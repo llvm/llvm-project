@@ -9,7 +9,7 @@
 
 // CHECK-LABEL: func @legal_loop()
 func @legal_loop() {
-  %0 = memref.alloc() : memref<64xf32>
+  %0 = alloc() : memref<64xf32>
 
   affine.for %i = 0 to 64 {
     %1 = affine.load %0[%i] : memref<64xf32>
@@ -32,7 +32,7 @@ func @legal_loop() {
 
 // CHECK-LABEL: func @illegal_loop_with_diag_dependence
 func @illegal_loop_with_diag_dependence() {
-  %A = memref.alloc() : memref<64x64xf32>
+  %A = alloc() : memref<64x64xf32>
 
   affine.for %i = 0 to 64 {
     // expected-remark@above {{tiled code is illegal due to dependences}}

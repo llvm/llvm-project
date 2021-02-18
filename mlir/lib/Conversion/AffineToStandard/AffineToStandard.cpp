@@ -15,7 +15,6 @@
 
 #include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
@@ -45,8 +44,7 @@ public:
       : builder(builder), dimValues(dimValues), symbolValues(symbolValues),
         loc(loc) {}
 
-  template <typename OpTy>
-  Value buildBinaryExpr(AffineBinaryOpExpr expr) {
+  template <typename OpTy> Value buildBinaryExpr(AffineBinaryOpExpr expr) {
     auto lhs = visit(expr.getLHS());
     auto rhs = visit(expr.getRHS());
     if (!lhs || !rhs)
@@ -588,7 +586,7 @@ public:
 };
 
 /// Apply the affine map from an 'affine.prefetch' operation to its operands,
-/// and feed the results to a newly created 'memref.prefetch' operation (which
+/// and feed the results to a newly created 'std.prefetch' operation (which
 /// replaces the original 'affine.prefetch').
 class AffinePrefetchLowering : public OpRewritePattern<AffinePrefetchOp> {
 public:
@@ -603,16 +601,16 @@ public:
     if (!resultOperands)
       return failure();
 
-    // Build memref.prefetch memref[expandedMap.results].
-    rewriter.replaceOpWithNewOp<memref::PrefetchOp>(
-        op, op.memref(), *resultOperands, op.isWrite(), op.localityHint(),
-        op.isDataCache());
+    // Build std.prefetch memref[expandedMap.results].
+    rewriter.replaceOpWithNewOp<PrefetchOp>(op, op.memref(), *resultOperands,
+                                            op.isWrite(), op.localityHint(),
+                                            op.isDataCache());
     return success();
   }
 };
 
 /// Apply the affine map from an 'affine.store' operation to its operands, and
-/// feed the results to a newly created 'memref.store' operation (which replaces
+/// feed the results to a newly created 'std.store' operation (which replaces
 /// the original 'affine.store').
 class AffineStoreLowering : public OpRewritePattern<AffineStoreOp> {
 public:
@@ -627,8 +625,8 @@ public:
     if (!maybeExpandedMap)
       return failure();
 
-    // Build memref.store valueToStore, memref[expandedMap.results].
-    rewriter.replaceOpWithNewOp<memref::StoreOp>(
+    // Build std.store valueToStore, memref[expandedMap.results].
+    rewriter.replaceOpWithNewOp<mlir::StoreOp>(
         op, op.getValueToStore(), op.getMemRef(), *maybeExpandedMap);
     return success();
   }
@@ -779,8 +777,8 @@ class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
     populateAffineToStdConversionPatterns(patterns, &getContext());
     populateAffineToVectorConversionPatterns(patterns, &getContext());
     ConversionTarget target(getContext());
-    target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect,
-                           StandardOpsDialect, VectorDialect>();
+    target
+        .addLegalDialect<scf::SCFDialect, StandardOpsDialect, VectorDialect>();
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();

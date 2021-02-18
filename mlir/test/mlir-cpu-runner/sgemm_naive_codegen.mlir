@@ -1,9 +1,9 @@
 // RUN: mlir-opt -convert-linalg-to-loops -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm %s | mlir-cpu-runner -O3 -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
 func @main() {
-  %A = memref.alloc() : memref<16x16xf32>
-  %B = memref.alloc() : memref<16x16xf32>
-  %C = memref.alloc() : memref<16x16xf32>
+  %A = alloc() : memref<16x16xf32>
+  %B = alloc() : memref<16x16xf32>
+  %C = alloc() : memref<16x16xf32>
 
   %cf1 = constant 1.00000e+00 : f32
 
@@ -50,7 +50,7 @@ func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: mem
   %c0 = constant 0 : index
   affine.for %arg3 = 0 to 16 {
     affine.for %arg4 = 0 to 16 {
-      %m = memref.alloc() : memref<1xf32>
+      %m = alloc() : memref<1xf32>
       %v = affine.load %arg2[%arg3, %arg4] : memref<16x16xf32>
       affine.store %v, %m[%c0] : memref<1xf32>
       affine.for %arg5 = 0 to 16 {
@@ -63,7 +63,7 @@ func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: mem
       }
       %s = affine.load %m[%c0] : memref<1xf32>
       affine.store %s, %arg2[%arg3, %arg4] : memref<16x16xf32>
-      memref.dealloc %m : memref<1xf32>
+      dealloc %m : memref<1xf32>
     }
   }
   return

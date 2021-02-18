@@ -533,7 +533,7 @@ func @affine_apply_ceildiv(%arg0 : index) -> (index) {
 
 // CHECK-LABEL: func @affine_load
 func @affine_load(%arg0 : index) {
-  %0 = memref.alloc() : memref<10xf32>
+  %0 = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     %1 = affine.load %0[%i0 + symbol(%arg0) + 7] : memref<10xf32>
   }
@@ -546,7 +546,7 @@ func @affine_load(%arg0 : index) {
 
 // CHECK-LABEL: func @affine_store
 func @affine_store(%arg0 : index) {
-  %0 = memref.alloc() : memref<10xf32>
+  %0 = alloc() : memref<10xf32>
   %1 = constant 11.0 : f32
   affine.for %i0 = 0 to 10 {
     affine.store %1, %0[%i0 - symbol(%arg0) + 7] : memref<10xf32>
@@ -571,22 +571,22 @@ func @affine_load_store_zero_dim(%arg0 : memref<i32>, %arg1 : memref<i32>) {
 
 // CHECK-LABEL: func @affine_prefetch
 func @affine_prefetch(%arg0 : index) {
-  %0 = memref.alloc() : memref<10xf32>
+  %0 = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.prefetch %0[%i0 + symbol(%arg0) + 7], read, locality<3>, data : memref<10xf32>
   }
 // CHECK:       %[[a:.*]] = addi %{{.*}}, %{{.*}} : index
 // CHECK-NEXT:  %[[c7:.*]] = constant 7 : index
 // CHECK-NEXT:  %[[b:.*]] = addi %[[a]], %[[c7]] : index
-// CHECK-NEXT:  memref.prefetch %[[v0:.*]][%[[b]]], read, locality<3>, data : memref<10xf32>
+// CHECK-NEXT:  prefetch %[[v0:.*]][%[[b]]], read, locality<3>, data : memref<10xf32>
   return
 }
 
 // CHECK-LABEL: func @affine_dma_start
 func @affine_dma_start(%arg0 : index) {
-  %0 = memref.alloc() : memref<100xf32>
-  %1 = memref.alloc() : memref<100xf32, 2>
-  %2 = memref.alloc() : memref<1xi32>
+  %0 = alloc() : memref<100xf32>
+  %1 = alloc() : memref<100xf32, 2>
+  %2 = alloc() : memref<1xi32>
   %c0 = constant 0 : index
   %c64 = constant 64 : index
   affine.for %i0 = 0 to 10 {
@@ -603,7 +603,7 @@ func @affine_dma_start(%arg0 : index) {
 
 // CHECK-LABEL: func @affine_dma_wait
 func @affine_dma_wait(%arg0 : index) {
-  %2 = memref.alloc() : memref<1xi32>
+  %2 = alloc() : memref<1xi32>
   %c64 = constant 64 : index
   affine.for %i0 = 0 to 10 {
     affine.dma_wait %2[%i0 + %arg0 + 17], %c64 : memref<1xi32>
@@ -702,7 +702,7 @@ func @affine_parallel_tiled(%o: memref<100x100xf32>, %a: memref<100x100xf32>, %b
 /////////////////////////////////////////////////////////////////////
 
 func @affine_parallel_simple(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> (memref<3x3xf32>) {
-  %O = memref.alloc() : memref<3x3xf32>
+  %O = alloc() : memref<3x3xf32>
   affine.parallel (%kx, %ky) = (0, 0) to (2, 2) {
       %1 = affine.load %arg0[%kx, %ky] : memref<3x3xf32>
       %2 = affine.load %arg1[%kx, %ky] : memref<3x3xf32>

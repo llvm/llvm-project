@@ -20,7 +20,7 @@ func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
             %cij = load %C[%arg3, %arg4] : memref<10x10xf32>
             %p = mulf %a, %b : f32
             %co = addf %cij, %p : f32
-            memref.store %co, %C[%arg3, %arg4] : memref<10x10xf32>
+            store %co, %C[%arg3, %arg4] : memref<10x10xf32>
           }
         }
       }
@@ -47,7 +47,7 @@ func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
 //  CHECK-NEXT:             %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 //  CHECK-NEXT:             %{{.*}} = mulf %{{.*}}, %{{.*}} : f32
 //  CHECK-NEXT:             %{{.*}} = addf %{{.*}}, %{{.*}} : f32
-//  CHECK-NEXT:             memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+//  CHECK-NEXT:             store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 //  CHECK-NEXT:           }
 //  CHECK-NEXT:         }
 //  CHECK-NEXT:       }
@@ -75,7 +75,7 @@ func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
             %cij = load %C[%arg3, %arg4] : memref<10x10xf32>
             %p = mulf %a, %b : f32
             %co = addf %cij, %p : f32
-            memref.store %co, %C[%arg3, %arg4] : memref<10x10xf32>
+            store %co, %C[%arg3, %arg4] : memref<10x10xf32>
           }
         }
       }
@@ -101,7 +101,7 @@ func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
 //  CHECK-NEXT:             %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 //  CHECK-NEXT:             %{{.*}} = mulf %{{.*}}, %{{.*}} : f32
 //  CHECK-NEXT:             %{{.*}} = addf %{{.*}}, %{{.*}} : f32
-//  CHECK-NEXT:             memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+//  CHECK-NEXT:             store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 //  CHECK-NEXT:           }
 //  CHECK-NEXT:         }
 //  CHECK-NEXT:       }
@@ -130,7 +130,7 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
               %axy = load %a[%x, %y] : memref<10x10xf32>
               %bxy = load %b[%x, %y] : memref<10x10xf32>
               %tmp = addf %axy, %bxy : f32
-              memref.store %tmp, %c[%y] : memref<10xf32>
+              store %tmp, %c[%y] : memref<10xf32>
             }
             acc.yield
           }
@@ -142,7 +142,7 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
               %ci = load %c[%i] : memref<10xf32>
               %dx = load %d[%x] : memref<10xf32>
               %z = addf %ci, %dx : f32
-              memref.store %z, %d[%x] : memref<10xf32>
+              store %z, %d[%x] : memref<10xf32>
             }
             acc.yield
           } attributes {seq}
@@ -172,7 +172,7 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
 // CHECK-NEXT:               %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 // CHECK-NEXT:               %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 // CHECK-NEXT:               %{{.*}} = addf %{{.*}}, %{{.*}} : f32
-// CHECK-NEXT:               memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:               store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:             }
 // CHECK-NEXT:             acc.yield
 // CHECK-NEXT:           }
@@ -181,7 +181,7 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
 // CHECK-NEXT:               %{{.*}} = load %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:               %{{.*}} = load %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:               %{{.*}} = addf %{{.*}}, %{{.*}} : f32
-// CHECK-NEXT:               memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:               store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:             }
 // CHECK-NEXT:             acc.yield
 // CHECK-NEXT:           } attributes {seq}

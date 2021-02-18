@@ -14,7 +14,6 @@
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -41,7 +40,7 @@ void mlir::linalg::hoistViewAllocOps(FuncOp func) {
   while (changed) {
     changed = false;
     func.walk([&changed](Operation *op) {
-      if (!isa<memref::AllocOp, memref::AllocaOp, memref::DeallocOp>(op))
+      if (!isa<AllocOp, AllocaOp, DeallocOp>(op))
         return;
 
       LLVM_DEBUG(DBGS() << "Candidate for hoisting: " << *op << "\n");
@@ -67,15 +66,14 @@ void mlir::linalg::hoistViewAllocOps(FuncOp func) {
         v = op->getResult(0);
       }
       if (v && !llvm::all_of(v.getUses(), [&](OpOperand &operand) {
-            return isa<ViewLikeOpInterface, memref::DeallocOp>(
-                operand.getOwner());
+            return isa<ViewLikeOpInterface, DeallocOp>(operand.getOwner());
           })) {
         LLVM_DEBUG(DBGS() << "Found non view-like or dealloc use: bail\n");
         return;
       }
 
       // Move AllocOp before the loop.
-      if (isa<memref::AllocOp, memref::AllocaOp>(op))
+      if (isa<AllocOp, AllocaOp>(op))
         (void)loop.moveOutOfLoop({op});
       else // Move DeallocOp outside of the loop.
         op->moveAfter(loop);

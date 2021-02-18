@@ -12,7 +12,6 @@
 // convert heap-based allocations to stack-based allocations, if possible.
 
 #include "PassDetail.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
@@ -34,7 +33,7 @@ static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
                                 unsigned bitwidthOfIndexType,
                                 unsigned maxRankOfAllocatedMemRef) {
   auto type = alloc.getType().dyn_cast<ShapedType>();
-  if (!type || !alloc.getDefiningOp<memref::AllocOp>())
+  if (!type || !alloc.getDefiningOp<AllocOp>())
     return false;
   if (!type.hasStaticShape()) {
     // Check if the dynamic shape dimension of the alloc is produced by RankOp.
@@ -318,7 +317,7 @@ public:
       // `AutomaticAllocationScope` determined during the initialization phase.
       OpBuilder builder(startOperation);
       Operation *allocOp = alloc.getDefiningOp();
-      Operation *alloca = builder.create<memref::AllocaOp>(
+      Operation *alloca = builder.create<AllocaOp>(
           alloc.getLoc(), alloc.getType().cast<MemRefType>(),
           allocOp->getOperands());
 

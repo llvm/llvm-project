@@ -250,7 +250,7 @@ static Value setAllocAtFunctionEntry(MemRefType memRefMinorVectorType,
       op->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
   assert(scope && "Expected op to be inside automatic allocation scope");
   b.setInsertionPointToStart(&scope->getRegion(0).front());
-  Value res = memref_alloca(memRefMinorVectorType);
+  Value res = std_alloca(memRefMinorVectorType);
   return res;
 }
 
@@ -312,7 +312,7 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
               return {vector};
             }
             // 3.b. Otherwise, just go through the temporary `alloc`.
-            memref_store(vector, alloc, majorIvs);
+            std_store(vector, alloc, majorIvs);
             return {};
           },
           [&]() -> scf::ValueVector {
@@ -324,7 +324,7 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
               return {vector};
             }
             // 3.d. Otherwise, just go through the temporary `alloc`.
-            memref_store(vector, alloc, majorIvs);
+            std_store(vector, alloc, majorIvs);
             return {};
           });
 
@@ -339,7 +339,7 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
         result = vector_insert(loaded1D, result, majorIvs);
       // 5.b. Otherwise, just go through the temporary `alloc`.
       else
-        memref_store(loaded1D, alloc, majorIvs);
+        std_store(loaded1D, alloc, majorIvs);
     }
   });
 
@@ -357,8 +357,8 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
   Value alloc;
   if (!options.unroll) {
     alloc = setAllocAtFunctionEntry(memRefMinorVectorType, op);
-    memref_store(xferOp.vector(),
-                 vector_type_cast(MemRefType::get({}, vectorType), alloc));
+    std_store(xferOp.vector(),
+              vector_type_cast(MemRefType::get({}, vectorType), alloc));
   }
 
   emitLoops([&](ValueRange majorIvs, ValueRange leadingOffsets,
@@ -665,7 +665,7 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
   Value tmp = setAllocAtFunctionEntry(tmpMemRefType(transfer), transfer);
   StdIndexedValue local(tmp);
   Value vec = vector_type_cast(tmp);
-  memref_store(vectorValue, vec);
+  std_store(vectorValue, vec);
   loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
     auto ivsStorage = llvm::to_vector<8>(loopIvs);
     // Swap the ivsStorage which will reorder memory accesses.

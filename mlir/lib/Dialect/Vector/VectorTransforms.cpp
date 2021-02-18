@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -2317,7 +2316,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
 ///     b. using a dynamic shape and/or stride for the dimensions that don't
 ///        agree.
 static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
-  if (memref::CastOp::areCastCompatible(aT, bT))
+  if (MemRefCastOp::areCastCompatible(aT, bT))
     return aT;
   if (aT.getRank() != bT.getRank())
     return MemRefType();
@@ -2388,13 +2387,13 @@ static Value createScopedSubViewIntersection(VectorTransferOpInterface xferOp,
 /// Produce IR resembling:
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
-///      memref.cast %A: memref<A...> to compatibleMemRefType
+///      memref_cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view, ... : compatibleMemRefType, index, index
 ///    } else {
 ///      %2 = linalg.fill(%alloc, %pad)
 ///      %3 = subview %view [...][...][...]
 ///      linalg.copy(%3, %alloc)
-///      memref.cast %alloc: memref<B...> to compatibleMemRefType
+///      memref_cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4, ... : compatibleMemRefType, index, index
 ///   }
 /// ```
@@ -2412,7 +2411,7 @@ static scf::IfOp createScopedFullPartialLinalgCopy(
       [&]() -> scf::ValueVector {
         Value res = memref;
         if (compatibleMemRefType != xferOp.getShapedType())
-          res = memref_cast(memref, compatibleMemRefType);
+          res = std_memref_cast(memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.indices().begin(),
                               xferOp.indices().end());
@@ -2425,7 +2424,7 @@ static scf::IfOp createScopedFullPartialLinalgCopy(
         Value memRefSubView = createScopedSubViewIntersection(
             cast<VectorTransferOpInterface>(xferOp.getOperation()), alloc);
         linalg_copy(memRefSubView, alloc);
-        Value casted = memref_cast(alloc, compatibleMemRefType);
+        Value casted = std_memref_cast(alloc, compatibleMemRefType);
         scf::ValueVector viewAndIndices{casted};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getTransferRank(),
                               zero);
@@ -2441,14 +2440,14 @@ static scf::IfOp createScopedFullPartialLinalgCopy(
 /// Produce IR resembling:
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
-///      memref.cast %A: memref<A...> to compatibleMemRefType
+///      memref_cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view, ... : compatibleMemRefType, index, index
 ///    } else {
 ///      %2 = vector.transfer_read %view[...], %pad : memref<A...>, vector<...>
 ///      %3 = vector.type_cast %extra_alloc :
 ///        memref<...> to memref<vector<...>>
 ///      store %2, %3[] : memref<vector<...>>
-///      %4 = memref.cast %alloc: memref<B...> to compatibleMemRefType
+///      %4 = memref_cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4, ... : compatibleMemRefType, index, index
 ///   }
 /// ```
@@ -2466,7 +2465,7 @@ static scf::IfOp createScopedFullPartialVectorTransferRead(
       [&]() -> scf::ValueVector {
         Value res = memref;
         if (compatibleMemRefType != xferOp.getShapedType())
-          res = memref_cast(memref, compatibleMemRefType);
+          res = std_memref_cast(memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.indices().begin(),
                               xferOp.indices().end());
@@ -2476,10 +2475,10 @@ static scf::IfOp createScopedFullPartialVectorTransferRead(
         Operation *newXfer =
             ScopedContext::getBuilderRef().clone(*xferOp.getOperation());
         Value vector = cast<VectorTransferOpInterface>(newXfer).vector();
-        memref_store(vector, vector_type_cast(
-                                 MemRefType::get({}, vector.getType()), alloc));
+        std_store(vector, vector_type_cast(
+                              MemRefType::get({}, vector.getType()), alloc));
 
-        Value casted = memref_cast(alloc, compatibleMemRefType);
+        Value casted = std_memref_cast(alloc, compatibleMemRefType);
         scf::ValueVector viewAndIndices{casted};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getTransferRank(),
                               zero);
@@ -2506,11 +2505,11 @@ static scf::IfOp createScopedFullPartialVectorTransferRead(
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
 ///      // fastpath, direct cast
-///      memref.cast %A: memref<A...> to compatibleMemRefType
+///      memref_cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view : compatibleMemRefType, index, index
 ///    } else {
 ///      // slowpath, masked vector.transfer or linalg.copy.
-///      memref.cast %alloc: memref<B...> to compatibleMemRefType
+///      memref_cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4 : compatibleMemRefType, index, index
 //     }
 ///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {masked = [false ... false]}
@@ -2565,8 +2564,8 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
     b.setInsertionPointToStart(&funcOp.getRegion().front());
     auto shape = xferOp.getVectorType().getShape();
     Type elementType = xferOp.getVectorType().getElementType();
-    alloc = memref_alloca(MemRefType::get(shape, elementType), ValueRange{},
-                          b.getI64IntegerAttr(32));
+    alloc = std_alloca(MemRefType::get(shape, elementType), ValueRange{},
+                       b.getI64IntegerAttr(32));
   }
 
   MemRefType compatibleMemRefType =

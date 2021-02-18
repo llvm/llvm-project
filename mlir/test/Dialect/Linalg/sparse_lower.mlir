@@ -47,7 +47,7 @@
 // CHECK-HIR:           %[[VAL_9:.*]] = linalg.sparse_values %[[VAL_6]] : tensor<64x64xf64> to memref<?xf64>
 // CHECK-HIR:           %[[VAL_10:.*]] = tensor_to_memref %[[VAL_1]] : memref<64xf64>
 // CHECK-HIR:           %[[VAL_11:.*]] = tensor_to_memref %[[VAL_2]] : memref<64xf64>
-// CHECK-HIR:           %[[VAL_12:.*]] = memref.alloc() : memref<64xf64>
+// CHECK-HIR:           %[[VAL_12:.*]] = alloc() : memref<64xf64>
 // CHECK-HIR:           linalg.copy(%[[VAL_11]], %[[VAL_12]]) : memref<64xf64>, memref<64xf64>
 // CHECK-HIR:           scf.for %[[VAL_13:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-HIR:             %[[VAL_14:.*]] = load %[[VAL_7]]{{\[}}%[[VAL_13]]] : memref<?xindex>
@@ -80,7 +80,7 @@
 // CHECK-MIR:           %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK-MIR:           %[[VAL_9:.*]] = tensor_to_memref %[[VAL_1]] : memref<64xf64>
 // CHECK-MIR:           %[[VAL_10:.*]] = tensor_to_memref %[[VAL_2]] : memref<64xf64>
-// CHECK-MIR:           %[[VAL_11:.*]] = memref.alloc() : memref<64xf64>
+// CHECK-MIR:           %[[VAL_11:.*]] = alloc() : memref<64xf64>
 // CHECK-MIR:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-MIR:             %[[VAL_13:.*]] = load %[[VAL_10]]{{\[}}%[[VAL_12]]] : memref<64xf64>
 // CHECK-MIR:             store %[[VAL_13]], %[[VAL_11]]{{\[}}%[[VAL_12]]] : memref<64xf64>
@@ -114,7 +114,7 @@
 // CHECK-LIR:           %[[VAL_6:.*]] = call @sparsePointers64(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-LIR:           %[[VAL_7:.*]] = call @sparseIndices64(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-LIR:           %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
-// CHECK-LIR:           %[[VAL_9:.*]] = memref.alloc() : memref<64xf64>
+// CHECK-LIR:           %[[VAL_9:.*]] = alloc() : memref<64xf64>
 // CHECK-LIR:           scf.for %[[VAL_10:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-LIR:             %[[VAL_11:.*]] = load %[[VAL_2]]{{\[}}%[[VAL_10]]] : memref<64xf64>
 // CHECK-LIR:             store %[[VAL_11]], %[[VAL_9]]{{\[}}%[[VAL_10]]] : memref<64xf64>

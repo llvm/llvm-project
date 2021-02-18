@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s  -split-input-file -loop-invariant-code-motion | FileCheck %s
 
 func @nested_loops_both_having_invariant_code() {
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   %cf7 = constant 7.0 : f32
   %cf8 = constant 8.0 : f32
 
@@ -13,7 +13,7 @@ func @nested_loops_both_having_invariant_code() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
+  // CHECK: %0 = alloc() : memref<10xf32>
   // CHECK-NEXT: %[[CST0:.*]] = constant 7.000000e+00 : f32
   // CHECK-NEXT: %[[CST1:.*]] = constant 8.000000e+00 : f32
   // CHECK-NEXT: %[[ADD0:.*]] = addf %[[CST0]], %[[CST1]] : f32
@@ -28,7 +28,7 @@ func @nested_loops_both_having_invariant_code() {
 // -----
 
 func @nested_loops_code_invariant_to_both() {
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   %cf7 = constant 7.0 : f32
   %cf8 = constant 8.0 : f32
 
@@ -38,7 +38,7 @@ func @nested_loops_code_invariant_to_both() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
+  // CHECK: %0 = alloc() : memref<10xf32>
   // CHECK-NEXT: %cst = constant 7.000000e+00 : f32
   // CHECK-NEXT: %cst_0 = constant 8.000000e+00 : f32
   // CHECK-NEXT: %1 = addf %cst, %cst_0 : f32
@@ -49,8 +49,8 @@ func @nested_loops_code_invariant_to_both() {
 // -----
 
 func @single_loop_nothing_invariant() {
-  %m1 = memref.alloc() : memref<10xf32>
-  %m2 = memref.alloc() : memref<10xf32>
+  %m1 = alloc() : memref<10xf32>
+  %m2 = alloc() : memref<10xf32>
   affine.for %arg0 = 0 to 10 {
     %v0 = affine.load %m1[%arg0] : memref<10xf32>
     %v1 = affine.load %m2[%arg0] : memref<10xf32>
@@ -58,8 +58,8 @@ func @single_loop_nothing_invariant() {
     affine.store %v2, %m1[%arg0] : memref<10xf32>
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: %1 = memref.alloc() : memref<10xf32>
+  // CHECK: %0 = alloc() : memref<10xf32>
+  // CHECK-NEXT: %1 = alloc() : memref<10xf32>
   // CHECK-NEXT: affine.for %arg0 = 0 to 10 {
   // CHECK-NEXT: %2 = affine.load %0[%arg0] : memref<10xf32>
   // CHECK-NEXT: %3 = affine.load %1[%arg0] : memref<10xf32>
@@ -72,7 +72,7 @@ func @single_loop_nothing_invariant() {
 // -----
 
 func @invariant_code_inside_affine_if() {
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   %cf8 = constant 8.0 : f32
 
   affine.for %arg0 = 0 to 10 {
@@ -84,7 +84,7 @@ func @invariant_code_inside_affine_if() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
+  // CHECK: %0 = alloc() : memref<10xf32>
   // CHECK-NEXT: %cst = constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %arg0 = 0 to 10 {
   // CHECK-NEXT: %1 = affine.apply #map(%arg0)
@@ -100,7 +100,7 @@ func @invariant_code_inside_affine_if() {
 // -----
 
 func @invariant_affine_if() {
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   %cf8 = constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
@@ -110,7 +110,7 @@ func @invariant_affine_if() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
+  // CHECK: %0 = alloc() : memref<10xf32>
   // CHECK-NEXT: %[[CST:.*]] = constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 10 {
   // CHECK-NEXT: }
@@ -125,7 +125,7 @@ func @invariant_affine_if() {
 // -----
 
 func @invariant_affine_if2() {
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   %cf8 = constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
@@ -136,7 +136,7 @@ func @invariant_affine_if2() {
     }
   }
 
-  // CHECK: memref.alloc
+  // CHECK: alloc
   // CHECK-NEXT: constant
   // CHECK-NEXT: affine.for
   // CHECK-NEXT: affine.for
@@ -152,7 +152,7 @@ func @invariant_affine_if2() {
 // -----
 
 func @invariant_affine_nested_if() {
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   %cf8 = constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
@@ -165,7 +165,7 @@ func @invariant_affine_nested_if() {
     }
   }
 
-  // CHECK: memref.alloc
+  // CHECK: alloc
   // CHECK-NEXT: constant
   // CHECK-NEXT: affine.for
   // CHECK-NEXT: affine.for
@@ -184,7 +184,7 @@ func @invariant_affine_nested_if() {
 // -----
 
 func @invariant_affine_nested_if_else() {
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   %cf8 = constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
@@ -200,7 +200,7 @@ func @invariant_affine_nested_if_else() {
     }
   }
 
-  // CHECK: memref.alloc
+  // CHECK: alloc
   // CHECK-NEXT: constant
   // CHECK-NEXT: affine.for
   // CHECK-NEXT: affine.for
@@ -225,7 +225,7 @@ func @invariant_loop_dialect() {
   %ci0 = constant 0 : index
   %ci10 = constant 10 : index
   %ci1 = constant 1 : index
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   %cf7 = constant 7.0 : f32
   %cf8 = constant 8.0 : f32
   scf.for %arg0 = %ci0 to %ci10 step %ci1 {
@@ -234,7 +234,7 @@ func @invariant_loop_dialect() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
+  // CHECK: %0 = alloc() : memref<10xf32>
   // CHECK-NEXT: %cst = constant 7.000000e+00 : f32
   // CHECK-NEXT: %cst_0 = constant 8.000000e+00 : f32
   // CHECK-NEXT: %1 = addf %cst, %cst_0 : f32
@@ -248,14 +248,14 @@ func @variant_loop_dialect() {
   %ci0 = constant 0 : index
   %ci10 = constant 10 : index
   %ci1 = constant 1 : index
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   scf.for %arg0 = %ci0 to %ci10 step %ci1 {
     scf.for %arg1 = %ci0 to %ci10 step %ci1 {
       %v0 = addi %arg0, %arg1 : index
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
+  // CHECK: %0 = alloc() : memref<10xf32>
   // CHECK-NEXT: scf.for
   // CHECK-NEXT: scf.for
   // CHECK-NEXT: addi

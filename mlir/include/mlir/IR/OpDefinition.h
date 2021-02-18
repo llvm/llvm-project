@@ -1126,7 +1126,7 @@ public:
 /// A trait of region holding operations that define a new scope for automatic
 /// allocations, i.e., allocations that are freed when control is transferred
 /// back from the operation's region. Any operations performing such allocations
-/// (for eg. memref.alloca) will have their allocations automatically freed at
+/// (for eg. std.alloca) will have their allocations automatically freed at
 /// their closest enclosing operation with this trait.
 template <typename ConcreteType>
 class AutomaticAllocationScope

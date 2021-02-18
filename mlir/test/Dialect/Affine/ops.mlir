@@ -97,7 +97,7 @@ func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
 func @valid_symbols(%arg0: index, %arg1: index, %arg2: index) {
   %c1 = constant 1 : index
   %c0 = constant 0 : index
-  %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+  %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
   affine.for %arg3 = 0 to %arg2 step 768 {
     %13 = dim %0, %c1 : memref<?x?xf32>
     affine.for %arg4 = 0 to %13 step 264 {

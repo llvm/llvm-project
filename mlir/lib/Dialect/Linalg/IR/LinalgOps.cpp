@@ -108,12 +108,12 @@ static void dispatchIndexOpFoldResult(OpFoldResult ofr,
 /// ```
 ///    someop(memrefcast) -> someop
 /// ```
-/// It folds the source of the memref.cast into the root operation directly.
+/// It folds the source of the memref_cast into the root operation directly.
 static LogicalResult foldMemRefCast(Operation *op) {
   bool folded = false;
   for (OpOperand &operand : op->getOpOperands()) {
-    auto castOp = operand.get().getDefiningOp<memref::CastOp>();
-    if (castOp && memref::CastOp::canFoldIntoConsumerOp(castOp)) {
+    auto castOp = operand.get().getDefiningOp<MemRefCastOp>();
+    if (castOp && canFoldIntoConsumerOp(castOp)) {
       operand.set(castOp.getOperand());
       folded = true;
     }

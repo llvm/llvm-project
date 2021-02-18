@@ -8,7 +8,7 @@ func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
                           %arg3: memref<?xf32>) {
   %0 = constant 7.0 : f32
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
-    memref.store %0, %arg3[%i0] : memref<?xf32>
+    store %0, %arg3[%i0] : memref<?xf32>
   }
   return
 }
@@ -34,14 +34,14 @@ func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
 //       Compute step of unrolled loop in V8.
 //   UNROLL-BY-2-DAG:  %[[V8:.*]] = muli %[[STEP]], %[[C2]] : index
 //       UNROLL-BY-2:  scf.for %[[IV:.*]] = %[[LB]] to %[[V7]] step %[[V8]] {
-//  UNROLL-BY-2-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-2-NEXT:    store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
 //  UNROLL-BY-2-NEXT:    %[[C1_IV:.*]] = constant 1 : index
 //  UNROLL-BY-2-NEXT:    %[[V9:.*]] = muli %[[STEP]], %[[C1_IV]] : index
 //  UNROLL-BY-2-NEXT:    %[[V10:.*]] = addi %[[IV]], %[[V9]] : index
-//  UNROLL-BY-2-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[V10]]] : memref<?xf32>
+//  UNROLL-BY-2-NEXT:    store %{{.*}}, %[[MEM]][%[[V10]]] : memref<?xf32>
 //  UNROLL-BY-2-NEXT:  }
 //  UNROLL-BY-2-NEXT:  scf.for %[[IV:.*]] = %[[V7]] to %[[UB]] step %[[STEP]] {
-//  UNROLL-BY-2-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-2-NEXT:    store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
 //  UNROLL-BY-2-NEXT:  }
 //  UNROLL-BY-2-NEXT:  return
 
@@ -67,18 +67,18 @@ func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
 //       Compute step of unrolled loop in V8.
 //   UNROLL-BY-3-DAG:  %[[V8:.*]] = muli %[[STEP]], %[[C3]] : index
 //       UNROLL-BY-3:  scf.for %[[IV:.*]] = %[[LB]] to %[[V7]] step %[[V8]] {
-//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:    store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:    %[[C1_IV:.*]] = constant 1 : index
 //  UNROLL-BY-3-NEXT:    %[[V9:.*]] = muli %[[STEP]], %[[C1_IV]] : index
 //  UNROLL-BY-3-NEXT:    %[[V10:.*]] = addi %[[IV]], %[[V9]] : index
-//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[V10]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:    store %{{.*}}, %[[MEM]][%[[V10]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:    %[[C2_IV:.*]] = constant 2 : index
 //  UNROLL-BY-3-NEXT:    %[[V11:.*]] = muli %[[STEP]], %[[C2_IV]] : index
 //  UNROLL-BY-3-NEXT:    %[[V12:.*]] = addi %[[IV]], %[[V11]] : index
-//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[V12]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:    store %{{.*}}, %[[MEM]][%[[V12]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:  }
 //  UNROLL-BY-3-NEXT:  scf.for %[[IV:.*]] = %[[V7]] to %[[UB]] step %[[STEP]] {
-//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:    store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:  }
 //  UNROLL-BY-3-NEXT:  return
 
@@ -88,7 +88,7 @@ func @dynamic_loop_unroll_outer_by_2(
   %0 = constant 7.0 : f32
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
     scf.for %i1 = %arg3 to %arg4 step %arg5 {
-     memref.store %0, %arg6[%i1] : memref<?xf32>
+     store %0, %arg6[%i1] : memref<?xf32>
     }
   }
   return
@@ -104,15 +104,15 @@ func @dynamic_loop_unroll_outer_by_2(
 //
 //       UNROLL-OUTER-BY-2:  scf.for %[[IV0:.*]] = %[[LB0]] to %{{.*}} step %{{.*}} {
 //  UNROLL-OUTER-BY-2-NEXT:    scf.for %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
-//  UNROLL-OUTER-BY-2-NEXT:      memref.store %{{.*}}, %[[MEM]][%[[IV1]]] : memref<?xf32>
+//  UNROLL-OUTER-BY-2-NEXT:      store %{{.*}}, %[[MEM]][%[[IV1]]] : memref<?xf32>
 //  UNROLL-OUTER-BY-2-NEXT:    }
 //  UNROLL-OUTER-BY-2-NEXT:    scf.for %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
-//  UNROLL-OUTER-BY-2-NEXT:      memref.store %{{.*}}, %[[MEM]][%[[IV1]]] : memref<?xf32>
+//  UNROLL-OUTER-BY-2-NEXT:      store %{{.*}}, %[[MEM]][%[[IV1]]] : memref<?xf32>
 //  UNROLL-OUTER-BY-2-NEXT:    }
 //  UNROLL-OUTER-BY-2-NEXT:  }
 //  UNROLL-OUTER-BY-2-NEXT:  scf.for %[[IV0:.*]] = %{{.*}} to %[[UB0]] step %[[STEP0]] {
 //  UNROLL-OUTER-BY-2-NEXT:    scf.for %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
-//  UNROLL-OUTER-BY-2-NEXT:      memref.store %{{.*}}, %[[MEM]][%[[IV1]]] : memref<?xf32>
+//  UNROLL-OUTER-BY-2-NEXT:      store %{{.*}}, %[[MEM]][%[[IV1]]] : memref<?xf32>
 //  UNROLL-OUTER-BY-2-NEXT:    }
 //  UNROLL-OUTER-BY-2-NEXT:  }
 //  UNROLL-OUTER-BY-2-NEXT:  return
@@ -123,7 +123,7 @@ func @dynamic_loop_unroll_inner_by_2(
   %0 = constant 7.0 : f32
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
     scf.for %i1 = %arg3 to %arg4 step %arg5 {
-     memref.store %0, %arg6[%i1] : memref<?xf32>
+     store %0, %arg6[%i1] : memref<?xf32>
     }
   }
   return
@@ -139,14 +139,14 @@ func @dynamic_loop_unroll_inner_by_2(
 //
 //       UNROLL-INNER-BY-2:  scf.for %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
 //       UNROLL-INNER-BY-2:    scf.for %[[IV1:.*]] = %[[LB1]] to %{{.*}} step %{{.*}} {
-//  UNROLL-INNER-BY-2-NEXT:      memref.store %{{.*}}, %[[MEM]][%[[IV1]]] : memref<?xf32>
+//  UNROLL-INNER-BY-2-NEXT:      store %{{.*}}, %[[MEM]][%[[IV1]]] : memref<?xf32>
 //  UNROLL-INNER-BY-2-NEXT:      %[[C1_IV:.*]] = constant 1 : index
 //  UNROLL-INNER-BY-2-NEXT:      %[[V0:.*]] = muli %[[STEP1]], %[[C1_IV]] : index
 //  UNROLL-INNER-BY-2-NEXT:      %[[V1:.*]] = addi %[[IV1]], %[[V0]] : index
-//  UNROLL-INNER-BY-2-NEXT:      memref.store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
+//  UNROLL-INNER-BY-2-NEXT:      store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
 //  UNROLL-INNER-BY-2-NEXT:    }
 //  UNROLL-INNER-BY-2-NEXT:    scf.for %[[IV1:.*]] = %{{.*}} to %[[UB1]] step %[[STEP1]] {
-//  UNROLL-INNER-BY-2-NEXT:      memref.store %{{.*}}, %[[MEM]][%[[IV1]]] : memref<?xf32>
+//  UNROLL-INNER-BY-2-NEXT:      store %{{.*}}, %[[MEM]][%[[IV1]]] : memref<?xf32>
 //  UNROLL-INNER-BY-2-NEXT:    }
 //  UNROLL-INNER-BY-2-NEXT:  }
 //  UNROLL-INNER-BY-2-NEXT:  return
@@ -159,7 +159,7 @@ func @static_loop_unroll_by_2(%arg0 : memref<?xf32>) {
   %ub = constant 20 : index
   %step = constant 1 : index
   scf.for %i0 = %lb to %ub step %step {
-    memref.store %0, %arg0[%i0] : memref<?xf32>
+    store %0, %arg0[%i0] : memref<?xf32>
   }
   return
 }
@@ -171,11 +171,11 @@ func @static_loop_unroll_by_2(%arg0 : memref<?xf32>) {
 //   UNROLL-BY-2-DAG:  %[[C20:.*]] = constant 20 : index
 //   UNROLL-BY-2-DAG:  %[[C2:.*]] = constant 2 : index
 //   UNROLL-BY-2:  scf.for %[[IV:.*]] = %[[C0]] to %[[C20]] step %[[C2]] {
-//  UNROLL-BY-2-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-2-NEXT:    store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
 //  UNROLL-BY-2-NEXT:    %[[C1_IV:.*]] = constant 1 : index
 //  UNROLL-BY-2-NEXT:    %[[V0:.*]] = muli %[[C1]], %[[C1_IV]] : index
 //  UNROLL-BY-2-NEXT:    %[[V1:.*]] = addi %[[IV]], %[[V0]] : index
-//  UNROLL-BY-2-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
+//  UNROLL-BY-2-NEXT:    store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
 //  UNROLL-BY-2-NEXT:  }
 //  UNROLL-BY-2-NEXT:  return
 
@@ -187,7 +187,7 @@ func @static_loop_unroll_by_3(%arg0 : memref<?xf32>) {
   %ub = constant 20 : index
   %step = constant 1 : index
   scf.for %i0 = %lb to %ub step %step {
-    memref.store %0, %arg0[%i0] : memref<?xf32>
+    store %0, %arg0[%i0] : memref<?xf32>
   }
   return
 }
@@ -201,18 +201,18 @@ func @static_loop_unroll_by_3(%arg0 : memref<?xf32>) {
 //   UNROLL-BY-3-DAG:  %[[C18:.*]] = constant 18 : index
 //   UNROLL-BY-3-DAG:  %[[C3:.*]] = constant 3 : index
 //       UNROLL-BY-3: scf.for %[[IV:.*]] = %[[C0]] to %[[C18]] step %[[C3]] {
-//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:    store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:    %[[C1_IV:.*]] = constant 1 : index
 //  UNROLL-BY-3-NEXT:    %[[V0:.*]] = muli %[[C1]], %[[C1_IV]] : index
 //  UNROLL-BY-3-NEXT:    %[[V1:.*]] = addi %[[IV]], %[[V0]] : index
-//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:    store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:    %[[C2_IV:.*]] = constant 2 : index
 //  UNROLL-BY-3-NEXT:    %[[V2:.*]] = muli %[[C1]], %[[C2_IV]] : index
 //  UNROLL-BY-3-NEXT:    %[[V3:.*]] = addi %[[IV]], %[[V2]] : index
-//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[V3]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:    store %{{.*}}, %[[MEM]][%[[V3]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:  }
 //  UNROLL-BY-3-NEXT:  scf.for %[[IV:.*]] = %[[C18]] to %[[C20]] step %[[C1]] {
-//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:    store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:  }
 //  UNROLL-BY-3-NEXT:  return
 
@@ -224,7 +224,7 @@ func @static_loop_unroll_by_3_promote_epilogue(%arg0 : memref<?xf32>) {
   %ub = constant 10 : index
   %step = constant 1 : index
   scf.for %i0 = %lb to %ub step %step {
-    memref.store %0, %arg0[%i0] : memref<?xf32>
+    store %0, %arg0[%i0] : memref<?xf32>
   }
   return
 }
@@ -237,17 +237,17 @@ func @static_loop_unroll_by_3_promote_epilogue(%arg0 : memref<?xf32>) {
 //   UNROLL-BY-3-DAG:  %[[C9:.*]] = constant 9 : index
 //   UNROLL-BY-3-DAG:  %[[C3:.*]] = constant 3 : index
 //       UNROLL-BY-3: scf.for %[[IV:.*]] = %[[C0]] to %[[C9]] step %[[C3]] {
-//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:    store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:    %[[C1_IV:.*]] = constant 1 : index
 //  UNROLL-BY-3-NEXT:    %[[V0:.*]] = muli %[[C1]], %[[C1_IV]] : index
 //  UNROLL-BY-3-NEXT:    %[[V1:.*]] = addi %[[IV]], %[[V0]] : index
-//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:    store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:    %[[C2_IV:.*]] = constant 2 : index
 //  UNROLL-BY-3-NEXT:    %[[V2:.*]] = muli %[[C1]], %[[C2_IV]] : index
 //  UNROLL-BY-3-NEXT:    %[[V3:.*]] = addi %[[IV]], %[[V2]] : index
-//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[V3]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:    store %{{.*}}, %[[MEM]][%[[V3]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:  }
-//  UNROLL-BY-3-NEXT:  memref.store %{{.*}}, %[[MEM]][%[[C9]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:  store %{{.*}}, %[[MEM]][%[[C9]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:  return
 
 // Test unroll-up-to functionality.

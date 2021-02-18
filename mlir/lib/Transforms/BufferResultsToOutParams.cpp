@@ -8,7 +8,6 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
@@ -100,7 +99,7 @@ static LogicalResult updateCalls(ModuleOp module) {
         didFail = true;
         return;
       }
-      Value outParam = builder.create<memref::AllocOp>(
+      Value outParam = builder.create<AllocOp>(
           op.getLoc(), memref.getType().cast<MemRefType>());
       memref.replaceAllUsesWith(outParam);
       outParams.push_back(outParam);

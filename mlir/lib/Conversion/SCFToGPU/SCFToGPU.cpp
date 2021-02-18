@@ -18,7 +18,6 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/ParallelLoopMapper.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExpr.h"
@@ -648,7 +647,6 @@ void mlir::populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns,
 }
 
 void mlir::configureParallelLoopToGPULegality(ConversionTarget &target) {
-  target.addLegalDialect<memref::MemRefDialect>();
   target.addDynamicallyLegalOp<scf::ParallelOp>([](scf::ParallelOp parallelOp) {
     return !parallelOp->getAttr(gpu::getMappingAttrName());
   });

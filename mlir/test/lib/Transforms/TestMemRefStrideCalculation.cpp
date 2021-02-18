@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Pass/Pass.h"
@@ -24,7 +23,7 @@ struct TestMemRefStrideCalculation
 /// Traverse AllocOp and compute strides of each MemRefType independently.
 void TestMemRefStrideCalculation::runOnFunction() {
   llvm::outs() << "Testing: " << getFunction().getName() << "\n";
-  getFunction().walk([&](memref::AllocOp allocOp) {
+  getFunction().walk([&](AllocOp allocOp) {
     auto memrefType = allocOp.getResult().getType().cast<MemRefType>();
     int64_t offset;
     SmallVector<int64_t, 4> strides;
