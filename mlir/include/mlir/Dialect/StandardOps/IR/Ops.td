@@ -2788,6 +2788,16 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
                                 ArrayRef<OpFoldResult> staticOffsets,
                                 ArrayRef<OpFoldResult> staticSizes,
                                 ArrayRef<OpFoldResult> staticStrides);
+    static Type inferRankReducedResultType(unsigned resultRank,
+                                           MemRefType sourceMemRefType,
+                                           ArrayRef<int64_t> staticOffsets,
+                                           ArrayRef<int64_t> staticSizes,
+                                           ArrayRef<int64_t> staticStrides);
+    static Type inferRankReducedResultType(unsigned resultRank,
+                                           MemRefType sourceMemRefType,
+                                           ArrayRef<OpFoldResult> staticOffsets,
+                                           ArrayRef<OpFoldResult> staticSizes,
+                                           ArrayRef<OpFoldResult> staticStrides);
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
@@ -2914,6 +2924,16 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
                                 ArrayRef<OpFoldResult> staticOffsets,
                                 ArrayRef<OpFoldResult> staticSizes,
                                 ArrayRef<OpFoldResult> staticStrides);
+    static Type inferRankReducedResultType(unsigned resultRank,
+                                           RankedTensorType sourceRankedTensorType,
+                                           ArrayRef<int64_t> staticOffsets,
+                                           ArrayRef<int64_t> staticSizes,
+                                           ArrayRef<int64_t> staticStrides);
+    static Type inferRankReducedResultType(unsigned resultRank,
+                                           RankedTensorType sourceRankedTensorType,
+                                           ArrayRef<OpFoldResult> staticOffsets,
+                                           ArrayRef<OpFoldResult> staticSizes,
+                                           ArrayRef<OpFoldResult> staticStrides);
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
@@ -3027,6 +3047,7 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
     /// and `strides` operands.
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 2; }
   }];
+
   let hasFolder = 1;
 }
 
