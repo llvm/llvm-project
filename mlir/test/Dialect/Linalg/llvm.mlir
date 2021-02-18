@@ -6,13 +6,13 @@ func @range(%arg0: index) {
   %R = linalg.range %c0:%arg0:%c1 : !linalg.range
   return
 }
-// CHECK-LABEL: func @range(%{{.*}}: i64) {
-//       CHECK:   llvm.mlir.constant(0 : index) : i64
-//  CHECK-NEXT:   llvm.mlir.constant(1 : index) : i64
-//  CHECK-NEXT:   llvm.mlir.undef : !llvm.struct<(i64, i64, i64)>
-//  CHECK-NEXT:   llvm.insertvalue %{{.*}}, %{{.*}}[0] : !llvm.struct<(i64, i64, i64)>
-//  CHECK-NEXT:   llvm.insertvalue %{{.*}}, %{{.*}}[1] : !llvm.struct<(i64, i64, i64)>
-//  CHECK-NEXT:   llvm.insertvalue %{{.*}}, %{{.*}}[2] : !llvm.struct<(i64, i64, i64)>
+// CHECK-LABEL: func @range
+//       CHECK:   constant 0 : index
+//       CHECK:   constant 1 : index
+//       CHECK:   llvm.mlir.undef : !llvm.struct<(i64, i64, i64)>
+//       CHECK:   llvm.insertvalue %{{.*}}, %{{.*}}[0] : !llvm.struct<(i64, i64, i64)>
+//       CHECK:   llvm.insertvalue %{{.*}}, %{{.*}}[1] : !llvm.struct<(i64, i64, i64)>
+//       CHECK:   llvm.insertvalue %{{.*}}, %{{.*}}[2] : !llvm.struct<(i64, i64, i64)>
 
 func @reshape_static_expand(%arg0: memref<3x4x5xf32>) -> memref<1x3x4x1x5xf32> {
   // Reshapes that expand a contiguous tensor with some 1's.
