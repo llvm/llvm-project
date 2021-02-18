@@ -55,6 +55,8 @@ public:
 
   bool supportSwiftError() const override { return true; }
 
+  bool isTypeIsValidForThisReturn(EVT Ty) const override;
+
 private:
   using RegHandler = std::function<void(MachineIRBuilder &, Type *, unsigned,
                                         CCValAssign &)>;

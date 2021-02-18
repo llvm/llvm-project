@@ -266,13 +266,13 @@ protected:
   ///
   /// \return True if everything has succeeded, false otherwise.
   bool handleAssignments(MachineIRBuilder &MIRBuilder,
-                         SmallVectorImpl<ArgInfo> &Args,
-                         ValueHandler &Handler) const;
+                         SmallVectorImpl<ArgInfo> &Args, ValueHandler &Handler,
+                         Register ThisReturnReg = Register()) const;
   bool handleAssignments(CCState &CCState,
                          SmallVectorImpl<CCValAssign> &ArgLocs,
                          MachineIRBuilder &MIRBuilder,
-                         SmallVectorImpl<ArgInfo> &Args,
-                         ValueHandler &Handler) const;
+                         SmallVectorImpl<ArgInfo> &Args, ValueHandler &Handler,
+                         Register ThisReturnReg = Register()) const;
 
   /// Analyze passed or returned values from a call, supplied in \p ArgInfo,
   /// incorporating info about the passed values into \p CCState.
@@ -456,6 +456,10 @@ public:
                  ArrayRef<Register> ResRegs,
                  ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
                  std::function<unsigned()> GetCalleeReg) const;
+
+  /// For targets which support the "returned" parameter attribute, returns
+  /// true if the given type is a valid one to use with "returned".
+  virtual bool isTypeIsValidForThisReturn(EVT Ty) const { return false; }
 };
 
 } // end namespace llvm
