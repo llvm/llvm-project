@@ -204,6 +204,15 @@ module LLVM_FileCheck {
   module * { export * }
 }
 
+module LLVM_Frontend_OpenMP {
+  requires cplusplus
+
+  umbrella "Frontend/OpenMP"
+  module * { export * }
+
+  exclude header "Frontend/OpenMP/OMPKinds.def"
+}
+
 // Orc utilities that don't depend only on Support (not ExecutionEngine or
 // IR). This is a workaround for ExecutionEngine's broken layering, and will
 // be removed in the future.
