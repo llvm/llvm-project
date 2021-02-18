@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MC_REGISTER_H
-#define LLVM_MC_REGISTER_H
+#ifndef LLVM_MC_MCREGISTER_H
+#define LLVM_MC_MCREGISTER_H
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include <cassert>
@@ -111,4 +111,4 @@ inline hash_code hash_value(const MCRegister &Reg) {
 }
 }
 
-#endif // ifndef LLVM_MC_REGISTER_H
+#endif // LLVM_MC_MCREGISTER_H

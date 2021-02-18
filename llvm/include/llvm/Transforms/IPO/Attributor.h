@@ -3794,4 +3794,4 @@ enum AttributorRunOption {
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H
+#endif // LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H

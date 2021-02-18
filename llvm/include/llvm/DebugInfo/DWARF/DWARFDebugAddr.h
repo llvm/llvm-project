@@ -6,8 +6,8 @@
 //
 //===------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFDEBUGADDR_H
-#define LLVM_DEBUGINFO_DWARFDEBUGADDR_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGADDR_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDEBUGADDR_H
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
@@ -96,4 +96,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFDEBUGADDR_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDEBUGADDR_H

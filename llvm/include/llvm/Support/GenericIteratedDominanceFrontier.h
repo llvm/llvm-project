@@ -20,8 +20,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_GENERIC_IDF_H
-#define LLVM_SUPPORT_GENERIC_IDF_H
+#ifndef LLVM_SUPPORT_GENERICITERATEDDOMINANCEFRONTIER_H
+#define LLVM_SUPPORT_GENERICITERATEDDOMINANCEFRONTIER_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"

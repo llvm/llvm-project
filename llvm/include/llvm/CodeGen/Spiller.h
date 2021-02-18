@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_SPILLER_H
-#define LLVM_LIB_CODEGEN_SPILLER_H
+#ifndef LLVM_CODEGEN_SPILLER_H
+#define LLVM_CODEGEN_SPILLER_H
 
 namespace llvm {
 
@@ -39,4 +39,4 @@ Spiller *createInlineSpiller(MachineFunctionPass &pass, MachineFunction &mf,
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_SPILLER_H
+#endif // LLVM_CODEGEN_SPILLER_H

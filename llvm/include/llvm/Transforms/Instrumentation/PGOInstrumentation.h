@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_PGOINSTRUMENTATION_H
-#define LLVM_TRANSFORMS_PGOINSTRUMENTATION_H
+#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_PGOINSTRUMENTATION_H
+#define LLVM_TRANSFORMS_INSTRUMENTATION_PGOINSTRUMENTATION_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/PassManager.h"
@@ -97,4 +97,4 @@ void setIrrLoopHeaderMetadata(Module *M, Instruction *TI, uint64_t Count);
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_PGOINSTRUMENTATION_H
+#endif // LLVM_TRANSFORMS_INSTRUMENTATION_PGOINSTRUMENTATION_H

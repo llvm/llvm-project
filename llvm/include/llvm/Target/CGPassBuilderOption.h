@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_PASSBUILDER_OPTION_H
-#define LLVM_CODEGEN_PASSBUILDER_OPTION_H
+#ifndef LLVM_TARGET_CGPASSBUILDEROPTION_H
+#define LLVM_TARGET_CGPASSBUILDEROPTION_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -62,4 +62,4 @@ CGPassBuilderOption getCGPassBuilderOption();
 
 } // namespace llvm
 
-#endif // LLVM_CODEGEN_PASSBUILDER_OPTION_H
+#endif // LLVM_TARGET_CGPASSBUILDEROPTION_H

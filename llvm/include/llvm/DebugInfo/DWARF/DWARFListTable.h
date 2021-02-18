@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFLISTTABLE_H
-#define LLVM_DEBUGINFO_DWARFLISTTABLE_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFLISTTABLE_H
+#define LLVM_DEBUGINFO_DWARF_DWARFLISTTABLE_H
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
@@ -289,4 +289,4 @@ DWARFListTableBase<DWARFListType>::findList(DWARFDataExtractor Data,
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFLISTTABLE_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFLISTTABLE_H

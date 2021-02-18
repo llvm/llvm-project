@@ -214,4 +214,4 @@ raw_ostream &operator<<(raw_ostream &OS, const FunctionInfo &R);
 } // namespace gsym
 } // namespace llvm
 
-#endif // #ifndef LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
+#endif // LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H

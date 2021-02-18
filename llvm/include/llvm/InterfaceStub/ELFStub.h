@@ -11,8 +11,8 @@
 ///
 //===-----------------------------------------------------------------------===/
 
-#ifndef LLVM_TEXTAPI_ELF_ELFSTUB_H
-#define LLVM_TEXTAPI_ELF_ELFSTUB_H
+#ifndef LLVM_INTERFACESTUB_ELFSTUB_H
+#define LLVM_INTERFACESTUB_ELFSTUB_H
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/VersionTuple.h"
@@ -63,4 +63,4 @@ public:
 } // end namespace elfabi
 } // end namespace llvm
 
-#endif // LLVM_TEXTAPI_ELF_ELFSTUB_H
+#endif // LLVM_INTERFACESTUB_ELFSTUB_H

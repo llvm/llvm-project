@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_ASSUMEBUNDLEQUERIES_H
-#define LLVM_TRANSFORMS_UTILS_ASSUMEBUNDLEQUERIES_H
+#ifndef LLVM_ANALYSIS_ASSUMEBUNDLEQUERIES_H
+#define LLVM_ANALYSIS_ASSUMEBUNDLEQUERIES_H
 
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Instructions.h"
