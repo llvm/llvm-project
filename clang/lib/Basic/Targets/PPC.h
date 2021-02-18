@@ -451,6 +451,8 @@ public:
     switch (CC) {
     case CC_Swift:
       return CCCR_OK;
+    case CC_SwiftAsync:
+      return checkSwiftAsyncCCSupported();
     default:
       return CCCR_Warning;
     }
