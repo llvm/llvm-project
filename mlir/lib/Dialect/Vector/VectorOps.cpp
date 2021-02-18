@@ -2534,7 +2534,7 @@ void MaskedStoreOp::getCanonicalizationPatterns(
 static LogicalResult verify(GatherOp op) {
   VectorType indicesVType = op.getIndicesVectorType();
   VectorType maskVType = op.getMaskVectorType();
-  VectorType resVType = op.getResultVectorType();
+  VectorType resVType = op.getVectorType();
   MemRefType memType = op.getMemRefType();
 
   if (resVType.getElementType() != memType.getElementType())
@@ -2580,15 +2580,15 @@ void GatherOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 static LogicalResult verify(ScatterOp op) {
   VectorType indicesVType = op.getIndicesVectorType();
   VectorType maskVType = op.getMaskVectorType();
-  VectorType valueVType = op.getValueVectorType();
+  VectorType valueVType = op.getVectorType();
   MemRefType memType = op.getMemRefType();
 
   if (valueVType.getElementType() != memType.getElementType())
-    return op.emitOpError("base and value element type should match");
+    return op.emitOpError("base and valueToStore element type should match");
   if (valueVType.getDimSize(0) != indicesVType.getDimSize(0))
-    return op.emitOpError("expected value dim to match indices dim");
+    return op.emitOpError("expected valueToStore dim to match indices dim");
   if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
-    return op.emitOpError("expected value dim to match mask dim");
+    return op.emitOpError("expected valueToStore dim to match mask dim");
   return success();
 }
 
@@ -2624,7 +2624,7 @@ void ScatterOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 static LogicalResult verify(ExpandLoadOp op) {
   VectorType maskVType = op.getMaskVectorType();
   VectorType passVType = op.getPassThruVectorType();
-  VectorType resVType = op.getResultVectorType();
+  VectorType resVType = op.getVectorType();
   MemRefType memType = op.getMemRefType();
 
   if (resVType.getElementType() != memType.getElementType())
@@ -2671,15 +2671,15 @@ void ExpandLoadOp::getCanonicalizationPatterns(
 
 static LogicalResult verify(CompressStoreOp op) {
   VectorType maskVType = op.getMaskVectorType();
-  VectorType valueVType = op.getValueVectorType();
+  VectorType valueVType = op.getVectorType();
   MemRefType memType = op.getMemRefType();
 
   if (valueVType.getElementType() != memType.getElementType())
-    return op.emitOpError("base and value element type should match");
+    return op.emitOpError("base and valueToStore element type should match");
   if (llvm::size(op.indices()) != memType.getRank())
     return op.emitOpError("requires ") << memType.getRank() << " indices";
   if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
-    return op.emitOpError("expected value dim to match mask dim");
+    return op.emitOpError("expected valueToStore dim to match mask dim");
   return success();
 }
 
@@ -2692,8 +2692,8 @@ public:
     switch (get1DMaskFormat(compress.mask())) {
     case MaskFormat::AllTrue:
       rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-          compress, compress.value(), compress.base(), compress.indices(),
-          false);
+          compress, compress.valueToStore(), compress.base(),
+          compress.indices(), false);
       return success();
     case MaskFormat::AllFalse:
       rewriter.eraseOp(compress);
