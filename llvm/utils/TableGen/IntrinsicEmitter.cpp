@@ -741,127 +741,81 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
         intrinsic.isWillReturn || intrinsic.isCold || intrinsic.isNoDuplicate ||
         intrinsic.isConvergent || intrinsic.isSpeculatable) {
       OS << "      const Attribute::AttrKind Atts[] = {";
-      bool addComma = false;
-      if (!intrinsic.canThrow) {
-        OS << "Attribute::NoUnwind";
-        addComma = true;
-      }
-      if (intrinsic.isNoReturn) {
-        if (addComma)
-          OS << ",";
-        OS << "Attribute::NoReturn";
-        addComma = true;
-      }
-      if (intrinsic.isNoSync) {
-        if (addComma)
-          OS << ",";
-        OS << "Attribute::NoSync";
-        addComma = true;
-      }
-      if (intrinsic.isNoFree) {
-        if (addComma)
-          OS << ",";
-        OS << "Attribute::NoFree";
-        addComma = true;
-      }
-      if (intrinsic.isWillReturn) {
-        if (addComma)
-          OS << ",";
-        OS << "Attribute::WillReturn";
-        addComma = true;
-      }
-      if (intrinsic.isCold) {
-        if (addComma)
-          OS << ",";
-        OS << "Attribute::Cold";
-        addComma = true;
-      }
-      if (intrinsic.isNoDuplicate) {
-        if (addComma)
-          OS << ",";
-        OS << "Attribute::NoDuplicate";
-        addComma = true;
-      }
-      if (intrinsic.isConvergent) {
-        if (addComma)
-          OS << ",";
-        OS << "Attribute::Convergent";
-        addComma = true;
-      }
-      if (intrinsic.isSpeculatable) {
-        if (addComma)
-          OS << ",";
-        OS << "Attribute::Speculatable";
-        addComma = true;
-      }
+      ListSeparator LS(",");
+      if (!intrinsic.canThrow)
+        OS << LS << "Attribute::NoUnwind";
+      if (intrinsic.isNoReturn)
+        OS << LS << "Attribute::NoReturn";
+      if (intrinsic.isNoSync)
+        OS << LS << "Attribute::NoSync";
+      if (intrinsic.isNoFree)
+        OS << LS << "Attribute::NoFree";
+      if (intrinsic.isWillReturn)
+        OS << LS << "Attribute::WillReturn";
+      if (intrinsic.isCold)
+        OS << LS << "Attribute::Cold";
+      if (intrinsic.isNoDuplicate)
+        OS << LS << "Attribute::NoDuplicate";
+      if (intrinsic.isConvergent)
+        OS << LS << "Attribute::Convergent";
+      if (intrinsic.isSpeculatable)
+        OS << LS << "Attribute::Speculatable";
 
       switch (intrinsic.ModRef) {
       case CodeGenIntrinsic::NoMem:
         if (intrinsic.hasSideEffects)
           break;
-        if (addComma)
-          OS << ",";
+        OS << LS;
         OS << "Attribute::ReadNone";
         break;
       case CodeGenIntrinsic::ReadArgMem:
-        if (addComma)
-          OS << ",";
+        OS << LS;
         OS << "Attribute::ReadOnly,";
         OS << "Attribute::ArgMemOnly";
         break;
       case CodeGenIntrinsic::ReadMem:
-        if (addComma)
-          OS << ",";
+        OS << LS;
         OS << "Attribute::ReadOnly";
         break;
       case CodeGenIntrinsic::ReadInaccessibleMem:
-        if (addComma)
-          OS << ",";
+        OS << LS;
         OS << "Attribute::ReadOnly,";
         OS << "Attribute::InaccessibleMemOnly";
         break;
       case CodeGenIntrinsic::ReadInaccessibleMemOrArgMem:
-        if (addComma)
-          OS << ",";
+        OS << LS;
         OS << "Attribute::ReadOnly,";
         OS << "Attribute::InaccessibleMemOrArgMemOnly";
         break;
       case CodeGenIntrinsic::WriteArgMem:
-        if (addComma)
-          OS << ",";
+        OS << LS;
         OS << "Attribute::WriteOnly,";
         OS << "Attribute::ArgMemOnly";
         break;
       case CodeGenIntrinsic::WriteMem:
-        if (addComma)
-          OS << ",";
+        OS << LS;
         OS << "Attribute::WriteOnly";
         break;
       case CodeGenIntrinsic::WriteInaccessibleMem:
-        if (addComma)
-          OS << ",";
+        OS << LS;
         OS << "Attribute::WriteOnly,";
         OS << "Attribute::InaccessibleMemOnly";
         break;
       case CodeGenIntrinsic::WriteInaccessibleMemOrArgMem:
-        if (addComma)
-          OS << ",";
+        OS << LS;
         OS << "Attribute::WriteOnly,";
         OS << "Attribute::InaccessibleMemOrArgMemOnly";
         break;
       case CodeGenIntrinsic::ReadWriteArgMem:
-        if (addComma)
-          OS << ",";
+        OS << LS;
         OS << "Attribute::ArgMemOnly";
         break;
       case CodeGenIntrinsic::ReadWriteInaccessibleMem:
-        if (addComma)
-          OS << ",";
+        OS << LS;
         OS << "Attribute::InaccessibleMemOnly";
         break;
       case CodeGenIntrinsic::ReadWriteInaccessibleMemOrArgMem:
-        if (addComma)
-          OS << ",";
+        OS << LS;
         OS << "Attribute::InaccessibleMemOrArgMemOnly";
         break;
       case CodeGenIntrinsic::ReadWriteMem:
