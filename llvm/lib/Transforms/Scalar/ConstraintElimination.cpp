@@ -54,28 +54,43 @@ static SmallVector<std::pair<int64_t, Value *>, 4> decompose(Value *V) {
   }
   auto *GEP = dyn_cast<GetElementPtrInst>(V);
   if (GEP && GEP->getNumOperands() == 2 && GEP->isInBounds()) {
-    if (isa<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))) {
-      return {{cast<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))
-                   ->getSExtValue(),
-               nullptr},
-              {1, GEP->getPointerOperand()}};
-    }
     Value *Op0;
     ConstantInt *CI;
+
+    // If the index is zero-extended, it is guaranteed to be positive.
+    if (match(GEP->getOperand(GEP->getNumOperands() - 1),
+              m_ZExt(m_Value(Op0)))) {
+      if (match(Op0, m_NUWShl(m_Value(Op0), m_ConstantInt(CI))))
+        return {{0, nullptr},
+                {1, GEP->getPointerOperand()},
+                {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
+      if (match(Op0, m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))))
+        return {{CI->getSExtValue(), nullptr},
+                {1, GEP->getPointerOperand()},
+                {1, Op0}};
+      return {{0, nullptr}, {1, GEP->getPointerOperand()}, {1, Op0}};
+    }
+
+    if (match(GEP->getOperand(GEP->getNumOperands() - 1), m_ConstantInt(CI)) &&
+        !CI->isNegative())
+      return {{CI->getSExtValue(), nullptr}, {1, GEP->getPointerOperand()}};
+
+    SmallVector<std::pair<int64_t, Value *>, 4> Result;
     if (match(GEP->getOperand(GEP->getNumOperands() - 1),
               m_NUWShl(m_Value(Op0), m_ConstantInt(CI))))
-      return {{0, nullptr},
-              {1, GEP->getPointerOperand()},
-              {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
-    if (match(GEP->getOperand(GEP->getNumOperands() - 1),
-              m_ZExt(m_NUWShl(m_Value(Op0), m_ConstantInt(CI)))))
-      return {{0, nullptr},
-              {1, GEP->getPointerOperand()},
-              {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
-
-    return {{0, nullptr},
-            {1, GEP->getPointerOperand()},
-            {1, GEP->getOperand(GEP->getNumOperands() - 1)}};
+      Result = {{0, nullptr},
+                {1, GEP->getPointerOperand()},
+                {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
+    else if (match(GEP->getOperand(GEP->getNumOperands() - 1),
+                   m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))))
+      Result = {{CI->getSExtValue(), nullptr},
+                {1, GEP->getPointerOperand()},
+                {1, Op0}};
+    else {
+      Op0 = GEP->getOperand(GEP->getNumOperands() - 1);
+      Result = {{0, nullptr}, {1, GEP->getPointerOperand()}, {1, Op0}};
+    }
+    return Result;
   }
 
   Value *Op0;
