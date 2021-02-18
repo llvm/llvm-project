@@ -1373,10 +1373,13 @@ static LogicalResult verify(linalg::YieldOp op) {
     return verifyYield(op, cast<LinalgOp>(parentOp));
 
   if (auto padTensorOp = dyn_cast<linalg::PadTensorOp>(parentOp)) {
-    return success(
-        op.getNumOperands() == 1 &&
-        op.getOperand(0).getType() ==
-            padTensorOp.getType().cast<ShapedType>().getElementType());
+    if (op.getNumOperands() != 1)
+      return op.emitOpError("expected single yield operand (got ")
+             << op->getNumOperands() << ")";
+    if (op.getOperand(0).getType() !=
+        padTensorOp.getType().cast<ShapedType>().getElementType())
+      return op.emitOpError("expected yield type to match shape element type");
+    return success();
   }
 
   return op.emitOpError("expected parent op with LinalgOp interface");

@@ -508,9 +508,9 @@ static void applyAffineMinSCFCanonicalizationPatterns(FuncOp funcOp) {
 
 // For now, just assume it is the zero of type.
 // In the future, it should be the zero of type + op.
-static Value getNeutralOfLinalgOp(OpBuilder &b, Operation *op) {
-  auto t = op->getResult(0).getType().cast<ShapedType>().getElementType();
-  return b.create<ConstantOp>(op->getLoc(), t, b.getZeroAttr(t));
+static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
+  auto t = getElementTypeOrSelf(op.get().getType());
+  return b.create<ConstantOp>(op.getOwner()->getLoc(), t, b.getZeroAttr(t));
 }
 
 static void applyTileAndPadPattern(FuncOp funcOp) {
@@ -520,7 +520,7 @@ static void applyTileAndPadPattern(FuncOp funcOp) {
       linalg::LinalgTilingOptions()
           .setTileSizes({2, 3, 4})
           .setPaddingValueComputationFunction(getNeutralOfLinalgOp);
-  tilingPattern.insert<linalg::LinalgTilingPattern<linalg::MatmulOp>>(
+  tilingPattern.insert<linalg::LinalgTilingPattern<linalg::MatmulI8I8I32Op>>(
       context, linalgTilingOptions,
       linalg::LinalgTransformationFilter(
           Identifier::get("tile-and-pad", context)));
