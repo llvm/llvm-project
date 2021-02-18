@@ -13937,13 +13937,25 @@ static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   if ((N1.getOpcode() == ISD::FP_EXTEND ||
        N1.getOpcode() == ISD::FP_ROUND)) {
+    EVT N1VT = N1->getValueType(0);
+    EVT N1Op0VT = N1->getOperand(0).getValueType();
+
+    // Always fold no-op FP casts.
+    if (N1VT == N1Op0VT)
+      return true;
+
     // Do not optimize out type conversion of f128 type yet.
     // For some targets like x86_64, configuration is changed to keep one f128
     // value in one SSE register, but instruction selection cannot handle
     // FCOPYSIGN on SSE registers yet.
-    EVT N1VT = N1->getValueType(0);
-    EVT N1Op0VT = N1->getOperand(0).getValueType();
-    return (N1VT == N1Op0VT || N1Op0VT != MVT::f128);
+    if (N1Op0VT == MVT::f128)
+      return false;
+
+    // Avoid mismatched vector operand types, for better instruction selection.
+    if (N1Op0VT.isVector())
+      return false;
+
+    return true;
   }
   return false;
 }
