@@ -14,9 +14,9 @@ func @f(%arg0: tensor<2x3x4xf32>) -> tensor<?xindex> {
 func @f() -> (!shape.shape, !shape.shape) {
   // CHECK: shape.const_shape [2, 3] : !shape.shape
   // CHECK: shape.const_shape [4, 5] : !shape.shape
-  %c2 = constant 2 : i32
+  %c2 = constant 2 : index
   %0 = shape.const_shape [2, 3, 4, 5] : !shape.shape
-  %head, %tail = "shape.split_at"(%0, %c2) : (!shape.shape, i32) -> (!shape.shape, !shape.shape)
+  %head, %tail = "shape.split_at"(%0, %c2) : (!shape.shape, index) -> (!shape.shape, !shape.shape)
   return %head, %tail : !shape.shape, !shape.shape
 
 }
@@ -28,9 +28,9 @@ func @f() -> (!shape.shape, !shape.shape) {
 func @f() -> (!shape.shape, !shape.shape) {
   // CHECK: shape.const_shape [2, 3, 4] : !shape.shape
   // CHECK: shape.const_shape [5] : !shape.shape
-  %c-1 = constant -1 : i32
+  %c-1 = constant -1 : index
   %0 = shape.const_shape [2, 3, 4, 5] : !shape.shape
-  %head, %tail = "shape.split_at"(%0, %c-1) : (!shape.shape, i32) -> (!shape.shape, !shape.shape)
+  %head, %tail = "shape.split_at"(%0, %c-1) : (!shape.shape, index) -> (!shape.shape, !shape.shape)
   return %head, %tail : !shape.shape, !shape.shape
 }
 
@@ -40,9 +40,9 @@ func @f() -> (!shape.shape, !shape.shape) {
 // CHECK-LABEL: func @f
 func @f() -> (!shape.shape, !shape.shape) {
   // CHECK: shape.split_at
-  %c5 = constant 5 : i32
+  %c5 = constant 5 : index
   %0 = shape.const_shape [2, 3, 4, 5] : !shape.shape
-  %head, %tail = "shape.split_at"(%0, %c5) : (!shape.shape, i32) -> (!shape.shape, !shape.shape)
+  %head, %tail = "shape.split_at"(%0, %c5) : (!shape.shape, index) -> (!shape.shape, !shape.shape)
   return %head, %tail : !shape.shape, !shape.shape
 }
 
