@@ -3114,10 +3114,13 @@ TEST(CompletionTest, FunctionArgsExist) {
       Contains(AllOf(Labeled("Container<typename T>(int Size)"),
                      SnippetSuffix("<${1:typename T}>(${2:int Size})"),
                      Kind(CompletionItemKind::Constructor))));
-  // FIXME(kirillbobyrev): It would be nice to still produce the template
-  // snippet part: in this case it should be "<${1:typename T}>".
   EXPECT_THAT(
       completions(Context + "Container c = Cont^()", {}, Opts).Completions,
+      Contains(AllOf(Labeled("Container<typename T>(int Size)"),
+                     SnippetSuffix("<${1:typename T}>"),
+                     Kind(CompletionItemKind::Constructor))));
+  EXPECT_THAT(
+      completions(Context + "Container c = Cont^<int>()", {}, Opts).Completions,
       Contains(AllOf(Labeled("Container<typename T>(int Size)"),
                      SnippetSuffix(""),
                      Kind(CompletionItemKind::Constructor))));
