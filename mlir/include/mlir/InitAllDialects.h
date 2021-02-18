@@ -28,6 +28,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
@@ -60,6 +61,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   LLVM::LLVMArmNeonDialect,
                   LLVM::LLVMArmSVEDialect,
                   linalg::LinalgDialect,
+                  math::MathDialect,
                   scf::SCFDialect,
                   omp::OpenMPDialect,
                   pdl::PDLDialect,

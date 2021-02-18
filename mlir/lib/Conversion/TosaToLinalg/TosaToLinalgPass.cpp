@@ -13,6 +13,7 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
@@ -30,7 +31,8 @@ struct TosaToLinalgOnTensors
     : public TosaToLinalgOnTensorsBase<TosaToLinalgOnTensors> {
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<linalg::LinalgDialect, StandardOpsDialect>();
+    registry
+        .insert<linalg::LinalgDialect, math::MathDialect, StandardOpsDialect>();
   }
 
   void runOnFunction() override {
