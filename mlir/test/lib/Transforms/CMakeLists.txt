@@ -49,6 +49,7 @@ add_mlir_library(MLIRTestTransforms
   MLIRGPUToGPURuntimeTransforms
   MLIRLinalg
   MLIRLinalgTransforms
+  MLIRMathTransforms
   MLIRNVVMIR
   MLIRSCF
   MLIRSCFTransforms
