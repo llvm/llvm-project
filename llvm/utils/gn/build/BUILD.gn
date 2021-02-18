@@ -283,11 +283,11 @@ config("compiler_defaults") {
     }
     cflags += [
       "-isysroot",
-      sdk_path,
+      rebase_path(sdk_path, root_build_dir),
     ]
     ldflags += [
       "-isysroot",
-      sdk_path,
+      rebase_path(sdk_path, root_build_dir),
     ]
   }
   if (sysroot != "" && current_os != "win" && is_clang) {

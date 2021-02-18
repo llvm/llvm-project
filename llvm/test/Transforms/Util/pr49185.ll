@@ -1,10 +1,7 @@
 ; REQUIRES: asserts
 ; RUN: opt -S -passes='default<O3>' %s
 %struct0 = type { i64, i64, i32, i64, i32 }
-%struct1 = type { i32 }
 %union0 = type { i32 }
-%union1 = type { i16 }
-%union2 = type { i32 }
 
 @g_6 = external dso_local global i32, align 1
 @g_60 = external dso_local global i16, align 1
@@ -79,13 +76,10 @@ cleanup3402:                                      ; preds = %cleanup3097
 }
 
 ; Function Attrs: nofree nosync nounwind willreturn
-declare void @llvm.assume(i1 noundef) #4
+declare void @llvm.assume(i1 noundef) #1
 
 attributes #0 = { "use-soft-float"="false" }
-attributes #1 = { argmemonly nofree nosync nounwind willreturn }
-attributes #2 = { noinline }
-attributes #3 = { argmemonly nofree nosync nounwind willreturn writeonly }
-attributes #4 = { nofree nosync nounwind willreturn }
+attributes #1 = { nofree nosync nounwind willreturn }
 
 !llvm.ident = !{!0}
 
