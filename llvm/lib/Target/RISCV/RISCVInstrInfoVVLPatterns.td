@@ -97,10 +97,21 @@ def SDT_RISCVVMSETCLR_VL : SDTypeProfile<1, 1, [SDTCisVec<0>,
 def riscv_vmclr_vl : SDNode<"RISCVISD::VMCLR_VL", SDT_RISCVVMSETCLR_VL>;
 def riscv_vmset_vl : SDNode<"RISCVISD::VMSET_VL", SDT_RISCVVMSETCLR_VL>;
 
-def true_mask           : PatLeaf<(riscv_vmset_vl (XLenVT srcvalue))>;
+def true_mask : PatLeaf<(riscv_vmset_vl (XLenVT srcvalue))>;
 
+// Ignore the vl operand.
 def SplatFPOp : PatFrag<(ops node:$op),
                         (riscv_vfmv_v_f_vl node:$op, srcvalue)>;
+
+def sew8simm5  : ComplexPattern<XLenVT, 1, "selectRVVSimm5<8>",  []>;
+def sew16simm5 : ComplexPattern<XLenVT, 1, "selectRVVSimm5<16>", []>;
+def sew32simm5 : ComplexPattern<XLenVT, 1, "selectRVVSimm5<32>", []>;
+def sew64simm5 : ComplexPattern<XLenVT, 1, "selectRVVSimm5<64>", []>;
+
+def sew8uimm5  : ComplexPattern<XLenVT, 1, "selectRVVUimm5<8>",  []>;
+def sew16uimm5 : ComplexPattern<XLenVT, 1, "selectRVVUimm5<16>", []>;
+def sew32uimm5 : ComplexPattern<XLenVT, 1, "selectRVVUimm5<32>", []>;
+def sew64uimm5 : ComplexPattern<XLenVT, 1, "selectRVVUimm5<64>", []>;
 
 class VPatBinaryVL_VV<SDNode vop,
                       string instruction_name,
@@ -121,12 +132,37 @@ class VPatBinaryVL_VV<SDNode vop,
                      op_reg_class:$rs2,
                      GPR:$vl, sew)>;
 
+class VPatBinaryVL_XI<SDNode vop,
+                      string instruction_name,
+                      string suffix,
+                      ValueType result_type,
+                      ValueType vop_type,
+                      ValueType mask_type,
+                      int sew,
+                      LMULInfo vlmul,
+                      VReg RetClass,
+                      VReg vop_reg_class,
+                      ComplexPattern SplatPatKind,
+                      DAGOperand xop_kind> :
+    Pat<(result_type (vop
+                     (vop_type vop_reg_class:$rs1),
+                     (vop_type (SplatPatKind xop_kind:$rs2)),
+                     (mask_type true_mask),
+                     (XLenVT (VLOp GPR:$vl)))),
+        (!cast<Instruction>(instruction_name#_#suffix#_# vlmul.MX)
+                     vop_reg_class:$rs1,
+                     xop_kind:$rs2,
+                     GPR:$vl, sew)>;
+
 multiclass VPatBinaryVL_VV_VX<SDNode vop, string instruction_name> {
   foreach vti = AllIntegerVectors in {
     def : VPatBinaryVL_VV<vop, instruction_name,
                           vti.Vector, vti.Vector, vti.Mask, vti.SEW,
                           vti.LMul, vti.RegClass, vti.RegClass>;
-    // FIXME: Support splats.
+    def : VPatBinaryVL_XI<vop, instruction_name, "VX",
+                          vti.Vector, vti.Vector, vti.Mask, vti.SEW,
+                          vti.LMul, vti.RegClass, vti.RegClass,
+                          SplatPat, GPR>;
   }
 }
 
@@ -136,7 +172,15 @@ multiclass VPatBinaryVL_VV_VX_VI<SDNode vop, string instruction_name,
     def : VPatBinaryVL_VV<vop, instruction_name,
                           vti.Vector, vti.Vector, vti.Mask, vti.SEW,
                           vti.LMul, vti.RegClass, vti.RegClass>;
-    // FIXME: Support splats.
+    def : VPatBinaryVL_XI<vop, instruction_name, "VX",
+                          vti.Vector, vti.Vector, vti.Mask, vti.SEW,
+                          vti.LMul, vti.RegClass, vti.RegClass,
+                          SplatPat, GPR>;
+    def : VPatBinaryVL_XI<vop, instruction_name, "VI",
+                          vti.Vector, vti.Vector, vti.Mask, vti.SEW,
+                          vti.LMul, vti.RegClass, vti.RegClass,
+                          !cast<ComplexPattern>(SplatPat#_#ImmType),
+                          ImmType>;
   }
 }
 
@@ -214,6 +258,20 @@ foreach mti = AllMasks in {
 // 12.1. Vector Single-Width Integer Add and Subtract
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_add_vl, "PseudoVADD">;
 defm "" : VPatBinaryVL_VV_VX<riscv_sub_vl, "PseudoVSUB">;
+// Handle VRSUB specially since it's the only integer binary op with reversed
+// pattern operands
+foreach vti = AllIntegerVectors in {
+  def : Pat<(riscv_sub_vl (vti.Vector (SplatPat GPR:$rs2)),
+                          (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask),
+                          (XLenVT (VLOp GPR:$vl))),
+            (!cast<Instruction>("PseudoVRSUB_VX_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.SEW)>;
+  def : Pat<(riscv_sub_vl (vti.Vector (SplatPat_simm5 simm5:$rs2)),
+                          (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask),
+                          (XLenVT (VLOp GPR:$vl))),
+            (!cast<Instruction>("PseudoVRSUB_VI_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, simm5:$rs2, GPR:$vl, vti.SEW)>;
+}
 
 // 12.5. Vector Bitwise Logical Instructions
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_and_vl, "PseudoVAND">;
@@ -239,6 +297,18 @@ defm "" : VPatBinaryVL_VV_VX<riscv_udiv_vl, "PseudoVDIVU">;
 defm "" : VPatBinaryVL_VV_VX<riscv_sdiv_vl, "PseudoVDIV">;
 defm "" : VPatBinaryVL_VV_VX<riscv_urem_vl, "PseudoVREMU">;
 defm "" : VPatBinaryVL_VV_VX<riscv_srem_vl, "PseudoVREM">;
+
+// 12.17. Vector Integer Move Instructions
+foreach vti = AllIntegerVectors in {
+  def : Pat<(vti.Vector (riscv_vmv_v_x_vl GPR:$rs2, (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
+             $rs2, GPR:$vl, vti.SEW)>;
+  defvar ImmPat = !cast<ComplexPattern>("sew"#vti.SEW#"simm5");
+  def : Pat<(vti.Vector (riscv_vmv_v_x_vl (ImmPat XLenVT:$imm5),
+                                          (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX)
+             XLenVT:$imm5, GPR:$vl, vti.SEW)>;
+}
 
 } // Predicates = [HasStdExtV]
 

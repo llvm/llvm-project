@@ -1015,7 +1015,8 @@ bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
 
 bool RISCVDAGToDAGISel::selectVSplat(SDValue N, SDValue &SplatVal) {
   if (N.getOpcode() != ISD::SPLAT_VECTOR &&
-      N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64)
+      N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64 &&
+      N.getOpcode() != RISCVISD::VMV_V_X_VL)
     return false;
   SplatVal = N.getOperand(0);
   return true;
@@ -1023,7 +1024,8 @@ bool RISCVDAGToDAGISel::selectVSplat(SDValue N, SDValue &SplatVal) {
 
 bool RISCVDAGToDAGISel::selectVSplatSimm5(SDValue N, SDValue &SplatVal) {
   if ((N.getOpcode() != ISD::SPLAT_VECTOR &&
-       N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64) ||
+       N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64 &&
+       N.getOpcode() != RISCVISD::VMV_V_X_VL) ||
       !isa<ConstantSDNode>(N.getOperand(0)))
     return false;
 
@@ -1053,7 +1055,8 @@ bool RISCVDAGToDAGISel::selectVSplatSimm5(SDValue N, SDValue &SplatVal) {
 
 bool RISCVDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &SplatVal) {
   if ((N.getOpcode() != ISD::SPLAT_VECTOR &&
-       N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64) ||
+       N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64 &&
+       N.getOpcode() != RISCVISD::VMV_V_X_VL) ||
       !isa<ConstantSDNode>(N.getOperand(0)))
     return false;
 
@@ -1066,6 +1069,36 @@ bool RISCVDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &SplatVal) {
       CurDAG->getTargetConstant(SplatImm, SDLoc(N), Subtarget->getXLenVT());
 
   return true;
+}
+
+bool RISCVDAGToDAGISel::selectRVVSimm5(SDValue N, unsigned Width,
+                                       SDValue &Imm) {
+  if (auto *C = dyn_cast<ConstantSDNode>(N)) {
+    int64_t ImmVal = SignExtend64(C->getSExtValue(), Width);
+
+    if (!isInt<5>(ImmVal))
+      return false;
+
+    Imm = CurDAG->getTargetConstant(ImmVal, SDLoc(N), Subtarget->getXLenVT());
+    return true;
+  }
+
+  return false;
+}
+
+bool RISCVDAGToDAGISel::selectRVVUimm5(SDValue N, unsigned Width,
+                                       SDValue &Imm) {
+  if (auto *C = dyn_cast<ConstantSDNode>(N)) {
+    int64_t ImmVal = C->getSExtValue();
+
+    if (!isUInt<5>(ImmVal))
+      return false;
+
+    Imm = CurDAG->getTargetConstant(ImmVal, SDLoc(N), Subtarget->getXLenVT());
+    return true;
+  }
+
+  return false;
 }
 
 // Merge an ADDI into the offset of a load/store instruction where possible.
