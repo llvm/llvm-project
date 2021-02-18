@@ -4,28 +4,15 @@
 define half @extret1_f16_sf(<8 x half> %a, <8 x half> %b, half* nocapture %p) {
 ; CHECK-LABEL: extret1_f16_sf:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r6, r7, lr}
-; CHECK-NEXT:    .setfp r7, sp, #8
-; CHECK-NEXT:    add r7, sp, #8
-; CHECK-NEXT:    .pad #16
-; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    mov r4, sp
-; CHECK-NEXT:    bfc r4, #0, #4
-; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    strd r0, r1, [sp]
-; CHECK-NEXT:    add.w r0, r7, #8
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    sub.w r4, r7, #8
-; CHECK-NEXT:    ldr r0, [r7, #24]
-; CHECK-NEXT:    vadd.f16 q0, q1, q0
+; CHECK-NEXT:    vmov d0, r0, r1
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    ldr r0, [sp, #16]
+; CHECK-NEXT:    vadd.f16 q0, q0, q1
 ; CHECK-NEXT:    vmovx.f16 s0, s0
 ; CHECK-NEXT:    vstr.16 s0, [r0]
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    pop {r4, r6, r7, pc}
+; CHECK-NEXT:    bx lr
   %c = fadd <8 x half> %a, %b
   %e = extractelement <8 x half> %c, i32 1
   store half %e, half* %p, align 2
@@ -112,27 +99,14 @@ define arm_aapcs_vfpcc <8 x half> @extret4_v8f16_hf(<8 x half> %a, <8 x half> %b
 define float @extret1_f32_sf(<4 x float> %a, <4 x float> %b, float* nocapture %p) {
 ; CHECK-LABEL: extret1_f32_sf:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r6, r7, lr}
-; CHECK-NEXT:    .setfp r7, sp, #8
-; CHECK-NEXT:    add r7, sp, #8
-; CHECK-NEXT:    .pad #16
-; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    mov r4, sp
-; CHECK-NEXT:    bfc r4, #0, #4
-; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    strd r0, r1, [sp]
-; CHECK-NEXT:    add.w r0, r7, #8
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    ldr r1, [r7, #24]
-; CHECK-NEXT:    sub.w r4, r7, #8
-; CHECK-NEXT:    vadd.f32 q0, q1, q0
+; CHECK-NEXT:    vmov d0, r0, r1
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    ldr r1, [sp, #16]
+; CHECK-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-NEXT:    vmov r0, s1
 ; CHECK-NEXT:    vstr s1, [r1]
-; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    pop {r4, r6, r7, pc}
+; CHECK-NEXT:    bx lr
   %c = fadd <4 x float> %a, %b
   %e = extractelement <4 x float> %c, i32 1
   store float %e, float* %p, align 4

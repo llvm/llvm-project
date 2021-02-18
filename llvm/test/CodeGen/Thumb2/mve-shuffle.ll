@@ -1669,21 +1669,8 @@ entry:
 define arm_aapcs_vfpcc <2 x double> @insert_f64(double %a) {
 ; CHECK-LABEL: insert_f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r6, r7, lr}
-; CHECK-NEXT:    .setfp r7, sp, #8
-; CHECK-NEXT:    add r7, sp, #8
-; CHECK-NEXT:    .pad #16
-; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    mov r4, sp
-; CHECK-NEXT:    bfc r4, #0, #4
-; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    sub.w r4, r7, #8
-; CHECK-NEXT:    vstr d0, [sp]
-; CHECK-NEXT:    mov r0, sp
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    pop {r4, r6, r7, pc}
+; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    bx lr
 entry:
   %res = insertelement <2 x double> undef, double %a, i32 0
   ret <2 x double> %res
