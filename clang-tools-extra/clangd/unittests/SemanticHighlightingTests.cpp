@@ -74,9 +74,6 @@ void checkHighlightings(llvm::StringRef Code,
   TestTU TU;
   TU.Code = std::string(Test.code());
 
-  // FIXME: Auto-completion in a template requires disabling delayed template
-  // parsing.
-  TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
   TU.ExtraArgs.push_back("-std=c++20");
 
   for (auto File : AdditionalFiles)
