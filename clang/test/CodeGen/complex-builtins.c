@@ -133,7 +133,7 @@ void foo(float f) {
 // NO__ERRNO: declare { x86_fp80, x86_fp80 } @cprojl({ x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 // HAS_ERRNO: declare { double, double } @cproj(double, double) [[READNONE:#[0-9]+]]
 // HAS_ERRNO: declare <2 x float> @cprojf(<2 x float>) [[READNONE]]
-// HAS_ERRNO: declare { x86_fp80, x86_fp80 } @cprojl({ x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
+// HAS_ERRNO: declare { x86_fp80, x86_fp80 } @cprojl({ x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 16) [[WILLRETURN_NOT_READNONE:#[0-9]+]]
 
   __builtin_cpow(f,f);       __builtin_cpowf(f,f);      __builtin_cpowl(f,f);
 
@@ -202,3 +202,4 @@ void foo(float f) {
 
 // HAS_ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
 // HAS_ERRNO: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
+// HAS_ERRNO: attributes [[WILLRETURN_NOT_READNONE]] = { nounwind willreturn {{.*}} }

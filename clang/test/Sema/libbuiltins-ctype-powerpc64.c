@@ -62,4 +62,4 @@ void test(int x) {
 // CHECK: declare signext i32 @toupper(i32 signext) [[NUW_RO:#[0-9]+]]
 
 // CHECK: attributes [[NUW_RO]] = { nounwind readonly{{.*}} }
-// CHECK: attributes [[NUW_RO_CALL]] = { nounwind readonly }
+// CHECK: attributes [[NUW_RO_CALL]] = { nounwind readonly willreturn }
