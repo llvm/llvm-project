@@ -734,28 +734,55 @@ define void @atomics(i32* %word) {
   ; CHECK: %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
   %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
   ; CHECK: %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
-  %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
-  ; CHECK: %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
-  %atomicrmw.add = atomicrmw add i32* %word, i32 13 monotonic
-  ; CHECK: %atomicrmw.add = atomicrmw add i32* %word, i32 13 monotonic
-  %atomicrmw.sub = atomicrmw sub i32* %word, i32 14 monotonic
-  ; CHECK: %atomicrmw.sub = atomicrmw sub i32* %word, i32 14 monotonic
-  %atomicrmw.and = atomicrmw and i32* %word, i32 15 monotonic
-  ; CHECK: %atomicrmw.and = atomicrmw and i32* %word, i32 15 monotonic
-  %atomicrmw.nand = atomicrmw nand i32* %word, i32 16 monotonic
-  ; CHECK: %atomicrmw.nand = atomicrmw nand i32* %word, i32 16 monotonic
-  %atomicrmw.or = atomicrmw or i32* %word, i32 17 monotonic
-  ; CHECK: %atomicrmw.or = atomicrmw or i32* %word, i32 17 monotonic
-  %atomicrmw.xor = atomicrmw xor i32* %word, i32 18 monotonic
-  ; CHECK: %atomicrmw.xor = atomicrmw xor i32* %word, i32 18 monotonic
-  %atomicrmw.max = atomicrmw max i32* %word, i32 19 monotonic
-  ; CHECK: %atomicrmw.max = atomicrmw max i32* %word, i32 19 monotonic
-  %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic
-  ; CHECK: %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic
-  %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
-  ; CHECK: %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
-  %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
-  ; CHECK: %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
+
+  ;; Atomic w/o alignment
+  %atomicrmw_no_align.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
+  ; CHECK: %atomicrmw_no_align.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
+  %atomicrmw_no_align.add = atomicrmw add i32* %word, i32 13 monotonic
+  ; CHECK: %atomicrmw_no_align.add = atomicrmw add i32* %word, i32 13 monotonic
+  %atomicrmw_no_align.sub = atomicrmw sub i32* %word, i32 14 monotonic
+  ; CHECK: %atomicrmw_no_align.sub = atomicrmw sub i32* %word, i32 14 monotonic
+  %atomicrmw_no_align.and = atomicrmw and i32* %word, i32 15 monotonic
+  ; CHECK: %atomicrmw_no_align.and = atomicrmw and i32* %word, i32 15 monotonic
+  %atomicrmw_no_align.nand = atomicrmw nand i32* %word, i32 16 monotonic
+  ; CHECK: %atomicrmw_no_align.nand = atomicrmw nand i32* %word, i32 16 monotonic
+  %atomicrmw_no_align.or = atomicrmw or i32* %word, i32 17 monotonic
+  ; CHECK: %atomicrmw_no_align.or = atomicrmw or i32* %word, i32 17 monotonic
+  %atomicrmw_no_align.xor = atomicrmw xor i32* %word, i32 18 monotonic
+  ; CHECK: %atomicrmw_no_align.xor = atomicrmw xor i32* %word, i32 18 monotonic
+  %atomicrmw_no_align.max = atomicrmw max i32* %word, i32 19 monotonic
+  ; CHECK: %atomicrmw_no_align.max = atomicrmw max i32* %word, i32 19 monotonic
+  %atomicrmw_no_align.min = atomicrmw volatile min i32* %word, i32 20 monotonic
+  ; CHECK: %atomicrmw_no_align.min = atomicrmw volatile min i32* %word, i32 20 monotonic
+  %atomicrmw_no_align.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
+  ; CHECK: %atomicrmw_no_align.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
+  %atomicrmw_no_align.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
+  ; CHECK: %atomicrmw_no_align.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
+
+  ;; Atomic w/ alignment
+  %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic, align 16
+  ; CHECK: %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic, align 16
+  %atomicrmw.add = atomicrmw add i32* %word, i32 13 monotonic, align 16
+  ; CHECK: %atomicrmw.add = atomicrmw add i32* %word, i32 13 monotonic, align 16
+  %atomicrmw.sub = atomicrmw sub i32* %word, i32 14 monotonic, align 16
+  ; CHECK: %atomicrmw.sub = atomicrmw sub i32* %word, i32 14 monotonic, align 16
+  %atomicrmw.and = atomicrmw and i32* %word, i32 15 monotonic, align 16
+  ; CHECK: %atomicrmw.and = atomicrmw and i32* %word, i32 15 monotonic, align 16
+  %atomicrmw.nand = atomicrmw nand i32* %word, i32 16 monotonic, align 16
+  ; CHECK: %atomicrmw.nand = atomicrmw nand i32* %word, i32 16 monotonic, align 16
+  %atomicrmw.or = atomicrmw or i32* %word, i32 17 monotonic, align 16
+  ; CHECK: %atomicrmw.or = atomicrmw or i32* %word, i32 17 monotonic, align 16
+  %atomicrmw.xor = atomicrmw xor i32* %word, i32 18 monotonic, align 16
+  ; CHECK: %atomicrmw.xor = atomicrmw xor i32* %word, i32 18 monotonic, align 16
+  %atomicrmw.max = atomicrmw max i32* %word, i32 19 monotonic, align 16
+  ; CHECK: %atomicrmw.max = atomicrmw max i32* %word, i32 19 monotonic, align 16
+  %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic, align 16
+  ; CHECK: %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic, align 16
+  %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic, align 16
+  ; CHECK: %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic, align 16
+  %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic, align 16
+  ; CHECK: %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic, align 16
+  
   fence acquire
   ; CHECK: fence acquire
   fence release
