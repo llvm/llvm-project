@@ -4,7 +4,7 @@
 # RUN: llvm-symbolizer --obj=%t 0 | FileCheck %s
 
 # CHECK:       b
-# CHECK-NEXT:  ??:0:0
+# CHECK-NEXT:  1.c:0:0
 # CHECK-EMPTY:
 
 .file "1.c"
