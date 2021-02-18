@@ -4,9 +4,10 @@
 declare void @may_not_return(i32) nounwind readnone
 declare void @will_return(i32) nounwind readnone willreturn
 
-; FIXME: This is a miscompile.
 define void @test(i32 %a) {
 ; CHECK-LABEL: @test(
+; CHECK-NEXT:    [[B:%.*]] = add i32 [[A:%.*]], 1
+; CHECK-NEXT:    call void @may_not_return(i32 [[B]])
 ; CHECK-NEXT:    ret void
 ;
   %b = add i32 %a, 1
