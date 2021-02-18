@@ -546,6 +546,8 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
             /*Init=*/llvm::ConstantPointerNull::get(Var->getType()),
             Twine(Var->getName() + ".managed"), /*InsertBefore=*/nullptr,
             llvm::GlobalVariable::NotThreadLocal);
+        ManagedVar->setDSOLocal(Var->isDSOLocal());
+        ManagedVar->setVisibility(Var->getVisibility());
         replaceManagedVar(Var, ManagedVar);
         llvm::Value *Args[] = {
             &GpuBinaryHandlePtr,
@@ -932,11 +934,16 @@ CGCUDARuntime *CodeGen::CreateNVCUDARuntime(CodeGenModule &CGM) {
 
 void CGNVCUDARuntime::internalizeDeviceSideVar(
     const VarDecl *D, llvm::GlobalValue::LinkageTypes &Linkage) {
-  // Host-side shadows of external declarations of device-side
-  // global variables become internal definitions. These have to
-  // be internal in order to prevent name conflicts with global
-  // host variables with the same name in a different TUs.
+  // For -fno-gpu-rdc, host-side shadows of external declarations of device-side
+  // global variables become internal definitions. These have to be internal in
+  // order to prevent name conflicts with global host variables with the same
+  // name in a different TUs.
   //
+  // For -fgpu-rdc, the shadow variables should not be internalized because
+  // they may be accessed by different TU.
+  if (CGM.getLangOpts().GPURelocatableDeviceCode)
+    return;
+
   // __shared__ variables are odd. Shadows do get created, but
   // they are not registered with the CUDA runtime, so they
   // can't really be used to access their device-side
