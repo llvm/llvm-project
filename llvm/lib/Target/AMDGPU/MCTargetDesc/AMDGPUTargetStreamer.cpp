@@ -86,6 +86,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX906:  AK = GK_GFX906;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX908:  AK = GK_GFX908;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909:  AK = GK_GFX909;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90A:  AK = GK_GFX90A;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C:  AK = GK_GFX90C;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010: AK = GK_GFX1010; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011: AK = GK_GFX1011; break;
@@ -145,6 +146,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX906:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX906;
   case GK_GFX908:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX908;
   case GK_GFX909:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX909;
+  case GK_GFX90A:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX90A;
   case GK_GFX90C:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C;
   case GK_GFX1010: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010;
   case GK_GFX1011: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011;
@@ -258,10 +260,19 @@ bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
   return true;
 }
 
-bool AMDGPUTargetAsmStreamer::EmitCodeEnd() {
+bool AMDGPUTargetAsmStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
   const uint32_t Encoded_s_code_end = 0xbf9f0000;
-  OS << "\t.p2alignl 6, " << Encoded_s_code_end << '\n';
-  OS << "\t.fill 48, 4, " << Encoded_s_code_end << '\n';
+  const uint32_t Encoded_s_nop = 0xbf800000;
+  uint32_t Encoded_pad = Encoded_s_code_end;
+  unsigned FillSize = 48;
+
+  if (AMDGPU::isGFX90A(STI)) {
+    Encoded_pad = Encoded_s_nop;
+    FillSize = 256;
+  }
+
+  OS << "\t.p2alignl 6, " << Encoded_pad << '\n';
+  OS << "\t.fill " << FillSize << ", 4, " << Encoded_pad << '\n';
   return true;
 }
 
@@ -331,6 +342,12 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   OS << "\t\t.amdhsa_next_free_vgpr " << NextVGPR << '\n';
   OS << "\t\t.amdhsa_next_free_sgpr " << NextSGPR << '\n';
 
+  if (AMDGPU::isGFX90A(STI))
+    OS << "\t\t.amdhsa_accum_offset " <<
+      (AMDHSA_BITS_GET(KD.compute_pgm_rsrc3,
+                       amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET) + 1) * 4
+      << '\n';
+
   if (!ReserveVCC)
     OS << "\t\t.amdhsa_reserve_vcc " << ReserveVCC << '\n';
   if (IVersion.Major >= 7 && !ReserveFlatScr)
@@ -360,6 +377,10 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_fp16_overflow", KD,
                 compute_pgm_rsrc1,
                 amdhsa::COMPUTE_PGM_RSRC1_FP16_OVFL);
+  if (AMDGPU::isGFX90A(STI))
+    PRINT_FIELD(OS, ".amdhsa_tg_split", KD,
+                compute_pgm_rsrc3,
+                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT);
   if (IVersion.Major >= 10) {
     PRINT_FIELD(OS, ".amdhsa_workgroup_processor_mode", KD,
                 compute_pgm_rsrc1,
@@ -616,14 +637,22 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
   return true;
 }
 
-bool AMDGPUTargetELFStreamer::EmitCodeEnd() {
+bool AMDGPUTargetELFStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
   const uint32_t Encoded_s_code_end = 0xbf9f0000;
+  const uint32_t Encoded_s_nop = 0xbf800000;
+  uint32_t Encoded_pad = Encoded_s_code_end;
+  unsigned FillSize = 48;
+
+  if (AMDGPU::isGFX90A(STI)) {
+    Encoded_pad = Encoded_s_nop;
+    FillSize = 256;
+  }
 
   MCStreamer &OS = getStreamer();
   OS.PushSection();
-  OS.emitValueToAlignment(64, Encoded_s_code_end, 4);
-  for (unsigned I = 0; I < 48; ++I)
-    OS.emitInt32(Encoded_s_code_end);
+  OS.emitValueToAlignment(64, Encoded_pad, 4);
+  for (unsigned I = 0; I < FillSize; ++I)
+    OS.emitInt32(Encoded_pad);
   OS.PopSection();
   return true;
 }
