@@ -4768,67 +4768,43 @@ TranslationUnit Detached
 }
 
 TEST_P(BuildSyntaxTreeTest, ParametersAndQualifiers_InFreeFunctions_Named) {
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
-int func1(int a);
-int func2(int *ap);
-int func3(int a, float b);
-)cpp",
-      R"txt(
-TranslationUnit Detached
-|-SimpleDeclaration
-| |-'int'
-| |-DeclaratorList Declarators
-| | `-SimpleDeclarator ListElement
-| |   |-'func1'
-| |   `-ParametersAndQualifiers
-| |     |-'(' OpenParen
-| |     |-ParameterDeclarationList Parameters
-| |     | `-SimpleDeclaration ListElement
-| |     |   |-'int'
-| |     |   `-DeclaratorList Declarators
-| |     |     `-SimpleDeclarator ListElement
-| |     |       `-'a'
-| |     `-')' CloseParen
-| `-';'
-|-SimpleDeclaration
-| |-'int'
-| |-DeclaratorList Declarators
-| | `-SimpleDeclarator ListElement
-| |   |-'func2'
-| |   `-ParametersAndQualifiers
-| |     |-'(' OpenParen
-| |     |-ParameterDeclarationList Parameters
-| |     | `-SimpleDeclaration ListElement
-| |     |   |-'int'
-| |     |   `-DeclaratorList Declarators
-| |     |     `-SimpleDeclarator ListElement
-| |     |       |-'*'
-| |     |       `-'ap'
-| |     `-')' CloseParen
-| `-';'
-`-SimpleDeclaration
+     int func1([[int a]]);
+     int func2([[int *ap]]);
+     int func3([[int a, float b]]);
+   )cpp",
+      {R"txt(
+ParameterDeclarationList Parameters
+`-SimpleDeclaration ListElement
   |-'int'
-  |-DeclaratorList Declarators
-  | `-SimpleDeclarator ListElement
-  |   |-'func3'
-  |   `-ParametersAndQualifiers
-  |     |-'(' OpenParen
-  |     |-ParameterDeclarationList Parameters
-  |     | |-SimpleDeclaration ListElement
-  |     | | |-'int'
-  |     | | `-DeclaratorList Declarators
-  |     | |   `-SimpleDeclarator ListElement
-  |     | |     `-'a'
-  |     | |-',' ListDelimiter
-  |     | `-SimpleDeclaration ListElement
-  |     |   |-'float'
-  |     |   `-DeclaratorList Declarators
-  |     |     `-SimpleDeclarator ListElement
-  |     |       `-'b'
-  |     `-')' CloseParen
-  `-';'
-)txt"));
+  `-DeclaratorList Declarators
+    `-SimpleDeclarator ListElement
+      `-'a'
+)txt",
+       R"txt(
+ParameterDeclarationList Parameters
+`-SimpleDeclaration ListElement
+  |-'int'
+  `-DeclaratorList Declarators
+    `-SimpleDeclarator ListElement
+      |-'*'
+      `-'ap'
+)txt",
+       R"txt(
+ParameterDeclarationList Parameters
+|-SimpleDeclaration ListElement
+| |-'int'
+| `-DeclaratorList Declarators
+|   `-SimpleDeclarator ListElement
+|     `-'a'
+|-',' ListDelimiter
+`-SimpleDeclaration ListElement
+  |-'float'
+  `-DeclaratorList Declarators
+    `-SimpleDeclarator ListElement
+      `-'b'
+)txt"}));
 }
 
 TEST_P(BuildSyntaxTreeTest, ParametersAndQualifiers_InFreeFunctions_Unnamed) {
