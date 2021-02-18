@@ -219,16 +219,6 @@ static cl::opt<bool> EnableDebugify(
     cl::desc(
         "Start the pipeline with debugify and end it with check-debugify"));
 
-static cl::opt<bool> VerifyDebugInfoPreserve(
-    "verify-debuginfo-preserve",
-    cl::desc("Start the pipeline with collecting and end it with checking of "
-             "debug info preservation."));
-
-static cl::opt<bool> VerifyEachDebugInfoPreserve(
-    "verify-each-debuginfo-preserve",
-    cl::desc("Start each pass with collecting and end it with checking of "
-             "debug info preservation."));
-
 static cl::opt<bool>
 PrintBreakpoints("print-breakpoints-for-testing",
                  cl::desc("Print select breakpoints location for testing"));
@@ -823,19 +813,10 @@ int main(int argc, char **argv) {
   // about to build. If the -debugify-each option is set, wrap each pass with
   // the (-check)-debugify passes.
   DebugifyCustomPassManager Passes;
-  DebugifyStatsMap DIStatsMap;
-  DebugInfoPerPassMap DIPreservationMap;
-  if (DebugifyEach) {
-    Passes.setDebugifyMode(DebugifyMode::SyntheticDebugInfo);
-    Passes.setDIStatsMap(DIStatsMap);
-  } else if (VerifyEachDebugInfoPreserve) {
-    Passes.setDebugifyMode(DebugifyMode::OriginalDebugInfo);
-    Passes.setDIPreservationMap(DIPreservationMap);
-  }
+  if (DebugifyEach)
+    Passes.enableDebugifyEach();
 
-  bool AddOneTimeDebugifyPasses =
-      (EnableDebugify && !DebugifyEach) ||
-      (VerifyDebugInfoPreserve && !VerifyEachDebugInfoPreserve);
+  bool AddOneTimeDebugifyPasses = EnableDebugify && !DebugifyEach;
 
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
 
@@ -843,17 +824,8 @@ int main(int argc, char **argv) {
   Passes.add(createTargetTransformInfoWrapperPass(TM ? TM->getTargetIRAnalysis()
                                                      : TargetIRAnalysis()));
 
-  if (AddOneTimeDebugifyPasses) {
-    if (EnableDebugify) {
-      Passes.setDIStatsMap(DIStatsMap);
-      Passes.add(createDebugifyModulePass());
-    } else if (VerifyDebugInfoPreserve) {
-      Passes.setDIPreservationMap(DIPreservationMap);
-      Passes.add(createDebugifyModulePass(
-          DebugifyMode::OriginalDebugInfo, "",
-          &(Passes.getDebugInfoPerPassMap())));
-    }
-  }
+  if (AddOneTimeDebugifyPasses)
+    Passes.add(createDebugifyModulePass());
 
   std::unique_ptr<legacy::FunctionPassManager> FPasses;
   if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
@@ -997,14 +969,8 @@ int main(int argc, char **argv) {
   if (!NoVerify && !VerifyEach)
     Passes.add(createVerifierPass());
 
-  if (AddOneTimeDebugifyPasses) {
-    if (EnableDebugify)
-      Passes.add(createCheckDebugifyModulePass(false));
-    else if (VerifyDebugInfoPreserve)
-      Passes.add(createCheckDebugifyModulePass(
-          false, "", nullptr, DebugifyMode::OriginalDebugInfo,
-          &(Passes.getDebugInfoPerPassMap())));
-  }
+  if (AddOneTimeDebugifyPasses)
+    Passes.add(createCheckDebugifyModulePass(false));
 
   // In run twice mode, we want to make sure the output is bit-by-bit
   // equivalent if we run the pass manager again, so setup two buffers and
