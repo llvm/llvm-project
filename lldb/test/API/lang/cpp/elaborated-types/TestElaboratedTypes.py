@@ -34,7 +34,7 @@ class TestCase(TestBase):
         # Declare a template that can actually be instantiated.
         # FIXME: The error message here is incorrect.
         self.expect("expr --top-level -- template<typename T> struct $V {};",
-                    error=True, substrs=["Couldn't find $__lldb_expr() in the module"])
+                    error=True, substrs=["Top-level code needs to be inserted into a runnable target"])
         result = self.expect_expr("$V<::Struct> s; s",
                                   result_type="$V< ::Struct>")
         self.assertEqual(result.GetTypeName(), "$V<Struct>")
