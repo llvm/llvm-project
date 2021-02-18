@@ -16,7 +16,7 @@ struct string {
   ~string() {}
   int i = 0;
 };
-string get_string() {
+string __attribute__((noinline)) get_string() {
   string unused;
   string result = 3;
   // DEBUGGER: break 23
@@ -29,7 +29,7 @@ struct string2 {
   string2(string2 &&other) { i = other.i; }
   int i;
 };
-string2 get_string2() {
+string2 __attribute__((noinline)) get_string2() {
   string2 result;
   result.i = 5;
   some_function(result.i);
