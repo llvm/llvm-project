@@ -16,7 +16,6 @@ class FrameAPITestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @add_test_categories(['pyapi'])
     def test_get_arg_vals_for_call_stack(self):
         """Exercise SBFrame.GetVariables() API to get argument vals."""
         self.build()
@@ -120,7 +119,6 @@ class FrameAPITestCase(TestBase):
                     substrs=["a((int)val=1, (char)ch='A')",
                              "a((int)val=3, (char)ch='A')"])
 
-    @add_test_categories(['pyapi'])
     def test_frame_api_boundary_condition(self):
         """Exercise SBFrame APIs with boundary condition inputs."""
         self.build()
@@ -162,7 +160,6 @@ class FrameAPITestCase(TestBase):
 
         frame.EvaluateExpression(None)
 
-    @add_test_categories(['pyapi'])
     def test_frame_api_IsEqual(self):
         """Exercise SBFrame API IsEqual."""
         self.build()

@@ -14,7 +14,6 @@ class DebuggerAPITestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    @add_test_categories(['pyapi'])
     def test_debugger_api_boundary_condition(self):
         """Exercise SBDebugger APIs with boundary conditions."""
         self.dbg.HandleCommand(None)
@@ -37,7 +36,6 @@ class DebuggerAPITestCase(TestBase):
         fresh_dbg = lldb.SBDebugger()
         self.assertEquals(len(fresh_dbg), 0)
 
-    @add_test_categories(['pyapi'])
     def test_debugger_delete_invalid_target(self):
         """SBDebugger.DeleteTarget() should not crash LLDB given and invalid target."""
         target = lldb.SBTarget()

@@ -35,7 +35,6 @@ class TargetAPITestCase(TestBase):
     # It does not segfaults now.  But for dwarf, the variable value is None if
     # the inferior process does not exist yet.  The radar has been updated.
     #@unittest232.skip("segmentation fault -- skipping")
-    @add_test_categories(['pyapi'])
     def test_find_global_variables(self):
         """Exercise SBTarget.FindGlobalVariables() API."""
         d = {'EXE': 'b.out'}
@@ -43,7 +42,6 @@ class TargetAPITestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         self.find_global_variables('b.out')
 
-    @add_test_categories(['pyapi'])
     def test_find_compile_units(self):
         """Exercise SBTarget.FindCompileUnits() API."""
         d = {'EXE': 'b.out'}
@@ -51,7 +49,6 @@ class TargetAPITestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         self.find_compile_units(self.getBuildArtifact('b.out'))
 
-    @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_find_functions(self):
         """Exercise SBTarget.FindFunctions() API."""
@@ -60,20 +57,17 @@ class TargetAPITestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         self.find_functions('b.out')
 
-    @add_test_categories(['pyapi'])
     def test_get_description(self):
         """Exercise SBTarget.GetDescription() API."""
         self.build()
         self.get_description()
 
-    @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"], bugnumber='llvm.org/pr21765')
     def test_resolve_symbol_context_with_address(self):
         """Exercise SBTarget.ResolveSymbolContextForAddress() API."""
         self.build()
         self.resolve_symbol_context_with_address()
 
-    @add_test_categories(['pyapi'])
     def test_get_platform(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)
@@ -82,7 +76,6 @@ class TargetAPITestCase(TestBase):
         platform = target.platform
         self.assertTrue(platform, VALID_PLATFORM)
 
-    @add_test_categories(['pyapi'])
     def test_get_data_byte_size(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)
@@ -90,7 +83,6 @@ class TargetAPITestCase(TestBase):
         target = self.create_simple_target('b.out')
         self.assertEqual(target.data_byte_size, 1)
 
-    @add_test_categories(['pyapi'])
     def test_get_code_byte_size(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)
@@ -98,7 +90,6 @@ class TargetAPITestCase(TestBase):
         target = self.create_simple_target('b.out')
         self.assertEqual(target.code_byte_size, 1)
 
-    @add_test_categories(['pyapi'])
     def test_resolve_file_address(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)
@@ -121,7 +112,6 @@ class TargetAPITestCase(TestBase):
         self.assertIsNotNone(data_section2)
         self.assertEqual(data_section.name, data_section2.name)
 
-    @add_test_categories(['pyapi'])
     @skipIfReproducer # SBTarget::ReadMemory is not instrumented.
     def test_read_memory(self):
         d = {'EXE': 'b.out'}
@@ -151,7 +141,6 @@ class TargetAPITestCase(TestBase):
         self.assertEqual(len(content), 1)
 
 
-    @add_test_categories(['pyapi'])
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @skipIfRemote   # stdio manipulation unsupported on remote iOS devices<rdar://problem/54581135>
     @skipIfReproducer  # stdout not captured by reproducers
@@ -334,7 +323,6 @@ class TargetAPITestCase(TestBase):
                     substrs=['Target', 'Module', 'a.out', 'Breakpoint'])
 
     @skipIfRemote
-    @add_test_categories(['pyapi'])
     @no_debug_info_test
     @skipIfReproducer # Inferior doesn't run during replay.
     def test_launch_new_process_and_redirect_stdout(self):
@@ -476,6 +464,7 @@ class TargetAPITestCase(TestBase):
         desc2 = get_description(symbol2)
         self.assertTrue(desc1 and desc2 and desc1 == desc2,
                         "The two addresses should resolve to the same symbol")
+
     def test_default_arch(self):
         """ Test the other two target create methods using LLDB_ARCH_DEFAULT. """
         self.build()
@@ -490,7 +479,6 @@ class TargetAPITestCase(TestBase):
         self.assertTrue(target3.IsValid())
 
 
-    @add_test_categories(['pyapi'])
     @skipIfWindows
     def test_is_loaded(self):
         """Exercise SBTarget.IsLoaded(SBModule&) API."""

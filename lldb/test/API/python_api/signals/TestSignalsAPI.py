@@ -15,7 +15,6 @@ class SignalsAPITestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    @add_test_categories(['pyapi'])
     @skipIfWindows  # Windows doesn't have signals
     def test_ignore_signal(self):
         """Test Python SBUnixSignals.Suppress/Stop/Notify() API."""
