@@ -75,12 +75,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 17
 
-// TODO FMT Remove this once we require compilers with proper C++20 support.
-// If the compiler has no concepts support, the format header will be disabled.
-// Without concepts support enable_if needs to be used and that too much effort
-// to support compilers with partial C++20 support.
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
-
 class _LIBCPP_EXCEPTION_ABI format_error : public runtime_error {
 public:
   _LIBCPP_INLINE_VISIBILITY explicit format_error(const string& __s)
@@ -89,6 +83,12 @@ public:
       : runtime_error(__s) {}
   virtual ~format_error() noexcept;
 };
+
+// TODO FMT Remove this once we require compilers with proper C++20 support.
+// If the compiler has no concepts support, the format header will be disabled.
+// Without concepts support enable_if needs to be used and that too much effort
+// to support compilers with partial C++20 support.
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
 
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY void
 __throw_format_error(const char* __s) {
