@@ -123,7 +123,7 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor", [NoSideEffect]> {
 }
 
 def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
-    [AttrSizedOperandSegments]> {
+    [AttrSizedOperandSegments, NoSideEffect]> {
   let summary = "tensor pad operation";
   let description = [{
     `linalg.pad_tensor` is an operation that pads the `source` tensor
