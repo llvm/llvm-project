@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/PassManager.h"
@@ -649,6 +650,12 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
   // Prepare expensive constants for SelectionDAG.
   if (getOptLevel() != CodeGenOpt::None && !Opt.DisableConstantHoisting)
     addPass(ConstantHoistingPass());
+
+  if (getOptLevel() != CodeGenOpt::None) {
+    // Replace calls to LLVM intrinsics (e.g., exp, log) operating on vector
+    // operands with calls to the corresponding functions in a vector library.
+    addPass(ReplaceWithVeclib());
+  }
 
   if (getOptLevel() != CodeGenOpt::None && !Opt.DisablePartialLibcallInlining)
     addPass(PartiallyInlineLibCallsPass());
