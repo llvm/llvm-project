@@ -77,6 +77,7 @@ private:
   void calculateCustomSections();
   void calculateTypes();
   void createOutputSegments();
+  void combineOutputSegments();
   void layoutMemory();
   void createHeader();
 
@@ -86,6 +87,7 @@ private:
 
   void createCustomSections();
   void createSyntheticSections();
+  void createSyntheticSectionsPostLayout();
   void finalizeSections();
 
   // Custom sections
@@ -795,10 +797,6 @@ static StringRef getOutputDataSegmentName(StringRef name) {
   // We also need to merge .tbss into .tdata so they share the same offsets.
   if (name.startswith(".tdata") || name.startswith(".tbss"))
     return ".tdata";
-  // With PIC code we currently only support a single data segment since
-  // we only have a single __memory_base to use as our base address.
-  if (config->isPic)
-    return ".data";
   if (!config->mergeDataSegments)
     return name;
   if (name.startswith(".text."))
@@ -843,9 +841,9 @@ void Writer::createOutputSegments() {
                    [](const OutputSegment *a, const OutputSegment *b) {
                      auto order = [](StringRef name) {
                        return StringSwitch<int>(name)
-                           .StartsWith(".rodata", 0)
-                           .StartsWith(".data", 1)
-                           .StartsWith(".tdata", 2)
+                           .StartsWith(".tdata", 0)
+                           .StartsWith(".rodata", 1)
+                           .StartsWith(".data", 2)
                            .StartsWith(".bss", 4)
                            .Default(3);
                      };
@@ -854,6 +852,52 @@ void Writer::createOutputSegments() {
 
   for (size_t i = 0; i < segments.size(); ++i)
     segments[i]->index = i;
+}
+
+void Writer::combineOutputSegments() {
+  // With PIC code we currently only support a single data segment since
+  // we only have a single __memory_base to use as our base address.
+  // This pass combines all non-TLS data segments into a single .data
+  // segment.
+  // This restructions can be relaxed once we have extended constant
+  // expressions available:
+  // https://github.com/WebAssembly/extended-const
+  assert(config->isPic);
+  if (segments.size() <= 1)
+    return;
+  OutputSegment *combined = nullptr;
+  std::vector<OutputSegment *> new_segments;
+  for (OutputSegment *s : segments) {
+    if (s->name == ".tdata") {
+      new_segments.push_back(s);
+    } else {
+      if (!combined) {
+        combined = make<OutputSegment>(".data");
+        combined->startVA = s->startVA;
+        if (config->sharedMemory)
+          combined->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
+      }
+      bool first = true;
+      for (InputSegment *inSeg : s->inputSegments) {
+        uint32_t alignment = first ? s->alignment : 0;
+        first = false;
+#ifndef NDEBUG
+        uint64_t oldVA = inSeg->getVA();
+#endif
+        combined->addInputSegment(inSeg, alignment);
+#ifndef NDEBUG
+        uint64_t newVA = inSeg->getVA();
+        assert(oldVA == newVA);
+#endif
+      }
+    }
+  }
+  if (combined) {
+    new_segments.push_back(combined);
+    segments = new_segments;
+    for (size_t i = 0; i < segments.size(); ++i)
+      segments[i]->index = i;
+  }
 }
 
 static void createFunction(DefinedFunction *func, StringRef bodyContent) {
@@ -1295,11 +1339,14 @@ void Writer::createSyntheticSections() {
   out.exportSec = make<ExportSection>();
   out.startSec = make<StartSection>();
   out.elemSec = make<ElemSection>();
+  out.producersSec = make<ProducersSection>();
+  out.targetFeaturesSec = make<TargetFeaturesSection>();
+}
+
+void Writer::createSyntheticSectionsPostLayout() {
   out.dataCountSec = make<DataCountSection>(segments);
   out.linkingSec = make<LinkingSection>(initFunctions, segments);
   out.nameSec = make<NameSection>(segments);
-  out.producersSec = make<ProducersSection>();
-  out.targetFeaturesSec = make<TargetFeaturesSection>();
 }
 
 void Writer::run() {
@@ -1318,18 +1365,15 @@ void Writer::run() {
   createOutputSegments();
   log("-- createSyntheticSections");
   createSyntheticSections();
-  log("-- populateProducers");
-  populateProducers();
-  log("-- calculateImports");
-  calculateImports();
   log("-- layoutMemory");
   layoutMemory();
 
   if (!config->relocatable) {
     // Create linker synthesized __start_SECNAME/__stop_SECNAME symbols
     // This has to be done after memory layout is performed.
-    for (const OutputSegment *seg : segments)
+    for (const OutputSegment *seg : segments) {
       addStartStopSymbols(seg);
+    }
   }
 
   // Delay reporting error about explict exports until after addStartStopSymbols
@@ -1345,6 +1389,17 @@ void Writer::run() {
       warn(Twine("symbol exported via --export not found: ") + name);
   }
 
+  if (config->isPic) {
+    log("-- combineOutputSegments");
+    combineOutputSegments();
+  }
+
+  log("-- createSyntheticSectionsPostLayout");
+  createSyntheticSectionsPostLayout();
+  log("-- populateProducers");
+  populateProducers();
+  log("-- calculateImports");
+  calculateImports();
   log("-- scanRelocations");
   scanRelocations();
   log("-- finalizeIndirectFunctionTable");
