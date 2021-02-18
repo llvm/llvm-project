@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/IR/AffineExpr.h"
@@ -2408,6 +2409,18 @@ static LogicalResult foldMemRefCast(Operation *op) {
   return success(folded);
 }
 
+static LogicalResult foldTensorCast(Operation *op) {
+  bool folded = false;
+  for (OpOperand &operand : op->getOpOperands()) {
+    auto castOp = operand.get().getDefiningOp<tensor::CastOp>();
+    if (castOp && tensor::canFoldIntoConsumerOp(castOp)) {
+      operand.set(castOp.getOperand());
+      folded = true;
+    }
+  }
+  return success(folded);
+}
+
 template <typename TransferOp>
 static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   // TODO: support more aggressive createOrFold on:
@@ -2459,6 +2472,8 @@ OpFoldResult TransferReadOp::fold(ArrayRef<Attribute>) {
   if (succeeded(foldTransferMaskAttribute(*this)))
     return getResult();
   if (succeeded(foldMemRefCast(*this)))
+    return getResult();
+  if (succeeded(foldTensorCast(*this)))
     return getResult();
   return OpFoldResult();
 }
