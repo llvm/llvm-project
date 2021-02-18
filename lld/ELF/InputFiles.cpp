@@ -1249,10 +1249,10 @@ void ArchiveFile::fetch(const Archive::Symbol &sym) {
 }
 
 // The handling of tentative definitions (COMMON symbols) in archives is murky.
-// A tentative defintion will be promoted to a global definition if there are no
-// non-tentative definitions to dominate it. When we hold a tentative definition
-// to a symbol and are inspecting archive memebers for inclusion there are 2
-// ways we can proceed:
+// A tentative definition will be promoted to a global definition if there are
+// no non-tentative definitions to dominate it. When we hold a tentative
+// definition to a symbol and are inspecting archive members for inclusion
+// there are 2 ways we can proceed:
 //
 // 1) Consider the tentative definition a 'real' definition (ie promotion from
 //    tentative to real definition has already happened) and not inspect
@@ -1261,17 +1261,17 @@ void ArchiveFile::fetch(const Archive::Symbol &sym) {
 //    other undefined symbol. This is the behavior Gold uses.
 //
 // 2) Consider the tentative definition as still undefined (ie the promotion to
-//    a real definiton happens only after all symbol resolution is done).
-//    The linker searches archive memebers for global or weak definitions to
+//    a real definition happens only after all symbol resolution is done).
+//    The linker searches archive members for global or weak definitions to
 //    replace the tentative definition with. This is the behavior used by
 //    GNU ld.
 //
 //  The second behavior is inherited from SysVR4, which based it on the FORTRAN
-//  COMMON BLOCK model. This behavior is needed for proper initalizations in old
+//  COMMON BLOCK model. This behavior is needed for proper initalization in old
 //  (pre F90) FORTRAN code that is packaged into an archive.
 //
-//  The following functions search archive members for defintions to replace
-//  tentative defintions (implementing behavior 2).
+//  The following functions search archive members for definitions to replace
+//  tentative definitions (implementing behavior 2).
 static bool isBitcodeNonCommonDef(MemoryBufferRef mb, StringRef symName,
                                   StringRef archiveName) {
   IRSymtabFile symtabFile = check(readIRSymtab(mb));
