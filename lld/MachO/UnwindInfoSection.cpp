@@ -87,7 +87,7 @@ using namespace lld::macho;
 
 UnwindInfoSection::UnwindInfoSection()
     : SyntheticSection(segment_names::text, section_names::unwindInfo) {
-  align = WordSize; // TODO(gkm): make this 4 KiB ?
+  align = 4; // mimic ld64
 }
 
 bool UnwindInfoSection::isNeeded() const {
