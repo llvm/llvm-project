@@ -745,6 +745,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
+  case ISD::BITCAST:
+    // Just drop bitcasts between scalable vectors.
+    if (VT.isScalableVector() &&
+        Node->getOperand(0).getSimpleValueType().isScalableVector()) {
+      ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
+      CurDAG->RemoveDeadNode(Node);
+      return;
+    }
+    break;
   case ISD::INSERT_SUBVECTOR: {
     SDValue V = Node->getOperand(0);
     SDValue SubV = Node->getOperand(1);
