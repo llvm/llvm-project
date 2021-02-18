@@ -989,8 +989,8 @@ struct CounterCoverageMappingBuilder
         EndDepth--;
       }
       if (UnnestStart) {
-        SourceLocation NestedLoc = getEndOfFileOrMacro(AfterLoc);
-        assert(SM.isWrittenInSameFile(AfterLoc, NestedLoc));
+        assert(SM.isWrittenInSameFile(AfterLoc,
+                                      getEndOfFileOrMacro(AfterLoc)));
 
         AfterLoc = getIncludeOrExpansionLoc(AfterLoc);
         assert(AfterLoc.isValid());
