@@ -101,6 +101,7 @@ static void __kmp_redirect_output(void) {
 
       DWORD err = GetLastError();
       // TODO: output error somehow (maybe message box)
+      (void)err;
       __kmp_stdout = NULL;
 
     } else {
@@ -112,6 +113,7 @@ static void __kmp_redirect_output(void) {
 
       DWORD err = GetLastError();
       // TODO: output error somehow (maybe message box)
+      (void)err;
       __kmp_stderr = NULL;
 
     } else {

@@ -671,6 +671,7 @@ void __kmp_runtime_initialize(void) {
     BOOL ret = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
                                      GET_MODULE_HANDLE_EX_FLAG_PIN,
                                  (LPCTSTR)&__kmp_serial_initialize, &h);
+    (void)ret;
     KMP_DEBUG_ASSERT2(h && ret, "OpenMP RTL cannot find itself loaded");
     SetErrorMode(err_mode); // Restore error mode
     KA_TRACE(10, ("__kmp_runtime_initialize: dynamic library pinned\n"));
@@ -830,6 +831,7 @@ void __kmp_runtime_initialize(void) {
     __kmp_xproc = info.dwNumberOfProcessors;
   }
 #else
+  (void)kernel32;
   GetSystemInfo(&info);
   __kmp_xproc = info.dwNumberOfProcessors;
 #endif /* KMP_GROUP_AFFINITY */
