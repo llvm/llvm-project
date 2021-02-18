@@ -5,9 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -838,7 +843,7 @@ CharacterType fir::CharacterType::get(mlir::MLIRContext *ctxt, KindTy kind) {
   return Base::get(ctxt, kind);
 }
 
-int fir::CharacterType::getFKind() const { return getImpl()->getFKind(); }
+KindTy fir::CharacterType::getFKind() const { return getImpl()->getFKind(); }
 
 // Field
 
@@ -858,7 +863,7 @@ LogicalType fir::LogicalType::get(mlir::MLIRContext *ctxt, KindTy kind) {
   return Base::get(ctxt, kind);
 }
 
-int fir::LogicalType::getFKind() const { return getImpl()->getFKind(); }
+KindTy fir::LogicalType::getFKind() const { return getImpl()->getFKind(); }
 
 // INTEGER
 
@@ -866,7 +871,7 @@ fir::IntegerType fir::IntegerType::get(mlir::MLIRContext *ctxt, KindTy kind) {
   return Base::get(ctxt, kind);
 }
 
-int fir::IntegerType::getFKind() const { return getImpl()->getFKind(); }
+KindTy fir::IntegerType::getFKind() const { return getImpl()->getFKind(); }
 
 // COMPLEX
 
@@ -886,7 +891,7 @@ RealType fir::RealType::get(mlir::MLIRContext *ctxt, KindTy kind) {
   return Base::get(ctxt, kind);
 }
 
-int fir::RealType::getFKind() const { return getImpl()->getFKind(); }
+KindTy fir::RealType::getFKind() const { return getImpl()->getFKind(); }
 
 // Box<T>
 

@@ -36,7 +36,7 @@ namespace fir {
 
 class FIROpsDialect;
 
-using KindTy = int;
+using KindTy = unsigned;
 
 namespace detail {
 struct BoxTypeStorage;
