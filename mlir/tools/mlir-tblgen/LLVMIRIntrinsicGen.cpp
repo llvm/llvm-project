@@ -140,23 +140,17 @@ public:
   /// Return true if the intrinsic may have side effects, i.e. does not have the
   /// `IntrNoMem` property.
   bool hasSideEffects() const {
-    auto props = record.getValueAsListOfDefs(fieldTraits);
-    for (const llvm::Record *r : props) {
-      if (r->getName() == "IntrNoMem")
-        return true;
-    }
-    return false;
+    return llvm::none_of(
+        record.getValueAsListOfDefs(fieldTraits),
+        [](const llvm::Record *r) { return r->getName() == "IntrNoMem"; });
   }
 
   /// Return true if the intrinsic is commutative, i.e. has the respective
   /// property.
   bool isCommutative() const {
-    auto props = record.getValueAsListOfDefs(fieldTraits);
-    for (const llvm::Record *r : props) {
-      if (r->getName() == "Commutative")
-        return true;
-    }
-    return false;
+    return llvm::any_of(
+        record.getValueAsListOfDefs(fieldTraits),
+        [](const llvm::Record *r) { return r->getName() == "Commutative"; });
   }
 
   IndicesTy getOverloadableOperandsIdxs() const {
