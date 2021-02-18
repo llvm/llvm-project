@@ -20,6 +20,7 @@
 # GNU-NEXT:     .vgpr_count:     7
 # GNU-NEXT:     .wavefront_size: 5
 # GNU-NEXT: ...
+# GNU-EMPTY:
 
 # LLVM:      Notes [
 # LLVM-NEXT:   NoteSection {

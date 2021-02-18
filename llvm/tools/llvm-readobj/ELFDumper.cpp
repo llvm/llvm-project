@@ -5232,9 +5232,17 @@ static void printNotesHelper(
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
+  bool IsFirstHeader = true;
   auto PrintHeader = [&](Optional<StringRef> SecName,
                          const typename ELFT::Off Offset,
                          const typename ELFT::Addr Size) {
+    // Print a newline between notes sections to match GNU readelf.
+    if (!IsFirstHeader) {
+      OS << '\n';
+    } else {
+      IsFirstHeader = false;
+    }
+
     OS << "Displaying notes found ";
 
     if (SecName)
