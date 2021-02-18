@@ -84,6 +84,7 @@ void __kmp_close_console(void) {
 static void __kmp_redirect_output(void) {
   __kmp_acquire_bootstrap_lock(&__kmp_console_lock);
 
+  (void)is_console;
   if (!__kmp_console_exists) {
     HANDLE ho;
     HANDLE he;
