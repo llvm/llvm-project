@@ -106,27 +106,6 @@ static cl::opt<TargetChoice>
                           ),
            cl::init(TARGET_CPU), cl::ZeroOrMore, cl::cat(PollyCategory));
 
-#ifdef GPU_CODEGEN
-static cl::opt<GPURuntime> GPURuntimeChoice(
-    "polly-gpu-runtime", cl::desc("The GPU Runtime API to target"),
-    cl::values(clEnumValN(GPURuntime::CUDA, "libcudart",
-                          "use the CUDA Runtime API"),
-               clEnumValN(GPURuntime::OpenCL, "libopencl",
-                          "use the OpenCL Runtime API")),
-    cl::init(GPURuntime::CUDA), cl::ZeroOrMore, cl::cat(PollyCategory));
-
-static cl::opt<GPUArch>
-    GPUArchChoice("polly-gpu-arch", cl::desc("The GPU Architecture to target"),
-                  cl::values(clEnumValN(GPUArch::NVPTX64, "nvptx64",
-                                        "target NVIDIA 64-bit architecture"),
-                             clEnumValN(GPUArch::SPIR32, "spir32",
-                                        "target SPIR 32-bit architecture"),
-                             clEnumValN(GPUArch::SPIR64, "spir64",
-                                        "target SPIR 64-bit architecture")),
-                  cl::init(GPUArch::NVPTX64), cl::ZeroOrMore,
-                  cl::cat(PollyCategory));
-#endif
-
 VectorizerChoice polly::PollyVectorizerChoice;
 static cl::opt<polly::VectorizerChoice, true> Vectorizer(
     "polly-vectorizer", cl::desc("Select the vectorization strategy"),
