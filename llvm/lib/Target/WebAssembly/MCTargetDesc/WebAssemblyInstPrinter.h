@@ -33,6 +33,9 @@ class WebAssemblyInstPrinter final : public MCInstPrinter {
   // separate stack for 'delegate'.
   SmallVector<uint64_t, 4> DelegateStack;
 
+  enum EHInstKind { TRY, CATCH, CATCH_ALL };
+  SmallVector<EHInstKind, 4> EHInstStack;
+
 public:
   WebAssemblyInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                          const MCRegisterInfo &MRI);
