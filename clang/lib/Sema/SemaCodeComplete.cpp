@@ -5245,6 +5245,19 @@ QualType getApproximateType(const Expr *E) {
   return Unresolved;
 }
 
+// If \p Base is ParenListExpr, assume a chain of comma operators and pick the
+// last expr. We expect other ParenListExprs to be resolved to e.g. constructor
+// calls before here. (So the ParenListExpr should be nonempty, but check just
+// in case)
+Expr *unwrapParenList(Expr *Base) {
+  if (auto *PLE = llvm::dyn_cast_or_null<ParenListExpr>(Base)) {
+    if (PLE->getNumExprs() == 0)
+      return nullptr;
+    Base = PLE->getExpr(PLE->getNumExprs() - 1);
+  }
+  return Base;
+}
+
 } // namespace
 
 void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
@@ -5252,17 +5265,10 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
                                            SourceLocation OpLoc, bool IsArrow,
                                            bool IsBaseExprStatement,
                                            QualType PreferredType) {
+  Base = unwrapParenList(Base);
+  OtherOpBase = unwrapParenList(OtherOpBase);
   if (!Base || !CodeCompleter)
     return;
-
-  // Peel off the ParenListExpr by chosing the last one, as they don't have a
-  // predefined type.
-  if (auto *PLE = llvm::dyn_cast<ParenListExpr>(Base))
-    Base = PLE->getExpr(PLE->getNumExprs() - 1);
-  if (OtherOpBase) {
-    if (auto *PLE = llvm::dyn_cast<ParenListExpr>(OtherOpBase))
-      OtherOpBase = PLE->getExpr(PLE->getNumExprs() - 1);
-  }
 
   ExprResult ConvertedBase = PerformMemberExprBaseConversion(Base, IsArrow);
   if (ConvertedBase.isInvalid())
@@ -5693,13 +5699,9 @@ ProduceSignatureHelp(Sema &SemaRef, Scope *S,
 QualType Sema::ProduceCallSignatureHelp(Scope *S, Expr *Fn,
                                         ArrayRef<Expr *> Args,
                                         SourceLocation OpenParLoc) {
+  Fn = unwrapParenList(Fn);
   if (!CodeCompleter || !Fn)
     return QualType();
-
-  // If we have a ParenListExpr for LHS, peel it off by chosing the last expr.
-  // As ParenListExprs don't have a predefined type.
-  if (auto *PLE = llvm::dyn_cast<ParenListExpr>(Fn))
-    Fn = PLE->getExpr(PLE->getNumExprs() - 1);
 
   // FIXME: Provide support for variadic template functions.
   // Ignore type-dependent call expressions entirely.
