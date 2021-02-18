@@ -1236,8 +1236,8 @@ public:
             TODO("");
           }
         } else {
-          auto *range = std::get_if<fir::RangeBoxValue>(&subBox);
-          assert(range && "must be a range");
+          assert(std::holds_alternative<fir::RangeBoxValue>(subBox) &&
+                 "must be a range");
           // triple notation for slicing operation
           TODO("");
         }
@@ -2748,7 +2748,7 @@ fir::AllocMemOp Fortran::lower::createSomeArrayTemp(
   auto seqTy = ty.dyn_cast<fir::SequenceType>();
   assert(seqTy && "must be an array");
   auto loc = converter.getCurrentLocation();
-  if (ty.cast<fir::SequenceType>().hasConstantShape()) {
+  if (seqTy.hasConstantShape()) {
     auto result = bldr->create<fir::AllocMemOp>(loc, ty);
     auto res = result.getResult();
     stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, res); });

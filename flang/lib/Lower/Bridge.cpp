@@ -2000,7 +2000,7 @@ private:
     AggregateStoreKey key = {alias.getOwningScope(), alias.getAlias()};
     auto iter = storeMap.find(key);
     assert(iter != storeMap.end());
-    return storeMap.find(key)->second;
+    return iter->second;
   }
   /// Build the name for the storage of a global equivalence.
   std::string mangleGlobalAggregateStore(

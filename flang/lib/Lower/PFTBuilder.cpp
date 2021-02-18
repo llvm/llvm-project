@@ -1267,9 +1267,9 @@ struct SymbolDependenceDepth {
         // 2. Add an Interval to the list of stores allocated for this unit.
         lower::pft::Variable::Interval interval(ibgn, ilen);
         if (gvarIter != setIsGlobal.end()) {
-          auto *gsym = gvarIter->second;
-          LLVM_DEBUG(llvm::dbgs() << "interval [" << ibgn << ".." << ibgn + ilen
-                                  << ") added as global " << *gsym << '\n');
+          LLVM_DEBUG(llvm::dbgs()
+                     << "interval [" << ibgn << ".." << ibgn + ilen
+                     << ") added as global " << *gvarIter->second << '\n');
           stores.emplace_back(std::move(interval), scope, pair.second,
                               isDeclaration);
         } else {
