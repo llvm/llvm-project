@@ -1293,7 +1293,7 @@ IntrinsicLibrary::genLenTrim(mlir::Type resultType,
   Fortran::lower::CharacterExprHelper helper{builder, loc};
   auto *charBox = args[0].getCharBox();
   if (!charBox)
-    TODO("character array len_trim");
+    TODO(loc, "character array len_trim");
   auto len = helper.createLenTrim(*charBox);
   return builder.createConvert(loc, resultType, len);
 }

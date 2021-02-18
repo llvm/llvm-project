@@ -165,7 +165,7 @@ public:
       auto rowTy = getExtendedDescFieldTypeModel<10>()(&getContext());
       unsigned numLenParams = 0; // FIXME
       parts.push_back(mlir::LLVM::LLVMArrayType::get(rowTy, numLenParams));
-      TODO("extended descriptor");
+      TODO_NOLOC("extended descriptor");
     }
     return mlir::LLVM::LLVMPointerType::get(
         mlir::LLVM::LLVMStructType::getLiteral(&getContext(), parts,

@@ -138,21 +138,21 @@ componentToExtendedValue(Fortran::lower::FirOpBuilder &builder,
                          mlir::Value component) {
   auto fieldTy = fir::dyn_cast_ptrEleTy(component.getType());
   if (fieldTy.dyn_cast<fir::BoxType>())
-    TODO("lower pointer/allocatable component ref");
+    TODO(loc, "lower pointer/allocatable component ref");
   llvm::SmallVector<mlir::Value, 4> extents;
   if (auto seqTy = fieldTy.dyn_cast<fir::SequenceType>()) {
     fieldTy = seqTy.getEleTy();
     auto idxTy = builder.getIndexType();
     for (auto extent : seqTy.getShape()) {
       if (extent == fir::SequenceType::getUnknownExtent())
-        TODO("array component shape depending on length parameters");
+        TODO(loc, "array component shape depending on length parameters");
       extents.emplace_back(builder.createIntegerConstant(loc, idxTy, extent));
     }
   }
   if (auto charTy = fieldTy.dyn_cast<fir::CharacterType>()) {
     auto cstLen = charTy.getLen();
     if (cstLen == fir::CharacterType::unknownLen())
-      TODO("get character component length from length type parameters");
+      TODO(loc, "get character component length from length type parameters");
     auto len = builder.createIntegerConstant(
         loc, builder.getCharacterLengthType(), cstLen);
     if (!extents.empty())
@@ -161,7 +161,8 @@ componentToExtendedValue(Fortran::lower::FirOpBuilder &builder,
   }
   if (auto recordTy = fieldTy.dyn_cast<fir::RecordType>())
     if (recordTy.getNumLenParams() != 0)
-      TODO("lower component ref that is a derived type with length parameter");
+      TODO(loc,
+           "lower component ref that is a derived type with length parameter");
   if (extents.empty())
     return fir::ArrayBoxValue{component, extents};
   return component;
@@ -267,7 +268,7 @@ public:
     if (auto *lhs = left.getUnboxed())
       if (auto *rhs = right.getUnboxed())
         return builder.create<OpTy>(getLoc(), pred, *lhs, *rhs);
-    TODO("");
+    fir::emitFatalError(getLoc(), "array compare should be handled in genarr");
   }
   template <typename OpTy, typename A>
   mlir::Value createCompareOp(const A &ex, mlir::CmpIPredicate pred) {
@@ -281,7 +282,7 @@ public:
     if (auto *lhs = left.getUnboxed())
       if (auto *rhs = right.getUnboxed())
         return builder.create<OpTy>(getLoc(), pred, *lhs, *rhs);
-    TODO("");
+    fir::emitFatalError(getLoc(), "array compare should be handled in genarr");
   }
   template <typename OpTy, typename A>
   mlir::Value createFltCmpOp(const A &ex, mlir::CmpFPredicate pred) {
@@ -332,7 +333,7 @@ public:
           return builder.create<fir::LoadOp>(loc, fir::getBase(v));
         },
         [&](const auto &v) -> fir::ExtendedValue {
-          TODO("loading array or descriptor");
+          TODO(getLoc(), "loading array or descriptor");
         });
   }
 
@@ -359,7 +360,7 @@ public:
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::BOZLiteralConstant &) {
-    TODO("BOZ");
+    TODO(getLoc(), "BOZ");
   }
   /// Return indirection to function designated in ProcedureDesignator.
   /// The type of the function indirection is not guaranteed to match the one
@@ -398,10 +399,10 @@ public:
     return builder.createNullConstant(getLoc());
   }
   fir::ExtendedValue genval(const Fortran::evaluate::StructureConstructor &) {
-    TODO("struct ctor");
+    TODO(getLoc(), "struct ctor");
   }
   fir::ExtendedValue genval(const Fortran::evaluate::ImpliedDoIndex &) {
-    TODO("implied do index");
+    TODO(getLoc(), "implied do index");
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::DescriptorInquiry &desc) {
@@ -411,13 +412,13 @@ public:
     case Fortran::evaluate::DescriptorInquiry::Field::Len:
       return symBox.getCharLen().getValue();
     default:
-      TODO("descriptor inquiry other than length");
+      TODO(getLoc(), "descriptor inquiry other than length");
     }
     llvm_unreachable("unknown descriptor inquiry");
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::TypeParamInquiry &) {
-    TODO("");
+    TODO(getLoc(), "type parameter inquiry");
   }
 
   mlir::Value extractComplexPart(mlir::Value cplx, bool isImagPart) {
@@ -524,7 +525,7 @@ public:
     if (lhsChar && rhsChar)
       return Fortran::lower::CharacterExprHelper{builder, getLoc()}
           .createConcatenate(*lhsChar, *rhsChar);
-    fir::emitFatalError(getLoc(), "TODO: character array concatenate");
+    TODO(getLoc(), "character array concatenate");
   }
 
   /// MIN and MAX operations
@@ -549,7 +550,7 @@ public:
 
   template <int KIND>
   fir::ExtendedValue genval(const Fortran::evaluate::SetLength<KIND> &) {
-    TODO("");
+    TODO(getLoc(), "evaluate::SetLength lowering");
   }
 
   template <int KIND>
@@ -909,7 +910,9 @@ public:
         Fortran::common::visitors{
             [&](const Fortran::evaluate::DataRef &x) { return gen(x); },
             [&](const Fortran::evaluate::StaticDataObject::Pointer &)
-                -> fir::ExtendedValue { TODO(""); },
+                -> fir::ExtendedValue {
+              TODO(getLoc(), "StaticDataObject::Pointer substring");
+            },
         },
         s.parent());
     llvm::SmallVector<mlir::Value, 2> bounds;
@@ -925,8 +928,9 @@ public:
           return charHelper.createSubstring(x, bounds);
         },
         [&](const fir::CharArrayBoxValue &) -> fir::ExtendedValue {
-          // TODO: substring array
-          TODO("array substring lowering");
+          fir::emitFatalError(
+              getLoc(),
+              "array substring should be handled in array expression");
         },
         [&](const auto &) -> fir::ExtendedValue {
           fir::emitFatalError(getLoc(), "substring base is not a CharBox");
@@ -1047,7 +1051,7 @@ public:
         return genval(*sub);
       return genIntegerConstant<8>(builder.getContext(), 1);
     }
-    TODO("");
+    TODO(getLoc(), "non explicit semantics::Bound lowering");
   }
 
   fir::ExtendedValue
@@ -1101,7 +1105,7 @@ public:
       for (auto [ext, sub] : llvm::zip(arr.getExtents(), aref.subscript())) {
         auto subVal = genComponent(sub);
         if (auto *trip = std::get_if<fir::RangeBoxValue>(&subVal)) {
-          TODO("");
+          fir::emitFatalError(loc, "triplet slice should be handled in genarr");
         } else {
           auto *v = std::get_if<fir::ExtendedValue>(&subVal);
           assert(v);
@@ -1114,7 +1118,8 @@ public:
             if (ext)
               delta = builder.create<mlir::MulIOp>(loc, delta, ext);
           } else {
-            TODO("");
+            fir::emitFatalError(loc,
+                                "vector subscript should be handled in genarr");
           }
         }
         ++dim;
@@ -1143,9 +1148,7 @@ public:
         },
         [&](const Fortran::lower::SymbolBox::Derived &arr)
             -> fir::ExtendedValue {
-          // TODO: implement
-          mlir::emitError(loc, "not implemented: array of derived type");
-          return {};
+          TODO(loc, "array ref of derived type with length parameters");
         },
         [&](const auto &) -> fir::ExtendedValue {
           mlir::emitError(loc, "internal: array lowering failed");
@@ -1171,11 +1174,12 @@ public:
             auto val = builder.createConvert(loc, idxTy, *sval);
             arrayCoorArgs.push_back(val);
           } else {
-            TODO("");
+            fir::emitFatalError(loc,
+                                "vector subscript should be handled in genarr");
           }
         } else {
           // RangedBoxValue
-          TODO("");
+          fir::emitFatalError(loc, "triplet slice should be handled in genarr");
         }
       }
       return builder.create<fir::ArrayCoorOp>(
@@ -1185,21 +1189,18 @@ public:
         [&](const fir::ArrayBoxValue &arr) {
           // FIXME: this check can be removed when slicing is implemented
           if (isSlice(aref))
-            llvm::report_fatal_error(
-                "slicing should be handled in array expresion context");
+            fir::emitFatalError(
+                loc, "slicing should be handled in array expresion context");
           return genWithShape(arr);
         },
-        [&](const fir::CharArrayBoxValue &arr) {
-          TODO("");
-          return mlir::Value{};
+        [&](const fir::CharArrayBoxValue &arr) -> mlir::Value {
+          TODO(loc, "arraycoor of character array");
         },
-        [&](const fir::BoxValue &arr) {
-          TODO("");
-          return mlir::Value{};
+        [&](const fir::BoxValue &arr) -> mlir::Value {
+          TODO(loc, "arraycoor of derived type array with length parameters");
         },
-        [&](const auto &) {
-          TODO("");
-          return mlir::Value{};
+        [&](const auto &) -> mlir::Value {
+          fir::emitFatalError(loc, "arraycoor on non array extended value");
         });
   }
 
@@ -1233,13 +1234,11 @@ public:
             assert(adj && "boxed value not handled");
             args.push_back(builder.create<mlir::SubIOp>(loc, ty, *val, adj));
           } else {
-            TODO("");
+            fir::emitFatalError(loc,
+                                "vector subscript should be handled in genarr");
           }
         } else {
-          assert(std::holds_alternative<fir::RangeBoxValue>(subBox) &&
-                 "must be a range");
-          // triple notation for slicing operation
-          TODO("");
+          fir::emitFatalError(loc, "triplet slice should be handled in genarr");
         }
       }
       auto ty = genSubType(base.getType(), args.size());
@@ -1442,13 +1441,13 @@ public:
       }
       const auto *expr = actual->UnwrapExpr();
       if (!expr)
-        TODO("assumed type actual argument lowering");
+        TODO(loc, "assumed type actual argument lowering");
 
       if (arg.passBy == PassBy::Value) {
         auto *argVal = genExtValue(*expr).getUnboxed();
         if (!argVal)
           mlir::emitError(
-              getLoc(),
+              loc,
               "Lowering internal error: passing non trivial value by value");
         else
           caller.placeInput(arg, *argVal);
@@ -1478,7 +1477,7 @@ public:
             [&](const fir::BoxValue &x) -> mlir::Value {
               // Beware, descriptor content might have to be copied before
               // and after the call to a contiguous character argument.
-              TODO("lowering actual arguments descriptor to boxchar");
+              TODO(loc, "lowering actual arguments descriptor to boxchar");
             },
             [&](const auto &x) {
               mlir::emitError(loc, "Lowering internal error: actual "
@@ -1537,7 +1536,7 @@ public:
           caller.placeInput(*resultArg, temp);
           return fir::ExtendedValue(temp);
         }
-        TODO("passing hidden descriptor for result"); // Pass descriptor
+        TODO(loc, "passing hidden descriptor for result"); // Pass descriptor
       }
       return {};
     }();
@@ -2157,18 +2156,18 @@ public:
   }
   template <int KIND>
   CC genarr(const Fortran::evaluate::Concat<KIND> &x) {
-    TODO("concat");
+    TODO(getLoc(), "concat");
     return [](IterSpace iters) -> ExtValue { return mlir::Value{}; };
   }
   template <int KIND>
   CC genarr(const Fortran::evaluate::SetLength<KIND> &x) {
-    TODO("set length");
+    TODO(getLoc(), "set length");
     return [](IterSpace iters) -> ExtValue { return mlir::Value{}; };
   }
   template <typename A>
   CC genarr(const Fortran::evaluate::Constant<A> &x) {
+    TODO(getLoc(), "constant");
     return [](IterSpace iters) -> ExtValue {
-      TODO("constant");
       return mlir::Value{}; /* FIXME */
     };
   }
@@ -2255,11 +2254,11 @@ public:
                 if (auto optLo = t.lower())
                   trips.push_back(fir::getBase(asScalar(*optLo)));
                 else
-                  TODO("lbound");
+                  TODO(loc, "lbound");
                 if (auto optUp = t.upper())
                   trips.push_back(fir::getBase(asScalar(*optUp)));
                 else
-                  TODO("ubound");
+                  TODO(loc, "ubound");
                 trips.push_back(fir::getBase(asScalar(t.stride())));
               },
               [&](const Fortran::evaluate::IndirectSubscriptIntegerExpr &ie) {
@@ -2492,11 +2491,11 @@ public:
                    },
                    [&](const Fortran::evaluate::ArrayRef &r) {
                      // Must be scalar per C919 and C925
-                     TODO("field name and array arguments");
+                     TODO(getLoc(), "field name and array arguments");
                    },
                    [&](const Fortran::evaluate::CoarrayRef &r) {
                      // Must be scalar per C919 and C925
-                     TODO("field name and coarray arguments");
+                     TODO(getLoc(), "field name and coarray arguments");
                    }},
                dr.u);
   }
@@ -2536,37 +2535,41 @@ public:
     return result;
   }
 
-  CC genarr(const Fortran::evaluate::CoarrayRef &) { TODO("coarray ref"); }
-  CC genarr(const Fortran::evaluate::Substring &) { TODO("substring"); }
+  CC genarr(const Fortran::evaluate::CoarrayRef &) {
+    TODO(getLoc(), "coarray ref");
+  }
+  CC genarr(const Fortran::evaluate::Substring &) {
+    TODO(getLoc(), "array substring");
+  }
 
   template <typename A>
   CC genarr(const Fortran::evaluate::FunctionRef<A> &x) {
+    TODO(getLoc(), "array function ref");
     return [](IterSpace iters) -> ExtValue {
-      TODO("function ref");
       return mlir::Value{}; /* FIXME */
     };
   }
   template <typename A>
   CC genarr(const Fortran::evaluate::ArrayConstructor<A> &x) {
+    TODO(getLoc(), "array ctor");
     return [](IterSpace iters) -> ExtValue {
-      TODO("array ctor");
       return mlir::Value{}; /* FIXME */
     };
   }
   CC genarr(const Fortran::evaluate::ImpliedDoIndex &x) {
-    TODO("implied do index");
+    TODO(getLoc(), "array expr implied do index");
     return [](IterSpace iters) -> ExtValue { return mlir::Value{}; };
   }
   CC genarr(const Fortran::evaluate::TypeParamInquiry &x) {
-    TODO("type parameter inquiry");
+    TODO(getLoc(), "array expr type parameter inquiry");
     return [](IterSpace iters) -> ExtValue { return mlir::Value{}; };
   }
   CC genarr(const Fortran::evaluate::DescriptorInquiry &x) {
-    TODO("descriptor inquiry");
+    TODO(getLoc(), "array expr descriptor inquiry");
     return [](IterSpace iters) -> ExtValue { return mlir::Value{}; };
   }
   CC genarr(const Fortran::evaluate::StructureConstructor &x) {
-    TODO("structure constructor");
+    TODO(getLoc(), "structure constructor");
     return [](IterSpace iters) -> ExtValue { return mlir::Value{}; };
   }
 
