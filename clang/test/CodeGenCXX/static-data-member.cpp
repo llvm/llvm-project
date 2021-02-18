@@ -72,7 +72,7 @@ namespace test3 {
   // CHECK-NEXT: br i1 [[UNINITIALIZED]]
   // CHECK:      [[TMP:%.*]] = call i32 @_ZN5test33fooEv()
   // CHECK-NEXT: store i32 [[TMP]], i32* @_ZN5test31AIiE1xE, align 4
-  // CHECK-NEXT: store i64 1, i64* @_ZGVN5test31AIiE1xE
+  // CHECK-NEXT: store i8 1, i8* bitcast (i64* @_ZGVN5test31AIiE1xE to i8*)
   // CHECK-NEXT: br label
   // CHECK:      ret void
 }
