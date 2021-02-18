@@ -463,3 +463,8 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
 
   return true;
 }
+
+void llvm::printPasses(raw_ostream &OS) {
+  PassBuilder PB;
+  PB.printPassNames(OS);
+}
