@@ -292,7 +292,7 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     // unused op_sel_hi bits if corresponding operands do not exist.
     // accvgpr_read/write are different, however. These are VOP3P, MAI, have
     // src0, but do not use op_sel.
-    Encoding |= (1ul << 14) | (1ul << 59) | (1ul << 60);
+    Encoding |= (1ull << 14) | (1ull << 59) | (1ull << 60);
     break;
   default:
     break;
