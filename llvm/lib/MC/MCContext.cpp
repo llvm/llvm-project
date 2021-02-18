@@ -671,12 +671,14 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
 }
 
 MCSectionXCOFF *
-MCContext::getXCOFFSection(StringRef Section, XCOFF::StorageMappingClass SMC,
-                           XCOFF::SymbolType Type, SectionKind Kind,
+MCContext::getXCOFFSection(StringRef Section, SectionKind Kind,
+                           Optional<XCOFF::CsectProperties> CsectProp,
                            bool MultiSymbolsAllowed, const char *BeginSymName) {
   // Do the lookup. If we have a hit, return it.
-  auto IterBool = XCOFFUniquingMap.insert(
-      std::make_pair(XCOFFSectionKey{Section.str(), SMC}, nullptr));
+  // FIXME: handle the case for non-csect sections. Non-csect section has None
+  // CsectProp.
+  auto IterBool = XCOFFUniquingMap.insert(std::make_pair(
+      XCOFFSectionKey{Section.str(), CsectProp->MappingClass}, nullptr));
   auto &Entry = *IterBool.first;
   if (!IterBool.second) {
     MCSectionXCOFF *ExistedEntry = Entry.second;
@@ -689,7 +691,8 @@ MCContext::getXCOFFSection(StringRef Section, XCOFF::StorageMappingClass SMC,
   // Otherwise, return a new section.
   StringRef CachedName = Entry.first.SectionName;
   MCSymbolXCOFF *QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(
-      CachedName + "[" + XCOFF::getMappingClassString(SMC) + "]"));
+      CachedName + "[" + XCOFF::getMappingClassString(CsectProp->MappingClass) +
+      "]"));
 
   MCSymbol *Begin = nullptr;
   if (BeginSymName)
@@ -697,9 +700,9 @@ MCContext::getXCOFFSection(StringRef Section, XCOFF::StorageMappingClass SMC,
 
   // QualName->getUnqualifiedName() and CachedName are the same except when
   // CachedName contains invalid character(s) such as '$' for an XCOFF symbol.
-  MCSectionXCOFF *Result = new (XCOFFAllocator.Allocate())
-      MCSectionXCOFF(QualName->getUnqualifiedName(), SMC, Type, Kind, QualName,
-                     Begin, CachedName, MultiSymbolsAllowed);
+  MCSectionXCOFF *Result = new (XCOFFAllocator.Allocate()) MCSectionXCOFF(
+      QualName->getUnqualifiedName(), CsectProp->MappingClass, CsectProp->Type,
+      Kind, QualName, Begin, CachedName, MultiSymbolsAllowed);
   Entry.second = Result;
 
   auto *F = new MCDataFragment();
