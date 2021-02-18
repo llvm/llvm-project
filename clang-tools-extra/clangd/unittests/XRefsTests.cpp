@@ -1863,6 +1863,26 @@ TEST(FindReferences, WithinAST) {
         Vector<int> x2;
         Vector<double> y;
       )cpp",
+      R"cpp(// Dependent code
+        template <typename T> void $decl[[foo]](T t);
+        template <typename T> void bar(T t) { [[foo]](t); } // foo in bar is uninstantiated.
+        void baz(int x) { [[f^oo]](x); }
+      )cpp",
+      R"cpp(
+        namespace ns {
+        struct S{};
+        void $decl[[foo]](S s);
+        } // namespace ns
+        template <typename T> void foo(T t);
+        // FIXME: Maybe report this foo as a ref to ns::foo (because of ADL)
+        // when bar<ns::S> is instantiated?
+        template <typename T> void bar(T t) { foo(t); }
+        void baz(int x) {
+          ns::S s;
+          bar<ns::S>(s);
+          [[f^oo]](s);
+        }
+      )cpp",
   };
   for (const char *Test : Tests)
     checkFindRefs(Test);
