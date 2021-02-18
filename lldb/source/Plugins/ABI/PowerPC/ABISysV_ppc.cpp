@@ -900,6 +900,7 @@ bool ABISysV_ppc::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   const int32_t ptr_size = 4;
+  row->SetUnspecifiedRegistersAreUndefined(true);
   row->GetCFAValue().SetIsRegisterDereferenced(sp_reg_num);
 
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 1, true);
