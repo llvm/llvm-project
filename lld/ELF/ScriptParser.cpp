@@ -431,13 +431,26 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Default({ELFNoneKind, EM_NONE});
 }
 
-// Parse OUTPUT_FORMAT(bfdname) or OUTPUT_FORMAT(bfdname, big, little).
-// Currently we ignore big and little parameters.
+// Parse OUTPUT_FORMAT(bfdname) or OUTPUT_FORMAT(default, big, little). Choose
+// big if -EB is specified, little if -EL is specified, or default if neither is
+// specified.
 void ScriptParser::readOutputFormat() {
   expect("(");
 
+  StringRef s;
   config->bfdname = unquote(next());
-  StringRef s = config->bfdname;
+  if (!consume(")")) {
+    expect(",");
+    s = unquote(next());
+    if (config->optEB)
+      config->bfdname = s;
+    expect(",");
+    s = unquote(next());
+    if (config->optEL)
+      config->bfdname = s;
+    consume(")");
+  }
+  s = config->bfdname;
   if (s.consume_back("-freebsd"))
     config->osabi = ELFOSABI_FREEBSD;
 
@@ -448,14 +461,6 @@ void ScriptParser::readOutputFormat() {
     config->mipsN32Abi = true;
   if (config->emachine == EM_MSP430)
     config->osabi = ELFOSABI_STANDALONE;
-
-  if (consume(")"))
-    return;
-  expect(",");
-  skip();
-  expect(",");
-  skip();
-  expect(")");
 }
 
 void ScriptParser::readPhdrs() {
