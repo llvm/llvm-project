@@ -63,6 +63,7 @@ module Clang_Basic {
   textual header "Basic/OpenMPKinds.def"
   textual header "Basic/OperatorKinds.def"
   textual header "Basic/PPCTypes.def"
+  textual header "Basic/RISCVVTypes.def"
   textual header "Basic/Sanitizers.def"
   textual header "Basic/TokenKinds.def"
   textual header "Basic/X86Target.def"
