@@ -519,7 +519,7 @@ def CC_X86_64_C : CallingConv<[
   CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R12]>>>,
 
   // Pass SwiftSelf in a callee saved register.
-  CCIfSwiftAsync<CCIfType<[i64], CCAssignToReg<[R14]>>>,
+  CCIfSwiftAsync<CCIfType<[i64], CCAssignToReg<[R11]>>>,
 
   // For Swift Calling Conventions, pass sret in %rax.
   CCIfCC<"CallingConv::Swift",
