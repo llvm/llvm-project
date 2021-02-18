@@ -1334,9 +1334,7 @@ bool RAGreedy::growRegion(GlobalSplitCandidate &Cand) {
     for (unsigned Bundle : NewBundles) {
       // Look at all blocks connected to Bundle in the full graph.
       ArrayRef<unsigned> Blocks = Bundles->getBlocks(Bundle);
-      for (ArrayRef<unsigned>::iterator I = Blocks.begin(), E = Blocks.end();
-           I != E; ++I) {
-        unsigned Block = *I;
+      for (unsigned Block : Blocks) {
         if (!Todo.test(Block))
           continue;
         Todo.reset(Block);
@@ -2653,18 +2651,16 @@ unsigned RAGreedy::tryLastChanceRecoloring(LiveInterval &VirtReg,
     // with VirtReg on PhysReg (or one of its aliases).
     // Enqueue them for recoloring and perform the actual recoloring.
     PQueue RecoloringQueue;
-    for (SmallLISet::iterator It = RecoloringCandidates.begin(),
-                              EndIt = RecoloringCandidates.end();
-         It != EndIt; ++It) {
-      Register ItVirtReg = (*It)->reg();
-      enqueue(RecoloringQueue, *It);
+    for (LiveInterval *RC : RecoloringCandidates) {
+      Register ItVirtReg = RC->reg();
+      enqueue(RecoloringQueue, RC);
       assert(VRM->hasPhys(ItVirtReg) &&
              "Interferences are supposed to be with allocated variables");
 
       // Record the current allocation.
       VirtRegToPhysReg[ItVirtReg] = VRM->getPhys(ItVirtReg);
       // unset the related struct.
-      Matrix->unassign(**It);
+      Matrix->unassign(*RC);
     }
 
     // Do as if VirtReg was assigned to PhysReg so that the underlying
@@ -2698,22 +2694,18 @@ unsigned RAGreedy::tryLastChanceRecoloring(LiveInterval &VirtReg,
     // don't add it to NewVRegs because its physical register will be restored
     // below. Other vregs in CurrentNewVRegs are created by calling
     // selectOrSplit and should be added into NewVRegs.
-    for (SmallVectorImpl<Register>::iterator Next = CurrentNewVRegs.begin(),
-                                             End = CurrentNewVRegs.end();
-         Next != End; ++Next) {
-      if (RecoloringCandidates.count(&LIS->getInterval(*Next)))
+    for (Register &R : CurrentNewVRegs) {
+      if (RecoloringCandidates.count(&LIS->getInterval(R)))
         continue;
-      NewVRegs.push_back(*Next);
+      NewVRegs.push_back(R);
     }
 
-    for (SmallLISet::iterator It = RecoloringCandidates.begin(),
-                              EndIt = RecoloringCandidates.end();
-         It != EndIt; ++It) {
-      Register ItVirtReg = (*It)->reg();
+    for (LiveInterval *RC : RecoloringCandidates) {
+      Register ItVirtReg = RC->reg();
       if (VRM->hasPhys(ItVirtReg))
-        Matrix->unassign(**It);
+        Matrix->unassign(*RC);
       MCRegister ItPhysReg = VirtRegToPhysReg[ItVirtReg];
-      Matrix->assign(**It, ItPhysReg);
+      Matrix->assign(*RC, ItPhysReg);
     }
   }
 

@@ -286,16 +286,14 @@ MCRegister RABasic::selectOrSplit(LiveInterval &VirtReg,
   }
 
   // Try to spill another interfering reg with less spill weight.
-  for (auto PhysRegI = PhysRegSpillCands.begin(),
-            PhysRegE = PhysRegSpillCands.end();
-       PhysRegI != PhysRegE; ++PhysRegI) {
-    if (!spillInterferences(VirtReg, *PhysRegI, SplitVRegs))
+  for (MCRegister &PhysReg : PhysRegSpillCands) {
+    if (!spillInterferences(VirtReg, PhysReg, SplitVRegs))
       continue;
 
-    assert(!Matrix->checkInterference(VirtReg, *PhysRegI) &&
+    assert(!Matrix->checkInterference(VirtReg, PhysReg) &&
            "Interference after spill.");
     // Tell the caller to allocate to this newly freed physical register.
-    return *PhysRegI;
+    return PhysReg;
   }
 
   // No other spill candidates were found, so spill the current VirtReg.
