@@ -104,10 +104,10 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
     unsigned BaseOff;
     unsigned DMask;
     InstClassEnum InstClass;
-    bool GLC;
-    bool SLC;
-    bool DLC;
-    bool SCCB; // vmem only.
+    bool GLC = 0;
+    bool SLC = 0;
+    bool DLC = 0;
+    bool SCCB = 0; // vmem only.
     bool UseST64;
     int AddrIdx[MaxAddressRegs];
     const MachineOperand *AddrReg[MaxAddressRegs];
