@@ -25,8 +25,7 @@ if (sysroot == "") {
     iossim_sdk_path = "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk"
   }
 } else {
-  ios_sdk_path = rebase_path(sysroot, root_build_dir) + "/iPhoneOS.sdk"
-  iossim_sdk_path =
-      rebase_path(sysroot, root_build_dir) + "/iPhoneSimulator.sdk"
-  mac_sdk_path = rebase_path(sysroot, root_build_dir) + "/MacOSX.sdk"
+  ios_sdk_path = sysroot + "/iPhoneOS.sdk"
+  iossim_sdk_path = sysroot + "/iPhoneSimulator.sdk"
+  mac_sdk_path = sysroot + "/MacOSX.sdk"
 }
