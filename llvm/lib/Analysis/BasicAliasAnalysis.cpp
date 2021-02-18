@@ -1470,8 +1470,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     return NoAlias;
 
   // Strip off any casts if they exist.
-  V1 = V1->stripPointerCastsAndInvariantGroups();
-  V2 = V2->stripPointerCastsAndInvariantGroups();
+  V1 = V1->stripPointerCastsForAliasAnalysis();
+  V2 = V2->stripPointerCastsForAliasAnalysis();
 
   // If V1 or V2 is undef, the result is NoAlias because we can always pick a
   // value for undef that aliases nothing in the program.
