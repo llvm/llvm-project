@@ -21,7 +21,6 @@
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/InitAllDialects.h"
 #include "mlir/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 
@@ -299,7 +298,8 @@ Error compileAndExecuteSingleReturnFunction(Options &options, ModuleOp module,
 
 /// Entry point for all CPU runners. Expects the common argc/argv arguments for
 /// standard C++ main functions.
-int mlir::JitRunnerMain(int argc, char **argv, JitRunnerConfig config) {
+int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
+                        JitRunnerConfig config) {
   // Create the options struct containing the command line options for the
   // runner. This must come before the command line options are parsed.
   Options options;
@@ -330,8 +330,7 @@ int mlir::JitRunnerMain(int argc, char **argv, JitRunnerConfig config) {
     }
   }
 
-  MLIRContext context;
-  registerAllDialects(context);
+  MLIRContext context(registry);
 
   auto m = parseMLIRInput(options.inputFilename, &context);
   if (!m) {

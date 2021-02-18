@@ -12,9 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/ExecutionEngine/JitRunner.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
-#include "mlir/InitAllDialects.h"
+#include "mlir/IR/Dialect.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -25,5 +27,7 @@ int main(int argc, char **argv) {
   llvm::InitializeNativeTargetAsmParser();
   mlir::initializeLLVMPasses();
 
-  return mlir::JitRunnerMain(argc, argv);
+  mlir::DialectRegistry registry;
+  registry.insert<mlir::LLVM::LLVMDialect, mlir::omp::OpenMPDialect>();
+  return mlir::JitRunnerMain(argc, argv, registry);
 }
