@@ -120,9 +120,13 @@ std::unique_ptr<Module> llvm::CloneModule(
 
     SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
     G.getAllMetadata(MDs);
+
+    // FIXME: Stop using RF_ReuseAndMutateDistinctMDs here, since it's unsound
+    // to mutate metadata that is still referenced by the source module unless
+    // the source is about to be discarded (see IRMover for a valid use).
     for (auto MD : MDs)
-      GV->addMetadata(MD.first,
-                      *MapMetadata(MD.second, VMap, RF_MoveDistinctMDs));
+      GV->addMetadata(MD.first, *MapMetadata(MD.second, VMap,
+                                             RF_ReuseAndMutateDistinctMDs));
 
     if (G.isDeclaration())
       continue;

@@ -547,7 +547,7 @@ MDNode *MDNodeMapper::mapDistinctNode(const MDNode &N) {
   assert(N.isDistinct() && "Expected a distinct node");
   assert(!M.getVM().getMappedMD(&N) && "Expected an unmapped node");
   DistinctWorklist.push_back(
-      cast<MDNode>((M.Flags & RF_MoveDistinctMDs)
+      cast<MDNode>((M.Flags & RF_ReuseAndMutateDistinctMDs)
                        ? M.mapToSelf(&N)
                        : M.mapToMetadata(&N, cloneOrBuildODR(N))));
   return DistinctWorklist.back();
