@@ -497,11 +497,15 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
 
   if (Target == TARGET_CPU || Target == TARGET_HYBRID) {
     switch (CodeGeneration) {
+    case CODEGEN_AST:
+      SPM.addPass(
+          RequireAnalysisPass<IslAstAnalysis, Scop, ScopAnalysisManager,
+                              ScopStandardAnalysisResults &, SPMUpdater &>());
+      break;
     case CODEGEN_FULL:
       SPM.addPass(polly::CodeGenerationPass());
       break;
-    case CODEGEN_AST:
-    default: // Does it actually make sense to distinguish IslAst codegen?
+    default:
       break;
     }
   }
