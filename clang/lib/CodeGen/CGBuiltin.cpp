@@ -5371,10 +5371,7 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP2(vabdq_v, arm_neon_vabdu, arm_neon_vabds, Add1ArgType | UnsignedAlts),
   NEONMAP1(vabs_v, arm_neon_vabs, 0),
   NEONMAP1(vabsq_v, arm_neon_vabs, 0),
-  NEONMAP0(vadd_v),
   NEONMAP0(vaddhn_v),
-  NEONMAP0(vaddq_p128),
-  NEONMAP0(vaddq_v),
   NEONMAP1(vaesdq_v, arm_neon_aesd, 0),
   NEONMAP1(vaeseq_v, arm_neon_aese, 0),
   NEONMAP1(vaesimcq_v, arm_neon_aesimc, 0),
@@ -6305,14 +6302,6 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     if (VTy->getElementType()->isFloatingPointTy())
       return EmitNeonCall(CGM.getIntrinsic(Intrinsic::fabs, Ty), Ops, "vabs");
     return EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Ty), Ops, "vabs");
-  case NEON::BI__builtin_neon_vadd_v:
-  case NEON::BI__builtin_neon_vaddq_v: {
-    llvm::Type *VTy = llvm::FixedVectorType::get(Int8Ty, Quad ? 16 : 8);
-    Ops[0] = Builder.CreateBitCast(Ops[0], VTy);
-    Ops[1] = Builder.CreateBitCast(Ops[1], VTy);
-    Ops[0] =  Builder.CreateXor(Ops[0], Ops[1]);
-    return Builder.CreateBitCast(Ops[0], Ty);
-  }
   case NEON::BI__builtin_neon_vaddhn_v: {
     llvm::FixedVectorType *SrcTy =
         llvm::FixedVectorType::getExtendedElementVectorType(VTy);
@@ -9554,15 +9543,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vabsh_f16:
     Ops.push_back(EmitScalarExpr(E->getArg(0)));
     return EmitNeonCall(CGM.getIntrinsic(Intrinsic::fabs, HalfTy), Ops, "vabs");
-  case NEON::BI__builtin_neon_vaddq_p128: {
-    llvm::Type *Ty = GetNeonType(this, NeonTypeFlags::Poly128);
-    Ops.push_back(EmitScalarExpr(E->getArg(1)));
-    Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
-    Ops[1] = Builder.CreateBitCast(Ops[1], Ty);
-    Ops[0] =  Builder.CreateXor(Ops[0], Ops[1]);
-    llvm::Type *Int128Ty = llvm::Type::getIntNTy(getLLVMContext(), 128);
-    return Builder.CreateBitCast(Ops[0], Int128Ty);
-  }
   case NEON::BI__builtin_neon_vldrq_p128: {
     llvm::Type *Int128Ty = llvm::Type::getIntNTy(getLLVMContext(), 128);
     llvm::Type *Int128PTy = llvm::PointerType::get(Int128Ty, 0);

@@ -1147,8 +1147,6 @@ def SM4E : SInst<"vsm4e", "...", "QUi">;
 def SM4EKEY : SInst<"vsm4ekey", "...", "QUi">;
 }
 
-def VADDP : WInst<"vadd", "...", "PcPsPlQPcQPsQPlQPk">;
-
 ////////////////////////////////////////////////////////////////////////////////
 // Float -> Int conversions with explicit rounding mode
 
