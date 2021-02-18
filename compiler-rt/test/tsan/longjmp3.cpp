@@ -1,4 +1,4 @@
-// RUN: %clang_tsan %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
+// RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
 
 #include <pthread.h>
 #include <stdio.h>
@@ -17,14 +17,14 @@ void foo(jmp_buf env) {
   x++;
 }
 
-void badguy() {
+void badguy() __attribute__((noinline)) {
   pthread_mutex_t mtx;
   pthread_mutex_init(&mtx, 0);
   pthread_mutex_lock(&mtx);
   pthread_mutex_destroy(&mtx);
 }
 
-void mymain() {
+void mymain() __attribute__((noinline)) {
   jmp_buf env;
   if (setjmp(env) == 42) {
     badguy();

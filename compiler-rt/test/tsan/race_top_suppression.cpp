@@ -1,12 +1,12 @@
 // RUN: echo "race_top:TopFunction" > %t.supp
-// RUN: %clangxx_tsan %s -o %t
+// RUN: %clangxx_tsan -O1 %s -o %t
 // RUN: %env_tsan_opts=suppressions='%t.supp' %run %t 2>&1 | FileCheck %s
 // RUN: rm %t.supp
 #include "test.h"
 
 int Global;
 
-void TopFunction(int *p) {
+void TopFunction(int *p) __attribute__((noinline)) {
   *p = 1;
 }
 
