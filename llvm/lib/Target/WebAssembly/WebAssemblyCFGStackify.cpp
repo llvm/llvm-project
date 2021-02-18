@@ -38,7 +38,7 @@ using WebAssembly::SortRegionInfo;
 
 #define DEBUG_TYPE "wasm-cfg-stackify"
 
-STATISTIC(NumUnwindMismatches, "Number of EH pad unwind mismatches found");
+STATISTIC(NumCallUnwindMismatches, "Number of call unwind mismatches found");
 
 namespace {
 class WebAssemblyCFGStackify final : public MachineFunctionPass {
@@ -68,24 +68,35 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
   void placeBlockMarker(MachineBasicBlock &MBB);
   void placeLoopMarker(MachineBasicBlock &MBB);
   void placeTryMarker(MachineBasicBlock &MBB);
+
+  // Exception handling related functions
+  bool fixCallUnwindMismatches(MachineFunction &MF);
+  bool fixCatchUnwindMismatches(MachineFunction &MF);
+  void addTryDelegate(MachineInstr *RangeBegin, MachineInstr *RangeEnd,
+                      MachineBasicBlock *DelegateDest);
+  void recalculateScopeTops(MachineFunction &MF);
   void removeUnnecessaryInstrs(MachineFunction &MF);
-  bool fixUnwindMismatches(MachineFunction &MF);
+
+  // Wrap-up
+  unsigned getDepth(const SmallVectorImpl<const MachineBasicBlock *> &Stack,
+                    const MachineBasicBlock *MBB);
   void rewriteDepthImmediates(MachineFunction &MF);
   void fixEndsAtEndOfFunction(MachineFunction &MF);
+  void cleanupFunctionData(MachineFunction &MF);
 
-  // For each BLOCK|LOOP|TRY, the corresponding END_(BLOCK|LOOP|TRY).
+  // For each BLOCK|LOOP|TRY, the corresponding END_(BLOCK|LOOP|TRY) or DELEGATE
+  // (in case of TRY).
   DenseMap<const MachineInstr *, MachineInstr *> BeginToEnd;
-  // For each END_(BLOCK|LOOP|TRY), the corresponding BLOCK|LOOP|TRY.
+  // For each END_(BLOCK|LOOP|TRY) or DELEGATE, the corresponding
+  // BLOCK|LOOP|TRY.
   DenseMap<const MachineInstr *, MachineInstr *> EndToBegin;
   // <TRY marker, EH pad> map
   DenseMap<const MachineInstr *, MachineBasicBlock *> TryToEHPad;
   // <EH pad, TRY marker> map
   DenseMap<const MachineBasicBlock *, MachineInstr *> EHPadToTry;
 
-  // There can be an appendix block at the end of each function, shared for:
-  // - creating a correct signature for fallthrough returns
-  // - target for rethrows that need to unwind to the caller, but are trapped
-  //   inside another try/catch
+  // We need an appendix block to place 'end_loop' or 'end_try' marker when the
+  // loop / exception bottom block is the last block in a function
   MachineBasicBlock *AppendixBB = nullptr;
   MachineBasicBlock *getAppendixBlock(MachineFunction &MF) {
     if (!AppendixBB) {
@@ -95,6 +106,19 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
       MF.push_back(AppendixBB);
     }
     return AppendixBB;
+  }
+
+  // Before running rewriteDepthImmediates function, 'delegate' has a BB as its
+  // destination operand. getFakeCallerBlock() returns a fake BB that will be
+  // used for the operand when 'delegate' needs to rethrow to the caller. This
+  // will be rewritten as an immediate value that is the number of block depths
+  // + 1 in rewriteDepthImmediates, and this fake BB will be removed at the end
+  // of the pass.
+  MachineBasicBlock *FakeCallerBB = nullptr;
+  MachineBasicBlock *getFakeCallerBlock(MachineFunction &MF) {
+    if (!FakeCallerBB)
+      FakeCallerBB = MF.CreateMachineBasicBlock();
+    return FakeCallerBB;
   }
 
   // Helper functions to register / unregister scope information created by
@@ -189,6 +213,7 @@ void WebAssemblyCFGStackify::registerScope(MachineInstr *Begin,
   EndToBegin[End] = Begin;
 }
 
+// When 'End' is not an 'end_try' but 'delegate, EHPad is nullptr.
 void WebAssemblyCFGStackify::registerTryScope(MachineInstr *Begin,
                                               MachineInstr *End,
                                               MachineBasicBlock *EHPad) {
@@ -675,6 +700,8 @@ void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
     while (Cont->isEHPad()) {
       MachineInstr *Try = EHPadToTry[Cont];
       MachineInstr *EndTry = BeginToEnd[Try];
+      // We started from an EH pad, so the end marker cannot be a delegate
+      assert(EndTry->getOpcode() != WebAssembly::DELEGATE);
       Cont = EndTry->getParent();
     }
 
@@ -719,8 +746,10 @@ void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
     for (auto &MI : MBB) {
       if (MI.getOpcode() != WebAssembly::TRY)
         continue;
-
       MachineInstr *Try = &MI, *EndTry = BeginToEnd[Try];
+      if (EndTry->getOpcode() == WebAssembly::DELEGATE)
+        continue;
+
       MachineBasicBlock *TryBB = Try->getParent();
       MachineBasicBlock *Cont = EndTry->getParent();
       int64_t RetType = Try->getOperand(0).getImm();
@@ -763,12 +792,8 @@ static unsigned getCopyOpcode(const TargetRegisterClass *RC) {
 
 // When MBB is split into MBB and Split, we should unstackify defs in MBB that
 // have their uses in Split.
-// FIXME This function will be used when fixing unwind mismatches, but the old
-// version of that function was removed for the moment and the new version has
-// not yet been added. So 'LLVM_ATTRIBUTE_UNUSED' is added to suppress the
-// warning. Remove the attribute after the new functionality is added.
-LLVM_ATTRIBUTE_UNUSED static void
-unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB, MachineBasicBlock &Split) {
+static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
+                                         MachineBasicBlock &Split) {
   MachineFunction &MF = *MBB.getParent();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
@@ -826,14 +851,409 @@ unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB, MachineBasicBlock &Split) {
   }
 }
 
-bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
-  // TODO Implement this
+// Wrap the given range of instruction with try-delegate. RangeBegin and
+// RangeEnd are inclusive.
+void WebAssemblyCFGStackify::addTryDelegate(MachineInstr *RangeBegin,
+                                            MachineInstr *RangeEnd,
+                                            MachineBasicBlock *DelegateDest) {
+  auto *BeginBB = RangeBegin->getParent();
+  auto *EndBB = RangeEnd->getParent();
+  MachineFunction &MF = *BeginBB->getParent();
+  const auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+  const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+
+  // Local expression tree before the first call of this range should go
+  // after the nested TRY.
+  SmallPtrSet<const MachineInstr *, 4> AfterSet;
+  AfterSet.insert(RangeBegin);
+  for (auto I = MachineBasicBlock::iterator(RangeBegin), E = BeginBB->begin();
+       I != E; --I) {
+    if (std::prev(I)->isDebugInstr() || std::prev(I)->isPosition())
+      continue;
+    if (WebAssembly::isChild(*std::prev(I), MFI))
+      AfterSet.insert(&*std::prev(I));
+    else
+      break;
+  }
+
+  // Create the nested try instruction.
+  auto TryPos = getLatestInsertPos(
+      BeginBB, SmallPtrSet<const MachineInstr *, 4>(), AfterSet);
+  MachineInstr *Try = BuildMI(*BeginBB, TryPos, RangeBegin->getDebugLoc(),
+                              TII.get(WebAssembly::TRY))
+                          .addImm(int64_t(WebAssembly::BlockType::Void));
+
+  // Create a BB to insert the 'delegate' instruction.
+  MachineBasicBlock *DelegateBB = MF.CreateMachineBasicBlock();
+  // If the destination of 'delegate' is not the caller, adds the destination to
+  // the BB's successors.
+  if (DelegateDest != FakeCallerBB)
+    DelegateBB->addSuccessor(DelegateDest);
+
+  auto SplitPos = std::next(RangeEnd->getIterator());
+  if (SplitPos == EndBB->end()) {
+    // If the range's end instruction is at the end of the BB, insert the new
+    // delegate BB after the current BB.
+    MF.insert(std::next(EndBB->getIterator()), DelegateBB);
+    EndBB->addSuccessor(DelegateBB);
+
+  } else {
+    // If the range's end instruction is in the middle of the BB, we split the
+    // BB into two and insert the delegate BB in between.
+    // - Before:
+    // bb:
+    //   range_end
+    //   other_insts
+    //
+    // - After:
+    // pre_bb: (previous 'bb')
+    //   range_end
+    // delegate_bb: (new)
+    //   delegate
+    // post_bb: (new)
+    //   other_insts
+    MachineBasicBlock *PreBB = EndBB;
+    MachineBasicBlock *PostBB = MF.CreateMachineBasicBlock();
+    MF.insert(std::next(PreBB->getIterator()), PostBB);
+    MF.insert(std::next(PreBB->getIterator()), DelegateBB);
+    PostBB->splice(PostBB->end(), PreBB, SplitPos, PreBB->end());
+    PostBB->transferSuccessors(PreBB);
+    unstackifyVRegsUsedInSplitBB(*PreBB, *PostBB);
+    PreBB->addSuccessor(DelegateBB);
+    PreBB->addSuccessor(PostBB);
+  }
+
+  // Add 'delegate' instruction in the delegate BB created above.
+  MachineInstr *Delegate = BuildMI(DelegateBB, RangeEnd->getDebugLoc(),
+                                   TII.get(WebAssembly::DELEGATE))
+                               .addMBB(DelegateDest);
+  registerTryScope(Try, Delegate, nullptr);
+}
+
+bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
+  // Linearizing the control flow by placing TRY / END_TRY markers can create
+  // mismatches in unwind destinations for throwing instructions, such as calls.
+  //
+  // We use the 'delegate' instruction to fix the unwind mismatches. 'delegate'
+  // instruction delegates an exception to an outer 'catch'. It can target not
+  // only 'catch' but all block-like structures including another 'delegate',
+  // but with slightly different semantics than branches. When it targets a
+  // 'catch', it will delegate the exception to that catch. It is being
+  // discussed how to define the semantics when 'delegate''s target is a non-try
+  // block: it will either be a validation failure or it will target the next
+  // outer try-catch. But anyway our LLVM backend currently does not generate
+  // such code. The example below illustrates where the 'delegate' instruction
+  // in the middle will delegate the exception to, depending on the value of N.
+  // try
+  //   try
+  //     block
+  //       try
+  //         try
+  //           call @foo
+  //         delegate N    ;; Where will this delegate to?
+  //       catch           ;; N == 0
+  //       end
+  //     end               ;; N == 1 (invalid; will not be generated)
+  //   delegate            ;; N == 2
+  // catch                 ;; N == 3
+  // end
+  //                       ;; N == 4 (to caller)
+
+  // 1. When an instruction may throw, but the EH pad it will unwind to can be
+  //    different from the original CFG.
+  //
+  // Example: we have the following CFG:
+  // bb0:
+  //   call @foo    ; if it throws, unwind to bb2
+  // bb1:
+  //   call @bar    ; if it throws, unwind to bb3
+  // bb2 (ehpad):
+  //   catch
+  //   ...
+  // bb3 (ehpad)
+  //   catch
+  //   ...
+  //
+  // And the CFG is sorted in this order. Then after placing TRY markers, it
+  // will look like: (BB markers are omitted)
+  // try
+  //   try
+  //     call @foo
+  //     call @bar   ;; if it throws, unwind to bb3
+  //   catch         ;; ehpad (bb2)
+  //     ...
+  //   end_try
+  // catch           ;; ehpad (bb3)
+  //   ...
+  // end_try
+  //
+  // Now if bar() throws, it is going to end up ip in bb2, not bb3, where it
+  // is supposed to end up. We solve this problem by wrapping the mismatching
+  // call with an inner try-delegate that rethrows the exception to the right
+  // 'catch'.
+  //
+  //
+  // try
+  //   try
+  //     call @foo
+  //     try               ;; (new)
+  //       call @bar
+  //     delegate 1 (bb3)  ;; (new)
+  //   catch               ;; ehpad (bb2)
+  //     ...
+  //   end_try
+  // catch                 ;; ehpad (bb3)
+  //   ...
+  // end_try
+  //
+  // ---
+  // 2. The same as 1, but in this case an instruction unwinds to a caller
+  //    function and not another EH pad.
+  //
+  // Example: we have the following CFG:
+  // bb0:
+  //   call @foo       ; if it throws, unwind to bb2
+  // bb1:
+  //   call @bar       ; if it throws, unwind to caller
+  // bb2 (ehpad):
+  //   catch
+  //   ...
+  //
+  // And the CFG is sorted in this order. Then after placing TRY markers, it
+  // will look like:
+  // try
+  //   call @foo
+  //   call @bar     ;; if it throws, unwind to caller
+  // catch           ;; ehpad (bb2)
+  //   ...
+  // end_try
+  //
+  // Now if bar() throws, it is going to end up ip in bb2, when it is supposed
+  // throw up to the caller. We solve this problem in the same way, but in this
+  // case 'delegate's immediate argument is the number of block depths + 1,
+  // which means it rethrows to the caller.
+  // try
+  //   call @foo
+  //   try                  ;; (new)
+  //     call @bar
+  //   delegate 1 (caller)  ;; (new)
+  // catch                  ;; ehpad (bb2)
+  //   ...
+  // end_try
+  //
+  // Before rewriteDepthImmediates, delegate's argument is a BB. In case of the
+  // caller, it will take a fake BB generated by getFakeCallerBlock(), which
+  // will be converted to a correct immediate argument later.
+  //
+  // In case there are multiple calls in a BB that may throw to the caller, they
+  // can be wrapped together in one nested try-delegate scope. (In 1, this
+  // couldn't happen, because may-throwing instruction there had an unwind
+  // destination, i.e., it was an invoke before, and there could be only one
+  // invoke within a BB.)
+
+  SmallVector<const MachineBasicBlock *, 8> EHPadStack;
+  // Range of intructions to be wrapped in a new nested try/catch. A range
+  // exists in a single BB and does not span multiple BBs.
+  using TryRange = std::pair<MachineInstr *, MachineInstr *>;
+  // In original CFG, <unwind destination BB, a vector of try ranges>
+  DenseMap<MachineBasicBlock *, SmallVector<TryRange, 4>> UnwindDestToTryRanges;
+
+  // Gather possibly throwing calls (i.e., previously invokes) whose current
+  // unwind destination is not the same as the original CFG. (Case 1)
+
+  for (auto &MBB : reverse(MF)) {
+    bool SeenThrowableInstInBB = false;
+    for (auto &MI : reverse(MBB)) {
+      if (MI.getOpcode() == WebAssembly::TRY)
+        EHPadStack.pop_back();
+      else if (WebAssembly::isCatch(MI.getOpcode()))
+        EHPadStack.push_back(MI.getParent());
+
+      // In this loop we only gather calls that have an EH pad to unwind. So
+      // there will be at most 1 such call (= invoke) in a BB, so after we've
+      // seen one, we can skip the rest of BB. Also if MBB has no EH pad
+      // successor or MI does not throw, this is not an invoke.
+      if (SeenThrowableInstInBB || !MBB.hasEHPadSuccessor() ||
+          !WebAssembly::mayThrow(MI))
+        continue;
+      SeenThrowableInstInBB = true;
+
+      // If the EH pad on the stack top is where this instruction should unwind
+      // next, we're good.
+      MachineBasicBlock *UnwindDest = getFakeCallerBlock(MF);
+      for (auto *Succ : MBB.successors()) {
+        // Even though semantically a BB can have multiple successors in case an
+        // exception is not caught by a catchpad, in our backend implementation
+        // it is guaranteed that a BB can have at most one EH pad successor. For
+        // details, refer to comments in findWasmUnwindDestinations function in
+        // SelectionDAGBuilder.cpp.
+        if (Succ->isEHPad()) {
+          UnwindDest = Succ;
+          break;
+        }
+      }
+      if (EHPadStack.back() == UnwindDest)
+        continue;
+
+      // Include EH_LABELs in the range before and afer the invoke
+      MachineInstr *RangeBegin = &MI, *RangeEnd = &MI;
+      if (RangeBegin->getIterator() != MBB.begin() &&
+          std::prev(RangeBegin->getIterator())->isEHLabel())
+        RangeBegin = &*std::prev(RangeBegin->getIterator());
+      if (std::next(RangeEnd->getIterator()) != MBB.end() &&
+          std::next(RangeEnd->getIterator())->isEHLabel())
+        RangeEnd = &*std::next(RangeEnd->getIterator());
+
+      // If not, record the range.
+      UnwindDestToTryRanges[UnwindDest].push_back(
+          TryRange(RangeBegin, RangeEnd));
+      LLVM_DEBUG(dbgs() << "- Call unwind mismatch: MBB = " << MBB.getName()
+                        << "\nCall = " << MI
+                        << "\nOriginal dest = " << UnwindDest->getName()
+                        << "  Current dest = " << EHPadStack.back()->getName()
+                        << "\n\n");
+    }
+  }
+
+  assert(EHPadStack.empty());
+
+  // Gather possibly throwing calls that are supposed to unwind up to the caller
+  // if they throw, but currently unwind to an incorrect destination. Unlike the
+  // loop above, there can be multiple calls within a BB that unwind to the
+  // caller, which we should group together in a range. (Case 2)
+
+  MachineInstr *RangeBegin = nullptr, *RangeEnd = nullptr; // inclusive
+
+  // Record the range.
+  auto RecordCallerMismatchRange = [&](const MachineBasicBlock *CurrentDest) {
+    UnwindDestToTryRanges[getFakeCallerBlock(MF)].push_back(
+        TryRange(RangeBegin, RangeEnd));
+    LLVM_DEBUG(dbgs() << "- Call unwind mismatch: MBB = "
+                      << RangeBegin->getParent()->getName()
+                      << "\nRange begin = " << *RangeBegin
+                      << "Range end = " << *RangeEnd
+                      << "\nOriginal dest = caller  Current dest = "
+                      << CurrentDest->getName() << "\n\n");
+    RangeBegin = RangeEnd = nullptr; // Reset range pointers
+  };
+
+  for (auto &MBB : reverse(MF)) {
+    bool SeenThrowableInstInBB = false;
+    for (auto &MI : reverse(MBB)) {
+      if (MI.getOpcode() == WebAssembly::TRY)
+        EHPadStack.pop_back();
+      else if (WebAssembly::isCatch(MI.getOpcode()))
+        EHPadStack.push_back(MI.getParent());
+      bool MayThrow = WebAssembly::mayThrow(MI);
+
+      // If MBB has an EH pad successor and this is the last instruction that
+      // may throw, this instruction unwinds to the EH pad and not to the
+      // caller.
+      if (MBB.hasEHPadSuccessor() && MayThrow && !SeenThrowableInstInBB) {
+        SeenThrowableInstInBB = true;
+        continue;
+      }
+
+      // We wrap up the current range when we see a marker even if we haven't
+      // finished a BB.
+      if (RangeEnd && WebAssembly::isMarker(MI.getOpcode())) {
+        RecordCallerMismatchRange(EHPadStack.back());
+        continue;
+      }
+
+      // If EHPadStack is empty, that means it correctly unwinds to the caller
+      // if it throws, so we're good. If MI does not throw, we're good too.
+      if (EHPadStack.empty() || !MayThrow)
+        continue;
+
+      // We found an instruction that unwinds to the caller but currently has an
+      // incorrect unwind destination. Create a new range or increment the
+      // currently existing range.
+      if (!RangeEnd)
+        RangeBegin = RangeEnd = &MI;
+      else
+        RangeBegin = &MI;
+    }
+
+    if (RangeEnd)
+      RecordCallerMismatchRange(EHPadStack.back());
+  }
+
+  assert(EHPadStack.empty());
+
+  // We don't have any unwind destination mismatches to resolve.
+  if (UnwindDestToTryRanges.empty())
+    return false;
+
+  // Now we fix the mismatches by wrapping calls with inner try-delegates.
+  for (auto &P : UnwindDestToTryRanges) {
+    NumCallUnwindMismatches += P.second.size();
+    MachineBasicBlock *UnwindDest = P.first;
+    auto &TryRanges = P.second;
+
+    for (auto Range : TryRanges) {
+      MachineInstr *RangeBegin = nullptr, *RangeEnd = nullptr;
+      std::tie(RangeBegin, RangeEnd) = Range;
+      auto *MBB = RangeBegin->getParent();
+
+      // If this BB has an EH pad successor, i.e., ends with an 'invoke', now we
+      // are going to wrap the invoke with try-delegate, making the 'delegate'
+      // BB the new successor instead, so remove the EH pad succesor here. The
+      // BB may not have an EH pad successor if calls in this BB throw to the
+      // caller.
+      MachineBasicBlock *EHPad = nullptr;
+      for (auto *Succ : MBB->successors()) {
+        if (Succ->isEHPad()) {
+          EHPad = Succ;
+          break;
+        }
+      }
+      if (EHPad)
+        MBB->removeSuccessor(EHPad);
+
+      addTryDelegate(RangeBegin, RangeEnd, UnwindDest);
+    }
+  }
+
+  return true;
+}
+
+bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
+  // TODO implement
   return false;
 }
 
-static unsigned
-getDepth(const SmallVectorImpl<const MachineBasicBlock *> &Stack,
-         const MachineBasicBlock *MBB) {
+void WebAssemblyCFGStackify::recalculateScopeTops(MachineFunction &MF) {
+  // Renumber BBs and recalculate ScopeTop info because new BBs might have been
+  // created and inserted during fixing unwind mismatches.
+  MF.RenumberBlocks();
+  ScopeTops.clear();
+  ScopeTops.resize(MF.getNumBlockIDs());
+  for (auto &MBB : reverse(MF)) {
+    for (auto &MI : reverse(MBB)) {
+      if (ScopeTops[MBB.getNumber()])
+        break;
+      switch (MI.getOpcode()) {
+      case WebAssembly::END_BLOCK:
+      case WebAssembly::END_LOOP:
+      case WebAssembly::END_TRY:
+      case WebAssembly::DELEGATE:
+        updateScopeTops(EndToBegin[&MI]->getParent(), &MBB);
+        break;
+      case WebAssembly::CATCH:
+      case WebAssembly::CATCH_ALL:
+        updateScopeTops(EHPadToTry[&MBB]->getParent(), &MBB);
+        break;
+      }
+    }
+  }
+}
+
+unsigned WebAssemblyCFGStackify::getDepth(
+    const SmallVectorImpl<const MachineBasicBlock *> &Stack,
+    const MachineBasicBlock *MBB) {
+  if (MBB == FakeCallerBB)
+    return Stack.size();
   unsigned Depth = 0;
   for (auto X : reverse(Stack)) {
     if (X == MBB)
@@ -937,13 +1357,18 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
   }
   // Fix mismatches in unwind destinations induced by linearizing the code.
   if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
-      MF.getFunction().hasPersonalityFn())
-    fixUnwindMismatches(MF);
+      MF.getFunction().hasPersonalityFn()) {
+    bool Changed = fixCallUnwindMismatches(MF);
+    Changed |= fixCatchUnwindMismatches(MF);
+    if (Changed)
+      recalculateScopeTops(MF);
+  }
 }
 
 void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
   // Now rewrite references to basic blocks to be depth immediates.
   SmallVector<const MachineBasicBlock *, 8> Stack;
+  SmallVector<const MachineBasicBlock *, 8> DelegateStack;
   for (auto &MBB : reverse(MF)) {
     for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
       MachineInstr &MI = *I;
@@ -954,20 +1379,34 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
                    MBB.getNumber() &&
                "Block/try marker should be balanced");
         Stack.pop_back();
+        DelegateStack.pop_back();
         break;
 
       case WebAssembly::LOOP:
         assert(Stack.back() == &MBB && "Loop top should be balanced");
         Stack.pop_back();
+        DelegateStack.pop_back();
         break;
 
       case WebAssembly::END_BLOCK:
+        Stack.push_back(&MBB);
+        DelegateStack.push_back(&MBB);
+        break;
+
       case WebAssembly::END_TRY:
+        // We handle DELEGATE in the default level, because DELEGATE has
+        // immediate operands to rewirte.
         Stack.push_back(&MBB);
         break;
 
       case WebAssembly::END_LOOP:
         Stack.push_back(EndToBegin[&MI]->getParent());
+        DelegateStack.push_back(EndToBegin[&MI]->getParent());
+        break;
+
+      case WebAssembly::CATCH:
+      case WebAssembly::CATCH_ALL:
+        DelegateStack.push_back(&MBB);
         break;
 
       default:
@@ -977,10 +1416,20 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
           while (MI.getNumOperands() > 0)
             MI.RemoveOperand(MI.getNumOperands() - 1);
           for (auto MO : Ops) {
-            if (MO.isMBB())
-              MO = MachineOperand::CreateImm(getDepth(Stack, MO.getMBB()));
+            if (MO.isMBB()) {
+              if (MI.getOpcode() == WebAssembly::DELEGATE)
+                MO = MachineOperand::CreateImm(
+                    getDepth(DelegateStack, MO.getMBB()));
+              else
+                MO = MachineOperand::CreateImm(getDepth(Stack, MO.getMBB()));
+            }
             MI.addOperand(MF, MO);
           }
+        }
+
+        if (MI.getOpcode() == WebAssembly::DELEGATE) {
+          Stack.push_back(&MBB);
+          DelegateStack.push_back(&MBB);
         }
         break;
       }
@@ -989,13 +1438,18 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
   assert(Stack.empty() && "Control flow should be balanced");
 }
 
+void WebAssemblyCFGStackify::cleanupFunctionData(MachineFunction &MF) {
+  if (FakeCallerBB)
+    MF.DeleteMachineBasicBlock(FakeCallerBB);
+  AppendixBB = FakeCallerBB = nullptr;
+}
+
 void WebAssemblyCFGStackify::releaseMemory() {
   ScopeTops.clear();
   BeginToEnd.clear();
   EndToBegin.clear();
   TryToEHPad.clear();
   EHPadToTry.clear();
-  AppendixBB = nullptr;
 }
 
 bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
@@ -1030,6 +1484,8 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
            .getTargetTriple()
            .isOSBinFormatELF())
     appendEndToFunction(MF, TII);
+
+  cleanupFunctionData(MF);
 
   MF.getInfo<WebAssemblyFunctionInfo>()->setCFGStackified();
   return true;

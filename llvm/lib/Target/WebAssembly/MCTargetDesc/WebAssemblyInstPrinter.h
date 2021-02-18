@@ -27,6 +27,11 @@ class WebAssemblyInstPrinter final : public MCInstPrinter {
   uint64_t ControlFlowCounter = 0;
   SmallVector<std::pair<uint64_t, bool>, 4> ControlFlowStack;
   SmallVector<uint64_t, 4> EHPadStack;
+  // 'delegate' can target any block-like structure, but in case the target is
+  // 'try', it rethrows to the corresponding 'catch'. Because it can target all
+  // blocks but with a slightly different semantics with branches, we need a
+  // separate stack for 'delegate'.
+  SmallVector<uint64_t, 4> DelegateStack;
 
 public:
   WebAssemblyInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
