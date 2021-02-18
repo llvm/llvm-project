@@ -151,10 +151,7 @@ public:
                     // TargetLoweringObjectFileWasm
                     .StartsWith(".init_array", SectionKind::getData())
                     .StartsWith(".debug_", SectionKind::getMetadata())
-                    .Default(Optional<SectionKind>());
-    if (!Kind.hasValue())
-      return Parser->Error(Lexer->getLoc(), "unknown section kind: " + Name);
-
+                    .Default(SectionKind::getData());
 
     // Update section flags if present in this .section directive
     bool Passive = false;
