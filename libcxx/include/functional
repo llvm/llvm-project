@@ -42,8 +42,8 @@ public:
     typedef see below result_type; // Not always defined
 
     // construct/copy/destroy
-    reference_wrapper(T&) noexcept;
-    reference_wrapper(T&&) = delete; // do not bind to temps
+    template<class U>
+      reference_wrapper(U&&);
     reference_wrapper(const reference_wrapper<T>& x) noexcept;
 
     // assignment
@@ -58,6 +58,9 @@ public:
       typename result_of<T&(ArgTypes&&...)>::type
           operator() (ArgTypes&&...) const;
 };
+
+template <class T>
+  reference_wrapper(T&) -> reference_wrapper<T>;
 
 template <class T> reference_wrapper<T> ref(T& t) noexcept;
 template <class T> void ref(const T&& t) = delete;
