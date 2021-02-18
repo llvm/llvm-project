@@ -1015,11 +1015,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     Symbol *sym = symtab->find(arg->getValue());
     if (sym && sym->isDefined())
       sym->forceExport = true;
-    else if (config->unresolvedSymbols == UnresolvedPolicy::ReportError)
-      error(Twine("symbol exported via --export not found: ") +
-            arg->getValue());
-    else if (config->unresolvedSymbols == UnresolvedPolicy::Warn)
-      warn(Twine("symbol exported via --export not found: ") + arg->getValue());
   }
 
   if (!config->relocatable && !config->isPic) {
