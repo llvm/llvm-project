@@ -157,3 +157,22 @@ func @subview_of_memcast(%arg : memref<4x6x16x32xi8>) ->
     memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>
   return %1 : memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>
 }
+
+// CHECK-LABEL: func @trivial_subtensor
+//  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: tensor<4x6x16x32xi8>
+//   CHECK-NOT:   subtensor
+//       CHECK:   return %[[ARG0]] :  tensor<4x6x16x32xi8>
+func @trivial_subtensor(%arg0 : tensor<4x6x16x32xi8>) -> tensor<4x6x16x32xi8> {
+  %0 = subtensor %arg0[0, 0, 0, 0] [4, 6, 16, 32] [1, 1, 1, 1] : tensor<4x6x16x32xi8> to tensor<4x6x16x32xi8>
+  return %0 : tensor<4x6x16x32xi8>
+}
+
+// CHECK-LABEL: func @trivial_subtensor_insert
+//  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: tensor<4x6x16x32xi8>
+//   CHECK-NOT:   subtensor
+//       CHECK:   return %[[ARG0]] :  tensor<4x6x16x32xi8>
+func @trivial_subtensor_insert(%arg0 : tensor<4x6x16x32xi8>, %arg1 : tensor<4x6x16x32xi8>) -> tensor<4x6x16x32xi8> {
+  %0 = subtensor_insert %arg0 into %arg1[0, 0, 0, 0] [4, 6, 16, 32] [1, 1, 1, 1] : tensor<4x6x16x32xi8> into tensor<4x6x16x32xi8>
+  return %0 : tensor<4x6x16x32xi8>
+}
+

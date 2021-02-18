@@ -2928,6 +2928,7 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
   }];
 
   let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3026,6 +3027,7 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
     /// and `strides` operands.
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 2; }
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
