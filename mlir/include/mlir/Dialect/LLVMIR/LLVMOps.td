@@ -1278,6 +1278,19 @@ def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
 }
 
 //
+// Stack save/restore intrinsics.
+//
+
+def LLVM_StackSaveOp : LLVM_OneResultIntrOp<"stacksave"> {
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+def LLVM_StackRestoreOp : LLVM_ZeroResultIntrOp<"stackrestore"> {
+  let arguments = (ins LLVM_i8Ptr:$ptr);
+  let assemblyFormat = "$ptr attr-dict";
+}
+
+//
 // Vector Reductions.
 //
 
