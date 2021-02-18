@@ -124,3 +124,114 @@ Note: this op only supports channel multiplier == 1.
   O(n, oh, ow, c) = std_addf<kh, kw>(std_mulf(
     I(n, oh * strides[0] + kh, ow * strides[1] + kw, c), K(kh, kw, c)));
 }
+
+ods_def<ConvInputNWCFilterWCFOp>:
+def conv_1d_input_nwc_filter_wcf(I: f32(N, W, C), K: f32(KW, C, F)) -> (O: f32(N, W, F))
+  attr(strides: 1xi64, dilations: 1xi64)
+""" A 1-D convolution given NWC layout input and WCF layout filter.
+
+Computes a 1-D convolution given 3-D input and filter. The data layout
+of input is NWC and the data layout of filter is WCF.
+
+The indexing maps for these three tensors contain 5 dimensions, following the
+order of (`N`, `W`, `F`, `KW`, `C`).
+"""
+{
+  O(n, w, f) = std_addf<kw>(
+      std_mulf(I(n, w * strides[0] + kw * dilations[0], c), K(kw, c, f)));
+}
+
+ods_def<ConvInputNCWFilterWCFOp>:
+def conv_1d_input_ncw_filter_wcf(I: f32(N, C, W), K: f32(KW, C, F)) -> (O: f32(N, F, W))
+  attr(strides: 1xi64, dilations: 1xi64)
+""" A 1-D convolution given NCW layout input and WCF layout filter.
+
+Computes a 1-D convolution given 3-D input and filter. The data layout
+of input is NCW and the data layout of filter is WCF.
+
+The indexing maps for these three tensors contain 5 dimensions, following the
+order of (`N`, `F`, `W`, `KW`, `C`).
+"""
+{
+  O(n, f, w) = std_addf<kw>(
+      std_mulf(I(n, c, w * strides[0] + kw * dilations[0]), K(kw, c, f)));
+}
+
+ods_def<ConvInputNHWCFilterHWCFOp>:
+def conv_2d_input_nhwc_filter_hwcf(I: f32(N, H, W, C), K: f32(KH, KW, C, F)) -> (O: f32(N, H, W, F))
+  attr(strides: 2xi64, dilations: 2xi64)
+""" A 2-D convolution given NHWC layout input and HWCF layout filter.
+
+Computes a 2-D convolution given 4-D input and filter. The data layout
+of input is NHWC and the data layout of filter is HWCF.
+
+The indexing maps for these three tensors contain 7 dimensions, following the
+order of (`N`, `H`, `W`, `F`, `KH`, `KW`, `C`).
+"""
+{
+  O(n, h, w, f) =
+      std_addf<kh, kw>(std_mulf(I(n, h * strides[0] + kh * dilations[0],
+                                  w * strides[1] + kw * dilations[1], c),
+                                K(kh, kw, c, f)));
+}
+
+ods_def<ConvInputNCHWFilterHWCFOp>:
+def conv_2d_input_nchw_filter_hwcf
+    (I: f32(N, C, H, W), K: f32(KH, KW, C, F))
+  -> (O: f32(N, F, H, W))
+  attr(strides: 2xi64, dilations: 2xi64)
+""" A 2-D convolution given NCHW layout input and HWCF layout filter.
+
+Computes a 2-D convolution given 4-D input and filter. The data layout
+of input is NCHW and the data layout of filter is HWCF.
+
+The indexing maps for these three tensors contain 7 dimensions, following the
+order of (`N`, `F`, `H`, `W`, `KH`, `KW`, `C`).
+"""
+{
+  O(n, f, h, w) =
+      std_addf<kh, kw>(std_mulf(I(n, c, h * strides[0] + kh * dilations[0],
+                                  w * strides[1] + kw * dilations[1]),
+                                K(kh, kw, c, f)));
+}
+
+ods_def<ConvInputNDHWCFilterDHWCFOp>:
+def conv_3d_input_ndhwc_filter_dhwcf
+    (I: f32(N, D, H, W, C), K: f32(KD, KH, KW, C, F))
+  -> (O: f32(N, D, H, W, F))
+  attr(strides: 3xi64, dilations: 3xi64)
+""" A 3-D convolution given NDHWC layout input and DHWCF layout filter.
+
+Computes a 3-D convolution given 5-D input and filter. The data layout
+of input is NDHWC and the data layout of filter is DHWCF.
+
+The indexing maps for these three tensors contain 9 dimensions, following the
+order of (`N`, `D`, `H`, `W`, `F`, `KD`, `KH`, `KW`, `C`).
+"""
+{
+  O(n, d, h, w, f) =
+      std_addf<kd, kh, kw>(std_mulf(I(n, d * strides[0] + kd * dilations[0],
+                                      h * strides[1] + kh * dilations[1],
+                                      w * strides[2] + kw * dilations[2], c),
+                                    K(kd, kh, kw, c, f)));
+}
+
+ods_def<ConvInputNCDHWFilterDHWCFOp>:
+def conv_3d_input_ncdhw_filter_dhwcf
+    (I: f32(N, C, D, H, W), K: f32(KD, KH, KW, C, F))
+  -> (O: f32(N, F, D, H, W))
+  attr(strides: 3xi64, dilations: 3xi64)
+""" A 3-D convolution given NCDHW layout input and DHWCF layout filter.
+
+Computes a 3-D convolution given 5-D input and filter. The data layout
+of input is NCDHW and the data layout of filter is DHWCF.
+
+The indexing maps for these three tensors contain 9 dimensions, following the
+order of (`N`, `F`, `D`, `H`, `W`, `KD`, `KH`, `KW`, `C`).
+"""
+{
+  O(n, f, d, h, w) = std_addf<kd, kh, kw>(std_mulf(
+      I(n, c, d * strides[0] + kd * dilations[0],
+        h * strides[1] + kh * dilations[1], w * strides[2] + kw * dilations[2]),
+      K(kd, kh, kw, c, f)));
+}
