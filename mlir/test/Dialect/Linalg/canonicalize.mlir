@@ -6,9 +6,9 @@ func @memref_cast(%a: index, %b: index) -> memref<?x?xf32> {
   %c1 = constant 1 : index
   %c8 = constant 8 : index
   %c16 = constant 16 : index
-  %1 = alloc (%b) : memref<?xi8>
-  %2 = view %1[%c0][] : memref<?xi8> to memref<16x16xf32>
-  %3 = memref_cast %2 : memref<16x16xf32> to memref<?x?xf32>
+  %1 = memref.alloc (%b) : memref<?xi8>
+  %2 = memref.view %1[%c0][] : memref<?xi8> to memref<16x16xf32>
+  %3 = memref.cast %2 : memref<16x16xf32> to memref<?x?xf32>
 
   // CHECK:  linalg.matmul ins({{.*}}memref<16x16xf32>, memref<16x16xf32>) outs({{.*}}memref<16x16xf32>)
   linalg.matmul ins(%3, %3: memref<?x?xf32>, memref<?x?xf32>)

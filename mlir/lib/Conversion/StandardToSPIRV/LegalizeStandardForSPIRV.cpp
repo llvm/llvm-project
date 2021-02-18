@@ -14,6 +14,7 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/StandardToSPIRV/StandardToSPIRV.h"
 #include "mlir/Conversion/StandardToSPIRV/StandardToSPIRVPass.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
@@ -27,7 +28,7 @@ static Value getMemRefOperand(LoadOp op) { return op.memref(); }
 
 static Value getMemRefOperand(vector::TransferReadOp op) { return op.source(); }
 
-static Value getMemRefOperand(StoreOp op) { return op.memref(); }
+static Value getMemRefOperand(memref::StoreOp op) { return op.memref(); }
 
 static Value getMemRefOperand(vector::TransferWriteOp op) {
   return op.source();
@@ -83,11 +84,11 @@ void LoadOpOfSubViewFolder<vector::TransferReadOp>::replaceOp(
 }
 
 template <>
-void StoreOpOfSubViewFolder<StoreOp>::replaceOp(
-    StoreOp storeOp, SubViewOp subViewOp, ArrayRef<Value> sourceIndices,
+void StoreOpOfSubViewFolder<memref::StoreOp>::replaceOp(
+    memref::StoreOp storeOp, SubViewOp subViewOp, ArrayRef<Value> sourceIndices,
     PatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<StoreOp>(storeOp, storeOp.value(),
-                                       subViewOp.source(), sourceIndices);
+  rewriter.replaceOpWithNewOp<memref::StoreOp>(
+      storeOp, storeOp.value(), subViewOp.source(), sourceIndices);
 }
 
 template <>
@@ -195,7 +196,7 @@ void mlir::populateStdLegalizationPatternsForSPIRVLowering(
     MLIRContext *context, OwningRewritePatternList &patterns) {
   patterns.insert<LoadOpOfSubViewFolder<LoadOp>,
                   LoadOpOfSubViewFolder<vector::TransferReadOp>,
-                  StoreOpOfSubViewFolder<StoreOp>,
+                  StoreOpOfSubViewFolder<memref::StoreOp>,
                   StoreOpOfSubViewFolder<vector::TransferWriteOp>>(context);
 }
 

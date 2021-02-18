@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -26,13 +27,13 @@ namespace {
 class GlobalCreator {
 public:
   explicit GlobalCreator(ModuleOp module);
-  GlobalMemrefOp getGlobalFor(Attribute attr) {
+  memref::GlobalOp getGlobalFor(Attribute attr) {
     assert(globals.find(attr) != globals.end() && "unknown constant attr");
     return globals[attr];
   }
 
 private:
-  DenseMap<Attribute, GlobalMemrefOp> globals;
+  DenseMap<Attribute, memref::GlobalOp> globals;
 };
 
 GlobalCreator::GlobalCreator(ModuleOp module) {
@@ -58,7 +59,7 @@ GlobalCreator::GlobalCreator(ModuleOp module) {
     interleave(type.getShape(), os, "x");
     os << "x" << type.getElementType();
 
-    auto global = globalBuilder.create<GlobalMemrefOp>(
+    auto global = globalBuilder.create<memref::GlobalOp>(
         op.getLoc(), (Twine("__constant_") + os.str()).str(),
         /*sym_visibility=*/globalBuilder.getStringAttr("private"),
         /*type=*/
@@ -89,8 +90,8 @@ public:
       return failure();
 
     auto globalMemref = globals.getGlobalFor(op.value());
-    rewriter.replaceOpWithNewOp<GetGlobalMemrefOp>(op, globalMemref.type(),
-                                                   globalMemref.getName());
+    rewriter.replaceOpWithNewOp<memref::GetGlobalOp>(op, globalMemref.type(),
+                                                     globalMemref.getName());
     return success();
   }
   GlobalCreator &globals;

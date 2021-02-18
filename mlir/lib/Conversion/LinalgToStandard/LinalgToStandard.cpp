@@ -93,7 +93,7 @@ createTypeCanonicalizedMemRefOperands(OpBuilder &b, Location loc,
       continue;
     }
     Value cast =
-        b.create<MemRefCastOp>(loc, eraseStridedLayout(memrefType), op);
+        b.create<memref::CastOp>(loc, eraseStridedLayout(memrefType), op);
     res.push_back(cast);
   }
   return res;
@@ -143,12 +143,12 @@ LogicalResult mlir::linalg::CopyTransposeRewrite::matchAndRewrite(
   // If either inputPerm or outputPerm are non-identities, insert transposes.
   auto inputPerm = op.inputPermutation();
   if (inputPerm.hasValue() && !inputPerm->isIdentity())
-    in = rewriter.create<TransposeOp>(op.getLoc(), in,
-                                      AffineMapAttr::get(*inputPerm));
+    in = rewriter.create<memref::TransposeOp>(op.getLoc(), in,
+                                              AffineMapAttr::get(*inputPerm));
   auto outputPerm = op.outputPermutation();
   if (outputPerm.hasValue() && !outputPerm->isIdentity())
-    out = rewriter.create<TransposeOp>(op.getLoc(), out,
-                                       AffineMapAttr::get(*outputPerm));
+    out = rewriter.create<memref::TransposeOp>(op.getLoc(), out,
+                                               AffineMapAttr::get(*outputPerm));
 
   // If nothing was transposed, fail and let the conversion kick in.
   if (in == op.input() && out == op.output())
@@ -213,7 +213,8 @@ struct ConvertLinalgToStandardPass
 void ConvertLinalgToStandardPass::runOnOperation() {
   auto module = getOperation();
   ConversionTarget target(getContext());
-  target.addLegalDialect<AffineDialect, scf::SCFDialect, StandardOpsDialect>();
+  target.addLegalDialect<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+                         StandardOpsDialect>();
   target.addLegalOp<ModuleOp, FuncOp, ModuleTerminatorOp, ReturnOp>();
   target.addLegalOp<linalg::ReshapeOp, linalg::RangeOp>();
   OwningRewritePatternList patterns;

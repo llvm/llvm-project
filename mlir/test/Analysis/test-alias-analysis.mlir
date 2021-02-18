@@ -23,10 +23,10 @@
 // CHECK-DAG: alloc_2#0 <-> func.region0#0: MayAlias
 // CHECK-DAG: alloc_2#0 <-> func.region0#1: MayAlias
 func @simple(%arg: memref<2xf32>, %arg1: memref<2xf32>) attributes {test.ptr = "func"} {
-  %0 = alloca() {test.ptr = "alloca_1"} : memref<8x64xf32>
-  %1 = alloca() {test.ptr = "alloca_2"} : memref<8x64xf32>
-  %2 = alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
-  %3 = alloc() {test.ptr = "alloc_2"} : memref<8x64xf32>
+  %0 = memref.alloca() {test.ptr = "alloca_1"} : memref<8x64xf32>
+  %1 = memref.alloca() {test.ptr = "alloca_2"} : memref<8x64xf32>
+  %2 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
+  %3 = memref.alloc() {test.ptr = "alloc_2"} : memref<8x64xf32>
   return
 }
 
@@ -50,9 +50,9 @@ func @simple(%arg: memref<2xf32>, %arg1: memref<2xf32>) attributes {test.ptr = "
 
 // CHECK-DAG: func.region0.block1#0 <-> func.region0.block2#0: MustAlias
 func @control_flow(%arg: memref<2xf32>, %cond: i1) attributes {test.ptr = "func"} {
-  %0 = alloca() {test.ptr = "alloca_1"} : memref<8x64xf32>
-  %1 = alloca() {test.ptr = "alloca_2"} : memref<8x64xf32>
-  %2 = alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
+  %0 = memref.alloca() {test.ptr = "alloca_1"} : memref<8x64xf32>
+  %1 = memref.alloca() {test.ptr = "alloca_2"} : memref<8x64xf32>
+  %2 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
 
   cond_br %cond, ^bb1(%0 : memref<8x64xf32>), ^bb2(%0 : memref<8x64xf32>)
 
@@ -83,9 +83,9 @@ func @control_flow(%arg: memref<2xf32>, %cond: i1) attributes {test.ptr = "func"
 
 // CHECK-DAG: func.region0.block1#0 <-> func.region0.block2#0: MayAlias
 func @control_flow_merge(%arg: memref<2xf32>, %cond: i1) attributes {test.ptr = "func"} {
-  %0 = alloca() {test.ptr = "alloca_1"} : memref<8x64xf32>
-  %1 = alloca() {test.ptr = "alloca_2"} : memref<8x64xf32>
-  %2 = alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
+  %0 = memref.alloca() {test.ptr = "alloca_1"} : memref<8x64xf32>
+  %1 = memref.alloca() {test.ptr = "alloca_2"} : memref<8x64xf32>
+  %2 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
 
   cond_br %cond, ^bb1(%0 : memref<8x64xf32>), ^bb2(%2 : memref<8x64xf32>)
 
@@ -123,9 +123,9 @@ func @control_flow_merge(%arg: memref<2xf32>, %cond: i1) attributes {test.ptr = 
 // CHECK-DAG: if_alloc#0 <-> func.region0#0: MayAlias
 // CHECK-DAG: if_alloc#0 <-> func.region0#1: MayAlias
 func @region_control_flow(%arg: memref<2xf32>, %cond: i1) attributes {test.ptr = "func"} {
-  %0 = alloca() {test.ptr = "alloca_1"} : memref<8x64xf32>
-  %1 = alloca() {test.ptr = "alloca_2"} : memref<8x64xf32>
-  %2 = alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
+  %0 = memref.alloca() {test.ptr = "alloca_1"} : memref<8x64xf32>
+  %1 = memref.alloca() {test.ptr = "alloca_2"} : memref<8x64xf32>
+  %2 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
 
   %3 = scf.if %cond -> (memref<8x64xf32>) {
     scf.yield %0 : memref<8x64xf32>
@@ -181,9 +181,9 @@ func @region_control_flow(%arg: memref<2xf32>, %cond: i1) attributes {test.ptr =
 // CHECK-DAG: for_alloca.region0#1 <-> func.region0#3: NoAlias
 func @region_loop_control_flow(%arg: memref<2xf32>, %loopI0 : index,
                                %loopI1 : index, %loopI2 : index) attributes {test.ptr = "func"} {
-  %0 = alloca() {test.ptr = "alloca_1"} : memref<8x64xf32>
-  %1 = alloca() {test.ptr = "alloca_2"} : memref<8x64xf32>
-  %2 = alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
+  %0 = memref.alloca() {test.ptr = "alloca_1"} : memref<8x64xf32>
+  %1 = memref.alloca() {test.ptr = "alloca_2"} : memref<8x64xf32>
+  %2 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
 
   %result = scf.for %i0 = %loopI0 to %loopI1 step %loopI2 iter_args(%si = %0) -> (memref<8x64xf32>) {
     scf.yield %si : memref<8x64xf32>
@@ -201,11 +201,11 @@ func @region_loop_control_flow(%arg: memref<2xf32>, %loopI0 : index,
 // CHECK-DAG: view#0 <-> func.region0#0: NoAlias
 // CHECK-DAG: view#0 <-> func.region0#1: NoAlias
 func @view_like(%arg: memref<2xf32>, %size: index) attributes {test.ptr = "func"} {
-  %1 = alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
+  %1 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
 
   %c0 = constant 0 : index
-  %2 = alloca (%size) {test.ptr = "alloca_1"} : memref<?xi8>
-  %3 = view %2[%c0][] {test.ptr = "view"} : memref<?xi8> to memref<8x64xf32>
+  %2 = memref.alloca (%size) {test.ptr = "alloca_1"} : memref<?xi8>
+  %3 = memref.view %2[%c0][] {test.ptr = "view"} : memref<?xi8> to memref<8x64xf32>
   return
 }
 
@@ -225,7 +225,7 @@ func @view_like(%arg: memref<2xf32>, %size: index) attributes {test.ptr = "func"
 
 // CHECK-DAG: constant_3#0 <-> func.region0#0: MayAlias
 func @constants(%arg: memref<2xf32>) attributes {test.ptr = "func"} {
-  %1 = alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
+  %1 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
 
   %c0 = constant {test.ptr = "constant_1"} 0 : index
   %c0_2 = constant {test.ptr = "constant_2"} 0 : index

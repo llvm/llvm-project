@@ -47,9 +47,9 @@ func @vec2d(%A : memref<?x?x?xf32>) {
 }
 
 func @vector_add_2d(%M : index, %N : index) -> f32 {
-  %A = alloc (%M, %N) : memref<?x?xf32, 0>
-  %B = alloc (%M, %N) : memref<?x?xf32, 0>
-  %C = alloc (%M, %N) : memref<?x?xf32, 0>
+  %A = memref.alloc (%M, %N) : memref<?x?xf32, 0>
+  %B = memref.alloc (%M, %N) : memref<?x?xf32, 0>
+  %C = memref.alloc (%M, %N) : memref<?x?xf32, 0>
   %f1 = constant 1.0 : f32
   %f2 = constant 2.0 : f32
   affine.for %i0 = 0 to %M {
