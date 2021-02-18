@@ -34,9 +34,12 @@ We start by showing you how to construct a pass, everything from setting up the
 code, to compiling, loading, and executing it.  After the basics are down, more
 advanced features are discussed.
 
-This document deals with the legacy pass manager. LLVM is transitioning to
-the new pass manager, which has its own way of defining passes. For more
-details, see :doc:`WritingAnLLVMNewPMPass`.
+.. warning::
+  This document deals with the legacy pass manager. LLVM now uses the new
+  pass manager by default, which has its own way of defining passes. For more
+  details, see :doc:`WritingAnLLVMNewPMPass`. To use the legacy pass manager
+  with ``opt``, pass the ``-enable-new-pm=0`` flag to all ``opt``
+  invocations.
 
 Quick Start --- Writing hello world
 ===================================
