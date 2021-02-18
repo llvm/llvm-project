@@ -13,6 +13,7 @@
 #include "mlir/Target/LLVMIR.h"
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Translation.h"
 
@@ -35,6 +36,24 @@ mlir::translateModuleToLLVMIR(ModuleOp m, llvm::LLVMContext &llvmContext,
   return llvmModule;
 }
 
+void mlir::registerLLVMDialectTranslation(DialectRegistry &registry) {
+  registry.insert<LLVM::LLVMDialect>();
+  registry.addDialectInterface<LLVM::LLVMDialect,
+                               LLVMDialectLLVMIRTranslationInterface>();
+}
+
+void mlir::registerLLVMDialectTranslation(MLIRContext &context) {
+  auto *dialect = context.getLoadedDialect<LLVM::LLVMDialect>();
+  if (!dialect || dialect->getRegisteredInterface<
+                      LLVMDialectLLVMIRTranslationInterface>() == nullptr) {
+    DialectRegistry registry;
+    registry.insert<LLVM::LLVMDialect>();
+    registry.addDialectInterface<LLVM::LLVMDialect,
+                                 LLVMDialectLLVMIRTranslationInterface>();
+    context.appendDialectRegistry(registry);
+  }
+}
+
 namespace mlir {
 void registerToLLVMIRTranslation() {
   TranslateFromMLIRRegistration registration(
@@ -50,7 +69,8 @@ void registerToLLVMIRTranslation() {
         return success();
       },
       [](DialectRegistry &registry) {
-        registry.insert<LLVM::LLVMDialect, omp::OpenMPDialect>();
+        registry.insert<omp::OpenMPDialect>();
+        registerLLVMDialectTranslation(registry);
       });
 }
 } // namespace mlir
