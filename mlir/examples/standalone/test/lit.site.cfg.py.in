@@ -7,7 +7,7 @@ config.target_triple = "@TARGET_TRIPLE@"
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
-config.llvm_lib_dir = "@LLVM_LIBRARY_DIR@"
+config.llvm_lib_dir = "@LLVM_LIBS_DIR@"
 config.llvm_shlib_dir = "@SHLIBDIR@"
 config.llvm_shlib_ext = "@SHLIBEXT@"
 config.llvm_exe_ext = "@EXEEXT@"
@@ -35,6 +35,7 @@ config.standalone_obj_root = "@CMAKE_BINARY_DIR@"
 # used when we can't determine the tool dir at configuration time.
 try:
     config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
+    config.llvm_lib_dir = config.llvm_lib_dir % lit_config.params
     config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
 except KeyError:
     e = sys.exc_info()[1]

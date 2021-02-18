@@ -14,6 +14,7 @@ config.shlibdir = path(r"@SHLIBDIR@")
 try:
     config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
     config.llvm_build_mode = config.llvm_build_mode % lit_config.params
+    config.shlibdir = config.shlibdir % lit_config.params
 except KeyError:
     e = sys.exc_info()[1]
     key, = e.args
