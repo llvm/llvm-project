@@ -48,6 +48,11 @@ createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
                                 unsigned bitwidthOfIndexType = 64,
                                 unsigned maxRankOfAllocatedMemRef = 1);
 
+/// Creates a pass that promotes heap-based allocations to stack-based ones.
+/// Only buffers smaller with `isSmallAlloc(alloc) == true` are promoted.
+std::unique_ptr<Pass>
+createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
+
 /// Creates a pass that finalizes a partial bufferization by removing remaining
 /// tensor_load and tensor_to_memref operations.
 std::unique_ptr<FunctionPass> createFinalizingBufferizePass();
