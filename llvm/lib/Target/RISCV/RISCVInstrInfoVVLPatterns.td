@@ -46,6 +46,15 @@ def SDT_RISCVFPBinOp_VL : SDTypeProfile<1, 4, [SDTCisSameAs<0, 1>,
                                                SDTCisSameNumEltsAs<0, 3>,
                                                SDTCisVT<4, XLenVT>]>;
 
+def riscv_vmv_v_x_vl : SDNode<"RISCVISD::VMV_V_X_VL",
+                              SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<0>,
+                                                   SDTCisVT<1, XLenVT>,
+                                                   SDTCisVT<2, XLenVT>]>>;
+def riscv_vfmv_v_f_vl : SDNode<"RISCVISD::VFMV_V_F_VL",
+                               SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisFP<0>,
+                                                    SDTCisEltOfVec<1, 0>,
+                                                    SDTCisVT<2, XLenVT>]>>;
+
 def riscv_vle_vl : SDNode<"RISCVISD::VLE_VL", SDT_RISCVVLE_VL,
                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def riscv_vse_vl : SDNode<"RISCVISD::VSE_VL", SDT_RISCVVSE_VL,
@@ -459,6 +468,22 @@ foreach vti = AllFloatVectors in {
                            (XLenVT (VLOp GPR:$vl))),
             (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
                  vti.RegClass:$rs, vti.RegClass:$rs, GPR:$vl, vti.SEW)>;
+}
+
+// 14.16. Vector Floating-Point Move Instruction
+foreach fvti = AllFloatVectors in {
+  // If we're splatting fpimm0, use vmv.v.x vd, x0.
+  def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
+                         (fvti.Scalar (fpimm0)), (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX)
+             0, GPR:$vl, fvti.SEW)>;
+
+  def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
+                         (fvti.Scalar fvti.ScalarRegClass:$rs2), (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVFMV_V_" # fvti.ScalarSuffix # "_" #
+                                fvti.LMul.MX)
+             (fvti.Scalar fvti.ScalarRegClass:$rs2),
+             GPR:$vl, fvti.SEW)>;
 }
 
 } // Predicates = [HasStdExtV, HasStdExtF]
