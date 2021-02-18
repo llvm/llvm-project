@@ -113,7 +113,8 @@ std::string annotate(llvm::StringRef Input,
 void checkHighlightings(llvm::StringRef Code,
                         std::vector<std::pair</*FileName*/ llvm::StringRef,
                                               /*FileContent*/ llvm::StringRef>>
-                            AdditionalFiles = {}) {
+                            AdditionalFiles = {},
+                        uint32_t ModifierMask = -1) {
   Annotations Test(Code);
   TestTU TU;
   TU.Code = std::string(Test.code());
@@ -126,8 +127,11 @@ void checkHighlightings(llvm::StringRef Code,
   for (auto File : AdditionalFiles)
     TU.AdditionalFiles.insert({File.first, std::string(File.second)});
   auto AST = TU.build();
+  auto Actual = getSemanticHighlightings(AST);
+  for (auto &Token : Actual)
+    Token.Modifiers &= ModifierMask;
 
-  EXPECT_EQ(Code, annotate(Test.code(), getSemanticHighlightings(AST)));
+  EXPECT_EQ(Code, annotate(Test.code(), Actual));
 }
 
 // Any annotations in OldCode and NewCode are converted into their corresponding
@@ -162,6 +166,12 @@ void checkDiffedHighlights(llvm::StringRef OldCode, llvm::StringRef NewCode) {
               testing::UnorderedElementsAreArray(ExpectedLinePairHighlighting))
       << OldCode;
 }
+
+constexpr static uint32_t ScopeModifierMask =
+    1 << unsigned(HighlightingModifier::FunctionScope) |
+    1 << unsigned(HighlightingModifier::ClassScope) |
+    1 << unsigned(HighlightingModifier::FileScope) |
+    1 << unsigned(HighlightingModifier::GlobalScope);
 
 TEST(SemanticHighlighting, GetsCorrectTokens) {
   const char *TestCases[] = {
@@ -720,9 +730,10 @@ sizeof...($TemplateParameter[[Elements]]);
       <:[deprecated]:> int $Variable_decl_deprecated[[x]];
       )cpp",
   };
-  for (const auto &TestCase : TestCases) {
-    checkHighlightings(TestCase);
-  }
+  for (const auto &TestCase : TestCases)
+    // Mask off scope modifiers to keep the tests manageable.
+    // They're tested separately.
+    checkHighlightings(TestCase, {}, ~ScopeModifierMask);
 
   checkHighlightings(R"cpp(
     class $Class_decl[[A]] {
@@ -732,7 +743,8 @@ sizeof...($TemplateParameter[[Elements]]);
                      {{"imp.h", R"cpp(
     int someMethod();
     void otherMethod();
-  )cpp"}});
+  )cpp"}},
+                     ~ScopeModifierMask);
 
   // A separate test for macros in headers.
   checkHighlightings(R"cpp(
@@ -745,7 +757,59 @@ sizeof...($TemplateParameter[[Elements]]);
     #define DXYZ_Y(Y) DXYZ(x##Y)
     #define DEFINE(X) int X;
     #define DEFINE_Y DEFINE(Y)
-  )cpp"}});
+  )cpp"}},
+                     ~ScopeModifierMask);
+}
+
+TEST(SemanticHighlighting, ScopeModifiers) {
+  const char *TestCases[] = {
+      R"cpp(
+        static int $Variable_fileScope[[x]];
+        namespace $Namespace_globalScope[[ns]] {
+          class $Class_globalScope[[x]];
+        }
+        namespace {
+          void $Function_fileScope[[foo]]();
+        }
+      )cpp",
+      R"cpp(
+        void $Function_globalScope[[foo]](int $Parameter_functionScope[[y]]) {
+          int $LocalVariable_functionScope[[z]];
+        }
+      )cpp",
+      R"cpp(
+        // Lambdas are considered functions, not classes.
+        auto $Variable_fileScope[[x]] = [m(42)] { // FIXME: annotate capture
+          return $LocalVariable_functionScope[[m]];
+        };
+      )cpp",
+      R"cpp(
+        // Classes in functions are classes.
+        void $Function_globalScope[[foo]]() {
+          class $Class_functionScope[[X]] {
+            int $Field_classScope[[x]];
+          };
+        };
+      )cpp",
+      R"cpp(
+        template <int $TemplateParameter_classScope[[T]]>
+        class $Class_globalScope[[X]] {
+        };
+      )cpp",
+      R"cpp(
+        // No useful scope for template parameters of variable templates.
+        template <typename $TemplateParameter[[A]]>
+        unsigned $Variable_globalScope[[X]] =
+          $TemplateParameter[[A]]::$DependentName_classScope[[x]];
+      )cpp",
+      R"cpp(
+        #define $Macro_globalScope[[X]] 1
+        int $Variable_globalScope[[Y]] = $Macro_globalScope[[X]];
+      )cpp",
+  };
+
+  for (const char *Test : TestCases)
+    checkHighlightings(Test, {}, ScopeModifierMask);
 }
 
 TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
