@@ -2997,6 +2997,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(Builder.CreateZExt(V, ConvertType(E->getType())));
     }
 
+    if (Value *Result = getTargetHooks().testFPKind(V, BuiltinID, Builder, CGM))
+      return RValue::get(Result);
+
     // NaN has all exp bits set and a non zero significand. Therefore:
     // isnan(V) == ((exp mask - (abs(V) & exp mask)) < 0)
     unsigned bitsize = Ty->getScalarSizeInBits();
