@@ -1358,12 +1358,14 @@ void ELFState<ELFT>::writeSectionContent(
   for (const ELFYAML::BBAddrMapEntry &E : *Section.Entries) {
     // Write the address of the function.
     CBA.write<uintX_t>(E.Address, ELFT::TargetEndianness);
-    // Write number of BBEntries (number of basic blocks in the function).
-    size_t NumBlocks = E.BBEntries ? E.BBEntries->size() : 0;
+    // Write number of BBEntries (number of basic blocks in the function). This
+    // is overriden by the 'NumBlocks' YAML field if specified.
+    uint32_t NumBlocks =
+        E.NumBlocks.getValueOr(E.BBEntries ? E.BBEntries->size() : 0);
     SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
-    if (!NumBlocks)
-      continue;
     // Write all BBEntries.
+    if (!E.BBEntries)
+      continue;
     for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *E.BBEntries)
       SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset) +
                          CBA.writeULEB128(BBE.Size) +
