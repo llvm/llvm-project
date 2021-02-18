@@ -57,9 +57,7 @@ set(MLIR_TEST_DEPENDS
   mlir_async_runtime
   )
 
-if(TARGET gtest)
-  list(APPEND MLIR_TEST_DEPENDS MLIRUnitTests)
-endif()
+list(APPEND MLIR_TEST_DEPENDS MLIRUnitTests)
 
 if(LLVM_BUILD_EXAMPLES)
   list(APPEND MLIR_TEST_DEPENDS
