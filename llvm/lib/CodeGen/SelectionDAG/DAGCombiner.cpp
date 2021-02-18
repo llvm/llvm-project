@@ -549,6 +549,7 @@ namespace {
                                    SDValue N2, SDValue N3, ISD::CondCode CC);
     SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
                               const SDLoc &DL);
+    SDValue foldSubToUSubSat(EVT DstVT, SDNode *N);
     SDValue unfoldMaskedMerge(SDNode *N);
     SDValue unfoldExtremeBitClearingToShifts(SDNode *N);
     SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
@@ -3125,6 +3126,64 @@ SDValue DAGCombiner::visitADDCARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
   return SDValue();
 }
 
+// Try to find umax(a,b) - b or a - umin(a,b) patterns that may be converted to
+// usubsat(a,b), optionally as a truncated type.
+SDValue DAGCombiner::foldSubToUSubSat(EVT DstVT, SDNode *N) {
+  if (N->getOpcode() != ISD::SUB ||
+      !(!LegalOperations || hasOperation(ISD::USUBSAT, DstVT)))
+    return SDValue();
+
+  EVT SubVT = N->getValueType(0);
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  assert(DstVT.getScalarSizeInBits() <= SubVT.getScalarSizeInBits() &&
+         "Illegal truncation");
+
+  auto TruncatedUSUBSAT = [&](SDValue LHS, SDValue RHS) {
+    SDLoc DL(N);
+    if (DstVT == SubVT)
+      return DAG.getNode(ISD::USUBSAT, DL, DstVT, LHS, RHS);
+
+    // If the LHS is zero-extended then we can perform the USUBSAT as DstVT by
+    // clamping RHS.
+    APInt UpperBits = APInt::getBitsSetFrom(SubVT.getScalarSizeInBits(),
+                                            DstVT.getScalarSizeInBits());
+    if (!DAG.MaskedValueIsZero(LHS, UpperBits))
+      return SDValue();
+
+    SDValue SatLimit =
+        DAG.getConstant(APInt::getLowBitsSet(SubVT.getScalarSizeInBits(),
+                                             DstVT.getScalarSizeInBits()),
+                        DL, SubVT);
+    RHS = DAG.getNode(ISD::UMIN, DL, SubVT, RHS, SatLimit);
+    RHS = DAG.getZExtOrTrunc(RHS, DL, DstVT);
+    LHS = DAG.getZExtOrTrunc(LHS, DL, DstVT);
+    return DAG.getNode(ISD::USUBSAT, DL, DstVT, LHS, RHS);
+  };
+
+  // Try to find umax(a,b) - b or a - umin(a,b) patterns
+  // they may be converted to usubsat(a,b).
+  if (Op0.getOpcode() == ISD::UMAX) {
+    SDValue MaxLHS = Op0.getOperand(0);
+    SDValue MaxRHS = Op0.getOperand(1);
+    if (MaxLHS == Op1)
+      return TruncatedUSUBSAT(MaxRHS, Op1);
+    if (MaxRHS == Op1)
+      return TruncatedUSUBSAT(MaxLHS, Op1);
+  }
+
+  if (Op1.getOpcode() == ISD::UMIN) {
+    SDValue MinLHS = Op1.getOperand(0);
+    SDValue MinRHS = Op1.getOperand(1);
+    if (MinLHS == Op0)
+      return TruncatedUSUBSAT(Op0, MinRHS);
+    if (MinRHS == Op0)
+      return TruncatedUSUBSAT(Op0, MinLHS);
+  }
+
+  return SDValue();
+}
+
 // Since it may not be valid to emit a fold to zero for vector initializers
 // check if we can before folding.
 static SDValue tryFoldToZero(const SDLoc &DL, const TargetLowering &TLI, EVT VT,
@@ -3341,6 +3400,9 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return V;
 
   if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, SDLoc(N)))
+    return V;
+
+  if (SDValue V = foldSubToUSubSat(VT, N))
     return V;
 
   // (x - y) - 1  ->  add (xor y, -1), x
@@ -11815,6 +11877,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       return DAG.getNode(ISD::SHL, SL, VT, Trunc, Amt);
     }
   }
+
+  if (SDValue V = foldSubToUSubSat(VT, N0.getNode()))
+    return V;
 
   // Attempt to pre-truncate BUILD_VECTOR sources.
   if (N0.getOpcode() == ISD::BUILD_VECTOR && !LegalOperations &&
