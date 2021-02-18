@@ -92,17 +92,38 @@ void test_isinf_sign(double d) {
   return;
 }
 
-// CHECK-LABEL: @test_isnan(
+// CHECK-LABEL: @test_float_isnan(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store float [[F:%.*]], float* [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[F_ADDR]], align 4
+// CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[TMP0]] to i32
+// CHECK-NEXT:    [[ABS:%.*]] = and i32 [[BITCAST]], [[#%u,0x7FFFFFFF]]
+// CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[#%u,0x7F800000]], [[ABS]]
+// CHECK-NEXT:    [[ISNAN:%.*]] = lshr i32 [[TMP1]], 31
+// CHECK-NEXT:    call void @p(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.4, i64 0, i64 0), i32 [[ISNAN]]) [[ATTR4]]
+// CHECK-NEXT:    ret void
+//
+void test_float_isnan(float f) {
+  P(isnan, (f));
+
+  return;
+}
+
+// CHECK-LABEL: @test_double_isnan(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store double [[D:%.*]], double* [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, double* [[D_ADDR]], align 8
-// CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP0]], double [[TMP0]], metadata !"uno", metadata !"fpexcept.strict") [[ATTR4]]
-// CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[CMP]] to i32
-// CHECK-NEXT:    call void @p(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.4, i64 0, i64 0), i32 [[TMP1]]) [[ATTR4]]
+// CHECK-NEXT:    [[BITCAST:%.*]] = bitcast double [[TMP0]] to i64
+// CHECK-NEXT:    [[ABS:%.*]] = and i64 [[BITCAST]], [[#%u,0x7FFFFFFFFFFFFFFF]]
+// CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[#%u,0x7FF0000000000000]], [[ABS]]
+// CHECK-NEXT:    [[ISNAN:%.*]] = lshr i64 [[TMP1]], 63
+// CHECK-NEXT:    [[RES:%.*]] = trunc i64 [[ISNAN]] to i32
+// CHECK-NEXT:    call void @p(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.5, i64 0, i64 0), i32 [[RES]]) [[ATTR4]]
 // CHECK-NEXT:    ret void
 //
-void test_isnan(double d) {
+void test_double_isnan(double d) {
   P(isnan, (d));
 
   return;
@@ -120,7 +141,7 @@ void test_isnan(double d) {
 // CHECK-NEXT:    [[AND:%.*]] = and i1 [[ISEQ]], [[ISINF]]
 // CHECK-NEXT:    [[AND1:%.*]] = and i1 [[AND]], [[ISNORMAL]]
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[AND1]] to i32
-// CHECK-NEXT:    call void @p(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.5, i64 0, i64 0), i32 [[TMP2]]) [[ATTR4]]
+// CHECK-NEXT:    call void @p(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.6, i64 0, i64 0), i32 [[TMP2]]) [[ATTR4]]
 // CHECK-NEXT:    ret void
 //
 void test_isnormal(double d) {
