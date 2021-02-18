@@ -4889,6 +4889,75 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::SveFloat64x4:
       break;
 
+    // RISC-V V builtin types.
+    case clang::BuiltinType::RvvInt8mf8:
+    case clang::BuiltinType::RvvInt8mf4:
+    case clang::BuiltinType::RvvInt8mf2:
+    case clang::BuiltinType::RvvInt8m1:
+    case clang::BuiltinType::RvvInt8m2:
+    case clang::BuiltinType::RvvInt8m4:
+    case clang::BuiltinType::RvvInt8m8:
+    case clang::BuiltinType::RvvUint8mf8:
+    case clang::BuiltinType::RvvUint8mf4:
+    case clang::BuiltinType::RvvUint8mf2:
+    case clang::BuiltinType::RvvUint8m1:
+    case clang::BuiltinType::RvvUint8m2:
+    case clang::BuiltinType::RvvUint8m4:
+    case clang::BuiltinType::RvvUint8m8:
+    case clang::BuiltinType::RvvInt16mf4:
+    case clang::BuiltinType::RvvInt16mf2:
+    case clang::BuiltinType::RvvInt16m1:
+    case clang::BuiltinType::RvvInt16m2:
+    case clang::BuiltinType::RvvInt16m4:
+    case clang::BuiltinType::RvvInt16m8:
+    case clang::BuiltinType::RvvUint16mf4:
+    case clang::BuiltinType::RvvUint16mf2:
+    case clang::BuiltinType::RvvUint16m1:
+    case clang::BuiltinType::RvvUint16m2:
+    case clang::BuiltinType::RvvUint16m4:
+    case clang::BuiltinType::RvvUint16m8:
+    case clang::BuiltinType::RvvInt32mf2:
+    case clang::BuiltinType::RvvInt32m1:
+    case clang::BuiltinType::RvvInt32m2:
+    case clang::BuiltinType::RvvInt32m4:
+    case clang::BuiltinType::RvvInt32m8:
+    case clang::BuiltinType::RvvUint32mf2:
+    case clang::BuiltinType::RvvUint32m1:
+    case clang::BuiltinType::RvvUint32m2:
+    case clang::BuiltinType::RvvUint32m4:
+    case clang::BuiltinType::RvvUint32m8:
+    case clang::BuiltinType::RvvInt64m1:
+    case clang::BuiltinType::RvvInt64m2:
+    case clang::BuiltinType::RvvInt64m4:
+    case clang::BuiltinType::RvvInt64m8:
+    case clang::BuiltinType::RvvUint64m1:
+    case clang::BuiltinType::RvvUint64m2:
+    case clang::BuiltinType::RvvUint64m4:
+    case clang::BuiltinType::RvvUint64m8:
+    case clang::BuiltinType::RvvFloat16mf4:
+    case clang::BuiltinType::RvvFloat16mf2:
+    case clang::BuiltinType::RvvFloat16m1:
+    case clang::BuiltinType::RvvFloat16m2:
+    case clang::BuiltinType::RvvFloat16m4:
+    case clang::BuiltinType::RvvFloat16m8:
+    case clang::BuiltinType::RvvFloat32mf2:
+    case clang::BuiltinType::RvvFloat32m1:
+    case clang::BuiltinType::RvvFloat32m2:
+    case clang::BuiltinType::RvvFloat32m4:
+    case clang::BuiltinType::RvvFloat32m8:
+    case clang::BuiltinType::RvvFloat64m1:
+    case clang::BuiltinType::RvvFloat64m2:
+    case clang::BuiltinType::RvvFloat64m4:
+    case clang::BuiltinType::RvvFloat64m8:
+    case clang::BuiltinType::RvvBool1:
+    case clang::BuiltinType::RvvBool2:
+    case clang::BuiltinType::RvvBool4:
+    case clang::BuiltinType::RvvBool8:
+    case clang::BuiltinType::RvvBool16:
+    case clang::BuiltinType::RvvBool32:
+    case clang::BuiltinType::RvvBool64:
+      break;
+
     case clang::BuiltinType::IncompleteMatrixIdx:
       break;
     }
