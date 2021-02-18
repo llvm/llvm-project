@@ -206,6 +206,18 @@ static unsigned EmitVBRValue(uint64_t Val, raw_ostream &OS) {
   return NumBytes+1;
 }
 
+/// Emit the specified signed value as a VBR. To improve compression we encode
+/// positive numbers shifted left by 1 and negative numbers negated and shifted
+/// left by 1 with bit 0 set.
+static unsigned EmitSignedVBRValue(uint64_t Val, raw_ostream &OS) {
+  if ((int64_t)Val >= 0)
+    Val = Val << 1;
+  else
+    Val = (-Val << 1) | 1;
+
+  return EmitVBRValue(Val, OS);
+}
+
 // This is expensive and slow.
 static std::string getIncludePath(const Record *R) {
   std::string str;
@@ -579,15 +591,16 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
 
   case Matcher::CheckInteger: {
     OS << "OPC_CheckInteger, ";
-    unsigned Bytes=1+EmitVBRValue(cast<CheckIntegerMatcher>(N)->getValue(), OS);
+    unsigned Bytes =
+        1 + EmitSignedVBRValue(cast<CheckIntegerMatcher>(N)->getValue(), OS);
     OS << '\n';
     return Bytes;
   }
   case Matcher::CheckChildInteger: {
     OS << "OPC_CheckChild" << cast<CheckChildIntegerMatcher>(N)->getChildNo()
        << "Integer, ";
-    unsigned Bytes=1+EmitVBRValue(cast<CheckChildIntegerMatcher>(N)->getValue(),
-                                  OS);
+    unsigned Bytes = 1 + EmitSignedVBRValue(
+                             cast<CheckChildIntegerMatcher>(N)->getValue(), OS);
     OS << '\n';
     return Bytes;
   }
