@@ -31,6 +31,7 @@
 #include "polly/LinkAllPasses.h"
 #include "polly/PolyhedralInfo.h"
 #include "polly/PruneUnprofitable.h"
+#include "polly/ScheduleOptimizer.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
 #include "polly/Simplify.h"
@@ -253,7 +254,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeJSONImporterPass(Registry);
   initializeMaximalStaticExpanderPass(Registry);
   initializeIslAstInfoWrapperPassPass(Registry);
-  initializeIslScheduleOptimizerPass(Registry);
+  initializeIslScheduleOptimizerWrapperPassPass(Registry);
   initializePollyCanonicalizePass(Registry);
   initializePolyhedralInfoPass(Registry);
   initializeScopDetectionWrapperPassPass(Registry);
@@ -352,7 +353,7 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
       break; /* Do nothing */
 
     case OPTIMIZER_ISL:
-      PM.add(polly::createIslScheduleOptimizerPass());
+      PM.add(polly::createIslScheduleOptimizerWrapperPass());
       break;
     }
 
@@ -485,7 +486,7 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
     case OPTIMIZER_NONE:
       break; /* Do nothing */
     case OPTIMIZER_ISL:
-      llvm_unreachable("ISL optimizer is not implemented");
+      SPM.addPass(IslScheduleOptimizerPass());
       break;
     }
 

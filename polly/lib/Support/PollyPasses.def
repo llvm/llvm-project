@@ -36,4 +36,6 @@ SCOP_PASS("print<polly-optree>", ForwardOpTreePrinterPass(outs()))
 SCOP_PASS("polly-delicm", DeLICMPass())
 SCOP_PASS("print<polly-delicm>", DeLICMPrinterPass(outs()))
 SCOP_PASS("polly-prune-unprofitable", PruneUnprofitablePass())
+SCOP_PASS("polly-opt-isl", IslScheduleOptimizerPass())
+SCOP_PASS("print<polly-opt-isl>", IslScheduleOptimizerPrinterPass(outs()))
 #undef SCOP_PASS
