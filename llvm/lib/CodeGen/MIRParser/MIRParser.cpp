@@ -51,9 +51,9 @@ namespace llvm {
 /// file.
 class MIRParserImpl {
   SourceMgr SM;
+  LLVMContext &Context;
   yaml::Input In;
   StringRef Filename;
-  LLVMContext &Context;
   SlotMapping IRSlots;
   std::unique_ptr<PerTargetMIParsingState> Target;
 
@@ -176,10 +176,11 @@ MIRParserImpl::MIRParserImpl(std::unique_ptr<MemoryBuffer> Contents,
                              StringRef Filename, LLVMContext &Context,
                              std::function<void(Function &)> Callback)
     : SM(),
+      Context(Context),
       In(SM.getMemoryBuffer(SM.AddNewSourceBuffer(std::move(Contents), SMLoc()))
              ->getBuffer(),
          nullptr, handleYAMLDiag, this),
-      Filename(Filename), Context(Context), ProcessIRFunction(Callback) {
+      Filename(Filename), ProcessIRFunction(Callback) {
   In.setContext(&In);
 }
 
