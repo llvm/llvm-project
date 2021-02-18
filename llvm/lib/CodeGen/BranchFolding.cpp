@@ -164,10 +164,10 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
   TriedMerging.erase(MBB);
 
   // Update call site info.
-  std::for_each(MBB->begin(), MBB->end(), [MF](const MachineInstr &MI) {
+  for (const MachineInstr &MI : *MBB)
     if (MI.shouldUpdateCallSiteInfo())
       MF->eraseCallSiteInfo(&MI);
-  });
+
   // Remove the block.
   MF->erase(MBB);
   EHScopeMembership.erase(MBB);
