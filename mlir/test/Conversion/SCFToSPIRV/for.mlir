@@ -37,7 +37,7 @@ func @loop_kernel(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>) {
   // CHECK:      }
   scf.for %arg4 = %lb to %ub step %step {
     %1 = load %arg2[%arg4] : memref<10xf32>
-    memref.store %1, %arg3[%arg4] : memref<10xf32>
+    store %1, %arg3[%arg4] : memref<10xf32>
   }
   return
 }
@@ -78,8 +78,8 @@ func @loop_yield(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>) {
   // CHECK-DAG: %[[OUT2:.*]] = spv.Load "Function" %[[VAR2]] : f32
   // CHECK: spv.Store "StorageBuffer" {{%.*}}, %[[OUT1]] : f32
   // CHECK: spv.Store "StorageBuffer" {{%.*}}, %[[OUT2]] : f32
-  memref.store %result#0, %arg3[%lb] : memref<10xf32>
-  memref.store %result#1, %arg3[%ub] : memref<10xf32>
+  store %result#0, %arg3[%lb] : memref<10xf32>
+  store %result#1, %arg3[%ub] : memref<10xf32>
   return
 }
 

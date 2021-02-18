@@ -1,4 +1,4 @@
-! RUN: %f18 -fdebug-dump-symbols %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-dump-symbols %s 2>&1 | FileCheck %s
 ! CHECK: DATA statement value initializes 'jx' of type 'INTEGER(4)' with CHARACTER
 ! CHECK: DATA statement value initializes 'jy' of type 'INTEGER(4)' with CHARACTER
 ! CHECK: DATA statement value initializes 'jz' of type 'INTEGER(4)' with CHARACTER

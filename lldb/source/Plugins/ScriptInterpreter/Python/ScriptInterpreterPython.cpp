@@ -410,6 +410,31 @@ FileSpec ScriptInterpreterPython::GetPythonDir() {
   return g_spec;
 }
 
+void ScriptInterpreterPython::SharedLibraryDirectoryHelper(
+    FileSpec &this_file) {
+  // When we're loaded from python, this_file will point to the file inside the
+  // python package directory. Replace it with the one in the lib directory.
+#ifdef _WIN32
+  // On windows, we need to manually back out of the python tree, and go into
+  // the bin directory. This is pretty much the inverse of what ComputePythonDir
+  // does.
+  if (this_file.GetFileNameExtension() == ConstString(".pyd")) {
+    this_file.RemoveLastPathComponent(); // _lldb.pyd or _lldb_d.pyd
+    this_file.RemoveLastPathComponent(); // lldb
+    for (auto it = llvm::sys::path::begin(LLDB_PYTHON_RELATIVE_LIBDIR),
+              end = llvm::sys::path::end(LLDB_PYTHON_RELATIVE_LIBDIR);
+         it != end; ++it)
+      this_file.RemoveLastPathComponent();
+    this_file.AppendPathComponent("bin");
+    this_file.AppendPathComponent("liblldb.dll");
+  }
+#else
+  // The python file is a symlink, so we can find the real library by resolving
+  // it. We can do this unconditionally.
+  FileSystem::Instance().ResolveSymbolicLink(this_file, this_file);
+#endif
+}
+
 lldb_private::ConstString ScriptInterpreterPython::GetPluginNameStatic() {
   static ConstString g_name("script-python");
   return g_name;

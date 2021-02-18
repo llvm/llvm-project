@@ -17,7 +17,7 @@
 // FWDBWD-LABEL: slicing_test
 func @slicing_test() {
   // Fake 0 to align on 1 and match ASCII art.
-  %0 = memref.alloc() : memref<1xi32>
+  %0 = alloc() : memref<1xi32>
 
   // FWD: matched: %[[v1:.*]] {{.*}} forward static slice:
   // FWD-NEXT: %[[v5:.*]] {{.*}} -> i5

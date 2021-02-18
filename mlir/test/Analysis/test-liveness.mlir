@@ -221,7 +221,7 @@ func @nested_region(
     // CHECK-NEXT: LiveOut:{{ *$}}
     %2 = addi %0, %arg5 : i32
     %3 = addi %2, %0 : i32
-    memref.store %3, %buffer[] : memref<i32>
+    store %3, %buffer[] : memref<i32>
   }
   return %1 : i32
 }
@@ -265,7 +265,7 @@ func @nested_region2(
     %2 = addi %0, %arg5 : i32
     scf.for %arg7 = %arg0 to %arg1 step %arg2 {
       %3 = addi %2, %0 : i32
-      memref.store %3, %buffer[] : memref<i32>
+      store %3, %buffer[] : memref<i32>
     }
   }
   return %1 : i32
@@ -299,7 +299,7 @@ func @nested_region3(
     // CHECK-NEXT: LiveIn: arg5@0 arg6@0 val_7
     // CHECK-NEXT: LiveOut:{{ *$}}
     %2 = addi %0, %arg5 : i32
-    memref.store %2, %buffer[] : memref<i32>
+    store %2, %buffer[] : memref<i32>
   }
   br ^exit
 
@@ -312,7 +312,7 @@ func @nested_region3(
     // CHECK-NEXT: LiveIn: arg6@0 val_7 val_8
     // CHECK-NEXT: LiveOut:{{ *$}}
     %2 = addi %0, %1 : i32
-    memref.store %2, %buffer[] : memref<i32>
+    store %2, %buffer[] : memref<i32>
   }
   return %1 : i32
 }

@@ -25,7 +25,7 @@ func @one_d_loop(%A : memref<?xf32>, %B : memref<?xf32>) {
   // CHECK-BLOCKS-NEXT: %[[INDEX:.*]] = addi %{{.*}}, %[[B0]]
   // CHECK-BLOCKS-NEXT: load %{{.*}}[%[[INDEX]]]
     %0 = load %A[%i] : memref<?xf32>
-    memref.store %0, %B[%i] : memref<?xf32>
+    store %0, %B[%i] : memref<?xf32>
     // CHECK-THREADS: gpu.terminator
     // CHECK-BLOCKS: gpu.terminator
   }

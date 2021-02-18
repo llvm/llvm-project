@@ -10,14 +10,27 @@
 #include "flang/Common/default-kinds.h"
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendOptions.h"
+#include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/source.h"
 #include "flang/Parser/unparse.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "llvm/ADT/StringRef.h"
+#include <clang/Basic/Diagnostic.h>
+#include <memory>
 
 using namespace Fortran::frontend;
+
+void reportFatalSemanticErrors(const Fortran::semantics::Semantics &semantics,
+    clang::DiagnosticsEngine &diags, const llvm::StringRef &bufferName) {
+  if (semantics.AnyFatalError()) {
+    unsigned DiagID = diags.getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Semantic errors in %0");
+    diags.Report(DiagID) << bufferName;
+  }
+}
 
 bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
   CompilerInstance &ci = this->instance();
@@ -101,23 +114,16 @@ bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
   auto &parseTree{*ci.parsing().parseTree()};
 
   // Prepare semantics
-  Fortran::semantics::Semantics semantics{ci.invocation().semanticsContext(),
-      parseTree, ci.parsing().cooked().AsCharBlock()};
+  setSemantics(std::make_unique<Fortran::semantics::Semantics>(
+      ci.invocation().semanticsContext(), parseTree,
+      ci.parsing().cooked().AsCharBlock()));
+  auto &semantics = this->semantics();
 
   // Run semantic checks
   semantics.Perform();
 
   // Report the diagnostics from the semantic checks
   semantics.EmitMessages(ci.semaOutputStream());
-
-  if (semantics.AnyFatalError()) {
-    unsigned DiagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Semantic errors in %0");
-    ci.diagnostics().Report(DiagID) << GetCurrentFileOrBufferName();
-
-    return false;
-  }
-
   return true;
 }
 
@@ -183,7 +189,14 @@ void PrintPreprocessedAction::ExecuteAction() {
   }
 }
 
-void ParseSyntaxOnlyAction::ExecuteAction() {}
+void DebugDumpProvenanceAction::ExecuteAction() {
+  this->instance().parsing().DumpProvenance(llvm::outs());
+}
+
+void ParseSyntaxOnlyAction::ExecuteAction() {
+  reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
+      GetCurrentFileOrBufferName());
+}
 
 void DebugUnparseAction::ExecuteAction() {
   auto &parseTree{instance().parsing().parseTree()};
@@ -195,6 +208,10 @@ void DebugUnparseAction::ExecuteAction() {
       /*encoding=*/Fortran::parser::Encoding::UTF_8,
       /*capitalizeKeywords=*/true, /*backslashEscapes=*/false,
       /*preStatement=*/nullptr, &asFortran);
+
+  // Report fatal semantic errors
+  reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
+      GetCurrentFileOrBufferName());
 }
 
 void DebugUnparseWithSymbolsAction::ExecuteAction() {
@@ -202,6 +219,32 @@ void DebugUnparseWithSymbolsAction::ExecuteAction() {
 
   Fortran::semantics::UnparseWithSymbols(
       llvm::outs(), parseTree, /*encoding=*/Fortran::parser::Encoding::UTF_8);
+
+  // Report fatal semantic errors
+  reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
+      GetCurrentFileOrBufferName());
+}
+
+void DebugDumpSymbolsAction::ExecuteAction() {
+  auto &semantics = this->semantics();
+
+  // Dump symbols
+  semantics.DumpSymbols(llvm::outs());
+  // Report fatal semantic errors
+  reportFatalSemanticErrors(
+      semantics, this->instance().diagnostics(), GetCurrentFileOrBufferName());
+}
+
+void DebugDumpParseTreeAction::ExecuteAction() {
+  auto &parseTree{instance().parsing().parseTree()};
+  Fortran::parser::AnalyzedObjectsAsFortran asFortran =
+      Fortran::frontend::getBasicAsFortran();
+
+  // Dump parse tree
+  Fortran::parser::DumpTree(llvm::outs(), parseTree, &asFortran);
+  // Report fatal semantic errors
+  reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
+      GetCurrentFileOrBufferName());
 }
 
 void EmitObjAction::ExecuteAction() {

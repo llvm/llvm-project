@@ -25,8 +25,8 @@ using namespace ::mlir::linalg;
 
 static Value cloneMemref(Location loc, Value memref, OpBuilder &b) {
   auto memrefType = memref.getType().cast<MemRefType>();
-  auto alloc = b.create<memref::AllocOp>(loc, memrefType,
-                                         getDynOperands(loc, memref, b));
+  auto alloc =
+      b.create<AllocOp>(loc, memrefType, getDynOperands(loc, memref, b));
   b.create<linalg::CopyOp>(loc, memref, alloc);
   return alloc;
 }
@@ -60,17 +60,17 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp,
       continue;
     }
 
-    if (auto alloc = resultTensor.getDefiningOp<memref::AllocOp>()) {
+    if (auto alloc = resultTensor.getDefiningOp<AllocOp>()) {
       resultBuffers.push_back(resultTensor);
       continue;
     }
     // Allocate buffers for statically-shaped results.
     if (memrefType.hasStaticShape()) {
-      resultBuffers.push_back(b.create<memref::AllocOp>(loc, memrefType));
+      resultBuffers.push_back(b.create<AllocOp>(loc, memrefType));
       continue;
     }
 
-    resultBuffers.push_back(b.create<memref::AllocOp>(
+    resultBuffers.push_back(b.create<AllocOp>(
         loc, memrefType, getDynOperands(loc, resultTensor, b)));
   }
   return success();
@@ -148,7 +148,7 @@ public:
   matchAndRewrite(InitTensorOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     linalg::InitTensorOpAdaptor adaptor(operands, op->getAttrDictionary());
-    rewriter.replaceOpWithNewOp<memref::AllocOp>(
+    rewriter.replaceOpWithNewOp<AllocOp>(
         op, getTypeConverter()->convertType(op.getType()).cast<MemRefType>(),
         adaptor.sizes());
     return success();
@@ -231,8 +231,8 @@ public:
     // op.sizes() capture exactly the dynamic alloc operands matching the
     // subviewMemRefType thanks to subview/subtensor canonicalization and
     // verification.
-    Value alloc = rewriter.create<memref::AllocOp>(
-        op.getLoc(), subviewMemRefType, op.sizes());
+    Value alloc =
+        rewriter.create<AllocOp>(op.getLoc(), subviewMemRefType, op.sizes());
     Value subView = rewriter.create<SubViewOp>(
         op.getLoc(), sourceMemref, op.getMixedOffsets(), op.getMixedSizes(),
         op.getMixedStrides());
@@ -295,7 +295,7 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
 
     // Mark all Standard operations legal.
     target.addLegalDialect<AffineDialect, math::MathDialect,
-                           memref::MemRefDialect, StandardOpsDialect>();
+                           StandardOpsDialect>();
     target.addIllegalOp<InitTensorOp, SubTensorOp, SubTensorInsertOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.

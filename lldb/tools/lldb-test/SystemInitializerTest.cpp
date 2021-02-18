@@ -22,7 +22,8 @@
 
 using namespace lldb_private;
 
-SystemInitializerTest::SystemInitializerTest() = default;
+SystemInitializerTest::SystemInitializerTest()
+    : SystemInitializerCommon(nullptr) {}
 SystemInitializerTest::~SystemInitializerTest() = default;
 
 llvm::Error SystemInitializerTest::Initialize() {

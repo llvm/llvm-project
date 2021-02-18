@@ -10,6 +10,8 @@
 #define LLVM_FLANG_FRONTEND_FRONTENDACTIONS_H
 
 #include "flang/Frontend/FrontendAction.h"
+#include "flang/Semantics/semantics.h"
+#include <memory>
 
 namespace Fortran::frontend {
 
@@ -37,12 +39,26 @@ class PrintPreprocessedAction : public PrescanAction {
   void ExecuteAction() override;
 };
 
+class DebugDumpProvenanceAction : public PrescanAction {
+  void ExecuteAction() override;
+};
+
 //===----------------------------------------------------------------------===//
 // PrescanAndSema Actions
 //===----------------------------------------------------------------------===//
 class PrescanAndSemaAction : public FrontendAction {
+  std::unique_ptr<Fortran::semantics::Semantics> semantics_;
+
   void ExecuteAction() override = 0;
   bool BeginSourceFileAction(CompilerInstance &ci) override;
+
+public:
+  Fortran::semantics::Semantics &semantics() { return *semantics_; }
+  const Fortran::semantics::Semantics &semantics() const { return *semantics_; }
+
+  void setSemantics(std::unique_ptr<Fortran::semantics::Semantics> semantics) {
+    semantics_ = std::move(semantics);
+  }
 };
 
 class DebugUnparseWithSymbolsAction : public PrescanAndSemaAction {
@@ -50,6 +66,14 @@ class DebugUnparseWithSymbolsAction : public PrescanAndSemaAction {
 };
 
 class DebugUnparseAction : public PrescanAndSemaAction {
+  void ExecuteAction() override;
+};
+
+class DebugDumpSymbolsAction : public PrescanAndSemaAction {
+  void ExecuteAction() override;
+};
+
+class DebugDumpParseTreeAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
 };
 

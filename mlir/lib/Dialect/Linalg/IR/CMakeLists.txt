@@ -17,6 +17,5 @@ add_mlir_dialect_library(MLIRLinalg
   MLIRSideEffectInterfaces
   MLIRViewLikeInterface
   MLIRStandard
-  MLIRMemRef
   MLIRTensor
   )

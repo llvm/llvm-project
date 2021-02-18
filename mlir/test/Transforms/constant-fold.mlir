@@ -13,8 +13,8 @@ func @affine_for(%p : memref<f32>) {
 
       %2 = addf %0, %1 : f32
 
-      // CHECK-NEXT: memref.store [[C]], [[ARG]][]
-      memref.store %2, %p[] : memref<f32>
+      // CHECK-NEXT: store [[C]], [[ARG]][]
+      store %2, %p[] : memref<f32>
     }
   }
   return

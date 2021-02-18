@@ -209,12 +209,12 @@ func @extract_from_tensor.generate_2d(%idx0: index, %idx1: index, %tensor: tenso
 // CHECK-SAME: %[[IDX:.*]]: index
 func @extract_from_tensor.generate_sideeffects(%idx: index, %tensor: tensor<*xf32>) -> index {
   %size = rank %tensor : tensor<*xf32>
-  %mem = memref.alloc(%size) : memref<?xindex>
+  %mem = alloc(%size) : memref<?xindex>
   // CHECK: %[[DTENSOR:.*]] = tensor.generate
   %0 = tensor.generate %size {
     ^bb0(%arg0: index):
     %1 = dim %tensor, %arg0 : tensor<*xf32>
-    memref.store %1, %mem[%arg0] : memref<?xindex>
+    store %1, %mem[%arg0] : memref<?xindex>
     tensor.yield %1 : index
   } : tensor<?xindex>
   // CHECK: %[[RES:.*]] = tensor.extract %[[DTENSOR]][%[[IDX]]]
