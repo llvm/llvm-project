@@ -74,7 +74,9 @@ void CodeMetrics::collectEphemeralValues(
   SmallVector<const Value *, 16> Worklist;
 
   for (auto &AssumeVH : AC->assumptions()) {
-    Instruction *I = AssumeVH.getAssumeCI();
+    if (!AssumeVH)
+      continue;
+    Instruction *I = cast<Instruction>(AssumeVH);
 
     // Filter out call sites outside of the loop so we don't do a function's
     // worth of work for each of its loops (and, in the common case, ephemeral
@@ -96,7 +98,9 @@ void CodeMetrics::collectEphemeralValues(
   SmallVector<const Value *, 16> Worklist;
 
   for (auto &AssumeVH : AC->assumptions()) {
-    Instruction *I = AssumeVH.getAssumeCI();
+    if (!AssumeVH)
+      continue;
+    Instruction *I = cast<Instruction>(AssumeVH);
     assert(I->getParent()->getParent() == F &&
            "Found assumption for the wrong function!");
 
