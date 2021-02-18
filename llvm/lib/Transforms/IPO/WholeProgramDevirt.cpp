@@ -994,10 +994,10 @@ bool DevirtIndex::tryFindVirtualCallTargets(
     std::vector<ValueInfo> &TargetsForSlot, const TypeIdCompatibleVtableInfo TIdInfo,
     uint64_t ByteOffset) {
   for (const TypeIdOffsetVtableInfo &P : TIdInfo) {
-    // Find the first non-available_externally linkage vtable initializer.
+    // Find a representative copy of the vtable initializer.
     // We can have multiple available_externally, linkonce_odr and weak_odr
-    // vtable initializers, however we want to skip available_externally as they
-    // do not have type metadata attached, and therefore the summary will not
+    // vtable initializers, however currently clang does not attach type
+    // metadata to available_externally, and therefore the summary will not
     // contain any vtable functions. We can also have multiple external
     // vtable initializers in the case of comdats, which we cannot check here.
     // The linker should give an error in this case.
@@ -1014,14 +1014,22 @@ bool DevirtIndex::tryFindVirtualCallTargets(
           return false;
         LocalFound = true;
       }
-      if (!GlobalValue::isAvailableExternallyLinkage(S->linkage())) {
-        VS = cast<GlobalVarSummary>(S->getBaseObject());
+      auto *CurVS = cast<GlobalVarSummary>(S->getBaseObject());
+      if (!CurVS->vTableFuncs().empty()) {
+        VS = CurVS;
         // We cannot perform whole program devirtualization analysis on a vtable
         // with public LTO visibility.
         if (VS->getVCallVisibility() == GlobalObject::VCallVisibilityPublic)
           return false;
-      }
+      } else
+        // Currently clang will not attach the necessary type metadata to
+        // available_externally vtables.
+        assert(GlobalValue::isAvailableExternallyLinkage(S->linkage()));
     }
+    // There will be no VS if all copies are available_externally having no
+    // type metadata. In that case we can't safely perform WPD.
+    if (!VS)
+      return false;
     if (!VS->isLive())
       continue;
     for (auto VTP : VS->vTableFuncs()) {

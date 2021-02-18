@@ -275,6 +275,11 @@ void splitAndWriteThinLTOBitcode(
   ValueToValueMapTy VMap;
   std::unique_ptr<Module> MergedM(
       CloneModule(M, VMap, [&](const GlobalValue *GV) -> bool {
+        // Clone any llvm.*used globals to ensure the included values are
+        // not deleted.
+        if (GV->getName() == "llvm.used" ||
+            GV->getName() == "llvm.compiler.used")
+          return true;
         if (const auto *C = GV->getComdat())
           if (MergedMComdats.count(C))
             return true;

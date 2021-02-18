@@ -2781,6 +2781,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   };
 
   std::string module_name(pathname);
+  bool possible_package = false;
 
   if (extra_search_dir) {
     if (llvm::Error e = ExtendSysPath(extra_search_dir.GetPath())) {
@@ -2805,6 +2806,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
         return false;
       }
       // Not a filename, probably a package of some sort, let it go through.
+      possible_package = true;
     } else if (is_directory(st) || is_regular_file(st)) {
       if (module_file.GetDirectory().IsEmpty()) {
         error.SetErrorString("invalid directory name");
@@ -2829,6 +2831,18 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
       module_name.resize(module_name.length() - 3);
     else if (extension == ".pyc")
       module_name.resize(module_name.length() - 4);
+  }
+
+  if (!possible_package && module_name.find('.') != llvm::StringRef::npos) {
+    error.SetErrorStringWithFormat(
+        "Python does not allow dots in module names: %s", module_name.c_str());
+    return false;
+  }
+
+  if (module_name.find('-') != llvm::StringRef::npos) {
+    error.SetErrorStringWithFormat(
+        "Python discourages dashes in module names: %s", module_name.c_str());
+    return false;
   }
 
   // check if the module is already import-ed

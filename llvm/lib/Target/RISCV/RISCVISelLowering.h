@@ -450,22 +450,6 @@ using namespace RISCV;
 
 } // end namespace RISCVVIntrinsicsTable
 
-namespace RISCVZvlssegTable {
-
-struct RISCVZvlsseg {
-  unsigned IntrinsicID;
-  uint8_t SEW;
-  uint8_t LMUL;
-  uint8_t IndexLMUL;
-  uint16_t Pseudo;
-};
-
-using namespace RISCV;
-
-#define GET_RISCVZvlssegTable_DECL
-#include "RISCVGenSearchableTables.inc"
-
-} // namespace RISCVZvlssegTable
-}
+} // end namespace llvm
 
 #endif

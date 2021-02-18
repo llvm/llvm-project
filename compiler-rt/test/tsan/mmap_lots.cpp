@@ -24,6 +24,12 @@ int main() {
     fprintf(stderr, "allocated %zu with size %zu\n", allocated, mmap_size);
   }
   fprintf(stderr, "DONE\n");
+  // If tsan runtime will try to allocate something during exit handling,
+  // the allocation will fail because there is no VA whatsoever.
+  // It's observed to fail with the following error in some cases:
+  // failed to allocate 0x1000 (4096) bytes of DTLS_NextBlock.
+  // So terminate the process immediately.
+  _exit(0);
 }
 
 // CHECK: DONE

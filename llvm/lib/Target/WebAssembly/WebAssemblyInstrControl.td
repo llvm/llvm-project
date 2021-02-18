@@ -153,7 +153,7 @@ defm CATCH : I<(outs I32:$dst), (ins event_op:$tag),
                [(set I32:$dst,
                  (WebAssemblycatch (WebAssemblywrapper texternalsym:$tag)))],
                "catch   \t$dst, $tag", "catch   \t$tag", 0x07>;
-defm CATCH_ALL : NRI<(outs), (ins), [], "catch_all", 0x05>;
+defm CATCH_ALL : NRI<(outs), (ins), [], "catch_all", 0x19>;
 }
 
 // Delegating an exception: delegate
