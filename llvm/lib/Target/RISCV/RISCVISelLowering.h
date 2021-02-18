@@ -141,7 +141,8 @@ enum NodeType : unsigned {
   VECREDUCE_FADD,
   VECREDUCE_SEQ_FADD,
 
-  // Vector binary and unary ops with VL as a third operand.
+  // Vector binary and unary ops with a mask as a third operand, and VL as a
+  // fourth operand.
   // FIXME: Can we replace these with ISD::VP_*?
   ADD_VL,
   AND_VL,
@@ -166,6 +167,10 @@ enum NodeType : unsigned {
   SMAX_VL,
   UMIN_VL,
   UMAX_VL,
+
+  // Vector compare producing a mask. Fourth operand is input mask. Fifth
+  // operand is VL.
+  SETCC_VL,
 
   // Set mask vector to all zeros or ones.
   VMCLR_VL,
@@ -393,6 +398,7 @@ private:
   SDValue lowerFPVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorStoreToRVV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFixedLengthVectorSetccToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
                             unsigned NewOpc) const;
 
