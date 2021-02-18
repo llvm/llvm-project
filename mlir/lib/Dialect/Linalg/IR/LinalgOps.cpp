@@ -1387,8 +1387,9 @@ static LogicalResult verify(linalg::YieldOp op) {
 void FillOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(MemoryEffects::Write::get(), output(),
-                       SideEffects::DefaultResource::get());
+  if (output().getType().isa<MemRefType>())
+    effects.emplace_back(MemoryEffects::Write::get(), output(),
+                         SideEffects::DefaultResource::get());
 }
 
 static LogicalResult verify(FillOp op) {
