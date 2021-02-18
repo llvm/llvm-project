@@ -29,51 +29,6 @@ namespace {
 using testing::IsEmpty;
 using testing::SizeIs;
 
-MATCHER_P(LineNumber, L, "") { return arg.Line == L; }
-MATCHER(EmptyHighlightings, "") { return arg.Tokens.empty(); }
-
-std::vector<HighlightingToken>
-makeHighlightingTokens(llvm::ArrayRef<Range> Ranges, HighlightingKind Kind) {
-  std::vector<HighlightingToken> Tokens(Ranges.size());
-  for (int I = 0, End = Ranges.size(); I < End; ++I) {
-    Tokens[I].R = Ranges[I];
-    Tokens[I].Kind = Kind;
-  }
-
-  return Tokens;
-}
-
-std::vector<HighlightingToken> getExpectedTokens(Annotations &Test) {
-  static const std::map<HighlightingKind, std::string> KindToString{
-      {HighlightingKind::Variable, "Variable"},
-      {HighlightingKind::LocalVariable, "LocalVariable"},
-      {HighlightingKind::Parameter, "Parameter"},
-      {HighlightingKind::Function, "Function"},
-      {HighlightingKind::Class, "Class"},
-      {HighlightingKind::Enum, "Enum"},
-      {HighlightingKind::Namespace, "Namespace"},
-      {HighlightingKind::EnumConstant, "EnumConstant"},
-      {HighlightingKind::Field, "Field"},
-      {HighlightingKind::StaticField, "StaticField"},
-      {HighlightingKind::Method, "Method"},
-      {HighlightingKind::StaticMethod, "StaticMethod"},
-      {HighlightingKind::Typedef, "Typedef"},
-      {HighlightingKind::Type, "Type"},
-      {HighlightingKind::Unknown, "Unknown"},
-      {HighlightingKind::TemplateParameter, "TemplateParameter"},
-      {HighlightingKind::Concept, "Concept"},
-      {HighlightingKind::Primitive, "Primitive"},
-      {HighlightingKind::Macro, "Macro"}};
-  std::vector<HighlightingToken> ExpectedTokens;
-  for (const auto &KindString : KindToString) {
-    std::vector<HighlightingToken> Toks = makeHighlightingTokens(
-        Test.ranges(KindString.second), KindString.first);
-    ExpectedTokens.insert(ExpectedTokens.end(), Toks.begin(), Toks.end());
-  }
-  llvm::sort(ExpectedTokens);
-  return ExpectedTokens;
-}
-
 /// Annotates the input code with provided semantic highlightings. Results look
 /// something like:
 ///   class $Class[[X]] {
@@ -132,39 +87,6 @@ void checkHighlightings(llvm::StringRef Code,
     Token.Modifiers &= ModifierMask;
 
   EXPECT_EQ(Code, annotate(Test.code(), Actual));
-}
-
-// Any annotations in OldCode and NewCode are converted into their corresponding
-// HighlightingToken. The tokens are diffed against each other. Any lines where
-// the tokens should diff must be marked with a ^ somewhere on that line in
-// NewCode. If there are diffs that aren't marked with ^ the test fails. The
-// test also fails if there are lines marked with ^ that don't differ.
-void checkDiffedHighlights(llvm::StringRef OldCode, llvm::StringRef NewCode) {
-  Annotations OldTest(OldCode);
-  Annotations NewTest(NewCode);
-  std::vector<HighlightingToken> OldTokens = getExpectedTokens(OldTest);
-  std::vector<HighlightingToken> NewTokens = getExpectedTokens(NewTest);
-
-  llvm::DenseMap<int, std::vector<HighlightingToken>> ExpectedLines;
-  for (const Position &Point : NewTest.points()) {
-    ExpectedLines[Point.line]; // Default initialize to an empty line. Tokens
-                               // are inserted on these lines later.
-  }
-  std::vector<LineHighlightings> ExpectedLinePairHighlighting;
-  for (const HighlightingToken &Token : NewTokens) {
-    auto It = ExpectedLines.find(Token.R.start.line);
-    if (It != ExpectedLines.end())
-      It->second.push_back(Token);
-  }
-  for (auto &LineTokens : ExpectedLines)
-    ExpectedLinePairHighlighting.push_back(
-        {LineTokens.first, LineTokens.second, /*IsInactive = */ false});
-
-  std::vector<LineHighlightings> ActualDiffed =
-      diffHighlightings(NewTokens, OldTokens);
-  EXPECT_THAT(ActualDiffed,
-              testing::UnorderedElementsAreArray(ExpectedLinePairHighlighting))
-      << OldCode;
 }
 
 constexpr static uint32_t ScopeModifierMask =
@@ -809,30 +731,6 @@ TEST(SemanticHighlighting, ScopeModifiers) {
     checkHighlightings(Test, {}, ScopeModifierMask);
 }
 
-TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
-  class HighlightingsCounter : public ClangdServer::Callbacks {
-  public:
-    std::atomic<int> Count = {0};
-
-    void onHighlightingsReady(
-        PathRef File, llvm::StringRef Version,
-        std::vector<HighlightingToken> Highlightings) override {
-      ++Count;
-    }
-  };
-
-  auto FooCpp = testPath("foo.cpp");
-  MockFS FS;
-  FS.Files[FooCpp] = "";
-
-  MockCompilationDatabase MCD;
-  HighlightingsCounter Counter;
-  ClangdServer Server(MCD, FS, ClangdServer::optsForTest(), &Counter);
-  Server.addDocument(FooCpp, "int a;");
-  ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for server";
-  ASSERT_EQ(Counter.Count, 1);
-}
-
 // Ranges are highlighted as variables, unless highlighted as $Function etc.
 std::vector<HighlightingToken> tokens(llvm::StringRef MarkedText) {
   Annotations A(MarkedText);
@@ -910,149 +808,6 @@ TEST(SemanticHighlighting, diffSemanticTokens) {
   EXPECT_EQ(0u, Diff.front().tokens[2].deltaLine);
   EXPECT_EQ(6u, Diff.front().tokens[2].deltaStart);
   EXPECT_EQ(3u, Diff.front().tokens[2].length);
-}
-
-TEST(SemanticHighlighting, toTheiaSemanticHighlightingInformation) {
-  auto CreatePosition = [](int Line, int Character) -> Position {
-    Position Pos;
-    Pos.line = Line;
-    Pos.character = Character;
-    return Pos;
-  };
-
-  std::vector<LineHighlightings> Tokens{
-      {3,
-       {{HighlightingKind::Variable, 0,
-         Range{CreatePosition(3, 8), CreatePosition(3, 12)}},
-        {HighlightingKind::Function, 0,
-         Range{CreatePosition(3, 4), CreatePosition(3, 7)}}},
-       /* IsInactive = */ false},
-      {1,
-       {{HighlightingKind::Variable, 0,
-         Range{CreatePosition(1, 1), CreatePosition(1, 5)}}},
-       /* IsInactive = */ true}};
-  std::vector<TheiaSemanticHighlightingInformation> ActualResults =
-      toTheiaSemanticHighlightingInformation(Tokens);
-  std::vector<TheiaSemanticHighlightingInformation> ExpectedResults = {
-      {3, "AAAACAAEAAAAAAAEAAMAAw=="}, {1, "AAAAAQAEAAA="}};
-  EXPECT_EQ(ActualResults, ExpectedResults);
-}
-
-TEST(SemanticHighlighting, HighlightingDiffer) {
-  struct {
-    llvm::StringRef OldCode;
-    llvm::StringRef NewCode;
-  } TestCases[]{{
-                    R"(
-        $Variable[[A]]
-        $Class[[B]]
-        $Function[[C]]
-      )",
-                    R"(
-        $Variable[[A]]
-        $Class[[D]]
-        $Function[[C]]
-      )"},
-                {
-                    R"(
-        $Class[[C]]
-        $Field[[F]]
-        $Variable[[V]]
-        $Class[[C]] $Variable[[V]] $Field[[F]]
-      )",
-                    R"(
-        $Class[[C]]
-        $Field[[F]]
-       ^$Function[[F]]
-        $Class[[C]] $Variable[[V]] $Field[[F]]
-      )"},
-                {
-                    R"(
-
-        $Class[[A]]
-        $Variable[[A]]
-      )",
-                    R"(
-
-       ^
-       ^$Class[[A]]
-       ^$Variable[[A]]
-      )"},
-                {
-                    R"(
-        $Class[[C]]
-        $Field[[F]]
-        $Variable[[V]]
-        $Class[[C]] $Variable[[V]] $Field[[F]]
-      )",
-                    R"(
-        $Class[[C]]
-       ^
-       ^
-        $Class[[C]] $Variable[[V]] $Field[[F]]
-      )"},
-                {
-                    R"(
-        $Class[[A]]
-        $Variable[[A]]
-        $Variable[[A]]
-      )",
-                    R"(
-        $Class[[A]]
-       ^$Variable[[AA]]
-        $Variable[[A]]
-      )"},
-                {
-                    R"(
-        $Class[[A]]
-        $Variable[[A]]
-      )",
-                    R"(
-        $Class[[A]]
-        $Variable[[A]]
-       ^$Class[[A]]
-       ^$Variable[[A]]
-      )"},
-                {
-                    R"(
-        $Variable[[A]]
-        $Variable[[A]]
-        $Variable[[A]]
-      )",
-                    R"(
-       ^$Class[[A]]
-       ^$Class[[A]]
-       ^$Class[[A]]
-      )"}};
-
-  for (const auto &Test : TestCases)
-    checkDiffedHighlights(Test.OldCode, Test.NewCode);
-}
-
-TEST(SemanticHighlighting, DiffBeyondTheEndOfFile) {
-  llvm::StringRef OldCode =
-      R"(
-        $Class[[A]]
-        $Variable[[A]]
-        $Class[[A]]
-        $Variable[[A]]
-      )";
-  llvm::StringRef NewCode =
-      R"(
-        $Class[[A]] // line 1
-        $Variable[[A]] // line 2
-      )";
-
-  Annotations OldTest(OldCode);
-  Annotations NewTest(NewCode);
-  std::vector<HighlightingToken> OldTokens = getExpectedTokens(OldTest);
-  std::vector<HighlightingToken> NewTokens = getExpectedTokens(NewTest);
-
-  auto ActualDiff = diffHighlightings(NewTokens, OldTokens);
-  EXPECT_THAT(ActualDiff,
-              testing::UnorderedElementsAre(
-                  testing::AllOf(LineNumber(3), EmptyHighlightings()),
-                  testing::AllOf(LineNumber(4), EmptyHighlightings())));
 }
 
 } // namespace

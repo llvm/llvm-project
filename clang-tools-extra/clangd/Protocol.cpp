@@ -1314,25 +1314,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OffsetEncoding Enc) {
   return OS << toString(Enc);
 }
 
-bool operator==(const TheiaSemanticHighlightingInformation &Lhs,
-                const TheiaSemanticHighlightingInformation &Rhs) {
-  return Lhs.Line == Rhs.Line && Lhs.Tokens == Rhs.Tokens;
-}
-
-llvm::json::Value
-toJSON(const TheiaSemanticHighlightingInformation &Highlighting) {
-  return llvm::json::Object{{"line", Highlighting.Line},
-                            {"tokens", Highlighting.Tokens},
-                            {"isInactive", Highlighting.IsInactive}};
-}
-
-llvm::json::Value toJSON(const TheiaSemanticHighlightingParams &Highlighting) {
-  return llvm::json::Object{
-      {"textDocument", Highlighting.TextDocument},
-      {"lines", std::move(Highlighting.Lines)},
-  };
-}
-
 bool fromJSON(const llvm::json::Value &Params, SelectionRangeParams &S,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
