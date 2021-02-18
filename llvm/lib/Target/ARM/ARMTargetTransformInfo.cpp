@@ -1416,8 +1416,9 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
   unsigned VectorCost = NumElems * LT.first * ST->getMVEVectorCostFactor();
   // The scalarization cost should be a lot higher. We use the number of vector
   // elements plus the scalarization overhead.
-  unsigned ScalarCost =
-      NumElems * LT.first + BaseT::getScalarizationOverhead(VTy, {});
+  unsigned ScalarCost = NumElems * LT.first +
+                        BaseT::getScalarizationOverhead(VTy, true, false) +
+                        BaseT::getScalarizationOverhead(VTy, false, true);
 
   if (EltSize < 8 || Alignment < EltSize / 8)
     return ScalarCost;
