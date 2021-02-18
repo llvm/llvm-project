@@ -22,7 +22,7 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(supported_vCont_modes)
 
         # Verify we support the given mode.
-        self.assertTrue(mode in supported_vCont_modes)
+        self.assertIn(mode, supported_vCont_modes)
 
 
     def test_vCont_supports_c(self):
