@@ -32,4 +32,6 @@ SCOP_PASS("polly-simplify", SimplifyPass())
 SCOP_PASS("print<polly-simplify>", SimplifyPrinterPass(outs()))
 SCOP_PASS("polly-optree", ForwardOpTreePass())
 SCOP_PASS("print<polly-optree>", ForwardOpTreePrinterPass(outs()))
+SCOP_PASS("polly-delicm", DeLICMPass())
+SCOP_PASS("print<polly-delicm>", DeLICMPrinterPass(outs()))
 #undef SCOP_PASS
