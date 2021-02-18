@@ -69,6 +69,7 @@ public:
   const AllSources &allSources() const { return allSources_; }
   AllSources &allSources() { return allSources_; }
 
+  void DefineStandardMacros();
   void Define(std::string macro, std::string value);
   void Undefine(std::string macro);
   bool IsNameDefined(const CharBlock &);
