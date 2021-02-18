@@ -30,6 +30,7 @@
 #include "polly/JSONExporter.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/PolyhedralInfo.h"
+#include "polly/PruneUnprofitable.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
 #include "polly/Simplify.h"
@@ -266,7 +267,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeDeLICMWrapperPassPass(Registry);
   initializeSimplifyLegacyPassPass(Registry);
   initializeDumpModulePass(Registry);
-  initializePruneUnprofitablePass(Registry);
+  initializePruneUnprofitableWrapperPassPass(Registry);
 }
 
 /// Register Polly passes such that they form a polyhedral optimizer.
@@ -338,7 +339,7 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
     PM.add(polly::createMaximalStaticExpansionPass());
 
   if (EnablePruneUnprofitable)
-    PM.add(polly::createPruneUnprofitablePass());
+    PM.add(polly::createPruneUnprofitableWrapperPass());
 
 #ifdef GPU_CODEGEN
   if (Target == TARGET_HYBRID)
@@ -477,7 +478,8 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
   if (ImportJScop)
     SPM.addPass(JSONImportPass());
   assert(!DeadCodeElim && "This option is not implemented");
-  assert(!EnablePruneUnprofitable && "This option is not implemented");
+  if (EnablePruneUnprofitable)
+    SPM.addPass(PruneUnprofitablePass());
   if (Target == TARGET_CPU || Target == TARGET_HYBRID)
     switch (Optimizer) {
     case OPTIMIZER_NONE:
