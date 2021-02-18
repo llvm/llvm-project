@@ -102,6 +102,9 @@ RegistryMaps::RegistryMaps() {
   // Other:
   // equalsNode
 
+  registerMatcher("mapAnyOf",
+                  std::make_unique<internal::MapAnyOfBuilderDescriptor>());
+
   REGISTER_OVERLOADED_2(callee);
   REGISTER_OVERLOADED_2(hasAnyCapture);
   REGISTER_OVERLOADED_2(hasPrefix);
@@ -564,6 +567,22 @@ static llvm::ManagedStatic<RegistryMaps> RegistryData;
 
 ASTNodeKind Registry::nodeMatcherType(MatcherCtor Ctor) {
   return Ctor->nodeMatcherType();
+}
+
+internal::MatcherDescriptorPtr::MatcherDescriptorPtr(MatcherDescriptor *Ptr)
+    : Ptr(Ptr) {}
+
+internal::MatcherDescriptorPtr::~MatcherDescriptorPtr() { delete Ptr; }
+
+bool Registry::isBuilderMatcher(MatcherCtor Ctor) {
+  return Ctor->isBuilderMatcher();
+}
+
+internal::MatcherDescriptorPtr
+Registry::buildMatcherCtor(MatcherCtor Ctor, SourceRange NameRange,
+                           ArrayRef<ParserValue> Args, Diagnostics *Error) {
+  return internal::MatcherDescriptorPtr(
+      Ctor->buildMatcherCtor(NameRange, Args, Error).release());
 }
 
 // static
