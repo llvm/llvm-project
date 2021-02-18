@@ -12,6 +12,7 @@
 
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -79,6 +80,31 @@ static bool isDereferenceableAndAlignedPointer(
       APInt Offset(DL.getTypeStoreSizeInBits(Ty), 0);
       return isAligned(V, Offset, Alignment, DL);
     }
+
+  if (CtxI) {
+    /// Look through assumes to see if both dereferencability and alignment can
+    /// be provent by an assume
+    RetainedKnowledge AlignRK;
+    RetainedKnowledge DerefRK;
+    if (getKnowledgeForValue(
+            V, {Attribute::Dereferenceable, Attribute::Alignment}, nullptr,
+            [&](RetainedKnowledge RK, Instruction *Assume, auto) {
+              if (!isValidAssumeForContext(Assume, CtxI))
+                return false;
+              if (RK.AttrKind == Attribute::Alignment)
+                AlignRK = std::max(AlignRK, RK);
+              if (RK.AttrKind == Attribute::Dereferenceable)
+                DerefRK = std::max(DerefRK, RK);
+              if (AlignRK && DerefRK && AlignRK.ArgValue >= Alignment.value() &&
+                  DerefRK.ArgValue >= Size.getZExtValue())
+                return true; // We have found what we needed so we stop looking
+              return false;  // Other assumes may have better information. so
+                             // keep looking
+            }))
+      return true;
+  }
+  /// TODO refactor this function to be able to search independently for
+  /// Dereferencability and Alignment requirements.
 
   // For GEPs, determine if the indexing lands within the allocated object.
   if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
