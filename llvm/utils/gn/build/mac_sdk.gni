@@ -15,15 +15,14 @@ if (sysroot == "") {
   # long and almost everyone has Xcode installed.  So require that people who
   # don't have it installed set a gn arg.
   if (mac_use_commandline_tools_sdk) {
-    ios_sdk_path = "/Library/Developer/CommandLineTools/SDKs/iPhoneOS.sdk"
-    iossim_sdk_path =
-        "/Library/Developer/CommandLineTools/SDKs/iPhoneSimulator.sdk"
     mac_sdk_path = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
-  } else {
-    mac_sdk_path = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
 
     # iOS SDKs aren't available in the commandline tools SDK.
-    have_ios_sdks = true
+    have_ios_sdks = false
+  } else {
+    mac_sdk_path = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+    ios_sdk_path = "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk"
+    iossim_sdk_path = "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk"
   }
 } else {
   ios_sdk_path = rebase_path(sysroot, root_build_dir) + "/iPhoneOS.sdk"
