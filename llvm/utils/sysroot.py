@@ -36,18 +36,47 @@ def make_fake_sysroot(out_dir):
         os.mkdir(os.path.join(out_dir, 'Windows Kits'))
         mkjunction(os.path.join(out_dir, 'Windows Kits', '10'), winsdk)
     elif sys.platform == 'darwin':
-        assert False, "FIXME: Implement on darwin"
+        # The SDKs used by default in compiler-rt/cmake/base-config-ix.cmake.
+        # COMPILER_RT_ENABLE_IOS defaults to on.
+        # COMPILER_RT_ENABLE_WATCHOS and COMPILER_RT_ENABLE_TV default to off.
+        # compiler-rt/cmake/config-ix.cmake sets DARWIN_EMBEDDED_PLATFORMS
+        # depending on these.
+        sdks = ['macosx', 'iphoneos', 'iphonesimulator']
+        os.mkdir(out_dir)
+        for sdk in sdks:
+          sdkpath = cmdout(['xcrun', '-sdk', sdk, '-show-sdk-path'])
+          # sdkpath is something like /.../SDKs/MacOSX11.1.sdk, which is a
+          # symlink to MacOSX.sdk in the same directory. Resolve the symlink,
+          # to make the symlink in out_dir less likely to break when the SDK
+          # is updated (which will bump the number on xcrun's output, but not
+          # on the symlink destination).
+          sdkpath = os.path.realpath(sdkpath)
+          os.symlink(sdkpath, os.path.join(out_dir, os.path.basename(sdkpath)))
     else:
         os.symlink('/', out_dir)
 
-    print('Done.')
+    print('Done. Pass these flags to cmake:')
     abs_out_dir = os.path.abspath(out_dir)
     if sys.platform == 'win32':
         # CMake doesn't like backslashes in commandline args.
         abs_out_dir = abs_out_dir.replace(os.path.sep, '/')
-        print('Pass -DLLVM_WINSYSROOT=' + abs_out_dir + ' to cmake.')
+        print('  -DLLVM_WINSYSROOT=' + abs_out_dir)
+    elif sys.platform == 'darwin':
+        flags = [
+          '-DCMAKE_OSX_SYSROOT=' + os.path.join(abs_out_dir, 'MacOSX.sdk'),
+
+          # For find_darwin_sdk_dir() in
+          # compiler-rt/cmake/Modules/CompilerRTDarwinUtils.cmake
+          '-DDARWIN_macosx_CACHED_SYSROOT=' +
+              os.path.join(abs_out_dir, 'MacOSX.sdk'),
+          '-DDARWIN_iphoneos_CACHED_SYSROOT=' +
+              os.path.join(abs_out_dir, 'iPhoneOS.sdk'),
+          '-DDARWIN_iphonesimulator_CACHED_SYSROOT=' +
+              os.path.join(abs_out_dir, 'iPhoneSimulator.sdk'),
+        ]
+        print('  ' + ' '.join(flags))
     else:
-        print('Pass -DCMAKE_SYSROOT=' + abs_out_dir + ' to cmake.')
+        print('  -DCMAKE_SYSROOT=' + abs_out_dir + ' to cmake.')
 
 
 def main():

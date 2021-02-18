@@ -43,24 +43,6 @@ config("compiler_defaults") {
   cflags = target_flags
   ldflags = target_flags + target_ldflags
 
-  if ((current_os == "ios" || current_os == "mac") && clang_base_path != "") {
-    if (current_os == "ios" && current_cpu == "arm64") {
-      sdk_path = ios_sdk_path
-    } else if (current_os == "ios" && current_cpu == "x64") {
-      sdk_path = iossim_sdk_path
-    } else if (current_os == "mac") {
-      sdk_path = mac_sdk_path
-    }
-    cflags += [
-      "-isysroot",
-      sdk_path,
-    ]
-    ldflags += [
-      "-isysroot",
-      sdk_path,
-    ]
-  }
-
   # Mostly for compiler-rt, see compiler-rt/cmake/config-ix.cmake
   if (current_os == "ios") {
     asmflags += [ "-miphoneos-version-min=8.0" ]
@@ -283,17 +265,33 @@ config("compiler_defaults") {
     }
   }
   if (sysroot != "") {
-    assert(current_os != "mac" && current_os != "ios",
-           "FIXME: Make sysroot work on darwin")
     if (current_os == "win") {
       assert(is_clang, "sysroot only works with clang-cl as host compiler")
       cflags += [ "/winsysroot" + rebase_path(sysroot, root_build_dir) ]
-    } else {
+    } else if (current_os != "ios" && current_os != "mac") {
       cflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
-      if (is_clang) {
-        cflags += [ "-Wpoison-system-directories"]
-      }
     }
+  }
+  if ((current_os == "ios" || current_os == "mac") &&
+      (clang_base_path != "" || sysroot != "")) {
+    if (current_os == "ios" && current_cpu == "arm64") {
+      sdk_path = ios_sdk_path
+    } else if (current_os == "ios" && current_cpu == "x64") {
+      sdk_path = iossim_sdk_path
+    } else if (current_os == "mac") {
+      sdk_path = mac_sdk_path
+    }
+    cflags += [
+      "-isysroot",
+      sdk_path,
+    ]
+    ldflags += [
+      "-isysroot",
+      sdk_path,
+    ]
+  }
+  if (sysroot != "" && current_os != "win" && is_clang) {
+    cflags += [ "-Wpoison-system-directories" ]
   }
 
   if (use_ubsan) {
