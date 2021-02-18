@@ -378,6 +378,12 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
   // determines unrolling factor) or 1 argument (the unroll factor provided
   // by the user).
 
+  if (!isa<ForStmt, CXXForRangeStmt, DoStmt, WhileStmt>(St)) {
+    S.Diag(A.getLoc(), diag::err_attribute_wrong_decl_type_str)
+        << A << "'for', 'while', and 'do' statements";
+    return nullptr;
+  }
+
   unsigned NumArgs = A.getNumArgs();
 
   if (NumArgs > 1) {
