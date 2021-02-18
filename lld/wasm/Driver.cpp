@@ -1016,7 +1016,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       sym->forceExport = true;
   }
 
-  if (!config->relocatable && !config->isPic) {
+  if (!config->relocatable &&
+      config->unresolvedSymbols != UnresolvedPolicy::ImportFuncs) {
     // Add synthetic dummies for weak undefined functions.  Must happen
     // after LTO otherwise functions may not yet have signatures.
     symtab->handleWeakUndefines();
