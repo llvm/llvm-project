@@ -42,12 +42,19 @@ struct GCNRegPressure {
     clear();
   }
 
-  bool empty() const { return getSGPRNum() == 0 && getVGPRNum() == 0; }
+  bool empty() const { return getSGPRNum() == 0 && getVGPRNum(false) == 0; }
 
   void clear() { std::fill(&Value[0], &Value[TOTAL_KINDS], 0); }
 
   unsigned getSGPRNum() const { return Value[SGPR32]; }
-  unsigned getVGPRNum() const { return std::max(Value[VGPR32], Value[AGPR32]); }
+  unsigned getVGPRNum(bool UnifiedVGPRFile) const {
+    if (UnifiedVGPRFile) {
+      return Value[AGPR32] ? alignTo(Value[VGPR32], 4) + Value[AGPR32]
+                           : Value[VGPR32] + Value[AGPR32];
+    }
+    return std::max(Value[VGPR32], Value[AGPR32]);
+  }
+  unsigned getAGPRNum() const { return Value[AGPR32]; }
 
   unsigned getVGPRTuplesWeight() const { return std::max(Value[VGPR_TUPLE],
                                                          Value[AGPR_TUPLE]); }
@@ -55,7 +62,7 @@ struct GCNRegPressure {
 
   unsigned getOccupancy(const GCNSubtarget &ST) const {
     return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
-                    ST.getOccupancyWithNumVGPRs(getVGPRNum()));
+             ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts())));
   }
 
   void inc(unsigned Reg,

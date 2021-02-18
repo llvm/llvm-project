@@ -62,6 +62,8 @@ class SM_Real <SM_Pseudo ps>
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SMRD = ps.SMRD;
 
+  let TSFlags = ps.TSFlags;
+
   bit is_buffer = ps.is_buffer;
 
   // encoding
@@ -227,24 +229,29 @@ class SM_Atomic_Pseudo <string opName,
   let ScalarStore = 1;
   let hasSideEffects = 1;
   let maybeAtomic = 1;
+
+  let IsAtomicNoRet = !not(isRet);
+  let IsAtomicRet = isRet;
 }
 
 class SM_Pseudo_Atomic<string opName,
                        RegisterClass baseClass,
                        RegisterClass dataClass,
                        bit isImm,
-                       bit isRet> :
+                       bit isRet,
+                       string opNameWithSuffix = opName # !if(isImm,
+                                 !if(isRet, "_IMM_RTN", "_IMM"),
+                                 !if(isRet, "_SGPR_RTN", "_SGPR"))> :
   SM_Atomic_Pseudo<opName,
                    !if(isRet, (outs dataClass:$sdst), (outs)),
                    !if(isImm,
                        (ins dataClass:$sdata, baseClass:$sbase, smem_offset:$offset, DLC:$dlc),
                        (ins dataClass:$sdata, baseClass:$sbase, SReg_32:$offset, DLC:$dlc)),
                    !if(isRet, " $sdst", " $sdata") # ", $sbase, $offset" # !if(isRet, " glc", "") # "$dlc",
-                   isRet> {
+                   isRet>,
+  AtomicNoRet <opNameWithSuffix, isRet> {
   let offset_is_imm = isImm;
-  let PseudoInstr = opName # !if(isImm,
-                                 !if(isRet, "_IMM_RTN", "_IMM"),
-                                 !if(isRet, "_SGPR_RTN", "_SGPR"));
+  let PseudoInstr = opNameWithSuffix;
 
   let Constraints = !if(isRet, "$sdst = $sdata", "");
   let DisableEncoding = !if(isRet, "$sdata", "");
@@ -589,7 +596,8 @@ defm S_ATC_PROBE_BUFFER : SM_Real_Probe_vi <0x27, "S_ATC_PROBE_BUFFER">;
 //===----------------------------------------------------------------------===//
 
 class SMEM_Atomic_Real_vi <bits<8> op, SM_Atomic_Pseudo ps>
-  : SMEM_Real_vi <op, ps> {
+  : SMEM_Real_vi <op, ps>,
+    AtomicNoRet <!subst("_RTN","",NAME), ps.glc> {
 
   bits<7> sdata;
 
@@ -973,7 +981,8 @@ defm S_ATC_PROBE        : SM_Real_Probe_gfx10 <0x26, "S_ATC_PROBE">;
 defm S_ATC_PROBE_BUFFER : SM_Real_Probe_gfx10 <0x27, "S_ATC_PROBE_BUFFER">;
 
 class SMEM_Atomic_Real_gfx10 <bits<8> op, SM_Atomic_Pseudo ps>
-  : SMEM_Real_gfx10 <op, ps> {
+  : SMEM_Real_gfx10 <op, ps>,
+    AtomicNoRet <!subst("_RTN","",NAME), ps.glc> {
 
   bits<7> sdata;
   bit dlc;

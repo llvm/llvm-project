@@ -649,12 +649,6 @@ if (LLVM_BUILD_STATIC)
   endforeach()
 endif()
 
-include(CheckSymbolExists)
-check_symbol_exists(proc_pid_rusage "libproc.h" HAVE_PROC_PID_RUSAGE)
-if(HAVE_PROC_PID_RUSAGE)
-  list(APPEND CMAKE_REQUIRED_LIBRARIES proc)
-endif()
-
 # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
 if(CMAKE_HOST_APPLE AND APPLE)
   include(UseLibtool)

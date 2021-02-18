@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -335,7 +336,7 @@ static bool isDimOpValidSymbol(DimOp dimOp, Region *region) {
          "expect only `dim` operations with a constant index");
   int64_t i = index.getValue();
   return TypeSwitch<Operation *, bool>(dimOp.memrefOrTensor().getDefiningOp())
-      .Case<ViewOp, SubViewOp, AllocOp>(
+      .Case<memref::ViewOp, SubViewOp, memref::AllocOp>(
           [&](auto op) { return isMemRefSizeValidSymbol(op, i, region); })
       .Default([](Operation *) { return false; });
 }
@@ -915,12 +916,12 @@ void AffineApplyOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 /// This is a common class used for patterns of the form
-/// "someop(memrefcast) -> someop".  It folds the source of any memref_cast
+/// "someop(memrefcast) -> someop".  It folds the source of any memref.cast
 /// into the root operation directly.
 static LogicalResult foldMemRefCast(Operation *op) {
   bool folded = false;
   for (OpOperand &operand : op->getOpOperands()) {
-    auto cast = operand.get().getDefiningOp<MemRefCastOp>();
+    auto cast = operand.get().getDefiningOp<memref::CastOp>();
     if (cast && !cast.getOperand().getType().isa<UnrankedMemRefType>()) {
       operand.set(cast.getOperand());
       folded = true;

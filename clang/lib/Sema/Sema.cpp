@@ -386,6 +386,12 @@ void Sema::Initialize() {
 #include "clang/Basic/PPCTypes.def"
   }
 
+  if (Context.getTargetInfo().hasRISCVVTypes()) {
+#define RVV_TYPE(Name, Id, SingletonId)                                        \
+  addImplicitTypedef(Name, Context.SingletonId);
+#include "clang/Basic/RISCVVTypes.def"
+  }
+
   if (Context.getTargetInfo().hasBuiltinMSVaList()) {
     DeclarationName MSVaList = &Context.Idents.get("__builtin_ms_va_list");
     if (IdResolver.begin(MSVaList) == IdResolver.end())

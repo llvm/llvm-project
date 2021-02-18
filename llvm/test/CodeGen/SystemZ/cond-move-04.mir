@@ -68,7 +68,7 @@ body:             |
     %7 = LGFR %0
     $r3d = LGHI 0
     $r4d = COPY %7
-    CallBRASL @foo, undef $r2d, killed $r3d, killed $r4d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit-def dead $r2d
+    CallBRASL @foo, undef $r2d, killed $r3d, killed $r4d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def dead $r2d
     ADJCALLSTACKUP 0, 0
     J %bb.1
 

@@ -84,7 +84,7 @@ body:             |
   bb.0:
     %0:sreg_32_xm0 = COPY $sgpr32
     %1:vreg_64 = IMPLICIT_DEF
-    %2:vgpr_32 = FLAT_LOAD_DWORD %1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    %2:vgpr_32 = FLAT_LOAD_DWORD %1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %3:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @func + 4, target-flags(amdgpu-rel32-hi) @func + 4, implicit-def dead $scc
     ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
     dead $sgpr30_sgpr31 = SI_CALL %3, @func, csr_amdgpu_highregs, implicit undef $vgpr0

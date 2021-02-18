@@ -88,22 +88,22 @@ func @range(%arg0: index, %arg1: index, %arg2: index) {
 func @views(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) {
   %c0 = constant 0 : index
   %0 = muli %arg0, %arg0 : index
-  %1 = alloc (%0) : memref<?xi8>
+  %1 = memref.alloc (%0) : memref<?xi8>
   %2 = linalg.range %arg0:%arg1:%arg2 : !linalg.range
-  %3 = view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xf32>
-  %4 = view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xvector<4x4xf32>>
-  dealloc %1 : memref<?xi8>
+  %3 = memref.view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xf32>
+  %4 = memref.view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xvector<4x4xf32>>
+  memref.dealloc %1 : memref<?xi8>
   return
 }
 // CHECK-LABEL: func @views
 //  CHECK:  muli %{{.*}}, %{{.*}} : index
-//  CHECK-NEXT:  alloc(%{{.*}}) : memref<?xi8>
+//  CHECK-NEXT:  memref.alloc(%{{.*}}) : memref<?xi8>
 //  CHECK-NEXT:  range
-//  CHECK-NEXT:  std.view %{{.*}}[%{{.*}}][%{{.*}}] :
+//  CHECK-NEXT:  memref.view %{{.*}}[%{{.*}}][%{{.*}}] :
 //  CHECK-SAME:     memref<?xi8> to memref<?x?xf32>
-//  CHECK-NEXT:  view %{{.*}}[%{{.*}}][%{{.*}}] :
+//  CHECK-NEXT:  memref.view %{{.*}}[%{{.*}}][%{{.*}}] :
 //  CHECK-SAME:     memref<?xi8> to memref<?x?xvector<4x4xf32>>
-//  CHECK-NEXT:  dealloc %{{.*}} : memref<?xi8>
+//  CHECK-NEXT:  memref.dealloc %{{.*}} : memref<?xi8>
 
 // -----
 
@@ -157,7 +157,7 @@ func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
 // CHECK-DAG: #[[$strided3DT:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d1 * s2 + d0)>
 
 func @transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  %0 = transpose %arg0 (i, j, k) -> (k, j, i) : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]> to memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d1 * s2 + d0)>>
+  %0 = memref.transpose %arg0 (i, j, k) -> (k, j, i) : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]> to memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d1 * s2 + d0)>>
   return
 }
 // CHECK-LABEL: func @transpose

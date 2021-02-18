@@ -70,7 +70,7 @@ body:             |
     %13.sub2_sub3 = COPY killed %12
     %20 = V_LSHL_B64_e64 killed %19, 2, implicit $exec
     %16 = COPY killed %5
-    BUFFER_STORE_DWORD_ADDR64 killed %16, killed %20, killed %13, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.out)
+    BUFFER_STORE_DWORD_ADDR64 killed %16, killed %20, killed %13, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.out)
     S_ENDPGM 0
 
 ...

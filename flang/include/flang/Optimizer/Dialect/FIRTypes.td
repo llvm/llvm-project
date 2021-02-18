@@ -13,12 +13,41 @@
 #ifndef FIR_DIALECT_FIR_TYPES
 #define FIR_DIALECT_FIR_TYPES
 
+include "flang/Optimizer/Dialect/FIRDialect.td"
+
 //===----------------------------------------------------------------------===//
 // FIR Types
 //===----------------------------------------------------------------------===//
 
 class FIR_Type<string name, string typeMnemonic> : TypeDef<fir_Dialect, name> {
   let mnemonic = typeMnemonic;
+}
+
+def fir_BoxCharType : FIR_Type<"BoxChar", "boxchar"> {
+  let summary = "CHARACTER type descriptor.";
+
+  let description = [{
+    The type of a pair that describes a CHARACTER variable. Specifically, a
+    CHARACTER consists of a reference to a buffer (the string value) and a LEN
+    type parameter (the runtime length of the buffer).
+  }];
+
+  let parameters = (ins "KindTy":$kind);
+
+  let printer = [{
+    $_printer << "boxchar<" << getImpl()->kind << ">";
+  }];
+
+  let genAccessors = 1;
+
+  let extraClassDeclaration = [{
+    using KindTy = unsigned;
+
+    // a !fir.boxchar<k> always wraps a !fir.char<k, ?>
+    CharacterType getElementType(mlir::MLIRContext *context) const;
+
+    CharacterType getEleTy() const;
+  }];
 }
 
 def fir_BoxProcType : FIR_Type<"BoxProc", "boxproc"> {
@@ -39,11 +68,10 @@ def fir_BoxProcType : FIR_Type<"BoxProc", "boxproc"> {
   }];
 
   let genAccessors = 1;
-
   let genVerifyInvariantsDecl = 1;
 }
 
-def BoxType : FIR_Type<"Box", "box"> {
+def fir_BoxType : FIR_Type<"Box", "box"> {
   let summary = "The type of a Fortran descriptor";
 
   let description = [{
@@ -63,102 +91,7 @@ def BoxType : FIR_Type<"Box", "box"> {
   }];
 
   let genAccessors = 1;
-
   let genVerifyInvariantsDecl = 1;
-}
-
-def fir_FieldType : FIR_Type<"Field", "field"> {
-  let summary = "A field (in a RecordType) argument's type";
-
-  let description = [{
-    The type of a field name. Implementations may defer the layout of a Fortran
-    derived type until runtime. This implies that the runtime must be able to
-    determine the offset of fields within the entity.
-  }];
-
-  let printer = [{
-    $_printer << "field";
-  }];
-
-  let parser = [{
-    return get(context);
-  }];
-}
-
-def fir_ComplexType : FIR_Type<"Complex", "complex"> {
-  let summary = "Complex type";
-
-  let description = [{
-    Model of a Fortran COMPLEX intrinsic type, including the KIND type
-    parameter. COMPLEX is a floating point type with a real and imaginary
-    member.
-  }];
-
-  let parameters = (ins "KindTy":$fKind);
-
-  let printer = [{
-    $_printer << "complex<" << getFKind() << '>';
-  }];
-
-  let genAccessors = 1;
-
-  let extraClassDeclaration = [{
-    using KindTy = unsigned;
-
-    mlir::Type getElementType() const;
-  }];
-}
-
-def ShapeType : FIR_Type<"Shape", "shape"> {
-  let summary = "shape of a multidimensional array object";
-
-  let description = [{
-    Type of a vector of runtime values that define the shape of a
-    multidimensional array object. The vector is the extents of each array
-    dimension. The rank of a ShapeType must be at least 1.
-  }];
-
-  let parameters = (ins "unsigned":$rank);
-
-  let printer = [{
-    $_printer << "shape<" << getImpl()->rank << ">";
-  }];
-
-  let parser = [{
-    int rank;
-    if ($_parser.parseLess() || $_parser.parseInteger(rank) ||
-        $_parser.parseGreater())
-      return Type();
-    return get(context, rank);
-  }];
-}
-
-def ShapeShiftType : FIR_Type<"ShapeShift", "shapeshift"> {
-  let summary = "shape and origin of a multidimensional array object";
-
-  let description = [{
-    Type of a vector of runtime values that define the shape and the origin of a
-    multidimensional array object. The vector is of pairs, origin offset and
-    extent, of each array dimension. The rank of a ShapeShiftType must be at
-    least 1.
-  }];
-
-  let parameters = (ins "unsigned":$rank);
-
-  let printer = [{
-    $_printer << "shapeshift<" << getImpl()->rank << ">";
-  }];
-
-  let parser = [{
-    if ($_parser.parseLess())
-      return Type();
-    int rank;
-    if ($_parser.parseInteger(rank))
-      return Type();
-    if ($_parser.parseGreater())
-      return Type();
-    return get(context, rank);
-  }];
 }
 
 def fir_CharacterType : FIR_Type<"Character", "char"> {
@@ -194,19 +127,19 @@ def fir_CharacterType : FIR_Type<"Character", "char"> {
   }];
 }
 
-def fir_BoxCharType : FIR_Type<"BoxChar", "boxchar"> {
-  let summary = "CHARACTER type descriptor.";
+def fir_ComplexType : FIR_Type<"Complex", "complex"> {
+  let summary = "Complex type";
 
   let description = [{
-    The type of a pair that describes a CHARACTER variable. Specifically, a
-    CHARACTER consists of a reference to a buffer (the string value) and a LEN
-    type parameter (the runtime length of the buffer).
+    Model of a Fortran COMPLEX intrinsic type, including the KIND type
+    parameter. COMPLEX is a floating point type with a real and imaginary
+    member.
   }];
 
-  let parameters = (ins "KindTy":$kind);
+  let parameters = (ins "KindTy":$fKind);
 
   let printer = [{
-    $_printer << "boxchar<" << getImpl()->kind << ">";
+    $_printer << "complex<" << getFKind() << '>';
   }];
 
   let genAccessors = 1;
@@ -214,10 +147,98 @@ def fir_BoxCharType : FIR_Type<"BoxChar", "boxchar"> {
   let extraClassDeclaration = [{
     using KindTy = unsigned;
 
-    // a !fir.boxchar<k> always wraps a !fir.char<k, ?>
-    CharacterType getElementType(mlir::MLIRContext *context) const;
+    mlir::Type getElementType() const;
+  }];
+}
 
-    CharacterType getEleTy() const;
+def fir_FieldType : FIR_Type<"Field", "field"> {
+  let summary = "A field (in a RecordType) argument's type";
+
+  let description = [{
+    The type of a field name. Implementations may defer the layout of a Fortran
+    derived type until runtime. This implies that the runtime must be able to
+    determine the offset of fields within the entity.
+  }];
+
+  let printer = [{
+    $_printer << "field";
+  }];
+
+  let parser = [{
+    return get(context);
+  }];
+}
+
+def fir_ShapeType : FIR_Type<"Shape", "shape"> {
+  let summary = "shape of a multidimensional array object";
+
+  let description = [{
+    Type of a vector of runtime values that define the shape of a
+    multidimensional array object. The vector is the extents of each array
+    dimension. The rank of a ShapeType must be at least 1.
+  }];
+
+  let parameters = (ins "unsigned":$rank);
+
+  let printer = [{
+    $_printer << "shape<" << getImpl()->rank << ">";
+  }];
+
+  let parser = [{
+    int rank;
+    if ($_parser.parseLess() || $_parser.parseInteger(rank) ||
+        $_parser.parseGreater())
+      return Type();
+    return get(context, rank);
+  }];
+}
+
+def fir_ShapeShiftType : FIR_Type<"ShapeShift", "shapeshift"> {
+  let summary = "shape and origin of a multidimensional array object";
+
+  let description = [{
+    Type of a vector of runtime values that define the shape and the origin of a
+    multidimensional array object. The vector is of pairs, origin offset and
+    extent, of each array dimension. The rank of a ShapeShiftType must be at
+    least 1.
+  }];
+
+  let parameters = (ins "unsigned":$rank);
+
+  let printer = [{
+    $_printer << "shapeshift<" << getImpl()->rank << ">";
+  }];
+
+  let parser = [{
+    int rank;
+    if ($_parser.parseLess() || $_parser.parseInteger(rank) ||
+        $_parser.parseGreater())
+      return Type();
+    return get(context, rank);
+  }];
+}
+
+def fir_ShiftType : FIR_Type<"Shift", "shift"> {
+  let summary = "lower bounds of a multidimensional array object";
+
+  let description = [{
+    Type of a vector of runtime values that define the lower bounds of a
+    multidimensional array object. The vector is the lower bounds of each array
+    dimension. The rank of a ShiftType must be at least 1.
+  }];
+
+  let parameters = (ins "unsigned":$rank);
+
+  let printer = [{
+    $_printer << "shift<" << getImpl()->rank << ">";
+  }];
+
+  let parser = [{
+    int rank;
+    if ($_parser.parseLess() || $_parser.parseInteger(rank) ||
+        $_parser.parseGreater())
+      return Type();
+    return get(context, rank);
   }];
 }
 

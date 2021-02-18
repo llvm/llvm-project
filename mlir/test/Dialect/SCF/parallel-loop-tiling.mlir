@@ -8,7 +8,7 @@ func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
     %B_elem = load %B[%i0, %i1] : memref<?x?xf32>
     %C_elem = load %C[%i0, %i1] : memref<?x?xf32>
     %sum_elem = addf %B_elem, %C_elem : f32
-    store %sum_elem, %result[%i0, %i1] : memref<?x?xf32>
+    memref.store %sum_elem, %result[%i0, %i1] : memref<?x?xf32>
   }
   return
 }
@@ -30,7 +30,7 @@ func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:               [[V11:%.*]] = load [[ARG8]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
 // CHECK:               [[V12:%.*]] = load [[ARG9]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
 // CHECK:               [[V13:%.*]] = addf [[V11]], [[V12]] : f32
-// CHECK:               store [[V13]], [[ARG10]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
+// CHECK:               memref.store [[V13]], [[ARG10]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
 // CHECK:             }
 // CHECK:           }
 // CHECK:           return

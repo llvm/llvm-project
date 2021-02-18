@@ -437,6 +437,75 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsSextInReg) {
   EXPECT_EQ(25u, Info.computeNumSignBits(CopyInReg31Sext));
 }
 
+TEST_F(AArch64GISelMITest, TestNumSignBitsAssertSext) {
+  StringRef MIRString = R"(
+   %ptr:_(p0) = G_IMPLICIT_DEF
+   %load4:_(s32) = G_LOAD %ptr :: (load 4)
+
+   %assert_sext1:_(s32) = G_ASSERT_SEXT %load4, 1
+   %copy_assert_sext1:_(s32) = COPY %assert_sext1
+
+   %assert_sext7:_(s32) = G_ASSERT_SEXT %load4, 7
+   %copy_assert_sext7:_(s32) = COPY %assert_sext7
+
+   %assert_sext8:_(s32) = G_ASSERT_SEXT %load4, 8
+   %copy_assert_sext8:_(s32) = COPY %assert_sext8
+
+   %assert_sext9:_(s32) = G_ASSERT_SEXT %load4, 9
+   %copy_assert_sext9:_(s32) = COPY %assert_sext9
+
+   %assert_sext31:_(s32) = G_ASSERT_SEXT %load4, 31
+   %copy_assert_sext31:_(s32) = COPY %assert_sext31
+
+   %load1:_(s8) = G_LOAD %ptr :: (load 1)
+   %sext_load1:_(s32) = G_SEXT %load1
+
+   %assert_sext6_sext:_(s32) = G_ASSERT_SEXT %sext_load1, 6
+   %copy_assert_sext6_sext:_(s32) = COPY %assert_sext6_sext
+
+   %assert_sext7_sext:_(s32) = G_ASSERT_SEXT %sext_load1, 7
+   %copy_assert_sext7_sext:_(s32) = COPY %assert_sext7_sext
+
+   %assert_sext8_sext:_(s32) = G_ASSERT_SEXT %sext_load1, 8
+   %copy_assert_sext8_sext:_(s32) = COPY %assert_sext8_sext
+
+   %assert_sext9_sext:_(s32) = G_ASSERT_SEXT %sext_load1, 9
+   %copy_assert_sext9_sext:_(s32) = COPY %assert_sext9_sext
+
+   %assert_sext31_sext:_(s32) = G_ASSERT_SEXT %sext_load1, 31
+   %copy_assert_sext31_sext:_(s32) = COPY %assert_sext31_sext
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register CopyInReg1 = Copies[Copies.size() - 10];
+  Register CopyInReg7 = Copies[Copies.size() - 9];
+  Register CopyInReg8 = Copies[Copies.size() - 8];
+  Register CopyInReg9 = Copies[Copies.size() - 7];
+  Register CopyInReg31 = Copies[Copies.size() - 6];
+
+  Register CopyInReg6Sext = Copies[Copies.size() - 5];
+  Register CopyInReg7Sext = Copies[Copies.size() - 4];
+  Register CopyInReg8Sext = Copies[Copies.size() - 3];
+  Register CopyInReg9Sext = Copies[Copies.size() - 2];
+  Register CopyInReg31Sext = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  EXPECT_EQ(32u, Info.computeNumSignBits(CopyInReg1));
+  EXPECT_EQ(26u, Info.computeNumSignBits(CopyInReg7));
+  EXPECT_EQ(25u, Info.computeNumSignBits(CopyInReg8));
+  EXPECT_EQ(24u, Info.computeNumSignBits(CopyInReg9));
+  EXPECT_EQ(2u, Info.computeNumSignBits(CopyInReg31));
+
+  EXPECT_EQ(27u, Info.computeNumSignBits(CopyInReg6Sext));
+  EXPECT_EQ(26u, Info.computeNumSignBits(CopyInReg7Sext));
+  EXPECT_EQ(25u, Info.computeNumSignBits(CopyInReg8Sext));
+  EXPECT_EQ(25u, Info.computeNumSignBits(CopyInReg9Sext));
+  EXPECT_EQ(25u, Info.computeNumSignBits(CopyInReg31Sext));
+}
+
 TEST_F(AArch64GISelMITest, TestNumSignBitsTrunc) {
   StringRef MIRString = "  %3:_(p0) = G_IMPLICIT_DEF\n"
                         "  %4:_(s32) = G_LOAD %3 :: (load 4)\n"
@@ -736,6 +805,77 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSextInReg) {
    %inreg4:_(s32) = G_SEXT_INREG %ten, 2
    %copy_inreg4:_(s32) = COPY %inreg4
 
+)";
+  setUp(MIRString);
+  if (!TM)
+    return;
+  GISelKnownBits Info(*MF);
+  KnownBits Res;
+  auto GetKB = [&](unsigned Idx) {
+    Register CopyReg = Copies[Idx];
+    auto *Copy = MRI->getVRegDef(CopyReg);
+    return Info.getKnownBits(Copy->getOperand(1).getReg());
+  };
+
+  // Every bit is known to be a 1.
+  Res = GetKB(Copies.size() - 4);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_TRUE(Res.isAllOnes());
+
+  // All bits are unknown
+  Res = GetKB(Copies.size() - 3);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_TRUE(Res.isUnknown());
+
+  // Extending from the only known set bit
+  // 111...11?
+  Res = GetKB(Copies.size() - 2);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_EQ(0xFFFFFFFEu, Res.One.getZExtValue());
+  EXPECT_EQ(0u, Res.Zero.getZExtValue());
+
+  // Extending from a known set bit, overwriting all of the high set bits.
+  // 111...1110
+  Res = GetKB(Copies.size() - 1);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_EQ(0xFFFFFFFEu, Res.One.getZExtValue());
+  EXPECT_EQ(1u, Res.Zero.getZExtValue());
+}
+
+TEST_F(AArch64GISelMITest, TestKnownBitsAssertSext) {
+  StringRef MIRString = R"(
+   ; 000...0001
+   %one:_(s32) = G_CONSTANT i32 1
+
+   ; 000...0010
+   %two:_(s32) = G_CONSTANT i32 2
+
+   ; 000...1010
+   %ten:_(s32) = G_CONSTANT i32 10
+
+   ; ???...????
+   %w0:_(s32) = COPY $w0
+
+   ; ???...?1?
+   %or:_(s32) = G_OR %w0, %two
+
+   ; All bits are known.
+   %assert_sext1:_(s32) = G_ASSERT_SEXT %one, 1
+   %copy_assert_sext1:_(s32) = COPY %assert_sext1
+
+   ; All bits unknown
+   %assert_sext2:_(s32) = G_ASSERT_SEXT %or, 1
+   %copy_assert_sext2:_(s32) = COPY %assert_sext2
+
+   ; Extending from the only (known) set bit
+   ; 111...11?
+   %assert_sext3:_(s32) = G_ASSERT_SEXT %or, 2
+   %copy_assert_sext3:_(s32) = COPY %assert_sext3
+
+   ; Extending from a known set bit, overwriting all of the high set bits.
+   ; 111...1110
+   %assert_sext4:_(s32) = G_ASSERT_SEXT %ten, 2
+   %copy_assert_sext4:_(s32) = COPY %assert_sext4
 )";
   setUp(MIRString);
   if (!TM)

@@ -8,7 +8,7 @@ module {
     %c1 = constant 1 : index
     %d0 = dim %arg0, %c0 : memref<?x?xf32>
     %d1 = dim %arg1, %c1 : memref<?x?xf32>
-    %0 = alloc(%d0, %d1) : memref<?x?xf32>
+    %0 = memref.alloc(%d0, %d1) : memref<?x?xf32>
     linalg.fill(%0, %cst) : memref<?x?xf32>, f32
     linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%0 : memref<?x?xf32>)
@@ -34,7 +34,7 @@ module {
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 //  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: memref<?xf32>
 //  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: memref<?x?xf32>
-//       CHECK:   %[[TEMP:.+]] = alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32>
+//       CHECK:   %[[TEMP:.+]] = memref.alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32>
 //       CHECK:   scf.parallel (%[[IV0:.+]], %[[IV1:.+]]) = {{.*}} {
 //   CHECK-DAG:     %[[SV_TEMP:.+]] = subview %[[TEMP]][%[[IV0]], %[[IV1]]]
 //   CHECK-DAG:     %[[SV_ARG2:.+]] = subview %[[ARG2]][%[[IV1]]]
@@ -66,8 +66,8 @@ module {
     %n1 = dim %arg1, %c1 : memref<?x?xf32>
     %n2 = dim %arg2, %c1 : memref<?x?xf32>
     %n3 = dim %arg3, %c1 : memref<?x?xf32>
-    %0 = alloc(%m, %n1) : memref<?x?xf32>
-    %1 = alloc(%m, %n2) : memref<?x?xf32>
+    %0 = memref.alloc(%m, %n1) : memref<?x?xf32>
+    %1 = memref.alloc(%m, %n2) : memref<?x?xf32>
     linalg.fill(%0, %cst) : memref<?x?xf32>, f32
     linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%0 : memref<?x?xf32>)
@@ -95,8 +95,8 @@ module {
 //   CHECK-DAG:   %[[M:.+]] = dim %[[ARG0]], %[[C0]]
 //   CHECK-DAG:   %[[N1:.+]] = dim %[[ARG1]], %[[C1]]
 //   CHECK-DAG:   %[[N2:.+]] = dim %[[ARG2]], %[[C1]]
-//       CHECK:   %[[ALLOC1:.+]] = alloc(%[[M]], %[[N1]])
-//       CHECK:   %[[ALLOC2:.+]] = alloc(%[[M]], %[[N2]])
+//       CHECK:   %[[ALLOC1:.+]] = memref.alloc(%[[M]], %[[N1]])
+//       CHECK:   %[[ALLOC2:.+]] = memref.alloc(%[[M]], %[[N2]])
 //       CHECK:   scf.parallel (%[[IV0:.+]]) = (%[[C0]]) to (%[[M]])
 //  CHECK-SAME:     step (%[[C16]]) {
 //       CHECK:     %[[TILE_M:.+]] = affine.min #[[MAP0]](%[[IV0]])[%[[M]]]

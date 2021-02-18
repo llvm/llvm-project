@@ -1,5 +1,6 @@
 ; RUN: llc -amdgpu-conditional-discard-transformations=1 --march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,KILL %s
 ; RUN: llc -amdgpu-conditional-discard-transformations=1 -amdgpu-transform-discard-to-demote --march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,DEMOTE %s
+; XFAIL: *
 
 ; Check that the branch is removed by the discard opt.
 

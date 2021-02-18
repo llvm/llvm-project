@@ -11,7 +11,7 @@
 #
 # GCN-LABEL: bb.6:
 # GCN: successors: %bb.7(0x{{[0-9]+}}), %bb.18(0x{{[0-9]+}})
-# GCN: %{{[0-9]+}}:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %{{[0-9]+}}, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN: %{{[0-9]+}}:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %{{[0-9]+}}, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 #
 
 --- |
@@ -69,7 +69,7 @@ body: |
     %10:sreg_64 = COPY killed %5
     undef %11.sub2:sgpr_128 = COPY %4
     %11.sub3:sgpr_128 = COPY %3
-    %12:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET killed %11, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %12:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET killed %11, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     undef %13.sub1:vreg_128 = COPY %9.sub1
     %13.sub2:vreg_128 = COPY %9.sub2
     %14:sreg_64 = nofpexcept V_CMP_GT_F32_e64 0, target-flags(amdgpu-rel32-lo) 0, 0, killed %12.sub3, 0, implicit $mode, implicit $exec
@@ -161,7 +161,7 @@ body: |
   bb.18:
     successors: %bb.7(0x80000000)
     dead %59:vgpr_32 = nofpexcept V_FMA_F32_e64 0, killed %9.sub2, 0, undef %60:vgpr_32, 0, undef %61:vgpr_32, 0, 0, implicit $mode, implicit $exec
-    dead %62:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN undef %63:vgpr_32, undef %64:sgpr_128, undef %65:sreg_32, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead %62:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN undef %63:vgpr_32, undef %64:sgpr_128, undef %65:sreg_32, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     undef %66.sub1:vreg_128 = COPY %13.sub1
     %66.sub2:vreg_128 = COPY %13.sub2
     %67:sreg_64 = nofpexcept V_CMP_NGT_F32_e64 0, 0, 0, undef %68:vgpr_32, 0, implicit $mode, implicit $exec

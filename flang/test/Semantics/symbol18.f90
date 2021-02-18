@@ -4,7 +4,7 @@
 
 !DEF: /p1 MainProgram
 program p1
- !DEF: /p1/cos ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
+ !DEF: /p1/cos ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity INTEGER(4)
  integer cos
  !DEF: /p1/y (Implicit) ObjectEntity REAL(4)
  !REF: /p1/cos

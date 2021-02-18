@@ -1253,9 +1253,8 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
 
         // Displace clobbered registers.
         const uint32_t *Mask = MO.getRegMask();
-        for (LiveRegMap::iterator LRI = LiveVirtRegs.begin(),
-             LRIE = LiveVirtRegs.end(); LRI != LRIE; ++LRI) {
-          MCPhysReg PhysReg = LRI->PhysReg;
+        for (const LiveReg &LR : LiveVirtRegs) {
+          MCPhysReg PhysReg = LR.PhysReg;
           if (PhysReg != 0 && MachineOperand::clobbersPhysReg(Mask, PhysReg))
             displacePhysReg(MI, PhysReg);
         }

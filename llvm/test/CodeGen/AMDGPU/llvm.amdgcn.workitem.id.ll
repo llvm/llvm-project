@@ -4,6 +4,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,MESA %s
 ; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2 %s
 ; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,PACKED-TID %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0
@@ -17,7 +18,10 @@ declare i32 @llvm.amdgcn.workitem.id.z() #0
 ; CO-V2: enable_vgpr_workitem_id = 0
 
 ; ALL-NOT: v0
-; ALL: {{buffer|flat}}_store_dword {{.*}}v0
+; ALL: {{buffer|flat|global}}_store_dword {{.*}}v0
+
+; CO-V3: .amdhsa_system_vgpr_workitem_id 0
+; PACKED-TID: .amdhsa_system_vgpr_workitem_id 0
 define amdgpu_kernel void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   store i32 %id, i32 addrspace(1)* %out
@@ -31,8 +35,14 @@ define amdgpu_kernel void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
 ; ALL-LABEL: {{^}}test_workitem_id_y:
 ; CO-V2: enable_vgpr_workitem_id = 1
 
-; ALL-NOT: v1
-; ALL: {{buffer|flat}}_store_dword {{.*}}v1
+; PACKED-TID: v_bfe_u32 [[ID:v[0-9]+]], v0, 10, 10
+; PACKED-TID: {{buffer|flat|global}}_store_dword {{.*}}[[ID]]
+
+; UNPACKED-TID-NOT: v1
+; UNPACKED-TID: {{buffer|flat}}_store_dword {{.*}}v1
+
+; CO-V3: .amdhsa_system_vgpr_workitem_id 1
+; PACKED-TID: .amdhsa_system_vgpr_workitem_id 1
 define amdgpu_kernel void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.y()
   store i32 %id, i32 addrspace(1)* %out
@@ -46,8 +56,14 @@ define amdgpu_kernel void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
 ; ALL-LABEL: {{^}}test_workitem_id_z:
 ; CO-V2: enable_vgpr_workitem_id = 2
 
-; ALL-NOT: v2
-; ALL: {{buffer|flat}}_store_dword {{.*}}v2
+; PACKED-TID: v_bfe_u32 [[ID:v[0-9]+]], v0, 20, 10
+; PACKED-TID: {{buffer|flat|global}}_store_dword {{.*}}[[ID]]
+
+; UNPACKED-TID-NOT: v2
+; UNPACKED-TID: {{buffer|flat}}_store_dword {{.*}}v2
+
+; CO-V3: .amdhsa_system_vgpr_workitem_id 2
+; PACKED-TID: .amdhsa_system_vgpr_workitem_id 2
 define amdgpu_kernel void @test_workitem_id_z(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.z()
   store i32 %id, i32 addrspace(1)* %out

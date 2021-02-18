@@ -12,11 +12,11 @@ body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX9-LABEL: name: global_store_dwordx4_data_hazard_kill
-    ; GFX9: GLOBAL_STORE_DWORDX4 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, 0, 0, implicit $exec
+    ; GFX9: GLOBAL_STORE_DWORDX4 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $exec
     ; GFX9: $vgpr2 = KILL
     ; GFX9: S_NOP 0
     ; GFX9: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $exec
     $vgpr2 = KILL
     $vgpr2 = V_MOV_B32_e32 0, implicit $exec
 
@@ -30,11 +30,11 @@ body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4
     ; GFX9-LABEL: name: global_store_dwordx3_data_hazard_kill
-    ; GFX9: GLOBAL_STORE_DWORDX3 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4, 0, 0, 0, 0, implicit $exec
+    ; GFX9: GLOBAL_STORE_DWORDX3 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4, 0, 0, 0, 0, 0, implicit $exec
     ; GFX9: $vgpr2 = KILL
     ; GFX9: S_NOP 0
     ; GFX9: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
-    GLOBAL_STORE_DWORDX3 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX3 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4, 0, 0, 0, 0, 0, implicit $exec
     $vgpr2 = KILL
     $vgpr2 = V_MOV_B32_e32 0, implicit $exec
 

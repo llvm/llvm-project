@@ -75,6 +75,11 @@ else()
   add_library_flags_if(LIBCXXABI_HAS_C_LIB c)
 endif()
 
+if (LIBCXXABI_USE_COMPILER_RT)
+  find_compiler_rt_library(builtins LIBCXXABI_BUILTINS_LIBRARY)
+  list(APPEND LIBCXXABI_SHARED_LIBRARIES "${LIBCXXABI_BUILTINS_LIBRARY}")
+endif ()
+
 if (LIBCXXABI_USE_LLVM_UNWINDER)
   # Prefer using the in-tree version of libunwind, either shared or static. If
   # none are found fall back to using -lunwind.

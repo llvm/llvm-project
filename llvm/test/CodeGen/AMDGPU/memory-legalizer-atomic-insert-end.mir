@@ -81,7 +81,7 @@ body:             |
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 0
     S_WAITCNT 127
-    $vgpr1_vgpr2 = BUFFER_LOAD_DWORDX2_ADDR64 killed $vgpr1_vgpr2, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 8 from %ir.tid.gep)
+    $vgpr1_vgpr2 = BUFFER_LOAD_DWORDX2_ADDR64 killed $vgpr1_vgpr2, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 8 from %ir.tid.gep)
     $vgpr0 = V_XOR_B32_e32 1, killed $vgpr0, implicit $exec
     V_CMP_NE_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
     $sgpr2_sgpr3 = S_AND_SAVEEXEC_B64 killed $vcc, implicit-def $exec, implicit-def $scc, implicit $exec

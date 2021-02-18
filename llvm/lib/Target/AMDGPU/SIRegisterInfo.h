@@ -279,6 +279,8 @@ public:
                                 LiveIntervals *LIS) const;
 
   const uint32_t *getAllVGPRRegMask() const;
+  const uint32_t *getAllAGPRRegMask() const;
+  const uint32_t *getAllVectorRegMask() const;
   const uint32_t *getAllAllocatableSRegMask() const;
 
   // \returns number of 32 bit registers covered by a \p LM

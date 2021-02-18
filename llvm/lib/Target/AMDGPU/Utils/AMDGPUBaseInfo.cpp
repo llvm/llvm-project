@@ -345,7 +345,7 @@ void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream) {
          << "gfx"
          << Version.Major
          << Version.Minor
-         << Version.Stepping;
+         << hexdigit(Version.Stepping, true);
 
   if (hasXNACK(*STI))
     Stream << "+xnack";
@@ -402,6 +402,8 @@ unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
 
 unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI) {
   // FIXME: Need to take scratch memory into account.
+  if (isGFX90A(*STI))
+    return 8;
   if (!isGFX10Plus(*STI))
     return 10;
   return hasGFX10_3Insts(*STI) ? 16 : 20;
@@ -531,6 +533,9 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs) {
 
 unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
                              Optional<bool> EnableWavefrontSize32) {
+  if (STI->getFeatureBits().test(FeatureGFX90AInsts))
+    return 8;
+
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
@@ -543,6 +548,8 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
 
 unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
                                 Optional<bool> EnableWavefrontSize32) {
+  if (STI->getFeatureBits().test(FeatureGFX90AInsts))
+    return 8;
 
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
@@ -552,12 +559,16 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
 }
 
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
+  if (STI->getFeatureBits().test(FeatureGFX90AInsts))
+    return 512;
   if (!isGFX10Plus(*STI))
     return 256;
   return STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1024 : 512;
 }
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
+  if (STI->getFeatureBits().test(FeatureGFX90AInsts))
+    return 512;
   return 256;
 }
 
@@ -652,6 +663,11 @@ amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
                     STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1);
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
                     amdhsa::COMPUTE_PGM_RSRC1_MEM_ORDERED, 1);
+  }
+  if (AMDGPU::isGFX90A(*STI)) {
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc3,
+                    amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
+                    STI->getFeatureBits().test(FeatureTgSplit) ? 1 : 0);
   }
   return KD;
 }
@@ -1267,6 +1283,10 @@ bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10_3Insts];
 }
 
+bool isGFX90A(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts];
+}
+
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
   const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
   const unsigned FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
@@ -1374,6 +1394,9 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP32:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
+  case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     return true;
   default:
     return false;
@@ -1418,16 +1441,19 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::SReg_96RegClassID:
   case AMDGPU::VReg_96RegClassID:
   case AMDGPU::AReg_96RegClassID:
+  case AMDGPU::AV_96RegClassID:
     return 96;
   case AMDGPU::SGPR_128RegClassID:
   case AMDGPU::SReg_128RegClassID:
   case AMDGPU::VReg_128RegClassID:
   case AMDGPU::AReg_128RegClassID:
+  case AMDGPU::AV_128RegClassID:
     return 128;
   case AMDGPU::SGPR_160RegClassID:
   case AMDGPU::SReg_160RegClassID:
   case AMDGPU::VReg_160RegClassID:
   case AMDGPU::AReg_160RegClassID:
+  case AMDGPU::AV_160RegClassID:
     return 160;
   case AMDGPU::SGPR_192RegClassID:
   case AMDGPU::SReg_192RegClassID:

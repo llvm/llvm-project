@@ -60,3 +60,18 @@
 // GDWARF64_VER:  error: invalid argument '-gdwarf64' only allowed with 'DWARFv3 or greater'
 // GDWARF64_32ARCH: error: invalid argument '-gdwarf64' only allowed with '64 bit architecture'
 // GDWARF64_ELF: error: invalid argument '-gdwarf64' only allowed with 'ELF platforms'
+
+// Check that -gdwarf-N can be placed before other options of the "-g" group.
+// RUN: %clang -### -c -g -gdwarf-3 -target %itanium_abi_triple -fintegrated-as -x assembler %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=DWARF3 %s
+// RUN: %clang -### -c -gdwarf-3 -g -target %itanium_abi_triple -fintegrated-as -x assembler %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=DWARF3 %s
+// RUN: %clang -### -c -g -gdwarf-5 -target %itanium_abi_triple -fintegrated-as -x assembler %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=DWARF5 %s
+// RUN: %clang -### -c -gdwarf-5 -g -target %itanium_abi_triple -fintegrated-as -x assembler %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=DWARF5 %s
+
+// DWARF3: "-cc1as"
+// DWARF3: "-dwarf-version=3"
+// DWARF5: "-cc1as"
+// DWARF5: "-dwarf-version=5"

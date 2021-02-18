@@ -171,6 +171,10 @@ public:
     return RI;
   }
 
+  const GCNSubtarget &getSubtarget() const {
+    return ST;
+  }
+
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
                                          AAResults *AA) const override;
 
@@ -1085,11 +1089,7 @@ public:
   const TargetRegisterClass *getRegClass(const MCInstrDesc &TID, unsigned OpNum,
                                          const TargetRegisterInfo *TRI,
                                          const MachineFunction &MF)
-    const override {
-    if (OpNum >= TID.getNumOperands())
-      return nullptr;
-    return RI.getRegClass(TID.OpInfo[OpNum].RegClass);
-  }
+    const override;
 
   void fixImplicitOperands(MachineInstr &MI) const;
 

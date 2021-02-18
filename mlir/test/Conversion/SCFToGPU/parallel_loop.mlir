@@ -10,7 +10,7 @@ func @parallel_loop_bidy_bidx(%arg0 : index, %arg1 : index, %arg2 : index,
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                                           step (%arg4, %step)  {
     %val = load %buf[%i0, %i1] : memref<?x?xf32>
-    store %val, %res[%i1, %i0] : memref<?x?xf32>
+    memref.store %val, %res[%i1, %i0] : memref<?x?xf32>
   } { mapping = [{processor = 1, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}, {processor = 0, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}] }
   return
 }
@@ -29,7 +29,7 @@ func @parallel_loop_bidy_bidx(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:             [[VAL_23:%.*]] = affine.apply #[[$MAP1]]([[VAL_12]]){{\[}}[[VAL_4]], [[VAL_0]]]
 // CHECK:             [[VAL_24:%.*]] = affine.apply #[[$MAP1]]([[VAL_11]]){{\[}}[[VAL_7]], [[VAL_1]]]
 // CHECK:             [[VAL_25:%.*]] = load [[VAL_5]]{{\[}}[[VAL_23]], [[VAL_24]]] : memref<?x?xf32>
-// CHECK:             store [[VAL_25]], [[VAL_6]]{{\[}}[[VAL_24]], [[VAL_23]]] : memref<?x?xf32>
+// CHECK:             memref.store [[VAL_25]], [[VAL_6]]{{\[}}[[VAL_24]], [[VAL_23]]] : memref<?x?xf32>
 // CHECK:             gpu.terminator
 // CHECK:           }
 // CHECK:           return
@@ -54,7 +54,7 @@ func @parallel_loop_tiled(%arg0 : index, %arg1 : index, %arg2 : index,
       %idx0 = addi %i0, %si0 : index
       %idx1 = addi %i1, %si1 : index
       %val = load %buf[%idx0, %idx1] : memref<?x?xf32>
-      store %val, %res[%idx1, %idx0] : memref<?x?xf32>
+      memref.store %val, %res[%idx1, %idx0] : memref<?x?xf32>
     } { mapping = [
         {processor = 4, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>},
         {processor = 3, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}
@@ -88,7 +88,7 @@ func @parallel_loop_tiled(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:             [[VAL_56:%.*]] = addi [[VAL_52]], [[VAL_54]] : index
 // CHECK:             [[VAL_57:%.*]] = addi [[VAL_53]], [[VAL_55]] : index
 // CHECK:             [[VAL_58:%.*]] = load [[VAL_30]]{{\[}}[[VAL_56]], [[VAL_57]]] : memref<?x?xf32>
-// CHECK:             store [[VAL_58]], [[VAL_31]]{{\[}}[[VAL_57]], [[VAL_56]]] : memref<?x?xf32>
+// CHECK:             memref.store [[VAL_58]], [[VAL_31]]{{\[}}[[VAL_57]], [[VAL_56]]] : memref<?x?xf32>
 // CHECK:             gpu.terminator
 // CHECK:           }
 // CHECK:           return
@@ -107,7 +107,7 @@ func @parallel_loop_bidy_seq(%arg0 : index, %arg1 : index, %arg2 : index,
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                                           step (%arg4, %step)  {
     %val = load %buf[%i0, %i1] : memref<?x?xf32>
-    store %val, %res[%i1, %i0] : memref<?x?xf32>
+    memref.store %val, %res[%i1, %i0] : memref<?x?xf32>
   } { mapping = [
       {processor = 1, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>},
       {processor = 6, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}
@@ -128,7 +128,7 @@ func @parallel_loop_bidy_seq(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:             [[VAL_81:%.*]] = affine.apply #[[$MAP1]]([[VAL_70]]){{\[}}[[VAL_63]], [[VAL_59]]]
 // CHECK:             scf.for [[VAL_82:%.*]] = [[VAL_60]] to [[VAL_62]] step [[VAL_66]] {
 // CHECK:               [[VAL_83:%.*]] = load [[VAL_64]]{{\[}}[[VAL_81]], [[VAL_82]]] : memref<?x?xf32>
-// CHECK:               store [[VAL_83]], [[VAL_65]]{{\[}}[[VAL_82]], [[VAL_81]]] : memref<?x?xf32>
+// CHECK:               memref.store [[VAL_83]], [[VAL_65]]{{\[}}[[VAL_82]], [[VAL_81]]] : memref<?x?xf32>
 // CHECK:             }
 // CHECK:             gpu.terminator
 // CHECK:           }
@@ -154,7 +154,7 @@ func @parallel_loop_tiled_seq(%arg0 : index, %arg1 : index, %arg2 : index,
       %idx0 = addi %i0, %si0 : index
       %idx1 = addi %i1, %si1 : index
       %val = load %buf[%idx0, %idx1] : memref<?x?xf32>
-      store %val, %res[%idx1, %idx0] : memref<?x?xf32>
+      memref.store %val, %res[%idx1, %idx0] : memref<?x?xf32>
     } { mapping = [
         {processor = 4, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>},
         {processor = 6, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}
@@ -186,7 +186,7 @@ func @parallel_loop_tiled_seq(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:                 [[VAL_112:%.*]] = addi [[VAL_108]], [[VAL_110]] : index
 // CHECK:                 [[VAL_113:%.*]] = addi [[VAL_109]], [[VAL_111]] : index
 // CHECK:                 [[VAL_114:%.*]] = load [[VAL_88]]{{\[}}[[VAL_112]], [[VAL_113]]] : memref<?x?xf32>
-// CHECK:                 store [[VAL_114]], [[VAL_89]]{{\[}}[[VAL_113]], [[VAL_112]]] : memref<?x?xf32>
+// CHECK:                 memref.store [[VAL_114]], [[VAL_89]]{{\[}}[[VAL_113]], [[VAL_112]]] : memref<?x?xf32>
 // CHECK:               }
 // CHECK:             }
 // CHECK:             gpu.terminator
@@ -232,7 +232,7 @@ module {
         %18 = load %11[%arg5, %arg6] : memref<?x?xf32, #map3>
         %19 = load %16[%arg5, %arg6] : memref<?x?xf32, #map3>
         %20 = addf %17, %18 : f32
-        store %20, %16[%arg5, %arg6] : memref<?x?xf32, #map3>
+        memref.store %20, %16[%arg5, %arg6] : memref<?x?xf32, #map3>
         scf.yield
       } {mapping = [{bound = affine_map<(d0) -> (d0)>, map = affine_map<(d0) -> (d0)>, processor = 3 : i64}, {bound = affine_map<(d0) -> (d0)>, map = affine_map<(d0) -> (d0)>, processor = 4 : i64}]}
       scf.yield
@@ -293,7 +293,7 @@ module {
 // CHECK:                 [[VAL_50:%.*]] = load [[VAL_39]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
 // CHECK:                 [[VAL_51:%.*]] = load [[VAL_44]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
 // CHECK:                 [[VAL_52:%.*]] = addf [[VAL_49]], [[VAL_50]] : f32
-// CHECK:                 store [[VAL_52]], [[VAL_44]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
+// CHECK:                 memref.store [[VAL_52]], [[VAL_44]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
 // CHECK:               }
 // CHECK:             }
 // CHECK:             gpu.terminator
@@ -354,7 +354,7 @@ func @parallel_loop_loop_variant_bound(%arg0 : index, %arg1 : index, %arg2 : ind
       %idx0 = addi %i0, %si0 : index
       %idx1 = addi %i1, %si1 : index
       %val = load %buf[%idx0, %idx1] : memref<?x?xf32>
-      store %val, %res[%idx1, %idx0] : memref<?x?xf32>
+      memref.store %val, %res[%idx1, %idx0] : memref<?x?xf32>
     } { mapping = [
         {processor = 4, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>},
         {processor = 6, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}

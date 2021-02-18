@@ -1,4 +1,5 @@
 ; RUN: llc --march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,KILL,DEMOTE %s
+; XFAIL: *
 
 ; Check that the branch is removed by the discard opt.
 
