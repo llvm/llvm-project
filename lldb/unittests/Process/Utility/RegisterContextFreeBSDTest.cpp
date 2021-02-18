@@ -17,13 +17,15 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
+#include "Plugins/Process/Utility/RegisterContextFreeBSD_mips64.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/lldb-arm-register-enums.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
+#include "Plugins/Process/Utility/lldb-mips-freebsd-register-enums.h"
+#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -398,3 +400,61 @@ TEST(RegisterContextFreeBSDTest, arm64) {
 }
 
 #endif // defined(__aarch64__)
+
+#if defined(__mips64__)
+
+#define EXPECT_GPR_MIPS64(lldb_reg, fbsd_regno)                                \
+  EXPECT_THAT(GetRegParams(reg_ctx, gpr_##lldb_reg##_mips64),                  \
+              ::testing::Pair(offsetof(reg, r_regs[fbsd_regno]),               \
+                              sizeof(reg::r_regs[fbsd_regno])))
+
+TEST(RegisterContextFreeBSDTest, mips64) {
+  ArchSpec arch{"mips64-unknown-freebsd"};
+  RegisterContextFreeBSD_mips64 reg_ctx{arch};
+
+  // we can not use aliases from <machine/regnum.h> because macros defined
+  // there are not namespaced and collide a lot, e.g. 'A1'
+
+  EXPECT_GPR_MIPS64(zero, 0);
+  EXPECT_GPR_MIPS64(r1, 1);
+  EXPECT_GPR_MIPS64(r2, 2);
+  EXPECT_GPR_MIPS64(r3, 3);
+  EXPECT_GPR_MIPS64(r4, 4);
+  EXPECT_GPR_MIPS64(r5, 5);
+  EXPECT_GPR_MIPS64(r6, 6);
+  EXPECT_GPR_MIPS64(r7, 7);
+  EXPECT_GPR_MIPS64(r8, 8);
+  EXPECT_GPR_MIPS64(r9, 9);
+  EXPECT_GPR_MIPS64(r10, 10);
+  EXPECT_GPR_MIPS64(r11, 11);
+  EXPECT_GPR_MIPS64(r12, 12);
+  EXPECT_GPR_MIPS64(r13, 13);
+  EXPECT_GPR_MIPS64(r14, 14);
+  EXPECT_GPR_MIPS64(r15, 15);
+  EXPECT_GPR_MIPS64(r16, 16);
+  EXPECT_GPR_MIPS64(r17, 17);
+  EXPECT_GPR_MIPS64(r18, 18);
+  EXPECT_GPR_MIPS64(r19, 19);
+  EXPECT_GPR_MIPS64(r20, 20);
+  EXPECT_GPR_MIPS64(r21, 21);
+  EXPECT_GPR_MIPS64(r22, 22);
+  EXPECT_GPR_MIPS64(r23, 23);
+  EXPECT_GPR_MIPS64(r24, 24);
+  EXPECT_GPR_MIPS64(r25, 25);
+  EXPECT_GPR_MIPS64(r26, 26);
+  EXPECT_GPR_MIPS64(r27, 27);
+  EXPECT_GPR_MIPS64(gp, 28);
+  EXPECT_GPR_MIPS64(sp, 29);
+  EXPECT_GPR_MIPS64(r30, 30);
+  EXPECT_GPR_MIPS64(ra, 31);
+  EXPECT_GPR_MIPS64(sr, 32);
+  EXPECT_GPR_MIPS64(mullo, 33);
+  EXPECT_GPR_MIPS64(mulhi, 34);
+  EXPECT_GPR_MIPS64(badvaddr, 35);
+  EXPECT_GPR_MIPS64(cause, 36);
+  EXPECT_GPR_MIPS64(pc, 37);
+  EXPECT_GPR_MIPS64(ic, 38);
+  EXPECT_GPR_MIPS64(dummy, 39);
+}
+
+#endif // defined(__mips64__)
