@@ -152,23 +152,8 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
     return rewriter.notifyMatchFailure(operation,
                                        "All results must be a shaped type");
 
-  // For now require no broadcasting. Consider making it support broadcasting
-  // operations.
-  Type uniqueInTy = operation->getOperand(0).getType();
-  bool allInputTypesEqual =
-      llvm::all_of(operation->getOperandTypes(),
-                   [&](Type operandTy) { return operandTy == uniqueInTy; });
-  if (!allInputTypesEqual)
-    return rewriter.notifyMatchFailure(operation,
-                                       "All operands must have the same type");
-  bool resultAndInputShapeEqual =
-      llvm::all_of(operation->getResultTypes(), [&](Type resultTy) {
-        return resultTy.cast<ShapedType>().getShape() == t0.getShape();
-      });
-
-  if (!resultAndInputShapeEqual)
-    return rewriter.notifyMatchFailure(
-        operation, "All results must have the same shape as the input");
+  assert(operation->getNumResults() == 1 &&
+         "All TOSA elementwise ops should only return a single result.");
 
   // Construct the indexing maps needed for linalg.generic ops.
   SmallVector<Type> bodyArgTypes;
@@ -194,12 +179,30 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
   auto bodyResultTypes = llvm::to_vector<4>(llvm::map_range(
       initTensors, [](Value v) { return getElementTypeOrSelf(v); }));
 
-  // Supports only non-broadcasted operation. Shoudl consider update indexing
-  // map to be multidimensional.
   unsigned nloops = t0.getRank();
-  AffineMap commonIndexingMap = rewriter.getMultiDimIdentityMap(nloops);
-  SmallVector<AffineMap, 2> indexingMaps(
-      operation->getNumOperands() + bodyResultTypes.size(), commonIndexingMap);
+  SmallVector<AffineMap, 2> indexingMaps;
+  indexingMaps.reserve(operation->getNumOperands() + bodyResultTypes.size());
+
+  // Input indexing maps may be broadcasted.
+  for (Type types : operation->getOperandTypes()) {
+    auto shape = types.cast<ShapedType>().getShape();
+    SmallVector<AffineExpr, 4> dimExprs;
+    dimExprs.reserve(nloops);
+    for (unsigned i = 0; i < nloops; ++i) {
+      // If the dimension is one we can broadcast the input with a constant
+      // affine expression.
+      if (shape[i] == 1)
+        dimExprs.push_back(rewriter.getAffineConstantExpr(0));
+      else
+        dimExprs.push_back(rewriter.getAffineDimExpr(i));
+    }
+    indexingMaps.push_back(AffineMap::get(/*dimCount=*/nloops,
+                                          /*symbolCount=*/0, dimExprs,
+                                          rewriter.getContext()));
+  }
+
+  indexingMaps.append(operation->getNumResults(),
+                      rewriter.getMultiDimIdentityMap(nloops));
 
   bool didEncounterError = false;
   auto linalgOp = rewriter.create<linalg::GenericOp>(
