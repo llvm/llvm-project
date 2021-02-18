@@ -1132,8 +1132,8 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
 
   // BEGIN SWIFT
   SBStringList no_extra_args;
-  return BreakpointCreateForException(language, catch_bp, throw_bp,
-                                      no_extra_args);
+  return LLDB_RECORD_RESULT(BreakpointCreateForException(
+      language, catch_bp, throw_bp, no_extra_args));
   // END SWIFT
 }
 
