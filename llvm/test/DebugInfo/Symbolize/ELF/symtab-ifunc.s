@@ -1,3 +1,4 @@
+# REQUIRES: x86-registered-target
 ## Test we can symbolize STT_GNU_IFUNC symbols.
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
 # RUN: llvm-symbolizer --obj=%t 0 1
