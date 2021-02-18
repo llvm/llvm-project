@@ -305,6 +305,19 @@ Format compatibility guarantees
   minor version increment is for added functionality, and patch version
   increments are for bugfixes.
 
+Impact of llvm optimizations on coverage reports
+================================================
+
+llvm optimizations (such as inlining or CFG simplification) should have no
+impact on coverage report quality. This is due to the fact that the mapping
+from source regions to profile counters is immutable, and is generated before
+the llvm optimizer kicks in. The optimizer can't prove that profile counter
+instrumentation is safe to delete (because it's not: it affects the profile the
+program emits), and so leaves it alone.
+
+Note that this coverage feature does not rely on information that can degrade
+during the course of optimization, such as debug info line tables.
+
 Using the profiling runtime without static initializers
 =======================================================
 
