@@ -77,7 +77,8 @@ mlir::translateModuleToNVVMIR(Operation *m, llvm::LLVMContext &llvmContext,
   // function as a kernel.
   for (auto func :
        ModuleTranslation::getModuleBody(m).getOps<LLVM::LLVMFuncOp>()) {
-    if (!gpu::GPUDialect::isKernel(func))
+    if (!func->getAttrOfType<UnitAttr>(
+            NVVM::NVVMDialect::getKernelFuncAttrName()))
       continue;
 
     auto *llvmFunc = llvmModule->getFunction(func.getName());

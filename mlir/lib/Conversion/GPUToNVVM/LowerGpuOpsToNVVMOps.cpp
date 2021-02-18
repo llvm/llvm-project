@@ -167,11 +167,16 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                           NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
               GPUIndexIntrinsicOpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
                                           NVVM::GridDimYOp, NVVM::GridDimZOp>,
-              GPUShuffleOpLowering, GPUReturnOpLowering,
-              // Explicitly drop memory space when lowering private memory
-              // attributions since NVVM models it as `alloca`s in the default
-              // memory space and does not support `alloca`s with addrspace(5).
-              GPUFuncOpLowering<0>>(converter);
+              GPUShuffleOpLowering, GPUReturnOpLowering>(converter);
+
+  // Explicitly drop memory space when lowering private memory
+  // attributions since NVVM models it as `alloca`s in the default
+  // memory space and does not support `alloca`s with addrspace(5).
+  patterns.insert<GPUFuncOpLowering>(
+      converter, /*allocaAddrSpace=*/0,
+      Identifier::get(NVVM::NVVMDialect::getKernelFuncAttrName(),
+                      &converter.getContext()));
+
   patterns.insert<OpToFuncCallLowering<AbsFOp>>(converter, "__nv_fabsf",
                                                 "__nv_fabs");
   patterns.insert<OpToFuncCallLowering<math::AtanOp>>(converter, "__nv_atanf",

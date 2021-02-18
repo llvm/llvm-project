@@ -29,7 +29,7 @@ llvm.func @rocdl_special_regs() -> i32 {
   llvm.return %1 : i32
 }
 
-llvm.func @kernel_func() attributes {gpu.kernel} {
+llvm.func @kernel_func() attributes {rocdl.kernel} {
   // CHECK-LABEL: amdgpu_kernel void @kernel_func
   llvm.return
 }
