@@ -36,7 +36,7 @@ public:
                           CharSourceRange /*FilenameRange*/,
                           const FileEntry *File, llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
-                          const Module * /*Imported*/,
+                          const clang::Module * /*Imported*/,
                           SrcMgr::CharacteristicKind FileKind) override {
     auto MainFID = SM.getMainFileID();
     // If an include is part of the preamble patch, translate #line directives.
