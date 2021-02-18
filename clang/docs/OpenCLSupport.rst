@@ -114,6 +114,8 @@ flags that forward options to the frontend e.g. ``-cc1`` or ``-Xclang``.
 OpenCL builtins
 ---------------
 
+**Clang builtins**
+
 There are some standard OpenCL functions that are implemented as Clang builtins:
 
 - All pipe functions from `section 6.13.16.2/6.13.16.3
@@ -128,6 +130,28 @@ There are some standard OpenCL functions that are implemented as Clang builtins:
   <https://www.khronos.org/registry/cl/specs/opencl-2.0-openclc.pdf#164>`_ and
   enqueue query functions from `section 6.13.17.5
   <https://www.khronos.org/registry/cl/specs/opencl-2.0-openclc.pdf#171>`_.
+
+**Fast builtin function declarations**
+
+The implementation of the fast builtin function declarations (available via the
+:ref:`-fdeclare-opencl-builtins option <opencl_fast_builtins>`) consists of the
+following main components:
+
+- A TableGen definitions file ``OpenCLBuiltins.td``.  This contains a compact
+  representation of the supported builtin functions.  When adding new builtin
+  function declarations, this is normally the only file that needs modifying.
+
+- A Clang TableGen emitter defined in ``ClangOpenCLBuiltinEmitter.cpp``.  During
+  Clang build time, the emitter reads the TableGen definition file and
+  generates ``OpenCLBuiltins.inc``.  This generated file contains various tables
+  and functions that capture the builtin function data from the TableGen
+  definitions in a compact manner.
+
+- OpenCL specific code in ``SemaLookup.cpp``.  When ``Sema::LookupBuiltin``
+  encounters a potential builtin function, it will check if the name corresponds
+  to a valid OpenCL builtin function.  If so, all overloads of the function are
+  inserted using ``InsertOCLBuiltinDeclarationsFromTable`` and overload
+  resolution takes place.
 
 .. _opencl_addrsp:
 
@@ -238,6 +262,8 @@ and provide early feedback or contribute with further improvements.
 Feel free to contact us on `cfe-dev
 <https://lists.llvm.org/mailman/listinfo/cfe-dev>`_ or via `Bugzilla
 <https://bugs.llvm.org/>`__.
+
+.. _opencl_fast_builtins:
 
 Fast builtin function declarations
 ----------------------------------
