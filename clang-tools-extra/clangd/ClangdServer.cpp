@@ -397,20 +397,15 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
                                  const RenameOptions &RenameOpts,
                                  Callback<RenameResult> CB) {
   auto Action = [Pos, File = File.str(), CB = std::move(CB),
-                 NewName = std::move(NewName), RenameOpts,
-                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+                 NewName = std::move(NewName),
+                 RenameOpts](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    // prepareRename is latency-sensitive:
-    //  - for single-file rename, performing rename isn't substantially more
-    //    expensive than doing an AST-based check (the index is used to see if
-    //    the rename is complete);
-    //  - for cross-file rename, we deliberately pass a nullptr index to save
-    //    the cost, thus the result may be incomplete as it only contains
-    //    main-file occurrences;
+    // prepareRename is latency-sensitive: we don't query the index, as we
+    // only need main-file references
     auto Results = clangd::rename(
         {Pos, NewName.getValueOr("__clangd_rename_dummy"), InpAST->AST, File,
-         RenameOpts.AllowCrossFile ? nullptr : Index, RenameOpts});
+         /*Index=*/nullptr, RenameOpts});
     if (!Results) {
       // LSP says to return null on failure, but that will result in a generic
       // failure message. If we send an LSP error response, clients can surface
