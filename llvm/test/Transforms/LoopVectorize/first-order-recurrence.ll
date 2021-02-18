@@ -143,7 +143,7 @@ scalar.body:
 ; CHECK:         [[SHUF:%[a-zA-Z0-9.]+]] = shufflevector <4 x i16> %vector.recur, <4 x i16> [[L1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; Check also that the casts were not moved needlessly.
 ; CHECK:         sitofp <4 x i16> [[L1]] to <4 x double>
-; CHECK:         sitofp <4 x i16> [[SHUF]] to <4 x double> 
+; CHECK:         sitofp <4 x i16> [[SHUF]] to <4 x double>
 ; CHECK:       middle.block:
 ; CHECK:         %vector.recur.extract = extractelement <4 x i16> [[L1]], i32 3
 ; CHECK:       scalar.ph:
@@ -357,8 +357,8 @@ for.end:
 }
 
 ; We vectorize this first order recurrence, by generating two
-; extracts for the phi `val.phi` - one at the last index and 
-; another at the second last index. We need these 2 extracts because 
+; extracts for the phi `val.phi` - one at the last index and
+; another at the second last index. We need these 2 extracts because
 ; the first order recurrence phi is used outside the loop, so we require the phi
 ; itself and not its update (addx).
 ; UNROLL-NO-IC-LABEL: extract_second_last_iteration
@@ -705,16 +705,12 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; CHECK-NEXT:    [[TMP21]] = phi <4 x i32> [ [[TMP16]], [[PRED_UDIV_CONTINUE7]] ], [ [[TMP20]], [[PRED_UDIV_IF8]] ]
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP21]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP23]] = add <4 x i32> [[VEC_PHI1]], [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP23]], <4 x i32> [[VEC_PHI1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof !45, [[LOOP46:!llvm.loop !.*]]
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof !45, [[LOOP46:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP24]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP24]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF10:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF10]]
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[BIN_RDX11]], i32 0
+; CHECK-NEXT:    [[TMP25:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP23]], <4 x i32> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP26:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP25]])
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
@@ -834,17 +830,13 @@ define i32 @sink_into_replication_region_multiple(i32 *%x, i32 %y) {
 ; CHECK-NEXT:    store i32 [[TMP4]], i32* [[TMP38]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE16]]
 ; CHECK:       pred.store.continue16:
-; CHECK-NEXT:    [[TMP39:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP23]], <4 x i32> [[VEC_PHI4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i32> [[VEC_IND2]], <i32 4, i32 4, i32 4, i32 4>
-; CHECK-NEXT:    [[TMP40:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP40]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof !45, [[LOOP49:!llvm.loop !.*]]
+; CHECK-NEXT:    [[TMP39:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP39]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof !45, [[LOOP49:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP39]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP39]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF17:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX18:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF17]]
-; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i32> [[BIN_RDX18]], i32 0
+; CHECK-NEXT:    [[TMP40:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP23]], <4 x i32> [[VEC_PHI4]]
+; CHECK-NEXT:    [[TMP41:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP40]])
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
