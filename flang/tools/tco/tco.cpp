@@ -61,8 +61,9 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   // load the file into a module
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), SMLoc());
-  mlir::MLIRContext context;
-  fir::registerFIRDialects(context.getDialectRegistry());
+  mlir::DialectRegistry registry;
+  fir::registerFIRDialects(registry);
+  mlir::MLIRContext context(registry);
   auto owningRef = mlir::parseSourceFile(sourceMgr, &context);
 
   if (!owningRef) {

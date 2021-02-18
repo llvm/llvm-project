@@ -326,8 +326,7 @@ public:
   DictionaryAttr emptyDictionaryAttr;
 
 public:
-  MLIRContextImpl(MLIRContext *ctx)
-      : dialectsRegistry(ctx), identifiers(identifierAllocator) {}
+  MLIRContextImpl() : identifiers(identifierAllocator) {}
   ~MLIRContextImpl() {
     for (auto typeMapping : registeredTypes)
       typeMapping.second->~AbstractType();
@@ -337,7 +336,10 @@ public:
 };
 } // end namespace mlir
 
-MLIRContext::MLIRContext() : impl(new MLIRContextImpl(this)) {
+MLIRContext::MLIRContext() : MLIRContext(DialectRegistry()) {}
+
+MLIRContext::MLIRContext(const DialectRegistry &registry)
+    : impl(new MLIRContextImpl) {
   // Initialize values based on the command line flags if they were provided.
   if (clOptions.isConstructed()) {
     disableMultithreading(clOptions->disableThreading);
@@ -347,6 +349,9 @@ MLIRContext::MLIRContext() : impl(new MLIRContextImpl(this)) {
 
   // Ensure the builtin dialect is always pre-loaded.
   getOrLoadDialect<BuiltinDialect>();
+
+  // Pre-populate the registry.
+  registry.appendTo(impl->dialectsRegistry);
 
   // Initialize several common attributes and types to avoid the need to lock
   // the context when accessing them.
@@ -424,7 +429,15 @@ DiagnosticEngine &MLIRContext::getDiagEngine() { return getImpl().diagEngine; }
 // Dialect and Operation Registration
 //===----------------------------------------------------------------------===//
 
-DialectRegistry &MLIRContext::getDialectRegistry() {
+void MLIRContext::appendDialectRegistry(const DialectRegistry &registry) {
+  registry.appendTo(impl->dialectsRegistry);
+
+  // For the already loaded dialects, register the interfaces immediately.
+  for (const auto &kvp : impl->loadedDialects)
+    registry.registerDelayedInterfaces(kvp.second.get());
+}
+
+const DialectRegistry &MLIRContext::getDialectRegistry() {
   return impl->dialectsRegistry;
 }
 
@@ -459,7 +472,9 @@ Dialect *MLIRContext::getOrLoadDialect(StringRef name) {
   Dialect *dialect = getLoadedDialect(name);
   if (dialect)
     return dialect;
-  return impl->dialectsRegistry.loadByName(name, this);
+  DialectAllocatorFunctionRef allocator =
+      impl->dialectsRegistry.getDialectAllocator(name);
+  return allocator ? allocator(this) : nullptr;
 }
 
 /// Get a dialect for the provided namespace and TypeID: abort the program if a
@@ -505,6 +520,11 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
                              "' has already been registered");
 
   return dialect.get();
+}
+
+void MLIRContext::loadAllAvailableDialects() {
+  for (StringRef name : getAvailableDialects())
+    getOrLoadDialect(name);
 }
 
 llvm::hash_code MLIRContext::getRegistryHash() {

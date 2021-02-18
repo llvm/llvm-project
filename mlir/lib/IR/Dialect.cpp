@@ -29,27 +29,18 @@ DialectAsmParser::~DialectAsmParser() {}
 void DialectRegistry::addDialectInterface(
     StringRef dialectName, InterfaceAllocatorFunction allocator) {
   assert(allocator && "unexpected null interface allocation function");
-
-  // If the dialect is already loaded, directly add the interface.
-  if (Dialect *dialect = owningContext
-                             ? owningContext->getLoadedDialect(dialectName)
-                             : nullptr) {
-    dialect->addInterface(allocator(dialect));
-    return;
-  }
-
-  // Otherwise, store it in the interface map for delayed registration.
   auto it = registry.find(dialectName.str());
   assert(it != registry.end() &&
          "adding an interface for an unregistered dialect");
   interfaces[it->second.first].push_back(allocator);
 }
 
-Dialect *DialectRegistry::loadByName(StringRef name, MLIRContext *context) {
+DialectAllocatorFunctionRef
+DialectRegistry::getDialectAllocator(StringRef name) const {
   auto it = registry.find(name.str());
   if (it == registry.end())
     return nullptr;
-  return it->second.second(context);
+  return it->second.second;
 }
 
 void DialectRegistry::insert(TypeID typeID, StringRef name,
@@ -63,7 +54,7 @@ void DialectRegistry::insert(TypeID typeID, StringRef name,
   }
 }
 
-void DialectRegistry::registerDelayedInterfaces(Dialect *dialect) {
+void DialectRegistry::registerDelayedInterfaces(Dialect *dialect) const {
   auto it = interfaces.find(dialect->getTypeID());
   if (it == interfaces.end())
     return;
