@@ -71,3 +71,7 @@ func private @box5() -> !fir.box<!fir.type<derived3{f:f32}>>
 // CHECK-LABEL: func private @oth3() -> !fir.tdesc<!fir.type<derived7{f1:f32,f2:f32}>>
 func private @oth2() -> !fir.field
 func private @oth3() -> !fir.tdesc<!fir.type<derived7{f1:f32,f2:f32}>>
+
+// FIR vector
+// CHECK-LABEL: func private @vecty(i1) -> !fir.vector<10:i32>
+func private @vecty(i1) -> !fir.vector<10:i32>
