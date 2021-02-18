@@ -2071,9 +2071,9 @@ def fobjc_arc : Flag<["-"], "fobjc-arc">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Synthesize retain and release calls for Objective-C pointers">;
 def fno_objc_arc : Flag<["-"], "fno-objc-arc">, Group<f_Group>;
 defm objc_encode_cxx_class_template_spec : BoolFOption<"objc-encode-cxx-class-template-spec",
-  LangOpts<"EncodeCXXClassTemplateSpec">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option], "Fully encode c++ class template specialization">,
-  NegFlag<SetFalse>>;
+  "LangOpts->EncodeCXXClassTemplateSpec", DefaultsToFalse,
+  ChangedBy<PosFlag, [CC1Option], "Fully encode c++ class template specialization">,
+  ResetBy<NegFlag>>;
 defm objc_convert_messages_to_runtime_calls : BoolFOption<"objc-convert-messages-to-runtime-calls",
   "CodeGenOpts.ObjCConvertMessagesToRuntimeCalls", DefaultsToTrue,
   ChangedBy<NegFlag>, ResetBy<PosFlag>>;
