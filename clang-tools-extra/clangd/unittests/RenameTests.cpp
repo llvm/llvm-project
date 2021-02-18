@@ -832,8 +832,12 @@ TEST(RenameTest, WithinFileRename) {
     TU.ExtraArgs.push_back("-xobjective-c++");
     auto AST = TU.build();
     for (const auto &RenamePos : Code.points()) {
-      auto RenameResult =
-          rename({RenamePos, NewName, AST, testPath(TU.Filename)});
+      auto RenameResult = rename({RenamePos,
+                                  NewName,
+                                  AST,
+                                  testPath(TU.Filename),
+                                  /*Index*/ nullptr,
+                                  {/*CrossFile*/ false}});
       ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
       ASSERT_EQ(1u, RenameResult->GlobalChanges.size());
       EXPECT_EQ(
@@ -1133,8 +1137,12 @@ TEST(RenameTest, Renameable) {
     }
     auto AST = TU.build();
     llvm::StringRef NewName = Case.NewName;
-    auto Results =
-        rename({T.point(), NewName, AST, testPath(TU.Filename), Case.Index});
+    auto Results = rename({T.point(),
+                           NewName,
+                           AST,
+                           testPath(TU.Filename),
+                           Case.Index,
+                           {/*CrossFile=*/false}});
     bool WantRename = true;
     if (T.ranges().empty())
       WantRename = false;

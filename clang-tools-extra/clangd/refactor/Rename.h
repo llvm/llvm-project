@@ -29,7 +29,7 @@ using DirtyBufferGetter =
 struct RenameOptions {
   /// If true, enable cross-file rename; otherwise, only allows to rename a
   /// symbol that's only used in the current file.
-  bool AllowCrossFile = false;
+  bool AllowCrossFile = true;
   /// The maximum number of affected files (0 means no limit), only meaningful
   /// when AllowCrossFile = true.
   /// If the actual number exceeds the limit, rename is forbidden.
