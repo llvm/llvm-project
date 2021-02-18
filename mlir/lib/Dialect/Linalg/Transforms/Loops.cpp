@@ -52,14 +52,6 @@ static SmallVector<Value, 8> makeCanonicalAffineApplies(OpBuilder &b,
   return res;
 }
 
-static SmallVector<Value, 4> permuteIvs(ArrayRef<Value> ivs,
-                                        Optional<AffineMap> permutation) {
-  return permutation ? applyMapToValues(ScopedContext::getBuilderRef(),
-                                        ScopedContext::getLocation(),
-                                        permutation.getValue(), ivs)
-                     : SmallVector<Value, 4>(ivs.begin(), ivs.end());
-}
-
 template <typename IndexedValueType, typename OpType>
 static void inlineRegionAndEmitStore(OpType op, ArrayRef<Value> indexedValues,
                                      ArrayRef<SmallVector<Value, 8>> indexing,
@@ -176,40 +168,6 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs,
   }
   inlineRegionAndEmitStore<IndexedValueType>(linalgOp, indexedValues, indexing,
                                              outputBuffers);
-}
-
-template <typename IndexedValueType>
-static void emitScalarImplementation(ArrayRef<Value> allIvs, CopyOp copyOp) {
-  assert(copyOp.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  auto nPar = copyOp.getNumParallelLoops();
-  assert(nPar == allIvs.size());
-  auto inputIvs =
-      permuteIvs(allIvs.take_front(nPar), copyOp.inputPermutation());
-  auto outputIvs =
-      permuteIvs(allIvs.take_front(nPar), copyOp.outputPermutation());
-  SmallVector<Value, 8> iivs(inputIvs.begin(), inputIvs.end());
-  SmallVector<Value, 8> oivs(outputIvs.begin(), outputIvs.end());
-  IndexedValueType O(copyOp.getOutputBuffer(0)), I(copyOp.getInput(0));
-  // Emit the proper scalar assignment, whether we are dealing with a 0-D or
-  // an n-D loop nest; with or without permutations.
-  // clang-format off
-    nPar > 0 ? O(oivs) = I(iivs) :
-               O() = I();
-  // clang-format on
-}
-
-template <typename IndexedValueType>
-static void emitScalarImplementation(ArrayRef<Value> allIvs, FillOp fillOp) {
-  assert(fillOp.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  auto nPar = fillOp.getNumParallelLoops();
-  assert(nPar == allIvs.size());
-  auto ivs = SmallVector<Value, 4>(allIvs.begin(), allIvs.begin() + nPar);
-  IndexedValueType O(fillOp.getOutputBuffer(0));
-  // Emit the proper scalar assignment, whether we are dealing with a 0-D or
-  // an n-D loop nest; with or without permutations.
-  nPar > 0 ? O(ivs) = fillOp.value() : O() = fillOp.value();
 }
 
 // Create a padded view into the given `input` tensor using the 'indices'
@@ -533,8 +491,8 @@ linalgOpToLoopsImpl(Operation *op, OpBuilder &builder,
         assert(iterArgs.empty() && "unexpected iterArgs");
         allIvs.append(ivs.begin(), ivs.end());
         llvm::TypeSwitch<Operation *>(op)
-            .Case<CopyOp, FillOp, ConvOp, PoolingMaxOp, PoolingMinOp,
-                  PoolingSumOp, IndexedGenericOp, LinalgOp>([&](auto op) {
+            .Case<ConvOp, PoolingMaxOp, PoolingMinOp, PoolingSumOp,
+                  IndexedGenericOp, LinalgOp>([&](auto op) {
               emitScalarImplementation<IndexedValueTy>(allIvs, op);
             })
             .Default([&](Operation *op) { assert(false && "unexpected op"); });
