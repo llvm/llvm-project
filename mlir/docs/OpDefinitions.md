@@ -1407,8 +1407,9 @@ def IntegerType : Test_Type<"TestInteger"> {
       return Type();
     if ($_parser.parseGreater())
       return Type();
-    return get(ctxt, width);
+    return get($_ctxt, width);
   }];
+}
 ```
 
 ### Type name
