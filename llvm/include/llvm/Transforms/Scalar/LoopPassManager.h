@@ -271,6 +271,12 @@ public:
       SkipCurrentLoop = true;
   }
 
+  void setParentLoop(Loop *L) {
+#ifndef NDEBUG
+    ParentL = L;
+#endif
+  }
+
   /// Loop passes should use this method to indicate they have added new child
   /// loops of the current loop.
   ///
