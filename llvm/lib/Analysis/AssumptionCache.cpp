@@ -163,7 +163,12 @@ void AssumptionCache::unregisterAssumption(CallInst *CI) {
       AffectedValues.erase(AVI);
   }
 
-  erase_value(AssumeHandles, CI);
+  AssumeHandles.erase({CI, this});
+}
+
+void AssumptionCache::AssumeHandle::deleted() {
+  AC->AssumeHandles.erase(*this);
+  // 'this' now dangles!
 }
 
 void AssumptionCache::AffectedValueCallbackVH::deleted() {
@@ -204,14 +209,14 @@ void AssumptionCache::scanFunction() {
   for (BasicBlock &B : F)
     for (Instruction &II : B)
       if (match(&II, m_Intrinsic<Intrinsic::assume>()))
-        AssumeHandles.push_back({&II, ExprResultIdx});
+        AssumeHandles.insert({&II, this});
 
   // Mark the scan as complete.
   Scanned = true;
 
   // Update affected values.
-  for (auto &A : AssumeHandles)
-    updateAffectedValues(cast<CallInst>(A));
+  for (auto &AssumeVH : AssumeHandles)
+    updateAffectedValues(AssumeVH.getAssumeCI());
 }
 
 void AssumptionCache::registerAssumption(CallInst *CI) {
@@ -223,7 +228,7 @@ void AssumptionCache::registerAssumption(CallInst *CI) {
   if (!Scanned)
     return;
 
-  AssumeHandles.push_back({CI, ExprResultIdx});
+  AssumeHandles.insert({CI, this});
 
 #ifndef NDEBUG
   assert(CI->getParent() &&
@@ -231,20 +236,11 @@ void AssumptionCache::registerAssumption(CallInst *CI) {
   assert(&F == CI->getParent()->getParent() &&
          "Cannot register @llvm.assume call not in this function");
 
-  // We expect the number of assumptions to be small, so in an asserts build
-  // check that we don't accumulate duplicates and that all assumptions point
-  // to the same function.
-  SmallPtrSet<Value *, 16> AssumptionSet;
-  for (auto &VH : AssumeHandles) {
-    if (!VH)
-      continue;
-
-    assert(&F == cast<Instruction>(VH)->getParent()->getParent() &&
+  for (auto &AssumeVH : AssumeHandles) {
+    assert(&F == AssumeVH.getAssumeCI()->getCaller() &&
            "Cached assumption not inside this function!");
-    assert(match(cast<CallInst>(VH), m_Intrinsic<Intrinsic::assume>()) &&
+    assert(match(AssumeVH.getAssumeCI(), m_Intrinsic<Intrinsic::assume>()) &&
            "Cached something other than a call to @llvm.assume!");
-    assert(AssumptionSet.insert(VH).second &&
-           "Cache contains multiple copies of a call!");
   }
 #endif
 
@@ -258,9 +254,8 @@ PreservedAnalyses AssumptionPrinterPass::run(Function &F,
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
 
   OS << "Cached assumptions for function: " << F.getName() << "\n";
-  for (auto &VH : AC.assumptions())
-    if (VH)
-      OS << "  " << *cast<CallInst>(VH)->getArgOperand(0) << "\n";
+  for (auto &AssumeVH : AC.assumptions())
+    OS << "  " << *AssumeVH.getAssumeCI()->getArgOperand(0) << "\n";
 
   return PreservedAnalyses::all();
 }
@@ -306,9 +301,8 @@ void AssumptionCacheTracker::verifyAnalysis() const {
 
   SmallPtrSet<const CallInst *, 4> AssumptionSet;
   for (const auto &I : AssumptionCaches) {
-    for (auto &VH : I.second->assumptions())
-      if (VH)
-        AssumptionSet.insert(cast<CallInst>(VH));
+    for (auto &AssumeVH : I.second->assumptions())
+      AssumptionSet.insert(AssumeVH.getAssumeCI());
 
     for (const BasicBlock &B : cast<Function>(*I.first))
       for (const Instruction &II : B)

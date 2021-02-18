@@ -532,10 +532,11 @@ void PredicateInfoBuilder::buildPredicateInfo() {
       processSwitch(SI, BranchBB, OpsToRename);
     }
   }
-  for (auto &Assume : AC.assumptions()) {
-    if (auto *II = dyn_cast_or_null<IntrinsicInst>(Assume))
-      if (DT.isReachableFromEntry(II->getParent()))
-        processAssume(II, II->getParent(), OpsToRename);
+  for (auto &AssumeVH : AC.assumptions()) {
+    CallInst *AssumeCI = AssumeVH.getAssumeCI();
+    if (DT.isReachableFromEntry(AssumeCI->getParent()))
+      processAssume(cast<IntrinsicInst>(AssumeCI), AssumeCI->getParent(),
+                    OpsToRename);
   }
   // Now rename all our operations.
   renameUses(OpsToRename);
