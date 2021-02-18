@@ -326,7 +326,8 @@ public:
   DictionaryAttr emptyDictionaryAttr;
 
 public:
-  MLIRContextImpl() : identifiers(identifierAllocator) {}
+  MLIRContextImpl(MLIRContext *ctx)
+      : dialectsRegistry(ctx), identifiers(identifierAllocator) {}
   ~MLIRContextImpl() {
     for (auto typeMapping : registeredTypes)
       typeMapping.second->~AbstractType();
@@ -336,7 +337,7 @@ public:
 };
 } // end namespace mlir
 
-MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
+MLIRContext::MLIRContext() : impl(new MLIRContextImpl(this)) {
   // Initialize values based on the command line flags if they were provided.
   if (clOptions.isConstructed()) {
     disableMultithreading(clOptions->disableThreading);
@@ -441,8 +442,8 @@ std::vector<Dialect *> MLIRContext::getLoadedDialects() {
 }
 std::vector<StringRef> MLIRContext::getAvailableDialects() {
   std::vector<StringRef> result;
-  for (auto &dialect : impl->dialectsRegistry)
-    result.push_back(dialect.first);
+  for (auto dialect : impl->dialectsRegistry.getDialectNames())
+    result.push_back(dialect);
   return result;
 }
 
@@ -493,6 +494,8 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
           identifierEntry.first().startswith(dialectNamespace))
         identifierEntry.second = dialect.get();
 
+    // Actually register the interfaces with delayed registration.
+    impl.dialectsRegistry.registerDelayedInterfaces(dialect.get());
     return dialect.get();
   }
 
