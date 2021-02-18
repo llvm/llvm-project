@@ -739,7 +739,6 @@ define i8* @signext(i8* %input_row, i8* %input_col, i16 zeroext %output_ch, i16 
 ; CHECK-NEXT:    mla r3, r9, r2, r0
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r7, r0, [sp] @ 8-byte Folded Reload
-; CHECK-NEXT:    mov r11, r2
 ; CHECK-NEXT:    mov r8, r10
 ; CHECK-NEXT:    dlstp.16 lr, r2
 ; CHECK-NEXT:  .LBB5_7: @ %for.body24
@@ -913,7 +912,6 @@ define i8* @signext_optsize(i8* %input_row, i8* %input_col, i16 zeroext %output_
 ; CHECK-NEXT:    mla r3, r9, r2, r0
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r7, r0, [sp] @ 8-byte Folded Reload
-; CHECK-NEXT:    mov r11, r2
 ; CHECK-NEXT:    mov r8, r10
 ; CHECK-NEXT:    dlstp.16 lr, r2
 ; CHECK-NEXT:  .LBB6_5: @ %for.body24

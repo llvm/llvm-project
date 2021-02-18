@@ -7,7 +7,6 @@ define arm_aapcs_vfpcc void @arm_var_f32_mve(float* %pSrc, i32 %blockSize, float
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r12, r0
 ; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:  .LBB0_1: @ %do.body.i
@@ -19,7 +18,6 @@ define arm_aapcs_vfpcc void @arm_var_f32_mve(float* %pSrc, i32 %blockSize, float
 ; CHECK-NEXT:    vmov s4, r1
 ; CHECK-NEXT:    vadd.f32 s0, s3, s3
 ; CHECK-NEXT:    vcvt.f32.u32 s4, s4
-; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vdiv.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
