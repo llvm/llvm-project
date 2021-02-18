@@ -641,6 +641,9 @@ MLIR_CAPI_EXPORTED MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name,
 MLIR_CAPI_EXPORTED MlirIdentifier mlirIdentifierGet(MlirContext context,
                                                     MlirStringRef str);
 
+/// Returns the context associated with this identifier
+MLIR_CAPI_EXPORTED MlirContext mlirIdentifierGetContext(MlirIdentifier);
+
 /// Checks whether two identifiers are the same.
 MLIR_CAPI_EXPORTED bool mlirIdentifierEqual(MlirIdentifier ident,
                                             MlirIdentifier other);
