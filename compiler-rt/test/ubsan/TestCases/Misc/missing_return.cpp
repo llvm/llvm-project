@@ -1,4 +1,4 @@
-// RUN: %clangxx -fsanitize=return %gmlt %s -O3 -o %t
+// RUN: %clangxx -fsanitize=return %gmlt %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 // RUN: %env_ubsan_opts=print_stacktrace=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-STACKTRACE
 // Error message does not exact what expected
