@@ -33,6 +33,8 @@ config.mlir_src_root = "@MLIR_SOURCE_DIR@"
 config.mlir_obj_root = "@MLIR_BINARY_DIR@"
 config.mlir_tools_dir = "@MLIR_TOOLS_DIR@"
 config.mlir_integration_test_dir = "@MLIR_INTEGRATION_TEST_DIR@"
+config.intel_sde_executable = "@INTEL_SDE_EXECUTABLE@"
+config.mlir_run_avx512_tests = "@MLIR_RUN_AVX512_TESTS@"
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
