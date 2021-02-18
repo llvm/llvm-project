@@ -44,13 +44,13 @@ backends and OpenCL runtime.
 
 Each kernel will have function metadata attached to it, specifying the arguments.
 Kernel argument metadata is used to provide source level information for querying
-at runtime, for example using the `clGetKernelArgInfo 
+at runtime, for example using the `clGetKernelArgInfo
 <https://www.khronos.org/registry/OpenCL/specs/opencl-1.2.pdf#167>`_
 call.
 
 Note that ``-cl-kernel-arg-info`` enables more information about the original
 kernel code to be added e.g. kernel parameter names will appear in the OpenCL
-metadata along with other information. 
+metadata along with other information.
 
 The IDs used to encode the OpenCL's logical address spaces in the argument info
 metadata follows the SPIR address space mapping as defined in the SPIR
@@ -120,7 +120,7 @@ There are some standard OpenCL functions that are implemented as Clang builtins:
 
 - All pipe functions from `section 6.13.16.2/6.13.16.3
   <https://www.khronos.org/registry/cl/specs/opencl-2.0-openclc.pdf#160>`_ of
-  the OpenCL v2.0 kernel language specification. `
+  the OpenCL v2.0 kernel language specification.
 
 - Address space qualifier conversion functions ``to_global``/``to_local``/``to_private``
   from `section 6.13.9
@@ -216,7 +216,7 @@ OpenCL 3.0 Implementation Status
 ================================
 
 The following table provides an overview of features in OpenCL C 3.0 and their
-implementation status. 
+implementation status.
 
 +------------------------------+--------------------------------------------------------------+----------------------+---------------------------------------------------------------------------+
 | Category                     | Feature                                                      | Status               | Reviews                                                                   |
@@ -278,7 +278,7 @@ if full functionality is required.
 **Example of Use**:
 
     .. code-block:: console
- 
+
       $ clang -Xclang -fdeclare-opencl-builtins test.cl
 
 Note that this is a frontend-only flag and therefore it requires the use of
