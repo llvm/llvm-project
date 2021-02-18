@@ -50,12 +50,13 @@ def Shape_AddOp : Shape_Op<"add", [Commutative, NoSideEffect]> {
 }
 
 def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative]> {
-  let summary = "Returns the broadcasted output shape of two inputs";
+  let summary = "Returns the broadcasted output shape of two or more inputs";
   let description = [{
-    Returns the broadcasted shape for two input shapes or extent tensors. Both
-    operands can be of type `shape.shape` or `tensor<?xindex>`. The result is of
-    type `shape.shape` and, if both operands are tensors, may be of type
-    `tensor<?xindex>`.
+    Returns the broadcasted shape for input shapes or extent tensors. The rest
+    of this description is simplified for the 2 input case but can be extended
+    to more inputs. Both operands can be of type `shape.shape` or
+    `tensor<?xindex>`. The result is of type `shape.shape` and, if both
+    operands are tensors, may be of type `tensor<?xindex>`.
 
     If the two operand shapes are of different rank the smaller one is padded
     with 1's from the left. The resulting broadcasted shape is then defined as
@@ -72,19 +73,26 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative]> {
     attribute can be used to describe the error case.
   }];
 
-  let arguments = (ins Shape_ShapeOrExtentTensorType:$lhs,
-                       Shape_ShapeOrExtentTensorType:$rhs,
+  let arguments = (ins Variadic<Shape_ShapeOrExtentTensorType>:$shapes,
                        OptionalAttr<StrAttr>:$error);
   let results = (outs Shape_ShapeOrExtentTensorType:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)
+    $shapes attr-dict `:` type($shapes) `->` type($result)
   }];
 
-  let verifier = [{ return ::verifyShapeOrExtentTensorOp(*this); }];
-  let hasFolder = 1;
+  let builders = [OpBuilderDAG<(ins "::mlir::Type":$result,
+                                "::mlir::Value":$lhs, "::mlir::Value":$rhs,
+                                "/*optional*/ ::mlir::StringAttr":$error), [{
+      build($_builder, $_state, result, ::llvm::makeArrayRef({lhs, rhs}), error);
+    }]>
+  ];
 
-  let verifier = [{ return ::verifyShapeOrExtentTensorOp(*this); }];
+  let hasFolder = 1;
+  let verifier = [{
+    return success(succeeded(::verifyShapeOrExtentTensorOp(*this)) &&
+                   getNumOperands() >= 2);
+  }];
 }
 
 def Shape_ConstShapeOp : Shape_Op<"const_shape", [ConstantLike, NoSideEffect]> {
