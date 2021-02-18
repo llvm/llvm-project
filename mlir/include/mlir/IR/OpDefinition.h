@@ -1133,8 +1133,8 @@ class AutomaticAllocationScope
     : public TraitBase<ConcreteType, AutomaticAllocationScope> {
 public:
   static LogicalResult verifyTrait(Operation *op) {
-    if (op->hasTrait<ZeroRegion>())
-      return op->emitOpError("is expected to have regions");
+    static_assert(!ConcreteType::template hasTrait<ZeroRegion>(),
+                  "expected operation to have one or more regions");
     return success();
   }
 };
