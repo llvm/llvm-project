@@ -1812,3 +1812,16 @@ void SplitEditor::splitRegOutBlock(const SplitAnalysis::BlockInfo &BI,
   SlotIndex From = enterIntvBefore(std::min(Idx, BI.FirstInstr));
   useIntv(From, Idx);
 }
+
+void SplitAnalysis::BlockInfo::print(raw_ostream &OS) const {
+  OS << "{" << printMBBReference(*MBB) << ", "
+     << "uses " << FirstInstr << " to " << LastInstr << ", "
+     << "1st def " << FirstDef << ", "
+     << (LiveIn ? "live in" : "dead in") << ", "
+     << (LiveOut ? "live out" : "dead out") << "}";
+}
+
+void SplitAnalysis::BlockInfo::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}

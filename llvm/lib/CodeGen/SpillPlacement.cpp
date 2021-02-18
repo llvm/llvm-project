@@ -377,3 +377,27 @@ SpillPlacement::finish() {
   ActiveNodes = nullptr;
   return Perfect;
 }
+
+void SpillPlacement::BlockConstraint::print(raw_ostream &OS) const {
+  auto toString = [](BorderConstraint C) -> StringRef {
+    switch(C) {
+    case DontCare: return "DontCare";
+    case PrefReg: return "PrefReg";
+    case PrefSpill: return "PrefSpill";
+    case PrefBoth: return "PrefBoth";
+    case MustSpill: return "MustSpill";
+    default:
+      llvm_unreachable("uncovered switch");
+    };
+  };
+
+  dbgs() << "{" << Number << ", "
+         << toString(Entry) << ", "
+         << toString(Exit) << ", "
+         << (ChangesValue ? "changes" : "no change") << "}";
+}
+
+void SpillPlacement::BlockConstraint::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
