@@ -866,7 +866,8 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
   if ((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) && Sel &&
       Sel->hasOneUse())
     Sel = cast<Instruction>(Sel->user_back());
-  if (Sel && ValTy->isVectorTy()) {
+  if (Sel && ValTy->isVectorTy() &&
+      (ValTy->isIntOrIntVectorTy() || ValTy->isFPOrFPVectorTy())) {
     const Value *LHS, *RHS;
     SelectPatternFlavor SPF = matchSelectPattern(Sel, LHS, RHS).Flavor;
     unsigned IID = 0;
