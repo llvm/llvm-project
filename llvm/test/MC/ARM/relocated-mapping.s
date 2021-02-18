@@ -7,5 +7,5 @@
         add r0, r0, r0
 
 @ CHECK: 00000000 l .text 00000000 $a
-@ CHECK-NEXT: 00000008 l .text 00000000 $a
 @ CHECK-NEXT: 00000004 l .text 00000000 $d
+@ CHECK-NEXT: 00000008 l .text 00000000 $a
