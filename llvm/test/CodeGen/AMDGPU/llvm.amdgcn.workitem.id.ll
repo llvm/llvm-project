@@ -20,7 +20,6 @@ declare i32 @llvm.amdgcn.workitem.id.z() #0
 ; ALL-NOT: v0
 ; ALL: {{buffer|flat|global}}_store_dword {{.*}}v0
 
-; CO-V3: .amdhsa_system_vgpr_workitem_id 0
 ; PACKED-TID: .amdhsa_system_vgpr_workitem_id 0
 define amdgpu_kernel void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
@@ -34,14 +33,11 @@ define amdgpu_kernel void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
 
 ; ALL-LABEL: {{^}}test_workitem_id_y:
 ; CO-V2: enable_vgpr_workitem_id = 1
+; CO-V2-NOT: v1
+; CO-V2: {{buffer|flat}}_store_dword {{.*}}v1
 
 ; PACKED-TID: v_bfe_u32 [[ID:v[0-9]+]], v0, 10, 10
 ; PACKED-TID: {{buffer|flat|global}}_store_dword {{.*}}[[ID]]
-
-; UNPACKED-TID-NOT: v1
-; UNPACKED-TID: {{buffer|flat}}_store_dword {{.*}}v1
-
-; CO-V3: .amdhsa_system_vgpr_workitem_id 1
 ; PACKED-TID: .amdhsa_system_vgpr_workitem_id 1
 define amdgpu_kernel void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.y()
@@ -55,14 +51,11 @@ define amdgpu_kernel void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
 
 ; ALL-LABEL: {{^}}test_workitem_id_z:
 ; CO-V2: enable_vgpr_workitem_id = 2
+; CO-V2-NOT: v2
+; CO-V2: {{buffer|flat}}_store_dword {{.*}}v2
 
 ; PACKED-TID: v_bfe_u32 [[ID:v[0-9]+]], v0, 20, 10
 ; PACKED-TID: {{buffer|flat|global}}_store_dword {{.*}}[[ID]]
-
-; UNPACKED-TID-NOT: v2
-; UNPACKED-TID: {{buffer|flat}}_store_dword {{.*}}v2
-
-; CO-V3: .amdhsa_system_vgpr_workitem_id 2
 ; PACKED-TID: .amdhsa_system_vgpr_workitem_id 2
 define amdgpu_kernel void @test_workitem_id_z(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.z()

@@ -24,6 +24,8 @@
 name: eh_label_test
 liveins:
   - { reg: '$arguments' }
+frameInfo:
+  hasCalls: true
 body: |
   bb.0:
     ; TRY should be before EH_LABEL wrappers of throwing calls
@@ -41,10 +43,15 @@ body: |
   bb.1 (landing-pad):
   ; predecessors: %bb.0
     successors: %bb.2
-    ; CATCH_ALL should be after an EH_LABEL at the beginning of an EH pad
+    ; CATCH_ALL should be after EH_LABELs in the beginning of an EH pad.
+    ; (Sometimes there are multiple EH_LABELs in an EH pad. This test tests
+    ; that.) GLOBAL_SET should follow right after that.
     ; CHECK:      bb.1
     ; CHECK:      EH_LABEL
+    ; CHECK:      EH_LABEL
     ; CHECK-NEXT: CATCH_ALL
+    ; CHECK-NEXT: GLOBAL_SET_I32
+    EH_LABEL <mcsymbol .Ltmp2>
     EH_LABEL <mcsymbol .Ltmp2>
     CATCHRET %bb.2, %bb.1, implicit-def dead $arguments
 

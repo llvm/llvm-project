@@ -406,7 +406,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     assert(DstReg != MI.getOperand(3).getReg());
 
   bool UseRev = false;
-  unsigned PredIdx, DOPIdx, SrcIdx;
+  unsigned PredIdx, DOPIdx, SrcIdx, Src2Idx;
   switch (DType) {
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:
@@ -420,7 +420,19 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   case AArch64::DestructiveBinary:
   case AArch64::DestructiveBinaryImm:
     std::tie(PredIdx, DOPIdx, SrcIdx) = std::make_tuple(1, 2, 3);
-   break;
+    break;
+  case AArch64::DestructiveTernaryCommWithRev:
+    std::tie(PredIdx, DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 2, 3, 4);
+    if (DstReg == MI.getOperand(3).getReg()) {
+      // FMLA Zd, Pg, Za, Zd, Zm ==> FMAD Zdn, Pg, Zm, Za
+      std::tie(PredIdx, DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 3, 4, 2);
+      UseRev = true;
+    } else if (DstReg == MI.getOperand(4).getReg()) {
+      // FMLA Zd, Pg, Za, Zm, Zd ==> FMAD Zdn, Pg, Zm, Za
+      std::tie(PredIdx, DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 4, 3, 2);
+      UseRev = true;
+    }
+    break;
   default:
     llvm_unreachable("Unsupported Destructive Operand type");
   }
@@ -439,6 +451,12 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     break;
   case AArch64::DestructiveBinaryImm:
     DOPRegIsUnique = true;
+    break;
+  case AArch64::DestructiveTernaryCommWithRev:
+    DOPRegIsUnique =
+        DstReg != MI.getOperand(DOPIdx).getReg() ||
+        (MI.getOperand(DOPIdx).getReg() != MI.getOperand(SrcIdx).getReg() &&
+         MI.getOperand(DOPIdx).getReg() != MI.getOperand(Src2Idx).getReg());
     break;
   }
 #endif
@@ -521,6 +539,12 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     DOP.add(MI.getOperand(PredIdx))
        .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
        .add(MI.getOperand(SrcIdx));
+    break;
+  case AArch64::DestructiveTernaryCommWithRev:
+    DOP.add(MI.getOperand(PredIdx))
+        .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+        .add(MI.getOperand(SrcIdx))
+        .add(MI.getOperand(Src2Idx));
     break;
   }
 

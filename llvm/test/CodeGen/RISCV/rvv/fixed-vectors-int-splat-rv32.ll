@@ -435,3 +435,43 @@ define void @splat_allones_v4i64(<4 x i64>* %x) {
   store <4 x i64> %b, <4 x i64>* %x
   ret void
 }
+
+; This requires a bitcast on RV32 due to type legalization rewriting the
+; build_vector to v8i32.
+; FIXME: We should prevent this and use the implicit sign extension of vmv.v.x
+; with SEW=64 on RV32.
+define void @splat_allones_with_use_v4i64(<4 x i64>* %x) {
+; LMULMAX2-LABEL: splat_allones_with_use_v4i64:
+; LMULMAX2:       # %bb.0:
+; LMULMAX2-NEXT:    addi a1, zero, 4
+; LMULMAX2-NEXT:    vsetvli a2, a1, e64,m2,ta,mu
+; LMULMAX2-NEXT:    vle64.v v26, (a0)
+; LMULMAX2-NEXT:    addi a2, zero, 8
+; LMULMAX2-NEXT:    vsetvli a2, a2, e32,m2,ta,mu
+; LMULMAX2-NEXT:    vmv.v.i v28, -1
+; LMULMAX2-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; LMULMAX2-NEXT:    vadd.vv v26, v26, v28
+; LMULMAX2-NEXT:    vse64.v v26, (a0)
+; LMULMAX2-NEXT:    ret
+;
+; LMULMAX1-LABEL: splat_allones_with_use_v4i64:
+; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    addi a1, zero, 2
+; LMULMAX1-NEXT:    vsetvli a2, a1, e64,m1,ta,mu
+; LMULMAX1-NEXT:    vle64.v v25, (a0)
+; LMULMAX1-NEXT:    addi a2, a0, 16
+; LMULMAX1-NEXT:    vle64.v v26, (a2)
+; LMULMAX1-NEXT:    addi a3, zero, 4
+; LMULMAX1-NEXT:    vsetvli a3, a3, e32,m1,ta,mu
+; LMULMAX1-NEXT:    vmv.v.i v27, -1
+; LMULMAX1-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; LMULMAX1-NEXT:    vadd.vv v26, v26, v27
+; LMULMAX1-NEXT:    vadd.vv v25, v25, v27
+; LMULMAX1-NEXT:    vse64.v v25, (a0)
+; LMULMAX1-NEXT:    vse64.v v26, (a2)
+; LMULMAX1-NEXT:    ret
+  %a = load <4 x i64>, <4 x i64>* %x
+  %b = add <4 x i64> %a, <i64 -1, i64 -1, i64 -1, i64 -1>
+  store <4 x i64> %b, <4 x i64>* %x
+  ret void
+}

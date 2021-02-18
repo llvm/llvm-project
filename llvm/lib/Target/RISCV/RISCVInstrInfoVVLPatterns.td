@@ -63,6 +63,8 @@ def riscv_vse_vl : SDNode<"RISCVISD::VSE_VL", SDT_RISCVVSE_VL,
 def riscv_add_vl   : SDNode<"RISCVISD::ADD_VL",   SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_sub_vl   : SDNode<"RISCVISD::SUB_VL",   SDT_RISCVIntBinOp_VL>;
 def riscv_mul_vl   : SDNode<"RISCVISD::MUL_VL",   SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+def riscv_mulhs_vl : SDNode<"RISCVISD::MULHS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+def riscv_mulhu_vl : SDNode<"RISCVISD::MULHU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_and_vl   : SDNode<"RISCVISD::AND_VL",   SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_or_vl    : SDNode<"RISCVISD::OR_VL",    SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_xor_vl   : SDNode<"RISCVISD::XOR_VL",   SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
@@ -443,6 +445,8 @@ defm "" : VPatBinaryVL_VV_VX<riscv_smax_vl, "PseudoVMAX">;
 
 // 12.10. Vector Single-Width Integer Multiply Instructions
 defm "" : VPatBinaryVL_VV_VX<riscv_mul_vl, "PseudoVMUL">;
+defm "" : VPatBinaryVL_VV_VX<riscv_mulhs_vl, "PseudoVMULH">;
+defm "" : VPatBinaryVL_VV_VX<riscv_mulhu_vl, "PseudoVMULHU">;
 
 // 12.11. Vector Integer Divide Instructions
 defm "" : VPatBinaryVL_VV_VX<riscv_udiv_vl, "PseudoVDIVU">;

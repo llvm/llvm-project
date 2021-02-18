@@ -2877,7 +2877,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   bool does_contain = false;
   // this call will succeed if the module was ever imported in any Debugger
   // in the lifetime of the process in which this LLDB framework is living
-  bool was_imported_globally =
+  const bool was_imported_globally =
       (ExecuteOneLineWithReturn(
            command_stream.GetData(),
            ScriptInterpreterPythonImpl::eScriptReturnTypeBool, &does_contain,
@@ -2885,20 +2885,15 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
                .SetEnableIO(false)
                .SetSetLLDBGlobals(false)) &&
        does_contain);
-  // this call will fail if the module was not imported in this Debugger
-  // before
-  command_stream.Clear();
-  command_stream.Printf("sys.getrefcount(%s)", module_name.c_str());
-  bool was_imported_locally = GetSessionDictionary()
-                                  .GetItemForKey(PythonString(module_name))
-                                  .IsAllocated();
-
-  bool was_imported = (was_imported_globally || was_imported_locally);
+  const bool was_imported_locally =
+      GetSessionDictionary()
+          .GetItemForKey(PythonString(module_name))
+          .IsAllocated();
 
   // now actually do the import
   command_stream.Clear();
 
-  if (was_imported) {
+  if (was_imported_globally || was_imported_locally) {
     if (!was_imported_locally)
       command_stream.Printf("import %s ; reload_module(%s)",
                             module_name.c_str(), module_name.c_str());

@@ -43,6 +43,13 @@ dfsan_label dfsan_union(dfsan_label l1, dfsan_label l2);
 void dfsan_clear_arg_tls(uptr offset, uptr size);
 // Zero out the TLS storage.
 void dfsan_clear_thread_local_state();
+
+// Return the origin associated with the first taint byte in the size bytes
+// from the address addr.
+dfsan_origin dfsan_read_origin_of_first_taint(const void *addr, uptr size);
+
+// Copy or move the origins of the len bytes from src to dst.
+void dfsan_mem_origin_transfer(const void *dst, const void *src, uptr len);
 }  // extern "C"
 
 template <typename T>

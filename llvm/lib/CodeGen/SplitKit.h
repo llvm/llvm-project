@@ -238,6 +238,10 @@ public:
     return IPA.getLastInsertPoint(*CurLI, *MF.getBlockNumbered(Num));
   }
 
+  SlotIndex getLastSplitPoint(MachineBasicBlock *BB) {
+    return IPA.getLastInsertPoint(*CurLI, *BB);
+  }
+
   MachineBasicBlock::iterator getLastSplitPointIter(MachineBasicBlock *BB) {
     return IPA.getLastInsertPointIter(*CurLI, *BB);
   }
