@@ -189,6 +189,14 @@ template<class _Tp>
 concept move_constructible =
   constructible_from<_Tp, _Tp> && convertible_to<_Tp, _Tp>;
 
+// [concept.copyconstructible]
+template<class _Tp>
+concept copy_constructible =
+  move_constructible<_Tp> &&
+  constructible_from<_Tp, _Tp&> && convertible_to<_Tp&, _Tp> &&
+  constructible_from<_Tp, const _Tp&> && convertible_to<const _Tp&, _Tp> &&
+  constructible_from<_Tp, const _Tp> && convertible_to<const _Tp, _Tp>;
+
 #endif //_LIBCPP_STD_VER > 17 && defined(__cpp_concepts) && __cpp_concepts >= 201811L
 
 _LIBCPP_END_NAMESPACE_STD
