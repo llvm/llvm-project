@@ -50,7 +50,7 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: LV: Found an estimated cost of 0 for VF 8 For instruction:   %arrayidx = getelementptr inbounds i16, i16* %s, i32 %i.016
 ; CHECK: LV: Found an estimated cost of 2 for VF 8 For instruction:   %1 = load i16, i16* %arrayidx, align 2
 ; CHECK: LV: Found an estimated cost of 2 for VF 8 For instruction:   %conv = sext i16 %1 to i32
-; CHECK: LV: Found an estimated cost of 4 for VF 8 For instruction:   %cmp2 = icmp sgt i32 %conv, %conv1
+; CHECK: LV: Found an estimated cost of 68 for VF 8 For instruction:   %cmp2 = icmp sgt i32 %conv, %conv1
 ; CHECK: LV: Found an estimated cost of 0 for VF 8 For instruction:   br i1 %cmp2, label %if.then, label %for.inc
 ; CHECK: LV: Found an estimated cost of 2 for VF 8 For instruction:   %conv6 = add i16 %1, %0
 ; CHECK: LV: Found an estimated cost of 0 for VF 8 For instruction:   %arrayidx7 = getelementptr inbounds i16, i16* %d, i32 %i.016
@@ -59,8 +59,8 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: LV: Found an estimated cost of 1 for VF 8 For instruction:   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: LV: Found an estimated cost of 1 for VF 8 For instruction:   %exitcond.not = icmp eq i32 %inc, %n
 ; CHECK: LV: Found an estimated cost of 0 for VF 8 For instruction:   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
-; CHECK: LV: Vector loop of width 8 costs: 1.
-; CHECK: LV: Selecting VF: 8.
+; CHECK: LV: Vector loop of width 8 costs: 9.
+; CHECK: LV: Selecting VF: 4.
 define void @expensive_icmp(i16* noalias nocapture %d, i16* nocapture readonly %s, i32 %n, i16 zeroext %m) #0 {
 entry:
   %cmp15 = icmp sgt i32 %n, 0
@@ -127,8 +127,8 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: LV: Found an estimated cost of 4 for VF 2 For instruction:   %conv3 = sext i8 %1 to i32
 ; CHECK: LV: Found an estimated cost of 14 for VF 2 For instruction:   %mul = mul nsw i32 %conv3, %conv1
 ; CHECK: LV: Found an estimated cost of 10 for VF 2 For instruction:   %shr = ashr i32 %mul, 7
-; CHECK: LV: Found an estimated cost of 12 for VF 2 For instruction:   %2 = icmp slt i32 %shr, 127
-; CHECK: LV: Found an estimated cost of 12 for VF 2 For instruction:   %spec.select.i = select i1 %2, i32 %shr, i32 127
+; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %2 = icmp slt i32 %shr, 127
+; CHECK: LV: Found an estimated cost of 24 for VF 2 For instruction:   %spec.select.i = select i1 %2, i32 %shr, i32 127
 ; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %conv4 = trunc i32 %spec.select.i to i8
 ; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %incdec.ptr5 = getelementptr inbounds i8, i8* %pDst.addr.010, i32 1
 ; CHECK: LV: Found an estimated cost of 10 for VF 2 For instruction:   store i8 %conv4, i8* %pDst.addr.010, align 1
@@ -148,7 +148,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %conv3 = sext i8 %1 to i32
 ; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   %mul = mul nsw i32 %conv3, %conv1
 ; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   %shr = ashr i32 %mul, 7
-; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   %2 = icmp slt i32 %shr, 127
+; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %2 = icmp slt i32 %shr, 127
 ; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   %spec.select.i = select i1 %2, i32 %shr, i32 127
 ; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %conv4 = trunc i32 %spec.select.i to i8
 ; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %incdec.ptr5 = getelementptr inbounds i8, i8* %pDst.addr.010, i32 1
@@ -156,7 +156,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %dec = add i32 %blkCnt.012, -1
 ; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %cmp.not = icmp eq i32 %dec, 0
 ; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   br i1 %cmp.not, label %while.end.loopexit, label %while.body
-; CHECK: LV: Vector loop of width 4 costs: 4.
+; CHECK: LV: Vector loop of width 4 costs: 3.
 ; CHECK: LV: Found an estimated cost of 0 for VF 8 For instruction:   %blkCnt.012 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
 ; CHECK: LV: Found an estimated cost of 0 for VF 8 For instruction:   %pSrcA.addr.011 = phi i8* [ %incdec.ptr, %while.body ], [ %pSrcA, %while.body.preheader ]
 ; CHECK: LV: Found an estimated cost of 0 for VF 8 For instruction:   %pDst.addr.010 = phi i8* [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
@@ -169,7 +169,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: LV: Found an estimated cost of 2 for VF 8 For instruction:   %conv3 = sext i8 %1 to i32
 ; CHECK: LV: Found an estimated cost of 4 for VF 8 For instruction:   %mul = mul nsw i32 %conv3, %conv1
 ; CHECK: LV: Found an estimated cost of 4 for VF 8 For instruction:   %shr = ashr i32 %mul, 7
-; CHECK: LV: Found an estimated cost of 4 for VF 8 For instruction:   %2 = icmp slt i32 %shr, 127
+; CHECK: LV: Found an estimated cost of 0 for VF 8 For instruction:   %2 = icmp slt i32 %shr, 127
 ; CHECK: LV: Found an estimated cost of 4 for VF 8 For instruction:   %spec.select.i = select i1 %2, i32 %shr, i32 127
 ; CHECK: LV: Found an estimated cost of 2 for VF 8 For instruction:   %conv4 = trunc i32 %spec.select.i to i8
 ; CHECK: LV: Found an estimated cost of 0 for VF 8 For instruction:   %incdec.ptr5 = getelementptr inbounds i8, i8* %pDst.addr.010, i32 1
@@ -190,7 +190,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: LV: Found an estimated cost of 6 for VF 16 For instruction:   %conv3 = sext i8 %1 to i32
 ; CHECK: LV: Found an estimated cost of 8 for VF 16 For instruction:   %mul = mul nsw i32 %conv3, %conv1
 ; CHECK: LV: Found an estimated cost of 8 for VF 16 For instruction:   %shr = ashr i32 %mul, 7
-; CHECK: LV: Found an estimated cost of 8 for VF 16 For instruction:   %2 = icmp slt i32 %shr, 127
+; CHECK: LV: Found an estimated cost of 0 for VF 16 For instruction:   %2 = icmp slt i32 %shr, 127
 ; CHECK: LV: Found an estimated cost of 8 for VF 16 For instruction:   %spec.select.i = select i1 %2, i32 %shr, i32 127
 ; CHECK: LV: Found an estimated cost of 6 for VF 16 For instruction:   %conv4 = trunc i32 %spec.select.i to i8
 ; CHECK: LV: Found an estimated cost of 0 for VF 16 For instruction:   %incdec.ptr5 = getelementptr inbounds i8, i8* %pDst.addr.010, i32 1
