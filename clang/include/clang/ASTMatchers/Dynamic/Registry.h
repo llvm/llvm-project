@@ -66,6 +66,8 @@ class Registry {
 public:
   Registry() = delete;
 
+  static ASTNodeKind nodeMatcherType(MatcherCtor);
+
   /// Look up a matcher in the registry by name,
   ///
   /// \return An opaque value which may be used to refer to the matcher

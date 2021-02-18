@@ -309,6 +309,8 @@ public:
                                 ArrayRef<ParserValue> Args,
                                 Diagnostics *Error) const = 0;
 
+  virtual ASTNodeKind nodeMatcherType() const { return ASTNodeKind(); }
+
   /// Returns whether the matcher is variadic. Variadic matchers can take any
   /// number of arguments, but they must be of the same type.
   virtual bool isVariadic() const = 0;
@@ -576,6 +578,8 @@ public:
                                   LeastDerivedKind);
   }
 
+  ASTNodeKind nodeMatcherType() const override { return RetKinds[0]; }
+
 private:
   const RunFunc Func;
   const std::string MatcherName;
@@ -610,6 +614,8 @@ public:
       return false;
     }
   }
+
+  ASTNodeKind nodeMatcherType() const override { return DerivedKind; }
 
 private:
   const ASTNodeKind DerivedKind;

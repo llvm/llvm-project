@@ -497,6 +497,12 @@ TEST_F(RegistryTest, Completion) {
       "Matcher<CXXRecordDecl> isSameOrDerivedFrom(string|Matcher<NamedDecl>)"));
 }
 
+TEST_F(RegistryTest, NodeType) {
+  EXPECT_TRUE(Registry::nodeMatcherType(*lookupMatcherCtor("callExpr")).isSame(ASTNodeKind::getFromNodeKind<CallExpr>()));
+  EXPECT_TRUE(Registry::nodeMatcherType(*lookupMatcherCtor("has")).isNone());
+  EXPECT_TRUE(Registry::nodeMatcherType(*lookupMatcherCtor("allOf")).isNone());
+}
+
 TEST_F(RegistryTest, HasArgs) {
   Matcher<Decl> Value = constructMatcher(
       "decl", constructMatcher("hasAttr", StringRef("attr::WarnUnused")))
