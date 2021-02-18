@@ -996,10 +996,7 @@ enum CovMapVersion {
   Version4 = 3,
   // Branch regions referring to two counters are added
   Version5 = 4,
-  // Compilation directory is stored separately and combined with relative
-  // filenames to produce an absolute file path.
-  Version6 = 5,
-  // The current version is Version6.
+  // The current version is Version5.
   CurrentVersion = INSTR_PROF_COVMAP_VERSION
 };
 

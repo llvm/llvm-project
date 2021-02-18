@@ -129,7 +129,6 @@ struct InputFunctionCoverageData {
 struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
   bool UseMultipleReaders;
   StringMap<unsigned> Files;
-  std::vector<std::string> Filenames;
   std::vector<InputFunctionCoverageData> InputFunctions;
   std::vector<OutputFunctionCoverageData> OutputFunctions;
 
@@ -147,7 +146,7 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
     auto R = Files.find(Name);
     if (R != Files.end())
       return R->second;
-    unsigned Index = Files.size() + 1;
+    unsigned Index = Files.size();
     Files.try_emplace(Name, Index);
     return Index;
   }
@@ -201,12 +200,11 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
 
   void readCoverageRegions(const std::string &Coverage,
                            OutputFunctionCoverageData &Data) {
-    Filenames.resize(Files.size() + 1);
+    SmallVector<StringRef, 8> Filenames(Files.size());
     for (const auto &E : Files)
-      Filenames[E.getValue()] = E.getKey().str();
+      Filenames[E.getValue()] = E.getKey();
     std::vector<CounterExpression> Expressions;
-    ArrayRef<std::string> FilenameRefs = llvm::makeArrayRef(Filenames);
-    RawCoverageMappingReader Reader(Coverage, FilenameRefs, Data.Filenames,
+    RawCoverageMappingReader Reader(Coverage, Filenames, Data.Filenames,
                                     Expressions, Data.Regions);
     EXPECT_THAT_ERROR(Reader.read(), Succeeded());
   }
@@ -897,7 +895,7 @@ INSTANTIATE_TEST_CASE_P(ParameterizedCovMapTest, CoverageMappingTest,
                                           std::pair<bool, bool>({true, true})),);
 
 TEST(CoverageMappingTest, filename_roundtrip) {
-  std::vector<std::string> Paths({"", "a", "b", "c", "d", "e"});
+  std::vector<StringRef> Paths({"a", "b", "c", "d", "e"});
 
   for (bool Compress : {false, true}) {
     std::string EncodedFilenames;
@@ -907,12 +905,16 @@ TEST(CoverageMappingTest, filename_roundtrip) {
       Writer.write(OS, Compress);
     }
 
-    std::vector<std::string> ReadFilenames;
+    std::vector<StringRef> ReadFilenames;
     RawCoverageFilenamesReader Reader(EncodedFilenames, ReadFilenames);
-    EXPECT_THAT_ERROR(Reader.read(CovMapVersion::CurrentVersion), Succeeded());
+    BinaryCoverageReader::DecompressedData Decompressed;
+    EXPECT_THAT_ERROR(Reader.read(CovMapVersion::CurrentVersion, Decompressed),
+                      Succeeded());
+    if (!Compress)
+      ASSERT_EQ(Decompressed.size(), 0U);
 
     ASSERT_EQ(ReadFilenames.size(), Paths.size());
-    for (unsigned I = 1; I < Paths.size(); ++I)
+    for (unsigned I = 0; I < Paths.size(); ++I)
       ASSERT_TRUE(ReadFilenames[I] == Paths[I]);
   }
 }
