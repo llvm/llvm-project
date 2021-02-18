@@ -1336,7 +1336,10 @@ MatchFinder::~MatchFinder() {}
 
 void MatchFinder::addMatcher(const DeclarationMatcher &NodeMatch,
                              MatchCallback *Action) {
-  if (auto TK = Action->getCheckTraversalKind())
+  llvm::Optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
     Matchers.DeclOrStmt.emplace_back(traverse(*TK, NodeMatch), Action);
   else
     Matchers.DeclOrStmt.emplace_back(NodeMatch, Action);
@@ -1351,7 +1354,10 @@ void MatchFinder::addMatcher(const TypeMatcher &NodeMatch,
 
 void MatchFinder::addMatcher(const StatementMatcher &NodeMatch,
                              MatchCallback *Action) {
-  if (auto TK = Action->getCheckTraversalKind())
+  llvm::Optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
     Matchers.DeclOrStmt.emplace_back(traverse(*TK, NodeMatch), Action);
   else
     Matchers.DeclOrStmt.emplace_back(NodeMatch, Action);
