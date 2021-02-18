@@ -5102,6 +5102,22 @@ bool RISCVTargetLowering::useRVVForFixedLengthVectorVT(MVT VT) const {
   return true;
 }
 
+bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
+    bool *Fast) const {
+  if (!VT.isScalableVector())
+    return false;
+
+  EVT ElemVT = VT.getVectorElementType();
+  if (Alignment >= ElemVT.getStoreSize()) {
+    if (Fast)
+      *Fast = true;
+    return true;
+  }
+
+  return false;
+}
+
 #define GET_REGISTER_MATCHER
 #include "RISCVGenAsmMatcher.inc"
 
