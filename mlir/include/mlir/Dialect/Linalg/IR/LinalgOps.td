@@ -224,6 +224,13 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     // size is met).
     static linalg::PadTensorOp createPadHighOp(
         Type type, Value source, Value pad, Location loc, OpBuilder & builder);
+
+    // Return a PadTensorOp that pads `source to `type` size with `pad` value.
+    // I.e., a block will be created and the `pad` value will be yielded
+    // directly. If the type passed is nullptr, it is inferred.
+    static linalg::PadTensorOp createPadScalarOp(
+        Type type, Value source, Value pad, ArrayRef<OpFoldResult> low,
+        ArrayRef<OpFoldResult> high, Location loc, OpBuilder & builder);
   }];
 
   let builders = [
@@ -234,7 +241,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     // Build a PadTensorOp with all dynamic entries.
     OpBuilderDAG<(ins "Value":$source, "ValueRange":$low, "ValueRange":$high,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
-    // Build a PadTensorOp with with mixed static and dynamic entries and custom
+    // Build a PadTensorOp with mixed static and dynamic entries and custom
     // result type. If the type passed is nullptr, it is inferred.
     OpBuilderDAG<(ins "Type":$resultType, "Value":$source,
       "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
