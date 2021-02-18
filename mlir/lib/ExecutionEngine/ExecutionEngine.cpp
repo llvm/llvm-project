@@ -339,7 +339,8 @@ Expected<void (*)(void **)> ExecutionEngine::lookup(StringRef name) const {
   return fptr;
 }
 
-Error ExecutionEngine::invoke(StringRef name, MutableArrayRef<void *> args) {
+Error ExecutionEngine::invokePacked(StringRef name,
+                                    MutableArrayRef<void *> args) {
   auto expectedFPtr = lookup(name);
   if (!expectedFPtr)
     return expectedFPtr.takeError();
