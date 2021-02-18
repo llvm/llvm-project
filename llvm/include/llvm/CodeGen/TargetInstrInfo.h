@@ -1929,6 +1929,14 @@ public:
   virtual Optional<ParamLoadedValue> describeLoadedValue(const MachineInstr &MI,
                                                          Register Reg) const;
 
+  /// Given the generic extension instruction \p ExtMI, returns true if this
+  /// extension is a likely candidate for being folded into an another
+  /// instruction.
+  virtual bool isExtendLikelyToBeFolded(MachineInstr &ExtMI,
+                                        MachineRegisterInfo &MRI) const {
+    return false;
+  }
+
   /// Return MIR formatter to format/parse MIR operands.  Target can override
   /// this virtual function and return target specific MIR formatter.
   virtual const MIRFormatter *getMIRFormatter() const {
