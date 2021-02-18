@@ -14,9 +14,9 @@ define void @test_uge_temporary_indices_decompose(i8 %start, i8 %n, i8 %idx) {
 ; CHECK-NEXT:    br i1 [[CMP_PRE]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp ult i8 [[START_ADD_IDX]], [[START_ADD_N]]
-; CHECK-NEXT:    call void @use(i1 [[T_0]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[F_0:%.*]] = icmp uge i8 [[START_ADD_IDX]], [[START_ADD_N]]
-; CHECK-NEXT:    call void @use(i1 [[F_0]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[START_ADD_1]], [[START_ADD_N]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[START_ADD_IDX]], [[START_ADD_1]]
@@ -24,9 +24,9 @@ define void @test_uge_temporary_indices_decompose(i8 %start, i8 %n, i8 %idx) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[START_ADD_IDX]], [[START_ADD_N]]
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[START_ADD_IDX]], [[START_ADD_N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i8 [[START_ADD_1]], [[START_ADD_N]]
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i8 [[START_ADD_IDX]], [[START_ADD_1]]
