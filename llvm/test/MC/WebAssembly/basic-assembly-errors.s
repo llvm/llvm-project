@@ -4,6 +4,10 @@
 # (must be 0.0 or similar)
     f32.const 0
 
+# CHECK: Wasm doesn't support data symbols in text sections
+	.type	objerr,@object
+objerr:
+
 # CHECK: End of block construct with no start: end_try
     end_try
 test0:
