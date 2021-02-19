@@ -48,7 +48,14 @@ enum ActionKind {
   DebugDumpParseTree,
 
   /// Dump provenance
-  DebugDumpProvenance
+  DebugDumpProvenance,
+
+  /// Parse then output the number of objects in the parse tree and the overall
+  /// size
+  DebugMeasureParseTree,
+
+  /// Parse, run semantics and then output the pre-FIR tree
+  DebugPreFIRTree
 
   /// TODO: RunPreprocessor, EmitLLVM, EmitLLVMOnly,
   /// EmitCodeGenOnly, EmitAssembly, (...)

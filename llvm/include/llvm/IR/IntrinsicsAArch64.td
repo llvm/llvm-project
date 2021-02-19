@@ -675,10 +675,13 @@ def int_aarch64_neon_tbx4 : AdvSIMD_Tbx4_Intrinsic;
 let TargetPrefix = "aarch64" in {
   class FPCR_Get_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrHasSideEffects]>;
+  class FPCR_Set_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrNoMem, IntrHasSideEffects]>;
 }
 
 // FPCR
 def int_aarch64_get_fpcr : FPCR_Get_Intrinsic;
+def int_aarch64_set_fpcr : FPCR_Set_Intrinsic;
 
 let TargetPrefix = "aarch64" in {
   class Crypto_AES_DataKey_Intrinsic

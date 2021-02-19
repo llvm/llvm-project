@@ -31,6 +31,19 @@ int A::count = 0;
 struct Base { };
 struct Derived : Base { };
 
+template<class T>
+class MoveDeleter
+{
+    MoveDeleter();
+    MoveDeleter(MoveDeleter const&);
+public:
+    MoveDeleter(MoveDeleter&&) {};
+
+    explicit MoveDeleter(int) {}
+
+    void operator()(T *ptr) { delete ptr; }
+};
+
 int main(int, char**)
 {
     {
@@ -56,6 +69,14 @@ int main(int, char**)
         // aren't "convertible" but are "compatible".
         static_assert(!std::is_constructible<std::shared_ptr<Derived[4]>, Base[4], test_deleter<Derived[4]> >::value, "");
     }
+
+#if TEST_STD_VER >= 11
+    {
+        MoveDeleter<int> d(0);
+        std::shared_ptr<int> p0(new int, std::move(d));
+        std::shared_ptr<int> p1(nullptr, std::move(d));
+    }
+#endif // TEST_STD_VER >= 11
 
   return 0;
 }

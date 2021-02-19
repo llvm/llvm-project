@@ -40,7 +40,8 @@ MCSection *PPC64LinuxTargetObjectFile::SelectSectionForGlobal(
   if (Kind.isReadOnly()) {
     const auto *GVar = dyn_cast<GlobalVariable>(GO);
 
-    if (GVar && GVar->isConstant() && GVar->getInitializer()->needsRelocation())
+    if (GVar && GVar->isConstant() &&
+        GVar->getInitializer()->needsDynamicRelocation())
       Kind = SectionKind::getReadOnlyWithRel();
   }
 

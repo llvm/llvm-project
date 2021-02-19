@@ -1119,7 +1119,7 @@ unsigned MachineConstantPoolEntry::getSizeInBytes(const DataLayout &DL) const {
 bool MachineConstantPoolEntry::needsRelocation() const {
   if (isMachineConstantPoolEntry())
     return true;
-  return Val.ConstVal->needsRelocation();
+  return Val.ConstVal->needsDynamicRelocation();
 }
 
 SectionKind

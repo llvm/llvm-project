@@ -59,6 +59,9 @@
 ! HELP-FC1-NEXT: -fdebug-dump-parse-tree Dump the parse tree
 ! HELP-FC1-NEXT: -fdebug-dump-provenance Dump provenance
 ! HELP-FC1-NEXT: -fdebug-dump-symbols    Dump symbols after the semantic analysis
+! HELP-FC1-NEXT: -fdebug-measure-parse-tree
+! HELP-FC1-NEXT:                         Measure the parse tree
+! HELP-FC1-NEXT: -fdebug-pre-fir-tree    Dump the pre-FIR tree
 ! HELP-FC1-NEXT: -fdebug-unparse-with-symbols
 ! HELP-FC1-NEXT:                        Unparse and stop.
 ! HELP-FC1-NEXT: -fdebug-unparse        Unparse and stop.
