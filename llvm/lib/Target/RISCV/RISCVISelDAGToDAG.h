@@ -126,10 +126,21 @@ struct VSXSEGPseudo {
   uint16_t Pseudo;
 };
 
+struct VLX_VSXPseudo {
+  uint8_t Masked;
+  uint8_t Ordered;
+  uint8_t SEW;
+  uint8_t LMUL;
+  uint8_t IndexLMUL;
+  uint16_t Pseudo;
+};
+
 #define GET_RISCVVSSEGTable_DECL
 #define GET_RISCVVLSEGTable_DECL
 #define GET_RISCVVLXSEGTable_DECL
 #define GET_RISCVVSXSEGTable_DECL
+#define GET_RISCVVLXTable_DECL
+#define GET_RISCVVSXTable_DECL
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCV
 
