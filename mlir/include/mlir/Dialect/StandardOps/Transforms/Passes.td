@@ -44,7 +44,7 @@ def FuncBufferize : Pass<"func-bufferize", "ModuleOp"> {
     implement the `ReturnLike` trait are not rewritten in general, as they
     require that the corresponding parent operation is also rewritten.
     Finally, this pass fails for unknown terminators, as we cannot decide
-    whether they need rewriting.
+    whether they need rewriting. 
   }];
   let constructor = "mlir::createFuncBufferizePass()";
 }
@@ -54,7 +54,7 @@ def TensorConstantBufferize : Pass<"tensor-constant-bufferize", "ModuleOp"> {
   let description = [{
     This pass bufferizes tensor constants.
 
-    This pass needs to be a module pass because it inserts memref.global
+    This pass needs to be a module pass because it inserts std.global_memref
     ops into the module, which cannot be done safely from a function pass due to
     multi-threading. Most other bufferization passes can run in parallel at
     function granularity.

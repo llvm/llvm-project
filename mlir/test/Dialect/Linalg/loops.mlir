@@ -34,9 +34,9 @@
 func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %A = memref.view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
-  %B = memref.view %arg0[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
-  %C = memref.view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
+  %A = view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
+  %B = view %arg0[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
+  %C = view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
   linalg.matmul ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
                outs(%C: memref<?x?xf32>)
   return
@@ -45,9 +45,9 @@ func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
 //  CHECKLOOP-SAME: [[M:arg[0-9]+]]: index
 //  CHECKLOOP-SAME: [[N:arg[0-9]+]]: index
 //  CHECKLOOP-SAME: [[K:arg[0-9]+]]: index
-//       CHECKLOOP: %[[A:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECKLOOP: %[[B:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECKLOOP: %[[C:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECKLOOP: %[[A:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECKLOOP: %[[B:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECKLOOP: %[[C:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
 //       CHECKLOOP: scf.for %{{.*}} = %{{.*}} to %[[M]] step %{{.*}} {
 //       CHECKLOOP:   scf.for %{{.*}} = %{{.*}} to %[[N]] step %{{.*}} {
 //       CHECKLOOP:     scf.for %{{.*}} = %{{.*}} to %[[K]] step %{{.*}} {
@@ -62,9 +62,9 @@ func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
 //  CHECKPARALLEL-SAME: [[M:arg[0-9]+]]: index
 //  CHECKPARALLEL-SAME: [[N:arg[0-9]+]]: index
 //  CHECKPARALLEL-SAME: [[K:arg[0-9]+]]: index
-//       CHECKPARALLEL: %[[A:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECKPARALLEL: %[[B:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECKPARALLEL: %[[C:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECKPARALLEL: %[[A:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECKPARALLEL: %[[B:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECKPARALLEL: %[[C:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
 //       CHECKPARALLEL: scf.parallel (%{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}) to (%[[M]], %[[N]]) step (%{{.*}}, %{{.*}} {
 //       CHECKPARALLEL:   scf.for %{{.*}} = %{{.*}} to %[[K]] step %{{.*}} {
 //   CHECKPARALLEL-DAG:     %[[a:.*]] = load %[[A]][%{{.*}}, %{{.*}}] : memref<?x?xf32>
@@ -79,9 +79,9 @@ func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
 func @matvec(%arg0: memref<?xi8>, %M: index, %N: index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %2 = memref.view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
-  %3 = memref.view %arg0[%c0][%M] : memref<?xi8> to memref<?xf32>
-  %4 = memref.view %arg0[%c0][%N] : memref<?xi8> to memref<?xf32>
+  %2 = view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
+  %3 = view %arg0[%c0][%M] : memref<?xi8> to memref<?xf32>
+  %4 = view %arg0[%c0][%N] : memref<?xi8> to memref<?xf32>
   linalg.matvec ins(%2, %3: memref<?x?xf32>, memref<?xf32>)
                outs(%4 : memref<?xf32>)
   return
@@ -89,9 +89,9 @@ func @matvec(%arg0: memref<?xi8>, %M: index, %N: index) {
 // CHECKLOOP-LABEL: func @matvec(%{{.*}}: memref<?xi8>,
 //  CHECKLOOP-SAME: [[M:arg[0-9]+]]: index
 //  CHECKLOOP-SAME: [[K:arg[0-9]+]]: index
-//       CHECKLOOP: %[[A:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECKLOOP: %[[B:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?xf32>
-//       CHECKLOOP: %[[C:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?xf32>
+//       CHECKLOOP: %[[A:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECKLOOP: %[[B:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?xf32>
+//       CHECKLOOP: %[[C:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?xf32>
 //       CHECKLOOP: scf.for %{{.*}} = %{{.*}} to %[[M]] step %{{.*}} {
 //       CHECKLOOP:   scf.for %{{.*}} = %{{.*}} to %[[K]] step %{{.*}} {
 //   CHECKLOOP-DAG:     %[[a:.*]] = load %[[A]][%{{.*}}, %{{.*}}] : memref<?x?xf32>
@@ -104,9 +104,9 @@ func @matvec(%arg0: memref<?xi8>, %M: index, %N: index) {
 // CHECKPARALLEL-LABEL: func @matvec(%{{.*}}: memref<?xi8>,
 //  CHECKPARALLEL-SAME: [[M:arg[0-9]+]]: index
 //  CHECKPARALLEL-SAME: [[K:arg[0-9]+]]: index
-//       CHECKPARALLEL: %[[A:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECKPARALLEL: %[[B:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?xf32>
-//       CHECKPARALLEL: %[[C:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?xf32>
+//       CHECKPARALLEL: %[[A:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECKPARALLEL: %[[B:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?xf32>
+//       CHECKPARALLEL: %[[C:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?xf32>
 //       CHECKPARALLEL: scf.parallel (%{{.*}}) = (%{{.*}}) to (%[[M]]) step (%{{.*}}) {
 //       CHECKPARALLEL:   scf.for %{{.*}} = %{{.*}} to %[[K]] step %{{.*}} {
 //   CHECKPARALLEL-DAG:     %[[a:.*]] = load %[[A]][%{{.*}}, %{{.*}}] : memref<?x?xf32>
@@ -120,18 +120,18 @@ func @matvec(%arg0: memref<?xi8>, %M: index, %N: index) {
 func @dot(%arg0: memref<?xi8>, %M: index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %1 = memref.view %arg0[%c0][%M] : memref<?xi8> to memref<?xf32>
-  %2 = memref.view %arg0[%c0][%M] : memref<?xi8> to memref<?xf32>
-  %3 = memref.view %arg0[%c0][] : memref<?xi8> to memref<f32>
+  %1 = view %arg0[%c0][%M] : memref<?xi8> to memref<?xf32>
+  %2 = view %arg0[%c0][%M] : memref<?xi8> to memref<?xf32>
+  %3 = view %arg0[%c0][] : memref<?xi8> to memref<f32>
   linalg.dot ins(%1, %2 : memref<?xf32>, memref<?xf32>)
             outs(%3 : memref<f32>)
   return
 }
 // CHECKLOOP-LABEL: func @dot(%{{.*}}: memref<?xi8>,
 //  CHECKLOOP-SAME: [[K:arg[0-9]+]]: index
-//       CHECKLOOP: %[[A:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?xf32>
-//       CHECKLOOP: %[[B:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?xf32>
-//       CHECKLOOP: %[[C:.*]] = memref.view %{{.*}}[{{.*}}][] : memref<?xi8> to memref<f32>
+//       CHECKLOOP: %[[A:.*]] = std.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?xf32>
+//       CHECKLOOP: %[[B:.*]] = std.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?xf32>
+//       CHECKLOOP: %[[C:.*]] = std.view %{{.*}}[{{.*}}][] : memref<?xi8> to memref<f32>
 //       CHECKLOOP: scf.for %{{.*}} = %{{.*}} to %[[K]] step %{{.*}} {
 //   CHECKLOOP-DAG:   %[[a:.*]] = load %[[A]][%{{.*}}] : memref<?xf32>
 //   CHECKLOOP-DAG:   %[[b:.*]] = load %[[B]][%{{.*}}] : memref<?xf32>
@@ -142,9 +142,9 @@ func @dot(%arg0: memref<?xi8>, %M: index) {
 
 // CHECKPARALLEL-LABEL: func @dot(%{{.*}}: memref<?xi8>,
 //  CHECKPARALLEL-SAME: [[K:arg[0-9]+]]: index
-//       CHECKPARALLEL: %[[A:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?xf32>
-//       CHECKPARALLEL: %[[B:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?xf32>
-//       CHECKPARALLEL: %[[C:.*]] = memref.view %{{.*}}[{{.*}}][] : memref<?xi8> to memref<f32>
+//       CHECKPARALLEL: %[[A:.*]] = std.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?xf32>
+//       CHECKPARALLEL: %[[B:.*]] = std.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?xf32>
+//       CHECKPARALLEL: %[[C:.*]] = std.view %{{.*}}[{{.*}}][] : memref<?xi8> to memref<f32>
 //       CHECKPARALLEL: scf.for %{{.*}} = %{{.*}} to %[[K]] step %{{.*}} {
 //   CHECKPARALLEL-DAG:   %[[a:.*]] = load %[[A]][%{{.*}}] : memref<?xf32>
 //   CHECKPARALLEL-DAG:   %[[b:.*]] = load %[[B]][%{{.*}}] : memref<?xf32>

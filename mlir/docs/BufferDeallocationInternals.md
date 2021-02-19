@@ -779,8 +779,8 @@ the deallocation of the source value.
 ## Known Limitations
 
 BufferDeallocation introduces additional copies using allocations from the
-“memref” dialect (“memref.alloc”). Analogous, all deallocations use the
-“memref” dialect-free operation “memref.dealloc”. The actual copy process is
-realized using “linalg.copy”. Furthermore, buffers are essentially immutable
-after their creation in a block. Another limitations are known in the case
-using unstructered control flow.
+“std” dialect (“std.alloc”). Analogous, all deallocations use the “std”
+dialect-free operation “std.dealloc”. The actual copy process is realized using
+“linalg.copy”. Furthermore, buffers are essentially immutable after their
+creation in a block. Another limitations are known in the case using
+unstructered control flow.

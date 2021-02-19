@@ -882,7 +882,7 @@ func @load_store_zero_rank_float(%arg0: memref<f32>, %arg1: memref<f32>) {
   // CHECK-SAME: [[ZERO2]], [[ZERO2]]
   // CHECK-SAME: ] :
   //      CHECK: spv.Store "StorageBuffer" %{{.*}} : f32
-  memref.store %0, %arg1[] : memref<f32>
+  store %0, %arg1[] : memref<f32>
   return
 }
 
@@ -901,7 +901,7 @@ func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
   // CHECK-SAME: [[ZERO2]], [[ZERO2]]
   // CHECK-SAME: ] :
   //      CHECK: spv.Store "StorageBuffer" %{{.*}} : i32
-  memref.store %0, %arg1[] : memref<i32>
+  store %0, %arg1[] : memref<i32>
   return
 }
 
@@ -1000,7 +1000,7 @@ func @store_i8(%arg0: memref<i8>, %value: i8) {
   //     CHECK: %[[PTR:.+]] = spv.AccessChain %[[ARG0]][%[[ZERO]], %[[ACCESS_IDX]]]
   //     CHECK: spv.AtomicAnd "Device" "AcquireRelease" %[[PTR]], %[[MASK]]
   //     CHECK: spv.AtomicOr "Device" "AcquireRelease" %[[PTR]], %[[STORE_VAL]]
-  memref.store %value, %arg0[] : memref<i8>
+  store %value, %arg0[] : memref<i8>
   return
 }
 
@@ -1026,7 +1026,7 @@ func @store_i16(%arg0: memref<10xi16>, %index: index, %value: i16) {
   //     CHECK: %[[PTR:.+]] = spv.AccessChain %[[ARG0]][%[[ZERO]], %[[ACCESS_IDX]]]
   //     CHECK: spv.AtomicAnd "Device" "AcquireRelease" %[[PTR]], %[[MASK]]
   //     CHECK: spv.AtomicOr "Device" "AcquireRelease" %[[PTR]], %[[STORE_VAL]]
-  memref.store %value, %arg0[%index] : memref<10xi16>
+  store %value, %arg0[%index] : memref<10xi16>
   return
 }
 
@@ -1035,7 +1035,7 @@ func @store_i32(%arg0: memref<i32>, %value: i32) {
   //     CHECK: spv.Store
   // CHECK-NOT: spv.AtomicAnd
   // CHECK-NOT: spv.AtomicOr
-  memref.store %value, %arg0[] : memref<i32>
+  store %value, %arg0[] : memref<i32>
   return
 }
 
@@ -1044,7 +1044,7 @@ func @store_f32(%arg0: memref<f32>, %value: f32) {
   //     CHECK: spv.Store
   // CHECK-NOT: spv.AtomicAnd
   // CHECK-NOT: spv.AtomicOr
-  memref.store %value, %arg0[] : memref<f32>
+  store %value, %arg0[] : memref<f32>
   return
 }
 
@@ -1108,7 +1108,7 @@ func @store_i8(%arg0: memref<i8>, %value: i8) {
   //     CHECK: %[[PTR:.+]] = spv.AccessChain %[[ARG0]][%[[ZERO]], %[[ACCESS_IDX]]]
   //     CHECK: spv.AtomicAnd "Device" "AcquireRelease" %[[PTR]], %[[MASK]]
   //     CHECK: spv.AtomicOr "Device" "AcquireRelease" %[[PTR]], %[[STORE_VAL]]
-  memref.store %value, %arg0[] : memref<i8>
+  store %value, %arg0[] : memref<i8>
   return
 }
 
@@ -1117,7 +1117,7 @@ func @store_i16(%arg0: memref<10xi16>, %index: index, %value: i16) {
   //     CHECK: spv.Store
   // CHECK-NOT: spv.AtomicAnd
   // CHECK-NOT: spv.AtomicOr
-  memref.store %value, %arg0[%index] : memref<10xi16>
+  store %value, %arg0[%index] : memref<10xi16>
   return
 }
 

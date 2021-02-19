@@ -10,7 +10,7 @@ func @single_iteration(%A: memref<?x?x?xi32>) {
   %c10 = constant 10 : index
   scf.parallel (%i0, %i1, %i2) = (%c0, %c3, %c7) to (%c1, %c6, %c10) step (%c1, %c2, %c3) {
     %c42 = constant 42 : i32
-    memref.store %c42, %A[%i0, %i1, %i2] : memref<?x?x?xi32>
+    store %c42, %A[%i0, %i1, %i2] : memref<?x?x?xi32>
     scf.yield
   }
   return
@@ -25,7 +25,7 @@ func @single_iteration(%A: memref<?x?x?xi32>) {
 // CHECK:           [[C7:%.*]] = constant 7 : index
 // CHECK:           [[C42:%.*]] = constant 42 : i32
 // CHECK:           scf.parallel ([[V0:%.*]]) = ([[C3]]) to ([[C6]]) step ([[C2]]) {
-// CHECK:             memref.store [[C42]], [[ARG0]]{{\[}}[[C0]], [[V0]], [[C7]]] : memref<?x?x?xi32>
+// CHECK:             store [[C42]], [[ARG0]]{{\[}}[[C0]], [[V0]], [[C7]]] : memref<?x?x?xi32>
 // CHECK:             scf.yield
 // CHECK:           }
 // CHECK:           return

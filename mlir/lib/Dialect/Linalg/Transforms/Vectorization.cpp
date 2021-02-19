@@ -110,7 +110,7 @@ static Value buildVectorWrite(OpBuilder &builder, Value value, Value dest) {
       value = vector_broadcast(vectorType, value);
     write = vector_transfer_write(value, dest, indices);
   } else {
-    write = memref_store(value, dest);
+    write = std_store(value, dest);
   }
   LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: vectorized op: " << *write);
   if (!write->getResults().empty())
@@ -543,7 +543,7 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
       rewriter.getAffineMapArrayAttr(indexingMaps),
       rewriter.getStrArrayAttr(iteratorTypes));
 
-  rewriter.create<memref::StoreOp>(loc, result, output, ValueRange(zeros));
+  rewriter.create<StoreOp>(loc, result, output, ValueRange(zeros));
   rewriter.eraseOp(op);
   return success();
 }
@@ -685,8 +685,8 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
 
   // Transfer into `view`.
   Value viewOrAlloc = xferOp.source();
-  if (!viewOrAlloc.getDefiningOp<memref::ViewOp>() &&
-      !viewOrAlloc.getDefiningOp<memref::AllocOp>())
+  if (!viewOrAlloc.getDefiningOp<ViewOp>() &&
+      !viewOrAlloc.getDefiningOp<AllocOp>())
     return failure();
 
   LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: " << viewOrAlloc);
@@ -764,8 +764,8 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
     vector::TransferWriteOp xferOp, PatternRewriter &rewriter) const {
   // Transfer into `viewOrAlloc`.
   Value viewOrAlloc = xferOp.source();
-  if (!viewOrAlloc.getDefiningOp<memref::ViewOp>() &&
-      !viewOrAlloc.getDefiningOp<memref::AllocOp>())
+  if (!viewOrAlloc.getDefiningOp<ViewOp>() &&
+      !viewOrAlloc.getDefiningOp<AllocOp>())
     return failure();
 
   // Ensure there is exactly one subview of `viewOrAlloc` defining `subView`.

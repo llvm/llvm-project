@@ -72,8 +72,7 @@ void populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
 
 /// Creates a pass to convert the Standard dialect into the LLVMIR dialect.
 /// stdlib malloc/free is used by default for allocating memrefs allocated with
-/// memref.alloc, while LLVM's alloca is used for those allocated with
-/// memref.alloca.
+/// std.alloc, while LLVM's alloca is used for those allocated with std.alloca.
 std::unique_ptr<OperationPass<ModuleOp>>
 createLowerToLLVMPass(const LowerToLLVMOptions &options =
                           LowerToLLVMOptions::getDefaultOptions());

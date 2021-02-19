@@ -82,21 +82,21 @@ acc.update
 // -----
 
 %cst = constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = alloc() : memref<10xf32>
 // expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
 acc.update wait_devnum(%cst: index) host(%value: memref<10xf32>)
 
 // -----
 
 %cst = constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = alloc() : memref<10xf32>
 // expected-error@+1 {{async attribute cannot appear with  asyncOperand}}
 acc.update async(%cst: index) host(%value: memref<10xf32>) attributes {async}
 
 // -----
 
 %cst = constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = alloc() : memref<10xf32>
 // expected-error@+1 {{wait attribute cannot appear with waitOperands}}
 acc.update wait(%cst: index) host(%value: memref<10xf32>) attributes {wait}
 
@@ -162,14 +162,14 @@ acc.exit_data attributes {async}
 // -----
 
 %cst = constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = alloc() : memref<10xf32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
 acc.exit_data async(%cst: index) delete(%value : memref<10xf32>) attributes {async}
 
 // -----
 
 %cst = constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = alloc() : memref<10xf32>
 // expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
 acc.exit_data wait_devnum(%cst: index) delete(%value : memref<10xf32>)
 
@@ -181,20 +181,20 @@ acc.enter_data attributes {async}
 // -----
 
 %cst = constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = alloc() : memref<10xf32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
 acc.enter_data async(%cst: index) create(%value : memref<10xf32>) attributes {async}
 
 // -----
 
 %cst = constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = alloc() : memref<10xf32>
 // expected-error@+1 {{wait attribute cannot appear with waitOperands}}
 acc.enter_data wait(%cst: index) create(%value : memref<10xf32>) attributes {wait}
 
 // -----
 
 %cst = constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = alloc() : memref<10xf32>
 // expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
 acc.enter_data wait_devnum(%cst: index) create(%value : memref<10xf32>)

@@ -287,7 +287,7 @@ func @triang_loop(%arg0: index, %arg1: memref<?x?xi32>) {
   %c = constant 0 : i32       // CHECK: %{{.*}} = constant 0 : i32
   affine.for %i0 = 1 to %arg0 {      // CHECK: affine.for %{{.*}} = 1 to %{{.*}} {
     affine.for %i1 = affine_map<(d0)[]->(d0)>(%i0)[] to %arg0 {  // CHECK:   affine.for %{{.*}} = #map{{[0-9]+}}(%{{.*}}) to %{{.*}} {
-      memref.store %c, %arg1[%i0, %i1] : memref<?x?xi32>  // CHECK: memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}]
+      store %c, %arg1[%i0, %i1] : memref<?x?xi32>  // CHECK: store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}]
     }          // CHECK:     }
   }            // CHECK:   }
   return       // CHECK:   return
