@@ -28,6 +28,22 @@ struct A
 
 int A::count = 0;
 
+struct bad_ty { };
+
+struct bad_deleter
+{
+    void operator()(bad_ty) { }
+};
+
+struct no_move_deleter
+{
+    no_move_deleter(no_move_deleter const&) = delete;
+    no_move_deleter(no_move_deleter &&) = delete;
+    void operator()(int*) { }
+};
+
+static_assert(!std::is_move_constructible<no_move_deleter>::value, "");
+
 struct Base { };
 struct Derived : Base { };
 
@@ -115,6 +131,14 @@ int main(int, char**)
 #endif // TEST_STD_VER >= 11
 
     {
+        // Make sure we can't construct with:
+        //    a) a deleter that doesn't have an operator ()(int*)
+        //    b) a deleter that doesn't have a move constructor.
+        static_assert(!std::is_constructible<std::shared_ptr<int>, int*, bad_deleter,
+                                             test_allocator<A> >::value, "");
+        static_assert(!std::is_constructible<std::shared_ptr<int>, int*, no_move_deleter,
+                                             test_allocator<A> >::value, "");
+
         // Make sure that we can construct a shared_ptr where the element type and pointer type
         // aren't "convertible" but are "compatible".
         static_assert(!std::is_constructible<std::shared_ptr<Derived[4]>,
