@@ -46,11 +46,6 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
-// The include below has a static function unused in this translation unit,
-// declare it as such to silence a warning.
-static LLVM_ATTRIBUTE_UNUSED ::llvm::InlineAsm::AsmDialect
-convertAsmDialectToLLVM(::mlir::LLVM::AsmDialect value);
-
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
 
 /// Builds a constant of a sequential LLVM type `type`, potentially containing

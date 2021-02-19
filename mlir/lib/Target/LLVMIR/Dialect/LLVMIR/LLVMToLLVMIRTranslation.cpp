@@ -26,11 +26,6 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using mlir::LLVM::detail::getLLVMConstant;
 
-// The include below has a static function unused in this translation unit,
-// declare it as such to silence a warning.
-static LLVM_ATTRIBUTE_UNUSED ::llvm::GlobalValue::LinkageTypes
-convertLinkageToLLVM(::mlir::LLVM::Linkage value);
-
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
 
 /// Convert MLIR integer comparison predicate to LLVM IR comparison predicate.
