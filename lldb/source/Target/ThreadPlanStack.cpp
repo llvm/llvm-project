@@ -124,20 +124,6 @@ void ThreadPlanStack::ThreadDestroyed(Thread *thread) {
   }
 }
 
-void ThreadPlanStack::EnableTracer(bool value, bool single_stepping) {
-  for (ThreadPlanSP plan : m_plans) {
-    if (plan->GetThreadPlanTracer()) {
-      plan->GetThreadPlanTracer()->EnableTracing(value);
-      plan->GetThreadPlanTracer()->EnableSingleStep(single_stepping);
-    }
-  }
-}
-
-void ThreadPlanStack::SetTracer(lldb::ThreadPlanTracerSP &tracer_sp) {
-  for (ThreadPlanSP plan : m_plans)
-    plan->SetThreadPlanTracer(tracer_sp);
-}
-
 void ThreadPlanStack::PushPlan(lldb::ThreadPlanSP new_plan_sp) {
   // If the thread plan doesn't already have a tracer, give it its parent's
   // tracer:
