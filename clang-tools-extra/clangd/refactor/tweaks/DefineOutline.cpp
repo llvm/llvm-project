@@ -144,7 +144,8 @@ getFunctionSourceAfterReplacements(const FunctionDecl *FD,
 // FIXME: Drop attributes in function signature.
 llvm::Expected<std::string>
 getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
-                      const syntax::TokenBuffer &TokBuf) {
+                      const syntax::TokenBuffer &TokBuf,
+                      const HeuristicResolver *Resolver) {
   auto &AST = FD->getASTContext();
   auto &SM = AST.getSourceManager();
   auto TargetContext = findContextForNS(TargetNamespace, FD->getDeclContext());
@@ -156,31 +157,36 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
 
   // Finds the first unqualified name in function return type and name, then
   // qualifies those to be valid in TargetContext.
-  findExplicitReferences(FD, [&](ReferenceLoc Ref) {
-    // It is enough to qualify the first qualifier, so skip references with a
-    // qualifier. Also we can't do much if there are no targets or name is
-    // inside a macro body.
-    if (Ref.Qualifier || Ref.Targets.empty() || Ref.NameLoc.isMacroID())
-      return;
-    // Only qualify return type and function name.
-    if (Ref.NameLoc != FD->getReturnTypeSourceRange().getBegin() &&
-        Ref.NameLoc != FD->getLocation())
-      return;
+  findExplicitReferences(
+      FD,
+      [&](ReferenceLoc Ref) {
+        // It is enough to qualify the first qualifier, so skip references with
+        // a qualifier. Also we can't do much if there are no targets or name is
+        // inside a macro body.
+        if (Ref.Qualifier || Ref.Targets.empty() || Ref.NameLoc.isMacroID())
+          return;
+        // Only qualify return type and function name.
+        if (Ref.NameLoc != FD->getReturnTypeSourceRange().getBegin() &&
+            Ref.NameLoc != FD->getLocation())
+          return;
 
-    for (const NamedDecl *ND : Ref.Targets) {
-      if (ND->getDeclContext() != Ref.Targets.front()->getDeclContext()) {
-        elog("Targets from multiple contexts: {0}, {1}",
-             printQualifiedName(*Ref.Targets.front()), printQualifiedName(*ND));
-        return;
-      }
-    }
-    const NamedDecl *ND = Ref.Targets.front();
-    const std::string Qualifier = getQualification(
-        AST, *TargetContext, SM.getLocForStartOfFile(SM.getMainFileID()), ND);
-    if (auto Err = DeclarationCleanups.add(
-            tooling::Replacement(SM, Ref.NameLoc, 0, Qualifier)))
-      Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
-  });
+        for (const NamedDecl *ND : Ref.Targets) {
+          if (ND->getDeclContext() != Ref.Targets.front()->getDeclContext()) {
+            elog("Targets from multiple contexts: {0}, {1}",
+                 printQualifiedName(*Ref.Targets.front()),
+                 printQualifiedName(*ND));
+            return;
+          }
+        }
+        const NamedDecl *ND = Ref.Targets.front();
+        const std::string Qualifier =
+            getQualification(AST, *TargetContext,
+                             SM.getLocForStartOfFile(SM.getMainFileID()), ND);
+        if (auto Err = DeclarationCleanups.add(
+                tooling::Replacement(SM, Ref.NameLoc, 0, Qualifier)))
+          Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+      },
+      Resolver);
 
   // Get rid of default arguments, since they should not be specified in
   // out-of-line definition.
@@ -421,7 +427,8 @@ public:
       return InsertionPoint.takeError();
 
     auto FuncDef = getFunctionSourceCode(
-        Source, InsertionPoint->EnclosingNamespace, Sel.AST->getTokens());
+        Source, InsertionPoint->EnclosingNamespace, Sel.AST->getTokens(),
+        Sel.AST->getHeuristicResolver());
     if (!FuncDef)
       return FuncDef.takeError();
 
