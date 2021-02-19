@@ -441,6 +441,7 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
       if (module_sp.get()) {
         if (module_sp->GetObjectFile()->GetBaseAddress().GetLoadAddress(
                 &m_process->GetTarget()) == m_interpreter_base &&
+            m_interpreter_module.lock() &&
             module_sp != m_interpreter_module.lock()) {
           // If this is a duplicate instance of ld.so, unload it.  We may end up
           // with it if we load it via a different path than before (symlink
