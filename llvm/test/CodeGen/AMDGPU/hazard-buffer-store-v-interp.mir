@@ -12,7 +12,7 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr7, $vgpr8, $vgpr9, $vgpr10
 
-    BUFFER_STORE_DWORDX4_OFFSET_exact killed $vgpr7_vgpr8_vgpr9_vgpr10, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 96, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX4_OFFSET_exact killed $vgpr7_vgpr8_vgpr9_vgpr10, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 96, 0, 0, 0, 0, 0, 0, implicit $exec
     $vgpr7 = V_INTERP_P1_F32 $vgpr0, 0, 0, implicit $mode, implicit $m0, implicit $exec
     S_ENDPGM 0
 

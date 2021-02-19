@@ -42,9 +42,9 @@
   !0 = !{i32 1}
 
 # GCN-LABEL: name: syncscopes
-# GCN: FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("agent") seq_cst 4 into %ir.agent_out, addrspace 4)
-# GCN: FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("workgroup") seq_cst 4 into %ir.workgroup_out, addrspace 4)
-# GCN: FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("wavefront") seq_cst 4 into %ir.wavefront_out, addrspace 4)
+# GCN: FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("agent") seq_cst 4 into %ir.agent_out, addrspace 4)
+# GCN: FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("workgroup") seq_cst 4 into %ir.workgroup_out, addrspace 4)
+# GCN: FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("wavefront") seq_cst 4 into %ir.wavefront_out, addrspace 4)
 ...
 ---
 name:            syncscopes
@@ -84,17 +84,17 @@ body:             |
     $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed $sgpr4_sgpr5, 40, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit killed $sgpr0_sgpr1, implicit $sgpr0_sgpr1, implicit $exec
     $vgpr2 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
-    FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("agent") seq_cst 4 into %ir.agent_out)
+    FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("agent") seq_cst 4 into %ir.agent_out)
     S_WAITCNT 112
     $vgpr0 = V_MOV_B32_e32 $sgpr2, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr2_sgpr3
     $vgpr1 = V_MOV_B32_e32 killed $sgpr3, implicit $exec, implicit killed $sgpr2_sgpr3, implicit $sgpr2_sgpr3, implicit $exec
     $vgpr2 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
-    FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("workgroup") seq_cst 4 into %ir.workgroup_out)
+    FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("workgroup") seq_cst 4 into %ir.workgroup_out)
     S_WAITCNT 112
     $vgpr0 = V_MOV_B32_e32 $sgpr4, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr4_sgpr5
     $vgpr1 = V_MOV_B32_e32 killed $sgpr5, implicit $exec, implicit killed $sgpr4_sgpr5, implicit $sgpr4_sgpr5, implicit $exec
     $vgpr2 = V_MOV_B32_e32 killed $sgpr8, implicit $exec, implicit $exec
-    FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("wavefront") seq_cst 4 into %ir.wavefront_out)
+    FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("wavefront") seq_cst 4 into %ir.wavefront_out)
     S_ENDPGM 0
 
 ...

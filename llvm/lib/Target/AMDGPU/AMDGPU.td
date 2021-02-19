@@ -51,6 +51,12 @@ def HalfRate64Ops : SubtargetFeature<"half-rate-64-ops",
   "Most fp64 instructions are half rate instead of quarter"
 >;
 
+def FullRate64Ops : SubtargetFeature<"full-rate-64-ops",
+  "FullRate64Ops",
+  "true",
+  "Most fp64 instructions are full rate"
+>;
+
 def FeatureFlatAddressSpace : SubtargetFeature<"flat-address-space",
   "FlatAddressSpace",
   "true",
@@ -146,6 +152,12 @@ def FeatureXNACK : SubtargetFeature<"xnack",
   "EnableXNACK",
   "true",
   "Enable XNACK support"
+>;
+
+def FeatureTgSplit : SubtargetFeature<"tgsplit",
+  "EnableTgSplit",
+  "true",
+  "Enable threadgroup split execution"
 >;
 
 def FeatureCuMode : SubtargetFeature<"cumode",
@@ -272,6 +284,12 @@ def FeatureGFX9Insts : SubtargetFeature<"gfx9-insts",
   "Additional instructions for GFX9+"
 >;
 
+def FeatureGFX90AInsts : SubtargetFeature<"gfx90a-insts",
+  "GFX90AInsts",
+  "true",
+  "Additional instructions for GFX90A+"
+>;
+
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
   "GFX10Insts",
   "true",
@@ -387,6 +405,18 @@ def FeatureDPP8 : SubtargetFeature<"dpp8",
   "Support DPP8 (Data Parallel Primitives) extension"
 >;
 
+def Feature64BitDPP : SubtargetFeature<"dpp-64bit",
+  "Has64BitDPP",
+  "true",
+  "Support DPP (Data Parallel Primitives) extension"
+>;
+
+def FeaturePackedFP32Ops : SubtargetFeature<"packed-fp32-ops",
+  "HasPackedFP32Ops",
+  "true",
+  "Support packed fp32 instructions"
+>;
+
 def FeatureR128A16 : SubtargetFeature<"r128-a16",
   "HasR128A16",
   "true",
@@ -409,6 +439,12 @@ def FeatureNSAEncoding : SubtargetFeature<"nsa-encoding",
   "HasNSAEncoding",
   "true",
   "Support NSA encoding for image instructions"
+>;
+
+def FeatureExtendedImageInsts : SubtargetFeature<"extended-image-insts",
+  "HasExtendedImageInsts",
+  "true",
+  "Support mips != 0, lod != 0, gather4, and get_lod"
 >;
 
 def FeatureGFX10_BEncoding : SubtargetFeature<"gfx10_b-encoding",
@@ -659,6 +695,12 @@ def FeatureUnalignedAccessMode : SubtargetFeature<"unaligned-access-mode",
   " supports it"
 >;
 
+def FeaturePackedTID : SubtargetFeature<"packed-tid",
+  "HasPackedTID",
+  "true",
+  "Workitem IDs are packed into v0 at kernel launch"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -675,7 +717,8 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize32768, FeatureMIMG_R128,
   FeatureWavefrontSize64, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureLDSBankCount32, FeatureMovrel,
-  FeatureTrigReducedRange]
+  FeatureTrigReducedRange, FeatureExtendedImageInsts
+  ]
 >;
 
 def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
@@ -684,7 +727,8 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureWavefrontSize64, FeatureFlatAddressSpace,
   FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange,
   FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
-  FeatureDsSrc2Insts, FeatureUnalignedBufferAccess]
+  FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureUnalignedBufferAccess
+  ]
 >;
 
 def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
@@ -697,7 +741,9 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureSDWA, FeatureSDWAOutModsVOPC, FeatureSDWAMac, FeatureDPP,
    FeatureIntClamp, FeatureTrigReducedRange, FeatureGFX8Insts,
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
-   FeatureDsSrc2Insts, FeatureFastDenormalF32, FeatureUnalignedBufferAccess]
+   FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
+   FeatureUnalignedBufferAccess
+  ]
 >;
 
 def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
@@ -712,9 +758,9 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
-   FeatureSMemTimeInst, FeatureMadMacF32Insts, FeatureDsSrc2Insts,
-   FeatureFastDenormalF32, FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureSupportsXNACK]
+   FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess
+  ]
 >;
 
 def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
@@ -729,7 +775,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureFmaMixInsts, FeatureGFX8Insts,
    FeatureNoSdstCMPX, FeatureVscnt, FeatureRegisterBanking,
-   FeatureVOP3Literal, FeatureDPP8,
+   FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureGFX10A16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess
@@ -816,17 +862,26 @@ def FeatureISAVersion9_0_0 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
+   FeatureDsSrc2Insts,
+   FeatureExtendedImageInsts,
+   FeatureMadMacF32Insts,
    FeatureImageGather4D16Bug]>;
 
 def FeatureISAVersion9_0_2 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
+   FeatureDsSrc2Insts,
+   FeatureExtendedImageInsts,
+   FeatureMadMacF32Insts,
    FeatureImageGather4D16Bug]>;
 
 def FeatureISAVersion9_0_4 : FeatureSet<
   [FeatureGFX9,
    FeatureLDSBankCount32,
+   FeatureDsSrc2Insts,
+   FeatureExtendedImageInsts,
+   FeatureMadMacF32Insts,
    FeatureFmaMixInsts,
    FeatureImageGather4D16Bug]>;
 
@@ -835,6 +890,9 @@ def FeatureISAVersion9_0_6 : FeatureSet<
    HalfRate64Ops,
    FeatureFmaMixInsts,
    FeatureLDSBankCount32,
+   FeatureDsSrc2Insts,
+   FeatureExtendedImageInsts,
+   FeatureMadMacF32Insts,
    FeatureDLInsts,
    FeatureDot1Insts,
    FeatureDot2Insts,
@@ -846,6 +904,9 @@ def FeatureISAVersion9_0_8 : FeatureSet<
    HalfRate64Ops,
    FeatureFmaMixInsts,
    FeatureLDSBankCount32,
+   FeatureDsSrc2Insts,
+   FeatureExtendedImageInsts,
+   FeatureMadMacF32Insts,
    FeatureDLInsts,
    FeatureDot1Insts,
    FeatureDot2Insts,
@@ -864,13 +925,40 @@ def FeatureISAVersion9_0_9 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
+   FeatureDsSrc2Insts,
+   FeatureExtendedImageInsts,
+   FeatureMadMacF32Insts,
    FeatureImageGather4D16Bug]>;
+
+def FeatureISAVersion9_0_A : FeatureSet<
+  [FeatureGFX9,
+   FeatureGFX90AInsts,
+   FeatureFmaMixInsts,
+   FeatureLDSBankCount32,
+   FeatureDLInsts,
+   FeatureDot1Insts,
+   FeatureDot2Insts,
+   FeatureDot3Insts,
+   FeatureDot4Insts,
+   FeatureDot5Insts,
+   FeatureDot6Insts,
+   Feature64BitDPP,
+   FeaturePackedFP32Ops,
+   FeatureMAIInsts,
+   FeaturePkFmacF16Inst,
+   FeatureAtomicFaddInsts,
+   FeatureMadMacF32Insts,
+   FeatureSupportsSRAMECC,
+   FeaturePackedTID,
+   FullRate64Ops]>;
 
 def FeatureISAVersion9_0_C : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
    FeatureXNACK,
+   FeatureDsSrc2Insts,
+   FeatureExtendedImageInsts,
    FeatureImageGather4D16Bug]>;
 
 // TODO: Organize more features into groups.
@@ -1077,6 +1165,14 @@ def isGFX6GFX7GFX8GFX9 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of (not FeatureGFX10Insts))>;
 
+def isGFX6GFX7GFX8GFX9NotGFX90A :
+  Predicate<"!Subtarget->hasGFX90AInsts() &&"
+            "(Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
+            " Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
+            " Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
+            " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9)">,
+  AssemblerPredicate<(all_of (not FeatureGFX10Insts), (not FeatureGFX90AInsts))>;
+
 def isGFX7Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS">,
   AssemblerPredicate<(all_of FeatureCIInsts)>;
@@ -1096,6 +1192,28 @@ def isGFX9Plus :
 def isGFX9Only : Predicate <
   "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGCN3Encoding, FeatureGFX9Insts)>;
+
+def isGCN3ExcludingGFX90A :
+  Predicate<"Subtarget->isGCN3Encoding() && !Subtarget->hasGFX90AInsts()">,
+  AssemblerPredicate<(all_of FeatureGCN3Encoding, (not FeatureGFX90AInsts))>;
+
+def isGFX90APlus :
+  Predicate<"Subtarget->hasGFX90AInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX90AInsts)>;
+
+def isNotGFX90APlus :
+  Predicate<"!Subtarget->hasGFX90AInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
+
+def isGFX8GFX9NotGFX90A :
+  Predicate<"!Subtarget->hasGFX90AInsts() &&"
+            "(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
+            " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9)">,
+  AssemblerPredicate<(all_of FeatureGFX8Insts, FeatureGCN3Encoding, (not FeatureGFX90AInsts))>;
+
+def isGFX90AOnly :
+  Predicate<"Subtarget->hasGFX90AInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX90AInsts)>;
 
 def isGFX8GFX9 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
@@ -1176,6 +1294,15 @@ def HasDPP : Predicate<"Subtarget->hasDPP()">,
 
 def HasDPP8 : Predicate<"Subtarget->hasDPP8()">,
   AssemblerPredicate<(all_of (not FeatureGCN3Encoding), FeatureGFX10Insts, FeatureDPP8)>;
+
+def Has64BitDPP : Predicate<"Subtarget->has64BitDPP()">,
+  AssemblerPredicate<(all_of Feature64BitDPP)>;
+
+def HasPackedFP32Ops : Predicate<"Subtarget->hasPackedFP32Ops()">,
+  AssemblerPredicate<(all_of FeaturePackedFP32Ops)>;
+
+def HasExtendedImageInsts : Predicate<"Subtarget->hasExtendedImageInsts()">,
+  AssemblerPredicate<(all_of FeatureExtendedImageInsts)>;
 
 def HasR128A16 : Predicate<"Subtarget->hasR128A16()">,
   AssemblerPredicate<(all_of FeatureR128A16)>;

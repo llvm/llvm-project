@@ -847,20 +847,35 @@ def VS_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   let isAllocatable = 0;
 }
 
-def VS_64 : RegisterClass<"AMDGPU", [i64, f64], 32, (add VReg_64, SReg_64)> {
+def VS_64 : RegisterClass<"AMDGPU", [i64, f64, v2f32], 32, (add VReg_64, SReg_64)> {
   let isAllocatable = 0;
 }
 
-def AV_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
+def AV_32 : RegisterClass<"AMDGPU", VGPR_32.RegTypes, 32,
                           (add AGPR_32, VGPR_32)> {
   let isAllocatable = 0;
 }
 
-def AV_64 : RegisterClass<"AMDGPU", [i64, f64, v4f16], 32,
+def AV_64 : RegisterClass<"AMDGPU", VReg_64.RegTypes, 32,
                           (add AReg_64, VReg_64)> {
   let isAllocatable = 0;
 }
 } // End GeneratePressureSet = 0
+
+def AV_96 : RegisterClass<"AMDGPU", VReg_96.RegTypes, 32,
+                          (add AReg_96, VReg_96)> {
+  let isAllocatable = 0;
+}
+
+def AV_128 : RegisterClass<"AMDGPU", VReg_128.RegTypes, 32,
+                          (add AReg_128, VReg_128)> {
+  let isAllocatable = 0;
+}
+
+def AV_160 : RegisterClass<"AMDGPU", VReg_160.RegTypes, 32,
+                          (add AReg_160, VReg_160)> {
+  let isAllocatable = 0;
+}
 
 //===----------------------------------------------------------------------===//
 //  Register operands
@@ -912,20 +927,37 @@ multiclass SIRegOperand32 <string rc, string MatchName, string opType,
   }
 }
 
-multiclass SIRegOperand <string rc, string MatchName, string opType> :
-  SIRegOperand32<rc, MatchName, opType> {
+multiclass SIRegOperand64 <string rc, string MatchName, string opType,
+                           string rc_suffix = "_64", bit Vectors = 1> {
   let OperandNamespace = "AMDGPU" in {
-    def _b64 : RegisterOperand<!cast<RegisterClass>(rc#"_64")> {
+    def _b64 : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix)> {
       let OperandType = opType#"_INT64";
       let ParserMatchClass = RegImmMatcher<MatchName#"B64">;
     }
 
-    def _f64 : RegisterOperand<!cast<RegisterClass>(rc#"_64")> {
+    def _f64 : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix)> {
       let OperandType = opType#"_FP64";
       let ParserMatchClass = RegImmMatcher<MatchName#"F64">;
     }
+
+    foreach _ = BoolToList<Vectors>.ret in
+    def _v2f32 : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix)> {
+      let OperandType = opType#"_V2FP32";
+      let ParserMatchClass = RegImmMatcher<MatchName#"V2FP32">;
+      let DecoderMethod = "decodeOperand_VSrcV232";
+    }
+    foreach _ = BoolToList<Vectors>.ret in
+    def _v2b32 : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix)> {
+      let OperandType = opType#"_V2INT32";
+      let ParserMatchClass = RegImmMatcher<MatchName#"V2INT32">;
+      let DecoderMethod = "decodeOperand_VSrcV232";
+    }
   }
 }
+
+multiclass SIRegOperand <string rc, string MatchName, string opType> :
+  SIRegOperand32<rc, MatchName, opType>,
+  SIRegOperand64<rc, MatchName, opType>;
 
 // FIXME: 64-bit sources can sometimes use 32-bit constants.
 multiclass RegImmOperand <string rc, string MatchName>
@@ -938,9 +970,17 @@ multiclass RegInlineOperand32 <string rc, string MatchName,
                                string rc_suffix = "_32">
   : SIRegOperand32<rc, MatchName, "OPERAND_REG_INLINE_C", rc_suffix>;
 
+multiclass RegInlineOperand64 <string rc, string MatchName,
+                               string rc_suffix = "_64">
+  : SIRegOperand64<rc, MatchName, "OPERAND_REG_INLINE_C", rc_suffix>;
+
 multiclass RegInlineOperandAC <string rc, string MatchName,
                                string rc_suffix = "_32">
   : SIRegOperand32<rc, MatchName, "OPERAND_REG_INLINE_AC", rc_suffix>;
+
+multiclass RegInlineOperandAC64 <string rc, string MatchName,
+                                 string rc_suffix = "_64">
+  : SIRegOperand64<rc, MatchName, "OPERAND_REG_INLINE_AC", rc_suffix, 0>;
 
 //===----------------------------------------------------------------------===//
 //  SSrc_* Operands with an SGPR or a 32-bit immediate
@@ -1001,6 +1041,13 @@ defm VCSrc : RegInlineOperand<"VS", "VCSrc">;
 //===----------------------------------------------------------------------===//
 
 defm VISrc : RegInlineOperand32<"VGPR", "VISrc">;
+let DecoderMethod = "decodeOperand_VReg_64" in
+defm VISrc_64   : RegInlineOperand64<"VReg", "VISrc_64",   "_64">;
+defm VISrc_128  : RegInlineOperandAC<"VReg", "VISrc_128",  "_128">;
+let DecoderMethod = "decodeOperand_VReg_256" in
+defm VISrc_256  : RegInlineOperand64<"VReg", "VISrc_256",  "_256">;
+defm VISrc_512  : RegInlineOperandAC<"VReg", "VISrc_512",  "_512">;
+defm VISrc_1024 : RegInlineOperandAC<"VReg", "VISrc_1024", "_1024">;
 
 //===----------------------------------------------------------------------===//
 //  AVSrc_* Operands with an AGPR or VGPR
@@ -1016,6 +1063,31 @@ def AVSrc_64 : RegisterOperand<AV_64> {
   let EncoderMethod = "getAVOperandEncoding";
 }
 
+def AVLdSt_32 : RegisterOperand<AV_32> {
+  let DecoderMethod = "DecodeAVLdSt_32RegisterClass";
+  let EncoderMethod = "getAVOperandEncoding";
+}
+
+def AVLdSt_64 : RegisterOperand<AV_64> {
+  let DecoderMethod = "DecodeAVLdSt_64RegisterClass";
+  let EncoderMethod = "getAVOperandEncoding";
+}
+
+def AVLdSt_96 : RegisterOperand<AV_96> {
+  let DecoderMethod = "DecodeAVLdSt_96RegisterClass";
+  let EncoderMethod = "getAVOperandEncoding";
+}
+
+def AVLdSt_128 : RegisterOperand<AV_128> {
+  let DecoderMethod = "DecodeAVLdSt_128RegisterClass";
+  let EncoderMethod = "getAVOperandEncoding";
+}
+
+def AVLdSt_160 : RegisterOperand<AV_160> {
+  let DecoderMethod = "DecodeAVLdSt_160RegisterClass";
+  let EncoderMethod = "getAVOperandEncoding";
+}
+
 //===----------------------------------------------------------------------===//
 //  ACSrc_* Operands with an AGPR or an inline constant
 //===----------------------------------------------------------------------===//
@@ -1024,3 +1096,8 @@ defm AISrc      : RegInlineOperandAC<"AGPR", "AISrc">;
 defm AISrc_128  : RegInlineOperandAC<"AReg", "AISrc_128",  "_128">;
 defm AISrc_512  : RegInlineOperandAC<"AReg", "AISrc_512",  "_512">;
 defm AISrc_1024 : RegInlineOperandAC<"AReg", "AISrc_1024", "_1024">;
+
+let DecoderMethod = "decodeOperand_AReg_64" in
+defm AISrc_64   : RegInlineOperandAC64<"AReg", "AISrc_64",   "_64">;
+let DecoderMethod = "decodeOperand_AReg_256" in
+defm AISrc_256  : RegInlineOperandAC64<"AReg", "AISrc_256",  "_256">;
