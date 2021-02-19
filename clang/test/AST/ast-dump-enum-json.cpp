@@ -79,7 +79,7 @@ enum class I : int {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "One",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "(unnamed enum at {{.*}}:3:1)"
+// CHECK-NEXT:     "qualType": "(anonymous enum at {{.*}}:3:1)"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
@@ -105,7 +105,7 @@ enum class I : int {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Two",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "(unnamed enum at {{.*}}:3:1)"
+// CHECK-NEXT:     "qualType": "(anonymous enum at {{.*}}:3:1)"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]

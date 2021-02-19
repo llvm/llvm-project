@@ -17,4 +17,4 @@ void test() {
 // CHECK-NEXT:           |-CompoundStmt {{.*}} <line:5:3, line:8:3>
 // CHECK-NEXT:           | `-OMPSectionDirective {{.*}} <line:6:1, col:20>
 // CHECK-NEXT:           | `-NullStmt {{.*}} <line:7:5>
-// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-section.c:4:1) *const restrict'
+// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-section.c:4:1) *const restrict'
