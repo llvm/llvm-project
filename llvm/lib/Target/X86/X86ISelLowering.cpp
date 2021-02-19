@@ -2221,7 +2221,7 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
 
     // If we got a 512-bit vector then we'll definitely have a vXi1 compare.
     if (LegalVT.getSimpleVT().is512BitVector())
-      return VT.changeVectorElementType(MVT::i1);
+      return EVT::getVectorVT(Context, MVT::i1, VT.getVectorElementCount());
 
     if (LegalVT.getSimpleVT().isVector() && Subtarget.hasVLX()) {
       // If we legalized to less than a 512-bit vector, then we will use a vXi1
@@ -2229,7 +2229,7 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
       // vXi16/vXi8.
       MVT EltVT = LegalVT.getSimpleVT().getVectorElementType();
       if (Subtarget.hasBWI() || EltVT.getSizeInBits() >= 32)
-        return VT.changeVectorElementType(MVT::i1);
+        return EVT::getVectorVT(Context, MVT::i1, VT.getVectorElementCount());
     }
   }
 
