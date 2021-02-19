@@ -161,6 +161,24 @@ static const Instruction *safeCxtI(const Value *V, const Instruction *CxtI) {
   return nullptr;
 }
 
+static const Instruction *safeCxtI(const Value *V1, const Value *V2, const Instruction *CxtI) {
+  // If we've been provided with a context instruction, then use that (provided
+  // it has been inserted).
+  if (CxtI && CxtI->getParent())
+    return CxtI;
+
+  // If the value is really an already-inserted instruction, then use that.
+  CxtI = dyn_cast<Instruction>(V1);
+  if (CxtI && CxtI->getParent())
+    return CxtI;
+
+  CxtI = dyn_cast<Instruction>(V2);
+  if (CxtI && CxtI->getParent())
+    return CxtI;
+
+  return nullptr;
+}
+
 static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
                                    const APInt &DemandedElts,
                                    APInt &DemandedLHS, APInt &DemandedRHS) {
@@ -358,7 +376,7 @@ bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
                            const Instruction *CxtI, const DominatorTree *DT,
                            bool UseInstrInfo) {
   return ::isKnownNonEqual(V1, V2, 0,
-                           Query(DL, AC, safeCxtI(V1, safeCxtI(V2, CxtI)), DT,
+                           Query(DL, AC, safeCxtI(V2, V1, CxtI), DT,
                                  UseInstrInfo, /*ORE=*/nullptr));
 }
 
