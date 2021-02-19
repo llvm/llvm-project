@@ -1116,21 +1116,17 @@ AliasResult BasicAAResult::aliasGEP(
     DecompGEP1.Offset -= DecompGEP2.Offset;
     GetIndexDifference(DecompGEP1.VarIndices, DecompGEP2.VarIndices);
 
+    // For GEPs with identical offsets, we can preserve the size and AAInfo
+    // when performing the alias check on the underlying objects.
+    if (DecompGEP1.Offset == 0 && DecompGEP1.VarIndices.empty())
+      return getBestAAResults().alias(
+          MemoryLocation(UnderlyingV1, V1Size, V1AAInfo),
+          MemoryLocation(UnderlyingV2, V2Size, V2AAInfo), AAQI);
+
     // Do the base pointers alias?
     AliasResult BaseAlias = getBestAAResults().alias(
         MemoryLocation::getBeforeOrAfter(UnderlyingV1),
         MemoryLocation::getBeforeOrAfter(UnderlyingV2), AAQI);
-
-    // For GEPs with identical offsets, we can preserve the size and AAInfo
-    // when performing the alias check on the underlying objects.
-    if (BaseAlias == MayAlias && DecompGEP1.Offset == 0 &&
-        DecompGEP1.VarIndices.empty()) {
-      AliasResult PreciseBaseAlias = getBestAAResults().alias(
-          MemoryLocation(UnderlyingV1, V1Size, V1AAInfo),
-          MemoryLocation(UnderlyingV2, V2Size, V2AAInfo), AAQI);
-      if (PreciseBaseAlias == NoAlias)
-        return NoAlias;
-    }
 
     // If we get a No or May, then return it immediately, no amount of analysis
     // will improve this situation.
