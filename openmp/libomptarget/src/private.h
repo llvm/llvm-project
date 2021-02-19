@@ -23,8 +23,7 @@
 extern int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
                            void **args_base, void **args, int64_t *arg_sizes,
                            int64_t *arg_types, map_var_info_t *arg_names,
-                           void **arg_mappers,
-                           __tgt_async_info *async_info_ptr);
+                           void **arg_mappers, __tgt_async_info *AsyncInfo);
 
 extern int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
                          void **ArgBases, void **Args, int64_t *ArgSizes,
@@ -34,14 +33,13 @@ extern int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
 extern int targetDataUpdate(ident_t *loc, DeviceTy &Device, int32_t arg_num,
                             void **args_base, void **args, int64_t *arg_sizes,
                             int64_t *arg_types, map_var_info_t *arg_names,
-                            void **arg_mappers,
-                            __tgt_async_info *async_info_ptr = nullptr);
+                            void **arg_mappers, __tgt_async_info *AsyncInfo);
 
 extern int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
                   int64_t *ArgTypes, map_var_info_t *arg_names,
                   void **ArgMappers, int32_t TeamNum, int32_t ThreadLimit,
-                  int IsTeamConstruct);
+                  int IsTeamConstruct, __tgt_async_info *AsyncInfo);
 
 extern int CheckDeviceAndCtors(int64_t device_id);
 
