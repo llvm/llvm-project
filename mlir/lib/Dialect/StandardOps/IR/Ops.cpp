@@ -3558,6 +3558,37 @@ OpFoldResult TensorToMemrefOp::fold(ArrayRef<Attribute>) {
   return {};
 }
 
+namespace {
+/// Replace tensor_cast + tensor_to_memref by tensor_to_memref + memref_cast.
+struct TensorCastToMemref : public OpRewritePattern<TensorToMemrefOp> {
+  using OpRewritePattern<TensorToMemrefOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TensorToMemrefOp tensorToMemRef,
+                                PatternRewriter &rewriter) const final {
+    auto tensorCastOperand =
+        tensorToMemRef.getOperand().getDefiningOp<tensor::CastOp>();
+    if (!tensorCastOperand)
+      return failure();
+    auto srcTensorType =
+        tensorCastOperand.getOperand().getType().dyn_cast<RankedTensorType>();
+    if (!srcTensorType)
+      return failure();
+    auto memrefType = MemRefType::get(srcTensorType.getShape(),
+                                      srcTensorType.getElementType());
+    Value memref = rewriter.create<TensorToMemrefOp>(
+        tensorToMemRef.getLoc(), memrefType, tensorCastOperand.getOperand());
+    rewriter.replaceOpWithNewOp<MemRefCastOp>(tensorToMemRef,
+                                              tensorToMemRef.getType(), memref);
+    return success();
+  }
+};
+} // namespace
+
+void TensorToMemrefOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<TensorCastToMemref>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//
