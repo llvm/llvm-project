@@ -233,7 +233,11 @@ TEST_F(LSPTest, ModulesTest) {
 
   public:
     void add(const int &X) { Value += X; }
-    void get(const std::nullptr_t &, Callback<int> Reply) { Reply(Value); }
+    void get(const std::nullptr_t &, Callback<int> Reply) {
+      scheduler().runQuick(
+          "get", "",
+          [Reply(std::move(Reply)), Value(Value)]() mutable { Reply(Value); });
+    }
   };
   ModuleSet Mods;
   Mods.add(std::make_unique<MathModule>());
