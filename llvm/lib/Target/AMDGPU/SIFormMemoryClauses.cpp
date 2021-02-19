@@ -112,8 +112,7 @@ static bool isValidClauseInst(const MachineInstr &MI, bool IsVMEMClause) {
     return false;
   if (!MI.mayLoad() || MI.mayStore())
     return false;
-  if (AMDGPU::getAtomicNoRetOp(MI.getOpcode()) != -1 ||
-      AMDGPU::getAtomicRetOp(MI.getOpcode()) != -1)
+  if (SIInstrInfo::isAtomic(MI))
     return false;
   if (IsVMEMClause && !isVMEMClauseInst(MI))
     return false;
