@@ -2923,11 +2923,11 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
         data_byte_size = 4;
         break;
       case eFormatAddressInfo:
-        if (data_byte_size == 0) {
-          data_byte_size = exe_scope->CalculateTarget()
-                               ->GetArchitecture()
-                               .GetAddressByteSize();
-          item_count = 1;
+        if (data_byte_size == 0 && exe_scope) {
+          if (auto target_sp = exe_scope->CalculateTarget()) {
+            data_byte_size = target_sp->GetArchitecture().GetAddressByteSize();
+            item_count = 1;
+          }
         }
         break;
       default:
