@@ -130,11 +130,13 @@ public:
   bool isConstantUsed() const;
 
   /// This method classifies the entry according to whether or not it may
-  /// generate a relocation entry.  This must be conservative, so if it might
-  /// codegen to a relocatable entry, it should say so.
+  /// generate a relocation entry (either static or dynamic). This must be
+  /// conservative, so if it might codegen to a relocatable entry, it should say
+  /// so.
   ///
   /// FIXME: This really should not be in IR.
   bool needsRelocation() const;
+  bool needsDynamicRelocation() const;
 
   /// For aggregates (struct/array/vector) return the constant that corresponds
   /// to the specified element if possible, or null if not. This can return null
@@ -214,6 +216,24 @@ public:
   /// both must either be scalars or vectors with the same element count. If no
   /// changes are made, the constant C is returned.
   static Constant *mergeUndefsWith(Constant *C, Constant *Other);
+
+private:
+  enum PossibleRelocationsTy {
+    /// This constant requires no relocations. That is, it holds simple
+    /// constants (like integrals).
+    NoRelocation = 0,
+
+    /// This constant holds static relocations that can be resolved by the
+    /// static linker.
+    LocalRelocation = 1,
+
+    /// This constant holds dynamic relocations that the dynamic linker will
+    /// need to resolve.
+    GlobalRelocation = 2,
+  };
+
+  /// Determine what potential relocations may be needed by this constant.
+  PossibleRelocationsTy getRelocationInfo() const;
 };
 
 } // end namespace llvm
