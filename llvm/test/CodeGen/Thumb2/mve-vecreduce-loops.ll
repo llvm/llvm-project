@@ -521,8 +521,7 @@ define float @fadd_f32(float* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    add.w r0, r0, r2, lsl #2
 ; CHECK-NEXT:  .LBB5_8: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldr s2, [r0]
-; CHECK-NEXT:    adds r0, #4
+; CHECK-NEXT:    vldmia r0!, {s2}
 ; CHECK-NEXT:    vadd.f32 s0, s2, s0
 ; CHECK-NEXT:    le lr, .LBB5_8
 ; CHECK-NEXT:  .LBB5_9: @ %for.cond.cleanup
@@ -620,8 +619,7 @@ define float @fmul_f32(float* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    add.w r0, r0, r2, lsl #2
 ; CHECK-NEXT:  .LBB6_8: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldr s2, [r0]
-; CHECK-NEXT:    adds r0, #4
+; CHECK-NEXT:    vldmia r0!, {s2}
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    le lr, .LBB6_8
 ; CHECK-NEXT:  .LBB6_9: @ %for.cond.cleanup
