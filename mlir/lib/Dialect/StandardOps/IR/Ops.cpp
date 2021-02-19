@@ -2891,8 +2891,68 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
   dispatchIndexOpFoldResults(leadingStaticStrides, dynamicStrides,
                              staticStrides, ShapedType::kDynamicStrideOrOffset);
   return SubViewOp::inferResultType(sourceMemRefType, staticOffsets,
-                                    staticSizes, staticStrides)
-      .cast<MemRefType>();
+                                    staticSizes, staticStrides);
+}
+
+static void
+getPositionsOfShapeOne(unsigned rank, ArrayRef<int64_t> shape,
+                       llvm::SmallDenseSet<unsigned> &dimsToProject) {
+  dimsToProject.reserve(rank);
+  for (unsigned pos = 0, e = shape.size(); pos < e && rank > 0; ++pos) {
+    if (shape[pos] == 1) {
+      dimsToProject.insert(pos);
+      --rank;
+    }
+  }
+}
+
+Type SubViewOp::inferRankReducedResultType(
+    unsigned resultRank, MemRefType sourceRankedTensorType,
+    ArrayRef<int64_t> leadingStaticOffsets,
+    ArrayRef<int64_t> leadingStaticSizes,
+    ArrayRef<int64_t> leadingStaticStrides) {
+  auto inferredType =
+      inferResultType(sourceRankedTensorType, leadingStaticOffsets,
+                      leadingStaticSizes, leadingStaticStrides)
+          .cast<MemRefType>();
+  assert(inferredType.getRank() >= resultRank && "expected ");
+  int rankDiff = inferredType.getRank() - resultRank;
+  if (rankDiff > 0) {
+    auto shape = inferredType.getShape();
+    llvm::SmallDenseSet<unsigned> dimsToProject;
+    getPositionsOfShapeOne(rankDiff, shape, dimsToProject);
+    SmallVector<int64_t> projectedShape;
+    for (unsigned pos = 0, e = shape.size(); pos < e; ++pos)
+      if (!dimsToProject.contains(pos))
+        projectedShape.push_back(shape[pos]);
+
+    AffineMap map;
+    auto maps = inferredType.getAffineMaps();
+    if (!maps.empty() && maps.front())
+      map = getProjectedMap(maps.front(), dimsToProject);
+    inferredType =
+        MemRefType::get(projectedShape, inferredType.getElementType(), map,
+                        inferredType.getMemorySpace());
+  }
+  return inferredType;
+}
+
+Type SubViewOp::inferRankReducedResultType(
+    unsigned resultRank, MemRefType sourceRankedTensorType,
+    ArrayRef<OpFoldResult> leadingStaticOffsets,
+    ArrayRef<OpFoldResult> leadingStaticSizes,
+    ArrayRef<OpFoldResult> leadingStaticStrides) {
+  SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
+  SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
+  dispatchIndexOpFoldResults(leadingStaticOffsets, dynamicOffsets,
+                             staticOffsets, ShapedType::kDynamicStrideOrOffset);
+  dispatchIndexOpFoldResults(leadingStaticSizes, dynamicSizes, staticSizes,
+                             ShapedType::kDynamicSize);
+  dispatchIndexOpFoldResults(leadingStaticStrides, dynamicStrides,
+                             staticStrides, ShapedType::kDynamicStrideOrOffset);
+  return SubViewOp::inferRankReducedResultType(
+      resultRank, sourceRankedTensorType, staticOffsets, staticSizes,
+      staticStrides);
 }
 
 // Build a SubViewOp with mixed static and dynamic entries and custom result
@@ -3407,29 +3467,11 @@ public:
     /// Deduce the resultType of the SubViewOp using `inferSubViewResultType` on
     /// the cast source operand type and the SubViewOp static information. This
     /// is the resulting type if the MemRefCastOp were folded.
-    auto resultType = SubViewOp::inferResultType(
-                          castOp.source().getType().cast<MemRefType>(),
-                          extractFromI64ArrayAttr(subViewOp.static_offsets()),
-                          extractFromI64ArrayAttr(subViewOp.static_sizes()),
-                          extractFromI64ArrayAttr(subViewOp.static_strides()))
-                          .cast<MemRefType>();
-    uint32_t rankDiff =
-        subViewOp.getSourceType().getRank() - subViewOp.getType().getRank();
-    if (rankDiff > 0) {
-      auto shape = resultType.getShape();
-      auto projectedShape = shape.drop_front(rankDiff);
-      AffineMap map;
-      auto maps = resultType.getAffineMaps();
-      if (!maps.empty() && maps.front()) {
-        auto optionalUnusedDimsMask =
-            computeRankReductionMask(shape, projectedShape);
-        llvm::SmallDenseSet<unsigned> dimsToProject =
-            optionalUnusedDimsMask.getValue();
-        map = getProjectedMap(maps.front(), dimsToProject);
-      }
-      resultType = MemRefType::get(projectedShape, resultType.getElementType(),
-                                   map, resultType.getMemorySpace());
-    }
+    auto resultType = SubViewOp::inferRankReducedResultType(
+        subViewOp.getType().getRank(),
+        castOp.source().getType().cast<MemRefType>(),
+        subViewOp.getMixedOffsets(), subViewOp.getMixedSizes(),
+        subViewOp.getMixedStrides());
     Value newSubView = rewriter.create<SubViewOp>(
         subViewOp.getLoc(), resultType, castOp.source(), subViewOp.offsets(),
         subViewOp.sizes(), subViewOp.strides(), subViewOp.static_offsets(),
@@ -3492,8 +3534,52 @@ Type SubTensorOp::inferResultType(RankedTensorType sourceRankedTensorType,
   dispatchIndexOpFoldResults(leadingStaticStrides, dynamicStrides,
                              staticStrides, ShapedType::kDynamicStrideOrOffset);
   return SubTensorOp::inferResultType(sourceRankedTensorType, staticOffsets,
-                                      staticSizes, staticStrides)
-      .cast<RankedTensorType>();
+                                      staticSizes, staticStrides);
+}
+
+/// A subtensor result type can be fully inferred from the source type and the
+/// static representation of offsets, sizes and strides. Special sentinels
+/// encode the dynamic case.
+Type SubTensorOp::inferRankReducedResultType(
+    unsigned resultRank, RankedTensorType sourceRankedTensorType,
+    ArrayRef<int64_t> leadingStaticOffsets,
+    ArrayRef<int64_t> leadingStaticSizes,
+    ArrayRef<int64_t> leadingStaticStrides) {
+  auto inferredType =
+      inferResultType(sourceRankedTensorType, leadingStaticOffsets,
+                      leadingStaticSizes, leadingStaticStrides)
+          .cast<RankedTensorType>();
+  int rankDiff = inferredType.getRank() - resultRank;
+  if (rankDiff > 0) {
+    auto shape = inferredType.getShape();
+    llvm::SmallDenseSet<unsigned> dimsToProject;
+    getPositionsOfShapeOne(rankDiff, shape, dimsToProject);
+    SmallVector<int64_t> projectedShape;
+    for (unsigned pos = 0, e = shape.size(); pos < e; ++pos)
+      if (!dimsToProject.contains(pos))
+        projectedShape.push_back(shape[pos]);
+    inferredType =
+        RankedTensorType::get(projectedShape, inferredType.getElementType());
+  }
+  return inferredType;
+}
+
+Type SubTensorOp::inferRankReducedResultType(
+    unsigned resultRank, RankedTensorType sourceRankedTensorType,
+    ArrayRef<OpFoldResult> leadingStaticOffsets,
+    ArrayRef<OpFoldResult> leadingStaticSizes,
+    ArrayRef<OpFoldResult> leadingStaticStrides) {
+  SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
+  SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
+  dispatchIndexOpFoldResults(leadingStaticOffsets, dynamicOffsets,
+                             staticOffsets, ShapedType::kDynamicStrideOrOffset);
+  dispatchIndexOpFoldResults(leadingStaticSizes, dynamicSizes, staticSizes,
+                             ShapedType::kDynamicSize);
+  dispatchIndexOpFoldResults(leadingStaticStrides, dynamicStrides,
+                             staticStrides, ShapedType::kDynamicStrideOrOffset);
+  return SubTensorOp::inferRankReducedResultType(
+      resultRank, sourceRankedTensorType, staticOffsets, staticSizes,
+      staticStrides);
 }
 
 // Build a SubTensorOp with mixed static and dynamic entries and custom result
@@ -3571,11 +3657,65 @@ static LogicalResult verify(SubTensorOp op) {
   return produceSubViewErrorMsg(result, op, expectedType);
 }
 
+namespace {
+/// Pattern to rewrite a subtensor op with tensor::Cast arguments.
+/// This essentially pushes memref_cast past its consuming subtensor when
+/// `canFoldIntoConsumerOp` is true.
+///
+/// Example:
+/// ```
+///   %0 = tensorcast %V : tensor<16x16xf32> to tensor<?x?xf32>
+///   %1 = subtensor %0[0, 0][3, 4][1, 1] : tensor<?x?xf32> to tensor<3x4xf32>
+/// ```
+/// is rewritten into:
+/// ```
+///   %0 = subtensor %V[0, 0][3, 4][1, 1] : tensor<16x16xf32> to tensor<3x4xf32>
+///   %1 = tensor.cast %0: tensor<3x4xf32> to tensor<3x4xf32>
+/// ```
+class SubTensorOpCastFolder final : public OpRewritePattern<SubTensorOp> {
+public:
+  using OpRewritePattern<SubTensorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SubTensorOp subTensorOp,
+                                PatternRewriter &rewriter) const override {
+    // Any constant operand, just return to let SubViewOpConstantFolder kick in.
+    if (llvm::any_of(subTensorOp.getOperands(), [](Value operand) {
+          return matchPattern(operand, m_ConstantIndex());
+        }))
+      return failure();
+
+    auto castOp = subTensorOp.source().getDefiningOp<tensor::CastOp>();
+    if (!castOp)
+      return failure();
+
+    if (!canFoldIntoConsumerOp(castOp))
+      return failure();
+
+    /// Deduce the resultType of SubTensorOp with `inferRankReducedResultType`
+    /// on the cast source operand type and the SubTensorOp static information.
+    /// This is the resulting type if the tensor::CastOp were folded and
+    /// rank-reduced to the desired result rank.
+    auto resultType = SubTensorOp::inferRankReducedResultType(
+        subTensorOp.getType().getRank(),
+        castOp.source().getType().cast<RankedTensorType>(),
+        subTensorOp.getMixedOffsets(), subTensorOp.getMixedSizes(),
+        subTensorOp.getMixedStrides());
+    Value newSubTensor = rewriter.create<SubTensorOp>(
+        subTensorOp.getLoc(), resultType, castOp.source(),
+        subTensorOp.offsets(), subTensorOp.sizes(), subTensorOp.strides(),
+        subTensorOp.static_offsets(), subTensorOp.static_sizes(),
+        subTensorOp.static_strides());
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(
+        subTensorOp, subTensorOp.getType(), newSubTensor);
+    return success();
+  }
+};
+} // namespace
+
 void SubTensorOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                               MLIRContext *context) {
-  results
-      .insert<OpWithOffsetSizesAndStridesConstantArgumentFolder<SubTensorOp>>(
-          context);
+  results.insert<OpWithOffsetSizesAndStridesConstantArgumentFolder<SubTensorOp>,
+                 SubTensorOpCastFolder>(context);
 }
 
 //
