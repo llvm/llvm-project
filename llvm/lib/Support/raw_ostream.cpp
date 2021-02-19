@@ -563,6 +563,53 @@ void format_object_base::home() {
 //===----------------------------------------------------------------------===//
 //  raw_fd_ostream
 //===----------------------------------------------------------------------===//
+static void emitExtraOpenFileFailDiagnostic(const Twine &Name,
+                                            const Twine &Error,
+                                            int Retries) {
+  SmallVector<char, 64> Buffer;
+  raw_svector_ostream OS(Buffer);
+  OS << "Open File failed on file: " << Name << "\n";
+  OS << "Error: " << Error << "\n";
+  OS << "Attempted again: " << Retries << " times\n";
+  StringRef MessageStr = OS.str();
+  ::write(2, MessageStr.data(), MessageStr.size());
+}
+
+static std::error_code openFileForWriteWithRetry(const Twine &Name, int &ResultFD,
+                                                 sys::fs::CreationDisposition Disp,
+                                                 llvm::sys::fs::OpenFlags Flags,
+                                                 bool WithRead) {
+  // This is a workaround for a Swift compiler issue wherein the compiler
+  // occassionally fails when destructing a file descriptor with no meaningful
+  // diagnostic.
+  // Re-try opening descriptor, in case it helps.
+  // Emit additional diagnostics to ease with root-causing this issue.
+  // Reversal tracked in: rdar://74359658
+  std::error_code EC;
+  if (WithRead)
+    EC = sys::fs::openFileForReadWrite(Name, ResultFD, Disp, Flags);
+  else
+    EC = sys::fs::openFileForWrite(Name, ResultFD, Disp, Flags);
+
+  if (EC) {
+    const unsigned MAX_COUNT = 10;
+    unsigned I = 0;
+    for (I = 0; I != MAX_COUNT; ++I) {
+      std::error_code RetryEC;
+      if (WithRead)
+        RetryEC = sys::fs::openFileForReadWrite(Name, ResultFD, Disp, Flags);
+      else
+        RetryEC = sys::fs::openFileForWrite(Name, ResultFD, Disp, Flags);
+      if (!RetryEC) {
+        EC = RetryEC;
+        break;
+      }
+    }
+    emitExtraOpenFileFailDiagnostic(Name, EC.message(), I);
+  }
+
+  return EC;
+}
 
 static int getFD(StringRef Filename, std::error_code &EC,
                  sys::fs::CreationDisposition Disp, sys::fs::FileAccess Access,
@@ -583,9 +630,9 @@ static int getFD(StringRef Filename, std::error_code &EC,
 
   int FD;
   if (Access & sys::fs::FA_Read)
-    EC = sys::fs::openFileForReadWrite(Filename, FD, Disp, Flags);
+    EC = openFileForWriteWithRetry(Filename, FD, Disp, Flags, true);
   else
-    EC = sys::fs::openFileForWrite(Filename, FD, Disp, Flags);
+    EC = openFileForWriteWithRetry(Filename, FD, Disp, Flags, false);
   if (EC)
     return -1;
 
@@ -663,8 +710,39 @@ raw_fd_ostream::~raw_fd_ostream() {
   if (FD >= 0) {
     flush();
     if (ShouldClose) {
-      if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
-        error_detected(EC);
+      if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD)) {
+        // This is a workaround for a Swift compiler issue wherein the compiler
+        // occassionally crashes in this destructor with no meaningful error
+        // diagnostic.
+        // Re-try closing the file descriptor, in case it helps.
+        // Emit additional diagnostics to ease with root-causing this issue.
+        // Reversal tracked in: rdar://74359658
+        const unsigned MAX_RETRY_COUNT = 10;
+        bool AllAttemptsFailed = true;
+        unsigned I;
+        for (I = 0; I != MAX_RETRY_COUNT; ++I) {
+          if (bool(sys::Process::SafelyCloseFileDescriptor(FD)) == false) {
+            AllAttemptsFailed = false;
+            break;
+          }
+        }
+        {
+          // Blast the error out to stderr.  We don't try hard to make sure
+          // this succeeds and we can't use errs() here because it may be
+          // part of the problem.
+          SmallVector<char, 64> Buffer;
+          raw_svector_ostream OS(Buffer);
+          OS << "File Descriptor close failed on FD: " << FD << "\n";
+          OS << "Error: " << EC.message() << "\n";
+          OS << "Attempted to retry: " << I << " times.\n";
+          OS << "A re-try attempt succeeded: "
+             << (AllAttemptsFailed ? "false" : "true") << "\n";
+          StringRef MessageStr = OS.str();
+          ::write(2, MessageStr.data(), MessageStr.size());
+        }
+        if (AllAttemptsFailed)
+          error_detected(EC);
+      }
     }
   }
 
