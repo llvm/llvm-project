@@ -17,4 +17,4 @@ void test() {
 // CHECK-NEXT:           | `-OMPCancellationPointDirective {{.*}} <line:6:1, col:40> openmp_standalone_directive
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-cancellation-point.c:4:1) *const restrict'
+// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-cancellation-point.c:4:1) *const restrict'
