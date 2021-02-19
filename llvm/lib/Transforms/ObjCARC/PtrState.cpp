@@ -44,8 +44,6 @@ raw_ostream &llvm::objcarc::operator<<(raw_ostream &OS, const Sequence S) {
     return OS << "S_CanRelease";
   case S_Use:
     return OS << "S_Use";
-  case S_Release:
-    return OS << "S_Release";
   case S_MovableRelease:
     return OS << "S_MovableRelease";
   case S_Stop:
@@ -75,12 +73,10 @@ static Sequence MergeSeqs(Sequence A, Sequence B, bool TopDown) {
   } else {
     // Choose the side which is further along in the sequence.
     if ((A == S_Use || A == S_CanRelease) &&
-        (B == S_Use || B == S_Release || B == S_Stop || B == S_MovableRelease))
+        (B == S_Use || B == S_Stop || B == S_MovableRelease))
       return A;
     // If both sides are releases, choose the more conservative one.
-    if (A == S_Stop && (B == S_Release || B == S_MovableRelease))
-      return A;
-    if (A == S_Release && B == S_MovableRelease)
+    if (A == S_Stop && B == S_MovableRelease)
       return A;
   }
 
@@ -184,7 +180,7 @@ bool BottomUpPtrState::InitBottomUp(ARCMDKindCache &Cache, Instruction *I) {
   // pairs by making PtrState hold a stack of states, but this is
   // simple and avoids adding overhead for the non-nested case.
   bool NestingDetected = false;
-  if (GetSeq() == S_Release || GetSeq() == S_MovableRelease) {
+  if (GetSeq() == S_MovableRelease) {
     LLVM_DEBUG(
         dbgs() << "        Found nested releases (i.e. a release pair)\n");
     NestingDetected = true;
@@ -192,8 +188,10 @@ bool BottomUpPtrState::InitBottomUp(ARCMDKindCache &Cache, Instruction *I) {
 
   MDNode *ReleaseMetadata =
       I->getMetadata(Cache.get(ARCMDKindID::ImpreciseRelease));
-  Sequence NewSeq = ReleaseMetadata ? S_MovableRelease : S_Release;
+  Sequence NewSeq = ReleaseMetadata ? S_MovableRelease : S_Stop;
   ResetSequenceProgress(NewSeq);
+  if (NewSeq == S_Stop)
+    InsertReverseInsertPt(I);
   SetReleaseMetadata(ReleaseMetadata);
   SetKnownSafe(HasKnownPositiveRefCount());
   SetTailCallRelease(cast<CallInst>(I)->isTailCall());
@@ -208,7 +206,6 @@ bool BottomUpPtrState::MatchWithRetain() {
   Sequence OldSeq = GetSeq();
   switch (OldSeq) {
   case S_Stop:
-  case S_Release:
   case S_MovableRelease:
   case S_Use:
     // If OldSeq is not S_Use or OldSeq is S_Use and we are tracking an
@@ -243,7 +240,6 @@ bool BottomUpPtrState::HandlePotentialAlterRefCount(Instruction *Inst,
     SetSeq(S_CanRelease);
     return true;
   case S_CanRelease:
-  case S_Release:
   case S_MovableRelease:
   case S_Stop:
   case S_None:
@@ -292,17 +288,11 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
 
   // Check for possible direct uses.
   switch (GetSeq()) {
-  case S_Release:
   case S_MovableRelease:
     if (CanUse(Inst, Ptr, PA, Class)) {
       LLVM_DEBUG(dbgs() << "            CanUse: Seq: " << GetSeq() << "; "
                         << *Ptr << "\n");
       SetSeqAndInsertReverseInsertPt(S_Use);
-    } else if (Seq == S_Release && IsUser(Class)) {
-      LLVM_DEBUG(dbgs() << "            PreciseReleaseUse: Seq: " << GetSeq()
-                        << "; " << *Ptr << "\n");
-      // Non-movable releases depend on any possible objc pointer use.
-      SetSeqAndInsertReverseInsertPt(S_Stop);
     } else if (const auto *Call = getreturnRVOperand(*Inst, Class)) {
       if (CanUse(Call, Ptr, PA, GetBasicARCInstKind(Call))) {
         LLVM_DEBUG(dbgs() << "            ReleaseUse: Seq: " << GetSeq() << "; "
@@ -378,7 +368,6 @@ bool TopDownPtrState::MatchWithRelease(ARCMDKindCache &Cache,
   case S_None:
     return false;
   case S_Stop:
-  case S_Release:
   case S_MovableRelease:
     llvm_unreachable("top-down pointer in bottom up state!");
   }
@@ -418,7 +407,6 @@ bool TopDownPtrState::HandlePotentialAlterRefCount(
   case S_None:
     return false;
   case S_Stop:
-  case S_Release:
   case S_MovableRelease:
     llvm_unreachable("top-down pointer in release state!");
   }
@@ -442,7 +430,6 @@ void TopDownPtrState::HandlePotentialUse(Instruction *Inst, const Value *Ptr,
   case S_None:
     return;
   case S_Stop:
-  case S_Release:
   case S_MovableRelease:
     llvm_unreachable("top-down pointer in release state!");
   }
