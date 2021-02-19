@@ -39,8 +39,10 @@ FileHeader:
 Sections:
   - Name:    .llvm_bb_addr_map
     Type:    SHT_LLVM_BB_ADDR_MAP
+    ShSize:    [[SIZE=<none>]]
     Entries:
       - Address:   0x0
+        NumBlocks: [[NUMBLOCKS=<none>]]
         BBEntries:
           - AddressOffset:    0x1
             Size:             0x2
@@ -57,37 +59,10 @@ Sections:
             Size:             0xB
             Metadata:         0xC
 
-## Check that obj2yaml uses the "Content" tag to describe an .llvm_bb_addr_map section
-## when it can't extract the entries. For instance, when truncated data is given as
-## 'Content'.
-
-# RUN: yaml2obj --docnum=2 %s -o %t2
-# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=INVALID
-
-# INVALID:      --- !ELF
-# INVALID-NEXT: FileHeader:
-# INVALID-NEXT:   Class:   ELFCLASS64
-# INVALID-NEXT:   Data:    ELFDATA2LSB
-# INVALID-NEXT:   Type:    ET_EXEC
-# INVALID-NEXT: Sections:
-# INVALID-NEXT:   - Name: .llvm_bb_addr_map
-# INVALID-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
-# INVALID-NEXT:     Content: '10000000000000'
-
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_EXEC
-Sections:
-  - Name:    .llvm_bb_addr_map
-    Type:    SHT_LLVM_BB_ADDR_MAP
-    Content: '10000000000000'
-
 ## Check obj2yaml can dump empty .llvm_bb_addr_map sections.
 
-# RUN: yaml2obj --docnum=3 %s -o %t3
-# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=EMPTY
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=EMPTY
 
 # EMPTY:      --- !ELF
 # EMPTY-NEXT: FileHeader:
@@ -111,8 +86,8 @@ Sections:
 
 ## Check obj2yaml can dump multiple .llvm_bb_addr_map sections.
 
-# RUN: yaml2obj --docnum=4 %s -o %t4
-# RUN: obj2yaml %t4 | FileCheck %s --check-prefix=MULTI
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=MULTI
 
 # MULTI:      --- !ELF
 # MULTI-NEXT: FileHeader:
@@ -153,3 +128,24 @@ Sections:
     Type:    SHT_LLVM_BB_ADDR_MAP
     Entries:
       - Address:   0x20
+
+## Check that obj2yaml uses the "Content" tag to describe an .llvm_bb_addr_map section
+## when it can't extract the entries, for example, when section is truncated, or when
+## an invalid NumBlocks field is specified.
+
+# RUN: yaml2obj --docnum=1 -DSIZE=0x8 %s -o %t4
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefixes=TRUNCATED,INVALID
+
+# RUN: yaml2obj --docnum=1 -DNUMBLOCKS=2 %s -o %t5
+# RUN: obj2yaml %t5 | FileCheck %s --check-prefixes=BADNUMBLOCKS,INVALID
+
+# INVALID:           --- !ELF
+# INVALID-NEXT:      FileHeader:
+# INVALID-NEXT:        Class:   ELFCLASS64
+# INVALID-NEXT:        Data:    ELFDATA2LSB
+# INVALID-NEXT:        Type:    ET_EXEC
+# INVALID-NEXT:      Sections:
+# INVALID-NEXT:        - Name: .llvm_bb_addr_map
+# INVALID-NEXT:          Type: SHT_LLVM_BB_ADDR_MAP
+# BADNUMBLOCKS-NEXT:     Content: {{([[:xdigit:]]+)}}{{$}}
+# TRUNCATED-NEXT:        Content: '{{([[:xdigit:]]{16})}}'{{$}}
