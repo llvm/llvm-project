@@ -125,7 +125,7 @@ let Command = "breakpoint set" in {
   def breakpoint_set_address : Option<"address", "a">, Group<2>,
     Arg<"AddressOrExpression">, Required,
     Desc<"Set the breakpoint at the specified address.  If the address maps "
-    "uniquely toa particular binary, then the address will be converted to "
+    "uniquely to a particular binary, then the address will be converted to "
     "a \"file\"address, so that the breakpoint will track that binary+offset "
     "no matter where the binary eventually loads.  Alternately, if you also "
     "specify the module - with the -s option - then the address will be "
