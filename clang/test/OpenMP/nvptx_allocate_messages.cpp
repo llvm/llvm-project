@@ -81,8 +81,7 @@ int main () {
 #endif // DEVICE && !REQUIRES
 #pragma omp allocate(b)
 #if defined(DEVICE) && !defined(REQUIRES)
-// expected-note@+3 {{in instantiation of function template specialization 'foo<int>' requested here}}
-// expected-note@+2 {{called by 'main'}}
+// expected-note@+2 2{{called by 'main'}}
 #endif // DEVICE && !REQUIRES
   return (foo<int>() + bar());
 }
