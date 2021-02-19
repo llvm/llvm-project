@@ -22,5 +22,5 @@ PRINTEC: use of undeclared identifier 'EC'
 
 RUN: %lldb %t -b -o "target variable a e ec" | FileCheck --check-prefix=VARS %s
 VARS: (const (unnamed struct)) a = {}
-VARS: (const (unnamed enum)) e = 0x1
-VARS: (const (unnamed enum)) ec = 0x1
+VARS: (const (anonymous enum)) e = 0x1
+VARS: (const (anonymous enum)) ec = 0x1
