@@ -271,9 +271,9 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       DP("Calling targetDataMapper for the %dth argument\n", i);
 
       map_var_info_t arg_name = (!arg_names) ? nullptr : arg_names[i];
-      int rc = targetDataMapper(loc, Device, args_base[i], args[i], arg_sizes[i],
-                                arg_types[i], arg_name, arg_mappers[i],
-                                targetDataBegin);
+      int rc = targetDataMapper(loc, Device, args_base[i], args[i],
+                                arg_sizes[i], arg_types[i], arg_name,
+                                arg_mappers[i], targetDataBegin);
 
       if (rc != OFFLOAD_SUCCESS) {
         REPORT("Call to targetDataBegin via targetDataMapper for custom mapper"
