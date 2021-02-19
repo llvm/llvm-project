@@ -36,15 +36,19 @@ extern char PROF_NAME_STOP COMPILER_RT_VISIBILITY;
 extern ValueProfNode PROF_VNODES_START COMPILER_RT_VISIBILITY;
 extern ValueProfNode PROF_VNODES_STOP COMPILER_RT_VISIBILITY;
 
-/* Add dummy data to ensure the section is always created. */
-__llvm_profile_data
-    __prof_data_sect_data[0] COMPILER_RT_SECTION(INSTR_PROF_DATA_SECT_NAME);
-uint64_t
-    __prof_cnts_sect_data[0] COMPILER_RT_SECTION(INSTR_PROF_CNTS_SECT_NAME);
-uint32_t
-    __prof_orderfile_sect_data[0] COMPILER_RT_SECTION(INSTR_PROF_ORDERFILE_SECT_NAME);
-const char __prof_nms_sect_data[0] COMPILER_RT_SECTION(INSTR_PROF_NAME_SECT_NAME);
-ValueProfNode __prof_vnodes_sect_data[0] COMPILER_RT_SECTION(INSTR_PROF_VNODES_SECT_NAME);
+/* Add dummy data to ensure the section is always created. Add used attribute so
+ * that they are linker GC roots on supported ELF platforms.
+ */
+__llvm_profile_data __prof_data_sect_data[0] COMPILER_RT_SECTION(
+    INSTR_PROF_DATA_SECT_NAME) COMPILER_RT_USED;
+uint64_t __prof_cnts_sect_data[0] COMPILER_RT_SECTION(INSTR_PROF_CNTS_SECT_NAME)
+    COMPILER_RT_USED;
+uint32_t __prof_orderfile_sect_data[0] COMPILER_RT_SECTION(
+    INSTR_PROF_ORDERFILE_SECT_NAME) COMPILER_RT_USED;
+const char __prof_nms_sect_data[0] COMPILER_RT_SECTION(
+    INSTR_PROF_NAME_SECT_NAME) COMPILER_RT_USED;
+ValueProfNode __prof_vnodes_sect_data[0] COMPILER_RT_SECTION(
+    INSTR_PROF_VNODES_SECT_NAME) COMPILER_RT_USED;
 
 COMPILER_RT_VISIBILITY const __llvm_profile_data *
 __llvm_profile_begin_data(void) {
