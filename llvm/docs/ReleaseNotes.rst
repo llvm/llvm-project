@@ -129,7 +129,75 @@ During this release ...
 Changes to the PowerPC Target
 -----------------------------
 
-During this release ...
+Optimization:
+
+* Made improvements to loop unroll-and-jam including fix to respect user
+  provided #pragma unroll-and-jam for loops on targets other than ARM.
+* Improved PartialInliner allowing it to handle code regions in a switch
+  statements.
+* Improved PGO support on AIX by building and linking with compiler-rt profile
+  library.
+* Add support for Epilogue Vectorization and enabled it by default.
+
+CodeGen:
+
+* POWER10 support
+  * Implementation of PC Relative addressing in LLD including the associated
+    linker optimizations.
+  * Add support for the new matrix multiplication (MMA) instructions to Clang
+    and LLVM.
+  * Implementation of Power10 builtins.
+
+* Scheduling enhancements
+  * Add a new algorithm to cluster more loads/stores if the DAG is not too
+    complicated.
+  * Enable the PowerPC scheduling heuristic for Power10.
+
+* Target dependent passes tuning
+  * Enhance LoopStrengthReduce/PPCLoopInstrFormPrep pass for PowerPC,
+    especially for P10 intrinsics.
+  * Enhance machine combiner pass to reduce register pressure for PowerPC.
+  * Improve MachineSink to do more sinking based on register pressure and alias
+    analysis.
+
+* General improvements
+  * Complete the constrained floating point operations support.
+  * Improve the llvm-exegesis support.
+  * Improve the stack clash protection to probe the gap between stackptr and
+    realigned stackptr.
+  * Improve the IEEE long double support for Power8.
+  * Enable MemorySSA for LoopSink.
+  * Enhance LLVM debugging functionality via options such as -print-changed and
+    -print-before-changed.
+  * Add builtins for Power9 (i.e. darn, xvtdiv, xvtsqrt etc).
+  * Add options to disable all or part of LoopIdiomRecognizePass.
+  * Add support for printing the DDG in DOT form allowing for visual inspection
+    of the Data Dependence Graph.
+  * Remove the QPX support.
+  * Significant number of bug fixes including all the fixes necessary to
+    achieve a clean test run for Julia.
+
+AIX Support:
+
+* Compiler-rt support
+  * Add support for building compiler-rt for AIX and 32-bit Power targets.
+  * Made compiler-rt the default rtlib for AIX.
+
+* General Improvements
+  * Enable the AIX extended AltiVec ABI under option -mabi=vec-extabi.
+  * Add partial C99 complex type support.
+  * Implemente traceback table for functions (encodes vector information,
+    emits exception handling).
+  * Implemente code generation for C++ dynamic initialization and finalization.
+    of non-local variables for use with the -bcdtors option of the AIX linker.
+  * Add new option -mignore-xcoff-visibility.
+  * Enable explicit sections on AIX.
+  * Enable -f[no-]data-sections on AIX and set -fdata-sections to be the default
+    on AIX.
+  * Enable -f[no-]function-sections.
+  * Add support for relocation generation using the large code model.
+  * Add pragma align natural and sorted out pragma pack stack effect.
+
 
 Changes to the X86 Target
 -------------------------
