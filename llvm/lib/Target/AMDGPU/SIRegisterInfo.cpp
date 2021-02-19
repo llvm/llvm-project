@@ -604,6 +604,7 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V256_CFI_SAVE:
   case AMDGPU::SI_SPILL_V256_RESTORE:
   case AMDGPU::SI_SPILL_A256_SAVE:
+  case AMDGPU::SI_SPILL_A256_CFI_SAVE:
   case AMDGPU::SI_SPILL_A256_RESTORE:
     return 8;
   case AMDGPU::SI_SPILL_S192_SAVE:

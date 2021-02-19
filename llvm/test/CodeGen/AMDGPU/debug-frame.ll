@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX90A %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE32 %s
 
 ; CHECK-LABEL: kern1:
@@ -271,6 +272,39 @@ declare hidden void @ex() #0
 ; WAVE64-NEXT: .cfi_undefined 2806
 ; WAVE64-NEXT: .cfi_undefined 2807
 
+; AGPR0_wave64 = 3072
+; GFX90A-NEXT: .cfi_undefined 3072
+; GFX90A-NEXT: .cfi_undefined 3073
+; GFX90A-NEXT: .cfi_undefined 3074
+; GFX90A-NEXT: .cfi_undefined 3075
+; GFX90A-NEXT: .cfi_undefined 3076
+; GFX90A-NEXT: .cfi_undefined 3077
+; GFX90A-NEXT: .cfi_undefined 3078
+; GFX90A-NEXT: .cfi_undefined 3079
+; GFX90A-NEXT: .cfi_undefined 3080
+; GFX90A-NEXT: .cfi_undefined 3081
+; GFX90A-NEXT: .cfi_undefined 3082
+; GFX90A-NEXT: .cfi_undefined 3083
+; GFX90A-NEXT: .cfi_undefined 3084
+; GFX90A-NEXT: .cfi_undefined 3085
+; GFX90A-NEXT: .cfi_undefined 3086
+; GFX90A-NEXT: .cfi_undefined 3087
+; GFX90A-NEXT: .cfi_undefined 3088
+; GFX90A-NEXT: .cfi_undefined 3089
+; GFX90A-NEXT: .cfi_undefined 3090
+; GFX90A-NEXT: .cfi_undefined 3091
+; GFX90A-NEXT: .cfi_undefined 3092
+; GFX90A-NEXT: .cfi_undefined 3093
+; GFX90A-NEXT: .cfi_undefined 3094
+; GFX90A-NEXT: .cfi_undefined 3095
+; GFX90A-NEXT: .cfi_undefined 3096
+; GFX90A-NEXT: .cfi_undefined 3097
+; GFX90A-NEXT: .cfi_undefined 3098
+; GFX90A-NEXT: .cfi_undefined 3099
+; GFX90A-NEXT: .cfi_undefined 3100
+; GFX90A-NEXT: .cfi_undefined 3101
+; GFX90A-NEXT: .cfi_undefined 3102
+; GFX90A-NEXT: .cfi_undefined 3103
 
 ; VGPR0_wave32 = 1536
 ; WAVE32-NEXT: .cfi_undefined 1536
