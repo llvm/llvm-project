@@ -545,6 +545,13 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
       DP("Mapping does not exist (%s)\n",
          (HasPresentModifier ? "'present' map type modifier" : "ignored"));
       if (HasPresentModifier) {
+        // OpenMP 5.1, sec. 2.21.7.1 "map Clause", p. 350 L10-13:
+        // "If a map clause appears on a target, target data, target enter data
+        // or target exit data construct with a present map-type-modifier then
+        // on entry to the region if the corresponding list item does not appear
+        // in the device data environment then an error occurs and the program
+        // terminates."
+        //
         // This should be an error upon entering an "omp target exit data".  It
         // should not be an error upon exiting an "omp target data" or "omp
         // target".  For "omp target data", Clang thus doesn't include present
@@ -563,6 +570,14 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
          " - is%s last\n",
          DataSize, DPxPTR(TgtPtrBegin), (IsLast ? "" : " not"));
     }
+
+    // OpenMP 5.1, sec. 2.21.7.1 "map Clause", p. 351 L14-16:
+    // "If the map clause appears on a target, target data, or target exit data
+    // construct and a corresponding list item of the original list item is not
+    // present in the device data environment on exit from the region then the
+    // list item is ignored."
+    if (!TgtPtrBegin)
+      continue;
 
     bool DelEntry = IsLast || ForceDelete;
 
