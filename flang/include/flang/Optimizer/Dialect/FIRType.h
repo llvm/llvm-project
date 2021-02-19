@@ -42,7 +42,6 @@ class FIROpsDialect;
 using KindTy = unsigned;
 
 namespace detail {
-struct ComplexTypeStorage;
 struct HeapTypeStorage;
 struct IntegerTypeStorage;
 struct LenTypeStorage;
@@ -94,21 +93,6 @@ bool isa_aggregate(mlir::Type t);
 mlir::Type dyn_cast_ptrEleTy(mlir::Type t);
 
 // Intrinsic types
-
-/// Model of a Fortran COMPLEX intrinsic type, including the KIND type
-/// parameter. COMPLEX is a floating point type with a real and imaginary
-/// member.
-class ComplexType : public mlir::Type::TypeBase<fir::ComplexType, mlir::Type,
-                                                detail::ComplexTypeStorage> {
-public:
-  using Base::Base;
-  static fir::ComplexType get(mlir::MLIRContext *ctxt, KindTy kind);
-
-  /// Get the corresponding fir.real<k> type.
-  mlir::Type getElementType() const;
-
-  KindTy getFKind() const;
-};
 
 /// Model of a Fortran INTEGER intrinsic type, including the KIND type
 /// parameter.
