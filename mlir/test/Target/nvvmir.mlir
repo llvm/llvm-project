@@ -32,7 +32,7 @@ llvm.func @nvvm_special_regs() -> i32 {
   llvm.return %1 : i32
 }
 
-llvm.func @llvm.nvvm.barrier0() {
+llvm.func @llvm_nvvm_barrier0() {
   // CHECK: call void @llvm.nvvm.barrier0()
   nvvm.barrier0
   llvm.return
@@ -67,7 +67,7 @@ llvm.func @nvvm_vote(%0 : i32, %1 : i1) -> i32 {
 llvm.func @nvvm_mma(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                     %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                     %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
-                    %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
+                    %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> {
   // CHECK: call { float, float, float, float, float, float, float, float } @llvm.nvvm.mma.m8n8k4.row.col.f32.f32
   %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>

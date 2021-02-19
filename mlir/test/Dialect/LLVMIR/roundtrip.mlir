@@ -284,8 +284,8 @@ func @null() {
 
 // CHECK-LABEL: @atomicrmw
 func @atomicrmw(%ptr : !llvm.ptr<f32>, %val : f32) {
-  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} unordered : f32
-  %0 = llvm.atomicrmw fadd %ptr, %val unordered : f32
+  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : f32
+  %0 = llvm.atomicrmw fadd %ptr, %val monotonic : f32
   llvm.return
 }
 

@@ -36,10 +36,10 @@
 @linkonce = linkonce global i32 42
 ; CHECK: llvm.mlir.global weak @weak(42 : i32) : i32
 @weak = weak global i32 42
-; CHECK: llvm.mlir.global common @common(42 : i32) : i32
-@common = common global i32 42
-; CHECK: llvm.mlir.global appending @appending(42 : i32) : i32
-@appending = appending global i32 42
+; CHECK: llvm.mlir.global common @common(0 : i32) : i32
+@common = common global i32 zeroinitializer
+; CHECK: llvm.mlir.global appending @appending(dense<[0, 1]> : tensor<2xi32>) : !llvm.array<2 x i32>
+@appending = appending global [2 x i32] [i32 0, i32 1]
 ; CHECK: llvm.mlir.global extern_weak @extern_weak() : i32
 @extern_weak = extern_weak global i32
 ; CHECK: llvm.mlir.global linkonce_odr @linkonce_odr(42 : i32) : i32
