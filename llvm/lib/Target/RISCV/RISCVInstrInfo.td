@@ -874,7 +874,7 @@ def SLLIUWPat : PatFrag<(ops node:$A, node:$B),
 
 def : Pat<(simm12:$imm), (ADDI X0, simm12:$imm)>;
 def : Pat<(simm32hi20:$imm), (LUI (HI20 imm:$imm))>;
-def : Pat<(simm32:$imm), (ADDI (LUI (HI20 imm:$imm)), (LO12Sext imm:$imm))>,
+def : Pat<(i32 (simm32:$imm)), (ADDI (LUI (HI20 imm:$imm)), (LO12Sext imm:$imm))>,
       Requires<[IsRV32]>;
 
 /// Simple arithmetic operations
@@ -1110,11 +1110,11 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 
 /// Loads
 
-multiclass LdPat<PatFrag LoadOp, RVInst Inst> {
-  def : Pat<(LoadOp BaseAddr:$rs1), (Inst BaseAddr:$rs1, 0)>;
-  def : Pat<(LoadOp (add BaseAddr:$rs1, simm12:$imm12)),
+multiclass LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
+  def : Pat<(vt (LoadOp BaseAddr:$rs1)), (Inst BaseAddr:$rs1, 0)>;
+  def : Pat<(vt (LoadOp (add BaseAddr:$rs1, simm12:$imm12))),
             (Inst BaseAddr:$rs1, simm12:$imm12)>;
-  def : Pat<(LoadOp (IsOrAdd AddrFI:$rs1, simm12:$imm12)),
+  def : Pat<(vt (LoadOp (IsOrAdd AddrFI:$rs1, simm12:$imm12))),
             (Inst AddrFI:$rs1, simm12:$imm12)>;
 }
 
@@ -1122,23 +1122,25 @@ defm : LdPat<sextloadi8, LB>;
 defm : LdPat<extloadi8, LB>;
 defm : LdPat<sextloadi16, LH>;
 defm : LdPat<extloadi16, LH>;
-defm : LdPat<load, LW>, Requires<[IsRV32]>;
+defm : LdPat<load, LW, i32>, Requires<[IsRV32]>;
 defm : LdPat<zextloadi8, LBU>;
 defm : LdPat<zextloadi16, LHU>;
 
 /// Stores
 
-multiclass StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy> {
-  def : Pat<(StoreOp StTy:$rs2, BaseAddr:$rs1), (Inst StTy:$rs2, BaseAddr:$rs1, 0)>;
-  def : Pat<(StoreOp StTy:$rs2, (add BaseAddr:$rs1, simm12:$imm12)),
+multiclass StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
+                 ValueType vt> {
+  def : Pat<(StoreOp (vt StTy:$rs2), BaseAddr:$rs1),
+                     (Inst StTy:$rs2, BaseAddr:$rs1, 0)>;
+  def : Pat<(StoreOp (vt StTy:$rs2), (add BaseAddr:$rs1, simm12:$imm12)),
             (Inst StTy:$rs2, BaseAddr:$rs1, simm12:$imm12)>;
-  def : Pat<(StoreOp StTy:$rs2, (IsOrAdd AddrFI:$rs1, simm12:$imm12)),
+  def : Pat<(StoreOp (vt StTy:$rs2), (IsOrAdd AddrFI:$rs1, simm12:$imm12)),
             (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
 }
 
-defm : StPat<truncstorei8, SB, GPR>;
-defm : StPat<truncstorei16, SH, GPR>;
-defm : StPat<store, SW, GPR>, Requires<[IsRV32]>;
+defm : StPat<truncstorei8, SB, GPR, XLenVT>;
+defm : StPat<truncstorei16, SH, GPR, XLenVT>;
+defm : StPat<store, SW, GPR, i32>, Requires<[IsRV32]>;
 
 /// Fences
 
@@ -1173,14 +1175,14 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 /// RV64 patterns
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
-def : Pat<(and GPR:$rs1, 0xffffffff), (SRLI (SLLI GPR:$rs1, 32), 32)>;
+def : Pat<(i64 (and GPR:$rs1, 0xffffffff)), (SRLI (SLLI GPR:$rs1, 32), 32)>;
 
 // If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
 // shifts instead of 3. This can occur when unsigned is used to index an array.
-def : Pat<(shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt),
+def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
           (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
 // shl/and can appear in the other order too.
-def : Pat<(SLLIUWPat GPR:$rs1, uimm5:$shamt),
+def : Pat<(i64 (SLLIUWPat GPR:$rs1, uimm5:$shamt)),
           (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
 }
 
@@ -1215,15 +1217,15 @@ def : PatGprGpr<shiftopw<riscv_sraw>, SRAW>;
 
 /// Loads
 
-defm : LdPat<sextloadi32, LW>;
-defm : LdPat<extloadi32, LW>;
-defm : LdPat<zextloadi32, LWU>;
-defm : LdPat<load, LD>;
+defm : LdPat<sextloadi32, LW, i64>;
+defm : LdPat<extloadi32, LW, i64>;
+defm : LdPat<zextloadi32, LWU, i64>;
+defm : LdPat<load, LD, i64>;
 
 /// Stores
 
-defm : StPat<truncstorei32, SW, GPR>;
-defm : StPat<store, SD, GPR>;
+defm : StPat<truncstorei32, SW, GPR, i64>;
+defm : StPat<store, SD, GPR, i64>;
 } // Predicates = [IsRV64]
 
 /// readcyclecounter
