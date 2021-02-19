@@ -70,8 +70,8 @@ Vote ThreadPlanBase::ShouldReportStop(Event *event_ptr) {
 }
 
 bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
-  m_stop_vote = eVoteYes;
-  m_run_vote = eVoteYes;
+  m_report_stop_vote = eVoteYes;
+  m_report_run_vote = eVoteYes;
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
@@ -82,8 +82,8 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
     case eStopReasonInvalid:
     case eStopReasonNone:
       // This
-      m_run_vote = eVoteNoOpinion;
-      m_stop_vote = eVoteNo;
+      m_report_run_vote = eVoteNoOpinion;
+      m_report_stop_vote = eVoteNo;
       return false;
 
     case eStopReasonBreakpoint:
@@ -106,11 +106,11 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
       // with "restarted" so the UI will know to wait and expect the consequent
       // "running".
       if (stop_info_sp->ShouldNotify(event_ptr)) {
-        m_stop_vote = eVoteYes;
-        m_run_vote = eVoteYes;
+        m_report_stop_vote = eVoteYes;
+        m_report_run_vote = eVoteYes;
       } else {
-        m_stop_vote = eVoteNo;
-        m_run_vote = eVoteNo;
+        m_report_stop_vote = eVoteNo;
+        m_report_run_vote = eVoteNo;
       }
       return false;
 
@@ -156,9 +156,9 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
         // We're not going to stop, but while we are here, let's figure out
         // whether to report this.
         if (stop_info_sp->ShouldNotify(event_ptr))
-          m_stop_vote = eVoteYes;
+          m_report_stop_vote = eVoteYes;
         else
-          m_stop_vote = eVoteNo;
+          m_report_stop_vote = eVoteNo;
       }
       return false;
 
@@ -167,8 +167,8 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
     }
 
   } else {
-    m_run_vote = eVoteNoOpinion;
-    m_stop_vote = eVoteNo;
+    m_report_run_vote = eVoteNoOpinion;
+    m_report_stop_vote = eVoteNo;
   }
 
   // If there's no explicit reason to stop, then we will continue.
@@ -185,8 +185,8 @@ bool ThreadPlanBase::DoWillResume(lldb::StateType resume_state,
                                   bool current_plan) {
   // Reset these to the default values so we don't set them wrong, then not get
   // asked for a while, then return the wrong answer.
-  m_run_vote = eVoteNoOpinion;
-  m_stop_vote = eVoteNo;
+  m_report_run_vote = eVoteNoOpinion;
+  m_report_stop_vote = eVoteNo;
   return true;
 }
 
