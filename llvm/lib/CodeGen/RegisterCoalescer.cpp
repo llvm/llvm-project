@@ -3877,21 +3877,20 @@ RegisterCoalescer::copyCoalesceInMBB(MachineBasicBlock *MBB) {
     // are not inherently easier to resolve, but slightly preferable until we
     // have local live range splitting. In particular this is required by
     // cmp+jmp macro fusion.
-    for (MachineBasicBlock::iterator MII = MBB->begin(), E = MBB->end();
-         MII != E; ++MII) {
-      if (!MII->isCopyLike())
+    for (MachineInstr &MI : *MBB) {
+      if (!MI.isCopyLike())
         continue;
-      bool ApplyTerminalRule = applyTerminalRule(*MII);
-      if (isLocalCopy(&(*MII), LIS)) {
+      bool ApplyTerminalRule = applyTerminalRule(MI);
+      if (isLocalCopy(&MI, LIS)) {
         if (ApplyTerminalRule)
-          LocalTerminals.push_back(&(*MII));
+          LocalTerminals.push_back(&MI);
         else
-          LocalWorkList.push_back(&(*MII));
+          LocalWorkList.push_back(&MI);
       } else {
         if (ApplyTerminalRule)
-          GlobalTerminals.push_back(&(*MII));
+          GlobalTerminals.push_back(&MI);
         else
-          WorkList.push_back(&(*MII));
+          WorkList.push_back(&MI);
       }
     }
     // Append the copies evicted by the terminal rule at the end of the list.
@@ -3935,10 +3934,9 @@ void RegisterCoalescer::joinAllIntervals() {
 
   std::vector<MBBPriorityInfo> MBBs;
   MBBs.reserve(MF->size());
-  for (MachineFunction::iterator I = MF->begin(), E = MF->end(); I != E; ++I) {
-    MachineBasicBlock *MBB = &*I;
-    MBBs.push_back(MBBPriorityInfo(MBB, Loops->getLoopDepth(MBB),
-                                   JoinSplitEdges && isSplitEdge(MBB)));
+  for (MachineBasicBlock &MBB : *MF) {
+    MBBs.push_back(MBBPriorityInfo(&MBB, Loops->getLoopDepth(&MBB),
+                                   JoinSplitEdges && isSplitEdge(&MBB)));
   }
   array_pod_sort(MBBs.begin(), MBBs.end(), compareMBBPriority);
 
