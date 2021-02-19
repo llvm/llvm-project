@@ -3838,11 +3838,34 @@ struct TensorCastToMemref : public OpRewritePattern<TensorToMemrefOp> {
     return success();
   }
 };
+
+/// Canonicalize tensor_load + tensor_to_memref to memref_cast when type
+/// mismatches prevent `TensorToMemrefOp::fold` to kick in.
+struct TensorLoadToMemref : public OpRewritePattern<TensorToMemrefOp> {
+  using OpRewritePattern<TensorToMemrefOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TensorToMemrefOp tensorToMemRef,
+                                PatternRewriter &rewriter) const final {
+    auto tensorLoad = tensorToMemRef.tensor().getDefiningOp<TensorLoadOp>();
+    // Bail unless we have a tensor_load + tensor_to_memref with different
+    // types. `TensorToMemrefOp::fold` handles the same type case.
+    if (!tensorLoad ||
+        tensorLoad.memref().getType() == tensorToMemRef.getType())
+      return failure();
+    // If types are not cast-compatible, bail.
+    if (!MemRefCastOp::areCastCompatible(tensorLoad.memref().getType(),
+                                         tensorToMemRef.getType()))
+      return failure();
+    rewriter.replaceOpWithNewOp<MemRefCastOp>(
+        tensorToMemRef, tensorToMemRef.getType(), tensorLoad.memref());
+    return success();
+  }
+};
 } // namespace
 
 void TensorToMemrefOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<TensorCastToMemref>(context);
+  results.insert<TensorCastToMemref, TensorLoadToMemref>(context);
 }
 
 //===----------------------------------------------------------------------===//
