@@ -542,6 +542,8 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       StreamString active_row_strm;
       active_row->Dump(active_row_strm, m_fast_unwind_plan_sp.get(), &m_thread,
                        m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
+      UnwindLogMsg("Using fast unwind plan '%s'",
+                   m_fast_unwind_plan_sp->GetSourceName().AsCString());
       UnwindLogMsg("active row: %s", active_row_strm.GetData());
     }
   } else {
@@ -556,6 +558,8 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
         active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
                          &m_thread,
                          m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
+        UnwindLogMsg("Using full unwind plan '%s'",
+                     m_full_unwind_plan_sp->GetSourceName().AsCString());
         UnwindLogMsg("active row: %s", active_row_strm.GetData());
       }
     }
@@ -662,13 +666,6 @@ UnwindPlanSP RegisterContextUnwind::GetFastUnwindPlanForFrame() {
       *m_thread.CalculateTarget(), m_thread);
   if (unwind_plan_sp) {
     if (unwind_plan_sp->PlanValidAtAddress(m_current_pc)) {
-      Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
-      if (log && log->GetVerbose()) {
-        if (m_fast_unwind_plan_sp)
-          UnwindLogMsgVerbose("frame, and has a fast UnwindPlan");
-        else
-          UnwindLogMsgVerbose("frame");
-      }
       m_frame_type = eNormalFrame;
       return unwind_plan_sp;
     } else {
@@ -1147,6 +1144,7 @@ enum UnwindLLDB::RegisterSearchResult
 RegisterContextUnwind::SavedLocationForRegister(
     uint32_t lldb_regnum, lldb_private::UnwindLLDB::RegisterLocation &regloc) {
   RegisterNumber regnum(m_thread, eRegisterKindLLDB, lldb_regnum);
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
 
   // Have we already found this register location?
   if (!m_registers.empty()) {
@@ -1179,8 +1177,17 @@ RegisterContextUnwind::SavedLocationForRegister(
                    (int)unwindplan_registerkind);
       return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
     }
+    // The architecture default unwind plan marks unknown registers as
+    // Undefined so that we don't forward them up the stack when a
+    // jitted stack frame may have overwritten them.  But when the
+    // arch default unwind plan is used as the Fast Unwind Plan, we
+    // need to recognize this & switch over to the Full Unwind Plan
+    // to see what unwind rule that (more knoweldgeable, probably)
+    // UnwindPlan has.  If the full UnwindPlan says the register 
+    // location is Undefined, then it really is.
     if (active_row->GetRegisterInfo(regnum.GetAsKind(unwindplan_registerkind),
-                                    unwindplan_regloc)) {
+                                    unwindplan_regloc) &&
+        !unwindplan_regloc.IsUndefined()) {
       UnwindLogMsg(
           "supplying caller's saved %s (%d)'s location using FastUnwindPlan",
           regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
@@ -1191,8 +1198,11 @@ RegisterContextUnwind::SavedLocationForRegister(
   if (!have_unwindplan_regloc) {
     // m_full_unwind_plan_sp being NULL means that we haven't tried to find a
     // full UnwindPlan yet
-    if (!m_full_unwind_plan_sp)
+    bool got_new_full_unwindplan = false;
+    if (!m_full_unwind_plan_sp) {
       m_full_unwind_plan_sp = GetFullUnwindPlanForFrame();
+      got_new_full_unwindplan = true;
+    }
 
     if (m_full_unwind_plan_sp) {
       RegisterNumber pc_regnum(m_thread, eRegisterKindGeneric,
@@ -1202,6 +1212,16 @@ RegisterContextUnwind::SavedLocationForRegister(
           m_full_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
       unwindplan_registerkind = m_full_unwind_plan_sp->GetRegisterKind();
 
+      if (got_new_full_unwindplan && active_row.get() && log) {
+        StreamString active_row_strm;
+        ExecutionContext exe_ctx(m_thread.shared_from_this());
+        active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
+                         &m_thread,
+                         m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
+        UnwindLogMsg("Using full unwind plan '%s'",
+                     m_full_unwind_plan_sp->GetSourceName().AsCString());
+        UnwindLogMsg("active row: %s", active_row_strm.GetData());
+      }
       RegisterNumber return_address_reg;
 
       // If we're fetching the saved pc and this UnwindPlan defines a
