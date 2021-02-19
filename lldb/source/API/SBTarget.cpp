@@ -2650,6 +2650,9 @@ void RegisterMethods<SBTarget>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget,
                        BreakpointCreateForException,
                        (lldb::LanguageType, bool, bool));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget,
+                       BreakpointCreateForException,
+                       (lldb::LanguageType, bool, bool, SBStringList &));
   LLDB_REGISTER_METHOD(
       lldb::SBBreakpoint, SBTarget, BreakpointCreateFromScript,
       (const char *, lldb::SBStructuredData &, const lldb::SBFileSpecList &,
