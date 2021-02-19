@@ -20,6 +20,12 @@
 #include "archetypes.h"
 #endif
 
+struct CopyAssignableInt {
+  CopyAssignableInt& operator=(int&) { return *this; }
+};
+
+struct Unrelated {};
+
 TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::pair<int, short> P1;
@@ -58,6 +64,18 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(p.second.value == -42);
   }
 #endif
+
+  { // test const requirement
+    using T = std::pair<CopyAssignableInt, CopyAssignableInt>;
+    using P = std::pair<int, int>;
+    static_assert(!std::is_assignable<T&, P const>::value, "");
+  }
+  {
+    using T = std::pair<int, Unrelated>;
+    using P = std::pair<Unrelated, int>;
+    static_assert(!std::is_assignable<T&, P&>::value, "");
+    static_assert(!std::is_assignable<P&, T&>::value, "");
+  }
   return true;
 }
 

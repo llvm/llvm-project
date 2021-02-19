@@ -17,6 +17,7 @@
 
 #include <tuple>
 #include <utility>
+#include <memory>
 #include <cassert>
 
 #include "test_macros.h"
@@ -31,6 +32,13 @@ int main(int, char**)
         t1 = t0;
         assert(std::get<0>(t1) == 2);
         assert(std::get<1>(t1) == short('a'));
+    }
+    {
+        // test that the implicitly generated copy assignment operator
+        // is properly deleted
+        using T = std::tuple<int, int>;
+        using P = std::tuple<std::unique_ptr<int>, std::unique_ptr<int>>;
+        static_assert(!std::is_assignable<T, const P &>::value, "");
     }
 
   return 0;
