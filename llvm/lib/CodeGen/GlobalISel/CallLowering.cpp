@@ -483,9 +483,6 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       continue;
     }
 
-    // FIXME: Pack registers if we have more than one.
-    Register ArgReg = Args[i].Regs[0];
-
     EVT OrigVT = EVT::getEVT(Args[i].Ty);
     EVT VAVT = VA.getValVT();
     const LLT OrigTy = getLLTForType(*Args[i].Ty, DL);
@@ -494,10 +491,12 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     // Expected to be multiple regs for a single incoming arg.
     // There should be Regs.size() ArgLocs per argument.
     unsigned NumArgRegs = Args[i].Regs.size();
-
+    MachineRegisterInfo &MRI = MF.getRegInfo();
     assert((j + (NumArgRegs - 1)) < ArgLocs.size() &&
            "Too many regs for number of args");
     for (unsigned Part = 0; Part < NumArgRegs; ++Part) {
+      Register ArgReg = Args[i].Regs[Part];
+      LLT ArgRegTy = MRI.getType(ArgReg);
       // There should be Regs.size() ArgLocs per argument.
       VA = ArgLocs[j + Part];
       if (VA.isMemLoc()) {
@@ -538,8 +537,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       }
 
       // This ArgLoc covers multiple pieces, so we need to split it.
-      Register NewReg =
-        MIRBuilder.getMRI()->createGenericVirtualRegister(VATy);
+      Register NewReg = MRI.createGenericVirtualRegister(VATy);
       Handler.assignValueToReg(NewReg, VA.getLocReg(), VA);
       // If it's a vector type, we either need to truncate the elements
       // or do an unmerge to get the lower block of elements.
@@ -560,8 +558,10 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
           DstRegs.push_back(
               MIRBuilder.getMRI()->createGenericVirtualRegister(OrigTy));
         MIRBuilder.buildUnmerge(DstRegs, {NewReg});
-      } else {
+      } else if (VATy.getScalarSizeInBits() > ArgRegTy.getScalarSizeInBits()) {
         MIRBuilder.buildTrunc(ArgReg, {NewReg}).getReg(0);
+      } else {
+        MIRBuilder.buildCopy(ArgReg, NewReg);
       }
     }
 
