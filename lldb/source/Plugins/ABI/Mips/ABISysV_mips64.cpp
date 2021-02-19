@@ -764,7 +764,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
   const RegisterInfo *r3_info = reg_ctx->GetRegisterInfoByName("r3", 0);
 
   if (type_flags & eTypeIsScalar || type_flags & eTypeIsPointer) {
-    value.SetValueType(Value::eValueTypeScalar);
+    value.SetValueType(Value::ValueType::Scalar);
 
     bool success = false;
     if (type_flags & eTypeIsInteger || type_flags & eTypeIsPointer) {
