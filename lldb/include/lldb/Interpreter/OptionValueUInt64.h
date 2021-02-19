@@ -19,11 +19,10 @@ public:
   OptionValueUInt64() = default;
 
   OptionValueUInt64(uint64_t value)
-      : OptionValue(), m_current_value(value), m_default_value(value) {}
+      : m_current_value(value), m_default_value(value) {}
 
   OptionValueUInt64(uint64_t current_value, uint64_t default_value)
-      : OptionValue(), m_current_value(current_value),
-        m_default_value(default_value) {}
+      : m_current_value(current_value), m_default_value(default_value) {}
 
   ~OptionValueUInt64() override = default;
 

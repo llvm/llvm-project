@@ -16,10 +16,9 @@ namespace lldb_private {
 class OptionValueBoolean : public OptionValue {
 public:
   OptionValueBoolean(bool value)
-      : OptionValue(), m_current_value(value), m_default_value(value) {}
+      : m_current_value(value), m_default_value(value) {}
   OptionValueBoolean(bool current_value, bool default_value)
-      : OptionValue(), m_current_value(current_value),
-        m_default_value(default_value) {}
+      : m_current_value(current_value), m_default_value(default_value) {}
 
   ~OptionValueBoolean() override = default;
 

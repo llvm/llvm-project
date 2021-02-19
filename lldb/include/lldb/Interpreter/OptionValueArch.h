@@ -19,17 +19,15 @@ class OptionValueArch : public OptionValue {
 public:
   OptionValueArch() = default;
 
-  OptionValueArch(const char *triple)
-      : OptionValue(), m_current_value(triple), m_default_value() {
+  OptionValueArch(const char *triple) : m_current_value(triple) {
     m_default_value = m_current_value;
   }
 
   OptionValueArch(const ArchSpec &value)
-      : OptionValue(), m_current_value(value), m_default_value(value) {}
+      : m_current_value(value), m_default_value(value) {}
 
   OptionValueArch(const ArchSpec &current_value, const ArchSpec &default_value)
-      : OptionValue(), m_current_value(current_value),
-        m_default_value(default_value) {}
+      : m_current_value(current_value), m_default_value(default_value) {}
 
   ~OptionValueArch() override = default;
 

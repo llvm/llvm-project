@@ -42,8 +42,7 @@ CommandObject::CommandObject(CommandInterpreter &interpreter,
                              llvm::StringRef name, llvm::StringRef help,
                              llvm::StringRef syntax, uint32_t flags)
     : m_interpreter(interpreter), m_cmd_name(std::string(name)),
-      m_cmd_help_short(), m_cmd_help_long(), m_cmd_syntax(), m_flags(flags),
-      m_arguments(), m_deprecated_command_override_callback(nullptr),
+      m_flags(flags), m_deprecated_command_override_callback(nullptr),
       m_command_override_callback(nullptr), m_command_override_baton(nullptr) {
   m_cmd_help_short = std::string(help);
   m_cmd_syntax = std::string(syntax);
