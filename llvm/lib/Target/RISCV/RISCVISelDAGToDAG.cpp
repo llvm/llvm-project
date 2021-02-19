@@ -25,21 +25,15 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscv-isel"
 
-namespace RISCVZvlssegTable {
-struct RISCVZvlsseg {
-  unsigned IntrinsicID;
-  uint8_t SEW;
-  uint8_t LMUL;
-  uint8_t IndexLMUL;
-  uint16_t Pseudo;
-};
-
-using namespace RISCV;
-
-#define GET_RISCVZvlssegTable_IMPL
+namespace llvm {
+namespace RISCV {
+#define GET_RISCVVSSEGTable_IMPL
+#define GET_RISCVVLSEGTable_IMPL
+#define GET_RISCVVLXSEGTable_IMPL
+#define GET_RISCVVSXSEGTable_IMPL
 #include "RISCVGenSearchableTables.inc"
-
-} // namespace RISCVZvlssegTable
+} // namespace RISCV
+} // namespace llvm
 
 void RISCVDAGToDAGISel::PostprocessISelDAG() {
   doPeepholeLoadStoreADDI();
@@ -184,7 +178,7 @@ static SDValue createTuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
   }
 }
 
-void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, unsigned IntNo, bool IsMasked,
+void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, bool IsMasked,
                                     bool IsStrided) {
   SDLoc DL(Node);
   unsigned NF = Node->getNumValues() - 1;
@@ -210,9 +204,9 @@ void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, unsigned IntNo, bool IsMasked,
   Operands.push_back(Node->getOperand(CurOp++));   // VL.
   Operands.push_back(SEW);
   Operands.push_back(Node->getOperand(0)); // Chain.
-  const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
-      IntNo, ScalarSize, static_cast<unsigned>(LMUL),
-      static_cast<unsigned>(RISCVVLMUL::LMUL_1));
+  const RISCV::VLSEGPseudo *P =
+      RISCV::getVLSEGPseudo(NF, IsMasked, IsStrided, /*FF*/ false, ScalarSize,
+                            static_cast<unsigned>(LMUL));
   SDNode *Load =
       CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped, MVT::Other, Operands);
   SDValue SuperReg = SDValue(Load, 0);
@@ -227,7 +221,6 @@ void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, unsigned IntNo, bool IsMasked,
 
 void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, bool IsMasked) {
   SDLoc DL(Node);
-  unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
   unsigned NF = Node->getNumValues() - 2; // Do not count VL and Chain.
   MVT VT = Node->getSimpleValueType(0);
   MVT XLenVT = Subtarget->getXLenVT();
@@ -250,9 +243,9 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, bool IsMasked) {
   Operands.push_back(Node->getOperand(CurOp++));   // VL.
   Operands.push_back(SEW);
   Operands.push_back(Node->getOperand(0)); // Chain.
-  const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
-      IntNo, ScalarSize, static_cast<unsigned>(LMUL),
-      static_cast<unsigned>(RISCVVLMUL::LMUL_1));
+  const RISCV::VLSEGPseudo *P =
+      RISCV::getVLSEGPseudo(NF, IsMasked, /*Strided*/ false, /*FF*/ true,
+                            ScalarSize, static_cast<unsigned>(LMUL));
   SDNode *Load = CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped, MVT::Other,
                                         MVT::Glue, Operands);
   SDNode *ReadVL = CurDAG->getMachineNode(RISCV::PseudoReadVL, DL, XLenVT,
@@ -269,8 +262,8 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, bool IsMasked) {
   CurDAG->RemoveDeadNode(Node);
 }
 
-void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, unsigned IntNo,
-                                     bool IsMasked) {
+void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, bool IsMasked,
+                                     bool IsOrdered) {
   SDLoc DL(Node);
   unsigned NF = Node->getNumValues() - 1;
   MVT VT = Node->getSimpleValueType(0);
@@ -298,8 +291,8 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, unsigned IntNo,
 
   RISCVVLMUL IndexLMUL = getLMUL(IndexVT);
   unsigned IndexScalarSize = IndexVT.getScalarSizeInBits();
-  const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
-      IntNo, IndexScalarSize, static_cast<unsigned>(LMUL),
+  const RISCV::VLXSEGPseudo *P = RISCV::getVLXSEGPseudo(
+      NF, IsMasked, IsOrdered, IndexScalarSize, static_cast<unsigned>(LMUL),
       static_cast<unsigned>(IndexLMUL));
   SDNode *Load =
       CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped, MVT::Other, Operands);
@@ -313,7 +306,7 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, unsigned IntNo,
   CurDAG->RemoveDeadNode(Node);
 }
 
-void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, unsigned IntNo, bool IsMasked,
+void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, bool IsMasked,
                                     bool IsStrided) {
   SDLoc DL(Node);
   unsigned NF = Node->getNumOperands() - 4;
@@ -339,16 +332,15 @@ void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, unsigned IntNo, bool IsMasked,
   Operands.push_back(Node->getOperand(CurOp++));   // VL.
   Operands.push_back(SEW);
   Operands.push_back(Node->getOperand(0)); // Chain.
-  const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
-      IntNo, ScalarSize, static_cast<unsigned>(LMUL),
-      static_cast<unsigned>(RISCVVLMUL::LMUL_1));
+  const RISCV::VSSEGPseudo *P = RISCV::getVSSEGPseudo(
+      NF, IsMasked, IsStrided, ScalarSize, static_cast<unsigned>(LMUL));
   SDNode *Store =
       CurDAG->getMachineNode(P->Pseudo, DL, Node->getValueType(0), Operands);
   ReplaceNode(Node, Store);
 }
 
-void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned IntNo,
-                                     bool IsMasked) {
+void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, bool IsMasked,
+                                     bool IsOrdered) {
   SDLoc DL(Node);
   unsigned NF = Node->getNumOperands() - 5;
   if (IsMasked)
@@ -374,8 +366,8 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned IntNo,
 
   RISCVVLMUL IndexLMUL = getLMUL(IndexVT);
   unsigned IndexScalarSize = IndexVT.getScalarSizeInBits();
-  const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
-      IntNo, IndexScalarSize, static_cast<unsigned>(LMUL),
+  const RISCV::VSXSEGPseudo *P = RISCV::getVSXSEGPseudo(
+      NF, IsMasked, IsOrdered, IndexScalarSize, static_cast<unsigned>(LMUL),
       static_cast<unsigned>(IndexLMUL));
   SDNode *Store =
       CurDAG->getMachineNode(P->Pseudo, DL, Node->getValueType(0), Operands);
@@ -575,7 +567,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vlseg6:
     case Intrinsic::riscv_vlseg7:
     case Intrinsic::riscv_vlseg8: {
-      selectVLSEG(Node, IntNo, /*IsMasked*/ false, /*IsStrided*/ false);
+      selectVLSEG(Node, /*IsMasked*/ false, /*IsStrided*/ false);
       return;
     }
     case Intrinsic::riscv_vlseg2_mask:
@@ -585,7 +577,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vlseg6_mask:
     case Intrinsic::riscv_vlseg7_mask:
     case Intrinsic::riscv_vlseg8_mask: {
-      selectVLSEG(Node, IntNo, /*IsMasked*/ true, /*IsStrided*/ false);
+      selectVLSEG(Node, /*IsMasked*/ true, /*IsStrided*/ false);
       return;
     }
     case Intrinsic::riscv_vlsseg2:
@@ -595,7 +587,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vlsseg6:
     case Intrinsic::riscv_vlsseg7:
     case Intrinsic::riscv_vlsseg8: {
-      selectVLSEG(Node, IntNo, /*IsMasked*/ false, /*IsStrided*/ true);
+      selectVLSEG(Node, /*IsMasked*/ false, /*IsStrided*/ true);
       return;
     }
     case Intrinsic::riscv_vlsseg2_mask:
@@ -605,7 +597,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vlsseg6_mask:
     case Intrinsic::riscv_vlsseg7_mask:
     case Intrinsic::riscv_vlsseg8_mask: {
-      selectVLSEG(Node, IntNo, /*IsMasked*/ true, /*IsStrided*/ true);
+      selectVLSEG(Node, /*IsMasked*/ true, /*IsStrided*/ true);
       return;
     }
     case Intrinsic::riscv_vloxseg2:
@@ -615,16 +607,17 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vloxseg6:
     case Intrinsic::riscv_vloxseg7:
     case Intrinsic::riscv_vloxseg8:
+      selectVLXSEG(Node, /*IsMasked*/ false, /*IsOrdered*/ true);
+      return;
     case Intrinsic::riscv_vluxseg2:
     case Intrinsic::riscv_vluxseg3:
     case Intrinsic::riscv_vluxseg4:
     case Intrinsic::riscv_vluxseg5:
     case Intrinsic::riscv_vluxseg6:
     case Intrinsic::riscv_vluxseg7:
-    case Intrinsic::riscv_vluxseg8: {
-      selectVLXSEG(Node, IntNo, /*IsMasked*/ false);
+    case Intrinsic::riscv_vluxseg8:
+      selectVLXSEG(Node, /*IsMasked*/ false, /*IsOrdered*/ false);
       return;
-    }
     case Intrinsic::riscv_vloxseg2_mask:
     case Intrinsic::riscv_vloxseg3_mask:
     case Intrinsic::riscv_vloxseg4_mask:
@@ -632,16 +625,17 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vloxseg6_mask:
     case Intrinsic::riscv_vloxseg7_mask:
     case Intrinsic::riscv_vloxseg8_mask:
+      selectVLXSEG(Node, /*IsMasked*/ true, /*IsOrdered*/ true);
+      return;
     case Intrinsic::riscv_vluxseg2_mask:
     case Intrinsic::riscv_vluxseg3_mask:
     case Intrinsic::riscv_vluxseg4_mask:
     case Intrinsic::riscv_vluxseg5_mask:
     case Intrinsic::riscv_vluxseg6_mask:
     case Intrinsic::riscv_vluxseg7_mask:
-    case Intrinsic::riscv_vluxseg8_mask: {
-      selectVLXSEG(Node, IntNo, /*IsMasked*/ true);
+    case Intrinsic::riscv_vluxseg8_mask:
+      selectVLXSEG(Node, /*IsMasked*/ true, /*IsOrdered*/ false);
       return;
-    }
     case Intrinsic::riscv_vlseg8ff:
     case Intrinsic::riscv_vlseg7ff:
     case Intrinsic::riscv_vlseg6ff:
@@ -675,7 +669,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vsseg6:
     case Intrinsic::riscv_vsseg7:
     case Intrinsic::riscv_vsseg8: {
-      selectVSSEG(Node, IntNo, /*IsMasked*/ false, /*IsStrided*/ false);
+      selectVSSEG(Node, /*IsMasked*/ false, /*IsStrided*/ false);
       return;
     }
     case Intrinsic::riscv_vsseg2_mask:
@@ -685,7 +679,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vsseg6_mask:
     case Intrinsic::riscv_vsseg7_mask:
     case Intrinsic::riscv_vsseg8_mask: {
-      selectVSSEG(Node, IntNo, /*IsMasked*/ true, /*IsStrided*/ false);
+      selectVSSEG(Node, /*IsMasked*/ true, /*IsStrided*/ false);
       return;
     }
     case Intrinsic::riscv_vssseg2:
@@ -695,7 +689,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vssseg6:
     case Intrinsic::riscv_vssseg7:
     case Intrinsic::riscv_vssseg8: {
-      selectVSSEG(Node, IntNo, /*IsMasked*/ false, /*IsStrided*/ true);
+      selectVSSEG(Node, /*IsMasked*/ false, /*IsStrided*/ true);
       return;
     }
     case Intrinsic::riscv_vssseg2_mask:
@@ -705,7 +699,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vssseg6_mask:
     case Intrinsic::riscv_vssseg7_mask:
     case Intrinsic::riscv_vssseg8_mask: {
-      selectVSSEG(Node, IntNo, /*IsMasked*/ true, /*IsStrided*/ true);
+      selectVSSEG(Node, /*IsMasked*/ true, /*IsStrided*/ true);
       return;
     }
     case Intrinsic::riscv_vsoxseg2:
@@ -715,16 +709,17 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vsoxseg6:
     case Intrinsic::riscv_vsoxseg7:
     case Intrinsic::riscv_vsoxseg8:
+      selectVSXSEG(Node, /*IsMasked*/ false, /*IsOrdered*/ true);
+      return;
     case Intrinsic::riscv_vsuxseg2:
     case Intrinsic::riscv_vsuxseg3:
     case Intrinsic::riscv_vsuxseg4:
     case Intrinsic::riscv_vsuxseg5:
     case Intrinsic::riscv_vsuxseg6:
     case Intrinsic::riscv_vsuxseg7:
-    case Intrinsic::riscv_vsuxseg8: {
-      selectVSXSEG(Node, IntNo, /*IsMasked*/ false);
+    case Intrinsic::riscv_vsuxseg8:
+      selectVSXSEG(Node, /*IsMasked*/ false, /*IsOrdered*/ false);
       return;
-    }
     case Intrinsic::riscv_vsoxseg2_mask:
     case Intrinsic::riscv_vsoxseg3_mask:
     case Intrinsic::riscv_vsoxseg4_mask:
@@ -732,16 +727,17 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vsoxseg6_mask:
     case Intrinsic::riscv_vsoxseg7_mask:
     case Intrinsic::riscv_vsoxseg8_mask:
+      selectVSXSEG(Node, /*IsMasked*/ true, /*IsOrdered*/ true);
+      return;
     case Intrinsic::riscv_vsuxseg2_mask:
     case Intrinsic::riscv_vsuxseg3_mask:
     case Intrinsic::riscv_vsuxseg4_mask:
     case Intrinsic::riscv_vsuxseg5_mask:
     case Intrinsic::riscv_vsuxseg6_mask:
     case Intrinsic::riscv_vsuxseg7_mask:
-    case Intrinsic::riscv_vsuxseg8_mask: {
-      selectVSXSEG(Node, IntNo, /*IsMasked*/ true);
+    case Intrinsic::riscv_vsuxseg8_mask:
+      selectVSXSEG(Node, /*IsMasked*/ true, /*IsOrdered*/ false);
       return;
-    }
     }
     break;
   }
