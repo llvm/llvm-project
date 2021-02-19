@@ -460,6 +460,12 @@ typedef struct {
 
 #endif // defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
 
+#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
+// OpenCL v1.2 s6.12.13, v2.0 s6.13.13 - printf
+
+int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)));
+#endif
+
 #ifdef cl_intel_device_side_avc_motion_estimation
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : begin
 
