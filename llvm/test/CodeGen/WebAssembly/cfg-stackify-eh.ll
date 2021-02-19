@@ -1099,8 +1099,35 @@ ehcleanup:                                        ; preds = %if.then
   cleanupret from %0 unwind to caller
 }
 
+; This crashed when updating EHPadStack within fixCallUniwindMismatch had a bug.
+; This should not crash and try-delegate has to be created around 'call @baz',
+; because the initial TRY placement for 'call @quux' was done before 'call @baz'
+; because 'call @baz''s return value is stackified.
+
+; CHECK-LABEL: test19
+; CHECK: try
+; CHECK:   try
+; CHECK:     call $[[RET:[0-9]+]]=, baz
+; CHECK:   delegate  1
+; CHECK:    call  quux, $[[RET]]
+; CHECK: catch_all
+; CHECK: end_try
+define void @test19() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  %call = call i32 @baz()
+  invoke void @quux(i32 %call)
+          to label %invoke.cont unwind label %ehcleanup
+
+ehcleanup:                                        ; preds = %entry
+  %0 = cleanuppad within none []
+  cleanupret from %0 unwind to caller
+
+invoke.cont:                                      ; preds = %entry
+  unreachable
+}
+
 ; Check if the unwind destination mismatch stats are correct
-; NOSORT: 18 wasm-cfg-stackify    - Number of call unwind mismatches found
+; NOSORT: 19 wasm-cfg-stackify    - Number of call unwind mismatches found
 ; NOSORT:  3 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()
