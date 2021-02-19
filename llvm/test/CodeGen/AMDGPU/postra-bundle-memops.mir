@@ -220,3 +220,61 @@ body:             |
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, 0, 0, implicit $exec
 
 ...
+
+# Before register allocation, KILL hints are inserted after potential soft
+# clauses to hint the register allocator to not clobber the input
+# registers. Kills that look like this should be erased.
+---
+name: post_bundle_kill
+body:             |
+  bb.0:
+    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+
+    ; GCN-LABEL: name: post_bundle_kill
+    ; GCN: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
+    ; GCN:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, 0, 0, implicit $exec
+    ; GCN:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, 0, 0, implicit $exec
+    ; GCN: }
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, 0, 0, implicit $exec
+    KILL killed $vgpr3_vgpr4, killed $vgpr5_vgpr6
+...
+
+# Kill some other register not used in the bundle, should not be touched.
+---
+name: post_bundle_kill_other
+body:             |
+  bb.0:
+    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN-LABEL: name: post_bundle_kill_other
+    ; GCN: $vgpr7 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
+    ; GCN:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, 0, 0, implicit $exec
+    ; GCN:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, 0, 0, implicit $exec
+    ; GCN: }
+    ; GCN: KILL killed $vgpr7
+    $vgpr7 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, 0, 0, implicit $exec
+    KILL killed $vgpr7
+...
+
+# Kill some other register not used in the bundle, but also some
+# from the bundle.
+---
+name: post_bundle_kill_plus_other
+body:             |
+  bb.0:
+    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN-LABEL: name: post_bundle_kill_plus_other
+    ; GCN: $vgpr7 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
+    ; GCN:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, 0, 0, implicit $exec
+    ; GCN:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, 0, 0, implicit $exec
+    ; GCN: }
+    ; GCN: KILL killed $vgpr7, killed $vgpr3
+    $vgpr7 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, 0, 0, implicit $exec
+    KILL killed $vgpr7, killed $vgpr3
+...

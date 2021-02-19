@@ -48,6 +48,9 @@ private:
 
   SmallSet<Register, 16> Defs;
 
+  void collectUsedRegUnits(const MachineInstr &MI,
+                           BitVector &UsedRegUnits) const;
+
   bool isBundleCandidate(const MachineInstr &MI) const;
   bool isDependentLoad(const MachineInstr &MI) const;
   bool canBundle(const MachineInstr &MI, const MachineInstr &NextMI) const;
@@ -85,6 +88,21 @@ bool SIPostRABundler::isDependentLoad(const MachineInstr &MI) const {
   return false;
 }
 
+void SIPostRABundler::collectUsedRegUnits(const MachineInstr &MI,
+                                          BitVector &UsedRegUnits) const {
+  for (const MachineOperand &Op : MI.operands()) {
+    if (!Op.isReg() || !Op.readsReg())
+      continue;
+
+    Register Reg = Op.getReg();
+    assert(!Op.getSubReg() &&
+           "subregister indexes should not be present after RA");
+
+    for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
+      UsedRegUnits.set(*Units);
+  }
+}
+
 bool SIPostRABundler::isBundleCandidate(const MachineInstr &MI) const {
   const uint64_t IMemFlags = MI.getDesc().TSFlags & MemFlags;
   return IMemFlags != 0 && MI.mayLoadOrStore() && !MI.isBundled();
@@ -105,6 +123,9 @@ bool SIPostRABundler::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+  BitVector BundleUsedRegUnits(TRI->getNumRegUnits());
+  BitVector KillUsedRegUnits(TRI->getNumRegUnits());
+
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::instr_iterator Next;
@@ -147,6 +168,34 @@ bool SIPostRABundler::runOnMachineFunction(MachineFunction &MF) {
       Next = std::next(BundleEnd);
       if (ClauseLength > 1) {
         Changed = true;
+
+        // Before register allocation, kills are inserted after potential soft
+        // clauses to hint register allocation. Look for kills that look like
+        // this, and erase them.
+        if (Next != E && Next->isKill()) {
+          MachineInstr &Kill = *Next;
+
+          // TODO: Should maybe back-propagate kill flags to the bundle.
+          for (const MachineInstr &BundleMI : make_range(BundleStart, Next))
+            collectUsedRegUnits(BundleMI, BundleUsedRegUnits);
+          collectUsedRegUnits(Kill, KillUsedRegUnits);
+
+          BundleUsedRegUnits.flip();
+          KillUsedRegUnits &= BundleUsedRegUnits;
+
+          // Erase the kill if it's a subset of the used registers.
+          //
+          // TODO: Should we just remove all kills? Is there any real reason to
+          // keep them after RA?
+          if (KillUsedRegUnits.none()) {
+            ++Next;
+            Kill.eraseFromParent();
+          }
+
+          BundleUsedRegUnits.reset();
+          KillUsedRegUnits.reset();
+        }
+
         finalizeBundle(MBB, BundleStart, Next);
       }
 
