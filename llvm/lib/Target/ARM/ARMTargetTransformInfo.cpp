@@ -943,7 +943,7 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
              BaseT::getScalarizationOverhead(VecCondTy, true, false) +
              VecValTy->getNumElements() *
                  getCmpSelInstrCost(Opcode, ValTy->getScalarType(),
-                                    CondTy->getScalarType(), VecPred, CostKind,
+                                    VecCondTy->getScalarType(), VecPred, CostKind,
                                     I);
     }
 
