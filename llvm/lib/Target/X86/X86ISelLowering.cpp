@@ -7821,8 +7821,14 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
   }
   case X86ISD::VBROADCAST: {
     SDValue Src = N.getOperand(0);
-    if (!Src.getSimpleValueType().isVector())
-      return false;
+    if (!Src.getSimpleValueType().isVector()) {
+      if (Src.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+          !isNullConstant(Src.getOperand(1)) ||
+          Src.getOperand(0).getValueType().getScalarType() !=
+              VT.getScalarType())
+        return false;
+      Src = Src.getOperand(0);
+    }
     Ops.push_back(Src);
     Mask.append(NumElts, 0);
     return true;
