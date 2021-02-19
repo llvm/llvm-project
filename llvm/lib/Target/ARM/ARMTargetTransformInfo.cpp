@@ -100,20 +100,18 @@ bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
   return MatchExact && MatchSubset;
 }
 
-TTI::AddressingModeKind
-ARMTTIImpl::getPreferredAddressingMode(const Loop *L,
-                                       ScalarEvolution *SE) const {
-  if (ST->hasMVEIntegerOps())
-    return TTI::AMK_PostIndexed;
-
+bool ARMTTIImpl::shouldFavorBackedgeIndex(const Loop *L) const {
   if (L->getHeader()->getParent()->hasOptSize())
-    return TTI::AMK_None;
+    return false;
+  if (ST->hasMVEIntegerOps())
+    return false;
+  return ST->isMClass() && ST->isThumb2() && L->getNumBlocks() == 1;
+}
 
-  if (ST->isMClass() && ST->isThumb2() &&
-      L->getNumBlocks() == 1)
-    return TTI::AMK_PreIndexed;
-
-  return TTI::AMK_None;
+bool ARMTTIImpl::shouldFavorPostInc() const {
+  if (ST->hasMVEIntegerOps())
+    return true;
+  return false;
 }
 
 Optional<Instruction *>

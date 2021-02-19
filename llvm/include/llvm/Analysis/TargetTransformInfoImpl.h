@@ -209,10 +209,9 @@ public:
     return false;
   }
 
-  TTI::AddressingModeKind
-    getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const {
-    return TTI::AMK_None;
-  }
+  bool shouldFavorPostInc() const { return false; }
+
+  bool shouldFavorBackedgeIndex(const Loop *L) const { return false; }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment) const {
     return false;
