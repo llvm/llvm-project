@@ -1286,15 +1286,22 @@ multiclass VPseudoSLoad {
 
 multiclass VPseudoILoad {
   foreach eew = EEWList in {
-    foreach lmul = MxList.m in
-    foreach idx_lmul = MxSet<eew>.m in {
-      defvar LInfo = lmul.MX;
-      defvar Vreg = lmul.vrclass;
-      defvar IdxLInfo = idx_lmul.MX;
-      defvar IdxVreg = idx_lmul.vrclass;
-      let VLMul = lmul.value in {
-        def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo : VPseudoILoadNoMask<Vreg, IdxVreg>;
-        def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_MASK" : VPseudoILoadMask<Vreg, IdxVreg>;
+    foreach sew = EEWList in {
+      foreach lmul = MxSet<sew>.m in {
+        defvar octuple_lmul = octuple_from_str<lmul.MX>.ret;
+        // Calculate emul = eew * lmul / sew
+        defvar octuple_emul = !srl(!mul(eew, octuple_lmul), shift_amount<sew>.val);
+        if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
+          defvar LInfo = lmul.MX;
+          defvar IdxLInfo = octuple_to_str<octuple_emul>.ret;
+          defvar idx_lmul = !cast<LMULInfo>("V_" # IdxLInfo);
+          defvar Vreg = lmul.vrclass;
+          defvar IdxVreg = idx_lmul.vrclass;
+          let VLMul = lmul.value in {
+            def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo : VPseudoILoadNoMask<Vreg, IdxVreg>;
+            def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_MASK" : VPseudoILoadMask<Vreg, IdxVreg>;
+          }
+        }
       }
     }
   }
@@ -1336,17 +1343,24 @@ multiclass VPseudoSStore {
 
 multiclass VPseudoIStore {
   foreach eew = EEWList in {
-    foreach lmul = MxList.m in
-    foreach idx_lmul = MxSet<eew>.m in {
-      defvar LInfo = lmul.MX;
-      defvar Vreg = lmul.vrclass;
-      defvar IdxLInfo = idx_lmul.MX;
-      defvar IdxVreg = idx_lmul.vrclass;
-      let VLMul = lmul.value in {
-        def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo :
-          VPseudoIStoreNoMask<Vreg, IdxVreg>;
-        def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_MASK" :
-          VPseudoIStoreMask<Vreg, IdxVreg>;
+    foreach sew = EEWList in {
+      foreach lmul = MxSet<sew>.m in {
+        defvar octuple_lmul = octuple_from_str<lmul.MX>.ret;
+        // Calculate emul = eew * lmul / sew
+        defvar octuple_emul = !srl(!mul(eew, octuple_lmul), shift_amount<sew>.val);
+        if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
+          defvar LInfo = lmul.MX;
+          defvar IdxLInfo = octuple_to_str<octuple_emul>.ret;
+          defvar idx_lmul = !cast<LMULInfo>("V_" # IdxLInfo);
+          defvar Vreg = lmul.vrclass;
+          defvar IdxVreg = idx_lmul.vrclass;
+          let VLMul = lmul.value in {
+            def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo :
+              VPseudoIStoreNoMask<Vreg, IdxVreg>;
+            def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_MASK" :
+              VPseudoIStoreMask<Vreg, IdxVreg>;
+          }
+        }
       }
     }
   }
