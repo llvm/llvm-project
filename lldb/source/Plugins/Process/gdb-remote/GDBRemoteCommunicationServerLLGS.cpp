@@ -3608,6 +3608,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
     ret.push_back("qXfer:auxv:read+");
   if (bool(plugin_features & Extension::libraries_svr4))
     ret.push_back("qXfer:libraries-svr4:read+");
+  if (bool(plugin_features & Extension::memory_tagging))
+    ret.push_back("memory-tagging+");
 
   // check for client features
   m_extensions_supported = {};

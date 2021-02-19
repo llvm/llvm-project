@@ -2767,6 +2767,10 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
   return 0;
 }
 
+bool ProcessGDBRemote::SupportsMemoryTagging() {
+  return m_gdb_comm.GetMemoryTaggingSupported();
+}
+
 Status ProcessGDBRemote::WriteObjectFile(
     std::vector<ObjectFile::LoadableData> entries) {
   Status error;

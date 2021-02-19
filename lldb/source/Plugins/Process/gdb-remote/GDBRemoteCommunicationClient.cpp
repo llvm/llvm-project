@@ -311,6 +311,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_multiprocess = eLazyBoolNo;
   m_supports_qEcho = eLazyBoolNo;
   m_supports_QPassSignals = eLazyBoolNo;
+  m_supports_memory_tagging = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
@@ -356,6 +357,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_QPassSignals = eLazyBoolYes;
       else if (x == "multiprocess+")
         m_supports_multiprocess = eLazyBoolYes;
+      else if (x == "memory-tagging+")
+        m_supports_memory_tagging = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma
@@ -574,6 +577,13 @@ bool GDBRemoteCommunicationClient::GetSharedCacheInfoSupported() {
     }
   }
   return m_supports_jGetSharedCacheInfo;
+}
+
+bool GDBRemoteCommunicationClient::GetMemoryTaggingSupported() {
+  if (m_supports_memory_tagging == eLazyBoolCalculate) {
+    GetRemoteQSupported();
+  }
+  return m_supports_memory_tagging == eLazyBoolYes;
 }
 
 bool GDBRemoteCommunicationClient::GetxPacketSupported() {

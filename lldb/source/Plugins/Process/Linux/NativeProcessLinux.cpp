@@ -53,9 +53,18 @@
 #include <sys/user.h>
 #include <sys/wait.h>
 
+#ifdef __aarch64__
+#include <asm/hwcap.h>
+#include <sys/auxv.h>
+#endif
+
 // Support hardware breakpoints in case it has not been defined
 #ifndef TRAP_HWBKPT
 #define TRAP_HWBKPT 4
+#endif
+
+#ifndef HWCAP2_MTE
+#define HWCAP2_MTE (1 << 18)
 #endif
 
 using namespace lldb;
@@ -283,8 +292,17 @@ NativeProcessLinux::Factory::Attach(
 
 NativeProcessLinux::Extension
 NativeProcessLinux::Factory::GetSupportedExtensions() const {
-  return Extension::multiprocess | Extension::fork | Extension::vfork |
-         Extension::pass_signals | Extension::auxv | Extension::libraries_svr4;
+  NativeProcessLinux::Extension supported =
+      Extension::multiprocess | Extension::fork | Extension::vfork |
+      Extension::pass_signals | Extension::auxv | Extension::libraries_svr4;
+
+#ifdef __aarch64__
+  // At this point we do not have a process so read auxv directly.
+  if ((getauxval(AT_HWCAP2) & HWCAP2_MTE))
+    supported |= Extension::memory_tagging;
+#endif
+
+  return supported;
 }
 
 // Public Instance Methods
