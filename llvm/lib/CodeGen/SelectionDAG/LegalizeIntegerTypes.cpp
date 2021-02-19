@@ -772,6 +772,11 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   EVT PromotedType = Op1Promoted.getValueType();
   unsigned NewBits = PromotedType.getScalarSizeInBits();
 
+  // USUBSAT can always be promoted as long as we have zero-extended the args.
+  if (Opcode == ISD::USUBSAT)
+    return DAG.getNode(ISD::USUBSAT, dl, PromotedType, Op1Promoted,
+                       Op2Promoted);
+
   // Shift cannot use a min/max expansion, we can't detect overflow if all of
   // the bits have been shifted out.
   if (IsShift || TLI.isOperationLegalOrCustom(Opcode, PromotedType)) {
@@ -783,7 +788,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
       ShiftOp = ISD::SRA;
       break;
     case ISD::UADDSAT:
-    case ISD::USUBSAT:
     case ISD::USHLSAT:
       ShiftOp = ISD::SRL;
       break;
@@ -804,12 +808,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
     SDValue Result =
         DAG.getNode(Opcode, dl, PromotedType, Op1Promoted, Op2Promoted);
     return DAG.getNode(ShiftOp, dl, PromotedType, Result, ShiftAmount);
-  }
-
-  if (Opcode == ISD::USUBSAT) {
-    SDValue Max =
-        DAG.getNode(ISD::UMAX, dl, PromotedType, Op1Promoted, Op2Promoted);
-    return DAG.getNode(ISD::SUB, dl, PromotedType, Max, Op2Promoted);
   }
 
   if (Opcode == ISD::UADDSAT) {
