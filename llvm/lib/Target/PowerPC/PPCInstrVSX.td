@@ -1810,6 +1810,14 @@ let PPC970_Single = 1, AddedComplexity = 400 in {
 }
 
 //----------------------------- DAG Definitions ------------------------------//
+
+// Output dag used to bitcast f32 to i32 and f64 to i64
+def Bitcast {
+  dag FltToInt = (i32 (MFVSRWZ (EXTRACT_SUBREG (XXSLDWI (XSCVDPSPN $A),
+                      (XSCVDPSPN $A), 3), sub_64)));
+  dag DblToLong = (i64 (MFVSRD $A));
+}
+
 def FpMinMax {
   dag F32Min = (COPY_TO_REGCLASS (XSMINDP (COPY_TO_REGCLASS $A, VSFRC),
                                           (COPY_TO_REGCLASS $B, VSFRC)),
@@ -3345,10 +3353,8 @@ def : Pat<(store (f64 (extractelt v2f64:$A, 1)), xoaddr:$src),
 let Predicates = [HasVSX, HasDirectMove] in {
 // bitconvert f32 -> i32
 // (convert to 32-bit fp single, shift right 1 word, move to GPR)
-def : Pat<(i32 (bitconvert f32:$S)),
-          (i32 (MFVSRWZ (EXTRACT_SUBREG
-                          (XXSLDWI (XSCVDPSPN $S), (XSCVDPSPN $S), 3),
-                          sub_64)))>;
+def : Pat<(i32 (bitconvert f32:$A)), Bitcast.FltToInt>;
+
 // bitconvert i32 -> f32
 // (move to FPR, shift left 1 word, convert to 64-bit fp single)
 def : Pat<(f32 (bitconvert i32:$A)),
@@ -3357,8 +3363,7 @@ def : Pat<(f32 (bitconvert i32:$A)),
 
 // bitconvert f64 -> i64
 // (move to GPR, nothing else needed)
-def : Pat<(i64 (bitconvert f64:$S)),
-          (i64 (MFVSRD $S))>;
+def : Pat<(i64 (bitconvert f64:$A)), Bitcast.DblToLong>;
 
 // bitconvert i64 -> f64
 // (move to FPR, nothing else needed)
