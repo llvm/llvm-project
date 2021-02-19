@@ -497,9 +497,13 @@ void Writer::createLoadCommands() {
 
   in.header->addLoadCommand(make<LCBuildVersion>(config->platform));
 
-  uint64_t dylibOrdinal = 1;
+  int64_t dylibOrdinal = 1;
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
+      if (dylibFile->isBundleLoader)
+        dylibFile->ordinal = MachO::BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE;
+      else
+        dylibFile->ordinal = dylibOrdinal++;
       LoadCommandType lcType =
           dylibFile->forceWeakImport || dylibFile->refState == RefState::Weak
               ? LC_LOAD_WEAK_DYLIB
@@ -507,7 +511,6 @@ void Writer::createLoadCommands() {
       in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->dylibName,
                                               dylibFile->compatibilityVersion,
                                               dylibFile->currentVersion));
-      dylibFile->ordinal = dylibOrdinal++;
 
       if (dylibFile->reexport)
         in.header->addLoadCommand(

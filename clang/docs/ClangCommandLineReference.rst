@@ -3034,9 +3034,17 @@ AMDGPU
 
 Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only)
 
+.. option:: -msram-ecc, -mno-sram-ecc
+
+Specify SRAM ECC mode (AMDGPU only)
+
+.. option:: -mtgsplit, -mno-tgsplit
+
+Enable threadgroup split execution mode (AMDGPU only)
+
 .. option:: -mxnack, -mno-xnack
 
-Legacy option to specify XNACK mode (AMDGPU only)
+Specify XNACK mode (AMDGPU only)
 
 ARM
 ---

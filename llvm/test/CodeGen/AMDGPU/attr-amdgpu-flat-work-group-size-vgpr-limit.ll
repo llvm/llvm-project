@@ -1,6 +1,7 @@
 ; -enable-misched=false makes the register usage more predictable
 ; -regalloc=fast just makes the test run faster
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-function-calls=false -enable-misched=false -regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX9
+; RUN: llc -march=amdgcn -mcpu=gfx90a -amdgpu-function-calls=false -enable-misched=false -regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX90A
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -amdgpu-function-calls=false -enable-misched=false -regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX10WGP-WAVE32
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -amdgpu-function-calls=false -enable-misched=false -regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX10WGP-WAVE64
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+cumode -amdgpu-function-calls=false -enable-misched=false -regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX10CU-WAVE32
@@ -524,6 +525,9 @@ define internal void @use256vgprs() {
 
 ; GCN-LABEL: {{^}}f256:
 ; GFX9: NumVgprs: 256
+; GFX90A: NumVgprs: 256
+; GFX90A: NumAgprs: 0
+; GFX90A: TotalNumVgprs: 256
 ; GFX10WGP-WAVE32: NumVgprs: 256
 ; GFX10WGP-WAVE64: NumVgprs: 256
 ; GFX10CU-WAVE32: NumVgprs: 256
@@ -536,6 +540,9 @@ attributes #256 = { nounwind "amdgpu-flat-work-group-size"="256,256" }
 
 ; GCN-LABEL: {{^}}f512:
 ; GFX9: NumVgprs: 128
+; GFX90A: NumVgprs: 128
+; GFX90A: NumAgprs: 128
+; GFX90A: TotalNumVgprs: 256
 ; GFX10WGP-WAVE32: NumVgprs: 256
 ; GFX10WGP-WAVE64: NumVgprs: 256
 ; GFX10CU-WAVE32: NumVgprs: 128
@@ -548,6 +555,9 @@ attributes #512 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
 
 ; GCN-LABEL: {{^}}f1024:
 ; GFX9: NumVgprs: 64
+; GFX90A: NumVgprs: 64
+; GFX90A: NumAgprs: 64
+; GFX90A: TotalNumVgprs: 128
 ; GFX10WGP-WAVE32: NumVgprs: 128
 ; GFX10WGP-WAVE64: NumVgprs: 128
 ; GFX10CU-WAVE32: NumVgprs: 64

@@ -131,7 +131,7 @@ int main(int argc_, const char **argv_) {
     // information if possible.
     isCrash = CommandRes < 0;
 #ifdef _WIN32
-    IsCrash |= CommandRes == 3;
+    isCrash |= CommandRes == 3;
 #endif
     if (isCrash) {
       theDriver.generateCompilationDiagnostics(*c, *failingCommand);

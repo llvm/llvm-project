@@ -759,6 +759,59 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 #include "clang/Basic/PPCTypes.def"
     return CreateType(cast<const BuiltinType>(CGM.getContext().IntTy));
 
+#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
+    {
+      ASTContext::BuiltinVectorTypeInfo Info =
+          CGM.getContext().getBuiltinVectorTypeInfo(BT);
+
+      unsigned ElementCount = Info.EC.getKnownMinValue();
+      unsigned SEW = CGM.getContext().getTypeSize(Info.ElementType);
+
+      bool Fractional = false;
+      unsigned LMUL;
+      unsigned FixedSize = ElementCount * SEW;
+      if (Info.ElementType == CGM.getContext().BoolTy) {
+        // Mask type only occupies one vector register.
+        LMUL = 1;
+      } else if (FixedSize < 64) {
+        // In RVV scalable vector types, we encode 64 bits in the fixed part.
+        Fractional = true;
+        LMUL = 64 / FixedSize;
+      } else {
+        LMUL = FixedSize / 64;
+      }
+
+      // Element count = (VLENB / SEW) x LMUL
+      SmallVector<int64_t, 9> Expr(
+          // The DW_OP_bregx operation has two operands: a register which is
+          // specified by an unsigned LEB128 number, followed by a signed LEB128
+          // offset.
+          {llvm::dwarf::DW_OP_bregx, // Read the contents of a register.
+           4096 + 0xC22,             // RISC-V VLENB CSR register.
+           0, // Offset for DW_OP_bregx. It is dummy here.
+           llvm::dwarf::DW_OP_constu,
+           SEW / 8, // SEW is in bits.
+           llvm::dwarf::DW_OP_div, llvm::dwarf::DW_OP_constu, LMUL});
+      if (Fractional)
+        Expr.push_back(llvm::dwarf::DW_OP_div);
+      else
+        Expr.push_back(llvm::dwarf::DW_OP_mul);
+
+      auto *LowerBound =
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+              llvm::Type::getInt64Ty(CGM.getLLVMContext()), 0));
+      auto *UpperBound = DBuilder.createExpression(Expr);
+      llvm::Metadata *Subscript = DBuilder.getOrCreateSubrange(
+          /*count*/ nullptr, LowerBound, UpperBound, /*stride*/ nullptr);
+      llvm::DINodeArray SubscriptArray = DBuilder.getOrCreateArray(Subscript);
+      llvm::DIType *ElemTy =
+          getOrCreateType(Info.ElementType, TheCU->getFile());
+
+      auto Align = getTypeAlignIfRequired(BT, CGM.getContext());
+      return DBuilder.createVectorType(/*Size=*/0, Align, ElemTy,
+                                       SubscriptArray);
+    }
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
     Encoding = llvm::dwarf::DW_ATE_unsigned_char;

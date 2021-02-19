@@ -160,8 +160,13 @@ def getTestsInSuite(ts, path_in_suite, litConfig,
         # tests which are not executed. The check adds some performance
         # overhead which might be important if a large number of tests
         # are being run directly.
-        # --no-indirectly-run-check: skips this check.
-        if indirectlyRunCheck and lc.test_format is not None:
+        # This check can be disabled by using --no-indirectly-run-check or
+        # setting the standalone_tests variable in the suite's configuration.
+        if (
+            indirectlyRunCheck
+            and lc.test_format is not None
+            and not lc.standalone_tests
+        ):
             found = False
             for res in lc.test_format.getTestsInDirectory(ts, test_dir_in_suite,
                                                           litConfig, lc):
@@ -171,6 +176,7 @@ def getTestsInSuite(ts, path_in_suite, litConfig,
             if not found:
                 litConfig.error(
                     '%r would not be run indirectly: change name or LIT config'
+                    '(e.g. suffixes or standalone_tests variables)'
                     % test.getFullName())
 
         yield test
@@ -179,6 +185,15 @@ def getTestsInSuite(ts, path_in_suite, litConfig,
     # Otherwise we have a directory to search for tests, start by getting the
     # local configuration.
     lc = getLocalConfig(ts, path_in_suite, litConfig, localConfigCache)
+
+    # Directory contains tests to be run standalone. Do not try to discover.
+    if lc.standalone_tests:
+        if lc.suffixes or lc.excludes:
+            litConfig.warning(
+                'standalone_tests set in LIT config but suffixes or excludes'
+                    ' are also set'
+            )
+        return
 
     # Search for tests.
     if lc.test_format is not None:

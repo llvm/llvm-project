@@ -22,4 +22,6 @@ add_flang_library(flangFrontend
   LINK_COMPONENTS
   Option
   Support
+  FrontendOpenACC
+  FrontendOpenMP
 )

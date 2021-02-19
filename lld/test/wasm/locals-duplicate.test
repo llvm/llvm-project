@@ -240,7 +240,7 @@
 ; RELOC-NEXT:          Index:           0
 ; RELOC-NEXT:          ElemType:        FUNCREF
 ; RELOC-NEXT:          Limits:
-; RELOC-NEXT:            Initial:         0x3
+; RELOC-NEXT:            Initial:         0x7
 ; RELOC-NEXT:   - Type:            FUNCTION
 ; RELOC-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ; RELOC-NEXT:                        0, 0 ]

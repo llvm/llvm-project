@@ -975,6 +975,31 @@ struct CounterCoverageMappingBuilder
   /// Find a valid gap range between \p AfterLoc and \p BeforeLoc.
   Optional<SourceRange> findGapAreaBetween(SourceLocation AfterLoc,
                                            SourceLocation BeforeLoc) {
+    size_t StartDepth = locationDepth(AfterLoc);
+    size_t EndDepth = locationDepth(BeforeLoc);
+    while (!SM.isWrittenInSameFile(AfterLoc, BeforeLoc)) {
+      bool UnnestStart = StartDepth >= EndDepth;
+      bool UnnestEnd = EndDepth >= StartDepth;
+      if (UnnestEnd) {
+        assert(SM.isWrittenInSameFile(getStartOfFileOrMacro(BeforeLoc),
+                                      BeforeLoc));
+
+        BeforeLoc = getIncludeOrExpansionLoc(BeforeLoc);
+        assert(BeforeLoc.isValid());
+        EndDepth--;
+      }
+      if (UnnestStart) {
+        assert(SM.isWrittenInSameFile(AfterLoc,
+                                      getEndOfFileOrMacro(AfterLoc)));
+
+        AfterLoc = getIncludeOrExpansionLoc(AfterLoc);
+        assert(AfterLoc.isValid());
+        AfterLoc = getPreciseTokenLocEnd(AfterLoc);
+        assert(AfterLoc.isValid());
+        StartDepth--;
+      }
+    }
+    AfterLoc = getPreciseTokenLocEnd(AfterLoc);
     // If the start and end locations of the gap are both within the same macro
     // file, the range may not be in source order.
     if (AfterLoc.isMacroID() || BeforeLoc.isMacroID())
@@ -982,13 +1007,6 @@ struct CounterCoverageMappingBuilder
     if (!SM.isWrittenInSameFile(AfterLoc, BeforeLoc))
       return None;
     return {{AfterLoc, BeforeLoc}};
-  }
-
-  /// Find the source range after \p AfterStmt and before \p BeforeStmt.
-  Optional<SourceRange> findGapAreaBetween(const Stmt *AfterStmt,
-                                           const Stmt *BeforeStmt) {
-    return findGapAreaBetween(getPreciseTokenLocEnd(getEnd(AfterStmt)),
-                              getStart(BeforeStmt));
   }
 
   /// Emit a gap region between \p StartLoc and \p EndLoc with the given count.
@@ -1155,7 +1173,7 @@ struct CounterCoverageMappingBuilder
     adjustForOutOfOrderTraversal(getEnd(S));
 
     // The body count applies to the area immediately after the increment.
-    auto Gap = findGapAreaBetween(S->getCond(), S->getBody());
+    auto Gap = findGapAreaBetween(S->getRParenLoc(), getStart(S->getBody()));
     if (Gap)
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
 
@@ -1230,8 +1248,7 @@ struct CounterCoverageMappingBuilder
     }
 
     // The body count applies to the area immediately after the increment.
-    auto Gap = findGapAreaBetween(getPreciseTokenLocEnd(S->getRParenLoc()),
-                                  getStart(S->getBody()));
+    auto Gap = findGapAreaBetween(S->getRParenLoc(), getStart(S->getBody()));
     if (Gap)
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
 
@@ -1261,8 +1278,7 @@ struct CounterCoverageMappingBuilder
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
     // The body count applies to the area immediately after the range.
-    auto Gap = findGapAreaBetween(getPreciseTokenLocEnd(S->getRParenLoc()),
-                                  getStart(S->getBody()));
+    auto Gap = findGapAreaBetween(S->getRParenLoc(), getStart(S->getBody()));
     if (Gap)
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
 
@@ -1291,8 +1307,7 @@ struct CounterCoverageMappingBuilder
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
     // The body count applies to the area immediately after the collection.
-    auto Gap = findGapAreaBetween(getPreciseTokenLocEnd(S->getRParenLoc()),
-                                  getStart(S->getBody()));
+    auto Gap = findGapAreaBetween(S->getRParenLoc(), getStart(S->getBody()));
     if (Gap)
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
 
@@ -1411,7 +1426,7 @@ struct CounterCoverageMappingBuilder
     propagateCounts(ParentCount, S->getCond());
 
     // The 'then' count applies to the area immediately after the condition.
-    auto Gap = findGapAreaBetween(S->getCond(), S->getThen());
+    auto Gap = findGapAreaBetween(S->getRParenLoc(), getStart(S->getThen()));
     if (Gap)
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), ThenCount);
 
@@ -1421,7 +1436,7 @@ struct CounterCoverageMappingBuilder
     Counter ElseCount = subtractCounters(ParentCount, ThenCount);
     if (const Stmt *Else = S->getElse()) {
       // The 'else' count applies to the area immediately after the 'then'.
-      Gap = findGapAreaBetween(S->getThen(), Else);
+      Gap = findGapAreaBetween(getEnd(S->getThen()), getStart(Else));
       if (Gap)
         fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), ElseCount);
       extendRegion(Else);
@@ -1591,9 +1606,17 @@ CoverageMappingModuleGen::CoverageMappingModuleGen(
   ProfilePrefixMap = CGM.getCodeGenOpts().ProfilePrefixMap;
 }
 
+std::string CoverageMappingModuleGen::getCurrentDirname() {
+  if (!CGM.getCodeGenOpts().ProfileCompilationDir.empty())
+    return CGM.getCodeGenOpts().ProfileCompilationDir;
+
+  SmallString<256> CWD;
+  llvm::sys::fs::current_path(CWD);
+  return CWD.str().str();
+}
+
 std::string CoverageMappingModuleGen::normalizeFilename(StringRef Filename) {
   llvm::SmallString<256> Path(Filename);
-  llvm::sys::fs::make_absolute(Path);
   llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
   for (const auto &Entry : ProfilePrefixMap) {
     if (llvm::sys::path::replace_path_prefix(Path, Entry.first, Entry.second))
@@ -1674,18 +1697,17 @@ void CoverageMappingModuleGen::addFunctionMappingRecord(
     // also processed by the CoverageMappingWriter which performs
     // additional minimization operations such as reducing the number of
     // expressions.
+    llvm::SmallVector<std::string, 16> FilenameStrs;
     std::vector<StringRef> Filenames;
     std::vector<CounterExpression> Expressions;
     std::vector<CounterMappingRegion> Regions;
-    llvm::SmallVector<std::string, 16> FilenameStrs;
-    llvm::SmallVector<StringRef, 16> FilenameRefs;
-    FilenameStrs.resize(FileEntries.size());
-    FilenameRefs.resize(FileEntries.size());
+    FilenameStrs.resize(FileEntries.size() + 1);
+    FilenameStrs[0] = normalizeFilename(getCurrentDirname());
     for (const auto &Entry : FileEntries) {
       auto I = Entry.second;
       FilenameStrs[I] = normalizeFilename(Entry.first->getName());
-      FilenameRefs[I] = FilenameStrs[I];
     }
+    ArrayRef<std::string> FilenameRefs = llvm::makeArrayRef(FilenameStrs);
     RawCoverageMappingReader Reader(CoverageMapping, FilenameRefs, Filenames,
                                     Expressions, Regions);
     if (Reader.read())
@@ -1702,19 +1724,18 @@ void CoverageMappingModuleGen::emit() {
 
   // Create the filenames and merge them with coverage mappings
   llvm::SmallVector<std::string, 16> FilenameStrs;
-  llvm::SmallVector<StringRef, 16> FilenameRefs;
-  FilenameStrs.resize(FileEntries.size());
-  FilenameRefs.resize(FileEntries.size());
+  FilenameStrs.resize(FileEntries.size() + 1);
+  // The first filename is the current working directory.
+  FilenameStrs[0] = getCurrentDirname();
   for (const auto &Entry : FileEntries) {
     auto I = Entry.second;
     FilenameStrs[I] = normalizeFilename(Entry.first->getName());
-    FilenameRefs[I] = FilenameStrs[I];
   }
 
   std::string Filenames;
   {
     llvm::raw_string_ostream OS(Filenames);
-    CoverageFilenamesSectionWriter(FilenameRefs).write(OS);
+    CoverageFilenamesSectionWriter(FilenameStrs).write(OS);
   }
   auto *FilenamesVal =
       llvm::ConstantDataArray::getString(Ctx, Filenames, false);
@@ -1772,7 +1793,7 @@ unsigned CoverageMappingModuleGen::getFileID(const FileEntry *File) {
   auto It = FileEntries.find(File);
   if (It != FileEntries.end())
     return It->second;
-  unsigned FileID = FileEntries.size();
+  unsigned FileID = FileEntries.size() + 1;
   FileEntries.insert(std::make_pair(File, FileID));
   return FileID;
 }

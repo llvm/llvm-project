@@ -24,27 +24,23 @@
 
 namespace mlir {
 
-inline bool isRowMajorMatmul(ArrayAttr indexingMaps) {
-  auto context = indexingMaps.getContext();
-  AffineExpr m, n, k;
-  bindDims(context, m, n, k);
-  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}, context));
-  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}, context));
-  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {m, n}, context));
-  auto maps = ArrayAttr::get(context, {mapA, mapB, mapC});
-  return indexingMaps == maps;
-}
+/// Tests whether the given maps describe a row major matmul. The test is
+/// permutation-invariant. Note that this only checks the affine maps from an
+/// operation, so does not perform any checks on the math being performed within
+/// the reduction.
+bool isRowMajorMatmul(ArrayAttr indexingMaps);
 
-inline bool isColumnMajorMatmul(ArrayAttr indexingMaps) {
-  auto context = indexingMaps.getContext();
-  AffineExpr m, n, k;
-  bindDims(context, m, n, k);
-  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}, context));
-  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}, context));
-  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {n, m}, context));
-  auto maps = ArrayAttr::get(context, {mapA, mapB, mapC});
-  return indexingMaps == maps;
-}
+/// Tests whether the given maps describe a column major matmul. The test is
+/// permutation-invariant. Note that this only checks the affine maps from an
+/// operation, so does not perform any checks on the math being performed within
+/// the reduction.
+bool isColumnMajorMatmul(ArrayAttr indexingMaps);
+
+/// Tests whether the given maps describe a row major batch matmul. The test is
+/// permutation-invariant. Note that this only checks the affine maps from an
+/// operation, so does not perform any checks on the math being performed within
+/// the reduction.
+bool isRowMajorBatchMatmul(ArrayAttr indexingMaps);
 
 /// Attribute name for the AffineArrayAttr which encodes the relationship
 /// between a structured op iterators' and its operands.

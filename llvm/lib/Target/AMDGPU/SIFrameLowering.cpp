@@ -141,6 +141,7 @@ static void buildPrologSpill(const GCNSubtarget &ST, LivePhysRegs &LiveRegs,
         .addImm(0) // glc
         .addImm(0) // slc
         .addImm(0) // dlc
+        .addImm(0) // scc
         .addMemOperand(MMO);
       return;
     }
@@ -155,6 +156,7 @@ static void buildPrologSpill(const GCNSubtarget &ST, LivePhysRegs &LiveRegs,
       .addImm(0) // tfe
       .addImm(0) // dlc
       .addImm(0) // swz
+      .addImm(0) // scc
       .addMemOperand(MMO);
     return;
   }
@@ -184,6 +186,7 @@ static void buildPrologSpill(const GCNSubtarget &ST, LivePhysRegs &LiveRegs,
         .addImm(0) // glc
         .addImm(0) // slc
         .addImm(0) // dlc
+        .addImm(0) // scc
         .addMemOperand(MMO);
 
     if (!HasOffsetReg) {
@@ -210,6 +213,7 @@ static void buildPrologSpill(const GCNSubtarget &ST, LivePhysRegs &LiveRegs,
           .addImm(0) // tfe
           .addImm(0) // dlc
           .addImm(0) // swz
+          .addImm(0) // scc
           .addMemOperand(MMO);
     } else {
       // No free register, use stack pointer and restore afterwards.
@@ -227,6 +231,7 @@ static void buildPrologSpill(const GCNSubtarget &ST, LivePhysRegs &LiveRegs,
           .addImm(0) // tfe
           .addImm(0) // dlc
           .addImm(0) // swz
+          .addImm(0) // scc
           .addMemOperand(MMO);
 
       BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_SUB_U32), SPReg)
@@ -260,6 +265,7 @@ static void buildEpilogReload(const GCNSubtarget &ST, LivePhysRegs &LiveRegs,
         .addImm(0) // glc
         .addImm(0) // slc
         .addImm(0) // dlc
+        .addImm(0) // scc
         .addMemOperand(MMO);
       return;
     }
@@ -278,6 +284,7 @@ static void buildEpilogReload(const GCNSubtarget &ST, LivePhysRegs &LiveRegs,
         .addImm(0) // glc
         .addImm(0) // slc
         .addImm(0) // dlc
+        .addImm(0) // scc
         .addMemOperand(MMO);
     return;
   }
@@ -293,6 +300,7 @@ static void buildEpilogReload(const GCNSubtarget &ST, LivePhysRegs &LiveRegs,
       .addImm(0) // tfe
       .addImm(0) // dlc
       .addImm(0) // swz
+      .addImm(0) // scc
       .addMemOperand(MMO);
     return;
   }
@@ -316,6 +324,7 @@ static void buildEpilogReload(const GCNSubtarget &ST, LivePhysRegs &LiveRegs,
     .addImm(0) // tfe
     .addImm(0) // dlc
     .addImm(0) // swz
+    .addImm(0) // scc
     .addMemOperand(MMO);
 }
 
@@ -1628,7 +1637,13 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
   // Ignore the SGPRs the default implementation found.
-  SavedVGPRs.clearBitsNotInMask(TRI->getAllVGPRRegMask());
+  SavedVGPRs.clearBitsNotInMask(TRI->getAllVectorRegMask());
+
+  // Do not save AGPRs prior to GFX90A because there was no easy way to do so.
+  // In gfx908 there was do AGPR loads and stores and thus spilling also
+  // require a temporary VGPR.
+  if (!ST.hasGFX90AInsts())
+    SavedVGPRs.clearBitsInMask(TRI->getAllAGPRRegMask());
 
   if (TRI->isCFISavedRegsSpillEnabled()) {
     allocateCFISave(MF, MFI->ReturnAddressSaveIndex,
@@ -1689,7 +1704,7 @@ void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,
   SavedRegs.reset(MFI->getStackPtrOffsetReg());
 
   const BitVector AllSavedRegs = SavedRegs;
-  SavedRegs.clearBitsInMask(TRI->getAllVGPRRegMask());
+  SavedRegs.clearBitsInMask(TRI->getAllVectorRegMask());
 
   // If clearing VGPRs changed the mask, we will have some CSR VGPR spills.
   const bool HaveAnyCSRVGPR = SavedRegs != AllSavedRegs;

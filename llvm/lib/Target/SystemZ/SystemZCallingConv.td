@@ -28,7 +28,7 @@ class CCIfShortVector<CCAction A>
 //===----------------------------------------------------------------------===//
 // z/Linux return value calling convention
 //===----------------------------------------------------------------------===//
-def RetCC_SystemZ : CallingConv<[
+def RetCC_SystemZ_ELF : CallingConv<[
   // Promote i32 to i64 if it has an explicit extension type.
   CCIfType<[i32], CCIfExtend<CCPromoteToType<i64>>>,
 
@@ -83,7 +83,7 @@ def CC_SystemZ_GHC : CallingConv<[
 //===----------------------------------------------------------------------===//
 // z/Linux argument calling conventions
 //===----------------------------------------------------------------------===//
-def CC_SystemZ : CallingConv<[
+def CC_SystemZ_ELF : CallingConv<[
   CCIfCC<"CallingConv::GHC", CCDelegateTo<CC_SystemZ_GHC>>,
 
   // Promote i32 to i64 if it has an explicit extension type.
@@ -139,11 +139,11 @@ def CC_SystemZ : CallingConv<[
 //===----------------------------------------------------------------------===//
 // z/Linux callee-saved registers
 //===----------------------------------------------------------------------===//
-def CSR_SystemZ : CalleeSavedRegs<(add (sequence "R%dD", 6, 15),
+def CSR_SystemZ_ELF : CalleeSavedRegs<(add (sequence "R%dD", 6, 15),
                                        (sequence "F%dD", 8, 15))>;
 
 // R9 is used to return SwiftError; remove it from CSR.
-def CSR_SystemZ_SwiftError : CalleeSavedRegs<(sub CSR_SystemZ, R9D)>;
+def CSR_SystemZ_SwiftError : CalleeSavedRegs<(sub CSR_SystemZ_ELF, R9D)>;
 
 // "All registers" as used by the AnyReg calling convention.
 // Note that registers 0 and 1 are still defined as intra-call scratch
@@ -155,3 +155,22 @@ def CSR_SystemZ_AllRegs_Vector : CalleeSavedRegs<(add (sequence "R%dD", 2, 15),
 
 def CSR_SystemZ_NoRegs : CalleeSavedRegs<(add)>;
 
+//===----------------------------------------------------------------------===//
+// s390x return value calling convention
+//===----------------------------------------------------------------------===//
+
+def RetCC_SystemZ : CallingConv<[
+
+  // ELF Linux SystemZ
+  CCIfSubtarget<"isTargetELF()", CCDelegateTo<RetCC_SystemZ_ELF>>
+]>;
+
+
+//===----------------------------------------------------------------------===//
+// s390x argument calling conventions
+//===----------------------------------------------------------------------===//
+def CC_SystemZ : CallingConv<[
+
+  // ELF Linux SystemZ
+  CCIfSubtarget<"isTargetELF()", CCDelegateTo<CC_SystemZ_ELF>>
+]>;

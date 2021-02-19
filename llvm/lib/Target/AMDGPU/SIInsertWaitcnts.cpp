@@ -131,7 +131,8 @@ static const unsigned WaitEventMaskForInst[NUM_INST_CNTS] = {
 // We reserve a fixed number of VGPR slots in the scoring tables for
 // special tokens like SCMEM_LDS (needed for buffer load to LDS).
 enum RegisterMapping {
-  SQ_MAX_PGM_VGPRS = 256, // Maximum programmable VGPRs across all targets.
+  SQ_MAX_PGM_VGPRS = 512, // Maximum programmable VGPRs across all targets.
+  AGPR_OFFSET = 226, // Maximum programmable ArchVGPRs across all targets.
   SQ_MAX_PGM_SGPRS = 256, // Maximum programmable SGPRs across all targets.
   NUM_EXTRA_VGPRS = 1,    // A reserved slot for DS.
   EXTRA_VGPR_LDS = 0,     // This is a placeholder the Shader algorithm uses.
@@ -451,8 +452,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
                                             const SIRegisterInfo *TRI,
                                             unsigned OpNo) const {
   const MachineOperand &Op = MI->getOperand(OpNo);
-  assert(Op.isReg());
-  if (!TRI->isInAllocatableClass(Op.getReg()) || TRI->isAGPR(*MRI, Op.getReg()))
+  if (!TRI->isInAllocatableClass(Op.getReg()))
     return {-1, -1};
 
   // A use via a PW operand does not need a waitcnt.
@@ -463,9 +463,11 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   unsigned Reg = TRI->getEncodingValue(AMDGPU::getMCReg(Op.getReg(), *ST));
 
-  if (TRI->isVGPR(*MRI, Op.getReg())) {
+  if (TRI->isVectorRegister(*MRI, Op.getReg())) {
     assert(Reg >= RegisterEncoding.VGPR0 && Reg <= RegisterEncoding.VGPRL);
     Result.first = Reg - RegisterEncoding.VGPR0;
+    if (TRI->isAGPR(*MRI, Op.getReg()))
+      Result.first += AGPR_OFFSET;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
   } else if (TRI->isSGPRReg(*MRI, Op.getReg())) {
     assert(Reg >= RegisterEncoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS);
@@ -491,7 +493,7 @@ void WaitcntBrackets::setExpScore(const MachineInstr *MI,
                                   const MachineRegisterInfo *MRI, unsigned OpNo,
                                   unsigned Val) {
   RegInterval Interval = getRegInterval(MI, TII, MRI, TRI, OpNo);
-  assert(TRI->isVGPR(*MRI, MI->getOperand(OpNo).getReg()));
+  assert(TRI->isVectorRegister(*MRI, MI->getOperand(OpNo).getReg()));
   for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
     setRegScore(RegNo, EXP_CNT, Val);
   }
@@ -549,7 +551,8 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                  Inst.getOpcode() != AMDGPU::DS_ORDERED_COUNT) {
         for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
           const MachineOperand &Op = Inst.getOperand(I);
-          if (Op.isReg() && !Op.isDef() && TRI->isVGPR(*MRI, Op.getReg())) {
+          if (Op.isReg() && !Op.isDef() &&
+              TRI->isVectorRegister(*MRI, Op.getReg())) {
             setExpScore(&Inst, TII, TRI, MRI, I, CurrScore);
           }
         }
@@ -606,7 +609,8 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       }
       for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
         MachineOperand &MO = Inst.getOperand(I);
-        if (MO.isReg() && !MO.isDef() && TRI->isVGPR(*MRI, MO.getReg())) {
+        if (MO.isReg() && !MO.isDef() &&
+            TRI->isVectorRegister(*MRI, MO.getReg())) {
           setExpScore(&Inst, TII, TRI, MRI, I, CurrScore);
         }
       }
@@ -1003,7 +1007,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         RegInterval Interval =
             ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I);
 
-        const bool IsVGPR = TRI->isVGPR(*MRI, Op.getReg());
+        const bool IsVGPR = TRI->isVectorRegister(*MRI, Op.getReg());
         for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
           if (IsVGPR) {
             // RAW always needs an s_waitcnt. WAW needs an s_waitcnt unless the
@@ -1206,6 +1210,10 @@ bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
 
   // Flat instruction such as SCRATCH and GLOBAL do not use the lgkm counter.
   if (!TII->usesLGKM_CNT(MI))
+    return false;
+
+  // If in tgsplit mode then there can be no use of LDS.
+  if (ST->isTgSplitEnabled())
     return false;
 
   // If there are no memory operands then conservatively assume the flat

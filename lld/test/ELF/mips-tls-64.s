@@ -21,9 +21,9 @@
 # RUN:   | FileCheck -check-prefix=DIS-SO %s
 # RUN: llvm-readobj -r -A %t-out.so | FileCheck -check-prefix=SO %s
 
-# DIS: 0000000000000000 l     O .tdata  0000000000000000 loc
-# DIS: 0000000000000000       O *UND*   0000000000000000 foo
-# DIS: 0000000000000004 g     O .tdata  0000000000000000 bar
+# DIS: 0000000000000000 l       .tdata  0000000000000000 loc
+# DIS: 0000000000000000         *UND*   0000000000000000 foo
+# DIS: 0000000000000004 g       .tdata  0000000000000000 bar
 
 # DIS:      Contents of section .got:
 # DIS-NEXT:  30000 00000000 00000000 80000000 00000000

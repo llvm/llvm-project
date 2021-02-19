@@ -63,6 +63,8 @@ def riscv_vse_vl : SDNode<"RISCVISD::VSE_VL", SDT_RISCVVSE_VL,
 def riscv_add_vl   : SDNode<"RISCVISD::ADD_VL",   SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_sub_vl   : SDNode<"RISCVISD::SUB_VL",   SDT_RISCVIntBinOp_VL>;
 def riscv_mul_vl   : SDNode<"RISCVISD::MUL_VL",   SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+def riscv_mulhs_vl : SDNode<"RISCVISD::MULHS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+def riscv_mulhu_vl : SDNode<"RISCVISD::MULHU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_and_vl   : SDNode<"RISCVISD::AND_VL",   SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_or_vl    : SDNode<"RISCVISD::OR_VL",    SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_xor_vl   : SDNode<"RISCVISD::XOR_VL",   SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
@@ -110,6 +112,15 @@ def riscv_vrgather_vx_vl : SDNode<"RISCVISD::VRGATHER_VX_VL",
                                                        SDTCVecEltisVT<3, i1>,
                                                        SDTCisSameNumEltsAs<0, 3>,
                                                        SDTCisVT<4, XLenVT>]>>;
+
+def riscv_vselect_vl : SDNode<"RISCVISD::VSELECT_VL",
+                              SDTypeProfile<1, 4, [SDTCisVec<0>,
+                                                   SDTCisVec<1>,
+                                                   SDTCisSameNumEltsAs<0, 1>,
+                                                   SDTCVecEltisVT<1, i1>,
+                                                   SDTCisSameAs<0, 2>,
+                                                   SDTCisSameAs<2, 3>,
+                                                   SDTCisVT<4, XLenVT>]>>;
 
 def SDT_RISCVMaskBinOp_VL : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                                  SDTCisSameAs<0, 2>,
@@ -434,12 +445,39 @@ defm "" : VPatBinaryVL_VV_VX<riscv_smax_vl, "PseudoVMAX">;
 
 // 12.10. Vector Single-Width Integer Multiply Instructions
 defm "" : VPatBinaryVL_VV_VX<riscv_mul_vl, "PseudoVMUL">;
+defm "" : VPatBinaryVL_VV_VX<riscv_mulhs_vl, "PseudoVMULH">;
+defm "" : VPatBinaryVL_VV_VX<riscv_mulhu_vl, "PseudoVMULHU">;
 
 // 12.11. Vector Integer Divide Instructions
 defm "" : VPatBinaryVL_VV_VX<riscv_udiv_vl, "PseudoVDIVU">;
 defm "" : VPatBinaryVL_VV_VX<riscv_sdiv_vl, "PseudoVDIV">;
 defm "" : VPatBinaryVL_VV_VX<riscv_urem_vl, "PseudoVREMU">;
 defm "" : VPatBinaryVL_VV_VX<riscv_srem_vl, "PseudoVREM">;
+
+// 12.16. Vector Integer Merge Instructions
+foreach vti = AllIntegerVectors in {
+  def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask VMV0:$vm),
+                                          vti.RegClass:$rs1,
+                                          vti.RegClass:$rs2,
+                                          (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMERGE_VVM_"#vti.LMul.MX)
+                 vti.RegClass:$rs2, vti.RegClass:$rs1, VMV0:$vm,
+                 GPR:$vl, vti.SEW)>;
+
+  def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask VMV0:$vm),
+                                          (SplatPat XLenVT:$rs1),
+                                          vti.RegClass:$rs2,
+                                          (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMERGE_VXM_"#vti.LMul.MX)
+                 vti.RegClass:$rs2, GPR:$rs1, VMV0:$vm, GPR:$vl, vti.SEW)>;
+
+  def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask VMV0:$vm),
+                                          (SplatPat_simm5 simm5:$rs1),
+                                          vti.RegClass:$rs2,
+                                          (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX)
+                 vti.RegClass:$rs2, simm5:$rs1, VMV0:$vm, GPR:$vl, vti.SEW)>;
+}
 
 // 12.17. Vector Integer Move Instructions
 foreach vti = AllIntegerVectors in {
@@ -609,8 +647,35 @@ foreach vti = AllFloatVectors in {
                  vti.RegClass:$rs, vti.RegClass:$rs, GPR:$vl, vti.SEW)>;
 }
 
-// 14.16. Vector Floating-Point Move Instruction
 foreach fvti = AllFloatVectors in {
+  // Floating-point vselects:
+  // 12.16. Vector Integer Merge Instructions
+  // 14.13. Vector Floating-Point Merge Instruction
+  def : Pat<(fvti.Vector (riscv_vselect_vl (fvti.Mask VMV0:$vm),
+                                           fvti.RegClass:$rs1,
+                                           fvti.RegClass:$rs2,
+                                           (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX)
+                 fvti.RegClass:$rs2, fvti.RegClass:$rs1, VMV0:$vm,
+                 GPR:$vl, fvti.SEW)>;
+
+  def : Pat<(fvti.Vector (riscv_vselect_vl (fvti.Mask VMV0:$vm),
+                                           (SplatFPOp fvti.ScalarRegClass:$rs1),
+                                           fvti.RegClass:$rs2,
+                                           (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
+                 fvti.RegClass:$rs2,
+                 (fvti.Scalar fvti.ScalarRegClass:$rs1),
+                 VMV0:$vm, GPR:$vl, fvti.SEW)>;
+
+  def : Pat<(fvti.Vector (riscv_vselect_vl (fvti.Mask VMV0:$vm),
+                                           (SplatFPOp (fvti.Scalar fpimm0)),
+                                           fvti.RegClass:$rs2,
+                                           (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
+                 fvti.RegClass:$rs2, 0, VMV0:$vm, GPR:$vl, fvti.SEW)>;
+
+  // 14.16. Vector Floating-Point Move Instruction
   // If we're splatting fpimm0, use vmv.v.x vd, x0.
   def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
                          (fvti.Scalar (fpimm0)), (XLenVT (VLOp GPR:$vl)))),

@@ -1192,39 +1192,39 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
   for (auto &MBB : reverse(MF)) {
     bool SeenThrowableInstInBB = false;
     for (auto &MI : reverse(MBB)) {
-      if (MI.getOpcode() == WebAssembly::TRY)
-        EHPadStack.pop_back();
-      else if (WebAssembly::isCatch(MI.getOpcode()))
-        EHPadStack.push_back(MI.getParent());
       bool MayThrow = WebAssembly::mayThrow(MI);
 
       // If MBB has an EH pad successor and this is the last instruction that
       // may throw, this instruction unwinds to the EH pad and not to the
       // caller.
-      if (MBB.hasEHPadSuccessor() && MayThrow && !SeenThrowableInstInBB) {
+      if (MBB.hasEHPadSuccessor() && MayThrow && !SeenThrowableInstInBB)
         SeenThrowableInstInBB = true;
-        continue;
-      }
 
       // We wrap up the current range when we see a marker even if we haven't
       // finished a BB.
-      if (RangeEnd && WebAssembly::isMarker(MI.getOpcode())) {
+      else if (RangeEnd && WebAssembly::isMarker(MI.getOpcode()))
         RecordCallerMismatchRange(EHPadStack.back());
-        continue;
-      }
 
       // If EHPadStack is empty, that means it correctly unwinds to the caller
       // if it throws, so we're good. If MI does not throw, we're good too.
-      if (EHPadStack.empty() || !MayThrow)
-        continue;
+      else if (EHPadStack.empty() || !MayThrow) {
+      }
 
       // We found an instruction that unwinds to the caller but currently has an
       // incorrect unwind destination. Create a new range or increment the
       // currently existing range.
-      if (!RangeEnd)
-        RangeBegin = RangeEnd = &MI;
-      else
-        RangeBegin = &MI;
+      else {
+        if (!RangeEnd)
+          RangeBegin = RangeEnd = &MI;
+        else
+          RangeBegin = &MI;
+      }
+
+      // Update EHPadStack.
+      if (MI.getOpcode() == WebAssembly::TRY)
+        EHPadStack.pop_back();
+      else if (WebAssembly::isCatch(MI.getOpcode()))
+        EHPadStack.push_back(MI.getParent());
     }
 
     if (RangeEnd)

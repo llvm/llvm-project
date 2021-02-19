@@ -65,21 +65,15 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
             (store_instr reg_class:$rs2, BaseAddr:$rs1, avl, sew)>;
 }
 
-multiclass VPatUSLoadStoreWholeVRSDNode<LLVMType type,
+multiclass VPatUSLoadStoreWholeVRSDNode<ValueType type,
                                         int sew,
                                         LMULInfo vlmul,
                                         VReg reg_class>
 {
   defvar load_instr =
-    !cond(!eq(vlmul.value, V_M1.value): !cast<Instruction>("VL1RE"#sew#"_V"),
-          !eq(vlmul.value, V_M2.value): !cast<Instruction>("VL2RE"#sew#"_V"),
-          !eq(vlmul.value, V_M4.value): !cast<Instruction>("VL4RE"#sew#"_V"),
-          !eq(vlmul.value, V_M8.value): !cast<Instruction>("VL8RE"#sew#"_V"));
+    !cast<Instruction>("VL"#!substr(vlmul.MX, 1)#"RE"#sew#"_V");
   defvar store_instr =
-    !cond(!eq(vlmul.value, V_M1.value): VS1R_V,
-          !eq(vlmul.value, V_M2.value): VS2R_V,
-          !eq(vlmul.value, V_M4.value): VS4R_V,
-          !eq(vlmul.value, V_M8.value): VS8R_V);
+    !cast<Instruction>("VS"#!substr(vlmul.MX, 1)#"R_V");
 
   // Load
   def : Pat<(type (load BaseAddr:$rs1)),

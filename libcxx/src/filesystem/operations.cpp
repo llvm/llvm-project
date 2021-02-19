@@ -64,6 +64,10 @@ bool isSeparator(path::value_type C) {
   return false;
 }
 
+bool isDriveLetter(path::value_type C) {
+  return (C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z');
+}
+
 namespace parser {
 
 using string_view_t = path::__string_view;
@@ -120,6 +124,12 @@ public:
 
     switch (State) {
     case PS_BeforeBegin: {
+      PosPtr TkEnd = consumeRootName(Start, End);
+      if (TkEnd)
+        return makeState(PS_InRootName, Start, TkEnd);
+    }
+      _LIBCPP_FALLTHROUGH();
+    case PS_InRootName: {
       PosPtr TkEnd = consumeSeparator(Start, End);
       if (TkEnd)
         return makeState(PS_InRootDir, Start, TkEnd);
@@ -142,7 +152,6 @@ public:
     case PS_InTrailingSep:
       return makeState(PS_AtEnd);
 
-    case PS_InRootName:
     case PS_AtEnd:
       _LIBCPP_UNREACHABLE();
     }
@@ -160,9 +169,15 @@ public:
       if (PosPtr SepEnd = consumeSeparator(RStart, REnd)) {
         if (SepEnd == REnd)
           return makeState(PS_InRootDir, Path.data(), RStart + 1);
+        PosPtr TkStart = consumeRootName(SepEnd, REnd);
+        if (TkStart == REnd)
+          return makeState(PS_InRootDir, RStart, RStart + 1);
         return makeState(PS_InTrailingSep, SepEnd + 1, RStart + 1);
       } else {
-        PosPtr TkStart = consumeName(RStart, REnd);
+        PosPtr TkStart = consumeRootName(RStart, REnd);
+        if (TkStart == REnd)
+          return makeState(PS_InRootName, TkStart + 1, RStart + 1);
+        TkStart = consumeName(RStart, REnd);
         return makeState(PS_InFilenames, TkStart + 1, RStart + 1);
       }
     }
@@ -173,11 +188,17 @@ public:
       PosPtr SepEnd = consumeSeparator(RStart, REnd);
       if (SepEnd == REnd)
         return makeState(PS_InRootDir, Path.data(), RStart + 1);
-      PosPtr TkEnd = consumeName(SepEnd, REnd);
-      return makeState(PS_InFilenames, TkEnd + 1, SepEnd + 1);
+      PosPtr TkStart = consumeRootName(SepEnd ? SepEnd : RStart, REnd);
+      if (TkStart == REnd) {
+        if (SepEnd)
+          return makeState(PS_InRootDir, SepEnd + 1, RStart + 1);
+        return makeState(PS_InRootName, TkStart + 1, RStart + 1);
+      }
+      TkStart = consumeName(SepEnd, REnd);
+      return makeState(PS_InFilenames, TkStart + 1, SepEnd + 1);
     }
     case PS_InRootDir:
-      // return makeState(PS_InRootName, Path.data(), RStart + 1);
+      return makeState(PS_InRootName, Path.data(), RStart + 1);
     case PS_InRootName:
     case PS_BeforeBegin:
       _LIBCPP_UNREACHABLE();
@@ -284,7 +305,7 @@ private:
   }
 
   PosPtr consumeSeparator(PosPtr P, PosPtr End) const noexcept {
-    if (P == End || !isSeparator(*P))
+    if (P == nullptr || P == End || !isSeparator(*P))
       return nullptr;
     const int Inc = P < End ? 1 : -1;
     P += Inc;
@@ -293,14 +314,71 @@ private:
     return P;
   }
 
+  // Consume exactly N separators, or return nullptr.
+  PosPtr consumeNSeparators(PosPtr P, PosPtr End, int N) const noexcept {
+    PosPtr Ret = consumeSeparator(P, End);
+    if (Ret == nullptr)
+      return nullptr;
+    if (P < End) {
+      if (Ret == P + N)
+        return Ret;
+    } else {
+      if (Ret == P - N)
+        return Ret;
+    }
+    return nullptr;
+  }
+
   PosPtr consumeName(PosPtr P, PosPtr End) const noexcept {
-    if (P == End || isSeparator(*P))
+    PosPtr Start = P;
+    if (P == nullptr || P == End || isSeparator(*P))
       return nullptr;
     const int Inc = P < End ? 1 : -1;
     P += Inc;
     while (P != End && !isSeparator(*P))
       P += Inc;
+    if (P == End && Inc < 0) {
+      // Iterating backwards and consumed all the rest of the input.
+      // Check if the start of the string would have been considered
+      // a root name.
+      PosPtr RootEnd = consumeRootName(End + 1, Start);
+      if (RootEnd)
+        return RootEnd - 1;
+    }
     return P;
+  }
+
+  PosPtr consumeDriveLetter(PosPtr P, PosPtr End) const noexcept {
+    if (P == End)
+      return nullptr;
+    if (P < End) {
+      if (P + 1 == End || !isDriveLetter(P[0]) || P[1] != ':')
+        return nullptr;
+      return P + 2;
+    } else {
+      if (P - 1 == End || !isDriveLetter(P[-1]) || P[0] != ':')
+        return nullptr;
+      return P - 2;
+    }
+  }
+
+  PosPtr consumeNetworkRoot(PosPtr P, PosPtr End) const noexcept {
+    if (P == End)
+      return nullptr;
+    if (P < End)
+      return consumeName(consumeNSeparators(P, End, 2), End);
+    else
+      return consumeNSeparators(consumeName(P, End), End, 2);
+  }
+
+  PosPtr consumeRootName(PosPtr P, PosPtr End) const noexcept {
+#if defined(_LIBCPP_WIN32API)
+    if (PosPtr Ret = consumeDriveLetter(P, End))
+      return Ret;
+    if (PosPtr Ret = consumeNetworkRoot(P, End))
+      return Ret;
+#endif
+    return nullptr;
   }
 };
 
@@ -973,7 +1051,7 @@ bool __create_directory(path const& p, path const& attributes, error_code* ec) {
 
   StatT attr_stat;
   error_code mec;
-  auto st = detail::posix_stat(attributes, attr_stat, &mec);
+  file_status st = detail::posix_stat(attributes, attr_stat, &mec);
   if (!status_known(st))
     return err.report(mec);
   if (!is_directory(st))
@@ -983,16 +1061,14 @@ bool __create_directory(path const& p, path const& attributes, error_code* ec) {
   if (detail::mkdir(p.c_str(), attr_stat.st_mode) == 0)
     return true;
 
-  if (errno == EEXIST) {
-    error_code mec = capture_errno();
-    error_code ignored_ec;
-    const file_status st = status(p, ignored_ec);
-    if (!is_directory(st)) {
-      err.report(mec);
-    }
-  } else {
-    err.report(capture_errno());
-  }
+  if (errno != EEXIST)
+    return err.report(capture_errno());
+
+  mec = capture_errno();
+  error_code ignored_ec;
+  st = status(p, ignored_ec);
+  if (!is_directory(st))
+    return err.report(mec);
   return false;
 }
 

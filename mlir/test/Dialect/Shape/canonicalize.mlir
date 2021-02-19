@@ -132,6 +132,17 @@ func @f() -> !shape.shape {
 
 // -----
 
+// Dead code
+// CHECK-LABEL: @broadcast
+func @broadcast(%arg0 : !shape.shape, %arg1 : !shape.shape) {
+  // CHECK-NEXT: return
+  %0 = shape.broadcast %arg0, %arg1
+      : !shape.shape, !shape.shape -> !shape.shape
+  return
+}
+
+// -----
+
 // Basic case.
 // CHECK-LABEL: func @f
 func @f() -> !shape.shape {
@@ -585,6 +596,92 @@ func @broadcastable_on_extent_tensors(%arg : tensor<?xindex>) {
   // CHECK-NEXT: consume.witness
   // CHECK-NEXT: return
   %0 = shape.cstr_broadcastable %arg, %arg : tensor<?xindex>, tensor<?xindex>
+  "consume.witness"(%0) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+// Fold ternary broadcastable
+// CHECK-LABEL: func @f
+func @f() {
+  // CHECK-NEXT: shape.const_witness true
+  // CHECK-NEXT: consume.witness
+  // CHECK-NEXT: return
+  %cs0 = shape.const_shape [8, 1] : !shape.shape
+  %cs1 = shape.const_shape [1, 8] : !shape.shape
+  %cs2 = shape.const_shape [1, 1] : !shape.shape
+  %0 = shape.cstr_broadcastable %cs0, %cs1, %cs2 : !shape.shape, !shape.shape, !shape.shape
+  "consume.witness"(%0) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+// Fold ternary broadcastable with dynamic ranks
+// CHECK-LABEL: func @f
+func @f() {
+  // CHECK-NEXT: shape.const_witness true
+  // CHECK-NEXT: consume.witness
+  // CHECK-NEXT: return
+  %cs0 = shape.const_shape [8, 1] : !shape.shape
+  %cs1 = shape.const_shape [1, -1] : !shape.shape
+  %0 = shape.cstr_broadcastable %cs0, %cs0, %cs1 : !shape.shape, !shape.shape, !shape.shape
+  "consume.witness"(%0) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+// One scalar and one non-scalar and one unknown cannot be broadcasted at compile time
+// CHECK-LABEL: func @f
+func @f() {
+  // CHECK: shape.cstr_broadcastable
+  // CHECK-NEXT: consume.witness
+  // CHECK-NEXT: return
+  %cs0 = shape.const_shape [8, 1] : !shape.shape
+  %cs1 = shape.const_shape [1, 8] : !shape.shape
+  %cs2 = shape.const_shape [1, -1] : !shape.shape
+  %0 = shape.cstr_broadcastable %cs0, %cs1, %cs2 : !shape.shape, !shape.shape, !shape.shape
+  "consume.witness"(%0) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+// One scalar and two unknowns cannot be broadcasted at compile time
+// CHECK-LABEL: func @f
+func @f() {
+  // CHECK: shape.cstr_broadcastable
+  // CHECK-NEXT: consume.witness
+  // CHECK-NEXT: return
+  %cs0 = shape.const_shape [8, 1] : !shape.shape
+  %cs1 = shape.const_shape [1, -1] : !shape.shape
+  %cs2 = shape.const_shape [1, -1] : !shape.shape
+  %0 = shape.cstr_broadcastable %cs0, %cs1, %cs2 : !shape.shape, !shape.shape, !shape.shape
+  "consume.witness"(%0) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+// Broadcastable with scalars and a non-scalar can be constant folded
+// CHECK-LABEL: func @f
+func @f(%arg0 : !shape.shape) {
+  // CHECK-NEXT: shape.const_witness true
+  // CHECK-NEXT: consume.witness
+  // CHECK-NEXT: return
+  %cs0 = shape.const_shape [] : !shape.shape
+  %0 = shape.cstr_broadcastable %cs0, %cs0, %arg0 : !shape.shape, !shape.shape, !shape.shape
+  "consume.witness"(%0) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+// One scalar and one non-scalar and one unknown cannot be folded.
+// CHECK-LABEL: func @f
+func @f(%arg0 : !shape.shape) {
+  // CHECK: shape.cstr_broadcastable
+  // CHECK-NEXT: consume.witness
+  // CHECK-NEXT: return
+  %cs0 = shape.const_shape [] : !shape.shape
+  %cs1 = shape.const_shape [2] : !shape.shape
+  %0 = shape.cstr_broadcastable %cs0, %cs1, %arg0 : !shape.shape, !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }

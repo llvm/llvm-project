@@ -61,6 +61,8 @@ config.substitutions.append(('%build_dir', config.cmake_binary_dir))
 libfuzzer_src_root = os.path.join(config.compiler_rt_src_root, "lib", "fuzzer")
 config.substitutions.append(('%libfuzzer_src', libfuzzer_src_root))
 
+config.substitutions.append(('%python', '"%s"' % (sys.executable)))
+
 def generate_compiler_cmd(is_cpp=True, fuzzer_enabled=True, msan_enabled=False):
   compiler_cmd = config.clang
   extra_cmd = config.target_flags

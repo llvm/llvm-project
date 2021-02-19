@@ -131,6 +131,9 @@ public:
     bool isOneInstr() const {
       return SlotIndex::isSameInstr(FirstInstr, LastInstr);
     }
+
+    void print(raw_ostream &OS) const;
+    void dump() const;
   };
 
 private:
@@ -233,6 +236,10 @@ public:
 
   SlotIndex getLastSplitPoint(unsigned Num) {
     return IPA.getLastInsertPoint(*CurLI, *MF.getBlockNumbered(Num));
+  }
+
+  SlotIndex getLastSplitPoint(MachineBasicBlock *BB) {
+    return IPA.getLastInsertPoint(*CurLI, *BB);
   }
 
   MachineBasicBlock::iterator getLastSplitPointIter(MachineBasicBlock *BB) {

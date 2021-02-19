@@ -137,7 +137,7 @@ body:             |
     %28 = REG_SEQUENCE %6, 17, killed %27, 18
     %29 = V_MOV_B32_e32 0, implicit $exec
     %30 = COPY %24
-    BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
     SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -243,7 +243,7 @@ body:             |
     %37 = REG_SEQUENCE %6, 17, killed %36, 18
     %38 = V_MOV_B32_e32 0, implicit $exec
     %39 = COPY %33
-    BUFFER_STORE_DWORD_ADDR64 killed %38, killed %39, killed %37, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %38, killed %39, killed %37, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
     SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -332,7 +332,7 @@ body:             |
     %28 = REG_SEQUENCE %6, 17, killed %27, 18
     %29 = V_MOV_B32_e32 0, implicit $exec
     %30 = COPY %24
-    BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
     SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec

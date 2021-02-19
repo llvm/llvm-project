@@ -9,6 +9,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_MODULE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_MODULE_H
 
+#include "support/Function.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
@@ -24,8 +26,6 @@ class ThreadsafeFS;
 class TUScheduler;
 
 /// A Module contributes a vertical feature to clangd.
-///
-/// FIXME: Extend this to support outgoing LSP calls.
 ///
 /// The lifetime of a module is roughly:
 ///  - modules are created before the LSP server, in ClangdMain.cpp
@@ -72,6 +72,13 @@ protected:
   const SymbolIndex *index() { return facilities().Index; }
   /// The filesystem is used to read source files on disk.
   const ThreadsafeFS &fs() { return facilities().FS; }
+
+  /// Types of function objects that modules use for outgoing calls.
+  /// (Bound throuh LSPBinder, made available here for convenience).
+  template <typename P>
+  using OutgoingNotification = llvm::unique_function<void(const P &)>;
+  template <typename P, typename R>
+  using OutgoingMethod = llvm::unique_function<void(const P &, Callback<R>)>;
 
 private:
   llvm::Optional<Facilities> Fac;

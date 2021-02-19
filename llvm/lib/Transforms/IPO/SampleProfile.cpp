@@ -1248,8 +1248,19 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           }
           SmallVector<InstrProfValueData, 2> SortedCallTargets =
               GetSortedValueDataFromCallTargets(T.get());
-          uint64_t Sum;
-          findIndirectCallFunctionSamples(I, Sum);
+          uint64_t Sum = 0;
+          for (const auto &C : T.get())
+            Sum += C.second;
+          // With CSSPGO all indirect call targets are counted torwards the
+          // original indirect call site in the profile, including both
+          // inlined and non-inlined targets.
+          if (!FunctionSamples::ProfileIsCS) {
+            if (const FunctionSamplesMap *M =
+                    FS->findFunctionSamplesMapAt(CallSite)) {
+              for (const auto &NameFS : *M)
+                Sum += NameFS.second.getEntrySamples();
+            }
+          }
           annotateValueSite(*I.getParent()->getParent()->getParent(), I,
                             SortedCallTargets, Sum, IPVK_IndirectCallTarget,
                             SortedCallTargets.size());

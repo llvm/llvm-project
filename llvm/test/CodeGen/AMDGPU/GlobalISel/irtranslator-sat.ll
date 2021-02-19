@@ -42,11 +42,11 @@ define i64 @uaddsat_i64(i64 %lhs, i64 %rhs) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[UADDSAT:%[0-9]+]]:_(s64) = G_UADDSAT [[MV]], [[MV1]]
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UADDSAT]](s64)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -64,11 +64,11 @@ define <2 x i32> @uaddsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[UADDSAT:%[0-9]+]]:_(<2 x s32>) = G_UADDSAT [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UADDSAT]](<2 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -121,11 +121,11 @@ define i64 @saddsat_i64(i64 %lhs, i64 %rhs) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[SADDSAT:%[0-9]+]]:_(s64) = G_SADDSAT [[MV]], [[MV1]]
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SADDSAT]](s64)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -143,11 +143,11 @@ define <2 x i32> @saddsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[SADDSAT:%[0-9]+]]:_(<2 x s32>) = G_SADDSAT [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SADDSAT]](<2 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -200,11 +200,11 @@ define i64 @usubsat_i64(i64 %lhs, i64 %rhs) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[USUBSAT:%[0-9]+]]:_(s64) = G_USUBSAT [[MV]], [[MV1]]
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[USUBSAT]](s64)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -222,11 +222,11 @@ define <2 x i32> @usubsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[USUBSAT:%[0-9]+]]:_(<2 x s32>) = G_USUBSAT [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[USUBSAT]](<2 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -279,11 +279,11 @@ define i64 @ssubsat_i64(i64 %lhs, i64 %rhs) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[SSUBSAT:%[0-9]+]]:_(s64) = G_SSUBSAT [[MV]], [[MV1]]
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SSUBSAT]](s64)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -301,11 +301,11 @@ define <2 x i32> @ssubsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[SSUBSAT:%[0-9]+]]:_(<2 x s32>) = G_SSUBSAT [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SSUBSAT]](<2 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -358,11 +358,11 @@ define i64 @ushlsat_i64(i64 %lhs, i64 %rhs) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[USHLSAT:%[0-9]+]]:_(s64) = G_USHLSAT [[MV]], [[MV1]](s64)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[USHLSAT]](s64)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -380,11 +380,11 @@ define <2 x i32> @ushlsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[USHLSAT:%[0-9]+]]:_(<2 x s32>) = G_USHLSAT [[BUILD_VECTOR]], [[BUILD_VECTOR1]](<2 x s32>)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[USHLSAT]](<2 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -437,11 +437,11 @@ define i64 @sshlsat_i64(i64 %lhs, i64 %rhs) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[SSHLSAT:%[0-9]+]]:_(s64) = G_SSHLSAT [[MV]], [[MV1]](s64)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SSHLSAT]](s64)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -459,11 +459,11 @@ define <2 x i32> @sshlsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[SSHLSAT:%[0-9]+]]:_(<2 x s32>) = G_SSHLSAT [[BUILD_VECTOR]], [[BUILD_VECTOR1]](<2 x s32>)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SSHLSAT]](<2 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)

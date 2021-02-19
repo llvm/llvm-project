@@ -17,8 +17,8 @@ body:             |
   ; GCN: bb.1:
   ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load 8 from %stack.0, align 4, addrspace 5)
-  ; GCN:   renamable $vgpr2 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec
-  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, implicit $exec
+  ; GCN:   renamable $vgpr2 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec
+  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, 0, 0, implicit $exec
   ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -27,8 +27,8 @@ body:             |
     %0:vreg_64 = COPY $vgpr0_vgpr1
 
   bb.1:
-    %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD %0, %1, 0, 0, 0, 0, implicit $exec
+    %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, 0, 0, 0, implicit $exec
     S_CBRANCH_EXECZ %bb.1, implicit $exec
 
   bb.2:
@@ -52,11 +52,11 @@ body:             |
   ; GCN: bb.1:
   ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load 8 from %stack.0, align 4, addrspace 5)
-  ; GCN:   renamable $vgpr2 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec
-  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, renamable $vgpr2, 0, 0, 0, 0, implicit $exec
-  ; GCN:   renamable $vgpr2 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec
+  ; GCN:   renamable $vgpr2 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec
+  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, renamable $vgpr2, 0, 0, 0, 0, 0, implicit $exec
+  ; GCN:   renamable $vgpr2 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec
   ; GCN:   SI_SPILL_V32_SAVE $vgpr2, %stack.1, $sgpr32, 0, implicit $exec :: (store 4 into %stack.1, addrspace 5)
-  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, renamable $vgpr2, 0, 0, 0, 0, implicit $exec
+  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, renamable $vgpr2, 0, 0, 0, 0, 0, implicit $exec
   ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -65,10 +65,10 @@ body:             |
     %0:vreg_64 = COPY $vgpr0_vgpr1
 
   bb.1:
-    %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD %0, %1, 0, 0, 0, 0, implicit $exec
-    %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD %0, %1, 0, 0, 0, 0, implicit $exec
+    %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, 0, 0, 0, implicit $exec
+    %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, 0, 0, 0, implicit $exec
     S_CBRANCH_EXECZ %bb.1, implicit $exec
 
   bb.2:
@@ -96,7 +96,7 @@ body:             |
   ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load 8 from %stack.0, align 4, addrspace 5)
   ; GCN:   renamable $vgpr2 = V_ADD_U32_e32 1, undef $vgpr0, implicit $exec
   ; GCN:   SI_SPILL_V32_SAVE $vgpr2, %stack.1, $sgpr32, 0, implicit $exec :: (store 4 into %stack.1, addrspace 5)
-  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, renamable $vgpr2, 0, 0, 0, 0, implicit $exec
+  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, renamable $vgpr2, 0, 0, 0, 0, 0, implicit $exec
   ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -106,7 +106,7 @@ body:             |
 
   bb.1:
     %1:vgpr_32 = V_ADD_U32_e32 1, undef %1, implicit $exec
-    GLOBAL_STORE_DWORD %0, %1, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, 0, 0, 0, implicit $exec
     S_CBRANCH_EXECZ %bb.1, implicit $exec
 
   bb.2:
@@ -130,7 +130,7 @@ body:             |
   ; GCN: bb.1:
   ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load 8 from %stack.0, align 4, addrspace 5)
-  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, undef renamable $vgpr0, 0, 0, 0, 0, implicit $exec
+  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, undef renamable $vgpr0, 0, 0, 0, 0, 0, implicit $exec
   ; GCN:   renamable $vgpr0 = V_ADD_U32_e64 1, 1, 0, implicit $exec
   ; GCN:   SI_SPILL_V32_SAVE killed $vgpr0, %stack.1, $sgpr32, 0, implicit $exec :: (store 4 into %stack.1, addrspace 5)
   ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec
@@ -141,7 +141,7 @@ body:             |
     %0:vreg_64 = COPY $vgpr0_vgpr1
 
   bb.1:
-    GLOBAL_STORE_DWORD %0, undef %1, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, undef %1, 0, 0, 0, 0, 0, implicit $exec
     %1:vgpr_32 = V_ADD_U32_e64 1, 1, 0, implicit $exec
     S_CBRANCH_EXECZ %bb.1, implicit $exec
 
@@ -166,8 +166,8 @@ body:             |
   ; GCN: bb.1:
   ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load 8 from %stack.0, align 4, addrspace 5)
-  ; GCN:   undef renamable $vgpr3 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit-def dead $vgpr2_vgpr3
-  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, undef renamable $vgpr1, 0, 0, 0, 0, implicit $exec
+  ; GCN:   undef renamable $vgpr3 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec, implicit-def dead $vgpr2_vgpr3
+  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, undef renamable $vgpr1, 0, 0, 0, 0, 0, implicit $exec
   ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -176,8 +176,8 @@ body:             |
     %0:vreg_64 = COPY $vgpr0_vgpr1
 
   bb.1:
-    undef %1.sub1:vreg_64 = GLOBAL_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD %0, undef %1.sub1, 0, 0, 0, 0, implicit $exec
+    undef %1.sub1:vreg_64 = GLOBAL_LOAD_DWORD %0, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, undef %1.sub1, 0, 0, 0, 0, 0, implicit $exec
     S_CBRANCH_EXECZ %bb.1, implicit $exec
 
   bb.2:

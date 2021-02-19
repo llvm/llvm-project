@@ -1105,13 +1105,17 @@ def fauto_profile_accurate : Flag<["-"], "fauto-profile-accurate">,
     Group<f_Group>, Alias<fprofile_sample_accurate>;
 def fno_auto_profile_accurate : Flag<["-"], "fno-auto-profile-accurate">,
     Group<f_Group>, Alias<fno_profile_sample_accurate>;
-def fdebug_compilation_dir : Separate<["-"], "fdebug-compilation-dir">,
-    Group<f_Group>, Flags<[CC1Option, CC1AsOption, CoreOption]>,
-    HelpText<"The compilation directory to embed in the debug info.">,
-    MarshallingInfoString<CodeGenOpts<"DebugCompilationDir">>;
 def fdebug_compilation_dir_EQ : Joined<["-"], "fdebug-compilation-dir=">,
     Group<f_Group>, Flags<[CC1Option, CC1AsOption, CoreOption]>,
-    Alias<fdebug_compilation_dir>;
+    HelpText<"The compilation directory to embed in the debug info">,
+    MarshallingInfoString<CodeGenOpts<"DebugCompilationDir">>;
+def fdebug_compilation_dir : Separate<["-"], "fdebug-compilation-dir">,
+    Group<f_Group>, Flags<[CC1Option, CC1AsOption, CoreOption]>,
+    Alias<fdebug_compilation_dir_EQ>;
+def fprofile_compilation_dir_EQ : Joined<["-"], "fprofile-compilation-dir=">,
+    Group<f_Group>, Flags<[CC1Option, CC1AsOption, CoreOption]>,
+    HelpText<"The compilation directory to embed in the coverage mapping.">,
+    MarshallingInfoString<CodeGenOpts<"ProfileCompilationDir">>;
 defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   CodeGenOpts<"DebugInfoForProfiling">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Emit extra debug info to make sample profile more accurate">,
@@ -1131,8 +1135,6 @@ def fprofile_remapping_file_EQ : Joined<["-"], "fprofile-remapping-file=">,
     Group<f_Group>, Flags<[CC1Option, CoreOption]>, MetaVarName<"<file>">,
     HelpText<"Use the remappings described in <file> to match the profile data against names in the program">,
     MarshallingInfoString<CodeGenOpts<"ProfileRemappingFile">>;
-def fprofile_remapping_file : Separate<["-"], "fprofile-remapping-file">,
-    Group<f_Group>, Flags<[CoreOption]>, Alias<fprofile_remapping_file_EQ>;
 defm coverage_mapping : BoolFOption<"coverage-mapping",
   CodeGenOpts<"CoverageMapping">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Generate coverage mapping to enable code coverage analysis">,
@@ -1663,13 +1665,10 @@ defm delete_null_pointer_checks : BoolFOption<"delete-null-pointer-checks",
   PosFlag<SetFalse, [], "Treat usage of null pointers as undefined behavior (default)">,
   BothFlags<[CoreOption]>>;
 
-def frewrite_map_file : Separate<["-"], "frewrite-map-file">,
-                        Group<f_Group>,
-                        Flags<[ NoXarchOption, CC1Option ]>,
-                        MarshallingInfoStringVector<CodeGenOpts<"RewriteMapFiles">>;
 def frewrite_map_file_EQ : Joined<["-"], "frewrite-map-file=">,
                            Group<f_Group>,
-                           Flags<[NoXarchOption]>;
+                           Flags<[NoXarchOption, CC1Option]>,
+                           MarshallingInfoStringVector<CodeGenOpts<"RewriteMapFiles">>;
 
 defm use_line_directives : BoolFOption<"use-line-directives",
   PreprocessorOutputOpts<"UseLineDirectives">, DefaultFalse,
@@ -1993,7 +1992,6 @@ def fmodule_name_EQ : Joined<["-"], "fmodule-name=">, Group<f_Group>,
   Flags<[NoXarchOption,CC1Option]>, MetaVarName<"<name>">,
   HelpText<"Specify the name of the module to build">,
   MarshallingInfoString<LangOpts<"ModuleName">>;
-def fmodule_name : Separate<["-"], "fmodule-name">, Alias<fmodule_name_EQ>;
 def fmodule_implementation_of : Separate<["-"], "fmodule-implementation-of">,
   Flags<[CC1Option]>, Alias<fmodule_name_EQ>;
 def fsystem_module : Flag<["-"], "fsystem-module">, Flags<[CC1Option]>,
@@ -2113,6 +2111,10 @@ def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>;
 def fobjc_arc : Flag<["-"], "fobjc-arc">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Synthesize retain and release calls for Objective-C pointers">;
 def fno_objc_arc : Flag<["-"], "fno-objc-arc">, Group<f_Group>;
+defm objc_encode_cxx_class_template_spec : BoolFOption<"objc-encode-cxx-class-template-spec",
+  LangOpts<"EncodeCXXClassTemplateSpec">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Fully encode c++ class template specialization">,
+  NegFlag<SetFalse>>;
 defm objc_convert_messages_to_runtime_calls : BoolFOption<"objc-convert-messages-to-runtime-calls",
   CodeGenOpts<"ObjCConvertMessagesToRuntimeCalls">, DefaultTrue,
   NegFlag<SetFalse, [CC1Option]>, PosFlag<SetTrue>>;
@@ -2675,10 +2677,12 @@ def gdwarf_4 : Flag<["-"], "gdwarf-4">, Group<g_Group>,
   HelpText<"Generate source-level debug information with dwarf version 4">;
 def gdwarf_5 : Flag<["-"], "gdwarf-5">, Group<g_Group>,
   HelpText<"Generate source-level debug information with dwarf version 5">;
-def gdwarf64 : Flag<["-"], "gdwarf64">, Group<g_Group>, Flags<[CC1Option]>,
+def gdwarf64 : Flag<["-"], "gdwarf64">, Group<g_Group>,
+  Flags<[CC1Option, CC1AsOption]>,
   HelpText<"Enables DWARF64 format for ELF binaries, if debug information emission is enabled.">,
   MarshallingInfoFlag<CodeGenOpts<"Dwarf64">>;
-def gdwarf32 : Flag<["-"], "gdwarf32">, Group<g_Group>, Flags<[CC1Option]>,
+def gdwarf32 : Flag<["-"], "gdwarf32">, Group<g_Group>,
+  Flags<[CC1Option, CC1AsOption]>,
   HelpText<"Enables DWARF32 format for ELF binaries, if debug information emission is enabled.">;
 
 def gcodeview : Flag<["-"], "gcodeview">,
@@ -3112,6 +3116,11 @@ def msram_ecc_legacy : Flag<["-"], "msram-ecc">, Group<m_Group>,
   HelpText<"Legacy option to specify SRAM ECC mode (AMDGPU only)">;
 def mno_sram_ecc_legacy : Flag<["-"], "mno-sram-ecc">, Group<m_Group>;
 
+def mtgsplit : Flag<["-"], "mtgsplit">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Enable threadgroup split execution mode (AMDGPU only)">;
+def mno_tgsplit : Flag<["-"], "mno-tgsplit">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Disable threadgroup split execution mode (AMDGPU only)">;
+
 def mwavefrontsize64 : Flag<["-"], "mwavefrontsize64">, Group<m_Group>,
   HelpText<"Specify wavefront size 64 mode (AMDGPU only)">;
 def mno_wavefrontsize64 : Flag<["-"], "mno-wavefrontsize64">, Group<m_Group>,
@@ -3199,6 +3208,8 @@ def mno_longcall : Flag<["-"], "mno-longcall">,
     Group<m_ppc_Features_Group>;
 def mmma: Flag<["-"], "mmma">, Group<m_ppc_Features_Group>;
 def mno_mma: Flag<["-"], "mno-mma">, Group<m_ppc_Features_Group>;
+def mrop_protection : Flag<["-"], "mrop-protection">,
+    Group<m_ppc_Features_Group>;
 def maix_struct_return : Flag<["-"], "maix-struct-return">,
   Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Return all structs in memory (PPC32 only)">;
@@ -4424,6 +4435,12 @@ def fdebug_unparse : Flag<["-"], "fdebug-unparse">, Group<Action_Group>,
   HelpText<"Unparse and stop.">;
 def fdebug_unparse_with_symbols : Flag<["-"], "fdebug-unparse-with-symbols">, Group<Action_Group>,
   HelpText<"Unparse and stop.">;
+def fdebug_dump_symbols : Flag<["-"], "fdebug-dump-symbols">, Group<Action_Group>,
+  HelpText<"Dump symbols after the semantic analysis">;
+def fdebug_dump_parse_tree : Flag<["-"], "fdebug-dump-parse-tree">, Group<Action_Group>,
+  HelpText<"Dump the parse tree">;
+def fdebug_dump_provenance : Flag<["-"], "fdebug-dump-provenance">, Group<Action_Group>,
+  HelpText<"Dump provenance">;
 
 }
 

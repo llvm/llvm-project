@@ -143,7 +143,8 @@ struct AMDGPUFunctionArgInfo {
   // Input registers for non-HSA ABI
   ArgDescriptor ImplicitBufferPtr;
 
-  // VGPRs inputs. These are always v0, v1 and v2 for entry functions.
+  // VGPRs inputs. For entry functions these are either v0, v1 and v2 or packed
+  // into v0, 10 bits per dimension if packed-tid is set.
   ArgDescriptor WorkItemIDX;
   ArgDescriptor WorkItemIDY;
   ArgDescriptor WorkItemIDZ;

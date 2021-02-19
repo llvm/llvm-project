@@ -326,11 +326,11 @@ body: |
   bb.0:
     ; GCN-LABEL: name: flat_inst_breaks_smem_clause
     ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0, 0
-    ; GCN-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0, 0
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0, 0
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0, 0
     S_ENDPGM 0
 ...

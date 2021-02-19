@@ -490,38 +490,48 @@ void CstrBroadcastableOp::getCanonicalizationPatterns(
   patterns.insert<CstrBroadcastableEqOps>(context);
 }
 
-OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
-  // TODO: Add folding for the nary case
-  if (operands.size() != 2)
-    return nullptr;
-
-  // Both operands are not needed if one is a scalar.
-  if (operands[0] &&
-      operands[0].cast<DenseIntElementsAttr>().getNumElements() == 0)
-    return BoolAttr::get(getContext(), true);
-  if (operands[1] &&
-      operands[1].cast<DenseIntElementsAttr>().getNumElements() == 0)
-    return BoolAttr::get(getContext(), true);
-
-  if (operands[0] && operands[1]) {
-    auto lhsShape = llvm::to_vector<6>(
-        operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
-    auto rhsShape = llvm::to_vector<6>(
-        operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
-    SmallVector<int64_t, 6> resultShape;
-    if (OpTrait::util::staticallyKnownBroadcastable(lhsShape, rhsShape))
-      return BoolAttr::get(getContext(), true);
+// Return true if there is exactly one attribute not representing a scalar
+// broadcast.
+static bool hasAtMostSingleNonScalar(ArrayRef<Attribute> attributes) {
+  bool nonScalarSeen = false;
+  for (Attribute a : attributes) {
+    if (!a || a.cast<DenseIntElementsAttr>().getNumElements() != 0) {
+      if (nonScalarSeen)
+        return false;
+      nonScalarSeen = true;
+    }
   }
+  return true;
+}
+
+OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
+  // No broadcasting is needed if all operands but one are scalar.
+  if (hasAtMostSingleNonScalar(operands))
+    return BoolAttr::get(getContext(), true);
+
+  if ([&] {
+        SmallVector<SmallVector<int64_t, 6>, 6> extents;
+        for (const auto &operand : operands) {
+          if (!operand)
+            return false;
+          extents.push_back(llvm::to_vector<6>(
+              operand.cast<DenseIntElementsAttr>().getValues<int64_t>()));
+        }
+        return OpTrait::util::staticallyKnownBroadcastable(extents);
+      }())
+    return BoolAttr::get(getContext(), true);
 
   // Lastly, see if folding can be completed based on what constraints are known
   // on the input shapes.
-  SmallVector<int64_t, 6> lhsShape, rhsShape;
-  if (failed(getShapeVec(shapes()[0], lhsShape)))
-    return nullptr;
-  if (failed(getShapeVec(shapes()[1], rhsShape)))
-    return nullptr;
-
-  if (OpTrait::util::staticallyKnownBroadcastable(lhsShape, rhsShape))
+  if ([&] {
+        SmallVector<SmallVector<int64_t, 6>, 6> extents;
+        for (const auto &shape : shapes()) {
+          extents.emplace_back();
+          if (failed(getShapeVec(shape, extents.back())))
+            return false;
+        }
+        return OpTrait::util::staticallyKnownBroadcastable(extents);
+      }())
     return BoolAttr::get(getContext(), true);
 
   // Because a failing witness result here represents an eventual assertion

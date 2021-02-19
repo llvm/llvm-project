@@ -317,8 +317,8 @@ void PEI::calculateCallFrameInfo(MachineFunction &MF) {
     return;
 
   std::vector<MachineBasicBlock::iterator> FrameSDOps;
-  for (MachineFunction::iterator BB = MF.begin(), E = MF.end(); BB != E; ++BB)
-    for (MachineBasicBlock::iterator I = BB->begin(); I != BB->end(); ++I)
+  for (MachineBasicBlock &BB : MF)
+    for (MachineBasicBlock::iterator I = BB.begin(); I != BB.end(); ++I)
       if (TII.isFrameInstr(*I)) {
         unsigned Size = TII.getFrameSize(*I);
         if (Size > MaxCallFrameSize) MaxCallFrameSize = Size;
@@ -337,10 +337,7 @@ void PEI::calculateCallFrameInfo(MachineFunction &MF) {
   MFI.setAdjustsStack(AdjustsStack);
   MFI.setMaxCallFrameSize(MaxCallFrameSize);
 
-  for (std::vector<MachineBasicBlock::iterator>::iterator
-         i = FrameSDOps.begin(), e = FrameSDOps.end(); i != e; ++i) {
-    MachineBasicBlock::iterator I = *i;
-
+  for (MachineBasicBlock::iterator I : FrameSDOps) {
     // If call frames are not being included as part of the stack frame, and
     // the target doesn't indicate otherwise, remove the call frame pseudos
     // here. The sub/add sp instruction pairs are still inserted, but we don't
@@ -772,9 +769,7 @@ static void AssignProtectedObjSet(const StackObjSet &UnassignedObjs,
                                   int64_t &Offset, Align &MaxAlign,
                                   unsigned Skew) {
 
-  for (StackObjSet::const_iterator I = UnassignedObjs.begin(),
-        E = UnassignedObjs.end(); I != E; ++I) {
-    int i = *I;
+  for (int i : UnassignedObjs) {
     AdjustStackOffset(MFI, i, StackGrowsDown, Offset, MaxAlign, Skew);
     ProtectedObjs.insert(i);
   }
@@ -888,9 +883,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   if (RS && EarlyScavengingSlots) {
     SmallVector<int, 2> SFIs;
     RS->getScavengingFrameIndices(SFIs);
-    for (SmallVectorImpl<int>::iterator I = SFIs.begin(),
-           IE = SFIs.end(); I != IE; ++I)
-      AdjustStackOffset(MFI, *I, StackGrowsDown, Offset, MaxAlign, Skew);
+    for (int SFI : SFIs)
+      AdjustStackOffset(MFI, SFI, StackGrowsDown, Offset, MaxAlign, Skew);
   }
 
   // FIXME: Once this is working, then enable flag will change to a target
@@ -1050,9 +1044,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   if (RS && !EarlyScavengingSlots) {
     SmallVector<int, 2> SFIs;
     RS->getScavengingFrameIndices(SFIs);
-    for (SmallVectorImpl<int>::iterator I = SFIs.begin(),
-           IE = SFIs.end(); I != IE; ++I)
-      AdjustStackOffset(MFI, *I, StackGrowsDown, Offset, MaxAlign, Skew);
+    for (int SFI : SFIs)
+      AdjustStackOffset(MFI, SFI, StackGrowsDown, Offset, MaxAlign, Skew);
   }
 
   if (!TFI.targetHandlesStackFrameRounding()) {
@@ -1089,12 +1082,12 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
       LLVM_DEBUG(if (!SFIs.empty()) llvm::dbgs()
                      << "Adjusting emergency spill slots!\n";);
       int64_t Delta = Offset - OffsetBeforeAlignment;
-      for (SmallVectorImpl<int>::iterator I = SFIs.begin(), IE = SFIs.end();
-           I != IE; ++I) {
-        LLVM_DEBUG(llvm::dbgs() << "Adjusting offset of emergency spill slot #"
-                                << *I << " from " << MFI.getObjectOffset(*I););
-        MFI.setObjectOffset(*I, MFI.getObjectOffset(*I) - Delta);
-        LLVM_DEBUG(llvm::dbgs() << " to " << MFI.getObjectOffset(*I) << "\n";);
+      for (int SFI : SFIs) {
+        LLVM_DEBUG(llvm::dbgs()
+                       << "Adjusting offset of emergency spill slot #" << SFI
+                       << " from " << MFI.getObjectOffset(SFI););
+        MFI.setObjectOffset(SFI, MFI.getObjectOffset(SFI) - Delta);
+        LLVM_DEBUG(llvm::dbgs() << " to " << MFI.getObjectOffset(SFI) << "\n";);
       }
     }
   }

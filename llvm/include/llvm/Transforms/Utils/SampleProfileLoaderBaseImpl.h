@@ -21,6 +21,9 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -38,6 +41,7 @@
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
 
 namespace llvm {
+using namespace llvm;
 using namespace sampleprof;
 using namespace sampleprofutil;
 using ProfileCount = Function::ProfileCount;
@@ -65,33 +69,35 @@ protected:
   ~SampleProfileLoaderBaseImpl() = default;
   friend class SampleCoverageTracker;
 
-  unsigned getFunctionLoc(Function &F);
-  virtual ErrorOr<uint64_t> getInstWeight(const Instruction &Inst);
-  ErrorOr<uint64_t> getInstWeightImpl(const Instruction &Inst);
-  ErrorOr<uint64_t> getBlockWeight(const BasicBlock *BB);
+  inline unsigned getFunctionLoc(Function &F);
+  inline virtual ErrorOr<uint64_t> getInstWeight(const Instruction &Inst);
+  inline ErrorOr<uint64_t> getInstWeightImpl(const Instruction &Inst);
+  inline ErrorOr<uint64_t> getBlockWeight(const BasicBlock *BB);
   mutable DenseMap<const DILocation *, const FunctionSamples *>
       DILocation2SampleMap;
-  virtual const FunctionSamples *
+  inline virtual const FunctionSamples *
   findFunctionSamples(const Instruction &I) const;
-  void printEdgeWeight(raw_ostream &OS, Edge E);
-  void printBlockWeight(raw_ostream &OS, const BasicBlock *BB) const;
-  void printBlockEquivalence(raw_ostream &OS, const BasicBlock *BB);
-  bool computeBlockWeights(Function &F);
-  void findEquivalenceClasses(Function &F);
+  inline void printEdgeWeight(raw_ostream &OS, Edge E);
+  inline void printBlockWeight(raw_ostream &OS, const BasicBlock *BB) const;
+  inline void printBlockEquivalence(raw_ostream &OS, const BasicBlock *BB);
+  inline bool computeBlockWeights(Function &F);
+  inline void findEquivalenceClasses(Function &F);
   template <bool IsPostDom>
-  void findEquivalencesFor(BasicBlock *BB1, ArrayRef<BasicBlock *> Descendants,
-                           DominatorTreeBase<BasicBlock, IsPostDom> *DomTree);
+  inline void
+  findEquivalencesFor(BasicBlock *BB1, ArrayRef<BasicBlock *> Descendants,
+                      DominatorTreeBase<BasicBlock, IsPostDom> *DomTree);
 
-  void propagateWeights(Function &F);
-  uint64_t visitEdge(Edge E, unsigned *NumUnknownEdges, Edge *UnknownEdge);
-  void buildEdges(Function &F);
-  bool propagateThroughEdges(Function &F, bool UpdateBlockCount);
-  void clearFunctionData();
-  void computeDominanceAndLoopInfo(Function &F);
-  bool
+  inline void propagateWeights(Function &F);
+  inline uint64_t visitEdge(Edge E, unsigned *NumUnknownEdges,
+                            Edge *UnknownEdge);
+  inline void buildEdges(Function &F);
+  inline bool propagateThroughEdges(Function &F, bool UpdateBlockCount);
+  inline void clearFunctionData();
+  inline void computeDominanceAndLoopInfo(Function &F);
+  inline bool
   computeAndPropagateWeights(Function &F,
                              const DenseSet<GlobalValue::GUID> &InlinedGUIDs);
-  void emitCoverageRemarks(Function &F);
+  inline void emitCoverageRemarks(Function &F);
 
   /// Map basic blocks to their computed weights.
   ///

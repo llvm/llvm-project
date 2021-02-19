@@ -49,7 +49,7 @@ def Shape_AddOp : Shape_Op<"add", [Commutative, NoSideEffect]> {
   let verifier = [{ return verifySizeOrIndexOp(*this); }];
 }
 
-def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative]> {
+def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative, NoSideEffect]> {
   let summary = "Returns the broadcasted output shape of two or more inputs";
   let description = [{
     Returns the broadcasted shape for input shapes or extent tensors. The rest

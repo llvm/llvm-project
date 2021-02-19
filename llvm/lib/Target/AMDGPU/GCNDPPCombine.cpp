@@ -137,7 +137,8 @@ MachineOperand *GCNDPPCombine::getOldOpndValue(MachineOperand &OldOpnd) const {
   case AMDGPU::IMPLICIT_DEF:
     return nullptr;
   case AMDGPU::COPY:
-  case AMDGPU::V_MOV_B32_e32: {
+  case AMDGPU::V_MOV_B32_e32:
+  case AMDGPU::V_MOV_B64_PSEUDO: {
     auto &Op1 = Def->getOperand(1);
     if (Op1.isImm())
       return &Op1;
@@ -151,7 +152,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
                                            MachineInstr &MovMI,
                                            RegSubRegPair CombOldVGPR,
                                            bool CombBCZ) const {
-  assert(MovMI.getOpcode() == AMDGPU::V_MOV_B32_dpp);
+  assert(MovMI.getOpcode() == AMDGPU::V_MOV_B32_dpp ||
+         MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO);
 
   auto OrigOp = OrigMI.getOpcode();
   auto DPPOp = getDPPOp(OrigOp);
@@ -174,7 +176,11 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     const int OldIdx = AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::old);
     if (OldIdx != -1) {
       assert(OldIdx == NumOperands);
-      assert(isOfRegClass(CombOldVGPR, AMDGPU::VGPR_32RegClass, *MRI));
+      assert(isOfRegClass(
+          CombOldVGPR,
+          *MRI->getRegClass(
+              TII->getNamedOperand(MovMI, AMDGPU::OpName::vdst)->getReg()),
+          *MRI));
       auto *Def = getVRegSubRegDef(CombOldVGPR, *MRI);
       DPPInst.addReg(CombOldVGPR.Reg, Def ? 0 : RegState::Undef,
                      CombOldVGPR.SubReg);
@@ -325,8 +331,10 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       return nullptr;
     }
     CombOldVGPR = getRegSubRegPair(*Src1);
-    if (!isOfRegClass(CombOldVGPR, AMDGPU::VGPR_32RegClass, *MRI)) {
-      LLVM_DEBUG(dbgs() << "  failed: src1 isn't a VGPR32 register\n");
+    auto MovDst = TII->getNamedOperand(MovMI, AMDGPU::OpName::vdst);
+    const TargetRegisterClass *RC = MRI->getRegClass(MovDst->getReg());
+    if (!isOfRegClass(CombOldVGPR, *RC, *MRI)) {
+      LLVM_DEBUG(dbgs() << "  failed: src1 has wrong register class\n");
       return nullptr;
     }
   }
@@ -346,7 +354,8 @@ bool GCNDPPCombine::hasNoImmOrEqual(MachineInstr &MI, unsigned OpndName,
 }
 
 bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
-  assert(MovMI.getOpcode() == AMDGPU::V_MOV_B32_dpp);
+  assert(MovMI.getOpcode() == AMDGPU::V_MOV_B32_dpp ||
+         MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO);
   LLVM_DEBUG(dbgs() << "\nDPP combine: " << MovMI);
 
   auto *DstOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::vdst);
@@ -360,6 +369,17 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     LLVM_DEBUG(dbgs() << "  failed: EXEC mask should remain the same"
                          " for all uses\n");
     return false;
+  }
+
+  if (MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO) {
+    auto *DppCtrl = TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl);
+    assert(DppCtrl && DppCtrl->isImm());
+    if (!AMDGPU::isLegal64BitDPPControl(DppCtrl->getImm())) {
+      LLVM_DEBUG(dbgs() << "  failed: 64 bit dpp move uses unsupported"
+                           " control value\n");
+      // Let it split, then control may become legal.
+      return false;
+    }
   }
 
   auto *RowMaskOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::row_mask);
@@ -430,8 +450,9 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
   auto CombOldVGPR = getRegSubRegPair(*OldOpnd);
   // try to reuse previous old reg if its undefined (IMPLICIT_DEF)
   if (CombBCZ && OldOpndValue) { // CombOldVGPR should be undef
+    const TargetRegisterClass *RC = MRI->getRegClass(DPPMovReg);
     CombOldVGPR = RegSubRegPair(
-      MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass));
+      MRI->createVirtualRegister(RC));
     auto UndefInst = BuildMI(*MovMI.getParent(), MovMI, MovMI.getDebugLoc(),
                              TII->get(AMDGPU::IMPLICIT_DEF), CombOldVGPR.Reg);
     DPPMIs.push_back(UndefInst.getInstr());
@@ -581,12 +602,17 @@ bool GCNDPPCombine::runOnMachineFunction(MachineFunction &MF) {
         Changed = true;
         ++NumDPPMovsCombined;
       } else if (MI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO) {
-        auto Split = TII->expandMovDPP64(MI);
-        for (auto M : { Split.first, Split.second }) {
-          if (combineDPPMov(*M))
-            ++NumDPPMovsCombined;
+        if (ST.has64BitDPP() && combineDPPMov(MI)) {
+          Changed = true;
+          ++NumDPPMovsCombined;
+        } else {
+          auto Split = TII->expandMovDPP64(MI);
+          for (auto M : { Split.first, Split.second }) {
+            if (M && combineDPPMov(*M))
+              ++NumDPPMovsCombined;
+          }
+          Changed = true;
         }
-        Changed = true;
       }
     }
   }

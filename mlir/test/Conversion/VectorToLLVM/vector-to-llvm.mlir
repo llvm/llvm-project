@@ -1147,18 +1147,18 @@ func @transfer_read_1d_non_zero_addrspace(%A : memref<?xf32, 3>, %base: index) -
 // 1. Check address space for GEP is correct.
 //       CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}} :
 //  CHECK-SAME: (!llvm.ptr<f32, 3>, i64) -> !llvm.ptr<f32, 3>
-//       CHECK: %[[vecPtr:.*]] = llvm.addrspacecast %[[gep]] :
-//  CHECK-SAME: !llvm.ptr<f32, 3> to !llvm.ptr<vector<17xf32>>
+//       CHECK: %[[vecPtr:.*]] = llvm.bitcast %[[gep]] :
+//  CHECK-SAME: !llvm.ptr<f32, 3> to !llvm.ptr<vector<17xf32>, 3>
 //
 // 2. Check address space of the memref is correct.
 //       CHECK: %[[c0:.*]] = constant 0 : index
 //       CHECK: %[[DIM:.*]] = dim %{{.*}}, %[[c0]] : memref<?xf32, 3>
 //
-// 3. Check address apce for GEP is correct.
+// 3. Check address space for GEP is correct.
 //       CHECK: %[[gep_b:.*]] = llvm.getelementptr {{.*}} :
 //  CHECK-SAME: (!llvm.ptr<f32, 3>, i64) -> !llvm.ptr<f32, 3>
-//       CHECK: %[[vecPtr_b:.*]] = llvm.addrspacecast %[[gep_b]] :
-//  CHECK-SAME: !llvm.ptr<f32, 3> to !llvm.ptr<vector<17xf32>>
+//       CHECK: %[[vecPtr_b:.*]] = llvm.bitcast %[[gep_b]] :
+//  CHECK-SAME: !llvm.ptr<f32, 3> to !llvm.ptr<vector<17xf32>, 3>
 
 // -----
 

@@ -406,6 +406,13 @@ enum ExtendedTBTableFlag : uint8_t {
 StringRef getNameForTracebackTableLanguageId(TracebackTable::LanguageID LangId);
 SmallString<32> getExtendedTBTableFlagString(uint8_t Flag);
 
+struct CsectProperties {
+  CsectProperties(StorageMappingClass SMC, SymbolType ST)
+      : MappingClass(SMC), Type(ST) {}
+  StorageMappingClass MappingClass;
+  SymbolType Type;
+};
+
 } // end namespace XCOFF
 } // end namespace llvm
 

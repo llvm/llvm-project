@@ -57,9 +57,9 @@ static std::unique_ptr<raw_fd_ostream> openFile(StringRef file) {
   return ret;
 }
 
-// The merged bitcode after LTO is large. Try openning a file stream that
+// The merged bitcode after LTO is large. Try opening a file stream that
 // supports reading, seeking and writing. Such a file allows BitcodeWriter to
-// flush buffered data to reduce memory comsuption. If this fails, open a file
+// flush buffered data to reduce memory consumption. If this fails, open a file
 // stream that supports only write.
 static std::unique_ptr<raw_fd_ostream> openLTOOutputFile(StringRef file) {
   std::error_code ec;

@@ -275,7 +275,7 @@ public:
     // variables or functions in constant data, so don't convert switches to
     // lookup tables if any of the values would need relocation.
     if (ST->isROPI() || ST->isRWPI())
-      return !C->needsRelocation();
+      return !C->needsDynamicRelocation();
 
     return true;
   }

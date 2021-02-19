@@ -7069,6 +7069,11 @@ QualType ASTReader::GetType(TypeID ID) {
       T = Context.Id##Ty; \
       break;
 #include "clang/Basic/PPCTypes.def"
+#define RVV_TYPE(Name, Id, SingletonId) \
+    case PREDEF_TYPE_##Id##_ID: \
+      T = Context.SingletonId; \
+      break;
+#include "clang/Basic/RISCVVTypes.def"
     }
 
     assert(!T.isNull() && "Unknown predefined type");

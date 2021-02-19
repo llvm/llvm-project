@@ -8,6 +8,7 @@ import os
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test import lldbplatformutil
 
 
 class TestPaths(TestBase):
@@ -29,7 +30,18 @@ class TestPaths(TestBase):
         for path_type in dir_path_types:
             f = lldb.SBHostOS.GetLLDBPath(path_type)
             # No directory path types should have the filename set
-            self.assertTrue(f.GetFilename() is None)
+            self.assertIsNone(f.GetFilename())
+
+        shlib_dir = lldb.SBHostOS.GetLLDBPath(lldb.ePathTypeLLDBShlibDir).GetDirectory()
+        if lldbplatformutil.getHostPlatform() == 'windows':
+            filenames = ['liblldb.dll']
+        elif lldbplatformutil.getHostPlatform() == 'darwin':
+            filenames = ['LLDB', 'liblldb.dylib']
+        else:
+            filenames = ['liblldb.so']
+        self.assertTrue(any([os.path.exists(os.path.join(shlib_dir, f)) for f in
+            filenames]), "shlib_dir = " + shlib_dir)
+
 
     @no_debug_info_test
     def test_directory_doesnt_end_with_slash(self):

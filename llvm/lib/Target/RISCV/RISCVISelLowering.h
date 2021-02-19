@@ -170,10 +170,15 @@ enum NodeType : unsigned {
   SMAX_VL,
   UMIN_VL,
   UMAX_VL,
+  MULHS_VL,
+  MULHU_VL,
 
   // Vector compare producing a mask. Fourth operand is input mask. Fifth
   // operand is VL.
   SETCC_VL,
+
+  // Vector select with an additional VL operand. This operation is unmasked.
+  VSELECT_VL,
 
   // Mask binary operators.
   VMAND_VL,
@@ -410,6 +415,8 @@ private:
   SDValue lowerFixedLengthVectorLogicOpToRVV(SDValue Op, SelectionDAG &DAG,
                                              unsigned MaskOpc,
                                              unsigned VecOpc) const;
+  SDValue lowerFixedLengthVectorSelectToRVV(SDValue Op,
+                                            SelectionDAG &DAG) const;
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG, unsigned NewOpc,
                             bool HasMask = true) const;
 
@@ -445,22 +452,6 @@ using namespace RISCV;
 
 } // end namespace RISCVVIntrinsicsTable
 
-namespace RISCVZvlssegTable {
-
-struct RISCVZvlsseg {
-  unsigned IntrinsicID;
-  uint8_t SEW;
-  uint8_t LMUL;
-  uint8_t IndexLMUL;
-  uint16_t Pseudo;
-};
-
-using namespace RISCV;
-
-#define GET_RISCVZvlssegTable_DECL
-#include "RISCVGenSearchableTables.inc"
-
-} // namespace RISCVZvlssegTable
-}
+} // end namespace llvm
 
 #endif

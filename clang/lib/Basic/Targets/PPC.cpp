@@ -66,6 +66,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       PairedVectorMemops = true;
     } else if (Feature == "+mma") {
       HasMMA = true;
+    } else if (Feature == "+rop-protection") {
+      HasROPProtection = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -193,6 +195,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__POWER9_VECTOR__");
   if (HasMMA)
     Builder.defineMacro("__MMA__");
+  if (HasROPProtection)
+    Builder.defineMacro("__ROP_PROTECTION__");
   if (HasP10Vector)
     Builder.defineMacro("__POWER10_VECTOR__");
 
@@ -319,6 +323,9 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("pwr8", true)
                         .Default(false);
 
+  // ROP Protection is off by default.
+  Features["rop-protection"] = false;
+
   Features["spe"] = llvm::StringSwitch<bool>(CPU)
                         .Case("8548", true)
                         .Case("e500", true)
@@ -352,6 +359,13 @@ bool PPCTargetInfo::initFeatureMap(
       llvm::find(FeaturesVec, "+mma") != FeaturesVec.end()) {
     // We have MMA on PPC but not power 10 and above.
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mmma" << CPU;
+    return false;
+  }
+
+  if (!(ArchDefs & ArchDefinePwr8) &&
+      llvm::find(FeaturesVec, "+rop-protection") != FeaturesVec.end()) {
+    // We can turn on ROP Protection on Power 8 and above.
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protection" << CPU;
     return false;
   }
 
@@ -393,6 +407,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("pcrelative-memops", HasPCRelativeMemops)
       .Case("spe", HasSPE)
       .Case("mma", HasMMA)
+      .Case("rop-protection", HasROPProtection)
       .Default(false);
 }
 

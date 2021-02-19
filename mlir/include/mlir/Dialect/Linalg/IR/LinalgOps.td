@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
@@ -484,5 +485,59 @@ def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
     ```
   }];
 }
+
+def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
+     AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+     RecursiveSideEffects,
+     SingleBlockImplicitTerminator<"linalg::YieldOp">
+    ]> {
+  let summary = "Linalg tiled loop operation";
+  let description = [{
+    This is a loop-like operation with additional properties. The arguments
+    also include the input and the output tensors and the attributes to specify
+    the iterator types. The body region of the loop contains `subtensor`
+    operations applied to every tensor argument of TiledLoopOp.
+
+    The body region must contain exactly one block that terminates with
+    `linalg.yield` with the operands resulting from `subtensor_insert`
+    operations.
+
+    Parsing TiledLoopOp will set all elements of the `iterator_types` attribute
+    to "parallel" type, when it is absent from the custom format.
+
+    Example:
+
+    ```mlir
+      linalg.tiled_loop (%i) = (%c0) to (%c24) step (%c4)
+        ins(%lhs, %rhs : tensor<24x64xi8>, tensor<24x64xi8>)
+        outs(%out : tensor<24x64xi8>)
+        iterators("parallel") {
+      %lhs_sub = subtensor %lhs[%i, 0] [%c4, %c64] [1, 1]
+          : tensor<24x64xi8> to tensor<?x?xi8>
+      %rhs_sub = subtensor %rhs[%i, 0] [%c4, %c64] [1, 1]
+          : tensor<24x64xi8> to tensor<?x?xi8>
+      %out_sub = subtensor %out[%i, 0] [%c4, %c64] [1, 1]
+          : tensor<24x64xi8> to tensor<?x?xi8>
+
+      %result_sub = linalg.generic ...
+
+      %result = subtensor_insert %result_sub into %out[%i, 0][%c4, %c64][1, 1]
+        : tensor<?x?xi8> into tensor<24x64xi8>
+      linalg.yield %result : tensor<24x64xi8>
+    }
+    ```
+  }];
+
+  let arguments = (ins Variadic<Index>:$lowerBound,
+                       Variadic<Index>:$upperBound,
+                       Variadic<Index>:$step,
+                       Variadic<AnyRankedTensor>:$inputs,
+                       Variadic<AnyRankedTensor>:$outputs,
+                       ArrayAttr:$iterator_types);
+  let results = (outs Variadic<AnyRankedTensor>:$results);
+  let regions = (region SizedRegion<1>:$region);
+}
+
 
 #endif // LINALG_OPS

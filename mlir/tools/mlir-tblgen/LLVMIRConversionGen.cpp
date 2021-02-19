@@ -222,8 +222,9 @@ static void emitOneEnumToConversion(const llvm::Record *record,
   StringRef cppNamespace = enumAttr.getCppNamespace();
 
   // Emit the function converting the enum attribute to its LLVM counterpart.
-  os << formatv("static {0} convert{1}ToLLVM({2}::{1} value) {{\n", llvmClass,
-                cppClassName, cppNamespace);
+  os << formatv(
+      "static LLVM_ATTRIBUTE_UNUSED {0} convert{1}ToLLVM({2}::{1} value) {{\n",
+      llvmClass, cppClassName, cppNamespace);
   os << "  switch (value) {\n";
 
   for (const auto &enumerant : enumAttr.getAllCases()) {
@@ -251,7 +252,8 @@ static void emitOneEnumFromConversion(const llvm::Record *record,
   StringRef cppNamespace = enumAttr.getCppNamespace();
 
   // Emit the function converting the enum attribute from its LLVM counterpart.
-  os << formatv("inline {0}::{1} convert{1}FromLLVM({2} value) {{\n",
+  os << formatv("inline LLVM_ATTRIBUTE_UNUSED {0}::{1} convert{1}FromLLVM({2} "
+                "value) {{\n",
                 cppNamespace, cppClassName, llvmClass);
   os << "  switch (value) {\n";
 

@@ -336,9 +336,7 @@ public:
   /// Add a library for inlining to top level library.
   ///
   ///\param Document The library to inline with top level library.
-  void addDocument(std::shared_ptr<InterfaceFile> &&Document) {
-    Documents.emplace_back(std::move(Document));
-  }
+  void addDocument(std::shared_ptr<InterfaceFile> &&Document);
 
   /// Get the list of inlined libraries.
   ///
@@ -397,6 +395,14 @@ public:
         fn);
   }
 
+  /// The equality is determined by attributes that impact linking
+  /// compatibilities. UUIDs, Path, & FileKind are irrelevant since these by
+  /// itself should not impact linking.
+  /// This is an expensive operation.
+  bool operator==(const InterfaceFile &O) const;
+
+  bool operator!=(const InterfaceFile &O) const { return !(*this == O); }
+
 private:
   llvm::BumpPtrAllocator Allocator;
   StringRef copyString(StringRef String) {
@@ -426,6 +432,21 @@ private:
   std::vector<std::pair<Target, std::string>> UUIDs;
   SymbolMapType Symbols;
 };
+
+template <typename DerivedT, typename KeyInfoT, typename BucketT>
+bool operator==(const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
+                                   KeyInfoT, BucketT> &LHS,
+                const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
+                                   KeyInfoT, BucketT> &RHS) {
+  if (LHS.size() != RHS.size())
+    return false;
+  for (auto KV : LHS) {
+    auto I = RHS.find(KV.first);
+    if (I == RHS.end() || *I->second != *KV.second)
+      return false;
+  }
+  return true;
+}
 
 } // end namespace MachO.
 } // end namespace llvm.

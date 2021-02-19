@@ -1,0 +1,196 @@
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck --check-prefix=GFX90A --implicit-check-not=error: %s
+
+ds_add_src2_u32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_add_src2_f32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_sub_src2_u32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_rsub_src2_u32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_inc_src2_u32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_dec_src2_u32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_min_src2_i32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_max_src2_i32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_min_src2_u32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_max_src2_u32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_and_src2_b32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_or_src2_b32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_xor_src2_b32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_min_src2_f32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_max_src2_f32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_add_src2_u64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_sub_src2_u64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_rsub_src2_u64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_inc_src2_u64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_dec_src2_u64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_min_src2_i64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_max_src2_i64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_min_src2_u64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_max_src2_u64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_and_src2_b64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_or_src2_b64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_xor_src2_b64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_min_src2_f64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_max_src2_f64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_write_src2_b32 v1
+// GFX90A: error: instruction not supported on this GPU
+
+ds_write_src2_b64 v1
+// GFX90A: error: instruction not supported on this GPU
+
+image_gather4 v[5:8], v1, s[8:15], s[12:15]
+// GFX90A: error: instruction not supported on this GPU
+
+image_get_lod v5, v1, s[8:15], s[12:15]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mul_legacy_f32_e32 v5, v1, v2
+// GFX90A: error: e32 variant of this instruction is not supported
+
+v_mul_legacy_f32_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+// GFX90A: error: sdwa variant of this instruction is not supported
+
+v_mul_legacy_f32_dpp v5, v1, v2  quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+// GFX90A: error: dpp variant of this instruction is not supported
+
+v_interp_p1_f32 v5, v1, attr0.x
+// GFX90A: error: instruction not supported on this GPU
+
+v_interp_p1_f32_e64 v5, v2, attr0.x
+// GFX90A: error: instruction not supported on this GPU
+
+v_interp_p2_f32 v5, v1, attr0.x
+// GFX90A: error: instruction not supported on this GPU
+
+v_interp_mov_f32 v5, p10, attr0.x
+// GFX90A: error: instruction not supported on this GPU
+
+v_interp_p1ll_f16 v5, v2, attr0.x
+// GFX90A: error: instruction not supported on this GPU
+
+v_interp_p1lv_f16 v5, v2, attr0.x, v3
+// GFX90A: error: instruction not supported on this GPU
+
+v_interp_p2_legacy_f16 v5, v2, attr0.x, v3
+// GFX90A: error: instruction not supported on this GPU
+
+v_interp_p2_f16 v5, v2, attr0.x, v3
+// GFX90A: error: instruction not supported on this GPU
+
+v_mov_b32_dpp v5, v1 row_share:1 row_mask:0x0 bank_mask:0x0
+// GFX90A: error: not a valid operand
+
+v_ceil_f64_dpp v[0:1], v[2:3] quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf
+// GFX90A: error: not a valid operand.
+
+v_ceil_f64_dpp v[0:1], v[2:3] row_shl:1 row_mask:0xf bank_mask:0xf
+// GFX90A: error: not a valid operand.
+
+v_ceil_f64_dpp v[0:1], v[2:3] wave_ror:1 row_mask:0xf bank_mask:0xf
+// GFX90A: error: not a valid operand.
+
+v_ceil_f64_dpp v[0:1], v[2:3] row_share:1 row_mask:0xf bank_mask:0xf
+// GFX90A: error: not a valid operand.
+
+flat_atomic_add v2, v[2:3], a2 glc
+// GFX90A: error: invalid register class: data and dst should be all VGPR or AGPR
+
+flat_atomic_add a2, v[2:3], v2 glc
+// GFX90A: error: invalid register class: data and dst should be all VGPR or AGPR
+
+tbuffer_store_format_xyzw v[0:3], off, s[4:7],  dfmt:15,  nfmt:2, s1 tfe
+// GFX90A: error: operands are not valid for this GPU or mode
+
+buffer_store_dwordx4 v[0:3], off, s[12:15], s4 offset:4095 glc tfe
+// GFX90A: error: operands are not valid for this GPU or mode
+
+ds_write2_b64 v1, a[4:5], v[2:3] offset1:255
+// GFX90A: error: invalid register class: data and dst should be all VGPR or AGPR
+
+ds_write2_b64 v1, v[4:5], a[2:3] offset1:255
+// GFX90A: error: invalid register class: data and dst should be all VGPR or AGPR
+
+ds_write2_b64 v1, a[4:5], v[2:3] offset1:255 gds
+// GFX90A: error: invalid register class: data and dst should be all VGPR or AGPR
+
+ds_write2_b64 v1, v[4:5], a[2:3] offset1:255 gds
+// GFX90A: error: invalid register class: data and dst should be all VGPR or AGPR
+
+ds_wrxchg2st64_rtn_b32 v[6:7], v1, a2, a3 offset0:127
+// GFX90A: error: invalid register class: data and dst should be all VGPR or AGPR
+
+image_load v[0:4], v2, s[0:7] dmask:0xf unorm tfe
+// GFX90A: error: operands are not valid for this GPU or mode
+
+image_sample_lz v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
+// GFX90A: error: instruction not supported on this GPU
+
+image_sample_d v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
+// GFX90A: error: instruction not supported on this GPU
+
+image_sample_o v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
+// GFX90A: error: instruction not supported on this GPU
+
+image_sample_cl v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
+// GFX90A: error: instruction not supported on this GPU
+
+image_sample_cd v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
+// GFX90A: error: instruction not supported on this GPU
+
+image_sample_b v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
+// GFX90A: error: instruction not supported on this GPU

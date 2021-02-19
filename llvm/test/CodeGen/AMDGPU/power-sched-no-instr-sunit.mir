@@ -16,6 +16,6 @@ body:             |
     S_BARRIER
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X1F32_e64 undef $vgpr0, undef $vgpr0, 0, 0, 0, 2, implicit $mode, implicit $exec
     $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr31, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN killed $vgpr0, undef $vgpr0, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr6, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN killed $vgpr0, undef $vgpr0, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr6, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 
 ...

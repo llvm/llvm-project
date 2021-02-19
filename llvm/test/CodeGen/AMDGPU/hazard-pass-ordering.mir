@@ -15,7 +15,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
     $sgpr8_sgpr9 = S_MOV_B64 -1
-    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     $vcc = S_ANDN2_B64 $exec, killed renamable $sgpr8_sgpr9, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
 

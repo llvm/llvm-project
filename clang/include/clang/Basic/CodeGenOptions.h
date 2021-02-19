@@ -172,6 +172,9 @@ public:
   /// The string to embed in debug information as the current working directory.
   std::string DebugCompilationDir;
 
+  /// The string to embed in coverage mapping as the current working directory.
+  std::string ProfileCompilationDir;
+
   /// The string to embed in the debug information for the compile unit, if
   /// non-empty.
   std::string DwarfDebugFlags;

@@ -199,9 +199,9 @@ for.body:                                         ; preds = %for.body, %entry
 } 
 
 ; CHECK-LABEL: single_arg_phi
-; CHECK: MayAlias: i32* %ptr, i32* %ptr.next
+; CHECK: NoAlias: i32* %ptr, i32* %ptr.next
+; CHECK: MustAlias: i32* %ptr, i32* %ptr.phi
 ; CHECK: MustAlias: i32* %ptr.next, i32* %ptr.next.phi
-; TODO: The first one could be MustAlias as well.
 define void @single_arg_phi(i32* %ptr.base) {
 entry:
   br label %loop

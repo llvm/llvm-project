@@ -94,6 +94,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Evaluator.h"
 #include <algorithm>
 #include <cstddef>
@@ -161,6 +162,14 @@ cl::list<std::string>
     SkipFunctionNames("wholeprogramdevirt-skip",
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated);
+
+/// Mechanism to add runtime checking of devirtualization decisions, trapping on
+/// any that are not correct. Useful for debugging undefined behavior leading to
+/// failures with WPD.
+cl::opt<bool>
+    CheckDevirt("wholeprogramdevirt-check", cl::init(false), cl::Hidden,
+                cl::ZeroOrMore,
+                cl::desc("Add code to trap on incorrect devirtualizations"));
 
 namespace {
 struct PatternList {
@@ -994,10 +1003,10 @@ bool DevirtIndex::tryFindVirtualCallTargets(
     std::vector<ValueInfo> &TargetsForSlot, const TypeIdCompatibleVtableInfo TIdInfo,
     uint64_t ByteOffset) {
   for (const TypeIdOffsetVtableInfo &P : TIdInfo) {
-    // Find the first non-available_externally linkage vtable initializer.
+    // Find a representative copy of the vtable initializer.
     // We can have multiple available_externally, linkonce_odr and weak_odr
-    // vtable initializers, however we want to skip available_externally as they
-    // do not have type metadata attached, and therefore the summary will not
+    // vtable initializers, however currently clang does not attach type
+    // metadata to available_externally, and therefore the summary will not
     // contain any vtable functions. We can also have multiple external
     // vtable initializers in the case of comdats, which we cannot check here.
     // The linker should give an error in this case.
@@ -1014,14 +1023,22 @@ bool DevirtIndex::tryFindVirtualCallTargets(
           return false;
         LocalFound = true;
       }
-      if (!GlobalValue::isAvailableExternallyLinkage(S->linkage())) {
-        VS = cast<GlobalVarSummary>(S->getBaseObject());
+      auto *CurVS = cast<GlobalVarSummary>(S->getBaseObject());
+      if (!CurVS->vTableFuncs().empty()) {
+        VS = CurVS;
         // We cannot perform whole program devirtualization analysis on a vtable
         // with public LTO visibility.
         if (VS->getVCallVisibility() == GlobalObject::VCallVisibilityPublic)
           return false;
-      }
+      } else
+        // Currently clang will not attach the necessary type metadata to
+        // available_externally vtables.
+        assert(GlobalValue::isAvailableExternallyLinkage(S->linkage()));
     }
+    // There will be no VS if all copies are available_externally having no
+    // type metadata. In that case we can't safely perform WPD.
+    if (!VS)
+      return false;
     if (!VS->isLive())
       continue;
     for (auto VTP : VS->vTableFuncs()) {
@@ -1047,8 +1064,27 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       if (RemarksEnabled)
         VCallSite.emitRemark("single-impl",
                              TheFn->stripPointerCasts()->getName(), OREGetter);
-      VCallSite.CB.setCalledOperand(ConstantExpr::getBitCast(
-          TheFn, VCallSite.CB.getCalledOperand()->getType()));
+      auto &CB = VCallSite.CB;
+      IRBuilder<> Builder(&CB);
+      Value *Callee =
+          Builder.CreateBitCast(TheFn, CB.getCalledOperand()->getType());
+
+      // If checking is enabled, add support to compare the virtual function
+      // pointer to the devirtualized target. In case of a mismatch, perform a
+      // debug trap.
+      if (CheckDevirt) {
+        auto *Cond = Builder.CreateICmpNE(CB.getCalledOperand(), Callee);
+        Instruction *ThenTerm =
+            SplitBlockAndInsertIfThen(Cond, &CB, /*Unreachable=*/false);
+        Builder.SetInsertPoint(ThenTerm);
+        Function *TrapFn = Intrinsic::getDeclaration(&M, Intrinsic::debugtrap);
+        auto *CallTrap = Builder.CreateCall(TrapFn);
+        CallTrap->setDebugLoc(CB.getDebugLoc());
+      }
+
+      // Devirtualize.
+      CB.setCalledOperand(Callee);
+
       // This use is no longer unsafe.
       if (VCallSite.NumUnsafeUses)
         --*VCallSite.NumUnsafeUses;

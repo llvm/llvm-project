@@ -874,31 +874,37 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   // the ABI or object file format. For example, the XL compiler uses an unnamed
   // csect for program code.
   TextSection = Ctx->getXCOFFSection(
-      ".text", XCOFF::StorageMappingClass::XMC_PR, XCOFF::XTY_SD,
-      SectionKind::getText(), /* MultiSymbolsAllowed*/ true);
+      ".text", SectionKind::getText(),
+      XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_PR, XCOFF::XTY_SD),
+      /* MultiSymbolsAllowed*/ true);
 
   DataSection = Ctx->getXCOFFSection(
-      ".data", XCOFF::StorageMappingClass::XMC_RW, XCOFF::XTY_SD,
-      SectionKind::getData(), /* MultiSymbolsAllowed*/ true);
+      ".data", SectionKind::getData(),
+      XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_RW, XCOFF::XTY_SD),
+      /* MultiSymbolsAllowed*/ true);
 
   ReadOnlySection = Ctx->getXCOFFSection(
-      ".rodata", XCOFF::StorageMappingClass::XMC_RO, XCOFF::XTY_SD,
-      SectionKind::getReadOnly(), /* MultiSymbolsAllowed*/ true);
+      ".rodata", SectionKind::getReadOnly(),
+      XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_RO, XCOFF::XTY_SD),
+      /* MultiSymbolsAllowed*/ true);
 
-  TOCBaseSection =
-      Ctx->getXCOFFSection("TOC", XCOFF::StorageMappingClass::XMC_TC0,
-                           XCOFF::XTY_SD, SectionKind::getData());
+  TOCBaseSection = Ctx->getXCOFFSection(
+      "TOC", SectionKind::getData(),
+      XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_TC0,
+                             XCOFF::XTY_SD));
 
   // The TOC-base always has 0 size, but 4 byte alignment.
   TOCBaseSection->setAlignment(Align(4));
 
-  LSDASection = Ctx->getXCOFFSection(".gcc_except_table",
-                                     XCOFF::StorageMappingClass::XMC_RO,
-                                     XCOFF::XTY_SD, SectionKind::getReadOnly());
+  LSDASection = Ctx->getXCOFFSection(
+      ".gcc_except_table", SectionKind::getReadOnly(),
+      XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_RO,
+                             XCOFF::XTY_SD));
 
-  CompactUnwindSection =
-      Ctx->getXCOFFSection(".eh_info_table", XCOFF::StorageMappingClass::XMC_RW,
-                           XCOFF::XTY_SD, SectionKind::getData());
+  CompactUnwindSection = Ctx->getXCOFFSection(
+      ".eh_info_table", SectionKind::getData(),
+      XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_RW,
+                             XCOFF::XTY_SD));
 
   // DWARF sections for XCOFF are not csects. They are special STYP_DWARF
   // sections, and the individual DWARF sections are distinguished by their
