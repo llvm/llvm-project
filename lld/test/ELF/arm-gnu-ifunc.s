@@ -62,19 +62,7 @@ _start:
 // CHECK-NEXT:     0x30154 R_ARM_IRELATIVE
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
-// CHECK:        Symbol {
-// CHECK:          Name: __rel_iplt_end
-// CHECK-NEXT:     Value: 0x10104
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other [
-// CHECK-NEXT:       STV_HIDDEN
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Section: .rel.dyn
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: __rel_iplt_start
+// CHECK:          Name: __rel_iplt_start
 // CHECK-NEXT:     Value: 0x100F4
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
@@ -84,15 +72,17 @@ _start:
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Section: .rel.dyn
 // CHECK-NEXT:   }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: _start
-// CHECK-NEXT:    Value: 0x2010C
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global
-// CHECK-NEXT:    Type: None
-// CHECK-NEXT:    Other:
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
+// CHECK-NEXT:   Symbol {
+// CHECK-NEXT:     Name: __rel_iplt_end
+// CHECK-NEXT:     Value: 0x10104
+// CHECK-NEXT:     Size: 0
+// CHECK-NEXT:     Binding: Local
+// CHECK-NEXT:     Type: None
+// CHECK-NEXT:     Other [
+// CHECK-NEXT:       STV_HIDDEN
+// CHECK-NEXT:     ]
+// CHECK-NEXT:     Section: .rel.dyn
+// CHECK-NEXT:   }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: bar
 // CHECK-NEXT:    Value: 0x20108
@@ -109,6 +99,15 @@ _start:
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: GNU_IFunc
 // CHECK-NEXT:    Other: 0
+// CHECK-NEXT:    Section: .text
+// CHECK-NEXT:  }
+// CHECK-NEXT:  Symbol {
+// CHECK-NEXT:    Name: _start
+// CHECK-NEXT:    Value: 0x2010C
+// CHECK-NEXT:    Size: 0
+// CHECK-NEXT:    Binding: Global
+// CHECK-NEXT:    Type: None
+// CHECK-NEXT:    Other:
 // CHECK-NEXT:    Section: .text
 // CHECK-NEXT:  }
 

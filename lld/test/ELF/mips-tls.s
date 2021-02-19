@@ -22,8 +22,8 @@
 # RUN: llvm-readobj -r -A %t-out.so | FileCheck -check-prefix=SO %s
 
 # DIS: 00000000 l    O .tdata          00000000 loc
-# DIS: 00000004 g    O .tdata          00000000 bar
 # DIS: 00000000      O *UND*           00000000 foo
+# DIS: 00000004 g    O .tdata          00000000 bar
 
 # DIS:      Contents of section .got:
 # DIS-NEXT:  30000 00000000 80000000 00000000 ffff9004
@@ -70,12 +70,12 @@
 # SO:      Relocations [
 # SO-NEXT:   Section (7) .rel.dyn {
 # SO-NEXT:     0x30018 R_MIPS_TLS_DTPMOD32 -
-# SO-NEXT:     0x3000C R_MIPS_TLS_TPREL32 bar
-# SO-NEXT:     0x30020 R_MIPS_TLS_DTPMOD32 bar
-# SO-NEXT:     0x30024 R_MIPS_TLS_DTPREL32 bar
 # SO-NEXT:     0x30008 R_MIPS_TLS_TPREL32 foo
 # SO-NEXT:     0x30010 R_MIPS_TLS_DTPMOD32 foo
 # SO-NEXT:     0x30014 R_MIPS_TLS_DTPREL32 foo
+# SO-NEXT:     0x3000C R_MIPS_TLS_TPREL32 bar
+# SO-NEXT:     0x30020 R_MIPS_TLS_DTPMOD32 bar
+# SO-NEXT:     0x30024 R_MIPS_TLS_DTPREL32 bar
 # SO-NEXT:   }
 # SO-NEXT: ]
 # SO:      Primary GOT {

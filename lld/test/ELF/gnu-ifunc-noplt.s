@@ -18,8 +18,8 @@
 // Check that we emitted relocations for the ifunc calls
 // CHECK: Relocations [
 // CHECK-NEXT:   Section (4) .rela.dyn {
-// CHECK-NEXT:     0x201328 R_X86_64_PLT32 bar 0xFFFFFFFFFFFFFFFC
 // CHECK-NEXT:     0x201323 R_X86_64_PLT32 foo 0xFFFFFFFFFFFFFFFC
+// CHECK-NEXT:     0x201328 R_X86_64_PLT32 bar 0xFFFFFFFFFFFFFFFC
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .rela.plt {
 // CHECK-NEXT:     0x203498 R_X86_64_JUMP_SLOT bar2 0x0
