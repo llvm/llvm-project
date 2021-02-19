@@ -17,16 +17,27 @@
 declare dso_local void @"bar"() align 2
 declare dso_local fastcc void @"bar.resume"(%"bar.Frame"*) align 2
 
-; There is a musttail call. CoroElide won't happen.
+; There is a musttail call.
+; With alias analysis, we can tell that the frame does not interfere with CALL34, and hence we can keep the tailcalls.
+; Without alias analysis, we have to keep the tailcalls.
 define internal fastcc void @foo.resume_musttail(%"foo.Frame"* %FramePtr) {
 ; CHECK-LABEL: @foo.resume_musttail(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.coro.id(i32 16, i8* null, i8* bitcast (void ()* @bar to i8*), i8* bitcast ([3 x void (%bar.Frame*)*]* @bar.resumers to i8*))
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i1 @llvm.coro.alloc(token [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i8* @llvm.coro.begin(token [[TMP0]], i8* null)
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca [24 x i8], align 8
+; CHECK-NEXT:    [[VFRAME:%.*]] = bitcast [24 x i8]* [[TMP0]] to i8*
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call token @llvm.coro.id(i32 16, i8* null, i8* bitcast (void ()* @bar to i8*), i8* bitcast ([3 x void (%bar.Frame*)*]* @bar.resumers to i8*))
 ; CHECK-NEXT:    [[CALL34:%.*]] = call i8* undef()
 ; CHECK-NEXT:    musttail call fastcc void undef(i8* [[CALL34]])
 ; CHECK-NEXT:    ret void
+;
+; NOAA-LABEL: @foo.resume_musttail(
+; NOAA-NEXT:  entry:
+; NOAA-NEXT:    [[TMP0:%.*]] = alloca [24 x i8], align 8
+; NOAA-NEXT:    [[VFRAME:%.*]] = bitcast [24 x i8]* [[TMP0]] to i8*
+; NOAA-NEXT:    [[TMP1:%.*]] = call token @llvm.coro.id(i32 16, i8* null, i8* bitcast (void ()* @bar to i8*), i8* bitcast ([3 x void (%bar.Frame*)*]* @bar.resumers to i8*))
+; NOAA-NEXT:    [[CALL34:%.*]] = call i8* undef()
+; NOAA-NEXT:    musttail call fastcc void undef(i8* [[CALL34]])
+; NOAA-NEXT:    ret void
 ;
 entry:
   %0 = tail call token @llvm.coro.id(i32 16, i8* null, i8* bitcast (void ()* @"bar" to i8*), i8* bitcast ([3 x void (%"bar.Frame"*)*]* @"bar.resumers" to i8*))
@@ -37,60 +48,6 @@ entry:
   musttail call fastcc void undef(i8* %call34)
   ret void
 }
-
-; The new frame (TMP0) could potentially alias CALL34, the tailcall attribute on that call must be removed
-define internal fastcc void @foo.resume_no_musttail_with_alias(%"foo.Frame"* %FramePtr) {
-; CHECK-LABEL: @foo.resume_no_musttail_with_alias(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca [24 x i8], align 8
-; CHECK-NEXT:    [[VFRAME:%.*]] = bitcast [24 x i8]* [[TMP0]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call token @llvm.coro.id(i32 16, i8* null, i8* bitcast (void ()* @bar to i8*), i8* bitcast ([3 x void (%bar.Frame*)*]* @bar.resumers to i8*))
-; CHECK-NEXT:    call fastcc void undef(i8* [[VFRAME]])
-; CHECK-NEXT:    [[CALL34:%.*]] = call i8* undef()
-; CHECK-NEXT:    call fastcc void undef(i8* [[CALL34]])
-; CHECK-NEXT:    ret void
-;
-entry:
-  %0 = tail call token @llvm.coro.id(i32 16, i8* null, i8* bitcast (void ()* @"bar" to i8*), i8* bitcast ([3 x void (%"bar.Frame"*)*]* @"bar.resumers" to i8*))
-  %1 = tail call i1 @llvm.coro.alloc(token %0)
-  %2 = tail call i8* @llvm.coro.begin(token %0, i8* null)
-  call i8* @llvm.coro.subfn.addr(i8* %2, i8 1)
-  call fastcc void undef(i8* %2)
-  %call34 = call i8* undef()
-  tail call fastcc void undef(i8* %call34)
-  ret void
-}
-
-; The new frame (TMP0) does not alias CALL34, tailcall attribute can reimain. This analysis is only available when alias analysis is enabled.
-define internal fastcc void @foo.resume_no_musttail_no_alias(%"foo.Frame"* %FramePtr) {
-; CHECK-LABEL: @foo.resume_no_musttail_no_alias(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca [24 x i8], align 8
-; CHECK-NEXT:    [[VFRAME:%.*]] = bitcast [24 x i8]* [[TMP0]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call token @llvm.coro.id(i32 16, i8* null, i8* bitcast (void ()* @bar to i8*), i8* bitcast ([3 x void (%bar.Frame*)*]* @bar.resumers to i8*))
-; CHECK-NEXT:    [[CALL34:%.*]] = call i8* undef()
-; CHECK-NEXT:    tail call fastcc void undef(i8* [[CALL34]])
-; CHECK-NEXT:    ret void
-;
-; NOAA-LABEL: @foo.resume_no_musttail_no_alias(
-; NOAA-NEXT:  entry:
-; NOAA-NEXT:    [[TMP0:%.*]] = alloca [24 x i8], align 8
-; NOAA-NEXT:    [[VFRAME:%.*]] = bitcast [24 x i8]* [[TMP0]] to i8*
-; NOAA-NEXT:    [[TMP1:%.*]] = call token @llvm.coro.id(i32 16, i8* null, i8* bitcast (void ()* @bar to i8*), i8* bitcast ([3 x void (%bar.Frame*)*]* @bar.resumers to i8*))
-; NOAA-NEXT:    [[CALL34:%.*]] = call i8* undef()
-; NOAA-NEXT:    call fastcc void undef(i8* [[CALL34]])
-; NOAA-NEXT:    ret void
-;
-entry:
-  %0 = tail call token @llvm.coro.id(i32 16, i8* null, i8* bitcast (void ()* @"bar" to i8*), i8* bitcast ([3 x void (%"bar.Frame"*)*]* @"bar.resumers" to i8*))
-  %1 = tail call i1 @llvm.coro.alloc(token %0)
-  %2 = tail call i8* @llvm.coro.begin(token %0, i8* null)
-  call i8* @llvm.coro.subfn.addr(i8* %2, i8 1)
-  %call34 = call i8* undef()
-  tail call fastcc void undef(i8* %call34)
-  ret void
-}
-
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #0
