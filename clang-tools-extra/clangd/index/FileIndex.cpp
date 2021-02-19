@@ -280,11 +280,14 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
     }
     for (const auto &FileAndRefs : RefsSnapshot) {
       RefSlabs.push_back(FileAndRefs.second.Slab);
+      Files.insert(FileAndRefs.first());
       if (FileAndRefs.second.CountReferences)
         MainFileRefs.push_back(RefSlabs.back().get());
     }
-    for (const auto &FileAndRelations : RelationsSnapshot)
+    for (const auto &FileAndRelations : RelationsSnapshot) {
+      Files.insert(FileAndRelations.first());
       RelationSlabs.push_back(FileAndRelations.second);
+    }
 
     if (Version)
       *Version = this->Version;
