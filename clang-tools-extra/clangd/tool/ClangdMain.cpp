@@ -172,14 +172,6 @@ opt<bool> EnableClangTidy{
     init(true),
 };
 
-opt<std::string> ClangTidyChecks{
-    "clang-tidy-checks",
-    cat(Features),
-    desc("List of clang-tidy checks to run (this will override "
-         ".clang-tidy files). Only meaningful when -clang-tidy flag is on"),
-    init(""),
-};
-
 opt<CodeCompleteOptions::CodeCompletionParse> CodeCompletionParse{
     "completion-parse",
     cat(Features),
@@ -286,6 +278,8 @@ RetiredFlag<bool> RecoveryAST("recovery-ast");
 RetiredFlag<bool> RecoveryASTType("recovery-ast-type");
 RetiredFlag<bool> AsyncPreamble("async-preamble");
 RetiredFlag<bool> CollectMainFileRefs("collect-main-file-refs");
+RetiredFlag<bool> CrossFileRename("cross-file-rename");
+RetiredFlag<std::string> ClangTidyChecks("clang-tidy-checks");
 
 opt<int> LimitResults{
     "limit-results",
@@ -295,20 +289,12 @@ opt<int> LimitResults{
     init(100),
 };
 
-
 list<std::string> TweakList{
     "tweaks",
     cat(Features),
     desc("Specify a list of Tweaks to enable (only for clangd developers)."),
     Hidden,
     CommaSeparated,
-};
-
-opt<bool> CrossFileRename{
-    "cross-file-rename",
-    cat(Features),
-    desc("Enable cross-file rename feature."),
-    init(true),
 };
 
 opt<bool> FoldingRanges{
@@ -833,10 +819,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Providers.push_back(provideClangTidyFiles(TFS));
     if (EnableConfig)
       Providers.push_back(provideClangdConfig());
-    if (!ClangTidyChecks.empty())
-      Providers.push_back(addTidyChecks(ClangTidyChecks));
-    else
-      Providers.push_back(provideDefaultChecks());
+    Providers.push_back(provideDefaultChecks());
     Providers.push_back(disableUnusableChecks());
     ClangTidyOptProvider = combine(std::move(Providers));
     Opts.ClangTidyProvider = ClangTidyOptProvider;
@@ -851,9 +834,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   };
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
     Opts.Encoding = ForceOffsetEncoding;
-
-  // Shall we allow to customize the file limit?
-  Opts.Rename.AllowCrossFile = CrossFileRename;
 
   if (CheckFile.getNumOccurrences()) {
     llvm::SmallString<256> Path;

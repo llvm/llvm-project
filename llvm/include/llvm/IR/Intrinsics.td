@@ -446,6 +446,9 @@ def int_objc_storeWeak                      : Intrinsic<[llvm_ptr_ty],
                                                          llvm_ptr_ty]>;
 def int_objc_clang_arc_use                  : Intrinsic<[],
                                                         [llvm_vararg_ty]>;
+def int_objc_clang_arc_noop_use : DefaultAttrsIntrinsic<[],
+                                                        [llvm_vararg_ty],
+                                                        [IntrInaccessibleMemOnly]>;
 def int_objc_unsafeClaimAutoreleasedReturnValue : Intrinsic<[llvm_ptr_ty],
                                                             [llvm_ptr_ty]>;
 def int_objc_retainedObject                 : Intrinsic<[llvm_ptr_ty],
@@ -1213,9 +1216,8 @@ def int_coro_async_context_dealloc : Intrinsic<[],
 def int_coro_async_resume : Intrinsic<[llvm_ptr_ty],
     [],
     []>;
-def int_coro_suspend_async : Intrinsic<[llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
-    [llvm_ptr_ty, llvm_ptr_ty, llvm_vararg_ty],
-    []>;
+def int_coro_suspend_async
+    : Intrinsic<[llvm_any_ty], [llvm_ptr_ty, llvm_ptr_ty, llvm_vararg_ty], []>;
 def int_coro_prepare_async : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
                                        [IntrNoMem]>;
 def int_coro_begin : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
@@ -1632,6 +1634,12 @@ def int_preserve_struct_access_index : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                                  [IntrNoMem,
                                                   ImmArg<ArgIndex<1>>,
                                                   ImmArg<ArgIndex<2>>]>;
+
+//===------------ Intrinsics to perform common vector shuffles ------------===//
+
+def int_experimental_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                   [LLVMMatchType<0>],
+                                   [IntrNoMem]>;
 
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;

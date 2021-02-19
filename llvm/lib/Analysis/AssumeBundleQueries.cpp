@@ -157,9 +157,8 @@ llvm::getKnowledgeFromUse(const Use *U,
     return RetainedKnowledge::none();
   RetainedKnowledge RK =
       getKnowledgeFromBundle(*cast<CallInst>(U->getUser()), *Bundle);
-  for (auto Attr : AttrKinds)
-    if (Attr == RK.AttrKind)
-      return RK;
+  if (llvm::is_contained(AttrKinds, RK.AttrKind))
+    return RK;
   return RetainedKnowledge::none();
 }
 

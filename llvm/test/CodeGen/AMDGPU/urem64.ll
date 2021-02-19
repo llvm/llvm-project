@@ -63,7 +63,7 @@ define amdgpu_kernel void @s_test_urem_i64(i64 addrspace(1)* %out, i64 %x, i64 %
 ; GCN-NEXT:    v_add_i32_e32 v10, vcc, v11, v10
 ; GCN-NEXT:    v_addc_u32_e32 v11, vcc, v2, v12, vcc
 ; GCN-NEXT:    v_mul_lo_u32 v4, v4, v6
-; GCN-NEXT:    v_add_i32_e32 v7, vcc, v7, v10
+; GCN-NEXT:    v_add_i32_e32 v7, vcc, v10, v7
 ; GCN-NEXT:    v_addc_u32_e32 v7, vcc, v11, v9, vcc
 ; GCN-NEXT:    v_addc_u32_e32 v6, vcc, v8, v1, vcc
 ; GCN-NEXT:    v_add_i32_e32 v4, vcc, v7, v4
@@ -807,7 +807,7 @@ define amdgpu_kernel void @s_test_urem_k_num_i64(i64 addrspace(1)* %out, i64 %x)
 ; GCN-NEXT:    v_add_i32_e32 v10, vcc, v11, v10
 ; GCN-NEXT:    v_addc_u32_e32 v11, vcc, v2, v12, vcc
 ; GCN-NEXT:    v_mul_lo_u32 v4, v4, v6
-; GCN-NEXT:    v_add_i32_e32 v7, vcc, v7, v10
+; GCN-NEXT:    v_add_i32_e32 v7, vcc, v10, v7
 ; GCN-NEXT:    v_addc_u32_e32 v7, vcc, v11, v9, vcc
 ; GCN-NEXT:    v_addc_u32_e32 v6, vcc, v8, v1, vcc
 ; GCN-NEXT:    v_add_i32_e32 v4, vcc, v7, v4
@@ -1011,7 +1011,7 @@ define amdgpu_kernel void @s_test_urem_k_den_i64(i64 addrspace(1)* %out, i64 %x)
 ; GCN-NEXT:    v_mul_lo_u32 v10, v2, v6
 ; GCN-NEXT:    v_mul_hi_u32 v6, v2, v6
 ; GCN-NEXT:    v_mul_lo_u32 v2, v2, v4
-; GCN-NEXT:    v_add_i32_e32 v5, vcc, v10, v5
+; GCN-NEXT:    v_add_i32_e32 v5, vcc, v5, v10
 ; GCN-NEXT:    v_addc_u32_e32 v5, vcc, v9, v6, vcc
 ; GCN-NEXT:    v_addc_u32_e32 v4, vcc, v11, v7, vcc
 ; GCN-NEXT:    v_add_i32_e32 v2, vcc, v5, v2

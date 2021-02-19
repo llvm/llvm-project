@@ -207,9 +207,8 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
 
   // Can't merge if there is PHI loop.
   for (PHINode &PN : BB->phis())
-    for (Value *IncValue : PN.incoming_values())
-      if (IncValue == &PN)
-        return false;
+    if (llvm::is_contained(PN.incoming_values(), &PN))
+      return false;
 
   LLVM_DEBUG(dbgs() << "Merging: " << BB->getName() << " into "
                     << PredBB->getName() << "\n");

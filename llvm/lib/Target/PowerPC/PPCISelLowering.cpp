@@ -1233,6 +1233,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i32, Legal);
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i64, Legal);
     }
+
+    if (Subtarget.isISA3_1()) {
+      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2i64, Custom);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2f64, Custom);
+    }
   }
 
   if (Subtarget.pairedVectorMemops()) {
@@ -5049,8 +5054,8 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
       const auto getExternalFunctionEntryPointSymbol = [&](StringRef SymName) {
         auto &Context = DAG.getMachineFunction().getMMI().getContext();
         MCSectionXCOFF *Sec = Context.getXCOFFSection(
-            (Twine(".") + Twine(SymName)).str(), XCOFF::XMC_PR, XCOFF::XTY_ER,
-            SectionKind::getMetadata());
+            (Twine(".") + Twine(SymName)).str(), SectionKind::getMetadata(),
+            XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER));
         return Sec->getQualNameSymbol();
       };
 
@@ -6396,12 +6401,14 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
       report_fatal_error(
           "variadic arguments for vector types are unimplemented for AIX");
 
-    if (unsigned VReg = State.AllocateReg(VR))
+    if (unsigned VReg = State.AllocateReg(VR)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, VReg, LocVT, LocInfo));
-    else {
-      report_fatal_error(
-          "passing vector parameters to the stack is unimplemented for AIX");
+      return false;
     }
+
+    const unsigned VecSize = 16;
+    const unsigned Offset = State.AllocateStack(VecSize, Align(VecSize));
+    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
     return false;
   }
   }
@@ -6549,10 +6556,6 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     CCValAssign &VA = ArgLocs[I++];
     MVT LocVT = VA.getLocVT();
     ISD::ArgFlagsTy Flags = Ins[VA.getValNo()].Flags;
-    if (VA.isMemLoc() && VA.getValVT().isVector())
-      report_fatal_error(
-          "passing vector parameters to the stack is unimplemented for AIX");
-
     // For compatibility with the AIX XL compiler, the float args in the
     // parameter save area are initialized even if the argument is available
     // in register.  The caller is required to initialize both the register
@@ -6902,10 +6905,6 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     CCValAssign &VA = ArgLocs[I++];
     const MVT LocVT = VA.getLocVT();
     const MVT ValVT = VA.getValVT();
-
-    if (VA.isMemLoc() && VA.getValVT().isVector())
-      report_fatal_error(
-          "passing vector parameters to the stack is unimplemented for AIX");
 
     switch (VA.getLocInfo()) {
     default:
@@ -10041,14 +10040,34 @@ SDValue PPCTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
          "Should only be called for ISD::INSERT_VECTOR_ELT");
 
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(2));
-  // We have legal lowering for constant indices but not for variable ones.
-  if (!C)
-    return SDValue();
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
   SDValue V1 = Op.getOperand(0);
   SDValue V2 = Op.getOperand(1);
+  SDValue V3 = Op.getOperand(2);
+
+  if (Subtarget.isISA3_1()) {
+    // On P10, we have legal lowering for constant and variable indices for
+    // integer vectors.
+    if (VT == MVT::v16i8 || VT == MVT::v8i16 || VT == MVT::v4i32 ||
+        VT == MVT::v2i64)
+      return DAG.getNode(PPCISD::VECINSERT, dl, VT, V1, V2, V3);
+    // For f32 and f64 vectors, we have legal lowering for variable indices.
+    // For f32 we also have legal lowering when the element is loaded from
+    // memory.
+    if (VT == MVT::v4f32 || VT == MVT::v2f64) {
+      if (!C || (VT == MVT::v4f32 && dyn_cast<LoadSDNode>(V2)))
+        return DAG.getNode(PPCISD::VECINSERT, dl, VT, V1, V2, V3);
+      return SDValue();
+    }
+  }
+
+  // Before P10, we have legal lowering for constant indices but not for
+  // variable ones.
+  if (!C)
+    return SDValue();
+
   // We can use MTVSRZ + VECINSERT for v8i16 and v16i8 types.
   if (VT == MVT::v8i16 || VT == MVT::v16i8) {
     SDValue Mtvsrz = DAG.getNode(PPCISD::MTVSRZ, dl, VT, V2);
@@ -15092,17 +15111,38 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(0U, &PPC::VSFRCRegClass);
   }
 
-  // If we name a VSX register, we can't defer to the base class because it
-  // will not recognize the correct register (their names will be VSL{0-31}
-  // and V{0-31} so they won't match). So we match them here.
-  if (Constraint.size() > 3 && Constraint[1] == 'v' && Constraint[2] == 's') {
-    int VSNum = atoi(Constraint.data() + 3);
-    assert(VSNum >= 0 && VSNum <= 63 &&
-           "Attempted to access a vsr out of range");
-    if (VSNum < 32)
-      return std::make_pair(PPC::VSL0 + VSNum, &PPC::VSRCRegClass);
-    return std::make_pair(PPC::V0 + VSNum - 32, &PPC::VSRCRegClass);
+  // Handle special cases of physical registers that are not properly handled
+  // by the base class.
+  if (Constraint[0] == '{' && Constraint[Constraint.size() - 1] == '}') {
+    // If we name a VSX register, we can't defer to the base class because it
+    // will not recognize the correct register (their names will be VSL{0-31}
+    // and V{0-31} so they won't match). So we match them here.
+    if (Constraint.size() > 3 && Constraint[1] == 'v' && Constraint[2] == 's') {
+      int VSNum = atoi(Constraint.data() + 3);
+      assert(VSNum >= 0 && VSNum <= 63 &&
+             "Attempted to access a vsr out of range");
+      if (VSNum < 32)
+        return std::make_pair(PPC::VSL0 + VSNum, &PPC::VSRCRegClass);
+      return std::make_pair(PPC::V0 + VSNum - 32, &PPC::VSRCRegClass);
+    }
+
+    // For float registers, we can't defer to the base class as it will match
+    // the SPILLTOVSRRC class.
+    if (Constraint.size() > 3 && Constraint[1] == 'f') {
+      int RegNum = atoi(Constraint.data() + 2);
+      if (RegNum > 31 || RegNum < 0)
+        report_fatal_error("Invalid floating point register number");
+      if (VT == MVT::f32 || VT == MVT::i32)
+        return Subtarget.hasSPE()
+                   ? std::make_pair(PPC::R0 + RegNum, &PPC::GPRCRegClass)
+                   : std::make_pair(PPC::F0 + RegNum, &PPC::F4RCRegClass);
+      if (VT == MVT::f64 || VT == MVT::i64)
+        return Subtarget.hasSPE()
+                   ? std::make_pair(PPC::S0 + RegNum, &PPC::SPERCRegClass)
+                   : std::make_pair(PPC::F0 + RegNum, &PPC::F8RCRegClass);
+    }
   }
+
   std::pair<unsigned, const TargetRegisterClass *> R =
       TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 

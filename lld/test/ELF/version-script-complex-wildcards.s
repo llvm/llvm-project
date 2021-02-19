@@ -51,12 +51,12 @@
 # ERROR: invalid glob pattern: a[
 
 .text
-.globl _Z3abci
-.type _Z3abci,@function
-_Z3abci:
-retq
-
 .globl _Z3abbi
 .type _Z3abbi,@function
 _Z3abbi:
+retq
+
+.globl _Z3abci
+.type _Z3abci,@function
+_Z3abci:
 retq

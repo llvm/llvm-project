@@ -359,26 +359,26 @@ def Select_FPR32_Using_CC_GPR : SelectCC_rrirr<FPR32, GPR>;
 
 /// Loads
 
-defm : LdPat<load, FLW>;
+defm : LdPat<load, FLW, f32>;
 
 /// Stores
 
-defm : StPat<store, FSW, FPR32>;
+defm : StPat<store, FSW, FPR32, f32>;
 
 } // Predicates = [HasStdExtF]
 
 let Predicates = [HasStdExtF, IsRV32] in {
 // Moves (no conversion)
-def : Pat<(bitconvert GPR:$rs1), (FMV_W_X GPR:$rs1)>;
-def : Pat<(bitconvert FPR32:$rs1), (FMV_X_W FPR32:$rs1)>;
+def : Pat<(bitconvert (i32 GPR:$rs1)), (FMV_W_X GPR:$rs1)>;
+def : Pat<(i32 (bitconvert FPR32:$rs1)), (FMV_X_W FPR32:$rs1)>;
 
 // float->[u]int. Round-to-zero must be used.
-def : Pat<(fp_to_sint FPR32:$rs1), (FCVT_W_S $rs1, 0b001)>;
-def : Pat<(fp_to_uint FPR32:$rs1), (FCVT_WU_S $rs1, 0b001)>;
+def : Pat<(i32 (fp_to_sint FPR32:$rs1)), (FCVT_W_S $rs1, 0b001)>;
+def : Pat<(i32 (fp_to_uint FPR32:$rs1)), (FCVT_WU_S $rs1, 0b001)>;
 
 // [u]int->float. Match GCC and default to using dynamic rounding mode.
-def : Pat<(sint_to_fp GPR:$rs1), (FCVT_S_W $rs1, 0b111)>;
-def : Pat<(uint_to_fp GPR:$rs1), (FCVT_S_WU $rs1, 0b111)>;
+def : Pat<(sint_to_fp (i32 GPR:$rs1)), (FCVT_S_W $rs1, 0b111)>;
+def : Pat<(uint_to_fp (i32 GPR:$rs1)), (FCVT_S_WU $rs1, 0b111)>;
 } // Predicates = [HasStdExtF, IsRV32]
 
 let Predicates = [HasStdExtF, IsRV64] in {
@@ -396,12 +396,12 @@ def : Pat<(sext_inreg (assertzexti32 (fp_to_uint FPR32:$rs1)), i32),
           (FCVT_WU_S $rs1, 0b001)>;
 
 // FP->[u]int64
-def : Pat<(fp_to_sint FPR32:$rs1), (FCVT_L_S $rs1, 0b001)>;
-def : Pat<(fp_to_uint FPR32:$rs1), (FCVT_LU_S $rs1, 0b001)>;
+def : Pat<(i64 (fp_to_sint FPR32:$rs1)), (FCVT_L_S $rs1, 0b001)>;
+def : Pat<(i64 (fp_to_uint FPR32:$rs1)), (FCVT_LU_S $rs1, 0b001)>;
 
 // [u]int->fp. Match GCC and default to using dynamic rounding mode.
-def : Pat<(sint_to_fp (sexti32 GPR:$rs1)), (FCVT_S_W $rs1, 0b111)>;
-def : Pat<(uint_to_fp (zexti32 GPR:$rs1)), (FCVT_S_WU $rs1, 0b111)>;
-def : Pat<(sint_to_fp GPR:$rs1), (FCVT_S_L $rs1, 0b111)>;
-def : Pat<(uint_to_fp GPR:$rs1), (FCVT_S_LU $rs1, 0b111)>;
+def : Pat<(sint_to_fp (i64 (sexti32 GPR:$rs1))), (FCVT_S_W $rs1, 0b111)>;
+def : Pat<(uint_to_fp (i64 (zexti32 GPR:$rs1))), (FCVT_S_WU $rs1, 0b111)>;
+def : Pat<(sint_to_fp (i64 GPR:$rs1)), (FCVT_S_L $rs1, 0b111)>;
+def : Pat<(uint_to_fp (i64 GPR:$rs1)), (FCVT_S_LU $rs1, 0b111)>;
 } // Predicates = [HasStdExtF, IsRV64]

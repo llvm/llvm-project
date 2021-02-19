@@ -82,7 +82,8 @@ bool isTopLevelValue(Value value);
 // TODO: Consider replacing src/dst memref indices with view memrefs.
 class AffineDmaStartOp
     : public Op<AffineDmaStartOp, OpTrait::MemRefsNormalizable,
-                OpTrait::VariadicOperands, OpTrait::ZeroResult> {
+                OpTrait::VariadicOperands, OpTrait::ZeroResult,
+                AffineMapAccessInterface::Trait> {
 public:
   using Op::Op;
 
@@ -191,6 +192,7 @@ public:
                       getTagMap().getNumInputs());
   }
 
+  /// Impelements the AffineMapAccessInterface.
   /// Returns the AffineMapAttr associated with 'memref'.
   NamedAttribute getAffineMapAttrForMemRef(Value memref) {
     if (memref == getSrcMemRef())
@@ -271,7 +273,8 @@ public:
 //
 class AffineDmaWaitOp
     : public Op<AffineDmaWaitOp, OpTrait::MemRefsNormalizable,
-                OpTrait::VariadicOperands, OpTrait::ZeroResult> {
+                OpTrait::VariadicOperands, OpTrait::ZeroResult,
+                AffineMapAccessInterface::Trait> {
 public:
   using Op::Op;
 
@@ -303,6 +306,7 @@ public:
     return getTagMemRef().getType().cast<MemRefType>().getRank();
   }
 
+  /// Impelements the AffineMapAccessInterface.
   /// Returns the AffineMapAttr associated with 'memref'.
   NamedAttribute getAffineMapAttrForMemRef(Value memref) {
     assert(memref == getTagMemRef());

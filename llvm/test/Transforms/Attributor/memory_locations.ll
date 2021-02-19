@@ -176,7 +176,7 @@ return:                                           ; preds = %if.end, %if.then
 define dso_local i8* @internal_argmem_only_read(i32* %arg) {
 ; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
 ; CHECK-LABEL: define {{[^@]+}}@internal_argmem_only_read
-; CHECK-SAME: (i32* nocapture nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR1:#.*]] {
+; CHECK-SAME: (i32* nocapture noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR1:#.*]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARG]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP]] to i64
@@ -193,7 +193,7 @@ entry:
 define dso_local i8* @internal_argmem_only_write(i32* %arg) {
 ; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
 ; CHECK-LABEL: define {{[^@]+}}@internal_argmem_only_write
-; CHECK-SAME: (i32* nocapture nonnull writeonly align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR1]] {
+; CHECK-SAME: (i32* nocapture noundef nonnull writeonly align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 10, i32* [[ARG]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(10) i8* @malloc(i64 noundef 10)
@@ -215,9 +215,9 @@ define dso_local i8* @internal_argmem_only_rec(i32* %arg) {
 ;
 ; IS__CGSCC____: Function Attrs: inaccessiblemem_or_argmemonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@internal_argmem_only_rec
-; IS__CGSCC____-SAME: (i32* nocapture nonnull align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR1:#.*]] {
+; IS__CGSCC____-SAME: (i32* nocapture noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR1:#.*]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_1(i32* nocapture nonnull align 4 dereferenceable(4) [[ARG]])
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_1(i32* nocapture noundef nonnull align 4 dereferenceable(4) [[ARG]])
 ; IS__CGSCC____-NEXT:    ret i8* [[CALL]]
 ;
 entry:
@@ -226,31 +226,57 @@ entry:
 }
 
 define internal i8* @internal_argmem_only_rec_1(i32* %arg) {
-; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
-; CHECK-LABEL: define {{[^@]+}}@internal_argmem_only_rec_1
-; CHECK-SAME: (i32* nocapture nonnull align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR1]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARG]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    br label [[RETURN:%.*]]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARG]], align 4
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TMP1]], 1
-; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
-; CHECK:       if.then2:
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 -1
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_2(i32* nocapture nonnull align 4 dereferenceable(4) [[ADD_PTR]])
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       if.end3:
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARG]], align 4
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[CALL4:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i8* [ null, [[IF_THEN]] ], [ [[CALL]], [[IF_THEN2]] ], [ [[CALL4]], [[IF_END3]] ]
-; CHECK-NEXT:    ret i8* [[RETVAL_0]]
+; IS__TUNIT____: Function Attrs: inaccessiblemem_or_argmemonly
+; IS__TUNIT____-LABEL: define {{[^@]+}}@internal_argmem_only_rec_1
+; IS__TUNIT____-SAME: (i32* nocapture noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR1]] {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARG]], align 4
+; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP]], 0
+; IS__TUNIT____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; IS__TUNIT____:       if.then:
+; IS__TUNIT____-NEXT:    br label [[RETURN:%.*]]
+; IS__TUNIT____:       if.end:
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARG]], align 4
+; IS__TUNIT____-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TMP1]], 1
+; IS__TUNIT____-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
+; IS__TUNIT____:       if.then2:
+; IS__TUNIT____-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 -1
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_2(i32* nocapture nonnull align 4 dereferenceable(4) [[ADD_PTR]])
+; IS__TUNIT____-NEXT:    br label [[RETURN]]
+; IS__TUNIT____:       if.end3:
+; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARG]], align 4
+; IS__TUNIT____-NEXT:    [[CONV:%.*]] = sext i32 [[TMP2]] to i64
+; IS__TUNIT____-NEXT:    [[CALL4:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
+; IS__TUNIT____-NEXT:    br label [[RETURN]]
+; IS__TUNIT____:       return:
+; IS__TUNIT____-NEXT:    [[RETVAL_0:%.*]] = phi i8* [ null, [[IF_THEN]] ], [ [[CALL]], [[IF_THEN2]] ], [ [[CALL4]], [[IF_END3]] ]
+; IS__TUNIT____-NEXT:    ret i8* [[RETVAL_0]]
+;
+; IS__CGSCC____: Function Attrs: inaccessiblemem_or_argmemonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@internal_argmem_only_rec_1
+; IS__CGSCC____-SAME: (i32* nocapture noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR1]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARG]], align 4
+; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP]], 0
+; IS__CGSCC____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; IS__CGSCC____:       if.then:
+; IS__CGSCC____-NEXT:    br label [[RETURN:%.*]]
+; IS__CGSCC____:       if.end:
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARG]], align 4
+; IS__CGSCC____-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TMP1]], 1
+; IS__CGSCC____-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
+; IS__CGSCC____:       if.then2:
+; IS__CGSCC____-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 -1
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_2(i32* nocapture noundef nonnull align 4 dereferenceable(4) [[ADD_PTR]])
+; IS__CGSCC____-NEXT:    br label [[RETURN]]
+; IS__CGSCC____:       if.end3:
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARG]], align 4
+; IS__CGSCC____-NEXT:    [[CONV:%.*]] = sext i32 [[TMP2]] to i64
+; IS__CGSCC____-NEXT:    [[CALL4:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
+; IS__CGSCC____-NEXT:    br label [[RETURN]]
+; IS__CGSCC____:       return:
+; IS__CGSCC____-NEXT:    [[RETVAL_0:%.*]] = phi i8* [ null, [[IF_THEN]] ], [ [[CALL]], [[IF_THEN2]] ], [ [[CALL4]], [[IF_END3]] ]
+; IS__CGSCC____-NEXT:    ret i8* [[RETVAL_0]]
 ;
 entry:
   %tmp = load i32, i32* %arg, align 4
@@ -284,7 +310,7 @@ return:                                           ; preds = %if.end3, %if.then2,
 define internal i8* @internal_argmem_only_rec_2(i32* %arg) {
 ; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
 ; CHECK-LABEL: define {{[^@]+}}@internal_argmem_only_rec_2
-; CHECK-SAME: (i32* nocapture nonnull align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR1]] {
+; CHECK-SAME: (i32* nocapture noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 0, i32* [[ARG]], align 4
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 -1
@@ -423,13 +449,13 @@ define void @write_global() {
 define void @write_global_via_arg(i32* %GPtr) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@write_global_via_arg
-; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[GPTR:%.*]]) [[ATTR7:#.*]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[GPTR:%.*]]) [[ATTR7:#.*]] {
 ; IS__TUNIT____-NEXT:    store i32 0, i32* [[GPTR]], align 4
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@write_global_via_arg
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[GPTR:%.*]]) [[ATTR7:#.*]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[GPTR:%.*]]) [[ATTR7:#.*]] {
 ; IS__CGSCC____-NEXT:    store i32 0, i32* [[GPTR]], align 4
 ; IS__CGSCC____-NEXT:    ret void
 ;

@@ -21,6 +21,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -30,6 +31,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm> // std::sort
@@ -7200,8 +7202,37 @@ public:
   SystemZTargetCodeGenInfo(CodeGenTypes &CGT, bool HasVector, bool SoftFloatABI)
       : TargetCodeGenInfo(
             std::make_unique<SystemZABIInfo>(CGT, HasVector, SoftFloatABI)) {}
-};
 
+  llvm::Value *testFPKind(llvm::Value *V, unsigned BuiltinID,
+                          CGBuilderTy &Builder,
+                          CodeGenModule &CGM) const override {
+    assert(V->getType()->isFloatingPointTy() && "V should have an FP type.");
+    // Only use TDC in constrained FP mode.
+    if (!Builder.getIsFPConstrained())
+      return nullptr;
+
+    llvm::Type *Ty = V->getType();
+    if (Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isFP128Ty()) {
+      llvm::Module &M = CGM.getModule();
+      auto &Ctx = M.getContext();
+      llvm::Function *TDCFunc =
+          llvm::Intrinsic::getDeclaration(&M, llvm::Intrinsic::s390_tdc, Ty);
+      unsigned TDCBits = 0;
+      switch (BuiltinID) {
+      case Builtin::BI__builtin_isnan:
+        TDCBits = 0xf;
+        break;
+      default:
+        break;
+      }
+      if (TDCBits)
+        return Builder.CreateCall(
+            TDCFunc,
+            {V, llvm::ConstantInt::get(llvm::Type::getInt64Ty(Ctx), TDCBits)});
+    }
+    return nullptr;
+  }
+};
 }
 
 bool SystemZABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
@@ -8998,9 +9029,13 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
       assert(Max == 0 && "Max must be zero");
   } else if (IsOpenCLKernel || IsHIPKernel) {
     // By default, restrict the maximum size to a value specified by
-    // --gpu-max-threads-per-block=n or its default value.
+    // --gpu-max-threads-per-block=n or its default value for HIP.
+    const unsigned OpenCLDefaultMaxWorkGroupSize = 256;
+    const unsigned DefaultMaxWorkGroupSize =
+        IsOpenCLKernel ? OpenCLDefaultMaxWorkGroupSize
+                       : M.getLangOpts().GPUMaxThreadsPerBlock;
     std::string AttrVal =
-        std::string("1,") + llvm::utostr(M.getLangOpts().GPUMaxThreadsPerBlock);
+        std::string("1,") + llvm::utostr(DefaultMaxWorkGroupSize);
     F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   }
 

@@ -533,27 +533,23 @@ global_atomic_cmpswap_b32 v0, v[1:2], v[3:4], off offset:2047 slc
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
 global_atomic_cmpswap_b64 v[1:2], v[3:4], off offset:2047
-// GFX11-ERR: error: instruction must use glc
+// GFX11-ERR: error: invalid operand for instruction
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
-// TODO-GFX11 FIXME global_atomic_cmpswap_b64, also GFX10?
-global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], off offset:2047 glc
-// GFX11-NOT: encoding: [0xff,0x47,0x0a,0xdd,0x03,0x05,0x7c,0x01]
+global_atomic_cmpswap_b64 v[1:2], v[3:4], v[5:8], off offset:2047 glc
+// GFX11: encoding: [0xff,0x47,0x0a,0xdd,0x03,0x05,0x7c,0x01]
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
-// TODO-GFX11 FIXME global_atomic_cmpswap_b64, also GFX10?
-global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], off offset:2047 glc slc
-// GFX11-NOT: encoding: [0xff,0xc7,0x0a,0xdd,0x03,0x05,0x7c,0x01]
+global_atomic_cmpswap_b64 v[1:2], v[3:4], v[5:8], off offset:2047 glc slc
+// GFX11: encoding: [0xff,0xc7,0x0a,0xdd,0x03,0x05,0x7c,0x01]
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
-// TODO-GFX11 FIXME global_atomic_cmpswap_b64, also GFX10?
-global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], off glc
-// GFX11-NOT: encoding: [0x00,0x40,0x0a,0xdd,0x03,0x05,0x7c,0x01]
+global_atomic_cmpswap_b64 v[1:2], v[3:4], v[5:8], off glc
+// GFX11: encoding: [0x00,0x40,0x0a,0xdd,0x03,0x05,0x7c,0x01]
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
-// TODO-GFX11 FIXME global_atomic_cmpswap_b64, also GFX10?
-global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], off glc slc
-// GFX11-NOT: encoding: [0x00,0xc0,0x0a,0xdd,0x03,0x05,0x7c,0x01]
+global_atomic_cmpswap_b64 v[1:2], v[3:4], v[5:8], off glc slc
+// GFX11: encoding: [0x00,0xc0,0x0a,0xdd,0x03,0x05,0x7c,0x01]
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
 global_load_d16_u8 v1, v[3:4], off
@@ -824,24 +820,20 @@ global_atomic_cmpswap_b64 v[1:2], v3, s[2:3] offset:2047
 // GFX11-ERR: error: instruction must use glc
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
-// TODO-GFX11 FIXME global_atomic_cmpswap_b64, also GFX10?
-global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], s[2:3] offset:2047 glc
-// GFX11-NOT: encoding: [0xff,0x47,0x0a,0xdd,0x03,0x05,0x02,0x01]
+global_atomic_cmpswap_b64 v[1:2], v3, v[5:8], s[2:3] offset:2047 glc
+// GFX11: encoding: [0xff,0x47,0x0a,0xdd,0x03,0x05,0x02,0x01]
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
-// TODO-GFX11 FIXME global_atomic_cmpswap_b64, also GFX10?
-global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], s[2:3] offset:2047 glc slc
-// GFX11-NOT: encoding: [0xff,0xc7,0x0a,0xdd,0x03,0x05,0x02,0x01]
+global_atomic_cmpswap_b64 v[1:2], v3, v[5:8], s[2:3] offset:2047 glc slc
+// GFX11: encoding: [0xff,0xc7,0x0a,0xdd,0x03,0x05,0x02,0x01]
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
-// TODO-GFX11 FIXME global_atomic_cmpswap_b64, also GFX10?
-global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], s[2:3] glc
-// GFX11-NOT: encoding: [0x00,0x40,0x0a,0xdd,0x03,0x05,0x02,0x01]
+global_atomic_cmpswap_b64 v[1:2], v3, v[5:8], s[2:3] glc
+// GFX11: encoding: [0x00,0x40,0x0a,0xdd,0x03,0x05,0x02,0x01]
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
-// TODO-GFX11 FIXME global_atomic_cmpswap_b64, also GFX10?
-global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], s[2:3] glc slc
-// GFX11-NOT: encoding: [0x00,0xc0,0x0a,0xdd,0x03,0x05,0x02,0x01]
+global_atomic_cmpswap_b64 v[1:2], v3, v[5:8], s[2:3] glc slc
+// GFX11: encoding: [0x00,0xc0,0x0a,0xdd,0x03,0x05,0x02,0x01]
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
 global_load_d16_u8 v1, v3, s[2:3]

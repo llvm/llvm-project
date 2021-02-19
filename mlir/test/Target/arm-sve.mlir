@@ -1,4 +1,4 @@
-// RUN: mlir-opt -verify-diagnostics %s | mlir-opt | mlir-translate --arm-sve-mlir-to-llvmir | FileCheck %s
+// RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
 
 // CHECK-LABEL: define <vscale x 4 x i32> @arm_sve_sdot
 llvm.func @arm_sve_sdot(%arg0: !llvm.vec<?x16 x i8>,

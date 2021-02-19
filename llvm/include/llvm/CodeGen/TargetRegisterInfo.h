@@ -363,6 +363,15 @@ public:
     return SubRegIndexLaneMasks[SubIdx];
   }
 
+  /// Try to find one or more subregister indexes to cover \p LaneMask.
+  ///
+  /// If this is possible, returns true and appends the best matching set of
+  /// indexes to \p Indexes. If this is not possible, returns false.
+  bool getCoveringSubRegIndexes(const MachineRegisterInfo &MRI,
+                                const TargetRegisterClass *RC,
+                                LaneBitmask LaneMask,
+                                SmallVectorImpl<unsigned> &Indexes) const;
+
   /// The lane masks returned by getSubRegIndexLaneMask() above can only be
   /// used to determine if sub-registers overlap - they can't be used to
   /// determine if a set of sub-registers completely cover another

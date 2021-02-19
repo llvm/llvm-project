@@ -82,6 +82,7 @@ protected:
   bool FastFMAF32;
   bool FastDenormalF32;
   bool HalfRate64Ops;
+  bool FullRate64Ops;
 
   // Dynamically set bits that enable features.
   bool FlatForGlobal;
@@ -95,6 +96,7 @@ protected:
   // for XNACK.
   bool EnableXNACK;
 
+  bool EnableTgSplit;
   bool EnableCuMode;
   bool TrapHandler;
 
@@ -111,10 +113,11 @@ protected:
   bool FP64;
   bool FMA;
   bool MIMG_R128;
-  bool GCN3Encoding;
+  bool IsGCN;
   bool CIInsts;
   bool GFX8Insts;
   bool GFX9Insts;
+  bool GFX90AInsts;
   bool GFX10Insts;
   bool GFX11Insts;
   bool GFX10_3Insts;
@@ -134,6 +137,9 @@ protected:
   bool HasSDWAOutModsVOPC;
   bool HasDPP;
   bool HasDPP8;
+  bool Has64BitDPP;
+  bool HasPackedFP32Ops;
+  bool HasExtendedImageInsts;
   bool HasR128A16;
   bool HasGFX10A16;
   bool HasG16;
@@ -172,11 +178,16 @@ protected:
   bool HasArchitectedFlatScratch;
   bool AddNoCarryInsts;
   bool HasUnpackedD16VMem;
+  bool R600ALUInst;
+  bool CaymanISA;
+  bool CFALUBug;
   bool LDSMisalignedBug;
   bool HasMFMAInlineLiteralBug;
-  bool HasPackedTID;
+  bool HasVertexCache;
+  short TexVTXClauseSize;
   bool UnalignedBufferAccess;
   bool UnalignedDSAccess;
+  bool HasPackedTID;
   bool ScalarizeGlobal;
 
   bool HasVcmpxPermlaneHazard;
@@ -300,6 +311,10 @@ public:
 
   bool hasHalfRate64Ops() const {
     return HalfRate64Ops;
+  }
+
+  bool hasFullRate64Ops() const {
+    return FullRate64Ops;
   }
 
   bool hasAddr64() const {
@@ -515,6 +530,10 @@ public:
 
   bool isXNACKEnabled() const {
     return TargetID.isXnackOnOrAny();
+  }
+
+  bool isTgSplitEnabled() const {
+    return EnableTgSplit;
   }
 
   bool isCuModeEnabled() const {
@@ -811,6 +830,18 @@ public:
     return HasDPP8;
   }
 
+  bool has64BitDPP() const {
+    return Has64BitDPP;
+  }
+
+  bool hasPackedFP32Ops() const {
+    return HasPackedFP32Ops;
+  }
+
+  bool hasExtendedImageInsts() const {
+    return HasExtendedImageInsts;
+  }
+
   bool hasR128A16() const {
     return HasR128A16;
   }
@@ -914,6 +945,8 @@ public:
   }
 
   bool hasHardClauses() const { return getGeneration() >= GFX10; }
+
+  bool hasGFX90AInsts() const { return GFX90AInsts; }
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const {

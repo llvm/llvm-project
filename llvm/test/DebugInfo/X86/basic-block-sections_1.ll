@@ -16,10 +16,10 @@
 ; NO-SECTIONS: DW_AT_high_pc [DW_FORM_data4] ({{.*}})
 ; BB-SECTIONS: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 ; BB-SECTIONS-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
-; BB-SECTIONS-NEXT: [{{.*}}) ".text._Z3fooi.__part.1"
-; BB-SECTIONS-NEXT: [{{.*}}) ".text._Z3fooi.__part.2"
-; BB-SECTIONS-NEXT: [{{.*}}) ".text._Z3fooi.__part.3"
-; BB-SECTIONS-NEXT: [{{.*}}) ".text"
+; BB-SECTIONS-NEXT: [{{.*}}) ".text._Z3fooi._Z3fooi.__part.1"
+; BB-SECTIONS-NEXT: [{{.*}}) ".text._Z3fooi._Z3fooi.__part.2"
+; BB-SECTIONS-NEXT: [{{.*}}) ".text._Z3fooi._Z3fooi.__part.3"
+; BB-SECTIONS-NEXT: [{{.*}}) ".text._Z3fooi"
 ; BB-SECTIONS-ASM: _Z3fooi:
 ; BB-SECTIONS-ASM: .Ltmp{{[0-9]+}}:
 ; BB-SECTIONS-ASM-NEXT: .loc 1 2 9 prologue_end

@@ -298,6 +298,7 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 // Addressing modes.
 // Necessary because a frameindex can't be matched directly in a pattern.
 def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
+def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 
 // Extract least significant 12 bits from an immediate value and sign extend
 // them.
@@ -873,7 +874,7 @@ def SLLIUWPat : PatFrag<(ops node:$A, node:$B),
 
 def : Pat<(simm12:$imm), (ADDI X0, simm12:$imm)>;
 def : Pat<(simm32hi20:$imm), (LUI (HI20 imm:$imm))>;
-def : Pat<(simm32:$imm), (ADDI (LUI (HI20 imm:$imm)), (LO12Sext imm:$imm))>,
+def : Pat<(i32 (simm32:$imm)), (ADDI (LUI (HI20 imm:$imm)), (LO12Sext imm:$imm))>,
       Requires<[IsRV32]>;
 
 /// Simple arithmetic operations
@@ -895,21 +896,15 @@ def : PatGprUimmLog2XLen<sra, SRAI>;
 // typically introduced when the legalizer promotes the shift amount and
 // zero-extends it). For RISC-V, the mask is unnecessary as shifts in the base
 // ISA only read the least significant 5 bits (RV32I) or 6 bits (RV64I).
-def shiftMaskXLen : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
-  return isUnneededShiftMask(N, Subtarget->is64Bit() ? 6 : 5);
-}]>;
-def shiftMask32 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
-  return isUnneededShiftMask(N, 5);
-}]>;
+def shiftMaskXLen : ComplexPattern<XLenVT, 1, "selectShiftMaskXLen", [], [], 0>;
+def shiftMask32   : ComplexPattern<i64, 1, "selectShiftMask32", [], [], 0>;
 
 class shiftop<SDPatternOperator operator>
-    : PatFrags<(ops node:$val, node:$count),
-               [(operator node:$val, node:$count),
-                (operator node:$val, (shiftMaskXLen node:$count))]>;
+    : PatFrag<(ops node:$val, node:$count),
+              (operator node:$val, (XLenVT (shiftMaskXLen node:$count)))>;
 class shiftopw<SDPatternOperator operator>
-    : PatFrags<(ops node:$val, node:$count),
-               [(operator node:$val, node:$count),
-                (operator node:$val, (shiftMask32 node:$count))]>;
+    : PatFrag<(ops node:$val, node:$count),
+              (operator node:$val, (i64 (shiftMask32 node:$count)))>;
 
 def : PatGprGpr<shiftop<shl>, SLL>;
 def : PatGprGpr<shiftop<srl>, SRL>;
@@ -1115,14 +1110,11 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 
 /// Loads
 
-multiclass LdPat<PatFrag LoadOp, RVInst Inst> {
-  def : Pat<(LoadOp GPR:$rs1), (Inst GPR:$rs1, 0)>;
-  def : Pat<(LoadOp AddrFI:$rs1), (Inst AddrFI:$rs1, 0)>;
-  def : Pat<(LoadOp (add GPR:$rs1, simm12:$imm12)),
-            (Inst GPR:$rs1, simm12:$imm12)>;
-  def : Pat<(LoadOp (add AddrFI:$rs1, simm12:$imm12)),
-            (Inst AddrFI:$rs1, simm12:$imm12)>;
-  def : Pat<(LoadOp (IsOrAdd AddrFI:$rs1, simm12:$imm12)),
+multiclass LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
+  def : Pat<(vt (LoadOp BaseAddr:$rs1)), (Inst BaseAddr:$rs1, 0)>;
+  def : Pat<(vt (LoadOp (add BaseAddr:$rs1, simm12:$imm12))),
+            (Inst BaseAddr:$rs1, simm12:$imm12)>;
+  def : Pat<(vt (LoadOp (IsOrAdd AddrFI:$rs1, simm12:$imm12))),
             (Inst AddrFI:$rs1, simm12:$imm12)>;
 }
 
@@ -1130,26 +1122,25 @@ defm : LdPat<sextloadi8, LB>;
 defm : LdPat<extloadi8, LB>;
 defm : LdPat<sextloadi16, LH>;
 defm : LdPat<extloadi16, LH>;
-defm : LdPat<load, LW>, Requires<[IsRV32]>;
+defm : LdPat<load, LW, i32>, Requires<[IsRV32]>;
 defm : LdPat<zextloadi8, LBU>;
 defm : LdPat<zextloadi16, LHU>;
 
 /// Stores
 
-multiclass StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy> {
-  def : Pat<(StoreOp StTy:$rs2, GPR:$rs1), (Inst StTy:$rs2, GPR:$rs1, 0)>;
-  def : Pat<(StoreOp StTy:$rs2, AddrFI:$rs1), (Inst StTy:$rs2, AddrFI:$rs1, 0)>;
-  def : Pat<(StoreOp StTy:$rs2, (add GPR:$rs1, simm12:$imm12)),
-            (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
-  def : Pat<(StoreOp StTy:$rs2, (add AddrFI:$rs1, simm12:$imm12)),
-            (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
-  def : Pat<(StoreOp StTy:$rs2, (IsOrAdd AddrFI:$rs1, simm12:$imm12)),
+multiclass StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
+                 ValueType vt> {
+  def : Pat<(StoreOp (vt StTy:$rs2), BaseAddr:$rs1),
+                     (Inst StTy:$rs2, BaseAddr:$rs1, 0)>;
+  def : Pat<(StoreOp (vt StTy:$rs2), (add BaseAddr:$rs1, simm12:$imm12)),
+            (Inst StTy:$rs2, BaseAddr:$rs1, simm12:$imm12)>;
+  def : Pat<(StoreOp (vt StTy:$rs2), (IsOrAdd AddrFI:$rs1, simm12:$imm12)),
             (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
 }
 
-defm : StPat<truncstorei8, SB, GPR>;
-defm : StPat<truncstorei16, SH, GPR>;
-defm : StPat<store, SW, GPR>, Requires<[IsRV32]>;
+defm : StPat<truncstorei8, SB, GPR, XLenVT>;
+defm : StPat<truncstorei16, SH, GPR, XLenVT>;
+defm : StPat<store, SW, GPR, i32>, Requires<[IsRV32]>;
 
 /// Fences
 
@@ -1184,14 +1175,14 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 /// RV64 patterns
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
-def : Pat<(and GPR:$rs1, 0xffffffff), (SRLI (SLLI GPR:$rs1, 32), 32)>;
+def : Pat<(i64 (and GPR:$rs1, 0xffffffff)), (SRLI (SLLI GPR:$rs1, 32), 32)>;
 
 // If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
 // shifts instead of 3. This can occur when unsigned is used to index an array.
-def : Pat<(shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt),
+def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
           (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
 // shl/and can appear in the other order too.
-def : Pat<(SLLIUWPat GPR:$rs1, uimm5:$shamt),
+def : Pat<(i64 (SLLIUWPat GPR:$rs1, uimm5:$shamt)),
           (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
 }
 
@@ -1226,15 +1217,15 @@ def : PatGprGpr<shiftopw<riscv_sraw>, SRAW>;
 
 /// Loads
 
-defm : LdPat<sextloadi32, LW>;
-defm : LdPat<extloadi32, LW>;
-defm : LdPat<zextloadi32, LWU>;
-defm : LdPat<load, LD>;
+defm : LdPat<sextloadi32, LW, i64>;
+defm : LdPat<extloadi32, LW, i64>;
+defm : LdPat<zextloadi32, LWU, i64>;
+defm : LdPat<load, LD, i64>;
 
 /// Stores
 
-defm : StPat<truncstorei32, SW, GPR>;
-defm : StPat<store, SD, GPR>;
+defm : StPat<truncstorei32, SW, GPR, i64>;
+defm : StPat<store, SD, GPR, i64>;
 } // Predicates = [IsRV64]
 
 /// readcyclecounter

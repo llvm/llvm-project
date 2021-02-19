@@ -103,7 +103,7 @@ class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
 
 // Base class for standard arithmetic operations.  Requires operands and
 // results to be of the same type, but does not constrain them to specific
-// types.  Individual classes will have `lhs` and `rhs` accessor to operands.
+// types.
 class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
     Op<StandardOps_Dialect, mnemonic,
        !listconcat(traits, [NoSideEffect,
@@ -122,6 +122,32 @@ class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
   }];
 }
 
+// Base class for standard binary arithmetic operations.
+class ArithmeticBinaryOp<string mnemonic, list<OpTrait> traits = []> :
+    ArithmeticOp<mnemonic, traits> {
+
+  let parser = [{
+    return impl::parseOneResultSameOperandTypeOp(parser, result);
+  }];
+
+  let printer = [{
+    return printStandardBinaryOp(this->getOperation(), p);
+  }];
+}
+
+// Base class for standard ternary arithmetic operations.
+class ArithmeticTernaryOp<string mnemonic, list<OpTrait> traits = []> :
+    ArithmeticOp<mnemonic, traits> {
+
+  let parser = [{
+    return impl::parseOneResultSameOperandTypeOp(parser, result);
+  }];
+
+  let printer = [{
+    return printStandardTernaryOp(this->getOperation(), p);
+  }];
+}
+
 // Base class for standard arithmetic operations on integers, vectors and
 // tensors thereof.  This operation takes two operands and returns one result,
 // each of these is required to be of the same type.  This type may be an
@@ -130,8 +156,8 @@ class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 //
 //     <op>i %0, %1 : i32
 //
-class IntArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-    ArithmeticOp<mnemonic,
+class IntBinaryOp<string mnemonic, list<OpTrait> traits = []> :
+    ArithmeticBinaryOp<mnemonic,
       !listconcat(traits,
                   [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
     Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs)>;
@@ -145,11 +171,26 @@ class IntArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 //
 //     <op>f %0, %1 : f32
 //
-class FloatArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-    ArithmeticOp<mnemonic,
+class FloatBinaryOp<string mnemonic, list<OpTrait> traits = []> :
+    ArithmeticBinaryOp<mnemonic,
       !listconcat(traits,
                   [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
     Arguments<(ins FloatLike:$lhs, FloatLike:$rhs)>;
+
+// Base class for standard arithmetic ternary operations on floats, vectors and
+// tensors thereof.  This operation has three operands and returns one result,
+// each of these is required to be of the same type.  This type may be a
+// floating point scalar type, a vector whose element type is a floating point
+// type, or a floating point tensor.  The custom assembly form of the operation
+// is as follows
+//
+//     <op> %0, %1, %2 : f32
+//
+class FloatTernaryOp<string mnemonic, list<OpTrait> traits = []> :
+    ArithmeticTernaryOp<mnemonic,
+      !listconcat(traits,
+                  [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
+    Arguments<(ins FloatLike:$a, FloatLike:$b, FloatLike:$c)>;
 
 // Base class for memref allocating ops: alloca and alloc.
 //
@@ -257,7 +298,7 @@ def AbsFOp : FloatUnaryOp<"absf"> {
 // AddFOp
 //===----------------------------------------------------------------------===//
 
-def AddFOp : FloatArithmeticOp<"addf"> {
+def AddFOp : FloatBinaryOp<"addf"> {
   let summary = "floating point addition operation";
   let description = [{
     Syntax:
@@ -294,7 +335,7 @@ def AddFOp : FloatArithmeticOp<"addf"> {
 // AddIOp
 //===----------------------------------------------------------------------===//
 
-def AddIOp : IntArithmeticOp<"addi", [Commutative]> {
+def AddIOp : IntBinaryOp<"addi", [Commutative]> {
   let summary = "integer addition operation";
   let description = [{
     Syntax:
@@ -418,7 +459,7 @@ def AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource> {
 // AndOp
 //===----------------------------------------------------------------------===//
 
-def AndOp : IntArithmeticOp<"and", [Commutative]> {
+def AndOp : IntBinaryOp<"and", [Commutative]> {
   let summary = "integer binary and";
   let description = [{
     Syntax:
@@ -497,79 +538,6 @@ def AssumeAlignmentOp : Std_Op<"assume_alignment"> {
   let results = (outs);
 
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
-}
-
-//===----------------------------------------------------------------------===//
-// AtanOp
-//===----------------------------------------------------------------------===//
-
-def AtanOp : FloatUnaryOp<"atan", []>{
-  let summary = "arcus tangent of the given value";
-  let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `std.atan` ssa-use `:` type
-    ```
-
-    The `atan` operation computes the arcus tangent of a given value.  It takes
-    one operand and returns one result of the same type.  This type may be a
-    float scalar type, a vector whose element type is float, or a tensor of
-    floats.  It has no standard attributes.
-
-    Example:
-
-    ```mlir
-    // Arcus tangent of scalar value.
-    %a = atan %b : f64
-
-    // SIMD vector element-wise arcus tangent.
-    %f = atan %g : vector<4xf32>
-
-    // Tensor element-wise arcus tangent.
-    %x = atan %y : tensor<4x?xf8>
-    ```
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// Atan2Op
-//===----------------------------------------------------------------------===//
-
-def Atan2Op : FloatArithmeticOp<"atan2">{
-  let summary = "2-argument arcus tangent of the given values";
-  let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `std.atan2` ssa-use `,` ssa-use `:` type
-    ```
-
-    The `atan2` operation takes two operands and returns one result, all of
-    which must be of the same type.  This type may be a floating point scalar
-    type, a vector whose element type is a floating point type, or a floating
-    point tensor.
-
-    The 2-argument arcus tangent `atan2(y, x)` returns the angle in the
-    Euclidian plane between the positive x-axis and the ray through the point
-    (x, y).  It is a generalization of the 1-argument arcus tangent which
-    returns the angle on the basis of the ratio y/x.
-
-    See also https://en.wikipedia.org/wiki/Atan2
-
-    Example:
-
-    ```mlir
-    // Scalar variant.
-    %a = atan2 %b, %c : f32
-
-    // SIMD vector variant.
-    %f = atan2 %g, %h : vector<4xf32>
-
-    // Tensor variant.
-    %x = atan2 %y, %z : tensor<4x?xf32>
-    ```
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1342,7 +1310,7 @@ def ConstantOp : Std_Op<"constant",
 // CopySignOp
 //===----------------------------------------------------------------------===//
 
-def CopySignOp : FloatArithmeticOp<"copysign"> {
+def CopySignOp : FloatBinaryOp<"copysign"> {
   let summary = "A copysign operation";
   let description = [{
     Syntax:
@@ -1368,72 +1336,6 @@ def CopySignOp : FloatArithmeticOp<"copysign"> {
 
     // Tensor element-wise copysign value.
     %x = copysign %y, %z : tensor<4x?xf8>
-    ```
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// CosOp
-//===----------------------------------------------------------------------===//
-
-def CosOp : FloatUnaryOp<"cos"> {
-  let summary = "cosine of the specified value";
-  let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `std.cos` ssa-use `:` type
-    ```
-
-    The `cos` operation computes the cosine of a given value. It takes one
-    operand and returns one result of the same type. This type may be a float
-    scalar type, a vector whose element type is float, or a tensor of floats.
-    It has no standard attributes.
-
-    Example:
-
-    ```mlir
-    // Scalar cosine value.
-    %a = cos %b : f64
-
-    // SIMD vector element-wise cosine value.
-    %f = cos %g : vector<4xf32>
-
-    // Tensor element-wise cosine value.
-    %x = cos %y : tensor<4x?xf8>
-    ```
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// SinOp
-//===----------------------------------------------------------------------===//
-
-def SinOp : FloatUnaryOp<"sin"> {
-  let summary = "sine of the specified value";
-  let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `std.sin` ssa-use `:` type
-    ```
-
-    The `sin` operation computes the sine of a given value. It takes one
-    operand and returns one result of the same type. This type may be a float
-    scalar type, a vector whose element type is float, or a tensor of floats.
-    It has no standard attributes.
-
-    Example:
-
-    ```mlir
-    // Scalar sine value.
-    %a = sin %b : f64
-
-    // SIMD vector element-wise sine value.
-    %f = sin %g : vector<4xf32>
-
-    // Tensor element-wise sine value.
-    %x = sin %y : tensor<4x?xf8>
     ```
   }];
 }
@@ -1523,49 +1425,47 @@ def DimOp : Std_Op<"dim", [NoSideEffect]> {
 // DivFOp
 //===----------------------------------------------------------------------===//
 
-def DivFOp : FloatArithmeticOp<"divf"> {
+def DivFOp : FloatBinaryOp<"divf"> {
   let summary = "floating point division operation";
   let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
-// ExpOp
+// FmaFOp
 //===----------------------------------------------------------------------===//
 
-def ExpOp : FloatUnaryOp<"exp"> {
-  let summary = "base-e exponential of the specified value";
+def FmaFOp : FloatTernaryOp<"fmaf"> {
+  let summary = "floating point fused multipy-add operation";
   let description = [{
     Syntax:
 
     ```
-    operation ::= ssa-id `=` `std.exp` ssa-use `:` type
+    operation ::= ssa-id `=` `std.fmaf` ssa-use `,` ssa-use `,` ssa-use `:` type
     ```
 
-    The `exp` operation takes one operand and returns one result of the same
-    type. This type may be a float scalar type, a vector whose element type is
-    float, or a tensor of floats. It has no standard attributes.
+    The `fmaf` operation takes three operands and returns one result, each of
+    these is required to be the same type. This type may be a floating point
+    scalar type, a vector whose element type is a floating point type, or a
+    floating point tensor.
 
     Example:
 
     ```mlir
-    // Scalar natural exponential.
-    %a = exp %b : f64
+    // Scalar fused multiply-add: d = a*b + c
+    %d = fmaf %a, %b, %c : f64
 
-    // SIMD vector element-wise natural exponential.
-    %f = exp %g : vector<4xf32>
+    // SIMD vector fused multiply-add, e.g. for Intel SSE.
+    %i = fmaf %f, %g, %h : vector<4xf32>
 
-    // Tensor element-wise natural exponential.
-    %x = exp %y : tensor<4x?xf8>
+    // Tensor fused multiply-add.
+    %w = fmaf %x, %y, %z : tensor<4x?xbf16>
     ```
+
+    The semantics of the operation correspond to those of the `llvm.fma`
+    [intrinsic](https://llvm.org/docs/LangRef.html#llvm-fma-intrinsic). In the
+    particular case of lowering to LLVM, this is guaranteed to lower
+    to the `llvm.fma.*` intrinsic.
   }];
-}
-
-//===----------------------------------------------------------------------===//
-// ExpOp
-//===----------------------------------------------------------------------===//
-
-def Exp2Op : FloatUnaryOp<"exp2"> {
-  let summary = "base-2 exponential of the specified value";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1803,51 +1703,6 @@ def LoadOp : Std_Op<"load",
 }
 
 //===----------------------------------------------------------------------===//
-// LogOp
-//===----------------------------------------------------------------------===//
-
-def LogOp : FloatUnaryOp<"log"> {
-  let summary = "base-e logarithm of the specified value";
-}
-
-//===----------------------------------------------------------------------===//
-// Log10Op
-//===----------------------------------------------------------------------===//
-
-def Log10Op : FloatUnaryOp<"log10"> {
-  let summary = "base-10 logarithm of the specified value";
-}
-
-//===----------------------------------------------------------------------===//
-// Log1pOp
-//===----------------------------------------------------------------------===//
-
-def Log1pOp : FloatUnaryOp<"log1p"> {
-  let summary = "Computes the natural logarithm of one plus the given value";
-
-  let description = [{
-    Computes the base-e logarithm of one plus the given value. It takes one
-    operand and returns one result of the same type.
-
-    log1p(x) := log(1 + x)
-
-    Example:
-
-    ```mlir
-    %y = log1p %x : f64
-    ```
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// Log2Op
-//===----------------------------------------------------------------------===//
-
-def Log2Op : FloatUnaryOp<"log2"> {
-  let summary = "base-2 logarithm of the specified value";
-}
-
-//===----------------------------------------------------------------------===//
 // MemRefCastOp
 //===----------------------------------------------------------------------===//
 
@@ -2078,7 +1933,7 @@ def MemRefReshapeOp: Std_Op<"memref_reshape", [
 // MulFOp
 //===----------------------------------------------------------------------===//
 
-def MulFOp : FloatArithmeticOp<"mulf"> {
+def MulFOp : FloatBinaryOp<"mulf"> {
   let summary = "floating point multiplication operation";
   let description = [{
     Syntax:
@@ -2115,7 +1970,7 @@ def MulFOp : FloatArithmeticOp<"mulf"> {
 // MulIOp
 //===----------------------------------------------------------------------===//
 
-def MulIOp : IntArithmeticOp<"muli", [Commutative]> {
+def MulIOp : IntBinaryOp<"muli", [Commutative]> {
   let summary = "integer multiplication operation";
   let hasFolder = 1;
 }
@@ -2157,7 +2012,7 @@ def NegFOp : FloatUnaryOp<"negf"> {
 // OrOp
 //===----------------------------------------------------------------------===//
 
-def OrOp : IntArithmeticOp<"or", [Commutative]> {
+def OrOp : IntBinaryOp<"or", [Commutative]> {
   let summary = "integer binary or";
   let description = [{
     Syntax:
@@ -2185,39 +2040,6 @@ def OrOp : IntArithmeticOp<"or", [Commutative]> {
     ```
   }];
   let hasFolder = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// PowFOp
-//===----------------------------------------------------------------------===//
-
-def PowFOp : FloatArithmeticOp<"powf"> {
-  let summary = "floating point raised to the power of operation";
-  let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `std.powf` ssa-use `,` ssa-use `:` type
-    ```
-
-    The `powf` operation takes two operands and returns one result, each of
-    these is required to be the same type. This type may be a floating point
-    scalar type, a vector whose element type is a floating point type, or a
-    floating point tensor.
-
-    Example:
-
-    ```mlir
-    // Scalar exponentiation.
-    %a = powf %b, %c : f64
-
-    // SIMD pointwise vector exponentiation
-    %f = powf %g, %h : vector<4xf32>
-
-    // Tensor pointwise exponentiation.
-    %x = powf %y, %z : tensor<4x?xbf16>
-    ```
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2297,7 +2119,7 @@ def RankOp : Std_Op<"rank", [NoSideEffect]> {
 // RemFOp
 //===----------------------------------------------------------------------===//
 
-def RemFOp : FloatArithmeticOp<"remf"> {
+def RemFOp : FloatBinaryOp<"remf"> {
   let summary = "floating point division remainder operation";
 }
 
@@ -2331,20 +2153,6 @@ def ReturnOp : Std_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
     [{ build($_builder, $_state, llvm::None); }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
-}
-
-//===----------------------------------------------------------------------===//
-// RsqrtOp
-//===----------------------------------------------------------------------===//
-
-def RsqrtOp : FloatUnaryOp<"rsqrt"> {
-  let summary = "reciprocal of sqrt (1 / sqrt of the specified value)";
-  let description = [{
-    The `rsqrt` operation computes the reciprocal of the square root. It takes
-    one operand and returns one result of the same type. This type may be a
-    float scalar type, a vector whose element type is float, or a tensor of
-    floats. It has no standard attributes.
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2412,7 +2220,7 @@ def SelectOp : Std_Op<"select", [NoSideEffect,
 // ShiftLeftOp
 //===----------------------------------------------------------------------===//
 
-def ShiftLeftOp : IntArithmeticOp<"shift_left"> {
+def ShiftLeftOp : IntBinaryOp<"shift_left"> {
   let summary = "integer left-shift";
   let description = [{
     The shift_left operation shifts an integer value to the left by a variable
@@ -2432,7 +2240,7 @@ def ShiftLeftOp : IntArithmeticOp<"shift_left"> {
 // SignedDivIOp
 //===----------------------------------------------------------------------===//
 
-def SignedDivIOp : IntArithmeticOp<"divi_signed"> {
+def SignedDivIOp : IntBinaryOp<"divi_signed"> {
   let summary = "signed integer division operation";
   let description = [{
     Syntax:
@@ -2467,7 +2275,7 @@ def SignedDivIOp : IntArithmeticOp<"divi_signed"> {
 // SignedFloorDivIOp
 //===----------------------------------------------------------------------===//
 
-def SignedFloorDivIOp : IntArithmeticOp<"floordivi_signed"> {
+def SignedFloorDivIOp : IntBinaryOp<"floordivi_signed"> {
   let summary = "signed floor integer division operation";
   let description = [{
     Syntax:
@@ -2496,7 +2304,7 @@ def SignedFloorDivIOp : IntArithmeticOp<"floordivi_signed"> {
 // SignedCeilDivIOp
 //===----------------------------------------------------------------------===//
 
-def SignedCeilDivIOp : IntArithmeticOp<"ceildivi_signed"> {
+def SignedCeilDivIOp : IntBinaryOp<"ceildivi_signed"> {
   let summary = "signed ceil integer division operation";
   let description = [{
     Syntax:
@@ -2524,7 +2332,7 @@ def SignedCeilDivIOp : IntArithmeticOp<"ceildivi_signed"> {
 // SignedRemIOp
 //===----------------------------------------------------------------------===//
 
-def SignedRemIOp : IntArithmeticOp<"remi_signed"> {
+def SignedRemIOp : IntBinaryOp<"remi_signed"> {
   let summary = "signed integer division remainder operation";
   let description = [{
     Syntax:
@@ -2559,7 +2367,7 @@ def SignedRemIOp : IntArithmeticOp<"remi_signed"> {
 // SignedShiftRightOp
 //===----------------------------------------------------------------------===//
 
-def SignedShiftRightOp : IntArithmeticOp<"shift_right_signed"> {
+def SignedShiftRightOp : IntBinaryOp<"shift_right_signed"> {
   let summary = "signed integer right-shift";
   let description = [{
     The shift_right_signed operation shifts an integer value to the right by
@@ -2685,31 +2493,6 @@ def SplatOp : Std_Op<"splat", [NoSideEffect,
 }
 
 //===----------------------------------------------------------------------===//
-// SqrtOp
-//===----------------------------------------------------------------------===//
-
-def SqrtOp : FloatUnaryOp<"sqrt"> {
-  let summary = "sqrt of the specified value";
-  let description = [{
-    The `sqrt` operation computes the square root. It takes one operand and
-    returns one result of the same type. This type may be a float scalar type, a
-    vector whose element type is float, or a tensor of floats. It has no standard
-    attributes.
-
-    Example:
-
-    ```mlir
-    // Scalar square root value.
-    %a = sqrt %b : f64
-    // SIMD vector element-wise square root value.
-    %f = sqrt %g : vector<4xf32>
-    // Tensor element-wise square root value.
-    %x = sqrt %y : tensor<4x?xf32>
-    ```
-  }];
-}
-
-//===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
 
@@ -2784,7 +2567,7 @@ def StoreOp : Std_Op<"store",
 // SubFOp
 //===----------------------------------------------------------------------===//
 
-def SubFOp : FloatArithmeticOp<"subf"> {
+def SubFOp : FloatBinaryOp<"subf"> {
   let summary = "floating point subtraction operation";
   let hasFolder = 1;
 }
@@ -2793,7 +2576,7 @@ def SubFOp : FloatArithmeticOp<"subf"> {
 // SubIOp
 //===----------------------------------------------------------------------===//
 
-def SubIOp : IntArithmeticOp<"subi"> {
+def SubIOp : IntBinaryOp<"subi"> {
   let summary = "integer subtraction operation";
   let hasFolder = 1;
 }
@@ -3246,39 +3029,6 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
 }
 
 //===----------------------------------------------------------------------===//
-// TanhOp
-//===----------------------------------------------------------------------===//
-
-def TanhOp : FloatUnaryOp<"tanh"> {
-  let summary = "hyperbolic tangent of the specified value";
-  let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `std.tanh` ssa-use `:` type
-    ```
-
-    The `tanh` operation computes the hyperbolic tangent. It takes one operand
-    and returns one result of the same type. This type may be a float scalar
-    type, a vector whose element type is float, or a tensor of floats. It has
-    no standard attributes.
-
-    Example:
-
-    ```mlir
-    // Scalar hyperbolic tangent value.
-    %a = tanh %b : f64
-
-    // SIMD vector element-wise hyperbolic tangent value.
-    %f = tanh %g : vector<4xf32>
-
-    // Tensor element-wise hyperbolic tangent value.
-    %x = tanh %y : tensor<4x?xf8>
-    ```
-  }];
-}
-
-//===----------------------------------------------------------------------===//
 // TensorLoadOp
 //===----------------------------------------------------------------------===//
 
@@ -3407,6 +3157,7 @@ def TensorToMemrefOp : Std_Op<"tensor_to_memref",
   let assemblyFormat = "$tensor attr-dict `:` type($memref)";
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3501,7 +3252,7 @@ def UIToFPOp : ArithmeticCastOp<"uitofp">, Arguments<(ins AnyType:$in)> {
 // UnsignedDivIOp
 //===----------------------------------------------------------------------===//
 
-def UnsignedDivIOp : IntArithmeticOp<"divi_unsigned"> {
+def UnsignedDivIOp : IntBinaryOp<"divi_unsigned"> {
   let summary = "unsigned integer division operation";
   let description = [{
     Syntax:
@@ -3536,7 +3287,7 @@ def UnsignedDivIOp : IntArithmeticOp<"divi_unsigned"> {
 // UnsignedRemIOp
 //===----------------------------------------------------------------------===//
 
-def UnsignedRemIOp : IntArithmeticOp<"remi_unsigned"> {
+def UnsignedRemIOp : IntBinaryOp<"remi_unsigned"> {
   let summary = "unsigned integer division remainder operation";
   let description = [{
     Syntax:
@@ -3571,7 +3322,7 @@ def UnsignedRemIOp : IntArithmeticOp<"remi_unsigned"> {
 // UnsignedShiftRightOp
 //===----------------------------------------------------------------------===//
 
-def UnsignedShiftRightOp : IntArithmeticOp<"shift_right_unsigned"> {
+def UnsignedShiftRightOp : IntBinaryOp<"shift_right_unsigned"> {
   let summary = "unsigned integer right-shift";
   let description = [{
     The shift_right_unsigned operation shifts an integer value to the right by
@@ -3660,7 +3411,7 @@ def ViewOp : Std_Op<"view", [
 // XOrOp
 //===----------------------------------------------------------------------===//
 
-def XOrOp : IntArithmeticOp<"xor", [Commutative]> {
+def XOrOp : IntBinaryOp<"xor", [Commutative]> {
   let summary = "integer binary xor";
   let description = [{
     The `xor` operation takes two operands and returns one result, each of these

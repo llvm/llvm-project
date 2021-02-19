@@ -1,6 +1,7 @@
 add_subdirectory(Transforms)
 
 add_mlir_dialect_library(MLIRLLVMIR
+  IR/FunctionCallUtils.cpp
   IR/LLVMDialect.cpp
   IR/LLVMTypes.cpp
   IR/LLVMTypeSyntax.cpp

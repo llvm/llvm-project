@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/EDSC/Builders.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Math/EDSC/Intrinsics.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -26,8 +27,6 @@ Operation *mlir::edsc::makeGenericLinalgOp(
     ArrayRef<StructuredIndexed> outputs, TypeRange resultTensorTypes,
     function_ref<void(ValueRange)> regionBuilder, ArrayRef<Value> otherValues,
     ArrayRef<Attribute> otherAttributes) {
-  OpBuilder &builder = edsc::ScopedContext::getBuilderRef();
-
   // Build maps
   SmallVector<SmallVector<AffineExpr, 4>, 4> exprsList;
   exprsList.reserve(inputs.size() + outputs.size());
@@ -53,13 +52,10 @@ Operation *mlir::edsc::makeGenericLinalgOp(
               resultTensorTypes,
               inputValues,
               outputValues,
-              builder.getAffineMapArrayAttr(maps),
-              builder.getStrArrayAttr(iteratorStrTypes),
-              StringAttr() /*doc*/,
-              StringAttr() /*library_call*/,
-              ArrayAttr() /*sparse*/
-              /* TODO: other attributes in op */
-              )
+              maps,
+              iteratorStrTypes,
+              ""/*doc*/,
+              ""/*library_call*/)
           .getOperation();
   // clang-format on
 
@@ -113,7 +109,7 @@ Operation *mlir::edsc::ops::linalg_generic_pointwise(
 
 Operation *mlir::edsc::ops::linalg_generic_pointwise_tanh(StructuredIndexed I,
                                                           StructuredIndexed O) {
-  UnaryPointwiseOpBuilder unOp([](Value a) -> Value { return std_tanh(a); });
+  UnaryPointwiseOpBuilder unOp([](Value a) -> Value { return math_tanh(a); });
   return linalg_generic_pointwise(unOp, I, O);
 }
 

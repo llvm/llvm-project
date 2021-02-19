@@ -185,7 +185,7 @@ RewriteObjCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 void RewriteMacrosAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
   std::unique_ptr<raw_ostream> OS =
-      CI.createDefaultOutputFile(true, getCurrentFileOrBufferName());
+      CI.createDefaultOutputFile(/*Binary=*/false, getCurrentFileOrBufferName());
   if (!OS) return;
 
   RewriteMacrosInInput(CI.getPreprocessor(), OS.get());
@@ -270,7 +270,7 @@ public:
 bool RewriteIncludesAction::BeginSourceFileAction(CompilerInstance &CI) {
   if (!OutputStream) {
     OutputStream =
-        CI.createDefaultOutputFile(true, getCurrentFileOrBufferName());
+        CI.createDefaultOutputFile(/*Binary=*/false, getCurrentFileOrBufferName());
     if (!OutputStream)
       return false;
   }

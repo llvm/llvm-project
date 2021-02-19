@@ -117,7 +117,9 @@ public:
         std::distance(CI.First->getIterator(), CI.Last->getIterator()) + 1;
     if (Size < 2)
       return false;
-    assert(Size <= 64 && "Hard clause is too long!");
+    // N.B. a size of 64 could be encoded in the instruction, but the hardware
+    // documentation (at least for GFX11) says that 63 is the maximum allowed.
+    assert(Size <= 63 && "Hard clause is too long!");
 
     auto &MBB = *CI.First->getParent();
     auto ClauseMI =
@@ -158,7 +160,7 @@ public:
           }
         }
 
-        if (CI.Length == 64 ||
+        if (CI.Length == 63 ||
             (CI.Length && Type != HARDCLAUSE_INTERNAL &&
              (Type != CI.Type ||
               // Note that we lie to shouldClusterMemOps about the size of the

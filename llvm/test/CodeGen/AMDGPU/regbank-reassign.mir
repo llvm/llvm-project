@@ -29,7 +29,7 @@ body: |
   bb.0:
     %0 = IMPLICIT_DEF
     %1 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORD %1, %0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %1, %0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -45,7 +45,7 @@ body: |
   bb.0:
     %0 = IMPLICIT_DEF
     %1 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORDX2 %1, %0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %1, %0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -241,15 +241,15 @@ body: |
     %14 = IMPLICIT_DEF
     %15 = IMPLICIT_DEF
     %2 = V_AND_B32_e32 %1, %0, implicit $exec
-    GLOBAL_STORE_DWORD %3, %0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD %3, %1, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD %3, %2, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD %3, %4, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX2 %3, %5, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 %3, %6, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 %3, %7, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 %3, %8, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 %3, %9, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %0, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %1, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %2, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %4, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %3, %5, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %6, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %7, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %8, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %9, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -287,18 +287,18 @@ body: |
     %11 = IMPLICIT_DEF
     %12 = IMPLICIT_DEF
     %2 = V_AND_B32_e32 %1, %0, implicit $exec
-    GLOBAL_STORE_DWORD %3, %0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD %3, %1, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD %3, %2, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD %3, %4, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX2 %3, %5, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 %3, %6, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 %3, %7, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 %3, %8, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 %3, %9, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 %3, %10, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 %3, %11, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD %3, %12, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %0, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %1, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %2, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %4, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %3, %5, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %6, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %7, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %8, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %9, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %10, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %11, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %3, %12, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 

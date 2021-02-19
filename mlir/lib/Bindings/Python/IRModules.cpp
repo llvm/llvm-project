@@ -1763,6 +1763,23 @@ public:
   static void bindDerived(ClassTy &m) {}
 };
 
+class PyAffineMapAttribute : public PyConcreteAttribute<PyAffineMapAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAAffineMap;
+  static constexpr const char *pyClassName = "AffineMapAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](PyAffineMap &affineMap) {
+          MlirAttribute attr = mlirAffineMapAttrGet(affineMap.get());
+          return PyAffineMapAttribute(affineMap.getContext(), attr);
+        },
+        py::arg("affine_map"), "Gets an attribute wrapping an AffineMap.");
+  }
+};
+
 class PyArrayAttribute : public PyConcreteAttribute<PyArrayAttribute> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAArray;
@@ -3994,17 +4011,18 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           "The underlying generic attribute of the NamedAttribute binding");
 
   // Builtin attribute bindings.
-  PyFloatAttribute::bind(m);
+  PyAffineMapAttribute::bind(m);
   PyArrayAttribute::bind(m);
   PyArrayAttribute::PyArrayAttributeIterator::bind(m);
-  PyIntegerAttribute::bind(m);
   PyBoolAttribute::bind(m);
-  PyFlatSymbolRefAttribute::bind(m);
-  PyStringAttribute::bind(m);
   PyDenseElementsAttribute::bind(m);
-  PyDenseIntElementsAttribute::bind(m);
   PyDenseFPElementsAttribute::bind(m);
+  PyDenseIntElementsAttribute::bind(m);
   PyDictAttribute::bind(m);
+  PyFlatSymbolRefAttribute::bind(m);
+  PyFloatAttribute::bind(m);
+  PyIntegerAttribute::bind(m);
+  PyStringAttribute::bind(m);
   PyTypeAttribute::bind(m);
   PyUnitAttribute::bind(m);
 

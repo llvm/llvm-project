@@ -6,8 +6,8 @@
 # RUN: ld.lld -just-symbols=%t1.exe -o %t2.exe -cref | FileCheck %s
 
 # CHECK:      Symbol      File
-# CHECK-NEXT: bar         {{.*exe}}
 # CHECK-NEXT: foo         {{.*exe}}
+# CHECK-NEXT: bar         {{.*exe}}
 
 .globl foo, bar
 foo:

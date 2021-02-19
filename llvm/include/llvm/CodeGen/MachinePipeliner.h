@@ -526,6 +526,9 @@ public:
   /// Set the initiation interval for this schedule.
   void setInitiationInterval(int ii) { InitiationInterval = ii; }
 
+  /// Return the initiation interval for this schedule.
+  int getInitiationInterval() const { return InitiationInterval; }
+
   /// Return the first cycle in the completed schedule.  This
   /// can be a negative value.
   int getFirstCycle() const { return FirstCycle; }

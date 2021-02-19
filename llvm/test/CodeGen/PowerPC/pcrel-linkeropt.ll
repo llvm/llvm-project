@@ -42,11 +42,11 @@ define dso_local void @ReadWrite8() local_unnamed_addr #0 {
 ; CHECK-NEXT:    pld r4, output8@got@pcrel(0), 1
 ; CHECK-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
 ; CHECK-NEXT:    lbz r3, 0(r3)
+; CHECK-NEXT:    stb r3, 0(r4)
+; CHECK-NEXT:    blr
 ; In this test the stb r3, 0(r4) cannot be optimized because it
 ; uses the register r3 and that register is defined by lbz r3, 0(r3)
 ; which is defined between the pld and the stb.
-; CHECK-NEXT:    stb r3, 0(r4)
-; CHECK-NEXT:    blr
 entry:
   %0 = load i8, i8* @input8, align 1
   store i8 %0, i8* @output8, align 1
@@ -61,11 +61,11 @@ define dso_local void @ReadWrite16() local_unnamed_addr #0 {
 ; CHECK-NEXT:    pld r4, output16@got@pcrel(0), 1
 ; CHECK-NEXT:    .reloc .Lpcrel1-8,R_PPC64_PCREL_OPT,.-(.Lpcrel1-8)
 ; CHECK-NEXT:    lhz r3, 0(r3)
+; CHECK-NEXT:    sth r3, 0(r4)
+; CHECK-NEXT:    blr
 ; In this test the sth r3, 0(r4) cannot be optimized because it
 ; uses the register r3 and that register is defined by lhz r3, 0(r3)
 ; which is defined between the pld and the sth.
-; CHECK-NEXT:    sth r3, 0(r4)
-; CHECK-NEXT:    blr
 entry:
   %0 = load i16, i16* @input16, align 2
   store i16 %0, i16* @output16, align 2
@@ -165,11 +165,10 @@ define dso_local void @ReadWriteVi32() local_unnamed_addr #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, inputVi32@got@pcrel(0), 1
 ; CHECK-NEXT:    li r4, 45
-; CHECK-NEXT:    mtfprwz f1, r4
-; CHECK-NEXT:    lxvx vs0, 0, r3
+; CHECK-NEXT:    lxvx v2, 0, r3
 ; CHECK-NEXT:    pld r3, outputVi32@got@pcrel(0), 1
-; CHECK-NEXT:    xxinsertw vs0, vs1, 8
-; CHECK-NEXT:    stxvx vs0, 0, r3
+; CHECK-NEXT:    vinsw v2, r4, 8
+; CHECK-NEXT:    stxvx v2, 0, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load <4 x i32>, <4 x i32>* @inputVi32, align 16
@@ -286,8 +285,7 @@ declare void @Callee(...)
 
 define dso_local void @FuncPtrCall() local_unnamed_addr #0 {
 ; CHECK-LABEL: FuncPtrCall:
-; CHECK:         .localentry FuncPtrCall, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, FuncPtrIn@got@pcrel(0), 1
 ; CHECK-NEXT:  .Lpcrel10:
 ; CHECK-NEXT:    .reloc .Lpcrel10-8,R_PPC64_PCREL_OPT,.-(.Lpcrel10-8)
@@ -317,8 +315,7 @@ entry:
 
 define dso_local signext i32 @VecMultiUse() local_unnamed_addr #0 {
 ; CHECK-LABEL: VecMultiUse:
-; CHECK:         .localentry VecMultiUse, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
@@ -355,8 +352,7 @@ entry:
 
 define dso_local signext i32 @UseAddr(i32 signext %a) local_unnamed_addr #0 {
 ; CHECK-LABEL: UseAddr:
-; CHECK:         .localentry UseAddr, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r0, 16(r1)

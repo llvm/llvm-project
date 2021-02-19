@@ -134,25 +134,26 @@ gpu.module @test_module {
   // CHECK: llvm.func @__ocml_cos_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_cos
   func @gpu_cos(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = std.cos %arg_f32 : f32
+    %result32 = math.cos %arg_f32 : f32
     // CHECK: llvm.call @__ocml_cos_f32(%{{.*}}) : (f32) -> f32
-    %result64 = std.cos %arg_f64 : f64
+    %result64 = math.cos %arg_f64 : f64
     // CHECK: llvm.call @__ocml_cos_f64(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
 }
 
 // -----
+
 gpu.module @test_module {
   // CHECK: llvm.func @__ocml_exp_f32(f32) -> f32
   // CHECK: llvm.func @__ocml_exp_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_exp
   func @gpu_exp(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %exp_f32 = std.exp %arg_f32 : f32
+    %exp_f32 = math.exp %arg_f32 : f32
     // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-    %result32 = std.exp %exp_f32 : f32
+    %result32 = math.exp %exp_f32 : f32
     // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-    %result64 = std.exp %arg_f64 : f64
+    %result64 = math.exp %arg_f64 : f64
     // CHECK: llvm.call @__ocml_exp_f64(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
@@ -169,11 +170,11 @@ gpu.module @test_module {
     // CHECK: llvm.func @__ocml_exp_f64(f64) -> f64
     // CHECK-LABEL: func @gpu_exp
     func @gpu_exp(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-      %exp_f32 = std.exp %arg_f32 : f32
+      %exp_f32 = math.exp %arg_f32 : f32
       // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-      %result32 = std.exp %exp_f32 : f32
+      %result32 = math.exp %exp_f32 : f32
       // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-      %result64 = std.exp %arg_f64 : f64
+      %result64 = math.exp %arg_f64 : f64
       // CHECK: llvm.call @__ocml_exp_f64(%{{.*}}) : (f64) -> f64
       std.return %result32, %result64 : f32, f64
     }
@@ -184,13 +185,30 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK: llvm.func @__ocml_expm1_f32(f32) -> f32
+  // CHECK: llvm.func @__ocml_expm1_f64(f64) -> f64
+  // CHECK-LABEL: func @gpu_expm1
+  func @gpu_expm1(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %expm1_f32 = math.expm1 %arg_f32 : f32
+    // CHECK: llvm.call @__ocml_expm1_f32(%{{.*}}) : (f32) -> f32
+    %result32 = math.expm1 %expm1_f32 : f32
+    // CHECK: llvm.call @__ocml_expm1_f32(%{{.*}}) : (f32) -> f32
+    %result64 = math.expm1 %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_expm1_f64(%{{.*}}) : (f64) -> f64
+    std.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK: llvm.func @__ocml_log_f32(f32) -> f32
   // CHECK: llvm.func @__ocml_log_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_log
   func @gpu_log(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = std.log %arg_f32 : f32
+    %result32 = math.log %arg_f32 : f32
     // CHECK: llvm.call @__ocml_log_f32(%{{.*}}) : (f32) -> f32
-    %result64 = std.log %arg_f64 : f64
+    %result64 = math.log %arg_f64 : f64
     // CHECK: llvm.call @__ocml_log_f64(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
@@ -203,9 +221,9 @@ gpu.module @test_module {
   // CHECK: llvm.func @__ocml_log1p_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_log1p
   func @gpu_log1p(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = std.log1p %arg_f32 : f32
+    %result32 = math.log1p %arg_f32 : f32
     // CHECK: llvm.call @__ocml_log1p_f32(%{{.*}}) : (f32) -> f32
-    %result64 = std.log1p %arg_f64 : f64
+    %result64 = math.log1p %arg_f64 : f64
     // CHECK: llvm.call @__ocml_log1p_f64(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
@@ -218,9 +236,9 @@ gpu.module @test_module {
   // CHECK: llvm.func @__ocml_log10_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_log10
   func @gpu_log10(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = std.log10 %arg_f32 : f32
+    %result32 = math.log10 %arg_f32 : f32
     // CHECK: llvm.call @__ocml_log10_f32(%{{.*}}) : (f32) -> f32
-    %result64 = std.log10 %arg_f64 : f64
+    %result64 = math.log10 %arg_f64 : f64
     // CHECK: llvm.call @__ocml_log10_f64(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
@@ -233,9 +251,9 @@ gpu.module @test_module {
   // CHECK: llvm.func @__ocml_log2_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_log2
   func @gpu_log2(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = std.log2 %arg_f32 : f32
+    %result32 = math.log2 %arg_f32 : f32
     // CHECK: llvm.call @__ocml_log2_f32(%{{.*}}) : (f32) -> f32
-    %result64 = std.log2 %arg_f64 : f64
+    %result64 = math.log2 %arg_f64 : f64
     // CHECK: llvm.call @__ocml_log2_f64(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
@@ -249,13 +267,13 @@ gpu.module @test_module {
   // CHECK-LABEL: func @gpu_rsqrt
   func @gpu_rsqrt(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64)
       -> (f16, f32, f64) {
-    %result16 = std.rsqrt %arg_f16 : f16
+    %result16 = math.rsqrt %arg_f16 : f16
     // CHECK: llvm.fpext %{{.*}} : f16 to f32
     // CHECK-NEXT: llvm.call @__ocml_rsqrt_f32(%{{.*}}) : (f32) -> f32
     // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to f16
-    %result32 = std.rsqrt %arg_f32 : f32
+    %result32 = math.rsqrt %arg_f32 : f32
     // CHECK: llvm.call @__ocml_rsqrt_f32(%{{.*}}) : (f32) -> f32
-    %result64 = std.rsqrt %arg_f64 : f64
+    %result64 = math.rsqrt %arg_f64 : f64
     // CHECK: llvm.call @__ocml_rsqrt_f64(%{{.*}}) : (f64) -> f64
     std.return %result16, %result32, %result64 : f16, f32, f64
   }
@@ -269,13 +287,13 @@ gpu.module @test_module {
   // CHECK-LABEL: func @gpu_sqrt
   func @gpu_sqrt(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64)
       -> (f16, f32, f64) {
-    %result16 = std.sqrt %arg_f16 : f16
+    %result16 = math.sqrt %arg_f16 : f16
     // CHECK: llvm.fpext %{{.*}} : f16 to f32
     // CHECK-NEXT: llvm.call @__ocml_sqrt_f32(%{{.*}}) : (f32) -> f32
     // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to f16
-    %result32 = std.sqrt %arg_f32 : f32
+    %result32 = math.sqrt %arg_f32 : f32
     // CHECK: llvm.call @__ocml_sqrt_f32(%{{.*}}) : (f32) -> f32
-    %result64 = std.sqrt %arg_f64 : f64
+    %result64 = math.sqrt %arg_f64 : f64
     // CHECK: llvm.call @__ocml_sqrt_f64(%{{.*}}) : (f64) -> f64
     std.return %result16, %result32, %result64 : f16, f32, f64
   }
@@ -288,9 +306,9 @@ gpu.module @test_module {
   // CHECK: llvm.func @__ocml_tanh_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_tanh
   func @gpu_tanh(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = std.tanh %arg_f32 : f32
+    %result32 = math.tanh %arg_f32 : f32
     // CHECK: llvm.call @__ocml_tanh_f32(%{{.*}}) : (f32) -> f32
-    %result64 = std.tanh %arg_f64 : f64
+    %result64 = math.tanh %arg_f64 : f64
     // CHECK: llvm.call @__ocml_tanh_f64(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
@@ -303,9 +321,9 @@ gpu.module @test_module {
   // CHECK: llvm.func @__ocml_atan_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_atan
   func @gpu_atan(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = std.atan %arg_f32 : f32
+    %result32 = math.atan %arg_f32 : f32
     // CHECK: llvm.call @__ocml_atan_f32(%{{.*}}) : (f32) -> f32
-    %result64 = std.atan %arg_f64 : f64
+    %result64 = math.atan %arg_f64 : f64
     // CHECK: llvm.call @__ocml_atan_f64(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
@@ -318,9 +336,9 @@ gpu.module @test_module {
   // CHECK: llvm.func @__ocml_atan2_f64(f64, f64) -> f64
   // CHECK-LABEL: func @gpu_atan2
   func @gpu_atan2(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = std.atan2 %arg_f32, %arg_f32 : f32
+    %result32 = math.atan2 %arg_f32, %arg_f32 : f32
     // CHECK: llvm.call @__ocml_atan2_f32(%{{.*}}) : (f32, f32) -> f32
-    %result64 = std.atan2 %arg_f64, %arg_f64 : f64
+    %result64 = math.atan2 %arg_f64, %arg_f64 : f64
     // CHECK: llvm.call @__ocml_atan2_f64(%{{.*}}) : (f64, f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
@@ -333,10 +351,22 @@ gpu.module @test_module {
   // CHECK: llvm.func @__ocml_pow_f64(f64, f64) -> f64
   // CHECK-LABEL: func @gpu_pow
   func @gpu_pow(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = std.powf %arg_f32, %arg_f32 : f32
+    %result32 = math.powf %arg_f32, %arg_f32 : f32
     // CHECK: llvm.call @__ocml_pow_f32(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
-    %result64 = std.powf %arg_f64, %arg_f64 : f64
+    %result64 = math.powf %arg_f64, %arg_f64 : f64
     // CHECK: llvm.call @__ocml_pow_f64(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
     std.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK-LABEL: @kernel_func
+  // CHECK: attributes
+  // CHECK: gpu.kernel
+  // CHECK: rocdl.kernel
+  gpu.func @kernel_func() kernel {
+    gpu.return
   }
 }

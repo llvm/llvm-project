@@ -1699,6 +1699,8 @@ StringRef Triple::getARMCPUForArch(StringRef MArch) const {
   case llvm::Triple::NetBSD:
     if (!MArch.empty() && MArch == "v6")
       return "arm1176jzf-s";
+    if (!MArch.empty() && MArch == "v7")
+      return "cortex-a8";
     break;
   case llvm::Triple::Win32:
     // FIXME: this is invalid for WindowsCE

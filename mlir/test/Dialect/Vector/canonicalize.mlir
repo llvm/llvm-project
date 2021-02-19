@@ -267,6 +267,20 @@ func @cast_transfers(%A: memref<4x8xf32>) -> (vector<4x8xf32>) {
 
 // -----
 
+// CHECK-LABEL: cast_transfers
+func @cast_transfers(%A: tensor<4x8xf32>) -> (vector<4x8xf32>) {
+  %c0 = constant 0 : index
+  %f0 = constant 0.0 : f32
+  %0 = tensor.cast %A : tensor<4x8xf32> to tensor<?x?xf32>
+
+  // CHECK: vector.transfer_read %{{.*}} {masked = [false, false]} : tensor<4x8xf32>, vector<4x8xf32>
+  %1 = vector.transfer_read %0[%c0, %c0], %f0 : tensor<?x?xf32>, vector<4x8xf32>
+
+  return %1 : vector<4x8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @insert_extract_transpose_2d(
 //  CHECK-SAME: %[[V:[a-zA-Z0-9]*]]: vector<2x3xf32>,
 //  CHECK-SAME: %[[F0:[a-zA-Z0-9]*]]: f32,
@@ -710,3 +724,49 @@ func @dead_load(%base: memref<?xf32>, %indices: vector<16xi32>,
     memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return
 }
+
+// -----
+
+#contraction_accesses0 = [
+  affine_map<(i, j, k) -> (i, k)>,
+  affine_map<(i, j, k) -> (k, j)>,
+  affine_map<(i, j, k) -> (i, j)>
+]
+#contraction_trait0 = {
+  indexing_maps = #contraction_accesses0,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// CHECK-LABEL: func @contractions
+//  CHECK-SAME:   %[[A:[0-9a-zA-Z]+]]: vector<2x3xf32>
+//  CHECK-SAME:   %[[B:[0-9a-zA-Z]+]]: vector<3x4xf32>
+//  CHECK-SAME:   %[[C:[0-9a-zA-Z]+]]: vector<2x4xf32>
+//  CHECK-SAME:   %[[A_I8:[0-9a-zA-Z]+]]: vector<2x3xi8>
+//  CHECK-SAME:   %[[B_I8:[0-9a-zA-Z]+]]: vector<3x4xi8>
+//  CHECK-SAME:   %[[C_I8:[0-9a-zA-Z]+]]: vector<2x4xi8>
+func @contractions(%a: vector<2x3xf32>, %b: vector<3x4xf32>, %c: vector<2x4xf32>,
+                   %a_i8: vector<2x3xi8>, %b_i8: vector<3x4xi8>, %c_i8: vector<2x4xi8>)
+  -> (vector<2x4xf32>, vector<2x4xi8>)
+{
+  // CHECK-NOT: constant
+  %vf_0 = constant dense <0.0>: vector<2x4xf32>
+  // CHECK-NOT: addf
+  //     CHECK: %[[D:.*]] = vector.contract {{.*}} %[[A]], %[[B]], %[[C]]
+  %0 = vector.contract #contraction_trait0 %a, %b, %vf_0:
+    vector<2x3xf32>, vector<3x4xf32> into vector<2x4xf32>
+  // CHECK-NOT: addf
+  %1 = addf %0, %c: vector<2x4xf32>
+
+  // CHECK-NOT: constant
+  %vi8_0 = constant dense <0>: vector<2x4xi8>
+  // CHECK-NOT: addi
+  //     CHECK: %[[D_I8:.*]] = vector.contract {{.*}} %[[A_I8]], %[[B_I8]], %[[C_I8]]
+  %i8_0 = vector.contract #contraction_trait0 %a_i8, %b_i8, %vi8_0:
+    vector<2x3xi8>, vector<3x4xi8> into vector<2x4xi8>
+  // CHECK-NOT: addi
+  %i8_1 = addi %i8_0, %c_i8: vector<2x4xi8>
+
+  // CHECK: return %[[D]], %[[D_I8]]
+  return %1, %i8_1: vector<2x4xf32>, vector<2x4xi8>
+}
+

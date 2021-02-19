@@ -399,11 +399,7 @@ void coro::Shape::buildFrom(Function &F) {
     this->AsyncLowering.ContextAlignment =
         AsyncId->getStorageAlignment().value();
     this->AsyncLowering.AsyncFuncPointer = AsyncId->getAsyncFunctionPointer();
-    auto &Context = F.getContext();
-    auto *Int8PtrTy = Type::getInt8PtrTy(Context);
-    auto *VoidTy = Type::getVoidTy(Context);
-    this->AsyncLowering.AsyncFuncTy =
-        FunctionType::get(VoidTy, {Int8PtrTy, Int8PtrTy, Int8PtrTy}, false);
+    this->AsyncLowering.AsyncCC = F.getCallingConv();
     break;
   };
   case Intrinsic::coro_id_retcon:

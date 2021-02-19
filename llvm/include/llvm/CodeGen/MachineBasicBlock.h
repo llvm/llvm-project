@@ -153,6 +153,9 @@ private:
   /// LLVM IR.
   bool IsEHScopeEntry = false;
 
+  /// Indicates if this is a target block of a catchret.
+  bool IsEHCatchretTarget = false;
+
   /// Indicate that this basic block is the entry block of an EH funclet.
   bool IsEHFuncletEntry = false;
 
@@ -174,6 +177,9 @@ private:
   /// since getSymbol is a relatively heavy-weight operation, the symbol
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
+
+  /// Cached MCSymbol for this block (used if IsEHCatchRetTarget).
+  mutable MCSymbol *CachedEHCatchretMCSymbol = nullptr;
 
   /// Marks the end of the basic block. Used during basic block sections to
   /// calculate the size of the basic block, or the BB section ending with it.
@@ -444,6 +450,12 @@ public:
   /// Indicates if this is the entry block of an EH scope, i.e., the block that
   /// that used to have a catchpad or cleanuppad instruction in the LLVM IR.
   void setIsEHScopeEntry(bool V = true) { IsEHScopeEntry = V; }
+
+  /// Returns true if this is a target block of a catchret.
+  bool isEHCatchretTarget() const { return IsEHCatchretTarget; }
+
+  /// Indicates if this is a target block of a catchret.
+  void setIsEHCatchretTarget(bool V = true) { IsEHCatchretTarget = V; }
 
   /// Returns true if this is the entry block of an EH funclet.
   bool isEHFuncletEntry() const { return IsEHFuncletEntry; }
@@ -909,6 +921,9 @@ public:
 
   /// Return the MCSymbol for this basic block.
   MCSymbol *getSymbol() const;
+
+  /// Return the EHCatchret Symbol for this basic block.
+  MCSymbol *getEHCatchretSymbol() const;
 
   Optional<uint64_t> getIrrLoopHeaderWeight() const {
     return IrrLoopHeaderWeight;

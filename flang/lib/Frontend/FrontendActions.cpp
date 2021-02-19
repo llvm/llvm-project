@@ -9,12 +9,28 @@
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Common/default-kinds.h"
 #include "flang/Frontend/CompilerInstance.h"
+#include "flang/Frontend/FrontendOptions.h"
+#include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/source.h"
+#include "flang/Parser/unparse.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Semantics/unparse-with-symbols.h"
+#include "llvm/ADT/StringRef.h"
+#include <clang/Basic/Diagnostic.h>
+#include <memory>
 
 using namespace Fortran::frontend;
+
+void reportFatalSemanticErrors(const Fortran::semantics::Semantics &semantics,
+    clang::DiagnosticsEngine &diags, const llvm::StringRef &bufferName) {
+  if (semantics.AnyFatalError()) {
+    unsigned DiagID = diags.getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Semantic errors in %0");
+    diags.Report(DiagID) << bufferName;
+  }
+}
 
 bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
   CompilerInstance &ci = this->instance();
@@ -46,6 +62,68 @@ bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
     return false;
   }
 
+  return true;
+}
+
+bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
+  CompilerInstance &ci = this->instance();
+
+  std::string currentInputPath{GetCurrentFileOrBufferName()};
+
+  Fortran::parser::Options parserOptions = ci.invocation().fortranOpts();
+
+  if (ci.invocation().frontendOpts().fortranForm_ == FortranForm::Unknown) {
+    // Switch between fixed and free form format based on the input file
+    // extension.
+    //
+    // Ideally we should have all Fortran options set before entering this
+    // method (i.e. before processing any specific input files). However, we
+    // can't decide between fixed and free form based on the file extension
+    // earlier than this.
+    parserOptions.isFixedForm = currentInput().IsFixedForm();
+  }
+
+  // Prescan. In case of failure, report and return.
+  ci.parsing().Prescan(currentInputPath, parserOptions);
+
+  if (ci.parsing().messages().AnyFatalError()) {
+    const unsigned diagID = ci.diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Could not scan %0");
+    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
+    ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+
+    return false;
+  }
+
+  // Parse. In case of failure, report and return.
+  ci.parsing().Parse(llvm::outs());
+
+  if (ci.parsing().messages().AnyFatalError()) {
+    unsigned diagID = ci.diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Could not parse %0");
+    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
+
+    ci.parsing().messages().Emit(
+        llvm::errs(), this->instance().allCookedSources());
+    return false;
+  }
+
+  // Report the diagnostics from parsing
+  ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+
+  auto &parseTree{*ci.parsing().parseTree()};
+
+  // Prepare semantics
+  setSemantics(std::make_unique<Fortran::semantics::Semantics>(
+      ci.invocation().semanticsContext(), parseTree,
+      ci.parsing().cooked().AsCharBlock()));
+  auto &semantics = this->semantics();
+
+  // Run semantic checks
+  semantics.Perform();
+
+  // Report the diagnostics from the semantic checks
+  semantics.EmitMessages(ci.semaOutputStream());
   return true;
 }
 
@@ -111,42 +189,62 @@ void PrintPreprocessedAction::ExecuteAction() {
   }
 }
 
+void DebugDumpProvenanceAction::ExecuteAction() {
+  this->instance().parsing().DumpProvenance(llvm::outs());
+}
+
 void ParseSyntaxOnlyAction::ExecuteAction() {
-  CompilerInstance &ci = this->instance();
+  reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
+      GetCurrentFileOrBufferName());
+}
 
-  // Parse. In case of failure, report and return.
-  ci.parsing().Parse(llvm::outs());
+void DebugUnparseAction::ExecuteAction() {
+  auto &parseTree{instance().parsing().parseTree()};
+  Fortran::parser::AnalyzedObjectsAsFortran asFortran =
+      Fortran::frontend::getBasicAsFortran();
 
-  if (ci.parsing().messages().AnyFatalError()) {
-    unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Could not parse %0");
-    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
+  // TODO: Options should come from CompilerInvocation
+  Unparse(llvm::outs(), *parseTree,
+      /*encoding=*/Fortran::parser::Encoding::UTF_8,
+      /*capitalizeKeywords=*/true, /*backslashEscapes=*/false,
+      /*preStatement=*/nullptr, &asFortran);
 
-    ci.parsing().messages().Emit(
-        llvm::errs(), this->instance().allCookedSources());
-    return;
-  }
+  // Report fatal semantic errors
+  reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
+      GetCurrentFileOrBufferName());
+}
 
-  // Report the diagnostics from parsing
-  ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+void DebugUnparseWithSymbolsAction::ExecuteAction() {
+  auto &parseTree{*instance().parsing().parseTree()};
 
-  auto &parseTree{*ci.parsing().parseTree()};
+  Fortran::semantics::UnparseWithSymbols(
+      llvm::outs(), parseTree, /*encoding=*/Fortran::parser::Encoding::UTF_8);
 
-  // Prepare semantics
-  Fortran::semantics::Semantics semantics{ci.invocation().semanticsContext(),
-      parseTree, ci.parsing().cooked().AsCharBlock()};
+  // Report fatal semantic errors
+  reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
+      GetCurrentFileOrBufferName());
+}
 
-  // Run semantic checks
-  semantics.Perform();
+void DebugDumpSymbolsAction::ExecuteAction() {
+  auto &semantics = this->semantics();
 
-  // Report the diagnostics from the semantic checks
-  semantics.EmitMessages(ci.semaOutputStream());
+  // Dump symbols
+  semantics.DumpSymbols(llvm::outs());
+  // Report fatal semantic errors
+  reportFatalSemanticErrors(
+      semantics, this->instance().diagnostics(), GetCurrentFileOrBufferName());
+}
 
-  if (semantics.AnyFatalError()) {
-    unsigned DiagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Semantic errors in %0");
-    ci.diagnostics().Report(DiagID) << GetCurrentFileOrBufferName();
-  }
+void DebugDumpParseTreeAction::ExecuteAction() {
+  auto &parseTree{instance().parsing().parseTree()};
+  Fortran::parser::AnalyzedObjectsAsFortran asFortran =
+      Fortran::frontend::getBasicAsFortran();
+
+  // Dump parse tree
+  Fortran::parser::DumpTree(llvm::outs(), parseTree, &asFortran);
+  // Report fatal semantic errors
+  reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
+      GetCurrentFileOrBufferName());
 }
 
 void EmitObjAction::ExecuteAction() {

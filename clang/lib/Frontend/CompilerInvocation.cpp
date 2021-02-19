@@ -1383,8 +1383,7 @@ void CompilerInvocation::GenerateCodeGenArgs(
       GenerateArg(Args, OPT_ftime_report, SA);
   }
 
-  if (Opts.FunctionSections &&
-      (Opts.BBSections == "none" || Opts.BBSections == "labels"))
+  if (Opts.FunctionSections)
     GenerateArg(Args, OPT_ffunction_sections, SA);
 
   if (Opts.PrepareForLTO && !Opts.PrepareForThinLTO)
@@ -1509,6 +1508,17 @@ void CompilerInvocation::GenerateCodeGenArgs(
 
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Args, OPT_Qn, SA);
+
+  switch (Opts.FiniteLoops) {
+  case CodeGenOptions::FiniteLoopsKind::Language:
+    break;
+  case CodeGenOptions::FiniteLoopsKind::Always:
+    GenerateArg(Args, OPT_ffinite_loops, SA);
+    break;
+  case CodeGenOptions::FiniteLoopsKind::Never:
+    GenerateArg(Args, OPT_fno_finite_loops, SA);
+    break;
+  }
 }
 
 bool CompilerInvocation::ParseCodeGenArgsImpl(CodeGenOptions &Opts,
@@ -1633,7 +1643,6 @@ bool CompilerInvocation::ParseCodeGenArgsImpl(CodeGenOptions &Opts,
   Opts.UnrollLoops =
       Args.hasFlag(OPT_funroll_loops, OPT_fno_unroll_loops,
                    (Opts.OptimizationLevel > 1));
-
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
 
@@ -1668,9 +1677,7 @@ bool CompilerInvocation::ParseCodeGenArgsImpl(CodeGenOptions &Opts,
   }
 
   // Basic Block Sections implies Function Sections.
-  Opts.FunctionSections =
-      Args.hasArg(OPT_ffunction_sections) ||
-      (Opts.BBSections != "none" && Opts.BBSections != "labels");
+  Opts.FunctionSections = Args.hasArg(OPT_ffunction_sections);
 
   Opts.PrepareForLTO = Args.hasArg(OPT_flto, OPT_flto_EQ);
   Opts.PrepareForThinLTO = false;
@@ -1920,6 +1927,11 @@ bool CompilerInvocation::ParseCodeGenArgsImpl(CodeGenOptions &Opts,
                       Opts.SanitizeTrap);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
+
+  if (Args.hasArg(options::OPT_ffinite_loops))
+    Opts.FiniteLoops = CodeGenOptions::FiniteLoopsKind::Always;
+  else if (Args.hasArg(options::OPT_fno_finite_loops))
+    Opts.FiniteLoops = CodeGenOptions::FiniteLoopsKind::Never;
 
   return Success && Diags.getNumErrors() == NumErrorsBefore;
 }

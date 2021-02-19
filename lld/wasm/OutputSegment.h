@@ -22,10 +22,11 @@ class OutputSegment {
 public:
   OutputSegment(StringRef n) : name(n) {}
 
-  void addInputSegment(InputSegment *inSeg) {
-    alignment = std::max(alignment, inSeg->getAlignment());
+  void addInputSegment(InputSegment *inSeg, uint32_t forceAlignment = 0) {
+    uint32_t segAlign = std::max(forceAlignment, inSeg->getAlignment());
+    alignment = std::max(alignment, segAlign);
     inputSegments.push_back(inSeg);
-    size = llvm::alignTo(size, 1ULL << inSeg->getAlignment());
+    size = llvm::alignTo(size, 1ULL << segAlign);
     inSeg->outputSeg = this;
     inSeg->outputSegmentOffset = size;
     size += inSeg->getSize();

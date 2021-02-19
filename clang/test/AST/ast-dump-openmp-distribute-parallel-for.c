@@ -113,6 +113,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |   `-OMPDistributeParallelForDirective {{.*}} <line:17:1, col:48>
 // CHECK-NEXT: |     |-OMPCollapseClause {{.*}} <col:37, col:47>
 // CHECK-NEXT: |     | `-ConstantExpr {{.*}} <col:46> 'int'
+// CHECK-NEXT: |     | |-value: Int 1
 // CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} <col:46> 'int' 1
 // CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:18:3, line:20:7>
 // CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
@@ -159,6 +160,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |   `-OMPDistributeParallelForDirective {{.*}} <line:24:1, col:48>
 // CHECK-NEXT: |     |-OMPCollapseClause {{.*}} <col:37, col:47>
 // CHECK-NEXT: |     | `-ConstantExpr {{.*}} <col:46> 'int'
+// CHECK-NEXT: |     | |-value: Int 2
 // CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} <col:46> 'int' 2
 // CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:25:3, line:27:7>
 // CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
@@ -206,6 +208,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:     `-OMPDistributeParallelForDirective {{.*}} <line:31:1, col:48>
 // CHECK-NEXT:       |-OMPCollapseClause {{.*}} <col:37, col:47>
 // CHECK-NEXT:       | `-ConstantExpr {{.*}} <col:46> 'int'
+// CHECK-NEXT:       | |-value: Int 2
 // CHECK-NEXT:       |   `-IntegerLiteral {{.*}} <col:46> 'int' 2
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:32:3, line:35:9>
 // CHECK-NEXT:         |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow

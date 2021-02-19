@@ -91,7 +91,7 @@ int main() {
     // LAMBDA: br
     // LAMBDA: [[CASE2]]:
     // LAMBDA-DAG: [[SIVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[SIVAR_PRIV]],
-    // LAMBDA-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]]
+    // LAMBDA-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]] monotonic, align {{.+}}
     // LAMBDA: call void @__kmpc_end_reduce({{.+}}, {{.+}}, {{.+}} [[RED_VAR]])
     // LAMBDA: br
     sivar += i;
@@ -168,7 +168,7 @@ int main() {
 // CHECK: br
 // CHECK: [[CASE2]]:
 // CHECK-DAG: [[SIVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[SIVAR_PRIV]],
-// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]]
+// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]] monotonic, align {{.+}}
 // CHECK: call void @__kmpc_end_reduce({{.+}}, {{.+}}, {{.+}} [[RED_VAR]])
 // CHECK: br
 
@@ -217,7 +217,7 @@ int main() {
 // CHECK: br
 // CHECK: [[CASE2]]:
 // CHECK-DAG: [[TVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[TVAR_PRIV]],
-// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[TVAR_REF]], {{.+}} [[TVAR_PRIV_VAL]]
+// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[TVAR_REF]], {{.+}} [[TVAR_PRIV_VAL]] monotonic, align {{.+}}
 // CHECK: call void @__kmpc_end_reduce({{.+}}, {{.+}}, {{.+}} [[RED_VAR]])
 // CHECK: br
 

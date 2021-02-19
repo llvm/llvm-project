@@ -21,9 +21,7 @@
 #include "MarkLive.h"
 #include "Config.h"
 #include "InputChunks.h"
-#include "InputEvent.h"
-#include "InputGlobal.h"
-#include "InputTable.h"
+#include "InputElement.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 

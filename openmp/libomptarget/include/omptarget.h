@@ -14,15 +14,19 @@
 #ifndef _OMPTARGET_H_
 #define _OMPTARGET_H_
 
-#include <stdint.h>
+#include <deque>
 #include <stddef.h>
+#include <stdint.h>
 
 #include <SourceInfo.h>
 
 #define OFFLOAD_SUCCESS (0)
 #define OFFLOAD_FAIL (~0)
 
-#define OFFLOAD_DEVICE_DEFAULT     -1
+#define OFFLOAD_DEVICE_DEFAULT -1
+
+// Don't format out enums and structs.
+// clang-format off
 
 /// Data attributes for each data reference used in an OpenMP target region.
 enum tgt_map_type {
@@ -116,6 +120,8 @@ struct __tgt_target_table {
       *EntriesEnd; // End of the table with all the entries (non inclusive)
 };
 
+// clang-format on
+
 /// This struct contains information exchanged between different asynchronous
 /// operations for device-dependent optimization and potential synchronization
 struct __tgt_async_info {
@@ -123,6 +129,37 @@ struct __tgt_async_info {
   // We assume to use this structure to do synchronization. In CUDA backend, it
   // is CUstream.
   void *Queue = nullptr;
+};
+
+struct DeviceTy;
+
+/// The libomptarget wrapper around a __tgt_async_info object directly
+/// associated with a libomptarget layer device. RAII semantics to avoid
+/// mistakes.
+class AsyncInfoTy {
+  /// Locations we used in (potentially) asynchronous calls which should live
+  /// as long as this AsyncInfoTy object.
+  std::deque<void *> BufferLocations;
+
+  __tgt_async_info AsyncInfo;
+  DeviceTy &Device;
+
+public:
+  AsyncInfoTy(DeviceTy &Device) : Device(Device) {}
+  ~AsyncInfoTy() { synchronize(); }
+
+  /// Implicit conversion to the __tgt_async_info which is used in the
+  /// plugin interface.
+  operator __tgt_async_info *() { return &AsyncInfo; }
+
+  /// Synchronize all pending actions.
+  ///
+  /// \returns OFFLOAD_FAIL or OFFLOAD_SUCCESS appropriately.
+  int synchronize();
+
+  /// Return a void* reference with a lifetime that is at least as long as this
+  /// AsyncInfoTy object. The location can be used as intermediate buffer.
+  void *&getVoidPtrLocation();
 };
 
 /// This struct is a record of non-contiguous information
@@ -142,13 +179,15 @@ void *omp_target_alloc(size_t size, int device_num);
 void omp_target_free(void *device_ptr, int device_num);
 int omp_target_is_present(void *ptr, int device_num);
 int omp_target_memcpy(void *dst, void *src, size_t length, size_t dst_offset,
-    size_t src_offset, int dst_device, int src_device);
+                      size_t src_offset, int dst_device, int src_device);
 int omp_target_memcpy_rect(void *dst, void *src, size_t element_size,
-    int num_dims, const size_t *volume, const size_t *dst_offsets,
-    const size_t *src_offsets, const size_t *dst_dimensions,
-    const size_t *src_dimensions, int dst_device, int src_device);
+                           int num_dims, const size_t *volume,
+                           const size_t *dst_offsets, const size_t *src_offsets,
+                           const size_t *dst_dimensions,
+                           const size_t *src_dimensions, int dst_device,
+                           int src_device);
 int omp_target_associate_ptr(void *host_ptr, void *device_ptr, size_t size,
-    size_t device_offset, int device_num);
+                             size_t device_offset, int device_num);
 int omp_target_disassociate_ptr(void *host_ptr, int device_num);
 
 /// add the clauses of the requires directives in a given file

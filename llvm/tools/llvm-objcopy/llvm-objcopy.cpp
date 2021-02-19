@@ -310,7 +310,10 @@ static Error executeObjcopy(CopyConfig &Config) {
       if (Error E = executeObjcopyOnArchive(Config, *Ar))
         return E;
     } else {
-      FileBuffer FB(Config.OutputFilename);
+      FileBuffer FB(Config.OutputFilename,
+                    Config.InputFilename != "-" &&
+                        Config.InputFilename == Config.OutputFilename,
+                    Stat.getUser(), Stat.getGroup());
       if (Error E = executeObjcopyOnBinary(Config,
                                            *BinaryOrErr.get().getBinary(), FB))
         return E;

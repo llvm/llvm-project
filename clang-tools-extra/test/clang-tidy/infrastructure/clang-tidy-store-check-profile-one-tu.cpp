@@ -17,8 +17,9 @@
 // CHECK-FILE-NEXT:"profile": {
 // CHECK-FILE-NEXT:	"time.clang-tidy.readability-function-size.wall": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
 // CHECK-FILE-NEXT:	"time.clang-tidy.readability-function-size.user": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
-// CHECK-FILE-NEXT:	"time.clang-tidy.readability-function-size.sys": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}}
-// CHECK-FILE-NEXT: }
+// CHECK-FILE-NEXT:	"time.clang-tidy.readability-function-size.sys": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}}{{,?}}
+// If available on the platform, we also have a "time.clang-tidy.readability-function-size.instr" entry
+// CHECK-FILE: }
 // CHECK-FILE-NEXT: }
 
 // CHECK-FILE-NOT: {
@@ -27,7 +28,7 @@
 // CHECK-FILE-NOT: "profile": {
 // CHECK-FILE-NOT:	"time.clang-tidy.readability-function-size.wall": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
 // CHECK-FILE-NOT:	"time.clang-tidy.readability-function-size.user": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
-// CHECK-FILE-NOT:	"time.clang-tidy.readability-function-size.sys": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}}
+// CHECK-FILE-NOT:	"time.clang-tidy.readability-function-size.sys": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}}{{,?}}
 // CHECK-FILE-NOT: }
 // CHECK-FILE-NOT: }
 

@@ -254,6 +254,9 @@ def SDTFPVecReduce : SDTypeProfile<1, 1, [  // FP vector reduction
   SDTCisFP<0>, SDTCisVec<1>
 ]>;
 
+def SDTVecReverse : SDTypeProfile<1, 1, [  // vector reverse
+  SDTCisVec<0>, SDTCisSameAs<0,1>
+]>;
 
 def SDTSubVecExtract : SDTypeProfile<1, 2, [// subvector extract
   SDTCisSubVecOfVec<0,1>, SDTCisInt<2>
@@ -651,6 +654,7 @@ def ist        : SDNode<"ISD::STORE"      , SDTIStore,
                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def vector_shuffle : SDNode<"ISD::VECTOR_SHUFFLE", SDTVecShuffle, []>;
+def vector_reverse : SDNode<"ISD::VECTOR_REVERSE", SDTVecReverse>;
 def build_vector : SDNode<"ISD::BUILD_VECTOR", SDTypeProfile<1, -1, []>, []>;
 def splat_vector : SDNode<"ISD::SPLAT_VECTOR", SDTypeProfile<1, 1, []>, []>;
 def scalar_to_vector : SDNode<"ISD::SCALAR_TO_VECTOR", SDTypeProfile<1, 1, []>,

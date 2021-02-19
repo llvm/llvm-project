@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-nsa-encoding -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NONSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-nsa-encoding -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NONSA,GFX10-NONSA %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NSA,GFX10-NSA %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-nsa-encoding -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NONSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-nsa-encoding -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NONSA,GFX11-NONSA %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NSA,GFX11-NSA %s
 
 ; GCN-LABEL: {{^}}sample_2d:
@@ -82,8 +82,10 @@ main_body:
 ; GFX10-NSA: image_sample v9, v[5:7],
 ; GFX11-NSA: image_sample_c_l v0, v[0:7],
 ; GFX11-NSA: image_sample v1, v[5:7],
-; NONSA: image_sample_c_l v0, v[0:7],
-; NONSA: image_sample v1, v[5:7],
+; GFX10-NONSA: image_sample_c_l v0, v[0:7],
+; GFX10-NONSA: image_sample v1, v[5:7],
+; GFX11-NONSA: image_sample_c_l v0, v[0:7],
+; GFX11-NONSA: image_sample v1, v[5:7],
 define amdgpu_ps <2 x float> @sample_contig_contig(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s1, float %t1, float %r1, float %lod, float %s2, float %t2, float %r2) {
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)

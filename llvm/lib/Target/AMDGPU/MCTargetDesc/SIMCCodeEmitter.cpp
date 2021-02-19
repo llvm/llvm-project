@@ -234,12 +234,17 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
+  case AMDGPU::OPERAND_REG_IMM_V2INT32:
+  case AMDGPU::OPERAND_REG_IMM_V2FP32:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
     return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+  case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     return getLit64Encoding(static_cast<uint64_t>(Imm), STI);
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
@@ -283,6 +288,20 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   uint64_t Encoding = getBinaryCodeForInstr(MI, Fixups, STI);
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   unsigned bytes = Desc.getSize();
+
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_ACCVGPR_READ_B32_vi:
+  case AMDGPU::V_ACCVGPR_WRITE_B32_vi:
+    // Set unused op_sel_hi bits to 1.
+    // FIXME: This shall be done for all VOP3P but not MAI instructions with
+    // unused op_sel_hi bits if corresponding operands do not exist.
+    // accvgpr_read/write are different, however. These are VOP3P, MAI, have
+    // src0, but do not use op_sel.
+    Encoding |= (1ull << 14) | (1ull << 59) | (1ull << 60);
+    break;
+  default:
+    break;
+  }
 
   for (unsigned i = 0; i < bytes; i++) {
     OS.write((uint8_t) ((Encoding >> (8 * i)) & 0xff));

@@ -365,12 +365,12 @@ let SubtargetPredicate = isGFX6GFX7 in {
       VOP1Inst<"v_rsq_legacy_f32", VOP_F32_F32, int_amdgcn_rsq_legacy>;
   } // End TRANS = 1, SchedRW = [WriteTrans32]
 
-  let SchedRW = [WriteDouble] in {
+  let SchedRW = [WriteTrans64] in {
     defm V_RCP_CLAMP_F64 :
       VOP1Inst<"v_rcp_clamp_f64", VOP_F64_F64>;
     defm V_RSQ_CLAMP_F64 :
       VOP1Inst<"v_rsq_clamp_f64", VOP_F64_F64, AMDGPUrsq_clamp>;
-  } // End SchedRW = [WriteDouble]
+  } // End SchedRW = [WriteTrans64]
 } // End SubtargetPredicate = isGFX6GFX7
 
 let SubtargetPredicate = isGFX7GFX8GFX9 in {
@@ -485,6 +485,18 @@ let SubtargetPredicate = isGFX10Plus in {
     }
   } // End Uses = [M0]
 } // End SubtargetPredicate = isGFX10Plus
+
+def VOPProfileAccMov : VOP_NO_EXT<VOP_I32_I32> {
+  let DstRC = RegisterOperand<AGPR_32>;
+  let Src0RC32 = RegisterOperand<AGPR_32>;
+  let Asm32 = " $vdst, $src0";
+}
+
+def V_ACCVGPR_MOV_B32 : VOP1_Pseudo<"v_accvgpr_mov_b32", VOPProfileAccMov, [], 1> {
+  let SubtargetPredicate = isGFX90APlus;
+  let isReMaterializable = 1;
+  let isAsCheapAsAMove = 1;
+}
 
 let SubtargetPredicate = isGFX11Plus in {
   // TODO-GFX11 new inst
@@ -636,8 +648,8 @@ defm V_CVT_FLOOR_I32_F32   : VOP1_Real_FULL_with_name_gfx11<0x00d,
 defm V_MOV_B16             : VOP1_Real_FULL_gfx11<0x01c>;
 defm V_CLZ_I32_U32         : VOP1_Real_FULL_with_name_gfx11<0x039,
   "V_FFBH_U32", "v_clz_i32_u32">;
-defm V_CLZ_I32_B32         : VOP1_Real_FULL_with_name_gfx11<0x03a,
-  "V_FFBL_B32", "v_clz_i32_b32">;
+defm V_CTZ_I32_B32         : VOP1_Real_FULL_with_name_gfx11<0x03a,
+  "V_FFBL_B32", "v_ctz_i32_b32">;
 defm V_CLS_I32             : VOP1_Real_FULL_with_name_gfx11<0x03b,
   "V_FFBH_I32", "v_cls_i32">;
 // TODO-GFX11 new inst
@@ -984,6 +996,8 @@ defm V_SWAP_B32          : VOP1Only_Real_vi <0x51>;
 defm V_SAT_PK_U8_I16     : VOP1_Real_vi<0x4f>;
 defm V_CVT_NORM_I16_F16  : VOP1_Real_vi<0x4d>;
 defm V_CVT_NORM_U16_F16  : VOP1_Real_vi<0x4e>;
+
+defm V_ACCVGPR_MOV_B32   : VOP1Only_Real_vi<0x52>;
 
 // Copy of v_mov_b32 with $vdst as a use operand for use with VGPR
 // indexing mode. vdst can't be treated as a def for codegen purposes,

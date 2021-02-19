@@ -222,10 +222,8 @@ MachineModuleInfo::getAddrLabelSymbolToEmit(const BasicBlock *BB) {
 /// \{
 
 void MachineModuleInfo::addPersonality(const Function *Personality) {
-  for (unsigned i = 0; i < Personalities.size(); ++i)
-    if (Personalities[i] == Personality)
-      return;
-  Personalities.push_back(Personality);
+  if (!llvm::is_contained(Personalities, Personality))
+    Personalities.push_back(Personality);
 }
 
 /// \}

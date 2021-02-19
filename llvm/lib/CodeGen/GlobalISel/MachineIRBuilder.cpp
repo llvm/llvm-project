@@ -240,6 +240,12 @@ MachineInstrBuilder MachineIRBuilder::buildCopy(const DstOp &Res,
   return buildInstr(TargetOpcode::COPY, Res, Op);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildAssertSExt(const DstOp &Res,
+                                                      const SrcOp &Op,
+                                                      unsigned Size) {
+  return buildInstr(TargetOpcode::G_ASSERT_SEXT, Res, Op).addImm(Size);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildAssertZExt(const DstOp &Res,
                                                       const SrcOp &Op,
                                                       unsigned Size) {

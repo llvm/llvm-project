@@ -92,7 +92,7 @@ func @fuse_three(%lhs: memref<100x10xf32>, %rhs: memref<100xf32>,
   }
   scf.parallel (%i, %j) = (%c0, %c0) to (%c100, %c10) step (%c1, %c1) {
     %diff_elem = load %diff[%i, %j] : memref<100x10xf32>
-    %exp_elem = exp %diff_elem : f32
+    %exp_elem = math.exp %diff_elem : f32
     store %exp_elem, %result[%i, %j] : memref<100x10xf32>
     scf.yield
   }
@@ -118,7 +118,7 @@ func @fuse_three(%lhs: memref<100x10xf32>, %rhs: memref<100xf32>,
 // CHECK:        [[DIFF_ELEM:%.*]] = subf [[LHS_ELEM]], [[BROADCAST_RHS_ELEM]]
 // CHECK:        store [[DIFF_ELEM]], [[DIFF]]{{\[}}[[I]], [[J]]]
 // CHECK:        [[DIFF_ELEM_:%.*]] = load [[DIFF]]{{\[}}[[I]], [[J]]]
-// CHECK:        [[EXP_ELEM:%.*]] = exp [[DIFF_ELEM_]]
+// CHECK:        [[EXP_ELEM:%.*]] = math.exp [[DIFF_ELEM_]]
 // CHECK:        store [[EXP_ELEM]], [[RESULT]]{{\[}}[[I]], [[J]]]
 // CHECK:        scf.yield
 // CHECK:      }

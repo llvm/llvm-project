@@ -38,11 +38,15 @@ class Tosa_QuantizedType<string n, list<int> params, bit signed>
 // Used to express accumulator results or compare results.
 //===----------------------------------------------------------------------===//
 
+def Tosa_Int8 : I<8>;
+def Tosa_Int16 : I<16>;
 def Tosa_Int32 : I<32>;
 def Tosa_Int48 : I<48>;
 def Tosa_Int64 : I<64>;
 
-def Tosa_SignedInt : AnyTypeOf<[Tosa_Int32,
+def Tosa_SignedInt : AnyTypeOf<[Tosa_Int8,
+                                Tosa_Int16,
+                                Tosa_Int32,
                                 Tosa_Int48,
                                 Tosa_Int64]>;
 

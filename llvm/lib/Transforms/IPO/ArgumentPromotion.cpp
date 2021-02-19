@@ -986,13 +986,8 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
     // function, we could end up infinitely peeling the function argument.
     if (isSelfRecursive) {
       if (StructType *STy = dyn_cast<StructType>(AgTy)) {
-        bool RecursiveType = false;
-        for (const auto *EltTy : STy->elements()) {
-          if (EltTy == PtrArg->getType()) {
-            RecursiveType = true;
-            break;
-          }
-        }
+        bool RecursiveType =
+            llvm::is_contained(STy->elements(), PtrArg->getType());
         if (RecursiveType)
           continue;
       }

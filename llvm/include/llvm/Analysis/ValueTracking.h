@@ -590,6 +590,11 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// if I is executed and that operand has a poison value.
   void getGuaranteedNonPoisonOps(const Instruction *I,
                                  SmallPtrSetImpl<const Value *> &Ops);
+  /// Insert operands of I into Ops such that I will trigger undefined behavior
+  /// if I is executed and that operand is not a well-defined value
+  /// (i.e. has undef bits or poison).
+  void getGuaranteedWellDefinedOps(const Instruction *I,
+                                   SmallPtrSetImpl<const Value *> &Ops);
 
   /// Return true if the given instruction must trigger undefined behavior
   /// when I is executed with any operands which appear in KnownPoison holding

@@ -393,6 +393,7 @@ class DataFlowSanitizer {
   FunctionCallee DFSanStoreCallbackFn;
   FunctionCallee DFSanMemTransferCallbackFn;
   FunctionCallee DFSanCmpCallbackFn;
+  SmallPtrSet<Value *, 12> DFSanRuntimeFunctions;
   MDNode *ColdCallWeights;
   DFSanABIList ABIList;
   DenseMap<Value *, Function *> UnwrappedFnMap;
@@ -1048,6 +1049,30 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
       Mod->getOrInsertFunction("__dfsan_nonzero_label", DFSanNonzeroLabelFnTy);
   DFSanVarargWrapperFn = Mod->getOrInsertFunction("__dfsan_vararg_wrapper",
                                                   DFSanVarargWrapperFnTy);
+
+  DFSanRuntimeFunctions.insert(DFSanUnionFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanCheckedUnionFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanUnionLoadFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanUnionLoadFast16LabelsFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanUnimplementedFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanSetLabelFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanNonzeroLabelFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanVarargWrapperFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanLoadCallbackFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanStoreCallbackFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanMemTransferCallbackFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanCmpCallbackFn.getCallee()->stripPointerCasts());
 }
 
 // Initializes event callback functions and declare them in the module
@@ -1073,19 +1098,23 @@ bool DataFlowSanitizer::runImpl(Module &M) {
 
   bool Changed = false;
 
-  Type *ArgTLSTy = ArrayType::get(Type::getInt64Ty(*Ctx), kArgTLSSize / 8);
-  ArgTLS = Mod->getOrInsertGlobal("__dfsan_arg_tls", ArgTLSTy);
-  if (GlobalVariable *G = dyn_cast<GlobalVariable>(ArgTLS)) {
-    Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
-    G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
-  }
-  Type *RetvalTLSTy =
-      ArrayType::get(Type::getInt64Ty(*Ctx), kRetvalTLSSize / 8);
-  RetvalTLS = Mod->getOrInsertGlobal("__dfsan_retval_tls", RetvalTLSTy);
-  if (GlobalVariable *G = dyn_cast<GlobalVariable>(RetvalTLS)) {
-    Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
-    G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
-  }
+  auto getOrInsertGlobal = [this, &Changed](StringRef Name,
+                                            Type *Ty) -> Constant * {
+    Constant *C = Mod->getOrInsertGlobal(Name, Ty);
+    if (GlobalVariable *G = dyn_cast<GlobalVariable>(C)) {
+      Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
+      G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
+    }
+    return C;
+  };
+
+  // These globals must be kept in sync with the ones in dfsan.cpp.
+  ArgTLS = getOrInsertGlobal(
+      "__dfsan_arg_tls",
+      ArrayType::get(Type::getInt64Ty(*Ctx), kArgTLSSize / 8));
+  RetvalTLS = getOrInsertGlobal(
+      "__dfsan_retval_tls",
+      ArrayType::get(Type::getInt64Ty(*Ctx), kRetvalTLSSize / 8));
 
   ExternalShadowMask =
       Mod->getOrInsertGlobal(kDFSanExternShadowPtrMask, IntptrTy);
@@ -1095,22 +1124,9 @@ bool DataFlowSanitizer::runImpl(Module &M) {
 
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
-  for (Function &i : M) {
-    if (!i.isIntrinsic() &&
-        &i != DFSanUnionFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanCheckedUnionFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanUnionLoadFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanUnionLoadFast16LabelsFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanUnimplementedFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanSetLabelFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanNonzeroLabelFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanVarargWrapperFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanLoadCallbackFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanStoreCallbackFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanMemTransferCallbackFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanCmpCallbackFn.getCallee()->stripPointerCasts())
+  for (Function &i : M)
+    if (!i.isIntrinsic() && !DFSanRuntimeFunctions.contains(&i))
       FnsToInstrument.push_back(&i);
-  }
 
   // Give function aliases prefixes when necessary, and build wrappers where the
   // instrumentedness is inconsistent.

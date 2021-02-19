@@ -764,7 +764,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
   const RegisterInfo *r3_info = reg_ctx->GetRegisterInfoByName("r3", 0);
 
   if (type_flags & eTypeIsScalar || type_flags & eTypeIsPointer) {
-    value.SetValueType(Value::eValueTypeScalar);
+    value.SetValueType(Value::ValueType::Scalar);
 
     bool success = false;
     if (type_flags & eTypeIsInteger || type_flags & eTypeIsPointer) {
@@ -1156,6 +1156,7 @@ bool ABISysV_mips64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
+  row->SetUnspecifiedRegistersAreUndefined(true);
   row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
   row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);

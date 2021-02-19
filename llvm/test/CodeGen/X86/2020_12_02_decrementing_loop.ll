@@ -173,3 +173,56 @@ exit:                                             ; preds = %loop
 failure:                                          ; preds = %backedge
   unreachable
 }
+
+define void @test_04() {
+; CHECK-LABEL: test_04:
+; CHECK:       ## %bb.0: ## %bb
+; CHECK-NEXT:    ud2
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb10, %bb
+  %tmp = phi i64 [ 1, %bb ], [ %tmp2, %bb10 ]
+  %tmp2 = add nuw nsw i64 %tmp, 1
+  %tmp6 = bitcast i8 addrspace(1)* undef to i32 addrspace(1)*
+  br i1 undef, label %bb21, label %bb7
+
+bb7:                                              ; preds = %bb1
+  %tmp8 = add nsw i64 %tmp, -1
+  %tmp9 = getelementptr inbounds i32, i32 addrspace(1)* %tmp6, i64 %tmp8
+  store atomic i32 undef, i32 addrspace(1)* %tmp9 unordered, align 4
+  br label %bb11
+
+bb10:                                             ; preds = %bb16
+  br label %bb1
+
+bb11:                                             ; preds = %bb16, %bb7
+  switch i32 undef, label %bb19 [
+    i32 0, label %bb17
+    i32 1, label %bb16
+    i32 2, label %bb15
+    i32 3, label %bb14
+    i32 4, label %bb12
+  ]
+
+bb12:                                             ; preds = %bb11
+  unreachable
+
+bb14:                                             ; preds = %bb11
+  unreachable
+
+bb15:                                             ; preds = %bb11
+  unreachable
+
+bb16:                                             ; preds = %bb11
+  br i1 undef, label %bb10, label %bb11
+
+bb17:                                             ; preds = %bb11
+  unreachable
+
+bb19:                                             ; preds = %bb11
+  unreachable
+
+bb21:                                             ; preds = %bb1
+  unreachable
+}

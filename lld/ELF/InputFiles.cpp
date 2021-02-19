@@ -609,27 +609,20 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       StringRef signature = getShtGroupSignature(objSections, sec);
       this->sections[i] = &InputSection::discarded;
 
-
       ArrayRef<Elf_Word> entries =
           CHECK(obj.template getSectionContentsAsArray<Elf_Word>(sec), this);
       if (entries.empty())
         fatal(toString(this) + ": empty SHT_GROUP");
 
-      // The first word of a SHT_GROUP section contains flags. Currently,
-      // the standard defines only "GRP_COMDAT" flag for the COMDAT group.
-      // An group with the empty flag doesn't define anything; such sections
-      // are just skipped.
-      if (entries[0] == 0)
-        continue;
-
-      if (entries[0] != GRP_COMDAT)
+      Elf_Word flag = entries[0];
+      if (flag && flag != GRP_COMDAT)
         fatal(toString(this) + ": unsupported SHT_GROUP format");
 
-      bool isNew =
-          ignoreComdats ||
+      bool keepGroup =
+          (flag & GRP_COMDAT) == 0 || ignoreComdats ||
           symtab->comdatGroups.try_emplace(CachedHashStringRef(signature), this)
               .second;
-      if (isNew) {
+      if (keepGroup) {
         if (config->relocatable)
           this->sections[i] = createInputSection(sec);
         selectedGroups.push_back(entries);
@@ -1138,6 +1131,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
   }
 
   // Symbol resolution of non-local symbols.
+  SmallVector<unsigned, 32> unds;
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
     const Elf_Sym &eSym = eSyms[i];
     uint8_t binding = eSym.getBinding();
@@ -1154,8 +1148,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
 
     // Handle global undefined symbols.
     if (eSym.st_shndx == SHN_UNDEF) {
-      this->symbols[i]->resolve(Undefined{this, name, binding, stOther, type});
-      this->symbols[i]->referenced = true;
+      unds.push_back(i);
       continue;
     }
 
@@ -1202,6 +1195,20 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
 
     fatal(toString(this) + ": unexpected binding: " + Twine((int)binding));
   }
+
+  // Undefined symbols (excluding those defined relative to non-prevailing
+  // sections) can trigger recursive fetch. Process defined symbols first so
+  // that the relative order between a defined symbol and an undefined symbol
+  // does not change the symbol resolution behavior. In addition, a set of
+  // interconnected symbols will all be resolved to the same file, instead of
+  // being resolved to different files.
+  for (unsigned i : unds) {
+    const Elf_Sym &eSym = eSyms[i];
+    StringRefZ name = this->stringTable.data() + eSym.st_name;
+    this->symbols[i]->resolve(Undefined{this, name, eSym.getBinding(),
+                                        eSym.st_other, eSym.getType()});
+    this->symbols[i]->referenced = true;
+  }
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&file)
@@ -1242,10 +1249,10 @@ void ArchiveFile::fetch(const Archive::Symbol &sym) {
 }
 
 // The handling of tentative definitions (COMMON symbols) in archives is murky.
-// A tentative defintion will be promoted to a global definition if there are no
-// non-tentative definitions to dominate it. When we hold a tentative definition
-// to a symbol and are inspecting archive memebers for inclusion there are 2
-// ways we can proceed:
+// A tentative definition will be promoted to a global definition if there are
+// no non-tentative definitions to dominate it. When we hold a tentative
+// definition to a symbol and are inspecting archive members for inclusion
+// there are 2 ways we can proceed:
 //
 // 1) Consider the tentative definition a 'real' definition (ie promotion from
 //    tentative to real definition has already happened) and not inspect
@@ -1254,17 +1261,17 @@ void ArchiveFile::fetch(const Archive::Symbol &sym) {
 //    other undefined symbol. This is the behavior Gold uses.
 //
 // 2) Consider the tentative definition as still undefined (ie the promotion to
-//    a real definiton happens only after all symbol resolution is done).
-//    The linker searches archive memebers for global or weak definitions to
+//    a real definition happens only after all symbol resolution is done).
+//    The linker searches archive members for global or weak definitions to
 //    replace the tentative definition with. This is the behavior used by
 //    GNU ld.
 //
 //  The second behavior is inherited from SysVR4, which based it on the FORTRAN
-//  COMMON BLOCK model. This behavior is needed for proper initalizations in old
+//  COMMON BLOCK model. This behavior is needed for proper initalization in old
 //  (pre F90) FORTRAN code that is packaged into an archive.
 //
-//  The following functions search archive members for defintions to replace
-//  tentative defintions (implementing behavior 2).
+//  The following functions search archive members for definitions to replace
+//  tentative definitions (implementing behavior 2).
 static bool isBitcodeNonCommonDef(MemoryBufferRef mb, StringRef symName,
                                   StringRef archiveName) {
   IRSymtabFile symtabFile = check(readIRSymtab(mb));

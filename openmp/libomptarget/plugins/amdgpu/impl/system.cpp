@@ -822,7 +822,6 @@ static hsa_status_t get_code_object_custom_metadata(void *binary,
   for (size_t i = 0; i < kernelsSize; i++) {
     assert(msgpack_errors == 0);
     std::string kernelName;
-    std::string languageName;
     std::string symbolName;
 
     msgpack::byte_range element;
@@ -830,7 +829,6 @@ static hsa_status_t get_code_object_custom_metadata(void *binary,
     msgpackErrorCheck(element lookup in kernel metadata, msgpack_errors);
 
     msgpack_errors += map_lookup_string(element, ".name", &kernelName);
-    msgpack_errors += map_lookup_string(element, ".language", &languageName);
     msgpack_errors += map_lookup_string(element, ".symbol", &symbolName);
     msgpackErrorCheck(strings lookup in kernel metadata, msgpack_errors);
 

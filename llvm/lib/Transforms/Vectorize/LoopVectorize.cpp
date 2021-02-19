@@ -514,14 +514,15 @@ public:
   /// variable canonicalization. It supports both VF = 1 for unrolled loops and
   /// arbitrary length vectors.
   void widenPHIInstruction(Instruction *PN, RecurrenceDescriptor *RdxDesc,
-                           Value *StartV, unsigned UF, ElementCount VF);
+                           Value *StartV, VPValue *Def,
+                           VPTransformState &State);
 
   /// A helper function to scalarize a single Instruction in the innermost loop.
   /// Generates a sequence of scalar instances for each lane between \p MinLane
   /// and \p MaxLane, times each part between \p MinPart and \p MaxPart,
   /// inclusive. Uses the VPValue operands from \p Operands instead of \p
   /// Instr's operands.
-  void scalarizeInstruction(Instruction *Instr, VPUser &Operands,
+  void scalarizeInstruction(Instruction *Instr, VPValue *Def, VPUser &Operands,
                             const VPIteration &Instance, bool IfPredicateInstr,
                             VPTransformState &State);
 
@@ -1522,6 +1523,15 @@ public:
     Align Align = getLoadStoreAlignment(V);
     return (LI && isLegalMaskedGather(Ty, Align)) ||
            (SI && isLegalMaskedScatter(Ty, Align));
+  }
+
+  /// Returns true if the target machine supports all of the reduction
+  /// variables found for the given VF.
+  bool canVectorizeReductions(ElementCount VF) {
+    return (all_of(Legal->getReductionVars(), [&](auto &Reduction) -> bool {
+      RecurrenceDescriptor RdxDesc = Reduction.second;
+      return TTI.isLegalToVectorizeReduction(RdxDesc, VF);
+    }));
   }
 
   /// Returns true if \p I is an instruction that will be scalarized with
@@ -2903,7 +2913,8 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(
   }
 }
 
-void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPUser &User,
+void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPValue *Def,
+                                               VPUser &User,
                                                const VPIteration &Instance,
                                                bool IfPredicateInstr,
                                                VPTransformState &State) {
@@ -2924,6 +2935,8 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPUser &User,
   if (!IsVoidRetTy)
     Cloned->setName(Instr->getName() + ".cloned");
 
+  State.Builder.SetInsertPoint(Builder.GetInsertBlock(),
+                               Builder.GetInsertPoint());
   // Replace the operands of the cloned instructions with their scalar
   // equivalents in the new loop.
   for (unsigned op = 0, e = User.getNumOperands(); op != e; ++op) {
@@ -2940,10 +2953,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPUser &User,
   // Place the cloned scalar in the new loop.
   Builder.Insert(Cloned);
 
-  // TODO: Set result for VPValue of VPReciplicateRecipe. This requires
-  // representing scalar values in VPTransformState. Add the cloned scalar to
-  // the scalar map entry.
-  VectorLoopValueMap.setScalarValue(Instr, Instance, Cloned);
+  State.set(Def, Instr, Cloned, Instance);
 
   // If we just cloned a new assumption, add it the assumption cache.
   if (auto *II = dyn_cast<IntrinsicInst>(Cloned))
@@ -3753,7 +3763,6 @@ static void cse(BasicBlock *BB) {
 InstructionCost
 LoopVectorizationCostModel::getVectorCallCost(CallInst *CI, ElementCount VF,
                                               bool &NeedToScalarize) {
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   Function *F = CI->getCalledFunction();
   Type *ScalarRetTy = CI->getType();
   SmallVector<Type *, 4> Tys, ScalarTys;
@@ -4624,19 +4633,19 @@ void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPValue *VPDef,
 
 void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
                                               RecurrenceDescriptor *RdxDesc,
-                                              Value *StartV, unsigned UF,
-                                              ElementCount VF) {
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
+                                              Value *StartV, VPValue *Def,
+                                              VPTransformState &State) {
   PHINode *P = cast<PHINode>(PN);
   if (EnableVPlanNativePath) {
     // Currently we enter here in the VPlan-native path for non-induction
     // PHIs where all control flow is uniform. We simply widen these PHIs.
     // Create a vector phi with no operands - the vector phi operands will be
     // set at the end of vector code generation.
-    Type *VecTy =
-        (VF.isScalar()) ? PN->getType() : VectorType::get(PN->getType(), VF);
+    Type *VecTy = (State.VF.isScalar())
+                      ? PN->getType()
+                      : VectorType::get(PN->getType(), State.VF);
     Value *VecPhi = Builder.CreatePHI(VecTy, PN->getNumOperands(), "vec.phi");
-    VectorLoopValueMap.setVectorValue(P, 0, VecPhi);
+    State.set(Def, P, VecPhi, 0);
     OrigPHIsToFix.push_back(P);
 
     return;
@@ -4652,9 +4661,9 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
   if (RdxDesc || Legal->isFirstOrderRecurrence(P)) {
     Value *Iden = nullptr;
     bool ScalarPHI =
-        (VF.isScalar()) || Cost->isInLoopReduction(cast<PHINode>(PN));
+        (State.VF.isScalar()) || Cost->isInLoopReduction(cast<PHINode>(PN));
     Type *VecTy =
-        ScalarPHI ? PN->getType() : VectorType::get(PN->getType(), VF);
+        ScalarPHI ? PN->getType() : VectorType::get(PN->getType(), State.VF);
 
     if (RdxDesc) {
       assert(Legal->isReductionVariable(P) && StartV &&
@@ -4668,7 +4677,8 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
         } else {
           IRBuilderBase::InsertPointGuard IPBuilder(Builder);
           Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-          StartV = Iden = Builder.CreateVectorSplat(VF, StartV, "minmax.ident");
+          StartV = Iden =
+              Builder.CreateVectorSplat(State.VF, StartV, "minmax.ident");
         }
       } else {
         Constant *IdenC = RecurrenceDescriptor::getRecurrenceIdentity(
@@ -4676,7 +4686,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
         Iden = IdenC;
 
         if (!ScalarPHI) {
-          Iden = ConstantVector::getSplat(VF, IdenC);
+          Iden = ConstantVector::getSplat(State.VF, IdenC);
           IRBuilderBase::InsertPointGuard IPBuilder(Builder);
           Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
           Constant *Zero = Builder.getInt32(0);
@@ -4685,11 +4695,11 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
       }
     }
 
-    for (unsigned Part = 0; Part < UF; ++Part) {
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
       // This is phase one of vectorizing PHIs.
       Value *EntryPart = PHINode::Create(
           VecTy, 2, "vec.phi", &*LoopVectorBody->getFirstInsertionPt());
-      VectorLoopValueMap.setVectorValue(P, Part, EntryPart);
+      State.set(Def, P, EntryPart, Part);
       if (StartV) {
         // Make sure to add the reduction start value only to the
         // first unroll part.
@@ -4724,25 +4734,25 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
     // Handle the pointer induction variable case.
     assert(P->getType()->isPointerTy() && "Unexpected type.");
 
-    if (Cost->isScalarAfterVectorization(P, VF)) {
+    if (Cost->isScalarAfterVectorization(P, State.VF)) {
       // This is the normalized GEP that starts counting at zero.
       Value *PtrInd =
           Builder.CreateSExtOrTrunc(Induction, II.getStep()->getType());
       // Determine the number of scalars we need to generate for each unroll
       // iteration. If the instruction is uniform, we only need to generate the
       // first lane. Otherwise, we generate all VF values.
-      unsigned Lanes =
-          Cost->isUniformAfterVectorization(P, VF) ? 1 : VF.getKnownMinValue();
+      unsigned Lanes = Cost->isUniformAfterVectorization(P, State.VF)
+                           ? 1
+                           : State.VF.getKnownMinValue();
       for (unsigned Part = 0; Part < UF; ++Part) {
         for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
-          Constant *Idx = ConstantInt::get(PtrInd->getType(),
-                                           Lane + Part * VF.getKnownMinValue());
+          Constant *Idx = ConstantInt::get(
+              PtrInd->getType(), Lane + Part * State.VF.getKnownMinValue());
           Value *GlobalIdx = Builder.CreateAdd(PtrInd, Idx);
           Value *SclrGep =
               emitTransformedIndex(Builder, GlobalIdx, PSE.getSE(), DL, II);
           SclrGep->setName("next.gep");
-          VectorLoopValueMap.setScalarValue(P, VPIteration(Part, Lane),
-                                            SclrGep);
+          State.set(Def, P, SclrGep, VPIteration(Part, Lane));
         }
       }
       return;
@@ -4769,28 +4779,28 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
         ScStValueType->getPointerElementType(), NewPointerPhi,
         Builder.CreateMul(
             ScalarStepValue,
-            ConstantInt::get(PhiType, VF.getKnownMinValue() * UF)),
+            ConstantInt::get(PhiType, State.VF.getKnownMinValue() * State.UF)),
         "ptr.ind", InductionLoc);
     NewPointerPhi->addIncoming(InductionGEP, LoopLatch);
 
     // Create UF many actual address geps that use the pointer
     // phi as base and a vectorized version of the step value
     // (<step*0, ..., step*N>) as offset.
-    for (unsigned Part = 0; Part < UF; ++Part) {
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
       SmallVector<Constant *, 8> Indices;
       // Create a vector of consecutive numbers from zero to VF.
-      for (unsigned i = 0; i < VF.getKnownMinValue(); ++i)
+      for (unsigned i = 0; i < State.VF.getKnownMinValue(); ++i)
         Indices.push_back(
-            ConstantInt::get(PhiType, i + Part * VF.getKnownMinValue()));
+            ConstantInt::get(PhiType, i + Part * State.VF.getKnownMinValue()));
       Constant *StartOffset = ConstantVector::get(Indices);
 
       Value *GEP = Builder.CreateGEP(
           ScStValueType->getPointerElementType(), NewPointerPhi,
-          Builder.CreateMul(
-              StartOffset,
-              Builder.CreateVectorSplat(VF.getKnownMinValue(), ScalarStepValue),
-              "vector.gep"));
-      VectorLoopValueMap.setVectorValue(P, Part, GEP);
+          Builder.CreateMul(StartOffset,
+                            Builder.CreateVectorSplat(
+                                State.VF.getKnownMinValue(), ScalarStepValue),
+                            "vector.gep"));
+      State.set(Def, P, GEP, Part);
     }
   }
   }
@@ -4967,10 +4977,8 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPValue *Def,
     if (UseVectorIntrinsic) {
       // Use vector version of the intrinsic.
       Type *TysForDecl[] = {CI->getType()};
-      if (VF.isVector()) {
-        assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+      if (VF.isVector())
         TysForDecl[0] = VectorType::get(CI->getType()->getScalarType(), VF);
-      }
       VectorF = Intrinsic::getDeclaration(M, ID, TysForDecl);
       assert(VectorF && "Can't retrieve vector intrinsic.");
     } else {
@@ -5688,9 +5696,22 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount,
   // then a suitable VF is chosen. If UserVF is specified and there are
   // dependencies, check if it's legal. However, if a UserVF is specified and
   // there are no dependencies, then there's nothing to do.
-  if (UserVF.isNonZero() && !IgnoreScalableUserVF &&
-      Legal->isSafeForAnyVectorWidth())
-    return UserVF;
+  if (UserVF.isNonZero() && !IgnoreScalableUserVF) {
+    if (!canVectorizeReductions(UserVF)) {
+      reportVectorizationFailure(
+          "LV: Scalable vectorization not supported for the reduction "
+          "operations found in this loop. Using fixed-width "
+          "vectorization instead.",
+          "Scalable vectorization not supported for the reduction operations "
+          "found in this loop. Using fixed-width vectorization instead.",
+          "ScalableVFUnfeasible", ORE, TheLoop);
+      return computeFeasibleMaxVF(
+          ConstTripCount, ElementCount::getFixed(UserVF.getKnownMinValue()));
+    }
+
+    if (Legal->isSafeForAnyVectorWidth())
+      return UserVF;
+  }
 
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
   unsigned SmallestType, WidestType;
@@ -7042,8 +7063,9 @@ InstructionCost
 LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
                                                      ElementCount VF) {
 
-  assert(!VF.isScalable() &&
-         "cannot compute scalarization overhead for scalable vectorization");
+  if (VF.isScalable())
+    return InstructionCost::getInvalid();
+
   if (VF.isScalar())
     return 0;
 
@@ -8248,8 +8270,15 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst,
   if (BI->getSuccessor(0) != Dst)
     EdgeMask = Builder.createNot(EdgeMask);
 
-  if (SrcMask) // Otherwise block in-mask is all-one, no need to AND.
-    EdgeMask = Builder.createAnd(EdgeMask, SrcMask);
+  if (SrcMask) { // Otherwise block in-mask is all-one, no need to AND.
+    // The condition is 'SrcMask && EdgeMask', which is equivalent to
+    // 'select i1 SrcMask, i1 EdgeMask, i1 false'.
+    // The select version does not introduce new UB if SrcMask is false and
+    // EdgeMask is poison. Using 'and' here introduces undefined behavior.
+    VPValue *False = Plan->getOrAddVPValue(
+        ConstantInt::getFalse(BI->getCondition()->getType()));
+    EdgeMask = Builder.createSelect(SrcMask, EdgeMask, False);
+  }
 
   return EdgeMaskCache[Edge] = EdgeMask;
 }
@@ -8583,6 +8612,10 @@ VPRegionBlock *VPRecipeBuilder::createReplicateRegion(Instruction *Instr,
   auto *PHIRecipe = Instr->getType()->isVoidTy()
                         ? nullptr
                         : new VPPredInstPHIRecipe(Plan->getOrAddVPValue(Instr));
+  if (PHIRecipe) {
+    Plan->removeVPValueFor(Instr);
+    Plan->addVPValue(Instr, PHIRecipe);
+  }
   auto *Exit = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
   auto *Pred = new VPBasicBlock(Twine(RegionName) + ".if", PredRecipe);
   VPRegionBlock *Region = new VPRegionBlock(Entry, Exit, RegionName, true);
@@ -9039,7 +9072,8 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   Value *StartV =
       getStartValue() ? getStartValue()->getLiveInIRValue() : nullptr;
-  State.ILV->widenPHIInstruction(Phi, RdxDesc, StartV, State.UF, State.VF);
+  State.ILV->widenPHIInstruction(cast<PHINode>(getUnderlyingValue()), RdxDesc,
+                                 StartV, this, State);
 }
 
 void VPBlendRecipe::execute(VPTransformState &State) {
@@ -9078,7 +9112,7 @@ void VPBlendRecipe::execute(VPTransformState &State) {
     }
   }
   for (unsigned Part = 0; Part < State.UF; ++Part)
-    State.ValueMap.setVectorValue(Phi, Part, Entry[Part]);
+    State.set(this, Phi, Entry[Part], Part);
 }
 
 void VPInterleaveRecipe::execute(VPTransformState &State) {
@@ -9122,7 +9156,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
 void VPReplicateRecipe::execute(VPTransformState &State) {
   if (State.Instance) { // Generate a single instance.
     assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
-    State.ILV->scalarizeInstruction(getUnderlyingInstr(), *this,
+    State.ILV->scalarizeInstruction(getUnderlyingInstr(), this, *this,
                                     *State.Instance, IsPredicated, State);
     // Insert scalar instance packing it into a vector.
     if (AlsoPack && State.VF.isVector()) {
@@ -9131,11 +9165,9 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
         assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
         Value *Poison = PoisonValue::get(
             VectorType::get(getUnderlyingValue()->getType(), State.VF));
-        State.ValueMap.setVectorValue(getUnderlyingInstr(),
-                                      State.Instance->Part, Poison);
+        State.set(this, getUnderlyingInstr(), Poison, State.Instance->Part);
       }
-      State.ILV->packScalarIntoVectorValue(getUnderlyingInstr(),
-                                           *State.Instance);
+      State.ILV->packScalarIntoVectorValue(this, *State.Instance, State);
     }
     return;
   }
@@ -9148,7 +9180,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
          "Can't scalarize a scalable vector");
   for (unsigned Part = 0; Part < State.UF; ++Part)
     for (unsigned Lane = 0; Lane < EndLane; ++Lane)
-      State.ILV->scalarizeInstruction(getUnderlyingInstr(), *this,
+      State.ILV->scalarizeInstruction(getUnderlyingInstr(), this, *this,
                                       VPIteration(Part, Lane), IsPredicated,
                                       State);
 }
@@ -9186,6 +9218,8 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
   BasicBlock *PredicatedBB = ScalarPredInst->getParent();
   BasicBlock *PredicatingBB = PredicatedBB->getSinglePredecessor();
   assert(PredicatingBB && "Predicated block has no single predecessor.");
+  assert(isa<VPReplicateRecipe>(getOperand(0)) &&
+         "operand must be VPReplicateRecipe");
 
   // By current pack/unpack logic we need to generate only a single phi node: if
   // a vector value for the predicated instruction exists at this point it means
@@ -9194,21 +9228,32 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
   // also do that packing, thereby "hoisting" the insert-element sequence.
   // Otherwise, a phi node for the scalar value is needed.
   unsigned Part = State.Instance->Part;
-  Instruction *PredInst =
-      cast<Instruction>(getOperand(0)->getUnderlyingValue());
-  if (State.ValueMap.hasVectorValue(PredInst, Part)) {
-    Value *VectorValue = State.ValueMap.getVectorValue(PredInst, Part);
+  if (State.hasVectorValue(getOperand(0), Part)) {
+    Value *VectorValue = State.get(getOperand(0), Part);
     InsertElementInst *IEI = cast<InsertElementInst>(VectorValue);
     PHINode *VPhi = State.Builder.CreatePHI(IEI->getType(), 2);
     VPhi->addIncoming(IEI->getOperand(0), PredicatingBB); // Unmodified vector.
     VPhi->addIncoming(IEI, PredicatedBB); // New vector with inserted element.
-    State.ValueMap.resetVectorValue(PredInst, Part, VPhi); // Update cache.
+    if (State.hasVectorValue(this, Part))
+      State.reset(this, VPhi, Part);
+    else
+      State.set(this, VPhi, Part);
+    // NOTE: Currently we need to update the value of the operand, so the next
+    // predicated iteration inserts its generated value in the correct vector.
+    State.reset(getOperand(0), VPhi, Part);
   } else {
-    Type *PredInstType = PredInst->getType();
+    Type *PredInstType = getOperand(0)->getUnderlyingValue()->getType();
     PHINode *Phi = State.Builder.CreatePHI(PredInstType, 2);
-    Phi->addIncoming(PoisonValue::get(ScalarPredInst->getType()), PredicatingBB);
+    Phi->addIncoming(PoisonValue::get(ScalarPredInst->getType()),
+                     PredicatingBB);
     Phi->addIncoming(ScalarPredInst, PredicatedBB);
-    State.ValueMap.resetScalarValue(PredInst, *State.Instance, Phi);
+    if (State.hasScalarValue(this, *State.Instance))
+      State.reset(this, Phi, *State.Instance);
+    else
+      State.set(this, Phi, *State.Instance);
+    // NOTE: Currently we need to update the value of the operand, so the next
+    // predicated iteration inserts its generated value in the correct vector.
+    State.reset(getOperand(0), Phi, *State.Instance);
   }
 }
 
@@ -9292,8 +9337,6 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part) {
   if (hasVectorValue(Def, Part))
     return Data.PerPartOutput[Def][Part];
 
-  // TODO: Remove the callback once all scalar recipes are managed using
-  // VPValues.
   if (!hasScalarValue(Def, {Part, 0}))
     return Callback.getOrCreateVectorValues(VPValue2Value[Def], Part);
 
@@ -9331,7 +9374,7 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part) {
   } else {
     // Initialize packing with insertelements to start from undef.
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-    Value *Undef = UndefValue::get(VectorType::get(LastInst->getType(), VF));
+    Value *Undef = PoisonValue::get(VectorType::get(LastInst->getType(), VF));
     set(Def, Undef, Part);
     for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
       ILV->packScalarIntoVectorValue(Def, {Part, Lane}, *this);
@@ -9396,6 +9439,51 @@ static bool processLoopInVPlanNativePath(
 
   assert(!verifyFunction(*L->getHeader()->getParent(), &dbgs()));
   return true;
+}
+
+// Emit a remark if there are stores to floats that required a floating point
+// extension. If the vectorized loop was generated with floating point there
+// will be a performance penalty from the conversion overhead and the change in
+// the vector width.
+static void checkMixedPrecision(Loop *L, OptimizationRemarkEmitter *ORE) {
+  SmallVector<Instruction *, 4> Worklist;
+  for (BasicBlock *BB : L->getBlocks()) {
+    for (Instruction &Inst : *BB) {
+      if (auto *S = dyn_cast<StoreInst>(&Inst)) {
+        if (S->getValueOperand()->getType()->isFloatTy())
+          Worklist.push_back(S);
+      }
+    }
+  }
+
+  // Traverse the floating point stores upwards searching, for floating point
+  // conversions.
+  SmallPtrSet<const Instruction *, 4> Visited;
+  SmallPtrSet<const Instruction *, 4> EmittedRemark;
+  while (!Worklist.empty()) {
+    auto *I = Worklist.pop_back_val();
+    if (!L->contains(I))
+      continue;
+    if (!Visited.insert(I).second)
+      continue;
+
+    // Emit a remark if the floating point store required a floating
+    // point conversion.
+    // TODO: More work could be done to identify the root cause such as a
+    // constant or a function return type and point the user to it.
+    if (isa<FPExtInst>(I) && EmittedRemark.insert(I).second)
+      ORE->emit([&]() {
+        return OptimizationRemarkAnalysis(LV_NAME, "VectorMixedPrecision",
+                                          I->getDebugLoc(), L->getHeader())
+               << "floating point conversion changes vector width. "
+               << "Mixed floating point precision requires an up/down "
+               << "cast that will negatively impact performance.";
+      });
+
+    for (Use &Op : I->operands())
+      if (auto *OpI = dyn_cast<Instruction>(Op))
+        Worklist.push_back(OpI);
+  }
 }
 
 LoopVectorizePass::LoopVectorizePass(LoopVectorizeOptions Opts)
@@ -9716,6 +9804,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
              << NV("VectorizationFactor", VF.Width)
              << ", interleaved count: " << NV("InterleaveCount", IC) << ")";
     });
+
+    if (ORE->allowExtraAnalysis(LV_NAME))
+      checkMixedPrecision(L, ORE);
   }
 
   Optional<MDNode *> RemainderLoopID =

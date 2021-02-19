@@ -1396,34 +1396,34 @@ mlir::OpFoldResult fir::SubfOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
 }
 
 //===----------------------------------------------------------------------===//
-// WhereOp
+// IfOp
 //===----------------------------------------------------------------------===//
-void fir::WhereOp::build(mlir::OpBuilder &builder, OperationState &result,
-                         mlir::Value cond, bool withElseRegion) {
+void fir::IfOp::build(mlir::OpBuilder &builder, OperationState &result,
+                      mlir::Value cond, bool withElseRegion) {
   build(builder, result, llvm::None, cond, withElseRegion);
 }
 
-void fir::WhereOp::build(mlir::OpBuilder &builder, OperationState &result,
-                         mlir::TypeRange resultTypes, mlir::Value cond,
-                         bool withElseRegion) {
+void fir::IfOp::build(mlir::OpBuilder &builder, OperationState &result,
+                      mlir::TypeRange resultTypes, mlir::Value cond,
+                      bool withElseRegion) {
   result.addOperands(cond);
   result.addTypes(resultTypes);
 
   mlir::Region *thenRegion = result.addRegion();
   thenRegion->push_back(new mlir::Block());
   if (resultTypes.empty())
-    WhereOp::ensureTerminator(*thenRegion, builder, result.location);
+    fir::IfOp::ensureTerminator(*thenRegion, builder, result.location);
 
   mlir::Region *elseRegion = result.addRegion();
   if (withElseRegion) {
     elseRegion->push_back(new mlir::Block());
     if (resultTypes.empty())
-      WhereOp::ensureTerminator(*elseRegion, builder, result.location);
+      fir::IfOp::ensureTerminator(*elseRegion, builder, result.location);
   }
 }
 
-static mlir::ParseResult parseWhereOp(OpAsmParser &parser,
-                                      OperationState &result) {
+static mlir::ParseResult parseIfOp(OpAsmParser &parser,
+                                   OperationState &result) {
   result.regions.reserve(2);
   mlir::Region *thenRegion = result.addRegion();
   mlir::Region *elseRegion = result.addRegion();
@@ -1438,13 +1438,14 @@ static mlir::ParseResult parseWhereOp(OpAsmParser &parser,
   if (parser.parseRegion(*thenRegion, {}, {}))
     return mlir::failure();
 
-  WhereOp::ensureTerminator(*thenRegion, parser.getBuilder(), result.location);
+  fir::IfOp::ensureTerminator(*thenRegion, parser.getBuilder(),
+                              result.location);
 
   if (!parser.parseOptionalKeyword("else")) {
     if (parser.parseRegion(*elseRegion, {}, {}))
       return mlir::failure();
-    WhereOp::ensureTerminator(*elseRegion, parser.getBuilder(),
-                              result.location);
+    fir::IfOp::ensureTerminator(*elseRegion, parser.getBuilder(),
+                                result.location);
   }
 
   // Parse the optional attribute list.
@@ -1454,16 +1455,16 @@ static mlir::ParseResult parseWhereOp(OpAsmParser &parser,
   return mlir::success();
 }
 
-static LogicalResult verify(fir::WhereOp op) {
+static LogicalResult verify(fir::IfOp op) {
   if (op.getNumResults() != 0 && op.otherRegion().empty())
     return op.emitOpError("must have an else block if defining values");
 
   return mlir::success();
 }
 
-static void print(mlir::OpAsmPrinter &p, fir::WhereOp op) {
+static void print(mlir::OpAsmPrinter &p, fir::IfOp op) {
   bool printBlockTerminators = false;
-  p << fir::WhereOp::getOperationName() << ' ' << op.condition();
+  p << fir::IfOp::getOperationName() << ' ' << op.condition();
   if (!op.results().empty()) {
     p << " -> (" << op.getResultTypes() << ')';
     printBlockTerminators = true;

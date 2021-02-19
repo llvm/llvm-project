@@ -341,7 +341,7 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
   let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0); // neg (lo)
 }
 
-class VOP3Pe_MAI <bits<7> op, VOPProfile P> : Enc64 {
+class VOP3Pe_MAI <bits<7> op, VOPProfile P, bit acc_cd = 0> : Enc64 {
   bits<8> vdst;
   bits<10> src0;
   bits<10> src1;
@@ -349,14 +349,13 @@ class VOP3Pe_MAI <bits<7> op, VOPProfile P> : Enc64 {
   bits<3> blgp;
   bits<3> cbsz;
   bits<4> abid;
-  bits<1> clamp;
 
   let Inst{7-0} = vdst;
 
   let Inst{10-8}  = !if(P.HasSrc1, cbsz, 0);
   let Inst{14-11} = !if(P.HasSrc1, abid, 0);
 
-  let Inst{15} = !if(P.HasClamp, clamp{0}, 0);
+  let Inst{15} = acc_cd;
 
   let Inst{22-16} = op;
   let Inst{31-23} = 0x1a7; //encoding
@@ -694,8 +693,8 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   string AsmOperands = asmOps;
 
   let AsmMatchConverter = !if(P.HasModifiers, "cvtDPP", "");
-  let SubtargetPredicate = HasDPP;
-  let AssemblerPredicate = HasDPP;
+  let SubtargetPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
+  let AssemblerPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
@@ -756,8 +755,8 @@ class VOP_DPP_Base <string OpName, VOPProfile P, bit IsDPP16,
   let Size = 8;
 
   let AsmMatchConverter = !if(P.HasModifiers, "cvtDPP", "");
-  let SubtargetPredicate = HasDPP;
-  let AssemblerPredicate = HasDPP;
+  let SubtargetPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
+  let AssemblerPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
                                         AMDGPUAsmVariants.Disable);
   // TODO-GFX11 check these 2 on VOP3 DPP

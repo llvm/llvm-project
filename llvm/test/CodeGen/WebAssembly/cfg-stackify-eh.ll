@@ -119,7 +119,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:               rethrow   0                     # down to catch[[C0:[0-9]+]]
 ; CHECK:             end_try
 ; CHECK:           end_block                           # label[[L2]]:
-; CHECK:           rethrow   0                         # down to catch[[C0]]
+; CHECK:           rethrow   1                         # down to catch[[C0]]
 ; CHECK:         catch_all                             # catch[[C0]]:
 ; CHECK:           call      __cxa_end_catch
 ; CHECK:           rethrow   0                         # to caller
@@ -128,7 +128,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:         br        2                           # 2: down to label[[L1]]
 ; CHECK:       end_try
 ; CHECK:     end_block                                 # label[[L0]]:
-; CHECK:     rethrow   0                               # to caller
+; CHECK:     rethrow   1                               # to caller
 ; CHECK:   end_block                                   # label[[L1]]:
 ; CHECK:   call      __cxa_end_catch
 ; CHECK: end_try
@@ -658,7 +658,7 @@ try.cont:                                         ; preds = %catch.start0
 ; --- try-delegate starts (call unwind mismatch)
 ; NOSORT:       try
 ; NOSORT:         call  __cxa_end_catch
-; NOSORT:       delegate    2            # label/catch{{[0-9]+}}: to caller
+; NOSORT:       delegate    3            # label/catch{{[0-9]+}}: to caller
 ; --- try-delegate ends (call unwind mismatch)
 ; NOSORT:     end_try
 ; NOSORT:   delegate    1                # label/catch{{[0-9]+}}: to caller
@@ -1099,8 +1099,35 @@ ehcleanup:                                        ; preds = %if.then
   cleanupret from %0 unwind to caller
 }
 
+; This crashed when updating EHPadStack within fixCallUniwindMismatch had a bug.
+; This should not crash and try-delegate has to be created around 'call @baz',
+; because the initial TRY placement for 'call @quux' was done before 'call @baz'
+; because 'call @baz''s return value is stackified.
+
+; CHECK-LABEL: test19
+; CHECK: try
+; CHECK:   try
+; CHECK:     call $[[RET:[0-9]+]]=, baz
+; CHECK:   delegate  1
+; CHECK:    call  quux, $[[RET]]
+; CHECK: catch_all
+; CHECK: end_try
+define void @test19() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  %call = call i32 @baz()
+  invoke void @quux(i32 %call)
+          to label %invoke.cont unwind label %ehcleanup
+
+ehcleanup:                                        ; preds = %entry
+  %0 = cleanuppad within none []
+  cleanupret from %0 unwind to caller
+
+invoke.cont:                                      ; preds = %entry
+  unreachable
+}
+
 ; Check if the unwind destination mismatch stats are correct
-; NOSORT: 18 wasm-cfg-stackify    - Number of call unwind mismatches found
+; NOSORT: 19 wasm-cfg-stackify    - Number of call unwind mismatches found
 ; NOSORT:  3 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()

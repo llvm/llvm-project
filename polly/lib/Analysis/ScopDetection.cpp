@@ -352,7 +352,7 @@ ScopDetection::ScopDetection(Function &F, const DominatorTree &DT,
 
   // Prune non-profitable regions.
   for (auto &DIt : DetectionContextMap) {
-    auto &DC = DIt.getSecond();
+    DetectionContext &DC = *DIt.getSecond().get();
     if (DC.Log.hasErrors())
       continue;
     if (!ValidRegions.count(&DC.CurRegion))
@@ -405,12 +405,17 @@ bool ScopDetection::isMaxRegionInScop(const Region &R, bool Verify) const {
     return false;
 
   if (Verify) {
-    DetectionContextMap.erase(getBBPairForRegion(&R));
-    const auto &It = DetectionContextMap.insert(std::make_pair(
-        getBBPairForRegion(&R),
-        DetectionContext(const_cast<Region &>(R), AA, false /*verifying*/)));
-    DetectionContext &Context = It.first->second;
-    return isValidRegion(Context);
+    BBPair P = getBBPairForRegion(&R);
+    std::unique_ptr<DetectionContext> &Entry = DetectionContextMap[P];
+
+    // Free previous DetectionContext for the region and create and verify a new
+    // one. Be sure that the DetectionContext is not still used by a ScopInfop.
+    // Due to changes but CodeGeneration of another Scop, the Region object and
+    // the BBPair might not match anymore.
+    Entry = std::make_unique<DetectionContext>(const_cast<Region &>(R), AA,
+                                               /*Verifying=*/false);
+
+    return isValidRegion(*Entry.get());
   }
 
   return true;
@@ -1398,10 +1403,12 @@ Region *ScopDetection::expandRegion(Region &R) {
   LLVM_DEBUG(dbgs() << "\tExpanding " << R.getNameStr() << "\n");
 
   while (ExpandedRegion) {
-    const auto &It = DetectionContextMap.insert(std::make_pair(
-        getBBPairForRegion(ExpandedRegion.get()),
-        DetectionContext(*ExpandedRegion, AA, false /*verifying*/)));
-    DetectionContext &Context = It.first->second;
+    BBPair P = getBBPairForRegion(ExpandedRegion.get());
+    std::unique_ptr<DetectionContext> &Entry = DetectionContextMap[P];
+    Entry = std::make_unique<DetectionContext>(*ExpandedRegion, AA,
+                                               /*Verifying=*/false);
+    DetectionContext &Context = *Entry.get();
+
     LLVM_DEBUG(dbgs() << "\t\tTrying " << ExpandedRegion->getNameStr() << "\n");
     // Only expand when we did not collect errors.
 
@@ -1411,7 +1418,7 @@ Region *ScopDetection::expandRegion(Region &R) {
       //  - if false, .tbd. => stop  (should this really end the loop?)
       if (!allBlocksValid(Context) || Context.Log.hasErrors()) {
         removeCachedResults(*ExpandedRegion);
-        DetectionContextMap.erase(It.first);
+        DetectionContextMap.erase(P);
         break;
       }
 
@@ -1419,7 +1426,7 @@ Region *ScopDetection::expandRegion(Region &R) {
       // far).
       if (LastValidRegion) {
         removeCachedResults(*LastValidRegion);
-        DetectionContextMap.erase(getBBPairForRegion(LastValidRegion.get()));
+        DetectionContextMap.erase(P);
       }
       LastValidRegion = std::move(ExpandedRegion);
 
@@ -1430,7 +1437,7 @@ Region *ScopDetection::expandRegion(Region &R) {
     } else {
       // Create and test the next greater region (if any)
       removeCachedResults(*ExpandedRegion);
-      DetectionContextMap.erase(It.first);
+      DetectionContextMap.erase(P);
       ExpandedRegion =
           std::unique_ptr<Region>(ExpandedRegion->getExpandedRegion());
     }
@@ -1468,9 +1475,10 @@ void ScopDetection::removeCachedResults(const Region &R) {
 }
 
 void ScopDetection::findScops(Region &R) {
-  const auto &It = DetectionContextMap.insert(std::make_pair(
-      getBBPairForRegion(&R), DetectionContext(R, AA, false /*verifying*/)));
-  DetectionContext &Context = It.first->second;
+  std::unique_ptr<DetectionContext> &Entry =
+      DetectionContextMap[getBBPairForRegion(&R)];
+  Entry = std::make_unique<DetectionContext>(R, AA, /*Verifying=*/false);
+  DetectionContext &Context = *Entry.get();
 
   bool RegionIsValid = false;
   if (!PollyProcessUnprofitable && regionWithoutLoops(R, LI))
@@ -1705,7 +1713,7 @@ void ScopDetection::printLocations(Function &F) {
 
 void ScopDetection::emitMissedRemarks(const Function &F) {
   for (auto &DIt : DetectionContextMap) {
-    auto &DC = DIt.getSecond();
+    DetectionContext &DC = *DIt.getSecond().get();
     if (DC.Log.hasErrors())
       emitRejectionRemarks(DIt.getFirst(), DC.Log, ORE);
   }
@@ -1831,7 +1839,7 @@ ScopDetection::getDetectionContext(const Region *R) const {
   auto DCMIt = DetectionContextMap.find(getBBPairForRegion(R));
   if (DCMIt == DetectionContextMap.end())
     return nullptr;
-  return &DCMIt->second;
+  return DCMIt->second.get();
 }
 
 const RejectLog *ScopDetection::lookupRejectionLog(const Region *R) const {

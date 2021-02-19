@@ -11,7 +11,7 @@ define dso_local i32 @bar(i32* %arg) {
 ; CHECK_1-SAME: (i32* dereferenceable_or_null(8) [[ARG:%.*]]) {
 ; CHECK_1-NEXT:  entry:
 ; CHECK_1-NEXT:    [[BC1:%.*]] = bitcast i32* [[ARG]] to i8*
-; CHECK_1-NEXT:    call void @foo(i8* dereferenceable_or_null(8) [[BC1]])
+; CHECK_1-NEXT:    call void @foo(i8* noundef dereferenceable_or_null(8) [[BC1]])
 ; CHECK_1-NEXT:    [[LD:%.*]] = load i32, i32* [[ARG]], align 4
 ; CHECK_1-NEXT:    ret i32 [[LD]]
 ;
@@ -19,7 +19,7 @@ define dso_local i32 @bar(i32* %arg) {
 ; CHECK_5-SAME: (i32* nonnull dereferenceable(8) [[ARG:%.*]]) {
 ; CHECK_5-NEXT:  entry:
 ; CHECK_5-NEXT:    [[BC1:%.*]] = bitcast i32* [[ARG]] to i8*
-; CHECK_5-NEXT:    call void @foo(i8* nonnull dereferenceable(8) [[BC1]])
+; CHECK_5-NEXT:    call void @foo(i8* noundef nonnull dereferenceable(8) [[BC1]])
 ; CHECK_5-NEXT:    [[LD:%.*]] = load i32, i32* [[ARG]], align 4
 ; CHECK_5-NEXT:    ret i32 [[LD]]
 ;

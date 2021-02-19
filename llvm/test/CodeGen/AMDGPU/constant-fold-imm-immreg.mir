@@ -37,7 +37,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_AND_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -85,19 +85,19 @@ body:             |
     %16:vgpr_32 = V_MOV_B32_e32 63, implicit $exec
 
     %9:vgpr_32 = V_AND_B32_e64 %8, %6, implicit $exec
-    FLAT_STORE_DWORD %19, %9, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %19, %9, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %10:vgpr_32 = V_AND_B32_e64 %6, %8, implicit $exec
-    FLAT_STORE_DWORD %19, %10, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %19, %10, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %11:vgpr_32 = V_AND_B32_e32 %8, %6, implicit $exec
-    FLAT_STORE_DWORD %19, %11, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %19, %11, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %12:vgpr_32 = V_AND_B32_e64 %8, %8, implicit $exec
-    FLAT_STORE_DWORD %19, %12, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %19, %12, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %13:vgpr_32 = V_AND_B32_e64 %16, %16, implicit $exec
-    FLAT_STORE_DWORD %19, %13, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %19, %13, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     S_ENDPGM 0
 
@@ -116,7 +116,6 @@ body:             |
   bb.0:
     liveins: $sgpr0_sgpr1
 
-
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
     %5:sreg_32_xm0_xexec = S_MOV_B32 1
@@ -127,7 +126,7 @@ body:             |
     %10:sgpr_128 = REG_SEQUENCE killed %7, %subreg.hi16, killed %6, %subreg.lo16, killed %9, %subreg.sub0, killed %8, %subreg.sub0_sub1
     %12:sreg_32_xm0 = S_LSHL_B32 killed %5, 12, implicit-def dead $scc
     %13:vgpr_32 = COPY %12
-    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -154,7 +153,7 @@ body:             |
     %8:sgpr_128 = REG_SEQUENCE killed %5, %subreg.hi16, killed %4, %subreg.lo16, killed %7, %subreg.sub0, killed %6, %subreg.sub0_sub1
     %10:sreg_32_xm0 = S_ASHR_I32 killed %3, 12, implicit-def dead $scc
     %11:vgpr_32 = COPY %10
-    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -222,34 +221,34 @@ body:             |
     %32:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
 
     %11:vgpr_32 = V_ASHRREV_I32_e64 8, %10, implicit $exec
-    FLAT_STORE_DWORD %20, %11, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %11, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %12:vgpr_32 = V_ASHRREV_I32_e64 %8, %10, implicit $exec
-    FLAT_STORE_DWORD %20, %12, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %12, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %13:vgpr_32 = V_ASHR_I32_e64 %7, 3, implicit $exec
-    FLAT_STORE_DWORD %20, %13, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %13, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %14:vgpr_32 = V_ASHR_I32_e64 7, %29, implicit $exec
-    FLAT_STORE_DWORD %20, %14, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %14, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %15:vgpr_32 = V_ASHR_I32_e64 %27, %24, implicit $exec
-    FLAT_STORE_DWORD %20, %15, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %15, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %22:vgpr_32 = V_ASHR_I32_e64 %6, 4, implicit $exec
-    FLAT_STORE_DWORD %20, %22, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %22, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %23:vgpr_32 = V_ASHR_I32_e64 %6, %30, implicit $exec
-    FLAT_STORE_DWORD %20, %23, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %23, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %25:vgpr_32 = V_ASHR_I32_e32 %31, %31, implicit $exec
-    FLAT_STORE_DWORD %20, %25, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %25, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %26:vgpr_32 = V_ASHRREV_I32_e32 11, %10, implicit $exec
-    FLAT_STORE_DWORD %20, %26, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %26, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %28:vgpr_32 = V_ASHR_I32_e32 %27, %32, implicit $exec
-    FLAT_STORE_DWORD %20, %28, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %28, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     S_ENDPGM 0
 
@@ -277,7 +276,7 @@ body:             |
     %8:sgpr_128 = REG_SEQUENCE killed %5, %subreg.hi16, killed %4, %subreg.lo16, killed %7, %subreg.sub0, killed %6, %subreg.sub0_sub1
     %10:sreg_32_xm0 = S_LSHR_B32 killed %3, 12, implicit-def dead $scc
     %11:vgpr_32 = COPY %10
-    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -346,34 +345,34 @@ body:             |
     %32:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
 
     %11:vgpr_32 = V_LSHRREV_B32_e64 8, %10, implicit $exec
-    FLAT_STORE_DWORD %20, %11, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %11, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %12:vgpr_32 = V_LSHRREV_B32_e64 %8, %10, implicit $exec
-    FLAT_STORE_DWORD %20, %12, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %12, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %13:vgpr_32 = V_LSHR_B32_e64 %7, 3, implicit $exec
-    FLAT_STORE_DWORD %20, %13, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %13, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %14:vgpr_32 = V_LSHR_B32_e64 7, %29, implicit $exec
-    FLAT_STORE_DWORD %20, %14, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %14, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %15:vgpr_32 = V_LSHR_B32_e64 %27, %24, implicit $exec
-    FLAT_STORE_DWORD %20, %15, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %15, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %22:vgpr_32 = V_LSHR_B32_e64 %6, 4, implicit $exec
-    FLAT_STORE_DWORD %20, %22, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %22, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %23:vgpr_32 = V_LSHR_B32_e64 %6, %30, implicit $exec
-    FLAT_STORE_DWORD %20, %23, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %23, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %25:vgpr_32 = V_LSHR_B32_e32 %31, %31, implicit $exec
-    FLAT_STORE_DWORD %20, %25, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %25, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %26:vgpr_32 = V_LSHRREV_B32_e32 11, %10, implicit $exec
-    FLAT_STORE_DWORD %20, %26, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %26, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %28:vgpr_32 = V_LSHR_B32_e32 %27, %32, implicit $exec
-    FLAT_STORE_DWORD %20, %28, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %28, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 
 ...
@@ -391,7 +390,7 @@ body:             |
   bb.0:
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vgpr_32 = V_XOR_B32_e64 killed %0, undef %1:vgpr_32, implicit $exec
-    FLAT_STORE_DWORD undef %3:vreg_64, %2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD undef %3:vreg_64, %2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 
 ...
@@ -445,7 +444,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_ANDN2_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -478,7 +477,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_OR_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -530,15 +529,15 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 1234567
     %16:vgpr_32 = V_MOV_B32_e32 63, implicit $exec
     %9:vgpr_32 = V_OR_B32_e64 %8, %6, implicit $exec
-    FLAT_STORE_DWORD %19, %9, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %19, %9, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %10:vgpr_32 = V_OR_B32_e64 %6, %8, implicit $exec
-    FLAT_STORE_DWORD %19, %10, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %19, %10, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %11:vgpr_32 = V_OR_B32_e32 %8, %6, implicit $exec
-    FLAT_STORE_DWORD %19, %11, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %19, %11, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %12:vgpr_32 = V_OR_B32_e64 %8, %8, implicit $exec
-    FLAT_STORE_DWORD %19, %12, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %19, %12, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %13:vgpr_32 = V_OR_B32_e64 %16, %16, implicit $exec
-    FLAT_STORE_DWORD %19, %13, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %19, %13, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 
 ...
@@ -571,7 +570,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_ORN2_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -604,7 +603,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_NAND_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -637,7 +636,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_NOR_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -670,7 +669,7 @@ body:             |
     %8:sreg_32_xm0 = S_MOV_B32 9999
     %9:sreg_32_xm0 = S_XNOR_B32 killed %7, killed %8, implicit-def dead $scc
     %10:vgpr_32 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -739,25 +738,25 @@ body:             |
     %7:sreg_32_xm0 = S_MOV_B32 1
     %27:sreg_32_xm0 = S_MOV_B32 -4
     %11:vgpr_32 = V_LSHLREV_B32_e64 12, %10, implicit $exec
-    FLAT_STORE_DWORD %20, %11, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %11, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %12:vgpr_32 = V_LSHLREV_B32_e64 %7, 12, implicit $exec
-    FLAT_STORE_DWORD %20, %12, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %12, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %13:vgpr_32 = V_LSHL_B32_e64 %7, 12, implicit $exec
-    FLAT_STORE_DWORD %20, %13, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %13, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %14:vgpr_32 = V_LSHL_B32_e64 12, %7, implicit $exec
-    FLAT_STORE_DWORD %20, %14, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %14, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %15:vgpr_32 = V_LSHL_B32_e64 12, %24, implicit $exec
-    FLAT_STORE_DWORD %20, %15, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %15, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %22:vgpr_32 = V_LSHL_B32_e64 %6, 12, implicit $exec
-    FLAT_STORE_DWORD %20, %22, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %22, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %23:vgpr_32 = V_LSHL_B32_e64 %6, 32, implicit $exec
-    FLAT_STORE_DWORD %20, %23, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %23, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %25:vgpr_32 = V_LSHL_B32_e32 %6, %6, implicit $exec
-    FLAT_STORE_DWORD %20, %25, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %25, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %26:vgpr_32 = V_LSHLREV_B32_e32 11, %24, implicit $exec
-    FLAT_STORE_DWORD %20, %26, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %26, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     %28:vgpr_32 = V_LSHL_B32_e32 %27, %6, implicit $exec
-    FLAT_STORE_DWORD %20, %28, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD %20, %28, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 
 ...

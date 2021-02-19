@@ -249,9 +249,9 @@ bool ValueObjectRegister::UpdateValue() {
         Process *process = exe_ctx.GetProcessPtr();
         if (process)
           m_data.SetAddressByteSize(process->GetAddressByteSize());
-        m_value.SetContext(Value::eContextTypeRegisterInfo,
+        m_value.SetContext(Value::ContextType::RegisterInfo,
                            (void *)&m_reg_info);
-        m_value.SetValueType(Value::eValueTypeHostAddress);
+        m_value.SetValueType(Value::ValueType::HostAddress);
         m_value.GetScalar() = (uintptr_t)m_data.GetDataStart();
         SetValueIsValid(true);
         SetValueDidChange(!(m_old_reg_value == m_reg_value));

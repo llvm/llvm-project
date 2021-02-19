@@ -794,3 +794,110 @@ func @fill_tensor(%arg0 : index, %arg1 : index, %arg2 : f32) -> tensor<?x?xf32> 
   return %1 : tensor<?x?xf32>
 }
 // CHECK: %{{.+}} = linalg.fill(%{{.+}}, %{{.+}}) : tensor<?x?xf32>, f32 -> tensor<?x?xf32>
+
+// -----
+
+#accesses = [
+  affine_map<(i, j) -> (i, j)>,
+  affine_map<(i, j) -> (i, j)>,
+  affine_map<(i, j) -> (i, j)>
+]
+
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel", "parallel"]
+}
+
+func @tiled_loop(%lhs: tensor<24x64xi8>, %rhs: tensor<24x64xi8>,
+                 %out: tensor<24x64xi8>) -> tensor<24x64xi8> {
+ %c0 = constant 0 : index
+ %c1 = constant 1 : index
+ %c4 = constant 4 : index
+ %c24 = constant 24 : index
+ %c64 = constant 64 : index
+ %prod = linalg.tiled_loop (%i) = (%c0) to (%c24) step (%c4)
+      ins(%lhs, %rhs : tensor<24x64xi8>, tensor<24x64xi8>)
+      outs(%out : tensor<24x64xi8>) {
+    %lhs_sub = subtensor %lhs[%i, 0] [%c4, %c64] [1, 1]
+        : tensor<24x64xi8> to tensor<?x?xi8>
+    %rhs_sub = subtensor %rhs[%i, 0] [%c4, %c64] [1, 1]
+        : tensor<24x64xi8> to tensor<?x?xi8>
+    %out_sub = subtensor %out[%i, 0] [%c4, %c64] [1, 1]
+        : tensor<24x64xi8> to tensor<?x?xi8>
+
+    %sum = linalg.generic #trait
+        ins(%lhs_sub, %rhs_sub : tensor<?x?xi8>, tensor<?x?xi8>)
+        outs(%out_sub : tensor<?x?xi8>) {
+      ^bb(%l: i8, %r: i8, %o: i8) :
+        %s = addi %l, %r : i8
+        linalg.yield %s : i8
+      } -> tensor<?x?xi8>
+
+    %sum_sub = subtensor_insert %sum into %out[%i, 0][%c4, %c64][1, 1]
+      : tensor<?x?xi8> into tensor<24x64xi8>
+    linalg.yield %sum_sub : tensor<24x64xi8>
+  }
+  return %prod : tensor<24x64xi8>
+}
+// CHECK-LABEL: func @tiled_loop
+// CHECK-NOT: iterators(
+
+// -----
+
+#id_3d = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#id_2d = affine_map<(d0, d1, d2) -> (d0, d2)>
+#id_1d = affine_map<(d0, d1, d2) -> (d1)>
+
+#trait = {
+  indexing_maps = [
+    #id_3d,
+    #id_2d,
+    #id_1d,
+    #id_1d
+  ],
+  iterator_types = ["reduction", "parallel", "reduction"]
+}
+
+func @tiled_loop_reduction(%input_3d: tensor<16x24x32xf32>,
+                           %input_2d: tensor<16x32xf32>,
+                           %input_1d: tensor<24xf32>,
+                           %output: tensor<24xf32>) -> tensor<24xf32> {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c4 = constant 4 : index
+  %c8 = constant 8 : index
+  %X = dim %input_3d, %c0 : tensor<16x24x32xf32>
+  %Y = dim %input_3d, %c1 : tensor<16x24x32xf32>
+  %Z = dim %input_3d, %c2 : tensor<16x24x32xf32>
+  %result = linalg.tiled_loop (%i, %j, %k)
+      = (%c0, %c0, %c0) to (%X, %Y, %Z) step (%c2, %c4, %c8)
+      ins(%input_3d, %input_2d: tensor<16x24x32xf32>, tensor<16x32xf32>)
+      outs( %output: tensor<24xf32>)
+      iterators("reduction", "parallel", "reduction") {
+    %sub_3d = subtensor %input_3d[%i, %j, %k][2, 4, 8][1, 1, 1]
+      : tensor<16x24x32xf32> to tensor<2x4x8xf32>
+    %sub_2d = subtensor %input_2d[%i, %k][2, 8][1, 1]
+      : tensor<16x32xf32> to tensor<2x8xf32>
+    %sub_1d = subtensor %input_1d[%j] [4] [1]
+      : tensor<24xf32> to tensor<4xf32>
+    %sub_out = subtensor %output[%j] [4] [1]
+      : tensor<24xf32> to tensor<4xf32>
+    %acc = linalg.generic #trait
+      ins(%sub_3d, %sub_2d, %sub_1d
+        : tensor<2x4x8xf32>, tensor<2x8xf32>, tensor<4xf32>)
+      outs(%sub_out : tensor<4xf32>)  {
+    ^bb0(%i3d: f32, %i2d: f32, %i1d: f32, %o: f32):
+      %0 = addf %i3d, %i2d : f32
+      %1 = addf %0, %i1d : f32
+      linalg.yield %1 : f32
+    } -> tensor<4xf32>
+
+    %sum_sub = subtensor_insert %acc into %output[%j][%c4][1]
+      : tensor<4xf32> into tensor<24xf32>
+    linalg.yield %sum_sub : tensor<24xf32>
+  }
+  return %result : tensor<24xf32>
+}
+// CHECK-LABEL: func @tiled_loop_reduction
+// CHECK: iterators(

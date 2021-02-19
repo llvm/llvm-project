@@ -1159,6 +1159,16 @@ std::error_code unlockFile(int FD);
 /// means that the filesystem may have failed to perform some buffered writes.
 std::error_code closeFile(file_t &F);
 
+#ifdef LLVM_ON_UNIX
+/// @brief Change ownership of a file.
+///
+/// @param Owner The owner of the file to change to.
+/// @param Group The group of the file to change to.
+/// @returns errc::success if successfully updated file ownership, otherwise an
+///          error code is returned.
+std::error_code changeFileOwnership(int FD, uint32_t Owner, uint32_t Group);
+#endif
+
 /// RAII class that facilitates file locking.
 class FileLocker {
   int FD; ///< Locked file handle.

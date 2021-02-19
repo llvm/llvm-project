@@ -94,4 +94,52 @@ TEST(Dialect, DelayedInterfaceRegistration) {
   EXPECT_TRUE(secondTestDialectInterface != nullptr);
 }
 
+TEST(Dialect, RepeatedDelayedRegistration) {
+  // Set up the delayed registration.
+  DialectRegistry registry;
+  registry.insert<TestDialect>();
+  registry.addDialectInterface<TestDialect, TestDialectInterface>();
+  MLIRContext context(registry);
+
+  // Load the TestDialect and check that the interface got registered for it.
+  auto *testDialect = context.getOrLoadDialect<TestDialect>();
+  ASSERT_TRUE(testDialect != nullptr);
+  auto *testDialectInterface =
+      testDialect->getRegisteredInterface<TestDialectInterfaceBase>();
+  EXPECT_TRUE(testDialectInterface != nullptr);
+
+  // Try adding the same dialect interface again and check that we don't crash
+  // on repeated interface registration.
+  DialectRegistry secondRegistry;
+  secondRegistry.insert<TestDialect>();
+  secondRegistry.addDialectInterface<TestDialect, TestDialectInterface>();
+  context.appendDialectRegistry(secondRegistry);
+  testDialectInterface =
+      testDialect->getRegisteredInterface<TestDialectInterfaceBase>();
+  EXPECT_TRUE(testDialectInterface != nullptr);
+}
+
+// A dialect that registers two interfaces with the same InterfaceID, triggering
+// an assertion failure.
+struct RepeatedRegistrationDialect : public Dialect {
+  static StringRef getDialectNamespace() { return "repeatedreg"; }
+  RepeatedRegistrationDialect(MLIRContext *context)
+      : Dialect(getDialectNamespace(), context,
+                TypeID::get<RepeatedRegistrationDialect>()) {
+    addInterfaces<TestDialectInterface>();
+    addInterfaces<SecondTestDialectInterface>();
+  }
+};
+
+TEST(Dialect, RepeatedInterfaceRegistrationDeath) {
+  MLIRContext context;
+  (void)context;
+
+  // This triggers an assertion in debug mode.
+#ifndef NDEBUG
+  ASSERT_DEATH(context.loadDialect<RepeatedRegistrationDialect>(),
+               "interface kind has already been registered");
+#endif
+}
+
 } // end namespace

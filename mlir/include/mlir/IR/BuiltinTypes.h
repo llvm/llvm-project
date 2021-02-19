@@ -88,6 +88,11 @@ public:
   static constexpr int64_t kDynamicStrideOrOffset =
       std::numeric_limits<int64_t>::min();
 
+  /// Return clone of this type with new shape and element type.
+  ShapedType clone(ArrayRef<int64_t> shape, Type elementType);
+  ShapedType clone(ArrayRef<int64_t> shape);
+  ShapedType clone(Type elementType);
+
   /// Return the element type.
   Type getElementType() const;
 
@@ -565,6 +570,10 @@ AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
 
 /// Return true if the layout for `t` is compatible with strided semantics.
 bool isStrided(MemRefType t);
+
+/// Return the layout map in strided linear layout AffineMap form.
+/// Return null if the layout is not compatible with a strided layout.
+AffineMap getStridedLinearLayoutMap(MemRefType t);
 
 } // end namespace mlir
 

@@ -217,7 +217,7 @@ body:             |
     %19:sreg_32_xm0_xexec = IMPLICIT_DEF
     %20:vgpr_32 = V_ADD_CO_U32_e32 %19, %0, implicit-def dead $vcc, implicit $exec
     %21:vreg_64, dead %22:sreg_64 = V_MAD_I64_I32_e64 %20, 12, %7, 0, implicit $exec
-    %23:vgpr_32 = GLOBAL_LOAD_DWORD %21, 4, 0, 0, 0, implicit $exec
+    %23:vgpr_32 = GLOBAL_LOAD_DWORD %21, 4, 0, 0, 0, 0, implicit $exec
     %24:vreg_64, dead %25:sreg_64 = V_MAD_I64_I32_e64 %20, 48, %8, 0, implicit $exec
     %26:vreg_128 = IMPLICIT_DEF
     undef %27.sub0:sreg_64_xexec = S_LOAD_DWORD_IMM %6, 0, 0, 0
@@ -232,14 +232,14 @@ body:             |
     %33:sgpr_32 = S_ADDC_U32 %5.sub1, %31.sub1, implicit-def dead $scc, implicit killed $scc
     %34:vgpr_32 = IMPLICIT_DEF
     %35:vreg_64, dead %36:sreg_64 = V_MAD_I64_I32_e64 %23, %34, 0, 0, implicit $exec
-    %37:vreg_64 = GLOBAL_LOAD_DWORDX2 %35, 32, 0, 0, 0, implicit $exec
+    %37:vreg_64 = GLOBAL_LOAD_DWORDX2 %35, 32, 0, 0, 0, 0, implicit $exec
     undef %38.sub1:vreg_64 = V_ASHRREV_I32_e32 31, %37.sub0, implicit $exec
     %38.sub0:vreg_64 = COPY %37.sub0
     %39:vreg_64 = V_LSHLREV_B64_e64 3, %38, implicit $exec
     undef %40.sub0:vreg_64, %41:sreg_64_xexec = V_ADD_CO_U32_e64 0, %39.sub0, 0, implicit $exec
     %42:vgpr_32 = COPY %33
     %40.sub1:vreg_64, dead %43:sreg_64_xexec = V_ADDC_U32_e64 %42, %39.sub1, %41, 0, implicit $exec
-    %44:vreg_64 = GLOBAL_LOAD_DWORDX2 %40, 0, 0, 0, 0, implicit $exec :: (load 8 from %ir.tmp34)
+    %44:vreg_64 = GLOBAL_LOAD_DWORDX2 %40, 0, 0, 0, 0, 0, implicit $exec :: (load 8 from %ir.tmp34)
     undef %45.sub1:vreg_64 = IMPLICIT_DEF
     %45.sub0:vreg_64 = COPY %37.sub1
     %46:vreg_64 = V_LSHLREV_B64_e64 3, %45, implicit $exec
@@ -247,7 +247,7 @@ body:             |
     %49:vgpr_32 = COPY %33
     %47.sub1:vreg_64, dead %50:sreg_64_xexec = V_ADDC_U32_e64 %49, %46.sub1, %48, 0, implicit $exec
     %51:vreg_64 = IMPLICIT_DEF
-    undef %52.sub0:vreg_64 = GLOBAL_LOAD_DWORD %35, 40, 0, 0, 0, implicit $exec :: (load 4 from %ir.18 + 8)
+    undef %52.sub0:vreg_64 = GLOBAL_LOAD_DWORD %35, 40, 0, 0, 0, 0, implicit $exec :: (load 4 from %ir.18 + 8)
     %52.sub1:vreg_64 = IMPLICIT_DEF
     %53:vreg_64 = V_LSHLREV_B64_e64 3, %52, implicit $exec
     undef %54.sub0:vreg_64, %55:sreg_64_xexec = V_ADD_CO_U32_e64 0, %53.sub0, 0, implicit $exec
@@ -258,31 +258,31 @@ body:             |
     %59:sreg_64 = IMPLICIT_DEF
     %60:sreg_32_xm0 = S_ADD_U32 %5.sub0, %59.sub0, implicit-def $scc
     %61:sgpr_32 = S_ADDC_U32 %5.sub1, %59.sub1, implicit-def dead $scc, implicit killed $scc
-    %62:vreg_64 = GLOBAL_LOAD_DWORDX2 %35, 0, 0, 0, 0, implicit $exec :: (load 8 from %ir.20, align 4)
+    %62:vreg_64 = GLOBAL_LOAD_DWORDX2 %35, 0, 0, 0, 0, 0, implicit $exec :: (load 8 from %ir.20, align 4)
     undef %63.sub1:vreg_64 = V_ASHRREV_I32_e32 31, %62.sub0, implicit $exec
     %63.sub0:vreg_64 = COPY %62.sub0
     %64:vreg_64 = IMPLICIT_DEF
     undef %65.sub0:vreg_64, %66:sreg_64_xexec = V_ADD_CO_U32_e64 %60, %64.sub0, 0, implicit $exec
     %67:vgpr_32 = COPY %61
     %65.sub1:vreg_64, dead %68:sreg_64_xexec = V_ADDC_U32_e64 %67, %64.sub1, %66, 0, implicit $exec
-    %69:vreg_128 = GLOBAL_LOAD_DWORDX4 %65, 0, 0, 0, 0, implicit $exec :: (load 16 from %ir.tmp58)
+    %69:vreg_128 = GLOBAL_LOAD_DWORDX4 %65, 0, 0, 0, 0, 0, implicit $exec :: (load 16 from %ir.tmp58)
     undef %70.sub1:vreg_64 = IMPLICIT_DEF
     %70.sub0:vreg_64 = IMPLICIT_DEF
     %71:vreg_64 = IMPLICIT_DEF
     undef %72.sub0:vreg_64, %73:sreg_64_xexec = V_ADD_CO_U32_e64 %60, %71.sub0, 0, implicit $exec
     %74:vgpr_32 = COPY %61
     %72.sub1:vreg_64, dead %75:sreg_64_xexec = V_ADDC_U32_e64 0, %71.sub1, %73, 0, implicit $exec
-    %76:vreg_128 = GLOBAL_LOAD_DWORDX4 %72, 0, 0, 0, 0, implicit $exec
+    %76:vreg_128 = GLOBAL_LOAD_DWORDX4 %72, 0, 0, 0, 0, 0, implicit $exec
     %77:vgpr_32 = IMPLICIT_DEF
     %78:vgpr_32 = IMPLICIT_DEF
     %79:vgpr_32 = nofpexcept V_MUL_F32_e32 0, %77, implicit $mode, implicit $exec
     %80:vgpr_32 = IMPLICIT_DEF
     %81:vgpr_32 = IMPLICIT_DEF
     %84:vgpr_32 = IMPLICIT_DEF
-    BUFFER_STORE_DWORD_OFFEN %84, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 108, 0, 0, 0, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN %81, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 104, 0, 0, 0, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN %80, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 100, 0, 0, 0, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN %78, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 96, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %84, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 108, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %81, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 104, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %80, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 100, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %78, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 96, 0, 0, 0, 0, 0, 0, implicit $exec
     %85:vgpr_32 = IMPLICIT_DEF
     %86:vgpr_32 = IMPLICIT_DEF
     %87:vgpr_32 = IMPLICIT_DEF

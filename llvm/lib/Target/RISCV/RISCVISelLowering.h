@@ -109,10 +109,11 @@ enum NodeType : unsigned {
   VLEFF,
   VLEFF_MASK,
   // Matches the semantics of vslideup/vslidedown. The first operand is the
-  // pass-thru operand, the second is the source vector, and the third is the
-  // XLenVT index (either constant or non-constant).
-  VSLIDEUP,
-  VSLIDEDOWN,
+  // pass-thru operand, the second is the source vector, the third is the
+  // XLenVT index (either constant or non-constant), the fourth is the mask
+  // and the fifth the VL.
+  VSLIDEUP_VL,
+  VSLIDEDOWN_VL,
   // Matches the semantics of the vid.v instruction, with a mask and VL
   // operand.
   VID_VL,
@@ -141,7 +142,8 @@ enum NodeType : unsigned {
   VECREDUCE_FADD,
   VECREDUCE_SEQ_FADD,
 
-  // Vector binary and unary ops with VL as a third operand.
+  // Vector binary and unary ops with a mask as a third operand, and VL as a
+  // fourth operand.
   // FIXME: Can we replace these with ISD::VP_*?
   ADD_VL,
   AND_VL,
@@ -161,7 +163,27 @@ enum NodeType : unsigned {
   FMUL_VL,
   FDIV_VL,
   FNEG_VL,
+  FABS_VL,
+  FSQRT_VL,
   FMA_VL,
+  SMIN_VL,
+  SMAX_VL,
+  UMIN_VL,
+  UMAX_VL,
+  MULHS_VL,
+  MULHU_VL,
+
+  // Vector compare producing a mask. Fourth operand is input mask. Fifth
+  // operand is VL.
+  SETCC_VL,
+
+  // Vector select with an additional VL operand. This operation is unmasked.
+  VSELECT_VL,
+
+  // Mask binary operators.
+  VMAND_VL,
+  VMOR_VL,
+  VMXOR_VL,
 
   // Set mask vector to all zeros or ones.
   VMCLR_VL,
@@ -389,8 +411,14 @@ private:
   SDValue lowerFPVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorStoreToRVV(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
-                            unsigned NewOpc) const;
+  SDValue lowerFixedLengthVectorSetccToRVV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFixedLengthVectorLogicOpToRVV(SDValue Op, SelectionDAG &DAG,
+                                             unsigned MaskOpc,
+                                             unsigned VecOpc) const;
+  SDValue lowerFixedLengthVectorSelectToRVV(SDValue Op,
+                                            SelectionDAG &DAG) const;
+  SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG, unsigned NewOpc,
+                            bool HasMask = true) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
@@ -424,22 +452,6 @@ using namespace RISCV;
 
 } // end namespace RISCVVIntrinsicsTable
 
-namespace RISCVZvlssegTable {
-
-struct RISCVZvlsseg {
-  unsigned IntrinsicID;
-  uint8_t SEW;
-  uint8_t LMUL;
-  uint8_t IndexLMUL;
-  uint16_t Pseudo;
-};
-
-using namespace RISCV;
-
-#define GET_RISCVZvlssegTable_DECL
-#include "RISCVGenSearchableTables.inc"
-
-} // namespace RISCVZvlssegTable
-}
+} // end namespace llvm
 
 #endif

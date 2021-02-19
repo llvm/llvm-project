@@ -15,19 +15,45 @@ using namespace mlir;
 
 bool OpTrait::util::staticallyKnownBroadcastable(ArrayRef<int64_t> shape1,
                                                  ArrayRef<int64_t> shape2) {
-  // Two dimensions are compatible when
-  //   1. they are defined and equal, or
-  //   2. one of them is 1
-  return llvm::all_of(llvm::zip(llvm::reverse(shape1), llvm::reverse(shape2)),
-                      [](auto dimensions) {
-                        auto dim1 = std::get<0>(dimensions);
-                        auto dim2 = std::get<1>(dimensions);
-                        if (dim1 == 1 || dim2 == 1)
-                          return true;
-                        if (dim1 == dim2 && !ShapedType::isDynamic(dim1))
-                          return true;
-                        return false;
-                      });
+  SmallVector<SmallVector<int64_t, 6>, 2> extents;
+  extents.emplace_back(shape1.begin(), shape1.end());
+  extents.emplace_back(shape2.begin(), shape2.end());
+  return staticallyKnownBroadcastable(extents);
+}
+
+bool OpTrait::util::staticallyKnownBroadcastable(
+    ArrayRef<SmallVector<int64_t, 6>> shapes) {
+  assert(!shapes.empty() && "Expected at least one shape");
+  size_t maxRank = shapes[0].size();
+  for (size_t i = 1; i != shapes.size(); ++i)
+    maxRank = std::max(maxRank, shapes[i].size());
+
+  // We look backwards through every column of `shapes`.
+  for (size_t i = 0; i != maxRank; ++i) {
+    bool seenDynamic = false;
+    Optional<int64_t> nonOneDim;
+    for (ArrayRef<int64_t> extent : shapes) {
+      int64_t dim = i >= extent.size() ? 1 : extent[extent.size() - i - 1];
+
+      if (dim == 1)
+        continue;
+
+      // Dimensions are compatible when
+      //.  1. One is dynamic, the rest are 1
+      if (ShapedType::isDynamic(dim)) {
+        if (seenDynamic || nonOneDim)
+          return false;
+        seenDynamic = true;
+      }
+
+      //   2. All are 1 or a specific constant.
+      if (nonOneDim && dim != *nonOneDim)
+        return false;
+
+      nonOneDim = dim;
+    }
+  }
+  return true;
 }
 
 bool OpTrait::util::getBroadcastedShape(ArrayRef<int64_t> shape1,

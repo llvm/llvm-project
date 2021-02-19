@@ -139,7 +139,8 @@ bool checkDeclsAreVisible(const llvm::DenseSet<const Decl *> &DeclRefs,
 // Rewrites body of FD by re-spelling all of the names to make sure they are
 // still valid in context of Target.
 llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD,
-                                            const FunctionDecl *Target) {
+                                            const FunctionDecl *Target,
+                                            const HeuristicResolver *Resolver) {
   // There are three types of spellings that needs to be qualified in a function
   // body:
   // - Types:       Foo                 -> ns::Foo
@@ -162,48 +163,54 @@ llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD,
 
   tooling::Replacements Replacements;
   bool HadErrors = false;
-  findExplicitReferences(FD->getBody(), [&](ReferenceLoc Ref) {
-    // Since we want to qualify only the first qualifier, skip names with a
-    // qualifier.
-    if (Ref.Qualifier)
-      return;
-    // There might be no decl in dependent contexts, there's nothing much we can
-    // do in such cases.
-    if (Ref.Targets.empty())
-      return;
-    // Do not qualify names introduced by macro expansions.
-    if (Ref.NameLoc.isMacroID())
-      return;
+  findExplicitReferences(
+      FD->getBody(),
+      [&](ReferenceLoc Ref) {
+        // Since we want to qualify only the first qualifier, skip names with a
+        // qualifier.
+        if (Ref.Qualifier)
+          return;
+        // There might be no decl in dependent contexts, there's nothing much we
+        // can do in such cases.
+        if (Ref.Targets.empty())
+          return;
+        // Do not qualify names introduced by macro expansions.
+        if (Ref.NameLoc.isMacroID())
+          return;
 
-    for (const NamedDecl *ND : Ref.Targets) {
-      if (ND->getDeclContext() != Ref.Targets.front()->getDeclContext()) {
-        elog("define inline: Targets from multiple contexts: {0}, {1}",
-             printQualifiedName(*Ref.Targets.front()), printQualifiedName(*ND));
-        HadErrors = true;
-        return;
-      }
-    }
-    // All Targets are in the same scope, so we can safely chose first one.
-    const NamedDecl *ND = Ref.Targets.front();
-    // Skip anything from a non-namespace scope, these can be:
-    // - Function or Method scopes, which means decl is local and doesn't need
-    //   qualification.
-    // - From Class/Struct/Union scope, which again doesn't need any qualifiers,
-    //   rather the left side of it requires qualification, like:
-    //   namespace a { class Bar { public: static int x; } }
-    //   void foo() { Bar::x; }
-    //                ~~~~~ -> we need to qualify Bar not x.
-    if (!ND->getDeclContext()->isNamespace())
-      return;
+        for (const NamedDecl *ND : Ref.Targets) {
+          if (ND->getDeclContext() != Ref.Targets.front()->getDeclContext()) {
+            elog("define inline: Targets from multiple contexts: {0}, {1}",
+                 printQualifiedName(*Ref.Targets.front()),
+                 printQualifiedName(*ND));
+            HadErrors = true;
+            return;
+          }
+        }
+        // All Targets are in the same scope, so we can safely chose first one.
+        const NamedDecl *ND = Ref.Targets.front();
+        // Skip anything from a non-namespace scope, these can be:
+        // - Function or Method scopes, which means decl is local and doesn't
+        // need
+        //   qualification.
+        // - From Class/Struct/Union scope, which again doesn't need any
+        // qualifiers,
+        //   rather the left side of it requires qualification, like:
+        //   namespace a { class Bar { public: static int x; } }
+        //   void foo() { Bar::x; }
+        //                ~~~~~ -> we need to qualify Bar not x.
+        if (!ND->getDeclContext()->isNamespace())
+          return;
 
-    const std::string Qualifier = getQualification(
-        FD->getASTContext(), TargetContext, Target->getBeginLoc(), ND);
-    if (auto Err = Replacements.add(
-            tooling::Replacement(SM, Ref.NameLoc, 0, Qualifier))) {
-      HadErrors = true;
-      elog("define inline: Failed to add quals: {0}", std::move(Err));
-    }
-  });
+        const std::string Qualifier = getQualification(
+            FD->getASTContext(), TargetContext, Target->getBeginLoc(), ND);
+        if (auto Err = Replacements.add(
+                tooling::Replacement(SM, Ref.NameLoc, 0, Qualifier))) {
+          HadErrors = true;
+          elog("define inline: Failed to add quals: {0}", std::move(Err));
+        }
+      },
+      Resolver);
 
   if (HadErrors)
     return error(
@@ -230,7 +237,8 @@ llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD,
 /// Generates Replacements for changing template and function parameter names in
 /// \p Dest to be the same as in \p Source.
 llvm::Expected<tooling::Replacements>
-renameParameters(const FunctionDecl *Dest, const FunctionDecl *Source) {
+renameParameters(const FunctionDecl *Dest, const FunctionDecl *Source,
+                 const HeuristicResolver *Resolver) {
   llvm::DenseMap<const Decl *, std::string> ParamToNewName;
   llvm::DenseMap<const NamedDecl *, std::vector<SourceLocation>> RefLocs;
   auto HandleParam = [&](const NamedDecl *DestParam,
@@ -286,7 +294,8 @@ renameParameters(const FunctionDecl *Dest, const FunctionDecl *Source) {
         if (It == ParamToNewName.end())
           return;
         RefLocs[Target].push_back(Ref.NameLoc);
-      });
+      },
+      Resolver);
 
   // Now try to generate edits for all the refs.
   tooling::Replacements Replacements;
@@ -451,11 +460,13 @@ public:
       return error("Couldn't find semicolon for target declaration.");
 
     auto AddInlineIfNecessary = addInlineIfInHeader(Target);
-    auto ParamReplacements = renameParameters(Target, Source);
+    auto ParamReplacements =
+        renameParameters(Target, Source, Sel.AST->getHeuristicResolver());
     if (!ParamReplacements)
       return ParamReplacements.takeError();
 
-    auto QualifiedBody = qualifyAllDecls(Source, Target);
+    auto QualifiedBody =
+        qualifyAllDecls(Source, Target, Sel.AST->getHeuristicResolver());
     if (!QualifiedBody)
       return QualifiedBody.takeError();
 

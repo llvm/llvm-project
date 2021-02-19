@@ -62,6 +62,26 @@ define half @test_fmul(half %a, half %b) #0 {
   ret half %r
 }
 
+; CHECK-CVT-LABEL: test_fmadd:
+; CHECK-CVT-NEXT: fcvt s1, h1
+; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: fmul s0, s0, s1
+; CHECK-CVT-NEXT: fcvt h0, s0
+; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: fcvt s1, h2
+; CHECK-CVT-NEXT: fadd s0, s0, s1
+; CHECK-CVT-NEXT: fcvt h0, s0
+; CHECK-CVT-NEXT: ret
+
+; CHECK-FP16-LABEL: test_fmadd:
+; CHECK-FP16-NEXT: fmadd h0, h0, h1, h2
+; CHECK-FP16-NEXT: ret
+
+define half @test_fmadd(half %a, half %b, half %c) #0 {
+  %mul = fmul fast half %a, %b
+  %r = fadd fast half %mul, %c
+  ret half %r
+}
 ; CHECK-CVT-LABEL: test_fdiv:
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0
@@ -1305,8 +1325,7 @@ define half @test_round(half %a) #0 {
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_fmuladd:
-; CHECK-FP16-NEXT: fmul h0, h0, h1
-; CHECK-FP16-NEXT: fadd h0, h0, h2
+; CHECK-FP16-NEXT: fmadd h0, h0, h1, h2
 ; CHECK-FP16-NEXT: ret
 
 define half @test_fmuladd(half %a, half %b, half %c) #0 {

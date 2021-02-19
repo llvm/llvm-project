@@ -100,6 +100,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_proc_bind:
   case OMPC_safelen:
   case OMPC_simdlen:
+  case OMPC_sizes:
   case OMPC_allocator:
   case OMPC_allocate:
   case OMPC_collapse:
@@ -188,6 +189,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_num_threads:
   case OMPC_safelen:
   case OMPC_simdlen:
+  case OMPC_sizes:
   case OMPC_allocator:
   case OMPC_allocate:
   case OMPC_collapse:
@@ -901,6 +903,25 @@ OMPInReductionClause *OMPInReductionClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPInReductionClause(N);
 }
 
+OMPSizesClause *OMPSizesClause::Create(const ASTContext &C,
+                                       SourceLocation StartLoc,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation EndLoc,
+                                       ArrayRef<Expr *> Sizes) {
+  OMPSizesClause *Clause = CreateEmpty(C, Sizes.size());
+  Clause->setLocStart(StartLoc);
+  Clause->setLParenLoc(LParenLoc);
+  Clause->setLocEnd(EndLoc);
+  Clause->setSizesRefs(Sizes);
+  return Clause;
+}
+
+OMPSizesClause *OMPSizesClause::CreateEmpty(const ASTContext &C,
+                                            unsigned NumSizes) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumSizes));
+  return new (Mem) OMPSizesClause(NumSizes);
+}
+
 OMPAllocateClause *
 OMPAllocateClause::Create(const ASTContext &C, SourceLocation StartLoc,
                           SourceLocation LParenLoc, Expr *Allocator,
@@ -1525,6 +1546,18 @@ void OMPClausePrinter::VisitOMPSafelenClause(OMPSafelenClause *Node) {
 void OMPClausePrinter::VisitOMPSimdlenClause(OMPSimdlenClause *Node) {
   OS << "simdlen(";
   Node->getSimdlen()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
+  OS << "sizes(";
+  bool First = true;
+  for (auto Size : Node->getSizesRefs()) {
+    if (!First)
+      OS << ", ";
+    Size->printPretty(OS, nullptr, Policy, 0);
+    First = false;
+  }
   OS << ")";
 }
 

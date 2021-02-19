@@ -141,6 +141,12 @@ class InstSI <dag outs, dag ins, string asm = "",
   // Must be 0 for non-FLAT instructions.
   field bit IsFlatScratch = 0;
 
+  // Atomic without a return.
+  field bit IsAtomicNoRet = 0;
+
+  // Atomic with return.
+  field bit IsAtomicRet = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -214,6 +220,10 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{56} = IsFlatScratch;
 
+  let TSFlags{57} = IsAtomicNoRet;
+
+  let TSFlags{58} = IsAtomicRet;
+
   let SchedRW = [Write32Bit];
 
   let AsmVariantName = AMDGPUAsmVariants.Default;
@@ -282,7 +292,7 @@ class VINTRPe <bits<2> op> : Enc32 {
 }
 
 class MIMGe_gfxpre11 : Enc64 {
-  bits<8> vdata;
+  bits<10> vdata;
   bits<4> dmask;
   bits<1> unorm;
   bits<1> glc;
@@ -298,11 +308,10 @@ class MIMGe_gfxpre11 : Enc64 {
   let Inst{12} = unorm;
   let Inst{13} = glc;
   let Inst{15} = r128;
-  let Inst{16} = tfe;
   let Inst{17} = lwe;
   let Inst{25} = slc;
   let Inst{31-26} = 0x3c;
-  let Inst{47-40} = vdata;
+  let Inst{47-40} = vdata{7-0};
   let Inst{52-48} = srsrc{6-2};
   let Inst{57-53} = ssamp{6-2};
   let Inst{63} = d16;
@@ -311,9 +320,25 @@ class MIMGe_gfxpre11 : Enc64 {
 class MIMGe_gfx6789 <bits<8> op> : MIMGe_gfxpre11 {
   bits<8> vaddr;
   bits<1> da;
+  bits<1> sccb;
 
   let Inst{0} = op{7};
+  let Inst{7} = sccb;
   let Inst{14} = da;
+  let Inst{16} = tfe;
+  let Inst{24-18} = op{6-0};
+  let Inst{39-32} = vaddr;
+}
+
+class MIMGe_gfx90a <bits<8> op> : MIMGe_gfxpre11 {
+  bits<8> vaddr;
+  bits<1> da;
+  bits<1> sccb;
+
+  let Inst{0} = op{7};
+  let Inst{7} = sccb;
+  let Inst{14} = da;
+  let Inst{16} = vdata{9}; // ACC bit
   let Inst{24-18} = op{6-0};
   let Inst{39-32} = vaddr;
 }
@@ -329,6 +354,7 @@ class MIMGe_gfx10 <bits<8> op> : MIMGe_gfxpre11 {
   let Inst{2-1} = nsa;
   let Inst{5-3} = dim;
   let Inst{7} = dlc;
+  let Inst{16} = tfe;
   let Inst{24-18} = op{6-0};
   let Inst{39-32} = vaddr0;
   let Inst{62} = a16;

@@ -44,6 +44,6 @@ public:
   lldb_private::LazyBool disable_aslr;
 }; // CommandOptionsProcessLaunch
 
-}; // namespace lldb_private
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_COMMANDS_COMMANDOPTIONSPROCESSLAUNCH_H

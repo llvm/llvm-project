@@ -156,8 +156,7 @@ bool ThreadPlan::OkayToDiscard() {
 }
 
 lldb::StateType ThreadPlan::RunState() {
-  if (m_tracer_sp && m_tracer_sp->TracingEnabled() &&
-      m_tracer_sp->SingleStepEnabled())
+  if (m_tracer_sp && m_tracer_sp->TracingEnabled())
     return eStateStepping;
   else
     return GetPlanRunState();

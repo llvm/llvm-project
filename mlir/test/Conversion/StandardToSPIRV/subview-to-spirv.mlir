@@ -22,7 +22,7 @@ func @fold_static_stride_subview
   //     CHECK: %[[T2:.*]] = muli %[[ARG4]], %[[ARG2]]
   //     CHECK: %[[T3:.*]] = addi %[[T2]], %[[C2]]
   //     CHECK: %[[LOADVAL:.*]] = load %[[ARG0]][%[[T1]], %[[T3]]]
-  //     CHECK: %[[STOREVAL:.*]] = sqrt %[[LOADVAL]]
+  //     CHECK: %[[STOREVAL:.*]] = math.sqrt %[[LOADVAL]]
   //     CHECK: %[[T6:.*]] = muli %[[ARG3]], %[[C3]]
   //     CHECK: %[[T7:.*]] = addi %[[ARG1]], %[[T6]]
   //     CHECK: %[[T8:.*]] = muli %[[ARG4]], %[[ARG2]]
@@ -30,7 +30,7 @@ func @fold_static_stride_subview
   //     CHECK: store %[[STOREVAL]], %[[ARG0]][%[[T7]], %[[T9]]]
   %0 = subview %arg0[%arg1, 2][4, 4][3, %arg2] : memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [96, ?]>
   %1 = load %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [96, ?]>
-  %2 = sqrt %1 : f32
+  %2 = math.sqrt %1 : f32
   store %2, %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [96, ?]>
   return
 }

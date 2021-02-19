@@ -10,13 +10,8 @@
 # RUN: cd %t.dir
 # RUN: ld.lld build1/foo.o -o /dev/null --reproduce repro1.tar --lto-sample-profile=%t.dir/build1/empty_profile.txt
 # RUN: tar tvf repro1.tar | FileCheck %s --implicit-check-not={{.}}
-# RUN: tar xvf repro1.tar &> %t2
-# RUN: cat repro1/response.txt >> %t2
-# RUN: FileCheck %s --check-prefix=RSP < %t2
 
 # CHECK-DAG: {{.*}} repro1/{{.*}}/empty_profile.txt
 # CHECK-DAG: {{.*}} repro1/response.txt
 # CHECK-DAG: {{.*}} repro1/version.txt
 # CHECK-DAG: {{.*}} repro1/{{.*}}/foo.o
-# RSP:       repro1/[[PATH:.*]]/empty_profile.txt
-# RSP:       --lto-sample-profile=[[PATH]]/empty_profile.txt

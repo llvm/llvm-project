@@ -62,8 +62,8 @@ tracksRegLiveness: true
 registers:
   - { id: 0, class: rgpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gprnopc, preferred-register: '' }
-  - { id: 3, class: gprnopc, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+  - { id: 3, class: rgpr, preferred-register: '' }
   - { id: 4, class: tgpreven, preferred-register: '' }
   - { id: 5, class: gprlr, preferred-register: '' }
   - { id: 6, class: rgpr, preferred-register: '' }
@@ -129,8 +129,8 @@ body:             |
   ; CHECK:   [[t2DoLoopStartTP:%[0-9]+]]:gprlr = t2DoLoopStartTP [[COPY4]], [[COPY6]]
   ; CHECK: bb.3.vector.body:
   ; CHECK:   successors: %bb.3(0x7c000000), %bb.4(0x04000000)
-  ; CHECK:   [[PHI:%[0-9]+]]:gprnopc = PHI [[COPY2]], %bb.2, %10, %bb.3
-  ; CHECK:   [[PHI1:%[0-9]+]]:gprnopc = PHI [[COPY1]], %bb.2, %9, %bb.3
+  ; CHECK:   [[PHI:%[0-9]+]]:rgpr = PHI [[COPY2]], %bb.2, %10, %bb.3
+  ; CHECK:   [[PHI1:%[0-9]+]]:rgpr = PHI [[COPY1]], %bb.2, %9, %bb.3
   ; CHECK:   [[PHI2:%[0-9]+]]:tgpreven = PHI [[COPY5]], %bb.2, %8, %bb.3
   ; CHECK:   [[PHI3:%[0-9]+]]:gprlr = PHI [[t2DoLoopStartTP]], %bb.2, %33, %bb.3
   ; CHECK:   [[PHI4:%[0-9]+]]:rgpr = PHI [[COPY6]], %bb.2, %7, %bb.3
@@ -184,8 +184,8 @@ body:             |
   bb.2.vector.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
 
-    %2:gprnopc = PHI %13, %bb.1, %10, %bb.2
-    %3:gprnopc = PHI %14, %bb.1, %9, %bb.2
+    %2:rgpr = PHI %13, %bb.1, %10, %bb.2
+    %3:rgpr = PHI %14, %bb.1, %9, %bb.2
     %4:tgpreven = PHI %23, %bb.1, %8, %bb.2
     %5:gprlr = PHI %1, %bb.1, %11, %bb.2
     %6:rgpr = PHI %35, %bb.1, %7, %bb.2

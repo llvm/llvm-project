@@ -351,7 +351,7 @@ define void @test10()  {
 
 define void @test11() {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable(8) i8* @_Znwm(i64 8) #7
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable(8) i8* @_Znwm(i64 8) #8
 ; CHECK-NEXT:    call void @_ZdlPv(i8* nonnull [[CALL]])
 ; CHECK-NEXT:    ret void
 ;
@@ -390,3 +390,32 @@ if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
+; Freeing a no-free pointer -> full UB
+define void @test13(i8* nofree %foo) {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    ret void
+;
+  call void @free(i8* %foo)
+  ret void
+}
+
+; Freeing a no-free pointer -> full UB
+define void @test14(i8* %foo) nofree {
+; CHECK-LABEL: @test14(
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    ret void
+;
+  call void @free(i8* %foo)
+  ret void
+}
+
+; free call marked no-free -> full UB
+define void @test15(i8* %foo) {
+; CHECK-LABEL: @test15(
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    ret void
+;
+  call void @free(i8* %foo) nofree
+  ret void
+}

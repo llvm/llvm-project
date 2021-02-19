@@ -92,6 +92,15 @@ AffineExpr::replaceDimsAndSymbols(ArrayRef<AffineExpr> dimReplacements,
   llvm_unreachable("Unknown AffineExpr");
 }
 
+AffineExpr AffineExpr::replaceDims(ArrayRef<AffineExpr> dimReplacements) const {
+  return replaceDimsAndSymbols(dimReplacements, {});
+}
+
+AffineExpr
+AffineExpr::replaceSymbols(ArrayRef<AffineExpr> symReplacements) const {
+  return replaceDimsAndSymbols({}, symReplacements);
+}
+
 /// Replace symbols[0 .. numDims - 1] by symbols[shift .. shift + numDims - 1].
 AffineExpr AffineExpr::shiftDims(unsigned numDims, unsigned shift) const {
   SmallVector<AffineExpr, 4> dims;

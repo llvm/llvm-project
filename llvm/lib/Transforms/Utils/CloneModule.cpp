@@ -120,13 +120,8 @@ std::unique_ptr<Module> llvm::CloneModule(
 
     SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
     G.getAllMetadata(MDs);
-
-    // FIXME: Stop using RF_ReuseAndMutateDistinctMDs here, since it's unsound
-    // to mutate metadata that is still referenced by the source module unless
-    // the source is about to be discarded (see IRMover for a valid use).
     for (auto MD : MDs)
-      GV->addMetadata(MD.first, *MapMetadata(MD.second, VMap,
-                                             RF_ReuseAndMutateDistinctMDs));
+      GV->addMetadata(MD.first, *MapMetadata(MD.second, VMap));
 
     if (G.isDeclaration())
       continue;
@@ -165,7 +160,8 @@ std::unique_ptr<Module> llvm::CloneModule(
     }
 
     SmallVector<ReturnInst *, 8> Returns; // Ignore returns cloned.
-    CloneFunctionInto(F, &I, VMap, /*ModuleLevelChanges=*/true, Returns);
+    CloneFunctionInto(F, &I, VMap, CloneFunctionChangeType::ClonedModule,
+                      Returns);
 
     if (I.hasPersonalityFn())
       F->setPersonalityFn(MapValue(I.getPersonalityFn(), VMap));
@@ -185,25 +181,13 @@ std::unique_ptr<Module> llvm::CloneModule(
   }
 
   // And named metadata....
-  const auto* LLVM_DBG_CU = M.getNamedMetadata("llvm.dbg.cu");
   for (Module::const_named_metadata_iterator I = M.named_metadata_begin(),
                                              E = M.named_metadata_end();
        I != E; ++I) {
     const NamedMDNode &NMD = *I;
     NamedMDNode *NewNMD = New->getOrInsertNamedMetadata(NMD.getName());
-    if (&NMD == LLVM_DBG_CU) {
-      // Do not insert duplicate operands.
-      SmallPtrSet<const void*, 8> Visited;
-      for (const auto* Operand : NewNMD->operands())
-        Visited.insert(Operand);
-      for (const auto* Operand : NMD.operands()) {
-        auto* MappedOperand = MapMetadata(Operand, VMap);
-        if (Visited.insert(MappedOperand).second)
-          NewNMD->addOperand(MappedOperand);
-      }
-    } else
-      for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
-        NewNMD->addOperand(MapMetadata(NMD.getOperand(i), VMap));
+    for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
+      NewNMD->addOperand(MapMetadata(NMD.getOperand(i), VMap));
   }
 
   return New;

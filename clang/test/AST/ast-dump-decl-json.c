@@ -948,6 +948,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "valueCategory": "rvalue",
+// CHECK-NEXT:    "value": "1",
 // CHECK-NEXT:    "inner": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
@@ -1668,6 +1669,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "valueCategory": "rvalue",
+// CHECK-NEXT:    "value": "1",
 // CHECK-NEXT:    "inner": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",

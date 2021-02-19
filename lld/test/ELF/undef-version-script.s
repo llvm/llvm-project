@@ -34,8 +34,8 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-.global foo
 .weak bar
+.global foo
 .data
   .dc.a foo
   .dc.a bar

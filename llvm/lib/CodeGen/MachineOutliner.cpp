@@ -518,9 +518,8 @@ void MachineOutliner::findCandidates(
   // First, find all of the repeated substrings in the tree of minimum length
   // 2.
   std::vector<Candidate> CandidatesForRepeatedSeq;
-  for (auto It = ST.begin(), Et = ST.end(); It != Et; ++It) {
+  for (const SuffixTree::RepeatedSubstring &RS : ST) {
     CandidatesForRepeatedSeq.clear();
-    SuffixTree::RepeatedSubstring RS = *It;
     unsigned StringLen = RS.Length;
     for (const unsigned &StartIdx : RS.StartIndices) {
       unsigned EndIdx = StartIdx + StringLen - 1;

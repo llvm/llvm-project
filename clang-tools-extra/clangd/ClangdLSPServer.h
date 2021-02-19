@@ -14,6 +14,7 @@
 #include "Features.inc"
 #include "FindSymbols.h"
 #include "GlobalCompilationDatabase.h"
+#include "LSPBinder.h"
 #include "Protocol.h"
 #include "Transport.h"
 #include "support/Context.h"
@@ -38,7 +39,8 @@ class SymbolIndex;
 /// MessageHandler binds the implemented LSP methods (e.g. onInitialize) to
 /// corresponding JSON-RPC methods ("initialize").
 /// The server also supports $/cancelRequest (MessageHandler provides this).
-class ClangdLSPServer : private ClangdServer::Callbacks {
+class ClangdLSPServer : private ClangdServer::Callbacks,
+                        private LSPBinder::RawOutgoing {
 public:
   struct Options : ClangdServer::Options {
     /// Supplies configuration (overrides ClangdServer::ContextProvider).
@@ -90,8 +92,8 @@ private:
   // Calls have signature void(const Params&, Callback<Response>).
   void onInitialize(const InitializeParams &, Callback<llvm::json::Value>);
   void onInitialized(const InitializedParams &);
-  void onShutdown(Callback<std::nullptr_t>);
-  void onSync(Callback<std::nullptr_t>);
+  void onShutdown(const NoParams &, Callback<std::nullptr_t>);
+  void onSync(const NoParams &, Callback<std::nullptr_t>);
   void onDocumentDidOpen(const DidOpenTextDocumentParams &);
   void onDocumentDidChange(const DidChangeTextDocumentParams &);
   void onDocumentDidClose(const DidCloseTextDocumentParams &);
@@ -126,7 +128,6 @@ private:
   void onDocumentHighlight(const TextDocumentPositionParams &,
                            Callback<std::vector<DocumentHighlight>>);
   void onFileEvent(const DidChangeWatchedFilesParams &);
-  void onCommand(const ExecuteCommandParams &, Callback<llvm::json::Value>);
   void onWorkspaceSymbol(const WorkspaceSymbolParams &,
                          Callback<std::vector<SymbolInformation>>);
   void onPrepareRename(const TextDocumentPositionParams &,
@@ -158,8 +159,33 @@ private:
                              Callback<SemanticTokensOrDelta>);
   /// This is a clangd extension. Provides a json tree representing memory usage
   /// hierarchy.
-  void onMemoryUsage(Callback<MemoryTree>);
+  void onMemoryUsage(const NoParams &, Callback<MemoryTree>);
+  void onCommand(const ExecuteCommandParams &, Callback<llvm::json::Value>);
 
+  /// Implement commands.
+  void onCommandApplyEdit(const WorkspaceEdit &, Callback<llvm::json::Value>);
+  void onCommandApplyTweak(const TweakArgs &, Callback<llvm::json::Value>);
+
+  /// Outgoing LSP calls.
+  LSPBinder::OutgoingMethod<ApplyWorkspaceEditParams,
+                            ApplyWorkspaceEditResponse>
+      ApplyWorkspaceEdit;
+  LSPBinder::OutgoingNotification<ShowMessageParams> ShowMessage;
+  LSPBinder::OutgoingNotification<PublishDiagnosticsParams> PublishDiagnostics;
+  LSPBinder::OutgoingNotification<FileStatus> NotifyFileStatus;
+  LSPBinder::OutgoingMethod<WorkDoneProgressCreateParams, std::nullptr_t>
+      CreateWorkDoneProgress;
+  LSPBinder::OutgoingNotification<ProgressParams<WorkDoneProgressBegin>>
+      BeginWorkDoneProgress;
+  LSPBinder::OutgoingNotification<ProgressParams<WorkDoneProgressReport>>
+      ReportWorkDoneProgress;
+  LSPBinder::OutgoingNotification<ProgressParams<WorkDoneProgressEnd>>
+      EndWorkDoneProgress;
+
+  void applyEdit(WorkspaceEdit WE, llvm::json::Value Success,
+                 Callback<llvm::json::Value> Reply);
+
+  void bindMethods(LSPBinder &);
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 
   /// Checks if completion request should be ignored. We need this due to the
@@ -175,9 +201,6 @@ private:
   void reparseOpenFilesIfNeeded(
       llvm::function_ref<bool(llvm::StringRef File)> Filter);
   void applyConfiguration(const ConfigurationSettings &Settings);
-
-  /// Sends a "publishDiagnostics" notification to the LSP client.
-  void publishDiagnostics(const PublishDiagnosticsParams &);
 
   /// Runs profiling and exports memory usage metrics if tracing is enabled and
   /// profiling hasn't happened recently.
@@ -211,58 +234,18 @@ private:
   std::mutex SemanticTokensMutex;
   llvm::StringMap<SemanticTokens> LastSemanticTokens;
 
-  // Most code should not deal with Transport directly.
-  // MessageHandler deals with incoming messages, use call() etc for outgoing.
+  // Most code should not deal with Transport, callMethod, notify directly.
+  // Use LSPBinder to handle incoming and outgoing calls.
   clangd::Transport &Transp;
   class MessageHandler;
   std::unique_ptr<MessageHandler> MsgHandler;
   std::mutex TranspWriter;
 
-  template <typename T>
-  static Expected<T> parse(const llvm::json::Value &Raw,
-                           llvm::StringRef PayloadName,
-                           llvm::StringRef PayloadKind) {
-    T Result;
-    llvm::json::Path::Root Root;
-    if (!fromJSON(Raw, Result, Root)) {
-      elog("Failed to decode {0} {1}: {2}", PayloadName, PayloadKind,
-           Root.getError());
-      // Dump the relevant parts of the broken message.
-      std::string Context;
-      llvm::raw_string_ostream OS(Context);
-      Root.printErrorContext(Raw, OS);
-      vlog("{0}", OS.str());
-      // Report the error (e.g. to the client).
-      return llvm::make_error<LSPError>(
-          llvm::formatv("failed to decode {0} {1}: {2}", PayloadName,
-                        PayloadKind, fmt_consume(Root.getError())),
-          ErrorCode::InvalidParams);
-    }
-    return std::move(Result);
-  }
+  void callMethod(StringRef Method, llvm::json::Value Params,
+                  Callback<llvm::json::Value> CB) override;
+  void notify(StringRef Method, llvm::json::Value Params) override;
 
-  template <typename Response>
-  void call(StringRef Method, llvm::json::Value Params, Callback<Response> CB) {
-    // Wrap the callback with LSP conversion and error-handling.
-    auto HandleReply =
-        [CB = std::move(CB), Ctx = Context::current().clone(),
-         Method = Method.str()](
-            llvm::Expected<llvm::json::Value> RawResponse) mutable {
-          if (!RawResponse)
-            return CB(RawResponse.takeError());
-          CB(parse<Response>(*RawResponse, Method, "response"));
-        };
-    callRaw(Method, std::move(Params), std::move(HandleReply));
-  }
-  void callRaw(StringRef Method, llvm::json::Value Params,
-               Callback<llvm::json::Value> CB);
-  void notify(StringRef Method, llvm::json::Value Params);
-  template <typename T> void progress(const llvm::json::Value &Token, T Value) {
-    ProgressParams<T> Params;
-    Params.token = Token;
-    Params.value = std::move(Value);
-    notify("$/progress", Params);
-  }
+  LSPBinder::RawHandlers Handlers;
 
   const ThreadsafeFS &TFS;
   /// Options used for diagnostics.

@@ -17,6 +17,17 @@
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #endif
 
+// First, test that Clang gracefully handles missing types.
+#ifdef NO_HEADER
+void test_without_header() {
+  barrier(0);
+  // expected-note@-1 0+{{candidate function not viable}}
+  // expected-error@-2 0+{{argument type 'void' is incomplete}}
+  // expected-error@-3 0+{{no matching function for call to 'barrier'}}
+  // expected-error@* {{typedef type cl_mem_fence_flags not found; include the base header with -finclude-default-header}}
+}
+#endif
+
 // Provide typedefs when invoking clang without -finclude-default-header.
 #ifdef NO_HEADER
 typedef unsigned char uchar;
@@ -33,6 +44,9 @@ typedef int int2 __attribute__((ext_vector_type(2)));
 typedef int int4 __attribute__((ext_vector_type(4)));
 typedef uint uint4 __attribute__((ext_vector_type(4)));
 typedef long long2 __attribute__((ext_vector_type(2)));
+
+typedef uint cl_mem_fence_flags;
+#define CLK_GLOBAL_MEM_FENCE 0x02
 
 // Enable extensions that are enabled in opencl-c-base.h.
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -52,6 +66,18 @@ kernel void test_pointers(volatile global void *global_p, global const int4 *a) 
   atom_add((volatile __global int *)global_p, i);
   atom_cmpxchg((volatile __global unsigned int *)global_p, ui, ui);
 }
+
+// Only test enum arguments when the base header is included, because we need
+// the enum declarations.
+#if !defined(NO_HEADER) && (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+kernel void test_enum_args(volatile global atomic_int *global_p, global int *expected) {
+  int desired;
+  atomic_compare_exchange_strong_explicit(global_p, expected, desired,
+                                          memory_order_acq_rel,
+                                          memory_order_relaxed,
+                                          memory_scope_work_group);
+}
+#endif
 
 kernel void basic_conversion() {
   double d;
@@ -183,6 +209,8 @@ kernel void basic_vector_data() {
 
 kernel void basic_work_item() {
   uint ui;
+
+  barrier(CLK_GLOBAL_MEM_FENCE);
 
   get_enqueued_local_size(ui);
 #if !defined(__OPENCL_CPP_VERSION__) && __OPENCL_C_VERSION__ < CL_VERSION_2_0

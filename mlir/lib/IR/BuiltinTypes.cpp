@@ -197,6 +197,75 @@ LogicalResult OpaqueType::verifyConstructionInvariants(Location loc,
 constexpr int64_t ShapedType::kDynamicSize;
 constexpr int64_t ShapedType::kDynamicStrideOrOffset;
 
+ShapedType ShapedType::clone(ArrayRef<int64_t> shape, Type elementType) {
+  if (auto other = dyn_cast<MemRefType>()) {
+    MemRefType::Builder b(other);
+    b.setShape(shape);
+    b.setElementType(elementType);
+    return b;
+  }
+
+  if (auto other = dyn_cast<UnrankedMemRefType>()) {
+    MemRefType::Builder b(shape, elementType);
+    b.setMemorySpace(other.getMemorySpace());
+    return b;
+  }
+
+  if (isa<TensorType>())
+    return RankedTensorType::get(shape, elementType);
+
+  if (isa<VectorType>())
+    return VectorType::get(shape, elementType);
+
+  llvm_unreachable("Unhandled ShapedType clone case");
+}
+
+ShapedType ShapedType::clone(ArrayRef<int64_t> shape) {
+  if (auto other = dyn_cast<MemRefType>()) {
+    MemRefType::Builder b(other);
+    b.setShape(shape);
+    return b;
+  }
+
+  if (auto other = dyn_cast<UnrankedMemRefType>()) {
+    MemRefType::Builder b(shape, other.getElementType());
+    b.setShape(shape);
+    b.setMemorySpace(other.getMemorySpace());
+    return b;
+  }
+
+  if (isa<TensorType>())
+    return RankedTensorType::get(shape, getElementType());
+
+  if (isa<VectorType>())
+    return VectorType::get(shape, getElementType());
+
+  llvm_unreachable("Unhandled ShapedType clone case");
+}
+
+ShapedType ShapedType::clone(Type elementType) {
+  if (auto other = dyn_cast<MemRefType>()) {
+    MemRefType::Builder b(other);
+    b.setElementType(elementType);
+    return b;
+  }
+
+  if (auto other = dyn_cast<UnrankedMemRefType>()) {
+    return UnrankedMemRefType::get(elementType, other.getMemorySpace());
+  }
+
+  if (isa<TensorType>()) {
+    if (hasRank())
+      return RankedTensorType::get(getShape(), elementType);
+    return UnrankedTensorType::get(elementType);
+  }
+
+  if (isa<VectorType>())
+    return VectorType::get(getShape(), elementType);
+
+  llvm_unreachable("Unhandled ShapedType clone hit");
+}
+
 Type ShapedType::getElementType() const {
   return static_cast<ImplType *>(impl)->elementType;
 }
@@ -209,8 +278,10 @@ int64_t ShapedType::getNumElements() const {
   assert(hasStaticShape() && "cannot get element count of dynamic shaped type");
   auto shape = getShape();
   int64_t num = 1;
-  for (auto dim : shape)
+  for (auto dim : shape) {
     num *= dim;
+    assert(num >= 0 && "integer overflow in element count computation");
+  }
   return num;
 }
 
@@ -801,10 +872,12 @@ AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                             ? getAffineSymbolExpr(nSymbols++, context)
                             : getAffineConstantExpr(runningSize, context);
     expr = expr ? expr + dimExpr * stride : dimExpr * stride;
-    if (size > 0)
+    if (size > 0) {
       runningSize *= size;
-    else
+      assert(runningSize > 0 && "integer overflow in size computation");
+    } else {
       dynamicPoisonBit = true;
+    }
   }
   return simplifyAffineExpr(expr, numDims, nSymbols);
 }
@@ -829,7 +902,17 @@ AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
 /// Return true if the layout for `t` is compatible with strided semantics.
 bool mlir::isStrided(MemRefType t) {
   int64_t offset;
-  SmallVector<int64_t, 4> stridesAndOffset;
-  auto res = getStridesAndOffset(t, stridesAndOffset, offset);
+  SmallVector<int64_t, 4> strides;
+  auto res = getStridesAndOffset(t, strides, offset);
   return succeeded(res);
+}
+
+/// Return the layout map in strided linear layout AffineMap form.
+/// Return null if the layout is not compatible with a strided layout.
+AffineMap mlir::getStridedLinearLayoutMap(MemRefType t) {
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  if (failed(getStridesAndOffset(t, strides, offset)))
+    return AffineMap();
+  return makeStridedLinearLayoutMap(strides, offset, t.getContext());
 }

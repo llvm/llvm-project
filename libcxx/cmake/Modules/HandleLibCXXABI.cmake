@@ -121,6 +121,8 @@ elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxrt")
   if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
     set(LIBCXX_CXX_ABI_INCLUDE_PATHS "/usr/include/c++/v1")
   endif()
+  # libcxxrt does not provide aligned new and delete operators
+  set(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS ON)
   setup_abi_lib(
     "-DLIBCXXRT"
     "cxxrt" "cxxrt" "cxxabi.h;unwind.h;unwind-arm.h;unwind-itanium.h" ""

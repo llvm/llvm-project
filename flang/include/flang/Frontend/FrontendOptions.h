@@ -9,6 +9,8 @@
 #define LLVM_FLANG_FRONTEND_FRONTENDOPTIONS_H
 
 #include "flang/Common/Fortran-features.h"
+#include "flang/Parser/characters.h"
+#include "flang/Parser/unparse.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -32,6 +34,22 @@ enum ActionKind {
   /// Emit a .o file.
   EmitObj,
 
+  /// Parse, unparse the parse-tree and output a Fortran source file
+  DebugUnparse,
+
+  /// Parse, resolve the sybmols, unparse the parse-tree and then output a
+  /// Fortran source file
+  DebugUnparseWithSymbols,
+
+  /// Parse, run semantics and then output symbols from semantics
+  DebugDumpSymbols,
+
+  /// Parse, run semantics and then output the parse tree
+  DebugDumpParseTree,
+
+  /// Dump provenance
+  DebugDumpProvenance
+
   /// TODO: RunPreprocessor, EmitLLVM, EmitLLVMOnly,
   /// EmitCodeGenOnly, EmitAssembly, (...)
 };
@@ -40,29 +58,13 @@ enum ActionKind {
 /// \return True if the file extension should be processed as fixed form
 bool isFixedFormSuffix(llvm::StringRef suffix);
 
+// TODO: Find a more suitable location for this. Added for compability with
+// f18.cpp (this is equivalent to `asFortran` defined there).
+Fortran::parser::AnalyzedObjectsAsFortran getBasicAsFortran();
+
 /// \param suffix The file extension
 /// \return True if the file extension should be processed as free form
 bool isFreeFormSuffix(llvm::StringRef suffix);
-
-inline const char *GetActionKindName(const ActionKind ak) {
-  switch (ak) {
-  case InputOutputTest:
-    return "InputOutputTest";
-  case PrintPreprocessedInput:
-    return "PrintPreprocessedInput";
-  case ParseSyntaxOnly:
-    return "ParseSyntaxOnly";
-  default:
-    return "<unknown ActionKind>";
-    // TODO:
-    // case RunPreprocessor:
-    // case ParserSyntaxOnly:
-    // case EmitLLVM:
-    // case EmitLLVMOnly:
-    // case EmitCodeGenOnly:
-    // (...)
-  }
-}
 
 enum class Language : uint8_t {
   Unknown,
@@ -181,6 +183,9 @@ public:
 
   // Language features
   common::LanguageFeatureControl features_;
+
+  // Source file encoding
+  Fortran::parser::Encoding encoding_{Fortran::parser::Encoding::UTF_8};
 
 public:
   FrontendOptions() : showHelp_(false), showVersion_(false) {}

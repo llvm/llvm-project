@@ -18,7 +18,7 @@ func @rsqrt(%arg0 : f32) {
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
   // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%arg0) : (f32) -> f32
   // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : f32
-  %0 = rsqrt %arg0 : f32
+  %0 = math.rsqrt %arg0 : f32
   std.return
 }
 
@@ -28,7 +28,7 @@ func @rsqrt(%arg0 : f32) {
 // CHECK-SAME: f32
 func @sine(%arg0 : f32) {
   // CHECK: "llvm.intr.sin"(%arg0) : (f32) -> f32
-  %0 = sin %arg0 : f32
+  %0 = math.sin %arg0 : f32
   std.return
 }
 
@@ -61,7 +61,7 @@ func @rsqrt_double(%arg0 : f64) {
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f64) : f64
   // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%arg0) : (f64) -> f64
   // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : f64
-  %0 = rsqrt %arg0 : f64
+  %0 = math.rsqrt %arg0 : f64
   std.return
 }
 
@@ -73,7 +73,7 @@ func @rsqrt_vector(%arg0 : vector<4xf32>) {
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
   // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%arg0) : (vector<4xf32>) -> vector<4xf32>
   // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : vector<4xf32>
-  %0 = rsqrt %arg0 : vector<4xf32>
+  %0 = math.rsqrt %arg0 : vector<4xf32>
   std.return
 }
 
@@ -87,7 +87,7 @@ func @rsqrt_multidim_vector(%arg0 : vector<4x3xf32>) {
   // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%[[EXTRACT]]) : (vector<3xf32>) -> vector<3xf32>
   // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : vector<3xf32>
   // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[DIV]], %0[0] : !llvm.array<4 x vector<3xf32>>
-  %0 = rsqrt %arg0 : vector<4x3xf32>
+  %0 = math.rsqrt %arg0 : vector<4x3xf32>
   std.return
 }
 
@@ -220,6 +220,19 @@ func private @zero_result_func()
 // CHECK-SAME: f64
 func @powf(%arg0 : f64) {
   // CHECK: %[[POWF:.*]] = "llvm.intr.pow"(%arg0, %arg0) : (f64, f64) -> f64
-  %0 = std.powf %arg0, %arg0 : f64
+  %0 = math.powf %arg0, %arg0 : f64
+  std.return
+}
+
+// -----
+
+// CHECK-LABEL: func @fmaf(
+// CHECK-SAME: %[[ARG0:.*]]: f32
+// CHECK-SAME: %[[ARG1:.*]]: vector<4xf32>
+func @fmaf(%arg0: f32, %arg1: vector<4xf32>) {
+  // CHECK: %[[S:.*]] = "llvm.intr.fma"(%[[ARG0]], %[[ARG0]], %[[ARG0]]) : (f32, f32, f32) -> f32
+  %0 = fmaf %arg0, %arg0, %arg0 : f32
+  // CHECK: %[[V:.*]] = "llvm.intr.fma"(%[[ARG1]], %[[ARG1]], %[[ARG1]]) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %1 = fmaf %arg1, %arg1, %arg1 : vector<4xf32>
   std.return
 }

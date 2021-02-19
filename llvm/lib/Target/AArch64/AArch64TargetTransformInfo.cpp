@@ -1089,29 +1089,31 @@ bool AArch64TTIImpl::shouldConsiderAddressTypePromotion(
   return Considerable;
 }
 
-bool AArch64TTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
-                                           TTI::ReductionFlags Flags) const {
-  auto *VTy = cast<VectorType>(Ty);
-  unsigned ScalarBits = Ty->getScalarSizeInBits();
-  switch (Opcode) {
-  case Instruction::FAdd:
-  case Instruction::FMul:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor:
-  case Instruction::Mul:
+bool AArch64TTIImpl::isLegalToVectorizeReduction(RecurrenceDescriptor RdxDesc,
+                                                 ElementCount VF) const {
+  if (!VF.isScalable())
+    return true;
+
+  Type *Ty = RdxDesc.getRecurrenceType();
+  if (Ty->isBFloatTy() || !isLegalElementTypeForSVE(Ty))
     return false;
-  case Instruction::Add:
-    return ScalarBits * cast<FixedVectorType>(VTy)->getNumElements() >= 128;
-  case Instruction::ICmp:
-    return (ScalarBits < 64) &&
-           (ScalarBits * cast<FixedVectorType>(VTy)->getNumElements() >= 128);
-  case Instruction::FCmp:
-    return Flags.NoNaN;
+
+  switch (RdxDesc.getRecurrenceKind()) {
+  case RecurKind::Add:
+  case RecurKind::FAdd:
+  case RecurKind::And:
+  case RecurKind::Or:
+  case RecurKind::Xor:
+  case RecurKind::SMin:
+  case RecurKind::SMax:
+  case RecurKind::UMin:
+  case RecurKind::UMax:
+  case RecurKind::FMin:
+  case RecurKind::FMax:
+    return true;
   default:
-    llvm_unreachable("Unhandled reduction opcode");
+    return false;
   }
-  return false;
 }
 
 int AArch64TTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
@@ -1208,7 +1210,8 @@ int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode,
 int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                    int Index, VectorType *SubTp) {
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
-      Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc) {
+      Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
+      Kind == TTI::SK_Reverse) {
     static const CostTblEntry ShuffleTbl[] = {
       // Broadcast shuffle kinds can be performed with 'dup'.
       { TTI::SK_Broadcast, MVT::v8i8,  1 },
@@ -1258,6 +1261,15 @@ int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
       { TTI::SK_Broadcast, MVT::nxv8bf16, 1 },
       { TTI::SK_Broadcast, MVT::nxv4f32,  1 },
       { TTI::SK_Broadcast, MVT::nxv2f64,  1 },
+      // Handle the cases for vector.reverse with scalable vectors
+      { TTI::SK_Reverse, MVT::nxv16i8,  1 },
+      { TTI::SK_Reverse, MVT::nxv8i16,  1 },
+      { TTI::SK_Reverse, MVT::nxv4i32,  1 },
+      { TTI::SK_Reverse, MVT::nxv2i64,  1 },
+      { TTI::SK_Reverse, MVT::nxv8f16,  1 },
+      { TTI::SK_Reverse, MVT::nxv8bf16, 1 },
+      { TTI::SK_Reverse, MVT::nxv4f32,  1 },
+      { TTI::SK_Reverse, MVT::nxv2f64,  1 },
     };
     std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
     if (const auto *Entry = CostTableLookup(ShuffleTbl, Kind, LT.second))

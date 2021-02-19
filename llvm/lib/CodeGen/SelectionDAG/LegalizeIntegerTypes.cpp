@@ -96,6 +96,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::EXTRACT_SUBVECTOR:
                          Res = PromoteIntRes_EXTRACT_SUBVECTOR(N); break;
+  case ISD::VECTOR_REVERSE:
+                         Res = PromoteIntRes_VECTOR_REVERSE(N); break;
   case ISD::VECTOR_SHUFFLE:
                          Res = PromoteIntRes_VECTOR_SHUFFLE(N); break;
   case ISD::INSERT_VECTOR_ELT:
@@ -476,6 +478,16 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITREVERSE(SDNode *N) {
   EVT NVT = Op.getValueType();
   SDLoc dl(N);
 
+  // If the larger BITREVERSE isn't supported by the target, try to expand now.
+  // If we expand later we'll end up with more operations since we lost the
+  // original type. We only do this for scalars since we have a shuffle
+  // based lowering for vectors in LegalizeVectorOps.
+  if (!OVT.isVector() && OVT.isSimple() &&
+      !TLI.isOperationLegalOrCustom(ISD::BITREVERSE, NVT)) {
+    if (SDValue Res = TLI.expandBITREVERSE(N, DAG))
+      return DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Res);
+  }
+
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
   EVT ShiftVT = getShiftAmountTyForConstant(NVT, TLI, DAG);
   return DAG.getNode(ISD::SRL, dl, NVT,
@@ -772,6 +784,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   EVT PromotedType = Op1Promoted.getValueType();
   unsigned NewBits = PromotedType.getScalarSizeInBits();
 
+  if (Opcode == ISD::UADDSAT) {
+    APInt MaxVal = APInt::getAllOnesValue(OldBits).zext(NewBits);
+    SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
+    SDValue Add =
+        DAG.getNode(ISD::ADD, dl, PromotedType, Op1Promoted, Op2Promoted);
+    return DAG.getNode(ISD::UMIN, dl, PromotedType, Add, SatMax);
+  }
+
+  // USUBSAT can always be promoted as long as we have zero-extended the args.
+  if (Opcode == ISD::USUBSAT)
+    return DAG.getNode(ISD::USUBSAT, dl, PromotedType, Op1Promoted,
+                       Op2Promoted);
+
   // Shift cannot use a min/max expansion, we can't detect overflow if all of
   // the bits have been shifted out.
   if (IsShift || TLI.isOperationLegalOrCustom(Opcode, PromotedType)) {
@@ -782,8 +807,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
     case ISD::SSHLSAT:
       ShiftOp = ISD::SRA;
       break;
-    case ISD::UADDSAT:
-    case ISD::USUBSAT:
     case ISD::USHLSAT:
       ShiftOp = ISD::SRL;
       break;
@@ -804,32 +827,18 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
     SDValue Result =
         DAG.getNode(Opcode, dl, PromotedType, Op1Promoted, Op2Promoted);
     return DAG.getNode(ShiftOp, dl, PromotedType, Result, ShiftAmount);
-  } else {
-    if (Opcode == ISD::USUBSAT) {
-      SDValue Max =
-          DAG.getNode(ISD::UMAX, dl, PromotedType, Op1Promoted, Op2Promoted);
-      return DAG.getNode(ISD::SUB, dl, PromotedType, Max, Op2Promoted);
-    }
-
-    if (Opcode == ISD::UADDSAT) {
-      APInt MaxVal = APInt::getAllOnesValue(OldBits).zext(NewBits);
-      SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
-      SDValue Add =
-          DAG.getNode(ISD::ADD, dl, PromotedType, Op1Promoted, Op2Promoted);
-      return DAG.getNode(ISD::UMIN, dl, PromotedType, Add, SatMax);
-    }
-
-    unsigned AddOp = Opcode == ISD::SADDSAT ? ISD::ADD : ISD::SUB;
-    APInt MinVal = APInt::getSignedMinValue(OldBits).sext(NewBits);
-    APInt MaxVal = APInt::getSignedMaxValue(OldBits).sext(NewBits);
-    SDValue SatMin = DAG.getConstant(MinVal, dl, PromotedType);
-    SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
-    SDValue Result =
-        DAG.getNode(AddOp, dl, PromotedType, Op1Promoted, Op2Promoted);
-    Result = DAG.getNode(ISD::SMIN, dl, PromotedType, Result, SatMax);
-    Result = DAG.getNode(ISD::SMAX, dl, PromotedType, Result, SatMin);
-    return Result;
   }
+
+  unsigned AddOp = Opcode == ISD::SADDSAT ? ISD::ADD : ISD::SUB;
+  APInt MinVal = APInt::getSignedMinValue(OldBits).sext(NewBits);
+  APInt MaxVal = APInt::getSignedMaxValue(OldBits).sext(NewBits);
+  SDValue SatMin = DAG.getConstant(MinVal, dl, PromotedType);
+  SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
+  SDValue Result =
+      DAG.getNode(AddOp, dl, PromotedType, Op1Promoted, Op2Promoted);
+  Result = DAG.getNode(ISD::SMIN, dl, PromotedType, Result, SatMax);
+  Result = DAG.getNode(ISD::SMAX, dl, PromotedType, Result, SatMin);
+  return Result;
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_MULFIX(SDNode *N) {
@@ -4664,6 +4673,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
   return DAG.getBuildVector(NOutVT, dl, Ops);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_REVERSE(SDNode *N) {
+  SDLoc dl(N);
+
+  SDValue V0 = GetPromotedInteger(N->getOperand(0));
+  EVT OutVT = V0.getValueType();
+
+  return DAG.getNode(ISD::VECTOR_REVERSE, dl, OutVT, V0);
+}
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SHUFFLE(SDNode *N) {
   ShuffleVectorSDNode *SV = cast<ShuffleVectorSDNode>(N);

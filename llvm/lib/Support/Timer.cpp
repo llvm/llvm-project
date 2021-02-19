@@ -13,6 +13,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -23,6 +24,14 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
+
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+#ifdef HAVE_PROC_PID_RUSAGE
+#include <libproc.h>
+#endif
 
 using namespace llvm;
 
@@ -120,6 +129,17 @@ static inline size_t getMemUsage() {
   return sys::Process::GetMallocUsage();
 }
 
+static uint64_t getCurInstructionsExecuted() {
+#if defined(HAVE_UNISTD_H) && defined(HAVE_PROC_PID_RUSAGE) &&                 \
+    defined(RUSAGE_INFO_V4)
+  struct rusage_info_v4 ru;
+  if (proc_pid_rusage(getpid(), RUSAGE_INFO_V4, (rusage_info_t *)&ru) == 0) {
+    return ru.ri_instructions;
+  }
+#endif
+  return 0;
+}
+
 TimeRecord TimeRecord::getCurrentTime(bool Start) {
   using Seconds = std::chrono::duration<double, std::ratio<1>>;
   TimeRecord Result;
@@ -128,9 +148,11 @@ TimeRecord TimeRecord::getCurrentTime(bool Start) {
 
   if (Start) {
     Result.MemUsed = getMemUsage();
+    Result.InstructionsExecuted = getCurInstructionsExecuted();
     sys::Process::GetTimeUsage(now, user, sys);
   } else {
     sys::Process::GetTimeUsage(now, user, sys);
+    Result.InstructionsExecuted = getCurInstructionsExecuted();
     Result.MemUsed = getMemUsage();
   }
 
@@ -180,6 +202,8 @@ void TimeRecord::print(const TimeRecord &Total, raw_ostream &OS) const {
 
   if (Total.getMemUsed())
     OS << format("%9" PRId64 "  ", (int64_t)getMemUsed());
+  if (Total.getInstructionsExecuted())
+    OS << format("%9" PRId64 "  ", (int64_t)getInstructionsExecuted());
 }
 
 
@@ -339,6 +363,8 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   OS << "   ---Wall Time---";
   if (Total.getMemUsed())
     OS << "  ---Mem---";
+  if (Total.getInstructionsExecuted())
+    OS << "  ---Instr---";
   OS << "  --- Name ---\n";
 
   // Loop through all of the timing data, printing it out.
@@ -432,6 +458,10 @@ const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
     if (T.getMemUsed()) {
       OS << delim;
       printJSONValue(OS, R, ".mem", T.getMemUsed());
+    }
+    if (T.getInstructionsExecuted()) {
+      OS << delim;
+      printJSONValue(OS, R, ".instr", T.getInstructionsExecuted());
     }
   }
   TimersToPrint.clear();

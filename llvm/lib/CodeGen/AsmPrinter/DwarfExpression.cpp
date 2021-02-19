@@ -285,20 +285,21 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // a call site parameter expression and if that expression is just a register
   // location, emit it with addBReg and offset 0, because we should emit a DWARF
   // expression representing a value, rather than a location.
-  if (!isMemoryLocation() && !HasComplexExpression &&
-      (!isParameterValue() || isEntryValue())) {
+  if ((!isParameterValue() && !isMemoryLocation() && !HasComplexExpression) ||
+      isEntryValue()) {
     for (auto &Reg : DwarfRegs) {
       if (Reg.DwarfRegNo >= 0)
         addReg(Reg.DwarfRegNo, Reg.Comment);
       addOpPiece(Reg.SubRegSize);
     }
 
-    if (isEntryValue())
+    if (isEntryValue()) {
       finalizeEntryValue();
 
-    if (isEntryValue() && !isIndirect() && !isParameterValue() &&
-        DwarfVersion >= 4)
-      emitOp(dwarf::DW_OP_stack_value);
+      if (!isIndirect() && !isParameterValue() && !HasComplexExpression &&
+          DwarfVersion >= 4)
+        emitOp(dwarf::DW_OP_stack_value);
+    }
 
     DwarfRegs.clear();
     return true;
@@ -365,11 +366,7 @@ void DwarfExpression::setEntryValueFlags(const MachineLocation &Loc) {
 void DwarfExpression::setLocation(const MachineLocation &Loc,
                                   const DIExpression *DIExpr) {
   if (Loc.isIndirect())
-    // Do not treat entry value descriptions of indirect parameters as memory
-    // locations. This allows DwarfExpression::addReg() to add DW_OP_regN to an
-    // entry value description.
-    if (!DIExpr->isEntryValue())
-      setMemoryLocationKind();
+    setMemoryLocationKind();
 
   if (DIExpr->isEntryValue())
     setEntryValueFlags(Loc);
@@ -380,12 +377,12 @@ void DwarfExpression::beginEntryValueExpression(
   auto Op = ExprCursor.take();
   (void)Op;
   assert(Op && Op->getOp() == dwarf::DW_OP_LLVM_entry_value);
-  assert(!isMemoryLocation() &&
-         "We don't support entry values of memory locations yet");
   assert(!IsEmittingEntryValue && "Already emitting entry value?");
   assert(Op->getArg(0) == 1 &&
          "Can currently only emit entry values covering a single operation");
 
+  SavedLocationKind = LocationKind;
+  LocationKind = Register;
   IsEmittingEntryValue = true;
   enableTemporaryBuffer();
 }
@@ -403,6 +400,7 @@ void DwarfExpression::finalizeEntryValue() {
   // Emit the entry value's DWARF block operand.
   commitTemporaryBuffer();
 
+  LocationKind = SavedLocationKind;
   IsEmittingEntryValue = false;
 }
 
@@ -415,6 +413,7 @@ void DwarfExpression::cancelEntryValue() {
   assert(getTemporaryBufferSize() == 0 &&
          "Began emitting entry value block before cancelling entry value");
 
+  LocationKind = SavedLocationKind;
   IsEmittingEntryValue = false;
 }
 

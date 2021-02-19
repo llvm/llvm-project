@@ -120,11 +120,13 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
     const Value &result_value = live_valobj_sp->GetValue();
 
     switch (result_value.GetValueType()) {
-    case Value::eValueTypeHostAddress:
-    case Value::eValueTypeFileAddress:
-      // we don't do anything with these for now
+    case Value::ValueType::Invalid:
+      return {};
+    case Value::ValueType::HostAddress:
+    case Value::ValueType::FileAddress:
+      // we odon't do anything with these for now
       break;
-    case Value::eValueTypeScalar:
+    case Value::ValueType::Scalar:
       expr_variable_sp->m_flags |=
           ExpressionVariable::EVIsFreezeDried;
       expr_variable_sp->m_flags |=
@@ -132,7 +134,7 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
       expr_variable_sp->m_flags |=
           ExpressionVariable::EVNeedsAllocation;
       break;
-    case Value::eValueTypeLoadAddress:
+    case Value::ValueType::LoadAddress:
       expr_variable_sp->m_live_sp = live_valobj_sp;
       expr_variable_sp->m_flags |=
           ExpressionVariable::EVIsProgramReference;

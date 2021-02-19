@@ -737,3 +737,84 @@ bool TypeBasedAAWrapperPass::doFinalization(Module &M) {
 void TypeBasedAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
+
+MDNode *AAMDNodes::ShiftTBAA(MDNode *MD, size_t Offset) {
+  // Fast path if there's no offset
+  if (Offset == 0)
+    return MD;
+  // Fast path if there's no path tbaa node (and thus scalar)
+  if (!isStructPathTBAA(MD))
+    return MD;
+
+  TBAAStructTagNode Tag(MD);
+  SmallVector<Metadata *, 5> Sub;
+  Sub.push_back(MD->getOperand(0));
+  Sub.push_back(MD->getOperand(1));
+  ConstantInt *InnerOffset = mdconst::extract<ConstantInt>(MD->getOperand(2));
+
+  if (Tag.isNewFormat()) {
+    ConstantInt *InnerSize = mdconst::extract<ConstantInt>(MD->getOperand(3));
+
+    if (InnerOffset->getZExtValue() + InnerSize->getZExtValue() <= Offset) {
+      return nullptr;
+    }
+
+    uint64_t NewSize = InnerSize->getZExtValue();
+    uint64_t NewOffset = InnerOffset->getZExtValue() - Offset;
+    if (InnerOffset->getZExtValue() < Offset) {
+      NewOffset = 0;
+      NewSize -= Offset - InnerOffset->getZExtValue();
+    }
+
+    Sub.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(InnerOffset->getType(), NewOffset)));
+
+    Sub.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(InnerSize->getType(), NewSize)));
+
+    // immutable type
+    if (MD->getNumOperands() >= 5)
+      Sub.push_back(MD->getOperand(4));
+  } else {
+    if (InnerOffset->getZExtValue() < Offset)
+      return nullptr;
+
+    Sub.push_back(ConstantAsMetadata::get(ConstantInt::get(
+        InnerOffset->getType(), InnerOffset->getZExtValue() - Offset)));
+
+    // immutable type
+    if (MD->getNumOperands() >= 4)
+      Sub.push_back(MD->getOperand(3));
+  }
+  return MDNode::get(MD->getContext(), Sub);
+}
+
+MDNode *AAMDNodes::ShiftTBAAStruct(MDNode *MD, size_t Offset) {
+  // Fast path if there's no offset
+  if (Offset == 0)
+    return MD;
+  SmallVector<Metadata *, 3> Sub;
+  for (size_t i = 0, size = MD->getNumOperands(); i < size; i += 3) {
+    ConstantInt *InnerOffset = mdconst::extract<ConstantInt>(MD->getOperand(i));
+    ConstantInt *InnerSize =
+        mdconst::extract<ConstantInt>(MD->getOperand(i + 1));
+    // Don't include any triples that aren't in bounds
+    if (InnerOffset->getZExtValue() + InnerSize->getZExtValue() <= Offset)
+      continue;
+
+    uint64_t NewSize = InnerSize->getZExtValue();
+    uint64_t NewOffset = InnerOffset->getZExtValue() - Offset;
+    if (InnerOffset->getZExtValue() < Offset) {
+      NewOffset = 0;
+      NewSize -= Offset - InnerOffset->getZExtValue();
+    }
+
+    // Shift the offset of the triple
+    Sub.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(InnerOffset->getType(), NewOffset)));
+    Sub.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(InnerSize->getType(), NewSize)));
+    Sub.push_back(MD->getOperand(i + 2));
+  }
+  return MDNode::get(MD->getContext(), Sub);
+}

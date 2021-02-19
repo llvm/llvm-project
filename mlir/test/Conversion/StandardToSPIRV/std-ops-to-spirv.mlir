@@ -48,21 +48,21 @@ func @float32_unary_scalar(%arg0: f32) {
   // CHECK: spv.GLSL.Ceil %{{.*}}: f32
   %1 = ceilf %arg0 : f32
   // CHECK: spv.GLSL.Cos %{{.*}}: f32
-  %2 = cos %arg0 : f32
+  %2 = math.cos %arg0 : f32
   // CHECK: spv.GLSL.Exp %{{.*}}: f32
-  %3 = exp %arg0 : f32
+  %3 = math.exp %arg0 : f32
   // CHECK: spv.GLSL.Log %{{.*}}: f32
-  %4 = log %arg0 : f32
+  %4 = math.log %arg0 : f32
   // CHECK: spv.FNegate %{{.*}}: f32
   %5 = negf %arg0 : f32
   // CHECK: spv.GLSL.InverseSqrt %{{.*}}: f32
-  %6 = rsqrt %arg0 : f32
+  %6 = math.rsqrt %arg0 : f32
   // CHECK: spv.GLSL.Sqrt %{{.*}}: f32
-  %7 = sqrt %arg0 : f32
+  %7 = math.sqrt %arg0 : f32
   // CHECK: spv.GLSL.Tanh %{{.*}}: f32
-  %8 = tanh %arg0 : f32
+  %8 = math.tanh %arg0 : f32
   // CHECK: spv.GLSL.Sin %{{.*}}: f32
-  %9 = sin %arg0 : f32
+  %9 = math.sin %arg0 : f32
   // CHECK: spv.GLSL.Floor %{{.*}}: f32
   %10 = floorf %arg0 : f32
   return
@@ -675,6 +675,20 @@ spv.func @uitofp_vec_i1_f64(%arg0: vector<4xi1>) -> vector<4xf64> "None" {
   spv.ReturnValue %2 : vector<4xf64>
 }
 
+// CHECK-LABEL: @sexti1
+func @sexti1(%arg0: i16) -> i64 {
+  // CHECK: spv.SConvert %{{.*}} : i16 to i64
+  %0 = std.sexti %arg0 : i16 to i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: @sexti2
+func @sexti2(%arg0 : i32) -> i64 {
+  // CHECK: spv.SConvert %{{.*}} : i32 to i64
+  %0 = std.sexti %arg0 : i32 to i64
+  return %0 : i64
+}
+
 // CHECK-LABEL: @zexti1
 func @zexti1(%arg0: i16) -> i64 {
   // CHECK: spv.UConvert %{{.*}} : i16 to i64
@@ -728,6 +742,30 @@ func @trunci2(%arg0: i32) -> i16 {
   // CHECK: spv.SConvert %{{.*}} : i32 to i16
   %0 = std.trunci %arg0 : i32 to i16
   return %0 : i16
+}
+
+// CHECK-LABEL: @trunc_to_i1
+func @trunc_to_i1(%arg0: i32) -> i1 {
+  // CHECK: %[[MASK:.*]] = spv.constant 1 : i32
+  // CHECK: %[[MASKED_SRC:.*]] = spv.BitwiseAnd %{{.*}}, %[[MASK]] : i32
+  // CHECK: %[[IS_ONE:.*]] = spv.IEqual %[[MASKED_SRC]], %[[MASK]] : i32
+  // CHECK-DAG: %[[TRUE:.*]] = spv.constant true
+  // CHECK-DAG: %[[FALSE:.*]] = spv.constant false
+  // CHECK: spv.Select %[[IS_ONE]], %[[TRUE]], %[[FALSE]] : i1, i1
+  %0 = std.trunci %arg0 : i32 to i1
+  return %0 : i1
+}
+
+// CHECK-LABEL: @trunc_to_veci1
+func @trunc_to_veci1(%arg0: vector<4xi32>) -> vector<4xi1> {
+  // CHECK: %[[MASK:.*]] = spv.constant dense<1> : vector<4xi32>
+  // CHECK: %[[MASKED_SRC:.*]] = spv.BitwiseAnd %{{.*}}, %[[MASK]] : vector<4xi32>
+  // CHECK: %[[IS_ONE:.*]] = spv.IEqual %[[MASKED_SRC]], %[[MASK]] : vector<4xi32>
+  // CHECK-DAG: %[[TRUE:.*]] = spv.constant dense<true> : vector<4xi1>
+  // CHECK-DAG: %[[FALSE:.*]] = spv.constant dense<false> : vector<4xi1>
+  // CHECK: spv.Select %[[IS_ONE]], %[[TRUE]], %[[FALSE]] : vector<4xi1>, vector<4xi1>
+  %0 = std.trunci %arg0 : vector<4xi32> to vector<4xi1>
+  return %0 : vector<4xi1>
 }
 
 // CHECK-LABEL: @fptosi1

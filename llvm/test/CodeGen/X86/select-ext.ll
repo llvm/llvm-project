@@ -19,6 +19,45 @@ define i64 @zext_scalar(i8* %p, i1 zeroext %c) {
   ret i64 %cond
 }
 
+define i64 @zext_scalar2(i8* %p, i16* %q, i1 zeroext %c) {
+; CHECK-LABEL: zext_scalar2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    je .LBB1_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    movzwl (%rsi), %eax
+; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    retq
+  %ld1 = load volatile i8, i8* %p
+  %ext_ld1 = zext i8 %ld1 to i16
+  %ld2 = load volatile i16, i16* %q
+  %cond.v = select i1 %c, i16 %ld2, i16 %ext_ld1
+  %cond = zext i16 %cond.v to i64
+  ret i64 %cond
+}
+
+; Don't fold the ext if there is a load with conflicting ext type.
+define i64 @zext_scalar_neg(i8* %p, i16* %q, i1 zeroext %c) {
+; CHECK-LABEL: zext_scalar_neg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movsbl (%rdi), %eax
+; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    je .LBB2_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    movzwl (%rsi), %eax
+; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    retq
+  %ld1 = load volatile i8, i8* %p
+  %ext_ld1 = sext i8 %ld1 to i16
+  %ld2 = load volatile i16, i16* %q
+  %cond.v = select i1 %c, i16 %ld2, i16 %ext_ld1
+  %cond = zext i16 %cond.v to i64
+  ret i64 %cond
+}
+
 ; TODO: (sext(select c, load1, load2)) -> (select c, sextload1, sextload2)
 define i64 @sext_scalar(i8* %p, i1 zeroext %c) {
 ; CHECK-LABEL: sext_scalar:
@@ -44,10 +83,10 @@ define <2 x i64> @zext_vector_i1(<2 x i32>* %p, i1 zeroext %c) {
 ; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    jne .LBB2_2
+; CHECK-NEXT:    jne .LBB4_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:  .LBB4_2:
 ; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; CHECK-NEXT:    retq
   %ld1 = load volatile <2 x i32>, <2 x i32>* %p
@@ -83,10 +122,10 @@ define <2 x i64> @sext_vector_i1(<2 x i32>* %p, i1 zeroext %c) {
 ; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    jne .LBB4_2
+; CHECK-NEXT:    jne .LBB6_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:  .LBB4_2:
+; CHECK-NEXT:  .LBB6_2:
 ; CHECK-NEXT:    pmovsxdq %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %ld1 = load volatile <2 x i32>, <2 x i32>* %p

@@ -11,12 +11,12 @@
 # VI: V_ADD_CO_U32_e64 %6, %0,
 # VI-NEXT: DS_WRITE2_B32 killed %7, %0, %3, 0, 8,
 # VI: V_ADD_CO_U32_e64 %10, %3,
-# VI-NEXT: DS_READ2_B32 killed %11, 0, 8,
+# VI-NEXT: DS_READ2_B32 killed %11, 16, 24,
 
 # GFX9: V_ADD_U32_e64 %6, %0,
 # GFX9-NEXT: DS_WRITE2_B32_gfx9 killed %7, %0, %3, 0, 8,
 # GFX9: V_ADD_U32_e64 %9, %3,
-# GFX9-NEXT: DS_READ2_B32_gfx9 killed %10, 0, 8,
+# GFX9-NEXT: DS_READ2_B32_gfx9 killed %10, 16, 24,
 
 --- |
   @0 = internal unnamed_addr addrspace(3) global [256 x float] undef, align 4
@@ -94,12 +94,12 @@ body:             |
 # VI: V_ADD_CO_U32_e64 %6, %0.sub0,
 # VI-NEXT: DS_WRITE2_B32 killed %7, %0.sub0, %3.sub0, 0, 8,
 # VI: V_ADD_CO_U32_e64 %10, %3.sub0,
-# VI-NEXT: DS_READ2_B32 killed %11, 0, 8,
+# VI-NEXT: DS_READ2_B32 killed %11, 16, 24,
 
 # GFX9: V_ADD_U32_e64 %6, %0.sub0,
 # GFX9-NEXT: DS_WRITE2_B32_gfx9 killed %7, %0.sub0, %3.sub0, 0, 8,
 # GFX9: V_ADD_U32_e64 %9, %3.sub0,
-# GFX9-NEXT: DS_READ2_B32_gfx9 killed %10, 0, 8,
+# GFX9-NEXT: DS_READ2_B32_gfx9 killed %10, 16, 24,
 ---
 name:            ds_combine_base_offset_subreg
 body:             |

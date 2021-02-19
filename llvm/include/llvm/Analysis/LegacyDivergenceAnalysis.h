@@ -20,8 +20,8 @@
 #include <memory>
 
 namespace llvm {
+class DivergenceInfo;
 class Function;
-class GPUDivergenceAnalysis;
 class Module;
 class raw_ostream;
 class TargetTransformInfo;
@@ -63,7 +63,7 @@ private:
                                       const TargetTransformInfo &TTI) const;
 
   // (optional) handle to new DivergenceAnalysis
-  std::unique_ptr<GPUDivergenceAnalysis> gpuDA;
+  std::unique_ptr<DivergenceInfo> gpuDA;
 
   // Stores all divergent values.
   DenseSet<const Value *> DivergentValues;

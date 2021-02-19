@@ -334,8 +334,12 @@ bool MprotectNoAccess(uptr addr, uptr size) {
 }
 
 void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
-  // This is almost useless on 32-bits.
-  // FIXME: add madvise-analog when we move to 64-bits.
+  uptr beg_aligned = RoundDownTo(beg, GetPageSizeCached()),
+       end_aligned = RoundDownTo(end, GetPageSizeCached());
+  CHECK(beg < end);                // make sure the region is sane
+  if (beg_aligned == end_aligned)  // make sure we're freeing at least 1 page;
+    return;
+  UnmapOrDie((void *)beg, end_aligned - beg_aligned);
 }
 
 void SetShadowRegionHugePageMode(uptr addr, uptr size) {

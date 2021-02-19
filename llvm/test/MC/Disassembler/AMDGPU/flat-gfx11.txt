@@ -242,20 +242,16 @@
 # GFX11: global_atomic_cmpswap_b32 v0, v[1:2], v[3:4], off glc slc
 0x00,0xc0,0xd2,0xdc,0x01,0x03,0x7c,0x00
 
-# TODO-GFX11 global_atomic_cmpswap_b64
-# GFX11-NOT: global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], off offset:2047 glc
+# GFX11: global_atomic_cmpswap_b64 v[1:2], v[3:4], v[5:8], off offset:2047 glc
 0xff,0x47,0x0a,0xdd,0x03,0x05,0x7c,0x01
 
-# TODO-GFX11 global_atomic_cmpswap_b64
-# GFX11-NOT: global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], off offset:2047 glc slc
+# GFX11: global_atomic_cmpswap_b64 v[1:2], v[3:4], v[5:8], off offset:2047 glc slc
 0xff,0xc7,0x0a,0xdd,0x03,0x05,0x7c,0x01
 
-# TODO-GFX11 global_atomic_cmpswap_b64
-# GFX11-NOT: global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], off glc
+# GFX11: global_atomic_cmpswap_b64 v[1:2], v[3:4], v[5:8], off glc
 0x00,0x40,0x0a,0xdd,0x03,0x05,0x7c,0x01
 
-# TODO-GFX11 global_atomic_cmpswap_b64
-# GFX11-NOT: global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], off glc slc
+# GFX11: global_atomic_cmpswap_b64 v[1:2], v[3:4], v[5:8], off glc slc
 0x00,0xc0,0x0a,0xdd,0x03,0x05,0x7c,0x01
 
 # GFX11: global_load_d16_u8 v1, v[3:4], off
@@ -388,20 +384,16 @@
 # GFX11: global_atomic_cmpswap_b32 v0, v1, v[2:3], s[2:3] glc slc
 0x00,0xc0,0xd2,0xdc,0x01,0x02,0x02,0x00
 
-# TODO-GFX11 global_atomic_cmpswap_b64
-# GFX11-NOT: global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], s[2:3] offset:2047 glc
+# GFX11: global_atomic_cmpswap_b64 v[1:2], v3, v[5:8], s[2:3] offset:2047 glc
 0xff,0x47,0x0a,0xdd,0x03,0x05,0x02,0x01
 
-# TODO-GFX11 global_atomic_cmpswap_b64
-# GFX11-NOT: global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], s[2:3] offset:2047 glc slc
+# GFX11: global_atomic_cmpswap_b64 v[1:2], v3, v[5:8], s[2:3] offset:2047 glc slc
 0xff,0xc7,0x0a,0xdd,0x03,0x05,0x02,0x01
 
-# TODO-GFX11 global_atomic_cmpswap_b64
-# GFX11-NOT: global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], s[2:3] glc
+# GFX11: global_atomic_cmpswap_b64 v[1:2], v3, v[5:8], s[2:3] glc
 0x00,0x40,0x0a,0xdd,0x03,0x05,0x02,0x01
 
-# TODO-GFX11 global_atomic_cmpswap_b64
-# GFX11-NOT: global_atomic_cmpswap_b64 v[1:4], v3, v[5:8], s[2:3] glc slc
+# GFX11: global_atomic_cmpswap_b64 v[1:2], v3, v[5:8], s[2:3] glc slc
 0x00,0xc0,0x0a,0xdd,0x03,0x05,0x02,0x01
 
 # GFX11: global_load_d16_u8 v1, v3, s[2:3]

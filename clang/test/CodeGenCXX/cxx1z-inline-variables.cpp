@@ -93,7 +93,7 @@ const int &yib = Y<int>::b;
 // CHECK-LABEL: define {{.*}}global_var_init
 // CHECK-NOT: comdat
 // CHECK-SAME: {{$}}
-// CHECK: load atomic {{.*}} acquire
+// CHECK: load atomic {{.*}} acquire, align
 // CHECK: br
 // CHECK: __cxa_guard_acquire(i64* @_ZGV1b)
 // CHECK: br

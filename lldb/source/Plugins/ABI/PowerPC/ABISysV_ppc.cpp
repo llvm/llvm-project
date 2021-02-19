@@ -520,7 +520,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
 
   const uint32_t type_flags = return_compiler_type.GetTypeInfo();
   if (type_flags & eTypeIsScalar) {
-    value.SetValueType(Value::eValueTypeScalar);
+    value.SetValueType(Value::ValueType::Scalar);
 
     bool success = false;
     if (type_flags & eTypeIsInteger) {
@@ -603,7 +603,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
         reg_ctx->GetRegisterInfoByName("r3", 0)->kinds[eRegisterKindLLDB];
     value.GetScalar() =
         (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(r3_id, 0);
-    value.SetValueType(Value::eValueTypeScalar);
+    value.SetValueType(Value::ValueType::Scalar);
     return_valobj_sp = ValueObjectConstResult::Create(
         thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if (type_flags & eTypeIsVector) {
@@ -900,6 +900,7 @@ bool ABISysV_ppc::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   const int32_t ptr_size = 4;
+  row->SetUnspecifiedRegistersAreUndefined(true);
   row->GetCFAValue().SetIsRegisterDereferenced(sp_reg_num);
 
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 1, true);

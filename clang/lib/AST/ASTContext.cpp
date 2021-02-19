@@ -1436,6 +1436,12 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/PPCTypes.def"
   }
 
+  if (Target.hasRISCVVTypes()) {
+#define RVV_TYPE(Name, Id, SingletonId)                                        \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/RISCVVTypes.def"
+  }
+
   // Builtin type for __objc_yes and __objc_no
   ObjCBuiltinBoolTy = (Target.useSignedCharForObjCBool() ?
                        SignedCharTy : BoolTy);
@@ -1445,7 +1451,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   ObjCSuperType = QualType();
 
   // void * type
-  if (LangOpts.OpenCLVersion >= 200) {
+  if (LangOpts.OpenCLGenericAddressSpace) {
     auto Q = VoidTy.getQualifiers();
     Q.setAddressSpace(LangAS::opencl_generic);
     VoidPtrTy = getPointerType(getCanonicalType(
@@ -2167,6 +2173,18 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = Size;                                                              \
     break;
 #include "clang/Basic/PPCTypes.def"
+#define RVV_VECTOR_TYPE(Name, Id, SingletonId, ElKind, ElBits, NF, IsSigned,   \
+                        IsFP)                                                  \
+  case BuiltinType::Id:                                                        \
+    Width = 0;                                                                 \
+    Align = ElBits;                                                            \
+    break;
+#define RVV_PREDICATE_TYPE(Name, Id, SingletonId, ElKind)                      \
+  case BuiltinType::Id:                                                        \
+    Width = 0;                                                                 \
+    Align = 8;                                                                 \
+    break;
+#include "clang/Basic/RISCVVTypes.def"
     }
     break;
   case Type::ObjCObjectPointer:
@@ -3811,6 +3829,19 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
     return SVE_ELTTY(BFloat16Ty, 8, 3);
   case BuiltinType::SveBFloat16x4:
     return SVE_ELTTY(BFloat16Ty, 8, 4);
+#define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
+                            IsSigned)                                          \
+  case BuiltinType::Id:                                                        \
+    return {getIntTypeForBitwidth(ElBits, IsSigned),                           \
+            llvm::ElementCount::getScalable(NumEls), NF};
+#define RVV_VECTOR_TYPE_FLOAT(Name, Id, SingletonId, NumEls, ElBits, NF)       \
+  case BuiltinType::Id:                                                        \
+    return {ElBits == 16 ? HalfTy : (ElBits == 32 ? FloatTy : DoubleTy),       \
+            llvm::ElementCount::getScalable(NumEls), NF};
+#define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
+  case BuiltinType::Id:                                                        \
+    return {BoolTy, llvm::ElementCount::getScalable(NumEls), 1};
+#include "clang/Basic/RISCVVTypes.def"
   }
 }
 
@@ -3837,6 +3868,20 @@ QualType ASTContext::getScalableVectorType(QualType EltTy,
   if (EltTy->isBooleanType() && NumElts == NumEls)                             \
     return SingletonId;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+  } else if (Target->hasRISCVVTypes()) {
+    uint64_t EltTySize = getTypeSize(EltTy);
+#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
+                        IsFP)                                                  \
+    if (!EltTy->isBooleanType() &&                                             \
+        ((EltTy->hasIntegerRepresentation() &&                                 \
+          EltTy->hasSignedIntegerRepresentation() == IsSigned) ||              \
+         (EltTy->hasFloatingRepresentation() && IsFP)) &&                      \
+        EltTySize == ElBits && NumElts == NumEls)                              \
+      return SingletonId;
+#define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
+    if (EltTy->isBooleanType() && NumElts == NumEls)                           \
+      return SingletonId;
+#include "clang/Basic/RISCVVTypes.def"
   }
   return QualType();
 }
@@ -7212,13 +7257,15 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #define SVE_TYPE(Name, Id, SingletonId) \
     case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
-    {
-      DiagnosticsEngine &Diags = C->getDiagnostics();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error, "cannot yet @encode type %0");
-      Diags.Report(DiagID) << BT->getName(C->getPrintingPolicy());
-      return ' ';
-    }
+#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
+      {
+        DiagnosticsEngine &Diags = C->getDiagnostics();
+        unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                                "cannot yet @encode type %0");
+        Diags.Report(DiagID) << BT->getName(C->getPrintingPolicy());
+        return ' ';
+      }
 
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
@@ -7303,6 +7350,40 @@ static void EncodeBitField(const ASTContext *Ctx, std::string& S,
     }
   }
   S += llvm::utostr(FD->getBitWidthValue(*Ctx));
+}
+
+// Helper function for determining whether the encoded type string would include
+// a template specialization type.
+static bool hasTemplateSpecializationInEncodedString(const Type *T,
+                                                     bool VisitBasesAndFields) {
+  T = T->getBaseElementTypeUnsafe();
+
+  if (auto *PT = T->getAs<PointerType>())
+    return hasTemplateSpecializationInEncodedString(
+        PT->getPointeeType().getTypePtr(), false);
+
+  auto *CXXRD = T->getAsCXXRecordDecl();
+
+  if (!CXXRD)
+    return false;
+
+  if (isa<ClassTemplateSpecializationDecl>(CXXRD))
+    return true;
+
+  if (!CXXRD->hasDefinition() || !VisitBasesAndFields)
+    return false;
+
+  for (auto B : CXXRD->bases())
+    if (hasTemplateSpecializationInEncodedString(B.getType().getTypePtr(),
+                                                 true))
+      return true;
+
+  for (auto *FD : CXXRD->fields())
+    if (hasTemplateSpecializationInEncodedString(FD->getType().getTypePtr(),
+                                                 true))
+      return true;
+
+  return false;
 }
 
 // FIXME: Use SmallString for accumulating string.
@@ -7395,6 +7476,15 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
       // GCC binary compat: Need to convert "struct objc_object *" to "@".
       if (RTy->getDecl()->getIdentifier() == &Idents.get("objc_object")) {
         S += '@';
+        return;
+      }
+      // If the encoded string for the class includes template names, just emit
+      // "^v" for pointers to the class.
+      if (getLangOpts().CPlusPlus &&
+          (!getLangOpts().EncodeCXXClassTemplateSpec &&
+           hasTemplateSpecializationInEncodedString(
+               RTy, Options.ExpandPointedToStructures()))) {
+        S += "^v";
         return;
       }
       // fall through...

@@ -404,4 +404,6 @@ class Test:
         This can be used for test suites with long running tests to maximize
         parallelism or where it is desirable to surface their failures early.
         """
+        if '/'.join(self.path_in_suite) in self.suite.config.early_tests:
+            return True
         return self.suite.config.is_early

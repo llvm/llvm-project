@@ -21,18 +21,12 @@ define i32 @smaxv6() {
 ; GFX9-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP2]], [[TMP3]]
 ; GFX9-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP1]], i32 [[TMP2]], i32 [[TMP3]]
 ; GFX9-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 2) to <4 x i32>*), align 8
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <4 x i32> [[TMP4]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i32> [[TMP4]], <4 x i32> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <4 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[RDX_MINMAX_SELECT3]], i32 0
+; GFX9-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP4]])
 ; GFX9-NEXT:    [[OP_EXTRA:%.*]] = icmp sgt i32 [[TMP5]], [[SELECT1]]
-; GFX9-NEXT:    [[OP_EXTRA4:%.*]] = select i1 [[OP_EXTRA]], i32 [[TMP5]], i32 [[SELECT1]]
+; GFX9-NEXT:    [[OP_EXTRA1:%.*]] = select i1 [[OP_EXTRA]], i32 [[TMP5]], i32 [[SELECT1]]
 ; GFX9-NEXT:    [[STORE_SELECT:%.*]] = select i1 [[CMP1]], i32 3, i32 4
 ; GFX9-NEXT:    store i32 [[STORE_SELECT]], i32* @var, align 8
-; GFX9-NEXT:    ret i32 [[OP_EXTRA4]]
+; GFX9-NEXT:    ret i32 [[OP_EXTRA1]]
 ;
   %load1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 0), align 16
   %load2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 1), align 4
@@ -68,18 +62,12 @@ define i64 @sminv6() {
 ; GFX9-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[TMP2]], [[TMP3]]
 ; GFX9-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP1]], i64 [[TMP2]], i64 [[TMP3]]
 ; GFX9-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* bitcast (i64* getelementptr inbounds ([32 x i64], [32 x i64]* @arr64, i64 0, i64 2) to <4 x i64>*), align 16
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp slt <4 x i64> [[TMP4]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i64> [[TMP4]], <4 x i64> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i64> [[RDX_MINMAX_SELECT]], <4 x i64> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp slt <4 x i64> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i64> [[RDX_MINMAX_SELECT]], <4 x i64> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[RDX_MINMAX_SELECT3]], i32 0
+; GFX9-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[TMP4]])
 ; GFX9-NEXT:    [[OP_EXTRA:%.*]] = icmp slt i64 [[TMP5]], [[SELECT1]]
-; GFX9-NEXT:    [[OP_EXTRA4:%.*]] = select i1 [[OP_EXTRA]], i64 [[TMP5]], i64 [[SELECT1]]
+; GFX9-NEXT:    [[OP_EXTRA1:%.*]] = select i1 [[OP_EXTRA]], i64 [[TMP5]], i64 [[SELECT1]]
 ; GFX9-NEXT:    [[STORE_SELECT:%.*]] = select i1 [[CMP1]], i64 3, i64 4
 ; GFX9-NEXT:    store i64 [[STORE_SELECT]], i64* @var64, align 8
-; GFX9-NEXT:    ret i64 [[OP_EXTRA4]]
+; GFX9-NEXT:    ret i64 [[OP_EXTRA1]]
 ;
   %load1 = load i64, i64* getelementptr inbounds ([32 x i64], [32 x i64]* @arr64, i64 0, i64 0), align 16
   %load2 = load i64, i64* getelementptr inbounds ([32 x i64], [32 x i64]* @arr64, i64 0, i64 1), align 8
@@ -217,18 +205,12 @@ define i32 @smax_wdiff_valuenum(i32, i32 %v1) {
 ; GFX9-NEXT:    [[EX0:%.*]] = extractelement <2 x i32> [[VLOAD]], i32 0
 ; GFX9-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP1]], i32 [[EX0]], i32 [[V1]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 2) to <4 x i32>*), align 8
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <4 x i32> [[TMP2]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i32> [[TMP2]], <4 x i32> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <4 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[RDX_MINMAX_SELECT3]], i32 0
+; GFX9-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP2]])
 ; GFX9-NEXT:    [[OP_EXTRA:%.*]] = icmp sgt i32 [[TMP3]], [[SELECT1]]
-; GFX9-NEXT:    [[OP_EXTRA4:%.*]] = select i1 [[OP_EXTRA]], i32 [[TMP3]], i32 [[SELECT1]]
+; GFX9-NEXT:    [[OP_EXTRA1:%.*]] = select i1 [[OP_EXTRA]], i32 [[TMP3]], i32 [[SELECT1]]
 ; GFX9-NEXT:    [[STOREVAL:%.*]] = select i1 [[CMP1]], i32 3, i32 4
 ; GFX9-NEXT:    store i32 [[STOREVAL]], i32* @var, align 8
-; GFX9-NEXT:    ret i32 [[OP_EXTRA4]]
+; GFX9-NEXT:    ret i32 [[OP_EXTRA1]]
 ;
   %vload = load <2 x i32>, <2 x i32>* bitcast ([32 x i32]* @arr to <2 x i32>*), align 16
   %elt1 = extractelement <2 x i32> %vload, i32 0

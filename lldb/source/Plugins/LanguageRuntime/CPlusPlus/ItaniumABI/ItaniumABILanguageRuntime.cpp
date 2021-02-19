@@ -196,7 +196,7 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
   //
 
   class_type_or_name.Clear();
-  value_type = Value::ValueType::eValueTypeScalar;
+  value_type = Value::ValueType::Scalar;
 
   // Only a pointer or reference type can have a different dynamic and static
   // type:

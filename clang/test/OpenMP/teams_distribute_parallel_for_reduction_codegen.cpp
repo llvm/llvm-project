@@ -92,7 +92,7 @@ int main() {
     // LAMBDA: br
     // LAMBDA: [[CASE2]]:
     // LAMBDA-DAG: [[SIVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[SIVAR_PRIV]],
-    // LAMBDA-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]]
+    // LAMBDA-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]] monotonic, align {{.+}}
     // LAMBDA: br
 
     // LAMBDA: define internal void @[[LPAR_OUTL]]({{.+}}, {{.+}}, {{.+}}, {{.+}}, {{.+}} [[SIVAR_ARG:%.+]])
@@ -138,7 +138,7 @@ int main() {
     // LAMBDA: br
     // LAMBDA: [[CASE2]]:
     // LAMBDA-DAG: [[SIVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[SIVAR_PRIV]],
-    // LAMBDA-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]]
+    // LAMBDA-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]] monotonic, align {{.+}}
     // LAMBDA: br
 
     sivar += i;
@@ -217,7 +217,7 @@ int main() {
 // CHECK: br
 // CHECK: [[CASE2]]:
 // CHECK-DAG: [[SIVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[SIVAR_PRIV]],
-// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]]
+// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]] monotonic, align {{.+}}
 // CHECK: br
 
 // CHECK: define internal void @[[PAR_OUTL]]({{.+}}, {{.+}}, {{.+}}, {{.+}}, {{.+}} [[SIVAR_ARG:%.+]])
@@ -261,7 +261,7 @@ int main() {
 // CHECK: br
 // CHECK: [[CASE2]]:
 // CHECK-DAG: [[SIVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[SIVAR_PRIV]],
-// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]]
+// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]] monotonic, align {{.+}}
 // CHECK: br
 
 // CHECK: define{{.*}} i{{[0-9]+}} @[[TMAIN_INT]]()
@@ -309,7 +309,7 @@ int main() {
 // CHECK: br
 // CHECK: [[CASE2]]:
 // CHECK-DAG: [[TVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[TVAR_PRIV]],
-// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[TVAR_REF]], {{.+}} [[TVAR_PRIV_VAL]]
+// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[TVAR_REF]], {{.+}} [[TVAR_PRIV_VAL]] monotonic, align {{.+}}
 // CHECK: br
 
 // CHECK: define internal void @[[TPAR_OUTL]]({{.+}}, {{.+}}, {{.+}}, {{.+}}, {{.+}} [[TVAR_ARG:%.+]])
@@ -353,6 +353,6 @@ int main() {
 // CHECK: br
 // CHECK: [[CASE2]]:
 // CHECK-DAG: [[TVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[TVAR_PRIV]],
-// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[TVAR_REF]], {{.+}} [[TVAR_PRIV_VAL]]
+// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[TVAR_REF]], {{.+}} [[TVAR_PRIV_VAL]] monotonic, align {{.+}}
 // CHECK: br
 #endif

@@ -104,9 +104,10 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
     unsigned BaseOff;
     unsigned DMask;
     InstClassEnum InstClass;
-    bool GLC;
-    bool SLC;
-    bool DLC;
+    bool GLC = 0;
+    bool SLC = 0;
+    bool DLC = 0;
+    bool SCCB = 0; // vmem only.
     bool UseST64;
     int AddrIdx[MaxAddressRegs];
     const MachineOperand *AddrReg[MaxAddressRegs];
@@ -199,6 +200,7 @@ private:
                                                      const CombineInfo &Paired);
   const TargetRegisterClass *getTargetRegisterClass(const CombineInfo &CI,
                                                     const CombineInfo &Paired);
+  const TargetRegisterClass *getDataRegClass(const MachineInstr &MI) const;
 
   bool checkAndPrepareMerge(CombineInfo &CI, CombineInfo &Paired,
                             SmallVectorImpl<MachineInstr *> &InstsToMove);
@@ -304,6 +306,16 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
     return 2;
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
     return 4;
+  case AMDGPU::DS_READ_B32:      LLVM_FALLTHROUGH;
+  case AMDGPU::DS_READ_B32_gfx9: LLVM_FALLTHROUGH;
+  case AMDGPU::DS_WRITE_B32:     LLVM_FALLTHROUGH;
+  case AMDGPU::DS_WRITE_B32_gfx9:
+    return 1;
+  case AMDGPU::DS_READ_B64:      LLVM_FALLTHROUGH;
+  case AMDGPU::DS_READ_B64_gfx9: LLVM_FALLTHROUGH;
+  case AMDGPU::DS_WRITE_B64:     LLVM_FALLTHROUGH;
+  case AMDGPU::DS_WRITE_B64_gfx9:
+    return 2;
   default:
     return 0;
   }
@@ -526,6 +538,9 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
       SLC = TII.getNamedOperand(*I, AMDGPU::OpName::slc)->getImm();
     }
     DLC = TII.getNamedOperand(*I, AMDGPU::OpName::dlc)->getImm();
+    if (InstClass != S_BUFFER_LOAD_IMM) {
+      SCCB = TII.getNamedOperand(*I, AMDGPU::OpName::sccb)->getImm();
+    }
   }
 
   AddressRegs Regs = getRegs(Opc, TII);
@@ -725,6 +740,16 @@ static unsigned getBufferFormatWithCompCount(unsigned OldFormat,
   return NewFormatInfo->Format;
 }
 
+// Return the value in the inclusive range [Lo,Hi] that is aligned to the
+// highest power of two. Note that the result is well defined for all inputs
+// including corner cases like:
+// - if Lo == Hi, return that value
+// - if Lo == 0, return 0 (even though the "- 1" below underflows
+// - if Lo > Hi, return 0 (as if the range wrapped around)
+static uint32_t mostAlignedValueInRange(uint32_t Lo, uint32_t Hi) {
+  return Hi & maskLeadingOnes<uint32_t>(countLeadingZeros((Lo - 1) ^ Hi) + 1);
+}
+
 bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
                                                 const GCNSubtarget &STI,
                                                 CombineInfo &Paired,
@@ -764,8 +789,8 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
       return false;
   }
 
-  unsigned EltOffset0 = CI.Offset / CI.EltSize;
-  unsigned EltOffset1 = Paired.Offset / CI.EltSize;
+  uint32_t EltOffset0 = CI.Offset / CI.EltSize;
+  uint32_t EltOffset1 = Paired.Offset / CI.EltSize;
   CI.UseST64 = false;
   CI.BaseOff = 0;
 
@@ -774,7 +799,8 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
     return (EltOffset0 + CI.Width == EltOffset1 ||
             EltOffset1 + Paired.Width == EltOffset0) &&
            CI.GLC == Paired.GLC && CI.DLC == Paired.DLC &&
-           (CI.InstClass == S_BUFFER_LOAD_IMM || CI.SLC == Paired.SLC);
+           (CI.InstClass == S_BUFFER_LOAD_IMM ||
+               (CI.SLC == Paired.SLC && CI.SCCB == Paired.SCCB));
   }
 
   // If the offset in elements doesn't fit in 8-bits, we might be able to use
@@ -799,22 +825,36 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
   }
 
   // Try to shift base address to decrease offsets.
-  unsigned OffsetDiff = std::abs((int)EltOffset1 - (int)EltOffset0);
-  CI.BaseOff = std::min(CI.Offset, Paired.Offset);
+  uint32_t Min = std::min(EltOffset0, EltOffset1);
+  uint32_t Max = std::max(EltOffset0, EltOffset1);
 
-  if ((OffsetDiff % 64 == 0) && isUInt<8>(OffsetDiff / 64)) {
+  const uint32_t Mask = maskTrailingOnes<uint32_t>(8) * 64;
+  if (((Max - Min) & ~Mask) == 0) {
     if (Modify) {
-      CI.Offset = (EltOffset0 - CI.BaseOff / CI.EltSize) / 64;
-      Paired.Offset = (EltOffset1 - CI.BaseOff / CI.EltSize) / 64;
+      // From the range of values we could use for BaseOff, choose the one that
+      // is aligned to the highest power of two, to maximise the chance that
+      // the same offset can be reused for other load/store pairs.
+      uint32_t BaseOff = mostAlignedValueInRange(Max - 0xff * 64, Min);
+      // Copy the low bits of the offsets, so that when we adjust them by
+      // subtracting BaseOff they will be multiples of 64.
+      BaseOff |= Min & maskTrailingOnes<uint32_t>(6);
+      CI.BaseOff = BaseOff * CI.EltSize;
+      CI.Offset = (EltOffset0 - BaseOff) / 64;
+      Paired.Offset = (EltOffset1 - BaseOff) / 64;
       CI.UseST64 = true;
     }
     return true;
   }
 
-  if (isUInt<8>(OffsetDiff)) {
+  if (isUInt<8>(Max - Min)) {
     if (Modify) {
-      CI.Offset = EltOffset0 - CI.BaseOff / CI.EltSize;
-      Paired.Offset = EltOffset1 - CI.BaseOff / CI.EltSize;
+      // From the range of values we could use for BaseOff, choose the one that
+      // is aligned to the highest power of two, to maximise the chance that
+      // the same offset can be reused for other load/store pairs.
+      uint32_t BaseOff = mostAlignedValueInRange(Max - 0xff, Min);
+      CI.BaseOff = BaseOff * CI.EltSize;
+      CI.Offset = EltOffset0 - BaseOff;
+      Paired.Offset = EltOffset1 - BaseOff;
     }
     return true;
   }
@@ -838,6 +878,26 @@ bool SILoadStoreOptimizer::widthsFit(const GCNSubtarget &STM,
       return true;
     }
   }
+}
+
+const TargetRegisterClass *
+SILoadStoreOptimizer::getDataRegClass(const MachineInstr &MI) const {
+  if (const auto *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst)) {
+    return TRI->getRegClassForReg(*MRI, Dst->getReg());
+  }
+  if (const auto *Src = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)) {
+    return TRI->getRegClassForReg(*MRI, Src->getReg());
+  }
+  if (const auto *Src = TII->getNamedOperand(MI, AMDGPU::OpName::data0)) {
+    return TRI->getRegClassForReg(*MRI, Src->getReg());
+  }
+  if (const auto *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::sdst)) {
+    return TRI->getRegClassForReg(*MRI, Dst->getReg());
+  }
+  if (const auto *Src = TII->getNamedOperand(MI, AMDGPU::OpName::sdata)) {
+    return TRI->getRegClassForReg(*MRI, Src->getReg());
+  }
+  return nullptr;
 }
 
 /// This function assumes that CI comes before Paired in a basic block.
@@ -871,6 +931,9 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
   DenseSet<Register> RegDefsToMove;
   DenseSet<Register> PhysRegUsesToMove;
   addDefsUsesToList(*CI.I, RegDefsToMove, PhysRegUsesToMove);
+
+  const TargetRegisterClass *DataRC = getDataRegClass(*CI.I);
+  bool IsAGPR = TRI->hasAGPRs(DataRC);
 
   MachineBasicBlock::iterator E = std::next(Paired.I);
   MachineBasicBlock::iterator MBBI = std::next(CI.I);
@@ -940,6 +1003,17 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
       continue;
 
     if (&*MBBI == &*Paired.I) {
+      if (TRI->hasAGPRs(getDataRegClass(*MBBI)) != IsAGPR)
+        return false;
+      // FIXME: nothing is illegal in a ds_write2 opcode with two AGPR data
+      //        operands. However we are reporting that ds_write2 shall have
+      //        only VGPR data so that machine copy propagation does not
+      //        create an illegal instruction with a VGPR and AGPR sources.
+      //        Consequenctially if we create such instruction the verifier
+      //        will complain.
+      if (IsAGPR && CI.InstClass == DS_WRITE)
+        return false;
+
       // We need to go through the list of instructions that we plan to
       // move and make sure they are all safe to move down past the merged
       // instruction.
@@ -1013,8 +1087,7 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
 
   const MCInstrDesc &Read2Desc = TII->get(Opc);
 
-  const TargetRegisterClass *SuperRC =
-      (CI.EltSize == 4) ? &AMDGPU::VReg_64RegClass : &AMDGPU::VReg_128RegClass;
+  const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
   Register DestReg = MRI->createVirtualRegister(SuperRC);
 
   DebugLoc DL = CI.I->getDebugLoc();
@@ -1293,6 +1366,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
         .addImm(0)            // tfe
         .addImm(CI.DLC)      // dlc
         .addImm(0)            // swz
+        .addImm(CI.SCCB)     // scc
         .addMemOperand(combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
   std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
@@ -1360,6 +1434,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
           .addImm(0)            // tfe
           .addImm(CI.DLC)      // dlc
           .addImm(0)            // swz
+          .addImm(CI.SCCB)     // scc
           .addMemOperand(
               combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
@@ -1440,6 +1515,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
           .addImm(0)                                // tfe
           .addImm(CI.DLC)                          // dlc
           .addImm(0)                                // swz
+          .addImm(CI.SCCB)                         // scc
           .addMemOperand(
               combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
@@ -1535,18 +1611,27 @@ SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI,
     case 16:
       return &AMDGPU::SGPR_512RegClass;
     }
-  } else {
-    switch (CI.Width + Paired.Width) {
-    default:
-      return nullptr;
-    case 2:
-      return &AMDGPU::VReg_64RegClass;
-    case 3:
-      return &AMDGPU::VReg_96RegClass;
-    case 4:
-      return &AMDGPU::VReg_128RegClass;
-    }
   }
+  const TargetRegisterClass *RC = nullptr;
+
+  switch (CI.Width + Paired.Width) {
+  default:
+    return nullptr;
+  case 2:
+    RC = &AMDGPU::VReg_64RegClass;
+    break;
+  case 3:
+    RC = &AMDGPU::VReg_96RegClass;
+    break;
+  case 4:
+    RC = &AMDGPU::VReg_128RegClass;
+    break;
+  }
+
+  if (TRI->hasAGPRs(getDataRegClass(*CI.I)))
+    return TRI->getEquivalentAGPRClass(RC);
+
+  return RC;
 }
 
 MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
@@ -1600,6 +1685,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
         .addImm(0)            // tfe
         .addImm(CI.DLC)      // dlc
         .addImm(0)            // swz
+        .addImm(CI.SCCB)     // scc
         .addMemOperand(combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
   moveInstsAfter(MIB, InstsToMove);

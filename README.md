@@ -50,11 +50,7 @@ This is an example work-flow and configuration to get and build the LLVM source:
 
      * ``cd llvm-project``
 
-     * ``mkdir build``
-
-     * ``cd build``
-
-     * ``cmake -G <generator> [options] ../llvm``
+     * ``cmake -S llvm -B build -G <generator> [options]``
 
         Some common build system generators are:
 
@@ -85,7 +81,7 @@ This is an example work-flow and configuration to get and build the LLVM source:
         * ``-DLLVM_ENABLE_ASSERTIONS=On`` --- Compile with assertion checks enabled
           (default is Yes for Debug builds, No for all other build types).
 
-      * ``cmake --build . [-- [options] <target>]`` or your build system specified above
+      * ``cmake --build build [-- [options] <target>]`` or your build system specified above
         directly.
 
         * The default target (i.e. ``ninja`` or ``make``) will build all of LLVM.

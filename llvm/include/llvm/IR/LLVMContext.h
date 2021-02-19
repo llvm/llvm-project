@@ -87,12 +87,13 @@ public:
   /// operand bundle tags without comparing strings. Keep this in sync with
   /// LLVMContext::LLVMContext().
   enum : unsigned {
-    OB_deopt = 0,         // "deopt"
-    OB_funclet = 1,       // "funclet"
-    OB_gc_transition = 2, // "gc-transition"
-    OB_cfguardtarget = 3, // "cfguardtarget"
-    OB_preallocated = 4,  // "preallocated"
-    OB_gc_live = 5,       // "gc-live"
+    OB_deopt = 0,                  // "deopt"
+    OB_funclet = 1,                // "funclet"
+    OB_gc_transition = 2,          // "gc-transition"
+    OB_cfguardtarget = 3,          // "cfguardtarget"
+    OB_preallocated = 4,           // "preallocated"
+    OB_gc_live = 5,                // "gc-live"
+    OB_clang_arc_attachedcall = 6, // "clang.arc.attachedcall"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
@@ -189,10 +190,11 @@ public:
       DiagnosticHandler::DiagnosticHandlerTy DiagHandler,
       void *DiagContext = nullptr, bool RespectFilters = false);
 
-  /// setDiagnosticHandler - This method sets unique_ptr to object of DiagnosticHandler
-  /// to provide custom diagnostic handling. The first argument is unique_ptr of object
-  /// of type DiagnosticHandler or a derived of that.   The third argument should be
-  /// set to true if the handler only expects enabled diagnostics.
+  /// setDiagnosticHandler - This method sets unique_ptr to object of
+  /// DiagnosticHandler to provide custom diagnostic handling. The first
+  /// argument is unique_ptr of object of type DiagnosticHandler or a derived
+  /// of that. The second argument should be set to true if the handler only
+  /// expects enabled diagnostics.
   ///
   /// Ownership of this pointer is moved to LLVMContextImpl.
   void setDiagnosticHandler(std::unique_ptr<DiagnosticHandler> &&DH,
@@ -210,7 +212,7 @@ public:
   /// setDiagnosticHandler.
   const DiagnosticHandler *getDiagHandlerPtr() const;
 
-  /// getDiagnosticHandler - transfers owenership of DiagnosticHandler unique_ptr
+  /// getDiagnosticHandler - transfers ownership of DiagnosticHandler unique_ptr
   /// to caller.
   std::unique_ptr<DiagnosticHandler> getDiagnosticHandler();
 

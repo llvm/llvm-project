@@ -292,7 +292,6 @@ enum NodeType : unsigned {
   CLASTB_N,
   LASTA,
   LASTB,
-  REV,
   TBL,
 
   // Floating-point reductions.
@@ -595,6 +594,9 @@ public:
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;
   bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
+
+  bool generateFMAsInMachineCombiner(EVT VT,
+                                     CodeGenOpt::Level OptLevel) const override;
 
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
 

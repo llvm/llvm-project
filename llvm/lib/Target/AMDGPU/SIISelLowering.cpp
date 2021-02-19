@@ -718,6 +718,19 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FEXP, MVT::v2f16, Custom);
     setOperationAction(ISD::SELECT, MVT::v4i16, Custom);
     setOperationAction(ISD::SELECT, MVT::v4f16, Custom);
+
+    if (Subtarget->hasPackedFP32Ops()) {
+      setOperationAction(ISD::FADD, MVT::v2f32, Legal);
+      setOperationAction(ISD::FMUL, MVT::v2f32, Legal);
+      setOperationAction(ISD::FMA,  MVT::v2f32, Legal);
+      setOperationAction(ISD::FNEG, MVT::v2f32, Legal);
+
+      for (MVT VT : { MVT::v4f32, MVT::v8f32, MVT::v16f32, MVT::v32f32 }) {
+        setOperationAction(ISD::FADD, VT, Custom);
+        setOperationAction(ISD::FMUL, VT, Custom);
+        setOperationAction(ISD::FMA, VT, Custom);
+      }
+    }
   }
 
   setOperationAction(ISD::FNEG, MVT::v4f16, Custom);
@@ -1129,17 +1142,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                  MachineMemOperand::MOVolatile;
     return true;
   }
-  case Intrinsic::amdgcn_global_atomic_fadd: {
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(CI.getType());
-    Info.ptrVal = CI.getOperand(0);
-    Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MOStore |
-                 MachineMemOperand::MODereferenceable |
-                 MachineMemOperand::MOVolatile;
-    return true;
-  }
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -1149,6 +1151,22 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align.reset();
     Info.flags = MachineMemOperand::MOLoad |
                  MachineMemOperand::MODereferenceable;
+    return true;
+  }
+  case Intrinsic::amdgcn_global_atomic_fadd:
+  case Intrinsic::amdgcn_global_atomic_fmin:
+  case Intrinsic::amdgcn_global_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fadd:
+  case Intrinsic::amdgcn_flat_atomic_fmin:
+  case Intrinsic::amdgcn_flat_atomic_fmax: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(CI.getType());
+    Info.ptrVal = CI.getOperand(0);
+    Info.align.reset();
+    Info.flags = MachineMemOperand::MOLoad |
+                 MachineMemOperand::MOStore |
+                 MachineMemOperand::MODereferenceable |
+                 MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::amdgcn_ds_gws_init:
@@ -1192,6 +1210,9 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax:
   case Intrinsic::amdgcn_global_atomic_fadd:
+  case Intrinsic::amdgcn_flat_atomic_fadd:
+  case Intrinsic::amdgcn_flat_atomic_fmin:
+  case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_csub: {
     Value *Ptr = II->getArgOperand(0);
     AccessTy = II->getType();
@@ -4274,9 +4295,15 @@ bool SITargetLowering::hasBitPreservingFPLogic(EVT VT) const {
 }
 
 bool SITargetLowering::hasAtomicFaddRtnForTy(SDValue &Op) const {
-  if (Op.getValue(0).getValueType() == MVT::f32)
+  switch (Op.getValue(0).getSimpleValueType().SimpleTy) {
+  case MVT::f32:
     return Subtarget->hasAtomicFaddRtnInsts();
-  return false;
+  case MVT::v2f16:
+  case MVT::f64:
+    return Subtarget->hasGFX90AInsts();
+  default:
+    return false;
+  }
 }
 
 bool SITargetLowering::enableAggressiveFMAFusion(EVT VT) const {
@@ -4401,7 +4428,8 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
                                               SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16);
+  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
+         VT == MVT::v8f32 || VT == MVT::v16f32 || VT == MVT::v32f32);
 
   SDValue Lo0, Hi0;
   std::tie(Lo0, Hi0) = DAG.SplitVectorOperand(Op.getNode(), 0);
@@ -4422,7 +4450,8 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
                                               SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16);
+  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
+         VT == MVT::v8f32 || VT == MVT::v16f32 || VT == MVT::v32f32);
 
   SDValue Lo0, Hi0;
   std::tie(Lo0, Hi0) = DAG.SplitVectorOperand(Op.getNode(), 0);
@@ -6200,6 +6229,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   if (IsGFX10Plus)
     Ops.push_back(DAG.getTargetConstant(DimInfo->Encoding, DL, MVT::i32));
   Ops.push_back(Unorm);
+  if (!IsGFX10Plus)
+    Ops.push_back(DAG.getTargetConstant(0, SDLoc(), MVT::i1));
   if (IsGFX10Plus)
     Ops.push_back(DLC);
   Ops.push_back(GLC);
@@ -6208,8 +6239,12 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
                 ST->hasFeature(AMDGPU::FeatureR128A16) ? True : False);
   if (IsGFX10Plus)
     Ops.push_back(IsA16 ? True : False);
-  Ops.push_back(TFE);
-  Ops.push_back(LWE);
+  if (!Subtarget->hasGFX90AInsts()) {
+    Ops.push_back(TFE); //tfe
+  } else if (cast<ConstantSDNode>(TFE)->getZExtValue()) {
+    report_fatal_error("TFE is not supported on this GPU");
+  }
+  Ops.push_back(LWE); // lwe
   if (!IsGFX10Plus)
     Ops.push_back(DimInfo->DA ? True : False);
   if (BaseOpcode->HasD16)
@@ -6232,7 +6267,15 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
                                           : AMDGPU::MIMGEncGfx10Default,
                                    NumVDataDwords, NumVAddrDwords);
   } else {
-    if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    if (Subtarget->hasGFX90AInsts()) {
+      Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx90a,
+                                     NumVDataDwords, NumVAddrDwords);
+      if (Opcode == -1)
+        report_fatal_error(
+            "requested image instruction is not supported on this GPU");
+    }
+    if (Opcode == -1 &&
+        Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
       Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx8,
                                      NumVDataDwords, NumVAddrDwords);
     if (Opcode == -1)
@@ -7121,6 +7164,14 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
     return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
+  case Intrinsic::amdgcn_raw_buffer_atomic_fmin:
+    return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FMIN);
+  case Intrinsic::amdgcn_struct_buffer_atomic_fmin:
+    return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FMIN);
+  case Intrinsic::amdgcn_raw_buffer_atomic_fmax:
+    return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FMAX);
+  case Intrinsic::amdgcn_struct_buffer_atomic_fmax:
+    return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FMAX);
   case Intrinsic::amdgcn_raw_buffer_atomic_swap:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_SWAP);
   case Intrinsic::amdgcn_raw_buffer_atomic_add:
@@ -7246,27 +7297,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getMemIntrinsicNode(AMDGPUISD::BUFFER_ATOMIC_CMPSWAP, DL,
                                    Op->getVTList(), Ops, VT, M->getMemOperand());
   }
-  case Intrinsic::amdgcn_global_atomic_fadd: {
-    if (!Op.getValue(0).use_empty() && !hasAtomicFaddRtnForTy(Op)) {
-      DiagnosticInfoUnsupported
-        NoFpRet(DAG.getMachineFunction().getFunction(),
-                "return versions of fp atomics not supported",
-                DL.getDebugLoc(), DS_Error);
-      DAG.getContext()->diagnose(NoFpRet);
-      return SDValue();
-    }
-    MemSDNode *M = cast<MemSDNode>(Op);
-    SDValue Ops[] = {
-      M->getOperand(0), // Chain
-      M->getOperand(2), // Ptr
-      M->getOperand(3)  // Value
-    };
-
-    EVT VT = Op.getOperand(3).getValueType();
-    return DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, VT,
-                         DAG.getVTList(VT, MVT::Other), Ops,
-                         M->getMemOperand());
-  }
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
     SDLoc DL(Op);
     MemSDNode *M = cast<MemSDNode>(Op);
@@ -7358,7 +7388,55 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     }
     return Op;
   }
+  case Intrinsic::amdgcn_global_atomic_fadd:
+    if (!Op.getValue(0).use_empty() && !Subtarget->hasGFX90AInsts()) {
+      DiagnosticInfoUnsupported
+        NoFpRet(DAG.getMachineFunction().getFunction(),
+                "return versions of fp atomics not supported",
+                DL.getDebugLoc(), DS_Error);
+      DAG.getContext()->diagnose(NoFpRet);
+      return SDValue();
+    }
+    LLVM_FALLTHROUGH;
+  case Intrinsic::amdgcn_global_atomic_fmin:
+  case Intrinsic::amdgcn_global_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fadd:
+  case Intrinsic::amdgcn_flat_atomic_fmin:
+  case Intrinsic::amdgcn_flat_atomic_fmax: {
+    MemSDNode *M = cast<MemSDNode>(Op);
+    SDValue Ops[] = {
+      M->getOperand(0), // Chain
+      M->getOperand(2), // Ptr
+      M->getOperand(3)  // Value
+    };
+    unsigned Opcode = 0;
+    switch (IntrID) {
+    case Intrinsic::amdgcn_global_atomic_fadd:
+    case Intrinsic::amdgcn_flat_atomic_fadd: {
+      EVT VT = Op.getOperand(3).getValueType();
+      return DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, VT,
+                           DAG.getVTList(VT, MVT::Other), Ops,
+                           M->getMemOperand());
+    }
+    case Intrinsic::amdgcn_global_atomic_fmin:
+    case Intrinsic::amdgcn_flat_atomic_fmin: {
+      Opcode = AMDGPUISD::ATOMIC_LOAD_FMIN;
+      break;
+    }
+    case Intrinsic::amdgcn_global_atomic_fmax:
+    case Intrinsic::amdgcn_flat_atomic_fmax: {
+      Opcode = AMDGPUISD::ATOMIC_LOAD_FMAX;
+      break;
+    }
+    default:
+      llvm_unreachable("unhandled atomic opcode");
+    }
+    return DAG.getMemIntrinsicNode(Opcode, SDLoc(Op),
+                                   M->getVTList(), Ops, M->getMemoryVT(),
+                                   M->getMemOperand());
+  }
   default:
+
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))
       return lowerImage(Op, ImageDimIntr, DAG, true);
@@ -8878,18 +8956,20 @@ SDValue SITargetLowering::splitBinaryBitConstantOp(
 }
 
 // Returns true if argument is a boolean value which is not serialized into
-// memory or argument and does not require v_cmdmask_b32 to be deserialized.
+// memory or argument and does not require v_cndmask_b32 to be deserialized.
 static bool isBoolSGPR(SDValue V) {
   if (V.getValueType() != MVT::i1)
     return false;
   switch (V.getOpcode()) {
-  default: break;
+  default:
+    break;
   case ISD::SETCC:
+  case AMDGPUISD::FP_CLASS:
+    return true;
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
-  case AMDGPUISD::FP_CLASS:
-    return true;
+    return isBoolSGPR(V.getOperand(0)) && isBoolSGPR(V.getOperand(1));
   }
   return false;
 }
@@ -10875,7 +10955,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   unsigned NewDmask = 0;
   unsigned TFEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::tfe) - 1;
   unsigned LWEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::lwe) - 1;
-  bool UsesTFC = (Node->getConstantOperandVal(TFEIdx) ||
+  bool UsesTFC = ((int(TFEIdx) >= 0 && Node->getConstantOperandVal(TFEIdx)) ||
                   Node->getConstantOperandVal(LWEIdx)) ? 1 : 0;
   unsigned TFCLane = 0;
   bool HasChain = Node->getNumValues() > 1;
@@ -11830,17 +11910,24 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     if (Ty->isHalfTy())
       return AtomicExpansionKind::None;
 
-    if (!Ty->isFloatTy())
+    if (!Ty->isFloatTy() && (!Subtarget->hasGFX90AInsts() || !Ty->isDoubleTy()))
       return AtomicExpansionKind::CmpXChg;
 
     // TODO: Do have these for flat. Older targets also had them for buffers.
     unsigned AS = RMW->getPointerAddressSpace();
 
-    if (AS == AMDGPUAS::GLOBAL_ADDRESS &&
+    if ((AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) &&
         Subtarget->hasAtomicFaddNoRtnInsts()) {
       if (!fpModeMatchesGlobalFPAtomicMode(RMW) ||
           RMW->getFunction()->getFnAttribute("amdgpu-unsafe-fp-atomics")
               .getValueAsString() != "true")
+        return AtomicExpansionKind::CmpXChg;
+
+      if (Subtarget->hasGFX90AInsts())
+        return (Ty->isFloatTy() && AS == AMDGPUAS::FLAT_ADDRESS) ?
+          AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
+
+      if (!Subtarget->hasGFX90AInsts() && AS != AMDGPUAS::GLOBAL_ADDRESS)
         return AtomicExpansionKind::CmpXChg;
 
       return RMW->use_empty() ? AtomicExpansionKind::None :
@@ -11849,8 +11936,13 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 
     // DS FP atomics do repect the denormal mode, but the rounding mode is fixed
     // to round-to-nearest-even.
-    return (AS == AMDGPUAS::LOCAL_ADDRESS && Subtarget->hasLDSFPAtomics()) ?
-      AtomicExpansionKind::None : AtomicExpansionKind::CmpXChg;
+    // The only exception is DS_ADD_F64 which never flushes regardless of mode.
+    if (AS == AMDGPUAS::LOCAL_ADDRESS && Subtarget->hasLDSFPAtomics()) {
+      return (Ty->isDoubleTy() && !fpModeMatchesGlobalFPAtomicMode(RMW)) ?
+        AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
+    }
+
+    return AtomicExpansionKind::CmpXChg;
   }
   default:
     break;
