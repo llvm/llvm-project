@@ -27,7 +27,7 @@ using namespace llvm;
 using namespace coverage;
 
 CoverageFilenamesSectionWriter::CoverageFilenamesSectionWriter(
-    ArrayRef<StringRef> Filenames)
+    ArrayRef<std::string> Filenames)
     : Filenames(Filenames) {
 #ifndef NDEBUG
   StringSet<> NameSet;
