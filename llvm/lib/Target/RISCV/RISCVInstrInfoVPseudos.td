@@ -2352,31 +2352,6 @@ multiclass VPatSLoad<string intrinsic,
                                 $rs1, $rs2, (mask_type V0), GPR:$vl, sew)>;
 }
 
-multiclass VPatILoad<string intrinsic,
-                     string inst,
-                     ValueType type,
-                     ValueType idx_type,
-                     ValueType mask_type,
-                     int sew,
-                     LMULInfo vlmul,
-                     LMULInfo idx_vlmul,
-                     VReg reg_class,
-                     VReg idx_reg_class>
-{
-    defvar Intr = !cast<Intrinsic>(intrinsic);
-    defvar Pseudo = !cast<Instruction>(inst#"_V_"#idx_vlmul.MX#"_"#vlmul.MX);
-    def : Pat<(type (Intr GPR:$rs1, (idx_type idx_reg_class:$rs2), (XLenVT (VLOp GPR:$vl)))),
-                    (Pseudo $rs1, $rs2, GPR:$vl, sew)>;
-
-    defvar IntrMask = !cast<Intrinsic>(intrinsic # "_mask");
-    defvar PseudoMask = !cast<Instruction>(inst#"_V_"#idx_vlmul.MX#"_"#vlmul.MX#"_MASK");
-    def : Pat<(type (IntrMask (type GetVRegNoV0<reg_class>.R:$merge),
-                               GPR:$rs1, (idx_type idx_reg_class:$rs2),
-                               (mask_type V0), (XLenVT (VLOp GPR:$vl)))),
-                    (PseudoMask $merge,
-                                $rs1, $rs2, (mask_type V0), GPR:$vl, sew)>;
-}
-
 multiclass VPatUSStore<string intrinsic,
                        string inst,
                        ValueType type,
@@ -2410,29 +2385,6 @@ multiclass VPatSStore<string intrinsic,
     defvar IntrMask = !cast<Intrinsic>(intrinsic # "_mask");
     defvar PseudoMask = !cast<Instruction>(inst#"_V_"#vlmul.MX#"_MASK");
     def : Pat<(IntrMask (type reg_class:$rs3), GPR:$rs1, GPR:$rs2, (mask_type V0), (XLenVT (VLOp GPR:$vl))),
-              (PseudoMask $rs3, $rs1, $rs2, (mask_type V0), GPR:$vl, sew)>;
-}
-
-multiclass VPatIStore<string intrinsic,
-                      string inst,
-                      ValueType type,
-                      ValueType idx_type,
-                      ValueType mask_type,
-                      int sew,
-                      LMULInfo vlmul,
-                      LMULInfo idx_vlmul,
-                      VReg reg_class,
-                      VReg idx_reg_class>
-{
-    defvar Intr = !cast<Intrinsic>(intrinsic);
-    defvar Pseudo = !cast<Instruction>(inst#"_V_"#idx_vlmul.MX#"_"#vlmul.MX);
-    def : Pat<(Intr (type reg_class:$rs3), GPR:$rs1,
-                    (idx_type idx_reg_class:$rs2), (XLenVT (VLOp GPR:$vl))),
-              (Pseudo $rs3, $rs1, $rs2, GPR:$vl, sew)>;
-    defvar IntrMask = !cast<Intrinsic>(intrinsic # "_mask");
-    defvar PseudoMask = !cast<Instruction>(inst#"_V_"#idx_vlmul.MX#"_"#vlmul.MX#"_MASK");
-    def : Pat<(IntrMask (type reg_class:$rs3), GPR:$rs1,
-                        (idx_type idx_reg_class:$rs2), (mask_type V0), (XLenVT (VLOp GPR:$vl))),
               (PseudoMask $rs3, $rs1, $rs2, (mask_type V0), GPR:$vl, sew)>;
 }
 
