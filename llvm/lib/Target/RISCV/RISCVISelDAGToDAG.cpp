@@ -297,6 +297,9 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, bool IsMasked,
   Operands.push_back(SEW);
   Operands.push_back(Node->getOperand(0)); // Chain.
 
+  assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
+         "Element count mismatch");
+
   RISCVVLMUL IndexLMUL = getLMUL(IndexVT);
   unsigned IndexScalarSize = IndexVT.getScalarSizeInBits();
   const RISCV::VLXSEGPseudo *P = RISCV::getVLXSEGPseudo(
@@ -375,6 +378,9 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, bool IsMasked,
   Operands.push_back(VL);
   Operands.push_back(SEW);
   Operands.push_back(Node->getOperand(0)); // Chain.
+
+  assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
+         "Element count mismatch");
 
   RISCVVLMUL IndexLMUL = getLMUL(IndexVT);
   unsigned IndexScalarSize = IndexVT.getScalarSizeInBits();
