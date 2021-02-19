@@ -266,17 +266,17 @@ static Optional<Value> allocCallBackFn(OpBuilder &b, SubViewOp subView,
                                        OperationFolder *folder) {
   SmallVector<int64_t, 4> shape(boundingSubViewSize.size(), -1);
   return b
-      .create<memref::AllocOp>(
-          subView.getLoc(),
-          MemRefType::get(shape, subView.getType().getElementType(),
-                          /*affineMapComposition =*/{}, 3),
-          boundingSubViewSize)
+      .create<AllocOp>(subView.getLoc(),
+                       MemRefType::get(shape,
+                                       subView.getType().getElementType(),
+                                       /*affineMapComposition =*/{}, 3),
+                       boundingSubViewSize)
       .getResult();
 }
 
 // Deallocation callback
 static LogicalResult deallocCallBackFn(OpBuilder &b, Value buffer) {
-  b.create<memref::DeallocOp>(buffer.getLoc(), buffer);
+  b.create<DeallocOp>(buffer.getLoc(), buffer);
   return success();
 }
 

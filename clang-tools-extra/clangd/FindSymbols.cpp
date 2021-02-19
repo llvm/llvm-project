@@ -172,6 +172,38 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
 }
 
 namespace {
+std::string getSymbolDetail(ASTContext &Ctx, const NamedDecl &ND) {
+  PrintingPolicy P(Ctx.getPrintingPolicy());
+  P.SuppressScope = true;
+  P.SuppressUnwrittenScope = true;
+  P.AnonymousTagLocations = false;
+  P.PolishForDeclaration = true;
+  std::string Detail;
+  llvm::raw_string_ostream OS(Detail);
+  if (ND.getDescribedTemplateParams()) {
+    OS << "template ";
+  }
+  if (const auto *VD = dyn_cast<ValueDecl>(&ND)) {
+    // FIXME: better printing for dependent type
+    if (isa<CXXConstructorDecl>(VD)) {
+      std::string ConstructorType = VD->getType().getAsString(P);
+      // Print constructor type as "(int)" instead of "void (int)".
+      llvm::StringRef WithoutVoid = ConstructorType;
+      WithoutVoid.consume_front("void ");
+      OS << WithoutVoid;
+    } else if (!isa<CXXDestructorDecl>(VD)) {
+      VD->getType().print(OS, P);
+    }
+  } else if (const auto *TD = dyn_cast<TagDecl>(&ND)) {
+    OS << TD->getKindName();
+  } else if (isa<TypedefNameDecl>(&ND)) {
+    OS << "type alias";
+  } else if (isa<ConceptDecl>(&ND)) {
+    OS << "concept";
+  }
+  return std::move(OS.str());
+}
+
 llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   auto &SM = Ctx.getSourceManager();
 
@@ -193,6 +225,7 @@ llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   SI.deprecated = ND.isDeprecated();
   SI.range = Range{sourceLocToPosition(SM, SymbolRange->getBegin()),
                    sourceLocToPosition(SM, SymbolRange->getEnd())};
+  SI.detail = getSymbolDetail(Ctx, ND);
 
   SourceLocation NameLoc = ND.getLocation();
   SourceLocation FallbackNameLoc;

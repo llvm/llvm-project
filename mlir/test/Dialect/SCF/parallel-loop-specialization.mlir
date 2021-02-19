@@ -15,7 +15,7 @@ func @parallel_loop(%outer_i0: index, %outer_i1: index, %A: memref<?x?xf32>, %B:
     %B_elem = load %B[%i0, %i1] : memref<?x?xf32>
     %C_elem = load %C[%i0, %i1] : memref<?x?xf32>
     %sum_elem = addf %B_elem, %C_elem : f32
-    memref.store %sum_elem, %result[%i0, %i1] : memref<?x?xf32>
+    store %sum_elem, %result[%i0, %i1] : memref<?x?xf32>
   }
   return
 }
@@ -35,11 +35,11 @@ func @parallel_loop(%outer_i0: index, %outer_i1: index, %A: memref<?x?xf32>, %B:
 // CHECK:           [[VAL_16:%.*]] = and [[VAL_13]], [[VAL_15]] : i1
 // CHECK:           scf.if [[VAL_16]] {
 // CHECK:             scf.parallel ([[VAL_17:%.*]], [[VAL_18:%.*]]) = ([[VAL_6]], [[VAL_6]]) to ([[VAL_12]], [[VAL_14]]) step ([[VAL_7]], [[VAL_7]]) {
-// CHECK:               memref.store
+// CHECK:               store
 // CHECK:             }
 // CHECK:           } else {
 // CHECK:             scf.parallel ([[VAL_22:%.*]], [[VAL_23:%.*]]) = ([[VAL_6]], [[VAL_6]]) to ([[VAL_10]], [[VAL_11]]) step ([[VAL_7]], [[VAL_7]]) {
-// CHECK:               memref.store
+// CHECK:               store
 // CHECK:             }
 // CHECK:           }
 // CHECK:           return

@@ -41,6 +41,15 @@ enum ActionKind {
   /// Fortran source file
   DebugUnparseWithSymbols,
 
+  /// Parse, run semantics and then output symbols from semantics
+  DebugDumpSymbols,
+
+  /// Parse, run semantics and then output the parse tree
+  DebugDumpParseTree,
+
+  /// Dump provenance
+  DebugDumpProvenance
+
   /// TODO: RunPreprocessor, EmitLLVM, EmitLLVMOnly,
   /// EmitCodeGenOnly, EmitAssembly, (...)
 };

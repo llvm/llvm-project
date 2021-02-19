@@ -209,15 +209,12 @@ static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
   return success();
 }
 
-// Casts a strided element pointer to a vector pointer. The vector pointer
-// would always be on address space 0, therefore addrspacecast shall be
-// used when source/dst memrefs are not on address space 0.
+// Casts a strided element pointer to a vector pointer.  The vector pointer
+// will be in the same address space as the incoming memref type.
 static Value castDataPtr(ConversionPatternRewriter &rewriter, Location loc,
                          Value ptr, MemRefType memRefType, Type vt) {
-  auto pType = LLVM::LLVMPointerType::get(vt);
-  if (memRefType.getMemorySpace() == 0)
-    return rewriter.create<LLVM::BitcastOp>(loc, pType, ptr);
-  return rewriter.create<LLVM::AddrSpaceCastOp>(loc, pType, ptr);
+  auto pType = LLVM::LLVMPointerType::get(vt, memRefType.getMemorySpace());
+  return rewriter.create<LLVM::BitcastOp>(loc, pType, ptr);
 }
 
 static LogicalResult

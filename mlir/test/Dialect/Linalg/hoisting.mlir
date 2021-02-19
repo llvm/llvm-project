@@ -10,77 +10,77 @@
 //  CHECK-SAME:   %[[STEP:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[CMP:[a-zA-Z0-9]*]]: i1
 func @hoist_allocs(%val: index, %lb : index, %ub : index, %step: index, %cmp: i1) {
-//   CHECK-DAG:   memref.alloca(%[[VAL]]) : memref<?xi8>
-//   CHECK-DAG: %[[A0:.*]] = memref.alloc(%[[VAL]]) : memref<?xi8>
+//   CHECK-DAG:   alloca(%[[VAL]]) : memref<?xi8>
+//   CHECK-DAG: %[[A0:.*]] = alloc(%[[VAL]]) : memref<?xi8>
 //       CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
-//       CHECK:   memref.alloca(%[[I]]) : memref<?xi8>
-//       CHECK:   %[[A1:.*]] = memref.alloc(%[[I]]) : memref<?xi8>
+//       CHECK:   alloca(%[[I]]) : memref<?xi8>
+//       CHECK:   %[[A1:.*]] = alloc(%[[I]]) : memref<?xi8>
 //       CHECK:   scf.for %[[J:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
-//   CHECK-DAG:     memref.alloca(%[[J]]) : memref<?xi8>
-//   CHECK-DAG:     %[[A2:.*]] = memref.alloc(%[[J]]) : memref<?xi8>
+//   CHECK-DAG:     alloca(%[[J]]) : memref<?xi8>
+//   CHECK-DAG:     %[[A2:.*]] = alloc(%[[J]]) : memref<?xi8>
 //       CHECK:     scf.for %[[K:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
   scf.for %i = %lb to %ub step %step {
     scf.for %j = %lb to %ub step %step {
       scf.for %k = %lb to %ub step %step {
         // Hoist allocs / deallocs outermost, keep view/subview below k.
-        %sa0 = memref.alloca(%val) : memref<? x i8>
-        %a0 = memref.alloc(%val) : memref<? x i8>
-//       CHECK:       memref.view %[[A0]][%[[LB]]][] : memref<?xi8> to memref<16xf32>
+        %sa0 = alloca(%val) : memref<? x i8>
+        %a0 = alloc(%val) : memref<? x i8>
+//       CHECK:       std.view %[[A0]][%[[LB]]][] : memref<?xi8> to memref<16xf32>
 //       CHECK:       subview %[[A0]][0] [42] [1]  : memref<?xi8> to memref<42xi8>
-        %v0 = memref.view %a0[%lb][] : memref<? x i8> to memref<16 x f32>
+        %v0 = view %a0[%lb][] : memref<? x i8> to memref<16 x f32>
         %sv0 = subview %a0[0][42][1] : memref<? x i8> to memref<42 x i8>
-        memref.dealloc %a0 : memref<? x i8>
+        dealloc %a0 : memref<? x i8>
 
         // Hoist below i.
-        %sa1 = memref.alloca(%i) : memref<? x i8>
-        %a1 = memref.alloc(%i) : memref<? x i8>
-        memref.dealloc %a1 : memref<? x i8>
+        %sa1 = alloca(%i) : memref<? x i8>
+        %a1 = alloc(%i) : memref<? x i8>
+        dealloc %a1 : memref<? x i8>
 
         // Hoist below j.
-        %sa2 = memref.alloca(%j) : memref<? x i8>
-        %a2 = memref.alloc(%j) : memref<? x i8>
-        memref.dealloc %a2 : memref<? x i8>
+        %sa2 = alloca(%j) : memref<? x i8>
+        %a2 = alloc(%j) : memref<? x i8>
+        dealloc %a2 : memref<? x i8>
 
         // Don't hoist since k innermost.
-//       CHECK:       memref.alloca(%[[K]]) : memref<?xi8>
-//       CHECK:       %[[A3:.*]] = memref.alloc(%[[K]]) : memref<?xi8>
-//       CHECK:       memref.dealloc %[[A3]] : memref<?xi8>
-        %sa3 = memref.alloca(%k) : memref<? x i8>
-        %a3 = memref.alloc(%k) : memref<? x i8>
-        memref.dealloc %a3 : memref<? x i8>
+//       CHECK:       alloca(%[[K]]) : memref<?xi8>
+//       CHECK:       %[[A3:.*]] = alloc(%[[K]]) : memref<?xi8>
+//       CHECK:       dealloc %[[A3]] : memref<?xi8>
+        %sa3 = alloca(%k) : memref<? x i8>
+        %a3 = alloc(%k) : memref<? x i8>
+        dealloc %a3 : memref<? x i8>
 
         // No hoisting due to control flow.
 //       CHECK:       scf.if %[[CMP]] {
-//       CHECK:         memref.alloca(%[[VAL]]) : memref<?xi8>
-//       CHECK:         %[[A4:.*]] = memref.alloc(%[[VAL]]) : memref<?xi8>
-//       CHECK:         memref.dealloc %[[A4]] : memref<?xi8>
+//       CHECK:         alloca(%[[VAL]]) : memref<?xi8>
+//       CHECK:         %[[A4:.*]] = alloc(%[[VAL]]) : memref<?xi8>
+//       CHECK:         dealloc %[[A4]] : memref<?xi8>
         scf.if %cmp {
-          %sa4 = memref.alloca(%val) : memref<? x i8>
-          %a4 = memref.alloc(%val) : memref<? x i8>
-          memref.dealloc %a4 : memref<? x i8>
+          %sa4 = alloca(%val) : memref<? x i8>
+          %a4 = alloc(%val) : memref<? x i8>
+          dealloc %a4 : memref<? x i8>
         }
 
         // No hoisting due to load/store.
-//       CHECK:       %[[SA5:.*]] = memref.alloca(%[[VAL]]) : memref<?xi8>
-//       CHECK:       %[[A5:.*]] = memref.alloc(%[[VAL]]) : memref<?xi8>
+//       CHECK:       %[[SA5:.*]] = alloca(%[[VAL]]) : memref<?xi8>
+//       CHECK:       %[[A5:.*]] = alloc(%[[VAL]]) : memref<?xi8>
 //       CHECK:       load %[[A5]][%[[LB]]] : memref<?xi8>
-//       CHECK:       memref.store %{{.*}}, %[[SA5]][%[[LB]]] : memref<?xi8>
-//       CHECK:       memref.dealloc %[[A5]] : memref<?xi8>
-        %sa5 = memref.alloca(%val) : memref<? x i8>
-        %a5 = memref.alloc(%val) : memref<? x i8>
+//       CHECK:       store %{{.*}}, %[[SA5]][%[[LB]]] : memref<?xi8>
+//       CHECK:       dealloc %[[A5]] : memref<?xi8>
+        %sa5 = alloca(%val) : memref<? x i8>
+        %a5 = alloc(%val) : memref<? x i8>
         %v5 = load %a5[%lb] : memref<? x i8>
-        memref.store %v5, %sa5[%lb] : memref<? x i8>
-        memref.dealloc %a5 : memref<? x i8>
+        store %v5, %sa5[%lb] : memref<? x i8>
+        dealloc %a5 : memref<? x i8>
 
       }
     }
   }
 //       CHECK:     }
-//       CHECK:     memref.dealloc %[[A2]] : memref<?xi8>
+//       CHECK:     dealloc %[[A2]] : memref<?xi8>
 //       CHECK:   }
-//       CHECK:   memref.dealloc %[[A1]] : memref<?xi8>
+//       CHECK:   dealloc %[[A1]] : memref<?xi8>
 //       CHECK: }
-//       CHECK: memref.dealloc %[[A0]] : memref<?xi8>
+//       CHECK: dealloc %[[A0]] : memref<?xi8>
   return
 }
 

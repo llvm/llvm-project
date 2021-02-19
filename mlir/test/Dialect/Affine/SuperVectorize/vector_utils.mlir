@@ -4,12 +4,12 @@
 
 func @vector_add_2d(%arg0: index, %arg1: index) -> f32 {
   // Nothing should be matched in this first block.
-  // CHECK-NOT:matched: {{.*}} = memref.alloc{{.*}}
+  // CHECK-NOT:matched: {{.*}} = alloc{{.*}}
   // CHECK-NOT:matched: {{.*}} = constant 0{{.*}}
   // CHECK-NOT:matched: {{.*}} = constant 1{{.*}}
-  %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
-  %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
-  %2 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+  %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
+  %1 = alloc(%arg0, %arg1) : memref<?x?xf32>
+  %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
   %c0 = constant 0 : index
   %cst = constant 1.000000e+00 : f32
 

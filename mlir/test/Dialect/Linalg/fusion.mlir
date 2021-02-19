@@ -543,11 +543,11 @@ func @pointwise_no_view(%M: index, %N: index) {
   %c0 = constant 0 : index
   %c3 = constant 3 : index
   %c2 = constant 2 : index
-  %A = memref.alloc (%M, %N): memref<?x?xf32>
-  %B = memref.alloc (%M, %N): memref<?x?xf32>
-  %C = memref.alloc (%M, %N): memref<?x?xf32>
-  %D = memref.alloc (%M, %N): memref<?x?xf32>
-  %E = memref.alloc (%M, %N): memref<?x?xf32>
+  %A = alloc (%M, %N): memref<?x?xf32>
+  %B = alloc (%M, %N): memref<?x?xf32>
+  %C = alloc (%M, %N): memref<?x?xf32>
+  %D = alloc (%M, %N): memref<?x?xf32>
+  %E = alloc (%M, %N): memref<?x?xf32>
   linalg.generic #pointwise_2d_trait
     ins(%A, %A : memref<?x?xf32>, memref<?x?xf32>)
    outs(%B : memref<?x?xf32>) {
@@ -601,7 +601,7 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
                       %arg2: memref<100x10xf32>) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %0 = memref.alloc() {temp = true} : memref<100x10xf32>
+  %0 = alloc() {temp = true} : memref<100x10xf32>
   linalg.generic {
     indexing_maps = [#map0, #map1],
     iterator_types = ["parallel", "parallel"]}
@@ -610,7 +610,7 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
       ^bb0(%arg3: f32, %arg4: f32): // no predecessors
         linalg.yield %arg3 : f32
       }
-  %1 = memref.alloc() {temp = true} : memref<100x10xf32>
+  %1 = alloc() {temp = true} : memref<100x10xf32>
   linalg.generic {
     indexing_maps = [#map1, #map1, #map1],
     iterator_types = ["parallel", "parallel"]}
@@ -620,7 +620,7 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
         %2 = subf %arg3, %arg4 : f32
         linalg.yield %2 : f32
       }
-  memref.dealloc %0 : memref<100x10xf32>
+  dealloc %0 : memref<100x10xf32>
   %2 = dim %1, %c0 : memref<100x10xf32>
   %3 = dim %1, %c1 : memref<100x10xf32>
   %4 = dim %arg2, %c0 : memref<100x10xf32>
@@ -642,7 +642,7 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
           }
     }
   }
- memref.dealloc %1 : memref<100x10xf32>
+ dealloc %1 : memref<100x10xf32>
  return
 }
 // CHECK-LABEL: func @fusion
@@ -719,9 +719,9 @@ func @accept_different_alloc_ops(%dim: index, %s0 : index, %s1: index) {
   %c3 = constant 3 : index
   %c4 = constant 4 : index
 
-  %A = memref.alloca(%dim, %dim)[%s0, %s1] : memref<?x?xf32, offset: 0, strides: [?, ?]>
-  %B = memref.alloca(%dim, %dim)[%s0, %s1] : memref<?x?xf32, offset: 0, strides: [?, ?]>
-  %C = memref.alloc(%dim, %dim)[%s0, %s1]  : memref<?x?xf32, offset: 0, strides: [?, ?]>
+  %A = alloca(%dim, %dim)[%s0, %s1] : memref<?x?xf32, offset: 0, strides: [?, ?]>
+  %B = alloca(%dim, %dim)[%s0, %s1] : memref<?x?xf32, offset: 0, strides: [?, ?]>
+  %C = alloc(%dim, %dim)[%s0, %s1]  : memref<?x?xf32, offset: 0, strides: [?, ?]>
 
   linalg.matmul ins(%A, %B : memref<?x?xf32, offset: 0, strides: [?, ?]>,
                              memref<?x?xf32, offset: 0, strides: [?, ?]>)

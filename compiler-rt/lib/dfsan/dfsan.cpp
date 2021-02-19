@@ -49,13 +49,27 @@ Flags __dfsan::flags_data;
 // in DataFlowSanitizer.cpp.
 static const int kDFsanArgTlsSize = 800;
 static const int kDFsanRetvalTlsSize = 800;
+static const int kDFsanArgOriginTlsSize = 800;
 
 SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u64
     __dfsan_retval_tls[kDFsanRetvalTlsSize / sizeof(u64)];
+SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u32 __dfsan_retval_origin_tls;
 SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u64
     __dfsan_arg_tls[kDFsanArgTlsSize / sizeof(u64)];
+SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u32
+    __dfsan_arg_origin_tls[kDFsanArgOriginTlsSize / sizeof(u32)];
 
 SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
+
+// Instrumented code may set this value in terms of -dfsan-track-origins.
+// * undefined or 0: do not track origins.
+// * 1: track origins at memory store operations.
+// * 2: TODO: track origins at memory store operations and callsites.
+extern "C" SANITIZER_WEAK_ATTRIBUTE const int __dfsan_track_origins;
+
+int __dfsan_get_track_origins() {
+  return &__dfsan_track_origins ? __dfsan_track_origins : 0;
+}
 
 // On Linux/x86_64, memory is laid out as follows:
 //
@@ -243,6 +257,25 @@ dfsan_label __dfsan_union_load_fast16labels(const dfsan_label *ls, uptr n) {
   return label;
 }
 
+// Return the union of all the n labels from addr at the high 32 bit, and the
+// origin of the first taint byte at the low 32 bit.
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE u64
+__dfsan_load_label_and_origin(const void *addr, uptr n) {
+  dfsan_label label = 0;
+  u64 ret = 0;
+  uptr p = (uptr)addr;
+  dfsan_label *s = shadow_for((void *)p);
+  for (uptr i = 0; i < n; ++i) {
+    dfsan_label l = s[i];
+    if (!l)
+      continue;
+    label |= l;
+    if (!ret)
+      ret = *(dfsan_origin *)origin_for((void *)(p + i));
+  }
+  return ret | (u64)label << 32;
+}
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_unimplemented(char *fname) {
   if (flags().warn_unimplemented)
@@ -287,6 +320,23 @@ dfsan_label dfsan_create_label(const char *desc, void *userdata) {
   return label;
 }
 
+// Return the origin of the first taint byte in the size bytes from the address
+// addr.
+static dfsan_origin GetOriginIfTainted(uptr addr, uptr size) {
+  for (uptr i = 0; i < size; ++i, ++addr) {
+    dfsan_label *s = shadow_for((void *)addr);
+    if (!is_shadow_addr_valid((uptr)s)) {
+      // The current DFSan memory layout is not always correct. For example,
+      // addresses (0, 0x10000) are mapped to (0, 0x10000). Before fixing the
+      // issue, we ignore such addresses.
+      continue;
+    }
+    if (*s)
+      return *(dfsan_origin *)origin_for((void *)addr);
+  }
+  return 0;
+}
+
 // For platforms which support slow unwinder only, we need to restrict the store
 // context size to 1, basically only storing the current pc, because the slow
 // unwinder which is based on libunwind is not async signal safe and causes
@@ -304,7 +354,8 @@ dfsan_label dfsan_create_label(const char *desc, void *userdata) {
     stack.Print();                      \
   }
 
-/*
+// Return a chain with the previous ID id and the current stack.
+// from_init = true if this is the first chain of an origin tracking path.
 static u32 ChainOrigin(u32 id, StackTrace *stack, bool from_init = false) {
   // StackDepot is not async signal safe. Do not create new chains in a signal
   // handler.
@@ -327,7 +378,166 @@ static u32 ChainOrigin(u32 id, StackTrace *stack, bool from_init = false) {
   Origin chained = Origin::CreateChainedOrigin(o, stack);
   return chained.raw_id();
 }
-*/
+
+static const uptr kOriginAlign = sizeof(dfsan_origin);
+static const uptr kOriginAlignMask = ~(kOriginAlign - 1UL);
+
+static uptr AlignUp(uptr u) {
+  return (u + kOriginAlign - 1) & kOriginAlignMask;
+}
+
+static uptr AlignDown(uptr u) { return u & kOriginAlignMask; }
+
+static void ChainAndWriteOriginIfTainted(uptr src, uptr size, uptr dst,
+                                         StackTrace *stack) {
+  dfsan_origin o = GetOriginIfTainted(src, size);
+  if (o) {
+    o = ChainOrigin(o, stack);
+    *(dfsan_origin *)origin_for((void *)dst) = o;
+  }
+}
+
+// Copy the origins of the size bytes from src to dst. The source and target
+// memory ranges cannot be overlapped. This is used by memcpy. stack records the
+// stack trace of the memcpy. When dst and src are not 4-byte aligned properly,
+// origins at the unaligned address boundaries may be overwritten because four
+// contiguous bytes share the same origin.
+static void CopyOrigin(const void *dst, const void *src, uptr size,
+                       StackTrace *stack) {
+  uptr d = (uptr)dst;
+  uptr beg = AlignDown(d);
+  // Copy left unaligned origin if that memory is tainted.
+  if (beg < d) {
+    ChainAndWriteOriginIfTainted((uptr)src, beg + kOriginAlign - d, beg, stack);
+    beg += kOriginAlign;
+  }
+
+  uptr end = AlignDown(d + size);
+  // If both ends fall into the same 4-byte slot, we are done.
+  if (end < beg)
+    return;
+
+  // Copy right unaligned origin if that memory is tainted.
+  if (end < d + size)
+    ChainAndWriteOriginIfTainted((uptr)src + (end - d), (d + size) - end, end,
+                                 stack);
+
+  if (beg >= end)
+    return;
+
+  // Align src up.
+  uptr s = AlignUp((uptr)src);
+  dfsan_origin *src_o = (dfsan_origin *)origin_for((void *)s);
+  u64 *src_s = (u64 *)shadow_for((void *)s);
+  dfsan_origin *src_end = (dfsan_origin *)origin_for((void *)(s + (end - beg)));
+  dfsan_origin *dst_o = (dfsan_origin *)origin_for((void *)beg);
+  dfsan_origin last_src_o = 0;
+  dfsan_origin last_dst_o = 0;
+  for (; src_o < src_end; ++src_o, ++src_s, ++dst_o) {
+    if (!*src_s)
+      continue;
+    if (*src_o != last_src_o) {
+      last_src_o = *src_o;
+      last_dst_o = ChainOrigin(last_src_o, stack);
+    }
+    *dst_o = last_dst_o;
+  }
+}
+
+// Copy the origins of the size bytes from src to dst. The source and target
+// memory ranges may be overlapped. So the copy is done in a reverse order.
+// This is used by memmove. stack records the stack trace of the memmove.
+static void ReverseCopyOrigin(const void *dst, const void *src, uptr size,
+                              StackTrace *stack) {
+  uptr d = (uptr)dst;
+  uptr end = AlignDown(d + size);
+
+  // Copy right unaligned origin if that memory is tainted.
+  if (end < d + size)
+    ChainAndWriteOriginIfTainted((uptr)src + (end - d), (d + size) - end, end,
+                                 stack);
+
+  uptr beg = AlignDown(d);
+
+  if (beg + kOriginAlign < end) {
+    // Align src up.
+    uptr s = AlignUp((uptr)src);
+    dfsan_origin *src =
+        (dfsan_origin *)origin_for((void *)(s + end - beg - kOriginAlign));
+    u64 *src_s = (u64 *)shadow_for((void *)(s + end - beg - kOriginAlign));
+    dfsan_origin *src_begin = (dfsan_origin *)origin_for((void *)s);
+    dfsan_origin *dst =
+        (dfsan_origin *)origin_for((void *)(end - kOriginAlign));
+    dfsan_origin src_o = 0;
+    dfsan_origin dst_o = 0;
+    for (; src >= src_begin; --src, --src_s, --dst) {
+      if (!*src_s)
+        continue;
+      if (*src != src_o) {
+        src_o = *src;
+        dst_o = ChainOrigin(src_o, stack);
+      }
+      *dst = dst_o;
+    }
+  }
+
+  // Copy left unaligned origin if that memory is tainted.
+  if (beg < d)
+    ChainAndWriteOriginIfTainted((uptr)src, beg + kOriginAlign - d, beg, stack);
+}
+
+// Copy or move the origins of the len bytes from src to dst. The source and
+// target memory ranges may or may not be overlapped. This is used by memory
+// transfer operations. stack records the stack trace of the memory transfer
+// operation.
+static void MoveOrigin(const void *dst, const void *src, uptr size,
+                       StackTrace *stack) {
+  if (!has_valid_shadow_addr(dst) ||
+      !has_valid_shadow_addr((void *)((uptr)dst + size)) ||
+      !has_valid_shadow_addr(src) ||
+      !has_valid_shadow_addr((void *)((uptr)src + size))) {
+    return;
+  }
+  // If destination origin range overlaps with source origin range, move
+  // origins by copying origins in a reverse order; otherwise, copy origins in
+  // a normal order. The orders of origin transfer are consistent with the
+  // orders of how memcpy and memmove transfer user data.
+  uptr src_aligned_beg = reinterpret_cast<uptr>(src) & ~3UL;
+  uptr src_aligned_end = (reinterpret_cast<uptr>(src) + size) & ~3UL;
+  uptr dst_aligned_beg = reinterpret_cast<uptr>(dst) & ~3UL;
+  if (dst_aligned_beg < src_aligned_end && dst_aligned_beg >= src_aligned_beg)
+    return ReverseCopyOrigin(dst, src, size, stack);
+  return CopyOrigin(dst, src, size, stack);
+}
+
+// Set the size bytes from the addres dst to be the origin value.
+static void SetOrigin(const void *dst, uptr size, u32 origin) {
+  if (size == 0)
+    return;
+
+  // Origin mapping is 4 bytes per 4 bytes of application memory.
+  // Here we extend the range such that its left and right bounds are both
+  // 4 byte aligned.
+  uptr x = unaligned_origin_for((uptr)dst);
+  uptr beg = AlignDown(x);
+  uptr end = AlignUp(x + size);  // align up.
+  u64 origin64 = ((u64)origin << 32) | origin;
+  // This is like memset, but the value is 32-bit. We unroll by 2 to write
+  // 64 bits at once. May want to unroll further to get 128-bit stores.
+  if (beg & 7ULL) {
+    if (*(u32 *)beg != origin)
+      *(u32 *)beg = origin;
+    beg += 4;
+  }
+  for (uptr addr = beg; addr < (end & ~7UL); addr += 8) {
+    if (*(u64 *)addr == origin64)
+      continue;
+    *(u64 *)addr = origin64;
+  }
+  if (end & 7ULL)
+    if (*(u32 *)(end - kOriginAlign) != origin)
+      *(u32 *)(end - kOriginAlign) = origin;
+}
 
 static void WriteShadowIfDifferent(dfsan_label label, uptr shadow_addr,
                                    uptr size) {
@@ -345,6 +555,45 @@ static void WriteShadowIfDifferent(dfsan_label label, uptr shadow_addr,
       continue;
 
     *labelp = label;
+  }
+}
+
+// Return a new origin chain with the previous ID id and the current stack
+// trace.
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin
+__dfsan_chain_origin(dfsan_origin id) {
+  GET_CALLER_PC_BP_SP;
+  (void)sp;
+  GET_STORE_STACK_TRACE_PC_BP(pc, bp);
+  return ChainOrigin(id, &stack);
+}
+
+// Copy or move the origins of the len bytes from src to dst.
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_mem_origin_transfer(
+    const void *dst, const void *src, uptr len) {
+  if (src == dst)
+    return;
+  GET_CALLER_PC_BP;
+  GET_STORE_STACK_TRACE_PC_BP(pc, bp);
+  MoveOrigin(dst, src, len, &stack);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE void dfsan_mem_origin_transfer(const void *dst,
+                                                             const void *src,
+                                                             uptr len) {
+  __dfsan_mem_origin_transfer(dst, src, len);
+}
+
+// If the label s is tainted, set the size bytes from the address p to be a new
+// origin chain with the previous ID o and the current stack trace. This is
+// used by instrumentation to reduce code size when too much code is inserted.
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_maybe_store_origin(
+    u16 s, void *p, uptr size, dfsan_origin o) {
+  if (UNLIKELY(s)) {
+    GET_CALLER_PC_BP_SP;
+    (void)sp;
+    GET_STORE_STACK_TRACE_PC_BP(pc, bp);
+    SetOrigin(p, size, ChainOrigin(o, &stack));
   }
 }
 
@@ -407,6 +656,11 @@ dfsan_read_label(const void *addr, uptr size) {
   if (size == 0)
     return 0;
   return __dfsan_union_load(shadow_for(addr), size);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin
+dfsan_read_origin_of_first_taint(const void *addr, uptr size) {
+  return GetOriginIfTainted((uptr)addr, size);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -518,6 +772,12 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void dfsan_clear_thread_local_state() {
   internal_memset(__dfsan_arg_tls, 0, sizeof(__dfsan_arg_tls));
   internal_memset(__dfsan_retval_tls, 0, sizeof(__dfsan_retval_tls));
+
+  if (__dfsan_get_track_origins()) {
+    internal_memset(__dfsan_arg_origin_tls, 0, sizeof(__dfsan_arg_origin_tls));
+    internal_memset(&__dfsan_retval_origin_tls, 0,
+                    sizeof(__dfsan_retval_origin_tls));
+  }
 }
 
 static void InitializePlatformEarly() {

@@ -63,7 +63,7 @@ func @store_too_few_subscripts_map(%arg0: memref<?x?xf32>, %arg1: index, %val: f
 // -----
 
 func @load_non_affine_index(%arg0 : index) {
-  %0 = memref.alloc() : memref<10xf32>
+  %0 = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     %1 = muli %i0, %arg0 : index
     // expected-error@+1 {{op index must be a dimension or symbol identifier}}
@@ -75,7 +75,7 @@ func @load_non_affine_index(%arg0 : index) {
 // -----
 
 func @store_non_affine_index(%arg0 : index) {
-  %0 = memref.alloc() : memref<10xf32>
+  %0 = alloc() : memref<10xf32>
   %1 = constant 11.0 : f32
   affine.for %i0 = 0 to 10 {
     %2 = muli %i0, %arg0 : index
@@ -88,7 +88,7 @@ func @store_non_affine_index(%arg0 : index) {
 // -----
 
 func @invalid_prefetch_rw(%i : index) {
-  %0 = memref.alloc() : memref<10xf32>
+  %0 = alloc() : memref<10xf32>
   // expected-error@+1 {{rw specifier has to be 'read' or 'write'}}
   affine.prefetch %0[%i], rw, locality<0>, data  : memref<10xf32>
   return
@@ -97,7 +97,7 @@ func @invalid_prefetch_rw(%i : index) {
 // -----
 
 func @invalid_prefetch_cache_type(%i : index) {
-  %0 = memref.alloc() : memref<10xf32>
+  %0 = alloc() : memref<10xf32>
   // expected-error@+1 {{cache type has to be 'data' or 'instr'}}
   affine.prefetch %0[%i], read, locality<0>, false  : memref<10xf32>
   return
@@ -106,9 +106,9 @@ func @invalid_prefetch_cache_type(%i : index) {
 // -----
 
 func @dma_start_non_affine_src_index(%arg0 : index) {
-  %0 = memref.alloc() : memref<100xf32>
-  %1 = memref.alloc() : memref<100xf32, 2>
-  %2 = memref.alloc() : memref<1xi32, 4>
+  %0 = alloc() : memref<100xf32>
+  %1 = alloc() : memref<100xf32, 2>
+  %2 = alloc() : memref<1xi32, 4>
   %c0 = constant 0 : index
   %c64 = constant 64 : index
   affine.for %i0 = 0 to 10 {
@@ -123,9 +123,9 @@ func @dma_start_non_affine_src_index(%arg0 : index) {
 // -----
 
 func @dma_start_non_affine_dst_index(%arg0 : index) {
-  %0 = memref.alloc() : memref<100xf32>
-  %1 = memref.alloc() : memref<100xf32, 2>
-  %2 = memref.alloc() : memref<1xi32, 4>
+  %0 = alloc() : memref<100xf32>
+  %1 = alloc() : memref<100xf32, 2>
+  %2 = alloc() : memref<1xi32, 4>
   %c0 = constant 0 : index
   %c64 = constant 64 : index
   affine.for %i0 = 0 to 10 {
@@ -140,9 +140,9 @@ func @dma_start_non_affine_dst_index(%arg0 : index) {
 // -----
 
 func @dma_start_non_affine_tag_index(%arg0 : index) {
-  %0 = memref.alloc() : memref<100xf32>
-  %1 = memref.alloc() : memref<100xf32, 2>
-  %2 = memref.alloc() : memref<1xi32, 4>
+  %0 = alloc() : memref<100xf32>
+  %1 = alloc() : memref<100xf32, 2>
+  %2 = alloc() : memref<1xi32, 4>
   %c0 = constant 0 : index
   %c64 = constant 64 : index
   affine.for %i0 = 0 to 10 {
@@ -157,9 +157,9 @@ func @dma_start_non_affine_tag_index(%arg0 : index) {
 // -----
 
 func @dma_wait_non_affine_tag_index(%arg0 : index) {
-  %0 = memref.alloc() : memref<100xf32>
-  %1 = memref.alloc() : memref<100xf32, 2>
-  %2 = memref.alloc() : memref<1xi32, 4>
+  %0 = alloc() : memref<100xf32>
+  %1 = alloc() : memref<100xf32, 2>
+  %2 = alloc() : memref<1xi32, 4>
   %c0 = constant 0 : index
   %c64 = constant 64 : index
   affine.for %i0 = 0 to 10 {

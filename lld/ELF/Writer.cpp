@@ -1446,8 +1446,8 @@ static void sortSection(OutputSection *sec,
     return;
 
   // IRelative relocations that usually live in the .rel[a].dyn section should
-  // be proccessed last by the dynamic loader. To achieve that we add synthetic
-  // sections in the required order from the begining so that the in.relaIplt
+  // be processed last by the dynamic loader. To achieve that we add synthetic
+  // sections in the required order from the beginning so that the in.relaIplt
   // section is placed last in an output section. Here we just do not apply
   // sorting for an output section which holds the in.relaIplt section.
   if (in.relaIplt->getParent() == sec)
@@ -1769,7 +1769,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
              Twine(os->alignment) + ")");
 }
 
-// If Input Sections have been shrinked (basic block sections) then
+// If Input Sections have been shrunk (basic block sections) then
 // update symbol values and sizes associated with these sections.  With basic
 // block sections, input sections can shrink when the jump instructions at
 // the end of the section are relaxed.

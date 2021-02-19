@@ -56,6 +56,9 @@
 ! HELP-FC1-NEXT: -falternative-parameter-statement
 ! HELP-FC1-NEXT: Enable the old style PARAMETER statement
 ! HELP-FC1-NEXT: -fbackslash            Specify that backslash in string introduces an escape character
+! HELP-FC1-NEXT: -fdebug-dump-parse-tree Dump the parse tree
+! HELP-FC1-NEXT: -fdebug-dump-provenance Dump provenance
+! HELP-FC1-NEXT: -fdebug-dump-symbols    Dump symbols after the semantic analysis
 ! HELP-FC1-NEXT: -fdebug-unparse-with-symbols
 ! HELP-FC1-NEXT:                        Unparse and stop.
 ! HELP-FC1-NEXT: -fdebug-unparse        Unparse and stop.

@@ -595,6 +595,9 @@ public:
                                   EVT VT) const override;
   bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
 
+  bool generateFMAsInMachineCombiner(EVT VT,
+                                     CodeGenOpt::Level OptLevel) const override;
+
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
 
   /// Returns false if N is a bit extraction pattern of (X >> C) & Mask.

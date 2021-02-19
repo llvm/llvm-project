@@ -114,6 +114,11 @@ LoopPassManager::runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
     // Check if the current pass preserved the loop-nest object or not.
     IsLoopNestPtrValid &= PassPA->getChecker<LoopNestAnalysis>().preserved();
 
+    // After running the loop pass, the parent loop might change and we need to
+    // notify the updater, otherwise U.ParentL might gets outdated and triggers
+    // assertion failures in addSiblingLoops and addChildLoops.
+    U.setParentLoop(L.getParentLoop());
+
     // FIXME: Historically, the pass managers all called the LLVM context's
     // yield function here. We don't have a generic way to acquire the
     // context and it isn't yet clear what the right pattern is for yielding
@@ -157,6 +162,11 @@ LoopPassManager::runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
     // Finally, we intersect the final preserved analyses to compute the
     // aggregate preserved set for this pass manager.
     PA.intersect(std::move(*PassPA));
+
+    // After running the loop pass, the parent loop might change and we need to
+    // notify the updater, otherwise U.ParentL might gets outdated and triggers
+    // assertion failures in addSiblingLoops and addChildLoops.
+    U.setParentLoop(L.getParentLoop());
 
     // FIXME: Historically, the pass managers all called the LLVM context's
     // yield function here. We don't have a generic way to acquire the

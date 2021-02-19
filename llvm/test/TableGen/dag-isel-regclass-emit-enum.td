@@ -31,7 +31,7 @@ def GPRAbove127 : RegisterClass<"TestTarget", [i32], 32,
 def : Pat<(i32 (add i32:$src, (i32 0))),
           (COPY_TO_REGCLASS GPRAbove127, GPR0:$src)>;
 
-// CHECK:      OPC_CheckChild1Integer, 1,
+// CHECK:      OPC_CheckChild1Integer, 2,
 // CHECK-NEXT: OPC_EmitInteger, MVT::i32, TestNamespace::GPR127RegClassID,
 // CHECK-NEXT: OPC_MorphNodeTo1, TARGET_VAL(TargetOpcode::COPY_TO_REGCLASS), 0,
 // CHECK-NEXT:     MVT::i32, 2/*#Ops*/, 1, 0,

@@ -4,7 +4,7 @@
 func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
   %token = async.execute {
     %c0 = constant 0 : index
-    memref.store %arg0, %arg1[%c0] : memref<1xf32>
+    store %arg0, %arg1[%c0] : memref<1xf32>
     async.yield
   }
   async.await %token : !async.token
@@ -28,7 +28,7 @@ func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
 
 // Resume coroutine after suspension.
 // CHECK: ^[[RESUME]]:
-// CHECK:   memref.store
+// CHECK:   store
 // CHECK:   async.runtime.set_available %[[TOKEN]]
 
 // Delete coroutine.
@@ -50,12 +50,12 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 
     %token1 = async.execute {
       %c1 = constant 1: index
-      memref.store %arg0, %arg2[%c0] : memref<1xf32>
+      store %arg0, %arg2[%c0] : memref<1xf32>
       async.yield
     }
     async.await %token1 : !async.token
 
-    memref.store %arg1, %arg2[%c0] : memref<1xf32>
+    store %arg1, %arg2[%c0] : memref<1xf32>
     async.yield
   }
   // CHECK: async.runtime.await %[[TOKEN]]
@@ -77,7 +77,7 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 // CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME:.*]], ^[[CLEANUP:.*]]
 
 // CHECK: ^[[RESUME]]:
-// CHECK:   memref.store
+// CHECK:   store
 // CHECK:   async.runtime.set_available %[[TOKEN]]
 
 // Function outlined from the outer async.execute operation.
@@ -103,7 +103,7 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 
 // Set token available after second resumption.
 // CHECK: ^[[RESUME_1]]:
-// CHECK:   memref.store
+// CHECK:   store
 // CHECK:   async.runtime.set_available %[[TOKEN]]
 
 // CHECK: ^[[CLEANUP]]:
@@ -116,13 +116,13 @@ func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
   // CHECK: %[[TOKEN:.*]] = call @async_execute_fn
   %token = async.execute {
     %c0 = constant 0 : index
-    memref.store %arg0, %arg1[%c0] : memref<1xf32>
+    store %arg0, %arg1[%c0] : memref<1xf32>
     async.yield
   }
   // CHECK: call @async_execute_fn_0(%[[TOKEN]], %arg0, %arg1)
   %token_0 = async.execute [%token] {
     %c0 = constant 0 : index
-    memref.store %arg0, %arg1[%c0] : memref<1xf32>
+    store %arg0, %arg1[%c0] : memref<1xf32>
     async.yield
   }
   return
@@ -157,7 +157,7 @@ func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
 
 // Emplace result token after second resumption.
 // CHECK: ^[[RESUME_1]]:
-// CHECK:   memref.store
+// CHECK:   store
 // CHECK:   async.runtime.set_available %[[TOKEN]]
 
 // CHECK: ^[[CLEANUP]]:

@@ -13,7 +13,7 @@ func @for(%outer: index, %A: memref<?xf32>, %B: memref<?xf32>,
     %B_elem = load %B[%i0] : memref<?xf32>
     %C_elem = load %C[%i0] : memref<?xf32>
     %sum_elem = addf %B_elem, %C_elem : f32
-    memref.store %sum_elem, %result[%i0] : memref<?xf32>
+    store %sum_elem, %result[%i0] : memref<?xf32>
   }
   return
 }
@@ -28,11 +28,11 @@ func @for(%outer: index, %A: memref<?xf32>, %B: memref<?xf32>,
 // CHECK:           [[PRED:%.*]] = cmpi eq, [[MIN]], [[CST_1024]] : index
 // CHECK:           scf.if [[PRED]] {
 // CHECK:             scf.for [[IDX0:%.*]] = [[CST_0]] to [[CST_1024]] step [[CST_1]] {
-// CHECK:               memref.store
+// CHECK:               store
 // CHECK:             }
 // CHECK:           } else {
 // CHECK:             scf.for [[IDX0:%.*]] = [[CST_0]] to [[MIN]] step [[CST_1]] {
-// CHECK:               memref.store
+// CHECK:               store
 // CHECK:             }
 // CHECK:           }
 // CHECK:           return

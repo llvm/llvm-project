@@ -2212,7 +2212,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // in addCombinedLTOObject, so we are done if that's the case.
   // Likewise, --plugin-opt=emit-llvm and --plugin-opt=emit-asm are the
   // options to create output files in bitcode or assembly code
-  // repsectively. No object files are generated.
+  // respectively. No object files are generated.
   // Also bail out here when only certain thinLTO modules are specified for
   // compilation. The intermediate object file are the expected output.
   if (config->thinLTOIndexOnly || config->emitLLVM || config->ltoEmitAsm ||

@@ -20,8 +20,7 @@ group("compiler-rt") {
 
   # FIXME: Do this only if a gn arg compiler_rt_enable_ios is set?
   # That would match the cmake build.
-  # iOS SDKs aren't available in the commandline tools SDK.
-  if (host_os == "mac" && !mac_use_commandline_tools_sdk) {
+  if (host_os == "mac" && have_ios_sdks) {
     if (llvm_build_AArch64) {
       deps += [ "//compiler-rt/lib/builtins(//llvm/utils/gn/build/toolchain:stage2_ios_aarch64)" ]
     }

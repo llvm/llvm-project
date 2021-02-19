@@ -117,3 +117,46 @@ void InterfaceFile::addSymbol(SymbolKind Kind, StringRef Name,
     for (const auto &Target : Targets)
       result.first->second->addTarget(Target);
 }
+
+void InterfaceFile::addDocument(std::shared_ptr<InterfaceFile> &&Document) {
+  auto Pos = llvm::lower_bound(Documents, Document,
+                               [](const std::shared_ptr<InterfaceFile> &LHS,
+                                  const std::shared_ptr<InterfaceFile> &RHS) {
+                                 return LHS->InstallName < RHS->InstallName;
+                               });
+  Documents.insert(Pos, Document);
+}
+
+bool InterfaceFile::operator==(const InterfaceFile &O) const {
+    if (Targets != O.Targets)
+      return false;
+    if (InstallName != O.InstallName)
+      return false;
+    if ((CurrentVersion != O.CurrentVersion) ||
+        (CompatibilityVersion != O.CompatibilityVersion))
+      return false;
+    if (SwiftABIVersion != O.SwiftABIVersion)
+      return false;
+    if (IsTwoLevelNamespace != O.IsTwoLevelNamespace)
+      return false;
+    if (IsAppExtensionSafe != O.IsAppExtensionSafe)
+      return false;
+    if (IsInstallAPI != O.IsInstallAPI)
+      return false;
+    if (ParentUmbrellas != O.ParentUmbrellas)
+      return false;
+    if (AllowableClients != O.AllowableClients)
+      return false;
+    if (ReexportedLibraries != O.ReexportedLibraries)
+      return false;
+    if (Symbols != O.Symbols)
+      return false;
+    if (!std::equal(Documents.begin(), Documents.end(), O.Documents.begin(),
+                    O.Documents.end(),
+                    [](const std::shared_ptr<InterfaceFile> LHS,
+                        const std::shared_ptr<InterfaceFile> RHS) {
+                      return *LHS == *RHS;
+                    }))
+      return false;
+    return true;
+}
