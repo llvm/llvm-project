@@ -62,6 +62,7 @@ static_library("Utils") {
     "PromoteMemoryToRegister.cpp",
     "SSAUpdater.cpp",
     "SSAUpdaterBulk.cpp",
+    "SampleProfileLoaderBaseUtil.cpp",
     "SanitizerStats.cpp",
     "ScalarEvolutionExpander.cpp",
     "SimplifyCFG.cpp",
