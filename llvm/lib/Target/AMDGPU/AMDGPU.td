@@ -956,9 +956,9 @@ def FeatureISAVersion9_0_C : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
-   FeatureXNACK,
    FeatureDsSrc2Insts,
    FeatureExtendedImageInsts,
+   FeatureMadMacF32Insts,
    FeatureImageGather4D16Bug]>;
 
 // TODO: Organize more features into groups.
