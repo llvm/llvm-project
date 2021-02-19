@@ -1849,31 +1849,39 @@ inline bool Registers_arm64::validRegister(int regNum) const {
     return false;
   if (regNum == UNW_ARM64_RA_SIGN_STATE)
     return true;
-  if ((regNum > 31) && (regNum < 64))
+  if ((regNum > 32) && (regNum < 64))
     return false;
   return true;
 }
 
 inline uint64_t Registers_arm64::getRegister(int regNum) const {
-  if (regNum == UNW_REG_IP)
+  if (regNum == UNW_REG_IP || regNum == UNW_ARM64_PC)
     return _registers.__pc;
-  if (regNum == UNW_REG_SP)
+  if (regNum == UNW_REG_SP || regNum == UNW_ARM64_SP)
     return _registers.__sp;
   if (regNum == UNW_ARM64_RA_SIGN_STATE)
     return _registers.__ra_sign_state;
-  if ((regNum >= 0) && (regNum < 32))
+  if (regNum == UNW_ARM64_FP)
+    return _registers.__fp;
+  if (regNum == UNW_ARM64_LR)
+    return _registers.__lr;
+  if ((regNum >= 0) && (regNum < 29))
     return _registers.__x[regNum];
   _LIBUNWIND_ABORT("unsupported arm64 register");
 }
 
 inline void Registers_arm64::setRegister(int regNum, uint64_t value) {
-  if (regNum == UNW_REG_IP)
+  if (regNum == UNW_REG_IP || regNum == UNW_ARM64_PC)
     _registers.__pc = value;
-  else if (regNum == UNW_REG_SP)
+  else if (regNum == UNW_REG_SP || regNum == UNW_ARM64_SP)
     _registers.__sp = value;
   else if (regNum == UNW_ARM64_RA_SIGN_STATE)
     _registers.__ra_sign_state = value;
-  else if ((regNum >= 0) && (regNum < 32))
+  else if (regNum == UNW_ARM64_FP)
+    _registers.__fp = value;
+  else if (regNum == UNW_ARM64_LR)
+    _registers.__lr = value;
+  else if ((regNum >= 0) && (regNum < 29))
     _registers.__x[regNum] = value;
   else
     _LIBUNWIND_ABORT("unsupported arm64 register");
@@ -1943,12 +1951,14 @@ inline const char *Registers_arm64::getRegisterName(int regNum) {
     return "x27";
   case UNW_ARM64_X28:
     return "x28";
-  case UNW_ARM64_X29:
+  case UNW_ARM64_FP:
     return "fp";
-  case UNW_ARM64_X30:
+  case UNW_ARM64_LR:
     return "lr";
-  case UNW_ARM64_X31:
+  case UNW_ARM64_SP:
     return "sp";
+  case UNW_ARM64_PC:
+    return "pc";
   case UNW_ARM64_D0:
     return "d0";
   case UNW_ARM64_D1:
