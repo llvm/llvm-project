@@ -1468,8 +1468,7 @@ void CompilerInvocation::GenerateCodeGenArgs(
       GenerateArg(Args, OPT_ftime_report, SA);
   }
 
-  if (Opts.FunctionSections &&
-      (Opts.BBSections == "none" || Opts.BBSections == "labels"))
+  if (Opts.FunctionSections)
     GenerateArg(Args, OPT_ffunction_sections, SA);
 
   if (Opts.PrepareForLTO && !Opts.PrepareForThinLTO)
@@ -1763,9 +1762,7 @@ bool CompilerInvocation::ParseCodeGenArgsImpl(CodeGenOptions &Opts,
   }
 
   // Basic Block Sections implies Function Sections.
-  Opts.FunctionSections =
-      Args.hasArg(OPT_ffunction_sections) ||
-      (Opts.BBSections != "none" && Opts.BBSections != "labels");
+  Opts.FunctionSections = Args.hasArg(OPT_ffunction_sections);
 
   Opts.PrepareForLTO = Args.hasArg(OPT_flto, OPT_flto_EQ);
   Opts.PrepareForThinLTO = false;
