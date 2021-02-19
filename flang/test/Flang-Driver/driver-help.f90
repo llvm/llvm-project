@@ -22,14 +22,21 @@
 ! HELP-NEXT: -c                     Only run preprocess, compile, and assemble steps
 ! HELP-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-NEXT: -E                     Only run the preprocessor
+! HELP-NEXT: -falternative-parameter-statement
+! HELP-NEXT: Enable the old style PARAMETER statement
+! HELP-NEXT: -fbackslash            Specify that backslash in string introduces an escape character
 ! HELP-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
 ! HELP-NEXT: -ffixed-form           Process source files in fixed form
 ! HELP-NEXT: -ffixed-line-length=<value>
 ! HELP-NEXT: Use <value> as character line width in fixed mode
 ! HELP-NEXT: -ffree-form            Process source files in free form
+! HELP-NEXT: -fimplicit-none        No implicit typing allowed unless overridden by IMPLICIT statements
+! HELP-NEXT: -finput-charset=<value> Specify the default character set for source files
+! HELP-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! HELP-NEXT: -fno-color-diagnostics Disable colors in diagnostics
 ! HELP-NEXT: -fopenacc              Enable OpenACC
 ! HELP-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
+! HELP-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! HELP-NEXT: -help                  Display available options
 ! HELP-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-NEXT: -module-dir <dir>      Put MODULE files in <dir>
@@ -46,6 +53,9 @@
 ! HELP-FC1-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-FC1-NEXT: -emit-obj Emit native object files
 ! HELP-FC1-NEXT: -E                     Only run the preprocessor
+! HELP-FC1-NEXT: -falternative-parameter-statement
+! HELP-FC1-NEXT: Enable the old style PARAMETER statement
+! HELP-FC1-NEXT: -fbackslash            Specify that backslash in string introduces an escape character
 ! HELP-FC1-NEXT: -fdebug-unparse-with-symbols
 ! HELP-FC1-NEXT:                        Unparse and stop.
 ! HELP-FC1-NEXT: -fdebug-unparse        Unparse and stop.
@@ -53,8 +63,12 @@
 ! HELP-FC1-NEXT: -ffixed-line-length=<value>
 ! HELP-FC1-NEXT: Use <value> as character line width in fixed mode
 ! HELP-FC1-NEXT: -ffree-form            Process source files in free form
+! HELP-FC1-NEXT: -fimplicit-none        No implicit typing allowed unless overridden by IMPLICIT statements
+! HELP-FC1-NEXT: -finput-charset=<value> Specify the default character set for source files
+! HELP-FC1-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! HELP-FC1-NEXT: -fopenacc              Enable OpenACC
 ! HELP-FC1-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
+! HELP-FC1-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! HELP-FC1-NEXT: -help                  Display available options
 ! HELP-FC1-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-FC1-NEXT: -module-dir <dir>      Put MODULE files in <dir>
