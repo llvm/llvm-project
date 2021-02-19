@@ -129,6 +129,11 @@ accepted if enabled by command-line options.
 * DATA statement initialization is allowed for procedure pointers outside
   structure constructors.
 * Nonstandard intrinsic functions: ISNAN, SIZEOF
+* A forward reference to a default INTEGER scalar dummy argument is
+  permitted to appear in a specification expression, such as an array
+  bound, in a scope with IMPLICIT NONE(TYPE) if the name
+  of the dummy argument would have caused it to be implicitly typed
+  as default INTEGER if IMPLICIT NONE(TYPE) were absent.
 
 ### Extensions supported when enabled by options
 
