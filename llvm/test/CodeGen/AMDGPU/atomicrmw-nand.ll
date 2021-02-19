@@ -13,10 +13,9 @@ define i32 @atomic_nand_i32_lds(i32 addrspace(3)* %ptr) nounwind {
 ; GCN-NEXT:    v_mov_b32_e32 v2, v1
 ; GCN-NEXT:    v_not_b32_e32 v1, v2
 ; GCN-NEXT:    v_or_b32_e32 v1, -5, v1
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_cmpst_rtn_b32 v1, v0, v2, v1
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    buffer_wbinvl1_vol
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GCN-NEXT:    s_andn2_b64 exec, exec, s[4:5]
