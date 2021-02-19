@@ -298,8 +298,8 @@ void VPBasicBlock::execute(VPTransformState *State) {
 
   VPValue *CBV;
   if (EnableVPlanNativePath && (CBV = getCondBit())) {
-    Value *IRCBV = CBV->getUnderlyingValue();
-    assert(IRCBV && "Unexpected null underlying value for condition bit");
+    assert(CBV->getUnderlyingValue() &&
+           "Unexpected null underlying value for condition bit");
 
     // Condition bit value in a VPBasicBlock is used as the branch selector. In
     // the VPlan-native path case, since all branches are uniform we generate a
