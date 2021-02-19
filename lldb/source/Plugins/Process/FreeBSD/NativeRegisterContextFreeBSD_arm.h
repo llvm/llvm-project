@@ -17,7 +17,7 @@
 #include <machine/vfp.h>
 // clang-format on
 
-#include "Plugins/Process/FreeBSDRemote/NativeRegisterContextFreeBSD.h"
+#include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 
 #include <array>

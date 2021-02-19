@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextFreeBSD_arm64.h --------------------*- C++ -*-===//
+//===-- NativeRegisterContextFreeBSD_powerpc.h ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__aarch64__)
+#if defined(__powerpc__)
 
-#ifndef lldb_NativeRegisterContextFreeBSD_arm64_h
-#define lldb_NativeRegisterContextFreeBSD_arm64_h
+#ifndef lldb_NativeRegisterContextFreeBSD_powerpc_h
+#define lldb_NativeRegisterContextFreeBSD_powerpc_h
 
 // clang-format off
 #include <sys/types.h>
 #include <machine/reg.h>
 // clang-format on
 
-#include "Plugins/Process/FreeBSDRemote/NativeRegisterContextFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
+#include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
 
 #include <array>
 
@@ -26,10 +26,11 @@ namespace process_freebsd {
 
 class NativeProcessFreeBSD;
 
-class NativeRegisterContextFreeBSD_arm64 : public NativeRegisterContextFreeBSD {
+class NativeRegisterContextFreeBSD_powerpc
+    : public NativeRegisterContextFreeBSD {
 public:
-  NativeRegisterContextFreeBSD_arm64(const ArchSpec &target_arch,
-                                     NativeThreadProtocol &native_thread);
+  NativeRegisterContextFreeBSD_powerpc(const ArchSpec &target_arch,
+                                       NativeThreadProtocol &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
 
@@ -51,21 +52,23 @@ public:
   CopyHardwareWatchpointsFrom(NativeRegisterContextFreeBSD &source) override;
 
 private:
-  // Due to alignment, FreeBSD reg/fpreg are a few bytes larger than
-  // LLDB's GPR/FPU structs.  However, all fields have matching offsets
-  // and sizes, so we do not have to worry about these (and we have
-  // a unittest to assert that).
+  enum RegSetKind {
+    GPRegSet,
+    FPRegSet,
+  };
   std::array<uint8_t, sizeof(reg) + sizeof(fpreg)> m_reg_data;
 
-  Status ReadRegisterSet(uint32_t set);
-  Status WriteRegisterSet(uint32_t set);
+  llvm::Optional<RegSetKind> GetSetForNativeRegNum(uint32_t reg_num) const;
 
-  RegisterInfoPOSIX_arm64 &GetRegisterInfo() const;
+  Status ReadRegisterSet(RegSetKind set);
+  Status WriteRegisterSet(RegSetKind set);
+
+  RegisterContextFreeBSD_powerpc &GetRegisterInfo() const;
 };
 
 } // namespace process_freebsd
 } // namespace lldb_private
 
-#endif // #ifndef lldb_NativeRegisterContextFreeBSD_arm64_h
+#endif // #ifndef lldb_NativeRegisterContextFreeBSD_powerpc_h
 
-#endif // defined (__aarch64__)
+#endif // defined (__powerpc__)

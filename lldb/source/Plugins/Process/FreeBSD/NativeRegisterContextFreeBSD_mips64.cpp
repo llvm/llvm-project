@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextFreeBSD_arm64.cpp ----------------------------===//
+//===-- NativeRegisterContextFreeBSD_mips64.cpp ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__aarch64__)
+#if defined(__mips64__)
 
-#include "NativeRegisterContextFreeBSD_arm64.h"
+#include "NativeRegisterContextFreeBSD_mips64.h"
 
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include "Plugins/Process/FreeBSDRemote/NativeProcessFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 
 // clang-format off
 #include <sys/param.h>
@@ -30,71 +29,57 @@ using namespace lldb_private::process_freebsd;
 NativeRegisterContextFreeBSD *
 NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
-  return new NativeRegisterContextFreeBSD_arm64(target_arch, native_thread);
+  return new NativeRegisterContextFreeBSD_mips64(target_arch, native_thread);
 }
 
-NativeRegisterContextFreeBSD_arm64::NativeRegisterContextFreeBSD_arm64(
+NativeRegisterContextFreeBSD_mips64::NativeRegisterContextFreeBSD_mips64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_arm64(target_arch)) {
-  GetRegisterInfo().ConfigureVectorRegisterInfos(
-      RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64);
+          native_thread, new RegisterContextFreeBSD_mips64(target_arch)) {}
+
+RegisterContextFreeBSD_mips64 &
+NativeRegisterContextFreeBSD_mips64::GetRegisterInfo() const {
+  return static_cast<RegisterContextFreeBSD_mips64 &>(
+      *m_register_info_interface_up);
 }
 
-RegisterInfoPOSIX_arm64 &
-NativeRegisterContextFreeBSD_arm64::GetRegisterInfo() const {
-  return static_cast<RegisterInfoPOSIX_arm64 &>(*m_register_info_interface_up);
-}
-
-uint32_t NativeRegisterContextFreeBSD_arm64::GetRegisterSetCount() const {
+uint32_t NativeRegisterContextFreeBSD_mips64::GetRegisterSetCount() const {
   return GetRegisterInfo().GetRegisterSetCount();
 }
 
 const RegisterSet *
-NativeRegisterContextFreeBSD_arm64::GetRegisterSet(uint32_t set_index) const {
+NativeRegisterContextFreeBSD_mips64::GetRegisterSet(uint32_t set_index) const {
   return GetRegisterInfo().GetRegisterSet(set_index);
 }
 
-uint32_t NativeRegisterContextFreeBSD_arm64::GetUserRegisterCount() const {
+uint32_t NativeRegisterContextFreeBSD_mips64::GetUserRegisterCount() const {
   uint32_t count = 0;
   for (uint32_t set_index = 0; set_index < GetRegisterSetCount(); ++set_index)
     count += GetRegisterSet(set_index)->num_registers;
   return count;
 }
 
-Status NativeRegisterContextFreeBSD_arm64::ReadRegisterSet(uint32_t set) {
+Status NativeRegisterContextFreeBSD_mips64::ReadRegisterSet(RegSetKind set) {
   switch (set) {
-  case RegisterInfoPOSIX_arm64::GPRegSet:
+  case GPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETREGS, m_thread.GetID(),
                                                m_reg_data.data());
-  case RegisterInfoPOSIX_arm64::FPRegSet:
-    return NativeProcessFreeBSD::PtraceWrapper(
-        PT_GETFPREGS, m_thread.GetID(),
-        m_reg_data.data() + sizeof(RegisterInfoPOSIX_arm64::GPR));
-  case RegisterInfoPOSIX_arm64::SVERegSet:
-    return Status("not supported");
   }
-  llvm_unreachable("NativeRegisterContextFreeBSD_arm64::ReadRegisterSet");
+  llvm_unreachable("NativeRegisterContextFreeBSD_mips64::ReadRegisterSet");
 }
 
-Status NativeRegisterContextFreeBSD_arm64::WriteRegisterSet(uint32_t set) {
+Status NativeRegisterContextFreeBSD_mips64::WriteRegisterSet(RegSetKind set) {
   switch (set) {
-  case RegisterInfoPOSIX_arm64::GPRegSet:
+  case GPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETREGS, m_thread.GetID(),
                                                m_reg_data.data());
-  case RegisterInfoPOSIX_arm64::FPRegSet:
-    return NativeProcessFreeBSD::PtraceWrapper(
-        PT_SETFPREGS, m_thread.GetID(),
-        m_reg_data.data() + sizeof(RegisterInfoPOSIX_arm64::GPR));
-  case RegisterInfoPOSIX_arm64::SVERegSet:
-    return Status("not supported");
   }
-  llvm_unreachable("NativeRegisterContextFreeBSD_arm64::WriteRegisterSet");
+  llvm_unreachable("NativeRegisterContextFreeBSD_mips64::WriteRegisterSet");
 }
 
 Status
-NativeRegisterContextFreeBSD_arm64::ReadRegister(const RegisterInfo *reg_info,
-                                                 RegisterValue &reg_value) {
+NativeRegisterContextFreeBSD_mips64::ReadRegister(const RegisterInfo *reg_info,
+                                                  RegisterValue &reg_value) {
   Status error;
 
   if (!reg_info) {
@@ -109,7 +94,7 @@ NativeRegisterContextFreeBSD_arm64::ReadRegister(const RegisterInfo *reg_info,
                                                ? reg_info->name
                                                : "<unknown register>");
 
-  uint32_t set = GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg);
+  RegSetKind set = GPRegSet;
   error = ReadRegisterSet(set);
   if (error.Fail())
     return error;
@@ -120,7 +105,7 @@ NativeRegisterContextFreeBSD_arm64::ReadRegister(const RegisterInfo *reg_info,
   return error;
 }
 
-Status NativeRegisterContextFreeBSD_arm64::WriteRegister(
+Status NativeRegisterContextFreeBSD_mips64::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
   Status error;
 
@@ -134,7 +119,7 @@ Status NativeRegisterContextFreeBSD_arm64::WriteRegister(
                                                ? reg_info->name
                                                : "<unknown register>");
 
-  uint32_t set = GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg);
+  RegSetKind set = GPRegSet;
   error = ReadRegisterSet(set);
   if (error.Fail())
     return error;
@@ -146,15 +131,11 @@ Status NativeRegisterContextFreeBSD_arm64::WriteRegister(
   return WriteRegisterSet(set);
 }
 
-Status NativeRegisterContextFreeBSD_arm64::ReadAllRegisterValues(
+Status NativeRegisterContextFreeBSD_mips64::ReadAllRegisterValues(
     lldb::DataBufferSP &data_sp) {
   Status error;
 
-  error = ReadRegisterSet(RegisterInfoPOSIX_arm64::GPRegSet);
-  if (error.Fail())
-    return error;
-
-  error = ReadRegisterSet(RegisterInfoPOSIX_arm64::FPRegSet);
+  error = ReadRegisterSet(GPRegSet);
   if (error.Fail())
     return error;
 
@@ -165,20 +146,20 @@ Status NativeRegisterContextFreeBSD_arm64::ReadAllRegisterValues(
   return error;
 }
 
-Status NativeRegisterContextFreeBSD_arm64::WriteAllRegisterValues(
+Status NativeRegisterContextFreeBSD_mips64::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
   Status error;
 
   if (!data_sp) {
     error.SetErrorStringWithFormat(
-        "NativeRegisterContextFreeBSD_arm64::%s invalid data_sp provided",
+        "NativeRegisterContextFreeBSD_mips64::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
 
   if (data_sp->GetByteSize() != m_reg_data.size()) {
     error.SetErrorStringWithFormat(
-        "NativeRegisterContextFreeBSD_arm64::%s data_sp contained mismatched "
+        "NativeRegisterContextFreeBSD_mips64::%s data_sp contained mismatched "
         "data size, expected %" PRIu64 ", actual %" PRIu64,
         __FUNCTION__, m_reg_data.size(), data_sp->GetByteSize());
     return error;
@@ -186,7 +167,7 @@ Status NativeRegisterContextFreeBSD_arm64::WriteAllRegisterValues(
 
   uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
-    error.SetErrorStringWithFormat("NativeRegisterContextFreeBSD_arm64::%s "
+    error.SetErrorStringWithFormat("NativeRegisterContextFreeBSD_mips64::%s "
                                    "DataBuffer::GetBytes() returned a null "
                                    "pointer",
                                    __FUNCTION__);
@@ -194,16 +175,12 @@ Status NativeRegisterContextFreeBSD_arm64::WriteAllRegisterValues(
   }
   ::memcpy(m_reg_data.data(), src, m_reg_data.size());
 
-  error = WriteRegisterSet(RegisterInfoPOSIX_arm64::GPRegSet);
-  if (error.Fail())
-    return error;
-
-  return WriteRegisterSet(RegisterInfoPOSIX_arm64::FPRegSet);
+  return WriteRegisterSet(GPRegSet);
 }
 
-llvm::Error NativeRegisterContextFreeBSD_arm64::CopyHardwareWatchpointsFrom(
+llvm::Error NativeRegisterContextFreeBSD_mips64::CopyHardwareWatchpointsFrom(
     NativeRegisterContextFreeBSD &source) {
   return llvm::Error::success();
 }
 
-#endif // defined (__aarch64__)
+#endif // defined (__mips64__)

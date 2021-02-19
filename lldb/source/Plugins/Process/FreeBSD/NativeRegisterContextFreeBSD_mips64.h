@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextFreeBSD_powerpc.h ------------------*- C++ -*-===//
+//===-- NativeRegisterContextFreeBSD_mips64.h -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__powerpc__)
+#if defined(__mips64__)
 
-#ifndef lldb_NativeRegisterContextFreeBSD_powerpc_h
-#define lldb_NativeRegisterContextFreeBSD_powerpc_h
+#ifndef lldb_NativeRegisterContextFreeBSD_mips64_h
+#define lldb_NativeRegisterContextFreeBSD_mips64_h
 
 // clang-format off
 #include <sys/types.h>
 #include <machine/reg.h>
 // clang-format on
 
-#include "Plugins/Process/FreeBSDRemote/NativeRegisterContextFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
+#include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
+#include "Plugins/Process/Utility/RegisterContextFreeBSD_mips64.h"
 
 #include <array>
 
@@ -26,11 +26,11 @@ namespace process_freebsd {
 
 class NativeProcessFreeBSD;
 
-class NativeRegisterContextFreeBSD_powerpc
+class NativeRegisterContextFreeBSD_mips64
     : public NativeRegisterContextFreeBSD {
 public:
-  NativeRegisterContextFreeBSD_powerpc(const ArchSpec &target_arch,
-                                       NativeThreadProtocol &native_thread);
+  NativeRegisterContextFreeBSD_mips64(const ArchSpec &target_arch,
+                                      NativeThreadProtocol &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
 
@@ -54,21 +54,18 @@ public:
 private:
   enum RegSetKind {
     GPRegSet,
-    FPRegSet,
   };
-  std::array<uint8_t, sizeof(reg) + sizeof(fpreg)> m_reg_data;
-
-  llvm::Optional<RegSetKind> GetSetForNativeRegNum(uint32_t reg_num) const;
+  std::array<uint8_t, sizeof(reg)> m_reg_data;
 
   Status ReadRegisterSet(RegSetKind set);
   Status WriteRegisterSet(RegSetKind set);
 
-  RegisterContextFreeBSD_powerpc &GetRegisterInfo() const;
+  RegisterContextFreeBSD_mips64 &GetRegisterInfo() const;
 };
 
 } // namespace process_freebsd
 } // namespace lldb_private
 
-#endif // #ifndef lldb_NativeRegisterContextFreeBSD_powerpc_h
+#endif // #ifndef lldb_NativeRegisterContextFreeBSD_mips64_h
 
-#endif // defined (__powerpc__)
+#endif // defined (__mips64__)
