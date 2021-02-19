@@ -312,7 +312,7 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
     };
     Status DoDestroy() override { return {}; }
     void RefreshStateAfterStop() override {}
-    bool DoUpdateThreadList(ThreadList &old_thread_list,
+    bool UpdateThreadList(ThreadList &old_thread_list,
                             ThreadList &new_thread_list) override {
       return false;
     };
