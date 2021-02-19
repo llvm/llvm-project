@@ -46,20 +46,12 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MD5.h"
 
 #define DEBUG_TYPE "flang-lower-bridge"
 
 static llvm::cl::opt<bool> dumpBeforeFir(
     "fdebug-dump-pre-fir", llvm::cl::init(false),
     llvm::cl::desc("dump the Pre-FIR tree prior to FIR generation"));
-
-static llvm::cl::opt<std::size_t>
-    nameLengthHashSize("length-to-hash-string-literal",
-                       llvm::cl::desc("string literals that exceed this length"
-                                      " will use a hash value as their symbol "
-                                      "name"),
-                       llvm::cl::init(32));
 
 namespace {
 /// Information for generating a structured or unstructured increment loop.
@@ -341,21 +333,6 @@ public:
     return genLocation();
   }
 
-  virtual mlir::Value locationToFilename(mlir::Location loc) override final {
-    if (auto flc = loc.dyn_cast<mlir::FileLineColLoc>()) {
-      // must be encoded as asciiz, C string
-      auto fn = flc.getFilename().str() + '\0';
-      return fir::getBase(createStringLiteral(loc, *this, fn, fn.size()));
-    }
-    return builder->createNullConstant(loc);
-  }
-  virtual mlir::Value locationToLineNo(mlir::Location loc,
-                                       mlir::Type type) override final {
-    if (auto flc = loc.dyn_cast<mlir::FileLineColLoc>())
-      return builder->createIntegerConstant(loc, type, flc.getLine());
-    return builder->createIntegerConstant(loc, type, 0);
-  }
-
   Fortran::lower::FirOpBuilder &getFirOpBuilder() override final {
     return *builder;
   }
@@ -368,26 +345,6 @@ public:
   std::string
   mangleName(const Fortran::semantics::Symbol &symbol) override final {
     return Fortran::lower::mangle::mangleName(symbol);
-  }
-
-  std::string uniqueCGIdent(llvm::StringRef prefix,
-                            llvm::StringRef name) override final {
-    // For "long" identifiers use a hash value
-    if (name.size() > nameLengthHashSize) {
-      llvm::MD5 hash;
-      hash.update(name);
-      llvm::MD5::MD5Result result;
-      hash.final(result);
-      llvm::SmallString<32> str;
-      llvm::MD5::stringifyResult(result, str);
-      std::string hashName = prefix.str();
-      hashName.append(".").append(str.c_str());
-      return fir::NameUniquer::doGenerated(hashName);
-    }
-    // "Short" identifiers use a reversible hex string
-    std::string nm = prefix.str();
-    return fir::NameUniquer::doGenerated(
-        nm.append(".").append(llvm::toHex(name)));
   }
 
   fir::KindMapping &getKindMap() override final { return bridge.getKindMap(); }

@@ -62,12 +62,6 @@ createSomeMutableBox(mlir::Location loc, AbstractConverter &converter,
                      const evaluate::Expr<evaluate::SomeType> &expr,
                      SymMap &symMap);
 
-/// Create a string literal. Lowers `str` to the MLIR representation of a
-/// literal CHARACTER value. (KIND is assumed to be 1.)
-fir::ExtendedValue createStringLiteral(mlir::Location loc,
-                                       AbstractConverter &converter,
-                                       llvm::StringRef str, std::uint64_t len);
-
 /// Create and return a projection of a subspace of an array value. This is the
 /// lhs onto which a newly constructed array value can be merged.
 fir::ArrayLoadOp

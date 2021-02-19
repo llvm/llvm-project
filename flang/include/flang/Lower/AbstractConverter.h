@@ -139,11 +139,6 @@ public:
   /// Generate the location as converted from a CharBlock
   virtual mlir::Location genLocation(const Fortran::parser::CharBlock &) = 0;
 
-  /// Generate a string literal containing the file name and return its address
-  virtual mlir::Value locationToFilename(mlir::Location) = 0;
-  /// Generate a constant of the given type with the location line number
-  virtual mlir::Value locationToLineNo(mlir::Location, mlir::Type) = 0;
-
   //===--------------------------------------------------------------------===//
   // FIR/MLIR
   //===--------------------------------------------------------------------===//
@@ -156,10 +151,6 @@ public:
   virtual mlir::MLIRContext &getMLIRContext() = 0;
   /// Unique a symbol
   virtual std::string mangleName(const Fortran::semantics::Symbol &) = 0;
-  /// Unique a compiler generated identifier. A short prefix should be provided
-  /// to hint at the origin of the identifier.
-  virtual std::string uniqueCGIdent(llvm::StringRef prefix,
-                                    llvm::StringRef name) = 0;
   /// Get the KindMap.
   virtual fir::KindMapping &getKindMap() = 0;
 
