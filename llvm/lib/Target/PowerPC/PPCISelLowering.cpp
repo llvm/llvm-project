@@ -5049,8 +5049,8 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
       const auto getExternalFunctionEntryPointSymbol = [&](StringRef SymName) {
         auto &Context = DAG.getMachineFunction().getMMI().getContext();
         MCSectionXCOFF *Sec = Context.getXCOFFSection(
-            (Twine(".") + Twine(SymName)).str(), XCOFF::XMC_PR, XCOFF::XTY_ER,
-            SectionKind::getMetadata());
+            (Twine(".") + Twine(SymName)).str(), SectionKind::getMetadata(),
+            XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER));
         return Sec->getQualNameSymbol();
       };
 

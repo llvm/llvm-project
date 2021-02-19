@@ -579,11 +579,11 @@ namespace llvm {
                                   const MCSymbolWasm *Group, unsigned UniqueID,
                                   const char *BeginSymName);
 
-    MCSectionXCOFF *getXCOFFSection(StringRef Section,
-                                    XCOFF::StorageMappingClass MappingClass,
-                                    XCOFF::SymbolType CSectType, SectionKind K,
-                                    bool MultiSymbolsAllowed = false,
-                                    const char *BeginSymName = nullptr);
+    MCSectionXCOFF *
+    getXCOFFSection(StringRef Section, SectionKind K,
+                    Optional<XCOFF::CsectProperties> CsectProp = None,
+                    bool MultiSymbolsAllowed = false,
+                    const char *BeginSymName = nullptr);
 
     // Create and save a copy of STI and return a reference to the copy.
     MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);
