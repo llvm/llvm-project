@@ -173,7 +173,7 @@ class InlineSpiller : public Spiller {
   LiveRangeEdit *Edit;
   LiveInterval *StackInt;
   int StackSlot;
-  unsigned Original;
+  Register Original;
 
   // All registers to spill to StackSlot, including the main register.
   SmallVector<Register, 8> RegsToSpill;
