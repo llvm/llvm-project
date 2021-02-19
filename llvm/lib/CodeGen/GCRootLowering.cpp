@@ -105,9 +105,9 @@ void LowerIntrinsics::getAnalysisUsage(AnalysisUsage &AU) const {
 bool LowerIntrinsics::doInitialization(Module &M) {
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
   assert(MI && "LowerIntrinsics didn't require GCModuleInfo!?");
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
-    if (!I->isDeclaration() && I->hasGC())
-      MI->getFunctionInfo(*I); // Instantiate the GC strategy.
+  for (Function &F : M)
+    if (!F.isDeclaration() && F.hasGC())
+      MI->getFunctionInfo(F); // Instantiate the GC strategy.
 
   return false;
 }
