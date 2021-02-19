@@ -26,9 +26,9 @@
 // WARNINGS-NEXT: (CXXConstructExpr, struct standalone)
 // ANALYZER-NEXT: (CXXConstructExpr, [B1.9], struct standalone)
 // CHECK-NEXT:   9: struct standalone myStandalone;
-// WARNINGS-NEXT: (CXXConstructExpr, struct (unnamed struct at {{.*}}))
-// ANALYZER-NEXT: (CXXConstructExpr, [B1.11], struct (unnamed struct at {{.*}}))
-// CHECK-NEXT:  11: struct (unnamed struct at {{.*}}) myAnon;
+// WARNINGS-NEXT: (CXXConstructExpr, struct (anonymous struct at {{.*}}))
+// ANALYZER-NEXT: (CXXConstructExpr, [B1.11], struct (anonymous struct at {{.*}}))
+// CHECK-NEXT:  11: struct (anonymous struct at {{.*}}) myAnon;
 // WARNINGS-NEXT: (CXXConstructExpr, struct named)
 // ANALYZER-NEXT: (CXXConstructExpr, [B1.13], struct named)
 // CHECK-NEXT:  13: struct named myNamed;

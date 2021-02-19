@@ -18,8 +18,8 @@ void test() {
 
   while (struct NewS *x=0) ;
   while (struct S {} *x=0) ; // expected-error {{'S' cannot be defined in a condition}}
-  while (struct {} *x=0) ; // expected-error-re {{'(unnamed struct at {{.*}})' cannot be defined in a condition}}
-  switch (enum {E} x=0) ; // expected-error-re {{'(unnamed enum at {{.*}})' cannot be defined in a condition}}
+  while (struct {} *x=0) ; // expected-error-re {{'(anonymous struct at {{.*}})' cannot be defined in a condition}}
+  switch (enum {E} x=0) ; // expected-error-re {{'(anonymous enum at {{.*}})' cannot be defined in a condition}}
 
   if (int x=0) { // expected-note 2 {{previous definition is here}}
     int x;  // expected-error {{redefinition of 'x'}}

@@ -55,7 +55,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | `-NullStmt {{.*}} <line:6:5>
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-for.c:4:1) *const restrict'
 // CHECK-NEXT: |       | `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
@@ -91,7 +91,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT: |       | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | |   `-NullStmt {{.*}} <line:13:7>
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-for.c:10:1) *const restrict'
 // CHECK-NEXT: |       | |-VarDecl {{.*}} <line:11:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | `-VarDecl {{.*}} <line:12:10, col:18> col:14 used i 'int' cinit
@@ -134,7 +134,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT: |       | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | |   `-NullStmt {{.*}} <line:20:7>
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-for.c:17:1) *const restrict'
 // CHECK-NEXT: |       | |-VarDecl {{.*}} <line:18:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | `-VarDecl {{.*}} <line:19:10, col:18> col:14 used i 'int' cinit
@@ -177,7 +177,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT: |       | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | |   `-NullStmt {{.*}} <line:27:7>
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-for.c:24:1) *const restrict'
 // CHECK-NEXT: |       | |-VarDecl {{.*}} <line:25:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | `-VarDecl {{.*}} <line:26:10, col:18> col:14 used i 'int' cinit
@@ -233,7 +233,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | |     |-UnaryOperator {{.*}} <col:30, col:31> 'int' postfix '++'
 // CHECK-NEXT:         | |     | `-DeclRefExpr {{.*}} <col:30> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | |     `-NullStmt {{.*}} <line:35:9>
-// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-for.c:31:1) *const restrict'
+// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-for.c:31:1) *const restrict'
 // CHECK-NEXT:         | |-VarDecl {{.*}} <line:32:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT:         | |-VarDecl {{.*}} <line:33:10, col:18> col:14 used i 'int' cinit

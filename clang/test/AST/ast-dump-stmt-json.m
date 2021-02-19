@@ -757,7 +757,7 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:              "name": "__context",
 // CHECK-NEXT:              "mangledName": "__context",
 // CHECK-NEXT:              "type": {
-// CHECK-NEXT:               "qualType": "struct (unnamed at {{.*}}:18:14) *"
+// CHECK-NEXT:               "qualType": "struct (anonymous at {{.*}}:18:14) *"
 // CHECK-NEXT:              }
 // CHECK-NEXT:             }
 // CHECK-NEXT:            ]
