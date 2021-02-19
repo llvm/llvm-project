@@ -656,16 +656,16 @@ TEST(ISLTools, getNumScatterDims) {
                                                         &isl_ctx_free);
 
   // Basic usage
-  EXPECT_EQ(0u, getNumScatterDims(UMAP("{ [] -> [] }")));
-  EXPECT_EQ(1u, getNumScatterDims(UMAP("{ [] -> [i] }")));
-  EXPECT_EQ(2u, getNumScatterDims(UMAP("{ [] -> [i,j] }")));
-  EXPECT_EQ(3u, getNumScatterDims(UMAP("{ [] -> [i,j,k] }")));
+  EXPECT_EQ(0, getNumScatterDims(UMAP("{ [] -> [] }")));
+  EXPECT_EQ(1, getNumScatterDims(UMAP("{ [] -> [i] }")));
+  EXPECT_EQ(2, getNumScatterDims(UMAP("{ [] -> [i,j] }")));
+  EXPECT_EQ(3, getNumScatterDims(UMAP("{ [] -> [i,j,k] }")));
 
   // Different scatter spaces
-  EXPECT_EQ(0u, getNumScatterDims(UMAP("{ A[] -> []; [] -> []}")));
-  EXPECT_EQ(1u, getNumScatterDims(UMAP("{ A[] -> []; [] -> [i] }")));
-  EXPECT_EQ(2u, getNumScatterDims(UMAP("{ A[] -> [i]; [] -> [i,j] }")));
-  EXPECT_EQ(3u, getNumScatterDims(UMAP("{ A[] -> [i]; [] -> [i,j,k] }")));
+  EXPECT_EQ(0, getNumScatterDims(UMAP("{ A[] -> []; [] -> []}")));
+  EXPECT_EQ(1, getNumScatterDims(UMAP("{ A[] -> []; [] -> [i] }")));
+  EXPECT_EQ(2, getNumScatterDims(UMAP("{ A[] -> [i]; [] -> [i,j] }")));
+  EXPECT_EQ(3, getNumScatterDims(UMAP("{ A[] -> [i]; [] -> [i,j,k] }")));
 }
 
 TEST(ISLTools, getScatterSpace) {
