@@ -97,6 +97,11 @@ SinkInstsIntoLoop("sink-insts-to-avoid-spills",
                            "register spills"),
                   cl::init(false), cl::Hidden);
 
+static cl::opt<unsigned> SinkIntoLoopLimit(
+    "machine-sink-loop-limit",
+    cl::desc("The maximum number of instructions considered for loop sinking."),
+    cl::init(50), cl::Hidden);
+
 STATISTIC(NumSunk,      "Number of machine instructions sunk");
 STATISTIC(NumLoopSunk,  "Number of machine instructions sunk into a loop");
 STATISTIC(NumSplit,     "Number of critical edges split");
@@ -468,7 +473,15 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
 
       // Walk the candidates in reverse order so that we start with the use
       // of a def-use chain, if there is any.
+      // TODO: Sort the candidates using a cost-model.
+      unsigned i = 0;
       for (auto It = Candidates.rbegin(); It != Candidates.rend(); ++It) {
+        if (i++ == SinkIntoLoopLimit) {
+          LLVM_DEBUG(dbgs() << "LoopSink:   Limit reached of instructions to "
+                               "be analysed.");
+          break;
+        }
+
         MachineInstr *I = *It;
         if (!SinkIntoLoop(L, *I))
           break;
@@ -1241,6 +1254,10 @@ bool MachineSinking::SinkIntoLoop(MachineLoop *L, MachineInstr &I) {
   }
   if (SinkBlock == Preheader) {
     LLVM_DEBUG(dbgs() << "LoopSink: Not sinking, sink block is the preheader\n");
+    return false;
+  }
+  if (SinkBlock->size() > SinkLoadInstsPerBlockThreshold) {
+    LLVM_DEBUG(dbgs() << "LoopSink: Not Sinking, block too large to analyse.\n");
     return false;
   }
 
