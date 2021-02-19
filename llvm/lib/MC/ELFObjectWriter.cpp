@@ -119,19 +119,6 @@ struct ELFWriter {
     StringRef Name;
     uint32_t SectionIndex;
     uint32_t Order;
-
-    // Support lexicographic sorting.
-    bool operator<(const ELFSymbolData &RHS) const {
-      unsigned LHSType = Symbol->getType();
-      unsigned RHSType = RHS.Symbol->getType();
-      if (LHSType == ELF::STT_SECTION && RHSType != ELF::STT_SECTION)
-        return false;
-      if (LHSType != ELF::STT_SECTION && RHSType == ELF::STT_SECTION)
-        return true;
-      if (LHSType == ELF::STT_SECTION && RHSType == ELF::STT_SECTION)
-        return SectionIndex < RHS.SectionIndex;
-      return Name < RHS.Name;
-    }
   };
 
   /// @}
@@ -157,7 +144,7 @@ struct ELFWriter {
   bool is64Bit() const;
   bool hasRelocationAddend() const;
 
-  void align(unsigned Alignment);
+  uint64_t align(unsigned Alignment);
 
   bool maybeWriteCompression(uint64_t Size,
                              SmallVectorImpl<char> &CompressedContents,
@@ -206,8 +193,6 @@ public:
 
   MCSectionELF *createRelocationSection(MCContext &Ctx,
                                         const MCSectionELF &Sec);
-
-  const MCSectionELF *createStringTable(MCContext &Ctx);
 
   void writeSectionHeader(const MCAsmLayout &Layout,
                           const SectionIndexMapTy &SectionIndexMap,
@@ -337,9 +322,10 @@ public:
 
 } // end anonymous namespace
 
-void ELFWriter::align(unsigned Alignment) {
-  uint64_t Padding = offsetToAlignment(W.OS.tell(), Align(Alignment));
-  W.OS.write_zeros(Padding);
+uint64_t ELFWriter::align(unsigned Alignment) {
+  uint64_t Offset = W.OS.tell(), NewOffset = alignTo(Offset, Alignment);
+  W.OS.write_zeros(NewOffset - Offset);
+  return NewOffset;
 }
 
 unsigned ELFWriter::addToSectionTable(const MCSectionELF *Sec) {
@@ -458,7 +444,7 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
   // e_shnum     = # of section header ents
   W.write<uint16_t>(0);
 
-  // e_shstrndx  = Section # of '.shstrtab'
+  // e_shstrndx  = Section # of '.strtab'
   assert(StringTableIndex < ELF::SHN_LORESERVE);
   W.write<uint16_t>(StringTableIndex);
 }
@@ -619,8 +605,7 @@ void ELFWriter::computeSymbolTable(
   SymtabSection->setAlignment(is64Bit() ? Align(8) : Align(4));
   SymbolTableIndex = addToSectionTable(SymtabSection);
 
-  align(SymtabSection->getAlignment());
-  uint64_t SecStart = W.OS.tell();
+  uint64_t SecStart = align(SymtabSection->getAlignment());
 
   // The first entry is the undefined symbol entry.
   Writer.writeSymbol(0, 0, 0, 0, 0, 0, false);
@@ -985,12 +970,6 @@ void ELFWriter::writeRelocations(const MCAssembler &Asm,
   }
 }
 
-const MCSectionELF *ELFWriter::createStringTable(MCContext &Ctx) {
-  const MCSectionELF *StrtabSection = SectionTable[StringTableIndex - 1];
-  StrTabBuilder.write(W.OS);
-  return StrtabSection;
-}
-
 void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
                              uint32_t GroupSymbolIndex, uint64_t Offset,
                              uint64_t Size, const MCSectionELF &Section) {
@@ -1105,10 +1084,8 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
     if (Mode == DwoOnly && !isDwoSection(Section))
       continue;
 
-    align(Section.getAlignment());
-
     // Remember the offset into the file for this section.
-    uint64_t SecStart = W.OS.tell();
+    const uint64_t SecStart = align(Section.getAlignment());
 
     const MCSymbolELF *SignatureSymbol = Section.getGroup();
     writeSectionData(Asm, Section, Layout);
@@ -1151,10 +1128,8 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
   }
 
   for (MCSectionELF *Group : Groups) {
-    align(Group->getAlignment());
-
     // Remember the offset into the file for this section.
-    uint64_t SecStart = W.OS.tell();
+    const uint64_t SecStart = align(Group->getAlignment());
 
     const MCSymbol *SignatureSymbol = Group->getGroup();
     assert(SignatureSymbol);
@@ -1185,10 +1160,8 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
                        SectionOffsets);
 
     for (MCSectionELF *RelSection : Relocations) {
-      align(RelSection->getAlignment());
-
       // Remember the offset into the file for this section.
-      uint64_t SecStart = W.OS.tell();
+      const uint64_t SecStart = align(RelSection->getAlignment());
 
       writeRelocations(Asm,
                        cast<MCSectionELF>(*RelSection->getLinkedToSection()));
@@ -1218,15 +1191,11 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
 
   {
     uint64_t SecStart = W.OS.tell();
-    const MCSectionELF *Sec = createStringTable(Ctx);
-    uint64_t SecEnd = W.OS.tell();
-    SectionOffsets[Sec] = std::make_pair(SecStart, SecEnd);
+    StrTabBuilder.write(W.OS);
+    SectionOffsets[StrtabSection] = std::make_pair(SecStart, W.OS.tell());
   }
 
-  uint64_t NaturalAlignment = is64Bit() ? 8 : 4;
-  align(NaturalAlignment);
-
-  const uint64_t SectionHeaderOffset = W.OS.tell();
+  const uint64_t SectionHeaderOffset = align(is64Bit() ? 8 : 4);
 
   // ... then the section header table ...
   writeSectionHeader(Layout, SectionIndexMap, SectionOffsets);
