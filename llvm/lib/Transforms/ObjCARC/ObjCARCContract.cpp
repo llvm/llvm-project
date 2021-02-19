@@ -568,7 +568,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
     LLVM_DEBUG(dbgs() << "Visiting: " << *Inst << "\n");
 
     if (auto *CI = dyn_cast<CallInst>(Inst))
-      if (objcarc::hasRVOpBundle(CI)) {
+      if (objcarc::hasAttachedCallOpBundle(CI)) {
         BundledInsts->insertRVCallWithColors(&*I, CI, BlockColors);
         --I;
         Changed = true;

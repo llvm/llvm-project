@@ -6,7 +6,7 @@ define void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: simple:
 ; CHECK: btsq    $60, %rbp
 ; CHECK: pushq   %rbp
-; CHECK: pushq   %r14
+; CHECK: pushq   %r11
 ; CHECK: leaq    8(%rsp), %rbp
 ; CHECK: pushq
 ; [...]
@@ -28,7 +28,7 @@ define void @more_csrs(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: btsq    $60, %rbp
 ; CHECK: pushq   %rbp
 ; CHECK: .cfi_offset %rbp, -16
-; CHECK: pushq   %r14
+; CHECK: pushq   %r11
 ; CHECK: leaq    8(%rsp), %rbp
 ; CHECK: subq    $8, %rsp
 ; CHECK: pushq   %r15
@@ -51,7 +51,7 @@ define void @locals(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: pushq   %rbp
 ; CHECK: .cfi_def_cfa_offset 16
 ; CHECK: .cfi_offset %rbp, -16
-; CHECK: pushq   %r14
+; CHECK: pushq   %r11
 ; CHECK: leaq    8(%rsp), %rbp
 ; CHECK: .cfi_def_cfa_register %rbp
 ; CHECK: subq    $56, %rsp
@@ -72,7 +72,7 @@ define void @locals(i8* swiftasync %ctx) "frame-pointer"="all" {
 
 define void @use_input_context(i8* swiftasync %ctx, i8** %ptr) "frame-pointer"="all" {
 ; CHECK-LABEL: use_input_context:
-; CHECK: movq    %r14, (%rdi)
+; CHECK: movq    %r11, (%rdi)
 
   store i8* %ctx, i8** %ptr
   ret void

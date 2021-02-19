@@ -505,6 +505,7 @@ private:
 
   void verifySwiftErrorCall(CallBase &Call, const Value *SwiftErrorVal);
   void verifySwiftErrorValue(const Value *SwiftErrorVal);
+  void verifySwiftTailCCMustTailAttrs(AttrBuilder Attrs, StringRef Context);
   void verifyMustTailCall(CallInst &CI);
   bool verifyAttributeCount(AttributeList Attrs, unsigned Params);
   void verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
@@ -3193,8 +3194,8 @@ void Verifier::visitCallBase(CallBase &Call) {
   // "preallocated" operand bundle, and at most one "ptrauth" operand bundle.
   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
-       FoundPtrauthBundle = false,
-       FoundPreallocatedBundle = false, FoundGCLiveBundle = false;;
+       FoundPtrauthBundle = false, FoundPreallocatedBundle = false,
+       FoundGCLiveBundle = false, FoundAttachedCallBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -3245,8 +3246,18 @@ void Verifier::visitCallBase(CallBase &Call) {
       Assert(!FoundGCLiveBundle, "Multiple gc-live operand bundles",
              Call);
       FoundGCLiveBundle = true;
+    } else if (Tag == LLVMContext::OB_clang_arc_attachedcall) {
+      Assert(!FoundAttachedCallBundle,
+             "Multiple \"clang.arc.attachedcall\" operand bundles", Call);
+      FoundAttachedCallBundle = true;
     }
   }
+
+  if (FoundAttachedCallBundle)
+    Assert(FTy->getReturnType()->isPointerTy(),
+           "a call with operand bundle \"clang.arc.attachedcall\" must call a "
+           "function returning a pointer",
+           Call);
 
   // Verify that each inlinable callsite of a debug-info-bearing function in a
   // debug-info-bearing function has a debug location attached to it. Failure to
@@ -3259,6 +3270,19 @@ void Verifier::visitCallBase(CallBase &Call) {
              Call);
 
   visitInstruction(Call);
+}
+
+void Verifier::verifySwiftTailCCMustTailAttrs(AttrBuilder Attrs, StringRef Context) {
+  Assert(!Attrs.contains(Attribute::InAlloca),
+         Twine("inalloca attribute not allowed in swifttailcc ") + Context);
+  Assert(!Attrs.contains(Attribute::InReg),
+         Twine("inreg attribute not allowed in swifttailcc ") + Context);
+  Assert(!Attrs.contains(Attribute::SwiftError),
+         Twine("swifterror attribute not allowed in swifttailcc ") + Context);
+  Assert(!Attrs.contains(Attribute::Preallocated),
+         Twine("preallocated attribute not allowed in swifttailcc ") + Context);
+  Assert(!Attrs.contains(Attribute::ByRef),
+         Twine("byref attribute not allowed in swifttailcc ") + Context);
 }
 
 /// Two types are "congruent" if they are identical, or if they are both pointer
@@ -3295,22 +3319,9 @@ static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
 void Verifier::verifyMustTailCall(CallInst &CI) {
   Assert(!CI.isInlineAsm(), "cannot use musttail call with inline asm", &CI);
 
-  // - The caller and callee prototypes must match.  Pointer types of
-  //   parameters or return types may differ in pointee type, but not
-  //   address space.
   Function *F = CI.getParent()->getParent();
   FunctionType *CallerTy = F->getFunctionType();
   FunctionType *CalleeTy = CI.getFunctionType();
-  if (!CI.getCalledFunction() || !CI.getCalledFunction()->isIntrinsic()) {
-    Assert(CallerTy->getNumParams() == CalleeTy->getNumParams(),
-           "cannot guarantee tail call due to mismatched parameter counts",
-           &CI);
-    for (int I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
-      Assert(
-          isTypeCongruent(CallerTy->getParamType(I), CalleeTy->getParamType(I)),
-          "cannot guarantee tail call due to mismatched parameter types", &CI);
-    }
-  }
   Assert(CallerTy->isVarArg() == CalleeTy->isVarArg(),
          "cannot guarantee tail call due to mismatched varargs", &CI);
   Assert(isTypeCongruent(CallerTy->getReturnType(), CalleeTy->getReturnType()),
@@ -3319,19 +3330,6 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
   // - The calling conventions of the caller and callee must match.
   Assert(F->getCallingConv() == CI.getCallingConv(),
          "cannot guarantee tail call due to mismatched calling conv", &CI);
-
-  // - All ABI-impacting function attributes, such as sret, byval, inreg,
-  //   returned, preallocated, and inalloca, must match.
-  AttributeList CallerAttrs = F->getAttributes();
-  AttributeList CalleeAttrs = CI.getAttributes();
-  for (int I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
-    AttrBuilder CallerABIAttrs = getParameterABIAttributes(I, CallerAttrs);
-    AttrBuilder CalleeABIAttrs = getParameterABIAttributes(I, CalleeAttrs);
-    Assert(CallerABIAttrs == CalleeABIAttrs,
-           "cannot guarantee tail call due to mismatched ABI impacting "
-           "function attributes",
-           &CI, CI.getOperand(I));
-  }
 
   // - The call must immediately precede a :ref:`ret <i_ret>` instruction,
   //   or a pointer bitcast followed by a ret instruction.
@@ -3352,8 +3350,53 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
   ReturnInst *Ret = dyn_cast_or_null<ReturnInst>(Next);
   Assert(Ret, "musttail call must precede a ret with an optional bitcast",
          &CI);
-  Assert(!Ret->getReturnValue() || Ret->getReturnValue() == RetVal,
+  Assert(!Ret->getReturnValue() || Ret->getReturnValue() == RetVal ||
+             isa<UndefValue>(Ret->getReturnValue()),
          "musttail call result must be returned", Ret);
+
+  AttributeList CallerAttrs = F->getAttributes();
+  AttributeList CalleeAttrs = CI.getAttributes();
+  if (CI.getCallingConv() == CallingConv::SwiftTail) {
+    // - Only sret, byval, swiftself, and swiftasync ABI-impacting attributes
+    //   are allowed in swifttailcc call
+    for (int I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
+      AttrBuilder ABIAttrs = getParameterABIAttributes(I, CallerAttrs);
+      verifySwiftTailCCMustTailAttrs(ABIAttrs, "musttail caller");
+    }
+    for (int I = 0, E = CalleeTy->getNumParams(); I != E; ++I) {
+      AttrBuilder ABIAttrs = getParameterABIAttributes(I, CalleeAttrs);
+      verifySwiftTailCCMustTailAttrs(ABIAttrs, "musttail callee");
+    }
+    // - Varargs functions are not allowed
+    Assert(!CallerTy->isVarArg(),
+           "cannot guarantee swifttailcc tail call for varargs function");
+    return;
+  }
+
+  // - The caller and callee prototypes must match.  Pointer types of
+  //   parameters or return types may differ in pointee type, but not
+  //   address space.
+  if (!CI.getCalledFunction() || !CI.getCalledFunction()->isIntrinsic()) {
+    Assert(CallerTy->getNumParams() == CalleeTy->getNumParams(),
+           "cannot guarantee tail call due to mismatched parameter counts",
+           &CI);
+    for (int I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
+      Assert(
+          isTypeCongruent(CallerTy->getParamType(I), CalleeTy->getParamType(I)),
+          "cannot guarantee tail call due to mismatched parameter types", &CI);
+    }
+  }
+
+  // - All ABI-impacting function attributes, such as sret, byval, inreg,
+  //   returned, preallocated, and inalloca, must match.
+  for (int I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
+    AttrBuilder CallerABIAttrs = getParameterABIAttributes(I, CallerAttrs);
+    AttrBuilder CalleeABIAttrs = getParameterABIAttributes(I, CalleeAttrs);
+    Assert(CallerABIAttrs == CalleeABIAttrs,
+           "cannot guarantee tail call due to mismatched ABI impacting "
+           "function attributes",
+           &CI, CI.getOperand(I));
+  }
 }
 
 void Verifier::visitCallInst(CallInst &CI) {

@@ -70,7 +70,7 @@ def CC_AArch64_AAPCS : CallingConv<[
   CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X21], [W21]>>>,
 
   // Pass SwiftAsync in a callee saved register.
-  CCIfSwiftAsync<CCIfType<[i64], CCAssignToRegWithShadow<[X22], [W22]>>>,
+  CCIfSwiftAsync<CCIfType<[i64], CCAssignToRegWithShadow<[X9], [W9]>>>,
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 
@@ -206,7 +206,7 @@ def CC_AArch64_DarwinPCS : CallingConv<[
   CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X21], [W21]>>>,
 
   // Pass SwiftAsync in a callee saved register.
-  CCIfSwiftAsync<CCIfType<[i64], CCAssignToRegWithShadow<[X22], [W22]>>>,
+  CCIfSwiftAsync<CCIfType<[i64], CCAssignToRegWithShadow<[X9], [W9]>>>,
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 

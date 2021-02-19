@@ -2180,6 +2180,11 @@ void coro::salvageDebugInfo(
   // code. Extending the lifetime this way is correct because the
   // variable has been declared by a dbg.declare intrinsic.
   if (auto Arg = dyn_cast_or_null<llvm::Argument>(Storage)) {
+    if (Arg->getParent()->hasParamAttribute(Arg->getArgNo(),
+                                            Attribute::SwiftAsync)) {
+      // Swift async arguments will be lowered to entry values by the
+      // backend. Don't stash them in an alloca.
+    } else {
     auto &Cached = DbgPtrAllocaCache[Storage];
     if (!Cached) {
       Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,
@@ -2196,6 +2201,7 @@ void coro::salvageDebugInfo(
     // adjusting it with the expression.
     if (Expr && Expr->isComplex())
       Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+    }
   }
   auto &VMContext = DDI->getFunction()->getContext();
   DDI->setOperand(
@@ -2206,7 +2212,9 @@ void coro::salvageDebugInfo(
 }
 
 void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
-  eliminateSwiftError(F, Shape);
+  // Don't eliminate swifterror in async functions that won't be split.
+  if (Shape.ABI != coro::ABI::Async || !Shape.CoroSuspends.empty())
+    eliminateSwiftError(F, Shape);
 
   if (Shape.ABI == coro::ABI::Switch &&
       Shape.SwitchLowering.PromiseAlloca) {
@@ -2277,7 +2285,8 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   }
 
   sinkLifetimeStartMarkers(F, Shape, Checker);
-  collectFrameAllocas(F, Shape, Checker, FrameData.Allocas);
+  if (Shape.ABI != coro::ABI::Async || !Shape.CoroSuspends.empty())
+    collectFrameAllocas(F, Shape, Checker, FrameData.Allocas);
   LLVM_DEBUG(dumpAllocas(FrameData.Allocas));
 
   // Collect the spills for arguments and other not-materializable values.

@@ -1067,6 +1067,7 @@ bool DWARFExpression::Evaluate(
         stack.back().SetValueType(Value::eValueTypeLoadAddress);
         // Fall through to load address code below...
       } LLVM_FALLTHROUGH;
+      case Value::eValueTypeScalar:
       case Value::eValueTypeLoadAddress:
         if (exe_ctx) {
           if (process) {
@@ -1100,7 +1101,9 @@ bool DWARFExpression::Evaluate(
         break;
 
       default:
-        break;
+        if (error_ptr)
+          error_ptr->SetErrorString("Unhandled value type for DW_OP_deref.\n");
+        return false;
       }
 
     } break;
@@ -1167,7 +1170,12 @@ bool DWARFExpression::Evaluate(
         stack.back().GetScalar() = ptr;
         stack.back().ClearContext();
       } break;
+<<<<<<< HEAD
       case Value::eValueTypeLoadAddress:
+=======
+      case Value::ValueType::Scalar:
+      case Value::ValueType::LoadAddress:
+>>>>>>> 188b0747c166 (Support dereferencing a DWARF scalar stack value)
         if (exe_ctx) {
           if (process) {
             lldb::addr_t pointer_addr =
@@ -1218,8 +1226,16 @@ bool DWARFExpression::Evaluate(
         }
         break;
 
+<<<<<<< HEAD
       default:
         break;
+=======
+      case Value::ValueType::FileAddress:
+      case Value::ValueType::Invalid:
+        if (error_ptr)
+          error_ptr->SetErrorString("Invalid value for DW_OP_deref_size.\n");
+        return false;
+>>>>>>> 188b0747c166 (Support dereferencing a DWARF scalar stack value)
       }
 
     } break;

@@ -10,7 +10,7 @@ define swifttailcc void @caller_to0_from0() nounwind {
 ; COMMON-LABEL: caller_to0_from0:
 ; COMMON-NEXT: // %bb.
 
-  tail call swifttailcc void @callee_stack0()
+  musttail call swifttailcc void @callee_stack0()
   ret void
 
 ; COMMON-NEXT: b callee_stack0
@@ -19,7 +19,7 @@ define swifttailcc void @caller_to0_from0() nounwind {
 define swifttailcc void @caller_to0_from8([8 x i64], i64) {
 ; COMMON-LABEL: caller_to0_from8:
 
-  tail call swifttailcc void @callee_stack0()
+  musttail call swifttailcc void @callee_stack0()
   ret void
 
 ; COMMON: add sp, sp, #16
@@ -31,7 +31,7 @@ define swifttailcc void @caller_to8_from0() {
 
 ; Key point is that the "42" should go #16 below incoming stack
 ; pointer (we didn't have arg space to reuse).
-  tail call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
+  musttail call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
   ret void
 
 ; COMMON: str {{x[0-9]+}}, [sp, #-16]!
@@ -43,7 +43,7 @@ define swifttailcc void @caller_to8_from8([8 x i64], i64 %a) {
 ; COMMON-NOT: sub sp,
 
 ; Key point is that the "%a" should go where at SP on entry.
-  tail call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
+  musttail call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
   ret void
 
 ; COMMON: str {{x[0-9]+}}, [sp]
@@ -57,7 +57,7 @@ define swifttailcc void @caller_to16_from8([8 x i64], i64 %a) {
 ; Important point is that the call reuses the "dead" argument space
 ; above %a on the stack. If it tries to go below incoming-SP then the
 ; callee will not deallocate the space, even in swifttailcc.
-  tail call swifttailcc void @callee_stack16([8 x i64] undef, i64 42, i64 2)
+  musttail call swifttailcc void @callee_stack16([8 x i64] undef, i64 42, i64 2)
 
 ; COMMON: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp]
 ; COMMON-NEXT: b callee_stack16
@@ -70,7 +70,7 @@ define swifttailcc void @caller_to8_from24([8 x i64], i64 %a, i64 %b, i64 %c) {
 ; COMMON-NOT: sub sp,
 
 ; Key point is that the "%a" should go where at #16 above SP on entry.
-  tail call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
+  musttail call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
   ret void
 
 ; COMMON: str {{x[0-9]+}}, [sp, #16]!
@@ -84,7 +84,7 @@ define swifttailcc void @caller_to16_from16([8 x i64], i64 %a, i64 %b) {
 
 ; Here we want to make sure that both loads happen before the stores:
 ; otherwise either %a or %b will be wrongly clobbered.
-  tail call swifttailcc void @callee_stack16([8 x i64] undef, i64 %b, i64 %a)
+  musttail call swifttailcc void @callee_stack16([8 x i64] undef, i64 %b, i64 %a)
   ret void
 
 ; COMMON: ldp {{x[0-9]+}}, {{x[0-9]+}}, [sp]

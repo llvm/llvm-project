@@ -66,6 +66,7 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_PreserveMost: return llvm::CallingConv::PreserveMost;
   case CC_PreserveAll: return llvm::CallingConv::PreserveAll;
   case CC_Swift: return llvm::CallingConv::Swift;
+  case CC_SwiftAsync: return llvm::CallingConv::SwiftTail;
   }
 }
 
@@ -773,7 +774,7 @@ CodeGenTypes::arrangeLLVMFunctionInfo(CanQualType resultType,
     // Force target independent argument handling for the host visible
     // kernel functions.
     computeSPIRKernelABIInfo(CGM, *FI);
-  } else if (info.getCC() == CC_Swift) {
+  } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else {
     getABIInfo().computeInfo(*FI);
@@ -3876,11 +3877,11 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
 // later, so we can't check it directly.
 static bool hasInAllocaArgs(CodeGenModule &CGM, CallingConv ExplicitCC,
                             ArrayRef<QualType> ArgTypes) {
-  // The Swift calling convention doesn't go through the target-specific
-  // argument classification, so it never uses inalloca.
+  // The Swift calling conventions don't go through the target-specific
+  // argument classification, they never use inalloca.
   // TODO: Consider limiting inalloca use to only calling conventions supported
   // by MSVC.
-  if (ExplicitCC == CC_Swift)
+  if (ExplicitCC == CC_Swift || ExplicitCC == CC_SwiftAsync)
     return false;
   if (!CGM.getTarget().getCXXABI().isMicrosoft())
     return false;
@@ -5147,10 +5148,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (CGM.getLangOpts().ObjCAutoRefCount)
     AddObjCARCExceptionMetadata(CI);
 
-  // Suppress tail calls if requested.
+  // Adjust tail call behavior based on TargetDecl's attributes and CallInfo.
   if (llvm::CallInst *Call = dyn_cast<llvm::CallInst>(CI)) {
     if (TargetDecl && TargetDecl->hasAttr<NotTailCalledAttr>())
       Call->setTailCallKind(llvm::CallInst::TCK_NoTail);
+    else if (CallInfo.getASTCallingConvention() == CC_SwiftAsync &&
+             CurFnInfo->getASTCallingConvention() == CC_SwiftAsync)
+      Call->setTailCallKind(llvm::CallInst::TCK_Tail);
   }
 
   // Add metadata for calls to MSAllocator functions

@@ -340,7 +340,11 @@ private:
           Expr(MI.getDebugExpression()), MI(MI) {
       assert(MI.isDebugValue() && "not a DBG_VALUE");
       assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
-      if (int RegNo = isDbgValueDescribedByReg(MI)) {
+      if (Expr && Expr->isEntryValue()) {
+        Kind = EntryValueKind;
+        if (int RegNo = isDbgValueDescribedByReg(MI))
+          Loc.RegNo = RegNo;
+      } else if (int RegNo = isDbgValueDescribedByReg(MI)) {
         Kind = RegisterKind;
         Loc.RegNo = RegNo;
       } else if (MI.getDebugOperand(0).isImm()) {
@@ -354,9 +358,9 @@ private:
         Loc.CImm = MI.getDebugOperand(0).getCImm();
       }
 
-      // We create the debug entry values from the factory functions rather than
-      // from this ctor.
-      assert(Kind != EntryValueKind && !isEntryBackupLoc());
+      // We create the backup debug entry values from the factory
+      // functions rather than from this ctor.
+      assert(!isEntryBackupLoc());
     }
 
     /// Take the variable and machine-location in DBG_VALUE MI, and build an
@@ -1813,6 +1817,21 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
   OpenRanges.insert(EntryValLocID, EntryValLocAsBackup);
 }
 
+static bool isSwiftAsyncContext(const MachineInstr &MI) {
+  const llvm::MachineFunction *MF = MI.getParent()->getParent();
+  const llvm::Function &F = MF->getFunction();
+  if (F.arg_size() != 3 || !F.hasParamAttribute(2, Attribute::SwiftAsync))
+    return false;
+  unsigned Reg = isDbgValueDescribedByReg(MI);
+  if (!Reg)
+    return false;
+  auto &EntryMBB = MF->front();
+  for (auto R : EntryMBB.liveins())
+    if (R.PhysReg == Reg)
+      return true;
+  return false;
+}
+
 /// Calculate the liveness information for the given machine function and
 /// extend ranges across basic blocks.
 bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC) {
@@ -1871,8 +1890,15 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC) {
   MachineBasicBlock &First_MBB = *(MF.begin());
   for (auto &MI : First_MBB) {
     collectRegDefs(MI, DefinedRegs, TRI);
-    if (MI.isDebugValue())
-      recordEntryValue(MI, DefinedRegs, OpenRanges, VarLocIDs);
+    if (MI.isDebugValue()) {
+      // In Swift async functions entry values are preferred, since they
+      // can be evaluated in both live frames and virtual backtraces.
+      if (isSwiftAsyncContext(MI))
+        MI.getOperand(3).setMetadata(DIExpression::prepend(
+            MI.getDebugExpression(), DIExpression::EntryValue));
+      else
+        recordEntryValue(MI, DefinedRegs, OpenRanges, VarLocIDs);
+    }
   }
 
   // Initialize per-block structures and scan for fragment overlaps.
