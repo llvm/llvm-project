@@ -412,6 +412,21 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK: llvm.func @__nv_expm1f(f32) -> f32
+  // CHECK: llvm.func @__nv_expm1(f64) -> f64
+  // CHECK-LABEL: func @gpu_expm1
+  func @gpu_expm1(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.expm1 %arg_f32 : f32
+    // CHECK: llvm.call @__nv_expm1f(%{{.*}}) : (f32) -> f32
+    %result64 = math.expm1 %arg_f64 : f64
+    // CHECK: llvm.call @__nv_expm1(%{{.*}}) : (f64) -> f64
+    std.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK: llvm.func @__nv_powf(f32, f32) -> f32
   // CHECK: llvm.func @__nv_pow(f64, f64) -> f64
   // CHECK-LABEL: func @gpu_pow
