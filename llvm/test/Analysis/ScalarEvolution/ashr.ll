@@ -31,7 +31,7 @@ define i32 @t2(i32 %x, i32 %y) {
 ; CHECK-LABEL: 't2'
 ; CHECK-NEXT:  Classifying expressions for: @t2
 ; CHECK-NEXT:    %i0 = ashr i32 %x, 4
-; CHECK-NEXT:    --> %i0 U: full-set S: [-134217728,134217728)
+; CHECK-NEXT:    --> %i0 U: [-134217728,134217728) S: [-134217728,134217728)
 ; CHECK-NEXT:  Determining loop execution counts for: @t2
 ;
   %i0 = ashr i32 %x, 4

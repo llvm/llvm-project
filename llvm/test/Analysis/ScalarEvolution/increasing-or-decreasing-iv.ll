@@ -6,7 +6,7 @@ define void @f0(i1 %c) {
 ; CHECK-LABEL: 'f0'
 ; CHECK-NEXT:  Classifying expressions for: @f0
 ; CHECK-NEXT:    %start = select i1 %c, i32 127, i32 0
-; CHECK-NEXT:    --> %start U: [0,128) S: [-128,128)
+; CHECK-NEXT:    --> %start U: [0,128) S: [0,128)
 ; CHECK-NEXT:    %step = select i1 %c, i32 -1, i32 1
 ; CHECK-NEXT:    --> %step U: [1,0) S: [-2,2)
 ; CHECK-NEXT:    %loop.iv = phi i32 [ 0, %entry ], [ %loop.iv.inc, %loop ]
@@ -14,7 +14,7 @@ define void @f0(i1 %c) {
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {%start,+,%step}<%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [-384,256) S: [-384,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i32 %loop.iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f0
@@ -45,7 +45,7 @@ define void @f1(i1 %c) {
 ; CHECK-LABEL: 'f1'
 ; CHECK-NEXT:  Classifying expressions for: @f1
 ; CHECK-NEXT:    %start = select i1 %c, i32 120, i32 0
-; CHECK-NEXT:    --> %start U: [0,121) S: [-128,128)
+; CHECK-NEXT:    --> %start U: [0,121) S: [0,121)
 ; CHECK-NEXT:    %step = select i1 %c, i32 -8, i32 8
 ; CHECK-NEXT:    --> %step U: [8,-7) S: [-16,16)
 ; CHECK-NEXT:    %loop.iv = phi i32 [ 0, %entry ], [ %loop.iv.inc, %loop ]
@@ -81,7 +81,7 @@ define void @f1(i1 %c) {
 ; CHECK-NEXT:    %iv.m7 = sub i32 %iv, 7
 ; CHECK-NEXT:    --> {(-7 + %start)<nsw>,+,%step}<%loop> U: [-7,114) S: [-7,114) Exits: (-7 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [0,-7) S: [-384,368) Exits: ((16 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [0,-7) S: [-256,361) Exits: ((16 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i32 %loop.iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,17) S: [1,17) Exits: 16 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f1
@@ -131,7 +131,7 @@ define void @f2(i1 %c) {
 ; CHECK-LABEL: 'f2'
 ; CHECK-NEXT:  Classifying expressions for: @f2
 ; CHECK-NEXT:    %start = select i1 %c, i32 127, i32 0
-; CHECK-NEXT:    --> %start U: [0,128) S: [-128,128)
+; CHECK-NEXT:    --> %start U: [0,128) S: [0,128)
 ; CHECK-NEXT:    %step = select i1 %c, i32 -1, i32 1
 ; CHECK-NEXT:    --> %step U: [1,0) S: [-2,2)
 ; CHECK-NEXT:    %loop.iv = phi i32 [ 0, %entry ], [ %loop.iv.inc, %loop ]
@@ -139,9 +139,9 @@ define void @f2(i1 %c) {
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {%start,+,%step}<%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.sext = sext i32 %iv to i64
-; CHECK-NEXT:    --> {(sext i32 %start to i64),+,(sext i32 %step to i64)}<nsw><%loop> U: [0,128) S: [0,128) Exits: ((sext i32 %start to i64) + (127 * (sext i32 %step to i64))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(zext i32 %start to i64),+,(sext i32 %step to i64)}<nsw><%loop> U: [0,128) S: [0,128) Exits: ((zext i32 %start to i64) + (127 * (sext i32 %step to i64))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-384,256) S: [-384,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i32 %loop.iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f2
@@ -173,9 +173,9 @@ define void @f3(i1 %c) {
 ; CHECK-LABEL: 'f3'
 ; CHECK-NEXT:  Classifying expressions for: @f3
 ; CHECK-NEXT:    %start = select i1 %c, i16 1000, i16 0
-; CHECK-NEXT:    --> %start U: [0,1001) S: [-1024,1024)
+; CHECK-NEXT:    --> %start U: [0,1001) S: [0,1001)
 ; CHECK-NEXT:    %step = select i1 %c, i16 1, i16 509
-; CHECK-NEXT:    --> %step U: [1,510) S: [-512,512)
+; CHECK-NEXT:    --> %step U: [1,510) S: [1,510)
 ; CHECK-NEXT:    %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv = phi i16 [ %start, %entry ], [ %iv.next, %loop ]
@@ -222,7 +222,7 @@ define void @f4(i1 %c) {
 ; CHECK-LABEL: 'f4'
 ; CHECK-NEXT:  Classifying expressions for: @f4
 ; CHECK-NEXT:    %start = select i1 %c, i32 127, i32 0
-; CHECK-NEXT:    --> %start U: [0,128) S: [-128,128)
+; CHECK-NEXT:    --> %start U: [0,128) S: [0,128)
 ; CHECK-NEXT:    %step = select i1 %c, i32 -1, i32 1
 ; CHECK-NEXT:    --> %step U: [1,0) S: [-2,2)
 ; CHECK-NEXT:    %loop.iv = phi i32 [ 0, %entry ], [ %loop.iv.inc, %loop ]
@@ -232,7 +232,7 @@ define void @f4(i1 %c) {
 ; CHECK-NEXT:    %iv.trunc = trunc i32 %iv to i16
 ; CHECK-NEXT:    --> {(trunc i32 %start to i16),+,(trunc i32 %step to i16)}<%loop> U: full-set S: full-set Exits: ((trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [-384,256) S: [-384,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i32 %loop.iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f4
@@ -270,7 +270,7 @@ define void @f5(i1 %c) {
 ; CHECK-LABEL: 'f5'
 ; CHECK-NEXT:  Classifying expressions for: @f5
 ; CHECK-NEXT:    %start = select i1 %c, i32 127, i32 0
-; CHECK-NEXT:    --> %start U: [0,128) S: [-128,128)
+; CHECK-NEXT:    --> %start U: [0,128) S: [0,128)
 ; CHECK-NEXT:    %step = select i1 %c, i32 -1, i32 1
 ; CHECK-NEXT:    --> %step U: [1,0) S: [-2,2)
 ; CHECK-NEXT:    %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
@@ -280,7 +280,7 @@ define void @f5(i1 %c) {
 ; CHECK-NEXT:    %iv.trunc = trunc i32 %iv to i16
 ; CHECK-NEXT:    --> {(trunc i32 %start to i16),+,(trunc i32 %step to i16)}<%loop> U: [0,128) S: [0,128) Exits: ((trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [-384,256) S: [-384,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i16 %loop.iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f5
@@ -313,7 +313,7 @@ define void @f6(i1 %c) {
 ; CHECK-LABEL: 'f6'
 ; CHECK-NEXT:  Classifying expressions for: @f6
 ; CHECK-NEXT:    %start = select i1 %c, i32 127, i32 0
-; CHECK-NEXT:    --> %start U: [0,128) S: [-128,128)
+; CHECK-NEXT:    --> %start U: [0,128) S: [0,128)
 ; CHECK-NEXT:    %step = select i1 %c, i32 -2, i32 0
 ; CHECK-NEXT:    --> %step U: [0,-1) S: [-2,2)
 ; CHECK-NEXT:    %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
@@ -323,9 +323,9 @@ define void @f6(i1 %c) {
 ; CHECK-NEXT:    %step.plus.one = add i32 %step, 1
 ; CHECK-NEXT:    --> (1 + %step)<nuw><nsw> U: [1,0) S: [-1,3) Exits: (1 + %step)<nuw><nsw> LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step.plus.one
-; CHECK-NEXT:    --> {(1 + %step + %start),+,(1 + %step)<nuw><nsw>}<%loop> U: [-256,384) S: [-256,384) Exits: (128 + (128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %step + %start),+,(1 + %step)<nuw><nsw>}<%loop> U: [-128,384) S: [-128,384) Exits: (128 + (128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.sext = sext i32 %iv to i64
-; CHECK-NEXT:    --> {(sext i32 %start to i64),+,(1 + (sext i32 %step to i64))<nuw><nsw>}<nsw><%loop> U: [0,128) S: [0,128) Exits: (127 + (sext i32 %start to i64) + (127 * (sext i32 %step to i64))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(zext i32 %start to i64),+,(1 + (sext i32 %step to i64))<nuw><nsw>}<nsw><%loop> U: [0,128) S: [0,128) Exits: (127 + (zext i32 %start to i64) + (127 * (sext i32 %step to i64))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i16 %loop.iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f6
@@ -359,7 +359,7 @@ define void @f7(i1 %c) {
 ; CHECK-LABEL: 'f7'
 ; CHECK-NEXT:  Classifying expressions for: @f7
 ; CHECK-NEXT:    %start = select i1 %c, i32 127, i32 0
-; CHECK-NEXT:    --> %start U: [0,128) S: [-128,128)
+; CHECK-NEXT:    --> %start U: [0,128) S: [0,128)
 ; CHECK-NEXT:    %step = select i1 %c, i32 -1, i32 1
 ; CHECK-NEXT:    --> %step U: [1,0) S: [-2,2)
 ; CHECK-NEXT:    %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
@@ -369,7 +369,7 @@ define void @f7(i1 %c) {
 ; CHECK-NEXT:    %iv.trunc = trunc i32 %iv to i16
 ; CHECK-NEXT:    --> {(trunc i32 %start to i16),+,(trunc i32 %step to i16)}<%loop> U: [0,128) S: [0,128) Exits: ((trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [-384,256) S: [-384,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.trunc.plus.one = add i16 %iv.trunc, 1
 ; CHECK-NEXT:    --> {(1 + (trunc i32 %start to i16))<nuw><nsw>,+,(trunc i32 %step to i16)}<%loop> U: [1,129) S: [1,129) Exits: (1 + (trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.trunc.plus.two = add i16 %iv.trunc, 2

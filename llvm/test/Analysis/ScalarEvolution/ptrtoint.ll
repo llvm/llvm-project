@@ -175,13 +175,13 @@ define void @ptrtoint_of_constantexpr_inttoptr(i64* %out0) {
 ; X64-LABEL: 'ptrtoint_of_constantexpr_inttoptr'
 ; X64-NEXT:  Classifying expressions for: @ptrtoint_of_constantexpr_inttoptr
 ; X64-NEXT:    %p0 = ptrtoint i8* inttoptr (i64 42 to i8*) to i64
-; X64-NEXT:    --> (ptrtoint i8* inttoptr (i64 42 to i8*) to i64) U: [42,43) S: [-64,64)
+; X64-NEXT:    --> (ptrtoint i8* inttoptr (i64 42 to i8*) to i64) U: [42,43) S: [42,43)
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_constantexpr_inttoptr
 ;
 ; X32-LABEL: 'ptrtoint_of_constantexpr_inttoptr'
 ; X32-NEXT:  Classifying expressions for: @ptrtoint_of_constantexpr_inttoptr
 ; X32-NEXT:    %p0 = ptrtoint i8* inttoptr (i64 42 to i8*) to i64
-; X32-NEXT:    --> (zext i32 (ptrtoint i8* inttoptr (i64 42 to i8*) to i32) to i64) U: [42,43) S: [0,4294967296)
+; X32-NEXT:    --> (zext i32 (ptrtoint i8* inttoptr (i64 42 to i8*) to i32) to i64) U: [42,43) S: [42,43)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_constantexpr_inttoptr
 ;
   %p0 = ptrtoint i8* inttoptr (i64 42 to i8*) to i64
