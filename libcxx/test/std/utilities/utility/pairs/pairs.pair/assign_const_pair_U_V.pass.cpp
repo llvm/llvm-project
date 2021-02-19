@@ -63,8 +63,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(p.first == 42);
     assert(p.second.value == -42);
   }
-#endif
-
   { // test const requirement
     using T = std::pair<CopyAssignableInt, CopyAssignableInt>;
     using P = std::pair<int, int>;
@@ -76,6 +74,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     static_assert(!std::is_assignable<T&, P&>::value, "");
     static_assert(!std::is_assignable<P&, T&>::value, "");
   }
+#endif
   return true;
 }
 
