@@ -769,6 +769,11 @@ static void *mmap_interceptor(ThreadState *thr, uptr pc, Mmap real_mmap,
   if (!fix_mmap_addr(&addr, sz, flags)) return MAP_FAILED;
   void *res = real_mmap(addr, sz, prot, flags, fd, off);
   if (res != MAP_FAILED) {
+    if (!IsAppMem((uptr)res) || !IsAppMem((uptr)res + sz - 1)) {
+      Report("ThreadSanitizer: mmap at bad address: addr=%p size=%p res=%p\n",
+             addr, (void*)sz, res);
+      Die();
+    }
     if (fd > 0) FdAccess(thr, pc, fd);
     MemoryRangeImitateWriteOrResetRange(thr, pc, (uptr)res, sz);
   }
