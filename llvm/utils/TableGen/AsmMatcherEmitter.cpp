@@ -3509,12 +3509,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
           OS << '_' << MI->RequiredFeatures[i]->TheDef->getName();
 
       OS << ", { ";
-      for (unsigned i = 0, e = MI->AsmOperands.size(); i != e; ++i) {
-        const MatchableInfo::AsmOperand &Op = MI->AsmOperands[i];
-
-        if (i) OS << ", ";
-        OS << Op.Class->Name;
-      }
+      ListSeparator LS;
+      for (const MatchableInfo::AsmOperand &Op : MI->AsmOperands)
+        OS << LS << Op.Class->Name;
       OS << " }, },\n";
     }
 
