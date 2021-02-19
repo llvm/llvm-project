@@ -836,4 +836,114 @@ TEST(TBDv3, MalformedFile2) {
       ErrorMessage);
 }
 
+TEST(TBDv3, InterfaceEquality) {
+  static const char TBDv3File[] =
+      "--- !tapi-tbd-v3\n"
+      "archs: [ armv7, arm64 ]\n"
+      "uuids: [ 'armv7: 00000000-0000-0000-0000-000000000000',\n"
+      "         'arm64: 11111111-1111-1111-1111-111111111111']\n"
+      "platform: ios\n"
+      "flags: [ installapi ]\n"
+      "install-name: Test.dylib\n"
+      "current-version: 2.3.4\n"
+      "compatibility-version: 1.0\n"
+      "swift-abi-version: 1.1\n"
+      "parent-umbrella: Umbrella.dylib\n"
+      "exports:\n"
+      "  - archs: [ armv7, arm64 ]\n"
+      "    allowable-clients: [ clientA ]\n"
+      "    re-exports: [ /usr/lib/libfoo.dylib ]\n"
+      "    symbols: [ _sym1, _sym2, _sym3, _sym4, $ld$hide$os9.0$_sym1 ]\n"
+      "    objc-classes: [ class1, class2 ]\n"
+      "    objc-eh-types: [ class1 ]\n"
+      "    objc-ivars: [ class1._ivar1, class1._ivar2 ]\n"
+      "    weak-def-symbols: [ _weak1, _weak2 ]\n"
+      "    thread-local-symbols: [ _tlv1, _tlv3 ]\n"
+      "  - archs: [ armv7 ]\n"
+      "    symbols: [ _sym5 ]\n"
+      "    objc-classes: [ class3 ]\n"
+      "    objc-ivars: [ class1._ivar3 ]\n"
+      "    weak-def-symbols: [ _weak3 ]\n"
+      "    thread-local-symbols: [ _tlv3 ]\n"
+      "--- !tapi-tbd-v3\n"
+      "archs:           [ i386 ]\n"
+      "platform:        macosx\n"
+      "install-name:    '/usr/lib/libbar.dylib'\n"
+      "current-version: 0\n"
+      "compatibility-version: 0\n"
+      "swift-abi-version: 5\n"
+      "objc-constraint: none\n"
+      "exports:\n"
+      "  - archs:           [ i386 ]\n"
+      "    symbols:         [ _sym3, _sym4 ]\n"
+      "...\n";
+  Expected<TBDFile> ResultA =
+      TextAPIReader::get(MemoryBufferRef(TBDv3File, "TestA.tbd"));
+  EXPECT_TRUE(!!ResultA);
+  InterfaceFile FileA = std::move(*ResultA.get());
+  Expected<TBDFile> ResultB =
+      TextAPIReader::get(MemoryBufferRef(TBDv3File, "TestB.tbd"));
+  EXPECT_TRUE(!!ResultB);
+  InterfaceFile FileB = std::move(*ResultB.get());
+  EXPECT_FALSE(FileA.getPath() == FileB.getPath());
+  EXPECT_TRUE(FileA == FileB);
+}
+
+
+
+TEST(TBDv3, InterfaceInequality) {
+  static const char TBDv3File[] = "--- !tapi-tbd-v3\n"
+                                  "archs: [ armv7, arm64 ]\n"
+                                  "platform: ios\n"
+                                  "install-name: Test.dylib\n"
+                                  "...\n";
+
+  Expected<TBDFile> ResultA =
+      TextAPIReader::get(MemoryBufferRef(TBDv3File, "TestA.tbd"));
+  EXPECT_TRUE(!!ResultA);
+  InterfaceFile FileA = std::move(*ResultA.get());
+  Expected<TBDFile> ResultB =
+      TextAPIReader::get(MemoryBufferRef(TBDv3File, "TestB.tbd"));
+  EXPECT_TRUE(!!ResultB);
+  InterfaceFile FileB = std::move(*ResultB.get());
+
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->addTarget(Target(AK_x86_64, PlatformKind::iOS));
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->setCurrentVersion(PackedVersion(1, 2, 3));
+    File->setCompatibilityVersion(PackedVersion(1, 0, 0));
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(
+      FileA, FileB, [](InterfaceFile *File) { File->setSwiftABIVersion(5); }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->setTwoLevelNamespace(false);
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(
+      FileA, FileB, [](InterfaceFile *File) { File->setInstallAPI(true); }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->setApplicationExtensionSafe(false);
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->addParentUmbrella(Target(AK_armv7, PlatformKind::iOS), "Umbrella.dylib");
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->addAllowableClient("ClientA", Target(AK_armv7, PlatformKind::iOS));
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->addReexportedLibrary("/System/Library/Frameworks/A.framework/A",
+                              Target(AK_armv7, PlatformKind::iOS));
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->addSymbol(SymbolKind::GlobalSymbol, "_symA", {Target(AK_arm64, PlatformKind::iOS)});
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    InterfaceFile Document;
+    Document.addTargets(TargetList{Target(AK_armv7, PlatformKind::iOS),
+                      Target(AK_arm64, PlatformKind::iOS)});
+    Document.setInstallName("/System/Library/Frameworks/A.framework/A");
+    File->addDocument(std::make_shared<InterfaceFile>(std::move(Document)));
+  }));
+}
+
 } // namespace TBDv3
