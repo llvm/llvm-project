@@ -155,7 +155,7 @@ body:             |
     ADJCALLSTACKDOWN 0, 0
     %12 = LZDR
     $f0d = COPY %12
-    CallBRASL &fmod, killed $f0d, undef $f2d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $f0d
+    CallBRASL &fmod, killed $f0d, undef $f2d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $f0d
     ADJCALLSTACKUP 0, 0
     KILL killed $f0d
   

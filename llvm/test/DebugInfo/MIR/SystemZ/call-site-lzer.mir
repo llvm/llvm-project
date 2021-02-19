@@ -77,7 +77,7 @@ body:             |
     $r11d = LGR $r15d
     CFI_INSTRUCTION def_cfa_register $r11d
     renamable $f0s = LZER
-    CallBRASL @callee, $f0s, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, debug-location !16
+    CallBRASL @callee, $f0s, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, debug-location !16
     $r2d = LGHI 0, debug-location !17
     $r11d, $r15d = LMG $r11d, 248, implicit-def $r14d, debug-location !17
     Return implicit killed $r2d, debug-location !17
