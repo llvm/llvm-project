@@ -1190,10 +1190,11 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %if.then
 ; THUMB-ENABLE-NEXT:    push {r7, lr}
 ; THUMB-ENABLE-NEXT:    mov r7, sp
-; THUMB-ENABLE-NEXT:    strd r1, r1, [sp, #-12]!
+; THUMB-ENABLE-NEXT:    sub sp, #12
 ; THUMB-ENABLE-NEXT:    mov r0, r1
 ; THUMB-ENABLE-NEXT:    mov r2, r1
 ; THUMB-ENABLE-NEXT:    mov r3, r1
+; THUMB-ENABLE-NEXT:    strd r1, r1, [sp]
 ; THUMB-ENABLE-NEXT:    str r1, [sp, #8]
 ; THUMB-ENABLE-NEXT:    bl _someVariadicFunc
 ; THUMB-ENABLE-NEXT:    lsls r0, r0, #3
