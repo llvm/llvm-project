@@ -383,6 +383,10 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
     else if (getMCSubtargetInfo()->checkFeatures("+wavefrontsize32"))
       MRI.reset(llvm::createGCNMCRegisterInfo(AMDGPUDwarfFlavour::Wave32));
   }
+  // Set -fixed-function-abi to true if not provided..
+  if (TT.getOS() == Triple::AMDHSA &&
+      EnableAMDGPUFixedFunctionABIOpt.getNumOccurrences() == 0)
+    EnableFixedFunctionABI = true;
 }
 
 bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
