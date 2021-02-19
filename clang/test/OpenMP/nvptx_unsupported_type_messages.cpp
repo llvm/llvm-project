@@ -39,10 +39,12 @@ struct T1 {
 };
 
 #ifndef _ARCH_PPC
-// expected-note@+1 {{'boo' defined here}}
+// expected-error@+2 {{'boo' requires 128 bit size '__float128' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+// expected-note@+1 2{{'boo' defined here}}
 void boo(__float128 A) { return; }
 #else
-// expected-note@+1 {{'boo' defined here}}
+// expected-error@+2 {{'boo' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+// expected-note@+1 2{{'boo' defined here}}
 void boo(long double A) { return; }
 #endif
 #pragma omp declare target
@@ -51,10 +53,11 @@ T f = a;
 void foo(T a = T()) {
   a = a + f; // expected-note {{called by 'foo'}}
 #ifndef _ARCH_PPC
-// expected-error@+4 {{'boo' requires 128 bit size '__float128' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+// expected-error@+5 {{'boo' requires 128 bit size '__float128' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 #else
-// expected-error@+2 {{'boo' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+// expected-error@+3 {{'boo' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 #endif
+// expected-note@+1 {{called by 'foo'}}
   boo(0);
   return;
 }
@@ -98,28 +101,49 @@ void dead_template_declare_target() {
   a = &b;
 }
 
-// TODO: We should diagnose the return type and argument type here.
+// expected-note@+2 {{'ld_return1a' defined here}}
+// expected-error@+1 {{'ld_return1a' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 long double ld_return1a() { return 0; }
+// expected-note@+2 {{'ld_arg1a' defined here}}
+// expected-error@+1 {{'ld_arg1a' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 void ld_arg1a(long double ld) {}
 
 // TODO: We should diagnose the return type and argument type here.
 typedef long double ld_ty;
+// expected-note@+2 {{'ld_return1b' defined here}}
+// expected-error@+1 {{'ld_return1b' requires 128 bit size 'ld_ty' (aka 'long double') type support, but device 'nvptx64-unknown-unknown' does not support it}}
 ld_ty ld_return1b() { return 0; }
+// expected-note@+2 {{'ld_arg1b' defined here}}
+// expected-error@+1 {{'ld_arg1b' requires 128 bit size 'ld_ty' (aka 'long double') type support, but device 'nvptx64-unknown-unknown' does not support it}}
 void ld_arg1b(ld_ty ld) {}
 
+// TODO: These errors should not be emitted.
+// expected-note@+2 {{'ld_return1c' defined here}}
+// expected-error@+1 {{'ld_return1c' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 static long double ld_return1c() { return 0; }
+// expected-note@+2 {{'ld_arg1c' defined here}}
+// expected-error@+1 {{'ld_arg1c' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 static void ld_arg1c(long double ld) {}
 
+// TODO: These errors should not be emitted.
+// expected-note@+2 {{'ld_return1d' defined here}}
+// expected-error@+1 {{'ld_return1d' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 inline long double ld_return1d() { return 0; }
+// expected-note@+2 {{'ld_arg1d' defined here}}
+// expected-error@+1 {{'ld_arg1d' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 inline void ld_arg1d(long double ld) {}
 
+// expected-error@+2 {{'ld_return1e' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 // expected-note@+1 {{'ld_return1e' defined here}}
 static long double ld_return1e() { return 0; }
+// expected-error@+2 {{'ld_arg1e' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 // expected-note@+1 {{'ld_arg1e' defined here}}
 static void ld_arg1e(long double ld) {}
 
+// expected-error@+2 {{'ld_return1f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 // expected-note@+1 {{'ld_return1f' defined here}}
 inline long double ld_return1f() { return 0; }
+// expected-error@+2 {{'ld_arg1f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 // expected-note@+1 {{'ld_arg1f' defined here}}
 inline void ld_arg1f(long double ld) {}
 
@@ -152,46 +176,47 @@ static void ld_use4() {
 }
 
 void external() {
-// expected-error@+1 {{'ld_return1e' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   void *p1 = reinterpret_cast<void*>(&ld_return1e);
-// expected-error@+1 {{'ld_arg1e' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   void *p2 = reinterpret_cast<void*>(&ld_arg1e);
-// expected-error@+1 {{'ld_return1f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   void *p3 = reinterpret_cast<void*>(&ld_return1f);
-// expected-error@+1 {{'ld_arg1f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   void *p4 = reinterpret_cast<void*>(&ld_arg1f);
   void *p5 = reinterpret_cast<void*>(&ld_use3);
   void *p6 = reinterpret_cast<void*>(&ld_use4);
 }
 
 #ifndef _ARCH_PPC
-// TODO: We should diagnose the return type and argument type here.
+// expected-note@+2 {{'ld_return2a' defined here}}
+// expected-error@+1 {{'ld_return2a' requires 128 bit size '__float128' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 __float128 ld_return2a() { return 0; }
+// expected-note@+2 {{'ld_arg2a' defined here}}
+// expected-error@+1 {{'ld_arg2a' requires 128 bit size '__float128' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 void ld_arg2a(__float128 ld) {}
 
-// TODO: We should diagnose the return type and argument type here.
 typedef __float128 fp128_ty;
+// expected-note@+2 {{'ld_return2b' defined here}}
+// expected-error@+1 {{'ld_return2b' requires 128 bit size 'fp128_ty' (aka '__float128') type support, but device 'nvptx64-unknown-unknown' does not support it}}
 fp128_ty ld_return2b() { return 0; }
+// expected-note@+2 {{'ld_arg2b' defined here}}
+// expected-error@+1 {{'ld_arg2b' requires 128 bit size 'fp128_ty' (aka '__float128') type support, but device 'nvptx64-unknown-unknown' does not support it}}
 void ld_arg2b(fp128_ty ld) {}
 #endif
 
 #pragma omp end declare target
 
 // TODO: There should not be an error here, dead_inline is never emitted.
-// expected-note@+1 3{{'f' defined here}}
+// expected-note@+1 {{'f' defined here}}
 inline long double dead_inline(long double f) {
 #pragma omp target map(f)
-// TODO: We should not emit the same error message 3 times, here and elsewhere in this file.
-  // expected-error@+1 3{{'f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+  // expected-error@+1 {{'f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   f = 1;
   return f;
 }
 
 // TODO: There should not be an error here, dead_static is never emitted.
-// expected-note@+1 3{{'f' defined here}}
+// expected-note@+1 {{'f' defined here}}
 static long double dead_static(long double f) {
 #pragma omp target map(f)
-  // expected-error@+1 3{{'f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+  // expected-error@+1 {{'f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   f = 1;
   return f;
 }
@@ -204,18 +229,18 @@ long double dead_template(long double f) {
 }
 
 #ifndef _ARCH_PPC
-// expected-note@+1 3{{'f' defined here}}
+// expected-note@+1 {{'f' defined here}}
 __float128 foo2(__float128 f) {
 #pragma omp target map(f)
-  // expected-error@+1 3{{'f' requires 128 bit size '__float128' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+  // expected-error@+1 {{'f' requires 128 bit size '__float128' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   f = 1;
   return f;
 }
 #else
-// expected-note@+1 3{{'f' defined here}}
+// expected-note@+1 {{'f' defined here}}
 long double foo3(long double f) {
 #pragma omp target map(f)
-  // expected-error@+1 3{{'f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+  // expected-error@+1 {{'f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   f = 1;
   return f;
 }
