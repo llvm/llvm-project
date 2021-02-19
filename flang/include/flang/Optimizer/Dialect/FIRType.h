@@ -46,7 +46,6 @@ struct BoxCharTypeStorage;
 struct BoxProcTypeStorage;
 struct CharacterTypeStorage;
 struct ComplexTypeStorage;
-struct FieldTypeStorage;
 struct HeapTypeStorage;
 struct IntegerTypeStorage;
 struct LenTypeStorage;
@@ -211,16 +210,6 @@ public:
   using Base::Base;
   static SliceType get(mlir::MLIRContext *ctx, unsigned rank);
   unsigned getRank() const;
-};
-
-/// The type of a field name. Implementations may defer the layout of a Fortran
-/// derived type until runtime. This implies that the runtime must be able to
-/// determine the offset of fields within the entity.
-class FieldType : public mlir::Type::TypeBase<FieldType, mlir::Type,
-                                              detail::FieldTypeStorage> {
-public:
-  using Base::Base;
-  static FieldType get(mlir::MLIRContext *ctxt);
 };
 
 /// The type of a heap pointer. Fortran entities with the ALLOCATABLE attribute

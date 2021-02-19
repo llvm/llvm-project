@@ -113,9 +113,6 @@ def AnyEmboxArg : Type<AnyEmboxLike.predicate, "embox argument type">;
 def fir_TypeDescType : Type<CPred<"$_self.isa<fir::TypeDescType>()">,
     "type desc type">;
 
-// A field (in a RecordType) argument's type
-def fir_FieldType : Type<CPred<"$_self.isa<fir::FieldType>()">, "field type">;
-
 // A LEN parameter (in a RecordType) argument's type
 def fir_LenType : Type<CPred<"$_self.isa<fir::LenType>()">,
     "LEN parameter type">;
