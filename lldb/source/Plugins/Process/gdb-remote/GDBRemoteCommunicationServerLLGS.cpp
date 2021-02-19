@@ -13,6 +13,7 @@
 
 #include <chrono>
 #include <cstring>
+#include <limits>
 #include <thread>
 
 #include "GDBRemoteCommunicationServerLLGS.h"
@@ -210,6 +211,10 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
 
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_g,
                                 &GDBRemoteCommunicationServerLLGS::Handle_g);
+
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qMemTags,
+      &GDBRemoteCommunicationServerLLGS::Handle_qMemTags);
 
   RegisterPacketHandler(StringExtractorGDBRemote::eServerPacketType_k,
                         [this](StringExtractorGDBRemote packet, Status &error,
@@ -3412,6 +3417,71 @@ GDBRemoteCommunicationServerLLGS::Handle_QPassSignals(
     return SendErrorResponse(69);
 
   return SendOKResponse();
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_qMemTags(
+    StringExtractorGDBRemote &packet) {
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
+
+  // Ensure we have a process.
+  if (!m_current_process ||
+      (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID)) {
+    LLDB_LOGF(
+        log,
+        "GDBRemoteCommunicationServerLLGS::%s failed, no process available",
+        __FUNCTION__);
+    return SendErrorResponse(1);
+  }
+
+  // We are expecting
+  // qMemTags:<hex address>,<hex length>:<hex type>
+
+  // Address
+  packet.SetFilePos(strlen("qMemTags:"));
+  const char *current_char = packet.Peek();
+  if (!current_char || *current_char == ',')
+    return SendIllFormedResponse(packet, "Missing address in qMemTags packet");
+  const lldb::addr_t addr = packet.GetHexMaxU64(/*little_endian=*/false, 0);
+
+  // Length
+  char previous_char = packet.GetChar();
+  current_char = packet.Peek();
+  // If we don't have a separator or the length field is empty
+  if (previous_char != ',' || (current_char && *current_char == ':'))
+    return SendIllFormedResponse(packet,
+                                 "Invalid addr,length pair in qMemTags packet");
+
+  if (packet.GetBytesLeft() < 1)
+    return SendIllFormedResponse(
+        packet, "Too short qMemtags: packet (looking for length)");
+  const size_t length = packet.GetHexMaxU64(/*little_endian=*/false, 0);
+
+  // Type
+  const char *invalid_type_err = "Invalid type field in qMemTags: packet";
+  if (packet.GetBytesLeft() < 1 || packet.GetChar() != ':')
+    return SendIllFormedResponse(packet, invalid_type_err);
+
+  int32_t type =
+      packet.GetS32(std::numeric_limits<int32_t>::max(), /*base=*/16);
+  if (type == std::numeric_limits<int32_t>::max() ||
+      // To catch inputs like "123aardvark" that will parse but clearly aren't
+      // valid in this case.
+      packet.GetBytesLeft()) {
+    return SendIllFormedResponse(packet, invalid_type_err);
+  }
+
+  StreamGDBRemote response;
+  std::vector<uint8_t> tags;
+  Status error = m_current_process->ReadMemoryTags(type, addr, length, tags);
+  if (error.Fail())
+    return SendErrorResponse(1);
+
+  // This m is here in case we want to support multi part replies in the future.
+  // In the same manner as qfThreadInfo/qsThreadInfo.
+  response.PutChar('m');
+  response.PutBytesAsRawHex8(tags.data(), tags.size());
+  return SendPacketNoLock(response.GetString());
 }
 
 void GDBRemoteCommunicationServerLLGS::MaybeCloseInferiorTerminalConnection() {

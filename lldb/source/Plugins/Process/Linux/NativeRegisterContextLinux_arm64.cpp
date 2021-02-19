@@ -13,6 +13,7 @@
 
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -21,6 +22,7 @@
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "Plugins/Process/Utility/MemoryTagManagerAArch64MTE.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
 // System includes - They have to be included after framework includes because
@@ -875,6 +877,17 @@ std::vector<uint32_t> NativeRegisterContextLinux_arm64::GetExpeditedRegisters(
     expedited_reg_nums.push_back(GetRegisterInfo().GetRegNumSVEVG());
 
   return expedited_reg_nums;
+}
+
+llvm::Expected<NativeRegisterContextLinux::MemoryTaggingDetails>
+NativeRegisterContextLinux_arm64::GetMemoryTaggingDetails(int32_t type) {
+  if (type == MemoryTagManagerAArch64MTE::eMTE_allocation) {
+    return MemoryTaggingDetails{std::make_unique<MemoryTagManagerAArch64MTE>(),
+                                PTRACE_PEEKMTETAGS, PTRACE_POKEMTETAGS};
+  }
+
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "Unknown AArch64 memory tag type %d", type);
 }
 
 #endif // defined (__arm64__) || defined (__aarch64__)

@@ -50,6 +50,12 @@ typedef int __ptrace_request;
 #define ARCH_GET_FS 0x1003
 #define ARCH_GET_GS 0x1004
 #endif
+#ifndef PTRACE_PEEKMTETAGS
+#define PTRACE_PEEKMTETAGS 33
+#endif
+#ifndef PTRACE_POKEMTETAGS
+#define PTRACE_POKEMTETAGS 34
+#endif
 
 #define LLDB_PTRACE_NT_ARM_TLS 0x401 // ARM TLS register
 
