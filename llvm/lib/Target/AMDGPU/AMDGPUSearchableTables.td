@@ -243,6 +243,7 @@ def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_fadd>;
 def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_cmpswap>;
 def : SourceOfDivergence<int_amdgcn_buffer_atomic_csub>;
 def : SourceOfDivergence<int_amdgcn_ps_live>;
+def : SourceOfDivergence<int_amdgcn_live_mask>;
 def : SourceOfDivergence<int_amdgcn_ds_swizzle>;
 def : SourceOfDivergence<int_amdgcn_ds_ordered_add>;
 def : SourceOfDivergence<int_amdgcn_ds_ordered_swap>;
