@@ -460,6 +460,9 @@ public:
   /// This is specialized because it is a common request and does not require
   /// traversing the whole use list.
   Use *getSingleUndroppableUse();
+  const Use *getSingleUndroppableUse() const {
+    return const_cast<Value *>(this)->getSingleUndroppableUse();
+  }
 
   /// Return true if there this value.
   ///
