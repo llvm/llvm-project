@@ -158,6 +158,32 @@ static void printStandardBinaryOp(Operation *op, OpAsmPrinter &p) {
   p << " : " << op->getResult(0).getType();
 }
 
+/// A custom ternary operation printer that omits the "std." prefix from the
+/// operation names.
+static void printStandardTernaryOp(Operation *op, OpAsmPrinter &p) {
+  assert(op->getNumOperands() == 3 && "ternary op should have three operands");
+  assert(op->getNumResults() == 1 && "ternary op should have one result");
+
+  // If not all the operand and result types are the same, just use the
+  // generic assembly form to avoid omitting information in printing.
+  auto resultType = op->getResult(0).getType();
+  if (op->getOperand(0).getType() != resultType ||
+      op->getOperand(1).getType() != resultType ||
+      op->getOperand(2).getType() != resultType) {
+    p.printGenericOp(op);
+    return;
+  }
+
+  int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
+  p << op->getName().getStringRef().drop_front(stdDotLen) << ' '
+    << op->getOperand(0) << ", " << op->getOperand(1) << ", "
+    << op->getOperand(2);
+  p.printOptionalAttrDict(op->getAttrs());
+
+  // Now we can output only one type for all operands and the result.
+  p << " : " << op->getResult(0).getType();
+}
+
 /// A custom cast operation printer that omits the "std." prefix from the
 /// operation names.
 static void printStandardCastOp(Operation *op, OpAsmPrinter &p) {
