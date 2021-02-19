@@ -88,6 +88,9 @@ private:
   SmallString<0> OpenCL;
   SmallString<0> HIP;
 
+  // Asan runtime library
+  SmallString<0> AsanRTL;
+
   // Libraries swapped based on compile flags.
   ConditionalLibrary WavefrontSize64;
   ConditionalLibrary FiniteOnly;
@@ -112,12 +115,13 @@ public:
                            bool DetectHIPRuntime = true,
                            bool DetectDeviceLib = false);
 
-  /// Add arguments needed to link default bitcode libraries.
-  void addCommonBitcodeLibCC1Args(const llvm::opt::ArgList &DriverArgs,
-                                  llvm::opt::ArgStringList &CC1Args,
-                                  StringRef LibDeviceFile, bool Wave64,
-                                  bool DAZ, bool FiniteOnly, bool UnsafeMathOpt,
-                                  bool FastRelaxedMath, bool CorrectSqrt) const;
+  /// Get file paths of default bitcode libraries common to AMDGPU based
+  /// toolchains.
+  llvm::SmallVector<std::string, 12>
+  getCommonBitcodeLibs(const llvm::opt::ArgList &DriverArgs,
+                       StringRef LibDeviceFile, bool Wave64, bool DAZ,
+                       bool FiniteOnly, bool UnsafeMathOpt,
+                       bool FastRelaxedMath, bool CorrectSqrt) const;
 
   /// Check whether we detected a valid HIP runtime.
   bool hasHIPRuntime() const { return HasHIPRuntime; }
@@ -165,6 +169,9 @@ public:
     assert(!HIP.empty());
     return HIP;
   }
+
+  /// Returns empty string of Asan runtime library is not available.
+  StringRef getAsanRTLPath() const { return AsanRTL; }
 
   StringRef getWavefrontSize64Path(bool Enabled) const {
     return WavefrontSize64.get(Enabled);
