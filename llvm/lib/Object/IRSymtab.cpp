@@ -247,11 +247,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
 
   setStr(Sym.IRName, GV->getName());
 
-  bool IsBuiltinFunc = false;
-
-  for (const char *LibcallName : LibcallRoutineNames)
-    if (GV->getName() == LibcallName)
-      IsBuiltinFunc = true;
+  bool IsBuiltinFunc = llvm::is_contained(LibcallRoutineNames, GV->getName());
 
   if (Used.count(GV) || IsBuiltinFunc)
     Sym.Flags |= 1 << storage::Symbol::FB_used;
