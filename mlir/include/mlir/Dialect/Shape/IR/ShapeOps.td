@@ -89,10 +89,7 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative]> {
   ];
 
   let hasFolder = 1;
-  let verifier = [{
-    return success(succeeded(::verifyShapeOrExtentTensorOp(*this)) &&
-                   getNumOperands() >= 2);
-  }];
+  let verifier = [{ return ::verify(*this); }];
 }
 
 def Shape_ConstShapeOp : Shape_Op<"const_shape", [ConstantLike, NoSideEffect]> {
