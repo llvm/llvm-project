@@ -927,6 +927,9 @@ namespace {
     /// Whether we're checking for an expression that has undefined behavior.
     /// If so, we will produce warnings if we encounter an operation that is
     /// always undefined.
+    ///
+    /// Note that we still need to evaluate the expression normally when this
+    /// is set; this is used when evaluating ICEs in C.
     bool CheckingForUndefinedBehavior = false;
 
     enum EvaluationMode {
@@ -2729,8 +2732,7 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                        diag::warn_integer_constant_overflow)
           << Result.toString(10) << E->getType();
-    else
-      return HandleOverflow(Info, E, Value, E->getType());
+    return HandleOverflow(Info, E, Value, E->getType());
   }
   return true;
 }
@@ -7860,8 +7862,8 @@ public:
   bool VisitStmtExpr(const StmtExpr *E) {
     // We will have checked the full-expressions inside the statement expression
     // when they were completed, and don't need to check them again now.
-    if (Info.checkingForUndefinedBehavior())
-      return Error(E);
+    llvm::SaveAndRestore<bool> NotCheckingForUB(
+        Info.CheckingForUndefinedBehavior, false);
 
     const CompoundStmt *CS = E->getSubStmt();
     if (CS->body_empty())
@@ -13441,7 +13443,7 @@ bool FixedPointExprEvaluator::VisitCastExpr(const CastExpr *E) {
         Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                          diag::warn_fixedpoint_constant_overflow)
           << Result.toString() << E->getType();
-      else if (!HandleOverflow(Info, E, Result, E->getType()))
+      if (!HandleOverflow(Info, E, Result, E->getType()))
         return false;
     }
     return Success(Result, E);
@@ -13460,7 +13462,7 @@ bool FixedPointExprEvaluator::VisitCastExpr(const CastExpr *E) {
         Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                          diag::warn_fixedpoint_constant_overflow)
           << IntResult.toString() << E->getType();
-      else if (!HandleOverflow(Info, E, IntResult, E->getType()))
+      if (!HandleOverflow(Info, E, IntResult, E->getType()))
         return false;
     }
 
@@ -13480,7 +13482,7 @@ bool FixedPointExprEvaluator::VisitCastExpr(const CastExpr *E) {
         Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                          diag::warn_fixedpoint_constant_overflow)
           << Result.toString() << E->getType();
-      else if (!HandleOverflow(Info, E, Result, E->getType()))
+      if (!HandleOverflow(Info, E, Result, E->getType()))
         return false;
     }
 
@@ -13568,7 +13570,7 @@ bool FixedPointExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                        diag::warn_fixedpoint_constant_overflow)
         << Result.toString() << E->getType();
-    else if (!HandleOverflow(Info, E, Result, E->getType()))
+    if (!HandleOverflow(Info, E, Result, E->getType()))
       return false;
   }
   return Success(Result, E);
