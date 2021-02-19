@@ -12,7 +12,7 @@ define i32 @ashr(i32 %a) {
 ; CHECK-LABEL: 'ashr'
 ; CHECK-NEXT:  Classifying expressions for: @ashr
 ; CHECK-NEXT:    %ashr = ashr i32 %a, 31
-; CHECK-NEXT:    --> %ashr U: [0,1) S: [-1,1)
+; CHECK-NEXT:    --> %ashr U: [0,1) S: [0,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @ashr
 ;
   %pos = icmp sge i32 %a, 0
