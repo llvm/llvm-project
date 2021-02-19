@@ -661,14 +661,17 @@ define float @fabs_fabs_extra_use3(float %x, float %y) {
 
 define float @pow_divisor(float %x, float %y, float %z) {
 ; CHECK-LABEL: @pow_divisor(
-; CHECK-NEXT:    [[P:%.*]] = call float @llvm.pow.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc arcp float [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc arcp float @llvm.pow.f32(float [[X:%.*]], float [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp float [[TMP2]], [[Z:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %p = call float @llvm.pow.f32(float %x, float %y)
   %r = fdiv reassoc arcp float %z, %p
   ret float %r
 }
+
+; Negative test - don't create an extra pow
 
 define float @pow_divisor_extra_use(float %x, float %y, float %z) {
 ; CHECK-LABEL: @pow_divisor_extra_use(
@@ -683,6 +686,8 @@ define float @pow_divisor_extra_use(float %x, float %y, float %z) {
   ret float %r
 }
 
+; Negative test - must have reassoc+arcp
+
 define float @pow_divisor_not_enough_fmf(float %x, float %y, float %z) {
 ; CHECK-LABEL: @pow_divisor_not_enough_fmf(
 ; CHECK-NEXT:    [[P:%.*]] = call fast float @llvm.pow.f32(float [[X:%.*]], float [[Y:%.*]])
@@ -693,6 +698,8 @@ define float @pow_divisor_not_enough_fmf(float %x, float %y, float %z) {
   %r = fdiv reassoc float %z, %p
   ret float %r
 }
+
+; Negative test - must have reassoc+arcp
 
 define float @pow_divisor_not_enough_fmf2(float %x, float %y, float %z) {
 ; CHECK-LABEL: @pow_divisor_not_enough_fmf2(
@@ -705,11 +712,13 @@ define float @pow_divisor_not_enough_fmf2(float %x, float %y, float %z) {
   ret float %r
 }
 
+; Special-case - reciprocal does not require extra fmul
+
 define <2 x half> @pow_recip(<2 x half> %x, <2 x half> %y) {
 ; CHECK-LABEL: @pow_recip(
-; CHECK-NEXT:    [[P:%.*]] = call <2 x half> @llvm.pow.v2f16(<2 x half> [[X:%.*]], <2 x half> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf arcp <2 x half> <half 0xH3C00, half 0xH3C00>, [[P]]
-; CHECK-NEXT:    ret <2 x half> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc ninf arcp <2 x half> [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf arcp <2 x half> @llvm.pow.v2f16(<2 x half> [[X:%.*]], <2 x half> [[TMP1]])
+; CHECK-NEXT:    ret <2 x half> [[TMP2]]
 ;
   %p = call <2 x half> @llvm.pow.v2f16(<2 x half> %x, <2 x half> %y)
   %r = fdiv reassoc arcp ninf <2 x half> <half 1.0, half 1.0>, %p
