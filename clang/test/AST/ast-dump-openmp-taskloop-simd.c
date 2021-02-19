@@ -68,7 +68,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .st. 'const long'
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .liter. 'const int'
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .reductions. 'void *const restrict'
-// CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-taskloop-simd.c:4:1) *const restrict'
+// CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-taskloop-simd.c:4:1) *const restrict'
 // CHECK-NEXT: |         `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |           `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |-FunctionDecl {{.*}} <line:9:1, line:14:1> line:9:6 test_two 'void (int, int)'
@@ -117,7 +117,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .st. 'const long'
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .liter. 'const int'
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .reductions. 'void *const restrict'
-// CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-taskloop-simd.c:10:1) *const restrict'
+// CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-taskloop-simd.c:10:1) *const restrict'
 // CHECK-NEXT: |         |-VarDecl {{.*}} <line:11:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |         | `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |         `-VarDecl {{.*}} <line:12:10, col:18> col:14 used i 'int' cinit
@@ -172,7 +172,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .st. 'const long'
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .liter. 'const int'
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .reductions. 'void *const restrict'
-// CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-taskloop-simd.c:17:1) *const restrict'
+// CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-taskloop-simd.c:17:1) *const restrict'
 // CHECK-NEXT: |         |-VarDecl {{.*}} <line:18:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |         | `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |         `-VarDecl {{.*}} <line:19:10, col:18> col:14 used i 'int' cinit
@@ -227,7 +227,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .st. 'const long'
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .liter. 'const int'
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .reductions. 'void *const restrict'
-// CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-taskloop-simd.c:24:1) *const restrict'
+// CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-taskloop-simd.c:24:1) *const restrict'
 // CHECK-NEXT: |         |-VarDecl {{.*}} <line:25:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |         | `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |         `-VarDecl {{.*}} <line:26:10, col:18> col:14 used i 'int' cinit
@@ -296,7 +296,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .st. 'const long'
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .liter. 'const int'
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .reductions. 'void *const restrict'
-// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-taskloop-simd.c:31:1) *const restrict'
+// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-taskloop-simd.c:31:1) *const restrict'
 // CHECK-NEXT:           |-VarDecl {{.*}} <line:32:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:           | `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT:           |-VarDecl {{.*}} <line:33:10, col:18> col:14 used i 'int' cinit

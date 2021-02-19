@@ -195,7 +195,7 @@ void typedefStructFunc() {
 }
 
 void anonStructFunc() {
-  struct { // expected-warning{{Excessive padding in 'struct (unnamed}}
+  struct { // expected-warning{{Excessive padding in 'struct (anonymous}}
     char c1;
     int t;
     char c2;

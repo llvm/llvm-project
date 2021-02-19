@@ -3,7 +3,7 @@
 // NOTE: When a 'enumeral mismatch' warning is implemented then expect several
 // of the following cases to be impacted.
 
-// namespace for unnamed enums tests
+// namespace for anonymous enums tests
 namespace test1 {
   enum { A };
   enum { B = -1 };
@@ -15,7 +15,7 @@ namespace test1 {
 
   enum { E = ~0U };
 
-  void doit_unnamed( int i ) {
+  void doit_anonymous( int i ) {
     int a1 = 1 ? i : A;
     int a2 = 1 ? A : i;
 
@@ -25,22 +25,22 @@ namespace test1 {
     int c1 = 1 ? i : Foo<bool>::C;
     int c2 = 1 ? Foo<bool>::C : i;
 
-    int d1a = 1 ? i : Foo<bool>::D; // expected-warning {{test1::Foo<bool>::(unnamed enum at }}
+    int d1a = 1 ? i : Foo<bool>::D; // expected-warning {{test1::Foo<bool>::(anonymous enum at }}
     int d1b = 1 ? i : Foo<bool>::D; // expected-warning {{warn-sign-conversion.cpp:13:5)' to 'int'}}
-    int d2a = 1 ? Foo<bool>::D : i; // expected-warning {{operand of ? changes signedness: 'test1::Foo<bool>::(unnamed enum at }}
+    int d2a = 1 ? Foo<bool>::D : i; // expected-warning {{operand of ? changes signedness: 'test1::Foo<bool>::(anonymous enum at }}
     int d2b = 1 ? Foo<bool>::D : i; // expected-warning {{warn-sign-conversion.cpp:13:5)' to 'int'}}
-    int d3a = 1 ? B : Foo<bool>::D; // expected-warning {{operand of ? changes signedness: 'test1::Foo<bool>::(unnamed enum at }}
+    int d3a = 1 ? B : Foo<bool>::D; // expected-warning {{operand of ? changes signedness: 'test1::Foo<bool>::(anonymous enum at }}
     int d3b = 1 ? B : Foo<bool>::D; // expected-warning {{warn-sign-conversion.cpp:13:5)' to 'int'}}
-    int d4a = 1 ? Foo<bool>::D : B; // expected-warning {{operand of ? changes signedness: 'test1::Foo<bool>::(unnamed enum at }}
+    int d4a = 1 ? Foo<bool>::D : B; // expected-warning {{operand of ? changes signedness: 'test1::Foo<bool>::(anonymous enum at }}
     int d4b = 1 ? Foo<bool>::D : B; // expected-warning {{warn-sign-conversion.cpp:13:5)' to 'int'}}
 
-    int e1a = 1 ? i : E; // expected-warning {{operand of ? changes signedness: 'test1::(unnamed enum at }}
+    int e1a = 1 ? i : E; // expected-warning {{operand of ? changes signedness: 'test1::(anonymous enum at }}
     int e1b = 1 ? i : E; // expected-warning {{warn-sign-conversion.cpp:16:3)' to 'int'}}
-    int e2a = 1 ? E : i; // expected-warning {{operand of ? changes signedness: 'test1::(unnamed enum at }}
+    int e2a = 1 ? E : i; // expected-warning {{operand of ? changes signedness: 'test1::(anonymous enum at }}
     int e2b = 1 ? E : i; // expected-warning {{warn-sign-conversion.cpp:16:3)' to 'int'}}
-    int e3a = 1 ? E : B; // expected-warning {{operand of ? changes signedness: 'test1::(unnamed enum at }}
+    int e3a = 1 ? E : B; // expected-warning {{operand of ? changes signedness: 'test1::(anonymous enum at }}
     int e3b = 1 ? E : B; // expected-warning {{warn-sign-conversion.cpp:16:3)' to 'int'}}
-    int e4a = 1 ? B : E; // expected-warning {{operand of ? changes signedness: 'test1::(unnamed enum at }}
+    int e4a = 1 ? B : E; // expected-warning {{operand of ? changes signedness: 'test1::(anonymous enum at }}
     int e4b = 1 ? B : E; // expected-warning {{warn-sign-conversion.cpp:16:3)' to 'int'}}
   }
 }
@@ -57,7 +57,7 @@ namespace test2 {
 
   enum Named5 { E = ~0U };
 
-  void doit_unnamed( int i ) {
+  void doit_anonymous( int i ) {
     int a1 = 1 ? i : A;
     int a2 = 1 ? A : i;
 
