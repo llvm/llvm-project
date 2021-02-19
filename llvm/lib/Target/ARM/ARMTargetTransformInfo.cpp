@@ -859,6 +859,51 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
     return Cost;
   }
 
+  // If this is a vector min/max/abs, use the cost of that intrinsic directly
+  // instead. Hopefully when min/max intrinsics are more prevalent this code
+  // will not be needed.
+  const Instruction *Sel = I;
+  if ((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) && Sel &&
+      Sel->hasOneUse())
+    Sel = cast<Instruction>(Sel->user_back());
+  if (Sel && ValTy->isVectorTy()) {
+    const Value *LHS, *RHS;
+    SelectPatternFlavor SPF = matchSelectPattern(Sel, LHS, RHS).Flavor;
+    unsigned IID = 0;
+    switch (SPF) {
+    case SPF_ABS:
+      IID = Intrinsic::abs;
+      break;
+    case SPF_SMIN:
+      IID = Intrinsic::smin;
+      break;
+    case SPF_SMAX:
+      IID = Intrinsic::smax;
+      break;
+    case SPF_UMIN:
+      IID = Intrinsic::umin;
+      break;
+    case SPF_UMAX:
+      IID = Intrinsic::umax;
+      break;
+    case SPF_FMINNUM:
+      IID = Intrinsic::minnum;
+      break;
+    case SPF_FMAXNUM:
+      IID = Intrinsic::maxnum;
+      break;
+    default:
+      break;
+    }
+    if (IID) {
+      // The ICmp is free, the select gets the cost of the min/max/etc
+      if (Sel != I)
+        return 0;
+      IntrinsicCostAttributes CostAttrs(IID, ValTy, {ValTy, ValTy});
+      return getIntrinsicInstrCost(CostAttrs, CostKind);
+    }
+  }
+
   // On NEON a vector select gets lowered to vbsl.
   if (ST->hasNEON() && ValTy->isVectorTy() && ISD == ISD::SELECT && CondTy) {
     // Lowering of some vector selects is currently far from perfect.
@@ -879,6 +924,41 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
 
     std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
     return LT.first;
+  }
+
+  if (ST->hasMVEIntegerOps() && ValTy->isVectorTy() &&
+      (Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
+      cast<FixedVectorType>(ValTy)->getNumElements() > 1) {
+    FixedVectorType *VecValTy = cast<FixedVectorType>(ValTy);
+    FixedVectorType *VecCondTy = dyn_cast_or_null<FixedVectorType>(CondTy);
+    if (!VecCondTy)
+      VecCondTy = cast<FixedVectorType>(CmpInst::makeCmpResultType(VecValTy));
+
+    // If we don't have mve.fp any fp operations will need to be scalarized.
+    if (Opcode == Instruction::FCmp && !ST->hasMVEFloatOps()) {
+      // One scalaization insert, one scalarization extract and the cost of the
+      // fcmps.
+      return BaseT::getScalarizationOverhead(VecValTy, false, true) +
+             BaseT::getScalarizationOverhead(VecCondTy, true, false) +
+             VecValTy->getNumElements() *
+                 getCmpSelInstrCost(Opcode, ValTy->getScalarType(),
+                                    CondTy->getScalarType(), VecPred, CostKind,
+                                    I);
+    }
+
+    std::pair<unsigned, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+    int BaseCost = ST->getMVEVectorCostFactor(CostKind);
+    // There are two types - the input that specifies the type of the compare
+    // and the output vXi1 type. Because we don't know how the output will be
+    // split, we may need an expensive shuffle to get two in sync. This has the
+    // effect of making larger than legal compares (v8i32 for example)
+    // expensive.
+    if (LT.second.getVectorNumElements() > 2) {
+      if (LT.first > 1)
+        return LT.first * BaseCost +
+               BaseT::getScalarizationOverhead(VecCondTy, true, false);
+      return BaseCost;
+    }
   }
 
   // Default to cheap (throughput/size of 1 instruction) but adjust throughput
