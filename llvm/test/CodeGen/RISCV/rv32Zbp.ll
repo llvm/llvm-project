@@ -2449,26 +2449,20 @@ declare i8 @llvm.bitreverse.i8(i8)
 define zeroext i8 @bitreverse_i8(i8 zeroext %a) nounwind {
 ; RV32I-LABEL: bitreverse_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a1, a0, 20
-; RV32I-NEXT:    lui a2, 61440
-; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    slli a0, a0, 28
+; RV32I-NEXT:    srli a1, a0, 4
+; RV32I-NEXT:    andi a0, a0, 15
+; RV32I-NEXT:    slli a0, a0, 4
 ; RV32I-NEXT:    or a0, a1, a0
-; RV32I-NEXT:    lui a1, 208896
-; RV32I-NEXT:    and a1, a0, a1
+; RV32I-NEXT:    andi a1, a0, 51
 ; RV32I-NEXT:    slli a1, a1, 2
-; RV32I-NEXT:    lui a2, 835584
-; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    andi a0, a0, 204
 ; RV32I-NEXT:    srli a0, a0, 2
 ; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    lui a1, 348160
-; RV32I-NEXT:    and a1, a0, a1
+; RV32I-NEXT:    andi a1, a0, 85
 ; RV32I-NEXT:    slli a1, a1, 1
-; RV32I-NEXT:    lui a2, 696320
-; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    andi a0, a0, 170
 ; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    srli a0, a0, 24
 ; RV32I-NEXT:    ret
 ;
 ; RV32IB-LABEL: bitreverse_i8:
@@ -2491,33 +2485,36 @@ declare i16 @llvm.bitreverse.i16(i16)
 define zeroext i16 @bitreverse_i16(i16 zeroext %a) nounwind {
 ; RV32I-LABEL: bitreverse_i16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a1, a0, 8
-; RV32I-NEXT:    lui a2, 4080
-; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srli a1, a0, 8
+; RV32I-NEXT:    slli a0, a0, 8
 ; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    lui a1, 61680
+; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    addi a1, a1, -241
 ; RV32I-NEXT:    and a1, a0, a1
 ; RV32I-NEXT:    slli a1, a1, 4
-; RV32I-NEXT:    lui a2, 986880
+; RV32I-NEXT:    lui a2, 15
+; RV32I-NEXT:    addi a2, a2, 240
 ; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    srli a0, a0, 4
 ; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    lui a1, 209712
+; RV32I-NEXT:    lui a1, 3
+; RV32I-NEXT:    addi a1, a1, 819
 ; RV32I-NEXT:    and a1, a0, a1
 ; RV32I-NEXT:    slli a1, a1, 2
-; RV32I-NEXT:    lui a2, 838848
+; RV32I-NEXT:    lui a2, 13
+; RV32I-NEXT:    addi a2, a2, -820
 ; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    srli a0, a0, 2
 ; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    lui a1, 349520
+; RV32I-NEXT:    lui a1, 5
+; RV32I-NEXT:    addi a1, a1, 1365
 ; RV32I-NEXT:    and a1, a0, a1
 ; RV32I-NEXT:    slli a1, a1, 1
-; RV32I-NEXT:    lui a2, 699040
+; RV32I-NEXT:    lui a2, 11
+; RV32I-NEXT:    addi a2, a2, -1366
 ; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV32IB-LABEL: bitreverse_i16:

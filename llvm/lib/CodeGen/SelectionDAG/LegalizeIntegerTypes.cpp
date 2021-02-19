@@ -478,6 +478,16 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITREVERSE(SDNode *N) {
   EVT NVT = Op.getValueType();
   SDLoc dl(N);
 
+  // If the larger BITREVERSE isn't supported by the target, try to expand now.
+  // If we expand later we'll end up with more operations since we lost the
+  // original type. We only do this for scalars since we have a shuffle
+  // based lowering for vectors in LegalizeVectorOps.
+  if (!OVT.isVector() && OVT.isSimple() &&
+      !TLI.isOperationLegalOrCustom(ISD::BITREVERSE, NVT)) {
+    if (SDValue Res = TLI.expandBITREVERSE(N, DAG))
+      return DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Res);
+  }
+
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
   EVT ShiftVT = getShiftAmountTyForConstant(NVT, TLI, DAG);
   return DAG.getNode(ISD::SRL, dl, NVT,
