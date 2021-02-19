@@ -3778,7 +3778,7 @@ let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
                              VEX_4V, VEX_WIG;
   defm VPACKUSDW : sse4_pack<0x2B, "vpackusdw", v8i16, v4i32, X86Packus, VR128,
                              i128mem, SchedWriteShuffle.XMM, load, 0>,
-                             VEX_4V;
+                             VEX_4V, VEX_WIG;
 }
 
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
@@ -3794,7 +3794,7 @@ let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
                               VEX_4V, VEX_L, VEX_WIG;
   defm VPACKUSDWY : sse4_pack<0x2B, "vpackusdw", v16i16, v8i32, X86Packus, VR256,
                               i256mem, SchedWriteShuffle.YMM, load, 0>,
-                              VEX_4V, VEX_L;
+                              VEX_4V, VEX_L, VEX_WIG;
 }
 
 let Constraints = "$src1 = $dst" in {
@@ -4756,7 +4756,7 @@ let isCommutable = 0 in {
                                   SchedWritePHAdd.XMM, 0>, VEX_4V, VEX_WIG;
   defm VPHSUBD    : SS3I_binop_rm<0x06, "vphsubd", X86hsub, v4i32, v4i32, VR128,
                                   load, i128mem,
-                                  SchedWritePHAdd.XMM, 0>, VEX_4V;
+                                  SchedWritePHAdd.XMM, 0>, VEX_4V, VEX_WIG;
   defm VPSIGNB    : SS3I_binop_rm_int<0x08, "vpsignb",
                                       int_x86_ssse3_psign_b_128,
                                       SchedWriteVecALU.XMM, load, 0>, VEX_4V, VEX_WIG;
@@ -4802,7 +4802,7 @@ let isCommutable = 0 in {
                                   SchedWritePHAdd.YMM, 0>, VEX_4V, VEX_L, VEX_WIG;
   defm VPHSUBDY   : SS3I_binop_rm<0x06, "vphsubd", X86hsub, v8i32, v8i32, VR256,
                                   load, i256mem,
-                                  SchedWritePHAdd.YMM, 0>, VEX_4V, VEX_L;
+                                  SchedWritePHAdd.YMM, 0>, VEX_4V, VEX_L, VEX_WIG;
   defm VPSIGNB   : SS3I_binop_rm_int_y<0x08, "vpsignb", int_x86_avx2_psign_b,
                                        SchedWriteVecALU.YMM>, VEX_4V, VEX_L, VEX_WIG;
   defm VPSIGNW   : SS3I_binop_rm_int_y<0x09, "vpsignw", int_x86_avx2_psign_w,
@@ -6503,7 +6503,7 @@ multiclass pcmpistrm_SS42AI<string asm> {
 
 let Defs = [XMM0, EFLAGS], hasSideEffects = 0 in {
   let Predicates = [HasAVX] in
-  defm VPCMPISTRM : pcmpistrm_SS42AI<"vpcmpistrm">, VEX;
+  defm VPCMPISTRM : pcmpistrm_SS42AI<"vpcmpistrm">, VEX, VEX_WIG;
   defm PCMPISTRM  : pcmpistrm_SS42AI<"pcmpistrm"> ;
 }
 
@@ -6521,7 +6521,7 @@ multiclass SS42AI_pcmpestrm<string asm> {
 
 let Defs = [XMM0, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
   let Predicates = [HasAVX] in
-  defm VPCMPESTRM : SS42AI_pcmpestrm<"vpcmpestrm">, VEX;
+  defm VPCMPESTRM : SS42AI_pcmpestrm<"vpcmpestrm">, VEX, VEX_WIG;
   defm PCMPESTRM :  SS42AI_pcmpestrm<"pcmpestrm">;
 }
 
@@ -6539,7 +6539,7 @@ multiclass SS42AI_pcmpistri<string asm> {
 
 let Defs = [ECX, EFLAGS], hasSideEffects = 0 in {
   let Predicates = [HasAVX] in
-  defm VPCMPISTRI : SS42AI_pcmpistri<"vpcmpistri">, VEX;
+  defm VPCMPISTRI : SS42AI_pcmpistri<"vpcmpistri">, VEX, VEX_WIG;
   defm PCMPISTRI  : SS42AI_pcmpistri<"pcmpistri">;
 }
 
@@ -6557,7 +6557,7 @@ multiclass SS42AI_pcmpestri<string asm> {
 
 let Defs = [ECX, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
   let Predicates = [HasAVX] in
-  defm VPCMPESTRI : SS42AI_pcmpestri<"vpcmpestri">, VEX;
+  defm VPCMPESTRI : SS42AI_pcmpestri<"vpcmpestri">, VEX, VEX_WIG;
   defm PCMPESTRI  : SS42AI_pcmpestri<"pcmpestri">;
 }
 

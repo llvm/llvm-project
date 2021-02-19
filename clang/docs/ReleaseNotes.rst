@@ -144,6 +144,18 @@ New Pragmas in Clang
 
 - ...
 
+Modified Pragmas in Clang
+-------------------------
+
+- The "#pragma clang loop vectorize_width" has been extended to support an
+  optional 'fixed|scalable' argument, which can be used to indicate that the
+  compiler should use fixed-width or scalable vectorization.  Fixed-width is
+  assumed by default.
+
+  Scalable or vector length agnostic vectorization is an experimental feature
+  for targets that support scalable vectors. For more information please refer
+  to the Clang Language Extensions documentation.
+
 Attribute Changes in Clang
 --------------------------
 

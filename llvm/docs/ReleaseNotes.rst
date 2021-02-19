@@ -111,6 +111,10 @@ During this release ...
   ``:lo12:`` relocation specifiers, to allow the assembly output
   to actually be assembled.
 
+* Changed the assembly comment string for MSVC targets to ``//`` (consistent
+  with the MinGW and ELF targets), freeing up ``;`` to be used as
+  statement separator.
+
 Changes to the ARM Backend
 --------------------------
 
