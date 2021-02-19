@@ -1081,15 +1081,16 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
     // RequireAnalysisPass for PSI before subsequent non-module passes.
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
-    // Do not invoke ICP in the ThinLTOPrelink phase as it makes it hard
-    // for the profile annotation to be accurate in the ThinLTO backend.
-    if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+    // Do not invoke ICP in the LTOPrelink phase as it makes it hard
+    // for the profile annotation to be accurate in the LTO backend.
+    if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink &&
+        Phase != ThinOrFullLTOPhase::FullLTOPreLink)
       // We perform early indirect call promotion here, before globalopt.
       // This is important for the ThinLTO backend phase because otherwise
       // imported available_externally functions look unreferenced and are
       // removed.
-      MPM.addPass(PGOIndirectCallPromotion(
-          Phase == ThinOrFullLTOPhase::ThinLTOPostLink, true /* SamplePGO */));
+      MPM.addPass(
+          PGOIndirectCallPromotion(true /* IsInLTO */, true /* SamplePGO */));
   }
 
   if (AttributorRun & AttributorRunOption::MODULE)
