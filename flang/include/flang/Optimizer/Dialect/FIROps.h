@@ -13,8 +13,6 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "flang/Optimizer/Dialect/FIRType.h"
-
 
 using namespace mlir;
 
@@ -48,6 +46,5 @@ mlir::ParseResult parseSelector(mlir::OpAsmParser &parser,
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/FIROps.h.inc"
-
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIROPS_H
