@@ -431,15 +431,6 @@ public:
       m_tracer_sp->Log();
   }
 
-  // Some thread plans hide away the actual stop info which caused any
-  // particular stop.  For instance the ThreadPlanCallFunction restores the
-  // original stop reason so that stopping and calling a few functions won't
-  // lose the history of the run. This call can be implemented to get you back
-  // to the real stop info.
-  virtual lldb::StopInfoSP GetRealStopInfo() { 
-    return GetThread().GetStopInfo();
-  }
-
   // If the completion of the thread plan stepped out of a function, the return
   // value of the function might have been captured by the thread plan
   // (currently only ThreadPlanStepOut does this.) If so, the ReturnValueObject
