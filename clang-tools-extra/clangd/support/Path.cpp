@@ -21,8 +21,8 @@ bool pathEqual(PathRef A, PathRef B) { return A == B; }
 
 bool pathStartsWith(PathRef Ancestor, PathRef Path,
                     llvm::sys::path::Style Style) {
-  assert(llvm::sys::path::is_absolute(Ancestor, Style) &&
-         llvm::sys::path::is_absolute(Path, Style));
+  assert(llvm::sys::path::is_absolute(Ancestor) &&
+         llvm::sys::path::is_absolute(Path));
   // If ancestor ends with a separator drop that, so that we can match /foo/ as
   // a parent of /foo.
   if (llvm::sys::path::is_separator(Ancestor.back(), Style))
