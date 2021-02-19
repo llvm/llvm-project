@@ -303,7 +303,10 @@ private:
     SymTab.Shdr.sh_flags = SHF_ALLOC;
     SymTab.Shdr.sh_addr = SymTab.Addr;
     SymTab.Shdr.sh_offset = SymTab.Offset;
-    SymTab.Shdr.sh_info = SymTab.Size / sizeof(Elf_Sym) > 1 ? 1 : 0;
+    // Only non-local symbols are included in the tbe file, so .dynsym only
+    // contains 1 local symbol (the undefined symbol at index 0). The sh_info
+    // should always be 1.
+    SymTab.Shdr.sh_info = 1;
     SymTab.Shdr.sh_size = SymTab.Size;
     SymTab.Shdr.sh_name = this->ShStrTab.Content.getOffset(SymTab.Name);
     SymTab.Shdr.sh_addralign = SymTab.Align;
