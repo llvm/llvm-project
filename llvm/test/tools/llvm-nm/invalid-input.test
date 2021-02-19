@@ -1,2 +1,2 @@
 RUN: not llvm-nm %s 2>&1 | FileCheck %s -check-prefix=UNKNOWN_FILE_TYPE
-UNKNOWN_FILE_TYPE: {{.*}}invalid-input.test The file was not recognized as a valid object file
+UNKNOWN_FILE_TYPE: {{.*}}invalid-input.test: The file was not recognized as a valid object file
