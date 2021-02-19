@@ -850,9 +850,8 @@ int MachineFunction::getFilterIDFor(std::vector<unsigned> &TyIds) {
   // If the new filter coincides with the tail of an existing filter, then
   // re-use the existing filter.  Folding filters more than this requires
   // re-ordering filters and/or their elements - probably not worth it.
-  for (std::vector<unsigned>::iterator I = FilterEnds.begin(),
-       E = FilterEnds.end(); I != E; ++I) {
-    unsigned i = *I, j = TyIds.size();
+  for (unsigned i : FilterEnds) {
+    unsigned j = TyIds.size();
 
     while (i && j)
       if (FilterIds[--i] != TyIds[--j])
@@ -1150,11 +1149,9 @@ MachineConstantPool::~MachineConstantPool() {
       Deleted.insert(Constants[i].Val.MachineCPVal);
       delete Constants[i].Val.MachineCPVal;
     }
-  for (DenseSet<MachineConstantPoolValue*>::iterator I =
-       MachineCPVsSharingEntries.begin(), E = MachineCPVsSharingEntries.end();
-       I != E; ++I) {
-    if (Deleted.count(*I) == 0)
-      delete *I;
+  for (MachineConstantPoolValue *CPV : MachineCPVsSharingEntries) {
+    if (Deleted.count(CPV) == 0)
+      delete CPV;
   }
 }
 
