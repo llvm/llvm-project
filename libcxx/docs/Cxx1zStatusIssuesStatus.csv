@@ -200,7 +200,7 @@
 "`2525 <https://wg21.link/LWG2525>`__","[fund.ts.v2] get_memory_resource should be const and noexcept","Issaquah","",""
 "`2527 <https://wg21.link/LWG2527>`__","[fund.ts.v2] ALLOCATOR_OF for function::operator= has incorrect default","Issaquah","",""
 "`2531 <https://wg21.link/LWG2531>`__","future::get should explicitly state that the shared state is released","Issaquah","",""
-"`2534 <https://wg21.link/LWG2534>`__","Constrain rvalue stream operators","Issaquah","",""
+"`2534 <https://wg21.link/LWG2534>`__","Constrain rvalue stream operators","Issaquah","|Complete|",""
 "`2536 <https://wg21.link/LWG2536>`__","What should <complex.h> do?","Issaquah","|Complete|",""
 "`2540 <https://wg21.link/LWG2540>`__","unordered_multimap::insert hint iterator","Issaquah","|Complete|",""
 "`2543 <https://wg21.link/LWG2543>`__","LWG 2148 (hash support for enum types) seems under-specified","Issaquah","|Complete|",""
