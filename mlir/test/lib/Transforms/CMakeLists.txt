@@ -26,6 +26,7 @@ add_mlir_library(MLIRTestTransforms
   TestLoopUnrolling.cpp
   TestNumberOfExecutions.cpp
   TestOpaqueLoc.cpp
+  TestPolynomialApproximation.cpp
   TestMemRefBoundCheck.cpp
   TestMemRefDependenceCheck.cpp
   TestMemRefStrideCalculation.cpp
