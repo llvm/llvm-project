@@ -244,7 +244,7 @@ if.end:                                           ; preds = %if.then, %entry
 
 define internal void @.omp_outlined..4(i32* noalias %.global_tid., i32* noalias %.bound_tid., i32* dereferenceable(4) %a) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..4
-; CHECK-SAME: (i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK-SAME: (i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_master(%struct.ident_t* noundef nonnull [[GLOB0]], i32 [[TMP]])
@@ -324,7 +324,7 @@ omp_if.end:                                       ; preds = %entry, %omp_if.then
 
 define internal void @.omp_outlined..6(i32* noalias %.global_tid., i32* noalias %.bound_tid., i32* dereferenceable(4) %a) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..6
-; CHECK-SAME: (i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK-SAME: (i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
@@ -349,7 +349,7 @@ define internal void @.omp_outlined..6(i32* noalias %.global_tid., i32* noalias 
 ; CHECK-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 ; CHECK:       .omp.reduction.case2:
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[A1]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = atomicrmw add i32* [[A]], i32 [[TMP7]] monotonic
+; CHECK-NEXT:    [[TMP8:%.*]] = atomicrmw add i32* [[A]], i32 [[TMP7]] monotonic, align 4
 ; CHECK-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 ; CHECK:       .omp.reduction.default:
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[A1]] to i8*
