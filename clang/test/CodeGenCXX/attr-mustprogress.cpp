@@ -7,7 +7,7 @@
 // Make sure -ffinite-loops overrides -std=c++98 for loops.
 // RUN: %clang_cc1 -std=c++98 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
 
-// Make sure -fno_finite-loops overrides -std=c++11
+// Make sure -fno-finite-loops overrides -std=c++11
 // RUN: %clang_cc1 -std=c++11 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX98 %s
 
 int a = 0;
