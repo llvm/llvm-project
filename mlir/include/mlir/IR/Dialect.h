@@ -239,7 +239,8 @@ class DialectRegistry {
   using MapTy =
       std::map<std::string, std::pair<TypeID, DialectAllocatorFunction>>;
   using InterfaceMapTy =
-      DenseMap<TypeID, SmallVector<InterfaceAllocatorFunction, 2>>;
+      DenseMap<TypeID,
+               SmallVector<std::pair<TypeID, InterfaceAllocatorFunction>, 2>>;
 
 public:
   explicit DialectRegistry() {}
@@ -292,17 +293,20 @@ public:
   /// dialect provided as template parameter. The dialect must be present in
   /// the registry.
   template <typename DialectTy>
-  void addDialectInterface(InterfaceAllocatorFunction allocator) {
-    addDialectInterface(DialectTy::getDialectNamespace(), allocator);
+  void addDialectInterface(TypeID interfaceTypeID,
+                           InterfaceAllocatorFunction allocator) {
+    addDialectInterface(DialectTy::getDialectNamespace(), interfaceTypeID,
+                        allocator);
   }
 
   /// Add an interface to the dialect, both provided as template parameter. The
   /// dialect must be present in the registry.
   template <typename DialectTy, typename InterfaceTy>
   void addDialectInterface() {
-    addDialectInterface<DialectTy>([](Dialect *dialect) {
-      return std::make_unique<InterfaceTy>(dialect);
-    });
+    addDialectInterface<DialectTy>(
+        InterfaceTy::getInterfaceID(), [](Dialect *dialect) {
+          return std::make_unique<InterfaceTy>(dialect);
+        });
   }
 
   /// Register any interfaces required for the given dialect (based on its
@@ -312,7 +316,7 @@ public:
 private:
   /// Add an interface constructed with the given allocation function to the
   /// dialect identified by its namespace.
-  void addDialectInterface(StringRef dialectName,
+  void addDialectInterface(StringRef dialectName, TypeID interfaceTypeID,
                            InterfaceAllocatorFunction allocator);
 
   MapTy registry;
