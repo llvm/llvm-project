@@ -14,6 +14,7 @@
 #ifndef _OMPTARGET_H_
 #define _OMPTARGET_H_
 
+#include <deque>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -136,6 +137,10 @@ struct DeviceTy;
 /// associated with a libomptarget layer device. RAII semantics to avoid
 /// mistakes.
 class AsyncInfoTy {
+  /// Locations we used in (potentially) asynchronous calls which should live
+  /// as long as this AsyncInfoTy object.
+  std::deque<void *> BufferLocations;
+
   __tgt_async_info AsyncInfo;
   DeviceTy &Device;
 
@@ -151,6 +156,10 @@ public:
   ///
   /// \returns OFFLOAD_FAIL or OFFLOAD_SUCCESS appropriately.
   int synchronize();
+
+  /// Return a void* reference with a lifetime that is at least as long as this
+  /// AsyncInfoTy object. The location can be used as intermediate buffer.
+  void *&getVoidPtrLocation();
 };
 
 /// This struct is a record of non-contiguous information
