@@ -413,7 +413,7 @@ def RISCVVIntrinsicsTable : GenericTable {
   let PrimaryKeyName = "getRISCVVIntrinsicInfo";
 }
 
-class RISCVVLX<bit M, bit O, bits<7> S, bits<3> L, bits<3> IL> {
+class RISCVVLX_VSX<bit M, bit O, bits<7> S, bits<3> L, bits<3> IL> {
   bits<1> Masked = M;
   bits<1> Ordered = O;
   bits<7> SEW = S;
@@ -422,28 +422,24 @@ class RISCVVLX<bit M, bit O, bits<7> S, bits<3> L, bits<3> IL> {
   Pseudo Pseudo = !cast<Pseudo>(NAME);
 }
 
-def RISCVVLXTable : GenericTable {
-  let FilterClass = "RISCVVLX";
+class RISCVVLX<bit M, bit O, bits<7> S, bits<3> L, bits<3> IL> :
+  RISCVVLX_VSX<M, O, S, L, IL>;
+class RISCVVSX<bit M, bit O, bits<7> S, bits<3> L, bits<3> IL> :
+  RISCVVLX_VSX<M, O, S, L, IL>;
+
+class RISCVVLX_VSXTable : GenericTable {
   let CppTypeName = "VLX_VSXPseudo";
   let Fields = ["Masked", "Ordered", "SEW", "LMUL", "IndexLMUL", "Pseudo"];
   let PrimaryKey = ["Masked", "Ordered", "SEW", "LMUL", "IndexLMUL"];
+}
+
+def RISCVVLXTable : RISCVVLX_VSXTable {
+  let FilterClass = "RISCVVLX";
   let PrimaryKeyName = "getVLXPseudo";
 }
 
-class RISCVVSX<bit M, bit O, bits<7> S, bits<3> L, bits<3> IL> {
-  bits<1> Masked = M;
-  bits<1> Ordered = O;
-  bits<7> SEW = S;
-  bits<3> LMUL = L;
-  bits<3> IndexLMUL = IL;
-  Pseudo Pseudo = !cast<Pseudo>(NAME);
-}
-
-def RISCVVSXTable : GenericTable {
+def RISCVVSXTable : RISCVVLX_VSXTable {
   let FilterClass = "RISCVVSX";
-  let CppTypeName = "VLX_VSXPseudo";
-  let Fields = ["Masked", "Ordered", "SEW", "LMUL", "IndexLMUL", "Pseudo"];
-  let PrimaryKey = ["Masked", "Ordered", "SEW", "LMUL", "IndexLMUL"];
   let PrimaryKeyName = "getVSXPseudo";
 }
 
