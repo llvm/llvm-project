@@ -18,7 +18,7 @@ set(MLIR_LINALG_ODS_GEN_EXE ${MLIR_LINALG_ODS_GEN} PARENT_SCOPE)
 set(MLIR_LINALG_ODS_GEN_TARGET mlir-linalg-ods-gen PARENT_SCOPE)
 
 if(LLVM_USE_HOST_TOOLS)
-  if (${MLIR_LINALG_ODS_GEN_EXE} STREQUAL mlir-linalg-ods-gen)
+  if ("${MLIR_LINALG_ODS_GEN_EXE}" STREQUAL mlir-linalg-ods-gen)
     build_native_tool(mlir-linalg-ods-gen MLIR_LINALG_ODS_GEN_EXE DEPENDS mlir-linalg-ods-gen)
     set(MLIR_LINALG_ODS_GEN_EXE ${MLIR_LINALG_ODS_GEN_EXE} PARENT_SCOPE)
 
