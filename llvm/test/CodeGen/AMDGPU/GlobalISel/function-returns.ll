@@ -1194,9 +1194,9 @@ define <33 x i32> @v33i32_func_v33i32_i32(<33 x i32> addrspace(1)* %p, i32 %idx)
   ; CHECK:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
   ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; CHECK:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY3]](s32)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 256
   ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]

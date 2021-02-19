@@ -2884,8 +2884,8 @@ define amdgpu_ps <32 x float> @dyn_insertelement_v32f32_s_v_s(<32 x float> inreg
 ; GPRIDX-NEXT:    s_mov_b32 s28, s30
 ; GPRIDX-NEXT:    s_mov_b32 s29, s31
 ; GPRIDX-NEXT:    s_mov_b32 s31, s33
-; GPRIDX-NEXT:    v_mov_b32_e32 v32, v0
 ; GPRIDX-NEXT:    s_mov_b32 s30, s32
+; GPRIDX-NEXT:    v_mov_b32_e32 v32, v0
 ; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
 ; GPRIDX-NEXT:    v_mov_b32_e32 v1, s1
 ; GPRIDX-NEXT:    v_mov_b32_e32 v2, s2
@@ -2956,8 +2956,8 @@ define amdgpu_ps <32 x float> @dyn_insertelement_v32f32_s_v_s(<32 x float> inreg
 ; MOVREL-NEXT:    s_mov_b32 s28, s30
 ; MOVREL-NEXT:    s_mov_b32 s29, s31
 ; MOVREL-NEXT:    s_mov_b32 s31, s33
-; MOVREL-NEXT:    v_mov_b32_e32 v32, v0
 ; MOVREL-NEXT:    s_mov_b32 s30, s32
+; MOVREL-NEXT:    v_mov_b32_e32 v32, v0
 ; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
 ; MOVREL-NEXT:    s_mov_b32 m0, s34
 ; MOVREL-NEXT:    v_mov_b32_e32 v1, s1
