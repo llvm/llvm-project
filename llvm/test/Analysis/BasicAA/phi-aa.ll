@@ -197,3 +197,22 @@ for.body:                                         ; preds = %for.body, %entry
   store i32 0, i32* %arrayidx13, align 4
   br label %for.body
 } 
+
+; CHECK-LABEL: single_arg_phi
+; CHECK: MayAlias: i32* %ptr, i32* %ptr.next
+; CHECK: MayAlias: i32* %ptr.next, i32* %ptr.next.phi
+; TODO: Both of these could be MustAlias.
+define void @single_arg_phi(i32* %ptr.base) {
+entry:
+  br label %loop
+
+loop:
+  %ptr = phi i32* [ %ptr.base, %entry ], [ %ptr.next, %split ]
+  %ptr.next = getelementptr inbounds i32, i32* %ptr, i64 1
+  br label %split
+
+split:
+  %ptr.phi = phi i32* [ %ptr, %loop ]
+  %ptr.next.phi = phi i32* [ %ptr.next, %loop ]
+  br label %loop
+}
