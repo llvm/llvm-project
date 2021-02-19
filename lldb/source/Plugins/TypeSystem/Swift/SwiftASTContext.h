@@ -79,6 +79,39 @@ class ClangExternalASTSourceCallbacks;
 
 CompilerType ToCompilerType(swift::Type qual_type);
 
+namespace detail {
+/// Serves as the key for caching calls to LoadLibraryUsingPaths.
+struct SwiftLibraryLookupRequest {
+  std::string library_name;
+  std::vector<std::string> search_paths;
+  bool check_rpath = false;
+  uint32_t process_uid = 0;
+
+  bool operator==(const SwiftLibraryLookupRequest &o) const {
+    return std::tie(library_name, search_paths, check_rpath, process_uid) ==
+        std::tie(o.library_name, o.search_paths, o.check_rpath, o.process_uid);
+  }
+};
+} // namespace detail
+} // namespace lldb_private
+
+namespace std {
+template <> struct hash<lldb_private::detail::SwiftLibraryLookupRequest> {
+  using argument_type = lldb_private::detail::SwiftLibraryLookupRequest;
+  using result_type = std::size_t;
+
+  result_type operator()(const argument_type &Arg) const {
+    result_type result = std::hash<decltype(Arg.library_name)>()(Arg.library_name);
+    result ^= std::hash<decltype(Arg.check_rpath)>()(Arg.check_rpath);
+    result ^= std::hash<decltype(Arg.process_uid)>()(Arg.process_uid);
+    for (const std::string &search_path : Arg.search_paths)
+      result ^= std::hash<std::string>()(search_path);
+    return result;
+  }
+};
+} // end namespace std
+
+namespace lldb_private {
 /// This "middle" class between TypeSystemSwiftTypeRef and
 /// SwiftASTContextForExpressions will eventually go away, as more and
 /// more functionality becomes available in TypeSystemSwiftTypeRef.
@@ -831,6 +864,8 @@ protected:
   lldb_private::Process *m_process = nullptr;
   Module *m_module = nullptr;
   std::string m_platform_sdk_path;
+  /// All previously failed library loads in LoadLibraryUsingPaths.
+  std::unordered_set<detail::SwiftLibraryLookupRequest> failed_library_loads;
 
   typedef std::map<Module *, std::vector<lldb::DataBufferSP>> ASTFileDataMap;
   ASTFileDataMap m_ast_file_data_map;
