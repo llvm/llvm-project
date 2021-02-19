@@ -1,5 +1,5 @@
 
-! RUN: %f18 -funparse-with-symbols %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: end do
 
 SUBROUTINE sub00(a,b,n,m)

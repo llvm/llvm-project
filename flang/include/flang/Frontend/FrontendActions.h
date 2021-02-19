@@ -37,7 +37,23 @@ class PrintPreprocessedAction : public PrescanAction {
   void ExecuteAction() override;
 };
 
-class ParseSyntaxOnlyAction : public PrescanAction {
+//===----------------------------------------------------------------------===//
+// PrescanAndSema Actions
+//===----------------------------------------------------------------------===//
+class PrescanAndSemaAction : public FrontendAction {
+  void ExecuteAction() override = 0;
+  bool BeginSourceFileAction(CompilerInstance &ci) override;
+};
+
+class DebugUnparseWithSymbolsAction : public PrescanAndSemaAction {
+  void ExecuteAction() override;
+};
+
+class DebugUnparseAction : public PrescanAndSemaAction {
+  void ExecuteAction() override;
+};
+
+class ParseSyntaxOnlyAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
 };
 

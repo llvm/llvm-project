@@ -110,6 +110,12 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
     case clang::driver::options::OPT_emit_obj:
       opts.programAction_ = EmitObj;
       break;
+    case clang::driver::options::OPT_fdebug_unparse:
+      opts.programAction_ = DebugUnparse;
+      break;
+    case clang::driver::options::OPT_fdebug_unparse_with_symbols:
+      opts.programAction_ = DebugUnparseWithSymbols;
+      break;
 
       // TODO:
       // case calng::driver::options::OPT_emit_llvm:

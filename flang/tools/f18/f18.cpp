@@ -540,9 +540,10 @@ int main(int argc, char *const argv[]) {
       options.instrumentedParse = true;
     } else if (arg == "-fdebug-no-semantics") {
       driver.debugNoSemantics = true;
-    } else if (arg == "-funparse") {
+    } else if (arg == "-funparse" || arg == "-fdebug-unparse") {
       driver.dumpUnparse = true;
-    } else if (arg == "-funparse-with-symbols") {
+    } else if (arg == "-funparse-with-symbols" ||
+        arg == "-fdebug-unparse-with-symbols") {
       driver.dumpUnparseWithSymbols = true;
     } else if (arg == "-funparse-typed-exprs-to-f18-fc") {
       driver.unparseTypedExprsToF18_FC = true;

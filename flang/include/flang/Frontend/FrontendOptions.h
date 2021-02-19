@@ -9,6 +9,7 @@
 #define LLVM_FLANG_FRONTEND_FRONTENDOPTIONS_H
 
 #include "flang/Common/Fortran-features.h"
+#include "flang/Parser/unparse.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -32,6 +33,13 @@ enum ActionKind {
   /// Emit a .o file.
   EmitObj,
 
+  /// Parse, unparse the parse-tree and output a Fortran source file
+  DebugUnparse,
+
+  /// Parse, resolve the sybmols, unparse the parse-tree and then output a
+  /// Fortran source file
+  DebugUnparseWithSymbols,
+
   /// TODO: RunPreprocessor, EmitLLVM, EmitLLVMOnly,
   /// EmitCodeGenOnly, EmitAssembly, (...)
 };
@@ -39,6 +47,10 @@ enum ActionKind {
 /// \param suffix The file extension
 /// \return True if the file extension should be processed as fixed form
 bool isFixedFormSuffix(llvm::StringRef suffix);
+
+// TODO: Find a more suitable location for this. Added for compability with
+// f18.cpp (this is equivalent to `asFortran` defined there).
+Fortran::parser::AnalyzedObjectsAsFortran getBasicAsFortran();
 
 /// \param suffix The file extension
 /// \return True if the file extension should be processed as free form

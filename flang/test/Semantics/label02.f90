@@ -1,5 +1,5 @@
 
-! RUN: not %f18 -funparse-with-symbols %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fdebug-unparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: Label '0' is out of range
 ! CHECK: Label '100000' is out of range
 ! CHECK: Label '123456' is out of range
