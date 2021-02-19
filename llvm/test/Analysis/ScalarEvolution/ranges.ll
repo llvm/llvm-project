@@ -2,6 +2,7 @@
  ; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution | FileCheck %s
  ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 | FileCheck %s
 
+target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64"
 
 ; Collection of cases exercising range logic, mostly (but not exclusively)
 ; involving SCEVUnknowns.
