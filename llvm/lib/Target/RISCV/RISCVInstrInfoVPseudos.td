@@ -997,12 +997,10 @@ multiclass VPseudoAMOEI<int eew> {
       defvar octuple_emul = !srl(!mul(eew, octuple_lmul), shift_amount<sew>.val);
       if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
         defvar emulMX = octuple_to_str<octuple_emul>.ret;
-        defvar lmulMX = octuple_to_str<octuple_lmul>.ret;
         defvar emul= !cast<LMULInfo>("V_" # emulMX);
-        defvar lmul = !cast<LMULInfo>("V_" # lmulMX);
         let VLMul = lmul.value in {
-          def "_WD_" # lmulMX # "_" # emulMX : VPseudoAMOWDNoMask<lmul.vrclass, emul.vrclass>;
-          def "_WD_" # lmulMX # "_" # emulMX # "_MASK" : VPseudoAMOWDMask<lmul.vrclass, emul.vrclass>;
+          def "_WD_" # lmul.MX # "_" # emulMX : VPseudoAMOWDNoMask<lmul.vrclass, emul.vrclass>;
+          def "_WD_" # lmul.MX # "_" # emulMX # "_MASK" : VPseudoAMOWDMask<lmul.vrclass, emul.vrclass>;
         }
       }
     }
