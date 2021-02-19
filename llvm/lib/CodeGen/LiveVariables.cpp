@@ -67,9 +67,8 @@ LiveVariables::VarInfo::findKill(const MachineBasicBlock *MBB) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveVariables::VarInfo::dump() const {
   dbgs() << "  Alive in blocks: ";
-  for (SparseBitVector<>::iterator I = AliveBlocks.begin(),
-           E = AliveBlocks.end(); I != E; ++I)
-    dbgs() << *I << ", ";
+  for (unsigned AB : AliveBlocks)
+    dbgs() << AB << ", ";
   dbgs() << "\n  Killed by:";
   if (Kills.empty())
     dbgs() << " No instructions.\n";
@@ -173,9 +172,8 @@ void LiveVariables::HandleVirtRegUse(Register Reg, MachineBasicBlock *MBB,
     VRInfo.Kills.push_back(&MI);
 
   // Update all dominating blocks to mark them as "known live".
-  for (MachineBasicBlock::const_pred_iterator PI = MBB->pred_begin(),
-         E = MBB->pred_end(); PI != E; ++PI)
-    MarkVirtRegAliveInBlock(VRInfo, MRI->getVRegDef(Reg)->getParent(), *PI);
+  for (MachineBasicBlock *Pred : MBB->predecessors())
+    MarkVirtRegAliveInBlock(VRInfo, MRI->getVRegDef(Reg)->getParent(), Pred);
 }
 
 void LiveVariables::HandleVirtRegDef(Register Reg, MachineInstr &MI) {
@@ -588,19 +586,16 @@ void LiveVariables::runOnBlock(MachineBasicBlock *MBB, const unsigned NumRegs) {
   if (!PHIVarInfo[MBB->getNumber()].empty()) {
     SmallVectorImpl<unsigned> &VarInfoVec = PHIVarInfo[MBB->getNumber()];
 
-    for (SmallVectorImpl<unsigned>::iterator I = VarInfoVec.begin(),
-           E = VarInfoVec.end(); I != E; ++I)
+    for (unsigned I : VarInfoVec)
       // Mark it alive only in the block we are representing.
-      MarkVirtRegAliveInBlock(getVarInfo(*I),MRI->getVRegDef(*I)->getParent(),
+      MarkVirtRegAliveInBlock(getVarInfo(I), MRI->getVRegDef(I)->getParent(),
                               MBB);
   }
 
   // MachineCSE may CSE instructions which write to non-allocatable physical
   // registers across MBBs. Remember if any reserved register is liveout.
   SmallSet<unsigned, 4> LiveOuts;
-  for (MachineBasicBlock::const_succ_iterator SI = MBB->succ_begin(),
-         SE = MBB->succ_end(); SI != SE; ++SI) {
-    MachineBasicBlock *SuccMBB = *SI;
+  for (const MachineBasicBlock *SuccMBB : MBB->successors()) {
     if (SuccMBB->isEHPad())
       continue;
     for (const auto &LI : SuccMBB->liveins()) {
@@ -665,8 +660,8 @@ bool LiveVariables::runOnMachineFunction(MachineFunction &mf) {
   // function.  If so, it is due to a bug in the instruction selector or some
   // other part of the code generator if this happens.
 #ifndef NDEBUG
-  for(MachineFunction::iterator i = MF->begin(), e = MF->end(); i != e; ++i)
-    assert(Visited.contains(&*i) && "unreachable basic block found");
+  for (const MachineBasicBlock &MBB : *MF)
+    assert(Visited.contains(&MBB) && "unreachable basic block found");
 #endif
 
   PhysRegDef.clear();
@@ -817,8 +812,8 @@ void LiveVariables::addNewBlock(MachineBasicBlock *BB,
   const unsigned NumNew = BB->getNumber();
 
   SparseBitVector<> &BV = LiveInSets[SuccBB->getNumber()];
-  for (auto R = BV.begin(), E = BV.end(); R != E; R++) {
-    Register VirtReg = Register::index2VirtReg(*R);
+  for (unsigned R : BV) {
+    Register VirtReg = Register::index2VirtReg(R);
     LiveVariables::VarInfo &VI = getVarInfo(VirtReg);
     VI.AliveBlocks.set(NumNew);
   }
