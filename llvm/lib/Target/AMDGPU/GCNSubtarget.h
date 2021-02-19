@@ -930,6 +930,9 @@ public:
 
   bool hasGFX90AInsts() const { return GFX90AInsts; }
 
+  /// Return if operations acting on VGPR tuples require even alignment.
+  bool needsAlignedVGPRs() const { return GFX90AInsts; }
+
   bool hasPackedTID() const { return HasPackedTID; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
