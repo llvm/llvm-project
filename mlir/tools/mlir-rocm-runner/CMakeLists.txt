@@ -83,7 +83,7 @@ if(MLIR_ROCM_RUNNER_ENABLED)
     MLIRStandard
     MLIRSupport
     MLIRTargetLLVMIR
-    MLIRTargetROCDLIR
+    MLIRROCDLToLLVMIRTranslation
     MLIRTransforms
     MLIRTranslation
     ${ROCM_RUNTIME_LIBRARY}
