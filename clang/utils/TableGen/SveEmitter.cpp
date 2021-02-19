@@ -1201,7 +1201,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "};\n\n";
 
   OS << "/* Function attributes */\n";
-  OS << "#define __aio static inline __attribute__((__always_inline__, "
+  OS << "#define __aio static __inline__ __attribute__((__always_inline__, "
         "__nodebug__, __overloadable__))\n\n";
 
   // Add reinterpret functions.
