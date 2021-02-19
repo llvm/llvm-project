@@ -201,6 +201,14 @@ static cl::opt<bool> ClTrackSelectControlFlow(
              "to results."),
     cl::Hidden, cl::init(true));
 
+// Controls how to track origins.
+// * 0: do not track origins.
+// * 1: track origins at memory store operations.
+// * 2: TODO: track origins at memory store operations and callsites.
+static cl::opt<int> ClTrackOrigins("dfsan-track-origins",
+                                   cl::desc("Track origins of labels"),
+                                   cl::Hidden, cl::init(0));
+
 static StringRef GetGlobalTypeString(const GlobalValue &G) {
   // Types of GlobalVariables are always pointer types.
   Type *GType = G.getValueType();
@@ -321,7 +329,12 @@ class DataFlowSanitizer {
   friend struct DFSanFunction;
   friend class DFSanVisitor;
 
-  enum { ShadowWidthBits = 16, ShadowWidthBytes = ShadowWidthBits / 8 };
+  enum {
+    ShadowWidthBits = 16,
+    ShadowWidthBytes = ShadowWidthBits / 8,
+    OriginWidthBits = 32,
+    OriginWidthBytes = OriginWidthBits / 8
+  };
 
   /// Which ABI should be used for instrumented functions?
   enum InstrumentedABI {
@@ -362,6 +375,8 @@ class DataFlowSanitizer {
   Module *Mod;
   LLVMContext *Ctx;
   Type *Int8Ptr;
+  IntegerType *OriginTy;
+  PointerType *OriginPtrTy;
   /// The shadow type for all primitive types and vector types.
   IntegerType *PrimitiveShadowTy;
   PointerType *PrimitiveShadowPtrTy;
@@ -370,10 +385,14 @@ class DataFlowSanitizer {
   ConstantInt *ShadowPtrMask;
   ConstantInt *ShadowPtrMul;
   Constant *ArgTLS;
+  ArrayType *ArgOriginTLSTy;
+  Constant *ArgOriginTLS;
   Constant *RetvalTLS;
+  Constant *RetvalOriginTLS;
   Constant *ExternalShadowMask;
   FunctionType *DFSanUnionFnTy;
   FunctionType *DFSanUnionLoadFnTy;
+  FunctionType *DFSanLoadLabelAndOriginFnTy;
   FunctionType *DFSanUnimplementedFnTy;
   FunctionType *DFSanSetLabelFnTy;
   FunctionType *DFSanNonzeroLabelFnTy;
@@ -381,10 +400,14 @@ class DataFlowSanitizer {
   FunctionType *DFSanCmpCallbackFnTy;
   FunctionType *DFSanLoadStoreCallbackFnTy;
   FunctionType *DFSanMemTransferCallbackFnTy;
+  FunctionType *DFSanChainOriginFnTy;
+  FunctionType *DFSanMemOriginTransferFnTy;
+  FunctionType *DFSanMaybeStoreOriginFnTy;
   FunctionCallee DFSanUnionFn;
   FunctionCallee DFSanCheckedUnionFn;
   FunctionCallee DFSanUnionLoadFn;
   FunctionCallee DFSanUnionLoadFast16LabelsFn;
+  FunctionCallee DFSanLoadLabelAndOriginFn;
   FunctionCallee DFSanUnimplementedFn;
   FunctionCallee DFSanSetLabelFn;
   FunctionCallee DFSanNonzeroLabelFn;
@@ -393,7 +416,10 @@ class DataFlowSanitizer {
   FunctionCallee DFSanStoreCallbackFn;
   FunctionCallee DFSanMemTransferCallbackFn;
   FunctionCallee DFSanCmpCallbackFn;
-  SmallPtrSet<Value *, 12> DFSanRuntimeFunctions;
+  FunctionCallee DFSanChainOriginFn;
+  FunctionCallee DFSanMemOriginTransferFn;
+  FunctionCallee DFSanMaybeStoreOriginFn;
+  SmallPtrSet<Value *, 16> DFSanRuntimeFunctions;
   MDNode *ColdCallWeights;
   DFSanABIList ABIList;
   DenseMap<Value *, Function *> UnwrappedFnMap;
@@ -417,6 +443,10 @@ class DataFlowSanitizer {
   void initializeRuntimeFunctions(Module &M);
 
   bool init(Module &M);
+
+  /// Returns whether the pass tracks origins. Support only fast16 mode in TLS
+  /// ABI mode.
+  bool shouldTrackOrigins();
 
   /// Returns whether the pass tracks labels for struct fields and array
   /// indices. Support only fast16 mode in TLS ABI mode.
@@ -448,6 +478,8 @@ class DataFlowSanitizer {
   Type *getShadowTy(Type *OrigTy);
   /// Returns the shadow type of of V's type.
   Type *getShadowTy(Value *V);
+
+  const uint64_t kNumOfElementsInArgOrgTLS = kArgTLSSize / OriginWidthBytes;
 
 public:
   DataFlowSanitizer(const std::vector<std::string> &ABIListFiles);
@@ -670,6 +702,11 @@ bool DataFlowSanitizer::isZeroShadow(Value *V) {
   return isa<ConstantAggregateZero>(V);
 }
 
+bool DataFlowSanitizer::shouldTrackOrigins() {
+  return ClTrackOrigins && getInstrumentedABI() == DataFlowSanitizer::IA_TLS &&
+         ClFast16Labels;
+}
+
 bool DataFlowSanitizer::shouldTrackFieldsAndIndices() {
   return getInstrumentedABI() == DataFlowSanitizer::IA_TLS && ClFast16Labels;
 }
@@ -824,6 +861,8 @@ bool DataFlowSanitizer::init(Module &M) {
   Mod = &M;
   Ctx = &M.getContext();
   Int8Ptr = Type::getInt8PtrTy(*Ctx);
+  OriginTy = IntegerType::get(*Ctx, OriginWidthBits);
+  OriginPtrTy = PointerType::getUnqual(OriginTy);
   PrimitiveShadowTy = IntegerType::get(*Ctx, ShadowWidthBits);
   PrimitiveShadowPtrTy = PointerType::getUnqual(PrimitiveShadowTy);
   IntptrTy = DL.getIntPtrType(*Ctx);
@@ -845,6 +884,10 @@ bool DataFlowSanitizer::init(Module &M) {
   Type *DFSanUnionLoadArgs[2] = {PrimitiveShadowPtrTy, IntptrTy};
   DFSanUnionLoadFnTy = FunctionType::get(PrimitiveShadowTy, DFSanUnionLoadArgs,
                                          /*isVarArg=*/false);
+  Type *DFSanLoadLabelAndOriginArgs[2] = {Int8Ptr, IntptrTy};
+  DFSanLoadLabelAndOriginFnTy =
+      FunctionType::get(IntegerType::get(*Ctx, 64), DFSanLoadLabelAndOriginArgs,
+                        /*isVarArg=*/false);
   DFSanUnimplementedFnTy = FunctionType::get(
       Type::getVoidTy(*Ctx), Type::getInt8PtrTy(*Ctx), /*isVarArg=*/false);
   Type *DFSanSetLabelArgs[3] = {PrimitiveShadowTy, Type::getInt8PtrTy(*Ctx),
@@ -858,6 +901,15 @@ bool DataFlowSanitizer::init(Module &M) {
   DFSanCmpCallbackFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), PrimitiveShadowTy,
                         /*isVarArg=*/false);
+  DFSanChainOriginFnTy =
+      FunctionType::get(OriginTy, OriginTy, /*isVarArg=*/false);
+  Type *DFSanMaybeStoreOriginArgs[4] = {IntegerType::get(*Ctx, ShadowWidthBits),
+                                        Int8Ptr, IntptrTy, OriginTy};
+  DFSanMaybeStoreOriginFnTy = FunctionType::get(
+      Type::getVoidTy(*Ctx), DFSanMaybeStoreOriginArgs, /*isVarArg=*/false);
+  Type *DFSanMemOriginTransferArgs[3] = {Int8Ptr, Int8Ptr, IntptrTy};
+  DFSanMemOriginTransferFnTy = FunctionType::get(
+      Type::getVoidTy(*Ctx), DFSanMemOriginTransferArgs, /*isVarArg=*/false);
   Type *DFSanLoadStoreCallbackArgs[2] = {PrimitiveShadowTy, Int8Ptr};
   DFSanLoadStoreCallbackFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanLoadStoreCallbackArgs,
@@ -1037,6 +1089,17 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
     DFSanUnionLoadFast16LabelsFn = Mod->getOrInsertFunction(
         "__dfsan_union_load_fast16labels", DFSanUnionLoadFnTy, AL);
   }
+  {
+    AttributeList AL;
+    AL = AL.addAttribute(M.getContext(), AttributeList::FunctionIndex,
+                         Attribute::NoUnwind);
+    AL = AL.addAttribute(M.getContext(), AttributeList::FunctionIndex,
+                         Attribute::ReadOnly);
+    AL = AL.addAttribute(M.getContext(), AttributeList::ReturnIndex,
+                         Attribute::ZExt);
+    DFSanLoadLabelAndOriginFn = Mod->getOrInsertFunction(
+        "__dfsan_load_label_and_origin", DFSanLoadLabelAndOriginFnTy, AL);
+  }
   DFSanUnimplementedFn =
       Mod->getOrInsertFunction("__dfsan_unimplemented", DFSanUnimplementedFnTy);
   {
@@ -1049,6 +1112,24 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
       Mod->getOrInsertFunction("__dfsan_nonzero_label", DFSanNonzeroLabelFnTy);
   DFSanVarargWrapperFn = Mod->getOrInsertFunction("__dfsan_vararg_wrapper",
                                                   DFSanVarargWrapperFnTy);
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    AL = AL.addAttribute(M.getContext(), AttributeList::ReturnIndex,
+                         Attribute::ZExt);
+    DFSanChainOriginFn = Mod->getOrInsertFunction("__dfsan_chain_origin",
+                                                  DFSanChainOriginFnTy, AL);
+  }
+  DFSanMemOriginTransferFn = Mod->getOrInsertFunction(
+      "__dfsan_mem_origin_transfer", DFSanMemOriginTransferFnTy);
+
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    AL = AL.addParamAttribute(M.getContext(), 3, Attribute::ZExt);
+    DFSanMaybeStoreOriginFn = Mod->getOrInsertFunction(
+        "__dfsan_maybe_store_origin", DFSanMaybeStoreOriginFnTy, AL);
+  }
 
   DFSanRuntimeFunctions.insert(DFSanUnionFn.getCallee()->stripPointerCasts());
   DFSanRuntimeFunctions.insert(
@@ -1057,6 +1138,8 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
       DFSanUnionLoadFn.getCallee()->stripPointerCasts());
   DFSanRuntimeFunctions.insert(
       DFSanUnionLoadFast16LabelsFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanLoadLabelAndOriginFn.getCallee()->stripPointerCasts());
   DFSanRuntimeFunctions.insert(
       DFSanUnimplementedFn.getCallee()->stripPointerCasts());
   DFSanRuntimeFunctions.insert(
@@ -1073,6 +1156,12 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
       DFSanMemTransferCallbackFn.getCallee()->stripPointerCasts());
   DFSanRuntimeFunctions.insert(
       DFSanCmpCallbackFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanChainOriginFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanMemOriginTransferFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanMaybeStoreOriginFn.getCallee()->stripPointerCasts());
 }
 
 // Initializes event callback functions and declare them in the module
@@ -1115,6 +1204,17 @@ bool DataFlowSanitizer::runImpl(Module &M) {
   RetvalTLS = getOrInsertGlobal(
       "__dfsan_retval_tls",
       ArrayType::get(Type::getInt64Ty(*Ctx), kRetvalTLSSize / 8));
+  ArgOriginTLSTy = ArrayType::get(OriginTy, kNumOfElementsInArgOrgTLS);
+  ArgOriginTLS = getOrInsertGlobal("__dfsan_arg_origin_tls", ArgOriginTLSTy);
+  RetvalOriginTLS = getOrInsertGlobal("__dfsan_retval_origin_tls", OriginTy);
+
+  (void)Mod->getOrInsertGlobal("__dfsan_track_origins", OriginTy, [&] {
+    Changed = true;
+    return new GlobalVariable(
+        M, OriginTy, true, GlobalValue::WeakODRLinkage,
+        ConstantInt::getSigned(OriginTy, shouldTrackOrigins()),
+        "__dfsan_track_origins");
+  });
 
   ExternalShadowMask =
       Mod->getOrInsertGlobal(kDFSanExternShadowPtrMask, IntptrTy);
