@@ -313,22 +313,22 @@ foreach vti = AllVectors in {
   defvar load_instr = !cast<Instruction>("PseudoVLE"#vti.SEW#"_V_"#vti.LMul.MX);
   defvar store_instr = !cast<Instruction>("PseudoVSE"#vti.SEW#"_V_"#vti.LMul.MX);
   // Load
-  def : Pat<(vti.Vector (riscv_vle_vl RVVBaseAddr:$rs1, (XLenVT (VLOp GPR:$vl)))),
-            (load_instr RVVBaseAddr:$rs1, GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_vle_vl BaseAddr:$rs1, (XLenVT (VLOp GPR:$vl)))),
+            (load_instr BaseAddr:$rs1, GPR:$vl, vti.SEW)>;
   // Store
-  def : Pat<(riscv_vse_vl (vti.Vector vti.RegClass:$rs2), RVVBaseAddr:$rs1,
+  def : Pat<(riscv_vse_vl (vti.Vector vti.RegClass:$rs2), BaseAddr:$rs1,
                           (XLenVT (VLOp GPR:$vl))),
-            (store_instr vti.RegClass:$rs2, RVVBaseAddr:$rs1, GPR:$vl, vti.SEW)>;
+            (store_instr vti.RegClass:$rs2, BaseAddr:$rs1, GPR:$vl, vti.SEW)>;
 }
 
 foreach mti = AllMasks in {
   defvar load_instr = !cast<Instruction>("PseudoVLE1_V_"#mti.BX);
   defvar store_instr = !cast<Instruction>("PseudoVSE1_V_"#mti.BX);
-  def : Pat<(mti.Mask (riscv_vle_vl RVVBaseAddr:$rs1, (XLenVT (VLOp GPR:$vl)))),
-            (load_instr RVVBaseAddr:$rs1, GPR:$vl, mti.SEW)>;
-  def : Pat<(riscv_vse_vl (mti.Mask VR:$rs2), RVVBaseAddr:$rs1,
+  def : Pat<(mti.Mask (riscv_vle_vl BaseAddr:$rs1, (XLenVT (VLOp GPR:$vl)))),
+            (load_instr BaseAddr:$rs1, GPR:$vl, mti.SEW)>;
+  def : Pat<(riscv_vse_vl (mti.Mask VR:$rs2), BaseAddr:$rs1,
                           (XLenVT (VLOp GPR:$vl))),
-            (store_instr VR:$rs2, RVVBaseAddr:$rs1, GPR:$vl, mti.SEW)>;
+            (store_instr VR:$rs2, BaseAddr:$rs1, GPR:$vl, mti.SEW)>;
 }
 
 // 12.1. Vector Single-Width Integer Add and Subtract
