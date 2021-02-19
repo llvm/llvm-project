@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_DIALECT_FIRATTR_H
-#define OPTIMIZER_DIALECT_FIRATTR_H
+#ifndef FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H
+#define FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H
 
 #include "mlir/IR/BuiltinAttributes.h"
 
@@ -164,4 +164,4 @@ void printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
 
 } // namespace fir
 
-#endif // OPTIMIZER_DIALECT_FIRATTR_H
+#endif // FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H
