@@ -15,7 +15,6 @@ add_mlir_dialect_library(MLIRVector
   LINK_LIBS PUBLIC
   MLIRAffineEDSC
   MLIREDSC
-  MLIRDialectUtils
   MLIRIR
   MLIRStandard
   MLIRAffine
