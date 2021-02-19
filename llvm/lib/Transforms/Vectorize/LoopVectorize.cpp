@@ -1525,6 +1525,15 @@ public:
            (SI && isLegalMaskedScatter(Ty, Align));
   }
 
+  /// Returns true if the target machine supports all of the reduction
+  /// variables found for the given VF.
+  bool canVectorizeReductions(ElementCount VF) {
+    return (all_of(Legal->getReductionVars(), [&](auto &Reduction) -> bool {
+      RecurrenceDescriptor RdxDesc = Reduction.second;
+      return TTI.isLegalToVectorizeReduction(RdxDesc, VF);
+    }));
+  }
+
   /// Returns true if \p I is an instruction that will be scalarized with
   /// predication. Such instructions include conditional stores and
   /// instructions that may divide by zero.
@@ -4626,7 +4635,6 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
                                               RecurrenceDescriptor *RdxDesc,
                                               Value *StartV, VPValue *Def,
                                               VPTransformState &State) {
-  assert(!State.VF.isScalable() && "scalable vectors not yet supported.");
   PHINode *P = cast<PHINode>(PN);
   if (EnableVPlanNativePath) {
     // Currently we enter here in the VPlan-native path for non-induction
@@ -5688,9 +5696,22 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount,
   // then a suitable VF is chosen. If UserVF is specified and there are
   // dependencies, check if it's legal. However, if a UserVF is specified and
   // there are no dependencies, then there's nothing to do.
-  if (UserVF.isNonZero() && !IgnoreScalableUserVF &&
-      Legal->isSafeForAnyVectorWidth())
-    return UserVF;
+  if (UserVF.isNonZero() && !IgnoreScalableUserVF) {
+    if (!canVectorizeReductions(UserVF)) {
+      reportVectorizationFailure(
+          "LV: Scalable vectorization not supported for the reduction "
+          "operations found in this loop. Using fixed-width "
+          "vectorization instead.",
+          "Scalable vectorization not supported for the reduction operations "
+          "found in this loop. Using fixed-width vectorization instead.",
+          "ScalableVFUnfeasible", ORE, TheLoop);
+      return computeFeasibleMaxVF(
+          ConstTripCount, ElementCount::getFixed(UserVF.getKnownMinValue()));
+    }
+
+    if (Legal->isSafeForAnyVectorWidth())
+      return UserVF;
+  }
 
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
   unsigned SmallestType, WidestType;

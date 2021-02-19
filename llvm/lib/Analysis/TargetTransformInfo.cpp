@@ -1033,6 +1033,11 @@ bool TargetTransformInfo::isLegalToVectorizeStoreChain(
                                                AddrSpace);
 }
 
+bool TargetTransformInfo::isLegalToVectorizeReduction(
+    RecurrenceDescriptor RdxDesc, ElementCount VF) const {
+  return TTIImpl->isLegalToVectorizeReduction(RdxDesc, VF);
+}
+
 unsigned TargetTransformInfo::getLoadVectorFactor(unsigned VF,
                                                   unsigned LoadSize,
                                                   unsigned ChainSizeInBytes,
