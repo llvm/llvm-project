@@ -901,16 +901,17 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   // Try and match an index sequence, which we can lower directly to the vid
   // instruction. An all-undef vector is matched by getSplatValue, above.
-  bool IsVID = true;
-  if (VT.isInteger())
+  if (VT.isInteger()) {
+    bool IsVID = true;
     for (unsigned i = 0, e = Op.getNumOperands(); i < e && IsVID; i++)
       IsVID &= Op.getOperand(i).isUndef() ||
                (isa<ConstantSDNode>(Op.getOperand(i)) &&
                 Op.getConstantOperandVal(i) == i);
 
-  if (IsVID) {
-    SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, ContainerVT, Mask, VL);
-    return convertFromScalableVector(VT, VID, DAG, Subtarget);
+    if (IsVID) {
+      SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, ContainerVT, Mask, VL);
+      return convertFromScalableVector(VT, VID, DAG, Subtarget);
+    }
   }
 
   return SDValue();
