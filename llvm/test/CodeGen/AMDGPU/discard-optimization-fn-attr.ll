@@ -1,5 +1,4 @@
-; RUN: llc --march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,KILL,DEMOTE %s
-; XFAIL: *
+; RUN: llc --march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,KILL,DEMOTE %s
 
 ; Check that the branch is removed by the discard opt.
 
