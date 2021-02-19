@@ -509,7 +509,7 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
     Example:
 
     ```mlir
-      linalg.tiled_loop (%i) = (%c0) to (%c24) step (%c4)
+    linalg.tiled_loop (%i) = (%c0) to (%c24) step (%c4)
         ins(%lhs, %rhs : tensor<24x64xi8>, tensor<24x64xi8>)
         outs(%out : tensor<24x64xi8>)
         iterators("parallel") {
