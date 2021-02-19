@@ -1,5 +1,6 @@
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/mac_sdk.gni")
+import("//llvm/utils/gn/build/sysroot.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 import("//llvm/utils/gn/build/toolchain/target_flags.gni")
 
@@ -22,9 +23,6 @@ declare_args() {
 
   # The version of host gcc. Ignored if is_clang is true.
   gcc_version = 9
-
-  # Path of sysroot to use.
-  sysroot = ""
 }
 
 assert(!llvm_build_instrumented_coverage || is_clang,
@@ -292,6 +290,9 @@ config("compiler_defaults") {
       cflags += [ "/winsysroot" + rebase_path(sysroot, root_build_dir) ]
     } else {
       cflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
+      if (is_clang) {
+        cflags += [ "-Wpoison-system-directories"]
+      }
     }
   }
 
