@@ -289,6 +289,17 @@ multiclass OptOutFFlag<string name, string pos_prefix, string neg_prefix,
                   Group<f_Group>, HelpText<!strconcat(neg_prefix, help)>;
 }
 
+// Creates a positive and negative flags where both of them are prefixed with
+// "m", have help text specified for positive and negative option, and a Group
+// optionally specified by the opt_group argument, otherwise Group<m_Group>.
+multiclass SimpleMFlag<string name, string pos_prefix, string neg_prefix,
+                       string help, OptionGroup opt_group = m_Group> {
+  def m#NAME : Flag<["-"], "m"#name>, Group<opt_group>,
+    HelpText<!strconcat(pos_prefix, help)>;
+  def mno_#NAME : Flag<["-"], "mno-"#name>, Group<opt_group>,
+    HelpText<!strconcat(neg_prefix, help)>;
+}
+
 //===----------------------------------------------------------------------===//
 // BoolOption
 //===----------------------------------------------------------------------===//
@@ -3138,23 +3149,18 @@ def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Gr
   HelpText<"Specify code object ABI version. Defaults to 3. (AMDGPU only)">,
   MetaVarName<"<version>">, Values<"2,3,4">;
 
-def mcode_object_v3_legacy : Flag<["-"], "mcode-object-v3">, Group<m_Group>,
-  HelpText<"Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)">;
-def mno_code_object_v3_legacy : Flag<["-"], "mno-code-object-v3">, Group<m_Group>;
-
-def mcumode : Flag<["-"], "mcumode">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only)">;
-def mno_cumode : Flag<["-"], "mno-cumode">, Group<m_amdgpu_Features_Group>;
-
-def mtgsplit : Flag<["-"], "mtgsplit">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Enable threadgroup split execution mode (AMDGPU only)">;
-def mno_tgsplit : Flag<["-"], "mno-tgsplit">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Disable threadgroup split execution mode (AMDGPU only)">;
-
-def mwavefrontsize64 : Flag<["-"], "mwavefrontsize64">, Group<m_Group>,
-  HelpText<"Specify wavefront size 64 mode (AMDGPU only)">;
-def mno_wavefrontsize64 : Flag<["-"], "mno-wavefrontsize64">, Group<m_Group>,
-  HelpText<"Specify wavefront size 32 mode (AMDGPU only)">;
+defm code_object_v3_legacy : SimpleMFlag<"code-object-v3",
+  "Legacy option to specify code object ABI V3",
+  "Legacy option to specify code object ABI V2",
+  " (AMDGPU only)">;
+defm cumode : SimpleMFlag<"cumode",
+  "Specify CU wavefront", "Specify WGP wavefront",
+  " execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
+defm tgsplit : SimpleMFlag<"tgsplit", "Enable", "Disable",
+  " threadgroup split execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
+defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
+  "Specify wavefront size 64", "Specify wavefront size 32",
+  " mode (AMDGPU only)">;
 
 defm unsafe_fp_atomics : BoolOption<"m", "unsafe-fp-atomics",
   TargetOpts<"AllowAMDGPUUnsafeFPAtomics">, DefaultFalse,
