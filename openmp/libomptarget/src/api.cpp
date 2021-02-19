@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "device.h"
+#include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
 
@@ -171,11 +172,13 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
   } else if (src_device == omp_get_initial_device()) {
     DP("copy from host to device\n");
     DeviceTy &DstDev = PM->Devices[dst_device];
-    rc = DstDev.submitData(dstAddr, srcAddr, length, nullptr);
+    AsyncInfoTy AsyncInfo(DstDev);
+    rc = DstDev.submitData(dstAddr, srcAddr, length, AsyncInfo);
   } else if (dst_device == omp_get_initial_device()) {
     DP("copy from device to host\n");
     DeviceTy &SrcDev = PM->Devices[src_device];
-    rc = SrcDev.retrieveData(dstAddr, srcAddr, length, nullptr);
+    AsyncInfoTy AsyncInfo(SrcDev);
+    rc = SrcDev.retrieveData(dstAddr, srcAddr, length, AsyncInfo);
   } else {
     DP("copy from device to device\n");
     DeviceTy &SrcDev = PM->Devices[src_device];
@@ -183,15 +186,21 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
     // First try to use D2D memcpy which is more efficient. If fails, fall back
     // to unefficient way.
     if (SrcDev.isDataExchangable(DstDev)) {
-      rc = SrcDev.dataExchange(srcAddr, DstDev, dstAddr, length, nullptr);
+      AsyncInfoTy AsyncInfo(SrcDev);
+      rc = SrcDev.dataExchange(srcAddr, DstDev, dstAddr, length, AsyncInfo);
       if (rc == OFFLOAD_SUCCESS)
         return OFFLOAD_SUCCESS;
     }
 
     void *buffer = malloc(length);
-    rc = SrcDev.retrieveData(buffer, srcAddr, length, nullptr);
-    if (rc == OFFLOAD_SUCCESS)
-      rc = DstDev.submitData(dstAddr, buffer, length, nullptr);
+    {
+      AsyncInfoTy AsyncInfo(SrcDev);
+      rc = SrcDev.retrieveData(buffer, srcAddr, length, AsyncInfo);
+    }
+    if (rc == OFFLOAD_SUCCESS) {
+      AsyncInfoTy AsyncInfo(SrcDev);
+      rc = DstDev.submitData(dstAddr, buffer, length, AsyncInfo);
+    }
     free(buffer);
   }
 
