@@ -24,8 +24,6 @@ config.mlir_src_root = "@MLIR_SOURCE_DIR@"
 
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 
-config.python3_executable = "@Python3_EXECUTABLE@"
-
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
 try:
