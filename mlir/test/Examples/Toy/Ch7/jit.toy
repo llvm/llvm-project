@@ -1,0 +1,5 @@
+# RUN: toyc-ch7 -emit=jit %s
+
+def main() {
+ print([[1, 2], [3, 4]]);
+}
