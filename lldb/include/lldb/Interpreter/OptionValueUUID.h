@@ -14,7 +14,7 @@
 
 namespace lldb_private {
 
-class OptionValueUUID : public OptionValue {
+class OptionValueUUID : public Cloneable<OptionValueUUID, OptionValue> {
 public:
   OptionValueUUID() = default;
 
@@ -37,8 +37,6 @@ public:
     m_uuid.Clear();
     m_value_was_set = false;
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   // Subclass specific functions
 

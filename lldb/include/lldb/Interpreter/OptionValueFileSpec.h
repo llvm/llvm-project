@@ -16,7 +16,7 @@
 
 namespace lldb_private {
 
-class OptionValueFileSpec : public OptionValue {
+class OptionValueFileSpec : public Cloneable<OptionValueFileSpec, OptionValue> {
 public:
   OptionValueFileSpec(bool resolve = true);
 
@@ -44,8 +44,6 @@ public:
     m_data_sp.reset();
     m_data_mod_time = llvm::sys::TimePoint<>();
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   void AutoComplete(CommandInterpreter &interpreter,
                     CompletionRequest &request) override;

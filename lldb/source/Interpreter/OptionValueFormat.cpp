@@ -56,7 +56,3 @@ Status OptionValueFormat::SetValueFromString(llvm::StringRef value,
   }
   return error;
 }
-
-lldb::OptionValueSP OptionValueFormat::DeepCopy() const {
-  return OptionValueSP(new OptionValueFormat(*this));
-}

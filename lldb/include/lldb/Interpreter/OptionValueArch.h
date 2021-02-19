@@ -15,7 +15,7 @@
 
 namespace lldb_private {
 
-class OptionValueArch : public OptionValue {
+class OptionValueArch : public Cloneable<OptionValueArch, OptionValue> {
 public:
   OptionValueArch() = default;
 
@@ -46,8 +46,6 @@ public:
     m_current_value = m_default_value;
     m_value_was_set = false;
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   void AutoComplete(CommandInterpreter &interpreter,
                     lldb_private::CompletionRequest &request) override;

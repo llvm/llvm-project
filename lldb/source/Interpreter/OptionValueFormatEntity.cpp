@@ -109,10 +109,6 @@ Status OptionValueFormatEntity::SetValueFromString(llvm::StringRef value_str,
   return error;
 }
 
-lldb::OptionValueSP OptionValueFormatEntity::DeepCopy() const {
-  return OptionValueSP(new OptionValueFormatEntity(*this));
-}
-
 void OptionValueFormatEntity::AutoComplete(CommandInterpreter &interpreter,
                                            CompletionRequest &request) {
   FormatEntity::AutoComplete(request);

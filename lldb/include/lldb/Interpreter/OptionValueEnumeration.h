@@ -19,7 +19,8 @@
 
 namespace lldb_private {
 
-class OptionValueEnumeration : public OptionValue {
+class OptionValueEnumeration
+    : public Cloneable<OptionValueEnumeration, OptionValue> {
 public:
   typedef int64_t enum_type;
   struct EnumeratorInfo {
@@ -48,8 +49,6 @@ public:
     m_current_value = m_default_value;
     m_value_was_set = false;
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   void AutoComplete(CommandInterpreter &interpreter,
                     CompletionRequest &request) override;

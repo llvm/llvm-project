@@ -16,7 +16,8 @@
 
 namespace lldb_private {
 
-class OptionValueFileColonLine : public OptionValue {
+class OptionValueFileColonLine :
+    public Cloneable<OptionValueFileColonLine, OptionValue> {
 public:
   OptionValueFileColonLine();
   OptionValueFileColonLine(const llvm::StringRef input);
@@ -37,8 +38,6 @@ public:
     m_line_number = LLDB_INVALID_LINE_NUMBER;
     m_column_number = LLDB_INVALID_COLUMN_NUMBER;
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   void AutoComplete(CommandInterpreter &interpreter,
                     CompletionRequest &request) override;

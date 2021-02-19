@@ -196,7 +196,3 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
   }
   return error;
 }
-
-lldb::OptionValueSP OptionValuePathMappings::DeepCopy() const {
-  return OptionValueSP(new OptionValuePathMappings(*this));
-}

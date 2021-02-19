@@ -14,7 +14,7 @@
 
 namespace lldb_private {
 
-class OptionValueRegex : public OptionValue {
+class OptionValueRegex : public Cloneable<OptionValueRegex, OptionValue> {
 public:
   OptionValueRegex(const char *value = nullptr)
       : m_regex(llvm::StringRef::withNullAsEmpty(value)),
@@ -37,8 +37,6 @@ public:
     m_regex = RegularExpression(m_default_regex_str);
     m_value_was_set = false;
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   // Subclass specific functions
   const RegularExpression *GetCurrentValue() const {

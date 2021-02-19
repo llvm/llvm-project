@@ -18,16 +18,15 @@
 #include "lldb/Utility/ConstString.h"
 
 namespace lldb_private {
+class Properties;
 
 class OptionValueProperties
-    : public OptionValue,
+    : public Cloneable<OptionValueProperties, OptionValue>,
       public std::enable_shared_from_this<OptionValueProperties> {
 public:
   OptionValueProperties() = default;
 
   OptionValueProperties(ConstString name);
-
-  OptionValueProperties(const OptionValueProperties &global_properties);
 
   ~OptionValueProperties() override = default;
 
@@ -35,7 +34,11 @@ public:
 
   void Clear() override;
 
-  lldb::OptionValueSP DeepCopy() const override;
+  static lldb::OptionValuePropertiesSP
+  CreateLocalCopy(const Properties &global_properties);
+
+  lldb::OptionValueSP
+  DeepCopy(const lldb::OptionValueSP &new_parent) const override;
 
   Status
   SetValueFromString(llvm::StringRef value,

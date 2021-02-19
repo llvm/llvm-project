@@ -17,7 +17,7 @@
 
 namespace lldb_private {
 
-class OptionValueString : public OptionValue {
+class OptionValueString : public Cloneable<OptionValueString, OptionValue> {
 public:
   typedef Status (*ValidatorCallback)(const char *string, void *baton);
 
@@ -77,8 +77,6 @@ public:
     m_current_value = m_default_value;
     m_value_was_set = false;
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   // Subclass specific functions
 
