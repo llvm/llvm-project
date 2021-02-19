@@ -42,7 +42,7 @@ define i32 @atomic_nand_i32_global(i32 addrspace(1)* %ptr) nounwind {
 ; GCN-NEXT:    v_or_b32_e32 v2, -5, v2
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off glc
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
