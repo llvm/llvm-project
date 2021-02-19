@@ -607,13 +607,6 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
     Config.GnuDebugLinkCRC32 =
         llvm::crc32(arrayRefFromStringRef(Debug->getBuffer()));
   }
-  Config.BuildIdLinkDir = InputArgs.getLastArgValue(OBJCOPY_build_id_link_dir);
-  if (InputArgs.hasArg(OBJCOPY_build_id_link_input))
-    Config.BuildIdLinkInput =
-        InputArgs.getLastArgValue(OBJCOPY_build_id_link_input);
-  if (InputArgs.hasArg(OBJCOPY_build_id_link_output))
-    Config.BuildIdLinkOutput =
-        InputArgs.getLastArgValue(OBJCOPY_build_id_link_output);
   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
   Config.AllocSectionsPrefix =
