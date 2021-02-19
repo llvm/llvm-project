@@ -122,10 +122,11 @@ body:             |
 
 ...
 
+# CHECK: .section	.text._Z3foob,"ax",@progbits
 # CHECK: _Z3foob:
-# CHECK: .section	.text,"ax",@progbits,unique
+# CHECK: .section	.text._Z3foob,"ax",@progbits,unique
 # CHECK: _Z3foob.__part.1:
-# CHECK: .section	.text,"ax",@progbits,unique
+# CHECK: .section	.text._Z3foob,"ax",@progbits,unique
 # CHECK: _Z3foob.__part.2:
-# CHECK: .section	.text,"ax",@progbits,unique
+# CHECK: .section	.text._Z3foob,"ax",@progbits,unique
 # CHECK: _Z3foob.__part.3:
