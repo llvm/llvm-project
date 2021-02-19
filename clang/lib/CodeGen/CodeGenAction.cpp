@@ -1115,6 +1115,14 @@ void CodeGenAction::ExecuteAction() {
   LLVMContext &Ctx = TheModule->getContext();
   Ctx.setInlineAsmDiagnosticHandler(BitcodeInlineAsmDiagHandler, &Diagnostics);
 
+  // Restore any diagnostic handler previously set before returning from this
+  // function.
+  struct RAII {
+    LLVMContext &Ctx;
+    std::unique_ptr<DiagnosticHandler> PrevHandler = Ctx.getDiagnosticHandler();
+    ~RAII() { Ctx.setDiagnosticHandler(std::move(PrevHandler)); }
+  } _{Ctx};
+
   // Set clang diagnostic handler. To do this we need to create a fake
   // BackendConsumer.
   BackendConsumer Result(BA, CI.getDiagnostics(), CI.getHeaderSearchOpts(),
