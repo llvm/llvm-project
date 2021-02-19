@@ -545,14 +545,21 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       // or do an unmerge to get the lower block of elements.
       if (VATy.isVector() &&
           VATy.getNumElements() > OrigVT.getVectorNumElements()) {
-        // Just handle the case where the VA type is 2 * original type.
-        if (VATy.getNumElements() != OrigVT.getVectorNumElements() * 2) {
-          LLVM_DEBUG(dbgs()
-                     << "Incoming promoted vector arg has too many elts");
+        // Just handle the case where the VA type is a multiple of original
+        // type.
+        if (VATy.getNumElements() % OrigVT.getVectorNumElements() != 0) {
+          LLVM_DEBUG(dbgs() << "Incoming promoted vector arg elts is not a "
+                               "multiple of orig type elt: "
+                            << VATy << " vs " << OrigTy);
           return false;
         }
-        auto Unmerge = MIRBuilder.buildUnmerge({OrigTy, OrigTy}, {NewReg});
-        MIRBuilder.buildCopy(ArgReg, Unmerge.getReg(0));
+        SmallVector<Register, 4> DstRegs = {ArgReg};
+        unsigned NumParts =
+            VATy.getNumElements() / OrigVT.getVectorNumElements() - 1;
+        for (unsigned Idx = 0; Idx < NumParts; ++Idx)
+          DstRegs.push_back(
+              MIRBuilder.getMRI()->createGenericVirtualRegister(OrigTy));
+        MIRBuilder.buildUnmerge(DstRegs, {NewReg});
       } else {
         MIRBuilder.buildTrunc(ArgReg, {NewReg}).getReg(0);
       }
