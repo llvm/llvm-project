@@ -306,9 +306,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     // branch instruction using the condition value from vector lane 0 and dummy
     // successors. The successors are fixed later when the successor blocks are
     // visited.
-    Value *NewCond = State->Callback.getOrCreateVectorValues(IRCBV, 0);
-    NewCond = State->Builder.CreateExtractElement(NewCond,
-                                                  State->Builder.getInt32(0));
+    Value *NewCond = State->get(CBV, {0, 0});
 
     // Replace the temporary unreachable terminator with the new conditional
     // branch.
