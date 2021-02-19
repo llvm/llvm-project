@@ -1,6 +1,6 @@
 ; RUN: llc -O0 %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
-; CHECK: "version": 6,
+; CHECK: "version": 7,
 
 ; namespace test {
 ;  extern int a;
