@@ -161,6 +161,15 @@ public:
   ClangdServer(const GlobalCompilationDatabase &CDB, const ThreadsafeFS &TFS,
                const Options &Opts, Callbacks *Callbacks = nullptr);
 
+  /// Gets the installed module of a given type, if any.
+  /// This exposes access the public interface of modules that have one.
+  template <typename Mod> Mod *getModule() {
+    return Modules ? Modules->get<Mod>() : nullptr;
+  }
+  template <typename Mod> const Mod *getModule() const {
+    return Modules ? Modules->get<Mod>() : nullptr;
+  }
+
   /// Add a \p File to the list of tracked C++ files or update the contents if
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
   /// separate thread. When the parsing is complete, DiagConsumer passed in
@@ -337,6 +346,7 @@ private:
                   ArrayRef<tooling::Range> Ranges,
                   Callback<tooling::Replacements> CB);
 
+  ModuleSet *Modules;
   const GlobalCompilationDatabase &CDB;
   const ThreadsafeFS &TFS;
 

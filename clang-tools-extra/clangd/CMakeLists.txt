@@ -75,6 +75,7 @@ add_clang_library(clangDaemon
   Hover.cpp
   IncludeFixer.cpp
   JSONTransport.cpp
+  Module.cpp
   PathMapping.cpp
   Protocol.cpp
   Quality.cpp
