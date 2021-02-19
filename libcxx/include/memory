@@ -2930,7 +2930,11 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d,
 #endif  // _LIBCPP_NO_EXCEPTIONS
         typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
         typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT > _CntrlBlk;
+#ifndef _LIBCPP_CXX03_LANG
+        __cntrl_ = new _CntrlBlk(__p, _VSTD::move(__d), _AllocT());
+#else
         __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
+#endif // not _LIBCPP_CXX03_LANG
         __enable_weak_this(__p, __p);
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
@@ -2953,7 +2957,11 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d)
 #endif  // _LIBCPP_NO_EXCEPTIONS
         typedef typename __shared_ptr_default_allocator<_Tp>::type _AllocT;
         typedef __shared_ptr_pointer<nullptr_t, _Dp, _AllocT > _CntrlBlk;
+#ifndef _LIBCPP_CXX03_LANG
+        __cntrl_ = new _CntrlBlk(__p, _VSTD::move(__d), _AllocT());
+#else
         __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
+#endif // not _LIBCPP_CXX03_LANG
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
     catch (...)
@@ -2979,7 +2987,12 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d, _Alloc __a,
         typedef __allocator_destructor<_A2> _D2;
         _A2 __a2(__a);
         unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-        ::new ((void*)_VSTD::addressof(*__hold2.get())) _CntrlBlk(__p, __d, __a);
+        ::new ((void*)_VSTD::addressof(*__hold2.get()))
+#ifndef _LIBCPP_CXX03_LANG
+            _CntrlBlk(__p, _VSTD::move(__d), __a);
+#else
+            _CntrlBlk(__p, __d, __a);
+#endif // not _LIBCPP_CXX03_LANG
         __cntrl_ = _VSTD::addressof(*__hold2.release());
         __enable_weak_this(__p, __p);
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -3006,7 +3019,12 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d, _Alloc __a)
         typedef __allocator_destructor<_A2> _D2;
         _A2 __a2(__a);
         unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-        ::new ((void*)_VSTD::addressof(*__hold2.get())) _CntrlBlk(__p, __d, __a);
+        ::new ((void*)_VSTD::addressof(*__hold2.get()))
+#ifndef _LIBCPP_CXX03_LANG
+            _CntrlBlk(__p, _VSTD::move(__d), __a);
+#else
+            _CntrlBlk(__p, __d, __a);
+#endif // not _LIBCPP_CXX03_LANG
         __cntrl_ = _VSTD::addressof(*__hold2.release());
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }

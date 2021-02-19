@@ -278,7 +278,7 @@
 "`2795 <https://wg21.link/LWG2795>`__","|sect|\ [global.functions] provides incorrect example of ADL use","Kona","|Complete|",""
 "`2796 <https://wg21.link/LWG2796>`__","tuple should be a literal type","Kona","|Complete|",""
 "`2801 <https://wg21.link/LWG2801>`__","Default-constructibility of unique_ptr","Kona","|Complete|",""
-"`2802 <https://wg21.link/LWG2802>`__","shared_ptr constructor requirements for a deleter","Kona","",""
+"`2802 <https://wg21.link/LWG2802>`__","shared_ptr constructor requirements for a deleter","Kona","|Complete|",""
 "`2804 <https://wg21.link/LWG2804>`__","Unconditional constexpr default constructor for istream_iterator","Kona","|Complete|",""
 "`2806 <https://wg21.link/LWG2806>`__","Base class of bad_optional_access","Kona","|Complete|",""
 "`2807 <https://wg21.link/LWG2807>`__","std::invoke should use ``std::is_nothrow_callable``\ ","Kona","|Complete|",""
