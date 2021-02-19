@@ -3153,8 +3153,8 @@ static SDValue getTruncatedUSUBSAT(EVT DstVT, EVT SrcVT, SDValue LHS,
                                            DstVT.getScalarSizeInBits()),
                       DL, SrcVT);
   RHS = DAG.getNode(ISD::UMIN, DL, SrcVT, RHS, SatLimit);
-  RHS = DAG.getZExtOrTrunc(RHS, DL, DstVT);
-  LHS = DAG.getZExtOrTrunc(LHS, DL, DstVT);
+  RHS = DAG.getNode(ISD::TRUNCATE, DL, DstVT, RHS);
+  LHS = DAG.getNode(ISD::TRUNCATE, DL, DstVT, LHS);
   return DAG.getNode(ISD::USUBSAT, DL, DstVT, LHS, RHS);
 }
 
