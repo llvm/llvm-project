@@ -16,8 +16,18 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/symbol.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MD5.h"
+
+static llvm::cl::opt<std::size_t>
+    nameLengthHashSize("length-to-hash-string-literal",
+                       llvm::cl::desc("string literals that exceed this length"
+                                      " will use a hash value as their symbol "
+                                      "name"),
+                       llvm::cl::init(32));
 
 mlir::FuncOp Fortran::lower::FirOpBuilder::createFunction(
     mlir::Location loc, mlir::ModuleOp module, llvm::StringRef name,
@@ -201,17 +211,17 @@ mlir::Value Fortran::lower::FirOpBuilder::createConvert(mlir::Location loc,
   return val;
 }
 
-fir::StringLitOp Fortran::lower::FirOpBuilder::createStringLit(
-    mlir::Location loc, mlir::Type eleTy, llvm::StringRef data) {
+fir::StringLitOp
+Fortran::lower::FirOpBuilder::createStringLitOp(mlir::Location loc,
+                                                llvm::StringRef data) {
+  auto type = fir::CharacterType::get(getContext(), 1, data.size());
   auto strAttr = mlir::StringAttr::get(getContext(), data);
   auto valTag = mlir::Identifier::get(fir::StringLitOp::value(), getContext());
   mlir::NamedAttribute dataAttr(valTag, strAttr);
   auto sizeTag = mlir::Identifier::get(fir::StringLitOp::size(), getContext());
   mlir::NamedAttribute sizeAttr(sizeTag, getI64IntegerAttr(data.size()));
   llvm::SmallVector<mlir::NamedAttribute, 2> attrs{dataAttr, sizeAttr};
-  auto arrTy =
-      fir::SequenceType::get(fir::SequenceType::Shape(1, data.size()), eleTy);
-  return create<fir::StringLitOp>(loc, llvm::ArrayRef<mlir::Type>{arrTy},
+  return create<fir::StringLitOp>(loc, llvm::ArrayRef<mlir::Type>{type},
                                   llvm::None, attrs);
 }
 
@@ -443,4 +453,64 @@ void Fortran::lower::readExtents(Fortran::lower::FirOpBuilder &builder,
                                                   box.getAddr(), dimVal);
     result.emplace_back(dimInfo.getResult(1));
   }
+}
+
+std::string Fortran::lower::uniqueCGIdent(llvm::StringRef prefix,
+                                          llvm::StringRef name) {
+  // For "long" identifiers use a hash value
+  if (name.size() > nameLengthHashSize) {
+    llvm::MD5 hash;
+    hash.update(name);
+    llvm::MD5::MD5Result result;
+    hash.final(result);
+    llvm::SmallString<32> str;
+    llvm::MD5::stringifyResult(result, str);
+    std::string hashName = prefix.str();
+    hashName.append(".").append(str.c_str());
+    return fir::NameUniquer::doGenerated(hashName);
+  }
+  // "Short" identifiers use a reversible hex string
+  std::string nm = prefix.str();
+  return fir::NameUniquer::doGenerated(
+      nm.append(".").append(llvm::toHex(name)));
+}
+
+mlir::Value
+Fortran::lower::locationToFilename(Fortran::lower::FirOpBuilder &builder,
+                                   mlir::Location loc) {
+  if (auto flc = loc.dyn_cast<mlir::FileLineColLoc>()) {
+    // must be encoded as asciiz, C string
+    auto fn = flc.getFilename().str() + '\0';
+    return fir::getBase(createStringLiteral(builder, loc, fn));
+  }
+  return builder.createNullConstant(loc);
+}
+
+mlir::Value
+Fortran::lower::locationToLineNo(Fortran::lower::FirOpBuilder &builder,
+                                 mlir::Location loc, mlir::Type type) {
+  if (auto flc = loc.dyn_cast<mlir::FileLineColLoc>())
+    return builder.createIntegerConstant(loc, type, flc.getLine());
+  return builder.createIntegerConstant(loc, type, 0);
+}
+
+fir::ExtendedValue
+Fortran::lower::createStringLiteral(Fortran::lower::FirOpBuilder &builder,
+                                    mlir::Location loc, llvm::StringRef str) {
+  std::string globalName = Fortran::lower::uniqueCGIdent("cl", str);
+  auto type = fir::CharacterType::get(builder.getContext(), 1, str.size());
+  auto global = builder.getNamedGlobal(globalName);
+  if (!global)
+    global = builder.createGlobalConstant(
+        loc, type, globalName,
+        [&](Fortran::lower::FirOpBuilder &builder) {
+          auto stringLitOp = builder.createStringLitOp(loc, str);
+          builder.create<fir::HasValueOp>(loc, stringLitOp);
+        },
+        builder.createLinkOnceLinkage());
+  auto addr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
+                                            global.getSymbol());
+  auto len = builder.createIntegerConstant(
+      loc, builder.getCharacterLengthType(), str.size());
+  return fir::CharBoxValue{addr, len};
 }

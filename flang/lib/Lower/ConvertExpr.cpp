@@ -230,10 +230,6 @@ public:
     return genval(expr);
   }
 
-  fir::ExtendedValue genStringLit(llvm::StringRef str, std::uint64_t len) {
-    return genScalarLit<1>(str.str(), static_cast<int64_t>(len));
-  }
-
   fir::MutableBoxValue
   genMutableBoxValue(const Fortran::lower::SomeExpr &expr) {
     // TODO: GetLastSymbol is not the right thing to do if expr if an
@@ -718,28 +714,41 @@ public:
       llvm_unreachable("unhandled constant");
     }
   }
-  /// Convert a scalar literal CHARACTER to IR. (specialization)
+  /// Convert a ascii scalar literal CHARACTER to IR. (specialization)
+  fir::ExtendedValue
+  genAsciiScalarLit(const Fortran::evaluate::Scalar<Fortran::evaluate::Type<
+                        Fortran::common::TypeCategory::Character, 1>> &value,
+                    int64_t len) {
+    assert(value.size() == static_cast<std::uint64_t>(len));
+    // Outline character constant in ro data if it is not in an initializer.
+    if (!inInitializer)
+      return Fortran::lower::createStringLiteral(builder, getLoc(), value);
+    // When in an initializer context, construct the literal op itself and do
+    // not construct another constant object in rodata.
+    auto stringLit = builder.createStringLitOp(getLoc(), value);
+    auto lenp = builder.createIntegerConstant(
+        getLoc(), builder.getCharacterLengthType(), len);
+    return fir::CharBoxValue{stringLit.getResult(), lenp};
+  }
+  /// Convert a non ascii scalar literal CHARACTER to IR. (specialization)
   template <int KIND>
   fir::ExtendedValue
   genScalarLit(const Fortran::evaluate::Scalar<Fortran::evaluate::Type<
                    Fortran::common::TypeCategory::Character, KIND>> &value,
                int64_t len) {
+    using ET = typename std::decay_t<decltype(value)>::value_type;
+    if constexpr (KIND == 1) {
+      return genAsciiScalarLit(value, len);
+    }
     auto type = fir::CharacterType::get(builder.getContext(), KIND, len);
     auto consLit = [&]() -> fir::StringLitOp {
       auto context = builder.getContext();
-      mlir::Attribute strAttr;
-      if constexpr (std::is_same_v<std::decay_t<decltype(value)>,
-                                   std::string>) {
-        strAttr = mlir::StringAttr::get(context, value);
-      } else {
-        using ET = typename std::decay_t<decltype(value)>::value_type;
-        std::int64_t size = static_cast<std::int64_t>(value.size());
-        auto shape = mlir::VectorType::get(
-            llvm::ArrayRef<std::int64_t>{size},
-            mlir::IntegerType::get(builder.getContext(), sizeof(ET) * 8));
-        strAttr = mlir::DenseElementsAttr::get(
-            shape, llvm::ArrayRef<ET>{value.data(), value.size()});
-      }
+      std::int64_t size = static_cast<std::int64_t>(value.size());
+      auto shape = mlir::VectorType::get(
+          llvm::ArrayRef<std::int64_t>{size},
+          mlir::IntegerType::get(builder.getContext(), sizeof(ET) * 8));
+      auto strAttr = mlir::DenseElementsAttr::get(
+          shape, llvm::ArrayRef<ET>{value.data(), value.size()});
       auto valTag = mlir::Identifier::get(fir::StringLitOp::value(), context);
       mlir::NamedAttribute dataAttr(valTag, strAttr);
       auto sizeTag = mlir::Identifier::get(fir::StringLitOp::size(), context);
@@ -763,7 +772,7 @@ public:
     // i32. But for now, lowering just fakes that the string value is a range of
     // i8 to get it past the C++ compiler.
     std::string globalName =
-        converter.uniqueCGIdent("cl", (const char *)value.c_str());
+        Fortran::lower::uniqueCGIdent("cl", (const char *)value.c_str());
     auto global = builder.getNamedGlobal(globalName);
     if (!global)
       global = builder.createGlobalConstant(
@@ -2846,17 +2855,6 @@ fir::ExtendedValue Fortran::lower::createSomeArrayBox(
   LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "box designator: ") << '\n');
   return ArrayExprLowering::lowerAndBoxArrayExpression(converter, symMap,
                                                        stmtCtx, expr);
-}
-
-fir::ExtendedValue Fortran::lower::createStringLiteral(
-    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
-    llvm::StringRef str, uint64_t len) {
-  assert(str.size() == len);
-  Fortran::lower::SymMap dummySymbolMap;
-  Fortran::lower::StatementContext dummyStmtCtx;
-  LLVM_DEBUG(llvm::dbgs() << "string-lit: \"" << str << "\"\n");
-  return ScalarExprLowering{loc, converter, dummySymbolMap, dummyStmtCtx}
-      .genStringLit(str, len);
 }
 
 fir::MutableBoxValue Fortran::lower::createSomeMutableBox(

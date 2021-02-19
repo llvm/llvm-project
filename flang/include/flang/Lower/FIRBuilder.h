@@ -159,8 +159,8 @@ public:
   }
 
   /// Convert a StringRef string into a fir::StringLitOp.
-  fir::StringLitOp createStringLit(mlir::Location loc, mlir::Type eleTy,
-                                   llvm::StringRef string);
+  fir::StringLitOp createStringLitOp(mlir::Location loc,
+                                     llvm::StringRef string);
 
   //===--------------------------------------------------------------------===//
   // Linkage helpers (inline). The default linkage is external.
@@ -281,6 +281,28 @@ mlir::Value readLowerBound(FirOpBuilder &, mlir::Location,
 /// Read extents from an IrBoxValue into \p result.
 void readExtents(FirOpBuilder &, mlir::Location, const fir::IrBoxValue &,
                  llvm::SmallVectorImpl<mlir::Value> &result);
+
+//===--------------------------------------------------------------------===//
+// String literal helper helpers
+//===--------------------------------------------------------------------===//
+
+/// Create a !fir.char<1> string literal global and returns a
+/// fir::CharBoxValue with its address en length.
+fir::ExtendedValue createStringLiteral(FirOpBuilder &, mlir::Location,
+                                       llvm::StringRef string);
+
+/// Unique a compiler generated identifier. A short prefix should be provided
+/// to hint at the origin of the identifier.
+std::string uniqueCGIdent(llvm::StringRef prefix, llvm::StringRef name);
+
+//===--------------------------------------------------------------------===//
+// Location helpers
+//===--------------------------------------------------------------------===//
+
+/// Generate a string literal containing the file name and return its address
+mlir::Value locationToFilename(FirOpBuilder &, mlir::Location);
+/// Generate a constant of the given type with the location line number
+mlir::Value locationToLineNo(FirOpBuilder &, mlir::Location, mlir::Type);
 
 } // namespace Fortran::lower
 

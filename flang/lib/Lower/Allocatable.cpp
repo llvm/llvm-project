@@ -398,8 +398,9 @@ struct ErrorManagementValues {
       TODO(loc, "errmsg in allocate and deallocate");
     else
       errMsgBoxAddr = builder.createNullConstant(loc);
-    sourceFile = converter.locationToFilename(loc);
-    sourceLine = converter.locationToLineNo(loc, builder.getIntegerType(32));
+    sourceFile = Fortran::lower::locationToFilename(builder, loc);
+    sourceLine = Fortran::lower::locationToLineNo(builder, loc,
+                                                  builder.getIntegerType(32));
   }
   bool hasErrorRecovery() const { return static_cast<bool>(statAddr); }
   // Values always initialized before lowering individual allocations
