@@ -1,4 +1,4 @@
-//===- OpenMPToLLVMIRTranslation.h - OpenMP Dialect to LLVM IR --*- C++ -*-===//
+//===- ROCDLToLLVMIRTranslation.h - ROCDL to LLVM IR ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the dialect interface for translating the OpenMP dialect
-// to LLVM IR.
+// This file implements the dialect interface for translating the ROCDL
+// dialect to LLVM IR.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TARGET_LLVMIR_DIALECT_OPENMP_OPENMPTOLLVMIRTRANSLATION_H
-#define MLIR_TARGET_LLVMIR_DIALECT_OPENMP_OPENMPTOLLVMIRTRANSLATION_H
+#ifndef MLIR_TARGET_LLVMIR_DIALECT_ROCDL_ROCDLTOLLVMIRTRANSLATION_H
+#define MLIR_TARGET_LLVMIR_DIALECT_ROCDL_ROCDLTOLLVMIRTRANSLATION_H
 
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 
 namespace mlir {
 
 /// Implementation of the dialect interface that converts operations belonging
-/// to the OpenMP dialect to LLVM IR.
-class OpenMPDialectLLVMIRTranslationInterface
+/// to the ROCDL dialect to LLVM IR.
+class ROCDLDialectLLVMIRTranslationInterface
     : public LLVMTranslationDialectInterface {
 public:
   using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
@@ -30,8 +30,13 @@ public:
   LogicalResult
   convertOperation(Operation *op, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) const final;
+
+  /// Attaches module-level metadata for functions marked as kernels.
+  LogicalResult
+  amendOperation(Operation *op, NamedAttribute attribute,
+                 LLVM::ModuleTranslation &moduleTranslation) const final;
 };
 
 } // namespace mlir
 
-#endif // MLIR_TARGET_LLVMIR_DIALECT_OPENMP_OPENMPTOLLVMIRTRANSLATION_H
+#endif // MLIR_TARGET_LLVMIR_DIALECT_ROCDL_ROCDLTOLLVMIRTRANSLATION_H

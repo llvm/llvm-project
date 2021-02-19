@@ -175,7 +175,7 @@ def ROCDL_MubufStoreOp :
                  LLVM_Type:$glc,
                  LLVM_Type:$slc)>{
   string llvmBuilder = [{
-    auto vdataType = convertType(op.vdata().getType());
+    auto vdataType = moduleTranslation.convertType(op.vdata().getType());
     createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_buffer_store, {$vdata, $rsrc, $vindex,
           $offset, $glc, $slc}, {vdataType});
