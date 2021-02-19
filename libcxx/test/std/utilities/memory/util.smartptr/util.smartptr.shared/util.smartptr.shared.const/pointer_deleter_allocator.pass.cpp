@@ -31,6 +31,19 @@ int A::count = 0;
 struct Base { };
 struct Derived : Base { };
 
+template<class T>
+class MoveDeleter
+{
+    MoveDeleter();
+    MoveDeleter(MoveDeleter const&);
+public:
+    MoveDeleter(MoveDeleter&&) {};
+
+    explicit MoveDeleter(int) {}
+
+    void operator()(T *ptr) { delete ptr; }
+};
+
 int main(int, char**)
 {
     {
@@ -93,7 +106,13 @@ int main(int, char**)
     assert(A::count == 0);
     assert(test_deleter<A>::count == 0);
     assert(test_deleter<A>::dealloc_count == 1);
-#endif
+
+    {
+        MoveDeleter<int> d(0);
+        std::shared_ptr<int> p2(new int, std::move(d), std::allocator<int>());
+        std::shared_ptr<int> p3(nullptr, std::move(d), std::allocator<int>());
+    }
+#endif // TEST_STD_VER >= 11
 
     {
         // Make sure that we can construct a shared_ptr where the element type and pointer type
