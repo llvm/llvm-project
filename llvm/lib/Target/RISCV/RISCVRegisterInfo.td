@@ -117,6 +117,9 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 def XLenVT : ValueTypeByHwMode<[RV32, RV64],
                                [i32,  i64]>;
+def XLenRI : RegInfoByHwMode<
+      [RV32,              RV64],
+      [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
 
 // The order of registers represents the preferred allocation sequence.
 // Registers are listed in the order caller-save, callee-save, specials.
@@ -128,15 +131,11 @@ def GPR : RegisterClass<"RISCV", [XLenVT], 32, (add
     (sequence "X%u", 18, 27),
     (sequence "X%u", 0, 4)
   )> {
-  let RegInfos = RegInfoByHwMode<
-      [RV32,              RV64],
-      [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
+  let RegInfos = XLenRI;
 }
 
 def GPRX0 : RegisterClass<"RISCV", [XLenVT], 32, (add X0)> {
-  let RegInfos = RegInfoByHwMode<
-      [RV32,              RV64],
-      [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
+  let RegInfos = XLenRI;
 }
 
 // The order of registers represents the preferred allocation sequence.
@@ -149,9 +148,7 @@ def GPRNoX0 : RegisterClass<"RISCV", [XLenVT], 32, (add
     (sequence "X%u", 18, 27),
     (sequence "X%u", 1, 4)
   )> {
-  let RegInfos = RegInfoByHwMode<
-      [RV32,              RV64],
-      [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
+  let RegInfos = XLenRI;
 }
 
 def GPRNoX0X2 : RegisterClass<"RISCV", [XLenVT], 32, (add
@@ -162,18 +159,14 @@ def GPRNoX0X2 : RegisterClass<"RISCV", [XLenVT], 32, (add
     (sequence "X%u", 18, 27),
     X1, X3, X4
   )> {
-  let RegInfos = RegInfoByHwMode<
-      [RV32,              RV64],
-      [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
+  let RegInfos = XLenRI;
 }
 
 def GPRC : RegisterClass<"RISCV", [XLenVT], 32, (add
     (sequence "X%u", 10, 15),
     (sequence "X%u", 8, 9)
   )> {
-  let RegInfos = RegInfoByHwMode<
-      [RV32,              RV64],
-      [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
+  let RegInfos = XLenRI;
 }
 
 // For indirect tail calls, we can't use callee-saved registers, as they are
@@ -184,15 +177,11 @@ def GPRTC : RegisterClass<"RISCV", [XLenVT], 32, (add
     (sequence "X%u", 10, 17),
     (sequence "X%u", 28, 31)
   )> {
-  let RegInfos = RegInfoByHwMode<
-      [RV32,              RV64],
-      [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
+  let RegInfos = XLenRI;
 }
 
 def SP : RegisterClass<"RISCV", [XLenVT], 32, (add X2)> {
-  let RegInfos = RegInfoByHwMode<
-      [RV32,              RV64],
-      [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
+  let RegInfos = XLenRI;
 }
 
 // Floating point registers
