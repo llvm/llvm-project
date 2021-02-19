@@ -540,6 +540,8 @@ struct InitializeParams {
 
   /// The capabilities provided by the client (editor or tool)
   ClientCapabilities capabilities;
+  /// The same data as capabilities, but not parsed (to expose to modules).
+  llvm::json::Object rawCapabilities;
 
   /// The initial trace setting. If omitted trace is disabled ('off').
   llvm::Optional<TraceLevel> trace;
