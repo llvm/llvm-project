@@ -67,9 +67,9 @@ func @step_1(%A : memref<?x?x?x?xf32>, %B : memref<?x?x?x?xf32>) {
           // CHECK-11:        {{.*}} = load %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
           // CHECK-22:        {{.*}} = load %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
           %0 = load %A[%i, %j, %ii, %jj] : memref<?x?x?x?xf32>
-          // CHECK-11-NEXT:   store {{.*}}, %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
-          // CHECK-22-NEXT:   store {{.*}}, %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
-          store %0, %B[%i, %j, %ii, %jj] : memref<?x?x?x?xf32>
+          // CHECK-11-NEXT:   memref.store {{.*}}, %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
+          // CHECK-22-NEXT:   memref.store {{.*}}, %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
+          memref.store %0, %B[%i, %j, %ii, %jj] : memref<?x?x?x?xf32>
 
           // CHECK-11: gpu.terminator
           // CHECK-22: gpu.terminator

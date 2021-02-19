@@ -48,7 +48,7 @@ func @mixed_alloc(%arg0: index, %arg1: index) -> memref<?x42x?xf32> {
 //  CHECK-NEXT:  llvm.insertvalue %[[st0]], %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
 //  CHECK-NEXT:  llvm.insertvalue %[[N]], %{{.*}}[4, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
 //  CHECK-NEXT:  llvm.insertvalue %[[one]], %{{.*}}[4, 2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
-  %0 = alloc(%arg0, %arg1) : memref<?x42x?xf32>
+  %0 = memref.alloc(%arg0, %arg1) : memref<?x42x?xf32>
 //  CHECK-NEXT:  llvm.return %{{.*}} : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
   return %0 : memref<?x42x?xf32>
 }
@@ -58,7 +58,7 @@ func @mixed_dealloc(%arg0: memref<?x42x?xf32>) {
 //      CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
 // CHECK-NEXT:  %[[ptri8:.*]] = llvm.bitcast %[[ptr]] : !llvm.ptr<f32> to !llvm.ptr<i8>
 // CHECK-NEXT:  llvm.call @free(%[[ptri8]]) : (!llvm.ptr<i8>) -> ()
-  dealloc %arg0 : memref<?x42x?xf32>
+  memref.dealloc %arg0 : memref<?x42x?xf32>
 // CHECK-NEXT:  llvm.return
   return
 }
@@ -82,7 +82,7 @@ func @dynamic_alloc(%arg0: index, %arg1: index) -> memref<?x?xf32> {
 //  CHECK-NEXT:  llvm.insertvalue %[[N]], %{{.*}}[3, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  llvm.insertvalue %[[N]], %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  llvm.insertvalue %[[one]], %{{.*}}[4, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
-  %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
+  %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
 //  CHECK-NEXT:  llvm.return %{{.*}} : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
   return %0 : memref<?x?xf32>
 }
@@ -107,7 +107,7 @@ func @dynamic_alloca(%arg0: index, %arg1: index) -> memref<?x?xf32> {
 //  CHECK-NEXT:  llvm.insertvalue %[[N]], %{{.*}}[3, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  llvm.insertvalue %[[N]], %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  llvm.insertvalue %[[st1]], %{{.*}}[4, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
-  %0 = alloca(%arg0, %arg1) : memref<?x?xf32>
+  %0 = memref.alloca(%arg0, %arg1) : memref<?x?xf32>
 
 // Test with explicitly specified alignment. llvm.alloca takes care of the
 // alignment. The same pointer is thus used for allocation and aligned
@@ -116,7 +116,7 @@ func @dynamic_alloca(%arg0: index, %arg1: index) -> memref<?x?xf32> {
 // CHECK: %[[desc:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[desc1:.*]] = llvm.insertvalue %[[alloca_aligned]], %[[desc]][0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: llvm.insertvalue %[[alloca_aligned]], %[[desc1]][1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
-  alloca(%arg0, %arg1) {alignment = 32} : memref<?x?xf32>
+  memref.alloca(%arg0, %arg1) {alignment = 32} : memref<?x?xf32>
   return %0 : memref<?x?xf32>
 }
 
@@ -125,7 +125,7 @@ func @dynamic_dealloc(%arg0: memref<?x?xf32>) {
 //      CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK-NEXT:  %[[ptri8:.*]] = llvm.bitcast %[[ptr]] : !llvm.ptr<f32> to !llvm.ptr<i8>
 // CHECK-NEXT:  llvm.call @free(%[[ptri8]]) : (!llvm.ptr<i8>) -> ()
-  dealloc %arg0 : memref<?x?xf32>
+  memref.dealloc %arg0 : memref<?x?xf32>
   return
 }
 
@@ -142,23 +142,23 @@ func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
 // ALIGNED-ALLOC-NEXT:  %[[alignment:.*]] = llvm.mlir.constant(32 : index) : i64
 // ALIGNED-ALLOC-NEXT:  %[[allocated:.*]] = llvm.call @aligned_alloc(%[[alignment]], %[[bytes]]) : (i64, i64) -> !llvm.ptr<i8>
 // ALIGNED-ALLOC-NEXT:  llvm.bitcast %[[allocated]] : !llvm.ptr<i8> to !llvm.ptr<f32>
-  %0 = alloc() {alignment = 32} : memref<32x18xf32>
+  %0 = memref.alloc() {alignment = 32} : memref<32x18xf32>
   // Do another alloc just to test that we have a unique declaration for
   // aligned_alloc.
   // ALIGNED-ALLOC:  llvm.call @aligned_alloc
-  %1 = alloc() {alignment = 64} : memref<4096xf32>
+  %1 = memref.alloc() {alignment = 64} : memref<4096xf32>
 
   // Alignment is to element type boundaries (minimum 16 bytes).
   // ALIGNED-ALLOC:  %[[c32:.*]] = llvm.mlir.constant(32 : index) : i64
   // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c32]]
-  %2 = alloc() : memref<4096xvector<8xf32>>
+  %2 = memref.alloc() : memref<4096xvector<8xf32>>
   // The minimum alignment is 16 bytes unless explicitly specified.
   // ALIGNED-ALLOC:  %[[c16:.*]] = llvm.mlir.constant(16 : index) : i64
   // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c16]],
-  %3 = alloc() : memref<4096xvector<2xf32>>
+  %3 = memref.alloc() : memref<4096xvector<2xf32>>
   // ALIGNED-ALLOC:  %[[c8:.*]] = llvm.mlir.constant(8 : index) : i64
   // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c8]],
-  %4 = alloc() {alignment = 8} : memref<1024xvector<4xf32>>
+  %4 = memref.alloc() {alignment = 8} : memref<1024xvector<4xf32>>
   // Bump the memref allocation size if its size is not a multiple of alignment.
   // ALIGNED-ALLOC:       %[[c32:.*]] = llvm.mlir.constant(32 : index) : i64
   // ALIGNED-ALLOC-NEXT:  llvm.mlir.constant(1 : index) : i64
@@ -167,11 +167,11 @@ func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
   // ALIGNED-ALLOC-NEXT:  llvm.urem
   // ALIGNED-ALLOC-NEXT:  %[[SIZE_ALIGNED:.*]] = llvm.sub
   // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c32]], %[[SIZE_ALIGNED]])
-  %5 = alloc() {alignment = 32} : memref<100xf32>
+  %5 = memref.alloc() {alignment = 32} : memref<100xf32>
   // Bump alignment to the next power of two if it isn't.
   // ALIGNED-ALLOC:  %[[c128:.*]] = llvm.mlir.constant(128 : index) : i64
   // ALIGNED-ALLOC:  llvm.call @aligned_alloc(%[[c128]]
-  %6 = alloc(%N) : memref<?xvector<18xf32>>
+  %6 = memref.alloc(%N) : memref<?xvector<18xf32>>
   return %0 : memref<32x18xf32>
 }
 
@@ -232,17 +232,17 @@ func @prefetch(%A : memref<?x?xf32>, %i : index, %j : index) {
 // CHECK-NEXT:  [[C3:%.*]] = llvm.mlir.constant(3 : i32) : i32
 // CHECK-NEXT:  [[C1_1:%.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK-NEXT:  "llvm.intr.prefetch"(%[[addr]], [[C1]], [[C3]], [[C1_1]]) : (!llvm.ptr<f32>, i32, i32, i32) -> ()
-  prefetch %A[%i, %j], write, locality<3>, data : memref<?x?xf32>
+  memref.prefetch %A[%i, %j], write, locality<3>, data : memref<?x?xf32>
 // CHECK:  [[C0:%.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:  [[C0_1:%.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:  [[C1_2:%.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:  "llvm.intr.prefetch"(%{{.*}}, [[C0]], [[C0_1]], [[C1_2]]) : (!llvm.ptr<f32>, i32, i32, i32) -> ()
-  prefetch %A[%i, %j], read, locality<0>, data : memref<?x?xf32>
+  memref.prefetch %A[%i, %j], read, locality<0>, data : memref<?x?xf32>
 // CHECK:  [[C0_2:%.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:  [[C2:%.*]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK:  [[C0_3:%.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:  "llvm.intr.prefetch"(%{{.*}}, [[C0_2]], [[C2]], [[C0_3]]) : (!llvm.ptr<f32>, i32, i32, i32) -> ()
-  prefetch %A[%i, %j], read, locality<2>, instr : memref<?x?xf32>
+  memref.prefetch %A[%i, %j], read, locality<2>, instr : memref<?x?xf32>
   return
 }
 
@@ -263,7 +263,7 @@ func @dynamic_store(%dynamic : memref<?x?xf32>, %i : index, %j : index, %val : f
 //  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
 //  CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : !llvm.ptr<f32>
-  store %val, %dynamic[%i, %j] : memref<?x?xf32>
+  memref.store %val, %dynamic[%i, %j] : memref<?x?xf32>
   return
 }
 
@@ -284,56 +284,56 @@ func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val : f32)
 //  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
 //  CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : !llvm.ptr<f32>
-  store %val, %mixed[%i, %j] : memref<42x?xf32>
+  memref.store %val, %mixed[%i, %j] : memref<42x?xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_static_to_dynamic
 func @memref_cast_static_to_dynamic(%static : memref<10x42xf32>) {
 // CHECK-NOT: llvm.bitcast
-  %0 = memref_cast %static : memref<10x42xf32> to memref<?x?xf32>
+  %0 = memref.cast %static : memref<10x42xf32> to memref<?x?xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_static_to_mixed
 func @memref_cast_static_to_mixed(%static : memref<10x42xf32>) {
 // CHECK-NOT: llvm.bitcast
-  %0 = memref_cast %static : memref<10x42xf32> to memref<?x42xf32>
+  %0 = memref.cast %static : memref<10x42xf32> to memref<?x42xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_dynamic_to_static
 func @memref_cast_dynamic_to_static(%dynamic : memref<?x?xf32>) {
 // CHECK-NOT: llvm.bitcast
-  %0 = memref_cast %dynamic : memref<?x?xf32> to memref<10x12xf32>
+  %0 = memref.cast %dynamic : memref<?x?xf32> to memref<10x12xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_dynamic_to_mixed
 func @memref_cast_dynamic_to_mixed(%dynamic : memref<?x?xf32>) {
 // CHECK-NOT: llvm.bitcast
-  %0 = memref_cast %dynamic : memref<?x?xf32> to memref<?x12xf32>
+  %0 = memref.cast %dynamic : memref<?x?xf32> to memref<?x12xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_mixed_to_dynamic
 func @memref_cast_mixed_to_dynamic(%mixed : memref<42x?xf32>) {
 // CHECK-NOT: llvm.bitcast
-  %0 = memref_cast %mixed : memref<42x?xf32> to memref<?x?xf32>
+  %0 = memref.cast %mixed : memref<42x?xf32> to memref<?x?xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_mixed_to_static
 func @memref_cast_mixed_to_static(%mixed : memref<42x?xf32>) {
 // CHECK-NOT: llvm.bitcast
-  %0 = memref_cast %mixed : memref<42x?xf32> to memref<42x1xf32>
+  %0 = memref.cast %mixed : memref<42x?xf32> to memref<42x1xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_mixed_to_mixed
 func @memref_cast_mixed_to_mixed(%mixed : memref<42x?xf32>) {
 // CHECK-NOT: llvm.bitcast
-  %0 = memref_cast %mixed : memref<42x?xf32> to memref<?x1xf32>
+  %0 = memref.cast %mixed : memref<42x?xf32> to memref<?x1xf32>
   return
 }
 
@@ -347,7 +347,7 @@ func @memref_cast_ranked_to_unranked(%arg : memref<42x2x?xf32>) {
 // CHECK    :  llvm.mlir.undef : !llvm.struct<(i64, ptr<i8>)>
 // CHECK-DAG:  llvm.insertvalue %[[r]], %{{.*}}[0] : !llvm.struct<(i64, ptr<i8>)>
 // CHECK-DAG:  llvm.insertvalue %[[p2]], %{{.*}}[1] : !llvm.struct<(i64, ptr<i8>)>
-  %0 = memref_cast %arg : memref<42x2x?xf32> to memref<*xf32>
+  %0 = memref.cast %arg : memref<42x2x?xf32> to memref<*xf32>
   return
 }
 
@@ -355,7 +355,7 @@ func @memref_cast_ranked_to_unranked(%arg : memref<42x2x?xf32>) {
 func @memref_cast_unranked_to_ranked(%arg : memref<*xf32>) {
 //      CHECK: %[[p:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(i64, ptr<i8>)>
 // CHECK-NEXT: llvm.bitcast %[[p]] : !llvm.ptr<i8> to !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>>
-  %0 = memref_cast %arg : memref<*xf32> to memref<?x?x10x2xf32>
+  %0 = memref.cast %arg : memref<*xf32> to memref<?x?x10x2xf32>
   return
 }
 

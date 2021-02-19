@@ -20,8 +20,8 @@ func @step_var(%A : memref<?x?xf32>, %B : memref<?x?xf32>) {
 
       // CHECK:     {{.*}} = load %{{.*}}[%[[i]], %[[j]]] : memref<?x?xf32>
       %0 = load %A[%i, %j] : memref<?x?xf32>
-      // CHECK:     store {{.*}}, %{{.*}}[%[[i]], %[[j]]] : memref<?x?xf32>
-      store %0, %B[%i, %j] : memref<?x?xf32>
+      // CHECK:     memref.store {{.*}}, %{{.*}}[%[[i]], %[[j]]] : memref<?x?xf32>
+      memref.store %0, %B[%i, %j] : memref<?x?xf32>
     }
   }
   return

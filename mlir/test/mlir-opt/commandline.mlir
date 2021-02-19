@@ -14,6 +14,7 @@
 // CHECK-NEXT: llvm_arm_sve
 // CHECK-NEXT: llvm_avx512
 // CHECK-NEXT: math
+// CHECK-NEXT: memref
 // CHECK-NEXT: nvvm
 // CHECK-NEXT: omp
 // CHECK-NEXT: pdl

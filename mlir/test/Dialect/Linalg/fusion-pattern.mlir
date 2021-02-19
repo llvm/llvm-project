@@ -318,7 +318,7 @@ module {
     %c1 = constant 1 : index
     %0 = dim %arg2, %c0 : memref<?x?xf32>
     %1 = dim %arg2, %c1 : memref<?x?xf32>
-    %2 = alloc(%0, %1) : memref<?x?xf32>
+    %2 = memref.alloc(%0, %1) : memref<?x?xf32>
     linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%2 : memref<?x?xf32>)
     linalg.generic
@@ -340,7 +340,7 @@ module {
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 //  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: memref<?x?xf32>
-//       CHECK:   %[[T2:.+]] = alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32>
+//       CHECK:   %[[T2:.+]] = memref.alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32>
 //       CHECK:   linalg.matmul
 //  CHECK-SAME:     after_transpose_fusion_original
 //       CHECK:   scf.parallel (%[[ARG3:[a-zA-Z0-9_]+]], %[[ARG4:.[a-zA-Z0-9_]+]])
@@ -368,7 +368,7 @@ module {
     %c1 = constant 1 : index
     %0 = dim %arg2, %c0 : memref<?x?xf32>
     %1 = dim %arg2, %c1 : memref<?x?xf32>
-    %2 = alloc(%0, %1) : memref<?x?xf32>
+    %2 = memref.alloc(%0, %1) : memref<?x?xf32>
     linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%2 : memref<?x?xf32>)
     linalg.generic
