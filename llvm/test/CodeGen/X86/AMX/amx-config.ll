@@ -45,6 +45,9 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    testl %edi, %edi
 ; AVX2-NEXT:    movsbl %sil, %eax
+; AVX2-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
@@ -69,12 +72,18 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) {
 ; AVX2-NEXT:    movl $32, %esi
 ; AVX2-NEXT:    tilestored %tmm1, (%rcx,%rsi)
 ; AVX2-NEXT:    tilerelease
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; SSE2-LABEL: test_api:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    testl %edi, %edi
 ; SSE2-NEXT:    movsbl %sil, %eax
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    movups %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movups %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movups %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movups %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
