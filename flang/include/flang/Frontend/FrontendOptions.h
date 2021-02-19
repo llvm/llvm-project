@@ -56,26 +56,6 @@ Fortran::parser::AnalyzedObjectsAsFortran getBasicAsFortran();
 /// \return True if the file extension should be processed as free form
 bool isFreeFormSuffix(llvm::StringRef suffix);
 
-inline const char *GetActionKindName(const ActionKind ak) {
-  switch (ak) {
-  case InputOutputTest:
-    return "InputOutputTest";
-  case PrintPreprocessedInput:
-    return "PrintPreprocessedInput";
-  case ParseSyntaxOnly:
-    return "ParseSyntaxOnly";
-  default:
-    return "<unknown ActionKind>";
-    // TODO:
-    // case RunPreprocessor:
-    // case ParserSyntaxOnly:
-    // case EmitLLVM:
-    // case EmitLLVMOnly:
-    // case EmitCodeGenOnly:
-    // (...)
-  }
-}
-
 enum class Language : uint8_t {
   Unknown,
 
