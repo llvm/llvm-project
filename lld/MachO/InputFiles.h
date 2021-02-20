@@ -125,28 +125,20 @@ public:
   // the root dylib to ensure symbols in the child library are correctly bound
   // to the root. On the other hand, if a dylib is being directly loaded
   // (through an -lfoo flag), then `umbrella` should be a nullptr.
-  explicit DylibFile(MemoryBufferRef mb, DylibFile *umbrella = nullptr,
-                     bool isBundleLoader = false);
+  explicit DylibFile(MemoryBufferRef mb, DylibFile *umbrella = nullptr);
 
   explicit DylibFile(const llvm::MachO::InterfaceFile &interface,
-                     DylibFile *umbrella = nullptr,
-                     bool isBundleLoader = false);
+                     DylibFile *umbrella = nullptr);
 
   static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
   StringRef dylibName;
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
-  int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
+  uint64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
   RefState refState;
   bool reexport = false;
   bool forceWeakImport = false;
-
-  // An executable can be used as a bundle loader that will load the output
-  // file being linked, and that contains symbols referenced, but not
-  // implemented in the bundle. When used like this, it is very similar
-  // to a Dylib, so we re-used the same class to represent it.
-  bool isBundleLoader;
 };
 
 // .a file
