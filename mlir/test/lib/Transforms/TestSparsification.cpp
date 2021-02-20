@@ -17,7 +17,7 @@ using namespace mlir;
 namespace {
 
 struct TestSparsification
-    : public PassWrapper<TestSparsification, FunctionPass> {
+    : public PassWrapper<TestSparsification, OperationPass<ModuleOp>> {
 
   TestSparsification() = default;
   TestSparsification(const TestSparsification &pass) {}
@@ -99,7 +99,7 @@ struct TestSparsification
   }
 
   /// Runs the test on a function.
-  void runOnFunction() override {
+  void runOnOperation() override {
     auto *ctx = &getContext();
     OwningRewritePatternList patterns;
     // Translate strategy flags to strategy options.
@@ -109,7 +109,7 @@ struct TestSparsification
     // Apply rewriting.
     linalg::populateSparsificationPatterns(ctx, patterns, options);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns, ctx);
-    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     // Lower sparse primitives to calls into runtime support library.
     if (lower) {
       OwningRewritePatternList conversionPatterns;
