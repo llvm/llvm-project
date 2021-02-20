@@ -33,7 +33,7 @@
 ##         DW_AT_location	(0x00000023:
 ##            [0x0000000000000003, 0x0000000000000005): DW_OP_reg2 RCX)
 
-# CHECK: "version": 6,
+# CHECK: "version": 7,
 # CHECK: "sum_all_variables(#bytes in parent scope)": 12,
 # CHECK: "sum_all_variables(#bytes in any scope covered by DW_AT_location)": 8
 # CHECK: "sum_all_variables(#bytes in parent scope covered by DW_AT_location)": 4
