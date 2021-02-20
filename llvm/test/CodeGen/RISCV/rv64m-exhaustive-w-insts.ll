@@ -1123,6 +1123,18 @@ define signext i32 @sext_i32_remw_zext_sext_i16(i16 zeroext %0, i16 signext %1) 
   ret i32 %5
 }
 
+define signext i32 @sext_i32_remw_sext_zext_i16(i16 signext %a, i16 zeroext %b) nounwind {
+; RV64IM-LABEL: sext_i32_remw_sext_zext_i16:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    rem a0, a0, a1
+; RV64IM-NEXT:    sext.w a0, a0
+; RV64IM-NEXT:    ret
+  %1 = sext i16 %a to i32
+  %2 = zext i16 %b to i32
+  %3 = srem i32 %1, %2
+  ret i32 %3
+}
+
 define i32 @aext_remuw_aext_aext(i32 %a, i32 %b) nounwind {
 ; RV64IM-LABEL: aext_remuw_aext_aext:
 ; RV64IM:       # %bb.0:
