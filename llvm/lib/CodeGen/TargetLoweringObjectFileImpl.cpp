@@ -626,6 +626,8 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     Name.push_back('.');
     TM.getNameWithPrefix(Name, GO, Mang, /*MayAlwaysUsePrivate*/true);
   } else if (HasPrefix)
+    // For distinguishing between .text.${text-section-prefix}. (with trailing
+    // dot) and .text.${function-name}
     Name.push_back('.');
   return Name;
 }
@@ -939,7 +941,8 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   } else {
     Name += MBB.getParent()->getSection()->getName();
     if (TM.getUniqueBasicBlockSectionNames()) {
-      Name += ".";
+      if (!Name.endswith("."))
+        Name += ".";
       Name += MBB.getSymbol()->getName();
     } else {
       UniqueID = NextUniqueID++;
