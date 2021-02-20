@@ -248,6 +248,15 @@ public:
   bool isPC32DBLSymbol(const GlobalValue *GV, CodeModel::Model CM) const;
 
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
+
+  // Returns TRUE if we are generating GOFF object code
+  bool isTargetGOFF() const { return TargetTriple.isOSBinFormatGOFF(); }
+
+  // Returns TRUE if we are using XPLINK64 linkage convention
+  bool isTargetXPLINK64() const { return (isTargetGOFF() && isTargetzOS()); }
+
+  // Returns TRUE if we are generating code for a s390x machine running zOS
+  bool isTargetzOS() const { return TargetTriple.isOSzOS(); }
 };
 } // end namespace llvm
 
