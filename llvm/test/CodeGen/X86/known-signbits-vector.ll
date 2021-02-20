@@ -558,13 +558,13 @@ define <4 x i32> @signbits_mask_ashr_smax(<4 x i32> %a0, <4 x i32> %a1) {
 ; X64-AVX2-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 0>
   %2 = ashr <4 x i32> %a1, <i32 25, i32 26, i32 27, i32 0>
-  %3 = call <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32> %1, <4 x i32> %2)
+  %3 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %1, <4 x i32> %2)
   %4 = shufflevector <4 x i32> %3, <4 x i32> undef, <4 x i32> zeroinitializer
   %5 = ashr <4 x i32> %4, <i32 1, i32 2, i32 3, i32 4>
   %6 = and <4 x i32> %5, <i32 -32768, i32 -65536, i32 -32768, i32 -65536>
   ret <4 x i32> %6
 }
-declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
 
 define <4 x i32> @signbits_mask_ashr_smin(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: signbits_mask_ashr_smin:
@@ -616,13 +616,13 @@ define <4 x i32> @signbits_mask_ashr_smin(<4 x i32> %a0, <4 x i32> %a1) {
 ; X64-AVX2-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 0>
   %2 = ashr <4 x i32> %a1, <i32 25, i32 26, i32 27, i32 0>
-  %3 = call <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32> %1, <4 x i32> %2)
+  %3 = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %1, <4 x i32> %2)
   %4 = shufflevector <4 x i32> %3, <4 x i32> undef, <4 x i32> zeroinitializer
   %5 = ashr <4 x i32> %4, <i32 1, i32 2, i32 3, i32 4>
   %6 = and <4 x i32> %5, <i32 -32768, i32 -65536, i32 -32768, i32 -65536>
   ret <4 x i32> %6
 }
-declare <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @llvm.smin.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
 
 define <4 x i32> @signbits_mask_ashr_umax(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: signbits_mask_ashr_umax:
@@ -674,13 +674,13 @@ define <4 x i32> @signbits_mask_ashr_umax(<4 x i32> %a0, <4 x i32> %a1) {
 ; X64-AVX2-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 0>
   %2 = ashr <4 x i32> %a1, <i32 25, i32 26, i32 27, i32 0>
-  %3 = call <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32> %1, <4 x i32> %2)
+  %3 = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %1, <4 x i32> %2)
   %4 = shufflevector <4 x i32> %3, <4 x i32> undef, <4 x i32> zeroinitializer
   %5 = ashr <4 x i32> %4, <i32 1, i32 2, i32 3, i32 4>
   %6 = and <4 x i32> %5, <i32 -32768, i32 -65536, i32 -32768, i32 -65536>
   ret <4 x i32> %6
 }
-declare <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @llvm.umax.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
 
 define <4 x i32> @signbits_mask_ashr_umin(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: signbits_mask_ashr_umin:
@@ -732,13 +732,13 @@ define <4 x i32> @signbits_mask_ashr_umin(<4 x i32> %a0, <4 x i32> %a1) {
 ; X64-AVX2-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 0>
   %2 = ashr <4 x i32> %a1, <i32 25, i32 26, i32 27, i32 0>
-  %3 = call <4 x i32> @llvm.x86.sse41.pminud(<4 x i32> %1, <4 x i32> %2)
+  %3 = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %1, <4 x i32> %2)
   %4 = shufflevector <4 x i32> %3, <4 x i32> undef, <4 x i32> zeroinitializer
   %5 = ashr <4 x i32> %4, <i32 1, i32 2, i32 3, i32 4>
   %6 = and <4 x i32> %5, <i32 -32768, i32 -65536, i32 -32768, i32 -65536>
   ret <4 x i32> %6
 }
-declare <4 x i32> @llvm.x86.sse41.pminud(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @llvm.umin.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
 
 ; Make sure we can preserve sign bit information into the second basic block
 ; so we can avoid having to shift bit 0 into bit 7 for each element due to
