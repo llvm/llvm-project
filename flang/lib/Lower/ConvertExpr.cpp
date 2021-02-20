@@ -1015,10 +1015,9 @@ public:
       ty = recTy.getType(name);
     }
     ty = builder.getRefType(ty);
-    return componentToExtendedValue(
-        builder, loc, obj,
-        builder.create<fir::CoordinateOp>(loc, ty, fir::getBase(obj), coorArgs,
-                                          /*lenParams=*/mlir::ValueRange{}));
+    return componentToExtendedValue(builder, loc, obj,
+                                    builder.create<fir::CoordinateOp>(
+                                        loc, ty, fir::getBase(obj), coorArgs));
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::Component &cmpt) {

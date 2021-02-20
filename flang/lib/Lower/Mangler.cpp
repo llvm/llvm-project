@@ -63,6 +63,16 @@ findInterfaceIfSeperateMP(const Fortran::semantics::Symbol &symbol) {
   return nullptr;
 }
 
+static std::vector<std::int64_t>
+kindValues(const Fortran::semantics::Symbol &symbol) {
+  for (const auto &param :
+       Fortran::semantics::OrderParameterDeclarations(symbol))
+    if (param->get<Fortran::semantics::TypeParamDetails>().attr() ==
+        Fortran::common::TypeParamAttr::Kind)
+      TODO("type with a KIND parameter");
+  return {};
+}
+
 // Mangle the name of `symbol` to make it unique within FIR's symbol table using
 // the FIR name mangler, `mangler`
 std::string
@@ -114,6 +124,13 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol) {
           },
           [&](const Fortran::semantics::CommonBlockDetails &) {
             return fir::NameUniquer::doCommonBlock(symbolName);
+          },
+          [&](const Fortran::semantics::DerivedTypeDetails &) {
+            auto modNames = moduleNames(ultimateSymbol);
+            auto optHost = hostName(ultimateSymbol);
+            auto kinds = kindValues(ultimateSymbol);
+            return fir::NameUniquer::doType(modNames, optHost, symbolName,
+                                            kinds);
           },
           [](const auto &) -> std::string { TODO_NOLOC("symbol mangling"); },
       },

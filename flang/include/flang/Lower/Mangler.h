@@ -43,9 +43,10 @@ class Symbol;
 
 namespace lower::mangle {
 
-/// Convert a front-end Symbol to an internal name
+/// Convert a front-end Symbol to an internal name.
 std::string mangleName(const semantics::Symbol &);
 
+/// Recover the bare name of the original symbol from an internal name.
 std::string demangleName(llvm::StringRef name);
 
 } // namespace lower::mangle
