@@ -1193,7 +1193,12 @@ public:
 #if defined(_LIBCPP_WIN32API)
   _LIBCPP_INLINE_VISIBILITY _VSTD::wstring wstring() const { return __pn_; }
 
-  _VSTD::wstring generic_wstring() const { return __pn_; }
+  _VSTD::wstring generic_wstring() const {
+    _VSTD::wstring __s;
+    __s.resize(__pn_.size());
+    _VSTD::replace_copy(__pn_.begin(), __pn_.end(), __s.begin(), '\\', '/');
+    return __s;
+  }
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
   template <class _ECharT, class _Traits = char_traits<_ECharT>,
@@ -1230,13 +1235,24 @@ public:
             class _Allocator = allocator<_ECharT> >
   basic_string<_ECharT, _Traits, _Allocator>
   generic_string(const _Allocator& __a = _Allocator()) const {
-    return string<_ECharT, _Traits, _Allocator>(__a);
+    using _Str = basic_string<_ECharT, _Traits, _Allocator>;
+    _Str __s = string<_ECharT, _Traits, _Allocator>(__a);
+    // Note: This (and generic_u8string below) is slightly suboptimal as
+    // it iterates twice over the string; once to convert it to the right
+    // character type, and once to replace path delimiters.
+    _VSTD::replace(__s.begin(), __s.end(),
+                   static_cast<_ECharT>('\\'), static_cast<_ECharT>('/'));
+    return __s;
   }
 
   _VSTD::string generic_string() const { return generic_string<char>(); }
   _VSTD::u16string generic_u16string() const { return generic_string<char16_t>(); }
   _VSTD::u32string generic_u32string() const { return generic_string<char32_t>(); }
-  __u8_string generic_u8string() const { return u8string(); }
+  __u8_string generic_u8string() const {
+    __u8_string __s = u8string();
+    _VSTD::replace(__s.begin(), __s.end(), '\\', '/');
+    return __s;
+  }
 #endif /* !_LIBCPP_HAS_NO_LOCALIZATION */
 #else /* _LIBCPP_WIN32API */
 
