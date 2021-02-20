@@ -2124,8 +2124,8 @@ void CodeGenModule::ConstructAttributeList(
 
       return false;
     };
-    FuncAttrs.addAttribute("disable-tail-calls",
-                           llvm::toStringRef(shouldDisableTailCalls()));
+    if (shouldDisableTailCalls())
+      FuncAttrs.addAttribute("disable-tail-calls", "true");
 
     // CPU/feature overrides.  addDefaultFunctionDefinitionAttributes
     // handles these separately to set them based on the global defaults.
