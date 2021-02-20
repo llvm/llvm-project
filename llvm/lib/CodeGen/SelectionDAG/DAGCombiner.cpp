@@ -3189,6 +3189,19 @@ SDValue DAGCombiner::foldSubToUSubSat(EVT DstVT, SDNode *N) {
       return getTruncatedUSUBSAT(DstVT, SubVT, Op0, MinLHS, DAG, SDLoc(N));
   }
 
+  // sub(a,trunc(umin(zext(a),b))) -> usubsat(a,trunc(umin(b,SatLimit)))
+  if (Op1.getOpcode() == ISD::TRUNCATE &&
+      Op1.getOperand(0).getOpcode() == ISD::UMIN) {
+    SDValue MinLHS = Op1.getOperand(0).getOperand(0);
+    SDValue MinRHS = Op1.getOperand(0).getOperand(1);
+    if (MinLHS.getOpcode() == ISD::ZERO_EXTEND && MinLHS.getOperand(0) == Op0)
+      return getTruncatedUSUBSAT(DstVT, MinLHS.getValueType(), MinLHS, MinRHS,
+                                 DAG, SDLoc(N));
+    if (MinRHS.getOpcode() == ISD::ZERO_EXTEND && MinRHS.getOperand(0) == Op0)
+      return getTruncatedUSUBSAT(DstVT, MinLHS.getValueType(), MinRHS, MinLHS,
+                                 DAG, SDLoc(N));
+  }
+
   return SDValue();
 }
 
