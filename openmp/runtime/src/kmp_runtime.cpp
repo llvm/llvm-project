@@ -1372,7 +1372,8 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
   serial_team->t.ompt_team_info.master_return_address = codeptr;
   if (ompt_enabled.enabled &&
       this_thr->th.ompt_thread_info.state != ompt_state_overhead) {
-    OMPT_CUR_TASK_INFO(this_thr)->frame.exit_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+    OMPT_CUR_TASK_INFO(this_thr)->frame.exit_frame.ptr =
+        OMPT_GET_FRAME_ADDRESS(0);
 
     ompt_lw_taskteam_t lw_taskteam;
     __ompt_lw_taskteam_init(&lw_taskteam, this_thr, global_tid,
@@ -1386,14 +1387,16 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     if (ompt_enabled.ompt_callback_implicit_task) {
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_begin, OMPT_CUR_TEAM_DATA(this_thr),
-          OMPT_CUR_TASK_DATA(this_thr), 1, __kmp_tid_from_gtid(global_tid), ompt_task_implicit); // TODO: Can this be ompt_task_initial?
-      OMPT_CUR_TASK_INFO(this_thr)
-          ->thread_num = __kmp_tid_from_gtid(global_tid);
+          OMPT_CUR_TASK_DATA(this_thr), 1, __kmp_tid_from_gtid(global_tid),
+          ompt_task_implicit); // TODO: Can this be ompt_task_initial?
+      OMPT_CUR_TASK_INFO(this_thr)->thread_num =
+          __kmp_tid_from_gtid(global_tid);
     }
 
     /* OMPT state */
     this_thr->th.ompt_thread_info.state = ompt_state_work_parallel;
-    OMPT_CUR_TASK_INFO(this_thr)->frame.exit_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+    OMPT_CUR_TASK_INFO(this_thr)->frame.exit_frame.ptr =
+        OMPT_GET_FRAME_ADDRESS(0);
   }
 #endif
 }
@@ -1544,8 +1547,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
           /* OMPT implicit task begin */
           implicit_task_data = OMPT_CUR_TASK_DATA(master_th);
           if (ompt_enabled.ompt_callback_implicit_task) {
-            OMPT_CUR_TASK_INFO(master_th)
-                ->thread_num = __kmp_tid_from_gtid(gtid);
+            OMPT_CUR_TASK_INFO(master_th)->thread_num =
+                __kmp_tid_from_gtid(gtid);
             ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                 ompt_scope_begin, OMPT_CUR_TEAM_DATA(master_th),
                 implicit_task_data, 1,
@@ -1570,7 +1573,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
                                  ,
                                  exit_frame_p
 #endif
-                                 );
+          );
         }
 
 #if OMPT_SUPPORT
@@ -1755,7 +1758,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         if (!ap) {
           // revert change made in __kmpc_serialized_parallel()
           master_th->th.th_serial_team->t.t_level--;
-// Get args from parent team for teams construct
+          // Get args from parent team for teams construct
 
 #if OMPT_SUPPORT
           void *dummy;
@@ -1774,8 +1777,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             task_info = OMPT_CUR_TASK_INFO(master_th);
             exit_frame_p = &(task_info->frame.exit_frame.ptr);
             if (ompt_enabled.ompt_callback_implicit_task) {
-              OMPT_CUR_TASK_INFO(master_th)
-                  ->thread_num = __kmp_tid_from_gtid(gtid);
+              OMPT_CUR_TASK_INFO(master_th)->thread_num =
+                  __kmp_tid_from_gtid(gtid);
               ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                   ompt_scope_begin, OMPT_CUR_TEAM_DATA(master_th),
                   &(task_info->task_data), 1,
@@ -1799,7 +1802,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
                                    ,
                                    exit_frame_p
 #endif
-                                   );
+            );
           }
 
 #if OMPT_SUPPORT
@@ -1889,8 +1892,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
                   ompt_scope_begin, OMPT_CUR_TEAM_DATA(master_th),
                   implicit_task_data, 1, __kmp_tid_from_gtid(gtid),
                   ompt_task_implicit);
-              OMPT_CUR_TASK_INFO(master_th)
-                  ->thread_num = __kmp_tid_from_gtid(gtid);
+              OMPT_CUR_TASK_INFO(master_th)->thread_num =
+                  __kmp_tid_from_gtid(gtid);
             }
 
             /* OMPT state */
@@ -1908,7 +1911,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
                                    ,
                                    exit_frame_p
 #endif
-                                   );
+            );
           }
 
 #if OMPT_SUPPORT
@@ -2655,7 +2658,7 @@ void __kmp_set_num_threads(int new_nth, int gtid) {
 #if KMP_NESTED_HOT_TEAMS
       && __kmp_hot_teams_max_level && !__kmp_hot_teams_mode
 #endif
-      ) {
+  ) {
     kmp_team_t *hot_team = root->r.r_hot_team;
     int f;
 
@@ -3200,7 +3203,7 @@ static void __kmp_initialize_root(kmp_root_t *root) {
                           __kmp_nested_proc_bind.bind_types[0], &r_icvs,
                           0 // argc
                           USE_NESTED_HOT_ARG(NULL) // master thread is unknown
-                          );
+      );
 #if USE_DEBUGGER
   // Non-NULL value should be assigned to make the debugger display the root
   // team.
@@ -3237,7 +3240,7 @@ static void __kmp_initialize_root(kmp_root_t *root) {
                           __kmp_nested_proc_bind.bind_types[0], &r_icvs,
                           0 // argc
                           USE_NESTED_HOT_ARG(NULL) // master thread is unknown
-                          );
+      );
   KF_TRACE(10, ("__kmp_initialize_root: after hot_team = %p\n", hot_team));
 
   root->r.r_hot_team = hot_team;
@@ -3268,7 +3271,7 @@ typedef kmp_team_list_item_t *kmp_team_list_t;
 static void __kmp_print_structure_team_accum( // Add team to list of teams.
     kmp_team_list_t list, // List of teams.
     kmp_team_p const *team // Team to add.
-    ) {
+) {
 
   // List must terminate with item where both entry and next are NULL.
   // Team is added to the list only once.
@@ -3312,7 +3315,7 @@ static void __kmp_print_structure_team_accum( // Add team to list of teams.
 
 static void __kmp_print_structure_team(char const *title, kmp_team_p const *team
 
-                                       ) {
+) {
   __kmp_printf("%s", title);
   if (team != NULL) {
     __kmp_printf("%2x %p\n", team->t.t_id, team);
@@ -3535,9 +3538,9 @@ static int __kmp_expand_threads(int nNeed) {
   kmp_info_t **newThreads;
   kmp_root_t **newRoot;
 
-// All calls to __kmp_expand_threads should be under __kmp_forkjoin_lock, so
-// resizing __kmp_threads does not need additional protection if foreign
-// threads are present
+  // All calls to __kmp_expand_threads should be under __kmp_forkjoin_lock, so
+  // resizing __kmp_threads does not need additional protection if foreign
+  // threads are present
 
 #if KMP_OS_WINDOWS && !KMP_DYNAMIC_LIB
   /* only for Windows static library */
@@ -3856,7 +3859,8 @@ int __kmp_register_root(int initial_thread) {
     }
     ompt_data_t *task_data;
     ompt_data_t *parallel_data;
-    __ompt_get_task_info_internal(0, NULL, &task_data, NULL, &parallel_data, NULL);
+    __ompt_get_task_info_internal(0, NULL, &task_data, NULL, &parallel_data,
+                                  NULL);
     if (ompt_enabled.ompt_callback_implicit_task) {
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_begin, parallel_data, task_data, 1, 1, ompt_task_initial);
@@ -3951,7 +3955,8 @@ static int __kmp_reset_root(int gtid, kmp_root_t *root) {
 #if OMPT_SUPPORT
   ompt_data_t *task_data;
   ompt_data_t *parallel_data;
-  __ompt_get_task_info_internal(0, NULL, &task_data, NULL, &parallel_data, NULL);
+  __ompt_get_task_info_internal(0, NULL, &task_data, NULL, &parallel_data,
+                                NULL);
   if (ompt_enabled.ompt_callback_implicit_task) {
     ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
         ompt_scope_end, parallel_data, task_data, 0, 1, ompt_task_initial);
@@ -4192,8 +4197,9 @@ static void __kmp_initialize_info(kmp_info_t *this_thr, kmp_team_t *team,
             &dispatch->th_disp_buffer[team->t.t_max_nproc == 1
                                           ? 1
                                           : __kmp_dispatch_num_buffers],
-            disp_size, "th_%d.th_dispatch.th_disp_buffer "
-                       "(team_%d.t_dispatch[%d].th_disp_buffer)",
+            disp_size,
+            "th_%d.th_dispatch.th_disp_buffer "
+            "(team_%d.t_dispatch[%d].th_disp_buffer)",
             gtid, team->t.t_id, gtid);
       }
     } else {
@@ -5978,7 +5984,7 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
   TCW_SYNC_PTR(__kmp_threads[gtid], NULL);
 
   --__kmp_all_nth;
-// __kmp_nth was decremented when thread is added to the pool.
+  // __kmp_nth was decremented when thread is added to the pool.
 
 #ifdef KMP_ADJUST_BLOCKTIME
   /* Adjust blocktime back to user setting or default if necessary */
@@ -6526,7 +6532,7 @@ void __kmp_register_library_startup(void) {
       if (tail != NULL) {
         long *flag_addr = 0;
         long flag_val = 0;
-        KMP_SSCANF(flag_addr_str, "%p", RCAST(void**, &flag_addr));
+        KMP_SSCANF(flag_addr_str, "%p", RCAST(void **, &flag_addr));
         KMP_SSCANF(flag_val_str, "%lx", &flag_val);
         if (flag_addr != 0 && flag_val != 0 && strcmp(file_name, "") != 0) {
           // First, check whether environment-encoded address is mapped into
@@ -6571,7 +6577,9 @@ void __kmp_register_library_startup(void) {
         __kmp_env_unset(name);
 #endif
       } break;
-      default: { KMP_DEBUG_ASSERT(0); } break;
+      default: {
+        KMP_DEBUG_ASSERT(0);
+      } break;
       }
     }
     KMP_INTERNAL_FREE((void *)value);
@@ -7277,8 +7285,8 @@ int __kmp_invoke_task_func(int gtid) {
   int ompt_team_size;
 
   if (ompt_enabled.enabled) {
-    exit_frame_p = &(
-        team->t.t_implicit_task_taskdata[tid].ompt_task_info.frame.exit_frame.ptr);
+    exit_frame_p = &(team->t.t_implicit_task_taskdata[tid]
+                         .ompt_task_info.frame.exit_frame.ptr);
   } else {
     exit_frame_p = &dummy;
   }
@@ -7311,10 +7319,10 @@ int __kmp_invoke_task_func(int gtid) {
                               ,
                               exit_frame_p
 #endif
-                              );
+  );
 #if OMPT_SUPPORT
   *exit_frame_p = NULL;
-   this_thr->th.ompt_thread_info.parallel_flags |= ompt_parallel_team;
+  this_thr->th.ompt_thread_info.parallel_flags |= ompt_parallel_team;
 #endif
 
 #if KMP_STATS_ENABLED
@@ -7629,7 +7637,7 @@ void __kmp_internal_join(ident_t *id, int gtid, kmp_team_t *team) {
   KMP_ASSERT(KMP_MASTER_GTID(gtid));
   KMP_MB(); /* Flush all pending memory write invalidates.  */
 
-/* Join barrier after fork */
+  /* Join barrier after fork */
 
 #ifdef KMP_DEBUG
   if (__kmp_threads[gtid] &&
@@ -7673,7 +7681,8 @@ void __kmp_internal_join(ident_t *id, int gtid, kmp_team_t *team) {
 #endif
     if (!KMP_MASTER_TID(ds_tid) && ompt_enabled.ompt_callback_implicit_task) {
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
-          ompt_scope_end, NULL, task_data, 0, ds_tid, ompt_task_implicit); // TODO: Can this be ompt_task_initial?
+          ompt_scope_end, NULL, task_data, 0, ds_tid,
+          ompt_task_implicit); // TODO: Can this be ompt_task_initial?
     }
   }
 #endif
@@ -8103,7 +8112,7 @@ int __kmp_aux_get_num_teams() {
  *
  * Implementation-specific field types can be added
  * If a type is unknown, print "undefined"
-*/
+ */
 
 // Structure holding the short name, long name, and corresponding data type
 // for snprintf.  A table of these will represent the entire valid keyword
@@ -8298,7 +8307,7 @@ static int __kmp_aux_capture_affinity_field(int gtid, const kmp_info_t *th,
  * (not including null byte character)
  * The resultant string is printed to buffer, which the caller can then
  * handle afterwards
-*/
+ */
 size_t __kmp_aux_capture_affinity(int gtid, const char *format,
                                   kmp_str_buf_t *buffer) {
   const char *parse_ptr;

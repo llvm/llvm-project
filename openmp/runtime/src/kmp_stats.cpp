@@ -700,16 +700,18 @@ void kmp_stats_output_module::printPloticusFile() {
                    "   pagesize: 15 10\n"
                    "   scale: 1.0\n\n");
 
-  fprintf(plotOut, "#proc getdata\n"
-                   "   file: %s\n\n",
+  fprintf(plotOut,
+          "#proc getdata\n"
+          "   file: %s\n\n",
           eventsFileName);
 
-  fprintf(plotOut, "#proc areadef\n"
-                   "   title: OpenMP Sampling Timeline\n"
-                   "   titledetails: align=center size=16\n"
-                   "   rectangle: 1 1 13 9\n"
-                   "   xautorange: datafield=2,3\n"
-                   "   yautorange: -1 %d\n\n",
+  fprintf(plotOut,
+          "#proc areadef\n"
+          "   title: OpenMP Sampling Timeline\n"
+          "   titledetails: align=center size=16\n"
+          "   rectangle: 1 1 13 9\n"
+          "   xautorange: datafield=2,3\n"
+          "   yautorange: -1 %d\n\n",
           size);
 
   fprintf(plotOut, "#proc xaxis\n"
@@ -718,12 +720,13 @@ void kmp_stats_output_module::printPloticusFile() {
                    "   label: Time (ticks)\n"
                    "   labeldetails: size=14\n\n");
 
-  fprintf(plotOut, "#proc yaxis\n"
-                   "   stubs: inc 1\n"
-                   "   stubrange: 0 %d\n"
-                   "   stubdetails: size=12\n"
-                   "   label: Thread #\n"
-                   "   labeldetails: size=14\n\n",
+  fprintf(plotOut,
+          "#proc yaxis\n"
+          "   stubs: inc 1\n"
+          "   stubrange: 0 %d\n"
+          "   stubdetails: size=12\n"
+          "   label: Thread #\n"
+          "   labeldetails: size=14\n\n",
           size - 1);
 
   fprintf(plotOut, "#proc bars\n"
@@ -737,10 +740,11 @@ void kmp_stats_output_module::printPloticusFile() {
   for (i = 0; i < TIMER_LAST; i++) {
     if (timeStat::logEvent((timer_e)i)) {
       rgb_color c = getEventColor((timer_e)i);
-      fprintf(plotOut, "#proc legendentry\n"
-                       "   sampletype: color\n"
-                       "   label: %s\n"
-                       "   details: rgb(%1.1f,%1.1f,%1.1f)\n\n",
+      fprintf(plotOut,
+              "#proc legendentry\n"
+              "   sampletype: color\n"
+              "   label: %s\n"
+              "   details: rgb(%1.1f,%1.1f,%1.1f)\n\n",
               timeStat::name((timer_e)i), c.r, c.g, c.b);
     }
   }
@@ -833,10 +837,10 @@ void kmp_stats_output_module::outputStats(const char *heading) {
     for (timer_e s = timer_e(0); s < TIMER_LAST; s = timer_e(s + 1)) {
       // See if we should ignore this timer when aggregating
       if ((timeStat::masterOnly(s) && (t != 0)) || // Timer only valid on master
-          // and this thread is worker
+                                                   // and this thread is worker
           (timeStat::workerOnly(s) && (t == 0)) // Timer only valid on worker
           // and this thread is the master
-          ) {
+      ) {
         continue;
       }
 

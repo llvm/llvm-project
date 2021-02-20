@@ -315,7 +315,7 @@ static void __kmp_bget_enqueue(kmp_info_t *th, void *buf
                                ,
                                kmp_int32 rel_gtid
 #endif
-                               ) {
+) {
   bfhead_t *b = BFH(((char *)buf) - sizeof(bhead_t));
 
   KMP_DEBUG_ASSERT(b->bh.bb.bsize != 0);
@@ -738,7 +738,7 @@ static void brel(kmp_info_t *th, void *buf) {
                        ,
                        __kmp_gtid_from_thread(th)
 #endif
-                           );
+    );
     return;
   }
 
@@ -1945,10 +1945,9 @@ void *___kmp_fast_allocate(kmp_info_t *this_thr, size_t size KMP_SRC_LOC_DECL) {
   if (ptr != NULL) {
     // pop the head of no-sync free list
     this_thr->th.th_free_lists[index].th_free_list_self = *((void **)ptr);
-    KMP_DEBUG_ASSERT(
-        this_thr ==
-        ((kmp_mem_descr_t *)((kmp_uintptr_t)ptr - sizeof(kmp_mem_descr_t)))
-            ->ptr_aligned);
+    KMP_DEBUG_ASSERT(this_thr == ((kmp_mem_descr_t *)((kmp_uintptr_t)ptr -
+                                                      sizeof(kmp_mem_descr_t)))
+                                     ->ptr_aligned);
     goto end;
   }
   ptr = TCR_SYNC_PTR(this_thr->th.th_free_lists[index].th_free_list_sync);
@@ -1964,10 +1963,9 @@ void *___kmp_fast_allocate(kmp_info_t *this_thr, size_t size KMP_SRC_LOC_DECL) {
     // push the rest of chain into no-sync free list (can be NULL if there was
     // the only block)
     this_thr->th.th_free_lists[index].th_free_list_self = *((void **)ptr);
-    KMP_DEBUG_ASSERT(
-        this_thr ==
-        ((kmp_mem_descr_t *)((kmp_uintptr_t)ptr - sizeof(kmp_mem_descr_t)))
-            ->ptr_aligned);
+    KMP_DEBUG_ASSERT(this_thr == ((kmp_mem_descr_t *)((kmp_uintptr_t)ptr -
+                                                      sizeof(kmp_mem_descr_t)))
+                                     ->ptr_aligned);
     goto end;
   }
 
