@@ -2388,26 +2388,24 @@ TEST_F(ConstantRangeTest, binaryXor) {
 }
 
 TEST_F(ConstantRangeTest, binaryNot) {
-  // TODO: Improve binaryNot() implementation to remove the need for
-  // PreferSmallestUnsigned.
   TestUnaryOpExhaustive(
       [](const ConstantRange &CR) { return CR.binaryNot(); },
       [](const APInt &N) { return ~N; },
-      PreferSmallestUnsigned);
+      PreferSmallest);
   TestUnaryOpExhaustive(
       [](const ConstantRange &CR) {
         return CR.binaryXor(
             ConstantRange(APInt::getAllOnesValue(CR.getBitWidth())));
       },
       [](const APInt &N) { return ~N; },
-      PreferSmallestUnsigned);
+      PreferSmallest);
   TestUnaryOpExhaustive(
       [](const ConstantRange &CR) {
         return ConstantRange(APInt::getAllOnesValue(CR.getBitWidth()))
             .binaryXor(CR);
       },
       [](const APInt &N) { return ~N; },
-      PreferSmallestUnsigned);
+      PreferSmallest);
 }
 
 }  // anonymous namespace
