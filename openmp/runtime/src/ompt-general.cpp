@@ -308,7 +308,7 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
 #else
 #error Activation of OMPT is not supported on this platform.
 #endif
-        {// if (start_tool)
+        { // if (start_tool)
           ret = (*start_tool)(omp_version, runtime_version);
           if (ret) {
             OMPT_VERBOSE_INIT_CONTINUED_PRINT("Success.\n");
@@ -428,9 +428,10 @@ void ompt_pre_init() {
     break;
 
   case omp_tool_error:
-    fprintf(stderr, "Warning: OMP_TOOL has invalid value \"%s\".\n"
-                    "  legal values are (NULL,\"\",\"disabled\","
-                    "\"enabled\").\n",
+    fprintf(stderr,
+            "Warning: OMP_TOOL has invalid value \"%s\".\n"
+            "  legal values are (NULL,\"\",\"disabled\","
+            "\"enabled\").\n",
             ompt_env_var);
     break;
   }
@@ -459,7 +460,8 @@ void ompt_post_init() {
   //--------------------------------------------------
   if (ompt_start_tool_result) {
     ompt_enabled.enabled = !!ompt_start_tool_result->initialize(
-        ompt_fn_lookup, omp_get_initial_device(), &(ompt_start_tool_result->tool_data));
+        ompt_fn_lookup, omp_get_initial_device(),
+        &(ompt_start_tool_result->tool_data));
 
     if (!ompt_enabled.enabled) {
       // tool not enabled, zero out the bitmap, and done
@@ -477,7 +479,8 @@ void ompt_post_init() {
     }
     ompt_data_t *task_data;
     ompt_data_t *parallel_data;
-    __ompt_get_task_info_internal(0, NULL, &task_data, NULL, &parallel_data, NULL);
+    __ompt_get_task_info_internal(0, NULL, &task_data, NULL, &parallel_data,
+                                  NULL);
     if (ompt_enabled.ompt_callback_implicit_task) {
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_begin, parallel_data, task_data, 1, 1, ompt_task_initial);
@@ -540,7 +543,7 @@ OMPT_API_ROUTINE int ompt_enumerate_mutex_impls(int current_impl,
  ****************************************************************************/
 
 OMPT_API_ROUTINE ompt_set_result_t ompt_set_callback(ompt_callbacks_t which,
-                                       ompt_callback_t callback) {
+                                                     ompt_callback_t callback) {
   switch (which) {
 
 #define ompt_event_macro(event_name, callback_type, event_id)                  \
@@ -782,7 +785,7 @@ OMPT_API_ROUTINE int ompt_get_ompt_version() { return OMPT_VERSION; }
 */
 
 /*****************************************************************************
-* application-facing API
+ * application-facing API
  ****************************************************************************/
 
 /*----------------------------------------------------------------------------

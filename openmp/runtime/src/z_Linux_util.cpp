@@ -122,14 +122,13 @@ void __kmp_affinity_bind_thread(int which) {
  * Linux* OS by checking __NR_sched_{get,set}affinity system calls, and set
  * __kmp_affin_mask_size to the appropriate value (0 means not capable). */
 void __kmp_affinity_determine_capable(const char *env_var) {
-// Check and see if the OS supports thread affinity.
+  // Check and see if the OS supports thread affinity.
 
 #if KMP_OS_LINUX
 #define KMP_CPU_SET_SIZE_LIMIT (1024 * 1024)
 #elif KMP_OS_FREEBSD
 #define KMP_CPU_SET_SIZE_LIMIT (sizeof(cpuset_t))
 #endif
-
 
 #if KMP_OS_LINUX
   // If Linux* OS:
@@ -281,7 +280,8 @@ void __kmp_affinity_determine_capable(const char *env_var) {
   long gCode;
   unsigned char *buf;
   buf = (unsigned char *)KMP_INTERNAL_MALLOC(KMP_CPU_SET_SIZE_LIMIT);
-  gCode = pthread_getaffinity_np(pthread_self(), KMP_CPU_SET_SIZE_LIMIT, reinterpret_cast<cpuset_t *>(buf));
+  gCode = pthread_getaffinity_np(pthread_self(), KMP_CPU_SET_SIZE_LIMIT,
+                                 reinterpret_cast<cpuset_t *>(buf));
   KA_TRACE(30, ("__kmp_affinity_determine_capable: "
                 "initial getaffinity call returned %d errno = %d\n",
                 gCode, errno));
@@ -289,7 +289,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     KMP_AFFINITY_ENABLE(KMP_CPU_SET_SIZE_LIMIT);
     KA_TRACE(10, ("__kmp_affinity_determine_capable: "
                   "affinity supported (mask size %d)\n",
-		  (int)__kmp_affin_mask_size));
+                  (int)__kmp_affin_mask_size));
     KMP_INTERNAL_FREE(buf);
     return;
   }
@@ -474,7 +474,7 @@ void __kmp_terminate_thread(int gtid) {
 static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
   int stack_data;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-        KMP_OS_HURD
+    KMP_OS_HURD
   pthread_attr_t attr;
   int status;
   size_t size = 0;
@@ -512,8 +512,8 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
     TCW_4(th->th.th_info.ds.ds_stackgrow, FALSE);
     return TRUE;
   }
-#endif /* KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||
-              KMP_OS_HURD */
+#endif /* KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD  \
+          || KMP_OS_HURD */
   /* Use incremental refinement starting from initial conservative estimate */
   TCW_PTR(th->th.th_info.ds.ds_stacksize, 0);
   TCW_PTR(th->th.th_info.ds.ds_stackbase, &stack_data);
@@ -528,7 +528,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
   void *exit_val;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-        KMP_OS_OPENBSD || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_HURD
   void *volatile padding = 0;
 #endif
   int gtid;
@@ -577,7 +577,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-        KMP_OS_OPENBSD
+    KMP_OS_OPENBSD
   if (__kmp_stkoffset > 0 && gtid > 0) {
     padding = KMP_ALLOCA(gtid * __kmp_stkoffset);
   }
@@ -830,10 +830,10 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
   stack_size += gtid * __kmp_stkoffset * 2;
 
 #if defined(__ANDROID__) && __ANDROID_API__ < 19
-    // Round the stack size to a multiple of the page size. Older versions of
-    // Android (until KitKat) would fail pthread_attr_setstacksize with EINVAL
-    // if the stack size was not a multiple of the page size.
-    stack_size = (stack_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+  // Round the stack size to a multiple of the page size. Older versions of
+  // Android (until KitKat) would fail pthread_attr_setstacksize with EINVAL
+  // if the stack size was not a multiple of the page size.
+  stack_size = (stack_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 #endif
 
   KA_TRACE(10, ("__kmp_create_worker: T#%d, default stacksize = %lu bytes, "
@@ -1395,9 +1395,8 @@ void __kmp_suspend_initialize_thread(kmp_info_t *th) {
   if (old_value == new_value)
     return;
   // Wait, then return if being initialized
-  if (old_value == -1 ||
-      !__kmp_atomic_compare_store(&th->th.th_suspend_init_count, old_value,
-                                  -1)) {
+  if (old_value == -1 || !__kmp_atomic_compare_store(
+                             &th->th.th_suspend_init_count, old_value, -1)) {
     while (KMP_ATOMIC_LD_ACQ(&th->th.th_suspend_init_count) != new_value) {
       KMP_CPU_PAUSE();
     }
@@ -1807,7 +1806,7 @@ static int __kmp_get_xproc(void) {
   int r = 0;
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-        KMP_OS_OPENBSD || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_HURD
 
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_ONLN), &(r));
 
@@ -1870,7 +1869,7 @@ void __kmp_runtime_initialize(void) {
 
   __kmp_xproc = __kmp_get_xproc();
 
-#if ! KMP_32_BIT_ARCH
+#if !KMP_32_BIT_ARCH
   struct rlimit rlim;
   // read stack size of calling thread, save it as default for worker threads;
   // this should be done before reading environment variables
@@ -2015,8 +2014,8 @@ int __kmp_is_address_mapped(void *addr) {
 
 #if KMP_OS_LINUX || KMP_OS_HURD
 
-  /* On GNUish OSes, read the /proc/<pid>/maps pseudo-file to get all the address
-     ranges mapped into the address space. */
+  /* On GNUish OSes, read the /proc/<pid>/maps pseudo-file to get all the
+     address ranges mapped into the address space. */
 
   char *name = __kmp_str_format("/proc/%d/maps", getpid());
   FILE *file = NULL;
@@ -2057,36 +2056,36 @@ int __kmp_is_address_mapped(void *addr) {
   int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_VMMAP, getpid()};
   rc = sysctl(mib, 4, NULL, &lstsz, NULL, 0);
   if (rc < 0)
-     return 0;
+    return 0;
   // We pass from number of vm entry's semantic
   // to size of whole entry map list.
   lstsz = lstsz * 4 / 3;
   buf = reinterpret_cast<char *>(kmpc_malloc(lstsz));
   rc = sysctl(mib, 4, buf, &lstsz, NULL, 0);
   if (rc < 0) {
-     kmpc_free(buf);
-     return 0;
+    kmpc_free(buf);
+    return 0;
   }
 
   char *lw = buf;
   char *up = buf + lstsz;
 
   while (lw < up) {
-      struct kinfo_vmentry *cur = reinterpret_cast<struct kinfo_vmentry *>(lw);
-      size_t cursz = cur->kve_structsize;
-      if (cursz == 0)
-          break;
-      void *start = reinterpret_cast<void *>(cur->kve_start);
-      void *end = reinterpret_cast<void *>(cur->kve_end);
-      // Readable/Writable addresses within current map entry
-      if ((addr >= start) && (addr < end)) {
-          if ((cur->kve_protection & KVME_PROT_READ) != 0 &&
-              (cur->kve_protection & KVME_PROT_WRITE) != 0) {
-              found = 1;
-              break;
-          }
+    struct kinfo_vmentry *cur = reinterpret_cast<struct kinfo_vmentry *>(lw);
+    size_t cursz = cur->kve_structsize;
+    if (cursz == 0)
+      break;
+    void *start = reinterpret_cast<void *>(cur->kve_start);
+    void *end = reinterpret_cast<void *>(cur->kve_end);
+    // Readable/Writable addresses within current map entry
+    if ((addr >= start) && (addr < end)) {
+      if ((cur->kve_protection & KVME_PROT_READ) != 0 &&
+          (cur->kve_protection & KVME_PROT_WRITE) != 0) {
+        found = 1;
+        break;
       }
-      lw += cursz;
+    }
+    lw += cursz;
   }
   kmpc_free(buf);
 
@@ -2103,7 +2102,7 @@ int __kmp_is_address_mapped(void *addr) {
       1, // Number of bytes to be read.
       (vm_address_t)(&buffer), // Address of buffer to save read bytes in.
       &count // Address of var to save number of read bytes in.
-      );
+  );
   if (rc == 0) {
     // Memory successfully read.
     found = 1;

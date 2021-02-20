@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 #pragma omp declare target
 
-#include "interface.h"
 #include "common/debug.h"
+#include "interface.h"
 
 EXTERN
 void __kmpc_critical(kmp_Ident *loc, int32_t global_tid,
