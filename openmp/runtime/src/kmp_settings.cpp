@@ -223,11 +223,11 @@ static int __kmp_strcasecmp_with_sentinel(char const *a, char const *b,
     ++a;
     ++b;
   }
-  return *a
-             ? (*b && *b != sentinel)
-                   ? (int)(unsigned char)*a - (int)(unsigned char)*b
-                   : 1
-             : (*b && *b != sentinel) ? -1 : 0;
+  return *a                       ? (*b && *b != sentinel)
+                                        ? (int)(unsigned char)*a - (int)(unsigned char)*b
+                                        : 1
+         : (*b && *b != sentinel) ? -1
+                                  : 0;
 }
 
 // =============================================================================
@@ -272,7 +272,7 @@ static int __kmp_stg_check_rivals( // 0 -- Ok, 1 -- errors found.
     char const *name, // Name of variable.
     char const *value, // Value of the variable.
     kmp_setting_t **rivals // List of rival settings (must include current one).
-    );
+);
 
 // -----------------------------------------------------------------------------
 // Helper parse functions.
@@ -367,7 +367,7 @@ static void __kmp_stg_parse_int(
     int min, // I: Minimum allowed value.
     int max, // I: Maximum allowed value.
     int *out // O: Output (parsed) value.
-    ) {
+) {
   char const *msg = NULL;
   kmp_uint64 uint = *out;
   __kmp_str_to_uint(value, &uint, &msg);
@@ -910,7 +910,7 @@ static void __kmp_stg_parse_stackpad(char const *name, char const *value,
                       KMP_MIN_STKPADDING, // Min value
                       KMP_MAX_STKPADDING, // Max value
                       &__kmp_stkpadding // Var to initialize
-                      );
+  );
 } // __kmp_stg_parse_stackpad
 
 static void __kmp_stg_print_stackpad(kmp_str_buf_t *buffer, char const *name,
@@ -2424,7 +2424,9 @@ static void __kmp_parse_affinity_env(char const *name, char const *value,
       KMP_WARNING(AffNoParam, name, "default");
     }
   } break;
-  default: { KMP_ASSERT(0); }
+  default: {
+    KMP_ASSERT(0);
+  }
   }
 } // __kmp_parse_affinity_env
 
@@ -4700,7 +4702,8 @@ static void __kmp_stg_print_adaptive_lock_props(kmp_str_buf_t *buffer,
 static void __kmp_stg_parse_speculative_statsfile(char const *name,
                                                   char const *value,
                                                   void *data) {
-  __kmp_stg_parse_file(name, value, "", CCAST(char**, &__kmp_speculative_statsfile));
+  __kmp_stg_parse_file(name, value, "",
+                       CCAST(char **, &__kmp_speculative_statsfile));
 } // __kmp_stg_parse_speculative_statsfile
 
 static void __kmp_stg_print_speculative_statsfile(kmp_str_buf_t *buffer,
@@ -4948,11 +4951,10 @@ static void __kmp_stg_print_forkjoin_frames_mode(kmp_str_buf_t *buffer,
 // -----------------------------------------------------------------------------
 // KMP_ENABLE_TASK_THROTTLING
 
-static void __kmp_stg_parse_task_throttling(char const *name,
-                                            char const *value, void *data) {
+static void __kmp_stg_parse_task_throttling(char const *name, char const *value,
+                                            void *data) {
   __kmp_stg_parse_bool(name, value, &__kmp_enable_task_throttling);
 } // __kmp_stg_parse_task_throttling
-
 
 static void __kmp_stg_print_task_throttling(kmp_str_buf_t *buffer,
                                             char const *name, void *data) {
@@ -5065,12 +5067,14 @@ static void __kmp_stg_print_omp_tool_libraries(kmp_str_buf_t *buffer,
 static char *__kmp_tool_verbose_init = NULL;
 
 static void __kmp_stg_parse_omp_tool_verbose_init(char const *name,
-                                                  char const *value, void *data) {
+                                                  char const *value,
+                                                  void *data) {
   __kmp_stg_parse_str(name, value, &__kmp_tool_verbose_init);
 } // __kmp_stg_parse_omp_tool_libraries
 
 static void __kmp_stg_print_omp_tool_verbose_init(kmp_str_buf_t *buffer,
-                                                  char const *name, void *data) {
+                                                  char const *name,
+                                                  void *data) {
   if (__kmp_tool_verbose_init)
     __kmp_stg_print_str(buffer, name, __kmp_tool_libraries);
   else {
@@ -5604,7 +5608,7 @@ static int __kmp_stg_check_rivals( // 0 -- Ok, 1 -- errors found.
     char const *name, // Name of variable.
     char const *value, // Value of the variable.
     kmp_setting_t **rivals // List of rival settings (must include current one).
-    ) {
+) {
 
   if (rivals == NULL) {
     return 0;
@@ -5724,15 +5728,15 @@ void __kmp_env_initialize(char const *string) {
   __kmp_affinity_notype = NULL;
   char const *aff_str = __kmp_env_blk_var(&block, "KMP_AFFINITY");
   if (aff_str != NULL) {
-// Check if the KMP_AFFINITY type is specified in the string.
-// We just search the string for "compact", "scatter", etc.
-// without really parsing the string.  The syntax of the
-// KMP_AFFINITY env var is such that none of the affinity
-// type names can appear anywhere other that the type
-// specifier, even as substrings.
-//
-// I can't find a case-insensitive version of strstr on Windows* OS.
-// Use the case-sensitive version for now.
+    // Check if the KMP_AFFINITY type is specified in the string.
+    // We just search the string for "compact", "scatter", etc.
+    // without really parsing the string.  The syntax of the
+    // KMP_AFFINITY env var is such that none of the affinity
+    // type names can appear anywhere other that the type
+    // specifier, even as substrings.
+    //
+    // I can't find a case-insensitive version of strstr on Windows* OS.
+    // Use the case-sensitive version for now.
 
 #if KMP_OS_WINDOWS
 #define FIND strstr
@@ -6103,7 +6107,7 @@ void __kmp_env_print() {
 #ifdef KMP_GOMP_COMPAT
         || strncmp(name, "GOMP_", 5) == 0
 #endif // KMP_GOMP_COMPAT
-        ) {
+    ) {
       __kmp_str_buf_print(&buffer, "   %s=%s\n", name, value);
     }
   }
@@ -6131,7 +6135,6 @@ void __kmp_env_print_2() {
   __kmp_display_env_impl(__kmp_display_env, __kmp_display_env_verbose);
 } // __kmp_env_print_2
 
-
 void __kmp_display_env_impl(int display_env, int display_env_verbose) {
   kmp_env_blk_t block;
   kmp_str_buf_t buffer;
@@ -6149,8 +6152,7 @@ void __kmp_display_env_impl(int display_env, int display_env_verbose) {
 
   for (int i = 0; i < __kmp_stg_count; ++i) {
     if (__kmp_stg_table[i].print != NULL &&
-        ((display_env &&
-          strncmp(__kmp_stg_table[i].name, "OMP_", 4) == 0) ||
+        ((display_env && strncmp(__kmp_stg_table[i].name, "OMP_", 4) == 0) ||
          display_env_verbose)) {
       __kmp_stg_table[i].print(&buffer, __kmp_stg_table[i].name,
                                __kmp_stg_table[i].data);

@@ -188,9 +188,9 @@ EXTERN void __kmpc_kernel_end_parallel() {
   // If we have the whole warp, reconverge all the threads in the warp before
   // actually trying to change the parallel level. Otherwise, parallel level can
   // be changed incorrectly because of threads divergence.
-    bool IsActiveParallelRegion = threadsInTeam != 1;
-    DecParallelLevel(IsActiveParallelRegion,
-                     IsActiveParallelRegion ? __kmpc_impl_all_lanes : 1u);
+  bool IsActiveParallelRegion = threadsInTeam != 1;
+  DecParallelLevel(IsActiveParallelRegion,
+                   IsActiveParallelRegion ? __kmpc_impl_all_lanes : 1u);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -281,7 +281,8 @@ EXTERN int32_t __kmpc_global_thread_num(kmp_Ident *loc) {
 EXTERN void __kmpc_push_num_threads(kmp_Ident *loc, int32_t tid,
                                     int32_t num_threads) {
   PRINT(LD_IO, "call kmpc_push_num_threads %d\n", num_threads);
-  ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc), "Runtime must be initialized.");
+  ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
+          "Runtime must be initialized.");
   tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
   omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(tid) =
       num_threads;
@@ -293,12 +294,10 @@ EXTERN void __kmpc_push_num_threads(kmp_Ident *loc, int32_t tid,
 EXTERN void __kmpc_push_num_teams(kmp_Ident *loc, int32_t tid,
                                   int32_t num_teams, int32_t thread_limit) {
   PRINT(LD_IO, "call kmpc_push_num_teams %d\n", (int)num_teams);
-  ASSERT0(LT_FUSSY, 0,
-          "should never have anything with new teams on device");
+  ASSERT0(LT_FUSSY, 0, "should never have anything with new teams on device");
 }
 
-EXTERN void __kmpc_push_proc_bind(kmp_Ident *loc, uint32_t tid,
-                                  int proc_bind) {
+EXTERN void __kmpc_push_proc_bind(kmp_Ident *loc, uint32_t tid, int proc_bind) {
   PRINT(LD_IO, "call kmpc_push_proc_bind %d\n", (int)proc_bind);
 }
 
