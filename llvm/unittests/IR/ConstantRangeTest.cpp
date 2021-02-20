@@ -1080,10 +1080,18 @@ TEST_F(ConstantRangeTest, UMax) {
   EXPECT_EQ(Some.umax(Some), Some);
   EXPECT_EQ(Some.umax(Wrap), ConstantRange(APInt(16, 0xa), APInt(16, 0)));
   EXPECT_EQ(Some.umax(One), Some);
-  // TODO: ConstantRange is currently over-conservative here.
-  EXPECT_EQ(Wrap.umax(Wrap), Full);
+  EXPECT_EQ(Wrap.umax(Wrap), Wrap);
   EXPECT_EQ(Wrap.umax(One), ConstantRange(APInt(16, 0xa), APInt(16, 0)));
   EXPECT_EQ(One.umax(One), One);
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.umax(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return APIntOps::umax(N1, N2);
+      },
+      PreferSmallestNonFullUnsigned);
 }
 
 TEST_F(ConstantRangeTest, SMax) {
@@ -1105,6 +1113,15 @@ TEST_F(ConstantRangeTest, SMax) {
   EXPECT_EQ(Wrap.smax(One), ConstantRange(APInt(16, 0xa),
                                           APInt(16, (uint64_t)INT16_MIN)));
   EXPECT_EQ(One.smax(One), One);
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.smax(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return APIntOps::smax(N1, N2);
+      },
+      PreferSmallestNonFullSigned);
 }
 
 TEST_F(ConstantRangeTest, UMin) {
@@ -1119,10 +1136,18 @@ TEST_F(ConstantRangeTest, UMin) {
   EXPECT_EQ(Some.umin(Some), Some);
   EXPECT_EQ(Some.umin(Wrap), ConstantRange(APInt(16, 0), APInt(16, 0xaaa)));
   EXPECT_EQ(Some.umin(One), One);
-  // TODO: ConstantRange is currently over-conservative here.
-  EXPECT_EQ(Wrap.umin(Wrap), Full);
+  EXPECT_EQ(Wrap.umin(Wrap), Wrap);
   EXPECT_EQ(Wrap.umin(One), ConstantRange(APInt(16, 0), APInt(16, 0xb)));
   EXPECT_EQ(One.umin(One), One);
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.umin(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return APIntOps::umin(N1, N2);
+      },
+      PreferSmallestNonFullUnsigned);
 }
 
 TEST_F(ConstantRangeTest, SMin) {
@@ -1139,11 +1164,19 @@ TEST_F(ConstantRangeTest, SMin) {
   EXPECT_EQ(Some.smin(Wrap), ConstantRange(APInt(16, (uint64_t)INT16_MIN),
                                            APInt(16, 0xaaa)));
   EXPECT_EQ(Some.smin(One), One);
-  // TODO: ConstantRange is currently over-conservative here.
-  EXPECT_EQ(Wrap.smin(Wrap), Full);
+  EXPECT_EQ(Wrap.smin(Wrap), Wrap);
   EXPECT_EQ(Wrap.smin(One), ConstantRange(APInt(16, (uint64_t)INT16_MIN),
                                           APInt(16, 0xb)));
   EXPECT_EQ(One.smin(One), One);
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.smin(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return APIntOps::smin(N1, N2);
+      },
+      PreferSmallestNonFullSigned);
 }
 
 TEST_F(ConstantRangeTest, UDiv) {
