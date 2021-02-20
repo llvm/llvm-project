@@ -1909,10 +1909,14 @@ void __kmp_runtime_initialize(void) {
   KMP_CHECK_SYSFAIL("pthread_mutexattr_init", status);
   status = pthread_mutex_init(&__kmp_wait_mx.m_mutex, &mutex_attr);
   KMP_CHECK_SYSFAIL("pthread_mutex_init", status);
+  status = pthread_mutexattr_destroy(&mutex_attr);
+  KMP_CHECK_SYSFAIL("pthread_mutexattr_destroy", status);
   status = pthread_condattr_init(&cond_attr);
   KMP_CHECK_SYSFAIL("pthread_condattr_init", status);
   status = pthread_cond_init(&__kmp_wait_cv.c_cond, &cond_attr);
   KMP_CHECK_SYSFAIL("pthread_cond_init", status);
+  status = pthread_condattr_destroy(&cond_attr);
+  KMP_CHECK_SYSFAIL("pthread_condattr_destroy", status);
 #if USE_ITT_BUILD
   __kmp_itt_initialize();
 #endif /* USE_ITT_BUILD */
