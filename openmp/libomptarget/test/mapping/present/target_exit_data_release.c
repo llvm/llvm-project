@@ -23,18 +23,18 @@ int main() {
   fprintf(stderr, "addr=%p, size=%ld\n", &i, sizeof i);
 
   // CHECK-NOT: Libomptarget
-#pragma omp target enter data map(alloc: i)
-#pragma omp target exit data map(present, release: i)
+  #pragma omp target enter data map(alloc: i)
+  #pragma omp target exit data map(present, release: i)
 
-  // CHECK: i is present
-  fprintf(stderr, "i is present\n");
+  // CHECK: i was present
+  fprintf(stderr, "i was present\n");
 
   // CHECK: Libomptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
   // CHECK: Libomptarget fatal error 1: failure of target construct while offloading is mandatory
-#pragma omp target exit data map(present, release: i)
+  #pragma omp target exit data map(present, release: i)
 
-  // CHECK-NOT: i is present
-  fprintf(stderr, "i is present\n");
+  // CHECK-NOT: i was present
+  fprintf(stderr, "i was present\n");
 
   return 0;
 }
