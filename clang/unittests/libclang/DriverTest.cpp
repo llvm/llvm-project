@@ -40,10 +40,10 @@ TEST(DriverTests, WorkingDirectory) {
 
   const char **FDCD = std::find(CompileAction->ArgV, CompileAction->ArgV +
                                                      CompileAction->ArgC,
-                                llvm::StringRef("-fdebug-compilation-dir"));
+                                llvm::StringRef("-fdebug-compilation-dir=/"));
   ASSERT_NE(FDCD, CompileAction->ArgV + CompileAction->ArgC);
   ASSERT_NE(FDCD + 1, CompileAction->ArgV + CompileAction->ArgC);
-  EXPECT_STREQ(*(FDCD + 1), "/");
+  EXPECT_STREQ(*FDCD, "-fdebug-compilation-dir=/");
 
   clang_Driver_ExternalActionList_dispose(EAL);
 }
