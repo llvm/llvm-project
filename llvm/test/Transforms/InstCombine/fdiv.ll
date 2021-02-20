@@ -4,6 +4,10 @@
 declare float @llvm.fabs.f32(float) nounwind readnone
 declare float @llvm.pow.f32(float, float) nounwind readnone
 declare <2 x half> @llvm.pow.v2f16(<2 x half>, <2 x half>) nounwind readnone
+declare float @llvm.exp.f32(float) nounwind readnone
+declare <2 x half> @llvm.exp.v2f16(<2 x half>) nounwind readnone
+declare float @llvm.exp2.f32(float) nounwind readnone
+declare <2 x half> @llvm.exp2.v2f16(<2 x half>) nounwind readnone
 
 define float @exact_inverse(float %x) {
 ; CHECK-LABEL: @exact_inverse(
@@ -721,6 +725,136 @@ define <2 x half> @pow_recip(<2 x half> %x, <2 x half> %y) {
 ; CHECK-NEXT:    ret <2 x half> [[TMP2]]
 ;
   %p = call <2 x half> @llvm.pow.v2f16(<2 x half> %x, <2 x half> %y)
+  %r = fdiv reassoc arcp ninf <2 x half> <half 1.0, half 1.0>, %p
+  ret <2 x half> %r
+}
+
+define float @exp_divisor(float %y, float %z) {
+; CHECK-LABEL: @exp_divisor(
+; CHECK-NEXT:    [[P:%.*]] = call float @llvm.exp.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call float @llvm.exp.f32(float %y)
+  %r = fdiv reassoc arcp float %z, %p
+  ret float %r
+}
+
+; Negative test - don't create an extra exp
+
+define float @exp_divisor_extra_use(float %y, float %z) {
+; CHECK-LABEL: @exp_divisor_extra_use(
+; CHECK-NEXT:    [[P:%.*]] = call float @llvm.exp.f32(float [[Y:%.*]])
+; CHECK-NEXT:    call void @use_f32(float [[P]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call float @llvm.exp.f32(float %y)
+  call void @use_f32(float %p)
+  %r = fdiv reassoc arcp float %z, %p
+  ret float %r
+}
+
+; Negative test - must have reassoc+arcp
+
+define float @exp_divisor_not_enough_fmf(float %y, float %z) {
+; CHECK-LABEL: @exp_divisor_not_enough_fmf(
+; CHECK-NEXT:    [[P:%.*]] = call fast float @llvm.exp.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call fast float @llvm.exp.f32(float %y)
+  %r = fdiv reassoc float %z, %p
+  ret float %r
+}
+
+; Negative test - must have reassoc+arcp
+
+define float @exp_divisor_not_enough_fmf2(float %y, float %z) {
+; CHECK-LABEL: @exp_divisor_not_enough_fmf2(
+; CHECK-NEXT:    [[P:%.*]] = call fast float @llvm.exp.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv arcp float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call fast float @llvm.exp.f32(float %y)
+  %r = fdiv arcp float %z, %p
+  ret float %r
+}
+
+; Special-case - reciprocal does not require extra fmul
+
+define <2 x half> @exp_recip(<2 x half> %x, <2 x half> %y) {
+; CHECK-LABEL: @exp_recip(
+; CHECK-NEXT:    [[P:%.*]] = call <2 x half> @llvm.exp.v2f16(<2 x half> [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf arcp <2 x half> <half 0xH3C00, half 0xH3C00>, [[P]]
+; CHECK-NEXT:    ret <2 x half> [[R]]
+;
+  %p = call <2 x half> @llvm.exp.v2f16(<2 x half> %y)
+  %r = fdiv reassoc arcp ninf <2 x half> <half 1.0, half 1.0>, %p
+  ret <2 x half> %r
+}
+
+define float @exp2_divisor(float %y, float %z) {
+; CHECK-LABEL: @exp2_divisor(
+; CHECK-NEXT:    [[P:%.*]] = call float @llvm.exp2.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call float @llvm.exp2.f32(float %y)
+  %r = fdiv reassoc arcp float %z, %p
+  ret float %r
+}
+
+; Negative test - don't create an extra exp
+
+define float @exp2_divisor_extra_use(float %y, float %z) {
+; CHECK-LABEL: @exp2_divisor_extra_use(
+; CHECK-NEXT:    [[P:%.*]] = call float @llvm.exp2.f32(float [[Y:%.*]])
+; CHECK-NEXT:    call void @use_f32(float [[P]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call float @llvm.exp2.f32(float %y)
+  call void @use_f32(float %p)
+  %r = fdiv reassoc arcp float %z, %p
+  ret float %r
+}
+
+; Negative test - must have reassoc+arcp
+
+define float @exp2_divisor_not_enough_fmf(float %y, float %z) {
+; CHECK-LABEL: @exp2_divisor_not_enough_fmf(
+; CHECK-NEXT:    [[P:%.*]] = call fast float @llvm.exp2.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call fast float @llvm.exp2.f32(float %y)
+  %r = fdiv reassoc float %z, %p
+  ret float %r
+}
+
+; Negative test - must have reassoc+arcp
+
+define float @exp2_divisor_not_enough_fmf2(float %y, float %z) {
+; CHECK-LABEL: @exp2_divisor_not_enough_fmf2(
+; CHECK-NEXT:    [[P:%.*]] = call fast float @llvm.exp2.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv arcp float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call fast float @llvm.exp2.f32(float %y)
+  %r = fdiv arcp float %z, %p
+  ret float %r
+}
+
+; Special-case - reciprocal does not require extra fmul
+
+define <2 x half> @exp2_recip(<2 x half> %x, <2 x half> %y) {
+; CHECK-LABEL: @exp2_recip(
+; CHECK-NEXT:    [[P:%.*]] = call <2 x half> @llvm.exp2.v2f16(<2 x half> [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf arcp <2 x half> <half 0xH3C00, half 0xH3C00>, [[P]]
+; CHECK-NEXT:    ret <2 x half> [[R]]
+;
+  %p = call <2 x half> @llvm.exp2.v2f16(<2 x half> %y)
   %r = fdiv reassoc arcp ninf <2 x half> <half 1.0, half 1.0>, %p
   ret <2 x half> %r
 }
