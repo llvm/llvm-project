@@ -14,11 +14,9 @@
 
 #include "llvm/ADT/STLExtras.h"
 
-#include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
@@ -44,35 +42,36 @@
 
 using namespace mlir;
 
-inline void emit_cuda_error(const llvm::Twine &message, const char *buffer,
-                            CUresult error, Location loc) {
-  emitError(loc, message.concat(" failed with error code ")
+static void emitCudaError(const llvm::Twine &expr, const char *buffer,
+                          CUresult result, Location loc) {
+  const char *error;
+  cuGetErrorString(result, &error);
+  emitError(loc, expr.concat(" failed with error code ")
                      .concat(llvm::Twine{error})
                      .concat("[")
                      .concat(buffer)
                      .concat("]"));
 }
 
-#define RETURN_ON_CUDA_ERROR(expr, msg)                                        \
-  {                                                                            \
-    auto _cuda_error = (expr);                                                 \
-    if (_cuda_error != CUDA_SUCCESS) {                                         \
-      emit_cuda_error(msg, jitErrorBuffer, _cuda_error, loc);                  \
+#define RETURN_ON_CUDA_ERROR(expr)                                             \
+  do {                                                                         \
+    if (auto status = (expr)) {                                                \
+      emitCudaError(#expr, jitErrorBuffer, status, loc);                       \
       return {};                                                               \
     }                                                                          \
-  }
+  } while (false)
 
 OwnedBlob compilePtxToCubin(const std::string ptx, Location loc,
                             StringRef name) {
   char jitErrorBuffer[4096] = {0};
 
-  RETURN_ON_CUDA_ERROR(cuInit(0), "cuInit");
+  RETURN_ON_CUDA_ERROR(cuInit(0));
 
   // Linking requires a device context.
   CUdevice device;
-  RETURN_ON_CUDA_ERROR(cuDeviceGet(&device, 0), "cuDeviceGet");
+  RETURN_ON_CUDA_ERROR(cuDeviceGet(&device, 0));
   CUcontext context;
-  RETURN_ON_CUDA_ERROR(cuCtxCreate(&context, 0, device), "cuCtxCreate");
+  RETURN_ON_CUDA_ERROR(cuCtxCreate(&context, 0, device));
   CUlinkState linkState;
 
   CUjit_option jitOptions[] = {CU_JIT_ERROR_LOG_BUFFER,
@@ -83,8 +82,7 @@ OwnedBlob compilePtxToCubin(const std::string ptx, Location loc,
   RETURN_ON_CUDA_ERROR(cuLinkCreate(2,              /* number of jit options */
                                     jitOptions,     /* jit options */
                                     jitOptionsVals, /* jit option values */
-                                    &linkState),
-                       "cuLinkCreate");
+                                    &linkState));
 
   RETURN_ON_CUDA_ERROR(
       cuLinkAddData(linkState, CUjitInputType::CU_JIT_INPUT_PTX,
@@ -93,51 +91,69 @@ OwnedBlob compilePtxToCubin(const std::string ptx, Location loc,
                     0,                               /* number of jit options */
                     nullptr,                         /* jit options */
                     nullptr                          /* jit option values */
-                    ),
-      "cuLinkAddData");
+                    ));
 
   void *cubinData;
   size_t cubinSize;
-  RETURN_ON_CUDA_ERROR(cuLinkComplete(linkState, &cubinData, &cubinSize),
-                       "cuLinkComplete");
+  RETURN_ON_CUDA_ERROR(cuLinkComplete(linkState, &cubinData, &cubinSize));
 
   char *cubinAsChar = static_cast<char *>(cubinData);
   OwnedBlob result =
       std::make_unique<std::vector<char>>(cubinAsChar, cubinAsChar + cubinSize);
 
   // This will also destroy the cubin data.
-  RETURN_ON_CUDA_ERROR(cuLinkDestroy(linkState), "cuLinkDestroy");
-  RETURN_ON_CUDA_ERROR(cuCtxDestroy(context), "cuCtxDestroy");
+  RETURN_ON_CUDA_ERROR(cuLinkDestroy(linkState));
+  RETURN_ON_CUDA_ERROR(cuCtxDestroy(context));
 
   return result;
 }
 
-static LogicalResult runMLIRPasses(ModuleOp m) {
-  PassManager pm(m.getContext());
+struct GpuToCubinPipelineOptions
+    : public mlir::PassPipelineOptions<GpuToCubinPipelineOptions> {
+  Option<std::string> gpuBinaryAnnotation{
+      *this, "gpu-binary-annotation",
+      llvm::cl::desc("Annotation attribute string for GPU binary")};
+};
+
+// Register cuda-runner specific passes.
+static void registerCudaRunnerPasses() {
+  PassPipelineRegistration<GpuToCubinPipelineOptions> registerGpuToCubin(
+      "gpu-to-cubin", "Generate CUBIN from gpu.launch regions",
+      [&](OpPassManager &pm, const GpuToCubinPipelineOptions &options) {
+        pm.addPass(createGpuKernelOutliningPass());
+        auto &kernelPm = pm.nest<gpu::GPUModuleOp>();
+        kernelPm.addPass(createStripDebugInfoPass());
+        kernelPm.addPass(createLowerGpuOpsToNVVMOpsPass());
+        kernelPm.addPass(createConvertGPUKernelToBlobPass(
+            translateModuleToLLVMIR, compilePtxToCubin, "nvptx64-nvidia-cuda",
+            "sm_35", "+ptx60", options.gpuBinaryAnnotation));
+      });
+  registerGPUPasses();
+  registerGpuToLLVMConversionPassPass();
+  registerAsyncPasses();
+  registerConvertAsyncToLLVMPass();
+  registerConvertStandardToLLVMPass();
+}
+
+static LogicalResult runMLIRPasses(ModuleOp module,
+                                   PassPipelineCLParser &passPipeline) {
+  PassManager pm(module.getContext(), PassManager::Nesting::Implicit);
   applyPassManagerCLOptions(pm);
 
-  const char gpuBinaryAnnotation[] = "nvvm.cubin";
-  pm.addPass(createGpuKernelOutliningPass());
-  auto &kernelPm = pm.nest<gpu::GPUModuleOp>();
-  kernelPm.addPass(createStripDebugInfoPass());
-  kernelPm.addPass(createLowerGpuOpsToNVVMOpsPass());
-  kernelPm.addPass(createConvertGPUKernelToBlobPass(
-      translateModuleToLLVMIR, compilePtxToCubin, "nvptx64-nvidia-cuda",
-      "sm_35", "+ptx60", gpuBinaryAnnotation));
-  auto &funcPm = pm.nest<FuncOp>();
-  funcPm.addPass(createGpuAsyncRegionPass());
-  funcPm.addPass(createAsyncRefCountingPass());
-  pm.addPass(createGpuToLLVMConversionPass(gpuBinaryAnnotation));
-  pm.addPass(createAsyncToAsyncRuntimePass());
-  pm.addPass(createConvertAsyncToLLVMPass());
-  mlir::LowerToLLVMOptions lower_to_llvm_opts;
-  pm.addPass(mlir::createLowerToLLVMPass(lower_to_llvm_opts));
+  auto errorHandler = [&](const Twine &msg) {
+    emitError(UnknownLoc::get(module.getContext())) << msg;
+    return failure();
+  };
 
-  return pm.run(m);
+  // Build the provided pipeline.
+  if (failed(passPipeline.addToPipeline(pm, errorHandler)))
+    return failure();
+
+  // Run the pipeline.
+  return pm.run(module);
 }
 
 int main(int argc, char **argv) {
-  registerPassManagerCLOptions();
   llvm::InitLLVM y(argc, argv);
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
@@ -150,8 +166,16 @@ int main(int argc, char **argv) {
 
   mlir::initializeLLVMPasses();
 
+  registerCudaRunnerPasses();
+  PassPipelineCLParser passPipeline("", "Compiler passes to run");
+  registerPassManagerCLOptions();
+
+  auto mlirTransformer = [&](ModuleOp module) {
+    return runMLIRPasses(module, passPipeline);
+  };
+
   mlir::JitRunnerConfig jitRunnerConfig;
-  jitRunnerConfig.mlirTransformer = runMLIRPasses;
+  jitRunnerConfig.mlirTransformer = mlirTransformer;
 
   mlir::DialectRegistry registry;
   registry.insert<mlir::LLVM::LLVMDialect, mlir::NVVM::NVVMDialect,
