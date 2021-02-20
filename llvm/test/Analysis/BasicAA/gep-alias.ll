@@ -247,7 +247,7 @@ define i32 @test12(i32 %x, i32 %y, i8* %p) nounwind {
 ; CHECK: [[U0ADDR:%[a-zA-Z0-9_]+]] = getelementptr inbounds [3 x i8], [3 x i8]* %u, i32 0, i32 0
 ; CHECK: [[U0:%[a-zA-Z0-9_]+]] = load i8, i8* [[U0ADDR]], align 1
 ; CHECK: [[U0ARG:%[a-zA-Z0-9_]+]] = zext i8 [[U0]] to i32
-; CHECK: call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([7 x i8], [7 x i8]* @.str, i32 0, i32 0), i32 [[T0ARG]], i32 [[U0ARG]])
+; CHECK: call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([7 x i8], [7 x i8]* @.str, i32 0, i32 0), i32 [[T0ARG]], i32 [[U0ARG]])
 ; CHECK: ret
 define void @test13() {
 entry:

@@ -18,7 +18,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define i8* @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(1824) bitcast (%struct.T1* @t1 to i8*), i8* noundef nonnull align 4 dereferenceable(1824) bitcast (%struct.T2* @t2 to i8*), i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T1* @t1 to i8*), i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T2* @t2 to i8*), i64 1824, i1 false)
 ; CHECK-NEXT:    ret i8* bitcast (%struct.T1* @t1 to i8*)
 ;
   %dst = bitcast %struct.T1* @t1 to i8*
@@ -30,7 +30,7 @@ define i8* @test_simplify1() {
 
 define i8* @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(1824) bitcast (%struct.T1* @t1 to i8*), i8* noundef nonnull align 4 dereferenceable(1824) bitcast (%struct.T3* @t3 to i8*), i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T1* @t1 to i8*), i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T3* @t3 to i8*), i64 1824, i1 false)
 ; CHECK-NEXT:    ret i8* bitcast (%struct.T1* @t1 to i8*)
 ;
   %dst = bitcast %struct.T1* @t1 to i8*
@@ -68,7 +68,7 @@ define i8* @test_no_simplify2() {
 
 define i8* @test_no_incompatible_attr(i8* %mem, i32 %val, i32 %size) {
 ; CHECK-LABEL: @test_no_incompatible_attr(
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(1824) bitcast (%struct.T1* @t1 to i8*), i8* noundef nonnull align 4 dereferenceable(1824) bitcast (%struct.T2* @t2 to i8*), i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T1* @t1 to i8*), i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T2* @t2 to i8*), i64 1824, i1 false)
 ; CHECK-NEXT:    ret i8* bitcast (%struct.T1* @t1 to i8*)
 ;
   %dst = bitcast %struct.T1* @t1 to i8*

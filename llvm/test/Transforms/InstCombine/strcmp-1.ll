@@ -97,12 +97,12 @@ define i32 @test5(i1 %b) {
 ; CHECK: ret i32 %memcmp
 ; NOBCMP-LABEL: @test5(
 ; NOBCMP-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @hell, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @bell, i32 0, i32 0)
-; NOBCMP-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* noundef nonnull dereferenceable(5) [[STR2]], i32 5)
+; NOBCMP-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* nonnull dereferenceable(5) [[STR2]], i32 5)
 ; NOBCMP-NEXT:    ret i32 [[MEMCMP]]
 ;
 ; BCMP-LABEL: @test5(
 ; BCMP-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @hell, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @bell, i32 0, i32 0)
-; BCMP-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* noundef nonnull dereferenceable(5) [[STR2]], i32 5)
+; BCMP-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* nonnull dereferenceable(5) [[STR2]], i32 5)
 ; BCMP-NEXT:    ret i32 [[MEMCMP]]
 ;
   %str1 = getelementptr inbounds [6 x i8], [6 x i8]* @hello, i32 0, i32 0
@@ -131,13 +131,13 @@ define i32 @test6(i8* %str) {
 define i1 @test7(i1 %b) {
 ; NOBCMP-LABEL: @test7(
 ; NOBCMP-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @hell, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @bell, i32 0, i32 0)
-; NOBCMP-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* noundef nonnull dereferenceable(5) [[STR2]], i32 5)
+; NOBCMP-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* nonnull dereferenceable(5) [[STR2]], i32 5)
 ; NOBCMP-NEXT:    [[RES:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; NOBCMP-NEXT:    ret i1 [[RES]]
 ;
 ; BCMP-LABEL: @test7(
 ; BCMP-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @hell, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @bell, i32 0, i32 0)
-; BCMP-NEXT:    [[BCMP:%.*]] = call i32 @bcmp(i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* noundef nonnull dereferenceable(5) [[STR2]], i32 5)
+; BCMP-NEXT:    [[BCMP:%.*]] = call i32 @bcmp(i8* nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* nonnull dereferenceable(5) [[STR2]], i32 5)
 ; BCMP-NEXT:    [[RES:%.*]] = icmp eq i32 [[BCMP]], 0
 ; BCMP-NEXT:    ret i1 [[RES]]
 ;

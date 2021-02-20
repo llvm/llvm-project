@@ -190,16 +190,13 @@ static void annotateDereferenceableBytes(CallInst *CI,
   }
 }
 
-static void annotateNonNullNoUndefBasedOnAccess(CallInst *CI,
+static void annotateNonNullBasedOnAccess(CallInst *CI,
                                          ArrayRef<unsigned> ArgNos) {
   Function *F = CI->getCaller();
   if (!F)
     return;
 
   for (unsigned ArgNo : ArgNos) {
-    if (!CI->paramHasAttr(ArgNo, Attribute::NoUndef))
-      CI->addParamAttr(ArgNo, Attribute::NoUndef);
-
     if (CI->paramHasAttr(ArgNo, Attribute::NonNull))
       continue;
     unsigned AS = CI->getArgOperand(ArgNo)->getType()->getPointerAddressSpace();
@@ -214,10 +211,10 @@ static void annotateNonNullNoUndefBasedOnAccess(CallInst *CI,
 static void annotateNonNullAndDereferenceable(CallInst *CI, ArrayRef<unsigned> ArgNos,
                                Value *Size, const DataLayout &DL) {
   if (ConstantInt *LenC = dyn_cast<ConstantInt>(Size)) {
-    annotateNonNullNoUndefBasedOnAccess(CI, ArgNos);
+    annotateNonNullBasedOnAccess(CI, ArgNos);
     annotateDereferenceableBytes(CI, ArgNos, LenC->getZExtValue());
   } else if (isKnownNonZero(Size, DL)) {
-    annotateNonNullNoUndefBasedOnAccess(CI, ArgNos);
+    annotateNonNullBasedOnAccess(CI, ArgNos);
     const APInt *X, *Y;
     uint64_t DerefMin = 1;
     if (match(Size, m_Select(m_Value(), m_APInt(X), m_APInt(Y)))) {
@@ -235,7 +232,7 @@ Value *LibCallSimplifier::optimizeStrCat(CallInst *CI, IRBuilderBase &B) {
   // Extract some information from the instruction
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
-  annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
+  annotateNonNullBasedOnAccess(CI, {0, 1});
 
   // See if we can get the length of the input string.
   uint64_t Len = GetStringLength(Src);
@@ -279,9 +276,9 @@ Value *LibCallSimplifier::optimizeStrNCat(CallInst *CI, IRBuilderBase &B) {
   Value *Src = CI->getArgOperand(1);
   Value *Size = CI->getArgOperand(2);
   uint64_t Len;
-  annotateNonNullNoUndefBasedOnAccess(CI, 0);
+  annotateNonNullBasedOnAccess(CI, 0);
   if (isKnownNonZero(Size, DL))
-    annotateNonNullNoUndefBasedOnAccess(CI, 1);
+    annotateNonNullBasedOnAccess(CI, 1);
 
   // We don't do anything if length is not constant.
   ConstantInt *LengthArg = dyn_cast<ConstantInt>(Size);
@@ -320,7 +317,7 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
   Function *Callee = CI->getCalledFunction();
   FunctionType *FT = Callee->getFunctionType();
   Value *SrcStr = CI->getArgOperand(0);
-  annotateNonNullNoUndefBasedOnAccess(CI, 0);
+  annotateNonNullBasedOnAccess(CI, 0);
 
   // If the second operand is non-constant, see if we can compute the length
   // of the input string and turn this into memchr.
@@ -364,7 +361,7 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
 Value *LibCallSimplifier::optimizeStrRChr(CallInst *CI, IRBuilderBase &B) {
   Value *SrcStr = CI->getArgOperand(0);
   ConstantInt *CharC = dyn_cast<ConstantInt>(CI->getArgOperand(1));
-  annotateNonNullNoUndefBasedOnAccess(CI, 0);
+  annotateNonNullBasedOnAccess(CI, 0);
 
   // Cannot fold anything if we're not looking for a constant.
   if (!CharC)
@@ -440,7 +437,7 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
           TLI);
   }
 
-  annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
+  annotateNonNullBasedOnAccess(CI, {0, 1});
   return nullptr;
 }
 
@@ -452,7 +449,7 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
     return ConstantInt::get(CI->getType(), 0);
 
   if (isKnownNonZero(Size, DL))
-    annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
+    annotateNonNullBasedOnAccess(CI, {0, 1});
   // Get the length argument if it is constant.
   uint64_t Length;
   if (ConstantInt *LengthArg = dyn_cast<ConstantInt>(Size))
@@ -530,7 +527,7 @@ Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilderBase &B) {
   if (Dst == Src) // strcpy(x,x)  -> x
     return Src;
   
-  annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
+  annotateNonNullBasedOnAccess(CI, {0, 1});
   // See if we can get the length of the input string.
   uint64_t Len = GetStringLength(Src);
   if (Len)
@@ -583,9 +580,9 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
   Value *Size = CI->getArgOperand(2);
-  annotateNonNullNoUndefBasedOnAccess(CI, 0);
+  annotateNonNullBasedOnAccess(CI, 0);
   if (isKnownNonZero(Size, DL))
-    annotateNonNullNoUndefBasedOnAccess(CI, 1);
+    annotateNonNullBasedOnAccess(CI, 1);
 
   uint64_t Len;
   if (ConstantInt *LengthArg = dyn_cast<ConstantInt>(Size))
@@ -731,7 +728,7 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
 Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilderBase &B) {
   if (Value *V = optimizeStringLength(CI, B, 8))
     return V;
-  annotateNonNullNoUndefBasedOnAccess(CI, 0);
+  annotateNonNullBasedOnAccess(CI, 0);
   return nullptr;
 }
 
@@ -881,13 +878,13 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
     return StrChr ? B.CreateBitCast(StrChr, CI->getType()) : nullptr;
   }
 
-  annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
+  annotateNonNullBasedOnAccess(CI, {0, 1});
   return nullptr;
 }
 
 Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   if (isKnownNonZero(CI->getOperand(2), DL))
-    annotateNonNullNoUndefBasedOnAccess(CI, 0);
+    annotateNonNullBasedOnAccess(CI, 0);
   return nullptr;
 }
 
@@ -2473,7 +2470,7 @@ Value *LibCallSimplifier::optimizePrintF(CallInst *CI, IRBuilderBase &B) {
     return New;
   }
 
-  annotateNonNullNoUndefBasedOnAccess(CI, 0);
+  annotateNonNullBasedOnAccess(CI, 0);
   return nullptr;
 }
 
@@ -2595,7 +2592,7 @@ Value *LibCallSimplifier::optimizeSPrintF(CallInst *CI, IRBuilderBase &B) {
     return New;
   }
 
-  annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
+  annotateNonNullBasedOnAccess(CI, {0, 1});
   return nullptr;
 }
 
@@ -2684,7 +2681,7 @@ Value *LibCallSimplifier::optimizeSnPrintF(CallInst *CI, IRBuilderBase &B) {
   }
 
   if (isKnownNonZero(CI->getOperand(1), DL))
-    annotateNonNullNoUndefBasedOnAccess(CI, 0);
+    annotateNonNullBasedOnAccess(CI, 0);
   return nullptr;
 }
 
@@ -2827,7 +2824,7 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizePuts(CallInst *CI, IRBuilderBase &B) {
-  annotateNonNullNoUndefBasedOnAccess(CI, 0);
+  annotateNonNullBasedOnAccess(CI, 0);
   if (!CI->use_empty())
     return nullptr;
 

@@ -131,7 +131,7 @@ define i32 @test10(i8* %str1, i8* %str2, i32 %n) {
 ; strncmp(x, y, 5)  -> strncmp(nonnull x, nonnull y, 5)
 define i32 @test11(i8* %str1, i8* %str2, i32 %n) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[TEMP1:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) [[STR1:%.*]], i8* noundef nonnull dereferenceable(1) [[STR2:%.*]], i32 5)
+; CHECK-NEXT:    [[TEMP1:%.*]] = call i32 @strncmp(i8* nonnull dereferenceable(1) [[STR1:%.*]], i8* nonnull dereferenceable(1) [[STR2:%.*]], i32 5)
 ; CHECK-NEXT:    ret i32 [[TEMP1]]
 ;
 
