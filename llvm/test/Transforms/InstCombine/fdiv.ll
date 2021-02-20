@@ -731,8 +731,9 @@ define <2 x half> @pow_recip(<2 x half> %x, <2 x half> %y) {
 
 define float @exp_divisor(float %y, float %z) {
 ; CHECK-LABEL: @exp_divisor(
-; CHECK-NEXT:    [[P:%.*]] = call float @llvm.exp.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc arcp float [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc arcp float @llvm.exp.f32(float [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp float [[TMP2]], [[Z:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %p = call float @llvm.exp.f32(float %y)
@@ -785,9 +786,9 @@ define float @exp_divisor_not_enough_fmf2(float %y, float %z) {
 
 define <2 x half> @exp_recip(<2 x half> %x, <2 x half> %y) {
 ; CHECK-LABEL: @exp_recip(
-; CHECK-NEXT:    [[P:%.*]] = call <2 x half> @llvm.exp.v2f16(<2 x half> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf arcp <2 x half> <half 0xH3C00, half 0xH3C00>, [[P]]
-; CHECK-NEXT:    ret <2 x half> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc ninf arcp <2 x half> [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf arcp <2 x half> @llvm.exp.v2f16(<2 x half> [[TMP1]])
+; CHECK-NEXT:    ret <2 x half> [[TMP2]]
 ;
   %p = call <2 x half> @llvm.exp.v2f16(<2 x half> %y)
   %r = fdiv reassoc arcp ninf <2 x half> <half 1.0, half 1.0>, %p
@@ -796,8 +797,9 @@ define <2 x half> @exp_recip(<2 x half> %x, <2 x half> %y) {
 
 define float @exp2_divisor(float %y, float %z) {
 ; CHECK-LABEL: @exp2_divisor(
-; CHECK-NEXT:    [[P:%.*]] = call float @llvm.exp2.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc arcp float [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc arcp float @llvm.exp2.f32(float [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp float [[TMP2]], [[Z:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %p = call float @llvm.exp2.f32(float %y)
@@ -850,9 +852,9 @@ define float @exp2_divisor_not_enough_fmf2(float %y, float %z) {
 
 define <2 x half> @exp2_recip(<2 x half> %x, <2 x half> %y) {
 ; CHECK-LABEL: @exp2_recip(
-; CHECK-NEXT:    [[P:%.*]] = call <2 x half> @llvm.exp2.v2f16(<2 x half> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf arcp <2 x half> <half 0xH3C00, half 0xH3C00>, [[P]]
-; CHECK-NEXT:    ret <2 x half> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc ninf arcp <2 x half> [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf arcp <2 x half> @llvm.exp2.v2f16(<2 x half> [[TMP1]])
+; CHECK-NEXT:    ret <2 x half> [[TMP2]]
 ;
   %p = call <2 x half> @llvm.exp2.v2f16(<2 x half> %y)
   %r = fdiv reassoc arcp ninf <2 x half> <half 1.0, half 1.0>, %p
