@@ -156,6 +156,12 @@ def CSR_SystemZ_AllRegs_Vector : CalleeSavedRegs<(add (sequence "R%dD", 2, 15),
 def CSR_SystemZ_NoRegs : CalleeSavedRegs<(add)>;
 
 //===----------------------------------------------------------------------===//
+// z/OS XPLINK64 callee-saved registers
+//===----------------------------------------------------------------------===//
+def CSR_SystemZ_XPLINK64 : CalleeSavedRegs<(add (sequence "R%dD", 8, 15),
+                                                (sequence "F%dD", 8, 15))>;
+
+//===----------------------------------------------------------------------===//
 // s390x return value calling convention
 //===----------------------------------------------------------------------===//
 
