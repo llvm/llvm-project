@@ -140,6 +140,12 @@ public:
     All,         // Keep all frame pointers.
   };
 
+  enum FiniteLoopsKind {
+    Language, // Not specified, use language standard.
+    Always,   // All loops are assumed to be finite.
+    Never,    // No loop is assumed to be finite.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
