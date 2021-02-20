@@ -866,8 +866,8 @@ void Liveness::computeLiveIns() {
     // Dump the liveness map
     for (MachineBasicBlock &B : MF) {
       std::vector<RegisterRef> LV;
-      for (auto I = B.livein_begin(), E = B.livein_end(); I != E; ++I)
-        LV.push_back(RegisterRef(I->PhysReg, I->LaneMask));
+      for (const MachineBasicBlock::RegisterMaskPair &LI : B.liveins())
+        LV.push_back(RegisterRef(LI.PhysReg, LI.LaneMask));
       llvm::sort(LV);
       dbgs() << printMBBReference(B) << "\t rec = {";
       for (auto I : LV)
@@ -893,16 +893,14 @@ void Liveness::resetLiveIns() {
   for (auto &B : DFG.getMF()) {
     // Remove all live-ins.
     std::vector<unsigned> T;
-    for (auto I = B.livein_begin(), E = B.livein_end(); I != E; ++I)
-      T.push_back(I->PhysReg);
+    for (const MachineBasicBlock::RegisterMaskPair &LI : B.liveins())
+      T.push_back(LI.PhysReg);
     for (auto I : T)
       B.removeLiveIn(I);
     // Add the newly computed live-ins.
     const RegisterAggr &LiveIns = LiveMap[&B];
-    for (auto I = LiveIns.rr_begin(), E = LiveIns.rr_end(); I != E; ++I) {
-      RegisterRef R = *I;
+    for (const RegisterRef &R : make_range(LiveIns.rr_begin(), LiveIns.rr_end()))
       B.addLiveIn({MCPhysReg(R.Reg), R.Mask});
-    }
   }
 }
 
