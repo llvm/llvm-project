@@ -820,7 +820,11 @@ def produce_version_header():
 #pragma GCC system_header
 #endif
 
+// clang-format off
+
 {cxx_macros}
+
+// clang-format on
 
 #endif // _LIBCPP_VERSIONH
 """
