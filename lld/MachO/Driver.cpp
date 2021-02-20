@@ -582,18 +582,27 @@ static void handlePlatformVersion(const opt::Arg *arg) {
 
 static void handleUndefined(const opt::Arg *arg) {
   StringRef treatmentStr = arg->getValue(0);
-  config->undefinedSymbolTreatment =
+  auto treatment =
       StringSwitch<UndefinedSymbolTreatment>(treatmentStr)
           .Case("error", UndefinedSymbolTreatment::error)
           .Case("warning", UndefinedSymbolTreatment::warning)
           .Case("suppress", UndefinedSymbolTreatment::suppress)
           .Case("dynamic_lookup", UndefinedSymbolTreatment::dynamic_lookup)
           .Default(UndefinedSymbolTreatment::unknown);
-  if (config->undefinedSymbolTreatment == UndefinedSymbolTreatment::unknown) {
+  if (treatment == UndefinedSymbolTreatment::unknown) {
     warn(Twine("unknown -undefined TREATMENT '") + treatmentStr +
          "', defaulting to 'error'");
-    config->undefinedSymbolTreatment = UndefinedSymbolTreatment::error;
+    treatment = UndefinedSymbolTreatment::error;
+  } else if (config->namespaceKind == NamespaceKind::twolevel &&
+             (treatment == UndefinedSymbolTreatment::warning ||
+              treatment == UndefinedSymbolTreatment::suppress)) {
+    if (treatment == UndefinedSymbolTreatment::warning)
+      error("'-undefined warning' only valid with '-flat_namespace'");
+    else
+      error("'-undefined suppress' only valid with '-flat_namespace'");
+    treatment = UndefinedSymbolTreatment::error;
   }
+  config->undefinedSymbolTreatment = treatment;
 }
 
 static void warnIfDeprecatedOption(const opt::Option &opt) {
@@ -759,6 +768,18 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   if (const opt::Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
     config->staticLink = (arg->getOption().getID() == OPT_static);
+
+  if (const opt::Arg *arg =
+          args.getLastArg(OPT_flat_namespace, OPT_twolevel_namespace)) {
+    config->namespaceKind = arg->getOption().getID() == OPT_twolevel_namespace
+                                ? NamespaceKind::twolevel
+                                : NamespaceKind::flat;
+    if (config->namespaceKind == NamespaceKind::flat) {
+      warn("Option '" + arg->getOption().getPrefixedName() +
+           "' is not yet implemented. Stay tuned...");
+      config->namespaceKind = NamespaceKind::twolevel;
+    }
+  }
 
   config->systemLibraryRoots = getSystemLibraryRoots(args);
   config->librarySearchPaths =

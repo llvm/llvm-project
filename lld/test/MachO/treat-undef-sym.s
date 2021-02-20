@@ -5,13 +5,28 @@
 # RUN:     FileCheck %s -check-prefix=UNKNOWN
 # RUN: not %lld -undefined error -o /dev/null %t.o 2>&1 | \
 # RUN:     FileCheck %s -check-prefix=ERROR
-# RUN:     %no_fatal_warnings_lld -undefined warning -o /dev/null %t.o 2>&1 | \
-# RUN:     FileCheck %s -check-prefix=WARNING
-# RUN:     %lld -undefined suppress -o /dev/null %t.o 2>&1 | \
-# RUN:     FileCheck %s -check-prefix=SUPPRESS --allow-empty
+
+# RUN: not %lld -undefined warning -o /dev/null %t.o 2>&1 | \
+# RUN:     FileCheck %s -check-prefix=INVAL-WARNING
+# RUN: not %lld -undefined suppress -o /dev/null %t.o 2>&1 | \
+# RUN:     FileCheck %s -check-prefix=INVAL-SUPPRESS
+
+# FIXME: Enable these -undefined checks once -flat_namespace is implemented.
+# RN: %no_fatal_warnings_lld -flat_namespace -undefined warning \
+# RN:     -o /dev/null %t.o 2>&1 | \
+# RN:     FileCheck %s -check-prefix=WARNING
+# RN: %lld -flat_namespace -undefined suppress -o /dev/null %t.o 2>&1 | \
+# RN:     FileCheck %s -check-prefix=SUPPRESS --allow-empty
 
 # ERROR: error: undefined symbol: _bar
 # ERROR-NEXT: >>> referenced by
+
+# INVAL-WARNING: error: '-undefined warning' only valid with '-flat_namespace'
+# INVAL-WARNING-NEXT: error: undefined symbol: _bar
+
+# INVAL-SUPPRESS: error: '-undefined suppress' only valid with '-flat_namespace'
+# INVAL-SUPPRESS-NEXT: error: undefined symbol: _bar
+
 
 # WARNING: warning: undefined symbol: _bar
 # WARNING-NEXT: >>> referenced by
