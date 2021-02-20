@@ -60,7 +60,7 @@ define i64 @memcpy_constant_arg_ptr_to_alloca_load_atomic([32 x i64] addrspace(4
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i64], align 8, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = bitcast [32 x i64] addrspace(5)* [[ALLOCA]] to i8 addrspace(5)*
 ; CHECK-NEXT:    [[ARG_CAST:%.*]] = bitcast [32 x i64] addrspace(4)* [[ARG:%.*]] to i8 addrspace(4)*
-; CHECK-NEXT:    call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 8 dereferenceable(256) [[ALLOCA_CAST]], i8 addrspace(4)* align 8 dereferenceable(256) [[ARG_CAST]], i64 256, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* noundef align 8 dereferenceable(256) [[ALLOCA_CAST]], i8 addrspace(4)* noundef align 8 dereferenceable(256) [[ARG_CAST]], i64 256, i1 false)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i64], [32 x i64] addrspace(5)* [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load atomic i64, i64 addrspace(5)* [[GEP]] syncscope("somescope") acquire, align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
@@ -116,7 +116,7 @@ define amdgpu_kernel void @memcpy_constant_byref_arg_ptr_to_alloca_too_many_byte
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 4, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* [[ALLOCA]], i32 0, i32 0
 ; CHECK-NEXT:    [[ARG_CAST:%.*]] = getelementptr inbounds [31 x i8], [31 x i8] addrspace(4)* [[ARG:%.*]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 4 dereferenceable(31) [[ALLOCA_CAST]], i8 addrspace(4)* align 4 dereferenceable(31) [[ARG_CAST]], i64 31, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* noundef align 4 dereferenceable(31) [[ALLOCA_CAST]], i8 addrspace(4)* noundef align 4 dereferenceable(31) [[ARG_CAST]], i64 31, i1 false)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8 addrspace(5)* [[GEP]], align 1
 ; CHECK-NEXT:    store i8 [[LOAD]], i8 addrspace(1)* [[OUT:%.*]], align 1
@@ -159,7 +159,7 @@ define i8 @memcpy_constant_arg_ptr_to_alloca_addrspacecast_to_flat([31 x i8] add
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* [[ALLOCA]], i32 0, i32 0
 ; CHECK-NEXT:    [[ALLOCA_CAST_ASC:%.*]] = addrspacecast i8 addrspace(5)* [[ALLOCA_CAST]] to i8*
 ; CHECK-NEXT:    [[ARG_CAST:%.*]] = getelementptr inbounds [31 x i8], [31 x i8] addrspace(4)* [[ARG:%.*]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i64(i8* nonnull align 1 dereferenceable(31) [[ALLOCA_CAST_ASC]], i8 addrspace(4)* align 4 dereferenceable(31) [[ARG_CAST]], i64 31, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i64(i8* noundef nonnull align 1 dereferenceable(31) [[ALLOCA_CAST_ASC]], i8 addrspace(4)* noundef align 4 dereferenceable(31) [[ARG_CAST]], i64 31, i1 false)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8 addrspace(5)* [[GEP]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
@@ -181,7 +181,7 @@ define i8 @memcpy_constant_arg_ptr_to_alloca_addrspacecast_to_flat2([32 x i8] ad
 ; CHECK-NEXT:    [[ALLOCA_CAST1:%.*]] = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* [[ALLOCA]], i32 0, i32 0
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast i8 addrspace(5)* [[ALLOCA_CAST1]] to i8*
 ; CHECK-NEXT:    [[ARG_CAST:%.*]] = getelementptr inbounds [32 x i8], [32 x i8] addrspace(4)* [[ARG:%.*]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i64(i8* nonnull align 1 dereferenceable(32) [[ALLOCA_CAST]], i8 addrspace(4)* align 4 dereferenceable(32) [[ARG_CAST]], i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i64(i8* noundef nonnull align 1 dereferenceable(32) [[ALLOCA_CAST]], i8 addrspace(4)* noundef align 4 dereferenceable(32) [[ARG_CAST]], i64 32, i1 false)
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[GEP:%.*]] = addrspacecast i8 addrspace(5)* [[GEP2]] to i8*
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8* [[GEP]], align 1
@@ -203,7 +203,7 @@ define amdgpu_kernel void @byref_infloop(i8* %scratch, %struct.ty addrspace(4)* 
 ; CHECK-LABEL: @byref_infloop(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[CAST_ALLOCA:%.*]] = bitcast [[STRUCT_TY:%.*]] addrspace(4)* [[ARG:%.*]] to i8 addrspace(4)*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i32(i8* nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], i8 addrspace(4)* align 4 dereferenceable(16) [[CAST_ALLOCA]], i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i32(i8* noundef nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], i8 addrspace(4)* noundef align 4 dereferenceable(16) [[CAST_ALLOCA]], i32 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -219,7 +219,7 @@ define amdgpu_kernel void @byref_infloop_metadata(i8* %scratch, %struct.ty addrs
 ; CHECK-LABEL: @byref_infloop_metadata(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[CAST_ALLOCA:%.*]] = bitcast [[STRUCT_TY:%.*]] addrspace(4)* [[ARG:%.*]] to i8 addrspace(4)*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i32(i8* nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], i8 addrspace(4)* align 4 dereferenceable(16) [[CAST_ALLOCA]], i32 16, i1 false), !noalias !1
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i32(i8* noundef nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], i8 addrspace(4)* noundef align 4 dereferenceable(16) [[CAST_ALLOCA]], i32 16, i1 false), !noalias !1
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -238,8 +238,8 @@ define amdgpu_kernel void @byref_infloop_addrspacecast(i8* %scratch, %struct.ty 
 ; CHECK-NEXT:    [[CAST_ARG:%.*]] = bitcast [[STRUCT_TY:%.*]] addrspace(4)* [[ARG:%.*]] to i8 addrspace(4)*
 ; CHECK-NEXT:    [[CAST_ALLOCA:%.*]] = bitcast [4 x i32] addrspace(5)* [[ALLOCA]] to i8 addrspace(5)*
 ; CHECK-NEXT:    [[ADDRSPACECAST_ALLOCA:%.*]] = addrspacecast i8 addrspace(5)* [[CAST_ALLOCA]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i64(i8* nonnull align 4 dereferenceable(16) [[ADDRSPACECAST_ALLOCA]], i8 addrspace(4)* align 4 dereferenceable(16) [[CAST_ARG]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], i8* nonnull align 4 dereferenceable(16) [[ADDRSPACECAST_ALLOCA]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i64(i8* noundef nonnull align 4 dereferenceable(16) [[ADDRSPACECAST_ALLOCA]], i8 addrspace(4)* noundef align 4 dereferenceable(16) [[CAST_ARG]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], i8* noundef nonnull align 4 dereferenceable(16) [[ADDRSPACECAST_ALLOCA]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -256,7 +256,7 @@ define amdgpu_kernel void @byref_infloop_memmove(i8* %scratch, %struct.ty addrsp
 ; CHECK-LABEL: @byref_infloop_memmove(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[CAST_ALLOCA:%.*]] = bitcast [[STRUCT_TY:%.*]] addrspace(4)* [[ARG:%.*]] to i8 addrspace(4)*
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p4i8.i32(i8* nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], i8 addrspace(4)* align 4 dereferenceable(16) [[CAST_ALLOCA]], i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p4i8.i32(i8* noundef nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], i8 addrspace(4)* noundef align 4 dereferenceable(16) [[CAST_ALLOCA]], i32 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 bb:
