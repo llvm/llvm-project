@@ -1766,9 +1766,6 @@ public:
     return doesNotAccessMemory() || hasFnAttr(Attribute::ReadOnly);
   }
 
-  /// Returns true if this function is guaranteed to return.
-  bool willReturn() const { return hasFnAttr(Attribute::WillReturn); }
-
   void setOnlyReadsMemory() {
     addAttribute(AttributeList::FunctionIndex, Attribute::ReadOnly);
   }
