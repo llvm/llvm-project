@@ -458,11 +458,8 @@ LiveRangeEdit::MRI_NoteNewVirtualRegister(Register VReg) {
   NewRegs.push_back(VReg);
 }
 
-void
-LiveRangeEdit::calculateRegClassAndHint(MachineFunction &MF,
-                                        const MachineLoopInfo &Loops,
-                                        const MachineBlockFrequencyInfo &MBFI) {
-  VirtRegAuxInfo VRAI(MF, LIS, *VRM, Loops, MBFI);
+void LiveRangeEdit::calculateRegClassAndHint(MachineFunction &MF,
+                                             VirtRegAuxInfo &VRAI) {
   for (unsigned I = 0, Size = size(); I < Size; ++I) {
     LiveInterval &LI = LIS.getInterval(get(I));
     if (MRI.recomputeRegClass(LI.reg()))

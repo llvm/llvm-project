@@ -320,7 +320,7 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
                       getAnalysis<MachineBlockFrequencyInfo>());
   VRAI.calculateSpillWeightsAndHints();
 
-  SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
+  SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM, VRAI));
 
   allocatePhysRegs();
   postOptimization();

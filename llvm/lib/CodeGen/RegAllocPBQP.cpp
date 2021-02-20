@@ -800,7 +800,14 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   PBQPVirtRegAuxInfo VRAI(MF, LIS, VRM, getAnalysis<MachineLoopInfo>(), MBFI);
   VRAI.calculateSpillWeightsAndHints();
 
-  std::unique_ptr<Spiller> VRegSpiller(createInlineSpiller(*this, MF, VRM));
+  // FIXME: we create DefaultVRAI here to match existing behavior pre-passing
+  // the VRAI through the spiller to the live range editor. However, it probably
+  // makes more sense to pass the PBQP VRAI. The existing behavior had
+  // LiveRangeEdit make its own VirtRegAuxInfo object.
+  VirtRegAuxInfo DefaultVRAI(MF, LIS, VRM, getAnalysis<MachineLoopInfo>(),
+                             MBFI);
+  std::unique_ptr<Spiller> VRegSpiller(
+      createInlineSpiller(*this, MF, VRM, DefaultVRAI));
 
   MF.getRegInfo().freezeReservedRegs(MF);
 
