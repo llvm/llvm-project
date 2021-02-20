@@ -895,20 +895,24 @@ bool AVRExpandPseudo::expandAtomicArithmeticOp(unsigned Width,
                                                Block &MBB,
                                                BlockIt MBBI) {
   return expandAtomic(MBB, MBBI, [&](MachineInstr &MI) {
-      auto Op1 = MI.getOperand(0);
-      auto Op2 = MI.getOperand(1);
+      auto DstReg = MI.getOperand(0).getReg();
+      auto PtrOp = MI.getOperand(1);
+      auto SrcReg = MI.getOperand(2).getReg();
 
       unsigned LoadOpcode = (Width == 8) ? AVR::LDRdPtr : AVR::LDWRdPtr;
       unsigned StoreOpcode = (Width == 8) ? AVR::STPtrRr : AVR::STWPtrRr;
 
+      // FIXME: this returns the new value (after the operation), not the old
+      // value as the atomicrmw instruction is supposed to do!
+
       // Create the load
-      buildMI(MBB, MBBI, LoadOpcode).add(Op1).add(Op2);
+      buildMI(MBB, MBBI, LoadOpcode, DstReg).addReg(PtrOp.getReg());
 
       // Create the arithmetic op
-      buildMI(MBB, MBBI, ArithOpcode).add(Op1).add(Op1).add(Op2);
+      buildMI(MBB, MBBI, ArithOpcode, DstReg).addReg(DstReg).addReg(SrcReg);
 
       // Create the store
-      buildMI(MBB, MBBI, StoreOpcode).add(Op2).add(Op1);
+      buildMI(MBB, MBBI, StoreOpcode).add(PtrOp).addReg(DstReg);
   });
 }
 
