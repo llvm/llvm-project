@@ -15,11 +15,13 @@
 using namespace llvm;
 
 EVT EVT::changeExtendedTypeToInteger() const {
+  assert(isExtended() && "Type is not extended!");
   LLVMContext &Context = LLVMTy->getContext();
   return getIntegerVT(Context, getSizeInBits());
 }
 
 EVT EVT::changeExtendedVectorElementTypeToInteger() const {
+  assert(isExtended() && "Type is not extended!");
   LLVMContext &Context = LLVMTy->getContext();
   EVT IntTy = getIntegerVT(Context, getScalarSizeInBits());
   return getVectorVT(Context, IntTy, getVectorNumElements(),
@@ -27,6 +29,7 @@ EVT EVT::changeExtendedVectorElementTypeToInteger() const {
 }
 
 EVT EVT::changeExtendedVectorElementType(EVT EltVT) const {
+  assert(isExtended() && "Type is not extended!");
   LLVMContext &Context = LLVMTy->getContext();
   return getVectorVT(Context, EltVT, getVectorElementCount());
 }
