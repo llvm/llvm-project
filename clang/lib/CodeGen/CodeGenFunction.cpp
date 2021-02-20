@@ -859,8 +859,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   // Add no-jump-tables value.
-  Fn->addFnAttr("no-jump-tables",
-                llvm::toStringRef(CGM.getCodeGenOpts().NoUseJumpTables));
+  if (CGM.getCodeGenOpts().NoUseJumpTables)
+    Fn->addFnAttr("no-jump-tables", "true");
 
   // Add no-inline-line-tables value.
   if (CGM.getCodeGenOpts().NoInlineLineTables)
