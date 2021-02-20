@@ -4870,11 +4870,19 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison,
   if (Depth >= MaxDepth)
     return false;
 
-  const auto *I = dyn_cast<Instruction>(V);
-  if (I && propagatesPoison(cast<Operator>(I))) {
-    return any_of(I->operands(), [=](const Value *Op) {
-      return directlyImpliesPoison(ValAssumedPoison, Op, Depth + 1);
-    });
+  if (const auto *I = dyn_cast<Instruction>(V)) {
+    if (propagatesPoison(cast<Operator>(I)))
+      return any_of(I->operands(), [=](const Value *Op) {
+        return directlyImpliesPoison(ValAssumedPoison, Op, Depth + 1);
+      });
+
+    // V  = extractvalue V0, idx
+    // V2 = extractvalue V0, idx2
+    // V0's elements are all poison or not. (e.g., add_with_overflow)
+    const WithOverflowInst *II;
+    if (match(I, m_ExtractValue(m_WithOverflowInst(II))) &&
+        match(ValAssumedPoison, m_ExtractValue(m_Specific(II))))
+      return true;
   }
   return false;
 }
