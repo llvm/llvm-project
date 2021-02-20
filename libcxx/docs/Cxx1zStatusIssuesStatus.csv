@@ -300,7 +300,7 @@
 "`2872 <https://wg21.link/LWG2872>`__","Add definition for direct-non-list-initialization","Kona","|Complete|",""
 "`2873 <https://wg21.link/LWG2873>`__","Add noexcept to several shared_ptr related functions","Kona","|Complete|",""
 "`2874 <https://wg21.link/LWG2874>`__","Constructor ``shared_ptr::shared_ptr(Y*)``\  should be constrained","Kona","",""
-"`2875 <https://wg21.link/LWG2875>`__","shared_ptr::shared_ptr(Y\*, D, [|hellip|\ ]) constructors should be constrained","Kona","",""
+"`2875 <https://wg21.link/LWG2875>`__","shared_ptr::shared_ptr(Y\*, D, [|hellip|\ ]) constructors should be constrained","Kona","|Complete|",""
 "`2876 <https://wg21.link/LWG2876>`__","``shared_ptr::shared_ptr(const weak_ptr<Y>&)``\  constructor should be constrained","Kona","",""
 "`2878 <https://wg21.link/LWG2878>`__","Missing DefaultConstructible requirement for istream_iterator default constructor","Kona","|Complete|",""
 "`2890 <https://wg21.link/LWG2890>`__","The definition of 'object state' applies only to class types","Kona","|Complete|",""
