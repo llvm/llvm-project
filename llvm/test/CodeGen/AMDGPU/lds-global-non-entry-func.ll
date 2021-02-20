@@ -15,7 +15,7 @@ define void @func_use_lds_global() {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    ds_write_b32 v0, v0
-; GFX8-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; GFX8-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; GFX8-NEXT:    s_trap 2
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -25,7 +25,7 @@ define void @func_use_lds_global() {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    ds_write_b32 v0, v0
-; GFX9-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; GFX9-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; GFX9-NEXT:    s_trap 2
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -38,7 +38,7 @@ define void @func_use_lds_global_constexpr_cast() {
 ; GCN-LABEL: func_use_lds_global_constexpr_cast:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; GCN-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; GCN-NEXT:    s_trap 2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   store i32 ptrtoint (float addrspace(3)* @lds to i32), i32 addrspace(1)* undef, align 4

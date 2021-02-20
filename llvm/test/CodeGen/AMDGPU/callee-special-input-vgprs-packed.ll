@@ -3,7 +3,7 @@
 
 ; GCN-LABEL: {{^}}use_workitem_id_x:
 ; GCN: s_waitcnt
-; GCN: v_and_b32_e32 [[ID:v[0-9]+]], 0x3ff, v0
+; GCN: v_and_b32_e32 [[ID:v[0-9]+]], 0x3ff, v31
 ; GCN-NEXT: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[ID]]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -15,7 +15,7 @@ define void @use_workitem_id_x() #1 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_y:
 ; GCN: s_waitcnt
-; GCN: v_bfe_u32 [[ID:v[0-9]+]], v0, 10, 10
+; GCN: v_bfe_u32 [[ID:v[0-9]+]], v31, 10, 10
 ; GCN-NEXT: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[ID]]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -27,7 +27,7 @@ define void @use_workitem_id_y() #1 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_z:
 ; GCN: s_waitcnt
-; GCN: v_bfe_u32 [[ID:v[0-9]+]], v0, 20, 10
+; GCN: v_bfe_u32 [[ID:v[0-9]+]], v31, 20, 10
 ; GCN-NEXT: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[ID]]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -39,9 +39,10 @@ define void @use_workitem_id_z() #1 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_xy:
 ; GCN: s_waitcnt
-; GCN-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v0
-; GCN-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v0, 10, 10
+; GCN-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v31
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDX]]
+; GCN-NEXT: s_waitcnt
+; GCN-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v31, 10, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDY]]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -55,11 +56,13 @@ define void @use_workitem_id_xy() #1 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_xyz:
 ; GCN: s_waitcnt
-; GCN-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v0
-; GCN-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v0, 10, 10
-; GCN-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v0, 20, 10
+; GCN-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v31
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDX]]
+; GCN-NEXT: s_waitcnt
+; GCN-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v31, 10, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDY]]
+; GCN-NEXT: s_waitcnt
+; GCN-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v31, 20, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDZ]]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -75,9 +78,10 @@ define void @use_workitem_id_xyz() #1 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_xz:
 ; GCN: s_waitcnt
-; GCN-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v0
-; GCN-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v0, 20, 10
+; GCN-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v31
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDX]]
+; GCN-NEXT: s_waitcnt
+; GCN-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v31, 20, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDZ]]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -91,9 +95,10 @@ define void @use_workitem_id_xz() #1 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_yz:
 ; GCN: s_waitcnt
-; GCN-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v0, 10, 10
-; GCN-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v0, 20, 10
+; GCN-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v31, 10, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDY]]
+; GCN-NEXT: s_waitcnt
+; GCN-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v31, 20, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDZ]]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -107,11 +112,9 @@ define void @use_workitem_id_yz() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workitem_id_x:
 
-; GCN-NOT: v0
 ; GCN: s_swappc_b64
-; GCN-NOT: v0
 
-; GCN: .amdhsa_system_vgpr_workitem_id 0
+; GCN: .amdhsa_system_vgpr_workitem_id 2
 define amdgpu_kernel void @kern_indirect_use_workitem_id_x() #1 {
   call void @use_workitem_id_x()
   ret void
@@ -119,14 +122,10 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_x() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workitem_id_y:
 
-; GCN-NOT: v0
-; GCN-NOT: v1
-; UNPACKED-TID: v_lshlrev_b32_e32 v0, 10, v1
-; UNPACKED-TID-NOT: v0
-; UNPACKED-TID-NOT: v1
+; UNPACKED-TID: v_lshlrev_b32_e32 v1, 10, v1
 ; GCN: s_swappc_b64
 
-; GCN: .amdhsa_system_vgpr_workitem_id 1
+; GCN: .amdhsa_system_vgpr_workitem_id 2
 define amdgpu_kernel void @kern_indirect_use_workitem_id_y() #1 {
   call void @use_workitem_id_y()
   ret void
@@ -134,11 +133,7 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_y() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workitem_id_z:
 
-; GCN-NOT: v0
-; GCN-NOT: v2
-; UNPACKED-TID: v_lshlrev_b32_e32 v0, 20, v2
-; UNPACKED-TID-NOT: v0
-; UNPACKED-TID-NOT: v1
+; UNPACKED-TID: v_lshlrev_b32_e32 v2, 20, v2
 ; GCN: s_swappc_b64
 
 ; GCN: .amdhsa_system_vgpr_workitem_id 2
@@ -152,8 +147,6 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_z() #1 {
 ; UNPACKED-TID-NOT: v1
 ; UNPACKED-TID: v_lshlrev_b32_e32 [[IDY:v[0-9]+]], 10, v1
 ; UNPACKED-TID: v_or_b32_e32 v0, v0, [[IDY]]
-; GCN-NOT: v0
-; GCN-NOT: v1
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workitem_id_xy() #1 {
   call void @use_workitem_id_xy()
@@ -164,9 +157,7 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_xy() #1 {
 ; UNPACKED-TID-NOT: v0
 ; UNPACKED-TID-NOT: v2
 ; UNPACKED-TID: v_lshlrev_b32_e32 [[IDZ:v[0-9]+]], 20, v2
-; UNPACKED-TID: v_or_b32_e32 v0, v0, [[IDZ]]
-; GCN-NOT: v0
-; GCN-NOT: v2
+; UNPACKED-TID: v_or_b32_e32 v31, v0, [[IDZ]]
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workitem_id_xz() #1 {
   call void @use_workitem_id_xz()
@@ -178,9 +169,9 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_xz() #1 {
 ; UNPACKED-TID-NOT: v2
 ; UNPACKED-TID-DAG: v_lshlrev_b32_e32 [[IDY:v[0-9]+]], 10, v1
 ; UNPACKED-TID-DAG: v_lshlrev_b32_e32 [[IDZ:v[0-9]+]], 20, v2
-; UNPACKED-TID: v_or_b32_e32 v0, [[IDY]], [[IDZ]]
+; UNPACKED-TID: v_or_b32_e32 v0, v0, [[IDY]]
+; UNPACKED-TID: v_or_b32_e32 v31, v0, [[IDZ]]
 ; GCN-NOT: v1
-; GCN-NOT: v2
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workitem_id_yz() #1 {
   call void @use_workitem_id_yz()
@@ -194,8 +185,7 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_yz() #1 {
 ; UNPACKED-TID-DAG: v_lshlrev_b32_e32 [[IDY:v[0-9]+]], 10, v1
 ; UNPACKED-TID-DAG: v_lshlrev_b32_e32 [[IDZ:v[0-9]+]], 20, v2
 ; UNPACKED-TID-DAG: v_or_b32_e32 v0, v0, [[IDY]]
-; UNPACKED-TID-DAG: v_or_b32_e32 v0, v0, [[IDZ]]
-; GCN-NOT: v0
+; UNPACKED-TID-DAG: v_or_b32_e32 v31, v0, [[IDZ]]
 ; GCN-NOT: v1
 ; GCN-NOT: v2
 ; GCN: s_swappc_b64
@@ -233,8 +223,8 @@ define void @func_indirect_use_workitem_id_z() #1 {
 
 ; GCN-LABEL: {{^}}other_arg_use_workitem_id_x:
 ; GCN: s_waitcnt
-; GCN-DAG: v_and_b32_e32 [[ID:v[0-9]+]], 0x3ff, v1
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; GCN-DAG: v_and_b32_e32 [[ID:v[0-9]+]], 0x3ff, v31
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[ID]]
 define void @other_arg_use_workitem_id_x(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workitem.id.x()
@@ -245,8 +235,9 @@ define void @other_arg_use_workitem_id_x(i32 %arg0) #1 {
 
 ; GCN-LABEL: {{^}}other_arg_use_workitem_id_y:
 ; GCN: s_waitcnt
-; GCN-DAG: v_bfe_u32 [[ID:v[0-9]+]], v1, 10, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; GCN: s_waitcnt
+; GCN-DAG: v_bfe_u32 [[ID:v[0-9]+]], v31, 10, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[ID]]
 define void @other_arg_use_workitem_id_y(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workitem.id.y()
@@ -257,8 +248,9 @@ define void @other_arg_use_workitem_id_y(i32 %arg0) #1 {
 
 ; GCN-LABEL: {{^}}other_arg_use_workitem_id_z:
 ; GCN: s_waitcnt
-; GCN-DAG: v_bfe_u32 [[ID:v[0-9]+]], v1, 20, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; GCN: s_waitcnt
+; GCN-DAG: v_bfe_u32 [[ID:v[0-9]+]], v31, 20, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[ID]]
 define void @other_arg_use_workitem_id_z(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workitem.id.z()
@@ -270,11 +262,10 @@ define void @other_arg_use_workitem_id_z(i32 %arg0) #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workitem_id_x:
 
-; GCN: v_mov_b32_e32 v1, v0
 ; GCN: v_mov_b32_e32 v0, 0x22b
 ; GCN: s_swappc_b64
 
-; GCN: .amdhsa_system_vgpr_workitem_id 0
+; GCN: .amdhsa_system_vgpr_workitem_id 2
 define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_x() #1 {
   call void @other_arg_use_workitem_id_x(i32 555)
   ret void
@@ -284,14 +275,13 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_x() #1 {
 ; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workitem_id_y:
 
 ; UNPACKED-TID: v_lshlrev_b32_e32 v1, 10, v1
-; PACKED-TID:   v_mov_b32_e32 v1, v0
-; GCN-NOT: v1
+; PACKED-TID:   v_mov_b32_e32 v31, v0
 ; GCN: v_mov_b32_e32 v0, 0x22b
 ; GCN-NOT: v1
 ; GCN: s_swappc_b64
 ; GCN-NOT: v0
 
-; GCN: .amdhsa_system_vgpr_workitem_id 1
+; GCN: .amdhsa_system_vgpr_workitem_id 2
 define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_y() #1 {
   call void @other_arg_use_workitem_id_y(i32 555)
   ret void
@@ -300,8 +290,8 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_y() #1 {
 ; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workitem_id_z:
 
 ; GCN-DAG: v_mov_b32_e32 v0, 0x22b
-; UNPACKED-TID-DAG: v_lshlrev_b32_e32 v1, 20, v2
-; PACKED-TID-DAG: v_mov_b32_e32 v1, v0
+; UNPACKED-TID-DAG: v_lshlrev_b32_e32 v2, 20, v2
+; PACKED-TID-DAG: v_mov_b32_e32 v31, v0
 ; GCN: s_swappc_b64
 ; GCN-NOT: v0
 
@@ -312,9 +302,10 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_z() #1 {
 }
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_x:
-; GCN: buffer_load_dword v32, off, s[0:3], s32{{$}}
-; GCN: v_and_b32_e32 v32, 0x3ff, v32
-; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, v32
+; GFX90A: buffer_load_dword v32, off, s[0:3], s32{{$}}
+; GCN: v_and_b32_e32 v31, 0x3ff, v31
+; GFX7: buffer_load_dword v0, off, s[0:3], s32{{$}}
+; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, v0
 ; GCN: s_setpc_b64
 define void @too_many_args_use_workitem_id_x(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
@@ -366,10 +357,11 @@ define void @too_many_args_use_workitem_id_x(
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_x:
 
 ; GCN: s_mov_b32 s32, 0
-; GCN: buffer_store_dword v0, off, s[0:3], s32{{$}}
+; GFX7: buffer_store_dword v3, off, s[0:3], s32{{$}}
+; GFX90A: buffer_store_dword v1, off, s[0:3], s32{{$}}
 ; GCN: s_swappc_b64
 
-; GCN: .amdhsa_system_vgpr_workitem_id 0
+; GCN: .amdhsa_system_vgpr_workitem_id 2
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x() #1 {
   call void @too_many_args_use_workitem_id_x(
     i32 10, i32 20, i32 30, i32 40,
@@ -385,7 +377,7 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x() #1 {
 
 ; GCN-LABEL: {{^}}func_call_too_many_args_use_workitem_id_x:
 ; GCN: s_mov_b32 s33, s32
-; GCN: buffer_store_dword v1, off, s[0:3], s32{{$}}
+; GCN: buffer_store_dword v0, off, s[0:3], s32{{$}}
 ; GCN: s_swappc_b64
 define void @func_call_too_many_args_use_workitem_id_x(i32 %arg0) #1 {
   store volatile i32 %arg0, i32 addrspace(1)* undef
@@ -433,12 +425,13 @@ define void @too_many_args_call_too_many_args_use_workitem_id_x(
 ; frame[2] = VGPR spill slot
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_x_byval:
-; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:4
-; GCN-NEXT: s_waitcnt
-; GCN-NEXT: v_and_b32_e32 v32, 0x3ff, v32
-; GCN-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v32
-; GFX7: buffer_load_dword v0, off, s[0:3], s32 glc{{$}}
-; GFX90A: buffer_load_dword v0, off, s[0:3], s32 glc scc{{$}}
+; GFX7: buffer_load_dword v0, off, s[0:3], s32
+; GFX90A: buffer_load_dword v32, off, s[0:3], s32
+; GCN-DAG: s_waitcnt
+; GFX7: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; GFX90A: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v32,
+; GFX7: buffer_load_dword v0, off, s[0:3], s32 offset:4 glc{{$}}
+; GFX90A: buffer_load_dword v0, off, s[0:3], s32 offset:4 glc scc{{$}}
 ; GCN: s_setpc_b64
 define void @too_many_args_use_workitem_id_x_byval(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
@@ -493,17 +486,18 @@ define void @too_many_args_use_workitem_id_x_byval(
 
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_x_byval:
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
+; GCN-DAG: buffer_store_dword [[K]], off, s[0:3], 0 offset:4
 ; GCN-DAG: s_movk_i32 s32, 0x400
 
-; GCN: buffer_store_dword [[K]], off, s[0:3], 0 offset:4
-; GCN: buffer_store_dword v0, off, s[0:3], s32 offset:4
+; GFX7: buffer_store_dword v3, off, s[0:3], s32
+; GFX90A: buffer_store_dword v0, off, s[0:3], s32
 ; GCN: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], 0 offset:4
 
-; GCN: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32{{$}}
+; GCN: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32 offset:4
 ; GCN: v_mov_b32_e32 [[RELOAD_BYVAL]],
 ; GCN: s_swappc_b64
 
-; GCN: .amdhsa_system_vgpr_workitem_id 0
+; GCN: .amdhsa_system_vgpr_workitem_id 2
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 {
   %alloca = alloca i32, align 4, addrspace(5)
   store volatile i32 999, i32 addrspace(5)* %alloca
@@ -521,12 +515,12 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 
 }
 
 ; GCN-LABEL: {{^}}func_call_too_many_args_use_workitem_id_x_byval:
+; GCN: buffer_store_dword v40, off, s[0:3], s32 offset:4
 ; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
 ; GFX7: buffer_store_dword [[K]], off, s[0:3], s33{{$}}
 ; GFX90A: buffer_store_dword [[K]], off, s[0:3], s33 scc{{$}}
-; GCN: buffer_store_dword v0, off, s[0:3], s32 offset:4
 ; GCN: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s33{{$}}
-; GCN: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32{{$}}
+; GCN: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32 offset:4
 ; GCN: v_mov_b32_e32 [[RELOAD_BYVAL]],
 ; GCN: s_swappc_b64
 define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
@@ -546,20 +540,21 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
 }
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_xyz:
-; GCN:    buffer_load_dword v32, off, s[0:3], s32{{$}}
-; GCN:    v_and_b32_e32 v33, 0x3ff, v32
-; GFX7:   flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v33
-; GFX7:   v_bfe_u32 v33, v32, 10, 10
-; GFX90A: v_bfe_u32 v34, v32, 10, 10
-; GCN:    v_bfe_u32 v32, v32, 20, 10
-; GFX7:   flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v33{{$}}
-; GFX7:   flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v32{{$}}
-; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, v33, off scc{{$}}
-; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, v34, off scc{{$}}
+; GFX90A: buffer_load_dword v32, off, s[0:3], s32{{$}}
+; GFX90A: v_and_b32_e32 v33, 0x3ff, v31
+; GFX90A: v_bfe_u32 v33, v31, 10, 10
+; GCN90A: v_bfe_u32 v31, v31, 20, 10
+; GFX7:   v_and_b32_e32 v32, 0x3ff, v31
+; GFX7:   v_bfe_u32 v32, v31, 10, 10
+; GCN7:   v_bfe_u32 v31, v31, 20, 10
+; GFX7:   buffer_load_dword v0, off, s[0:3], s32{{$}}
+; GFX7:   flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v12
+; GFX7:   flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v30{{$}}
+; GFX7:   flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v0{{$}}
+; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, v29, off scc{{$}}
+; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, v30, off scc{{$}}
 ; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, v32, off scc{{$}}
 
-; GFX7-COUNT-32: flat_store_dword v{{\[[0-9]+:[0-9]+]}}
-; GFX90A-COUNT-32: global_store_dword v{{\[[0-9]+:[0-9]+]}}
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @too_many_args_use_workitem_id_xyz(
@@ -622,11 +617,11 @@ define void @too_many_args_use_workitem_id_xyz(
 ; UNPACKED-TID-DAG: v_lshlrev_b32_e32 v1, 10, v1
 ; UNPACKED-TID-DAG: v_or_b32_e32 v0, v0, v1
 ; UNPACKED-TID-DAG: v_lshlrev_b32_e32 v2, 20, v2
-; UNPACKED-TID-DAG: v_or_b32_e32 v0, v0, v2
+; UNPACKED-TID-DAG: v_or_b32_e32 v31, v0, v2
 ; PACKED-TID-NOT: v0
-; PACKED-TID-NOT: v1
 ; PACKED-TID-NOT: v2
-; GCN: buffer_store_dword v0, off, s[0:3], s32{{$}}
+; GFX7: buffer_store_dword v3, off, s[0:3], s32{{$}}
+; GFX90A: buffer_store_dword v1, off, s[0:3], s32{{$}}
 ; GCN: s_swappc_b64
 
 ; GCN: .amdhsa_system_vgpr_workitem_id 2
