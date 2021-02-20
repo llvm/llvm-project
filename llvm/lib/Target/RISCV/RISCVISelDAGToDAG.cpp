@@ -201,7 +201,9 @@ void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, bool IsMasked,
     Operands.push_back(Node->getOperand(CurOp++)); // Stride.
   if (IsMasked)
     Operands.push_back(Node->getOperand(CurOp++)); // Mask.
-  Operands.push_back(Node->getOperand(CurOp++));   // VL.
+  SDValue VL;
+  selectVLOp(Node->getOperand(CurOp++), VL);
+  Operands.push_back(VL);
   Operands.push_back(SEW);
   Operands.push_back(Node->getOperand(0)); // Chain.
   const RISCV::VLSEGPseudo *P =
@@ -240,7 +242,9 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, bool IsMasked) {
   Operands.push_back(Node->getOperand(CurOp++)); // Base pointer.
   if (IsMasked)
     Operands.push_back(Node->getOperand(CurOp++)); // Mask.
-  Operands.push_back(Node->getOperand(CurOp++));   // VL.
+  SDValue VL;
+  selectVLOp(Node->getOperand(CurOp++), VL);
+  Operands.push_back(VL);
   Operands.push_back(SEW);
   Operands.push_back(Node->getOperand(0)); // Chain.
   const RISCV::VLSEGPseudo *P =
@@ -285,7 +289,9 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, bool IsMasked,
   MVT IndexVT = Operands.back()->getSimpleValueType(0);
   if (IsMasked)
     Operands.push_back(Node->getOperand(CurOp++)); // Mask.
-  Operands.push_back(Node->getOperand(CurOp++));   // VL.
+  SDValue VL;
+  selectVLOp(Node->getOperand(CurOp++), VL);
+  Operands.push_back(VL);
   Operands.push_back(SEW);
   Operands.push_back(Node->getOperand(0)); // Chain.
 
@@ -329,7 +335,9 @@ void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, bool IsMasked,
     Operands.push_back(Node->getOperand(CurOp++)); // Stride.
   if (IsMasked)
     Operands.push_back(Node->getOperand(CurOp++)); // Mask.
-  Operands.push_back(Node->getOperand(CurOp++));   // VL.
+  SDValue VL;
+  selectVLOp(Node->getOperand(CurOp++), VL);
+  Operands.push_back(VL);
   Operands.push_back(SEW);
   Operands.push_back(Node->getOperand(0)); // Chain.
   const RISCV::VSSEGPseudo *P = RISCV::getVSSEGPseudo(
@@ -360,7 +368,9 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, bool IsMasked,
   MVT IndexVT = Operands.back()->getSimpleValueType(0);
   if (IsMasked)
     Operands.push_back(Node->getOperand(CurOp++)); // Mask.
-  Operands.push_back(Node->getOperand(CurOp++));   // VL.
+  SDValue VL;
+  selectVLOp(Node->getOperand(CurOp++), VL);
+  Operands.push_back(VL);
   Operands.push_back(SEW);
   Operands.push_back(Node->getOperand(0)); // Chain.
 
