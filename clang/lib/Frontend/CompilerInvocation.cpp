@@ -1037,7 +1037,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   Opts.UnrollLoops =
       Args.hasFlag(OPT_funroll_loops, OPT_fno_unroll_loops,
                    (Opts.OptimizationLevel > 1));
-
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
 
@@ -1324,6 +1323,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
+  if (Args.hasArg(options::OPT_ffinite_loops))
+    Opts.FiniteLoops = CodeGenOptions::FiniteLoopsKind::Always;
+  else if (Args.hasArg(options::OPT_fno_finite_loops))
+    Opts.FiniteLoops = CodeGenOptions::FiniteLoopsKind::Never;
   return Success;
 }
 
