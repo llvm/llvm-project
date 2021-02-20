@@ -13,7 +13,7 @@ define void @CopyEventArg(%union.anon* %ev) nounwind {
 ; CHECK-LABEL: @CopyEventArg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CSTR:%.*]] = bitcast %union.anon* [[EV:%.*]] to i8*
-; CHECK-NEXT:    [[STRCPY:%.*]] = call i8* @strcpy(i8* noundef nonnull dereferenceable(1) undef, i8* noundef nonnull dereferenceable(1) [[CSTR]])
+; CHECK-NEXT:    [[STRCPY:%.*]] = call i8* @strcpy(i8* nonnull dereferenceable(1) undef, i8* nonnull dereferenceable(1) [[CSTR]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

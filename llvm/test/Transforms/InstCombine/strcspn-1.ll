@@ -15,7 +15,7 @@ declare i64 @strcspn(i8*, i8*)
 
 define i64 @test_simplify1(i8* %str) {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) [[STR:%.*]])
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(i8* nonnull dereferenceable(1) [[STR:%.*]])
 ; CHECK-NEXT:    ret i64 [[STRLEN]]
 ;
   %pat = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0

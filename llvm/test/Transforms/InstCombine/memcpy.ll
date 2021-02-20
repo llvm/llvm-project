@@ -29,7 +29,7 @@ define void @test2(i8* %a) {
 
 define void @test3(i8* %d, i8* %s) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(17179869184) [[D:%.*]], i8* noundef nonnull align 4 dereferenceable(17179869184) [[S:%.*]], i64 17179869184, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(17179869184) [[D:%.*]], i8* nonnull align 4 dereferenceable(17179869184) [[S:%.*]], i64 17179869184, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %d, i8* align 4 %s, i64 17179869184, i1 false)

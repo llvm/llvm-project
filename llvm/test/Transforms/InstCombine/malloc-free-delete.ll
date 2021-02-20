@@ -83,8 +83,8 @@ define void @test5(i8* %ptr, i8** %esc) {
 ; CHECK-NEXT:    [[E:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
 ; CHECK-NEXT:    [[F:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
 ; CHECK-NEXT:    [[G:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(32) [[PTR:%.*]], i8* noundef nonnull align 1 dereferenceable(32) [[A]], i32 32, i1 false)
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(32) [[PTR]], i8* noundef nonnull align 1 dereferenceable(32) [[B]], i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* nonnull align 1 dereferenceable(32) [[PTR:%.*]], i8* nonnull align 1 dereferenceable(32) [[A]], i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i32(i8* nonnull align 1 dereferenceable(32) [[PTR]], i8* nonnull align 1 dereferenceable(32) [[B]], i32 32, i1 false)
 ; CHECK-NEXT:    store i8* [[C]], i8** [[ESC:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[D]], i8* [[PTR]], i32 32, i1 true)
 ; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i32(i8* [[E]], i8* [[PTR]], i32 32, i1 true)
@@ -149,11 +149,10 @@ define void @test6a(i8* %foo) minsize {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @_ZdlPv(i8* [[FOO]]) [[ATTR8:#.*]]
+; CHECK-NEXT:    tail call void @_ZdlPv(i8* [[FOO]])
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
-;
 entry:
   %tobool = icmp eq i8* %foo, null
   br i1 %tobool, label %if.end, label %if.then
@@ -352,7 +351,7 @@ define void @test10()  {
 
 define void @test11() {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable(8) i8* @_Znwm(i64 8) [[ATTR8]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable(8) i8* @_Znwm(i64 8) #8
 ; CHECK-NEXT:    call void @_ZdlPv(i8* nonnull [[CALL]])
 ; CHECK-NEXT:    ret void
 ;
@@ -394,7 +393,7 @@ if.end:                                           ; preds = %entry, %if.then
 ; Freeing a no-free pointer -> full UB
 define void @test13(i8* nofree %foo) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    call void @free(i8* [[FOO:%.*]])
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
 ; CHECK-NEXT:    ret void
 ;
   call void @free(i8* %foo)
@@ -404,7 +403,7 @@ define void @test13(i8* nofree %foo) {
 ; Freeing a no-free pointer -> full UB
 define void @test14(i8* %foo) nofree {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    call void @free(i8* [[FOO:%.*]])
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
 ; CHECK-NEXT:    ret void
 ;
   call void @free(i8* %foo)
@@ -414,7 +413,7 @@ define void @test14(i8* %foo) nofree {
 ; free call marked no-free -> full UB
 define void @test15(i8* %foo) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    call void @free(i8* [[FOO:%.*]]) [[ATTR6:#.*]]
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
 ; CHECK-NEXT:    ret void
 ;
   call void @free(i8* %foo) nofree

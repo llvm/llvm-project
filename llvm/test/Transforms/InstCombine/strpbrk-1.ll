@@ -52,7 +52,7 @@ define i8* @test_simplify3() {
 
 define i8* @test_simplify4(i8* %str) {
 ; CHECK-LABEL: @test_simplify4(
-; CHECK-NEXT:    [[STRCHR:%.*]] = call i8* @strchr(i8* noundef nonnull dereferenceable(1) [[STR:%.*]], i32 119)
+; CHECK-NEXT:    [[STRCHR:%.*]] = call i8* @strchr(i8* nonnull dereferenceable(1) [[STR:%.*]], i32 119)
 ; CHECK-NEXT:    ret i8* [[STRCHR]]
 ;
   %pat = getelementptr [2 x i8], [2 x i8]* @w, i32 0, i32 0

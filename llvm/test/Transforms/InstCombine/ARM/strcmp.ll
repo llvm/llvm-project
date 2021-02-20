@@ -67,7 +67,7 @@ define arm_aapcscc i32 @test4() {
 define arm_aapcscc i32 @test5(i1 %b) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @hell, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @bell, i32 0, i32 0)
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* noundef nonnull dereferenceable(5) [[STR2]], i32 5)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* nonnull dereferenceable(5) [[STR2]], i32 5)
 ; CHECK-NEXT:    ret i32 [[MEMCMP]]
 ;
 
@@ -145,7 +145,7 @@ define arm_aapcs_vfpcc i32 @test4_vfp() {
 define arm_aapcs_vfpcc i32 @test5_vfp(i1 %b) {
 ; CHECK-LABEL: @test5_vfp(
 ; CHECK-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @hell, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @bell, i32 0, i32 0)
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* noundef nonnull dereferenceable(5) [[STR2]], i32 5)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* nonnull dereferenceable(5) [[STR2]], i32 5)
 ; CHECK-NEXT:    ret i32 [[MEMCMP]]
 ;
 

@@ -32,11 +32,11 @@ define void @memcpy_memcpy_across_lifetime(i8* noalias %p1, i8* noalias %p2, i8*
 ; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    [[A8:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A]], i64 0, i64 0
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull [[A8]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(16) [[A8]], i8* noundef nonnull align 1 dereferenceable(16) [[P1:%.*]], i64 16, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(16) [[P1]], i8* noundef nonnull align 1 dereferenceable(16) [[P2:%.*]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(16) [[P2]], i8* noundef nonnull align 1 dereferenceable(16) [[A8]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(16) [[A8]], i8* nonnull align 1 dereferenceable(16) [[P1:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(16) [[P1]], i8* nonnull align 1 dereferenceable(16) [[P2:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(16) [[P2]], i8* nonnull align 1 dereferenceable(16) [[A8]], i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull [[A8]])
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(16) [[P3:%.*]], i8* noundef nonnull align 1 dereferenceable(16) [[P2]], i64 16, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(16) [[P3:%.*]], i8* nonnull align 1 dereferenceable(16) [[P2]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [16 x i8]

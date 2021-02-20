@@ -10,7 +10,7 @@ declare i32 @snprintf(i8*, i64, i8*, ...) #1
 
 define void @test_not_const_fmt(i8* %buf, i8* %fmt) #0 {
 ; CHECK-LABEL: @test_not_const_fmt(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* noundef nonnull dereferenceable(1) [[BUF:%.*]], i64 32, i8* [[FMT:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* nonnull dereferenceable(1) [[BUF:%.*]], i64 32, i8* [[FMT:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 32, i8* %fmt) #2
@@ -47,7 +47,7 @@ define i32 @test_return_value(i8* %buf) #0 {
 
 define void @test_percentage(i8* %buf) #0 {
 ; CHECK-LABEL: @test_percentage(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* noundef nonnull dereferenceable(1) [[BUF:%.*]], i64 32, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.1, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* nonnull dereferenceable(1) [[BUF:%.*]], i64 32, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.1, i64 0, i64 0))
 ; CHECK-NEXT:    ret void
 ;
   %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 32, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.1, i64 0, i64 0)) #2
@@ -92,7 +92,7 @@ define i32 @test_char_zero_size(i8* %buf) #0 {
 
 define i32 @test_char_wrong_size(i8* %buf) #0 {
 ; CHECK-LABEL: @test_char_wrong_size(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* noundef nonnull dereferenceable(1) [[BUF:%.*]], i64 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.2, i64 0, i64 0), i32 65)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* nonnull dereferenceable(1) [[BUF:%.*]], i64 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.2, i64 0, i64 0), i32 65)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.2, i64 0, i64 0), i32 65) #2
@@ -120,7 +120,7 @@ define i32 @test_str_zero_size(i8* %buf) #0 {
 
 define i32 @test_str_wrong_size(i8* %buf) #0 {
 ; CHECK-LABEL: @test_str_wrong_size(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* noundef nonnull dereferenceable(1) [[BUF:%.*]], i64 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* nonnull dereferenceable(1) [[BUF:%.*]], i64 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0))
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)) #2
