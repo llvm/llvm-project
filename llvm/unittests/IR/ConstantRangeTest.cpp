@@ -94,11 +94,13 @@ bool PreferSmallestNonFullSigned(const ConstantRange &CR1,
   return PreferSmallestSigned(CR1, CR2);
 }
 
+
+
 // Check whether constant range CR is an optimal approximation of the set
 // Elems under the given PreferenceFn. The preference function should return
 // true if the first range argument is strictly preferred to the second one.
 static void TestRange(const ConstantRange &CR, const SmallBitVector &Elems,
-                      PreferFn PreferenceFn) {
+                      PreferFn PreferenceFn, ArrayRef<ConstantRange> Inputs) {
   unsigned BitWidth = CR.getBitWidth();
 
   // Check conservative correctness.
@@ -106,16 +108,23 @@ static void TestRange(const ConstantRange &CR, const SmallBitVector &Elems,
     EXPECT_TRUE(CR.contains(APInt(BitWidth, Elem)));
   }
 
-  // Make sure we have at least two elements for the code below.
+  // Make sure we have at least one element for the code below.
   if (Elems.none()) {
     EXPECT_TRUE(CR.isEmptySet());
     return;
   }
 
-  if (Elems.count() == 1) {
-    EXPECT_TRUE(CR.isSingleElement());
-    return;
-  }
+  auto NotPreferred = [&](const ConstantRange &PossibleCR) {
+    if (!PreferenceFn(PossibleCR, CR))
+      return testing::AssertionSuccess();
+
+    testing::AssertionResult Result = testing::AssertionFailure();
+    Result << "Inputs = ";
+    for (const ConstantRange &Input : Inputs)
+      Result << Input << ", ";
+    Result << "CR = " << CR << ", BetterCR = " << PossibleCR;
+    return Result;
+  };
 
   // Look at all pairs of adjacent elements and the slack-free ranges
   // [Elem, PrevElem] they imply. Check that none of the ranges are strictly
@@ -130,12 +139,16 @@ static void TestRange(const ConstantRange &CR, const SmallBitVector &Elems,
     ConstantRange PossibleCR =
         ConstantRange::getNonEmpty(APInt(BitWidth, Elem),
                                    APInt(BitWidth, PrevElem) + 1);
-    // There should be no range that is preferred over CR.
-    EXPECT_FALSE(PreferenceFn(PossibleCR, CR))
-      << "CR = " << CR << ", BetterCR = " << PossibleCR;
+    // We get a full range any time PrevElem and Elem are adjacent. Avoid
+    // repeated checks by skipping here, and explicitly checking below instead.
+    if (!PossibleCR.isFullSet()) {
+      EXPECT_TRUE(NotPreferred(PossibleCR));
+    }
 
     PrevElem = Elem;
   } while (Elem != FirstElem);
+
+  EXPECT_TRUE(NotPreferred(ConstantRange::getFull(BitWidth)));
 }
 
 using UnaryRangeFn = llvm::function_ref<ConstantRange(const ConstantRange &)>;
@@ -150,7 +163,7 @@ static void TestUnaryOpExhaustive(UnaryRangeFn RangeFn, UnaryIntFn IntFn,
       if (Optional<APInt> ResultN = IntFn(N))
         Elems.set(ResultN->getZExtValue());
     });
-    TestRange(RangeFn(CR), Elems, PreferenceFn);
+    TestRange(RangeFn(CR), Elems, PreferenceFn, {CR});
   });
 }
 
@@ -171,7 +184,7 @@ static void TestBinaryOpExhaustive(BinaryRangeFn RangeFn, BinaryIntFn IntFn,
               Elems.set(ResultN->getZExtValue());
           });
         });
-        TestRange(RangeFn(CR1, CR2), Elems, PreferenceFn);
+        TestRange(RangeFn(CR1, CR2), Elems, PreferenceFn, {CR1, CR2});
       });
 }
 
@@ -543,13 +556,13 @@ void testBinarySetOperationExhaustive(Fn1 OpFn, Fn2 InResultFn) {
             Elems.set(Num.getZExtValue());
 
         ConstantRange SmallestCR = OpFn(CR1, CR2, ConstantRange::Smallest);
-        TestRange(SmallestCR, Elems, PreferSmallest);
+        TestRange(SmallestCR, Elems, PreferSmallest, {CR1, CR2});
 
         ConstantRange UnsignedCR = OpFn(CR1, CR2, ConstantRange::Unsigned);
-        TestRange(UnsignedCR, Elems, PreferSmallestNonFullUnsigned);
+        TestRange(UnsignedCR, Elems, PreferSmallestNonFullUnsigned, {CR1, CR2});
 
         ConstantRange SignedCR = OpFn(CR1, CR2, ConstantRange::Signed);
-        TestRange(SignedCR, Elems, PreferSmallestNonFullSigned);
+        TestRange(SignedCR, Elems, PreferSmallestNonFullSigned, {CR1, CR2});
       });
 }
 
