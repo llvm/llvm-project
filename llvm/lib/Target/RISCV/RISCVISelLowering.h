@@ -20,6 +20,7 @@
 
 namespace llvm {
 class RISCVSubtarget;
+struct RISCVRegisterInfo;
 namespace RISCVISD {
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
@@ -374,6 +375,15 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *Fast = nullptr) const override;
 
+  static RISCVVLMUL getLMUL(MVT VT);
+  static unsigned getRegClassIDForLMUL(RISCVVLMUL LMul);
+  static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
+  static unsigned getRegClassIDForVecVT(MVT VT);
+  static std::pair<unsigned, unsigned>
+  decomposeSubvectorInsertExtractToSubRegs(MVT VecVT, MVT SubVecVT,
+                                           unsigned InsertExtractIdx,
+                                           const RISCVRegisterInfo *TRI);
+
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -410,6 +420,7 @@ private:
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFPVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorStoreToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorSetccToRVV(SDValue Op, SelectionDAG &DAG) const;
