@@ -1726,7 +1726,7 @@ void CoverageMappingModuleGen::emit() {
   llvm::SmallVector<std::string, 16> FilenameStrs;
   FilenameStrs.resize(FileEntries.size() + 1);
   // The first filename is the current working directory.
-  FilenameStrs[0] = getCurrentDirname();
+  FilenameStrs[0] = normalizeFilename(getCurrentDirname());
   for (const auto &Entry : FileEntries) {
     auto I = Entry.second;
     FilenameStrs[I] = normalizeFilename(Entry.first->getName());
