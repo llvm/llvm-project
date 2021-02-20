@@ -448,8 +448,11 @@ def alias_list : Separate<["-"], "alias_list">,
      Flags<[HelpHidden]>,
      Group<grp_resolve>;
 def flat_namespace : Flag<["-"], "flat_namespace">,
-     HelpText<"Resolve symbols from all dylibs, both direct & transitive. Do not record source libraries: dyld must re-search at runtime and use the first definition found">,
+     HelpText<"Resolve symbols from all dylibs, both direct and transitive. Do not record source libraries: dyld must re-search at runtime and use the first definition found">,
      Flags<[HelpHidden]>,
+     Group<grp_resolve>;
+def twolevel_namespace : Flag<["-"], "twolevel_namespace">,
+     HelpText<"Make dyld look up symbols by (dylib,name) pairs (default)">,
      Group<grp_resolve>;
 def u : Separate<["-"], "u">,
      MetaVarName<"<symbol>">,
@@ -1299,10 +1302,6 @@ def text_exec : Flag<["-"], "text_exec">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
 def threaded_starts_section : Flag<["-"], "threaded_starts_section">,
-     HelpText<"This option is undocumented in ld64">,
-     Flags<[HelpHidden]>,
-     Group<grp_undocumented>;
-def twolevel_namespace : Flag<["-"], "twolevel_namespace">,
      HelpText<"This option is undocumented in ld64">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
