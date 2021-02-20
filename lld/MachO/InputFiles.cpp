@@ -605,11 +605,8 @@ void loadReexport(StringRef path, DylibFile *umbrella) {
     inputFiles.insert(*reexport);
 }
 
-DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
-                     bool isBundleLoader)
-    : InputFile(DylibKind, mb), refState(RefState::Unreferenced),
-      isBundleLoader(isBundleLoader) {
-  assert(!isBundleLoader || !umbrella);
+DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
+    : InputFile(DylibKind, mb), refState(RefState::Unreferenced) {
   if (umbrella == nullptr)
     umbrella = this;
 
@@ -622,9 +619,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     currentVersion = read32le(&c->dylib.current_version);
     compatibilityVersion = read32le(&c->dylib.compatibility_version);
     dylibName = reinterpret_cast<const char *>(cmd) + read32le(&c->dylib.name);
-  } else if (!isBundleLoader) {
-    // macho_executable and macho_bundle don't have LC_ID_DYLIB,
-    // so it's OK.
+  } else {
     error("dylib " + toString(this) + " missing LC_ID_DYLIB load command");
     return;
   }
@@ -663,12 +658,8 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
   }
 }
 
-DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
-                     bool isBundleLoader)
-    : InputFile(DylibKind, interface), refState(RefState::Unreferenced),
-      isBundleLoader(isBundleLoader) {
-  // FIXME: Add test for the missing TBD code path.
-
+DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
+    : InputFile(DylibKind, interface), refState(RefState::Unreferenced) {
   if (umbrella == nullptr)
     umbrella = this;
 
