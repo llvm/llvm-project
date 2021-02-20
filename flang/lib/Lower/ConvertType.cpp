@@ -11,6 +11,7 @@
 #include "flang/Evaluate/shape.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/CallInterface.h"
+#include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/Todo.h"
@@ -260,9 +261,10 @@ struct TypeBuilder {
     const auto &typeSymbol = tySpec.typeSymbol();
     if (auto ty = getTypeIfDerivedAlreadyInConstruction(typeSymbol))
       return ty;
-    // FIXME: mangle the type name, including KIND parameters, etc.
-    auto rec = fir::RecordType::get(context, toStringRef(typeSymbol.name()));
-    addToDerivedTypeInConstruction(typeSymbol, rec);
+    auto rec = fir::RecordType::get(
+        context, Fortran::lower::mangle::mangleName(typeSymbol));
+    // Maintain the stack of types for recursive references.
+    derivedTypeInConstruction.emplace_back(typeSymbol, rec);
 
     // Gather the record type fields.
     // (1) The data components.
@@ -276,6 +278,7 @@ struct TypeBuilder {
         continue;
       cs.emplace_back(field.name().ToString(), ty);
     }
+
     // (2) The LEN type parameters.
     for (const auto &param :
          Fortran::semantics::OrderParameterDeclarations(typeSymbol))
@@ -285,6 +288,12 @@ struct TypeBuilder {
 
     rec.finalize(ps, cs);
     popDerivedTypeInConstruction();
+
+    if (!ps.empty()) {
+      // This type is a PDT (parametric derived type). Create the functions to
+      // use for allocation, dereferencing, and address arithmetic here.
+      TODO("PDT");
+    }
     LLVM_DEBUG(llvm::dbgs() << "derived type: " << rec << '\n');
     return rec;
   }
@@ -362,10 +371,6 @@ struct TypeBuilder {
     return {};
   }
 
-  void addToDerivedTypeInConstruction(const Fortran::lower::SymbolRef sym,
-                                      mlir::Type type) {
-    derivedTypeInConstruction.emplace_back(sym, type);
-  }
   void popDerivedTypeInConstruction() {
     assert(!derivedTypeInConstruction.empty());
     derivedTypeInConstruction.pop_back();
