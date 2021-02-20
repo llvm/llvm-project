@@ -37,6 +37,11 @@ struct D
     explicit D(int i) : B(i) {}
 };
 
+struct NonMoveAssignable {
+  NonMoveAssignable& operator=(NonMoveAssignable const&) = default;
+  NonMoveAssignable& operator=(NonMoveAssignable&&) = delete;
+};
+
 int main(int, char**)
 {
     {
@@ -47,6 +52,16 @@ int main(int, char**)
         t1 = std::move(t0);
         assert(std::get<0>(t1) == 2);
         assert(std::get<1>(t1)->id_ == 3);
+    }
+    {
+      using T = std::tuple<int, NonMoveAssignable>;
+      using P = std::pair<int, NonMoveAssignable>;
+      static_assert(!std::is_assignable<T&, P&&>::value, "");
+    }
+    {
+      using T = std::tuple<int, int, int>;
+      using P = std::pair<int, int>;
+      static_assert(!std::is_assignable<T&, P&&>::value, "");
     }
 
   return 0;

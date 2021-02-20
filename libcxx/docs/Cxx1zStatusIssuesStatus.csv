@@ -232,7 +232,7 @@
 "`2699 <https://wg21.link/LWG2699>`__","Missing restriction in [numeric.requirements]","Issaquah","|Complete|",""
 "`2712 <https://wg21.link/LWG2712>`__","copy_file(from, to, ...) has a number of unspecified error conditions","Issaquah","|Complete|",""
 "`2722 <https://wg21.link/LWG2722>`__","equivalent incorrectly specifies throws clause","Issaquah","|Complete|",""
-"`2729 <https://wg21.link/LWG2729>`__","Missing SFINAE on std::pair::operator=","Issaquah","",""
+"`2729 <https://wg21.link/LWG2729>`__","Missing SFINAE on std::pair::operator=","Issaquah","|Complete|",""
 "`2732 <https://wg21.link/LWG2732>`__","Questionable specification of path::operator/= and path::append","Issaquah","|Complete|",""
 "`2733 <https://wg21.link/LWG2733>`__","[fund.ts.v2] gcd / lcm and bool","Issaquah","|Complete|",""
 "`2735 <https://wg21.link/LWG2735>`__","std::abs(short), std::abs(signed char) and others should return int instead of double in order to be compatible with C++98 and C","Issaquah","|Complete|",""

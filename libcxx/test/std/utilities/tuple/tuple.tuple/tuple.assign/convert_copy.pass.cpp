@@ -34,6 +34,11 @@ struct D
     explicit D(int i = 0) : B(i) {}
 };
 
+struct NonAssignable {
+  NonAssignable& operator=(NonAssignable const&) = delete;
+  NonAssignable& operator=(NonAssignable&&) = delete;
+};
+
 int main(int, char**)
 {
     {
@@ -86,6 +91,12 @@ int main(int, char**)
         t = t2;
         assert(std::get<0>(t) == 43);
         assert(&std::get<0>(t) == &x);
+    }
+    {
+      using T = std::tuple<int, NonAssignable>;
+      using U = std::tuple<NonAssignable, int>;
+      static_assert(!std::is_assignable<T, U const&>::value, "");
+      static_assert(!std::is_assignable<U, T const&>::value, "");
     }
 
   return 0;

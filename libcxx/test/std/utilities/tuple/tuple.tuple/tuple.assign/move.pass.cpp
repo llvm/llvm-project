@@ -105,8 +105,8 @@ int main(int, char**)
 
     }
     {
-        using T = std::tuple<int, NonAssignable>;
-        static_assert(!std::is_move_assignable<T>::value, "");
+      using T = std::tuple<int, NonAssignable>;
+      static_assert(!std::is_move_assignable<T>::value, "");
     }
     {
         using T = std::tuple<int, MoveAssignable>;
