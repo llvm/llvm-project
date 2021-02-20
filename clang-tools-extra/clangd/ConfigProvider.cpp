@@ -10,8 +10,10 @@
 #include "Config.h"
 #include "ConfigFragment.h"
 #include "support/FileCache.h"
+#include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -96,16 +98,10 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
         return {};
 
       // Compute absolute paths to all ancestors (substrings of P.Path).
-      llvm::StringRef Parent = path::parent_path(P.Path);
       llvm::SmallVector<llvm::StringRef, 8> Ancestors;
-      for (auto I = path::begin(Parent, path::Style::posix),
-                E = path::end(Parent);
-           I != E; ++I) {
-        // Avoid weird non-substring cases like phantom "." components.
-        // In practice, Component is a substring for all "normal" ancestors.
-        if (I->end() < Parent.begin() || I->end() > Parent.end())
-          continue;
-        Ancestors.emplace_back(Parent.begin(), I->end() - Parent.begin());
+      for (auto Ancestor = absoluteParent(P.Path); !Ancestor.empty();
+           Ancestor = absoluteParent(Ancestor)) {
+        Ancestors.emplace_back(Ancestor);
       }
       // Ensure corresponding cache entries exist in the map.
       llvm::SmallVector<FileConfigCache *, 8> Caches;
@@ -127,7 +123,7 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
       // Finally query each individual file.
       // This will take a (per-file) lock for each file that actually exists.
       std::vector<CompiledFragment> Result;
-      for (FileConfigCache *Cache : Caches)
+      for (FileConfigCache *Cache : llvm::reverse(Caches))
         Cache->get(FS, DC, P.FreshTime, Result);
       return Result;
     };
