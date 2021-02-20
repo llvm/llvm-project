@@ -1256,12 +1256,6 @@ ConstantRange ConstantRange::srem(const ConstantRange &RHS) const {
 }
 
 ConstantRange ConstantRange::binaryNot() const {
-  if (isEmptySet())
-    return getEmpty();
-
-  if (isWrappedSet())
-    return getFull();
-
   return ConstantRange(APInt::getAllOnesValue(getBitWidth())).sub(*this);
 }
 
