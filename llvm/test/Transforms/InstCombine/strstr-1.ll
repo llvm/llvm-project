@@ -27,7 +27,7 @@ define i8* @test_simplify1(i8* %str) {
 
 define i8* @test_simplify2(i8* %str) {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    [[STRCHR:%.*]] = call i8* @strchr(i8* noundef nonnull dereferenceable(1) [[STR:%.*]], i32 97)
+; CHECK-NEXT:    [[STRCHR:%.*]] = call i8* @strchr(i8* nonnull dereferenceable(1) [[STR:%.*]], i32 97)
 ; CHECK-NEXT:    ret i8* [[STRCHR]]
 ;
   %pat = getelementptr inbounds [2 x i8], [2 x i8]* @.str1, i32 0, i32 0
@@ -61,7 +61,7 @@ define i8* @test_simplify4(i8* %str) {
 
 define i1 @test_simplify5(i8* %str, i8* %pat) {
 ; CHECK-LABEL: @test_simplify5(
-; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) [[PAT:%.*]])
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(i8* nonnull dereferenceable(1) [[PAT:%.*]])
 ; CHECK-NEXT:    [[STRNCMP:%.*]] = call i32 @strncmp(i8* [[STR:%.*]], i8* [[PAT]], i64 [[STRLEN]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[STRNCMP]], 0
 ; CHECK-NEXT:    ret i1 [[CMP1]]
@@ -73,7 +73,7 @@ define i1 @test_simplify5(i8* %str, i8* %pat) {
 
 define i8* @test1(i8* %str1, i8* %str2) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strstr(i8* noundef nonnull dereferenceable(1) [[STR1:%.*]], i8* noundef nonnull dereferenceable(1) [[STR2:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @strstr(i8* nonnull dereferenceable(1) [[STR1:%.*]], i8* nonnull dereferenceable(1) [[STR2:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %ret = call i8* @strstr(i8* %str1, i8* %str2)
@@ -82,7 +82,7 @@ define i8* @test1(i8* %str1, i8* %str2) {
 
 define i8* @test2(i8* %str1, i8* %str2) null_pointer_is_valid {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strstr(i8* noundef [[STR1:%.*]], i8* noundef [[STR2:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @strstr(i8* [[STR1:%.*]], i8* [[STR2:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %ret = call i8* @strstr(i8* %str1, i8* %str2)

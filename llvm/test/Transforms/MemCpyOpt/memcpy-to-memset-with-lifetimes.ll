@@ -9,7 +9,7 @@ define void @foo([8 x i64]* noalias nocapture sret([8 x i64]) dereferenceable(64
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry-block:
 ; CHECK-NEXT:    [[SRET1:%.*]] = bitcast [8 x i64]* [[SRET:%.*]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(64) [[SRET1]], i8 0, i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(64) [[SRET1]], i8 0, i64 64, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry-block:
@@ -30,12 +30,12 @@ define void @bar([8 x i64]* noalias nocapture sret([8 x i64]) dereferenceable(64
 ; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i64], align 8
 ; CHECK-NEXT:    [[A_CAST:%.*]] = bitcast [8 x i64]* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 64, i8* nonnull [[A_CAST]])
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(64) [[A_CAST]], i8 0, i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(64) [[A_CAST]], i8 0, i64 64, i1 false)
 ; CHECK-NEXT:    [[SRET_CAST:%.*]] = bitcast [8 x i64]* [[SRET:%.*]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(64) [[SRET_CAST]], i8 0, i64 64, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(32) [[A_CAST]], i8 42, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(64) [[SRET_CAST]], i8 0, i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(32) [[A_CAST]], i8 42, i64 32, i1 false)
 ; CHECK-NEXT:    [[OUT_CAST:%.*]] = bitcast [8 x i64]* [[OUT:%.*]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(64) [[OUT_CAST]], i8* noundef nonnull align 8 dereferenceable(64) [[A_CAST]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(64) [[OUT_CAST]], i8* nonnull align 8 dereferenceable(64) [[A_CAST]], i64 64, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 64, i8* nonnull [[A_CAST]])
 ; CHECK-NEXT:    ret void
 ;

@@ -10,7 +10,7 @@ define void @baz() unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [[FOO:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %Foo* [[TMP2]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16384, i8* nonnull [[TMP0]])
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(16384) [[TMP0]], i8 0, i64 16384, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(16384) [[TMP0]], i8 0, i64 16384, i1 false)
 ; CHECK-NEXT:    call void @bar(%Foo* noalias nocapture nonnull dereferenceable(16384) [[TMP2]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16384, i8* nonnull [[TMP0]])
 ; CHECK-NEXT:    ret void

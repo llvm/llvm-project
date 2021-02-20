@@ -5,7 +5,7 @@ declare i32 @memcmp(i8 addrspace(1)* nocapture, i8* nocapture, i64)
 
 define i32 @memcmp_const_size_update_deref(i8 addrspace(1)* nocapture readonly %d, i8* nocapture readonly %s) {
 ; CHECK-LABEL: @memcmp_const_size_update_deref(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8 addrspace(1)* noundef dereferenceable(16) dereferenceable_or_null(40) [[D:%.*]], i8* noundef nonnull dereferenceable(16) [[S:%.*]], i64 16)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8 addrspace(1)* dereferenceable(16) dereferenceable_or_null(40) [[D:%.*]], i8* nonnull dereferenceable(16) [[S:%.*]], i64 16)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = tail call i32 @memcmp(i8 addrspace(1)* dereferenceable_or_null(40) %d, i8* %s, i64 16)

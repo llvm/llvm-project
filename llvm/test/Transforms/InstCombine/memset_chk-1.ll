@@ -14,7 +14,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define i8* @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(1824) bitcast (%struct.T* @t to i8*), i8 0, i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T* @t to i8*), i8 0, i64 1824, i1 false)
 ; CHECK-NEXT:    ret i8* bitcast (%struct.T* @t to i8*)
 ;
   %dst = bitcast %struct.T* @t to i8*
@@ -25,7 +25,7 @@ define i8* @test_simplify1() {
 
 define i8* @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(1824) bitcast (%struct.T* @t to i8*), i8 0, i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T* @t to i8*), i8 0, i64 1824, i1 false)
 ; CHECK-NEXT:    ret i8* bitcast (%struct.T* @t to i8*)
 ;
   %dst = bitcast %struct.T* @t to i8*
@@ -36,7 +36,7 @@ define i8* @test_simplify2() {
 
 define i8* @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(1824) bitcast (%struct.T* @t to i8*), i8 0, i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T* @t to i8*), i8 0, i64 1824, i1 false)
 ; CHECK-NEXT:    ret i8* bitcast (%struct.T* @t to i8*)
 ;
   %dst = bitcast %struct.T* @t to i8*
@@ -73,11 +73,11 @@ define i8* @test_no_simplify2() {
 define i32 @test_rauw(i8* %a, i8* %b, i8** %c) {
 ; CHECK-LABEL: @test_rauw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL49:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) [[A:%.*]])
+; CHECK-NEXT:    [[CALL49:%.*]] = call i64 @strlen(i8* nonnull dereferenceable(1) [[A:%.*]])
 ; CHECK-NEXT:    [[ADD180:%.*]] = add i64 [[CALL49]], 1
 ; CHECK-NEXT:    [[YO107:%.*]] = call i64 @llvm.objectsize.i64.p0i8(i8* [[B:%.*]], i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    [[CALL50:%.*]] = call i8* @__memmove_chk(i8* [[B]], i8* [[A]], i64 [[ADD180]], i64 [[YO107]])
-; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) [[B]])
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(i8* nonnull dereferenceable(1) [[B]])
 ; CHECK-NEXT:    [[STRCHR1:%.*]] = getelementptr i8, i8* [[B]], i64 [[STRLEN]]
 ; CHECK-NEXT:    [[D:%.*]] = load i8*, i8** [[C:%.*]], align 8
 ; CHECK-NEXT:    [[SUB182:%.*]] = ptrtoint i8* [[D]] to i64
@@ -143,7 +143,7 @@ cleanup:
 
 define i8* @test_no_incompatible_attr(i8* %mem, i32 %val, i32 %size) {
 ; CHECK-LABEL: @test_no_incompatible_attr(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(1824) bitcast (%struct.T* @t to i8*), i8 0, i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T* @t to i8*), i8 0, i64 1824, i1 false)
 ; CHECK-NEXT:    ret i8* bitcast (%struct.T* @t to i8*)
 ;
   %dst = bitcast %struct.T* @t to i8*
