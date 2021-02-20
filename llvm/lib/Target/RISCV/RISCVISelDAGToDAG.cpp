@@ -455,7 +455,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     break;
   }
   case ISD::Constant: {
-    auto ConstNode = cast<ConstantSDNode>(Node);
+    auto *ConstNode = cast<ConstantSDNode>(Node);
     if (VT == XLenVT && ConstNode->isNullValue()) {
       SDValue New =
           CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, RISCV::X0, XLenVT);
@@ -1164,14 +1164,14 @@ void RISCVDAGToDAGISel::doPeepholeLoadStoreADDI() {
     SDValue ImmOperand = Base.getOperand(1);
     uint64_t Offset2 = N->getConstantOperandVal(OffsetOpIdx);
 
-    if (auto Const = dyn_cast<ConstantSDNode>(ImmOperand)) {
+    if (auto *Const = dyn_cast<ConstantSDNode>(ImmOperand)) {
       int64_t Offset1 = Const->getSExtValue();
       int64_t CombinedOffset = Offset1 + Offset2;
       if (!isInt<12>(CombinedOffset))
         continue;
       ImmOperand = CurDAG->getTargetConstant(CombinedOffset, SDLoc(ImmOperand),
                                              ImmOperand.getValueType());
-    } else if (auto GA = dyn_cast<GlobalAddressSDNode>(ImmOperand)) {
+    } else if (auto *GA = dyn_cast<GlobalAddressSDNode>(ImmOperand)) {
       // If the off1 in (addi base, off1) is a global variable's address (its
       // low part, really), then we can rely on the alignment of that variable
       // to provide a margin of safety before off1 can overflow the 12 bits.
@@ -1185,7 +1185,7 @@ void RISCVDAGToDAGISel::doPeepholeLoadStoreADDI() {
       ImmOperand = CurDAG->getTargetGlobalAddress(
           GA->getGlobal(), SDLoc(ImmOperand), ImmOperand.getValueType(),
           CombinedOffset, GA->getTargetFlags());
-    } else if (auto CP = dyn_cast<ConstantPoolSDNode>(ImmOperand)) {
+    } else if (auto *CP = dyn_cast<ConstantPoolSDNode>(ImmOperand)) {
       // Ditto.
       Align Alignment = CP->getAlign();
       if (Offset2 != 0 && Alignment <= Offset2)
