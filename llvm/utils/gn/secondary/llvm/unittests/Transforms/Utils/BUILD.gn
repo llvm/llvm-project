@@ -4,6 +4,7 @@ unittest("UtilsTests") {
   deps = [
     "//llvm/lib/Analysis",
     "//llvm/lib/AsmParser",
+    "//llvm/lib/Bitcode/Writer",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
     "//llvm/lib/Transforms/Utils",
@@ -15,6 +16,7 @@ unittest("UtilsTests") {
     "CloningTest.cpp",
     "CodeExtractorTest.cpp",
     "CodeMoverUtilsTest.cpp",
+    "DebugifyTest.cpp",
     "FunctionComparatorTest.cpp",
     "IntegerDivisionTest.cpp",
     "LocalTest.cpp",
