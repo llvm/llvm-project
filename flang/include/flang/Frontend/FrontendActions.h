@@ -15,6 +15,17 @@
 
 namespace Fortran::frontend {
 
+// TODO: This is a copy from f18.cpp. It doesn't really belong here and should
+// be moved to a more suitable place in future.
+struct MeasurementVisitor {
+  template <typename A> bool Pre(const A &) { return true; }
+  template <typename A> void Post(const A &) {
+    ++objects;
+    bytes += sizeof(A);
+  }
+  size_t objects{0}, bytes{0};
+};
+
 //===----------------------------------------------------------------------===//
 // Custom Consumer Actions
 //===----------------------------------------------------------------------===//
@@ -40,6 +51,10 @@ class PrintPreprocessedAction : public PrescanAction {
 };
 
 class DebugDumpProvenanceAction : public PrescanAction {
+  void ExecuteAction() override;
+};
+
+class DebugMeasureParseTreeAction : public PrescanAction {
   void ExecuteAction() override;
 };
 
@@ -74,6 +89,10 @@ class DebugDumpSymbolsAction : public PrescanAndSemaAction {
 };
 
 class DebugDumpParseTreeAction : public PrescanAndSemaAction {
+  void ExecuteAction() override;
+};
+
+class DebugPreFIRTreeAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
 };
 

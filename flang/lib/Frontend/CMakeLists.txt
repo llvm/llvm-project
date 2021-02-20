@@ -16,6 +16,7 @@ add_flang_library(flangFrontend
   FortranSemantics
   FortranEvaluate
   FortranCommon
+  FortranLower
   clangBasic
   clangDriver
 
