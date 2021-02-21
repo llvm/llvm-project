@@ -1110,8 +1110,6 @@ define signext i32 @sext_i32_remw_zext_sext_i16(i16 zeroext %0, i16 signext %1) 
 ; RV64IM-LABEL: sext_i32_remw_zext_sext_i16:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    rem a0, a0, a1
-; RV64IM-NEXT:    slli a0, a0, 32
-; RV64IM-NEXT:    srli a0, a0, 32
 ; RV64IM-NEXT:    ret
   %3 = sext i16 %1 to i32
   %4 = zext i16 %0 to i32
