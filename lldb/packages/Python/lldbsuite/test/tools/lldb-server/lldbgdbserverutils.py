@@ -15,54 +15,12 @@ from lldbsuite.support import seven
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import configuration
 from textwrap import dedent
+import shutil
 
-def _get_debug_monitor_from_lldb(lldb_exe, debug_monitor_basename):
-    """Return the debug monitor exe path given the lldb exe path.
+def _get_support_exe(basename):
+    support_dir = lldb.SBHostOS.GetLLDBPath(lldb.ePathTypeSupportExecutableDir)
 
-    This method attempts to construct a valid debug monitor exe name
-    from a given lldb exe name.  It will return None if the synthesized
-    debug monitor name is not found to exist.
-
-    The debug monitor exe path is synthesized by taking the directory
-    of the lldb exe, and replacing the portion of the base name that
-    matches "lldb" (case insensitive) and replacing with the value of
-    debug_monitor_basename.
-
-    Args:
-        lldb_exe: the path to an lldb executable.
-
-        debug_monitor_basename: the base name portion of the debug monitor
-            that will replace 'lldb'.
-
-    Returns:
-        A path to the debug monitor exe if it is found to exist; otherwise,
-        returns None.
-
-    """
-    if not lldb_exe:
-        return None
-
-    exe_dir = os.path.dirname(lldb_exe)
-    exe_base = os.path.basename(lldb_exe)
-
-    # we'll rebuild the filename by replacing lldb with
-    # the debug monitor basename, keeping any prefix or suffix in place.
-    regex = re.compile(r"lldb", re.IGNORECASE)
-    new_base = regex.sub(debug_monitor_basename, exe_base)
-
-    debug_monitor_exe = os.path.join(exe_dir, new_base)
-    if os.path.exists(debug_monitor_exe):
-        return debug_monitor_exe
-
-    new_base = regex.sub(
-        'LLDB.framework/Versions/A/Resources/' +
-        debug_monitor_basename,
-        exe_base)
-    debug_monitor_exe = os.path.join(exe_dir, new_base)
-    if os.path.exists(debug_monitor_exe):
-        return debug_monitor_exe
-
-    return None
+    return shutil.which(basename, path=support_dir.GetDirectory())
 
 
 def get_lldb_server_exe():
@@ -72,11 +30,8 @@ def get_lldb_server_exe():
         A path to the lldb-server exe if it is found to exist; otherwise,
         returns None.
     """
-    if "LLDB_DEBUGSERVER_PATH" in os.environ:
-        return os.environ["LLDB_DEBUGSERVER_PATH"]
 
-    return _get_debug_monitor_from_lldb(
-        lldbtest_config.lldbExec, "lldb-server")
+    return _get_support_exe("lldb-server")
 
 
 def get_debugserver_exe():
@@ -86,15 +41,11 @@ def get_debugserver_exe():
         A path to the debugserver exe if it is found to exist; otherwise,
         returns None.
     """
-    if "LLDB_DEBUGSERVER_PATH" in os.environ:
-        return os.environ["LLDB_DEBUGSERVER_PATH"]
-
     if configuration.arch and configuration.arch == "x86_64" and \
        platform.machine().startswith("arm64"):
         return '/Library/Apple/usr/libexec/oah/debugserver'
 
-    return _get_debug_monitor_from_lldb(
-        lldbtest_config.lldbExec, "debugserver")
+    return _get_support_exe("debugserver")
 
 _LOG_LINE_REGEX = re.compile(r'^(lldb-server|debugserver)\s+<\s*(\d+)>' +
                              '\s+(read|send)\s+packet:\s+(.+)$')
