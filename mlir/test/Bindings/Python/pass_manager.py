@@ -73,7 +73,7 @@ def testInvalidNesting():
     try:
       pm = PassManager.parse("func(print-op-graph)")
     except ValueError as e:
-      # CHECK: Can't add pass 'PrintOp' restricted to 'module' on a PassManager intended to run on 'func', did you intend to nest?
+      # CHECK: Can't add pass 'ViewOpGraphPass' restricted to 'module' on a PassManager intended to run on 'func', did you intend to nest?
       # CHECK: ValueError exception: invalid pass pipeline 'func(print-op-graph)'.
       log("ValueError exception:", e)
     else:
