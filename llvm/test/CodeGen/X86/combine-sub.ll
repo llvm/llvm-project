@@ -228,3 +228,53 @@ define <4 x i32> @combine_vec_sub_sextinreg(<4 x i32> %x, <4 x i32> %y) {
   %3 = sub <4 x i32> %x, %2
   ret <4 x i32> %3
 }
+
+; sub C1, (xor X, C1) -> add (xor X, ~C2), C1+1
+define i32 @combine_sub_xor_consts(i32 %x) {
+; CHECK-LABEL: combine_sub_xor_consts:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    xorl $-32, %edi
+; CHECK-NEXT:    leal 33(%rdi), %eax
+; CHECK-NEXT:    retq
+  %xor = xor i32 %x, 31
+  %sub = sub i32 32, %xor
+  ret i32 %sub
+}
+
+define <4 x i32> @combine_vec_sub_xor_consts(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_sub_xor_consts:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,3,4]
+; SSE-NEXT:    psubd %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_sub_xor_consts:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,3,4]
+; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %xor = xor <4 x i32> %x, <i32 28, i32 29, i32 -1, i32 -31>
+  %sub = sub <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %xor
+  ret <4 x i32> %sub
+}
+
+define <4 x i32> @combine_vec_neg_xor_consts(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_neg_xor_consts:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_neg_xor_consts:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %xor = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %sub = sub <4 x i32> zeroinitializer, %xor
+  ret <4 x i32> %sub
+}
