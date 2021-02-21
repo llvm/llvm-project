@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK0-NOT: bar
 ; CHECK0: T foo
 ; CHECK0-NOT: bar
-define void @foo() mustprogress {
+define void @foo() {
   call void @bar()
   ret void
 }
@@ -19,7 +19,7 @@ define void @foo() mustprogress {
 ; CHECK1-NOT: foo
 ; CHECK1: T bar
 ; CHECK1-NOT: foo
-define void @bar() mustprogress {
+define void @bar() {
   call void @foo()
   ret void
 }
