@@ -593,6 +593,51 @@ Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
   return nullptr;
 }
 
+Value *llvm::FindAvailableLoadedValue(LoadInst *Load, AAResults &AA,
+                                      bool *IsLoadCSE,
+                                      unsigned MaxInstsToScan) {
+  const DataLayout &DL = Load->getModule()->getDataLayout();
+  Value *StrippedPtr = Load->getPointerOperand()->stripPointerCasts();
+  BasicBlock *ScanBB = Load->getParent();
+  Type *AccessTy = Load->getType();
+  bool AtLeastAtomic = Load->isAtomic();
+
+  if (!Load->isUnordered())
+    return nullptr;
+
+  // Try to find an available value first, and delay expensive alias analysis
+  // queries until later.
+  Value *Available = nullptr;;
+  SmallVector<Instruction *> MustNotAliasInsts;
+  for (Instruction &Inst : make_range(++Load->getReverseIterator(),
+                                      ScanBB->rend())) {
+    if (isa<DbgInfoIntrinsic>(&Inst))
+      continue;
+
+    if (MaxInstsToScan-- == 0)
+      return nullptr;
+
+    Available = getAvailableLoadStore(&Inst, StrippedPtr, AccessTy,
+                                      AtLeastAtomic, DL, IsLoadCSE);
+    if (Available)
+      break;
+
+    if (Inst.mayWriteToMemory())
+      MustNotAliasInsts.push_back(&Inst);
+  }
+
+  // If we found an available value, ensure that the instructions in between
+  // did not modify the memory location.
+  if (Available) {
+    auto AccessSize = LocationSize::precise(DL.getTypeStoreSize(AccessTy));
+    for (Instruction *Inst : MustNotAliasInsts)
+      if (isModSet(AA.getModRefInfo(Inst, StrippedPtr, AccessSize)))
+        return nullptr;
+  }
+
+  return Available;
+}
+
 bool llvm::canReplacePointersIfEqual(Value *A, Value *B, const DataLayout &DL,
                                      Instruction *CtxI) {
   Type *Ty = A->getType();
