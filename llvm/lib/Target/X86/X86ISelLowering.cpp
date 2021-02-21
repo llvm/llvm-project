@@ -49123,8 +49123,10 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   // negation into a preceding instruction. If the RHS of the sub is a XOR with
   // one use and a constant, invert the immediate, saving one register.
   // sub(C1, xor(X, C2)) -> add(xor(X, ~C2), C1+1)
-  if (Op1.getOpcode() == ISD::XOR && isa<ConstantSDNode>(Op0) &&
-      isa<ConstantSDNode>(Op1.getOperand(1)) && Op1->hasOneUse()) {
+  if (Op1.getOpcode() == ISD::XOR &&
+      DAG.isConstantIntBuildVectorOrConstantInt(Op0) &&
+      DAG.isConstantIntBuildVectorOrConstantInt(Op1.getOperand(1)) &&
+      Op1->hasOneUse()) {
     SDLoc DL(N);
     EVT VT = Op0.getValueType();
     SDValue NewXor = DAG.getNode(ISD::XOR, SDLoc(Op1), VT, Op1.getOperand(0),
