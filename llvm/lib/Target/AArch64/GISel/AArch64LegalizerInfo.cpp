@@ -691,11 +691,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_VECREDUCE_FADD)
       // We only have FADDP to do reduction-like operations. Lower the rest.
       .legalFor({{s32, v2s32}, {s64, v2s64}})
+      .clampMaxNumElements(1, s64, 2)
+      .clampMaxNumElements(1, s32, 2)
       .lower();
 
   getActionDefinitionsBuilder(G_VECREDUCE_ADD)
       .legalFor(
           {{s8, v16s8}, {s16, v8s16}, {s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
+      .clampMaxNumElements(1, s64, 2)
+      .clampMaxNumElements(1, s32, 4)
       .lower();
 
   getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT})

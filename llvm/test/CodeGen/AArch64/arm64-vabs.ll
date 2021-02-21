@@ -1,7 +1,6 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck -check-prefixes=CHECK,DAG %s
 ; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-eabi -aarch64-neon-syntax=apple 2>&1 | FileCheck %s --check-prefixes=FALLBACK,CHECK,GISEL
 
-; FALLBACK-NOT: remark:{{.*}} G_ZEXT
 ; FALLBACK-NOT: remark:{{.*}} sabdl8h
 define <8 x i16> @sabdl8h(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ;CHECK-LABEL: sabdl8h:
