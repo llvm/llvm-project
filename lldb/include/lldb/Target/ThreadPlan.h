@@ -361,6 +361,12 @@ public:
 
   virtual bool ShouldStop(Event *event_ptr) = 0;
 
+  /// Returns whether this thread plan overrides the `ShouldStop` of
+  /// subsequently processed plans.
+  ///
+  /// When processing the thread plan stack, this function gives plans the
+  /// ability to continue - even when subsequent plans return true from
+  /// `ShouldStop`. \see Thread::ShouldStop
   virtual bool ShouldAutoContinue(Event *event_ptr) { return false; }
 
   // Whether a "stop class" event should be reported to the "outside world".
