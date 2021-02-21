@@ -1092,8 +1092,6 @@ define signext i8 @sext_remw_sext_sext_i8(i8 signext %a, i8 signext %b) nounwind
 ; RV64IM-LABEL: sext_remw_sext_sext_i8:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    remw a0, a0, a1
-; RV64IM-NEXT:    slli a0, a0, 56
-; RV64IM-NEXT:    srai a0, a0, 56
 ; RV64IM-NEXT:    ret
   %1 = srem i8 %a, %b
   ret i8 %1
@@ -1103,8 +1101,6 @@ define signext i16 @sext_remw_sext_sext_i16(i16 signext %a, i16 signext %b) noun
 ; RV64IM-LABEL: sext_remw_sext_sext_i16:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    remw a0, a0, a1
-; RV64IM-NEXT:    slli a0, a0, 48
-; RV64IM-NEXT:    srai a0, a0, 48
 ; RV64IM-NEXT:    ret
   %1 = srem i16 %a, %b
   ret i16 %1
@@ -1127,7 +1123,6 @@ define signext i32 @sext_i32_remw_sext_zext_i16(i16 signext %a, i16 zeroext %b) 
 ; RV64IM-LABEL: sext_i32_remw_sext_zext_i16:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    rem a0, a0, a1
-; RV64IM-NEXT:    sext.w a0, a0
 ; RV64IM-NEXT:    ret
   %1 = sext i16 %a to i32
   %2 = zext i16 %b to i32
