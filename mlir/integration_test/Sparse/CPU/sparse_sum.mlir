@@ -1,8 +1,9 @@
 // RUN: mlir-opt %s \
 // RUN:   --test-sparsification="lower" \
-// RUN:   --convert-linalg-to-loops \
-// RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize --finalizing-bufferize  \
-// RUN:   --convert-scf-to-std --convert-vector-to-llvm --convert-std-to-llvm | \
+// RUN:   --convert-linalg-to-loops --convert-vector-to-scf --convert-scf-to-std \
+// RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
+// RUN:   --std-bufferize --finalizing-bufferize  \
+// RUN:   --convert-vector-to-llvm --convert-std-to-llvm | \
 // RUN: TENSOR0="%mlir_integration_test_dir/data/test.mtx" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
