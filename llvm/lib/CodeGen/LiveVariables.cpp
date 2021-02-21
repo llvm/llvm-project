@@ -774,13 +774,12 @@ void LiveVariables::addNewBlock(MachineBasicBlock *BB,
 
   // Record all vreg defs and kills of all instructions in SuccBB.
   for (; BBI != BBE; ++BBI) {
-    for (MachineInstr::mop_iterator I = BBI->operands_begin(),
-         E = BBI->operands_end(); I != E; ++I) {
-      if (I->isReg() && Register::isVirtualRegister(I->getReg())) {
-        if (I->isDef())
-          Defs.insert(I->getReg());
-        else if (I->isKill())
-          Kills.insert(I->getReg());
+    for (const MachineOperand &Op : BBI->operands()) {
+      if (Op.isReg() && Register::isVirtualRegister(Op.getReg())) {
+        if (Op.isDef())
+          Defs.insert(Op.getReg());
+        else if (Op.isKill())
+          Kills.insert(Op.getReg());
       }
     }
   }
