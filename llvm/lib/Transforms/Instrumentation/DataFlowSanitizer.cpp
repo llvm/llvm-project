@@ -434,8 +434,8 @@ class DataFlowSanitizer {
 
   Value *getShadowOffset(Value *Addr, IRBuilder<> &IRB);
   Value *getShadowAddress(Value *Addr, Instruction *Pos);
-  std::pair<Value *, Value *>
-  getShadowOriginAddress(Value *Addr, Align InstAlignment, Instruction *Pos);
+  // std::pair<Value *, Value *>
+  // getShadowOriginAddress(Value *Addr, Align InstAlignment, Instruction *Pos);
   bool isInstrumented(const Function *F);
   bool isInstrumented(const GlobalAlias *GA);
   FunctionType *getArgsFunctionType(FunctionType *T);
@@ -543,13 +543,13 @@ struct DFSanFunction {
   /// Computes the origin address for a given function argument.
   ///
   /// Origin = ArgOriginTLS[ArgNo].
-  Value *getArgOriginTLS(unsigned ArgNo, IRBuilder<> &IRB);
+  // Value *getArgOriginTLS(unsigned ArgNo, IRBuilder<> &IRB);
 
   /// Computes the origin address for a return value.
-  Value *getRetvalOriginTLS();
+  // Value *getRetvalOriginTLS();
 
-  Value *getOrigin(Value *V);
-  void setOrigin(Instruction *I, Value *Origin);
+  // Value *getOrigin(Value *V);
+  // void setOrigin(Instruction *I, Value *Origin);
   Value *getShadow(Value *V);
   void setShadow(Instruction *I, Value *Shadow);
   /// Generates IR to compute the union of the two given shadows, inserting it
@@ -1465,7 +1465,7 @@ Value *DFSanFunction::getRetvalTLS(Type *T, IRBuilder<> &IRB) {
   return IRB.CreatePointerCast(
       DFS.RetvalTLS, PointerType::get(DFS.getShadowTy(T), 0), "_dfsret");
 }
-
+/*
 Value *DFSanFunction::getRetvalOriginTLS() { return DFS.RetvalOriginTLS; }
 
 Value *DFSanFunction::getArgOriginTLS(unsigned ArgNo, IRBuilder<> &IRB) {
@@ -1514,7 +1514,7 @@ void DFSanFunction::setOrigin(Instruction *I, Value *Origin) {
   assert(Origin->getType() == DFS.OriginTy);
   ValOriginMap[I] = Origin;
 }
-
+*/
 Value *DFSanFunction::getShadowForTLSArgument(Argument *A) {
   unsigned ArgOffset = 0;
   const DataLayout &DL = F->getParent()->getDataLayout();
@@ -1595,7 +1595,7 @@ Value *DataFlowSanitizer::getShadowOffset(Value *Addr, IRBuilder<> &IRB) {
   return IRB.CreateAnd(IRB.CreatePtrToInt(Addr, IntptrTy),
                        IRB.CreatePtrToInt(ShadowPtrMaskValue, IntptrTy));
 }
-
+/*
 std::pair<Value *, Value *>
 DataFlowSanitizer::getShadowOriginAddress(Value *Addr, Align InstAlignment,
                                           Instruction *Pos) {
@@ -1618,7 +1618,7 @@ DataFlowSanitizer::getShadowOriginAddress(Value *Addr, Align InstAlignment,
   }
   return {ShadowPtr, OriginPtr};
 }
-
+*/
 Value *DataFlowSanitizer::getShadowAddress(Value *Addr, Instruction *Pos) {
   // Returns (Addr & shadow_mask) x 2
   IRBuilder<> IRB(Pos);
