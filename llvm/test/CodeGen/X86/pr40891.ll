@@ -8,9 +8,11 @@ define <8 x i32> @foo(<8 x i64> %x, <4 x i64> %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vandps {{\.LCPI.*}}, %ymm1, %ymm1
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm2
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm2[0,2],ymm0[0,2],ymm2[4,6],ymm0[4,6]
 ; CHECK-NEXT:    retl
   %a = shufflevector <4 x i64> %y, <4 x i64> <i64 12345, i64 67890, i64 13579, i64 24680>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %b = and <8 x i64> %x, %a
