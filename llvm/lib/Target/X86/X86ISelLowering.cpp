@@ -36944,12 +36944,11 @@ static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
 
   switch (SrcOpc0) {
   case X86ISD::MOVDDUP: {
-    SDValue LHS = DAG.getBitcast(VT, Src0.getOperand(0));
-    SDValue RHS =
-        DAG.getBitcast(VT, Src1.isUndef() ? Src1 : Src1.getOperand(0));
+    SDValue LHS = Src0.getOperand(0);
+    SDValue RHS = Src1.isUndef() ? Src1 : Src1.getOperand(0);
     SDValue Res =
-        DAG.getNode(X86ISD::VPERM2X128, DL, VT, LHS, RHS, V.getOperand(2));
-    Res = DAG.getNode(SrcOpc0, DL, SrcVT0, DAG.getBitcast(SrcVT0, Res));
+        DAG.getNode(X86ISD::VPERM2X128, DL, SrcVT0, LHS, RHS, V.getOperand(2));
+    Res = DAG.getNode(SrcOpc0, DL, SrcVT0, Res);
     return DAG.getBitcast(VT, Res);
   }
   case X86ISD::VPERMILPI:
@@ -36965,13 +36964,11 @@ static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
   case X86ISD::VSRAI:
   case X86ISD::PSHUFD:
     if (Src1.isUndef() || Src0.getOperand(1) == Src1.getOperand(1)) {
-      SDValue LHS = DAG.getBitcast(VT, Src0.getOperand(0));
-      SDValue RHS =
-          DAG.getBitcast(VT, Src1.isUndef() ? Src1 : Src1.getOperand(0));
-      SDValue Res =
-          DAG.getNode(X86ISD::VPERM2X128, DL, VT, LHS, RHS, V.getOperand(2));
-      Res = DAG.getNode(SrcOpc0, DL, SrcVT0, DAG.getBitcast(SrcVT0, Res),
-                        Src0.getOperand(1));
+      SDValue LHS = Src0.getOperand(0);
+      SDValue RHS = Src1.isUndef() ? Src1 : Src1.getOperand(0);
+      SDValue Res = DAG.getNode(X86ISD::VPERM2X128, DL, SrcVT0, LHS, RHS,
+                                V.getOperand(2));
+      Res = DAG.getNode(SrcOpc0, DL, SrcVT0, Res, Src0.getOperand(1));
       return DAG.getBitcast(VT, Res);
     }
     break;
