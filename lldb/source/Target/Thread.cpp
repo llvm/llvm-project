@@ -829,6 +829,8 @@ bool Thread::ShouldStop(Event *event_ptr) {
       ThreadPlan *plan_ptr = current_plan;
       while ((plan_ptr = GetPreviousPlan(plan_ptr)) != nullptr) {
         if (plan_ptr->PlanExplainsStop(event_ptr)) {
+          LLDB_LOGF(log, "Plan %s explains stop.", plan_ptr->GetName());
+
           should_stop = plan_ptr->ShouldStop(event_ptr);
 
           // plan_ptr explains the stop, next check whether plan_ptr is done,
@@ -860,10 +862,7 @@ bool Thread::ShouldStop(Event *event_ptr) {
   }
 
   if (!done_processing_current_plan) {
-    bool over_ride_stop = current_plan->ShouldAutoContinue(event_ptr);
-
-    LLDB_LOGF(log, "Plan %s explains stop, auto-continue %i.",
-              current_plan->GetName(), over_ride_stop);
+    bool override_stop = false;
 
     // We're starting from the base plan, so just let it decide;
     if (current_plan->IsBasePlan()) {
@@ -884,20 +883,24 @@ bool Thread::ShouldStop(Event *event_ptr) {
           if (should_stop)
             current_plan->WillStop();
 
-          // If a Master Plan wants to stop, and wants to stick on the stack,
-          // we let it. Otherwise, see if the plan's parent wants to stop.
+          if (current_plan->ShouldAutoContinue(event_ptr)) {
+            override_stop = true;
+            LLDB_LOGF(log, "Plan %s auto-continue: true.",
+                      current_plan->GetName());
+          }
 
+          // If a Master Plan wants to stop, we let it. Otherwise, see if the
+          // plan's parent wants to stop.
+
+          PopPlan();
           if (should_stop && current_plan->IsMasterPlan() &&
               !current_plan->OkayToDiscard()) {
-            PopPlan();
             break;
-          } else {
-            PopPlan();
+          }
 
-            current_plan = GetCurrentPlan();
-            if (current_plan == nullptr) {
-              break;
-            }
+          current_plan = GetCurrentPlan();
+          if (current_plan == nullptr) {
+            break;
           }
         } else {
           break;
@@ -905,7 +908,7 @@ bool Thread::ShouldStop(Event *event_ptr) {
       }
     }
 
-    if (over_ride_stop)
+    if (override_stop)
       should_stop = false;
   }
 
