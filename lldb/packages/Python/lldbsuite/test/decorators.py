@@ -622,10 +622,6 @@ def skipUnlessDarwin(func):
     """Decorate the item to skip tests that should be skipped on any non Darwin platform."""
     return skipUnlessPlatform(lldbplatformutil.getDarwinOSTriples())(func)
 
-def skipUnlessLinux(func):
-    """Decorate the item to skip tests that should be skipped on any non-Linux platform."""
-    return skipUnlessPlatform(["linux"])(func)
-
 def skipUnlessTargetAndroid(func):
     return unittest2.skipUnless(lldbplatformutil.target_is_android(),
                                 "requires target to be Android")(func)
