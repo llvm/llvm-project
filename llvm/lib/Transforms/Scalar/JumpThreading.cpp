@@ -2076,6 +2076,15 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
     ValueMapping[PN] = NewPN;
   }
 
+  // Clone noalias scope declarations in the threaded block. When threading a
+  // loop exit, we would otherwise end up with two idential scope declarations
+  // visible at the same time.
+  SmallVector<MDNode *> NoAliasScopes;
+  DenseMap<MDNode *, MDNode *> ClonedScopes;
+  LLVMContext &Context = PredBB->getContext();
+  identifyNoAliasScopesToClone(BI, BE, NoAliasScopes);
+  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, "thread", Context);
+
   // Clone the non-phi instructions of the source basic block into NewBB,
   // keeping track of the mapping and using it to remap operands in the cloned
   // instructions.
@@ -2084,6 +2093,7 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
     New->setName(BI->getName());
     NewBB->getInstList().push_back(New);
     ValueMapping[&*BI] = New;
+    adaptNoAliasScopes(New, ClonedScopes, Context);
 
     // Remap operands to patch up intra-block references.
     for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
