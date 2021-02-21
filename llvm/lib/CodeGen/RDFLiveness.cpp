@@ -238,8 +238,8 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
              [this](auto A, auto B) { return MDT.properlyDominates(A, B); });
 
   std::vector<NodeId> TmpInst;
-  for (auto I = TmpBB.rbegin(), E = TmpBB.rend(); I != E; ++I) {
-    auto &Bucket = Blocks[*I];
+  for (MachineBasicBlock *MBB : llvm::reverse(TmpBB)) {
+    auto &Bucket = Blocks[MBB];
     TmpInst.insert(TmpInst.end(), Bucket.rbegin(), Bucket.rend());
   }
 
@@ -931,13 +931,12 @@ void Liveness::resetKills(MachineBasicBlock *B) {
   for (auto SI : B->successors())
     CopyLiveIns(SI, Live);
 
-  for (auto I = B->rbegin(), E = B->rend(); I != E; ++I) {
-    MachineInstr *MI = &*I;
-    if (MI->isDebugInstr())
+  for (MachineInstr &MI : llvm::reverse(*B)) {
+    if (MI.isDebugInstr())
       continue;
 
-    MI->clearKillInfo();
-    for (auto &Op : MI->operands()) {
+    MI.clearKillInfo();
+    for (auto &Op : MI.operands()) {
       // An implicit def of a super-register may not necessarily start a
       // live range of it, since an implicit use could be used to keep parts
       // of it live. Instead of analyzing the implicit operands, ignore
@@ -950,7 +949,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
       for (MCSubRegIterator SR(R, &TRI, true); SR.isValid(); ++SR)
         Live.reset(*SR);
     }
-    for (auto &Op : MI->operands()) {
+    for (auto &Op : MI.operands()) {
       if (!Op.isReg() || !Op.isUse() || Op.isUndef())
         continue;
       Register R = Op.getReg();
