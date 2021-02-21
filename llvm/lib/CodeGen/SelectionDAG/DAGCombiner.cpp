@@ -9881,6 +9881,19 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
         SDValue CondRHS = RHS;
         SDValue OpLHS = Other.getOperand(0), OpRHS = Other.getOperand(1);
 
+        if (Other.getOpcode() == ISD::SUB &&
+            LHS.getOpcode() == ISD::ZERO_EXTEND && LHS.getOperand(0) == OpLHS &&
+            OpRHS.getOpcode() == ISD::TRUNCATE && OpRHS.getOperand(0) == RHS) {
+          // Look for a general sub with unsigned saturation first.
+          // zext(x) >= y ? x - trunc(y) : 0
+          // --> usubsat(x,trunc(umin(y,SatLimit)))
+          // zext(x) >  y ? x - trunc(y) : 0
+          // --> usubsat(x,trunc(umin(y,SatLimit)))
+          if (SatCC == ISD::SETUGE || SatCC == ISD::SETUGT)
+            return getTruncatedUSUBSAT(VT, LHS.getValueType(), LHS, RHS, DAG,
+                                       DL);
+        }
+
         if (OpLHS == LHS) {
           // Look for a general sub with unsigned saturation first.
           // x >= y ? x-y : 0 --> usubsat x, y
