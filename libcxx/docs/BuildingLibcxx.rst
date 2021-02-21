@@ -69,13 +69,14 @@ projects). A standalone build would look like this:
   $ make check-cxx # optional
 
 
-Experimental Support for Windows
---------------------------------
+Support for Windows
+-------------------
 
-The Windows support requires building with clang-cl as cl does not support one
-required extension: `#include_next`.  Furthermore, VS 2015 or newer (19.00) is
-required.  In the case of clang-cl, we need to specify the "MS Compatibility
-Version" as it defaults to 2014 (18.00).
+libcxx supports being built with clang-cl, but not with MSVC's cl.exe, as
+cl doesn't support the `#include_next` extension. Furthermore, VS 2017 or
+newer (19.14) is required.
+
+libcxx also supports being built with clang targeting MinGW environments.
 
 CMake + Visual Studio
 ~~~~~~~~~~~~~~~~~~~~~
@@ -85,40 +86,81 @@ it is the simplest way to build.
 
 .. code-block:: batch
 
-  > cmake -G "Visual Studio 14 2015"              ^
-          -T "LLVM-vs2014"                        ^
+  > cmake -G "Visual Studio 16 2019"              ^
+          -T "ClangCL"                            ^
           -DLIBCXX_ENABLE_SHARED=YES              ^
           -DLIBCXX_ENABLE_STATIC=NO               ^
           -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO ^
           \path\to\libcxx
   > cmake --build .
 
-CMake + ninja
-~~~~~~~~~~~~~
+CMake + ninja (MSVC)
+~~~~~~~~~~~~~~~~~~~~
 
 Building with ninja is required for development to enable tests.
-Unfortunately, doing so requires additional configuration as we cannot
-just specify a toolset.
+Running the tests also requires a Bash shell and Python to be available.
+
+If Git for Windows is available, that can be used to provide the bash
+shell by adding the right bin directory to the path, e.g.
+`set PATH=%PATH%;C:\Program Files\Git\usr\bin`.
+
+Alternatively, one can also choose to run the whole build in a MSYS2
+shell. That can be set up e.g. by starting a Visual Studio Tools Command
+Prompt (for getting the environment variables pointing to the headers and
+import libraries), and making sure that clang-cl is available in the
+path. From there, launch an MSYS2 shell via e.g.
+`C:\msys64\msys2_shell.cmd -full-path -mingw64` (preserving the earlier
+environment, allowing the MSVC headers/libraries and clang-cl to be found).
+
+In either case, then run:
 
 .. code-block:: batch
 
   > cmake -G Ninja                                                                    ^
-          -DCMAKE_MAKE_PROGRAM=/path/to/ninja                                         ^
-          -DCMAKE_SYSTEM_NAME=Windows                                                 ^
+          -DCMAKE_BUILD_TYPE=Release                                                  ^
           -DCMAKE_C_COMPILER=clang-cl                                                 ^
-          -DCMAKE_C_FLAGS="-fms-compatibility-version=19.00 --target=i686--windows"   ^
-          -DCMAKE_CXX_COMPILER=clang-cl                                                ^
-          -DCMAKE_CXX_FLAGS="-fms-compatibility-version=19.00 --target=i686--windows" ^
-          -DLLVM_PATH=/path/to/llvm/tree                                              ^
-          -DLIBCXX_ENABLE_SHARED=YES                                                  ^
-          -DLIBCXX_ENABLE_STATIC=NO                                                   ^
+          -DCMAKE_CXX_COMPILER=clang-cl                                               ^
           -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO                                     ^
-          \path\to\libcxx
-  > /path/to/ninja cxx
-  > /path/to/ninja check-cxx
+          path/to/libcxx
+  > ninja cxx
+  > ninja check-cxx
 
-Note that the paths specified with backward slashes must use the `\\` as the
-directory separator as clang-cl may otherwise parse the path as an argument.
+If you are running in an MSYS2 shell and you have installed the
+MSYS2-provided clang package (which defaults to a non-MSVC target), you
+should add e.g. `-DLIBCXX_TARGET_TRIPLE=x86_64-windows-msvc` (replacing
+`x86_64` with the architecture you're targeting) to the `cmake` command
+line above. This will instruct `check-cxx` to use the right target triple
+when invoking `clang++`.
+
+Also note that if not building in Release mode, a failed assert in the tests
+pops up a blocking dialog box, making it hard to run a larger number of tests.
+
+CMake + ninja (MinGW)
+~~~~~~~~~~~~~~~~~~~~~
+
+libcxx can also be built in MinGW environments, e.g. with the MinGW
+compilers in MSYS2. This requires clang to be available (installed with
+e.g. the `mingw-w64-x86_64-clang` package), together with CMake and ninja.
+
+.. code-block:: bash
+
+  > cmake -G Ninja                                                                    \
+          -DCMAKE_C_COMPILER=clang                                                    \
+          -DCMAKE_CXX_COMPILER=clang++                                                \
+          -DLIBCXX_HAS_WIN32_THREAD_API=ON                                            \
+          -DLIBCXX_CXX_ABI=libstdc++                                                  \
+          -DLIBCXX_TARGET_INFO="libcxx.test.target_info.MingwLocalTI"                 \
+          path/to/libcxx
+  > ninja cxx
+  > cp /mingw64/bin/{libstdc++-6,libgcc_s_seh-1,libwinpthread-1}.dll lib
+  > ninja check-cxx
+
+As this build configuration ends up depending on a couple other DLLs that
+aren't available in path while running tests, copy them into the same
+directory as the tested libc++ DLL.
+
+(Building a libc++ that depends on libstdc++ isn't necessarily a config one
+would want to deploy, but it simplifies the config for testing purposes.)
 
 .. _`libc++abi`: http://libcxxabi.llvm.org/
 
