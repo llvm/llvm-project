@@ -341,7 +341,7 @@ define float @signbits_ashr_sext_sextinreg_and_extract_sitofp(<2 x i64> %a0, <2 
 ; X86-NEXT:    vpsrad $29, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)

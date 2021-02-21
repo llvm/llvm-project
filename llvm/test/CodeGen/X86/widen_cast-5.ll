@@ -15,9 +15,9 @@ define void @convert(<2 x i32>* %dst.addr, i64 %src) nounwind {
 ;
 ; X64-LABEL: convert:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    movq %rsi, %xmm0
-; X64-NEXT:    pxor {{.*}}(%rip), %xmm0
-; X64-NEXT:    movq %xmm0, (%rdi)
+; X64-NEXT:    movabsq $140733193388287, %rax ## imm = 0x7FFF000000FF
+; X64-NEXT:    xorq %rsi, %rax
+; X64-NEXT:    movq %rax, (%rdi)
 ; X64-NEXT:    retq
 entry:
 	%conv = bitcast i64 %src to <2 x i32>

@@ -39599,6 +39599,7 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT SrcVT = N0.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Try to match patterns such as
   // (i16 bitcast (v16i1 x))
@@ -39656,8 +39657,7 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     // If we're bitcasting from iX to vXi1, see if the integer originally
     // began as a vXi1 and whether we can remove the bitcast entirely.
     if (VT.isVector() && VT.getScalarType() == MVT::i1 &&
-        SrcVT.isScalarInteger() &&
-        DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
+        SrcVT.isScalarInteger() && TLI.isTypeLegal(VT)) {
       if (SDValue V =
               combineBitcastToBoolVector(VT, N0, SDLoc(N), DAG, Subtarget))
         return V;
@@ -39845,8 +39845,11 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     default: return SDValue();
   }
 
+  // Check if we have a bitcast from another integer type as well.
   if (!((Subtarget.hasSSE1() && VT == MVT::f32) ||
-        (Subtarget.hasSSE2() && VT == MVT::f64)))
+        (Subtarget.hasSSE2() && VT == MVT::f64) ||
+        (Subtarget.hasSSE2() && VT.isInteger() && VT.isVector() &&
+         TLI.isTypeLegal(VT))))
     return SDValue();
 
   SDValue LogicOp0 = N0.getOperand(0);
@@ -39855,17 +39858,21 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
 
   // bitcast(logic(bitcast(X), Y)) --> logic'(X, bitcast(Y))
   if (N0.hasOneUse() && LogicOp0.getOpcode() == ISD::BITCAST &&
-      LogicOp0.hasOneUse() && LogicOp0.getOperand(0).getValueType() == VT &&
+      LogicOp0.hasOneUse() && LogicOp0.getOperand(0).hasOneUse() &&
+      LogicOp0.getOperand(0).getValueType() == VT &&
       !isa<ConstantSDNode>(LogicOp0.getOperand(0))) {
     SDValue CastedOp1 = DAG.getBitcast(VT, LogicOp1);
-    return DAG.getNode(FPOpcode, DL0, VT, LogicOp0.getOperand(0), CastedOp1);
+    unsigned Opcode = VT.isFloatingPoint() ? FPOpcode : N0.getOpcode();
+    return DAG.getNode(Opcode, DL0, VT, LogicOp0.getOperand(0), CastedOp1);
   }
   // bitcast(logic(X, bitcast(Y))) --> logic'(bitcast(X), Y)
   if (N0.hasOneUse() && LogicOp1.getOpcode() == ISD::BITCAST &&
-      LogicOp1.hasOneUse() && LogicOp1.getOperand(0).getValueType() == VT &&
+      LogicOp1.hasOneUse() && LogicOp1.getOperand(0).hasOneUse() &&
+      LogicOp1.getOperand(0).getValueType() == VT &&
       !isa<ConstantSDNode>(LogicOp1.getOperand(0))) {
     SDValue CastedOp0 = DAG.getBitcast(VT, LogicOp0);
-    return DAG.getNode(FPOpcode, DL0, VT, LogicOp1.getOperand(0), CastedOp0);
+    unsigned Opcode = VT.isFloatingPoint() ? FPOpcode : N0.getOpcode();
+    return DAG.getNode(Opcode, DL0, VT, LogicOp1.getOperand(0), CastedOp0);
   }
 
   return SDValue();
