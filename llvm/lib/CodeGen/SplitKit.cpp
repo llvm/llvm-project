@@ -94,10 +94,10 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
     // instructions in the block.
     if (ExceptionalSuccessors.empty())
       return LIP.first;
-    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
-      if ((EHPadSuccessor && I->isCall()) ||
-          I->getOpcode() == TargetOpcode::INLINEASM_BR) {
-        LIP.second = LIS.getInstructionIndex(*I);
+    for (const MachineInstr &MI : llvm::reverse(MBB)) {
+      if ((EHPadSuccessor && MI.isCall()) ||
+          MI.getOpcode() == TargetOpcode::INLINEASM_BR) {
+        LIP.second = LIS.getInstructionIndex(MI);
         break;
       }
     }
@@ -810,8 +810,8 @@ void SplitEditor::removeBackCopies(SmallVectorImpl<VNInfo*> &Copies) {
   RegAssignMap::iterator AssignI;
   AssignI.setMap(RegAssign);
 
-  for (unsigned i = 0, e = Copies.size(); i != e; ++i) {
-    SlotIndex Def = Copies[i]->def;
+  for (const VNInfo *C : Copies) {
+    SlotIndex Def = C->def;
     MachineInstr *MI = LIS.getInstructionFromIndex(Def);
     assert(MI && "No instruction for back-copy");
 
