@@ -1135,6 +1135,19 @@ def SHA256H : SInst<"vsha256h", "....", "QUi">;
 def SHA256H2 : SInst<"vsha256h2", "....", "QUi">;
 def SHA256SU1 : SInst<"vsha256su1", "....", "QUi">;
 
+def BCAX : SInst<"vbcax", "....", "QUcQUsQUiQUlQcQsQiQl">;
+def EOR3 : SInst<"veor3", "....", "QUcQUsQUiQUlQcQsQiQl">;
+def RAX1 : SInst<"vrax1", "...", "QUl">;
+
+let isVXAR = 1 in {
+def XAR :  SInst<"vxar", "...I", "QUl">;
+}
+
+def SHA512SU0 : SInst<"vsha512su0", "...", "QUl">;
+def SHA512su1 : SInst<"vsha512su1", "....", "QUl">;
+def SHA512H : SInst<"vsha512h", "....", "QUl">;
+def SHA512H2 : SInst<"vsha512h2", "....", "QUl">;
+
 def SM3SS1 : SInst<"vsm3ss1", "....", "QUi">;
 def SM3TT1A : SInst<"vsm3tt1a", "....I", "QUi">;
 def SM3TT1B : SInst<"vsm3tt1b", "....I", "QUi">;

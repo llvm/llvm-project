@@ -924,6 +924,45 @@ def RAX1      : CryptoRRR_2D<0b0,0b11, "rax1">;
 def EOR3      : CryptoRRRR_16B<0b00, "eor3">;
 def BCAX      : CryptoRRRR_16B<0b01, "bcax">;
 def XAR       : CryptoRRRi6<"xar">;
+
+class SHA3_pattern<Instruction INST, Intrinsic OpNode, ValueType VecTy>
+  : Pat<(VecTy (OpNode (VecTy V128:$Vd), (VecTy V128:$Vn), (VecTy V128:$Vm))),
+        (INST (VecTy V128:$Vd), (VecTy V128:$Vn), (VecTy V128:$Vm))>;
+
+def : Pat<(v2i64 (int_aarch64_crypto_sha512su0 (v2i64 V128:$Vn), (v2i64 V128:$Vm))),
+          (SHA512SU0 (v2i64 V128:$Vn), (v2i64 V128:$Vm))>;
+
+def : SHA3_pattern<SHA512H, int_aarch64_crypto_sha512h, v2i64>;
+def : SHA3_pattern<SHA512H2, int_aarch64_crypto_sha512h2, v2i64>;
+def : SHA3_pattern<SHA512SU1, int_aarch64_crypto_sha512su1, v2i64>;
+
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v16i8>;
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v8i16>;
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v4i32>;
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v2i64>;
+
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v16i8>;
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v8i16>;
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v4i32>;
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v2i64>;
+
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3s, v16i8>;
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3s, v8i16>;
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3s, v4i32>;
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3s, v2i64>;
+
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxs, v16i8>;
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxs, v8i16>;
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxs, v4i32>;
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxs, v2i64>;
+
+def : Pat<(v2i64 (int_aarch64_crypto_rax1 (v2i64 V128:$Vn), (v2i64 V128:$Vm))),
+          (RAX1 (v2i64 V128:$Vn), (v2i64 V128:$Vm))>;
+
+def : Pat<(v2i64 (int_aarch64_crypto_xar (v2i64 V128:$Vn), (v2i64 V128:$Vm), (i64 timm0_63:$imm))),
+          (XAR (v2i64 V128:$Vn), (v2i64 V128:$Vm), (timm0_63:$imm))>;
+
+
 } // HasSHA3
 
 let Predicates = [HasSM4] in {
