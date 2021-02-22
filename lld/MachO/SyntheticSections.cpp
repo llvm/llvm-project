@@ -53,11 +53,23 @@ uint64_t MachHeaderSection::getSize() const {
   return sizeof(MachO::mach_header_64) + sizeOfCmds + config->headerPad;
 }
 
+static uint32_t cpuSubtype() {
+  uint32_t subtype = target->cpuSubtype;
+
+  if (config->outputType == MachO::MH_EXECUTE && !config->staticLink &&
+      target->cpuSubtype == MachO::CPU_SUBTYPE_X86_64_ALL &&
+      config->platform.kind == MachO::PlatformKind::macOS &&
+      config->platform.minimum >= VersionTuple(10, 5))
+    subtype |= MachO::CPU_SUBTYPE_LIB64;
+
+  return subtype;
+}
+
 void MachHeaderSection::writeTo(uint8_t *buf) const {
   auto *hdr = reinterpret_cast<MachO::mach_header_64 *>(buf);
   hdr->magic = MachO::MH_MAGIC_64;
   hdr->cputype = target->cpuType;
-  hdr->cpusubtype = target->cpuSubtype | MachO::CPU_SUBTYPE_LIB64;
+  hdr->cpusubtype = cpuSubtype();
   hdr->filetype = config->outputType;
   hdr->ncmds = loadCommands.size();
   hdr->sizeofcmds = sizeOfCmds;
