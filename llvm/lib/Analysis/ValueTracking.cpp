@@ -2784,6 +2784,8 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     }
 
     case Instruction::SRem: {
+      Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+
       const APInt *Denominator;
       // srem X, C -> we know that the result is within [-C+1,C) when C is a
       // positive constant.  This let us put a lower bound on the number of sign
@@ -2791,30 +2793,25 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       if (match(U->getOperand(1), m_APInt(Denominator))) {
 
         // Ignore non-positive denominator.
-        if (!Denominator->isStrictlyPositive())
-          break;
+        if (Denominator->isStrictlyPositive()) {
+          // Calculate the leading sign bit constraints by examining the
+          // denominator.  Given that the denominator is positive, there are two
+          // cases:
+          //
+          //  1. The numerator is positive. The result range is [0,C) and
+          //     [0,C) u< (1 << ceilLogBase2(C)).
+          //
+          //  2. The numerator is negative. Then the result range is (-C,0] and
+          //     integers in (-C,0] are either 0 or >u (-1 << ceilLogBase2(C)).
+          //
+          // Thus a lower bound on the number of sign bits is `TyBits -
+          // ceilLogBase2(C)`.
 
-        // Calculate the incoming numerator bits. SRem by a positive constant
-        // can't lower the number of sign bits.
-        unsigned NumrBits = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-
-        // Calculate the leading sign bit constraints by examining the
-        // denominator.  Given that the denominator is positive, there are two
-        // cases:
-        //
-        //  1. the numerator is positive. The result range is [0,C) and [0,C) u<
-        //     (1 << ceilLogBase2(C)).
-        //
-        //  2. the numerator is negative. Then the result range is (-C,0] and
-        //     integers in (-C,0] are either 0 or >u (-1 << ceilLogBase2(C)).
-        //
-        // Thus a lower bound on the number of sign bits is `TyBits -
-        // ceilLogBase2(C)`.
-
-        unsigned ResBits = TyBits - Denominator->ceilLogBase2();
-        return std::max(NumrBits, ResBits);
+          unsigned ResBits = TyBits - Denominator->ceilLogBase2();
+          Tmp = std::max(Tmp, ResBits);
+        }
       }
-      break;
+      return Tmp;
     }
 
     case Instruction::AShr: {
