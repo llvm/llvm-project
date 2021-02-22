@@ -710,13 +710,14 @@ void CudaToolChain::addClangTargetOptions(
   CC1Args.push_back("-mlink-builtin-bitcode");
   CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
 
+  clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
   std::string CudaVersionStr;
 
   // New CUDA versions often introduce new instructions that are only supported
   // by new PTX version, so we need to raise PTX level to enable them in NVPTX
   // back-end.
   const char *PtxFeature = nullptr;
-  switch (CudaInstallation.version()) {
+  switch (CudaInstallationVersion) {
 #define CASE_CUDA_VERSION(CUDA_VER, PTX_VER)                                   \
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     CudaVersionStr = #CUDA_VER;                                                \
@@ -743,12 +744,19 @@ void CudaToolChain::addClangTargetOptions(
                          options::OPT_fno_cuda_short_ptr, false))
     CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
 
-  if (CudaInstallation.version() >= CudaVersion::UNKNOWN)
-    CC1Args.push_back(DriverArgs.MakeArgString(
-        Twine("-target-sdk-version=") +
-        CudaVersionToString(CudaInstallation.version())));
+  if (CudaInstallationVersion >= CudaVersion::UNKNOWN)
+    CC1Args.push_back(
+        DriverArgs.MakeArgString(Twine("-target-sdk-version=") +
+                                 CudaVersionToString(CudaInstallationVersion)));
 
   if (DeviceOffloadingKind == Action::OFK_OpenMP) {
+    if (CudaInstallationVersion < CudaVersion::CUDA_92) {
+      getDriver().Diag(
+          diag::err_drv_omp_offload_target_cuda_version_not_support)
+          << CudaVersionToString(CudaInstallationVersion);
+      return;
+    }
+
     std::string BitcodeSuffix =
         "nvptx-cuda_" + CudaVersionStr + "-" + GpuArch.str();
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
