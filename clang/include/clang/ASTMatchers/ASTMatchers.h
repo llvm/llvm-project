@@ -7384,9 +7384,10 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CUDAKernelCallExpr>
 /// expr(nullPointerConstant())
 ///   matches the initializer for v1, v2, v3, cp, and ip. Does not match the
 ///   initializer for i.
-AST_MATCHER(Expr, nullPointerConstant) {
-  return Node.isNullPointerConstant(Finder->getASTContext(),
-                                    Expr::NPC_ValueDependentIsNull);
+AST_MATCHER_FUNCTION(internal::Matcher<Expr>, nullPointerConstant) {
+  return anyOf(
+      gnuNullExpr(), cxxNullPtrLiteralExpr(),
+      integerLiteral(equals(0), hasParent(expr(hasType(pointerType())))));
 }
 
 /// Matches the DecompositionDecl the binding belongs to.
