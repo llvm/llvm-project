@@ -3104,16 +3104,6 @@ bool ARMDAGToDAGISel::tryInsertVectorElt(SDNode *N) {
   // The inserted values are not extracted - if they are f16 then insert them
   // directly using a VINS.
   if (VT == MVT::v8f16) {
-    auto F32RC = CurDAG->getTargetConstant(ARM::SPRRegClassID, dl, MVT::i32);
-    SDNode *Val1Copy = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
-                                              dl, MVT::f32, Val1, F32RC);
-    SDNode *Val2Copy = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
-                                              dl, MVT::f32, Val2, F32RC);
-    auto MQPRRC = CurDAG->getTargetConstant(ARM::MQPRRegClassID, dl, MVT::i32);
-    SDNode *VecCopy =
-        CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS, dl, MVT::v4f32,
-                               Ins2.getOperand(0), MQPRRC);
-
     SDNode *VINS = CurDAG->getMachineNode(ARM::VINSH, dl, MVT::f32, Val2, Val1);
     SDValue NewIns =
         CurDAG->getTargetInsertSubreg(ARM::ssub_0 + Lane2 / 2, dl, MVT::v4f32,
