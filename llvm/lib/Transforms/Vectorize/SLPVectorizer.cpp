@@ -2575,6 +2575,7 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
           // instructions. If that is the case, the one in Lane 0 will
           // be used.
           if (UseScalar != U ||
+              UseEntry->State == TreeEntry::ScatterVectorize ||
               !InTreeUserNeedToExtract(Scalar, UserInst, TLI)) {
             LLVM_DEBUG(dbgs() << "SLP: \tInternal user will be removed:" << *U
                               << ".\n");
