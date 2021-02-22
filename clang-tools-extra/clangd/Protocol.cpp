@@ -1303,6 +1303,25 @@ llvm::json::Value toJSON(const CallHierarchyOutgoingCall &C) {
   return llvm::json::Object{{"to", C.to}, {"fromRanges", C.fromRanges}};
 }
 
+bool fromJSON(const llvm::json::Value &Params, InlayHintsParams &R,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("textDocument", R.textDocument);
+}
+
+llvm::json::Value toJSON(InlayHintKind K) {
+  switch (K) {
+  case InlayHintKind::ParameterHint:
+    return "parameter";
+  }
+  llvm_unreachable("Unknown clang.clangd.InlayHintKind");
+}
+
+llvm::json::Value toJSON(const InlayHint &H) {
+  return llvm::json::Object{
+      {"range", H.range}, {"kind", H.kind}, {"label", H.label}};
+}
+
 static const char *toString(OffsetEncoding OE) {
   switch (OE) {
   case OffsetEncoding::UTF8:

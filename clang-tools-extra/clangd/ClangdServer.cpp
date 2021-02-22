@@ -15,6 +15,7 @@
 #include "Format.h"
 #include "HeaderSourceSwitch.h"
 #include "Headers.h"
+#include "InlayHints.h"
 #include "ParsedAST.h"
 #include "Preamble.h"
 #include "Protocol.h"
@@ -749,6 +750,17 @@ void ClangdServer::incomingCalls(
                      [CB = std::move(CB), Item, this]() mutable {
                        CB(clangd::incomingCalls(Item, Index));
                      });
+}
+
+void ClangdServer::inlayHints(PathRef File,
+                              Callback<std::vector<InlayHint>> CB) {
+  auto Action = [File = File.str(),
+                 CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::inlayHints(InpAST->AST));
+  };
+  WorkScheduler->runWithAST("InlayHints", File, std::move(Action));
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
