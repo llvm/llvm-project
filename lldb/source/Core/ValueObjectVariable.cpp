@@ -161,7 +161,7 @@ bool ValueObjectVariable::UpdateValue() {
       m_error.SetErrorString("empty constant data");
     // constant bytes can't be edited - sorry
     m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
-    SetAddressTypeOfChildren(Value::AddressType::Invalid);
+    SetAddressTypeOfChildren(eAddressTypeInvalid);
   } else {
     lldb::addr_t loclist_base_load_addr = LLDB_INVALID_ADDRESS;
     ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -220,7 +220,7 @@ bool ValueObjectVariable::UpdateValue() {
           (type_info & (lldb::eTypeIsPointer | lldb::eTypeIsReference)) != 0;
 
       switch (value_type) {
-      case Value::eValueTypeFileAddress:
+      case Value::ValueType::FileAddress:
         // If this type is a pointer, then its children will be considered load
         // addresses if the pointer or reference is dereferenced, but only if
         // the process is alive.
@@ -243,7 +243,7 @@ bool ValueObjectVariable::UpdateValue() {
         else
           SetAddressTypeOfChildren(eAddressTypeFile);
         break;
-      case Value::eValueTypeHostAddress:
+      case Value::ValueType::HostAddress:
         // Same as above for load addresses, except children of pointer or refs
         // are always load addresses. Host addresses are used to store freeze
         // dried variables. If this type is a struct, the entire struct
@@ -254,8 +254,8 @@ bool ValueObjectVariable::UpdateValue() {
         else
           SetAddressTypeOfChildren(eAddressTypeHost);
         break;
-      case Value::eValueTypeLoadAddress:
-      case Value::eValueTypeScalar:
+      case Value::ValueType::LoadAddress:
+      case Value::ValueType::Scalar:
         SetAddressTypeOfChildren(eAddressTypeLoad);
         break;
       }
