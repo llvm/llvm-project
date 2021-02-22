@@ -548,58 +548,6 @@ static void __kmp_fini_allocator() { __kmp_fini_memkind(); }
 #if KMP_DYNAMIC_LIB
 #if KMP_OS_WINDOWS
 
-static void __kmp_reset_lock(kmp_bootstrap_lock_t *lck) {
-  // TODO: Change to __kmp_break_bootstrap_lock().
-  __kmp_init_bootstrap_lock(lck); // make the lock released
-}
-
-static void __kmp_reset_locks_on_process_detach(int gtid_req) {
-  int i;
-  int thread_count;
-
-  // PROCESS_DETACH is expected to be called by a thread that executes
-  // ProcessExit() or FreeLibrary(). OS terminates other threads (except the one
-  // calling ProcessExit or FreeLibrary). So, it might be safe to access the
-  // __kmp_threads[] without taking the forkjoin_lock. However, in fact, some
-  // threads can be still alive here, although being about to be terminated. The
-  // threads in the array with ds_thread==0 are most suspicious. Actually, it
-  // can be not safe to access the __kmp_threads[].
-
-  // TODO: does it make sense to check __kmp_roots[] ?
-
-  // Let's check that there are no other alive threads registered with the OMP
-  // lib.
-  while (1) {
-    thread_count = 0;
-    for (i = 0; i < __kmp_threads_capacity; ++i) {
-      if (!__kmp_threads)
-        continue;
-      kmp_info_t *th = __kmp_threads[i];
-      if (th == NULL)
-        continue;
-      int gtid = th->th.th_info.ds.ds_gtid;
-      if (gtid == gtid_req)
-        continue;
-      if (gtid < 0)
-        continue;
-      DWORD exit_val;
-      int alive = __kmp_is_thread_alive(th, &exit_val);
-      if (alive) {
-        ++thread_count;
-      }
-    }
-    if (thread_count == 0)
-      break; // success
-  }
-
-  // Assume that I'm alone. Now it might be safe to check and reset locks.
-  // __kmp_forkjoin_lock and __kmp_stdio_lock are expected to be reset.
-  __kmp_reset_lock(&__kmp_forkjoin_lock);
-#ifdef KMP_DEBUG
-  __kmp_reset_lock(&__kmp_stdio_lock);
-#endif // KMP_DEBUG
-}
-
 BOOL WINAPI DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpReserved) {
   //__kmp_acquire_bootstrap_lock( &__kmp_initz_lock );
 
@@ -613,36 +561,19 @@ BOOL WINAPI DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpReserved) {
   case DLL_PROCESS_DETACH:
     KA_TRACE(10, ("DllMain: PROCESS_DETACH T#%d\n", __kmp_gtid_get_specific()));
 
-    if (lpReserved != NULL) {
-      // lpReserved is used for telling the difference:
-      //   lpReserved == NULL when FreeLibrary() was called,
-      //   lpReserved != NULL when the process terminates.
-      // When FreeLibrary() is called, worker threads remain alive. So they will
-      // release the forkjoin lock by themselves. When the process terminates,
-      // worker threads disappear triggering the problem of unreleased forkjoin
-      // lock as described below.
-
-      // A worker thread can take the forkjoin lock. The problem comes up if
-      // that worker thread becomes dead before it releases the forkjoin lock.
-      // The forkjoin lock remains taken, while the thread executing
-      // DllMain()->PROCESS_DETACH->__kmp_internal_end_library() below will try
-      // to take the forkjoin lock and will always fail, so that the application
-      // will never finish [normally]. This scenario is possible if
-      // __kmpc_end() has not been executed. It looks like it's not a corner
-      // case, but common cases:
-      // - the main function was compiled by an alternative compiler;
-      // - the main function was compiled by icl but without /Qopenmp
-      //   (application with plugins);
-      // - application terminates by calling C exit(), Fortran CALL EXIT() or
-      //   Fortran STOP.
-      // - alive foreign thread prevented __kmpc_end from doing cleanup.
-      //
-      // This is a hack to work around the problem.
-      // TODO: !!! figure out something better.
-      __kmp_reset_locks_on_process_detach(__kmp_gtid_get_specific());
-    }
-
-    __kmp_internal_end_library(__kmp_gtid_get_specific());
+    // According to Windows* documentation for DllMain entry point:
+    // for DLL_PROCESS_DETACH, lpReserved is used for telling the difference:
+    //   lpReserved == NULL when FreeLibrary() is called,
+    //   lpReserved != NULL when the process is terminated.
+    // When FreeLibrary() is called, worker threads remain alive. So the
+    // runtime's state is consistent and executing proper shutdown is OK.
+    // When the process is terminated, worker threads have exited or been
+    // forcefully terminated by the OS and only the shutdown thread remains.
+    // This can leave the runtime in an inconsistent state.
+    // Hence, only attempt proper cleanup when FreeLibrary() is called.
+    // Otherwise, rely on OS to reclaim resources.
+    if (lpReserved == NULL)
+      __kmp_internal_end_library(__kmp_gtid_get_specific());
 
     return TRUE;
 
