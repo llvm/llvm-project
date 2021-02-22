@@ -130,15 +130,13 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     : Modules(Opts.Modules), CDB(CDB), TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
-      WorkspaceRoot(Opts.WorkspaceRoot),
-      // Pass a callback into `WorkScheduler` to extract symbols from a newly
-      // parsed file and rebuild the file index synchronously each time an AST
-      // is parsed.
-      // FIXME(ioeric): this can be slow and we may be able to index on less
-      // critical paths.
-      WorkScheduler(
-          CDB, TUScheduler::Options(Opts),
-          std::make_unique<UpdateIndexCallbacks>(DynamicIdx.get(), Callbacks)) {
+      WorkspaceRoot(Opts.WorkspaceRoot) {
+  // Pass a callback into `WorkScheduler` to extract symbols from a newly
+  // parsed file and rebuild the file index synchronously each time an AST
+  // is parsed.
+  WorkScheduler.emplace(
+      CDB, TUScheduler::Options(Opts),
+      std::make_unique<UpdateIndexCallbacks>(DynamicIdx.get(), Callbacks));
   // Adds an index to the stack, at higher priority than existing indexes.
   auto AddIndex = [&](SymbolIndex *Idx) {
     if (this->Index != nullptr) {
@@ -170,12 +168,26 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 
   if (Opts.Modules) {
     Module::Facilities F{
-        this->WorkScheduler,
+        *this->WorkScheduler,
         this->Index,
         this->TFS,
     };
     for (auto &Mod : *Opts.Modules)
       Mod.initialize(F);
+  }
+}
+
+ClangdServer::~ClangdServer() {
+  // Destroying TUScheduler first shuts down request threads that might
+  // otherwise access members concurrently.
+  // (Nobody can be using TUScheduler because we're on the main thread).
+  WorkScheduler.reset();
+  // Now requests have stopped, we can shut down modules.
+  if (Modules) {
+    for (auto &Mod : *Modules)
+      Mod.stop();
+    for (auto &Mod : *Modules)
+      Mod.blockUntilIdle(Deadline::infinity());
   }
 }
 
@@ -193,7 +205,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;
   Inputs.ClangTidyProvider = ClangTidyProvider;
-  bool NewFile = WorkScheduler.update(File, Inputs, WantDiags);
+  bool NewFile = WorkScheduler->update(File, Inputs, WantDiags);
   // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
   if (NewFile && BackgroundIdx)
     BackgroundIdx->boostRelated(File);
@@ -276,7 +288,7 @@ ClangdServer::createConfiguredContextProvider(const config::Provider *Provider,
   };
 }
 
-void ClangdServer::removeDocument(PathRef File) { WorkScheduler.remove(File); }
+void ClangdServer::removeDocument(PathRef File) { WorkScheduler->remove(File); }
 
 void ClangdServer::codeComplete(PathRef File, Position Pos,
                                 const clangd::CodeCompleteOptions &Opts,
@@ -330,7 +342,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
   };
 
   // We use a potentially-stale preamble because latency is critical here.
-  WorkScheduler.runWithPreamble(
+  WorkScheduler->runWithPreamble(
       "CodeComplete", File,
       (Opts.RunParser == CodeCompleteOptions::AlwaysParse)
           ? TUScheduler::Stale
@@ -356,8 +368,8 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
   };
 
   // Unlike code completion, we wait for a preamble here.
-  WorkScheduler.runWithPreamble("SignatureHelp", File, TUScheduler::Stale,
-                                std::move(Action));
+  WorkScheduler->runWithPreamble("SignatureHelp", File, TUScheduler::Stale,
+                                 std::move(Action));
 }
 
 void ClangdServer::formatRange(PathRef File, llvm::StringRef Code, Range Rng,
@@ -399,7 +411,7 @@ void ClangdServer::formatOnType(PathRef File, llvm::StringRef Code,
       Result.push_back(replacementToEdit(Code, R));
     return CB(Result);
   };
-  WorkScheduler.runQuick("FormatOnType", File, std::move(Action));
+  WorkScheduler->runQuick("FormatOnType", File, std::move(Action));
 }
 
 void ClangdServer::prepareRename(PathRef File, Position Pos,
@@ -424,14 +436,14 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
     }
     return CB(*Results);
   };
-  WorkScheduler.runWithAST("PrepareRename", File, std::move(Action));
+  WorkScheduler->runWithAST("PrepareRename", File, std::move(Action));
 }
 
 void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
                           const RenameOptions &Opts,
                           Callback<RenameResult> CB) {
   // A snapshot of all file dirty buffers.
-  llvm::StringMap<std::string> Snapshot = WorkScheduler.getAllFileContents();
+  llvm::StringMap<std::string> Snapshot = WorkScheduler->getAllFileContents();
   auto Action = [File = File.str(), NewName = NewName.str(), Pos, Opts,
                  CB = std::move(CB), Snapshot = std::move(Snapshot),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
@@ -466,7 +478,7 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
     RenameFiles.record(R->GlobalChanges.size());
     return CB(*R);
   };
-  WorkScheduler.runWithAST("Rename", File, std::move(Action));
+  WorkScheduler->runWithAST("Rename", File, std::move(Action));
 }
 
 // May generate several candidate selections, due to SelectionTree ambiguity.
@@ -522,8 +534,8 @@ void ClangdServer::enumerateTweaks(
     CB(std::move(Res));
   };
 
-  WorkScheduler.runWithAST("EnumerateTweaks", File, std::move(Action),
-                           TUScheduler::InvalidateOnUpdate);
+  WorkScheduler->runWithAST("EnumerateTweaks", File, std::move(Action),
+                            TUScheduler::InvalidateOnUpdate);
 }
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
@@ -569,7 +581,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
     }
     return CB(std::move(*Effect));
   };
-  WorkScheduler.runWithAST("ApplyTweak", File, std::move(Action));
+  WorkScheduler->runWithAST("ApplyTweak", File, std::move(Action));
 }
 
 void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
@@ -581,7 +593,7 @@ void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
     CB(clangd::locateSymbolAt(InpAST->AST, Pos, Index));
   };
 
-  WorkScheduler.runWithAST("Definitions", File, std::move(Action));
+  WorkScheduler->runWithAST("Definitions", File, std::move(Action));
 }
 
 void ClangdServer::switchSourceHeader(
@@ -601,7 +613,7 @@ void ClangdServer::switchSourceHeader(
       return CB(InpAST.takeError());
     CB(getCorrespondingHeaderOrSource(Path, InpAST->AST, Index));
   };
-  WorkScheduler.runWithAST("SwitchHeaderSource", Path, std::move(Action));
+  WorkScheduler->runWithAST("SwitchHeaderSource", Path, std::move(Action));
 }
 
 void ClangdServer::formatCode(PathRef File, llvm::StringRef Code,
@@ -622,7 +634,7 @@ void ClangdServer::formatCode(PathRef File, llvm::StringRef Code,
         tooling::calculateRangesAfterReplacements(IncludeReplaces, Ranges),
         File)));
   };
-  WorkScheduler.runQuick("Format", File, std::move(Action));
+  WorkScheduler->runQuick("Format", File, std::move(Action));
 }
 
 void ClangdServer::findDocumentHighlights(
@@ -634,8 +646,8 @@ void ClangdServer::findDocumentHighlights(
         CB(clangd::findDocumentHighlights(InpAST->AST, Pos));
       };
 
-  WorkScheduler.runWithAST("Highlights", File, std::move(Action),
-                           TUScheduler::InvalidateOnUpdate);
+  WorkScheduler->runWithAST("Highlights", File, std::move(Action),
+                            TUScheduler::InvalidateOnUpdate);
 }
 
 void ClangdServer::findHover(PathRef File, Position Pos,
@@ -649,8 +661,8 @@ void ClangdServer::findHover(PathRef File, Position Pos,
     CB(clangd::getHover(InpAST->AST, Pos, std::move(Style), Index));
   };
 
-  WorkScheduler.runWithAST("Hover", File, std::move(Action),
-                           TUScheduler::InvalidateOnUpdate);
+  WorkScheduler->runWithAST("Hover", File, std::move(Action),
+                            TUScheduler::InvalidateOnUpdate);
 }
 
 void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
@@ -664,13 +676,13 @@ void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
                                 File));
   };
 
-  WorkScheduler.runWithAST("TypeHierarchy", File, std::move(Action));
+  WorkScheduler->runWithAST("TypeHierarchy", File, std::move(Action));
 }
 
 void ClangdServer::resolveTypeHierarchy(
     TypeHierarchyItem Item, int Resolve, TypeHierarchyDirection Direction,
     Callback<llvm::Optional<TypeHierarchyItem>> CB) {
-  WorkScheduler.run(
+  WorkScheduler->run(
       "Resolve Type Hierarchy", "", [=, CB = std::move(CB)]() mutable {
         clangd::resolveTypeHierarchy(Item, Resolve, Direction, Index);
         CB(Item);
@@ -685,16 +697,16 @@ void ClangdServer::prepareCallHierarchy(
       return CB(InpAST.takeError());
     CB(clangd::prepareCallHierarchy(InpAST->AST, Pos, File));
   };
-  WorkScheduler.runWithAST("CallHierarchy", File, std::move(Action));
+  WorkScheduler->runWithAST("CallHierarchy", File, std::move(Action));
 }
 
 void ClangdServer::incomingCalls(
     const CallHierarchyItem &Item,
     Callback<std::vector<CallHierarchyIncomingCall>> CB) {
-  WorkScheduler.run("Incoming Calls", "",
-                    [CB = std::move(CB), Item, this]() mutable {
-                      CB(clangd::incomingCalls(Item, Index));
-                    });
+  WorkScheduler->run("Incoming Calls", "",
+                     [CB = std::move(CB), Item, this]() mutable {
+                       CB(clangd::incomingCalls(Item, Index));
+                     });
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
@@ -705,7 +717,7 @@ void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
 void ClangdServer::workspaceSymbols(
     llvm::StringRef Query, int Limit,
     Callback<std::vector<SymbolInformation>> CB) {
-  WorkScheduler.run(
+  WorkScheduler->run(
       "getWorkspaceSymbols", /*Path=*/"",
       [Query = Query.str(), Limit, CB = std::move(CB), this]() mutable {
         CB(clangd::getWorkspaceSymbols(Query, Limit, Index,
@@ -721,8 +733,8 @@ void ClangdServer::documentSymbols(llvm::StringRef File,
           return CB(InpAST.takeError());
         CB(clangd::getDocumentSymbols(InpAST->AST));
       };
-  WorkScheduler.runWithAST("DocumentSymbols", File, std::move(Action),
-                           TUScheduler::InvalidateOnUpdate);
+  WorkScheduler->runWithAST("DocumentSymbols", File, std::move(Action),
+                            TUScheduler::InvalidateOnUpdate);
 }
 
 void ClangdServer::foldingRanges(llvm::StringRef File,
@@ -733,8 +745,8 @@ void ClangdServer::foldingRanges(llvm::StringRef File,
           return CB(InpAST.takeError());
         CB(clangd::getFoldingRanges(InpAST->AST));
       };
-  WorkScheduler.runWithAST("FoldingRanges", File, std::move(Action),
-                           TUScheduler::InvalidateOnUpdate);
+  WorkScheduler->runWithAST("FoldingRanges", File, std::move(Action),
+                            TUScheduler::InvalidateOnUpdate);
 }
 
 void ClangdServer::findImplementations(
@@ -746,7 +758,7 @@ void ClangdServer::findImplementations(
     CB(clangd::findImplementations(InpAST->AST, Pos, Index));
   };
 
-  WorkScheduler.runWithAST("Implementations", File, std::move(Action));
+  WorkScheduler->runWithAST("Implementations", File, std::move(Action));
 }
 
 void ClangdServer::findReferences(PathRef File, Position Pos, uint32_t Limit,
@@ -758,7 +770,7 @@ void ClangdServer::findReferences(PathRef File, Position Pos, uint32_t Limit,
     CB(clangd::findReferences(InpAST->AST, Pos, Limit, Index));
   };
 
-  WorkScheduler.runWithAST("References", File, std::move(Action));
+  WorkScheduler->runWithAST("References", File, std::move(Action));
 }
 
 void ClangdServer::symbolInfo(PathRef File, Position Pos,
@@ -770,7 +782,7 @@ void ClangdServer::symbolInfo(PathRef File, Position Pos,
         CB(clangd::getSymbolInfo(InpAST->AST, Pos));
       };
 
-  WorkScheduler.runWithAST("SymbolInfo", File, std::move(Action));
+  WorkScheduler->runWithAST("SymbolInfo", File, std::move(Action));
 }
 
 void ClangdServer::semanticRanges(PathRef File,
@@ -789,7 +801,7 @@ void ClangdServer::semanticRanges(PathRef File,
     }
     CB(std::move(Result));
   };
-  WorkScheduler.runWithAST("SemanticRanges", File, std::move(Action));
+  WorkScheduler->runWithAST("SemanticRanges", File, std::move(Action));
 }
 
 void ClangdServer::documentLinks(PathRef File,
@@ -800,8 +812,8 @@ void ClangdServer::documentLinks(PathRef File,
           return CB(InpAST.takeError());
         CB(clangd::getDocumentLinks(InpAST->AST));
       };
-  WorkScheduler.runWithAST("DocumentLinks", File, std::move(Action),
-                           TUScheduler::InvalidateOnUpdate);
+  WorkScheduler->runWithAST("DocumentLinks", File, std::move(Action),
+                            TUScheduler::InvalidateOnUpdate);
 }
 
 void ClangdServer::semanticHighlights(
@@ -812,8 +824,8 @@ void ClangdServer::semanticHighlights(
           return CB(InpAST.takeError());
         CB(clangd::getSemanticHighlightings(InpAST->AST));
       };
-  WorkScheduler.runWithAST("SemanticHighlights", File, std::move(Action),
-                           TUScheduler::InvalidateOnUpdate);
+  WorkScheduler->runWithAST("SemanticHighlights", File, std::move(Action),
+                            TUScheduler::InvalidateOnUpdate);
 }
 
 void ClangdServer::getAST(PathRef File, Range R,
@@ -845,16 +857,16 @@ void ClangdServer::getAST(PathRef File, Range R,
         if (!Success)
           CB(llvm::None);
       };
-  WorkScheduler.runWithAST("GetAST", File, std::move(Action));
+  WorkScheduler->runWithAST("GetAST", File, std::move(Action));
 }
 
 void ClangdServer::customAction(PathRef File, llvm::StringRef Name,
                                 Callback<InputsAndAST> Action) {
-  WorkScheduler.runWithAST(Name, File, std::move(Action));
+  WorkScheduler->runWithAST(Name, File, std::move(Action));
 }
 
 llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {
-  return WorkScheduler.fileStats();
+  return WorkScheduler->fileStats();
 }
 
 LLVM_NODISCARD bool
@@ -864,7 +876,7 @@ ClangdServer::blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds) {
 
   // Nothing else can schedule work on TUScheduler, because it's not threadsafe
   // and we're blocking the main thread.
-  if (!WorkScheduler.blockUntilIdle(timeoutSeconds(TimeoutSeconds)))
+  if (!WorkScheduler->blockUntilIdle(timeoutSeconds(TimeoutSeconds)))
     return false;
 
   // Unfortunately we don't have strict topological order between the rest of
@@ -882,9 +894,13 @@ ClangdServer::blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds) {
       return false;
     if (BackgroundIdx && !BackgroundIdx->blockUntilIdleForTest(Timeout))
       return false;
+    if (Modules && llvm::any_of(*Modules, [&](Module &M) {
+          return !M.blockUntilIdle(timeoutSeconds(Timeout));
+        }))
+      return false;
   }
 
-  assert(WorkScheduler.blockUntilIdle(Deadline::zero()) &&
+  assert(WorkScheduler->blockUntilIdle(Deadline::zero()) &&
          "Something scheduled work while we're blocking the main thread!");
   return true;
 }
@@ -894,7 +910,7 @@ void ClangdServer::profile(MemoryTree &MT) const {
     DynamicIdx->profile(MT.child("dynamic_index"));
   if (BackgroundIdx)
     BackgroundIdx->profile(MT.child("background_index"));
-  WorkScheduler.profile(MT.child("tuscheduler"));
+  WorkScheduler->profile(MT.child("tuscheduler"));
 }
 } // namespace clangd
 } // namespace clang
