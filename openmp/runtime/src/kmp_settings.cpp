@@ -1389,7 +1389,8 @@ static void __kmp_stg_parse_disp_buffers(char const *name, char const *value,
     KMP_WARNING(EnvSerialWarn, name);
     return;
   } // read value before serial initialization only
-  __kmp_stg_parse_int(name, value, 1, KMP_MAX_NTH, &__kmp_dispatch_num_buffers);
+  __kmp_stg_parse_int(name, value, KMP_MIN_DISP_NUM_BUFF, KMP_MAX_DISP_NUM_BUFF,
+                      &__kmp_dispatch_num_buffers);
 } // __kmp_stg_parse_disp_buffers
 
 static void __kmp_stg_print_disp_buffers(kmp_str_buf_t *buffer,
