@@ -315,27 +315,27 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @minnm_float16_t(<8 x half> %src1, <8 x half> %src2) {
 ; CHECK-MVE-LABEL: minnm_float16_t:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vmovx.f16 s8, s0
-; CHECK-MVE-NEXT:    vmovx.f16 s10, s4
-; CHECK-MVE-NEXT:    vminnm.f16 s12, s10, s8
-; CHECK-MVE-NEXT:    vminnm.f16 s8, s4, s0
-; CHECK-MVE-NEXT:    vins.f16 s8, s12
-; CHECK-MVE-NEXT:    vmovx.f16 s12, s1
+; CHECK-MVE-NEXT:    vmov q2, q0
+; CHECK-MVE-NEXT:    vmovx.f16 s2, s4
+; CHECK-MVE-NEXT:    vmovx.f16 s0, s8
 ; CHECK-MVE-NEXT:    vmovx.f16 s14, s5
-; CHECK-MVE-NEXT:    vminnm.f16 s9, s5, s1
+; CHECK-MVE-NEXT:    vminnm.f16 s12, s2, s0
+; CHECK-MVE-NEXT:    vminnm.f16 s0, s4, s8
+; CHECK-MVE-NEXT:    vins.f16 s0, s12
+; CHECK-MVE-NEXT:    vmovx.f16 s12, s9
 ; CHECK-MVE-NEXT:    vminnm.f16 s12, s14, s12
+; CHECK-MVE-NEXT:    vminnm.f16 s1, s5, s9
+; CHECK-MVE-NEXT:    vins.f16 s1, s12
+; CHECK-MVE-NEXT:    vmovx.f16 s12, s10
 ; CHECK-MVE-NEXT:    vmovx.f16 s14, s6
-; CHECK-MVE-NEXT:    vins.f16 s9, s12
-; CHECK-MVE-NEXT:    vmovx.f16 s12, s2
+; CHECK-MVE-NEXT:    vminnm.f16 s2, s6, s10
 ; CHECK-MVE-NEXT:    vminnm.f16 s12, s14, s12
-; CHECK-MVE-NEXT:    vminnm.f16 s10, s6, s2
-; CHECK-MVE-NEXT:    vins.f16 s10, s12
-; CHECK-MVE-NEXT:    vmovx.f16 s12, s3
 ; CHECK-MVE-NEXT:    vmovx.f16 s14, s7
-; CHECK-MVE-NEXT:    vminnm.f16 s11, s7, s3
+; CHECK-MVE-NEXT:    vins.f16 s2, s12
+; CHECK-MVE-NEXT:    vmovx.f16 s12, s11
 ; CHECK-MVE-NEXT:    vminnm.f16 s12, s14, s12
-; CHECK-MVE-NEXT:    vins.f16 s11, s12
-; CHECK-MVE-NEXT:    vmov q0, q2
+; CHECK-MVE-NEXT:    vminnm.f16 s3, s7, s11
+; CHECK-MVE-NEXT:    vins.f16 s3, s12
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: minnm_float16_t:
