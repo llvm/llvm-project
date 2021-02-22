@@ -301,7 +301,8 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
       if (tid < trip_count) {
         *pupper = *plower = *plower + tid * incr;
       } else {
-        *plower = *pupper + incr;
+        // set bounds so non-active threads execute no iterations
+        *plower = *pupper + (incr > 0 ? 1 : -1);
       }
       if (plastiter != NULL)
         *plastiter = (tid == trip_count - 1);
@@ -345,15 +346,28 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   }
   case kmp_sch_static_chunked: {
     ST span;
-    if (chunk < 1) {
+    UT nchunks;
+    if (chunk < 1)
       chunk = 1;
-    }
+    else if ((UT)chunk > trip_count)
+      chunk = trip_count;
+    nchunks = (trip_count) / (UT)chunk + (trip_count % (UT)chunk ? 1 : 0);
     span = chunk * incr;
-    *pstride = span * nth;
-    *plower = *plower + (span * tid);
-    *pupper = *plower + span - incr;
+    if (nchunks < nth) {
+      *pstride = span * nchunks;
+      if (tid < nchunks) {
+        *plower = *plower + (span * tid);
+        *pupper = *plower + span - incr;
+      } else {
+        *plower = *pupper + (incr > 0 ? 1 : -1);
+      }
+    } else {
+      *pstride = span * nth;
+      *plower = *plower + (span * tid);
+      *pupper = *plower + span - incr;
+    }
     if (plastiter != NULL)
-      *plastiter = (tid == ((trip_count - 1) / (UT)chunk) % nth);
+      *plastiter = (tid == (nchunks - 1) % nth);
     break;
   }
   case kmp_sch_static_balanced_chunked: {
