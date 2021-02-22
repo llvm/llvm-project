@@ -38870,6 +38870,26 @@ let Inst{13-0} = 0b00000000000000;
 let Inst{31-16} = 0b1010100001000000;
 let isSolo = 1;
 }
+def Y2_tfrscrr : HInst<
+(outs IntRegs:$Rd32),
+(ins SysRegs:$Ss128),
+"$Rd32 = $Ss128",
+tc_fae9dfa5, TypeCR>, Enc_7d1542 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-23} = 0b011011101;
+let hasNewValue = 1;
+let opNewValue = 0;
+}
+def Y2_tfrsrcr : HInst<
+(outs SysRegs:$Sd128),
+(ins IntRegs:$Rs32),
+"$Sd128 = $Rs32",
+tc_6ae3426b, TypeCR>, Enc_8f7633 {
+let Inst{13-7} = 0b0000000;
+let Inst{31-21} = 0b01100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+}
 def Y2_wait : HInst<
 (outs),
 (ins IntRegs:$Rs32),
@@ -38890,6 +38910,24 @@ let Inst{31-21} = 0b10100110000;
 let isSoloAX = 1;
 let hasSideEffects = 1;
 let mayStore = 1;
+}
+def Y4_tfrscpp : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins SysRegs64:$Sss128),
+"$Rdd32 = $Sss128",
+tc_fae9dfa5, TypeCR>, Enc_e32517 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-23} = 0b011011110;
+}
+def Y4_tfrspcp : HInst<
+(outs SysRegs64:$Sdd128),
+(ins DoubleRegs:$Rss32),
+"$Sdd128 = $Rss32",
+tc_6ae3426b, TypeCR>, Enc_a705fc {
+let Inst{13-7} = 0b0000000;
+let Inst{31-21} = 0b01101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
 }
 def Y4_trace : HInst<
 (outs),

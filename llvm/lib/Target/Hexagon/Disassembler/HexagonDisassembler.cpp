@@ -131,6 +131,9 @@ static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeGuestRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                  uint64_t Address,
                                                  const void *Decoder);
+static DecodeStatus DecodeSysRegsRegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder);
 static DecodeStatus DecodeModRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t Address,
                                                const void *Decoder);
@@ -140,6 +143,10 @@ static DecodeStatus DecodeCtrRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeGuestRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
                                                    uint64_t Address,
                                                    const void *Decoder);
+static DecodeStatus DecodeSysRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
+                                                 uint64_t Address,
+                                                 const void *Decoder);
+
 
 static DecodeStatus unsignedImmDecoder(MCInst &MI, unsigned tmp,
                                        uint64_t Address, const void *Decoder);
@@ -757,6 +764,78 @@ static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
   uint32_t Extended = FullValue + Address;
   if (!Disassembler.tryAddingSymbolicOperand(MI, Extended, Address, true, 0, 4))
     HexagonMCInstrInfo::addConstant(MI, Extended, Disassembler.getContext());
+  return MCDisassembler::Success;
+}
+
+static const uint16_t SysRegDecoderTable[] = {
+    Hexagon::SGP0,       Hexagon::SGP1,      Hexagon::STID,
+    Hexagon::ELR,        Hexagon::BADVA0,    Hexagon::BADVA1,
+    Hexagon::SSR,        Hexagon::CCR,       Hexagon::HTID,
+    Hexagon::BADVA,      Hexagon::IMASK,     Hexagon::S11,
+    Hexagon::S12,        Hexagon::S13,       Hexagon::S14,
+    Hexagon::S15,        Hexagon::EVB,       Hexagon::MODECTL,
+    Hexagon::SYSCFG,     Hexagon::S19,       Hexagon::S20,
+    Hexagon::VID,        Hexagon::S22,       Hexagon::S23,
+    Hexagon::S24,        Hexagon::S25,       Hexagon::S26,
+    Hexagon::CFGBASE,    Hexagon::DIAG,      Hexagon::REV,
+    Hexagon::PCYCLELO,   Hexagon::PCYCLEHI,  Hexagon::ISDBST,
+    Hexagon::ISDBCFG0,   Hexagon::ISDBCFG1,  Hexagon::S35,
+    Hexagon::BRKPTPC0,   Hexagon::BRKPTCFG0, Hexagon::BRKPTPC1,
+    Hexagon::BRKPTCFG1,  Hexagon::ISDBMBXIN, Hexagon::ISDBMBXOUT,
+    Hexagon::ISDBEN,     Hexagon::ISDBGPR,   Hexagon::S44,
+    Hexagon::S45,        Hexagon::S46,       Hexagon::S47,
+    Hexagon::PMUCNT0,    Hexagon::PMUCNT1,   Hexagon::PMUCNT2,
+    Hexagon::PMUCNT3,    Hexagon::PMUEVTCFG, Hexagon::PMUCFG,
+    Hexagon::S54,        Hexagon::S55,       Hexagon::S56,
+    Hexagon::S57,        Hexagon::S58,       Hexagon::S59,
+    Hexagon::S60,        Hexagon::S61,       Hexagon::S62,
+    Hexagon::S63,        Hexagon::S64,       Hexagon::S65,
+    Hexagon::S66,        Hexagon::S67,       Hexagon::S68,
+    Hexagon::S69,        Hexagon::S70,       Hexagon::S71,
+    Hexagon::S72,        Hexagon::S73,       Hexagon::S74,
+    Hexagon::S75,        Hexagon::S76,       Hexagon::S77,
+    Hexagon::S78,        Hexagon::S79,       Hexagon::S80,
+};
+
+static DecodeStatus DecodeSysRegsRegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t /*Address*/,
+                                               const void *Decoder) {
+  if (RegNo >= sizeof(SysRegDecoderTable) / sizeof(SysRegDecoderTable[0]))
+    return MCDisassembler::Fail;
+
+  if (SysRegDecoderTable[RegNo] == Hexagon::NoRegister)
+    return MCDisassembler::Fail;
+
+  unsigned Register = SysRegDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Register));
+  return MCDisassembler::Success;
+}
+
+static const uint16_t SysReg64DecoderTable[] = {
+    Hexagon::SGP1_0, Hexagon::S3_2,   Hexagon::S5_4,   Hexagon::S7_6,
+    Hexagon::S9_8,   Hexagon::S11_10, Hexagon::S13_12, Hexagon::S15_14,
+    Hexagon::S17_16, Hexagon::S19_18, Hexagon::S21_20, Hexagon::S23_22,
+    Hexagon::S25_24, Hexagon::S27_26, Hexagon::S29_28, Hexagon::S31_30,
+    Hexagon::S33_32, Hexagon::S35_34, Hexagon::S37_36, Hexagon::S39_38,
+    Hexagon::S41_40, Hexagon::S43_42, Hexagon::S45_44, Hexagon::S47_46,
+    Hexagon::S49_48, Hexagon::S51_50, Hexagon::S53_52, Hexagon::S55_54,
+    Hexagon::S57_56, Hexagon::S59_58, Hexagon::S61_60, Hexagon::S63_62,
+    Hexagon::S65_64, Hexagon::S67_66, Hexagon::S69_68, Hexagon::S71_70,
+    Hexagon::S73_72, Hexagon::S75_74, Hexagon::S77_76, Hexagon::S79_78,
+};
+
+static DecodeStatus DecodeSysRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
+                                                 uint64_t /*Address*/,
+                                                 const void *Decoder) {
+  RegNo = RegNo >> 1;
+  if (RegNo >= sizeof(SysReg64DecoderTable) / sizeof(SysReg64DecoderTable[0]))
+    return MCDisassembler::Fail;
+
+  if (SysReg64DecoderTable[RegNo] == Hexagon::NoRegister)
+    return MCDisassembler::Fail;
+
+  unsigned Register = SysReg64DecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Register));
   return MCDisassembler::Success;
 }
 
