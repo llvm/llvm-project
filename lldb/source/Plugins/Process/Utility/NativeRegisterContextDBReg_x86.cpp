@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextWatchpoint_x86.cpp ---------------------------===//
+//===-- NativeRegisterContextDBReg_x86.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NativeRegisterContextWatchpoint_x86.h"
+#include "NativeRegisterContextDBReg_x86.h"
 
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -80,7 +80,7 @@ static inline uint64_t GetWatchControlBitmask(uint32_t wp_index) {
 // Bit mask for control bits regarding all watchpoints.
 static constexpr uint64_t watchpoint_all_control_bit_mask = 0xFFFF00FF;
 
-const RegisterInfo *NativeRegisterContextWatchpoint_x86::GetDR(int num) const {
+const RegisterInfo *NativeRegisterContextDBReg_x86::GetDR(int num) const {
   assert(num >= 0 && num <= 7);
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
@@ -92,8 +92,8 @@ const RegisterInfo *NativeRegisterContextWatchpoint_x86::GetDR(int num) const {
   }
 }
 
-Status NativeRegisterContextWatchpoint_x86::IsWatchpointHit(uint32_t wp_index,
-                                                            bool &is_hit) {
+Status NativeRegisterContextDBReg_x86::IsWatchpointHit(uint32_t wp_index,
+                                                       bool &is_hit) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
     return Status("Watchpoint index out of range");
 
@@ -107,8 +107,9 @@ Status NativeRegisterContextWatchpoint_x86::IsWatchpointHit(uint32_t wp_index,
   return error;
 }
 
-Status NativeRegisterContextWatchpoint_x86::GetWatchpointHitIndex(
-    uint32_t &wp_index, lldb::addr_t trap_addr) {
+Status
+NativeRegisterContextDBReg_x86::GetWatchpointHitIndex(uint32_t &wp_index,
+                                                      lldb::addr_t trap_addr) {
   uint32_t num_hw_wps = NumSupportedHardwareWatchpoints();
   for (wp_index = 0; wp_index < num_hw_wps; ++wp_index) {
     bool is_hit;
@@ -124,9 +125,8 @@ Status NativeRegisterContextWatchpoint_x86::GetWatchpointHitIndex(
   return Status();
 }
 
-Status
-NativeRegisterContextWatchpoint_x86::IsWatchpointVacant(uint32_t wp_index,
-                                                        bool &is_vacant) {
+Status NativeRegisterContextDBReg_x86::IsWatchpointVacant(uint32_t wp_index,
+                                                          bool &is_vacant) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
     return Status("Watchpoint index out of range");
 
@@ -140,7 +140,7 @@ NativeRegisterContextWatchpoint_x86::IsWatchpointVacant(uint32_t wp_index,
   return error;
 }
 
-Status NativeRegisterContextWatchpoint_x86::SetHardwareWatchpointWithIndex(
+Status NativeRegisterContextDBReg_x86::SetHardwareWatchpointWithIndex(
     lldb::addr_t addr, size_t size, uint32_t watch_flags, uint32_t wp_index) {
 
   if (wp_index >= NumSupportedHardwareWatchpoints())
@@ -202,7 +202,7 @@ Status NativeRegisterContextWatchpoint_x86::SetHardwareWatchpointWithIndex(
   return error;
 }
 
-bool NativeRegisterContextWatchpoint_x86::ClearHardwareWatchpoint(
+bool NativeRegisterContextDBReg_x86::ClearHardwareWatchpoint(
     uint32_t wp_index) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
     return false;
@@ -217,8 +217,7 @@ bool NativeRegisterContextWatchpoint_x86::ClearHardwareWatchpoint(
       .Success();
 }
 
-Status
-NativeRegisterContextWatchpoint_x86::ClearWatchpointHit(uint32_t wp_index) {
+Status NativeRegisterContextDBReg_x86::ClearWatchpointHit(uint32_t wp_index) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
     return Status("Watchpoint index out of range");
 
@@ -231,7 +230,7 @@ NativeRegisterContextWatchpoint_x86::ClearWatchpointHit(uint32_t wp_index) {
       GetDR(6), RegisterValue(dr6.GetAsUInt64() & ~GetStatusBit(wp_index)));
 }
 
-Status NativeRegisterContextWatchpoint_x86::ClearAllHardwareWatchpoints() {
+Status NativeRegisterContextDBReg_x86::ClearAllHardwareWatchpoints() {
   RegisterValue dr7;
   Status error = ReadRegister(GetDR(7), dr7);
   if (error.Fail())
@@ -241,7 +240,7 @@ Status NativeRegisterContextWatchpoint_x86::ClearAllHardwareWatchpoints() {
       RegisterValue(dr7.GetAsUInt64() & ~watchpoint_all_control_bit_mask));
 }
 
-uint32_t NativeRegisterContextWatchpoint_x86::SetHardwareWatchpoint(
+uint32_t NativeRegisterContextDBReg_x86::SetHardwareWatchpoint(
     lldb::addr_t addr, size_t size, uint32_t watch_flags) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   const uint32_t num_hw_watchpoints = NumSupportedHardwareWatchpoints();
@@ -254,7 +253,7 @@ uint32_t NativeRegisterContextWatchpoint_x86::SetHardwareWatchpoint(
         return wp_index;
     }
     if (error.Fail() && log) {
-      LLDB_LOGF(log, "NativeRegisterContextWatchpoint_x86::%s Error: %s",
+      LLDB_LOGF(log, "NativeRegisterContextDBReg_x86::%s Error: %s",
                 __FUNCTION__, error.AsCString());
     }
   }
@@ -262,7 +261,7 @@ uint32_t NativeRegisterContextWatchpoint_x86::SetHardwareWatchpoint(
 }
 
 lldb::addr_t
-NativeRegisterContextWatchpoint_x86::GetWatchpointAddress(uint32_t wp_index) {
+NativeRegisterContextDBReg_x86::GetWatchpointAddress(uint32_t wp_index) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
     return LLDB_INVALID_ADDRESS;
   RegisterValue drN;
@@ -271,8 +270,7 @@ NativeRegisterContextWatchpoint_x86::GetWatchpointAddress(uint32_t wp_index) {
   return drN.GetAsUInt64();
 }
 
-uint32_t
-NativeRegisterContextWatchpoint_x86::NumSupportedHardwareWatchpoints() {
+uint32_t NativeRegisterContextDBReg_x86::NumSupportedHardwareWatchpoints() {
   // Available debug address registers: dr0, dr1, dr2, dr3
   return 4;
 }
