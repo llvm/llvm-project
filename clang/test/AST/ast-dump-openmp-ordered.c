@@ -25,7 +25,7 @@ void test_three(int x) {
 // CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:5:3>
 // CHECK-NEXT: |       `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
 // CHECK-NEXT: |         |-NullStmt {{.*}} <col:3>
-// CHECK-NEXT: |         `-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-ordered.c:4:1) *const restrict'
+// CHECK-NEXT: |         `-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-ordered.c:4:1) *const restrict'
 // CHECK-NEXT: |-FunctionDecl {{.*}} <line:8:1, line:12:1> line:8:6 test_two 'void (int)'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:15, col:19> col:19 used x 'int'
 // CHECK-NEXT: | `-CompoundStmt {{.*}} <col:22, line:12:1>
@@ -47,7 +47,7 @@ void test_three(int x) {
 // CHECK-NEXT: |       | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | `-NullStmt {{.*}} <line:11:5>
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:9:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-ordered.c:9:1) *const restrict'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:9:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-ordered.c:9:1) *const restrict'
 // CHECK-NEXT: |       | `-VarDecl {{.*}} <line:10:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
@@ -76,7 +76,7 @@ void test_three(int x) {
 // CHECK-NEXT:         | | `-CompoundStmt {{.*}} <col:31, line:18:3>
 // CHECK-NEXT:         | |   `-OMPOrderedDirective {{.*}} <line:17:1, col:35> openmp_standalone_directive
 // CHECK-NEXT:         | |     `-OMPDependClause {{.*}} <col:21, <invalid sloc>>
-// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} <line:15:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-ordered.c:15:1) *const restrict'
+// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} <line:15:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-ordered.c:15:1) *const restrict'
 // CHECK-NEXT:         | `-VarDecl {{.*}} <line:16:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT:         `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'

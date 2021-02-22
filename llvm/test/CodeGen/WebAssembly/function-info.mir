@@ -1,6 +1,20 @@
-# RUN: llc -mtriple=wasm32-unknown-unknown -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
+# RUN: llc -mtriple=wasm32-unknown-unknown -exception-model=wasm -mattr=+exception-handling -run-pass wasm-cfg-sort -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
 
-# CHECK-LABEL: function_property_test
+--- |
+  target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+  target triple = "wasm32-unknown-unknown"
+
+  declare i32 @__gxx_wasm_personality_v0(...)
+  declare void @foo()
+  define void @function_property_test() {
+    ret void
+  }
+  define void @wasm_eh_info_test() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+    ret void
+  }
+...
+
+# CHECK-LABEL: name: function_property_test
 # CHECK: machineFunctionInfo:
 # CHECK:   isCFGStackified:   true
 name: function_property_test
@@ -9,4 +23,35 @@ liveins:
 body: |
   bb.0:
     RETURN implicit-def dead $arguments
+...
+
+---
+# CHECK-LABEL: name: wasm_eh_info_test
+# CHECK: machineFunctionInfo:
+name: wasm_eh_info_test
+liveins:
+  - { reg: '$arguments' }
+# CHECK:  wasmEHFuncInfo:
+# bb.2 becomes bb.1 and bb.3 becomes bb.2 after CFGSort.
+# CHECK-NEXT:    1:               2
+machineFunctionInfo:
+  wasmEHFuncInfo:
+    2:               3
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+
+  bb.1:
+    RETURN implicit-def dead $arguments
+
+  bb.2 (landing-pad):
+    successors: %bb.1, %bb.3
+    %0:i32 = CATCH &__cpp_exception, implicit-def dead $arguments
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    BR %bb.1, implicit-def $arguments
+
+  bb.3 (landing-pad):
+    CATCH_ALL implicit-def $arguments
+    RETHROW 0, implicit-def $arguments
 ...

@@ -19,6 +19,10 @@
 #if KMP_USE_HIER_SCHED
 #include "kmp_dispatch_hier.h"
 #endif
+#if KMP_USE_HWLOC
+// Copied from hwloc
+#define HWLOC_GROUP_KIND_INTEL_DIE 104
+#endif
 
 // Store the real or imagined machine hierarchy here
 static hierarchy_info machine_hierarchy;
@@ -583,6 +587,13 @@ static inline kmp_hw_t __kmp_hwloc_type_2_topology_type(hwloc_obj_t obj) {
     return KMP_HW_CORE;
   case HWLOC_OBJ_PU:
     return KMP_HW_THREAD;
+  case HWLOC_OBJ_GROUP:
+    if (obj->attr->group.kind == HWLOC_GROUP_KIND_INTEL_DIE)
+      return KMP_HW_DIE;
+#if HWLOC_API_VERSION >= 0x00020100
+  case HWLOC_OBJ_DIE:
+    return KMP_HW_DIE;
+#endif
   }
   return KMP_HW_UNKNOWN;
 }

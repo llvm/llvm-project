@@ -7,7 +7,7 @@
 // RUN: llvm-cov show %t -instr-profile %t.profdata | FileCheck %s -check-prefix=COV
 // RUN: llvm-nm %t | FileCheck %s -check-prefix=NM
 // RUN: llvm-readelf -x __llvm_prf_names %t | FileCheck %s -check-prefix=PRF_NAMES
-// RUN: llvm-readelf -x __llvm_prf_cnts %t | FileCheck %s -check-prefix=PRF_CNTS
+// RUN: llvm-size -A %t | FileCheck %s -check-prefix=PRF_CNTS
 
 // RUN: %clang_lto_profgen=%t.lto.profraw -fuse-ld=lld -fcoverage-mapping -mllvm -enable-name-compression=false -DCODE=1 -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -o %t.lto %s
 // RUN: %run %t.lto
@@ -16,7 +16,7 @@
 // RUN: llvm-cov show %t.lto -instr-profile %t.lto.profdata | FileCheck %s -check-prefix=COV
 // RUN: llvm-nm %t.lto | FileCheck %s -check-prefix=NM
 // RUN: llvm-readelf -x __llvm_prf_names %t.lto | FileCheck %s -check-prefix=PRF_NAMES
-// RUN: llvm-readelf -x __llvm_prf_cnts %t.lto | FileCheck %s -check-prefix=PRF_CNTS
+// RUN: llvm-size -A %t.lto | FileCheck %s -check-prefix=PRF_CNTS
 
 // Note: We expect foo() and some of the profiling data associated with it to
 // be garbage collected.
@@ -72,8 +72,7 @@ int main() { return 0; }
 // Note: We expect the profile counters for garbage collected functions to also
 // be garbage collected.
 
-// PRF_CNTS: Hex dump of section '__llvm_prf_cnts':
-// PRF_CNTS-EMPTY:
+// PRF_CNTS: __llvm_prf_cnts 8
 
 // PGO: Counters:
 // PGO-NEXT:   main:
