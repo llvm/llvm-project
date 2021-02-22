@@ -1988,8 +1988,10 @@ void kmpc_set_defaults(char const *str) {
 void kmpc_set_disp_num_buffers(int arg) {
   // ignore after initialization because some teams have already
   // allocated dispatch buffers
-  if (__kmp_init_serial == 0 && arg > 0)
+  if (__kmp_init_serial == FALSE && arg >= KMP_MIN_DISP_NUM_BUFF &&
+      arg <= KMP_MAX_DISP_NUM_BUFF) {
     __kmp_dispatch_num_buffers = arg;
+  }
 }
 
 int kmpc_set_affinity_mask_proc(int proc, void **mask) {

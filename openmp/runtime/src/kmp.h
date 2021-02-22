@@ -1124,7 +1124,10 @@ extern kmp_uint64 __kmp_now_nsec();
 #define KMP_MAX_CHUNK (INT_MAX - 1)
 #define KMP_DEFAULT_CHUNK 1
 
+#define KMP_MIN_DISP_NUM_BUFF 1
 #define KMP_DFLT_DISP_NUM_BUFF 7
+#define KMP_MAX_DISP_NUM_BUFF 4096
+
 #define KMP_MAX_ORDERED 8
 
 #define KMP_MAX_FIELDS 32
