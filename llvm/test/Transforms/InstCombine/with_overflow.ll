@@ -332,11 +332,7 @@ define i1 @overflow_mod_overflow_mul(i32 %v1, i32 %v2) nounwind {
 
 define i1 @overflow_mod_mul2(i16 %v1, i32 %v2) nounwind {
 ; CHECK-LABEL: @overflow_mod_mul2(
-; CHECK-NEXT:    [[A:%.*]] = sext i16 [[V1:%.*]] to i32
-; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[A]], [[V2:%.*]]
-; CHECK-NEXT:    [[T:%.*]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[REM]], i32 [[REM]])
-; CHECK-NEXT:    [[OBIT:%.*]] = extractvalue { i32, i1 } [[T]], 1
-; CHECK-NEXT:    ret i1 [[OBIT]]
+; CHECK-NEXT:    ret i1 false
 ;
   %a = sext i16 %v1 to i32
   %rem = srem i32 %a, %v2
