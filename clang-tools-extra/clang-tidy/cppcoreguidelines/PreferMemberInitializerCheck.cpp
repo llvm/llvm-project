@@ -151,20 +151,16 @@ void PreferMemberInitializerCheck::check(
           (!isa<RecordDecl>(Class->getDeclContext()) ||
            !cast<RecordDecl>(Class->getDeclContext())->isUnion()) &&
           shouldBeDefaultMemberInitializer(InitValue)) {
-        auto Diag =
-            diag(S->getBeginLoc(), "%0 should be initialized in an in-class"
-                                   " default member initializer")
-            << Field;
 
         SourceLocation FieldEnd =
             Lexer::getLocForEndOfToken(Field->getSourceRange().getEnd(), 0,
                                        *Result.SourceManager, getLangOpts());
-        Diag << FixItHint::CreateInsertion(FieldEnd,
-                                           UseAssignment ? " = " : "{")
-             << FixItHint::CreateInsertionFromRange(
-                    FieldEnd,
-                    CharSourceRange(InitValue->getSourceRange(), true))
-             << FixItHint::CreateInsertion(FieldEnd, UseAssignment ? "" : "}");
+        SmallString<128> Insertion(
+            {UseAssignment ? " = " : "{",
+             Lexer::getSourceText(
+                 CharSourceRange(InitValue->getSourceRange(), true),
+                 *Result.SourceManager, getLangOpts()),
+             UseAssignment ? "" : "}"});
 
         SourceLocation SemiColonEnd =
             Lexer::findNextToken(S->getEndLoc(), *Result.SourceManager,
@@ -173,13 +169,12 @@ void PreferMemberInitializerCheck::check(
         CharSourceRange StmtRange =
             CharSourceRange::getCharRange(S->getBeginLoc(), SemiColonEnd);
 
-        Diag << FixItHint::CreateRemoval(StmtRange);
+        diag(S->getBeginLoc(), "%0 should be initialized in an in-class"
+                               " default member initializer")
+            << Field << FixItHint::CreateInsertion(FieldEnd, Insertion)
+            << FixItHint::CreateRemoval(StmtRange);
       } else {
-        auto Diag =
-            diag(S->getBeginLoc(), "%0 should be initialized in a member"
-                                   " initializer of the constructor")
-            << Field;
-
+        SmallString<128> Insertion;
         bool AddComma = false;
         if (!Ctor->getNumCtorInitializers() && FirstToCtorInits) {
           SourceLocation BodyPos = Ctor->getBody()->getBeginLoc();
@@ -193,13 +188,13 @@ void PreferMemberInitializerCheck::check(
           InsertPos = Lexer::getLocForEndOfToken(
               InsertPos, 0, *Result.SourceManager, getLangOpts());
 
-          Diag << FixItHint::CreateInsertion(InsertPos, " : ");
+          Insertion = " : ";
         } else {
           bool Found = false;
+          unsigned Index = Field->getFieldIndex();
           for (const auto *Init : Ctor->inits()) {
             if (Init->isMemberInitializer()) {
-              if (Result.SourceManager->isBeforeInTranslationUnit(
-                      Field->getLocation(), Init->getMember()->getLocation())) {
+              if (Index < Init->getMember()->getFieldIndex()) {
                 InsertPos = Init->getSourceLocation();
                 Found = true;
                 break;
@@ -213,19 +208,17 @@ void PreferMemberInitializerCheck::check(
                   (*Ctor->init_rbegin())->getSourceRange().getEnd(), 0,
                   *Result.SourceManager, getLangOpts());
             }
-            Diag << FixItHint::CreateInsertion(InsertPos, ", ");
+            Insertion = ", ";
           } else {
             AddComma = true;
           }
         }
-        Diag << FixItHint::CreateInsertion(InsertPos, Field->getName())
-             << FixItHint::CreateInsertion(InsertPos, "(")
-             << FixItHint::CreateInsertionFromRange(
-                    InsertPos,
-                    CharSourceRange(InitValue->getSourceRange(), true))
-             << FixItHint::CreateInsertion(InsertPos, ")");
-        if (AddComma)
-          Diag << FixItHint::CreateInsertion(InsertPos, ", ");
+        Insertion.append(
+            {Field->getName(), "(",
+             Lexer::getSourceText(
+                 CharSourceRange(InitValue->getSourceRange(), true),
+                 *Result.SourceManager, getLangOpts()),
+             AddComma ? "), " : ")"});
 
         SourceLocation SemiColonEnd =
             Lexer::findNextToken(S->getEndLoc(), *Result.SourceManager,
@@ -234,7 +227,12 @@ void PreferMemberInitializerCheck::check(
         CharSourceRange StmtRange =
             CharSourceRange::getCharRange(S->getBeginLoc(), SemiColonEnd);
 
-        Diag << FixItHint::CreateRemoval(StmtRange);
+        diag(S->getBeginLoc(), "%0 should be initialized in a member"
+                               " initializer of the constructor")
+            << Field
+            << FixItHint::CreateInsertion(InsertPos, Insertion,
+                                          FirstToCtorInits)
+            << FixItHint::CreateRemoval(StmtRange);
         FirstToCtorInits = false;
       }
     }

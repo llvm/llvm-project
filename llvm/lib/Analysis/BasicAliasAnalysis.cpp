@@ -1559,6 +1559,13 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     V2Size = LocationSize::afterPointer();
   }
 
+  // FIXME: If this depth limit is hit, then we may cache sub-optimal results
+  // for recursive queries. For this reason, this limit is chosen to be large
+  // enough to be very rarely hit, while still being small enough to avoid
+  // stack overflows.
+  if (AAQI.Depth >= 512)
+    return MayAlias;
+
   // Check the cache before climbing up use-def chains. This also terminates
   // otherwise infinitely recursive queries.
   AAQueryInfo::LocPair Locs(MemoryLocation(V1, V1Size, V1AAInfo),

@@ -693,7 +693,6 @@ public:
   getHIPDeviceLibs(const llvm::opt::ArgList &Args) const;
 
   /// Return sanitizers which are available in this toolchain.
-  /// Return sanitizers which are available in this toolchain.
   virtual SanitizerMask getSupportedSanitizers() const;
 
   /// Return sanitizers which are enabled by default.

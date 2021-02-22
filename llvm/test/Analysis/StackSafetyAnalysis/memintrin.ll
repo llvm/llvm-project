@@ -70,7 +70,7 @@ define void @MemsetNonConstInBounds(i1 zeroext %z) {
 ; CHECK-LABEL: MemsetNonConstInBounds dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
-; CHECK-NEXT: x[4]: [0,4294967295){{$}}
+; CHECK-NEXT: x[4]: [0,7){{$}}
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4

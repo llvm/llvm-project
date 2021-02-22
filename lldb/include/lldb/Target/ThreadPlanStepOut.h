@@ -18,8 +18,8 @@ namespace lldb_private {
 class ThreadPlanStepOut : public ThreadPlan, public ThreadPlanShouldStopHere {
 public:
   ThreadPlanStepOut(Thread &thread, SymbolContext *addr_context,
-                    bool first_insn, bool stop_others, Vote stop_vote,
-                    Vote run_vote, uint32_t frame_idx,
+                    bool first_insn, bool stop_others, Vote report_stop_vote,
+                    Vote report_run_vote, uint32_t frame_idx,
                     LazyBool step_out_avoids_code_without_debug_info,
                     bool continue_to_next_branch = false,
                     bool gather_return_value = true);
@@ -76,8 +76,9 @@ private:
 
   friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepOut(
       bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
-      bool stop_others, Vote stop_vote, Vote run_vote, uint32_t frame_idx,
-      Status &status, LazyBool step_out_avoids_code_without_debug_info);
+      bool stop_others, Vote report_stop_vote, Vote report_run_vote,
+      uint32_t frame_idx, Status &status,
+      LazyBool step_out_avoids_code_without_debug_info);
 
   void SetupAvoidNoDebug(LazyBool step_out_avoids_code_without_debug_info);
   // Need an appropriate marker for the current stack so we can tell step out

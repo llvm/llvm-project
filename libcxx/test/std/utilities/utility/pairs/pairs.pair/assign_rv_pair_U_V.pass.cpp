@@ -40,6 +40,10 @@ struct CountAssign {
   }
 };
 
+struct CopyAssignableInt {
+  CopyAssignableInt& operator=(int&) { return *this; }
+};
+
 TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::pair<Derived, short> P1;
@@ -60,6 +64,12 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(p.second.copied == 0);
     assert(t.second.moved == 0);
     assert(t.second.copied == 0);
+  }
+  { // test const requirement
+    using T = std::pair<CopyAssignableInt, CopyAssignableInt>;
+    using P = std::pair<int, int>;
+    static_assert(!std::is_assignable<T, P&&>::value, "");
+    static_assert(!std::is_assignable<P, T&&>::value, "");
   }
   return true;
 }

@@ -19,6 +19,9 @@ class OwningRewritePatternList;
 void populateExpandTanhPattern(OwningRewritePatternList &patterns,
                                MLIRContext *ctx);
 
+void populateMathPolynomialApproximationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *ctx);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_MATH_TRANSFORMS_PASSES_H_

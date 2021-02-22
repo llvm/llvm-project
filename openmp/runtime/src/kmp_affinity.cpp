@@ -597,9 +597,8 @@ static int __kmp_hwloc_get_nobjs_under_obj(hwloc_obj_t obj,
   hwloc_obj_t first;
   for (first = hwloc_get_obj_below_by_type(__kmp_hwloc_topology, obj->type,
                                            obj->logical_index, type, 0);
-       first != NULL &&
-       hwloc_get_ancestor_obj_by_type(__kmp_hwloc_topology, obj->type, first) ==
-           obj;
+       first != NULL && hwloc_get_ancestor_obj_by_type(__kmp_hwloc_topology,
+                                                       obj->type, first) == obj;
        first = hwloc_get_next_obj_by_type(__kmp_hwloc_topology, first->type,
                                           first)) {
     ++retval;
@@ -926,8 +925,9 @@ static int __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
       c = ratio[level];
       plural = (c > 1);
       if (level == 0) {
-        __kmp_str_buf_print(&buf, "%d %s", c, __kmp_hw_get_catalog_string(
-                                                  numerator_type, plural));
+        __kmp_str_buf_print(
+            &buf, "%d %s", c,
+            __kmp_hw_get_catalog_string(numerator_type, plural));
       } else {
         __kmp_str_buf_print(&buf, " x %d %s/%s", c,
                             __kmp_hw_get_catalog_string(numerator_type, plural),
@@ -1969,8 +1969,9 @@ static int __kmp_affinity_create_x2apicid_map(AddrUnsPair **address2os,
       c = ratio[level];
       plural = (c > 1);
       if (level == 0) {
-        __kmp_str_buf_print(&buf, "%d %s", c, __kmp_hw_get_catalog_string(
-                                                  numerator_type, plural));
+        __kmp_str_buf_print(
+            &buf, "%d %s", c,
+            __kmp_hw_get_catalog_string(numerator_type, plural));
       } else {
         __kmp_str_buf_print(&buf, " x %d %s/%s", c,
                             __kmp_hw_get_catalog_string(numerator_type, plural),
@@ -2074,7 +2075,7 @@ static void __kmp_dispatch_set_hierarchy_values() {
   __kmp_hier_max_units[kmp_hier_layer_e::LAYER_THREAD + 1] =
       nPackages * nCoresPerPkg * __kmp_nThreadsPerCore;
   __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L1 + 1] = __kmp_ncores;
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS) && \
+#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS) &&   \
     KMP_MIC_SUPPORTED
   if (__kmp_mic_type >= mic3)
     __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L2 + 1] = __kmp_ncores / 2;
@@ -2089,7 +2090,7 @@ static void __kmp_dispatch_set_hierarchy_values() {
   __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_THREAD + 1] = 1;
   __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L1 + 1] =
       __kmp_nThreadsPerCore;
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS) && \
+#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS) &&   \
     KMP_MIC_SUPPORTED
   if (__kmp_mic_type >= mic3)
     __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L2 + 1] =
@@ -4078,12 +4079,10 @@ static void __kmp_apply_thread_places(AddrUnsPair **pAddr, int depth) {
         }
       }
     }
-    KMP_DEBUG_ASSERT(n_old ==
-                     nPackages * nDiesPerPkg * nCoresPerPkg *
-                         __kmp_nThreadsPerCore);
-    KMP_DEBUG_ASSERT(n_new ==
-                     __kmp_hws_socket.num * __kmp_hws_die.num *
-                         __kmp_hws_core.num * __kmp_hws_proc.num);
+    KMP_DEBUG_ASSERT(n_old == nPackages * nDiesPerPkg * nCoresPerPkg *
+                                  __kmp_nThreadsPerCore);
+    KMP_DEBUG_ASSERT(n_new == __kmp_hws_socket.num * __kmp_hws_die.num *
+                                  __kmp_hws_core.num * __kmp_hws_proc.num);
     nPackages = __kmp_hws_socket.num; // correct nPackages
     nCoresPerPkg = __kmp_hws_core.num; // correct nCoresPerPkg
     nDiesPerPkg = __kmp_hws_die.num; // correct nDiesPerPkg
@@ -4450,9 +4449,9 @@ static void __kmp_aux_affinity_initialize(void) {
   }
 #endif // KMP_USE_HWLOC
 
-// If the user has specified that a particular topology discovery method is to be
-// used, then we abort if that method fails. The exception is group affinity,
-// which might have been implicitly set.
+  // If the user has specified that a particular topology discovery method is to
+  // be used, then we abort if that method fails. The exception is group
+  // affinity, which might have been implicitly set.
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
 
@@ -4570,7 +4569,7 @@ static void __kmp_aux_affinity_initialize(void) {
 #if KMP_USE_HWLOC
       && __kmp_tile_depth == 0
 #endif
-      ) {
+  ) {
     // tiles requested but not detected, warn user on this
     KMP_WARNING(AffTilesNoTiles, "KMP_AFFINITY");
   }
@@ -4615,10 +4614,10 @@ static void __kmp_aux_affinity_initialize(void) {
     }
     break;
 
-  // The other affinity types rely on sorting the Addresses according to some
-  // permutation of the machine topology tree. Set __kmp_affinity_compact and
-  // __kmp_affinity_offset appropriately, then jump to a common code fragment
-  // to do the sort and create the array of affinity masks.
+    // The other affinity types rely on sorting the Addresses according to some
+    // permutation of the machine topology tree. Set __kmp_affinity_compact and
+    // __kmp_affinity_offset appropriately, then jump to a common code fragment
+    // to do the sort and create the array of affinity masks.
 
   case affinity_logical:
     __kmp_affinity_compact = 0;
@@ -4964,14 +4963,15 @@ int __kmp_aux_set_affinity(void **mask) {
   }
 
   gtid = __kmp_entry_gtid();
-  KA_TRACE(1000, (""); {
-    char buf[KMP_AFFIN_MASK_PRINT_LEN];
-    __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
-                              (kmp_affin_mask_t *)(*mask));
-    __kmp_debug_printf(
-        "kmp_set_affinity: setting affinity mask for thread %d = %s\n", gtid,
-        buf);
-  });
+  KA_TRACE(
+      1000, (""); {
+        char buf[KMP_AFFIN_MASK_PRINT_LEN];
+        __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
+                                  (kmp_affin_mask_t *)(*mask));
+        __kmp_debug_printf(
+            "kmp_set_affinity: setting affinity mask for thread %d = %s\n",
+            gtid, buf);
+      });
 
   if (__kmp_env_consistency_check) {
     if ((mask == NULL) || (*mask == NULL)) {
@@ -5032,13 +5032,15 @@ int __kmp_aux_get_affinity(void **mask) {
   th = __kmp_threads[gtid];
   KMP_DEBUG_ASSERT(th->th.th_affin_mask != NULL);
 
-  KA_TRACE(1000, (""); {
-    char buf[KMP_AFFIN_MASK_PRINT_LEN];
-    __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
-                              th->th.th_affin_mask);
-    __kmp_printf("kmp_get_affinity: stored affinity mask for thread %d = %s\n",
-                 gtid, buf);
-  });
+  KA_TRACE(
+      1000, (""); {
+        char buf[KMP_AFFIN_MASK_PRINT_LEN];
+        __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
+                                  th->th.th_affin_mask);
+        __kmp_printf(
+            "kmp_get_affinity: stored affinity mask for thread %d = %s\n", gtid,
+            buf);
+      });
 
   if (__kmp_env_consistency_check) {
     if ((mask == NULL) || (*mask == NULL)) {
@@ -5049,13 +5051,15 @@ int __kmp_aux_get_affinity(void **mask) {
 #if !KMP_OS_WINDOWS
 
   retval = __kmp_get_system_affinity((kmp_affin_mask_t *)(*mask), FALSE);
-  KA_TRACE(1000, (""); {
-    char buf[KMP_AFFIN_MASK_PRINT_LEN];
-    __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
-                              (kmp_affin_mask_t *)(*mask));
-    __kmp_printf("kmp_get_affinity: system affinity mask for thread %d = %s\n",
-                 gtid, buf);
-  });
+  KA_TRACE(
+      1000, (""); {
+        char buf[KMP_AFFIN_MASK_PRINT_LEN];
+        __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
+                                  (kmp_affin_mask_t *)(*mask));
+        __kmp_printf(
+            "kmp_get_affinity: system affinity mask for thread %d = %s\n", gtid,
+            buf);
+      });
   return retval;
 
 #else
@@ -5084,15 +5088,16 @@ int __kmp_aux_set_affinity_mask_proc(int proc, void **mask) {
     return -1;
   }
 
-  KA_TRACE(1000, (""); {
-    int gtid = __kmp_entry_gtid();
-    char buf[KMP_AFFIN_MASK_PRINT_LEN];
-    __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
-                              (kmp_affin_mask_t *)(*mask));
-    __kmp_debug_printf("kmp_set_affinity_mask_proc: setting proc %d in "
-                       "affinity mask for thread %d = %s\n",
-                       proc, gtid, buf);
-  });
+  KA_TRACE(
+      1000, (""); {
+        int gtid = __kmp_entry_gtid();
+        char buf[KMP_AFFIN_MASK_PRINT_LEN];
+        __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
+                                  (kmp_affin_mask_t *)(*mask));
+        __kmp_debug_printf("kmp_set_affinity_mask_proc: setting proc %d in "
+                           "affinity mask for thread %d = %s\n",
+                           proc, gtid, buf);
+      });
 
   if (__kmp_env_consistency_check) {
     if ((mask == NULL) || (*mask == NULL)) {
@@ -5116,15 +5121,16 @@ int __kmp_aux_unset_affinity_mask_proc(int proc, void **mask) {
     return -1;
   }
 
-  KA_TRACE(1000, (""); {
-    int gtid = __kmp_entry_gtid();
-    char buf[KMP_AFFIN_MASK_PRINT_LEN];
-    __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
-                              (kmp_affin_mask_t *)(*mask));
-    __kmp_debug_printf("kmp_unset_affinity_mask_proc: unsetting proc %d in "
-                       "affinity mask for thread %d = %s\n",
-                       proc, gtid, buf);
-  });
+  KA_TRACE(
+      1000, (""); {
+        int gtid = __kmp_entry_gtid();
+        char buf[KMP_AFFIN_MASK_PRINT_LEN];
+        __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
+                                  (kmp_affin_mask_t *)(*mask));
+        __kmp_debug_printf("kmp_unset_affinity_mask_proc: unsetting proc %d in "
+                           "affinity mask for thread %d = %s\n",
+                           proc, gtid, buf);
+      });
 
   if (__kmp_env_consistency_check) {
     if ((mask == NULL) || (*mask == NULL)) {
@@ -5148,15 +5154,16 @@ int __kmp_aux_get_affinity_mask_proc(int proc, void **mask) {
     return -1;
   }
 
-  KA_TRACE(1000, (""); {
-    int gtid = __kmp_entry_gtid();
-    char buf[KMP_AFFIN_MASK_PRINT_LEN];
-    __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
-                              (kmp_affin_mask_t *)(*mask));
-    __kmp_debug_printf("kmp_get_affinity_mask_proc: getting proc %d in "
-                       "affinity mask for thread %d = %s\n",
-                       proc, gtid, buf);
-  });
+  KA_TRACE(
+      1000, (""); {
+        int gtid = __kmp_entry_gtid();
+        char buf[KMP_AFFIN_MASK_PRINT_LEN];
+        __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
+                                  (kmp_affin_mask_t *)(*mask));
+        __kmp_debug_printf("kmp_get_affinity_mask_proc: getting proc %d in "
+                           "affinity mask for thread %d = %s\n",
+                           proc, gtid, buf);
+      });
 
   if (__kmp_env_consistency_check) {
     if ((mask == NULL) || (*mask == NULL)) {

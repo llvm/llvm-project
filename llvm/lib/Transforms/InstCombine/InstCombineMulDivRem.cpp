@@ -1326,14 +1326,25 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
     if (match(Op1, m_FDiv(m_SpecificFP(1.0), m_Value(Y))))
       return BinaryOperator::CreateFMulFMF(Y, Op0, &I);
 
-    // Negate the exponent of pow to fold division-by-pow() into multiply:
+    // Negate the exponent of pow/exp to fold division-by-pow() into multiply:
     // Z / pow(X, Y) --> Z * pow(X, -Y)
+    // Z / exp{2}(Y) --> Z * exp{2}(-Y)
     // In the general case, this creates an extra instruction, but fmul allows
     // for better canonicalization and optimization than fdiv.
     if (match(Op1,
               m_OneUse(m_Intrinsic<Intrinsic::pow>(m_Value(X), m_Value(Y))))) {
       Value *NegY = Builder.CreateFNegFMF(Y, &I);
       Value *Pow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, X, NegY, &I);
+      return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
+    }
+    if (match(Op1, m_OneUse(m_Intrinsic<Intrinsic::exp>(m_Value(Y))))) {
+      Value *NegY = Builder.CreateFNegFMF(Y, &I);
+      Value *Pow = Builder.CreateUnaryIntrinsic(Intrinsic::exp, NegY, &I);
+      return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
+    }
+    if (match(Op1, m_OneUse(m_Intrinsic<Intrinsic::exp2>(m_Value(Y))))) {
+      Value *NegY = Builder.CreateFNegFMF(Y, &I);
+      Value *Pow = Builder.CreateUnaryIntrinsic(Intrinsic::exp2, NegY, &I);
       return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
     }
   }

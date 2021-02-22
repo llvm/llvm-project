@@ -41,7 +41,7 @@ class omptarget_nvptx_SharedArgs {
 public:
   // All these methods must be called by the master thread only.
   INLINE void Init() {
-    args  = buffer;
+    args = buffer;
     nArgs = MAX_SHARED_ARGS;
   }
   INLINE void DeInit() {
@@ -63,6 +63,7 @@ public:
   }
   // Called by all threads.
   INLINE void **GetArgs() const { return args; };
+
 private:
   // buffer of pre-allocated arguments.
   void *buffer[MAX_SHARED_ARGS];

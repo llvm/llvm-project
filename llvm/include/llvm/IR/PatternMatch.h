@@ -708,6 +708,10 @@ inline bind_ty<UnaryOperator> m_UnOp(UnaryOperator *&I) { return I; }
 inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
 /// Match a with overflow intrinsic, capturing it if we match.
 inline bind_ty<WithOverflowInst> m_WithOverflowInst(WithOverflowInst *&I) { return I; }
+inline bind_ty<const WithOverflowInst>
+m_WithOverflowInst(const WithOverflowInst *&I) {
+  return I;
+}
 
 /// Match a Constant, capturing the value if we match.
 inline bind_ty<Constant> m_Constant(Constant *&C) { return C; }
@@ -2314,9 +2318,13 @@ template <int Ind, typename Opnd_t> struct ExtractValue_match {
   ExtractValue_match(const Opnd_t &V) : Val(V) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (auto *I = dyn_cast<ExtractValueInst>(V))
-      return I->getNumIndices() == 1 && I->getIndices()[0] == Ind &&
-             Val.match(I->getAggregateOperand());
+    if (auto *I = dyn_cast<ExtractValueInst>(V)) {
+      // If Ind is -1, don't inspect indices
+      if (Ind != -1 &&
+          !(I->getNumIndices() == 1 && I->getIndices()[0] == (unsigned)Ind))
+        return false;
+      return Val.match(I->getAggregateOperand());
+    }
     return false;
   }
 };
@@ -2326,6 +2334,13 @@ template <int Ind, typename Opnd_t> struct ExtractValue_match {
 template <int Ind, typename Val_t>
 inline ExtractValue_match<Ind, Val_t> m_ExtractValue(const Val_t &V) {
   return ExtractValue_match<Ind, Val_t>(V);
+}
+
+/// Match an ExtractValue instruction with any index.
+/// For example m_ExtractValue(...)
+template <typename Val_t>
+inline ExtractValue_match<-1, Val_t> m_ExtractValue(const Val_t &V) {
+  return ExtractValue_match<-1, Val_t>(V);
 }
 
 /// Matcher for a single index InsertValue instruction.

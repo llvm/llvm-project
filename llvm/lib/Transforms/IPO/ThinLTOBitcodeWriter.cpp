@@ -195,6 +195,29 @@ void forEachVirtualFunction(Constant *C, function_ref<void(Function *)> Fn) {
     forEachVirtualFunction(cast<Constant>(Op), Fn);
 }
 
+// Clone any @llvm[.compiler].used over to the new module and append
+// values whose defs were cloned into that module.
+static void cloneUsedGlobalVariables(const Module &SrcM, Module &DestM,
+                                     bool CompilerUsed) {
+  SmallPtrSet<GlobalValue *, 8> Used;
+  SmallPtrSet<GlobalValue *, 8> NewUsed;
+  // First collect those in the llvm[.compiler].used set.
+  collectUsedGlobalVariables(SrcM, Used, CompilerUsed);
+  // Next build a set of the equivalent values defined in DestM.
+  for (auto *V : Used) {
+    auto *GV = DestM.getNamedValue(V->getName());
+    if (GV && !GV->isDeclaration())
+      NewUsed.insert(GV);
+  }
+  // Finally, add them to a llvm[.compiler].used variable in DestM.
+  if (CompilerUsed)
+    appendToCompilerUsed(
+        DestM, std::vector<GlobalValue *>(NewUsed.begin(), NewUsed.end()));
+  else
+    appendToUsed(DestM,
+                 std::vector<GlobalValue *>(NewUsed.begin(), NewUsed.end()));
+}
+
 // If it's possible to split M into regular and thin LTO parts, do so and write
 // a multi-module bitcode file with the two parts to OS. Otherwise, write only a
 // regular LTO bitcode file to OS.
@@ -275,11 +298,6 @@ void splitAndWriteThinLTOBitcode(
   ValueToValueMapTy VMap;
   std::unique_ptr<Module> MergedM(
       CloneModule(M, VMap, [&](const GlobalValue *GV) -> bool {
-        // Clone any llvm.*used globals to ensure the included values are
-        // not deleted.
-        if (GV->getName() == "llvm.used" ||
-            GV->getName() == "llvm.compiler.used")
-          return true;
         if (const auto *C = GV->getComdat())
           if (MergedMComdats.count(C))
             return true;
@@ -291,6 +309,11 @@ void splitAndWriteThinLTOBitcode(
       }));
   StripDebugInfo(*MergedM);
   MergedM->setModuleInlineAsm("");
+
+  // Clone any llvm.*used globals to ensure the included values are
+  // not deleted.
+  cloneUsedGlobalVariables(M, *MergedM, /*CompilerUsed*/ false);
+  cloneUsedGlobalVariables(M, *MergedM, /*CompilerUsed*/ true);
 
   for (Function &F : *MergedM)
     if (!F.isDeclaration()) {

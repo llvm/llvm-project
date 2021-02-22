@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_SUPPORT_KINDMAPPING_H
-#define OPTIMIZER_SUPPORT_KINDMAPPING_H
+#ifndef FORTRAN_OPTIMIZER_SUPPORT_KINDMAPPING_H
+#define FORTRAN_OPTIMIZER_SUPPORT_KINDMAPPING_H
 
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
@@ -52,15 +52,24 @@ public:
   using LLVMTypeID = llvm::Type::TypeID;
   using MatchResult = mlir::ParseResult;
 
-  /// KindMapping constructors take an optional `defs` argument to specify the
+  /// KindMapping constructor with both the kind map and default kinds read from
+  /// command-line options.
+  explicit KindMapping(mlir::MLIRContext *context);
+  /// KindMapping constructor taking a `defs` argument to specify the default
+  /// kinds for intrinsic types. To set the default kinds, an ArrayRef of 6
+  /// KindTy must be passed. The kinds must be the given in the following order:
+  /// CHARACTER, COMPLEX, DOUBLE PRECISION, INTEGER, LOGICAL, and REAL.  The
+  /// kind map is read from command-line options, if given.
+  explicit KindMapping(mlir::MLIRContext *context, llvm::ArrayRef<KindTy> defs);
+  /// KindMapping constructor taking an optional `defs` argument to specify the
   /// default kinds for intrinsic types. To set the default kinds, an ArrayRef
   /// of 6 KindTy must be passed. The kinds must be the given in the following
   /// order: CHARACTER, COMPLEX, DOUBLE PRECISION, INTEGER, LOGICAL, and REAL.
-  /// If `defs` is not specified, default default kinds will be used.
-  explicit KindMapping(mlir::MLIRContext *context,
-                       llvm::ArrayRef<KindTy> defs = llvm::None);
   explicit KindMapping(mlir::MLIRContext *context, llvm::StringRef map,
                        llvm::ArrayRef<KindTy> defs = llvm::None);
+  explicit KindMapping(mlir::MLIRContext *context, llvm::StringRef map,
+                       llvm::StringRef defs)
+      : KindMapping{context, map, toDefaultKinds(defs)} {}
 
   /// Get the size in bits of !fir.char<kind>
   Bitsize getCharacterBitsize(KindTy kind) const;
@@ -85,6 +94,12 @@ public:
   /// Get the float semantics of !fir.real<kind>
   const llvm::fltSemantics &getFloatSemantics(KindTy kind) const;
 
+  /// Get the default kind map as a string.
+  static constexpr const char *getDefaultMap() { return ""; }
+
+  /// Convert the current kind map to a string.
+  std::string mapToString() const;
+
   //===--------------------------------------------------------------------===//
   // Default kinds of intrinsic types
   //===--------------------------------------------------------------------===//
@@ -95,6 +110,16 @@ public:
   KindTy defaultIntegerKind() const;
   KindTy defaultLogicalKind() const;
   KindTy defaultRealKind() const;
+
+  /// Get the default kinds as a string.
+  static constexpr const char *getDefaultKinds() { return "a1c4d8i4l4r4"; }
+
+  /// Convert the current default kinds to a string.
+  std::string defaultsToString() const;
+
+  /// Translate a default kinds string into a default kind vector. This vector
+  /// can be passed to the KindMapping ctor.
+  static std::vector<KindTy> toDefaultKinds(llvm::StringRef defs);
 
 private:
   MatchResult badMapString(const llvm::Twine &ptr);
@@ -109,4 +134,4 @@ private:
 
 } // namespace fir
 
-#endif // OPTIMIZER_SUPPORT_KINDMAPPING_H
+#endif // FORTRAN_OPTIMIZER_SUPPORT_KINDMAPPING_H

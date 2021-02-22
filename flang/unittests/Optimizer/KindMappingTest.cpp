@@ -176,19 +176,19 @@ TEST(KindMappingDeathTests, mapTest) {
 }
 
 TEST_F(KindDefaultsTests, getIntegerBitsizeTest) {
-   EXPECT_EQ(defaultDefaultKinds->defaultCharacterKind(), 1u);
-   EXPECT_EQ(defaultDefaultKinds->defaultComplexKind(), 4u);
-   EXPECT_EQ(defaultDefaultKinds->defaultDoubleKind(), 8u);
-   EXPECT_EQ(defaultDefaultKinds->defaultIntegerKind(), 4u);
-   EXPECT_EQ(defaultDefaultKinds->defaultLogicalKind(), 4u);
-   EXPECT_EQ(defaultDefaultKinds->defaultRealKind(), 4u);
+  EXPECT_EQ(defaultDefaultKinds->defaultCharacterKind(), 1u);
+  EXPECT_EQ(defaultDefaultKinds->defaultComplexKind(), 4u);
+  EXPECT_EQ(defaultDefaultKinds->defaultDoubleKind(), 8u);
+  EXPECT_EQ(defaultDefaultKinds->defaultIntegerKind(), 4u);
+  EXPECT_EQ(defaultDefaultKinds->defaultLogicalKind(), 4u);
+  EXPECT_EQ(defaultDefaultKinds->defaultRealKind(), 4u);
 
-   EXPECT_EQ(overrideDefaultKinds->defaultCharacterKind(), 20u);
-   EXPECT_EQ(overrideDefaultKinds->defaultComplexKind(), 121u);
-   EXPECT_EQ(overrideDefaultKinds->defaultDoubleKind(), 32u);
-   EXPECT_EQ(overrideDefaultKinds->defaultIntegerKind(), 133u);
-   EXPECT_EQ(overrideDefaultKinds->defaultLogicalKind(), 44u);
-   EXPECT_EQ(overrideDefaultKinds->defaultRealKind(), 145u);
+  EXPECT_EQ(overrideDefaultKinds->defaultCharacterKind(), 20u);
+  EXPECT_EQ(overrideDefaultKinds->defaultComplexKind(), 121u);
+  EXPECT_EQ(overrideDefaultKinds->defaultDoubleKind(), 32u);
+  EXPECT_EQ(overrideDefaultKinds->defaultIntegerKind(), 133u);
+  EXPECT_EQ(overrideDefaultKinds->defaultLogicalKind(), 44u);
+  EXPECT_EQ(overrideDefaultKinds->defaultRealKind(), 145u);
 }
 
 // main() from gtest_main

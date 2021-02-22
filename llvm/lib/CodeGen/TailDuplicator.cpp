@@ -1035,10 +1035,9 @@ void TailDuplicator::removeDeadBlock(
 
   MachineFunction *MF = MBB->getParent();
   // Update the call site info.
-  std::for_each(MBB->begin(), MBB->end(), [MF](const MachineInstr &MI) {
+  for (const MachineInstr &MI : *MBB)
     if (MI.shouldUpdateCallSiteInfo())
       MF->eraseCallSiteInfo(&MI);
-  });
 
   if (RemovalCallback)
     (*RemovalCallback)(MBB);

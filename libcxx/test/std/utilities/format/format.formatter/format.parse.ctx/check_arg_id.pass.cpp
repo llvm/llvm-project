@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: no-exceptions
 
 // This test requires the dylib support introduced in D92214.

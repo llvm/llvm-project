@@ -1715,7 +1715,7 @@ define arm_aapcs_vfpcc void @arm_biquad_cascade_df1_f32(%struct.arm_biquad_casd_
 ; CHECK-NEXT:    vmov r3, s10
 ; CHECK-NEXT:    vldrw.u32 q3, [r11, #48]
 ; CHECK-NEXT:    vfma.f32 q1, q0, r3
-; CHECK-NEXT:    ldr r3, [r1], #16
+; CHECK-NEXT:    ldr r3, [r1]
 ; CHECK-NEXT:    vfma.f32 q1, q7, r6
 ; CHECK-NEXT:    vldrw.u32 q6, [r11, #64]
 ; CHECK-NEXT:    vfma.f32 q1, q3, r3
@@ -1725,6 +1725,7 @@ define arm_aapcs_vfpcc void @arm_biquad_cascade_df1_f32(%struct.arm_biquad_casd_
 ; CHECK-NEXT:    vfma.f32 q1, q5, r0
 ; CHECK-NEXT:    vldrw.u32 q0, [sp, #64] @ 16-byte Reload
 ; CHECK-NEXT:    vfma.f32 q1, q4, r7
+; CHECK-NEXT:    adds r1, #16
 ; CHECK-NEXT:    vfma.f32 q1, q0, r9
 ; CHECK-NEXT:    vmov.f32 s2, s8
 ; CHECK-NEXT:    vstrb.8 q1, [r5], #16

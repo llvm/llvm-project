@@ -462,6 +462,49 @@ static bool AreNonOverlapSameBaseLoadAndStore(
   return LoadRange.intersectWith(StoreRange).isEmptySet();
 }
 
+static Value *getAvailableLoadStore(Instruction *Inst, Value *Ptr,
+                                    Type *AccessTy, bool AtLeastAtomic,
+                                    const DataLayout &DL, bool *IsLoadCSE) {
+  // If this is a load of Ptr, the loaded value is available.
+  // (This is true even if the load is volatile or atomic, although
+  // those cases are unlikely.)
+  if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
+    if (AreEquivalentAddressValues(
+            LI->getPointerOperand()->stripPointerCasts(), Ptr) &&
+        CastInst::isBitOrNoopPointerCastable(LI->getType(), AccessTy, DL)) {
+      // We can value forward from an atomic to a non-atomic, but not the
+      // other way around.
+      if (LI->isAtomic() < AtLeastAtomic)
+        return nullptr;
+
+      if (IsLoadCSE)
+        *IsLoadCSE = true;
+      return LI;
+    }
+  }
+
+  // If this is a store through Ptr, the value is available!
+  // (This is true even if the store is volatile or atomic, although
+  // those cases are unlikely.)
+  if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
+    Value *StorePtr = SI->getPointerOperand()->stripPointerCasts();
+    if (AreEquivalentAddressValues(StorePtr, Ptr) &&
+        CastInst::isBitOrNoopPointerCastable(SI->getValueOperand()->getType(),
+                                             AccessTy, DL)) {
+      // We can value forward from an atomic to a non-atomic, but not the
+      // other way around.
+      if (SI->isAtomic() < AtLeastAtomic)
+        return nullptr;
+
+      if (IsLoadCSE)
+        *IsLoadCSE = false;
+      return SI->getOperand(0);
+    }
+  }
+
+  return nullptr;
+}
+
 Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
                                        bool AtLeastAtomic, BasicBlock *ScanBB,
                                        BasicBlock::iterator &ScanFrom,
@@ -492,45 +535,16 @@ Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
       return nullptr;
 
     --ScanFrom;
-    // If this is a load of Ptr, the loaded value is available.
-    // (This is true even if the load is volatile or atomic, although
-    // those cases are unlikely.)
-    if (LoadInst *LI = dyn_cast<LoadInst>(Inst))
-      if (AreEquivalentAddressValues(
-              LI->getPointerOperand()->stripPointerCasts(), StrippedPtr) &&
-          CastInst::isBitOrNoopPointerCastable(LI->getType(), AccessTy, DL)) {
 
-        // We can value forward from an atomic to a non-atomic, but not the
-        // other way around.
-        if (LI->isAtomic() < AtLeastAtomic)
-          return nullptr;
-
-        if (IsLoadCSE)
-            *IsLoadCSE = true;
-        return LI;
-      }
+    if (Value *Available = getAvailableLoadStore(Inst, StrippedPtr, AccessTy,
+                                                 AtLeastAtomic, DL, IsLoadCSE))
+      return Available;
 
     // Try to get the store size for the type.
     auto AccessSize = LocationSize::precise(DL.getTypeStoreSize(AccessTy));
 
     if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
       Value *StorePtr = SI->getPointerOperand()->stripPointerCasts();
-      // If this is a store through Ptr, the value is available!
-      // (This is true even if the store is volatile or atomic, although
-      // those cases are unlikely.)
-      if (AreEquivalentAddressValues(StorePtr, StrippedPtr) &&
-          CastInst::isBitOrNoopPointerCastable(SI->getValueOperand()->getType(),
-                                               AccessTy, DL)) {
-
-        // We can value forward from an atomic to a non-atomic, but not the
-        // other way around.
-        if (SI->isAtomic() < AtLeastAtomic)
-          return nullptr;
-
-        if (IsLoadCSE)
-          *IsLoadCSE = false;
-        return SI->getOperand(0);
-      }
 
       // If both StrippedPtr and StorePtr reach all the way to an alloca or
       // global and they are different, ignore the store. This is a trivial form
@@ -577,6 +591,51 @@ Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
   // Got to the start of the block, we didn't find it, but are done for this
   // block.
   return nullptr;
+}
+
+Value *llvm::FindAvailableLoadedValue(LoadInst *Load, AAResults &AA,
+                                      bool *IsLoadCSE,
+                                      unsigned MaxInstsToScan) {
+  const DataLayout &DL = Load->getModule()->getDataLayout();
+  Value *StrippedPtr = Load->getPointerOperand()->stripPointerCasts();
+  BasicBlock *ScanBB = Load->getParent();
+  Type *AccessTy = Load->getType();
+  bool AtLeastAtomic = Load->isAtomic();
+
+  if (!Load->isUnordered())
+    return nullptr;
+
+  // Try to find an available value first, and delay expensive alias analysis
+  // queries until later.
+  Value *Available = nullptr;;
+  SmallVector<Instruction *> MustNotAliasInsts;
+  for (Instruction &Inst : make_range(++Load->getReverseIterator(),
+                                      ScanBB->rend())) {
+    if (isa<DbgInfoIntrinsic>(&Inst))
+      continue;
+
+    if (MaxInstsToScan-- == 0)
+      return nullptr;
+
+    Available = getAvailableLoadStore(&Inst, StrippedPtr, AccessTy,
+                                      AtLeastAtomic, DL, IsLoadCSE);
+    if (Available)
+      break;
+
+    if (Inst.mayWriteToMemory())
+      MustNotAliasInsts.push_back(&Inst);
+  }
+
+  // If we found an available value, ensure that the instructions in between
+  // did not modify the memory location.
+  if (Available) {
+    auto AccessSize = LocationSize::precise(DL.getTypeStoreSize(AccessTy));
+    for (Instruction *Inst : MustNotAliasInsts)
+      if (isModSet(AA.getModRefInfo(Inst, StrippedPtr, AccessSize)))
+        return nullptr;
+  }
+
+  return Available;
 }
 
 bool llvm::canReplacePointersIfEqual(Value *A, Value *B, const DataLayout &DL,

@@ -43,21 +43,6 @@ namespace clang {
 namespace clangd {
 namespace {
 
-// Variant of parent_path that operates only on absolute paths.
-PathRef absoluteParent(PathRef Path) {
-  assert(llvm::sys::path::is_absolute(Path));
-#if defined(_WIN32)
-  // llvm::sys says "C:\" is absolute, and its parent is "C:" which is relative.
-  // This unhelpful behavior seems to have been inherited from boost.
-  if (llvm::sys::path::relative_path(Path).empty()) {
-    return PathRef();
-  }
-#endif
-  PathRef Result = llvm::sys::path::parent_path(Path);
-  assert(Result.empty() || llvm::sys::path::is_absolute(Result));
-  return Result;
-}
-
 // Runs the given action on all parent directories of filename, starting from
 // deepest directory and going up to root. Stops whenever action succeeds.
 void actOnAllParentDirectories(PathRef FileName,

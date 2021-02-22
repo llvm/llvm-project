@@ -38,7 +38,9 @@
 #pragma push_macro("PTX65")
 #pragma push_macro("PTX70")
 #pragma push_macro("PTX71")
-#define PTX71 "ptx71"
+#pragma push_macro("PTX72")
+#define PTX72 "ptx72"
+#define PTX71 "ptx71|" PTX72
 #define PTX70 "ptx70|" PTX71
 #define PTX65 "ptx65|" PTX70
 #define PTX64 "ptx64|" PTX65
@@ -740,3 +742,4 @@ TARGET_BUILTIN(__imma_m8n8k32_st_c_i32, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 #pragma pop_macro("PTX65")
 #pragma pop_macro("PTX70")
 #pragma pop_macro("PTX71")
+#pragma pop_macro("PTX72")

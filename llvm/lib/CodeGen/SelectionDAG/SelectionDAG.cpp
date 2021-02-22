@@ -3869,6 +3869,12 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
         (VTBits - SignBitsOp0 + 1) + (VTBits - SignBitsOp1 + 1);
     return OutValidBits > VTBits ? 1 : VTBits - OutValidBits + 1;
   }
+  case ISD::SREM:
+    // The sign bit is the LHS's sign bit, except when the result of the
+    // remainder is zero. The magnitude of the result should be less than or
+    // equal to the magnitude of the LHS. Therefore, the result should have
+    // at least as many sign bits as the left hand side.
+    return ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
   case ISD::TRUNCATE: {
     // Check if the sign bits of source go down as far as the truncated value.
     unsigned NumSrcBits = Op.getOperand(0).getScalarValueSizeInBits();
