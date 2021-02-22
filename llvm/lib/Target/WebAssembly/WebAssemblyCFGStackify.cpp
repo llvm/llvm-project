@@ -1368,6 +1368,9 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   if (EHPadToUnwindDest.empty())
     return false;
   NumCatchUnwindMismatches += EHPadToUnwindDest.size();
+  // <current branch dest, future branch dest> map, because fixing catch unwind
+  // mismatches can invalidate branch destinations
+  DenseMap<MachineBasicBlock *, MachineBasicBlock *> BrDestMap;
 
   for (auto &P : EHPadToUnwindDest) {
     MachineBasicBlock *EHPad = P.first;
@@ -1375,6 +1378,66 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
     MachineInstr *Try = EHPadToTry[EHPad];
     MachineInstr *EndTry = BeginToEnd[Try];
     addTryDelegate(Try, EndTry, UnwindDest);
+    BrDestMap[EndTry->getParent()] =
+        EndTry->getParent()->getNextNode()->getNextNode();
+  }
+
+  // Adding a try-delegate wrapping an existing try-catch-end can make existing
+  // branch destination BBs invalid. For example,
+  //
+  // - Before:
+  // bb0:
+  //   block
+  //     br bb3
+  // bb1:
+  //     try
+  //       ...
+  // bb2: (ehpad)
+  //     catch
+  // bb3:
+  //     end_try
+  //   end_block   ;; 'br bb3' targets here
+  //
+  // Suppose this try-catch-end has a catch unwind mismatch, so we need to wrap
+  // this with a try-delegate. Then this becomes:
+  //
+  // - After:
+  // bb0:
+  //   block
+  //     br bb3    ;; invalid destination!
+  // bb1:
+  //     try       ;; (new instruction)
+  //       try
+  //         ...
+  // bb2: (ehpad)
+  //       catch
+  // bb3:
+  //       end_try ;; 'br bb3' still incorrectly targets here!
+  // delegate_bb:  ;; (new BB)
+  //     delegate  ;; (new instruction)
+  // split_bb:     ;; (new BB)
+  //   end_block
+  //
+  // Now 'br bb3' incorrectly branches to an inner scope.
+  //
+  // As we can see in this case, when branches target a BB that has both
+  // 'end_try' and 'end_block' and the BB is split to insert a 'delegate', we
+  // have to remap existing branch destinations so that they target not the
+  // 'end_try' BB but the new 'end_block' BB, which should be the second next BB
+  // of 'end_try' (because there is a 'delegate' BB in between). In this
+  // example, the 'br bb3' instruction should be remapped to 'br split_bb'.
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (MI.isTerminator()) {
+        for (auto &MO : MI.operands()) {
+          if (MO.isMBB()) {
+            auto It = BrDestMap.find(MO.getMBB());
+            if (It != BrDestMap.end())
+              MO.setMBB(It->second);
+          }
+        }
+      }
+    }
   }
 
   return true;
