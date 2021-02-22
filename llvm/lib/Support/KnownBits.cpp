@@ -474,9 +474,10 @@ KnownBits KnownBits::srem(const KnownBits &LHS, const KnownBits &RHS) {
   }
 
   // The sign bit is the LHS's sign bit, except when the result of the
-  // remainder is zero. If it's known zero, our sign bit is also zero.
-  if (LHS.isNonNegative())
-    Known.makeNonNegative();
+  // remainder is zero. The magnitude of the result should be less than or
+  // equal to the magnitude of the LHS. Therefore any leading zeros that exist
+  // in the left hand side must also exist in the result.
+  Known.Zero.setHighBits(LHS.countMinLeadingZeros());
   return Known;
 }
 
