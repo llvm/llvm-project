@@ -34,6 +34,41 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
   }];
   let cppNamespace = "::mlir::linalg";
   let verify = [{ return detail::verifyContractionInterface($_op); }];
+  let methods = [
+    InterfaceMethod<
+    /*desc=*/[{
+      Returns whether the given op has indexing maps the correspond to a
+      row-major matmul operation.
+    }],
+    /*retTy=*/"bool",
+    /*methodName=*/"isRowMajorMatmul",
+    /*args=*/(ins),
+    /*methodBody=*/[{
+        return mlir::isRowMajorMatmul($_op.indexing_maps());
+    }]>,
+    InterfaceMethod<
+    /*desc=*/[{
+      Returns whether the given op has indexing maps the correspond to a
+      column-major matmul operation.
+    }],
+    /*retTy=*/"bool",
+    /*methodName=*/"isColumnMajorMatmul",
+    /*args=*/(ins),
+    /*methodBody=*/[{
+        return mlir::isColumnMajorMatmul($_op.indexing_maps());
+    }]>,
+    InterfaceMethod<
+    /*desc=*/[{
+      Returns whether the given op has indexing maps the correspond to a
+      row-major batch matmul operation.
+    }],
+    /*retTy=*/"bool",
+    /*methodName=*/"isRowMajorBatchMatmul",
+    /*args=*/(ins),
+    /*methodBody=*/[{
+        return mlir::isRowMajorBatchMatmul($_op.indexing_maps());
+    }]>,
+  ];
 }
 
 // The 'LinalgStructuredInterface' provides access to the 'LinalgOp' interface.
