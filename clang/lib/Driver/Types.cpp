@@ -160,6 +160,8 @@ bool types::isObjC(ID Id) {
   }
 }
 
+bool types::isOpenCL(ID Id) { return Id == TY_CL; }
+
 bool types::isCXX(ID Id) {
   switch (Id) {
   default:
