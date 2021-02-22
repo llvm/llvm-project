@@ -2587,7 +2587,7 @@ def SubIOp : IntBinaryOp<"subi"> {
 
 def SubViewOp : BaseOpWithOffsetSizesAndStrides<
     "subview", [DeclareOpInterfaceMethods<ViewLikeOpInterface>,
-                OffsetSizeAndStrideOpInterface] >  {
+                NoSideEffect, OffsetSizeAndStrideOpInterface] >  {
   let summary = "memref subview operation";
   let description = [{
     The "subview" operation converts a memref type to another memref type

@@ -73,7 +73,7 @@ int main() { return 0; }
 // be garbage collected.
 
 // PRF_CNTS: Hex dump of section '__llvm_prf_cnts':
-// PRF_CNTS-NEXT: {{.*}} 00000000 00000000 {{.*$}}
+// PRF_CNTS-EMPTY:
 
 // PGO: Counters:
 // PGO-NEXT:   main:
