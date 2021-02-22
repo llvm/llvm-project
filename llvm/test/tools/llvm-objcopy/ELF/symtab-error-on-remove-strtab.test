@@ -15,9 +15,11 @@ Symbols: []
 # ERR2: error: '[[INPUT]]': string table '.strtab' cannot be removed because it is referenced by the symbol table '.symtab'
 
 # RUN: llvm-objcopy --allow-broken-links -R .strtab %t %t4
-# RUN: llvm-objdump --section-headers %t4 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.strtab
+# RUN: llvm-readobj --section-headers %t4 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.strtab
 # RUN: cp %t %t5
 # RUN: llvm-strip --no-strip-all --allow-broken-links -R .strtab %t %t5
-# RUN: llvm-objdump --section-headers %t5 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.strtab
+# RUN: llvm-readobj --section-headers %t5 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.strtab
 
-# SECTIONS: .symtab
+# SECTIONS:      Name: .symtab
+# SECTIONS:      Link
+# SECTIONS-SAME:     : 0

@@ -1,37 +1,32 @@
 # RUN: yaml2obj %s -o %t
 
-# Single flags on a section with all flags:
-# RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t %t.alloc
+## Show which flags are preserved when setting other section flags.
+# RUN: llvm-objcopy --set-section-flags=.foo=alloc %t %t.alloc
 # RUN: llvm-readobj --sections %t.alloc | FileCheck %s --check-prefixes=CHECK,ALLOC,WRITE
-# RUN: llvm-objcopy --rename-section=.foo=.bar,load %t %t.load
+# RUN: llvm-objcopy --set-section-flags=.foo=load %t %t.load
 # RUN: llvm-readobj --sections %t.load | FileCheck %s --check-prefixes=CHECK,WRITE
-# RUN: llvm-objcopy --rename-section=.foo=.bar,noload %t %t.noload
+# RUN: llvm-objcopy --set-section-flags=.foo=noload %t %t.noload
 # RUN: llvm-readobj --sections %t.noload | FileCheck %s --check-prefixes=CHECK,WRITE
-# RUN: llvm-objcopy --rename-section=.foo=.bar,readonly %t %t.readonly
+# RUN: llvm-objcopy --set-section-flags=.foo=readonly %t %t.readonly
 # RUN: llvm-readobj --sections %t.readonly | FileCheck %s --check-prefixes=CHECK
-# RUN: llvm-objcopy --rename-section=.foo=.bar,debug %t %t.debug
+# RUN: llvm-objcopy --set-section-flags=.foo=debug %t %t.debug
 # RUN: llvm-readobj --sections %t.debug | FileCheck %s --check-prefixes=CHECK,WRITE
-# RUN: llvm-objcopy --rename-section=.foo=.bar,code %t %t.code
+# RUN: llvm-objcopy --set-section-flags=.foo=code %t %t.code
 # RUN: llvm-readobj --sections %t.code | FileCheck %s --check-prefixes=CHECK,EXEC,WRITE
-# RUN: llvm-objcopy --rename-section=.foo=.bar,data %t %t.data
+# RUN: llvm-objcopy --set-section-flags=.foo=data %t %t.data
 # RUN: llvm-readobj --sections %t.data | FileCheck %s --check-prefixes=CHECK,WRITE
-# RUN: llvm-objcopy --rename-section=.foo=.bar,rom %t %t.rom
+# RUN: llvm-objcopy --set-section-flags=.foo=rom %t %t.rom
 # RUN: llvm-readobj --sections %t.rom | FileCheck %s --check-prefixes=CHECK,WRITE
-# RUN: llvm-objcopy --rename-section=.foo=.bar,contents %t %t.contents
+# RUN: llvm-objcopy --set-section-flags=.foo=contents %t %t.contents
 # RUN: llvm-readobj --sections %t.contents | FileCheck %s --check-prefixes=CHECK,WRITE
-# RUN: llvm-objcopy --rename-section=.foo=.bar,merge %t %t.merge
+# RUN: llvm-objcopy --set-section-flags=.foo=merge %t %t.merge
 # RUN: llvm-readobj --sections %t.merge | FileCheck %s --check-prefixes=CHECK,MERGE,WRITE
-# RUN: llvm-objcopy --rename-section=.foo=.bar,strings %t %t.strings
+# RUN: llvm-objcopy --set-section-flags=.foo=strings %t %t.strings
 # RUN: llvm-readobj --sections %t.strings | FileCheck %s --check-prefixes=CHECK,STRINGS,WRITE
-# RUN: llvm-objcopy --rename-section=.foo=.bar,share %t %t.share
+# RUN: llvm-objcopy --set-section-flags=.foo=share %t %t.share
 # RUN: llvm-readobj --sections %t.share | FileCheck %s --check-prefixes=CHECK,WRITE
-# RUN: llvm-objcopy --rename-section=.foo=.bar,exclude %t %t.exclude
+# RUN: llvm-objcopy --set-section-flags=.foo=exclude %t %t.exclude
 # RUN: llvm-readobj --sections %t.exclude | FileCheck %s --check-prefixes=CHECK,WRITE,EXCLUDE
-
-## Show that if no flags are specified, all existing flags are preserved.
-## Note: GNU objcopy does not preserve the SHF_OS_NONCONFORMING flag.
-# RUN: llvm-objcopy --rename-section=.foo=.bar %t %t.none
-# RUN: llvm-readobj --sections %t.none | FileCheck %s --check-prefixes=CHECK,ALLOC,EXCLUDE,EXEC,MERGE,NONCONFORMING,STRINGS,WRITE
 
 !ELF
 FileHeader:
@@ -61,7 +56,7 @@ Symbols:
   - Name:            dummy
     Section:         .group
 
-# CHECK:              Name: .bar
+# CHECK:              Name: .foo
 # CHECK-NEXT:         Type: SHT_PROGBITS
 # CHECK-NEXT:         Flags [
 # ALLOC-NEXT:           SHF_ALLOC (0x2)
@@ -72,7 +67,6 @@ Symbols:
 # CHECK-NEXT:           SHF_INFO_LINK (0x40)
 # CHECK-NEXT:           SHF_LINK_ORDER (0x80)
 # MERGE-NEXT:           SHF_MERGE (0x10)
-# NONCONFORMING-NEXT:   SHF_OS_NONCONFORMING (0x100)
 # STRINGS-NEXT:         SHF_STRINGS (0x20)
 # CHECK-NEXT:           SHF_TLS (0x400)
 # WRITE-NEXT:           SHF_WRITE (0x1)
