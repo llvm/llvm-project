@@ -1541,6 +1541,8 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   MemCpyInst *MDep = nullptr;
   if (EnableMemorySSA) {
     MemoryUseOrDef *CallAccess = MSSA->getMemoryAccess(&CB);
+    if (!CallAccess)
+      return false;
     MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
         CallAccess->getDefiningAccess(), Loc);
     if (auto *MD = dyn_cast<MemoryDef>(Clobber))
