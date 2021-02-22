@@ -3607,7 +3607,7 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Args, OPT_fsanitize_EQ, Sanitizer, SA);
 
   // Conflating '-fsanitize-system-blacklist' and '-fsanitize-blacklist'.
-  for (const std::string &F : Opts.SanitizerBlacklistFiles)
+  for (const std::string &F : Opts.NoSanitizeFiles)
     GenerateArg(Args, OPT_fsanitize_blacklist, F, SA);
 
   if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver3_8)
@@ -4006,12 +4006,11 @@ bool CompilerInvocation::ParseLangArgsImpl(LangOptions &Opts, ArgList &Args,
   // Parse -fsanitize= arguments.
   parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                       Diags, Opts.Sanitize);
-  Opts.SanitizerBlacklistFiles = Args.getAllArgValues(OPT_fsanitize_blacklist);
+  Opts.NoSanitizeFiles = Args.getAllArgValues(OPT_fsanitize_blacklist);
   std::vector<std::string> systemBlacklists =
       Args.getAllArgValues(OPT_fsanitize_system_blacklist);
-  Opts.SanitizerBlacklistFiles.insert(Opts.SanitizerBlacklistFiles.end(),
-                                      systemBlacklists.begin(),
-                                      systemBlacklists.end());
+  Opts.NoSanitizeFiles.insert(Opts.NoSanitizeFiles.end(),
+                              systemBlacklists.begin(), systemBlacklists.end());
 
   if (Arg *A = Args.getLastArg(OPT_fclang_abi_compat_EQ)) {
     Opts.setClangABICompat(LangOptions::ClangABI::Latest);
