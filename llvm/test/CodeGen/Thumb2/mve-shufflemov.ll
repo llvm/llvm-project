@@ -35,15 +35,15 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @shuffle_i16_76543210(<8 x i16> %s1, <8 x i16> %s2) {
 ; CHECK-LABEL: shuffle_i16_76543210:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmovx.f16 s4, s3
-; CHECK-NEXT:    vins.f16 s4, s3
-; CHECK-NEXT:    vmovx.f16 s5, s2
-; CHECK-NEXT:    vins.f16 s5, s2
-; CHECK-NEXT:    vmovx.f16 s6, s1
-; CHECK-NEXT:    vins.f16 s6, s1
-; CHECK-NEXT:    vmovx.f16 s7, s0
-; CHECK-NEXT:    vins.f16 s7, s0
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    vmovx.f16 s0, s7
+; CHECK-NEXT:    vins.f16 s0, s7
+; CHECK-NEXT:    vmovx.f16 s1, s6
+; CHECK-NEXT:    vins.f16 s1, s6
+; CHECK-NEXT:    vmovx.f16 s2, s5
+; CHECK-NEXT:    vins.f16 s2, s5
+; CHECK-NEXT:    vmovx.f16 s3, s4
+; CHECK-NEXT:    vins.f16 s3, s4
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x i16> %s1, <8 x i16> %s2, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>

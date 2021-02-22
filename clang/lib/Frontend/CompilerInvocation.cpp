@@ -4588,12 +4588,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                              Res.getPreprocessorOpts().Includes, Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
-    if (T.isOSDarwin() && DashX.isPreprocessed()) {
-      // Supress the darwin-specific 'stdlibcxx-not-found' diagnostic for
-      // preprocessed input as we don't expect it to be used with -std=libc++
-      // anyway.
-      Res.getDiagnosticOpts().Warnings.push_back("no-stdlibcxx-not-found");
-    }
   }
 
   if (LangOpts.CUDA) {
@@ -4633,10 +4627,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     Diags.Report(diag::err_fe_dependency_file_requires_MT);
     Success = false;
   }
-
-  // Turn on -Wspir-compat for SPIR target.
-  if (T.isSPIR())
-    Res.getDiagnosticOpts().Warnings.push_back("spir-compat");
 
   // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
   if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&
