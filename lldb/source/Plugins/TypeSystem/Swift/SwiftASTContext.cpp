@@ -3960,6 +3960,21 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
       uniqued_paths.push_back(library_search_dir);
   }
 
+  detail::SwiftLibraryLookupRequest library_request;
+  library_request.library_name = library_fullname;
+  library_request.search_paths = uniqued_paths;
+  library_request.check_rpath = check_rpath;
+  library_request.process_uid = process.GetUniqueID();
+
+  // If this library failed to load before, don't try to load it again.
+  // This is partly done for performance reasons, but also trying to load a
+  // library might change the process state. This in turn could then invalidate
+  // ValueObjects which then in turn try to resolve types their types again
+  // which would bring us back here trying to load the required library. This
+  // cache prevents this recursion. See also rdar://74454500
+  if (failed_library_loads.count(library_request) != 0)
+    return false;
+
   FileSpec library_spec(library_fullname);
   FileSpec found_library;
   uint32_t token = LLDB_INVALID_IMAGE_TOKEN;
@@ -3994,6 +4009,8 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
                                library_fullname.c_str(),
                                load_image_error.AsCString());
   }
+
+  failed_library_loads.insert(library_request);
   return false;
 }
 
