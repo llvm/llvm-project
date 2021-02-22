@@ -513,7 +513,7 @@ public:
   /// variable canonicalization. It supports both VF = 1 for unrolled loops and
   /// arbitrary length vectors.
   void widenPHIInstruction(Instruction *PN, RecurrenceDescriptor *RdxDesc,
-                           Value *StartV, VPValue *Def,
+                           VPValue *StartV, VPValue *Def,
                            VPTransformState &State);
 
   /// A helper function to scalarize a single Instruction in the innermost loop.
@@ -4353,36 +4353,13 @@ void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
 
 void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
   for (PHINode *OrigPhi : OrigPHIsToFix) {
-    PHINode *NewPhi =
-        cast<PHINode>(State.get(State.Plan->getVPValue(OrigPhi), 0));
-    unsigned NumIncomingValues = OrigPhi->getNumIncomingValues();
-
-    SmallVector<BasicBlock *, 2> ScalarBBPredecessors(
-        predecessors(OrigPhi->getParent()));
-    SmallVector<BasicBlock *, 2> VectorBBPredecessors(
-        predecessors(NewPhi->getParent()));
-    assert(ScalarBBPredecessors.size() == VectorBBPredecessors.size() &&
-           "Scalar and Vector BB should have the same number of predecessors");
-
-    // The insertion point in Builder may be invalidated by the time we get
-    // here. Force the Builder insertion point to something valid so that we do
-    // not run into issues during insertion point restore in
-    // State::get() calls below.
-    Builder.SetInsertPoint(NewPhi);
-
-    // The predecessor order is preserved and we can rely on mapping between
-    // scalar and vector block predecessors.
-    for (unsigned i = 0; i < NumIncomingValues; ++i) {
-      BasicBlock *NewPredBB = VectorBBPredecessors[i];
-
-      // When looking up the new scalar/vector values to fix up, use incoming
-      // values from original phi.
-      Value *ScIncV =
-          OrigPhi->getIncomingValueForBlock(ScalarBBPredecessors[i]);
-
-      // Scalar incoming value may need a broadcast
-      Value *NewIncV = State.get(State.Plan->getOrAddVPValue(ScIncV), 0);
-      NewPhi->addIncoming(NewIncV, NewPredBB);
+    VPWidenPHIRecipe *VPPhi =
+        cast<VPWidenPHIRecipe>(State.Plan->getVPValue(OrigPhi));
+    PHINode *NewPhi = cast<PHINode>(State.get(VPPhi, 0));
+    for (unsigned i = 0; i < VPPhi->getNumOperands(); ++i) {
+      VPValue *Inc = VPPhi->getIncomingValue(i);
+      VPBasicBlock *VPBB = VPPhi->getIncomingBlock(i);
+      NewPhi->addIncoming(State.get(Inc, 0), State.CFG.VPBB2IRBB[VPBB]);
     }
   }
 }
@@ -4460,7 +4437,7 @@ void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPValue *VPDef,
 
 void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
                                               RecurrenceDescriptor *RdxDesc,
-                                              Value *StartV, VPValue *Def,
+                                              VPValue *StartVPV, VPValue *Def,
                                               VPTransformState &State) {
   PHINode *P = cast<PHINode>(PN);
   if (EnableVPlanNativePath) {
@@ -4481,6 +4458,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
   assert(PN->getParent() == OrigLoop->getHeader() &&
          "Non-header phis should have been handled elsewhere");
 
+  Value *StartV = StartVPV ? StartVPV->getLiveInIRValue() : nullptr;
   // In order to support recurrences we need to be able to vectorize Phi nodes.
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
@@ -8882,10 +8860,8 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
-  Value *StartV =
-      getStartValue() ? getStartValue()->getLiveInIRValue() : nullptr;
   State.ILV->widenPHIInstruction(cast<PHINode>(getUnderlyingValue()), RdxDesc,
-                                 StartV, this, State);
+                                 getStartValue(), this, State);
 }
 
 void VPBlendRecipe::execute(VPTransformState &State) {
