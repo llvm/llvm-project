@@ -517,6 +517,12 @@ protected:
     GetThread().SetStopInfo(stop_reason_sp);
   }
 
+  // BEGIN SWIFT MOD
+  LazyBool GetCachedPlanExplainsStop() const {
+    return m_cached_plan_explains_stop;
+  }
+  // END SWIFT MOD
+
   virtual lldb::StateType GetPlanRunState() = 0;
 
   bool IsUsuallyUnexplainedStopReason(lldb::StopReason);
