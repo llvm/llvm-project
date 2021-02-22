@@ -1,7 +1,13 @@
 REQUIRES: x86, gnutar, manifest_tool
 
+manifest-related files are compiled to a .res file and the .res file is
+added to the repro archive, instead of adding the inputs.
+
 RUN: rm -rf %t && mkdir %t && cd %t
-RUN: lld-link -entry:__ImageBase -nodefaultlib -linkrepro:%t -manifest:embed %p/Inputs/std32.lib -subsystem:console
+RUN: lld-link -entry:__ImageBase -nodefaultlib -linkrepro:%t \
+RUN:     -manifest:embed %p/Inputs/std32.lib -subsystem:console \
+RUN:     -manifestinput:%p/Inputs/manifestinput.test
+
 RUN: tar tf repro.tar | FileCheck --check-prefix=LIST %s
 RUN: tar xOf repro.tar repro/response.txt | FileCheck %s
 
