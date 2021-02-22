@@ -158,6 +158,10 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     return A;
   }
 
+  if (Pred == CmpInst::ICMP_NE && match(Op1, m_Zero())) {
+    return getConstraint(CmpInst::ICMP_UGT, Op0, Op1, Value2Index, NewIndices);
+  }
+
   // Only ULE and ULT predicates are supported at the moment.
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT)
     return {};
