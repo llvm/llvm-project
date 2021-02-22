@@ -335,12 +335,12 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
     // Map all BB references in the WinEH data to MBBs.
     DenseMap<BBOrMBB, BBOrMBB> NewMap;
-    for (auto &KV : EHInfo.EHPadUnwindMap) {
+    for (auto &KV : EHInfo.SrcToUnwindDest) {
       const auto *Src = KV.first.get<const BasicBlock *>();
       const auto *Dst = KV.second.get<const BasicBlock *>();
       NewMap[MBBMap[Src]] = MBBMap[Dst];
     }
-    EHInfo.EHPadUnwindMap = std::move(NewMap);
+    EHInfo.SrcToUnwindDest = std::move(NewMap);
   }
 }
 
