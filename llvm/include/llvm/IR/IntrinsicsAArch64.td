@@ -715,6 +715,31 @@ let TargetPrefix = "aarch64" in {
     : DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty, llvm_v4i32_ty],
                 [IntrNoMem]>;
 
+  // SHA512 intrinsic taking 2 arguments
+  class Crypto_SHA512_2Arg_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty], [IntrNoMem]>;
+
+  // SHA512 intrinsic taking 3 Arguments
+  class Crypto_SHA512_3Arg_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty, llvm_v2i64_ty],
+                [IntrNoMem]>;
+
+  // SHA3 Intrinsics taking 3 arguments
+  class Crypto_SHA3_3Arg_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+               [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+               [IntrNoMem]>;
+
+  // SHA3 Intrinsic taking 2 arguments
+  class Crypto_SHA3_2Arg_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty],
+               [IntrNoMem]>;
+
+  // SHA3 Intrinsic taking 3 Arguments 1 immediate
+  class Crypto_SHA3_2ArgImm_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty, llvm_i64_ty],
+               [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
   class Crypto_SM3_3Vector_Intrinsic
     : Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty, llvm_v4i32_ty],
                 [IntrNoMem]>;
@@ -747,6 +772,20 @@ def int_aarch64_crypto_sha256h   : Crypto_SHA_8Hash4Schedule_Intrinsic;
 def int_aarch64_crypto_sha256h2  : Crypto_SHA_8Hash4Schedule_Intrinsic;
 def int_aarch64_crypto_sha256su0 : Crypto_SHA_8Schedule_Intrinsic;
 def int_aarch64_crypto_sha256su1 : Crypto_SHA_12Schedule_Intrinsic;
+
+//SHA3
+def int_aarch64_crypto_eor3s : Crypto_SHA3_3Arg_Intrinsic;
+def int_aarch64_crypto_eor3u : Crypto_SHA3_3Arg_Intrinsic;
+def int_aarch64_crypto_bcaxs : Crypto_SHA3_3Arg_Intrinsic;
+def int_aarch64_crypto_bcaxu : Crypto_SHA3_3Arg_Intrinsic;
+def int_aarch64_crypto_rax1 : Crypto_SHA3_2Arg_Intrinsic;
+def int_aarch64_crypto_xar : Crypto_SHA3_2ArgImm_Intrinsic;
+
+// SHA512
+def int_aarch64_crypto_sha512h : Crypto_SHA512_3Arg_Intrinsic;
+def int_aarch64_crypto_sha512h2 : Crypto_SHA512_3Arg_Intrinsic;
+def int_aarch64_crypto_sha512su0 : Crypto_SHA512_2Arg_Intrinsic;
+def int_aarch64_crypto_sha512su1 : Crypto_SHA512_3Arg_Intrinsic;
 
 //SM3 & SM4
 def int_aarch64_crypto_sm3partw1 : Crypto_SM3_3Vector_Intrinsic;
