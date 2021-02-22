@@ -83,7 +83,15 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
                                 NarrowTy.getSizeInBits()));
       break;
     }
-    case CCValAssign::LocInfo::SExt:
+    case CCValAssign::LocInfo::SExt: {
+      auto WideTy = LLT{VA.getLocVT()};
+      auto NarrowTy = MRI.getType(ValVReg);
+      MIRBuilder.buildTrunc(ValVReg,
+                            MIRBuilder.buildAssertSExt(
+                                WideTy, MIRBuilder.buildCopy(WideTy, PhysReg),
+                                NarrowTy.getSizeInBits()));
+      break;
+    }
     case CCValAssign::LocInfo::AExt: {
       auto Copy = MIRBuilder.buildCopy(LLT{VA.getLocVT()}, PhysReg);
       MIRBuilder.buildTrunc(ValVReg, Copy);
@@ -104,16 +112,28 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant,
         MemSize, inferAlignFromPtrInfo(MF, MPO));
     const LLT LocVT = LLT{VA.getLocVT()};
-    if (VA.getLocInfo() == CCValAssign::LocInfo::ZExt &&
-        RegTy.getScalarSizeInBits() < LocVT.getScalarSizeInBits()) {
-      // We know the parameter is zero-extended. Perform a load into LocVT, and
-      // use G_ASSERT_ZEXT to communicate that this was zero-extended from the
-      // parameter type. Move down to the parameter type using G_TRUNC.
-      MIRBuilder.buildTrunc(ValVReg,
-                            MIRBuilder.buildAssertZExt(
-                                LocVT, MIRBuilder.buildLoad(LocVT, Addr, *MMO),
-                                RegTy.getScalarSizeInBits()));
-      return;
+
+    if (RegTy.getScalarSizeInBits() < LocVT.getScalarSizeInBits()) {
+      auto LocInfo = VA.getLocInfo();
+      if (LocInfo == CCValAssign::LocInfo::ZExt) {
+        // We know the parameter is zero-extended. Perform a load into LocVT,
+        // and use G_ASSERT_ZEXT to communicate that this was zero-extended from
+        // the parameter type. Move down to the parameter type using G_TRUNC.
+        MIRBuilder.buildTrunc(
+            ValVReg, MIRBuilder.buildAssertZExt(
+                         LocVT, MIRBuilder.buildLoad(LocVT, Addr, *MMO),
+                         RegTy.getScalarSizeInBits()));
+        return;
+      }
+
+      if (LocInfo == CCValAssign::LocInfo::SExt) {
+        // Same as the ZExt case, but use G_ASSERT_SEXT instead.
+        MIRBuilder.buildTrunc(
+            ValVReg, MIRBuilder.buildAssertSExt(
+                         LocVT, MIRBuilder.buildLoad(LocVT, Addr, *MMO),
+                         RegTy.getScalarSizeInBits()));
+        return;
+      }
     }
 
     // No extension information, or no extension necessary. Load into the
