@@ -292,7 +292,7 @@ struct TypeBuilder {
     if (!ps.empty()) {
       // This type is a PDT (parametric derived type). Create the functions to
       // use for allocation, dereferencing, and address arithmetic here.
-      TODO("PDT");
+      TODO_NOLOC("PDT");
     }
     LLVM_DEBUG(llvm::dbgs() << "derived type: " << rec << '\n');
     return rec;

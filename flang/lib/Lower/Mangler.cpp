@@ -69,7 +69,7 @@ kindValues(const Fortran::semantics::Symbol &symbol) {
        Fortran::semantics::OrderParameterDeclarations(symbol))
     if (param->get<Fortran::semantics::TypeParamDetails>().attr() ==
         Fortran::common::TypeParamAttr::Kind)
-      TODO("type with a KIND parameter");
+      TODO_NOLOC("type with a KIND parameter");
   return {};
 }
 
