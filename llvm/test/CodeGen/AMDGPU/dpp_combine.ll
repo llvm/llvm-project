@@ -3,7 +3,7 @@
 
 ; GCN-LABEL: {{^}}dpp_add:
 ; GCN: global_load_dword [[V:v[0-9]+]],
-; GCN: v_add_{{(nc_)?}}u32_dpp [[V]], [[V]], [[V]] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:0{{$}}
+; GCN: v_add_{{(nc_)?}}u32_dpp [[V]], [[V]], [[V]] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_add(i32 addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %id
@@ -16,7 +16,7 @@ define amdgpu_kernel void @dpp_add(i32 addrspace(1)* %arg) {
 
 ; GCN-LABEL: {{^}}dpp_ceil:
 ; GCN: global_load_dword [[V:v[0-9]+]],
-; GCN: v_ceil_f32_dpp [[V]], [[V]] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:0{{$}}
+; GCN: v_ceil_f32_dpp [[V]], [[V]] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_ceil(i32 addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %id
@@ -31,7 +31,7 @@ define amdgpu_kernel void @dpp_ceil(i32 addrspace(1)* %arg) {
 
 ; GCN-LABEL: {{^}}dpp_fadd:
 ; GCN: global_load_dword [[V:v[0-9]+]],
-; GCN: v_add_f32_dpp [[V]], [[V]], [[V]] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:0{{$}}
+; GCN: v_add_f32_dpp [[V]], [[V]], [[V]] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_fadd(i32 addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %id
