@@ -2272,7 +2272,7 @@ allows the optimizer to assume that the :ref:`llvm.assume <int_assume>`
 call location is cold and that ``%val`` may not be null.
 
 Just like for the argument of :ref:`llvm.assume <int_assume>`, if any of the
-provided guarantees are are violated at runtime the behavior is undefined.
+provided guarantees are violated at runtime the behavior is undefined.
 
 Even if the assumed property can be encoded as a boolean value, like
 ``nonnull``, using operand bundles to express the property can still have
