@@ -295,6 +295,13 @@ void updateProfileCallee(
 void identifyNoAliasScopesToClone(
     ArrayRef<BasicBlock *> BBs, SmallVectorImpl<MDNode *> &NoAliasDeclScopes);
 
+/// Find the 'llvm.experimental.noalias.scope.decl' intrinsics in the specified
+/// instruction range and extract their scope. These are candidates for
+/// duplication when cloning.
+void identifyNoAliasScopesToClone(
+    BasicBlock::iterator Start, BasicBlock::iterator End,
+    SmallVectorImpl<MDNode *> &NoAliasDeclScopes);
+
 /// Duplicate the specified list of noalias decl scopes.
 /// The 'Ext' string is added as an extension to the name.
 /// Afterwards, the ClonedScopes contains the mapping of the original scope
