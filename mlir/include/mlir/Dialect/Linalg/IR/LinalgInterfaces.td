@@ -37,7 +37,7 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
   let methods = [
     InterfaceMethod<
     /*desc=*/[{
-      Returns whether the given op has indexing maps the correspond to a
+      Returns whether the given op has indexing maps that correspond to a
       row-major matmul operation.
     }],
     /*retTy=*/"bool",
@@ -48,7 +48,7 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
     }]>,
     InterfaceMethod<
     /*desc=*/[{
-      Returns whether the given op has indexing maps the correspond to a
+      Returns whether the given op has indexing maps that correspond to a
       column-major matmul operation.
     }],
     /*retTy=*/"bool",
@@ -59,7 +59,7 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
     }]>,
     InterfaceMethod<
     /*desc=*/[{
-      Returns whether the given op has indexing maps the correspond to a
+      Returns whether the given op has indexing maps that correspond to a
       row-major batch matmul operation.
     }],
     /*retTy=*/"bool",
