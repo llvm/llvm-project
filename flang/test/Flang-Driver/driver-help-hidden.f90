@@ -41,9 +41,9 @@
 ! CHECK-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! CHECK-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! CHECK-NEXT: -o <file> Write output to <file>
-! CHECK-NEXT: -test-io  Run the InputOuputTest action. Use for development and testing only.
 ! CHECK-NEXT: -U <macro>             Undefine macro <macro>
 ! CHECK-NEXT: --version Print version information
+! CHECK-NEXT: -Xflang <arg>          Pass <arg> to the flang compiler
 
 !-------------------------------------------------------------
 ! EXPECTED OUTPUT FOR FLANG DRIVER (flang-new)
