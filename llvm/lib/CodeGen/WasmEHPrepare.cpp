@@ -436,9 +436,9 @@ void llvm::calculateWasmEHInfo(const Function *F, WasmEHFuncInfo &EHInfo) {
       const Instruction *UnwindPad = UnwindBB->getFirstNonPHI();
       if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(UnwindPad))
         // Currently there should be only one handler per a catchswitch.
-        EHInfo.setEHPadUnwindDest(&BB, *CatchSwitch->handlers().begin());
+        EHInfo.setUnwindDest(&BB, *CatchSwitch->handlers().begin());
       else // cleanuppad
-        EHInfo.setEHPadUnwindDest(&BB, UnwindBB);
+        EHInfo.setUnwindDest(&BB, UnwindBB);
     }
   }
 }
