@@ -176,7 +176,8 @@ Optional<std::string> macho::resolveDylibPath(StringRef path) {
 static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 
 Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
-                                       DylibFile *umbrella) {
+                                       DylibFile *umbrella,
+                                       bool isBundleLoader) {
   StringRef path = mbref.getBufferIdentifier();
   DylibFile *&file = loadedDylibs[CachedHashStringRef(path)];
   if (file)
@@ -190,11 +191,13 @@ Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
             ": " + toString(result.takeError()));
       return {};
     }
-    file = make<DylibFile>(**result, umbrella);
+    file = make<DylibFile>(**result, umbrella, isBundleLoader);
   } else {
     assert(magic == file_magic::macho_dynamically_linked_shared_lib ||
-           magic == file_magic::macho_dynamically_linked_shared_lib_stub);
-    file = make<DylibFile>(mbref, umbrella);
+           magic == file_magic::macho_dynamically_linked_shared_lib_stub ||
+           magic == file_magic::macho_executable ||
+           magic == file_magic::macho_bundle);
+    file = make<DylibFile>(mbref, umbrella, isBundleLoader);
   }
   return file;
 }
