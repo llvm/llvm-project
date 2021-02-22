@@ -315,6 +315,19 @@ struct AddrOfOpConversion : public FIROpConversion<fir::AddrOfOp> {
 };
 } // namespace
 
+/// Lookup the function to compute the memory size of this parametric derived
+/// type. The size of the object may depend on the LEN type parameters of the
+/// derived type.
+static mlir::LLVM::LLVMFuncOp
+getDependentTypeMemSizeFn(fir::RecordType recTy, fir::AllocaOp op,
+                          mlir::ConversionPatternRewriter &rewriter) {
+  auto module = op->getParentOfType<mlir::ModuleOp>();
+  std::string name = recTy.getName().str() + "P.mem.size";
+  if (auto memSizeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(name))
+    return memSizeFunc;
+  TODO_NOLOC("did not find allocation function");
+}
+
 namespace {
 /// convert to LLVM IR dialect `alloca`
 struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
@@ -325,13 +338,41 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto loc = alloc.getLoc();
     auto ity = lowerTy().indexType();
-    auto c1 = genConstantIndex(loc, ity, rewriter, 1);
-    auto size = c1.getResult();
-    for (auto opnd : operands)
-      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, opnd);
+    unsigned i = 0;
+    auto size = genConstantIndex(loc, ity, rewriter, 1).getResult();
     auto ty = convertType(alloc.getType());
-    rewriter.replaceOpWithNewOp<mlir::LLVM::AllocaOp>(alloc, ty, size,
+    auto resultTy = ty;
+    if (alloc.hasLenParams()) {
+      unsigned end = alloc.numLenParams();
+      llvm::SmallVector<mlir::Value, 4> lenParams;
+      for (; i < end; ++i)
+        lenParams.push_back(operands[i]);
+      auto i64Ty = mlir::IntegerType::get(alloc.getContext(), 64);
+      auto recTy = alloc.getInType().dyn_cast<fir::RecordType>();
+      assert(recTy && "expected fir.type");
+      auto memSizeFn = getDependentTypeMemSizeFn(recTy, alloc, rewriter);
+      auto attr =
+          rewriter.getNamedAttr("callee", rewriter.getSymbolRefAttr(memSizeFn));
+      auto call = rewriter.create<mlir::LLVM::CallOp>(
+          loc, i64Ty, lenParams, llvm::ArrayRef<mlir::NamedAttribute>{attr});
+      size = call.getResult(0);
+      ty = mlir::LLVM::LLVMPointerType::get(
+          mlir::IntegerType::get(alloc.getContext(), 8));
+    }
+    if (alloc.hasShapeOperands()) {
+      unsigned end = operands.size();
+      for (; i < end; ++i)
+        size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, operands[i]);
+    }
+    if (ty == resultTy) {
+      // Do not emit the bitcast if ty and resultTy are the same.
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AllocaOp>(alloc, ty, size,
+                                                        alloc.getAttrs());
+    } else {
+      auto al = rewriter.create<mlir::LLVM::AllocaOp>(loc, ty, size,
                                                       alloc.getAttrs());
+      rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(alloc, resultTy, al);
+    }
     return success();
   }
 };
@@ -386,8 +427,7 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
             mlir::LLVM::getPrimitiveTypeSizeInBits(ptrTy.getElementType()))
       return genConstantIndex(loc, idxTy, rewriter, size / 8);
 
-    // Otherwise, generate the GEP trick in LLVM IR to compute the size, since
-    // mlir::Type doesn't provide a sufficiently complete implementation.
+    // Otherwise, generate the GEP trick in LLVM IR to compute the size.
     auto nullPtr = rewriter.create<mlir::LLVM::NullOp>(loc, ptrTy);
     auto one = genConstantIndex(loc, lowerTy().offsetType(), rewriter, 1);
     auto gep = rewriter.create<mlir::LLVM::GEPOp>(
@@ -1839,9 +1879,6 @@ struct CoordinateOpConversion
       rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(coor, unwrap(ty),
                                                          addr);
       return success();
-    } else {
-      if (fir::LLVMTypeConverter::dynamicallySized(cpnTy))
-        return mlir::emitError(loc, "bare reference to unknown shape");
     }
     if (!hasSubdimension)
       columnIsDeferred = true;
@@ -1872,6 +1909,9 @@ struct CoordinateOpConversion
         }
       }
     }
+
+    if (fir::LLVMTypeConverter::dynamicallySized(cpnTy))
+      TODO(loc, "type has dynamic size");
 
     if (hasKnownShape || columnIsDeferred) {
       SmallVector<mlir::Value, 8> offs;
@@ -1914,7 +1954,7 @@ struct CoordinateOpConversion
 
         // check if the i-th coordinate relates to a field
         if (auto strTy = cpnTy.dyn_cast<fir::RecordType>()) {
-          cpnTy = strTy.getType(getIntValue(nxtOpnd));
+          cpnTy = strTy.getType(getFieldNumber(strTy, nxtOpnd));
         } else if (auto strTy = cpnTy.dyn_cast<mlir::TupleType>()) {
           cpnTy = strTy.getType(getIntValue(nxtOpnd));
         } else {
@@ -1929,6 +1969,14 @@ struct CoordinateOpConversion
       return success();
     }
     return mlir::emitError(loc, "fir.coordinate_of base must have box type");
+  }
+
+  unsigned getFieldNumber(fir::RecordType ty, mlir::Value op) const {
+    return fir::LLVMTypeConverter::dynamicallySized(ty)
+               ? op.getDefiningOp()
+                     ->getAttrOfType<mlir::IntegerAttr>("field")
+                     .getInt()
+               : getIntValue(op);
   }
 
   bool hasSubDimensions(mlir::Type type) const {
@@ -1950,7 +1998,7 @@ struct CoordinateOpConversion
         i += arrTy.getDimension() - 1;
         type = arrTy.getEleTy();
       } else if (auto strTy = type.dyn_cast<fir::RecordType>()) {
-        type = strTy.getType(getIntValue(nxtOpnd));
+        type = strTy.getType(getFieldNumber(strTy, nxtOpnd));
       } else if (auto strTy = type.dyn_cast<mlir::TupleType>()) {
         type = strTy.getType(getIntValue(nxtOpnd));
       } else {
@@ -1973,7 +2021,7 @@ struct CoordinateOpConversion
         type = arrTy.getEleTy();
       } else if (auto strTy = type.dyn_cast<fir::RecordType>()) {
         subEle = true;
-        type = strTy.getType(getIntValue(nxtOpnd));
+        type = strTy.getType(getFieldNumber(strTy, nxtOpnd));
       } else if (auto strTy = type.dyn_cast<mlir::TupleType>()) {
         subEle = true;
         type = strTy.getType(getIntValue(nxtOpnd));
@@ -2036,41 +2084,32 @@ struct FieldIndexOpConversion : public FIROpConversion<fir::FieldIndexOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::FieldIndexOp field, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-
-    auto recordType = field.on_type().cast<fir::RecordType>();
-    if (!fir::LLVMTypeConverter::dynamicallySized(recordType)) {
-      // Derived type has compile-time constant layout.
-      // Returns index of the component type in the parent type (to be used in
-      // GEP).
-      auto index = recordType.getFieldIndex(field.field_id());
+    auto recTy = field.on_type().cast<fir::RecordType>();
+    auto index = recTy.getFieldIndex(field.field_id());
+    if (!fir::LLVMTypeConverter::dynamicallySized(recTy)) {
+      // Derived type has compile-time constant layout. Returns index of the
+      // component type in the parent type (to be used in GEP).
       rewriter.replaceOp(field, mlir::ValueRange{genConstantOffset(
                                     field.getLoc(), rewriter, index)});
     } else {
-      // call the compiler generated function to determine the byte offset of
-      // the field at runtime
-      // FIXME: If/when derived type layout not known at compile time, need to
-      // call runtime. Field -> offset in parent type in bytes. This currently
-      // breaks the coordinate_of lowering that expects constant integers to
-      // generate GEPs.
-      auto symAttr =
-          mlir::SymbolRefAttr::get(field.getContext(), methodName(field));
-      SmallVector<mlir::NamedAttribute, 1> attrs{
-          rewriter.getNamedAttr("callee", symAttr)};
-      auto ty = lowerTy().offsetType();
-      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(field, ty, operands,
-                                                      attrs);
+      // Call the compiler generated function to determine the byte offset of
+      // the field at runtime. This returns a non-constant.
+      auto symAttr = mlir::SymbolRefAttr::get(
+          field.getContext(), methodName(recTy, field.field_id()));
+      auto callAttr = rewriter.getNamedAttr("callee", symAttr);
+      auto fieldAttr = rewriter.getNamedAttr(
+          "field", mlir::IntegerAttr::get(lowerTy().indexType(), index));
+      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+          field, lowerTy().offsetType(), operands,
+          llvm::ArrayRef<mlir::NamedAttribute>{callAttr, fieldAttr});
     }
     return success();
   }
 
   // constructing the name of the method
-  inline static std::string methodName(fir::FieldIndexOp field) {
-    auto fldName = field.field_id();
-    auto type = field.on_type().cast<fir::RecordType>();
-    // note: using std::string to dodge a bug in g++ 7.4.0
-    std::string tyName = type.getName().str();
-    Twine methodName = "_QQOFFSETOF_" + tyName + "_" + fldName;
-    return methodName.str();
+  inline static std::string methodName(fir::RecordType recTy,
+                                       llvm::StringRef field) {
+    return recTy.getName().str() + "P." + field.str() + ".offset";
   }
 };
 
@@ -2088,9 +2127,9 @@ struct LenParamIndexOpConversion
     const unsigned boxsize = 24; // FIXME
     unsigned offset = boxsize;
     // add the size of the rows of triples
-    if (auto arr = onty.dyn_cast<fir::SequenceType>()) {
+    if (auto arr = onty.dyn_cast<fir::SequenceType>())
       offset += 3 * arr.getDimension();
-    }
+
     // advance over some addendum fields
     const unsigned addendumOffset{sizeof(void *) + sizeof(uint64_t)};
     offset += addendumOffset;
@@ -2919,7 +2958,8 @@ struct FIRToLLVMLoweringPass
         StringLitOpConversion, SubcOpConversion, SubfOpConversion,
         UnboxCharOpConversion, UnboxOpConversion, UnboxProcOpConversion,
         UndefOpConversion, UnreachableOpConversion, XArrayCoorOpConversion,
-        XEmboxOpConversion, XReboxOpConversion>(context, typeConverter);
+        XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(
+        context, typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ConversionTarget target{*context};
