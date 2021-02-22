@@ -830,9 +830,9 @@ getExpandedMacro(SourceLocation MacroExpansionLoc,
                  const cross_tu::CrossTranslationUnitContext &CTU,
                  const MacroExpansionContext &MacroExpansions,
                  const SourceManager &SM) {
-  if (auto LocAndUnit = CTU.getImportedFromSourceLocation(MacroExpansionLoc)) {
-    // TODO: Implement macro expansions for CTU.
-    return llvm::None;
+  if (auto CTUMacroExpCtx =
+          CTU.getMacroExpansionContextForSourceLocation(MacroExpansionLoc)) {
+    return CTUMacroExpCtx->getExpandedText(MacroExpansionLoc);
   }
   return MacroExpansions.getExpandedText(MacroExpansionLoc);
 }

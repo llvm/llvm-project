@@ -754,31 +754,15 @@ CrossTranslationUnitContext::getOrCreateASTImporter(ASTUnit *Unit) {
   ASTImporter *NewImporter = new ASTImporter(
       Context, Context.getSourceManager().getFileManager(), From,
       From.getSourceManager().getFileManager(), false, ImporterSharedSt);
-  NewImporter->setFileIDImportHandler([this, Unit](FileID ToID, FileID FromID) {
-    assert(ImportedFileIDs.find(ToID) == ImportedFileIDs.end() &&
-           "FileID already imported, should not happen.");
-    ImportedFileIDs[ToID] = std::make_pair(FromID, Unit);
-  });
   ASTUnitImporterMap[From.getTranslationUnitDecl()].reset(NewImporter);
   return *NewImporter;
 }
 
-llvm::Optional<std::pair<SourceLocation, ASTUnit *>>
-CrossTranslationUnitContext::getImportedFromSourceLocation(
+llvm::Optional<clang::MacroExpansionContext>
+CrossTranslationUnitContext::getMacroExpansionContextForSourceLocation(
     const clang::SourceLocation &ToLoc) const {
-  const SourceManager &SM = Context.getSourceManager();
-  auto DecToLoc = SM.getDecomposedLoc(ToLoc);
-
-  auto I = ImportedFileIDs.find(DecToLoc.first);
-  if (I == ImportedFileIDs.end())
-    return {};
-
-  FileID FromID = I->second.first;
-  clang::ASTUnit *Unit = I->second.second;
-  SourceLocation FromLoc =
-      Unit->getSourceManager().getComposedLoc(FromID, DecToLoc.second);
-
-  return std::make_pair(FromLoc, Unit);
+  // FIXME: Implement: Record such a context for every imported ASTUnit; lookup.
+  return llvm::None;
 }
 
 } // namespace cross_tu
