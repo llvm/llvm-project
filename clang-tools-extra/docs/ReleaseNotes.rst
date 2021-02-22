@@ -47,6 +47,9 @@ Major New Features
 Improvements to clangd
 ----------------------
 
+Performance
+^^^^^^^^^^^
+
 - clangd's memory usage is significantly reduced on most Linux systems.
   In particular, memory usage should not increase dramatically over time.
 
@@ -58,6 +61,172 @@ Improvements to clangd
   Users of other allocators (such as ``jemalloc`` or ``tcmalloc``) on glibc
   systems can disable this using ``--malloc_trim=0`` or the CMake flag
   ``-DCLANGD_MALLOC_TRIM=0``.
+
+- Added the `$/memoryUsage request
+  <https://clangd.llvm.org/extensions.html#memory-usage>`_: an LSP extension.
+  This provides a breakdown of the memory clangd thinks it is using (excluding
+  malloc overhead etc). The clangd VSCode extension supports showing the memory
+  usage tree.
+
+Parsing and selection
+^^^^^^^^^^^^^^^^^^^^^
+
+- Improved navigation of broken code in C using Recovery AST. (This has been
+  enabled for C++ since clangd 11).
+
+- Types are understood more often in broken code. (This is the first release
+  where Recovery AST preserves speculated types).
+
+- Heuristic resolution for dependent names in templates.
+
+Code completion
+^^^^^^^^^^^^^^^
+
+- Higher priority for symbols that were already used in this file, and symbols
+  from namespaces mentioned in this file. (Estimated 3% accuracy improvement)
+
+- Introduced a ranking algorithm trained on snippets from a large C++ codebase.
+  Use the flag ``--ranking-model=decision_forest`` to try this (Estimated 6%
+  accuracy improvement). This mode is likely to become the default in future.
+
+  Note: this is a generic model, not specialized for your code. clangd does not
+  collect any data from your code to train code completion.
+
+- Signature help works with functions with template-dependent parameter types.
+
+Go to definition
+^^^^^^^^^^^^^^^^
+
+- Selecting an ``auto`` or ``decltype`` keyword will attempt to navigate to
+  a definition of the deduced type.
+
+- Improved handling of aliases: navigate to the underlying entity more often.
+
+- Better understanding of declaration vs definition for Objective-C classes and
+  protocols.
+
+- Selecting a pure-virtual method shows its overrides.
+
+Find references
+^^^^^^^^^^^^^^^
+
+- Indexes are smarter about not returning stale references when code is deleted.
+
+- References in implementation files are always indexed, so results should be
+  more complete.
+
+- Find-references on a virtual method shows references to overridden methods.
+
+New navigation features
+^^^^^^^^^^^^^^^^^^^^^^^
+
+- Call hierarchy (``textDocument/callHierarchy``) is supported.
+  Only incoming calls are available.
+
+- Go to implementation (``textDocument/implementation``) is supported on
+  abstract classes, and on virtual methods.
+
+- Symbol search (``workspace/symbol``) queries may be partially qualified.
+  That is, typing ``b::Foo`` will match the symbol ``a::b::c::Foo``.
+
+Refactoring
+^^^^^^^^^^^
+
+- New refactoring: populate ``switch`` statement with cases.
+  (This acts as a fix for the ``-Wswitch-enum`` warning).
+
+- Renaming templates is supported, and many other complex cases were fixed.
+
+- Attempting to rename to an invalid or conflicting name can produce an error
+  message rather than broken code. (Not all cases are detected!)
+
+- The accuracy of many code actions has been improved.
+
+Hover
+^^^^^
+
+- Hovers for ``auto`` and ``decltype`` show the type in the same style as other
+  hovers. ``this`` is also now supported.
+
+- Displayed type names are more consistent and idiomatic.
+
+Semantic highlighting
+^^^^^^^^^^^^^^^^^^^^^
+
+- Inactive preprocessor regions (``#ifdef``) are highlighted as comments.
+
+- clangd 12 is the last release with support for the non-standard
+  ``textDocument/semanticHighlights`` notification. Clients sholud migrate to
+  the ``textDocument/semanticTokens`` request added in LSP 3.16.
+
+Remote index (alpha)
+^^^^^^^^^^^^^^^^^^^^
+
+- clangd can now connect to a remote index server instead of building a project
+  index locally. This saves resources in large codebases that are slow to index.
+
+- The server program is ``clangd-index-server``, and it consumes index files
+  produced by ``clangd-indexer``.
+
+- This feature requires clangd to be built with the CMake flag
+  ``-DCLANGD_ENABLE_REMOTE=On``, which requires GRPC libraries and is not
+  enabled by default. Unofficial releases of the remote-index-enabled client
+  and server tools are at https://github.com/clangd/clangd/releases
+
+- Large projects can deploy a shared server, and check in a ``.clangd`` file
+  to enable it (in the ``Index.External`` section). We hope to provide such a
+  server for ``llvm-project`` itself in the near future.
+
+Configuration
+^^^^^^^^^^^^^
+
+- Static and remote indexes can be configured in the ``Index.External`` section.
+  Different static indexes can now be used for different files.
+  (Obsoletes the flag ``--index-file``).
+
+- Diagnostics can be filtered or suppressed in the ``Diagnostics`` section.
+
+- Clang-tidy checks can be enabled/disabled in the ``Diagnostics.ClangTidy``
+  section. (Obsoletes the flag ``--clang-tidy-checks``).
+
+- The compilation database directory can be configured in the ``CompileFlags``
+  section. Different compilation databases can now be specified for different
+  files. (Obsoletes the flag ``--compile-commands-dir``).
+
+- Errors in loaded configuration files are published as LSP diagnostics, and so
+  should be shown in your editor.
+
+`Full reference of configuration options <https://clangd.llvm.org/config.html>`_
+
+System integration
+^^^^^^^^^^^^^^^^^^
+
+- Changes to ``compile_commands.json`` and ``compile_flags.txt`` will take
+  effect the next time a file is parsed, without restarting clangd.
+
+- ``clangd --check=<filename>`` can be run on the command-line to simulate
+  opening a file without actually using an editor. This can be useful to
+  reproduce crashes or aother problems.
+
+- Various fixes to handle filenames correctly (and case-insensitively) on
+  windows.
+
+- If incoming LSP messages are malformed, the logs now contain details.
+
+Miscellaneous
+^^^^^^^^^^^^^
+
+- "Show AST" request
+  (`textDocument/ast <https://clangd.llvm.org/extensions.html#ast>`_)
+  added as an LSP extension. This displays a simplified view of the clang AST
+  for selected code. The clangd VSCode extension supports this.
+
+- clangd should no longer crash while loading old or corrupt index files.
+
+- The flags ``--index``, ``--recovery-ast`` and ``-suggest-missing-includes``
+  have been retired. These features are now always enabled.
+
+- Too many stability and correctness fixes to mention.
 
 Improvements to clang-doc
 -------------------------
