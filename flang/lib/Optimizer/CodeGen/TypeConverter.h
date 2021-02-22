@@ -355,6 +355,9 @@ public:
       if (auto arr = field.second.dyn_cast<SequenceType>()) {
         if (unknownShape(arr.getShape()))
           return true;
+      } else if (auto str = field.second.dyn_cast<fir::CharacterType>()) {
+        if (str.hasDynamicLen())
+          return true;
       } else if (auto rec = field.second.dyn_cast<fir::RecordType>()) {
         if (dynamicallySized(rec))
           return true;

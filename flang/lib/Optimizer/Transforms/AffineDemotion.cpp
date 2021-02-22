@@ -44,7 +44,7 @@ public:
 
     auto coorOp = rewriter.create<fir::CoordinateOp>(
         op.getLoc(), fir::ReferenceType::get(op.getResult().getType()),
-        op.getMemRef(), *maybeExpandedMap, /*lenparams=*/mlir::ValueRange{});
+        op.getMemRef(), *maybeExpandedMap);
 
     rewriter.replaceOpWithNewOp<fir::LoadOp>(op, coorOp.getResult());
     return success();
@@ -65,7 +65,7 @@ public:
 
     auto coorOp = rewriter.create<fir::CoordinateOp>(
         op.getLoc(), fir::ReferenceType::get(op.getValueToStore().getType()),
-        op.getMemRef(), *maybeExpandedMap, /*lenparams=*/mlir::ValueRange{});
+        op.getMemRef(), *maybeExpandedMap);
     rewriter.replaceOpWithNewOp<fir::StoreOp>(op, op.getValueToStore(),
                                               coorOp.getResult());
     return success();
