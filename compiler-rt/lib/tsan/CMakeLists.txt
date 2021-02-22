@@ -113,6 +113,10 @@ set(TSAN_HEADERS
 set(TSAN_RUNTIME_LIBRARIES)
 add_compiler_rt_component(tsan)
 
+if("${CMAKE_C_FLAGS}" MATCHES "-Wno-(error=)?unused-command-line-argument")
+  set(EXTRA_CFLAGS "-Wno-error=unused-command-line-argument ${EXTRA_CFLAGS}")
+endif()
+
 if(APPLE)
   # Ideally we would check the SDK version for the actual platform we are
   # building for here.  To make our lifes easier we assume the host SDK setup is
@@ -156,6 +160,7 @@ if(APPLE)
   set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
   add_custom_target(GotsanRuntimeCheck
     COMMAND env "CC=${CMAKE_C_COMPILER} ${OSX_SYSROOT_FLAG}"
+            EXTRA_CFLAGS=${EXTRA_CFLAGS}
             IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
     DEPENDS tsan ${BUILDGO_SCRIPT}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
@@ -170,6 +175,7 @@ else()
       set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
       add_custom_target(GotsanRuntimeCheck
         COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
+                EXTRA_CFLAGS=${EXTRA_CFLAGS}
                 IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
         DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
@@ -181,6 +187,7 @@ else()
       set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
       add_custom_target(GotsanRuntimeCheck
 	COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
+		EXTRA_CFLAGS=${EXTRA_CFLAGS} 
 		IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
 	DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
@@ -192,6 +199,7 @@ else()
       set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
       add_custom_target(GotsanRuntimeCheck
 	COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
+		EXTRA_CFLAGS=${EXTRA_CFLAGS} 
 		IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
 	DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
