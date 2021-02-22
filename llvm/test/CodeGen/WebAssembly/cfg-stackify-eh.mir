@@ -1,0 +1,55 @@
+# RUN: llc -mtriple=wasm32-unknown-unknown -exception-model=wasm -mattr=+exception-handling -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+  target triple = "wasm32-unknown-unknown"
+
+  declare i32 @__gxx_wasm_personality_v0(...)
+  declare void @foo()
+  define void @rethrow_arg_test() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+    ret void
+  }
+...
+
+---
+# CHECK-LABEL: name: rethrow_arg_test
+name: rethrow_arg_test
+liveins:
+  - { reg: '$arguments' }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.3
+    ; CHECK: bb.0:
+    ; CHECK: TRY
+    EH_LABEL <mcsymbol .Ltmp0>
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    EH_LABEL <mcsymbol .Ltmp1>
+    BR %bb.3, implicit-def dead $arguments
+
+  bb.1 (landing-pad):
+    successors: %bb.2
+    ; CHECK: bb.1 (landing-pad):
+    ; CHECK: CATCH
+    ; CHECK: TRY
+    ; This RETHROW rethrows the exception caught by this BB's CATCH, but after
+    ; CFGStackify a TRY is placed between the CATCH and this RETHROW, so after
+    ; CFGStackify its immediate argument should become not 0, but 1.
+    ; CHECK: RETHROW 1
+    EH_LABEL <mcsymbol .Ltmp2>
+    %0:i32 = CATCH &__cpp_exception, implicit-def dead $arguments
+    RETHROW 0, implicit-def dead $arguments
+
+  bb.2 (landing-pad):
+    ; CHECK: bb.2 (landing-pad):
+    ; CHECK: CATCH
+    ; CHECK: RETHROW 0
+    EH_LABEL <mcsymbol .Ltmp5>
+    %1:i32 = CATCH &__cpp_exception, implicit-def dead $arguments
+    RETHROW 0, implicit-def dead $arguments
+
+  bb.3:
+    ; CHECK: bb.3:
+    ; CHECK: END_TRY
+    ; CHECK: END_TRY
+    RETURN implicit-def dead $arguments
+...
