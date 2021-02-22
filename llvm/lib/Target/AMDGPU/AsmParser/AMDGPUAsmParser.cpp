@@ -7076,17 +7076,14 @@ static bool ConvertOmodDiv(int64_t &Div) {
   return false;
 }
 
+// Both bound_ctrl:0 and bound_ctrl:1 are encoded as 1.
+// This is intentional and ensures compatibility with sp3.
+// See bug 35397 for details.
 static bool ConvertBoundCtrl(int64_t &BoundCtrl) {
-  if (BoundCtrl == 0) {
+  if (BoundCtrl == 0 || BoundCtrl == 1) {
     BoundCtrl = 1;
     return true;
   }
-
-  if (BoundCtrl == -1) {
-    BoundCtrl = 0;
-    return true;
-  }
-
   return false;
 }
 
