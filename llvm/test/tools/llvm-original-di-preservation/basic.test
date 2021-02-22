@@ -1,0 +1,2 @@
+RUN: %llvm-original-di-preservation %p/Inputs/sample.json %t.html
+RUN: diff -w %p/Outputs/sample.html %t.html

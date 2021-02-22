@@ -229,6 +229,13 @@ static cl::opt<bool> VerifyEachDebugInfoPreserve(
     cl::desc("Start each pass with collecting and end it with checking of "
              "debug info preservation."));
 
+static cl::opt<std::string>
+    VerifyDIPreserveExport("verify-di-preserve-export",
+                   cl::desc("Export debug info preservation failures into "
+                            "specified (JSON) file (should be abs path as we use"
+                            " append mode to insert new JSON objects)"),
+                   cl::value_desc("filename"), cl::init(""));
+
 static cl::opt<bool>
 PrintBreakpoints("print-breakpoints-for-testing",
                  cl::desc("Print select breakpoints location for testing"));
@@ -837,6 +844,8 @@ int main(int argc, char **argv) {
   } else if (VerifyEachDebugInfoPreserve) {
     Passes.setDebugifyMode(DebugifyMode::OriginalDebugInfo);
     Passes.setDIPreservationMap(DIPreservationMap);
+    if (!VerifyDIPreserveExport.empty())
+      Passes.setOrigDIVerifyBugsReportFilePath(VerifyDIPreserveExport);
   }
 
   bool AddOneTimeDebugifyPasses =
@@ -1006,10 +1015,13 @@ int main(int argc, char **argv) {
   if (AddOneTimeDebugifyPasses) {
     if (EnableDebugify)
       Passes.add(createCheckDebugifyModulePass(false));
-    else if (VerifyDebugInfoPreserve)
+    else if (VerifyDebugInfoPreserve) {
+      if (!VerifyDIPreserveExport.empty())
+        Passes.setOrigDIVerifyBugsReportFilePath(VerifyDIPreserveExport);
       Passes.add(createCheckDebugifyModulePass(
           false, "", nullptr, DebugifyMode::OriginalDebugInfo,
-          &(Passes.getDebugInfoPerPassMap())));
+          &(Passes.getDebugInfoPerPassMap()), VerifyDIPreserveExport));
+    }
   }
 
   // In run twice mode, we want to make sure the output is bit-by-bit
