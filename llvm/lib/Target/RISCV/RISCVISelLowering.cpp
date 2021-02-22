@@ -805,22 +805,26 @@ static unsigned getBranchOpcodeForIntCondCode(ISD::CondCode CC) {
 }
 
 RISCVVLMUL RISCVTargetLowering::getLMUL(MVT VT) {
-  switch (VT.getSizeInBits().getKnownMinValue() / 8) {
+  unsigned KnownSize = VT.getSizeInBits().getKnownMinValue();
+  if (VT.getVectorElementType() == MVT::i1)
+    KnownSize *= 8;
+
+  switch (KnownSize) {
   default:
     llvm_unreachable("Invalid LMUL.");
-  case 1:
-    return RISCVVLMUL::LMUL_F8;
-  case 2:
-    return RISCVVLMUL::LMUL_F4;
-  case 4:
-    return RISCVVLMUL::LMUL_F2;
   case 8:
-    return RISCVVLMUL::LMUL_1;
+    return RISCVVLMUL::LMUL_F8;
   case 16:
-    return RISCVVLMUL::LMUL_2;
+    return RISCVVLMUL::LMUL_F4;
   case 32:
-    return RISCVVLMUL::LMUL_4;
+    return RISCVVLMUL::LMUL_F2;
   case 64:
+    return RISCVVLMUL::LMUL_1;
+  case 128:
+    return RISCVVLMUL::LMUL_2;
+  case 256:
+    return RISCVVLMUL::LMUL_4;
+  case 512:
     return RISCVVLMUL::LMUL_8;
   }
 }
@@ -2116,33 +2120,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     }
   }
 
-  switch (IntNo) {
-  default:
-    return SDValue(); // Don't custom lower most intrinsics.
-  case Intrinsic::riscv_vleff: {
-    SDLoc DL(Op);
-    SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Other, MVT::Glue);
-    SDValue Load = DAG.getNode(RISCVISD::VLEFF, DL, VTs, Op.getOperand(0),
-                               Op.getOperand(2), Op.getOperand(3));
-    SDValue ReadVL =
-        SDValue(DAG.getMachineNode(RISCV::PseudoReadVL, DL, Op->getValueType(1),
-                                   Load.getValue(2)),
-                0);
-    return DAG.getMergeValues({Load, ReadVL, Load.getValue(1)}, DL);
-  }
-  case Intrinsic::riscv_vleff_mask: {
-    SDLoc DL(Op);
-    SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Other, MVT::Glue);
-    SDValue Load = DAG.getNode(RISCVISD::VLEFF_MASK, DL, VTs, Op.getOperand(0),
-                               Op.getOperand(2), Op.getOperand(3),
-                               Op.getOperand(4), Op.getOperand(5));
-    SDValue ReadVL =
-        SDValue(DAG.getMachineNode(RISCV::PseudoReadVL, DL, Op->getValueType(1),
-                                   Load.getValue(2)),
-                0);
-    return DAG.getMergeValues({Load, ReadVL, Load.getValue(1)}, DL);
-  }
-  }
+  return SDValue(); // Don't custom lower most intrinsics.
 }
 
 static std::pair<unsigned, uint64_t>
@@ -5252,8 +5230,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SPLAT_VECTOR_I64)
   NODE_NAME_CASE(READ_VLENB)
   NODE_NAME_CASE(TRUNCATE_VECTOR)
-  NODE_NAME_CASE(VLEFF)
-  NODE_NAME_CASE(VLEFF_MASK)
   NODE_NAME_CASE(VSLIDEUP_VL)
   NODE_NAME_CASE(VSLIDEDOWN_VL)
   NODE_NAME_CASE(VID_VL)
