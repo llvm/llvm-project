@@ -4628,10 +4628,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     Success = false;
   }
 
-  // Turn on -Wspir-compat for SPIR target.
-  if (T.isSPIR())
-    Res.getDiagnosticOpts().Warnings.push_back("spir-compat");
-
   // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
   if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&
       !Res.getLangOpts()->Sanitize.empty()) {
