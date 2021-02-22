@@ -1,3 +1,4 @@
+# REQUIRES: x86, arm
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/test.o
 # RUN: %lld -arch x86_64 -platform_version macos 10.5.0 11.0 -o %t/x86-64-executable %t/test.o
