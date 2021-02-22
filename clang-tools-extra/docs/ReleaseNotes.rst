@@ -67,7 +67,22 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-The improvements are...
+New checks
+^^^^^^^^^^
+
+- New :doc:`concurrency-thread-canceltype-asynchronous
+  <clang-tidy/checks/concurrency-thread-canceltype-asynchronous>` check.
+
+  Finds ``pthread_setcanceltype`` function calls where a thread's cancellation
+  type is set to asynchronous.
+
+New check aliases
+^^^^^^^^^^^^^^^^^
+
+- New alias :doc:`cert-pos47-c
+  <clang-tidy/checks/cert-pos47-c>` to
+  :doc:`concurrency-thread-canceltype-asynchronous
+  <clang-tidy/checks/concurrency-thread-canceltype-asynchronous>` was added.
 
 Improvements to include-fixer
 -----------------------------
