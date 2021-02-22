@@ -36,6 +36,13 @@ template <class Allocator> struct TSDRegistryExT {
     initLinkerInitialized(Instance);
   }
 
+  void initOnceMaybe(Allocator *Instance) {
+    ScopedLock L(Mutex);
+    if (LIKELY(Initialized))
+      return;
+    initLinkerInitialized(Instance); // Sets Initialized.
+  }
+
   void unmapTestOnly() {}
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance, bool MinimalInit) {
@@ -80,13 +87,6 @@ template <class Allocator> struct TSDRegistryExT {
   bool getDisableMemInit() { return State.DisableMemInit; }
 
 private:
-  void initOnceMaybe(Allocator *Instance) {
-    ScopedLock L(Mutex);
-    if (LIKELY(Initialized))
-      return;
-    initLinkerInitialized(Instance); // Sets Initialized.
-  }
-
   // Using minimal initialization allows for global initialization while keeping
   // the thread specific structure untouched. The fallback structure will be
   // used instead.
