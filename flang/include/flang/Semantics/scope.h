@@ -169,7 +169,7 @@ public:
   mapType &commonBlocks() { return commonBlocks_; }
   const mapType &commonBlocks() const { return commonBlocks_; }
   Symbol &MakeCommonBlock(const SourceName &);
-  Symbol *FindCommonBlock(const SourceName &);
+  Symbol *FindCommonBlock(const SourceName &) const;
 
   /// Make a Symbol but don't add it to the scope.
   template <typename D>
