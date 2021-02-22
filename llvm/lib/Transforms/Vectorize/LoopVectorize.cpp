@@ -8604,6 +8604,15 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
       if (auto Recipe =
               RecipeBuilder.tryToCreateWidenRecipe(Instr, Range, Plan)) {
+
+        // VPBlendRecipes with a single incoming (value, mask) pair are no-ops.
+        // Use the incoming value directly.
+        if (isa<VPBlendRecipe>(Recipe) && Recipe->getNumOperands() <= 2) {
+          Plan->removeVPValueFor(Instr);
+          Plan->addVPValue(Instr, Recipe->getOperand(0));
+          delete Recipe;
+          continue;
+        }
         for (auto *Def : Recipe->definedValues()) {
           auto *UV = Def->getUnderlyingValue();
           Plan->addVPValue(UV, Def);
