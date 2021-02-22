@@ -859,10 +859,34 @@ llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {
 
 LLVM_NODISCARD bool
 ClangdServer::blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds) {
-  return WorkScheduler.blockUntilIdle(timeoutSeconds(TimeoutSeconds)) &&
-         CDB.blockUntilIdle(timeoutSeconds(TimeoutSeconds)) &&
-         (!BackgroundIdx ||
-          BackgroundIdx->blockUntilIdleForTest(TimeoutSeconds));
+  // Order is important here: we don't want to block on A and then B,
+  // if B might schedule work on A.
+
+  // Nothing else can schedule work on TUScheduler, because it's not threadsafe
+  // and we're blocking the main thread.
+  if (!WorkScheduler.blockUntilIdle(timeoutSeconds(TimeoutSeconds)))
+    return false;
+
+  // Unfortunately we don't have strict topological order between the rest of
+  // the components. E.g. CDB broadcast triggers backrgound indexing.
+  // This queries the CDB which may discover new work if disk has changed.
+  //
+  // So try each one a few times in a loop.
+  // If there are no tricky interactions then all after the first are no-ops.
+  // Then on the last iteration, verify they're idle without waiting.
+  //
+  // There's a small chance they're juggling work and we didn't catch them :-(
+  for (llvm::Optional<double> Timeout :
+       {TimeoutSeconds, TimeoutSeconds, llvm::Optional<double>(0)}) {
+    if (!CDB.blockUntilIdle(timeoutSeconds(Timeout)))
+      return false;
+    if (BackgroundIdx && !BackgroundIdx->blockUntilIdleForTest(Timeout))
+      return false;
+  }
+
+  assert(WorkScheduler.blockUntilIdle(Deadline::zero()) &&
+         "Something scheduled work while we're blocking the main thread!");
+  return true;
 }
 
 void ClangdServer::profile(MemoryTree &MT) const {
