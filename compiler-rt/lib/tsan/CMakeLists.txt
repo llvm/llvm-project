@@ -156,7 +156,6 @@ if(APPLE)
   set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
   add_custom_target(GotsanRuntimeCheck
     COMMAND env "CC=${CMAKE_C_COMPILER} ${OSX_SYSROOT_FLAG}"
-            EXTRA_CFLAGS=${CMAKE_C_FLAGS}
             IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
     DEPENDS tsan ${BUILDGO_SCRIPT}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
@@ -171,7 +170,6 @@ else()
       set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
       add_custom_target(GotsanRuntimeCheck
         COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
-                EXTRA_CFLAGS=${CMAKE_C_FLAGS}
                 IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
         DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
@@ -183,7 +181,6 @@ else()
       set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
       add_custom_target(GotsanRuntimeCheck
 	COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
-		EXTRA_CFLAGS=${CMAKE_C_FLAGS} 
 		IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
 	DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
@@ -195,7 +192,6 @@ else()
       set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
       add_custom_target(GotsanRuntimeCheck
 	COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
-		EXTRA_CFLAGS=${CMAKE_C_FLAGS} 
 		IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
 	DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
