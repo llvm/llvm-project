@@ -869,19 +869,20 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   if (IsDirect) {
     MIB.addGlobalAddress(Func);
   } else {
-    // Add placeholders for the type index and immediate flags
+    // Placehoder for the type index.
     MIB.addImm(0);
-    MIB.addImm(0);
-
-    // Ensure that the object file has a __indirect_function_table import, as we
-    // call_indirect against it.
-    MCSymbolWasm *Sym = WebAssembly::getOrCreateFunctionTableSymbol(
-        MF->getMMI().getContext(), "__indirect_function_table");
-    // Until call_indirect emits TABLE_NUMBER relocs against this symbol, mark
-    // it as NO_STRIP so as to ensure that the indirect function table makes it
-    // to linked output.
-    Sym->setNoStrip();
-
+    // The table into which this call_indirect indexes.
+    MCSymbolWasm *Table = WebAssembly::getOrCreateFunctionTableSymbol(
+        MF->getMMI().getContext(), Subtarget);
+    if (Subtarget->hasReferenceTypes()) {
+      MIB.addSym(Table);
+    } else {
+      // Otherwise for the MVP there is at most one table whose number is 0, but
+      // we can't write a table symbol or issue relocations.  Instead we just
+      // ensure the table is live.
+      Table->setNoStrip();
+      MIB.addImm(0);
+    }
     // See if we must truncate the function pointer.
     // CALL_INDIRECT takes an i32, but in wasm64 we represent function pointers
     // as 64-bit for uniformity with other pointer types.

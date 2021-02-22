@@ -98,11 +98,9 @@ const MachineOperand &WebAssembly::getCalleeOp(const MachineInstr &MI) {
   }
 }
 
-MCSymbolWasm *
-WebAssembly::getOrCreateFunctionTableSymbol(MCContext &Ctx,
-                                            const StringRef &Name) {
-  // FIXME: Duplicates functionality from
-  // MC/WasmObjectWriter::recordRelocation.
+MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
+    MCContext &Ctx, const WebAssemblySubtarget *Subtarget) {
+  StringRef Name = "__indirect_function_table";
   MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
   if (Sym) {
     if (!Sym->isFunctionTable())
@@ -113,6 +111,9 @@ WebAssembly::getOrCreateFunctionTableSymbol(MCContext &Ctx,
     // The default function table is synthesized by the linker.
     Sym->setUndefined();
   }
+  // MVP object files can't have symtab entries for tables.
+  if (!Subtarget->hasReferenceTypes())
+    Sym->setOmitFromLinkingSection();
   return Sym;
 }
 

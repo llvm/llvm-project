@@ -1,5 +1,5 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -o %t.o < %s
-# RUN: obj2yaml %t.o | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj < %s | obj2yaml | FileCheck --check-prefix=CHECK %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+reference-types -filetype=obj < %s | obj2yaml | FileCheck --check-prefix=REF %s
 
 # 'foo_alias()' is weak alias of function 'foo()'
 # 'bar_alias' is weak alias of global variable 'bar'
@@ -78,7 +78,7 @@ alias_address:
 # CHECK:        - Type:            TYPE
 # CHECK-NEXT:     Signatures:
 # CHECK-NEXT:       - Index:           0
-# CHECK-NEXT:         ParamTypes:
+# CHECK-NEXT:         ParamTypes:      []
 # CHECK-NEXT:         ReturnTypes:
 # CHECK-NEXT:           - I32
 # CHECK-NEXT:   - Type:            IMPORT
@@ -128,19 +128,19 @@ alias_address:
 # CHECK-NEXT:         Offset:          0x37
 # CHECK-NEXT:     Functions:
 # CHECK-NEXT:       - Index:           0
-# CHECK-NEXT:         Locals:
+# CHECK-NEXT:         Locals:          []
 # CHECK-NEXT:         Body:            41000B
 # CHECK-NEXT:       - Index:           1
-# CHECK-NEXT:         Locals:
+# CHECK-NEXT:         Locals:          []
 # CHECK-NEXT:         Body:            1080808080000B
 # CHECK-NEXT:       - Index:           2
-# CHECK-NEXT:         Locals:
+# CHECK-NEXT:         Locals:          []
 # CHECK-NEXT:         Body:            1080808080000B
 # CHECK-NEXT:       - Index:           3
-# CHECK-NEXT:         Locals:
+# CHECK-NEXT:         Locals:          []
 # CHECK-NEXT:         Body:            410028028880808000118080808000000B
 # CHECK-NEXT:       - Index:           4
-# CHECK-NEXT:         Locals:
+# CHECK-NEXT:         Locals:          []
 # CHECK-NEXT:         Body:            410028029080808000118080808000000B
 # CHECK-NEXT:   - Type:            DATA
 # CHECK-NEXT:     Relocations:
@@ -231,16 +231,194 @@ alias_address:
 # CHECK-NEXT:       - Index:           0
 # CHECK-NEXT:         Name:            .data.bar
 # CHECK-NEXT:         Alignment:       3
-# CHECK-NEXT:         Flags:           [ ]
+# CHECK-NEXT:         Flags:           [  ]
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Name:            .data.direct_address
 # CHECK-NEXT:         Alignment:       3
-# CHECK-NEXT:         Flags:           [ ]
+# CHECK-NEXT:         Flags:           [  ]
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Name:            .data.alias_address
 # CHECK-NEXT:         Alignment:       3
-# CHECK-NEXT:         Flags:           [ ]
+# CHECK-NEXT:         Flags:           [  ]
 # CHECK-NEXT: ...
+
+# REF:        - Type:            TYPE
+# REF-NEXT:     Signatures:
+# REF-NEXT:       - Index:           0
+# REF-NEXT:         ParamTypes:      []
+# REF-NEXT:         ReturnTypes:
+# REF-NEXT:           - I32
+# REF-NEXT:   - Type:            IMPORT
+# REF-NEXT:     Imports:
+# REF-NEXT:       - Module:          env
+# REF-NEXT:         Field:           __linear_memory
+# REF-NEXT:         Kind:            MEMORY
+# REF-NEXT:         Memory:
+# REF-NEXT:           Initial:         0x1
+# REF-NEXT:       - Module:          env
+# REF-NEXT:         Field:           __indirect_function_table
+# REF-NEXT:         Kind:            TABLE
+# REF-NEXT:         Table:
+# REF-NEXT:           Index:           0
+# REF-NEXT:           ElemType:        FUNCREF
+# REF-NEXT:           Limits:
+# REF-NEXT:             Initial:         0x1
+# REF-NEXT:   - Type:            FUNCTION
+# REF-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0 ]
+# REF-NEXT:   - Type:            ELEM
+# REF-NEXT:     Segments:
+# REF-NEXT:       - Offset:
+# REF-NEXT:           Opcode:          I32_CONST
+# REF-NEXT:           Value:           1
+# REF-NEXT:         Functions:       [ 0 ]
+# REF-NEXT:   - Type:            DATACOUNT
+# REF-NEXT:     Count:           3
+# REF-NEXT:   - Type:            CODE
+# REF-NEXT:     Relocations:
+# REF-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
+# REF-NEXT:         Index:           0
+# REF-NEXT:         Offset:          0x9
+# REF-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
+# REF-NEXT:         Index:           3
+# REF-NEXT:         Offset:          0x12
+# REF-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB
+# REF-NEXT:         Index:           5
+# REF-NEXT:         Offset:          0x1E
+# REF-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB
+# REF-NEXT:         Index:           0
+# REF-NEXT:         Offset:          0x24
+# REF-NEXT:       - Type:            R_WASM_TABLE_NUMBER_LEB
+# REF-NEXT:         Index:           6
+# REF-NEXT:         Offset:          0x29
+# REF-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB
+# REF-NEXT:         Index:           8
+# REF-NEXT:         Offset:          0x35
+# REF-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB
+# REF-NEXT:         Index:           0
+# REF-NEXT:         Offset:          0x3B
+# REF-NEXT:       - Type:            R_WASM_TABLE_NUMBER_LEB
+# REF-NEXT:         Index:           6
+# REF-NEXT:         Offset:          0x40
+# REF-NEXT:     Functions:
+# REF-NEXT:       - Index:           0
+# REF-NEXT:         Locals:          []
+# REF-NEXT:         Body:            41000B
+# REF-NEXT:       - Index:           1
+# REF-NEXT:         Locals:          []
+# REF-NEXT:         Body:            1080808080000B
+# REF-NEXT:       - Index:           2
+# REF-NEXT:         Locals:          []
+# REF-NEXT:         Body:            1080808080000B
+# REF-NEXT:       - Index:           3
+# REF-NEXT:         Locals:          []
+# REF-NEXT:         Body:            41002802888080800011808080800080808080000B
+# REF-NEXT:       - Index:           4
+# REF-NEXT:         Locals:          []
+# REF-NEXT:         Body:            41002802908080800011808080800080808080000B
+# REF-NEXT:   - Type:            DATA
+# REF-NEXT:     Relocations:
+# REF-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
+# REF-NEXT:         Index:           0
+# REF-NEXT:         Offset:          0x13
+# REF-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
+# REF-NEXT:         Index:           3
+# REF-NEXT:         Offset:          0x20
+# REF-NEXT:     Segments:
+# REF-NEXT:       - SectionOffset:   6
+# REF-NEXT:         InitFlags:       0
+# REF-NEXT:         Offset:
+# REF-NEXT:           Opcode:          I32_CONST
+# REF-NEXT:           Value:           0
+# REF-NEXT:         Content:         '0700000000000000'
+# REF-NEXT:       - SectionOffset:   19
+# REF-NEXT:         InitFlags:       0
+# REF-NEXT:         Offset:
+# REF-NEXT:           Opcode:          I32_CONST
+# REF-NEXT:           Value:           8
+# REF-NEXT:         Content:         '0100000000000000'
+# REF-NEXT:       - SectionOffset:   32
+# REF-NEXT:         InitFlags:       0
+# REF-NEXT:         Offset:
+# REF-NEXT:           Opcode:          I32_CONST
+# REF-NEXT:           Value:           16
+# REF-NEXT:         Content:         '0100000000000000'
+# REF-NEXT:   - Type:            CUSTOM
+# REF-NEXT:     Name:            linking
+# REF-NEXT:     Version:         2
+# REF-NEXT:     SymbolTable:
+# REF-NEXT:       - Index:           0
+# REF-NEXT:         Kind:            FUNCTION
+# REF-NEXT:         Name:            foo
+# REF-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+# REF-NEXT:         Function:        0
+# REF-NEXT:       - Index:           1
+# REF-NEXT:         Kind:            FUNCTION
+# REF-NEXT:         Name:            call_direct
+# REF-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+# REF-NEXT:         Function:        1
+# REF-NEXT:       - Index:           2
+# REF-NEXT:         Kind:            FUNCTION
+# REF-NEXT:         Name:            call_alias
+# REF-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+# REF-NEXT:         Function:        2
+# REF-NEXT:       - Index:           3
+# REF-NEXT:         Kind:            FUNCTION
+# REF-NEXT:         Name:            foo_alias
+# REF-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN, NO_STRIP ]
+# REF-NEXT:         Function:        0
+# REF-NEXT:       - Index:           4
+# REF-NEXT:         Kind:            FUNCTION
+# REF-NEXT:         Name:            call_direct_ptr
+# REF-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+# REF-NEXT:         Function:        3
+# REF-NEXT:       - Index:           5
+# REF-NEXT:         Kind:            DATA
+# REF-NEXT:         Name:            direct_address
+# REF-NEXT:         Flags:           [  ]
+# REF-NEXT:         Segment:         1
+# REF-NEXT:         Size:            4
+# REF-NEXT:       - Index:           6
+# REF-NEXT:         Kind:            TABLE
+# REF-NEXT:         Name:            __indirect_function_table
+# REF-NEXT:         Flags:           [ UNDEFINED, NO_STRIP ]
+# REF-NEXT:         Table:           0
+# REF-NEXT:       - Index:           7
+# REF-NEXT:         Kind:            FUNCTION
+# REF-NEXT:         Name:            call_alias_ptr
+# REF-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+# REF-NEXT:         Function:        4
+# REF-NEXT:       - Index:           8
+# REF-NEXT:         Kind:            DATA
+# REF-NEXT:         Name:            alias_address
+# REF-NEXT:         Flags:           [  ]
+# REF-NEXT:         Segment:         2
+# REF-NEXT:         Size:            4
+# REF-NEXT:       - Index:           9
+# REF-NEXT:         Kind:            DATA
+# REF-NEXT:         Name:            bar
+# REF-NEXT:         Flags:           [  ]
+# REF-NEXT:         Segment:         0
+# REF-NEXT:         Size:            4
+# REF-NEXT:       - Index:           10
+# REF-NEXT:         Kind:            DATA
+# REF-NEXT:         Name:            bar_alias
+# REF-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN, NO_STRIP ]
+# REF-NEXT:         Segment:         0
+# REF-NEXT:         Size:            4
+# REF-NEXT:     SegmentInfo:
+# REF-NEXT:       - Index:           0
+# REF-NEXT:         Name:            .data.bar
+# REF-NEXT:         Alignment:       3
+# REF-NEXT:         Flags:           [  ]
+# REF-NEXT:       - Index:           1
+# REF-NEXT:         Name:            .data.direct_address
+# REF-NEXT:         Alignment:       3
+# REF-NEXT:         Flags:           [  ]
+# REF-NEXT:       - Index:           2
+# REF-NEXT:         Name:            .data.alias_address
+# REF-NEXT:         Alignment:       3
+# REF-NEXT:         Flags:           [  ]
+# REF-NEXT: ...
 
 # CHECK-SYMS: SYMBOL TABLE:
 # CHECK-SYMS-NEXT: 00000001 g     F CODE	.hidden foo

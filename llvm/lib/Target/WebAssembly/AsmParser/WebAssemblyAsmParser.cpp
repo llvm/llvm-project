@@ -171,9 +171,6 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
 
 static MCSymbolWasm *GetOrCreateFunctionTableSymbol(MCContext &Ctx,
                                                     const StringRef &Name) {
-  // FIXME: Duplicates functionality from
-  // MC/WasmObjectWriter::recordRelocation, as well as WebAssemblyCodegen's
-  // WebAssembly:getOrCreateFunctionTableSymbol.
   MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
   if (Sym) {
     if (!Sym->isFunctionTable())
@@ -223,6 +220,7 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
   };
   std::vector<NestingType> NestingStack;
 
+  MCSymbolWasm *DefaultFunctionTable = nullptr;
   MCSymbol *LastFunctionLabel = nullptr;
 
 public:
@@ -231,6 +229,15 @@ public:
       : MCTargetAsmParser(Options, STI, MII), Parser(Parser),
         Lexer(Parser.getLexer()) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+  }
+
+  void Initialize(MCAsmParser &Parser) override {
+    MCAsmParserExtension::Initialize(Parser);
+
+    DefaultFunctionTable = GetOrCreateFunctionTableSymbol(
+        getContext(), "__indirect_function_table");
+    if (!STI->checkFeatures("+reference-types"))
+      DefaultFunctionTable->setOmitFromLinkingSection();
   }
 
 #define GET_ASSEMBLER_HEADER
@@ -480,6 +487,39 @@ public:
         WebAssemblyOperand::IntOp{static_cast<int64_t>(BT)}));
   }
 
+  bool addFunctionTableOperand(OperandVector &Operands, MCSymbolWasm *Sym,
+                               SMLoc StartLoc, SMLoc EndLoc) {
+    const auto *Val = MCSymbolRefExpr::create(Sym, getContext());
+    Operands.push_back(std::make_unique<WebAssemblyOperand>(
+        WebAssemblyOperand::Symbol, StartLoc, EndLoc,
+        WebAssemblyOperand::SymOp{Val}));
+    return false;
+  }
+
+  bool addFunctionTableOperand(OperandVector &Operands, StringRef TableName,
+                               SMLoc StartLoc, SMLoc EndLoc) {
+    return addFunctionTableOperand(
+        Operands, GetOrCreateFunctionTableSymbol(getContext(), TableName),
+        StartLoc, EndLoc);
+  }
+
+  bool addDefaultFunctionTableOperand(OperandVector &Operands, SMLoc StartLoc,
+                                      SMLoc EndLoc) {
+    if (STI->checkFeatures("+reference-types")) {
+      return addFunctionTableOperand(Operands, DefaultFunctionTable, StartLoc,
+                                     EndLoc);
+    } else {
+      // For the MVP there is at most one table whose number is 0, but we can't
+      // write a table symbol or issue relocations.  Instead we just ensure the
+      // table is live and write a zero.
+      getStreamer().emitSymbolAttribute(DefaultFunctionTable, MCSA_NoDeadStrip);
+      Operands.push_back(std::make_unique<WebAssemblyOperand>(
+          WebAssemblyOperand::Integer, StartLoc, EndLoc,
+          WebAssemblyOperand::IntOp{0}));
+      return false;
+    }
+  }
+
   bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override {
     // Note: Name does NOT point into the sourcecode, but to a local, so
@@ -516,6 +556,7 @@ public:
     bool ExpectBlockType = false;
     bool ExpectFuncType = false;
     bool ExpectHeapType = false;
+    bool ExpectFunctionTable = false;
     if (Name == "block") {
       push(Block);
       ExpectBlockType = true;
@@ -562,15 +603,7 @@ public:
         return true;
     } else if (Name == "call_indirect" || Name == "return_call_indirect") {
       ExpectFuncType = true;
-      // Ensure that the object file has a __indirect_function_table import, as
-      // we call_indirect against it.
-      auto &Ctx = getStreamer().getContext();
-      MCSymbolWasm *Sym =
-          GetOrCreateFunctionTableSymbol(Ctx, "__indirect_function_table");
-      // Until call_indirect emits TABLE_NUMBER relocs against this symbol, mark
-      // it as NO_STRIP so as to ensure that the indirect function table makes
-      // it to linked output.
-      Sym->setNoStrip();
+      ExpectFunctionTable = true;
     } else if (Name == "ref.null") {
       ExpectHeapType = true;
     }
@@ -586,7 +619,7 @@ public:
         return true;
       // Got signature as block type, don't need more
       ExpectBlockType = false;
-      auto &Ctx = getStreamer().getContext();
+      auto &Ctx = getContext();
       // The "true" here will cause this to be a nameless symbol.
       MCSymbol *Sym = Ctx.createTempSymbol("typeindex", true);
       auto *WasmSym = cast<MCSymbolWasm>(Sym);
@@ -598,6 +631,16 @@ public:
       Operands.push_back(std::make_unique<WebAssemblyOperand>(
           WebAssemblyOperand::Symbol, Loc.getLoc(), Loc.getEndLoc(),
           WebAssemblyOperand::SymOp{Expr}));
+
+      // Allow additional operands after the signature, notably for
+      // call_indirect against a named table.
+      if (Lexer.isNot(AsmToken::EndOfStatement)) {
+        if (expect(AsmToken::Comma, ","))
+          return true;
+        if (Lexer.is(AsmToken::EndOfStatement)) {
+          return error("Unexpected trailing comma");
+        }
+      }
     }
 
     while (Lexer.isNot(AsmToken::EndOfStatement)) {
@@ -622,6 +665,11 @@ public:
           Operands.push_back(std::make_unique<WebAssemblyOperand>(
               WebAssemblyOperand::Integer, Id.getLoc(), Id.getEndLoc(),
               WebAssemblyOperand::IntOp{static_cast<int64_t>(HeapType)}));
+          Parser.Lex();
+        } else if (ExpectFunctionTable) {
+          if (addFunctionTableOperand(Operands, Id.getString(), Id.getLoc(),
+                                      Id.getEndLoc()))
+            return true;
           Parser.Lex();
         } else {
           // Assume this identifier is a label.
@@ -688,6 +736,12 @@ public:
     if (ExpectBlockType && Operands.size() == 1) {
       // Support blocks with no operands as default to void.
       addBlockTypeOperand(Operands, NameLoc, WebAssembly::BlockType::Void);
+    }
+    if (ExpectFunctionTable && Operands.size() == 2) {
+      // If call_indirect doesn't specify a target table, supply one.
+      if (addDefaultFunctionTableOperand(Operands, NameLoc,
+                                         SMLoc::getFromPointer(Name.end())))
+        return true;
     }
     Parser.Lex();
     return false;

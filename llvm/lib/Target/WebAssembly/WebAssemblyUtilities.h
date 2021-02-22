@@ -24,6 +24,7 @@ class MCContext;
 class MCSymbolWasm;
 class StringRef;
 class WebAssemblyFunctionInfo;
+class WebAssemblySubtarget;
 
 namespace WebAssembly {
 
@@ -41,10 +42,11 @@ extern const char *const PersonalityWrapperFn;
 /// instruction.
 const MachineOperand &getCalleeOp(const MachineInstr &MI);
 
-/// Returns the operand number of a callee, assuming the argument is a call
-/// instruction.
-MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
-                                             const StringRef &Name);
+/// Returns the __indirect_function_table, for use in call_indirect and in
+/// function bitcasts.
+MCSymbolWasm *
+getOrCreateFunctionTableSymbol(MCContext &Ctx,
+                               const WebAssemblySubtarget *Subtarget);
 
 /// Find a catch instruction from an EH pad. Returns null if no catch
 /// instruction found or the catch is in an invalid location.
