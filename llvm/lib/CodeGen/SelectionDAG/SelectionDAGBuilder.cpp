@@ -1459,9 +1459,8 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
     if (isa<ConstantStruct>(C) || isa<ConstantArray>(C)) {
       SmallVector<SDValue, 4> Constants;
-      for (User::const_op_iterator OI = C->op_begin(), OE = C->op_end();
-           OI != OE; ++OI) {
-        SDNode *Val = getValue(*OI).getNode();
+      for (const Use &U : C->operands()) {
+        SDNode *Val = getValue(U).getNode();
         // If the operand is an empty aggregate, there are no values.
         if (!Val) continue;
         // Add each leaf value from the operand to the Constants list

@@ -2266,10 +2266,8 @@ bool TargetLowering::SimplifyDemandedBits(
   if (DemandedBits.isSubsetOf(Known.Zero | Known.One)) {
     // Avoid folding to a constant if any OpaqueConstant is involved.
     const SDNode *N = Op.getNode();
-    for (SDNodeIterator I = SDNodeIterator::begin(N),
-                        E = SDNodeIterator::end(N);
-         I != E; ++I) {
-      SDNode *Op = *I;
+    for (SDNode *Op :
+         llvm::make_range(SDNodeIterator::begin(N), SDNodeIterator::end(N))) {
       if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op))
         if (C->isOpaque())
           return false;
@@ -4564,11 +4562,10 @@ TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
     if (!isLegalRC(*RI, *RC))
       continue;
 
-    for (TargetRegisterClass::iterator I = RC->begin(), E = RC->end();
-         I != E; ++I) {
-      if (RegName.equals_lower(RI->getRegAsmName(*I))) {
+    for (const MCPhysReg &PR : *RC) {
+      if (RegName.equals_lower(RI->getRegAsmName(PR))) {
         std::pair<unsigned, const TargetRegisterClass *> S =
-            std::make_pair(*I, RC);
+            std::make_pair(PR, RC);
 
         // If this register class has the requested value type, return it,
         // otherwise keep searching and return the first class found
