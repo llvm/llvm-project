@@ -30,3 +30,10 @@ void test_range_check_vsm3tt2b(uint32x4_t a, uint32x4_t b, uint32x4_t c) {
   vsm3tt2bq_u32(a, b, c, 0);
 }
 
+void test_range_check_xar(uint64x2_t a, uint64x2_t b) {
+  vxarq_u64(a, b, -1); // expected-error {{argument value -1 is outside the valid range [0, 63]}}
+  vxarq_u64(a, b, 64); // expected-error {{argument value 64 is outside the valid range [0, 63]}}
+  vxarq_u64(a, b, 0);
+  vxarq_u64(a, b, 63);
+}
+
