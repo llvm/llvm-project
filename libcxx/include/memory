@@ -2620,6 +2620,24 @@ struct __compatible_with
     : is_convertible<_Tp*, _Up*> {};
 #endif // _LIBCPP_STD_VER > 14
 
+template <class _Dp, class _Pt,
+    class = decltype(_VSTD::declval<_Dp>()(_VSTD::declval<_Pt>()))>
+static true_type __well_formed_deleter_test(int);
+
+template <class, class>
+static false_type __well_formed_deleter_test(...);
+
+template <class _Dp, class _Pt>
+struct __well_formed_deleter : decltype(__well_formed_deleter_test<_Dp, _Pt>(0)) {};
+
+template<class _Dp, class _Tp, class _Yp>
+struct __shared_ptr_deleter_ctor_reqs
+{
+    static const bool value = __compatible_with<_Tp, _Yp>::value &&
+                              is_move_constructible<_Dp>::value &&
+                              __well_formed_deleter<_Dp, _Tp*>::value;
+};
+
 #if defined(_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI)
 #  define _LIBCPP_SHARED_PTR_TRIVIAL_ABI __attribute__((trivial_abi))
 #else
@@ -2652,10 +2670,10 @@ public:
                             typename enable_if<__compatible_with<_Yp, element_type>::value, __nat>::type = __nat());
     template<class _Yp, class _Dp>
         shared_ptr(_Yp* __p, _Dp __d,
-                   typename enable_if<__compatible_with<_Yp, element_type>::value, __nat>::type = __nat());
+                   typename enable_if<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, element_type>::value, __nat>::type = __nat());
     template<class _Yp, class _Dp, class _Alloc>
         shared_ptr(_Yp* __p, _Dp __d, _Alloc __a,
-                   typename enable_if<__compatible_with<_Yp, element_type>::value, __nat>::type = __nat());
+                   typename enable_if<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, element_type>::value, __nat>::type = __nat());
     template <class _Dp> shared_ptr(nullptr_t __p, _Dp __d);
     template <class _Dp, class _Alloc> shared_ptr(nullptr_t __p, _Dp __d, _Alloc __a);
     template<class _Yp> _LIBCPP_INLINE_VISIBILITY shared_ptr(const shared_ptr<_Yp>& __r, element_type* __p) _NOEXCEPT;
@@ -2921,7 +2939,7 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p,
 template<class _Tp>
 template<class _Yp, class _Dp>
 shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d,
-                            typename enable_if<__compatible_with<_Yp, element_type>::value, __nat>::type)
+                            typename enable_if<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, element_type>::value, __nat>::type)
     : __ptr_(__p)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -2975,7 +2993,7 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d)
 template<class _Tp>
 template<class _Yp, class _Dp, class _Alloc>
 shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d, _Alloc __a,
-                            typename enable_if<__compatible_with<_Yp, element_type>::value, __nat>::type)
+                            typename enable_if<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, element_type>::value, __nat>::type)
     : __ptr_(__p)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS

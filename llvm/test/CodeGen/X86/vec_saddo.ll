@@ -813,10 +813,9 @@ define <2 x i32> @saddo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) noun
 ; SSE-NEXT:    pxor %xmm0, %xmm2
 ; SSE-NEXT:    movdqa %xmm3, %xmm4
 ; SSE-NEXT:    pcmpgtd %xmm2, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
 ; SSE-NEXT:    pcmpeqd %xmm3, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; SSE-NEXT:    pand %xmm5, %xmm2
+; SSE-NEXT:    pand %xmm4, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSE-NEXT:    por %xmm2, %xmm3
 ; SSE-NEXT:    pxor %xmm2, %xmm2

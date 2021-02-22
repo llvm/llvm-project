@@ -26,9 +26,11 @@
 /// |                    |
 /// |       unused       |
 /// |                    |
-/// +--------------------+ 0x200200000000 (kUnusedAddr)
+/// +--------------------+ 0x300200000000 (kUnusedAddr)
 /// |    union table     |
-/// +--------------------+ 0x200000000000 (kUnionTableAddr)
+/// +--------------------+ 0x300000000000 (kUnionTableAddr)
+/// |       origin       |
+/// +--------------------+ 0x200000008000 (kOriginAddr)
 /// |   shadow memory    |
 /// +--------------------+ 0x000000010000 (kShadowAddr)
 /// | reserved by kernel |
@@ -108,6 +110,8 @@ using namespace llvm;
 
 // This must be consistent with ShadowWidthBits.
 static const Align kShadowTLSAlignment = Align(2);
+
+static const Align kMinOriginAlignment = Align(4);
 
 // The size of TLS variables. These constants must be kept in sync with the ones
 // in dfsan.cpp.
@@ -377,6 +381,8 @@ class DataFlowSanitizer {
   Type *Int8Ptr;
   IntegerType *OriginTy;
   PointerType *OriginPtrTy;
+  ConstantInt *OriginBase;
+  ConstantInt *ZeroOrigin;
   /// The shadow type for all primitive types and vector types.
   IntegerType *PrimitiveShadowTy;
   PointerType *PrimitiveShadowPtrTy;
@@ -426,7 +432,10 @@ class DataFlowSanitizer {
   AttrBuilder ReadOnlyNoneAttrs;
   bool DFSanRuntimeShadowMask = false;
 
+  Value *getShadowOffset(Value *Addr, IRBuilder<> &IRB);
   Value *getShadowAddress(Value *Addr, Instruction *Pos);
+  // std::pair<Value *, Value *>
+  // getShadowOriginAddress(Value *Addr, Align InstAlignment, Instruction *Pos);
   bool isInstrumented(const Function *F);
   bool isInstrumented(const GlobalAlias *GA);
   FunctionType *getArgsFunctionType(FunctionType *T);
@@ -495,6 +504,7 @@ struct DFSanFunction {
   bool IsNativeABI;
   AllocaInst *LabelReturnAlloca = nullptr;
   DenseMap<Value *, Value *> ValShadowMap;
+  DenseMap<Value *, Value *> ValOriginMap;
   DenseMap<AllocaInst *, AllocaInst *> AllocaShadowMap;
   std::vector<std::pair<PHINode *, PHINode *>> PHIFixups;
   DenseSet<Instruction *> SkipInsts;
@@ -527,9 +537,19 @@ struct DFSanFunction {
   /// Shadow = ArgTLS+ArgOffset.
   Value *getArgTLS(Type *T, unsigned ArgOffset, IRBuilder<> &IRB);
 
-  /// Computes the shadow address for a retval.
+  /// Computes the shadow address for a return value.
   Value *getRetvalTLS(Type *T, IRBuilder<> &IRB);
 
+  /// Computes the origin address for a given function argument.
+  ///
+  /// Origin = ArgOriginTLS[ArgNo].
+  // Value *getArgOriginTLS(unsigned ArgNo, IRBuilder<> &IRB);
+
+  /// Computes the origin address for a return value.
+  // Value *getRetvalOriginTLS();
+
+  // Value *getOrigin(Value *V);
+  // void setOrigin(Instruction *I, Value *Origin);
   Value *getShadow(Value *V);
   void setShadow(Instruction *I, Value *Shadow);
   /// Generates IR to compute the union of the two given shadows, inserting it
@@ -868,6 +888,8 @@ bool DataFlowSanitizer::init(Module &M) {
   IntptrTy = DL.getIntPtrType(*Ctx);
   ZeroPrimitiveShadow = ConstantInt::getSigned(PrimitiveShadowTy, 0);
   ShadowPtrMul = ConstantInt::getSigned(IntptrTy, ShadowWidthBytes);
+  OriginBase = ConstantInt::get(IntptrTy, 0x200000000000LL);
+  ZeroOrigin = ConstantInt::getSigned(OriginTy, 0);
   if (IsX86_64)
     ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0x700000000000LL);
   else if (IsMIPS64)
@@ -1443,7 +1465,56 @@ Value *DFSanFunction::getRetvalTLS(Type *T, IRBuilder<> &IRB) {
   return IRB.CreatePointerCast(
       DFS.RetvalTLS, PointerType::get(DFS.getShadowTy(T), 0), "_dfsret");
 }
+/*
+Value *DFSanFunction::getRetvalOriginTLS() { return DFS.RetvalOriginTLS; }
 
+Value *DFSanFunction::getArgOriginTLS(unsigned ArgNo, IRBuilder<> &IRB) {
+  return IRB.CreateConstGEP2_64(DFS.ArgOriginTLSTy, DFS.ArgOriginTLS, 0, ArgNo,
+                                "_dfsarg_o");
+}
+
+Value *DFSanFunction::getOrigin(Value *V) {
+  assert(DFS.shouldTrackOrigins());
+  if (!isa<Argument>(V) && !isa<Instruction>(V))
+    return DFS.ZeroOrigin;
+  Value *&Origin = ValOriginMap[V];
+  if (!Origin) {
+    if (Argument *A = dyn_cast<Argument>(V)) {
+      if (IsNativeABI)
+        return DFS.ZeroOrigin;
+      switch (IA) {
+      case DataFlowSanitizer::IA_TLS: {
+        if (A->getArgNo() < DFS.kNumOfElementsInArgOrgTLS) {
+          Instruction *ArgOriginTLSPos = &*F->getEntryBlock().begin();
+          IRBuilder<> IRB(ArgOriginTLSPos);
+          Value *ArgOriginPtr = getArgOriginTLS(A->getArgNo(), IRB);
+          Origin = IRB.CreateLoad(DFS.OriginTy, ArgOriginPtr);
+        } else {
+          // Overflow
+          Origin = DFS.ZeroOrigin;
+        }
+        break;
+      }
+      case DataFlowSanitizer::IA_Args: {
+        Origin = DFS.ZeroOrigin;
+        break;
+      }
+      }
+    } else {
+      Origin = DFS.ZeroOrigin;
+    }
+  }
+  return Origin;
+}
+
+void DFSanFunction::setOrigin(Instruction *I, Value *Origin) {
+  if (!DFS.shouldTrackOrigins())
+    return;
+  assert(!ValOriginMap.count(I));
+  assert(Origin->getType() == DFS.OriginTy);
+  ValOriginMap[I] = Origin;
+}
+*/
 Value *DFSanFunction::getShadowForTLSArgument(Argument *A) {
   unsigned ArgOffset = 0;
   const DataLayout &DL = F->getParent()->getDataLayout();
@@ -1513,20 +1584,47 @@ void DFSanFunction::setShadow(Instruction *I, Value *Shadow) {
   ValShadowMap[I] = Shadow;
 }
 
-Value *DataFlowSanitizer::getShadowAddress(Value *Addr, Instruction *Pos) {
+Value *DataFlowSanitizer::getShadowOffset(Value *Addr, IRBuilder<> &IRB) {
+  // Returns Addr & shadow_mask
   assert(Addr != RetvalTLS && "Reinstrumenting?");
-  IRBuilder<> IRB(Pos);
   Value *ShadowPtrMaskValue;
   if (DFSanRuntimeShadowMask)
     ShadowPtrMaskValue = IRB.CreateLoad(IntptrTy, ExternalShadowMask);
   else
     ShadowPtrMaskValue = ShadowPtrMask;
-  return IRB.CreateIntToPtr(
-      IRB.CreateMul(
-          IRB.CreateAnd(IRB.CreatePtrToInt(Addr, IntptrTy),
-                        IRB.CreatePtrToInt(ShadowPtrMaskValue, IntptrTy)),
-          ShadowPtrMul),
-      PrimitiveShadowPtrTy);
+  return IRB.CreateAnd(IRB.CreatePtrToInt(Addr, IntptrTy),
+                       IRB.CreatePtrToInt(ShadowPtrMaskValue, IntptrTy));
+}
+/*
+std::pair<Value *, Value *>
+DataFlowSanitizer::getShadowOriginAddress(Value *Addr, Align InstAlignment,
+                                          Instruction *Pos) {
+  // Returns ((Addr & shadow_mask) + origin_base) & ~4UL
+  IRBuilder<> IRB(Pos);
+  Value *ShadowOffset = getShadowOffset(Addr, IRB);
+  Value *ShadowPtr = IRB.CreateIntToPtr(
+      IRB.CreateMul(ShadowOffset, ShadowPtrMul), PrimitiveShadowPtrTy);
+  Value *OriginPtr = nullptr;
+  if (shouldTrackOrigins()) {
+    Value *OriginLong = IRB.CreateAdd(ShadowOffset, OriginBase);
+    const Align Alignment = llvm::assumeAligned(InstAlignment.value());
+    // When alignment is >= 4, Addr must be aligned to 4, otherwise it is UB.
+    // So Mask is unnecessary.
+    if (Alignment < kMinOriginAlignment) {
+      uint64_t Mask = kMinOriginAlignment.value() - 1;
+      OriginLong = IRB.CreateAnd(OriginLong, ConstantInt::get(IntptrTy, ~Mask));
+    }
+    OriginPtr = IRB.CreateIntToPtr(OriginLong, OriginPtrTy);
+  }
+  return {ShadowPtr, OriginPtr};
+}
+*/
+Value *DataFlowSanitizer::getShadowAddress(Value *Addr, Instruction *Pos) {
+  // Returns (Addr & shadow_mask) x 2
+  IRBuilder<> IRB(Pos);
+  Value *ShadowOffset = getShadowOffset(Addr, IRB);
+  return IRB.CreateIntToPtr(IRB.CreateMul(ShadowOffset, ShadowPtrMul),
+                            PrimitiveShadowPtrTy);
 }
 
 Value *DFSanFunction::combineShadowsThenConvert(Type *T, Value *V1, Value *V2,

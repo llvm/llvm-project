@@ -536,10 +536,6 @@ typedef __char32_t char32_t;
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 #endif
 
-#if !defined(__cpp_concepts) || __cpp_concepts < 201907L
-#define _LIBCPP_HAS_NO_CONCEPTS
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_ASAN) && !defined(__SANITIZE_ADDRESS__)
 #define _LIBCPP_HAS_NO_ASAN
 #endif
@@ -834,6 +830,10 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_CONSTEVAL _LIBCPP_CONSTEXPR
 #else
 #  define _LIBCPP_CONSTEVAL consteval
+#endif
+
+#if !defined(__cpp_concepts) || __cpp_concepts < 201907L
+#define _LIBCPP_HAS_NO_CONCEPTS
 #endif
 
 #ifdef _LIBCPP_CXX03_LANG

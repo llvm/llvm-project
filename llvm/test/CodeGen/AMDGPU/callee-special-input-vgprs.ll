@@ -1,10 +1,8 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VARABI %s
-; RUN: llc -amdgpu-fixed-function-abi -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,FIXEDABI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
 
 ; GCN-LABEL: {{^}}use_workitem_id_x:
 ; GCN: s_waitcnt
-; VARABI: v_and_b32_e32 [[ID:v[0-9]+]], 0x3ff, v0
-; FIXEDABI: v_and_b32_e32 [[ID:v[0-9]+]], 0x3ff, v31
+; GCN: v_and_b32_e32 [[ID:v[0-9]+]], 0x3ff, v31
 ; GCN-NEXT: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[ID]]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -16,8 +14,7 @@ define void @use_workitem_id_x() #1 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_y:
 ; GCN: s_waitcnt
-; VARABI: v_bfe_u32 [[ID:v[0-9]+]], v0, 10, 10
-; FIXEDABI: v_bfe_u32 [[ID:v[0-9]+]], v31, 10, 10
+; GCN: v_bfe_u32 [[ID:v[0-9]+]], v31, 10, 10
 ; GCN-NEXT: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[ID]]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -29,8 +26,7 @@ define void @use_workitem_id_y() #1 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_z:
 ; GCN: s_waitcnt
-; VARABI: v_bfe_u32 [[ID:v[0-9]+]], v0, 20, 10
-; FIXEDABI: v_bfe_u32 [[ID:v[0-9]+]], v31, 20, 10
+; GCN: v_bfe_u32 [[ID:v[0-9]+]], v31, 20, 10
 ; GCN-NEXT: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[ID]]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -42,11 +38,9 @@ define void @use_workitem_id_z() #1 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_xy:
 ; GCN: s_waitcnt
-; VARABI-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v0
-; VARABI-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v0, 10, 10
 
-; FIXEDABI-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v31
-; FIXEDABI-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v31, 10, 10
+; GCN-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v31
+; GCN-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v31, 10, 10
 
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDX]]
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDY]]
@@ -63,13 +57,10 @@ define void @use_workitem_id_xy() #1 {
 ; GCN-LABEL: {{^}}use_workitem_id_xyz:
 ; GCN: s_waitcnt
 
-; VARABI-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v0
-; VARABI-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v0, 10, 10
-; VARABI-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v0, 20, 10
 
-; FIXEDABI-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v31
-; FIXEDABI-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v31, 10, 10
-; FIXEDABI-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v31, 20, 10
+; GCN-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v31
+; GCN-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v31, 10, 10
+; GCN-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v31, 20, 10
 
 
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDX]]
@@ -89,11 +80,9 @@ define void @use_workitem_id_xyz() #1 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_xz:
 ; GCN: s_waitcnt
-; VARABI-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v0
-; VARABI-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v0, 20, 10
 
-; FIXEDABI-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v31
-; FIXEDABI-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v31, 20, 10
+; GCN-DAG: v_and_b32_e32 [[IDX:v[0-9]+]], 0x3ff, v31
+; GCN-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v31, 20, 10
 
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDX]]
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDZ]]
@@ -109,11 +98,9 @@ define void @use_workitem_id_xz() #1 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_yz:
 ; GCN: s_waitcnt
-; VARABI-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v0, 10, 10
-; VARABI-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v0, 20, 10
 
-; FIXEDABI-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v31, 10, 10
-; FIXEDABI-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v31, 20, 10
+; GCN-DAG: v_bfe_u32 [[IDY:v[0-9]+]], v31, 10, 10
+; GCN-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v31, 20, 10
 
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDY]]
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDZ]]
@@ -128,38 +115,31 @@ define void @use_workitem_id_yz() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workitem_id_x:
-; VARABI: enable_vgpr_workitem_id = 0
-; FIXEDABI: enable_vgpr_workitem_id = 2
+; GCN: enable_vgpr_workitem_id = 2
 
 ; FIXEDA-NOT: v0
-; VARABI-NOT: v31
 ; GCN: s_swappc_b64
-; FIXEDABI-NOT: v0
-; VARABI-NOT: v31
+; GCN-NOT: v0
 define amdgpu_kernel void @kern_indirect_use_workitem_id_x() #1 {
   call void @use_workitem_id_x()
   ret void
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workitem_id_y:
-; VARABI: enable_vgpr_workitem_id = 1
-; FIXEDABI: enable_vgpr_workitem_id = 2
+; GCN: enable_vgpr_workitem_id = 2
 
-; FIXEDABI-NOT: v0
-; FIXEDABI-NOT: v1
-
-; VARABI-NOT: v31
-; VARABI: v_lshlrev_b32_e32 v0, 10, v1
+; GCN-NOT: v0
+; GCN-NOT: v1
 
 
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
-; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
-; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
-; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
 
-; FIXEDABI-NOT: v0
-; FIXEDABI-NOT: v1
-; VARABI-NOT: v31
+; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
+; GCN: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
+; GCN: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+
+; GCN-NOT: v0
+; GCN-NOT: v1
 
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workitem_id_y() #1 {
@@ -170,16 +150,11 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_y() #1 {
 ; GCN-LABEL: {{^}}kern_indirect_use_workitem_id_z:
 ; GCN: enable_vgpr_workitem_id = 2
 
-; VARABI-NOT: v0
-; VARABI-NOT: v2
-; VARABI: v_lshlrev_b32_e32 v0, 20, v2
-; VARABI-NOT: v0
-; VARABI-NOT: v1
 
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
-; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
-; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
-; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
+; GCN: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
+; GCN: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
 
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workitem_id_z() #1 {
@@ -188,17 +163,11 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_z() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workitem_id_xy:
-; VARABI-NOT: v0
-; VARABI-NOT: v1
-; VARABI: v_lshlrev_b32_e32 [[IDY:v[0-9]+]], 10, v1
-; VARABI: v_or_b32_e32 v0, v0, [[IDY]]
-; VARABI-NOT: v0
-; VARABI-NOT: v1
 
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
-; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
-; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
-; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
+; GCN: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
+; GCN: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
 
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workitem_id_xy() #1 {
@@ -207,18 +176,12 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_xy() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workitem_id_xz:
-; VARABI-NOT: v0
-; VARABI-NOT: v2
-; VARABI: v_lshlrev_b32_e32 [[IDZ:v[0-9]+]], 20, v2
-; VARABI: v_or_b32_e32 v0, v0, [[IDZ]]
-; VARABI-NOT: v0
-; VARABI-NOT: v2
 
 
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
-; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
-; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
-; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
+; GCN: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
+; GCN: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
 
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workitem_id_xz() #1 {
@@ -227,19 +190,12 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_xz() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workitem_id_yz:
-; VARABI-NOT: v1
-; VARABI-NOT: v2
-; VARABI-DAG: v_lshlrev_b32_e32 [[IDY:v[0-9]+]], 10, v1
-; VARABI-DAG: v_lshlrev_b32_e32 [[IDZ:v[0-9]+]], 20, v2
-; VARABI: v_or_b32_e32 v0, [[IDY]], [[IDZ]]
-; VARABI-NOT: v1
-; VARABI-NOT: v2
 
 
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
-; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
-; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
-; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
+; GCN: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
+; GCN: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
 
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workitem_id_yz() #1 {
@@ -248,21 +204,11 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_yz() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workitem_id_xyz:
-; VARABI-NOT: v0
-; VARABI-NOT: v1
-; VARABI-NOT: v2
-; VARABI-DAG: v_lshlrev_b32_e32 [[IDY:v[0-9]+]], 10, v1
-; VARABI-DAG: v_lshlrev_b32_e32 [[IDZ:v[0-9]+]], 20, v2
-; VARABI-DAG: v_or_b32_e32 v0, v0, [[IDY]]
-; VARABI-DAG: v_or_b32_e32 v0, v0, [[IDZ]]
-; VARABI-NOT: v0
-; VARABI-NOT: v1
-; VARABI-NOT: v2
 
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
-; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
-; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
-; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
+; GCN: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
+; GCN: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
 
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workitem_id_xyz() #1 {
@@ -299,8 +245,7 @@ define void @func_indirect_use_workitem_id_z() #1 {
 
 ; GCN-LABEL: {{^}}other_arg_use_workitem_id_x:
 ; GCN: s_waitcnt
-; VARABI-DAG: v_and_b32_e32 [[ID:v[0-9]+]], 0x3ff, v1
-; FIXEDABI-DAG: v_and_b32_e32 [[ID:v[0-9]+]], 0x3ff, v31
+; GCN-DAG: v_and_b32_e32 [[ID:v[0-9]+]], 0x3ff, v31
 
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[ID]]
@@ -313,8 +258,7 @@ define void @other_arg_use_workitem_id_x(i32 %arg0) #1 {
 
 ; GCN-LABEL: {{^}}other_arg_use_workitem_id_y:
 ; GCN: s_waitcnt
-; VARABI-DAG: v_bfe_u32 [[ID:v[0-9]+]], v1, 10, 10
-; FIXEDABI-DAG: v_bfe_u32 [[ID:v[0-9]+]], v31, 10, 10
+; GCN-DAG: v_bfe_u32 [[ID:v[0-9]+]], v31, 10, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[ID]]
 define void @other_arg_use_workitem_id_y(i32 %arg0) #1 {
@@ -326,8 +270,7 @@ define void @other_arg_use_workitem_id_y(i32 %arg0) #1 {
 
 ; GCN-LABEL: {{^}}other_arg_use_workitem_id_z:
 ; GCN: s_waitcnt
-; VARABI-DAG: v_bfe_u32 [[ID:v[0-9]+]], v1, 20, 10
-; FIXEDABI-DAG: v_bfe_u32 [[ID:v[0-9]+]], v31, 20, 10
+; GCN-DAG: v_bfe_u32 [[ID:v[0-9]+]], v31, 20, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[ID]]
 define void @other_arg_use_workitem_id_z(i32 %arg0) #1 {
@@ -339,16 +282,13 @@ define void @other_arg_use_workitem_id_z(i32 %arg0) #1 {
 
 
 ; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workitem_id_x:
-; VARABI: enable_vgpr_workitem_id = 0
-; FIXEDABI: enable_vgpr_workitem_id = 2
+; GCN: enable_vgpr_workitem_id = 2
 
-; VARABI: v_mov_b32_e32 v1, v0
-; VARABI: v_mov_b32_e32 v0, 0x22b
 
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
-; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
-; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
-; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
+; GCN: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
+; GCN: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
 
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_x() #1 {
@@ -358,20 +298,13 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_x() #1 {
 
 
 ; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workitem_id_y:
-; VARABI: enable_vgpr_workitem_id = 1
 
-; VARABI: v_lshlrev_b32_e32 v1, 10, v1
-; VARABI-NOT: v1
-; VARABI: v_mov_b32_e32 v0, 0x22b
-; VARABI-NOT: v1
-; VARABI: s_swappc_b64
-; VARABI-NOT: v0
 
-; FIXEDABI: enable_vgpr_workitem_id = 2
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
-; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
-; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
-; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+; GCN: enable_vgpr_workitem_id = 2
+; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
+; GCN: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
+; GCN: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
 define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_y() #1 {
   call void @other_arg_use_workitem_id_y(i32 555)
   ret void
@@ -380,29 +313,21 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_y() #1 {
 ; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workitem_id_z:
 ; GCN: enable_vgpr_workitem_id = 2
 
-; VARABI-DAG: v_mov_b32_e32 v0, 0x22b
-; VARABI-DAG: v_lshlrev_b32_e32 v1, 20, v2
-; VARABI: s_swappc_b64
-; VARABI-NOT: v0
 
 
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
-; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
-; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
-; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
+; GCN: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
+; GCN: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
 define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_z() #1 {
   call void @other_arg_use_workitem_id_z(i32 555)
   ret void
 }
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_x:
-; VARABI: buffer_load_dword v32, off, s[0:3], s32{{$}}
-; VARABI: v_and_b32_e32 v32, 0x3ff, v32
-; VARABI: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, v32
-; VARABI: s_setpc_b64
 
-; FIXEDABI: v_and_b32_e32 v31, 0x3ff, v31
-; FIXEDABI: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32{{$}}
+; GCN: v_and_b32_e32 v31, 0x3ff, v31
+; GCN: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32{{$}}
 define void @too_many_args_use_workitem_id_x(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
   i32 %arg8, i32 %arg9, i32 %arg10, i32 %arg11, i32 %arg12, i32 %arg13, i32 %arg14, i32 %arg15,
@@ -451,23 +376,19 @@ define void @too_many_args_use_workitem_id_x(
 }
 
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_x:
-; VARABI: enable_vgpr_workitem_id = 0
-
-; VARABI: s_mov_b32 s32, 0
-; VARABI: buffer_store_dword v0, off, s[0:3], s32{{$}}
-; VARABI: s_swappc_b64
 
 
-; FIXEDABI: enable_vgpr_workitem_id = 2
-; FIXEDABI-DAG: s_mov_b32 s32, 0
-; FIXEDABI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x140{{$}}
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
-; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
-; FIXEDABI-DAG: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
-; FIXEDABI-DAG: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
-; FIXEDABI: buffer_store_dword [[K]], off, s[0:3], s32{{$}}
 
-; FIXEDABI: s_swappc_b64
+; GCN: enable_vgpr_workitem_id = 2
+; GCN-DAG: s_mov_b32 s32, 0
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x140{{$}}
+; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
+; GCN-DAG: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
+; GCN-DAG: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+; GCN: buffer_store_dword [[K]], off, s[0:3], s32{{$}}
+
+; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x() #1 {
   call void @too_many_args_use_workitem_id_x(
     i32 10, i32 20, i32 30, i32 40,
@@ -482,15 +403,13 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x() #1 {
 }
 
 ; GCN-LABEL: {{^}}func_call_too_many_args_use_workitem_id_x:
-; VARABI: s_mov_b32 s33, s32
-; VARABI: buffer_store_dword v1, off, s[0:3], s32{{$}}
 
 ; Touching the workitem id register is not necessary.
-; FIXEDABI-NOT: v31
-; FIXEDABI: v_mov_b32_e32 [[K:v[0-9]+]], 0x140{{$}}
-; FIXEDABI-NOT: v31
-; FIXEDABI: buffer_store_dword [[K]], off, s[0:3], s32{{$}}
-; FIXEDABI-NOT: v31
+; GCN-NOT: v31
+; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0x140{{$}}
+; GCN-NOT: v31
+; GCN: buffer_store_dword [[K]], off, s[0:3], s32{{$}}
+; GCN-NOT: v31
 
 ; GCN: s_swappc_b64
 define void @func_call_too_many_args_use_workitem_id_x(i32 %arg0) #1 {
@@ -539,21 +458,15 @@ define void @too_many_args_call_too_many_args_use_workitem_id_x(
 ; frame[2] = VGPR spill slot
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_x_byval:
-; VARABI: buffer_load_dword v32, off, s[0:3], s32 offset:4
-; VARABI-NEXT: s_waitcnt
-; VARABI-NEXT: v_and_b32_e32 v32, 0x3ff, v32
-; VARABI-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v32
-; VARABI: buffer_load_dword v0, off, s[0:3], s32 glc{{$}}
-; VARABI: s_setpc_b64
 
 
-; FIXEDABI: v_and_b32_e32 v31, 0x3ff, v31
-; FIXEDABI-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v31
+; GCN: v_and_b32_e32 v31, 0x3ff, v31
+; GCN-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v31
 
-; FIXEDABI: buffer_load_dword v0, off, s[0:3], s32{{$}}
-; FIXEDABI: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
-; FIXEDABI: buffer_load_dword v0, off, s[0:3], s32 offset:4 glc{{$}}
-; FIXEDABI: s_setpc_b64
+; GCN: buffer_load_dword v0, off, s[0:3], s32{{$}}
+; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; GCN: buffer_load_dword v0, off, s[0:3], s32 offset:4 glc{{$}}
+; GCN: s_setpc_b64
 define void @too_many_args_use_workitem_id_x_byval(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
   i32 %arg8, i32 %arg9, i32 %arg10, i32 %arg11, i32 %arg12, i32 %arg13, i32 %arg14, i32 %arg15,
@@ -607,36 +520,27 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; sp[2] = stack passed workitem ID x
 
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_x_byval:
-; VARABI: enable_vgpr_workitem_id = 0
-; VARABI: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
-; VARABI: s_movk_i32 s32, 0x400{{$}}
-; VARABI: buffer_store_dword [[K]], off, s[0:3], 0 offset:4
-; VARABI: buffer_store_dword v0, off, s[0:3], s32 offset:4
-; VARABI: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], 0 offset:4
-
-; VARABI: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32{{$}}
-; VARABI: v_mov_b32_e32 [[RELOAD_BYVAL]],
-; VARABI: s_swappc_b64
 
 
-; FIXEDABI: v_mov_b32_e32 [[K0:v[0-9]+]], 0x3e7
-; FIXEDABI: buffer_store_dword [[K0]], off, s[0:3], 0 offset:4{{$}}
-; FIXEDABI: s_movk_i32 s32, 0x400{{$}}
-; FIXEDABI: v_mov_b32_e32 [[K1:v[0-9]+]], 0x140
 
-; FIXEDABI: buffer_store_dword [[K1]], off, s[0:3], s32{{$}}
+; GCN: v_mov_b32_e32 [[K0:v[0-9]+]], 0x3e7
+; GCN: buffer_store_dword [[K0]], off, s[0:3], 0 offset:4{{$}}
+; GCN: s_movk_i32 s32, 0x400{{$}}
+; GCN: v_mov_b32_e32 [[K1:v[0-9]+]], 0x140
+
+; GCN: buffer_store_dword [[K1]], off, s[0:3], s32{{$}}
 
 ; FIXME: Why this reload?
-; FIXEDABI: buffer_load_dword [[RELOAD:v[0-9]+]], off, s[0:3], 0 offset:4{{$}}
+; GCN: buffer_load_dword [[RELOAD:v[0-9]+]], off, s[0:3], 0 offset:4{{$}}
 
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
-; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
-; FIXEDABI-DAG: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
-; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
+; GCN-DAG: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
+; GCN: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
 
-; FIXEDABI-NOT: s32
-; FIXEDABI: buffer_store_dword [[RELOAD]], off, s[0:3], s32 offset:4
-; FIXEDABI: s_swappc_b64
+; GCN-NOT: s32
+; GCN: buffer_store_dword [[RELOAD]], off, s[0:3], s32 offset:4
+; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 {
   %alloca = alloca i32, align 4, addrspace(5)
   store volatile i32 999, i32 addrspace(5)* %alloca
@@ -654,26 +558,19 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 
 }
 
 ; GCN-LABEL: {{^}}func_call_too_many_args_use_workitem_id_x_byval:
-; VARABI: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
-; VARABI: buffer_store_dword [[K]], off, s[0:3], s33{{$}}
-; VARABI: buffer_store_dword v0, off, s[0:3], s32 offset:4
-; VARABI: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s33{{$}}
-; VARABI: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32{{$}}
-; VARABI: v_mov_b32_e32 [[RELOAD_BYVAL]],
-; VARABI: s_swappc_b64
 
 
 ; FIXED-ABI-NOT: v31
-; FIXEDABI: v_mov_b32_e32 [[K0:v[0-9]+]], 0x3e7{{$}}
-; FIXEDABI: buffer_store_dword [[K0]], off, s[0:3], s33{{$}}
-; FIXEDABI: v_mov_b32_e32 [[K1:v[0-9]+]], 0x140{{$}}
-; FIXEDABI: buffer_store_dword [[K1]], off, s[0:3], s32{{$}}
-; FIXEDABI: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s33{{$}}
+; GCN: v_mov_b32_e32 [[K0:v[0-9]+]], 0x3e7{{$}}
+; GCN: buffer_store_dword [[K0]], off, s[0:3], s33{{$}}
+; GCN: v_mov_b32_e32 [[K1:v[0-9]+]], 0x140{{$}}
+; GCN: buffer_store_dword [[K1]], off, s[0:3], s32{{$}}
+; GCN: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s33{{$}}
 
 ; FIXED-ABI-NOT: v31
-; FIXEDABI: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32 offset:4{{$}}
+; GCN: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32 offset:4{{$}}
 ; FIXED-ABI-NOT: v31
-; FIXEDABI: s_swappc_b64
+; GCN: s_swappc_b64
 define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
   %alloca = alloca i32, align 4, addrspace(5)
   store volatile i32 999, i32 addrspace(5)* %alloca
@@ -691,29 +588,17 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
 }
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_xyz:
-; VARABI-NOT: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32{{$}}
-; VARABI: buffer_load_dword v32, off, s[0:3], s32{{$}}
-; VARABI-NOT: buffer_load_dword
-
-; VARABI: v_and_b32_e32 [[AND_X:v[0-9]+]], 0x3ff, v32
-; VARABI-NOT: buffer_load_dword
-; VARABI: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[AND_X]]
-; VARABI-NOT: buffer_load_dword
-; VARABI: v_bfe_u32 [[BFE_Y:v[0-9]+]], v32, 10, 10
-; VARABI-NEXT: v_bfe_u32 [[BFE_Z:v[0-9]+]], v32, 20, 10
-; VARABI-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[BFE_Y]]
-; VARABI: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[BFE_Z]]
-; VARABI: s_setpc_b64
 
 
-; FIXEDABI: v_and_b32_e32 [[AND_X:v[0-9]+]], 0x3ff, v31
-; FIXEDABI-NOT: buffer_load_dword
-; FIXEDABI: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[AND_X]]
-; FIXEDABI-NOT: buffer_load_dword
-; FIXEDABI: v_bfe_u32 [[BFE_Y:v[0-9]+]], v31, 10, 10
-; FIXEDABI-NEXT: v_bfe_u32 [[BFE_Z:v[0-9]+]], v31, 20, 10
-; FIXEDABI-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[BFE_Y]]
-; FIXEDABI: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[BFE_Z]]
+
+; GCN: v_and_b32_e32 [[AND_X:v[0-9]+]], 0x3ff, v31
+; GCN-NOT: buffer_load_dword
+; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[AND_X]]
+; GCN-NOT: buffer_load_dword
+; GCN: v_bfe_u32 [[BFE_Y:v[0-9]+]], v31, 10, 10
+; GCN-NEXT: v_bfe_u32 [[BFE_Z:v[0-9]+]], v31, 20, 10
+; GCN-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[BFE_Y]]
+; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[BFE_Z]]
 
 define void @too_many_args_use_workitem_id_xyz(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
@@ -774,12 +659,10 @@ define void @too_many_args_use_workitem_id_xyz(
 ; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
 ; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
 ; GCN-DAG: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
-; VARABI-DAG: v_or_b32_e32 [[PACKEDID:v[0-9]+]], [[TMP2]], [[TMP0]]
-; VARABI: buffer_store_dword [[PACKEDID]], off, s[0:3], s32{{$}}
 
-; FIXEDABI-DAG: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
-; FIXEDABI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x140
-; FIXEDABI: buffer_store_dword [[K]], off, s[0:3], s32{{$}}
+; GCN-DAG: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x140
+; GCN: buffer_store_dword [[K]], off, s[0:3], s32{{$}}
 
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_xyz() #1 {

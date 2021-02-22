@@ -819,19 +819,17 @@ define <2 x i32> @ssubo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) noun
 ; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:    movdqa %xmm3, %xmm4
 ; SSE-NEXT:    pcmpgtd %xmm0, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
 ; SSE-NEXT:    pcmpeqd %xmm3, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE-NEXT:    pand %xmm5, %xmm0
+; SSE-NEXT:    pand %xmm4, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSE-NEXT:    por %xmm0, %xmm3
 ; SSE-NEXT:    pxor %xmm2, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[0,0,2,2]
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE-NEXT:    pand %xmm4, %xmm1
+; SSE-NEXT:    pand %xmm0, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE-NEXT:    por %xmm1, %xmm0
 ; SSE-NEXT:    pxor %xmm3, %xmm0

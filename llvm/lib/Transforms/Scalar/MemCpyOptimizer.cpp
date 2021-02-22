@@ -68,7 +68,7 @@ using namespace llvm;
 #define DEBUG_TYPE "memcpyopt"
 
 static cl::opt<bool>
-    EnableMemorySSA("enable-memcpyopt-memoryssa", cl::init(false), cl::Hidden,
+    EnableMemorySSA("enable-memcpyopt-memoryssa", cl::init(true), cl::Hidden,
                     cl::desc("Use MemorySSA-backed MemCpyOpt."));
 
 STATISTIC(NumMemCpyInstr, "Number of memcpy instructions deleted");

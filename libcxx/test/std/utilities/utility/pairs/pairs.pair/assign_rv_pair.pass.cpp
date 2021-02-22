@@ -35,6 +35,11 @@ struct CountAssign {
   }
 };
 
+struct NotAssignable {
+  NotAssignable& operator=(NotAssignable const&) = delete;
+  NotAssignable& operator=(NotAssignable&&) = delete;
+};
+
 TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::pair<ConstexprTestTypes::MoveOnly, int> P;
@@ -82,6 +87,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(p.first.copied == 0);
     assert(p2.first.moved == 0);
     assert(p2.first.copied == 0);
+  }
+  {
+    using T = std::pair<int, NotAssignable>;
+    using P = std::pair<int, NotAssignable>;
+    static_assert(!std::is_assignable<T, P&&>::value, "");
   }
   return true;
 }

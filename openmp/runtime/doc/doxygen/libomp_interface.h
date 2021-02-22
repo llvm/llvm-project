@@ -1,3 +1,4 @@
+// clang-format off
 // This file does not contain any code; it just contains additional text and formatting
 // for doxygen.
 
@@ -63,7 +64,7 @@ supported are shown in the table below.
 <tr><td>OS X\other<td>Yes(1,3,4)<td>No<td>Yes(4,6,7)
 <tr><td>Windows\other OS<td>Yes(1,4)<td>No<td>No
 </table>
-(1) On IA-32 architecture and Intel&reg;&nbsp; 64, icc/icl versions 12.x 
+(1) On IA-32 architecture and Intel&reg;&nbsp; 64, icc/icl versions 12.x
     are supported (12.1 is recommended).<br>
 (2) gcc version 4.7 is supported.<br>
 (3) For icc on OS X\other, OS X\other version 10.5.8 is supported.<br>
@@ -131,9 +132,9 @@ void foo()
 
 @subsection SEC_SHAREDVARS Addressing shared variables
 
-In real uses of the OpenMP\other API there are normally references 
-from the outlined code  to shared variables that are in scope in the containing function. 
-Therefore the containing function must be able to address 
+In real uses of the OpenMP\other API there are normally references
+from the outlined code  to shared variables that are in scope in the containing function.
+Therefore the containing function must be able to address
 these variables. The runtime supports two alternate ways of doing
 this.
 
@@ -173,7 +174,7 @@ to the outlined functions. In this way the offsets of the shared variables
 are known (since they are inside the struct) without needing to know
 the complete layout of the parent stack-frame. From the point of view
 of the runtime either of these techniques is equivalent, since in either
-case it only has to pass a single argument to the outlined function to allow 
+case it only has to pass a single argument to the outlined function to allow
 it to access shared variables.
 
 A scheme like this is how gcc\other generates outlined functions.
@@ -202,49 +203,49 @@ This example shows the code generated for a parallel for with reduction and dyna
 extern float foo( void );
 
 int main () {
-    int i; 
-    float r = 0.0; 
-    #pragma omp parallel for schedule(dynamic) reduction(+:r) 
+    int i;
+    float r = 0.0;
+    #pragma omp parallel for schedule(dynamic) reduction(+:r)
     for ( i = 0; i < 10; i ++ ) {
-        r += foo(); 
+        r += foo();
     }
 }
 @endcode
 
 The transformed code looks like this.
 @code
-extern float foo( void ); 
+extern float foo( void );
 
 int main () {
-    static int zero = 0; 
-    auto int gtid; 
-    auto float r = 0.0; 
-    __kmpc_begin( & loc3, 0 ); 
+    static int zero = 0;
+    auto int gtid;
+    auto float r = 0.0;
+    __kmpc_begin( & loc3, 0 );
     // The gtid is not actually required in this example so could be omitted;
     // We show its initialization here because it is often required for calls into
     // the runtime and should be locally cached like this.
-    gtid = __kmpc_global thread num( & loc3 ); 
-    __kmpc_fork call( & loc7, 1, main_7_parallel_3, & r ); 
-    __kmpc_end( & loc0 ); 
-    return 0; 
+    gtid = __kmpc_global thread num( & loc3 );
+    __kmpc_fork call( & loc7, 1, main_7_parallel_3, & r );
+    __kmpc_end( & loc0 );
+    return 0;
 }
 
-struct main_10_reduction_t_5 { float r_10_rpr; }; 
+struct main_10_reduction_t_5 { float r_10_rpr; };
 
 static kmp_critical_name lck = { 0 };
-static ident_t loc10; // loc10.flags should contain KMP_IDENT_ATOMIC_REDUCE bit set 
+static ident_t loc10; // loc10.flags should contain KMP_IDENT_ATOMIC_REDUCE bit set
                       // if compiler has generated an atomic reduction.
 
 void main_7_parallel_3( int *gtid, int *btid, float *r_7_shp ) {
-    auto int i_7_pr; 
-    auto int lower, upper, liter, incr; 
-    auto struct main_10_reduction_t_5 reduce; 
-    reduce.r_10_rpr = 0.F; 
-    liter = 0; 
-    __kmpc_dispatch_init_4( & loc7,*gtid, 35, 0, 9, 1, 1 ); 
+    auto int i_7_pr;
+    auto int lower, upper, liter, incr;
+    auto struct main_10_reduction_t_5 reduce;
+    reduce.r_10_rpr = 0.F;
+    liter = 0;
+    __kmpc_dispatch_init_4( & loc7,*gtid, 35, 0, 9, 1, 1 );
     while ( __kmpc_dispatch_next_4( & loc7, *gtid, & liter, & lower, & upper, & incr ) ) {
-        for( i_7_pr = lower; upper >= i_7_pr; i_7_pr ++ ) 
-          reduce.r_10_rpr += foo(); 
+        for( i_7_pr = lower; upper >= i_7_pr; i_7_pr ++ )
+          reduce.r_10_rpr += foo();
     }
     switch( __kmpc_reduce_nowait( & loc10, *gtid, 1, 4, & reduce, main_10_reduce_5, & lck ) ) {
         case 1:
@@ -256,12 +257,12 @@ void main_7_parallel_3( int *gtid, int *btid, float *r_7_shp ) {
            break;
         default:;
     }
-} 
+}
 
-void main_10_reduce_5( struct main_10_reduction_t_5 *reduce_lhs, 
-                       struct main_10_reduction_t_5 *reduce_rhs ) 
-{ 
-    reduce_lhs->r_10_rpr += reduce_rhs->r_10_rpr; 
+void main_10_reduce_5( struct main_10_reduction_t_5 *reduce_lhs,
+                       struct main_10_reduction_t_5 *reduce_rhs )
+{
+    reduce_lhs->r_10_rpr += reduce_rhs->r_10_rpr;
 }
 @endcode
 
@@ -282,9 +283,9 @@ These functions are used for implementing <tt>\#pragma omp parallel</tt>.
 These functions return information about the currently executing thread.
 
 @defgroup WORK_SHARING Work Sharing
-These functions are used for implementing 
-<tt>\#pragma omp for</tt>, <tt>\#pragma omp sections</tt>, <tt>\#pragma omp single</tt> and 
-<tt>\#pragma omp master</tt> constructs. 
+These functions are used for implementing
+<tt>\#pragma omp for</tt>, <tt>\#pragma omp sections</tt>, <tt>\#pragma omp single</tt> and
+<tt>\#pragma omp master</tt> constructs.
 
 When handling loops, there are different functions for each of the signed and unsigned 32 and 64 bit integer types
 which have the name suffixes `_4`, `_4u`, `_8` and `_8u`. The semantics of each of the functions is the same,
@@ -293,9 +294,9 @@ so they are only described once.
 Static loop scheduling is handled by  @ref __kmpc_for_static_init_4 and friends. Only a single call is needed,
 since the iterations to be executed by any give thread can be determined as soon as the loop parameters are known.
 
-Dynamic scheduling is handled by the @ref __kmpc_dispatch_init_4 and @ref __kmpc_dispatch_next_4 functions. 
+Dynamic scheduling is handled by the @ref __kmpc_dispatch_init_4 and @ref __kmpc_dispatch_next_4 functions.
 The init function is called once in each thread outside the loop, while the next function is called each
-time that the previous chunk of work has been exhausted. 
+time that the previous chunk of work has been exhausted.
 
 @defgroup SYNCHRONIZATION Synchronization
 These functions are used for implementing barriers.

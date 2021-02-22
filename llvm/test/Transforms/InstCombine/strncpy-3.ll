@@ -41,7 +41,7 @@ define void @fill_with_zeros3(i8* %dst) {
 
 define void @fill_with_zeros4(i8* %dst) {
 ; CHECK-LABEL: @fill_with_zeros4(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(128) [[DST:%.*]], i8* nonnull align 1 dereferenceable(128) getelementptr inbounds ([129 x i8], [129 x i8]* @str.2, i64 0, i64 0), i64 128, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(128) [[DST:%.*]], i8* noundef nonnull align 1 dereferenceable(128) getelementptr inbounds ([129 x i8], [129 x i8]* @str.2, i64 0, i64 0), i64 128, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   tail call i8* @strncpy(i8* %dst, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @str3, i64 0, i64 0), i64 128)
@@ -50,7 +50,7 @@ define void @fill_with_zeros4(i8* %dst) {
 
 define void @no_simplify(i8* %dst) {
 ; CHECK-LABEL: @no_simplify(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8* @strncpy(i8* nonnull dereferenceable(1) [[DST:%.*]], i8* nonnull dereferenceable(5) getelementptr inbounds ([4 x i8], [4 x i8]* @str3, i64 0, i64 0), i64 129)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8* @strncpy(i8* noundef nonnull dereferenceable(1) [[DST:%.*]], i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([4 x i8], [4 x i8]* @str3, i64 0, i64 0), i64 129)
 ; CHECK-NEXT:    ret void
 ;
   tail call i8* @strncpy(i8* %dst, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @str3, i64 0, i64 0), i64 129)

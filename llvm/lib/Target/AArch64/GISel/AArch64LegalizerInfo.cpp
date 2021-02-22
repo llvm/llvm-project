@@ -692,7 +692,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lower();
 
   getActionDefinitionsBuilder(G_VECREDUCE_ADD)
-      .legalFor({{s8, v16s8}, {s16, v8s16}, {s32, v4s32}, {s64, v2s64}})
+      .legalFor(
+          {{s8, v16s8}, {s16, v8s16}, {s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
       .lower();
 
   computeTables();

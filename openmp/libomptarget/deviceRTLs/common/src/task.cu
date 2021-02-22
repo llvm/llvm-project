@@ -31,7 +31,7 @@
 #include "common/omptarget.h"
 
 EXTERN kmp_TaskDescr *__kmpc_omp_task_alloc(
-    kmp_Ident *loc,     // unused
+    kmp_Ident *loc,      // unused
     uint32_t global_tid, // unused
     int32_t flag, // unused (because in our impl, all are immediately exec
     size_t sizeOfTaskInclPrivate, size_t sizeOfSharedTable,

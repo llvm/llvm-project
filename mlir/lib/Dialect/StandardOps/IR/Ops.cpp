@@ -3790,6 +3790,8 @@ OpFoldResult SubTensorInsertOp::fold(ArrayRef<Attribute>) {
   if (getSourceType() == getType() &&
       succeeded(foldIdentityOffsetSizeAndStrideOpInterface(*this, getType())))
     return this->source();
+  if (succeeded(tensor::foldTensorCast(*this)))
+    return this->source();
   return OpFoldResult();
 }
 

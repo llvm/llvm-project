@@ -78,7 +78,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
                                   ,
                                   void *codeptr
 #endif
-                                  ) {
+) {
   KMP_COUNT_BLOCK(OMP_LOOP_STATIC);
   KMP_PUSH_PARTITIONED_TIMER(OMP_loop_static);
   KMP_PUSH_PARTITIONED_TIMER(OMP_loop_static_scheduling);
@@ -811,7 +811,7 @@ void __kmpc_for_static_init_4(ident_t *loc, kmp_int32 gtid, kmp_int32 schedtype,
                                    ,
                                    OMPT_GET_RETURN_ADDRESS(0)
 #endif
-                                       );
+  );
 }
 
 /*!
@@ -828,7 +828,7 @@ void __kmpc_for_static_init_4u(ident_t *loc, kmp_int32 gtid,
                                     ,
                                     OMPT_GET_RETURN_ADDRESS(0)
 #endif
-                                        );
+  );
 }
 
 /*!
@@ -844,7 +844,7 @@ void __kmpc_for_static_init_8(ident_t *loc, kmp_int32 gtid, kmp_int32 schedtype,
                                    ,
                                    OMPT_GET_RETURN_ADDRESS(0)
 #endif
-                                       );
+  );
 }
 
 /*!
@@ -861,7 +861,7 @@ void __kmpc_for_static_init_8u(ident_t *loc, kmp_int32 gtid,
                                     ,
                                     OMPT_GET_RETURN_ADDRESS(0)
 #endif
-                                        );
+  );
 }
 /*!
 @}

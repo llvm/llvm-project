@@ -316,7 +316,7 @@ void __kmpc_fork_call(ident_t *loc, kmp_int32 argc, kmpc_micro microtask, ...) {
                     ,
                     fork_context_intel
 #endif
-                    );
+    );
 
     va_end(ap);
   }
@@ -438,7 +438,7 @@ void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
                   ,
                   fork_context_intel
 #endif
-                  );
+  );
 
   // Pop current CG root off list
   KMP_DEBUG_ASSERT(this_thr->th.th_cg_roots);
@@ -594,7 +594,7 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
   --serial_team->t.t_serialized;
   if (serial_team->t.t_serialized == 0) {
 
-/* return to the parallel section */
+    /* return to the parallel section */
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
     if (__kmp_inherit_fp_control && serial_team->t.t_fp_control_saved) {
@@ -1202,10 +1202,10 @@ void __kmpc_critical(ident_t *loc, kmp_int32 global_tid,
   if (__kmp_env_consistency_check)
     __kmp_push_sync(global_tid, ct_critical, loc, lck);
 
-// since the critical directive binds to all threads, not just the current
-// team we have to check this even if we are in a serialized team.
-// also, even if we are the uber thread, we still have to conduct the lock,
-// as we have to contend with sibling threads.
+    // since the critical directive binds to all threads, not just the current
+    // team we have to check this even if we are in a serialized team.
+    // also, even if we are the uber thread, we still have to conduct the lock,
+    // as we have to contend with sibling threads.
 
 #if USE_ITT_BUILD
   __kmp_itt_critical_acquiring(lck);
@@ -2110,21 +2110,21 @@ void __kmpc_copyprivate(ident_t *loc, kmp_int32 gtid, size_t cpy_size,
   if (!didit)
     (*cpy_func)(cpy_data, *data_ptr);
 
-// Consider next barrier a user-visible barrier for barrier region boundaries
-// Nesting checks are already handled by the single construct checks
+  // Consider next barrier a user-visible barrier for barrier region boundaries
+  // Nesting checks are already handled by the single construct checks
   {
 #if OMPT_SUPPORT
     OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 #if USE_ITT_NOTIFY
-  __kmp_threads[gtid]->th.th_ident = loc; // TODO: check if it is needed (e.g.
+    __kmp_threads[gtid]->th.th_ident = loc; // TODO: check if it is needed (e.g.
 // tasks can overwrite the location)
 #endif
-  __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
+    __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  if (ompt_enabled.enabled) {
-    ompt_frame->enter_frame = ompt_data_none;
-  }
+    if (ompt_enabled.enabled) {
+      ompt_frame->enter_frame = ompt_data_none;
+    }
 #endif
   }
 }
@@ -2669,7 +2669,7 @@ void __kmpc_set_nest_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
 #endif
   int acquire_status =
       KMP_D_LOCK_FUNC(user_lock, set)((kmp_dyna_lock_t *)user_lock, gtid);
-  (void) acquire_status;
+  (void)acquire_status;
 #if USE_ITT_BUILD
   __kmp_itt_lock_acquired((kmp_user_lock_p)user_lock);
 #endif
@@ -2862,7 +2862,7 @@ void __kmpc_unset_nest_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
 #endif
   int release_status =
       KMP_D_LOCK_FUNC(user_lock, unset)((kmp_dyna_lock_t *)user_lock, gtid);
-  (void) release_status;
+  (void)release_status;
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   // This is the case, if called from omp_init_lock_with_hint:
@@ -3082,7 +3082,7 @@ int __kmpc_test_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
 
   return (rc ? FTN_TRUE : FTN_FALSE);
 
-/* Can't use serial interval since not block structured */
+  /* Can't use serial interval since not block structured */
 
 #endif // KMP_USE_DYNAMIC_LOCK
 }
@@ -3200,7 +3200,7 @@ int __kmpc_test_nest_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
 #endif
   return rc;
 
-/* Can't use serial interval since not block structured */
+  /* Can't use serial interval since not block structured */
 
 #endif // KMP_USE_DYNAMIC_LOCK
 }
