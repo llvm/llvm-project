@@ -35,7 +35,12 @@ struct MoveAssignable {
   MoveAssignable& operator=(MoveAssignable const&) = delete;
   MoveAssignable& operator=(MoveAssignable&&) = default;
 };
-
+struct NothrowMoveAssignable {
+  NothrowMoveAssignable& operator=(NothrowMoveAssignable&&) noexcept { return *this; }
+};
+struct PotentiallyThrowingMoveAssignable {
+  PotentiallyThrowingMoveAssignable& operator=(PotentiallyThrowingMoveAssignable&&) { return *this; }
+};
 
 struct CountAssign {
   static int copied;
@@ -47,7 +52,6 @@ struct CountAssign {
 };
 int CountAssign::copied = 0;
 int CountAssign::moved = 0;
-
 
 int main(int, char**)
 {
@@ -102,7 +106,6 @@ int main(int, char**)
         using T = std::tuple<std::unique_ptr<int>>;
         static_assert(std::is_move_assignable<T>::value, "");
         static_assert(!std::is_copy_assignable<T>::value, "");
-
     }
     {
       using T = std::tuple<int, NonAssignable>;
@@ -123,6 +126,22 @@ int main(int, char**)
         assert(CountAssign::copied == 1);
         assert(CountAssign::moved == 0);
     }
+    {
+        using T = std::tuple<int, NonAssignable>;
+        static_assert(!std::is_move_assignable<T>::value, "");
+    }
+    {
+        using T = std::tuple<int, MoveAssignable>;
+        static_assert(std::is_move_assignable<T>::value, "");
+    }
+    {
+        using T = std::tuple<NothrowMoveAssignable, int>;
+        static_assert(std::is_nothrow_move_assignable<T>::value, "");
+    }
+    {
+        using T = std::tuple<PotentiallyThrowingMoveAssignable, int>;
+        static_assert(!std::is_nothrow_move_assignable<T>::value, "");
+    }
 
-  return 0;
+    return 0;
 }
