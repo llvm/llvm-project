@@ -1126,9 +1126,77 @@ invoke.cont:                                      ; preds = %entry
   unreachable
 }
 
+; This tests if invalidated branch destinations after fixing catch unwind
+; mismatches are correctly remapped. For example, we have this code and suppose
+; we need to wrap this try-catch-end in this code with a try-delegate to fix a
+; catch unwind mismatch:
+  ; - Before:
+; block
+;   br (a)
+;   try
+;   catch
+;   end_try
+; end_block
+;           <- (a)
+;
+; - After
+; block
+;   br (a)
+;   try
+;     try
+;     catch
+;     end_try
+;           <- (a)
+;   delegate
+; end_block
+;           <- (b)
+; After adding a try-delegate, the 'br's destination BB, where (a) points,
+; becomes invalid because it incorrectly branches into an inner scope. The
+; destination should change to the BB where (b) points.
+
+; NOSORT-LABEL: test20
+; NOSORT: try
+; NOSORT:   br_if   0
+define void @test20(i1 %arg) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  br i1 %arg, label %bb0, label %dest
+
+bb0:                                              ; preds = %entry
+  invoke void @foo()
+          to label %bb1 unwind label %catch.dispatch0
+
+bb1:                                              ; preds = %bb0
+  invoke void @bar()
+          to label %try.cont unwind label %catch.dispatch1
+
+catch.dispatch0:                                  ; preds = %bb0
+  %0 = catchswitch within none [label %catch.start0] unwind to caller
+
+catch.start0:                                     ; preds = %catch.dispatch0
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  catchret from %1 to label %try.cont
+
+dest:                                             ; preds = %entry
+  ret void
+
+catch.dispatch1:                                  ; preds = %bb1
+  %4 = catchswitch within none [label %catch.start1] unwind to caller
+
+catch.start1:                                     ; preds = %catch.dispatch1
+  %5 = catchpad within %4 [i8* null]
+  %6 = call i8* @llvm.wasm.get.exception(token %5)
+  %7 = call i32 @llvm.wasm.get.ehselector(token %5)
+  catchret from %5 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start1, %catch.start0, %bb1
+  ret void
+}
+
 ; Check if the unwind destination mismatch stats are correct
-; NOSORT: 19 wasm-cfg-stackify    - Number of call unwind mismatches found
-; NOSORT:  3 wasm-cfg-stackify    - Number of catch unwind mismatches found
+; NOSORT: 20 wasm-cfg-stackify    - Number of call unwind mismatches found
+; NOSORT:  4 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()
 declare void @bar()
