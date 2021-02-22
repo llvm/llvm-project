@@ -379,17 +379,17 @@ define arm_aapcs_vfpcc <8 x half> @ptr_f16(<8 x half*>* %offptr) {
 ; CHECK-NEXT:    vldr.16 s8, [r1]
 ; CHECK-NEXT:    vmov r1, s4
 ; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vmov r1, s7
-; CHECK-NEXT:    vins.f16 s0, s8
-; CHECK-NEXT:    vldr.16 s8, [r1]
+; CHECK-NEXT:    vmov r2, s7
 ; CHECK-NEXT:    vmov r1, s6
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
+; CHECK-NEXT:    vldr.16 s4, [r2]
+; CHECK-NEXT:    vins.f16 s0, s8
 ; CHECK-NEXT:    vldr.16 s1, [r1]
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vins.f16 s1, s8
-; CHECK-NEXT:    vldr.16 s8, [r0]
+; CHECK-NEXT:    vins.f16 s1, s4
+; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
 ; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov r1, s5
 ; CHECK-NEXT:    vldr.16 s2, [r0]
+; CHECK-NEXT:    vldr.16 s8, [r1]
 ; CHECK-NEXT:    vmov r0, s7
 ; CHECK-NEXT:    vins.f16 s2, s8
 ; CHECK-NEXT:    vldr.16 s8, [r0]
