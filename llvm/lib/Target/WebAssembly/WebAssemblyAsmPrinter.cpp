@@ -23,7 +23,6 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblyTargetMachine.h"
-#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -172,24 +171,18 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
 
 void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
   for (auto &It : OutContext.getSymbols()) {
-    // Emit .globaltype, .eventtype, or .tabletype declarations.
+    // Emit a .globaltype and .eventtype declaration.
     auto Sym = cast<MCSymbolWasm>(It.getValue());
     if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_GLOBAL)
       getTargetStreamer()->emitGlobalType(Sym);
     else if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_EVENT)
       getTargetStreamer()->emitEventType(Sym);
-    else if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_TABLE)
-      getTargetStreamer()->emitTableType(Sym);
   }
 
   DenseSet<MCSymbol *> InvokeSymbols;
-  bool HasAddressTakenFunction = false;
   for (const auto &F : M) {
     if (F.isIntrinsic())
       continue;
-
-    if (F.hasAddressTaken())
-      HasAddressTakenFunction = true;
 
     // Emit function type info for all undefined functions
     if (F.isDeclarationForLinker()) {
@@ -247,18 +240,6 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
       Sym->setExportName(storeName(Name));
       getTargetStreamer()->emitExportName(Sym, Name);
     }
-  }
-
-  // When a function's address is taken, a TABLE_INDEX relocation is emitted
-  // against the function symbol at the use site.  However the relocation
-  // doesn't explicitly refer to the table.  In the future we may want to
-  // define a new kind of reloc against both the function and the table, so
-  // that the linker can see that the function symbol keeps the table alive,
-  // but for now manually mark the table as live.
-  if (HasAddressTakenFunction) {
-    MCSymbolWasm *FunctionTable =
-        WebAssembly::getOrCreateFunctionTableSymbol(OutContext, Subtarget);
-    OutStreamer->emitSymbolAttribute(FunctionTable, MCSA_NoDeadStrip);
   }
 
   for (const auto &G : M.globals()) {
