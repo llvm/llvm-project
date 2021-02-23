@@ -192,8 +192,10 @@ static void emitTypeDefDoc(TypeDef td, raw_ostream &os) {
   if (td.getMnemonic() && td.getPrinterCode() && *td.getPrinterCode() == "" &&
       td.getParserCode() && *td.getParserCode() == "")
     emitTypeAssemblyFormat(td, os);
-  if (td.hasDescription())
+  if (td.hasDescription()) {
+    os << "\n";
     mlir::tblgen::emitDescription(td.getDescription(), os);
+  }
 
   // Emit attribute documentation.
   SmallVector<TypeParameter, 4> parameters;
@@ -204,7 +206,7 @@ static void emitTypeDefDoc(TypeDef td, raw_ostream &os) {
        << "| :-------: | :-------: | ----------- |\n";
     for (const auto &it : parameters) {
       auto desc = it.getSummary();
-      os << "| " << it.getName() << " | `" << td.getCppClassName() << "` | "
+      os << "| " << it.getName() << " | `" << it.getCppType() << "` | "
          << (desc ? *desc : "") << " |\n";
     }
   }
