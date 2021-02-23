@@ -2617,21 +2617,6 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
   }
 }
 
-void ValueObject::LogValueObject(Log *log) {
-  if (log)
-    return LogValueObject(log, DumpValueObjectOptions(*this));
-}
-
-void ValueObject::LogValueObject(Log *log,
-                                 const DumpValueObjectOptions &options) {
-  if (log) {
-    StreamString s;
-    Dump(s, options);
-    if (s.GetSize())
-      log->PutCString(s.GetData());
-  }
-}
-
 void ValueObject::Dump(Stream &s) { Dump(s, DumpValueObjectOptions(*this)); }
 
 void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
