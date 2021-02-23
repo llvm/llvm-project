@@ -92,10 +92,20 @@ let Predicates = [HasAMXINT8, In64BitMode] in {
     }
 
     // Pseduo instruction for RA.
-    let Constraints = "$src4 = $dst" in
-    def PTDPBSSDV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
-                            GR16:$src2, GR16:$src3, TILE:$src4,
-                            TILE:$src5, TILE:$src6), []>;
+    let Constraints = "$src4 = $dst" in {
+      def PTDPBSSDV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
+                              GR16:$src2, GR16:$src3, TILE:$src4,
+                              TILE:$src5, TILE:$src6), []>;
+      def PTDPBSUDV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
+                              GR16:$src2, GR16:$src3, TILE:$src4,
+                              TILE:$src5, TILE:$src6), []>;
+      def PTDPBUSDV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
+                              GR16:$src2, GR16:$src3, TILE:$src4,
+                              TILE:$src5, TILE:$src6), []>;
+      def PTDPBUUDV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
+                              GR16:$src2, GR16:$src3, TILE:$src4,
+                              TILE:$src5, TILE:$src6), []>;
+    }
 
     let usesCustomInserter = 1 in {
       // Pseudo instructions, using immediates instead of tile registers.
