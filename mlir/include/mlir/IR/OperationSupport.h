@@ -327,7 +327,9 @@ public:
 
   /// If this operation has a registered operation description, return it.
   /// Otherwise return null.
-  const AbstractOperation *getAbstractOperation() const;
+  const AbstractOperation *getAbstractOperation() const {
+    return representation.dyn_cast<const AbstractOperation *>();
+  }
 
   void print(raw_ostream &os) const;
   void dump() const;
