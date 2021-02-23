@@ -1123,6 +1123,27 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
   return true;
 }
 
+bool RISCVDAGToDAGISel::selectSExti32(SDValue N, SDValue &Val) {
+  if (N.getOpcode() == ISD::SIGN_EXTEND_INREG &&
+      cast<VTSDNode>(N.getOperand(1))->getVT() == MVT::i32) {
+    Val = N.getOperand(0);
+    return true;
+  }
+  // FIXME: Should we just call computeNumSignBits here?
+  if (N.getOpcode() == ISD::AssertSext &&
+      cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32)) {
+    Val = N;
+    return true;
+  }
+  if (N.getOpcode() == ISD::AssertZext &&
+      cast<VTSDNode>(N->getOperand(1))->getVT().bitsLT(MVT::i32)) {
+    Val = N;
+    return true;
+  }
+
+  return false;
+}
+
 // Match (srl (and val, mask), imm) where the result would be a
 // zero-extended 32-bit integer. i.e. the mask is 0xffffffff or the result
 // is equivalent to this (SimplifyDemandedBits may have removed lower bits
