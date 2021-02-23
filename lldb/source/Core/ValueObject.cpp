@@ -914,7 +914,7 @@ ValueObject::ReadPointedString(lldb::DataBufferSP &buffer_sp, Status &error,
     if (is_array) {
       // We have an array
       uint64_t array_size = 0;
-      if (compiler_type.IsArrayType(nullptr, &array_size, nullptr)) {
+      if (compiler_type.IsArrayType(nullptr, &array_size)) {
         cstr_len = array_size;
         if (cstr_len > max_length) {
           capped_data = true;
@@ -1608,9 +1608,7 @@ ValueObject::GetTypeInfo(CompilerType *pointee_or_element_compiler_type) {
 
 bool ValueObject::IsPointerType() { return GetCompilerType().IsPointerType(); }
 
-bool ValueObject::IsArrayType() {
-  return GetCompilerType().IsArrayType(nullptr, nullptr, nullptr);
-}
+bool ValueObject::IsArrayType() { return GetCompilerType().IsArrayType(); }
 
 bool ValueObject::IsScalarType() { return GetCompilerType().IsScalarType(); }
 
