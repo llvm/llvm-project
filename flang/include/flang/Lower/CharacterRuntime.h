@@ -17,11 +17,11 @@ class ExtendedValue;
 
 namespace Fortran {
 namespace lower {
-class AbstractConverter;
+class FirOpBuilder;
 
 /// Generate call to a character comparison for two ssa-values of type
 /// `boxchar`.
-mlir::Value genCharCompare(AbstractConverter &converter, mlir::Location loc,
+mlir::Value genCharCompare(FirOpBuilder &builder, mlir::Location loc,
                            mlir::CmpIPredicate cmp,
                            const fir::ExtendedValue &lhs,
                            const fir::ExtendedValue &rhs);
@@ -30,7 +30,7 @@ mlir::Value genCharCompare(AbstractConverter &converter, mlir::Location loc,
 /// are 4 arguments, 2 for the lhs and 2 for the rhs. Each CHARACTER must pass a
 /// reference to its buffer (`ref<char<K>>`) and its LEN type parameter (some
 /// integral type).
-mlir::Value genRawCharCompare(AbstractConverter &converter, mlir::Location loc,
+mlir::Value genRawCharCompare(FirOpBuilder &builder, mlir::Location loc,
                               mlir::CmpIPredicate cmp, mlir::Value lhsBuff,
                               mlir::Value lhsLen, mlir::Value rhsBuff,
                               mlir::Value rhsLen);

@@ -319,8 +319,7 @@ public:
   mlir::Value createCharCompare(mlir::CmpIPredicate pred,
                                 const fir::ExtendedValue &left,
                                 const fir::ExtendedValue &right) {
-    return Fortran::lower::genCharCompare(converter, getLoc(), pred, left,
-                                          right);
+    return Fortran::lower::genCharCompare(builder, getLoc(), pred, left, right);
   }
 
   template <typename A>
@@ -2674,7 +2673,7 @@ public:
     return [=](IterSpace iters) -> ExtValue {
       auto lhs = fir::getBase(lf(iters));
       auto rhs = fir::getBase(rf(iters));
-      return Fortran::lower::genCharCompare(converter, loc, pred, lhs, rhs);
+      return Fortran::lower::genCharCompare(builder, loc, pred, lhs, rhs);
     };
   }
   template <int KIND>
