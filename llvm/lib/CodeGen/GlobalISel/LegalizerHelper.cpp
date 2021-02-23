@@ -863,8 +863,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_SSUBO:
+  case TargetOpcode::G_SADDE:
+  case TargetOpcode::G_SSUBE:
   case TargetOpcode::G_UADDO:
   case TargetOpcode::G_USUBO:
+  case TargetOpcode::G_UADDE:
+  case TargetOpcode::G_USUBE:
     return narrowScalarAddSub(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_MUL:
   case TargetOpcode::G_UMULH:
@@ -4472,21 +4476,25 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
   unsigned OpO, OpE, OpF;
   switch (Opcode) {
   case TargetOpcode::G_SADDO:
+  case TargetOpcode::G_SADDE:
   case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_UADDE:
   case TargetOpcode::G_ADD:
     OpO = TargetOpcode::G_UADDO;
     OpE = TargetOpcode::G_UADDE;
     OpF = TargetOpcode::G_UADDE;
-    if (Opcode == TargetOpcode::G_SADDO)
+    if (Opcode == TargetOpcode::G_SADDO || Opcode == TargetOpcode::G_SADDE)
       OpF = TargetOpcode::G_SADDE;
     break;
   case TargetOpcode::G_SSUBO:
+  case TargetOpcode::G_SSUBE:
   case TargetOpcode::G_USUBO:
+  case TargetOpcode::G_USUBE:
   case TargetOpcode::G_SUB:
     OpO = TargetOpcode::G_USUBO;
     OpE = TargetOpcode::G_USUBE;
     OpF = TargetOpcode::G_USUBE;
-    if (Opcode == TargetOpcode::G_SSUBO)
+    if (Opcode == TargetOpcode::G_SSUBO || Opcode == TargetOpcode::G_SSUBE)
       OpF = TargetOpcode::G_SSUBE;
     break;
   default:
@@ -4500,12 +4508,14 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
   Register CarryDst;
   if (NumDefs == 2)
     CarryDst = MI.getOperand(1).getReg();
+  Register CarryIn;
+  if (MI.getNumOperands() == NumDefs + 3)
+    CarryIn = MI.getOperand(NumDefs + 2).getReg();
 
   SmallVector<Register, 2> Src1Regs, Src2Regs, DstRegs;
   extractParts(Src1, NarrowTy, NumParts, Src1Regs);
   extractParts(Src2, NarrowTy, NumParts, Src2Regs);
 
-  Register CarryIn;
   for (int i = 0; i < NumParts; ++i) {
     Register DstReg = MRI.createGenericVirtualRegister(NarrowTy);
     Register CarryOut = MRI.createGenericVirtualRegister(LLT::scalar(1));
@@ -4513,7 +4523,7 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
     if (i == NumParts - 1 && CarryDst)
       CarryOut = CarryDst;
 
-    if (i == 0) {
+    if (!CarryIn) {
       MIRBuilder.buildInstr(OpO, {DstReg, CarryOut},
                             {Src1Regs[i], Src2Regs[i]});
     } else if (i == NumParts - 1) {
