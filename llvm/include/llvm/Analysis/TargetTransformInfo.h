@@ -726,10 +726,10 @@ public:
                                     bool Insert, bool Extract) const;
 
   /// Estimate the overhead of scalarizing an instructions unique
-  /// non-constant operands. The types of the arguments are ordinarily
-  /// scalar, in which case the costs are multiplied with VF.
+  /// non-constant operands. The (potentially vector) types to use for each of
+  /// argument are passes via Tys.
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                            unsigned VF) const;
+                                            ArrayRef<Type *> Tys) const;
 
   /// If target has efficient vector element load/store instructions, it can
   /// return true here so that insertion/extraction costs are not added to
@@ -1479,7 +1479,7 @@ public:
                                             bool Insert, bool Extract) = 0;
   virtual unsigned
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                   unsigned VF) = 0;
+                                   ArrayRef<Type *> Tys) = 0;
   virtual bool supportsEfficientVectorElementLoadStore() = 0;
   virtual bool enableAggressiveInterleaving(bool LoopHasReductions) = 0;
   virtual MemCmpExpansionOptions
@@ -1864,8 +1864,8 @@ public:
     return Impl.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
   }
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                            unsigned VF) override {
-    return Impl.getOperandsScalarizationOverhead(Args, VF);
+                                            ArrayRef<Type *> Tys) override {
+    return Impl.getOperandsScalarizationOverhead(Args, Tys);
   }
 
   bool supportsEfficientVectorElementLoadStore() override {

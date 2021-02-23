@@ -609,51 +609,48 @@ public:
     return thisT()->getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
   }
 
-  /// Estimate the overhead of scalarizing an instruction's unique
-  /// non-constant operands. The types of the arguments are ordinarily
-  /// scalar, in which case the costs are multiplied with VF.
+  /// Estimate the overhead of scalarizing an instructions unique
+  /// non-constant operands. The (potentially vector) types to use for each of
+  /// argument are passes via Tys.
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                            unsigned VF) {
+                                            ArrayRef<Type *> Tys) {
+    assert(Args.size() == Tys.size() && "Expected matching Args and Tys");
+
     unsigned Cost = 0;
     SmallPtrSet<const Value*, 4> UniqueOperands;
-    for (const Value *A : Args) {
+    for (int I = 0, E = Args.size(); I != E; I++) {
       // Disregard things like metadata arguments.
-      Type *Ty = A->getType();
+      const Value *A = Args[I];
+      Type *Ty = Tys[I];
       if (!Ty->isIntOrIntVectorTy() && !Ty->isFPOrFPVectorTy() &&
           !Ty->isPtrOrPtrVectorTy())
         continue;
 
       if (!isa<Constant>(A) && UniqueOperands.insert(A).second) {
-        auto *VecTy = dyn_cast<VectorType>(Ty);
-        if (VecTy) {
-          // If A is a vector operand, VF should be 1 or correspond to A.
-          assert((VF == 1 ||
-                  VF == cast<FixedVectorType>(VecTy)->getNumElements()) &&
-                 "Vector argument does not match VF");
-        }
-        else
-          VecTy = FixedVectorType::get(Ty, VF);
-
-        Cost += getScalarizationOverhead(VecTy, false, true);
+        if (auto *VecTy = dyn_cast<VectorType>(Ty))
+          Cost += getScalarizationOverhead(VecTy, false, true);
       }
     }
 
     return Cost;
   }
 
-  unsigned getScalarizationOverhead(VectorType *InTy,
-                                    ArrayRef<const Value *> Args) {
-    auto *Ty = cast<FixedVectorType>(InTy);
-
+  /// Estimate the overhead of scalarizing the inputs and outputs of an
+  /// instruction, with return type RetTy and arguments Args of type Tys. If
+  /// Args are unknown (empty), then the cost associated with one argument is
+  /// added as a heuristic.
+  unsigned getScalarizationOverhead(VectorType *RetTy,
+                                    ArrayRef<const Value *> Args,
+                                    ArrayRef<Type *> Tys) {
     unsigned Cost = 0;
 
-    Cost += getScalarizationOverhead(Ty, true, false);
+    Cost += getScalarizationOverhead(RetTy, true, false);
     if (!Args.empty())
-      Cost += getOperandsScalarizationOverhead(Args, Ty->getNumElements());
+      Cost += getOperandsScalarizationOverhead(Args, Tys);
     else
       // When no information on arguments is provided, we add the cost
       // associated with one argument as a heuristic.
-      Cost += getScalarizationOverhead(Ty, false, true);
+      Cost += getScalarizationOverhead(RetTy, false, true);
 
     return Cost;
   }
@@ -710,7 +707,8 @@ public:
           Opd1PropInfo, Opd2PropInfo, Args, CxtI);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
-      return getScalarizationOverhead(VTy, Args) + Num * Cost;
+      SmallVector<Type *> Tys(Args.size(), Ty);
+      return getScalarizationOverhead(VTy, Args, Tys) + Num * Cost;
     }
 
     // We don't know anything about this scalar instruction.
@@ -1354,7 +1352,7 @@ public:
         ScalarizationCost +=
             getScalarizationOverhead(cast<VectorType>(RetTy), true, false);
       ScalarizationCost +=
-          getOperandsScalarizationOverhead(Args, RetVF.getKnownMinValue());
+          getOperandsScalarizationOverhead(Args, ICA.getArgTypes());
     }
 
     IntrinsicCostAttributes Attrs(IID, RetTy, ICA.getArgTypes(), FMF, I,

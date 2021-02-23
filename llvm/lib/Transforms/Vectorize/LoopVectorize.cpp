@@ -3634,15 +3634,15 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI, ElementCount VF,
   return Cost;
 }
 
+static Type *MaybeVectorizeType(Type *Elt, ElementCount VF) {
+  if (VF.isScalar() || (!Elt->isIntOrPtrTy() && !Elt->isFloatingPointTy()))
+    return Elt;
+  return VectorType::get(Elt, VF);
+}
+
 InstructionCost
 LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
                                                    ElementCount VF) {
-  auto MaybeVectorizeType = [](Type *Elt, ElementCount VF) -> Type * {
-    if (VF.isScalar() || (!Elt->isIntOrPtrTy() && !Elt->isFloatingPointTy()))
-      return Elt;
-    return VectorType::get(Elt, VF);
-  };
-
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
   assert(ID && "Expected intrinsic call!");
   Type *RetTy = MaybeVectorizeType(CI->getType(), VF);
@@ -6914,8 +6914,11 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
 
   // Skip operands that do not require extraction/scalarization and do not incur
   // any overhead.
+  SmallVector<Type *> Tys;
+  for (auto *V : filterExtractingOperands(Ops, VF))
+    Tys.push_back(MaybeVectorizeType(V->getType(), VF));
   return Cost + TTI.getOperandsScalarizationOverhead(
-                    filterExtractingOperands(Ops, VF), VF.getKnownMinValue());
+                    filterExtractingOperands(Ops, VF), Tys);
 }
 
 void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
