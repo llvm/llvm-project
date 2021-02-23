@@ -67,6 +67,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- The `run-clang-tidy.py` helper script is now installed in `bin/` as
+  `run-clang-tidy`. It was previously installed in `share/clang/`.
+
 New checks
 ^^^^^^^^^^
 

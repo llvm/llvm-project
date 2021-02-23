@@ -455,4 +455,18 @@ TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
   TiedStream << "0";
   EXPECT_EQ("acegostuv", TiedToBuffer);
 }
+
+TEST(raw_ostreamTest, reserve_stream) {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << "11111111111111111111";
+  uint64_t CurrentPos = OS.tell();
+  OS.reserveExtraSpace(1000);
+  EXPECT_TRUE(Str.capacity() >= CurrentPos + 1000);
+  OS << "hello";
+  OS << 1;
+  OS << 'w' << 'o' << 'r' << 'l' << 'd';
+  OS.flush();
+  EXPECT_EQ("11111111111111111111hello1world", Str);
+}
 }
