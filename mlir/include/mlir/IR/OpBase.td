@@ -2492,15 +2492,21 @@ def replaceWithValue;
 //
 // If an empty string is passed in for `body`, then *only* the builder
 // declaration will be generated; this provides a way to define complicated
-// builders entirely in C++.
+// builders entirely in C++. If a `body` string is provided, the `Base::get`
+// method should be invoked using `$_get`, e.g.:
 //
-// `checkedBody` is similar to `body`, but is the code block used when
-// generating a `getChecked` method.
-class TypeBuilder<dag parameters, code bodyCode = "",
-                  code checkedBodyCode = ""> {
+// ```
+// TypeBuilder<(ins "int":$integerArg, CArg<"float", "3.0f">:$floatArg), [{
+//   return $_get($_ctxt, integerArg, floatArg);
+// }]>
+// ```
+//
+// This is necessary because the `body` is also used to generate `getChecked`
+// methods, which have a different underlying `Base::get*` call.
+//
+class TypeBuilder<dag parameters, code bodyCode = ""> {
   dag dagParams = parameters;
   code body = bodyCode;
-  code checkedBody = checkedBodyCode;
 
   // The context parameter can be inferred from one of the other parameters and
   // is not implicitly added to the parameter list.
@@ -2510,10 +2516,8 @@ class TypeBuilder<dag parameters, code bodyCode = "",
 // A class of TypeBuilder that is able to infer the MLIRContext parameter from
 // one of the other builder parameters. Instances of this builder do not have
 // `MLIRContext *` implicitly added to the parameter list.
-class TypeBuilderWithInferredContext<dag parameters, code bodyCode = "",
-                                     code checkedBodyCode = "">
+class TypeBuilderWithInferredContext<dag parameters, code bodyCode = "">
   : TypeBuilder<parameters, bodyCode> {
-  code checkedBody = checkedBodyCode;
   let hasInferredContextParam = 1;
 }
 
@@ -2590,9 +2594,8 @@ class TypeDef<Dialect dialect, string name,
   // Avoid generating default get/getChecked functions. Custom get methods must
   // be provided.
   bit skipDefaultBuilders = 0;
-  // Generate the verifyConstructionInvariants declaration and getChecked
-  // method.
-  bit genVerifyInvariantsDecl = 0;
+  // Generate the verify and getChecked methods.
+  bit genVerifyDecl = 0;
   // Extra code to include in the class declaration.
   code extraClassDeclaration = [{}];
 

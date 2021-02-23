@@ -187,7 +187,7 @@ static LLVMFunctionType parseFunctionType(DialectAsmParser &parser) {
   // Function type without arguments.
   if (succeeded(parser.parseOptionalRParen())) {
     if (succeeded(parser.parseGreater()))
-      return LLVMFunctionType::getChecked(loc, returnType, {},
+      return LLVMFunctionType::getChecked(loc, returnType, llvm::None,
                                           /*isVarArg=*/false);
     return LLVMFunctionType();
   }
@@ -345,7 +345,8 @@ static LLVMStructType parseStructType(DialectAsmParser &parser) {
     if (knownStructNames.count(name)) {
       if (failed(parser.parseGreater()))
         return LLVMStructType();
-      return LLVMStructType::getIdentifiedChecked(loc, name);
+      return LLVMStructType::getIdentifiedChecked(
+          [loc] { return emitError(loc); }, loc.getContext(), name);
     }
     if (failed(parser.parseComma()))
       return LLVMStructType();
@@ -359,7 +360,8 @@ static LLVMStructType parseStructType(DialectAsmParser &parser) {
              LLVMStructType();
     if (failed(parser.parseGreater()))
       return LLVMStructType();
-    auto type = LLVMStructType::getOpaqueChecked(loc, name);
+    auto type = LLVMStructType::getOpaqueChecked(
+        [loc] { return emitError(loc); }, loc.getContext(), name);
     if (!type.isOpaque()) {
       parser.emitError(kwLoc, "redeclaring defined struct as opaque");
       return LLVMStructType();
@@ -377,8 +379,10 @@ static LLVMStructType parseStructType(DialectAsmParser &parser) {
     if (failed(parser.parseGreater()))
       return LLVMStructType();
     if (!isIdentified)
-      return LLVMStructType::getLiteralChecked(loc, {}, isPacked);
-    auto type = LLVMStructType::getIdentifiedChecked(loc, name);
+      return LLVMStructType::getLiteralChecked([loc] { return emitError(loc); },
+                                               loc.getContext(), {}, isPacked);
+    auto type = LLVMStructType::getIdentifiedChecked(
+        [loc] { return emitError(loc); }, loc.getContext(), name);
     return trySetStructBody(type, {}, isPacked, parser, kwLoc);
   }
 
@@ -402,8 +406,10 @@ static LLVMStructType parseStructType(DialectAsmParser &parser) {
 
   // Construct the struct with body.
   if (!isIdentified)
-    return LLVMStructType::getLiteralChecked(loc, subtypes, isPacked);
-  auto type = LLVMStructType::getIdentifiedChecked(loc, name);
+    return LLVMStructType::getLiteralChecked(
+        [loc] { return emitError(loc); }, loc.getContext(), subtypes, isPacked);
+  auto type = LLVMStructType::getIdentifiedChecked(
+      [loc] { return emitError(loc); }, loc.getContext(), name);
   return trySetStructBody(type, subtypes, isPacked, parser, subtypesLoc);
 }
 

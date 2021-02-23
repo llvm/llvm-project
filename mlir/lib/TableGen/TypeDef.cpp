@@ -23,13 +23,6 @@ using namespace mlir::tblgen;
 // TypeBuilder
 //===----------------------------------------------------------------------===//
 
-/// Return an optional code body used for the `getChecked` variant of this
-/// builder.
-Optional<StringRef> TypeBuilder::getCheckedBody() const {
-  Optional<StringRef> body = def->getValueAsOptionalString("checkedBody");
-  return body && !body->empty() ? body : llvm::None;
-}
-
 /// Returns true if this builder is able to infer the MLIRContext parameter.
 bool TypeBuilder::hasInferredContextParameter() const {
   return def->getValueAsBit("hasInferredContextParam");
@@ -111,8 +104,8 @@ llvm::Optional<StringRef> TypeDef::getParserCode() const {
 bool TypeDef::genAccessors() const {
   return def->getValueAsBit("genAccessors");
 }
-bool TypeDef::genVerifyInvariantsDecl() const {
-  return def->getValueAsBit("genVerifyInvariantsDecl");
+bool TypeDef::genVerifyDecl() const {
+  return def->getValueAsBit("genVerifyDecl");
 }
 llvm::Optional<StringRef> TypeDef::getExtraDecls() const {
   auto value = def->getValueAsString("extraClassDeclaration");
