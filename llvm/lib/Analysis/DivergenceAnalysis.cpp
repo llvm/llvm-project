@@ -398,8 +398,7 @@ DivergenceAnalysisPrinterPass::run(Function &F, FunctionAnalysisManager &FAM) {
       OS << (DI.isDivergent(Arg) ? "DIVERGENT: " : "           ");
       OS << Arg << "\n";
     }
-    for (auto BI = F.begin(), BE = F.end(); BI != BE; ++BI) {
-      auto &BB = *BI;
+    for (const BasicBlock &BB : F) {
       OS << "\n           " << BB.getName() << ":\n";
       for (auto &I : BB.instructionsWithoutDebug()) {
         OS << (DI.isDivergent(I) ? "DIVERGENT:     " : "               ");

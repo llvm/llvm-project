@@ -1395,11 +1395,9 @@ void MemorySSAUpdater::removeBlocks(
     MemorySSA::AccessList *Acc = MSSA->getWritableBlockAccesses(BB);
     if (!Acc)
       continue;
-    for (auto AB = Acc->begin(), AE = Acc->end(); AB != AE;) {
-      MemoryAccess *MA = &*AB;
-      ++AB;
-      MSSA->removeFromLookups(MA);
-      MSSA->removeFromLists(MA);
+    for (MemoryAccess &MA : llvm::make_early_inc_range(*Acc)) {
+      MSSA->removeFromLookups(&MA);
+      MSSA->removeFromLists(&MA);
     }
   }
 }
