@@ -370,39 +370,33 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK-LABEL: v2i128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x7, #0 // =0
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    csinc w9, w9, wzr, ne
+; CHECK-NEXT:    cset w9, lt
 ; CHECK-NEXT:    cmp x3, #0 // =0
-; CHECK-NEXT:    cset w10, ge
-; CHECK-NEXT:    csinc w10, w10, wzr, ne
+; CHECK-NEXT:    cset w10, lt
 ; CHECK-NEXT:    cmp w10, w9
 ; CHECK-NEXT:    cset w9, ne
 ; CHECK-NEXT:    subs x11, x2, x6
 ; CHECK-NEXT:    sbcs x12, x3, x7
 ; CHECK-NEXT:    cmp x12, #0 // =0
-; CHECK-NEXT:    cset w13, ge
 ; CHECK-NEXT:    mov x8, #9223372036854775807
-; CHECK-NEXT:    csinc w13, w13, wzr, ne
+; CHECK-NEXT:    cset w15, lt
 ; CHECK-NEXT:    cinv x14, x8, ge
-; CHECK-NEXT:    cmp w10, w13
-; CHECK-NEXT:    cset w13, ne
-; CHECK-NEXT:    asr x10, x12, #63
-; CHECK-NEXT:    tst w9, w13
+; CHECK-NEXT:    cmp w10, w15
+; CHECK-NEXT:    cset w10, ne
+; CHECK-NEXT:    asr x13, x12, #63
+; CHECK-NEXT:    tst w9, w10
+; CHECK-NEXT:    csel x2, x13, x11, ne
 ; CHECK-NEXT:    csel x3, x14, x12, ne
-; CHECK-NEXT:    csel x2, x10, x11, ne
 ; CHECK-NEXT:    cmp x5, #0 // =0
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    csinc w9, w9, wzr, ne
+; CHECK-NEXT:    cset w9, lt
 ; CHECK-NEXT:    cmp x1, #0 // =0
-; CHECK-NEXT:    cset w10, ge
-; CHECK-NEXT:    csinc w10, w10, wzr, ne
+; CHECK-NEXT:    cset w10, lt
 ; CHECK-NEXT:    cmp w10, w9
 ; CHECK-NEXT:    cset w9, ne
 ; CHECK-NEXT:    subs x11, x0, x4
 ; CHECK-NEXT:    sbcs x12, x1, x5
 ; CHECK-NEXT:    cmp x12, #0 // =0
-; CHECK-NEXT:    cset w13, ge
-; CHECK-NEXT:    csinc w13, w13, wzr, ne
+; CHECK-NEXT:    cset w13, lt
 ; CHECK-NEXT:    cinv x8, x8, ge
 ; CHECK-NEXT:    cmp w10, w13
 ; CHECK-NEXT:    cset w10, ne

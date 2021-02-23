@@ -3661,9 +3661,9 @@ void DAGTypeLegalizer::ExpandIntRes_SADDSUBO(SDNode *Node,
 
     // Compute the overflow.
     //
-    //   LHSSign -> LHS >= 0
-    //   RHSSign -> RHS >= 0
-    //   SumSign -> Sum >= 0
+    //   LHSSign -> LHS < 0
+    //   RHSSign -> RHS < 0
+    //   SumSign -> Sum < 0
     //
     //   Add:
     //   Overflow -> (LHSSign == RHSSign) && (LHSSign != SumSign)
@@ -3673,13 +3673,13 @@ void DAGTypeLegalizer::ExpandIntRes_SADDSUBO(SDNode *Node,
     EVT OType = Node->getValueType(1);
     SDValue Zero = DAG.getConstant(0, dl, LHS.getValueType());
 
-    SDValue LHSSign = DAG.getSetCC(dl, OType, LHS, Zero, ISD::SETGE);
-    SDValue RHSSign = DAG.getSetCC(dl, OType, RHS, Zero, ISD::SETGE);
+    SDValue LHSSign = DAG.getSetCC(dl, OType, LHS, Zero, ISD::SETLT);
+    SDValue RHSSign = DAG.getSetCC(dl, OType, RHS, Zero, ISD::SETLT);
     SDValue SignsMatch = DAG.getSetCC(dl, OType, LHSSign, RHSSign,
                                       Node->getOpcode() == ISD::SADDO ?
                                       ISD::SETEQ : ISD::SETNE);
 
-    SDValue SumSign = DAG.getSetCC(dl, OType, Sum, Zero, ISD::SETGE);
+    SDValue SumSign = DAG.getSetCC(dl, OType, Sum, Zero, ISD::SETLT);
     SDValue SumSignNE = DAG.getSetCC(dl, OType, LHSSign, SumSign, ISD::SETNE);
 
     Ovf = DAG.getNode(ISD::AND, dl, OType, SignsMatch, SumSignNE);

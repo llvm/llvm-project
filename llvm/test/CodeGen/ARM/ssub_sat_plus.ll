@@ -92,13 +92,13 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-T1-NEXT:    movs r4, #0
 ; CHECK-T1-NEXT:    cmp r5, #0
 ; CHECK-T1-NEXT:    mov r3, r2
-; CHECK-T1-NEXT:    bge .LBB1_2
+; CHECK-T1-NEXT:    bmi .LBB1_2
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:    mov r3, r4
 ; CHECK-T1-NEXT:  .LBB1_2:
 ; CHECK-T1-NEXT:    cmp r1, #0
 ; CHECK-T1-NEXT:    mov r6, r2
-; CHECK-T1-NEXT:    bge .LBB1_4
+; CHECK-T1-NEXT:    bmi .LBB1_4
 ; CHECK-T1-NEXT:  @ %bb.3:
 ; CHECK-T1-NEXT:    mov r6, r4
 ; CHECK-T1-NEXT:  .LBB1_4:
@@ -108,9 +108,8 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-T1-NEXT:    ldr r7, [sp, #24]
 ; CHECK-T1-NEXT:    subs r0, r0, r7
 ; CHECK-T1-NEXT:    sbcs r1, r5
-; CHECK-T1-NEXT:    cmp r1, #0
 ; CHECK-T1-NEXT:    mov r5, r2
-; CHECK-T1-NEXT:    bge .LBB1_6
+; CHECK-T1-NEXT:    bmi .LBB1_6
 ; CHECK-T1-NEXT:  @ %bb.5:
 ; CHECK-T1-NEXT:    mov r5, r4
 ; CHECK-T1-NEXT:  .LBB1_6:
@@ -152,21 +151,20 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-T2-NEXT:    movs r2, #0
 ; CHECK-T2-NEXT:    movs r3, #0
 ; CHECK-T2-NEXT:    ldr r4, [sp, #8]
-; CHECK-T2-NEXT:    cmp.w r12, #-1
-; CHECK-T2-NEXT:    it gt
-; CHECK-T2-NEXT:    movgt r2, #1
-; CHECK-T2-NEXT:    cmp.w r1, #-1
-; CHECK-T2-NEXT:    it gt
-; CHECK-T2-NEXT:    movgt r3, #1
+; CHECK-T2-NEXT:    cmp.w r12, #0
+; CHECK-T2-NEXT:    it mi
+; CHECK-T2-NEXT:    movmi r2, #1
+; CHECK-T2-NEXT:    cmp r1, #0
+; CHECK-T2-NEXT:    it mi
+; CHECK-T2-NEXT:    movmi r3, #1
 ; CHECK-T2-NEXT:    subs r2, r3, r2
 ; CHECK-T2-NEXT:    mov.w lr, #0
 ; CHECK-T2-NEXT:    it ne
 ; CHECK-T2-NEXT:    movne r2, #1
 ; CHECK-T2-NEXT:    subs r0, r0, r4
-; CHECK-T2-NEXT:    sbc.w r4, r1, r12
-; CHECK-T2-NEXT:    cmp.w r4, #-1
-; CHECK-T2-NEXT:    it gt
-; CHECK-T2-NEXT:    movgt.w lr, #1
+; CHECK-T2-NEXT:    sbcs.w r4, r1, r12
+; CHECK-T2-NEXT:    it mi
+; CHECK-T2-NEXT:    movmi.w lr, #1
 ; CHECK-T2-NEXT:    subs.w r1, r3, lr
 ; CHECK-T2-NEXT:    it ne
 ; CHECK-T2-NEXT:    movne r1, #1
@@ -184,33 +182,32 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ;
 ; CHECK-ARM-LABEL: func64:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    .save {r4, r5, r11, lr}
-; CHECK-ARM-NEXT:    push {r4, r5, r11, lr}
-; CHECK-ARM-NEXT:    ldr lr, [sp, #20]
-; CHECK-ARM-NEXT:    cmn r1, #1
+; CHECK-ARM-NEXT:    .save {r4, lr}
+; CHECK-ARM-NEXT:    push {r4, lr}
+; CHECK-ARM-NEXT:    ldr lr, [sp, #12]
+; CHECK-ARM-NEXT:    cmp r1, #0
 ; CHECK-ARM-NEXT:    mov r3, #0
 ; CHECK-ARM-NEXT:    mov r4, #0
-; CHECK-ARM-NEXT:    movwgt r3, #1
-; CHECK-ARM-NEXT:    cmn lr, #1
-; CHECK-ARM-NEXT:    movwgt r4, #1
-; CHECK-ARM-NEXT:    ldr r12, [sp, #16]
+; CHECK-ARM-NEXT:    movwmi r3, #1
+; CHECK-ARM-NEXT:    cmp lr, #0
+; CHECK-ARM-NEXT:    movwmi r4, #1
+; CHECK-ARM-NEXT:    ldr r12, [sp, #8]
 ; CHECK-ARM-NEXT:    subs r4, r3, r4
-; CHECK-ARM-NEXT:    mov r5, #0
+; CHECK-ARM-NEXT:    mov r2, #0
 ; CHECK-ARM-NEXT:    movwne r4, #1
 ; CHECK-ARM-NEXT:    subs r0, r0, r12
-; CHECK-ARM-NEXT:    sbc r2, r1, lr
-; CHECK-ARM-NEXT:    cmn r2, #1
-; CHECK-ARM-NEXT:    movwgt r5, #1
-; CHECK-ARM-NEXT:    subs r1, r3, r5
+; CHECK-ARM-NEXT:    sbcs r12, r1, lr
+; CHECK-ARM-NEXT:    movwmi r2, #1
+; CHECK-ARM-NEXT:    subs r1, r3, r2
 ; CHECK-ARM-NEXT:    movwne r1, #1
-; CHECK-ARM-NEXT:    ands r3, r4, r1
-; CHECK-ARM-NEXT:    asrne r0, r2, #31
+; CHECK-ARM-NEXT:    ands r2, r4, r1
+; CHECK-ARM-NEXT:    asrne r0, r12, #31
 ; CHECK-ARM-NEXT:    mov r1, #-2147483648
-; CHECK-ARM-NEXT:    cmp r2, #0
+; CHECK-ARM-NEXT:    cmp r12, #0
 ; CHECK-ARM-NEXT:    mvnmi r1, #-2147483648
-; CHECK-ARM-NEXT:    cmp r3, #0
-; CHECK-ARM-NEXT:    moveq r1, r2
-; CHECK-ARM-NEXT:    pop {r4, r5, r11, pc}
+; CHECK-ARM-NEXT:    cmp r2, #0
+; CHECK-ARM-NEXT:    moveq r1, r12
+; CHECK-ARM-NEXT:    pop {r4, pc}
   %a = mul i64 %y, %z
   %tmp = call i64 @llvm.ssub.sat.i64(i64 %x, i64 %z)
   ret i64 %tmp
