@@ -861,6 +861,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     return reduceOperationWidth(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_USUBO:
     return narrowScalarAddSub(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_MUL:
   case TargetOpcode::G_UMULH:
@@ -4466,10 +4468,12 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
 
   unsigned OpO, OpE;
   switch (MI.getOpcode()) {
+  case TargetOpcode::G_UADDO:
   case TargetOpcode::G_ADD:
     OpO = TargetOpcode::G_UADDO;
     OpE = TargetOpcode::G_UADDE;
     break;
+  case TargetOpcode::G_USUBO:
   case TargetOpcode::G_SUB:
     OpO = TargetOpcode::G_USUBO;
     OpE = TargetOpcode::G_USUBE;
@@ -4478,14 +4482,25 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
     llvm_unreachable("Unexpected add/sub opcode!");
   }
 
+  // 1 for a plain add/sub, 2 if this is an operation with a carry-out.
+  unsigned NumDefs = MI.getNumExplicitDefs();
+  Register Src1 = MI.getOperand(NumDefs).getReg();
+  Register Src2 = MI.getOperand(NumDefs + 1).getReg();
+  Register CarryDst;
+  if (NumDefs == 2)
+    CarryDst = MI.getOperand(1).getReg();
+
   SmallVector<Register, 2> Src1Regs, Src2Regs, DstRegs;
-  extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, Src1Regs);
-  extractParts(MI.getOperand(2).getReg(), NarrowTy, NumParts, Src2Regs);
+  extractParts(Src1, NarrowTy, NumParts, Src1Regs);
+  extractParts(Src2, NarrowTy, NumParts, Src2Regs);
 
   Register CarryIn;
   for (int i = 0; i < NumParts; ++i) {
     Register DstReg = MRI.createGenericVirtualRegister(NarrowTy);
     Register CarryOut = MRI.createGenericVirtualRegister(LLT::scalar(1));
+    // Forward the final carry-out to the destination register
+    if (i == NumParts - 1 && CarryDst)
+      CarryOut = CarryDst;
 
     if (i == 0)
       MIRBuilder.buildInstr(OpO, {DstReg, CarryOut},
