@@ -28,7 +28,8 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX7-NEXT:    s_cbranch_execz BB0_3
 ; GFX7-NEXT:  ; %bb.2:
 ; GFX7-NEXT:    s_bcnt1_i32_b64 s12, s[12:13]
-; GFX7-NEXT:    v_mul_u32_u24_e64 v1, s12, 5
+; GFX7-NEXT:    s_mul_i32 s12, s12, 5
+; GFX7-NEXT:    v_mov_b32_e32 v1, s12
 ; GFX7-NEXT:    buffer_atomic_add v1, off, s[4:7], 0 glc
 ; GFX7-NEXT:  BB0_3:
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[10:11]
@@ -61,7 +62,8 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX8-NEXT:    s_cbranch_execz BB0_3
 ; GFX8-NEXT:  ; %bb.2:
 ; GFX8-NEXT:    s_bcnt1_i32_b64 s12, s[12:13]
-; GFX8-NEXT:    v_mul_u32_u24_e64 v1, s12, 5
+; GFX8-NEXT:    s_mul_i32 s12, s12, 5
+; GFX8-NEXT:    v_mov_b32_e32 v1, s12
 ; GFX8-NEXT:    buffer_atomic_add v1, off, s[4:7], 0 glc
 ; GFX8-NEXT:  BB0_3:
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[10:11]
@@ -94,7 +96,8 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX9-NEXT:    s_cbranch_execz BB0_3
 ; GFX9-NEXT:  ; %bb.2:
 ; GFX9-NEXT:    s_bcnt1_i32_b64 s12, s[12:13]
-; GFX9-NEXT:    v_mul_u32_u24_e64 v1, s12, 5
+; GFX9-NEXT:    s_mul_i32 s12, s12, 5
+; GFX9-NEXT:    v_mov_b32_e32 v1, s12
 ; GFX9-NEXT:    buffer_atomic_add v1, off, s[4:7], 0 glc
 ; GFX9-NEXT:  BB0_3:
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[10:11]
@@ -127,7 +130,8 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX1064-NEXT:    s_cbranch_execz BB0_3
 ; GFX1064-NEXT:  ; %bb.2:
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s12, s[12:13]
-; GFX1064-NEXT:    v_mul_u32_u24_e64 v1, s12, 5
+; GFX1064-NEXT:    s_mul_i32 s12, s12, 5
+; GFX1064-NEXT:    v_mov_b32_e32 v1, s12
 ; GFX1064-NEXT:    buffer_atomic_add v1, off, s[4:7], 0 glc
 ; GFX1064-NEXT:  BB0_3:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
@@ -160,7 +164,8 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX1032-NEXT:    s_cbranch_execz BB0_3
 ; GFX1032-NEXT:  ; %bb.2:
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s10, s10
-; GFX1032-NEXT:    v_mul_u32_u24_e64 v1, s10, 5
+; GFX1032-NEXT:    s_mul_i32 s10, s10, 5
+; GFX1032-NEXT:    v_mov_b32_e32 v1, s10
 ; GFX1032-NEXT:    buffer_atomic_add v1, off, s[4:7], 0 glc
 ; GFX1032-NEXT:  BB0_3:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
