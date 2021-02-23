@@ -18,7 +18,6 @@ class MCSymbolWasm : public MCSymbol {
   bool IsWeak = false;
   bool IsHidden = false;
   bool IsComdat = false;
-  bool OmitFromLinkingSection = false;
   mutable bool IsUsedInInitArray = false;
   mutable bool IsUsedInGOT = false;
   Optional<StringRef> ImportModule;
@@ -75,12 +74,6 @@ public:
 
   bool isComdat() const { return IsComdat; }
   void setComdat(bool isComdat) { IsComdat = isComdat; }
-
-  // wasm-ld understands a finite set of symbol types.  This flag allows the
-  // compiler to avoid emitting symbol table entries that would confuse the
-  // linker, unless the user specifically requests the feature.
-  bool omitFromLinkingSection() const { return OmitFromLinkingSection; }
-  void setOmitFromLinkingSection() { OmitFromLinkingSection = true; }
 
   bool hasImportModule() const { return ImportModule.hasValue(); }
   StringRef getImportModule() const {

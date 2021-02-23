@@ -405,17 +405,12 @@ void WasmObjectWriter::writeHeader(const MCAssembler &Asm) {
 
 void WasmObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                 const MCAsmLayout &Layout) {
-  // Some compilation units require the indirect function table to be present
-  // but don't explicitly reference it.  This is the case for call_indirect
-  // without the reference-types feature, and also function bitcasts in all
-  // cases.  In those cases the __indirect_function_table has the
-  // WASM_SYMBOL_NO_STRIP attribute.  Here we make sure this symbol makes it to
-  // the assembler, if needed.
-  if (auto *Sym = Asm.getContext().lookupSymbol("__indirect_function_table")) {
-    const auto *WasmSym = static_cast<const MCSymbolWasm *>(Sym);
-    if (WasmSym->isNoStrip())
-      Asm.registerSymbol(*Sym);
-  }
+  // As a stopgap measure until call_indirect instructions start explicitly
+  // referencing the indirect function table via TABLE_NUMBER relocs, ensure
+  // that the indirect function table import makes it to the output if anything
+  // in the compilation unit has caused it to be present.
+  if (auto *Sym = Asm.getContext().lookupSymbol("__indirect_function_table"))
+    Asm.registerSymbol(*Sym);
 
   // Build a map of sections to the function that defines them, for use
   // in recordRelocation.
@@ -514,18 +509,21 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
       Type == wasm::R_WASM_TABLE_INDEX_I32 ||
       Type == wasm::R_WASM_TABLE_INDEX_I64) {
     // TABLE_INDEX relocs implicitly use the default indirect function table.
-    // We require the function table to have already been defined.
     auto TableName = "__indirect_function_table";
     MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(TableName));
-    if (!Sym || !Sym->isFunctionTable()) {
-      Ctx.reportError(
-          Fixup.getLoc(),
-          "symbol '__indirect_function_table' is not a function table");
+    if (Sym) {
+      if (!Sym->isFunctionTable())
+        Ctx.reportError(
+            Fixup.getLoc(),
+            "symbol '__indirect_function_table' is not a function table");
     } else {
-      // Ensure that __indirect_function_table reaches the output.
-      Sym->setNoStrip();
-      Asm.registerSymbol(*Sym);
+      Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(TableName));
+      Sym->setFunctionTable();
+      // The default function table is synthesized by the linker.
+      Sym->setUndefined();
     }
+    Sym->setUsedInReloc();
+    Asm.registerSymbol(*Sym);
   }
 
   // Relocation other than R_WASM_TYPE_INDEX_LEB are required to be
@@ -1213,9 +1211,6 @@ static bool isInSymtab(const MCSymbolWasm &Sym) {
   if (Sym.isSection())
     return false;
 
-  if (Sym.omitFromLinkingSection())
-    return false;
-
   return true;
 }
 
@@ -1677,6 +1672,10 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
     if (!isInSymtab(WS)) {
       WS.setIndex(InvalidIndex);
+      continue;
+    }
+    if (WS.isTable() && WS.getName() == "__indirect_function_table") {
+      // For the moment, don't emit table symbols -- wasm-ld can't handle them.
       continue;
     }
     LLVM_DEBUG(dbgs() << "adding to symtab: " << WS << "\n");
