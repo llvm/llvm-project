@@ -523,10 +523,20 @@ inline CoroSaveInst *AnyCoroSuspendInst::getCoroSave() const {
 
 /// This represents the llvm.coro.suspend.async instruction.
 class LLVM_LIBRARY_VISIBILITY CoroSuspendAsyncInst : public AnyCoroSuspendInst {
-  enum { ResumeFunctionArg, AsyncContextProjectionArg, MustTailCallFuncArg };
-
 public:
+  enum {
+    StorageArgNoArg,
+    ResumeFunctionArg,
+    AsyncContextProjectionArg,
+    MustTailCallFuncArg
+  };
+
   void checkWellFormed() const;
+
+  unsigned getStorageArgumentIndex() const {
+    auto *Arg = cast<ConstantInt>(getArgOperand(StorageArgNoArg));
+    return Arg->getZExtValue();
+  }
 
   Function *getAsyncContextProjectionFunction() const {
     return cast<Function>(
