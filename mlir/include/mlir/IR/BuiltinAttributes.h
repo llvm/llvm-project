@@ -182,17 +182,20 @@ class FloatAttr : public Attribute::AttrBase<FloatAttr, Attribute,
                                              detail::FloatAttributeStorage> {
 public:
   using Base::Base;
+  using Base::getChecked;
   using ValueType = APFloat;
 
   /// Return a float attribute for the specified value in the specified type.
   /// These methods should only be used for simple constant values, e.g 1.0/2.0,
   /// that are known-valid both as host double and the 'type' format.
   static FloatAttr get(Type type, double value);
-  static FloatAttr getChecked(Type type, double value, Location loc);
+  static FloatAttr getChecked(function_ref<InFlightDiagnostic()> emitError,
+                              Type type, double value);
 
   /// Return a float attribute for the specified value in the specified type.
   static FloatAttr get(Type type, const APFloat &value);
-  static FloatAttr getChecked(Type type, const APFloat &value, Location loc);
+  static FloatAttr getChecked(function_ref<InFlightDiagnostic()> emitError,
+                              Type type, const APFloat &value);
 
   APFloat getValue() const;
 
@@ -202,10 +205,10 @@ public:
   static double getValueAsDouble(APFloat val);
 
   /// Verify the construction invariants for a double value.
-  static LogicalResult verifyConstructionInvariants(Location loc, Type type,
-                                                    double value);
-  static LogicalResult verifyConstructionInvariants(Location loc, Type type,
-                                                    const APFloat &value);
+  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                              Type type, double value);
+  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                              Type type, const APFloat &value);
 };
 
 //===----------------------------------------------------------------------===//
@@ -234,10 +237,10 @@ public:
   /// an unsigned integer.
   uint64_t getUInt() const;
 
-  static LogicalResult verifyConstructionInvariants(Location loc, Type type,
-                                                    int64_t value);
-  static LogicalResult verifyConstructionInvariants(Location loc, Type type,
-                                                    const APInt &value);
+  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                              Type type, int64_t value);
+  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                              Type type, const APInt &value);
 };
 
 //===----------------------------------------------------------------------===//
@@ -290,6 +293,7 @@ class OpaqueAttr : public Attribute::AttrBase<OpaqueAttr, Attribute,
                                               detail::OpaqueAttributeStorage> {
 public:
   using Base::Base;
+  using Base::getChecked;
 
   /// Get or create a new OpaqueAttr with the provided dialect and string data.
   static OpaqueAttr get(MLIRContext *context, Identifier dialect,
@@ -298,8 +302,9 @@ public:
   /// Get or create a new OpaqueAttr with the provided dialect and string data.
   /// If the given identifier is not a valid namespace for a dialect, then a
   /// null attribute is returned.
-  static OpaqueAttr getChecked(Identifier dialect, StringRef attrData,
-                               Type type, Location location);
+  static OpaqueAttr getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               Identifier dialect, StringRef attrData,
+                               Type type);
 
   /// Returns the dialect namespace of the opaque attribute.
   Identifier getDialectNamespace() const;
@@ -308,10 +313,9 @@ public:
   StringRef getAttrData() const;
 
   /// Verify the construction of an opaque attribute.
-  static LogicalResult verifyConstructionInvariants(Location loc,
-                                                    Identifier dialect,
-                                                    StringRef attrData,
-                                                    Type type);
+  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                              Identifier dialect, StringRef attrData,
+                              Type type);
 };
 
 //===----------------------------------------------------------------------===//
@@ -428,10 +432,8 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace detail {
-template <typename T>
-class ElementsAttrIterator;
-template <typename T>
-class ElementsAttrRange;
+template <typename T> class ElementsAttrIterator;
+template <typename T> class ElementsAttrRange;
 } // namespace detail
 
 /// A base attribute that represents a reference to a static shaped tensor or
@@ -439,10 +441,8 @@ class ElementsAttrRange;
 class ElementsAttr : public Attribute {
 public:
   using Attribute::Attribute;
-  template <typename T>
-  using iterator = detail::ElementsAttrIterator<T>;
-  template <typename T>
-  using iterator_range = detail::ElementsAttrRange<T>;
+  template <typename T> using iterator = detail::ElementsAttrIterator<T>;
+  template <typename T> using iterator_range = detail::ElementsAttrRange<T>;
 
   /// Return the type of this ElementsAttr, guaranteed to be a vector or tensor
   /// with static shape.
@@ -454,16 +454,14 @@ public:
 
   /// Return the value of type 'T' at the given index, where 'T' corresponds to
   /// an Attribute type.
-  template <typename T>
-  T getValue(ArrayRef<uint64_t> index) const {
+  template <typename T> T getValue(ArrayRef<uint64_t> index) const {
     return getValue(index).template cast<T>();
   }
 
   /// Return the elements of this attribute as a value of type 'T'. Note:
   /// Aborts if the subclass is OpaqueElementsAttrs, these attrs do not support
   /// iteration.
-  template <typename T>
-  iterator_range<T> getValues() const;
+  template <typename T> iterator_range<T> getValues() const;
 
   /// Return if the given 'index' refers to a valid element in this attribute.
   bool isValidIndex(ArrayRef<uint64_t> index) const;
@@ -540,8 +538,7 @@ protected:
 };
 
 /// Type trait detector that checks if a given type T is a complex type.
-template <typename T>
-struct is_complex_t : public std::false_type {};
+template <typename T> struct is_complex_t : public std::false_type {};
 template <typename T>
 struct is_complex_t<std::complex<T>> : public std::true_type {};
 } // namespace detail
@@ -556,8 +553,7 @@ public:
   /// floating point type that can be used to access the underlying element
   /// types of a DenseElementsAttr.
   // TODO: Use std::disjunction when C++17 is supported.
-  template <typename T>
-  struct is_valid_cpp_fp_type {
+  template <typename T> struct is_valid_cpp_fp_type {
     /// The type is a valid floating point type if it is a builtin floating
     /// point type, or is a potentially user defined floating point type. The
     /// latter allows for supporting users that have custom types defined for
@@ -826,8 +822,7 @@ public:
   Attribute getValue(ArrayRef<uint64_t> index) const {
     return getValue<Attribute>(index);
   }
-  template <typename T>
-  T getValue(ArrayRef<uint64_t> index) const {
+  template <typename T> T getValue(ArrayRef<uint64_t> index) const {
     // Skip to the element corresponding to the flattened index.
     return *std::next(getValues<T>().begin(), getFlattenedIndex(index));
   }
@@ -1236,8 +1231,7 @@ public:
 
   /// Return the values of this attribute in the form of the given type 'T'. 'T'
   /// may be any of Attribute, APInt, APFloat, c++ integer/float types, etc.
-  template <typename T>
-  llvm::iterator_range<iterator<T>> getValues() const {
+  template <typename T> llvm::iterator_range<iterator<T>> getValues() const {
     auto zeroValue = getZeroValue<T>();
     auto valueIt = getValues().getValues<T>().begin();
     const std::vector<ptrdiff_t> flatSparseIndices(getFlattenedSparseIndices());
@@ -1379,28 +1373,22 @@ class ElementsAttrIterator
   }
 
   /// Utility functors used to generically implement the iterators methods.
-  template <typename ItT>
-  struct PlusAssign {
+  template <typename ItT> struct PlusAssign {
     void operator()(ItT &it, ptrdiff_t offset) { it += offset; }
   };
-  template <typename ItT>
-  struct Minus {
+  template <typename ItT> struct Minus {
     ptrdiff_t operator()(const ItT &lhs, const ItT &rhs) { return lhs - rhs; }
   };
-  template <typename ItT>
-  struct MinusAssign {
+  template <typename ItT> struct MinusAssign {
     void operator()(ItT &it, ptrdiff_t offset) { it -= offset; }
   };
-  template <typename ItT>
-  struct Dereference {
+  template <typename ItT> struct Dereference {
     T operator()(ItT &it) { return *it; }
   };
-  template <typename ItT>
-  struct ConstructIter {
+  template <typename ItT> struct ConstructIter {
     void operator()(ItT &dest, const ItT &it) { ::new (&dest) ItT(it); }
   };
-  template <typename ItT>
-  struct DestructIter {
+  template <typename ItT> struct DestructIter {
     void operator()(ItT &it) { it.~ItT(); }
   };
 

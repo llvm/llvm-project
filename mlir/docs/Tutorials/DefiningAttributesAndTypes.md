@@ -161,27 +161,28 @@ public:
     return Base::get(type.getContext(), param, type);
   }
 
-  /// This method is used to get an instance of the 'ComplexType', defined at
-  /// the given location. If any of the construction invariants are invalid,
-  /// errors are emitted with the provided location and a null type is returned.
+  /// This method is used to get an instance of the 'ComplexType'. If any of the
+  /// construction invariants are invalid, errors are emitted with the provided
+  /// `emitError` function and a null type is returned.
   /// Note: This method is completely optional.
-  static ComplexType getChecked(unsigned param, Type type, Location location) {
+  static ComplexType getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                unsigned param, Type type) {
     // Call into a helper 'getChecked' method in 'TypeBase' to get a uniqued
     // instance of this type. All parameters to the storage class are passed
-    // after the location.
-    return Base::getChecked(location, param, type);
+    // after the context.
+    return Base::getChecked(emitError, type.getContext(), param, type);
   }
 
   /// This method is used to verify the construction invariants passed into the
   /// 'get' and 'getChecked' methods. Note: This method is completely optional.
-  static LogicalResult verifyConstructionInvariants(
-      Location loc, unsigned param, Type type) {
+  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                              unsigned param, Type type) {
     // Our type only allows non-zero parameters.
     if (param == 0)
-      return emitError(loc) << "non-zero parameter passed to 'ComplexType'";
+      return emitError() << "non-zero parameter passed to 'ComplexType'";
     // Our type also expects an integer type.
     if (!type.isa<IntegerType>())
-      return emitError(loc) << "non integer-type passed to 'ComplexType'";
+      return emitError() << "non integer-type passed to 'ComplexType'";
     return success();
   }
 
