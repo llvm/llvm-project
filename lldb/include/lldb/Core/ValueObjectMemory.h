@@ -24,8 +24,8 @@
 namespace lldb_private {
 class ExecutionContextScope;
 
-// A ValueObject that represents memory at a given address, viewed as some
-// set lldb type.
+/// A ValueObject that represents memory at a given address, viewed as some
+/// set lldb type.
 class ValueObjectMemory : public ValueObject {
 public:
   ~ValueObjectMemory() override;

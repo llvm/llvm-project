@@ -121,55 +121,62 @@ public:
   };
 
   enum ExpressionPathScanEndReason {
-    eExpressionPathScanEndReasonEndOfString = 1,      // out of data to parse
-    eExpressionPathScanEndReasonNoSuchChild,          // child element not found
-    eExpressionPathScanEndReasonNoSuchSyntheticChild, // (synthetic) child
-                                                      // element not found
-    eExpressionPathScanEndReasonEmptyRangeNotAllowed, // [] only allowed for
-                                                      // arrays
-    eExpressionPathScanEndReasonDotInsteadOfArrow, // . used when -> should be
-                                                   // used
-    eExpressionPathScanEndReasonArrowInsteadOfDot, // -> used when . should be
-                                                   // used
-    eExpressionPathScanEndReasonFragileIVarNotAllowed,   // ObjC ivar expansion
-                                                         // not allowed
-    eExpressionPathScanEndReasonRangeOperatorNotAllowed, // [] not allowed by
-                                                         // options
-    eExpressionPathScanEndReasonRangeOperatorInvalid, // [] not valid on objects
-                                                      // other than scalars,
-                                                      // pointers or arrays
-    eExpressionPathScanEndReasonArrayRangeOperatorMet, // [] is good for arrays,
-                                                       // but I cannot parse it
-    eExpressionPathScanEndReasonBitfieldRangeOperatorMet, // [] is good for
-                                                          // bitfields, but I
-                                                          // cannot parse after
-                                                          // it
-    eExpressionPathScanEndReasonUnexpectedSymbol, // something is malformed in
-                                                  // the expression
-    eExpressionPathScanEndReasonTakingAddressFailed,   // impossible to apply &
-                                                       // operator
-    eExpressionPathScanEndReasonDereferencingFailed,   // impossible to apply *
-                                                       // operator
-    eExpressionPathScanEndReasonRangeOperatorExpanded, // [] was expanded into a
-                                                       // VOList
-    eExpressionPathScanEndReasonSyntheticValueMissing, // getting the synthetic
-                                                       // children failed
+    /// Out of data to parse.
+    eExpressionPathScanEndReasonEndOfString = 1,
+    /// Child element not found.
+    eExpressionPathScanEndReasonNoSuchChild,
+    /// (Synthetic) child  element not found.
+    eExpressionPathScanEndReasonNoSuchSyntheticChild,
+    /// [] only allowed for arrays.
+    eExpressionPathScanEndReasonEmptyRangeNotAllowed,
+    /// . used when -> should be used.
+    eExpressionPathScanEndReasonDotInsteadOfArrow,
+    /// -> used when . should be used.
+    eExpressionPathScanEndReasonArrowInsteadOfDot,
+    /// ObjC ivar expansion not allowed.
+    eExpressionPathScanEndReasonFragileIVarNotAllowed,
+    /// [] not allowed by options.
+    eExpressionPathScanEndReasonRangeOperatorNotAllowed,
+    /// [] not valid on objects  other than scalars, pointers or arrays.
+    eExpressionPathScanEndReasonRangeOperatorInvalid,
+    /// [] is good for arrays,  but I cannot parse it.
+    eExpressionPathScanEndReasonArrayRangeOperatorMet,
+    /// [] is good for bitfields, but I cannot parse after it.
+    eExpressionPathScanEndReasonBitfieldRangeOperatorMet,
+    /// Something is malformed in he expression.
+    eExpressionPathScanEndReasonUnexpectedSymbol,
+    /// Impossible to apply &  operator.
+    eExpressionPathScanEndReasonTakingAddressFailed,
+    /// Impossible to apply *  operator.
+    eExpressionPathScanEndReasonDereferencingFailed,
+    /// [] was expanded into a  VOList.
+    eExpressionPathScanEndReasonRangeOperatorExpanded,
+    /// getting the synthetic children failed.
+    eExpressionPathScanEndReasonSyntheticValueMissing,
     eExpressionPathScanEndReasonUnknown = 0xFFFF
   };
 
   enum ExpressionPathEndResultType {
-    eExpressionPathEndResultTypePlain = 1,       // anything but...
-    eExpressionPathEndResultTypeBitfield,        // a bitfield
-    eExpressionPathEndResultTypeBoundedRange,    // a range [low-high]
-    eExpressionPathEndResultTypeUnboundedRange,  // a range []
-    eExpressionPathEndResultTypeValueObjectList, // several items in a VOList
+    /// Anything but...
+    eExpressionPathEndResultTypePlain = 1,
+    /// A bitfield.
+    eExpressionPathEndResultTypeBitfield,
+    /// A range [low-high].
+    eExpressionPathEndResultTypeBoundedRange,
+    /// A range [].
+    eExpressionPathEndResultTypeUnboundedRange,
+    /// Several items in a VOList.
+    eExpressionPathEndResultTypeValueObjectList,
     eExpressionPathEndResultTypeInvalid = 0xFFFF
   };
 
   enum ExpressionPathAftermath {
-    eExpressionPathAftermathNothing = 1, // just return it
-    eExpressionPathAftermathDereference, // dereference the target
-    eExpressionPathAftermathTakeAddress  // take target's address
+    /// Just return it.
+    eExpressionPathAftermathNothing = 1,
+    /// Dereference the target.
+    eExpressionPathAftermathDereference,
+    /// Take target's address.
+    eExpressionPathAftermathTakeAddress
   };
 
   enum ClearUserVisibleDataItems {
@@ -264,14 +271,6 @@ public:
     const ExecutionContextRef &GetExecutionContextRef() const {
       return m_exe_ctx_ref;
     }
-
-    // Set the EvaluationPoint to the values in exe_scope, Return true if the
-    // Evaluation Point changed. Since the ExecutionContextScope is always
-    // going to be valid currently, the Updated Context will also always be
-    // valid.
-
-    //        bool
-    //        SetContext (ExecutionContextScope *exe_scope);
 
     void SetIsConstant() {
       SetUpdated();
@@ -438,16 +437,16 @@ public:
 
   virtual bool SetValueFromCString(const char *value_str, Status &error);
 
-  // Return the module associated with this value object in case the value is
-  // from an executable file and might have its data in sections of the file.
-  // This can be used for variables.
+  /// Return the module associated with this value object in case the value is
+  /// from an executable file and might have its data in sections of the file.
+  /// This can be used for variables.
   virtual lldb::ModuleSP GetModule();
 
   ValueObject *GetRoot();
 
-  // Given a ValueObject, loop over itself and its parent, and its parent's
-  // parent, .. until either the given callback returns false, or you end up at
-  // a null pointer
+  /// Given a ValueObject, loop over itself and its parent, and its parent's
+  /// parent, .. until either the given callback returns false, or you end up at
+  /// a null pointer
   ValueObject *FollowParentChain(std::function<bool(ValueObject *)>);
 
   virtual bool GetDeclaration(Declaration &decl);
@@ -543,9 +542,9 @@ public:
 
   lldb::ValueObjectSP GetSP() { return m_manager->GetSharedPointer(this); }
 
-  // Change the name of the current ValueObject. Should *not* be used from a
-  // synthetic child provider as it would change the name of the non synthetic
-  // child as well.
+  /// Change the name of the current ValueObject. Should *not* be used from a
+  /// synthetic child provider as it would change the name of the non synthetic
+  /// child as well.
   void SetName(ConstString name);
 
   virtual lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
@@ -594,10 +593,10 @@ public:
 
   virtual lldb::ValueObjectSP Dereference(Status &error);
 
-  // Creates a copy of the ValueObject with a new name and setting the current
-  // ValueObject as its parent. It should be used when we want to change the
-  // name of a ValueObject without modifying the actual ValueObject itself
-  // (e.g. sythetic child provider).
+  /// Creates a copy of the ValueObject with a new name and setting the current
+  /// ValueObject as its parent. It should be used when we want to change the
+  /// name of a ValueObject without modifying the actual ValueObject itself
+  /// (e.g. sythetic child provider).
   virtual lldb::ValueObjectSP Clone(ConstString new_name);
 
   virtual lldb::ValueObjectSP AddressOf(Status &error);
@@ -616,7 +615,7 @@ public:
                                               lldb::TypeSP &type_sp);
 
   // The backing bits of this value object were updated, clear any descriptive
-  // string, so we know we have to refetch them
+  // string, so we know we have to refetch them.
   virtual void ValueUpdated() {
     ClearUserVisibleData(eClearUserVisibleDataItemsValue |
                          eClearUserVisibleDataItemsSummary |
@@ -663,8 +662,8 @@ public:
 
   lldb::ValueObjectSP Persist();
 
-  // returns true if this is a char* or a char[] if it is a char* and
-  // check_pointer is true, it also checks that the pointer is valid
+  /// Returns true if this is a char* or a char[] if it is a char* and
+  /// check_pointer is true, it also checks that the pointer is valid.
   bool IsCStringContainer(bool check_pointer = false);
 
   std::pair<size_t, bool>
@@ -948,13 +947,14 @@ protected:
 
   virtual void CalculateSyntheticValue();
 
-  // Should only be called by ValueObject::GetChildAtIndex() Returns a
-  // ValueObject managed by this ValueObject's manager.
+  /// Should only be called by ValueObject::GetChildAtIndex().
+  ///
+  /// \return A ValueObject managed by this ValueObject's manager.
   virtual ValueObject *CreateChildAtIndex(size_t idx,
                                           bool synthetic_array_member,
                                           int32_t synthetic_index);
 
-  // Should only be called by ValueObject::GetNumChildren()
+  /// Should only be called by ValueObject::GetNumChildren().
   virtual size_t CalculateNumChildren(uint32_t max = UINT32_MAX) = 0;
 
   void SetNumChildren(size_t num_children);
@@ -1003,19 +1003,20 @@ private:
   const ValueObject &operator=(const ValueObject &) = delete;
 };
 
-// A value object manager class that is seeded with the static variable value
-// and it vends the user facing value object. If the type is dynamic it can
-// vend the dynamic type. If this user type also has a synthetic type
-// associated with it, it will vend the synthetic type. The class watches the
-// process' stop
-// ID and will update the user type when needed.
+/// A value object manager class that is seeded with the static variable value
+/// and it vends the user facing value object. If the type is dynamic it can
+/// vend the dynamic type. If this user type also has a synthetic type
+/// associated with it, it will vend the synthetic type. The class watches the
+/// process' stop
+/// ID and will update the user type when needed.
 class ValueObjectManager {
-  // The root value object is the static typed variable object.
+  /// The root value object is the static typed variable object.
   lldb::ValueObjectSP m_root_valobj_sp;
-  // The user value object is the value object the user wants to see.
+  /// The user value object is the value object the user wants to see.
   lldb::ValueObjectSP m_user_valobj_sp;
   lldb::DynamicValueType m_use_dynamic;
-  uint32_t m_stop_id; // The stop ID that m_user_valobj_sp is valid for.
+  /// The stop ID that m_user_valobj_sp is valid for.
+  uint32_t m_stop_id;
   bool m_use_synthetic;
 
 public:
@@ -1027,11 +1028,11 @@ public:
   bool IsValid() const;
   
   lldb::ValueObjectSP GetRootSP() const { return m_root_valobj_sp; }
-  
-  // Gets the correct value object from the root object for a given process
-  // stop ID. If dynamic values are enabled, or if synthetic children are
-  // enabled, the value object that the user wants to see might change while
-  // debugging.
+
+  /// Gets the correct value object from the root object for a given process
+  /// stop ID. If dynamic values are enabled, or if synthetic children are
+  /// enabled, the value object that the user wants to see might change while
+  /// debugging.
   lldb::ValueObjectSP GetSP();
   
   void SetUseDynamic(lldb::DynamicValueType use_dynamic);
