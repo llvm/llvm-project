@@ -46,6 +46,27 @@ void test_tile_dpbssd(__tile1024i a, __tile1024i b, __tile1024i c) {
   __tile_dpbssd(&c, a, b);
 }
 
+void test_tile_dpbsud(__tile1024i a, __tile1024i b, __tile1024i c) {
+  //CHECK-LABEL: @test_tile_dpbsud
+  //CHECK: call x86_amx @llvm.x86.tdpbsud.internal
+  //CHECK-NEXT: {{%.*}} = bitcast x86_amx {{%.*}} to <256 x i32>
+  __tile_dpbsud(&c, a, b);
+}
+
+void test_tile_dpbusd(__tile1024i a, __tile1024i b, __tile1024i c) {
+  //CHECK-LABEL: @test_tile_dpbusd
+  //CHECK: call x86_amx @llvm.x86.tdpbusd.internal
+  //CHECK-NEXT: {{%.*}} = bitcast x86_amx {{%.*}} to <256 x i32>
+  __tile_dpbusd(&c, a, b);
+}
+
+void test_tile_dpbuud(__tile1024i a, __tile1024i b, __tile1024i c) {
+  //CHECK-LABEL: @test_tile_dpbuud
+  //CHECK: call x86_amx @llvm.x86.tdpbuud.internal
+  //CHECK-NEXT: {{%.*}} = bitcast x86_amx {{%.*}} to <256 x i32>
+  __tile_dpbuud(&c, a, b);
+}
+
 void test_tile_stored(__tile1024i c) {
   //CHECK-LABEL: @test_tile_stored
   //CHECK: {{%.*}} = bitcast <256 x i32> {{%.*}} to x86_amx

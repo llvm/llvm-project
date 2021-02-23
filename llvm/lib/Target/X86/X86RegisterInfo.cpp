@@ -884,6 +884,9 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   // We only collect the tile shape that is defined.
   case X86::PTILELOADDV:
   case X86::PTDPBSSDV:
+  case X86::PTDPBSUDV:
+  case X86::PTDPBUSDV:
+  case X86::PTDPBUUDV:
   case X86::PTILEZEROV:
     MachineOperand &MO1 = MI->getOperand(1);
     MachineOperand &MO2 = MI->getOperand(2);
