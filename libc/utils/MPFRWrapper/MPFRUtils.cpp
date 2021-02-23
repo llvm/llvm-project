@@ -8,10 +8,9 @@
 
 #include "MPFRUtils.h"
 
+#include "utils/CPP/StringView.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/TestHelpers.h"
-
-#include "llvm/ADT/StringRef.h"
 
 #include <memory>
 #include <stdint.h>
@@ -226,9 +225,9 @@ public:
     constexpr size_t printBufSize = 200;
     char buffer[printBufSize];
     mpfr_snprintf(buffer, printBufSize, "%100.50Rf", value);
-    llvm::StringRef ref(buffer);
-    ref = ref.trim();
-    return ref.str();
+    cpp::StringView view(buffer);
+    view = view.trim(' ');
+    return std::string(view.data());
   }
 
   // These functions are useful for debugging.
