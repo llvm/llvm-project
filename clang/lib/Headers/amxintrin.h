@@ -238,6 +238,24 @@ _tile_dpbssd_internal(unsigned short m, unsigned short n, unsigned short k,
   return __builtin_ia32_tdpbssd_internal(m, n, k, dst, src1, src2);
 }
 
+static __inline__ _tile1024i __DEFAULT_FN_ATTRS_INT8
+_tile_dpbsud_internal(unsigned short m, unsigned short n, unsigned short k,
+                      _tile1024i dst, _tile1024i src1, _tile1024i src2) {
+  return __builtin_ia32_tdpbsud_internal(m, n, k, dst, src1, src2);
+}
+
+static __inline__ _tile1024i __DEFAULT_FN_ATTRS_INT8
+_tile_dpbusd_internal(unsigned short m, unsigned short n, unsigned short k,
+                      _tile1024i dst, _tile1024i src1, _tile1024i src2) {
+  return __builtin_ia32_tdpbusd_internal(m, n, k, dst, src1, src2);
+}
+
+static __inline__ _tile1024i __DEFAULT_FN_ATTRS_INT8
+_tile_dpbuud_internal(unsigned short m, unsigned short n, unsigned short k,
+                      _tile1024i dst, _tile1024i src1, _tile1024i src2) {
+  return __builtin_ia32_tdpbuud_internal(m, n, k, dst, src1, src2);
+}
+
 static __inline__ void __DEFAULT_FN_ATTRS_INT8
 _tile_stored_internal(unsigned short m, unsigned short n, void *base,
                       __SIZE_TYPE__ stride, _tile1024i tile) {
@@ -261,6 +279,27 @@ __DEFAULT_FN_ATTRS_INT8
 static void __tile_dpbssd(__tile1024i *dst, __tile1024i src1,
                           __tile1024i src2) {
   dst->tile = _tile_dpbssd_internal(src1.row, src2.col, src1.col, dst->tile,
+                                    src1.tile, src2.tile);
+}
+
+__DEFAULT_FN_ATTRS_INT8
+static void __tile_dpbsud(__tile1024i *dst, __tile1024i src1,
+                          __tile1024i src2) {
+  dst->tile = _tile_dpbsud_internal(src1.row, src2.col, src1.col, dst->tile,
+                                    src1.tile, src2.tile);
+}
+
+__DEFAULT_FN_ATTRS_INT8
+static void __tile_dpbusd(__tile1024i *dst, __tile1024i src1,
+                          __tile1024i src2) {
+  dst->tile = _tile_dpbusd_internal(src1.row, src2.col, src1.col, dst->tile,
+                                    src1.tile, src2.tile);
+}
+
+__DEFAULT_FN_ATTRS_INT8
+static void __tile_dpbuud(__tile1024i *dst, __tile1024i src1,
+                          __tile1024i src2) {
+  dst->tile = _tile_dpbuud_internal(src1.row, src2.col, src1.col, dst->tile,
                                     src1.tile, src2.tile);
 }
 
