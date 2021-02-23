@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=arm64e-apple-ios %s -o - | FileCheck %s --check-prefixes=CHECK-AUTH,CHECK
 
 ; Important details in prologue:
-;   * x22 is stored just below x29
+;   * x9 is stored just below x29
 ;   * Enough stack space is allocated for everything
 define void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: simple:
@@ -11,10 +11,10 @@ define void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: sub sp, sp, #32
 ; CHECK: stp x29, x30, [sp, #16]
 
-; CHECK-NOAUTH: str x22, [sp, #8]
+; CHECK-NOAUTH: str x9, [sp, #8]
 ; CHECK-AUTH: add x16, sp, #8
 ; CHECK-AUTH: movk x16, #49946, lsl #48
-; CHECK-AUTH: mov x17, x22
+; CHECK-AUTH: mov x17, x9
 ; CHECK-AUTH: pacdb x17, x16
 ; CHECK-AUTH: str x17, [sp, #8]
 
@@ -35,27 +35,30 @@ define void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
 define void @more_csrs(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: more_csrs:
 ; CHECK: orr x29, x29, #0x100000000000000
-; CHECK: str x23, [sp, #-32]!
-; CHECK: stp x29, x30, [sp, #16]
+; CHECK: sub sp, sp, #48
+; CHECK: stp x24, x23, [sp, #8]
+; CHECK: stp x29, x30, [sp, #32]
 
-; CHECK-NOAUTH: str x22, [sp, #8]
-; CHECK-AUTH: add x16, sp, #8
+; CHECK-NOAUTH: str x9, [sp, #24]
+; CHECK-AUTH: add x16, sp, #24
 ; CHECK-AUTH: movk x16, #49946, lsl #48
-; CHECK-AUTH: mov x17, x22
+; CHECK-AUTH: mov x17, x9
 ; CHECK-AUTH: pacdb x17, x16
-; CHECK-AUTH: str x17, [sp, #8]
+; CHECK-AUTH: str x17, [sp, #24]
 
-; CHECK: add x29, sp, #16
+; CHECK: add x29, sp, #32
 ; CHECK: .cfi_def_cfa w29, 16
 ; CHECK: .cfi_offset w30, -8
 ; CHECK: .cfi_offset w29, -16
 ; CHECK: .cfi_offset w23, -32
+; CHECK: .cfi_offset w24, -40
 
 ; [...]
 
-; CHECK: ldp x29, x30, [sp, #16]
-; CHECK: ldr x23, [sp], #32
+; CHECK: ldp x29, x30, [sp, #32]
+; CHECK: ldp x24, x23, [sp, #8]
 ; CHECK: and x29, x29, #0xefffffffffffffff
+; CHECK: add sp, sp, #48
   call void asm sideeffect "", "~{x23}"()
   ret void
 }
@@ -66,10 +69,10 @@ define void @locals(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: sub sp, sp, #64
 ; CHECK: stp x29, x30, [sp, #48]
 
-; CHECK-NOAUTH: str x22, [sp, #40]
+; CHECK-NOAUTH: str x9, [sp, #40]
 ; CHECK-AUTH: add x16, sp, #40
 ; CHECK-AUTH: movk x16, #49946, lsl #48
-; CHECK-AUTH: mov x17, x22
+; CHECK-AUTH: mov x17, x9
 ; CHECK-AUTH: pacdb x17, x16
 ; CHECK-AUTH: str x17, [sp, #40]
 
@@ -94,11 +97,11 @@ define void @locals(i8* swiftasync %ctx) "frame-pointer"="all" {
 define void @use_input_context(i8* swiftasync %ctx, i8** %ptr) "frame-pointer"="all" {
 ; CHECK-LABEL: use_input_context:
 
-; CHECK-NOAUTH: str x22, [sp
-; CHECK-AUTH: mov x17, x22
+; CHECK-NOAUTH: str x9, [sp
+; CHECK-AUTH: mov x17, x9
 
-; CHECK-NOT: x22
-; CHECK: str x22, [x0]
+; CHECK-NOT: x9
+; CHECK: str x9, [x0]
 
   store i8* %ctx, i8** %ptr
   ret void
@@ -136,15 +139,17 @@ define void @simple_fp_elim(i8* swiftasync %ctx) "frame-pointer"="non-leaf" {
 
 define void @large_frame(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: large_frame:
-; CHECK: str x28, [sp, #-32]!
-; CHECK: stp x29, x30, [sp, #16]
-; CHECK-NOAUTH: str x22, [sp, #8]
-; CHECK: add x29, sp, #16
+; CHECK: sub sp, sp, #48
+; CHECK: stp x28, x27, [sp, #8]
+; CHECK: stp x29, x30, [sp, #32]
+; CHECK-NOAUTH: str x9, [sp, #24]
+; CHECK: add x29, sp, #32
 ; CHECK: sub sp, sp, #1024
 ; [...]
 ; CHECK: add sp, sp, #1024
-; CHECK: ldp x29, x30, [sp, #16]
-; CHECK: ldr x28, [sp], #32
+; CHECK: ldp x29, x30, [sp, #32]
+; CHECK: ldp x28, x27, [sp, #8]
+; CHECK: add sp, sp, #48
 ; CHECK: ret
   %var = alloca i8, i32 1024
   ret void
