@@ -50,9 +50,6 @@ struct TimeConstants {
   // susceptible to the Year 2038 problem.
   static constexpr int EndOf32BitEpochYear = 2038;
 
-  static constexpr int NonLeapYearDaysInMonth[] = {31, 28, 31, 30, 31, 30, 30,
-                                                   31, 31, 30, 31, 30, 31};
-
   static constexpr time_t OutOfRangeReturnValue = -1;
 };
 
