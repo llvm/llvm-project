@@ -872,8 +872,7 @@ incorporateNewSCCRange(const SCCRangeT &NewSCCRange, LazyCallGraph &G,
   if (FAM)
     updateNewSCCFunctionAnalyses(*C, G, AM, *FAM);
 
-  for (SCC &NewC : llvm::reverse(make_range(std::next(NewSCCRange.begin()),
-                                            NewSCCRange.end()))) {
+  for (SCC &NewC : llvm::reverse(llvm::drop_begin(NewSCCRange))) {
     assert(C != &NewC && "No need to re-visit the current SCC!");
     assert(OldC != &NewC && "Already handled the original SCC!");
     UR.CWorklist.insert(&NewC);
@@ -1067,8 +1066,7 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     // "bottom" we will continue processing in the bottom-up walk.
     assert(NewRefSCCs.front() == RC &&
            "New current RefSCC not first in the returned list!");
-    for (RefSCC *NewRC : llvm::reverse(make_range(std::next(NewRefSCCs.begin()),
-                                                  NewRefSCCs.end()))) {
+    for (RefSCC *NewRC : llvm::reverse(llvm::drop_begin(NewRefSCCs))) {
       assert(NewRC != RC && "Should not encounter the current RefSCC further "
                             "in the postorder list of new RefSCCs.");
       UR.RCWorklist.insert(NewRC);
