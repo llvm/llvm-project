@@ -175,33 +175,25 @@ public:
     unsigned p0 = latSets[s0][0];
     for (unsigned p1 : latSets[s0]) {
       bool add = true;
-      llvm::BitVector simple = simplifyCond(s0, p1);
       if (p0 != p1) {
         // Is this a straightforward copy?
         unsigned e = latPoints[p1].exp;
         if (exp(e).kind == Kind::kTensor && exp(e).e0 == outTensor)
           continue;
-        // Only dense exhausted?
-        llvm::BitVector tmp = latPoints[p1].bits;
-        tmp ^= latPoints[p0].bits;
-        if (!hasAnyDimOf(tmp, Dim::kSparse))
-          continue;
-        // Duplication of an earlier conjunction?
+        // Conjunction already covered?
         for (unsigned p2 : latSets[s]) {
-          tmp = simple;
-          tmp ^= latPoints[p2].simple;
-          if (tmp.count() == 0) {
+          if (onlyDenseDiff(p2, p1)) {
             add = false;
             break;
           }
         }
         assert(!add || latGT(p0, p1));
       }
-      if (add) {
+      if (add)
         latSets[s].push_back(p1);
-        latPoints[latSets[s].back()].simple = simple;
-      }
     }
+    for (unsigned p : latSets[s])
+      latPoints[p].simple = simplifyCond(s, p);
     return s;
   }
 
@@ -215,15 +207,8 @@ public:
     bool isSingleton = true;
     for (unsigned p1 : latSets[s]) {
       if (p0 != p1 && latGT(p0, p1)) {
-        unsigned e = latPoints[p1].exp;
-        if (exp(e).kind == Kind::kTensor && exp(e).e0 == outTensor)
-          continue;
-        llvm::BitVector tmp = latPoints[p1].bits;
-        tmp ^= latPoints[p0].bits;
-        if (hasAnyDimOf(tmp, Dim::kSparse)) {
-          isSingleton = false;
-          break;
-        }
+        isSingleton = false;
+        break;
       }
     }
     // Now apply the two basic rules.
@@ -253,6 +238,13 @@ public:
     return false;
   }
 
+  /// Returns true if Li and Lj only differ in dense.
+  bool onlyDenseDiff(unsigned i, unsigned j) {
+    llvm::BitVector tmp = latPoints[j].bits;
+    tmp ^= latPoints[i].bits;
+    return !hasAnyDimOf(tmp, Dim::kSparse);
+  }
+
   /// Bit translation.
   unsigned tensor(unsigned b) const { return b % numTensors; }
   unsigned index(unsigned b) const { return b / numTensors; }
@@ -274,12 +266,12 @@ public:
     return false;
   }
 
-  // Returns true if tensor has any sparse dimension.
+  /// Returns true if tensor has any sparse dimension.
   bool isSparseTensor(unsigned t) const {
     return llvm::any_of(dims[t], [](Dim d) { return d == Dim::kSparse; });
   }
 
-  // Setter
+  /// Setter
   void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }
 
   /// Getters.
@@ -1193,12 +1185,6 @@ static void genStmt(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
       unsigned lj = merger.set(lts)[j];
       unsigned ej = merger.lat(lj).exp;
       if (li == lj || merger.latGT(li, lj)) {
-        if (li != lj) {
-          llvm::BitVector tmp = merger.lat(lj).bits;
-          tmp ^= merger.lat(li).bits;
-          if (!merger.hasAnyDimOf(tmp, Dim::kSparse))
-            continue; // only dense exhausted within if/else
-        }
         // Recurse into body of each branch.
         if (isWhile) {
           scf::IfOp ifOp =
