@@ -111,7 +111,7 @@ if (libunwind_enable_static) {
       if (!invoker.export) {
         cflags = [ "-fvisibility=hidden" ]
         cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
-        defines = [ "_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS" ]
+        defines = [ "_LIBUNWIND_HIDE_SYMBOLS" ]
       }
       deps = [ "//compiler-rt/lib/builtins" ]
       configs += [ ":unwind_config" ]
