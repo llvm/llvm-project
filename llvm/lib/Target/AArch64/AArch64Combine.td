@@ -79,13 +79,9 @@ def ext: GICombineRule <
   (apply [{ applyEXT(*${root}, ${matchinfo}); }])
 >;
 
-def shuf_to_ins_matchdata : GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
-def shuf_to_ins: GICombineRule <
-  (defs root:$root, shuf_to_ins_matchdata:$matchinfo),
-  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
-         [{ return matchINS(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ return applyINS(*${root}, B, ${matchinfo}); }])
->;
+// Combines which replace a G_SHUFFLE_VECTOR with a target-specific pseudo
+// instruction.
+def shuffle_vector_pseudos : GICombineGroup<[dup, rev, ext, zip, uzp, trn]>;
 
 def vashr_vlshr_imm_matchdata : GIDefMatchData<"int64_t">;
 def vashr_vlshr_imm : GICombineRule<
@@ -103,10 +99,6 @@ def form_duplane : GICombineRule <
           [{ return matchDupLane(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
 >;
-
-def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn,
-                                              form_duplane,
-                                              shuf_to_ins]>;
 
 def adjust_icmp_imm_matchdata :
   GIDefMatchData<"std::pair<uint64_t, CmpInst::Predicate>">;
@@ -140,8 +132,8 @@ def mul_const : GICombineRule<
 // pseudos.
 def AArch64PostLegalizerLoweringHelper
     : GICombinerHelper<"AArch64GenPostLegalizerLoweringHelper",
-                       [shuffle_vector_lowering, vashr_vlshr_imm,
-                        icmp_lowering]> {
+                       [shuffle_vector_pseudos, vashr_vlshr_imm,
+                        icmp_lowering, form_duplane]> {
   let DisableRuleOption = "aarch64postlegalizerlowering-disable-rule";
 }
 
