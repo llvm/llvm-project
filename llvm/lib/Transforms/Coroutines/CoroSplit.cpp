@@ -882,12 +882,14 @@ void CoroCloner::create() {
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.FrameSize, Shape.FrameAlign);
     break;
-  case coro::ABI::Async:
-    if (OrigF.hasParamAttribute(Shape.AsyncLowering.ContextArgNo,
-                                Attribute::SwiftAsync)) {
-      addAsyncContextAttrs(NewAttrs, Context, Shape.AsyncLowering.ContextArgNo);
+  case coro::ABI::Async: {
+    auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
+    auto ContextArgIndex = ActiveAsyncSuspend->getStorageArgumentIndex();
+    if (OrigF.hasParamAttribute(ContextArgIndex, Attribute::SwiftAsync)) {
+      addAsyncContextAttrs(NewAttrs, Context, ContextArgIndex);
     }
     break;
+  }
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
     // If we have a continuation prototype, just use its attributes,
