@@ -893,6 +893,12 @@ public:
 GlobalVariable *collectUsedGlobalVariables(const Module &M,
                                            SmallPtrSetImpl<GlobalValue *> &Set,
                                            bool CompilerUsed);
+/// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the
+/// initializer elements of that global in a SmallVector and return the global
+/// itself.
+GlobalVariable *collectUsedGlobalVariables(const Module &M,
+                                           SmallVectorImpl<GlobalValue *> &Vec,
+                                           bool CompilerUsed);
 
 /// An raw_ostream inserter for modules.
 inline raw_ostream &operator<<(raw_ostream &O, const Module &M) {
