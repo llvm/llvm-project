@@ -90,9 +90,8 @@ static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
 
 // ValueObject constructor
 ValueObject::ValueObject(ValueObject &parent)
-    : UserID(++g_value_obj_uid), // Unique identifier for every value object
-      m_parent(&parent), m_update_point(parent.GetUpdatePoint()),
-      m_manager(parent.GetManager()) {
+    : m_parent(&parent), m_update_point(parent.GetUpdatePoint()),
+      m_manager(parent.GetManager()), m_id(++g_value_obj_uid) {
   m_flags.m_is_synthetic_children_generated =
       parent.m_flags.m_is_synthetic_children_generated;
   m_data.SetByteOrder(parent.GetDataExtractor().GetByteOrder());
@@ -104,9 +103,9 @@ ValueObject::ValueObject(ValueObject &parent)
 ValueObject::ValueObject(ExecutionContextScope *exe_scope,
                          ValueObjectManager &manager,
                          AddressType child_ptr_or_ref_addr_type)
-    : UserID(++g_value_obj_uid), // Unique identifier for every value object
-      m_update_point(exe_scope), m_manager(&manager),
-      m_address_type_of_ptr_or_ref_children(child_ptr_or_ref_addr_type) {
+    : m_update_point(exe_scope), m_manager(&manager),
+      m_address_type_of_ptr_or_ref_children(child_ptr_or_ref_addr_type),
+      m_id(++g_value_obj_uid) {
   if (exe_scope) {
     TargetSP target_sp(exe_scope->CalculateTarget());
     if (target_sp) {
