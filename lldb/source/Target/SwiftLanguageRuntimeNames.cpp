@@ -13,6 +13,7 @@
 #include "SwiftLanguageRuntimeImpl.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 
+#include "swift/ABI/Task.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/Demangler.h"
 #include "lldb/Symbol/Block.h"
@@ -40,27 +41,41 @@ enum class ThunkKind {
   ObjCAttribute,
   Reabstraction,
   ProtocolConformance,
+  AsyncFunction,
 };
 
 enum class ThunkAction {
   Unknown = 0,
   GetThunkTarget,
   StepIntoConformance,
-  StepThrough
+  StepThrough,
+  AsyncStepIn,
 };
 
 } // namespace
 
+static NodePointer
+childAtPath(NodePointer node,
+            llvm::ArrayRef<swift::Demangle::Node::Kind> path) {
+  if (path.empty())
+    return node;
+
+  auto current_step = path.front();
+  for (NodePointer child : *node)
+    if (child->getKind() == current_step)
+      return childAtPath(child, path.drop_front());
+  return nullptr;
+}
+
 static ThunkKind GetThunkKind(Symbol *symbol) {
   auto symbol_name = symbol->GetMangled().GetMangledName().GetStringRef();
 
-  swift::Demangle::Node::Kind kind;
   swift::Demangle::Context demangle_ctx;
-  if (!demangle_ctx.isThunkSymbol(symbol_name))
-    return ThunkKind::Unknown;
-
   swift::Demangle::NodePointer nodes =
       demangle_ctx.demangleSymbolAsNode(symbol_name);
+  if (!nodes)
+    return ThunkKind::Unknown;
+
   size_t num_global_children = nodes->getNumChildren();
   if (num_global_children == 0)
     return ThunkKind::Unknown;
@@ -71,7 +86,18 @@ static ThunkKind GetThunkKind(Symbol *symbol) {
     return ThunkKind::Unknown;
 
   swift::Demangle::NodePointer node_ptr = nodes->getFirstChild();
-  kind = node_ptr->getKind();
+  swift::Demangle::Node::Kind kind = node_ptr->getKind();
+
+  if (!demangle_ctx.isThunkSymbol(symbol_name)) {
+    if (kind == swift::Demangle::Node::Kind::Function) {
+      using namespace swift::Demangle;
+      if (childAtPath(node_ptr, {Node::Kind::Type, Node::Kind::FunctionType,
+                                 Node::Kind::AsyncAnnotation}))
+        return ThunkKind::AsyncFunction;
+    }
+    return ThunkKind::Unknown;
+  }
+
   switch (kind) {
   case swift::Demangle::Node::Kind::ObjCAttribute:
     return ThunkKind::ObjCAttribute;
@@ -100,6 +126,7 @@ static ThunkKind GetThunkKind(Symbol *symbol) {
 
   return ThunkKind::Unknown;
 }
+
 static const char *GetThunkKindName(ThunkKind kind) {
   switch (kind) {
   case ThunkKind::Unknown:
@@ -114,6 +141,8 @@ static const char *GetThunkKindName(ThunkKind kind) {
     return "GetThunkTarget";
   case ThunkKind::ProtocolConformance:
     return "StepIntoConformance";
+  case ThunkKind::AsyncFunction:
+    return "AsyncStepIn";
   }
 }
 
@@ -131,8 +160,159 @@ static ThunkAction GetThunkAction(ThunkKind kind) {
     return ThunkAction::StepThrough;
   case ThunkKind::ProtocolConformance:
     return ThunkAction::StepIntoConformance;
+  case ThunkKind::AsyncFunction:
+    return ThunkAction::AsyncStepIn;
   }
 }
+
+class ThreadPlanStepInAsync : public ThreadPlan {
+public:
+  static bool NeedsStep(SymbolContext &sc) {
+    if (sc.line_entry.IsValid() && sc.line_entry.line == 0) {
+      // Compiler generated function, need to step in.
+      return true;
+    }
+
+    // TEMPORARY HACK WORKAROUND
+    if (!sc.symbol || !sc.comp_unit) {
+      return false;
+    }
+    auto fn_start = sc.symbol->GetFileAddress();
+    auto fn_end = sc.symbol->GetFileAddress() + sc.symbol->GetByteSize();
+    int line_entry_count = 0;
+    if (auto line_table = sc.comp_unit->GetLineTable()) {
+      for (uint32_t i = 0; i < line_table->GetSize(); ++i) {
+        LineEntry line_entry;
+        if (line_table->GetLineEntryAtIndex(i, line_entry)) {
+          if (!line_entry.IsValid() || line_entry.line == 0) {
+            continue;
+          }
+
+          auto line_start = line_entry.range.GetBaseAddress().GetFileAddress();
+          if (line_start >= fn_start && line_start < fn_end) {
+            if (++line_entry_count > 1) {
+              // This is an async function with a proper body of code, no step
+              // into `swift_task_switch` required.
+              return false;
+            }
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  ThreadPlanStepInAsync(Thread &thread, SymbolContext &sc)
+      : ThreadPlan(eKindGeneric, "step-in-async", thread, eVoteNoOpinion,
+                   eVoteNoOpinion) {
+    // Using the absence of line table entries as a heuristic, step into
+    // `swift_task_switch`. Then, a breakpoint can be set on the async function.
+    assert(sc.function);
+    if (!sc.function) {
+      return;
+    }
+
+    m_step_in_plan_sp = std::make_shared<ThreadPlanStepInRange>(
+        thread, sc.function->GetAddressRange(), sc, "swift_task_switch",
+        RunMode::eAllThreads, eLazyBoolNo, eLazyBoolNo);
+  }
+
+  void DidPush() override {
+    if (m_step_in_plan_sp) {
+      PushPlan(m_step_in_plan_sp);
+    }
+  }
+
+  bool ValidatePlan(Stream *error) override { return (bool)m_step_in_plan_sp; }
+
+  void GetDescription(Stream *s, lldb::DescriptionLevel level) override {
+    // TODO: Implement completely.
+    s->PutCString("ThreadPlanStepInAsync");
+  }
+
+  // Composite thread plans never directly explain a stop.
+  bool DoPlanExplainsStop(Event *event) override { return false; }
+
+  // Async stops happen via breakpoint.
+  bool ShouldStop(Event *event) override { return false; }
+
+  bool MischiefManaged() override {
+    if (!m_step_in_plan_sp->IsPlanComplete()) {
+      return false;
+    }
+
+    if (!m_step_in_plan_sp->PlanSucceeded()) {
+      // If the step in fails, then this plan fails.
+      SetPlanComplete(false);
+      return true;
+    }
+
+    if (!m_async_breakpoint_sp) {
+      m_async_breakpoint_sp = CreateAsyncBreakpoint(GetThread());
+    }
+
+    SetPlanComplete();
+    return true;
+  }
+
+  // Override ShouldStop of previous step plan.
+  bool ShouldAutoContinue(Event *event) override { return true; }
+
+  bool WillStop() override { return false; }
+
+  lldb::StateType GetPlanRunState() override { return eStateRunning; }
+
+  bool StopOthers() override { return false; }
+
+private:
+  static constexpr std::ptrdiff_t taskOffsetOfRunJob64 = 8 * 5;
+  static constexpr std::ptrdiff_t taskOffsetOfRunJob32 = 4 * 5;
+#if __POINTER_WIDTH__ == 64
+  static_assert(offsetof(swift::AsyncTask, RunJob) == taskOffsetOfRunJob64,
+                "lldb assumes an incorrect offset of swift::Task::RunJob");
+#elif __POINTER_WIDTH__ == 32
+  static_assert(offsetof(swift::AsyncTask, RunJob) == taskOffsetOfRunJob32,
+                "lldb assumes an incorrect offset of swift::Task::RunJob");
+#endif
+
+  static BreakpointSP CreateAsyncBreakpoint(Thread &thread) {
+    auto frame_sp = thread.GetStackFrameAtIndex(0);
+    auto reg_ctx = frame_sp->GetRegisterContext();
+
+    // swift_task_switch(AsyncTask *, ExecutorRef, ExecutorRef)
+    constexpr auto task_regnum = LLDB_REGNUM_GENERIC_ARG1;
+    auto task_reg = reg_ctx->ConvertRegisterKindToRegisterNumber(
+        RegisterKind::eRegisterKindGeneric, task_regnum);
+    auto task_ptr = reg_ctx->ReadRegisterAsUnsigned(task_reg, 0);
+    if (!task_ptr) {
+      return {};
+    }
+
+    auto process_sp = thread.GetProcess();
+    const auto sizeof_pointer = process_sp->GetAddressByteSize();
+    auto run_job_ptr = task_ptr;
+    if (sizeof_pointer == 8) {
+      run_job_ptr += taskOffsetOfRunJob64;
+    } else if (sizeof_pointer == 4) {
+      run_job_ptr += taskOffsetOfRunJob32;
+    }
+
+    Status status;
+    auto fn_ptr = process_sp->ReadPointerFromMemory(run_job_ptr, status);
+    if (status.Fail()) {
+      return {};
+    }
+
+    auto breakpoint_sp =
+        process_sp->GetTarget().CreateBreakpoint(fn_ptr, true, false);
+    breakpoint_sp->SetBreakpointKind("async-step");
+    return breakpoint_sp;
+  }
+
+  ThreadPlanSP m_step_in_plan_sp;
+  BreakpointSP m_async_breakpoint_sp;
+};
 
 static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                        bool stop_others) {
@@ -142,6 +322,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
   // 2) Thunks for going from Swift ObjC classes to their actual method
   //    invocations.
   // 3) Thunks that retain captured objects in closure invocations.
+  // 4) Task switches for async functions.
 
   ThreadPlanSP new_thread_plan_sp;
 
@@ -173,6 +354,12 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
   switch (thunk_action) {
   case ThunkAction::Unknown:
     return new_thread_plan_sp;
+  case ThunkAction::AsyncStepIn: {
+    if (ThreadPlanStepInAsync::NeedsStep(sc)) {
+      new_thread_plan_sp.reset(new ThreadPlanStepInAsync(thread, sc));
+    }
+    return new_thread_plan_sp;
+  }
   case ThunkAction::GetThunkTarget: {
     swift::Demangle::Context demangle_ctx;
     std::string thunk_target = demangle_ctx.getThunkTarget(symbol_name);
