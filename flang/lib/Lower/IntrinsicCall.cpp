@@ -258,6 +258,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"dble", &I::genConversion},
     {"dprod", &I::genDprod},
     {"floor", &I::genFloor},
+    {"iachar", &I::genIchar},
     {"iand", &I::genIAnd},
     {"ichar", &I::genIchar},
     {"ieor", &I::genIEOr},
