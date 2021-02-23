@@ -264,7 +264,7 @@ Clang-Tidy Checks
    `performance-inefficient-string-concatenation <performance-inefficient-string-concatenation.html>`_,
    `performance-inefficient-vector-operation <performance-inefficient-vector-operation.html>`_, "Yes"
    `performance-move-const-arg <performance-move-const-arg.html>`_, "Yes"
-   `performance-move-constructor-init <performance-move-constructor-init.html>`_, "Yes"
+   `performance-move-constructor-init <performance-move-constructor-init.html>`_,
    `performance-no-automatic-move <performance-no-automatic-move.html>`_,
    `performance-no-int-to-ptr <performance-no-int-to-ptr.html>`_,
    `performance-noexcept-move-constructor <performance-noexcept-move-constructor.html>`_, "Yes"
@@ -331,7 +331,7 @@ Clang-Tidy Checks
    `cert-fio38-c <cert-fio38-c.html>`_, `misc-non-copyable-objects <misc-non-copyable-objects.html>`_,
    `cert-msc30-c <cert-msc30-c.html>`_, `cert-msc50-cpp <cert-msc50-cpp.html>`_,
    `cert-msc32-c <cert-msc32-c.html>`_, `cert-msc51-cpp <cert-msc51-cpp.html>`_,
-   `cert-oop11-cpp <cert-oop11-cpp.html>`_, `performance-move-constructor-init <performance-move-constructor-init.html>`_, "Yes"
+   `cert-oop11-cpp <cert-oop11-cpp.html>`_, `performance-move-constructor-init <performance-move-constructor-init.html>`_,
    `cert-oop54-cpp <cert-oop54-cpp.html>`_, `bugprone-unhandled-self-assignment <bugprone-unhandled-self-assignment.html>`_,
    `cert-pos44-c <cert-pos44-c.html>`_, `bugprone-bad-signal-to-kill-thread <bugprone-bad-signal-to-kill-thread.html>`_,
    `cert-pos47-c <cert-pos47-c.html>`_, `concurrency-thread-canceltype-asynchronous <concurrency-thread-canceltype-asynchronous.html>`_,
