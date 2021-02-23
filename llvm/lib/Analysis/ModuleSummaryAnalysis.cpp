@@ -511,10 +511,8 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
     assert(STy);
     const StructLayout *SL = DL.getStructLayout(C->getType());
 
-    for (StructType::element_iterator EB = STy->element_begin(), EI = EB,
-                                      EE = STy->element_end();
-         EI != EE; ++EI) {
-      auto Offset = SL->getElementOffset(EI - EB);
+    for (auto EI : llvm::enumerate(STy->elements())) {
+      auto Offset = SL->getElementOffset(EI.index());
       unsigned Op = SL->getElementContainingOffset(Offset);
       findFuncPointers(cast<Constant>(I->getOperand(Op)),
                        StartingOffset + Offset, M, Index, VTableFuncs);

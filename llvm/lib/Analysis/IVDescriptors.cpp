@@ -609,9 +609,8 @@ bool RecurrenceDescriptor::hasMultipleUsesOf(
     Instruction *I, SmallPtrSetImpl<Instruction *> &Insts,
     unsigned MaxNumUses) {
   unsigned NumUses = 0;
-  for (User::op_iterator Use = I->op_begin(), E = I->op_end(); Use != E;
-       ++Use) {
-    if (Insts.count(dyn_cast<Instruction>(*Use)))
+  for (const Use &U : I->operands()) {
+    if (Insts.count(dyn_cast<Instruction>(U)))
       ++NumUses;
     if (NumUses > MaxNumUses)
       return true;

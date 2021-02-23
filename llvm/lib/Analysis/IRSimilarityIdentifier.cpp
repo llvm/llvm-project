@@ -176,8 +176,8 @@ void IRInstructionMapper::convertToUnsignedVec(
 
   if (HaveLegalRange) {
     mapToIllegalUnsigned(It, IntegerMappingForBB, InstrListForBB, true);
-    for_each(InstrListForBB,
-             [this](IRInstructionData *ID) { this->IDL->push_back(*ID); });
+    for (IRInstructionData *ID : InstrListForBB)
+      this->IDL->push_back(*ID);
     llvm::append_range(InstrList, InstrListForBB);
     llvm::append_range(IntegerMapping, IntegerMappingForBB);
   }
