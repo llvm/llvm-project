@@ -178,7 +178,7 @@ declare x86_fp80 @acoshl(x86_fp80)
 ; CHECK: declare x86_fp80 @acosl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @acosl(x86_fp80)
 
-; CHECK: declare noalias noundef i8* @aligned_alloc(i64, i64) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND:#[0-9]+]]
+; CHECK: declare noalias noundef i8* @aligned_alloc(i64 noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND:#[0-9]+]]
 declare i8* @aligned_alloc(i64, i64)
 
 ; CHECK: declare double @asin(double) [[NOFREE_NOUNWIND_WILLRETURN]]
@@ -250,7 +250,7 @@ declare void @bcopy(i8*, i8*, i64)
 ; CHECK: declare void @bzero(i8* nocapture writeonly, i64)  [[ARGMEMONLY_NOFREE_NOUNWIND:#[0-9]+]]
 declare void @bzero(i8*, i64)
 
-; CHECK: declare noalias noundef i8* @calloc(i64, i64) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare noalias noundef i8* @calloc(i64 noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i8* @calloc(i64, i64)
 
 ; CHECK: declare double @cbrt(double) [[NOFREE_NOUNWIND_WILLRETURN]]
@@ -610,7 +610,7 @@ declare i32 @lstat(i8*, %opaque*)
 ; CHECK-LINUX: declare noundef i32 @lstat64(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
 declare i32 @lstat64(i8*, %opaque*)
 
-; CHECK: declare noalias noundef i8* @malloc(i64) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare noalias noundef i8* @malloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare i8* @malloc(i64)
 
 ; CHECK-LINUX: declare noalias noundef i8* @memalign(i64, i64) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
@@ -727,10 +727,10 @@ declare i64 @read(i32, i8*, i64)
 ; CHECK: declare noundef i64 @readlink(i8* nocapture noundef readonly, i8* nocapture noundef, i64 noundef) [[NOFREE_NOUNWIND]]
 declare i64 @readlink(i8*, i8*, i64)
 
-; CHECK: declare noalias noundef i8* @realloc(i8* nocapture, i64) [[NOUNWIND]]
+; CHECK: declare noalias noundef i8* @realloc(i8* nocapture, i64 noundef) [[NOUNWIND]]
 declare i8* @realloc(i8*, i64)
 
-; CHECK: declare noundef i8* @reallocf(i8*, i64)
+; CHECK: declare noundef i8* @reallocf(i8*, i64 noundef)
 declare i8* @reallocf(i8*, i64)
 
 ; CHECK: declare noundef i8* @realpath(i8* nocapture noundef readonly, i8* noundef) [[NOFREE_NOUNWIND]]
@@ -871,7 +871,7 @@ declare i32 @strncmp(i8*, i8*, i64)
 ; CHECK: declare i8* @strncpy(i8* noalias returned writeonly, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND]]
 declare i8* @strncpy(i8*, i8*, i64)
 
-; CHECK: declare noalias i8* @strndup(i8* nocapture readonly, i64) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare noalias i8* @strndup(i8* nocapture readonly, i64 noundef) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare i8* @strndup(i8*, i64)
 
 ; CHECK: declare i64 @strnlen(i8*, i64) [[NOFREE_NOUNWIND_WILLRETURN]]
@@ -979,7 +979,7 @@ declare i32 @utime(i8*, %opaque*)
 ; CHECK: declare noundef i32 @utimes(i8* nocapture noundef readonly, %opaque* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
 declare i32 @utimes(i8*, %opaque*)
 
-; CHECK: declare noalias noundef i8* @valloc(i64) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare noalias noundef i8* @valloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare i8* @valloc(i64)
 
 ; CHECK: declare noundef i32 @vfprintf(%opaque* nocapture noundef, i8* nocapture noundef readonly, %opaque* noundef) [[NOFREE_NOUNWIND]]
