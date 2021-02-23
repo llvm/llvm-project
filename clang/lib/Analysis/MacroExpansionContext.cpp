@@ -46,6 +46,7 @@ public:
       return SM.getExpansionLoc(Range.getEnd()).getLocWithOffset(1);
     }();
 
+    (void)PP;
     LLVM_DEBUG(llvm::dbgs() << "MacroExpands event: '";
                dumpTokenInto(PP, llvm::dbgs(), MacroName);
                llvm::dbgs()
