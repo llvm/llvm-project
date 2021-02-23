@@ -22,7 +22,10 @@ namespace bugprone {
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-signal-handler-check.html
 class SignalHandlerCheck : public ClangTidyCheck {
 public:
+  enum class AsyncSafeFunctionSetType { Minimal, POSIX };
+
   SignalHandlerCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -32,7 +35,11 @@ private:
                  const CallExpr *SignalCall, const FunctionDecl *HandlerDecl);
   bool isSystemCallAllowed(const FunctionDecl *FD) const;
 
-  static llvm::StringSet<> StrictConformingFunctions;
+  AsyncSafeFunctionSetType AsyncSafeFunctionSet;
+  llvm::StringSet<> &ConformingFunctions;
+
+  static llvm::StringSet<> MinimalConformingFunctions;
+  static llvm::StringSet<> POSIXConformingFunctions;
 };
 
 } // namespace bugprone
