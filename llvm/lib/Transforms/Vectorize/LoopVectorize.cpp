@@ -8249,24 +8249,15 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(TruncInst *I, VFRange &Range,
   return nullptr;
 }
 
-VPRecipeOrVPValueTy VPRecipeBuilder::tryToBlend(PHINode *Phi, VPlanPtr &Plan) {
-  // If all incoming values are equal, the incoming VPValue can be used directly
-  // instead of creating a new VPBlendRecipe.
-  Value *FirstIncoming = Phi->getIncomingValue(0);
-  if (all_of(Phi->incoming_values(), [FirstIncoming](const Value *Inc) {
-        return FirstIncoming == Inc;
-      })) {
-    return Plan->getOrAddVPValue(Phi->getIncomingValue(0));
-  }
-
+VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi, VPlanPtr &Plan) {
   // We know that all PHIs in non-header blocks are converted into selects, so
   // we don't have to worry about the insertion order and we can just use the
   // builder. At this point we generate the predication tree. There may be
   // duplications since this is a simple recursive scan, but future
   // optimizations will clean it up.
+
   SmallVector<VPValue *, 2> Operands;
   unsigned NumIncoming = Phi->getNumIncomingValues();
-
   for (unsigned In = 0; In < NumIncoming; In++) {
     VPValue *EdgeMask =
       createEdgeMask(Phi->getIncomingBlock(In), Phi->getParent(), Plan);
@@ -8458,9 +8449,9 @@ VPRegionBlock *VPRecipeBuilder::createReplicateRegion(Instruction *Instr,
   return Region;
 }
 
-VPRecipeOrVPValueTy VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
-                                                            VFRange &Range,
-                                                            VPlanPtr &Plan) {
+VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
+                                                      VFRange &Range,
+                                                      VPlanPtr &Plan) {
   // First, check for specific widening recipes that deal with calls, memory
   // operations, inductions and Phi nodes.
   if (auto *CI = dyn_cast<CallInst>(Instr))
@@ -8632,15 +8623,17 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       if (isa<BranchInst>(Instr) || DeadInstructions.count(Instr))
         continue;
 
-      if (auto RecipeOrValue =
+      if (auto Recipe =
               RecipeBuilder.tryToCreateWidenRecipe(Instr, Range, Plan)) {
-        // If Instr can be simplified to an existing VPValue, use it.
-        if (RecipeOrValue.is<VPValue *>()) {
-          Plan->addVPValue(Instr, RecipeOrValue.get<VPValue *>());
+
+        // VPBlendRecipes with a single incoming (value, mask) pair are no-ops.
+        // Use the incoming value directly.
+        if (isa<VPBlendRecipe>(Recipe) && Recipe->getNumOperands() <= 2) {
+          Plan->removeVPValueFor(Instr);
+          Plan->addVPValue(Instr, Recipe->getOperand(0));
+          delete Recipe;
           continue;
         }
-        // Otherwise, add the new recipe.
-        VPRecipeBase *Recipe = RecipeOrValue.get<VPRecipeBase *>();
         for (auto *Def : Recipe->definedValues()) {
           auto *UV = Def->getUnderlyingValue();
           Plan->addVPValue(UV, Def);
