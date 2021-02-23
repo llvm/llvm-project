@@ -143,3 +143,31 @@ module @switch_result_types {
     pdl.rewrite %root with "rewriter"
   }
 }
+
+// -----
+
+// CHECK-LABEL: module @predicate_ordering
+module @predicate_ordering  {
+  // Check that the result is checked for null first, before applying the
+  // constraint. The null check is prevalent in both patterns, so should be
+  // prioritized first.
+
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK:   %[[RESULT:.*]] = pdl_interp.get_result 0 of %[[ROOT]]
+  // CHECK-NEXT: pdl_interp.is_not_null %[[RESULT]]
+  // CHECK:   %[[RESULT_TYPE:.*]] = pdl_interp.get_value_type of %[[RESULT]]
+  // CHECK: pdl_interp.apply_constraint "typeConstraint" [](%[[RESULT_TYPE]]
+
+  pdl.pattern : benefit(1) {
+    %resultType = pdl.type
+    pdl.apply_constraint "typeConstraint"[](%resultType : !pdl.type)
+    %root, %result = pdl.operation -> %resultType
+    pdl.rewrite %root with "rewriter"
+  }
+
+  pdl.pattern : benefit(1) {
+    %resultType = pdl.type
+    %apply, %applyRes = pdl.operation -> %resultType
+    pdl.rewrite %apply with "rewriter"
+  }
+}
