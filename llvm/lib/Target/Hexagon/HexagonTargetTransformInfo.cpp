@@ -118,9 +118,10 @@ unsigned HexagonTTIImpl::getScalarizationOverhead(VectorType *Ty,
   return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
 }
 
-unsigned HexagonTTIImpl::getOperandsScalarizationOverhead(
-      ArrayRef<const Value*> Args, unsigned VF) {
-  return BaseT::getOperandsScalarizationOverhead(Args, VF);
+unsigned
+HexagonTTIImpl::getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
+                                                 ArrayRef<Type *> Tys) {
+  return BaseT::getOperandsScalarizationOverhead(Args, Tys);
 }
 
 unsigned HexagonTTIImpl::getCallInstrCost(Function *F, Type *RetTy,

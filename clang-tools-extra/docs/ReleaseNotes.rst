@@ -87,6 +87,14 @@ New check aliases
   :doc:`concurrency-thread-canceltype-asynchronous
   <clang-tidy/checks/concurrency-thread-canceltype-asynchronous>` was added.
 
+Changes in existing checks
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-signal-handler
+  <clang-tidy/checks/bugprone-signal-handler>` check.
+
+  Added an option to choose the set of allowed functions.
+
 Improvements to include-fixer
 -----------------------------
 

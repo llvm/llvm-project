@@ -12051,7 +12051,16 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     checkObjCDictionaryLiteral(S, QualType(Target, 0), DictionaryLiteral);
 
   // Strip vector types.
-  if (isa<VectorType>(Source)) {
+  if (const auto *SourceVT = dyn_cast<VectorType>(Source)) {
+    if (Target->isVLSTBuiltinType()) {
+      auto SourceVectorKind = SourceVT->getVectorKind();
+      if (SourceVectorKind == VectorType::SveFixedLengthDataVector ||
+          SourceVectorKind == VectorType::SveFixedLengthPredicateVector ||
+          (SourceVectorKind == VectorType::GenericVector &&
+           S.Context.getTypeSize(Source) == S.getLangOpts().ArmSveVectorBits))
+        return;
+    }
+
     if (!isa<VectorType>(Target)) {
       if (S.SourceMgr.isInSystemMacro(CC))
         return;

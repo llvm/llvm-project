@@ -1,4 +1,4 @@
-//===--- stdlib.h - Stub header for tests------ -----------------*- C++ -*-===//
+//===--- system-other.h - Stub header for tests -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _STDLIB_H_
-#define _STDLIB_H_
+#ifndef _SYSTEM_OTHER_H_
+#define _SYSTEM_OTHER_H_
 
-void abort(void);
-void _Exit(int);
-void quick_exit(int);
+// Special system calls.
 
-#endif // _STDLIB_H_
+void other_call();
+
+#endif // _SYSTEM_OTHER_H_
