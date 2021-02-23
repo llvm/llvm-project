@@ -929,6 +929,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue SubV = Node->getOperand(1);
     SDLoc DL(SubV);
     auto Idx = Node->getConstantOperandVal(2);
+    MVT XLenVT = Subtarget->getXLenVT();
     MVT SubVecVT = Node->getOperand(1).getSimpleValueType();
 
     // TODO: This method of selecting INSERT_SUBVECTOR should work
@@ -936,24 +937,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // correctly identify the canonical register class for fixed-length types.
     // For now, keep the two paths separate.
     if (VT.isScalableVector() && SubVecVT.isScalableVector()) {
-      bool IsFullVecReg = false;
-      switch (RISCVTargetLowering::getLMUL(SubVecVT)) {
-      default:
-        break;
-      case RISCVVLMUL::LMUL_1:
-      case RISCVVLMUL::LMUL_2:
-      case RISCVVLMUL::LMUL_4:
-      case RISCVVLMUL::LMUL_8:
-        IsFullVecReg = true;
-        break;
-      }
-
-      // If the subvector doesn't occupy a full vector register then we can't
-      // insert it purely using subregister manipulation. We must not clobber
-      // the untouched elements (say, in the upper half of the VR register).
-      if (!IsFullVecReg)
-        break;
-
       const auto *TRI = Subtarget->getRegisterInfo();
       unsigned SubRegIdx;
       std::tie(SubRegIdx, Idx) =
@@ -966,9 +949,32 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       if (Idx != 0)
         break;
 
+      RISCVVLMUL SubVecLMUL = RISCVTargetLowering::getLMUL(SubVecVT);
+      bool IsSubVecPartReg = SubVecLMUL == RISCVVLMUL::LMUL_F2 ||
+                             SubVecLMUL == RISCVVLMUL::LMUL_F4 ||
+                             SubVecLMUL == RISCVVLMUL::LMUL_F8;
+      (void)IsSubVecPartReg; // Silence unused variable warning without asserts.
+      assert((!IsSubVecPartReg || V.isUndef()) &&
+             "Expecting lowering to have created legal INSERT_SUBVECTORs when "
+             "the subvector is smaller than a full-sized register");
+
+      // If we haven't set a SubRegIdx, then we must be going between LMUL<=1
+      // types (VR -> VR). This can be done as a copy.
+      if (SubRegIdx == RISCV::NoSubRegister) {
+        unsigned InRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(VT);
+        assert(RISCVTargetLowering::getRegClassIDForVecVT(SubVecVT) ==
+                   RISCV::VRRegClassID &&
+               InRegClassID == RISCV::VRRegClassID &&
+               "Unexpected subvector extraction");
+        SDValue RC = CurDAG->getTargetConstant(InRegClassID, DL, XLenVT);
+        SDNode *NewNode = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
+                                                 DL, VT, SubV, RC);
+        return ReplaceNode(Node, NewNode);
+      }
+
       SDNode *NewNode = CurDAG->getMachineNode(
           TargetOpcode::INSERT_SUBREG, DL, VT, V, SubV,
-          CurDAG->getTargetConstant(SubRegIdx, DL, Subtarget->getXLenVT()));
+          CurDAG->getTargetConstant(SubRegIdx, DL, XLenVT));
       return ReplaceNode(Node, NewNode);
     }
 
@@ -981,8 +987,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       unsigned RegClassID = RISCVTargetLowering::getRegClassIDForVecVT(VT);
 
-      SDValue RC =
-          CurDAG->getTargetConstant(RegClassID, DL, Subtarget->getXLenVT());
+      SDValue RC = CurDAG->getTargetConstant(RegClassID, DL, XLenVT);
       SDNode *NewNode = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
                                                DL, VT, SubV, RC);
       ReplaceNode(Node, NewNode);

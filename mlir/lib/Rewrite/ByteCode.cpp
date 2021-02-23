@@ -1273,7 +1273,7 @@ void ByteCodeExecutor::execute(
     case GetOperand3: {
       unsigned index = opCode - GetOperand0;
       LLVM_DEBUG(llvm::dbgs() << "Executing GetOperand" << index << ":\n");
-      executeGetOperand(opCode - GetOperand0);
+      executeGetOperand(index);
       break;
     }
     case GetOperandN:
@@ -1286,7 +1286,7 @@ void ByteCodeExecutor::execute(
     case GetResult3: {
       unsigned index = opCode - GetResult0;
       LLVM_DEBUG(llvm::dbgs() << "Executing GetResult" << index << ":\n");
-      executeGetResult(opCode - GetResult0);
+      executeGetResult(index);
       break;
     }
     case GetResultN:
