@@ -251,6 +251,12 @@ public:
   /// Returns an iterator to the new next element.
   edge_iterator removeEdge(edge_iterator I) { return Edges.erase(I); }
 
+  /// Returns the address of the fixup for the given edge, which is equal to
+  /// this block's address plus the edge's offset.
+  JITTargetAddress getFixupAddress(const Edge &E) const {
+    return getAddress() + E.getOffset();
+  }
+
 private:
   static constexpr uint64_t MaxAlignmentOffset = (1ULL << 57) - 1;
 
