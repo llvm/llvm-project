@@ -135,12 +135,6 @@ bool ThreadPlanStepThrough::ValidatePlan(Stream *error) {
     return false;
   }
 
-  if (m_backstop_bkpt_id == LLDB_INVALID_BREAK_ID) {
-    if (error)
-      error->PutCString("Could not create backstop breakpoint.");
-    return false;
-  }
-
   if (!m_sub_plan_sp.get()) {
     if (error)
       error->PutCString("Does not have a subplan.");
