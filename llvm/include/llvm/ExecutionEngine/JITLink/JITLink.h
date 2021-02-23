@@ -830,6 +830,11 @@ public:
 
   /// Create a section with the given name, protection flags, and alignment.
   Section &createSection(StringRef Name, sys::Memory::ProtectionFlags Prot) {
+    assert(llvm::find_if(Sections,
+                         [&](std::unique_ptr<Section> &Sec) {
+                           return Sec->getName() == Name;
+                         }) == Sections.end() &&
+           "Duplicate section name");
     std::unique_ptr<Section> Sec(new Section(Name, Prot, Sections.size()));
     Sections.push_back(std::move(Sec));
     return *Sections.back();
