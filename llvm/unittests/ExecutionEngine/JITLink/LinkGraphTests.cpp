@@ -48,7 +48,7 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
   auto &S2 = G.addDefinedSymbol(B2, 4, "S2", 4, Linkage::Strong, Scope::Default,
                                 false, false);
 
-  auto &Sec2 = G.createSection("__data.1", RWFlags);
+  auto &Sec2 = G.createSection("__data.2", RWFlags);
   auto &B3 = G.createContentBlock(Sec2, BlockContent, 0x3000, 8, 0);
   auto &B4 = G.createContentBlock(Sec2, BlockContent, 0x4000, 8, 0);
   auto &S3 = G.addDefinedSymbol(B3, 0, "S3", 4, Linkage::Strong, Scope::Default,
