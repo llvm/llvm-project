@@ -50,6 +50,10 @@ class GCNMaxOccupancySchedStrategy final : public GenericScheduler {
 
   unsigned TargetOccupancy;
 
+  // schedule() have seen a clustered memory operation. Set it to false
+  // before a region scheduling to know if the region had such clusters.
+  bool HasClusteredNodes;
+
   MachineFunction *MF;
 
 public:
