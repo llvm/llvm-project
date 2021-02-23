@@ -253,11 +253,8 @@ Module::DirectoryName Module::getUmbrellaDir() const {
   if (Header U = getUmbrellaHeader())
     return {"", "", U.Entry->getDir()};
 
-  if (auto *ME = Umbrella.dyn_cast<const DirectoryEntryRef::MapEntry *>())
-    return {UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
-            DirectoryEntryRef(*ME)};
-
-  return {"", "", None};
+  return {UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
+          Umbrella.dyn_cast<const DirectoryEntry *>()};
 }
 
 void Module::addTopHeader(const FileEntry *File) {
