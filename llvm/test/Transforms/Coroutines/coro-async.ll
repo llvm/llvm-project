@@ -89,7 +89,7 @@ entry:
   store i8* %async.ctxt, i8** %callee_context.caller_context.addr
   %resume_proj_fun = bitcast i8*(i8*)* @resume_context_projection to i8*
   %callee = bitcast void(i8*, %async.task*, %async.actor*)* @asyncSuspend to i8*
-  %res = call {i8*, i8*, i8*} (i8*, i8*, ...) @llvm.coro.suspend.async(
+  %res = call {i8*, i8*, i8*} (i32, i8*, i8*, ...) @llvm.coro.suspend.async(i32 0,
                                                   i8* %resume.func_ptr,
                                                   i8* %resume_proj_fun,
                                                   void (i8*, i8*, %async.task*, %async.actor*)* @my_async_function.my_other_async_function_fp.apply,
@@ -204,7 +204,7 @@ entry:
   store i8* %async.ctxt, i8** %callee_context.caller_context.addr
   %resume_proj_fun = bitcast i8*(i8*)* @resume_context_projection to i8*
   %callee = bitcast void(i8*, %async.task*, %async.actor*)* @asyncSuspend to i8*
-  %res = call {i8*, i8*, i8*} (i8*, i8*, ...) @llvm.coro.suspend.async(
+  %res = call {i8*, i8*, i8*} (i32, i8*, i8*, ...) @llvm.coro.suspend.async(i32 2,
                                                   i8* %resume.func_ptr,
                                                   i8* %resume_proj_fun,
                                                   void (i8*, i8*, %async.task*, %async.actor*)* @my_async_function.my_other_async_function_fp.apply,
@@ -222,7 +222,7 @@ entry:
   store i8* %async.ctxt, i8** %callee_context.caller_context.addr.1
   %resume_proj_fun.2 = bitcast i8*(i8*)* @resume_context_projection to i8*
   %callee.2 = bitcast void(i8*, %async.task*, %async.actor*)* @asyncSuspend to i8*
-  %res.2 = call {i8*, i8*, i8*} (i8*, i8*, ...) @llvm.coro.suspend.async(
+  %res.2 = call {i8*, i8*, i8*} (i32, i8*, i8*, ...) @llvm.coro.suspend.async(i32 0,
                                                   i8* %resume.func_ptr.1,
                                                   i8* %resume_proj_fun.2,
                                                   void (i8*, i8*, %async.task*, %async.actor*)* @my_async_function.my_other_async_function_fp.apply,
@@ -258,8 +258,8 @@ entry:
 ; CHECK: tail call swiftcc void @asyncSuspend(i8* [[CALLEE_CTXT_RELOAD]]
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(i8* nocapture readnone %0, i8* %1, i8* nocapture readonly %2) {
-; CHECK: bitcast i8* %2 to i8**
+; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(i8* nocapture readonly %0, i8* %1, i8* nocapture readnone %2) {
+; CHECK: bitcast i8* %0 to i8**
 ; CHECK: [[ACTOR_ARG:%.*]] = bitcast i8* %1
 ; CHECK: tail call swiftcc void @asyncReturn({{.*}}[[ACTOR_ARG]])
 ; CHECK: ret void
@@ -318,7 +318,7 @@ entry:
   store i8* %async.ctxt, i8** %callee_context.caller_context.addr
   %resume_proj_fun = bitcast i8*(i8*)* @resume_context_projection to i8*
   %callee = bitcast void(i8*, %async.task*, %async.actor*)* @asyncSuspend to i8*
-  %res = call {i8*, i8*, i8*} (i8*, i8*, ...) @llvm.coro.suspend.async(
+  %res = call {i8*, i8*, i8*} (i32, i8*, i8*, ...) @llvm.coro.suspend.async(i32 0,
                                                   i8* %resume.func_ptr,
                                                   i8* %resume_proj_fun,
                                                   void (i8*, i8*, %async.task*, %async.actor*)* @dont_crash_on_cf_dispatch,
@@ -364,7 +364,7 @@ entry:
   store i8* %async.ctxt, i8** %callee_context.caller_context.addr
   %resume_proj_fun = bitcast i8*(i8*)* @resume_context_projection to i8*
   %callee = bitcast void(i8*, %async.task*, %async.actor*)* @asyncSuspend to i8*
-  %res = call {i8*, i8*, i8*} (i8*, i8*, ...) @llvm.coro.suspend.async(
+  %res = call {i8*, i8*, i8*} (i32, i8*, i8*, ...) @llvm.coro.suspend.async(i32 0,
                                                   i8* %resume.func_ptr,
                                                   i8* %resume_proj_fun,
                                                   void (i8*, i8*, %async.task*, %async.actor*)* @dont_crash_on_cf_dispatch,
@@ -437,11 +437,12 @@ entry:
   store i8* %async.ctxt, i8** %callee_context.caller_context.addr
   %resume_proj_fun = bitcast i8*(i8*)* @resume_context_projection to i8*
   %callee = bitcast void(i8*, %async.task*, %async.actor*)* @asyncSuspend to i8*
-  %res = call {i8*, i8*, i8*, i8*} (i8*, i8*, ...) @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(
-                                                  i8* %resume.func_ptr,
-                                                  i8* %resume_proj_fun,
-                                                  void (i8*, i8*, %async.task*, %async.actor*)* @my_async_function.my_other_async_function_fp.apply,
-                                                  i8* %callee, i8* %callee_context, %async.task* %task, %async.actor *%actor)
+  %res = call {i8*, i8*, i8*, i8*} (i32, i8*, i8*, ...)
+         @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32 0,
+                                                 i8* %resume.func_ptr,
+                                                 i8* %resume_proj_fun,
+                                                 void (i8*, i8*, %async.task*, %async.actor*)* @my_async_function.my_other_async_function_fp.apply,
+                                                 i8* %callee, i8* %callee_context, %async.task* %task, %async.actor *%actor)
 
   call void @llvm.coro.async.context.dealloc(i8* %callee_context)
   %continuation_task_arg = extractvalue {i8*, i8*, i8*, i8*} %res, 3
@@ -515,13 +516,13 @@ entry:
  ; CHECK:   store i64* null, i64** [[ALLOCA]]
  ; CHECK:   call void @do_with_swifterror(i64** {{.*}}swifterror{{.*}} [[ALLOCA]])
 
-declare { i8*, i8*, i8*, i8* } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i8*, i8*, ...)
+declare { i8*, i8*, i8*, i8* } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32, i8*, i8*, ...)
 declare i8* @llvm.coro.prepare.async(i8*)
 declare token @llvm.coro.id.async(i32, i32, i32, i8*)
 declare i8* @llvm.coro.begin(token, i8*)
 declare i1 @llvm.coro.end.async(i8*, i1, ...)
 declare i1 @llvm.coro.end(i8*, i1)
-declare {i8*, i8*, i8*} @llvm.coro.suspend.async(i8*, i8*, ...)
+declare {i8*, i8*, i8*} @llvm.coro.suspend.async(i32, i8*, i8*, ...)
 declare i8* @llvm.coro.async.context.alloc(i8*, i8*)
 declare void @llvm.coro.async.context.dealloc(i8*)
 declare swiftcc void @asyncReturn(i8*, %async.task*, %async.actor*)
