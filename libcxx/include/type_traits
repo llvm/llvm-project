@@ -1451,7 +1451,8 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_signed_v
 
 // is_unsigned
 
-#if __has_keyword(__is_unsigned)
+// Before clang 13, __is_unsigned returned true for enums with signed underlying type
+#if __has_keyword(__is_unsigned) && _LIBCPP_CLANG_VER >= 1300
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_unsigned : _BoolConstant<__is_unsigned(_Tp)> { };
@@ -1461,7 +1462,7 @@ template <class _Tp>
 _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_unsigned_v = __is_unsigned(_Tp);
 #endif
 
-#else // __has_keyword(__is_unsigned)
+#else // __has_keyword(__is_unsigned) && _LIBCPP_CLANG_VER >= 1300
 
 template <class _Tp, bool = is_integral<_Tp>::value>
 struct __libcpp_is_unsigned_impl : public _LIBCPP_BOOL_CONSTANT(_Tp(0) < _Tp(-1)) {};
@@ -1482,7 +1483,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_unsigned_v
     = is_unsigned<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_unsigned)
+#endif // __has_keyword(__is_unsigned) && _LIBCPP_CLANG_VER >= 1300
 
 // rank
 
