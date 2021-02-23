@@ -205,8 +205,8 @@ else:
 }
 
 declare i8* @fn_nonnull_noundef_arg(i8* nonnull noundef %p)
-declare i8* @fn_nonnull_deref_arg(i8* dereferenceable(4) noundef %p)
-declare i8* @fn_nonnull_deref_or_null_arg(i8* dereferenceable_or_null(4) noundef %p)
+declare i8* @fn_nonnull_deref_arg(i8* nonnull dereferenceable(4) %p)
+declare i8* @fn_nonnull_deref_or_null_arg(i8* nonnull dereferenceable_or_null(4) %p)
 declare i8* @fn_nonnull_arg(i8* nonnull %p)
 declare i8* @fn_noundef_arg(i8* noundef %p)
 
