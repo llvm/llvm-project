@@ -130,8 +130,8 @@ Sections:
       - Address:   0x20
 
 ## Check that obj2yaml uses the "Content" tag to describe an .llvm_bb_addr_map section
-## when it can't extract the entries, for example, when section is truncated, or when
-## an invalid NumBlocks field is specified.
+## when it can't extract the entries, for example, when the section is truncated, or
+## when an invalid 'NumBlocks' field is specified.
 
 # RUN: yaml2obj --docnum=1 -DSIZE=0x8 %s -o %t4
 # RUN: obj2yaml %t4 | FileCheck %s --check-prefixes=TRUNCATED,INVALID

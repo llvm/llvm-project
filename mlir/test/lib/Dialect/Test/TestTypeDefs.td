@@ -48,7 +48,7 @@ def CompoundTypeA : Test_Type<"CompoundA"> {
 // An example of how one could implement a standard integer.
 def IntegerType : Test_Type<"TestInteger"> {
   let mnemonic = "int";
-  let genVerifyInvariantsDecl = 1;
+  let genVerifyDecl = 1;
   let parameters = (
     ins
     "unsigned":$width,
@@ -67,9 +67,7 @@ def IntegerType : Test_Type<"TestInteger"> {
   let builders = [
     TypeBuilder<(ins "unsigned":$width,
                      CArg<"SignednessSemantics", "Signless">:$signedness), [{
-      return Base::get($_ctxt, width, signedness);
-    }], [{
-      return Base::getChecked($_loc, width, signedness);
+      return $_get($_ctxt, width, signedness);
     }]>
   ];
   let skipDefaultBuilders = 1;
@@ -84,7 +82,7 @@ def IntegerType : Test_Type<"TestInteger"> {
     if ($_parser.parseInteger(width)) return Type();
     if ($_parser.parseGreater()) return Type();
     Location loc = $_parser.getEncodedSourceLoc($_parser.getNameLoc());
-    return getChecked(loc, width, signedness);
+    return getChecked(loc, loc.getContext(), width, signedness);
   }];
 
   // Any extra code one wants in the type's class declaration.

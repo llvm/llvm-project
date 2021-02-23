@@ -6,6 +6,8 @@ add_libc_unittest(
     libc_time_unittests
   SRCS
     mktime_test.cpp
+  HDRS
+    TmMatcher.h
   DEPENDS
     libc.src.time.mktime
 )

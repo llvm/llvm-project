@@ -1665,8 +1665,8 @@ void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
     IO &IO, ELFYAML::BBAddrMapEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapOptional("Address", E.Address, Hex64(0));
-  IO.mapOptional("BBEntries", E.BBEntries);
   IO.mapOptional("NumBlocks", E.NumBlocks);
+  IO.mapOptional("BBEntries", E.BBEntries);
 }
 
 void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(

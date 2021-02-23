@@ -70,12 +70,15 @@
 #if defined(__APPLE__)
 
 #define SYMBOL_IS_FUNC(name)
-#define EXPORT_SYMBOL(name)
 #define HIDDEN_SYMBOL(name) .private_extern name
-#define WEAK_SYMBOL(name) .weak_reference name
+#if defined(_LIBUNWIND_HIDE_SYMBOLS)
+#define EXPORT_SYMBOL(name) HIDDEN_SYMBOL(name)
+#else
+#define EXPORT_SYMBOL(name)
+#endif
 #define WEAK_ALIAS(name, aliasname)                                            \
   .globl SYMBOL_NAME(aliasname) SEPARATOR                                      \
-  WEAK_SYMBOL(aliasname) SEPARATOR                                             \
+  EXPORT_SYMBOL(SYMBOL_NAME(aliasname)) SEPARATOR                              \
   SYMBOL_NAME(aliasname) = SYMBOL_NAME(name)
 
 #define NO_EXEC_STACK_DIRECTIVE
@@ -87,17 +90,23 @@
 #else
 #define SYMBOL_IS_FUNC(name) .type name,@function
 #endif
-#define EXPORT_SYMBOL(name)
 #define HIDDEN_SYMBOL(name) .hidden name
+#if defined(_LIBUNWIND_HIDE_SYMBOLS)
+#define EXPORT_SYMBOL(name) HIDDEN_SYMBOL(name)
+#else
+#define EXPORT_SYMBOL(name)
+#endif
 #define WEAK_SYMBOL(name) .weak name
 
 #if defined(__hexagon__)
-#define WEAK_ALIAS(name, aliasname) \
-  WEAK_SYMBOL(aliasname) SEPARATOR                                             \
+#define WEAK_ALIAS(name, aliasname)                                            \
+  EXPORT_SYMBOL(SYMBOL_NAME(aliasname)) SEPARATOR                              \
+  WEAK_SYMBOL(SYMBOL_NAME(aliasname)) SEPARATOR                                \
   .equiv SYMBOL_NAME(aliasname), SYMBOL_NAME(name)
 #else
 #define WEAK_ALIAS(name, aliasname)                                            \
-  WEAK_SYMBOL(aliasname) SEPARATOR                                             \
+  EXPORT_SYMBOL(SYMBOL_NAME(aliasname)) SEPARATOR                              \
+  WEAK_SYMBOL(SYMBOL_NAME(aliasname)) SEPARATOR                                \
   SYMBOL_NAME(aliasname) = SYMBOL_NAME(name)
 #endif
 
@@ -119,7 +128,7 @@
   .section .drectve,"yn" SEPARATOR                                             \
   .ascii "-export:", #name, "\0" SEPARATOR                                     \
   .text
-#if defined(_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS)
+#if defined(_LIBUNWIND_HIDE_SYMBOLS)
 #define EXPORT_SYMBOL(name)
 #else
 #define EXPORT_SYMBOL(name) EXPORT_SYMBOL2(name)

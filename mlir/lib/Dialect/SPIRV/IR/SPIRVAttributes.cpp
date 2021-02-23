@@ -162,23 +162,23 @@ Optional<spirv::StorageClass> spirv::InterfaceVarABIAttr::getStorageClass() {
   return llvm::None;
 }
 
-LogicalResult spirv::InterfaceVarABIAttr::verifyConstructionInvariants(
-    Location loc, IntegerAttr descriptorSet, IntegerAttr binding,
-    IntegerAttr storageClass) {
+LogicalResult spirv::InterfaceVarABIAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, IntegerAttr descriptorSet,
+    IntegerAttr binding, IntegerAttr storageClass) {
   if (!descriptorSet.getType().isSignlessInteger(32))
-    return emitError(loc, "expected 32-bit integer for descriptor set");
+    return emitError() << "expected 32-bit integer for descriptor set";
 
   if (!binding.getType().isSignlessInteger(32))
-    return emitError(loc, "expected 32-bit integer for binding");
+    return emitError() << "expected 32-bit integer for binding";
 
   if (storageClass) {
     if (auto storageClassAttr = storageClass.cast<IntegerAttr>()) {
       auto storageClassValue =
           spirv::symbolizeStorageClass(storageClassAttr.getInt());
       if (!storageClassValue)
-        return emitError(loc, "unknown storage class");
+        return emitError() << "unknown storage class";
     } else {
-      return emitError(loc, "expected valid storage class");
+      return emitError() << "expected valid storage class";
     }
   }
 
@@ -257,11 +257,12 @@ ArrayAttr spirv::VerCapExtAttr::getCapabilitiesAttr() {
   return getImpl()->capabilities.cast<ArrayAttr>();
 }
 
-LogicalResult spirv::VerCapExtAttr::verifyConstructionInvariants(
-    Location loc, IntegerAttr version, ArrayAttr capabilities,
-    ArrayAttr extensions) {
+LogicalResult
+spirv::VerCapExtAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             IntegerAttr version, ArrayAttr capabilities,
+                             ArrayAttr extensions) {
   if (!version.getType().isSignlessInteger(32))
-    return emitError(loc, "expected 32-bit integer for version");
+    return emitError() << "expected 32-bit integer for version";
 
   if (!llvm::all_of(capabilities.getValue(), [](Attribute attr) {
         if (auto intAttr = attr.dyn_cast<IntegerAttr>())
@@ -269,7 +270,7 @@ LogicalResult spirv::VerCapExtAttr::verifyConstructionInvariants(
             return true;
         return false;
       }))
-    return emitError(loc, "unknown capability in capability list");
+    return emitError() << "unknown capability in capability list";
 
   if (!llvm::all_of(extensions.getValue(), [](Attribute attr) {
         if (auto strAttr = attr.dyn_cast<StringAttr>())
@@ -277,7 +278,7 @@ LogicalResult spirv::VerCapExtAttr::verifyConstructionInvariants(
             return true;
         return false;
       }))
-    return emitError(loc, "unknown extension in extension list");
+    return emitError() << "unknown extension in extension list";
 
   return success();
 }
@@ -338,12 +339,14 @@ spirv::ResourceLimitsAttr spirv::TargetEnvAttr::getResourceLimits() const {
   return getImpl()->limits.cast<spirv::ResourceLimitsAttr>();
 }
 
-LogicalResult spirv::TargetEnvAttr::verifyConstructionInvariants(
-    Location loc, spirv::VerCapExtAttr /*triple*/, spirv::Vendor /*vendorID*/,
-    spirv::DeviceType /*deviceType*/, uint32_t /*deviceID*/,
-    DictionaryAttr limits) {
+LogicalResult
+spirv::TargetEnvAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             spirv::VerCapExtAttr /*triple*/,
+                             spirv::Vendor /*vendorID*/,
+                             spirv::DeviceType /*deviceType*/,
+                             uint32_t /*deviceID*/, DictionaryAttr limits) {
   if (!limits.isa<spirv::ResourceLimitsAttr>())
-    return emitError(loc, "expected spirv::ResourceLimitsAttr for limits");
+    return emitError() << "expected spirv::ResourceLimitsAttr for limits";
 
   return success();
 }

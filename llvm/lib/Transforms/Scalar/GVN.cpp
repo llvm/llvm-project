@@ -1774,7 +1774,7 @@ bool GVN::processLoad(LoadInst *L) {
       MSSAU->removeMemoryAccess(L);
     ++NumGVNLoad;
     reportLoadElim(L, AvailableValue, ORE);
-    // Tell MDA to rexamine the reused pointer since we might have more
+    // Tell MDA to reexamine the reused pointer since we might have more
     // information after forwarding it.
     if (MD && AvailableValue->getType()->isPtrOrPtrVectorTy())
       MD->invalidateCachedPointerInfo(AvailableValue);
