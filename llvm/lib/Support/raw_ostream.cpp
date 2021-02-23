@@ -754,6 +754,15 @@ raw_fd_ostream::~raw_fd_ostream() {
   if (FD == 2) return;
 #endif
 
+  // This is a workaround for a Swift compiler issue wherein the compiler
+  // occassionally crashes in this destructor with no meaningful error
+  // diagnostic when destructing a *global* stream.
+  // In case we encounter an error on destroying a global stream
+  // to stdout or stderr, for now just exit to avoid a crash in:
+  // report_fatal_error.
+  // `Reversal tracked in: rdar://74359658`
+  if (has_error() && (FD == 2 || FD == 1)) return;
+
   // If there are any pending errors, report them now. Clients wishing
   // to avoid report_fatal_error calls should check for errors with
   // has_error() and clear the error flag with clear_error() before
