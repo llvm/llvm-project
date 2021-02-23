@@ -237,8 +237,8 @@ integer function len_trim_test(c)
   ! CHECK-DAG: %[[lastChar:.*]] = subi {{.*}}, %[[c1]]
   ! CHECK: %[[iterateResult:.*]]:2 = fir.iterate_while (%[[index:.*]] = %[[lastChar]] to %[[c0]] step %[[cm1]]) and ({{.*}}) iter_args({{.*}}) {
     ! CHECK: %[[addr:.*]] = fir.coordinate_of {{.*}}, %[[index]]
-    ! CHECK: %[[char:.*]] = fir.load %[[addr]]
-    ! CHECK: %[[code:.*]] = fir.convert %[[char]]
+    ! CHECK: %[[codeAddr:.*]] = fir.convert %[[addr]]
+    ! CHECK: %[[code:.*]] = fir.load %[[codeAddr]]
     ! CHECK: %[[bool:.*]] = cmpi eq
     ! CHECK: fir.result %[[bool]], %[[index]]
   ! CHECK: }
