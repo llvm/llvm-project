@@ -467,11 +467,22 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     MI.setDesc(TII->get(X86::TILELOADD));
     return true;
   }
-  case X86::PTDPBSSDV: {
+  case X86::PTDPBSSDV:
+  case X86::PTDPBSUDV:
+  case X86::PTDPBUSDV:
+  case X86::PTDPBUUDV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
       MI.RemoveOperand(i);
-    MI.setDesc(TII->get(X86::TDPBSSD));
+    unsigned Opc;
+    switch (Opcode) {
+    case X86::PTDPBSSDV: Opc = X86::TDPBSSD; break;
+    case X86::PTDPBSUDV: Opc = X86::TDPBSUD; break;
+    case X86::PTDPBUSDV: Opc = X86::TDPBUSD; break;
+    case X86::PTDPBUUDV: Opc = X86::TDPBUUD; break;
+    default: llvm_unreachable("Impossible Opcode!");
+    }
+    MI.setDesc(TII->get(Opc));
     MI.tieOperands(0, 1);
     return true;
   }
