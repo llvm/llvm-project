@@ -1956,27 +1956,34 @@ continue:
 define zeroext i1 @smulo2.br.i64(i64 %v1) {
 ; RV32-LABEL: smulo2.br.i64:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    add a2, a0, a0
-; RV32-NEXT:    sltu a0, a2, a0
-; RV32-NEXT:    add a2, a1, a1
-; RV32-NEXT:    add a0, a2, a0
-; RV32-NEXT:    slti a0, a0, 0
-; RV32-NEXT:    slti a1, a1, 0
-; RV32-NEXT:    beq a1, a0, .LBB56_2
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    sw zero, 8(sp)
+; RV32-NEXT:    addi a2, zero, -13
+; RV32-NEXT:    addi a3, zero, -1
+; RV32-NEXT:    addi a4, sp, 8
+; RV32-NEXT:    call __mulodi4@plt
+; RV32-NEXT:    lw a0, 8(sp)
+; RV32-NEXT:    beqz a0, .LBB56_2
 ; RV32-NEXT:  # %bb.1: # %overflow
 ; RV32-NEXT:    mv a0, zero
-; RV32-NEXT:    ret
+; RV32-NEXT:    j .LBB56_3
 ; RV32-NEXT:  .LBB56_2: # %continue
 ; RV32-NEXT:    addi a0, zero, 1
+; RV32-NEXT:  .LBB56_3: # %overflow
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: smulo2.br.i64:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    add a1, a0, a0
-; RV64-NEXT:    slt a1, a1, a0
-; RV64-NEXT:    slti a0, a0, 0
-; RV64-NEXT:    xor a0, a0, a1
-; RV64-NEXT:    beqz a0, .LBB56_2
+; RV64-NEXT:    addi a1, zero, -13
+; RV64-NEXT:    mulh a2, a0, a1
+; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    srai a0, a0, 63
+; RV64-NEXT:    beq a2, a0, .LBB56_2
 ; RV64-NEXT:  # %bb.1: # %overflow
 ; RV64-NEXT:    mv a0, zero
 ; RV64-NEXT:    ret
@@ -1984,7 +1991,7 @@ define zeroext i1 @smulo2.br.i64(i64 %v1) {
 ; RV64-NEXT:    addi a0, zero, 1
 ; RV64-NEXT:    ret
 entry:
-  %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 2)
+  %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 -13)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
   br i1 %obit, label %overflow, label %continue
