@@ -54,85 +54,26 @@ bool HardwareLoopInfo::canAnalyze(LoopInfo &LI) {
   return true;
 }
 
-IntrinsicCostAttributes::IntrinsicCostAttributes(const IntrinsicInst &I) :
-    II(&I), RetTy(I.getType()), IID(I.getIntrinsicID()) {
-
- FunctionType *FTy = I.getCalledFunction()->getFunctionType();
- ParamTys.insert(ParamTys.begin(), FTy->param_begin(), FTy->param_end());
- Arguments.insert(Arguments.begin(), I.arg_begin(), I.arg_end());
- if (auto *FPMO = dyn_cast<FPMathOperator>(&I))
-   FMF = FPMO->getFastMathFlags();
-}
-
 IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
-                                                 const CallBase &CI) :
-  II(dyn_cast<IntrinsicInst>(&CI)),  RetTy(CI.getType()), IID(Id) {
+                                                 const CallBase &CI,
+                                                 unsigned ScalarizationCost)
+    : II(dyn_cast<IntrinsicInst>(&CI)), RetTy(CI.getType()), IID(Id),
+      ScalarizationCost(ScalarizationCost) {
 
   if (const auto *FPMO = dyn_cast<FPMathOperator>(&CI))
     FMF = FPMO->getFastMathFlags();
 
   Arguments.insert(Arguments.begin(), CI.arg_begin(), CI.arg_end());
-  FunctionType *FTy =
-    CI.getCalledFunction()->getFunctionType();
+  FunctionType *FTy = CI.getCalledFunction()->getFunctionType();
   ParamTys.insert(ParamTys.begin(), FTy->param_begin(), FTy->param_end());
 }
 
-IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
-                                                 const CallBase &CI,
-                                                 ElementCount Factor)
-    : RetTy(CI.getType()), IID(Id), VF(Factor) {
-
-  if (auto *FPMO = dyn_cast<FPMathOperator>(&CI))
-    FMF = FPMO->getFastMathFlags();
-
-  Arguments.insert(Arguments.begin(), CI.arg_begin(), CI.arg_end());
-  FunctionType *FTy =
-    CI.getCalledFunction()->getFunctionType();
-  ParamTys.insert(ParamTys.begin(), FTy->param_begin(), FTy->param_end());
-}
-
-IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
-                                                 const CallBase &CI,
-                                                 ElementCount Factor,
+IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
+                                                 ArrayRef<Type *> Tys,
+                                                 FastMathFlags Flags,
+                                                 const IntrinsicInst *I,
                                                  unsigned ScalarCost)
-    : RetTy(CI.getType()), IID(Id), VF(Factor), ScalarizationCost(ScalarCost) {
-
-  if (const auto *FPMO = dyn_cast<FPMathOperator>(&CI))
-    FMF = FPMO->getFastMathFlags();
-
-  Arguments.insert(Arguments.begin(), CI.arg_begin(), CI.arg_end());
-  FunctionType *FTy =
-    CI.getCalledFunction()->getFunctionType();
-  ParamTys.insert(ParamTys.begin(), FTy->param_begin(), FTy->param_end());
-}
-
-IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                                                 ArrayRef<Type *> Tys,
-                                                 FastMathFlags Flags) :
-    RetTy(RTy), IID(Id), FMF(Flags) {
-  ParamTys.insert(ParamTys.begin(), Tys.begin(), Tys.end());
-}
-
-IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                                                 ArrayRef<Type *> Tys,
-                                                 FastMathFlags Flags,
-                                                 unsigned ScalarCost) :
-    RetTy(RTy), IID(Id), FMF(Flags), ScalarizationCost(ScalarCost) {
-  ParamTys.insert(ParamTys.begin(), Tys.begin(), Tys.end());
-}
-
-IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                                                 ArrayRef<Type *> Tys,
-                                                 FastMathFlags Flags,
-                                                 unsigned ScalarCost,
-                                                 const IntrinsicInst *I) :
-    II(I), RetTy(RTy), IID(Id), FMF(Flags), ScalarizationCost(ScalarCost) {
-  ParamTys.insert(ParamTys.begin(), Tys.begin(), Tys.end());
-}
-
-IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                                                 ArrayRef<Type *> Tys) :
-    RetTy(RTy), IID(Id) {
+    : II(I), RetTy(RTy), IID(Id), FMF(Flags), ScalarizationCost(ScalarCost) {
   ParamTys.insert(ParamTys.begin(), Tys.begin(), Tys.end());
 }
 
@@ -144,6 +85,17 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *Ty,
   ParamTys.reserve(Arguments.size());
   for (unsigned Idx = 0, Size = Arguments.size(); Idx != Size; ++Idx)
     ParamTys.push_back(Arguments[Idx]->getType());
+}
+
+IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
+                                                 ArrayRef<const Value *> Args,
+                                                 ArrayRef<Type *> Tys,
+                                                 FastMathFlags Flags,
+                                                 const IntrinsicInst *I,
+                                                 unsigned ScalarCost)
+    : II(I), RetTy(RTy), IID(Id), FMF(Flags), ScalarizationCost(ScalarCost) {
+  ParamTys.insert(ParamTys.begin(), Tys.begin(), Tys.end());
+  Arguments.insert(Arguments.begin(), Args.begin(), Args.end());
 }
 
 bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
