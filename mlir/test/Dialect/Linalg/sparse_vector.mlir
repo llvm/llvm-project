@@ -145,6 +145,40 @@ func @mul_s(%arga: tensor<1024xf32>, %argb: tensor<1024xf32>, %argx: tensor<1024
   return %0 : tensor<1024xf32>
 }
 
+//
+// CHECK-VEC2-LABEL: func @mul_s_alt
+// CHECK-VEC2-DAG:   %[[c0:.*]] = constant 0 : index
+// CHECK-VEC2-DAG:   %[[c1:.*]] = constant 1 : index
+// CHECK-VEC2-DAG:   %[[c16:.*]] = constant 16 : index
+// CHECK-VEC2:       %[[p:.*]] = load %{{.*}}[%[[c0]]] : memref<?xi32>
+// CHECK-VEC2:       %[[q:.*]] = index_cast %[[p]] : i32 to index
+// CHECK-VEC2:       %[[r:.*]] = load %{{.*}}[%[[c1]]] : memref<?xi32>
+// CHECK-VEC2:       %[[s:.*]] = index_cast %[[r]] : i32 to index
+// CHECK-VEC2:       scf.for %[[i:.*]] = %[[q]] to %[[s]] step %[[c16]] {
+// CHECK-VEC2:         %[[sub:.*]] = subi %[[s]], %[[i]] : index
+// CHECK-VEC2:         %[[mask:.*]] = vector.create_mask %[[sub]] : vector<16xi1>
+// CHECK-VEC2:         %[[li:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<?xi32>, vector<16xi1>, vector<16xi32> into vector<16xi32>
+// CHECK-VEC2:         %[[la:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC2:         %[[lb:.*]] = vector.gather %{{.*}}[%[[li]]], %[[mask]], %{{.*}} : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC2:         %[[m:.*]] = mulf %[[la]], %[[lb]] : vector<16xf32>
+// CHECK-VEC2:         vector.scatter %{{.*}}[%[[li]]], %[[mask]], %[[m]] : memref<1024xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
+// CHECK-VEC2:       }
+// CHECK-VEC2:       return
+//
+!SparseTensor = type !llvm.ptr<i8>
+func @mul_s_alt(%argA: !SparseTensor, %argB: !SparseTensor, %argx: tensor<1024xf32>) -> tensor<1024xf32> {
+  %arga = linalg.sparse_tensor %argA : !SparseTensor to tensor<1024xf32>
+  %argb = linalg.sparse_tensor %argB : !SparseTensor to tensor<1024xf32>
+  %0 = linalg.generic #trait_mul_s
+    ins(%arga, %argb: tensor<1024xf32>, tensor<1024xf32>)
+    outs(%argx: tensor<1024xf32>) {
+      ^bb(%a: f32, %b: f32, %x: f32):
+        %0 = mulf %a, %b : f32
+        linalg.yield %0 : f32
+  } -> tensor<1024xf32>
+  return %0 : tensor<1024xf32>
+}
+
 #trait_reduction_d = {
   indexing_maps = [
     affine_map<(i) -> (i)>,  // a
