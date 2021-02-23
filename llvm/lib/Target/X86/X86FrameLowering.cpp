@@ -1479,7 +1479,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
           // We have an initial context in r11, store it just before the frame
           // pointer.
           BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64r))
-              .addReg(X86::R14)
+              .addReg(X86::R11)
               .setMIFlag(MachineInstr::FrameSetup);
         } else {
           // No initial context, store null so that there's no pointer that
