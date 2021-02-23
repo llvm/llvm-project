@@ -54,11 +54,11 @@ def B_CompoundTypeA : TestType<"CompoundA"> {
       RTLValueType:$inner
   );
 
-  let genVerifyInvariantsDecl = 1;
+  let genVerifyDecl = 1;
 
 // DECL-LABEL: class CompoundAType : public ::mlir::Type
-// DECL: static CompoundAType getChecked(::mlir::Location loc, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
-// DECL: static ::mlir::LogicalResult verifyConstructionInvariants(::mlir::Location loc, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
+// DECL: static CompoundAType getChecked(llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
+// DECL: static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
 // DECL: static ::llvm::StringRef getMnemonic() { return "cmpnd_a"; }
 // DECL: static ::mlir::Type parse(::mlir::MLIRContext *context,
 // DECL-NEXT: ::mlir::DialectAsmParser &parser);
@@ -95,7 +95,7 @@ def D_SingleParameterType : TestType<"SingleParameter"> {
 
 def E_IntegerType : TestType<"Integer"> {
     let mnemonic = "int";
-    let genVerifyInvariantsDecl = 1;
+    let genVerifyDecl = 1;
     let parameters = (
         ins
         "SignednessSemantics":$signedness,
