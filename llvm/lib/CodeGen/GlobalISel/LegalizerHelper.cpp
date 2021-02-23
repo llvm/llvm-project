@@ -861,6 +861,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     return reduceOperationWidth(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
+  case TargetOpcode::G_SADDO:
+  case TargetOpcode::G_SSUBO:
   case TargetOpcode::G_UADDO:
   case TargetOpcode::G_USUBO:
     return narrowScalarAddSub(MI, TypeIdx, NarrowTy);
@@ -4466,17 +4468,26 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
   // Expand in terms of carry-setting/consuming G_<Op>E instructions.
   int NumParts = SizeOp0 / NarrowTy.getSizeInBits();
 
-  unsigned OpO, OpE;
-  switch (MI.getOpcode()) {
+  unsigned Opcode = MI.getOpcode();
+  unsigned OpO, OpE, OpF;
+  switch (Opcode) {
+  case TargetOpcode::G_SADDO:
   case TargetOpcode::G_UADDO:
   case TargetOpcode::G_ADD:
     OpO = TargetOpcode::G_UADDO;
     OpE = TargetOpcode::G_UADDE;
+    OpF = TargetOpcode::G_UADDE;
+    if (Opcode == TargetOpcode::G_SADDO)
+      OpF = TargetOpcode::G_SADDE;
     break;
+  case TargetOpcode::G_SSUBO:
   case TargetOpcode::G_USUBO:
   case TargetOpcode::G_SUB:
     OpO = TargetOpcode::G_USUBO;
     OpE = TargetOpcode::G_USUBE;
+    OpF = TargetOpcode::G_USUBE;
+    if (Opcode == TargetOpcode::G_SSUBO)
+      OpF = TargetOpcode::G_SSUBE;
     break;
   default:
     llvm_unreachable("Unexpected add/sub opcode!");
@@ -4502,10 +4513,13 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
     if (i == NumParts - 1 && CarryDst)
       CarryOut = CarryDst;
 
-    if (i == 0)
+    if (i == 0) {
       MIRBuilder.buildInstr(OpO, {DstReg, CarryOut},
                             {Src1Regs[i], Src2Regs[i]});
-    else {
+    } else if (i == NumParts - 1) {
+      MIRBuilder.buildInstr(OpF, {DstReg, CarryOut},
+                            {Src1Regs[i], Src2Regs[i], CarryIn});
+    } else {
       MIRBuilder.buildInstr(OpE, {DstReg, CarryOut},
                             {Src1Regs[i], Src2Regs[i], CarryIn});
     }
