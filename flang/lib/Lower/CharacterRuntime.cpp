@@ -38,11 +38,10 @@ static int discoverKind(mlir::Type ty) {
 //===----------------------------------------------------------------------===//
 
 mlir::Value
-Fortran::lower::genRawCharCompare(Fortran::lower::AbstractConverter &converter,
+Fortran::lower::genRawCharCompare(Fortran::lower::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::CmpIPredicate cmp,
                                   mlir::Value lhsBuff, mlir::Value lhsLen,
                                   mlir::Value rhsBuff, mlir::Value rhsLen) {
-  auto &builder = converter.getFirOpBuilder();
   mlir::FuncOp beginFunc;
   switch (discoverKind(lhsBuff.getType())) {
   case 1:
@@ -69,11 +68,10 @@ Fortran::lower::genRawCharCompare(Fortran::lower::AbstractConverter &converter,
 }
 
 mlir::Value
-Fortran::lower::genCharCompare(Fortran::lower::AbstractConverter &converter,
+Fortran::lower::genCharCompare(Fortran::lower::FirOpBuilder &builder,
                                mlir::Location loc, mlir::CmpIPredicate cmp,
                                const fir::ExtendedValue &lhs,
                                const fir::ExtendedValue &rhs) {
-  auto &builder = converter.getFirOpBuilder();
   if (lhs.getBoxOf<fir::BoxValue>() || rhs.getBoxOf<fir::BoxValue>())
     TODO(loc, "character compare from descriptors");
   auto allocateIfNotInMemory = [&](mlir::Value base) -> mlir::Value {
@@ -85,6 +83,6 @@ Fortran::lower::genCharCompare(Fortran::lower::AbstractConverter &converter,
   };
   auto lhsBuffer = allocateIfNotInMemory(fir::getBase(lhs));
   auto rhsBuffer = allocateIfNotInMemory(fir::getBase(rhs));
-  return genRawCharCompare(converter, loc, cmp, lhsBuffer, fir::getLen(lhs),
+  return genRawCharCompare(builder, loc, cmp, lhsBuffer, fir::getLen(lhs),
                            rhsBuffer, fir::getLen(rhs));
 }
