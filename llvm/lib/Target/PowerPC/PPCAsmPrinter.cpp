@@ -1323,8 +1323,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     unsigned RetOpcode = MI->getOperand(0).getImm();
     MCInst RetInst;
     RetInst.setOpcode(RetOpcode);
-    for (const auto &MO :
-         make_range(std::next(MI->operands_begin()), MI->operands_end())) {
+    for (const auto &MO : llvm::drop_begin(MI->operands())) {
       MCOperand MCOp;
       if (LowerPPCMachineOperandToMCOperand(MO, MCOp, *this))
         RetInst.addOperand(MCOp);
