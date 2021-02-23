@@ -126,6 +126,7 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
       "llvm.coro.alloc",
       "llvm.coro.async.context.alloc",
       "llvm.coro.async.context.dealloc",
+      "llvm.coro.async.size.replace",
       "llvm.coro.async.store_resume",
       "llvm.coro.begin",
       "llvm.coro.destroy",
