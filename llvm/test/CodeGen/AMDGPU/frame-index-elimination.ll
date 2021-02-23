@@ -77,6 +77,8 @@ define void @func_add_constant_to_fi_i32() #0 {
 
 ; A user the materialized frame index can't be meaningfully folded
 ; into.
+; FIXME: Should use s_mul but the frame index always gets materialized into a
+; vgpr
 
 ; GCN-LABEL: {{^}}func_other_fi_user_i32:
 
@@ -85,7 +87,7 @@ define void @func_add_constant_to_fi_i32() #0 {
 ; GFX9-MUBUF:   v_lshrrev_b32_e64 v0, 6, s32
 ; GFX9-FLATSCR: v_mov_b32_e32 v0, s32
 
-; GCN-NEXT: v_mul_u32_u24_e32 v0, 9, v0
+; GCN-NEXT: v_mul_lo_u32 v0, v0, 9
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
 define void @func_other_fi_user_i32() #0 {
@@ -197,7 +199,7 @@ ret:
 ; GFX9-FLATSCR-DAG: s_add_u32 [[SZ:[^,]+]], s32, 0x200
 ; GFX9-FLATSCR:     v_mov_b32_e32 [[VZ:v[0-9]+]], [[SZ]]
 
-; GCN: v_mul_u32_u24_e32 [[VZ]], 9, [[VZ]]
+; GCN: v_mul_lo_u32 [[VZ]], [[VZ]], 9
 ; GCN: ds_write_b32 v0, [[VZ]]
 define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
   %alloca0 = alloca [128 x i32], align 4, addrspace(5)
@@ -223,7 +225,7 @@ define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
 ; GFX9-FLATSCR-DAG: s_add_u32 [[SZ:[^,]+]], s32, 0x200
 ; GFX9-FLATSCR:     v_mov_b32_e32 [[VZ:v[0-9]+]], [[SZ]]
 
-; GCN: v_mul_u32_u24_e32 [[VZ]], 9, [[VZ]]
+; GCN: v_mul_lo_u32 [[VZ]], [[VZ]], 9
 ; GCN: ds_write_b32 v0, [[VZ]]
 define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() #0 {
   %alloca0 = alloca [128 x i32], align 4, addrspace(5)
