@@ -1820,9 +1820,9 @@ template <typename R> struct result_pair {
   result_pair(std::size_t Index, IterOfRange<R> Iter)
       : Index(Index), Iter(Iter) {}
 
-  result_pair<R>(const result_pair<R> &Other)
+  result_pair(const result_pair<R> &Other)
       : Index(Other.Index), Iter(Other.Iter) {}
-  result_pair<R> &operator=(const result_pair<R> &Other) {
+  result_pair &operator=(const result_pair &Other) {
     Index = Other.Index;
     Iter = Other.Iter;
     return *this;
@@ -1856,22 +1856,22 @@ public:
   result_type &operator*() { return Result; }
   const result_type &operator*() const { return Result; }
 
-  enumerator_iter<R> &operator++() {
+  enumerator_iter &operator++() {
     assert(Result.Index != std::numeric_limits<size_t>::max());
     ++Result.Iter;
     ++Result.Index;
     return *this;
   }
 
-  bool operator==(const enumerator_iter<R> &RHS) const {
+  bool operator==(const enumerator_iter &RHS) const {
     // Don't compare indices here, only iterators.  It's possible for an end
     // iterator to have different indices depending on whether it was created
     // by calling std::end() versus incrementing a valid iterator.
     return Result.Iter == RHS.Result.Iter;
   }
 
-  enumerator_iter<R>(const enumerator_iter<R> &Other) : Result(Other.Result) {}
-  enumerator_iter<R> &operator=(const enumerator_iter<R> &Other) {
+  enumerator_iter(const enumerator_iter &Other) : Result(Other.Result) {}
+  enumerator_iter &operator=(const enumerator_iter &Other) {
     Result = Other.Result;
     return *this;
   }
