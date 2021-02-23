@@ -23,8 +23,6 @@ The exact definition of an `external entity` is left opaque, to allow for more
 interesting handlers. The set of possible action queries is detailed in the
 [`action manager`](#debug-action-manager) section below.
 
-(TODO: Add connection to existing handlers when they are added)
-
 ## Debug Action
 
 A `debug action` is essentially a marker for a type of action that may be
@@ -168,4 +166,74 @@ struct MyPatternHandler : public DebugActionManager::GenericHandler {
   virtual FailureOr<bool> shouldExecute(StringRef actionTag,
                                         StringRef actionDesc);
 };
+```
+
+### Common Action Handlers
+
+MLIR provides several common debug action handlers for immediate use that have
+proven useful in general.
+
+#### DebugCounter
+
+When debugging a compiler issue,
+["bisection"](https://en.wikipedia.org/wiki/Bisection_\(software_engineering\))
+is a useful technique for locating the root cause of the issue. `Debug Counters`
+enable using this technique for debug actions by attaching a counter value to a
+specific debug action and enabling/disabling execution of this action based on
+the value of the counter. The counter controls the execution of the action with
+a "skip" and "count" value. The "skip" value is used to skip a certain number of
+initial executions of a debug action. The "count" value is used to prevent a
+debug action from executing after it has executed for a set number of times (not
+including any executions that have been skipped). If the "skip" value is
+negative, the action will always execute. If the "count" value is negative, the
+action will always execute after the "skip" value has been reached. For example,
+a counter for a debug action with `skip=47` and `count=2`, would skip the first
+47 executions, then execute twice, and finally prevent any further executions.
+With a bit of tooling, the values to use for the counter can be automatically
+selected; allowing for finding the exact execution of a debug action that
+potentially causes the bug being investigated.
+
+Note: The DebugCounter action handler does not support multi-threaded execution,
+and should only be used in MLIRContexts where multi-threading is disabled (e.g.
+via `-mlir-disable-threading`).
+
+##### CommandLine Configuration
+
+The `DebugCounter` handler provides several that allow for configuring counters.
+The main option is `mlir-debug-counter`, which accepts a comma separated list of
+`<count-name>=<counter-value>`. A `<counter-name>` is the debug action tag to
+attach the counter, suffixed with either `-skip` or `-count`. A `-skip` suffix
+will set the "skip" value of the counter. A `-count` suffix will set the "count"
+value of the counter. The `<counter-value>` component is a numeric value to use
+for the counter. An example is shown below using `ApplyPatternAction` defined
+above:
+
+```shell
+$ mlir-opt foo.mlir -mlir-debug-counter=apply-pattern-skip=47,apply-pattern-count=2
+```
+
+The above configuration would skip the first 47 executions of
+`ApplyPatternAction`, then execute twice, and finally prevent any further
+executions.
+
+Note: Each counter currently only has one `skip` and one `count` value, meaning
+that sequences of `skip`/`count` will not be chained.
+
+The `mlir-print-debug-counter` option may be used to print out debug counter
+information after all counters have been accumulated. The information is printed
+in the following format:
+
+```shell
+DebugCounter counters:
+<action-tag>                   : {<current-count>,<skip>,<count>}
+```
+
+For example, using the options above we can see how many times an action is
+executed:
+
+```shell
+$ mlir-opt foo.mlir -mlir-debug-counter=apply-pattern-skip=-1 -mlir-print-debug-counter
+
+DebugCounter counters:
+apply-pattern                   : {370,-1,-1}
 ```

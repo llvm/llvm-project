@@ -22,6 +22,7 @@
 #include "mlir/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/DebugCounter.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "llvm/Support/CommandLine.h"
@@ -100,6 +101,7 @@ static LogicalResult processBuffer(raw_ostream &os,
     context.loadAllAvailableDialects();
   context.allowUnregisteredDialects(allowUnregisteredDialects);
   context.printOpOnDiagnostic(!verifyDiagnostics);
+  context.getDebugActionManager().registerActionHandler<DebugCounter>();
 
   // If we are in verify diagnostics mode then we have a lot of work to do,
   // otherwise just perform the actions without worrying about it.
@@ -193,6 +195,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
   registerPassManagerCLOptions();
+  DebugCounter::registerCLOptions();
   PassPipelineCLParser passPipeline("", "Compiler passes to run");
 
   // Build the list of dialects as a header for the --help message.
