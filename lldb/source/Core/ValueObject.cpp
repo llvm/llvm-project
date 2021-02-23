@@ -91,26 +91,10 @@ static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
 // ValueObject constructor
 ValueObject::ValueObject(ValueObject &parent)
     : UserID(++g_value_obj_uid), // Unique identifier for every value object
-      m_parent(&parent), m_root(nullptr),
-      m_update_point(parent.GetUpdatePoint()), m_name(), m_data(), m_value(),
-      m_error(), m_value_str(), m_old_value_str(), m_location_str(),
-      m_summary_str(), m_object_desc_str(), m_manager(parent.GetManager()),
-      m_children(), m_synthetic_children(), m_dynamic_value(nullptr),
-      m_synthetic_value(nullptr), m_deref_valobj(nullptr),
-      m_format(eFormatDefault), m_last_format(eFormatDefault),
-      m_last_format_mgr_revision(0), m_type_summary_sp(), m_type_format_sp(),
-      m_synthetic_children_sp(), m_user_id_of_forced_summary(),
-      m_address_type_of_ptr_or_ref_children(eAddressTypeInvalid),
-      m_value_checksum(),
-      m_preferred_display_language(lldb::eLanguageTypeUnknown),
-      m_language_flags(0), m_value_is_valid(false), m_value_did_change(false),
-      m_children_count_valid(false), m_old_value_valid(false),
-      m_is_deref_of_parent(false), m_is_array_item_for_pointer(false),
-      m_is_bitfield_for_scalar(false), m_is_child_at_offset(false),
-      m_is_getting_summary(false),
-      m_did_calculate_complete_objc_class_type(false),
-      m_is_synthetic_children_generated(
-          parent.m_is_synthetic_children_generated) {
+      m_parent(&parent), m_update_point(parent.GetUpdatePoint()),
+      m_manager(parent.GetManager()) {
+  m_flags.m_is_synthetic_children_generated =
+      parent.m_flags.m_is_synthetic_children_generated;
   m_data.SetByteOrder(parent.GetDataExtractor().GetByteOrder());
   m_data.SetAddressByteSize(parent.GetDataExtractor().GetAddressByteSize());
   m_manager->ManageObject(this);
@@ -121,25 +105,8 @@ ValueObject::ValueObject(ExecutionContextScope *exe_scope,
                          ValueObjectManager &manager,
                          AddressType child_ptr_or_ref_addr_type)
     : UserID(++g_value_obj_uid), // Unique identifier for every value object
-      m_parent(nullptr), m_root(nullptr), m_update_point(exe_scope), m_name(),
-      m_data(), m_value(), m_error(), m_value_str(), m_old_value_str(),
-      m_location_str(), m_summary_str(), m_object_desc_str(),
-      m_manager(&manager), m_children(), m_synthetic_children(),
-      m_dynamic_value(nullptr), m_synthetic_value(nullptr),
-      m_deref_valobj(nullptr), m_format(eFormatDefault),
-      m_last_format(eFormatDefault), m_last_format_mgr_revision(0),
-      m_type_summary_sp(), m_type_format_sp(), m_synthetic_children_sp(),
-      m_user_id_of_forced_summary(),
-      m_address_type_of_ptr_or_ref_children(child_ptr_or_ref_addr_type),
-      m_value_checksum(),
-      m_preferred_display_language(lldb::eLanguageTypeUnknown),
-      m_language_flags(0), m_value_is_valid(false), m_value_did_change(false),
-      m_children_count_valid(false), m_old_value_valid(false),
-      m_is_deref_of_parent(false), m_is_array_item_for_pointer(false),
-      m_is_bitfield_for_scalar(false), m_is_child_at_offset(false),
-      m_is_getting_summary(false),
-      m_did_calculate_complete_objc_class_type(false),
-      m_is_synthetic_children_generated(false) {
+      m_update_point(exe_scope), m_manager(&manager),
+      m_address_type_of_ptr_or_ref_children(child_ptr_or_ref_addr_type) {
   if (exe_scope) {
     TargetSP target_sp(exe_scope->CalculateTarget());
     if (target_sp) {
@@ -195,9 +162,9 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
     // Save the old value using swap to avoid a string copy which also will
     // clear our m_value_str
     if (m_value_str.empty()) {
-      m_old_value_valid = false;
+      m_flags.m_old_value_valid = false;
     } else {
-      m_old_value_valid = true;
+      m_flags.m_old_value_valid = true;
       m_old_value_str.swap(m_value_str);
       ClearUserVisibleData(eClearUserVisibleDataItemsValue);
     }
@@ -240,7 +207,7 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
 
       if (first_update)
         SetValueDidChange(false);
-      else if (!m_value_did_change && !success) {
+      else if (!m_flags.m_value_did_change && !success) {
         // The value wasn't gotten successfully, so we mark this as changed if
         // the value used to be valid and now isn't
         SetValueDidChange(value_was_valid);
@@ -292,8 +259,8 @@ void ValueObject::SetNeedsUpdate() {
 }
 
 void ValueObject::ClearDynamicTypeInformation() {
-  m_children_count_valid = false;
-  m_did_calculate_complete_objc_class_type = false;
+  m_flags.m_children_count_valid = false;
+  m_flags.m_did_calculate_complete_objc_class_type = false;
   m_last_format_mgr_revision = 0;
   m_override_type = CompilerType();
   SetValueFormat(lldb::TypeFormatImplSP());
@@ -304,14 +271,14 @@ void ValueObject::ClearDynamicTypeInformation() {
 CompilerType ValueObject::MaybeCalculateCompleteType() {
   CompilerType compiler_type(GetCompilerTypeImpl());
 
-  if (m_did_calculate_complete_objc_class_type) {
+  if (m_flags.m_did_calculate_complete_objc_class_type) {
     if (m_override_type.IsValid())
       return m_override_type;
     else
       return compiler_type;
   }
 
-  m_did_calculate_complete_objc_class_type = true;
+  m_flags.m_did_calculate_complete_objc_class_type = true;
 
   ProcessSP process_sp(
       GetUpdatePoint().GetExecutionContextRef().GetProcessSP());
@@ -497,14 +464,14 @@ bool ValueObject::IsLogicalTrue(Status &error) {
   return ret;
 }
 
-bool ValueObject::GetValueIsValid() const { return m_value_is_valid; }
+bool ValueObject::GetValueIsValid() const { return m_flags.m_value_is_valid; }
 
-void ValueObject::SetValueIsValid(bool b) { m_value_is_valid = b; }
+void ValueObject::SetValueIsValid(bool b) { m_flags.m_value_is_valid = b; }
 
-bool ValueObject::GetValueDidChange() { return m_value_did_change; }
+bool ValueObject::GetValueDidChange() { return m_flags.m_value_did_change; }
 
 void ValueObject::SetValueDidChange(bool value_changed) {
-  m_value_did_change = value_changed;
+  m_flags.m_value_did_change = value_changed;
 }
 
 ValueObjectSP ValueObject::GetChildAtIndex(size_t idx, bool can_create) {
@@ -634,14 +601,14 @@ size_t ValueObject::GetNumChildren(uint32_t max) {
   UpdateValueIfNeeded();
 
   if (max < UINT32_MAX) {
-    if (m_children_count_valid) {
+    if (m_flags.m_children_count_valid) {
       size_t children_count = m_children.GetChildrenCount();
       return children_count <= max ? children_count : max;
     } else
       return CalculateNumChildren(max);
   }
 
-  if (!m_children_count_valid) {
+  if (!m_flags.m_children_count_valid) {
     SetNumChildren(CalculateNumChildren());
   }
   return m_children.GetChildrenCount();
@@ -661,7 +628,7 @@ bool ValueObject::MightHaveChildren() {
 
 // Should only be called by ValueObject::GetNumChildren()
 void ValueObject::SetNumChildren(size_t num_children) {
-  m_children_count_valid = true;
+  m_flags.m_children_count_valid = true;
   m_children.SetChildrenCount(num_children);
 }
 
@@ -735,10 +702,10 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
 
   // ideally we would like to bail out if passing NULL, but if we do so we end
   // up not providing the summary for function pointers anymore
-  if (/*summary_ptr == NULL ||*/ m_is_getting_summary)
+  if (/*summary_ptr == NULL ||*/ m_flags.m_is_getting_summary)
     return false;
 
-  m_is_getting_summary = true;
+  m_flags.m_is_getting_summary = true;
 
   TypeSummaryOptions actual_options(options);
 
@@ -761,7 +728,7 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
                                                 // up-to-date (e.g. ${svar%#})
     summary_ptr->FormatObject(this, destination, actual_options);
   }
-  m_is_getting_summary = false;
+  m_flags.m_is_getting_summary = false;
   return !destination.empty();
 }
 
@@ -1191,7 +1158,7 @@ const char *ValueObject::GetValueAsCString() {
       if (m_type_format_sp)
         format_sp = m_type_format_sp;
       else {
-        if (m_is_bitfield_for_scalar)
+        if (m_flags.m_is_bitfield_for_scalar)
           my_format = eFormatUnsigned;
         else {
           if (m_value.GetContextType() == Value::ContextType::RegisterInfo) {
@@ -1209,7 +1176,7 @@ const char *ValueObject::GetValueAsCString() {
       if (!format_sp)
         format_sp = std::make_shared<TypeFormatImpl_Format>(my_format);
       if (GetValueAsCString(*format_sp.get(), m_value_str)) {
-        if (!m_value_did_change && m_old_value_valid) {
+        if (!m_flags.m_value_did_change && m_flags.m_old_value_valid) {
           // The value was gotten successfully, so we consider the value as
           // changed if the value string differs
           SetValueDidChange(m_old_value_str != m_value_str);
@@ -1824,7 +1791,7 @@ ValueObjectSP ValueObject::GetSyntheticArrayMember(size_t index,
         AddSyntheticChild(index_const_str, synthetic_child);
         synthetic_child_sp = synthetic_child->GetSP();
         synthetic_child_sp->SetName(ConstString(index_str));
-        synthetic_child_sp->m_is_array_item_for_pointer = true;
+        synthetic_child_sp->m_flags.m_is_array_item_for_pointer = true;
       }
     }
   }
@@ -1858,7 +1825,7 @@ ValueObjectSP ValueObject::GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
         AddSyntheticChild(index_const_str, synthetic_child);
         synthetic_child_sp = synthetic_child->GetSP();
         synthetic_child_sp->SetName(ConstString(index_str));
-        synthetic_child_sp->m_is_bitfield_for_scalar = true;
+        synthetic_child_sp->m_flags.m_is_bitfield_for_scalar = true;
       }
     }
   }
@@ -1897,7 +1864,7 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
     AddSyntheticChild(name_const_str, synthetic_child);
     synthetic_child_sp = synthetic_child->GetSP();
     synthetic_child_sp->SetName(name_const_str);
-    synthetic_child_sp->m_is_child_at_offset = true;
+    synthetic_child_sp->m_flags.m_is_child_at_offset = true;
   }
   return synthetic_child_sp;
 }
@@ -2089,7 +2056,7 @@ void ValueObject::GetExpressionPath(Stream &s,
   // sometimes they are consed up in ways that don't make sense from an
   // underlying language/API standpoint. So, use a special code path here to
   // return something that can hopefully be used in expression
-  if (m_is_synthetic_children_generated) {
+  if (m_flags.m_is_synthetic_children_generated) {
     UpdateValueIfNeeded();
 
     if (m_value.GetValueType() == Value::ValueType::LoadAddress) {
@@ -2137,7 +2104,7 @@ void ValueObject::GetExpressionPath(Stream &s,
   // if we are a deref_of_parent just because we are synthetic array members
   // made up to allow ptr[%d] syntax to work in variable printing, then add our
   // name ([%d]) to the expression path
-  if (m_is_array_item_for_pointer &&
+  if (m_flags.m_is_array_item_for_pointer &&
       epformat == eGetExpressionPathFormatHonorPointers)
     s.PutCString(m_name.GetStringRef());
 
@@ -3364,11 +3331,11 @@ ValueObjectSP ValueObject::Persist() {
 }
 
 bool ValueObject::IsSyntheticChildrenGenerated() {
-  return m_is_synthetic_children_generated;
+  return m_flags.m_is_synthetic_children_generated;
 }
 
 void ValueObject::SetSyntheticChildrenGenerated(bool b) {
-  m_is_synthetic_children_generated = b;
+  m_flags.m_is_synthetic_children_generated = b;
 }
 
 uint64_t ValueObject::GetLanguageFlags() { return m_language_flags; }
