@@ -2159,13 +2159,6 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
   unsigned DstSize = getRegSizeInBits(*DstRC);
   unsigned NewSize = getRegSizeInBits(*NewRC);
 
-  // Do not allow coalescing between an odd and an even lanes as it will
-  // result in misaligned tuple access.
-  if (ST.hasGFX90AInsts() && !isSGPRClass(NewRC) &&
-      (getChannelFromSubReg(DstSubReg) & 1) !=
-      (getChannelFromSubReg(SubReg) & 1))
-    return false;
-
   // Do not increase size of registers beyond dword, we would need to allocate
   // adjacent registers and constraint regalloc more than needed.
 

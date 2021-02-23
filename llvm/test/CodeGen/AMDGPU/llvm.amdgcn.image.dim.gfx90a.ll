@@ -256,7 +256,7 @@ main_body:
 }
 
 ; GCN-LABEL: image_load_mmo
-; GCN: image_load v1, v[4:5], s[0:7] dmask:0x1 unorm
+; GCN: image_load v1, v[2:3], s[0:7] dmask:0x1 unorm
 define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)* %lds, <2 x i32> %c) #0 {
   store float 0.000000e+00, float addrspace(3)* %lds
   %c0 = extractelement <2 x i32> %c, i32 0
