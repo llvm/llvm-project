@@ -656,10 +656,6 @@ public:
   CreateValueObjectFromData(llvm::StringRef name, const DataExtractor &data,
                             const ExecutionContext &exe_ctx, CompilerType type);
 
-  void LogValueObject(Log *log);
-
-  void LogValueObject(Log *log, const DumpValueObjectOptions &options);
-
   lldb::ValueObjectSP Persist();
 
   /// Returns true if this is a char* or a char[] if it is a char* and
