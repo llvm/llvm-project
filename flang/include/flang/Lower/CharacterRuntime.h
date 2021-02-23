@@ -34,6 +34,12 @@ mlir::Value genRawCharCompare(FirOpBuilder &builder, mlir::Location loc,
                               mlir::CmpIPredicate cmp, mlir::Value lhsBuff,
                               mlir::Value lhsLen, mlir::Value rhsBuff,
                               mlir::Value rhsLen);
+/// Generate call to trim runtime.
+///   \p resultBox must be an unallocated allocatable used for the temporary
+///   result. \p stringBox must be a fir.box describing trim string argument.
+/// The runtime will always allocate the resultBox.
+void genTrim(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+             mlir::Value resultBox, mlir::Value stringBox);
 
 } // namespace lower
 } // namespace Fortran

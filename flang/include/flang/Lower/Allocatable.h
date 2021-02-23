@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringRef.h"
+
 namespace mlir {
 class Value;
 class ValueRange;
@@ -62,6 +64,14 @@ fir::MutableBoxValue createMutableBox(Fortran::lower::AbstractConverter &,
                                       const Fortran::lower::pft::Variable &var,
                                       mlir::Value boxAddr,
                                       mlir::ValueRange nonDeferredParams);
+
+/// Create a MutableBoxValue for a temporary allocatable.
+/// The created MutableBoxValue wraps a fir.ref<fir.box<fir.heap<type>>> and is
+/// initialized to unallocated/diassociated status. An optional name can be
+/// given to the created !fir.ref<fir.box>.
+fir::MutableBoxValue createTempMutableBox(Fortran::lower::FirOpBuilder &,
+                                          mlir::Location, mlir::Type type,
+                                          llvm::StringRef name = {});
 
 /// Read all mutable properties into a normal symbol box.
 /// It is OK to call this on unassociated/unallocated boxes but any use of the

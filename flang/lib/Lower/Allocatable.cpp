@@ -905,6 +905,19 @@ fir::MutableBoxValue Fortran::lower::createMutableBox(
   return box;
 }
 
+fir::MutableBoxValue
+Fortran::lower::createTempMutableBox(Fortran::lower::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Type type,
+                                     llvm::StringRef name) {
+  auto boxType = fir::BoxType::get(fir::HeapType::get(type));
+  auto boxAddr = builder.createTemporary(loc, boxType, name);
+  auto box =
+      fir::MutableBoxValue(boxAddr, /*nonDeferredParams*/ mlir::ValueRange(),
+                           /*mutableProperties*/ {});
+  MutablePropertyWriter{builder, loc, box}.setUnallocatedSatus();
+  return box;
+}
+
 //===----------------------------------------------------------------------===//
 // MutableBoxValue reading interface implementation
 //===----------------------------------------------------------------------===//
