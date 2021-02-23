@@ -4,14 +4,14 @@
 
 define i8* @argument(i8* swiftasync %in) {
 ; CHECK-LABEL: argument:
-; CHECK: mov x0, x22
+; CHECK: mov x0, x9
 
   ret i8* %in
 }
 
 define void @call(i8* %in) {
 ; CHECK-LABEL: call:
-; CHECK: mov x22, x0
+; CHECK: mov x9, x0
 
   call i8* @argument(i8* swiftasync %in)
   ret void
