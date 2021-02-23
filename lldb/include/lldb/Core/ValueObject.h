@@ -102,7 +102,7 @@ class TypeSummaryOptions;
 /// Shared Pointer to the contained ValueObject,
 /// just do so by calling GetSP() on the contained object.
 
-class ValueObject : public UserID {
+class ValueObject {
 public:
   enum GetExpressionPathFormat {
     eGetExpressionPathFormatDereferencePointers = 1,
@@ -456,6 +456,9 @@ public:
   const Status &GetError();
 
   ConstString GetName() const;
+
+  /// Returns a unique id for this ValueObject.
+  lldb::user_id_t GetID() const { return m_id.GetID(); }
 
   virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx, bool can_create);
 
@@ -884,6 +887,9 @@ protected:
   lldb::LanguageType m_preferred_display_language = lldb::eLanguageTypeUnknown;
 
   uint64_t m_language_flags = 0;
+
+  /// Unique identifier for every value object.
+  UserID m_id;
 
   // Utility class for initializing all bitfields in ValueObject's constructors.
   // FIXME: This could be done via default initializers once we have C++20.
