@@ -1,4 +1,5 @@
 add_mlir_unittest(MLIRSupportTests
+  DebugActionTest.cpp
   IndentedOstreamTest.cpp
   MathExtrasTest.cpp
 )
