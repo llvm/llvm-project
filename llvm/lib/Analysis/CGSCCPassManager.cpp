@@ -980,8 +980,10 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     RefSCC &TargetRC = TargetC.getOuterRefSCC();
     (void)TargetRC;
     // TODO: This only allows trivial edges to be added for now.
+#ifdef EXPENSIVE_CHECKS
     assert((RC == &TargetRC ||
            RC->isAncestorOf(TargetRC)) && "New ref edge is not trivial!");
+#endif
     RC->insertTrivialRefEdge(N, *RefTarget);
   }
 
@@ -991,8 +993,10 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     RefSCC &TargetRC = TargetC.getOuterRefSCC();
     (void)TargetRC;
     // TODO: This only allows trivial edges to be added for now.
+#ifdef EXPENSIVE_CHECKS
     assert((RC == &TargetRC ||
            RC->isAncestorOf(TargetRC)) && "New call edge is not trivial!");
+#endif
     // Add a trivial ref edge to be promoted later on alongside
     // PromotedRefTargets.
     RC->insertTrivialRefEdge(N, *CallTarget);
@@ -1085,8 +1089,10 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     // The easy case is when the target RefSCC is not this RefSCC. This is
     // only supported when the target RefSCC is a child of this RefSCC.
     if (&TargetRC != RC) {
+#ifdef EXPENSIVE_CHECKS
       assert(RC->isAncestorOf(TargetRC) &&
              "Cannot potentially form RefSCC cycles here!");
+#endif
       RC->switchOutgoingEdgeToRef(N, *RefTarget);
       LLVM_DEBUG(dbgs() << "Switch outgoing call edge to a ref edge from '" << N
                         << "' to '" << *RefTarget << "'\n");
@@ -1119,8 +1125,10 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     // The easy case is when the target RefSCC is not this RefSCC. This is
     // only supported when the target RefSCC is a child of this RefSCC.
     if (&TargetRC != RC) {
+#ifdef EXPENSIVE_CHECKS
       assert(RC->isAncestorOf(TargetRC) &&
              "Cannot potentially form RefSCC cycles here!");
+#endif
       RC->switchOutgoingEdgeToCall(N, *CallTarget);
       LLVM_DEBUG(dbgs() << "Switch outgoing ref edge to a call edge from '" << N
                         << "' to '" << *CallTarget << "'\n");
