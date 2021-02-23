@@ -10,6 +10,7 @@
 #include "mlir/CAPI/ExecutionEngine.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
+#include "mlir/Target/LLVMIR.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;
@@ -22,6 +23,7 @@ extern "C" MlirExecutionEngine mlirExecutionEngineCreate(MlirModule op) {
   }();
   (void)init_once;
 
+  mlir::registerLLVMDialectTranslation(*unwrap(op)->getContext());
   auto jitOrError = ExecutionEngine::create(unwrap(op));
   if (!jitOrError) {
     consumeError(jitOrError.takeError());
@@ -43,4 +45,12 @@ mlirExecutionEngineInvokePacked(MlirExecutionEngine jit, MlirStringRef name,
   if (error)
     return wrap(failure());
   return wrap(success());
+}
+
+extern "C" void *mlirExecutionEngineLookup(MlirExecutionEngine jit,
+                                           MlirStringRef name) {
+  auto expectedFPtr = unwrap(jit)->lookup(unwrap(name));
+  if (!expectedFPtr)
+    return nullptr;
+  return reinterpret_cast<void *>(*expectedFPtr);
 }
