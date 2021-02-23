@@ -666,16 +666,16 @@
 // RUN:     -target x86_64-pc-windows \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CFI-STATS-WIN64 %s
-// CHECK-CFI-STATS-WIN64: "--dependent-lib=clang_rt.stats_client-x86_64.lib"
-// CHECK-CFI-STATS-WIN64: "--dependent-lib=clang_rt.stats-x86_64.lib"
+// CHECK-CFI-STATS-WIN64: "--dependent-lib=clang_rt.stats_client{{(-x86_64)?}}.lib"
+// CHECK-CFI-STATS-WIN64: "--dependent-lib=clang_rt.stats{{(-x86_64)?}}.lib"
 // CHECK-CFI-STATS-WIN64: "--linker-option=/include:__sanitizer_stats_register"
 
 // RUN: %clang -fsanitize=cfi -fsanitize-stats %s -### -o %t.o 2>&1 \
 // RUN:     -target i686-pc-windows \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CFI-STATS-WIN32 %s
-// CHECK-CFI-STATS-WIN32: "--dependent-lib=clang_rt.stats_client-i386.lib"
-// CHECK-CFI-STATS-WIN32: "--dependent-lib=clang_rt.stats-i386.lib"
+// CHECK-CFI-STATS-WIN32: "--dependent-lib=clang_rt.stats_client{{(-i386)?}}.lib"
+// CHECK-CFI-STATS-WIN32: "--dependent-lib=clang_rt.stats{{(-i386)?}}.lib"
 // CHECK-CFI-STATS-WIN32: "--linker-option=/include:___sanitizer_stats_register"
 
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
