@@ -122,8 +122,9 @@ enum NodeType : unsigned {
   VID_VL,
   // Matches the semantics of the vfcnvt.rod function (Convert double-width
   // float to single-width float, rounding towards odd). Takes a double-width
-  // float vector and produces a single-width float vector.
-  VFNCVT_ROD,
+  // float vector and produces a single-width float vector. Also has a mask and
+  // VL operand.
+  VFNCVT_ROD_VL,
   // These nodes match the semantics of the corresponding RVV vector reduction
   // instructions. They produce a vector result which is the reduction
   // performed over the first vector operand plus the first element of the
@@ -175,6 +176,8 @@ enum NodeType : unsigned {
   UMAX_VL,
   MULHS_VL,
   MULHU_VL,
+  FP_ROUND_VL,
+  FP_EXTEND_VL,
 
   // Vector compare producing a mask. Fourth operand is input mask. Fifth
   // operand is VL.

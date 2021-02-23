@@ -588,6 +588,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // By default everything must be expanded.
         for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
           setOperationAction(Op, VT, Expand);
+        for (MVT OtherVT : MVT::fp_fixedlen_vector_valuetypes()) {
+          setLoadExtAction(ISD::EXTLOAD, OtherVT, VT, Expand);
+          setTruncStoreAction(VT, OtherVT, Expand);
+        }
 
         // We use EXTRACT_SUBVECTOR as a "cast" from scalable to fixed.
         setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
@@ -605,6 +609,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::FABS, VT, Custom);
         setOperationAction(ISD::FSQRT, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
+
+        setOperationAction(ISD::FP_ROUND, VT, Custom);
+        setOperationAction(ISD::FP_EXTEND, VT, Custom);
 
         for (auto CC : VFPCCToExpand)
           setCondCodeAction(CC, VT, Expand);
@@ -1081,6 +1088,21 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue getRVVFPExtendOrRound(SDValue Op, MVT VT, MVT ContainerVT,
+                                     SDLoc DL, SelectionDAG &DAG,
+                                     const RISCVSubtarget &Subtarget) {
+  if (VT.isScalableVector())
+    return DAG.getFPExtendOrRound(Op, DL, VT);
+  assert(VT.isFixedLengthVector() &&
+         "Unexpected value type for RVV FP extend/round lowering");
+  SDValue Mask, VL;
+  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  unsigned RVVOpc = ContainerVT.bitsGT(Op.getSimpleValueType())
+                        ? RISCVISD::FP_EXTEND_VL
+                        : RISCVISD::FP_ROUND_VL;
+  return DAG.getNode(RVVOpc, DL, ContainerVT, Op, Mask, VL);
+}
+
 SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                             SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -1254,33 +1276,86 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // RVV can only do fp_extend to types double the size as the source. We
     // custom-lower f16->f64 extensions to two hops of ISD::FP_EXTEND, going
     // via f32.
-    MVT VT = Op.getSimpleValueType();
-    MVT SrcVT = Op.getOperand(0).getSimpleValueType();
-    // We only need to close the gap between vXf16->vXf64.
-    if (!VT.isVector() || VT.getVectorElementType() != MVT::f64 ||
-        SrcVT.getVectorElementType() != MVT::f16)
-      return Op;
     SDLoc DL(Op);
-    MVT InterVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
-    SDValue IntermediateRound =
-        DAG.getFPExtendOrRound(Op.getOperand(0), DL, InterVT);
-    return DAG.getFPExtendOrRound(IntermediateRound, DL, VT);
+    MVT VT = Op.getSimpleValueType();
+    SDValue Src = Op.getOperand(0);
+    MVT SrcVT = Src.getSimpleValueType();
+
+    // Prepare any fixed-length vector operands.
+    MVT ContainerVT = VT;
+    if (SrcVT.isFixedLengthVector()) {
+      ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
+          DAG, VT, Subtarget);
+      MVT SrcContainerVT =
+          ContainerVT.changeVectorElementType(SrcVT.getVectorElementType());
+      Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
+    }
+
+    if (!VT.isVector() || VT.getVectorElementType() != MVT::f64 ||
+        SrcVT.getVectorElementType() != MVT::f16) {
+      // For scalable vectors, we only need to close the gap between
+      // vXf16->vXf64.
+      if (!VT.isFixedLengthVector())
+        return Op;
+      // For fixed-length vectors, lower the FP_EXTEND to a custom "VL" version.
+      Src = getRVVFPExtendOrRound(Src, VT, ContainerVT, DL, DAG, Subtarget);
+      return convertFromScalableVector(VT, Src, DAG, Subtarget);
+    }
+
+    MVT InterVT = VT.changeVectorElementType(MVT::f32);
+    MVT InterContainerVT = ContainerVT.changeVectorElementType(MVT::f32);
+    SDValue IntermediateExtend = getRVVFPExtendOrRound(
+        Src, InterVT, InterContainerVT, DL, DAG, Subtarget);
+
+    SDValue Extend = getRVVFPExtendOrRound(IntermediateExtend, VT, ContainerVT,
+                                           DL, DAG, Subtarget);
+    if (VT.isFixedLengthVector())
+      return convertFromScalableVector(VT, Extend, DAG, Subtarget);
+    return Extend;
   }
   case ISD::FP_ROUND: {
     // RVV can only do fp_round to types half the size as the source. We
     // custom-lower f64->f16 rounds via RVV's round-to-odd float
     // conversion instruction.
-    MVT VT = Op.getSimpleValueType();
-    MVT SrcVT = Op.getOperand(0).getSimpleValueType();
-    // We only need to close the gap between vXf64<->vXf16.
-    if (!VT.isVector() || VT.getVectorElementType() != MVT::f16 ||
-        SrcVT.getVectorElementType() != MVT::f64)
-      return Op;
     SDLoc DL(Op);
-    MVT InterVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
+    MVT VT = Op.getSimpleValueType();
+    SDValue Src = Op.getOperand(0);
+    MVT SrcVT = Src.getSimpleValueType();
+
+    // Prepare any fixed-length vector operands.
+    MVT ContainerVT = VT;
+    if (VT.isFixedLengthVector()) {
+      MVT SrcContainerVT =
+          RISCVTargetLowering::getContainerForFixedLengthVector(DAG, SrcVT,
+                                                                Subtarget);
+      ContainerVT =
+          SrcContainerVT.changeVectorElementType(VT.getVectorElementType());
+      Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
+    }
+
+    if (!VT.isVector() || VT.getVectorElementType() != MVT::f16 ||
+        SrcVT.getVectorElementType() != MVT::f64) {
+      // For scalable vectors, we only need to close the gap between
+      // vXf64<->vXf16.
+      if (!VT.isFixedLengthVector())
+        return Op;
+      // For fixed-length vectors, lower the FP_ROUND to a custom "VL" version.
+      Src = getRVVFPExtendOrRound(Src, VT, ContainerVT, DL, DAG, Subtarget);
+      return convertFromScalableVector(VT, Src, DAG, Subtarget);
+    }
+
+    SDValue Mask, VL;
+    std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+    MVT InterVT = ContainerVT.changeVectorElementType(MVT::f32);
     SDValue IntermediateRound =
-        DAG.getNode(RISCVISD::VFNCVT_ROD, DL, InterVT, Op.getOperand(0));
-    return DAG.getFPExtendOrRound(IntermediateRound, DL, VT);
+        DAG.getNode(RISCVISD::VFNCVT_ROD_VL, DL, InterVT, Src, Mask, VL);
+    SDValue Round = getRVVFPExtendOrRound(IntermediateRound, VT, ContainerVT,
+                                          DL, DAG, Subtarget);
+
+    if (VT.isFixedLengthVector())
+      return convertFromScalableVector(VT, Round, DAG, Subtarget);
+    return Round;
   }
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
@@ -5460,7 +5535,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VSLIDEUP_VL)
   NODE_NAME_CASE(VSLIDEDOWN_VL)
   NODE_NAME_CASE(VID_VL)
-  NODE_NAME_CASE(VFNCVT_ROD)
+  NODE_NAME_CASE(VFNCVT_ROD_VL)
   NODE_NAME_CASE(VECREDUCE_ADD)
   NODE_NAME_CASE(VECREDUCE_UMAX)
   NODE_NAME_CASE(VECREDUCE_SMAX)
@@ -5498,6 +5573,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(UMAX_VL)
   NODE_NAME_CASE(MULHS_VL)
   NODE_NAME_CASE(MULHU_VL)
+  NODE_NAME_CASE(FP_ROUND_VL)
+  NODE_NAME_CASE(FP_EXTEND_VL)
   NODE_NAME_CASE(SETCC_VL)
   NODE_NAME_CASE(VSELECT_VL)
   NODE_NAME_CASE(VMAND_VL)
