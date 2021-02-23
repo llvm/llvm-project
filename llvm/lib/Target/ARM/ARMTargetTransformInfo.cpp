@@ -1363,7 +1363,8 @@ int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
                                            CostKind);
     // Return the cost of multiple scalar invocation plus the cost of
     // inserting and extracting the values.
-    return BaseT::getScalarizationOverhead(VTy, Args) + Num * Cost;
+    SmallVector<Type *> Tys(Args.size(), Ty);
+    return BaseT::getScalarizationOverhead(VTy, Args, Tys) + Num * Cost;
   }
 
   return BaseCost;
