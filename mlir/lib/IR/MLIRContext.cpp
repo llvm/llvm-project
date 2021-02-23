@@ -24,6 +24,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Support/DebugAction.h"
 #include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -210,6 +211,13 @@ namespace mlir {
 /// This class is completely private to this file, so everything is public.
 class MLIRContextImpl {
 public:
+  //===--------------------------------------------------------------------===//
+  // Debugging
+  //===--------------------------------------------------------------------===//
+
+  /// An action manager for use within the context.
+  DebugActionManager debugActionManager;
+
   //===--------------------------------------------------------------------===//
   // Identifier uniquing
   //===--------------------------------------------------------------------===//
@@ -416,6 +424,14 @@ static ArrayRef<T> copyArrayRefInto(llvm::BumpPtrAllocator &allocator,
   auto result = allocator.Allocate<T>(elements.size());
   std::uninitialized_copy(elements.begin(), elements.end(), result);
   return ArrayRef<T>(result, elements.size());
+}
+
+//===----------------------------------------------------------------------===//
+// Debugging
+//===----------------------------------------------------------------------===//
+
+DebugActionManager &MLIRContext::getDebugActionManager() {
+  return getImpl().debugActionManager;
 }
 
 //===----------------------------------------------------------------------===//
