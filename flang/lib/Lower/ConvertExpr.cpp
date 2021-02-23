@@ -1406,7 +1406,7 @@ public:
     }
     // Let the intrinsic library lower the intrinsic procedure call
     return Fortran::lower::genIntrinsicCall(builder, getLoc(), name, resultType,
-                                            operands);
+                                            operands, stmtCtx);
   }
 
   template <typename A>

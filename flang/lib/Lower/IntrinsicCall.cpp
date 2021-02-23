@@ -15,8 +15,12 @@
 
 #include "flang/Lower/IntrinsicCall.h"
 #include "RTBuilder.h"
+#include "StatementContext.h"
+#include "SymbolMap.h"
 #include "flang/Common/static-multimap-view.h"
+#include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CharacterExpr.h"
+#include "flang/Lower/CharacterRuntime.h"
 #include "flang/Lower/ComplexExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/FIRBuilder.h"
@@ -96,8 +100,9 @@ struct IntrinsicLibrary {
 
   // Constructors.
   explicit IntrinsicLibrary(Fortran::lower::FirOpBuilder &builder,
-                            mlir::Location loc)
-      : builder{builder}, loc{loc} {}
+                            mlir::Location loc,
+                            Fortran::lower::StatementContext *stmtCtx = nullptr)
+      : builder{builder}, loc{loc}, stmtCtx{stmtCtx} {}
   IntrinsicLibrary() = delete;
   IntrinsicLibrary(const IntrinsicLibrary &) = delete;
 
@@ -148,6 +153,7 @@ struct IntrinsicLibrary {
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   /// Implement all conversion functions like DBLE, the first argument is
   /// the value to convert. There may be an additional KIND arguments that
   /// is ignored because this is already reflected in the result type.
@@ -206,8 +212,12 @@ struct IntrinsicLibrary {
   getUnrestrictedIntrinsicSymbolRefAttr(llvm::StringRef name,
                                         mlir::FunctionType signature);
 
+  /// Add clean-up for \p temp to the current statement context;
+  void addCleanUpForTemp(mlir::Location loc, mlir::Value temp);
+
   Fortran::lower::FirOpBuilder &builder;
   mlir::Location loc;
+  Fortran::lower::StatementContext *stmtCtx;
 };
 
 struct IntrinsicDummyArgument {
@@ -272,6 +282,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"nint", &I::genNint},
     {"present", &I::genPresent, {{{"a", asInquired}}}, /*isElemental=*/false},
     {"sign", &I::genSign},
+    {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental*/ false},
 };
 
 /// To make fir output more readable for debug, one can outline all intrinsic
@@ -1028,6 +1039,12 @@ mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
   return builder.getSymbolRefAttr(funcOp.getName());
 }
 
+void IntrinsicLibrary::addCleanUpForTemp(mlir::Location loc, mlir::Value temp) {
+  assert(stmtCtx);
+  auto *bldr = &builder;
+  stmtCtx->attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, temp); });
+}
+
 //===----------------------------------------------------------------------===//
 // Code generators for the intrinsic
 //===----------------------------------------------------------------------===//
@@ -1360,6 +1377,32 @@ mlir::Value IntrinsicLibrary::genSign(mlir::Type resultType,
   return builder.create<mlir::SelectOp>(loc, cmp, neg, abs);
 }
 
+// TRIM
+fir::ExtendedValue
+IntrinsicLibrary::genTrim(mlir::Type resultType,
+                          llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  auto string = builder.createBox(loc, args[0]);
+  // Create mutable fir.box to be passed to the runtime for the result.
+  auto resultMutableBox =
+      Fortran::lower::createTempMutableBox(builder, loc, resultType);
+  auto resultIrBox =
+      Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+  // Call runtime. The runtime is allocating the result.
+  Fortran::lower::genTrim(builder, loc, resultIrBox, string);
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
+  return res.match(
+      [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
+        addCleanUpForTemp(loc, fir::getBase(box));
+        return box;
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "result of TRIM is not a scalar character");
+      });
+}
+
 // Compare two FIR values and return boolean result as i1.
 template <Extremum extremum, ExtremumBehavior behavior>
 static mlir::Value createExtremumCompare(mlir::Location loc,
@@ -1465,9 +1508,10 @@ fir::ExtendedValue
 Fortran::lower::genIntrinsicCall(Fortran::lower::FirOpBuilder &builder,
                                  mlir::Location loc, llvm::StringRef name,
                                  llvm::Optional<mlir::Type> resultType,
-                                 llvm::ArrayRef<fir::ExtendedValue> args) {
-  return IntrinsicLibrary{builder, loc}.genIntrinsicCall(name, resultType,
-                                                         args);
+                                 llvm::ArrayRef<fir::ExtendedValue> args,
+                                 Fortran::lower::StatementContext &stmtCtx) {
+  return IntrinsicLibrary{builder, loc, &stmtCtx}.genIntrinsicCall(
+      name, resultType, args);
 }
 
 mlir::Value Fortran::lower::genMax(Fortran::lower::FirOpBuilder &builder,

@@ -18,16 +18,21 @@ class ExtendedValue;
 
 namespace Fortran::lower {
 
+class StatementContext;
+
 // TODO: Error handling interface ?
 // TODO: Implementation is incomplete. Many intrinsics to tbd.
 
 /// Generate the FIR+MLIR operations for the generic intrinsic \p name
 /// with arguments \p args and expected result type \p resultType.
 /// Returned mlir::Value is the returned Fortran intrinsic value.
+/// If the result is an allocated temporary, its clean-up is added to the
+/// StatementContext.
 fir::ExtendedValue genIntrinsicCall(FirOpBuilder &, mlir::Location,
                                     llvm::StringRef name,
                                     llvm::Optional<mlir::Type> resultType,
-                                    llvm::ArrayRef<fir::ExtendedValue> args);
+                                    llvm::ArrayRef<fir::ExtendedValue> args,
+                                    StatementContext &);
 
 /// Enum specifying how intrinsic argument evaluate::Expr should be
 /// lowered to fir::ExtendedValue to be passed to genIntrinsicCall.
