@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: llvm-profdata merge %S/Inputs/consecutive-zeros.proftext -o %t.profdata
 ; RUN: opt < %s -debug -pgo-instr-use -pgo-memop-opt -pgo-memop-count-threshold=0 -pgo-memop-percent-threshold=0 -pgo-test-profile-file=%t.profdata -S 2>&1 | FileCheck %s
 
