@@ -46,6 +46,10 @@ config.enable_spirv_cpu_runner = @MLIR_SPIRV_CPU_RUNNER_ENABLED@
 config.vulkan_wrapper_library_dir = "@MLIR_VULKAN_WRAPPER_LIBRARY_DIR@"
 config.enable_vulkan_runner = @MLIR_VULKAN_RUNNER_ENABLED@
 config.enable_bindings_python = @MLIR_BINDINGS_PYTHON_ENABLED@
+config.mlir_integration_test_dir = "@MLIR_INTEGRATION_TEST_DIR@"
+config.intel_sde_executable = "@INTEL_SDE_EXECUTABLE@"
+config.mlir_run_avx512_tests = "@MLIR_RUN_AVX512_TESTS@"
+config.mlir_include_integration_tests = "@MLIR_INCLUDE_INTEGRATION_TESTS@"
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
