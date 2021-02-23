@@ -16,6 +16,9 @@ namespace __llvm_libc {
 
 using __llvm_libc::time_utils::TimeConstants;
 
+static constexpr int NonLeapYearDaysInMonth[] = {31, 28, 31, 30, 31, 30,
+                                                 31, 31, 30, 31, 30, 31};
+
 // Returns number of years from (1, year).
 static constexpr int64_t getNumOfLeapYearsBefore(int64_t year) {
   return (year / 4) - (year / 100) + (year / 400);
@@ -198,7 +201,7 @@ LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
   // Calculate total number of days based on the month and the day (tm_mday).
   int64_t totalDays = tm_out->tm_mday - 1;
   for (int64_t i = 0; i < month; ++i)
-    totalDays += TimeConstants::NonLeapYearDaysInMonth[i];
+    totalDays += NonLeapYearDaysInMonth[i];
   // Add one day if it is a leap year and the month is after February.
   if (tmYearIsLeap && month > 1)
     totalDays++;
