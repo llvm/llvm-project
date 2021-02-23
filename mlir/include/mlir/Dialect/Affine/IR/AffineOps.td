@@ -592,7 +592,7 @@ def AffineMaxOp : AffineMinMaxOpBase<"max", [NoSideEffect]> {
 
 def AffineParallelOp : Affine_Op<"parallel",
     [ImplicitAffineTerminator, RecursiveSideEffects,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+     DeclareOpInterfaceMethods<LoopLikeOpInterface>, MemRefsNormalizable]> {
   let summary = "multi-index parallel band operation";
   let description = [{
     The "affine.parallel" operation represents a hyper-rectangular affine
@@ -842,7 +842,8 @@ def AffineStoreOp : AffineStoreOpBase<"store"> {
   let hasFolder = 1;
 }
 
-def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator, ReturnLike]> {
+def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator, ReturnLike,
+    MemRefsNormalizable]> {
   let summary = "Yield values to parent operation";
   let description = [{
     "affine.yield" yields zero or more SSA values from an affine op region and
