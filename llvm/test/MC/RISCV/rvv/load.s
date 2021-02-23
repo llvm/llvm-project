@@ -10,9 +10,9 @@
 
 vle1.v v8, (a0)
 # CHECK-INST: vle1.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x04,0xb5,0x00]
+# CHECK-ENCODING: [0x07,0x04,0xb5,0x02]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 04 b5 00 <unknown>
+# CHECK-UNKNOWN: 07 04 b5 02 <unknown>
 
 vle8.v v8, (a0), v0.t
 # CHECK-INST: vle8.v v8, (a0), v0.t
