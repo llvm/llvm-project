@@ -4675,11 +4675,12 @@ InputInfo Driver::BuildJobsForActionNoCache(
         /*CreatePrefixForHost=*/!!A->getOffloadingHostActiveKinds() &&
             !AtTopLevel);
     if (isa<OffloadWrapperJobAction>(JA)) {
-      OffloadingPrefix += "-wrapper";
       if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
         BaseInput = FinalOutput->getValue();
       else
         BaseInput = getDefaultImageName();
+      BaseInput =
+          C.getArgs().MakeArgString(std::string(BaseInput) + "-wrapper");
     }
     Result = InputInfo(A, GetNamedOutputPath(C, *JA, BaseInput, BoundArch,
                                              AtTopLevel, MultipleArchs,
