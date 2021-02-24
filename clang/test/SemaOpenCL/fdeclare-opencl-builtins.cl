@@ -45,6 +45,9 @@ typedef int int4 __attribute__((ext_vector_type(4)));
 typedef uint uint4 __attribute__((ext_vector_type(4)));
 typedef long long2 __attribute__((ext_vector_type(2)));
 
+typedef int clk_profiling_info;
+#define CLK_PROFILING_COMMAND_EXEC_TIME 0x1
+
 typedef uint cl_mem_fence_flags;
 #define CLK_GLOBAL_MEM_FENCE 0x02
 
@@ -76,6 +79,15 @@ kernel void test_enum_args(volatile global atomic_int *global_p, global int *exp
                                           memory_order_acq_rel,
                                           memory_order_relaxed,
                                           memory_scope_work_group);
+}
+#endif
+
+#if defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200
+void test_typedef_args(clk_event_t evt, volatile atomic_flag *flg, global unsigned long long *values) {
+  capture_event_profiling_info(evt, CLK_PROFILING_COMMAND_EXEC_TIME, values);
+
+  atomic_flag_clear(flg);
+  bool result = atomic_flag_test_and_set(flg);
 }
 #endif
 
@@ -166,6 +178,11 @@ kernel void basic_subgroup(global uint *out) {
 #if __OPENCL_C_VERSION__ <= CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
   // expected-error@-2{{implicit declaration of function 'get_sub_group_size' is invalid in OpenCL}}
   // expected-error@-3{{implicit conversion changes signedness}}
+#endif
+
+// Only test when the base header is included, because we need the enum declarations.
+#if !defined(NO_HEADER) && (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+  sub_group_barrier(CLK_GLOBAL_MEM_FENCE, memory_scope_device);
 #endif
 }
 
