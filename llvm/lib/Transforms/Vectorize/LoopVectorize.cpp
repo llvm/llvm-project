@@ -6811,7 +6811,7 @@ InstructionCost LoopVectorizationCostModel::getReductionPatternCost(
       unsigned ExtCost =
           TTI.getCastInstrCost(Op0->getOpcode(), VectorTy, ExtType,
                                TTI::CastContextHint::None, CostKind, Op0);
-      unsigned MulCost =
+      InstructionCost MulCost =
           TTI.getArithmeticInstrCost(Mul->getOpcode(), VectorTy, CostKind);
 
       InstructionCost RedCost = TTI.getExtendedAddReductionCost(
@@ -6821,7 +6821,7 @@ InstructionCost LoopVectorizationCostModel::getReductionPatternCost(
       if (RedCost.isValid() && RedCost < ExtCost * 2 + MulCost + BaseCost)
         return I == RetI ? *RedCost.getValue() : 0;
     } else {
-      unsigned MulCost =
+      InstructionCost MulCost =
           TTI.getArithmeticInstrCost(Mul->getOpcode(), VectorTy, CostKind);
 
       InstructionCost RedCost = TTI.getExtendedAddReductionCost(
