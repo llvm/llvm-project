@@ -46,8 +46,9 @@ Either way, when an object is emitted the ObjectLinkingLayer constructs a
 ``LinkGraph`` (see :ref:`Constructing LinkGraphs`) and calls JITLink's
 ``link`` function.
 
+
 ``ObjectLinkingLayer`` provides a plugin API,
-:literal:`ObjectLinkingLayer::Plugin`, which users can subclass in order to
+``ObjectLinkingLayer::Plugin``, which users can subclass in order to
 inspect and modify `LinkGraph`s at link time, and react to important JIT events
 (such as an object being emitted into target memory). This enables many features
 and optimizations that were not possible under MCJIT or RuntimeDyld.
@@ -57,9 +58,9 @@ ObjectLinkingLayer Plugins
 
 The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
 
-* :literal:`virtual void modifyPassConfig(MaterializationResponsibility &MR,
-                                          const Triple &TT,
-                                          jitlink::PassConfiguration &Config)`
+* ``virtual void modifyPassConfig(MaterializationResponsibility &MR,
+                                  const Triple &TT,
+                                  jitlink::PassConfiguration &Config)``
 
   Called each time a LinkGraph is about to be linked. Override to install
   custom JITLink *Passes* to run during the link process for this graph.
@@ -85,8 +86,8 @@ The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
   ``notifyTransferringResources`` should be implemented, or neither should be.
   Implementing one but not the other will lead to resource management bugs.
 
-* :literal:`virtual void notifyTransferringResources(ResourceKey DstKey,
-                                                     ResourceKey SrcKey)`
+* ``virtual void notifyTransferringResources(ResourceKey DstKey,
+                                             ResourceKey SrcKey)``
 
   Called if/when a request is made to reassociate resources from *SrcKey* to
   *DstKey*. Override to update the plugin's resource tracking maps (if any).
