@@ -1449,44 +1449,60 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VReg_64RegClassID:
   case AMDGPU::AReg_64RegClassID:
   case AMDGPU::SReg_64_XEXECRegClassID:
+  case AMDGPU::VReg_64_Align2RegClassID:
+  case AMDGPU::AReg_64_Align2RegClassID:
     return 64;
   case AMDGPU::SGPR_96RegClassID:
   case AMDGPU::SReg_96RegClassID:
   case AMDGPU::VReg_96RegClassID:
   case AMDGPU::AReg_96RegClassID:
+  case AMDGPU::VReg_96_Align2RegClassID:
+  case AMDGPU::AReg_96_Align2RegClassID:
   case AMDGPU::AV_96RegClassID:
     return 96;
   case AMDGPU::SGPR_128RegClassID:
   case AMDGPU::SReg_128RegClassID:
   case AMDGPU::VReg_128RegClassID:
   case AMDGPU::AReg_128RegClassID:
+  case AMDGPU::VReg_128_Align2RegClassID:
+  case AMDGPU::AReg_128_Align2RegClassID:
   case AMDGPU::AV_128RegClassID:
     return 128;
   case AMDGPU::SGPR_160RegClassID:
   case AMDGPU::SReg_160RegClassID:
   case AMDGPU::VReg_160RegClassID:
   case AMDGPU::AReg_160RegClassID:
+  case AMDGPU::VReg_160_Align2RegClassID:
+  case AMDGPU::AReg_160_Align2RegClassID:
   case AMDGPU::AV_160RegClassID:
     return 160;
   case AMDGPU::SGPR_192RegClassID:
   case AMDGPU::SReg_192RegClassID:
   case AMDGPU::VReg_192RegClassID:
   case AMDGPU::AReg_192RegClassID:
+  case AMDGPU::VReg_192_Align2RegClassID:
+  case AMDGPU::AReg_192_Align2RegClassID:
     return 192;
   case AMDGPU::SGPR_256RegClassID:
   case AMDGPU::SReg_256RegClassID:
   case AMDGPU::VReg_256RegClassID:
   case AMDGPU::AReg_256RegClassID:
+  case AMDGPU::VReg_256_Align2RegClassID:
+  case AMDGPU::AReg_256_Align2RegClassID:
     return 256;
   case AMDGPU::SGPR_512RegClassID:
   case AMDGPU::SReg_512RegClassID:
   case AMDGPU::VReg_512RegClassID:
   case AMDGPU::AReg_512RegClassID:
+  case AMDGPU::VReg_512_Align2RegClassID:
+  case AMDGPU::AReg_512_Align2RegClassID:
     return 512;
   case AMDGPU::SGPR_1024RegClassID:
   case AMDGPU::SReg_1024RegClassID:
   case AMDGPU::VReg_1024RegClassID:
   case AMDGPU::AReg_1024RegClassID:
+  case AMDGPU::VReg_1024_Align2RegClassID:
+  case AMDGPU::AReg_1024_Align2RegClassID:
     return 1024;
   default:
     llvm_unreachable("Unexpected register class");

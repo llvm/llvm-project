@@ -872,7 +872,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (RC == &AMDGPU::VReg_64RegClass &&
+  if (RC->hasSuperClassEq(&AMDGPU::VReg_64RegClass) &&
       !RI.hasAGPRs(RI.getPhysRegClass(SrcReg))) {
     if (ST.hasPackedFP32Ops()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestReg)
@@ -1021,7 +1021,7 @@ void SIInstrInfo::materializeImmediate(MachineBasicBlock &MBB,
       .addImm(Value);
     return;
   }
-  if (RegClass == &AMDGPU::VReg_64RegClass) {
+  if (RegClass->hasSuperClassEq(&AMDGPU::VReg_64RegClass)) {
     BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_PSEUDO), DestReg)
       .addImm(Value);
     return;
@@ -3776,7 +3776,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
   // Make sure the register classes are correct.
   for (int i = 0, e = Desc.getNumOperands(); i != e; ++i) {
-    if (MI.getOperand(i).isFPImm()) {
+    const MachineOperand &MO = MI.getOperand(i);
+    if (MO.isFPImm()) {
       ErrInfo = "FPImm Machine Operands are not supported. ISel should bitcast "
                 "all fp values to integers.";
       return false;
@@ -3805,7 +3806,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64: {
-      const MachineOperand &MO = MI.getOperand(i);
       if (!MO.isReg() && (!MO.isImm() || !isInlineConstant(MI, i))) {
         ErrInfo = "Illegal immediate value for operand.";
         return false;
@@ -3826,12 +3826,40 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       continue;
     }
 
-    if (!MI.getOperand(i).isReg())
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (!Reg)
       continue;
 
+    // FIXME: Ideally we would have separate instruction definitions with the
+    // aligned register constraint.
+    // FIXME: We do not verify inline asm operands, but custom inline asm
+    // verification is broken anyway
+    if (ST.needsAlignedVGPRs()) {
+      const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
+      const bool IsVGPR = RI.hasVGPRs(RC);
+      const bool IsAGPR = !IsVGPR && RI.hasAGPRs(RC);
+      if ((IsVGPR || IsAGPR) && MO.getSubReg()) {
+        const TargetRegisterClass *SubRC =
+            RI.getSubRegClass(RC, MO.getSubReg());
+        RC = RI.getCompatibleSubRegClass(RC, SubRC, MO.getSubReg());
+        if (RC)
+          RC = SubRC;
+      }
+
+      // Check that this is the aligned version of the class.
+      if (!RC || ((IsVGPR && !RC->hasSuperClassEq(RI.getVGPRClassForBitWidth(
+                                 RI.getRegSizeInBits(*RC)))) ||
+                  (IsAGPR && !RC->hasSuperClassEq(RI.getAGPRClassForBitWidth(
+                                 RI.getRegSizeInBits(*RC)))))) {
+        ErrInfo = "Subtarget requires even aligned vector registers";
+        return false;
+      }
+    }
+
     if (RegClass != -1) {
-      Register Reg = MI.getOperand(i).getReg();
-      if (Reg == AMDGPU::NoRegister || Reg.isVirtual())
+      if (Reg.isVirtual())
         continue;
 
       const TargetRegisterClass *RC = RI.getRegClass(RegClass);
@@ -4320,9 +4348,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
     if (Opcode != AMDGPU::V_MOV_B64_DPP_PSEUDO &&
         ((DstIdx >= 0 &&
-          Desc.OpInfo[DstIdx].RegClass == AMDGPU::VReg_64RegClassID) ||
-        ((Src0Idx >= 0 &&
-          Desc.OpInfo[Src0Idx].RegClass == AMDGPU::VReg_64RegClassID))) &&
+          (Desc.OpInfo[DstIdx].RegClass == AMDGPU::VReg_64RegClassID ||
+           Desc.OpInfo[DstIdx].RegClass == AMDGPU::VReg_64_Align2RegClassID)) ||
+         ((Src0Idx >= 0 &&
+           (Desc.OpInfo[Src0Idx].RegClass == AMDGPU::VReg_64RegClassID ||
+            Desc.OpInfo[Src0Idx].RegClass ==
+                AMDGPU::VReg_64_Align2RegClassID)))) &&
         !AMDGPU::isLegal64BitDPPControl(DC)) {
       ErrInfo = "Invalid dpp_ctrl value: "
                 "64 bit dpp only support row_newbcast";
@@ -4532,8 +4563,9 @@ void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
     Opcode = (Size == 64) ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
 
   const TargetRegisterClass *VRC = RI.getEquivalentVGPRClass(RC);
-  if (RI.getCommonSubClass(&AMDGPU::VReg_64RegClass, VRC))
-    VRC = &AMDGPU::VReg_64RegClass;
+  const TargetRegisterClass *VRC64 = RI.getVGPR64Class();
+  if (RI.getCommonSubClass(VRC64, VRC))
+    VRC = VRC64;
   else
     VRC = &AMDGPU::VGPR_32RegClass;
 
