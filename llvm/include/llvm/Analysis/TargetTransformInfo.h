@@ -119,44 +119,32 @@ class IntrinsicCostAttributes {
   SmallVector<Type *, 4> ParamTys;
   SmallVector<const Value *, 4> Arguments;
   FastMathFlags FMF;
-  ElementCount VF = ElementCount::getFixed(1);
   // If ScalarizationCost is UINT_MAX, the cost of scalarizing the
   // arguments and the return value will be computed based on types.
   unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
 
 public:
-  IntrinsicCostAttributes(const IntrinsicInst &I);
+  IntrinsicCostAttributes(
+      Intrinsic::ID Id, const CallBase &CI,
+      unsigned ScalarizationCost = std::numeric_limits<unsigned>::max());
 
-  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
-                          ElementCount Factor);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
-                          ElementCount Factor, unsigned ScalarCost);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                          ArrayRef<Type *> Tys, FastMathFlags Flags);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                          ArrayRef<Type *> Tys, FastMathFlags Flags,
-                          unsigned ScalarCost);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                          ArrayRef<Type *> Tys, FastMathFlags Flags,
-                          unsigned ScalarCost,
-                          const IntrinsicInst *I);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                          ArrayRef<Type *> Tys);
+  IntrinsicCostAttributes(
+      Intrinsic::ID Id, Type *RTy, ArrayRef<Type *> Tys,
+      FastMathFlags Flags = FastMathFlags(), const IntrinsicInst *I = nullptr,
+      unsigned ScalarCost = std::numeric_limits<unsigned>::max());
 
   IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
                           ArrayRef<const Value *> Args);
 
+  IntrinsicCostAttributes(
+      Intrinsic::ID Id, Type *RTy, ArrayRef<const Value *> Args,
+      ArrayRef<Type *> Tys, FastMathFlags Flags = FastMathFlags(),
+      const IntrinsicInst *I = nullptr,
+      unsigned ScalarCost = std::numeric_limits<unsigned>::max());
+
   Intrinsic::ID getID() const { return IID; }
   const IntrinsicInst *getInst() const { return II; }
   Type *getReturnType() const { return RetTy; }
-  ElementCount getVectorFactor() const { return VF; }
   FastMathFlags getFlags() const { return FMF; }
   unsigned getScalarizationCost() const { return ScalarizationCost; }
   const SmallVectorImpl<const Value *> &getArgs() const { return Arguments; }
@@ -738,10 +726,10 @@ public:
                                     bool Insert, bool Extract) const;
 
   /// Estimate the overhead of scalarizing an instructions unique
-  /// non-constant operands. The types of the arguments are ordinarily
-  /// scalar, in which case the costs are multiplied with VF.
+  /// non-constant operands. The (potentially vector) types to use for each of
+  /// argument are passes via Tys.
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                            unsigned VF) const;
+                                            ArrayRef<Type *> Tys) const;
 
   /// If target has efficient vector element load/store instructions, it can
   /// return true here so that insertion/extraction costs are not added to
@@ -1491,7 +1479,7 @@ public:
                                             bool Insert, bool Extract) = 0;
   virtual unsigned
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                   unsigned VF) = 0;
+                                   ArrayRef<Type *> Tys) = 0;
   virtual bool supportsEfficientVectorElementLoadStore() = 0;
   virtual bool enableAggressiveInterleaving(bool LoopHasReductions) = 0;
   virtual MemCmpExpansionOptions
@@ -1876,8 +1864,8 @@ public:
     return Impl.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
   }
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                            unsigned VF) override {
-    return Impl.getOperandsScalarizationOverhead(Args, VF);
+                                            ArrayRef<Type *> Tys) override {
+    return Impl.getOperandsScalarizationOverhead(Args, Tys);
   }
 
   bool supportsEfficientVectorElementLoadStore() override {

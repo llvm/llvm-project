@@ -9,6 +9,8 @@
 #ifndef _SIGNAL_H_
 #define _SIGNAL_H_
 
+typedef void (*sighandler_t)(int);
+
 void _sig_ign(int);
 void _sig_dfl(int);
 
@@ -16,7 +18,6 @@ void _sig_dfl(int);
 #define SIG_IGN _sig_ign
 #define SIG_DFL _sig_dfl
 
-typedef void (*sighandler_t)(int);
 sighandler_t signal(int, sighandler_t);
 
 #endif // _SIGNAL_H_

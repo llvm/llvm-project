@@ -63,9 +63,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
   if (isa<PreprocessJobAction>(JA)) {
-    if (C.getArgs().hasArg(options::OPT_test_io))
-      CmdArgs.push_back("-test-io");
-    else
       CmdArgs.push_back("-E");
   } else if (isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) {
     if (JA.getType() == types::TY_Nothing) {
@@ -101,6 +98,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add other compile options
   AddOtherOptions(Args, CmdArgs);
+
+  // Forward -Xflang arguments to -fc1
+  Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);
 
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");

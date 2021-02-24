@@ -1209,8 +1209,7 @@ static bool isPoisonShift(Value *Amount, const SimplifyQuery &Q) {
 
   // Shifting by the bitwidth or more is undefined.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(C))
-    if (CI->getValue().getLimitedValue() >=
-        CI->getType()->getScalarSizeInBits())
+    if (CI->getValue().uge(CI->getType()->getScalarSizeInBits()))
       return true;
 
   // If all lanes of a vector shift are undefined the whole shift is.
@@ -1264,7 +1263,7 @@ static Value *SimplifyShift(Instruction::BinaryOps Opcode, Value *Op0,
   // If any bits in the shift amount make that value greater than or equal to
   // the number of bits in the type, the shift is undefined.
   KnownBits Known = computeKnownBits(Op1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
-  if (Known.One.getLimitedValue() >= Known.getBitWidth())
+  if (Known.getMinValue().uge(Known.getBitWidth()))
     return PoisonValue::get(Op0->getType());
 
   // If all valid bits in the shift amount are known zero, the first operand is

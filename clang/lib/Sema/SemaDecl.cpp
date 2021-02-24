@@ -13295,7 +13295,8 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
 
   if (UsedAttr *Attr = VD->getAttr<UsedAttr>()) {
     if (!Attr->isInherited() && !VD->isThisDeclarationADefinition()) {
-      Diag(Attr->getLocation(), diag::warn_attribute_ignored) << Attr;
+      Diag(Attr->getLocation(), diag::warn_attribute_ignored_on_non_definition)
+          << Attr;
       VD->dropAttr<UsedAttr>();
     }
   }
@@ -13873,7 +13874,7 @@ ShouldWarnAboutMissingPrototype(const FunctionDecl *FD,
   // Don't warn about 'main'.
   if (isa<TranslationUnitDecl>(FD->getDeclContext()->getRedeclContext()))
     if (IdentifierInfo *II = FD->getIdentifier())
-      if (II->isStr("main"))
+      if (II->isStr("main") || II->isStr("efi_main"))
         return false;
 
   // Don't warn about inline functions.

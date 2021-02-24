@@ -1360,12 +1360,9 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
 void ConnectedVNInfoEqClasses::Distribute(LiveInterval &LI, LiveInterval *LIV[],
                                           MachineRegisterInfo &MRI) {
   // Rewrite instructions.
-  for (MachineRegisterInfo::reg_iterator RI = MRI.reg_begin(LI.reg()),
-                                         RE = MRI.reg_end();
-       RI != RE;) {
-    MachineOperand &MO = *RI;
-    MachineInstr *MI = RI->getParent();
-    ++RI;
+  for (MachineOperand &MO :
+       llvm::make_early_inc_range(MRI.reg_operands(LI.reg()))) {
+    MachineInstr *MI = MO.getParent();
     const VNInfo *VNI;
     if (MI->isDebugValue()) {
       // DBG_VALUE instructions don't have slot indexes, so get the index of

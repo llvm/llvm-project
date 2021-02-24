@@ -160,6 +160,8 @@ bool types::isObjC(ID Id) {
   }
 }
 
+bool types::isOpenCL(ID Id) { return Id == TY_CL; }
+
 bool types::isCXX(ID Id) {
   switch (Id) {
   default:
@@ -325,12 +327,10 @@ types::getCompilationPhases(const clang::driver::Driver &Driver,
   // Filter to compiler mode. When the compiler is run as a preprocessor then
   // compilation is not an option.
   // -S runs the compiler in Assembly listing mode.
-  // -test-io is used by Flang to run InputOutputTest action
   if (Driver.CCCIsCPP() || DAL.getLastArg(options::OPT_E) ||
       DAL.getLastArg(options::OPT__SLASH_EP) ||
       DAL.getLastArg(options::OPT_M, options::OPT_MM) ||
-      DAL.getLastArg(options::OPT__SLASH_P) ||
-      DAL.getLastArg(options::OPT_test_io))
+      DAL.getLastArg(options::OPT__SLASH_P))
     LastPhase = phases::Preprocess;
 
   // --precompile only runs up to precompilation.

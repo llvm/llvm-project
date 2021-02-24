@@ -362,8 +362,7 @@ static void addDataFlowSanitizerPass(const PassManagerBuilder &Builder,
   const PassManagerBuilderWrapper &BuilderWrapper =
       static_cast<const PassManagerBuilderWrapper&>(Builder);
   const LangOptions &LangOpts = BuilderWrapper.getLangOpts();
-  PM.add(
-      createDataFlowSanitizerLegacyPassPass(LangOpts.SanitizerBlacklistFiles));
+  PM.add(createDataFlowSanitizerLegacyPassPass(LangOpts.NoSanitizeFiles));
 }
 
 static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
@@ -1132,7 +1131,7 @@ static void addSanitizers(const Triple &TargetTriple,
     HWASanPass(SanitizerKind::KernelHWAddress, true);
 
     if (LangOpts.Sanitize.has(SanitizerKind::DataFlow)) {
-      MPM.addPass(DataFlowSanitizerPass(LangOpts.SanitizerBlacklistFiles));
+      MPM.addPass(DataFlowSanitizerPass(LangOpts.NoSanitizeFiles));
     }
   });
 }

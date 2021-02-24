@@ -263,6 +263,7 @@ def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
 def err_drv_omp_offload_target_missingbcruntime : Error<
   "No library '%0' found in the default clang lib directory or in LIBRARY_PATH. Please use --libomptarget-%1-bc-path to specify %1 bitcode library.">;
 def err_drv_omp_offload_target_bcruntime_not_found : Error<"Bitcode library '%0' does not exist.">;
+def err_drv_omp_offload_target_cuda_version_not_support : Error<"NVPTX target requires CUDA 9.2 or above. CUDA %0 is detected.">;
 def warn_drv_omp_offload_target_duplicate : Warning<
   "The OpenMP offloading target '%0' is similar to target '%1' already specified - will be ignored.">,
   InGroup<OpenMPTarget>;

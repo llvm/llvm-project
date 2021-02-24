@@ -583,6 +583,10 @@ def YieldOp : SCF_Op<"yield", [NoSideEffect, ReturnLike, Terminator,
 
   let arguments = (ins Variadic<AnyType>:$results);
   let builders = [OpBuilderDAG<(ins), [{ /* nothing to do */ }]>];
+
+  let assemblyFormat =
+      [{  attr-dict ($results^ `:` type($results))? }];
+
   // Override default verifier (defined in SCF_Op), no custom verification
   // needed.
   let verifier = ?;

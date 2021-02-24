@@ -214,20 +214,20 @@ struct OrderedPredicate {
   /// within that pattern.
   DenseMap<Operation *, Qualifier *> patternToAnswer;
 
-  /// Returns true if this predicate is ordered before `other`, based on the
-  /// cost model.
-  bool operator<(const OrderedPredicate &other) const {
+  /// Returns true if this predicate is ordered before `rhs`, based on the cost
+  /// model.
+  bool operator<(const OrderedPredicate &rhs) const {
     // Sort by:
-    // * first and secondary order sums
+    // * higher first and secondary order sums
     // * lower depth
-    // * position dependency
-    // * predicate dependency.
-    auto *otherPos = other.position;
-    return std::make_tuple(other.primary, other.secondary,
-                           otherPos->getIndex().size(), otherPos->getKind(),
-                           other.question->getKind()) >
-           std::make_tuple(primary, secondary, position->getIndex().size(),
-                           position->getKind(), question->getKind());
+    // * lower position dependency
+    // * lower predicate dependency
+    auto *rhsPos = rhs.position;
+    return std::make_tuple(primary, secondary, rhsPos->getIndex().size(),
+                           rhsPos->getKind(), rhs.question->getKind()) >
+           std::make_tuple(rhs.primary, rhs.secondary,
+                           position->getIndex().size(), position->getKind(),
+                           question->getKind());
   }
 };
 

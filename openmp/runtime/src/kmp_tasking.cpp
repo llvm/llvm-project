@@ -564,8 +564,10 @@ static inline void __ompt_task_init(kmp_taskdata_t *task, int tid) {
   task->ompt_task_info.task_data.value = 0;
   task->ompt_task_info.frame.exit_frame = ompt_data_none;
   task->ompt_task_info.frame.enter_frame = ompt_data_none;
-  task->ompt_task_info.frame.exit_frame_flags = ompt_frame_runtime | ompt_frame_framepointer;
-  task->ompt_task_info.frame.enter_frame_flags = ompt_frame_runtime | ompt_frame_framepointer;
+  task->ompt_task_info.frame.exit_frame_flags =
+      ompt_frame_runtime | ompt_frame_framepointer;
+  task->ompt_task_info.frame.enter_frame_flags =
+      ompt_frame_runtime | ompt_frame_framepointer;
 }
 
 // __ompt_task_start:
@@ -640,7 +642,8 @@ static void __kmpc_omp_task_begin_if0_template(ident_t *loc_ref, kmp_int32 gtid,
       current_task->ompt_task_info.frame.enter_frame.ptr =
           taskdata->ompt_task_info.frame.exit_frame.ptr = frame_address;
       current_task->ompt_task_info.frame.enter_frame_flags =
-          taskdata->ompt_task_info.frame.exit_frame_flags = ompt_frame_application | ompt_frame_framepointer;
+          taskdata->ompt_task_info.frame.exit_frame_flags =
+              ompt_frame_application | ompt_frame_framepointer;
     }
     if (ompt_enabled.ompt_callback_task_create) {
       ompt_task_info_t *parent_info = &(current_task->ompt_task_info);
@@ -957,7 +960,6 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
     taskdata->td_flags.executing = 0; // suspend the finishing task
   }
 
-
   KA_TRACE(
       20, ("__kmp_task_finish: T#%d finished task %p, %d incomplete children\n",
            gtid, taskdata, children));
@@ -999,7 +1001,8 @@ static void __kmpc_omp_task_complete_if0_template(ident_t *loc_ref,
     ompt_frame_t *ompt_frame;
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame = ompt_data_none;
-    ompt_frame->enter_frame_flags = ompt_frame_runtime | ompt_frame_framepointer;
+    ompt_frame->enter_frame_flags =
+        ompt_frame_runtime | ompt_frame_framepointer;
   }
 #endif
 
@@ -1422,7 +1425,7 @@ kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   kmp_tasking_flags_t *input_flags = (kmp_tasking_flags_t *)&flags;
   __kmp_assert_valid_gtid(gtid);
   input_flags->native = FALSE;
-// __kmp_task_alloc() sets up all other runtime flags
+  // __kmp_task_alloc() sets up all other runtime flags
   KA_TRACE(10, ("__kmpc_omp_task_alloc(enter): T#%d loc=%p, flags=(%s %s %s) "
                 "sizeof_task=%ld sizeof_shared=%ld entry=%p\n",
                 gtid, loc_ref, input_flags->tiedness ? "tied  " : "untied",
@@ -1632,7 +1635,6 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
     KMP_FSYNC_CANCEL(taskdata); // destroy self (just executed)
     KMP_FSYNC_RELEASING(taskdata->td_parent); // releasing parent
 #endif
-
   }
 
   // Proxy tasks are not handled by the runtime
@@ -1775,7 +1777,8 @@ kmp_int32 __kmpc_omp_task(ident_t *loc_ref, kmp_int32 gtid,
       OMPT_STORE_RETURN_ADDRESS(gtid);
       parent = new_taskdata->td_parent;
       if (!parent->ompt_task_info.frame.enter_frame.ptr) {
-        parent->ompt_task_info.frame.enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+        parent->ompt_task_info.frame.enter_frame.ptr =
+            OMPT_GET_FRAME_ADDRESS(0);
       }
       if (ompt_enabled.ompt_callback_task_create) {
         ompt_data_t task_data = ompt_data_none;
@@ -3341,7 +3344,7 @@ static int __kmp_realloc_task_threads_data(kmp_info_t *thread,
           __kmp_init_task_stack(__kmp_gtid_from_thread(thread), thread_data);
         }
 #endif // BUILD_TIED_TASK_STACK
-        // Install the new data and free the old data
+       // Install the new data and free the old data
         (*threads_data_p) = new_data;
         __kmp_free(old_data);
       } else {
@@ -4261,8 +4264,8 @@ void __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
   kmp_task_t *next_task;
   kmp_int32 lastpriv = 0;
 
-  KMP_DEBUG_ASSERT(
-      tc == num_tasks * grainsize + (last_chunk < 0 ? last_chunk : extras));
+  KMP_DEBUG_ASSERT(tc == num_tasks * grainsize +
+                             (last_chunk < 0 ? last_chunk : extras));
   KMP_DEBUG_ASSERT(num_tasks > extras);
   KMP_DEBUG_ASSERT(num_tasks > 0);
   KA_TRACE(20, ("__kmp_taskloop_linear: T#%d: %lld tasks, grainsize %lld, "
@@ -4322,7 +4325,7 @@ void __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
               next_task_bounds.get_upper_offset()));
 #if OMPT_SUPPORT
     __kmp_omp_taskloop_task(NULL, gtid, next_task,
-                           codeptr_ra); // schedule new task
+                            codeptr_ra); // schedule new task
 #else
     __kmp_omp_task(gtid, next_task, true); // schedule new task
 #endif
@@ -4458,8 +4461,8 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
   size_t upper_offset =
       (char *)ub - (char *)task; // remember offset of ub in the task structure
 
-  KMP_DEBUG_ASSERT(
-      tc == num_tasks * grainsize + (last_chunk < 0 ? last_chunk : extras));
+  KMP_DEBUG_ASSERT(tc == num_tasks * grainsize +
+                             (last_chunk < 0 ? last_chunk : extras));
   KMP_DEBUG_ASSERT(num_tasks > extras);
   KMP_DEBUG_ASSERT(num_tasks > 0);
 
@@ -4653,8 +4656,8 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
     KMP_ASSERT2(0, "unknown scheduling of taskloop");
   }
 
-  KMP_DEBUG_ASSERT(
-      tc == num_tasks * grainsize + (last_chunk < 0 ? last_chunk : extras));
+  KMP_DEBUG_ASSERT(tc == num_tasks * grainsize +
+                             (last_chunk < 0 ? last_chunk : extras));
   KMP_DEBUG_ASSERT(num_tasks > extras);
   KMP_DEBUG_ASSERT(num_tasks > 0);
   // =========================================================================

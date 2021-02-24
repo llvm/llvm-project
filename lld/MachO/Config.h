@@ -30,6 +30,11 @@ struct PlatformInfo {
   llvm::VersionTuple sdk;
 };
 
+enum class NamespaceKind {
+  twolevel,
+  flat,
+};
+
 enum class UndefinedSymbolTreatment {
   unknown,
   error,
@@ -61,6 +66,7 @@ struct Configuration {
   bool demangle = false;
   llvm::MachO::Architecture arch;
   PlatformInfo platform;
+  NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =
       UndefinedSymbolTreatment::error;
   llvm::MachO::HeaderFileType outputType;

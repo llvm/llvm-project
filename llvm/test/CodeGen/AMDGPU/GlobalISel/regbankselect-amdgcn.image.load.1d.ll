@@ -15,8 +15,8 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__sgpr_srsrc(<8 x i32> inreg %rsrc, i32
   ; FAST:   [[COPY5:%[0-9]+]]:sgpr(s32) = COPY $sgpr7
   ; FAST:   [[COPY6:%[0-9]+]]:sgpr(s32) = COPY $sgpr8
   ; FAST:   [[COPY7:%[0-9]+]]:sgpr(s32) = COPY $sgpr9
-  ; FAST:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; FAST:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; FAST:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; FAST:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; FAST:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load 16 from custom "ImageResource")
   ; FAST:   [[COPY9:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
@@ -33,8 +33,8 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__sgpr_srsrc(<8 x i32> inreg %rsrc, i32
   ; GREEDY:   [[COPY5:%[0-9]+]]:sgpr(s32) = COPY $sgpr7
   ; GREEDY:   [[COPY6:%[0-9]+]]:sgpr(s32) = COPY $sgpr8
   ; GREEDY:   [[COPY7:%[0-9]+]]:sgpr(s32) = COPY $sgpr9
-  ; GREEDY:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; GREEDY:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GREEDY:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; GREEDY:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; GREEDY:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load 16 from custom "ImageResource")
   ; GREEDY:   [[COPY9:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
@@ -58,8 +58,8 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__sgpr_srsrc(<8 x i32> inreg %rsrc, i32
   ; FAST:   [[COPY5:%[0-9]+]]:sgpr(s32) = COPY $sgpr7
   ; FAST:   [[COPY6:%[0-9]+]]:sgpr(s32) = COPY $sgpr8
   ; FAST:   [[COPY7:%[0-9]+]]:sgpr(s32) = COPY $sgpr9
-  ; FAST:   [[COPY8:%[0-9]+]]:sgpr(s32) = COPY $sgpr10
   ; FAST:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; FAST:   [[COPY8:%[0-9]+]]:sgpr(s32) = COPY $sgpr10
   ; FAST:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; FAST:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[COPY8]](s32)
   ; FAST:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load 16 from custom "ImageResource")
@@ -77,8 +77,8 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__sgpr_srsrc(<8 x i32> inreg %rsrc, i32
   ; GREEDY:   [[COPY5:%[0-9]+]]:sgpr(s32) = COPY $sgpr7
   ; GREEDY:   [[COPY6:%[0-9]+]]:sgpr(s32) = COPY $sgpr8
   ; GREEDY:   [[COPY7:%[0-9]+]]:sgpr(s32) = COPY $sgpr9
-  ; GREEDY:   [[COPY8:%[0-9]+]]:sgpr(s32) = COPY $sgpr10
   ; GREEDY:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GREEDY:   [[COPY8:%[0-9]+]]:sgpr(s32) = COPY $sgpr10
   ; GREEDY:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; GREEDY:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[COPY8]](s32)
   ; GREEDY:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load 16 from custom "ImageResource")
@@ -104,8 +104,8 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 %s) {
   ; FAST:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY $vgpr5
   ; FAST:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY $vgpr6
   ; FAST:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY $vgpr7
-  ; FAST:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr8
   ; FAST:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; FAST:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr8
   ; FAST:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; FAST:   [[DEF1:%[0-9]+]]:vgpr(<4 x s32>) = G_IMPLICIT_DEF
   ; FAST:   [[DEF2:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
@@ -158,8 +158,8 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 %s) {
   ; GREEDY:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY $vgpr5
   ; GREEDY:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY $vgpr6
   ; GREEDY:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY $vgpr7
-  ; GREEDY:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr8
   ; GREEDY:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GREEDY:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr8
   ; GREEDY:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; GREEDY:   [[DEF1:%[0-9]+]]:vgpr(<4 x s32>) = G_IMPLICIT_DEF
   ; GREEDY:   [[DEF2:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
@@ -219,8 +219,8 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 inreg
   ; FAST:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY $vgpr5
   ; FAST:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY $vgpr6
   ; FAST:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY $vgpr7
-  ; FAST:   [[COPY8:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
   ; FAST:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; FAST:   [[COPY8:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
   ; FAST:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; FAST:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[COPY8]](s32)
   ; FAST:   [[DEF1:%[0-9]+]]:vgpr(<4 x s32>) = G_IMPLICIT_DEF
@@ -274,8 +274,8 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 inreg
   ; GREEDY:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY $vgpr5
   ; GREEDY:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY $vgpr6
   ; GREEDY:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY $vgpr7
-  ; GREEDY:   [[COPY8:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
   ; GREEDY:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GREEDY:   [[COPY8:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
   ; GREEDY:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; GREEDY:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[COPY8]](s32)
   ; GREEDY:   [[DEF1:%[0-9]+]]:vgpr(<4 x s32>) = G_IMPLICIT_DEF

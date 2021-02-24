@@ -76,9 +76,14 @@ FunctionPass *createX86FlagsCopyLoweringPass();
 /// Return a pass that expands WinAlloca pseudo-instructions.
 FunctionPass *createX86WinAllocaExpander();
 
+/// Return a pass that config the tile registers.
 FunctionPass *createX86TileConfigPass();
 
+/// Return a pass that insert pseudo tile config instruction.
 FunctionPass *createX86PreTileConfigPass();
+
+/// Return a pass that lower the tile copy instruction.
+FunctionPass *createX86LowerTileCopyPass();
 
 /// Return a pass that inserts int3 at the end of the function if it ends with a
 /// CALL instruction. The pass does the same for each funclet as well. This
@@ -169,6 +174,7 @@ void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
 void initializeX86PreTileConfigPass(PassRegistry &);
 void initializeX86TileConfigPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
+void initializeX86LowerTileCopyPass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

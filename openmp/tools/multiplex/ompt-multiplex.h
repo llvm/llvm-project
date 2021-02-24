@@ -20,13 +20,13 @@
 #define _GNU_SOURCE
 #endif
 #include <dlfcn.h>
+#include <errno.h>
 #include <execinfo.h>
 #include <inttypes.h>
 #include <omp-tools.h>
 #include <omp.h>
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
 
 static ompt_set_callback_t ompt_multiplex_set_callback;
 static ompt_get_task_info_t ompt_multiplex_get_task_info;

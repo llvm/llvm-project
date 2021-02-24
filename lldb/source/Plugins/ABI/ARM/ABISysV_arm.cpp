@@ -1617,7 +1617,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
         thread.GetRegisterContext()->ReadRegisterAsUnsigned(r0_reg_info, 0) &
         UINT32_MAX;
     value.GetScalar() = ptr;
-  } else if (compiler_type.IsVectorType(nullptr, nullptr)) {
+  } else if (compiler_type.IsVectorType()) {
     if (IsArmHardFloat(thread) && (*byte_size == 8 || *byte_size == 16)) {
       is_vfp_candidate = true;
       vfp_byte_size = 8;
@@ -1704,7 +1704,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
       if (homogeneous_count > 0 && homogeneous_count <= 4) {
         llvm::Optional<uint64_t> base_byte_size =
             base_type.GetByteSize(&thread);
-        if (base_type.IsVectorType(nullptr, nullptr)) {
+        if (base_type.IsVectorType()) {
           if (base_byte_size &&
               (*base_byte_size == 8 || *base_byte_size == 16)) {
             is_vfp_candidate = true;

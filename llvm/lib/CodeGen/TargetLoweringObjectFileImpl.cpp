@@ -440,6 +440,10 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
       Name == ".llvmbc" || Name == ".llvmcmd")
     return SectionKind::getMetadata();
 
+  if (Name == getInstrProfSectionName(IPSK_cnts, Triple::ELF,
+                                      /*AddSegmentInfo=*/false))
+    return SectionKind::getBSS();
+
   if (Name.empty() || Name[0] != '.') return K;
 
   // Default implementation based on some magic section names.
@@ -626,6 +630,8 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     Name.push_back('.');
     TM.getNameWithPrefix(Name, GO, Mang, /*MayAlwaysUsePrivate*/true);
   } else if (HasPrefix)
+    // For distinguishing between .text.${text-section-prefix}. (with trailing
+    // dot) and .text.${function-name}
     Name.push_back('.');
   return Name;
 }
@@ -939,7 +945,8 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   } else {
     Name += MBB.getParent()->getSection()->getName();
     if (TM.getUniqueBasicBlockSectionNames()) {
-      Name += ".";
+      if (!Name.endswith("."))
+        Name += ".";
       Name += MBB.getSymbol()->getName();
     } else {
       UniqueID = NextUniqueID++;

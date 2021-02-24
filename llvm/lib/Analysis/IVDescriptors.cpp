@@ -243,11 +243,14 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
   if (RecurrenceType->isFloatingPointTy()) {
     if (!isFloatingPointRecurrenceKind(Kind))
       return false;
-  } else {
+  } else if (RecurrenceType->isIntegerTy()) {
     if (!isIntegerRecurrenceKind(Kind))
       return false;
     if (isArithmeticRecurrenceKind(Kind))
       Start = lookThroughAnd(Phi, RecurrenceType, VisitedInsts, CastInsts);
+  } else {
+    // Pointer min/max may exist, but it is not supported as a reduction op.
+    return false;
   }
 
   Worklist.push_back(Start);
@@ -606,9 +609,8 @@ bool RecurrenceDescriptor::hasMultipleUsesOf(
     Instruction *I, SmallPtrSetImpl<Instruction *> &Insts,
     unsigned MaxNumUses) {
   unsigned NumUses = 0;
-  for (User::op_iterator Use = I->op_begin(), E = I->op_end(); Use != E;
-       ++Use) {
-    if (Insts.count(dyn_cast<Instruction>(*Use)))
+  for (const Use &U : I->operands()) {
+    if (Insts.count(dyn_cast<Instruction>(U)))
       ++NumUses;
     if (NumUses > MaxNumUses)
       return true;

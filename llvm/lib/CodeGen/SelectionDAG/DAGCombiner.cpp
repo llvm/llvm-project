@@ -3153,8 +3153,8 @@ static SDValue getTruncatedUSUBSAT(EVT DstVT, EVT SrcVT, SDValue LHS,
                                            DstVT.getScalarSizeInBits()),
                       DL, SrcVT);
   RHS = DAG.getNode(ISD::UMIN, DL, SrcVT, RHS, SatLimit);
-  RHS = DAG.getZExtOrTrunc(RHS, DL, DstVT);
-  LHS = DAG.getZExtOrTrunc(LHS, DL, DstVT);
+  RHS = DAG.getNode(ISD::TRUNCATE, DL, DstVT, RHS);
+  LHS = DAG.getNode(ISD::TRUNCATE, DL, DstVT, LHS);
   return DAG.getNode(ISD::USUBSAT, DL, DstVT, LHS, RHS);
 }
 
@@ -3187,6 +3187,19 @@ SDValue DAGCombiner::foldSubToUSubSat(EVT DstVT, SDNode *N) {
       return getTruncatedUSUBSAT(DstVT, SubVT, Op0, MinRHS, DAG, SDLoc(N));
     if (MinRHS == Op0)
       return getTruncatedUSUBSAT(DstVT, SubVT, Op0, MinLHS, DAG, SDLoc(N));
+  }
+
+  // sub(a,trunc(umin(zext(a),b))) -> usubsat(a,trunc(umin(b,SatLimit)))
+  if (Op1.getOpcode() == ISD::TRUNCATE &&
+      Op1.getOperand(0).getOpcode() == ISD::UMIN) {
+    SDValue MinLHS = Op1.getOperand(0).getOperand(0);
+    SDValue MinRHS = Op1.getOperand(0).getOperand(1);
+    if (MinLHS.getOpcode() == ISD::ZERO_EXTEND && MinLHS.getOperand(0) == Op0)
+      return getTruncatedUSUBSAT(DstVT, MinLHS.getValueType(), MinLHS, MinRHS,
+                                 DAG, SDLoc(N));
+    if (MinRHS.getOpcode() == ISD::ZERO_EXTEND && MinRHS.getOperand(0) == Op0)
+      return getTruncatedUSUBSAT(DstVT, MinLHS.getValueType(), MinRHS, MinLHS,
+                                 DAG, SDLoc(N));
   }
 
   return SDValue();
@@ -9868,6 +9881,19 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
         SDValue CondRHS = RHS;
         SDValue OpLHS = Other.getOperand(0), OpRHS = Other.getOperand(1);
 
+        if (Other.getOpcode() == ISD::SUB &&
+            LHS.getOpcode() == ISD::ZERO_EXTEND && LHS.getOperand(0) == OpLHS &&
+            OpRHS.getOpcode() == ISD::TRUNCATE && OpRHS.getOperand(0) == RHS) {
+          // Look for a general sub with unsigned saturation first.
+          // zext(x) >= y ? x - trunc(y) : 0
+          // --> usubsat(x,trunc(umin(y,SatLimit)))
+          // zext(x) >  y ? x - trunc(y) : 0
+          // --> usubsat(x,trunc(umin(y,SatLimit)))
+          if (SatCC == ISD::SETUGE || SatCC == ISD::SETUGT)
+            return getTruncatedUSUBSAT(VT, LHS.getValueType(), LHS, RHS, DAG,
+                                       DL);
+        }
+
         if (OpLHS == LHS) {
           // Look for a general sub with unsigned saturation first.
           // x >= y ? x-y : 0 --> usubsat x, y
@@ -10027,6 +10053,77 @@ SDValue DAGCombiner::visitSETCCCARRY(SDNode *N) {
     return DAG.getNode(ISD::SETCC, SDLoc(N), N->getVTList(), LHS, RHS, Cond);
 
   return SDValue();
+}
+
+/// Check if N satisfies:
+///   N is used once.
+///   N is a Load.
+///   The load is compatible with ExtOpcode. It means
+///     If load has explicit zero/sign extension, ExpOpcode must have the same
+///     extension.
+///     Otherwise returns true.
+static bool isCompatibleLoad(SDValue N, unsigned ExtOpcode) {
+  if (!N.hasOneUse())
+    return false;
+
+  if (!isa<LoadSDNode>(N))
+    return false;
+
+  LoadSDNode *Load = cast<LoadSDNode>(N);
+  ISD::LoadExtType LoadExt = Load->getExtensionType();
+  if (LoadExt == ISD::NON_EXTLOAD || LoadExt == ISD::EXTLOAD)
+    return true;
+
+  // Now LoadExt is either SEXTLOAD or ZEXTLOAD, ExtOpcode must have the same
+  // extension.
+  if ((LoadExt == ISD::SEXTLOAD && ExtOpcode != ISD::SIGN_EXTEND) ||
+      (LoadExt == ISD::ZEXTLOAD && ExtOpcode != ISD::ZERO_EXTEND))
+    return false;
+
+  return true;
+}
+
+/// Fold
+///   (sext (select c, load x, load y)) -> (select c, sextload x, sextload y)
+///   (zext (select c, load x, load y)) -> (select c, zextload x, zextload y)
+///   (aext (select c, load x, load y)) -> (select c, extload x, extload y)
+/// This function is called by the DAGCombiner when visiting sext/zext/aext
+/// dag nodes (see for example method DAGCombiner::visitSIGN_EXTEND).
+static SDValue tryToFoldExtendSelectLoad(SDNode *N, const TargetLowering &TLI,
+                                         SelectionDAG &DAG) {
+  unsigned Opcode = N->getOpcode();
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  assert((Opcode == ISD::SIGN_EXTEND || Opcode == ISD::ZERO_EXTEND ||
+          Opcode == ISD::ANY_EXTEND) &&
+         "Expected EXTEND dag node in input!");
+
+  if (!(N0->getOpcode() == ISD::SELECT || N0->getOpcode() == ISD::VSELECT) ||
+      !N0.hasOneUse())
+    return SDValue();
+
+  SDValue Op1 = N0->getOperand(1);
+  SDValue Op2 = N0->getOperand(2);
+  if (!isCompatibleLoad(Op1, Opcode) || !isCompatibleLoad(Op2, Opcode))
+    return SDValue();
+
+  auto ExtLoadOpcode = ISD::EXTLOAD;
+  if (Opcode == ISD::SIGN_EXTEND)
+    ExtLoadOpcode = ISD::SEXTLOAD;
+  else if (Opcode == ISD::ZERO_EXTEND)
+    ExtLoadOpcode = ISD::ZEXTLOAD;
+
+  LoadSDNode *Load1 = cast<LoadSDNode>(Op1);
+  LoadSDNode *Load2 = cast<LoadSDNode>(Op2);
+  if (!TLI.isLoadExtLegal(ExtLoadOpcode, VT, Load1->getMemoryVT()) ||
+      !TLI.isLoadExtLegal(ExtLoadOpcode, VT, Load2->getMemoryVT()))
+    return SDValue();
+
+  SDValue Ext1 = DAG.getNode(Opcode, DL, VT, Op1);
+  SDValue Ext2 = DAG.getNode(Opcode, DL, VT, Op2);
+  return DAG.getSelect(DL, VT, N0->getOperand(0), Ext1, Ext2);
 }
 
 /// Try to fold a sext/zext/aext dag node into a ConstantSDNode or
@@ -10813,6 +10910,9 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     return DAG.getNode(ISD::ADD, DL, VT, Zext, DAG.getAllOnesConstant(DL, VT));
   }
 
+  if (SDValue Res = tryToFoldExtendSelectLoad(N, TLI, DAG))
+    return Res;
+
   return SDValue();
 }
 
@@ -11125,6 +11225,9 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   if (SDValue NewCtPop = widenCtPop(N, DAG))
     return NewCtPop;
 
+  if (SDValue Res = tryToFoldExtendSelectLoad(N, TLI, DAG))
+    return Res;
+
   return SDValue();
 }
 
@@ -11276,6 +11379,9 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
 
   if (SDValue NewCtPop = widenCtPop(N, DAG))
     return NewCtPop;
+
+  if (SDValue Res = tryToFoldExtendSelectLoad(N, TLI, DAG))
+    return Res;
 
   return SDValue();
 }
@@ -12096,6 +12202,20 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
         return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
       }
     }
+    break;
+  case ISD::USUBSAT:
+    // Truncate the USUBSAT only if LHS is a known zero-extension, its not
+    // enough to know that the upper bits are zero we must ensure that we don't
+    // introduce an extra truncate.
+    if (!LegalOperations && N0.hasOneUse() &&
+        N0.getOperand(0).getOpcode() == ISD::ZERO_EXTEND &&
+        N0.getOperand(0).getOperand(0).getScalarValueSizeInBits() <=
+            VT.getScalarSizeInBits() &&
+        hasOperation(N0.getOpcode(), VT)) {
+      return getTruncatedUSUBSAT(VT, SrcVT, N0.getOperand(0), N0.getOperand(1),
+                                 DAG, SDLoc(N));
+    }
+    break;
   }
 
   return SDValue();

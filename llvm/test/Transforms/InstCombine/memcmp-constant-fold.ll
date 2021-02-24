@@ -12,14 +12,14 @@ define i1 @memcmp_4bytes_unaligned_constant_i8(i8* align 4 %x) {
 ; LE-LABEL: @memcmp_4bytes_unaligned_constant_i8(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast i8* [[X:%.*]] to i32*
 ; LE-NEXT:    [[LHSV:%.*]] = load i32, i32* [[TMP1]], align 4
-; LE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[LHSV]], 16777216
-; LE-NEXT:    ret i1 [[TMP2]]
+; LE-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[LHSV]], 16777216
+; LE-NEXT:    ret i1 [[DOTNOT]]
 ;
 ; BE-LABEL: @memcmp_4bytes_unaligned_constant_i8(
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast i8* [[X:%.*]] to i32*
 ; BE-NEXT:    [[LHSV:%.*]] = load i32, i32* [[TMP1]], align 4
-; BE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[LHSV]], 1
-; BE-NEXT:    ret i1 [[TMP2]]
+; BE-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[LHSV]], 1
+; BE-NEXT:    ret i1 [[DOTNOT]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @charbuf, i64 0, i64 0), i64 4)
   %cmpeq0 = icmp eq i32 %call, 0
@@ -35,14 +35,14 @@ define i1 @memcmp_4bytes_unaligned_constant_i16(i8* align 4 %x) {
 ; LE-LABEL: @memcmp_4bytes_unaligned_constant_i16(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast i8* [[X:%.*]] to i32*
 ; LE-NEXT:    [[RHSV:%.*]] = load i32, i32* [[TMP1]], align 4
-; LE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[RHSV]], 131073
-; LE-NEXT:    ret i1 [[TMP2]]
+; LE-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[RHSV]], 131073
+; LE-NEXT:    ret i1 [[DOTNOT]]
 ;
 ; BE-LABEL: @memcmp_4bytes_unaligned_constant_i16(
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast i8* [[X:%.*]] to i32*
 ; BE-NEXT:    [[RHSV:%.*]] = load i32, i32* [[TMP1]], align 4
-; BE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[RHSV]], 65538
-; BE-NEXT:    ret i1 [[TMP2]]
+; BE-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[RHSV]], 65538
+; BE-NEXT:    ret i1 [[DOTNOT]]
 ;
   %call = tail call i32 @memcmp(i8* bitcast (i16* getelementptr inbounds ([4 x i16], [4 x i16]* @intbuf_unaligned, i64 0, i64 0) to i8*), i8* %x, i64 4)
   %cmpeq0 = icmp eq i32 %call, 0
@@ -55,7 +55,7 @@ define i1 @memcmp_4bytes_unaligned_constant_i16(i8* align 4 %x) {
 
 define i1 @memcmp_3bytes_aligned_constant_i32(i8* align 4 %x) {
 ; ALL-LABEL: @memcmp_3bytes_aligned_constant_i32(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* nonnull dereferenceable(3) bitcast (i32* getelementptr inbounds ([2 x i32], [2 x i32]* @intbuf, i64 0, i64 1) to i8*), i8* nonnull dereferenceable(3) bitcast ([2 x i32]* @intbuf to i8*), i64 3)
+; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* noundef nonnull dereferenceable(3) bitcast (i32* getelementptr inbounds ([2 x i32], [2 x i32]* @intbuf, i64 0, i64 1) to i8*), i8* noundef nonnull dereferenceable(3) bitcast ([2 x i32]* @intbuf to i8*), i64 3)
 ; ALL-NEXT:    [[CMPEQ0:%.*]] = icmp eq i32 [[CALL]], 0
 ; ALL-NEXT:    ret i1 [[CMPEQ0]]
 ;
@@ -68,7 +68,7 @@ define i1 @memcmp_3bytes_aligned_constant_i32(i8* align 4 %x) {
 
 define i1 @memcmp_4bytes_one_unaligned_i8(i8* align 4 %x, i8* align 1 %y) {
 ; ALL-LABEL: @memcmp_4bytes_one_unaligned_i8(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* nonnull dereferenceable(4) [[X:%.*]], i8* nonnull dereferenceable(4) [[Y:%.*]], i64 4)
+; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[X:%.*]], i8* noundef nonnull dereferenceable(4) [[Y:%.*]], i64 4)
 ; ALL-NEXT:    [[CMPEQ0:%.*]] = icmp eq i32 [[CALL]], 0
 ; ALL-NEXT:    ret i1 [[CMPEQ0]]
 ;

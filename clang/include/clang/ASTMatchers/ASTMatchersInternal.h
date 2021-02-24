@@ -2039,7 +2039,8 @@ equivalentUnaryOperator(const NodeType &Node) {
 template <>
 inline Optional<UnaryOperatorKind>
 equivalentUnaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
-  if (Node.getNumArgs() != 1)
+  if (Node.getNumArgs() != 1 && Node.getOperator() != OO_PlusPlus &&
+      Node.getOperator() != OO_MinusMinus)
     return None;
   switch (Node.getOperator()) {
   default:

@@ -45,6 +45,7 @@
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Fast Register Allocator
+; CHECK-NEXT:       X86 Lower Tile Copy
 ; CHECK-NEXT:       Bundle Machine CFG Edges
 ; CHECK-NEXT:       X86 FP Stackifier
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved

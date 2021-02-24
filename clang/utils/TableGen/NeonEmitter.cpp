@@ -2115,7 +2115,11 @@ void NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
     std::string LowerBound, UpperBound;
 
     Record *R = Def->getRecord();
-    if (R->getValueAsBit("isVCVT_N")) {
+    if (R->getValueAsBit("isVXAR")) {
+      //VXAR takes an immediate in the range [0, 63]
+      LowerBound = "0";
+      UpperBound = "63";
+    } else if (R->getValueAsBit("isVCVT_N")) {
       // VCVT between floating- and fixed-point values takes an immediate
       // in the range [1, 32) for f32 or [1, 64) for f64 or [1, 16) for f16.
       LowerBound = "1";

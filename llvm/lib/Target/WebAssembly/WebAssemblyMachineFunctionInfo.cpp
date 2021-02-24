@@ -104,7 +104,26 @@ llvm::signatureFromMVTs(const SmallVectorImpl<MVT> &Results,
 
 yaml::WebAssemblyFunctionInfo::WebAssemblyFunctionInfo(
     const llvm::WebAssemblyFunctionInfo &MFI)
-    : CFGStackified(MFI.isCFGStackified()) {}
+    : CFGStackified(MFI.isCFGStackified()) {
+  auto *EHInfo = MFI.getWasmEHFuncInfo();
+  const llvm::MachineFunction &MF = MFI.getMachineFunction();
+  //  MFI.getWasmEHFuncInfo() is non-null only for functions with the
+  //  personality function.
+  if (EHInfo) {
+    // SrcToUnwindDest can contain stale mappings in case BBs are removed in
+    // optimizations, in case, for example, they are unreachable. We should not
+    // include their info.
+    SmallPtrSet<const MachineBasicBlock *, 16> MBBs;
+    for (const auto &MBB : MF)
+      MBBs.insert(&MBB);
+    for (auto KV : EHInfo->SrcToUnwindDest) {
+      auto *SrcBB = KV.first.get<MachineBasicBlock *>();
+      auto *DestBB = KV.second.get<MachineBasicBlock *>();
+      if (MBBs.count(SrcBB) && MBBs.count(DestBB))
+        SrcToUnwindDest[SrcBB->getNumber()] = DestBB->getNumber();
+    }
+  }
+}
 
 void yaml::WebAssemblyFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<WebAssemblyFunctionInfo>::mapping(YamlIO, *this);
@@ -113,4 +132,9 @@ void yaml::WebAssemblyFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
 void WebAssemblyFunctionInfo::initializeBaseYamlFields(
     const yaml::WebAssemblyFunctionInfo &YamlMFI) {
   CFGStackified = YamlMFI.CFGStackified;
+  if (WasmEHInfo) {
+    for (auto KV : YamlMFI.SrcToUnwindDest)
+      WasmEHInfo->setUnwindDest(MF.getBlockNumbered(KV.first),
+                                MF.getBlockNumbered(KV.second));
+  }
 }

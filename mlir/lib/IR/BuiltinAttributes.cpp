@@ -211,16 +211,18 @@ FloatAttr FloatAttr::get(Type type, double value) {
   return Base::get(type.getContext(), type, value);
 }
 
-FloatAttr FloatAttr::getChecked(Type type, double value, Location loc) {
-  return Base::getChecked(loc, type, value);
+FloatAttr FloatAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                Type type, double value) {
+  return Base::getChecked(emitError, type.getContext(), type, value);
 }
 
 FloatAttr FloatAttr::get(Type type, const APFloat &value) {
   return Base::get(type.getContext(), type, value);
 }
 
-FloatAttr FloatAttr::getChecked(Type type, const APFloat &value, Location loc) {
-  return Base::getChecked(loc, type, value);
+FloatAttr FloatAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                Type type, const APFloat &value) {
+  return Base::getChecked(emitError, type.getContext(), type, value);
 }
 
 APFloat FloatAttr::getValue() const { return getImpl()->getValue(); }
@@ -238,27 +240,29 @@ double FloatAttr::getValueAsDouble(APFloat value) {
 }
 
 /// Verify construction invariants.
-static LogicalResult verifyFloatTypeInvariants(Location loc, Type type) {
+static LogicalResult
+verifyFloatTypeInvariants(function_ref<InFlightDiagnostic()> emitError,
+                          Type type) {
   if (!type.isa<FloatType>())
-    return emitError(loc, "expected floating point type");
+    return emitError() << "expected floating point type";
   return success();
 }
 
-LogicalResult FloatAttr::verifyConstructionInvariants(Location loc, Type type,
-                                                      double value) {
-  return verifyFloatTypeInvariants(loc, type);
+LogicalResult FloatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                Type type, double value) {
+  return verifyFloatTypeInvariants(emitError, type);
 }
 
-LogicalResult FloatAttr::verifyConstructionInvariants(Location loc, Type type,
-                                                      const APFloat &value) {
+LogicalResult FloatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                Type type, const APFloat &value) {
   // Verify that the type is correct.
-  if (failed(verifyFloatTypeInvariants(loc, type)))
+  if (failed(verifyFloatTypeInvariants(emitError, type)))
     return failure();
 
   // Verify that the type semantics match that of the value.
   if (&type.cast<FloatType>().getFloatSemantics() != &value.getSemantics()) {
-    return emitError(
-        loc, "FloatAttr type doesn't match the type implied by its value");
+    return emitError()
+           << "FloatAttr type doesn't match the type implied by its value";
   }
   return success();
 }
@@ -326,26 +330,28 @@ uint64_t IntegerAttr::getUInt() const {
   return getValue().getZExtValue();
 }
 
-static LogicalResult verifyIntegerTypeInvariants(Location loc, Type type) {
+static LogicalResult
+verifyIntegerTypeInvariants(function_ref<InFlightDiagnostic()> emitError,
+                            Type type) {
   if (type.isa<IntegerType, IndexType>())
     return success();
-  return emitError(loc, "expected integer or index type");
+  return emitError() << "expected integer or index type";
 }
 
-LogicalResult IntegerAttr::verifyConstructionInvariants(Location loc, Type type,
-                                                        int64_t value) {
-  return verifyIntegerTypeInvariants(loc, type);
+LogicalResult IntegerAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                  Type type, int64_t value) {
+  return verifyIntegerTypeInvariants(emitError, type);
 }
 
-LogicalResult IntegerAttr::verifyConstructionInvariants(Location loc, Type type,
-                                                        const APInt &value) {
-  if (failed(verifyIntegerTypeInvariants(loc, type)))
+LogicalResult IntegerAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                  Type type, const APInt &value) {
+  if (failed(verifyIntegerTypeInvariants(emitError, type)))
     return failure();
   if (auto integerType = type.dyn_cast<IntegerType>())
     if (integerType.getWidth() != value.getBitWidth())
-      return emitError(loc, "integer type bit width (")
-             << integerType.getWidth() << ") doesn't match value bit width ("
-             << value.getBitWidth() << ")";
+      return emitError() << "integer type bit width (" << integerType.getWidth()
+                         << ") doesn't match value bit width ("
+                         << value.getBitWidth() << ")";
   return success();
 }
 
@@ -381,9 +387,11 @@ OpaqueAttr OpaqueAttr::get(MLIRContext *context, Identifier dialect,
   return Base::get(context, dialect, attrData, type);
 }
 
-OpaqueAttr OpaqueAttr::getChecked(Identifier dialect, StringRef attrData,
-                                  Type type, Location location) {
-  return Base::getChecked(location, dialect, attrData, type);
+OpaqueAttr OpaqueAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                  Identifier dialect, StringRef attrData,
+                                  Type type) {
+  return Base::getChecked(emitError, dialect.getContext(), dialect, attrData,
+                          type);
 }
 
 /// Returns the dialect namespace of the opaque attribute.
@@ -395,12 +403,11 @@ Identifier OpaqueAttr::getDialectNamespace() const {
 StringRef OpaqueAttr::getAttrData() const { return getImpl()->attrData; }
 
 /// Verify the construction of an opaque attribute.
-LogicalResult OpaqueAttr::verifyConstructionInvariants(Location loc,
-                                                       Identifier dialect,
-                                                       StringRef attrData,
-                                                       Type type) {
+LogicalResult OpaqueAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                 Identifier dialect, StringRef attrData,
+                                 Type type) {
   if (!Dialect::isValidNamespace(dialect.strref()))
-    return emitError(loc, "invalid dialect namespace '") << dialect << "'";
+    return emitError() << "invalid dialect namespace '" << dialect << "'";
   return success();
 }
 

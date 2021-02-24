@@ -55,8 +55,37 @@ static bool shouldBeDefaultMemberInitializer(const Expr *Value) {
   return false;
 }
 
+namespace {
+AST_MATCHER_P(FieldDecl, indexNotLessThan, unsigned, Index) {
+  return Node.getFieldIndex() >= Index;
+}
+} // namespace
+
+// Checks if Field is initialised using a field that will be initialised after
+// it.
+// TODO: Probably should guard against function calls that could have side
+// effects or if they do reference another field that's initialized before this
+// field, but is modified before the assignment.
+static bool isSafeAssignment(const FieldDecl *Field, const Expr *Init,
+                             const CXXConstructorDecl *Context) {
+
+  auto MemberMatcher =
+      memberExpr(hasObjectExpression(cxxThisExpr()),
+                 member(fieldDecl(indexNotLessThan(Field->getFieldIndex()))));
+
+  auto DeclMatcher = declRefExpr(
+      to(varDecl(unless(parmVarDecl()), hasDeclContext(equalsNode(Context)))));
+
+  return match(expr(anyOf(MemberMatcher, DeclMatcher,
+                          hasDescendant(MemberMatcher),
+                          hasDescendant(DeclMatcher))),
+               *Init, Field->getASTContext())
+      .empty();
+}
+
 static const std::pair<const FieldDecl *, const Expr *>
-isAssignmentToMemberOf(const RecordDecl *Rec, const Stmt *S) {
+isAssignmentToMemberOf(const CXXRecordDecl *Rec, const Stmt *S,
+                       const CXXConstructorDecl *Ctor) {
   if (const auto *BO = dyn_cast<BinaryOperator>(S)) {
     if (BO->getOpcode() != BO_Assign)
       return std::make_pair(nullptr, nullptr);
@@ -69,8 +98,11 @@ isAssignmentToMemberOf(const RecordDecl *Rec, const Stmt *S) {
     if (!Field)
       return std::make_pair(nullptr, nullptr);
 
-    if (isa<CXXThisExpr>(ME->getBase()))
-      return std::make_pair(Field, BO->getRHS()->IgnoreParenImpCasts());
+    if (!isa<CXXThisExpr>(ME->getBase()))
+      return std::make_pair(nullptr, nullptr);
+    const Expr *Init = BO->getRHS()->IgnoreParenImpCasts();
+    if (isSafeAssignment(Field, Init, Ctor))
+      return std::make_pair(Field, Init);
   } else if (const auto *COCE = dyn_cast<CXXOperatorCallExpr>(S)) {
     if (COCE->getOperator() != OO_Equal)
       return std::make_pair(nullptr, nullptr);
@@ -84,8 +116,11 @@ isAssignmentToMemberOf(const RecordDecl *Rec, const Stmt *S) {
     if (!Field)
       return std::make_pair(nullptr, nullptr);
 
-    if (isa<CXXThisExpr>(ME->getBase()))
-      return std::make_pair(Field, COCE->getArg(1)->IgnoreParenImpCasts());
+    if (!isa<CXXThisExpr>(ME->getBase()))
+      return std::make_pair(nullptr, nullptr);
+    const Expr *Init = COCE->getArg(1)->IgnoreParenImpCasts();
+    if (isSafeAssignment(Field, Init, Ctor))
+      return std::make_pair(Field, Init);
   }
 
   return std::make_pair(nullptr, nullptr);
@@ -118,14 +153,12 @@ void PreferMemberInitializerCheck::check(
   const auto *Body = cast<CompoundStmt>(Ctor->getBody());
 
   const CXXRecordDecl *Class = Ctor->getParent();
-  SourceLocation InsertPos;
   bool FirstToCtorInits = true;
 
   for (const Stmt *S : Body->body()) {
     if (S->getBeginLoc().isMacroID()) {
-      StringRef MacroName =
-        Lexer::getImmediateMacroName(S->getBeginLoc(), *Result.SourceManager,
-                                     getLangOpts());
+      StringRef MacroName = Lexer::getImmediateMacroName(
+          S->getBeginLoc(), *Result.SourceManager, getLangOpts());
       if (MacroName.contains_lower("assert"))
         return;
     }
@@ -143,99 +176,116 @@ void PreferMemberInitializerCheck::check(
 
     const FieldDecl *Field;
     const Expr *InitValue;
-    std::tie(Field, InitValue) = isAssignmentToMemberOf(Class, S);
+    std::tie(Field, InitValue) = isAssignmentToMemberOf(Class, S, Ctor);
     if (Field) {
       if (IsUseDefaultMemberInitEnabled && getLangOpts().CPlusPlus11 &&
           Ctor->isDefaultConstructor() &&
           (getLangOpts().CPlusPlus20 || !Field->isBitField()) &&
+          !Field->hasInClassInitializer() &&
           (!isa<RecordDecl>(Class->getDeclContext()) ||
            !cast<RecordDecl>(Class->getDeclContext())->isUnion()) &&
           shouldBeDefaultMemberInitializer(InitValue)) {
+
+        bool InvalidFix = false;
+        SourceLocation FieldEnd =
+            Lexer::getLocForEndOfToken(Field->getSourceRange().getEnd(), 0,
+                                       *Result.SourceManager, getLangOpts());
+        InvalidFix |= FieldEnd.isInvalid() || FieldEnd.isMacroID();
+        SourceLocation SemiColonEnd;
+        if (auto NextToken = Lexer::findNextToken(
+                S->getEndLoc(), *Result.SourceManager, getLangOpts()))
+          SemiColonEnd = NextToken->getEndLoc();
+        else
+          InvalidFix = true;
         auto Diag =
             diag(S->getBeginLoc(), "%0 should be initialized in an in-class"
                                    " default member initializer")
             << Field;
+        if (!InvalidFix) {
+          CharSourceRange StmtRange =
+              CharSourceRange::getCharRange(S->getBeginLoc(), SemiColonEnd);
 
-        SourceLocation FieldEnd =
-            Lexer::getLocForEndOfToken(Field->getSourceRange().getEnd(), 0,
-                                       *Result.SourceManager, getLangOpts());
-        Diag << FixItHint::CreateInsertion(FieldEnd,
-                                           UseAssignment ? " = " : "{")
-             << FixItHint::CreateInsertionFromRange(
-                    FieldEnd,
-                    CharSourceRange(InitValue->getSourceRange(), true))
-             << FixItHint::CreateInsertion(FieldEnd, UseAssignment ? "" : "}");
+          SmallString<128> Insertion(
+              {UseAssignment ? " = " : "{",
+               Lexer::getSourceText(
+                   CharSourceRange(InitValue->getSourceRange(), true),
+                   *Result.SourceManager, getLangOpts()),
+               UseAssignment ? "" : "}"});
 
-        SourceLocation SemiColonEnd =
-            Lexer::findNextToken(S->getEndLoc(), *Result.SourceManager,
-                                 getLangOpts())
-                ->getEndLoc();
-        CharSourceRange StmtRange =
-            CharSourceRange::getCharRange(S->getBeginLoc(), SemiColonEnd);
-
-        Diag << FixItHint::CreateRemoval(StmtRange);
+          Diag << FixItHint::CreateInsertion(FieldEnd, Insertion)
+               << FixItHint::CreateRemoval(StmtRange);
+        }
       } else {
+        StringRef InsertPrefix = "";
+        SourceLocation InsertPos;
+        bool AddComma = false;
+        bool InvalidFix = false;
+        unsigned Index = Field->getFieldIndex();
+        const CXXCtorInitializer *LastInListInit = nullptr;
+        for (const CXXCtorInitializer *Init : Ctor->inits()) {
+          if (!Init->isWritten())
+            continue;
+          if (Init->isMemberInitializer() &&
+              Index < Init->getMember()->getFieldIndex()) {
+            InsertPos = Init->getSourceLocation();
+            // There are initializers after the one we are inserting, so add a
+            // comma after this insertion in order to not break anything.
+            AddComma = true;
+            break;
+          }
+          LastInListInit = Init;
+        }
+        if (InsertPos.isInvalid()) {
+          if (LastInListInit) {
+            InsertPos = Lexer::getLocForEndOfToken(
+                LastInListInit->getRParenLoc(), 0, *Result.SourceManager,
+                getLangOpts());
+            // Inserting after the last constructor initializer, so we need a
+            // comma.
+            InsertPrefix = ", ";
+          } else {
+            InsertPos = Lexer::getLocForEndOfToken(
+                Ctor->getTypeSourceInfo()
+                    ->getTypeLoc()
+                    .getAs<clang::FunctionTypeLoc>()
+                    .getLocalRangeEnd(),
+                0, *Result.SourceManager, getLangOpts());
+
+            // If this is first time in the loop, there are no initializers so
+            // `:` declares member initialization list. If this is a subsequent
+            // pass then we have already inserted a `:` so continue with a
+            // comma.
+            InsertPrefix = FirstToCtorInits ? " : " : ", ";
+          }
+        }
+        InvalidFix |= InsertPos.isMacroID();
+
+        SourceLocation SemiColonEnd;
+        if (auto NextToken = Lexer::findNextToken(
+                S->getEndLoc(), *Result.SourceManager, getLangOpts()))
+          SemiColonEnd = NextToken->getEndLoc();
+        else
+          InvalidFix = true;
+
         auto Diag =
             diag(S->getBeginLoc(), "%0 should be initialized in a member"
                                    " initializer of the constructor")
             << Field;
+        if (!InvalidFix) {
 
-        bool AddComma = false;
-        if (!Ctor->getNumCtorInitializers() && FirstToCtorInits) {
-          SourceLocation BodyPos = Ctor->getBody()->getBeginLoc();
-          SourceLocation NextPos = Ctor->getBeginLoc();
-          do {
-            InsertPos = NextPos;
-            NextPos = Lexer::findNextToken(NextPos, *Result.SourceManager,
-                                           getLangOpts())
-                          ->getLocation();
-          } while (NextPos != BodyPos);
-          InsertPos = Lexer::getLocForEndOfToken(
-              InsertPos, 0, *Result.SourceManager, getLangOpts());
-
-          Diag << FixItHint::CreateInsertion(InsertPos, " : ");
-        } else {
-          bool Found = false;
-          for (const auto *Init : Ctor->inits()) {
-            if (Init->isMemberInitializer()) {
-              if (Result.SourceManager->isBeforeInTranslationUnit(
-                      Field->getLocation(), Init->getMember()->getLocation())) {
-                InsertPos = Init->getSourceLocation();
-                Found = true;
-                break;
-              }
-            }
-          }
-
-          if (!Found) {
-            if (Ctor->getNumCtorInitializers()) {
-              InsertPos = Lexer::getLocForEndOfToken(
-                  (*Ctor->init_rbegin())->getSourceRange().getEnd(), 0,
-                  *Result.SourceManager, getLangOpts());
-            }
-            Diag << FixItHint::CreateInsertion(InsertPos, ", ");
-          } else {
-            AddComma = true;
-          }
+          CharSourceRange StmtRange =
+              CharSourceRange::getCharRange(S->getBeginLoc(), SemiColonEnd);
+          SmallString<128> Insertion(
+              {InsertPrefix, Field->getName(), "(",
+               Lexer::getSourceText(
+                   CharSourceRange(InitValue->getSourceRange(), true),
+                   *Result.SourceManager, getLangOpts()),
+               AddComma ? "), " : ")"});
+          Diag << FixItHint::CreateInsertion(InsertPos, Insertion,
+                                             FirstToCtorInits)
+               << FixItHint::CreateRemoval(StmtRange);
+          FirstToCtorInits = false;
         }
-        Diag << FixItHint::CreateInsertion(InsertPos, Field->getName())
-             << FixItHint::CreateInsertion(InsertPos, "(")
-             << FixItHint::CreateInsertionFromRange(
-                    InsertPos,
-                    CharSourceRange(InitValue->getSourceRange(), true))
-             << FixItHint::CreateInsertion(InsertPos, ")");
-        if (AddComma)
-          Diag << FixItHint::CreateInsertion(InsertPos, ", ");
-
-        SourceLocation SemiColonEnd =
-            Lexer::findNextToken(S->getEndLoc(), *Result.SourceManager,
-                                 getLangOpts())
-                ->getEndLoc();
-        CharSourceRange StmtRange =
-            CharSourceRange::getCharRange(S->getBeginLoc(), SemiColonEnd);
-
-        Diag << FixItHint::CreateRemoval(StmtRange);
-        FirstToCtorInits = false;
       }
     }
   }

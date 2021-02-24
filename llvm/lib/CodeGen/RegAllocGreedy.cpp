@@ -3227,7 +3227,6 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   DomTree = &getAnalysis<MachineDominatorTree>();
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-  SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
   Loops = &getAnalysis<MachineLoopInfo>();
   Bundles = &getAnalysis<EdgeBundles>();
   SpillPlacer = &getAnalysis<SpillPlacement>();
@@ -3239,13 +3238,14 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   RegCosts = TRI->getRegisterCosts(*MF);
 
   VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
+  SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM, *VRAI));
 
   VRAI->calculateSpillWeightsAndHints();
 
   LLVM_DEBUG(LIS->dump());
 
   SA.reset(new SplitAnalysis(*VRM, *LIS, *Loops));
-  SE.reset(new SplitEditor(*SA, *AA, *LIS, *VRM, *DomTree, *MBFI));
+  SE.reset(new SplitEditor(*SA, *AA, *LIS, *VRM, *DomTree, *MBFI, *VRAI));
   ExtraRegInfo.clear();
   ExtraRegInfo.resize(MRI->getNumVirtRegs());
   NextCascade = 1;

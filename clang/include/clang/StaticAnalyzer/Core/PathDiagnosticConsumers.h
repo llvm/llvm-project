@@ -21,7 +21,9 @@
 namespace clang {
 
 class AnalyzerOptions;
+class MacroExpansionContext;
 class Preprocessor;
+
 namespace cross_tu {
 class CrossTranslationUnitContext;
 }
@@ -35,7 +37,8 @@ typedef std::vector<PathDiagnosticConsumer*> PathDiagnosticConsumers;
   void CREATEFN(PathDiagnosticConsumerOptions Diagopts,                        \
                 PathDiagnosticConsumers &C, const std::string &Prefix,         \
                 const Preprocessor &PP,                                        \
-                const cross_tu::CrossTranslationUnitContext &CTU);
+                const cross_tu::CrossTranslationUnitContext &CTU,              \
+                const MacroExpansionContext &MacroExpansions);
 #include "clang/StaticAnalyzer/Core/Analyses.def"
 
 } // end 'ento' namespace

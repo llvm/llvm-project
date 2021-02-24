@@ -3607,7 +3607,7 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Args, OPT_fsanitize_EQ, Sanitizer, SA);
 
   // Conflating '-fsanitize-system-blacklist' and '-fsanitize-blacklist'.
-  for (const std::string &F : Opts.SanitizerBlacklistFiles)
+  for (const std::string &F : Opts.NoSanitizeFiles)
     GenerateArg(Args, OPT_fsanitize_blacklist, F, SA);
 
   if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver3_8)
@@ -4006,12 +4006,11 @@ bool CompilerInvocation::ParseLangArgsImpl(LangOptions &Opts, ArgList &Args,
   // Parse -fsanitize= arguments.
   parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                       Diags, Opts.Sanitize);
-  Opts.SanitizerBlacklistFiles = Args.getAllArgValues(OPT_fsanitize_blacklist);
+  Opts.NoSanitizeFiles = Args.getAllArgValues(OPT_fsanitize_blacklist);
   std::vector<std::string> systemBlacklists =
       Args.getAllArgValues(OPT_fsanitize_system_blacklist);
-  Opts.SanitizerBlacklistFiles.insert(Opts.SanitizerBlacklistFiles.end(),
-                                      systemBlacklists.begin(),
-                                      systemBlacklists.end());
+  Opts.NoSanitizeFiles.insert(Opts.NoSanitizeFiles.end(),
+                              systemBlacklists.begin(), systemBlacklists.end());
 
   if (Arg *A = Args.getLastArg(OPT_fclang_abi_compat_EQ)) {
     Opts.setClangABICompat(LangOptions::ClangABI::Latest);
@@ -4588,12 +4587,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                              Res.getPreprocessorOpts().Includes, Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
-    if (T.isOSDarwin() && DashX.isPreprocessed()) {
-      // Supress the darwin-specific 'stdlibcxx-not-found' diagnostic for
-      // preprocessed input as we don't expect it to be used with -std=libc++
-      // anyway.
-      Res.getDiagnosticOpts().Warnings.push_back("no-stdlibcxx-not-found");
-    }
   }
 
   if (LangOpts.CUDA) {
@@ -4633,10 +4626,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     Diags.Report(diag::err_fe_dependency_file_requires_MT);
     Success = false;
   }
-
-  // Turn on -Wspir-compat for SPIR target.
-  if (T.isSPIR())
-    Res.getDiagnosticOpts().Warnings.push_back("spir-compat");
 
   // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
   if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&

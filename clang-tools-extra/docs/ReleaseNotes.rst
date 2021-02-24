@@ -67,7 +67,33 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-The improvements are...
+- The `run-clang-tidy.py` helper script is now installed in `bin/` as
+  `run-clang-tidy`. It was previously installed in `share/clang/`.
+
+New checks
+^^^^^^^^^^
+
+- New :doc:`concurrency-thread-canceltype-asynchronous
+  <clang-tidy/checks/concurrency-thread-canceltype-asynchronous>` check.
+
+  Finds ``pthread_setcanceltype`` function calls where a thread's cancellation
+  type is set to asynchronous.
+
+New check aliases
+^^^^^^^^^^^^^^^^^
+
+- New alias :doc:`cert-pos47-c
+  <clang-tidy/checks/cert-pos47-c>` to
+  :doc:`concurrency-thread-canceltype-asynchronous
+  <clang-tidy/checks/concurrency-thread-canceltype-asynchronous>` was added.
+
+Changes in existing checks
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-signal-handler
+  <clang-tidy/checks/bugprone-signal-handler>` check.
+
+  Added an option to choose the set of allowed functions.
 
 Improvements to include-fixer
 -----------------------------

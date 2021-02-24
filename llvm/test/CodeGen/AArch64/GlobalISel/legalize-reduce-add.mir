@@ -88,3 +88,24 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+---
+name:            add_v2s32
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: add_v2s32
+    ; CHECK: liveins: $x0
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[COPY]](p0) :: (load 8)
+    ; CHECK: [[VECREDUCE_ADD:%[0-9]+]]:_(s32) = G_VECREDUCE_ADD [[LOAD]](<2 x s32>)
+    ; CHECK: $w0 = COPY [[VECREDUCE_ADD]](s32)
+    ; CHECK: RET_ReallyLR implicit $w0
+    %0:_(p0) = COPY $x0
+    %1:_(<2 x s32>) = G_LOAD %0(p0) :: (load 8)
+    %2:_(s32) = G_VECREDUCE_ADD %1(<2 x s32>)
+    $w0 = COPY %2(s32)
+    RET_ReallyLR implicit $w0
+
+...

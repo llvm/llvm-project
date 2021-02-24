@@ -890,6 +890,12 @@ def imm0_63 : Operand<i64>, ImmLeaf<i64, [{
   let ParserMatchClass = Imm0_63Operand;
 }
 
+def timm0_63 : Operand<i64>, TImmLeaf<i64, [{
+  return ((uint64_t)Imm) < 64;
+}]> {
+  let ParserMatchClass = Imm0_63Operand;
+}
+
 // imm0_31 predicate - True if the immediate is in the range [0,31]
 def imm0_31 : Operand<i64>, ImmLeaf<i64, [{
   return ((uint64_t)Imm) < 32;

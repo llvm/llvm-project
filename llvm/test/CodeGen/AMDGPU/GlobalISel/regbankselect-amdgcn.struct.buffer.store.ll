@@ -11,11 +11,11 @@ define amdgpu_ps void @struct_buffer_store__sgpr_rsrc__vgpr_val__vgpr_vindex__vg
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
   ; CHECK:   [[COPY7:%[0-9]+]]:sgpr(s32) = COPY $sgpr6
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   G_AMDGPU_BUFFER_STORE [[COPY4]](s32), [[BUILD_VECTOR]](<4 x s32>), [[COPY5]](s32), [[COPY6]], [[COPY7]], 0, 0, -1 :: (dereferenceable store 4 into custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   S_ENDPGM 0
   call void @llvm.amdgcn.struct.buffer.store.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
@@ -31,11 +31,11 @@ define amdgpu_ps void @struct_buffer_store__sgpr_rsrc__sgpr_val__sgpr_vindex__sg
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:sgpr(s32) = COPY $sgpr6
   ; CHECK:   [[COPY5:%[0-9]+]]:sgpr(s32) = COPY $sgpr7
   ; CHECK:   [[COPY6:%[0-9]+]]:sgpr(s32) = COPY $sgpr8
   ; CHECK:   [[COPY7:%[0-9]+]]:sgpr(s32) = COPY $sgpr9
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[COPY4]](s32)
   ; CHECK:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[COPY5]](s32)
   ; CHECK:   [[COPY10:%[0-9]+]]:vgpr(s32) = COPY [[COPY6]](s32)
@@ -55,11 +55,11 @@ define amdgpu_ps void @struct_buffer_store__vgpr_rsrc__vgpr_val__vgpr_vindex__vg
   ; CHECK:   [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr3
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY $vgpr5
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY $vgpr6
   ; CHECK:   [[COPY7:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; CHECK:   [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; CHECK:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
@@ -99,11 +99,11 @@ define amdgpu_ps void @struct_buffer_store__sgpr_rsrc__vgpr_val__vgpr_vindex__vg
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
   ; CHECK:   [[COPY7:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr3
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; CHECK:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
   ; CHECK: bb.2:
@@ -134,11 +134,11 @@ define amdgpu_ps void @struct_buffer_store__vgpr_rsrc__vgpr_val__vgpr_vindex__vg
   ; CHECK:   [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr3
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY $vgpr5
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY $vgpr6
   ; CHECK:   [[COPY7:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr7
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; CHECK:   [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; CHECK:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec

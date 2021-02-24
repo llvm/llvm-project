@@ -662,6 +662,18 @@ void batchmatmul::regionBuilder(ArrayRef<BlockArgument> args) {
 }
 ```
 
+### YAML Based Named Structured Ops
+
+Linalg provides a declarative generation tool (`mlir-linalg-ods-yaml-gen`) to
+automatically produce named ops from a YAML-based op description format
+intended to capture the structure of the named ops and be generated from a
+higher level "mathy" DSL syntax. This facility is currently in flight and is
+intended to subsume the above when ready. See the C++ class to YAML mapping
+traits in `mlir-mlinalg-ods-yaml-gen.cpp` as the source of truth for the schema.
+
+Most of the above documentation roughly applies to this path and will be ported
+as migration continues.
+
 ## Open Issues and Design Alternatives<a name="open_issues"></a>
 
 Multiple open issues and design alternatives are in flight and it is time to lay

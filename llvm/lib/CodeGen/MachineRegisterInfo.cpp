@@ -434,8 +434,8 @@ void MachineRegisterInfo::clearKillFlags(Register Reg) const {
 }
 
 bool MachineRegisterInfo::isLiveIn(Register Reg) const {
-  for (livein_iterator I = livein_begin(), E = livein_end(); I != E; ++I)
-    if ((Register)I->first == Reg || I->second == Reg)
+  for (const std::pair<MCRegister, Register> &LI : liveins())
+    if ((Register)LI.first == Reg || LI.second == Reg)
       return true;
   return false;
 }
@@ -443,18 +443,18 @@ bool MachineRegisterInfo::isLiveIn(Register Reg) const {
 /// getLiveInPhysReg - If VReg is a live-in virtual register, return the
 /// corresponding live-in physical register.
 MCRegister MachineRegisterInfo::getLiveInPhysReg(Register VReg) const {
-  for (livein_iterator I = livein_begin(), E = livein_end(); I != E; ++I)
-    if (I->second == VReg)
-      return I->first;
+  for (const std::pair<MCRegister, Register> &LI : liveins())
+    if (LI.second == VReg)
+      return LI.first;
   return MCRegister();
 }
 
 /// getLiveInVirtReg - If PReg is a live-in physical register, return the
 /// corresponding live-in physical register.
 Register MachineRegisterInfo::getLiveInVirtReg(MCRegister PReg) const {
-  for (livein_iterator I = livein_begin(), E = livein_end(); I != E; ++I)
-    if (I->first == PReg)
-      return I->second;
+  for (const std::pair<MCRegister, Register> &LI : liveins())
+    if (LI.first == PReg)
+      return LI.second;
   return Register();
 }
 
@@ -531,13 +531,10 @@ bool MachineRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
 /// deleted during LiveDebugVariables analysis.
 void MachineRegisterInfo::markUsesInDebugValueAsUndef(Register Reg) const {
   // Mark any DBG_VALUE that uses Reg as undef (but don't delete it.)
-  MachineRegisterInfo::use_instr_iterator nextI;
-  for (use_instr_iterator I = use_instr_begin(Reg), E = use_instr_end();
-       I != E; I = nextI) {
-    nextI = std::next(I);  // I is invalidated by the setReg
-    MachineInstr *UseMI = &*I;
-    if (UseMI->isDebugValue())
-      UseMI->getDebugOperandForReg(Reg)->setReg(0U);
+  // We use make_early_inc_range because setReg invalidates the iterator.
+  for (MachineInstr &UseMI : llvm::make_early_inc_range(use_instructions(Reg))) {
+    if (UseMI.isDebugValue())
+      UseMI.getDebugOperandForReg(Reg)->setReg(0U);
   }
 }
 

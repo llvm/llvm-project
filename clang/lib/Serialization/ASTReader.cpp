@@ -114,6 +114,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -812,6 +813,31 @@ void PCHValidator::ReadCounter(const ModuleFile &M, unsigned Value) {
 // AST reader implementation
 //===----------------------------------------------------------------------===//
 
+static uint64_t readULEB(const unsigned char *&P) {
+  unsigned Length = 0;
+  const char *Error = nullptr;
+
+  uint64_t Val = llvm::decodeULEB128(P, &Length, nullptr, &Error);
+  if (Error)
+    llvm::report_fatal_error(Error);
+  P += Length;
+  return Val;
+}
+
+/// Read ULEB-encoded key length and data length.
+static std::pair<unsigned, unsigned>
+readULEBKeyDataLength(const unsigned char *&P) {
+  unsigned KeyLen = readULEB(P);
+  if ((unsigned)KeyLen != KeyLen)
+    llvm::report_fatal_error("key too large");
+
+  unsigned DataLen = readULEB(P);
+  if ((unsigned)DataLen != DataLen)
+    llvm::report_fatal_error("data too large");
+
+  return std::make_pair(KeyLen, DataLen);
+}
+
 void ASTReader::setDeserializationListener(ASTDeserializationListener *Listener,
                                            bool TakeOwnership) {
   DeserializationListener = Listener;
@@ -824,11 +850,7 @@ unsigned ASTSelectorLookupTrait::ComputeHash(Selector Sel) {
 
 std::pair<unsigned, unsigned>
 ASTSelectorLookupTrait::ReadKeyDataLength(const unsigned char*& d) {
-  using namespace llvm::support;
-
-  unsigned KeyLen = endian::readNext<uint16_t, little, unaligned>(d);
-  unsigned DataLen = endian::readNext<uint16_t, little, unaligned>(d);
-  return std::make_pair(KeyLen, DataLen);
+  return readULEBKeyDataLength(d);
 }
 
 ASTSelectorLookupTrait::internal_key_type
@@ -894,11 +916,7 @@ unsigned ASTIdentifierLookupTraitBase::ComputeHash(const internal_key_type& a) {
 
 std::pair<unsigned, unsigned>
 ASTIdentifierLookupTraitBase::ReadKeyDataLength(const unsigned char*& d) {
-  using namespace llvm::support;
-
-  unsigned DataLen = endian::readNext<uint16_t, little, unaligned>(d);
-  unsigned KeyLen = endian::readNext<uint16_t, little, unaligned>(d);
-  return std::make_pair(KeyLen, DataLen);
+  return readULEBKeyDataLength(d);
 }
 
 ASTIdentifierLookupTraitBase::internal_key_type
@@ -1086,11 +1104,7 @@ ASTDeclContextNameLookupTrait::ReadFileRef(const unsigned char *&d) {
 
 std::pair<unsigned, unsigned>
 ASTDeclContextNameLookupTrait::ReadKeyDataLength(const unsigned char *&d) {
-  using namespace llvm::support;
-
-  unsigned KeyLen = endian::readNext<uint16_t, little, unaligned>(d);
-  unsigned DataLen = endian::readNext<uint16_t, little, unaligned>(d);
-  return std::make_pair(KeyLen, DataLen);
+  return readULEBKeyDataLength(d);
 }
 
 ASTDeclContextNameLookupTrait::internal_key_type
@@ -1847,11 +1861,7 @@ bool HeaderFileInfoTrait::EqualKey(internal_key_ref a, internal_key_ref b) {
 
 std::pair<unsigned, unsigned>
 HeaderFileInfoTrait::ReadKeyDataLength(const unsigned char*& d) {
-  using namespace llvm::support;
-
-  unsigned KeyLen = (unsigned) endian::readNext<uint16_t, little, unaligned>(d);
-  unsigned DataLen = (unsigned) *d++;
-  return std::make_pair(KeyLen, DataLen);
+  return readULEBKeyDataLength(d);
 }
 
 HeaderFileInfoTrait::internal_key_type
@@ -3188,12 +3198,13 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     }
 
     case IDENTIFIER_TABLE:
-      F.IdentifierTableData = Blob.data();
+      F.IdentifierTableData =
+          reinterpret_cast<const unsigned char *>(Blob.data());
       if (Record[0]) {
         F.IdentifierLookupTable = ASTIdentifierLookupTable::Create(
-            (const unsigned char *)F.IdentifierTableData + Record[0],
-            (const unsigned char *)F.IdentifierTableData + sizeof(uint32_t),
-            (const unsigned char *)F.IdentifierTableData,
+            F.IdentifierTableData + Record[0],
+            F.IdentifierTableData + sizeof(uint32_t),
+            F.IdentifierTableData,
             ASTIdentifierLookupTrait(*this, F));
 
         PP.getIdentifierTable().setExternalIdentifierLookup(this);
@@ -4320,8 +4331,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     // Preload all the pending interesting identifiers by marking them out of
     // date.
     for (auto Offset : F.PreloadIdentifierOffsets) {
-      const unsigned char *Data = reinterpret_cast<const unsigned char *>(
-          F.IdentifierTableData + Offset);
+      const unsigned char *Data = F.IdentifierTableData + Offset;
 
       ASTIdentifierLookupTrait Trait(*this, F);
       auto KeyDataLen = Trait.ReadKeyDataLength(Data);
@@ -8524,17 +8534,13 @@ IdentifierInfo *ASTReader::DecodeIdentifierInfo(IdentifierID ID) {
     assert(I != GlobalIdentifierMap.end() && "Corrupted global identifier map");
     ModuleFile *M = I->second;
     unsigned Index = ID - M->BaseIdentifierID;
-    const char *Str = M->IdentifierTableData + M->IdentifierOffsets[Index];
+    const unsigned char *Data =
+        M->IdentifierTableData + M->IdentifierOffsets[Index];
 
-    // All of the strings in the AST file are preceded by a 16-bit length.
-    // Extract that 16-bit length to avoid having to execute strlen().
-    // NOTE: 'StrLenPtr' is an 'unsigned char*' so that we load bytes as
-    //  unsigned integers.  This is important to avoid integer overflow when
-    //  we cast them to 'unsigned'.
-    const unsigned char *StrLenPtr = (const unsigned char*) Str - 2;
-    unsigned StrLen = (((unsigned) StrLenPtr[0])
-                       | (((unsigned) StrLenPtr[1]) << 8)) - 1;
-    auto &II = PP.getIdentifierTable().get(StringRef(Str, StrLen));
+    ASTIdentifierLookupTrait Trait(*this, *M);
+    auto KeyDataLen = Trait.ReadKeyDataLength(Data);
+    auto Key = Trait.ReadKey(Data, KeyDataLen.first);
+    auto &II = PP.getIdentifierTable().get(Key);
     IdentifiersLoaded[ID] = &II;
     markIdentifierFromAST(*this,  II);
     if (DeserializationListener)

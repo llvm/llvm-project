@@ -158,6 +158,10 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     return A;
   }
 
+  if (Pred == CmpInst::ICMP_NE && match(Op1, m_Zero())) {
+    return getConstraint(CmpInst::ICMP_UGT, Op0, Op1, Value2Index, NewIndices);
+  }
+
   // Only ULE and ULT predicates are supported at the moment.
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT)
     return {};
@@ -177,8 +181,8 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   Offset1 *= -1;
 
   // Create iterator ranges that skip the constant-factor.
-  auto VariablesA = make_range(std::next(ADec.begin()), ADec.end());
-  auto VariablesB = make_range(std::next(BDec.begin()), BDec.end());
+  auto VariablesA = llvm::drop_begin(ADec);
+  auto VariablesB = llvm::drop_begin(BDec);
 
   // Make sure all variables have entries in Value2Index or NewIndices.
   for (const auto &KV :

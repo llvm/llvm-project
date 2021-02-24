@@ -25,10 +25,16 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
+    libc.src.fenv.fegetenv
+    libc.src.fenv.fegetexceptflag
     libc.src.fenv.fegetround
+    libc.src.fenv.feholdexcept
+    libc.src.fenv.fesetenv
+    libc.src.fenv.fesetexceptflag
     libc.src.fenv.fesetround
     libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept
+    libc.src.fenv.feupdateenv
 
     # signal.h entrypoints
     libc.src.signal.raise

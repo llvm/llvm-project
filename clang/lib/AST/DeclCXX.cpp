@@ -2506,16 +2506,15 @@ CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
                                        SourceLocation L, Expr *Init,
                                        SourceLocation R,
                                        SourceLocation EllipsisLoc)
-    : Initializee(TInfo), MemberOrEllipsisLocation(EllipsisLoc), Init(Init),
+    : Initializee(TInfo), Init(Init), MemberOrEllipsisLocation(EllipsisLoc),
       LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(IsVirtual),
       IsWritten(false), SourceOrder(0) {}
 
-CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
-                                       FieldDecl *Member,
+CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context, FieldDecl *Member,
                                        SourceLocation MemberLoc,
                                        SourceLocation L, Expr *Init,
                                        SourceLocation R)
-    : Initializee(Member), MemberOrEllipsisLocation(MemberLoc), Init(Init),
+    : Initializee(Member), Init(Init), MemberOrEllipsisLocation(MemberLoc),
       LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
       IsWritten(false), SourceOrder(0) {}
 
@@ -2524,7 +2523,7 @@ CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
                                        SourceLocation MemberLoc,
                                        SourceLocation L, Expr *Init,
                                        SourceLocation R)
-    : Initializee(Member), MemberOrEllipsisLocation(MemberLoc), Init(Init),
+    : Initializee(Member), Init(Init), MemberOrEllipsisLocation(MemberLoc),
       LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
       IsWritten(false), SourceOrder(0) {}
 

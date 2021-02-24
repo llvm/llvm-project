@@ -160,6 +160,7 @@ public:
   /// if compilation arguments changed on calls to forceReparse().
   ClangdServer(const GlobalCompilationDatabase &CDB, const ThreadsafeFS &TFS,
                const Options &Opts, Callbacks *Callbacks = nullptr);
+  ~ClangdServer();
 
   /// Gets the installed module of a given type, if any.
   /// This exposes access the public interface of modules that have one.
@@ -335,6 +336,8 @@ public:
 
   // Blocks the main thread until the server is idle. Only for use in tests.
   // Returns false if the timeout expires.
+  // FIXME: various subcomponents each get the full timeout, so it's more of
+  // an order of magnitude than a hard deadline.
   LLVM_NODISCARD bool
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10);
 
@@ -373,10 +376,7 @@ private:
   mutable std::mutex CachedCompletionFuzzyFindRequestMutex;
 
   llvm::Optional<std::string> WorkspaceRoot;
-  // WorkScheduler has to be the last member, because its destructor has to be
-  // called before all other members to stop the worker thread that references
-  // ClangdServer.
-  TUScheduler WorkScheduler;
+  llvm::Optional<TUScheduler> WorkScheduler;
 };
 
 } // namespace clangd

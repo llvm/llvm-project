@@ -82,8 +82,9 @@ using namespace llvm::XCOFF;
 // std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind> in DenseMap.
 // This specialization is needed here because that type is used as keys in the
 // map representing TOC entries.
+namespace llvm {
 template <>
-struct llvm::DenseMapInfo<std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind>> {
+struct DenseMapInfo<std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind>> {
   using TOCKey = std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind>;
 
   static inline TOCKey getEmptyKey() {
@@ -99,6 +100,7 @@ struct llvm::DenseMapInfo<std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKi
   }
   static bool isEqual(const TOCKey &A, const TOCKey &B) { return A == B; }
 };
+} // end namespace llvm
 
 namespace {
 
@@ -1321,8 +1323,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     unsigned RetOpcode = MI->getOperand(0).getImm();
     MCInst RetInst;
     RetInst.setOpcode(RetOpcode);
-    for (const auto &MO :
-         make_range(std::next(MI->operands_begin()), MI->operands_end())) {
+    for (const auto &MO : llvm::drop_begin(MI->operands())) {
       MCOperand MCOp;
       if (LowerPPCMachineOperandToMCOperand(MO, MCOp, *this))
         RetInst.addOperand(MCOp);

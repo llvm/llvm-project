@@ -1216,6 +1216,7 @@ def int_coro_async_context_dealloc : Intrinsic<[],
 def int_coro_async_resume : Intrinsic<[llvm_ptr_ty],
     [],
     []>;
+def int_coro_async_size_replace : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty], []>;
 def int_coro_suspend_async
     : Intrinsic<[llvm_any_ty], [llvm_ptr_ty, llvm_ptr_ty, llvm_vararg_ty], []>;
 def int_coro_prepare_async : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],

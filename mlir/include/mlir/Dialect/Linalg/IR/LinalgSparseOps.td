@@ -32,9 +32,11 @@
 #define LINALG_SPARSE_OPS
 
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Base class.
-class Linalg_SparseOp<string mnemonic> : Op<Linalg_Dialect, mnemonic, []> {
+class Linalg_SparseOp<string mnemonic, list<OpTrait> traits = []>
+  : Op<Linalg_Dialect, mnemonic, traits> {
   let printer = [{ return ::print(p, *this); }];
   let verifier = ?;
   let parser = [{ return ::parse$cppClass(parser, result); }];
@@ -65,7 +67,7 @@ def Linalg_SparseTensorFromPointerOp :
 }
 
 def Linalg_SparseTensorToPointersMemRefOp :
-    Linalg_SparseOp<"sparse_pointers">,
+    Linalg_SparseOp<"sparse_pointers", [NoSideEffect]>,
     Arguments<(ins AnyTensor:$tensor, Index:$dim)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extract pointers array at given dimension from a tensor";
@@ -89,7 +91,7 @@ def Linalg_SparseTensorToPointersMemRefOp :
 }
 
 def Linalg_SparseTensorToIndicesMemRefOp :
-    Linalg_SparseOp<"sparse_indices">,
+    Linalg_SparseOp<"sparse_indices", [NoSideEffect]>,
     Arguments<(ins AnyTensor:$tensor, Index:$dim)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extract indices array at given dimension from a tensor";
@@ -113,7 +115,7 @@ def Linalg_SparseTensorToIndicesMemRefOp :
 }
 
 def Linalg_SparseTensorToValuesMemRefOp :
-    Linalg_SparseOp<"sparse_values">,
+    Linalg_SparseOp<"sparse_values", [NoSideEffect]>,
     Arguments<(ins AnyTensor:$tensor)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extract numerical values array from a tensor";

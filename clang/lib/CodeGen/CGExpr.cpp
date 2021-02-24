@@ -826,9 +826,9 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
     CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty.getUnqualifiedType(),
                                                      Out);
 
-    // Blacklist based on the mangled type.
-    if (!CGM.getContext().getSanitizerBlacklist().isBlacklistedType(
-            SanitizerKind::Vptr, Out.str())) {
+    // Contained in NoSanitizeList based on the mangled type.
+    if (!CGM.getContext().getNoSanitizeList().containsType(SanitizerKind::Vptr,
+                                                           Out.str())) {
       llvm::hash_code TypeHash = hash_value(Out.str());
 
       // Load the vptr, and compute hash_16_bytes(TypeHash, vptr).
@@ -3389,7 +3389,7 @@ void CodeGenFunction::EmitCfiCheckFail() {
   StartFunction(GlobalDecl(), CGM.getContext().VoidTy, F, FI, Args,
                 SourceLocation());
 
-  // This function should not be affected by blacklist. This function does
+  // This function is not affected by NoSanitizeList. This function does
   // not have a source location, but "src:*" would still apply. Revert any
   // changes to SanOpts made in StartFunction.
   SanOpts = CGM.getLangOpts().Sanitize;

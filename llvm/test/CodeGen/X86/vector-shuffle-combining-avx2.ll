@@ -782,9 +782,8 @@ define i32 @broadcast_v2i64_multiuse(i64* %p0) {
 ; X86-LABEL: broadcast_v2i64_multiuse:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; X86-NEXT:    vextractps $2, %xmm0, %eax
+; X86-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovd %xmm0, %eax
 ; X86-NEXT:    addl (%ecx), %eax
 ; X86-NEXT:    retl
 ;

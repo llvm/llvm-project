@@ -523,7 +523,7 @@ class Foo {})cpp";
         )cpp",
        [](HoverInfo &HI) {
          HI.Name = "result";
-         HI.Definition = "static constexpr int result = 1 + 2";
+         HI.Definition = "static constexpr int result = a + b";
          HI.Kind = index::SymbolKind::StaticProperty;
          HI.Type = "const int";
          HI.NamespaceScope = "";
@@ -1449,7 +1449,7 @@ TEST(Hover, All) {
             HI.NamespaceScope = "";
             // FIXME: This should be `(anon enum)::`
             HI.LocalScope = "";
-            HI.Type = "enum (anonymous)";
+            HI.Type = "enum (unnamed)";
             HI.Definition = "ONE";
             HI.Value = "0";
           }},

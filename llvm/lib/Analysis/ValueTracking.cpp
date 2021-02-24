@@ -161,6 +161,24 @@ static const Instruction *safeCxtI(const Value *V, const Instruction *CxtI) {
   return nullptr;
 }
 
+static const Instruction *safeCxtI(const Value *V1, const Value *V2, const Instruction *CxtI) {
+  // If we've been provided with a context instruction, then use that (provided
+  // it has been inserted).
+  if (CxtI && CxtI->getParent())
+    return CxtI;
+
+  // If the value is really an already-inserted instruction, then use that.
+  CxtI = dyn_cast<Instruction>(V1);
+  if (CxtI && CxtI->getParent())
+    return CxtI;
+
+  CxtI = dyn_cast<Instruction>(V2);
+  if (CxtI && CxtI->getParent())
+    return CxtI;
+
+  return nullptr;
+}
+
 static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
                                    const APInt &DemandedElts,
                                    APInt &DemandedLHS, APInt &DemandedRHS) {
@@ -358,7 +376,7 @@ bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
                            const Instruction *CxtI, const DominatorTree *DT,
                            bool UseInstrInfo) {
   return ::isKnownNonEqual(V1, V2, 0,
-                           Query(DL, AC, safeCxtI(V1, safeCxtI(V2, CxtI)), DT,
+                           Query(DL, AC, safeCxtI(V2, V1, CxtI), DT,
                                  UseInstrInfo, /*ORE=*/nullptr));
 }
 
@@ -2766,6 +2784,8 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     }
 
     case Instruction::SRem: {
+      Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+
       const APInt *Denominator;
       // srem X, C -> we know that the result is within [-C+1,C) when C is a
       // positive constant.  This let us put a lower bound on the number of sign
@@ -2773,30 +2793,25 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       if (match(U->getOperand(1), m_APInt(Denominator))) {
 
         // Ignore non-positive denominator.
-        if (!Denominator->isStrictlyPositive())
-          break;
+        if (Denominator->isStrictlyPositive()) {
+          // Calculate the leading sign bit constraints by examining the
+          // denominator.  Given that the denominator is positive, there are two
+          // cases:
+          //
+          //  1. The numerator is positive. The result range is [0,C) and
+          //     [0,C) u< (1 << ceilLogBase2(C)).
+          //
+          //  2. The numerator is negative. Then the result range is (-C,0] and
+          //     integers in (-C,0] are either 0 or >u (-1 << ceilLogBase2(C)).
+          //
+          // Thus a lower bound on the number of sign bits is `TyBits -
+          // ceilLogBase2(C)`.
 
-        // Calculate the incoming numerator bits. SRem by a positive constant
-        // can't lower the number of sign bits.
-        unsigned NumrBits = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-
-        // Calculate the leading sign bit constraints by examining the
-        // denominator.  Given that the denominator is positive, there are two
-        // cases:
-        //
-        //  1. the numerator is positive. The result range is [0,C) and [0,C) u<
-        //     (1 << ceilLogBase2(C)).
-        //
-        //  2. the numerator is negative. Then the result range is (-C,0] and
-        //     integers in (-C,0] are either 0 or >u (-1 << ceilLogBase2(C)).
-        //
-        // Thus a lower bound on the number of sign bits is `TyBits -
-        // ceilLogBase2(C)`.
-
-        unsigned ResBits = TyBits - Denominator->ceilLogBase2();
-        return std::max(NumrBits, ResBits);
+          unsigned ResBits = TyBits - Denominator->ceilLogBase2();
+          Tmp = std::max(Tmp, ResBits);
+        }
       }
-      break;
+      return Tmp;
     }
 
     case Instruction::AShr: {
@@ -4852,11 +4867,19 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison,
   if (Depth >= MaxDepth)
     return false;
 
-  const auto *I = dyn_cast<Instruction>(V);
-  if (I && propagatesPoison(cast<Operator>(I))) {
-    return any_of(I->operands(), [=](const Value *Op) {
-      return directlyImpliesPoison(ValAssumedPoison, Op, Depth + 1);
-    });
+  if (const auto *I = dyn_cast<Instruction>(V)) {
+    if (propagatesPoison(cast<Operator>(I)))
+      return any_of(I->operands(), [=](const Value *Op) {
+        return directlyImpliesPoison(ValAssumedPoison, Op, Depth + 1);
+      });
+
+    // V  = extractvalue V0, idx
+    // V2 = extractvalue V0, idx2
+    // V0's elements are all poison or not. (e.g., add_with_overflow)
+    const WithOverflowInst *II;
+    if (match(I, m_ExtractValue(m_WithOverflowInst(II))) &&
+        match(ValAssumedPoison, m_ExtractValue(m_Specific(II))))
+      return true;
   }
   return false;
 }
@@ -5056,36 +5079,14 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
   // arbitrary length of time, but programs aren't allowed to rely on that.
 
   // If there is no successor, then execution can't transfer to it.
-  if (const auto *CRI = dyn_cast<CleanupReturnInst>(I))
-    return !CRI->unwindsToCaller();
-  if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(I))
-    return !CatchSwitch->unwindsToCaller();
-  if (isa<ResumeInst>(I))
-    return false;
   if (isa<ReturnInst>(I))
     return false;
   if (isa<UnreachableInst>(I))
     return false;
 
-  // Calls can throw, or contain an infinite loop, or kill the process.
-  if (const auto *CB = dyn_cast<CallBase>(I)) {
-    // Call sites that throw have implicit non-local control flow.
-    if (!CB->doesNotThrow())
-      return false;
-
-    // A function which doens't throw and has "willreturn" attribute will
-    // always return.
-    if (CB->hasFnAttr(Attribute::WillReturn))
-      return true;
-
-    // FIXME: Temporarily assume that all side-effect free intrinsics will
-    // return. Remove this workaround once all intrinsics are appropriately
-    // annotated.
-    return isa<IntrinsicInst>(CB) && CB->onlyReadsMemory();
-  }
-
-  // Other instructions return normally.
-  return true;
+  // An instruction that returns without throwing must transfer control flow
+  // to a successor.
+  return !I->mayThrow() && I->willReturn();
 }
 
 bool llvm::isGuaranteedToTransferExecutionToSuccessor(const BasicBlock *BB) {

@@ -861,7 +861,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
       uint64_t Metadata = Data.getULEB128(Cur);
       BBEntries.push_back({Offset, Size, Metadata});
     }
-    Entries.push_back({Address, /* NumBlocks */ {}, BBEntries});
+    Entries.push_back({Address, /*NumBlocks=*/{}, BBEntries});
   }
 
   if (!Cur) {

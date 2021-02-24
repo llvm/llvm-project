@@ -24,6 +24,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Support/DebugAction.h"
 #include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -210,6 +211,13 @@ namespace mlir {
 /// This class is completely private to this file, so everything is public.
 class MLIRContextImpl {
 public:
+  //===--------------------------------------------------------------------===//
+  // Debugging
+  //===--------------------------------------------------------------------===//
+
+  /// An action manager for use within the context.
+  DebugActionManager debugActionManager;
+
   //===--------------------------------------------------------------------===//
   // Identifier uniquing
   //===--------------------------------------------------------------------===//
@@ -416,6 +424,14 @@ static ArrayRef<T> copyArrayRefInto(llvm::BumpPtrAllocator &allocator,
   auto result = allocator.Allocate<T>(elements.size());
   std::uninitialized_copy(elements.begin(), elements.end(), result);
   return ArrayRef<T>(result, elements.size());
+}
+
+//===----------------------------------------------------------------------===//
+// Debugging
+//===----------------------------------------------------------------------===//
+
+DebugActionManager &MLIRContext::getDebugActionManager() {
+  return getImpl().debugActionManager;
 }
 
 //===----------------------------------------------------------------------===//
@@ -856,12 +872,13 @@ IntegerType IntegerType::get(MLIRContext *context, unsigned width,
   return Base::get(context, width, signedness);
 }
 
-IntegerType IntegerType::getChecked(Location location, unsigned width,
-                                    SignednessSemantics signedness) {
-  if (auto cached =
-          getCachedIntegerType(width, signedness, location->getContext()))
+IntegerType
+IntegerType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                        MLIRContext *context, unsigned width,
+                        SignednessSemantics signedness) {
+  if (auto cached = getCachedIntegerType(width, signedness, context))
     return cached;
-  return Base::getChecked(location, width, signedness);
+  return Base::getChecked(emitError, context, width, signedness);
 }
 
 /// Get an instance of the NoneType.
@@ -1005,11 +1022,14 @@ IntegerSet IntegerSet::get(unsigned dimCount, unsigned symbolCount,
 // StorageUniquerSupport
 //===----------------------------------------------------------------------===//
 
-/// Utility method to generate a default location for use when checking the
-/// construction invariants of a storage object. This is defined out-of-line to
-/// avoid the need to include Location.h.
-const AttributeStorage *
-mlir::detail::generateUnknownStorageLocation(MLIRContext *ctx) {
-  return reinterpret_cast<const AttributeStorage *>(
-      ctx->getImpl().unknownLocAttr.getAsOpaquePointer());
+/// Utility method to generate a callback that can be used to generate a
+/// diagnostic when checking the construction invariants of a storage object.
+/// This is defined out-of-line to avoid the need to include Location.h.
+llvm::unique_function<InFlightDiagnostic()>
+mlir::detail::getDefaultDiagnosticEmitFn(MLIRContext *ctx) {
+  return [ctx] { return emitError(UnknownLoc::get(ctx)); };
+}
+llvm::unique_function<InFlightDiagnostic()>
+mlir::detail::getDefaultDiagnosticEmitFn(const Location &loc) {
+  return [=] { return emitError(loc); };
 }

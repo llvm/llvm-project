@@ -41,8 +41,8 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/PartialDiagnostic.h"
-#include "clang/Basic/SanitizerBlacklist.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -4594,7 +4594,7 @@ bool RecordDecl::mayInsertExtraPadding(bool EmitRemark) const {
       (SanitizerKind::Address | SanitizerKind::KernelAddress);
   if (!EnabledAsanMask || !Context.getLangOpts().SanitizeAddressFieldPadding)
     return false;
-  const auto &Blacklist = Context.getSanitizerBlacklist();
+  const auto &NoSanitizeList = Context.getNoSanitizeList();
   const auto *CXXRD = dyn_cast<CXXRecordDecl>(this);
   // We may be able to relax some of these requirements.
   int ReasonToReject = -1;
@@ -4610,12 +4610,11 @@ bool RecordDecl::mayInsertExtraPadding(bool EmitRemark) const {
     ReasonToReject = 4;  // has trivial destructor.
   else if (CXXRD->isStandardLayout())
     ReasonToReject = 5;  // is standard layout.
-  else if (Blacklist.isBlacklistedLocation(EnabledAsanMask, getLocation(),
+  else if (NoSanitizeList.containsLocation(EnabledAsanMask, getLocation(),
                                            "field-padding"))
     ReasonToReject = 6;  // is in an excluded file.
-  else if (Blacklist.isBlacklistedType(EnabledAsanMask,
-                                       getQualifiedNameAsString(),
-                                       "field-padding"))
+  else if (NoSanitizeList.containsType(
+               EnabledAsanMask, getQualifiedNameAsString(), "field-padding"))
     ReasonToReject = 7;  // The type is excluded.
 
   if (EmitRemark) {

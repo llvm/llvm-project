@@ -3239,6 +3239,21 @@ bool AArch64InstructionSelector::selectReduction(
   Register VecReg = I.getOperand(1).getReg();
   LLT VecTy = MRI.getType(VecReg);
   if (I.getOpcode() == TargetOpcode::G_VECREDUCE_ADD) {
+    // For <2 x i32> ADDPv2i32 generates an FPR64 value, so we need to emit
+    // a subregister copy afterwards.
+    if (VecTy == LLT::vector(2, 32)) {
+      MachineIRBuilder MIB(I);
+      Register DstReg = I.getOperand(0).getReg();
+      auto AddP = MIB.buildInstr(AArch64::ADDPv2i32, {&AArch64::FPR64RegClass},
+                                 {VecReg, VecReg});
+      auto Copy = MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {})
+                      .addReg(AddP.getReg(0), 0, AArch64::ssub)
+                      .getReg(0);
+      RBI.constrainGenericRegister(Copy, AArch64::FPR32RegClass, MRI);
+      I.eraseFromParent();
+      return constrainSelectedInstRegOperands(*AddP, TII, TRI, RBI);
+    }
+
     unsigned Opc = 0;
     if (VecTy == LLT::vector(16, 8))
       Opc = AArch64::ADDVv16i8v;

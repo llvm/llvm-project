@@ -164,11 +164,11 @@ if (LIBUNWIND_ENABLE_STATIC)
     LINKER_LANGUAGE C
     OUTPUT_NAME "unwind")
 
-  if(LIBUNWIND_HERMETIC_STATIC_LIBRARY)
+  if(LIBUNWIND_HIDE_SYMBOLS)
     append_flags_if_supported(UNWIND_STATIC_LIBRARY_FLAGS -fvisibility=hidden)
     append_flags_if_supported(UNWIND_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
     target_compile_options(unwind_static PRIVATE ${UNWIND_STATIC_LIBRARY_FLAGS})
-    target_compile_definitions(unwind_static PRIVATE _LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS)
+    target_compile_definitions(unwind_static PRIVATE _LIBUNWIND_HIDE_SYMBOLS)
   endif()
 
   list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_static")

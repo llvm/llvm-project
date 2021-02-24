@@ -59,8 +59,8 @@ define amdgpu_gfx void @test_gfx_indirect_call_sgpr_ptr(void()* %fptr) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[MV:%[0-9]+]]:sreg_64(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY3]](<4 x s32>)
