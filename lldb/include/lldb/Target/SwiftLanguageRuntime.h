@@ -131,6 +131,9 @@ public:
   /// since some day we may want to support more than one swift variant.
   static bool IsSwiftMangledName(llvm::StringRef name);
 
+  /// Return true if name is a Swift async function symbol.
+  static bool IsSwiftAsyncFunctionSymbol(llvm::StringRef name);
+  
   enum DemangleMode { eSimplified, eTypeName, eDisplayTypeName };
   static std::string DemangleSymbolAsString(llvm::StringRef symbol,
                                             DemangleMode mode,
