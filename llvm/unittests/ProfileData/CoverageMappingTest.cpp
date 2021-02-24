@@ -145,8 +145,10 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
 
   unsigned getGlobalFileIndex(StringRef Name) {
     auto R = Files.find(Name);
-    if (R != Files.end())
+    if (R != Files.end()) {
+      assert(R->second > 0 && "got index of compilation dir");
       return R->second;
+    }
     unsigned Index = Files.size() + 1;
     Files.try_emplace(Name, Index);
     return Index;
@@ -161,8 +163,10 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
     auto &CurrentFunctionFileMapping =
         InputFunctions.back().ReverseVirtualFileMapping;
     auto R = CurrentFunctionFileMapping.find(GlobalIndex);
-    if (R != CurrentFunctionFileMapping.end())
+    if (R != CurrentFunctionFileMapping.end()) {
+      assert(R->second > 0 && "got index of compilation dir");
       return R->second;
+    }
     unsigned IndexInFunction = CurrentFunctionFileMapping.size();
     CurrentFunctionFileMapping.insert(
         std::make_pair(GlobalIndex, IndexInFunction));
