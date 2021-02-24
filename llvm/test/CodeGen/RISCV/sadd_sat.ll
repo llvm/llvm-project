@@ -90,15 +90,11 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:  .LBB1_2:
-; RV32I-NEXT:    slti a5, a2, 0
-; RV32I-NEXT:    slti a4, a4, 0
-; RV32I-NEXT:    xor a5, a4, a5
-; RV32I-NEXT:    snez a5, a5
-; RV32I-NEXT:    slti a3, a3, 0
+; RV32I-NEXT:    xor a5, a4, a2
 ; RV32I-NEXT:    xor a3, a4, a3
-; RV32I-NEXT:    seqz a3, a3
+; RV32I-NEXT:    not a3, a3
 ; RV32I-NEXT:    and a3, a3, a5
-; RV32I-NEXT:    bnez a3, .LBB1_4
+; RV32I-NEXT:    bltz a3, .LBB1_4
 ; RV32I-NEXT:  # %bb.3:
 ; RV32I-NEXT:    mv a1, a2
 ; RV32I-NEXT:    ret
@@ -138,15 +134,10 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32IZbb-NEXT:  # %bb.1:
 ; RV32IZbb-NEXT:    addi a1, a1, -1
 ; RV32IZbb-NEXT:  .LBB1_2:
-; RV32IZbb-NEXT:    slti a5, a2, 0
-; RV32IZbb-NEXT:    slti a4, a4, 0
-; RV32IZbb-NEXT:    xor a5, a4, a5
-; RV32IZbb-NEXT:    snez a5, a5
-; RV32IZbb-NEXT:    slti a3, a3, 0
+; RV32IZbb-NEXT:    xor a5, a4, a2
 ; RV32IZbb-NEXT:    xor a3, a4, a3
-; RV32IZbb-NEXT:    seqz a3, a3
-; RV32IZbb-NEXT:    and a3, a3, a5
-; RV32IZbb-NEXT:    bnez a3, .LBB1_4
+; RV32IZbb-NEXT:    andn a3, a5, a3
+; RV32IZbb-NEXT:    bltz a3, .LBB1_4
 ; RV32IZbb-NEXT:  # %bb.3:
 ; RV32IZbb-NEXT:    mv a1, a2
 ; RV32IZbb-NEXT:    ret
