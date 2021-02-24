@@ -2125,6 +2125,12 @@ void ModuleAddressSanitizer::InstrumentGlobalsELF(
     const std::string &UniqueModuleId) {
   assert(ExtendedGlobals.size() == MetadataInitializers.size());
 
+  // Putting globals in a comdat changes the semantic and potentially cause
+  // false negative odr violations at link time. If odr indicators are used, we
+  // keep the comdat sections, as link time odr violations will be dectected on
+  // the odr indicator symbols.
+  bool UseComdatForGlobalsGC = UseOdrIndicator;
+
   SmallVector<GlobalValue *, 16> MetadataGlobals(ExtendedGlobals.size());
   for (size_t i = 0; i < ExtendedGlobals.size(); i++) {
     GlobalVariable *G = ExtendedGlobals[i];
@@ -2134,7 +2140,8 @@ void ModuleAddressSanitizer::InstrumentGlobalsELF(
     Metadata->setMetadata(LLVMContext::MD_associated, MD);
     MetadataGlobals[i] = Metadata;
 
-    SetComdatForGlobalMetadata(G, Metadata, UniqueModuleId);
+    if (UseComdatForGlobalsGC)
+      SetComdatForGlobalMetadata(G, Metadata, UniqueModuleId);
   }
 
   // Update llvm.compiler.used, adding the new metadata globals. This is
