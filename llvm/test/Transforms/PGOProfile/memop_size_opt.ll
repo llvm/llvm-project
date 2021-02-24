@@ -37,20 +37,20 @@ for.body3:
   br label %for.inc
 
 ; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL:.*]] [
-; MEMOP_OPT:    i64 1, label %[[CASE_1_LABEL:.*]]
+; MEMOP_OPT:    i64 0, label %[[CASE_1_LABEL:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]] 
 ; MEMOP_OPT: [[CASE_1_LABEL]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 1, i1 false)
+; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 0, i1 false)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL:.*]]
 ; MEMOP_OPT: [[DEFAULT_LABEL]]:
 ; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i1 false), !prof [[NEWVP:![0-9]+]]
 ; MEMOP_OPT:   br label %[[MERGE_LABEL]]
 ; MEMOP_OPT: [[MERGE_LABEL]]:
 ; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL2:.*]] [
-; MEMOP_OPT:    i64 1, label %[[CASE_1_LABEL2:.*]]
+; MEMOP_OPT:    i64 0, label %[[CASE_1_LABEL2:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]] 
 ; MEMOP_OPT: [[CASE_1_LABEL2]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 1, i1 false)
+; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 0, i1 false)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL2:.*]]
 ; MEMOP_OPT: [[DEFAULT_LABEL2]]:
 ; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 %conv, i1 false), !prof [[NEWVP]]
@@ -104,10 +104,10 @@ for.body3:
   br label %for.inc
 
 ; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL:.*]] [
-; MEMOP_OPT:    i64 1, label %[[CASE_1_LABEL:.*]]
+; MEMOP_OPT:    i64 0, label %[[CASE_1_LABEL:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]]
 ; MEMOP_OPT: [[CASE_1_LABEL]]:
-; MEMOP_OPT:   %[[RV:.*]] = call i32 @memcmp(i8* %dst, i8* %src, i64 1)
+; MEMOP_OPT:   %[[RV:.*]] = call i32 @memcmp(i8* %dst, i8* %src, i64 0)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL:.*]]
 ; MEMOP_OPT: [[DEFAULT_LABEL]]:
 ; MEMOP_OPT:   %[[RVD:.*]] = call i32 @memcmp(i8* %dst, i8* %src, i64 %conv), !prof [[NEWVP:![0-9]+]]
@@ -115,10 +115,10 @@ for.body3:
 ; MEMOP_OPT: [[MERGE_LABEL]]:
 ; MEMOP_OPT:  %[[PHI:.*]] = phi i32 [ %[[RVD]], %[[DEFAULT_LABEL]] ], [ %[[RV]], %[[CASE_1_LABEL]] ]
 ; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL2:.*]] [
-; MEMOP_OPT:    i64 1, label %[[CASE_1_LABEL2:.*]]
+; MEMOP_OPT:    i64 0, label %[[CASE_1_LABEL2:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]]
 ; MEMOP_OPT: [[CASE_1_LABEL2]]:
-; MEMOP_OPT:   %[[RV2:.*]] = call i32 @bcmp(i8* %dst2, i8* %src2, i64 1)
+; MEMOP_OPT:   %[[RV2:.*]] = call i32 @bcmp(i8* %dst2, i8* %src2, i64 0)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL2:.*]]
 ; MEMOP_OPT: [[DEFAULT_LABEL2]]:
 ; MEMOP_OPT:   %[[RVD2:.*]] = call i32 @bcmp(i8* %dst2, i8* %src2, i64 %conv), !prof [[NEWVP]]
@@ -182,8 +182,8 @@ for.end6:
 !27 = !{!"function_entry_count", i64 1}
 !28 = !{!"branch_weights", i32 20, i32 1}
 !29 = !{!"branch_weights", i32 556, i32 20}
-!30 = !{!"VP", i32 1, i64 556, i64 1, i64 99, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66, i64 5, i64 55, i64 6, i64 44, i64 7, i64 33, i64 8, i64 22}
-!31 = !{!"VP", i32 1, i64 556, i64 1, i64 99, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66, i64 5, i64 55, i64 6, i64 44, i64 7, i64 33, i64 8, i64 22}
+!30 = !{!"VP", i32 1, i64 556, i64 0, i64 99, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66, i64 5, i64 55, i64 6, i64 44, i64 7, i64 33, i64 8, i64 22}
+!31 = !{!"VP", i32 1, i64 556, i64 0, i64 99, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66, i64 5, i64 55, i64 6, i64 44, i64 7, i64 33, i64 8, i64 22}
 
 declare void @llvm.lifetime.start(i64, i8* nocapture)
 
