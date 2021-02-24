@@ -3194,14 +3194,18 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     // difficult because at RBS we may end up pessimizing the fpr case if we
     // decided to add an anyextend to fix this. Manual selection is the most
     // robust solution for now.
-    Register SrcReg = I.getOperand(1).getReg();
-    if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() != AArch64::GPRRegBankID)
+    if (RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI)->getID() !=
+        AArch64::GPRRegBankID)
       return false; // We expect the fpr regbank case to be imported.
-    LLT SrcTy = MRI.getType(SrcReg);
-    if (SrcTy.getSizeInBits() == 16)
-      I.setDesc(TII.get(AArch64::DUPv8i16gpr));
-    else if (SrcTy.getSizeInBits() == 8)
+    LLT VecTy = MRI.getType(I.getOperand(0).getReg());
+    if (VecTy == LLT::vector(8, 8))
+      I.setDesc(TII.get(AArch64::DUPv8i8gpr));
+    else if (VecTy == LLT::vector(16, 8))
       I.setDesc(TII.get(AArch64::DUPv16i8gpr));
+    else if (VecTy == LLT::vector(4, 16))
+      I.setDesc(TII.get(AArch64::DUPv4i16gpr));
+    else if (VecTy == LLT::vector(8, 16))
+      I.setDesc(TII.get(AArch64::DUPv8i16gpr));
     else
       return false;
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
