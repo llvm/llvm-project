@@ -484,6 +484,7 @@ def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
     linalg.yield %f0, %f1 : f32, f32
     ```
   }];
+  let builders = [OpBuilderDAG<(ins), [{ /* nothing to do */ }]>];
 }
 
 def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
@@ -537,6 +538,21 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
                        ArrayAttr:$iterator_types);
   let results = (outs Variadic<AnyRankedTensor>:$results);
   let regions = (region SizedRegion<1>:$region);
+
+  let builders = [
+    OpBuilderDAG<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
+      "ValueRange":$steps, "ValueRange":$inputs, "ValueRange":$outputs,
+      "ArrayRef<StringRef>":$iteratorTypes,
+      CArg<"function_ref<void (OpBuilder &, Location, ValueRange)>",
+           "nullptr">:$bodyBuilderFn)>,
+  ];
+
+  let extraClassDeclaration = [{
+    ValueRange getInductionVars() {
+      return getBody()->getArguments();
+    }
+    unsigned getNumLoops() { return step().size(); }
+  }];
 }
 
 
