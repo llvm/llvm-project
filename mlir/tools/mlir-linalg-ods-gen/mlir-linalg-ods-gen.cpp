@@ -1192,6 +1192,9 @@ private:
   /// Attributes are per TC def.
   std::map<std::string, RegisteredAttr> registeredAttrs;
 
+  /// A map from AttrUse to AffineExpr symbol.
+  llvm::StringMap<AffineExpr> registeredAttrUseToSymbol;
+
   StringRef docString;
 
   Parser &parser;
@@ -1298,12 +1301,14 @@ TCParser::parseAffineExprs(EagerDiscoveryMode discoveryMode,
     if (failed(parseAttrUse(result)))
       return llvm::None;
 
-    // We create a new symbol for each attribute usage without reuse. This is
-    // fine given these symbols will be replaced with constants and folded away
-    // for concrete op instances.
-    result.symbol = getAffineSymbolExpr(symbols.size(), parser.context);
-    // Merely for taking the index. We don't reuse anyway.
-    symbols.emplace_back("<attr-use>", result.symbol);
+    auto symbolIt = registeredAttrUseToSymbol.find(result.getKey());
+    if (symbolIt == registeredAttrUseToSymbol.end()) {
+      result.symbol = getAffineSymbolExpr(symbols.size(), parser.context);
+      symbols.emplace_back("<attr-use>", result.symbol);
+      registeredAttrUseToSymbol[result.getKey()] = result.symbol;
+    } else {
+      result.symbol = symbolIt->second;
+    }
 
     attrUses.push_back(result);
 
