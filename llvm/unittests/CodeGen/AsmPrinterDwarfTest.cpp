@@ -294,24 +294,6 @@ TEST_F(AsmPrinterGetUnitLengthFieldByteSizeTest, DWARF64) {
   EXPECT_EQ(TestPrinter->getAP()->getUnitLengthFieldByteSize(), 12u);
 }
 
-class AsmPrinterMaybeEmitDwarf64MarkTest : public AsmPrinterFixtureBase {};
-
-TEST_F(AsmPrinterMaybeEmitDwarf64MarkTest, DWARF32) {
-  if (!init("x86_64-pc-linux", /*DwarfVersion=*/4, dwarf::DWARF32))
-    return;
-
-  EXPECT_CALL(TestPrinter->getMS(), emitIntValue(_, _)).Times(0);
-  TestPrinter->getAP()->maybeEmitDwarf64Mark();
-}
-
-TEST_F(AsmPrinterMaybeEmitDwarf64MarkTest, DWARF64) {
-  if (!init("x86_64-pc-linux", /*DwarfVersion=*/4, dwarf::DWARF64))
-    return;
-
-  EXPECT_CALL(TestPrinter->getMS(), emitIntValue(dwarf::DW_LENGTH_DWARF64, 4));
-  TestPrinter->getAP()->maybeEmitDwarf64Mark();
-}
-
 class AsmPrinterEmitDwarfUnitLengthAsIntTest : public AsmPrinterFixtureBase {
 protected:
   uint64_t Val = 42;
