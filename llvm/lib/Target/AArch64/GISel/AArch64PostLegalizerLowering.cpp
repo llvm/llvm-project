@@ -456,11 +456,10 @@ static bool applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register DstVec, SrcVec;
   int DstLane, SrcLane;
   std::tie(DstVec, DstLane, SrcVec, SrcLane) = MatchInfo;
-  Builder.buildInsertVectorElement(
-      Dst, DstVec,
-      Builder.buildExtractVectorElement(
-          ScalarTy, SrcVec, Builder.buildConstant(LLT::scalar(64), SrcLane)),
-      Builder.buildConstant(LLT::scalar(64), DstLane));
+  auto SrcCst = Builder.buildConstant(LLT::scalar(64), SrcLane);
+  auto Extract = Builder.buildExtractVectorElement(ScalarTy, SrcVec, SrcCst);
+  auto DstCst = Builder.buildConstant(LLT::scalar(64), DstLane);
+  Builder.buildInsertVectorElement(Dst, DstVec, Extract, DstCst);
   MI.eraseFromParent();
   return true;
 }
