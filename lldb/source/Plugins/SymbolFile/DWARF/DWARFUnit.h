@@ -73,7 +73,8 @@ public:
 
   static llvm::Expected<DWARFUnitHeader>
   extract(const lldb_private::DWARFDataExtractor &data, DIERef::Section section,
-          lldb::offset_t *offset_ptr, const llvm::DWARFUnitIndex *index);
+          lldb_private::DWARFContext &dwarf_context,
+          lldb::offset_t *offset_ptr);
 };
 
 class DWARFUnit : public lldb_private::UserID {
@@ -84,8 +85,7 @@ public:
   static llvm::Expected<DWARFUnitSP>
   extract(SymbolFileDWARF &dwarf2Data, lldb::user_id_t uid,
           const lldb_private::DWARFDataExtractor &debug_info,
-          DIERef::Section section, lldb::offset_t *offset_ptr,
-          const llvm::DWARFUnitIndex *index);
+          DIERef::Section section, lldb::offset_t *offset_ptr);
   virtual ~DWARFUnit();
 
   bool IsDWOUnit() { return m_is_dwo; }
