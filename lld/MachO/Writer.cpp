@@ -408,15 +408,13 @@ static void prepareSymbolRelocation(lld::macho::Symbol *sym,
 
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
     prepareBranchTarget(sym);
-  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT | RelocAttrBits::LOAD)) {
-    if (needsBinding(sym))
-      in.got->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    in.got->addEntry(sym);
-  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV | RelocAttrBits::LOAD)) {
+    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
+      in.got->addEntry(sym);
+  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     if (needsBinding(sym))
       in.tlvPointers->addEntry(sym);
-  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
+  } else if (relocAttrs.hasAttr(RelocAttrBits::UNSIGNED)) {
     // References from thread-local variable sections are treated as offsets
     // relative to the start of the referent section, and therefore have no
     // need of rebase opcodes.

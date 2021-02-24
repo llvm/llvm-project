@@ -45,12 +45,12 @@ struct X86_64 : TargetInfo {
 const TargetInfo::RelocAttrs &X86_64::getRelocAttrs(uint8_t type) const {
   static const std::array<TargetInfo::RelocAttrs, 10> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
-      {"UNSIGNED", B(TLV) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(DYSYM8) |
-                       B(BYTE4) | B(BYTE8)},
+      {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) |
+                       B(DYSYM8) | B(BYTE4) | B(BYTE8)},
       {"SIGNED", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
       {"BRANCH", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
       {"GOT_LOAD", B(PCREL) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
-      {"GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(BYTE4)},
+      {"GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
       {"SUBTRACTOR", B(SUBTRAHEND)},
       {"SIGNED_1", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
       {"SIGNED_2", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
