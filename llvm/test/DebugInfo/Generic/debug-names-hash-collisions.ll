@@ -44,9 +44,9 @@
 ; CHECK:     Hash: 0x2841B989
 ; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZL11NumCommutes"
 ; CHECK:     Hash: 0x3E190F5F
-; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZL9NumRemats"
-; CHECK:     Hash: 0x3E190F5F
 ; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZL9NumReMats"
+; CHECK:     Hash: 0x3E190F5F
+; CHECK-NEXT:String: 0x{{[0-9a-f]*}} "_ZL9NumRemats"
 ; CHECK-NOT: String:
 ; CHECK: Bucket 3
 ; CHECK:     Hash: 0x2642207F

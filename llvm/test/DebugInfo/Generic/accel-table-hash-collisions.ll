@@ -27,20 +27,20 @@
 
 ; Check that all the names are present in the output
 ; CHECK:  Hash 0x597841
-; CHECK:    String: 0x{{[0-9a-f]*}} "is"
 ; CHECK:    String: 0x{{[0-9a-f]*}} "k1"
+; CHECK:    String: 0x{{[0-9a-f]*}} "is"
 
 ; CHECK: Hash 0xa4b42a1e
-; CHECK:    String: 0x{{[0-9a-f]*}} "_ZN5clang23DataRecursiveASTVisitorIN12_GLOBAL__N_124UnusedBackingIvarCheckerEE26TraverseCUDAKernelCallExprEPNS_18CUDAKernelCallExprE"
 ; CHECK:    String: 0x{{[0-9a-f]*}} "_ZN4llvm16DenseMapIteratorIPNS_10MDLocationENS_6detail13DenseSetEmptyENS_10MDNodeInfoIS1_EENS3_12DenseSetPairIS2_EELb0EE23AdvancePastEmptyBucketsEv"
+; CHECK:    String: 0x{{[0-9a-f]*}} "_ZN5clang23DataRecursiveASTVisitorIN12_GLOBAL__N_124UnusedBackingIvarCheckerEE26TraverseCUDAKernelCallExprEPNS_18CUDAKernelCallExprE"
 
 ; CHECK: Hash 0xeee7c0b2
 ; CHECK:    String: 0x{{[0-9a-f]*}} "_ZNK4llvm12LivePhysRegs5printERNS_11raw_ostreamE"
 ; CHECK:    String: 0x{{[0-9a-f]*}} "_ZN4llvm15ScalarEvolution14getSignedRangeEPKNS_4SCEVE"
 
 ; CHECK: Hash 0xea48ac5f
-; CHECK:    String: 0x{{[0-9a-f]*}} "ForceTopDown"
 ; CHECK:    String: 0x{{[0-9a-f]*}} "_ZNSt3__116allocator_traitsINS_9allocatorINS_11__tree_nodeINS_12__value_typeIPN4llvm10BasicBlockEPNS4_10RegionNodeEEEPvEEEEE11__constructIS9_JNS_4pairIS6_S8_EEEEEvNS_17integral_constantIbLb1EEERSC_PT_DpOT0_"
+; CHECK:    String: 0x{{[0-9a-f]*}} "ForceTopDown"
 
 ; CHECK:  Hash 0x6b22f71f
 ; CHECK:    String: 0x{{[0-9a-f]*}} "_ZNK5clang12OverrideAttr5cloneERNS_10ASTContextE"
