@@ -28,7 +28,7 @@ PreservedAnalyses HelloWorldPass::run(Function &F,
   }
   outs() << "\n\n";
 
-  // https://www.cs.mcgill.ca/~zcao7/mutls/release/llvm-2.9/docs/ProgrammersManual.html#inspection
+  // https://llvm.org/docs/ProgrammersManual.html#iterating-over-the-basicblock-in-a-function
   outs() << "Iterate basic block \n\n";
 
   for (auto it = F.begin(), et = F.end(); it != et; ++it) {
