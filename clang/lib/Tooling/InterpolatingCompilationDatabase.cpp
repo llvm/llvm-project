@@ -204,8 +204,10 @@ struct TransferableCommand {
   }
 
   // Produce a CompileCommand for \p filename, based on this one.
-  CompileCommand transferTo(StringRef Filename) const {
-    CompileCommand Result = Cmd;
+  // (This consumes the TransferableCommand just to avoid copying Cmd).
+  CompileCommand transferTo(StringRef Filename) && {
+    CompileCommand Result = std::move(Cmd);
+    Result.Heuristic = "inferred from " + Result.Filename;
     Result.Filename = std::string(Filename);
     bool TypeCertain;
     auto TargetType = guessType(Filename, &TypeCertain);
@@ -234,7 +236,6 @@ struct TransferableCommand {
           LangStandard::getLangStandardForKind(Std).getName()).str());
     }
     Result.CommandLine.push_back(std::string(Filename));
-    Result.Heuristic = "inferred from " + Cmd.Filename;
     return Result;
   }
 
@@ -521,7 +522,7 @@ public:
         Inner->getCompileCommands(Index.chooseProxy(Filename, foldType(Lang)));
     if (ProxyCommands.empty())
       return {};
-    return {TransferableCommand(ProxyCommands[0]).transferTo(Filename)};
+    return {transferCompileCommand(std::move(ProxyCommands.front()), Filename)};
   }
 
   std::vector<std::string> getAllFiles() const override {
@@ -542,6 +543,11 @@ private:
 std::unique_ptr<CompilationDatabase>
 inferMissingCompileCommands(std::unique_ptr<CompilationDatabase> Inner) {
   return std::make_unique<InterpolatingCompilationDatabase>(std::move(Inner));
+}
+
+tooling::CompileCommand transferCompileCommand(CompileCommand Cmd,
+                                               StringRef Filename) {
+  return TransferableCommand(std::move(Cmd)).transferTo(Filename);
 }
 
 } // namespace tooling
