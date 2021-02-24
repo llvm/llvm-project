@@ -182,6 +182,7 @@ public:
           continue;
         // Conjunction already covered?
         for (unsigned p2 : latSets[s]) {
+          assert(!latGT(p1, p2)); // Lj => Li would be bad
           if (onlyDenseDiff(p2, p1)) {
             add = false;
             break;
@@ -752,6 +753,17 @@ static Value genInvariantValue(Merger &merger, CodeGen &codegen,
   return val;
 }
 
+/// Generates an address computation "sz * p + i".
+static Value genAddress(CodeGen &codegen, PatternRewriter &rewriter,
+                        Location loc, Value size, Value p, Value i) {
+  Value mul = rewriter.create<MulIOp>(loc, size, p);
+  if (auto vtp = i.getType().dyn_cast<VectorType>()) {
+    Value inv = rewriter.create<IndexCastOp>(loc, mul, vtp.getElementType());
+    mul = genVectorInvariantValue(codegen, rewriter, inv);
+  }
+  return rewriter.create<AddIOp>(loc, mul, i);
+}
+
 /// Recursively generates tensor expression.
 static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
                     linalg::GenericOp op, unsigned exp) {
@@ -1073,9 +1085,8 @@ static void genLocals(Merger &merger, CodeGen &codegen,
           break;
       Value p = (pat == 0) ? rewriter.create<ConstantIndexOp>(loc, 0)
                            : codegen.pidxs[tensor][topSort[pat - 1]];
-      Value m = rewriter.create<MulIOp>(loc, codegen.sizes[idx], p);
-      codegen.pidxs[tensor][idx] =
-          rewriter.create<AddIOp>(loc, m, codegen.loops[idx]);
+      codegen.pidxs[tensor][idx] = genAddress(
+          codegen, rewriter, loc, codegen.sizes[idx], p, codegen.loops[idx]);
     }
   }
 }
