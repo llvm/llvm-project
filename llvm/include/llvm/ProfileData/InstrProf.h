@@ -291,6 +291,7 @@ enum class instrprof_error {
   truncated,
   malformed,
   unknown_function,
+  invalid_prof,
   hash_mismatch,
   count_mismatch,
   counter_overflow,

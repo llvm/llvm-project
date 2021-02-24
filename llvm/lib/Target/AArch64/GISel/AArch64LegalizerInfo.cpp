@@ -697,6 +697,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           {{s8, v16s8}, {s16, v8s16}, {s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
       .lower();
 
+  getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT})
+      .lowerIf([=](const LegalityQuery &Q) { return Q.Types[0].isScalar(); });
+
   computeTables();
   verify(*ST.getInstrInfo());
 }

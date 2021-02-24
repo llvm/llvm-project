@@ -144,20 +144,24 @@ private:
                            /*Managed*/ false, Normalized, Type}});
   }
 
+  /// Creates module constructor function
+  llvm::Function *makeModuleCtorFunction();
+  /// Creates module destructor function
+  llvm::Function *makeModuleDtorFunction();
+  /// Transform managed variables for device compilation.
+  void transformManagedVars();
+
 public:
   CGNVCUDARuntime(CodeGenModule &CGM);
 
   void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) override;
   void handleVarRegistration(const VarDecl *VD,
                              llvm::GlobalVariable &Var) override;
-
-  /// Creates module constructor function
-  llvm::Function *makeModuleCtorFunction() override;
-  /// Creates module destructor function
-  llvm::Function *makeModuleDtorFunction() override;
   void
   internalizeDeviceSideVar(const VarDecl *D,
                            llvm::GlobalValue::LinkageTypes &Linkage) override;
+
+  llvm::Function *finalizeModule() override;
 };
 
 }
@@ -534,6 +538,9 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
       addUnderscoredPrefixToName("RegisterTexture"));
   for (auto &&Info : DeviceVars) {
     llvm::GlobalVariable *Var = Info.Var;
+    assert((!Var->isDeclaration() || Info.Flags.isManaged()) &&
+           "External variables should not show up here, except HIP managed "
+           "variables");
     llvm::Constant *VarName = makeConstantString(getDeviceSideName(Info.D));
     switch (Info.Flags.getKind()) {
     case DeviceVarFlags::Variable: {
@@ -543,11 +550,16 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
         auto ManagedVar = new llvm::GlobalVariable(
             CGM.getModule(), Var->getType(),
             /*isConstant=*/false, Var->getLinkage(),
-            /*Init=*/llvm::ConstantPointerNull::get(Var->getType()),
-            Twine(Var->getName() + ".managed"), /*InsertBefore=*/nullptr,
+            /*Init=*/Var->isDeclaration()
+                ? nullptr
+                : llvm::ConstantPointerNull::get(Var->getType()),
+            /*Name=*/"", /*InsertBefore=*/nullptr,
             llvm::GlobalVariable::NotThreadLocal);
         ManagedVar->setDSOLocal(Var->isDSOLocal());
         ManagedVar->setVisibility(Var->getVisibility());
+        ManagedVar->setExternallyInitialized(true);
+        ManagedVar->takeName(Var);
+        Var->setName(Twine(ManagedVar->getName() + ".managed"));
         replaceManagedVar(Var, ManagedVar);
         llvm::Value *Args[] = {
             &GpuBinaryHandlePtr,
@@ -556,7 +568,8 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
             VarName,
             llvm::ConstantInt::get(VarSizeTy, VarSize),
             llvm::ConstantInt::get(IntTy, Var->getAlignment())};
-        Builder.CreateCall(RegisterManagedVar, Args);
+        if (!Var->isDeclaration())
+          Builder.CreateCall(RegisterManagedVar, Args);
       } else {
         llvm::Value *Args[] = {
             &GpuBinaryHandlePtr,
@@ -968,9 +981,13 @@ void CGNVCUDARuntime::handleVarRegistration(const VarDecl *D,
     // discarded and referencing a discarded local symbol from outside the
     // comdat (__cuda_register_globals) is disallowed by the ELF spec.
     // TODO: Reject __device__ constexpr and __device__ inline in Sema.
-    if (!D->hasExternalStorage() && !D->isInline())
+    // HIP managed variables need to be always recorded in device and host
+    // compilations for transformation.
+    if ((!D->hasExternalStorage() && !D->isInline()) ||
+        D->hasAttr<HIPManagedAttr>()) {
       registerDeviceVar(D, GV, !D->hasDefinition(),
                         D->hasAttr<CUDAConstantAttr>());
+    }
   } else if (D->getType()->isCUDADeviceBuiltinSurfaceType() ||
              D->getType()->isCUDADeviceBuiltinTextureType()) {
     // Builtin surfaces and textures and their template arguments are
@@ -997,4 +1014,48 @@ void CGNVCUDARuntime::handleVarRegistration(const VarDecl *D,
                           Normalized.getZExtValue());
     }
   }
+}
+
+// Transform managed variables to pointers to managed variables in device code.
+// Each use of the original managed variable is replaced by a load from the
+// transformed managed variable. The transformed managed variable contains
+// the address of managed memory which will be allocated by the runtime.
+void CGNVCUDARuntime::transformManagedVars() {
+  for (auto &&Info : DeviceVars) {
+    llvm::GlobalVariable *Var = Info.Var;
+    if (Info.Flags.getKind() == DeviceVarFlags::Variable &&
+        Info.Flags.isManaged()) {
+      auto ManagedVar = new llvm::GlobalVariable(
+          CGM.getModule(), Var->getType(),
+          /*isConstant=*/false, Var->getLinkage(),
+          /*Init=*/Var->isDeclaration()
+              ? nullptr
+              : llvm::ConstantPointerNull::get(Var->getType()),
+          /*Name=*/"", /*InsertBefore=*/nullptr,
+          llvm::GlobalVariable::NotThreadLocal,
+          CGM.getContext().getTargetAddressSpace(LangAS::cuda_device));
+      ManagedVar->setDSOLocal(Var->isDSOLocal());
+      ManagedVar->setVisibility(Var->getVisibility());
+      ManagedVar->setExternallyInitialized(true);
+      replaceManagedVar(Var, ManagedVar);
+      ManagedVar->takeName(Var);
+      Var->setName(Twine(ManagedVar->getName()) + ".managed");
+      // Keep managed variables even if they are not used in device code since
+      // they need to be allocated by the runtime.
+      if (!Var->isDeclaration()) {
+        assert(!ManagedVar->isDeclaration());
+        CGM.addCompilerUsedGlobal(Var);
+        CGM.addCompilerUsedGlobal(ManagedVar);
+      }
+    }
+  }
+}
+
+// Returns module constructor to be added.
+llvm::Function *CGNVCUDARuntime::finalizeModule() {
+  if (CGM.getLangOpts().CUDAIsDevice) {
+    transformManagedVars();
+    return nullptr;
+  }
+  return makeModuleCtorFunction();
 }

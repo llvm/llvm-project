@@ -26,8 +26,8 @@ __all__ = ['document']
 def document(args):
     """ Generates cover report and returns the number of bugs/crashes. """
 
-    html_reports_available = args.output_format in {'html', 'plist-html'}
-    sarif_reports_available = args.output_format in {'sarif'}
+    html_reports_available = args.output_format in {'html', 'plist-html', 'sarif-html'}
+    sarif_reports_available = args.output_format in {'sarif', 'sarif-html'}
 
     logging.debug('count crashes and bugs')
     crash_count = sum(1 for _ in read_crashes(args.output))

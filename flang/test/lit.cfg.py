@@ -39,12 +39,9 @@ llvm_config.use_default_substitutions()
 config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt']
 
 # If the new Flang driver is enabled, add the corresponding feature to
-# config. Otherwise, exclude the corresponding test directory.
+# config.
 if config.include_flang_new_driver_test:
   config.available_features.add('new-flang-driver')
-else:
-  config.excludes.append('Flang-Driver')
-  config.excludes.append('Frontend')
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)

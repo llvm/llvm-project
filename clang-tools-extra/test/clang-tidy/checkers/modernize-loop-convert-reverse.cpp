@@ -30,13 +30,6 @@
 // RUN:   | FileCheck %s -check-prefix=CHECK-HEADER-NO-FUNC \
 // RUN:       -implicit-check-not="{{warning|error}}:"
 
-/// Suppress FileCheck --allow-unused-prefixes=false diagnostics.
-// CHECK-MESSAGES-RANGES: {{^}}
-// CHECK-MESSAGES-CUSTOM: {{^}}
-// CHECK-MESSAGES-CUSTOM-SYS: {{^}}
-// CHECK-MESSAGES-CUSTOM-NO-SYS: {{^}}
-// CHECK-MESSAGES-CUSTOM-NO-HEADER: {{^}}
-
 // CHECK-HEADER-NO-FUNC: warning: modernize-loop-convert: 'MakeReverseRangeHeader' is set but 'MakeReverseRangeFunction' is not, disabling reverse loop transformation
 
 // Make sure appropiate headers are included

@@ -14,7 +14,7 @@ function(find_standalone_test_dependencies)
 
   # Find executables.
   find_program(OPENMP_LLVM_LIT_EXECUTABLE
-    NAMES llvm-lit lit.py lit
+    NAMES llvm-lit.py llvm-lit lit.py lit
     PATHS ${OPENMP_LLVM_TOOLS_DIR})
   if (NOT OPENMP_LLVM_LIT_EXECUTABLE)
     message(STATUS "Cannot find llvm-lit.")

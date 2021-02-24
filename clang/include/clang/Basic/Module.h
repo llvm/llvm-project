@@ -133,9 +133,7 @@ public:
   std::string PresumedModuleMapFile;
 
   /// The umbrella header or directory.
-  llvm::PointerUnion<const FileEntryRef::MapEntry *,
-                     const DirectoryEntryRef::MapEntry *>
-      Umbrella;
+  llvm::PointerUnion<const FileEntry *, const DirectoryEntry *> Umbrella;
 
   /// The module signature.
   ASTFileSignature Signature;
@@ -190,18 +188,18 @@ public:
   /// file.
   struct Header {
     std::string NameAsWritten;
-    OptionalFileEntryRefDegradesToFileEntryPtr Entry;
+    const FileEntry *Entry;
 
-    explicit operator bool() { return Entry != None; }
+    explicit operator bool() { return Entry; }
   };
 
   /// Information about a directory name as found in the module map
   /// file.
   struct DirectoryName {
     std::string NameAsWritten;
-    OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr Entry;
+    const DirectoryEntry *Entry;
 
-    explicit operator bool() { return Entry != None; }
+    explicit operator bool() { return Entry; }
   };
 
   /// The headers that are part of this module.
@@ -546,15 +544,15 @@ public:
   /// Retrieve the header that serves as the umbrella header for this
   /// module.
   Header getUmbrellaHeader() const {
-    if (auto *ME = Umbrella.dyn_cast<const FileEntryRef::MapEntry *>())
-      return Header{UmbrellaAsWritten, FileEntryRef(*ME)};
+    if (auto *FE = Umbrella.dyn_cast<const FileEntry *>())
+      return Header{UmbrellaAsWritten, FE};
     return Header{};
   }
 
   /// Determine whether this module has an umbrella directory that is
   /// not based on an umbrella header.
   bool hasUmbrellaDir() const {
-    return Umbrella && Umbrella.is<const DirectoryEntryRef::MapEntry *>();
+    return Umbrella && Umbrella.is<const DirectoryEntry *>();
   }
 
   /// Add a top-level header associated with this module.

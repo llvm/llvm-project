@@ -173,6 +173,8 @@ void RTLsTy::LoadRTLs() {
         dlsym(dynlib_handle, "__tgt_rtl_register_lib");
     *((void **)&R.unregister_lib) =
         dlsym(dynlib_handle, "__tgt_rtl_unregister_lib");
+    *((void **)&R.supports_empty_images) =
+        dlsym(dynlib_handle, "__tgt_rtl_supports_empty_images");
   }
 
   DP("RTLs loaded!\n");
@@ -334,6 +336,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
       // Initialize (if necessary) translation table for this library.
       PM->TrlTblMtx.lock();
       if (!PM->HostEntriesBeginToTransTable.count(desc->HostEntriesBegin)) {
+        PM->HostEntriesBeginRegistrationOrder.push_back(desc->HostEntriesBegin);
         TranslationTable &TransTable =
             (PM->HostEntriesBeginToTransTable)[desc->HostEntriesBegin];
         TransTable.HostTable.EntriesBegin = desc->HostEntriesBegin;

@@ -1074,7 +1074,9 @@ class TypeAttrBase<string retType, string summary> :
   let convertFromStorage = "$_self.getValue().cast<" # retType # ">()";
 }
 
-def TypeAttr : TypeAttrBase<"::mlir::Type", "any type attribute">;
+def TypeAttr : TypeAttrBase<"::mlir::Type", "any type attribute"> {
+  let constBuilderCall = "::mlir::TypeAttr::get($0)";
+}
 
 // The mere presence of unit attributes has a meaning.  Therefore, unit
 // attributes are always treated as optional and accessors to them return

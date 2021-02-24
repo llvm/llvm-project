@@ -255,6 +255,15 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
     if (engine->perfListener)
       objectLayer->registerJITEventListener(*engine->perfListener);
 
+    // COFF format binaries (Windows) need special handling to deal with
+    // exported symbol visibility.
+    // cf llvm/lib/ExecutionEngine/Orc/LLJIT.cpp LLJIT::createObjectLinkingLayer
+    llvm::Triple targetTriple(llvm::Twine(llvmModule->getTargetTriple()));
+    if (targetTriple.isOSBinFormatCOFF()) {
+      objectLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
+      objectLayer->setAutoClaimResponsibilityForObjectSymbols(true);
+    }
+
     // Resolve symbols from shared libraries.
     for (auto libPath : sharedLibPaths) {
       auto mb = llvm::MemoryBuffer::getFile(libPath);

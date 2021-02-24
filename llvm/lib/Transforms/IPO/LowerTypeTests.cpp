@@ -336,7 +336,7 @@ private:
 
 struct ScopedSaveAliaseesAndUsed {
   Module &M;
-  SmallPtrSet<GlobalValue *, 16> Used, CompilerUsed;
+  SmallVector<GlobalValue *, 4> Used, CompilerUsed;
   std::vector<std::pair<GlobalIndirectSymbol *, Function *>> FunctionAliases;
 
   ScopedSaveAliaseesAndUsed(Module &M) : M(M) {
@@ -367,9 +367,8 @@ struct ScopedSaveAliaseesAndUsed {
   }
 
   ~ScopedSaveAliaseesAndUsed() {
-    appendToUsed(M, std::vector<GlobalValue *>(Used.begin(), Used.end()));
-    appendToCompilerUsed(M, std::vector<GlobalValue *>(CompilerUsed.begin(),
-                                                       CompilerUsed.end()));
+    appendToUsed(M, Used);
+    appendToCompilerUsed(M, CompilerUsed);
 
     for (auto P : FunctionAliases)
       P.first->setIndirectSymbol(

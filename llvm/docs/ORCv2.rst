@@ -324,13 +324,13 @@ to be re-used across JIT sessions as the JIT'd code no longer changes, only the
 absolute symbol definition does.
 
 For process and library symbols the DynamicLibrarySearchGenerator utility (See
-:ref:`How to Add Process and Library Symbols to JITDylibs`) can be used to
-automatically build absolute symbol mappings for you. However the
-absoluteSymbols function is still useful for making non-global objects in your
-JIT visible to JIT'd code. For example, imagine that your JIT standard library
-needs access to your JIT object to make some calls. We could bake the address of
-your object into the library, but then it would need to be recompiled for each
-session:
+:ref:`How to Add Process and Library Symbols to JITDylibs
+<ProcessAndLibrarySymbols>`) can be used to automatically build absolute
+symbol mappings for you. However the absoluteSymbols function is still useful
+for making non-global objects in your JIT visible to JIT'd code. For example,
+imagine that your JIT standard library needs access to your JIT object to make
+some calls. We could bake the address of your object into the library, but then
+it would need to be recompiled for each session:
 
 .. code-block: c++
 
@@ -683,8 +683,8 @@ all modules on the same context:
 
 .. _ProcessAndLibrarySymbols:
 
-How to Add Process and Library Symbols to JITDylibs
-===================================================
+How to Add Process and Library Symbols to the JITDylibs
+=======================================================
 
 JIT'd code typically needs access to symbols in the host program or in
 supporting libraries. References to process symbols can be "baked in" to code

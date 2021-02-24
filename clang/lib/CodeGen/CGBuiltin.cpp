@@ -42,6 +42,7 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -5165,6 +5166,9 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
     return CGF->EmitWebAssemblyBuiltinExpr(BuiltinID, E);
   case llvm::Triple::hexagon:
     return CGF->EmitHexagonBuiltinExpr(BuiltinID, E);
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    return CGF->EmitRISCVBuiltinExpr(BuiltinID, E, ReturnValue);
   default:
     return nullptr;
   }
@@ -17728,4 +17732,216 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
   } // switch
 
   return nullptr;
+}
+
+Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
+                                             const CallExpr *E,
+                                             ReturnValueSlot ReturnValue) {
+  SmallVector<Value *, 4> Ops;
+  llvm::Type *ResultType = ConvertType(E->getType());
+
+  for (unsigned i = 0, e = E->getNumArgs(); i != e; i++)
+    Ops.push_back(EmitScalarExpr(E->getArg(i)));
+
+  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+
+  // Required for overloaded intrinsics.
+  llvm::SmallVector<llvm::Type *, 2> IntrinsicTypes;
+  switch (BuiltinID) {
+  // We could generate all the possible combinations and handling code in
+  // a file and include it here, instead of listing all the builtins plainly.
+  // Something like
+  // #include clang/Basic/RISCVVBuiltinCodeGen.inc
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8mf8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8mf8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8mf8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8mf8_vl:
+    // The order of operands is (op1, op2, vl).
+    ID = Intrinsic::riscv_vadd;
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType()};
+    break;
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8mf8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8mf8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8mf8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8mf8_m_vl:
+    ID = Intrinsic::riscv_vadd_mask;
+    // The order of operands is (mask, maskedoff, op1, op2, vl).
+    IntrinsicTypes = {ResultType, Ops[3]->getType(), Ops[4]->getType()};
+    // The order of intrinsic operands is (maskedoff, op1, op2, mask, vl).
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+    break;
+  }
+
+  assert(ID != Intrinsic::not_intrinsic);
+
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
 }

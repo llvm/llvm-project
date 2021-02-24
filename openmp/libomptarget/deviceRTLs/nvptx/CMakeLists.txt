@@ -153,7 +153,7 @@ add_custom_target(omptarget-nvptx-bc)
 # This map is from clang/lib/Driver/ToolChains/Cuda.cpp.
 # The last element is the default case.
 set(cuda_version_list 112 111 110 102 101 100 92 91 90 80)
-set(ptx_feature_list 71 71 70 65 64 63 61 61 60 42)
+set(ptx_feature_list 70 70 70 65 64 63 61 61 60 42)
 # The following two lines of ugly code is not needed when the minimal CMake
 # version requirement is 3.17+.
 list(LENGTH cuda_version_list num_version_supported)

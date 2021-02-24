@@ -21,6 +21,7 @@ VERS1.0 {
     __tgt_rtl_synchronize;
     __tgt_rtl_register_lib;
     __tgt_rtl_unregister_lib;
+    __tgt_rtl_supports_empty_images;
   local:
     *;
 };
