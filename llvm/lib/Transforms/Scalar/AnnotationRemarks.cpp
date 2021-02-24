@@ -27,16 +27,40 @@ using namespace llvm::ore;
 #define DEBUG_TYPE "annotation-remarks"
 #define REMARK_PASS DEBUG_TYPE
 
+static void tryEmitAutoInitRemark(ArrayRef<Instruction *> Instructions,
+                                  OptimizationRemarkEmitter &ORE) {
+  // For every auto-init annotation generate a separate remark.
+  for (Instruction *I : Instructions) {
+    if (!I->hasMetadata(LLVMContext::MD_annotation))
+      continue;
+    for (const MDOperand &Op :
+         I->getMetadata(LLVMContext::MD_annotation)->operands()) {
+      if (cast<MDString>(Op.get())->getString() != "auto-init")
+        continue;
+
+      ORE.emit(
+          OptimizationRemarkMissed(REMARK_PASS, "AutoInitUnknownInstruction", I)
+          << "Initialization inserted by -ftrivial-auto-var-init.");
+    }
+  }
+}
+
 static void runImpl(Function &F) {
   if (!OptimizationRemarkEmitter::allowExtraAnalysis(F, REMARK_PASS))
     return;
 
+  // Track all annotated instructions aggregated based on their debug location.
+  DenseMap<MDNode *, SmallVector<Instruction *, 4>> DebugLoc2Annotated;
+
   OptimizationRemarkEmitter ORE(&F);
-  // For now, just generate a summary of the annotated instructions.
+  // First, generate a summary of the annotated instructions.
   MapVector<StringRef, unsigned> Mapping;
   for (Instruction &I : instructions(F)) {
     if (!I.hasMetadata(LLVMContext::MD_annotation))
       continue;
+    auto Iter = DebugLoc2Annotated.insert({I.getDebugLoc().getAsMDNode(), {}});
+    Iter.first->second.push_back(&I);
+
     for (const MDOperand &Op :
          I.getMetadata(LLVMContext::MD_annotation)->operands()) {
       auto Iter = Mapping.insert({cast<MDString>(Op.get())->getString(), 0});
@@ -49,6 +73,16 @@ static void runImpl(Function &F) {
     ORE.emit(OptimizationRemarkAnalysis(REMARK_PASS, "AnnotationSummary", IP)
              << "Annotated " << NV("count", KV.second) << " instructions with "
              << NV("type", KV.first));
+
+  // For each debug location, look for all the instructions with annotations and
+  // generate more detailed remarks to be displayed at that location.
+  for (auto &KV : DebugLoc2Annotated) {
+    // Don't generate remarks with no debug location.
+    if (!KV.first)
+      continue;
+
+    tryEmitAutoInitRemark(KV.second, ORE);
+  }
 }
 
 namespace {
