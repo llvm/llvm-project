@@ -56,15 +56,18 @@ protected:
   //   1.2: Prune graph
   //   1.3: Run post-prune passes
   //   1.4: Sort blocks into segments
-  //   1.5: Allocate segment memory
-  //   1.6: Identify externals and make an async call to resolve function
+  //   1.5: Allocate segment memory, update node vmaddrs to target vmaddrs
+  //   1.6: Run post-allocation passes
+  //   1.7: Notify context of final assigned symbol addresses
+  //   1.8: Identify external symbols and make an async call to resolve
   void linkPhase1(std::unique_ptr<JITLinkerBase> Self);
 
   // Phase 2:
   //   2.1: Apply resolution results
-  //   2.2: Fix up block contents
-  //   2.3: Call OnResolved callback
-  //   2.3: Make an async call to transfer and finalize memory.
+  //   2.2: Run pre-fixup passes
+  //   2.3: Fix up block contents
+  //   2.4: Run post-fixup passes
+  //   2.5: Make an async call to transfer and finalize memory.
   void linkPhase2(std::unique_ptr<JITLinkerBase> Self,
                   Expected<AsyncLookupResult> LookupResult,
                   SegmentLayoutMap Layout);
