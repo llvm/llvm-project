@@ -665,7 +665,7 @@ LogicalResult InlinerPass::optimizeSCC(CallGraph &cg, CGUseList &useList,
   // NOTE: This is simple now, because we don't enable optimizing nodes within
   // children. When we remove this restriction, this logic will need to be
   // reworked.
-  if (context->isMultithreadingEnabled()) {
+  if (context->isMultithreadingEnabled() && nodesToVisit.size() > 1) {
     if (failed(optimizeSCCAsync(nodesToVisit, context)))
       return failure();
 
