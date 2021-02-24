@@ -1,0 +1,407 @@
+# RUN: llc -mtriple=aarch64-apple-darwin -run-pass=aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "arm64e-apple-ios13.0"
+  
+  %struct.widget = type { i64, i64, i32, i32, i64, i64, i64, i64, i64, i32, i32, i32, i16, i32, %struct.snork*, %struct.zot, %struct.zot, %struct.zot, %struct.zot, %struct.zot, i64, i64, i64, i32, i64, i32, i32, i32, i8*, %struct.baz, %struct.baz, i64, i64, %struct.snork*, %struct.zot, i32, i32, i32, i32, i32, i32, i32, [32 x i8], i64, i64, %struct.wombat, i32, i64, i64, i64, i64 }
+  %struct.baz = type { [4 x i32] }
+  %struct.snork = type { i32, i32, [1 x %struct.spam] }
+  %struct.spam = type { %struct.baz, i32, i32 }
+  %struct.zot = type { i64, i64 }
+  %struct.wombat = type { [2 x i32] }
+  %struct.wombat.0 = type { [200 x i32] }
+  
+  @__stack_chk_guard = external global i8*
+  
+  ; Function Attrs: noredzone ssp
+  define hidden void @with_noredzone_80bytes() #0 {
+  bb:
+    %StackGuardSlot = alloca i8*, align 8
+    %0 = call i8* @llvm.stackguard()
+    call void @llvm.stackprotector(i8* %0, i8** %StackGuardSlot)
+    %tmp = alloca %struct.widget, align 16
+    %tmp1 = alloca %struct.wombat.0*, align 8
+    %tmp2 = alloca %struct.wombat.0*, align 8
+    %tmp3 = alloca %struct.wombat.0*, align 8
+    %tmp4 = alloca %struct.wombat.0*, align 8
+    store %struct.wombat.0* null, %struct.wombat.0** %tmp3, align 8
+    store %struct.wombat.0* null, %struct.wombat.0** %tmp4, align 8
+    ret void
+  }
+
+  define hidden void @with_redzone_480bytes() #2 {
+  bb:
+    %StackGuardSlot = alloca i8*, align 8
+    %0 = call i8* @llvm.stackguard()
+    call void @llvm.stackprotector(i8* %0, i8** %StackGuardSlot)
+    %tmp = alloca %struct.widget, align 16
+    %tmp1 = alloca %struct.wombat.0*, align 8
+    %tmp2 = alloca %struct.wombat.0*, align 8
+    %tmp3 = alloca %struct.wombat.0*, align 8
+    %tmp4 = alloca %struct.wombat.0*, align 8
+    store %struct.wombat.0* null, %struct.wombat.0** %tmp3, align 8
+    store %struct.wombat.0* null, %struct.wombat.0** %tmp4, align 8
+    ret void
+  }
+
+  define hidden void @with_noredzone_no_mem_between() #0 {
+  bb:
+    %StackGuardSlot = alloca i8*, align 8
+    %0 = call i8* @llvm.stackguard()
+    call void @llvm.stackprotector(i8* %0, i8** %StackGuardSlot)
+    %tmp = alloca %struct.widget, align 16
+    %tmp1 = alloca %struct.wombat.0*, align 8
+    %tmp2 = alloca %struct.wombat.0*, align 8
+    %tmp3 = alloca %struct.wombat.0*, align 8
+    %tmp4 = alloca %struct.wombat.0*, align 8
+    store %struct.wombat.0* null, %struct.wombat.0** %tmp3, align 8
+    store %struct.wombat.0* null, %struct.wombat.0** %tmp4, align 8
+    ret void
+  }
+
+  ; Function Attrs: nofree nosync nounwind willreturn
+  declare i8* @llvm.stackguard() #1
+  
+  ; Function Attrs: nofree nosync nounwind willreturn
+  declare void @llvm.stackprotector(i8*, i8**) #1
+  
+  attributes #0 = { noredzone ssp "frame-pointer"="non-leaf" }
+  attributes #1 = { nofree nosync nounwind willreturn }
+  attributes #2 = { ssp "frame-pointer"="non-leaf" }
+...
+# Check that we don't try to combine the SUB with the STP using pre-index addressing
+# if the function does not have redzone enabled.
+# CHECK-LABEL: name: with_noredzone_80bytes
+# CHECK-NOT: STPXpre $xzr, $xzr
+---
+name:            with_noredzone_80bytes
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       512
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  '%stack.0.StackGuardSlot'
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  480
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: StackGuardSlot, type: default, offset: -40, size: 8, 
+      alignment: 8, stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -8, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 1, name: tmp, type: default, offset: -480, size: 440, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -448, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 2, name: tmp1, type: default, offset: -488, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -456, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 3, name: tmp2, type: default, offset: -496, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -464, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 4, name: tmp3, type: default, offset: -504, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -472, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 5, name: tmp4, type: default, offset: -512, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -480, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 6, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$fp', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, name: '', type: spill-slot, offset: -24, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$x27', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 9, name: '', type: spill-slot, offset: -32, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$x28', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.bb:
+    successors: %bb.1(0x7ffff800), %bb.2(0x00000800)
+    liveins: $x27, $x28, $lr
+    early-clobber $sp = frame-setup STPXpre killed $x28, killed $x27, $sp, -4 :: (store 8 into %stack.9), (store 8 into %stack.8)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store 8 into %stack.7), (store 8 into %stack.6)
+    $fp = frame-setup ADDXri $sp, 16, 0
+    $sp = frame-setup SUBXri $sp, 80, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    frame-setup CFI_INSTRUCTION offset $w27, -24
+    frame-setup CFI_INSTRUCTION offset $w28, -32
+    $x8 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
+    $x8 = LDRXui killed $x8, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
+    $x8 = LDRXui killed $x8, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
+    STURXi killed renamable $x8, $fp, -24 :: (volatile store 8 into %stack.0.StackGuardSlot)
+    STRXui $xzr, $sp, 1 :: (store 8 into %ir.tmp3)
+    STRXui $xzr, $sp, 0 :: (store 8 into %ir.tmp4)
+    renamable $x8 = LDURXi $fp, -24 :: (volatile load 8 from %stack.0.StackGuardSlot)
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
+    $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
+    $x9 = LDRXui killed $x9, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
+    $xzr = SUBSXrs killed renamable $x9, killed renamable $x8, 0, implicit-def $nzcv, implicit-def $nzcv
+    Bcc 1, %bb.2, implicit $nzcv
+  
+  bb.1.bb:
+    $sp = frame-destroy ADDXri $sp, 480, 0
+    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load 8 from %stack.7), (load 8 from %stack.6)
+    early-clobber $sp, $x28, $x27 = frame-destroy LDPXpost $sp, 4 :: (load 8 from %stack.9), (load 8 from %stack.8)
+    RET undef $lr
+  
+  bb.2.bb:
+    BL &__stack_chk_fail, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+
+...
+# Check we don't try to fold a 480 byte offset, even if we have a 128 byte redzone.
+# CHECK-LABEL: name: with_redzone_480bytes
+# CHECK-NOT: STPXpre $xzr, $xzr
+---
+name:            with_redzone_480bytes
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       512
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  '%stack.0.StackGuardSlot'
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  480
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: StackGuardSlot, type: default, offset: -40, size: 8, 
+      alignment: 8, stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -8, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 1, name: tmp, type: default, offset: -480, size: 440, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -448, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 2, name: tmp1, type: default, offset: -488, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -456, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 3, name: tmp2, type: default, offset: -496, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -464, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 4, name: tmp3, type: default, offset: -504, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -472, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 5, name: tmp4, type: default, offset: -512, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -480, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 6, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$fp', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, name: '', type: spill-slot, offset: -24, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$x27', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 9, name: '', type: spill-slot, offset: -32, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$x28', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+body:             |
+  bb.0.bb:
+    successors: %bb.1(0x7ffff800), %bb.2(0x00000800)
+    liveins: $x27, $x28, $lr
+    early-clobber $sp = frame-setup STPXpre killed $x28, killed $x27, $sp, -4 :: (store 8 into %stack.9), (store 8 into %stack.8)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store 8 into %stack.7), (store 8 into %stack.6)
+    $fp = frame-setup ADDXri $sp, 16, 0
+    $sp = frame-setup SUBXri $sp, 480, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    frame-setup CFI_INSTRUCTION offset $w27, -24
+    frame-setup CFI_INSTRUCTION offset $w28, -32
+    $x8 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
+    $x8 = LDRXui killed $x8, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
+    $x8 = LDRXui killed $x8, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
+    STURXi killed renamable $x8, $fp, -24 :: (volatile store 8 into %stack.0.StackGuardSlot)
+    STRXui $xzr, $sp, 1 :: (store 8 into %ir.tmp3)
+    STRXui $xzr, $sp, 0 :: (store 8 into %ir.tmp4)
+    renamable $x8 = LDURXi $fp, -24 :: (volatile load 8 from %stack.0.StackGuardSlot)
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
+    $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
+    $x9 = LDRXui killed $x9, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
+    $xzr = SUBSXrs killed renamable $x9, killed renamable $x8, 0, implicit-def $nzcv, implicit-def $nzcv
+    Bcc 1, %bb.2, implicit $nzcv
+  
+  bb.1.bb:
+    $sp = frame-destroy ADDXri $sp, 480, 0
+    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load 8 from %stack.7), (load 8 from %stack.6)
+    early-clobber $sp, $x28, $x27 = frame-destroy LDPXpost $sp, 4 :: (load 8 from %stack.9), (load 8 from %stack.8)
+    RET undef $lr
+  
+  bb.2.bb:
+    BL &__stack_chk_fail, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+
+...
+# Check we still do the opt if there are no mem ops between.
+# CHECK-LABEL: name: with_noredzone_no_mem_between
+# CHECK: STPXpre $xzr, $xzr
+---
+name:            with_noredzone_no_mem_between
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       512
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  '%stack.0.StackGuardSlot'
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  480
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: StackGuardSlot, type: default, offset: -40, size: 8, 
+      alignment: 8, stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -8, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 1, name: tmp, type: default, offset: -480, size: 440, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -448, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 2, name: tmp1, type: default, offset: -488, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -456, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 3, name: tmp2, type: default, offset: -496, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -464, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 4, name: tmp3, type: default, offset: -504, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -472, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 5, name: tmp4, type: default, offset: -512, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -480, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 6, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$fp', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, name: '', type: spill-slot, offset: -24, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$x27', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 9, name: '', type: spill-slot, offset: -32, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$x28', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.bb:
+    successors: %bb.1(0x7ffff800), %bb.2(0x00000800)
+    liveins: $x27, $x28, $lr
+    early-clobber $sp = frame-setup STPXpre killed $x28, killed $x27, $sp, -4 :: (store 8 into %stack.9), (store 8 into %stack.8)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store 8 into %stack.7), (store 8 into %stack.6)
+    $fp = frame-setup ADDXri $sp, 16, 0
+    $sp = frame-setup SUBXri $sp, 480, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    frame-setup CFI_INSTRUCTION offset $w27, -24
+    frame-setup CFI_INSTRUCTION offset $w28, -32
+    $x8 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
+    STRXui $xzr, $sp, 1 :: (store 8 into %ir.tmp3)
+    STRXui $xzr, $sp, 0 :: (store 8 into %ir.tmp4)
+    renamable $x8 = LDURXi $fp, -24 :: (volatile load 8 from %stack.0.StackGuardSlot)
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
+    $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
+    $x9 = LDRXui killed $x9, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
+    $xzr = SUBSXrs killed renamable $x9, killed renamable $x8, 0, implicit-def $nzcv, implicit-def $nzcv
+    Bcc 1, %bb.2, implicit $nzcv
+  
+  bb.1.bb:
+    $sp = frame-destroy ADDXri $sp, 480, 0
+    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load 8 from %stack.7), (load 8 from %stack.6)
+    early-clobber $sp, $x28, $x27 = frame-destroy LDPXpost $sp, 4 :: (load 8 from %stack.9), (load 8 from %stack.8)
+    RET undef $lr
+  
+  bb.2.bb:
+    BL &__stack_chk_fail, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+
+...
