@@ -994,26 +994,30 @@ static void computeKnownBitsFromShiftOperator(
   bool ShiftAmtIsConstant = Known.isConstant();
   bool MaxShiftAmtIsOutOfRange = Known.getMaxValue().uge(BitWidth);
 
-  // Use the KF callback to get an initial knownbits approximation.
-  Known = KF(Known2, Known);
+  if (ShiftAmtIsConstant) {
+    Known = KF(Known2, Known);
 
-  // If the known bits conflict, this must be an overflowing left shift, so
-  // the shift result is poison.
-  if (Known.hasConflict()) {
-    Known.resetAll();
+    // If the known bits conflict, this must be an overflowing left shift, so
+    // the shift result is poison. We can return anything we want. Choose 0 for
+    // the best folding opportunity.
+    if (Known.hasConflict())
+      Known.setAllZero();
+
     return;
   }
-
-  // Constant shift amount - we're not going to improve on this.
-  if (ShiftAmtIsConstant)
-    return;
 
   // If the shift amount could be greater than or equal to the bit-width of the
   // LHS, the value could be poison, but bail out because the check below is
   // expensive.
   // TODO: Should we just carry on?
-  if (MaxShiftAmtIsOutOfRange)
+  if (MaxShiftAmtIsOutOfRange) {
+    Known.resetAll();
     return;
+  }
+
+  // It would be more-clearly correct to use the two temporaries for this
+  // calculation. Reusing the APInts here to prevent unnecessary allocations.
+  Known.resetAll();
 
   // If we know the shifter operand is nonzero, we can sometimes infer more
   // known bits. However this is expensive to compute, so be lazy about it and
@@ -1053,9 +1057,10 @@ static void computeKnownBitsFromShiftOperator(
         Known, KF(Known2, KnownBits::makeConstant(APInt(32, ShiftAmt))));
   }
 
-  // If the known bits conflict, the result is poison.
+  // If the known bits conflict, the result is poison. Return a 0 and hope the
+  // caller can further optimize that.
   if (Known.hasConflict())
-    Known.resetAll();
+    Known.setAllZero();
 }
 
 static void computeKnownBitsFromOperator(const Operator *I,
@@ -1227,6 +1232,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
+    // Trailing zeros of a right-shifted constant never decrease.
+    const APInt *C;
+    if (match(I->getOperand(0), m_APInt(C)))
+      Known.Zero.setLowBits(C->countTrailingZeros());
     break;
   }
   case Instruction::LShr: {
@@ -1235,6 +1244,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
+    // Leading zeros of a left-shifted constant never decrease.
+    const APInt *C;
+    if (match(I->getOperand(0), m_APInt(C)))
+      Known.Zero.setHighBits(C->countLeadingZeros());
     break;
   }
   case Instruction::AShr: {
