@@ -4638,6 +4638,21 @@ SDValue DAGCombiner::visitMULO(SDNode *N) {
   EVT CarryVT = N->getValueType(1);
   SDLoc DL(N);
 
+  ConstantSDNode *N0C = isConstOrConstSplat(N0);
+  ConstantSDNode *N1C = isConstOrConstSplat(N1);
+
+  // fold operation with constant operands.
+  // TODO: Move this to FoldConstantArithmetic when it supports nodes with
+  // multiple results.
+  if (N0C && N1C) {
+    bool Overflow;
+    APInt Result =
+        IsSigned ? N0C->getAPIntValue().smul_ov(N1C->getAPIntValue(), Overflow)
+                 : N0C->getAPIntValue().umul_ov(N1C->getAPIntValue(), Overflow);
+    return CombineTo(N, DAG.getConstant(Result, DL, VT),
+                     DAG.getBoolConstant(Overflow, DL, CarryVT, CarryVT));
+  }
+
   // canonicalize constant to RHS.
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
@@ -4649,10 +4664,9 @@ SDValue DAGCombiner::visitMULO(SDNode *N) {
                      DAG.getConstant(0, DL, CarryVT));
 
   // (mulo x, 2) -> (addo x, x)
-  if (ConstantSDNode *C2 = isConstOrConstSplat(N1))
-    if (C2->getAPIntValue() == 2)
-      return DAG.getNode(IsSigned ? ISD::SADDO : ISD::UADDO, DL,
-                         N->getVTList(), N0, N0);
+  if (N1C && N1C->getAPIntValue() == 2)
+    return DAG.getNode(IsSigned ? ISD::SADDO : ISD::UADDO, DL,
+                       N->getVTList(), N0, N0);
 
   return SDValue();
 }
