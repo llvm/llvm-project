@@ -1018,10 +1018,15 @@ static void computeKnownBitsFromShiftOperator(
   // If we know the shifter operand is nonzero, we can sometimes infer more
   // known bits. However this is expensive to compute, so be lazy about it and
   // only compute it when absolutely necessary.
+  Optional<bool> ShifterOperandIsNonZero;
+
   // Early exit if we can't constrain any well-defined shift amount.
   if (!(ShiftAmtKZ & (PowerOf2Ceil(BitWidth) - 1)) &&
       !(ShiftAmtKO & (PowerOf2Ceil(BitWidth) - 1))) {
-    return;
+    ShifterOperandIsNonZero =
+        isKnownNonZero(I->getOperand(1), DemandedElts, Depth + 1, Q);
+    if (!*ShifterOperandIsNonZero)
+      return;
   }
 
   Known.Zero.setAllBits();
@@ -1033,6 +1038,17 @@ static void computeKnownBitsFromShiftOperator(
       continue;
     if ((ShiftAmt | ShiftAmtKO) != ShiftAmt)
       continue;
+    // If we know the shifter is nonzero, we may be able to infer more known
+    // bits. This check is sunk down as far as possible to avoid the expensive
+    // call to isKnownNonZero if the cheaper checks above fail.
+    if (ShiftAmt == 0) {
+      if (!ShifterOperandIsNonZero.hasValue())
+        ShifterOperandIsNonZero =
+            isKnownNonZero(I->getOperand(1), DemandedElts, Depth + 1, Q);
+      if (*ShifterOperandIsNonZero)
+        continue;
+    }
+
     Known = KnownBits::commonBits(
         Known, KF(Known2, KnownBits::makeConstant(APInt(32, ShiftAmt))));
   }
