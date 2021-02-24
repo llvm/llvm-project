@@ -42,7 +42,7 @@ class LibcxxMultiSetDataFormatterTestCase(TestBase):
                 "[3] = 3",
                 "[6] = 6"])
 
-    @skipIf(bugnumber="rdar://74106716")
+    @skipIf(bugnumber="rdar://74106716", debug_info="gmodules")
     @add_test_categories(["libc++"])
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
@@ -128,7 +128,6 @@ class LibcxxMultiSetDataFormatterTestCase(TestBase):
                 '[1] = "a very long string is right here"',
                 '[2] = "c"'])
 
-    @skipIf(bugnumber="rdar://74106716")
     @add_test_categories(["libc++"])
     def test_ref_and_ptr(self):
         """Test that the data formatters work on ref and ptr."""

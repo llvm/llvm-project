@@ -19,7 +19,7 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
         TestBase.setUp(self)
         self.namespace = 'std'
 
-    @skipIf(bugnumber="rdar://74106716")
+    @skipIf(bugnumber="rdar://74106716", debug_info="gmodules")
     @add_test_categories(["libc++"])
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
