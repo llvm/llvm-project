@@ -95,8 +95,6 @@ public:
   void AppendMessageWithFormat(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
-  void AppendRawWarning(llvm::StringRef in_string);
-
   void AppendWarning(llvm::StringRef in_string);
 
   void AppendWarningWithFormat(const char *format, ...)

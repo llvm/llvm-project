@@ -90,28 +90,19 @@ void CommandReturnObject::AppendWarningWithFormat(const char *format, ...) {
 void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
-  GetOutputStream() << in_string << "\n";
+  GetOutputStream() << in_string.rtrim() << '\n';
 }
 
 void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
-  warning(GetErrorStream()) << in_string << '\n';
-}
-
-// Similar to AppendWarning, but do not prepend 'warning: ' to message, and
-// don't append "\n" to the end of it.
-
-void CommandReturnObject::AppendRawWarning(llvm::StringRef in_string) {
-  if (in_string.empty())
-    return;
-  GetErrorStream() << in_string;
+  warning(GetErrorStream()) << in_string.rtrim() << '\n';
 }
 
 void CommandReturnObject::AppendError(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
-  error(GetErrorStream()) << in_string << '\n';
+  error(GetErrorStream()) << in_string.rtrim() << '\n';
 }
 
 void CommandReturnObject::SetError(const Status &error,
