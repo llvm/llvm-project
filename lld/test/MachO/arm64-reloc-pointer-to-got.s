@@ -1,4 +1,4 @@
-# REQUIRES: arm
+# REQUIRES: aarch64
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t.o
 # RUN: %lld -lSystem -arch arm64 -o %t %t.o
