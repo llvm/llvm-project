@@ -317,12 +317,16 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
   lldb::ExpressionResults return_value = lldb::eExpressionSetupError;
 
   // FunctionCaller::ExecuteFunction execution is always just to get the
-  // result. Do make sure we ignore breakpoints, unwind on error, and don't try
-  // to debug it.
+  // result. Unless explicitly asked for, ignore breakpoints and unwind on
+  // error.
+  const bool enable_debugging =
+      exe_ctx.GetTargetPtr() &&
+      exe_ctx.GetTargetPtr()->GetDebugUtilityExpression();
   EvaluateExpressionOptions real_options = options;
-  real_options.SetDebug(false);
-  real_options.SetUnwindOnError(true);
-  real_options.SetIgnoreBreakpoints(true);
+  real_options.SetDebug(false); // This halts the expression for debugging.
+  real_options.SetGenerateDebugInfo(enable_debugging);
+  real_options.SetUnwindOnError(!enable_debugging);
+  real_options.SetIgnoreBreakpoints(!enable_debugging);
 
   lldb::addr_t args_addr;
 

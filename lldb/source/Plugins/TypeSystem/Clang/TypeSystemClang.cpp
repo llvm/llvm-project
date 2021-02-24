@@ -9649,7 +9649,8 @@ ScratchTypeSystemClang::CreateUtilityFunction(std::string text,
     return {};
 
   return std::make_unique<ClangUtilityFunction>(
-      *target_sp.get(), std::move(text), std::move(name));
+      *target_sp.get(), std::move(text), std::move(name),
+      target_sp->GetDebugUtilityExpression());
 }
 
 PersistentExpressionState *
