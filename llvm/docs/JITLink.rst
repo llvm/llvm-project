@@ -47,11 +47,11 @@ Either way, when an object is emitted the ObjectLinkingLayer constructs a
 ``link`` function.
 
 
-``ObjectLinkingLayer`` provides a plugin API,
-``ObjectLinkingLayer::Plugin``, which users can subclass in order to
-inspect and modify `LinkGraph`s at link time, and react to important JIT events
-(such as an object being emitted into target memory). This enables many features
-and optimizations that were not possible under MCJIT or RuntimeDyld.
+The ``ObjectLinkingLayer`` class provides a plugin API,
+``ObjectLinkingLayer::Plugin``, which users can subclass in order to inspect and
+modify `LinkGraph`s at link time, and react to important JIT events (such as an
+object being emitted into target memory). This enables many features and
+optimizations that were not possible under MCJIT or RuntimeDyld.
 
 ObjectLinkingLayer Plugins
 --------------------------
