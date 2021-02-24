@@ -600,4 +600,4 @@ poly64x2_t test_vsriq_n_p64(poly64x2_t a, poly64x2_t b) {
 
 // CHECK: attributes #0 ={{.*}}"min-legal-vector-width"="64"
 // CHECK: attributes #1 ={{.*}}"min-legal-vector-width"="128"
-// CHECK: attributes #2 ={{.*}}"min-legal-vector-width"="0"
+// CHECK-NOT: attributes #2 ={{.*}}"min-legal-vector-width"="0"
