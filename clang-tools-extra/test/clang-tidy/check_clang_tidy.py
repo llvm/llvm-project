@@ -119,9 +119,12 @@ def run_test_once(args, extra_args):
     has_check_messages = has_check_messages or has_check_message
     has_check_notes = has_check_notes or has_check_note
 
-    check_fixes_prefixes.append(check_fixes_prefix)
-    check_messages_prefixes.append(check_messages_prefix)
-    check_notes_prefixes.append(check_notes_prefix)
+    if has_check_fix:
+      check_fixes_prefixes.append(check_fixes_prefix)
+    if has_check_message:
+      check_messages_prefixes.append(check_messages_prefix)
+    if has_check_note:
+      check_notes_prefixes.append(check_notes_prefix)
 
   assert has_check_fixes or has_check_messages or has_check_notes
   # Remove the contents of the CHECK lines to avoid CHECKs matching on
