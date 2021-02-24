@@ -46,7 +46,7 @@ int main(int, char**)
         // is properly deleted
         using T = std::tuple<int, int>;
         using P = std::tuple<std::unique_ptr<int>, std::unique_ptr<int>>;
-        static_assert(!std::is_assignable<T, const P &>::value, "");
+        static_assert(!std::is_assignable<T&, const P &>::value, "");
     }
     {
         typedef std::tuple<NothrowCopyAssignable, long> Tuple;

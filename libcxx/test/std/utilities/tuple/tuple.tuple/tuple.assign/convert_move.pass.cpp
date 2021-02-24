@@ -124,10 +124,10 @@ int main(int, char**)
         assert(&std::get<0>(t) == &x);
     }
     {
-      using T = std::tuple<int, NonAssignable>;
-      using U = std::tuple<NonAssignable, int>;
-      static_assert(!std::is_assignable<T, U&&>::value, "");
-      static_assert(!std::is_assignable<U, T&&>::value, "");
+        using T = std::tuple<int, NonAssignable>;
+        using U = std::tuple<NonAssignable, int>;
+        static_assert(!std::is_assignable<T&, U&&>::value, "");
+        static_assert(!std::is_assignable<U&, T&&>::value, "");
     }
     {
         typedef std::tuple<NothrowMoveAssignable, long> T0;
