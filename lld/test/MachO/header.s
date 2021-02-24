@@ -1,4 +1,4 @@
-# REQUIRES: x86, arm
+# REQUIRES: x86, aarch64
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/x86_64-test.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t/arm64-test.o
