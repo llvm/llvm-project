@@ -199,23 +199,20 @@ void forEachVirtualFunction(Constant *C, function_ref<void(Function *)> Fn) {
 // values whose defs were cloned into that module.
 static void cloneUsedGlobalVariables(const Module &SrcM, Module &DestM,
                                      bool CompilerUsed) {
-  SmallPtrSet<GlobalValue *, 8> Used;
-  SmallPtrSet<GlobalValue *, 8> NewUsed;
+  SmallVector<GlobalValue *, 4> Used, NewUsed;
   // First collect those in the llvm[.compiler].used set.
   collectUsedGlobalVariables(SrcM, Used, CompilerUsed);
   // Next build a set of the equivalent values defined in DestM.
   for (auto *V : Used) {
     auto *GV = DestM.getNamedValue(V->getName());
     if (GV && !GV->isDeclaration())
-      NewUsed.insert(GV);
+      NewUsed.push_back(GV);
   }
   // Finally, add them to a llvm[.compiler].used variable in DestM.
   if (CompilerUsed)
-    appendToCompilerUsed(
-        DestM, std::vector<GlobalValue *>(NewUsed.begin(), NewUsed.end()));
+    appendToCompilerUsed(DestM, NewUsed);
   else
-    appendToUsed(DestM,
-                 std::vector<GlobalValue *>(NewUsed.begin(), NewUsed.end()));
+    appendToUsed(DestM, NewUsed);
 }
 
 // If it's possible to split M into regular and thin LTO parts, do so and write
