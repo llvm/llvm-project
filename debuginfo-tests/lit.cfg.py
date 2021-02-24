@@ -81,9 +81,41 @@ if config.llvm_use_sanitizer:
     # Propagate path to symbolizer for ASan/MSan.
     llvm_config.with_system_environment(
         ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH'])
-llvm_config.with_environment('PATHTOCLANG', llvm_config.config.clang)
-llvm_config.with_environment('PATHTOCLANGPP', llvm_config.use_llvm_tool('clang++'))
-llvm_config.with_environment('PATHTOCLANGCL', llvm_config.use_llvm_tool('clang-cl'))
+
+def add_host_triple(clang):
+  return '{} --target={}'.format(clang, config.host_triple)
+
+# The set of arches we can build.
+targets = set(config.targets_to_build)
+# Add aliases to the target set.
+if 'AArch64' in targets:
+  targets.add('arm64')
+if 'ARM' in config.targets_to_build:
+  targets.add('thumbv7')
+
+def can_target_host():
+  # Check if the targets set contains anything that looks like our host arch.
+  # The arch name in the triple and targets set may be spelled differently
+  # (e.g. x86 vs X86).
+  return any(config.host_triple.lower().startswith(x.lower())
+             for x in targets)
+
+# Dexter tests run on the host machine. If the host arch is supported add
+# 'dexter' as an available feature and force the dexter tests to use the host
+# triple.
+if can_target_host():
+  config.available_features.add('dexter')
+  if config.host_triple != config.target_triple:
+    print('Forcing dexter tests to use host triple {}.'.format(config.host_triple))
+  llvm_config.with_environment('PATHTOCLANG',
+                               add_host_triple(llvm_config.config.clang))
+  llvm_config.with_environment('PATHTOCLANGPP',
+                               add_host_triple(llvm_config.use_llvm_tool('clang++')))
+  llvm_config.with_environment('PATHTOCLANGCL',
+                               add_host_triple(llvm_config.use_llvm_tool('clang-cl')))
+else:
+  print('Host triple {} not supported. Skipping dexter tests in the '
+        'debuginfo-tests project.'.format(config.host_triple))
 
 # Check which debuggers are available:
 built_lldb = llvm_config.use_llvm_tool('lldb', search_env='CLANG')
