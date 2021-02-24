@@ -64,6 +64,7 @@ add_lldb_library(lldbCore
   ValueObjectMemory.cpp
   ValueObjectRegister.cpp
   ValueObjectSyntheticFilter.cpp
+  ValueObjectUpdater.cpp
   ValueObjectVariable.cpp
 
   DEPENDS
