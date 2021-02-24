@@ -434,7 +434,8 @@ public:
 
   virtual std::string
   getCompilerRTBasename(const llvm::opt::ArgList &Args, StringRef Component,
-                        FileType Type = ToolChain::FT_Static) const;
+                        FileType Type = ToolChain::FT_Static,
+                        bool AddArch = true) const;
 
   // Returns target specific runtime path if it exists.
   virtual Optional<std::string> getRuntimePath() const;
