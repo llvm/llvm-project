@@ -687,10 +687,10 @@ LogicalResult
 InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
                               MLIRContext *context) {
   // Ensure that there are enough pipeline maps for the optimizer to run in
-  // parallel.
-  size_t numThreads =
-      std::min((size_t)llvm::hardware_concurrency().compute_thread_count(),
-               nodesToVisit.size());
+  // parallel. Note: The number of pass managers here needs to remain constant
+  // to prevent issues with pass instrumentations that rely on having the same
+  // pass manager for the main thread.
+  size_t numThreads = llvm::hardware_concurrency().compute_thread_count();
   if (opPipelines.size() < numThreads) {
     // Reserve before resizing so that we can use a reference to the first
     // element.
