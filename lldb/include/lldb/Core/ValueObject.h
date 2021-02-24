@@ -349,10 +349,10 @@ public:
 
   void SetNeedsUpdate();
 
-  CompilerType GetCompilerType();
+  CompilerType GetCompilerType() { return MaybeCalculateCompleteType(); }
 
   // this vends a TypeImpl that is useful at the SB API layer
-  virtual TypeImpl GetTypeImpl();
+  virtual TypeImpl GetTypeImpl() { return TypeImpl(GetCompilerType()); }
 
   virtual bool CanProvideValue();
 
@@ -362,24 +362,32 @@ public:
   virtual lldb::ValueType GetValueType() const = 0;
 
   // Subclasses can implement the functions below.
-  virtual ConstString GetTypeName();
+  virtual ConstString GetTypeName() { return GetCompilerType().GetTypeName(); }
 
-  virtual ConstString GetDisplayTypeName();
+  virtual ConstString GetDisplayTypeName() { return GetTypeName(); }
 
-  virtual ConstString GetQualifiedTypeName();
+  virtual ConstString GetQualifiedTypeName() {
+    return GetCompilerType().GetTypeName();
+  }
 
-  virtual lldb::LanguageType GetObjectRuntimeLanguage();
+  virtual lldb::LanguageType GetObjectRuntimeLanguage() {
+    return GetCompilerType().GetMinimumLanguage();
+  }
 
   virtual uint32_t
-  GetTypeInfo(CompilerType *pointee_or_element_compiler_type = nullptr);
+  GetTypeInfo(CompilerType *pointee_or_element_compiler_type = nullptr) {
+    return GetCompilerType().GetTypeInfo(pointee_or_element_compiler_type);
+  }
 
-  virtual bool IsPointerType();
+  virtual bool IsPointerType() { return GetCompilerType().IsPointerType(); }
 
-  virtual bool IsArrayType();
+  virtual bool IsArrayType() { return GetCompilerType().IsArrayType(); }
 
-  virtual bool IsScalarType();
+  virtual bool IsScalarType() { return GetCompilerType().IsScalarType(); }
 
-  virtual bool IsPointerOrReferenceType();
+  virtual bool IsPointerOrReferenceType() {
+    return GetCompilerType().IsPointerOrReferenceType();
+  }
 
   virtual bool IsPossibleDynamicType();
 
@@ -393,7 +401,9 @@ public:
 
   virtual bool IsDereferenceOfParent() { return false; }
 
-  bool IsIntegerType(bool &is_signed);
+  bool IsIntegerType(bool &is_signed) {
+    return GetCompilerType().IsIntegerType(is_signed);
+  }
 
   virtual void GetExpressionPath(
       Stream &s,
@@ -454,7 +464,7 @@ public:
   // The functions below should NOT be modified by subclasses
   const Status &GetError();
 
-  ConstString GetName() const;
+  ConstString GetName() const { return m_name; }
 
   /// Returns a unique id for this ValueObject.
   lldb::user_id_t GetID() const { return m_id.GetID(); }
@@ -484,9 +494,9 @@ public:
 
   size_t GetNumChildren(uint32_t max = UINT32_MAX);
 
-  const Value &GetValue() const;
+  const Value &GetValue() const { return m_value; }
 
-  Value &GetValue();
+  Value &GetValue() { return m_value; }
 
   virtual bool ResolveValue(Scalar &scalar);
 
@@ -495,7 +505,9 @@ public:
   // potentially a few others
   virtual bool IsLogicalTrue(Status &error);
 
-  virtual const char *GetLocationAsCString();
+  virtual const char *GetLocationAsCString() {
+    return GetLocationAsCStringImpl(m_value, m_data);
+  }
 
   const char *
   GetSummaryAsCString(lldb::LanguageType lang = lldb::eLanguageTypeUnknown);
@@ -530,11 +542,11 @@ public:
                               PrintableRepresentationSpecialCases special =
                                   PrintableRepresentationSpecialCases::eAllow,
                               bool do_dump_error = true);
-  bool GetValueIsValid() const;
+  bool GetValueIsValid() const { return m_flags.m_value_is_valid; }
 
   // If you call this on a newly created ValueObject, it will always return
   // false.
-  bool GetValueDidChange();
+  bool GetValueDidChange() { return m_flags.m_value_did_change; }
 
   bool UpdateValueIfNeeded(bool update_format = true);
 
@@ -545,7 +557,7 @@ public:
   /// Change the name of the current ValueObject. Should *not* be used from a
   /// synthetic child provider as it would change the name of the non synthetic
   /// child as well.
-  void SetName(ConstString name);
+  void SetName(ConstString name) { m_name = name; }
 
   virtual lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
                                     AddressType *address_type = nullptr);
@@ -575,9 +587,9 @@ public:
 
   lldb::DynamicValueType GetDynamicValueType();
 
-  virtual lldb::ValueObjectSP GetStaticValue();
+  virtual lldb::ValueObjectSP GetStaticValue() { return GetSP(); }
 
-  virtual lldb::ValueObjectSP GetNonSyntheticValue();
+  virtual lldb::ValueObjectSP GetNonSyntheticValue() { return GetSP(); }
 
   lldb::ValueObjectSP GetSyntheticValue();
 
@@ -626,9 +638,13 @@ public:
 
   virtual bool DoesProvideSyntheticValue() { return false; }
 
-  virtual bool IsSyntheticChildrenGenerated();
+  virtual bool IsSyntheticChildrenGenerated() {
+    return m_flags.m_is_synthetic_children_generated;
+  }
 
-  virtual void SetSyntheticChildrenGenerated(bool b);
+  virtual void SetSyntheticChildrenGenerated(bool b) {
+    m_flags.m_is_synthetic_children_generated = b;
+  }
 
   virtual SymbolContextScope *GetSymbolContextScope();
 
@@ -694,7 +710,9 @@ public:
 
   virtual lldb::LanguageType GetPreferredDisplayLanguage();
 
-  void SetPreferredDisplayLanguage(lldb::LanguageType);
+  void SetPreferredDisplayLanguage(lldb::LanguageType lt) {
+    m_preferred_display_language = lt;
+  }
 
   lldb::TypeSummaryImplSP GetSummaryFormat() {
     UpdateFormatsIfNeeded();
@@ -768,9 +786,9 @@ public:
 
   virtual bool IsRuntimeSupportValue();
 
-  virtual uint64_t GetLanguageFlags();
+  virtual uint64_t GetLanguageFlags() { return m_language_flags; }
 
-  virtual void SetLanguageFlags(uint64_t flags);
+  virtual void SetLanguageFlags(uint64_t flags) { m_language_flags = flags; }
 
 protected:
   typedef ClusterManager<ValueObject> ValueObjectManager;
@@ -955,9 +973,11 @@ protected:
 
   void SetNumChildren(size_t num_children);
 
-  void SetValueDidChange(bool value_changed);
+  void SetValueDidChange(bool value_changed) {
+    m_flags.m_value_did_change = value_changed;
+  }
 
-  void SetValueIsValid(bool valid);
+  void SetValueIsValid(bool valid) { m_flags.m_value_is_valid = valid; }
 
   void ClearUserVisibleData(
       uint32_t items = ValueObject::eClearUserVisibleDataItemsAllStrings);
@@ -975,7 +995,7 @@ protected:
   const char *GetLocationAsCStringImpl(const Value &value,
                                        const DataExtractor &data);
 
-  bool IsChecksumEmpty();
+  bool IsChecksumEmpty() { return m_value_checksum.empty(); }
 
   void SetPreferredDisplayLanguageIfNeeded(lldb::LanguageType);
 

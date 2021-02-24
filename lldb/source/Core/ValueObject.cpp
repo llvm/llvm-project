@@ -62,6 +62,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <lldb/Core/ValueObject.h>
+
 namespace lldb_private {
 class ExecutionContextScope;
 }
@@ -271,11 +273,7 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
   return compiler_type;
 }
 
-CompilerType ValueObject::GetCompilerType() {
-  return MaybeCalculateCompleteType();
-}
 
-TypeImpl ValueObject::GetTypeImpl() { return TypeImpl(GetCompilerType()); }
 
 DataExtractor &ValueObject::GetDataExtractor() {
   UpdateValueIfNeeded(false);
@@ -285,12 +283,6 @@ DataExtractor &ValueObject::GetDataExtractor() {
 const Status &ValueObject::GetError() {
   UpdateValueIfNeeded(false);
   return m_error;
-}
-
-ConstString ValueObject::GetName() const { return m_name; }
-
-const char *ValueObject::GetLocationAsCString() {
-  return GetLocationAsCStringImpl(m_value, m_data);
 }
 
 const char *ValueObject::GetLocationAsCStringImpl(const Value &value,
@@ -337,10 +329,6 @@ const char *ValueObject::GetLocationAsCStringImpl(const Value &value,
   return m_location_str.c_str();
 }
 
-Value &ValueObject::GetValue() { return m_value; }
-
-const Value &ValueObject::GetValue() const { return m_value; }
-
 bool ValueObject::ResolveValue(Scalar &scalar) {
   if (UpdateValueIfNeeded(
           false)) // make sure that you are up to date before returning anything
@@ -382,16 +370,6 @@ bool ValueObject::IsLogicalTrue(Status &error) {
   ret = scalar_value.ULongLong(1) != 0;
   error.Clear();
   return ret;
-}
-
-bool ValueObject::GetValueIsValid() const { return m_flags.m_value_is_valid; }
-
-void ValueObject::SetValueIsValid(bool b) { m_flags.m_value_is_valid = b; }
-
-bool ValueObject::GetValueDidChange() { return m_flags.m_value_did_change; }
-
-void ValueObject::SetValueDidChange(bool value_changed) {
-  m_flags.m_value_did_change = value_changed;
 }
 
 ValueObjectSP ValueObject::GetChildAtIndex(size_t idx, bool can_create) {
@@ -549,8 +527,6 @@ void ValueObject::SetNumChildren(size_t num_children) {
   m_flags.m_children_count_valid = true;
   m_children.SetChildrenCount(num_children);
 }
-
-void ValueObject::SetName(ConstString name) { m_name = name; }
 
 ValueObject *ValueObject::CreateChildAtIndex(size_t idx,
                                              bool synthetic_array_member,
@@ -1573,20 +1549,6 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
   return false;
 }
 
-ConstString ValueObject::GetTypeName() {
-  return GetCompilerType().GetTypeName();
-}
-
-ConstString ValueObject::GetDisplayTypeName() { return GetTypeName(); }
-
-ConstString ValueObject::GetQualifiedTypeName() {
-  return GetCompilerType().GetTypeName();
-}
-
-LanguageType ValueObject::GetObjectRuntimeLanguage() {
-  return GetCompilerType().GetMinimumLanguage();
-}
-
 void ValueObject::AddSyntheticChild(ConstString key,
                                     ValueObject *valobj) {
   m_synthetic_children[key] = valobj;
@@ -1599,25 +1561,6 @@ ValueObjectSP ValueObject::GetSyntheticChild(ConstString key) const {
   if (pos != m_synthetic_children.end())
     synthetic_child_sp = pos->second->GetSP();
   return synthetic_child_sp;
-}
-
-uint32_t
-ValueObject::GetTypeInfo(CompilerType *pointee_or_element_compiler_type) {
-  return GetCompilerType().GetTypeInfo(pointee_or_element_compiler_type);
-}
-
-bool ValueObject::IsPointerType() { return GetCompilerType().IsPointerType(); }
-
-bool ValueObject::IsArrayType() { return GetCompilerType().IsArrayType(); }
-
-bool ValueObject::IsScalarType() { return GetCompilerType().IsScalarType(); }
-
-bool ValueObject::IsIntegerType(bool &is_signed) {
-  return GetCompilerType().IsIntegerType(is_signed);
-}
-
-bool ValueObject::IsPointerOrReferenceType() {
-  return GetCompilerType().IsPointerOrReferenceType();
 }
 
 bool ValueObject::IsPossibleDynamicType() {
@@ -1898,10 +1841,6 @@ ValueObjectSP ValueObject::GetDynamicValue(DynamicValueType use_dynamic) {
   else
     return ValueObjectSP();
 }
-
-ValueObjectSP ValueObject::GetStaticValue() { return GetSP(); }
-
-lldb::ValueObjectSP ValueObject::GetNonSyntheticValue() { return GetSP(); }
 
 ValueObjectSP ValueObject::GetSyntheticValue() {
   CalculateSyntheticValue();
@@ -3154,10 +3093,6 @@ lldb::LanguageType ValueObject::GetPreferredDisplayLanguage() {
   return (m_preferred_display_language = type); // only compute it once
 }
 
-void ValueObject::SetPreferredDisplayLanguage(lldb::LanguageType lt) {
-  m_preferred_display_language = lt;
-}
-
 void ValueObject::SetPreferredDisplayLanguageIfNeeded(lldb::LanguageType lt) {
   if (m_preferred_display_language == lldb::eLanguageTypeUnknown)
     SetPreferredDisplayLanguage(lt);
@@ -3171,7 +3106,7 @@ bool ValueObject::CanProvideValue() {
   return (!type.IsValid()) || (0 != (type.GetTypeInfo() & eTypeHasValue));
 }
 
-bool ValueObject::IsChecksumEmpty() { return m_value_checksum.empty(); }
+
 
 ValueObjectSP ValueObject::Persist() {
   if (!UpdateValueIfNeeded())
@@ -3200,15 +3135,3 @@ ValueObjectSP ValueObject::Persist() {
 
   return persistent_var_sp->GetValueObject();
 }
-
-bool ValueObject::IsSyntheticChildrenGenerated() {
-  return m_flags.m_is_synthetic_children_generated;
-}
-
-void ValueObject::SetSyntheticChildrenGenerated(bool b) {
-  m_flags.m_is_synthetic_children_generated = b;
-}
-
-uint64_t ValueObject::GetLanguageFlags() { return m_language_flags; }
-
-void ValueObject::SetLanguageFlags(uint64_t flags) { m_language_flags = flags; }
