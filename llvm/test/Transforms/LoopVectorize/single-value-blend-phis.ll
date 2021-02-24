@@ -382,3 +382,65 @@ loop.latch:
 exit:
   ret void
 }
+
+; Test case for PR44800.
+define void @duplicated_incoming_blocks_blend(i32 %x, i32* %ptr) {
+; CHECK-LABEL: @duplicated_incoming_blocks_blend(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[VEC_IND]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, i32* [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP3]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[VEC_IND]], <2 x i32>* [[TMP4]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP10:!llvm.loop !.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 1000, 1000
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD_I:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ugt i32 [[IV]], [[X]]
+; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_LATCH]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[IV]], [[LOOP_HEADER]] ], [ [[IV]], [[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[GEP_PTR:%.*]] = getelementptr i32, i32* [[PTR]], i32 [[P]]
+; CHECK-NEXT:    store i32 [[P]], i32* [[GEP_PTR]], align 4
+; CHECK-NEXT:    [[ADD_I]] = add nsw i32 [[P]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD_I]], 1000
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_HEADER]], label [[EXIT]], [[LOOP11:!llvm.loop !.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0 , %entry ], [ %add.i, %loop.latch ]
+  %c.0 = icmp ugt i32 %iv, %x
+  br i1 %c.0, label %loop.latch, label %loop.latch
+
+loop.latch:
+  %p = phi i32 [ %iv, %loop.header ], [ %iv, %loop.header ]
+  %gep.ptr = getelementptr i32, i32* %ptr, i32 %p
+  store i32 %p, i32* %gep.ptr
+  %add.i = add nsw i32 %p, 1
+  %cmp = icmp slt i32 %add.i, 1000
+  br i1 %cmp, label %loop.header, label %exit
+
+exit:
+  ret void
+}
