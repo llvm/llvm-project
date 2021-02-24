@@ -18,6 +18,7 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
+#include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
@@ -51,8 +52,7 @@ public:
   void runOnOperation() override;
 };
 
-class FunctionCallBuilder {
-public:
+struct FunctionCallBuilder {
   FunctionCallBuilder(StringRef functionName, Type returnType,
                       ArrayRef<Type> argumentTypes)
       : functionName(functionName),
@@ -60,7 +60,6 @@ public:
   LLVM::CallOp create(Location loc, OpBuilder &builder,
                       ArrayRef<Value> arguments) const;
 
-private:
   StringRef functionName;
   LLVM::LLVMFunctionType functionType;
 };
@@ -199,6 +198,18 @@ public:
 private:
   LogicalResult
   matchAndRewrite(gpu::DeallocOp deallocOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+class ConvertAsyncYieldToGpuRuntimeCallPattern
+    : public ConvertOpToGpuRuntimeCallPattern<async::YieldOp> {
+public:
+  ConvertAsyncYieldToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
+      : ConvertOpToGpuRuntimeCallPattern<async::YieldOp>(typeConverter) {}
+
+private:
+  LogicalResult
+  matchAndRewrite(async::YieldOp yieldOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -429,11 +440,53 @@ LogicalResult ConvertDeallocOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
-// Converts `gpu.wait` to runtime calls. The operands are all CUDA or ROCm
-// streams (i.e. void*). The converted op synchronizes the host with every
-// stream and then destroys it. That is, it assumes that the stream is not used
-// afterwards. In case this isn't correct, we will get a runtime error.
-// Eventually, we will have a pass that guarantees this property.
+static bool isGpuAsyncTokenType(Value value) {
+  return value.getType().isa<gpu::AsyncTokenType>();
+}
+
+// Converts !gpu.async.token operands of `async.yield` to runtime calls. The
+// !gpu.async.token are lowered to stream within the async.execute region, but
+// are passed as events between them. For each !gpu.async.token operand, we
+// create an event and record it on the stream.
+LogicalResult ConvertAsyncYieldToGpuRuntimeCallPattern::matchAndRewrite(
+    async::YieldOp yieldOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  if (llvm::none_of(yieldOp.operands(), isGpuAsyncTokenType))
+    return rewriter.notifyMatchFailure(yieldOp, "no gpu async token operand");
+
+  Location loc = yieldOp.getLoc();
+  SmallVector<Value, 4> newOperands(operands.begin(), operands.end());
+  llvm::SmallDenseSet<Value> streams;
+  for (auto &operand : yieldOp->getOpOperands()) {
+    if (!isGpuAsyncTokenType(operand.get()))
+      continue;
+    auto idx = operand.getOperandNumber();
+    auto stream = operands[idx];
+    auto event = eventCreateCallBuilder.create(loc, rewriter, {}).getResult(0);
+    eventRecordCallBuilder.create(loc, rewriter, {event, stream});
+    newOperands[idx] = event;
+    streams.insert(stream);
+  }
+  for (auto stream : streams)
+    streamDestroyCallBuilder.create(loc, rewriter, {stream});
+
+  rewriter.updateRootInPlace(yieldOp,
+                             [&] { yieldOp->setOperands(newOperands); });
+  return success();
+}
+
+// Returns whether `value` is the result of an LLVM::CallOp to `functionName`.
+static bool isDefinedByCallTo(Value value, StringRef functionName) {
+  assert(value.getType().isa<LLVM::LLVMPointerType>());
+  if (auto defOp = value.getDefiningOp<LLVM::CallOp>())
+    return defOp.callee()->equals(functionName);
+  return false;
+}
+
+// Converts `gpu.wait` to runtime calls. The converted op synchronizes the host
+// with the stream/event operands. The operands are destroyed. That is, it
+// assumes that it is not used afterwards or elsewhere. Otherwise we will get a
+// runtime error. Eventually, we should guarantee this property.
 LogicalResult ConvertWaitOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::WaitOp waitOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
@@ -442,21 +495,28 @@ LogicalResult ConvertWaitOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   Location loc = waitOp.getLoc();
 
-  for (auto asyncDependency : operands)
-    streamSynchronizeCallBuilder.create(loc, rewriter, {asyncDependency});
-  for (auto asyncDependency : operands)
-    streamDestroyCallBuilder.create(loc, rewriter, {asyncDependency});
+  for (auto operand : operands) {
+    if (isDefinedByCallTo(operand, streamCreateCallBuilder.functionName)) {
+      // The converted operand's definition created a stream.
+      streamSynchronizeCallBuilder.create(loc, rewriter, {operand});
+      streamDestroyCallBuilder.create(loc, rewriter, {operand});
+    } else {
+      // Otherwise the converted operand is an event. This assumes that we use
+      // events in control flow code as well.
+      eventSynchronizeCallBuilder.create(loc, rewriter, {operand});
+      eventDestroyCallBuilder.create(loc, rewriter, {operand});
+    }
+  }
 
   rewriter.eraseOp(waitOp);
   return success();
 }
 
-// Converts `gpu.wait async` to runtime calls. The result is a new stream that
-// is synchronized with all operands, which are CUDA or ROCm streams (i.e.
-// void*). We create and record an event after the definition of the stream
-// and make the new stream wait on that event before destroying it again. This
-// assumes that there is no other use between the definition and this op, and
-// the plan is to have a pass that guarantees this property.
+// Converts `gpu.wait async` to runtime calls. The converted op creates a new
+// stream that is synchronized with stream/event operands. The operands are
+// destroyed. That is, it assumes that it is not used afterwards or elsewhere.
+// Otherwise we will get a runtime error. Eventually, we should guarantee this
+// property.
 LogicalResult ConvertWaitAsyncOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::WaitOp waitOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
@@ -468,18 +528,21 @@ LogicalResult ConvertWaitAsyncOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto insertionPoint = rewriter.saveInsertionPoint();
   SmallVector<Value, 1> events;
   for (auto pair : llvm::zip(waitOp.asyncDependencies(), operands)) {
-    auto token = std::get<0>(pair);
-    if (auto *defOp = token.getDefiningOp()) {
+    auto operand = std::get<1>(pair);
+    if (isDefinedByCallTo(operand, streamCreateCallBuilder.functionName)) {
+      // The converted operand's definition created a stream. Insert an event
+      // into the stream just after the last use of the original token operand.
+      auto *defOp = std::get<0>(pair).getDefiningOp();
       rewriter.setInsertionPointAfter(defOp);
+      auto event =
+          eventCreateCallBuilder.create(loc, rewriter, {}).getResult(0);
+      eventRecordCallBuilder.create(loc, rewriter, {event, operand});
+      events.push_back(event);
     } else {
-      // If we can't find the defining op, we record the event at block start,
-      // which is late and therefore misses parallelism, but still valid.
-      rewriter.setInsertionPointToStart(waitOp->getBlock());
+      // Otherwise the converted operand is an event. This assumes that we use
+      // events in control flow code as well.
+      events.push_back(operand);
     }
-    auto event = eventCreateCallBuilder.create(loc, rewriter, {}).getResult(0);
-    auto stream = std::get<1>(pair);
-    eventRecordCallBuilder.create(loc, rewriter, {event, stream});
-    events.push_back(event);
   }
   rewriter.restoreInsertionPoint(insertionPoint);
   auto stream = streamCreateCallBuilder.create(loc, rewriter, {}).getResult(0);
@@ -729,7 +792,8 @@ void mlir::populateGpuToLLVMConversionPatterns(
                   ConvertHostRegisterOpToGpuRuntimeCallPattern,
                   ConvertMemcpyOpToGpuRuntimeCallPattern,
                   ConvertWaitAsyncOpToGpuRuntimeCallPattern,
-                  ConvertWaitOpToGpuRuntimeCallPattern>(converter);
+                  ConvertWaitOpToGpuRuntimeCallPattern,
+                  ConvertAsyncYieldToGpuRuntimeCallPattern>(converter);
   patterns.insert<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(
       converter, gpuBinaryAnnotation);
   patterns.insert<EraseGpuModuleOpPattern>(&converter.getContext());
