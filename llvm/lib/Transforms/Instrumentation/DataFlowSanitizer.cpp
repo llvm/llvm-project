@@ -926,8 +926,8 @@ bool DataFlowSanitizer::init(Module &M) {
                         /*isVarArg=*/false);
   DFSanUnimplementedFnTy = FunctionType::get(
       Type::getVoidTy(*Ctx), Type::getInt8PtrTy(*Ctx), /*isVarArg=*/false);
-  Type *DFSanSetLabelArgs[3] = {PrimitiveShadowTy, Type::getInt8PtrTy(*Ctx),
-                                IntptrTy};
+  Type *DFSanSetLabelArgs[4] = {PrimitiveShadowTy, OriginTy,
+                                Type::getInt8PtrTy(*Ctx), IntptrTy};
   DFSanSetLabelFnTy = FunctionType::get(Type::getVoidTy(*Ctx),
                                         DFSanSetLabelArgs, /*isVarArg=*/false);
   DFSanNonzeroLabelFnTy =
@@ -1141,6 +1141,7 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
   {
     AttributeList AL;
     AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    AL = AL.addParamAttribute(M.getContext(), 1, Attribute::ZExt);
     DFSanSetLabelFn =
         Mod->getOrInsertFunction("__dfsan_set_label", DFSanSetLabelFnTy, AL);
   }
@@ -2207,10 +2208,14 @@ void DFSanVisitor::visitSelectInst(SelectInst &I) {
 void DFSanVisitor::visitMemSetInst(MemSetInst &I) {
   IRBuilder<> IRB(&I);
   Value *ValShadow = DFSF.getShadow(I.getValue());
-  IRB.CreateCall(DFSF.DFS.DFSanSetLabelFn,
-                 {ValShadow, IRB.CreateBitCast(I.getDest(), Type::getInt8PtrTy(
-                                                                *DFSF.DFS.Ctx)),
-                  IRB.CreateZExtOrTrunc(I.getLength(), DFSF.DFS.IntptrTy)});
+  Value *ValOrigin = DFSF.DFS.shouldTrackOrigins()
+                         ? DFSF.getOrigin(I.getValue())
+                         : DFSF.DFS.ZeroOrigin;
+  IRB.CreateCall(
+      DFSF.DFS.DFSanSetLabelFn,
+      {ValShadow, ValOrigin,
+       IRB.CreateBitCast(I.getDest(), Type::getInt8PtrTy(*DFSF.DFS.Ctx)),
+       IRB.CreateZExtOrTrunc(I.getLength(), DFSF.DFS.IntptrTy)});
 }
 
 void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
