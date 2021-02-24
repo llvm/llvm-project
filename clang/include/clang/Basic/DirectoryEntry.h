@@ -197,8 +197,8 @@ template <> struct DenseMapInfo<clang::DirectoryEntryRef> {
     if (LHS.isSpecialDenseMapKey() || RHS.isSpecialDenseMapKey())
       return false;
 
-    // It's safe to use operator==.
-    return LHS == RHS;
+    // Compare the two dir entries.
+    return &LHS.getDirEntry() == &RHS.getDirEntry();
   }
 };
 
