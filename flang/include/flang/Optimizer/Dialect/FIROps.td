@@ -138,23 +138,24 @@ def fir_AllocateOpBuilder : OpBuilderDAG<(ins
   }]>;
 
 def fir_NamedAllocateOpBuilder : OpBuilderDAG<(ins
-    "Type":$inType,
-    "StringRef":$name,
-    CArg<"ValueRange", "{}">:$lenParams,
-    CArg<"ValueRange", "{}">:$sizes,
-    CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+    "mlir::Type":$inType,
+    "llvm::StringRef":$name,
+    CArg<"mlir::ValueRange", "{}">:$lenParams,
+    CArg<"mlir::ValueRange","{}">:$sizes,
+    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
   [{
     $_state.addTypes(getRefTy(inType));
     $_state.addAttribute("in_type", TypeAttr::get(inType));
-    $_state.addAttribute("name", $_builder.getStringAttr(name));
+    if (!name.empty())
+      $_state.addAttribute("name", $_builder.getStringAttr(name));
     $_state.addOperands(sizes);
     $_state.addAttributes(attributes);
   }]>;
 
 def fir_OneResultOpBuilder : OpBuilderDAG<(ins
-    "Type":$resultType,
-    "ValueRange":$operands,
-    CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+    "mlir::Type":$resultType,
+    "mlir::ValueRange":$operands,
+    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
   [{
     if (resultType)
       $_state.addTypes(resultType);
@@ -186,9 +187,10 @@ class fir_AllocatableBaseOp<string mnemonic, list<OpTrait> traits = []> :
   );
 }
 
-class fir_AllocatableOp<string mnemonic, list<OpTrait> traits = []> :
+class fir_AllocatableOp<string mnemonic, Resource resource,
+      list<OpTrait> traits = []> :
     fir_AllocatableBaseOp<mnemonic,
-	!listconcat(traits, [MemoryEffects<[MemAlloc]>])>,
+	!listconcat(traits, [MemoryEffects<[MemAlloc<resource>]>])>,
     fir_TwoBuilders<fir_AllocateOpBuilder, fir_NamedAllocateOpBuilder>,
     Arguments<(ins TypeAttr:$in_type, Variadic<AnyIntegerType>:$args)> {
 
@@ -298,7 +300,8 @@ class fir_AllocatableOp<string mnemonic, list<OpTrait> traits = []> :
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
 
-def fir_AllocaOp : fir_AllocatableOp<"alloca"> {
+def fir_AllocaOp :
+      fir_AllocatableOp<"alloca", AutomaticAllocationScopeResource> {
   let summary = "allocate storage for a temporary on the stack given a type";
   let description = [{
     This primitive operation is used to allocate an object on the stack.  A
@@ -366,6 +369,8 @@ def fir_AllocaOp : fir_AllocatableOp<"alloca"> {
     mlir::Type outType = getType();
     if (!outType.isa<fir::ReferenceType>())
       return emitOpError("must be a !fir.ref type");
+    if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
+      return emitOpError("cannot allocate !fir.box of unknown rank or type");
     return mlir::success();
   }];
 
@@ -374,7 +379,7 @@ def fir_AllocaOp : fir_AllocatableOp<"alloca"> {
   }];
 }
 
-def fir_LoadOp : fir_OneResultOp<"load", [MemoryEffects<[MemRead]>]> {
+def fir_LoadOp : fir_OneResultOp<"load"> {
   let summary = "load a value from a memory reference";
   let description = [{
     Load a value from a memory reference into an ssa-value (virtual register).
@@ -390,19 +395,23 @@ def fir_LoadOp : fir_OneResultOp<"load", [MemoryEffects<[MemRead]>]> {
     or null.
   }];
 
-  let arguments = (ins AnyReferenceLike:$memref);
+  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$memref);
 
-  let builders = [
-    OpBuilderDAG<(ins "Value":$refVal),
+  let builders = [OpBuilderDAG<(ins "mlir::Value":$refVal),
     [{
       if (!refVal) {
         mlir::emitError($_state.location, "LoadOp has null argument");
         return;
       }
-      auto refTy = refVal.getType().cast<fir::ReferenceType>();
+      auto eleTy = fir::dyn_cast_ptrEleTy(refVal.getType());
+      if (!eleTy) {
+        mlir::emitError($_state.location, "not a memory reference type");
+        return;
+      }
       $_state.addOperands(refVal);
-      $_state.addTypes(refTy.getEleTy());
-    }]>];
+      $_state.addTypes(eleTy);
+    }]
+  >];
 
   let parser = [{
     mlir::Type type;
@@ -431,7 +440,7 @@ def fir_LoadOp : fir_OneResultOp<"load", [MemoryEffects<[MemRead]>]> {
   }];
 }
 
-def fir_StoreOp : fir_Op<"store", [MemoryEffects<[MemWrite]>]> {
+def fir_StoreOp : fir_Op<"store", []> {
   let summary = "store an SSA-value to a memory location";
 
   let description = [{
@@ -450,7 +459,8 @@ def fir_StoreOp : fir_Op<"store", [MemoryEffects<[MemWrite]>]> {
     `%p`, is undefined or null.
   }];
 
-  let arguments = (ins AnyType:$value, AnyReferenceLike:$memref);
+  let arguments = (ins AnyType:$value,
+                   Arg<AnyReferenceLike, "", [MemWrite]>:$memref);
 
   let parser = [{
     mlir::Type type;
@@ -480,6 +490,8 @@ def fir_StoreOp : fir_Op<"store", [MemoryEffects<[MemWrite]>]> {
   let verifier = [{
     if (value().getType() != fir::dyn_cast_ptrEleTy(memref().getType()))
       return emitOpError("store value type must match memory reference type");
+    if (fir::isa_unknown_size_box(value().getType()))
+      return emitOpError("cannot store !fir.box of unknown rank or type");
     return mlir::success();
   }];
 
@@ -513,7 +525,25 @@ def fir_UndefOp : fir_OneResultOp<"undefined", [NoSideEffect]> {
   }];
 }
 
-def fir_AllocMemOp : fir_AllocatableOp<"allocmem"> {
+def fir_ZeroOp : fir_OneResultOp<"zero_bits", [NoSideEffect]> {
+  let summary = "explicit polymorphic zero value of some type";
+  let description = [{
+    Constructs an ssa-value of the specified type with a value of zero for all
+    bits.
+
+    ```mlir
+      %a = fir.zero_bits !fir.box<!fir.array<10 x !fir.type<T>>>
+    ```
+
+    The example creates a value of type box where all bits are zero.
+  }];
+
+  let results = (outs AnyType:$intype);
+
+  let assemblyFormat = "type($intype) attr-dict";
+}
+
+def fir_AllocMemOp : fir_AllocatableOp<"allocmem", DefaultResource> {
   let summary = "allocate storage on the heap for an object of a given type";
 
   let description = [{
@@ -534,6 +564,8 @@ def fir_AllocMemOp : fir_AllocatableOp<"allocmem"> {
     mlir::Type outType = getType();
     if (!outType.dyn_cast<fir::HeapType>())
       return emitOpError("must be a !fir.heap type");
+    if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
+      return emitOpError("cannot allocate !fir.box of unknown rank or type");
     return mlir::success();
   }];
 
@@ -559,7 +591,7 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
     ```
   }];
 
-  let arguments = (ins fir_HeapType:$heapref);
+  let arguments = (ins Arg<fir_HeapType, "", [MemFree]>:$heapref);
 
   let assemblyFormat = "$heapref attr-dict `:` type($heapref)";
 }
@@ -627,11 +659,11 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     list<OpTrait> traits = []> : fir_SwitchTerminatorOp<mnemonic, traits> {
 
   let skipDefaultBuilders = 1;
-  let builders = [
-    OpBuilderDAG<(ins "Value":$selector, "ArrayRef<int64_t>":$compareOperands,
-      "ArrayRef<Block *>":$destinations,
-      CArg<"ArrayRef<ValueRange>", "{}">:$destOperands,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+  let builders = [OpBuilderDAG<(ins "mlir::Value":$selector,
+    "llvm::ArrayRef<int64_t>":$compareOperands,
+    "llvm::ArrayRef<mlir::Block *>":$destinations,
+    CArg<"llvm::ArrayRef<mlir::ValueRange>", "{}">:$destOperands,
+    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
     [{
       $_state.addOperands(selector);
       llvm::SmallVector<mlir::Attribute, 8> ivalues;
@@ -656,11 +688,12 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
         }
       }
       $_state.addAttribute(getOperandSegmentSizeAttr(),
-                          $_builder.getI32VectorAttr({1, 0, sumArgs}));
+        $_builder.getI32VectorAttr({1, 0, sumArgs}));
       $_state.addAttribute(getTargetOffsetAttr(),
-                          $_builder.getI32VectorAttr(argOffs));
+        $_builder.getI32VectorAttr(argOffs));
       $_state.addAttributes(attributes);
-    }]>];
+    }]
+  >];
 
   let parser = [{
     mlir::OpAsmParser::OperandType selector;
@@ -815,16 +848,18 @@ def fir_SelectCaseOp : fir_SwitchTerminatorOp<"select_case"> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "Value":$selector,
-      "ArrayRef<mlir::Attribute>":$compareAttrs,
-      "ArrayRef<ValueRange>":$cmpOperands, "ArrayRef<Block *>":$destinations,
-      CArg<"ArrayRef<ValueRange>", "{}">:$destOperands,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    OpBuilderDAG<(ins "Value":$selector,
-      "ArrayRef<mlir::Attribute>":$compareAttrs, "ArrayRef<Value>":$cmpOpList,
-      "ArrayRef<Block *>":$destinations,
-      CArg<"ArrayRef<ValueRange>", "{}">:$destOperands,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>];
+    OpBuilderDAG<(ins "mlir::Value":$selector,
+      "llvm::ArrayRef<mlir::Attribute>":$compareAttrs,
+      "llvm::ArrayRef<mlir::ValueRange>":$cmpOperands,
+      "llvm::ArrayRef<mlir::Block *>":$destinations,
+      CArg<"llvm::ArrayRef<mlir::ValueRange>", "{}">:$destOperands,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilderDAG<(ins "mlir::Value":$selector,
+      "llvm::ArrayRef<mlir::Attribute>":$compareAttrs,
+      "llvm::ArrayRef<mlir::Value>":$cmpOpList,
+      "llvm::ArrayRef<mlir::Block *>":$destinations,
+      CArg<"llvm::ArrayRef<mlir::ValueRange>", "{}">:$destOperands,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
 
   let parser = "return parseSelectCase(parser, result);";
 
@@ -909,15 +944,15 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
   }];
 
   let skipDefaultBuilders = 1;
-  let builders = [
-    OpBuilderDAG<(ins "Value":$selector,
-      "ArrayRef<mlir::Attribute>":$typeOperands,
-      "ArrayRef<Block *>":$destinations,
-      CArg<"ArrayRef<ValueRange>", "{}">:$destOperands,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+  let builders = [OpBuilderDAG<(ins "mlir::Value":$selector,
+    "llvm::ArrayRef<mlir::Attribute>":$typeOperands,
+    "llvm::ArrayRef<mlir::Block *>":$destinations,
+    CArg<"llvm::ArrayRef<mlir::ValueRange>", "{}">:$destOperands,
+    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
     [{
       $_state.addOperands(selector);
-      $_state.addAttribute(getCasesAttr(), $_builder.getArrayAttr(typeOperands));
+      $_state.addAttribute(getCasesAttr(),
+        $_builder.getArrayAttr(typeOperands));
       const auto count = destinations.size();
       for (auto d : destinations)
         $_state.addSuccessors(d);
@@ -935,11 +970,12 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
         }
       }
       $_state.addAttribute(getOperandSegmentSizeAttr(),
-                          $_builder.getI32VectorAttr({1, 0, sumArgs}));
+        $_builder.getI32VectorAttr({1, 0, sumArgs}));
       $_state.addAttribute(getTargetOffsetAttr(),
-                          $_builder.getI32VectorAttr(argOffs));
+        $_builder.getI32VectorAttr(argOffs));
       $_state.addAttributes(attributes);
-    }]>];
+    }]
+  >];
 
   let parser = "return parseSelectType(parser, result);";
 
@@ -1268,7 +1304,7 @@ def fir_UnboxOp : fir_SimpleOp<"unbox", [NoSideEffect]> {
 
     ```mlir
       %40   = ... : !fir.box<!fir.type<T>>
-      %41:6 = fir.unbox %40 : (!fir.box<!fir.type<T>>) -> (!fir.ref<!fir.type<T>>, i32, i32, !fir.tdesc<!fir.type<T>>, i32, !fir.dims<4>)
+      %41:6 = fir.unbox %40 : (!fir.box<!fir.type<T>>) -> (!fir.ref<!fir.type<T>>, i32, i32, !fir.tdesc<!fir.type<T>>, i32, !fir.array<? x index>)
     ```
   }];
 
@@ -1380,16 +1416,17 @@ def fir_BoxDimsOp : fir_Op<"box_dims", [NoSideEffect]> {
 
     ```mlir
       %c1   = constant 0 : i32
-      %52:3 = fir.box_dims %40, %c1 : (!fir.box<!fir.array<*:f64>>, i32) -> (i32, i32, i32)
+      %52:3 = fir.box_dims %40, %c1 : (!fir.box<!fir.array<*:f64>>, i32) -> (index, index, index)
     ```
 
     The above is a request to return the left most row (at index 0) triple from
-    the box. The triple will be the lower bound, upper bound, and stride.
+    the box. The triple will be the lower bound, extent, and byte-stride, which
+    are the values encoded in a standard descriptor.
   }];
 
   let arguments = (ins fir_BoxType:$val, AnyIntegerLike:$dim);
 
-  let results = (outs AnyIntegerLike, AnyIntegerLike, AnyIntegerLike);
+  let results = (outs Index, Index, Index);
 
   let assemblyFormat = [{
     $val `,` $dim attr-dict `:` functional-type(operands, results)
@@ -1450,12 +1487,13 @@ def fir_BoxIsArrayOp : fir_SimpleOp<"box_isarray", [NoSideEffect]> {
   let description = [{
     Determine if the boxed value has a positive (> 0) rank. This will return
     true if the originating box value was from a fir.embox with a memory
-    reference value that had the type !fir.array<T> and/or a dims argument.
+    reference value that had the type !fir.array<T> and/or a shape argument.
 
     ```mlir
       %r = ... : !fir.ref<i64>
-      %d = fir.gendims(1, 100, 1) : (i32, i32, i32) -> !fir.dims<1>
-      %b = fir.embox %r, %d : (!fir.ref<i64>, !fir.dims<1>) -> !fir.box<i64>
+      %c_100 = constant 100 : index
+      %d = fir.shape %c_100 : (index) -> !fir.shape<1>
+      %b = fir.embox %r(%d) : (!fir.ref<i64>, !fir.shape<1>) -> !fir.box<i64>
       %a = fir.box_isarray %b : (!fir.box<i64>) -> i1  // true
     ```
   }];
