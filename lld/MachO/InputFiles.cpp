@@ -221,7 +221,7 @@ static bool validateRelocationInfo(InputFile *file, const section_64 &sec,
     error(message(Twine("must ") + (rel.r_pcrel ? "not " : "") +
                   "be PC-relative"));
   if (isThreadLocalVariables(sec.flags) &&
-      !relocAttrs.hasAttr(RelocAttrBits::TLV | RelocAttrBits::BYTE8))
+      !relocAttrs.hasAttr(RelocAttrBits::UNSIGNED))
     error(message("not allowed in thread-local section, must be UNSIGNED"));
   if (rel.r_length < 2 || rel.r_length > 3 ||
       !relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {

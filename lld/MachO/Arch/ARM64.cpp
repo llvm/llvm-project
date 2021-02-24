@@ -48,13 +48,16 @@ struct ARM64 : TargetInfo {
 // Random notes on reloc types:
 // ADDEND always pairs with BRANCH26, PAGE21, or PAGEOFF12
 // SUBTRACTOR always pairs with UNSIGNED (a delta between two sections)
-// POINTER_TO_GOT: 4-byte is pc-relative, 8-byte is absolute
+// POINTER_TO_GOT: ld64 supports a 4-byte pc-relative form as well as an 8-byte
+// absolute version of this relocation. The semantics of the absolute relocation
+// are weird -- it results in the value of the GOT slot being written, instead
+// of the address. Let's not support it unless we find a real-world use case.
 
 const TargetInfo::RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
   static const std::array<TargetInfo::RelocAttrs, 11> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
-      {"UNSIGNED", B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(TLV) | B(DYSYM8) |
-                       B(BYTE4) | B(BYTE8)},
+      {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) |
+                       B(DYSYM8) | B(BYTE4) | B(BYTE8)},
       {"SUBTRACTOR", B(SUBTRAHEND) | B(BYTE8)},
       {"BRANCH26", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
       {"PAGE21", B(PCREL) | B(EXTERN) | B(BYTE4)},
@@ -62,7 +65,7 @@ const TargetInfo::RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
       {"GOT_LOAD_PAGE21", B(PCREL) | B(EXTERN) | B(GOT) | B(BYTE4)},
       {"GOT_LOAD_PAGEOFF12",
        B(ABSOLUTE) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
-      {"POINTER_TO_GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(BYTE4) | B(BYTE8)},
+      {"POINTER_TO_GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
       {"TLVP_LOAD_PAGE21", B(PCREL) | B(EXTERN) | B(TLV) | B(BYTE4)},
       {"TLVP_LOAD_PAGEOFF12",
        B(ABSOLUTE) | B(EXTERN) | B(TLV) | B(LOAD) | B(BYTE4)},
