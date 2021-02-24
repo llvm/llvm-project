@@ -247,7 +247,7 @@ ompt_data_t *ompt_get_own_thread_data() {
       printf("0: Could not register callback '" #name "'\n");                  \
   } while (0)
 
-#define register_ompt_callback2(name) register_callback2_t(name, name##_t)
+#define register_ompt_callback2(name) register_ompt_callback2_t(name, name##_t)
 
 int ompt_cds_initialize(ompt_function_lookup_t lookup, int initial_device_num,
                         ompt_data_t *tool_data) {
