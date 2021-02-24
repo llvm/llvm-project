@@ -111,19 +111,20 @@ int main(int, char**)
         static_assert(!std::is_copy_assignable<T>::value, "");
     }
     {
-      using T = std::tuple<int, int, int>;
-      using P = std::pair<int, int>;
-      static_assert(!std::is_assignable<T, P>::value, "");
-    }
-    { // test const requirement
-      using T = std::tuple<CopyAssignableInt, CopyAssignableInt>;
-      using P = std::pair<int, int>;
-      static_assert(!std::is_assignable<T&, P const>::value, "");
+        using T = std::tuple<int, int, int>;
+        using P = std::pair<int, int>;
+        static_assert(!std::is_assignable<T&, P>::value, "");
     }
     {
-      using T = std::tuple<int, MoveAssignable>;
-      using P = std::pair<int, MoveAssignable>;
-      static_assert(!std::is_assignable<T&, P&>::value, "");
+        // test const requirement
+        using T = std::tuple<CopyAssignableInt, CopyAssignableInt>;
+        using P = std::pair<int, int>;
+        static_assert(!std::is_assignable<T&, P const>::value, "");
+    }
+    {
+        using T = std::tuple<int, MoveAssignable>;
+        using P = std::pair<int, MoveAssignable>;
+        static_assert(!std::is_assignable<T&, P&>::value, "");
     }
     {
         using T = std::tuple<NothrowCopyAssignable, int>;
