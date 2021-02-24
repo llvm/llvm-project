@@ -3940,10 +3940,10 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
     // %res = { %5.0, %0 || %1.1 || %2.1 || %5.1 }
     SDValue LHS = N->getOperand(0), RHS = N->getOperand(1);
     SDValue LHSHigh, LHSLow, RHSHigh, RHSLow;
-    SplitInteger(LHS, LHSLow, LHSHigh);
-    SplitInteger(RHS, RHSLow, RHSHigh);
-    EVT HalfVT = LHSLow.getValueType()
-      , BitVT = N->getValueType(1);
+    GetExpandedInteger(LHS, LHSLow, LHSHigh);
+    GetExpandedInteger(RHS, RHSLow, RHSHigh);
+    EVT HalfVT = LHSLow.getValueType();
+    EVT BitVT = N->getValueType(1);
     SDVTList VTHalfMulO = DAG.getVTList(HalfVT, BitVT);
     SDVTList VTFullAddO = DAG.getVTList(VT, BitVT);
 
