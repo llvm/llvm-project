@@ -46,6 +46,7 @@ Either way, when an object is emitted the ObjectLinkingLayer constructs a
 ``LinkGraph`` (see :ref:`Constructing LinkGraphs`) and calls JITLink's
 ``link`` function.
 
+Test text.
 
 The ``ObjectLinkingLayer`` class provides a plugin API,
 ``ObjectLinkingLayer::Plugin``, which users can subclass in order to inspect and
