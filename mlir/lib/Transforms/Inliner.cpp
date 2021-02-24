@@ -688,8 +688,10 @@ InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
                               MLIRContext *context) {
   // Ensure that there are enough pipeline maps for the optimizer to run in
   // parallel.
-  size_t numThreads = llvm::hardware_concurrency().compute_thread_count();
-  if (opPipelines.size() != numThreads) {
+  size_t numThreads =
+      std::min((size_t)llvm::hardware_concurrency().compute_thread_count(),
+               nodesToVisit.size());
+  if (opPipelines.size() < numThreads) {
     // Reserve before resizing so that we can use a reference to the first
     // element.
     opPipelines.reserve(numThreads);
@@ -706,14 +708,11 @@ InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
 
   // Optimize the nodes of the SCC in parallel.
   ParallelDiagnosticHandler optimizerHandler(context);
-  return llvm::parallelTransformReduce(
-      llvm::seq<size_t>(0, numThreads), success(),
-      [](LogicalResult lhs, LogicalResult rhs) {
-        return success(succeeded(lhs) && succeeded(rhs));
-      },
-      [&](size_t index) {
-        LogicalResult result = success();
-        for (auto e = nodesToVisit.size(); nodeIt < e && succeeded(result);) {
+  std::atomic<bool> passFailed(false);
+  llvm::parallelForEach(
+      opPipelines.begin(), std::next(opPipelines.begin(), numThreads),
+      [&](llvm::StringMap<OpPassManager> &pipelines) {
+        for (auto e = nodesToVisit.size(); !passFailed && nodeIt < e;) {
           // Get the next available operation index.
           unsigned nextID = nodeIt++;
           if (nextID >= e)
@@ -722,11 +721,17 @@ InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
           // Set the order for this thread so that diagnostics will be
           // properly ordered, and reset after optimization has finished.
           optimizerHandler.setOrderIDForThread(nextID);
-          result = optimizeCallable(nodesToVisit[nextID], opPipelines[index]);
+          LogicalResult pipelineResult =
+              optimizeCallable(nodesToVisit[nextID], pipelines);
           optimizerHandler.eraseOrderIDForThread();
+
+          if (failed(pipelineResult)) {
+            passFailed = true;
+            break;
+          }
         }
-        return result;
       });
+  return failure(passFailed);
 }
 
 LogicalResult
