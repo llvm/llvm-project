@@ -20,18 +20,17 @@
 COMPILER_RT_ABI Fcomplex __divsc3(float __a, float __b, float __c, float __d) {
   int __ilogbw = 0;
   float __logbw =
-      __compiler_rt_logbf(__compiler_rt_fmaxf(crt_fabsf(__c), crt_fabsf(__d)));
+      __compiler_rt_logbf(crt_fmaxf(crt_fabsf(__c), crt_fabsf(__d)));
   if (crt_isfinite(__logbw)) {
     __ilogbw = (int)__logbw;
-    __c = __compiler_rt_scalbnf(__c, -__ilogbw);
-    __d = __compiler_rt_scalbnf(__d, -__ilogbw);
+    __c = crt_scalbnf(__c, -__ilogbw);
+    __d = crt_scalbnf(__d, -__ilogbw);
   }
   float __denom = __c * __c + __d * __d;
   Fcomplex z;
-  COMPLEX_REAL(z) =
-      __compiler_rt_scalbnf((__a * __c + __b * __d) / __denom, -__ilogbw);
+  COMPLEX_REAL(z) = crt_scalbnf((__a * __c + __b * __d) / __denom, -__ilogbw);
   COMPLEX_IMAGINARY(z) =
-      __compiler_rt_scalbnf((__b * __c - __a * __d) / __denom, -__ilogbw);
+      crt_scalbnf((__b * __c - __a * __d) / __denom, -__ilogbw);
   if (crt_isnan(COMPLEX_REAL(z)) && crt_isnan(COMPLEX_IMAGINARY(z))) {
     if ((__denom == 0) && (!crt_isnan(__a) || !crt_isnan(__b))) {
       COMPLEX_REAL(z) = crt_copysignf(CRT_INFINITY, __c) * __a;

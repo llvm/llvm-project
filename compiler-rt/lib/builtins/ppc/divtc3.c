@@ -27,16 +27,15 @@ long double _Complex __divtc3(long double a, long double b, long double c,
 
   int ilogbw = 0;
   const double logbw =
-      __compiler_rt_logb(__compiler_rt_fmax(crt_fabs(cDD.s.hi),
-                                            crt_fabs(dDD.s.hi)));
+      __compiler_rt_logb(crt_fmax(crt_fabs(cDD.s.hi), crt_fabs(dDD.s.hi)));
 
   if (crt_isfinite(logbw)) {
     ilogbw = (int)logbw;
 
-    cDD.s.hi = __compiler_rt_scalbn(cDD.s.hi, -ilogbw);
-    cDD.s.lo = __compiler_rt_scalbn(cDD.s.lo, -ilogbw);
-    dDD.s.hi = __compiler_rt_scalbn(dDD.s.hi, -ilogbw);
-    dDD.s.lo = __compiler_rt_scalbn(dDD.s.lo, -ilogbw);
+    cDD.s.hi = crt_scalbn(cDD.s.hi, -ilogbw);
+    cDD.s.lo = crt_scalbn(cDD.s.lo, -ilogbw);
+    dDD.s.hi = crt_scalbn(dDD.s.hi, -ilogbw);
+    dDD.s.lo = crt_scalbn(dDD.s.lo, -ilogbw);
   }
 
   const long double denom =
@@ -49,10 +48,10 @@ long double _Complex __divtc3(long double a, long double b, long double c,
   DD real = {.ld = __gcc_qdiv(realNumerator, denom)};
   DD imag = {.ld = __gcc_qdiv(imagNumerator, denom)};
 
-  real.s.hi = __compiler_rt_scalbn(real.s.hi, -ilogbw);
-  real.s.lo = __compiler_rt_scalbn(real.s.lo, -ilogbw);
-  imag.s.hi = __compiler_rt_scalbn(imag.s.hi, -ilogbw);
-  imag.s.lo = __compiler_rt_scalbn(imag.s.lo, -ilogbw);
+  real.s.hi = crt_scalbn(real.s.hi, -ilogbw);
+  real.s.lo = crt_scalbn(real.s.lo, -ilogbw);
+  imag.s.hi = crt_scalbn(imag.s.hi, -ilogbw);
+  imag.s.lo = crt_scalbn(imag.s.lo, -ilogbw);
 
   if (crt_isnan(real.s.hi) && crt_isnan(imag.s.hi)) {
     DD aDD = {.ld = a};
