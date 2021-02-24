@@ -66,6 +66,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
+#include "llvm/TextAPI/MachO/Architecture.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -474,6 +475,15 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const mach_header_64 *>(mb.getBufferStart());
 
+  MachO::Architecture arch =
+      MachO::getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
+  if (arch != config->arch) {
+    error(toString(this) + " has architecture " + getArchitectureName(arch) +
+          " which is incompatible with target architecture " +
+          getArchitectureName(config->arch));
+    return;
+  }
+
   if (const load_command *cmd = findCommand(hdr, LC_LINKER_OPTION)) {
     auto *c = reinterpret_cast<const linker_option_command *>(cmd);
     StringRef data{reinterpret_cast<const char *>(c + 1),
@@ -671,6 +681,12 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
 
   if (umbrella == nullptr)
     umbrella = this;
+
+  if (!interface.getArchitectures().has(config->arch)) {
+    error(toString(this) + " is incompatible with " +
+          getArchitectureName(config->arch));
+    return;
+  }
 
   dylibName = saver.save(interface.getInstallName());
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
