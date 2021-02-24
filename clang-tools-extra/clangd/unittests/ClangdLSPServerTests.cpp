@@ -314,8 +314,14 @@ TEST_F(LSPTest, ModulesThreadingTest) {
     ~AsyncCounter() {
       // Verify shutdown sequence was performed.
       // Real modules would not do this, to be robust to no ClangdServer.
-      EXPECT_TRUE(ShouldStop) << "ClangdServer should request shutdown";
-      EXPECT_EQ(Queue.size(), 0u) << "ClangdServer should block until idle";
+      {
+        // We still need the lock here, as Queue might be empty when
+        // ClangdServer calls blockUntilIdle, but run() might not have returned
+        // yet.
+        std::lock_guard<std::mutex> Lock(Mu);
+        EXPECT_TRUE(ShouldStop) << "ClangdServer should request shutdown";
+        EXPECT_EQ(Queue.size(), 0u) << "ClangdServer should block until idle";
+      }
       Thread.join();
     }
 
