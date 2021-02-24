@@ -9,34 +9,36 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_retval_origin_tls = external thread_local(initialexec) global i32
 ; CHECK_NO_ORIGIN: @__dfsan_track_origins = weak_odr constant i32 0
 ; CHECK_ORIGIN: @__dfsan_track_origins = weak_odr constant i32 1
+; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
+; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 ; CHECK: @__dfsan_shadow_ptr_mask = external global i64
-; CHECK: declare void @__dfsan_load_callback(i16, i8*)
-; CHECK: declare void @__dfsan_store_callback(i16, i8*)
-; CHECK: declare void @__dfsan_mem_transfer_callback(i16*, i64)
-; CHECK: declare void @__dfsan_cmp_callback(i16)
+; CHECK: declare void @__dfsan_load_callback(i[[#SBITS]], i8*)
+; CHECK: declare void @__dfsan_store_callback(i[[#SBITS]], i8*)
+; CHECK: declare void @__dfsan_mem_transfer_callback(i[[#SBITS]]*, i64)
+; CHECK: declare void @__dfsan_cmp_callback(i[[#SBITS]])
 
 ; CHECK: ; Function Attrs: nounwind readnone
-; CHECK-NEXT: declare zeroext i16 @__dfsan_union(i16 zeroext, i16 zeroext) #0
+; CHECK-NEXT: declare zeroext i[[#SBITS]] @__dfsan_union(i[[#SBITS]] zeroext, i[[#SBITS]] zeroext) #0
 
 ; CHECK: ; Function Attrs: nounwind readnone
-; CHECK-NEXT: declare zeroext i16 @dfsan_union(i16 zeroext, i16 zeroext) #0
+; CHECK-NEXT: declare zeroext i[[#SBITS]] @dfsan_union(i[[#SBITS]] zeroext, i[[#SBITS]] zeroext) #0
 
 ; CHECK: ; Function Attrs: nounwind readonly
-; CHECK-NEXT: declare zeroext i16 @__dfsan_union_load(i16*, i64) #1
+; CHECK-NEXT: declare zeroext i[[#SBITS]] @__dfsan_union_load(i[[#SBITS]]*, i64) #1
 
 ; CHECK: ; Function Attrs: nounwind readonly
-; CHECK-NEXT: declare zeroext i16 @__dfsan_union_load_fast16labels(i16*, i64) #1
+; CHECK-NEXT: declare zeroext i[[#SBITS]] @__dfsan_union_load_fast16labels(i[[#SBITS]]*, i64) #1
 
 ; CHECK: ; Function Attrs: nounwind readonly
 ; CHECK-NEXT: declare zeroext i64 @__dfsan_load_label_and_origin(i8*, i64) #1
 
 ; CHECK: declare void @__dfsan_unimplemented(i8*)
-; CHECK: declare void @__dfsan_set_label(i16 zeroext, i32 zeroext, i8*, i64)
+; CHECK: declare void @__dfsan_set_label(i[[#SBITS]] zeroext, i32 zeroext, i8*, i64)
 ; CHECK: declare void @__dfsan_nonzero_label()
 ; CHECK: declare void @__dfsan_vararg_wrapper(i8*)
 ; CHECK: declare zeroext i32 @__dfsan_chain_origin(i32 zeroext)
 ; CHECK: declare void @__dfsan_mem_origin_transfer(i8*, i8*, i64)
-; CHECK: declare void @__dfsan_maybe_store_origin(i16 zeroext, i8*, i64, i32 zeroext)
+; CHECK: declare void @__dfsan_maybe_store_origin(i[[#SBITS]] zeroext, i8*, i64, i32 zeroext)
 
 define void @foo() {
   ret void
