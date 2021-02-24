@@ -421,8 +421,7 @@ body:             |
 
     ; CHECK-LABEL: name: STR_post8
     ; CHECK: liveins: $r0, $r1
-    ; CHECK: t2STRi12 killed renamable $r1, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 4)
-    ; CHECK: renamable $r0 = nuw t2ADDri killed renamable $r0, 8, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: early-clobber $r0 = t2STR_POST killed $r1, $r0, 8, 14 /* CC::al */, $noreg :: (store 4)
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     t2STRi12 killed renamable $r1, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 4)
     renamable $r0 = nuw t2ADDri killed renamable $r0, 8, 14 /* CC::al */, $noreg, $noreg
@@ -485,8 +484,7 @@ body:             |
 
     ; CHECK-LABEL: name: STRD_post4
     ; CHECK: liveins: $r0, $r1, $r2
-    ; CHECK: t2STRDi8 killed $r1, killed $r2, $r0, 0, 14 /* CC::al */, $noreg :: (store 8)
-    ; CHECK: renamable $r0 = nuw t2ADDri killed renamable $r0, 4, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: $r0 = t2STRD_POST killed renamable $r1, killed renamable $r2, killed $r0, 4, 14 /* CC::al */, $noreg :: (store 8)
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     t2STRDi8 killed renamable $r1, killed renamable $r2, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 8)
     renamable $r0 = nuw t2ADDri killed renamable $r0, 4, 14 /* CC::al */, $noreg, $noreg
@@ -550,8 +548,7 @@ body:             |
 
     ; CHECK-LABEL: name: STRD_post256
     ; CHECK: liveins: $r0, $r1, $r2
-    ; CHECK: t2STRDi8 killed $r1, killed $r2, $r0, 0, 14 /* CC::al */, $noreg :: (store 8)
-    ; CHECK: renamable $r0 = nuw t2ADDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: $r0 = t2STRD_POST killed renamable $r1, killed renamable $r2, killed $r0, 256, 14 /* CC::al */, $noreg :: (store 8)
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     t2STRDi8 killed renamable $r1, killed renamable $r2, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 8)
     renamable $r0 = nuw t2ADDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
@@ -572,8 +569,7 @@ body:             |
 
     ; CHECK-LABEL: name: STRD_post1020
     ; CHECK: liveins: $r0, $r1, $r2
-    ; CHECK: t2STRDi8 killed $r1, killed $r2, $r0, 0, 14 /* CC::al */, $noreg :: (store 8)
-    ; CHECK: renamable $r0 = nuw t2ADDri killed renamable $r0, 1020, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: $r0 = t2STRD_POST killed renamable $r1, killed renamable $r2, killed $r0, 1020, 14 /* CC::al */, $noreg :: (store 8)
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     t2STRDi8 killed renamable $r1, killed renamable $r2, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 8)
     renamable $r0 = nuw t2ADDri killed renamable $r0, 1020, 14 /* CC::al */, $noreg, $noreg
@@ -616,8 +612,7 @@ body:             |
 
     ; CHECK-LABEL: name: STRD_postm4
     ; CHECK: liveins: $r0, $r1, $r2
-    ; CHECK: t2STRDi8 killed $r1, killed $r2, $r0, 0, 14 /* CC::al */, $noreg :: (store 8)
-    ; CHECK: renamable $r0 = nuw t2SUBri killed renamable $r0, 4, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: $r0 = t2STRD_POST killed renamable $r1, killed renamable $r2, killed $r0, -4, 14 /* CC::al */, $noreg :: (store 8)
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     t2STRDi8 killed renamable $r1, killed renamable $r2, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 8)
     renamable $r0 = nuw t2SUBri killed renamable $r0, 4, 14 /* CC::al */, $noreg, $noreg
@@ -681,8 +676,7 @@ body:             |
 
     ; CHECK-LABEL: name: STRD_postm256
     ; CHECK: liveins: $r0, $r1, $r2
-    ; CHECK: t2STRDi8 killed $r1, killed $r2, $r0, 0, 14 /* CC::al */, $noreg :: (store 8)
-    ; CHECK: renamable $r0 = nuw t2ADDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: $r0 = t2STRD_POST killed renamable $r1, killed renamable $r2, killed $r0, 256, 14 /* CC::al */, $noreg :: (store 8)
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     t2STRDi8 killed renamable $r1, killed renamable $r2, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 8)
     renamable $r0 = nuw t2ADDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
@@ -703,8 +697,7 @@ body:             |
 
     ; CHECK-LABEL: name: STRD_postm1020
     ; CHECK: liveins: $r0, $r1, $r2
-    ; CHECK: t2STRDi8 killed $r1, killed $r2, $r0, 0, 14 /* CC::al */, $noreg :: (store 8)
-    ; CHECK: renamable $r0 = nuw t2SUBri killed renamable $r0, 1020, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: $r0 = t2STRD_POST killed renamable $r1, killed renamable $r2, killed $r0, -1020, 14 /* CC::al */, $noreg :: (store 8)
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     t2STRDi8 killed renamable $r1, killed renamable $r2, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 8)
     renamable $r0 = nuw t2SUBri killed renamable $r0, 1020, 14 /* CC::al */, $noreg, $noreg
