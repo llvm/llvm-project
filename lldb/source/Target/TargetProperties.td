@@ -172,6 +172,9 @@ let Definition = "target" in {
   def AutoInstallMainExecutable: Property<"auto-install-main-executable", "Boolean">,
     DefaultTrue,
     Desc<"Always install the main executable when connected to a remote platform.">;
+  def DebugUtilityExpression: Property<"debug-utility-expression", "Boolean">,
+    DefaultFalse,
+    Desc<"Enable debugging of LLDB-internal utility expressions.">;
 }
 
 let Definition = "process_experimental" in {
