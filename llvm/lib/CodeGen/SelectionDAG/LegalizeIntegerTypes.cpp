@@ -3623,18 +3623,16 @@ void DAGTypeLegalizer::ExpandIntRes_DIVFIX(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::ExpandIntRes_SADDSUBO(SDNode *Node,
                                              SDValue &Lo, SDValue &Hi) {
+  assert((Node->getOpcode() == ISD::SADDO || Node->getOpcode() == ISD::SSUBO) &&
+         "Node has unexpected Opcode");
   SDValue LHS = Node->getOperand(0);
   SDValue RHS = Node->getOperand(1);
   SDLoc dl(Node);
 
   SDValue Ovf;
 
-  unsigned CarryOp;
-  switch(Node->getOpcode()) {
-  default: llvm_unreachable("Node has unexpected Opcode");
-  case ISD::SADDO: CarryOp = ISD::SADDO_CARRY; break;
-  case ISD::SSUBO: CarryOp = ISD::SSUBO_CARRY; break;
-  }
+  bool IsAdd = Node->getOpcode() == ISD::SADDO;
+  unsigned CarryOp = IsAdd ? ISD::SADDO_CARRY : ISD::SSUBO_CARRY;
 
   bool HasCarryOp = TLI.isOperationLegalOrCustom(
       CarryOp, TLI.getTypeToExpandTo(*DAG.getContext(), LHS.getValueType()));
@@ -3646,8 +3644,7 @@ void DAGTypeLegalizer::ExpandIntRes_SADDSUBO(SDNode *Node,
     GetExpandedInteger(RHS, RHSL, RHSH);
     SDVTList VTList = DAG.getVTList(LHSL.getValueType(), Node->getValueType(1));
 
-    Lo = DAG.getNode(Node->getOpcode() == ISD::SADDO ?
-                     ISD::UADDO : ISD::USUBO, dl, VTList, { LHSL, RHSL });
+    Lo = DAG.getNode(IsAdd ? ISD::UADDO : ISD::USUBO, dl, VTList, {LHSL, RHSL});
     Hi = DAG.getNode(CarryOp, dl, VTList, { LHSH, RHSH, Lo.getValue(1) });
 
     Ovf = Hi.getValue(1);
@@ -3670,19 +3667,27 @@ void DAGTypeLegalizer::ExpandIntRes_SADDSUBO(SDNode *Node,
     //   Sub:
     //   Overflow -> (LHSSign != RHSSign) && (LHSSign != SumSign)
     //
+    // To get better codegen we can rewrite this by doing bitwise math on
+    // the integers and extract the final sign bit at the end. So the
+    // above becomes:
+    //
+    //   Add:
+    //   Overflow -> (~(LHS ^ RHS) & (LHS ^ Sum)) < 0
+    //   Sub:
+    //   Overflow -> ((LHS ^ RHS) & (LHS ^ Sum)) < 0
+    //
+    // NOTE: This is different than the expansion we do in expandSADDSUBO
+    // because it is more costly to determine the RHS is > 0 for SSUBO with the
+    // integers split.
+    EVT VT = LHS.getValueType();
+    SDValue SignsMatch = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
+    if (IsAdd)
+      SignsMatch = DAG.getNOT(dl, SignsMatch, VT);
+
+    SDValue SumSignNE = DAG.getNode(ISD::XOR, dl, VT, LHS, Sum);
+    Ovf = DAG.getNode(ISD::AND, dl, VT, SignsMatch, SumSignNE);
     EVT OType = Node->getValueType(1);
-    SDValue Zero = DAG.getConstant(0, dl, LHS.getValueType());
-
-    SDValue LHSSign = DAG.getSetCC(dl, OType, LHS, Zero, ISD::SETLT);
-    SDValue RHSSign = DAG.getSetCC(dl, OType, RHS, Zero, ISD::SETLT);
-    SDValue SignsMatch = DAG.getSetCC(dl, OType, LHSSign, RHSSign,
-                                      Node->getOpcode() == ISD::SADDO ?
-                                      ISD::SETEQ : ISD::SETNE);
-
-    SDValue SumSign = DAG.getSetCC(dl, OType, Sum, Zero, ISD::SETLT);
-    SDValue SumSignNE = DAG.getSetCC(dl, OType, LHSSign, SumSign, ISD::SETNE);
-
-    Ovf = DAG.getNode(ISD::AND, dl, OType, SignsMatch, SumSignNE);
+    Ovf = DAG.getSetCC(dl, OType, Ovf, DAG.getConstant(0, dl, VT), ISD::SETLT);
   }
 
   // Use the calculated overflow everywhere.
