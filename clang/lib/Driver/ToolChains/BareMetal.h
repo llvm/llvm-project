@@ -46,7 +46,8 @@ public:
   std::string getCompilerRTPath() const override;
   std::string getCompilerRTBasename(const llvm::opt::ArgList &Args,
                                     StringRef Component,
-                                    FileType Type = ToolChain::FT_Static) const override;
+                                    FileType Type = ToolChain::FT_Static,
+                                    bool AddArch = true) const override;
 
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;
