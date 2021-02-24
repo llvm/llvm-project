@@ -57,11 +57,9 @@ ObjectLinkingLayer Plugins
 
 The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
 
-* ::
-
-    virtual void modifyPassConfig(MaterializationResponsibility &MR,
-                                  const Triple &TT,
-                                  jitlink::PassConfiguration &Config)``
+* :literal:`virtual void modifyPassConfig(MaterializationResponsibility &MR,
+                                          const Triple &TT,
+                                          jitlink::PassConfiguration &Config)`
 
   Called each time a LinkGraph is about to be linked. Override to install
   custom JITLink *Passes* to run during the link process for this graph.
@@ -87,10 +85,8 @@ The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
   ``notifyTransferringResources`` should be implemented, or neither should be.
   Implementing one but not the other will lead to resource management bugs.
 
-* ::
-
-    virtual void notifyTransferringResources(ResourceKey DstKey,
-                                             ResourceKey SrcKey)
+* :literal:`virtual void notifyTransferringResources(ResourceKey DstKey,
+                                                     ResourceKey SrcKey)`
 
   Called if/when a request is made to reassociate resources from *SrcKey* to
   *DstKey*. Override to update the plugin's resource tracking maps (if any).
