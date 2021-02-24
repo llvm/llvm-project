@@ -533,23 +533,13 @@ Optional<Metadata *> MDNodeMapper::tryToMapOperand(const Metadata *Op) {
   return None;
 }
 
-static Metadata *cloneOrBuildODR(const MDNode &N) {
-  auto *CT = dyn_cast<DICompositeType>(&N);
-  // If ODR type uniquing is enabled, we would have uniqued composite types
-  // with identifiers during bitcode reading, so we can just use CT.
-  if (CT && CT->getContext().isODRUniquingDebugTypes() &&
-      CT->getIdentifier() != "")
-    return const_cast<DICompositeType *>(CT);
-  return MDNode::replaceWithDistinct(N.clone());
-}
-
 MDNode *MDNodeMapper::mapDistinctNode(const MDNode &N) {
   assert(N.isDistinct() && "Expected a distinct node");
   assert(!M.getVM().getMappedMD(&N) && "Expected an unmapped node");
-  DistinctWorklist.push_back(
-      cast<MDNode>((M.Flags & RF_ReuseAndMutateDistinctMDs)
-                       ? M.mapToSelf(&N)
-                       : M.mapToMetadata(&N, cloneOrBuildODR(N))));
+  DistinctWorklist.push_back(cast<MDNode>(
+      (M.Flags & RF_ReuseAndMutateDistinctMDs)
+          ? M.mapToSelf(&N)
+          : M.mapToMetadata(&N, MDNode::replaceWithDistinct(N.clone()))));
   return DistinctWorklist.back();
 }
 
