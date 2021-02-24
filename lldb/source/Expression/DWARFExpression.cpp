@@ -36,6 +36,10 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
+#ifdef LLDB_ENABLE_SWIFT
+#include "lldb/Target/SwiftLanguageRuntime.h"
+#endif
+
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 
 using namespace lldb;
@@ -637,6 +641,7 @@ bool DWARFExpression::DumpLocationForAddress(Stream *s,
 }
 
 static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
+                                       const DWARFUnit *dwarf_cu,
                                        ExecutionContext *exe_ctx,
                                        RegisterContext *reg_ctx,
                                        const DataExtractor &opcodes,
@@ -754,6 +759,15 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   ModuleList &modlist = target.GetImages();
   ExecutionContext parent_exe_ctx = *exe_ctx;
   parent_exe_ctx.SetFrameSP(parent_frame);
+#ifdef LLDB_ENABLE_SWIFT
+  // Swift async function arguments are represented relative to a
+  // DW_OP_entry_value that fetches the async context register. This
+  // register is known to the unwinder and can always be restored
+  // therefore it is not necessary to match up a call site parameter
+  // with it.
+  if (!SwiftLanguageRuntime::IsSwiftAsyncFunctionSymbol(
+          current_func->GetMangled().GetMangledName().GetStringRef())) {
+#endif
   if (!parent_frame->IsArtificial()) {
     // If the parent frame is not artificial, the current activation may be
     // produced by an ambiguous tail call. In this case, refuse to proceed.
@@ -787,11 +801,16 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
                   "to current function");
     return false;
   }
-
+#ifdef LLDB_ENABLE_SWIFT
+  }
+#endif
   // 3. Attempt to locate the DW_OP_entry_value expression in the set of
   //    available call site parameters. If found, evaluate the corresponding
   //    parameter in the context of the parent frame.
   const uint32_t subexpr_len = opcodes.GetULEB128(&opcode_offset);
+#ifdef LLDB_ENABLE_SWIFT
+  lldb::offset_t subexpr_offset = opcode_offset;
+#endif
   const void *subexpr_data = opcodes.GetData(&opcode_offset, subexpr_len);
   if (!subexpr_data) {
     LLDB_LOG(log, "Evaluate_DW_OP_entry_value: subexpr could not be read");
@@ -799,6 +818,9 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   }
 
   const CallSiteParameter *matched_param = nullptr;
+#ifdef LLDB_ENABLE_SWIFT
+  if (call_edge) {
+#endif
   for (const CallSiteParameter &param : call_edge->GetCallSiteParameters()) {
     DataExtractor param_subexpr_extractor;
     if (!param.LocationInCallee.GetExpressionData(param_subexpr_extractor))
@@ -827,11 +849,26 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
              "Evaluate_DW_OP_entry_value: no matching call site param found");
     return false;
   }
+#ifdef LLDB_ENABLE_SWIFT
+  }
+  llvm::Optional<DWARFExpression> subexpr;
+  if (!matched_param) {
+    subexpr.emplace(parent_func->CalculateSymbolContextModule(),
+                    DataExtractor(opcodes, subexpr_offset, subexpr_len),
+                    dwarf_cu);
+  }
+#endif
 
+  
   // TODO: Add support for DW_OP_push_object_address within a DW_OP_entry_value
   // subexpresion whenever llvm does.
   Value result;
+#ifdef LLDB_ENABLE_SWIFT
+  const DWARFExpression &param_expr =
+      matched_param ? matched_param->LocationInCaller : *subexpr;
+#else
   const DWARFExpression &param_expr = matched_param->LocationInCaller;
+#endif
   if (!param_expr.Evaluate(&parent_exe_ctx,
                            parent_frame->GetRegisterContext().get(),
                            /*loclist_base_addr=*/LLDB_INVALID_ADDRESS,
@@ -2533,7 +2570,7 @@ bool DWARFExpression::Evaluate(
 
     case DW_OP_GNU_entry_value:
     case DW_OP_entry_value: {
-      if (!Evaluate_DW_OP_entry_value(stack, exe_ctx, reg_ctx, opcodes, offset,
+      if (!Evaluate_DW_OP_entry_value(stack, dwarf_cu, exe_ctx, reg_ctx, opcodes, offset,
                                       error_ptr, log)) {
         LLDB_ERRORF(error_ptr, "Could not evaluate %s.",
                     DW_OP_value_to_name(op));

@@ -67,6 +67,23 @@ childAtPath(NodePointer node,
   return nullptr;
 }
 
+bool SwiftLanguageRuntime::IsSwiftAsyncFunctionSymbol(StringRef name) {
+  if (!IsSwiftMangledName(name))
+    return false;
+  using namespace swift::Demangle;
+  Context ctx;
+  NodePointer node = ctx.demangleSymbolAsNode(name);
+  if (!node || node->getKind() != Node::Kind::Global)
+    return false;
+  return childAtPath(node,
+                     {Node::Kind::Function, Node::Kind::Type,
+                      Node::Kind::FunctionType, Node::Kind::AsyncAnnotation}) ||
+         childAtPath(node,
+                     {Node::Kind::Function, Node::Kind::Type,
+                      Node::Kind::DependentGenericType, Node::Kind::Type,
+                      Node::Kind::FunctionType, Node::Kind::AsyncAnnotation});
+}
+
 static ThunkKind GetThunkKind(Symbol *symbol) {
   auto symbol_name = symbol->GetMangled().GetMangledName().GetStringRef();
 
