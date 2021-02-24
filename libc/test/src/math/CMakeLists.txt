@@ -1072,3 +1072,4 @@ add_fp_unittest(
 )
 
 add_subdirectory(generic)
+add_subdirectory(exhaustive)
