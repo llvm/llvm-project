@@ -43,7 +43,7 @@ JITLink and ObjectLinkingLayer
 ``JITDylib``, or emitted from some higher level program representation, and
 linked into an executor process (which may be the same process) on request.
 Either way, when an object is emitted the ObjectLinkingLayer constructs a
-``LinkGraph`` (see :ref:`Constructing LinkGraphs`) and calls JITLink's
+``LinkGraph`` (see Constructing LinkGraphs) and calls JITLink's
 ``link`` function.
 
 Test text.
