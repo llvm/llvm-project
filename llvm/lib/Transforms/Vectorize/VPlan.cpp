@@ -171,6 +171,58 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
   return Parent->getEnclosingBlockWithPredecessors();
 }
 
+static VPValue *getSingleOperandOrNull(VPUser &U) {
+  if (U.getNumOperands() == 1)
+    return U.getOperand(0);
+
+  return nullptr;
+}
+
+static const VPValue *getSingleOperandOrNull(const VPUser &U) {
+  if (U.getNumOperands() == 1)
+    return U.getOperand(0);
+
+  return nullptr;
+}
+
+static void resetSingleOpUser(VPUser &U, VPValue *NewVal) {
+  assert(U.getNumOperands() <= 1 && "Didn't expect more than one operand!");
+  if (!NewVal) {
+    if (U.getNumOperands() == 1)
+      U.removeLastOperand();
+    return;
+  }
+
+  if (U.getNumOperands() == 1)
+    U.setOperand(0, NewVal);
+  else
+    U.addOperand(NewVal);
+}
+
+VPValue *VPBlockBase::getCondBit() {
+  return getSingleOperandOrNull(CondBitUser);
+}
+
+const VPValue *VPBlockBase::getCondBit() const {
+  return getSingleOperandOrNull(CondBitUser);
+}
+
+void VPBlockBase::setCondBit(VPValue *CV) {
+  resetSingleOpUser(CondBitUser, CV);
+}
+
+VPValue *VPBlockBase::getPredicate() {
+  return getSingleOperandOrNull(PredicateUser);
+}
+
+const VPValue *VPBlockBase::getPredicate() const {
+  return getSingleOperandOrNull(PredicateUser);
+}
+
+void VPBlockBase::setPredicate(VPValue *CV) {
+  resetSingleOpUser(PredicateUser, CV);
+}
+
 void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
   SmallVector<VPBlockBase *, 8> Blocks(depth_first(Entry));
 
