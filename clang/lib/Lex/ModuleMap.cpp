@@ -1148,7 +1148,7 @@ void ModuleMap::setUmbrellaHeader(Module *Mod, const FileEntry *UmbrellaHeader,
     Cb->moduleMapAddUmbrellaHeader(&SourceMgr.getFileManager(), UmbrellaHeader);
 }
 
-void ModuleMap::setUmbrellaDir(Module *Mod, DirectoryEntryRef UmbrellaDir,
+void ModuleMap::setUmbrellaDir(Module *Mod, const DirectoryEntry *UmbrellaDir,
                                Twine NameAsWritten,
                                Twine PathRelativeToRootModuleDirectory) {
   Mod->Umbrella = UmbrellaDir;

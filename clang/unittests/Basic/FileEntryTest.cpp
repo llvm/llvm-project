@@ -170,7 +170,6 @@ TEST(DirectoryEntryTest, isSameRef) {
   DirectoryEntryRef R1Also = Refs.addDirectoryAlias("1-also", R1);
 
   EXPECT_TRUE(R1.isSameRef(DirectoryEntryRef(R1)));
-  EXPECT_TRUE(R1.isSameRef(DirectoryEntryRef(R1.getMapEntry())));
   EXPECT_FALSE(R1.isSameRef(R2));
   EXPECT_FALSE(R1.isSameRef(R1Also));
 }
