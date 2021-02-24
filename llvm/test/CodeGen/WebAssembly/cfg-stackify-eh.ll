@@ -97,40 +97,42 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 
 ; CHECK-LABEL: test1
 ; CHECK: try
-; CHECK:   call      foo
+; CHECK:   call  foo
 ; CHECK: catch
 ; CHECK:   block
 ; CHECK:     block
-; CHECK:       br_if     0, {{.*}}                     # 0: down to label[[L0:[0-9]+]]
-; CHECK:       call      $drop=, __cxa_begin_catch
+; CHECK:       br_if     0, {{.*}}                     # 0: down to label[[L0:[0-9+]]]
+; CHECK:       call  $drop=, __cxa_begin_catch, $0
 ; CHECK:       try
-; CHECK:         call      foo
-; CHECK:         br        2                           # 2: down to label[[L1:[0-9]+]]
-; CHECK:       catch
 ; CHECK:         try
+; CHECK:           call  foo
+; CHECK:           br        3                         # 3: down to label[[L1:[0-9+]]]
+; CHECK:         catch
 ; CHECK:           block
-; CHECK:             br_if     0, {{.*}}               # 0: down to label[[L2:[0-9]+]]
-; CHECK:             call      $drop=, __cxa_begin_catch
-; CHECK:             try
-; CHECK:               call      foo
-; CHECK:               br        2                     # 2: down to label[[L3:[0-9]+]]
-; CHECK:             catch
-; CHECK:               call      __cxa_end_catch
-; CHECK:               rethrow   0                     # down to catch[[C0:[0-9]+]]
-; CHECK:             end_try
-; CHECK:           end_block                           # label[[L2]]:
-; CHECK:           rethrow   1                         # down to catch[[C0]]
-; CHECK:         catch_all                             # catch[[C0]]:
-; CHECK:           call      __cxa_end_catch
-; CHECK:           rethrow   0                         # to caller
-; CHECK:         end_try                               # label[[L3]]:
-; CHECK:         call      __cxa_end_catch
-; CHECK:         br        2                           # 2: down to label[[L1]]
+; CHECK:             block
+; CHECK:               br_if     0, {{.*}}             # 0: down to label[[L2:[0-9+]]]
+; CHECK:               call  $drop=, __cxa_begin_catch
+; CHECK:               try
+; CHECK:                 call  foo
+; CHECK:                 br        2                   # 2: down to label[[L3:[0-9+]]]
+; CHECK:               catch_all
+; CHECK:                 call  __cxa_end_catch
+; CHECK:                 rethrow   0                   # down to catch[[L4:[0-9+]]]
+; CHECK:               end_try
+; CHECK:             end_block                         # label[[L2]]:
+; CHECK:             rethrow   1                       # down to catch[[L4]]
+; CHECK:           end_block                           # label[[L3]]:
+; CHECK:           call  __cxa_end_catch
+; CHECK:           br        3                         # 3: down to label[[L1]]
+; CHECK:         end_try
+; CHECK:       catch_all                               # catch[[L4]]:
+; CHECK:         call  __cxa_end_catch
+; CHECK:         rethrow   0                           # to caller
 ; CHECK:       end_try
 ; CHECK:     end_block                                 # label[[L0]]:
 ; CHECK:     rethrow   1                               # to caller
 ; CHECK:   end_block                                   # label[[L1]]:
-; CHECK:   call      __cxa_end_catch
+; CHECK:   call  __cxa_end_catch
 ; CHECK: end_try
 define void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
