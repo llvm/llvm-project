@@ -62,7 +62,7 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   ompt_get_unique_id = (ompt_get_unique_id_t)lookup("ompt_get_unique_id");
   ompt_get_thread_data = (ompt_get_thread_data_t)lookup("ompt_get_thread_data");
 
-  register_callback(ompt_callback_master);
+  register_ompt_callback(ompt_callback_master);
   printf("0: NULL_POINTER=%p\n", (void *)NULL);
   return 1; // success
 }
