@@ -345,6 +345,12 @@ public:
     return sizeof(BaseTy) + ParentType::additionalSizeToAllocImpl(0, Counts...);
   }
 
+  TrailingObjects() = default;
+  TrailingObjects(const TrailingObjects &) = delete;
+  TrailingObjects(TrailingObjects &&) = delete;
+  TrailingObjects &operator=(const TrailingObjects &) = delete;
+  TrailingObjects &operator=(TrailingObjects &&) = delete;
+
   /// A type where its ::with_counts template member has a ::type member
   /// suitable for use as uninitialized storage for an object with the given
   /// trailing object counts. The template arguments are similar to those
