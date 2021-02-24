@@ -12,6 +12,7 @@
 
 #include "RISCV.h"
 #include "clang/Basic/MacroBuilder.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/TargetParser.h"
 
@@ -195,6 +196,17 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasZvlsseg)
     Builder.defineMacro("__riscv_zvlsseg", "10000");
+}
+
+const Builtin::Info RISCVTargetInfo::BuiltinInfo[] = {
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+#include "clang/Basic/BuiltinsRISCV.def"
+};
+
+ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
+  return llvm::makeArrayRef(BuiltinInfo, clang::RISCV::LastTSBuiltin -
+                                             Builtin::FirstTSBuiltin);
 }
 
 /// Return true if has this feature, need to sync with handleTargetFeatures.
