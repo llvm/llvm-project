@@ -420,3 +420,46 @@ func @frexp_struct_not_i32(%arg0 : f32) -> () {
   %2 = spv.GLSL.FrexpStruct %arg0 : f32 -> !spv.struct<(f32, i64)>
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Ldexp
+//===----------------------------------------------------------------------===//
+
+func @ldexp(%arg0 : f32, %arg1 : i32) -> () {
+  // CHECK: {{%.*}} = spv.GLSL.Ldexp {{%.*}} : f32, {{%.*}} : i32 -> f32
+  %0 = spv.GLSL.Ldexp %arg0 : f32, %arg1 : i32 -> f32
+  return
+}
+
+// -----
+func @ldexp_vec(%arg0 : vector<3xf32>, %arg1 : vector<3xi32>) -> () {
+  // CHECK: {{%.*}} = spv.GLSL.Ldexp {{%.*}} : vector<3xf32>, {{%.*}} : vector<3xi32> -> vector<3xf32>
+  %0 = spv.GLSL.Ldexp %arg0 : vector<3xf32>, %arg1 : vector<3xi32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+func @ldexp_wrong_type_scalar(%arg0 : f32, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must both be scalars or vectors}}
+  %0 = spv.GLSL.Ldexp %arg0 : f32, %arg1 : vector<2xi32> -> f32
+  return
+}
+
+// -----
+
+func @ldexp_wrong_type_vec_1(%arg0 : vector<3xf32>, %arg1 : i32) -> () {
+  // expected-error @+1 {{operands must both be scalars or vectors}}
+  %0 = spv.GLSL.Ldexp %arg0 : vector<3xf32>, %arg1 : i32 -> vector<3xf32>
+  return
+}
+
+// -----
+
+func @ldexp_wrong_type_vec_2(%arg0 : vector<3xf32>, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must have the same number of elements}}
+  %0 = spv.GLSL.Ldexp %arg0 : vector<3xf32>, %arg1 : vector<2xi32> -> vector<3xf32>
+  return
+}
