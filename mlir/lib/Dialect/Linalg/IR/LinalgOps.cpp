@@ -1707,15 +1707,15 @@ static void print(OpAsmPrinter &p, TiledLoopOp op) {
     << ")";
 
   if (!op.inputs().empty())
-    p << " ins (" << op.inputs() << ")";
+    p << " ins (" << op.inputs() << ": " << TypeRange(op.inputs()) << ")";
   if (!op.outputs().empty())
-    p << " outs (" << op.outputs() << ")";
+    p << " outs (" << op.outputs() << ":" << TypeRange(op.outputs()) << ")";
 
   if (llvm::any_of(op.iterator_types(), [](Attribute attr) {
         return attr.cast<StringAttr>().getValue() !=
                getParallelIteratorTypeName();
       })) {
-    p << " iterators(" << op.iterator_types() << ")";
+    p << " iterators" << op.iterator_types() << "";
   }
 
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
@@ -1792,7 +1792,7 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
   if (succeeded(parser.parseOptionalKeyword("iterators"))) {
     StringAttr iterType;
 
-    if (parser.parseLParen() || parser.parseAttribute(iterType))
+    if (parser.parseLSquare() || parser.parseAttribute(iterType))
       return failure();
     iterTypes.push_back(iterType);
     for (int i = 1, e = ivs.size(); i < e; ++i) {
@@ -1800,7 +1800,7 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
         return failure();
       iterTypes.push_back(iterType);
     }
-    if (parser.parseRParen())
+    if (parser.parseRSquare())
       return failure();
   } else {
     auto parallelIter = builder.getStringAttr(getParallelIteratorTypeName());
