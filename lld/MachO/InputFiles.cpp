@@ -203,15 +203,15 @@ static InputSection *findContainingSubsection(SubsectionMap &map,
   return it->second;
 }
 
-static bool validateRelocationInfo(MemoryBufferRef mb, const section_64 &sec,
+static bool validateRelocationInfo(InputFile *file, const section_64 &sec,
                                    relocation_info rel) {
   const TargetInfo::RelocAttrs &relocAttrs = target->getRelocAttrs(rel.r_type);
   bool valid = true;
-  auto message = [relocAttrs, mb, sec, rel, &valid](const Twine &diagnostic) {
+  auto message = [relocAttrs, file, sec, rel, &valid](const Twine &diagnostic) {
     valid = false;
     return (relocAttrs.name + " relocation " + diagnostic + " at offset " +
             std::to_string(rel.r_address) + " of " + sec.segname + "," +
-            sec.sectname + " in " + mb.getBufferIdentifier())
+            sec.sectname + " in " + toString(file))
         .str();
   };
 
@@ -273,7 +273,7 @@ void ObjFile::parseRelocations(const section_64 &sec,
       relInfo = relInfos[++i];
     }
     assert(i < relInfos.size());
-    if (!validateRelocationInfo(mb, sec, relInfo))
+    if (!validateRelocationInfo(this, sec, relInfo))
       continue;
     if (relInfo.r_address & R_SCATTERED)
       fatal("TODO: Scattered relocations not supported");
