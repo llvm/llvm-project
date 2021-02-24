@@ -51,6 +51,8 @@ typedef int clk_profiling_info;
 typedef uint cl_mem_fence_flags;
 #define CLK_GLOBAL_MEM_FENCE 0x02
 
+typedef struct {int a;} ndrange_t;
+
 // Enable extensions that are enabled in opencl-c-base.h.
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 #define cl_khr_subgroup_extended_types 1
@@ -88,6 +90,9 @@ void test_typedef_args(clk_event_t evt, volatile atomic_flag *flg, global unsign
 
   atomic_flag_clear(flg);
   bool result = atomic_flag_test_and_set(flg);
+
+  size_t ws[2] = {2, 8};
+  ndrange_t r = ndrange_2D(ws);
 }
 #endif
 

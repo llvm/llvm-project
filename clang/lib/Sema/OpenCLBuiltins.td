@@ -311,6 +311,7 @@ def Queue                 : Type<"queue_t", QualType<"Context.OCLQueueTy">>;
 def ReserveId             : Type<"reserve_id_t", QualType<"Context.OCLReserveIDTy">>;
 def MemFenceFlags         : TypedefType<"cl_mem_fence_flags">;
 def ClkProfilingInfo      : TypedefType<"clk_profiling_info">;
+def NDRange               : TypedefType<"ndrange_t">;
 
 // OpenCL v2.0 s6.13.11: Atomic integer and floating-point types.
 def AtomicInt             : Type<"atomic_int", QualType<"Context.getAtomicType(Context.IntTy)">>;
@@ -1353,21 +1354,38 @@ def : Builtin<"is_valid_reserve_id", [Bool, ReserveId]>;
 // Defined in Builtins.def
 
 // --- Table 33 ---
-def : Builtin<"enqueue_marker",
-    [Int, Queue, UInt, PointerType<ConstType<ClkEvent>, GenericAS>, PointerType<ClkEvent, GenericAS>]>;
+let MinVersion = CL20 in {
+  def : Builtin<"enqueue_marker",
+      [Int, Queue, UInt, PointerType<ConstType<ClkEvent>, GenericAS>, PointerType<ClkEvent, GenericAS>]>;
 
-// --- Table 34 ---
-def : Builtin<"retain_event", [Void, ClkEvent]>;
-def : Builtin<"release_event", [Void, ClkEvent]>;
-def : Builtin<"create_user_event", [ClkEvent]>;
-def : Builtin<"is_valid_event", [Bool, ClkEvent]>;
-def : Builtin<"set_user_event_status", [Void, ClkEvent, Int]>;
-def : Builtin<"capture_event_profiling_info",
-    [Void, ClkEvent, ClkProfilingInfo, PointerType<Void, GlobalAS>]>;
+  // --- Table 34 ---
+  def : Builtin<"retain_event", [Void, ClkEvent]>;
+  def : Builtin<"release_event", [Void, ClkEvent]>;
+  def : Builtin<"create_user_event", [ClkEvent]>;
+  def : Builtin<"is_valid_event", [Bool, ClkEvent]>;
+  def : Builtin<"set_user_event_status", [Void, ClkEvent, Int]>;
+  def : Builtin<"capture_event_profiling_info",
+      [Void, ClkEvent, ClkProfilingInfo, PointerType<Void, GlobalAS>]>;
 
-// --- Table 35 ---
-def : Builtin<"get_default_queue", [Queue]>;
-// TODO: ndrange functions
+  // --- Table 35 ---
+  def : Builtin<"get_default_queue", [Queue]>;
+
+  def : Builtin<"ndrange_1D", [NDRange, Size]>;
+  def : Builtin<"ndrange_1D", [NDRange, Size, Size]>;
+  def : Builtin<"ndrange_1D", [NDRange, Size, Size, Size]>;
+  def : Builtin<"ndrange_2D", [NDRange, PointerType<ConstType<Size>, PrivateAS>]>;
+  def : Builtin<"ndrange_2D", [NDRange, PointerType<ConstType<Size>, PrivateAS>,
+                                        PointerType<ConstType<Size>, PrivateAS>]>;
+  def : Builtin<"ndrange_2D", [NDRange, PointerType<ConstType<Size>, PrivateAS>,
+                                        PointerType<ConstType<Size>, PrivateAS>,
+                                        PointerType<ConstType<Size>, PrivateAS>]>;
+  def : Builtin<"ndrange_3D", [NDRange, PointerType<ConstType<Size>, PrivateAS>]>;
+  def : Builtin<"ndrange_3D", [NDRange, PointerType<ConstType<Size>, PrivateAS>,
+                                        PointerType<ConstType<Size>, PrivateAS>]>;
+  def : Builtin<"ndrange_3D", [NDRange, PointerType<ConstType<Size>, PrivateAS>,
+                                        PointerType<ConstType<Size>, PrivateAS>,
+                                        PointerType<ConstType<Size>, PrivateAS>]>;
+}
 
 
 //--------------------------------------------------------------------
