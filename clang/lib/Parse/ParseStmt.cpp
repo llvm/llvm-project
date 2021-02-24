@@ -172,7 +172,6 @@ Retry:
   switch (Kind) {
   case tok::at: // May be a @try or @throw statement
     {
-      ProhibitAttributes(Attrs); // TODO: is it correct?
       AtLoc = ConsumeToken();  // consume @
       return ParseObjCAtStatement(AtLoc, StmtCtx);
     }
