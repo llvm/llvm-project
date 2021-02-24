@@ -78,12 +78,8 @@
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
-#define crt_fmax(x, y) __max((x), (y))
-#define crt_fmaxf(x, y) __max((x), (y))
 #define crt_fmaxl(x, y) __max((x), (y))
 #else
-#define crt_fmax(x, y) __builtin_fmax((x), (y))
-#define crt_fmaxf(x, y) __builtin_fmaxf((x), (y))
 #define crt_fmaxl(x, y) __builtin_fmaxl((x), (y))
 #endif
 
@@ -94,12 +90,8 @@
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
-#define crt_scalbn(x, y) scalbn((x), (y))
-#define crt_scalbnf(x, y) scalbnf((x), (y))
 #define crt_scalbnl(x, y) scalbnl((x), (y))
 #else
-#define crt_scalbn(x, y) __builtin_scalbn((x), (y))
-#define crt_scalbnf(x, y) __builtin_scalbnf((x), (y))
 #define crt_scalbnl(x, y) __builtin_scalbnl((x), (y))
 #endif
 
