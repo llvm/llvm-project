@@ -879,6 +879,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_GLOBAL_VAR_EXPR:
       case bitc::METADATA_GENERIC_SUBRANGE:
       case bitc::METADATA_EXPR:
+      case bitc::METADATA_FRAGMENT:
         // We don't expect to see any of these, if we see one, give up on
         // lazy-loading and fallback.
         MDStringRef.clear();
@@ -2217,6 +2218,15 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       if (Error Err = parseGlobalObjectAttachment(
               *GO, ArrayRef<uint64_t>(Record).slice(1)))
         return Err;
+    break;
+  }
+  case bitc::METADATA_FRAGMENT: {
+    if (Record.size() != 0)
+      return error("Invalid record");
+    IsDistinct = true;
+    MetadataList.assignValue(DIFragment::getDistinct(Context),
+                             NextMetadataNo);
+    NextMetadataNo++;
     break;
   }
   case bitc::METADATA_KIND: {

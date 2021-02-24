@@ -2487,15 +2487,71 @@ public:
   }
 };
 
-/// Base class for variables.
-class DIVariable : public DINode {
+/// Base class for program objects.
+class DIObject : public DINode {
+protected:
+  DIObject(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
+           ArrayRef<Metadata *> Ops)
+      : DINode(C, ID, Storage, Tag, Ops) {}
+  ~DIObject() = default;
+
+public:
+  static bool classof(const Metadata *MD) {
+    switch (MD->getMetadataID()) {
+    default:
+      return false;
+    case DIFragmentKind:
+    case DILocalVariableKind:
+    case DIGlobalVariableKind:
+      return true;
+    }
+  }
+};
+
+/// Non-source program objects, and pieces of source program objects.
+class DIFragment : public DIObject {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+private:
+  static DIFragment *getImpl(LLVMContext &Context, StorageType Storage);
+
+protected:
+  DIFragment(LLVMContext &C, StorageType Storage)
+      : DIObject(C, DIFragmentKind, Storage, dwarf::DW_TAG_dwarf_procedure,
+                 {}) {
+    assert(Storage != Uniqued);
+  }
+  ~DIFragment() = default;
+
+public:
+  static void get() = delete;
+  static void getIfExists() = delete;
+
+  static DIFragment *getDistinct(LLVMContext &Context) {
+    return getImpl(Context, Distinct);
+  }
+
+  static TempDIFragment getTemporary(LLVMContext &Context) {
+    return TempDIFragment(getImpl(Context, Temporary));
+  }
+
+  TempDIFragment cloneImpl() const { return getTemporary(getContext()); }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIFragmentKind;
+  }
+};
+
+/// Base class for source variable program objects.
+class DIVariable : public DIObject {
   unsigned Line;
   uint32_t AlignInBits;
 
 protected:
   DIVariable(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Line,
              ArrayRef<Metadata *> Ops, uint32_t AlignInBits = 0)
-      : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
+      : DIObject(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
         AlignInBits(AlignInBits) {}
   ~DIVariable() = default;
 

@@ -364,6 +364,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(METADATA, INDEX)
       STRINGIFY_CODE(METADATA, ARG_LIST)
       STRINGIFY_CODE(METADATA, EXPR)
+      STRINGIFY_CODE(METADATA, FRAGMENT)
     }
   case bitc::METADATA_KIND_BLOCK_ID:
     switch (CodeID) {

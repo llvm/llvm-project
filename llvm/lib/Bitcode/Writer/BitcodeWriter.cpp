@@ -350,6 +350,8 @@ private:
                              unsigned Abbrev);
   void writeDILocalVariable(const DILocalVariable *N,
                             SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDIFragment(const DIFragment *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
   void writeDILabel(const DILabel *N,
                     SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIExpression(const DIExpression *N,
@@ -1990,6 +1992,14 @@ void ModuleBitcodeWriter::writeDILocalVariable(
   Record.push_back(N->getAlignInBits());
 
   Stream.EmitRecord(bitc::METADATA_LOCAL_VAR, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDIFragment(const DIFragment *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  assert(N->isDistinct() && "Expected distinct fragment");
+  Stream.EmitRecord(bitc::METADATA_FRAGMENT, Record, Abbrev);
   Record.clear();
 }
 

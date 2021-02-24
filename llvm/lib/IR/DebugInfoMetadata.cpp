@@ -1015,6 +1015,11 @@ DILocalVariable *DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope,
   DEFINE_GETIMPL_STORE(DILocalVariable, (Line, Arg, Flags, AlignInBits), Ops);
 }
 
+DIFragment *DIFragment::getImpl(LLVMContext &Context, StorageType Storage) {
+  assert(Storage != Uniqued && "Cannot unique DIFragment");
+  return storeImpl(new (0) DIFragment(Context, Storage), Storage);
+}
+
 Optional<uint64_t> DIVariable::getSizeInBits() const {
   // This is used by the Verifier so be mindful of broken types.
   const Metadata *RawType = getRawType();

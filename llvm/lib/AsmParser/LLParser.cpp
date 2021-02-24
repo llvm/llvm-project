@@ -5528,6 +5528,14 @@ bool LLParser::parseDIExpr(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+bool LLParser::parseDIFragment(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+  Result = DIFragment::getDistinct(Context);
+  return false;
+}
+
 /// parseDIGlobalVariableExpression:
 ///   ::= !DIGlobalVariableExpression(var: !0, expr: !1)
 bool LLParser::parseDIGlobalVariableExpression(MDNode *&Result,

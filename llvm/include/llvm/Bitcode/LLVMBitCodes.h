@@ -347,7 +347,8 @@ enum MetadataCodes {
   METADATA_COMMON_BLOCK = 44,     // [distinct, scope, name, variable,...]
   METADATA_GENERIC_SUBRANGE = 45, // [distinct, count, lo, up, stride]
   METADATA_ARG_LIST = 46,         // [n x [type num, value num]]
-  METADATA_EXPR = 47              // [distinct, ...]
+  METADATA_EXPR = 47,             // [distinct, ...]
+  METADATA_FRAGMENT = 48          // []
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each

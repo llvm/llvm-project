@@ -2317,6 +2317,12 @@ static void writeDILocalVariable(raw_ostream &Out, const DILocalVariable *N,
   Out << ")";
 }
 
+static void writeDIFragment(raw_ostream &Out, const DIFragment *N,
+                            TypePrinting *TypePrinter, SlotTracker *Machine,
+                            const Module *Context) {
+  Out << "!DIFragment()";
+}
+
 static void writeDILabel(raw_ostream &Out, const DILabel *N,
                          TypePrinting *TypePrinter,
                          SlotTracker *Machine, const Module *Context) {

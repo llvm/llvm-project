@@ -1428,6 +1428,8 @@ void Verifier::visitDILabel(const DILabel &N) {
            "label requires a valid scope", &N, N.getRawScope());
 }
 
+void Verifier::visitDIFragment(const DIFragment &N) {}
+
 void Verifier::visitDIExpression(const DIExpression &N) {
   AssertDI(N.isValid(), "invalid expression", &N);
 }
