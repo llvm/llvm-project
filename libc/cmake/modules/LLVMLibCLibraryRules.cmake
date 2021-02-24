@@ -134,6 +134,7 @@ function(add_redirector_library target_name)
   # prevent DT_NEEDED on C++ runtime.
   add_library(
     ${target_name}
+    EXCLUDE_FROM_ALL
     SHARED
     ${obj_files}
   )
