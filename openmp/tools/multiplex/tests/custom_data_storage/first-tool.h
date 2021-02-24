@@ -240,14 +240,14 @@ ompt_data_t *ompt_get_own_thread_data() {
   return get_own_ompt_data(ompt_cds_get_thread_data());
 }
 
-#define register_callback2_t(name, type)                                       \
+#define register_ompt_callback2_t(name, type)                                       \
   do {                                                                         \
     type f_##name = &on_cds_##name;                                            \
     if (ompt_set_callback(name, (ompt_callback_t)f_##name) == ompt_set_never)  \
       printf("0: Could not register callback '" #name "'\n");                  \
   } while (0)
 
-#define register_callback2(name) register_callback2_t(name, name##_t)
+#define register_ompt_callback2(name) register_callback2_t(name, name##_t)
 
 int ompt_cds_initialize(ompt_function_lookup_t lookup, int initial_device_num,
                         ompt_data_t *tool_data) {
@@ -255,29 +255,29 @@ int ompt_cds_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   ompt_cds_get_thread_data = ompt_get_thread_data;
   ompt_get_thread_data = ompt_get_own_thread_data;
 
-  register_callback(ompt_callback_mutex_acquire);
-  register_callback_t(ompt_callback_mutex_acquired, ompt_callback_mutex_t);
-  register_callback_t(ompt_callback_mutex_released, ompt_callback_mutex_t);
-  register_callback(ompt_callback_nest_lock);
-  register_callback2(ompt_callback_sync_region);
-  register_callback2_t(ompt_callback_sync_region_wait,
+  register_ompt_callback(ompt_callback_mutex_acquire);
+  register_ompt_callback_t(ompt_callback_mutex_acquired, ompt_callback_mutex_t);
+  register_ompt_callback_t(ompt_callback_mutex_released, ompt_callback_mutex_t);
+  register_ompt_callback(ompt_callback_nest_lock);
+  register_ompt_callback2(ompt_callback_sync_region);
+  register_ompt_callback2_t(ompt_callback_sync_region_wait,
                        ompt_callback_sync_region_t);
-  register_callback2(ompt_callback_control_tool);
-  register_callback2(ompt_callback_flush);
-  register_callback2(ompt_callback_cancel);
-  register_callback2(ompt_callback_implicit_task);
-  register_callback_t(ompt_callback_lock_init, ompt_callback_mutex_acquire_t);
-  register_callback_t(ompt_callback_lock_destroy, ompt_callback_mutex_t);
-  register_callback2(ompt_callback_work);
-  register_callback2(ompt_callback_master);
-  register_callback2(ompt_callback_parallel_begin);
-  register_callback2(ompt_callback_parallel_end);
-  register_callback2(ompt_callback_task_create);
-  register_callback2(ompt_callback_task_schedule);
-  register_callback2(ompt_callback_dependences);
-  register_callback2(ompt_callback_task_dependence);
-  register_callback2(ompt_callback_thread_begin);
-  register_callback2(ompt_callback_thread_end);
+  register_ompt_callback2(ompt_callback_control_tool);
+  register_ompt_callback2(ompt_callback_flush);
+  register_ompt_callback2(ompt_callback_cancel);
+  register_ompt_callback2(ompt_callback_implicit_task);
+  register_ompt_callback_t(ompt_callback_lock_init, ompt_callback_mutex_acquire_t);
+  register_ompt_callback_t(ompt_callback_lock_destroy, ompt_callback_mutex_t);
+  register_ompt_callback2(ompt_callback_work);
+  register_ompt_callback2(ompt_callback_master);
+  register_ompt_callback2(ompt_callback_parallel_begin);
+  register_ompt_callback2(ompt_callback_parallel_end);
+  register_ompt_callback2(ompt_callback_task_create);
+  register_ompt_callback2(ompt_callback_task_schedule);
+  register_ompt_callback2(ompt_callback_dependences);
+  register_ompt_callback2(ompt_callback_task_dependence);
+  register_ompt_callback2(ompt_callback_thread_begin);
+  register_ompt_callback2(ompt_callback_thread_end);
   return 1; // success
 }
 
