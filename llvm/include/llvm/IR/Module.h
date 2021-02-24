@@ -888,11 +888,6 @@ public:
   void setPartialSampleProfileRatio(const ModuleSummaryIndex &Index);
 };
 
-/// Given "llvm.used" or "llvm.compiler.used" as a global name, collect
-/// the initializer elements of that global in Set and return the global itself.
-GlobalVariable *collectUsedGlobalVariables(const Module &M,
-                                           SmallPtrSetImpl<GlobalValue *> &Set,
-                                           bool CompilerUsed);
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the
 /// initializer elements of that global in a SmallVector and return the global
 /// itself.
