@@ -201,6 +201,9 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
 
   void readCoverageRegions(const std::string &Coverage,
                            OutputFunctionCoverageData &Data) {
+    // We will re-use the StringRef in duplicate tests, clear it to avoid
+    // clobber previous ones.
+    Filenames.clear();
     Filenames.resize(Files.size() + 1);
     for (const auto &E : Files)
       Filenames[E.getValue()] = E.getKey().str();
