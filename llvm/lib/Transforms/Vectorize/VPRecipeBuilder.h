@@ -12,6 +12,7 @@
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
@@ -19,6 +20,8 @@ namespace llvm {
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class TargetLibraryInfo;
+
+using VPRecipeOrVPValueTy = PointerUnion<VPRecipeBase *, VPValue *>;
 
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
@@ -75,10 +78,11 @@ class VPRecipeBuilder {
   tryToOptimizeInductionTruncate(TruncInst *I, VFRange &Range,
                                  VPlan &Plan) const;
 
-  /// Handle non-loop phi nodes. Currently all such phi nodes are turned into
-  /// a sequence of select instructions as the vectorizer currently performs
-  /// full if-conversion.
-  VPBlendRecipe *tryToBlend(PHINode *Phi, VPlanPtr &Plan);
+  /// Handle non-loop phi nodes. Return a VPValue, if all incoming values match
+  /// or a new VPBlendRecipe otherwise. Currently all such phi nodes are turned
+  /// into a sequence of select instructions as the vectorizer currently
+  /// performs full if-conversion.
+  VPRecipeOrVPValueTy tryToBlend(PHINode *Phi, VPlanPtr &Plan);
 
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe. Range.End may be decreased to ensure same
@@ -91,6 +95,9 @@ class VPRecipeBuilder {
   /// that widening should be performed.
   VPWidenRecipe *tryToWiden(Instruction *I, VPlan &Plan) const;
 
+  /// Return a VPRecipeOrValueTy with VPRecipeBase * being set. This can be used to force the use as VPRecipeBase* for recipe sub-types that also inherit from VPValue.
+  VPRecipeOrVPValueTy toVPRecipeResult(VPRecipeBase *R) const { return R; }
+
 public:
   VPRecipeBuilder(Loop *OrigLoop, const TargetLibraryInfo *TLI,
                   LoopVectorizationLegality *Legal,
@@ -99,10 +106,12 @@ public:
       : OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM), PSE(PSE),
         Builder(Builder) {}
 
-  /// Check if a recipe can be create for \p I withing the given VF \p Range.
-  /// If a recipe can be created, return it. Otherwise return nullptr.
-  VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr, VFRange &Range,
-                                       VPlanPtr &Plan);
+  /// Check if an existing VPValue can be used for \p Instr or a recipe can be
+  /// create for \p I withing the given VF \p Range. If an existing VPValue can
+  /// be used or if a recipe can be created, return it. Otherwise return a
+  /// VPRecipeOrVPValueTy with nullptr.
+  VPRecipeOrVPValueTy tryToCreateWidenRecipe(Instruction *Instr, VFRange &Range,
+                                             VPlanPtr &Plan);
 
   /// Set the recipe created for given ingredient. This operation is a no-op for
   /// ingredients that were not marked using a nullptr entry in the map.
