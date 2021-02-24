@@ -67,7 +67,7 @@ entry:
   %23 = bitcast %T12_Concurrency9MainActorC5_ImplC* %15 to %swift.executor*, !dbg !49
   %24 = load %swift.executor*, %swift.executor** %4, align 8, !dbg !49
   %25 = load %swift.context*, %swift.context** %5, align 8, !dbg !49
-  %26 = call { i8*, i8*, i8* } (i8*, i8*, ...) @llvm.coro.suspend.async(i8* %16, i8* bitcast (i8* (i8*)* @__swift_async_resume_get_context to i8*), i8* bitcast (void (i8*, %swift.executor*, %swift.task*, %swift.executor*, %swift.context*)* @__swift_suspend_point to i8*), i8* %16, %swift.executor* %23, %swift.task* %17, %swift.executor* %24, %swift.context* %25), !dbg !49
+  %26 = call { i8*, i8*, i8* } (i32, i8*, i8*, ...) @llvm.coro.suspend.async(i32 2, i8* %16, i8* bitcast (i8* (i8*)* @__swift_async_resume_get_context to i8*), i8* bitcast (void (i8*, %swift.executor*, %swift.task*, %swift.executor*, %swift.context*)* @__swift_suspend_point to i8*), i8* %16, %swift.executor* %23, %swift.task* %17, %swift.executor* %24, %swift.context* %25), !dbg !49
   %27 = extractvalue { i8*, i8*, i8* } %26, 0, !dbg !49
   %28 = bitcast i8* %27 to %swift.task*, !dbg !49
   store %swift.task* %28, %swift.task** %3, align 8, !dbg !49
@@ -136,7 +136,7 @@ entry:
 declare extern_weak swiftcc void @swift_task_switch(%swift.task* %0, %swift.executor* %1, %swift.executor* %2) #1
 
 ; Function Attrs: nounwind
-declare { i8*, i8*, i8* } @llvm.coro.suspend.async(i8*, i8*, ...) #1
+declare { i8*, i8*, i8* } @llvm.coro.suspend.async(i32, i8*, i8*, ...) #1
 
 ; Function Attrs: nounwind
 declare void @swift_release(%swift.refcounted*) #1
