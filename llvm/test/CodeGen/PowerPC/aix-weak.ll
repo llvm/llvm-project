@@ -101,6 +101,16 @@ entry:
 
 ; CHECKSYM:      Symbols [
 ; CHECKSYM-NEXT:   Symbol {
+; CHECKSYM-NEXT:     Index: 0
+; CHECKSYM-NEXT:     Name: .file
+; CHECKSYM-NEXT:     Value (SymbolTableIndex): 0x0
+; CHECKSYM-NEXT:     Section: N_DEBUG
+; CHECKSYM-NEXT:     Source Language ID: TB_C (0x0)
+; CHECKSYM-NEXT:     CPU Version ID: 0x0
+; CHECKSYM-NEXT:     StorageClass: C_FILE (0x67)
+; CHECKSYM-NEXT:     NumberOfAuxEntries: 0
+; CHECKSYM-NEXT:   }
+; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: [[#Index:]]
 ; CHECKSYM-NEXT:     Name: .text
 ; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x0
