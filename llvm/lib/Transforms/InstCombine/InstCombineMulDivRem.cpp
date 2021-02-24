@@ -1294,6 +1294,17 @@ static Instruction *foldFDivPowDivisor(BinaryOperator &I,
     Args.push_back(II->getArgOperand(0));
     Args.push_back(Builder.CreateFNegFMF(II->getArgOperand(1), &I));
     break;
+  case Intrinsic::powi:
+    // Require 'ninf' assuming that makes powi(X, -INT_MIN) acceptable.
+    // That is, X ** (huge negative number) is 0.0, ~1.0, or INF and so
+    // dividing by that is INF, ~1.0, or 0.0. Code that uses powi allows
+    // non-standard results, so this corner case should be acceptable if the
+    // code rules out INF values.
+    if (!I.hasNoInfs())
+      return nullptr;
+    Args.push_back(II->getArgOperand(0));
+    Args.push_back(Builder.CreateNeg(II->getArgOperand(1)));
+    break;
   case Intrinsic::exp:
   case Intrinsic::exp2:
     Args.push_back(Builder.CreateFNegFMF(II->getArgOperand(0), &I));
