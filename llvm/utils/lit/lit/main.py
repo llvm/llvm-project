@@ -122,8 +122,11 @@ def main(builtin_params={}):
 
     has_failure = any(t.isFailure() for t in discovered_tests)
     if has_failure:
-        sys.exit(1)
-
+        if opts.ignoreFail:
+            sys.stderr.write("\nExiting with status 0 instead of 1 because "
+                             "'--ignore-fail' was specified.\n")
+        else:
+            sys.exit(1)
 
 def create_params(builtin_params, user_params):
     def parse(p):
