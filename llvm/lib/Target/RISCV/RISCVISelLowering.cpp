@@ -571,6 +571,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::MULHS, VT, Custom);
         setOperationAction(ISD::MULHU, VT, Custom);
 
+        setOperationAction(ISD::SINT_TO_FP, VT, Custom);
+        setOperationAction(ISD::UINT_TO_FP, VT, Custom);
+        setOperationAction(ISD::FP_TO_SINT, VT, Custom);
+        setOperationAction(ISD::FP_TO_UINT, VT, Custom);
+
         setOperationAction(ISD::VSELECT, VT, Custom);
 
         setOperationAction(ISD::TRUNCATE, VT, Custom);
@@ -1370,11 +1375,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     SDLoc DL(Op);
     SDValue Src = Op.getOperand(0);
     MVT EltVT = VT.getVectorElementType();
-    MVT SrcEltVT = Src.getSimpleValueType().getVectorElementType();
+    MVT SrcVT = Src.getSimpleValueType();
+    MVT SrcEltVT = SrcVT.getVectorElementType();
     unsigned EltSize = EltVT.getSizeInBits();
     unsigned SrcEltSize = SrcEltVT.getSizeInBits();
     assert(isPowerOf2_32(EltSize) && isPowerOf2_32(SrcEltSize) &&
            "Unexpected vector element types");
+
     bool IsInt2FP = SrcEltVT.isInteger();
     // Widening conversions
     if (EltSize > SrcEltSize && (EltSize / SrcEltSize >= 4)) {
@@ -1416,7 +1423,49 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return DAG.getNode(ISD::TRUNCATE, DL, VT, FP2Int);
     }
 
-    return Op;
+    // Scalable vectors can exit here. Patterns will handle equally-sized
+    // conversions halving/doubling ones.
+    if (!VT.isFixedLengthVector())
+      return Op;
+
+    // For fixed-length vectors we lower to a custom "VL" node.
+    unsigned RVVOpc = 0;
+    switch (Op.getOpcode()) {
+    default:
+      llvm_unreachable("Impossible opcode");
+    case ISD::FP_TO_SINT:
+      RVVOpc = RISCVISD::FP_TO_SINT_VL;
+      break;
+    case ISD::FP_TO_UINT:
+      RVVOpc = RISCVISD::FP_TO_UINT_VL;
+      break;
+    case ISD::SINT_TO_FP:
+      RVVOpc = RISCVISD::SINT_TO_FP_VL;
+      break;
+    case ISD::UINT_TO_FP:
+      RVVOpc = RISCVISD::UINT_TO_FP_VL;
+      break;
+    }
+
+    MVT ContainerVT, SrcContainerVT;
+    // Derive the reference container type from the larger vector type.
+    if (SrcEltSize > EltSize) {
+      SrcContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
+          DAG, SrcVT, Subtarget);
+      ContainerVT =
+          SrcContainerVT.changeVectorElementType(VT.getVectorElementType());
+    } else {
+      ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
+          DAG, VT, Subtarget);
+      SrcContainerVT = ContainerVT.changeVectorElementType(SrcEltVT);
+    }
+
+    SDValue Mask, VL;
+    std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+    Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
+    Src = DAG.getNode(RVVOpc, DL, ContainerVT, Src, Mask, VL);
+    return convertFromScalableVector(VT, Src, DAG, Subtarget);
   }
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_UMAX:
@@ -5573,8 +5622,12 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(UMAX_VL)
   NODE_NAME_CASE(MULHS_VL)
   NODE_NAME_CASE(MULHU_VL)
-  NODE_NAME_CASE(FP_ROUND_VL)
+  NODE_NAME_CASE(FP_TO_SINT_VL)
+  NODE_NAME_CASE(FP_TO_UINT_VL)
+  NODE_NAME_CASE(SINT_TO_FP_VL)
+  NODE_NAME_CASE(UINT_TO_FP_VL)
   NODE_NAME_CASE(FP_EXTEND_VL)
+  NODE_NAME_CASE(FP_ROUND_VL)
   NODE_NAME_CASE(SETCC_VL)
   NODE_NAME_CASE(VSELECT_VL)
   NODE_NAME_CASE(VMAND_VL)
