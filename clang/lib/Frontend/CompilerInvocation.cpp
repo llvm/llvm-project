@@ -1147,7 +1147,7 @@ GenerateOptimizationRemark(SmallVectorImpl<const char *> &Args,
   } else if (Remark.Kind == CodeGenOptions::RK_Disabled) {
     GenerateArg(Args, OPT_R_Joined, StringRef("no-") + Name, SA);
   }
-};
+}
 
 /// Parse a remark command line argument. It may be missing, disabled/enabled by
 /// '-R[no-]group' or specified with a regular expression by '-Rgroup=regexp'.
