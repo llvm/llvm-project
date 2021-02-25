@@ -2299,7 +2299,7 @@ def : GCNPat <
 def : GCNPat <
   (i64 (int_amdgcn_mov_dpp i64:$src, timm:$dpp_ctrl, timm:$row_mask,
                            timm:$bank_mask, timm:$bound_ctrl)),
-  (V_MOV_B64_DPP_PSEUDO VReg_64:$src, VReg_64:$src,
+  (V_MOV_B64_DPP_PSEUDO VReg_64_Align2:$src, VReg_64_Align2:$src,
                         (as_i32timm $dpp_ctrl), (as_i32timm $row_mask),
                         (as_i32timm $bank_mask),
                         (as_i1timm $bound_ctrl))
@@ -2308,7 +2308,7 @@ def : GCNPat <
 def : GCNPat <
   (i64 (int_amdgcn_update_dpp i64:$old, i64:$src, timm:$dpp_ctrl, timm:$row_mask,
                               timm:$bank_mask, timm:$bound_ctrl)),
-  (V_MOV_B64_DPP_PSEUDO VReg_64:$old, VReg_64:$src, (as_i32timm $dpp_ctrl),
+  (V_MOV_B64_DPP_PSEUDO VReg_64_Align2:$old, VReg_64_Align2:$src, (as_i32timm $dpp_ctrl),
                         (as_i32timm $row_mask), (as_i32timm $bank_mask),
                         (as_i1timm $bound_ctrl))
 >;

@@ -345,13 +345,6 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     reserveRegisterTuples(Reserved, Reg);
   }
 
-  if (ST.hasGFX90AInsts())
-    for (const TargetRegisterClass *RC : this->regclasses())
-      if (getRegSizeInBits(*RC) > 32 && hasVectorRegisters(RC))
-        for (unsigned Reg : *RC)
-          if (getEncodingValue(Reg) & 1)
-            Reserved.set(Reg);
-
   // FIXME: Stop using reserved registers for this.
   for (MCPhysReg Reg : MFI->getAGPRSpillVGPRs())
     reserveRegisterTuples(Reserved, Reg);
@@ -1763,14 +1756,8 @@ StringRef SIRegisterInfo::getRegAsmName(MCRegister Reg) const {
   return AMDGPUInstPrinter::getRegisterName(Reg);
 }
 
-const TargetRegisterClass *
-SIRegisterInfo::getVGPRClassForBitWidth(unsigned BitWidth) {
-  if (BitWidth == 1)
-    return &AMDGPU::VReg_1RegClass;
-  if (BitWidth <= 16)
-    return &AMDGPU::VGPR_LO16RegClass;
-  if (BitWidth <= 32)
-    return &AMDGPU::VGPR_32RegClass;
+static const TargetRegisterClass *
+getAnyVGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth <= 64)
     return &AMDGPU::VReg_64RegClass;
   if (BitWidth <= 96)
@@ -1791,12 +1778,42 @@ SIRegisterInfo::getVGPRClassForBitWidth(unsigned BitWidth) {
   return nullptr;
 }
 
+static const TargetRegisterClass *
+getAlignedVGPRClassForBitWidth(unsigned BitWidth) {
+  if (BitWidth <= 64)
+    return &AMDGPU::VReg_64_Align2RegClass;
+  if (BitWidth <= 96)
+    return &AMDGPU::VReg_96_Align2RegClass;
+  if (BitWidth <= 128)
+    return &AMDGPU::VReg_128_Align2RegClass;
+  if (BitWidth <= 160)
+    return &AMDGPU::VReg_160_Align2RegClass;
+  if (BitWidth <= 192)
+    return &AMDGPU::VReg_192_Align2RegClass;
+  if (BitWidth <= 256)
+    return &AMDGPU::VReg_256_Align2RegClass;
+  if (BitWidth <= 512)
+    return &AMDGPU::VReg_512_Align2RegClass;
+  if (BitWidth <= 1024)
+    return &AMDGPU::VReg_1024_Align2RegClass;
+
+  return nullptr;
+}
+
 const TargetRegisterClass *
-SIRegisterInfo::getAGPRClassForBitWidth(unsigned BitWidth) {
+SIRegisterInfo::getVGPRClassForBitWidth(unsigned BitWidth) const {
+  if (BitWidth == 1)
+    return &AMDGPU::VReg_1RegClass;
   if (BitWidth <= 16)
-    return &AMDGPU::AGPR_LO16RegClass;
+    return &AMDGPU::VGPR_LO16RegClass;
   if (BitWidth <= 32)
-    return &AMDGPU::AGPR_32RegClass;
+    return &AMDGPU::VGPR_32RegClass;
+  return ST.needsAlignedVGPRs() ? getAlignedVGPRClassForBitWidth(BitWidth)
+                                : getAnyVGPRClassForBitWidth(BitWidth);
+}
+
+static const TargetRegisterClass *
+getAnyAGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth <= 64)
     return &AMDGPU::AReg_64RegClass;
   if (BitWidth <= 96)
@@ -1815,6 +1832,38 @@ SIRegisterInfo::getAGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AReg_1024RegClass;
 
   return nullptr;
+}
+
+static const TargetRegisterClass *
+getAlignedAGPRClassForBitWidth(unsigned BitWidth) {
+  if (BitWidth <= 64)
+    return &AMDGPU::AReg_64_Align2RegClass;
+  if (BitWidth <= 96)
+    return &AMDGPU::AReg_96_Align2RegClass;
+  if (BitWidth <= 128)
+    return &AMDGPU::AReg_128_Align2RegClass;
+  if (BitWidth <= 160)
+    return &AMDGPU::AReg_160_Align2RegClass;
+  if (BitWidth <= 192)
+    return &AMDGPU::AReg_192_Align2RegClass;
+  if (BitWidth <= 256)
+    return &AMDGPU::AReg_256_Align2RegClass;
+  if (BitWidth <= 512)
+    return &AMDGPU::AReg_512_Align2RegClass;
+  if (BitWidth <= 1024)
+    return &AMDGPU::AReg_1024_Align2RegClass;
+
+  return nullptr;
+}
+
+const TargetRegisterClass *
+SIRegisterInfo::getAGPRClassForBitWidth(unsigned BitWidth) const {
+  if (BitWidth <= 16)
+    return &AMDGPU::AGPR_LO16RegClass;
+  if (BitWidth <= 32)
+    return &AMDGPU::AGPR_32RegClass;
+  return ST.needsAlignedVGPRs() ? getAlignedAGPRClassForBitWidth(BitWidth)
+                                : getAnyAGPRClassForBitWidth(BitWidth);
 }
 
 const TargetRegisterClass *
@@ -1855,29 +1904,46 @@ SIRegisterInfo::getPhysRegClass(MCRegister Reg) const {
     &AMDGPU::VGPR_32RegClass,
     &AMDGPU::SReg_32RegClass,
     &AMDGPU::AGPR_32RegClass,
+    &AMDGPU::AGPR_32RegClass,
+    &AMDGPU::VReg_64_Align2RegClass,
     &AMDGPU::VReg_64RegClass,
     &AMDGPU::SReg_64RegClass,
+    &AMDGPU::AReg_64_Align2RegClass,
     &AMDGPU::AReg_64RegClass,
+    &AMDGPU::VReg_96_Align2RegClass,
     &AMDGPU::VReg_96RegClass,
     &AMDGPU::SReg_96RegClass,
+    &AMDGPU::AReg_96_Align2RegClass,
     &AMDGPU::AReg_96RegClass,
+    &AMDGPU::VReg_128_Align2RegClass,
     &AMDGPU::VReg_128RegClass,
     &AMDGPU::SReg_128RegClass,
+    &AMDGPU::AReg_128_Align2RegClass,
     &AMDGPU::AReg_128RegClass,
+    &AMDGPU::VReg_160_Align2RegClass,
     &AMDGPU::VReg_160RegClass,
     &AMDGPU::SReg_160RegClass,
+    &AMDGPU::AReg_160_Align2RegClass,
     &AMDGPU::AReg_160RegClass,
+    &AMDGPU::VReg_192_Align2RegClass,
     &AMDGPU::VReg_192RegClass,
     &AMDGPU::SReg_192RegClass,
+    &AMDGPU::AReg_192_Align2RegClass,
     &AMDGPU::AReg_192RegClass,
+    &AMDGPU::VReg_256_Align2RegClass,
     &AMDGPU::VReg_256RegClass,
     &AMDGPU::SReg_256RegClass,
+    &AMDGPU::AReg_256_Align2RegClass,
     &AMDGPU::AReg_256RegClass,
+    &AMDGPU::VReg_512_Align2RegClass,
     &AMDGPU::VReg_512RegClass,
     &AMDGPU::SReg_512RegClass,
+    &AMDGPU::AReg_512_Align2RegClass,
     &AMDGPU::AReg_512RegClass,
     &AMDGPU::SReg_1024RegClass,
+    &AMDGPU::VReg_1024_Align2RegClass,
     &AMDGPU::VReg_1024RegClass,
+    &AMDGPU::AReg_1024_Align2RegClass,
     &AMDGPU::AReg_1024RegClass,
     &AMDGPU::SCC_CLASSRegClass,
     &AMDGPU::Pseudo_SReg_32RegClass,
@@ -1975,6 +2041,16 @@ const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
   }
   assert(RC && "Invalid sub-register class size");
   return RC;
+}
+
+const TargetRegisterClass *
+SIRegisterInfo::getCompatibleSubRegClass(const TargetRegisterClass *SuperRC,
+                                         const TargetRegisterClass *SubRC,
+                                         unsigned SubIdx) const {
+  // Ensure this subregister index is aligned in the super register.
+  const TargetRegisterClass *MatchRC =
+      getMatchingSuperRegClass(SuperRC, SubRC, SubIdx);
+  return MatchRC && MatchRC->hasSubClassEq(SuperRC) ? MatchRC : nullptr;
 }
 
 bool SIRegisterInfo::opCanUseInlineConstant(unsigned OpType) const {
@@ -2180,6 +2256,12 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
 
 MCRegister SIRegisterInfo::getVCC() const {
   return isWave32 ? AMDGPU::VCC_LO : AMDGPU::VCC;
+}
+
+const TargetRegisterClass *SIRegisterInfo::getVGPR64Class() const {
+  // VGPR tuples have an alignment requirement on gfx90a variants.
+  return ST.needsAlignedVGPRs() ? &AMDGPU::VReg_64_Align2RegClass
+                                : &AMDGPU::VReg_64RegClass;
 }
 
 const TargetRegisterClass *

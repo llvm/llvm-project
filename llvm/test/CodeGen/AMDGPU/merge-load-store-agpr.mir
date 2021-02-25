@@ -1,7 +1,7 @@
 # RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 # GCN-LABEL: name: ds_read_b32_v_v
-# GCN: vreg_64 = DS_READ2_B32
+# GCN: vreg_64_align2 = DS_READ2_B32
 name: ds_read_b32_v_v
 body:             |
   bb.0:
@@ -12,7 +12,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: ds_read_b32_a_a
-# GCN: areg_64 = DS_READ2_B32
+# GCN: areg_64_align2 = DS_READ2_B32
 name: ds_read_b32_a_a
 body:             |
   bb.0:
