@@ -940,23 +940,22 @@ and the result is assigned to the key path on success.
 
 **Enumeration**
 
-The key path defaults to the value specified in ``MarshallingInfoString``
-prefixed by the contents of ``NormalizedValuesScope`` and ``::``. This ensures
-correct reference to an enum case is formed even if the enum resides in different
+The key path defaults to the value specified in ``MarshallingInfoEnum`` prefixed
+by the contents of ``NormalizedValuesScope`` and ``::``. This ensures correct
+reference to an enum case is formed even if the enum resides in different
 namespace or is an enum class. If the value present on command line does not
 match any of the comma-separated values from ``Values``, an error diagnostics is
 issued. Otherwise, the corresponding element from ``NormalizedValues`` at the
 same index is assigned to the key path (also correctly scoped). The number of
 comma-separated string values and elements of the array within
-``NormalizedValues`` must match. The ``AutoNormalizeEnum`` mix-in denotes the
-key path option should be treated as an enum and not as a string.
+``NormalizedValues`` must match.
 
 .. code-block::
 
   def mthread_model : Separate<["-"], "mthread-model">, Flags<[CC1Option]>,
     Values<"posix,single">, NormalizedValues<["POSIX", "Single"]>,
     NormalizedValuesScope<"LangOptions::ThreadModelKind">,
-    MarshallingInfoString<LangOpts<"ThreadModel">, "POSIX">, AutoNormalizeEnum;
+    MarshallingInfoEnum<LangOpts<"ThreadModel">, "POSIX">;
 
 ..
   Intentionally omitting MarshallingInfoBitfieldFlag. It's adding some

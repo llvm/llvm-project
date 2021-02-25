@@ -427,11 +427,10 @@ multiclass BoolGOption<string flag_base, KeyPathAndMacro kpm,
 
 // FIXME: Diagnose if target does not support protected visibility.
 class MarshallingInfoVisibility<KeyPathAndMacro kpm, code default>
-  : MarshallingInfoString<kpm, default>,
+  : MarshallingInfoEnum<kpm, default>,
     Values<"default,hidden,internal,protected">,
     NormalizedValues<["DefaultVisibility", "HiddenVisibility",
-                      "HiddenVisibility", "ProtectedVisibility"]>,
-    AutoNormalizeEnum {}
+                      "HiddenVisibility", "ProtectedVisibility"]> {}
 
 // Key paths that are constant during parsing of options with the same key path prefix.
 defvar cplusplus = LangOpts<"CPlusPlus">;
@@ -1062,7 +1061,7 @@ def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
     HelpText<"Embed LLVM bitcode (option: off, all, bitcode, marker)">,
     Values<"off,all,bitcode,marker">, NormalizedValuesScope<"CodeGenOptions">,
     NormalizedValues<["Embed_Off", "Embed_All", "Embed_Bitcode", "Embed_Marker"]>,
-    MarshallingInfoString<CodeGenOpts<"EmbedBitcode">, "Embed_Off">, AutoNormalizeEnum;
+    MarshallingInfoEnum<CodeGenOpts<"EmbedBitcode">, "Embed_Off">;
 def fembed_bitcode : Flag<["-"], "fembed-bitcode">, Group<f_Group>,
   Alias<fembed_bitcode_EQ>, AliasArgs<["all"]>,
   HelpText<"Embed LLVM IR bitcode as data">;
@@ -1248,7 +1247,7 @@ def fcf_runtime_abi_EQ : Joined<["-"], "fcf-runtime-abi=">, Group<f_Group>,
     Flags<[CC1Option]>, Values<"unspecified,standalone,objc,swift,swift-5.0,swift-4.2,swift-4.1">,
     NormalizedValuesScope<"LangOptions::CoreFoundationABI">,
     NormalizedValues<["ObjectiveC", "ObjectiveC", "ObjectiveC", "Swift5_0", "Swift5_0", "Swift4_2", "Swift4_1"]>,
-    MarshallingInfoString<LangOpts<"CFRuntime">, "ObjectiveC">, AutoNormalizeEnum;
+    MarshallingInfoEnum<LangOpts<"CFRuntime">, "ObjectiveC">;
 defm constant_cfstrings : BoolFOption<"constant-cfstrings",
   LangOpts<"NoConstantCFStrings">, DefaultFalse,
   NegFlag<SetTrue, [CC1Option], "Disable creation of CodeFoundation-type constant strings">,
@@ -1356,8 +1355,7 @@ def exception_model : Separate<["-"], "exception-model">,
   Values<"dwarf,sjlj,seh,wasm">,
   NormalizedValuesScope<"llvm::ExceptionHandling">,
   NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm"]>,
-  MarshallingInfoString<LangOpts<"ExceptionHandling">, "None">,
-  AutoNormalizeEnum;
+  MarshallingInfoEnum<LangOpts<"ExceptionHandling">, "None">;
 def exception_model_EQ : Joined<["-"], "exception-model=">,
   Flags<[CC1Option, NoDriverOption]>, Alias<exception_model>;
 def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Group<f_Group>, Flags<[CC1Option]>,
@@ -1380,7 +1378,7 @@ def ffp_exception_behavior_EQ : Joined<["-"], "ffp-exception-behavior=">, Group<
   HelpText<"Specifies the exception behavior of floating-point operations.">,
   Values<"ignore,maytrap,strict">, NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["FPE_Ignore", "FPE_MayTrap", "FPE_Strict"]>,
-  MarshallingInfoString<LangOpts<"FPExceptionMode">, "FPE_Ignore">, AutoNormalizeEnum;
+  MarshallingInfoEnum<LangOpts<"FPExceptionMode">, "FPE_Ignore">;
 defm fast_math : OptInFFlag<"fast-math", "Allow aggressive, lossy floating-point optimizations", "", "", [],
   LangOpts<"FastMath">, [cl_fast_relaxed_math.KeyPath]>;
 def menable_unsafe_fp_math : Flag<["-"], "menable-unsafe-fp-math">, Flags<[CC1Option]>,
@@ -1820,10 +1818,9 @@ def flax_vector_conversions_EQ : Joined<["-"], "flax-vector-conversions=">, Grou
   NormalizedValues<["LangOptions::LaxVectorConversionKind::None",
                     "LangOptions::LaxVectorConversionKind::Integer",
                     "LangOptions::LaxVectorConversionKind::All"]>,
-  MarshallingInfoString<LangOpts<"LaxVectorConversions">,
-                        !strconcat(open_cl.KeyPath, " ? LangOptions::LaxVectorConversionKind::None"
-                                                    " : LangOptions::LaxVectorConversionKind::All")>,
-  AutoNormalizeEnum;
+  MarshallingInfoEnum<LangOpts<"LaxVectorConversions">,
+                      !strconcat(open_cl.KeyPath, " ? LangOptions::LaxVectorConversionKind::None"
+                                                  " : LangOptions::LaxVectorConversionKind::All")>;
 def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["integer"]>;
 def flimited_precision_EQ : Joined<["-"], "flimited-precision=">, Group<f_Group>;
@@ -1885,8 +1882,7 @@ def fms_memptr_rep_EQ : Joined<["-"], "fms-memptr-rep=">, Group<f_Group>, Flags<
   Values<"single,multiple,virtual">, NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["PPTMK_FullGeneralitySingleInheritance", "PPTMK_FullGeneralityMultipleInheritance",
                     "PPTMK_FullGeneralityVirtualInheritance"]>,
-  MarshallingInfoString<LangOpts<"MSPointerToMemberRepresentationMethod">, "PPTMK_BestCase">,
-  AutoNormalizeEnum;
+  MarshallingInfoEnum<LangOpts<"MSPointerToMemberRepresentationMethod">, "PPTMK_BestCase">;
 // __declspec is enabled by default for the PS4 by the driver, and also
 // enabled for Microsoft Extensions or Borland Extensions, here.
 //
@@ -2057,7 +2053,7 @@ def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>, Flags<[CC1Option]>,
     Values<"Accelerate,libmvec,MASSV,SVML,none">,
     NormalizedValuesScope<"CodeGenOptions">,
     NormalizedValues<["Accelerate", "LIBMVEC", "MASSV", "SVML", "NoLibrary"]>,
-    MarshallingInfoString<CodeGenOpts<"VecLib">, "NoLibrary">, AutoNormalizeEnum;
+    MarshallingInfoEnum<CodeGenOpts<"VecLib">, "NoLibrary">;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["none"]>;
 def fno_implicit_module_maps : Flag <["-"], "fno-implicit-module-maps">, Group<f_Group>,
@@ -2304,7 +2300,7 @@ def fshow_overloads_EQ : Joined<["-"], "fshow-overloads=">, Group<f_Group>, Flag
   HelpText<"Which overload candidates to show when overload resolution fails: "
            "best|all; defaults to all">, Values<"best,all">,
   NormalizedValues<["Ovl_Best", "Ovl_All"]>,
-  MarshallingInfoString<DiagnosticOpts<"ShowOverloads">, "Ovl_All">, AutoNormalizeEnum;
+  MarshallingInfoEnum<DiagnosticOpts<"ShowOverloads">, "Ovl_All">;
 defm show_column : BoolFOption<"show-column",
   DiagnosticOpts<"ShowColumn">, DefaultTrue,
   NegFlag<SetFalse, [CC1Option], "Do not include column number on diagnostics">,
@@ -2350,7 +2346,7 @@ def ftrivial_auto_var_init : Joined<["-"], "ftrivial-auto-var-init=">, Group<f_G
   " | pattern">, Values<"uninitialized,zero,pattern">,
   NormalizedValuesScope<"LangOptions::TrivialAutoVarInitKind">,
   NormalizedValues<["Uninitialized", "Zero", "Pattern"]>,
-  MarshallingInfoString<LangOpts<"TrivialAutoVarInit">, "Uninitialized">, AutoNormalizeEnum;
+  MarshallingInfoEnum<LangOpts<"TrivialAutoVarInit">, "Uninitialized">;
 def enable_trivial_var_init_zero : Flag<["-"], "enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang">,
   Flags<[CC1Option, CoreOption]>,
   HelpText<"Trivial automatic variable initialization to zero is only here for benchmarks, it'll eventually be removed, and I'm OK with that because I'm only using it to benchmark">;
@@ -2459,7 +2455,7 @@ def ftlsmodel_EQ : Joined<["-"], "ftls-model=">, Group<f_Group>, Flags<[CC1Optio
   Values<"global-dynamic,local-dynamic,initial-exec,local-exec">,
   NormalizedValuesScope<"CodeGenOptions">,
   NormalizedValues<["GeneralDynamicTLSModel", "LocalDynamicTLSModel", "InitialExecTLSModel", "LocalExecTLSModel"]>,
-  MarshallingInfoString<CodeGenOpts<"DefaultTLSModel">, "GeneralDynamicTLSModel">, AutoNormalizeEnum;
+  MarshallingInfoEnum<CodeGenOpts<"DefaultTLSModel">, "GeneralDynamicTLSModel">;
 def ftrapv : Flag<["-"], "ftrapv">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Trap on integer overflow">;
 def ftrapv_handler_EQ : Joined<["-"], "ftrapv-handler=">, Group<f_Group>,
@@ -2935,12 +2931,12 @@ def mno_stack_arg_probe : Flag<["-"], "mno-stack-arg-probe">, Group<m_Group>, Fl
 def mthread_model : Separate<["-"], "mthread-model">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"The thread model to use, e.g. posix, single (posix by default)">, Values<"posix,single">,
   NormalizedValues<["POSIX", "Single"]>, NormalizedValuesScope<"LangOptions::ThreadModelKind">,
-  MarshallingInfoString<LangOpts<"ThreadModel">, "POSIX">, AutoNormalizeEnum;
+  MarshallingInfoEnum<LangOpts<"ThreadModel">, "POSIX">;
 def meabi : Separate<["-"], "meabi">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Set EABI type, e.g. 4, 5 or gnu (default depends on triple)">, Values<"default,4,5,gnu">,
-  MarshallingInfoString<TargetOpts<"EABIVersion">, "Default">,
+  MarshallingInfoEnum<TargetOpts<"EABIVersion">, "Default">,
   NormalizedValuesScope<"llvm::EABI">,
-  NormalizedValues<["Default", "EABI4", "EABI5", "GNU"]>, AutoNormalizeEnum;
+  NormalizedValues<["Default", "EABI4", "EABI5", "GNU"]>;
 
 def mno_constant_cfstrings : Flag<["-"], "mno-constant-cfstrings">, Group<m_Group>;
 def mno_global_merge : Flag<["-"], "mno-global-merge">, Group<m_Group>, Flags<[CC1Option]>,
@@ -3058,7 +3054,7 @@ def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">,
            " vector length agnostic value of \"scalable\". (AArch64 only)">,
   Values<"128,256,512,1024,2048,scalable">,
   NormalizedValues<["128", "256", "512", "1024", "2048", "0"]>,
-  MarshallingInfoString<LangOpts<"ArmSveVectorBits">, "0">, AutoNormalizeEnum;
+  MarshallingInfoEnum<LangOpts<"ArmSveVectorBits">, "0">;
 
 def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Flags<[CC1Option]>, Group<m_Group>, Values<"none,all,non-leaf">,
@@ -4235,7 +4231,7 @@ defm sycl : BoolOption<"f", "sycl",
 def sycl_std_EQ : Joined<["-"], "sycl-std=">, Group<sycl_Group>, Flags<[CC1Option, NoArgumentUnused, CoreOption]>,
   HelpText<"SYCL language standard to compile for.">, Values<"2017,121,1.2.1,sycl-1.2.1">,
   NormalizedValues<["SYCL_2017", "SYCL_2017", "SYCL_2017", "SYCL_2017"]>, NormalizedValuesScope<"LangOptions">,
-  MarshallingInfoString<LangOpts<"SYCLVersion">, "SYCL_None">, ShouldParseIf<fsycl.KeyPath>, AutoNormalizeEnum;
+  MarshallingInfoEnum<LangOpts<"SYCLVersion">, "SYCL_None">, ShouldParseIf<fsycl.KeyPath>;
 
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption
@@ -4496,8 +4492,7 @@ def analyzer_checker_option_help_developer : Flag<["-"], "analyzer-checker-optio
 def analyzer_config_compatibility_mode : Separate<["-"], "analyzer-config-compatibility-mode">,
   HelpText<"Don't emit errors on invalid analyzer-config inputs">,
   Values<"true,false">, NormalizedValues<[[{false}], [{true}]]>,
-  MarshallingInfoString<AnalyzerOpts<"ShouldEmitErrorsOnInvalidConfigValue">, [{true}]>,
-  AutoNormalizeEnum;
+  MarshallingInfoEnum<AnalyzerOpts<"ShouldEmitErrorsOnInvalidConfigValue">, [{true}]>;
 
 def analyzer_config_compatibility_mode_EQ : Joined<["-"], "analyzer-config-compatibility-mode=">,
   Alias<analyzer_config_compatibility_mode>;
@@ -4534,7 +4529,7 @@ def dwarf_version_EQ : Joined<["-"], "dwarf-version=">,
 def debugger_tuning_EQ : Joined<["-"], "debugger-tuning=">,
   Values<"gdb,lldb,sce">,
   NormalizedValuesScope<"llvm::DebuggerKind">, NormalizedValues<["GDB", "LLDB", "SCE"]>,
-  MarshallingInfoString<CodeGenOpts<"DebuggerTuning">, "Default">, AutoNormalizeEnum;
+  MarshallingInfoEnum<CodeGenOpts<"DebuggerTuning">, "Default">;
 def dwarf_debug_flags : Separate<["-"], "dwarf-debug-flags">,
   HelpText<"The string to embed in the Dwarf debug flags record.">,
   MarshallingInfoString<CodeGenOpts<"DwarfDebugFlags">>;
@@ -4544,7 +4539,7 @@ def record_command_line : Separate<["-"], "record-command-line">,
 def compress_debug_sections_EQ : Joined<["-", "--"], "compress-debug-sections=">,
     HelpText<"DWARF debug sections compression type">, Values<"none,zlib,zlib-gnu">,
     NormalizedValuesScope<"llvm::DebugCompressionType">, NormalizedValues<["None", "Z", "GNU"]>,
-    MarshallingInfoString<CodeGenOpts<"CompressDebugSections">, "None">, AutoNormalizeEnum;
+    MarshallingInfoEnum<CodeGenOpts<"CompressDebugSections">, "None">;
 def compress_debug_sections : Flag<["-", "--"], "compress-debug-sections">,
   Alias<compress_debug_sections_EQ>, AliasArgs<["zlib"]>;
 def mno_exec_stack : Flag<["-"], "mnoexecstack">,
@@ -4568,8 +4563,7 @@ def mrelocation_model : Separate<["-"], "mrelocation-model">,
   HelpText<"The relocation model to use">, Values<"static,pic,ropi,rwpi,ropi-rwpi,dynamic-no-pic">,
   NormalizedValuesScope<"llvm::Reloc">,
   NormalizedValues<["Static", "PIC_", "ROPI", "RWPI", "ROPI_RWPI", "DynamicNoPIC"]>,
-  MarshallingInfoString<CodeGenOpts<"RelocationModel">, "PIC_">,
-  AutoNormalizeEnum;
+  MarshallingInfoEnum<CodeGenOpts<"RelocationModel">, "PIC_">;
 def fno_math_builtin : Flag<["-"], "fno-math-builtin">,
   HelpText<"Disable implicit builtin knowledge of math functions">,
   MarshallingInfoFlag<LangOpts<"NoMathBuiltin">>;
@@ -4654,7 +4648,7 @@ def mdebug_pass : Separate<["-"], "mdebug-pass">,
 def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
   HelpText<"Specify which frame pointers to retain (all, non-leaf, none).">, Values<"all,non-leaf,none">,
   NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "None"]>,
-  MarshallingInfoString<CodeGenOpts<"FramePointer">, "None">, AutoNormalizeEnum;
+  MarshallingInfoEnum<CodeGenOpts<"FramePointer">, "None">;
 def mdisable_tail_calls : Flag<["-"], "mdisable-tail-calls">,
   HelpText<"Disable tail call optimization, keeping the call stack accurate">,
   MarshallingInfoFlag<CodeGenOpts<"DisableTailCalls">>;
@@ -4776,7 +4770,7 @@ def fprofile_instrument_EQ : Joined<["-"], "fprofile-instrument=">,
              "or none">, Values<"none,clang,llvm,csllvm">,
     NormalizedValuesScope<"CodeGenOptions">,
     NormalizedValues<["ProfileNone", "ProfileClangInstr", "ProfileIRInstr", "ProfileCSIRInstr"]>,
-    MarshallingInfoString<CodeGenOpts<"ProfileInstr">, "ProfileNone">, AutoNormalizeEnum;
+    MarshallingInfoEnum<CodeGenOpts<"ProfileInstr">, "ProfileNone">;
 def fprofile_instrument_path_EQ : Joined<["-"], "fprofile-instrument-path=">,
     HelpText<"Generate instrumented code to collect execution counts into "
              "<file> (overridden by LLVM_PROFILE_FILE env var)">,
@@ -4850,11 +4844,11 @@ def diagnostic_serialized_file : Separate<["-"], "serialize-diagnostic-file">,
 def fdiagnostics_format : Separate<["-"], "fdiagnostics-format">,
   HelpText<"Change diagnostic formatting to match IDE and command line tools">, Values<"clang,msvc,vi">,
   NormalizedValuesScope<"DiagnosticOptions">, NormalizedValues<["Clang", "MSVC", "Vi"]>,
-  MarshallingInfoString<DiagnosticOpts<"Format">, "Clang">, AutoNormalizeEnum;
+  MarshallingInfoEnum<DiagnosticOpts<"Format">, "Clang">;
 def fdiagnostics_show_category : Separate<["-"], "fdiagnostics-show-category">,
   HelpText<"Print diagnostic category">, Values<"none,id,name">,
   NormalizedValues<["0", "1", "2"]>,
-  MarshallingInfoString<DiagnosticOpts<"ShowCategories">, "0">, AutoNormalizeEnum;
+  MarshallingInfoEnum<DiagnosticOpts<"ShowCategories">, "0">;
 def fno_diagnostics_use_presumed_location : Flag<["-"], "fno-diagnostics-use-presumed-location">,
   HelpText<"Ignore #line directives when displaying diagnostic locations">,
   MarshallingInfoNegativeFlag<DiagnosticOpts<"ShowPresumedLoc">>;
@@ -5113,8 +5107,7 @@ def arcmt_action_EQ : Joined<["-"], "arcmt-action=">, Flags<[CC1Option, NoDriver
   HelpText<"The ARC migration action to take">, Values<"check,modify,migrate">,
   NormalizedValuesScope<"FrontendOptions">,
   NormalizedValues<["ARCMT_Check", "ARCMT_Modify", "ARCMT_Migrate"]>,
-  MarshallingInfoString<FrontendOpts<"ARCMTAction">, "ARCMT_None">,
-  AutoNormalizeEnum;
+  MarshallingInfoEnum<FrontendOpts<"ARCMTAction">, "ARCMT_None">;
 
 def opt_record_file : Separate<["-"], "opt-record-file">,
   HelpText<"File name to use for YAML optimization record output">,
@@ -5212,13 +5205,13 @@ def fconstant_string_class : Separate<["-"], "fconstant-string-class">,
 def fobjc_arc_cxxlib_EQ : Joined<["-"], "fobjc-arc-cxxlib=">,
   HelpText<"Objective-C++ Automatic Reference Counting standard library kind">, Values<"libc++,libstdc++,none">,
   NormalizedValues<["ARCXX_libcxx", "ARCXX_libstdcxx", "ARCXX_nolib"]>,
-  MarshallingInfoString<PreprocessorOpts<"ObjCXXARCStandardLibrary">, "ARCXX_nolib">, AutoNormalizeEnum;
+  MarshallingInfoEnum<PreprocessorOpts<"ObjCXXARCStandardLibrary">, "ARCXX_nolib">;
 def fobjc_runtime_has_weak : Flag<["-"], "fobjc-runtime-has-weak">,
   HelpText<"The target Objective-C runtime supports ARC weak operations">;
 def fobjc_dispatch_method_EQ : Joined<["-"], "fobjc-dispatch-method=">,
   HelpText<"Objective-C dispatch method to use">, Values<"legacy,non-legacy,mixed">,
   NormalizedValuesScope<"CodeGenOptions">, NormalizedValues<["Legacy", "NonLegacy", "Mixed"]>,
-  MarshallingInfoString<CodeGenOpts<"ObjCDispatchMethod">, "Legacy">, AutoNormalizeEnum;
+  MarshallingInfoEnum<CodeGenOpts<"ObjCDispatchMethod">, "Legacy">;
 def disable_objc_default_synthesize_properties : Flag<["-"], "disable-objc-default-synthesize-properties">,
   HelpText<"disable the default synthesis of Objective-C properties">,
   MarshallingInfoNegativeFlag<LangOpts<"ObjCDefaultSynthProperties">>;
@@ -5262,7 +5255,7 @@ def stack_protector : Separate<["-"], "stack-protector">,
   HelpText<"Enable stack protectors">, Values<"0,1,2,3">,
   NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["SSPOff", "SSPOn", "SSPStrong", "SSPReq"]>,
-  MarshallingInfoString<LangOpts<"StackProtector">, "SSPOff">, AutoNormalizeEnum;
+  MarshallingInfoEnum<LangOpts<"StackProtector">, "SSPOff">;
 def stack_protector_buffer_size : Separate<["-"], "stack-protector-buffer-size">,
   HelpText<"Lower bound for a buffer to be considered for stack protection">,
   MarshallingInfoStringInt<CodeGenOpts<"SSPBufferSize">, "8">;
@@ -5304,7 +5297,7 @@ def faddress_space_map_mangling_EQ : Joined<["-"], "faddress-space-map-mangling=
   HelpText<"Set the mode for address space map based mangling; OpenCL testing purposes only">,
   Values<"target,no,yes">, NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["ASMM_Target", "ASMM_Off", "ASMM_On"]>,
-  MarshallingInfoString<LangOpts<"AddressSpaceMapMangling">, "ASMM_Target">, AutoNormalizeEnum;
+  MarshallingInfoEnum<LangOpts<"AddressSpaceMapMangling">, "ASMM_Target">;
 def funknown_anytype : Flag<["-"], "funknown-anytype">,
   HelpText<"Enable parser support for the __unknown_anytype type; for testing purposes only">,
   MarshallingInfoFlag<LangOpts<"ParseUnknownAnytype">>;
@@ -5343,7 +5336,7 @@ def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
   HelpText<"Set default calling convention">, Values<"cdecl,fastcall,stdcall,vectorcall,regcall">,
   NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["DCC_CDecl", "DCC_FastCall", "DCC_StdCall", "DCC_VectorCall", "DCC_RegCall"]>,
-  MarshallingInfoString<LangOpts<"DefaultCallingConv">, "DCC_None">, AutoNormalizeEnum;
+  MarshallingInfoEnum<LangOpts<"DefaultCallingConv">, "DCC_None">;
 
 // These options cannot be marshalled, because they are used to set up the LangOptions defaults.
 def finclude_default_header : Flag<["-"], "finclude-default-header">,
@@ -5357,7 +5350,7 @@ def fpreserve_vec3_type : Flag<["-"], "fpreserve-vec3-type">,
 def fwchar_type_EQ : Joined<["-"], "fwchar-type=">,
   HelpText<"Select underlying type for wchar_t">, Values<"char,short,int">,
   NormalizedValues<["1", "2", "4"]>,
-  MarshallingInfoString<LangOpts<"WCharSize">, "0">, AutoNormalizeEnum;
+  MarshallingInfoEnum<LangOpts<"WCharSize">, "0">;
 defm signed_wchar : BoolOption<"f", "signed-wchar",
   LangOpts<"WCharIsSigned">, DefaultTrue,
   NegFlag<SetFalse, [CC1Option], "Use an unsigned">, PosFlag<SetTrue, [], "Use a signed">,
