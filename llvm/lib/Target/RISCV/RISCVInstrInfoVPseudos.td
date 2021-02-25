@@ -3375,12 +3375,12 @@ defm PseudoVWMACCSU    : VPseudoTernaryW_VV_VX;
 defm PseudoVWMACCUS    : VPseudoTernaryW_VX;
 
 //===----------------------------------------------------------------------===//
-// 12.16. Vector Integer Merge Instructions
+// 12.15. Vector Integer Merge Instructions
 //===----------------------------------------------------------------------===//
 defm PseudoVMERGE      : VPseudoBinaryV_VM_XM_IM;
 
 //===----------------------------------------------------------------------===//
-// 12.17. Vector Integer Move Instructions
+// 12.16. Vector Integer Move Instructions
 //===----------------------------------------------------------------------===//
 defm PseudoVMV_V       : VPseudoUnaryV_V_X_I_NoDummyMask;
 
@@ -3966,12 +3966,12 @@ defm "" : VPatTernaryW_VV_VX<"int_riscv_vwmaccsu", "PseudoVWMACCSU", AllWidenabl
 defm "" : VPatTernaryW_VX<"int_riscv_vwmaccus", "PseudoVWMACCUS", AllWidenableIntVectors>;
 
 //===----------------------------------------------------------------------===//
-// 12.16. Vector Integer Merge Instructions
+// 12.15. Vector Integer Merge Instructions
 //===----------------------------------------------------------------------===//
 defm "" : VPatBinaryV_VM_XM_IM<"int_riscv_vmerge", "PseudoVMERGE">;
 
 //===----------------------------------------------------------------------===//
-// 12.17. Vector Integer Move Instructions
+// 12.16. Vector Integer Move Instructions
 //===----------------------------------------------------------------------===//
 foreach vti = AllVectors in {
   def : Pat<(vti.Vector (int_riscv_vmv_v_v (vti.Vector vti.RegClass:$rs1),
