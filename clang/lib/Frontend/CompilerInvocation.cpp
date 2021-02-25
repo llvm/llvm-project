@@ -423,9 +423,11 @@ static T extractMaskValue(T KeyPath) {
 
 static const StringRef GetInputKindName(InputKind IK);
 
-static void FixupInvocation(CompilerInvocation &Invocation,
-                            DiagnosticsEngine &Diags, const InputArgList &Args,
+static bool FixupInvocation(CompilerInvocation &Invocation,
+                            DiagnosticsEngine &Diags, const ArgList &Args,
                             InputKind IK) {
+  unsigned NumErrorsBefore = Diags.getNumErrors();
+
   LangOptions &LangOpts = *Invocation.getLangOpts();
   CodeGenOptions &CodeGenOpts = Invocation.getCodeGenOpts();
   TargetOptions &TargetOpts = Invocation.getTargetOpts();
@@ -502,6 +504,8 @@ static void FixupInvocation(CompilerInvocation &Invocation,
     Diags.Report(diag::err_drv_argument_only_allowed_with)
         << Args.getLastArg(OPT_fprofile_remapping_file_EQ)->getAsString(Args)
         << "-fno-legacy-pass-manager";
+
+  return Diags.getNumErrors() == NumErrorsBefore;
 }
 
 //===----------------------------------------------------------------------===//
@@ -569,27 +573,29 @@ static void GenerateArg(SmallVectorImpl<const char *> &Args,
                     Opt.getKind(), 0, Value);
 }
 
-// Parse subset of command line arguments into a member of CompilerInvocation.
-using ParseFn = llvm::function_ref<bool(CompilerInvocation &, ArgList &,
-                                        DiagnosticsEngine &)>;
+// Parse command line arguments into CompilerInvocation.
+using ParseFn =
+    llvm::function_ref<bool(CompilerInvocation &, ArrayRef<const char *>,
+                            DiagnosticsEngine &, const char *)>;
 
-// Generate part of command line arguments from a member of CompilerInvocation.
+// Generate command line arguments from CompilerInvocation.
 using GenerateFn = llvm::function_ref<void(
     CompilerInvocation &, SmallVectorImpl<const char *> &,
     CompilerInvocation::StringAllocator)>;
 
-// Swap between dummy/real instance of a CompilerInvocation member.
-using SwapOptsFn = llvm::function_ref<void(CompilerInvocation &)>;
-
-// Performs round-trip of command line arguments if OriginalArgs contain
-// "-round-trip-args". Effectively runs the Parse function for a part of
-// CompilerInvocation on command line arguments that were already once parsed
-// and generated. This is used to check the Generate function produces arguments
-// that are semantically equivalent to those that were used to create
-// CompilerInvocation.
-static bool RoundTrip(ParseFn Parse, GenerateFn Generate, SwapOptsFn SwapOpts,
-                      CompilerInvocation &Res, ArgList &OriginalArgs,
-                      DiagnosticsEngine &Diags, StringRef OptsName) {
+// May perform round-trip of command line arguments. By default, the round-trip
+// is enabled if CLANG_ROUND_TRIP_CC1_ARGS was defined during build. This can be
+// overwritten at run-time via the "-round-trip-args" and "-no-round-trip-args"
+// command line flags.
+// During round-trip, the command line arguments are parsed into a dummy
+// instance of CompilerInvocation which is used to generate the command line
+// arguments again. The real CompilerInvocation instance is then created by
+// parsing the generated arguments, not the original ones.
+static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
+                      CompilerInvocation &RealInvocation,
+                      CompilerInvocation &DummyInvocation,
+                      ArrayRef<const char *> CommandLineArgs,
+                      DiagnosticsEngine &Diags, const char *Argv0) {
   // FIXME: Switch to '#ifndef NDEBUG' when possible.
 #ifdef CLANG_ROUND_TRIP_CC1_ARGS
   bool DoRoundTripDefault = true;
@@ -597,16 +603,21 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate, SwapOptsFn SwapOpts,
   bool DoRoundTripDefault = false;
 #endif
 
-  bool DoRoundTrip = OriginalArgs.hasFlag(
-      OPT_round_trip_args, OPT_no_round_trip_args, DoRoundTripDefault);
+  bool DoRoundTrip = DoRoundTripDefault;
+  for (const auto *Arg : CommandLineArgs) {
+    if (Arg == StringRef("-round-trip-args"))
+      DoRoundTrip = true;
+    if (Arg == StringRef("-no-round-trip-args"))
+      DoRoundTrip = false;
+  }
 
-  // If round-trip was not requested, simply run the parser with the original
-  // options and diagnostics.
+  // If round-trip was not requested, simply run the parser with the real
+  // invocation diagnostics.
   if (!DoRoundTrip)
-    return Parse(Res, OriginalArgs, Diags);
+    return Parse(RealInvocation, CommandLineArgs, Diags, Argv0);
 
   // Serializes quoted (and potentially escaped) arguments.
-  auto SerializeArgs = [](ArgStringList &Args) {
+  auto SerializeArgs = [](ArrayRef<const char *> Args) {
     std::string Buffer;
     llvm::raw_string_ostream OS(Buffer);
     for (const char *Arg : Args) {
@@ -617,34 +628,28 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate, SwapOptsFn SwapOpts,
     return Buffer;
   };
 
-  OriginalArgs.clearQueriedOpts();
-
   // Setup a dummy DiagnosticsEngine.
   DiagnosticsEngine DummyDiags(new DiagnosticIDs(), new DiagnosticOptions());
   DummyDiags.setClient(new TextDiagnosticBuffer());
 
-  // Run the first parse on the original arguments with dummy options and
+  // Run the first parse on the original arguments with the dummy invocation and
   // diagnostics.
-  SwapOpts(Res);
-  if (!Parse(Res, OriginalArgs, DummyDiags) ||
+  if (!Parse(DummyInvocation, CommandLineArgs, DummyDiags, Argv0) ||
       DummyDiags.getNumWarnings() != 0) {
     // If the first parse did not succeed, it must be user mistake (invalid
     // command line arguments). We won't be able to generate arguments that
-    // would reproduce the same result. Let's fail again with the original
-    // options and diagnostics, so all side-effects of parsing are visible.
+    // would reproduce the same result. Let's fail again with the real
+    // invocation and diagnostics, so all side-effects of parsing are visible.
     unsigned NumWarningsBefore = Diags.getNumWarnings();
-    SwapOpts(Res);
-    auto Success = Parse(Res, OriginalArgs, Diags);
+    auto Success = Parse(RealInvocation, CommandLineArgs, Diags, Argv0);
     if (!Success || Diags.getNumWarnings() != NumWarningsBefore)
       return Success;
 
     // Parse with original options and diagnostics succeeded even though it
     // shouldn't have. Something is off.
-    Diags.Report(diag::err_cc1_round_trip_fail_then_ok) << OptsName;
-    ArgStringList OriginalStrings;
-    OriginalArgs.AddAllArgsExcept(OriginalStrings, {});
+    Diags.Report(diag::err_cc1_round_trip_fail_then_ok);
     Diags.Report(diag::note_cc1_round_trip_original)
-        << OptsName << SerializeArgs(OriginalStrings);
+        << SerializeArgs(CommandLineArgs);
     return false;
   }
 
@@ -655,50 +660,35 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate, SwapOptsFn SwapOpts,
     return StringPool.save(Arg).data();
   };
 
-  // Generate arguments. First simply copy any arguments the parser did not
-  // query. Then, use the Generate function that uses the CompilerInvocation
-  // options instance as the source of truth. If Generate is the inverse of
-  // Parse, the newly generated arguments must have the same semantics as the
-  // original.
-  ArgStringList GeneratedStrings1;
-  OriginalArgs.AddAllArgsExcept(GeneratedStrings1,
-                                OriginalArgs.getQueriedOpts());
-  Generate(Res, GeneratedStrings1, SA);
+  // Generate arguments from the dummy invocation. If Generate is the
+  // inverse of Parse, the newly generated arguments must have the same
+  // semantics as the original.
+  SmallVector<const char *> GeneratedArgs1;
+  Generate(DummyInvocation, GeneratedArgs1, SA);
 
-  // Process the generated arguments.
-  unsigned MissingArgIndex1, MissingArgCount1;
-  InputArgList GeneratedArgs1 =
-      getDriverOptTable().ParseArgs(GeneratedStrings1, MissingArgIndex1,
-                                    MissingArgCount1, options::CC1Option);
-
-  // TODO: Once we're responsible for generating all arguments, check that we
-  // didn't create any unknown options or omitted required values.
-
-  // Run the second parse, now on the generated arguments, and with the original
-  // options and diagnostics. The result is what we will end up using for the
+  // Run the second parse, now on the generated arguments, and with the real
+  // invocation and diagnostics. The result is what we will end up using for the
   // rest of compilation, so if Generate is not inverse of Parse, something down
   // the line will break.
-  SwapOpts(Res);
-  bool Success2 = Parse(Res, GeneratedArgs1, Diags);
+  bool Success2 = Parse(RealInvocation, GeneratedArgs1, Diags, Argv0);
 
   // The first parse on original arguments succeeded, but second parse of
   // generated arguments failed. Something must be wrong with the generator.
   if (!Success2) {
-    Diags.Report(diag::err_cc1_round_trip_ok_then_fail) << OptsName;
+    Diags.Report(diag::err_cc1_round_trip_ok_then_fail);
     Diags.Report(diag::note_cc1_round_trip_generated)
-        << OptsName << 1 << SerializeArgs(GeneratedStrings1);
+        << 1 << SerializeArgs(GeneratedArgs1);
     return false;
   }
 
   // Generate arguments again, this time from the options we will end up using
   // for the rest of the compilation.
-  ArgStringList GeneratedStrings2;
-  GeneratedArgs1.AddAllArgsExcept(GeneratedStrings2,
-                                  GeneratedArgs1.getQueriedOpts());
-  Generate(Res, GeneratedStrings2, SA);
+  SmallVector<const char *> GeneratedArgs2;
+  Generate(RealInvocation, GeneratedArgs2, SA);
 
   // Compares two lists of generated arguments.
-  auto Equal = [](const ArgStringList &A, const ArgStringList &B) {
+  auto Equal = [](const ArrayRef<const char *> A,
+                  const ArrayRef<const char *> B) {
     return std::equal(A.begin(), A.end(), B.begin(), B.end(),
                       [](const char *AElem, const char *BElem) {
                         return StringRef(AElem) == StringRef(BElem);
@@ -708,19 +698,19 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate, SwapOptsFn SwapOpts,
   // If we generated different arguments from what we assume are two
   // semantically equivalent CompilerInvocations, the Generate function may
   // be non-deterministic.
-  if (!Equal(GeneratedStrings1, GeneratedStrings2)) {
-    Diags.Report(diag::err_cc1_round_trip_mismatch) << OptsName;
+  if (!Equal(GeneratedArgs1, GeneratedArgs2)) {
+    Diags.Report(diag::err_cc1_round_trip_mismatch);
     Diags.Report(diag::note_cc1_round_trip_generated)
-        << OptsName << 1 << SerializeArgs(GeneratedStrings1);
+        << 1 << SerializeArgs(GeneratedArgs1);
     Diags.Report(diag::note_cc1_round_trip_generated)
-        << OptsName << 2 << SerializeArgs(GeneratedStrings2);
+        << 2 << SerializeArgs(GeneratedArgs2);
     return false;
   }
 
   Diags.Report(diag::remark_cc1_round_trip_generated)
-      << OptsName << 1 << SerializeArgs(GeneratedStrings1);
+      << 1 << SerializeArgs(GeneratedArgs1);
   Diags.Report(diag::remark_cc1_round_trip_generated)
-      << OptsName << 2 << SerializeArgs(GeneratedStrings2);
+      << 2 << SerializeArgs(GeneratedArgs2);
 
   return Success2;
 }
@@ -1028,20 +1018,7 @@ static bool ParseAnalyzerArgsImpl(AnalyzerOptions &Opts, ArgList &Args,
 
 static bool ParseAnalyzerArgs(CompilerInvocation &Res, AnalyzerOptions &Opts,
                               ArgList &Args, DiagnosticsEngine &Diags) {
-  auto DummyOpts = IntrusiveRefCntPtr<AnalyzerOptions>(new AnalyzerOptions());
-
-  return RoundTrip(
-      [](CompilerInvocation &Res, ArgList &Args, DiagnosticsEngine &Diags) {
-        return ParseAnalyzerArgsImpl(*Res.getAnalyzerOpts(), Args, Diags);
-      },
-      [](CompilerInvocation &Res, SmallVectorImpl<const char *> &Args,
-         CompilerInvocation::StringAllocator SA) {
-        GenerateAnalyzerArgs(*Res.getAnalyzerOpts(), Args, SA);
-      },
-      [&DummyOpts](CompilerInvocation &Res) {
-        Res.getAnalyzerOpts().swap(DummyOpts);
-      },
-      Res, Args, Diags, "AnalyzerOptions");
+  return ParseAnalyzerArgsImpl(*Res.getAnalyzerOpts(), Args, Diags);
 }
 
 static StringRef getStringOption(AnalyzerOptions::ConfigTable &Config,
@@ -1457,7 +1434,8 @@ void CompilerInvocation::GenerateCodeGenArgs(
   }
 
   if (memcmp(Opts.CoverageVersion, "408*", 4) != 0)
-    GenerateArg(Args, OPT_coverage_version_EQ, Opts.CoverageVersion, SA);
+    GenerateArg(Args, OPT_coverage_version_EQ,
+                StringRef(Opts.CoverageVersion, 4), SA);
 
   // TODO: Check if we need to generate arguments stored in CmdArgs. (Namely
   //  '-fembed_bitcode', which does not map to any CompilerInvocation field and
@@ -1976,23 +1954,8 @@ bool CompilerInvocation::ParseCodeGenArgs(
     CompilerInvocation &Res, CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     DiagnosticsEngine &Diags, const llvm::Triple &T,
     const std::string &OutputFile, const LangOptions &LangOptsRef) {
-  CodeGenOptions DummyOpts;
-
-  return RoundTrip(
-      [&](CompilerInvocation &Res, ArgList &Args, DiagnosticsEngine &Diags) {
-        Args.getLastArg(OPT_O0, OPT_O4, OPT_O, OPT_Ofast);
-        return ParseCodeGenArgsImpl(Res.getCodeGenOpts(), Args, IK, Diags, T,
-                                    OutputFile, LangOptsRef);
-      },
-      [&](CompilerInvocation &Res, SmallVectorImpl<const char *> &GeneratedArgs,
-          StringAllocator SA) {
-        GenerateCodeGenArgs(Res.getCodeGenOpts(), GeneratedArgs, SA, T,
-                            OutputFile, &LangOptsRef);
-      },
-      [&DummyOpts](CompilerInvocation &Res) {
-        std::swap(Res.CodeGenOpts, DummyOpts);
-      },
-      Res, Args, Diags, "CodeGenOptions");
+  return ParseCodeGenArgsImpl(Res.getCodeGenOpts(), Args, IK, Diags, T,
+                              OutputFile, LangOptsRef);
 }
 
 static void
@@ -2024,8 +1987,9 @@ GenerateDependencyOutputArgs(const DependencyOutputOptions &Opts,
       // HeaderSearchOptions.
       continue;
     case EDK_ProfileList:
-      GenerateArg(Args, OPT_fprofile_list_EQ, Dep.first, SA);
-      break;
+      // Profile list arguments are generated from LanguageOptions via the
+      // marshalling infrastructure.
+      continue;
     case EDK_DepFileEntry:
       GenerateArg(Args, OPT_fdepfile_entry, Dep.first, SA);
       break;
@@ -2106,50 +2070,8 @@ static bool ParseDependencyOutputArgs(CompilerInvocation &Res,
                                       ArgList &Args, DiagnosticsEngine &Diags,
                                       frontend::ActionKind Action,
                                       bool ShowLineMarkers) {
-  DependencyOutputOptions DummyOpts;
-
-  return RoundTrip(
-      [Action, ShowLineMarkers](CompilerInvocation &Res, ArgList &Args,
-                                DiagnosticsEngine &Diags) {
-        return ParseDependencyOutputArgsImpl(Res.getDependencyOutputOpts(),
-                                             Args, Diags, Action,
-                                             ShowLineMarkers);
-      },
-      [&Args](CompilerInvocation &Res,
-              SmallVectorImpl<const char *> &GeneratedArgs,
-              CompilerInvocation::StringAllocator SA) {
-        GenerateDependencyOutputArgs(Res.getDependencyOutputOpts(),
-                                     GeneratedArgs, SA);
-        // We're querying sanitizer blacklist and module file arguments, but
-        // they are generated from LanguageOptions and HeaderSearchOptions.
-        // Let's satisfy RoundTrip by generating them ourselves for now.
-        if (!Args.hasArg(OPT_fno_sanitize_blacklist)) {
-          for (const auto *A : Args.filtered(OPT_fsanitize_blacklist)) {
-            StringRef Val = A->getValue();
-            if (Val.find('=') == StringRef::npos)
-              GenerateArg(GeneratedArgs, OPT_fsanitize_blacklist, Val, SA);
-          }
-          if (Res.getDependencyOutputOpts().IncludeSystemHeaders) {
-            for (const auto *A :
-                 Args.filtered(OPT_fsanitize_system_blacklist)) {
-              StringRef Val = A->getValue();
-              if (Val.find('=') == StringRef::npos)
-                GenerateArg(GeneratedArgs, OPT_fsanitize_system_blacklist, Val,
-                            SA);
-            }
-          }
-        }
-
-        for (const auto *A : Args.filtered(OPT_fmodule_file)) {
-          StringRef Val = A->getValue();
-          if (Val.find('=') == StringRef::npos)
-            GenerateArg(GeneratedArgs, OPT_fmodule_file, Val, SA);
-        }
-      },
-      [&DummyOpts](CompilerInvocation &Res) {
-        std::swap(Res.getDependencyOutputOpts(), DummyOpts);
-      },
-      Res, Args, Diags, "DependencyOutputOptions");
+  return ParseDependencyOutputArgsImpl(Res.getDependencyOutputOpts(), Args,
+                                       Diags, Action, ShowLineMarkers);
 }
 
 static bool parseShowColorsArgs(const ArgList &Args, bool DefaultColor) {
@@ -2413,38 +2335,8 @@ bool CompilerInvocation::ParseDiagnosticArgsRoundTrip(CompilerInvocation &Res,
                                                       ArgList &Args,
                                                       DiagnosticsEngine *Diags,
                                                       bool DefaultDiagColor) {
-  IntrusiveRefCntPtr<DiagnosticOptions> DummyOpts(new DiagnosticOptions);
-
-  return RoundTrip(
-      [DefaultDiagColor](CompilerInvocation &Res, ArgList &Args,
-                         DiagnosticsEngine &Diags) {
-        // Query the options might not get queried properly during parsing, but
-        // should be generated from DiagnosticOptions.
-
-        Args.getLastArg(OPT_fcolor_diagnostics);
-        Args.getLastArg(OPT_fno_color_diagnostics);
-        Args.getLastArg(OPT_fdiagnostics_color);
-        Args.getLastArg(OPT_fno_diagnostics_color);
-        Args.getLastArg(OPT_fdiagnostics_color_EQ);
-
-        for (auto *A : Args.filtered(OPT_W_Group))
-          Args.getLastArg(A->getOption().getID());
-        for (auto *A : Args.filtered(OPT_R_Group))
-          Args.getLastArg(A->getOption().getID());
-
-        return clang::ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
-                                          DefaultDiagColor);
-      },
-      [DefaultDiagColor](CompilerInvocation &Res,
-                         SmallVectorImpl<const char *> &Args,
-                         CompilerInvocation::StringAllocator SA) {
-        GenerateDiagnosticArgs(Res.getDiagnosticOpts(), Args, SA,
-                               DefaultDiagColor);
-      },
-      [&DummyOpts](CompilerInvocation &Res) {
-        Res.DiagnosticOpts.swap(DummyOpts);
-      },
-      Res, Args, *Diags, "DiagnosticOptions");
+  return clang::ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, Diags,
+                                    DefaultDiagColor);
 }
 
 /// Parse the argument to the -ftest-module-file-extension
@@ -2926,29 +2818,8 @@ static bool ParseFrontendArgsImpl(FrontendOptions &Opts, ArgList &Args,
 static bool ParseFrontendArgs(CompilerInvocation &Res, FrontendOptions &Opts,
                               ArgList &Args, DiagnosticsEngine &Diags,
                               bool &IsHeaderFile) {
-  FrontendOptions DummyOpts;
-
-  return RoundTrip(
-      [&IsHeaderFile](CompilerInvocation &Res, ArgList &Args,
-                      DiagnosticsEngine &Diags) {
-        // ParseFrontendArgsImpl handles frontend action without querying the
-        // options. Let's do it now so RoundTrip considers us responsible for
-        // generating it.
-        for (const auto &Pair : getFrontendActionTable())
-          Args.hasArg(Pair.second);
-
-        return ParseFrontendArgsImpl(Res.getFrontendOpts(), Args, Diags,
-                                     IsHeaderFile);
-      },
-      [&IsHeaderFile](CompilerInvocation &Res,
-                      SmallVectorImpl<const char *> &Args,
-                      CompilerInvocation::StringAllocator SA) {
-        GenerateFrontendArgs(Res.getFrontendOpts(), Args, SA, IsHeaderFile);
-      },
-      [&DummyOpts](CompilerInvocation &Res) {
-        std::swap(Res.getFrontendOpts(), DummyOpts);
-      },
-      Res, Args, Diags, "FrontendOptions");
+  return ParseFrontendArgsImpl(Res.getFrontendOpts(), Args, Diags,
+                               IsHeaderFile);
 }
 
 std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
@@ -3224,22 +3095,7 @@ void CompilerInvocation::ParseHeaderSearchArgs(CompilerInvocation &Res,
                                                ArgList &Args,
                                                DiagnosticsEngine &Diags,
                                                const std::string &WorkingDir) {
-  auto DummyOpts = std::make_shared<HeaderSearchOptions>();
-
-  RoundTrip(
-      [&WorkingDir](CompilerInvocation &Res, ArgList &Args,
-                    DiagnosticsEngine &Diags) {
-        return ::ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
-                                       WorkingDir);
-      },
-      [](CompilerInvocation &Res, SmallVectorImpl<const char *> &GeneratedArgs,
-         CompilerInvocation::StringAllocator SA) {
-        GenerateHeaderSearchArgs(Res.getHeaderSearchOpts(), GeneratedArgs, SA);
-      },
-      [&DummyOpts](CompilerInvocation &Res) {
-        Res.HeaderSearchOpts.swap(DummyOpts);
-      },
-      Res, Args, Diags, "HeaderSearchOptions");
+  ::ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags, WorkingDir);
 }
 
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
@@ -3633,11 +3489,8 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.OpenMPCUDAForceFullRuntime)
     GenerateArg(Args, OPT_fopenmp_cuda_force_full_runtime, SA);
 
-  // The arguments used to set 'Optimize' and 'OptimizeSize' will be generated
-  // by CodeGenOptions.
-
-  if (Opts.NoInlineDefine && Opts.Optimize)
-    GenerateArg(Args, OPT_fno_inline, SA);
+  // The arguments used to set Optimize, OptimizeSize and NoInlineDefine are
+  // generated from CodeGenOptions.
 
   if (Opts.DefaultFPContractMode == LangOptions::FPM_Fast)
     GenerateArg(Args, OPT_ffp_contract, "fast", SA);
@@ -4133,47 +3986,7 @@ bool CompilerInvocation::ParseLangArgs(CompilerInvocation &Res,
                                        const llvm::Triple &T,
                                        std::vector<std::string> &Includes,
                                        DiagnosticsEngine &Diags) {
-  auto DummyOpts = std::make_shared<LangOptions>();
-
-  // We need to work around inconsistencies related to optimization flags. Their
-  // primary consumer is CodeGenOptions. However, the LangOptions parser also
-  // queries them, which means RoundTrip expects us to generate them. We don't
-  // want to do it in GenerateLangArgs, because it should eventually be the
-  // responsibility of GenerateCodeGenArgs. Until we start doing one big
-  // round-trip, let's do it here.
-  //
-  // Our parser always queries OPT_O_Group. When given -O1, -O2 or -O3, it also
-  // queries OPT_O. To ensure RoundTrip consistently considers us responsible
-  // for generating all of them, we ensure to proactively query them all.
-
-  return RoundTrip(
-      [IK, &T, &Includes](CompilerInvocation &Res, ArgList &Args,
-                          DiagnosticsEngine &Diags) {
-        // Proactively query all optimization flags.
-        Args.getLastArg(OPT_O0, OPT_O4, OPT_O, OPT_Ofast);
-        return ParseLangArgsImpl(*Res.getLangOpts(), Args, IK, T, Includes,
-                                 Diags);
-      },
-      [&T, &Args](CompilerInvocation &Res,
-                  SmallVectorImpl<const char *> &GenArgs, StringAllocator SA) {
-        GenerateLangArgs(*Res.getLangOpts(), GenArgs, SA, T);
-        // Generate all optimization flags we queried.
-        if (Arg *A = Args.getLastArg(OPT_O_Group)) {
-          OptSpecifier Opt = A->getOption().getID();
-
-          if (A->getNumValues() > 0)
-            GenerateArg(GenArgs, Opt, A->getValues().back(), SA);
-          else
-            GenerateArg(GenArgs, Opt, SA);
-        }
-
-        // We also queried -fcf-protection, but don't have enough information to
-        // generate it. Eventually, it will be generated from CodeGenOptions.
-        if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ))
-          GenerateArg(GenArgs, OPT_fcf_protection_EQ, A->getValue(), SA);
-      },
-      [&DummyOpts](CompilerInvocation &Res) { Res.LangOpts.swap(DummyOpts); },
-      Res, Args, Diags, "LangOptions");
+  return ParseLangArgsImpl(*Res.getLangOpts(), Args, IK, T, Includes, Diags);
 }
 
 static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
@@ -4389,39 +4202,8 @@ static bool ParsePreprocessorArgs(CompilerInvocation &Res,
                                   DiagnosticsEngine &Diags,
                                   frontend::ActionKind Action,
                                   FrontendOptions &FrontendOpts) {
-  auto DummyOpts = std::make_shared<PreprocessorOptions>();
-
-  auto Parse = [Action](CompilerInvocation &Res, ArgList &Args,
-                        DiagnosticsEngine &Diags) {
-    return ParsePreprocessorArgsImpl(Res.getPreprocessorOpts(), Args, Diags,
-                                     Action, Res.getFrontendOpts());
-  };
-
-  auto Generate = [&Args](CompilerInvocation &Res,
-                     SmallVectorImpl<const char *> &GeneratedArgs,
-                     CompilerInvocation::StringAllocator SA) {
-    GeneratePreprocessorArgs(Res.getPreprocessorOpts(), GeneratedArgs, SA,
-                             *Res.getLangOpts(), Res.getFrontendOpts(),
-                             Res.getCodeGenOpts());
-    // The ParsePreprocessorArgs function queries the -fcf-protection option,
-    // which means that it won't be directly copied during argument generation.
-    // The GeneratePreprocessorArgs function isn't responsible for generating it
-    // either. This would cause -fcf-protection to get forgotten during
-    // round-trip and the __CET__ macros wouldn't get deduced during second call
-    // to ParsePreprocessorArgs. Let's fix this by generating -fcf-protection
-    // here.
-    // TODO: Remove this once we're doing one big round-trip instead of many
-    // small ones.
-    if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ))
-      GenerateArg(GeneratedArgs, OPT_fcf_protection_EQ, A->getValue(), SA);
-  };
-
-  auto Swap = [&DummyOpts](CompilerInvocation &Res) {
-    std::swap(Res.PreprocessorOpts, DummyOpts);
-  };
-
-  return RoundTrip(Parse, Generate, Swap, Res, Args, Diags,
-                   "PreprocessorOptions");
+  return ParsePreprocessorArgsImpl(Res.getPreprocessorOpts(), Args, Diags,
+                                   Action, Res.getFrontendOpts());
 }
 
 static void GeneratePreprocessorOutputArgs(
@@ -4477,23 +4259,8 @@ static bool ParsePreprocessorOutputArgs(CompilerInvocation &Res,
                                         PreprocessorOutputOptions &Opts,
                                         ArgList &Args, DiagnosticsEngine &Diags,
                                         frontend::ActionKind Action) {
-  PreprocessorOutputOptions DummyOpts;
-
-  return RoundTrip(
-      [Action](CompilerInvocation &Res, ArgList &Args,
-               DiagnosticsEngine &Diags) {
-        return ParsePreprocessorOutputArgsImpl(Res.getPreprocessorOutputOpts(),
-                                               Args, Diags, Action);
-      },
-      [Action](CompilerInvocation &Res, SmallVectorImpl<const char *> &Args,
-               CompilerInvocation::StringAllocator SA) {
-        GeneratePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), Args,
-                                       SA, Action);
-      },
-      [&DummyOpts](CompilerInvocation &Res) {
-        std::swap(DummyOpts, Res.getPreprocessorOutputOpts());
-      },
-      Res, Args, Diags, "PreprocessorOutputOptions");
+  return ParsePreprocessorOutputArgsImpl(Res.getPreprocessorOutputOpts(), Args,
+                                         Diags, Action);
 }
 
 static void GenerateTargetArgs(const TargetOptions &Opts,
@@ -4548,27 +4315,12 @@ static bool ParseTargetArgsImpl(TargetOptions &Opts, ArgList &Args,
 
 static bool ParseTargetArgs(CompilerInvocation &Res, TargetOptions &Opts,
                             ArgList &Args, DiagnosticsEngine &Diags) {
-  auto DummyOpts = std::make_shared<TargetOptions>();
-
-  return RoundTrip(
-      [](CompilerInvocation &Res, ArgList &Args,
-                    DiagnosticsEngine &Diags) {
-        return ParseTargetArgsImpl(Res.getTargetOpts(), Args, Diags);
-      },
-      [](CompilerInvocation &Res, SmallVectorImpl<const char *> &GeneratedArgs,
-         CompilerInvocation::StringAllocator SA) {
-        GenerateTargetArgs(Res.getTargetOpts(), GeneratedArgs, SA);
-      },
-      [&DummyOpts](CompilerInvocation &Res) {
-        Res.TargetOpts.swap(DummyOpts);
-      },
-      Res, Args, Diags, "TargetArgs");
+  return ParseTargetArgsImpl(Res.getTargetOpts(), Args, Diags);
 }
 
-bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
-                                        ArrayRef<const char *> CommandLineArgs,
-                                        DiagnosticsEngine &Diags,
-                                        const char *Argv0) {
+bool CompilerInvocation::CreateFromArgsImpl(
+    CompilerInvocation &Res, ArrayRef<const char *> CommandLineArgs,
+    DiagnosticsEngine &Diags, const char *Argv0) {
   bool Success = true;
 
   // Parse the arguments.
@@ -4608,7 +4360,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                                LangOpts.IsHeaderFile);
   // FIXME: We shouldn't have to pass the DashX option around here
   InputKind DashX = Res.getFrontendOpts().DashX;
-  ParseTargetArgs(Res, Res.getTargetOpts(), Args, Diags);
+  Success &= ParseTargetArgs(Res, Res.getTargetOpts(), Args, Diags);
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res, Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
@@ -4683,9 +4435,25 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Res.getCodeGenOpts().Argv0 = Argv0;
   Res.getCodeGenOpts().CommandLineArgs = CommandLineArgs;
 
-  FixupInvocation(Res, Diags, Args, DashX);
+  Success &= FixupInvocation(Res, Diags, Args, DashX);
 
   return Success;
+}
+
+bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Invocation,
+                                        ArrayRef<const char *> CommandLineArgs,
+                                        DiagnosticsEngine &Diags,
+                                        const char *Argv0) {
+  CompilerInvocation DummyInvocation;
+
+  return RoundTrip(
+      [](CompilerInvocation &Invocation, ArrayRef<const char *> CommandLineArgs,
+         DiagnosticsEngine &Diags, const char *Argv0) {
+        return CreateFromArgsImpl(Invocation, CommandLineArgs, Diags, Argv0);
+      },
+      [](CompilerInvocation &Invocation, SmallVectorImpl<const char *> &Args,
+         StringAllocator SA) { Invocation.generateCC1CommandLine(Args, SA); },
+      Invocation, DummyInvocation, CommandLineArgs, Diags, Argv0);
 }
 
 std::string CompilerInvocation::getModuleHash() const {
@@ -4812,7 +4580,24 @@ void CompilerInvocation::generateCC1CommandLine(
   GenerateFrontendArgs(FrontendOpts, Args, SA, LangOpts->IsHeaderFile);
   GenerateTargetArgs(*TargetOpts, Args, SA);
   GenerateHeaderSearchArgs(*HeaderSearchOpts, Args, SA);
-  GenerateLangArgs(*LangOpts, Args, SA, T);
+
+  InputKind DashX = FrontendOpts.DashX;
+  if (DashX.getFormat() == InputKind::Precompiled ||
+      DashX.getLanguage() == Language::LLVM_IR) {
+    if (LangOpts->ObjCAutoRefCount)
+      GenerateArg(Args, OPT_fobjc_arc, SA);
+    if (LangOpts->PICLevel != 0)
+      GenerateArg(Args, OPT_pic_level, Twine(LangOpts->PICLevel), SA);
+    if (LangOpts->PIE)
+      GenerateArg(Args, OPT_pic_is_pie, SA);
+    for (StringRef Sanitizer : serializeSanitizerKinds(LangOpts->Sanitize))
+      GenerateArg(Args, OPT_fsanitize_EQ, Sanitizer, SA);
+  } else {
+    // FIXME: Move this whole condition into GenerateLangArgs. (And do the same
+    // for ParseLangArgs).
+    GenerateLangArgs(*LangOpts, Args, SA, T);
+  }
+
   GenerateCodeGenArgs(CodeGenOpts, Args, SA, T, FrontendOpts.OutputFile,
                       &*LangOpts);
   GeneratePreprocessorArgs(*PreprocessorOpts, Args, SA, *LangOpts, FrontendOpts,

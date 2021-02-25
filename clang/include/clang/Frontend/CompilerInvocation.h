@@ -239,6 +239,10 @@ public:
   /// @}
 
 private:
+  static bool CreateFromArgsImpl(CompilerInvocation &Res,
+                                 ArrayRef<const char *> CommandLineArgs,
+                                 DiagnosticsEngine &Diags, const char *Argv0);
+
   /// Parse command line options from DiagnosticOptions.
   static bool ParseDiagnosticArgsRoundTrip(CompilerInvocation &Res,
                                            DiagnosticOptions &Opts,
