@@ -468,7 +468,7 @@ defm "" : VPatBinarySDNode_VV_VX<sdiv, "PseudoVDIV">;
 defm "" : VPatBinarySDNode_VV_VX<urem, "PseudoVREMU">;
 defm "" : VPatBinarySDNode_VV_VX<srem, "PseudoVREM">;
 
-// 12.16. Vector Integer Merge Instructions
+// 12.15. Vector Integer Merge Instructions
 foreach vti = AllIntegerVectors in {
   def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), vti.RegClass:$rs1,
                                                       vti.RegClass:$rs2)),
@@ -647,7 +647,7 @@ foreach vti = AllFloatVectors in {
                  vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, vti.AVL, vti.SEW)>;
 }
 
-// 14.11. Vector Floating-Point Compare Instructions
+// 14.13. Vector Floating-Point Compare Instructions
 defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
 defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETOEQ, "PseudoVMFEQ", "PseudoVMFEQ">;
 
@@ -661,8 +661,8 @@ defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETLE,  "PseudoVMFLE", "PseudoVMFGE">;
 defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 
 // Floating-point vselects:
-// 12.16. Vector Integer Merge Instructions
-// 14.13. Vector Floating-Point Merge Instruction
+// 12.15. Vector Integer Merge Instructions
+// 14.15. Vector Floating-Point Merge Instruction
 foreach fvti = AllFloatVectors in {
   def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm), fvti.RegClass:$rs1,
                                                         fvti.RegClass:$rs2)),
@@ -685,13 +685,13 @@ foreach fvti = AllFloatVectors in {
                  fvti.RegClass:$rs2, 0, VMV0:$vm, fvti.AVL, fvti.SEW)>;
 }
 
-// 14.15. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
+// 14.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
 defm "" : VPatConvertFP2ISDNode_V<fp_to_sint, "PseudoVFCVT_RTZ_X_F_V">;
 defm "" : VPatConvertFP2ISDNode_V<fp_to_uint, "PseudoVFCVT_RTZ_XU_F_V">;
 defm "" : VPatConvertI2FPSDNode_V<sint_to_fp, "PseudoVFCVT_F_X_V">;
 defm "" : VPatConvertI2FPSDNode_V<uint_to_fp, "PseudoVFCVT_F_XU_V">;
 
-// 14.16. Widening Floating-Point/Integer Type-Convert Instructions
+// 14.18. Widening Floating-Point/Integer Type-Convert Instructions
 defm "" : VPatWConvertFP2ISDNode_V<fp_to_sint, "PseudoVFWCVT_RTZ_X_F_V">;
 defm "" : VPatWConvertFP2ISDNode_V<fp_to_uint, "PseudoVFWCVT_RTZ_XU_F_V">;
 defm "" : VPatWConvertI2FPSDNode_V<sint_to_fp, "PseudoVFWCVT_F_X_V">;
@@ -704,7 +704,7 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
                 fvti.RegClass:$rs1, fvti.AVL, fvti.SEW)>;
 }
 
-// 14.17. Narrowing Floating-Point/Integer Type-Convert Instructions
+// 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
 defm "" : VPatNConvertFP2ISDNode_V<fp_to_sint, "PseudoVFNCVT_RTZ_X_F_W">;
 defm "" : VPatNConvertFP2ISDNode_V<fp_to_uint, "PseudoVFNCVT_RTZ_XU_F_W">;
 defm "" : VPatNConvertI2FPSDNode_V<sint_to_fp, "PseudoVFNCVT_F_X_W">;

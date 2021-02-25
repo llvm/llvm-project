@@ -603,7 +603,7 @@ defm "" : VPatBinaryVL_VV_VX<riscv_sdiv_vl, "PseudoVDIV">;
 defm "" : VPatBinaryVL_VV_VX<riscv_urem_vl, "PseudoVREMU">;
 defm "" : VPatBinaryVL_VV_VX<riscv_srem_vl, "PseudoVREM">;
 
-// 12.16. Vector Integer Merge Instructions
+// 12.15. Vector Integer Merge Instructions
 foreach vti = AllIntegerVectors in {
   def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask VMV0:$vm),
                                           vti.RegClass:$rs1,
@@ -628,7 +628,7 @@ foreach vti = AllIntegerVectors in {
                  vti.RegClass:$rs2, simm5:$rs1, VMV0:$vm, GPR:$vl, vti.SEW)>;
 }
 
-// 12.17. Vector Integer Move Instructions
+// 12.16. Vector Integer Move Instructions
 foreach vti = AllIntegerVectors in {
   def : Pat<(vti.Vector (riscv_vmv_v_x_vl GPR:$rs2, (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
@@ -762,7 +762,7 @@ foreach vti = AllFloatVectors in {
                  GPR:$vl, vti.SEW)>;
 }
 
-// 14.11. Vector Floating-Point Compare Instructions
+// 14.13. Vector Floating-Point Compare Instructions
 defm "" : VPatFPSetCCVL_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
 defm "" : VPatFPSetCCVL_VV_VF_FV<SETOEQ, "PseudoVMFEQ", "PseudoVMFEQ">;
 
@@ -775,8 +775,6 @@ defm "" : VPatFPSetCCVL_VV_VF_FV<SETOLT, "PseudoVMFLT", "PseudoVMFGT">;
 defm "" : VPatFPSetCCVL_VV_VF_FV<SETLE,  "PseudoVMFLE", "PseudoVMFGE">;
 defm "" : VPatFPSetCCVL_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 
-// 14.12. Vector Floating-Point Sign-Injection Instructions
-// Handle fneg with VFSGNJN using the same input for both operands.
 foreach vti = AllFloatVectors in {
   // 14.8. Vector Floating-Point Square-Root Instruction
   def : Pat<(riscv_fsqrt_vl (vti.Vector vti.RegClass:$rs2), (vti.Mask true_mask),
@@ -798,8 +796,8 @@ foreach vti = AllFloatVectors in {
 
 foreach fvti = AllFloatVectors in {
   // Floating-point vselects:
-  // 12.16. Vector Integer Merge Instructions
-  // 14.13. Vector Floating-Point Merge Instruction
+  // 12.15. Vector Integer Merge Instructions
+  // 14.15. Vector Floating-Point Merge Instruction
   def : Pat<(fvti.Vector (riscv_vselect_vl (fvti.Mask VMV0:$vm),
                                            fvti.RegClass:$rs1,
                                            fvti.RegClass:$rs2,
