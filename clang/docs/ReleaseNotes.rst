@@ -73,6 +73,15 @@ New Compiler Flags
 
 - ...
 
+- AArch64 options ``-moutline-atomics``, ``-mno-outline-atomics`` to enable
+  and disable calls to helper functions implementing atomic operations. These
+  out-of-line helpers like '__aarch64_cas8_relax' will detect at runtime
+  AArch64 Large System Extensions (LSE) availability and either use their
+  atomic instructions, or falls back to LL/SC loop. These options do not apply
+  if the compilation target supports LSE. Atomic instructions are used directly
+  in that case. The option's behaviour mirrors GCC, the helpers are implemented
+  both in compiler-rt and libgcc.
+
 - -fpch-codegen and -fpch-debuginfo generate shared code and/or debuginfo
   for contents of a precompiled header in a separate object file. This object
   file needs to be linked in, but its contents do not need to be generated
