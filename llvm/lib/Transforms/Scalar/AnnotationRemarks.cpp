@@ -17,6 +17,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -30,7 +31,8 @@ using namespace llvm::ore;
 #define REMARK_PASS DEBUG_TYPE
 
 static void tryEmitAutoInitRemark(ArrayRef<Instruction *> Instructions,
-                                  OptimizationRemarkEmitter &ORE) {
+                                  OptimizationRemarkEmitter &ORE,
+                                  const TargetLibraryInfo &TLI) {
   // For every auto-init annotation generate a separate remark.
   for (Instruction *I : Instructions) {
     if (!I->hasMetadata(LLVMContext::MD_annotation))
@@ -42,7 +44,7 @@ static void tryEmitAutoInitRemark(ArrayRef<Instruction *> Instructions,
 
       Function &F = *I->getParent()->getParent();
       const DataLayout &DL = F.getParent()->getDataLayout();
-      AutoInitRemark Remark(ORE, REMARK_PASS, DL);
+      AutoInitRemark Remark(ORE, REMARK_PASS, DL, TLI);
       // For some of them, we can provide more information:
 
       // For stores:
@@ -53,12 +55,29 @@ static void tryEmitAutoInitRemark(ArrayRef<Instruction *> Instructions,
         continue;
       }
 
+      // For intrinsics:
+      // * user-friendly name
+      // * size
+      if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+        Remark.inspectIntrinsicCall(*II);
+        continue;
+      }
+
+      // For calls:
+      // * known/unknown function (e.g. the compiler knows bzero, but it doesn't
+      //                                know my_bzero)
+      // * memory operation size
+      if (auto *CI = dyn_cast<CallInst>(I)) {
+        Remark.inspectCall(*CI);
+        continue;
+      }
+
       Remark.inspectUnknown(*I);
     }
   }
 }
 
-static void runImpl(Function &F) {
+static void runImpl(Function &F, const TargetLibraryInfo &TLI) {
   if (!OptimizationRemarkEmitter::allowExtraAnalysis(F, REMARK_PASS))
     return;
 
@@ -94,7 +113,7 @@ static void runImpl(Function &F) {
     if (!KV.first)
       continue;
 
-    tryEmitAutoInitRemark(KV.second, ORE);
+    tryEmitAutoInitRemark(KV.second, ORE, TLI);
   }
 }
 
@@ -108,12 +127,15 @@ struct AnnotationRemarksLegacy : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
-    runImpl(F);
+    const TargetLibraryInfo &TLI =
+        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+    runImpl(F, TLI);
     return false;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
 };
 
@@ -123,6 +145,7 @@ char AnnotationRemarksLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AnnotationRemarksLegacy, "annotation-remarks",
                       "Annotation Remarks", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(AnnotationRemarksLegacy, "annotation-remarks",
                     "Annotation Remarks", false, false)
 
@@ -132,6 +155,7 @@ FunctionPass *llvm::createAnnotationRemarksLegacyPass() {
 
 PreservedAnalyses AnnotationRemarksPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
-  runImpl(F);
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  runImpl(F, TLI);
   return PreservedAnalyses::all();
 }
