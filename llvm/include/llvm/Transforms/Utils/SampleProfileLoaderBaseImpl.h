@@ -47,56 +47,99 @@ using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "sample-profile-impl"
 
-using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
-using EquivalenceClassMap = DenseMap<const BasicBlock *, const BasicBlock *>;
-using Edge = std::pair<const BasicBlock *, const BasicBlock *>;
-using EdgeWeightMap = DenseMap<Edge, uint64_t>;
-using BlockEdgeMap =
-    DenseMap<const BasicBlock *, SmallVector<const BasicBlock *, 8>>;
+namespace afdo_detail {
+
+template <typename BlockT> struct IRTraits;
+template <> struct IRTraits<BasicBlock> {
+  using InstructionT = Instruction;
+  using BasicBlockT = BasicBlock;
+  using FunctionT = Function;
+  using BlockFrequencyInfoT = BlockFrequencyInfo;
+  using LoopT = Loop;
+  using LoopInfoT = LoopInfo;
+  using OptRemarkEmitterT = OptimizationRemarkEmitter;
+  using OptRemarkAnalysisT = OptimizationRemarkAnalysis;
+  using DominatorTreeT = DominatorTree;
+  using PostDominatorTreeT = PostDominatorTree;
+  static Function &getFunction(Function &F) { return F; }
+  static const BasicBlock *getEntryBB(const Function *F) {
+    return &F->getEntryBlock();
+  }
+};
+
+} // end namespace afdo_detail
 
 extern cl::opt<unsigned> SampleProfileMaxPropagateIterations;
 extern cl::opt<unsigned> SampleProfileRecordCoverage;
 extern cl::opt<unsigned> SampleProfileSampleCoverage;
 extern cl::opt<bool> NoWarnSampleUnused;
 
-class SampleProfileLoaderBaseImpl {
+template <typename BT> class SampleProfileLoaderBaseImpl {
 public:
   SampleProfileLoaderBaseImpl(std::string Name) : Filename(Name) {}
   void dump() { Reader->dump(); }
+
+  using InstructionT = typename afdo_detail::IRTraits<BT>::InstructionT;
+  using BasicBlockT = typename afdo_detail::IRTraits<BT>::BasicBlockT;
+  using BlockFrequencyInfoT =
+      typename afdo_detail::IRTraits<BT>::BlockFrequencyInfoT;
+  using FunctionT = typename afdo_detail::IRTraits<BT>::FunctionT;
+  using LoopT = typename afdo_detail::IRTraits<BT>::LoopT;
+  using LoopInfoT = typename afdo_detail::IRTraits<BT>::LoopInfoT;
+  using OptRemarkEmitterT =
+      typename afdo_detail::IRTraits<BT>::OptRemarkEmitterT;
+  using OptRemarkAnalysisT =
+      typename afdo_detail::IRTraits<BT>::OptRemarkAnalysisT;
+  using DominatorTreeT = typename afdo_detail::IRTraits<BT>::DominatorTreeT;
+  using PostDominatorTreeT =
+      typename afdo_detail::IRTraits<BT>::PostDominatorTreeT;
+
+  using BlockWeightMap = DenseMap<const BasicBlockT *, uint64_t>;
+  using EquivalenceClassMap =
+      DenseMap<const BasicBlockT *, const BasicBlockT *>;
+  using Edge = std::pair<const BasicBlockT *, const BasicBlockT *>;
+  using EdgeWeightMap = DenseMap<Edge, uint64_t>;
+  using BlockEdgeMap =
+      DenseMap<const BasicBlockT *, SmallVector<const BasicBlockT *, 8>>;
 
 protected:
   ~SampleProfileLoaderBaseImpl() = default;
   friend class SampleCoverageTracker;
 
-  inline unsigned getFunctionLoc(Function &F);
-  inline virtual ErrorOr<uint64_t> getInstWeight(const Instruction &Inst);
-  inline ErrorOr<uint64_t> getInstWeightImpl(const Instruction &Inst);
-  inline ErrorOr<uint64_t> getBlockWeight(const BasicBlock *BB);
+  Function &getFunction(FunctionT &F) {
+    return afdo_detail::IRTraits<BT>::getFunction(F);
+  }
+  const BasicBlockT *getEntryBB(const FunctionT *F) {
+    return afdo_detail::IRTraits<BT>::getEntryBB(F);
+  }
+
+  unsigned getFunctionLoc(FunctionT &Func);
+  virtual ErrorOr<uint64_t> getInstWeight(const InstructionT &Inst);
+  ErrorOr<uint64_t> getInstWeightImpl(const InstructionT &Inst);
+  ErrorOr<uint64_t> getBlockWeight(const BasicBlockT *BB);
   mutable DenseMap<const DILocation *, const FunctionSamples *>
       DILocation2SampleMap;
-  inline virtual const FunctionSamples *
-  findFunctionSamples(const Instruction &I) const;
-  inline void printEdgeWeight(raw_ostream &OS, Edge E);
-  inline void printBlockWeight(raw_ostream &OS, const BasicBlock *BB) const;
-  inline void printBlockEquivalence(raw_ostream &OS, const BasicBlock *BB);
-  inline bool computeBlockWeights(Function &F);
-  inline void findEquivalenceClasses(Function &F);
-  template <bool IsPostDom>
-  inline void
-  findEquivalencesFor(BasicBlock *BB1, ArrayRef<BasicBlock *> Descendants,
-                      DominatorTreeBase<BasicBlock, IsPostDom> *DomTree);
+  virtual const FunctionSamples *
+  findFunctionSamples(const InstructionT &I) const;
+  void printEdgeWeight(raw_ostream &OS, Edge E);
+  void printBlockWeight(raw_ostream &OS, const BasicBlockT *BB) const;
+  void printBlockEquivalence(raw_ostream &OS, const BasicBlockT *BB);
+  bool computeBlockWeights(FunctionT &F);
+  void findEquivalenceClasses(FunctionT &F);
+  void findEquivalencesFor(BasicBlockT *BB1,
+                           ArrayRef<BasicBlockT *> Descendants,
+                           PostDominatorTreeT *DomTree);
 
-  inline void propagateWeights(Function &F);
-  inline uint64_t visitEdge(Edge E, unsigned *NumUnknownEdges,
-                            Edge *UnknownEdge);
-  inline void buildEdges(Function &F);
-  inline bool propagateThroughEdges(Function &F, bool UpdateBlockCount);
-  inline void clearFunctionData();
-  inline void computeDominanceAndLoopInfo(Function &F);
-  inline bool
-  computeAndPropagateWeights(Function &F,
+  void propagateWeights(FunctionT &F);
+  uint64_t visitEdge(Edge E, unsigned *NumUnknownEdges, Edge *UnknownEdge);
+  void buildEdges(FunctionT &F);
+  bool propagateThroughEdges(FunctionT &F, bool UpdateBlockCount);
+  void clearFunctionData();
+  void computeDominanceAndLoopInfo(FunctionT &F);
+  bool
+  computeAndPropagateWeights(FunctionT &F,
                              const DenseSet<GlobalValue::GUID> &InlinedGUIDs);
-  inline void emitCoverageRemarks(Function &F);
+  void emitCoverageRemarks(FunctionT &F);
 
   /// Map basic blocks to their computed weights.
   ///
@@ -111,7 +154,7 @@ protected:
   EdgeWeightMap EdgeWeights;
 
   /// Set of visited blocks during propagation.
-  SmallPtrSet<const BasicBlock *, 32> VisitedBlocks;
+  SmallPtrSet<const BasicBlockT *, 32> VisitedBlocks;
 
   /// Set of visited edges during propagation.
   SmallSet<Edge, 32> VisitedEdges;
@@ -125,9 +168,9 @@ protected:
   EquivalenceClassMap EquivalenceClass;
 
   /// Dominance, post-dominance and loop information.
-  std::unique_ptr<DominatorTree> DT;
-  std::unique_ptr<PostDominatorTree> PDT;
-  std::unique_ptr<LoopInfo> LI;
+  std::unique_ptr<DominatorTreeT> DT;
+  std::unique_ptr<PostDominatorTreeT> PDT;
+  std::unique_ptr<LoopInfoT> LI;
 
   /// Predecessors for each basic block in the CFG.
   BlockEdgeMap Predecessors;
@@ -151,11 +194,12 @@ protected:
   ProfileSummaryInfo *PSI = nullptr;
 
   /// Optimization Remark Emitter used to emit diagnostic remarks.
-  OptimizationRemarkEmitter *ORE = nullptr;
+  OptRemarkEmitterT *ORE = nullptr;
 };
 
 /// Clear all the per-function data used to load samples and propagate weights.
-void SampleProfileLoaderBaseImpl::clearFunctionData() {
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::clearFunctionData() {
   BlockWeights.clear();
   EdgeWeights.clear();
   VisitedBlocks.clear();
@@ -174,7 +218,8 @@ void SampleProfileLoaderBaseImpl::clearFunctionData() {
 ///
 /// \param OS  Stream to emit the output to.
 /// \param E  Edge to print.
-void SampleProfileLoaderBaseImpl::printEdgeWeight(raw_ostream &OS, Edge E) {
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::printEdgeWeight(raw_ostream &OS, Edge E) {
   OS << "weight[" << E.first->getName() << "->" << E.second->getName()
      << "]: " << EdgeWeights[E] << "\n";
 }
@@ -183,9 +228,10 @@ void SampleProfileLoaderBaseImpl::printEdgeWeight(raw_ostream &OS, Edge E) {
 ///
 /// \param OS  Stream to emit the output to.
 /// \param BB  Block to print.
-void SampleProfileLoaderBaseImpl::printBlockEquivalence(raw_ostream &OS,
-                                                        const BasicBlock *BB) {
-  const BasicBlock *Equiv = EquivalenceClass[BB];
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::printBlockEquivalence(
+    raw_ostream &OS, const BasicBlockT *BB) {
+  const BasicBlockT *Equiv = EquivalenceClass[BB];
   OS << "equivalence[" << BB->getName()
      << "]: " << ((Equiv) ? EquivalenceClass[BB]->getName() : "NONE") << "\n";
 }
@@ -194,8 +240,9 @@ void SampleProfileLoaderBaseImpl::printBlockEquivalence(raw_ostream &OS,
 ///
 /// \param OS  Stream to emit the output to.
 /// \param BB  Block to print.
-void SampleProfileLoaderBaseImpl::printBlockWeight(raw_ostream &OS,
-                                                   const BasicBlock *BB) const {
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::printBlockWeight(
+    raw_ostream &OS, const BasicBlockT *BB) const {
   const auto &I = BlockWeights.find(BB);
   uint64_t W = (I == BlockWeights.end() ? 0 : I->second);
   OS << "weight[" << BB->getName() << "]: " << W << "\n";
@@ -213,13 +260,15 @@ void SampleProfileLoaderBaseImpl::printBlockWeight(raw_ostream &OS,
 /// \param Inst Instruction to query.
 ///
 /// \returns the weight of \p Inst.
+template <typename BT>
 ErrorOr<uint64_t>
-SampleProfileLoaderBaseImpl::getInstWeight(const Instruction &Inst) {
+SampleProfileLoaderBaseImpl<BT>::getInstWeight(const InstructionT &Inst) {
   return getInstWeightImpl(Inst);
 }
 
+template <typename BT>
 ErrorOr<uint64_t>
-SampleProfileLoaderBaseImpl::getInstWeightImpl(const Instruction &Inst) {
+SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
   const FunctionSamples *FS = findFunctionSamples(Inst);
   if (!FS)
     return std::error_code();
@@ -237,7 +286,7 @@ SampleProfileLoaderBaseImpl::getInstWeightImpl(const Instruction &Inst) {
         CoverageTracker.markSamplesUsed(FS, LineOffset, Discriminator, R.get());
     if (FirstMark) {
       ORE->emit([&]() {
-        OptimizationRemarkAnalysis Remark(DEBUG_TYPE, "AppliedSamples", &Inst);
+        OptRemarkAnalysisT Remark(DEBUG_TYPE, "AppliedSamples", &Inst);
         Remark << "Applied " << ore::NV("NumSamples", *R);
         Remark << " samples from profile (offset: ";
         Remark << ore::NV("LineOffset", LineOffset);
@@ -266,11 +315,12 @@ SampleProfileLoaderBaseImpl::getInstWeightImpl(const Instruction &Inst) {
 /// \param BB The basic block to query.
 ///
 /// \returns the weight for \p BB.
+template <typename BT>
 ErrorOr<uint64_t>
-SampleProfileLoaderBaseImpl::getBlockWeight(const BasicBlock *BB) {
+SampleProfileLoaderBaseImpl<BT>::getBlockWeight(const BasicBlockT *BB) {
   uint64_t Max = 0;
   bool HasWeight = false;
-  for (auto &I : BB->getInstList()) {
+  for (auto &I : *BB) {
     const ErrorOr<uint64_t> &R = getInstWeight(I);
     if (R) {
       Max = std::max(Max, R.get());
@@ -286,7 +336,8 @@ SampleProfileLoaderBaseImpl::getBlockWeight(const BasicBlock *BB) {
 /// the weights of every basic block in the CFG.
 ///
 /// \param F The function to query.
-bool SampleProfileLoaderBaseImpl::computeBlockWeights(Function &F) {
+template <typename BT>
+bool SampleProfileLoaderBaseImpl<BT>::computeBlockWeights(FunctionT &F) {
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "Block weights\n");
   for (const auto &BB : F) {
@@ -311,8 +362,9 @@ bool SampleProfileLoaderBaseImpl::computeBlockWeights(Function &F) {
 /// \param Inst Instruction to query.
 ///
 /// \returns the FunctionSamples pointer to the inlined instance.
-const FunctionSamples *SampleProfileLoaderBaseImpl::findFunctionSamples(
-    const Instruction &Inst) const {
+template <typename BT>
+const FunctionSamples *SampleProfileLoaderBaseImpl<BT>::findFunctionSamples(
+    const InstructionT &Inst) const {
   const DILocation *DIL = Inst.getDebugLoc();
   if (!DIL)
     return Samples;
@@ -347,11 +399,11 @@ const FunctionSamples *SampleProfileLoaderBaseImpl::findFunctionSamples(
 /// \param DomTree  Opposite dominator tree. If \p Descendants is filled
 ///                 with blocks from \p BB1's dominator tree, then
 ///                 this is the post-dominator tree, and vice versa.
-template <bool IsPostDom>
-void SampleProfileLoaderBaseImpl::findEquivalencesFor(
-    BasicBlock *BB1, ArrayRef<BasicBlock *> Descendants,
-    DominatorTreeBase<BasicBlock, IsPostDom> *DomTree) {
-  const BasicBlock *EC = EquivalenceClass[BB1];
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::findEquivalencesFor(
+    BasicBlockT *BB1, ArrayRef<BasicBlockT *> Descendants,
+    PostDominatorTreeT *DomTree) {
+  const BasicBlockT *EC = EquivalenceClass[BB1];
   uint64_t Weight = BlockWeights[EC];
   for (const auto *BB2 : Descendants) {
     bool IsDomParent = DomTree->dominates(BB2, BB1);
@@ -374,7 +426,8 @@ void SampleProfileLoaderBaseImpl::findEquivalencesFor(
       Weight = std::max(Weight, BlockWeights[BB2]);
     }
   }
-  if (EC == &EC->getParent()->getEntryBlock()) {
+  const BasicBlockT *EntryBB = getEntryBB(EC->getParent());
+  if (EC == EntryBB) {
     BlockWeights[EC] = Samples->getHeadSamples() + 1;
   } else {
     BlockWeights[EC] = Weight;
@@ -390,12 +443,13 @@ void SampleProfileLoaderBaseImpl::findEquivalencesFor(
 /// dominates B2, B2 post-dominates B1 and both are in the same loop.
 ///
 /// \param F The function to query.
-void SampleProfileLoaderBaseImpl::findEquivalenceClasses(Function &F) {
-  SmallVector<BasicBlock *, 8> DominatedBBs;
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::findEquivalenceClasses(FunctionT &F) {
+  SmallVector<BasicBlockT *, 8> DominatedBBs;
   LLVM_DEBUG(dbgs() << "\nBlock equivalence classes\n");
   // Find equivalence sets based on dominance and post-dominance information.
   for (auto &BB : F) {
-    BasicBlock *BB1 = &BB;
+    BasicBlockT *BB1 = &BB;
 
     // Compute BB1's equivalence class once.
     if (EquivalenceClass.count(BB1)) {
@@ -432,8 +486,8 @@ void SampleProfileLoaderBaseImpl::findEquivalenceClasses(Function &F) {
   LLVM_DEBUG(
       dbgs() << "\nAssign the same weight to all blocks in the same class\n");
   for (auto &BI : F) {
-    const BasicBlock *BB = &BI;
-    const BasicBlock *EquivBB = EquivalenceClass[BB];
+    const BasicBlockT *BB = &BI;
+    const BasicBlockT *EquivBB = EquivalenceClass[BB];
     if (BB != EquivBB)
       BlockWeights[BB] = BlockWeights[EquivBB];
     LLVM_DEBUG(printBlockWeight(dbgs(), BB));
@@ -450,9 +504,10 @@ void SampleProfileLoaderBaseImpl::findEquivalenceClasses(Function &F) {
 /// \param UnknownEdge  Set if E has not been visited before.
 ///
 /// \returns E's weight, if known. Otherwise, return 0.
-uint64_t SampleProfileLoaderBaseImpl::visitEdge(Edge E,
-                                                unsigned *NumUnknownEdges,
-                                                Edge *UnknownEdge) {
+template <typename BT>
+uint64_t SampleProfileLoaderBaseImpl<BT>::visitEdge(Edge E,
+                                                    unsigned *NumUnknownEdges,
+                                                    Edge *UnknownEdge) {
   if (!VisitedEdges.count(E)) {
     (*NumUnknownEdges)++;
     *UnknownEdge = E;
@@ -475,13 +530,14 @@ uint64_t SampleProfileLoaderBaseImpl::visitEdge(Edge E,
 ///                          has already been annotated.
 ///
 /// \returns  True if new weights were assigned to edges or blocks.
-bool SampleProfileLoaderBaseImpl::propagateThroughEdges(Function &F,
-                                                        bool UpdateBlockCount) {
+template <typename BT>
+bool SampleProfileLoaderBaseImpl<BT>::propagateThroughEdges(
+    FunctionT &F, bool UpdateBlockCount) {
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "\nPropagation through edges\n");
   for (const auto &BI : F) {
-    const BasicBlock *BB = &BI;
-    const BasicBlock *EC = EquivalenceClass[BB];
+    const BasicBlockT *BB = &BI;
+    const BasicBlockT *EC = EquivalenceClass[BB];
 
     // Visit all the predecessor and successor edges to determine
     // which ones have a weight assigned already. Note that it doesn't
@@ -568,7 +624,7 @@ bool SampleProfileLoaderBaseImpl::propagateThroughEdges(Function &F,
             EdgeWeights[UnknownEdge] = BBWeight - TotalWeight;
           else
             EdgeWeights[UnknownEdge] = 0;
-          const BasicBlock *OtherEC;
+          const BasicBlockT *OtherEC;
           if (i == 0)
             OtherEC = EquivalenceClass[UnknownEdge.first];
           else
@@ -624,15 +680,16 @@ bool SampleProfileLoaderBaseImpl::propagateThroughEdges(Function &F,
 ///
 /// We are interested in unique edges. If a block B1 has multiple
 /// edges to another block B2, we only add a single B1->B2 edge.
-void SampleProfileLoaderBaseImpl::buildEdges(Function &F) {
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::buildEdges(FunctionT &F) {
   for (auto &BI : F) {
-    BasicBlock *B1 = &BI;
+    BasicBlockT *B1 = &BI;
 
     // Add predecessors for B1.
-    SmallPtrSet<BasicBlock *, 16> Visited;
+    SmallPtrSet<BasicBlockT *, 16> Visited;
     if (!Predecessors[B1].empty())
       llvm_unreachable("Found a stale predecessors list in a basic block.");
-    for (BasicBlock *B2 : predecessors(B1))
+    for (BasicBlockT *B2 : predecessors(B1))
       if (Visited.insert(B2).second)
         Predecessors[B1].push_back(B2);
 
@@ -640,7 +697,7 @@ void SampleProfileLoaderBaseImpl::buildEdges(Function &F) {
     Visited.clear();
     if (!Successors[B1].empty())
       llvm_unreachable("Found a stale successors list in a basic block.");
-    for (BasicBlock *B2 : successors(B1))
+    for (BasicBlockT *B2 : successors(B1))
       if (Visited.insert(B2).second)
         Successors[B1].push_back(B2);
   }
@@ -663,19 +720,20 @@ void SampleProfileLoaderBaseImpl::buildEdges(Function &F) {
 ///   known, the weight for that edge is set to the weight of the block
 ///   minus the weight of the other incoming edges to that block (if
 ///   known).
-void SampleProfileLoaderBaseImpl::propagateWeights(Function &F) {
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::propagateWeights(FunctionT &F) {
   bool Changed = true;
   unsigned I = 0;
 
   // If BB weight is larger than its corresponding loop's header BB weight,
   // use the BB weight to replace the loop header BB weight.
   for (auto &BI : F) {
-    BasicBlock *BB = &BI;
-    Loop *L = LI->getLoopFor(BB);
+    BasicBlockT *BB = &BI;
+    LoopT *L = LI->getLoopFor(BB);
     if (!L) {
       continue;
     }
-    BasicBlock *Header = L->getHeader();
+    BasicBlockT *Header = L->getHeader();
     if (Header && BlockWeights[BB] > BlockWeights[Header]) {
       BlockWeights[Header] = BlockWeights[BB];
     }
@@ -756,8 +814,9 @@ void SampleProfileLoaderBaseImpl::propagateWeights(Function &F) {
 /// \param F The function to query.
 ///
 /// \returns true if \p F was modified. Returns false, otherwise.
-bool SampleProfileLoaderBaseImpl::computeAndPropagateWeights(
-    Function &F, const DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
+template <typename BT>
+bool SampleProfileLoaderBaseImpl<BT>::computeAndPropagateWeights(
+    FunctionT &F, const DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
   bool Changed = (InlinedGUIDs.size() != 0);
 
   // Compute basic block weights.
@@ -769,7 +828,7 @@ bool SampleProfileLoaderBaseImpl::computeAndPropagateWeights(
     // Sets the GUIDs that are inlined in the profiled binary. This is used
     // for ThinLink to make correct liveness analysis, and also make the IR
     // match the profiled binary before annotation.
-    F.setEntryCount(
+    getFunction(F).setEntryCount(
         ProfileCount(Samples->getHeadSamples() + 1, Function::PCT_Real),
         &InlinedGUIDs);
 
@@ -786,15 +845,17 @@ bool SampleProfileLoaderBaseImpl::computeAndPropagateWeights(
   return Changed;
 }
 
-void SampleProfileLoaderBaseImpl::emitCoverageRemarks(Function &F) {
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::emitCoverageRemarks(FunctionT &F) {
   // If coverage checking was requested, compute it now.
+  const Function &Func = getFunction(F);
   if (SampleProfileRecordCoverage) {
     unsigned Used = CoverageTracker.countUsedRecords(Samples, PSI);
     unsigned Total = CoverageTracker.countBodyRecords(Samples, PSI);
     unsigned Coverage = CoverageTracker.computeCoverage(Used, Total);
     if (Coverage < SampleProfileRecordCoverage) {
-      F.getContext().diagnose(DiagnosticInfoSampleProfile(
-          F.getSubprogram()->getFilename(), getFunctionLoc(F),
+      Func.getContext().diagnose(DiagnosticInfoSampleProfile(
+          Func.getSubprogram()->getFilename(), getFunctionLoc(F),
           Twine(Used) + " of " + Twine(Total) + " available profile records (" +
               Twine(Coverage) + "%) were applied",
           DS_Warning));
@@ -806,8 +867,8 @@ void SampleProfileLoaderBaseImpl::emitCoverageRemarks(Function &F) {
     uint64_t Total = CoverageTracker.countBodySamples(Samples, PSI);
     unsigned Coverage = CoverageTracker.computeCoverage(Used, Total);
     if (Coverage < SampleProfileSampleCoverage) {
-      F.getContext().diagnose(DiagnosticInfoSampleProfile(
-          F.getSubprogram()->getFilename(), getFunctionLoc(F),
+      Func.getContext().diagnose(DiagnosticInfoSampleProfile(
+          Func.getSubprogram()->getFilename(), getFunctionLoc(F),
           Twine(Used) + " of " + Twine(Total) + " available profile samples (" +
               Twine(Coverage) + "%) were applied",
           DS_Warning));
@@ -826,7 +887,9 @@ void SampleProfileLoaderBaseImpl::emitCoverageRemarks(Function &F) {
 ///
 /// \returns the line number where \p F is defined. If it returns 0,
 ///          it means that there is no debug information available for \p F.
-unsigned SampleProfileLoaderBaseImpl::getFunctionLoc(Function &F) {
+template <typename BT>
+unsigned SampleProfileLoaderBaseImpl<BT>::getFunctionLoc(FunctionT &Func) {
+  const Function &F = getFunction(Func);
   if (DISubprogram *S = F.getSubprogram())
     return S->getLine();
 
@@ -842,13 +905,15 @@ unsigned SampleProfileLoaderBaseImpl::getFunctionLoc(Function &F) {
   return 0;
 }
 
-void SampleProfileLoaderBaseImpl::computeDominanceAndLoopInfo(Function &F) {
-  DT.reset(new DominatorTree);
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::computeDominanceAndLoopInfo(
+    FunctionT &F) {
+  DT.reset(new DominatorTreeT);
   DT->recalculate(F);
 
   PDT.reset(new PostDominatorTree(F));
 
-  LI.reset(new LoopInfo);
+  LI.reset(new LoopInfoT);
   LI->analyze(*DT);
 }
 

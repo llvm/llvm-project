@@ -334,7 +334,8 @@ using CandidateQueue =
 /// This pass reads profile data from the file specified by
 /// -sample-profile-file and annotates every affected function with the
 /// profile information found in that file.
-class SampleProfileLoader final : public SampleProfileLoaderBaseImpl {
+class SampleProfileLoader final
+    : public SampleProfileLoaderBaseImpl<BasicBlock> {
 public:
   SampleProfileLoader(
       StringRef Name, StringRef RemapName, ThinOrFullLTOPhase LTOPhase,
