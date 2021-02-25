@@ -728,6 +728,7 @@ static int containsExitOnSignalSpecifier(const char *FilenamePat, int I) {
          (isDigit(FilenamePat[I + 1]) && FilenamePat[I + 2] == 'x');
 }
 
+
 /* Assert that Idx does index past a string null terminator. Return the
  * result of the check. */
 static int checkBounds(int Idx, int Strlen) {
@@ -743,7 +744,6 @@ static int parseFilenamePattern(const char *FilenamePat,
   char *PidChars = &lprofCurFilename.PidChars[0];
   char *Hostname = &lprofCurFilename.Hostname[0];
   int MergingEnabled = 0;
-  char SignalNo;
   int FilenamePatLen = strlen(FilenamePat);
 
   /* Clean up cached prefix and filename.  */
@@ -802,22 +802,6 @@ static int parseFilenamePattern(const char *FilenamePat,
 
         __llvm_profile_set_page_size(getpagesize());
         __llvm_profile_enable_continuous_mode();
-      } else if (containsExitOnSignalSpecifier(FilenamePat, I)) {
-        if (lprofCurFilename.NumExitSignals == MAX_SIGNAL_HANDLERS) {
-          PROF_WARN("%%x specifier has been specified too many times in %s.\n",
-                    FilenamePat);
-          return -1;
-        }
-        /* Grab the signal number. */
-        SignalNo = FilenamePat[I] - '0';
-        I++; /* advance to either another digit, or 'x' */
-        if (FilenamePat[I] != 'x') {
-          SignalNo = (SignalNo * 10) + (FilenamePat[I] - '0');
-          I++; /* advance to 'x' */
-        }
-        lprofCurFilename.ExitOnSignals[lprofCurFilename.NumExitSignals] =
-            SignalNo;
-        ++lprofCurFilename.NumExitSignals;
       } else {
         unsigned MergePoolSize = getMergePoolSize(FilenamePat, &I);
         if (!MergePoolSize)
