@@ -588,11 +588,11 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
                                                    Value *LHS, Value *RHS) {
   Value *A = nullptr, *B = nullptr;
   MaxMinT m_MaxMin(m_Value(A), m_Value(B));
-  for (uint i = 0; i < 2; ++i) {
+  for (unsigned int i = 0; i < 2; ++i) {
     if (match(LHS, m_MaxMin)) {
       const SCEV *AExpr = SE->getSCEV(A), *BExpr = SE->getSCEV(B);
       const SCEV *RHSExpr = SE->getSCEV(RHS);
-      for (uint j = 0; j < 2; ++j) {
+      for (unsigned int j = 0; j < 2; ++j) {
         if (j == 0) {
           if (BExpr == RHSExpr)
             continue;
