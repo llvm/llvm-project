@@ -90,20 +90,9 @@ StringRef ArgList::getLastArgValue(OptSpecifier Id, StringRef Default) const {
 }
 
 std::vector<std::string> ArgList::getAllArgValues(OptSpecifier Id) const {
-  recordQueriedOpts(Id);
   SmallVector<const char *, 16> Values;
   AddAllArgValues(Values, Id);
   return std::vector<std::string>(Values.begin(), Values.end());
-}
-
-void ArgList::AddAllArgsExcept(ArgStringList &Output,
-                               const DenseSet<unsigned> &ExcludeIds) const {
-  for (const Arg *Arg : *this) {
-    if (!ExcludeIds.contains(Arg->getOption().getID())) {
-      Arg->claim();
-      Arg->render(*this, Output);
-    }
-  }
 }
 
 void ArgList::AddAllArgsExcept(ArgStringList &Output,
