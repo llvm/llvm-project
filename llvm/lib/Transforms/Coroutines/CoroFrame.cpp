@@ -2181,6 +2181,9 @@ void coro::salvageDebugInfo(
     else
       break;
   }
+  if (!Storage)
+    return;
+
   // Store a pointer to the coroutine frame object in an alloca so it
   // is available throughout the function when producing unoptimized
   // code. Extending the lifetime this way is correct because the
