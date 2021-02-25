@@ -528,7 +528,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction(Op, VT, Expand);
 
         // We use EXTRACT_SUBVECTOR as a "cast" from scalable to fixed.
-        setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
+        setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
 
@@ -587,7 +587,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction(Op, VT, Expand);
 
         // We use EXTRACT_SUBVECTOR as a "cast" from scalable to fixed.
-        setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
+        setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
         setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
@@ -918,8 +918,8 @@ RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
 }
 
 // Return the largest legal scalable vector type that matches VT's element type.
-static MVT getContainerForFixedLengthVector(SelectionDAG &DAG, MVT VT,
-                                            const RISCVSubtarget &Subtarget) {
+MVT RISCVTargetLowering::getContainerForFixedLengthVector(
+    SelectionDAG &DAG, MVT VT, const RISCVSubtarget &Subtarget) {
   assert(VT.isFixedLengthVector() &&
          DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
          "Expected legal fixed length vector!");
@@ -1003,7 +1003,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   assert(VT.isFixedLengthVector() && "Unexpected vector!");
 
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT =
+      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
   SDLoc DL(Op);
   SDValue Mask, VL;
@@ -1058,7 +1059,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   if (SVN->isSplat()) {
     int Lane = SVN->getSplatIndex();
     if (Lane >= 0) {
-      MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+      MVT ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
+          DAG, VT, Subtarget);
 
       V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
       assert(Lane < (int)VT.getVectorNumElements() && "Unexpected lane!");
@@ -1911,7 +1913,8 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ISD::VSELECT, DL, VecVT, Src, SplatTrueVal, SplatZero);
   }
 
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VecVT, Subtarget);
+  MVT ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
+      DAG, VecVT, Subtarget);
   MVT I1ContainerVT =
       MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
 
@@ -2335,14 +2338,40 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   MVT SubVecVT = Op.getSimpleValueType();
   MVT VecVT = Vec.getSimpleValueType();
 
-  // TODO: Only handle scalable->scalable extracts for now, and revisit this
-  // for fixed-length vectors later.
-  if (!SubVecVT.isScalableVector() || !VecVT.isScalableVector())
-    return Op;
-
   SDLoc DL(Op);
+  MVT XLenVT = Subtarget.getXLenVT();
   unsigned OrigIdx = Op.getConstantOperandVal(1);
   const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();
+
+  // If the subvector vector is a fixed-length type, we cannot use subregister
+  // manipulation to simplify the codegen; we don't know which register of a
+  // LMUL group contains the specific subvector as we only know the minimum
+  // register size. Therefore we must slide the vector group down the full
+  // amount.
+  if (SubVecVT.isFixedLengthVector()) {
+    // With an index of 0 this is a cast-like subvector, which can be performed
+    // with subregister operations.
+    if (OrigIdx == 0)
+      return Op;
+    MVT ContainerVT = VecVT;
+    if (VecVT.isFixedLengthVector()) {
+      ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
+          DAG, VecVT, Subtarget);
+      Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+    }
+    SDValue Mask =
+        getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget).first;
+    // Set the vector length to only the number of elements we care about. This
+    // avoids sliding down elements we're going to discard straight away.
+    SDValue VL = DAG.getConstant(SubVecVT.getVectorNumElements(), DL, XLenVT);
+    SDValue SlidedownAmt = DAG.getConstant(OrigIdx, DL, XLenVT);
+    SDValue Slidedown =
+        DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
+                    DAG.getUNDEF(ContainerVT), Vec, SlidedownAmt, Mask, VL);
+    // Now we can use a cast-like subvector extract to get the result.
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Slidedown,
+                       DAG.getConstant(0, DL, XLenVT));
+  }
 
   unsigned SubRegIdx, RemIdx;
   std::tie(SubRegIdx, RemIdx) =
@@ -2357,7 +2386,6 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
 
   // Else we must shift our vector register directly to extract the subvector.
   // Do this using VSLIDEDOWN.
-  MVT XLenVT = Subtarget.getXLenVT();
 
   // Extract a subvector equal to the nearest full vector register type. This
   // should resolve to a EXTRACT_SUBREG instruction.
@@ -2392,7 +2420,8 @@ RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
 
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT =
+      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
   SDValue VL =
       DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
@@ -2417,7 +2446,8 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
   // FIXME: We probably need to zero any extra bits in a byte for mask stores.
   // This is tricky to do.
 
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT =
+      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
   SDValue VL =
       DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
@@ -2434,7 +2464,8 @@ SDValue
 RISCVTargetLowering::lowerFixedLengthVectorSetccToRVV(SDValue Op,
                                                       SelectionDAG &DAG) const {
   MVT InVT = Op.getOperand(0).getSimpleValueType();
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, InVT, Subtarget);
+  MVT ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
+      DAG, InVT, Subtarget);
 
   MVT VT = Op.getSimpleValueType();
 
@@ -2547,7 +2578,8 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorLogicOpToRVV(
 SDValue RISCVTargetLowering::lowerFixedLengthVectorSelectToRVV(
     SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT =
+      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
   MVT I1ContainerVT =
       MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
@@ -2575,7 +2607,8 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   assert(useRVVForFixedLengthVectorVT(VT) &&
          "Only expected to lower fixed length vector operation!");
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT =
+      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
   // Create list of operands by converting existing ones to scalable types.
   SmallVector<SDValue, 6> Ops;
