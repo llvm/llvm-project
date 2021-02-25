@@ -77,3 +77,30 @@ function foo4()
   foo4 = bar4()
 end function
 
+module test_bindmodule
+  contains
+  ! CHECK: func @modulecproc()
+  ! CHECK: func @bind_modulecproc()
+    subroutine modulecproc() bind(c)
+    end subroutine
+    subroutine modulecproc_1() bind(c, name="bind_modulecproc")
+    end subroutine
+end module
+! CHECK-LABEL: func @_QPtest_bindmodule_call() {
+subroutine test_bindmodule_call
+  use test_bindmodule
+  interface
+     subroutine somecproc() bind(c)
+     end subroutine
+     subroutine somecproc_1() bind(c, name="bind_somecproc")
+     end subroutine
+  end interface
+  ! CHECK: fir.call @modulecproc()
+  ! CHECK: fir.call @bind_modulecproc()
+  ! CHECK: fir.call @somecproc()
+  ! CHECK: fir.call @bind_somecproc()
+  call modulecproc()
+  call modulecproc_1()
+  call somecproc()
+  call somecproc_1()
+end subroutine

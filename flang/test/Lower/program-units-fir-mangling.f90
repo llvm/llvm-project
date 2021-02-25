@@ -125,6 +125,15 @@ program test
 ! CHECK: }
 end program
 
+! CHECK-LABEL: func @omp_get_num_threads() -> f32 {
+function omp_get_num_threads() bind(c)
+! CHECK: }
+end function
+
+! CHECK-LABEL: func @get_threads() -> f32 {
+function omp_get_num_threads_1() bind(c, name ="get_threads")
+! CHECK: }
+end function
+
 ! CHECK-LABEL: fir.global internal @_QFfooEpi : f32 {
 ! CHECK-LABEL: fir.global internal @_QFfunctnECpi constant : f32 {
-
