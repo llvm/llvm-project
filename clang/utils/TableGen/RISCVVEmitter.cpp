@@ -145,6 +145,8 @@ private:
   bool HasMaskedOffOperand;
   bool HasVL;
   bool HasGeneric;
+  bool HasAutoDef; // There is automiatic definition in header
+  std::string ManualCodegen;
   RVVTypePtr OutputType; // Builtin output type
   RVVTypes InputTypes;   // Builtin input types
   // The types we use to obtain the specific LLVM intrinsic. They are index of
@@ -159,8 +161,8 @@ public:
   RVVIntrinsic(StringRef Name, StringRef Suffix, StringRef MangledName,
                StringRef IRName, bool HasSideEffects, bool IsMask,
                bool HasMaskedOffOperand, bool HasVL, bool HasGeneric,
-               const RVVTypes &Types,
-               const std::vector<int64_t> &RVVIntrinsicTypes);
+               bool HasAutoDef, StringRef ManualCodegen, const RVVTypes &Types,
+               const std::vector<int64_t> &IntrinsicTypes);
   ~RVVIntrinsic() = default;
 
   StringRef getName() const { return Name; }
@@ -169,6 +171,8 @@ public:
   bool hasMaskedOffOperand() const { return HasMaskedOffOperand; }
   bool hasVL() const { return HasVL; }
   bool hasGeneric() const { return HasGeneric; }
+  bool hasManualCodegen() const { return !ManualCodegen.empty(); }
+  bool hasAutoDef() const { return HasAutoDef; }
   size_t getNumOperand() const { return InputTypes.size(); }
   StringRef getIRName() const { return IRName; }
   uint8_t getRISCVExtensions() const { return RISCVExtensions; }
@@ -190,6 +194,7 @@ public:
 class RVVEmitter {
 private:
   RecordKeeper &Records;
+  std::string HeaderCode;
   // Concat BasicType, LMUL and Proto as key
   StringMap<RVVType> LegalTypes;
   StringSet<> IllegalTypes;
@@ -637,11 +642,13 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
                            StringRef NewMangledName, StringRef IRName,
                            bool HasSideEffects, bool IsMask,
                            bool HasMaskedOffOperand, bool HasVL,
-                           bool HasGeneric, const RVVTypes &OutInTypes,
+                           bool HasGeneric, bool HasAutoDef,
+                           StringRef ManualCodegen, const RVVTypes &OutInTypes,
                            const std::vector<int64_t> &NewIntrinsicTypes)
     : IRName(IRName), HasSideEffects(HasSideEffects),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL),
-      HasGeneric(HasGeneric) {
+      HasGeneric(HasGeneric), HasAutoDef(HasAutoDef),
+      ManualCodegen(ManualCodegen.str()) {
 
   // Init Name and MangledName
   Name = NewName.str();
@@ -702,7 +709,13 @@ std::string RVVIntrinsic::getBuiltinTypeStr() const {
 }
 
 void RVVIntrinsic::emitCodeGenSwitchBody(raw_ostream &OS) const {
+
   OS << "  ID = Intrinsic::riscv_" + getIRName() + ";\n";
+  if (hasManualCodegen()) {
+    OS << ManualCodegen;
+    OS << "break;\n";
+    return;
+  }
   OS << "  IntrinsicTypes = {";
   ListSeparator LS;
   for (const auto &Idx : IntrinsicTypes) {
@@ -791,6 +804,11 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
 
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
   createRVVIntrinsics(Defs);
+
+  // Print header code
+  if (!HeaderCode.empty()) {
+    OS << HeaderCode;
+  }
 
   auto printType = [&](auto T) {
     OS << "typedef " << T->getClangBuiltinStr() << " " << T->getTypeStr()
@@ -910,7 +928,6 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
 
 void RVVEmitter::createRVVIntrinsics(
     std::vector<std::unique_ptr<RVVIntrinsic>> &Out) {
-
   std::vector<Record *> RV = Records.getAllDerivedDefinitions("RVVBuiltin");
   for (auto *R : RV) {
     StringRef Name = R->getValueAsString("Name");
@@ -924,11 +941,18 @@ void RVVEmitter::createRVVIntrinsics(
     bool HasGeneric = R->getValueAsBit("HasGeneric");
     bool HasSideEffects = R->getValueAsBit("HasSideEffects");
     std::vector<int64_t> Log2LMULList = R->getValueAsListOfInts("Log2LMUL");
+    StringRef ManualCodegen = R->getValueAsString("ManualCodegen");
+    StringRef ManualCodegenMask = R->getValueAsString("ManualCodegenMask");
     std::vector<int64_t> IntrinsicTypes =
         R->getValueAsListOfInts("IntrinsicTypes");
     StringRef IRName = R->getValueAsString("IRName");
     StringRef IRNameMask = R->getValueAsString("IRNameMask");
 
+    StringRef HeaderCodeStr = R->getValueAsString("HeaderCode");
+    bool HasAutoDef = HeaderCodeStr.empty();
+    if (!HeaderCodeStr.empty()) {
+      HeaderCode += HeaderCodeStr.str();
+    }
     // Parse prototype and create a list of primitive type with transformers
     // (operand) in ProtoSeq. ProtoSeq[0] is output operand.
     SmallVector<std::string, 8> ProtoSeq;
@@ -955,7 +979,7 @@ void RVVEmitter::createRVVIntrinsics(
       ProtoMaskSeq.push_back("z");
     }
 
-    // Create intrinsics for each type and LMUL.
+    // Create Intrinsics for each type and LMUL.
     for (char I : TypeRange) {
       for (int Log2LMUL : Log2LMULList) {
         Optional<RVVTypes> Types = computeTypes(I, Log2LMUL, ProtoSeq);
@@ -965,11 +989,11 @@ void RVVEmitter::createRVVIntrinsics(
 
         auto SuffixStr =
             computeType(I, Log2LMUL, Suffix).getValue()->getShortStr();
-        // Create a non-mask intrinsic.
+        // Create a non-mask intrinsic
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, MangledName, IRName, HasSideEffects,
             /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL, HasGeneric,
-            Types.getValue(), IntrinsicTypes));
+            HasAutoDef, ManualCodegen, Types.getValue(), IntrinsicTypes));
         if (HasMask) {
           // Create a mask intrinsic
           Optional<RVVTypes> MaskTypes =
@@ -977,9 +1001,10 @@ void RVVEmitter::createRVVIntrinsics(
           Out.push_back(std::make_unique<RVVIntrinsic>(
               Name, SuffixStr, MangledName, IRNameMask, HasSideEffects,
               /*IsMask=*/true, HasMaskedOffOperand, HasVL, HasGeneric,
-              MaskTypes.getValue(), IntrinsicTypes));
+              HasAutoDef, ManualCodegenMask, MaskTypes.getValue(),
+              IntrinsicTypes));
         }
-      } // end for Log2LMUL
+      } // end for Log2LMULList
     }   // end for TypeRange
   }
 }
@@ -1039,7 +1064,8 @@ void RVVEmitter::emitArchMacroAndBody(
       NeedEndif = emitExtDefStr(CurExt, OS);
       PrevExt = CurExt;
     }
-    PrintBody(OS, *Def);
+    if (Def->hasAutoDef())
+      PrintBody(OS, *Def);
   }
   if (NeedEndif)
     OS << "#endif\n\n";
