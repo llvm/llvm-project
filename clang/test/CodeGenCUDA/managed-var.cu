@@ -2,19 +2,24 @@
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck \
-// RUN:   -check-prefixes=COMMON,DEV %s
+// RUN:   -check-prefixes=COMMON,DEV,NORDC-D %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
-// RUN:   -emit-llvm -fgpu-rdc -o - -x hip %s | FileCheck \
-// RUN:   -check-prefixes=COMMON,DEV %s
+// RUN:   -emit-llvm -fgpu-rdc -cuid=abc -o - -x hip %s > %t.dev
+// RUN: cat %t.dev | FileCheck -check-prefixes=COMMON,DEV,RDC-D %s
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefixes=COMMON,HOST,NORDC %s
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -std=c++11 \
-// RUN:   -emit-llvm -fgpu-rdc -o - -x hip %s | FileCheck \
-// RUN:   -check-prefixes=COMMON,HOST,RDC %s
+// RUN:   -emit-llvm -fgpu-rdc -cuid=abc -o - -x hip %s > %t.host
+// RUN: cat %t.host | FileCheck -check-prefixes=COMMON,HOST,RDC %s
+
+// Check device and host compilation use the same postfix for static
+// variable name.
+
+// RUN: cat %t.dev %t.host | FileCheck -check-prefix=POSTFIX %s
 
 #include "Inputs/cuda.h"
 
@@ -45,10 +50,17 @@ __managed__ vec v2[100] = {{1, 1, 1}};
 // HOST-DAG: @ex = external externally_initialized global i32*
 extern __managed__ int ex;
 
-// DEV-DAG: @_ZL2sx.managed = dso_local addrspace(1) externally_initialized global i32 1, align 4
-// DEV-DAG: @_ZL2sx = dso_local addrspace(1) externally_initialized global i32 addrspace(1)* null
+// NORDC-D-DAG: @_ZL2sx.managed = dso_local addrspace(1) externally_initialized global i32 1, align 4
+// NORDC-D-DAG: @_ZL2sx = dso_local addrspace(1) externally_initialized global i32 addrspace(1)* null
+// RDC-D-DAG: @_ZL2sx.static.[[HASH:.*]].managed = dso_local addrspace(1) externally_initialized global i32 1, align 4
+// RDC-D-DAG: @_ZL2sx.static.[[HASH]] = dso_local addrspace(1) externally_initialized global i32 addrspace(1)* null
 // HOST-DAG: @_ZL2sx.managed = internal global i32 1
 // HOST-DAG: @_ZL2sx = internal externally_initialized global i32* null
+// NORDC-DAG: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx\00"
+// RDC-DAG: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx.static.[[HASH:.*]]\00"
+
+// POSTFIX:  @_ZL2sx.static.[[HASH:.*]] = dso_local addrspace(1) externally_initialized global i32 addrspace(1)* null
+// POSTFIX: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx.static.[[HASH]]\00"
 static __managed__ int sx = 1;
 
 // DEV-DAG: @llvm.compiler.used
@@ -154,6 +166,6 @@ __device__ __host__ int load4() {
 }
 
 // HOST-DAG: __hipRegisterManagedVar({{.*}}@x {{.*}}@x.managed {{.*}}@[[DEVNAMEX]]{{.*}}, i64 4, i32 4)
-// HOST-DAG: __hipRegisterManagedVar({{.*}}@_ZL2sx {{.*}}@_ZL2sx.managed
+// HOST-DAG: __hipRegisterManagedVar({{.*}}@_ZL2sx {{.*}}@_ZL2sx.managed {{.*}}@[[DEVNAMESX]]
 // HOST-NOT: __hipRegisterManagedVar({{.*}}@ex {{.*}}@ex.managed
 // HOST-DAG: declare void @__hipRegisterManagedVar(i8**, i8*, i8*, i8*, i64, i32)
