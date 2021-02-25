@@ -1162,20 +1162,69 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
                                                            << "a filename";
 }
 
-/// Create a new Regex instance out of the string value in \p RpassArg.
-/// It returns the string and a pointer to the newly generated Regex instance.
-static CodeGenOptions::RemarkPattern
-GenerateOptimizationRemarkRegex(DiagnosticsEngine &Diags, ArgList &Args,
-                                Arg *RpassArg) {
-  StringRef Val = RpassArg->getValue();
-  std::string RegexError;
-  std::shared_ptr<llvm::Regex> Pattern = std::make_shared<llvm::Regex>(Val);
-  if (!Pattern->isValid(RegexError)) {
-    Diags.Report(diag::err_drv_optimization_remark_pattern)
-        << RegexError << RpassArg->getAsString(Args);
-    Pattern.reset();
+/// Generate a remark argument. This is an inverse of `ParseOptimizationRemark`.
+static void
+GenerateOptimizationRemark(SmallVectorImpl<const char *> &Args,
+                           CompilerInvocation::StringAllocator SA,
+                           OptSpecifier OptEQ, StringRef Name,
+                           const CodeGenOptions::OptRemark &Remark) {
+  if (Remark.hasValidPattern()) {
+    GenerateArg(Args, OptEQ, Remark.Pattern, SA);
+  } else if (Remark.Kind == CodeGenOptions::RK_Enabled) {
+    GenerateArg(Args, OPT_R_Joined, Name, SA);
+  } else if (Remark.Kind == CodeGenOptions::RK_Disabled) {
+    GenerateArg(Args, OPT_R_Joined, StringRef("no-") + Name, SA);
   }
-  return {std::string(Val), Pattern};
+};
+
+/// Parse a remark command line argument. It may be missing, disabled/enabled by
+/// '-R[no-]group' or specified with a regular expression by '-Rgroup=regexp'.
+/// On top of that, it can be disabled/enabled globally by '-R[no-]everything'.
+static CodeGenOptions::OptRemark
+ParseOptimizationRemark(DiagnosticsEngine &Diags, ArgList &Args,
+                        OptSpecifier OptEQ, StringRef Name) {
+  CodeGenOptions::OptRemark Result;
+
+  auto InitializeResultPattern = [&Diags, &Args, &Result](const Arg *A) {
+    Result.Pattern = A->getValue();
+
+    std::string RegexError;
+    Result.Regex = std::make_shared<llvm::Regex>(Result.Pattern);
+    if (!Result.Regex->isValid(RegexError)) {
+      Diags.Report(diag::err_drv_optimization_remark_pattern)
+          << RegexError << A->getAsString(Args);
+      return false;
+    }
+
+    return true;
+  };
+
+  for (Arg *A : Args) {
+    if (A->getOption().matches(OPT_R_Joined)) {
+      StringRef Value = A->getValue();
+
+      if (Value == Name)
+        Result.Kind = CodeGenOptions::RK_Enabled;
+      else if (Value == "everything")
+        Result.Kind = CodeGenOptions::RK_EnabledEverything;
+      else if (Value.split('-') == std::make_pair(StringRef("no"), Name))
+        Result.Kind = CodeGenOptions::RK_Disabled;
+      else if (Value == "no-everything")
+        Result.Kind = CodeGenOptions::RK_DisabledEverything;
+    } else if (A->getOption().matches(OptEQ)) {
+      Result.Kind = CodeGenOptions::RK_WithPattern;
+      if (!InitializeResultPattern(A))
+        return CodeGenOptions::OptRemark();
+    }
+  }
+
+  if (Result.Kind == CodeGenOptions::RK_Disabled ||
+      Result.Kind == CodeGenOptions::RK_DisabledEverything) {
+    Result.Pattern = "";
+    Result.Regex = nullptr;
+  }
+
+  return Result;
 }
 
 static bool parseDiagnosticLevelMask(StringRef FlagName,
@@ -1480,16 +1529,14 @@ void CompilerInvocation::GenerateCodeGenArgs(
   if (!Opts.OptRecordFormat.empty())
     GenerateArg(Args, OPT_opt_record_format, Opts.OptRecordFormat, SA);
 
-  if (Opts.OptimizationRemarkPattern)
-    GenerateArg(Args, OPT_Rpass_EQ, Opts.OptimizationRemarkPattern.Pattern, SA);
+  GenerateOptimizationRemark(Args, SA, OPT_Rpass_EQ, "pass",
+                             Opts.OptimizationRemark);
 
-  if (Opts.OptimizationRemarkMissedPattern)
-    GenerateArg(Args, OPT_Rpass_missed_EQ,
-                Opts.OptimizationRemarkMissedPattern.Pattern, SA);
+  GenerateOptimizationRemark(Args, SA, OPT_Rpass_missed_EQ, "pass-missed",
+                             Opts.OptimizationRemarkMissed);
 
-  if (Opts.OptimizationRemarkAnalysisPattern)
-    GenerateArg(Args, OPT_Rpass_analysis_EQ,
-                Opts.OptimizationRemarkAnalysisPattern.Pattern, SA);
+  GenerateOptimizationRemark(Args, SA, OPT_Rpass_analysis_EQ, "pass-analysis",
+                             Opts.OptimizationRemarkAnalysis);
 
   GenerateArg(Args, OPT_fdiagnostics_hotness_threshold_EQ,
               Opts.DiagnosticsHotnessThreshold
@@ -1853,23 +1900,18 @@ bool CompilerInvocation::ParseCodeGenArgsImpl(CodeGenOptions &Opts,
     NeedLocTracking = true;
   }
 
-  if (Arg *A = Args.getLastArg(OPT_Rpass_EQ)) {
-    Opts.OptimizationRemarkPattern =
-        GenerateOptimizationRemarkRegex(Diags, Args, A);
-    NeedLocTracking = true;
-  }
+  Opts.OptimizationRemark =
+      ParseOptimizationRemark(Diags, Args, OPT_Rpass_EQ, "pass");
 
-  if (Arg *A = Args.getLastArg(OPT_Rpass_missed_EQ)) {
-    Opts.OptimizationRemarkMissedPattern =
-        GenerateOptimizationRemarkRegex(Diags, Args, A);
-    NeedLocTracking = true;
-  }
+  Opts.OptimizationRemarkMissed =
+      ParseOptimizationRemark(Diags, Args, OPT_Rpass_missed_EQ, "pass-missed");
 
-  if (Arg *A = Args.getLastArg(OPT_Rpass_analysis_EQ)) {
-    Opts.OptimizationRemarkAnalysisPattern =
-        GenerateOptimizationRemarkRegex(Diags, Args, A);
-    NeedLocTracking = true;
-  }
+  Opts.OptimizationRemarkAnalysis = ParseOptimizationRemark(
+      Diags, Args, OPT_Rpass_analysis_EQ, "pass-analysis");
+
+  NeedLocTracking |= Opts.OptimizationRemark.hasValidPattern() ||
+                     Opts.OptimizationRemarkMissed.hasValidPattern() ||
+                     Opts.OptimizationRemarkAnalysis.hasValidPattern();
 
   bool UsingSampleProfile = !Opts.SampleProfileFile.empty();
   bool UsingProfile = UsingSampleProfile ||
@@ -2288,8 +2330,17 @@ void CompilerInvocation::GenerateDiagnosticArgs(
     Args.push_back(SA(StringRef("-W") + Warning));
   }
 
-  for (const auto &Remark : Opts.Remarks)
+  for (const auto &Remark : Opts.Remarks) {
+    // These arguments are generated from OptimizationRemark fields of
+    // CodeGenOptions.
+    StringRef IgnoredRemarks[] = {"pass",          "no-pass",
+                                  "pass-analysis", "no-pass-analysis",
+                                  "pass-missed",   "no-pass-missed"};
+    if (llvm::is_contained(IgnoredRemarks, Remark))
+      continue;
+
     Args.push_back(SA(StringRef("-R") + Remark));
+  }
 }
 
 bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
