@@ -4,4 +4,4 @@
 
 // CHECK-WITHOUT-ROUND-TRIP-NOT: remark:
 // CHECK-ROUND-TRIP-WITHOUT-REMARKS-NOT: remark:
-// CHECK-ROUND-TRIP-WITH-REMARKS: remark: Generated arguments {{.*}} in {{.*}} round-trip: {{.*}}
+// CHECK-ROUND-TRIP-WITH-REMARKS: remark: Generated arguments #{{.*}} in round-trip: {{.*}}
