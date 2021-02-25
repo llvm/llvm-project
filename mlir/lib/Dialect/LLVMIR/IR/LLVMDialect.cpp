@@ -1345,7 +1345,7 @@ static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type,
       if (!memrefType.hasStaticShape())
         return op->emitOpError(
             "unexpected bare pointer for dynamically shaped memref");
-      if (memrefType.getMemorySpace() != ptrType.getAddressSpace())
+      if (memrefType.getMemorySpaceAsInt() != ptrType.getAddressSpace())
         return op->emitError("invalid conversion between memref and pointer in "
                              "different memory spaces");
 
@@ -1369,7 +1369,7 @@ static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type,
     // The first two elements are pointers to the element type.
     auto allocatedPtr = structType.getBody()[0].dyn_cast<LLVMPointerType>();
     if (!allocatedPtr ||
-        allocatedPtr.getAddressSpace() != memrefType.getMemorySpace())
+        allocatedPtr.getAddressSpace() != memrefType.getMemorySpaceAsInt())
       return op->emitOpError("expected first element of a memref descriptor to "
                              "be a pointer in the address space of the memref");
     if (failed(verifyCast(op, allocatedPtr.getElementType(),
@@ -1378,7 +1378,7 @@ static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type,
 
     auto alignedPtr = structType.getBody()[1].dyn_cast<LLVMPointerType>();
     if (!alignedPtr ||
-        alignedPtr.getAddressSpace() != memrefType.getMemorySpace())
+        alignedPtr.getAddressSpace() != memrefType.getMemorySpaceAsInt())
       return op->emitOpError(
           "expected second element of a memref descriptor to "
           "be a pointer in the address space of the memref");

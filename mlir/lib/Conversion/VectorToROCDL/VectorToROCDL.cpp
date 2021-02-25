@@ -94,8 +94,8 @@ public:
     // MUBUF instruction operate only on addresspace 0(unified) or 1(global)
     // In case of 3(LDS): fall back to vector->llvm pass
     // In case of 5(VGPR): wrong
-    if ((memRefType.getMemorySpace() != 0) &&
-        (memRefType.getMemorySpace() != 1))
+    if ((memRefType.getMemorySpaceAsInt() != 0) &&
+        (memRefType.getMemorySpaceAsInt() != 1))
       return failure();
 
     // Note that the dataPtr starts at the offset address specified by
