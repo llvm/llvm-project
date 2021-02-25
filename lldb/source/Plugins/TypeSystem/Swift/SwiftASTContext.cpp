@@ -56,6 +56,7 @@
 #include "swift/Serialization/Validation.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Driver.h"
@@ -3045,10 +3046,10 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
                   clang::ASTContext &to_ctx,
                   llvm::Optional<swift::ClangTypeKind> kind,
                   llvm::SmallVectorImpl<clang::Decl *> &results) {
-    clang::FileSystemOptions file_system_options;
-    clang::FileManager file_manager(
-        file_system_options, FileSystem::Instance().GetVirtualFileSystem());
-    clang::ASTImporter importer(to_ctx, file_manager, from_ctx, file_manager,
+    clang::ASTImporter importer(to_ctx,
+                                to_ctx.getSourceManager().getFileManager(),
+                                from_ctx,
+                                from_ctx.getSourceManager().getFileManager(),
                                 false);
     llvm::Expected<clang::QualType> clang_type(importer.Import(qual_type));
     if (!clang_type) {
