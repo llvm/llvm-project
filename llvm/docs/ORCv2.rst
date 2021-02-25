@@ -797,10 +797,6 @@ Current Work
    ExecutionSession and leaving the JITDylib instance in a defunct state until
    all references to it have been released).
 
-4. **JITLink improvements**
-
-   TBD. We really need a separate JITLink design document.
-
 Near Future Work
 ----------------
 
