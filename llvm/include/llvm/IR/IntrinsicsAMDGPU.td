@@ -2076,10 +2076,6 @@ def int_amdgcn_flat_atomic_fadd   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_flat_atomic_fmin   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_flat_atomic_fmax   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
 
-//===----------------------------------------------------------------------===//
-// gfx11 intrinsics
-// ===----------------------------------------------------------------------===//
-
 def int_amdgcn_mfma_f32_32x32x4bf16_1k : GCCBuiltin<"__builtin_amdgcn_mfma_f32_32x32x4bf16_1k">,
   Intrinsic<[llvm_v32f32_ty],
             [llvm_v4i16_ty, llvm_v4i16_ty, llvm_v32f32_ty,
