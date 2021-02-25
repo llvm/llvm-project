@@ -1603,9 +1603,10 @@ private:
               }
               llvm_unreachable("unknown category");
             },
-            [&](const Fortran::evaluate::ProcedureRef &) {
-              // Defined assignment: call ProcRef
-              TODO(loc, "user defined assignment lowering");
+            [&](const Fortran::evaluate::ProcedureRef &procRef) {
+              // User defined assignment: call the procedure.
+              Fortran::semantics::SomeExpr expr{procRef};
+              createFIRExpr(toLocation(), &expr, stmtCtx);
             },
             [&](const Fortran::evaluate::Assignment::BoundsSpec &) {
               // Pointer assignment with possibly empty bounds-spec
