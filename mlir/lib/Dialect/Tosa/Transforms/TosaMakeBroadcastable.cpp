@@ -103,7 +103,7 @@ static void computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
   }
 }
 
-/// Common code to reate the reshape op where necessary to make the rank of the
+/// Common code to create the reshape op where necessary to make the rank of the
 /// operations equal. Returns the updated input1 and input2 for the original
 /// input. The caller is expected to use these to rewrite the original operator
 /// with the RESHAPE now in the graph.
