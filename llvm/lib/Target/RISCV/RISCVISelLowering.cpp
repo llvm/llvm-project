@@ -446,7 +446,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FP_TO_SINT, VT, Custom);
       setOperationAction(ISD::FP_TO_UINT, VT, Custom);
 
-      // Integer VTs are lowered as a series of "RISCVISD::TRUNCATE_VECTOR"
+      // Integer VTs are lowered as a series of "RISCVISD::TRUNCATE_VECTOR_VL"
       // nodes which truncate by one power of two at a time.
       setOperationAction(ISD::TRUNCATE, VT, Custom);
 
@@ -526,6 +526,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // By default everything must be expanded.
         for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
           setOperationAction(Op, VT, Expand);
+        for (MVT OtherVT : MVT::fixedlen_vector_valuetypes())
+          setTruncStoreAction(VT, OtherVT, Expand);
 
         // We use EXTRACT_SUBVECTOR as a "cast" from scalable to fixed.
         setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
@@ -571,6 +573,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::VSELECT, VT, Custom);
 
+        setOperationAction(ISD::TRUNCATE, VT, Custom);
         setOperationAction(ISD::ANY_EXTEND, VT, Custom);
         setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
         setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
@@ -1171,7 +1174,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::TRUNCATE: {
     SDLoc DL(Op);
-    EVT VT = Op.getValueType();
+    MVT VT = Op.getSimpleValueType();
     // Only custom-lower vector truncates
     if (!VT.isVector())
       return Op;
@@ -1181,27 +1184,41 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return lowerVectorMaskTrunc(Op, DAG);
 
     // RVV only has truncates which operate from SEW*2->SEW, so lower arbitrary
-    // truncates as a series of "RISCVISD::TRUNCATE_VECTOR" nodes which
+    // truncates as a series of "RISCVISD::TRUNCATE_VECTOR_VL" nodes which
     // truncate by one power of two at a time.
-    EVT DstEltVT = VT.getVectorElementType();
+    MVT DstEltVT = VT.getVectorElementType();
 
     SDValue Src = Op.getOperand(0);
-    EVT SrcVT = Src.getValueType();
-    EVT SrcEltVT = SrcVT.getVectorElementType();
+    MVT SrcVT = Src.getSimpleValueType();
+    MVT SrcEltVT = SrcVT.getVectorElementType();
 
     assert(DstEltVT.bitsLT(SrcEltVT) &&
            isPowerOf2_64(DstEltVT.getSizeInBits()) &&
            isPowerOf2_64(SrcEltVT.getSizeInBits()) &&
            "Unexpected vector truncate lowering");
 
+    MVT ContainerVT = SrcVT;
+    if (SrcVT.isFixedLengthVector()) {
+      ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
+          DAG, SrcVT, Subtarget);
+      Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
+    }
+
     SDValue Result = Src;
+    SDValue Mask, VL;
+    std::tie(Mask, VL) =
+        getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
     LLVMContext &Context = *DAG.getContext();
-    const ElementCount Count = SrcVT.getVectorElementCount();
+    const ElementCount Count = ContainerVT.getVectorElementCount();
     do {
-      SrcEltVT = EVT::getIntegerVT(Context, SrcEltVT.getSizeInBits() / 2);
+      SrcEltVT = MVT::getIntegerVT(SrcEltVT.getSizeInBits() / 2);
       EVT ResultVT = EVT::getVectorVT(Context, SrcEltVT, Count);
-      Result = DAG.getNode(RISCVISD::TRUNCATE_VECTOR, DL, ResultVT, Result);
+      Result = DAG.getNode(RISCVISD::TRUNCATE_VECTOR_VL, DL, ResultVT, Result,
+                           Mask, VL);
     } while (SrcEltVT != DstEltVT);
+
+    if (SrcVT.isFixedLengthVector())
+      Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
 
     return Result;
   }
@@ -5437,7 +5454,9 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VMV_X_S)
   NODE_NAME_CASE(SPLAT_VECTOR_I64)
   NODE_NAME_CASE(READ_VLENB)
-  NODE_NAME_CASE(TRUNCATE_VECTOR)
+  NODE_NAME_CASE(TRUNCATE_VECTOR_VL)
+  NODE_NAME_CASE(VLEFF)
+  NODE_NAME_CASE(VLEFF_MASK)
   NODE_NAME_CASE(VSLIDEUP_VL)
   NODE_NAME_CASE(VSLIDEDOWN_VL)
   NODE_NAME_CASE(VID_VL)
