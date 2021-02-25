@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -40,6 +41,7 @@ constexpr const char export_[] = "__export";
 constexpr const char symbolTable[] = "__symbol_table";
 constexpr const char indirectSymbolTable[] = "__ind_sym_tab";
 constexpr const char stringTable[] = "__string_table";
+constexpr const char codeSignature[] = "__code_signature";
 constexpr const char got[] = "__got";
 constexpr const char threadPtrs[] = "__thread_ptrs";
 constexpr const char unwindInfo[] = "__unwind_info";
@@ -94,7 +96,7 @@ public:
   // NOTE: This assumes that the extra bytes required for alignment can be
   // zero-valued bytes.
   uint64_t getSize() const override final {
-    return llvm::alignTo(getRawSize(), WordSize);
+    return llvm::alignTo(getRawSize(), align);
   }
 };
 
@@ -481,6 +483,32 @@ public:
   bool isNeeded() const override;
   void writeTo(uint8_t *buf) const override;
 };
+
+// The code signature comes at the very end of the linked output file.
+class CodeSignatureSection : public LinkEditSection {
+public:
+  static constexpr uint8_t blockSizeShift = 12;
+  static constexpr size_t blockSize = (1 << blockSizeShift); // 4 KiB
+  static constexpr size_t hashSize = 256 / 8;
+  static constexpr size_t blobHeadersSize = llvm::alignTo<8>(
+      sizeof(llvm::MachO::CS_SuperBlob) + sizeof(llvm::MachO::CS_BlobIndex));
+  static constexpr uint32_t fixedHeadersSize =
+      blobHeadersSize + sizeof(llvm::MachO::CS_CodeDirectory);
+
+  uint32_t fileNamePad = 0;
+  uint32_t allHeadersSize = 0;
+  StringRef fileName;
+
+  CodeSignatureSection();
+  uint64_t getRawSize() const override;
+  bool isNeeded() const override { return true; }
+  void writeTo(uint8_t *buf) const override;
+  uint32_t getBlockCount() const;
+  void writeHashes(uint8_t *buf) const;
+};
+
+static_assert((CodeSignatureSection::blobHeadersSize % 8) == 0, "");
+static_assert((CodeSignatureSection::fixedHeadersSize % 8) == 0, "");
 
 struct InStruct {
   MachHeaderSection *header = nullptr;
