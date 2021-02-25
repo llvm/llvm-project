@@ -148,6 +148,13 @@ def SDT_RISCVVEXTEND_VL : SDTypeProfile<1, 3, [SDTCisVec<0>,
 def riscv_sext_vl : SDNode<"RISCVISD::VSEXT_VL", SDT_RISCVVEXTEND_VL>;
 def riscv_zext_vl : SDNode<"RISCVISD::VZEXT_VL", SDT_RISCVVEXTEND_VL>;
 
+def riscv_trunc_vector_vl : SDNode<"RISCVISD::TRUNCATE_VECTOR_VL",
+                                   SDTypeProfile<1, 3, [SDTCisVec<0>,
+                                                        SDTCisVec<1>,
+                                                        SDTCisSameNumEltsAs<0, 2>,
+                                                        SDTCVecEltisVT<2, i1>,
+                                                        SDTCisVT<3, XLenVT>]>>;
+
 // Ignore the vl operand.
 def SplatFPOp : PatFrag<(ops node:$op),
                         (riscv_vfmv_v_f_vl node:$op, srcvalue)>;
@@ -442,6 +449,17 @@ defm "" : VPatBinaryVL_VV_VX_VI<riscv_xor_vl, "PseudoVXOR">;
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_shl_vl, "PseudoVSLL", uimm5>;
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_srl_vl, "PseudoVSRL", uimm5>;
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_sra_vl, "PseudoVSRA", uimm5>;
+
+// 12.7. Vector Narrowing Integer Right Shift Instructions
+foreach vtiTofti = AllFractionableVF2IntVectors in {
+  defvar vti = vtiTofti.Vti;
+  defvar fti = vtiTofti.Fti;
+  def : Pat<(fti.Vector (riscv_trunc_vector_vl (vti.Vector vti.RegClass:$rs1),
+                                               (vti.Mask true_mask),
+                                               (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVNSRL_WI_"#fti.LMul.MX)
+                vti.RegClass:$rs1, 0, GPR:$vl, fti.SEW)>;
+}
 
 // 12.8. Vector Integer Comparison Instructions
 foreach vti = AllIntegerVectors in {
