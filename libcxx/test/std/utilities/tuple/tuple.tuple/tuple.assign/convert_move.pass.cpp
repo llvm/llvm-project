@@ -45,19 +45,51 @@ struct E {
   }
 };
 
+struct NothrowMoveAssignable {
+    NothrowMoveAssignable& operator=(NothrowMoveAssignable&&) noexcept { return *this; }
+};
+
+struct PotentiallyThrowingMoveAssignable {
+    PotentiallyThrowingMoveAssignable& operator=(PotentiallyThrowingMoveAssignable&&) { return *this; }
+};
+
 struct NonAssignable {
   NonAssignable& operator=(NonAssignable const&) = delete;
   NonAssignable& operator=(NonAssignable&&) = delete;
 };
 
-struct NothrowMoveAssignable
-{
-    NothrowMoveAssignable& operator=(NothrowMoveAssignable&&) noexcept { return *this; }
+struct MoveAssignable {
+  MoveAssignable& operator=(MoveAssignable const&) = delete;
+  MoveAssignable& operator=(MoveAssignable&&) = default;
 };
 
-struct PotentiallyThrowingMoveAssignable
+struct CopyAssignable {
+  CopyAssignable& operator=(CopyAssignable const&) = default;
+  CopyAssignable& operator=(CopyAssignable&&) = delete;
+};
+
+struct TrackMove
 {
-    PotentiallyThrowingMoveAssignable& operator=(PotentiallyThrowingMoveAssignable&&) { return *this; }
+    TrackMove() : value(0), moved_from(false) { }
+    explicit TrackMove(int v) : value(v), moved_from(false) { }
+    TrackMove(TrackMove const& other) : value(other.value), moved_from(false) { }
+    TrackMove(TrackMove&& other) : value(other.value), moved_from(false) {
+        other.moved_from = true;
+    }
+    TrackMove& operator=(TrackMove const& other) {
+        value = other.value;
+        moved_from = false;
+        return *this;
+    }
+    TrackMove& operator=(TrackMove&& other) {
+        value = other.value;
+        moved_from = false;
+        other.moved_from = true;
+        return *this;
+    }
+
+    int value;
+    bool moved_from;
 };
 
 int main(int, char**)
@@ -138,6 +170,82 @@ int main(int, char**)
         typedef std::tuple<PotentiallyThrowingMoveAssignable, long> T0;
         typedef std::tuple<PotentiallyThrowingMoveAssignable, int> T1;
         static_assert(!std::is_nothrow_assignable<T0&, T1&&>::value, "");
+    }
+    {
+        // We assign through the reference and don't move out of the incoming ref,
+        // so this doesn't work (but would if the type were CopyAssignable).
+        {
+            using T1 = std::tuple<MoveAssignable&, long>;
+            using T2 = std::tuple<MoveAssignable&, int>;
+            static_assert(!std::is_assignable<T1&, T2&&>::value, "");
+        }
+
+        // ... works if it's CopyAssignable
+        {
+            using T1 = std::tuple<CopyAssignable&, long>;
+            using T2 = std::tuple<CopyAssignable&, int>;
+            static_assert(std::is_assignable<T1&, T2&&>::value, "");
+        }
+
+        // For rvalue-references, we can move-assign if the type is MoveAssignable
+        // or CopyAssignable (since in the worst case the move will decay into a copy).
+        {
+            using T1 = std::tuple<MoveAssignable&&, long>;
+            using T2 = std::tuple<MoveAssignable&&, int>;
+            static_assert(std::is_assignable<T1&, T2&&>::value, "");
+
+            using T3 = std::tuple<CopyAssignable&&, long>;
+            using T4 = std::tuple<CopyAssignable&&, int>;
+            static_assert(std::is_assignable<T3&, T4&&>::value, "");
+        }
+
+        // In all cases, we can't move-assign if the types are not assignable,
+        // since we assign through the reference.
+        {
+            using T1 = std::tuple<NonAssignable&, long>;
+            using T2 = std::tuple<NonAssignable&, int>;
+            static_assert(!std::is_assignable<T1&, T2&&>::value, "");
+
+            using T3 = std::tuple<NonAssignable&&, long>;
+            using T4 = std::tuple<NonAssignable&&, int>;
+            static_assert(!std::is_assignable<T3&, T4&&>::value, "");
+        }
+    }
+    {
+        // Make sure that we don't incorrectly move out of the source's reference.
+        using Dest = std::tuple<TrackMove, long>;
+        using Source = std::tuple<TrackMove&, int>;
+        TrackMove track{3};
+        Source src(track, 4);
+        assert(!track.moved_from);
+
+        Dest dst;
+        dst = std::move(src); // here we should make a copy
+        assert(!track.moved_from);
+        assert(std::get<0>(dst).value == 3);
+    }
+    {
+        // But we do move out of the source's reference if it's a rvalue ref
+        using Dest = std::tuple<TrackMove, long>;
+        using Source = std::tuple<TrackMove&&, int>;
+        TrackMove track{3};
+        Source src(std::move(track), 4);
+        assert(!track.moved_from); // we just took a reference
+
+        Dest dst;
+        dst = std::move(src);
+        assert(track.moved_from);
+        assert(std::get<0>(dst).value == 3);
+    }
+    {
+        // If the source holds a value, then we move out of it too
+        using Dest = std::tuple<TrackMove, long>;
+        using Source = std::tuple<TrackMove, int>;
+        Source src(TrackMove{3}, 4);
+        Dest dst;
+        dst = std::move(src);
+        assert(std::get<0>(src).moved_from);
+        assert(std::get<0>(dst).value == 3);
     }
 
     return 0;
