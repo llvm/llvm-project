@@ -1538,8 +1538,7 @@ define zeroext i1 @saddo.br.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    xor a1, a1, a3
 ; RV32-NEXT:    not a1, a1
 ; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    addi a1, zero, -1
-; RV32-NEXT:    blt a1, a0, .LBB47_2
+; RV32-NEXT:    bgez a0, .LBB47_2
 ; RV32-NEXT:  # %bb.1: # %overflow
 ; RV32-NEXT:    mv a0, zero
 ; RV32-NEXT:    ret
@@ -1706,8 +1705,7 @@ define zeroext i1 @ssubo.br.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    xor a1, a1, a3
 ; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    addi a1, zero, -1
-; RV32-NEXT:    blt a1, a0, .LBB51_2
+; RV32-NEXT:    bgez a0, .LBB51_2
 ; RV32-NEXT:  # %bb.1: # %overflow
 ; RV32-NEXT:    mv a0, zero
 ; RV32-NEXT:    ret
