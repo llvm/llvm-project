@@ -704,7 +704,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
       let mayStore = 1;
       let mayLoad = 0;
       // (2 * 4) + (8 * num_subregs) bytes maximum
-      int MaxSize = !add(!shl(!srl(vgpr_class.Size, 5), 3), 8);
+      int MaxSize = !add(!shl(!srl(vgpr_class.Size, 5), !add(UsesTmp, 3)), 8);
       // Size field is unsigned char and cannot fit more.
       let Size = !if(!le(MaxSize, 256), MaxSize, 252);
     }

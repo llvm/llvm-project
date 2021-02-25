@@ -16,6 +16,8 @@ body:             |
 
     ; CHECK-LABEL: name: spill_a64_kill
     ; CHECK: liveins: $agpr0_agpr1
+    ; CHECK: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
     ; CHECK: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1
     ; CHECK: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1 :: (store 4 into %stack.0, addrspace 5)
     ; CHECK: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
@@ -40,6 +42,8 @@ body:             |
 
     ; CHECK-LABEL: name: spill_a64_undef_sub1_killed
     ; CHECK: liveins: $agpr0
+    ; CHECK: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
     ; CHECK: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1
     ; CHECK: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1 :: (store 4 into %stack.0, addrspace 5)
     ; CHECK: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
@@ -62,6 +66,8 @@ body:             |
 
     ; CHECK-LABEL: name: spill_a64_undef_sub0_killed
     ; CHECK: liveins: $agpr1
+    ; CHECK: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
     ; CHECK: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1
     ; CHECK: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1 :: (store 4 into %stack.0, addrspace 5)
     ; CHECK: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec

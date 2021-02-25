@@ -4346,11 +4346,11 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
     return TokError("directive only supported for amdgcn architecture");
 
   std::string TargetIDDirective;
-  SMLoc TargetStart = getTok().getLoc();
+  SMLoc TargetStart = getLoc();
   if (getParser().parseEscapedString(TargetIDDirective))
     return true;
 
-  SMRange TargetRange = SMRange(TargetStart, getTok().getLoc());
+  SMRange TargetRange = SMRange(TargetStart, getLoc());
   if (getTargetStreamer().getTargetID()->toString() != TargetIDDirective)
     return getParser().Error(TargetRange.Start,
         (Twine(".amdgcn_target directive's target id ") +
@@ -4576,8 +4576,9 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       if (!isUInt<1>(Val))
         return OutOfRangeError(ValRange);
       if (Val != getTargetStreamer().getTargetID()->isXnackOnOrAny())
-        return getParser().Error(IDRange.Start, ".amdhsa_reserve_xnack_mask does not match target id",
-                                 IDRange);
+        return Error(IDRange.Start,
+                     ".amdhsa_reserve_xnack_mask does not match target id",
+                     IDRange);
     } else if (ID == ".amdhsa_float_round_mode_32") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_32, Val, ValRange);
@@ -4869,9 +4870,9 @@ bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
                  "architectures");
   }
 
-  auto TargetIDDirective = getLexer().getTok().getStringContents();
+  auto TargetIDDirective = getToken().getStringContents();
   if (getTargetStreamer().getTargetID()->toString() != TargetIDDirective)
-    return Error(getParser().getTok().getLoc(), "target id must match options");
+    return Error(getLoc(), "target id must match options");
 
   getTargetStreamer().EmitISAVersion();
   Lex();
