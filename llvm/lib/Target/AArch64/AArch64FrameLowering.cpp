@@ -1227,7 +1227,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       bool HaveInitialContext = Attrs.hasAttrSomewhere(Attribute::SwiftAsync);
 
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::StoreSwiftAsyncContext))
-          .addUse(HaveInitialContext ? AArch64::X9 : AArch64::XZR)
+          .addUse(HaveInitialContext ? AArch64::X22 : AArch64::XZR)
           .addUse(AArch64::SP)
           .addImm(FPOffset - 8)
           .setMIFlags(MachineInstr::FrameSetup);
@@ -2111,7 +2111,9 @@ static bool produceCompactUnwindFrame(MachineFunction &MF) {
   AttributeList Attrs = MF.getFunction().getAttributes();
   return Subtarget.isTargetMachO() &&
          !(Subtarget.getTargetLowering()->supportSwiftError() &&
-           Attrs.hasAttrSomewhere(Attribute::SwiftError));
+           Attrs.hasAttrSomewhere(Attribute::SwiftError)) &&
+         !Attrs.hasAttrSomewhere(Attribute::SwiftAsync) &&
+         MF.getFunction().getCallingConv() != CallingConv::SwiftTail;
 }
 
 static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
@@ -2225,6 +2227,7 @@ static void computeCalleeSaveRegisterPairs(
     FirstReg = Count - 1;
   }
   int ScalableByteOffset = AFI->getSVECalleeSavedStackSize();
+  bool NeedGapToAlignStack = AFI->hasCalleeSaveStackFreeSpace();
 
   // When iterating backwards, the loop condition relies on unsigned wraparound.
   for (unsigned i = FirstReg; i < Count; i += RegInc) {
@@ -2333,17 +2336,16 @@ static void computeCalleeSaveRegisterPairs(
 
     // Round up size of non-pair to pair size if we need to pad the
     // callee-save area to ensure 16-byte alignment.
-    if (AFI->hasCalleeSaveStackFreeSpace() && !NeedsWinCFI &&
+    if (NeedGapToAlignStack && !NeedsWinCFI &&
         !RPI.isScalable() && RPI.Type != RegPairInfo::FPR128 &&
-        !RPI.isPaired()) {
+        !RPI.isPaired() && ByteOffset % 16 != 0) {
       ByteOffset += 8 * StackFillDir;
-      assert(ByteOffset % 16 == 0);
       assert(MFI.getObjectAlign(RPI.FrameIdx) <= Align(16));
       // A stack frame with a gap looks like this, bottom up:
       // d9, d8. x21, gap, x20, x19.
-      // Set extra alignment on the x21 object (the only unpaired register)
-      // to create the gap above it.
+      // Set extra alignment on the x21 object to create the gap above it.
       MFI.setObjectAlignment(RPI.FrameIdx, Align(16));
+      NeedGapToAlignStack = false;
     }
 
     int OffsetPost = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
