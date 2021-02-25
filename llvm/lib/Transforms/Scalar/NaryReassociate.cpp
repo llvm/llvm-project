@@ -80,6 +80,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -106,6 +107,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 #include <cstdint>
 
@@ -269,6 +271,24 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
   return Changed;
 }
 
+template <typename PredT>
+Instruction *
+NaryReassociatePass::matchAndReassociateMinOrMax(Instruction *I,
+                                                 const SCEV *&OrigSCEV) {
+  Value *LHS = nullptr;
+  Value *RHS = nullptr;
+
+  auto MinMaxMatcher =
+      MaxMin_match<ICmpInst, bind_ty<Value>, bind_ty<Value>, PredT>(
+          m_Value(LHS), m_Value(RHS));
+  if (match(I, MinMaxMatcher)) {
+    OrigSCEV = SE->getSCEV(I);
+    return dyn_cast_or_null<Instruction>(
+        tryReassociateMinOrMax(I, MinMaxMatcher, LHS, RHS));
+  }
+  return nullptr;
+}
+
 Instruction *NaryReassociatePass::tryReassociate(Instruction * I,
                                                  const SCEV *&OrigSCEV) {
 
@@ -284,10 +304,17 @@ Instruction *NaryReassociatePass::tryReassociate(Instruction * I,
     OrigSCEV = SE->getSCEV(I);
     return tryReassociateGEP(cast<GetElementPtrInst>(I));
   default:
-    return nullptr;
+    break;
   }
 
-  llvm_unreachable("should not be reached");
+  // Try to match signed/unsigned Min/Max.
+  Instruction *ResI = nullptr;
+  if ((ResI = matchAndReassociateMinOrMax<umin_pred_ty>(I, OrigSCEV)) ||
+      (ResI = matchAndReassociateMinOrMax<smin_pred_ty>(I, OrigSCEV)) ||
+      (ResI = matchAndReassociateMinOrMax<umax_pred_ty>(I, OrigSCEV)) ||
+      (ResI = matchAndReassociateMinOrMax<smax_pred_ty>(I, OrigSCEV)))
+    return ResI;
+
   return nullptr;
 }
 
@@ -537,6 +564,75 @@ NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
         return CandidateInstruction;
     }
     Candidates.pop_back();
+  }
+  return nullptr;
+}
+
+template <typename MaxMinT> static SCEVTypes convertToSCEVype(MaxMinT &MM) {
+  if (std::is_same<smax_pred_ty, typename MaxMinT::PredType>::value)
+    return scSMaxExpr;
+  else if (std::is_same<umax_pred_ty, typename MaxMinT::PredType>::value)
+    return scUMaxExpr;
+  else if (std::is_same<smin_pred_ty, typename MaxMinT::PredType>::value)
+    return scSMinExpr;
+  else if (std::is_same<umin_pred_ty, typename MaxMinT::PredType>::value)
+    return scUMinExpr;
+
+  llvm_unreachable("Can't convert MinMax pattern to SCEV type");
+  return scUnknown;
+}
+
+template <typename MaxMinT>
+Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
+                                                   MaxMinT MaxMinMatch,
+                                                   Value *LHS, Value *RHS) {
+  Value *A = nullptr, *B = nullptr;
+  MaxMinT m_MaxMin(m_Value(A), m_Value(B));
+  for (uint i = 0; i < 2; ++i) {
+    if (match(LHS, m_MaxMin)) {
+      const SCEV *AExpr = SE->getSCEV(A), *BExpr = SE->getSCEV(B);
+      const SCEV *RHSExpr = SE->getSCEV(RHS);
+      for (uint j = 0; j < 2; ++j) {
+        if (j == 0) {
+          if (BExpr == RHSExpr)
+            continue;
+          // Transform 'I = (A op B) op RHS' to 'I = (A op RHS) op B' on the
+          // first iteration.
+          std::swap(BExpr, RHSExpr);
+        } else {
+          if (AExpr == RHSExpr)
+            continue;
+          // Transform 'I = (A op RHS) op B' 'I = (B op RHS) op A' on the second
+          // iteration.
+          std::swap(AExpr, RHSExpr);
+        }
+
+        SCEVExpander Expander(*SE, *DL, "nary-reassociate");
+        SmallVector<const SCEV *, 2> Ops1{ BExpr, AExpr };
+        const SCEVTypes SCEVType = convertToSCEVype(m_MaxMin);
+        const SCEV *R1Expr = SE->getMinMaxExpr(SCEVType, Ops1);
+
+        Instruction *R1MinMax = findClosestMatchingDominator(R1Expr, I);
+
+        if (!R1MinMax)
+          continue;
+
+        LLVM_DEBUG(dbgs() << "NARY: Found common sub-expr: " << *R1MinMax
+                          << "\n");
+
+        R1Expr = SE->getUnknown(R1MinMax);
+        SmallVector<const SCEV *, 2> Ops2{ RHSExpr, R1Expr };
+        const SCEV *R2Expr = SE->getMinMaxExpr(SCEVType, Ops2);
+
+        Value *NewMinMax = Expander.expandCodeFor(R2Expr, I->getType(), I);
+        NewMinMax->setName(Twine(I->getName()).concat(".nary"));
+
+        LLVM_DEBUG(dbgs() << "NARY: Deleting:  " << *I << "\n"
+                          << "NARY: Inserting: " << *NewMinMax << "\n");
+        return NewMinMax;
+      }
+    }
+    std::swap(LHS, RHS);
   }
   return nullptr;
 }
