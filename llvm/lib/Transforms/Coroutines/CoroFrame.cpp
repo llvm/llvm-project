@@ -2212,6 +2212,8 @@ void coro::salvageDebugInfo(
   DDI->setOperand(2, MetadataAsValue::get(VMContext, Expr));
   if (auto *InsertPt = dyn_cast_or_null<Instruction>(Storage))
     DDI->moveAfter(InsertPt);
+  else if (isa<Argument>(Storage))
+    DDI->moveBefore(DDI->getFunction()->getEntryBlock().getFirstNonPHIOrDbg());
 }
 
 void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
