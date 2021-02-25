@@ -36925,6 +36925,36 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
   return SDValue();
 }
 
+// Canonicalize UNARYSHUFFLE(XOR(X,-1)) -> XOR(UNARYSHUFFLE(X),-1) to
+// help expose the 'NOT' pattern further up the DAG.
+// TODO: This might be beneficial for any binop with a 'splattable' operand.
+static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
+                                             const SDLoc &DL) {
+  EVT ShuffleVT = N.getValueType();
+  unsigned Opc = N.getOpcode();
+  switch (Opc) {
+  case X86ISD::MOVDDUP:
+  case X86ISD::PSHUFD: {
+    SDValue N0 = N.getOperand(0);
+    if (N->isOnlyUserOf(N.getOperand(0).getNode())) {
+      if (SDValue Not = IsNOT(N0, DAG, /*OneUse*/ true)) {
+        Not = DAG.getBitcast(ShuffleVT, Not);
+        Not = Opc == X86ISD::MOVDDUP
+                  ? DAG.getNode(Opc, DL, ShuffleVT, Not)
+                  : DAG.getNode(Opc, DL, ShuffleVT, Not, N.getOperand(1));
+        EVT IntVT = Not.getValueType().changeTypeToInteger();
+        SDValue AllOnes = DAG.getConstant(-1, DL, IntVT);
+        Not = DAG.getBitcast(IntVT, Not);
+        Not = DAG.getNode(ISD::XOR, DL, IntVT, Not, AllOnes);
+        return DAG.getBitcast(ShuffleVT, Not);
+      }
+    }
+    break;
+  }
+  }
+  return SDValue();
+}
+
 /// Attempt to fold vpermf128(op(),op()) -> op(vpermf128(),vpermf128()).
 static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
                                                       SelectionDAG &DAG,
@@ -36989,29 +37019,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
   if (SDValue R = combineCommutableSHUFP(N, VT, DL, DAG))
     return R;
 
-  // Canonicalize UNARYSHUFFLE(XOR(X,-1) -> XOR(UNARYSHUFFLE(X),-1) to
-  // help expose the 'NOT' pattern further up the DAG.
-  // TODO: This might be beneficial for any binop with a 'splattable' operand.
-  switch (Opcode) {
-  case X86ISD::MOVDDUP:
-  case X86ISD::PSHUFD: {
-    SDValue Src = N.getOperand(0);
-    if (Src.hasOneUse() && Src.getValueType() == VT) {
-      if (SDValue Not = IsNOT(Src, DAG, /*OneUse*/ true)) {
-        Not = DAG.getBitcast(VT, Not);
-        Not = Opcode == X86ISD::MOVDDUP
-                  ? DAG.getNode(Opcode, DL, VT, Not)
-                  : DAG.getNode(Opcode, DL, VT, Not, N.getOperand(1));
-        EVT IntVT = Not.getValueType().changeTypeToInteger();
-        SDValue AllOnes = DAG.getConstant(-1, DL, IntVT);
-        Not = DAG.getBitcast(IntVT, Not);
-        Not = DAG.getNode(ISD::XOR, DL, IntVT, Not, AllOnes);
-        return DAG.getBitcast(VT, Not);
-      }
-    }
-    break;
-  }
-  }
+  if (SDValue R = canonicalizeShuffleWithBinOps(N, DAG, DL))
+    return R;
 
   // Handle specific target shuffles.
   switch (Opcode) {
