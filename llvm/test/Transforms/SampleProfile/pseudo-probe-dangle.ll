@@ -39,6 +39,34 @@ Merge:
 ; MIR-tail: PSEUDO_PROBE [[#GUID:]], 3, 0, 2
 ; MIR-tail: PSEUDO_PROBE [[#GUID:]], 4, 0, 0
 
+
+define void @foo2() {
+bb:
+  %tmp = call i32 @f1()
+  %tmp1 = icmp eq i32 %tmp, 1
+  br i1 %tmp1, label %bb5, label %bb8
+
+bb2:
+  %tmp4 = icmp ne i32 %tmp, 1
+  switch i1 %tmp4, label %bb2 [
+  i1 0, label %bb5
+  i1 1, label %bb8
+  ]
+
+bb5:
+;; Check the pseudo probe with id 3 only has one copy.
+; JT-COUNT-1: call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 3, i32 2, i64 -1)
+; JT-NOT: call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 3, i32 2, i64 -1)
+  %tmp6 = phi i1 [ %tmp1, %bb ], [ false, %bb2 ]
+  br i1 %tmp6, label %bb8, label %bb7
+
+bb7:
+  br label %bb8
+
+bb8:
+  ret void
+}
+
 define i32 @test(i32 %a, i32 %b, i32 %c) {
 ;; Check block bb1 and bb2 are gone, and their probes (probe 2 and 3) are dangling.
 ; SC-LABEL: @test(
