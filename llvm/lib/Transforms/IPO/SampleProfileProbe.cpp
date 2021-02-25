@@ -364,9 +364,8 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
   if (!F.isDeclarationForLinker()) {
     if (TM) {
       auto Triple = TM->getTargetTriple();
-      if (Triple.supportsCOMDAT() && TM->getFunctionSections()) {
-        GetOrCreateFunctionComdat(F, Triple, CurModuleUniqueId);
-      }
+      if (Triple.supportsCOMDAT() && TM->getFunctionSections())
+        getOrCreateFunctionComdat(F, Triple);
     }
   }
 }
