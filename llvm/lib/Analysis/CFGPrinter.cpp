@@ -169,6 +169,7 @@ struct CFGPrinterLegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
+    outs() << "Running CFGPrinterLegacyPass\n\n";
     auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
     writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI));
@@ -192,6 +193,7 @@ INITIALIZE_PASS(CFGPrinterLegacyPass, "dot-cfg",
 
 PreservedAnalyses CFGPrinterPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
+  outs() << "Running CFGPrinterNewPass\n\n";
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
   writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI));
@@ -206,6 +208,7 @@ struct CFGOnlyPrinterLegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
+    outs() << "Running CFGOnlyPrinterLegacyPass\n\n";
     auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
     writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
@@ -229,6 +232,7 @@ INITIALIZE_PASS(CFGOnlyPrinterLegacyPass, "dot-cfg-only",
 
 PreservedAnalyses CFGOnlyPrinterPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
+  outs() << "Running CFGOnlyPrinterNewPass\n\n";
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
   writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
