@@ -21,7 +21,7 @@ using namespace llvm;
 GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
     const MachineSchedContext *C) :
     GenericScheduler(C), TargetOccupancy(0), HasClusteredNodes(false),
-    MF(nullptr) { }
+    HasExcessPressure(false), MF(nullptr) { }
 
 void GCNMaxOccupancySchedStrategy::initialize(ScheduleDAGMI *DAG) {
   GenericScheduler::initialize(DAG);
@@ -104,11 +104,13 @@ void GCNMaxOccupancySchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU
   // marked as RegExcess in tryCandidate() when they are compared with
   // instructions that increase the register pressure.
   if (ShouldTrackVGPRs && NewVGPRPressure >= VGPRExcessLimit) {
+    HasExcessPressure = true;
     Cand.RPDelta.Excess = PressureChange(AMDGPU::RegisterPressureSets::VGPR_32);
     Cand.RPDelta.Excess.setUnitInc(NewVGPRPressure - VGPRExcessLimit);
   }
 
   if (ShouldTrackSGPRs && NewSGPRPressure >= SGPRExcessLimit) {
+    HasExcessPressure = true;
     Cand.RPDelta.Excess = PressureChange(AMDGPU::RegisterPressureSets::SReg_32);
     Cand.RPDelta.Excess.setUnitInc(NewSGPRPressure - SGPRExcessLimit);
   }
@@ -122,6 +124,7 @@ void GCNMaxOccupancySchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU
   int VGPRDelta = NewVGPRPressure - VGPRCriticalLimit;
 
   if (SGPRDelta >= 0 || VGPRDelta >= 0) {
+    HasExcessPressure = true;
     if (SGPRDelta > VGPRDelta) {
       Cand.RPDelta.CriticalMax =
         PressureChange(AMDGPU::RegisterPressureSets::SReg_32);
@@ -331,12 +334,17 @@ void GCNScheduleDAGMILive::schedule() {
   }
 
   GCNMaxOccupancySchedStrategy &S = (GCNMaxOccupancySchedStrategy&)*SchedImpl;
-  // Set HasClusteredNodes to true for late stages where we are not interested
-  // in it anymore. That way pickNode() will not scan SDep's when not needed.
-  S.HasClusteredNodes = Stage >= UnclusteredReschedule;
+  // Set HasClusteredNodes to true for late stages where we have already
+  // collected it. That way pickNode() will not scan SDep's when not needed.
+  S.HasClusteredNodes = Stage > InitialSchedule;
+  S.HasExcessPressure = false;
   ScheduleDAGMILive::schedule();
   Regions[RegionIdx] = std::make_pair(RegionBegin, RegionEnd);
   RescheduleRegions[RegionIdx] = false;
+  if (Stage == InitialSchedule && S.HasClusteredNodes)
+    RegionsWithClusters[RegionIdx] = true;
+  if (S.HasExcessPressure)
+    RegionsWithHighRP[RegionIdx] = true;
 
   if (!LIS)
     return;
@@ -381,8 +389,10 @@ void GCNScheduleDAGMILive::schedule() {
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
   if (PressureAfter.getVGPRNum(false) > MaxVGPRs ||
       PressureAfter.getAGPRNum() > MaxVGPRs ||
-      PressureAfter.getSGPRNum() > MaxSGPRs)
+      PressureAfter.getSGPRNum() > MaxSGPRs) {
     RescheduleRegions[RegionIdx] = true;
+    RegionsWithHighRP[RegionIdx] = true;
+  }
 
   if (WavesAfter >= MinOccupancy) {
     if (Stage == UnclusteredReschedule &&
@@ -392,7 +402,8 @@ void GCNScheduleDAGMILive::schedule() {
         PressureAfter.less(ST, PressureBefore) ||
         !RescheduleRegions[RegionIdx]) {
       Pressure[RegionIdx] = PressureAfter;
-      if (!S.HasClusteredNodes && (Stage + 1) == UnclusteredReschedule)
+      if (!RegionsWithClusters[RegionIdx] &&
+          (Stage + 1) == UnclusteredReschedule)
         RescheduleRegions[RegionIdx] = false;
       return;
     } else {
@@ -401,7 +412,7 @@ void GCNScheduleDAGMILive::schedule() {
   }
 
   LLVM_DEBUG(dbgs() << "Attempting to revert scheduling.\n");
-  RescheduleRegions[RegionIdx] = S.HasClusteredNodes ||
+  RescheduleRegions[RegionIdx] = RegionsWithClusters[RegionIdx] ||
                                  (Stage + 1) != UnclusteredReschedule;
   RegionEnd = RegionBegin;
   for (MachineInstr *MI : Unsched) {
@@ -535,7 +546,11 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   LiveIns.resize(Regions.size());
   Pressure.resize(Regions.size());
   RescheduleRegions.resize(Regions.size());
+  RegionsWithClusters.resize(Regions.size());
+  RegionsWithHighRP.resize(Regions.size());
   RescheduleRegions.set();
+  RegionsWithClusters.reset();
+  RegionsWithHighRP.reset();
 
   if (!Regions.empty())
     BBLiveInMap = getBBLiveInMap();
@@ -580,7 +595,10 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
       SavedMutations.swap(Mutations);
 
     for (auto Region : Regions) {
-      if (Stage == UnclusteredReschedule && !RescheduleRegions[RegionIdx]) {
+      if ((Stage == UnclusteredReschedule && !RescheduleRegions[RegionIdx]) ||
+          (Stage == ClusteredLowOccupancyReschedule &&
+           !RegionsWithClusters[RegionIdx] && !RegionsWithHighRP[RegionIdx])) {
+
         ++RegionIdx;
         continue;
       }
