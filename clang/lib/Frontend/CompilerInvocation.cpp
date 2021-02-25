@@ -848,8 +848,8 @@ static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
   // Nothing to generate for FullCompilerInvocation.
 }
 
-static bool ParseAnalyzerArgsImpl(AnalyzerOptions &Opts, ArgList &Args,
-                                  DiagnosticsEngine &Diags) {
+static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
+                              DiagnosticsEngine &Diags) {
   AnalyzerOptions *AnalyzerOpts = &Opts;
   bool Success = true;
 
@@ -1014,11 +1014,6 @@ static bool ParseAnalyzerArgsImpl(AnalyzerOptions &Opts, ArgList &Args,
   os.flush();
 
   return Success;
-}
-
-static bool ParseAnalyzerArgs(CompilerInvocation &Res, AnalyzerOptions &Opts,
-                              ArgList &Args, DiagnosticsEngine &Diags) {
-  return ParseAnalyzerArgsImpl(*Res.getAnalyzerOpts(), Args, Diags);
 }
 
 static StringRef getStringOption(AnalyzerOptions::ConfigTable &Config,
@@ -1543,12 +1538,12 @@ void CompilerInvocation::GenerateCodeGenArgs(
   }
 }
 
-bool CompilerInvocation::ParseCodeGenArgsImpl(CodeGenOptions &Opts,
-                                              ArgList &Args, InputKind IK,
-                                              DiagnosticsEngine &Diags,
-                                              const llvm::Triple &T,
-                                              const std::string &OutputFile,
-                                              const LangOptions &LangOptsRef) {
+bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
+                                          InputKind IK,
+                                          DiagnosticsEngine &Diags,
+                                          const llvm::Triple &T,
+                                          const std::string &OutputFile,
+                                          const LangOptions &LangOptsRef) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   bool Success = true;
@@ -1950,14 +1945,6 @@ bool CompilerInvocation::ParseCodeGenArgsImpl(CodeGenOptions &Opts,
   return Success && Diags.getNumErrors() == NumErrorsBefore;
 }
 
-bool CompilerInvocation::ParseCodeGenArgs(
-    CompilerInvocation &Res, CodeGenOptions &Opts, ArgList &Args, InputKind IK,
-    DiagnosticsEngine &Diags, const llvm::Triple &T,
-    const std::string &OutputFile, const LangOptions &LangOptsRef) {
-  return ParseCodeGenArgsImpl(Res.getCodeGenOpts(), Args, IK, Diags, T,
-                              OutputFile, LangOptsRef);
-}
-
 static void
 GenerateDependencyOutputArgs(const DependencyOutputOptions &Opts,
                              SmallVectorImpl<const char *> &Args,
@@ -1997,10 +1984,10 @@ GenerateDependencyOutputArgs(const DependencyOutputOptions &Opts,
   }
 }
 
-static bool ParseDependencyOutputArgsImpl(
-    DependencyOutputOptions &Opts, ArgList &Args,
-    DiagnosticsEngine &Diags,
-    frontend::ActionKind Action, bool ShowLineMarkers) {
+static bool ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
+                                      ArgList &Args, DiagnosticsEngine &Diags,
+                                      frontend::ActionKind Action,
+                                      bool ShowLineMarkers) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
   bool Success = true;
 
@@ -2063,15 +2050,6 @@ static bool ParseDependencyOutputArgsImpl(
   }
 
   return Success && Diags.getNumErrors() == NumErrorsBefore;
-}
-
-static bool ParseDependencyOutputArgs(CompilerInvocation &Res,
-                                      DependencyOutputOptions &Opts,
-                                      ArgList &Args, DiagnosticsEngine &Diags,
-                                      frontend::ActionKind Action,
-                                      bool ShowLineMarkers) {
-  return ParseDependencyOutputArgsImpl(Res.getDependencyOutputOpts(), Args,
-                                       Diags, Action, ShowLineMarkers);
 }
 
 static bool parseShowColorsArgs(const ArgList &Args, bool DefaultColor) {
@@ -2330,15 +2308,6 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   return Success;
 }
 
-bool CompilerInvocation::ParseDiagnosticArgsRoundTrip(CompilerInvocation &Res,
-                                                      DiagnosticOptions &Opts,
-                                                      ArgList &Args,
-                                                      DiagnosticsEngine *Diags,
-                                                      bool DefaultDiagColor) {
-  return clang::ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, Diags,
-                                    DefaultDiagColor);
-}
-
 /// Parse the argument to the -ftest-module-file-extension
 /// command-line argument.
 ///
@@ -2594,9 +2563,8 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
     Args.push_back(SA(Input.getFile()));
 }
 
-static bool ParseFrontendArgsImpl(FrontendOptions &Opts, ArgList &Args,
-                                  DiagnosticsEngine &Diags,
-                                  bool &IsHeaderFile) {
+static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
+                              DiagnosticsEngine &Diags, bool &IsHeaderFile) {
   FrontendOptions &FrontendOpts = Opts;
   bool Success = true;
   unsigned NumErrorsBefore = Diags.getNumErrors();
@@ -2815,13 +2783,6 @@ static bool ParseFrontendArgsImpl(FrontendOptions &Opts, ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
-static bool ParseFrontendArgs(CompilerInvocation &Res, FrontendOptions &Opts,
-                              ArgList &Args, DiagnosticsEngine &Diags,
-                              bool &IsHeaderFile) {
-  return ParseFrontendArgsImpl(Res.getFrontendOpts(), Args, Diags,
-                               IsHeaderFile);
-}
-
 std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
                                                  void *MainAddr) {
   std::string ClangExecutable =
@@ -2829,9 +2790,9 @@ std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
   return Driver::GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
 }
 
-void CompilerInvocation::GenerateHeaderSearchArgs(
-    HeaderSearchOptions &Opts, SmallVectorImpl<const char *> &Args,
-    CompilerInvocation::StringAllocator SA) {
+static void GenerateHeaderSearchArgs(HeaderSearchOptions &Opts,
+                                     SmallVectorImpl<const char *> &Args,
+                                     CompilerInvocation::StringAllocator SA) {
   const HeaderSearchOptions *HeaderSearchOpts = &Opts;
 #define HEADER_SEARCH_OPTION_WITH_MARSHALLING(                                 \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
@@ -3088,14 +3049,6 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     Opts.AddVFSOverlayFile(A->getValue());
 
   return Success;
-}
-
-void CompilerInvocation::ParseHeaderSearchArgs(CompilerInvocation &Res,
-                                               HeaderSearchOptions &Opts,
-                                               ArgList &Args,
-                                               DiagnosticsEngine &Diags,
-                                               const std::string &WorkingDir) {
-  ::ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags, WorkingDir);
 }
 
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
@@ -3533,10 +3486,10 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Args, OPT_msign_return_address_key_EQ, "b_key", SA);
 }
 
-bool CompilerInvocation::ParseLangArgsImpl(LangOptions &Opts, ArgList &Args,
-                                           InputKind IK, const llvm::Triple &T,
-                                           std::vector<std::string> &Includes,
-                                           DiagnosticsEngine &Diags) {
+bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
+                                       InputKind IK, const llvm::Triple &T,
+                                       std::vector<std::string> &Includes,
+                                       DiagnosticsEngine &Diags) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   // FIXME: Cleanup per-file based stuff.
@@ -3980,15 +3933,6 @@ bool CompilerInvocation::ParseLangArgsImpl(LangOptions &Opts, ArgList &Args,
   return Success && Diags.getNumErrors() == NumErrorsBefore;
 }
 
-bool CompilerInvocation::ParseLangArgs(CompilerInvocation &Res,
-                                       LangOptions &Opts,
-                                       llvm::opt::ArgList &Args, InputKind IK,
-                                       const llvm::Triple &T,
-                                       std::vector<std::string> &Includes,
-                                       DiagnosticsEngine &Diags) {
-  return ParseLangArgsImpl(*Res.getLangOpts(), Args, IK, T, Includes, Diags);
-}
-
 static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   switch (Action) {
   case frontend::ASTDeclList:
@@ -4104,10 +4048,10 @@ static void GeneratePreprocessorArgs(PreprocessorOptions &Opts,
   // generated elsewhere.
 }
 
-static bool ParsePreprocessorArgsImpl(PreprocessorOptions &Opts, ArgList &Args,
-                                      DiagnosticsEngine &Diags,
-                                      frontend::ActionKind Action,
-                                      const FrontendOptions &FrontendOpts) {
+static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
+                                  DiagnosticsEngine &Diags,
+                                  frontend::ActionKind Action,
+                                  const FrontendOptions &FrontendOpts) {
   PreprocessorOptions *PreprocessorOpts = &Opts;
   bool Success = true;
 
@@ -4197,15 +4141,6 @@ static bool ParsePreprocessorArgsImpl(PreprocessorOptions &Opts, ArgList &Args,
   return Success;
 }
 
-static bool ParsePreprocessorArgs(CompilerInvocation &Res,
-                                  PreprocessorOptions &Opts, ArgList &Args,
-                                  DiagnosticsEngine &Diags,
-                                  frontend::ActionKind Action,
-                                  FrontendOptions &FrontendOpts) {
-  return ParsePreprocessorArgsImpl(Res.getPreprocessorOpts(), Args, Diags,
-                                   Action, Res.getFrontendOpts());
-}
-
 static void GeneratePreprocessorOutputArgs(
     const PreprocessorOutputOptions &Opts, SmallVectorImpl<const char *> &Args,
     CompilerInvocation::StringAllocator SA, frontend::ActionKind Action) {
@@ -4229,10 +4164,9 @@ static void GeneratePreprocessorOutputArgs(
     GenerateArg(Args, OPT_dD, SA);
 }
 
-static bool ParsePreprocessorOutputArgsImpl(PreprocessorOutputOptions &Opts,
-                                            ArgList &Args,
-                                            DiagnosticsEngine &Diags,
-                                            frontend::ActionKind Action) {
+static bool ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
+                                        ArgList &Args, DiagnosticsEngine &Diags,
+                                        frontend::ActionKind Action) {
   PreprocessorOutputOptions &PreprocessorOutputOpts = Opts;
   unsigned NumErrorsBefore = Diags.getNumErrors();
   bool Success = true;
@@ -4255,14 +4189,6 @@ static bool ParsePreprocessorOutputArgsImpl(PreprocessorOutputOptions &Opts,
   return Success && Diags.getNumErrors() == NumErrorsBefore;
 }
 
-static bool ParsePreprocessorOutputArgs(CompilerInvocation &Res,
-                                        PreprocessorOutputOptions &Opts,
-                                        ArgList &Args, DiagnosticsEngine &Diags,
-                                        frontend::ActionKind Action) {
-  return ParsePreprocessorOutputArgsImpl(Res.getPreprocessorOutputOpts(), Args,
-                                         Diags, Action);
-}
-
 static void GenerateTargetArgs(const TargetOptions &Opts,
                                SmallVectorImpl<const char *> &Args,
                                CompilerInvocation::StringAllocator SA) {
@@ -4283,8 +4209,8 @@ static void GenerateTargetArgs(const TargetOptions &Opts,
                 SA);
 }
 
-static bool ParseTargetArgsImpl(TargetOptions &Opts, ArgList &Args,
-                                DiagnosticsEngine &Diags) {
+static bool ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
+                            DiagnosticsEngine &Diags) {
   TargetOptions *TargetOpts = &Opts;
   unsigned NumErrorsBefore = Diags.getNumErrors();
   bool Success = true;
@@ -4311,11 +4237,6 @@ static bool ParseTargetArgsImpl(TargetOptions &Opts, ArgList &Args,
   }
 
   return Success && Diags.getNumErrors() == NumErrorsBefore;
-}
-
-static bool ParseTargetArgs(CompilerInvocation &Res, TargetOptions &Opts,
-                            ArgList &Args, DiagnosticsEngine &Diags) {
-  return ParseTargetArgsImpl(Res.getTargetOpts(), Args, Diags);
 }
 
 bool CompilerInvocation::CreateFromArgsImpl(
@@ -4352,17 +4273,16 @@ bool CompilerInvocation::CreateFromArgsImpl(
 
   Success &= ParseFileSystemArgs(Res.getFileSystemOpts(), Args, Diags);
   Success &= ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
-  Success &= ParseAnalyzerArgs(Res, *Res.getAnalyzerOpts(), Args, Diags);
-  Success &=
-      ParseDiagnosticArgsRoundTrip(Res, Res.getDiagnosticOpts(), Args, &Diags,
-                                   /*DefaultDiagColor=*/false);
-  Success &= ParseFrontendArgs(Res, Res.getFrontendOpts(), Args, Diags,
+  Success &= ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
+  Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
+                                 /*DefaultDiagColor=*/false);
+  Success &= ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags,
                                LangOpts.IsHeaderFile);
   // FIXME: We shouldn't have to pass the DashX option around here
   InputKind DashX = Res.getFrontendOpts().DashX;
-  Success &= ParseTargetArgs(Res, Res.getTargetOpts(), Args, Diags);
+  Success &= ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
   llvm::Triple T(Res.getTargetOpts().Triple);
-  ParseHeaderSearchArgs(Res, Res.getHeaderSearchOpts(), Args, Diags,
+  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
   if (DashX.getFormat() == InputKind::Precompiled ||
       DashX.getLanguage() == Language::LLVM_IR) {
@@ -4380,7 +4300,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   } else {
     // Other LangOpts are only initialized when the input is not AST or LLVM IR.
     // FIXME: Should we really be calling this for an Language::Asm input?
-    Success &= ParseLangArgs(Res, LangOpts, Args, DashX, T,
+    Success &= ParseLangArgs(LangOpts, Args, DashX, T,
                              Res.getPreprocessorOpts().Includes, Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
@@ -4397,7 +4317,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   if (LangOpts.OpenMPIsDevice)
     Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
 
-  Success &= ParseCodeGenArgs(Res, Res.getCodeGenOpts(), Args, DashX, Diags, T,
+  Success &= ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
                               Res.getFrontendOpts().OutputFile, LangOpts);
 
   // FIXME: Override value name discarding when asan or msan is used because the
@@ -4409,13 +4329,13 @@ bool CompilerInvocation::CreateFromArgsImpl(
       !LangOpts.Sanitize.has(SanitizerKind::Memory) &&
       !LangOpts.Sanitize.has(SanitizerKind::KernelMemory);
 
-  ParsePreprocessorArgs(Res, Res.getPreprocessorOpts(), Args, Diags,
+  ParsePreprocessorArgs(Res.getPreprocessorOpts(), Args, Diags,
                         Res.getFrontendOpts().ProgramAction,
                         Res.getFrontendOpts());
-  ParsePreprocessorOutputArgs(Res, Res.getPreprocessorOutputOpts(), Args, Diags,
+  ParsePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), Args, Diags,
                               Res.getFrontendOpts().ProgramAction);
 
-  ParseDependencyOutputArgs(Res, Res.getDependencyOutputOpts(), Args, Diags,
+  ParseDependencyOutputArgs(Res.getDependencyOutputOpts(), Args, Diags,
                             Res.getFrontendOpts().ProgramAction,
                             Res.getPreprocessorOutputOpts().ShowLineMarkers);
   if (!Res.getDependencyOutputOpts().OutputFile.empty() &&
