@@ -1863,6 +1863,144 @@ or by simply a pointer to the canonical declaration (if the declarations
 are not ``Redeclarable`` -- in that case, a ``Mergeable`` base class is used
 instead).
 
+Error Handling
+--------------
+
+Clang produces an AST even when the code contains errors. Clang won't generate
+and optimize code for it, but it's used as parsing continues to detect further
+errors in the input. Clang-based tools also depend on such ASTs, and IDEs in
+particular benefit from a high-quality AST for broken code.
+
+In presence of errors, clang uses a few error-recovery strategies to present the
+broken code in the AST:
+
+- correcting errors: in cases where clang is confident about the fix, it
+  provides a FixIt attaching to the error diagnostic and emits a corrected AST
+  (reflecting the written code with FixIts applied). The advantage of that is to
+  provide more accurate subsequent diagnostics. Typo correction is a typical
+  example.
+- representing invalid node: the invalid node is preserved in the AST in some
+  form, e.g. when the "declaration" part of the declaration contains semantic
+  errors, the Decl node is marked as invalid.
+- dropping invalid node: this often happens for errors that we don’t have
+  graceful recovery. Prior to Recovery AST, a mismatched-argument function call
+  expression was dropped though a CallExpr was created for semantic analysis.
+
+With these strategies, clang surfaces better diagnostics, and provides AST
+consumers a rich AST reflecting the written source code as much as possible even
+for broken code.
+
+Recovery AST
+^^^^^^^^^^^^
+
+The idea of Recovery AST is to use recovery nodes which act as a placeholder to
+maintain the rough structure of the parsing tree, preserve locations and
+children but have no language semantics attached to them.
+
+For example, consider the following mismatched function call:
+
+.. code-block:: c++
+
+   int NoArg();
+   void test(int abc) {
+     NoArg(abc); // oops, mismatched function arguments.
+   }
+
+Without Recovery AST, the invalid function call expression (and its child
+expressions) would be dropped in the AST:
+
+::
+
+    |-FunctionDecl <line:1:1, col:11> NoArg 'int ()'
+    `-FunctionDecl <line:2:1, line:4:1> test 'void (int)'
+     |-ParmVarDecl <col:11, col:15> col:15 used abc 'int'
+     `-CompoundStmt <col:20, line:4:1>
+
+
+With Recovery AST, the AST looks like:
+
+::
+
+    |-FunctionDecl <line:1:1, col:11> NoArg 'int ()'
+    `-FunctionDecl <line:2:1, line:4:1> test 'void (int)'
+      |-ParmVarDecl <col:11, col:15> used abc 'int'
+      `-CompoundStmt <col:20, line:4:1>
+        `-RecoveryExpr <line:3:3, col:12> 'int' contains-errors
+          |-UnresolvedLookupExpr <col:3> '<overloaded function type>' lvalue (ADL) = 'NoArg'
+          `-DeclRefExpr <col:9> 'int' lvalue ParmVar 'abc' 'int'
+
+
+An alternative is to use existing Exprs, e.g. CallExpr for the above example.
+This would capture more call details (e.g. locations of parentheses) and allow
+it to be treated uniformly with valid CallExprs. However, jamming the data we
+have into CallExpr forces us to weaken its invariants, e.g. arg count may be
+wrong. This would introduce a huge burden on consumers of the AST to handle such
+"impossible" cases. So when we're representing (rather than correcting) errors,
+we use a distinct recovery node type with extremely weak invariants instead.
+
+``RecoveryExpr`` is the only recovery node so far. In practice, broken decls
+need more detailed semantics preserved (the current ``Invalid`` flag works
+fairly well), and completely broken statements with interesting internal
+structure are rare (so dropping the statements is OK).
+
+Types and dependence
+^^^^^^^^^^^^^^^^^^^^
+
+``RecoveryExpr`` is an ``Expr``, so it must have a type. In many cases the true
+type can't really be known until the code is corrected (e.g. a call to a
+function that doesn't exist). And it means that we can't properly perform type
+checks on some containing constructs, such as ``return 42 + unknownFunction()``.
+
+To model this, we generalize the concept of dependence from C++ templates to
+mean dependence on a template parameter or how an error is repaired. The
+``RecoveryExpr`` ``unknownFunction()`` has the totally unknown type
+``DependentTy``, and this suppresses type-based analysis in the same way it
+would inside a template.
+
+In cases where we are confident about the concrete type (e.g. the return type
+for a broken non-overloaded function call), the ``RecoveryExpr`` will have this
+type. This allows more code to be typechecked, and produces a better AST and
+more diagnostics. For example:
+
+.. code-block:: C++
+
+   unknownFunction().size() // .size() is a CXXDependentScopeMemberExpr
+   std::string(42).size() // .size() is a resolved MemberExpr
+
+Whether or not the ``RecoveryExpr`` has a dependent type, it is always
+considered value-dependent, because its value isn't well-defined until the error
+is resolved. Among other things, this means that clang doesn't emit more errors
+where a RecoveryExpr is used as a constant (e.g. array size), but also won't try
+to evaluate it.
+
+ContainsErrors bit
+^^^^^^^^^^^^^^^^^^
+
+Beyond the template dependence bits, we add a new “ContainsErrors” bit to
+express “Does this expression or anything within it contain errors” semantic,
+this bit is always set for RecoveryExpr, and propagated to other related nodes.
+This provides a fast way to query whether any (recursive) child of an expression
+had an error, which is often used to improve diagnostics.
+
+.. code-block:: C++
+
+   // C++
+   void recoveryExpr(int abc) {
+    unknownFunction(); // type-dependent, value-dependent, contains-errors
+
+    std::string(42).size(); // value-dependent, contains-errors,
+                            // not type-dependent, as we know the type is std::string
+   }
+
+
+.. code-block:: C
+
+   // C
+   void recoveryExpr(int abc) {
+     unknownVar + abc; // type-dependent, value-dependent, contains-errors
+   }
+
+
 The ASTImporter
 ---------------
 
