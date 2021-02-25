@@ -5607,7 +5607,7 @@ def : Pat<(v4i32 (opNode V128:$Rn)),
 
 // If none did, fallback to the explicit patterns, consuming the vector_extract.
 def : Pat<(i32 (vector_extract (insert_subvector undef, (v8i8 (opNode V64:$Rn)),
-            (i32 0)), (i64 0))),
+            (i64 0)), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v8i8 (IMPLICIT_DEF)),
             (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn),
             bsub), ssub)>;
@@ -5616,7 +5616,7 @@ def : Pat<(i32 (vector_extract (v16i8 (opNode V128:$Rn)), (i64 0))),
             (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn),
             bsub), ssub)>;
 def : Pat<(i32 (vector_extract (insert_subvector undef,
-            (v4i16 (opNode V64:$Rn)), (i32 0)), (i64 0))),
+            (v4i16 (opNode V64:$Rn)), (i64 0)), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v4i16 (IMPLICIT_DEF)),
             (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn),
             hsub), ssub)>;
@@ -5637,7 +5637,7 @@ multiclass SIMDAcrossLanesSignedIntrinsic<string baseOpc,
 // If there is a sign extension after this intrinsic, consume it as smov already
 // performed it
 def : Pat<(i32 (sext_inreg (i32 (vector_extract (insert_subvector undef,
-            (opNode (v8i8 V64:$Rn)), (i32 0)), (i64 0))), i8)),
+            (opNode (v8i8 V64:$Rn)), (i64 0)), (i64 0))), i8)),
           (i32 (SMOVvi8to32
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
               (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub),
@@ -5649,7 +5649,7 @@ def : Pat<(i32 (sext_inreg (i32 (vector_extract
              (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub),
             (i64 0)))>;
 def : Pat<(i32 (sext_inreg (i32 (vector_extract (insert_subvector undef,
-            (opNode (v4i16 V64:$Rn)), (i32 0)), (i64 0))), i16)),
+            (opNode (v4i16 V64:$Rn)), (i64 0)), (i64 0))), i16)),
           (i32 (SMOVvi16to32
            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
             (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub),
@@ -5668,7 +5668,7 @@ multiclass SIMDAcrossLanesUnsignedIntrinsic<string baseOpc,
 // If there is a masking operation keeping only what has been actually
 // generated, consume it.
 def : Pat<(i32 (and (i32 (vector_extract (insert_subvector undef,
-            (opNode (v8i8 V64:$Rn)), (i32 0)), (i64 0))), maski8_or_more)),
+            (opNode (v8i8 V64:$Rn)), (i64 0)), (i64 0))), maski8_or_more)),
       (i32 (EXTRACT_SUBREG
         (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
           (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub),
@@ -5680,7 +5680,7 @@ def : Pat<(i32 (and (i32 (vector_extract (opNode (v16i8 V128:$Rn)), (i64 0))),
             (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub),
           ssub))>;
 def : Pat<(i32 (and (i32 (vector_extract (insert_subvector undef,
-            (opNode (v4i16 V64:$Rn)), (i32 0)), (i64 0))), maski16_or_more)),
+            (opNode (v4i16 V64:$Rn)), (i64 0)), (i64 0))), maski16_or_more)),
           (i32 (EXTRACT_SUBREG
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
               (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub),
@@ -6003,7 +6003,7 @@ multiclass FMLSIndexedAfterNegPatterns<SDPatternOperator OpNode> {
                            (v2f32 (AArch64duplane32
                                       (v4f32 (insert_subvector undef,
                                                  (v2f32 (fneg V64:$Rm)),
-                                                 (i32 0))),
+                                                 (i64 0))),
                                       VectorIndexS:$idx)))),
             (FMLSv2i32_indexed V64:$Rd, V64:$Rn,
                                (SUBREG_TO_REG (i32 0), V64:$Rm, dsub),
@@ -6024,7 +6024,7 @@ multiclass FMLSIndexedAfterNegPatterns<SDPatternOperator OpNode> {
                            (v4f32 (AArch64duplane32
                                       (v4f32 (insert_subvector undef,
                                                  (v2f32 (fneg V64:$Rm)),
-                                                 (i32 0))),
+                                                 (i64 0))),
                                       VectorIndexS:$idx)))),
             (FMLSv4i32_indexed V128:$Rd, V128:$Rn,
                                (SUBREG_TO_REG (i32 0), V64:$Rm, dsub),
@@ -6055,7 +6055,7 @@ multiclass FMLSIndexedAfterNegPatterns<SDPatternOperator OpNode> {
   def : Pat<(f32 (OpNode (f32 FPR32:$Rd), (f32 FPR32:$Rn),
                          (vector_extract (v4f32 (insert_subvector undef,
                                                     (v2f32 (fneg V64:$Rm)),
-                                                    (i32 0))),
+                                                    (i64 0))),
                                          VectorIndexS:$idx))),
             (FMLSv1i32_indexed FPR32:$Rd, FPR32:$Rn,
                 (SUBREG_TO_REG (i32 0), V64:$Rm, dsub), VectorIndexS:$idx)>;
