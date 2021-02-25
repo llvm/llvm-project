@@ -153,6 +153,19 @@ int __inline __builtin_clzll(uint64_t value) {
 #endif
 
 #define __builtin_clzl __builtin_clzll
+
+bool __inline __builtin_sadd_overflow(int x, int y, int *result) {
+  if ((x < 0) != (y < 0)) {
+    *result = x + y;
+    return false;
+  }
+  int tmp = (unsigned int)x + (unsigned int)y;
+  if ((tmp < 0) != (x < 0))
+    return true;
+  *result = tmp;
+  return false;
+}
+
 #endif // defined(_MSC_VER) && !defined(__clang__)
 
 #endif // INT_LIB_H
