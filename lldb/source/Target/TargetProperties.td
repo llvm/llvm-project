@@ -190,6 +190,9 @@ let Definition = "target" in {
   def SDKPath: Property<"sdk-path", "FileSpec">,
     DefaultStringValue<"">,
     Desc<"The path to the SDK used to build the current target.">;
+  def DebugUtilityExpression: Property<"debug-utility-expression", "Boolean">,
+    DefaultFalse,
+    Desc<"Enable debugging of LLDB-internal utility expressions.">;
 }
 
 let Definition = "process_experimental" in {
