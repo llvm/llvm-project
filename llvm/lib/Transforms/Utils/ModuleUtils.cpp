@@ -289,7 +289,7 @@ std::string llvm::getUniqueModuleId(Module *M) {
 
   SmallString<32> Str;
   MD5::stringifyResult(R, Str);
-  return ("$" + Str).str();
+  return ("." + Str).str();
 }
 
 void VFABI::setVectorVariantNames(
