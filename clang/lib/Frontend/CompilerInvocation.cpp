@@ -3585,11 +3585,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     }
   }
 
-
-  if (auto *A = Args.getLastArg(OPT_cuid_EQ)) {
-    Opts.CUID = std::string(A->getValue());
-  }
-
   if (Opts.ObjC) {
     if (Arg *arg = Args.getLastArg(OPT_fobjc_runtime_EQ)) {
       StringRef value = arg->getValue();
