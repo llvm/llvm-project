@@ -21,44 +21,30 @@ define void @insertelt_v4i64(<4 x i64>* %x, i64 %y) {
 ; RV32-NEXT:    sw a1, 64(sp)
 ; RV32-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
 ; RV32-NEXT:    vle32.v v26, (a0)
-; RV32-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    sw a1, 0(sp)
-; RV32-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
 ; RV32-NEXT:    addi a1, sp, 32
 ; RV32-NEXT:    vle32.v v28, (a1)
-; RV32-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a1, v28
 ; RV32-NEXT:    sw a1, 28(sp)
-; RV32-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
 ; RV32-NEXT:    addi a1, sp, 64
 ; RV32-NEXT:    vle32.v v28, (a1)
-; RV32-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a1, v28
 ; RV32-NEXT:    sw a1, 24(sp)
 ; RV32-NEXT:    vsetivli a1, 1, e32,m2,ta,mu
 ; RV32-NEXT:    vslidedown.vi v28, v26, 5
-; RV32-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a1, v28
 ; RV32-NEXT:    sw a1, 20(sp)
-; RV32-NEXT:    vsetivli a1, 1, e32,m2,ta,mu
 ; RV32-NEXT:    vslidedown.vi v28, v26, 4
-; RV32-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a1, v28
 ; RV32-NEXT:    sw a1, 16(sp)
-; RV32-NEXT:    vsetivli a1, 1, e32,m2,ta,mu
 ; RV32-NEXT:    vslidedown.vi v28, v26, 3
-; RV32-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a1, v28
 ; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    vsetivli a1, 1, e32,m2,ta,mu
 ; RV32-NEXT:    vslidedown.vi v28, v26, 2
-; RV32-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a1, v28
 ; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    vsetivli a1, 1, e32,m2,ta,mu
 ; RV32-NEXT:    vslidedown.vi v26, v26, 1
-; RV32-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    sw a1, 4(sp)
 ; RV32-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
@@ -84,23 +70,17 @@ define void @insertelt_v4i64(<4 x i64>* %x, i64 %y) {
 ; RV64-NEXT:    vsetivli a2, 4, e64,m2,ta,mu
 ; RV64-NEXT:    vle64.v v26, (a0)
 ; RV64-NEXT:    sd a1, 32(sp)
-; RV64-NEXT:    vsetvli zero, zero, e64,m2,ta,mu
 ; RV64-NEXT:    vmv.x.s a1, v26
 ; RV64-NEXT:    sd a1, 0(sp)
-; RV64-NEXT:    vsetivli a1, 4, e64,m2,ta,mu
 ; RV64-NEXT:    addi a1, sp, 32
 ; RV64-NEXT:    vle64.v v28, (a1)
-; RV64-NEXT:    vsetvli zero, zero, e64,m2,ta,mu
 ; RV64-NEXT:    vmv.x.s a1, v28
 ; RV64-NEXT:    sd a1, 24(sp)
 ; RV64-NEXT:    vsetivli a1, 1, e64,m2,ta,mu
 ; RV64-NEXT:    vslidedown.vi v28, v26, 2
-; RV64-NEXT:    vsetvli zero, zero, e64,m2,ta,mu
 ; RV64-NEXT:    vmv.x.s a1, v28
 ; RV64-NEXT:    sd a1, 16(sp)
-; RV64-NEXT:    vsetivli a1, 1, e64,m2,ta,mu
 ; RV64-NEXT:    vslidedown.vi v26, v26, 1
-; RV64-NEXT:    vsetvli zero, zero, e64,m2,ta,mu
 ; RV64-NEXT:    vmv.x.s a1, v26
 ; RV64-NEXT:    sd a1, 8(sp)
 ; RV64-NEXT:    vsetivli a1, 4, e64,m2,ta,mu
