@@ -1383,9 +1383,6 @@ void CompilerInvocation::GenerateCodeGenArgs(
       GenerateArg(Args, OPT_ftime_report, SA);
   }
 
-  if (Opts.FunctionSections)
-    GenerateArg(Args, OPT_ffunction_sections, SA);
-
   if (Opts.PrepareForLTO && !Opts.PrepareForThinLTO)
     GenerateArg(Args, OPT_flto, SA);
 
@@ -1675,9 +1672,6 @@ bool CompilerInvocation::ParseCodeGenArgsImpl(CodeGenOptions &Opts,
             << A->getAsString(Args) << A->getValue();
     }
   }
-
-  // Basic Block Sections implies Function Sections.
-  Opts.FunctionSections = Args.hasArg(OPT_ffunction_sections);
 
   Opts.PrepareForLTO = Args.hasArg(OPT_flto, OPT_flto_EQ);
   Opts.PrepareForThinLTO = false;

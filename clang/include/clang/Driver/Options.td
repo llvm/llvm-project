@@ -267,32 +267,26 @@ class MigratorOpts<string base>
   : KeyPathAndMacro<"MigratorOpts.", base, "MIGRATOR_"> {}
 
 // A boolean option which is opt-in in CC1. The positive option exists in CC1 and
-// Args.hasArg(OPT_ffoo) is used to check that the flag is enabled.
+// Args.hasArg(OPT_ffoo) can be used to check that the flag is enabled.
 // This is useful if the option is usually disabled.
+// Use this only when the option cannot be declared via BoolFOption.
 multiclass OptInFFlag<string name, string pos_prefix, string neg_prefix="",
-                      string help="", list<OptionFlag> flags=[],
-                      KeyPathAndMacro kpm = EmptyKPM,
-                      list<string> enablers = []> {
+                      string help="", list<OptionFlag> flags=[]> {
   def f#NAME : Flag<["-"], "f"#name>, Flags<!listconcat([CC1Option], flags)>,
-               Group<f_Group>, HelpText<!strconcat(pos_prefix, help)>,
-               MarshallingInfoFlag<kpm, "false">,
-               ImpliedByAnyOf<enablers, "true">;
+               Group<f_Group>, HelpText<!strconcat(pos_prefix, help)>;
   def fno_#NAME : Flag<["-"], "fno-"#name>, Flags<flags>,
-               Group<f_Group>, HelpText<!strconcat(neg_prefix, help)>;
+                  Group<f_Group>, HelpText<!strconcat(neg_prefix, help)>;
 }
 
 // A boolean option which is opt-out in CC1. The negative option exists in CC1 and
-// Args.hasArg(OPT_fno_foo) is used to check that the flag is disabled.
+// Args.hasArg(OPT_fno_foo) can be used to check that the flag is disabled.
+// Use this only when the option cannot be declared via BoolFOption.
 multiclass OptOutFFlag<string name, string pos_prefix, string neg_prefix,
-                       string help="", list<OptionFlag> flags=[],
-                       KeyPathAndMacro kpm = EmptyKPM,
-                       list<string> disablers = []> {
+                       string help="", list<OptionFlag> flags=[]> {
   def f#NAME : Flag<["-"], "f"#name>, Flags<flags>,
                Group<f_Group>, HelpText<!strconcat(pos_prefix, help)>;
   def fno_#NAME : Flag<["-"], "fno-"#name>, Flags<!listconcat([CC1Option], flags)>,
-               Group<f_Group>, HelpText<!strconcat(neg_prefix, help)>,
-               MarshallingInfoFlag<kpm, "false">,
-               ImpliedByAnyOf<disablers, "true">;
+                  Group<f_Group>, HelpText<!strconcat(neg_prefix, help)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -891,9 +885,10 @@ defm gpu_rdc : BoolFOption<"gpu-rdc",
   NegFlag<SetFalse>>;
 def : Flag<["-"], "fcuda-rdc">, Alias<fgpu_rdc>;
 def : Flag<["-"], "fno-cuda-rdc">, Alias<fno_gpu_rdc>;
-defm cuda_short_ptr : OptInFFlag<"cuda-short-ptr",
-  "Use 32-bit pointers for accessing const/local/shared address spaces", "", "",
-  [], TargetOpts<"NVPTXUseShortPointers">>;
+defm cuda_short_ptr : BoolFOption<"cuda-short-ptr",
+  TargetOpts<"NVPTXUseShortPointers">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Use 32-bit pointers for accessing const/local/shared address spaces">,
+  NegFlag<SetFalse>>;
 def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<i_Group>,
   HelpText<"ROCm installation path, used for finding and automatically linking required bitcode libraries.">;
 def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Group<Link_Group>,
@@ -1379,8 +1374,11 @@ def ffp_exception_behavior_EQ : Joined<["-"], "ffp-exception-behavior=">, Group<
   Values<"ignore,maytrap,strict">, NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["FPE_Ignore", "FPE_MayTrap", "FPE_Strict"]>,
   MarshallingInfoEnum<LangOpts<"FPExceptionMode">, "FPE_Ignore">;
-defm fast_math : OptInFFlag<"fast-math", "Allow aggressive, lossy floating-point optimizations", "", "", [],
-  LangOpts<"FastMath">, [cl_fast_relaxed_math.KeyPath]>;
+defm fast_math : BoolFOption<"fast-math",
+  LangOpts<"FastMath">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Allow aggressive, lossy floating-point optimizations",
+          [cl_fast_relaxed_math.KeyPath]>,
+  NegFlag<SetFalse>>;
 def menable_unsafe_fp_math : Flag<["-"], "menable-unsafe-fp-math">, Flags<[CC1Option]>,
   HelpText<"Allow unsafe floating-point math optimizations which may decrease precision">,
   MarshallingInfoFlag<LangOpts<"UnsafeFPMath">>,
@@ -1397,7 +1395,10 @@ defm jump_tables : BoolFOption<"jump-tables",
   CodeGenOpts<"NoUseJumpTables">, DefaultFalse,
   NegFlag<SetTrue, [CC1Option], "Do not use">, PosFlag<SetFalse, [], "Use">,
   BothFlags<[], " jump tables for lowering switches">>;
-defm force_enable_int128 : OptInFFlag<"force-enable-int128", "Enable", "Disable", " support for int128_t type", [], TargetOpts<"ForceEnableInt128">>;
+defm force_enable_int128 : BoolFOption<"force-enable-int128",
+  TargetOpts<"ForceEnableInt128">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Enable">, NegFlag<SetFalse, [], "Disable">,
+  BothFlags<[], " support for int128_t type">>;
 defm keep_static_consts : BoolFOption<"keep-static-consts",
   CodeGenOpts<"KeepStaticConsts">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Keep">, NegFlag<SetFalse, [], "Don't keep">,
@@ -1604,12 +1605,17 @@ def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">
   Group<f_Group>;
 def fassociative_math : Flag<["-"], "fassociative-math">, Group<f_Group>;
 def fno_associative_math : Flag<["-"], "fno-associative-math">, Group<f_Group>;
-defm reciprocal_math : OptInFFlag<"reciprocal-math", "Allow division operations to be reassociated", "", "", [],
-  LangOpts<"AllowRecip">, [menable_unsafe_fp_math.KeyPath]>;
+defm reciprocal_math : BoolFOption<"reciprocal-math",
+  LangOpts<"AllowRecip">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Allow division operations to be reassociated",
+          [menable_unsafe_fp_math.KeyPath]>,
+  NegFlag<SetFalse>>;
 def fapprox_func : Flag<["-"], "fapprox-func">, Group<f_Group>, Flags<[CC1Option, NoDriverOption]>,
   MarshallingInfoFlag<LangOpts<"ApproxFunc">>, ImpliedByAnyOf<[menable_unsafe_fp_math.KeyPath]>;
-defm finite_math_only : OptInFFlag<"finite-math-only", "", "", "", [],
-  LangOpts<"FiniteMathOnly">, [cl_finite_math_only.KeyPath, ffast_math.KeyPath]>;
+defm finite_math_only : BoolFOption<"finite-math-only",
+  LangOpts<"FiniteMathOnly">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "", [cl_finite_math_only.KeyPath, ffast_math.KeyPath]>,
+  NegFlag<SetFalse>>;
 defm signed_zeros : BoolFOption<"signed-zeros",
   LangOpts<"NoSignedZero">, DefaultFalse,
   NegFlag<SetTrue, [CC1Option], "Allow optimizations that ignore the sign of floating point zeros",
@@ -1734,7 +1740,10 @@ def fcf_protection : Flag<["-"], "fcf-protection">, Group<f_Group>, Flags<[CoreO
   Alias<fcf_protection_EQ>, AliasArgs<["full"]>,
   HelpText<"Enable cf-protection in 'full' mode">;
 
-defm xray_instrument : OptInFFlag<"xray-instrument", "Generate XRay instrumentation sleds on function entry and exit", "", "", [], LangOpts<"XRayInstrument">>;
+defm xray_instrument : BoolFOption<"xray-instrument",
+  LangOpts<"XRayInstrument">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Generate XRay instrumentation sleds on function entry and exit">,
+  NegFlag<SetFalse>>;
 
 def fxray_instruction_threshold_EQ :
   JoinedOrSeparate<["-"], "fxray-instruction-threshold=">,
@@ -1765,16 +1774,29 @@ def fxray_modes :
   Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"List of modes to link in by default into XRay instrumented binaries.">;
 
-defm xray_always_emit_customevents : OptInFFlag<"xray-always-emit-customevents",
-  "Always emit __xray_customevent(...) calls even if the containing function is not always instrumented", "", "", [], LangOpts<"XRayAlwaysEmitCustomEvents">>;
+defm xray_always_emit_customevents : BoolFOption<"xray-always-emit-customevents",
+  LangOpts<"XRayAlwaysEmitCustomEvents">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Always emit __xray_customevent(...) calls"
+          " even if the containing function is not always instrumented">,
+  NegFlag<SetFalse>>;
 
-defm xray_always_emit_typedevents : OptInFFlag<"xray-always-emit-typedevents",
-  "Always emit __xray_typedevent(...) calls even if the containing function is not always instrumented", "", "", [], LangOpts<"XRayAlwaysEmitTypedEvents">>;
+defm xray_always_emit_typedevents : BoolFOption<"xray-always-emit-typedevents",
+  LangOpts<"XRayAlwaysEmitTypedEvents">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Always emit __xray_typedevent(...) calls"
+          " even if the containing function is not always instrumented">,
+  NegFlag<SetFalse>>;
 
-defm xray_ignore_loops : OptInFFlag<"xray-ignore-loops",
-  "Don't instrument functions with loops unless they also meet the minimum function size", "", "", [], CodeGenOpts<"XRayIgnoreLoops">>;
-defm xray_function_index : OptOutFFlag<"xray-function-index", "",
-  "Omit function index section at the expense of single-function patching performance", "", [], CodeGenOpts<"XRayOmitFunctionIndex">>;
+defm xray_ignore_loops : BoolFOption<"xray-ignore-loops",
+  CodeGenOpts<"XRayIgnoreLoops">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Don't instrument functions with loops"
+          " unless they also meet the minimum function size">,
+  NegFlag<SetFalse>>;
+
+defm xray_function_index : BoolFOption<"xray-function-index",
+  CodeGenOpts<"XRayOmitFunctionIndex">, DefaultTrue,
+  NegFlag<SetFalse, [CC1Option], "Omit function index section at the"
+          " expense of single-function patching performance">,
+  PosFlag<SetTrue>>;
 
 def fxray_link_deps : Flag<["-"], "fxray-link-deps">, Group<f_Group>,
   Flags<[CC1Option]>,
@@ -1906,9 +1928,11 @@ def fmodules_user_build_path : Separate<["-"], "fmodules-user-build-path">, Grou
 def fprebuilt_module_path : Joined<["-"], "fprebuilt-module-path=">, Group<i_Group>,
   Flags<[NoXarchOption, CC1Option]>, MetaVarName<"<directory>">,
   HelpText<"Specify the prebuilt module path">;
-defm prebuilt_implicit_modules : OptInFFlag<"prebuilt-implicit-modules",
-  "Look up implicit modules in the prebuilt module path", "", "",
-  [NoXarchOption, CC1Option], HeaderSearchOpts<"EnablePrebuiltImplicitModules">>;
+defm prebuilt_implicit_modules : BoolFOption<"prebuilt-implicit-modules",
+  HeaderSearchOpts<"EnablePrebuiltImplicitModules">, DefaultFalse,
+  PosFlag<SetTrue, [], "Look up implicit modules in the prebuilt module path">,
+  NegFlag<SetFalse>, BothFlags<[NoXarchOption, CC1Option]>>;
+
 def fmodules_prune_interval : Joined<["-"], "fmodules-prune-interval=">, Group<i_Group>,
   Flags<[CC1Option]>, MetaVarName<"<seconds>">,
   HelpText<"Specify the interval (in seconds) between attempts to prune the module cache">,
@@ -2110,9 +2134,10 @@ defm objc_encode_cxx_class_template_spec : BoolFOption<"objc-encode-cxx-class-te
 defm objc_convert_messages_to_runtime_calls : BoolFOption<"objc-convert-messages-to-runtime-calls",
   CodeGenOpts<"ObjCConvertMessagesToRuntimeCalls">, DefaultTrue,
   NegFlag<SetFalse, [CC1Option]>, PosFlag<SetTrue>>;
-defm objc_arc_exceptions : OptInFFlag<"objc-arc-exceptions",
-  "Use EH-safe code when synthesizing retains and releases in -fobjc-arc",
-  "", "", [], CodeGenOpts<"ObjCAutoRefCountExceptions">>;
+defm objc_arc_exceptions : BoolFOption<"objc-arc-exceptions",
+  CodeGenOpts<"ObjCAutoRefCountExceptions">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Use EH-safe code when synthesizing retains and releases in -fobjc-arc">,
+  NegFlag<SetFalse>>;
 def fobjc_atdefs : Flag<["-"], "fobjc-atdefs">, Group<clang_ignored_f_Group>;
 def fobjc_call_cxx_cdtors : Flag<["-"], "fobjc-call-cxx-cdtors">, Group<clang_ignored_f_Group>;
 defm objc_exceptions : BoolFOption<"objc-exceptions",
@@ -2561,7 +2586,10 @@ defm zero_initialized_in_bss : BoolFOption<"zero-initialized-in-bss",
   CodeGenOpts<"NoZeroInitializedInBSS">, DefaultFalse,
   NegFlag<SetTrue, [CC1Option], "Don't place zero initialized data in BSS">,
   PosFlag<SetFalse>>;
-defm function_sections : OptInFFlag<"function-sections", "Place each function in its own section">;
+defm function_sections : BoolFOption<"function-sections",
+  CodeGenOpts<"FunctionSections">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Place each function in its own section">,
+  NegFlag<SetFalse>>;
 def fbasic_block_sections_EQ : Joined<["-"], "fbasic-block-sections=">, Group<f_Group>,
   Flags<[CC1Option, CC1AsOption]>,
   HelpText<"Place each function's basic blocks in unique sections (ELF Only) : all | labels | none | list=<file>">,
