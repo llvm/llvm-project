@@ -183,7 +183,7 @@ static void print(OpAsmPrinter &p, OperationOp op) {
   // Print the result type constraints of the operation.
   if (!op.results().empty())
     p << " -> " << op.types();
-  p.printOptionalAttrDict(op.getAttrs(),
+  p.printOptionalAttrDict(op->getAttrs(),
                           {"attributeNames", "name", "operand_segment_sizes"});
 }
 

@@ -124,7 +124,11 @@ public:
   void setLoc(Location loc) { state->setLoc(loc); }
 
   /// Return all of the attributes on this operation.
-  ArrayRef<NamedAttribute> getAttrs() { return state->getAttrs(); }
+  LLVM_ATTRIBUTE_DEPRECATED(
+      ArrayRef<NamedAttribute> getAttrs(),
+      "Use Operation::getAttrs() instead (replace '.' with '->').") {
+    return state->getAttrs();
+  }
 
   /// A utility iterator that filters out non-dialect attributes.
   using dialect_attr_iterator = Operation::dialect_attr_iterator;

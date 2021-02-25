@@ -376,7 +376,7 @@ static void print(OpAsmPrinter &p, ContractionOp op) {
   llvm::StringSet<> traitAttrsSet;
   traitAttrsSet.insert(attrNames.begin(), attrNames.end());
   SmallVector<NamedAttribute, 8> attrs;
-  for (auto attr : op.getAttrs())
+  for (auto attr : op->getAttrs())
     if (traitAttrsSet.count(attr.first.strref()) > 0)
       attrs.push_back(attr);
 
@@ -386,7 +386,7 @@ static void print(OpAsmPrinter &p, ContractionOp op) {
   if (op.masks().size() == 2)
     p << ", " << op.masks();
 
-  p.printOptionalAttrDict(op.getAttrs(), attrNames);
+  p.printOptionalAttrDict(op->getAttrs(), attrNames);
   p << " : " << op.lhs().getType() << ", " << op.rhs().getType() << " into "
     << op.getResultType();
 }
@@ -776,7 +776,7 @@ void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
 
 static void print(OpAsmPrinter &p, vector::ExtractOp op) {
   p << op.getOperationName() << " " << op.vector() << op.position();
-  p.printOptionalAttrDict(op.getAttrs(), {"position"});
+  p.printOptionalAttrDict(op->getAttrs(), {"position"});
   p << " : " << op.vector().getType();
 }
 
@@ -1351,7 +1351,7 @@ void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value v1,
 static void print(OpAsmPrinter &p, ShuffleOp op) {
   p << op.getOperationName() << " " << op.v1() << ", " << op.v2() << " "
     << op.mask();
-  p.printOptionalAttrDict(op.getAttrs(), {ShuffleOp::getMaskAttrName()});
+  p.printOptionalAttrDict(op->getAttrs(), {ShuffleOp::getMaskAttrName()});
   p << " : " << op.v1().getType() << ", " << op.v2().getType();
 }
 
@@ -1708,7 +1708,7 @@ static void print(OpAsmPrinter &p, OuterProductOp op) {
   p << op.getOperationName() << " " << op.lhs() << ", " << op.rhs();
   if (!op.acc().empty()) {
     p << ", " << op.acc();
-    p.printOptionalAttrDict(op.getAttrs());
+    p.printOptionalAttrDict(op->getAttrs());
   }
   p << " : " << op.lhs().getType() << ", " << op.rhs().getType();
 }
@@ -2307,7 +2307,7 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   }
   if (elideMasked)
     elidedAttrs.push_back(op.getMaskedAttrName());
-  p.printOptionalAttrDict(op.getAttrs(), elidedAttrs);
+  p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
 
 static void print(OpAsmPrinter &p, TransferReadOp op) {
@@ -3217,7 +3217,7 @@ static ParseResult parseTupleOp(OpAsmParser &parser, OperationState &result) {
 static void print(OpAsmPrinter &p, TupleOp op) {
   p << op.getOperationName() << ' ';
   p.printOperands(op.getOperands());
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
   p << " : ";
   llvm::interleaveComma(op->getOperandTypes(), p);
 }
@@ -3362,7 +3362,7 @@ static ParseResult parseTupleGetOp(OpAsmParser &parser,
 
 static void print(OpAsmPrinter &p, TupleGetOp op) {
   p << op.getOperationName() << ' ' << op.getOperand() << ", " << op.index();
-  p.printOptionalAttrDict(op.getAttrs(),
+  p.printOptionalAttrDict(op->getAttrs(),
                           /*elidedAttrs=*/{TupleGetOp::getIndexAttrName()});
   p << " : " << op.getOperand().getType();
 }

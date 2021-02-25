@@ -88,14 +88,14 @@ static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
 static void printICmpOp(OpAsmPrinter &p, ICmpOp &op) {
   p << op.getOperationName() << " \"" << stringifyICmpPredicate(op.predicate())
     << "\" " << op.getOperand(0) << ", " << op.getOperand(1);
-  p.printOptionalAttrDict(op.getAttrs(), {"predicate"});
+  p.printOptionalAttrDict(op->getAttrs(), {"predicate"});
   p << " : " << op.lhs().getType();
 }
 
 static void printFCmpOp(OpAsmPrinter &p, FCmpOp &op) {
   p << op.getOperationName() << " \"" << stringifyFCmpPredicate(op.predicate())
     << "\" " << op.getOperand(0) << ", " << op.getOperand(1);
-  p.printOptionalAttrDict(processFMFAttr(op.getAttrs()), {"predicate"});
+  p.printOptionalAttrDict(processFMFAttr(op->getAttrs()), {"predicate"});
   p << " : " << op.lhs().getType();
 }
 
@@ -172,9 +172,9 @@ static void printAllocaOp(OpAsmPrinter &p, AllocaOp &op) {
 
   p << op.getOperationName() << ' ' << op.arraySize() << " x " << elemTy;
   if (op.alignment().hasValue() && *op.alignment() != 0)
-    p.printOptionalAttrDict(op.getAttrs());
+    p.printOptionalAttrDict(op->getAttrs());
   else
-    p.printOptionalAttrDict(op.getAttrs(), {"alignment"});
+    p.printOptionalAttrDict(op->getAttrs(), {"alignment"});
   p << " : " << funcTy;
 }
 
@@ -402,7 +402,7 @@ static void printLoadOp(OpAsmPrinter &p, LoadOp &op) {
   if (op.volatile_())
     p << "volatile ";
   p << op.addr();
-  p.printOptionalAttrDict(op.getAttrs(), {kVolatileAttrName});
+  p.printOptionalAttrDict(op->getAttrs(), {kVolatileAttrName});
   p << " : " << op.addr().getType();
 }
 
@@ -460,7 +460,7 @@ static void printStoreOp(OpAsmPrinter &p, StoreOp &op) {
   if (op.volatile_())
     p << "volatile ";
   p << op.value() << ", " << op.addr();
-  p.printOptionalAttrDict(op.getAttrs(), {kVolatileAttrName});
+  p.printOptionalAttrDict(op->getAttrs(), {kVolatileAttrName});
   p << " : " << op.addr().getType();
 }
 
@@ -536,7 +536,7 @@ static void printInvokeOp(OpAsmPrinter &p, InvokeOp op) {
   p << " unwind ";
   p.printSuccessorAndUseList(op.unwindDest(), op.unwindDestOperands());
 
-  p.printOptionalAttrDict(op.getAttrs(),
+  p.printOptionalAttrDict(op->getAttrs(),
                           {InvokeOp::getOperandSegmentSizeAttr(), "callee"});
   p << " : ";
   p.printFunctionalType(
@@ -694,7 +694,7 @@ static void printLandingpadOp(OpAsmPrinter &p, LandingpadOp &op) {
       << value.getType() << ") ";
   }
 
-  p.printOptionalAttrDict(op.getAttrs(), {"cleanup"});
+  p.printOptionalAttrDict(op->getAttrs(), {"cleanup"});
 
   p << ": " << op.getType();
 }
@@ -816,7 +816,7 @@ static void printCallOp(OpAsmPrinter &p, CallOp &op) {
 
   auto args = op.getOperands().drop_front(isDirect ? 0 : 1);
   p << '(' << args << ')';
-  p.printOptionalAttrDict(processFMFAttr(op.getAttrs()), {"callee"});
+  p.printOptionalAttrDict(processFMFAttr(op->getAttrs()), {"callee"});
 
   // Reconstruct the function MLIR function type from operand and result types.
   p << " : "
@@ -922,7 +922,7 @@ void LLVM::ExtractElementOp::build(OpBuilder &b, OperationState &result,
 static void printExtractElementOp(OpAsmPrinter &p, ExtractElementOp &op) {
   p << op.getOperationName() << ' ' << op.vector() << "[" << op.position()
     << " : " << op.position().getType() << "]";
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
   p << " : " << op.vector().getType();
 }
 
@@ -954,7 +954,7 @@ static ParseResult parseExtractElementOp(OpAsmParser &parser,
 
 static void printExtractValueOp(OpAsmPrinter &p, ExtractValueOp &op) {
   p << op.getOperationName() << ' ' << op.container() << op.position();
-  p.printOptionalAttrDict(op.getAttrs(), {"position"});
+  p.printOptionalAttrDict(op->getAttrs(), {"position"});
   p << " : " << op.container().getType();
 }
 
@@ -1037,7 +1037,7 @@ static ParseResult parseExtractValueOp(OpAsmParser &parser,
 static void printInsertElementOp(OpAsmPrinter &p, InsertElementOp &op) {
   p << op.getOperationName() << ' ' << op.value() << ", " << op.vector() << "["
     << op.position() << " : " << op.position().getType() << "]";
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
   p << " : " << op.vector().getType();
 }
 
@@ -1079,7 +1079,7 @@ static ParseResult parseInsertElementOp(OpAsmParser &parser,
 static void printInsertValueOp(OpAsmPrinter &p, InsertValueOp &op) {
   p << op.getOperationName() << ' ' << op.value() << ", " << op.container()
     << op.position();
-  p.printOptionalAttrDict(op.getAttrs(), {"position"});
+  p.printOptionalAttrDict(op->getAttrs(), {"position"});
   p << " : " << op.container().getType();
 }
 
@@ -1121,7 +1121,7 @@ static ParseResult parseInsertValueOp(OpAsmParser &parser,
 
 static void printReturnOp(OpAsmPrinter &p, ReturnOp op) {
   p << op.getOperationName();
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
   assert(op.getNumOperands() <= 1);
 
   if (op.getNumOperands() == 0)
@@ -1258,7 +1258,7 @@ static void printGlobalOp(OpAsmPrinter &p, GlobalOp op) {
   if (auto value = op.getValueOrNull())
     p.printAttribute(value);
   p << ')';
-  p.printOptionalAttrDict(op.getAttrs(),
+  p.printOptionalAttrDict(op->getAttrs(),
                           {SymbolTable::getSymbolAttrName(), "type", "constant",
                            "value", getLinkageAttrName()});
 
@@ -1641,7 +1641,7 @@ void LLVM::ShuffleVectorOp::build(OpBuilder &b, OperationState &result,
 static void printShuffleVectorOp(OpAsmPrinter &p, ShuffleVectorOp &op) {
   p << op.getOperationName() << ' ' << op.v1() << ", " << op.v2() << " "
     << op.mask();
-  p.printOptionalAttrDict(op.getAttrs(), {"mask"});
+  p.printOptionalAttrDict(op->getAttrs(), {"mask"});
   p << " : " << op.v1().getType() << ", " << op.v2().getType();
 }
 
@@ -1983,7 +1983,7 @@ static void printAtomicRMWOp(OpAsmPrinter &p, AtomicRMWOp &op) {
   p << op.getOperationName() << ' ' << stringifyAtomicBinOp(op.bin_op()) << ' '
     << op.ptr() << ", " << op.val() << ' '
     << stringifyAtomicOrdering(op.ordering()) << ' ';
-  p.printOptionalAttrDict(op.getAttrs(), {"bin_op", "ordering"});
+  p.printOptionalAttrDict(op->getAttrs(), {"bin_op", "ordering"});
   p << " : " << op.res().getType();
 }
 
@@ -2054,7 +2054,7 @@ static void printAtomicCmpXchgOp(OpAsmPrinter &p, AtomicCmpXchgOp &op) {
   p << op.getOperationName() << ' ' << op.ptr() << ", " << op.cmp() << ", "
     << op.val() << ' ' << stringifyAtomicOrdering(op.success_ordering()) << ' '
     << stringifyAtomicOrdering(op.failure_ordering());
-  p.printOptionalAttrDict(op.getAttrs(),
+  p.printOptionalAttrDict(op->getAttrs(),
                           {"success_ordering", "failure_ordering"});
   p << " : " << op.val().getType();
 }
