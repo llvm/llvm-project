@@ -779,7 +779,41 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
   }
 }
 
+static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
+                                          BitcodeFile &file) {
+  StringRef name = saver.save(objSym.getName());
+
+  // TODO: support weak references
+  if (objSym.isUndefined())
+    return symtab->addUndefined(name, &file, /*isWeakRef=*/false);
+
+  assert(!objSym.isCommon() && "TODO: support common symbols in LTO");
+
+  // TODO: Write a test demonstrating why computing isPrivateExtern before
+  // LTO compilation is important.
+  bool isPrivateExtern = false;
+  switch (objSym.getVisibility()) {
+  case GlobalValue::HiddenVisibility:
+    isPrivateExtern = true;
+    break;
+  case GlobalValue::ProtectedVisibility:
+    error(name + " has protected visibility, which is not supported by Mach-O");
+    break;
+  case GlobalValue::DefaultVisibility:
+    break;
+  }
+
+  return symtab->addDefined(name, &file, /*isec=*/nullptr, /*value=*/0,
+                            objSym.isWeak(), isPrivateExtern);
+}
+
 BitcodeFile::BitcodeFile(MemoryBufferRef mbref)
     : InputFile(BitcodeKind, mbref) {
   obj = check(lto::InputFile::create(mbref));
+
+  // Convert LTO Symbols to LLD Symbols in order to perform resolution. The
+  // "winning" symbol will then be marked as Prevailing at LTO compilation
+  // time.
+  for (const lto::InputFile::Symbol &objSym : obj->symbols())
+    symbols.push_back(createBitcodeSymbol(objSym, *this));
 }
