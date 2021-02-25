@@ -90,7 +90,7 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
   return cast<FuncOp>(Operation::create(state));
 }
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
-                      iterator_range<dialect_attr_iterator> attrs) {
+                      Operation::dialect_attr_range attrs) {
   SmallVector<NamedAttribute, 8> attrRef(attrs);
   return create(location, name, type, llvm::makeArrayRef(attrRef));
 }
