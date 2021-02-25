@@ -325,7 +325,7 @@ getDependentTypeMemSizeFn(fir::RecordType recTy, fir::AllocaOp op,
   std::string name = recTy.getName().str() + "P.mem.size";
   if (auto memSizeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(name))
     return memSizeFunc;
-  TODO_NOLOC("did not find allocation function");
+  TODO(op.getLoc(), "did not find allocation function");
 }
 
 namespace {
