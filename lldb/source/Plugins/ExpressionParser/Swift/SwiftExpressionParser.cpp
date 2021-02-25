@@ -451,6 +451,8 @@ static CompilerType GetSwiftTypeForVariableValueObject(
   if (!valobj_sp || valobj_sp->GetError().Fail())
     return CompilerType();
   CompilerType result = valobj_sp->GetCompilerType();
+  if (!result.IsValid())
+    return CompilerType();
   if (use_dynamic_value)
     result = runtime->BindGenericTypeParameters(*stack_frame_sp, result);
   if (!result.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
