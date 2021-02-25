@@ -50,7 +50,7 @@ int main(int, char**) {
     fs >> c;
     assert(c == 'a');
   }
-  std::remove(p.c_str());
+  std::remove(p.string().c_str());
   {
     std::wofstream fs;
     assert(!fs.is_open());
@@ -67,7 +67,7 @@ int main(int, char**) {
     fs >> c;
     assert(c == L'a');
   }
-  std::remove(p.c_str());
+  std::remove(p.string().c_str());
 
   return 0;
 }
