@@ -1111,23 +1111,32 @@ int64_t getMsgId(const StringRef Name) {
   return ID_UNKNOWN_;
 }
 
-static bool isValidMsgId(int64_t MsgId) {
-  return (ID_GAPS_FIRST_ <= MsgId && MsgId < ID_GAPS_LAST_) && IdSymbolic[MsgId];
-}
-
 bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict) {
   if (Strict) {
-    if (MsgId == ID_GS_ALLOC_REQ || MsgId == ID_GET_DOORBELL)
+    switch (MsgId) {
+    case ID_SAVEWAVE:
+      return isVI(STI) || isGFX9Plus(STI);
+    case ID_STALL_WAVE_GEN:
+    case ID_HALT_WAVES:
+    case ID_ORDERED_PS_DONE:
+    case ID_GS_ALLOC_REQ:
+    case ID_GET_DOORBELL:
       return isGFX9Plus(STI);
-    else
-      return isValidMsgId(MsgId);
+    case ID_EARLY_PRIM_DEALLOC:
+      return isGFX9(STI);
+    case ID_GET_DDID:
+      return isGFX10Plus(STI);
+    default:
+      return 0 <= MsgId && MsgId < ID_GAPS_LAST_ && IdSymbolic[MsgId];
+    }
   } else {
     return 0 <= MsgId && isUInt<ID_WIDTH_>(MsgId);
   }
 }
 
 StringRef getMsgName(int64_t MsgId) {
-  return isValidMsgId(MsgId)? IdSymbolic[MsgId] : "";
+  assert(0 <= MsgId && MsgId < ID_GAPS_LAST_);
+  return IdSymbolic[MsgId];
 }
 
 int64_t getMsgOpId(int64_t MsgId, const StringRef Name) {
@@ -1142,7 +1151,9 @@ int64_t getMsgOpId(int64_t MsgId, const StringRef Name) {
   return OP_UNKNOWN_;
 }
 
-bool isValidMsgOp(int64_t MsgId, int64_t OpId, bool Strict) {
+bool isValidMsgOp(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI,
+                  bool Strict) {
+  assert(isValidMsgId(MsgId, STI, Strict));
 
   if (!Strict)
     return 0 <= OpId && isUInt<OP_WIDTH_>(OpId);
@@ -1165,7 +1176,9 @@ StringRef getMsgOpName(int64_t MsgId, int64_t OpId) {
   return (MsgId == ID_SYSMSG)? OpSysSymbolic[OpId] : OpGsSymbolic[OpId];
 }
 
-bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId, bool Strict) {
+bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId,
+                      const MCSubtargetInfo &STI, bool Strict) {
+  assert(isValidMsgOp(MsgId, OpId, STI, Strict));
 
   if (!Strict)
     return 0 <= StreamId && isUInt<STREAM_ID_WIDTH_>(StreamId);
@@ -1504,44 +1517,60 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VReg_64RegClassID:
   case AMDGPU::AReg_64RegClassID:
   case AMDGPU::SReg_64_XEXECRegClassID:
+  case AMDGPU::VReg_64_Align2RegClassID:
+  case AMDGPU::AReg_64_Align2RegClassID:
     return 64;
   case AMDGPU::SGPR_96RegClassID:
   case AMDGPU::SReg_96RegClassID:
   case AMDGPU::VReg_96RegClassID:
   case AMDGPU::AReg_96RegClassID:
+  case AMDGPU::VReg_96_Align2RegClassID:
+  case AMDGPU::AReg_96_Align2RegClassID:
   case AMDGPU::AV_96RegClassID:
     return 96;
   case AMDGPU::SGPR_128RegClassID:
   case AMDGPU::SReg_128RegClassID:
   case AMDGPU::VReg_128RegClassID:
   case AMDGPU::AReg_128RegClassID:
+  case AMDGPU::VReg_128_Align2RegClassID:
+  case AMDGPU::AReg_128_Align2RegClassID:
   case AMDGPU::AV_128RegClassID:
     return 128;
   case AMDGPU::SGPR_160RegClassID:
   case AMDGPU::SReg_160RegClassID:
   case AMDGPU::VReg_160RegClassID:
   case AMDGPU::AReg_160RegClassID:
+  case AMDGPU::VReg_160_Align2RegClassID:
+  case AMDGPU::AReg_160_Align2RegClassID:
   case AMDGPU::AV_160RegClassID:
     return 160;
   case AMDGPU::SGPR_192RegClassID:
   case AMDGPU::SReg_192RegClassID:
   case AMDGPU::VReg_192RegClassID:
   case AMDGPU::AReg_192RegClassID:
+  case AMDGPU::VReg_192_Align2RegClassID:
+  case AMDGPU::AReg_192_Align2RegClassID:
     return 192;
   case AMDGPU::SGPR_256RegClassID:
   case AMDGPU::SReg_256RegClassID:
   case AMDGPU::VReg_256RegClassID:
   case AMDGPU::AReg_256RegClassID:
+  case AMDGPU::VReg_256_Align2RegClassID:
+  case AMDGPU::AReg_256_Align2RegClassID:
     return 256;
   case AMDGPU::SGPR_512RegClassID:
   case AMDGPU::SReg_512RegClassID:
   case AMDGPU::VReg_512RegClassID:
   case AMDGPU::AReg_512RegClassID:
+  case AMDGPU::VReg_512_Align2RegClassID:
+  case AMDGPU::AReg_512_Align2RegClassID:
     return 512;
   case AMDGPU::SGPR_1024RegClassID:
   case AMDGPU::SReg_1024RegClassID:
   case AMDGPU::VReg_1024RegClassID:
   case AMDGPU::AReg_1024RegClassID:
+  case AMDGPU::VReg_1024_Align2RegClassID:
+  case AMDGPU::AReg_1024_Align2RegClassID:
     return 1024;
   default:
     llvm_unreachable("Unexpected register class");

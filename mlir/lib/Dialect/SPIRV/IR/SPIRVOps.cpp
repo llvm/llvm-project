@@ -3585,6 +3585,30 @@ verifyGLSLFrexpStructOp(spirv::GLSLFrexpStructOp frexpStructOp) {
       "must have the same number of components as the operand type");
 }
 
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Ldexp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(spirv::GLSLLdexpOp ldexpOp) {
+  Type significandType = ldexpOp.x().getType();
+  Type exponentType = ldexpOp.exp().getType();
+
+  if (significandType.isa<FloatType>() != exponentType.isa<IntegerType>())
+    return ldexpOp.emitOpError("operands must both be scalars or vectors");
+
+  auto getNumElements = [](Type type) -> unsigned {
+    if (auto vectorType = type.dyn_cast<VectorType>())
+      return vectorType.getNumElements();
+    return 1;
+  };
+
+  if (getNumElements(significandType) != getNumElements(exponentType))
+    return ldexpOp.emitOpError(
+        "operands must have the same number of elements");
+
+  return success();
+}
+
 namespace mlir {
 namespace spirv {
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown  -target-feature +avx512f  -target-feature +amx-int8  \
+// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-unknown-unknown  -target-feature +avx512f  -target-feature +amx-int8  \
 // RUN: -target-feature +amx-bf16 -emit-llvm -o - -Werror -pedantic | FileCheck %s --check-prefixes=CHECK
 
 #include <immintrin.h>
@@ -79,4 +79,11 @@ void test_tile_zero(__tile1024i c) {
   //CHECK: call x86_amx @llvm.x86.tilezero.internal
   //CHECK-NEXT bitcast x86_amx {{%.*}} to <256 x i32>
   __tile_zero(&c);
+}
+
+void test_tile_tdpbf16ps(__tile1024i a, __tile1024i b, __tile1024i c) {
+  //CHECK-LABEL: @test_tile_tdpbf16ps
+  //CHECK: call x86_amx @llvm.x86.tdpbf16ps.internal
+  //CHECK-NEXT: {{%.*}} = bitcast x86_amx {{%.*}} to <256 x i32>
+  __tile_tdpbf16ps(&a, b, c);
 }

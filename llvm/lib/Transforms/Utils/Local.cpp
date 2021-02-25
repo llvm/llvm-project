@@ -2957,6 +2957,19 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       return Result;
     }
 
+    // If this is a truncate instruction, extract the lower bits.
+    if (match(V, m_Trunc(m_Value(X)))) {
+      const auto &Res =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      if (!Res)
+        return Result;
+
+      Result = BitPart(Res->Provider, BitWidth);
+      for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx)
+        Result->Provenance[BitIdx] = Res->Provenance[BitIdx];
+      return Result;
+    }
+
     // BITREVERSE - most likely due to us previous matching a partial
     // bitreverse.
     if (match(V, m_BitReverse(m_Value(X)))) {

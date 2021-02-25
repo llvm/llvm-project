@@ -6221,7 +6221,7 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
     }
     return false;
   }
-  if (!isValidMsgOp(Msg.Id, Op.Id, Strict)) {
+  if (!isValidMsgOp(Msg.Id, Op.Id, getSTI(), Strict)) {
     Error(Op.Loc, "invalid operation id");
     return false;
   }
@@ -6229,7 +6229,7 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
     Error(Stream.Loc, "message operation does not support streams");
     return false;
   }
-  if (!isValidMsgStream(Msg.Id, Op.Id, Stream.Id, Strict)) {
+  if (!isValidMsgStream(Msg.Id, Op.Id, Stream.Id, getSTI(), Strict)) {
     Error(Stream.Loc, "invalid message stream id");
     return false;
   }

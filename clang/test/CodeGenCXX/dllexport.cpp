@@ -535,7 +535,7 @@ struct SomeTemplate {
 // MSVC2013-DAG: define weak_odr dso_local dllexport {{.+}} @"??4?$SomeTemplate@H@@Q{{.+}}0@A{{.+}}0@@Z"
 struct __declspec(dllexport) InheritFromTemplate : SomeTemplate<int> {};
 
-// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??_F?$SomeTemplate@H@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??_F?$SomeTemplate@H@@QAEXXZ"({{.*}}) comdat
 
 namespace PR23801 {
 template <typename>
@@ -552,7 +552,7 @@ struct __declspec(dllexport) B {
 
 }
 //
-// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FB@PR23801@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FB@PR23801@@QAEXXZ"({{.*}}) comdat
 
 struct __declspec(dllexport) T {
   // Copy assignment operator:

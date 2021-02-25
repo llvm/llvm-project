@@ -74,28 +74,6 @@ struct TypeAttributeStorage : public mlir::AttributeStorage {
 private:
   mlir::Type value;
 };
-
-/// An attribute representing a raw pointer.
-struct OpaqueAttributeStorage : public mlir::AttributeStorage {
-  using KeyTy = void *;
-
-  OpaqueAttributeStorage(void *value) : value(value) {}
-
-  /// Key equality function.
-  bool operator==(const KeyTy &key) const { return key == value; }
-
-  /// Construct a new storage instance.
-  static OpaqueAttributeStorage *
-  construct(mlir::AttributeStorageAllocator &allocator, KeyTy key) {
-    return new (allocator.allocate<OpaqueAttributeStorage>())
-        OpaqueAttributeStorage(key);
-  }
-
-  void *getPointer() const { return value; }
-
-private:
-  void *value;
-};
 } // namespace fir::detail
 
 //===----------------------------------------------------------------------===//
@@ -148,16 +126,6 @@ RealAttr fir::RealAttr::get(mlir::MLIRContext *ctxt,
 KindTy fir::RealAttr::getFKind() const { return getImpl()->getFKind(); }
 
 llvm::APFloat fir::RealAttr::getValue() const { return getImpl()->getValue(); }
-
-//===----------------------------------------------------------------------===//
-// OpaqueAttr
-//===----------------------------------------------------------------------===//
-
-OpaqueAttr fir::OpaqueAttr::get(mlir::MLIRContext *ctxt, void *key) {
-  return Base::get(ctxt, key);
-}
-
-void *fir::OpaqueAttr::getPointer() const { return getImpl()->getPointer(); }
 
 //===----------------------------------------------------------------------===//
 // FIR attribute parsing
@@ -227,15 +195,6 @@ mlir::Attribute fir::parseFirAttribute(FIROpsDialect *dialect,
     }
     return SubclassAttr::get(type);
   }
-  if (attrName == OpaqueAttr::getAttrName()) {
-    if (parser.parseLess() || parser.parseGreater()) {
-      parser.emitError(loc, "expected <>");
-      return {};
-    }
-    // NB: opaque pointers are always parsed in as nullptrs. The tool must
-    // rebuild the context.
-    return OpaqueAttr::get(dialect->getContext(), nullptr);
-  }
   if (attrName == PointIntervalAttr::getAttrName())
     return PointIntervalAttr::get(dialect->getContext());
   if (attrName == LowerBoundAttr::getAttrName())
@@ -279,8 +238,6 @@ void fir::printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
     llvm::SmallString<40> ss;
     a.getValue().bitcastToAPInt().toStringUnsigned(ss, 16);
     os << ss << '>';
-  } else if (attr.isa<fir::OpaqueAttr>()) {
-    os << fir::OpaqueAttr::getAttrName() << "<>";
   } else {
     // don't know how to print the attribute, so use a default
     os << "<(unknown attribute)>";

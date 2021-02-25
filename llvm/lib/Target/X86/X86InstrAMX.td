@@ -138,6 +138,16 @@ let Predicates = [HasAMXBF16, In64BitMode] in {
                       "tdpbf16ps\t{$src3, $src2, $dst|$dst, $src2, $src3}",
                       []>, VEX_4V, T8XS;
 
+    // Pseduo instruction for RA.
+    let Constraints = "$src4 = $dst" in
+      def PTDPBF16PSV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
+                                 GR16:$src2, GR16:$src3, TILE:$src4,
+                                 TILE:$src5, TILE:$src6),
+                                 [(set TILE: $dst,
+                                  (int_x86_tdpbf16ps_internal GR16:$src1,
+                                   GR16:$src2, GR16:$src3, TILE:$src4,
+                                   TILE:$src5, TILE:$src6))]>;
+
     let usesCustomInserter = 1 in {
       // Pseudo instructions, using immediates instead of tile registers.
       // To be translated to the actual instructions in X86ISelLowering.cpp

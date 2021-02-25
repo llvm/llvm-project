@@ -79,6 +79,12 @@ New checks
   Finds ``pthread_setcanceltype`` function calls where a thread's cancellation
   type is set to asynchronous.
 
+- New :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines-prefer-member-initializer>` check.
+
+  Finds member initializations in the constructor body which can be placed into
+  the initialization list instead.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

@@ -1701,21 +1701,55 @@ static LogicalResult verify(linalg::YieldOp op) {
 // TiledLoopOp
 //===----------------------------------------------------------------------===//
 
+void TiledLoopOp::build(
+    OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
+    ValueRange upperBounds, ValueRange steps, ValueRange inputs,
+    ValueRange outputs, ArrayRef<StringRef> iteratorTypes,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn) {
+  result.addOperands(lowerBounds);
+  result.addOperands(upperBounds);
+  result.addOperands(steps);
+  result.addOperands(inputs);
+  result.addOperands(outputs);
+  result.addAttribute(
+      TiledLoopOp::getOperandSegmentSizeAttr(),
+      builder.getI32VectorAttr({static_cast<int32_t>(lowerBounds.size()),
+                                static_cast<int32_t>(upperBounds.size()),
+                                static_cast<int32_t>(steps.size()),
+                                static_cast<int32_t>(inputs.size()),
+                                static_cast<int32_t>(outputs.size())}));
+  result.addAttribute(getIteratorTypesAttrName(),
+                      builder.getStrArrayAttr(iteratorTypes));
+  result.addTypes(outputs.getTypes());
+
+  OpBuilder::InsertionGuard guard(builder);
+  unsigned numIVs = steps.size();
+  SmallVector<Type, 8> argTypes(numIVs, builder.getIndexType());
+  Region *bodyRegion = result.addRegion();
+  Block *bodyBlock = builder.createBlock(bodyRegion, {}, argTypes);
+
+  if (bodyBuilderFn) {
+    builder.setInsertionPointToStart(bodyBlock);
+    bodyBuilderFn(builder, result.location, bodyBlock->getArguments());
+  }
+  TiledLoopOp::ensureTerminator(*bodyRegion, builder, result.location);
+}
+
 static void print(OpAsmPrinter &p, TiledLoopOp op) {
   p << op.getOperationName() << " (" << op.getBody()->getArguments() << ") = ("
     << op.lowerBound() << ") to (" << op.upperBound() << ") step (" << op.step()
     << ")";
 
   if (!op.inputs().empty())
-    p << " ins (" << op.inputs() << ")";
+    p << " ins (" << op.inputs() << ": " << TypeRange(op.inputs()) << ")";
   if (!op.outputs().empty())
-    p << " outs (" << op.outputs() << ")";
+    p << " outs (" << op.outputs() << ":" << TypeRange(op.outputs()) << ")";
 
   if (llvm::any_of(op.iterator_types(), [](Attribute attr) {
         return attr.cast<StringAttr>().getValue() !=
                getParallelIteratorTypeName();
       })) {
-    p << " iterators(" << op.iterator_types() << ")";
+    p << " iterators" << op.iterator_types() << "";
   }
 
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
@@ -1792,7 +1826,7 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
   if (succeeded(parser.parseOptionalKeyword("iterators"))) {
     StringAttr iterType;
 
-    if (parser.parseLParen() || parser.parseAttribute(iterType))
+    if (parser.parseLSquare() || parser.parseAttribute(iterType))
       return failure();
     iterTypes.push_back(iterType);
     for (int i = 1, e = ivs.size(); i < e; ++i) {
@@ -1800,7 +1834,7 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
         return failure();
       iterTypes.push_back(iterType);
     }
-    if (parser.parseRParen())
+    if (parser.parseRSquare())
       return failure();
   } else {
     auto parallelIter = builder.getStringAttr(getParallelIteratorTypeName());

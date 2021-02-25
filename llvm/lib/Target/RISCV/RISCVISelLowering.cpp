@@ -545,6 +545,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
 
         setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+        setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
         setOperationAction(ISD::ADD, VT, Custom);
         setOperationAction(ISD::MUL, VT, Custom);
@@ -2030,12 +2031,21 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   MVT VecVT = Vec.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
 
+  // If this is a fixed vector, we need to convert it to a scalable vector.
+  MVT ContainerVT = VecVT;
+  if (VecVT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(DAG, VecVT, Subtarget);
+    Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+  }
+
   // If the index is 0, the vector is already in the right position.
   if (!isNullConstant(Idx)) {
-    SDValue Mask, VL;
-    std::tie(Mask, VL) = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
-    Vec = DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VecVT, DAG.getUNDEF(VecVT),
-                      Vec, Idx, Mask, VL);
+    // Use a VL of 1 to avoid processing more elements than we need.
+    SDValue VL = DAG.getConstant(1, DL, XLenVT);
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+    SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
+    Vec = DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
+                      DAG.getUNDEF(ContainerVT), Vec, Idx, Mask, VL);
   }
 
   if (!EltVT.isInteger()) {
@@ -2850,37 +2860,51 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDLoc DL(N);
     SDValue Vec = N->getOperand(0);
     SDValue Idx = N->getOperand(1);
-    EVT VecVT = Vec.getValueType();
+
+    // The vector type hasn't been legalized yet so we can't issue target
+    // specific nodes if it needs legalization.
+    // FIXME: We would manually legalize if it's important.
+    if (!isTypeLegal(Vec.getValueType()))
+      return;
+
+    MVT VecVT = Vec.getSimpleValueType();
+
     assert(!Subtarget.is64Bit() && N->getValueType(0) == MVT::i64 &&
            VecVT.getVectorElementType() == MVT::i64 &&
            "Unexpected EXTRACT_VECTOR_ELT legalization");
 
-    if (!VecVT.isScalableVector())
-      return;
+    // If this is a fixed vector, we need to convert it to a scalable vector.
+    MVT ContainerVT = VecVT;
+    if (VecVT.isFixedLengthVector()) {
+      ContainerVT = getContainerForFixedLengthVector(DAG, VecVT, Subtarget);
+      Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+    }
 
-    SDValue Slidedown = Vec;
     MVT XLenVT = Subtarget.getXLenVT();
+
+    // Use a VL of 1 to avoid processing more elements than we need.
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, VecVT.getVectorElementCount());
+    SDValue VL = DAG.getConstant(1, DL, XLenVT);
+    SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
+
     // Unless the index is known to be 0, we must slide the vector down to get
     // the desired element into index 0.
     if (!isNullConstant(Idx)) {
-      SDValue Mask, VL;
-      std::tie(Mask, VL) =
-          getDefaultScalableVLOps(VecVT.getSimpleVT(), DL, DAG, Subtarget);
-      Slidedown = DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VecVT,
-                              DAG.getUNDEF(VecVT), Vec, Idx, Mask, VL);
+      Vec = DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
+                        DAG.getUNDEF(ContainerVT), Vec, Idx, Mask, VL);
     }
 
     // Extract the lower XLEN bits of the correct vector element.
-    SDValue EltLo = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, Slidedown, Idx);
+    SDValue EltLo = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, Vec);
 
     // To extract the upper XLEN bits of the vector element, shift the first
     // element right by 32 bits and re-extract the lower XLEN bits.
-    SDValue ThirtyTwoV =
-        DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT,
-                    DAG.getConstant(32, DL, Subtarget.getXLenVT()));
-    SDValue LShr32 = DAG.getNode(ISD::SRL, DL, VecVT, Slidedown, ThirtyTwoV);
+    SDValue ThirtyTwoV = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
+                                     DAG.getConstant(32, DL, XLenVT), VL);
+    SDValue LShr32 = DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT, Vec,
+                                 ThirtyTwoV, Mask, VL);
 
-    SDValue EltHi = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, LShr32, Idx);
+    SDValue EltHi = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, LShr32);
 
     Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, EltLo, EltHi));
     break;
@@ -3948,18 +3972,39 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  // VL and VTYPE are alive here.
-  MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII.get(RISCV::PseudoVSETVLI));
+  auto BuildVSETVLI = [&]() {
+    if (VLIndex >= 0) {
+      Register DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      Register VLReg = MI.getOperand(VLIndex).getReg();
 
-  if (VLIndex >= 0) {
-    // Set VL (rs1 != X0).
-    Register DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    MIB.addReg(DestReg, RegState::Define | RegState::Dead)
-        .addReg(MI.getOperand(VLIndex).getReg());
-  } else
+      // VL might be a compile time constant, but isel would have to put it
+      // in a register. See if VL comes from an ADDI X0, imm.
+      if (VLReg.isVirtual()) {
+        MachineInstr *Def = MRI.getVRegDef(VLReg);
+        if (Def && Def->getOpcode() == RISCV::ADDI &&
+            Def->getOperand(1).getReg() == RISCV::X0 &&
+            Def->getOperand(2).isImm()) {
+          uint64_t Imm = Def->getOperand(2).getImm();
+          // VSETIVLI allows a 5-bit zero extended immediate.
+          if (isUInt<5>(Imm))
+            return BuildMI(*BB, MI, DL, TII.get(RISCV::PseudoVSETIVLI))
+                .addReg(DestReg, RegState::Define | RegState::Dead)
+                .addImm(Imm);
+        }
+      }
+
+      return BuildMI(*BB, MI, DL, TII.get(RISCV::PseudoVSETVLI))
+          .addReg(DestReg, RegState::Define | RegState::Dead)
+          .addReg(VLReg);
+    }
+
     // With no VL operator in the pseudo, do not modify VL (rd = X0, rs1 = X0).
-    MIB.addReg(RISCV::X0, RegState::Define | RegState::Dead)
+    return BuildMI(*BB, MI, DL, TII.get(RISCV::PseudoVSETVLI))
+        .addReg(RISCV::X0, RegState::Define | RegState::Dead)
         .addReg(RISCV::X0, RegState::Kill);
+  };
+
+  MachineInstrBuilder MIB = BuildVSETVLI();
 
   // Default to tail agnostic unless the destination is tied to a source. In
   // that case the user would have some control over the tail values. The tail

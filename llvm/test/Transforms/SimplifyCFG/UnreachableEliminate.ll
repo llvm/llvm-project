@@ -234,8 +234,9 @@ else:
 define void @test9_deref(i1 %X, i8* %Y) {
 ; CHECK-LABEL: @test9_deref(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_deref_arg(i8* [[SPEC_SELECT]])
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @fn_nonnull_deref_arg(i8* [[Y:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -254,8 +255,9 @@ else:
 define void @test9_deref_or_null(i1 %X, i8* %Y) {
 ; CHECK-LABEL: @test9_deref_or_null(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_deref_or_null_arg(i8* [[SPEC_SELECT]])
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @fn_nonnull_deref_or_null_arg(i8* [[Y:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

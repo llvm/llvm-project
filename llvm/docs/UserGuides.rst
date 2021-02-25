@@ -42,6 +42,8 @@ intermediate LLVM representation.
    MemorySSA
    MergeFunctions
    MCJITDesignAndImplementation
+   ORCv2
+   JITLink
    NVPTXUsage
    Phabricator
    Passes
@@ -170,6 +172,14 @@ JIT
 
 :doc:`MCJITDesignAndImplementation`
    Describes the inner workings of MCJIT execution engine.
+
+:doc:`ORCv2`
+   Describes the design and implementation of the ORC APIs, including some
+   usage examples, and a guide for users transitioning from ORCv1 to ORCv2.
+
+:doc:`JITLink`
+   Describes the design and APIs for the JITLink library, ORC's new JIT
+   linker.
 
 :doc:`DebuggingJITedCode`
    How to debug JITed code with GDB.

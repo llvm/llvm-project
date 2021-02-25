@@ -159,6 +159,7 @@ static ShapeT getShape(const MachineInstr &MI, MachineRegisterInfo *MRI) {
   case X86::PTDPBUSDV:
   case X86::PTDPBUUDV:
   case X86::PTILEZEROV:
+  case X86::PTDPBF16PSV:
     MachineOperand &MO1 = const_cast<MachineOperand &>(MI.getOperand(1));
     MachineOperand &MO2 = const_cast<MachineOperand &>(MI.getOperand(2));
     ShapeT Shape(&MO1, &MO2, MRI);
@@ -256,6 +257,7 @@ static bool isAMXInstruction(MachineBasicBlock::iterator MII) {
   case X86::PTDPBUSDV:
   case X86::PTDPBUUDV:
   case X86::PTILEZEROV:
+  case X86::PTDPBF16PSV:
     return true;
   }
 }

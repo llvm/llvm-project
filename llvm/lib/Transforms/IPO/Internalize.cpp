@@ -151,7 +151,7 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
   bool Changed = false;
   CallGraphNode *ExternalNode = CG ? CG->getExternalCallingNode() : nullptr;
 
-  SmallPtrSet<GlobalValue *, 8> Used;
+  SmallVector<GlobalValue *, 4> Used;
   collectUsedGlobalVariables(M, Used, false);
 
   // Collect comdat visiblity information for the module.

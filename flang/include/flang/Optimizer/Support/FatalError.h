@@ -26,12 +26,6 @@ LLVM_ATTRIBUTE_NORETURN inline void emitFatalError(mlir::Location loc,
   llvm::report_fatal_error("aborting");
 }
 
-/// Fatal error reporting helper. Report a fatal error without a source location
-/// and immediately abort flang.
-LLVM_ATTRIBUTE_NORETURN inline void emitFatalError(const llvm::Twine &message) {
-  llvm::report_fatal_error(message);
-}
-
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_FATALERROR_H

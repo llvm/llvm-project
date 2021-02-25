@@ -46,6 +46,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -338,6 +339,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   SmallVector<uint64_t, 16> CaseCounts;
   uint64_t MaxCount = 0;
   unsigned Version = 0;
+  int64_t LastV = -1;
   // Default case is in the front -- save the slot here.
   CaseCounts.push_back(0);
   for (auto &VD : VDs) {
@@ -353,6 +355,15 @@ bool MemOPSizeOpt::perform(MemOp MO) {
     // value.
     if (!isProfitable(C, RemainCount))
       break;
+
+    if (V == LastV) {
+      LLVM_DEBUG(dbgs() << "Invalid Profile Data in Function " << Func.getName()
+                        << ": Two consecutive, identical values in MemOp value"
+                           "counts.\n");
+      return false;
+    }
+
+    LastV = V;
 
     SizeIds.push_back(V);
     CaseCounts.push_back(C);

@@ -1498,6 +1498,12 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   if (PGOOpt && PGOOpt->PseudoProbeForProfiling)
     MPM.addPass(PseudoProbeUpdatePass());
 
+  // Handle OptimizerLastEPCallbacks added by clang on PreLink. Actual
+  // optimization is going to be done in PostLink stage, but clang can't
+  // add callbacks there in case of in-process ThinLTO called by linker.
+  for (auto &C : OptimizerLastEPCallbacks)
+    C(MPM, Level);
+
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
@@ -1533,8 +1539,17 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
   }
 
-  if (Level == OptimizationLevel::O0)
+  if (Level == OptimizationLevel::O0) {
+    // Run a second time to clean up any type tests left behind by WPD for use
+    // in ICP.
+    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
+    // Drop available_externally and unreferenced globals. This is necessary
+    // with ThinLTO in order to avoid leaving undefined references to dead
+    // globals in the object file.
+    MPM.addPass(EliminateAvailableExternallyPass());
+    MPM.addPass(GlobalDCEPass());
     return MPM;
+  }
 
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());

@@ -524,6 +524,7 @@ targets pending ABI standardization:
 
 * 32-bit ARM
 * 64-bit ARM (AArch64)
+* AMDGPU
 * SPIR
 
 ``_Float16`` will be supported on more targets as they define ABIs for it.

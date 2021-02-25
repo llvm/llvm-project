@@ -184,6 +184,11 @@ protected:
   virtual Tool *buildStaticLibTool() const;
   virtual Tool *getTool(Action::ActionClass AC) const;
 
+  virtual std::string buildCompilerRTBasename(const llvm::opt::ArgList &Args,
+                                              StringRef Component,
+                                              FileType Type,
+                                              bool AddArch) const;
+
   /// \name Utilities for implementing subclasses.
   ///@{
   static void addSystemInclude(const llvm::opt::ArgList &DriverArgs,
@@ -432,10 +437,9 @@ public:
   getCompilerRTArgString(const llvm::opt::ArgList &Args, StringRef Component,
                          FileType Type = ToolChain::FT_Static) const;
 
-  virtual std::string
-  getCompilerRTBasename(const llvm::opt::ArgList &Args, StringRef Component,
-                        FileType Type = ToolChain::FT_Static,
-                        bool AddArch = true) const;
+  std::string getCompilerRTBasename(const llvm::opt::ArgList &Args,
+                                    StringRef Component,
+                                    FileType Type = ToolChain::FT_Static) const;
 
   // Returns target specific runtime path if it exists.
   virtual Optional<std::string> getRuntimePath() const;

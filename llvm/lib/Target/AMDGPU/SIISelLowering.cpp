@@ -80,36 +80,40 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::i32, &AMDGPU::SReg_32RegClass);
   addRegisterClass(MVT::f32, &AMDGPU::VGPR_32RegClass);
 
-  addRegisterClass(MVT::f64, &AMDGPU::VReg_64RegClass);
   addRegisterClass(MVT::v2i32, &AMDGPU::SReg_64RegClass);
-  addRegisterClass(MVT::v2f32, &AMDGPU::VReg_64RegClass);
+
+  const SIRegisterInfo *TRI = STI.getRegisterInfo();
+  const TargetRegisterClass *V64RegClass = TRI->getVGPR64Class();
+
+  addRegisterClass(MVT::f64, V64RegClass);
+  addRegisterClass(MVT::v2f32, V64RegClass);
 
   addRegisterClass(MVT::v3i32, &AMDGPU::SGPR_96RegClass);
-  addRegisterClass(MVT::v3f32, &AMDGPU::VReg_96RegClass);
+  addRegisterClass(MVT::v3f32, TRI->getVGPRClassForBitWidth(96));
 
   addRegisterClass(MVT::v2i64, &AMDGPU::SGPR_128RegClass);
   addRegisterClass(MVT::v2f64, &AMDGPU::SGPR_128RegClass);
 
   addRegisterClass(MVT::v4i32, &AMDGPU::SGPR_128RegClass);
-  addRegisterClass(MVT::v4f32, &AMDGPU::VReg_128RegClass);
+  addRegisterClass(MVT::v4f32, TRI->getVGPRClassForBitWidth(128));
 
   addRegisterClass(MVT::v5i32, &AMDGPU::SGPR_160RegClass);
-  addRegisterClass(MVT::v5f32, &AMDGPU::VReg_160RegClass);
+  addRegisterClass(MVT::v5f32, TRI->getVGPRClassForBitWidth(160));
 
   addRegisterClass(MVT::v8i32, &AMDGPU::SGPR_256RegClass);
-  addRegisterClass(MVT::v8f32, &AMDGPU::VReg_256RegClass);
+  addRegisterClass(MVT::v8f32, TRI->getVGPRClassForBitWidth(256));
 
   addRegisterClass(MVT::v4i64, &AMDGPU::SGPR_256RegClass);
-  addRegisterClass(MVT::v4f64, &AMDGPU::VReg_256RegClass);
+  addRegisterClass(MVT::v4f64, TRI->getVGPRClassForBitWidth(256));
 
   addRegisterClass(MVT::v16i32, &AMDGPU::SGPR_512RegClass);
-  addRegisterClass(MVT::v16f32, &AMDGPU::VReg_512RegClass);
+  addRegisterClass(MVT::v16f32, TRI->getVGPRClassForBitWidth(512));
 
   addRegisterClass(MVT::v8i64, &AMDGPU::SGPR_512RegClass);
-  addRegisterClass(MVT::v8f64, &AMDGPU::VReg_512RegClass);
+  addRegisterClass(MVT::v8f64, TRI->getVGPRClassForBitWidth(512));
 
   addRegisterClass(MVT::v16i64, &AMDGPU::SGPR_1024RegClass);
-  addRegisterClass(MVT::v16f64, &AMDGPU::VReg_1024RegClass);
+  addRegisterClass(MVT::v16f64, TRI->getVGPRClassForBitWidth(1024));
 
   if (Subtarget->has16BitInsts()) {
     addRegisterClass(MVT::i16, &AMDGPU::SReg_32RegClass);
@@ -123,7 +127,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
-  addRegisterClass(MVT::v32f32, &AMDGPU::VReg_1024RegClass);
+  addRegisterClass(MVT::v32f32, TRI->getVGPRClassForBitWidth(1024));
 
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
@@ -11366,9 +11370,11 @@ MachineSDNode *SITargetLowering::buildRSRC(SelectionDAG &DAG, const SDLoc &DL,
 //===----------------------------------------------------------------------===//
 
 std::pair<unsigned, const TargetRegisterClass *>
-SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
                                                StringRef Constraint,
                                                MVT VT) const {
+  const SIRegisterInfo *TRI = static_cast<const SIRegisterInfo *>(TRI_);
+
   const TargetRegisterClass *RC = nullptr;
   if (Constraint.size() == 1) {
     const unsigned BitWidth = VT.getSizeInBits();
@@ -11397,7 +11403,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         RC = &AMDGPU::VGPR_32RegClass;
         break;
       default:
-        RC = SIRegisterInfo::getVGPRClassForBitWidth(BitWidth);
+        RC = TRI->getVGPRClassForBitWidth(BitWidth);
         if (!RC)
           return std::make_pair(0U, nullptr);
         break;
@@ -11411,7 +11417,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         RC = &AMDGPU::AGPR_32RegClass;
         break;
       default:
-        RC = SIRegisterInfo::getAGPRClassForBitWidth(BitWidth);
+        RC = TRI->getAGPRClassForBitWidth(BitWidth);
         if (!RC)
           return std::make_pair(0U, nullptr);
         break;
@@ -11584,6 +11590,35 @@ bool SITargetLowering::checkAsmConstraintValA(SDValue Op,
   return false;
 }
 
+static int getAlignedAGPRClassID(unsigned UnalignedClassID) {
+  switch (UnalignedClassID) {
+  case AMDGPU::VReg_64RegClassID:
+    return AMDGPU::VReg_64_Align2RegClassID;
+  case AMDGPU::VReg_96RegClassID:
+    return AMDGPU::VReg_96_Align2RegClassID;
+  case AMDGPU::VReg_128RegClassID:
+    return AMDGPU::VReg_128_Align2RegClassID;
+  case AMDGPU::VReg_256RegClassID:
+    return AMDGPU::VReg_256_Align2RegClassID;
+  case AMDGPU::VReg_512RegClassID:
+    return AMDGPU::VReg_512_Align2RegClassID;
+  case AMDGPU::AReg_64RegClassID:
+    return AMDGPU::AReg_64_Align2RegClassID;
+  case AMDGPU::AReg_96RegClassID:
+    return AMDGPU::AReg_96_Align2RegClassID;
+  case AMDGPU::AReg_128RegClassID:
+    return AMDGPU::AReg_128_Align2RegClassID;
+  case AMDGPU::AReg_256RegClassID:
+    return AMDGPU::AReg_256_Align2RegClassID;
+  case AMDGPU::AReg_512RegClassID:
+    return AMDGPU::AReg_512_Align2RegClassID;
+  case AMDGPU::AReg_1024RegClassID:
+    return AMDGPU::AReg_1024_Align2RegClassID;
+  default:
+    return -1;
+  }
+}
+
 // Figure out which registers should be reserved for stack access. Only after
 // the function is legalized do we know all of the non-spill stack objects or if
 // calls are present.
@@ -11592,6 +11627,7 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
 
   if (Info->isEntryFunction()) {
     // Callable functions have fixed registers used for stack access.
@@ -11614,11 +11650,27 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   Info->limitOccupancy(MF);
 
   if (ST.isWave32() && !MF.empty()) {
-    const SIInstrInfo *TII = ST.getInstrInfo();
     for (auto &MBB : MF) {
       for (auto &MI : MBB) {
         TII->fixImplicitOperands(MI);
       }
+    }
+  }
+
+  // FIXME: This is a hack to fixup AGPR classes to use the properly aligned
+  // classes if required. Ideally the register class constraints would differ
+  // per-subtarget, but there's no easy way to achieve that right now. This is
+  // not a problem for VGPRs because the correctly aligned VGPR class is implied
+  // from using them as the register class for legal types.
+  if (ST.needsAlignedVGPRs()) {
+    for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+      const Register Reg = Register::index2VirtReg(I);
+      const TargetRegisterClass *RC = MRI.getRegClassOrNull(Reg);
+      if (!RC)
+        continue;
+      int NewClassID = getAlignedAGPRClassID(RC->getID());
+      if (NewClassID != -1)
+        MRI.setRegClass(Reg, TRI->getRegClass(NewClassID));
     }
   }
 
@@ -11831,6 +11883,45 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(
   case ISD::INTRINSIC_W_CHAIN:
     return AMDGPU::isIntrinsicSourceOfDivergence(
         cast<ConstantSDNode>(N->getOperand(1))->getZExtValue());
+  case ISD::ATOMIC_CMP_SWAP:
+  case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
+  case ISD::ATOMIC_SWAP:
+  case ISD::ATOMIC_LOAD_ADD:
+  case ISD::ATOMIC_LOAD_SUB:
+  case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_CLR:
+  case ISD::ATOMIC_LOAD_OR:
+  case ISD::ATOMIC_LOAD_XOR:
+  case ISD::ATOMIC_LOAD_NAND:
+  case ISD::ATOMIC_LOAD_MIN:
+  case ISD::ATOMIC_LOAD_MAX:
+  case ISD::ATOMIC_LOAD_UMIN:
+  case ISD::ATOMIC_LOAD_UMAX:
+  case ISD::ATOMIC_LOAD_FADD:
+  case ISD::ATOMIC_LOAD_FSUB:
+  case AMDGPUISD::ATOMIC_CMP_SWAP:
+  case AMDGPUISD::ATOMIC_INC:
+  case AMDGPUISD::ATOMIC_DEC:
+  case AMDGPUISD::ATOMIC_LOAD_FMIN:
+  case AMDGPUISD::ATOMIC_LOAD_FMAX:
+  case AMDGPUISD::BUFFER_ATOMIC_SWAP:
+  case AMDGPUISD::BUFFER_ATOMIC_ADD:
+  case AMDGPUISD::BUFFER_ATOMIC_SUB:
+  case AMDGPUISD::BUFFER_ATOMIC_SMIN:
+  case AMDGPUISD::BUFFER_ATOMIC_UMIN:
+  case AMDGPUISD::BUFFER_ATOMIC_SMAX:
+  case AMDGPUISD::BUFFER_ATOMIC_UMAX:
+  case AMDGPUISD::BUFFER_ATOMIC_AND:
+  case AMDGPUISD::BUFFER_ATOMIC_OR:
+  case AMDGPUISD::BUFFER_ATOMIC_XOR:
+  case AMDGPUISD::BUFFER_ATOMIC_INC:
+  case AMDGPUISD::BUFFER_ATOMIC_DEC:
+  case AMDGPUISD::BUFFER_ATOMIC_CMPSWAP:
+  case AMDGPUISD::BUFFER_ATOMIC_CSUB:
+  case AMDGPUISD::BUFFER_ATOMIC_FADD:
+  case AMDGPUISD::BUFFER_ATOMIC_FMIN:
+  case AMDGPUISD::BUFFER_ATOMIC_FMAX:
+    return true;
   }
   return false;
 }

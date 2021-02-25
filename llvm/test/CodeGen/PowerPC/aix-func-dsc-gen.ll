@@ -12,6 +12,16 @@ entry:
 ; CHECK-NEXT: Arch: powerpc
 ; CHECK-NEXT: AddressSize: 32bit
 ; CHECK:        Symbol {
+; CHECK-NEXT:     Index: 0
+; CHECK-NEXT:     Name: .file
+; CHECK-NEXT:     Value (SymbolTableIndex): 0x0
+; CHECK-NEXT:     Section: N_DEBUG
+; CHECK-NEXT:     Source Language ID: TB_C (0x0)
+; CHECK-NEXT:     CPU Version ID: 0x0
+; CHECK-NEXT:     StorageClass: C_FILE (0x67)
+; CHECK-NEXT:     NumberOfAuxEntries: 0
+; CHECK-NEXT:   }
+; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Index: [[#Index:]]
 ; CHECK-NEXT:     Name: .text
 ; CHECK-NEXT:     Value (RelocatableAddress): 0x0

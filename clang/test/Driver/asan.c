@@ -3,7 +3,7 @@
 // RUN: %clang -O2 -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=address %s -S -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-ASAN
 // RUN: %clang -O3 -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=address %s -S -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-ASAN
 // RUN: %clang     -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=address %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-ASAN
-// FIX: %clang -O2 -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=address %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-ASAN
+// RUN: %clang -O2 -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=address %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-ASAN
 // RUN: %clang     -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=address %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefix=CHECK-ASAN
 // RUN: %clang -O2 -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=address %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefix=CHECK-ASAN
 
@@ -21,7 +21,7 @@
 // RUN: %clang -O2 -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=kernel-address %s -S -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-KASAN
 // RUN: %clang -O3 -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=kernel-address %s -S -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-KASAN
 // RUN: %clang     -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=kernel-address %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-KASAN
-// FIX: %clang -O2 -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=kernel-address %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-KASAN
+// RUN: %clang -O2 -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=kernel-address %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-KASAN
 // RUN: %clang     -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=kernel-address %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefix=CHECK-KASAN
 // RUN: %clang -O2 -fexperimental-new-pass-manager -target i386-unknown-linux -fsanitize=kernel-address %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefix=CHECK-KASAN
 
@@ -39,7 +39,7 @@
 // RUN: %clang -O2 -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=hwaddress %s -S -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-HWASAN
 // RUN: %clang -O3 -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=hwaddress %s -S -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-HWASAN
 // RUN: %clang     -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=hwaddress %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-HWASAN
-// FIX: %clang -O2 -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=hwaddress %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-HWASAN
+// RUN: %clang -O2 -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=hwaddress %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-HWASAN
 // RUN: %clang     -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=hwaddress %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefix=CHECK-HWASAN
 // RUN: %clang -O2 -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=hwaddress %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefix=CHECK-HWASAN
 
@@ -57,7 +57,7 @@
 // RUN: %clang -O2 -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=kernel-hwaddress %s -S -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-KHWASAN
 // RUN: %clang -O3 -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=kernel-hwaddress %s -S -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-KHWASAN
 // RUN: %clang     -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=kernel-hwaddress %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-KHWASAN
-// FIX: %clang -O2 -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=kernel-hwaddress %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-KHWASAN
+// RUN: %clang -O2 -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=kernel-hwaddress %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-KHWASAN
 // RUN: %clang     -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=kernel-hwaddress %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefix=CHECK-KHWASAN
 // RUN: %clang -O2 -fexperimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=kernel-hwaddress %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefix=CHECK-KHWASAN
 
@@ -68,7 +68,7 @@
 // RUN: %clang     -fno-experimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=kernel-hwaddress %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-KHWASAN
 // RUN: %clang -O2 -fno-experimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=kernel-hwaddress %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefix=CHECK-KHWASAN
 // RUN: %clang     -fno-experimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=kernel-hwaddress %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefix=CHECK-KHWASAN
-// FIX: %clang -O2 -fno-experimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=kernel-hwaddress %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefix=CHECK-KHWASAN
+// RUN: %clang -O2 -fno-experimental-new-pass-manager -target aarch64-unknown-linux -fsanitize=kernel-hwaddress %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefix=CHECK-KHWASAN
 // Verify that -fsanitize={address,hwaddres,kernel-address,kernel-hwaddress} invokes ASan, HWAsan, KASan or KHWASan instrumentation.
 
 int foo(int *a) { return *a; }
