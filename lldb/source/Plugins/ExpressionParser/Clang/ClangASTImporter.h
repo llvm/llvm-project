@@ -198,6 +198,12 @@ public:
       // nodes within the same AST doesn't make any sense as the whole idea
       // is to import them to a different AST.
       lldbassert(target_ctx != source_ctx && "Can't import into itself");
+      // This is always doing a minimal import of any declarations. This means
+      // that there has to be an ExternalASTSource in the target ASTContext
+      // (that should implement the callbacks that complete any declarations
+      // on demand). Without an ExternalASTSource, this ASTImporter will just
+      // do a minimal import and the imported declarations won't be completed.
+      assert(target_ctx->getExternalSource() && "Missing ExternalSource");
       setODRHandling(clang::ASTImporter::ODRHandlingType::Liberal);
     }
 
