@@ -4249,7 +4249,6 @@ defm func_args_alias : BooleanFFlag<"func-args-alias">, Group<gfortran_Group>,
   HelpText<"Function argument may alias (equivalent to ansi alias)">;
 defm use_flang_math_libs : BooleanFFlag<"use-flang-math-libs">, Group<gfortran_Group>,
   HelpText<"Use Flang internal runtime math library instead of LLVM math intrinsics.">;
-// AOCC Begin
 // Flang option to enable all loop vectorize pragmas: !dir$ vector/novector/ivdep
 def Menable_vectorize_pragmas_EQ : Joined<["-"], "Menable-vectorize-pragmas=">, Group<pgi_fortran_Group>,
 HelpText<"Enable loop vectorizing pragmas">, Values<"true,false">,
@@ -4972,6 +4971,12 @@ def cfguard : Flag<["-"], "cfguard">,
 
 def fdenormal_fp_math_f32_EQ : Joined<["-"], "fdenormal-fp-math-f32=">,
    Group<f_Group>;
+
+let Flags = [CoreOption] in {
+def famd_opt : Flag<["-"], "famd-opt">, Group<f_Group>,
+  HelpText<"Enable \"All\" [AMD] proprietary Optimizations">;
+def fno_amd_opt : Flag<["-"], "fno-amd-opt">, Group<f_Group>;
+}
 
 //===----------------------------------------------------------------------===//
 // Dependency Output Options

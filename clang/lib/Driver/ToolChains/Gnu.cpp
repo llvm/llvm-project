@@ -24,6 +24,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -560,6 +561,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
+  bool ProprietaryToolChain =
+	  checkForAMDProprietaryOptOptions(ToolChain, D, Args, CmdArgs);
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
     addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
@@ -688,7 +691,20 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddAllArgs(CmdArgs, options::OPT_T);
 
-  const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
+  // if a linker other than ld.lld is specified, dont use closed ld.lld.
+  if (Args.hasArg(options::OPT_fuse_ld_EQ)) {
+    StringRef LinkerName = Args.getLastArgValue(options::OPT_fuse_ld_EQ, "ld");
+    if (!LinkerName.equals_lower("lld"))
+      ProprietaryToolChain = false;
+  }
+
+  std::string AltPath = D.getInstalledDir();
+  AltPath += "/../alt/bin/ld.lld";
+  const char *Exec = ProprietaryToolChain
+         ? Args.MakeArgString(AltPath.c_str())
+         : Args.MakeArgString(ToolChain.GetLinkerPath());
+
+
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileCurCP(),
                                          Exec, CmdArgs, Inputs, Output));

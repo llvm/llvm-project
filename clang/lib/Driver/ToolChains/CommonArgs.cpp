@@ -493,6 +493,42 @@ llvm::StringRef tools::getLTOParallelism(const ArgList &Args, const Driver &D) {
   return LtoJobsArg->getValue();
 }
 
+static bool checkForPropOpts(const ArgList &Args) {
+  return false;
+}
+
+bool tools::checkForAMDProprietaryOptOptions(const ToolChain &TC,
+                                             const Driver &D,
+                                             const ArgList &Args,
+                                             ArgStringList &CmdArgs) {
+
+  std::string AltPath = D.getInstalledDir();
+  AltPath += "/../alt/bin";
+  // -famd-opt enables prorietary compiler and lto
+  if (Args.hasFlag(options::OPT_famd_opt,
+      options::OPT_fno_amd_opt, false)) {
+    if (!TC.getVFS().exists(AltPath)) {
+      D.Diag(diag::warn_drv_amd_opt_not_found);
+      return false;
+    }
+    return true;
+  }
+  // disables amd proprietary compiler
+  if (Args.hasFlag(options::OPT_fno_amd_opt,
+      options::OPT_famd_opt, false)) {
+    return false;
+  }
+
+  bool ProprietaryToolChainNeeded = false;
+  // check for more AOCC options
+  ProprietaryToolChainNeeded = checkForPropOpts(Args);
+  if (ProprietaryToolChainNeeded && !TC.getVFS().exists(AltPath)) {
+    D.Diag(diag::warn_drv_amd_opt_not_found);
+    return false;
+  }
+  return ProprietaryToolChainNeeded;
+}
+
 // CloudABI uses -ffunction-sections and -fdata-sections by default.
 bool tools::isUseSeparateSections(const llvm::Triple &Triple) {
   return Triple.getOS() == llvm::Triple::CloudABI;
@@ -642,6 +678,13 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                    options::OPT_fno_pseudo_probe_for_profiling, false))
     CmdArgs.push_back("-plugin-opt=pseudo-probe-for-profiling");
 
+  // Check for proprietary optimization flags
+  bool ProprietaryToolChainNeeded =
+	  checkForAMDProprietaryOptOptions(ToolChain, D, Args, CmdArgs);
+  if (ProprietaryToolChainNeeded) {
+    // Place holder
+  }
+
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
   if (!StatsFile.empty())
@@ -664,6 +707,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
 
   addMachineOutlinerArgs(D, Args, CmdArgs, ToolChain.getEffectiveTriple(),
                          /*IsLTO=*/true);
+  return;
 }
 
 std::string tools::FindDebugInLibraryPath() {
