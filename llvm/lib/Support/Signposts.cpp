@@ -14,12 +14,15 @@
 #if LLVM_SUPPORT_XCODE_SIGNPOSTS
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Mutex.h"
+#include <Availability.h>
 #include <os/signpost.h>
 #endif // if LLVM_SUPPORT_XCODE_SIGNPOSTS
 
 using namespace llvm;
 
 #if LLVM_SUPPORT_XCODE_SIGNPOSTS
+#define SIGNPOSTS_AVAILABLE()                                                  \
+  __builtin_available(macos 10.14, iOS 12, tvOS 12, watchOS 5, *)
 namespace {
 os_log_t *LogCreator() {
   os_log_t *X = new os_log_t;
@@ -47,30 +50,40 @@ class SignpostEmitterImpl {
     const auto &I = Signposts.find(O);
     if (I != Signposts.end())
       return I->second;
-
-    const auto &Inserted = Signposts.insert(
-        std::make_pair(O, os_signpost_id_make_with_pointer(getLogger(), O)));
+    os_signpost_id_t ID = {};
+    if (SIGNPOSTS_AVAILABLE()) {
+      ID = os_signpost_id_make_with_pointer(getLogger(), O);
+    }
+    const auto &Inserted = Signposts.insert(std::make_pair(O, ID));
     return Inserted.first->second;
   }
 
 public:
   SignpostEmitterImpl() : SignpostLog(LogCreator(), LogDeleter), Signposts() {}
 
-  bool isEnabled() const { return os_signpost_enabled(*SignpostLog); }
+  bool isEnabled() const {
+    if (SIGNPOSTS_AVAILABLE())
+      return os_signpost_enabled(*SignpostLog);
+    return false;
+  }
 
   void startInterval(const void *O, llvm::StringRef Name) {
     if (isEnabled()) {
-      // Both strings used here are required to be constant literal strings.
-      os_signpost_interval_begin(getLogger(), getSignpostForObject(O),
-                                 "LLVM Timers", "Begin %s", Name.data());
+      if (SIGNPOSTS_AVAILABLE()) {
+        // Both strings used here are required to be constant literal strings.
+        os_signpost_interval_begin(getLogger(), getSignpostForObject(O),
+                                   "LLVM Timers", "Begin %s", Name.data());
+      }
     }
   }
 
   void endInterval(const void *O, llvm::StringRef Name) {
     if (isEnabled()) {
-      // Both strings used here are required to be constant literal strings.
-      os_signpost_interval_end(getLogger(), getSignpostForObject(O),
-                               "LLVM Timers", "End %s", Name.data());
+      if (SIGNPOSTS_AVAILABLE()) {
+        // Both strings used here are required to be constant literal strings.
+        os_signpost_interval_end(getLogger(), getSignpostForObject(O),
+                                 "LLVM Timers", "End %s", Name.data());
+      }
     }
   }
 };
