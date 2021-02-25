@@ -162,7 +162,7 @@ class fir_AllocatableOp<string mnemonic, Resource resource,
       p << ", ";
       p.printOperand(sh);
     }
-    p.printOptionalAttrDict(getAttrs(), {inType(), lenpName()});
+    p.printOptionalAttrDict((*this)->getAttrs(), {inType(), lenpName()});
   }];
 
   string extraAllocClassDeclaration = [{
@@ -343,7 +343,7 @@ def fir_LoadOp : fir_OneResultOp<"load"> {
   let printer = [{
     p << getOperationName() << ' ';
     p.printOperand(memref());
-    p.printOptionalAttrDict(getAttrs(), {});
+    p.printOptionalAttrDict((*this)->getAttrs(), {});
     p << " : " << memref().getType();
   }];
 
@@ -395,7 +395,7 @@ def fir_StoreOp : fir_Op<"store", []> {
     p.printOperand(value());
     p << " to ";
     p.printOperand(memref());
-    p.printOptionalAttrDict(getAttrs(), {});
+    p.printOptionalAttrDict((*this)->getAttrs(), {});
     p << " : " << memref().getType();
   }];
 

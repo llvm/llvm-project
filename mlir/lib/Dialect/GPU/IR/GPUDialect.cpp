@@ -344,7 +344,7 @@ static void printLaunchOp(OpAsmPrinter &p, LaunchOp op) {
                       op.getThreadIds());
 
   p.printRegion(op.body(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
 }
 
 // Parse the size assignment blocks for blocks and threads.  These have the form
@@ -837,7 +837,7 @@ static ParseResult parseGPUModuleOp(OpAsmParser &parser,
 static void print(OpAsmPrinter &p, GPUModuleOp op) {
   p << op.getOperationName() << ' ';
   p.printSymbolName(op.getName());
-  p.printOptionalAttrDictWithKeyword(op.getAttrs(),
+  p.printOptionalAttrDictWithKeyword(op->getAttrs(),
                                      {SymbolTable::getSymbolAttrName()});
   p.printRegion(op->getRegion(0), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
