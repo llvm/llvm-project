@@ -31,7 +31,7 @@
 //
 ods_def<Test1Op> :
 def test1(A: f32(M, K), B: f32(K)) -> (C: f32(M)) {
-  C(m) = std_addf<k>(std_mulf(A(m, k), B(k)));
+  C(m) = std_addf<k>(C(m), std_mulf(A(m, k), B(k)));
 }
 
 // ODS-LABEL: def Test2Op : LinalgStructuredBase_Op<"test2", [
@@ -55,7 +55,7 @@ def test1(A: f32(M, K), B: f32(K)) -> (C: f32(M)) {
 //
 ods_def<Test2Op> :
 def test2(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
-  C(m, n) = std_addf<k>(std_mulf(A(m, k), B(k, n)));
+  C(m, n) = std_addf<k>(C(m, n), std_mulf(A(m, k), B(k, n)));
 }
 
 // ODS-LABEL: def Test3Op : LinalgStructuredBase_Op<"test3", [
@@ -79,7 +79,7 @@ def test2(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
 //
 ods_def<Test3Op> :
 def test3(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N)) {
-  C(b, m, n) = std_addf<k>(std_mulf(A(b, m, k), B(k, n)));
+  C(b, m, n) = std_addf<k>(C(b, m, n), std_mulf(A(b, m, k), B(k, n)));
 }
 
 // Test attribute definitions
@@ -115,7 +115,7 @@ attr(
   array_attr : f32[],
   optional_attr? : f32
 ) {
-  C(b, m, n) = std_addf<k>(std_mulf(A(b, m, k), B(k, n)));
+  C(b, m, n) = std_addf<k>(C(b, m, n), std_mulf(A(b, m, k), B(k, n)));
 }
 
 // Test attribute usage in affine expressions
@@ -157,7 +157,7 @@ It has two inputs.
 It has one output.
 """
 {
-  C(m) = std_addf<k>(std_mulf(A(m, k), B(k)));
+  C(m) = std_addf<k>(C(m), std_mulf(A(m, k), B(k)));
 }
 
 // Test attribute builder
@@ -172,5 +172,17 @@ ods_def<Test7Op>:
 def test7(A: f32(M, K), B: f32(K)) -> (C: f32(M))
      attr(attr_a: f32, attr_b: 4xi32)
 {
-  C(m) = std_addf<k>(std_mulf(A(m, k), B(k)));
+  C(m) = std_addf<k>(C(m), std_mulf(A(m, k), B(k)));
+}
+
+// Test output arg order.
+// IMPL-LABEL:  void Test8Op::regionBuilder(Block &block, ValueRange captures) {
+//       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
+//       IMPL:  Value [[d:.*]] = std_mulf([[a]], [[b]]);
+//       IMPL:  Value [[e:.*]] = std_subf([[d]], [[c]]);
+//       IMPL:  (linalg_yield(ValueRange{ [[e]] }));
+ods_def<Test8Op>:
+def test8(A: f32(M, K), B: f32(K)) -> (C: f32(M))
+{
+  C(m) = std_subf<k>(std_mulf(A(m, k), B(k)), C(m));
 }

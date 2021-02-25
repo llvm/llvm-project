@@ -1087,6 +1087,9 @@ public:
 
   /// Parses a tensor use.
   struct ComprehensionParsingState {
+    /// The number of operands (which includes inputs and outputs) in a
+    /// comprehension.
+    size_t numArgs;
     AffineDimList dims;
     SmallVector<std::unique_ptr<Expression>, 4> expressions;
     llvm::DenseMap<TensorUse, unsigned> orderedTensorArgs;
@@ -1510,11 +1513,6 @@ LogicalResult TCParser::parseExpression(TensorUse currentDefinition,
       reductionDims.push_back(iter.cast<AffineDimExpr>().getPosition());
   }
 
-  // If this op is a reduction, it's first argument is the `currentDefinition`
-  // tensor use.
-  if (!reductionDims.empty())
-    expressions.push_back(std::make_unique<TensorUse>(currentDefinition));
-  LLVM_DEBUG(llvm::dbgs() << "op: " << opOrTensor << "\n");
 
   auto parseExpr = [&]() -> LogicalResult {
     std::unique_ptr<Expression> e;
@@ -1619,7 +1617,8 @@ TCParser::parseOneComprehension(StringRef cppOpName, StringRef linalgOpName,
       auto tensorIter = registeredTensors.find(use.tensorId);
       assert(tensorIter != registeredTensors.end() && "unregistered tensor");
       auto &tensor = tensorIter->getValue();
-      if (tensor.indexingMap && state.orderedTensorArgs.count(use) == 0) {
+      if (tensor.indexingMap && state.orderedTensorArgs.count(use) == 0 &&
+          tensor.indexingMap.getResults() != use.indexingMap.getResults()) {
         LLVM_DEBUG(llvm::dbgs() << "\nexisting: " << tensor.indexingMap);
         (void)parser.emitError(
             "Unexpected multi-read of a tensor with different accesses");
@@ -1630,6 +1629,7 @@ TCParser::parseOneComprehension(StringRef cppOpName, StringRef linalgOpName,
       tensor.indexingMap = use.indexingMap;
       state.orderedTensorArgs[use] = tensor.index;
     });
+  state.numArgs = seenDefs.size();
   if (failed)
     return failure();
 
@@ -2004,8 +2004,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
 
   // Finally put everything together.
   os << llvm::formatv(header, cppOpName, linalgOpName, interfaceNameList, doc,
-                      attrList, state.orderedTensorArgs.size(), attrBuilder,
-                      attrMethods);
+                      attrList, state.numArgs, attrBuilder, attrMethods);
 }
 
 /// Print the C++ StructuredOpsInterface impl of `iterator_types`.
@@ -2203,7 +2202,7 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os,
   std::string mapsStr;
   llvm::raw_string_ostream mapsStringStream(mapsStr);
 
-  SmallVector<TensorUse, 4> orderedUses(state.orderedTensorArgs.size());
+  SmallVector<TensorUse, 4> orderedUses(state.numArgs);
   for (const auto &it : state.orderedTensorArgs)
     orderedUses[it.second] = it.first;
 
@@ -2286,7 +2285,7 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os,
 /// Print the C++ StructuredOpsInterface impl of `regionBuilder`.
 void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef cppOpName,
                                   ComprehensionParsingState &state) {
-  unsigned count = state.orderedTensorArgs.size();
+  unsigned count = state.numArgs;
   llvm::DenseMap<const TensorExpr *, unsigned> subExprsMap;
   std::function<void(llvm::raw_ostream & os, const Expression &)> printExpr;
   printExpr = [&](llvm::raw_ostream &os, const Expression &e) -> void {
@@ -2326,7 +2325,7 @@ void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef cppOpName,
   std::string valueHandleStr;
   llvm::raw_string_ostream valueHandleStringStream(valueHandleStr);
   llvm::interleaveComma(
-      state.orderedTensorArgs, valueHandleStringStream, [&](auto) {
+      llvm::seq<int>(0, state.numArgs), valueHandleStringStream, [&](auto) {
         valueHandleStringStream << "_" << idx << "(args[" << idx << "])";
         idx++;
       });
