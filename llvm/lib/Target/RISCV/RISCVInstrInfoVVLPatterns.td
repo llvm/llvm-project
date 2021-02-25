@@ -96,6 +96,20 @@ def SDT_RISCVVecFMA_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                               SDTCisVT<5, XLenVT>]>;
 def riscv_fma_vl : SDNode<"RISCVISD::FMA_VL", SDT_RISCVVecFMA_VL, [SDNPCommutative]>;
 
+def SDT_RISCVFPRoundOp_VL  : SDTypeProfile<1, 3, [
+  SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>,
+  SDTCVecEltisVT<2, i1>, SDTCisSameNumEltsAs<1, 2>, SDTCisVT<3, XLenVT>
+]>;
+def SDT_RISCVFPExtendOp_VL  : SDTypeProfile<1, 3, [
+  SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>,
+  SDTCVecEltisVT<2, i1>, SDTCisSameNumEltsAs<1, 2>, SDTCisVT<3, XLenVT>
+]>;
+
+def riscv_fpround_vl : SDNode<"RISCVISD::FP_ROUND_VL", SDT_RISCVFPRoundOp_VL>;
+def riscv_fpextend_vl : SDNode<"RISCVISD::FP_EXTEND_VL", SDT_RISCVFPExtendOp_VL>;
+def riscv_fncvt_rod_vl : SDNode<"RISCVISD::VFNCVT_ROD_VL", SDT_RISCVFPRoundOp_VL>;
+
+
 def riscv_setcc_vl : SDNode<"RISCVISD::SETCC_VL",
                             SDTypeProfile<1, 5, [SDTCVecEltisVT<0, i1>,
                                                  SDTCisVec<1>,
@@ -740,6 +754,33 @@ foreach fvti = AllFloatVectors in {
                                 fvti.LMul.MX)
              (fvti.Scalar fvti.ScalarRegClass:$rs2),
              GPR:$vl, fvti.SEW)>;
+
+  // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
+  foreach fvtiToFWti = AllWidenableFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    def : Pat<(fwti.Vector (riscv_fpextend_vl (fvti.Vector fvti.RegClass:$rs1),
+                                              (fvti.Mask true_mask),
+                                              (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>("PseudoVFWCVT_F_F_V_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1, GPR:$vl, fvti.SEW)>;
+  }
+
+  foreach fvtiToFWti = AllWidenableFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    def : Pat<(fvti.Vector (riscv_fpround_vl (fwti.Vector fwti.RegClass:$rs1),
+                                             (fwti.Mask true_mask),
+                                             (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX)
+                  fwti.RegClass:$rs1, GPR:$vl, fvti.SEW)>;
+
+    def : Pat<(fvti.Vector (riscv_fncvt_rod_vl (fwti.Vector fwti.RegClass:$rs1),
+                                               (fwti.Mask true_mask),
+                                               (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>("PseudoVFNCVT_ROD_F_F_W_"#fvti.LMul.MX)
+                  fwti.RegClass:$rs1, GPR:$vl, fvti.SEW)>;
+  }
 }
 
 } // Predicates = [HasStdExtV, HasStdExtF]

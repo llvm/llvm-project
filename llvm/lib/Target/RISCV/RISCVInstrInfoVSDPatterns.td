@@ -538,10 +538,6 @@ foreach mti = AllMasks in {
 
 } // Predicates = [HasStdExtV]
 
-def riscv_fncvt_rod
-    : SDNode<"RISCVISD::VFNCVT_ROD",
-             SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>, []>;
-
 let Predicates = [HasStdExtV, HasStdExtF] in {
 
 // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
@@ -719,12 +715,7 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
   def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
             (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX)
                 fwti.RegClass:$rs1, fvti.AVL, fvti.SEW)>;
-
-  def : Pat<(fvti.Vector (riscv_fncvt_rod (fwti.Vector fwti.RegClass:$rs1))),
-            (!cast<Instruction>("PseudoVFNCVT_ROD_F_F_W_"#fvti.LMul.MX)
-                fwti.RegClass:$rs1, fvti.AVL, fvti.SEW)>;
 }
-
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
