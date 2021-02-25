@@ -1129,13 +1129,12 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   StringRef Segment, Section;
   unsigned TAA = 0, StubSize = 0;
   bool TAAParsed;
-  std::string ErrorCode =
-    MCSectionMachO::ParseSectionSpecifier(SectionVal, Segment, Section,
-                                          TAA, TAAParsed, StubSize);
-  if (!ErrorCode.empty())
+  if (Error E = MCSectionMachO::ParseSectionSpecifier(
+          SectionVal, Segment, Section, TAA, TAAParsed, StubSize)) {
     // If invalid, report the error with report_fatal_error.
-    report_fatal_error("Invalid section specifier '" + Section + "': " +
-                       ErrorCode + ".");
+    report_fatal_error("Invalid section specifier '" + Section +
+                       "': " + toString(std::move(E)) + ".");
+  }
 
   // Get the section.
   MCSectionMachO *S = getContext().getMachOSection(
@@ -1159,6 +1158,14 @@ static void checkMachOComdat(const GlobalValue *GV) {
 
 MCSection *TargetLoweringObjectFileMachO::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+
+  StringRef SectionName = GO->getSection();
+
+  const Function *F = dyn_cast<Function>(GO);
+  if (F && F->hasFnAttribute("implicit-section-name")) {
+    SectionName = F->getFnAttribute("implicit-section-name").getValueAsString();
+  }
+
   // Parse the section specifier and create it if valid.
   StringRef Segment, Section;
   unsigned TAA = 0, StubSize = 0;
@@ -1166,14 +1173,12 @@ MCSection *TargetLoweringObjectFileMachO::getExplicitSectionGlobal(
 
   checkMachOComdat(GO);
 
-  std::string ErrorCode =
-    MCSectionMachO::ParseSectionSpecifier(GO->getSection(), Segment, Section,
-                                          TAA, TAAParsed, StubSize);
-  if (!ErrorCode.empty()) {
+  if (Error E = MCSectionMachO::ParseSectionSpecifier(
+          SectionName, Segment, Section, TAA, TAAParsed, StubSize)) {
     // If invalid, report the error with report_fatal_error.
     report_fatal_error("Global variable '" + GO->getName() +
                        "' has an invalid section specifier '" +
-                       GO->getSection() + "': " + ErrorCode + ".");
+                       GO->getSection() + "': " + toString(std::move(E)) + ".");
   }
 
   // Get the section.

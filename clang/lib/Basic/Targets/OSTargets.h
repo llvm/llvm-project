@@ -114,7 +114,7 @@ public:
     this->MCountName = "\01mcount";
   }
 
-  std::string isValidSectionSpecifier(StringRef SR) const override {
+  llvm::Error isValidSectionSpecifier(StringRef SR) const override {
     // Let MCSectionMachO validate this.
     StringRef Segment, Section;
     unsigned TAA, StubSize;
