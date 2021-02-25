@@ -22,94 +22,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 include "flang/Optimizer/Dialect/FIRTypes.td"
 
-// Types and predicates
-
-def fir_Type : Type<CPred<"fir::isa_fir_or_std_type($_self)">,
-    "FIR dialect type">;
-
-// Fortran intrinsic types
-def fir_IntegerType : Type<CPred<"$_self.isa<fir::IntegerType>()">,
-    "FIR integer type">;
-def fir_LogicalType : Type<CPred<"$_self.isa<fir::LogicalType>()">,
-    "FIR logical type">;
-def fir_RealType : Type<CPred<"$_self.isa<fir::RealType>()">,
-    "FIR real type">;
-def fir_VectorType : Type<CPred<"$_self.isa<fir::VectorType>()">,
-    "FIR vector type">;
-
-// Generalized FIR and standard dialect types representing intrinsic types
-def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerLike.predicate,
-    fir_IntegerType.predicate]>, "any integer">;
-def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,
-    fir_LogicalType.predicate]>, "any logical">;
-def AnyRealLike : TypeConstraint<Or<[FloatLike.predicate,
-    fir_RealType.predicate]>, "any real">;
-def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
-
-// Fortran derived (user defined) type
-def fir_RecordType : Type<CPred<"$_self.isa<fir::RecordType>()">,
-    "FIR derived type">;
-
-// Fortran array attribute
-def fir_SequenceType : Type<CPred<"$_self.isa<fir::SequenceType>()">,
-    "array type">;
-
-// Composable types
-def AnyCompositeLike : TypeConstraint<Or<[fir_RecordType.predicate,
-    fir_SequenceType.predicate, fir_ComplexType.predicate,
-    fir_VectorType.predicate, IsTupleTypePred]>, "any composite">;
-
-// Reference to an entity type
-def fir_ReferenceType : Type<CPred<"$_self.isa<fir::ReferenceType>()">,
-    "reference type">;
-
-// Reference to an ALLOCATABLE attribute type
-def fir_HeapType : Type<CPred<"$_self.isa<fir::HeapType>()">,
-    "allocatable type">;
-
-// Reference to a POINTER attribute type
-def fir_PointerType : Type<CPred<"$_self.isa<fir::PointerType>()">,
-    "pointer type">;
-
-// Reference types
-def AnyReferenceLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
-    fir_HeapType.predicate, fir_PointerType.predicate]>, "any reference">;
-
-def AnyBoxLike : TypeConstraint<Or<[fir_BoxType.predicate,
-    fir_BoxCharType.predicate, fir_BoxProcType.predicate]>, "any box">;
-
-def AnyRefOrBox : TypeConstraint<Or<[fir_ReferenceType.predicate,
-    fir_HeapType.predicate, fir_PointerType.predicate, fir_BoxType.predicate]>,
-    "any reference or box">;
-
-def AnyShapeLike : TypeConstraint<Or<[fir_ShapeType.predicate,
-    fir_ShapeShiftType.predicate]>, "any legal shape type">;
-def AnyShapeType : Type<AnyShapeLike.predicate, "any legal shape type">;
-def fir_SliceType : Type<CPred<"$_self.isa<fir::SliceType>()">, "slice type">;
-
-def AnyEmboxLike : TypeConstraint<Or<[AnySignlessInteger.predicate,
-    Index.predicate, fir_IntegerType.predicate]>,
-    "any legal embox argument type">;
-def AnyEmboxArg : Type<AnyEmboxLike.predicate, "embox argument type">;
-
-// A type descriptor's type
-def fir_TypeDescType : Type<CPred<"$_self.isa<fir::TypeDescType>()">,
-    "type desc type">;
-
-// A LEN parameter (in a RecordType) argument's type
-def fir_LenType : Type<CPred<"$_self.isa<fir::LenType>()">,
-    "LEN parameter type">;
-
-def AnyComponentLike : TypeConstraint<Or<[AnySignlessInteger.predicate,
-    Index.predicate, fir_IntegerType.predicate, fir_FieldType.predicate]>,
-    "any coordinate index">;
-def AnyComponentType : Type<AnyComponentLike.predicate, "coordinate type">;
-
-def AnyCoordinateLike : TypeConstraint<Or<[AnySignlessInteger.predicate,
-    Index.predicate, fir_IntegerType.predicate, fir_FieldType.predicate,
-    fir_LenType.predicate]>, "any coordinate index">;
-def AnyCoordinateType : Type<AnyCoordinateLike.predicate, "coordinate type">;
-
 // Base class for FIR operations.
 // All operations automatically get a prefix of "fir.".
 class fir_Op<string mnemonic, list<OpTrait> traits>
@@ -2251,7 +2163,7 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
     if (!(type.isa<fir::CharacterType>() || type.isa<mlir::IntegerType>()))
       return parser.emitError(parser.getCurrentLocation(),
                               "must have character type");
-    type = fir::SequenceType::get({sz.getInt()}, type);
+    type = fir::SequenceType::get(type.getContext(), {sz.getInt()}, type, {});
     if (!type || parser.addTypesToList(type, result.types))
       return mlir::failure();
     return mlir::success();
