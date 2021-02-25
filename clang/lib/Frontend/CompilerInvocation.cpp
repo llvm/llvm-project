@@ -1361,8 +1361,8 @@ void CompilerInvocation::GenerateCodeGenArgs(
     GenerateArg(Args, OPT_fdebug_prefix_map_EQ,
                 Prefix.first + "=" + Prefix.second, SA);
 
-  for (const auto &Prefix : Opts.ProfilePrefixMap)
-    GenerateArg(Args, OPT_fprofile_prefix_map_EQ,
+  for (const auto &Prefix : Opts.CoveragePrefixMap)
+    GenerateArg(Args, OPT_fcoverage_prefix_map_EQ,
                 Prefix.first + "=" + Prefix.second, SA);
 
   if (Opts.NewStructPathTBAA)
@@ -1636,9 +1636,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         {std::string(Split.first), std::string(Split.second)});
   }
 
-  for (const auto &Arg : Args.getAllArgValues(OPT_fprofile_prefix_map_EQ)) {
+  for (const auto &Arg : Args.getAllArgValues(OPT_fcoverage_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
-    Opts.ProfilePrefixMap.insert(
+    Opts.CoveragePrefixMap.insert(
         {std::string(Split.first), std::string(Split.second)});
   }
 

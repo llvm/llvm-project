@@ -1603,12 +1603,12 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
 CoverageMappingModuleGen::CoverageMappingModuleGen(
     CodeGenModule &CGM, CoverageSourceInfo &SourceInfo)
     : CGM(CGM), SourceInfo(SourceInfo) {
-  ProfilePrefixMap = CGM.getCodeGenOpts().ProfilePrefixMap;
+  CoveragePrefixMap = CGM.getCodeGenOpts().CoveragePrefixMap;
 }
 
 std::string CoverageMappingModuleGen::getCurrentDirname() {
-  if (!CGM.getCodeGenOpts().ProfileCompilationDir.empty())
-    return CGM.getCodeGenOpts().ProfileCompilationDir;
+  if (!CGM.getCodeGenOpts().CoverageCompilationDir.empty())
+    return CGM.getCodeGenOpts().CoverageCompilationDir;
 
   SmallString<256> CWD;
   llvm::sys::fs::current_path(CWD);
@@ -1618,7 +1618,7 @@ std::string CoverageMappingModuleGen::getCurrentDirname() {
 std::string CoverageMappingModuleGen::normalizeFilename(StringRef Filename) {
   llvm::SmallString<256> Path(Filename);
   llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
-  for (const auto &Entry : ProfilePrefixMap) {
+  for (const auto &Entry : CoveragePrefixMap) {
     if (llvm::sys::path::replace_path_prefix(Path, Entry.first, Entry.second))
       break;
   }
