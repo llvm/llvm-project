@@ -568,7 +568,7 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
           this->CGF->Builder.CreateBitCast(SrcAddr, PtrTy), FT);
       SrcLV = this->CGF->EmitLValueForField(SrcBase, FD);
     } else {
-      llvm::PointerType *Ty = this->CGF->ConvertType(FT)->getPointerTo();
+      llvm::PointerType *Ty = this->CGF->ConvertTypeForMem(FT)->getPointerTo();
       Address DstAddr = this->CGF->Builder.CreateBitCast(Addrs[DstIdx], Ty);
       Address SrcAddr = this->CGF->Builder.CreateBitCast(Addrs[SrcIdx], Ty);
       DstLV = this->CGF->MakeAddrLValue(DstAddr, FT);

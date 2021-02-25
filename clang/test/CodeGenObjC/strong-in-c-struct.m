@@ -79,6 +79,11 @@ typedef struct {
   volatile int a[16];
 } VolatileArray ;
 
+typedef struct {
+  _Bool f0[2];
+  VolatileArray f1;
+} StructWithBool;
+
 #endif
 
 #ifdef USESTRUCT
@@ -536,6 +541,24 @@ void test_copy_constructor_StrongBlock(StrongBlock *s) {
 // CHECK: ret void
 
 void test_copy_assignment_StrongBlock(StrongBlock *d, StrongBlock *s) {
+  *d = *s;
+}
+
+// CHECK-LABEL: define{{.*}} void @test_copy_assignment_StructWithBool(
+// CHECK: call void @__copy_assignment_8_8_AB0s1n2_tv0w8_AE_S_sv8_AB16s4n16_tv128w32_AE(
+
+// CHECK-LABEL: define linkonce_odr hidden void @__copy_assignment_8_8_AB0s1n2_tv0w8_AE_S_sv8_AB16s4n16_tv128w32_AE(
+// CHECK: %[[ADDR_CUR:.*]] = phi i8**
+// CHECK: %[[ADDR_CUR1:.*]] = phi i8**
+
+// CHECK: %[[V4:.*]] = bitcast i8** %[[ADDR_CUR]] to i8*
+// CHECK: %[[V5:.*]] = bitcast i8** %[[ADDR_CUR1]] to i8*
+// CHECK: %[[V6:.*]] = load volatile i8, i8* %[[V5]], align 1
+// CHECK: %[[TOBOOL:.*]] = trunc i8 %[[V6]] to i1
+// CHECK: %[[FROMBOOL:.*]] = zext i1 %[[TOBOOL]] to i8
+// CHECK: store volatile i8 %[[FROMBOOL]], i8* %[[V4]], align 1
+
+void test_copy_assignment_StructWithBool(StructWithBool *d, StructWithBool *s) {
   *d = *s;
 }
 
