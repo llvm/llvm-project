@@ -162,9 +162,9 @@ static LogicalResult verify(FuncOp op) {
 void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
   // Add the attributes of this function to dest.
   llvm::MapVector<Identifier, Attribute> newAttrs;
-  for (auto &attr : dest.getAttrs())
+  for (const auto &attr : dest->getAttrs())
     newAttrs.insert(attr);
-  for (auto &attr : getAttrs())
+  for (const auto &attr : (*this)->getAttrs())
     newAttrs.insert(attr);
   dest->setAttrs(DictionaryAttr::get(getContext(), newAttrs.takeVector()));
 
@@ -233,7 +233,7 @@ ModuleOp ModuleOp::create(Location loc, Optional<StringRef> name) {
 static LogicalResult verify(ModuleOp op) {
   // Check that none of the attributes are non-dialect attributes, except for
   // the symbol related attributes.
-  for (auto attr : op.getAttrs()) {
+  for (auto attr : op->getAttrs()) {
     if (!attr.first.strref().contains('.') &&
         !llvm::is_contained(
             ArrayRef<StringRef>{mlir::SymbolTable::getSymbolAttrName(),

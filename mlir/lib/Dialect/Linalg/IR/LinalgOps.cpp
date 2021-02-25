@@ -457,7 +457,7 @@ static void printGenericOp(OpAsmPrinter &p, GenericOpType op) {
   llvm::StringSet<> genericAttrNamesSet;
   genericAttrNamesSet.insert(genericAttrNames.begin(), genericAttrNames.end());
   SmallVector<NamedAttribute, 8> genericAttrs;
-  for (auto attr : op.getAttrs())
+  for (auto attr : op->getAttrs())
     if (genericAttrNamesSet.count(attr.first.strref()) > 0)
       genericAttrs.push_back(attr);
   if (!genericAttrs.empty()) {
@@ -472,13 +472,13 @@ static void printGenericOp(OpAsmPrinter &p, GenericOpType op) {
   genericAttrNamesSet.insert(genericAttrNames.back());
 
   bool hasExtraAttrs = false;
-  for (NamedAttribute n : op.getAttrs()) {
+  for (NamedAttribute n : op->getAttrs()) {
     if ((hasExtraAttrs = !genericAttrNamesSet.contains(n.first.strref())))
       break;
   }
   if (hasExtraAttrs) {
     p << " attrs = ";
-    p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/genericAttrNames);
+    p.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/genericAttrNames);
   }
 
   // Print region.
@@ -1635,7 +1635,7 @@ static void print(OpAsmPrinter &p, linalg::YieldOp op) {
   p << op.getOperationName();
   if (op.getNumOperands() > 0)
     p << ' ' << op.getOperands();
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
   if (op.getNumOperands() > 0)
     p << " : " << op.getOperandTypes();
 }
@@ -1754,8 +1754,8 @@ static void print(OpAsmPrinter &p, TiledLoopOp op) {
 
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
-      op.getAttrs(), /*elidedAttrs=*/{TiledLoopOp::getOperandSegmentSizeAttr(),
-                                      getIteratorTypesAttrName()});
+      op->getAttrs(), /*elidedAttrs=*/{TiledLoopOp::getOperandSegmentSizeAttr(),
+                                       getIteratorTypesAttrName()});
 }
 
 static ParseResult parseTiledLoopOp(OpAsmParser &parser,
@@ -2294,7 +2294,7 @@ static void printNamedStructuredOpResults(OpAsmPrinter &p,
 template <typename NamedStructuredOpType>
 static void printNamedStructuredOp(OpAsmPrinter &p, NamedStructuredOpType op) {
   p << op.getOperationName();
-  p.printOptionalAttrDict(op.getAttrs(),
+  p.printOptionalAttrDict(op->getAttrs(),
                           /*elidedAttrs=*/{"operand_segment_sizes"});
 
   // Printing is shared with generic ops, except for the region and

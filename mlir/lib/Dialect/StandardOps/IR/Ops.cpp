@@ -603,7 +603,7 @@ static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
   p << op.getOperationName() << ' ' << op.memref() << "[" << op.indices()
     << "] : " << op.memref().getType();
   p.printRegion(op.body());
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1164,9 +1164,9 @@ Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 
 static void print(OpAsmPrinter &p, ConstantOp &op) {
   p << "constant ";
-  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{"value"});
+  p.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/{"value"});
 
-  if (op.getAttrs().size() > 1)
+  if (op->getAttrs().size() > 1)
     p << ' ';
   p << op.getValue();
 
@@ -1599,7 +1599,7 @@ void DmaStartOp::print(OpAsmPrinter &p) {
   if (isStrided())
     p << ", " << getStride() << ", " << getNumElementsPerStride();
 
-  p.printOptionalAttrDict(getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs());
   p << " : " << getSrcMemRef().getType() << ", " << getDstMemRef().getType()
     << ", " << getTagMemRef().getType();
 }
@@ -1763,7 +1763,7 @@ void DmaWaitOp::build(OpBuilder &builder, OperationState &result,
 void DmaWaitOp::print(OpAsmPrinter &p) {
   p << "dma_wait " << getTagMemRef() << '[' << getTagIndices() << "], "
     << getNumElements();
-  p.printOptionalAttrDict(getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs());
   p << " : " << getTagMemRef().getType();
 }
 
@@ -2337,7 +2337,7 @@ static void print(OpAsmPrinter &p, PrefetchOp op) {
   p << ", locality<" << op.localityHint();
   p << ">, " << (op.isDataCache() ? "data" : "instr");
   p.printOptionalAttrDict(
-      op.getAttrs(),
+      op->getAttrs(),
       /*elidedAttrs=*/{"localityHint", "isWrite", "isDataCache"});
   p << " : " << op.getMemRefType();
 }
@@ -2454,7 +2454,7 @@ OpFoldResult SelectOp::fold(ArrayRef<Attribute> operands) {
 
 static void print(OpAsmPrinter &p, SelectOp op) {
   p << "select " << op.getOperands();
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
   p << " : ";
   if (ShapedType condType = op.getCondition().getType().dyn_cast<ShapedType>())
     p << condType << ", ";
@@ -3914,7 +3914,7 @@ void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
 // transpose $in $permutation attr-dict : type($in) `to` type(results)
 static void print(OpAsmPrinter &p, TransposeOp op) {
   p << "transpose " << op.in() << " " << op.permutation();
-  p.printOptionalAttrDict(op.getAttrs(),
+  p.printOptionalAttrDict(op->getAttrs(),
                           {TransposeOp::getPermutationAttrName()});
   p << " : " << op.in().getType() << " to " << op.getType();
 }
@@ -4069,7 +4069,7 @@ static void print(OpAsmPrinter &p, ViewOp op) {
   p << op.getOperationName() << ' ' << op.getOperand(0) << '[';
   p.printOperand(op.byte_shift());
   p << "][" << op.sizes() << ']';
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
   p << " : " << op.getOperand(0).getType() << " to " << op.getType();
 }
 
