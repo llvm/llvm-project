@@ -52,6 +52,7 @@ public:
   void openFile();
   void writeSections();
   void writeUuid();
+  void writeCodeSignature();
 
   void run();
 
@@ -62,6 +63,7 @@ public:
   StringTableSection *stringTableSection = nullptr;
   SymtabSection *symtabSection = nullptr;
   IndirectSymtabSection *indirectSymtabSection = nullptr;
+  CodeSignatureSection *codeSignatureSection = nullptr;
   UnwindInfoSection *unwindInfoSection = nullptr;
   LCUuid *uuidCommand = nullptr;
 };
@@ -400,6 +402,23 @@ public:
   mutable uint8_t *uuidBuf;
 };
 
+class LCCodeSignature : public LoadCommand {
+public:
+  LCCodeSignature(CodeSignatureSection *section) : section(section) {}
+
+  uint32_t getSize() const override { return sizeof(linkedit_data_command); }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<linkedit_data_command *>(buf);
+    c->cmd = LC_CODE_SIGNATURE;
+    c->cmdsize = getSize();
+    c->dataoff = static_cast<uint32_t>(section->fileOff);
+    c->datasize = section->getSize();
+  }
+
+  CodeSignatureSection *section;
+};
+
 } // namespace
 
 static void prepareSymbolRelocation(lld::macho::Symbol *sym,
@@ -521,6 +540,9 @@ void Writer::createLoadCommands() {
     }
   }
 
+  if (codeSignatureSection)
+    in.header->addLoadCommand(make<LCCodeSignature>(codeSignatureSection));
+
   const uint32_t MACOS_MAXPATHLEN = 1024;
   config->headerPad = std::max(
       config->headerPad, (config->headerPadMaxInstallNames
@@ -624,6 +646,7 @@ static int sectionOrder(OutputSection *osec) {
         .Case(section_names::symbolTable, -3)
         .Case(section_names::indirectSymbolTable, -2)
         .Case(section_names::stringTable, -1)
+        .Case(section_names::codeSignature, std::numeric_limits<int>::max())
         .Default(0);
   }
   // ZeroFill sections must always be the at the end of their segments,
@@ -678,6 +701,9 @@ void Writer::createOutputSections() {
   unwindInfoSection = make<UnwindInfoSection>(); // TODO(gkm): only when no -r
   symtabSection = make<SymtabSection>(*stringTableSection);
   indirectSymtabSection = make<IndirectSymtabSection>();
+  if (config->outputType == MH_EXECUTE &&
+      (config->arch == AK_arm64 || config->arch == AK_arm64e))
+    codeSignatureSection = make<CodeSignatureSection>();
 
   switch (config->outputType) {
   case MH_EXECUTE:
@@ -743,6 +769,7 @@ void Writer::assignAddresses(OutputSegment *seg) {
     addr += osec->getSize();
     fileOff += osec->getFileSize();
   }
+  seg->fileSize = fileOff - seg->fileOff;
 }
 
 void Writer::openFile() {
@@ -768,6 +795,11 @@ void Writer::writeUuid() {
   uint64_t digest =
       xxHash64({buffer->getBufferStart(), buffer->getBufferEnd()});
   uuidCommand->writeUuid(digest);
+}
+
+void Writer::writeCodeSignature() {
+  if (codeSignatureSection)
+    codeSignatureSection->writeHashes(buffer->getBufferStart());
 }
 
 void Writer::run() {
@@ -817,6 +849,7 @@ void Writer::run() {
 
   writeSections();
   writeUuid();
+  writeCodeSignature();
 
   if (auto e = buffer->commit())
     error("failed to write to the output file: " + toString(std::move(e)));
