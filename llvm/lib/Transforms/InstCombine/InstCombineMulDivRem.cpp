@@ -1274,6 +1274,37 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
   return BinaryOperator::CreateFDivFMF(NewC, X, &I);
 }
 
+/// Negate the exponent of pow/exp to fold division-by-pow() into multiply.
+static Instruction *foldFDivPowDivisor(BinaryOperator &I,
+                                       InstCombiner::BuilderTy &Builder) {
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  auto *II = dyn_cast<IntrinsicInst>(Op1);
+  if (!II || !II->hasOneUse() || !I.hasAllowReassoc() ||
+      !I.hasAllowReciprocal())
+    return nullptr;
+
+  // Z / pow(X, Y) --> Z * pow(X, -Y)
+  // Z / exp{2}(Y) --> Z * exp{2}(-Y)
+  // In the general case, this creates an extra instruction, but fmul allows
+  // for better canonicalization and optimization than fdiv.
+  Intrinsic::ID IID = II->getIntrinsicID();
+  SmallVector<Value *> Args;
+  switch (IID) {
+  case Intrinsic::pow:
+    Args.push_back(II->getArgOperand(0));
+    Args.push_back(Builder.CreateFNegFMF(II->getArgOperand(1), &I));
+    break;
+  case Intrinsic::exp:
+  case Intrinsic::exp2:
+    Args.push_back(Builder.CreateFNegFMF(II->getArgOperand(0), &I));
+    break;
+  default:
+    return nullptr;
+  }
+  Value *Pow = Builder.CreateIntrinsic(IID, I.getType(), Args, &I);
+  return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
+}
+
 Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
   if (Value *V = SimplifyFDivInst(I.getOperand(0), I.getOperand(1),
                                   I.getFastMathFlags(),
@@ -1325,28 +1356,6 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
     // replaced by a multiplication.
     if (match(Op1, m_FDiv(m_SpecificFP(1.0), m_Value(Y))))
       return BinaryOperator::CreateFMulFMF(Y, Op0, &I);
-
-    // Negate the exponent of pow/exp to fold division-by-pow() into multiply:
-    // Z / pow(X, Y) --> Z * pow(X, -Y)
-    // Z / exp{2}(Y) --> Z * exp{2}(-Y)
-    // In the general case, this creates an extra instruction, but fmul allows
-    // for better canonicalization and optimization than fdiv.
-    if (match(Op1,
-              m_OneUse(m_Intrinsic<Intrinsic::pow>(m_Value(X), m_Value(Y))))) {
-      Value *NegY = Builder.CreateFNegFMF(Y, &I);
-      Value *Pow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, X, NegY, &I);
-      return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
-    }
-    if (match(Op1, m_OneUse(m_Intrinsic<Intrinsic::exp>(m_Value(Y))))) {
-      Value *NegY = Builder.CreateFNegFMF(Y, &I);
-      Value *Pow = Builder.CreateUnaryIntrinsic(Intrinsic::exp, NegY, &I);
-      return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
-    }
-    if (match(Op1, m_OneUse(m_Intrinsic<Intrinsic::exp2>(m_Value(Y))))) {
-      Value *NegY = Builder.CreateFNegFMF(Y, &I);
-      Value *Pow = Builder.CreateUnaryIntrinsic(Intrinsic::exp2, NegY, &I);
-      return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
-    }
   }
 
   if (I.hasAllowReassoc() && Op0->hasOneUse() && Op1->hasOneUse()) {
@@ -1394,6 +1403,10 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
         Intrinsic::copysign, ConstantFP::get(I.getType(), 1.0), X, &I);
     return replaceInstUsesWith(I, V);
   }
+
+  if (Instruction *Mul = foldFDivPowDivisor(I, Builder))
+    return Mul;
+
   return nullptr;
 }
 
