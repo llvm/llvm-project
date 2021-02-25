@@ -1040,6 +1040,9 @@ enum kmp_warnings_level {
 } // extern "C"
 #endif // __cplusplus
 
+// Safe C API
+#include "kmp_safe_c_api.h"
+
 // Macros for C++11 atomic functions
 #define KMP_ATOMIC_LD(p, order) (p)->load(std::memory_order_##order)
 #define KMP_ATOMIC_OP(op, p, v, order) (p)->op(v, std::memory_order_##order)
@@ -1090,5 +1093,3 @@ extern void *__kmp_lookup_symbol(const char *name);
 #endif
 
 #endif /* KMP_OS_H */
-// Safe C API
-#include "kmp_safe_c_api.h"
