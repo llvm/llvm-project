@@ -70,6 +70,7 @@ StringRef AsanDtorKindToString(llvm::AsanDtorKind kind) {
   case llvm::AsanDtorKind::Invalid:
     return "invalid";
   }
+  return "invalid";
 }
 
 llvm::AsanDtorKind AsanDtorKindFromString(StringRef kindStr) {
