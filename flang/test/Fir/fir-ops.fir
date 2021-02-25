@@ -32,9 +32,6 @@ func private @method_impl(!fir.box<!fir.type<derived3{f:f32}>>)
 func private @nop()
 func private @get_func() -> (() -> ())
 
-// CHECK-LABEL: func private @attr1() -> none attributes {a = #fir.opaque<>, b = #fir.opaque<>}
-func private @attr1() -> none attributes {a = #fir.opaque<>, b = #fir.opaque<>}
-
 // CHECK-LABEL:       func @instructions() {
 func @instructions() {
 // CHECK: [[VAL_0:%.*]] = fir.alloca !fir.array<10xi32>
