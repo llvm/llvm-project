@@ -25,7 +25,6 @@ namespace fir {
 class FIROpsDialect;
 
 namespace detail {
-struct OpaqueAttributeStorage;
 struct RealAttributeStorage;
 struct TypeAttributeStorage;
 } // namespace detail
@@ -132,27 +131,6 @@ public:
 
   KindTy getFKind() const;
   llvm::APFloat getValue() const;
-};
-
-/// An opaque attribute is used to provide dictionary lookups of pointers. The
-/// underlying type of the pointee object is left up to the client. Opaque
-/// attributes are always constructed as null pointers when parsing. Clearly,
-/// opaque attributes come with restrictions and must be used with care.
-/// 1. An opaque attribute should not refer to information of semantic
-/// significance, since the pointed-to object will not be a part of
-/// round-tripping the IR.
-/// 2. The lifetime of the pointed-to object must outlive any possible uses
-/// via the opaque attribute.
-class OpaqueAttr
-    : public mlir::Attribute::AttrBase<OpaqueAttr, mlir::Attribute,
-                                       detail::OpaqueAttributeStorage> {
-public:
-  using Base::Base;
-
-  static constexpr llvm::StringRef getAttrName() { return "opaque"; }
-  static OpaqueAttr get(mlir::MLIRContext *ctxt, void *pointer);
-
-  void *getPointer() const;
 };
 
 mlir::Attribute parseFirAttribute(FIROpsDialect *dialect,

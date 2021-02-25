@@ -857,7 +857,7 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
       : PtrUseVisitor(DL), DT(DT), CoroBegin(CB), Checker(Checker) {}
 
   void visit(Instruction &I) {
-    UserBBs.insert(I.getParent());
+    Users.insert(&I);
     Base::visit(I);
     // If the pointer is escaped prior to CoroBegin, we have to assume it would
     // be written into before CoroBegin as well.
@@ -960,6 +960,12 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
     handleAlias(GEPI);
   }
 
+  void visitIntrinsicInst(IntrinsicInst &II) {
+    if (II.getIntrinsicID() != Intrinsic::lifetime_start)
+      return Base::visitIntrinsicInst(II);
+    LifetimeStarts.insert(&II);
+  }
+
   void visitCallBase(CallBase &CB) {
     for (unsigned Op = 0, OpCount = CB.getNumArgOperands(); Op < OpCount; ++Op)
       if (U->get() == CB.getArgOperand(Op) && !CB.doesNotCapture(Op))
@@ -993,18 +999,40 @@ private:
   // after CoroBegin. Each entry contains the instruction and the offset in the
   // original Alloca. They need to be recreated after CoroBegin off the frame.
   DenseMap<Instruction *, llvm::Optional<APInt>> AliasOffetMap{};
-  SmallPtrSet<BasicBlock *, 2> UserBBs{};
+  SmallPtrSet<Instruction *, 4> Users{};
+  SmallPtrSet<IntrinsicInst *, 2> LifetimeStarts{};
   bool MayWriteBeforeCoroBegin{false};
 
   mutable llvm::Optional<bool> ShouldLiveOnFrame{};
 
   bool computeShouldLiveOnFrame() const {
+    // If lifetime information is available, we check it first since it's
+    // more precise. We look at every pair of lifetime.start intrinsic and
+    // every basic block that uses the pointer to see if they cross suspension
+    // points. The uses cover both direct uses as well as indirect uses.
+    if (!LifetimeStarts.empty()) {
+      for (auto *I : Users)
+        for (auto *S : LifetimeStarts)
+          if (Checker.isDefinitionAcrossSuspend(*S, I))
+            return true;
+      return false;
+    }
+    // FIXME: Ideally the isEscaped check should come at the beginning.
+    // However there are a few loose ends that need to be fixed first before
+    // we can do that. We need to make sure we are not over-conservative, so
+    // that the data accessed in-between await_suspend and symmetric transfer
+    // is always put on the stack, and also data accessed after coro.end is
+    // always put on the stack (esp the return object). To fix that, we need
+    // to:
+    //  1) Potentially treat sret as nocapture in calls
+    //  2) Special handle the return object and put it on the stack
+    //  3) Utilize lifetime.end intrinsic
     if (PI.isEscaped())
       return true;
 
-    for (auto *BB1 : UserBBs)
-      for (auto *BB2 : UserBBs)
-        if (Checker.hasPathCrossingSuspendPoint(BB1, BB2))
+    for (auto *U1 : Users)
+      for (auto *U2 : Users)
+        if (Checker.isDefinitionAcrossSuspend(*U1, U2))
           return true;
 
     return false;
@@ -2094,24 +2122,6 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
 static void collectFrameAllocas(Function &F, coro::Shape &Shape,
                                 const SuspendCrossingInfo &Checker,
                                 SmallVectorImpl<AllocaInfo> &Allocas) {
-  // Collect lifetime.start info for each alloca.
-  using LifetimeStart = SmallPtrSet<Instruction *, 2>;
-  llvm::DenseMap<AllocaInst *, std::unique_ptr<LifetimeStart>> LifetimeMap;
-  for (Instruction &I : instructions(F)) {
-    auto *II = dyn_cast<IntrinsicInst>(&I);
-    if (!II || II->getIntrinsicID() != Intrinsic::lifetime_start)
-      continue;
-
-    if (auto *OpInst = dyn_cast<Instruction>(II->getOperand(1))) {
-      if (auto *AI = dyn_cast<AllocaInst>(OpInst->stripPointerCasts())) {
-
-        if (LifetimeMap.find(AI) == LifetimeMap.end())
-          LifetimeMap[AI] = std::make_unique<LifetimeStart>();
-        LifetimeMap[AI]->insert(isa<AllocaInst>(OpInst) ? II : OpInst);
-      }
-    }
-  }
-
   for (Instruction &I : instructions(F)) {
     auto *AI = dyn_cast<AllocaInst>(&I);
     if (!AI)
@@ -2121,23 +2131,6 @@ static void collectFrameAllocas(Function &F, coro::Shape &Shape,
     if (AI == Shape.SwitchLowering.PromiseAlloca) {
       continue;
     }
-    bool ShouldLiveOnFrame = false;
-    auto Iter = LifetimeMap.find(AI);
-    if (Iter != LifetimeMap.end()) {
-      // Check against lifetime.start if the instruction has the info.
-      for (User *U : I.users()) {
-        for (auto *S : *Iter->second)
-          if ((ShouldLiveOnFrame = Checker.isDefinitionAcrossSuspend(*S, U)))
-            break;
-        if (ShouldLiveOnFrame)
-          break;
-      }
-      if (!ShouldLiveOnFrame)
-        continue;
-    }
-    // At this point, either ShouldLiveOnFrame is true or we didn't have
-    // lifetime information. We will need to rely on more precise pointer
-    // tracking.
     DominatorTree DT(F);
     AllocaUseVisitor Visitor{F.getParent()->getDataLayout(), DT,
                              *Shape.CoroBegin, Checker};
