@@ -3972,18 +3972,39 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  // VL and VTYPE are alive here.
-  MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII.get(RISCV::PseudoVSETVLI));
+  auto BuildVSETVLI = [&]() {
+    if (VLIndex >= 0) {
+      Register DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      Register VLReg = MI.getOperand(VLIndex).getReg();
 
-  if (VLIndex >= 0) {
-    // Set VL (rs1 != X0).
-    Register DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    MIB.addReg(DestReg, RegState::Define | RegState::Dead)
-        .addReg(MI.getOperand(VLIndex).getReg());
-  } else
+      // VL might be a compile time constant, but isel would have to put it
+      // in a register. See if VL comes from an ADDI X0, imm.
+      if (VLReg.isVirtual()) {
+        MachineInstr *Def = MRI.getVRegDef(VLReg);
+        if (Def && Def->getOpcode() == RISCV::ADDI &&
+            Def->getOperand(1).getReg() == RISCV::X0 &&
+            Def->getOperand(2).isImm()) {
+          uint64_t Imm = Def->getOperand(2).getImm();
+          // VSETIVLI allows a 5-bit zero extended immediate.
+          if (isUInt<5>(Imm))
+            return BuildMI(*BB, MI, DL, TII.get(RISCV::PseudoVSETIVLI))
+                .addReg(DestReg, RegState::Define | RegState::Dead)
+                .addImm(Imm);
+        }
+      }
+
+      return BuildMI(*BB, MI, DL, TII.get(RISCV::PseudoVSETVLI))
+          .addReg(DestReg, RegState::Define | RegState::Dead)
+          .addReg(VLReg);
+    }
+
     // With no VL operator in the pseudo, do not modify VL (rd = X0, rs1 = X0).
-    MIB.addReg(RISCV::X0, RegState::Define | RegState::Dead)
+    return BuildMI(*BB, MI, DL, TII.get(RISCV::PseudoVSETVLI))
+        .addReg(RISCV::X0, RegState::Define | RegState::Dead)
         .addReg(RISCV::X0, RegState::Kill);
+  };
+
+  MachineInstrBuilder MIB = BuildVSETVLI();
 
   // Default to tail agnostic unless the destination is tied to a source. In
   // that case the user would have some control over the tail values. The tail
