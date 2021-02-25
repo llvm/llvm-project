@@ -4,13 +4,13 @@
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc-guard -mtriple=aarch64-apple-darwin -S -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,MACHO
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc-guard -mtriple=aarch64-apple-darwin -S | FileCheck %s --check-prefixes=CHECK,MACHO
 
-; ELF:        $foo = comdat any
-; ELF:        $CallViaVptr = comdat any
-; ELF:        @__sancov_gen_ = private global [3 x i32] zeroinitializer, section "__sancov_guards", comdat($foo), align 4, !associated !0
-; ELF-NEXT:   @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section "__sancov_guards", comdat($CallViaVptr), align 4, !associated !1
+; ELF:        $foo = comdat noduplicates
+; ELF:        $CallViaVptr = comdat noduplicates
+; ELF:        @__sancov_gen_ = private global [3 x i32] zeroinitializer, section "__sancov_guards", comdat($foo), align 4{{$}}
+; ELF-NEXT:   @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section "__sancov_guards", comdat($CallViaVptr), align 4{{$}}
 
-; MACHO:      @__sancov_gen_ = private global [3 x i32] zeroinitializer, section "__DATA,__sancov_guards", align 4, !associated !0
-; MACHO-NEXT: @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section "__DATA,__sancov_guards", align 4, !associated !1
+; MACHO:      @__sancov_gen_ = private global [3 x i32] zeroinitializer, section "__DATA,__sancov_guards", align 4{{$}}
+; MACHO-NEXT: @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section "__DATA,__sancov_guards", align 4{{$}}
 
 ; ELF-NOT:    @llvm.used =
 ; MACHO:      @llvm.used = appending global [2 x i8*] [i8* bitcast ([3 x i32]* @__sancov_gen_ to i8*), i8* bitcast ([1 x i32]* @__sancov_gen_.1 to i8*)], section "llvm.metadata"
