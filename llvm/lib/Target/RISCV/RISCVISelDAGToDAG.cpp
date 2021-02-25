@@ -1149,6 +1149,24 @@ bool RISCVDAGToDAGISel::selectSExti32(SDValue N, SDValue &Val) {
   return false;
 }
 
+bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
+  if (N.getOpcode() == ISD::AND) {
+    auto *C = dyn_cast<ConstantSDNode>(N.getOperand(1));
+    if (C && CheckAndMask(N.getOperand(0), C, UINT64_C(0xFFFFFFFF))) {
+      Val = N.getOperand(0);
+      return true;
+    }
+  }
+  // FIXME: Should we just call computeKnownBits here?
+  if (N.getOpcode() == ISD::AssertZext &&
+      cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32)) {
+    Val = N;
+    return true;
+  }
+
+  return false;
+}
+
 // Match (srl (and val, mask), imm) where the result would be a
 // zero-extended 32-bit integer. i.e. the mask is 0xffffffff or the result
 // is equivalent to this (SimplifyDemandedBits may have removed lower bits
