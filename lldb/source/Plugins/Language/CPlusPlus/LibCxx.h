@@ -124,7 +124,7 @@ public:
   ~LibcxxUniquePtrSyntheticFrontEnd() override;
 
 private:
-  lldb::ValueObjectSP m_compressed_pair_sp;
+  lldb::ValueObjectSP m_value_ptr_sp;
 };
 
 SyntheticChildrenFrontEnd *
