@@ -994,59 +994,44 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     MVT InVT = V.getSimpleValueType();
     SDLoc DL(V);
 
-    // TODO: This method of selecting EXTRACT_SUBVECTOR should work
-    // with any type of extraction (fixed <-> scalable) but we don't yet
-    // correctly identify the canonical register class for fixed-length types.
-    // For now, keep the two paths separate.
-    if (VT.isScalableVector() && InVT.isScalableVector()) {
-      const auto *TRI = Subtarget->getRegisterInfo();
-      unsigned SubRegIdx;
-      std::tie(SubRegIdx, Idx) =
-          RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
-              InVT, VT, Idx, TRI);
+    MVT SubVecContainerVT = VT;
+    // Establish the correct scalable-vector types for any fixed-length type.
+    if (VT.isFixedLengthVector())
+      SubVecContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
+          *CurDAG, VT, *Subtarget);
+    if (InVT.isFixedLengthVector())
+      InVT = RISCVTargetLowering::getContainerForFixedLengthVector(
+          *CurDAG, InVT, *Subtarget);
 
-      // If the Idx hasn't been completely eliminated then this is a subvector
-      // extract which doesn't naturally align to a vector register. These must
-      // be handled using instructions to manipulate the vector registers.
-      if (Idx != 0)
-        break;
+    const auto *TRI = Subtarget->getRegisterInfo();
+    unsigned SubRegIdx;
+    std::tie(SubRegIdx, Idx) =
+        RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+            InVT, SubVecContainerVT, Idx, TRI);
 
-      // If we haven't set a SubRegIdx, then we must be going between LMUL<=1
-      // types (VR -> VR). This can be done as a copy.
-      if (SubRegIdx == RISCV::NoSubRegister) {
-        unsigned InRegClassID =
-            RISCVTargetLowering::getRegClassIDForVecVT(InVT);
-        assert(RISCVTargetLowering::getRegClassIDForVecVT(VT) ==
-                   RISCV::VRRegClassID &&
-               InRegClassID == RISCV::VRRegClassID &&
-               "Unexpected subvector extraction");
-        SDValue RC =
-            CurDAG->getTargetConstant(InRegClassID, DL, XLenVT);
-        SDNode *NewNode = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
-                                                 DL, VT, V, RC);
-        return ReplaceNode(Node, NewNode);
-      }
-      SDNode *NewNode = CurDAG->getMachineNode(
-          TargetOpcode::EXTRACT_SUBREG, DL, VT, V,
-          CurDAG->getTargetConstant(SubRegIdx, DL, XLenVT));
+    // If the Idx hasn't been completely eliminated then this is a subvector
+    // extract which doesn't naturally align to a vector register. These must
+    // be handled using instructions to manipulate the vector registers.
+    if (Idx != 0)
+      break;
+
+    // If we haven't set a SubRegIdx, then we must be going between
+    // equally-sized LMUL types (e.g. VR -> VR). This can be done as a copy.
+    if (SubRegIdx == RISCV::NoSubRegister) {
+      unsigned InRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(InVT);
+      assert(RISCVTargetLowering::getRegClassIDForVecVT(SubVecContainerVT) ==
+                 InRegClassID &&
+             "Unexpected subvector extraction");
+      SDValue RC = CurDAG->getTargetConstant(InRegClassID, DL, XLenVT);
+      SDNode *NewNode =
+          CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS, DL, VT, V, RC);
       return ReplaceNode(Node, NewNode);
     }
 
-    if (VT.isFixedLengthVector() && InVT.isScalableVector()) {
-      // Bail when not a "cast" like extract_subvector.
-      if (Idx != 0)
-        break;
-
-      unsigned InRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(InVT);
-
-      SDValue RC =
-          CurDAG->getTargetConstant(InRegClassID, DL, Subtarget->getXLenVT());
-      SDNode *NewNode =
-          CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS, DL, VT, V, RC);
-      ReplaceNode(Node, NewNode);
-      return;
-    }
-    break;
+    SDNode *NewNode = CurDAG->getMachineNode(
+        TargetOpcode::EXTRACT_SUBREG, DL, VT, V,
+        CurDAG->getTargetConstant(SubRegIdx, DL, XLenVT));
+    return ReplaceNode(Node, NewNode);
   }
   }
 

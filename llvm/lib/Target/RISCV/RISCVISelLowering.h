@@ -105,8 +105,12 @@ enum NodeType : unsigned {
   SPLAT_VECTOR_I64,
   // Read VLENB CSR
   READ_VLENB,
-  // Truncates a RVV integer vector by one power-of-two.
-  TRUNCATE_VECTOR,
+  // Truncates a RVV integer vector by one power-of-two. Carries both an extra
+  // mask and VL operand.
+  TRUNCATE_VECTOR_VL,
+  // Unit-stride fault-only-first load
+  VLEFF,
+  VLEFF_MASK,
   // Matches the semantics of vslideup/vslidedown. The first operand is the
   // pass-thru operand, the second is the source vector, the third is the
   // XLenVT index (either constant or non-constant), the fourth is the mask
@@ -118,8 +122,9 @@ enum NodeType : unsigned {
   VID_VL,
   // Matches the semantics of the vfcnvt.rod function (Convert double-width
   // float to single-width float, rounding towards odd). Takes a double-width
-  // float vector and produces a single-width float vector.
-  VFNCVT_ROD,
+  // float vector and produces a single-width float vector. Also has a mask and
+  // VL operand.
+  VFNCVT_ROD_VL,
   // These nodes match the semantics of the corresponding RVV vector reduction
   // instructions. They produce a vector result which is the reduction
   // performed over the first vector operand plus the first element of the
@@ -171,6 +176,8 @@ enum NodeType : unsigned {
   UMAX_VL,
   MULHS_VL,
   MULHU_VL,
+  FP_ROUND_VL,
+  FP_EXTEND_VL,
 
   // Vector compare producing a mask. Fourth operand is input mask. Fifth
   // operand is VL.
@@ -190,6 +197,10 @@ enum NodeType : unsigned {
 
   // Matches the semantics of vrgather.vx with an extra operand for VL.
   VRGATHER_VX_VL,
+
+  // Vector sign/zero extend with additional mask & VL operands.
+  VSEXT_VL,
+  VZEXT_VL,
 
   // Memory opcodes start here.
   VLE_VL = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -380,6 +391,8 @@ public:
   decomposeSubvectorInsertExtractToSubRegs(MVT VecVT, MVT SubVecVT,
                                            unsigned InsertExtractIdx,
                                            const RISCVRegisterInfo *TRI);
+  static MVT getContainerForFixedLengthVector(SelectionDAG &DAG, MVT VT,
+                                              const RISCVSubtarget &Subtarget);
 
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
@@ -429,6 +442,8 @@ private:
                                             SelectionDAG &DAG) const;
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG, unsigned NewOpc,
                             bool HasMask = true) const;
+  SDValue lowerFixedLengthVectorExtendToRVV(SDValue Op, SelectionDAG &DAG,
+                                            unsigned ExtendOpc) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,

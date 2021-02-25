@@ -96,6 +96,20 @@ def SDT_RISCVVecFMA_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                               SDTCisVT<5, XLenVT>]>;
 def riscv_fma_vl : SDNode<"RISCVISD::FMA_VL", SDT_RISCVVecFMA_VL, [SDNPCommutative]>;
 
+def SDT_RISCVFPRoundOp_VL  : SDTypeProfile<1, 3, [
+  SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>,
+  SDTCVecEltisVT<2, i1>, SDTCisSameNumEltsAs<1, 2>, SDTCisVT<3, XLenVT>
+]>;
+def SDT_RISCVFPExtendOp_VL  : SDTypeProfile<1, 3, [
+  SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>,
+  SDTCVecEltisVT<2, i1>, SDTCisSameNumEltsAs<1, 2>, SDTCisVT<3, XLenVT>
+]>;
+
+def riscv_fpround_vl : SDNode<"RISCVISD::FP_ROUND_VL", SDT_RISCVFPRoundOp_VL>;
+def riscv_fpextend_vl : SDNode<"RISCVISD::FP_EXTEND_VL", SDT_RISCVFPExtendOp_VL>;
+def riscv_fncvt_rod_vl : SDNode<"RISCVISD::VFNCVT_ROD_VL", SDT_RISCVFPRoundOp_VL>;
+
+
 def riscv_setcc_vl : SDNode<"RISCVISD::SETCC_VL",
                             SDTypeProfile<1, 5, [SDTCVecEltisVT<0, i1>,
                                                  SDTCisVec<1>,
@@ -139,6 +153,21 @@ def true_mask : PatLeaf<(riscv_vmset_vl (XLenVT srcvalue))>;
 
 def riscv_vmnot_vl : PatFrag<(ops node:$rs, node:$vl),
                              (riscv_vmxor_vl node:$rs, true_mask, node:$vl)>;
+
+def SDT_RISCVVEXTEND_VL : SDTypeProfile<1, 3, [SDTCisVec<0>,
+                                               SDTCisSameNumEltsAs<0, 1>,
+                                               SDTCisSameNumEltsAs<1, 2>,
+                                               SDTCVecEltisVT<2, i1>,
+                                               SDTCisVT<3, XLenVT>]>;
+def riscv_sext_vl : SDNode<"RISCVISD::VSEXT_VL", SDT_RISCVVEXTEND_VL>;
+def riscv_zext_vl : SDNode<"RISCVISD::VZEXT_VL", SDT_RISCVVEXTEND_VL>;
+
+def riscv_trunc_vector_vl : SDNode<"RISCVISD::TRUNCATE_VECTOR_VL",
+                                   SDTypeProfile<1, 3, [SDTCisVec<0>,
+                                                        SDTCisVec<1>,
+                                                        SDTCisSameNumEltsAs<0, 2>,
+                                                        SDTCVecEltisVT<2, i1>,
+                                                        SDTCisVT<3, XLenVT>]>>;
 
 // Ignore the vl operand.
 def SplatFPOp : PatFrag<(ops node:$op),
@@ -352,6 +381,18 @@ multiclass VPatFPSetCCVL_VV_VF_FV<CondCode cc,
   }
 }
 
+multiclass VPatExtendSDNode_V_VL<SDNode vop, string inst_name, string suffix,
+                                 list <VTypeInfoToFraction> fraction_list> {
+  foreach vtiTofti = fraction_list in {
+    defvar vti = vtiTofti.Vti;
+    defvar fti = vtiTofti.Fti;
+    def : Pat<(vti.Vector (vop (fti.Vector fti.RegClass:$rs2),
+                               true_mask, (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>(inst_name#"_"#suffix#"_"#vti.LMul.MX)
+                  fti.RegClass:$rs2, GPR:$vl, vti.SEW)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -399,6 +440,20 @@ foreach vti = AllIntegerVectors in {
                  vti.RegClass:$rs1, simm5:$rs2, GPR:$vl, vti.SEW)>;
 }
 
+// 12.3. Vector Integer Extension
+defm "" : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF2",
+                                AllFractionableVF2IntVectors>;
+defm "" : VPatExtendSDNode_V_VL<riscv_sext_vl, "PseudoVSEXT", "VF2",
+                                AllFractionableVF2IntVectors>;
+defm "" : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF4",
+                                AllFractionableVF4IntVectors>;
+defm "" : VPatExtendSDNode_V_VL<riscv_sext_vl, "PseudoVSEXT", "VF4",
+                                AllFractionableVF4IntVectors>;
+defm "" : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF8",
+                                AllFractionableVF8IntVectors>;
+defm "" : VPatExtendSDNode_V_VL<riscv_sext_vl, "PseudoVSEXT", "VF8",
+                                AllFractionableVF8IntVectors>;
+
 // 12.5. Vector Bitwise Logical Instructions
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_and_vl, "PseudoVAND">;
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_or_vl,  "PseudoVOR">;
@@ -408,6 +463,17 @@ defm "" : VPatBinaryVL_VV_VX_VI<riscv_xor_vl, "PseudoVXOR">;
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_shl_vl, "PseudoVSLL", uimm5>;
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_srl_vl, "PseudoVSRL", uimm5>;
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_sra_vl, "PseudoVSRA", uimm5>;
+
+// 12.7. Vector Narrowing Integer Right Shift Instructions
+foreach vtiTofti = AllFractionableVF2IntVectors in {
+  defvar vti = vtiTofti.Vti;
+  defvar fti = vtiTofti.Fti;
+  def : Pat<(fti.Vector (riscv_trunc_vector_vl (vti.Vector vti.RegClass:$rs1),
+                                               (vti.Mask true_mask),
+                                               (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVNSRL_WI_"#fti.LMul.MX)
+                vti.RegClass:$rs1, 0, GPR:$vl, fti.SEW)>;
+}
 
 // 12.8. Vector Integer Comparison Instructions
 foreach vti = AllIntegerVectors in {
@@ -688,6 +754,33 @@ foreach fvti = AllFloatVectors in {
                                 fvti.LMul.MX)
              (fvti.Scalar fvti.ScalarRegClass:$rs2),
              GPR:$vl, fvti.SEW)>;
+
+  // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
+  foreach fvtiToFWti = AllWidenableFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    def : Pat<(fwti.Vector (riscv_fpextend_vl (fvti.Vector fvti.RegClass:$rs1),
+                                              (fvti.Mask true_mask),
+                                              (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>("PseudoVFWCVT_F_F_V_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1, GPR:$vl, fvti.SEW)>;
+  }
+
+  foreach fvtiToFWti = AllWidenableFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    def : Pat<(fvti.Vector (riscv_fpround_vl (fwti.Vector fwti.RegClass:$rs1),
+                                             (fwti.Mask true_mask),
+                                             (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX)
+                  fwti.RegClass:$rs1, GPR:$vl, fvti.SEW)>;
+
+    def : Pat<(fvti.Vector (riscv_fncvt_rod_vl (fwti.Vector fwti.RegClass:$rs1),
+                                               (fwti.Mask true_mask),
+                                               (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>("PseudoVFNCVT_ROD_F_F_W_"#fvti.LMul.MX)
+                  fwti.RegClass:$rs1, GPR:$vl, fvti.SEW)>;
+  }
 }
 
 } // Predicates = [HasStdExtV, HasStdExtF]

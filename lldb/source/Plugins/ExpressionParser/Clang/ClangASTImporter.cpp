@@ -359,9 +359,6 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
   if (!ClangUtil::IsClangType(type))
     return false;
 
-  // TODO: remove external completion BOOL
-  // CompleteAndFetchChildren should get the Decl out and check for the
-
   clang::QualType qual_type(
       ClangUtil::GetCanonicalQualType(ClangUtil::RemoveFastQualifiers(type)));
 
@@ -435,8 +432,6 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
 bool ClangASTImporter::Import(const CompilerType &type) {
   if (!ClangUtil::IsClangType(type))
     return false;
-  // TODO: remove external completion BOOL
-  // CompleteAndFetchChildren should get the Decl out and check for the
 
   clang::QualType qual_type(
       ClangUtil::GetCanonicalQualType(ClangUtil::RemoveFastQualifiers(type)));
@@ -907,16 +902,6 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
   // tell the ASTImporter that 'to' was imported from 'from'.
   MapImported(from, to);
   ASTImporter::Imported(from, to);
-
-  /*
-  if (to_objc_interface)
-      to_objc_interface->startDefinition();
-
-  CXXRecordDecl *to_cxx_record = dyn_cast<CXXRecordDecl>(to);
-
-  if (to_cxx_record)
-      to_cxx_record->startDefinition();
-  */
 
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
 
