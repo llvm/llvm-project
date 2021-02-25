@@ -1154,10 +1154,9 @@ define i64 @vreduce_add_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vredsum.vs v25, v8, v25
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1174,10 +1173,9 @@ define i64 @vreduce_umax_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vredmaxu.vs v25, v8, v25
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1201,8 +1199,7 @@ define i64 @vreduce_smax_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-NEXT:    vor.vv v25, v26, v25
 ; CHECK-NEXT:    vredmax.vs v25, v8, v25
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a2, zero, 1
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
@@ -1220,10 +1217,9 @@ define i64 @vreduce_umin_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-NEXT:    vmv.v.i v25, -1
 ; CHECK-NEXT:    vredminu.vs v25, v8, v25
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1248,8 +1244,7 @@ define i64 @vreduce_smin_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-NEXT:    vor.vv v25, v25, v26
 ; CHECK-NEXT:    vredmin.vs v25, v8, v25
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a2, zero, 1
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
@@ -1267,10 +1262,9 @@ define i64 @vreduce_and_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-NEXT:    vmv.v.i v25, -1
 ; CHECK-NEXT:    vredand.vs v25, v8, v25
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1287,10 +1281,9 @@ define i64 @vreduce_or_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vredor.vs v25, v8, v25
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1307,10 +1300,9 @@ define i64 @vreduce_xor_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vredxor.vs v25, v8, v25
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1329,10 +1321,9 @@ define i64 @vreduce_add_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-NEXT:    vredsum.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1351,10 +1342,9 @@ define i64 @vreduce_umax_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-NEXT:    vredmaxu.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1380,8 +1370,7 @@ define i64 @vreduce_smax_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-NEXT:    vredmax.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a2, zero, 1
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
@@ -1401,10 +1390,9 @@ define i64 @vreduce_umin_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-NEXT:    vredminu.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1431,8 +1419,7 @@ define i64 @vreduce_smin_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-NEXT:    vredmin.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a2, zero, 1
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
@@ -1452,10 +1439,9 @@ define i64 @vreduce_and_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-NEXT:    vredand.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1474,10 +1460,9 @@ define i64 @vreduce_or_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-NEXT:    vredor.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1496,10 +1481,9 @@ define i64 @vreduce_xor_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-NEXT:    vredxor.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1518,10 +1502,9 @@ define i64 @vreduce_add_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-NEXT:    vredsum.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1540,10 +1523,9 @@ define i64 @vreduce_umax_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-NEXT:    vredmaxu.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1569,8 +1551,7 @@ define i64 @vreduce_smax_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-NEXT:    vredmax.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a2, zero, 1
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
@@ -1590,10 +1571,9 @@ define i64 @vreduce_umin_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-NEXT:    vredminu.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1620,8 +1600,7 @@ define i64 @vreduce_smin_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-NEXT:    vredmin.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a2, zero, 1
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
@@ -1641,10 +1620,9 @@ define i64 @vreduce_and_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-NEXT:    vredand.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1663,10 +1641,9 @@ define i64 @vreduce_or_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-NEXT:    vredor.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret
@@ -1685,10 +1662,9 @@ define i64 @vreduce_xor_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-NEXT:    vredxor.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    addi a2, zero, 32
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsrl.vx v25, v25, a2
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    ret

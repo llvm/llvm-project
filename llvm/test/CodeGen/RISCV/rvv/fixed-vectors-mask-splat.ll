@@ -7,8 +7,7 @@
 define void @splat_ones_v1i1(<1 x i1>* %x) {
 ; CHECK-LABEL: splat_ones_v1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 1
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
 ; CHECK-NEXT:    vmset.m v25
 ; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
@@ -19,8 +18,7 @@ define void @splat_ones_v1i1(<1 x i1>* %x) {
 define void @splat_zeros_v2i1(<2 x i1>* %x) {
 ; CHECK-LABEL: splat_zeros_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 2
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
 ; CHECK-NEXT:    vmclr.m v25
 ; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
@@ -31,8 +29,7 @@ define void @splat_zeros_v2i1(<2 x i1>* %x) {
 define void @splat_ones_v4i1(<4 x i1>* %x) {
 ; CHECK-LABEL: splat_ones_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 4
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e8,m1,ta,mu
 ; CHECK-NEXT:    vmset.m v25
 ; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
@@ -43,8 +40,7 @@ define void @splat_ones_v4i1(<4 x i1>* %x) {
 define void @splat_zeros_v8i1(<8 x i1>* %x) {
 ; CHECK-LABEL: splat_zeros_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 8
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
 ; CHECK-NEXT:    vmclr.m v25
 ; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
@@ -55,8 +51,7 @@ define void @splat_zeros_v8i1(<8 x i1>* %x) {
 define void @splat_ones_v16i1(<16 x i1>* %x) {
 ; CHECK-LABEL: splat_ones_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 16
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vmset.m v25
 ; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
@@ -76,8 +71,7 @@ define void @splat_zeros_v32i1(<32 x i1>* %x) {
 ; LMULMAX1-RV32-LABEL: splat_zeros_v32i1:
 ; LMULMAX1-RV32:       # %bb.0:
 ; LMULMAX1-RV32-NEXT:    addi a1, a0, 2
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 16
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vmclr.m v25
 ; LMULMAX1-RV32-NEXT:    vse1.v v25, (a1)
 ; LMULMAX1-RV32-NEXT:    vse1.v v25, (a0)
@@ -86,8 +80,7 @@ define void @splat_zeros_v32i1(<32 x i1>* %x) {
 ; LMULMAX1-RV64-LABEL: splat_zeros_v32i1:
 ; LMULMAX1-RV64:       # %bb.0:
 ; LMULMAX1-RV64-NEXT:    addi a1, a0, 2
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 16
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vmclr.m v25
 ; LMULMAX1-RV64-NEXT:    vse1.v v25, (a1)
 ; LMULMAX1-RV64-NEXT:    vse1.v v25, (a0)
@@ -110,8 +103,7 @@ define void @splat_ones_v64i1(<64 x i1>* %x) {
 ; LMULMAX1-RV32-LABEL: splat_ones_v64i1:
 ; LMULMAX1-RV32:       # %bb.0:
 ; LMULMAX1-RV32-NEXT:    addi a1, a0, 6
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 16
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vmset.m v25
 ; LMULMAX1-RV32-NEXT:    vse1.v v25, (a1)
 ; LMULMAX1-RV32-NEXT:    addi a1, a0, 4
@@ -124,8 +116,7 @@ define void @splat_ones_v64i1(<64 x i1>* %x) {
 ; LMULMAX1-RV64-LABEL: splat_ones_v64i1:
 ; LMULMAX1-RV64:       # %bb.0:
 ; LMULMAX1-RV64-NEXT:    addi a1, a0, 6
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 16
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vmset.m v25
 ; LMULMAX1-RV64-NEXT:    vse1.v v25, (a1)
 ; LMULMAX1-RV64-NEXT:    addi a1, a0, 4
