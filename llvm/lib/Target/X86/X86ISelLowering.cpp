@@ -1468,8 +1468,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     for (auto VT : { MVT::v1i1, MVT::v2i1, MVT::v4i1, MVT::v8i1, MVT::v16i1 }) {
-      setOperationAction(ISD::ADD,              VT, Custom);
-      setOperationAction(ISD::SUB,              VT, Custom);
       setOperationAction(ISD::MUL,              VT, Custom);
       setOperationAction(ISD::UADDSAT,          VT, Custom);
       setOperationAction(ISD::SADDSAT,          VT, Custom);
@@ -27151,10 +27149,6 @@ static SDValue lowerAddSub(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   if (VT == MVT::i16 || VT == MVT::i32)
     return lowerAddSubToHorizontalOp(Op, DAG, Subtarget);
-
-  if (VT.getScalarType() == MVT::i1)
-    return DAG.getNode(ISD::XOR, SDLoc(Op), VT,
-                       Op.getOperand(0), Op.getOperand(1));
 
   if (VT == MVT::v32i16 || VT == MVT::v64i8)
     return splitVectorIntBinary(Op, DAG);
