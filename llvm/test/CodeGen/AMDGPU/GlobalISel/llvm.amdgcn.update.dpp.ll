@@ -20,14 +20,14 @@ define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in1, i32 %in2) 
 ; GFX10-LABEL: dpp_test:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2c
-; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, s4
-; GFX10-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
+; GFX10-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-NEXT:    s_endpgm
   %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 false)
   store i32 %tmp0, i32 addrspace(1)* %out
