@@ -10,9 +10,11 @@ define i32 @smin_test1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smin_test1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SMIN1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[SMIN1]], [[C:%.*]]
-; CHECK-NEXT:    [[SMIN3_NARY:%.*]] = select i1 [[TMP1]], i32 [[SMIN1]], i32 [[C]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMIN1]], [[SMIN3_NARY]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[B]], [[C:%.*]]
+; CHECK-NEXT:    [[SMIN2:%.*]] = select i1 [[C2]], i32 [[B]], i32 [[C]]
+; CHECK-NEXT:    [[C3:%.*]] = icmp slt i32 [[SMIN2]], [[A]]
+; CHECK-NEXT:    [[SMIN3:%.*]] = select i1 [[C3]], i32 [[SMIN2]], i32 [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMIN1]], [[SMIN3]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %c1 = icmp slt i32 %a, %b
@@ -31,9 +33,11 @@ define i32 @smin_test2(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smin_test2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SMIN1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[SMIN1]], [[C:%.*]]
-; CHECK-NEXT:    [[SMIN3_NARY:%.*]] = select i1 [[TMP1]], i32 [[SMIN1]], i32 [[C]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMIN1]], [[SMIN3_NARY]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[A]], [[C:%.*]]
+; CHECK-NEXT:    [[SMIN2:%.*]] = select i1 [[C2]], i32 [[A]], i32 [[C]]
+; CHECK-NEXT:    [[C3:%.*]] = icmp slt i32 [[B]], [[SMIN2]]
+; CHECK-NEXT:    [[SMIN3:%.*]] = select i1 [[C3]], i32 [[B]], i32 [[SMIN2]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMIN1]], [[SMIN3]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %c1 = icmp slt i32 %a, %b
@@ -50,9 +54,9 @@ define i32 @smin_test2(i32 %a, i32 %b, i32 %c) {
 define i32 @smin_test3(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smin_test3(
 ; CHECK-NEXT:    [[SMIN1:%.*]] = call i32 @llvm.smin.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[SMIN1]], [[C:%.*]]
-; CHECK-NEXT:    [[SMIN3_NARY:%.*]] = select i1 [[TMP1]], i32 [[SMIN1]], i32 [[C]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMIN1]], [[SMIN3_NARY]]
+; CHECK-NEXT:    [[SMIN2:%.*]] = call i32 @llvm.smin.i32(i32 [[B]], i32 [[C:%.*]])
+; CHECK-NEXT:    [[SMIN3:%.*]] = call i32 @llvm.smin.i32(i32 [[SMIN2]], i32 [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMIN1]], [[SMIN3]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %smin1 = call i32 @llvm.smin.i32(i32 %a, i32 %b)
@@ -68,9 +72,11 @@ define i32 @umin_test4(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @umin_test4(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SMIN1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[SMIN1]], [[C:%.*]]
-; CHECK-NEXT:    [[SMIN3_NARY:%.*]] = select i1 [[TMP1]], i32 [[SMIN1]], i32 [[C]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMIN1]], [[SMIN3_NARY]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp sle i32 [[B]], [[C:%.*]]
+; CHECK-NEXT:    [[SMIN_OR_EQ2:%.*]] = select i1 [[C2]], i32 [[B]], i32 [[C]]
+; CHECK-NEXT:    [[C3:%.*]] = icmp slt i32 [[SMIN_OR_EQ2]], [[A]]
+; CHECK-NEXT:    [[SMIN3:%.*]] = select i1 [[C3]], i32 [[SMIN_OR_EQ2]], i32 [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMIN1]], [[SMIN3]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %c1 = icmp slt i32 %a, %b
@@ -89,9 +95,11 @@ define i32 @smin_test5(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smin_test5(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sle i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SMIN_OR_EQ1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[SMIN_OR_EQ1]], [[C:%.*]]
-; CHECK-NEXT:    [[SMIN_OR_EQ3_NARY:%.*]] = select i1 [[TMP1]], i32 [[SMIN_OR_EQ1]], i32 [[C]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMIN_OR_EQ1]], [[SMIN_OR_EQ3_NARY]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[B]], [[C:%.*]]
+; CHECK-NEXT:    [[SMIN2:%.*]] = select i1 [[C2]], i32 [[B]], i32 [[C]]
+; CHECK-NEXT:    [[C3:%.*]] = icmp sle i32 [[SMIN2]], [[A]]
+; CHECK-NEXT:    [[SMIN_OR_EQ3:%.*]] = select i1 [[C3]], i32 [[SMIN2]], i32 [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMIN_OR_EQ1]], [[SMIN_OR_EQ3]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %c1 = icmp sle i32 %a, %b
