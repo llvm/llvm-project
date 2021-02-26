@@ -9,7 +9,6 @@ define i8 @extractelt_v16i8(<16 x i8>* %x) nounwind {
 ; RV32-NEXT:    vle8.v v25, (a0)
 ; RV32-NEXT:    vsetivli a0, 1, e8,m1,ta,mu
 ; RV32-NEXT:    vslidedown.vi v25, v25, 7
-; RV32-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
 ; RV32-NEXT:    ret
 ;
@@ -19,7 +18,6 @@ define i8 @extractelt_v16i8(<16 x i8>* %x) nounwind {
 ; RV64-NEXT:    vle8.v v25, (a0)
 ; RV64-NEXT:    vsetivli a0, 1, e8,m1,ta,mu
 ; RV64-NEXT:    vslidedown.vi v25, v25, 7
-; RV64-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; RV64-NEXT:    vmv.x.s a0, v25
 ; RV64-NEXT:    ret
   %a = load <16 x i8>, <16 x i8>* %x
@@ -34,7 +32,6 @@ define i16 @extractelt_v8i16(<8 x i16>* %x) nounwind {
 ; RV32-NEXT:    vle16.v v25, (a0)
 ; RV32-NEXT:    vsetivli a0, 1, e16,m1,ta,mu
 ; RV32-NEXT:    vslidedown.vi v25, v25, 7
-; RV32-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
 ; RV32-NEXT:    ret
 ;
@@ -44,7 +41,6 @@ define i16 @extractelt_v8i16(<8 x i16>* %x) nounwind {
 ; RV64-NEXT:    vle16.v v25, (a0)
 ; RV64-NEXT:    vsetivli a0, 1, e16,m1,ta,mu
 ; RV64-NEXT:    vslidedown.vi v25, v25, 7
-; RV64-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; RV64-NEXT:    vmv.x.s a0, v25
 ; RV64-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
@@ -59,7 +55,6 @@ define i32 @extractelt_v4i32(<4 x i32>* %x) nounwind {
 ; RV32-NEXT:    vle32.v v25, (a0)
 ; RV32-NEXT:    vsetivli a0, 1, e32,m1,ta,mu
 ; RV32-NEXT:    vslidedown.vi v25, v25, 2
-; RV32-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
 ; RV32-NEXT:    ret
 ;
@@ -69,7 +64,6 @@ define i32 @extractelt_v4i32(<4 x i32>* %x) nounwind {
 ; RV64-NEXT:    vle32.v v25, (a0)
 ; RV64-NEXT:    vsetivli a0, 1, e32,m1,ta,mu
 ; RV64-NEXT:    vslidedown.vi v25, v25, 2
-; RV64-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; RV64-NEXT:    vmv.x.s a0, v25
 ; RV64-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
@@ -82,12 +76,10 @@ define i64 @extractelt_v2i64(<2 x i64>* %x) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
-; RV32-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
 ; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
-; RV32-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a1, v25
 ; RV32-NEXT:    ret
 ;
@@ -95,7 +87,6 @@ define i64 @extractelt_v2i64(<2 x i64>* %x) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; RV64-NEXT:    vle64.v v25, (a0)
-; RV64-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV64-NEXT:    vmv.x.s a0, v25
 ; RV64-NEXT:    ret
   %a = load <2 x i64>, <2 x i64>* %x
@@ -111,7 +102,6 @@ define i8 @extractelt_v32i8(<32 x i8>* %x) nounwind {
 ; RV32-NEXT:    vle8.v v26, (a0)
 ; RV32-NEXT:    vsetivli a0, 1, e8,m2,ta,mu
 ; RV32-NEXT:    vslidedown.vi v26, v26, 7
-; RV32-NEXT:    vsetvli zero, zero, e8,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v26
 ; RV32-NEXT:    ret
 ;
@@ -122,7 +112,6 @@ define i8 @extractelt_v32i8(<32 x i8>* %x) nounwind {
 ; RV64-NEXT:    vle8.v v26, (a0)
 ; RV64-NEXT:    vsetivli a0, 1, e8,m2,ta,mu
 ; RV64-NEXT:    vslidedown.vi v26, v26, 7
-; RV64-NEXT:    vsetvli zero, zero, e8,m2,ta,mu
 ; RV64-NEXT:    vmv.x.s a0, v26
 ; RV64-NEXT:    ret
   %a = load <32 x i8>, <32 x i8>* %x
@@ -137,7 +126,6 @@ define i16 @extractelt_v16i16(<16 x i16>* %x) nounwind {
 ; RV32-NEXT:    vle16.v v26, (a0)
 ; RV32-NEXT:    vsetivli a0, 1, e16,m2,ta,mu
 ; RV32-NEXT:    vslidedown.vi v26, v26, 7
-; RV32-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v26
 ; RV32-NEXT:    ret
 ;
@@ -147,7 +135,6 @@ define i16 @extractelt_v16i16(<16 x i16>* %x) nounwind {
 ; RV64-NEXT:    vle16.v v26, (a0)
 ; RV64-NEXT:    vsetivli a0, 1, e16,m2,ta,mu
 ; RV64-NEXT:    vslidedown.vi v26, v26, 7
-; RV64-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; RV64-NEXT:    vmv.x.s a0, v26
 ; RV64-NEXT:    ret
   %a = load <16 x i16>, <16 x i16>* %x
@@ -162,7 +149,6 @@ define i32 @extractelt_v8i32(<8 x i32>* %x) nounwind {
 ; RV32-NEXT:    vle32.v v26, (a0)
 ; RV32-NEXT:    vsetivli a0, 1, e32,m2,ta,mu
 ; RV32-NEXT:    vslidedown.vi v26, v26, 6
-; RV32-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v26
 ; RV32-NEXT:    ret
 ;
@@ -172,7 +158,6 @@ define i32 @extractelt_v8i32(<8 x i32>* %x) nounwind {
 ; RV64-NEXT:    vle32.v v26, (a0)
 ; RV64-NEXT:    vsetivli a0, 1, e32,m2,ta,mu
 ; RV64-NEXT:    vslidedown.vi v26, v26, 6
-; RV64-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; RV64-NEXT:    vmv.x.s a0, v26
 ; RV64-NEXT:    ret
   %a = load <8 x i32>, <8 x i32>* %x
@@ -187,12 +172,9 @@ define i64 @extractelt_v4i64(<4 x i64>* %x) nounwind {
 ; RV32-NEXT:    vle64.v v26, (a0)
 ; RV32-NEXT:    vsetivli a0, 1, e64,m2,ta,mu
 ; RV32-NEXT:    vslidedown.vi v26, v26, 3
-; RV32-NEXT:    vsetvli zero, zero, e64,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v26
 ; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsetivli a2, 1, e64,m2,ta,mu
 ; RV32-NEXT:    vsrl.vx v26, v26, a1
-; RV32-NEXT:    vsetvli zero, zero, e64,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    ret
 ;
@@ -202,7 +184,6 @@ define i64 @extractelt_v4i64(<4 x i64>* %x) nounwind {
 ; RV64-NEXT:    vle64.v v26, (a0)
 ; RV64-NEXT:    vsetivli a0, 1, e64,m2,ta,mu
 ; RV64-NEXT:    vslidedown.vi v26, v26, 3
-; RV64-NEXT:    vsetvli zero, zero, e64,m2,ta,mu
 ; RV64-NEXT:    vmv.x.s a0, v26
 ; RV64-NEXT:    ret
   %a = load <4 x i64>, <4 x i64>* %x
@@ -221,11 +202,8 @@ define i64 @extractelt_v3i64(<3 x i64>* %x) nounwind {
 ; RV32-NEXT:    vle32.v v26, (a0)
 ; RV32-NEXT:    vsetivli a0, 1, e32,m2,ta,mu
 ; RV32-NEXT:    vslidedown.vi v28, v26, 4
-; RV32-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v28
-; RV32-NEXT:    vsetivli a1, 1, e32,m2,ta,mu
 ; RV32-NEXT:    vslidedown.vi v26, v26, 5
-; RV32-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    ret
 ;
@@ -235,7 +213,6 @@ define i64 @extractelt_v3i64(<3 x i64>* %x) nounwind {
 ; RV64-NEXT:    vle64.v v26, (a0)
 ; RV64-NEXT:    vsetivli a0, 1, e64,m2,ta,mu
 ; RV64-NEXT:    vslidedown.vi v26, v26, 2
-; RV64-NEXT:    vsetvli zero, zero, e64,m2,ta,mu
 ; RV64-NEXT:    vmv.x.s a0, v26
 ; RV64-NEXT:    ret
   %a = load <3 x i64>, <3 x i64>* %x

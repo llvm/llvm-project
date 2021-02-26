@@ -12102,6 +12102,11 @@ static void diagnoseXorMisusedAsPow(Sema &S, const ExprResult &XorLHS,
   if (Loc.isMacroID())
     return;
 
+  // Do not diagnose if both LHS and RHS are macros.
+  if (XorLHS.get()->getExprLoc().isMacroID() &&
+      XorRHS.get()->getExprLoc().isMacroID())
+    return;
+
   bool Negative = false;
   bool ExplicitPlus = false;
   const auto *LHSInt = dyn_cast<IntegerLiteral>(XorLHS.get());

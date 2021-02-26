@@ -1014,8 +1014,8 @@ void OpEmitter::genNamedRegionGetters() {
 
     // Generate the accessors for a variadic region.
     if (region.isVariadic()) {
-      auto *m = opClass.addMethodAndPrune("::mlir::MutableArrayRef<Region>",
-                                          region.name);
+      auto *m = opClass.addMethodAndPrune(
+          "::mlir::MutableArrayRef<::mlir::Region>", region.name);
       m->body() << formatv("  return (*this)->getRegions().drop_front({0});",
                            i);
       continue;

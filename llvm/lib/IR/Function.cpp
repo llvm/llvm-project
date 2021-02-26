@@ -31,6 +31,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -51,6 +52,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -1578,9 +1580,12 @@ Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 
 /// hasAddressTaken - returns true if there are any uses of this function
 /// other than direct calls or invokes to it. Optionally ignores callback
-/// uses.
+/// uses, assume like pointer annotation calls, and references in llvm.used
+/// and llvm.compiler.used variables.
 bool Function::hasAddressTaken(const User **PutOffender,
-                               bool IgnoreCallbackUses) const {
+                               bool IgnoreCallbackUses,
+                               bool IgnoreAssumeLikeCalls,
+                               bool IgnoreLLVMUsed) const {
   for (const Use &U : uses()) {
     const User *FU = U.getUser();
     if (isa<BlockAddress>(FU))
@@ -1594,6 +1599,31 @@ bool Function::hasAddressTaken(const User **PutOffender,
 
     const auto *Call = dyn_cast<CallBase>(FU);
     if (!Call) {
+      if (IgnoreAssumeLikeCalls) {
+        if (const auto *FI = dyn_cast<Instruction>(FU)) {
+          if (FI->isCast() && !FI->user_empty() &&
+              llvm::all_of(FU->users(), [](const User *U) {
+                if (const auto *I = dyn_cast<IntrinsicInst>(U))
+                  return I->isAssumeLikeIntrinsic();
+                return false;
+              }))
+            continue;
+        }
+      }
+      if (IgnoreLLVMUsed && !FU->user_empty()) {
+        const User *FUU = FU;
+        if (isa<BitCastOperator>(FU) && FU->hasOneUse() &&
+            !FU->user_begin()->user_empty())
+          FUU = *FU->user_begin();
+        if (llvm::all_of(FUU->users(), [](const User *U) {
+              if (const auto *GV = dyn_cast<GlobalVariable>(U))
+                return GV->hasName() &&
+                       (GV->getName().equals("llvm.compiler.used") ||
+                        GV->getName().equals("llvm.used"));
+              return false;
+            }))
+          continue;
+      }
       if (PutOffender)
         *PutOffender = FU;
       return true;
