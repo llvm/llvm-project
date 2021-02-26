@@ -99,7 +99,7 @@ unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
   return SS;
 }
 
-bool VirtRegMap::hasPreferredPhys(Register VirtReg) {
+bool VirtRegMap::hasPreferredPhys(Register VirtReg) const {
   Register Hint = MRI->getSimpleHint(VirtReg);
   if (!Hint.isValid())
     return false;
@@ -108,7 +108,7 @@ bool VirtRegMap::hasPreferredPhys(Register VirtReg) {
   return Register(getPhys(VirtReg)) == Hint;
 }
 
-bool VirtRegMap::hasKnownPreference(Register VirtReg) {
+bool VirtRegMap::hasKnownPreference(Register VirtReg) const {
   std::pair<unsigned, unsigned> Hint = MRI->getRegAllocationHint(VirtReg);
   if (Register::isPhysicalRegister(Hint.second))
     return true;
