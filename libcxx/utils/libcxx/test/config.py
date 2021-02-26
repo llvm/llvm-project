@@ -109,7 +109,7 @@ class Configuration(object):
 
     def make_static_lib_name(self, name):
         """Return the full filename for the specified library name"""
-        if self.target_info.is_windows():
+        if self.target_info.is_windows() and not self.target_info.is_mingw():
             assert name == 'c++'  # Only allow libc++ to use this function for now.
             return 'lib' + name + '.lib'
         else:
@@ -382,9 +382,12 @@ class Configuration(object):
 
         # Configure libraries
         if self.cxx_stdlib_under_test == 'libc++':
-            self.cxx.link_flags += ['-nodefaultlibs']
+            if self.target_info.is_mingw():
+                self.cxx.link_flags += ['-nostdlib++']
+            else:
+                self.cxx.link_flags += ['-nodefaultlibs']
             # FIXME: Handle MSVCRT as part of the ABI library handling.
-            if self.target_info.is_windows():
+            if self.target_info.is_windows() and not self.target_info.is_mingw():
                 self.cxx.link_flags += ['-nostdlib']
             self.configure_link_flags_cxx_library()
             self.configure_link_flags_abi_library()
