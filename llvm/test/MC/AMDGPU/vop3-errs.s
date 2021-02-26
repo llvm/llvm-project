@@ -43,9 +43,6 @@ v_cmp_eq_f32_e64 vcc, v0, v1 mul:2
 v_cmp_le_f64_e64 vcc, v0, v1 mul:4
 // GCN: error: invalid operand for instruction
 
-v_cvt_u32_f32_e64 v0, v1 div:2
-// GCN: error: invalid operand for instruction
-
 //
 // mul
 //
