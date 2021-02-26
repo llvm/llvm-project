@@ -1081,11 +1081,11 @@ class NoMemoryMapper {
 
   NoMemoryMapper() : last_request_buffer_size(0) {}
 
-  uptr MapPackedCounterArrayBuffer(uptr buffer_size) {
+  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
     last_request_buffer_size = buffer_size;
-    return 0;
+    return nullptr;
   }
-  void UnmapPackedCounterArrayBuffer(uptr buffer, uptr buffer_size) {}
+  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {}
 };
 
 class RedZoneMemoryMapper {
@@ -1100,14 +1100,15 @@ class RedZoneMemoryMapper {
     UnmapOrDie(buffer, 3 * GetPageSize());
   }
 
-  uptr MapPackedCounterArrayBuffer(uptr buffer_size) {
+  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
     const auto page_size = GetPageSize();
     CHECK_EQ(buffer_size, page_size);
-    memset(reinterpret_cast<void*>(reinterpret_cast<uptr>(buffer) + page_size),
-           0, page_size);
-    return reinterpret_cast<uptr>(buffer) + page_size;
+    void *p =
+        reinterpret_cast<void *>(reinterpret_cast<uptr>(buffer) + page_size);
+    memset(p, 0, page_size);
+    return p;
   }
-  void UnmapPackedCounterArrayBuffer(uptr buffer, uptr buffer_size) {}
+  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {}
 
  private:
   void *buffer;
@@ -1227,12 +1228,12 @@ class ReleasedPagesTrackingMemoryMapper {
  public:
   std::set<u32> reported_pages;
 
-  uptr MapPackedCounterArrayBuffer(uptr buffer_size) {
+  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
     reported_pages.clear();
-    return reinterpret_cast<uptr>(calloc(1, buffer_size));
+    return calloc(1, buffer_size);
   }
-  void UnmapPackedCounterArrayBuffer(uptr buffer, uptr buffer_size) {
-    free(reinterpret_cast<void*>(buffer));
+  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {
+    free(buffer);
   }
 
   void ReleasePageRangeToOS(u32 from, u32 to) {
