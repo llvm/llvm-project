@@ -3016,3 +3016,55 @@ func @should_not_fuse_src_loop_nest_return_value(
 
   return
 }
+
+// -----
+
+func private @some_function(memref<16xf32>)
+func @call_op_prevents_fusion(%arg0: memref<16xf32>){
+  %A = alloc() : memref<16xf32>
+  %cst_1 = constant 1.000000e+00 : f32
+  affine.for %arg1 = 0 to 16 {
+    %a = affine.load %arg0[%arg1] : memref<16xf32>
+    affine.store %a, %A[%arg1] : memref<16xf32>
+  }
+  call @some_function(%A) : (memref<16xf32>) -> ()
+  %B = alloc() : memref<16xf32>
+  affine.for %arg1 = 0 to 16 {
+    %a = affine.load %A[%arg1] : memref<16xf32>
+    %b = addf %cst_1, %a : f32
+    affine.store %b, %B[%arg1] : memref<16xf32>
+  }
+  return
+}
+// CHECK-LABEL: func @call_op_prevents_fusion
+// CHECK:         affine.for
+// CHECK-NEXT:      affine.load
+// CHECK-NEXT:      affine.store
+// CHECK:         call
+// CHECK:         affine.for
+// CHECK-NEXT:      affine.load
+// CHECK-NEXT:      addf
+// CHECK-NEXT:      affine.store
+
+// -----
+
+func private @some_function()
+func @call_op_does_not_prevent_fusion(%arg0: memref<16xf32>){
+  %A = alloc() : memref<16xf32>
+  %cst_1 = constant 1.000000e+00 : f32
+  affine.for %arg1 = 0 to 16 {
+    %a = affine.load %arg0[%arg1] : memref<16xf32>
+    affine.store %a, %A[%arg1] : memref<16xf32>
+  }
+  call @some_function() : () -> ()
+  %B = alloc() : memref<16xf32>
+  affine.for %arg1 = 0 to 16 {
+    %a = affine.load %A[%arg1] : memref<16xf32>
+    %b = addf %cst_1, %a : f32
+    affine.store %b, %B[%arg1] : memref<16xf32>
+  }
+  return
+}
+// CHECK-LABEL: func @call_op_does_not_prevent_fusion
+// CHECK:         affine.for
+// CHECK-NOT:     affine.for
