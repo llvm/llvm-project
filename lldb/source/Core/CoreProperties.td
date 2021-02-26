@@ -51,6 +51,10 @@ let Definition = "debugger" in {
     DefaultEnumValue<"Debugger::eStopDisassemblyTypeNoDebugInfo">,
     EnumValues<"OptionEnumValues(g_show_disassembly_enum_values)">,
     Desc<"Control when to display disassembly when displaying a stopped context.">;
+  def StopDisassemblyMaxSize: Property<"stop-disassembly-max-size", "UInt64">,
+    Global,
+    DefaultUnsignedValue<32000>,
+    Desc<"The size limit to use when disassembling large functions (default: 32KB).">;
   def StopLineCountAfter: Property<"stop-line-count-after", "SInt64">,
     Global,
     DefaultUnsignedValue<3>,
