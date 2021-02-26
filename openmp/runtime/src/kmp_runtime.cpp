@@ -1580,6 +1580,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         parent_team->t.t_region_time = tmp_time;
       }
       if (__itt_stack_caller_create_ptr) {
+        KMP_DEBUG_ASSERT(parent_team->t.t_stack_id == NULL);
         // create new stack stitching id before entering fork barrier
         parent_team->t.t_stack_id = __kmp_itt_stack_caller_create();
       }
@@ -1619,12 +1620,13 @@ int __kmp_fork_call(ident_t *loc, int gtid,
     }
 #endif
 
+    int enter_teams = 0;
     if (parent_team->t.t_active_level >=
         master_th->th.th_current_task->td_icvs.max_active_levels) {
       nthreads = 1;
     } else {
-      int enter_teams = ((ap == NULL && active_level == 0) ||
-                         (ap && teams_level > 0 && teams_level == level));
+      enter_teams = ((ap == NULL && active_level == 0) ||
+                     (ap && teams_level > 0 && teams_level == level));
       nthreads =
           master_set_numthreads
               ? master_set_numthreads
@@ -2143,9 +2145,18 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 
 #if USE_ITT_BUILD
     if (__itt_stack_caller_create_ptr) {
-      team->t.t_stack_id =
-          __kmp_itt_stack_caller_create(); // create new stack stitching id
-      // before entering fork barrier
+      // create new stack stitching id before entering fork barrier
+      if (!enter_teams) {
+        KMP_DEBUG_ASSERT(team->t.t_stack_id == NULL);
+        team->t.t_stack_id = __kmp_itt_stack_caller_create();
+      } else if (parent_team->t.t_serialized) {
+        // keep stack stitching id in the serialized parent_team;
+        // current team will be used for parallel inside the teams;
+        // if parent_team is active, then it already keeps stack stitching id
+        // for the league of teams
+        KMP_DEBUG_ASSERT(parent_team->t.t_stack_id == NULL);
+        parent_team->t.t_stack_id = __kmp_itt_stack_caller_create();
+      }
     }
 #endif /* USE_ITT_BUILD */
 
@@ -2305,9 +2316,27 @@ void __kmp_join_call(ident_t *loc, int gtid
     // AC: No barrier for internal teams at exit from teams construct.
     //     But there is barrier for external team (league).
     __kmp_internal_join(loc, gtid, team);
+#if USE_ITT_BUILD
+    if (__itt_stack_caller_create_ptr) {
+      KMP_DEBUG_ASSERT(team->t.t_stack_id != NULL);
+      // destroy the stack stitching id after join barrier
+      __kmp_itt_stack_caller_destroy((__itt_caller)team->t.t_stack_id);
+      team->t.t_stack_id = NULL;
+    }
+#endif
   } else {
     master_th->th.th_task_state =
         0; // AC: no tasking in teams (out of any parallel)
+#if USE_ITT_BUILD
+    if (__itt_stack_caller_create_ptr && parent_team->t.t_serialized) {
+      KMP_DEBUG_ASSERT(parent_team->t.t_stack_id != NULL);
+      // destroy the stack stitching id on exit from the teams construct
+      // if parent_team is active, then the id will be destroyed later on
+      // by master of the league of teams
+      __kmp_itt_stack_caller_destroy((__itt_caller)parent_team->t.t_stack_id);
+      parent_team->t.t_stack_id = NULL;
+    }
+#endif
   }
 
   KMP_MB();
@@ -2318,10 +2347,6 @@ void __kmp_join_call(ident_t *loc, int gtid
 #endif
 
 #if USE_ITT_BUILD
-  if (__itt_stack_caller_create_ptr) {
-    // destroy the stack stitching id after join barrier
-    __kmp_itt_stack_caller_destroy((__itt_caller)team->t.t_stack_id);
-  }
   // Mark end of "parallel" region for Intel(R) VTune(TM) analyzer.
   if (team->t.t_active_level == 1 &&
       (!master_th->th.th_teams_microtask || /* not in teams construct */
@@ -7199,9 +7224,14 @@ int __kmp_invoke_task_func(int gtid) {
   __kmp_run_before_invoked_task(gtid, tid, this_thr, team);
 #if USE_ITT_BUILD
   if (__itt_stack_caller_create_ptr) {
-    __kmp_itt_stack_callee_enter(
-        (__itt_caller)
-            team->t.t_stack_id); // inform ittnotify about entering user's code
+    // inform ittnotify about entering user's code
+    if (team->t.t_stack_id != NULL) {
+      __kmp_itt_stack_callee_enter((__itt_caller)team->t.t_stack_id);
+    } else {
+      KMP_DEBUG_ASSERT(team->t.t_parent->t.t_stack_id != NULL);
+      __kmp_itt_stack_callee_enter(
+          (__itt_caller)team->t.t_parent->t.t_stack_id);
+    }
   }
 #endif /* USE_ITT_BUILD */
 #if INCLUDE_SSC_MARKS
@@ -7265,9 +7295,14 @@ int __kmp_invoke_task_func(int gtid) {
 
 #if USE_ITT_BUILD
   if (__itt_stack_caller_create_ptr) {
-    __kmp_itt_stack_callee_leave(
-        (__itt_caller)
-            team->t.t_stack_id); // inform ittnotify about leaving user's code
+    // inform ittnotify about leaving user's code
+    if (team->t.t_stack_id != NULL) {
+      __kmp_itt_stack_callee_leave((__itt_caller)team->t.t_stack_id);
+    } else {
+      KMP_DEBUG_ASSERT(team->t.t_parent->t.t_stack_id != NULL);
+      __kmp_itt_stack_callee_leave(
+          (__itt_caller)team->t.t_parent->t.t_stack_id);
+    }
   }
 #endif /* USE_ITT_BUILD */
   __kmp_run_after_invoked_task(gtid, tid, this_thr, team);
