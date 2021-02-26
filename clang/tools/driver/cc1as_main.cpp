@@ -240,8 +240,9 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
       std::string(Args.getLastArgValue(OPT_dwarf_debug_flags));
   Opts.DwarfDebugProducer =
       std::string(Args.getLastArgValue(OPT_dwarf_debug_producer));
-  Opts.DebugCompilationDir =
-      std::string(Args.getLastArgValue(OPT_fdebug_compilation_dir));
+  if (const Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
+                                     options::OPT_fdebug_compilation_dir_EQ))
+    Opts.DebugCompilationDir = A->getValue();
   Opts.MainFileName = std::string(Args.getLastArgValue(OPT_main_file_name));
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {

@@ -1010,12 +1010,13 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
     return Args.MakeArgString(T);
   } else {
     // Use the compilation dir.
-    SmallString<128> T(
-        Args.getLastArgValue(options::OPT_fdebug_compilation_dir_EQ));
+    Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
+                             options::OPT_fdebug_compilation_dir_EQ);
+    SmallString<128> T(A ? A->getValue() : "");
     SmallString<128> F(llvm::sys::path::stem(Input.getBaseInput()));
     AddPostfix(F);
     T += F;
-    return Args.MakeArgString(F);
+    return Args.MakeArgString(T);
   }
 }
 
