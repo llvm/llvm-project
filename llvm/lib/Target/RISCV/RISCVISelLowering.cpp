@@ -603,6 +603,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
         setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+        setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
         setOperationAction(ISD::LOAD, VT, Custom);
         setOperationAction(ISD::STORE, VT, Custom);
