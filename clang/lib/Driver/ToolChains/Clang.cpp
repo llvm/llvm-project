@@ -620,7 +620,11 @@ static void addDebugCompDirArg(const ArgList &Args, ArgStringList &CmdArgs,
                                const llvm::vfs::FileSystem &VFS) {
   if (Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
                                options::OPT_fdebug_compilation_dir_EQ)) {
-    A->render(Args, CmdArgs);
+    if (A->getOption().matches(options::OPT_ffile_compilation_dir_EQ))
+      CmdArgs.push_back(Args.MakeArgString(Twine("-fdebug-compilation-dir=") +
+                                           A->getValue()));
+    else
+      A->render(Args, CmdArgs);
   } else if (llvm::ErrorOr<std::string> CWD =
                  VFS.getCurrentWorkingDirectory()) {
     CmdArgs.push_back(Args.MakeArgString("-fdebug-compilation-dir=" + *CWD));
@@ -862,10 +866,14 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
 
   if (Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
                                options::OPT_fcoverage_compilation_dir_EQ)) {
-    A->render(Args, CmdArgs);
+    if (A->getOption().matches(options::OPT_ffile_compilation_dir_EQ))
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine("-fcoverage-compilation-dir=") + A->getValue()));
+    else
+      A->render(Args, CmdArgs);
   } else if (llvm::ErrorOr<std::string> CWD =
                  D.getVFS().getCurrentWorkingDirectory()) {
-    Args.MakeArgString("-fcoverage-compilation-dir=" + *CWD);
+    CmdArgs.push_back(Args.MakeArgString("-fcoverage-compilation-dir=" + *CWD));
   }
 
   if (Args.hasArg(options::OPT_fprofile_exclude_files_EQ)) {
