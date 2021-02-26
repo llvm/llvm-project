@@ -460,7 +460,6 @@ def u : Separate<["-"], "u">,
 def U : Separate<["-"], "U">,
      MetaVarName<"<symbol>">,
      HelpText<"Allow <symbol> to have no definition">,
-     Flags<[HelpHidden]>,
      Group<grp_resolve>;
 def undefined : Separate<["-"], "undefined">,
      MetaVarName<"<treatment>">,

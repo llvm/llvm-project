@@ -282,21 +282,25 @@ static void encodeBinding(const Symbol *sym, const OutputSection *osec,
 static void encodeDylibOrdinal(const DylibSymbol *dysym, Binding *lastBinding,
                                raw_svector_ostream &os) {
   using namespace llvm::MachO;
+
+  int16_t ordinal = dysym->isDynamicLookup() ? BIND_SPECIAL_DYLIB_FLAT_LOOKUP
+                                             : dysym->getFile()->ordinal;
+
   if (lastBinding == nullptr ||
-      lastBinding->ordinal != dysym->getFile()->ordinal) {
-    if (dysym->getFile()->ordinal <= 0) {
+      lastBinding->ordinal != ordinal) {
+    if (ordinal <= 0) {
       os << static_cast<uint8_t>(
           BIND_OPCODE_SET_DYLIB_SPECIAL_IMM |
-          (dysym->getFile()->ordinal & BIND_IMMEDIATE_MASK));
-    } else if (dysym->getFile()->ordinal <= BIND_IMMEDIATE_MASK) {
+          (ordinal & BIND_IMMEDIATE_MASK));
+    } else if (ordinal <= BIND_IMMEDIATE_MASK) {
       os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
-                                 dysym->getFile()->ordinal);
+                                 ordinal);
     } else {
       os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
-      encodeULEB128(dysym->getFile()->ordinal, os);
+      encodeULEB128(ordinal, os);
     }
     if (lastBinding != nullptr)
-      lastBinding->ordinal = dysym->getFile()->ordinal;
+      lastBinding->ordinal = ordinal;
   }
 }
 
@@ -815,13 +819,16 @@ void SymtabSection::writeTo(uint8_t *buf) const {
       nList->n_desc |= defined->isExternalWeakDef() ? MachO::N_WEAK_DEF : 0;
     } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
       uint16_t n_desc = nList->n_desc;
-      if (dysym->getFile()->isBundleLoader)
+      if (dysym->isDynamicLookup())
+        MachO::SET_LIBRARY_ORDINAL(n_desc, MachO::DYNAMIC_LOOKUP_ORDINAL);
+      else if (dysym->getFile()->isBundleLoader)
         MachO::SET_LIBRARY_ORDINAL(n_desc, MachO::EXECUTABLE_ORDINAL);
       else
         MachO::SET_LIBRARY_ORDINAL(
             n_desc, static_cast<uint8_t>(dysym->getFile()->ordinal));
 
       nList->n_type = MachO::N_EXT;
+      n_desc |= dysym->isWeakDef() ? MachO::N_WEAK_DEF : 0;
       n_desc |= dysym->isWeakRef() ? MachO::N_WEAK_REF : 0;
       nList->n_desc = n_desc;
     }
