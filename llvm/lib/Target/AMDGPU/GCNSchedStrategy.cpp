@@ -20,7 +20,8 @@ using namespace llvm;
 
 GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
     const MachineSchedContext *C) :
-    GenericScheduler(C), TargetOccupancy(0), MF(nullptr) { }
+    GenericScheduler(C), TargetOccupancy(0), HasClusteredNodes(false),
+    MF(nullptr) { }
 
 void GCNMaxOccupancySchedStrategy::initialize(ScheduleDAGMI *DAG) {
   GenericScheduler::initialize(DAG);
@@ -279,6 +280,15 @@ SUnit *GCNMaxOccupancySchedStrategy::pickNode(bool &IsTopNode) {
   if (SU->isBottomReady())
     Bot.removeReady(SU);
 
+  if (!HasClusteredNodes && SU->getInstr()->mayLoadOrStore()) {
+    for (SDep &Dep : SU->Preds) {
+      if (Dep.isCluster()) {
+        HasClusteredNodes = true;
+        break;
+      }
+    }
+  }
+
   LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
                     << *SU->getInstr());
   return SU;
@@ -320,6 +330,10 @@ void GCNScheduleDAGMILive::schedule() {
                PressureBefore.print(dbgs()));
   }
 
+  GCNMaxOccupancySchedStrategy &S = (GCNMaxOccupancySchedStrategy&)*SchedImpl;
+  // Set HasClusteredNodes to true for late stages where we are not interested
+  // in it anymore. That way pickNode() will not scan SDep's when not needed.
+  S.HasClusteredNodes = Stage >= UnclusteredReschedule;
   ScheduleDAGMILive::schedule();
   Regions[RegionIdx] = std::make_pair(RegionBegin, RegionEnd);
   RescheduleRegions[RegionIdx] = false;
@@ -328,7 +342,6 @@ void GCNScheduleDAGMILive::schedule() {
     return;
 
   // Check the results of scheduling.
-  GCNMaxOccupancySchedStrategy &S = (GCNMaxOccupancySchedStrategy&)*SchedImpl;
   auto PressureAfter = getRealRegPressure();
 
   LLVM_DEBUG(dbgs() << "Pressure after scheduling: ";
@@ -379,6 +392,8 @@ void GCNScheduleDAGMILive::schedule() {
         PressureAfter.less(ST, PressureBefore) ||
         !RescheduleRegions[RegionIdx]) {
       Pressure[RegionIdx] = PressureAfter;
+      if (!S.HasClusteredNodes && (Stage + 1) == UnclusteredReschedule)
+        RescheduleRegions[RegionIdx] = false;
       return;
     } else {
       LLVM_DEBUG(dbgs() << "New pressure will result in more spilling.\n");
@@ -386,7 +401,8 @@ void GCNScheduleDAGMILive::schedule() {
   }
 
   LLVM_DEBUG(dbgs() << "Attempting to revert scheduling.\n");
-  RescheduleRegions[RegionIdx] = true;
+  RescheduleRegions[RegionIdx] = S.HasClusteredNodes ||
+                                 (Stage + 1) != UnclusteredReschedule;
   RegionEnd = RegionBegin;
   for (MachineInstr *MI : Unsched) {
     if (MI->isDebugInstr())
