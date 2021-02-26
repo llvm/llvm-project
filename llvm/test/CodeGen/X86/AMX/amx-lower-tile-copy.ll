@@ -95,7 +95,7 @@ define dso_local void @test2(i8 *%buf) nounwind {
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $4056, %rsp # imm = 0xFD8
+; CHECK-NEXT:    subq $72, %rsp
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
@@ -105,11 +105,9 @@ define dso_local void @test2(i8 *%buf) nounwind {
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, %r14w
-; CHECK-NEXT:    tilezero %tmm3
+; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_3
@@ -120,28 +118,20 @@ define dso_local void @test2(i8 *%buf) nounwind {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_2: # %loop.header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tilestored %tmm3, 2048(%rsp,%rax) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tileloadd 2048(%rsp,%rax), %tmm3 # 1024-byte Folded Reload
+; CHECK-NEXT:    tilezero %tmm2
 ; CHECK-NEXT:    tileloadd (%rbx,%r15), %tmm0
 ; CHECK-NEXT:    tileloadd (%rbx,%r15), %tmm1
-; CHECK-NEXT:    # implicit-def: $rax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tilestored %tmm3, 1024(%rsp,%rax) # 1024-byte Folded Spill
-; CHECK-NEXT:    tileloadd {{[-0-9]+}}(%r{{[sb]}}p), %tmm2 # 1024-byte Folded Reload
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; CHECK-NEXT:    tdpbssd %tmm1, %tmm0, %tmm2
 ; CHECK-NEXT:    tilestored %tmm2, (%rbx,%r15)
 ; CHECK-NEXT:    incl %ebp
 ; CHECK-NEXT:    cmpw $100, %bp
 ; CHECK-NEXT:    jl .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: # %exit
-; CHECK-NEXT:    addq $4056, %rsp # imm = 0xFD8
+; CHECK-NEXT:    addq $72, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
