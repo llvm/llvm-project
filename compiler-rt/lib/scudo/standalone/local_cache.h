@@ -17,24 +17,25 @@ namespace scudo {
 
 template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
   typedef typename SizeClassAllocator::SizeClassMap SizeClassMap;
+  typedef typename SizeClassAllocator::CompactPtrT CompactPtrT;
 
   struct TransferBatch {
     static const u32 MaxNumCached = SizeClassMap::MaxNumCachedHint;
-    void setFromArray(void **Array, u32 N) {
+    void setFromArray(CompactPtrT *Array, u32 N) {
       DCHECK_LE(N, MaxNumCached);
       Count = N;
-      memcpy(Batch, Array, sizeof(void *) * Count);
+      memcpy(Batch, Array, sizeof(Batch[0]) * Count);
     }
     void clear() { Count = 0; }
-    void add(void *P) {
+    void add(CompactPtrT P) {
       DCHECK_LT(Count, MaxNumCached);
       Batch[Count++] = P;
     }
-    void copyToArray(void **Array) const {
-      memcpy(Array, Batch, sizeof(void *) * Count);
+    void copyToArray(CompactPtrT *Array) const {
+      memcpy(Array, Batch, sizeof(Batch[0]) * Count);
     }
     u32 getCount() const { return Count; }
-    void *get(u32 I) const {
+    CompactPtrT get(u32 I) const {
       DCHECK_LE(I, Count);
       return Batch[I];
     }
@@ -45,7 +46,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
 
   private:
     u32 Count;
-    void *Batch[MaxNumCached];
+    CompactPtrT Batch[MaxNumCached];
   };
 
   void initLinkerInitialized(GlobalStats *S, SizeClassAllocator *A) {
@@ -78,13 +79,10 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     // Count, while Chunks might be further off (depending on Count). That keeps
     // the memory accesses in close quarters.
     const uptr ClassSize = C->ClassSize;
-    void *P = C->Chunks[--C->Count];
-    // The jury is still out as to whether any kind of PREFETCH here increases
-    // performance. It definitely decreases performance on Android though.
-    // if (!SCUDO_ANDROID) PREFETCH(P);
+    CompactPtrT CompactP = C->Chunks[--C->Count];
     Stats.add(StatAllocated, ClassSize);
     Stats.sub(StatFree, ClassSize);
-    return P;
+    return Allocator->decompactPtr(ClassId, CompactP);
   }
 
   void deallocate(uptr ClassId, void *P) {
@@ -97,7 +95,8 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
       drain(C, ClassId);
     // See comment in allocate() about memory accesses.
     const uptr ClassSize = C->ClassSize;
-    C->Chunks[C->Count++] = P;
+    C->Chunks[C->Count++] =
+        Allocator->compactPtr(ClassId, reinterpret_cast<uptr>(P));
     Stats.sub(StatAllocated, ClassSize);
     Stats.add(StatFree, ClassSize);
   }
@@ -124,7 +123,7 @@ private:
     u32 Count;
     u32 MaxCount;
     uptr ClassSize;
-    void *Chunks[2 * TransferBatch::MaxNumCached];
+    CompactPtrT Chunks[2 * TransferBatch::MaxNumCached];
   };
   PerClass PerClassArray[NumClasses];
   LocalStats Stats;
@@ -166,7 +165,8 @@ private:
 
   NOINLINE void drain(PerClass *C, uptr ClassId) {
     const u32 Count = Min(C->MaxCount / 2, C->Count);
-    TransferBatch *B = createBatch(ClassId, C->Chunks[0]);
+    TransferBatch *B =
+        createBatch(ClassId, Allocator->decompactPtr(ClassId, C->Chunks[0]));
     if (UNLIKELY(!B))
       reportOutOfMemory(
           SizeClassAllocator::getSizeByClassId(SizeClassMap::BatchClassId));

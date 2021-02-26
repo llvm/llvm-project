@@ -399,6 +399,8 @@ struct DeathConfig {
   static const scudo::uptr PrimaryRegionSizeLog = DeathRegionSizeLog;
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
+  typedef scudo::uptr PrimaryCompactPtrT;
+  static const scudo::uptr PrimaryCompactPtrScale = 0;
 
   typedef scudo::MapAllocatorNoCache SecondaryCache;
   template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;
