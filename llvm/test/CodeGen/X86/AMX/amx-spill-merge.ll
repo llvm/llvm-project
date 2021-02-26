@@ -120,7 +120,7 @@ define dso_local void @test3(i8 *%buf) nounwind {
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $3032, %rsp # imm = 0xBD8
+; CHECK-NEXT:    subq $72, %rsp
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
@@ -143,10 +143,9 @@ define dso_local void @test3(i8 *%buf) nounwind {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_2: # %loop.header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tilestored %tmm0, 1024(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    tilestored %tmm0, (%rbx,%r14)
 ; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
@@ -155,13 +154,12 @@ define dso_local void @test3(i8 *%buf) nounwind {
 ; CHECK-NEXT:    tileloadd (%rbx,%r14), %tmm2
 ; CHECK-NEXT:    tdpbssd %tmm2, %tmm1, %tmm0
 ; CHECK-NEXT:    tilestored %tmm0, (%rbx,%r14)
-; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tileloadd 1024(%rsp,%rax), %tmm0 # 1024-byte Folded Reload
+; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    incl %ebp
 ; CHECK-NEXT:    cmpw $100, %bp
 ; CHECK-NEXT:    jl .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: # %exit
-; CHECK-NEXT:    addq $3032, %rsp # imm = 0xBD8
+; CHECK-NEXT:    addq $72, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
