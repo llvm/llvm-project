@@ -1196,6 +1196,108 @@ try.cont:                                         ; preds = %catch.start1, %catc
   ret void
 }
 
+; The similar case with test20, but multiple consecutive delegates are
+; generated:
+; - Before:
+; block
+;   br (a)
+;   try
+;   catch
+;   end_try
+; end_block
+;           <- (a)
+;
+; - After
+; block
+;   br (a)
+;   try
+;     ...
+;     try
+;       try
+;       catch
+;       end_try
+;             <- (a)
+;     delegate
+;   delegate
+; end_block
+;           <- (b) The br destination should be remapped to here
+;
+; The test was reduced by bugpoint and should not crash.
+define void @test21() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  br i1 undef, label %if.then, label %if.end12
+
+if.then:                                          ; preds = %entry
+  invoke void @__cxa_throw() #1
+          to label %unreachable unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %if.then
+  %0 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* bitcast (i8** @_ZTIi to i8*)]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  catchret from %1 to label %catchret.dest
+
+catchret.dest:                                    ; preds = %catch.start
+  invoke void @foo()
+          to label %invoke.cont unwind label %catch.dispatch4
+
+invoke.cont:                                      ; preds = %catchret.dest
+  invoke void @__cxa_throw() #1
+          to label %unreachable unwind label %catch.dispatch4
+
+catch.dispatch4:                                  ; preds = %invoke.cont, %catchret.dest
+  %4 = catchswitch within none [label %catch.start5] unwind to caller
+
+catch.start5:                                     ; preds = %catch.dispatch4
+  %5 = catchpad within %4 [i8* bitcast (i8** @_ZTIi to i8*)]
+  %6 = call i8* @llvm.wasm.get.exception(token %5)
+  %7 = call i32 @llvm.wasm.get.ehselector(token %5)
+  unreachable
+
+if.end12:                                         ; preds = %entry
+  invoke void @foo()
+          to label %invoke.cont14 unwind label %catch.dispatch16
+
+catch.dispatch16:                                 ; preds = %if.end12
+  %8 = catchswitch within none [label %catch.start17] unwind label %ehcleanup
+
+catch.start17:                                    ; preds = %catch.dispatch16
+  %9 = catchpad within %8 [i8* bitcast (i8** @_ZTIi to i8*)]
+  %10 = call i8* @llvm.wasm.get.exception(token %9)
+  %11 = call i32 @llvm.wasm.get.ehselector(token %9)
+  br i1 undef, label %catch20, label %rethrow19
+
+catch20:                                          ; preds = %catch.start17
+  catchret from %9 to label %catchret.dest22
+
+catchret.dest22:                                  ; preds = %catch20
+  br label %try.cont23
+
+rethrow19:                                        ; preds = %catch.start17
+  invoke void @llvm.wasm.rethrow() #1 [ "funclet"(token %9) ]
+          to label %unreachable unwind label %ehcleanup
+
+try.cont23:                                       ; preds = %invoke.cont14, %catchret.dest22
+  invoke void @foo()
+          to label %invoke.cont24 unwind label %ehcleanup
+
+invoke.cont24:                                    ; preds = %try.cont23
+  ret void
+
+invoke.cont14:                                    ; preds = %if.end12
+  br label %try.cont23
+
+ehcleanup:                                        ; preds = %try.cont23, %rethrow19, %catch.dispatch16
+  %12 = cleanuppad within none []
+  cleanupret from %12 unwind to caller
+
+unreachable:                                      ; preds = %if.then, %invoke.cont, %rethrow19
+  unreachable
+}
+
 ; Check if the unwind destination mismatch stats are correct
 ; NOSORT: 20 wasm-cfg-stackify    - Number of call unwind mismatches found
 ; NOSORT:  4 wasm-cfg-stackify    - Number of catch unwind mismatches found
@@ -1224,6 +1326,8 @@ declare i32 @__gxx_wasm_personality_v0(...)
 declare i8* @llvm.wasm.get.exception(token) #0
 ; Function Attrs: nounwind
 declare i32 @llvm.wasm.get.ehselector(token) #0
+; Function Attrs: noreturn
+declare void @__cxa_throw() #1
 ; Function Attrs: noreturn
 declare void @llvm.wasm.rethrow() #1
 ; Function Attrs: nounwind
