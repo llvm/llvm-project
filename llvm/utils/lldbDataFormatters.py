@@ -132,7 +132,7 @@ class OptionalSynthProvider:
 
     def get_child_index(self, name):
         if name == '$$dereference$$':
-            return self.valobj.num_children + 1
+            return self.valobj.num_children
         return self.valobj.GetIndexOfChildWithName(name)
 
     def get_child_at_index(self, index):
