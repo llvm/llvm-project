@@ -41,7 +41,7 @@ development:
 JITLink and ObjectLinkingLayer
 ==============================
 
-``ObjectLinkingLayer`` is an ORCs wrapper for JITLink. It is an ORC layer that
+``ObjectLinkingLayer`` is ORCs wrapper for JITLink. It is an ORC layer that
 allows objects to be added to a ``JITDylib``, or emitted from some higher level
 program representation. When an object is emitted, ``ObjectLinkingLayer`` uses
 JITLink to construct a ``LinkGraph`` (see :ref:`constructing_linkgraphs`) and
@@ -75,8 +75,6 @@ The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
 
     void notifyLoaded(MaterializationResponsibility &MR)
 
-  Called before the link begins. Override to set up initial state if needed.
-
 * ``notifyEmitted`` is called after the link is complete and code has been
   emitted to the executor process. It can be overridden to finalize state
   for the ``MaterializationResponsibility`` if needed.
@@ -92,8 +90,6 @@ The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
   .. code-block:: c++
 
     Error notifyFailed(MaterializationResponsibility &MR)
-
-  Called if link fails. Override to handle failure if needed.
 
 * ``notifyRemovingResources`` is called when a request is made to remove any
   resources associated with the ``ResourceKey`` *K* for the
@@ -112,7 +108,7 @@ The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
     void notifyTransferringResources(ResourceKey DstKey,
                                      ResourceKey SrcKey)
 
-Plugin authors are required to implement the ``notifyFailed`,
+Plugin authors are required to implement the ``notifyFailed``,
 ``notifyRemovingResources``, and ``notifyTransferringResources`` methods in
 order to safely manage resources in the case of resource removal or transfer,
 or link failure. If no resources are managed by the plugin then these methods
@@ -132,8 +128,9 @@ calling the ``addPlugin`` method [1]_. E.g.
     void modifyPassConfig(MaterializationResponsibility &MR,
                           const Triple &TT,
                           jitlink::PassConfiguration &Config) override {
-      Config.PrePrunePasses.push_back(
-
+      Config.PostPrunePasses.push_back([this](jitlink::LinkGraph &G) {
+        return printAllSymbols(G);
+      });
     }
 
     // Implement mandatory overrides:
@@ -166,7 +163,7 @@ calling the ``addPlugin`` method [1]_. E.g.
                      ES, std::make_unique<jitlink::InProcessMemoryManager>());
 
                  // Install our plugin:
-                 OLL->addPlugin(std::make_unique<MyPlugin>();
+                 OLL->addPlugin(std::make_unique<MyPlugin>());
 
                  return OLL;
                })
@@ -218,7 +215,7 @@ relocations. Each of the elements of the graph is listed here:
   * ``Content`` is represented as an ``llvm::StringRef``, and accessible via
     the ``getContent`` method. Content is only available for content blocks,
     and not for zero-fill blocks (use ``isZeroFill`` to check, and prefer
-    ``getSize()`` when only the block size is needed as it works for both
+    ``getSize`` when only the block size is needed as it works for both
     zero-fill and content blocks).
 
   * ``Section`` is represented as a ``Section&`` reference, and accessible via
@@ -389,7 +386,7 @@ and utilities relevant to the linking process:
 
   * ``removeAbsoluteSymbol`` removes an absolute symbol and its target
     addressable. The target addressable must not be referenced by any other
-    sybols.
+    symbols.
 
   * ``removeDefinedSymbol`` removes a defined symbol, but *does not* remove
     its target block.
@@ -429,18 +426,18 @@ certain points by the introduction of JITLink :ref:`passes`:
    This phase is called immediately by the ``link`` function as soon as the
    initial configuration (including the pass pipeline setup) is complete.
 
-   #. Run pre-prune passes
+   #. Run pre-prune passes.
 
       These passes are called on the graph before it is pruned. At this stage
-      LinkGraph nodes still have their original vmaddrs. A mark-live pass
+      ``LinkGraph`` nodes still have their original vmaddrs. A mark-live pass
       (supplied by the ``JITLinkContext``) will be run at the end of this
       sequence to mark the initial set of live symbols.
 
       Notable use cases: marking nodes live, accessing/copying graph data that
-      well be pruned (e.g. metadata that's important for the JIT, but not needed
+      will be pruned (e.g. metadata that's important for the JIT, but not needed
       for the link process).
 
-   #. Prune (dead-strip) the LinkGraph
+   #. Prune (dead-strip) the ``LinkGraph``.
 
       Removes all symbols and blocks not reachable from the initial set of live
       symbols.
@@ -448,25 +445,25 @@ certain points by the introduction of JITLink :ref:`passes`:
       This allows JITLink to remove unreachable symbols / content, including
       overridden weak and redundant ODR definitions.
 
-   #. Run post-prune passes
+   #. Run post-prune passes.
 
       These passes are run on the graph after dead-stripping, but before memory
       is allocated or nodes assigned their final target vmaddrs.
 
       Passes run at this stage benefit from pruning, as dead functions and data
-      have been stripped from the graph. However new content call still be added
+      have been stripped from the graph. However new content can still be added
       to the graph, as target and working memory have not been allocated yet.
 
       Notable use cases: Building Global Offset Table (GOT), Procedure Linkage
       Table (PLT), and Thread Local Variable (TLV) entries.
 
-   #. Sort blocks into segments
+   #. Sort blocks into segments.
 
       Sorts all blocks by ordinal and then address. Collects sections with
       matching permissions into segments and computes the size of these
       segments for memory allocation.
 
-   #. Allocate segment memory, update node addresses
+   #. Allocate segment memory, update node addresses.
 
       Calls the ``JITLinkContext``'s ``JITLinkMemoryManager`` to allocate both
       working and target memory for the graph, then updates all node addresses
@@ -475,7 +472,7 @@ certain points by the introduction of JITLink :ref:`passes`:
       Note: This step only updates the addresses of nodes defined in this graph.
       External symbols will still have null addresses.
 
-   #. Run post-allocation passes
+   #. Run post-allocation passes.
 
       These passes are run on the graph after working and target memory have
       been allocated, but before the ``JITLinkContext`` is notified of the
@@ -524,7 +521,7 @@ certain points by the introduction of JITLink :ref:`passes`:
       optimizations to the graph and content based on address layout.
 
       Notable use cases: GOT and PLT relaxation, where GOT and PLT acceses are
-      bypassed for fixp targets that are directly accessible under the assigned
+      bypassed for fixup targets that are directly accessible under the assigned
       memory layout.
 
    #. Copy block content to working memory and apply fixups.
@@ -571,8 +568,8 @@ Passes
 ------
 
 JITLink passes are ``std::function<Error(LinkGraph&)>`` instances. They are free
-to inspect and modify the given ``LinkGraph``, subject to the constraints of
-whatever phase they are running in (see :ref:`generic_link_algorithm`). If a
+to inspect and modify the given ``LinkGraph`` and are subject to the constraints
+of whatever phase they are running in (see :ref:`generic_link_algorithm`). If a
 pass returns ``Error::success()`` then linking continues. If a pass returns
 a failure value then linking is stopped and the ``JITLinkContext`` is notified
 that the link failed.
@@ -586,9 +583,9 @@ implementation of powerful new features. For example:
 
 * Relaxation optimizations -- A pre-fixup pass can inspect GOT accesses and PLT
   calls and identify situations where the addresses of the entry target and the
-  access close enough to be accessed directly. In this case the pass can rewrite
-  the instruction stream of the containing block and update the fixup edges to
-  make the access direct.
+  access are close enough to be accessed directly. In this case the pass can
+  rewrite the instruction stream of the containing block and update the fixup
+  edges to make the access direct.
 
   Code for this looks like:
 
@@ -658,7 +655,7 @@ JIT process and target memory in the execution process (these processes and
 memory allocations may be one and the same, depending on how the user wants
 to build their JIT). It also requires that these allocations conform to the
 requested code model in the target process (e.g. MachO/x86-64's Small code
-model requires that all code and data for a simulated dylib be allocated within
+model requires that all code and data for a simulated dylib is allocated within
 4Gb). Finally, it is natural to make the memory manager responsible for
 transferring memory to the target address space and applying memory protections,
 since the memory manager must know how to communicate with the executor, and
@@ -751,9 +748,9 @@ for object formats) are encouraged to validate input, and validate fixups
 (e.g. with range checks) before application.
 
 Any error will halt the link process and notify the context of failure. In ORC,
-reported failures are propagated to and queries pending on definitions provided
-by the failing link, and also through edges of the dependence graph to any
-queries waiting on dependent symbols.
+reported failures are propagated to queries pending on definitions provided by
+the failing link, and also through edges of the dependence graph to any queries
+waiting on dependent symbols.
 
 .. _connection_to_orc_runtime:
 
@@ -926,7 +923,7 @@ tests for JITLink. To do this it supports two options:
 The ``-noexec`` option tells llvm-jitlink to stop after looking up the entry
 point, and before attempting to execute it. Since the linked code is not
 executed, this can be used to link for other targets even if you do not have
-access to the target being linked (the ``-define-abs`` or ``-phone-externals``
+access to the target being linked (the ``-define-abs`` or ``-phony-externals``
 options can be used to supply any missing definitions in this case).
 
 The ``-check <check-file>`` option can be used to run a set of ``jitlink-check``
@@ -959,7 +956,7 @@ Harness mode
 The ``-harness`` option allows a set of input objects to be designated as a test
 harness, with the regular object files implicitly treated as objects to be
 tested. Definitions of symbols in the harness set override definitions in the
-test set, and external references from the harness set cause automatic scope
+test set, and external references from the harness cause automatic scope
 promotion of local symbols in the test set (these modifications to the usual
 linker rules are accomplished via an ``ObjectLinkingLayer::Plugin`` installed by
 ``llvm-jitlink`` when it sees the ``-harness`` option).
@@ -1035,7 +1032,7 @@ Tips for JITLink backend developers
    endian-specific types when reading/writing content in the ``LinkGraph``.
 
 As a "minimum viable" JITLink wrapper, the ``llvm-jitlink`` tool is an
-invaluable resource for developres bringing a new JITLink backend. A standard
+invaluable resource for developers bringing in a new JITLink backend. A standard
 workflow is to start by throwing an unsupported object at the tool and seeing
 what error is returned, then fixing that (you can often make a reasonable guess
 at what should be done based on existing code for other formats or
@@ -1070,7 +1067,7 @@ Major outstanding projects include:
   generic and should be split into an ELFLinkGraphBuilder base class along the
   same lines as the existing generic MachOLinkGraphBuilder.
 
-* Implement ELF suport for arm64.
+* Implement ELF support for arm64.
 
   Once the architecture support code has been refactored to enable sharing and
   ELF link graph construction has been refactored to allow re-use we should be
