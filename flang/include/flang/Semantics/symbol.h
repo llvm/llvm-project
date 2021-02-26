@@ -17,7 +17,7 @@
 #include <array>
 #include <list>
 #include <optional>
-#include <set>
+#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -38,6 +38,12 @@ using SymbolRef = common::Reference<const Symbol>;
 using SymbolVector = std::vector<SymbolRef>;
 using MutableSymbolRef = common::Reference<Symbol>;
 using MutableSymbolVector = std::vector<MutableSymbolRef>;
+struct SymbolHash {
+  std::size_t operator()(SymbolRef symRef) const {
+    return (std::size_t)(&symRef.get());
+  }
+};
+using SymbolSet = std::unordered_set<SymbolRef, SymbolHash>;
 
 // A module or submodule.
 class ModuleDetails {
@@ -594,9 +600,10 @@ public:
 
   bool operator==(const Symbol &that) const { return this == &that; }
   bool operator!=(const Symbol &that) const { return !(*this == that); }
+  // For maps using symbols as keys and sorting symbols.  Collate them by their
+  // position in the cooked character stream
   bool operator<(const Symbol &that) const {
-    // For sets of symbols: collate them by source location
-    return name_.begin() < that.name_.begin();
+    return sortName_ < that.sortName_;
   }
 
   int Rank() const {
@@ -653,6 +660,7 @@ public:
 private:
   const Scope *owner_;
   SourceName name_;
+  const char *sortName_; // used in the "<" operator for sorting symbols
   Attrs attrs_;
   Flags flags_;
   Scope *scope_{nullptr};
@@ -687,6 +695,7 @@ public:
     Symbol &symbol = Get();
     symbol.owner_ = &owner;
     symbol.name_ = name;
+    symbol.sortName_ = name.begin();
     symbol.attrs_ = attrs;
     symbol.details_ = std::move(details);
     return symbol;
@@ -765,7 +774,6 @@ inline bool operator<(SymbolRef x, SymbolRef y) { return *x < *y; }
 inline bool operator<(MutableSymbolRef x, MutableSymbolRef y) {
   return *x < *y;
 }
-using SymbolSet = std::set<SymbolRef>;
 
 } // namespace Fortran::semantics
 
