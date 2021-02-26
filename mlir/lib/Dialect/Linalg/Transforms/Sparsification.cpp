@@ -652,9 +652,13 @@ static Value genVectorLoad(CodeGen &codegen, PatternRewriter &rewriter,
   Location loc = ptr.getLoc();
   VectorType vtp = vectorType(codegen, ptr);
   Value pass = rewriter.create<ConstantOp>(loc, vtp, rewriter.getZeroAttr(vtp));
-  if (args.back().getType().isa<VectorType>())
-    return rewriter.create<vector::GatherOp>(loc, vtp, ptr, args.back(),
-                                             codegen.curVecMask, pass);
+  if (args.back().getType().isa<VectorType>()) {
+    SmallVector<Value, 4> scalarArgs(args.begin(), args.end());
+    Value indexVec = args.back();
+    scalarArgs.back() = rewriter.create<ConstantIndexOp>(loc, 0);
+    return rewriter.create<vector::GatherOp>(
+        loc, vtp, ptr, scalarArgs, indexVec, codegen.curVecMask, pass);
+  }
   return rewriter.create<vector::MaskedLoadOp>(loc, vtp, ptr, args,
                                                codegen.curVecMask, pass);
 }
@@ -663,12 +667,16 @@ static Value genVectorLoad(CodeGen &codegen, PatternRewriter &rewriter,
 static void genVectorStore(CodeGen &codegen, PatternRewriter &rewriter,
                            Value rhs, Value ptr, ArrayRef<Value> args) {
   Location loc = ptr.getLoc();
-  if (args.back().getType().isa<VectorType>())
-    rewriter.create<vector::ScatterOp>(loc, ptr, args.back(),
+  if (args.back().getType().isa<VectorType>()) {
+    SmallVector<Value, 4> scalarArgs(args.begin(), args.end());
+    Value indexVec = args.back();
+    scalarArgs.back() = rewriter.create<ConstantIndexOp>(loc, 0);
+    rewriter.create<vector::ScatterOp>(loc, ptr, scalarArgs, indexVec,
                                        codegen.curVecMask, rhs);
-  else
-    rewriter.create<vector::MaskedStoreOp>(loc, ptr, args, codegen.curVecMask,
-                                           rhs);
+    return;
+  }
+  rewriter.create<vector::MaskedStoreOp>(loc, ptr, args, codegen.curVecMask,
+                                         rhs);
 }
 
 /// Generates a vectorized invariant. Here we rely on subsequent loop
@@ -985,11 +993,15 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen,
       unsigned tensor = merger.tensor(b);
       assert(idx == merger.index(b));
       types.push_back(indexType);
+      assert(codegen.pidxs[tensor][idx].getType().isa<IndexType>() &&
+             "type mismatch for sparse index");
       operands.push_back(codegen.pidxs[tensor][idx]);
     }
   }
   if (needsUniv) {
     types.push_back(indexType);
+    assert(codegen.loops[idx].getType().isa<IndexType>() &&
+           "type_mismatch for universal index");
     operands.push_back(codegen.loops[idx]);
   }
   Location loc = op.getLoc();
@@ -1160,6 +1172,7 @@ static void genStmt(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
     genTensorStore(merger, codegen, rewriter, op, lhs, rhs);
     return;
   }
+  assert(codegen.curVecLength == 1);
 
   // Construct iteration lattices for current loop index, with L0 at top.
   // Then emit initialization code for the loop sequence at this level.
@@ -1239,6 +1252,7 @@ static void genStmt(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   }
   genInvariants(merger, codegen, rewriter, op, exp, ldx, /*hoist=*/false);
   codegen.loops[idx] = Value();
+  codegen.curVecLength = 1;
 }
 
 namespace {
