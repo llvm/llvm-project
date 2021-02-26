@@ -784,6 +784,15 @@ bool MemRefDependenceGraph::init(FuncOp f) {
       // could be used by loop nest nodes.
       Node node(nextNodeId++, &op);
       nodes.insert({node.id, node});
+    } else if (isa<CallOpInterface>(op)) {
+      // Create graph node for top-level Call Op that takes any argument of
+      // memref type. Call Op that returns one or more memref type results
+      // is already taken care of, by the previous conditions.
+      if (llvm::any_of(op.getOperandTypes(),
+                       [&](Type t) { return t.isa<MemRefType>(); })) {
+        Node node(nextNodeId++, &op);
+        nodes.insert({node.id, node});
+      }
     } else if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
       // Create graph node for top-level op, which could have a memory write
       // side effect.
