@@ -1382,9 +1382,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
       // If this is a shift recurrence, we know the bits being shifted in.
       // We can combine that with information about the start value of the
       // recurrence to conclude facts about the result.
-      if (Opcode == Instruction::LShr ||
-          Opcode == Instruction::AShr ||
-          Opcode == Instruction::Shl) {
+      if ((Opcode == Instruction::LShr || Opcode == Instruction::AShr ||
+           Opcode == Instruction::Shl) &&
+          BO->getOperand(0) == I) {
 
         // We have matched a recurrence of the form:
         // %iv = [R, %entry], [%iv.next, %backedge]
@@ -6051,21 +6051,10 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     switch (Opcode) {
     default:
       continue;
+    // TODO: Expand list -- xor, div, gep, uaddo, etc..
     case Instruction::LShr:
     case Instruction::AShr:
-    case Instruction::Shl: {
-      Value *LL = LU->getOperand(0);
-      Value *LR = LU->getOperand(1);
-      // Find a recurrence.
-      if (LL == P)
-        L = LR;
-      else
-        continue; // Check for recurrence with L and R flipped.
-
-      break; // Match!
-    }
-
-    // TODO: Expand list -- xor, mul, div, gep, uaddo, etc..
+    case Instruction::Shl:
     case Instruction::Add:
     case Instruction::Sub:
     case Instruction::And:
@@ -6086,8 +6075,11 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     };
 
     // We have matched a recurrence of the form:
-    // %iv = [R, %entry], [%iv.next, %backedge]
-    // %iv.next = binop %iv, L
+    //   %iv = [R, %entry], [%iv.next, %backedge]
+    //   %iv.next = binop %iv, L
+    // OR
+    //   %iv = [R, %entry], [%iv.next, %backedge]
+    //   %iv.next = binop L, %iv
     BO = cast<BinaryOperator>(LU);
     Start = R;
     Step = L;

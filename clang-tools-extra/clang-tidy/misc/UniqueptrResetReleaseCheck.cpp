@@ -110,19 +110,22 @@ void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
     LeftText = "*" + LeftText;
   if (ReleaseMember->isArrow())
     RightText = "*" + RightText;
-  std::string DiagText;
+  bool IsMove = false;
   // Even if x was rvalue, *x is not rvalue anymore.
   if (!Right->isRValue() || ReleaseMember->isArrow()) {
     RightText = "std::move(" + RightText + ")";
-    DiagText = "prefer ptr1 = std::move(ptr2) over ptr1.reset(ptr2.release())";
-  } else {
-    DiagText =
-        "prefer ptr = ReturnUnique() over ptr.reset(ReturnUnique().release())";
+    IsMove = true;
   }
+
   std::string NewText = LeftText + " = " + RightText;
 
-  diag(ResetMember->getExprLoc(), DiagText) << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(ResetCall->getSourceRange()), NewText);
+  diag(ResetMember->getExprLoc(),
+       "prefer ptr = %select{std::move(ptr2)|ReturnUnique()}0 over "
+       "ptr.reset(%select{ptr2|ReturnUnique()}0.release())")
+      << !IsMove
+      << FixItHint::CreateReplacement(
+             CharSourceRange::getTokenRange(ResetCall->getSourceRange()),
+             NewText);
 }
 
 } // namespace misc

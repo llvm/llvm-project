@@ -143,7 +143,9 @@ void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, bool IsMasked,
     Operands.push_back(MaskedOff);
     CurOp += NF;
   }
-  Operands.push_back(Node->getOperand(CurOp++)); // Base pointer.
+  SDValue Base;
+  SelectBaseAddr(Node->getOperand(CurOp++), Base);
+  Operands.push_back(Base); // Base pointer.
   if (IsStrided)
     Operands.push_back(Node->getOperand(CurOp++)); // Stride.
   if (IsMasked)
@@ -191,7 +193,9 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, bool IsMasked) {
     Operands.push_back(MaskedOff);
     CurOp += NF;
   }
-  Operands.push_back(Node->getOperand(CurOp++)); // Base pointer.
+  SDValue Base;
+  SelectBaseAddr(Node->getOperand(CurOp++), Base);
+  Operands.push_back(Base); // Base pointer.
   if (IsMasked)
     Operands.push_back(Node->getOperand(CurOp++)); // Mask.
   SDValue VL;
@@ -240,7 +244,9 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, bool IsMasked,
     Operands.push_back(MaskedOff);
     CurOp += NF;
   }
-  Operands.push_back(Node->getOperand(CurOp++)); // Base pointer.
+  SDValue Base;
+  SelectBaseAddr(Node->getOperand(CurOp++), Base);
+  Operands.push_back(Base); // Base pointer.
   Operands.push_back(Node->getOperand(CurOp++)); // Index.
   MVT IndexVT = Operands.back()->getSimpleValueType(0);
   if (IsMasked)
@@ -294,7 +300,9 @@ void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, bool IsMasked,
   SmallVector<SDValue, 7> Operands;
   Operands.push_back(StoreVal);
   unsigned CurOp = 2 + NF;
-  Operands.push_back(Node->getOperand(CurOp++)); // Base pointer.
+  SDValue Base;
+  SelectBaseAddr(Node->getOperand(CurOp++), Base);
+  Operands.push_back(Base); // Base pointer.
   if (IsStrided)
     Operands.push_back(Node->getOperand(CurOp++)); // Stride.
   if (IsMasked)
@@ -331,7 +339,9 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, bool IsMasked,
   SDValue StoreVal = createTuple(*CurDAG, Regs, NF, LMUL);
   Operands.push_back(StoreVal);
   unsigned CurOp = 2 + NF;
-  Operands.push_back(Node->getOperand(CurOp++)); // Base pointer.
+  SDValue Base;
+  SelectBaseAddr(Node->getOperand(CurOp++), Base);
+  Operands.push_back(Base); // Base pointer.
   Operands.push_back(Node->getOperand(CurOp++)); // Index.
   MVT IndexVT = Operands.back()->getSimpleValueType(0);
   if (IsMasked)
@@ -617,7 +627,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SmallVector<SDValue, 7> Operands;
       if (IsMasked)
         Operands.push_back(Node->getOperand(CurOp++));
-      Operands.push_back(Node->getOperand(CurOp++)); // Base pointer.
+      SDValue Base;
+      SelectBaseAddr(Node->getOperand(CurOp++), Base);
+      Operands.push_back(Base); // Base pointer.
       Operands.push_back(Node->getOperand(CurOp++)); // Index.
       MVT IndexVT = Operands.back()->getSimpleValueType(0);
       if (IsMasked)
@@ -667,7 +679,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SmallVector<SDValue, 7> Operands;
       if (IsMasked)
         Operands.push_back(Node->getOperand(CurOp++));
-      Operands.push_back(Node->getOperand(CurOp++)); // Base pointer.
+      SDValue Base;
+      SelectBaseAddr(Node->getOperand(CurOp++), Base);
+      Operands.push_back(Base); // Base pointer.
       if (IsStrided)
         Operands.push_back(Node->getOperand(CurOp++)); // Stride.
       if (IsMasked)
@@ -704,7 +718,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SmallVector<SDValue, 7> Operands;
       if (IsMasked)
         Operands.push_back(Node->getOperand(CurOp++));
-      Operands.push_back(Node->getOperand(CurOp++)); // Base pointer.
+      SDValue Base;
+      SelectBaseAddr(Node->getOperand(CurOp++), Base);
+      Operands.push_back(Base); // Base pointer.
       if (IsMasked)
         Operands.push_back(Node->getOperand(CurOp++)); // Mask.
       SDValue VL;
@@ -831,7 +847,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       unsigned CurOp = 2;
       SmallVector<SDValue, 6> Operands;
       Operands.push_back(Node->getOperand(CurOp++)); // Store value.
-      Operands.push_back(Node->getOperand(CurOp++)); // Base pointer.
+      SDValue Base;
+      SelectBaseAddr(Node->getOperand(CurOp++), Base);
+      Operands.push_back(Base); // Base pointer.
       Operands.push_back(Node->getOperand(CurOp++)); // Index.
       MVT IndexVT = Operands.back()->getSimpleValueType(0);
       if (IsMasked)
@@ -880,7 +898,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       unsigned CurOp = 2;
       SmallVector<SDValue, 6> Operands;
       Operands.push_back(Node->getOperand(CurOp++)); // Store value.
-      Operands.push_back(Node->getOperand(CurOp++)); // Base pointer.
+      SDValue Base;
+      SelectBaseAddr(Node->getOperand(CurOp++), Base);
+      Operands.push_back(Base); // Base pointer.
       if (IsStrided)
         Operands.push_back(Node->getOperand(CurOp++)); // Stride.
       if (IsMasked)
