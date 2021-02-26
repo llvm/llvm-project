@@ -389,6 +389,78 @@ define <vscale x 32 x half> @insert_nxv32f16_undef_nxv1f16_26(<vscale x 1 x half
   ret <vscale x 32 x half> %v
 }
 
+define <vscale x 32 x i1> @insert_nxv32i1_nxv8i1_0(<vscale x 32 x i1> %v, <vscale x 8 x i1> %sv) {
+; CHECK-LABEL: insert_nxv32i1_nxv8i1_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf2,tu,mu
+; CHECK-NEXT:    vslideup.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %vec = call <vscale x 32 x i1> @llvm.experimental.vector.insert.nxv8i1.nxv32i1(<vscale x 32 x i1> %v, <vscale x 8 x i1> %sv, i64 0)
+  ret <vscale x 32 x i1> %vec
+}
+
+define <vscale x 32 x i1> @insert_nxv32i1_nxv8i1_8(<vscale x 32 x i1> %v, <vscale x 8 x i1> %sv) {
+; CHECK-LABEL: insert_nxv32i1_nxv8i1_8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    add a1, a0, a0
+; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vslideup.vx v0, v8, a0
+; CHECK-NEXT:    ret
+  %vec = call <vscale x 32 x i1> @llvm.experimental.vector.insert.nxv8i1.nxv32i1(<vscale x 32 x i1> %v, <vscale x 8 x i1> %sv, i64 8)
+  ret <vscale x 32 x i1> %vec
+}
+
+define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_0(<vscale x 4 x i1> %v, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv4i1_nxv1i1_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8,mf2,ta,mu
+; CHECK-NEXT:    vmv.v.i v25, 0
+; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
+; CHECK-NEXT:    vsetvli a0, zero, e8,mf8,ta,mu
+; CHECK-NEXT:    vmv.v.i v26, 0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v26, v26, 1, v0
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf2,tu,mu
+; CHECK-NEXT:    vslideup.vi v25, v26, 0
+; CHECK-NEXT:    vsetvli a0, zero, e8,mf2,ta,mu
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    ret
+  %vec = call <vscale x 4 x i1> @llvm.experimental.vector.insert.nxv1i1.nxv4i1(<vscale x 4 x i1> %v, <vscale x 1 x i1> %sv, i64 0)
+  ret <vscale x 4 x i1> %vec
+}
+
+define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_2(<vscale x 4 x i1> %v, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv4i1_nxv1i1_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8,mf2,ta,mu
+; CHECK-NEXT:    vmv.v.i v25, 0
+; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    slli a1, a0, 1
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    vsetvli a2, zero, e8,mf8,ta,mu
+; CHECK-NEXT:    vmv.v.i v26, 0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v26, v26, 1, v0
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf2,tu,mu
+; CHECK-NEXT:    vslideup.vx v25, v26, a1
+; CHECK-NEXT:    vsetvli a0, zero, e8,mf2,ta,mu
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    ret
+  %vec = call <vscale x 4 x i1> @llvm.experimental.vector.insert.nxv1i1.nxv4i1(<vscale x 4 x i1> %v, <vscale x 1 x i1> %sv, i64 2)
+  ret <vscale x 4 x i1> %vec
+}
+
+declare <vscale x 4 x i1> @llvm.experimental.vector.insert.nxv1i1.nxv4i1(<vscale x 4 x i1>, <vscale x 1 x i1>, i64)
+declare <vscale x 32 x i1> @llvm.experimental.vector.insert.nxv8i1.nxv32i1(<vscale x 32 x i1>, <vscale x 8 x i1>, i64)
+
 declare <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv1i8.nxv16i8(<vscale x 16 x i8>, <vscale x 1 x i8>, i64)
 
 declare <vscale x 32 x half> @llvm.experimental.vector.insert.nxv1f16.nxv32f16(<vscale x 32 x half>, <vscale x 1 x half>, i64)
