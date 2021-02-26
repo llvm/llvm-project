@@ -67,9 +67,13 @@ function clean() {
 
 function generate-cmake() {
     echo "--- Generating CMake"
+    # On macOS, fall back to using the Ninja provided with Xcode if no other
+    # Ninja can be found.
+    if which ninja &>/dev/null; then ninja_path="$(which ninja)"; else ninja_path="$(xcrun --find ninja)"; fi
     cmake -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
           -GNinja \
+          -DCMAKE_MAKE_PROGRAM="${ninja_path}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="libcxx;libunwind;libcxxabi" \
