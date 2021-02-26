@@ -781,10 +781,9 @@ define <32 x i8> @constant_fold_pshufb_256() {
 define i32 @broadcast_v2i64_multiuse(i64* %p0) {
 ; X86-LABEL: broadcast_v2i64_multiuse:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vmovd %xmm0, %eax
-; X86-NEXT:    addl (%ecx), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: broadcast_v2i64_multiuse:
