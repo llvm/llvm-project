@@ -121,23 +121,12 @@ public:
 
   /// The source location the operation was defined or derived from.
   Location getLoc() { return state->getLoc(); }
-  void setLoc(Location loc) { state->setLoc(loc); }
 
   /// Return all of the attributes on this operation.
   LLVM_ATTRIBUTE_DEPRECATED(
       ArrayRef<NamedAttribute> getAttrs(),
       "Use Operation::getAttrs() instead (replace '.' with '->').") {
     return state->getAttrs();
-  }
-
-  /// A utility iterator that filters out non-dialect attributes.
-  using dialect_attr_iterator = Operation::dialect_attr_iterator;
-  using dialect_attr_range = Operation::dialect_attr_range;
-
-  /// Set the dialect attributes for this operation, and preserve all dependent.
-  template <typename DialectAttrs>
-  void setDialectAttrs(DialectAttrs &&attrs) {
-    state->setDialectAttrs(std::forward<DialectAttrs>(attrs));
   }
 
   /// Remove the attribute with the specified name if it exists. Return the
