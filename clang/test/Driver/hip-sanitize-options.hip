@@ -26,15 +26,15 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=FAIL %s
 
 // CHECK-NOT: {{"[^"]*clang[^"]*".* "-fcuda-is-device".* "-fsanitize=address"}}
-// CHECK-NOT: {{"[^"]*lld[^"]*".* ".*hip.bc"}}
+// CHECK-NOT: {{"[^"]*lld(\.exe){0,1}".* ".*hip.bc"}}
 // CHECK: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address"}}
 
 // NORDC: {{"[^"]*clang[^"]*".* "-fcuda-is-device".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.bc]]"
-// NORDC: {{"[^"]*lld[^"]*".*}} "[[OUT]]" {{".*asanrtl.bc" ".*hip.bc"}}
+// NORDC: {{"[^"]*lld(\.exe){0,1}".*}} "[[OUT]]" {{".*asanrtl.bc" ".*hip.bc"}}
 // NORDC: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address"}}
 
 // RDC: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address"}}
 // RDC: {{"[^"]*clang[^"]*".* "-emit-llvm-bc".* "-fcuda-is-device".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.bc]]"
-// RDC: {{"[^"]*lld[^"]*".*}} "[[OUT]]" {{".*asanrtl.bc" ".*hip.bc"}}
+// RDC: {{"[^"]*lld(\.exe){0,1}".*}} "[[OUT]]" {{".*asanrtl.bc" ".*hip.bc"}}
 
 // FAIL: AMDGPU address sanitizer runtime library (asanrtl) is not found. Please install ROCm device library which supports address sanitizer

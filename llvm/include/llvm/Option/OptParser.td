@@ -211,6 +211,14 @@ class MarshallingInfoBooleanFlag<KeyPathAndMacro kpm, code defaultvalue, code va
   code Denormalizer = "makeBooleanOptionDenormalizer("#value#")";
 }
 
+// Marshalling info for enums. Typically used with `Values`, `NormalizedValues`
+// and `NormalizedValuesScope` mixins.
+class MarshallingInfoEnum<KeyPathAndMacro kpm, code defaultvalue>
+  : MarshallingInfo<kpm, defaultvalue> {
+  code Normalizer = "normalizeSimpleEnum";
+  code Denormalizer = "denormalizeSimpleEnum";
+}
+
 // Mixins for additional marshalling attributes.
 
 class ShouldParseIf<code condition> { code ShouldParse = condition; }
@@ -219,10 +227,6 @@ class Normalizer<code normalizer> { code Normalizer = normalizer; }
 class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
 class NormalizedValuesScope<code scope> { code NormalizedValuesScope = scope; }
 class NormalizedValues<list<code> definitions> { list<code> NormalizedValues = definitions; } 
-class AutoNormalizeEnum {
-  code Normalizer = "normalizeSimpleEnum";
-  code Denormalizer = "denormalizeSimpleEnum";
-}
 class ValueMerger<code merger> { code ValueMerger = merger; }
 class ValueExtractor<code extractor> { code ValueExtractor = extractor; }
 

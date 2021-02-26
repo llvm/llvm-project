@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 # This tiny little script, which should be run from the clang
 # directory (with clang in your patch), tries to take each
 # compilable Clang test and build a PCH file from that test, then read
 # and dump the contents of the PCH file just created.
 use POSIX;
+use warnings;
 
 $exitcode = 0;
 sub testfiles($$) {

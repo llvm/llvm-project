@@ -60,22 +60,19 @@ namespace clang {
     bool handleDiagnostics(const DiagnosticInfo &DI) override;
 
     bool isAnalysisRemarkEnabled(StringRef PassName) const override {
-      return (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
-              CodeGenOpts.OptimizationRemarkAnalysisPattern->match(PassName));
+      return CodeGenOpts.OptimizationRemarkAnalysis.patternMatches(PassName);
     }
     bool isMissedOptRemarkEnabled(StringRef PassName) const override {
-      return (CodeGenOpts.OptimizationRemarkMissedPattern &&
-              CodeGenOpts.OptimizationRemarkMissedPattern->match(PassName));
+      return CodeGenOpts.OptimizationRemarkMissed.patternMatches(PassName);
     }
     bool isPassedOptRemarkEnabled(StringRef PassName) const override {
-      return (CodeGenOpts.OptimizationRemarkPattern &&
-              CodeGenOpts.OptimizationRemarkPattern->match(PassName));
+      return CodeGenOpts.OptimizationRemark.patternMatches(PassName);
     }
 
     bool isAnyRemarkEnabled() const override {
-      return (CodeGenOpts.OptimizationRemarkAnalysisPattern ||
-              CodeGenOpts.OptimizationRemarkMissedPattern ||
-              CodeGenOpts.OptimizationRemarkPattern);
+      return CodeGenOpts.OptimizationRemarkAnalysis.hasValidPattern() ||
+             CodeGenOpts.OptimizationRemarkMissed.hasValidPattern() ||
+             CodeGenOpts.OptimizationRemark.hasValidPattern();
     }
 
   private:
@@ -722,15 +719,13 @@ void BackendConsumer::OptimizationRemarkHandler(
   if (D.isPassed()) {
     // Optimization remarks are active only if the -Rpass flag has a regular
     // expression that matches the name of the pass name in \p D.
-    if (CodeGenOpts.OptimizationRemarkPattern &&
-        CodeGenOpts.OptimizationRemarkPattern->match(D.getPassName()))
+    if (CodeGenOpts.OptimizationRemark.patternMatches(D.getPassName()))
       EmitOptimizationMessage(D, diag::remark_fe_backend_optimization_remark);
   } else if (D.isMissed()) {
     // Missed optimization remarks are active only if the -Rpass-missed
     // flag has a regular expression that matches the name of the pass
     // name in \p D.
-    if (CodeGenOpts.OptimizationRemarkMissedPattern &&
-        CodeGenOpts.OptimizationRemarkMissedPattern->match(D.getPassName()))
+    if (CodeGenOpts.OptimizationRemarkMissed.patternMatches(D.getPassName()))
       EmitOptimizationMessage(
           D, diag::remark_fe_backend_optimization_remark_missed);
   } else {
@@ -741,8 +736,7 @@ void BackendConsumer::OptimizationRemarkHandler(
       ShouldAlwaysPrint = ORA->shouldAlwaysPrint();
 
     if (ShouldAlwaysPrint ||
-        (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
-         CodeGenOpts.OptimizationRemarkAnalysisPattern->match(D.getPassName())))
+        CodeGenOpts.OptimizationRemarkAnalysis.patternMatches(D.getPassName()))
       EmitOptimizationMessage(
           D, diag::remark_fe_backend_optimization_remark_analysis);
   }
@@ -755,8 +749,7 @@ void BackendConsumer::OptimizationRemarkHandler(
   // regular expression that matches the name of the pass name in \p D.
 
   if (D.shouldAlwaysPrint() ||
-      (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
-       CodeGenOpts.OptimizationRemarkAnalysisPattern->match(D.getPassName())))
+      CodeGenOpts.OptimizationRemarkAnalysis.patternMatches(D.getPassName()))
     EmitOptimizationMessage(
         D, diag::remark_fe_backend_optimization_remark_analysis_fpcommute);
 }
@@ -768,8 +761,7 @@ void BackendConsumer::OptimizationRemarkHandler(
   // regular expression that matches the name of the pass name in \p D.
 
   if (D.shouldAlwaysPrint() ||
-      (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
-       CodeGenOpts.OptimizationRemarkAnalysisPattern->match(D.getPassName())))
+      CodeGenOpts.OptimizationRemarkAnalysis.patternMatches(D.getPassName()))
     EmitOptimizationMessage(
         D, diag::remark_fe_backend_optimization_remark_analysis_aliasing);
 }

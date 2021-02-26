@@ -532,10 +532,10 @@ def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognize
 def err_aix_default_altivec_abi : Error<
   "The default Altivec ABI on AIX is not yet supported, use '-mabi=vec-extabi' for the extended Altivec ABI">;
 
-def note_cc1_round_trip_original : Note<"Original arguments in %0 round-trip: %1">;
-def note_cc1_round_trip_generated : Note<"Generated arguments #%1 in %0 round-trip: %2">;
-def remark_cc1_round_trip_generated : Remark<"Generated arguments #%1 in %0 round-trip: %2">, InGroup<RoundTripCC1Args>;
-def err_cc1_round_trip_fail_then_ok : Error<"Original arguments parse failed, then succeeded in %0 round-trip">;
-def err_cc1_round_trip_ok_then_fail : Error<"Generated arguments parse failed in %0 round-trip">;
-def err_cc1_round_trip_mismatch : Error<"Generated arguments do not match in %0 round-trip">;
+def note_cc1_round_trip_original : Note<"Original arguments in round-trip: %0">;
+def note_cc1_round_trip_generated : Note<"Generated arguments #%0 in round-trip: %1">;
+def remark_cc1_round_trip_generated : Remark<"Generated arguments #%0 in round-trip: %1">, InGroup<RoundTripCC1Args>;
+def err_cc1_round_trip_fail_then_ok : Error<"Original arguments parse failed, then succeeded in round-trip">;
+def err_cc1_round_trip_ok_then_fail : Error<"Generated arguments parse failed in round-trip">;
+def err_cc1_round_trip_mismatch : Error<"Generated arguments do not match in round-trip">;
 }

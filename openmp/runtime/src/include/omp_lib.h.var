@@ -594,13 +594,11 @@
 
         subroutine omp_set_teams_thread_limit(thread_limit) bind(c)
           import
-          use omp_lib_kinds
           integer (kind=omp_integer_kind), value :: thread_limit
         end subroutine omp_set_teams_thread_limit
 
         function omp_get_teams_thread_limit() bind(c)
           import
-          use omp_lib_kinds
           integer (kind=omp_integer_kind) omp_get_teams_thread_limit
         end function omp_get_teams_thread_limit
 

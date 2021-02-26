@@ -287,37 +287,52 @@ public:
   /// -fsymbol-partition (see https://lld.llvm.org/Partitions.html).
   std::string SymbolPartition;
 
-  /// Regular expression and the string it was created from.
-  struct RemarkPattern {
+  enum RemarkKind {
+    RK_Missing,            // Remark argument not present on the command line.
+    RK_Enabled,            // Remark enabled via '-Rgroup'.
+    RK_EnabledEverything,  // Remark enabled via '-Reverything'.
+    RK_Disabled,           // Remark disabled via '-Rno-group'.
+    RK_DisabledEverything, // Remark disabled via '-Rno-everything'.
+    RK_WithPattern,        // Remark pattern specified via '-Rgroup=regexp'.
+  };
+
+  /// Optimization remark with an optional regular expression pattern.
+  struct OptRemark {
+    RemarkKind Kind;
     std::string Pattern;
     std::shared_ptr<llvm::Regex> Regex;
 
-    explicit operator bool() const { return Regex != nullptr; }
+    /// By default, optimization remark is missing.
+    OptRemark() : Kind(RK_Missing), Pattern(""), Regex(nullptr) {}
 
-    llvm::Regex *operator->() const { return Regex.get(); }
+    /// Returns true iff the optimization remark holds a valid regular
+    /// expression.
+    bool hasValidPattern() const { return Regex != nullptr; }
+
+    /// Matches the given string against the regex, if there is some.
+    bool patternMatches(StringRef String) const {
+      return hasValidPattern() && Regex->match(String);
+    }
   };
 
-  /// Regular expression to select optimizations for which we should enable
-  /// optimization remarks. Transformation passes whose name matches this
-  /// expression (and support this feature), will emit a diagnostic
-  /// whenever they perform a transformation. This is enabled by the
-  /// -Rpass=regexp flag.
-  RemarkPattern OptimizationRemarkPattern;
+  /// Selected optimizations for which we should enable optimization remarks.
+  /// Transformation passes whose name matches the contained (optional) regular
+  /// expression (and support this feature), will emit a diagnostic whenever
+  /// they perform a transformation.
+  OptRemark OptimizationRemark;
 
-  /// Regular expression to select optimizations for which we should enable
-  /// missed optimization remarks. Transformation passes whose name matches this
-  /// expression (and support this feature), will emit a diagnostic
-  /// whenever they tried but failed to perform a transformation. This is
-  /// enabled by the -Rpass-missed=regexp flag.
-  RemarkPattern OptimizationRemarkMissedPattern;
+  /// Selected optimizations for which we should enable missed optimization
+  /// remarks. Transformation passes whose name matches the contained (optional)
+  /// regular expression (and support this feature), will emit a diagnostic
+  /// whenever they tried but failed to perform a transformation.
+  OptRemark OptimizationRemarkMissed;
 
-  /// Regular expression to select optimizations for which we should enable
-  /// optimization analyses. Transformation passes whose name matches this
-  /// expression (and support this feature), will emit a diagnostic
-  /// whenever they want to explain why they decided to apply or not apply
-  /// a given transformation. This is enabled by the -Rpass-analysis=regexp
-  /// flag.
-  RemarkPattern OptimizationRemarkAnalysisPattern;
+  /// Selected optimizations for which we should enable optimization analyses.
+  /// Transformation passes whose name matches the contained (optional) regular
+  /// expression (and support this feature), will emit a diagnostic whenever
+  /// they want to explain why they decided to apply or not apply a given
+  /// transformation.
+  OptRemark OptimizationRemarkAnalysis;
 
   /// Set of files defining the rules for the symbol rewriting.
   std::vector<std::string> RewriteMapFiles;

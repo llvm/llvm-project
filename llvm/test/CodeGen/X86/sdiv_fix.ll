@@ -274,7 +274,7 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    movq %rbx, %rsi
 ; X64-NEXT:    movq %r14, %rdx
 ; X64-NEXT:    movq %r12, %rcx
-; X64-NEXT:    callq __divti3
+; X64-NEXT:    callq __divti3@PLT
 ; X64-NEXT:    movq %rax, %r13
 ; X64-NEXT:    decq %rax
 ; X64-NEXT:    movq %rax, (%rsp) # 8-byte Spill
@@ -287,7 +287,7 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    movq %rbx, %rsi
 ; X64-NEXT:    movq %r14, %rdx
 ; X64-NEXT:    movq %r12, %rcx
-; X64-NEXT:    callq __modti3
+; X64-NEXT:    callq __modti3@PLT
 ; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    testb %bpl, %al
