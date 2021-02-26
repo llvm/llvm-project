@@ -1222,7 +1222,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; end_block
 ;           <- (b) The br destination should be remapped to here
 ;
-; The test was reduced by bugpoint and should not crash.
+; The test was reduced by bugpoint and should not crash in CFGStackify.
 define void @test21() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   br i1 undef, label %if.then, label %if.end12
@@ -1295,6 +1295,65 @@ ehcleanup:                                        ; preds = %try.cont23, %rethro
   cleanupret from %12 unwind to caller
 
 unreachable:                                      ; preds = %if.then, %invoke.cont, %rethrow19
+  unreachable
+}
+
+; Regression test for WasmEHFuncInfo's reverse mapping bug. 'UnwindDestToSrc'
+; should return a vector and not a single BB, which was incorrect.
+; This was reduced by bugpoint and should not crash in CFGStackify.
+define void @test22() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  invoke void @foo()
+          to label %invoke.cont unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %entry
+  %0 = catchswitch within none [label %catch.start] unwind label %ehcleanup22
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* bitcast (i8** @_ZTIi to i8*)]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  invoke void @__cxa_throw() #1 [ "funclet"(token %1) ]
+          to label %unreachable unwind label %catch.dispatch2
+
+catch.dispatch2:                                  ; preds = %catch.start
+  %4 = catchswitch within %1 [label %catch.start3] unwind label %ehcleanup
+
+catch.start3:                                     ; preds = %catch.dispatch2
+  %5 = catchpad within %4 [i8* bitcast (i8** @_ZTIi to i8*)]
+  %6 = call i8* @llvm.wasm.get.exception(token %5)
+  %7 = call i32 @llvm.wasm.get.ehselector(token %5)
+  catchret from %5 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start3
+  invoke void @foo() [ "funclet"(token %1) ]
+          to label %invoke.cont8 unwind label %ehcleanup
+
+invoke.cont8:                                     ; preds = %try.cont
+  invoke void @__cxa_throw() #1 [ "funclet"(token %1) ]
+          to label %unreachable unwind label %catch.dispatch11
+
+catch.dispatch11:                                 ; preds = %invoke.cont8
+  %8 = catchswitch within %1 [label %catch.start12] unwind label %ehcleanup
+
+catch.start12:                                    ; preds = %catch.dispatch11
+  %9 = catchpad within %8 [i8* bitcast (i8** @_ZTIi to i8*)]
+  %10 = call i8* @llvm.wasm.get.exception(token %9)
+  %11 = call i32 @llvm.wasm.get.ehselector(token %9)
+  unreachable
+
+invoke.cont:                                      ; preds = %entry
+  unreachable
+
+ehcleanup:                                        ; preds = %try.cont, %catch.dispatch11, %catch.dispatch2
+  %12 = cleanuppad within %1 []
+  cleanupret from %12 unwind label %ehcleanup22
+
+ehcleanup22:                                      ; preds = %ehcleanup, %catch.dispatch
+  %13 = cleanuppad within none []
+  cleanupret from %13 unwind to caller
+
+unreachable:                                      ; preds = %catch.start, %invoke.cont8
   unreachable
 }
 
