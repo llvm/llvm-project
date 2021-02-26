@@ -2393,6 +2393,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     return;
   }
   case AMDGPU::G_CTPOP:
+  case AMDGPU::G_BITREVERSE:
   case AMDGPU::G_CTLZ_ZERO_UNDEF:
   case AMDGPU::G_CTTZ_ZERO_UNDEF: {
     const RegisterBank *DstBank =
@@ -3607,10 +3608,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[i] = AMDGPU::getValueMapping(Bank, SrcSize);
     break;
   }
+  case AMDGPU::G_BITREVERSE:
   case AMDGPU::G_BITCAST:
   case AMDGPU::G_INTTOPTR:
   case AMDGPU::G_PTRTOINT:
-  case AMDGPU::G_BITREVERSE:
   case AMDGPU::G_FABS:
   case AMDGPU::G_FNEG: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
