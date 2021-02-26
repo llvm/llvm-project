@@ -158,19 +158,6 @@ private:
   Instruction *findClosestMatchingDominator(const SCEV *CandidateExpr,
                                             Instruction *Dominatee);
 
-  // Try to match \p I as signed/unsigned Min/Max and reassociate it. \p
-  // OrigSCEV is set if \I matches Min/Max regardless whether resassociation is
-  // done or not. If reassociation was successful newly generated instruction is
-  // returned, otherwise nullptr.
-  template <typename PredT>
-  Instruction *matchAndReassociateMinOrMax(Instruction *I,
-                                           const SCEV *&OrigSCEV);
-
-  // Reassociate Min/Max.
-  template <typename MaxMinT>
-  Value *tryReassociateMinOrMax(Instruction *I, MaxMinT MaxMinMatch, Value *LHS,
-                                Value *RHS);
-
   // GetElementPtrInst implicitly sign-extends an index if the index is shorter
   // than the pointer size. This function returns whether Index is shorter than
   // GEP's pointer size, i.e., whether Index needs to be sign-extended in order
