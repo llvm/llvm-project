@@ -447,10 +447,7 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
       // FIXME: duplicated from Target/WebAssembly/WebAssembly.h
       // don't want to depend on target specific headers in this code?
       const unsigned TI_GLOBAL_RELOC = 3;
-      // FIXME: when writing dwo, we need to avoid relocations. Probably
-      // the "right" solution is to treat globals the way func and data symbols
-      // are (with entries in .debug_addr).
-      if (FrameBase.Location.WasmLoc.Kind == TI_GLOBAL_RELOC && !isDwoUnit()) {
+      if (FrameBase.Location.WasmLoc.Kind == TI_GLOBAL_RELOC) {
         // These need to be relocatable.
         assert(FrameBase.Location.WasmLoc.Index == 0);  // Only SP so far.
         auto SPSym = cast<MCSymbolWasm>(
@@ -468,8 +465,16 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
         DIELoc *Loc = new (DIEValueAllocator) DIELoc;
         addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_WASM_location);
         addSInt(*Loc, dwarf::DW_FORM_sdata, TI_GLOBAL_RELOC);
-        addLabel(*Loc, dwarf::DW_FORM_data4, SPSym);
-        DD->addArangeLabel(SymbolCU(this, SPSym));
+        if (!isDwoUnit()) {
+          addLabel(*Loc, dwarf::DW_FORM_data4, SPSym);
+          DD->addArangeLabel(SymbolCU(this, SPSym));
+        } else {
+          // FIXME: when writing dwo, we need to avoid relocations. Probably
+          // the "right" solution is to treat globals the way func and data
+          // symbols are (with entries in .debug_addr).
+          // For now, since we only ever use index 0, this should work as-is.       
+          addUInt(*Loc, dwarf::DW_FORM_data4, FrameBase.Location.WasmLoc.Index);
+        }
         addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_stack_value);
         addBlock(*SPDie, dwarf::DW_AT_frame_base, Loc);
       } else {
