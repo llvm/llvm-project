@@ -71,7 +71,6 @@ struct DefaultConfig {
 
   typedef MapAllocatorCache<DefaultConfig> SecondaryCache;
   static const u32 SecondaryCacheEntriesArraySize = 32U;
-  static const u32 SecondaryCacheQuarantineSize = 0U;
   static const u32 SecondaryCacheDefaultMaxEntriesCount = 32U;
   static const uptr SecondaryCacheDefaultMaxEntrySize = 1UL << 19;
   static const s32 SecondaryCacheMinReleaseToOsIntervalMs = INT32_MIN;
@@ -99,7 +98,6 @@ struct AndroidConfig {
 
   typedef MapAllocatorCache<AndroidConfig> SecondaryCache;
   static const u32 SecondaryCacheEntriesArraySize = 256U;
-  static const u32 SecondaryCacheQuarantineSize = 32U;
   static const u32 SecondaryCacheDefaultMaxEntriesCount = 32U;
   static const uptr SecondaryCacheDefaultMaxEntrySize = 2UL << 20;
   static const s32 SecondaryCacheMinReleaseToOsIntervalMs = 0;
@@ -128,7 +126,6 @@ struct AndroidSvelteConfig {
 
   typedef MapAllocatorCache<AndroidSvelteConfig> SecondaryCache;
   static const u32 SecondaryCacheEntriesArraySize = 16U;
-  static const u32 SecondaryCacheQuarantineSize = 32U;
   static const u32 SecondaryCacheDefaultMaxEntriesCount = 4U;
   static const uptr SecondaryCacheDefaultMaxEntrySize = 1UL << 18;
   static const s32 SecondaryCacheMinReleaseToOsIntervalMs = 0;
