@@ -153,12 +153,12 @@ attributes #7 = { noduplicate }
 
 ; CHECK: ![[ORIG]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 
-; CHECK: ![[RESUME]] = distinct !DISubprogram(name: "f", linkageName: "f.resume"
+; CHECK: ![[RESUME]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 ; CHECK: ![[RESUME_COROHDL]] = !DILocalVariable(name: "coro_hdl", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_X]] = !DILocalVariable(name: "x", arg: 1, scope: ![[RESUME]]
 ; CHECK: ![[RESUME_DIRECT]] = !DILocalVariable(name: "direct_mem", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_CONST]] = !DILocalVariable(name: "direct_const", scope: ![[RESUME]]
 
-; CHECK: ![[DESTROY]] = distinct !DISubprogram(name: "f", linkageName: "f.destroy"
+; CHECK: ![[DESTROY]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 
-; CHECK: ![[CLEANUP]] = distinct !DISubprogram(name: "f", linkageName: "f.cleanup"
+; CHECK: ![[CLEANUP]] = distinct !DISubprogram(name: "f", linkageName: "flink"

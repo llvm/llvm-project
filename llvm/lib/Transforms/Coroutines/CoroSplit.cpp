@@ -858,7 +858,6 @@ void CoroCloner::create() {
     if (ActiveSuspend)
       if (auto DL = ActiveSuspend->getDebugLoc())
         SP->setScopeLine(DL->getLine());
-    SP->replaceLinkageName(MDString::get(Context, NewF->getName()));
   }
 
   NewF->setLinkage(savedLinkage);
