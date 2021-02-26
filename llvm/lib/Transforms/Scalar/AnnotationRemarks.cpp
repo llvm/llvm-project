@@ -16,10 +16,12 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/AutoInitRemark.h"
 
 using namespace llvm;
 using namespace llvm::ore;
@@ -38,9 +40,20 @@ static void tryEmitAutoInitRemark(ArrayRef<Instruction *> Instructions,
       if (cast<MDString>(Op.get())->getString() != "auto-init")
         continue;
 
-      ORE.emit(
-          OptimizationRemarkMissed(REMARK_PASS, "AutoInitUnknownInstruction", I)
-          << "Initialization inserted by -ftrivial-auto-var-init.");
+      Function &F = *I->getParent()->getParent();
+      const DataLayout &DL = F.getParent()->getDataLayout();
+      AutoInitRemark Remark(ORE, REMARK_PASS, DL);
+      // For some of them, we can provide more information:
+
+      // For stores:
+      // * size
+      // * volatile / atomic
+      if (auto *SI = dyn_cast<StoreInst>(I)) {
+        Remark.inspectStore(*SI);
+        continue;
+      }
+
+      Remark.inspectUnknown(*I);
     }
   }
 }
