@@ -1851,8 +1851,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v64i1,  &X86::VK64RegClass);
 
     for (auto VT : { MVT::v32i1, MVT::v64i1 }) {
-      setOperationAction(ISD::ADD,                VT, Custom);
-      setOperationAction(ISD::SUB,                VT, Custom);
       setOperationAction(ISD::MUL,                VT, Custom);
       setOperationAction(ISD::VSELECT,            VT, Expand);
       setOperationAction(ISD::UADDSAT,            VT, Custom);
