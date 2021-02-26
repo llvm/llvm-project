@@ -67,12 +67,12 @@ childAtPath(NodePointer node,
   return nullptr;
 }
 
-bool SwiftLanguageRuntime::IsSwiftAsyncFunctionSymbol(StringRef name) {
-  if (!IsSwiftMangledName(name))
-    return false;
+static bool hasChild(NodePointer node, swift::Demangle::Node::Kind kind) {
+  return childAtPath(node, {kind});
+}
+
+static bool IsSwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node) {
   using namespace swift::Demangle;
-  Context ctx;
-  NodePointer node = ctx.demangleSymbolAsNode(name);
   if (!node || node->getKind() != Node::Kind::Global)
     return false;
   return childAtPath(node,
@@ -84,12 +84,21 @@ bool SwiftLanguageRuntime::IsSwiftAsyncFunctionSymbol(StringRef name) {
                       Node::Kind::FunctionType, Node::Kind::AsyncAnnotation});
 }
 
+bool SwiftLanguageRuntime::IsSwiftAsyncFunctionSymbol(StringRef name) {
+  if (!IsSwiftMangledName(name))
+    return false;
+  using namespace swift::Demangle;
+  Context ctx;
+  NodePointer node = ctx.demangleSymbolAsNode(name);
+  return ::IsSwiftAsyncFunctionSymbol(node);
+}
+
 static ThunkKind GetThunkKind(Symbol *symbol) {
   auto symbol_name = symbol->GetMangled().GetMangledName().GetStringRef();
 
-  swift::Demangle::Context demangle_ctx;
-  swift::Demangle::NodePointer nodes =
-      demangle_ctx.demangleSymbolAsNode(symbol_name);
+  using namespace swift::Demangle;
+  Context demangle_ctx;
+  NodePointer nodes = demangle_ctx.demangleSymbolAsNode(symbol_name);
   if (!nodes)
     return ThunkKind::Unknown;
 
@@ -97,44 +106,32 @@ static ThunkKind GetThunkKind(Symbol *symbol) {
   if (num_global_children == 0)
     return ThunkKind::Unknown;
 
-  if (nodes->getKind() != swift::Demangle::Node::Kind::Global)
+  if (nodes->getKind() != Node::Kind::Global)
     return ThunkKind::Unknown;
   if (nodes->getNumChildren() == 0)
     return ThunkKind::Unknown;
 
-  swift::Demangle::NodePointer node_ptr = nodes->getFirstChild();
-  swift::Demangle::Node::Kind kind = node_ptr->getKind();
-
   if (!demangle_ctx.isThunkSymbol(symbol_name)) {
-    if (kind == swift::Demangle::Node::Kind::Function) {
-      using namespace swift::Demangle;
-      if (childAtPath(node_ptr, {Node::Kind::Type, Node::Kind::FunctionType,
-                                 Node::Kind::AsyncAnnotation}))
-        return ThunkKind::AsyncFunction;
+    if (IsSwiftAsyncFunctionSymbol(nodes)) {
+      return ThunkKind::AsyncFunction;
     }
     return ThunkKind::Unknown;
   }
 
-  switch (kind) {
-  case swift::Demangle::Node::Kind::ObjCAttribute:
+  NodePointer main_node = nodes->getFirstChild();
+  switch (main_node->getKind()) {
+  case Node::Kind::ObjCAttribute:
     return ThunkKind::ObjCAttribute;
-    break;
-  case swift::Demangle::Node::Kind::ProtocolWitness:
-    if (node_ptr->getNumChildren() == 0)
-      return ThunkKind::Unknown;
-    if (node_ptr->getFirstChild()->getKind() ==
-        swift::Demangle::Node::Kind::ProtocolConformance)
+  case Node::Kind::ProtocolWitness:
+    if (hasChild(main_node, Node::Kind::ProtocolConformance))
       return ThunkKind::ProtocolConformance;
     break;
-  case swift::Demangle::Node::Kind::ReabstractionThunkHelper:
+  case Node::Kind::ReabstractionThunkHelper:
     return ThunkKind::Reabstraction;
-  case swift::Demangle::Node::Kind::PartialApplyForwarder:
+  case Node::Kind::PartialApplyForwarder:
     return ThunkKind::PartialApply;
-  case swift::Demangle::Node::Kind::Allocator:
-    if (node_ptr->getNumChildren() == 0)
-      return ThunkKind::Unknown;
-    if (node_ptr->getFirstChild()->getKind() ==
-        swift::Demangle::Node::Kind::Class)
+  case Node::Kind::Allocator:
+    if (hasChild(main_node, Node::Kind::Class))
       return ThunkKind::AllocatingInit;
     break;
   default:
