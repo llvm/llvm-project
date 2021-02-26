@@ -593,6 +593,11 @@ struct DFSanFunction {
   /// CTP(other types, PS) = PS
   Value *collapseToPrimitiveShadow(Value *Shadow, Instruction *Pos);
 
+  void storeZeroPrimitiveShadow(Value *Addr, uint64_t Size, Align ShadowAlign,
+                                Instruction *Pos);
+
+  Align getShadowAlign(Align InstAlignment);
+
 private:
   /// Collapses the shadow with aggregate type into a single primitive shadow
   /// value.
@@ -634,6 +639,8 @@ public:
   void visitGetElementPtrInst(GetElementPtrInst &GEPI);
   void visitLoadInst(LoadInst &LI);
   void visitStoreInst(StoreInst &SI);
+  void visitAtomicRMWInst(AtomicRMWInst &I);
+  void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
   void visitReturnInst(ReturnInst &RI);
   void visitCallBase(CallBase &CB);
   void visitPHINode(PHINode &PN);
@@ -648,6 +655,8 @@ public:
   void visitMemTransferInst(MemTransferInst &I);
 
 private:
+  void visitCASOrRMW(Align InstAlignment, Instruction &I);
+
   // Returns false when this is an invoke of a custom function.
   bool visitWrappedCallBase(Function &F, CallBase &CB);
 
@@ -1802,6 +1811,11 @@ void DFSanVisitor::visitInstOperandOrigins(Instruction &I) {
   DFSF.setOrigin(&I, CombinedOrigin);
 }
 
+Align DFSanFunction::getShadowAlign(Align InstAlignment) {
+  const Align Alignment = ClPreserveAlignment ? InstAlignment : Align(1);
+  return Align(Alignment.value() * DFS.ShadowWidthBytes);
+}
+
 Value *DFSanFunction::loadFast16ShadowFast(Value *ShadowAddr, uint64_t Size,
                                            Align ShadowAlign,
                                            Instruction *Pos) {
@@ -1959,6 +1973,23 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
   return FallbackCall;
 }
 
+static AtomicOrdering addAcquireOrdering(AtomicOrdering AO) {
+  switch (AO) {
+  case AtomicOrdering::NotAtomic:
+    return AtomicOrdering::NotAtomic;
+  case AtomicOrdering::Unordered:
+  case AtomicOrdering::Monotonic:
+  case AtomicOrdering::Acquire:
+    return AtomicOrdering::Acquire;
+  case AtomicOrdering::Release:
+  case AtomicOrdering::AcquireRelease:
+    return AtomicOrdering::AcquireRelease;
+  case AtomicOrdering::SequentiallyConsistent:
+    return AtomicOrdering::SequentiallyConsistent;
+  }
+  llvm_unreachable("Unknown ordering");
+}
+
 void DFSanVisitor::visitLoadInst(LoadInst &LI) {
   auto &DL = LI.getModule()->getDataLayout();
   uint64_t Size = DL.getTypeStoreSize(LI.getType());
@@ -1967,26 +1998,49 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
     return;
   }
 
+  // When an application load is atomic, increase atomic ordering between
+  // atomic application loads and stores to ensure happen-before order; load
+  // shadow data after application data; store zero shadow data before
+  // application data. This ensure shadow loads return either labels of the
+  // initial application data or zeros.
+  if (LI.isAtomic())
+    LI.setOrdering(addAcquireOrdering(LI.getOrdering()));
+
   Align Alignment = ClPreserveAlignment ? LI.getAlign() : Align(1);
+  Instruction *Pos = LI.isAtomic() ? LI.getNextNode() : &LI;
   Value *PrimitiveShadow =
-      DFSF.loadShadow(LI.getPointerOperand(), Size, Alignment.value(), &LI);
+      DFSF.loadShadow(LI.getPointerOperand(), Size, Alignment.value(), Pos);
   if (ClCombinePointerLabelsOnLoad) {
     Value *PtrShadow = DFSF.getShadow(LI.getPointerOperand());
-    PrimitiveShadow = DFSF.combineShadows(PrimitiveShadow, PtrShadow, &LI);
+    PrimitiveShadow = DFSF.combineShadows(PrimitiveShadow, PtrShadow, Pos);
   }
   if (!DFSF.DFS.isZeroShadow(PrimitiveShadow))
     DFSF.NonZeroChecks.push_back(PrimitiveShadow);
 
   Value *Shadow =
-      DFSF.expandFromPrimitiveShadow(LI.getType(), PrimitiveShadow, &LI);
+      DFSF.expandFromPrimitiveShadow(LI.getType(), PrimitiveShadow, Pos);
   DFSF.setShadow(&LI, Shadow);
   if (ClEventCallbacks) {
-    IRBuilder<> IRB(&LI);
+    IRBuilder<> IRB(Pos);
     Value *Addr8 = IRB.CreateBitCast(LI.getPointerOperand(), DFSF.DFS.Int8Ptr);
     IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, {PrimitiveShadow, Addr8});
   }
 }
 
+void DFSanFunction::storeZeroPrimitiveShadow(Value *Addr, uint64_t Size,
+                                             Align ShadowAlign,
+                                             Instruction *Pos) {
+  IRBuilder<> IRB(Pos);
+  IntegerType *ShadowTy =
+      IntegerType::get(*DFS.Ctx, Size * DFS.ShadowWidthBits);
+  Value *ExtZeroShadow = ConstantInt::get(ShadowTy, 0);
+  Value *ShadowAddr = DFS.getShadowAddress(Addr, Pos);
+  Value *ExtShadowAddr =
+      IRB.CreateBitCast(ShadowAddr, PointerType::getUnqual(ShadowTy));
+  IRB.CreateAlignedStore(ExtZeroShadow, ExtShadowAddr, ShadowAlign);
+  // Do not write origins for 0 shadows because we do not trace origins for
+  // untainted sinks.
+}
 void DFSanFunction::storePrimitiveShadow(Value *Addr, uint64_t Size,
                                          Align Alignment,
                                          Value *PrimitiveShadow,
@@ -2001,18 +2055,13 @@ void DFSanFunction::storePrimitiveShadow(Value *Addr, uint64_t Size,
   }
 
   const Align ShadowAlign(Alignment.value() * DFS.ShadowWidthBytes);
-  IRBuilder<> IRB(Pos);
-  Value *ShadowAddr = DFS.getShadowAddress(Addr, Pos);
   if (DFS.isZeroShadow(PrimitiveShadow)) {
-    IntegerType *ShadowTy =
-        IntegerType::get(*DFS.Ctx, Size * DFS.ShadowWidthBits);
-    Value *ExtZeroShadow = ConstantInt::get(ShadowTy, 0);
-    Value *ExtShadowAddr =
-        IRB.CreateBitCast(ShadowAddr, PointerType::getUnqual(ShadowTy));
-    IRB.CreateAlignedStore(ExtZeroShadow, ExtShadowAddr, ShadowAlign);
+    storeZeroPrimitiveShadow(Addr, Size, ShadowAlign, Pos);
     return;
   }
 
+  IRBuilder<> IRB(Pos);
+  Value *ShadowAddr = DFS.getShadowAddress(Addr, Pos);
   const unsigned ShadowVecSize = 128 / DFS.ShadowWidthBits;
   uint64_t Offset = 0;
   if (Size >= ShadowVecSize) {
@@ -2044,15 +2093,42 @@ void DFSanFunction::storePrimitiveShadow(Value *Addr, uint64_t Size,
   }
 }
 
+static AtomicOrdering addReleaseOrdering(AtomicOrdering AO) {
+  switch (AO) {
+  case AtomicOrdering::NotAtomic:
+    return AtomicOrdering::NotAtomic;
+  case AtomicOrdering::Unordered:
+  case AtomicOrdering::Monotonic:
+  case AtomicOrdering::Release:
+    return AtomicOrdering::Release;
+  case AtomicOrdering::Acquire:
+  case AtomicOrdering::AcquireRelease:
+    return AtomicOrdering::AcquireRelease;
+  case AtomicOrdering::SequentiallyConsistent:
+    return AtomicOrdering::SequentiallyConsistent;
+  }
+  llvm_unreachable("Unknown ordering");
+}
+
 void DFSanVisitor::visitStoreInst(StoreInst &SI) {
   auto &DL = SI.getModule()->getDataLayout();
-  uint64_t Size = DL.getTypeStoreSize(SI.getValueOperand()->getType());
+  Value *Val = SI.getValueOperand();
+  uint64_t Size = DL.getTypeStoreSize(Val->getType());
   if (Size == 0)
     return;
 
+  // When an application store is atomic, increase atomic ordering between
+  // atomic application loads and stores to ensure happen-before order; load
+  // shadow data after application data; store zero shadow data before
+  // application data. This ensure shadow loads return either labels of the
+  // initial application data or zeros.
+  if (SI.isAtomic())
+    SI.setOrdering(addReleaseOrdering(SI.getOrdering()));
+
   const Align Alignment = ClPreserveAlignment ? SI.getAlign() : Align(1);
 
-  Value* Shadow = DFSF.getShadow(SI.getValueOperand());
+  Value *Shadow =
+      SI.isAtomic() ? DFSF.DFS.getZeroShadow(Val) : DFSF.getShadow(Val);
   Value *PrimitiveShadow;
   if (ClCombinePointerLabelsOnStore) {
     Value *PtrShadow = DFSF.getShadow(SI.getPointerOperand());
@@ -2067,6 +2143,38 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
     Value *Addr8 = IRB.CreateBitCast(SI.getPointerOperand(), DFSF.DFS.Int8Ptr);
     IRB.CreateCall(DFSF.DFS.DFSanStoreCallbackFn, {PrimitiveShadow, Addr8});
   }
+}
+
+void DFSanVisitor::visitCASOrRMW(Align InstAlignment, Instruction &I) {
+  assert(isa<AtomicRMWInst>(I) || isa<AtomicCmpXchgInst>(I));
+
+  Value *Val = I.getOperand(1);
+  const auto &DL = I.getModule()->getDataLayout();
+  uint64_t Size = DL.getTypeStoreSize(Val->getType());
+  if (Size == 0)
+    return;
+
+  // Conservatively set data at stored addresses and return with zero shadow to
+  // prevent shadow data races.
+  IRBuilder<> IRB(&I);
+  Value *Addr = I.getOperand(0);
+  const Align ShadowAlign = DFSF.getShadowAlign(InstAlignment);
+  DFSF.storeZeroPrimitiveShadow(Addr, Size, ShadowAlign, &I);
+  DFSF.setShadow(&I, DFSF.DFS.getZeroShadow(&I));
+}
+
+void DFSanVisitor::visitAtomicRMWInst(AtomicRMWInst &I) {
+  visitCASOrRMW(I.getAlign(), I);
+  // TODO: The ordering change follows MSan. It is possible not to change
+  // ordering because we always set and use 0 shadows.
+  I.setOrdering(addReleaseOrdering(I.getOrdering()));
+}
+
+void DFSanVisitor::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+  visitCASOrRMW(I.getAlign(), I);
+  // TODO: The ordering change follows MSan. It is possible not to change
+  // ordering because we always set and use 0 shadows.
+  I.setSuccessOrdering(addReleaseOrdering(I.getSuccessOrdering()));
 }
 
 void DFSanVisitor::visitUnaryOperator(UnaryOperator &UO) {
