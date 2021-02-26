@@ -3594,7 +3594,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                           Name.startswith("atomic.load.add.f64.p"))) {
       Value *Ptr = CI->getArgOperand(0);
       Value *Val = CI->getArgOperand(1);
-      Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val,
+      Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
                                     AtomicOrdering::SequentiallyConsistent);
     } else if (IsNVVM && (Name == "max.i" || Name == "max.ll" ||
                           Name == "max.ui" || Name == "max.ull")) {
