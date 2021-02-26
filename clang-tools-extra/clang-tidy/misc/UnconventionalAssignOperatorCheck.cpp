@@ -73,21 +73,18 @@ void UnconventionalAssignOperatorCheck::check(
   if (const auto *RetStmt = Result.Nodes.getNodeAs<ReturnStmt>("returnStmt")) {
     diag(RetStmt->getBeginLoc(), "operator=() should always return '*this'");
   } else {
-    static const char *const Messages[][2] = {
-        {"ReturnType", "operator=() should return '%0&'"},
-        {"ArgumentType",
-         getLangOpts().CPlusPlus11
-             ? "operator=() should take '%0 const&', '%0&&' or '%0'"
-             : "operator=() should take '%0 const&' or '%0'"},
-        {"cv", "operator=() should not be marked '%1'"}};
-
     const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("method");
-    for (const auto &Message : Messages) {
-      if (Result.Nodes.getNodeAs<Decl>(Message[0]))
-        diag(Method->getBeginLoc(), Message[1])
-            << Method->getParent()->getName()
-            << (Method->isConst() ? "const" : "virtual");
-    }
+    if (Result.Nodes.getNodeAs<CXXMethodDecl>("ReturnType"))
+      diag(Method->getBeginLoc(), "operator=() should return '%0&'")
+          << Method->getParent()->getName();
+    if (Result.Nodes.getNodeAs<CXXMethodDecl>("ArgumentType"))
+      diag(Method->getBeginLoc(),
+           "operator=() should take '%0 const&'%select{|, '%0&&'}1 or '%0'")
+          << Method->getParent()->getName() << getLangOpts().CPlusPlus11;
+    if (Result.Nodes.getNodeAs<CXXMethodDecl>("cv"))
+      diag(Method->getBeginLoc(),
+           "operator=() should not be marked '%select{const|virtual}0'")
+          << !Method->isConst();
   }
 }
 
