@@ -1574,11 +1574,14 @@ def Vector_MaskedLoadOp :
     closely correspond to those of the `llvm.masked.load`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-load-intrinsics).
 
-    Example:
+    Examples:
 
     ```mlir
     %0 = vector.maskedload %base[%i], %mask, %pass_thru
        : memref<?xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+
+    %1 = vector.maskedload %base[%i, %j], %mask, %pass_thru
+       : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
   }];
   let extraClassDeclaration = [{
@@ -1625,11 +1628,14 @@ def Vector_MaskedStoreOp :
     closely correspond to those of the `llvm.masked.store`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-store-intrinsics).
 
-    Example:
+    Examples:
 
     ```mlir
     vector.maskedstore %base[%i], %mask, %value
       : memref<?xf32>, vector<8xi1>, vector<8xf32>
+
+    vector.maskedstore %base[%i, %j], %mask, %value
+      : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
     ```
   }];
   let extraClassDeclaration = [{
@@ -1652,7 +1658,8 @@ def Vector_MaskedStoreOp :
 def Vector_GatherOp :
   Vector_Op<"gather">,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
-               VectorOfRankAndType<[1], [AnyInteger]>:$indices,
+               Variadic<Index>:$indices,
+	       VectorOfRankAndType<[1], [AnyInteger]>:$index_vec,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$pass_thru)>,
     Results<(outs VectorOfRank<[1]>:$result)> {
@@ -1661,9 +1668,10 @@ def Vector_GatherOp :
 
   let description = [{
     The gather operation gathers elements from memory into a 1-D vector as
-    defined by a base and a 1-D index vector, but only if the corresponding
-    bit is set in a 1-D mask vector. Otherwise, the element is taken from a
-    1-D pass-through vector. Informally the semantics are:
+    defined by a base with indices and an additional 1-D index vector, but
+    only if the corresponding bit is set in a 1-D mask vector. Otherwise, the
+    element is taken from a 1-D pass-through vector. Informally the semantics
+    are:
     ```
     result[0] := mask[0] ? base[index[0]] : pass_thru[0]
     result[1] := mask[1] ? base[index[1]] : pass_thru[1]
@@ -1677,19 +1685,22 @@ def Vector_GatherOp :
     correspond to those of the `llvm.masked.gather`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-gather-intrinsics).
 
-    Example:
+    Examples:
 
     ```mlir
-    %g = vector.gather %base[%indices], %mask, %pass_thru
+    %0 = vector.gather %base[%c0][%v], %mask, %pass_thru
        : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+
+    %1 = vector.gather %base[%i, %j][%v], %mask, %pass_thru
+       : memref<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
       return base().getType().cast<MemRefType>();
     }
-    VectorType getIndicesVectorType() {
-      return indices().getType().cast<VectorType>();
+    VectorType getIndexVectorType() {
+      return index_vec().getType().cast<VectorType>();
     }
     VectorType getMaskVectorType() {
       return mask().getType().cast<VectorType>();
@@ -1701,15 +1712,19 @@ def Vector_GatherOp :
       return result().getType().cast<VectorType>();
     }
   }];
-  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $pass_thru attr-dict `:` "
-    "type($base) `,` type($indices) `,` type($mask) `,` type($pass_thru) `into` type($result)";
+  let assemblyFormat =
+    "$base `[` $indices `]` `[` $index_vec `]` `,` "
+    "$mask `,` $pass_thru attr-dict `:` type($base) `,` "
+    "type($index_vec)  `,` type($mask) `,` type($pass_thru) "
+    "`into` type($result)";
   let hasCanonicalizer = 1;
 }
 
 def Vector_ScatterOp :
   Vector_Op<"scatter">,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
-               VectorOfRankAndType<[1], [AnyInteger]>:$indices,
+               Variadic<Index>:$indices,
+	       VectorOfRankAndType<[1], [AnyInteger]>:$index_vec,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$valueToStore)> {
 
@@ -1717,9 +1732,9 @@ def Vector_ScatterOp :
 
   let description = [{
     The scatter operation scatters elements from a 1-D vector into memory as
-    defined by a base and a 1-D index vector, but only if the corresponding
-    bit in a 1-D mask vector is set. Otherwise, no action is taken for that
-    element. Informally the semantics are:
+    defined by a base with indices and an additional 1-D index vector, but
+    only if the corresponding bit in a 1-D mask vector is set. Otherwise, no
+    action is taken for that element. Informally the semantics are:
     ```
     if (mask[0]) base[index[0]] = value[0]
     if (mask[1]) base[index[1]] = value[1]
@@ -1736,19 +1751,22 @@ def Vector_ScatterOp :
     correspond to those of the `llvm.masked.scatter`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-scatter-intrinsics).
 
-    Example:
+    Examples:
 
     ```mlir
-    vector.scatter %base[%indices], %mask, %value
+    vector.scatter %base[%c0][%v], %mask, %value
         : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
+
+    vector.scatter %base[%i, %j][%v], %mask, %value
+        : memref<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
     ```
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
       return base().getType().cast<MemRefType>();
     }
-    VectorType getIndicesVectorType() {
-      return indices().getType().cast<VectorType>();
+    VectorType getIndexVectorType() {
+      return index_vec().getType().cast<VectorType>();
     }
     VectorType getMaskVectorType() {
       return mask().getType().cast<VectorType>();
@@ -1758,8 +1776,9 @@ def Vector_ScatterOp :
     }
   }];
   let assemblyFormat =
-      "$base `[` $indices `]` `,` $mask `,` $valueToStore attr-dict `:` "
-      "type($base) `,` type($indices) `,` type($mask) `,` type($valueToStore)";
+      "$base `[` $indices `]` `[` $index_vec `]` `,` "
+      "$mask `,` $valueToStore attr-dict `:` type($base) `,` "
+      "type($index_vec)  `,` type($mask) `,` type($valueToStore)";
   let hasCanonicalizer = 1;
 }
 
@@ -1792,11 +1811,14 @@ def Vector_ExpandLoadOp :
     correspond to those of the `llvm.masked.expandload`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics).
 
-    Example:
+    Examples:
 
     ```mlir
     %0 = vector.expandload %base[%i], %mask, %pass_thru
        : memref<?xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+
+    %1 = vector.expandload %base[%i, %j], %mask, %pass_thru
+       : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
   }];
   let extraClassDeclaration = [{
@@ -1846,11 +1868,14 @@ def Vector_CompressStoreOp :
     correspond to those of the `llvm.masked.compressstore`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics).
 
-    Example:
+    Examples:
 
     ```mlir
     vector.compressstore %base[%i], %mask, %value
       : memref<?xf32>, vector<8xi1>, vector<8xf32>
+
+    vector.compressstore %base[%i, %j], %mask, %value
+      : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
     ```
   }];
   let extraClassDeclaration = [{

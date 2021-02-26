@@ -64,7 +64,7 @@ func @spmv8x8(%AVAL: memref<8xvector<4xf32>>,
   scf.for %i = %c0 to %cn step %c1 {
     %aval = load %AVAL[%i] : memref<8xvector<4xf32>>
     %aidx = load %AIDX[%i] : memref<8xvector<4xi32>>
-    %0 = vector.gather %X[%aidx], %mask, %pass
+    %0 = vector.gather %X[%c0][%aidx], %mask, %pass
        : memref<?xf32>, vector<4xi32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
     %1 = vector.contract #dot_trait %aval, %0, %f0 : vector<4xf32>, vector<4xf32> into f32
     store %1, %B[%i] : memref<?xf32>
