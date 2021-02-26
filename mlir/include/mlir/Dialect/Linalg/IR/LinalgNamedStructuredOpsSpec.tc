@@ -329,3 +329,44 @@ order of (`N`, `F`, `D`, `H`, `W`, `KD`, `KH`, `KW`, `C`).
                                    w * strides[2] + kw * dilations[2]),
                                  K(kd, kh, kw, c, f)));
 }
+
+ods_def<PoolingNHWCSum>:
+def pooling_nhwc_sum
+    (I: f32(N, H, W, C), K: f32(KH, KW))
+  -> (O: f32(N, OH, OW, C))
+  attr(strides: 2xi64, dilations: 2xi64)
+{
+  O(n, oh, ow, c) = std_addf<kh, kw>(O(n, oh, ow, c),
+                                     I(n, oh * strides[0] + kh * dilations[0],
+                                       ow * strides[1] + kw * dilations[1], c));
+}
+
+ods_def<PoolingNHWCMax>:
+def pooling_nhwc_max
+    (I: f32(N, H, W, C), K: f32(KH, KW))
+  -> (O: f32(N, OH, OW, C))
+  attr(strides: 2xi64, dilations: 2xi64)
+{
+  O(n, oh, ow, c) =
+      std_select<kh, kw>(std_cmpf_ogt(I(n, oh * strides[0] + kh * dilations[0],
+                                        ow * strides[1] + kw * dilations[1], c),
+                                      O(n, oh, ow, c)),
+                         I(n, oh * strides[0] + kh * dilations[0],
+                           ow * strides[1] + kw * dilations[1], c),
+                         O(n, oh, ow, c));
+}
+
+ods_def<PoolingNHWCMin>:
+def pooling_nhwc_min
+    (I: f32(N, H, W, C), K: f32(KH, KW))
+  -> (O: f32(N, OH, OW, C))
+  attr(strides: 2xi64, dilations: 2xi64)
+{
+  O(n, oh, ow, c) =
+      std_select<kh, kw>(std_cmpf_olt(I(n, oh * strides[0] + kh * dilations[0],
+                                        ow * strides[1] + kw * dilations[1], c),
+                                      O(n, oh, ow, c)),
+                         I(n, oh * strides[0] + kh * dilations[0],
+                           ow * strides[1] + kw * dilations[1], c),
+                         O(n, oh, ow, c));
+}
