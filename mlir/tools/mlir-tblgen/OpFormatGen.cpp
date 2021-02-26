@@ -1514,7 +1514,7 @@ const char *enumAttrBeginPrinterCode = R"(
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                OpMethodBody &body, bool withKeyword) {
   body << "  p.printOptionalAttrDict" << (withKeyword ? "WithKeyword" : "")
-       << "(getAttrs(), /*elidedAttrs=*/{";
+       << "((*this)->getAttrs(), /*elidedAttrs=*/{";
   // Elide the variadic segment size attributes if necessary.
   if (!fmt.allOperands &&
       op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))

@@ -270,8 +270,8 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
       funcOp, *getTypeConverter(), rewriter, entryPointAttr, argABI);
   if (!newFuncOp)
     return failure();
-  newFuncOp.removeAttr(Identifier::get(gpu::GPUDialect::getKernelFuncAttrName(),
-                                       rewriter.getContext()));
+  newFuncOp->removeAttr(Identifier::get(
+      gpu::GPUDialect::getKernelFuncAttrName(), rewriter.getContext()));
   return success();
 }
 
