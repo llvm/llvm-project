@@ -755,7 +755,7 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   ///   %inc = binop %iv, %step
   /// NOTE: This is intentional simple.  If you want the ability to analyze
   /// non-trivial loop conditons, see ScalarEvolution instead.
-  bool matchSimpleRecurrence(PHINode *P, BinaryOperator *&BO,
+  bool matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
                              Value *&Start, Value *&Step);
 
   /// Return true if RHS is known to be implied true by LHS.  Return false if
