@@ -1473,9 +1473,8 @@ static Instruction *cloneInstructionInExitBlock(
   // invariant instructions, and then walk their operands to re-establish
   // LCSSA. That will eliminate creating PHI nodes just to nuke them when
   // sinking bottom-up.
-  for (User::op_iterator OI = New->op_begin(), OE = New->op_end(); OI != OE;
-       ++OI)
-    if (Instruction *OInst = dyn_cast<Instruction>(*OI))
+  for (Use &Op : New->operands())
+    if (Instruction *OInst = dyn_cast<Instruction>(Op))
       if (Loop *OLoop = LI->getLoopFor(OInst->getParent()))
         if (!OLoop->contains(&PN)) {
           PHINode *OpPN =
@@ -1483,7 +1482,7 @@ static Instruction *cloneInstructionInExitBlock(
                               OInst->getName() + ".lcssa", &ExitBlock.front());
           for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i)
             OpPN->addIncoming(OInst, PN.getIncomingBlock(i));
-          *OI = OpPN;
+          Op = OpPN;
         }
   return New;
 }
