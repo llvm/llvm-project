@@ -53,6 +53,7 @@ struct LinalgOpMetadata {
   std::string name;
   std::string cppOpName;
   Optional<std::string> doc;
+  SmallVector<std::string> implements;
 };
 
 struct SerializedAffineMap {
@@ -197,6 +198,7 @@ struct MappingTraits<LinalgOpMetadata> {
     io.mapRequired("name", info.name);
     io.mapRequired("cpp_op_name", info.cppOpName);
     io.mapOptional("doc", info.doc);
+    io.mapOptional("implements", info.implements);
   }
 };
 
@@ -387,11 +389,11 @@ static const char structuredOpOdsHeaderFormat[] = R"FMT(
 // Op definition for {0}
 //===----------------------------------------------------------------------===//
 
-def {0} : LinalgStructuredBase_Op<"{1}", [
+def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
   AttrSizedOperandSegments,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-  SingleBlockImplicitTerminator<"YieldOp">
-  /*extraInterfaces=*/{2}]> {
+  SingleBlockImplicitTerminator<"YieldOp">],
+  /*extraInterfaces=*/[{2}])> {
     {3}
     let arguments = (ins
       Variadic<AnyShaped>:$inputs,
@@ -527,6 +529,8 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
         StringRef(*opConfig.metadata->doc).trim().split('\n');
     doc = llvm::formatv(docFmt, summary.trim(), description.trim());
   }
+
+  interfaceNameList = interleaveToString(opConfig.metadata->implements, ", ");
 
   os << llvm::formatv(structuredOpOdsHeaderFormat, opConfig.metadata->cppOpName,
                       opConfig.metadata->name, interfaceNameList, doc, attrList,

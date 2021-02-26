@@ -7,6 +7,8 @@ metadata: !LinalgOpMetadata
 
     This op is presently here to test a new path for generation and will replace
     the existing 'matmul' op when ready. Do not use.
+  implements:
+  - LinalgContractionOpInterface
 structured_op: !LinalgStructuredOpConfig
   args:
   - !<LinalgTensorDef>
