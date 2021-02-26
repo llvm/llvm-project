@@ -88,6 +88,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -432,8 +433,8 @@ class DataFlowSanitizer {
 
   Value *getShadowOffset(Value *Addr, IRBuilder<> &IRB);
   Value *getShadowAddress(Value *Addr, Instruction *Pos);
-  // std::pair<Value *, Value *>
-  // getShadowOriginAddress(Value *Addr, Align InstAlignment, Instruction *Pos);
+  std::pair<Value *, Value *>
+  getShadowOriginAddress(Value *Addr, Align InstAlignment, Instruction *Pos);
   bool isInstrumented(const Function *F);
   bool isInstrumented(const GlobalAlias *GA);
   FunctionType *getArgsFunctionType(FunctionType *T);
@@ -506,6 +507,8 @@ struct DFSanFunction {
   DenseMap<Value *, Value *> ValShadowMap;
   DenseMap<Value *, Value *> ValOriginMap;
   DenseMap<AllocaInst *, AllocaInst *> AllocaShadowMap;
+  DenseMap<AllocaInst *, AllocaInst *> AllocaOriginMap;
+
   std::vector<std::pair<PHINode *, PHINode *>> PHIFixups;
   DenseSet<Instruction *> SkipInsts;
   std::vector<Value *> NonZeroChecks;
@@ -572,8 +575,9 @@ struct DFSanFunction {
   Value *combineShadowsThenConvert(Type *T, Value *V1, Value *V2,
                                    Instruction *Pos);
   Value *combineOperandShadows(Instruction *Inst);
-  Value *loadShadow(Value *ShadowAddr, uint64_t Size, uint64_t Align,
-                    Instruction *Pos);
+  std::pair<Value *, Value *> loadShadowOrigin(Value *ShadowAddr, uint64_t Size,
+                                               Align InstAlignment,
+                                               Instruction *Pos);
   void storePrimitiveShadow(Value *Addr, uint64_t Size, Align Alignment,
                             Value *PrimitiveShadow, Instruction *Pos);
   /// Applies PrimitiveShadow to all primitive subtypes of T, returning
@@ -615,8 +619,20 @@ private:
                               Align ShadowAlign, Instruction *Pos);
 
   /// The fast path of loading shadow in fast-16-label mode.
-  Value *loadFast16ShadowFast(Value *ShadowAddr, uint64_t Size,
-                              Align ShadowAlign, Instruction *Pos);
+  std::pair<Value *, Value *>
+  loadFast16ShadowFast(Value *ShadowAddr, Value *OriginAddr, uint64_t Size,
+                       Align ShadowAlign, Align OriginAlign, Value *FirstOrigin,
+                       Instruction *Pos);
+
+  Align getOriginAlign(Align InstAlignment);
+
+  /// Because 4 contiguous bytes share one 4-byte origin, the most accurate load
+  /// is __dfsan_load_label_and_origin. This function returns the union of all
+  /// labels and the origin of the first taint label. However this is an
+  /// additional call with many instructions. To ensure common cases are fast,
+  /// checks if it is possible to load labels and origins without using the
+  /// callback function.
+  bool useCallbackLoadLabelAndOrigin(uint64_t Size, Align InstAlignment);
 };
 
 class DFSanVisitor : public InstVisitor<DFSanVisitor> {
@@ -1683,7 +1699,7 @@ Value *DataFlowSanitizer::getShadowOffset(Value *Addr, IRBuilder<> &IRB) {
   return IRB.CreateAnd(IRB.CreatePtrToInt(Addr, IntptrTy),
                        IRB.CreatePtrToInt(ShadowPtrMaskValue, IntptrTy));
 }
-/*
+
 std::pair<Value *, Value *>
 DataFlowSanitizer::getShadowOriginAddress(Value *Addr, Align InstAlignment,
                                           Instruction *Pos) {
@@ -1706,7 +1722,7 @@ DataFlowSanitizer::getShadowOriginAddress(Value *Addr, Align InstAlignment,
   }
   return {ShadowPtr, OriginPtr};
 }
-*/
+
 Value *DataFlowSanitizer::getShadowAddress(Value *Addr, Instruction *Pos) {
   // Returns (Addr & shadow_mask) x 2
   IRBuilder<> IRB(Pos);
@@ -1881,17 +1897,51 @@ Align DFSanFunction::getShadowAlign(Align InstAlignment) {
   return Align(Alignment.value() * DFS.ShadowWidthBytes);
 }
 
-Value *DFSanFunction::loadFast16ShadowFast(Value *ShadowAddr, uint64_t Size,
-                                           Align ShadowAlign,
-                                           Instruction *Pos) {
+Align DFSanFunction::getOriginAlign(Align InstAlignment) {
+  const Align Alignment = llvm::assumeAligned(InstAlignment.value());
+  return Align(std::max(kMinOriginAlignment, Alignment));
+}
+
+bool DFSanFunction::useCallbackLoadLabelAndOrigin(uint64_t Size,
+                                                  Align InstAlignment) {
+  assert(Size != 0);
+  // * if Size == 1, it is sufficient to load its origin aligned at 4.
+  // * if Size == 2, we assume most cases Addr % 2 == 0, so it is sufficient to
+  //   load its origin aligned at 4. If not, although origins may be lost, it
+  //   should not happen very often.
+  // * if align >= 4, Addr must be aligned to 4, otherwise it is UB. When
+  //   Size % 4 == 0, it is more efficient to load origins without callbacks.
+  // * Otherwise we use __dfsan_load_label_and_origin.
+  // This should ensure that common cases run efficiently.
+  if (Size <= 2)
+    return false;
+
+  const Align Alignment = llvm::assumeAligned(InstAlignment.value());
+  if (Alignment >= kMinOriginAlignment &&
+      Size % (64 / DFS.ShadowWidthBits) == 0)
+    return false;
+
+  return true;
+}
+
+std::pair<Value *, Value *> DFSanFunction::loadFast16ShadowFast(
+    Value *ShadowAddr, Value *OriginAddr, uint64_t Size, Align ShadowAlign,
+    Align OriginAlign, Value *FirstOrigin, Instruction *Pos) {
   // First OR all the WideShadows, then OR individual shadows within the
   // combined WideShadow. This is fewer instructions than ORing shadows
   // individually.
+  const bool ShouldTrackOrigins = DFS.shouldTrackOrigins();
+  std::vector<Value *> Shadows;
+  std::vector<Value *> Origins;
   IRBuilder<> IRB(Pos);
   Value *WideAddr =
       IRB.CreateBitCast(ShadowAddr, Type::getInt64PtrTy(*DFS.Ctx));
   Value *CombinedWideShadow =
       IRB.CreateAlignedLoad(IRB.getInt64Ty(), WideAddr, ShadowAlign);
+  if (ShouldTrackOrigins) {
+    Shadows.push_back(CombinedWideShadow);
+    Origins.push_back(FirstOrigin);
+  }
   for (uint64_t Ofs = 64 / DFS.ShadowWidthBits; Ofs != Size;
        Ofs += 64 / DFS.ShadowWidthBits) {
     WideAddr = IRB.CreateGEP(Type::getInt64Ty(*DFS.Ctx), WideAddr,
@@ -1899,12 +1949,23 @@ Value *DFSanFunction::loadFast16ShadowFast(Value *ShadowAddr, uint64_t Size,
     Value *NextWideShadow =
         IRB.CreateAlignedLoad(IRB.getInt64Ty(), WideAddr, ShadowAlign);
     CombinedWideShadow = IRB.CreateOr(CombinedWideShadow, NextWideShadow);
+    if (ShouldTrackOrigins) {
+      Shadows.push_back(NextWideShadow);
+      OriginAddr = IRB.CreateGEP(DFS.OriginTy, OriginAddr,
+                                 ConstantInt::get(DFS.IntptrTy, 1));
+      Origins.push_back(
+          IRB.CreateAlignedLoad(DFS.OriginTy, OriginAddr, OriginAlign));
+    }
   }
   for (unsigned Width = 32; Width >= DFS.ShadowWidthBits; Width >>= 1) {
     Value *ShrShadow = IRB.CreateLShr(CombinedWideShadow, Width);
     CombinedWideShadow = IRB.CreateOr(CombinedWideShadow, ShrShadow);
   }
-  return IRB.CreateTrunc(CombinedWideShadow, DFS.PrimitiveShadowTy);
+  return {IRB.CreateTrunc(CombinedWideShadow, DFS.PrimitiveShadowTy),
+          ShouldTrackOrigins
+              ? combineOrigins(Shadows, Origins, Pos,
+                               ConstantInt::getSigned(IRB.getInt64Ty(), 0))
+              : DFS.ZeroOrigin};
 }
 
 Value *DFSanFunction::loadLegacyShadowFast(Value *ShadowAddr, uint64_t Size,
@@ -1977,17 +2038,27 @@ Value *DFSanFunction::loadLegacyShadowFast(Value *ShadowAddr, uint64_t Size,
 // Generates IR to load shadow corresponding to bytes [Addr, Addr+Size), where
 // Addr has alignment Align, and take the union of each of those shadows. The
 // returned shadow always has primitive type.
-Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
-                                 Instruction *Pos) {
+std::pair<Value *, Value *> DFSanFunction::loadShadowOrigin(Value *Addr,
+                                                            uint64_t Size,
+                                                            Align InstAlignment,
+                                                            Instruction *Pos) {
+  const bool ShouldTrackOrigins = DFS.shouldTrackOrigins();
+
+  // Non-escaped loads.
   if (AllocaInst *AI = dyn_cast<AllocaInst>(Addr)) {
-    const auto I = AllocaShadowMap.find(AI);
-    if (I != AllocaShadowMap.end()) {
+    const auto SI = AllocaShadowMap.find(AI);
+    if (SI != AllocaShadowMap.end()) {
       IRBuilder<> IRB(Pos);
-      return IRB.CreateLoad(DFS.PrimitiveShadowTy, I->second);
+      Value *ShadowLI = IRB.CreateLoad(DFS.PrimitiveShadowTy, SI->second);
+      const auto OI = AllocaOriginMap.find(AI);
+      assert(!ShouldTrackOrigins || OI != AllocaOriginMap.end());
+      return {ShadowLI, ShouldTrackOrigins
+                            ? IRB.CreateLoad(DFS.OriginTy, OI->second)
+                            : nullptr};
     }
   }
 
-  const llvm::Align ShadowAlign(Align * DFS.ShadowWidthBytes);
+  // Load from constant addresses.
   SmallVector<const Value *, 2> Objs;
   getUnderlyingObjects(Addr, Objs);
   bool AllConstants = true;
@@ -2001,33 +2072,65 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
     break;
   }
   if (AllConstants)
-    return DFS.ZeroPrimitiveShadow;
+    return {DFS.ZeroPrimitiveShadow,
+            ShouldTrackOrigins ? DFS.ZeroOrigin : nullptr};
 
-  Value *ShadowAddr = DFS.getShadowAddress(Addr, Pos);
+  if (Size == 0)
+    return {DFS.ZeroPrimitiveShadow,
+            ShouldTrackOrigins ? DFS.ZeroOrigin : nullptr};
+
+  // Use callback to load if this is not an optimizable case for origin
+  // tracking.
+  if (ShouldTrackOrigins &&
+      useCallbackLoadLabelAndOrigin(Size, InstAlignment)) {
+    IRBuilder<> IRB(Pos);
+    CallInst *Call =
+        IRB.CreateCall(DFS.DFSanLoadLabelAndOriginFn,
+                       {IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                        ConstantInt::get(DFS.IntptrTy, Size)});
+    Call->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
+    return {IRB.CreateTrunc(IRB.CreateLShr(Call, DFS.OriginWidthBits),
+                            DFS.PrimitiveShadowTy),
+            IRB.CreateTrunc(Call, DFS.OriginTy)};
+  }
+
+  // Other cases that support loading shadows or origins in a fast way.
+  Value *ShadowAddr, *OriginAddr;
+  std::tie(ShadowAddr, OriginAddr) =
+      DFS.getShadowOriginAddress(Addr, InstAlignment, Pos);
+
+  const Align ShadowAlign = getShadowAlign(InstAlignment);
+  const Align OriginAlign = getOriginAlign(InstAlignment);
+  Value *Origin = nullptr;
+  if (ShouldTrackOrigins) {
+    IRBuilder<> IRB(Pos);
+    Origin = IRB.CreateAlignedLoad(DFS.OriginTy, OriginAddr, OriginAlign);
+  }
+
   switch (Size) {
-  case 0:
-    return DFS.ZeroPrimitiveShadow;
   case 1: {
     LoadInst *LI = new LoadInst(DFS.PrimitiveShadowTy, ShadowAddr, "", Pos);
     LI->setAlignment(ShadowAlign);
-    return LI;
+    return {LI, Origin};
   }
   case 2: {
     IRBuilder<> IRB(Pos);
     Value *ShadowAddr1 = IRB.CreateGEP(DFS.PrimitiveShadowTy, ShadowAddr,
                                        ConstantInt::get(DFS.IntptrTy, 1));
-    return combineShadows(
-        IRB.CreateAlignedLoad(DFS.PrimitiveShadowTy, ShadowAddr, ShadowAlign),
-        IRB.CreateAlignedLoad(DFS.PrimitiveShadowTy, ShadowAddr1, ShadowAlign),
-        Pos);
+    Value *Load =
+        IRB.CreateAlignedLoad(DFS.PrimitiveShadowTy, ShadowAddr, ShadowAlign);
+    Value *Load1 =
+        IRB.CreateAlignedLoad(DFS.PrimitiveShadowTy, ShadowAddr1, ShadowAlign);
+    return {combineShadows(Load, Load1, Pos), Origin};
   }
   }
 
   if (ClFast16Labels && Size % (64 / DFS.ShadowWidthBits) == 0)
-    return loadFast16ShadowFast(ShadowAddr, Size, ShadowAlign, Pos);
+    return loadFast16ShadowFast(ShadowAddr, OriginAddr, Size, ShadowAlign,
+                                OriginAlign, Origin, Pos);
 
   if (!AvoidNewBlocks && Size % (64 / DFS.ShadowWidthBits) == 0)
-    return loadLegacyShadowFast(ShadowAddr, Size, ShadowAlign, Pos);
+    return {loadLegacyShadowFast(ShadowAddr, Size, ShadowAlign, Pos), Origin};
 
   IRBuilder<> IRB(Pos);
   FunctionCallee &UnionLoadFn =
@@ -2035,7 +2138,7 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
   CallInst *FallbackCall = IRB.CreateCall(
       UnionLoadFn, {ShadowAddr, ConstantInt::get(DFS.IntptrTy, Size)});
   FallbackCall->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
-  return FallbackCall;
+  return {FallbackCall, Origin};
 }
 
 static AtomicOrdering addAcquireOrdering(AtomicOrdering AO) {
@@ -2060,6 +2163,7 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
   uint64_t Size = DL.getTypeStoreSize(LI.getType());
   if (Size == 0) {
     DFSF.setShadow(&LI, DFSF.DFS.getZeroShadow(&LI));
+    DFSF.setOrigin(&LI, DFSF.DFS.ZeroOrigin);
     return;
   }
 
@@ -2071,13 +2175,24 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
   if (LI.isAtomic())
     LI.setOrdering(addAcquireOrdering(LI.getOrdering()));
 
-  Align Alignment = ClPreserveAlignment ? LI.getAlign() : Align(1);
   Instruction *Pos = LI.isAtomic() ? LI.getNextNode() : &LI;
-  Value *PrimitiveShadow =
-      DFSF.loadShadow(LI.getPointerOperand(), Size, Alignment.value(), Pos);
+  std::vector<Value *> Shadows;
+  std::vector<Value *> Origins;
+  Value *PrimitiveShadow, *Origin;
+  std::tie(PrimitiveShadow, Origin) =
+      DFSF.loadShadowOrigin(LI.getPointerOperand(), Size, LI.getAlign(), Pos);
+  const bool ShouldTrackOrigins = DFSF.DFS.shouldTrackOrigins();
+  if (ShouldTrackOrigins) {
+    Shadows.push_back(PrimitiveShadow);
+    Origins.push_back(Origin);
+  }
   if (ClCombinePointerLabelsOnLoad) {
     Value *PtrShadow = DFSF.getShadow(LI.getPointerOperand());
     PrimitiveShadow = DFSF.combineShadows(PrimitiveShadow, PtrShadow, Pos);
+    if (ShouldTrackOrigins) {
+      Shadows.push_back(PtrShadow);
+      Origins.push_back(DFSF.getOrigin(LI.getPointerOperand()));
+    }
   }
   if (!DFSF.DFS.isZeroShadow(PrimitiveShadow))
     DFSF.NonZeroChecks.push_back(PrimitiveShadow);
@@ -2085,6 +2200,11 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
   Value *Shadow =
       DFSF.expandFromPrimitiveShadow(LI.getType(), PrimitiveShadow, Pos);
   DFSF.setShadow(&LI, Shadow);
+
+  if (ShouldTrackOrigins) {
+    DFSF.setOrigin(&LI, DFSF.combineOrigins(Shadows, Origins, Pos));
+  }
+
   if (ClEventCallbacks) {
     IRBuilder<> IRB(Pos);
     Value *Addr8 = IRB.CreateBitCast(LI.getPointerOperand(), DFSF.DFS.Int8Ptr);
@@ -2322,8 +2442,13 @@ void DFSanVisitor::visitAllocaInst(AllocaInst &I) {
   if (AllLoadsStores) {
     IRBuilder<> IRB(&I);
     DFSF.AllocaShadowMap[&I] = IRB.CreateAlloca(DFSF.DFS.PrimitiveShadowTy);
+    if (DFSF.DFS.shouldTrackOrigins()) {
+      DFSF.AllocaOriginMap[&I] =
+          IRB.CreateAlloca(DFSF.DFS.OriginTy, nullptr, "_dfsa");
+    }
   }
   DFSF.setShadow(&I, DFSF.DFS.ZeroPrimitiveShadow);
+  DFSF.setOrigin(&I, DFSF.DFS.ZeroOrigin);
 }
 
 void DFSanVisitor::visitSelectInst(SelectInst &I) {
