@@ -504,12 +504,15 @@
 // RUN: %clang -### -S -fdebug-compilation-dir=. %s 2>&1 | FileCheck -check-prefix=CHECK-DEBUG-COMPILATION-DIR %s
 // RUN: %clang -### -fdebug-compilation-dir . -x assembler %s 2>&1 | FileCheck -check-prefix=CHECK-DEBUG-COMPILATION-DIR %s
 // RUN: %clang -### -fdebug-compilation-dir=. -x assembler %s 2>&1 | FileCheck -check-prefix=CHECK-DEBUG-COMPILATION-DIR %s
-// RUN: %clang -### -ffile-compilation-dir=. -x assembler %s 2>&1 | FileCheck -check-prefix=CHECK-FILE-COMPILATION-DIR %s
+// RUN: %clang -### -S -ffile-compilation-dir=. %s 2>&1 | FileCheck -check-prefix=CHECK-DEBUG-COMPILATION-DIR %s
+// RUN: %clang -### -ffile-compilation-dir=. -x assembler %s 2>&1 | FileCheck -check-prefixes=CHECK-DEBUG-COMPILATION-DIR %s
 // CHECK-DEBUG-COMPILATION-DIR: "-fdebug-compilation-dir=."
+// CHECK-DEBUG-COMPILATION-DIR-NOT: "-ffile-compilation-dir=."
 
-// RUN: %clang -### -S -ffile-compilation-dir=. %s 2>&1 | FileCheck -check-prefix=CHECK-FILE-COMPILATION-DIR %s
-// RUN: %clang -### -ffile-compilation-dir=. -x assembler %s 2>&1 | FileCheck -check-prefix=CHECK-FILE-COMPILATION-DIR %s
-// CHECK-FILE-COMPILATION-DIR: "-ffile-compilation-dir=."
+// RUN: %clang -### -S -fprofile-instr-generate -fcoverage-compilation-dir=. %s 2>&1 | FileCheck -check-prefix=CHECK-COVERAGE-COMPILATION-DIR %s
+// RUN: %clang -### -S -fprofile-instr-generate -ffile-compilation-dir=. %s 2>&1 | FileCheck -check-prefix=CHECK-COVERAGE-COMPILATION-DIR %s
+// CHECK-COVERAGE-COMPILATION-DIR: "-fcoverage-compilation-dir=."
+// CHECK-COVERAGE-COMPILATION-DIR-NOT: "-ffile-compilation-dir=."
 
 // RUN: %clang -### -S -fdiscard-value-names %s 2>&1 | FileCheck -check-prefix=CHECK-DISCARD-NAMES %s
 // RUN: %clang -### -S -fno-discard-value-names %s 2>&1 | FileCheck -check-prefix=CHECK-NO-DISCARD-NAMES %s
