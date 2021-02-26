@@ -35,7 +35,7 @@ def __lldb_init_module(debugger, internal_dict):
 
 # Pretty printer for llvm::SmallVector/llvm::SmallVectorImpl
 class SmallVectorSynthProvider:
-    def __init__(self, valobj, dict):
+    def __init__(self, valobj, internal_dict):
         self.valobj = valobj;
         self.update() # initialize this provider
 
@@ -74,7 +74,7 @@ class SmallVectorSynthProvider:
 
 class ArrayRefSynthProvider:
     """ Provider for llvm::ArrayRef """
-    def __init__(self, valobj, dict):
+    def __init__(self, valobj, internal_dict):
         self.valobj = valobj;
         self.update() # initialize this provider
 
