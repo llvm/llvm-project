@@ -736,6 +736,31 @@ define i32 @funnel_and(i32 %abcd) {
   ret i32 %dcba
 }
 
+; Don't attempt to collectBitParts from >128 bit integers
+define i16 @trunc_bswap_i160(i160* %a0) {
+; CHECK-LABEL: @trunc_bswap_i160(
+; CHECK-NEXT:    [[LOAD:%.*]] = load i160, i160* [[A0:%.*]], align 4
+; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i160 [[LOAD]], 136
+; CHECK-NEXT:    [[CAST1:%.*]] = trunc i160 [[LSHR1]] to i16
+; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[CAST1]], 255
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[LOAD]], 120
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i16
+; CHECK-NEXT:    [[SHL:%.*]] = and i16 [[TMP2]], -256
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[AND1]], [[SHL]]
+; CHECK-NEXT:    ret i16 [[OR]]
+;
+  %load = load i160, i160* %a0, align 4
+  %lshr0 = lshr i160 %load, 128
+  %lshr1 = lshr i160 %load, 136
+  %cast0 = trunc i160 %lshr0 to i16
+  %cast1 = trunc i160 %lshr1 to i16
+  %and0 = and i16 %cast0, 255
+  %and1 = and i16 %cast1, 255
+  %shl = shl i16 %and0, 8
+  %or = or i16 %and1, %shl
+  ret i16 %or
+}
+
 ; PR47191 - deep IR trees prevent ADD/XOR instructions being simplified to OR.
 
 define i64 @PR47191_problem1(i64 %0) {
