@@ -451,10 +451,11 @@ static bool isKnownZFlag(StringRef s) {
          s == "initfirst" || s == "interpose" ||
          s == "keep-text-section-prefix" || s == "lazy" || s == "muldefs" ||
          s == "separate-code" || s == "separate-loadable-segments" ||
-         s == "nocombreloc" || s == "nocopyreloc" || s == "nodefaultlib" ||
-         s == "nodelete" || s == "nodlopen" || s == "noexecstack" ||
-         s == "nognustack" || s == "nokeep-text-section-prefix" ||
-         s == "norelro" || s == "noseparate-code" || s == "notext" ||
+         s == "start-stop-gc" || s == "nocombreloc" || s == "nocopyreloc" ||
+         s == "nodefaultlib" || s == "nodelete" || s == "nodlopen" ||
+         s == "noexecstack" || s == "nognustack" ||
+         s == "nokeep-text-section-prefix" || s == "norelro" ||
+         s == "noseparate-code" || s == "nostart-stop-gc" || s == "notext" ||
          s == "now" || s == "origin" || s == "pac-plt" || s == "rel" ||
          s == "rela" || s == "relro" || s == "retpolineplt" ||
          s == "rodynamic" || s == "shstk" || s == "text" || s == "undefs" ||
@@ -1119,6 +1120,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->zSeparate = getZSeparate(args);
   config->zShstk = hasZOption(args, "shstk");
   config->zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
+  config->zStartStopGC =
+      getZFlag(args, "start-stop-gc", "nostart-stop-gc", false);
   config->zStartStopVisibility = getZStartStopVisibility(args);
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");
