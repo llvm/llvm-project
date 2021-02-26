@@ -19,11 +19,13 @@ define <4 x half> @shuffle_v4f16_234u(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
-; GFX9-NEXT:    global_load_dword v6, v[0:1], off offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_load_dword v5, v[0:1], off offset:4
+; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GFX9-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, v6
+; GFX9-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -811,14 +813,16 @@ define <4 x half> @shuffle_v4f16_0456(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
-; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
+; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0xffff
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; GFX9-NEXT:    v_and_b32_e32 v1, v0, v4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_sdwa v2, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v0, v6, 16, v1
-; GFX9-NEXT:    v_lshl_or_b32 v1, v7, 16, v2
+; GFX9-NEXT:    v_and_b32_sdwa v2, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_lshl_or_b32 v0, v5, 16, v1
+; GFX9-NEXT:    v_lshl_or_b32 v1, v6, 16, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
