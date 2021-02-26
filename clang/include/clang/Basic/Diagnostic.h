@@ -731,6 +731,7 @@ public:
     case Ovl_Best:
       return NumOverloadsToShow;
     }
+    llvm_unreachable("invalid OverloadsShown kind");
   }
 
   /// Call this after showing N overload candidates.  This influences the value
