@@ -59,6 +59,14 @@ namespace spirv {
 class SPIRVDialect;
 } // end namespace spirv
 
+namespace tensor {
+class TensorDialect;
+} // end namespace tensor
+
+namespace tosa {
+class TosaDialect;
+} // end namespace tosa
+
 namespace vector {
 class VectorDialect;
 } // end namespace vector
