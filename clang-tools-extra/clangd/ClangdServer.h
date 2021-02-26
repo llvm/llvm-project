@@ -28,6 +28,7 @@
 #include "support/Cancellation.h"
 #include "support/Function.h"
 #include "support/MemoryTree.h"
+#include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -74,6 +75,14 @@ public:
     /// Not called concurrently.
     virtual void
     onBackgroundIndexProgress(const BackgroundQueue::Stats &Stats) {}
+
+    /// Called when the meaning of a source code may have changed without an
+    /// edit. Usually clients assume that responses to requests are valid until
+    /// they next edit the file. If they're invalidated at other times, we
+    /// should tell the client. In particular, when an asynchronous preamble
+    /// build finishes, we can provide more accurate semantic tokens, so we
+    /// should tell the client to refresh.
+    virtual void onSemanticsMaybeChanged(PathRef File) {}
   };
   /// Creates a context provider that loads and installs config.
   /// Errors in loading config are reported as diagnostics via Callbacks.

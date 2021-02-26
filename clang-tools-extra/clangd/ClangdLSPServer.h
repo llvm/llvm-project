@@ -87,6 +87,7 @@ private:
                           std::vector<Diag> Diagnostics) override;
   void onFileUpdated(PathRef File, const TUStatus &Status) override;
   void onBackgroundIndexProgress(const BackgroundQueue::Stats &Stats) override;
+  void onSemanticsMaybeChanged(PathRef File) override;
 
   // LSP methods. Notifications have signature void(const Params&).
   // Calls have signature void(const Params&, Callback<Response>).
@@ -181,11 +182,12 @@ private:
       ReportWorkDoneProgress;
   LSPBinder::OutgoingNotification<ProgressParams<WorkDoneProgressEnd>>
       EndWorkDoneProgress;
+  LSPBinder::OutgoingMethod<NoParams, std::nullptr_t> SemanticTokensRefresh;
 
   void applyEdit(WorkspaceEdit WE, llvm::json::Value Success,
                  Callback<llvm::json::Value> Reply);
 
-  void bindMethods(LSPBinder &);
+  void bindMethods(LSPBinder &, const ClientCapabilities &Caps);
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 
   /// Checks if completion request should be ignored. We need this due to the
