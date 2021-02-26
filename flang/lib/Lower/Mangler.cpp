@@ -63,16 +63,6 @@ findInterfaceIfSeperateMP(const Fortran::semantics::Symbol &symbol) {
   return nullptr;
 }
 
-static std::vector<std::int64_t>
-kindValues(const Fortran::semantics::Symbol &symbol) {
-  for (const auto &param :
-       Fortran::semantics::OrderParameterDeclarations(symbol))
-    if (param->get<Fortran::semantics::TypeParamDetails>().attr() ==
-        Fortran::common::TypeParamAttr::Kind)
-      TODO_NOLOC("type with a KIND parameter");
-  return {};
-}
-
 // Mangle the name of `symbol` to make it unique within FIR's symbol table using
 // the FIR name mangler, `mangler`
 std::string
@@ -125,16 +115,40 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol) {
           [&](const Fortran::semantics::CommonBlockDetails &) {
             return fir::NameUniquer::doCommonBlock(symbolName);
           },
-          [&](const Fortran::semantics::DerivedTypeDetails &) {
-            auto modNames = moduleNames(ultimateSymbol);
-            auto optHost = hostName(ultimateSymbol);
-            auto kinds = kindValues(ultimateSymbol);
-            return fir::NameUniquer::doType(modNames, optHost, symbolName,
-                                            kinds);
+          [&](const Fortran::semantics::DerivedTypeDetails &) -> std::string {
+            // Derived type mangling must used mangleName(DerivedTypeSpec&) so
+            // that kind type parameter values can be mangled.
+            llvm::report_fatal_error(
+                "only derived type instances can be mangled");
           },
           [](const auto &) -> std::string { TODO_NOLOC("symbol mangling"); },
       },
       ultimateSymbol.details());
+}
+
+std::string Fortran::lower::mangle::mangleName(
+    const Fortran::semantics::DerivedTypeSpec &derivedType) {
+  // Resolve host and module association before mangling
+  const auto &ultimateSymbol = derivedType.typeSymbol().GetUltimate();
+  auto symbolName = toStringRef(ultimateSymbol.name());
+  auto modNames = moduleNames(ultimateSymbol);
+  auto optHost = hostName(ultimateSymbol);
+  llvm::SmallVector<std::int64_t, 4> kinds;
+  for (const auto &param :
+       Fortran::semantics::OrderParameterDeclarations(ultimateSymbol)) {
+    const auto &paramDetails =
+        param->get<Fortran::semantics::TypeParamDetails>();
+    if (paramDetails.attr() == Fortran::common::TypeParamAttr::Kind) {
+      const auto *paramValue = derivedType.FindParameter(param->name());
+      assert(paramValue && "derived type kind parameter value not found");
+      auto paramExpr = paramValue->GetExplicit();
+      assert(paramExpr && "derived type kind param not explicit");
+      auto init = Fortran::evaluate::ToInt64(paramValue->GetExplicit());
+      assert(init && "derived type kind param is not constant");
+      kinds.emplace_back(*init);
+    }
+  }
+  return fir::NameUniquer::doType(modNames, optHost, symbolName, kinds);
 }
 
 std::string Fortran::lower::mangle::demangleName(llvm::StringRef name) {

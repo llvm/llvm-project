@@ -261,8 +261,8 @@ struct TypeBuilder {
     const auto &typeSymbol = tySpec.typeSymbol();
     if (auto ty = getTypeIfDerivedAlreadyInConstruction(typeSymbol))
       return ty;
-    auto rec = fir::RecordType::get(
-        context, Fortran::lower::mangle::mangleName(typeSymbol));
+    auto rec = fir::RecordType::get(context,
+                                    Fortran::lower::mangle::mangleName(tySpec));
     // Maintain the stack of types for recursive references.
     derivedTypeInConstruction.emplace_back(typeSymbol, rec);
 
