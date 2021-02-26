@@ -47,6 +47,7 @@ public:
   ArrayRef<WasmRelocation> getRelocations() const { return relocations; }
   void setRelocations(ArrayRef<WasmRelocation> rs) { relocations = rs; }
 
+  uint64_t getOffset(uint64_t offset) const { return outSecOff + offset; }
   virtual StringRef getName() const = 0;
   virtual StringRef getDebugName() const = 0;
   virtual uint32_t getComdat() const = 0;
@@ -58,8 +59,10 @@ public:
 
   ObjFile *file;
   OutputSection *outputSec = nullptr;
-  // Offset withing the output section
-  int32_t outputOffset = 0;
+
+  // After assignAddresses is called, this represents the offset from
+  // the beginning of the output section this chunk was assigned to.
+  int32_t outSecOff = 0;
 
   // Signals that the section is part of the output.  The garbage collector,
   // and COMDAT handling can set a sections' Live bit.
@@ -108,7 +111,7 @@ public:
   uint32_t getInputSectionOffset() const override {
     return segment.SectionOffset;
   }
-  uint64_t getVA() const;
+  uint64_t getVA(uint64_t offset = 0) const;
 
   const OutputSegment *outputSeg = nullptr;
   int32_t outputSegmentOffset = 0;

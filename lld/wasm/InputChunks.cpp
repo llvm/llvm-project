@@ -122,7 +122,7 @@ void InputChunk::verifyRelocTargets() const {
 // Copy this input chunk to an mmap'ed output file and apply relocations.
 void InputChunk::writeTo(uint8_t *buf) const {
   // Copy contents
-  memcpy(buf + outputOffset, data().data(), data().size());
+  memcpy(buf + outSecOff, data().data(), data().size());
 
   // Apply relocations
   if (relocations.empty())
@@ -134,7 +134,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
 
   LLVM_DEBUG(dbgs() << "applying relocations: " << toString(this)
                     << " count=" << relocations.size() << "\n");
-  int32_t off = outputOffset - getInputSectionOffset();
+  int32_t off = outSecOff - getInputSectionOffset();
   auto tombstone = getTombstone();
 
   for (const WasmRelocation &rel : relocations) {
@@ -196,7 +196,7 @@ void InputChunk::writeRelocations(raw_ostream &os) const {
   if (relocations.empty())
     return;
 
-  int32_t off = outputOffset - getInputSectionOffset();
+  int32_t off = outSecOff - getInputSectionOffset();
   LLVM_DEBUG(dbgs() << "writeRelocations: " << file->getName()
                     << " offset=" << Twine(off) << "\n");
 
@@ -323,7 +323,7 @@ void InputFunction::writeTo(uint8_t *buf) const {
   if (!file || !config->compressRelocations)
     return InputChunk::writeTo(buf);
 
-  buf += outputOffset;
+  buf += outSecOff;
   uint8_t *orig = buf;
   (void)orig;
 
@@ -353,8 +353,8 @@ void InputFunction::writeTo(uint8_t *buf) const {
   LLVM_DEBUG(dbgs() << "  total: " << (buf + chunkSize - orig) << "\n");
 }
 
-uint64_t InputSegment::getVA() const {
-  return outputSeg->startVA + outputSegmentOffset;
+uint64_t InputSegment::getVA(uint64_t offset) const {
+  return outputSeg->startVA + outputSegmentOffset + offset;
 }
 
 // Generate code to apply relocations to the data section at runtime.
@@ -375,12 +375,11 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
   // TODO(sbc): Encode the relocations in the data section and write a loop
   // here to apply them.
   for (const WasmRelocation &rel : relocations) {
-    uint64_t offset = rel.Offset - getInputSectionOffset();
-    uint64_t outputOffset = getVA() + offset;
+    uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
 
     LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
                       << " addend=" << rel.Addend << " index=" << rel.Index
-                      << " output offset=" << outputOffset << "\n");
+                      << " output offset=" << offset << "\n");
 
     // Get __memory_base
     writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
@@ -388,7 +387,7 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
 
     // Add the offset of the relocation
     writeU8(os, opcode_ptr_const, "CONST");
-    writeSleb128(os, outputOffset, "offset");
+    writeSleb128(os, offset, "offset");
     writeU8(os, opcode_ptr_add, "ADD");
 
     bool is64 = relocIs64(rel.Type);
