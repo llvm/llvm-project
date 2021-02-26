@@ -1547,8 +1547,8 @@ void mlir::encodeBindAttribute(ModuleOp module) {
         if (failed(SymbolTable::replaceAllSymbolUses(op, name, spvModule)))
           op.emitError("unable to replace all symbol uses for ") << name;
         SymbolTable::setSymbolName(op, name);
-        op.removeAttr(kDescriptorSet);
-        op.removeAttr(kBinding);
+        op->removeAttr(kDescriptorSet);
+        op->removeAttr(kBinding);
       }
     });
   }

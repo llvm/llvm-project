@@ -701,7 +701,7 @@ void GPUFuncOp::setType(FunctionType newType) {
 
   SmallVector<char, 16> nameBuf;
   for (int i = newType.getNumInputs(), e = oldType.getNumInputs(); i < e; i++)
-    removeAttr(getArgAttrName(i, nameBuf));
+    (*this)->removeAttr(getArgAttrName(i, nameBuf));
 
   (*this)->setAttr(getTypeAttrName(), TypeAttr::get(newType));
 }
