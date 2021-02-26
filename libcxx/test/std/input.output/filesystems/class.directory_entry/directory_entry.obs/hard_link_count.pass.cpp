@@ -84,13 +84,10 @@ TEST_CASE(not_regular_file) {
   scoped_test_env env;
   const path dir = env.create_dir("dir");
   const path dir2 = env.create_dir("dir/dir2");
-  const path fifo = env.create_fifo("dir/fifo");
-  const path sym_to_fifo = env.create_symlink("dir/fifo", "dir/sym");
 
   const perms old_perms = status(dir).permissions();
 
-  for (auto p : {dir2, fifo, sym_to_fifo}) {
-    permissions(dir, old_perms);
+  auto test_path = [=](const path &p) {
     std::error_code dummy_ec = GetTestEC();
     directory_entry ent(p, dummy_ec);
     TEST_CHECK(!dummy_ec);
@@ -103,7 +100,15 @@ TEST_CASE(not_regular_file) {
     TEST_CHECK(ent.hard_link_count(ec) == expect);
     TEST_CHECK(!ec);
     TEST_CHECK_NO_THROW(ent.hard_link_count());
-  }
+    permissions(dir, old_perms);
+  };
+  test_path(dir2);
+#ifndef _WIN32
+  const path fifo = env.create_fifo("dir/fifo");
+  const path sym_to_fifo = env.create_symlink("dir/fifo", "dir/sym");
+  test_path(fifo);
+  test_path(sym_to_fifo);
+#endif
 }
 
 TEST_CASE(error_reporting) {

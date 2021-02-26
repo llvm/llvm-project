@@ -73,6 +73,7 @@ TEST_CASE(test_error_reporting) {
   }
 }
 
+#ifndef _WIN32
 TEST_CASE(non_regular_file_test) {
   scoped_test_env env;
   const path fifo = env.create_fifo("fifo");
@@ -94,6 +95,7 @@ TEST_CASE(non_regular_file_test) {
   }
 
 }
+#endif
 
 TEST_CASE(test_attributes_get_copied) {
   scoped_test_env env;
