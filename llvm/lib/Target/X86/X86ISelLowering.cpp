@@ -38908,6 +38908,16 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     }
     // TODO - add general PACKSS/PACKUS SimplifyDemandedBits support.
     break;
+  case X86ISD::VBROADCAST: {
+    SDValue Src = Op.getOperand(0);
+    MVT SrcVT = Src.getSimpleValueType();
+    APInt DemandedElts = APInt::getOneBitSet(
+        SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1, 0);
+    if (SimplifyDemandedBits(Src, OriginalDemandedBits, DemandedElts, Known,
+                             TLO, Depth + 1))
+      return true;
+    break;
+  }
   case X86ISD::PCMPGT:
     // icmp sgt(0, R) == ashr(R, BitWidth-1).
     // iff we only need the sign bit then we can use R directly.

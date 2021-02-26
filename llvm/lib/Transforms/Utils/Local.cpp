@@ -2851,6 +2851,10 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
   auto &Result = BPS[V] = None;
   auto BitWidth = V->getType()->getScalarSizeInBits();
 
+  // Can't do integer/elements > 128 bits.
+  if (BitWidth > 128)
+    return Result;
+
   // Prevent stack overflow by limiting the recursion depth
   if (Depth == BitPartRecursionMaxDepth) {
     LLVM_DEBUG(dbgs() << "collectBitParts max recursion depth reached.\n");

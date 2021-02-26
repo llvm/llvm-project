@@ -636,6 +636,11 @@ def add_ctpop : PatFrag <
   (add (ctpop $src0), $src1)
 >;
 
+def xnor : PatFrag <
+  (ops node:$src0, node:$src1),
+  (not (xor $src0, $src1))
+>;
+
 foreach I = 1-4 in {
 def shl#I#_add : PatFrag <
   (ops node:$src0, node:$src1),

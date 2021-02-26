@@ -678,7 +678,7 @@ defm V_MAC_F16 : VOP2Inst <"v_mac_f16", VOP_MAC_F16>;
 
 let SubtargetPredicate = HasDLInsts in {
 
-defm V_XNOR_B32 : VOP2Inst <"v_xnor_b32", VOP_I32_I32_I32>;
+defm V_XNOR_B32 : VOP2Inst <"v_xnor_b32", VOP_I32_I32_I32, xnor>;
 
 let Constraints = "$vdst = $src2",
     DisableEncoding = "$src2",
