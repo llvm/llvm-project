@@ -223,6 +223,19 @@ mlir::Type dyn_cast_ptrEleTy(mlir::Type t) {
       .Default([](mlir::Type) { return mlir::Type{}; });
 }
 
+mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t) {
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(t)
+      .Case<fir::ReferenceType, fir::PointerType, fir::HeapType>(
+          [](auto p) { return p.getEleTy(); })
+      .Case<fir::BoxType>([](auto p) {
+        auto eleTy = p.getEleTy();
+        if (auto ty = fir::dyn_cast_ptrEleTy(eleTy))
+          return ty;
+        return eleTy;
+      })
+      .Default([](mlir::Type) { return mlir::Type{}; });
+}
+
 } // namespace fir
 
 namespace {

@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
@@ -113,6 +117,90 @@ mlir::Type fir::AllocMemOp::wrapResultType(mlir::Type intype) {
       intype.isa<PointerType>() || intype.isa<FunctionType>())
     return {};
   return HeapType::get(intype);
+}
+
+//===----------------------------------------------------------------------===//
+// ArrayCoorOp
+//===----------------------------------------------------------------------===//
+
+static mlir::LogicalResult verify(fir::ArrayCoorOp op) {
+  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(op.memref().getType());
+  auto arrTy = eleTy.dyn_cast<fir::SequenceType>();
+  if (!arrTy)
+    return op.emitOpError("must be a reference to an array");
+  auto arrDim = arrTy.getDimension();
+
+  if (auto shapeOp = op.shape()) {
+    auto shapeTy = shapeOp.getType();
+    unsigned shapeTyRank = 0;
+    if (auto s = shapeTy.dyn_cast<fir::ShapeType>()) {
+      shapeTyRank = s.getRank();
+    } else if (auto ss = shapeTy.dyn_cast<fir::ShapeShiftType>()) {
+      shapeTyRank = ss.getRank();
+    } else {
+      auto s = shapeTy.cast<fir::ShiftType>();
+      shapeTyRank = s.getRank();
+      if (!op.memref().getType().isa<fir::BoxType>())
+        return op.emitOpError("shift can only be provided with fir.box memref");
+    }
+    if (arrDim && arrDim != shapeTyRank)
+      return op.emitOpError("rank of dimension mismatched");
+    if (shapeTyRank != op.indices().size())
+      return op.emitOpError("number of indices do not match dim rank");
+  }
+
+  if (auto sliceOp = op.slice())
+    if (auto sliceTy = sliceOp.getType().dyn_cast<fir::SliceType>())
+      if (sliceTy.getRank() != arrDim)
+        return op.emitOpError("rank of dimension in slice mismatched");
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ArrayLoadOp
+//===----------------------------------------------------------------------===//
+
+std::vector<mlir::Value> fir::ArrayLoadOp::getExtents() {
+  if (auto sh = shape())
+    if (auto *op = sh.getDefiningOp()) {
+      if (auto shOp = dyn_cast<fir::ShapeOp>(op))
+        return shOp.getExtents();
+      return cast<fir::ShapeShiftOp>(op).getExtents();
+    }
+  return {};
+}
+
+static mlir::LogicalResult verify(fir::ArrayLoadOp op) {
+  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(op.memref().getType());
+  auto arrTy = eleTy.dyn_cast<fir::SequenceType>();
+  if (!arrTy)
+    return op.emitOpError("must be a reference to an array");
+  auto arrDim = arrTy.getDimension();
+
+  if (auto shapeOp = op.shape()) {
+    auto shapeTy = shapeOp.getType();
+    unsigned shapeTyRank = 0;
+    if (auto s = shapeTy.dyn_cast<fir::ShapeType>()) {
+      shapeTyRank = s.getRank();
+    } else if (auto ss = shapeTy.dyn_cast<fir::ShapeShiftType>()) {
+      shapeTyRank = ss.getRank();
+    } else {
+      auto s = shapeTy.cast<fir::ShiftType>();
+      shapeTyRank = s.getRank();
+      if (!op.memref().getType().isa<fir::BoxType>())
+        return op.emitOpError("shift can only be provided with fir.box memref");
+    }
+    if (arrDim && arrDim != shapeTyRank)
+      return op.emitOpError("rank of dimension mismatched");
+  }
+
+  if (auto sliceOp = op.slice())
+    if (auto sliceTy = sliceOp.getType().dyn_cast<fir::SliceType>())
+      if (sliceTy.getRank() != arrDim)
+        return op.emitOpError("rank of dimension in slice mismatched");
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
