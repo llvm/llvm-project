@@ -166,12 +166,32 @@ define amdgpu_ps <2 x i64> @scalar_xnor_i64_mul_use(i64 inreg %a, i64 inreg %b) 
 }
 
 define i32 @vector_xnor_i32_one_use(i32 %a, i32 %b) {
-; GCN-LABEL: vector_xnor_i32_one_use:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GCN-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: vector_xnor_i32_one_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX7-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_xnor_i32_one_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX8-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-LABEL: vector_xnor_i32_one_use:
+; GFX900:       ; %bb.0: ; %entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX900-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: vector_xnor_i32_one_use:
+; GFX906:       ; %bb.0: ; %entry
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_xnor_b32_e32 v0, v0, v1
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %xor = xor i32 %a, %b
   %r = xor i32 %xor, -1
@@ -194,11 +214,28 @@ entry:
 }
 
 define amdgpu_ps float @xnor_s_v_i32_one_use(i32 inreg %s, i32 %v) {
-; GCN-LABEL: xnor_s_v_i32_one_use:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_xor_b32_e32 v0, s0, v0
-; GCN-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX7-LABEL: xnor_s_v_i32_one_use:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX7-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: xnor_s_v_i32_one_use:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX8-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX900-LABEL: xnor_s_v_i32_one_use:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX900-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX900-NEXT:    ; return to shader part epilog
+;
+; GFX906-LABEL: xnor_s_v_i32_one_use:
+; GFX906:       ; %bb.0:
+; GFX906-NEXT:    v_xnor_b32_e32 v0, s0, v0
+; GFX906-NEXT:    ; return to shader part epilog
   %xor = xor i32 %s, %v
   %d = xor i32 %xor, -1
   %cast = bitcast i32 %d to float
@@ -206,11 +243,28 @@ define amdgpu_ps float @xnor_s_v_i32_one_use(i32 inreg %s, i32 %v) {
 }
 
 define amdgpu_ps float @xnor_v_s_i32_one_use(i32 inreg %s, i32 %v) {
-; GCN-LABEL: xnor_v_s_i32_one_use:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_xor_b32_e32 v0, s0, v0
-; GCN-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX7-LABEL: xnor_v_s_i32_one_use:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX7-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: xnor_v_s_i32_one_use:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX8-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX900-LABEL: xnor_v_s_i32_one_use:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX900-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX900-NEXT:    ; return to shader part epilog
+;
+; GFX906-LABEL: xnor_v_s_i32_one_use:
+; GFX906:       ; %bb.0:
+; GFX906-NEXT:    v_xnor_b32_e64 v0, v0, s0
+; GFX906-NEXT:    ; return to shader part epilog
   %xor = xor i32 %v, %s
   %d = xor i32 %xor, -1
   %cast = bitcast i32 %d to float
@@ -305,12 +359,32 @@ define amdgpu_ps <2 x float> @xnor_i64_v_s_one_use(i64 inreg %a, i64 %b64) {
 }
 
 define i32 @vector_xor_na_b_i32_one_use(i32 %a, i32 %b) {
-; GCN-LABEL: vector_xor_na_b_i32_one_use:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GCN-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: vector_xor_na_b_i32_one_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX7-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_xor_na_b_i32_one_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX8-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-LABEL: vector_xor_na_b_i32_one_use:
+; GFX900:       ; %bb.0: ; %entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX900-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: vector_xor_na_b_i32_one_use:
+; GFX906:       ; %bb.0: ; %entry
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_xnor_b32_e32 v0, v0, v1
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %na = xor i32 %a, -1
   %r = xor i32 %na, %b
@@ -318,12 +392,32 @@ entry:
 }
 
 define i32 @vector_xor_a_nb_i32_one_use(i32 %a, i32 %b) {
-; GCN-LABEL: vector_xor_a_nb_i32_one_use:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_xor_b32_e32 v1, -1, v1
-; GCN-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: vector_xor_a_nb_i32_one_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX7-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_xor_a_nb_i32_one_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX8-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-LABEL: vector_xor_a_nb_i32_one_use:
+; GFX900:       ; %bb.0: ; %entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX900-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: vector_xor_a_nb_i32_one_use:
+; GFX906:       ; %bb.0: ; %entry
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_xnor_b32_e32 v0, v1, v0
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %nb = xor i32 %b, -1
   %r = xor i32 %a, %nb
