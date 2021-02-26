@@ -429,9 +429,7 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
     TS->emitLabel(Symbol);
 }
 
-void MCStreamer::emitCFISections(bool EH, bool Debug) {
-  assert(EH || Debug);
-}
+void MCStreamer::emitCFISections(bool EH, bool Debug) {}
 
 void MCStreamer::emitCFIStartProc(bool IsSimple, SMLoc Loc) {
   if (hasUnfinishedDwarfFrameInfo())
