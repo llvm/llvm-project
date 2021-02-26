@@ -132,8 +132,14 @@ public:
   /// Remove the attribute with the specified name if it exists. Return the
   /// attribute that was erased, or nullptr if there was no attribute with such
   /// name.
-  Attribute removeAttr(Identifier name) { return state->removeAttr(name); }
-  Attribute removeAttr(StringRef name) {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      Attribute removeAttr(Identifier name),
+      "Use Operation::removeAttr() instead (replace '.' with '->').") {
+    return state->removeAttr(name);
+  }
+  LLVM_ATTRIBUTE_DEPRECATED(
+      Attribute removeAttr(StringRef name),
+      "Use Operation::removeAttr() instead (replace '.' with '->').") {
     return state->removeAttr(Identifier::get(name, getContext()));
   }
 
