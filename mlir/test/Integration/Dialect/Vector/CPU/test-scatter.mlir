@@ -6,7 +6,8 @@
 func @scatter8(%base: memref<?xf32>,
                %indices: vector<8xi32>,
                %mask: vector<8xi1>, %value: vector<8xf32>) {
-  vector.scatter %base[%indices], %mask, %value
+  %c0 = constant 0: index
+  vector.scatter %base[%c0][%indices], %mask, %value
     : memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>
   return
 }

@@ -43,6 +43,7 @@ public:
                     bool isPrivateExtern);
 
   Symbol *addDylib(StringRef name, DylibFile *file, bool isWeakDef, bool isTlv);
+  Symbol *addDynamicLookup(StringRef name);
 
   Symbol *addLazy(StringRef name, ArchiveFile *file,
                   const llvm::object::Archive::Symbol &sym);
