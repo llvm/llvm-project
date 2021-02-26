@@ -54,15 +54,15 @@
 ; CHECK:      "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":
 ; CHECK:      "#bytes within functions": [[FUNCSIZE:[0-9]+]]
 ; CHECK:      "#bytes within inlined functions": [[INLINESIZE:[0-9]+]]
-; CHECK:      "#bytes in __debug_info": 459,
-; CHECK-NEXT: "#bytes in __debug_loc": 35,
-; CHECK-NEXT: "#bytes in __apple_names": 348,
-; CHECK-NEXT: "#bytes in __apple_types": 133,
+; CHECK:      "#bytes in __debug_loc": 35,
 ; CHECK-NEXT: "#bytes in __debug_abbrev": 384,
-; CHECK-NEXT: "#bytes in __apple_namespac": 60,
-; CHECK-NEXT: "#bytes in __debug_line": 126,
+; CHECK-NEXT: "#bytes in __debug_info": 459,
 ; CHECK-NEXT: "#bytes in __debug_str": 231,
+; CHECK-NEXT: "#bytes in __apple_names": 348,
 ; CHECK-NEXT: "#bytes in __apple_objc": 36,
+; CHECK-NEXT: "#bytes in __apple_namespac": 60,
+; CHECK-NEXT: "#bytes in __apple_types": 133,
+; CHECK-NEXT: "#bytes in __debug_line": 126,
 
 ; ModuleID = '/tmp/quality.cpp'
 source_filename = "/tmp/quality.cpp"
