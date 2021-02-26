@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../libcxx/src/include/refstring.h"
 #include "stdexcept"
 #include "new"
 #include <cstdlib>
 #include <cstring>
 #include <cstdint>
 #include <cstddef>
+
+// This includes an implementation file from libc++.
+#include "src/include/refstring.h"
 
 static_assert(sizeof(std::__libcpp_refstring) == sizeof(const char *), "");
 
