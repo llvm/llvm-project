@@ -618,7 +618,8 @@ getFramePointerKind(const ArgList &Args, const llvm::Triple &Triple) {
 /// Add a CC1 option to specify the debug compilation directory.
 static void addDebugCompDirArg(const ArgList &Args, ArgStringList &CmdArgs,
                                const llvm::vfs::FileSystem &VFS) {
-  if (Arg *A = Args.getLastArg(options::OPT_fdebug_compilation_dir_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
+                               options::OPT_fdebug_compilation_dir_EQ)) {
     A->render(Args, CmdArgs);
   } else if (llvm::ErrorOr<std::string> CWD =
                  VFS.getCurrentWorkingDirectory()) {
@@ -859,7 +860,8 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back("-fcoverage-mapping");
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_fprofile_compilation_dir_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
+                               options::OPT_fprofile_compilation_dir_EQ)) {
     A->render(Args, CmdArgs);
   } else if (llvm::ErrorOr<std::string> CWD =
                  D.getVFS().getCurrentWorkingDirectory()) {
