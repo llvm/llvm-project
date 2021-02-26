@@ -450,6 +450,7 @@ class DataFlowSanitizer {
   Constant *getOrBuildTrampolineFunction(FunctionType *FT, StringRef FName);
   void initializeCallbackFunctions(Module &M);
   void initializeRuntimeFunctions(Module &M);
+  void injectMetadataGlobals(Module &M);
 
   bool init(Module &M);
 
@@ -1267,6 +1268,26 @@ void DataFlowSanitizer::initializeCallbackFunctions(Module &M) {
       Mod->getOrInsertFunction("__dfsan_cmp_callback", DFSanCmpCallbackFnTy);
 }
 
+void DataFlowSanitizer::injectMetadataGlobals(Module &M) {
+  // These variables can be used:
+  // - by the runtime (to discover what the shadow width was, during
+  //   compilation)
+  // - in testing (to avoid hardcoding the shadow width and type but instead
+  //   extract them by pattern matching)
+  Type *IntTy = Type::getInt32Ty(*Ctx);
+  (void)Mod->getOrInsertGlobal("__dfsan_shadow_width_bits", IntTy, [&] {
+    return new GlobalVariable(
+        M, IntTy, /*isConstant=*/true, GlobalValue::WeakODRLinkage,
+        ConstantInt::get(IntTy, ShadowWidthBits), "__dfsan_shadow_width_bits");
+  });
+  (void)Mod->getOrInsertGlobal("__dfsan_shadow_width_bytes", IntTy, [&] {
+    return new GlobalVariable(M, IntTy, /*isConstant=*/true,
+                              GlobalValue::WeakODRLinkage,
+                              ConstantInt::get(IntTy, ShadowWidthBytes),
+                              "__dfsan_shadow_width_bytes");
+  });
+}
+
 bool DataFlowSanitizer::runImpl(Module &M) {
   init(M);
 
@@ -1306,6 +1327,8 @@ bool DataFlowSanitizer::runImpl(Module &M) {
         ConstantInt::getSigned(OriginTy, shouldTrackOrigins()),
         "__dfsan_track_origins");
   });
+
+  injectMetadataGlobals(M);
 
   ExternalShadowMask =
       Mod->getOrInsertGlobal(kDFSanExternShadowPtrMask, IntptrTy);
