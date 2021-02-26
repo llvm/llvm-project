@@ -3,7 +3,7 @@
 // RUN:   -fsanitize-address-destructor-kind=bad_arg -emit-llvm -o - \
 // RUN:   -triple x86_64-apple-macosx10.15 %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefixes=CHECK-BAD-ARG
-// CHECK-BAD-ARG: unsupported argument 'bad_arg' to option 'fsanitize-address-destructor-kind='
+// CHECK-BAD-ARG: invalid value 'bad_arg' in '-fsanitize-address-destructor-kind=bad_arg'
 
 // Default is global dtor
 // RUN: %clang_cc1 -fsanitize=address -emit-llvm -o - -triple x86_64-apple-macosx10.15 \
