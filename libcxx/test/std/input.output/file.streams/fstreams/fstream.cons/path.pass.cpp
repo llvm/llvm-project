@@ -44,7 +44,7 @@ int main(int, char**) {
     fs >> x;
     assert(x == 3.25);
   }
-  std::remove(p.c_str());
+  std::remove(p.string().c_str());
   {
     std::wfstream fs(p, std::ios_base::in | std::ios_base::out |
                             std::ios_base::trunc);
@@ -54,7 +54,7 @@ int main(int, char**) {
     fs >> x;
     assert(x == 3.25);
   }
-  std::remove(p.c_str());
+  std::remove(p.string().c_str());
 
   return 0;
 }
