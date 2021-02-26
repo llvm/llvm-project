@@ -2374,12 +2374,8 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
     TheU = Skeleton;
 
   // Emit the header.
-  MCSymbol *BeginLabel = Asm->createTempSymbol("pub" + Name + "_begin");
-  MCSymbol *EndLabel = Asm->createTempSymbol("pub" + Name + "_end");
-  Asm->emitDwarfUnitLength(EndLabel, BeginLabel,
-                           "Length of Public " + Name + " Info");
-
-  Asm->OutStreamer->emitLabel(BeginLabel);
+  MCSymbol *EndLabel = Asm->emitDwarfUnitLength(
+      "pub" + Name, "Length of Public " + Name + " Info");
 
   Asm->OutStreamer->AddComment("DWARF Version");
   Asm->emitInt16(dwarf::DW_PUBNAMES_VERSION);

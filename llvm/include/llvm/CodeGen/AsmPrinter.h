@@ -645,8 +645,9 @@ public:
 
   /// Emit a unit length field. The actual format, DWARF32 or DWARF64, is chosen
   /// according to the settings.
-  void emitDwarfUnitLength(const MCSymbol *Hi, const MCSymbol *Lo,
-                           const Twine &Comment) const;
+  /// Return the end symbol generated inside, the caller needs to emit it.
+  MCSymbol *emitDwarfUnitLength(const Twine &Prefix,
+                                const Twine &Comment) const;
 
   /// Emit reference to a call site with a specified encoding
   void emitCallSiteOffset(const MCSymbol *Hi, const MCSymbol *Lo,

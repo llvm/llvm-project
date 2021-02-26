@@ -7,7 +7,7 @@
 
 ; Check that we get a symbol off of the debug_info section when using split dwarf and pubnames.
 
-; CHECK: .LpubTypes_begin0:
+; CHECK: .LpubTypes_start0:
 ; CHECK-NEXT: .short    2                       # DWARF Version
 ; CHECK-NEXT: .long     .Lcu_begin0             # Offset of Compilation Unit Info
 
