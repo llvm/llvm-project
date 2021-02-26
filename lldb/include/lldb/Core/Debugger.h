@@ -250,6 +250,8 @@ public:
 
   const FormatEntity::Entry *GetFrameFormatUnique() const;
 
+  uint32_t GetStopDisassemblyMaxSize() const;
+
   const FormatEntity::Entry *GetThreadFormat() const;
 
   const FormatEntity::Entry *GetThreadStopFormat() const;
