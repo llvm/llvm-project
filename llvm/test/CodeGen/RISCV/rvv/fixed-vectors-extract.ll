@@ -94,6 +94,71 @@ define i64 @extractelt_v2i64(<2 x i64>* %x) nounwind {
   ret i64 %b
 }
 
+define half @extractelt_v8f16(<8 x half>* %x) nounwind {
+; RV32-LABEL: extractelt_v8f16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
+; RV32-NEXT:    vle16.v v25, (a0)
+; RV32-NEXT:    vsetivli a0, 1, e16,m1,ta,mu
+; RV32-NEXT:    vslidedown.vi v25, v25, 7
+; RV32-NEXT:    vfmv.f.s fa0, v25
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extractelt_v8f16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
+; RV64-NEXT:    vle16.v v25, (a0)
+; RV64-NEXT:    vsetivli a0, 1, e16,m1,ta,mu
+; RV64-NEXT:    vslidedown.vi v25, v25, 7
+; RV64-NEXT:    vfmv.f.s fa0, v25
+; RV64-NEXT:    ret
+  %a = load <8 x half>, <8 x half>* %x
+  %b = extractelement <8 x half> %a, i32 7
+  ret half %b
+}
+
+define float @extractelt_v4f32(<4 x float>* %x) nounwind {
+; RV32-LABEL: extractelt_v4f32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
+; RV32-NEXT:    vle32.v v25, (a0)
+; RV32-NEXT:    vsetivli a0, 1, e32,m1,ta,mu
+; RV32-NEXT:    vslidedown.vi v25, v25, 2
+; RV32-NEXT:    vfmv.f.s fa0, v25
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extractelt_v4f32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
+; RV64-NEXT:    vle32.v v25, (a0)
+; RV64-NEXT:    vsetivli a0, 1, e32,m1,ta,mu
+; RV64-NEXT:    vslidedown.vi v25, v25, 2
+; RV64-NEXT:    vfmv.f.s fa0, v25
+; RV64-NEXT:    ret
+  %a = load <4 x float>, <4 x float>* %x
+  %b = extractelement <4 x float> %a, i32 2
+  ret float %b
+}
+
+define double @extractelt_v2f64(<2 x double>* %x) nounwind {
+; RV32-LABEL: extractelt_v2f64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
+; RV32-NEXT:    vle64.v v25, (a0)
+; RV32-NEXT:    vfmv.f.s fa0, v25
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extractelt_v2f64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
+; RV64-NEXT:    vle64.v v25, (a0)
+; RV64-NEXT:    vfmv.f.s fa0, v25
+; RV64-NEXT:    ret
+  %a = load <2 x double>, <2 x double>* %x
+  %b = extractelement <2 x double> %a, i32 0
+  ret double %b
+}
+
 define i8 @extractelt_v32i8(<32 x i8>* %x) nounwind {
 ; RV32-LABEL: extractelt_v32i8:
 ; RV32:       # %bb.0:
@@ -189,6 +254,71 @@ define i64 @extractelt_v4i64(<4 x i64>* %x) nounwind {
   %a = load <4 x i64>, <4 x i64>* %x
   %b = extractelement <4 x i64> %a, i32 3
   ret i64 %b
+}
+
+define half @extractelt_v16f16(<16 x half>* %x) nounwind {
+; RV32-LABEL: extractelt_v16f16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli a1, 16, e16,m2,ta,mu
+; RV32-NEXT:    vle16.v v26, (a0)
+; RV32-NEXT:    vsetivli a0, 1, e16,m2,ta,mu
+; RV32-NEXT:    vslidedown.vi v26, v26, 7
+; RV32-NEXT:    vfmv.f.s fa0, v26
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extractelt_v16f16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli a1, 16, e16,m2,ta,mu
+; RV64-NEXT:    vle16.v v26, (a0)
+; RV64-NEXT:    vsetivli a0, 1, e16,m2,ta,mu
+; RV64-NEXT:    vslidedown.vi v26, v26, 7
+; RV64-NEXT:    vfmv.f.s fa0, v26
+; RV64-NEXT:    ret
+  %a = load <16 x half>, <16 x half>* %x
+  %b = extractelement <16 x half> %a, i32 7
+  ret half %b
+}
+
+define float @extractelt_v8f32(<8 x float>* %x) nounwind {
+; RV32-LABEL: extractelt_v8f32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
+; RV32-NEXT:    vle32.v v26, (a0)
+; RV32-NEXT:    vsetivli a0, 1, e32,m2,ta,mu
+; RV32-NEXT:    vslidedown.vi v26, v26, 2
+; RV32-NEXT:    vfmv.f.s fa0, v26
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extractelt_v8f32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
+; RV64-NEXT:    vle32.v v26, (a0)
+; RV64-NEXT:    vsetivli a0, 1, e32,m2,ta,mu
+; RV64-NEXT:    vslidedown.vi v26, v26, 2
+; RV64-NEXT:    vfmv.f.s fa0, v26
+; RV64-NEXT:    ret
+  %a = load <8 x float>, <8 x float>* %x
+  %b = extractelement <8 x float> %a, i32 2
+  ret float %b
+}
+
+define double @extractelt_v4f64(<4 x double>* %x) nounwind {
+; RV32-LABEL: extractelt_v4f64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli a1, 4, e64,m2,ta,mu
+; RV32-NEXT:    vle64.v v26, (a0)
+; RV32-NEXT:    vfmv.f.s fa0, v26
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extractelt_v4f64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli a1, 4, e64,m2,ta,mu
+; RV64-NEXT:    vle64.v v26, (a0)
+; RV64-NEXT:    vfmv.f.s fa0, v26
+; RV64-NEXT:    ret
+  %a = load <4 x double>, <4 x double>* %x
+  %b = extractelement <4 x double> %a, i32 0
+  ret double %b
 }
 
 ; This uses a non-power of 2 type so that it isn't an MVT to catch an
