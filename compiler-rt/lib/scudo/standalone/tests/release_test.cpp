@@ -124,6 +124,8 @@ public:
     for (scudo::uptr I = From; I < To; I += PageSize)
       ReportedPages.insert(I);
   }
+
+  scudo::uptr getBase() const { return 0; }
 };
 
 // Simplified version of a TransferBatch.
@@ -191,9 +193,10 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
 
     // Release the memory.
     auto SkipRegion = [](UNUSED scudo::uptr RegionIndex) { return false; };
+    auto DecompactPtr = [](scudo::uptr P) { return P; };
     ReleasedPagesRecorder Recorder;
-    releaseFreeMemoryToOS(FreeList, 0, MaxBlocks * BlockSize, 1U, BlockSize,
-                          &Recorder, SkipRegion);
+    releaseFreeMemoryToOS(FreeList, MaxBlocks * BlockSize, 1U, BlockSize,
+                          &Recorder, DecompactPtr, SkipRegion);
 
     // Verify that there are no released pages touched by used chunks and all
     // ranges of free chunks big enough to contain the entire memory pages had
