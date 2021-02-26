@@ -662,7 +662,76 @@ TEST(DocumentSymbols, Enums) {
                                               WithDetail("(unnamed)"))))))));
 }
 
-TEST(DocumentSymbols, FromMacro) {
+TEST(DocumentSymbols, Macro) {
+  struct Test {
+    const char *Code;
+    testing::Matcher<DocumentSymbol> Matcher;
+  } Tests[] = {
+      {
+          R"cpp(
+            // Basic macro that generates symbols.
+            #define DEFINE_FLAG(X) bool FLAGS_##X; bool FLAGS_no##X
+            DEFINE_FLAG(pretty);
+          )cpp",
+          AllOf(WithName("DEFINE_FLAG"), WithDetail("(pretty)"),
+                Children(WithName("FLAGS_pretty"), WithName("FLAGS_nopretty"))),
+      },
+      {
+          R"cpp(
+            // Hierarchy is determined by primary (name) location.
+            #define ID(X) X
+            namespace ID(ns) { int ID(y); }
+          )cpp",
+          AllOf(WithName("ID"), WithDetail("(ns)"),
+                Children(AllOf(WithName("ns"),
+                               Children(AllOf(WithName("ID"), WithDetail("(y)"),
+                                              Children(WithName("y"))))))),
+      },
+      {
+          R"cpp(
+            // More typical example where macro only generates part of a decl.
+            #define TEST(A, B) class A##_##B { void go(); }; void A##_##B::go()
+            TEST(DocumentSymbols, Macro) { }
+          )cpp",
+          AllOf(WithName("TEST"), WithDetail("(DocumentSymbols, Macro)"),
+                Children(AllOf(WithName("DocumentSymbols_Macro"),
+                               Children(WithName("go"))),
+                         WithName("DocumentSymbols_Macro::go"))),
+      },
+      {
+          R"cpp(
+            // Nested macros.
+            #define NAMESPACE(NS, BODY) namespace NS { BODY }
+            NAMESPACE(a, NAMESPACE(b, int x;))
+          )cpp",
+          AllOf(
+              WithName("NAMESPACE"), WithDetail("(a, NAMESPACE(b, int x;))"),
+              Children(AllOf(
+                  WithName("a"),
+                  Children(AllOf(WithName("NAMESPACE"),
+                                 // FIXME: nested expansions not in TokenBuffer
+                                 WithDetail(""),
+                                 Children(AllOf(WithName("b"),
+                                                Children(WithName("x"))))))))),
+      },
+      {
+          R"cpp(
+            // Macro invoked from body is not exposed.
+            #define INNER(X) int X
+            #define OUTER(X) INNER(X)
+            OUTER(foo);
+          )cpp",
+          AllOf(WithName("OUTER"), WithDetail("(foo)"),
+                Children(WithName("foo"))),
+      },
+  };
+  for (const Test &T : Tests) {
+    auto TU = TestTU::withCode(T.Code);
+    EXPECT_THAT(getSymbols(TU.build()), ElementsAre(T.Matcher)) << T.Code;
+  }
+}
+
+TEST(DocumentSymbols, RangeFromMacro) {
   TestTU TU;
   Annotations Main(R"(
     #define FF(name) \
@@ -671,9 +740,9 @@ TEST(DocumentSymbols, FromMacro) {
     $expansion1[[FF]](abc);
 
     #define FF2() \
-      class Test {};
+      class Test {}
 
-    $expansion2[[FF2]]();
+    $expansion2parens[[$expansion2[[FF2]]()]];
 
     #define FF3() \
       void waldo()
@@ -683,13 +752,21 @@ TEST(DocumentSymbols, FromMacro) {
     }]]
   )");
   TU.Code = Main.code().str();
-  EXPECT_THAT(getSymbols(TU.build()),
-              ElementsAre(AllOf(WithName("abc_Test"), WithDetail("class"),
-                                SymNameRange(Main.range("expansion1"))),
-                          AllOf(WithName("Test"), WithDetail("class"),
-                                SymNameRange(Main.range("expansion2"))),
-                          AllOf(WithName("waldo"), WithDetail("void ()"),
-                                SymRange(Main.range("fullDef")))));
+  EXPECT_THAT(
+      getSymbols(TU.build()),
+      ElementsAre(
+          AllOf(WithName("FF"), WithDetail("(abc)"),
+                Children(AllOf(WithName("abc_Test"), WithDetail("class"),
+                               SymNameRange(Main.range("expansion1"))))),
+          AllOf(WithName("FF2"), WithDetail("()"),
+                SymNameRange(Main.range("expansion2")),
+                SymRange(Main.range("expansion2parens")),
+                Children(AllOf(WithName("Test"), WithDetail("class"),
+                               SymNameRange(Main.range("expansion2"))))),
+          AllOf(WithName("FF3"), WithDetail("()"),
+                SymRange(Main.range("fullDef")),
+                Children(AllOf(WithName("waldo"), WithDetail("void ()"),
+                               SymRange(Main.range("fullDef")))))));
 }
 
 TEST(DocumentSymbols, FuncTemplates) {
