@@ -323,8 +323,76 @@ define void @insert_v8i32_undef_v2i32_6(<8 x i32>* %vp, <2 x i32>* %svp) {
   ret void
 }
 
+define void @insert_v4i16_v2i16_0(<4 x i16>* %vp, <2 x i16>* %svp) {
+; CHECK-LABEL: insert_v4i16_v2i16_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a2, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vsetivli a2, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vle16.v v26, (a1)
+; CHECK-NEXT:    vsetivli a1, 2, e16,m1,tu,mu
+; CHECK-NEXT:    vslideup.vi v25, v26, 0
+; CHECK-NEXT:    vsetivli a1, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vse16.v v25, (a0)
+; CHECK-NEXT:    ret
+  %v = load <4 x i16>, <4 x i16>* %vp
+  %sv = load <2 x i16>, <2 x i16>* %svp
+  %c = call <4 x i16> @llvm.experimental.vector.insert.v2i16.v4i16(<4 x i16> %v, <2 x i16> %sv, i64 0)
+  store <4 x i16> %c, <4 x i16>* %vp
+  ret void
+}
+
+define void @insert_v4i16_v2i16_2(<4 x i16>* %vp, <2 x i16>* %svp) {
+; CHECK-LABEL: insert_v4i16_v2i16_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a2, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vsetivli a2, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vle16.v v26, (a1)
+; CHECK-NEXT:    vsetivli a1, 4, e16,m1,tu,mu
+; CHECK-NEXT:    vslideup.vi v25, v26, 2
+; CHECK-NEXT:    vsetivli a1, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vse16.v v25, (a0)
+; CHECK-NEXT:    ret
+  %v = load <4 x i16>, <4 x i16>* %vp
+  %sv = load <2 x i16>, <2 x i16>* %svp
+  %c = call <4 x i16> @llvm.experimental.vector.insert.v2i16.v4i16(<4 x i16> %v, <2 x i16> %sv, i64 2)
+  store <4 x i16> %c, <4 x i16>* %vp
+  ret void
+}
+
+define <vscale x 2 x i16> @insert_nxv2i16_v2i16_0(<vscale x 2 x i16> %v, <2 x i16>* %svp) {
+; CHECK-LABEL: insert_nxv2i16_v2i16_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a1, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf2,tu,mu
+; CHECK-NEXT:    vslideup.vi v8, v25, 0
+; CHECK-NEXT:    ret
+  %sv = load <2 x i16>, <2 x i16>* %svp
+  %c = call <vscale x 2 x i16> @llvm.experimental.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16> %v, <2 x i16> %sv, i64 0)
+  ret <vscale x 2 x i16> %c
+}
+
+define <vscale x 2 x i16> @insert_nxv2i16_v2i16_2(<vscale x 2 x i16> %v, <2 x i16>* %svp) {
+; CHECK-LABEL: insert_nxv2i16_v2i16_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a1, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vsetivli a0, 6, e16,mf2,tu,mu
+; CHECK-NEXT:    vslideup.vi v8, v25, 4
+; CHECK-NEXT:    ret
+  %sv = load <2 x i16>, <2 x i16>* %svp
+  %c = call <vscale x 2 x i16> @llvm.experimental.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16> %v, <2 x i16> %sv, i64 4)
+  ret <vscale x 2 x i16> %c
+}
+
+declare <4 x i16> @llvm.experimental.vector.insert.v2i16.v4i16(<4 x i16>, <2 x i16>, i64)
+
 declare <4 x i32> @llvm.experimental.vector.insert.v2i32.v4i32(<4 x i32>, <2 x i32>, i64)
 declare <8 x i32> @llvm.experimental.vector.insert.v2i32.v8i32(<8 x i32>, <2 x i32>, i64)
+
+declare <vscale x 2 x i16> @llvm.experimental.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16>, <2 x i16>, i64)
 
 declare <vscale x 8 x i32> @llvm.experimental.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32>, <2 x i32>, i64)
 declare <vscale x 8 x i32> @llvm.experimental.vector.insert.v4i32.nxv8i32(<vscale x 8 x i32>, <4 x i32>, i64)

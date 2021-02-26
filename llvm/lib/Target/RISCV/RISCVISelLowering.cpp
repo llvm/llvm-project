@@ -2504,14 +2504,16 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   // (in our case undisturbed). This means we can set up a subvector insertion
   // where OFFSET is the insertion offset, and the VL is the OFFSET plus the
   // size of the subvector.
-  MVT InterSubVT = getLMUL1VT(VecVT);
-
-  // Extract a subvector equal to the nearest full vector register type. This
-  // should resolve to a EXTRACT_SUBREG instruction.
+  MVT InterSubVT = VecVT;
+  SDValue AlignedExtract = Vec;
   unsigned AlignedIdx = OrigIdx - RemIdx;
-  SDValue AlignedExtract =
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InterSubVT, Vec,
-                  DAG.getConstant(AlignedIdx, DL, XLenVT));
+  if (VecVT.bitsGT(getLMUL1VT(VecVT))) {
+    InterSubVT = getLMUL1VT(VecVT);
+    // Extract a subvector equal to the nearest full vector register type. This
+    // should resolve to a EXTRACT_SUBREG instruction.
+    AlignedExtract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InterSubVT, Vec,
+                                 DAG.getConstant(AlignedIdx, DL, XLenVT));
+  }
 
   SDValue SlideupAmt = DAG.getConstant(RemIdx, DL, XLenVT);
   // For scalable vectors this must be further multiplied by vscale.
@@ -2532,10 +2534,12 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   SDValue Slideup = DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, InterSubVT,
                                 AlignedExtract, SubVec, SlideupAmt, Mask, VL);
 
-  // Insert this subvector into the correct vector register. This should
-  // resolve to an INSERT_SUBREG instruction.
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecVT, Vec, Slideup,
-                     DAG.getConstant(AlignedIdx, DL, XLenVT));
+  // If required, insert this subvector back into the correct vector register.
+  // This should resolve to an INSERT_SUBREG instruction.
+  if (VecVT.bitsGT(InterSubVT))
+    Slideup = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecVT, Vec, Slideup,
+                          DAG.getConstant(AlignedIdx, DL, XLenVT));
+  return Slideup;
 }
 
 SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
@@ -2630,13 +2634,15 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   // Else we must shift our vector register directly to extract the subvector.
   // Do this using VSLIDEDOWN.
 
-  // Extract a subvector equal to the nearest full vector register type. This
-  // should resolve to a EXTRACT_SUBREG instruction.
-  unsigned AlignedIdx = OrigIdx - RemIdx;
-  MVT InterSubVT = getLMUL1VT(VecVT);
-  SDValue AlignedExtract =
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InterSubVT, Vec,
-                  DAG.getConstant(AlignedIdx, DL, XLenVT));
+  // If the vector type is an LMUL-group type, extract a subvector equal to the
+  // nearest full vector register type. This should resolve to a EXTRACT_SUBREG
+  // instruction.
+  MVT InterSubVT = VecVT;
+  if (VecVT.bitsGT(getLMUL1VT(VecVT))) {
+    InterSubVT = getLMUL1VT(VecVT);
+    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InterSubVT, Vec,
+                      DAG.getConstant(OrigIdx - RemIdx, DL, XLenVT));
+  }
 
   // Slide this vector register down by the desired number of elements in order
   // to place the desired subvector starting at element 0.
@@ -2646,9 +2652,9 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
 
   SDValue Mask, VL;
   std::tie(Mask, VL) = getDefaultScalableVLOps(InterSubVT, DL, DAG, Subtarget);
-  SDValue Slidedown = DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, InterSubVT,
-                                  DAG.getUNDEF(InterSubVT), AlignedExtract,
-                                  SlidedownAmt, Mask, VL);
+  SDValue Slidedown =
+      DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, InterSubVT,
+                  DAG.getUNDEF(InterSubVT), Vec, SlidedownAmt, Mask, VL);
 
   // Now the vector is in the right position, extract our final subvector. This
   // should resolve to a COPY.
