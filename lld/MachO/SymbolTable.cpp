@@ -131,11 +131,18 @@ Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
     }
   }
 
+  bool isDynamicLookup = file == nullptr;
   if (wasInserted || isa<Undefined>(s) ||
-      (isa<DylibSymbol>(s) && !isWeakDef && s->isWeakDef()))
+      (isa<DylibSymbol>(s) &&
+       ((!isWeakDef && s->isWeakDef()) ||
+        (!isDynamicLookup && cast<DylibSymbol>(s)->isDynamicLookup()))))
     replaceSymbol<DylibSymbol>(s, file, name, isWeakDef, refState, isTlv);
 
   return s;
+}
+
+Symbol *SymbolTable::addDynamicLookup(StringRef name) {
+  return addDylib(name, /*file=*/nullptr, /*isWeakDef=*/false, /*isTlv=*/false);
 }
 
 Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
@@ -158,7 +165,7 @@ Symbol *SymbolTable::addDSOHandle(const MachHeaderSection *header) {
   if (!wasInserted) {
     // FIXME: Make every symbol (including absolute symbols) contain a
     // reference to their originating file, then add that file name to this
-    // error message.
+    // error message. dynamic_lookup symbols don't have an originating file.
     if (isa<Defined>(s))
       error("found defined symbol with illegal name " + DSOHandle::name);
   }
