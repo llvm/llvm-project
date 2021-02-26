@@ -579,7 +579,7 @@ size_t UnwrappedLineParser::computePPHash() const {
   return h;
 }
 
-void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
+void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, unsigned AddLevels,
                                      bool MunchSemi) {
   assert(FormatTok->isOneOf(tok::l_brace, TT_MacroBlockBegin) &&
          "'{' or macro block token expected");
@@ -589,7 +589,7 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
   size_t PPStartHash = computePPHash();
 
   unsigned InitialLevel = Line->Level;
-  nextToken(/*LevelDifference=*/AddLevel ? 1 : 0);
+  nextToken(/*LevelDifference=*/AddLevels);
 
   if (MacroBlock && FormatTok->is(tok::l_paren))
     parseParens();
@@ -604,8 +604,7 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
 
   ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
                                           MustBeDeclaration);
-  if (AddLevel)
-    ++Line->Level;
+  Line->Level += AddLevels;
   parseLevel(/*HasOpeningBrace=*/true);
 
   if (eof())
@@ -621,7 +620,7 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
   size_t PPEndHash = computePPHash();
 
   // Munch the closing brace.
-  nextToken(/*LevelDifference=*/AddLevel ? -1 : 0);
+  nextToken(/*LevelDifference=*/-AddLevels);
 
   if (MacroBlock && FormatTok->is(tok::l_paren))
     parseParens();
@@ -1125,12 +1124,12 @@ void UnwrappedLineParser::parseStructuralElement() {
           if (Style.BraceWrapping.AfterExternBlock) {
             addUnwrappedLine();
           }
-          parseBlock(/*MustBeDeclaration=*/true,
-                     /*AddLevel=*/Style.BraceWrapping.AfterExternBlock);
+          unsigned AddLevels = Style.BraceWrapping.AfterExternBlock ? 1u : 0u;
+          parseBlock(/*MustBeDeclaration=*/true, AddLevels);
         } else {
-          parseBlock(/*MustBeDeclaration=*/true,
-                     /*AddLevel=*/Style.IndentExternBlock ==
-                         FormatStyle::IEBS_Indent);
+          unsigned AddLevels =
+              Style.IndentExternBlock == FormatStyle::IEBS_Indent ? 1u : 0u;
+          parseBlock(/*MustBeDeclaration=*/true, AddLevels);
         }
         addUnwrappedLine();
         return;
@@ -1159,7 +1158,7 @@ void UnwrappedLineParser::parseStructuralElement() {
       return;
     }
     if (FormatTok->is(TT_MacroBlockBegin)) {
-      parseBlock(/*MustBeDeclaration=*/false, /*AddLevel=*/true,
+      parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
                  /*MunchSemi=*/false);
       return;
     }
@@ -2128,10 +2127,13 @@ void UnwrappedLineParser::parseNamespace() {
     if (ShouldBreakBeforeBrace(Style, InitialToken))
       addUnwrappedLine();
 
-    bool AddLevel = Style.NamespaceIndentation == FormatStyle::NI_All ||
-                    (Style.NamespaceIndentation == FormatStyle::NI_Inner &&
-                     DeclarationScopeStack.size() > 1);
-    parseBlock(/*MustBeDeclaration=*/true, AddLevel);
+    unsigned AddLevels =
+        Style.NamespaceIndentation == FormatStyle::NI_All ||
+                (Style.NamespaceIndentation == FormatStyle::NI_Inner &&
+                 DeclarationScopeStack.size() > 1)
+            ? 1u
+            : 0u;
+    parseBlock(/*MustBeDeclaration=*/true, AddLevels);
     // Munch the semicolon after a namespace. This is more common than one would
     // think. Putting the semicolon into its own line is very ugly.
     if (FormatTok->Tok.is(tok::semi))
@@ -2577,7 +2579,7 @@ void UnwrappedLineParser::parseJavaEnumBody() {
   while (FormatTok) {
     if (FormatTok->is(tok::l_brace)) {
       // Parse the constant's class body.
-      parseBlock(/*MustBeDeclaration=*/true, /*AddLevel=*/true,
+      parseBlock(/*MustBeDeclaration=*/true, /*AddLevels=*/1u,
                  /*MunchSemi=*/false);
     } else if (FormatTok->is(tok::l_paren)) {
       parseParens();
@@ -2679,8 +2681,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       if (ShouldBreakBeforeBrace(Style, InitialToken))
         addUnwrappedLine();
 
-      parseBlock(/*MustBeDeclaration=*/true, /*AddLevel=*/true,
-                 /*MunchSemi=*/false);
+      unsigned AddLevels = Style.IndentAccessModifiers ? 2u : 1u;
+      parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/false);
     }
   }
   // There is no addUnwrappedLine() here so that we fall through to parsing a
