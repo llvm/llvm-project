@@ -748,6 +748,16 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   std::pair<Intrinsic::ID, bool>
   canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL);
 
+  /// Attempt to match a simple recurrence cycle of the form:
+  ///   <Start, Op, Step> (using SCEV's notation)
+  /// In IR, this might look like:
+  ///   %iv = phi Ty [%Start, %Entry], [%Inc, %backedge]
+  ///   %inc = binop %iv, %step
+  /// NOTE: This is intentional simple.  If you want the ability to analyze
+  /// non-trivial loop conditons, see ScalarEvolution instead.
+  bool matchSimpleRecurrence(PHINode *P, BinaryOperator *&BO,
+                             Value *&Start, Value *&Step);
+
   /// Return true if RHS is known to be implied true by LHS.  Return false if
   /// RHS is known to be implied false by LHS.  Otherwise, return None if no
   /// implication can be made.
