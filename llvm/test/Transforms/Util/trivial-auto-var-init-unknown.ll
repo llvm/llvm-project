@@ -33,23 +33,7 @@ define void @unknown_intrinsic(i32* %dst) {
   ret void
 }
 
-; Emit a remark that reports a function call to a known libcall.
-define void @known_call(i8* %dst) {
-; CHECK-NEXT: Initialization inserted by -ftrivial-auto-var-init.
-; YAML-LABEL: --- !Missed
-; YAML-NEXT: Pass:            annotation-remarks
-; YAML-NEXT: Name:            AutoInitUnknownInstruction
-; YAML-NEXT: DebugLoc:
-; YAML-NEXT: Function:        known_call
-; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          Initialization inserted by -ftrivial-auto-var-init.
-; YAML-NEXT: ...
-  call i8* @memset(i8* %dst, i32 0, i64 32), !annotation !0, !dbg !DILocation(scope: !4)
-  ret void
-}
-
 declare i8* @llvm.returnaddress(i32) nounwind readnone
-declare i8* @memset(i8*, i32, i64)
 
 !llvm.module.flags = !{!1}
 !0 = !{ !"auto-init" }
