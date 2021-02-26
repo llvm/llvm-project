@@ -1290,9 +1290,9 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     const BasicBlock *Latch = L->getLoopLatch();
     if (PN->getIncomingValueForBlock(Latch) != BO)
       return false;
-    if (auto *Step = dyn_cast<Instruction>(BO->getOperand(1)))
-      if (L->contains(Step->getParent()))
-        return false;
+    if (!L->isLoopInvariant(BO->getOperand(1)))
+      // Avoid complexities w/loop varying steps.
+      return false;
     // IV increment may have other users than the IV. We do not want to make
     // dominance queries to analyze the legality of moving it towards the cmp,
     // so just check that there is no other users.
