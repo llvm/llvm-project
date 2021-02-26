@@ -17,9 +17,9 @@
 using namespace mlir;
 
 int main(int argc, char **argv) {
-  fir::support::registerFIRPasses();
+  fir::support::registerMLIRPassesForFortranTools();
   DialectRegistry registry;
   fir::support::registerDialects(registry);
   return failed(MlirOptMain(argc, argv, "FIR modular optimizer driver\n",
-      registry, /*preloadDialectsInContext*/ false));
+      registry, /*preloadDialectsInContext=*/false));
 }
