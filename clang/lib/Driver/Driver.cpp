@@ -4069,6 +4069,7 @@ void Driver::BuildJobs(Compilation &C) const {
           return;
         }
         OS << Buffer;
+        OS.flush();
       }
     });
   }
