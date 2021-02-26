@@ -6,8 +6,7 @@
 
 ; CHECK-LABEL: test1
 ; CHECK: entry:
-; CHECK:   [[CMP:%[^ ]+]] = icmp ugt i32 %N, 2
-; CHECK:   [[MAX:%[^ ]+]] = select i1 [[CMP]], i32 %N, i32 2
+; CHECK:   [[MAX:%[^ ]+]] = call i32 @llvm.umax.i32(i32 %N, i32 2)
 ; CHECK:   [[COUNT:%[^ ]+]] = add i32 [[MAX]], -1
 ; CHECK:   br i1 %t1, label %do.body.preheader
 ; CHECK: do.body.preheader:
@@ -60,8 +59,7 @@ if.end:                                           ; preds = %do.body, %entry
 
 ; CHECK-LABEL: test3
 ; CHECK: entry:
-; CHECK:   [[CMP:%[^ ]+]] = icmp ugt i32 %N, 1
-; CHECK:   [[COUNT:%[^ ]+]] = select i1 [[CMP]], i32 %N, i32 1
+; CHECK:   [[COUNT:%[^ ]+]] = call i32 @llvm.umax.i32(i32 %N, i32 1)
 ; CHECK:   br i1 %brmerge.demorgan, label %do.body.preheader
 ; CHECK: do.body.preheader:
 ; CHECK-EXIT:   call void @llvm.set.loop.iterations.i32(i32 [[COUNT]])
