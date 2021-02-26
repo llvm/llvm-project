@@ -60,7 +60,7 @@ public:
   void initLinkerInitialized(s32 ReleaseToOsInterval) {
     // Reserve the space required for the Primary.
     PrimaryBase = reinterpret_cast<uptr>(
-        map(nullptr, PrimarySize, nullptr, MAP_NOACCESS, &Data));
+        map(nullptr, PrimarySize, "scudo:primary", MAP_NOACCESS, &Data));
 
     u32 Seed;
     const u64 Time = getMonotonicTime();
