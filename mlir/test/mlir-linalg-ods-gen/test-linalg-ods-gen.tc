@@ -190,3 +190,14 @@ def test8(A: f32(M, K), B: f32(K)) -> (C: f32(M))
 {
   C(m) = std_subf<k>(std_mulf(A(m, k), B(k)), C(m));
 }
+
+// Test shape-only operand.
+// IMPL-LABEL:  ArrayAttr Test9Op::indexing_maps() {
+//       IMPL:    auto map0 = AffineMap::get(2, 2, {d0, d1}, context);
+//       IMPL:    auto map1 = AffineMap::get(2, 2, {d1}, context);
+//       IMPL:    auto map2 = AffineMap::get(2, 2, {d0}, context);
+ods_def<Test9Op>:
+def test9(A: f32(M, K), B: f32(K)) -> (C: f32(M))
+{
+  C(m) = std_addf<k>(C(m), A(m, k));
+}
