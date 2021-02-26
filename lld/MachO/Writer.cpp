@@ -472,6 +472,8 @@ void Writer::scanSymbols() {
       if (defined->overridesWeakDef)
         in.weakBinding->addNonWeakDefinition(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+      if (dysym->isDynamicLookup())
+        continue;
       dysym->getFile()->refState =
           std::max(dysym->getFile()->refState, dysym->refState);
     }
