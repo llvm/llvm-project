@@ -10320,7 +10320,7 @@ void CheckFreeArgumentsCast(Sema &S, const std::string &CalleeName,
   case clang::CK_BitCast:
     if (!Cast->getSubExpr()->getType()->isFunctionPointerType())
       return;
-    [[clang::fallthrough]];
+    LLVM_FALLTHROUGH;
   case clang::CK_IntegralToPointer:
   case clang::CK_FunctionToPointerDecay:
     OS << '\'';
