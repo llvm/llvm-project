@@ -281,9 +281,9 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   } else if (Op.isImm()) {
     O << Op.getImm();
   } else if (Op.isSFPImm()) {
-    O << ::toString(APFloat(bit_cast<float>(Op.getSFPImm())));
+    O << ::toString(APFloat(APFloat::IEEEsingle(), APInt(32, Op.getSFPImm())));
   } else if (Op.isDFPImm()) {
-    O << ::toString(APFloat(bit_cast<double>(Op.getDFPImm())));
+    O << ::toString(APFloat(APFloat::IEEEdouble(), APInt(64, Op.getDFPImm())));
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     // call_indirect instructions have a TYPEINDEX operand that we print
