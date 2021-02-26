@@ -218,6 +218,8 @@ static cl::opt<std::string> ProfileInlineReplayFile(
         "by inlining from sample profile loader."),
     cl::Hidden);
 
+extern cl::opt<unsigned> MaxNumPromotions;
+
 namespace {
 
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
@@ -332,7 +334,8 @@ using CandidateQueue =
 /// This pass reads profile data from the file specified by
 /// -sample-profile-file and annotates every affected function with the
 /// profile information found in that file.
-class SampleProfileLoader final : public SampleProfileLoaderBaseImpl {
+class SampleProfileLoader final
+    : public SampleProfileLoaderBaseImpl<BasicBlock> {
 public:
   SampleProfileLoader(
       StringRef Name, StringRef RemapName, ThinOrFullLTOPhase LTOPhase,
@@ -688,6 +691,78 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   return it.first->second;
 }
 
+/// If the profile count for the promotion candidate \p Candidate is 0,
+/// it means \p Candidate has already been promoted for \p Inst.
+static bool isPromotedBefore(const Instruction &Inst, StringRef Candidate) {
+  uint32_t NumVals = 0;
+  uint64_t TotalCount = 0;
+  std::unique_ptr<InstrProfValueData[]> ValueData =
+      std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
+  bool Valid =
+      getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
+                               ValueData.get(), NumVals, TotalCount, true);
+  if (Valid) {
+    for (uint32_t I = 0; I < NumVals; I++) {
+      // If the promotion candidate has 0 count in the metadata, it
+      // means the candidate has been promoted for this indirect call.
+      if (ValueData[I].Value == Function::getGUID(Candidate))
+        return ValueData[I].Count == 0;
+    }
+  }
+  return false;
+}
+
+/// Update indirect call target profile metadata for \p Inst. If \p Total
+/// is given, set TotalCount of call targets counts to \p Total, otherwise
+/// keep the original value in metadata.
+static void
+updateIDTMetaData(Instruction &Inst,
+                  const SmallVectorImpl<InstrProfValueData> &CallTargets,
+                  uint64_t Total = 0) {
+  DenseMap<uint64_t, uint64_t> ValueCountMap;
+
+  uint32_t NumVals = 0;
+  uint64_t TotalCount = 0;
+  std::unique_ptr<InstrProfValueData[]> ValueData =
+      std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
+  bool Valid =
+      getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
+                               ValueData.get(), NumVals, TotalCount, true);
+  if (Valid) {
+    for (uint32_t I = 0; I < NumVals; I++)
+      ValueCountMap[ValueData[I].Value] = ValueData[I].Count;
+  }
+
+  for (const auto &Data : CallTargets) {
+    auto Pair = ValueCountMap.try_emplace(Data.Value, Data.Count);
+    if (Pair.second)
+      continue;
+    // Update existing profile count of the call target if it is not 0.
+    // If it is 0, the call target has been promoted so keep it as 0.
+    if (Pair.first->second != 0)
+      Pair.first->second = Data.Count;
+    else {
+      assert(Total >= Data.Count && "Total should be >= Data.Count");
+      Total -= Data.Count;
+    }
+  }
+
+  SmallVector<InstrProfValueData, 8> NewCallTargets;
+  for (const auto &ValueCount : ValueCountMap) {
+    NewCallTargets.emplace_back(
+        InstrProfValueData{ValueCount.first, ValueCount.second});
+  }
+  llvm::sort(NewCallTargets,
+             [](const InstrProfValueData &L, const InstrProfValueData &R) {
+               if (L.Count != R.Count)
+                 return L.Count > R.Count;
+               return L.Value > R.Value;
+             });
+  annotateValueSite(*Inst.getParent()->getParent()->getParent(), Inst,
+                    NewCallTargets, Total ? Total : TotalCount,
+                    IPVK_IndirectCallTarget, NewCallTargets.size());
+}
+
 /// Attempt to promote indirect call and also inline the promoted call.
 ///
 /// \param F  Caller function.
@@ -700,6 +775,15 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     Function &F, InlineCandidate &Candidate, uint64_t SumOrigin, uint64_t &Sum,
     DenseSet<Instruction *> &PromotedInsns,
     SmallVector<CallBase *, 8> *InlinedCallSite) {
+  auto CalleeFunctionName = Candidate.CalleeSamples->getFuncName();
+  auto R = SymbolMap.find(CalleeFunctionName);
+  if (R == SymbolMap.end() || !R->getValue())
+    return false;
+
+  auto &CI = *Candidate.CallInstr;
+  if (isPromotedBefore(CI, R->getValue()->getName()))
+    return false;
+
   const char *Reason = "Callee function not available";
   // R->getValue() != &F is to prevent promoting a recursive call.
   // If it is a recursive call, we do not inline it as it could bloat
@@ -707,15 +791,17 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
   // clone the caller first, and inline the cloned caller if it is
   // recursive. As llvm does not inline recursive calls, we will
   // simply ignore it instead of handling it explicitly.
-  auto R = SymbolMap.find(Candidate.CalleeSamples->getFuncName());
-  if (R != SymbolMap.end() && R->getValue() &&
-      !R->getValue()->isDeclaration() && R->getValue()->getSubprogram() &&
+  if (!R->getValue()->isDeclaration() && R->getValue()->getSubprogram() &&
       R->getValue()->hasFnAttribute("use-sample-profile") &&
-      R->getValue() != &F &&
-      isLegalToPromote(*Candidate.CallInstr, R->getValue(), &Reason)) {
-    auto *DI =
-        &pgo::promoteIndirectCall(*Candidate.CallInstr, R->getValue(),
-                                  Candidate.CallsiteCount, Sum, false, ORE);
+      R->getValue() != &F && isLegalToPromote(CI, R->getValue(), &Reason)) {
+    // For promoted target, save 0 count in the value profile metadata so
+    // the target won't be promoted again.
+    SmallVector<InstrProfValueData, 1> SortedCallTargets = {
+        InstrProfValueData{Function::getGUID(R->getValue()->getName()), 0}};
+    updateIDTMetaData(CI, SortedCallTargets);
+
+    auto *DI = &pgo::promoteIndirectCall(
+        CI, R->getValue(), Candidate.CallsiteCount, Sum, false, ORE);
     if (DI) {
       Sum -= Candidate.CallsiteCount;
       // Prorate the indirect callsite distribution.
@@ -724,9 +810,8 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
       // profile will be used to prorate callsites from the callee if
       // inlined. Once not inlined, the direct callsite distribution should
       // be prorated so that the it will reflect the real callsite counts.
-      setProbeDistributionFactor(*Candidate.CallInstr,
-                                 Candidate.CallsiteDistribution * Sum /
-                                     SumOrigin);
+      setProbeDistributionFactor(CI, Candidate.CallsiteDistribution * Sum /
+                                         SumOrigin);
       PromotedInsns.insert(Candidate.CallInstr);
       Candidate.CallInstr = DI;
       if (isa<CallInst>(DI) || isa<InvokeInst>(DI)) {
@@ -1248,11 +1333,20 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           }
           SmallVector<InstrProfValueData, 2> SortedCallTargets =
               GetSortedValueDataFromCallTargets(T.get());
-          uint64_t Sum;
-          findIndirectCallFunctionSamples(I, Sum);
-          annotateValueSite(*I.getParent()->getParent()->getParent(), I,
-                            SortedCallTargets, Sum, IPVK_IndirectCallTarget,
-                            SortedCallTargets.size());
+          uint64_t Sum = 0;
+          for (const auto &C : T.get())
+            Sum += C.second;
+          // With CSSPGO all indirect call targets are counted torwards the
+          // original indirect call site in the profile, including both
+          // inlined and non-inlined targets.
+          if (!FunctionSamples::ProfileIsCS) {
+            if (const FunctionSamplesMap *M =
+                    FS->findFunctionSamplesMapAt(CallSite)) {
+              for (const auto &NameFS : *M)
+                Sum += NameFS.second.getEntrySamples();
+            }
+          }
+          updateIDTMetaData(I, SortedCallTargets, Sum);
         } else if (!isa<IntrinsicInst>(&I)) {
           I.setMetadata(LLVMContext::MD_prof,
                         MDB.createBranchWeights(

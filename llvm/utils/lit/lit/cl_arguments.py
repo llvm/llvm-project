@@ -130,6 +130,10 @@ def parse_args():
     execution_group.add_argument("--allow-empty-runs",
             help="Do not fail the run if all tests are filtered out",
             action="store_true")
+    execution_group.add_argument("--ignore-fail",
+            dest="ignoreFail",
+            action="store_true",
+            help="Exit with status zero even if some tests fail")
     execution_group.add_argument("--no-indirectly-run-check",
             dest="indirectlyRunCheck",
             help="Do not error if a test would not be run if the user had "
@@ -158,6 +162,16 @@ def parse_args():
             type=_case_insensitive_regex,
             help="Only run tests with paths matching the given regular expression",
             default=os.environ.get("LIT_FILTER", ".*"))
+    selection_group.add_argument("--filter-out",
+            metavar="REGEX",
+            type=_case_insensitive_regex,
+            help="Filter out tests with paths matching the given regular expression",
+            default=os.environ.get("LIT_FILTER_OUT", "^$"))
+    selection_group.add_argument("--xfail",
+            metavar="LIST",
+            type=_semicolon_list,
+            help="XFAIL tests with paths in the semicolon separated list",
+            default=os.environ.get("LIT_XFAIL", ""))
     selection_group.add_argument("--num-shards",
             dest="numShards",
             metavar="M",
@@ -240,6 +254,10 @@ def _case_insensitive_regex(arg):
         return re.compile(arg, re.IGNORECASE)
     except re.error as reason:
         raise _error("invalid regular expression: '{}', {}", arg, reason)
+
+
+def _semicolon_list(arg):
+    return arg.split(';')
 
 
 def _error(desc, *args):

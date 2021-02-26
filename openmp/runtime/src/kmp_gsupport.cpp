@@ -242,8 +242,8 @@ void *KMP_EXPAND_NAME(KMP_API_NAME_GOMP_SINGLE_COPY_START)(void) {
   if (__kmp_enter_single(gtid, &loc, FALSE))
     return NULL;
 
-// Wait for the first thread to set the copyprivate data pointer,
-// and for all other threads to reach this point.
+    // Wait for the first thread to set the copyprivate data pointer,
+    // and for all other threads to reach this point.
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   ompt_frame_t *ompt_frame;
@@ -463,7 +463,8 @@ static void __kmp_GOMP_fork_call(ident_t *loc, int gtid, unsigned num_threads,
       ompt_team_size = __kmp_team_from_gtid(gtid)->t.t_nproc;
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_begin, &(team_info->parallel_data),
-          &(task_info->task_data), ompt_team_size, __kmp_tid_from_gtid(gtid), ompt_task_implicit); // TODO: Can this be ompt_task_initial?
+          &(task_info->task_data), ompt_team_size, __kmp_tid_from_gtid(gtid),
+          ompt_task_implicit); // TODO: Can this be ompt_task_initial?
       task_info->thread_num = __kmp_tid_from_gtid(gtid);
     }
     thr->th.ompt_thread_info.state = ompt_state_work_parallel;
@@ -526,7 +527,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)(void) {
                   ,
                   fork_context_gnu
 #endif
-                  );
+  );
 }
 
 // Loop worksharing constructs
@@ -960,12 +961,12 @@ LOOP_START_ULL(KMP_EXPAND_NAME(KMP_API_NAME_GOMP_LOOP_ULL_GUIDED_START),
 LOOP_NEXT_ULL(KMP_EXPAND_NAME(KMP_API_NAME_GOMP_LOOP_ULL_GUIDED_NEXT), {})
 LOOP_START_ULL(
     KMP_EXPAND_NAME(KMP_API_NAME_GOMP_LOOP_ULL_NONMONOTONIC_DYNAMIC_START),
-               kmp_sch_dynamic_chunked)
+    kmp_sch_dynamic_chunked)
 LOOP_NEXT_ULL(
     KMP_EXPAND_NAME(KMP_API_NAME_GOMP_LOOP_ULL_NONMONOTONIC_DYNAMIC_NEXT), {})
 LOOP_START_ULL(
     KMP_EXPAND_NAME(KMP_API_NAME_GOMP_LOOP_ULL_NONMONOTONIC_GUIDED_START),
-               kmp_sch_guided_chunked)
+    kmp_sch_guided_chunked)
 LOOP_NEXT_ULL(
     KMP_EXPAND_NAME(KMP_API_NAME_GOMP_LOOP_ULL_NONMONOTONIC_GUIDED_NEXT), {})
 LOOP_RUNTIME_START_ULL(
@@ -1232,7 +1233,8 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
   kmp_taskdata_t *current_task;
   if (ompt_enabled.enabled) {
     current_task = __kmp_threads[gtid]->th.th_current_task;
-    current_task->ompt_task_info.frame.enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+    current_task->ompt_task_info.frame.enter_frame.ptr =
+        OMPT_GET_FRAME_ADDRESS(0);
   }
   OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
@@ -1494,10 +1496,10 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS)(void (*task)(void *),
 
   {
 #if OMPT_SUPPORT
-  OMPT_STORE_RETURN_ADDRESS(gtid);
+    OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 
-  KMP_DISPATCH_INIT(&loc, gtid, kmp_nm_dynamic_chunked, 1, count, 1, 1, TRUE);
+    KMP_DISPATCH_INIT(&loc, gtid, kmp_nm_dynamic_chunked, 1, count, 1, 1, TRUE);
   }
   task(data);
   KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)();
@@ -1541,10 +1543,10 @@ PARALLEL_LOOP(KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_LOOP_DYNAMIC),
               kmp_sch_dynamic_chunked, OMPT_LOOP_PRE, OMPT_LOOP_POST)
 PARALLEL_LOOP(
     KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_LOOP_NONMONOTONIC_GUIDED),
-              kmp_sch_guided_chunked, OMPT_LOOP_PRE, OMPT_LOOP_POST)
+    kmp_sch_guided_chunked, OMPT_LOOP_PRE, OMPT_LOOP_POST)
 PARALLEL_LOOP(
     KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_LOOP_NONMONOTONIC_DYNAMIC),
-              kmp_sch_dynamic_chunked, OMPT_LOOP_PRE, OMPT_LOOP_POST)
+    kmp_sch_dynamic_chunked, OMPT_LOOP_PRE, OMPT_LOOP_POST)
 PARALLEL_LOOP(KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_LOOP_GUIDED),
               kmp_sch_guided_chunked, OMPT_LOOP_PRE, OMPT_LOOP_POST)
 PARALLEL_LOOP(KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_LOOP_RUNTIME),

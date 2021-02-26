@@ -298,10 +298,9 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
     return *Entry = ArrayType::get(ElementTypes[0],
                                    cast<ArrayType>(Ty)->getNumElements());
   case Type::ScalableVectorTyID:
-    // FIXME: handle scalable vectors
   case Type::FixedVectorTyID:
-    return *Entry = FixedVectorType::get(
-               ElementTypes[0], cast<FixedVectorType>(Ty)->getNumElements());
+    return *Entry = VectorType::get(ElementTypes[0],
+                                    cast<VectorType>(Ty)->getElementCount());
   case Type::PointerTyID:
     return *Entry = PointerType::get(ElementTypes[0],
                                      cast<PointerType>(Ty)->getAddressSpace());

@@ -52,13 +52,11 @@ def Builtin_Complex : Builtin_Type<"Complex"> {
   let parameters = (ins "Type":$elementType);
   let builders = [
     TypeBuilderWithInferredContext<(ins "Type":$elementType), [{
-      return Base::get(elementType.getContext(), elementType);
-    }], [{
-      return Base::getChecked($_loc, elementType);
+      return $_get(elementType.getContext(), elementType);
     }]>
   ];
   let skipDefaultBuilders = 1;
-  let genVerifyInvariantsDecl = 1;
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -137,7 +135,7 @@ def Builtin_Function : Builtin_Type<"Function"> {
   let parameters = (ins "ArrayRef<Type>":$inputs, "ArrayRef<Type>":$results);
   let builders = [
     TypeBuilder<(ins CArg<"TypeRange">:$inputs, CArg<"TypeRange">:$results), [{
-      return Base::get($_ctxt, inputs, results);
+      return $_get($_ctxt, inputs, results);
     }]>
   ];
   let skipDefaultBuilders = 1;
@@ -225,7 +223,7 @@ def Builtin_Integer : Builtin_Type<"Integer"> {
   // memory.
   let genStorageClass = 0;
   let skipDefaultBuilders = 1;
-  let genVerifyInvariantsDecl = 1;
+  let genVerifyDecl = 1;
   let extraClassDeclaration = [{
     /// Signedness semantics.
     enum SignednessSemantics : uint32_t {
@@ -295,7 +293,7 @@ def Builtin_Opaque : Builtin_Type<"Opaque"> {
     "Identifier":$dialectNamespace,
     StringRefParameter<"">:$typeData
   );
-  let genVerifyInvariantsDecl = 1;
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -334,10 +332,10 @@ def Builtin_Tuple : Builtin_Type<"Tuple"> {
   let parameters = (ins "ArrayRef<Type>":$types);
   let builders = [
     TypeBuilder<(ins "TypeRange":$elementTypes), [{
-      return Base::get($_ctxt, elementTypes);
+      return $_get($_ctxt, elementTypes);
     }]>,
     TypeBuilder<(ins), [{
-      return Base::get($_ctxt, TypeRange());
+      return $_get($_ctxt, TypeRange());
     }]>
   ];
   let skipDefaultBuilders = 1;

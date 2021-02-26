@@ -1630,6 +1630,84 @@ void opFree()
                cxxOperatorCallExpr(forFunction(functionDecl(hasName("opFree"))),
                                    hasAnyOperatorName("+", "!"),
                                    hasUnaryOperand(s1Expr)))));
+
+  Code = R"cpp(
+struct HasIncOperatorsMem
+{
+    HasIncOperatorsMem& operator++();
+    HasIncOperatorsMem operator++(int);
+};
+struct HasIncOperatorsFree
+{
+};
+HasIncOperatorsFree& operator++(HasIncOperatorsFree&);
+HasIncOperatorsFree operator++(HasIncOperatorsFree&, int);
+
+void prefixIncOperatorMem()
+{
+    HasIncOperatorsMem s1;
+    ++s1;
+}
+void prefixIncOperatorFree()
+{
+    HasIncOperatorsFree s1;
+    ++s1;
+}
+void postfixIncOperatorMem()
+{
+    HasIncOperatorsMem s1;
+    s1++;
+}
+void postfixIncOperatorFree()
+{
+    HasIncOperatorsFree s1;
+    s1++;
+}
+
+struct HasOpPlusInt
+{
+    HasOpPlusInt& operator+(int);
+};
+void plusIntOperator()
+{
+    HasOpPlusInt s1;
+    s1+1;
+}
+)cpp";
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               cxxOperatorCallExpr(
+                   forFunction(functionDecl(hasName("prefixIncOperatorMem"))),
+                   hasOperatorName("++"), hasUnaryOperand(declRefExpr())))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               cxxOperatorCallExpr(
+                   forFunction(functionDecl(hasName("prefixIncOperatorFree"))),
+                   hasOperatorName("++"), hasUnaryOperand(declRefExpr())))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               cxxOperatorCallExpr(
+                   forFunction(functionDecl(hasName("postfixIncOperatorMem"))),
+                   hasOperatorName("++"), hasUnaryOperand(declRefExpr())))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               cxxOperatorCallExpr(
+                   forFunction(functionDecl(hasName("postfixIncOperatorFree"))),
+                   hasOperatorName("++"), hasUnaryOperand(declRefExpr())))));
+
+  EXPECT_FALSE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     cxxOperatorCallExpr(
+                         forFunction(functionDecl(hasName("plusIntOperator"))),
+                         hasOperatorName("+"), hasUnaryOperand(expr())))));
 }
 
 TEST(Matcher, UnaryOperatorTypes) {

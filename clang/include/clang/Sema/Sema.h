@@ -2598,6 +2598,8 @@ public:
   NamedDecl *getShadowedDeclaration(const TypedefNameDecl *D,
                                     const LookupResult &R);
   NamedDecl *getShadowedDeclaration(const VarDecl *D, const LookupResult &R);
+  NamedDecl *getShadowedDeclaration(const BindingDecl *D,
+                                    const LookupResult &R);
   void CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
                    const LookupResult &R);
   void CheckShadow(Scope *S, VarDecl *D);
@@ -12403,6 +12405,8 @@ private:
   bool CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+  bool CheckRISCVBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
+                                     CallExpr *TheCall);
 
   bool SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool SemaBuiltinVAStartARMMicrosoft(CallExpr *Call);

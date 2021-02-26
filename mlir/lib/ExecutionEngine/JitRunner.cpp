@@ -158,8 +158,16 @@ static Error compileAndExecute(Options &options, ModuleOp module,
   // If shared library implements custom mlir-runner library init and destroy
   // functions, we'll use them to register the library with the execution
   // engine. Otherwise we'll pass library directly to the execution engine.
-  SmallVector<StringRef, 4> libs(options.clSharedLibs.begin(),
-                                 options.clSharedLibs.end());
+  SmallVector<SmallString<256>, 4> libPaths;
+
+  // Use absolute library path so that gdb can find the symbol table.
+  transform(
+      options.clSharedLibs, std::back_inserter(libPaths),
+      [](std::string libPath) {
+        SmallString<256> absPath(libPath.begin(), libPath.end());
+        cantFail(llvm::errorCodeToError(llvm::sys::fs::make_absolute(absPath)));
+        return absPath;
+      });
 
   // Libraries that we'll pass to the ExecutionEngine for loading.
   SmallVector<StringRef, 4> executionEngineLibs;
@@ -171,8 +179,8 @@ static Error compileAndExecute(Options &options, ModuleOp module,
   SmallVector<MlirRunnerDestroyFn> destroyFns;
 
   // Handle libraries that do support mlir-runner init/destroy callbacks.
-  for (auto libPath : libs) {
-    auto lib = llvm::sys::DynamicLibrary::getPermanentLibrary(libPath.data());
+  for (auto &libPath : libPaths) {
+    auto lib = llvm::sys::DynamicLibrary::getPermanentLibrary(libPath.c_str());
     void *initSym = lib.getAddressOfSymbol("__mlir_runner_init");
     void *destroySim = lib.getAddressOfSymbol("__mlir_runner_destroy");
 

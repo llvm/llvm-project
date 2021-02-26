@@ -1,16 +1,16 @@
-! RUN: rm -rf %S/multiple-input-files.txt  %S/Inputs/hello-world.txt
-
 ! REQUIRES: new-flang-driver
 
 !--------------------------
 ! FLANG DRIVER (flang-new)
 !--------------------------
+! NOTE: Use `-E` so that the compiler driver stops after the 1st compilation phase, preprocessing. That's all we need.
+
 ! TEST 1: Both input files are processed (output is printed to stdout)
-! RUN: %flang-new -test-io %s %S/Inputs/hello-world.f90 | FileCheck %s --match-full-lines -check-prefix=FLANG
+! RUN: %flang-new -E -Xflang -test-io %s %S/Inputs/hello-world.f90 | FileCheck %s --match-full-lines -check-prefix=FLANG
 
 ! TEST 2: None of the files is processed (not possible to specify the output file when multiple input files are present)
-! RUN: not %flang-new -test-io -o - %S/Inputs/hello-world.f90 %s  2>&1 | FileCheck %s --match-full-lines -check-prefix=ERROR
-! RUN: not %flang-new -test-io -o %t %S/Inputs/hello-world.f90 %s 2>&1 | FileCheck %s --match-full-lines -check-prefix=ERROR
+! RUN: not %flang-new -E -Xflang -test-io -o - %S/Inputs/hello-world.f90 %s  2>&1 | FileCheck %s --match-full-lines -check-prefix=ERROR
+! RUN: not %flang-new -E -Xflang -test-io -o %t %S/Inputs/hello-world.f90 %s 2>&1 | FileCheck %s --match-full-lines -check-prefix=ERROR
 
 !----------------------------------------
 ! FLANG FRONTEND DRIVER (flang-new -fc1)

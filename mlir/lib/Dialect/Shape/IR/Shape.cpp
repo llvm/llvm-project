@@ -358,7 +358,7 @@ OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
     return nullptr;
 
   // TODO: Support folding with more than 2 input shapes
-  if (operands.size() > 2 && !operands[2].isa<StringAttr>())
+  if (shapes().size() > 2)
     return nullptr;
 
   auto rhsShape = llvm::to_vector<6>(
@@ -598,6 +598,30 @@ OpFoldResult ConstWitnessOp::fold(ArrayRef<Attribute>) { return passingAttr(); }
 
 OpFoldResult CstrRequireOp::fold(ArrayRef<Attribute> operands) {
   return operands[0];
+}
+
+//===----------------------------------------------------------------------===//
+// DivOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult DivOp::fold(ArrayRef<Attribute> operands) {
+  auto lhs = operands[0].dyn_cast_or_null<IntegerAttr>();
+  if (!lhs)
+    return nullptr;
+  auto rhs = operands[1].dyn_cast_or_null<IntegerAttr>();
+  if (!rhs)
+    return nullptr;
+
+  // Division in APInt does not follow floor(lhs, rhs) when the result is
+  // negative. Rather, APInt rounds toward zero.
+  APInt quotient, remainder;
+  APInt::sdivrem(lhs.getValue(), rhs.getValue(), quotient, remainder);
+  if (quotient.isNegative() && !remainder.isNullValue()) {
+    quotient -= 1;
+  }
+
+  Type indexTy = IndexType::get(getContext());
+  return IntegerAttr::get(indexTy, quotient);
 }
 
 //===----------------------------------------------------------------------===//

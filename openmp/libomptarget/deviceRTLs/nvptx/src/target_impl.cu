@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 #pragma omp declare target
 
-#include "target_impl.h"
 #include "common/debug.h"
+#include "target_impl.h"
 
 DEVICE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
   asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));

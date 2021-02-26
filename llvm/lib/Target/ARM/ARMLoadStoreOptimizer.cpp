@@ -1633,7 +1633,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
   MachineBasicBlock::iterator MergeInstr = findIncDecBefore(MBBI, Base, Pred,
                                                             PredReg, Offset);
   unsigned NewOpc;
-  if (Offset != 0) {
+  if (Offset == 8 || Offset == -8) {
     NewOpc = Opcode == ARM::t2LDRDi8 ? ARM::t2LDRD_PRE : ARM::t2STRD_PRE;
   } else {
     MergeInstr = findIncDecAfter(MBBI, Base, Pred, PredReg, Offset, TRI);

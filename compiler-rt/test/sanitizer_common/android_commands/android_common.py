@@ -22,8 +22,6 @@ def adb(args, attempts = 1, timeout_sec = 600):
     while attempts > 0 and ret != 0:
       attempts -= 1
       ret = subprocess.call(['timeout', str(timeout_sec), ADB] + args, stdout=out, stderr=subprocess.STDOUT)
-      if attempts != 0:
-        ret = 5
     if ret != 0:
       print "adb command failed", args
       print tmpname

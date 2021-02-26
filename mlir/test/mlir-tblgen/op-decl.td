@@ -76,7 +76,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   ::mlir::Operation::result_range getODSResults(unsigned index);
 // CHECK:   ::mlir::Value r();
 // CHECK:   ::mlir::Region &someRegion();
-// CHECK:   ::mlir::MutableArrayRef<Region> someRegions();
+// CHECK:   ::mlir::MutableArrayRef<::mlir::Region> someRegions();
 // CHECK:   ::mlir::IntegerAttr attr1Attr()
 // CHECK:   uint32_t attr1();
 // CHECK:   ::mlir::FloatAttr attr2Attr()

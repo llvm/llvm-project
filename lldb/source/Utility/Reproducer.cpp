@@ -374,7 +374,7 @@ static llvm::Error addPaths(StringRef path,
   SmallVector<StringRef, 0> paths;
   (*buffer)->getBuffer().split(paths, '\0');
   for (StringRef p : paths) {
-    if (!p.empty())
+    if (!p.empty() && llvm::sys::fs::exists(p))
       callback(p);
   }
 

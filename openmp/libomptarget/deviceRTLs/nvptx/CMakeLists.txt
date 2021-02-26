@@ -152,8 +152,8 @@ add_custom_target(omptarget-nvptx-bc)
 
 # This map is from clang/lib/Driver/ToolChains/Cuda.cpp.
 # The last element is the default case.
-set(cuda_version_list 110 102 101 100 92 91 90 80)
-set(ptx_feature_list 70 65 64 63 61 61 60 42)
+set(cuda_version_list 112 111 110 102 101 100 92 91 90 80)
+set(ptx_feature_list 70 70 70 65 64 63 61 61 60 42)
 # The following two lines of ugly code is not needed when the minimal CMake
 # version requirement is 3.17+.
 list(LENGTH cuda_version_list num_version_supported)
@@ -172,7 +172,15 @@ foreach(sm ${nvptx_sm_list})
     list(GET ptx_feature_list ${itr} ptx_num)
     set(cuda_flags ${sm_flags})
     list(APPEND cuda_flags -Xclang -target-feature -Xclang +ptx${ptx_num})
-    list(APPEND cuda_flags "-DCUDA_VERSION=${cuda_version}00")
+    if("${cuda_version}" MATCHES "^([0-9]+)([0-9])$")
+      set(cuda_version_major ${CMAKE_MATCH_1})
+      set(cuda_version_minor ${CMAKE_MATCH_2})
+    else()
+      libomptarget_error_say(
+        "Unrecognized CUDA version format: ${cuda_version}")
+    endif()
+    list(APPEND cuda_flags
+      "-DCUDA_VERSION=${cuda_version_major}0${cuda_version_minor}0")
 
     set(bc_files "")
     foreach(src ${cuda_src_files})

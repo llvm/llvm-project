@@ -87,6 +87,9 @@ void RunTestCase(MultiStringType const& MS) {
   RunTestCaseImpl<CharT>(MS, fs::path::format::auto_format);
   RunTestCaseImpl<CharT>(MS, fs::path::format::native_format);
   RunTestCaseImpl<CharT>(MS, fs::path::format::generic_format);
+  RunTestCaseImpl<CharT>(MS, fs::path::auto_format);
+  RunTestCaseImpl<CharT>(MS, fs::path::native_format);
+  RunTestCaseImpl<CharT>(MS, fs::path::generic_format);
 }
 
 void test_sfinae() {

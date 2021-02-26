@@ -1563,6 +1563,14 @@ def t2LDRSH_POST : T2Ipostldst<1, 0b01, 1, 0, (outs GPR:$Rt, GPR:$Rn_wb),
                   Sched<[WriteLd]>;
 } // mayLoad = 1, hasSideEffects = 0
 
+// F5.1.72 LDR (immediate) T4
+// .w suffixes; Constraints can't be used on t2InstAlias to describe
+// "$Rn =  $Rn_wb" on POST or "$addr.base = $Rn_wb" on PRE.
+def t2LDR_PRE_imm : t2AsmPseudo<"ldr${p}.w $Rt, $addr!",
+                         (ins GPR:$Rt, t2addrmode_imm8_pre:$addr, pred:$p)>;
+def t2LDR_POST_imm : t2AsmPseudo<"ldr${p}.w $Rt, $Rn, $imm",
+                         (ins GPR:$Rt, addr_offset_none:$Rn, t2am_imm8_offset:$imm, pred:$p)>;
+
 // LDRT, LDRBT, LDRHT, LDRSBT, LDRSHT all have offset mode (PUW=0b110).
 // Ref: A8.6.57 LDR (immediate, Thumb) Encoding T4
 class T2IldT<bit signed, bits<2> type, string opc, InstrItinClass ii>
@@ -1719,6 +1727,15 @@ def t2STRH_preidx: t2PseudoInst<(outs GPRnopc:$Rn_wb),
             (pre_truncsti16 rGPR:$Rt, GPRnopc:$Rn, t2am_imm8_offset:$offset))]>,
             Sched<[WriteST]>;
 }
+
+// F5.1.229 STR (immediate) T4
+// .w suffixes; Constraints can't be used on t2InstAlias to describe
+// "$Rn =  $Rn_wb,@earlyclobber $Rn_wb" on POST or
+// "$addr.base = $Rn_wb,@earlyclobber $Rn_wb" on PRE.
+def t2STR_PRE_imm : t2AsmPseudo<"str${p}.w $Rt, $addr!",
+  (ins GPR:$Rt, t2addrmode_imm8_pre:$addr, pred:$p)>;
+def t2STR_POST_imm : t2AsmPseudo<"str${p}.w $Rt, $Rn, $imm",
+  (ins GPR:$Rt, addr_offset_none:$Rn, t2am_imm8_offset:$imm, pred:$p)>;
 
 // STRT, STRBT, STRHT all have offset mode (PUW=0b110) and are for disassembly
 // only.
@@ -3950,6 +3967,8 @@ def t2BXJ : T2I<(outs), (ins GPRnopc:$func), NoItinerary, "bxj", "\t$func", []>,
   let Inst{15-0} = 0b1000111100000000;
 }
 
+def : t2InstAlias<"bl${p}.w $func", (tBL pred:$p, thumb_bl_target:$func), 0>;
+
 // Compare and branch on zero / non-zero
 let isBranch = 1, isTerminator = 1 in {
   def tCBZ  : T1I<(outs), (ins tGPR:$Rn, thumb_cb_target:$target), IIC_Br,
@@ -4047,6 +4066,7 @@ def t2DBG : T2I<(outs), (ins imm0_15:$opt), NoItinerary, "dbg", "\t$opt",
   let Inst{7-4} = 0b1111;
   let Inst{3-0} = opt;
 }
+def : t2InstAlias<"dbg${p}.w $opt", (t2DBG imm0_15:$opt, pred:$p), 0>;
 
 // Secure Monitor Call is a system instruction.
 // Option = Inst{19-16}

@@ -173,7 +173,19 @@ func @f() -> !shape.shape {
   %e0 = constant 3 : index
   %e1 = constant 5 : index
   %e2 = constant 11 : index
-  %ret = shape.from_extents %e0, %e1, %e2
+  %ret = shape.from_extents %e0, %e1, %e2 : index, index, index
+  return %ret : !shape.shape
+}
+
+// -----
+
+// fold_const_size
+// CHECK-LABEL: func @fold_const_size()
+func @fold_const_size() -> !shape.shape {
+  // CHECK: shape.const_shape [3, 5] : !shape.shape
+  %e0 = shape.const_size 3
+  %e1 = shape.const_size 5
+  %ret = shape.from_extents %e0, %e1 : !shape.size, !shape.size
   return %ret : !shape.shape
 }
 
@@ -183,7 +195,7 @@ func @f() -> !shape.shape {
 func @no_fold(%arg0: index) -> !shape.shape {
   // CHECK-NOT: shape.const_shape
   %e0 = constant 3 : index
-  %ret = shape.from_extents %e0, %arg0
+  %ret = shape.from_extents %e0, %arg0 : index, index
   return %ret : !shape.shape
 }
 
@@ -945,6 +957,71 @@ func @fold_mul_mixed() -> !shape.size {
   %c2 = shape.const_size 2
   %c3 = constant 3 : index
   %result = shape.mul %c2, %c3 : !shape.size, index -> !shape.size
+  return %result : !shape.size
+}
+
+// -----
+
+// Fold `div` for constant sizes.
+// CHECK-LABEL: @fold_div_size
+func @fold_div_size() -> !shape.size {
+  // CHECK: %[[RESULT:.*]] = shape.const_size 3
+  // CHECK: return %[[RESULT]] : !shape.size
+  %c2 = shape.const_size 10
+  %c3 = shape.const_size 3
+  %result = shape.div %c2, %c3 : !shape.size, !shape.size -> !shape.size
+  return %result : !shape.size
+}
+
+// -----
+
+// Fold `div` for constant indices.
+// CHECK-LABEL: @fold_div_index
+func @fold_div_index() -> index {
+  // CHECK: %[[RESULT:.*]] = constant 2 : index
+  // CHECK: return %[[RESULT]] : index
+  %c2 = constant 10 : index
+  %c3 = constant 4 : index
+  %result = shape.div %c2, %c3 : index, index -> index
+  return %result : index
+}
+
+// -----
+
+// Fold `div` for constant indices and lhs is negative.
+// CHECK-LABEL: @fold_div_index_neg_lhs
+func @fold_div_index_neg_lhs() -> index {
+  // CHECK: %[[RESULT:.*]] = constant -3 : index
+  // CHECK: return %[[RESULT]] : index
+  %c2 = constant -10 : index
+  %c3 = constant 4 : index
+  %result = shape.div %c2, %c3 : index, index -> index
+  return %result : index
+}
+
+// -----
+
+// Fold `div` for constant indices and rhs is negative.
+// CHECK-LABEL: @fold_div_index_neg_rhs
+func @fold_div_index_neg_rhs() -> index {
+  // CHECK: %[[RESULT:.*]] = constant -3 : index
+  // CHECK: return %[[RESULT]] : index
+  %c2 = constant 10 : index
+  %c3 = constant -4 : index
+  %result = shape.div %c2, %c3 : index, index -> index
+  return %result : index
+}
+
+// -----
+
+// Fold `div` for mixed constants.
+// CHECK-LABEL: @fold_div_mixed
+func @fold_div_mixed() -> !shape.size {
+  // CHECK: %[[RESULT:.*]] = shape.const_size 4
+  // CHECK: return %[[RESULT]] : !shape.size
+  %c2 = shape.const_size 12
+  %c3 = constant 3 : index
+  %result = shape.div %c2, %c3 : !shape.size, index -> !shape.size
   return %result : !shape.size
 }
 

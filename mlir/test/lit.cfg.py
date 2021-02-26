@@ -81,8 +81,8 @@ tools.extend([
     ToolSubst('%rocm_wrapper_library_dir', config.rocm_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%spirv_wrapper_library_dir', config.spirv_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%vulkan_wrapper_library_dir', config.vulkan_wrapper_library_dir, unresolved='ignore'),
+    ToolSubst('%mlir_integration_test_dir', config.mlir_integration_test_dir, unresolved='ignore'),
 ])
-
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 

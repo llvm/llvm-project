@@ -149,7 +149,7 @@ Symbol &Scope::MakeCommonBlock(const SourceName &name) {
     return symbol;
   }
 }
-Symbol *Scope::FindCommonBlock(const SourceName &name) {
+Symbol *Scope::FindCommonBlock(const SourceName &name) const {
   const auto it{commonBlocks_.find(name)};
   return it != commonBlocks_.end() ? &*it->second : nullptr;
 }

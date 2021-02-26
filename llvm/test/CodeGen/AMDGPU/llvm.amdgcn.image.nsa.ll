@@ -35,7 +35,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_contig_nsa:
-; NONSA: image_sample_c_l v0, v[0:7],
+; GFX10-NONSA: image_sample_c_l v0, v[0:7],
+; GFX11-NONSA: image_sample_c_l v0, v[0:7],
 ; GFX10-NSA: image_sample_c_l v8, v[0:7],
 ; GFX10-NSA: image_sample v9, [v6, v7, v5],
 ; GFX11-NSA: image_sample_c_l v0, v[0:7],

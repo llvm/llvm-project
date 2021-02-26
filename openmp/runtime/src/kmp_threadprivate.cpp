@@ -410,7 +410,7 @@ struct private_common *kmp_threadprivate_insert(int gtid, void *pc_addr,
   }
 
   __kmp_release_lock(&__kmp_global_lock, gtid);
-/* +++++++++ END OF CRITICAL SECTION +++++++++ */
+  /* +++++++++ END OF CRITICAL SECTION +++++++++ */
 
 #ifdef USE_CHECKS_COMMON
   if (pc_size > d_tn->cmn_size) {

@@ -56,8 +56,8 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/ObjCRuntime.h"
-#include "clang/Basic/SanitizerBlacklist.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -84,6 +84,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -961,7 +962,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
       SubstTemplateTemplateParmPacks(this_()),
       CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
-      SanitizerBL(new SanitizerBlacklist(LangOpts.SanitizerBlacklistFiles, SM)),
+      NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,
                                         LangOpts.XRayAttrListFiles, SM)),
@@ -10645,7 +10646,10 @@ static GVALinkage adjustGVALinkageForAttributes(const ASTContext &Context,
       return GVA_StrongODR;
     // Single source offloading languages like CUDA/HIP need to be able to
     // access static device variables from host code of the same compilation
-    // unit. This is done by externalizing the static variable.
+    // unit. This is done by externalizing the static variable with a shared
+    // name between the host and device compilation which is the same for the
+    // same compilation unit whereas different among different compilation
+    // units.
     if (Context.shouldExternalizeStaticVar(D))
       return GVA_StrongExternal;
   }
@@ -11533,14 +11537,21 @@ bool ASTContext::mayExternalizeStaticVar(const Decl *D) const {
                               !D->getAttr<CUDAConstantAttr>()->isImplicit());
   // CUDA/HIP: static managed variables need to be externalized since it is
   // a declaration in IR, therefore cannot have internal linkage.
-  // ToDo: externalize static variables for -fgpu-rdc.
   return IsStaticVar &&
-         (D->hasAttr<HIPManagedAttr>() ||
-          (!getLangOpts().GPURelocatableDeviceCode && IsExplicitDeviceVar));
+         (D->hasAttr<HIPManagedAttr>() || IsExplicitDeviceVar);
 }
 
 bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {
   return mayExternalizeStaticVar(D) &&
          (D->hasAttr<HIPManagedAttr>() ||
           CUDAStaticDeviceVarReferencedByHost.count(cast<VarDecl>(D)));
+}
+
+StringRef ASTContext::getCUIDHash() const {
+  if (!CUIDHash.empty())
+    return CUIDHash;
+  if (LangOpts.CUID.empty())
+    return StringRef();
+  CUIDHash = llvm::utohexstr(llvm::MD5Hash(LangOpts.CUID), /*LowerCase=*/true);
+  return CUIDHash;
 }

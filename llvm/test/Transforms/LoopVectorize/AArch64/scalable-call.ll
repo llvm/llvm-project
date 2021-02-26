@@ -72,10 +72,11 @@ for.end:
 }
 
 define void @vec_intrinsic(i64 %N, double* nocapture readonly %a) {
+;; FIXME: Should be calling sin_vec, once the cost of scalarizing is handled.
 ; CHECK-LABEL: @vec_intrinsic
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD:.*]] = load <vscale x 2 x double>, <vscale x 2 x double>*
-; CHECK: call fast <vscale x 2 x double> @sin_vec(<vscale x 2 x double> %[[LOAD]])
+; CHECK: call fast <vscale x 2 x double> @llvm.sin.nxv2f64(<vscale x 2 x double> %[[LOAD]])
 entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.end
@@ -86,6 +87,7 @@ for.body:
   %0 = load double, double* %arrayidx, align 8
   %1 = call fast double @llvm.sin.f64(double %0) #2
   %add = fadd fast double %1, 1.000000e+00
+  store double %add, double* %arrayidx, align 8
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !1

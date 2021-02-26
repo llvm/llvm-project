@@ -4307,6 +4307,17 @@ void TargetProperties::DisableSTDIOValueChangedCallback() {
     m_launch_info.GetFlags().Clear(lldb::eLaunchFlagDisableSTDIO);
 }
 
+bool TargetProperties::GetDebugUtilityExpression() const {
+  const uint32_t idx = ePropertyDebugUtilityExpression;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+void TargetProperties::SetDebugUtilityExpression(bool debug) {
+  const uint32_t idx = ePropertyDebugUtilityExpression;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, debug);
+}
+
 // Target::TargetEventData
 
 Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp)

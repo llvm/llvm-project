@@ -20,6 +20,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Parser.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
@@ -120,6 +121,81 @@ static LogicalResult foldMemRefCast(Operation *op) {
   }
   return success(folded);
 }
+
+//===----------------------------------------------------------------------===//
+// Region builder helper.
+// TODO: Move this to a utility library.
+// The public methods on this class are referenced directly from generated code
+// and bind by name to math functions in the DSL as:
+//   `applyfn__{fnName}`
+// Examples:
+//   `applyfn__add`
+//   `applyfn__mul`
+// The naming convention is intentional in order to match snake-cased DSL names.
+// See mlir-linalg-ods-yaml-gen.cpp for the code that mates to this class.
+//
+// Implementations of the math functions must be polymorphic over numeric types,
+// internally performing necessary casts. If the function application makes no
+// sense, then the only recourse is to assert and return nullptr. This can be
+// extended later if it becomes possible to fail construction of the region. The
+// invariant should be enforced at a higher level.
+//
+// TODO: These helpers are currently type polymorphic over the class of integer
+// and floating point types, but they will not internally cast within bit
+// widths of a class (mixed precision such as i8->i32) or across classes
+// (i.e. mixed float and integer). Many such combinations are ambiguous or need
+// to be handled with care and work is being considered to extend the op
+// language to make such cases explicit. In the mean-time, violating this will
+// fail verification, which is deemed acceptable.
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+class RegionBuilderHelper {
+public:
+  RegionBuilderHelper(Block &block) : block(block) {}
+
+  Value applyfn__add(Value lhs, Value rhs) {
+    OpBuilder builder = getBuilder(lhs);
+    if (isFloatingPoint(lhs))
+      return builder.create<AddFOp>(lhs.getLoc(), lhs, rhs);
+    else if (isInteger(lhs))
+      return builder.create<AddIOp>(lhs.getLoc(), lhs, rhs);
+    llvm_unreachable("unsupported non numeric type");
+  }
+
+  Value applyfn__mul(Value lhs, Value rhs) {
+    OpBuilder builder = getBuilder(lhs);
+    if (isFloatingPoint(lhs))
+      return builder.create<MulFOp>(lhs.getLoc(), lhs, rhs);
+    else if (isInteger(lhs))
+      return builder.create<MulIOp>(lhs.getLoc(), lhs, rhs);
+    llvm_unreachable("unsupported non numeric type");
+  }
+
+  void yieldOutputs(ValueRange values) {
+    assert(!values.empty() && "linalg ops must yield outputs");
+    if (values.empty())
+      return;
+    Value first = values.front();
+    OpBuilder builder = getBuilder(first);
+    builder.create<YieldOp>(first.getLoc(), values);
+  }
+
+private:
+  Block &block;
+
+  bool isFloatingPoint(Value value) { return value.getType().isa<FloatType>(); }
+  bool isInteger(Value value) { return value.getType().isa<IntegerType>(); }
+
+  OpBuilder getBuilder(Value value) {
+    OpBuilder builder(value.getContext());
+    builder.setInsertionPointToEnd(&block);
+    return builder;
+  }
+};
+
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // CopyOp
@@ -603,95 +679,6 @@ static LogicalResult verify(InitTensorOp op) {
 Type InitTensorOp::inferResultType(ArrayRef<int64_t> staticSizes,
                                    Type elementType) {
   return RankedTensorType::get(staticSizes, elementType);
-}
-
-static Value getCollapsedInitTensor(OpBuilder &builder,
-                                    TensorReshapeOp reshapeOp) {
-  Location loc = reshapeOp.getLoc();
-  SmallVector<Value, 4> dynamicShapes;
-  SmallVector<int64_t, 4> staticShapes;
-  auto reassociation = reshapeOp.getReassociationMaps();
-  Value src = reshapeOp.src();
-  RankedTensorType srcType = reshapeOp.getSrcType();
-  ArrayRef<int64_t> srcShape = srcType.getShape();
-  for (auto map : reassociation) {
-    Value linearizedDynamicDim = nullptr;
-    int64_t linearizedStaticDim = 1;
-    for (unsigned i : llvm::map_range(map.getResults(), [](AffineExpr e) {
-           return e.cast<AffineDimExpr>().getPosition();
-         })) {
-      if (ShapedType::isDynamic(srcShape[i])) {
-        Value shapeVal = builder.create<DimOp>(loc, src, i);
-        if (linearizedDynamicDim) {
-          linearizedDynamicDim =
-              builder.create<MulIOp>(loc, linearizedDynamicDim, shapeVal);
-        } else {
-          linearizedDynamicDim = shapeVal;
-        }
-      } else {
-        linearizedStaticDim *= srcShape[i];
-      }
-    }
-    if (linearizedDynamicDim) {
-      if (linearizedStaticDim != 1) {
-        linearizedDynamicDim = builder.create<MulIOp>(
-            loc, linearizedDynamicDim,
-            builder.create<ConstantIndexOp>(loc, linearizedStaticDim));
-      }
-      dynamicShapes.push_back(linearizedDynamicDim);
-      staticShapes.push_back(ShapedType::kDynamicSize);
-    } else {
-      staticShapes.push_back(linearizedStaticDim);
-    }
-  }
-  return builder.create<InitTensorOp>(loc, dynamicShapes, staticShapes,
-                                      srcType.getElementType());
-}
-
-static Value getExpandedInitTensor(OpBuilder &builder,
-                                   TensorReshapeOp reshapeOp) {
-  SmallVector<Value, 4> dynamicShapes;
-  SmallVector<int64_t, 4> staticShapes;
-  auto reassociation = reshapeOp.getReassociationMaps();
-  Value src = reshapeOp.src();
-  RankedTensorType srcType = reshapeOp.getSrcType();
-  ArrayRef<int64_t> srcShape = srcType.getShape();
-  ArrayRef<int64_t> dstShape = reshapeOp.getResultType().getShape();
-  Location loc = reshapeOp.getLoc();
-  for (auto map : enumerate(reassociation)) {
-    int64_t linearizedStaticDim = 1;
-    bool hasDynamic = false;
-    for (unsigned i :
-         llvm::map_range(map.value().getResults(), [](AffineExpr e) {
-           return e.cast<AffineDimExpr>().getPosition();
-         })) {
-      if (ShapedType::isDynamic(dstShape[i])) {
-        // Only one of the dimensions of the expanded shape should be dynamic.
-        if (hasDynamic)
-          return nullptr;
-        hasDynamic = true;
-        staticShapes.push_back(ShapedType::kDynamicSize);
-        continue;
-      }
-      staticShapes.push_back(dstShape[i]);
-      linearizedStaticDim *= dstShape[i];
-    }
-    if (hasDynamic) {
-      // If the expanded dimensions has a dynamic shape, the src shape must be
-      // dynamic as well.
-      if (!ShapedType::isDynamic(srcShape[map.index()]))
-        return nullptr;
-      Value dynamicDim = builder.create<DimOp>(loc, src, map.index());
-      if (linearizedStaticDim != 1) {
-        dynamicDim = builder.create<UnsignedDivIOp>(
-            loc, dynamicDim,
-            builder.create<ConstantIndexOp>(loc, linearizedStaticDim));
-      }
-      dynamicShapes.push_back(dynamicDim);
-    }
-  }
-  return builder.create<InitTensorOp>(loc, dynamicShapes, staticShapes,
-                                      srcType.getElementType());
 }
 
 namespace {
@@ -1714,21 +1701,55 @@ static LogicalResult verify(linalg::YieldOp op) {
 // TiledLoopOp
 //===----------------------------------------------------------------------===//
 
+void TiledLoopOp::build(
+    OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
+    ValueRange upperBounds, ValueRange steps, ValueRange inputs,
+    ValueRange outputs, ArrayRef<StringRef> iteratorTypes,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn) {
+  result.addOperands(lowerBounds);
+  result.addOperands(upperBounds);
+  result.addOperands(steps);
+  result.addOperands(inputs);
+  result.addOperands(outputs);
+  result.addAttribute(
+      TiledLoopOp::getOperandSegmentSizeAttr(),
+      builder.getI32VectorAttr({static_cast<int32_t>(lowerBounds.size()),
+                                static_cast<int32_t>(upperBounds.size()),
+                                static_cast<int32_t>(steps.size()),
+                                static_cast<int32_t>(inputs.size()),
+                                static_cast<int32_t>(outputs.size())}));
+  result.addAttribute(getIteratorTypesAttrName(),
+                      builder.getStrArrayAttr(iteratorTypes));
+  result.addTypes(outputs.getTypes());
+
+  OpBuilder::InsertionGuard guard(builder);
+  unsigned numIVs = steps.size();
+  SmallVector<Type, 8> argTypes(numIVs, builder.getIndexType());
+  Region *bodyRegion = result.addRegion();
+  Block *bodyBlock = builder.createBlock(bodyRegion, {}, argTypes);
+
+  if (bodyBuilderFn) {
+    builder.setInsertionPointToStart(bodyBlock);
+    bodyBuilderFn(builder, result.location, bodyBlock->getArguments());
+  }
+  TiledLoopOp::ensureTerminator(*bodyRegion, builder, result.location);
+}
+
 static void print(OpAsmPrinter &p, TiledLoopOp op) {
   p << op.getOperationName() << " (" << op.getBody()->getArguments() << ") = ("
     << op.lowerBound() << ") to (" << op.upperBound() << ") step (" << op.step()
     << ")";
 
   if (!op.inputs().empty())
-    p << " ins (" << op.inputs() << ")";
+    p << " ins (" << op.inputs() << ": " << TypeRange(op.inputs()) << ")";
   if (!op.outputs().empty())
-    p << " outs (" << op.outputs() << ")";
+    p << " outs (" << op.outputs() << ":" << TypeRange(op.outputs()) << ")";
 
   if (llvm::any_of(op.iterator_types(), [](Attribute attr) {
         return attr.cast<StringAttr>().getValue() !=
                getParallelIteratorTypeName();
       })) {
-    p << " iterators(" << op.iterator_types() << ")";
+    p << " iterators" << op.iterator_types() << "";
   }
 
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
@@ -1805,7 +1826,7 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
   if (succeeded(parser.parseOptionalKeyword("iterators"))) {
     StringAttr iterType;
 
-    if (parser.parseLParen() || parser.parseAttribute(iterType))
+    if (parser.parseLSquare() || parser.parseAttribute(iterType))
       return failure();
     iterTypes.push_back(iterType);
     for (int i = 1, e = ivs.size(); i < e; ++i) {
@@ -1813,7 +1834,7 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
         return failure();
       iterTypes.push_back(iterType);
     }
-    if (parser.parseRParen())
+    if (parser.parseRSquare())
       return failure();
   } else {
     auto parallelIter = builder.getStringAttr(getParallelIteratorTypeName());
@@ -1957,7 +1978,8 @@ struct EraseDeadLinalgOp;
 struct FoldTensorCastOp;
 } // namespace
 
-#include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.cpp.inc"
+#include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.tcgen.cpp.inc"
+#include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.yamlgen.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgOps.cpp.inc"
@@ -2121,7 +2143,8 @@ fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
   unsigned actual = body->getNumArguments();
   unsigned expected = NamedStructuredOpType::getNumRegionArgs();
   if (expected != actual) {
-    if (errorHandler) errorHandler(expected, actual);
+    if (errorHandler)
+      errorHandler(expected, actual);
     return;
   }
 

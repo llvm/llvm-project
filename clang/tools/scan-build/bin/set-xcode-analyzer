@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # [PR 11661] Note that we hardwire to /usr/bin/python because we
 # want to the use the system version of Python on Mac OS X.

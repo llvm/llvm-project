@@ -247,6 +247,8 @@ def SDT_AArch64UnaryVec: SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
 def SDT_AArch64ExtVec: SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                           SDTCisSameAs<0,2>, SDTCisInt<3>]>;
 def SDT_AArch64vshift : SDTypeProfile<1, 2, [SDTCisSameAs<0,1>, SDTCisInt<2>]>;
+def SDT_AArch64Dot: SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
+                                         SDTCisVec<2>, SDTCisSameAs<2,3>]>;
 
 def SDT_AArch64vshiftinsert : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisInt<3>,
                                                  SDTCisSameAs<0,1>,
@@ -561,6 +563,9 @@ def AArch64frecps   : SDNode<"AArch64ISD::FRECPS", SDTFPBinOp>;
 def AArch64frsqrte  : SDNode<"AArch64ISD::FRSQRTE", SDTFPUnaryOp>;
 def AArch64frsqrts  : SDNode<"AArch64ISD::FRSQRTS", SDTFPBinOp>;
 
+def AArch64sdot     : SDNode<"AArch64ISD::SDOT", SDT_AArch64Dot>;
+def AArch64udot     : SDNode<"AArch64ISD::UDOT", SDT_AArch64Dot>;
+
 def AArch64saddv    : SDNode<"AArch64ISD::SADDV", SDT_AArch64UnaryVec>;
 def AArch64uaddv    : SDNode<"AArch64ISD::UADDV", SDT_AArch64UnaryVec>;
 def AArch64sminv    : SDNode<"AArch64ISD::SMINV", SDT_AArch64UnaryVec>;
@@ -831,10 +836,10 @@ def : TokenAlias<"IALL", "iall">;
 
 // ARMv8.2-A Dot Product
 let Predicates = [HasDotProd] in {
-defm SDOT : SIMDThreeSameVectorDot<0, 0, "sdot", int_aarch64_neon_sdot>;
-defm UDOT : SIMDThreeSameVectorDot<1, 0, "udot", int_aarch64_neon_udot>;
-defm SDOTlane : SIMDThreeSameVectorDotIndex<0, 0, 0b10, "sdot", int_aarch64_neon_sdot>;
-defm UDOTlane : SIMDThreeSameVectorDotIndex<1, 0, 0b10, "udot", int_aarch64_neon_udot>;
+defm SDOT : SIMDThreeSameVectorDot<0, 0, "sdot", AArch64sdot>;
+defm UDOT : SIMDThreeSameVectorDot<1, 0, "udot", AArch64udot>;
+defm SDOTlane : SIMDThreeSameVectorDotIndex<0, 0, 0b10, "sdot", AArch64sdot>;
+defm UDOTlane : SIMDThreeSameVectorDotIndex<1, 0, 0b10, "udot", AArch64udot>;
 }
 
 // ARMv8.6-A BFloat
@@ -924,6 +929,45 @@ def RAX1      : CryptoRRR_2D<0b0,0b11, "rax1">;
 def EOR3      : CryptoRRRR_16B<0b00, "eor3">;
 def BCAX      : CryptoRRRR_16B<0b01, "bcax">;
 def XAR       : CryptoRRRi6<"xar">;
+
+class SHA3_pattern<Instruction INST, Intrinsic OpNode, ValueType VecTy>
+  : Pat<(VecTy (OpNode (VecTy V128:$Vd), (VecTy V128:$Vn), (VecTy V128:$Vm))),
+        (INST (VecTy V128:$Vd), (VecTy V128:$Vn), (VecTy V128:$Vm))>;
+
+def : Pat<(v2i64 (int_aarch64_crypto_sha512su0 (v2i64 V128:$Vn), (v2i64 V128:$Vm))),
+          (SHA512SU0 (v2i64 V128:$Vn), (v2i64 V128:$Vm))>;
+
+def : SHA3_pattern<SHA512H, int_aarch64_crypto_sha512h, v2i64>;
+def : SHA3_pattern<SHA512H2, int_aarch64_crypto_sha512h2, v2i64>;
+def : SHA3_pattern<SHA512SU1, int_aarch64_crypto_sha512su1, v2i64>;
+
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v16i8>;
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v8i16>;
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v4i32>;
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v2i64>;
+
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v16i8>;
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v8i16>;
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v4i32>;
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v2i64>;
+
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3s, v16i8>;
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3s, v8i16>;
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3s, v4i32>;
+def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3s, v2i64>;
+
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxs, v16i8>;
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxs, v8i16>;
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxs, v4i32>;
+def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxs, v2i64>;
+
+def : Pat<(v2i64 (int_aarch64_crypto_rax1 (v2i64 V128:$Vn), (v2i64 V128:$Vm))),
+          (RAX1 (v2i64 V128:$Vn), (v2i64 V128:$Vm))>;
+
+def : Pat<(v2i64 (int_aarch64_crypto_xar (v2i64 V128:$Vn), (v2i64 V128:$Vm), (i64 timm0_63:$imm))),
+          (XAR (v2i64 V128:$Vn), (v2i64 V128:$Vm), (timm0_63:$imm))>;
+
+
 } // HasSHA3
 
 let Predicates = [HasSM4] in {
@@ -1247,6 +1291,7 @@ def : Pat<(readcyclecounter), (MRS 0xdce8)>;
 
 // FPCR register
 def : Pat<(i64 (int_aarch64_get_fpcr)), (MRS 0xda20)>;
+def : Pat<(int_aarch64_set_fpcr i64:$val), (MSR 0xda20, GPR64:$val)>;
 
 // Generic system instructions
 def SYSxt  : SystemXtI<0, "sys">;
@@ -4148,6 +4193,9 @@ defm CMGT    : SIMDThreeSameVector<0, 0b00110, "cmgt", AArch64cmgt>;
 defm CMHI    : SIMDThreeSameVector<1, 0b00110, "cmhi", AArch64cmhi>;
 defm CMHS    : SIMDThreeSameVector<1, 0b00111, "cmhs", AArch64cmhs>;
 defm CMTST   : SIMDThreeSameVector<0, 0b10001, "cmtst", AArch64cmtst>;
+foreach VT = [ v8i8, v16i8, v4i16, v8i16, v2i32, v4i32, v2i64 ] in {
+def : Pat<(vnot (AArch64cmeqz VT:$Rn)), (!cast<Instruction>("CMTST"#VT) VT:$Rn, VT:$Rn)>;
+}
 defm FABD    : SIMDThreeSameVectorFP<1,1,0b010,"fabd", int_aarch64_neon_fabd>;
 let Predicates = [HasNEON] in {
 foreach VT = [ v2f32, v4f32, v2f64 ] in

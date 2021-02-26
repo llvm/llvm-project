@@ -3194,14 +3194,18 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     // difficult because at RBS we may end up pessimizing the fpr case if we
     // decided to add an anyextend to fix this. Manual selection is the most
     // robust solution for now.
-    Register SrcReg = I.getOperand(1).getReg();
-    if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() != AArch64::GPRRegBankID)
+    if (RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI)->getID() !=
+        AArch64::GPRRegBankID)
       return false; // We expect the fpr regbank case to be imported.
-    LLT SrcTy = MRI.getType(SrcReg);
-    if (SrcTy.getSizeInBits() == 16)
-      I.setDesc(TII.get(AArch64::DUPv8i16gpr));
-    else if (SrcTy.getSizeInBits() == 8)
+    LLT VecTy = MRI.getType(I.getOperand(0).getReg());
+    if (VecTy == LLT::vector(8, 8))
+      I.setDesc(TII.get(AArch64::DUPv8i8gpr));
+    else if (VecTy == LLT::vector(16, 8))
       I.setDesc(TII.get(AArch64::DUPv16i8gpr));
+    else if (VecTy == LLT::vector(4, 16))
+      I.setDesc(TII.get(AArch64::DUPv4i16gpr));
+    else if (VecTy == LLT::vector(8, 16))
+      I.setDesc(TII.get(AArch64::DUPv8i16gpr));
     else
       return false;
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
@@ -3239,6 +3243,21 @@ bool AArch64InstructionSelector::selectReduction(
   Register VecReg = I.getOperand(1).getReg();
   LLT VecTy = MRI.getType(VecReg);
   if (I.getOpcode() == TargetOpcode::G_VECREDUCE_ADD) {
+    // For <2 x i32> ADDPv2i32 generates an FPR64 value, so we need to emit
+    // a subregister copy afterwards.
+    if (VecTy == LLT::vector(2, 32)) {
+      MachineIRBuilder MIB(I);
+      Register DstReg = I.getOperand(0).getReg();
+      auto AddP = MIB.buildInstr(AArch64::ADDPv2i32, {&AArch64::FPR64RegClass},
+                                 {VecReg, VecReg});
+      auto Copy = MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {})
+                      .addReg(AddP.getReg(0), 0, AArch64::ssub)
+                      .getReg(0);
+      RBI.constrainGenericRegister(Copy, AArch64::FPR32RegClass, MRI);
+      I.eraseFromParent();
+      return constrainSelectedInstRegOperands(*AddP, TII, TRI, RBI);
+    }
+
     unsigned Opc = 0;
     if (VecTy == LLT::vector(16, 8))
       Opc = AArch64::ADDVv16i8v;

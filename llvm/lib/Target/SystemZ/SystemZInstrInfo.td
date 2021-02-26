@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+def IsTargetXPLINK64      : Predicate<"Subtarget->isTargetXPLINK64()">;
 def IsTargetELF           : Predicate<"Subtarget->isTargetELF()">;
 
 //===----------------------------------------------------------------------===//
@@ -275,6 +276,16 @@ let isCall = 1, Defs = [CC] in {
   def BASR  : CallRR <"basr", 0x0D>;
 }
 
+// z/OS XPLINK
+let Predicates = [IsTargetXPLINK64] in {
+  let isCall = 1, Defs = [R7D, CC], Uses = [FPC] in {
+    def CallBRASL_XPLINK64 : Alias<8, (outs), (ins pcrel32:$I2, variable_ops),
+                          [(z_call pcrel32:$I2)]>;
+    def CallBASR_XPLINK64  : Alias<4, (outs), (ins ADDR64:$R2, variable_ops),
+                          [(z_call ADDR64:$R2)]>;
+  }
+}
+
 // Regular calls.
 // z/Linux ELF
 let Predicates = [IsTargetELF] in {
@@ -295,7 +306,8 @@ let Predicates = [IsTargetELF] in {
   }
 }
 
-// Sibling calls.
+// Sibling calls. Indirect sibling calls must be via R6 for XPLink,
+// R1 used for ELF
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
   def CallJG : Alias<6, (outs), (ins pcrel32:$I2),
                      [(z_sibcall pcrel32:$I2)]>;
@@ -323,7 +335,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1 in {
   def CLGIBCall : Alias<6, (outs), (ins GR64:$R1, imm64zx8:$I2, cond4:$M3, ADDR64:$R4), []>;
 }
 
-// A return instruction (br %r14).
+// A return instruction (br %r14) for ELF and (b 2 %r7) for XPLink.
 let isReturn = 1, isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
   def Return : Alias<2, (outs), (ins), [(z_retflag)]>;
 

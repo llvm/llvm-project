@@ -207,6 +207,11 @@ def int_amdgcn_s_sendmsghalt : GCCBuiltin<"__builtin_amdgcn_s_sendmsghalt">,
   Intrinsic <[], [llvm_i32_ty, llvm_i32_ty],
   [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
 
+// gfx11 intrinsic
+// The first parameter is s_sendmsg immediate (i16). Return type is i32 or i64.
+def int_amdgcn_s_sendmsg_rtn : Intrinsic <[llvm_anyint_ty], [llvm_i32_ty],
+  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+
 def int_amdgcn_s_barrier : GCCBuiltin<"__builtin_amdgcn_s_barrier">,
   Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
 
@@ -2137,10 +2142,6 @@ def int_amdgcn_global_atomic_fmax : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_flat_atomic_fadd   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_flat_atomic_fmin   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_flat_atomic_fmax   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
-
-//===----------------------------------------------------------------------===//
-// gfx11 intrinsics
-// ===----------------------------------------------------------------------===//
 
 def int_amdgcn_mfma_f32_32x32x4bf16_1k : GCCBuiltin<"__builtin_amdgcn_mfma_f32_32x32x4bf16_1k">,
   Intrinsic<[llvm_v32f32_ty],

@@ -27,14 +27,75 @@ define nonnull i32* @nonnull_ret(i1 %cond, i32* %p) {
   ret i32* %res
 }
 
+define nonnull i32* @nonnull_ret2(i1 %cond, i32* %p) {
+; CHECK-LABEL: @nonnull_ret2(
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* null, i32* [[P:%.*]]
+; CHECK-NEXT:    ret i32* [[RES]]
+;
+  %res = select i1 %cond, i32* null, i32* %p
+  ret i32* %res
+}
+
+define nonnull noundef i32* @nonnull_noundef_ret(i1 %cond, i32* %p) {
+; CHECK-LABEL: @nonnull_noundef_ret(
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* [[P:%.*]], i32* null
+; CHECK-NEXT:    ret i32* [[RES]]
+;
+  %res = select i1 %cond, i32* %p, i32* null
+  ret i32* %res
+}
+
+define nonnull noundef i32* @nonnull_noundef_ret2(i1 %cond, i32* %p) {
+; CHECK-LABEL: @nonnull_noundef_ret2(
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* null, i32* [[P:%.*]]
+; CHECK-NEXT:    ret i32* [[RES]]
+;
+  %res = select i1 %cond, i32* null, i32* %p
+  ret i32* %res
+}
+
+
 define void @nonnull_call(i1 %cond, i32* %p) {
 ; CHECK-LABEL: @nonnull_call(
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* [[P:%.*]], i32* null
+; CHECK-NEXT:    call void @f(i32* nonnull [[RES]])
+; CHECK-NEXT:    ret void
+;
+  %res = select i1 %cond, i32* %p, i32* null
+  call void @f(i32* nonnull %res)
+  ret void
+}
+
+define void @nonnull_call2(i1 %cond, i32* %p) {
+; CHECK-LABEL: @nonnull_call2(
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* null, i32* [[P:%.*]]
 ; CHECK-NEXT:    call void @f(i32* nonnull [[RES]])
 ; CHECK-NEXT:    ret void
 ;
   %res = select i1 %cond, i32* null, i32* %p
   call void @f(i32* nonnull %res)
+  ret void
+}
+
+define void @nonnull_noundef_call(i1 %cond, i32* %p) {
+; CHECK-LABEL: @nonnull_noundef_call(
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* [[P:%.*]], i32* null
+; CHECK-NEXT:    call void @f(i32* noundef nonnull [[RES]])
+; CHECK-NEXT:    ret void
+;
+  %res = select i1 %cond, i32* %p, i32* null
+  call void @f(i32* nonnull noundef %res)
+  ret void
+}
+
+define void @nonnull_noundef_call2(i1 %cond, i32* %p) {
+; CHECK-LABEL: @nonnull_noundef_call2(
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* null, i32* [[P:%.*]]
+; CHECK-NEXT:    call void @f(i32* noundef nonnull [[RES]])
+; CHECK-NEXT:    ret void
+;
+  %res = select i1 %cond, i32* null, i32* %p
+  call void @f(i32* nonnull noundef %res)
   ret void
 }
 

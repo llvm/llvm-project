@@ -76,11 +76,13 @@ static void appendToUsedList(Module &M, StringRef Name, ArrayRef<GlobalValue *> 
   SmallPtrSet<Constant *, 16> InitAsSet;
   SmallVector<Constant *, 16> Init;
   if (GV) {
-    auto *CA = cast<ConstantArray>(GV->getInitializer());
-    for (auto &Op : CA->operands()) {
-      Constant *C = cast_or_null<Constant>(Op);
-      if (InitAsSet.insert(C).second)
-        Init.push_back(C);
+    if (GV->hasInitializer()) {
+      auto *CA = cast<ConstantArray>(GV->getInitializer());
+      for (auto &Op : CA->operands()) {
+        Constant *C = cast_or_null<Constant>(Op);
+        if (InitAsSet.insert(C).second)
+          Init.push_back(C);
+      }
     }
     GV->eraseFromParent();
   }

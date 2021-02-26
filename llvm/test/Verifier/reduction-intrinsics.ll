@@ -30,6 +30,33 @@ define i64 @result_too_wide(<4 x i32> %x) {
   ret i64 %r
 }
 
+; We should have the appropriate (either int or FP) type of argument
+; for any vector reduction.
+
+define float @not_float_reduce(<4 x float> %x) {
+; CHECK: Intrinsic has incorrect argument type!
+  %r = call float @llvm.vector.reduce.umin.v4f32(<4 x float> %x)
+  ret float %r
+}
+
+define i32* @not_pointer_reduce(<4 x i32*> %x) {
+; CHECK: Intrinsic has incorrect argument type!
+  %r = call i32* @llvm.vector.reduce.or.v4p0i32(<4 x i32*> %x)
+  ret i32* %r
+}
+
+define i32 @not_integer_reduce(<4 x i32> %x) {
+; CHECK: Intrinsic has incorrect argument type!
+  %r = call i32 @llvm.vector.reduce.fadd.v4i32(i32 0, <4 x i32> %x)
+  ret i32 %r
+}
+
+define i32* @not_pointer_reduce2(<4 x i32*> %x) {
+; CHECK: Intrinsic has incorrect argument type!
+  %r = call i32* @llvm.vector.reduce.fmin.v4p0i32(<4 x i32*> %x)
+  ret i32* %r
+}
+
 declare float @llvm.vector.reduce.umin.v4f32(<4 x float>)
 declare i32* @llvm.vector.reduce.or.v4p0i32(<4 x i32*>)
 declare i32 @llvm.vector.reduce.fadd.v4i32(i32, <4 x i32>)

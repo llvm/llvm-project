@@ -30,6 +30,6 @@ int foo1() {
 // CHECK: define linkonce_odr i32 @_ZN1D2m1Ev(%class.D* {{[^,]*}} %this) unnamed_addr [[ATTRFALSE:#[0-9]+]]
 // CHECK: define linkonce_odr i32 @_ZN1D2m2Ev(%class.D* {{[^,]*}} %this) unnamed_addr [[ATTRTRUE1:#[0-9]+]]
 
-// CHECK: attributes [[ATTRFALSE]] = { {{.*}}"disable-tail-calls"="false"{{.*}} }
+// CHECK-NOT: attributes [[ATTRFALSE]] = { {{.*}}"disable-tail-calls"="false"{{.*}} }
 // CHECK: attributes [[ATTRTRUE0]] = { {{.*}}"disable-tail-calls"="true"{{.*}} }
 // CHECK: attributes [[ATTRTRUE1]] = { {{.*}}"disable-tail-calls"="true"{{.*}} }

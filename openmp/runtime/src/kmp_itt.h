@@ -90,16 +90,16 @@ __kmp_inline void __kmp_itt_barrier_finished(int gtid, void *object);
 __kmp_inline void *__kmp_itt_taskwait_object(int gtid);
 __kmp_inline void __kmp_itt_taskwait_starting(int gtid, void *object);
 __kmp_inline void __kmp_itt_taskwait_finished(int gtid, void *object);
-#define KMP_ITT_TASKWAIT_STARTING(obj) \
-    if (UNLIKELY(__itt_sync_create_ptr)) { \
-      obj = __kmp_itt_taskwait_object(gtid); \
-      if (obj != NULL) { \
-        __kmp_itt_taskwait_starting(gtid, obj); \
-      } \
-    }
-#define KMP_ITT_TASKWAIT_FINISHED(obj) \
-    if (UNLIKELY(obj != NULL)) \
-      __kmp_itt_taskwait_finished(gtid, obj);
+#define KMP_ITT_TASKWAIT_STARTING(obj)                                         \
+  if (UNLIKELY(__itt_sync_create_ptr)) {                                       \
+    obj = __kmp_itt_taskwait_object(gtid);                                     \
+    if (obj != NULL) {                                                         \
+      __kmp_itt_taskwait_starting(gtid, obj);                                  \
+    }                                                                          \
+  }
+#define KMP_ITT_TASKWAIT_FINISHED(obj)                                         \
+  if (UNLIKELY(obj != NULL))                                                   \
+    __kmp_itt_taskwait_finished(gtid, obj);
 
 // --- Task reporting ---
 __kmp_inline void __kmp_itt_task_starting(void *object);

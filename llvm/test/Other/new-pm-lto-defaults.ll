@@ -100,8 +100,8 @@
 ; CHECK-O23SZ-NEXT: Running analysis: MemoryDependenceAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running analysis: PhiValuesAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: MemCpyOptPass on foo
-; CHECK-O23SZ-NEXT: Running pass: DSEPass on foo
 ; CHECK-O23SZ-NEXT: Running analysis: MemorySSAAnalysis on foo
+; CHECK-O23SZ-NEXT: Running pass: DSEPass on foo
 ; CHECK-O23SZ-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: MergedLoadStoreMotionPass on foo
 ; CHECK-O23SZ-NEXT: Starting llvm::Function pass manager run.

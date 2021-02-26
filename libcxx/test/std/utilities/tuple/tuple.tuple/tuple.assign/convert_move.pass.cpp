@@ -45,6 +45,21 @@ struct E {
   }
 };
 
+struct NonAssignable {
+  NonAssignable& operator=(NonAssignable const&) = delete;
+  NonAssignable& operator=(NonAssignable&&) = delete;
+};
+
+struct NothrowMoveAssignable
+{
+    NothrowMoveAssignable& operator=(NothrowMoveAssignable&&) noexcept { return *this; }
+};
+
+struct PotentiallyThrowingMoveAssignable
+{
+    PotentiallyThrowingMoveAssignable& operator=(PotentiallyThrowingMoveAssignable&&) { return *this; }
+};
+
 int main(int, char**)
 {
     {
@@ -108,6 +123,22 @@ int main(int, char**)
         assert(std::get<0>(t) == 43);
         assert(&std::get<0>(t) == &x);
     }
+    {
+        using T = std::tuple<int, NonAssignable>;
+        using U = std::tuple<NonAssignable, int>;
+        static_assert(!std::is_assignable<T&, U&&>::value, "");
+        static_assert(!std::is_assignable<U&, T&&>::value, "");
+    }
+    {
+        typedef std::tuple<NothrowMoveAssignable, long> T0;
+        typedef std::tuple<NothrowMoveAssignable, int> T1;
+        static_assert(std::is_nothrow_assignable<T0&, T1&&>::value, "");
+    }
+    {
+        typedef std::tuple<PotentiallyThrowingMoveAssignable, long> T0;
+        typedef std::tuple<PotentiallyThrowingMoveAssignable, int> T1;
+        static_assert(!std::is_nothrow_assignable<T0&, T1&&>::value, "");
+    }
 
-  return 0;
+    return 0;
 }

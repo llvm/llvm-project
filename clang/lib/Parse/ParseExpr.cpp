@@ -1807,7 +1807,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   // These can be followed by postfix-expr pieces.
   PreferredType = SavedType;
   Res = ParsePostfixExpressionSuffix(Res);
-  if (getLangOpts().OpenCL)
+  if (getLangOpts().OpenCL && !getActions().getOpenCLOptions().isEnabled(
+                                  "__cl_clang_function_pointers"))
     if (Expr *PostfixExpr = Res.get()) {
       QualType Ty = PostfixExpr->getType();
       if (!Ty.isNull() && Ty->isFunctionType()) {

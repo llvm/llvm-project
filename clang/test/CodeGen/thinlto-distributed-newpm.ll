@@ -116,9 +116,6 @@
 ; CHECK-O: Running pass: SROA on main
 ; CHECK-O: Running pass: MergedLoadStoreMotionPass on main
 ; CHECK-O: Running pass: GVN on main
-; CHECK-O: Running analysis: MemoryDependenceAnalysis on main
-; CHECK-O: Running analysis: PhiValuesAnalysis on main
-; CHECK-O: Running pass: MemCpyOptPass on main
 ; CHECK-O: Running pass: SCCPPass on main
 ; CHECK-O: Running pass: BDCEPass on main
 ; CHECK-O: Running analysis: DemandedBitsAnalysis on main
@@ -127,6 +124,7 @@
 ; CHECK-O: Running pass: CorrelatedValuePropagationPass on main
 ; CHECK-O: Running pass: ADCEPass on main
 ; CHECK-O: Running analysis: PostDominatorTreeAnalysis on main
+; CHECK-O: Running pass: MemCpyOptPass on main
 ; CHECK-O: Running pass: DSEPass on main
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: LoopSimplifyPass on main

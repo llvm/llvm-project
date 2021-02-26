@@ -1452,8 +1452,7 @@ static bool functionWillReturn(const Function &F) {
   // If there are no loops, then the function is willreturn if all calls in
   // it are willreturn.
   return all_of(instructions(F), [](const Instruction &I) {
-    const auto *CB = dyn_cast<CallBase>(&I);
-    return !CB || CB->hasFnAttr(Attribute::WillReturn);
+    return I.willReturn();
   });
 }
 

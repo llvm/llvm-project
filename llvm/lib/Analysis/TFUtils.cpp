@@ -71,11 +71,9 @@ void writeTensorValues(raw_ostream &OutFile, const char *TensorData,
                        size_t ElemCount) {
   OutFile << "[";
   const T *TypedData = reinterpret_cast<const T *>(TensorData);
-  for (size_t I = 0; I < ElemCount; ++I) {
-    if (I > 0)
-      OutFile << ", ";
-    OutFile << TypedData[I];
-  }
+  ListSeparator LS;
+  for (size_t I = 0; I < ElemCount; ++I)
+    OutFile << LS << TypedData[I];
   OutFile << "]";
 }
 

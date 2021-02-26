@@ -289,7 +289,7 @@ enum stats_state_e {
  * same as that of a timer above.
  *
  * @ingroup STATS_GATHERING
-*/
+ */
 #define KMP_FOREACH_EXPLICIT_TIMER(macro, arg) KMP_FOREACH_TIMER(macro, arg)
 
 #define ENUMERATE(name, ignore, prefix) prefix##name,
@@ -884,7 +884,7 @@ extern kmp_stats_output_module __kmp_stats_output;
  * a timer statistics.
  *
  * @ingroup STATS_GATHERING
-*/
+ */
 #define KMP_COUNT_VALUE(name, value)                                           \
   __kmp_stats_thread_ptr->getTimer(TIMER_##name)->addSample((double)value)
 
@@ -897,7 +897,7 @@ extern kmp_stats_output_module __kmp_stats_output;
  * counter for the executing thread.
  *
  * @ingroup STATS_GATHERING
-*/
+ */
 #define KMP_COUNT_BLOCK(name)                                                  \
   __kmp_stats_thread_ptr->getCounter(COUNTER_##name)->increment()
 
@@ -917,7 +917,7 @@ extern kmp_stats_output_module __kmp_stats_output;
  * macro is called.
  *
  * @ingroup STATS_GATHERING
-*/
+ */
 #define KMP_OUTPUT_STATS(heading_string) __kmp_output_stats(heading_string)
 
 /*!
@@ -926,7 +926,7 @@ extern kmp_stats_output_module __kmp_stats_output;
  * @param name timer which you want this thread to begin with
  *
  * @ingroup STATS_GATHERING
-*/
+ */
 #define KMP_INIT_PARTITIONED_TIMERS(name)                                      \
   __kmp_stats_thread_ptr->getPartitionedTimers()->init(explicitTimer(          \
       __kmp_stats_thread_ptr->getTimer(TIMER_##name), TIMER_##name))
@@ -963,7 +963,7 @@ extern kmp_stats_output_module __kmp_stats_output;
  * \details Reset all stats for all threads.
  *
  * @ingroup STATS_GATHERING
-*/
+ */
 #define KMP_RESET_STATS() __kmp_reset_stats()
 
 #if (KMP_DEVELOPER_STATS)

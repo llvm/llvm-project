@@ -12,8 +12,8 @@ module attributes {gpu.container_module} {
     // CHECK: llvm.call @mgpuEventDestroy(%[[e0]])
     %t1 = gpu.wait async [%t0]
     // CHECK: llvm.call @mgpuStreamSynchronize(%[[t0]])
-    // CHECK: llvm.call @mgpuStreamSynchronize(%[[t1]])
     // CHECK: llvm.call @mgpuStreamDestroy(%[[t0]])
+    // CHECK: llvm.call @mgpuStreamSynchronize(%[[t1]])
     // CHECK: llvm.call @mgpuStreamDestroy(%[[t1]])
     gpu.wait [%t0, %t1]
     return

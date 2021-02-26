@@ -735,117 +735,6 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
   return true;
 }
 
-/// Pack values \p SrcRegs to cover the vector type result \p DstRegs.
-static MachineInstrBuilder mergeVectorRegsToResultRegs(
-  MachineIRBuilder &B, ArrayRef<Register> DstRegs, ArrayRef<Register> SrcRegs) {
-  MachineRegisterInfo &MRI = *B.getMRI();
-  LLT LLTy = MRI.getType(DstRegs[0]);
-  LLT PartLLT = MRI.getType(SrcRegs[0]);
-
-  // Deal with v3s16 split into v2s16
-  LLT LCMTy = getLCMType(LLTy, PartLLT);
-  if (LCMTy == LLTy) {
-    // Common case where no padding is needed.
-    assert(DstRegs.size() == 1);
-    return B.buildConcatVectors(DstRegs[0], SrcRegs);
-  }
-
-  const int NumWide =  LCMTy.getSizeInBits() / PartLLT.getSizeInBits();
-  Register Undef = B.buildUndef(PartLLT).getReg(0);
-
-  // Build vector of undefs.
-  SmallVector<Register, 8> WidenedSrcs(NumWide, Undef);
-
-  // Replace the first sources with the real registers.
-  std::copy(SrcRegs.begin(), SrcRegs.end(), WidenedSrcs.begin());
-
-  auto Widened = B.buildConcatVectors(LCMTy, WidenedSrcs);
-  int NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
-
-  SmallVector<Register, 8> PadDstRegs(NumDst);
-  std::copy(DstRegs.begin(), DstRegs.end(), PadDstRegs.begin());
-
-  // Create the excess dead defs for the unmerge.
-  for (int I = DstRegs.size(); I != NumDst; ++I)
-    PadDstRegs[I] = MRI.createGenericVirtualRegister(LLTy);
-
-  return B.buildUnmerge(PadDstRegs, Widened);
-}
-
-// TODO: Move this to generic code
-static void packSplitRegsToOrigType(MachineIRBuilder &B,
-                                    ArrayRef<Register> OrigRegs,
-                                    ArrayRef<Register> Regs,
-                                    LLT LLTy,
-                                    LLT PartLLT) {
-  MachineRegisterInfo &MRI = *B.getMRI();
-
-  if (!LLTy.isVector() && !PartLLT.isVector()) {
-    assert(OrigRegs.size() == 1);
-    LLT OrigTy = MRI.getType(OrigRegs[0]);
-
-    unsigned SrcSize = PartLLT.getSizeInBits() * Regs.size();
-    if (SrcSize == OrigTy.getSizeInBits())
-      B.buildMerge(OrigRegs[0], Regs);
-    else {
-      auto Widened = B.buildMerge(LLT::scalar(SrcSize), Regs);
-      B.buildTrunc(OrigRegs[0], Widened);
-    }
-
-    return;
-  }
-
-  if (LLTy.isVector() && PartLLT.isVector()) {
-    assert(OrigRegs.size() == 1);
-    assert(LLTy.getElementType() == PartLLT.getElementType());
-    mergeVectorRegsToResultRegs(B, OrigRegs, Regs);
-    return;
-  }
-
-  assert(LLTy.isVector() && !PartLLT.isVector());
-
-  LLT DstEltTy = LLTy.getElementType();
-
-  // Pointer information was discarded. We'll need to coerce some register types
-  // to avoid violating type constraints.
-  LLT RealDstEltTy = MRI.getType(OrigRegs[0]).getElementType();
-
-  assert(DstEltTy.getSizeInBits() == RealDstEltTy.getSizeInBits());
-
-  if (DstEltTy == PartLLT) {
-    // Vector was trivially scalarized.
-
-    if (RealDstEltTy.isPointer()) {
-      for (Register Reg : Regs)
-        MRI.setType(Reg, RealDstEltTy);
-    }
-
-    B.buildBuildVector(OrigRegs[0], Regs);
-  } else if (DstEltTy.getSizeInBits() > PartLLT.getSizeInBits()) {
-    // Deal with vector with 64-bit elements decomposed to 32-bit
-    // registers. Need to create intermediate 64-bit elements.
-    SmallVector<Register, 8> EltMerges;
-    int PartsPerElt = DstEltTy.getSizeInBits() / PartLLT.getSizeInBits();
-
-    assert(DstEltTy.getSizeInBits() % PartLLT.getSizeInBits() == 0);
-
-    for (int I = 0, NumElts = LLTy.getNumElements(); I != NumElts; ++I)  {
-      auto Merge = B.buildMerge(RealDstEltTy, Regs.take_front(PartsPerElt));
-      // Fix the type in case this is really a vector of pointers.
-      MRI.setType(Merge.getReg(0), RealDstEltTy);
-      EltMerges.push_back(Merge.getReg(0));
-      Regs = Regs.drop_front(PartsPerElt);
-    }
-
-    B.buildBuildVector(OrigRegs[0], EltMerges);
-  } else {
-    // Vector was split, and elements promoted to a wider type.
-    LLT BVType = LLT::vector(LLTy.getNumElements(), PartLLT);
-    auto BV = B.buildBuildVector(BVType, Regs);
-    B.buildTrunc(OrigRegs[0], BV);
-  }
-}
-
 bool AMDGPUCallLowering::lowerFormalArguments(
     MachineIRBuilder &B, const Function &F, ArrayRef<ArrayRef<Register>> VRegs,
     FunctionLoweringInfo &FLI) const {
@@ -886,7 +775,6 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     CCInfo.AllocateReg(ImplicitBufferPtrReg);
   }
 
-  SmallVector<ArgInfo, 8> SplitArg;
   SmallVector<ArgInfo, 32> SplitArgs;
   unsigned Idx = 0;
   unsigned PSInputNum = 0;
@@ -936,19 +824,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     const unsigned OrigArgIdx = Idx + AttributeList::FirstArgIndex;
     setArgFlags(OrigArg, OrigArgIdx, DL, F);
 
-    SplitArg.clear();
-    splitToValueTypes(B, OrigArg, SplitArg, DL, CC);
-
-    processSplitArgs(B, OrigArg, SplitArg, SplitArgs, DL, CC, false,
-                     // FIXME: We should probably be passing multiple registers
-                     // to handleAssignments to do this
-                     [&](ArrayRef<Register> Regs, Register DstReg, LLT LLTy,
-                         LLT PartLLT, int VTSplitIdx) {
-                       assert(DstReg == VRegs[Idx][VTSplitIdx]);
-                       packSplitRegsToOrigType(B, VRegs[Idx][VTSplitIdx], Regs,
-                                               LLTy, PartLLT);
-                     });
-
+    splitToValueTypes(B, OrigArg, SplitArgs, DL, CC);
     ++Idx;
   }
 
@@ -1356,19 +1232,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
                     Info.DemoteRegister, Info.DemoteStackIndex);
   } else if (!Info.OrigRet.Ty->isVoidTy()) {
-    SmallVector<ArgInfo, 8> PreSplitRetInfos;
-
-    splitToValueTypes(
-      MIRBuilder, Info.OrigRet, PreSplitRetInfos/*InArgs*/, DL, Info.CallConv);
-
-    processSplitArgs(MIRBuilder, Info.OrigRet,
-                     PreSplitRetInfos, InArgs/*SplitRetInfos*/, DL, Info.CallConv, false,
-                     [&](ArrayRef<Register> Regs, Register DstReg,
-                         LLT LLTy, LLT PartLLT, int VTSplitIdx) {
-                       assert(DstReg == Info.OrigRet.Regs[VTSplitIdx]);
-                       packSplitRegsToOrigType(MIRBuilder, Info.OrigRet.Regs[VTSplitIdx],
-                                               Regs, LLTy, PartLLT);
-                     });
+    splitToValueTypes(MIRBuilder, Info.OrigRet, InArgs, DL, Info.CallConv);
   }
 
   // Make sure the raw argument copies are inserted before the marshalling to

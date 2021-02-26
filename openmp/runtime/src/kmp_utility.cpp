@@ -92,7 +92,7 @@ int __kmp_get_logical_id(int log_per_phy, int apic_id) {
 
 static kmp_uint64 __kmp_parse_frequency( // R: Frequency in Hz.
     char const *frequency // I: Float number and unit: MHz, GHz, or TGz.
-    ) {
+) {
 
   double value = 0.0;
   char *unit = NULL;

@@ -45,7 +45,7 @@ define i8* @memcpy_small_const_n(i8* %d, i8* nocapture readonly %s) {
 
 define i8* @memcpy_big_const_n(i8* %d, i8* nocapture readonly %s) {
 ; CHECK-LABEL: @memcpy_big_const_n(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(1024) [[D:%.*]], i8* nonnull align 1 dereferenceable(1024) [[S:%.*]], i64 1024, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(1024) [[D:%.*]], i8* noundef nonnull align 1 dereferenceable(1024) [[S:%.*]], i64 1024, i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[D]], i64 1024
 ; CHECK-NEXT:    ret i8* [[TMP1]]
 ;

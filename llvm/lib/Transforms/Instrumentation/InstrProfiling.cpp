@@ -830,9 +830,18 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   }
   std::string DataVarName = getVarName(Inc, getInstrProfDataVarPrefix());
   auto MaybeSetComdat = [=](GlobalVariable *GV) {
-    if (NeedComdat)
-      GV->setComdat(M->getOrInsertComdat(TT.isOSBinFormatCOFF() ? GV->getName()
-                                                                : DataVarName));
+    // For ELF, when not using COMDAT, put counters, data and values into
+    // a noduplicates COMDAT which is lowered to a zero-flag section group.
+    // This allows linker GC to discard the entire group when the function
+    // is discarded.
+    bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
+    if (UseComdat) {
+      auto GroupName = TT.isOSBinFormatCOFF() ? GV->getName() : DataVarName;
+      Comdat *C = M->getOrInsertComdat(GroupName);
+      if (!NeedComdat)
+        C->setSelectionKind(Comdat::NoDuplicates);
+      GV->setComdat(C);
+    }
   };
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();

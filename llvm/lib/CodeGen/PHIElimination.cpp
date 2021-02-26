@@ -550,9 +550,8 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
         LiveInterval &SrcLI = LIS->getInterval(SrcReg);
 
         bool isLiveOut = false;
-        for (MachineBasicBlock::succ_iterator SI = opBlock.succ_begin(),
-             SE = opBlock.succ_end(); SI != SE; ++SI) {
-          SlotIndex startIdx = LIS->getMBBStartIdx(*SI);
+        for (MachineBasicBlock *Succ : opBlock.successors()) {
+          SlotIndex startIdx = LIS->getMBBStartIdx(Succ);
           VNInfo *VNI = SrcLI.getVNInfoAt(startIdx);
 
           // Definitions by other PHIs are not truly live-in for our purposes.

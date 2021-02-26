@@ -406,44 +406,48 @@ define <2 x half> @v_fdiv_v2f16(<2 x half> %a, <2 x half> %b) {
 ; GFX6-IEEE-LABEL: v_fdiv_v2f16:
 ; GFX6-IEEE:       ; %bb.0:
 ; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; GFX6-IEEE-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX6-IEEE-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v4, s[4:5], v2, v2, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v4, s[4:5], v3, v3, v2
 ; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v5, v4
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v6, vcc, v0, v2, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v6, vcc, v2, v3, v2
 ; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v4, v5, 1.0
 ; GFX6-IEEE-NEXT:    v_fma_f32 v5, v7, v5, v5
 ; GFX6-IEEE-NEXT:    v_mul_f32_e32 v7, v6, v5
 ; GFX6-IEEE-NEXT:    v_fma_f32 v8, -v4, v7, v6
 ; GFX6-IEEE-NEXT:    v_fma_f32 v7, v8, v5, v7
 ; GFX6-IEEE-NEXT:    v_fma_f32 v4, -v4, v7, v6
-; GFX6-IEEE-NEXT:    v_div_fmas_f32 v4, v4, v5, v7
-; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v3, v3, v1
-; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v4, v2
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v5, vcc, v1, v3, v1
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v6, v0
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v0, v4, v5, v7
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v0, v3, v2
 ; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-IEEE-NEXT:    v_fma_f32 v6, -v2, v4, 1.0
-; GFX6-IEEE-NEXT:    v_fma_f32 v4, v6, v4, v4
-; GFX6-IEEE-NEXT:    v_mul_f32_e32 v6, v5, v4
-; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v2, v6, v5
-; GFX6-IEEE-NEXT:    v_fma_f32 v6, v7, v4, v6
-; GFX6-IEEE-NEXT:    v_fma_f32 v2, -v2, v6, v5
-; GFX6-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v4, v6
-; GFX6-IEEE-NEXT:    v_div_fixup_f32 v1, v2, v3, v1
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v6
+; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v4, vcc, v6, v1, v6
+; GFX6-IEEE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v3, v5, v3, v3
+; GFX6-IEEE-NEXT:    v_mul_f32_e32 v5, v4, v3
+; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v2, v5, v4
+; GFX6-IEEE-NEXT:    v_fma_f32 v5, v7, v3, v5
+; GFX6-IEEE-NEXT:    v_fma_f32 v2, -v2, v5, v4
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v1, v2, v1, v6
 ; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-FLUSH-LABEL: v_fdiv_v2f16:
 ; GFX6-FLUSH:       ; %bb.0:
 ; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v4, s[4:5], v2, v2, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; GFX6-FLUSH-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX6-FLUSH-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v4, s[4:5], v3, v3, v2
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v5, v4
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v6, vcc, v0, v2, v0
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v6, vcc, v2, v3, v2
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v4, v5, 1.0
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v5, v7, v5, v5
@@ -452,25 +456,25 @@ define <2 x half> @v_fdiv_v2f16(<2 x half> %a, <2 x half> %b) {
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v7, v8, v5, v7
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v4, -v4, v7, v6
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v4, v4, v5, v7
-; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v5, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v4, v3, v2
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v3, v3, v1
-; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v2
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v5, vcc, v1, v3, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v5
+; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v4, vcc, v5, v1, v5
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v2, v4, 1.0
-; GFX6-FLUSH-NEXT:    v_fma_f32 v4, v6, v4, v4
-; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v6, v5, v4
-; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v2, v6, v5
-; GFX6-FLUSH-NEXT:    v_fma_f32 v6, v7, v4, v6
-; GFX6-FLUSH-NEXT:    v_fma_f32 v2, -v2, v6, v5
+; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v2, v3, 1.0
+; GFX6-FLUSH-NEXT:    v_fma_f32 v3, v6, v3, v3
+; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v6, v4, v3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v2, v6, v4
+; GFX6-FLUSH-NEXT:    v_fma_f32 v6, v7, v3, v6
+; GFX6-FLUSH-NEXT:    v_fma_f32 v2, -v2, v6, v4
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v4, v6
-; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v1, v2, v3, v1
+; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v6
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v1, v2, v1, v5
 ; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -525,15 +529,17 @@ define <2 x half> @v_fdiv_v2f16_afn(<2 x half> %a, <2 x half> %b) {
 ; GFX6-LABEL: v_fdiv_v2f16_afn:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
+; GFX6-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX6-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GFX6-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v1, v1
+; GFX6-NEXT:    v_mul_f32_e32 v0, v0, v3
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-NEXT:    v_mul_f32_e32 v1, v2, v1
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -567,44 +573,48 @@ define <2 x half> @v_fdiv_v2f16_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX6-IEEE-LABEL: v_fdiv_v2f16_ulp25:
 ; GFX6-IEEE:       ; %bb.0:
 ; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; GFX6-IEEE-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX6-IEEE-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v4, s[4:5], v2, v2, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v4, s[4:5], v3, v3, v2
 ; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v5, v4
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v6, vcc, v0, v2, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v6, vcc, v2, v3, v2
 ; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v4, v5, 1.0
 ; GFX6-IEEE-NEXT:    v_fma_f32 v5, v7, v5, v5
 ; GFX6-IEEE-NEXT:    v_mul_f32_e32 v7, v6, v5
 ; GFX6-IEEE-NEXT:    v_fma_f32 v8, -v4, v7, v6
 ; GFX6-IEEE-NEXT:    v_fma_f32 v7, v8, v5, v7
 ; GFX6-IEEE-NEXT:    v_fma_f32 v4, -v4, v7, v6
-; GFX6-IEEE-NEXT:    v_div_fmas_f32 v4, v4, v5, v7
-; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v3, v3, v1
-; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v4, v2
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v5, vcc, v1, v3, v1
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v6, v0
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v0, v4, v5, v7
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v0, v3, v2
 ; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-IEEE-NEXT:    v_fma_f32 v6, -v2, v4, 1.0
-; GFX6-IEEE-NEXT:    v_fma_f32 v4, v6, v4, v4
-; GFX6-IEEE-NEXT:    v_mul_f32_e32 v6, v5, v4
-; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v2, v6, v5
-; GFX6-IEEE-NEXT:    v_fma_f32 v6, v7, v4, v6
-; GFX6-IEEE-NEXT:    v_fma_f32 v2, -v2, v6, v5
-; GFX6-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v4, v6
-; GFX6-IEEE-NEXT:    v_div_fixup_f32 v1, v2, v3, v1
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v6
+; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v4, vcc, v6, v1, v6
+; GFX6-IEEE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v3, v5, v3, v3
+; GFX6-IEEE-NEXT:    v_mul_f32_e32 v5, v4, v3
+; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v2, v5, v4
+; GFX6-IEEE-NEXT:    v_fma_f32 v5, v7, v3, v5
+; GFX6-IEEE-NEXT:    v_fma_f32 v2, -v2, v5, v4
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v1, v2, v1, v6
 ; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-FLUSH-LABEL: v_fdiv_v2f16_ulp25:
 ; GFX6-FLUSH:       ; %bb.0:
 ; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v4, s[4:5], v2, v2, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; GFX6-FLUSH-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX6-FLUSH-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v4, s[4:5], v3, v3, v2
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v5, v4
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v6, vcc, v0, v2, v0
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v6, vcc, v2, v3, v2
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v4, v5, 1.0
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v5, v7, v5, v5
@@ -613,25 +623,25 @@ define <2 x half> @v_fdiv_v2f16_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v7, v8, v5, v7
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v4, -v4, v7, v6
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v4, v4, v5, v7
-; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v5, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v4, v3, v2
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v3, v3, v1
-; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v2
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v5, vcc, v1, v3, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v5
+; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v4, vcc, v5, v1, v5
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v2, v4, 1.0
-; GFX6-FLUSH-NEXT:    v_fma_f32 v4, v6, v4, v4
-; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v6, v5, v4
-; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v2, v6, v5
-; GFX6-FLUSH-NEXT:    v_fma_f32 v6, v7, v4, v6
-; GFX6-FLUSH-NEXT:    v_fma_f32 v2, -v2, v6, v5
+; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v2, v3, 1.0
+; GFX6-FLUSH-NEXT:    v_fma_f32 v3, v6, v3, v3
+; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v6, v4, v3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v2, v6, v4
+; GFX6-FLUSH-NEXT:    v_fma_f32 v6, v7, v3, v6
+; GFX6-FLUSH-NEXT:    v_fma_f32 v2, -v2, v6, v4
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v4, v6
-; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v1, v2, v3, v1
+; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v6
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v1, v2, v1, v5
 ; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -686,32 +696,33 @@ define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 ; GFX6-IEEE-LABEL: v_rcp_v2f16:
 ; GFX6-IEEE:       ; %bb.0:
 ; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, 1.0
+; GFX6-IEEE-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v2, v2, v1
 ; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v4, v3
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v5, vcc, v2, v0, v2
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v5, vcc, v1, v2, v1
 ; GFX6-IEEE-NEXT:    v_fma_f32 v6, -v3, v4, 1.0
 ; GFX6-IEEE-NEXT:    v_fma_f32 v4, v6, v4, v4
 ; GFX6-IEEE-NEXT:    v_mul_f32_e32 v6, v5, v4
 ; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v3, v6, v5
 ; GFX6-IEEE-NEXT:    v_fma_f32 v6, v7, v4, v6
 ; GFX6-IEEE-NEXT:    v_fma_f32 v3, -v3, v6, v5
-; GFX6-IEEE-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
-; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v3, v0, v2
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v1, v1, v2
-; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v4, v3
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v5, vcc, v2, v1, v2
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v5, v0
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v0, v3, v4, v6
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v0, v2, v1
 ; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-IEEE-NEXT:    v_fma_f32 v6, -v3, v4, 1.0
-; GFX6-IEEE-NEXT:    v_fma_f32 v4, v6, v4, v4
-; GFX6-IEEE-NEXT:    v_mul_f32_e32 v6, v5, v4
-; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v3, v6, v5
-; GFX6-IEEE-NEXT:    v_fma_f32 v6, v7, v4, v6
-; GFX6-IEEE-NEXT:    v_fma_f32 v3, -v3, v6, v5
-; GFX6-IEEE-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
-; GFX6-IEEE-NEXT:    v_div_fixup_f32 v1, v3, v1, v2
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v5, v5, v1
+; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v4, vcc, v1, v5, v1
+; GFX6-IEEE-NEXT:    v_fma_f32 v6, -v2, v3, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v3, v6, v3, v3
+; GFX6-IEEE-NEXT:    v_mul_f32_e32 v6, v4, v3
+; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v2, v6, v4
+; GFX6-IEEE-NEXT:    v_fma_f32 v6, v7, v3, v6
+; GFX6-IEEE-NEXT:    v_fma_f32 v2, -v2, v6, v4
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v6
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v1, v2, v5, v1
 ; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -719,11 +730,12 @@ define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 ; GFX6-FLUSH:       ; %bb.0:
 ; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    s_movk_i32 s6, 0x3c00
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, s6
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, s6
+; GFX6-FLUSH-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v2, v2, v1
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v3
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v5, vcc, v2, v0, v2
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v5, vcc, v1, v2, v1
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v3, v4, 1.0
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v4, v6, v4, v4
@@ -733,24 +745,24 @@ define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v3, -v3, v6, v5
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v5, v0
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v4, s6
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v3, v0, v2
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v3, v2, v1
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v4
-; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v5, vcc, v4, v1, v4
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v1, s[4:5], v5, v5, v4
+; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, vcc, v4, v5, v4
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v2, v3, 1.0
-; GFX6-FLUSH-NEXT:    v_fma_f32 v3, v6, v3, v3
-; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v6, v5, v3
-; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v2, v6, v5
-; GFX6-FLUSH-NEXT:    v_fma_f32 v6, v7, v3, v6
-; GFX6-FLUSH-NEXT:    v_fma_f32 v2, -v2, v6, v5
+; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v1, v2, 1.0
+; GFX6-FLUSH-NEXT:    v_fma_f32 v2, v6, v2, v2
+; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v6, v3, v2
+; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v1, v6, v3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v6, v7, v2, v6
+; GFX6-FLUSH-NEXT:    v_fma_f32 v1, -v1, v6, v3
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v6
-; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v1, v2, v1, v4
+; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v2, v6
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v1, v1, v5, v4
 ; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -801,32 +813,33 @@ define <2 x half> @v_rcp_v2f16_arcp(<2 x half> %x) {
 ; GFX6-IEEE-LABEL: v_rcp_v2f16_arcp:
 ; GFX6-IEEE:       ; %bb.0:
 ; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, 1.0
+; GFX6-IEEE-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v2, v2, v1
 ; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v4, v3
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v5, vcc, v2, v0, v2
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v5, vcc, v1, v2, v1
 ; GFX6-IEEE-NEXT:    v_fma_f32 v6, -v3, v4, 1.0
 ; GFX6-IEEE-NEXT:    v_fma_f32 v4, v6, v4, v4
 ; GFX6-IEEE-NEXT:    v_mul_f32_e32 v6, v5, v4
 ; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v3, v6, v5
 ; GFX6-IEEE-NEXT:    v_fma_f32 v6, v7, v4, v6
 ; GFX6-IEEE-NEXT:    v_fma_f32 v3, -v3, v6, v5
-; GFX6-IEEE-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
-; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v3, v0, v2
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v1, v1, v2
-; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v4, v3
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v5, vcc, v2, v1, v2
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v5, v0
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v0, v3, v4, v6
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v0, v2, v1
 ; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-IEEE-NEXT:    v_fma_f32 v6, -v3, v4, 1.0
-; GFX6-IEEE-NEXT:    v_fma_f32 v4, v6, v4, v4
-; GFX6-IEEE-NEXT:    v_mul_f32_e32 v6, v5, v4
-; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v3, v6, v5
-; GFX6-IEEE-NEXT:    v_fma_f32 v6, v7, v4, v6
-; GFX6-IEEE-NEXT:    v_fma_f32 v3, -v3, v6, v5
-; GFX6-IEEE-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
-; GFX6-IEEE-NEXT:    v_div_fixup_f32 v1, v3, v1, v2
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v5, v5, v1
+; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v4, vcc, v1, v5, v1
+; GFX6-IEEE-NEXT:    v_fma_f32 v6, -v2, v3, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v3, v6, v3, v3
+; GFX6-IEEE-NEXT:    v_mul_f32_e32 v6, v4, v3
+; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v2, v6, v4
+; GFX6-IEEE-NEXT:    v_fma_f32 v6, v7, v3, v6
+; GFX6-IEEE-NEXT:    v_fma_f32 v2, -v2, v6, v4
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v6
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v1, v2, v5, v1
 ; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -834,11 +847,12 @@ define <2 x half> @v_rcp_v2f16_arcp(<2 x half> %x) {
 ; GFX6-FLUSH:       ; %bb.0:
 ; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    s_movk_i32 s6, 0x3c00
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, s6
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, s6
+; GFX6-FLUSH-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v2, v2, v1
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v3
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v5, vcc, v2, v0, v2
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v5, vcc, v1, v2, v1
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v3, v4, 1.0
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v4, v6, v4, v4
@@ -848,24 +862,24 @@ define <2 x half> @v_rcp_v2f16_arcp(<2 x half> %x) {
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v3, -v3, v6, v5
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v5, v0
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v4, s6
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v3, v0, v2
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v3, v2, v1
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v4
-; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v5, vcc, v4, v1, v4
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v1, s[4:5], v5, v5, v4
+; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, vcc, v4, v5, v4
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v2, v3, 1.0
-; GFX6-FLUSH-NEXT:    v_fma_f32 v3, v6, v3, v3
-; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v6, v5, v3
-; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v2, v6, v5
-; GFX6-FLUSH-NEXT:    v_fma_f32 v6, v7, v3, v6
-; GFX6-FLUSH-NEXT:    v_fma_f32 v2, -v2, v6, v5
+; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v1, v2, 1.0
+; GFX6-FLUSH-NEXT:    v_fma_f32 v2, v6, v2, v2
+; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v6, v3, v2
+; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v1, v6, v3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v6, v7, v2, v6
+; GFX6-FLUSH-NEXT:    v_fma_f32 v1, -v1, v6, v3
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v6
-; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v1, v2, v1, v4
+; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v2, v6
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v1, v1, v5, v4
 ; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -916,14 +930,15 @@ define <2 x half> @v_rcp_v2f16_arcp_afn(<2 x half> %x) {
 ; GFX6-LABEL: v_rcp_v2f16_arcp_afn:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v0
+; GFX6-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
-; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX6-NEXT:    v_mul_f32_e32 v0, v2, v0
-; GFX6-NEXT:    v_mul_f32_e32 v1, v2, v1
+; GFX6-NEXT:    v_rcp_f32_e32 v3, v0
+; GFX6-NEXT:    v_mul_f32_e32 v0, v2, v1
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-NEXT:    v_mul_f32_e32 v1, v2, v3
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -953,32 +968,33 @@ define <2 x half> @v_rcp_v2f16_ulp25(<2 x half> %x) {
 ; GFX6-IEEE-LABEL: v_rcp_v2f16_ulp25:
 ; GFX6-IEEE:       ; %bb.0:
 ; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, 1.0
+; GFX6-IEEE-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v2, v2, v1
 ; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v4, v3
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v5, vcc, v2, v0, v2
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v5, vcc, v1, v2, v1
 ; GFX6-IEEE-NEXT:    v_fma_f32 v6, -v3, v4, 1.0
 ; GFX6-IEEE-NEXT:    v_fma_f32 v4, v6, v4, v4
 ; GFX6-IEEE-NEXT:    v_mul_f32_e32 v6, v5, v4
 ; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v3, v6, v5
 ; GFX6-IEEE-NEXT:    v_fma_f32 v6, v7, v4, v6
 ; GFX6-IEEE-NEXT:    v_fma_f32 v3, -v3, v6, v5
-; GFX6-IEEE-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
-; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v3, v0, v2
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v1, v1, v2
-; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v4, v3
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v5, vcc, v2, v1, v2
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v5, v0
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v0, v3, v4, v6
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v0, v2, v1
 ; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-IEEE-NEXT:    v_fma_f32 v6, -v3, v4, 1.0
-; GFX6-IEEE-NEXT:    v_fma_f32 v4, v6, v4, v4
-; GFX6-IEEE-NEXT:    v_mul_f32_e32 v6, v5, v4
-; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v3, v6, v5
-; GFX6-IEEE-NEXT:    v_fma_f32 v6, v7, v4, v6
-; GFX6-IEEE-NEXT:    v_fma_f32 v3, -v3, v6, v5
-; GFX6-IEEE-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
-; GFX6-IEEE-NEXT:    v_div_fixup_f32 v1, v3, v1, v2
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v5, v5, v1
+; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v4, vcc, v1, v5, v1
+; GFX6-IEEE-NEXT:    v_fma_f32 v6, -v2, v3, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v3, v6, v3, v3
+; GFX6-IEEE-NEXT:    v_mul_f32_e32 v6, v4, v3
+; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v2, v6, v4
+; GFX6-IEEE-NEXT:    v_fma_f32 v6, v7, v3, v6
+; GFX6-IEEE-NEXT:    v_fma_f32 v2, -v2, v6, v4
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v6
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v1, v2, v5, v1
 ; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -986,11 +1002,12 @@ define <2 x half> @v_rcp_v2f16_ulp25(<2 x half> %x) {
 ; GFX6-FLUSH:       ; %bb.0:
 ; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    s_movk_i32 s6, 0x3c00
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, s6
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, s6
+; GFX6-FLUSH-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v2, v2, v1
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v3
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v5, vcc, v2, v0, v2
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v5, vcc, v1, v2, v1
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v3, v4, 1.0
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v4, v6, v4, v4
@@ -1000,24 +1017,24 @@ define <2 x half> @v_rcp_v2f16_ulp25(<2 x half> %x) {
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v3, -v3, v6, v5
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v5, v0
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v4, s6
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v3, v0, v2
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v3, v2, v1
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v4
-; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v5, vcc, v4, v1, v4
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v1, s[4:5], v5, v5, v4
+; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, vcc, v4, v5, v4
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v2, v3, 1.0
-; GFX6-FLUSH-NEXT:    v_fma_f32 v3, v6, v3, v3
-; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v6, v5, v3
-; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v2, v6, v5
-; GFX6-FLUSH-NEXT:    v_fma_f32 v6, v7, v3, v6
-; GFX6-FLUSH-NEXT:    v_fma_f32 v2, -v2, v6, v5
+; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v1, v2, 1.0
+; GFX6-FLUSH-NEXT:    v_fma_f32 v2, v6, v2, v2
+; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v6, v3, v2
+; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v1, v6, v3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v6, v7, v2, v6
+; GFX6-FLUSH-NEXT:    v_fma_f32 v1, -v1, v6, v3
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v6
-; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v1, v2, v1, v4
+; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v2, v6
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v1, v1, v5, v4
 ; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1047,15 +1064,17 @@ define <2 x half> @v_fdiv_v2f16_afn_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX6-LABEL: v_fdiv_v2f16_afn_ulp25:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
+; GFX6-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX6-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GFX6-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v1, v1
+; GFX6-NEXT:    v_mul_f32_e32 v0, v0, v3
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-NEXT:    v_mul_f32_e32 v1, v2, v1
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1089,44 +1108,48 @@ define <2 x half> @v_fdiv_v2f16_arcp_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX6-IEEE-LABEL: v_fdiv_v2f16_arcp_ulp25:
 ; GFX6-IEEE:       ; %bb.0:
 ; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; GFX6-IEEE-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX6-IEEE-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v4, s[4:5], v2, v2, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v4, s[4:5], v3, v3, v2
 ; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v5, v4
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v6, vcc, v0, v2, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v6, vcc, v2, v3, v2
 ; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v4, v5, 1.0
 ; GFX6-IEEE-NEXT:    v_fma_f32 v5, v7, v5, v5
 ; GFX6-IEEE-NEXT:    v_mul_f32_e32 v7, v6, v5
 ; GFX6-IEEE-NEXT:    v_fma_f32 v8, -v4, v7, v6
 ; GFX6-IEEE-NEXT:    v_fma_f32 v7, v8, v5, v7
 ; GFX6-IEEE-NEXT:    v_fma_f32 v4, -v4, v7, v6
-; GFX6-IEEE-NEXT:    v_div_fmas_f32 v4, v4, v5, v7
-; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v3, v3, v1
-; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v4, v2
-; GFX6-IEEE-NEXT:    v_div_scale_f32 v5, vcc, v1, v3, v1
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v6, v0
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v0, v4, v5, v7
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v0, v3, v2
 ; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-IEEE-NEXT:    v_fma_f32 v6, -v2, v4, 1.0
-; GFX6-IEEE-NEXT:    v_fma_f32 v4, v6, v4, v4
-; GFX6-IEEE-NEXT:    v_mul_f32_e32 v6, v5, v4
-; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v2, v6, v5
-; GFX6-IEEE-NEXT:    v_fma_f32 v6, v7, v4, v6
-; GFX6-IEEE-NEXT:    v_fma_f32 v2, -v2, v6, v5
-; GFX6-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v4, v6
-; GFX6-IEEE-NEXT:    v_div_fixup_f32 v1, v2, v3, v1
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v6
+; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v4, vcc, v6, v1, v6
+; GFX6-IEEE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v3, v5, v3, v3
+; GFX6-IEEE-NEXT:    v_mul_f32_e32 v5, v4, v3
+; GFX6-IEEE-NEXT:    v_fma_f32 v7, -v2, v5, v4
+; GFX6-IEEE-NEXT:    v_fma_f32 v5, v7, v3, v5
+; GFX6-IEEE-NEXT:    v_fma_f32 v2, -v2, v5, v4
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v1, v2, v1, v6
 ; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-FLUSH-LABEL: v_fdiv_v2f16_arcp_ulp25:
 ; GFX6-FLUSH:       ; %bb.0:
 ; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v4, s[4:5], v2, v2, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; GFX6-FLUSH-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX6-FLUSH-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v4, s[4:5], v3, v3, v2
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v5, v4
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v6, vcc, v0, v2, v0
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v6, vcc, v2, v3, v2
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v4, v5, 1.0
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v5, v7, v5, v5
@@ -1135,25 +1158,25 @@ define <2 x half> @v_fdiv_v2f16_arcp_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v7, v8, v5, v7
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v4, -v4, v7, v6
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v4, v4, v5, v7
-; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v5, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v4, v3, v2
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v3, v3, v1
-; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v2
-; GFX6-FLUSH-NEXT:    v_div_scale_f32 v5, vcc, v1, v3, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v5
+; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v4, vcc, v5, v1, v5
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v2, v4, 1.0
-; GFX6-FLUSH-NEXT:    v_fma_f32 v4, v6, v4, v4
-; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v6, v5, v4
-; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v2, v6, v5
-; GFX6-FLUSH-NEXT:    v_fma_f32 v6, v7, v4, v6
-; GFX6-FLUSH-NEXT:    v_fma_f32 v2, -v2, v6, v5
+; GFX6-FLUSH-NEXT:    v_fma_f32 v6, -v2, v3, 1.0
+; GFX6-FLUSH-NEXT:    v_fma_f32 v3, v6, v3, v3
+; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v6, v4, v3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v7, -v2, v6, v4
+; GFX6-FLUSH-NEXT:    v_fma_f32 v6, v7, v3, v6
+; GFX6-FLUSH-NEXT:    v_fma_f32 v2, -v2, v6, v4
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v4, v6
-; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v1, v2, v3, v1
+; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v6
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v1, v2, v1, v5
 ; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1208,15 +1231,17 @@ define <2 x half> @v_fdiv_v2f16_arcp_afn_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX6-LABEL: v_fdiv_v2f16_arcp_afn_ulp25:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
+; GFX6-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX6-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GFX6-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v1, v1
+; GFX6-NEXT:    v_mul_f32_e32 v0, v0, v3
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-NEXT:    v_mul_f32_e32 v1, v2, v1
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;

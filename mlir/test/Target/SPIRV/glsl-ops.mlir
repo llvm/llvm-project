@@ -1,7 +1,7 @@
 // RUN: mlir-translate -test-spirv-roundtrip %s | FileCheck %s
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
-  spv.func @fmul(%arg0 : f32, %arg1 : f32) "None" {
+  spv.func @fmul(%arg0 : f32, %arg1 : f32, %arg2 : i32) "None" {
     // CHECK: {{%.*}} = spv.GLSL.Exp {{%.*}} : f32
     %0 = spv.GLSL.Exp %arg0 : f32
     // CHECK: {{%.*}} = spv.GLSL.FMax {{%.*}}, {{%.*}} : f32
@@ -30,6 +30,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %12 = spv.GLSL.Round %arg0 : f32
     // CHECK: {{%.*}} = spv.GLSL.FrexpStruct {{%.*}} : f32 -> !spv.struct<(f32, i32)>
     %13 = spv.GLSL.FrexpStruct %arg0 : f32 -> !spv.struct<(f32, i32)>
+    // CHECK: {{%.*}} = spv.GLSL.Ldexp {{%.*}} : f32, {{%.*}} : i32 -> f32
+    %14 = spv.GLSL.Ldexp %arg0 : f32, %arg2 : i32 -> f32
     spv.Return
   }
 

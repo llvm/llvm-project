@@ -71,13 +71,17 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
-- ...
+- -Wshadow now also checks for shadowed structured bindings
 
 Removed Compiler Flags
 -------------------------
 
 - The clang-cl ``/fallback`` flag, which made clang-cl invoke Microsoft Visual
   C++ on files it couldn't compile itself, has been removed.
+
+- ``-Wreturn-std-move-in-c++11``, which checked whether an entity is affected by
+  `CWG1579 <https://wg21.link/CWG1579>`_ to become implicitly movable, has been
+  removed.
 
 New Pragmas in Clang
 --------------------

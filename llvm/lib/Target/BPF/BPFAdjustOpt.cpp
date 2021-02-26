@@ -16,6 +16,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -25,6 +26,7 @@
 #define DEBUG_TYPE "bpf-adjust-opt"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static cl::opt<bool>
     DisableBPFserializeICMP("bpf-disable-serialize-icmp", cl::Hidden,
@@ -115,12 +117,14 @@ bool BPFAdjustOptImpl::serializeICMPInBB(Instruction &I) {
   //   comp2 = icmp <opcode> ...;
   //   new_comp1 = __builtin_bpf_passthrough(seq_num, comp1)
   //   ... or new_comp1 comp2 ...
-  if (I.getOpcode() != Instruction::Or)
+  Value *Op0, *Op1;
+  // Use LogicalOr (accept `or i1` as well as `select i1 Op0, true, Op1`)
+  if (!match(&I, m_LogicalOr(m_Value(Op0), m_Value(Op1))))
     return false;
-  auto *Icmp1 = dyn_cast<ICmpInst>(I.getOperand(0));
+  auto *Icmp1 = dyn_cast<ICmpInst>(Op0);
   if (!Icmp1)
     return false;
-  auto *Icmp2 = dyn_cast<ICmpInst>(I.getOperand(1));
+  auto *Icmp2 = dyn_cast<ICmpInst>(Op1);
   if (!Icmp2)
     return false;
 

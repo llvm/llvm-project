@@ -68,7 +68,7 @@ using namespace llvm;
 #define DEBUG_TYPE "memcpyopt"
 
 static cl::opt<bool>
-    EnableMemorySSA("enable-memcpyopt-memoryssa", cl::init(false), cl::Hidden,
+    EnableMemorySSA("enable-memcpyopt-memoryssa", cl::init(true), cl::Hidden,
                     cl::desc("Use MemorySSA-backed MemCpyOpt."));
 
 STATISTIC(NumMemCpyInstr, "Number of memcpy instructions deleted");
@@ -1541,6 +1541,8 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   MemCpyInst *MDep = nullptr;
   if (EnableMemorySSA) {
     MemoryUseOrDef *CallAccess = MSSA->getMemoryAccess(&CB);
+    if (!CallAccess)
+      return false;
     MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
         CallAccess->getDefiningAccess(), Loc);
     if (auto *MD = dyn_cast<MemoryDef>(Clobber))

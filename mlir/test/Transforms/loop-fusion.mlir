@@ -2835,3 +2835,184 @@ func @should_fuse_multi_store_producer_with_scaping_memrefs_and_preserve_src(
 
   return
 }
+
+// -----
+
+func @should_not_fuse_due_to_dealloc(%arg0: memref<16xf32>){
+  %A = alloc() : memref<16xf32>
+  %C = alloc() : memref<16xf32>
+  %cst_1 = constant 1.000000e+00 : f32
+  affine.for %arg1 = 0 to 16 {
+    %a = affine.load %arg0[%arg1] : memref<16xf32>
+    affine.store %a, %A[%arg1] : memref<16xf32>
+    affine.store %a, %C[%arg1] : memref<16xf32>
+  }
+  dealloc %C : memref<16xf32>
+  %B = alloc() : memref<16xf32>
+  affine.for %arg1 = 0 to 16 {
+    %a = affine.load %A[%arg1] : memref<16xf32>
+    %b = addf %cst_1, %a : f32
+    affine.store %b, %B[%arg1] : memref<16xf32>
+  }
+  dealloc %A : memref<16xf32>
+  return
+}
+// CHECK-LABEL: func @should_not_fuse_due_to_dealloc
+// CHECK:         affine.for
+// CHECK-NEXT:      affine.load
+// CHECK-NEXT:      affine.store
+// CHECK-NEXT:      affine.store
+// CHECK:         dealloc
+// CHECK:         affine.for
+// CHECK-NEXT:      affine.load
+// CHECK-NEXT:      addf
+// CHECK-NEXT:      affine.store
+
+// -----
+
+// CHECK-LABEL: func @should_fuse_defining_node_has_no_dependence_from_source_node
+func @should_fuse_defining_node_has_no_dependence_from_source_node(
+    %a : memref<10xf32>, %b : memref<f32>) -> () {
+  affine.for %i0 = 0 to 10 {
+    %0 = affine.load %b[] : memref<f32>
+    affine.store %0, %a[%i0] : memref<10xf32>
+  }
+  %0 = affine.load %b[] : memref<f32>
+  affine.for %i1 = 0 to 10 {
+    %1 = affine.load %a[%i1] : memref<10xf32>
+    %2 = divf %0, %1 : f32
+  }
+
+	// Loops '%i0' and '%i1' should be fused even though there is a defining
+  // node between the loops. It is because the node has no dependence from '%i0'.
+  // CHECK:       affine.load %{{.*}}[] : memref<f32>
+  // CHECK-NEXT:  affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:    affine.load %{{.*}}[] : memref<f32>
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    divf
+  // CHECK-NEXT:  }
+  // CHECK-NOT:   affine.for
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @should_not_fuse_defining_node_has_dependence_from_source_loop
+func @should_not_fuse_defining_node_has_dependence_from_source_loop(
+    %a : memref<10xf32>, %b : memref<f32>) -> () {
+  %cst = constant 0.000000e+00 : f32
+  affine.for %i0 = 0 to 10 {
+    affine.store %cst, %b[] : memref<f32>
+    affine.store %cst, %a[%i0] : memref<10xf32>
+  }
+  %0 = affine.load %b[] : memref<f32>
+  affine.for %i1 = 0 to 10 {
+    %1 = affine.load %a[%i1] : memref<10xf32>
+    %2 = divf %0, %1 : f32
+  }
+
+	// Loops '%i0' and '%i1' should not be fused because the defining node
+  // of '%0' used in '%i1' has dependence from loop '%i0'.
+  // CHECK:       affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[] : memref<f32>
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:  }
+  // CHECK-NEXT:  affine.load %{{.*}}[] : memref<f32>
+  // CHECK:       affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    divf
+  // CHECK-NEXT:  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @should_not_fuse_defining_node_has_transitive_dependence_from_source_loop
+func @should_not_fuse_defining_node_has_transitive_dependence_from_source_loop(
+    %a : memref<10xf32>, %b : memref<10xf32>, %c : memref<f32>) -> () {
+  %cst = constant 0.000000e+00 : f32
+  affine.for %i0 = 0 to 10 {
+    affine.store %cst, %a[%i0] : memref<10xf32>
+    affine.store %cst, %b[%i0] : memref<10xf32>
+  }
+  affine.for %i1 = 0 to 10 {
+    %1 = affine.load %b[%i1] : memref<10xf32>
+    affine.store %1, %c[] : memref<f32>
+  }
+  %0 = affine.load %c[] : memref<f32>
+  affine.for %i2 = 0 to 10 {
+    %1 = affine.load %a[%i2] : memref<10xf32>
+    %2 = divf %0, %1 : f32
+  }
+
+	// When loops '%i0' and '%i2' are evaluated first, they should not be
+  // fused. The defining node of '%0' in loop '%i2' has transitive dependence
+  // from loop '%i0'. After that, loops '%i0' and '%i1' are evaluated, and they
+  // will be fused as usual.
+  // CHECK:       affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[] : memref<f32>
+  // CHECK-NEXT:  }
+  // CHECK-NEXT:  affine.load %{{.*}}[] : memref<f32>
+  // CHECK:       affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    divf
+  // CHECK-NEXT:  }
+  // CHECK-NOT:   affine.for
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @should_not_fuse_dest_loop_nest_return_value
+func @should_not_fuse_dest_loop_nest_return_value(
+    %a : memref<10xf32>) -> () {
+  %cst = constant 0.000000e+00 : f32
+  affine.for %i0 = 0 to 10 {
+    affine.store %cst, %a[%i0] : memref<10xf32>
+  }
+  %b = affine.for %i1 = 0 to 10 step 2 iter_args(%b_iter = %cst) -> f32 {
+    %load_a = affine.load %a[%i1] : memref<10xf32>
+    affine.yield %load_a: f32
+  }
+
+  // CHECK:       affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:  }
+  // CHECK:       affine.for %{{.*}} = 0 to 10 step 2 iter_args(%{{.*}} = %{{.*}}) -> (f32) {
+  // CHECK-NEXT:    affine.load
+  // CHECK-NEXT:    affine.yield
+  // CHECK-NEXT:  }
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @should_not_fuse_src_loop_nest_return_value
+func @should_not_fuse_src_loop_nest_return_value(
+    %a : memref<10xf32>) -> () {
+  %cst = constant 1.000000e+00 : f32
+  %b = affine.for %i = 0 to 10 step 2 iter_args(%b_iter = %cst) -> f32 {
+    %c = addf %b_iter, %b_iter : f32
+    affine.store %c, %a[%i] : memref<10xf32>
+    affine.yield %c: f32
+  }
+  affine.for %i1 = 0 to 10 {
+    %1 = affine.load %a[%i1] : memref<10xf32>
+  }
+
+  // CHECK:       %{{.*}} = affine.for %{{.*}} = 0 to 10 step 2 iter_args(%{{.*}} = %{{.*}}) -> (f32) {
+  // CHECK-NEXT:    %{{.*}} = addf %{{.*}}, %{{.*}} : f32
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.yield %{{.*}} : f32
+  // CHECK-NEXT:  }
+  // CHECK:       affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:  }
+
+  return
+}

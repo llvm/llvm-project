@@ -425,7 +425,8 @@ def warn_decl_shadow :
           "static data member of %2|"
           "field of %2|"
           "typedef in %2|"
-          "type alias in %2}1">,
+          "type alias in %2|"
+          "structured binding}1">,
   InGroup<Shadow>, DefaultIgnore;
 def warn_decl_shadow_uncaptured_local :
   Warning<warn_decl_shadow.Text>,
@@ -3090,6 +3091,8 @@ def err_only_annotate_after_access_spec : Error<
 
 def err_attribute_section_invalid_for_target : Error<
   "argument to %select{'code_seg'|'section'}1 attribute is not valid for this target: %0">;
+def err_pragma_section_invalid_for_target : Error<
+  "argument to #pragma section is not valid for this target: %0">;
 def warn_attribute_section_drectve : Warning<
   "#pragma %0(\".drectve\") has undefined behavior, "
   "use #pragma comment(linker, ...) instead">, InGroup<MicrosoftDrectveSection>;
@@ -3158,6 +3161,9 @@ def warn_attribute_ignored : Warning<"%0 attribute ignored">,
   InGroup<IgnoredAttributes>;
 def warn_nothrow_attribute_ignored : Warning<"'nothrow' attribute conflicts with"
   " exception specification; attribute ignored">,
+  InGroup<IgnoredAttributes>;
+def warn_attribute_ignored_on_non_definition :
+  Warning<"%0 attribute ignored on a non-definition declaration">,
   InGroup<IgnoredAttributes>;
 def warn_attribute_ignored_on_inline :
   Warning<"%0 attribute ignored on inline function">,
@@ -11130,4 +11136,8 @@ def err_tcb_conflicting_attributes : Error<
 def warn_tcb_enforcement_violation : Warning<
   "calling %0 is a violation of trusted computing base '%1'">,
   InGroup<DiagGroup<"tcb-enforcement">>;
+
+// RISC-V V-extension
+def err_riscvv_builtin_requires_v : Error<
+   "builtin requires 'V' extension support to be enabled">;
 } // end of sema component.

@@ -42,6 +42,7 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -5165,6 +5166,9 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
     return CGF->EmitWebAssemblyBuiltinExpr(BuiltinID, E);
   case llvm::Triple::hexagon:
     return CGF->EmitHexagonBuiltinExpr(BuiltinID, E);
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    return CGF->EmitRISCVBuiltinExpr(BuiltinID, E, ReturnValue);
   default:
     return nullptr;
   }
@@ -5371,7 +5375,10 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP2(vabdq_v, arm_neon_vabdu, arm_neon_vabds, Add1ArgType | UnsignedAlts),
   NEONMAP1(vabs_v, arm_neon_vabs, 0),
   NEONMAP1(vabsq_v, arm_neon_vabs, 0),
+  NEONMAP0(vadd_v),
   NEONMAP0(vaddhn_v),
+  NEONMAP0(vaddq_p128),
+  NEONMAP0(vaddq_v),
   NEONMAP1(vaesdq_v, arm_neon_aesd, 0),
   NEONMAP1(vaeseq_v, arm_neon_aese, 0),
   NEONMAP1(vaesimcq_v, arm_neon_aesimc, 0),
@@ -5665,11 +5672,15 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP0(splatq_laneq_v),
   NEONMAP1(vabs_v, aarch64_neon_abs, 0),
   NEONMAP1(vabsq_v, aarch64_neon_abs, 0),
+  NEONMAP0(vadd_v),
   NEONMAP0(vaddhn_v),
+  NEONMAP0(vaddq_p128),
+  NEONMAP0(vaddq_v),
   NEONMAP1(vaesdq_v, aarch64_crypto_aesd, 0),
   NEONMAP1(vaeseq_v, aarch64_crypto_aese, 0),
   NEONMAP1(vaesimcq_v, aarch64_crypto_aesimc, 0),
   NEONMAP1(vaesmcq_v, aarch64_crypto_aesmc, 0),
+  NEONMAP2(vbcaxq_v, aarch64_crypto_bcaxu, aarch64_crypto_bcaxs, Add1ArgType | UnsignedAlts),
   NEONMAP1(vbfdot_v, aarch64_neon_bfdot, 0),
   NEONMAP1(vbfdotq_v, aarch64_neon_bfdot, 0),
   NEONMAP1(vbfmlalbq_v, aarch64_neon_bfmlalb, 0),
@@ -5739,6 +5750,7 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vcvtx_f32_v, aarch64_neon_fcvtxn, AddRetType | Add1ArgType),
   NEONMAP2(vdot_v, aarch64_neon_udot, aarch64_neon_sdot, 0),
   NEONMAP2(vdotq_v, aarch64_neon_udot, aarch64_neon_sdot, 0),
+  NEONMAP2(veor3q_v, aarch64_crypto_eor3u, aarch64_crypto_eor3s, Add1ArgType | UnsignedAlts),
   NEONMAP0(vext_v),
   NEONMAP0(vextq_v),
   NEONMAP0(vfma_v),
@@ -5804,6 +5816,7 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP2(vqsub_v, aarch64_neon_uqsub, aarch64_neon_sqsub, Add1ArgType | UnsignedAlts),
   NEONMAP2(vqsubq_v, aarch64_neon_uqsub, aarch64_neon_sqsub, Add1ArgType | UnsignedAlts),
   NEONMAP1(vraddhn_v, aarch64_neon_raddhn, Add1ArgType),
+  NEONMAP1(vrax1q_v, aarch64_crypto_rax1, 0),
   NEONMAP2(vrecpe_v, aarch64_neon_frecpe, aarch64_neon_urecpe, 0),
   NEONMAP2(vrecpeq_v, aarch64_neon_frecpe, aarch64_neon_urecpe, 0),
   NEONMAP1(vrecps_v, aarch64_neon_frecps, Add1ArgType),
@@ -5827,6 +5840,10 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vsha256hq_v, aarch64_crypto_sha256h, 0),
   NEONMAP1(vsha256su0q_v, aarch64_crypto_sha256su0, 0),
   NEONMAP1(vsha256su1q_v, aarch64_crypto_sha256su1, 0),
+  NEONMAP1(vsha512h2q_v, aarch64_crypto_sha512h2, 0),
+  NEONMAP1(vsha512hq_v, aarch64_crypto_sha512h, 0),
+  NEONMAP1(vsha512su0q_v, aarch64_crypto_sha512su0, 0),
+  NEONMAP1(vsha512su1q_v, aarch64_crypto_sha512su1, 0),
   NEONMAP0(vshl_n_v),
   NEONMAP2(vshl_v, aarch64_neon_ushl, aarch64_neon_sshl, Add1ArgType | UnsignedAlts),
   NEONMAP0(vshll_n_v),
@@ -5856,6 +5873,7 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vusdot_v, aarch64_neon_usdot, 0),
   NEONMAP1(vusdotq_v, aarch64_neon_usdot, 0),
   NEONMAP1(vusmmlaq_v, aarch64_neon_usmmla, 0),
+  NEONMAP1(vxarq_v, aarch64_crypto_xar, 0),
 };
 
 static const ARMVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
@@ -6302,6 +6320,14 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     if (VTy->getElementType()->isFloatingPointTy())
       return EmitNeonCall(CGM.getIntrinsic(Intrinsic::fabs, Ty), Ops, "vabs");
     return EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Ty), Ops, "vabs");
+  case NEON::BI__builtin_neon_vadd_v:
+  case NEON::BI__builtin_neon_vaddq_v: {
+    llvm::Type *VTy = llvm::FixedVectorType::get(Int8Ty, Quad ? 16 : 8);
+    Ops[0] = Builder.CreateBitCast(Ops[0], VTy);
+    Ops[1] = Builder.CreateBitCast(Ops[1], VTy);
+    Ops[0] =  Builder.CreateXor(Ops[0], Ops[1]);
+    return Builder.CreateBitCast(Ops[0], Ty);
+  }
   case NEON::BI__builtin_neon_vaddhn_v: {
     llvm::FixedVectorType *SrcTy =
         llvm::FixedVectorType::getExtendedElementVectorType(VTy);
@@ -6674,6 +6700,13 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vrshrq_n_v:
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrshr_n",
                         1, true);
+  case NEON::BI__builtin_neon_vsha512hq_v:
+  case NEON::BI__builtin_neon_vsha512h2q_v:
+  case NEON::BI__builtin_neon_vsha512su0q_v:
+  case NEON::BI__builtin_neon_vsha512su1q_v: {
+    Function *F = CGM.getIntrinsic(Int);
+    return EmitNeonCall(F, Ops, "");
+  }
   case NEON::BI__builtin_neon_vshl_n_v:
   case NEON::BI__builtin_neon_vshlq_n_v:
     Ops[1] = EmitNeonShiftVector(Ops[1], Ty, false);
@@ -6818,6 +6851,11 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
       SV = Builder.CreateDefaultAlignedStore(SV, Addr);
     }
     return SV;
+  }
+  case NEON::BI__builtin_neon_vxarq_v: {
+    Function *F = CGM.getIntrinsic(Int);
+    Ops[2] = Builder.CreateZExt(Ops[2], Int64Ty);
+    return EmitNeonCall(F, Ops, "");
   }
   case NEON::BI__builtin_neon_vzip_v:
   case NEON::BI__builtin_neon_vzipq_v: {
@@ -9543,6 +9581,15 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vabsh_f16:
     Ops.push_back(EmitScalarExpr(E->getArg(0)));
     return EmitNeonCall(CGM.getIntrinsic(Intrinsic::fabs, HalfTy), Ops, "vabs");
+  case NEON::BI__builtin_neon_vaddq_p128: {
+    llvm::Type *Ty = GetNeonType(this, NeonTypeFlags::Poly128);
+    Ops.push_back(EmitScalarExpr(E->getArg(1)));
+    Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
+    Ops[1] = Builder.CreateBitCast(Ops[1], Ty);
+    Ops[0] =  Builder.CreateXor(Ops[0], Ops[1]);
+    llvm::Type *Int128Ty = llvm::Type::getIntNTy(getLLVMContext(), 128);
+    return Builder.CreateBitCast(Ops[0], Int128Ty);
+  }
   case NEON::BI__builtin_neon_vldrq_p128: {
     llvm::Type *Int128Ty = llvm::Type::getIntNTy(getLLVMContext(), 128);
     llvm::Type *Int128PTy = llvm::PointerType::get(Int128Ty, 0);
@@ -17685,4 +17732,216 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
   } // switch
 
   return nullptr;
+}
+
+Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
+                                             const CallExpr *E,
+                                             ReturnValueSlot ReturnValue) {
+  SmallVector<Value *, 4> Ops;
+  llvm::Type *ResultType = ConvertType(E->getType());
+
+  for (unsigned i = 0, e = E->getNumArgs(); i != e; i++)
+    Ops.push_back(EmitScalarExpr(E->getArg(i)));
+
+  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+
+  // Required for overloaded intrinsics.
+  llvm::SmallVector<llvm::Type *, 2> IntrinsicTypes;
+  switch (BuiltinID) {
+  // We could generate all the possible combinations and handling code in
+  // a file and include it here, instead of listing all the builtins plainly.
+  // Something like
+  // #include clang/Basic/RISCVVBuiltinCodeGen.inc
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8mf8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8mf8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8mf8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m1_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m8_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32mf2_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16mf4_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8mf8_vl:
+    // The order of operands is (op1, op2, vl).
+    ID = Intrinsic::riscv_vadd;
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType()};
+    break;
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i64m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i32mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i16mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_i8mf8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i64m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i32mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i16mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_i8mf8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u64m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u32mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u16mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vv_u8mf8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m1_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u64m8_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u32mf2_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u16mf4_m_vl:
+  case RISCV::BI__builtin_rvv_vadd_vx_u8mf8_m_vl:
+    ID = Intrinsic::riscv_vadd_mask;
+    // The order of operands is (mask, maskedoff, op1, op2, vl).
+    IntrinsicTypes = {ResultType, Ops[3]->getType(), Ops[4]->getType()};
+    // The order of intrinsic operands is (maskedoff, op1, op2, mask, vl).
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+    break;
+  }
+
+  assert(ID != Intrinsic::not_intrinsic);
+
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
 }

@@ -84,6 +84,7 @@ void registerTestLivenessPass();
 void registerTestLoopFusion();
 void registerTestLoopMappingPass();
 void registerTestLoopUnrollingPass();
+void registerTestMathPolynomialApproximationPass();
 void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
 void registerTestNumberOfBlockExecutionsPass();
@@ -157,6 +158,7 @@ void registerTestPasses() {
   test::registerTestLoopFusion();
   test::registerTestLoopMappingPass();
   test::registerTestLoopUnrollingPass();
+  test::registerTestMathPolynomialApproximationPass();
   test::registerTestMemRefDependenceCheck();
   test::registerTestMemRefStrideCalculation();
   test::registerTestNumberOfBlockExecutionsPass();

@@ -2,6 +2,7 @@
  ; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution | FileCheck %s
  ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 | FileCheck %s
 
+target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64"
 
 ; Collection of cases exercising range logic, mostly (but not exclusively)
 ; involving SCEVUnknowns.
@@ -12,14 +13,31 @@ define i32 @ashr(i32 %a) {
 ; CHECK-LABEL: 'ashr'
 ; CHECK-NEXT:  Classifying expressions for: @ashr
 ; CHECK-NEXT:    %ashr = ashr i32 %a, 31
-; CHECK-NEXT:    --> %ashr U: [0,1) S: [-1,1)
+; CHECK-NEXT:    --> %ashr U: [0,1) S: [0,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @ashr
 ;
+  %ashr = ashr i32 %a, 31
   %pos = icmp sge i32 %a, 0
   call void @llvm.assume(i1 %pos)
-  %ashr = ashr i32 %a, 31
   ret i32 %ashr
 }
+
+; Highlight the fact that non-argument non-instructions are
+; also possible.
+@G = external global i8
+define i64 @ashr_global() {
+; CHECK-LABEL: 'ashr_global'
+; CHECK-NEXT:  Classifying expressions for: @ashr_global
+; CHECK-NEXT:    %ashr = ashr i64 ptrtoint (i8* @G to i64), 63
+; CHECK-NEXT:    --> %ashr U: [-1,1) S: [-1,1)
+; CHECK-NEXT:  Determining loop execution counts for: @ashr_global
+;
+  %ashr = ashr i64 ptrtoint (i8* @G to i64), 63
+  %pos = icmp sge i8* @G, null
+  call void @llvm.assume(i1 %pos)
+  ret i64 %ashr
+}
+
 
 define i32 @shl(i32 %a) {
 ; CHECK-LABEL: 'shl'
@@ -28,9 +46,9 @@ define i32 @shl(i32 %a) {
 ; CHECK-NEXT:    --> (4 * %a) U: [0,-3) S: [-2147483648,2147483645)
 ; CHECK-NEXT:  Determining loop execution counts for: @shl
 ;
-  %pos = icmp slt i32 %a, 1024
-  call void @llvm.assume(i1 %pos)
   %res = shl i32 %a, 2
+  %pos = icmp ult i32 %a, 1024
+  call void @llvm.assume(i1 %pos)
   ret i32 %res
 }
 
@@ -41,9 +59,9 @@ define i32 @lshr(i32 %a) {
 ; CHECK-NEXT:    --> (%a /u -2147483648) U: [0,2) S: [0,2)
 ; CHECK-NEXT:  Determining loop execution counts for: @lshr
 ;
+  %res = lshr i32 %a, 31
   %pos = icmp sge i32 %a, 0
   call void @llvm.assume(i1 %pos)
-  %res = lshr i32 %a, 31
   ret i32 %res
 }
 
@@ -55,34 +73,34 @@ define i32 @udiv(i32 %a) {
 ; CHECK-NEXT:    --> (%a /u -2147483648) U: [0,2) S: [0,2)
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv
 ;
+  %res = udiv i32 %a, 2147483648
   %pos = icmp sge i32 %a, 0
   call void @llvm.assume(i1 %pos)
-  %res = udiv i32 %a, 2147483648
   ret i32 %res
 }
 
-define i64 @sext(i32 %a) {
+define i64 @sext(i8 %a) {
 ; CHECK-LABEL: 'sext'
 ; CHECK-NEXT:  Classifying expressions for: @sext
-; CHECK-NEXT:    %res = sext i32 %a to i64
-; CHECK-NEXT:    --> (sext i32 %a to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
+; CHECK-NEXT:    %res = sext i8 %a to i64
+; CHECK-NEXT:    --> (sext i8 %a to i64) U: [-128,128) S: [-128,128)
 ; CHECK-NEXT:  Determining loop execution counts for: @sext
 ;
-  %pos = icmp sge i32 %a, 0
+  %res = sext i8 %a to i64
+  %pos = icmp sge i8 %a, 0
   call void @llvm.assume(i1 %pos)
-  %res = sext i32 %a to i64
   ret i64 %res
 }
 
-define i64 @zext(i32 %a) {
+define i64 @zext(i8 %a) {
 ; CHECK-LABEL: 'zext'
 ; CHECK-NEXT:  Classifying expressions for: @zext
-; CHECK-NEXT:    %res = zext i32 %a to i64
-; CHECK-NEXT:    --> (zext i32 %a to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:    %res = zext i8 %a to i64
+; CHECK-NEXT:    --> (zext i8 %a to i64) U: [0,256) S: [0,256)
 ; CHECK-NEXT:  Determining loop execution counts for: @zext
 ;
-  %pos = icmp sge i32 %a, 0
+  %res = zext i8 %a to i64
+  %pos = icmp sge i8 %a, 0
   call void @llvm.assume(i1 %pos)
-  %res = zext i32 %a to i64
   ret i64 %res
 }

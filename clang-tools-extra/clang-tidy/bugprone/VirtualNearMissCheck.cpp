@@ -216,10 +216,9 @@ bool VirtualNearMissCheck::isOverriddenByDerivedClass(
 
 void VirtualNearMissCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      cxxMethodDecl(
-          unless(anyOf(isOverride(), isImplicit(), cxxConstructorDecl(),
-                       cxxDestructorDecl(), cxxConversionDecl(), isStatic(),
-                       isOverloadedOperator())))
+      cxxMethodDecl(unless(anyOf(isOverride(), cxxConstructorDecl(),
+                                 cxxDestructorDecl(), cxxConversionDecl(),
+                                 isStatic(), isOverloadedOperator())))
           .bind("method"),
       this);
 }
@@ -234,7 +233,15 @@ void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
   assert(DerivedRD);
 
   for (const auto &BaseSpec : DerivedRD->bases()) {
-    if (const auto *BaseRD = BaseSpec.getType()->getAsCXXRecordDecl()) {
+    const auto *BaseRD = BaseSpec.getType()->getAsCXXRecordDecl();
+    if (const auto *TST =
+            dyn_cast<TemplateSpecializationType>(BaseSpec.getType())) {
+      auto TN = TST->getTemplateName();
+      BaseRD =
+          dyn_cast<CXXRecordDecl>(TN.getAsTemplateDecl()->getTemplatedDecl());
+    }
+
+    if (BaseRD) {
       for (const auto *BaseMD : BaseRD->methods()) {
         if (!isPossibleToBeOverridden(BaseMD))
           continue;
@@ -250,16 +257,12 @@ void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
             auto Range = CharSourceRange::getTokenRange(
                 SourceRange(DerivedMD->getLocation()));
 
-            bool ApplyFix = !BaseMD->isTemplateInstantiation() &&
-                            !DerivedMD->isTemplateInstantiation();
-            auto Diag =
-                diag(DerivedMD->getBeginLoc(),
-                     "method '%0' has a similar name and the same signature as "
-                     "virtual method '%1'; did you mean to override it?")
+            diag(DerivedMD->getBeginLoc(),
+                 "method '%0' has a similar name and the same signature as "
+                 "virtual method '%1'; did you mean to override it?")
                 << DerivedMD->getQualifiedNameAsString()
-                << BaseMD->getQualifiedNameAsString();
-            if (ApplyFix)
-              Diag << FixItHint::CreateReplacement(Range, BaseMD->getName());
+                << BaseMD->getQualifiedNameAsString()
+                << FixItHint::CreateReplacement(Range, BaseMD->getName());
           }
         }
       }

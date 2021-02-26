@@ -582,6 +582,8 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// poison.
   /// Formally, given I = `r = op v1 v2 .. vN`, propagatesPoison returns true
   /// if, for all i, r is evaluated to poison or op raises UB if vi = poison.
+  /// If vi is a vector or an aggregate and r is a single value, any poison
+  /// element in vi should make r poison or raise UB.
   /// To filter out operands that raise UB on poison, you can use
   /// getGuaranteedNonPoisonOp.
   bool propagatesPoison(const Operator *I);

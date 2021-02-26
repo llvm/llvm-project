@@ -126,10 +126,15 @@ static MCInst lowerSubvectorStore(const MachineInstr *MI, unsigned Opcode) {
 
 void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SystemZMCInstLower Lower(MF->getContext(), *this);
+  const SystemZSubtarget *Subtarget = &MF->getSubtarget<SystemZSubtarget>();
   MCInst LoweredMI;
   switch (MI->getOpcode()) {
   case SystemZ::Return:
-    LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R14D);
+    if (Subtarget->isTargetXPLINK64())
+      LoweredMI =
+          MCInstBuilder(SystemZ::B).addReg(SystemZ::R7D).addImm(2).addReg(0);
+    else
+      LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R14D);
     break;
 
   case SystemZ::CondReturn:
@@ -210,6 +215,26 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(SystemZ::R14D)
       .addImm(0);
     break;
+
+  case SystemZ::CallBRASL_XPLINK64:
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(SystemZ::BRASL)
+                       .addReg(SystemZ::R7D)
+                       .addExpr(Lower.getExpr(MI->getOperand(0),
+                                              MCSymbolRefExpr::VK_PLT)));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::BCRAsm).addImm(0).addReg(SystemZ::R3D));
+    return;
+
+  case SystemZ::CallBASR_XPLINK64:
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
+                                     .addReg(SystemZ::R7D)
+                                     .addReg(MI->getOperand(0).getReg()));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::BCRAsm).addImm(0).addReg(SystemZ::R0D));
+    return;
 
   case SystemZ::CallBRASL:
     LoweredMI = MCInstBuilder(SystemZ::BRASL)

@@ -100,6 +100,9 @@ bool UnwindInfoSection::isNeeded() const {
   return (compactUnwindSection != nullptr);
 }
 
+SmallDenseMap<std::pair<InputSection *, uint64_t /* addend */>, macho::Symbol *>
+    personalityTable;
+
 // Compact unwind relocations have different semantics, so we handle them in a
 // separate code path from regular relocations. First, we do not wish to add
 // rebase opcodes for __LD,__compact_unwind, because that section doesn't
@@ -109,25 +112,39 @@ void macho::prepareCompactUnwind(InputSection *isec) {
   assert(isec->segname == segment_names::ld &&
          isec->name == section_names::compactUnwind);
 
-  DenseMap<std::pair<InputSection *, uint64_t /* addend */>, macho::Symbol *>
-      anonPersonalitySymbols;
   for (Reloc &r : isec->relocs) {
-    // TODO: generalize for other archs
-    assert(r.type == X86_64_RELOC_UNSIGNED);
+    assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
     if (r.offset % sizeof(CompactUnwindEntry64) !=
         offsetof(struct CompactUnwindEntry64, personality))
       continue;
 
     if (auto *s = r.referent.dyn_cast<lld::macho::Symbol *>()) {
-      if (auto *undefined = dyn_cast<Undefined>(s))
+      if (auto *undefined = dyn_cast<Undefined>(s)) {
         treatUndefinedSymbol(*undefined);
-      else
-        in.got->addEntry(s);
-    } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
+        continue;
+      }
+      if (auto *defined = dyn_cast<Defined>(s)) {
+        // Check if we have created a synthetic symbol at the same address.
+        macho::Symbol *&personality =
+            personalityTable[{defined->isec, defined->value}];
+        if (personality == nullptr) {
+          personality = defined;
+          in.got->addEntry(defined);
+        } else if (personality != defined) {
+          r.referent = personality;
+        }
+        continue;
+      }
+      assert(isa<DylibSymbol>(s));
+      in.got->addEntry(s);
+      continue;
+    }
+
+    if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
       // Personality functions can be referenced via section relocations
-      // if they live in an object file (instead of a dylib). Create
-      // placeholder synthetic symbols for them in the GOT.
-      macho::Symbol *&s = anonPersonalitySymbols[{referentIsec, r.addend}];
+      // if they live in the same object file. Create placeholder synthetic
+      // symbols for them in the GOT.
+      macho::Symbol *&s = personalityTable[{referentIsec, r.addend}];
       if (s == nullptr) {
         s = make<Defined>("<internal>", nullptr, referentIsec, r.addend, false,
                           false, false);
@@ -225,7 +242,6 @@ void UnwindInfoSection::finalize() {
   size_t cuCount =
       compactUnwindSection->getSize() / sizeof(CompactUnwindEntry64);
   cuVector.resize(cuCount);
-  // Relocate all __LD,__compact_unwind entries
   relocateCompactUnwind(compactUnwindSection, cuVector);
 
   // Rather than sort & fold the 32-byte entries directly, we create a

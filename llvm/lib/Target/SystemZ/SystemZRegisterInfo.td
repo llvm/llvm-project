@@ -31,8 +31,10 @@ def subreg_hl32  : ComposedSubRegIndex<subreg_h64, subreg_l32>;
 // Define a register class that contains values of types TYPES and an
 // associated operand called NAME.  SIZE is the size and alignment
 // of the registers and REGLIST is the list of individual registers.
+// If the user provides an alternate order list of regs, it will be used for
+// XPLINK. Otherwise, by default, XPLINK will use the regList ordering as well
 multiclass SystemZRegClass<string name, list<ValueType> types, int size,
-                           dag regList, bit allocatable = 1> {
+                           dag regList, list<dag> altRegList = [regList], bit allocatable = 1> {
   def AsmOperand : AsmOperandClass {
     let Name = name;
     let ParserMethod = "parse"#name;
@@ -41,6 +43,11 @@ multiclass SystemZRegClass<string name, list<ValueType> types, int size,
   let isAllocatable = allocatable in
     def Bit : RegisterClass<"SystemZ", types, size, regList> {
       let Size = size;
+      let AltOrders = altRegList;
+      let AltOrderSelect = [{
+        const SystemZSubtarget &S = MF.getSubtarget<SystemZSubtarget>();
+        return S.isTargetXPLINK64();
+      }];
     }
   def "" : RegisterOperand<!cast<RegisterClass>(name#"Bit")> {
     let ParserMatchClass = !cast<AsmOperandClass>(name#"AsmOperand");
@@ -85,40 +92,58 @@ foreach I = [0, 2, 4, 6, 8, 10, 12, 14] in {
                      !cast<GPR64>("R"#I#"D")>;
 }
 
-/// Allocate the callee-saved R6-R13 backwards. That way they can be saved
-/// together with R14 and R15 in one prolog instruction.
+/// zLinux: Allocate the callee-saved R6-R13 backwards. That way they can be
+/// saved together with R14 and R15 in one prolog instruction.
+/// XPLINK64: Allocate all registers in natural order
 defm GR32  : SystemZRegClass<"GR32",  [i32], 32,
                              (add (sequence "R%uL",  0, 5),
-                                  (sequence "R%uL", 15, 6))>;
+                                  (sequence "R%uL", 15, 6)),
+                             [(add (sequence "R%uL", 0, 15))]>;
 defm GRH32 : SystemZRegClass<"GRH32", [i32], 32,
                              (add (sequence "R%uH",  0, 5),
-                                  (sequence "R%uH", 15, 6))>;
+                                  (sequence "R%uH", 15, 6)),
+                             [(add (sequence "R%uH", 0, 15))]>;
 defm GR64  : SystemZRegClass<"GR64",  [i64], 64,
                              (add (sequence "R%uD",  0, 5),
-                                  (sequence "R%uD", 15, 6))>;
+                                  (sequence "R%uD", 15, 6)),
+                             [(add (sequence "R%uD",  0, 15))]>;
 
 // Combine the low and high GR32s into a single class.  This can only be
 // used for virtual registers if the high-word facility is available.
+/// XPLINK64: Allocate all registers in natural order
 defm GRX32 : SystemZRegClass<"GRX32", [i32], 32,
                              (add (sequence "R%uL",  0, 5),
                                   (sequence "R%uH",  0, 5),
                                   R15L, R15H, R14L, R14H, R13L, R13H,
                                   R12L, R12H, R11L, R11H, R10L, R10H,
-                                  R9L, R9H, R8L, R8H, R7L, R7H, R6L, R6H)>;
+                                  R9L, R9H, R8L, R8H, R7L, R7H, R6L, R6H),
+                             [(add
+                               R0L, R1L, R2L, R3L, R0H, R1H, R2H, R3H,
+                               R4L, R4H, R5L, R5H, R6L, R6H, R7L, R7H,
+                               R8L, R8H, R9L, R9H, R10L,R10H,R11L,R11H,
+                               R12L,R12H,R13L,R13H,R14L,R14H,R15L,R15H)
+                             ]>;
 
 // The architecture doesn't really have any i128 support, so model the
 // register pairs as untyped instead.
+// XPLINK64: Allocate all registers in natural order
 defm GR128 : SystemZRegClass<"GR128", [untyped], 128,
-                             (add R0Q, R2Q, R4Q, R12Q, R10Q, R8Q, R6Q, R14Q)>;
+                             (add R0Q, R2Q, R4Q, R12Q, R10Q, R8Q, R6Q, R14Q),
+                             [(add R0Q, R2Q, R4Q, R6Q, R8Q, R10Q, R12Q, R14Q)]>;
 
 // Base and index registers.  Everything except R0, which in an address
 // context evaluates as 0.
-defm ADDR32 : SystemZRegClass<"ADDR32", [i32], 32, (sub GR32Bit, R0L)>;
-defm ADDR64 : SystemZRegClass<"ADDR64", [i64], 64, (sub GR64Bit, R0D)>;
+// XPLINK64: Allocate all registers in natural order
+defm ADDR32 : SystemZRegClass<"ADDR32", [i32], 32, (sub GR32Bit, R0L),
+                              [(add (sequence "R%uL",  1, 15))]>;
+defm ADDR64 : SystemZRegClass<"ADDR64", [i64], 64, (sub GR64Bit, R0D),
+                              [(add (sequence "R%uD",  1, 15))]>;
 
 // Not used directly, but needs to exist for ADDR32 and ADDR64 subregs
 // of a GR128.
-defm ADDR128 : SystemZRegClass<"ADDR128", [untyped], 128, (sub GR128Bit, R0Q)>;
+// XPLINK64: Allocate all registers in natural order
+defm ADDR128 : SystemZRegClass<"ADDR128", [untyped], 128, (sub GR128Bit, R0Q),
+                               [(add R2Q, R4Q, R6Q, R8Q, R10Q, R12Q, R14Q)]>;
 
 // Any type register. Used for .insn directives when we don't know what the
 // register types could be.
@@ -126,7 +151,8 @@ defm AnyReg : SystemZRegClass<"AnyReg",
                               [i64, f64, v8i8, v4i16, v2i32, v2f32], 64,
                               (add (sequence "R%uD", 0, 15),
                                    (sequence "F%uD", 0, 15),
-                                   (sequence "V%u", 0, 15)), 0/*allocatable*/>;
+                                   (sequence "V%u", 0, 15)),
+                              [], 0/*allocatable*/>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point registers
@@ -310,7 +336,7 @@ foreach I = 0-15 in {
   def A#I : ACR32<I, "a"#I>, DwarfRegNum<[!add(I, 48)]>;
 }
 defm AR32 : SystemZRegClass<"AR32", [i32], 32,
-                            (add (sequence "A%u", 0, 15)), 0>;
+                            (add (sequence "A%u", 0, 15)), [], 0>;
 
 // Control registers.
 class CREG64<bits<16> num, string n> : SystemZReg<n> {
@@ -320,5 +346,4 @@ foreach I = 0-15 in {
   def C#I : CREG64<I, "c"#I>, DwarfRegNum<[!add(I, 32)]>;
 }
 defm CR64 : SystemZRegClass<"CR64", [i64], 64,
-                            (add (sequence "C%u", 0, 15)), 0>;
-
+                            (add (sequence "C%u", 0, 15)), [], 0>;

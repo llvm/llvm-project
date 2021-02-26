@@ -54,6 +54,14 @@ static void warn(Twine Message, std::string Whence = "",
     WithColor::note() << Hint << "\n";
 }
 
+static void warn(Error E, StringRef Whence = "") {
+  if (E.isA<InstrProfError>()) {
+    handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
+      warn(IPE.message(), std::string(Whence), std::string(""));
+    });
+  }
+}
+
 static void exitWithError(Twine Message, std::string Whence = "",
                           std::string Hint = "") {
   WithColor::error();
@@ -304,9 +312,10 @@ static void writeInstrProfile(StringRef OutputFilename,
 
   if (OutputFormat == PF_Text) {
     if (Error E = Writer.writeText(Output))
-      exitWithError(std::move(E));
+      warn(std::move(E));
   } else {
-    Writer.write(Output);
+    if (Error E = Writer.write(Output))
+      warn(std::move(E));
   }
 }
 

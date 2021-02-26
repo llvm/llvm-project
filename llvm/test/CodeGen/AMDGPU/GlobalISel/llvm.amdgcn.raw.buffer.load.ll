@@ -11,9 +11,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -30,9 +30,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__sgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr7
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY6]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
@@ -51,9 +51,9 @@ define amdgpu_ps float @raw_buffer_load_f32__vgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; CHECK:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; CHECK:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
@@ -93,9 +93,9 @@ define amdgpu_ps float @raw_buffer_load_f32__vgpr_rsrc__vgpr_voffset__vgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; CHECK:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; CHECK:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
@@ -137,9 +137,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -156,9 +156,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 1, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -175,9 +175,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, 0, 1, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -194,9 +194,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 1, 0, 1, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -213,9 +213,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 1, 0, 0, 1, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -232,9 +232,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 1, 1, 0, 1, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -251,9 +251,9 @@ define amdgpu_ps <2 x float> @raw_buffer_load_v2f32__sgpr_rsrc__vgpr_voffset__sg
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORDX2_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 8 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub0
   ; CHECK:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub1
@@ -272,9 +272,9 @@ define amdgpu_ps <3 x float> @raw_buffer_load_v3f32__sgpr_rsrc__vgpr_voffset__sg
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORDX3_OFFEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 12 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_OFFEN]].sub0
   ; CHECK:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_OFFEN]].sub1
@@ -295,9 +295,9 @@ define amdgpu_ps <4 x float> @raw_buffer_load_v4f32__sgpr_rsrc__vgpr_voffset__sg
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORDX4_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub0
   ; CHECK:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub1
@@ -320,9 +320,9 @@ define amdgpu_ps half @raw_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffse
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_USHORT_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 2 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -338,9 +338,9 @@ define amdgpu_ps <2 x half> @raw_buffer_load_v2f16__sgpr_rsrc__vgpr_voffset__sgp
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -362,9 +362,9 @@ define amdgpu_ps <4 x half> @raw_buffer_load_v4f16__sgpr_rsrc__vgpr_voffset__sgp
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORDX2_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 8 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub0
   ; CHECK:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub1
@@ -383,9 +383,9 @@ define amdgpu_ps float @raw_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffse
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_UBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 1 from custom "BufferResource", addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -403,9 +403,9 @@ define amdgpu_ps float @raw_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffse
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_UBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 1 from custom "BufferResource", addrspace 4)
   ; CHECK:   [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[BUFFER_LOAD_UBYTE_OFFEN]], 0, 8, implicit $exec
   ; CHECK:   $vgpr0 = COPY [[V_BFE_I32_e64_]]
@@ -426,9 +426,9 @@ define amdgpu_ps half @raw_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffse
   ; CHECK:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; CHECK:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; CHECK:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
@@ -468,9 +468,9 @@ define amdgpu_ps float @raw_buffer_load_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffse
   ; CHECK:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; CHECK:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; CHECK:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
@@ -510,8 +510,8 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vdpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
-  ; CHECK:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; CHECK:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[REG_SEQUENCE]], [[COPY4]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -527,8 +527,8 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
-  ; CHECK:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; CHECK:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[REG_SEQUENCE]], [[COPY4]], 4095, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource" + 4095, align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -544,8 +544,8 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
-  ; CHECK:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; CHECK:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY5]], [[REG_SEQUENCE]], [[COPY4]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource" + 4096, align 1, addrspace 4)
@@ -563,9 +563,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 16, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource" + 16, align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -582,9 +582,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource" + 4095, align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -601,9 +601,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; CHECK:   %10:vgpr_32, dead %15:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY4]], [[COPY6]], 0, implicit $exec
@@ -623,8 +623,8 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
-  ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4095
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[S_MOV_B32_]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
@@ -641,8 +641,8 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
-  ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[S_MOV_B32_]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
@@ -659,9 +659,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; CHECK:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY5]], [[S_MOV_B32_]], implicit-def $scc
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[S_ADD_I32_]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
@@ -680,9 +680,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4095
   ; CHECK:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY5]], [[S_MOV_B32_]], implicit-def $scc
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[S_ADD_I32_]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
@@ -701,9 +701,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; CHECK:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY5]], [[S_MOV_B32_]], implicit-def $scc
   ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[S_ADD_I32_]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
@@ -724,9 +724,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 5000
   ; CHECK:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY5]], [[S_MOV_B32_]], implicit-def $scc
   ; CHECK:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
@@ -769,9 +769,9 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; CHECK:   %13:vgpr_32, dead %35:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY4]], [[COPY6]], 0, implicit $exec

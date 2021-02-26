@@ -229,8 +229,8 @@ An IR test case for a transformation can, in many cases, be automatically
 mutated to test debug info handling within that transformation. This is a
 simple way to test for proper debug info handling.
 
-The ``debugify`` utility
-^^^^^^^^^^^^^^^^^^^^^^^^
+The ``debugify`` utility pass
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``debugify`` testing utility is just a pair of passes: ``debugify`` and
 ``check-debugify``.
@@ -345,6 +345,21 @@ tests. Changes to this pass are not allowed to break existing tests.
    be precise enough), moving the test to its own file is preferred.
 
 .. _MIRDebugify:
+
+Test original debug info preservation in optimizations
+------------------------------------------------------
+
+In addition to automatically generating debug info, the checks provided by
+the ``debugify`` utility pass can also be used to test the preservation of
+pre-existing debug info metadata. It could be run as follows:
+
+.. code-block:: bash
+
+  # Run the pass by checking original Debug Info preservation.
+  $ opt -verify-debuginfo-preserve -pass-to-test sample.ll
+
+  # Check the preservation of original Debug Info after each pass.
+  $ opt -verify-each-debuginfo-preserve -O2 sample.ll
 
 Mutation testing for MIR-level transformations
 ----------------------------------------------

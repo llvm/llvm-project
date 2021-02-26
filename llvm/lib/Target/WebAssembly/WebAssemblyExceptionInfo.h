@@ -137,7 +137,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &) override;
   void releaseMemory() override;
-  void recalculate(MachineDominatorTree &MDT,
+  void recalculate(MachineFunction &MF, MachineDominatorTree &MDT,
                    const MachineDominanceFrontier &MDF);
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 

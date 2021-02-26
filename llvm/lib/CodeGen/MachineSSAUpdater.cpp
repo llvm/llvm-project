@@ -164,9 +164,7 @@ Register MachineSSAUpdater::GetValueInMiddleOfBlock(MachineBasicBlock *BB) {
   Register SingularValue;
 
   bool isFirstPred = true;
-  for (MachineBasicBlock::pred_iterator PI = BB->pred_begin(),
-         E = BB->pred_end(); PI != E; ++PI) {
-    MachineBasicBlock *PredBB = *PI;
+  for (MachineBasicBlock *PredBB : BB->predecessors()) {
     Register PredVal = GetValueAtEndOfBlockInternal(PredBB);
     PredValues.push_back(std::make_pair(PredBB, PredVal));
 

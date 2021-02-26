@@ -53,8 +53,6 @@ TEST_CASE(test_error_reporting) {
   scoped_test_env env;
   const path file = env.create_file("file1", 42);
   const path file2 = env.create_file("file2", 55);
-  const path non_regular_file = env.create_fifo("non_reg");
-  const path dne = env.make_env_path("dne");
 
   { // exists(to) && equivalent(to, from)
     std::error_code ec;

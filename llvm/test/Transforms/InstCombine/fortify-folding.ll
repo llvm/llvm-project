@@ -33,7 +33,7 @@ define i8* @test_not_memccpy() {
 
 define i8* @test_mempcpy() {
 ; CHECK-LABEL: @test_mempcpy(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(15) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* nonnull align 1 dereferenceable(15) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 15, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(15) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* noundef nonnull align 1 dereferenceable(15) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 15, i1 false)
 ; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 15)
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -103,7 +103,7 @@ define i32 @test_not_sprintf() {
 
 define i8* @test_strcat() {
 ; CHECK-LABEL: @test_strcat(
-; CHECK-NEXT:    [[STRCAT:%.*]] = call i8* @strcat(i8* nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0))
+; CHECK-NEXT:    [[STRCAT:%.*]] = call i8* @strcat(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0))
 ; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0)
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -147,7 +147,7 @@ define i64 @test_not_strlcat() {
 
 define i8* @test_strncat() {
 ; CHECK-LABEL: @test_strncat(
-; CHECK-NEXT:    [[STRNCAT:%.*]] = call i8* @strncat(i8* nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 22)
+; CHECK-NEXT:    [[STRNCAT:%.*]] = call i8* @strncat(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 22)
 ; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0)
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0

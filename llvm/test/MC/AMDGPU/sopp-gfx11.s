@@ -71,6 +71,22 @@ s_waitcnt vmcnt(62) expcnt(6) lgkmcnt(14)
 // GFX11: s_waitcnt vmcnt(62) expcnt(6) lgkmcnt(14) ; encoding: [0xe6,0xf8,0x89,0xbf]
 
 //===----------------------------------------------------------------------===//
+// s_sendmsg
+//===----------------------------------------------------------------------===//
+
+s_sendmsg 2
+// GFX11: s_sendmsg sendmsg(MSG_HS_TESSFACTOR) ; encoding: [0x02,0x00,0xb6,0xbf]
+
+s_sendmsg sendmsg(MSG_HS_TESSFACTOR)
+// GFX11: s_sendmsg sendmsg(MSG_HS_TESSFACTOR) ; encoding: [0x02,0x00,0xb6,0xbf]
+
+s_sendmsg 3
+// GFX11: s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
+
+s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+// GFX11: s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
+
+//===----------------------------------------------------------------------===//
 // s_delay_alu
 //===----------------------------------------------------------------------===//
 

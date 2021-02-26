@@ -157,12 +157,8 @@ void StackSlotColoring::ScanForSpillSlotRefs(MachineFunction &MF) {
   SSRefs.resize(MFI->getObjectIndexEnd());
 
   // FIXME: Need the equivalent of MachineRegisterInfo for frameindex operands.
-  for (MachineFunction::iterator MBBI = MF.begin(), E = MF.end();
-       MBBI != E; ++MBBI) {
-    MachineBasicBlock *MBB = &*MBBI;
-    for (MachineBasicBlock::iterator MII = MBB->begin(), EE = MBB->end();
-         MII != EE; ++MII) {
-      MachineInstr &MI = *MII;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
       for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
         MachineOperand &MO = MI.getOperand(i);
         if (!MO.isFI())
@@ -474,9 +470,8 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     ++I;
   }
 
-  for (SmallVectorImpl<MachineInstr *>::iterator I = toErase.begin(),
-       E = toErase.end(); I != E; ++I)
-    (*I)->eraseFromParent();
+  for (MachineInstr *MI : toErase)
+    MI->eraseFromParent();
 
   return changed;
 }

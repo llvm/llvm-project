@@ -133,6 +133,13 @@ Value *FindAvailableLoadedValue(LoadInst *Load,
                                 bool *IsLoadCSE = nullptr,
                                 unsigned *NumScanedInst = nullptr);
 
+/// This overload provides a more efficient implementation of
+/// FindAvailableLoadedValue() for the case where we are not interested in
+/// finding the closest clobbering instruction if no available load is found.
+/// This overload cannot be used to scan across multiple blocks.
+Value *FindAvailableLoadedValue(LoadInst *Load, AAResults &AA, bool *IsLoadCSE,
+                                unsigned MaxInstsToScan = DefMaxInstsToScan);
+
 /// Scan backwards to see if we have the value of the given pointer available
 /// locally within a small number of instructions.
 ///

@@ -1612,26 +1612,11 @@ SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI,
       return &AMDGPU::SGPR_512RegClass;
     }
   }
-  const TargetRegisterClass *RC = nullptr;
 
-  switch (CI.Width + Paired.Width) {
-  default:
-    return nullptr;
-  case 2:
-    RC = &AMDGPU::VReg_64RegClass;
-    break;
-  case 3:
-    RC = &AMDGPU::VReg_96RegClass;
-    break;
-  case 4:
-    RC = &AMDGPU::VReg_128RegClass;
-    break;
-  }
-
-  if (TRI->hasAGPRs(getDataRegClass(*CI.I)))
-    return TRI->getEquivalentAGPRClass(RC);
-
-  return RC;
+  unsigned BitWidth = 32 * (CI.Width + Paired.Width);
+  return TRI->hasAGPRs(getDataRegClass(*CI.I))
+             ? TRI->getAGPRClassForBitWidth(BitWidth)
+             : TRI->getVGPRClassForBitWidth(BitWidth);
 }
 
 MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(

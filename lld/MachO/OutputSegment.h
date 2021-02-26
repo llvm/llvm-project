@@ -45,6 +45,7 @@ public:
   size_t numNonHiddenSections() const;
 
   uint64_t fileOff = 0;
+  uint64_t fileSize = 0;
   StringRef name;
   uint32_t maxProt = 0;
   uint32_t initProt = 0;

@@ -62,7 +62,7 @@ EXTERN void __kmpc_data_sharing_init_stack_spmd() {
   __kmpc_impl_threadfence_block();
 }
 
-INLINE static void* data_sharing_push_stack_common(size_t PushSize) {
+INLINE static void *data_sharing_push_stack_common(size_t PushSize) {
   ASSERT0(LT_FUSSY, isRuntimeInitialized(), "Expected initialized runtime.");
 
   // Only warp active master threads manage the stack.
@@ -103,7 +103,7 @@ INLINE static void* data_sharing_push_stack_common(size_t PushSize) {
       size_t DefaultSlotSize = DS_Worker_Warp_Slot_Size;
       if (DefaultSlotSize > NewSize)
         NewSize = DefaultSlotSize;
-      NewSlot = (__kmpc_data_sharing_slot *) SafeMalloc(
+      NewSlot = (__kmpc_data_sharing_slot *)SafeMalloc(
           sizeof(__kmpc_data_sharing_slot) + NewSize,
           "Global memory slot allocation.");
 
@@ -163,8 +163,8 @@ EXTERN void *__kmpc_data_sharing_push_stack(size_t DataSize,
 
   // Compute the start address of the frame of each thread in the warp.
   uintptr_t FrameStartAddress =
-      (uintptr_t) data_sharing_push_stack_common(PushSize);
-  FrameStartAddress += (uintptr_t) (GetLaneId() * DataSize);
+      (uintptr_t)data_sharing_push_stack_common(PushSize);
+  FrameStartAddress += (uintptr_t)(GetLaneId() * DataSize);
   return (void *)FrameStartAddress;
 }
 

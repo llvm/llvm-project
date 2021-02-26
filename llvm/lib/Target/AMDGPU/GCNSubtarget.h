@@ -948,6 +948,9 @@ public:
 
   bool hasGFX90AInsts() const { return GFX90AInsts; }
 
+  /// Return if operations acting on VGPR tuples require even alignment.
+  bool needsAlignedVGPRs() const { return GFX90AInsts; }
+
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const {
     return GFX11Insts;
@@ -1000,6 +1003,9 @@ public:
   bool hasMergedShaders() const {
     return getGeneration() >= GFX9;
   }
+
+  // \returns true if the target supports the pre-NGG legacy geometry path.
+  bool hasLegacyGeometry() const { return getGeneration() < GFX11; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {

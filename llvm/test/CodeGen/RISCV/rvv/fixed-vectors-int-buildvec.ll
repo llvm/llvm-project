@@ -5,8 +5,7 @@
 define void @buildvec_vid_v16i8(<16 x i8>* %x) {
 ; CHECK-LABEL: buildvec_vid_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 16
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vid.v v25
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
@@ -17,8 +16,7 @@ define void @buildvec_vid_v16i8(<16 x i8>* %x) {
 define void @buildvec_vid_undefelts_v16i8(<16 x i8>* %x) {
 ; CHECK-LABEL: buildvec_vid_undefelts_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 16
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vid.v v25
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
@@ -32,8 +30,7 @@ define void @buildvec_notquite_vid_v16i8(<16 x i8>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI2_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI2_0)
-; CHECK-NEXT:    addi a2, zero, 16
-; CHECK-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a1)
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
@@ -47,8 +44,7 @@ define void @buildvec_vid_plus_imm_v16i8(<16 x i8>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI3_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI3_0)
-; CHECK-NEXT:    addi a2, zero, 16
-; CHECK-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a1)
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
@@ -62,8 +58,7 @@ define void @buildvec_vid_mpy_imm_v16i8(<16 x i8>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI4_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI4_0)
-; CHECK-NEXT:    addi a2, zero, 16
-; CHECK-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a1)
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret

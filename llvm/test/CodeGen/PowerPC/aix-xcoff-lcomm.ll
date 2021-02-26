@@ -27,7 +27,7 @@
 ; OBJ-NEXT:   NumberOfSections: 2
 ; OBJ-NEXT:   TimeStamp:
 ; OBJ-NEXT:   SymbolTableOffset: 0x64
-; OBJ-NEXT:   SymbolTableEntries: 8
+; OBJ-NEXT:   SymbolTableEntries: 9
 ; OBJ-NEXT:   OptionalHeaderSize: 0x0
 ; OBJ-NEXT:   Flags: 0x0
 ; OBJ-NEXT: }

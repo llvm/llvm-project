@@ -390,7 +390,13 @@ static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
                                                     InstCombinerImpl &IC) {
   auto *Arg = II.getArgOperand(0);
   auto *StrippedArg = Arg->stripPointerCasts();
-  auto *StrippedInvariantGroupsArg = Arg->stripPointerCastsAndInvariantGroups();
+  auto *StrippedInvariantGroupsArg = StrippedArg;
+  while (auto *Intr = dyn_cast<IntrinsicInst>(StrippedInvariantGroupsArg)) {
+    if (Intr->getIntrinsicID() != Intrinsic::launder_invariant_group &&
+        Intr->getIntrinsicID() != Intrinsic::strip_invariant_group)
+      break;
+    StrippedInvariantGroupsArg = Intr->getArgOperand(0)->stripPointerCasts();
+  }
   if (StrippedArg == StrippedInvariantGroupsArg)
     return nullptr; // No launders/strips to remove.
 

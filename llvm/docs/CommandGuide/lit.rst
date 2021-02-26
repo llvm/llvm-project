@@ -154,6 +154,10 @@ EXECUTION OPTIONS
  suite take the most time to execute.  Note that this option is most useful
  with ``-j 1``.
 
+.. option:: --ignore-fail
+
+ Exit with status zero even if some tests fail.
+
 .. option:: --no-indirectly-run-check
 
  Do not error if a test would not be run if the user had specified the
@@ -213,6 +217,21 @@ SELECTION OPTIONS
   ``REGEXP``. The environment variable ``LIT_FILTER`` can be also used in place
   of this option, which is especially useful in environments where the call
   to ``lit`` is issued indirectly.
+
+.. option:: --filter-out=REGEXP
+
+  Filter out those tests whose name matches the regular expression specified in
+  ``REGEXP``. The environment variable ``LIT_FILTER_OUT`` can be also used in
+  place of this option, which is especially useful in environments where the
+  call to ``lit`` is issued indirectly.
+
+.. option:: --xfail=LIST
+
+  Treat those tests whose name is in the semicolon separated list ``LIST`` as
+  ``XFAIL``. This can be helpful when one does not want to modify the test
+  suite. The environment variable ``LIT_XFAIL`` can be also used in place of
+  this option, which is especially useful in environments where the call to
+  ``lit`` is issued indirectly.
 
 ADDITIONAL OPTIONS
 ------------------

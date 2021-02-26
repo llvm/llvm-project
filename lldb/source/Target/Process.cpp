@@ -3374,14 +3374,14 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
         should_resume = !m_thread_list.ShouldStop(event_ptr);
 
       if (was_restarted || should_resume || m_resume_requested) {
-        Vote stop_vote = m_thread_list.ShouldReportStop(event_ptr);
+        Vote report_stop_vote = m_thread_list.ShouldReportStop(event_ptr);
         LLDB_LOGF(log,
                   "Process::ShouldBroadcastEvent: should_resume: %i state: "
-                  "%s was_restarted: %i stop_vote: %d.",
+                  "%s was_restarted: %i report_stop_vote: %d.",
                   should_resume, StateAsCString(state), was_restarted,
-                  stop_vote);
+                  report_stop_vote);
 
-        switch (stop_vote) {
+        switch (report_stop_vote) {
         case eVoteYes:
           return_value = true;
           break;

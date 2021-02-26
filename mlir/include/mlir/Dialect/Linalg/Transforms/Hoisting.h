@@ -16,13 +16,6 @@ struct LogicalResult;
 namespace linalg {
 class PadTensorOp;
 
-/// Hoist alloc/dealloc pairs and alloca op out of immediately enclosing
-/// scf::ForOp if both conditions are true:
-///   1. All operands are defined outside the loop.
-///   2. All uses are ViewLikeOp or DeallocOp.
-// TODO: generalize on a per-need basis.
-void hoistViewAllocOps(FuncOp func);
-
 /// Hoist vector.transfer_read/vector.transfer_write on buffers pairs out of
 /// immediately enclosing scf::ForOp iteratively, if the following conditions
 /// are true:

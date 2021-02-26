@@ -87,7 +87,7 @@ AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
   if (asA == AMDGPUAS::FLAT_ADDRESS &&
       (asB == AMDGPUAS::LOCAL_ADDRESS || asB == AMDGPUAS::PRIVATE_ADDRESS)) {
     const auto *ObjA =
-        getUnderlyingObject(A.Ptr->stripPointerCastsAndInvariantGroups());
+        getUnderlyingObject(A.Ptr->stripPointerCastsForAliasAnalysis());
     if (const LoadInst *LI = dyn_cast<LoadInst>(ObjA)) {
       // If a generic pointer is loaded from the constant address space, it
       // could only be a GLOBAL or CONSTANT one as that address space is soley

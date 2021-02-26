@@ -21,7 +21,7 @@ define i32 @sdiv(i32 %val) nounwind {
 ; CHECK-LABEL: 'sdiv'
 ; CHECK-NEXT:  Classifying expressions for: @sdiv
 ; CHECK-NEXT:    %tmp1 = sdiv i32 %val, 16
-; CHECK-NEXT:    --> %tmp1 U: full-set S: [-134217728,134217728)
+; CHECK-NEXT:    --> %tmp1 U: [-134217728,134217728) S: [-134217728,134217728)
 ; CHECK-NEXT:    %tmp2 = mul i32 %tmp1, 16
 ; CHECK-NEXT:    --> (16 * %tmp1)<nsw> U: [0,-15) S: [-2147483648,2147483633)
 ; CHECK-NEXT:  Determining loop execution counts for: @sdiv

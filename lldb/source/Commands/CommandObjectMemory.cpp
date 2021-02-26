@@ -356,8 +356,8 @@ protected:
       result.AppendErrorWithFormat("%s takes a start address expression with "
                                    "an optional end address expression.\n",
                                    m_cmd_name.c_str());
-      result.AppendRawWarning("Expressions should be quoted if they contain "
-                              "spaces or other special characters.\n");
+      result.AppendWarning("Expressions should be quoted if they contain "
+                           "spaces or other special characters.");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }

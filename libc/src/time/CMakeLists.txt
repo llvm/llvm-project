@@ -4,6 +4,7 @@ add_entrypoint_object(
     mktime.cpp
   HDRS
     mktime.h
+    time_utils.h
   DEPENDS
     libc.include.errno
     libc.include.time

@@ -204,7 +204,7 @@ class Configuration(object):
 
         assert self.cxx_is_clang_cl
         flags = []
-        compile_flags = _prefixed_env_list('INCLUDE', '-isystem')
+        compile_flags = []
         link_flags = _prefixed_env_list('LIB', '-L')
         for path in _split_env_var('LIB'):
             self.add_path(self.exec_env, path)
@@ -272,6 +272,9 @@ class Configuration(object):
             # Don't warn about using common but nonstandard unprefixed functions
             # like chdir, fileno.
             self.cxx.compile_flags += ['-D_CRT_NONSTDC_NO_WARNINGS']
+            # Build the tests in the same configuration as libcxx itself,
+            # to avoid mismatches if linked statically.
+            self.cxx.compile_flags += ['-D_CRT_STDIO_ISO_WIDE_SPECIFIERS']
             # Required so that tests using min/max don't fail on Windows,
             # and so that those tests don't have to be changed to tolerate
             # this insanity.

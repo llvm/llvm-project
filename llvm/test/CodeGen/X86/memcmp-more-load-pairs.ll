@@ -1671,7 +1671,7 @@ define i1 @length24_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
 ; X64-AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vpxor (%rsi), %xmm0, %xmm0
-; X64-AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    sete %al
 ; X64-AVX-NEXT:    retq

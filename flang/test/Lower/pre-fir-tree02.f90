@@ -1,4 +1,4 @@
-! RUN: %f18 -fdebug-pre-fir-tree -fsyntax-only %s | FileCheck %s
+! RUN: %flang_fc1 -fsyntax-only -fdebug-pre-fir-tree %s | FileCheck %s
 
 ! Test Pre-FIR Tree captures all the intended nodes from the parse-tree
 ! Coarray and OpenMP related nodes are tested in other files.

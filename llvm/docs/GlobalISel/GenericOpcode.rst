@@ -743,7 +743,7 @@ These instructions do not correspond to any target instructions. They act as
 hints for various combines.
 
 G_ASSERT_SEXT, G_ASSERT_ZEXT
-^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Signifies that the contents of a register were previously extended from a
 smaller type.

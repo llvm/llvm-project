@@ -95,6 +95,7 @@ class CoverageMappingModuleGen {
   std::vector<FunctionInfo> FunctionRecords;
   std::map<std::string, std::string> ProfilePrefixMap;
 
+  std::string getCurrentDirname();
   std::string normalizeFilename(StringRef Filename);
 
   /// Emit a function record.

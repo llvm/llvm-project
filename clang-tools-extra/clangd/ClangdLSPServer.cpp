@@ -1431,7 +1431,7 @@ void ClangdLSPServer::onAST(const ASTParams &Params,
   Server->getAST(Params.textDocument.uri.file(), Params.range, std::move(CB));
 }
 
-ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
+ClangdLSPServer::ClangdLSPServer(Transport &Transp,
                                  const ThreadsafeFS &TFS,
                                  const ClangdLSPServer::Options &Opts)
     : ShouldProfile(/*Period=*/std::chrono::minutes(5),

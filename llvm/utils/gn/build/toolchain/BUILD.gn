@@ -10,6 +10,9 @@ declare_args() {
   }
 }
 
+assert(!use_goma || goma_dir != "",
+       "set goma_dir to the output of `goma_ctl goma_dir` in your args.gn")
+
 template("unix_toolchain") {
   toolchain(target_name) {
     # https://groups.google.com/a/chromium.org/d/msg/gn-dev/F_lv5T-tNDM

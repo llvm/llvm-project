@@ -1767,8 +1767,22 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
       DC->getParent()->isTranslationUnit())
     EmitFundamentalRTTIDescriptors(RD);
 
-  if (!VTable->isDeclarationForLinker())
+  // Always emit type metadata on non-available_externally definitions, and on
+  // available_externally definitions if we are performing whole program
+  // devirtualization. For WPD we need the type metadata on all vtable
+  // definitions to ensure we associate derived classes with base classes
+  // defined in headers but with a strong definition only in a shared library.
+  if (!VTable->isDeclarationForLinker() ||
+      CGM.getCodeGenOpts().WholeProgramVTables) {
     CGM.EmitVTableTypeMetadata(RD, VTable, VTLayout);
+    // For available_externally definitions, add the vtable to
+    // @llvm.compiler.used so that it isn't deleted before whole program
+    // analysis.
+    if (VTable->isDeclarationForLinker()) {
+      assert(CGM.getCodeGenOpts().WholeProgramVTables);
+      CGM.addCompilerUsedGlobal(VTable);
+    }
+  }
 
   if (VTContext.isRelativeLayout() && !VTable->isDSOLocal())
     CGVT.GenerateRelativeVTableAlias(VTable, VTable->getName());

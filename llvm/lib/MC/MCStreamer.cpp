@@ -991,6 +991,29 @@ void MCStreamer::Finish(SMLoc EndLoc) {
   finishImpl();
 }
 
+void MCStreamer::maybeEmitDwarf64Mark() {
+  if (Context.getDwarfFormat() != dwarf::DWARF64)
+    return;
+  AddComment("DWARF64 Mark");
+  emitInt32(dwarf::DW_LENGTH_DWARF64);
+}
+
+void MCStreamer::emitDwarfUnitLength(uint64_t Length, const Twine &Comment) {
+  assert(Context.getDwarfFormat() == dwarf::DWARF64 ||
+         Length <= dwarf::DW_LENGTH_lo_reserved);
+  maybeEmitDwarf64Mark();
+  AddComment(Comment);
+  emitIntValue(Length, dwarf::getDwarfOffsetByteSize(Context.getDwarfFormat()));
+}
+
+void MCStreamer::emitDwarfUnitLength(const MCSymbol *Hi, const MCSymbol *Lo,
+                                     const Twine &Comment) {
+  maybeEmitDwarf64Mark();
+  AddComment(Comment);
+  emitAbsoluteSymbolDiff(
+      Hi, Lo, dwarf::getDwarfOffsetByteSize(Context.getDwarfFormat()));
+}
+
 void MCStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   visitUsedExpr(*Value);
   Symbol->setVariableValue(Value);

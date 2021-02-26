@@ -28,8 +28,37 @@ struct A
 
 int A::count = 0;
 
+struct bad_ty { };
+
+struct bad_deleter
+{
+    void operator()(bad_ty) { }
+};
+
+struct no_move_deleter
+{
+    no_move_deleter(no_move_deleter const&) = delete;
+    no_move_deleter(no_move_deleter &&) = delete;
+    void operator()(int*) { }
+};
+
+static_assert(!std::is_move_constructible<no_move_deleter>::value, "");
+
 struct Base { };
 struct Derived : Base { };
+
+template<class T>
+class MoveDeleter
+{
+    MoveDeleter();
+    MoveDeleter(MoveDeleter const&);
+public:
+    MoveDeleter(MoveDeleter&&) {};
+
+    explicit MoveDeleter(int) {}
+
+    void operator()(T *ptr) { delete ptr; }
+};
 
 int main(int, char**)
 {
@@ -93,9 +122,23 @@ int main(int, char**)
     assert(A::count == 0);
     assert(test_deleter<A>::count == 0);
     assert(test_deleter<A>::dealloc_count == 1);
-#endif
 
     {
+        MoveDeleter<int> d(0);
+        std::shared_ptr<int> p2(new int, std::move(d), std::allocator<int>());
+        std::shared_ptr<int> p3(nullptr, std::move(d), std::allocator<int>());
+    }
+#endif // TEST_STD_VER >= 11
+
+    {
+        // Make sure we can't construct with:
+        //    a) a deleter that doesn't have an operator ()(int*)
+        //    b) a deleter that doesn't have a move constructor.
+        static_assert(!std::is_constructible<std::shared_ptr<int>, int*, bad_deleter,
+                                             test_allocator<A> >::value, "");
+        static_assert(!std::is_constructible<std::shared_ptr<int>, int*, no_move_deleter,
+                                             test_allocator<A> >::value, "");
+
         // Make sure that we can construct a shared_ptr where the element type and pointer type
         // aren't "convertible" but are "compatible".
         static_assert(!std::is_constructible<std::shared_ptr<Derived[4]>,

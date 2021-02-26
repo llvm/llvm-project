@@ -217,7 +217,7 @@ define <8 x i64> @merge_8i64_i64_1u3u5zu8(i64* %ptr) nounwind uwtable noinline s
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    vmovdqu64 8(%eax), %zmm0
-; X86-AVX512F-NEXT:    vpandq {{\.LCPI.*}}, %zmm0, %zmm0
+; X86-AVX512F-NEXT:    vpandd {{\.LCPI.*}}, %zmm0, %zmm0
 ; X86-AVX512F-NEXT:    retl
   %ptr0 = getelementptr inbounds i64, i64* %ptr, i64 1
   %ptr2 = getelementptr inbounds i64, i64* %ptr, i64 3

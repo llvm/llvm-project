@@ -1,0 +1,50 @@
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: polymorphic_matmul
+  cpp_op_name: PolymorphicMatmulOp
+  doc: |-
+    Type polymorphic matrix multiplication.
+
+    This op is presently here to test a new path for generation and will replace
+    the existing 'matmul' op when ready. Do not use.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !<LinalgTensorDef>
+    name: A
+    usage: input
+    shape: affine_map<()[s0, s1, s2] -> (s0, s2)>
+  - !<LinalgTensorDef>
+    name: B
+    usage: input
+    shape: affine_map<()[s0, s1, s2] -> (s2, s1)>
+  - !<LinalgTensorDef>
+    name: C
+    usage: output
+    shape: affine_map<()[s0, s1, s2] -> (s0, s1)>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0, d2)>
+    - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2, d1)>
+    - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0, d1)>
+  iterator_types:
+  - parallel
+  - parallel
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: C
+    value: !ScalarExpression
+      scalar_apply:
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          scalar_arg: C
+        - !ScalarExpression
+          scalar_apply:
+            fn_name: mul
+            operands:
+            - !ScalarExpression
+              scalar_arg: A
+            - !ScalarExpression
+              scalar_arg: B
+

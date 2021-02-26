@@ -15,8 +15,13 @@
 #define __AMXINTRIN_H
 #ifdef __x86_64__
 
+/* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS_TILE                                                \
   __attribute__((__always_inline__, __nodebug__, __target__("amx-tile")))
+#define __DEFAULT_FN_ATTRS_INT8                                                \
+  __attribute__((__always_inline__, __nodebug__, __target__("amx-int8")))
+#define __DEFAULT_FN_ATTRS_BF16                                                \
+  __attribute__((__always_inline__, __nodebug__, __target__("amx-bf16")))
 
 /// Load tile configuration from a 64-byte memory location specified by
 /// "mem_addr". The tile configuration includes the tile type palette, the
@@ -221,10 +226,8 @@ static __inline__ void __DEFAULT_FN_ATTRS_TILE _tile_release(void) {
 #define _tile_dpbf16ps(dst, src0, src1)                                        \
   __builtin_ia32_tdpbf16ps((dst), (src0), (src1))
 
-#define __DEFAULT_FN_ATTRS_INT8                                                \
-  __attribute__((__always_inline__, __nodebug__, __target__("amx-int8")))
-
 typedef int _tile1024i __attribute__((__vector_size__(1024), __aligned__(64)));
+
 static __inline__ _tile1024i __DEFAULT_FN_ATTRS_INT8
 _tile_loadd_internal(unsigned short m, unsigned short n, const void *base,
                      __SIZE_TYPE__ stride) {
@@ -238,11 +241,35 @@ _tile_dpbssd_internal(unsigned short m, unsigned short n, unsigned short k,
   return __builtin_ia32_tdpbssd_internal(m, n, k, dst, src1, src2);
 }
 
+static __inline__ _tile1024i __DEFAULT_FN_ATTRS_INT8
+_tile_dpbsud_internal(unsigned short m, unsigned short n, unsigned short k,
+                      _tile1024i dst, _tile1024i src1, _tile1024i src2) {
+  return __builtin_ia32_tdpbsud_internal(m, n, k, dst, src1, src2);
+}
+
+static __inline__ _tile1024i __DEFAULT_FN_ATTRS_INT8
+_tile_dpbusd_internal(unsigned short m, unsigned short n, unsigned short k,
+                      _tile1024i dst, _tile1024i src1, _tile1024i src2) {
+  return __builtin_ia32_tdpbusd_internal(m, n, k, dst, src1, src2);
+}
+
+static __inline__ _tile1024i __DEFAULT_FN_ATTRS_INT8
+_tile_dpbuud_internal(unsigned short m, unsigned short n, unsigned short k,
+                      _tile1024i dst, _tile1024i src1, _tile1024i src2) {
+  return __builtin_ia32_tdpbuud_internal(m, n, k, dst, src1, src2);
+}
+
 static __inline__ void __DEFAULT_FN_ATTRS_INT8
 _tile_stored_internal(unsigned short m, unsigned short n, void *base,
                       __SIZE_TYPE__ stride, _tile1024i tile) {
   return __builtin_ia32_tilestored64_internal(m, n, base,
                                               (__SIZE_TYPE__)(stride), tile);
+}
+
+static __inline__ _tile1024i __DEFAULT_FN_ATTRS_BF16
+_tile_tdpbf16ps_internal(unsigned short m, unsigned short n, unsigned short k,
+                         _tile1024i dst, _tile1024i src1, _tile1024i src2) {
+  return __builtin_ia32_tdpbf16ps_internal(m, n, k, dst, src1, src2);
 }
 
 typedef struct __tile1024i_str {
@@ -264,6 +291,27 @@ static void __tile_dpbssd(__tile1024i *dst, __tile1024i src1,
                                     src1.tile, src2.tile);
 }
 
+__DEFAULT_FN_ATTRS_INT8
+static void __tile_dpbsud(__tile1024i *dst, __tile1024i src1,
+                          __tile1024i src2) {
+  dst->tile = _tile_dpbsud_internal(src1.row, src2.col, src1.col, dst->tile,
+                                    src1.tile, src2.tile);
+}
+
+__DEFAULT_FN_ATTRS_INT8
+static void __tile_dpbusd(__tile1024i *dst, __tile1024i src1,
+                          __tile1024i src2) {
+  dst->tile = _tile_dpbusd_internal(src1.row, src2.col, src1.col, dst->tile,
+                                    src1.tile, src2.tile);
+}
+
+__DEFAULT_FN_ATTRS_INT8
+static void __tile_dpbuud(__tile1024i *dst, __tile1024i src1,
+                          __tile1024i src2) {
+  dst->tile = _tile_dpbuud_internal(src1.row, src2.col, src1.col, dst->tile,
+                                    src1.tile, src2.tile);
+}
+
 __DEFAULT_FN_ATTRS_TILE
 static void __tile_stored(void *base, __SIZE_TYPE__ stride, __tile1024i src) {
   _tile_stored_internal(src.row, src.col, base, stride, src.tile);
@@ -273,6 +321,17 @@ __DEFAULT_FN_ATTRS_TILE
 static void __tile_zero(__tile1024i *dst) {
   dst->tile = __builtin_ia32_tilezero_internal(dst->row, dst->col);
 }
+
+__DEFAULT_FN_ATTRS_BF16
+static void __tile_tdpbf16ps(__tile1024i *dst, __tile1024i src1,
+                             __tile1024i src2) {
+  dst->tile = _tile_tdpbf16ps_internal(src1.row, src2.col, src1.col, dst->tile,
+                                       src1.tile, src2.tile);
+}
+
+#undef __DEFAULT_FN_ATTRS_TILE
+#undef __DEFAULT_FN_ATTRS_INT8
+#undef __DEFAULT_FN_ATTRS_BF16
 
 #endif /* __x86_64__ */
 #endif /* __AMXINTRIN_H */

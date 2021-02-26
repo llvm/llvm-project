@@ -875,10 +875,20 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   default:
     llvm_unreachable("Unexpected machine instruction on tile register!");
     break;
+  case X86::COPY: {
+    Register SrcReg = MI->getOperand(1).getReg();
+    ShapeT Shape = getTileShape(SrcReg, VRM, MRI);
+    VRM->assignVirt2Shape(VirtReg, Shape);
+    return Shape;
+  }
   // We only collect the tile shape that is defined.
   case X86::PTILELOADDV:
   case X86::PTDPBSSDV:
+  case X86::PTDPBSUDV:
+  case X86::PTDPBUSDV:
+  case X86::PTDPBUUDV:
   case X86::PTILEZEROV:
+  case X86::PTDPBF16PSV:
     MachineOperand &MO1 = MI->getOperand(1);
     MachineOperand &MO2 = MI->getOperand(2);
     ShapeT Shape(&MO1, &MO2, MRI);

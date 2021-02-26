@@ -69,7 +69,7 @@ bb15_0:                                             ; preds = %bb11
 ; PROMO-NEXT:  %pgocount{{.*}} = load {{.*}} @__profc_foo{{.*}} 4)
 ; PROMO-NEXT: add 
 ; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}4)
-; PROMO-NOT: @__profc_foo
+; PROMO-NOT: @__profc_foo{{.*}})
 
 
 bb15:                                             ; preds = %bb14, %bb4

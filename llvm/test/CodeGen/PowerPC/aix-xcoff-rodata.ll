@@ -82,7 +82,7 @@
 ; OBJ-NEXT:   NumberOfSections: 1
 ; OBJ-NEXT:   TimeStamp: None (0x0)
 ; OBJ-NEXT:   SymbolTableOffset: 0x8C
-; OBJ-NEXT:   SymbolTableEntries: 20
+; OBJ-NEXT:   SymbolTableEntries: 21
 ; OBJ-NEXT:   OptionalHeaderSize: 0x0
 ; OBJ-NEXT:   Flags: 0x0
 ; OBJ-NEXT: }
@@ -138,7 +138,7 @@
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
 ; SYMS-NEXT:       Index: [[#INDX+3]]
-; SYMS-NEXT:       ContainingCsectSymbolIndex: 2
+; SYMS-NEXT:       ContainingCsectSymbolIndex: 3
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
@@ -159,7 +159,7 @@
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
 ; SYMS-NEXT:       Index: [[#INDX+5]]
-; SYMS-NEXT:       ContainingCsectSymbolIndex: 2
+; SYMS-NEXT:       ContainingCsectSymbolIndex: 3
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
@@ -180,7 +180,7 @@
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
 ; SYMS-NEXT:       Index: [[#INDX+7]]
-; SYMS-NEXT:       ContainingCsectSymbolIndex: 2
+; SYMS-NEXT:       ContainingCsectSymbolIndex: 3
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
@@ -201,7 +201,7 @@
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
 ; SYMS-NEXT:       Index: [[#INDX+9]]
-; SYMS-NEXT:       ContainingCsectSymbolIndex: 2
+; SYMS-NEXT:       ContainingCsectSymbolIndex: 3
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
@@ -222,7 +222,7 @@
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
 ; SYMS-NEXT:       Index: [[#INDX+11]]
-; SYMS-NEXT:       ContainingCsectSymbolIndex: 2
+; SYMS-NEXT:       ContainingCsectSymbolIndex: 3
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
@@ -243,7 +243,7 @@
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
 ; SYMS-NEXT:       Index: [[#INDX+13]]
-; SYMS-NEXT:       ContainingCsectSymbolIndex: 2
+; SYMS-NEXT:       ContainingCsectSymbolIndex: 3
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
@@ -264,7 +264,7 @@
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
 ; SYMS-NEXT:       Index: [[#INDX+15]]
-; SYMS-NEXT:       ContainingCsectSymbolIndex: 2
+; SYMS-NEXT:       ContainingCsectSymbolIndex: 3
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
@@ -285,7 +285,7 @@
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
 ; SYMS-NEXT:       Index: [[#INDX+17]]
-; SYMS-NEXT:       ContainingCsectSymbolIndex: 2
+; SYMS-NEXT:       ContainingCsectSymbolIndex: 3
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0

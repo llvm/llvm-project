@@ -170,6 +170,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #pragma GCC system_header
 #endif
 
+// clang-format off
+
 #if _LIBCPP_STD_VER > 11
 # define __cpp_lib_chrono_udls                          201304L
 # define __cpp_lib_complex_udls                         201309L
@@ -364,5 +366,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_stdatomic_h                          202011L
 # define __cpp_lib_string_contains                      202011L
 #endif
+
+// clang-format on
 
 #endif // _LIBCPP_VERSIONH

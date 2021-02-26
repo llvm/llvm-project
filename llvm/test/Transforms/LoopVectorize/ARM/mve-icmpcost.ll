@@ -237,4 +237,31 @@ while.end:                                        ; preds = %while.end.loopexit,
   ret void
 }
 
-attributes #0 = { "target-features"="+mve.fp" }
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %cmp1 = fcmp
+; CHECK: LV: Found an estimated cost of 10 for VF 2 For instruction:   %cmp1 = fcmp
+; CHECK: LV: Found an estimated cost of 36 for VF 4 For instruction:   %cmp1 = fcmp
+define void @floatcmp(float* nocapture readonly %pSrc, i32* nocapture %pDst, i32 %blockSize) #0 {
+entry:
+  %cmp.not7 = icmp eq i32 %blockSize, 0
+  br i1 %cmp.not7, label %while.end, label %while.body
+
+while.body:                                       ; preds = %entry, %while.body
+  %pSrc.addr.010 = phi float* [ %incdec.ptr2, %while.body ], [ %pSrc, %entry ]
+  %blockSize.addr.09 = phi i32 [ %dec, %while.body ], [ %blockSize, %entry ]
+  %pDst.addr.08 = phi i32* [ %incdec.ptr, %while.body ], [ %pDst, %entry ]
+  %0 = load float, float* %pSrc.addr.010, align 4
+  %cmp1 = fcmp nnan ninf nsz olt float %0, 0.000000e+00
+  %cond = select nnan ninf nsz i1 %cmp1, float 1.000000e+01, float %0
+  %conv = fptosi float %cond to i32
+  %incdec.ptr = getelementptr inbounds i32, i32* %pDst.addr.08, i32 1
+  store i32 %conv, i32* %pDst.addr.08, align 4
+  %incdec.ptr2 = getelementptr inbounds float, float* %pSrc.addr.010, i32 1
+  %dec = add i32 %blockSize.addr.09, -1
+  %cmp.not = icmp eq i32 %dec, 0
+  br i1 %cmp.not, label %while.end, label %while.body
+
+while.end:                                        ; preds = %while.body, %entry
+  ret void
+}
+
+attributes #0 = { "target-features"="+mve" }

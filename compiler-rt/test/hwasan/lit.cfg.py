@@ -38,7 +38,7 @@ config.substitutions.append( ("%clangxx_hwasan ", build_invocation(clang_hwasan_
 config.substitutions.append( ("%clangxx_hwasan_oldrt ", build_invocation(clang_hwasan_oldrt_cxxflags)) )
 config.substitutions.append( ("%compiler_rt_libdir", config.compiler_rt_libdir) )
 
-default_hwasan_opts_str = ':'.join(['disable_allocator_tagging=1', 'random_tags=0'] + config.default_sanitizer_opts)
+default_hwasan_opts_str = ':'.join(['disable_allocator_tagging=1', 'random_tags=0', 'fail_without_syscall_abi=0'] + config.default_sanitizer_opts)
 if default_hwasan_opts_str:
   config.environment['HWASAN_OPTIONS'] = default_hwasan_opts_str
   default_hwasan_opts_str += ':'

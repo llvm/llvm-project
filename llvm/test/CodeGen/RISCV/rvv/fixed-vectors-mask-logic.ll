@@ -7,8 +7,7 @@
 define void @and_v8i1(<8 x i1>* %x, <8 x i1>* %y) {
 ; CHECK-LABEL: and_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 8
-; CHECK-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 8, e8,m1,ta,mu
 ; CHECK-NEXT:    vle1.v v25, (a0)
 ; CHECK-NEXT:    vle1.v v26, (a1)
 ; CHECK-NEXT:    vmand.mm v25, v25, v26
@@ -24,8 +23,7 @@ define void @and_v8i1(<8 x i1>* %x, <8 x i1>* %y) {
 define void @or_v16i1(<16 x i1>* %x, <16 x i1>* %y) {
 ; CHECK-LABEL: or_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 16
-; CHECK-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vle1.v v25, (a0)
 ; CHECK-NEXT:    vle1.v v26, (a1)
 ; CHECK-NEXT:    vmor.mm v25, v25, v26
@@ -74,8 +72,7 @@ define void @not_v64i1(<64 x i1>* %x, <64 x i1>* %y) {
 define void @andnot_v8i1(<8 x i1>* %x, <8 x i1>* %y) {
 ; CHECK-LABEL: andnot_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 8
-; CHECK-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 8, e8,m1,ta,mu
 ; CHECK-NEXT:    vle1.v v25, (a0)
 ; CHECK-NEXT:    vle1.v v26, (a1)
 ; CHECK-NEXT:    vmandnot.mm v25, v25, v26
@@ -92,8 +89,7 @@ define void @andnot_v8i1(<8 x i1>* %x, <8 x i1>* %y) {
 define void @ornot_v16i1(<16 x i1>* %x, <16 x i1>* %y) {
 ; CHECK-LABEL: ornot_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 16
-; CHECK-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vle1.v v25, (a0)
 ; CHECK-NEXT:    vle1.v v26, (a1)
 ; CHECK-NEXT:    vmornot.mm v25, v25, v26
@@ -128,8 +124,7 @@ define void @xornot_v32i1(<32 x i1>* %x, <32 x i1>* %y) {
 define void @nand_v8i1(<8 x i1>* %x, <8 x i1>* %y) {
 ; CHECK-LABEL: nand_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 8
-; CHECK-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 8, e8,m1,ta,mu
 ; CHECK-NEXT:    vle1.v v25, (a0)
 ; CHECK-NEXT:    vle1.v v26, (a1)
 ; CHECK-NEXT:    vmnand.mm v25, v25, v26
@@ -146,8 +141,7 @@ define void @nand_v8i1(<8 x i1>* %x, <8 x i1>* %y) {
 define void @nor_v16i1(<16 x i1>* %x, <16 x i1>* %y) {
 ; CHECK-LABEL: nor_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 16
-; CHECK-NEXT:    vsetvli a2, a2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vle1.v v25, (a0)
 ; CHECK-NEXT:    vle1.v v26, (a1)
 ; CHECK-NEXT:    vmnor.mm v25, v25, v26

@@ -2934,35 +2934,24 @@ compiling for OpenCL, examples: ``-c``, ``-O<1-4|s>``, ``-o``, ``-emit-llvm``, e
 
 Some extra options are available to support special OpenCL features.
 
-.. option:: -finclude-default-header
+.. _opencl_cl_no_stdinc:
 
-Adds most of builtin types and function declarations during compilations. By
-default the OpenCL headers are not loaded and therefore certain builtin
-types and most of builtin functions are not declared. To load them
-automatically this flag can be passed to the frontend (see also :ref:`the
-section on the OpenCL Header <opencl_header>`):
+.. option:: -cl-no-stdinc
 
-   .. code-block:: console
-
-     $ clang -Xclang -finclude-default-header test.cl
-
-Note that this is a frontend-only flag and therefore it requires the use of
-flags that forward options to the frontend, e.g. ``-cc1`` or ``-Xclang``.
-
-Alternatively the internal header `opencl-c.h` containing the declarations
-can be included manually using ``-include`` or ``-I`` followed by the path
-to the header location. The header can be found in the clang source tree or
-installation directory.
+Allows to disable all extra types and functions that are not native to the compiler.
+This might reduce the compilation speed marginally but many declarations from the
+OpenCL standard will not be accessible. For example, the following will fail to
+compile.
 
    .. code-block:: console
 
-     $ clang -I<path to clang sources>/lib/Headers/opencl-c.h test.cl
-     $ clang -I<path to clang installation>/lib/clang/<llvm version>/include/opencl-c.h/opencl-c.h test.cl
+     $ echo "bool is_wg_uniform(int i){return get_enqueued_local_size(i)==get_local_size(i);}" > test.cl
+     $ clang -cl-std=CL2.0 -cl-no-stdinc test.cl
+     error: use of undeclared identifier 'get_enqueued_local_size'
+     error: use of undeclared identifier 'get_local_size'
 
-In this example it is assumed that the kernel code contains
-``#include <opencl-c.h>`` just as a regular C include.
-
-More options are documented in :doc:`OpenCLSupport`.
+More information about the standard types and functions is provided in :ref:`the
+section on the OpenCL Header <opencl_header>`.
 
 OpenCL Targets
 --------------
@@ -2999,11 +2988,8 @@ Generic Targets
 
    .. code-block:: console
 
-    $ clang -cc1 -triple=spir test.cl
-    $ clang -cc1 -triple=spir64 test.cl
-
-  Note that this is a frontend-only target and therefore it requires the use of
-  flags that forward options to the frontend e.g. ``-cc1`` or ``-Xclang``.
+    $ clang -target spir test.cl -emit-llvm -c
+    $ clang -target spir64 test.cl -emit-llvm -c
 
   All known OpenCL extensions are supported in the SPIR targets. Clang will
   generate SPIR v1.2 compatible IR for OpenCL versions up to 2.0 and SPIR v2.0
@@ -3026,31 +3012,21 @@ Generic Targets
 OpenCL Header
 -------------
 
-By default Clang will not include standard headers and therefore OpenCL builtin
-functions and some types (i.e. vectors) are unknown during compilation. The
-default CL header is, however, provided in the Clang installation and can be
-enabled by passing the ``-finclude-default-header`` flag (see :ref:`flags
-description <opencl_cl_ext>` for more details).
+By default Clang will include standard headers and therefore most of OpenCL
+builtin functions and types are available during compilation. The
+default declarations of non-native compiler types and functions can be disabled
+by using flag :ref:`-cl-no-stdinc <opencl_cl_no_stdinc>`.
+
+The following example demonstrates that OpenCL kernel sources with various
+standard builtin functions can be compiled without the need for an explicit
+includes or compiler flags.
 
    .. code-block:: console
 
      $ echo "bool is_wg_uniform(int i){return get_enqueued_local_size(i)==get_local_size(i);}" > test.cl
-     $ clang -Xclang -finclude-default-header -cl-std=CL2.0 test.cl
+     $ clang -cl-std=CL2.0 test.cl
 
-Because the header is very large and long to parse, PCH (:doc:`PCHInternals`)
-and modules (:doc:`Modules`) are used internally to improve the compilation
-speed.
-
-To enable modules for OpenCL:
-
-   .. code-block:: console
-
-     $ clang -target spir-unknown-unknown -c -emit-llvm -Xclang -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=<path to the generated module> test.cl
-
-Another way to circumvent long parsing latency for the OpenCL builtin
-declarations is to use mechanism enabled by ``-fdeclare-opencl-builtins`` flag
-that is available as an experimental feature (see more information in
-:doc:`OpenCLSupport`).
+More information about the default headers is provided in :doc:`OpenCLSupport`.
 
 OpenCL Extensions
 -----------------

@@ -136,7 +136,7 @@ public:
   ///
   ///{
   /// Get the complete payload attached to @p Node.
-  static IslAstUserPayload *getNodePayload(__isl_keep isl_ast_node *Node);
+  static IslAstUserPayload *getNodePayload(const isl::ast_node &Node);
 
   /// Is this loop an innermost loop?
   static bool isInnermost(__isl_keep isl_ast_node *Node);

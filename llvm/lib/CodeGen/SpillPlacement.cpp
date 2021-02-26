@@ -121,9 +121,9 @@ struct SpillPlacement::Node {
     SumLinkWeights += w;
 
     // There can be multiple links to the same bundle, add them up.
-    for (LinkVector::iterator I = Links.begin(), E = Links.end(); I != E; ++I)
-      if (I->second == b) {
-        I->first += w;
+    for (std::pair<BlockFrequency, unsigned> &L : Links)
+      if (L.second == b) {
+        L.first += w;
         return;
       }
     // This must be the first link to b.
@@ -153,11 +153,11 @@ struct SpillPlacement::Node {
     // Compute the weighted sum of inputs.
     BlockFrequency SumN = BiasN;
     BlockFrequency SumP = BiasP;
-    for (LinkVector::iterator I = Links.begin(), E = Links.end(); I != E; ++I) {
-      if (nodes[I->second].Value == -1)
-        SumN += I->first;
-      else if (nodes[I->second].Value == 1)
-        SumP += I->first;
+    for (std::pair<BlockFrequency, unsigned> &L : Links) {
+      if (nodes[L.second].Value == -1)
+        SumN += L.first;
+      else if (nodes[L.second].Value == 1)
+        SumP += L.first;
     }
 
     // Each weighted sum is going to be less than the total frequency of the
@@ -258,35 +258,33 @@ void SpillPlacement::setThreshold(const BlockFrequency &Entry) {
 /// addConstraints - Compute node biases and weights from a set of constraints.
 /// Set a bit in NodeMask for each active node.
 void SpillPlacement::addConstraints(ArrayRef<BlockConstraint> LiveBlocks) {
-  for (ArrayRef<BlockConstraint>::iterator I = LiveBlocks.begin(),
-       E = LiveBlocks.end(); I != E; ++I) {
-    BlockFrequency Freq = BlockFrequencies[I->Number];
+  for (const BlockConstraint &LB : LiveBlocks) {
+    BlockFrequency Freq = BlockFrequencies[LB.Number];
 
     // Live-in to block?
-    if (I->Entry != DontCare) {
-      unsigned ib = bundles->getBundle(I->Number, false);
+    if (LB.Entry != DontCare) {
+      unsigned ib = bundles->getBundle(LB.Number, false);
       activate(ib);
-      nodes[ib].addBias(Freq, I->Entry);
+      nodes[ib].addBias(Freq, LB.Entry);
     }
 
     // Live-out from block?
-    if (I->Exit != DontCare) {
-      unsigned ob = bundles->getBundle(I->Number, true);
+    if (LB.Exit != DontCare) {
+      unsigned ob = bundles->getBundle(LB.Number, true);
       activate(ob);
-      nodes[ob].addBias(Freq, I->Exit);
+      nodes[ob].addBias(Freq, LB.Exit);
     }
   }
 }
 
 /// addPrefSpill - Same as addConstraints(PrefSpill)
 void SpillPlacement::addPrefSpill(ArrayRef<unsigned> Blocks, bool Strong) {
-  for (ArrayRef<unsigned>::iterator I = Blocks.begin(), E = Blocks.end();
-       I != E; ++I) {
-    BlockFrequency Freq = BlockFrequencies[*I];
+  for (unsigned B : Blocks) {
+    BlockFrequency Freq = BlockFrequencies[B];
     if (Strong)
       Freq += Freq;
-    unsigned ib = bundles->getBundle(*I, false);
-    unsigned ob = bundles->getBundle(*I, true);
+    unsigned ib = bundles->getBundle(B, false);
+    unsigned ob = bundles->getBundle(B, true);
     activate(ib);
     activate(ob);
     nodes[ib].addBias(Freq, PrefSpill);
@@ -295,9 +293,7 @@ void SpillPlacement::addPrefSpill(ArrayRef<unsigned> Blocks, bool Strong) {
 }
 
 void SpillPlacement::addLinks(ArrayRef<unsigned> Links) {
-  for (ArrayRef<unsigned>::iterator I = Links.begin(), E = Links.end(); I != E;
-       ++I) {
-    unsigned Number = *I;
+  for (unsigned Number : Links) {
     unsigned ib = bundles->getBundle(Number, false);
     unsigned ob = bundles->getBundle(Number, true);
 

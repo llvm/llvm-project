@@ -241,7 +241,7 @@ int runJit(mlir::ModuleOp module) {
   auto &engine = maybeEngine.get();
 
   // Invoke the JIT-compiled function.
-  auto invocationResult = engine->invoke("main");
+  auto invocationResult = engine->invokePacked("main");
   if (invocationResult) {
     llvm::errs() << "JIT invocation failed\n";
     return -1;

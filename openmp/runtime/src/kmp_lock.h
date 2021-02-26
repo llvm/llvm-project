@@ -655,9 +655,8 @@ extern int (*__kmp_acquire_user_lock_with_checks_)(kmp_user_lock_p lck,
       KMP_INIT_YIELD(spins);                                                   \
       do {                                                                     \
         KMP_YIELD_OVERSUB_ELSE_SPIN(spins);                                    \
-      } while (                                                                \
-          lck->tas.lk.poll != 0 ||                                             \
-          !__kmp_atomic_compare_store_acq(&lck->tas.lk.poll, 0, gtid + 1));    \
+      } while (lck->tas.lk.poll != 0 || !__kmp_atomic_compare_store_acq(       \
+                                            &lck->tas.lk.poll, 0, gtid + 1));  \
     }                                                                          \
     KMP_FSYNC_ACQUIRED(lck);                                                   \
   } else {                                                                     \

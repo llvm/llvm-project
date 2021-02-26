@@ -68,7 +68,9 @@ def main(builtin_params={}):
     determine_order(discovered_tests, opts.order)
 
     selected_tests = [t for t in discovered_tests if
-                      opts.filter.search(t.getFullName())]
+        opts.filter.search(t.getFullName()) and not
+        opts.filter_out.search(t.getFullName())]
+
     if not selected_tests:
         sys.stderr.write('error: filter did not match any tests '
                          '(of %d discovered).  ' % len(discovered_tests))
@@ -95,6 +97,8 @@ def main(builtin_params={}):
 
     selected_tests = selected_tests[:opts.max_tests]
 
+    mark_xfail(discovered_tests, opts)
+
     mark_excluded(discovered_tests, selected_tests)
 
     start = time.time()
@@ -118,8 +122,11 @@ def main(builtin_params={}):
 
     has_failure = any(t.isFailure() for t in discovered_tests)
     if has_failure:
-        sys.exit(1)
-
+        if opts.ignoreFail:
+            sys.stderr.write("\nExiting with status 0 instead of 1 because "
+                             "'--ignore-fail' was specified.\n")
+        else:
+            sys.exit(1)
 
 def create_params(builtin_params, user_params):
     def parse(p):
@@ -188,6 +195,11 @@ def filter_by_shard(tests, run, shards, lit_config):
     lit_config.note(msg)
     return selected_tests
 
+
+def mark_xfail(selected_tests, opts):
+    for t in selected_tests:
+        if os.sep.join(t.path_in_suite) in opts.xfail:
+            t.xfails += '*'
 
 def mark_excluded(discovered_tests, selected_tests):
     excluded_tests = set(discovered_tests) - set(selected_tests)

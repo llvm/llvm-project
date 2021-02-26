@@ -31,7 +31,7 @@
 // RUN: %clang -O2 -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=memory %s -S -emit-llvm -o - | FileCheck %s
 // RUN: %clang -O3 -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=memory %s -S -emit-llvm -o - | FileCheck %s
 // RUN: %clang     -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=memory %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefixes=CHECK0
-// FIX: %clang -O2 -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=memory %s -S -emit-llvm -flto=thin -o - | FileCheck %s
+// RUN: %clang -O2 -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=memory %s -S -emit-llvm -flto=thin -o - | FileCheck %s
 // RUN: %clang     -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=memory %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefixes=CHECK0
 // RUN: %clang -O2 -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=memory %s -S -emit-llvm -flto -o - | FileCheck %s
 
@@ -40,7 +40,7 @@
 // RUN: %clang -O2 -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=kernel-memory  %s -S -emit-llvm -o - | FileCheck %s
 // RUN: %clang -O3 -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=kernel-memory  %s -S -emit-llvm -o - | FileCheck %s
 // RUN: %clang     -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=kernel-memory %s -S -emit-llvm -flto=thin -o - | FileCheck %s --check-prefixes=CHECK0
-// FIX: %clang -O2 -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=kernel-memory %s -S -emit-llvm -flto=thin -o - | FileCheck %s
+// RUN: %clang -O2 -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=kernel-memory %s -S -emit-llvm -flto=thin -o - | FileCheck %s
 // RUN: %clang     -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=kernel-memory %s -S -emit-llvm -flto -o - | FileCheck %s --check-prefixes=CHECK0
 // RUN: %clang -O2 -fexperimental-new-pass-manager -target x86_64-unknown-linux -fsanitize=kernel-memory %s -S -emit-llvm -flto -o - | FileCheck %s
 

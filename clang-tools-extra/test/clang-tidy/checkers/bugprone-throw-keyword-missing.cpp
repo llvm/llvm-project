@@ -94,8 +94,17 @@ void nameContainsExceptionThrownTest(int i) {
 template <class Exception>
 void f(int i, Exception excToBeThrown) {}
 
+template <class SomeType>
+void templ(int i) {
+  if (i > 0)
+    SomeType();
+}
+
 void funcCallWithTempExcTest() {
   f(5, RegularException());
+
+  templ<RegularException>(4);
+  templ<RegularClass>(4);
 }
 
 // Global variable initialization test.

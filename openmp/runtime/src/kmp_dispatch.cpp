@@ -391,7 +391,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       schedule = kmp_sch_dynamic_chunked;
       KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d switching to "
                      "kmp_sch_dynamic_chunked\n",
-                      gtid));
+                     gtid));
       if (pr->u.p.parm1 <= 0)
         pr->u.p.parm1 = KMP_DEFAULT_CHUNK;
       break;
@@ -615,8 +615,9 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
 #define GUIDED_ANALYTICAL_WORKAROUND (x)
 #endif
         /* dynamic-style scheduling offset */
-        pr->u.p.count = tc - __kmp_dispatch_guided_remaining(
-                                 tc, GUIDED_ANALYTICAL_WORKAROUND, cross) -
+        pr->u.p.count = tc -
+                        __kmp_dispatch_guided_remaining(
+                            tc, GUIDED_ANALYTICAL_WORKAROUND, cross) -
                         cross * chunk;
 #if KMP_USE_X87CONTROL
         // restore FPCW
@@ -642,9 +643,10 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     break;
   case kmp_sch_static_chunked:
   case kmp_sch_dynamic_chunked:
-    if (pr->u.p.parm1 <= 0) {
+    if (pr->u.p.parm1 <= 0)
       pr->u.p.parm1 = KMP_DEFAULT_CHUNK;
-    }
+    else if (pr->u.p.parm1 > tc)
+      pr->u.p.parm1 = tc;
     KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d "
                    "kmp_sch_static_chunked/kmp_sch_dynamic_chunked cases\n",
                    gtid));
@@ -702,7 +704,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     __kmp_fatal(KMP_MSG(UnknownSchedTypeDetected), // Primary message
                 KMP_HNT(GetNewerLibrary), // Hint
                 __kmp_msg_null // Variadic argument list terminator
-                );
+    );
   } break;
   } // switch
   pr->schedule = schedule;
@@ -1814,7 +1816,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
     __kmp_fatal(KMP_MSG(UnknownSchedTypeDetected), // Primary message
                 KMP_HNT(GetNewerLibrary), // Hint
                 __kmp_msg_null // Variadic argument list terminator
-                );
+    );
   } break;
   } // switch
   if (p_last)
@@ -1902,7 +1904,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
                                ,
                                void *codeptr
 #endif
-                               ) {
+) {
 
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
@@ -2429,7 +2431,7 @@ int __kmpc_dispatch_next_4(ident_t *loc, kmp_int32 gtid, kmp_int32 *p_last,
                                         ,
                                         OMPT_LOAD_RETURN_ADDRESS(gtid)
 #endif
-                                            );
+  );
 }
 
 /*!
@@ -2446,7 +2448,7 @@ int __kmpc_dispatch_next_4u(ident_t *loc, kmp_int32 gtid, kmp_int32 *p_last,
                                          ,
                                          OMPT_LOAD_RETURN_ADDRESS(gtid)
 #endif
-                                             );
+  );
 }
 
 /*!
@@ -2462,7 +2464,7 @@ int __kmpc_dispatch_next_8(ident_t *loc, kmp_int32 gtid, kmp_int32 *p_last,
                                         ,
                                         OMPT_LOAD_RETURN_ADDRESS(gtid)
 #endif
-                                            );
+  );
 }
 
 /*!
@@ -2479,7 +2481,7 @@ int __kmpc_dispatch_next_8u(ident_t *loc, kmp_int32 gtid, kmp_int32 *p_last,
                                          ,
                                          OMPT_LOAD_RETURN_ADDRESS(gtid)
 #endif
-                                             );
+  );
 }
 
 /*!
@@ -2541,7 +2543,7 @@ kmp_uint32
 __kmp_wait_4(volatile kmp_uint32 *spinner, kmp_uint32 checker,
              kmp_uint32 (*pred)(kmp_uint32, kmp_uint32),
              void *obj // Higher-level synchronization object, or NULL.
-             ) {
+) {
   // note: we may not belong to a team at this point
   volatile kmp_uint32 *spin = spinner;
   kmp_uint32 check = checker;
@@ -2567,7 +2569,7 @@ __kmp_wait_4(volatile kmp_uint32 *spinner, kmp_uint32 checker,
 void __kmp_wait_4_ptr(void *spinner, kmp_uint32 checker,
                       kmp_uint32 (*pred)(void *, kmp_uint32),
                       void *obj // Higher-level synchronization object, or NULL.
-                      ) {
+) {
   // note: we may not belong to a team at this point
   void *spin = spinner;
   kmp_uint32 check = checker;

@@ -3381,7 +3381,7 @@ void __kmpc_atomic_1(ident_t *id_ref, int gtid, void *lhs, void *rhs,
 #else
       TRUE
 #endif // KMP_ARCH_X86 && defined(KMP_GOMP_COMPAT)
-      ) {
+  ) {
     kmp_int8 old_value, new_value;
 
     old_value = *(kmp_int8 *)lhs;
@@ -3398,7 +3398,7 @@ void __kmpc_atomic_1(ident_t *id_ref, int gtid, void *lhs, void *rhs,
 
     return;
   } else {
-// All 1-byte data is of integer data type.
+    // All 1-byte data is of integer data type.
 
 #ifdef KMP_GOMP_COMPAT
     if (__kmp_atomic_mode == 2) {
@@ -3428,7 +3428,7 @@ void __kmpc_atomic_2(ident_t *id_ref, int gtid, void *lhs, void *rhs,
 #else
       !((kmp_uintptr_t)lhs & 0x1) /* make sure address is 2-byte aligned */
 #endif // KMP_ARCH_X86 && defined(KMP_GOMP_COMPAT)
-      ) {
+  ) {
     kmp_int16 old_value, new_value;
 
     old_value = *(kmp_int16 *)lhs;
@@ -3445,7 +3445,7 @@ void __kmpc_atomic_2(ident_t *id_ref, int gtid, void *lhs, void *rhs,
 
     return;
   } else {
-// All 2-byte data is of integer data type.
+    // All 2-byte data is of integer data type.
 
 #ifdef KMP_GOMP_COMPAT
     if (__kmp_atomic_mode == 2) {
@@ -3477,7 +3477,7 @@ void __kmpc_atomic_4(ident_t *id_ref, int gtid, void *lhs, void *rhs,
 #else
       !((kmp_uintptr_t)lhs & 0x3) /* make sure address is 4-byte aligned */
 #endif // KMP_ARCH_X86 || KMP_ARCH_X86_64
-      ) {
+  ) {
     kmp_int32 old_value, new_value;
 
     old_value = *(kmp_int32 *)lhs;
@@ -3494,8 +3494,8 @@ void __kmpc_atomic_4(ident_t *id_ref, int gtid, void *lhs, void *rhs,
 
     return;
   } else {
-// Use __kmp_atomic_lock_4i for all 4-byte data,
-// even if it isn't of integer data type.
+    // Use __kmp_atomic_lock_4i for all 4-byte data,
+    // even if it isn't of integer data type.
 
 #ifdef KMP_GOMP_COMPAT
     if (__kmp_atomic_mode == 2) {
@@ -3527,7 +3527,7 @@ void __kmpc_atomic_8(ident_t *id_ref, int gtid, void *lhs, void *rhs,
 #else
       !((kmp_uintptr_t)lhs & 0x7) /* make sure address is 8-byte aligned */
 #endif // KMP_ARCH_X86 && defined(KMP_GOMP_COMPAT)
-      ) {
+  ) {
     kmp_int64 old_value, new_value;
 
     old_value = *(kmp_int64 *)lhs;
@@ -3543,8 +3543,8 @@ void __kmpc_atomic_8(ident_t *id_ref, int gtid, void *lhs, void *rhs,
 
     return;
   } else {
-// Use __kmp_atomic_lock_8i for all 8-byte data,
-// even if it isn't of integer data type.
+    // Use __kmp_atomic_lock_8i for all 8-byte data,
+    // even if it isn't of integer data type.
 
 #ifdef KMP_GOMP_COMPAT
     if (__kmp_atomic_mode == 2) {

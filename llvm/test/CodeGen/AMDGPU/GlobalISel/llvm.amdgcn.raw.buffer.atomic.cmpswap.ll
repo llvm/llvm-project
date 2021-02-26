@@ -12,9 +12,9 @@ define amdgpu_ps float @raw_buffer_atomic_cmpswap_i32__vgpr_val__vgpr_cmp__sgpr_
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; CHECK:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; CHECK:   [[BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN [[REG_SEQUENCE1]], [[COPY6]], [[REG_SEQUENCE]], [[COPY7]], 0, 1, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN]].sub0
@@ -36,9 +36,9 @@ define amdgpu_ps void @raw_buffer_atomic_cmpswap_i32_noret__vgpr_val__vgpr_cmp__
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; CHECK:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; CHECK:   [[BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN [[REG_SEQUENCE1]], [[COPY6]], [[REG_SEQUENCE]], [[COPY7]], 0, 1, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN]].sub0
@@ -59,9 +59,9 @@ define amdgpu_ps float @raw_buffer_atomic_cmpswap_i32__sgpr_val__sgpr_cmp__vgpr_
   ; CHECK:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; CHECK:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr4
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; CHECK:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; CHECK:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; CHECK:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
@@ -112,9 +112,9 @@ define amdgpu_ps void @raw_buffer_atomic_cmpswap_i32_noret__sgpr_val__sgpr_cmp__
   ; CHECK:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; CHECK:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr4
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; CHECK:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; CHECK:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; CHECK:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
@@ -161,9 +161,9 @@ define amdgpu_ps float @raw_buffer_atomic_cmpswap_i32__vgpr_val__vgpr_cmp__sgpr_
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; CHECK:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; CHECK:   [[BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN [[REG_SEQUENCE1]], [[COPY6]], [[REG_SEQUENCE]], [[COPY7]], 4095, 1, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource" + 4095, align 1, addrspace 4)
   ; CHECK:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN]].sub0

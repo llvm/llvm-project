@@ -2166,6 +2166,10 @@ class CXXCtorInitializer final {
   llvm::PointerUnion<TypeSourceInfo *, FieldDecl *, IndirectFieldDecl *>
       Initializee;
 
+  /// The argument used to initialize the base or member, which may
+  /// end up constructing an object (when multiple arguments are involved).
+  Stmt *Init;
+
   /// The source location for the field name or, for a base initializer
   /// pack expansion, the location of the ellipsis.
   ///
@@ -2173,10 +2177,6 @@ class CXXCtorInitializer final {
   /// constructor, it will still include the type's source location as the
   /// Initializee points to the CXXConstructorDecl (to allow loop detection).
   SourceLocation MemberOrEllipsisLocation;
-
-  /// The argument used to initialize the base or member, which may
-  /// end up constructing an object (when multiple arguments are involved).
-  Stmt *Init;
 
   /// Location of the left paren of the ctor-initializer.
   SourceLocation LParenLoc;

@@ -15,6 +15,7 @@ class LiveRangeEdit;
 class MachineFunction;
 class MachineFunctionPass;
 class VirtRegMap;
+class VirtRegAuxInfo;
 
 /// Spiller interface.
 ///
@@ -34,8 +35,8 @@ public:
 
 /// Create and return a spiller that will insert spill code directly instead
 /// of deferring though VirtRegMap.
-Spiller *createInlineSpiller(MachineFunctionPass &pass, MachineFunction &mf,
-                             VirtRegMap &vrm);
+Spiller *createInlineSpiller(MachineFunctionPass &Pass, MachineFunction &MF,
+                             VirtRegMap &VRM, VirtRegAuxInfo &VRAI);
 
 } // end namespace llvm
 

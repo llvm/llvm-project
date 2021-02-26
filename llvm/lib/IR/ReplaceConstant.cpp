@@ -60,6 +60,7 @@ Instruction *createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
+  case Instruction::AddrSpaceCast:
     return dyn_cast<Instruction>(
         Builder.CreateCast((Instruction::CastOps)OpCode, CE->getOperand(0),
                            CE->getType(), CE->getName()));

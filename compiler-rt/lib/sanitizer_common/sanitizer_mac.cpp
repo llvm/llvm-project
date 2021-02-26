@@ -44,6 +44,14 @@ extern char **environ;
 #define SANITIZER_OS_TRACE 0
 #endif
 
+// import new crash reporting api
+#if defined(__has_include) && __has_include(<CrashReporterClient.h>)
+#define HAVE_CRASHREPORTERCLIENT_H 1
+#include <CrashReporterClient.h>
+#else
+#define HAVE_CRASHREPORTERCLIENT_H 0
+#endif
+
 #if !SANITIZER_IOS
 #include <crt_externs.h>  // for _NSGetArgv and _NSGetEnviron
 #else
@@ -776,6 +784,46 @@ void WriteOneLineToSyslog(const char *s) {
   } else {
     asl_log(nullptr, nullptr, ASL_LEVEL_ERR, "%s", s);
   }
+#endif
+}
+
+// buffer to store crash report application information
+static char crashreporter_info_buff[__sanitizer::kErrorMessageBufferSize] = {};
+static BlockingMutex crashreporter_info_mutex(LINKER_INITIALIZED);
+
+extern "C" {
+// Integrate with crash reporter libraries.
+#if HAVE_CRASHREPORTERCLIENT_H
+CRASH_REPORTER_CLIENT_HIDDEN
+struct crashreporter_annotations_t gCRAnnotations
+    __attribute__((section("__DATA," CRASHREPORTER_ANNOTATIONS_SECTION))) = {
+        CRASHREPORTER_ANNOTATIONS_VERSION,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+#if CRASHREPORTER_ANNOTATIONS_VERSION > 4
+        0,
+#endif
+};
+
+#else
+// fall back to old crashreporter api
+static const char *__crashreporter_info__ __attribute__((__used__)) =
+    &crashreporter_info_buff[0];
+asm(".desc ___crashreporter_info__, 0x10");
+#endif
+
+}  // extern "C"
+
+static void CRAppendCrashLogMessage(const char *msg) {
+  BlockingMutexLock l(&crashreporter_info_mutex);
+  internal_strlcat(crashreporter_info_buff, msg,
+                   sizeof(crashreporter_info_buff));
+#if HAVE_CRASHREPORTERCLIENT_H
+  (void)CRSetCrashLogMessage(crashreporter_info_buff);
 #endif
 }
 

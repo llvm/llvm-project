@@ -420,13 +420,8 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     return true;
   }
 
-  if (auto *CB = dyn_cast<CallBase>(I)) {
-    // Treat calls that may not return as alive.
-    // TODO: Remove the intrinsic escape hatch once all intrinsics set
-    // willreturn properly.
-    if (!CB->willReturn() && !isa<IntrinsicInst>(I))
-      return false;
-  }
+  if (!I->willReturn())
+    return false;
 
   if (!I->mayHaveSideEffects())
     return true;
@@ -2959,6 +2954,19 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
         Result->Provenance[BitIdx] = Res->Provenance[BitIdx];
       for (unsigned BitIdx = NarrowBitWidth; BitIdx < BitWidth; ++BitIdx)
         Result->Provenance[BitIdx] = BitPart::Unset;
+      return Result;
+    }
+
+    // If this is a truncate instruction, extract the lower bits.
+    if (match(V, m_Trunc(m_Value(X)))) {
+      const auto &Res =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      if (!Res)
+        return Result;
+
+      Result = BitPart(Res->Provider, BitWidth);
+      for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx)
+        Result->Provenance[BitIdx] = Res->Provenance[BitIdx];
       return Result;
     }
 

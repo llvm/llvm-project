@@ -10,7 +10,7 @@ define void @child_function() #0 {
 ; GCN:  v_writelane_b32 v255, s33, 2
 ; GCN:  v_writelane_b32 v255, s30, 0
 ; GCN:  v_writelane_b32 v255, s31, 1
-; GCN:  s_swappc_b64 s[30:31], s[4:5]
+; GCN:  s_swappc_b64 s[30:31], s[16:17]
 ; GCN:  v_readlane_b32 s30, v255, 0
 ; GCN:  v_readlane_b32 s31, v255, 1
 ; GCN:  v_readlane_b32 s33, v255, 2
@@ -56,7 +56,7 @@ define void @reserve_vgpr_with_no_lower_vgpr_available() #0 {
 ; GCN:  v_writelane_b32 v254, s33, 2
 ; GCN:  v_writelane_b32 v254, s30, 0
 ; GCN:  v_writelane_b32 v254, s31, 1
-; GCN:  s_swappc_b64 s[30:31], s[4:5]
+; GCN:  s_swappc_b64 s[30:31], s[16:17]
 ; GCN:  v_readlane_b32 s30, v254, 0
 ; GCN:  v_readlane_b32 s31, v254, 1
 ; GCN:  v_readlane_b32 s33, v254, 2
@@ -150,7 +150,7 @@ ret:
 ; GCN-LABEL: {{^}}reserve_vgpr_with_tail_call
 ; GCN-NOT:  buffer_store_dword v255, off, s[0:3], s32
 ; GCN-NOT:  v_writelane
-; GCN:  s_setpc_b64 s[4:5]
+; GCN:  s_setpc_b64 s[16:17]
 
 define void @reserve_vgpr_with_tail_call() #0 {
   %alloca = alloca i32, align 4, addrspace(5)

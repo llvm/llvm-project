@@ -171,6 +171,58 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
   return Parent->getEnclosingBlockWithPredecessors();
 }
 
+static VPValue *getSingleOperandOrNull(VPUser &U) {
+  if (U.getNumOperands() == 1)
+    return U.getOperand(0);
+
+  return nullptr;
+}
+
+static const VPValue *getSingleOperandOrNull(const VPUser &U) {
+  if (U.getNumOperands() == 1)
+    return U.getOperand(0);
+
+  return nullptr;
+}
+
+static void resetSingleOpUser(VPUser &U, VPValue *NewVal) {
+  assert(U.getNumOperands() <= 1 && "Didn't expect more than one operand!");
+  if (!NewVal) {
+    if (U.getNumOperands() == 1)
+      U.removeLastOperand();
+    return;
+  }
+
+  if (U.getNumOperands() == 1)
+    U.setOperand(0, NewVal);
+  else
+    U.addOperand(NewVal);
+}
+
+VPValue *VPBlockBase::getCondBit() {
+  return getSingleOperandOrNull(CondBitUser);
+}
+
+const VPValue *VPBlockBase::getCondBit() const {
+  return getSingleOperandOrNull(CondBitUser);
+}
+
+void VPBlockBase::setCondBit(VPValue *CV) {
+  resetSingleOpUser(CondBitUser, CV);
+}
+
+VPValue *VPBlockBase::getPredicate() {
+  return getSingleOperandOrNull(PredicateUser);
+}
+
+const VPValue *VPBlockBase::getPredicate() const {
+  return getSingleOperandOrNull(PredicateUser);
+}
+
+void VPBlockBase::setPredicate(VPValue *CV) {
+  resetSingleOpUser(PredicateUser, CV);
+}
+
 void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
   SmallVector<VPBlockBase *, 8> Blocks(depth_first(Entry));
 
@@ -298,17 +350,15 @@ void VPBasicBlock::execute(VPTransformState *State) {
 
   VPValue *CBV;
   if (EnableVPlanNativePath && (CBV = getCondBit())) {
-    Value *IRCBV = CBV->getUnderlyingValue();
-    assert(IRCBV && "Unexpected null underlying value for condition bit");
+    assert(CBV->getUnderlyingValue() &&
+           "Unexpected null underlying value for condition bit");
 
     // Condition bit value in a VPBasicBlock is used as the branch selector. In
     // the VPlan-native path case, since all branches are uniform we generate a
     // branch instruction using the condition value from vector lane 0 and dummy
     // successors. The successors are fixed later when the successor blocks are
     // visited.
-    Value *NewCond = State->Callback.getOrCreateVectorValues(IRCBV, 0);
-    NewCond = State->Builder.CreateExtractElement(NewCond,
-                                                  State->Builder.getInt32(0));
+    Value *NewCond = State->get(CBV, {0, 0});
 
     // Replace the temporary unreachable terminator with the new conditional
     // branch.
@@ -1041,6 +1091,8 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
                                          InterleavedAccessInfo &IAI) {
   if (VPBasicBlock *VPBB = dyn_cast<VPBasicBlock>(Block)) {
     for (VPRecipeBase &VPI : *VPBB) {
+      if (isa<VPWidenPHIRecipe>(&VPI))
+        continue;
       assert(isa<VPInstruction>(&VPI) && "Can only handle VPInstructions");
       auto *VPInst = cast<VPInstruction>(&VPI);
       auto *Inst = cast<Instruction>(VPInst->getUnderlyingValue());

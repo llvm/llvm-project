@@ -654,15 +654,16 @@ public:
                                    ->stripPointerCastsSameRepresentation());
   }
 
-  /// Strip off pointer casts, all-zero GEPs and invariant group info.
+  /// Strip off pointer casts, all-zero GEPs, single-argument phi nodes and
+  /// invariant group info.
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'. This function should be used only in
   /// Alias analysis.
-  const Value *stripPointerCastsAndInvariantGroups() const;
-  Value *stripPointerCastsAndInvariantGroups() {
+  const Value *stripPointerCastsForAliasAnalysis() const;
+  Value *stripPointerCastsForAliasAnalysis() {
     return const_cast<Value *>(static_cast<const Value *>(this)
-                                   ->stripPointerCastsAndInvariantGroups());
+                                   ->stripPointerCastsForAliasAnalysis());
   }
 
   /// Strip off pointer casts and all-constant inbounds GEPs.

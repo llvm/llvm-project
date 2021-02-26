@@ -2191,15 +2191,20 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
 
         // stdin must be handled specially.
         if (memcmp(Value, "-", 2) == 0) {
-          // If running with -E, treat as a C input (this changes the builtin
-          // macros, for example). This may be overridden by -ObjC below.
-          //
-          // Otherwise emit an error but still use a valid type to avoid
-          // spurious errors (e.g., no inputs).
-          if (!Args.hasArgNoClaim(options::OPT_E) && !CCCIsCPP())
-            Diag(IsCLMode() ? clang::diag::err_drv_unknown_stdin_type_clang_cl
-                            : clang::diag::err_drv_unknown_stdin_type);
-          Ty = types::TY_C;
+          if (IsFlangMode()) {
+            Ty = types::TY_Fortran;
+          } else {
+            // If running with -E, treat as a C input (this changes the
+            // builtin macros, for example). This may be overridden by -ObjC
+            // below.
+            //
+            // Otherwise emit an error but still use a valid type to avoid
+            // spurious errors (e.g., no inputs).
+            if (!Args.hasArgNoClaim(options::OPT_E) && !CCCIsCPP())
+              Diag(IsCLMode() ? clang::diag::err_drv_unknown_stdin_type_clang_cl
+                              : clang::diag::err_drv_unknown_stdin_type);
+            Ty = types::TY_C;
+          }
         } else {
           // Otherwise lookup by extension.
           // Fallback is C if invoked as C preprocessor, C++ if invoked with
@@ -2844,12 +2849,15 @@ class OffloadingActionBuilder final {
   class HIPActionBuilder final : public CudaActionBuilderBase {
     /// The linker inputs obtained for each device arch.
     SmallVector<ActionList, 8> DeviceLinkerInputs;
+    bool GPUSanitize;
 
   public:
     HIPActionBuilder(Compilation &C, DerivedArgList &Args,
                      const Driver::InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_HIP) {
       DefaultCudaArch = CudaArch::GFX803;
+      GPUSanitize = Args.hasFlag(options::OPT_fgpu_sanitize,
+                                 options::OPT_fno_gpu_sanitize, false);
     }
 
     bool canUseBundlerUnbundler() const override { return true; }
@@ -2898,17 +2906,33 @@ class OffloadingActionBuilder final {
         // a fat binary containing all the code objects for different GPU's.
         // The fat binary is then an input to the host action.
         for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
-          auto BackendAction = C.getDriver().ConstructPhaseAction(
-              C, Args, phases::Backend, CudaDeviceActions[I],
-              AssociatedOffloadKind);
-          auto AssembleAction = C.getDriver().ConstructPhaseAction(
-              C, Args, phases::Assemble, BackendAction, AssociatedOffloadKind);
-          // Create a link action to link device IR with device library
-          // and generate ISA.
-          ActionList AL;
-          AL.push_back(AssembleAction);
-          CudaDeviceActions[I] =
-              C.MakeAction<LinkJobAction>(AL, types::TY_Image);
+          if (GPUSanitize) {
+            // When GPU sanitizer is enabled, since we need to link in the
+            // the sanitizer runtime library after the sanitize pass, we have
+            // to skip the backend and assemble phases and use lld to link
+            // the bitcode.
+            ActionList AL;
+            AL.push_back(CudaDeviceActions[I]);
+            // Create a link action to link device IR with device library
+            // and generate ISA.
+            CudaDeviceActions[I] =
+                C.MakeAction<LinkJobAction>(AL, types::TY_Image);
+          } else {
+            // When GPU sanitizer is not enabled, we follow the conventional
+            // compiler phases, including backend and assemble phases.
+            ActionList AL;
+            auto BackendAction = C.getDriver().ConstructPhaseAction(
+                C, Args, phases::Backend, CudaDeviceActions[I],
+                AssociatedOffloadKind);
+            auto AssembleAction = C.getDriver().ConstructPhaseAction(
+                C, Args, phases::Assemble, BackendAction,
+                AssociatedOffloadKind);
+            AL.push_back(AssembleAction);
+            // Create a link action to link device IR with device library
+            // and generate ISA.
+            CudaDeviceActions[I] =
+                C.MakeAction<LinkJobAction>(AL, types::TY_Image);
+          }
 
           // OffloadingActionBuilder propagates device arch until an offload
           // action. Since the next action for creating fatbin does
@@ -4656,11 +4680,12 @@ InputInfo Driver::BuildJobsForActionNoCache(
         /*CreatePrefixForHost=*/!!A->getOffloadingHostActiveKinds() &&
             !AtTopLevel);
     if (isa<OffloadWrapperJobAction>(JA)) {
-      OffloadingPrefix += "-wrapper";
       if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
         BaseInput = FinalOutput->getValue();
       else
         BaseInput = getDefaultImageName();
+      BaseInput =
+          C.getArgs().MakeArgString(std::string(BaseInput) + "-wrapper");
     }
     Result = InputInfo(A, GetNamedOutputPath(C, *JA, BaseInput, BoundArch,
                                              AtTopLevel, MultipleArchs,

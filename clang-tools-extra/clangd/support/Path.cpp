@@ -19,6 +19,20 @@ std::string maybeCaseFoldPath(PathRef Path) { return Path.str(); }
 bool pathEqual(PathRef A, PathRef B) { return A == B; }
 #endif // CLANGD_PATH_CASE_INSENSITIVE
 
+PathRef absoluteParent(PathRef Path) {
+  assert(llvm::sys::path::is_absolute(Path));
+#if defined(_WIN32)
+  // llvm::sys says "C:\" is absolute, and its parent is "C:" which is relative.
+  // This unhelpful behavior seems to have been inherited from boost.
+  if (llvm::sys::path::relative_path(Path).empty()) {
+    return PathRef();
+  }
+#endif
+  PathRef Result = llvm::sys::path::parent_path(Path);
+  assert(Result.empty() || llvm::sys::path::is_absolute(Result));
+  return Result;
+}
+
 bool pathStartsWith(PathRef Ancestor, PathRef Path,
                     llvm::sys::path::Style Style) {
   assert(llvm::sys::path::is_absolute(Ancestor) &&

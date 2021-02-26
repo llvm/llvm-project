@@ -103,159 +103,14 @@ struct VPIteration {
   bool isFirstIteration() const { return Part == 0 && Lane == 0; }
 };
 
-/// This is a helper struct for maintaining vectorization state. It's used for
-/// mapping values from the original loop to their corresponding values in
-/// the new loop. Two mappings are maintained: one for vectorized values and
-/// one for scalarized values. Vectorized values are represented with UF
-/// vector values in the new loop, and scalarized values are represented with
-/// UF x VF scalar values in the new loop. UF and VF are the unroll and
-/// vectorization factors, respectively.
-///
-/// Entries can be added to either map with setVectorValue and setScalarValue,
-/// which assert that an entry was not already added before. If an entry is to
-/// replace an existing one, call resetVectorValue and resetScalarValue. This is
-/// currently needed to modify the mapped values during "fix-up" operations that
-/// occur once the first phase of widening is complete. These operations include
-/// type truncation and the second phase of recurrence widening.
-///
-/// Entries from either map can be retrieved using the getVectorValue and
-/// getScalarValue functions, which assert that the desired value exists.
-struct VectorizerValueMap {
-  friend struct VPTransformState;
-
-private:
-  /// The unroll factor. Each entry in the vector map contains UF vector values.
-  unsigned UF;
-
-  /// The vectorization factor. Each entry in the scalar map contains UF x VF
-  /// scalar values.
-  ElementCount VF;
-
-  /// The vector and scalar map storage. We use std::map and not DenseMap
-  /// because insertions to DenseMap invalidate its iterators.
-  using VectorParts = SmallVector<Value *, 2>;
-  using ScalarParts = SmallVector<SmallVector<Value *, 4>, 2>;
-  std::map<Value *, VectorParts> VectorMapStorage;
-  std::map<Value *, ScalarParts> ScalarMapStorage;
-
-public:
-  /// Construct an empty map with the given unroll and vectorization factors.
-  VectorizerValueMap(unsigned UF, ElementCount VF) : UF(UF), VF(VF) {}
-
-  /// \return True if the map has any vector entry for \p Key.
-  bool hasAnyVectorValue(Value *Key) const {
-    return VectorMapStorage.count(Key);
-  }
-
-  /// \return True if the map has a vector entry for \p Key and \p Part.
-  bool hasVectorValue(Value *Key, unsigned Part) const {
-    assert(Part < UF && "Queried Vector Part is too large.");
-    if (!hasAnyVectorValue(Key))
-      return false;
-    const VectorParts &Entry = VectorMapStorage.find(Key)->second;
-    assert(Entry.size() == UF && "VectorParts has wrong dimensions.");
-    return Entry[Part] != nullptr;
-  }
-
-  /// \return True if the map has any scalar entry for \p Key.
-  bool hasAnyScalarValue(Value *Key) const {
-    return ScalarMapStorage.count(Key);
-  }
-
-  /// \return True if the map has a scalar entry for \p Key and \p Instance.
-  bool hasScalarValue(Value *Key, const VPIteration &Instance) const {
-    assert(Instance.Part < UF && "Queried Scalar Part is too large.");
-    assert(Instance.Lane < VF.getKnownMinValue() &&
-           "Queried Scalar Lane is too large.");
-
-    if (!hasAnyScalarValue(Key))
-      return false;
-    const ScalarParts &Entry = ScalarMapStorage.find(Key)->second;
-    assert(Entry.size() == UF && "ScalarParts has wrong dimensions.");
-    assert(Entry[Instance.Part].size() == VF.getKnownMinValue() &&
-           "ScalarParts has wrong dimensions.");
-    return Entry[Instance.Part][Instance.Lane] != nullptr;
-  }
-
-  /// Retrieve the existing vector value that corresponds to \p Key and
-  /// \p Part.
-  Value *getVectorValue(Value *Key, unsigned Part) {
-    assert(hasVectorValue(Key, Part) && "Getting non-existent value.");
-    return VectorMapStorage[Key][Part];
-  }
-
-  /// Retrieve the existing scalar value that corresponds to \p Key and
-  /// \p Instance.
-  Value *getScalarValue(Value *Key, const VPIteration &Instance) {
-    assert(hasScalarValue(Key, Instance) && "Getting non-existent value.");
-    return ScalarMapStorage[Key][Instance.Part][Instance.Lane];
-  }
-
-  /// Set a vector value associated with \p Key and \p Part. Assumes such a
-  /// value is not already set. If it is, use resetVectorValue() instead.
-  void setVectorValue(Value *Key, unsigned Part, Value *Vector) {
-    assert(!hasVectorValue(Key, Part) && "Vector value already set for part");
-    if (!VectorMapStorage.count(Key)) {
-      VectorParts Entry(UF);
-      VectorMapStorage[Key] = Entry;
-    }
-    VectorMapStorage[Key][Part] = Vector;
-  }
-
-  /// Set a scalar value associated with \p Key and \p Instance. Assumes such a
-  /// value is not already set.
-  void setScalarValue(Value *Key, const VPIteration &Instance, Value *Scalar) {
-    assert(!hasScalarValue(Key, Instance) && "Scalar value already set");
-    if (!ScalarMapStorage.count(Key)) {
-      ScalarParts Entry(UF);
-      // TODO: Consider storing uniform values only per-part, as they occupy
-      //       lane 0 only, keeping the other VF-1 redundant entries null.
-      for (unsigned Part = 0; Part < UF; ++Part)
-        Entry[Part].resize(VF.getKnownMinValue(), nullptr);
-      ScalarMapStorage[Key] = Entry;
-    }
-    ScalarMapStorage[Key][Instance.Part][Instance.Lane] = Scalar;
-  }
-
-  /// Reset the vector value associated with \p Key for the given \p Part.
-  /// This function can be used to update values that have already been
-  /// vectorized. This is the case for "fix-up" operations including type
-  /// truncation and the second phase of recurrence vectorization.
-  void resetVectorValue(Value *Key, unsigned Part, Value *Vector) {
-    assert(hasVectorValue(Key, Part) && "Vector value not set for part");
-    VectorMapStorage[Key][Part] = Vector;
-  }
-
-  /// Reset the scalar value associated with \p Key for \p Part and \p Lane.
-  /// This function can be used to update values that have already been
-  /// scalarized. This is the case for "fix-up" operations including scalar phi
-  /// nodes for scalarized and predicated instructions.
-  void resetScalarValue(Value *Key, const VPIteration &Instance,
-                        Value *Scalar) {
-    assert(hasScalarValue(Key, Instance) &&
-           "Scalar value not set for part and lane");
-    ScalarMapStorage[Key][Instance.Part][Instance.Lane] = Scalar;
-  }
-};
-
-/// This class is used to enable the VPlan to invoke a method of ILV. This is
-/// needed until the method is refactored out of ILV and becomes reusable.
-struct VPCallback {
-  virtual ~VPCallback() {}
-  virtual Value *getOrCreateVectorValues(Value *V, unsigned Part) = 0;
-  virtual Value *getOrCreateScalarValue(Value *V,
-                                        const VPIteration &Instance) = 0;
-};
-
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
   VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
                    DominatorTree *DT, IRBuilder<> &Builder,
-                   VectorizerValueMap &ValueMap, InnerLoopVectorizer *ILV,
-                   VPlan *Plan, VPCallback &Callback)
-      : VF(VF), UF(UF), Instance(), LI(LI), DT(DT), Builder(Builder),
-        ValueMap(ValueMap), ILV(ILV), Plan(Plan), Callback(Callback) {}
+                   InnerLoopVectorizer *ILV, VPlan *Plan)
+      : VF(VF), UF(UF), Instance(), LI(LI), DT(DT), Builder(Builder), ILV(ILV),
+        Plan(Plan) {}
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
   ElementCount VF;
@@ -294,6 +149,10 @@ struct VPTransformState {
            I->second[Part];
   }
 
+  bool hasAnyVectorValue(VPValue *Def) const {
+    return Data.PerPartOutput.find(Def) != Data.PerPartOutput.end();
+  }
+
   bool hasScalarValue(VPValue *Def, VPIteration Instance) {
     auto I = Data.PerPartScalars.find(Def);
     if (I == Data.PerPartScalars.end())
@@ -319,12 +178,6 @@ struct VPTransformState {
     Iter->second[Part] = V;
   }
 
-  void set(VPValue *Def, Value *IRDef, Value *V, unsigned Part);
-  void reset(VPValue *Def, Value *IRDef, Value *V, unsigned Part);
-
-  /// Set the generated scalar \p V for \p Def and \p IRDef and the given \p
-  /// Instance.
-  void set(VPValue *Def, Value *IRDef, Value *V, const VPIteration &Instance);
   /// Set the generated scalar \p V for \p Def and the given \p Instance.
   void set(VPValue *Def, Value *V, const VPIteration &Instance) {
     auto Iter = Data.PerPartScalars.insert({Def, {}});
@@ -384,12 +237,6 @@ struct VPTransformState {
   /// Hold a reference to the IRBuilder used to generate output IR code.
   IRBuilder<> &Builder;
 
-  /// Hold a reference to the Value state information used when generating the
-  /// Values of the output IR.
-  VectorizerValueMap &ValueMap;
-
-  /// Hold a reference to a mapping between VPValues in VPlan and original
-  /// Values they correspond to.
   VPValue2ValueTy VPValue2Value;
 
   /// Hold the canonical scalar IV of the vector loop (start=0, step=VF*UF).
@@ -403,8 +250,6 @@ struct VPTransformState {
 
   /// Pointer to the VPlan code is generated for.
   VPlan *Plan;
-
-  VPCallback &Callback;
 };
 
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
@@ -432,8 +277,10 @@ class VPBlockBase {
   /// which is the branch condition.
   VPUser CondBitUser;
 
-  /// Current block predicate - null if the block does not need a predicate.
-  VPValue *Predicate = nullptr;
+  /// If the block is predicated, its predicate is stored as an operand of this
+  /// VPUser to maintain the def-use relations. Otherwise there is no operand
+  /// here.
+  VPUser PredicateUser;
 
   /// VPlan containing the block. Can only be set on the entry block of the
   /// plan.
@@ -579,35 +426,18 @@ public:
   }
 
   /// \return the condition bit selecting the successor.
-  VPValue *getCondBit() {
-    if (CondBitUser.getNumOperands())
-      return CondBitUser.getOperand(0);
-    return nullptr;
-  }
+  VPValue *getCondBit();
+  /// \return the condition bit selecting the successor.
+  const VPValue *getCondBit() const;
+  /// Set the condition bit selecting the successor.
+  void setCondBit(VPValue *CV);
 
-  const VPValue *getCondBit() const {
-    if (CondBitUser.getNumOperands())
-      return CondBitUser.getOperand(0);
-    return nullptr;
-  }
-
-  void setCondBit(VPValue *CV) {
-    if (!CV) {
-      if (CondBitUser.getNumOperands() == 1)
-        CondBitUser.removeLastOperand();
-      return;
-    }
-    if (CondBitUser.getNumOperands() == 1)
-      CondBitUser.setOperand(0, CV);
-    else
-      CondBitUser.addOperand(CV);
-  }
-
-  VPValue *getPredicate() { return Predicate; }
-
-  const VPValue *getPredicate() const { return Predicate; }
-
-  void setPredicate(VPValue *Pred) { Predicate = Pred; }
+  /// \return the block's predicate.
+  VPValue *getPredicate();
+  /// \return the block's predicate.
+  const VPValue *getPredicate() const;
+  /// Set the block's predicate.
+  void setPredicate(VPValue *Pred);
 
   /// Set a given VPBlockBase \p Successor as the single successor of this
   /// VPBlockBase. This VPBlockBase is not added as predecessor of \p Successor.
@@ -1040,9 +870,14 @@ public:
 /// A recipe for handling all phi nodes except for integer and FP inductions.
 /// For reduction PHIs, RdxDesc must point to the corresponding recurrence
 /// descriptor and the start value is the first operand of the recipe.
+/// In the VPlan native path, all incoming VPValues & VPBasicBlock pairs are
+/// managed in the recipe directly.
 class VPWidenPHIRecipe : public VPRecipeBase, public VPValue {
   /// Descriptor for a reduction PHI.
   RecurrenceDescriptor *RdxDesc = nullptr;
+
+  /// List of incoming blocks. Only used in the VPlan native path.
+  SmallVector<VPBasicBlock *, 2> IncomingBlocks;
 
 public:
   /// Create a new VPWidenPHIRecipe for the reduction \p Phi described by \p
@@ -1063,6 +898,9 @@ public:
   static inline bool classof(const VPDef *D) {
     return D->getVPDefID() == VPRecipeBase::VPWidenPHISC;
   }
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPVWidenPHISC;
+  }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
@@ -1075,6 +913,18 @@ public:
   VPValue *getStartValue() {
     return getNumOperands() == 0 ? nullptr : getOperand(0);
   }
+
+  /// Adds a pair (\p IncomingV, \p IncomingBlock) to the phi.
+  void addIncoming(VPValue *IncomingV, VPBasicBlock *IncomingBlock) {
+    addOperand(IncomingV);
+    IncomingBlocks.push_back(IncomingBlock);
+  }
+
+  /// Returns the \p I th incoming VPValue.
+  VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
+
+  /// Returns the \p I th incoming VPBasicBlock.
+  VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select

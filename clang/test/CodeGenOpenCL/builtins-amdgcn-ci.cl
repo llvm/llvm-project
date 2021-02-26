@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -S -emit-llvm -o - %s | FileCheck %s
 
 typedef unsigned int uint;
+typedef unsigned long ulong;
 
 // CHECK-LABEL: @test_s_dcache_inv_vol
 // CHECK: call void @llvm.amdgcn.s.dcache.inv.vol(
@@ -25,6 +26,13 @@ void test_buffer_wbinvl1_vol()
 void test_gws_sema_release_all(uint id)
 {
   __builtin_amdgcn_ds_gws_sema_release_all(id);
+}
+
+// CHECK-LABEL: @test_s_memtime
+// CHECK: call i64 @llvm.amdgcn.s.memtime()
+void test_s_memtime(global ulong* out)
+{
+  *out = __builtin_amdgcn_s_memtime();
 }
 
 // CHECK-LABEL: @test_is_shared(

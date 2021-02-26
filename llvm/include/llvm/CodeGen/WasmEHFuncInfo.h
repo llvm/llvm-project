@@ -31,27 +31,42 @@ using BBOrMBB = PointerUnion<const BasicBlock *, MachineBasicBlock *>;
 struct WasmEHFuncInfo {
   // When there is an entry <A, B>, if an exception is not caught by A, it
   // should next unwind to the EH pad B.
-  DenseMap<BBOrMBB, BBOrMBB> EHPadUnwindMap;
+  DenseMap<BBOrMBB, BBOrMBB> SrcToUnwindDest;
+  DenseMap<BBOrMBB, BBOrMBB> UnwindDestToSrc; // reverse map
 
   // Helper functions
-  const BasicBlock *getEHPadUnwindDest(const BasicBlock *BB) const {
-    return EHPadUnwindMap.lookup(BB).get<const BasicBlock *>();
+  const BasicBlock *getUnwindDest(const BasicBlock *BB) const {
+    return SrcToUnwindDest.lookup(BB).get<const BasicBlock *>();
   }
-  void setEHPadUnwindDest(const BasicBlock *BB, const BasicBlock *Dest) {
-    EHPadUnwindMap[BB] = Dest;
+  const BasicBlock *getUnwindSrc(const BasicBlock *BB) const {
+    return UnwindDestToSrc.lookup(BB).get<const BasicBlock *>();
   }
-  bool hasEHPadUnwindDest(const BasicBlock *BB) const {
-    return EHPadUnwindMap.count(BB);
+  void setUnwindDest(const BasicBlock *BB, const BasicBlock *Dest) {
+    SrcToUnwindDest[BB] = Dest;
+    UnwindDestToSrc[Dest] = BB;
+  }
+  bool hasUnwindDest(const BasicBlock *BB) const {
+    return SrcToUnwindDest.count(BB);
+  }
+  bool hasUnwindSrc(const BasicBlock *BB) const {
+    return UnwindDestToSrc.count(BB);
   }
 
-  MachineBasicBlock *getEHPadUnwindDest(MachineBasicBlock *MBB) const {
-    return EHPadUnwindMap.lookup(MBB).get<MachineBasicBlock *>();
+  MachineBasicBlock *getUnwindDest(MachineBasicBlock *MBB) const {
+    return SrcToUnwindDest.lookup(MBB).get<MachineBasicBlock *>();
   }
-  void setEHPadUnwindDest(MachineBasicBlock *MBB, MachineBasicBlock *Dest) {
-    EHPadUnwindMap[MBB] = Dest;
+  MachineBasicBlock *getUnwindSrc(MachineBasicBlock *MBB) const {
+    return UnwindDestToSrc.lookup(MBB).get<MachineBasicBlock *>();
   }
-  bool hasEHPadUnwindDest(MachineBasicBlock *MBB) const {
-    return EHPadUnwindMap.count(MBB);
+  void setUnwindDest(MachineBasicBlock *MBB, MachineBasicBlock *Dest) {
+    SrcToUnwindDest[MBB] = Dest;
+    UnwindDestToSrc[Dest] = MBB;
+  }
+  bool hasUnwindDest(MachineBasicBlock *MBB) const {
+    return SrcToUnwindDest.count(MBB);
+  }
+  bool hasUnwindSrc(MachineBasicBlock *MBB) const {
+    return UnwindDestToSrc.count(MBB);
   }
 };
 

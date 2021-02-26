@@ -174,6 +174,24 @@ func @tile_with_loop_upper_bounds_in_two_symbols(%arg0: memref<?xf32>, %limit: i
 
 // -----
 
+// CHECK-DAG:  #[[$ID:.*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG:  [[$UBMAP:#map[0-9]+]] = affine_map<(d0)[s0] -> (d0 + 160, s0)>
+
+func @tile_loop_with_non_unit_step(%arg0 : memref<50xf32>, %arg1 : index) {
+  affine.for %i = 0 to %arg1 step 5 {
+    affine.load %arg0[%i] : memref<50xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @tile_loop_with_non_unit_step(%arg{{.*}}: memref<50xf32>, %arg{{.*}}: index)
+// CHECK:     affine.for %[[I:.*]] = 0 to %[[N:.*]] step 160 {
+// CHECK-NEXT:       affine.for %[[II:.*]] = [[$ID:.*]](%[[I]]) to min
+// [[$UBMAP]](%[[I]])[%[[N]]] step 5 {
+// CHECK-NEXT:         affine.load %arg{{.*}}[%arg{{.*}}] : memref<50xf32>
+
+// -----
+
 func @tile_size_larger_than_trip_count_symbolic_bound(%M: index, %N :  index) {
   affine.for %i = affine_map<(d0) -> (d0)>(%M) to affine_map<(d0) -> (d0 + 2)>(%M) {
     affine.for %j = affine_map<(d0) -> (d0)>(%N) to affine_map<(d0) -> (d0 + 4)>(%N) {

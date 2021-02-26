@@ -178,7 +178,7 @@ void __kmp_print_version_1(void) {
 #else
       "no"
 #endif
-          );
+  );
   __kmp_printf("%s", buffer.str);
   __kmp_str_buf_free(&buffer);
   K_DIAG(1, ("KMP_VERSION is true\n"));

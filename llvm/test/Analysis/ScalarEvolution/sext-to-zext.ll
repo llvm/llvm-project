@@ -6,7 +6,7 @@ define void @f(i1 %c) {
 ; CHECK-LABEL: 'f'
 ; CHECK-NEXT:  Classifying expressions for: @f
 ; CHECK-NEXT:    %start = select i1 %c, i32 100, i32 0
-; CHECK-NEXT:    --> %start U: [0,101) S: [-128,128)
+; CHECK-NEXT:    --> %start U: [0,101) S: [0,101)
 ; CHECK-NEXT:    %step = select i1 %c, i32 -1, i32 1
 ; CHECK-NEXT:    --> %step U: [1,0) S: [-2,2)
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.dec, %loop ]
@@ -16,9 +16,9 @@ define void @f(i1 %c) {
 ; CHECK-NEXT:    %iv.tc.inc = add i32 %iv.tc, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,101) S: [1,101) Exits: 100 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.dec = add nsw i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-328,228) S: [-328,228) Exits: ((100 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-200,201) S: [-200,201) Exits: ((100 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.sext = sext i32 %iv to i64
-; CHECK-NEXT:    --> {(sext i32 %start to i64),+,(sext i32 %step to i64)}<nsw><%loop> U: [0,101) S: [0,101) Exits: ((sext i32 %start to i64) + (99 * (sext i32 %step to i64))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(zext i32 %start to i64),+,(sext i32 %step to i64)}<nsw><%loop> U: [0,101) S: [0,101) Exits: ((zext i32 %start to i64) + (99 * (sext i32 %step to i64))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 99
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 99

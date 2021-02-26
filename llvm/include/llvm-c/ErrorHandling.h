@@ -11,8 +11,8 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#ifndef LLVM_C_ERROR_HANDLING_H
-#define LLVM_C_ERROR_HANDLING_H
+#ifndef LLVM_C_ERRORHANDLING_H
+#define LLVM_C_ERRORHANDLING_H
 
 #include "llvm-c/ExternC.h"
 

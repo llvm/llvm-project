@@ -876,17 +876,14 @@ void LoopInfo::erase(Loop *Unloop) {
   // First handle the special case of no parent loop to simplify the algorithm.
   if (Unloop->isOutermost()) {
     // Since BBLoop had no parent, Unloop blocks are no longer in a loop.
-    for (Loop::block_iterator I = Unloop->block_begin(),
-                              E = Unloop->block_end();
-         I != E; ++I) {
-
+    for (BasicBlock *BB : Unloop->blocks()) {
       // Don't reparent blocks in subloops.
-      if (getLoopFor(*I) != Unloop)
+      if (getLoopFor(BB) != Unloop)
         continue;
 
       // Blocks no longer have a parent but are still referenced by Unloop until
       // the Unloop object is deleted.
-      changeLoopFor(*I, nullptr);
+      changeLoopFor(BB, nullptr);
     }
 
     // Remove the loop from the top-level LoopInfo object.

@@ -293,6 +293,9 @@ config("compiler_defaults") {
   if (sysroot != "" && current_os != "win" && is_clang) {
     cflags += [ "-Wpoison-system-directories" ]
   }
+  assert(
+      !use_goma || sysroot != "",
+      "goma needs a sysroot: run `llvm/utils/sysroot.py make-fake --out-dir=sysroot` and add `sysroot = \"//sysroot\"` to your args.gn")
 
   if (use_ubsan) {
     assert(is_clang && current_os == "linux",

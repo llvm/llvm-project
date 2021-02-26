@@ -1,15 +1,17 @@
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
 ; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s --check-prefix=EG --check-prefix=FUNC
-; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=SI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN1
+; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=SI --check-prefix=FUNC --check-prefix=GCN
 ; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
 ; RUN: llc < %s -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: {{^}}u32_mad24:
-; EG: MULADD_UINT24
-; SI: v_mad_u32_u24
-; VI: v_mad_u32_u24
+; EG: MULLO_INT
+; SI: s_mul_i32
+; SI: s_add_i32
+; VI: s_mul_{{[iu]}}32
+; VI: s_add_{{[iu]}}32
 
 define amdgpu_kernel void @u32_mad24(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
 entry:
@@ -25,17 +27,15 @@ entry:
 
 ; FUNC-LABEL: {{^}}i16_mad24:
 ; The order of A and B does not matter.
-; EG: MULADD_UINT24 {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; EG: MULLO_INT {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; EG: ADD_INT {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
 ; The result must be sign-extended
 ; EG: BFE_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PV.[[MAD_CHAN]], 0.0, literal.x
 ; EG: 16
-; FIXME: Should be using scalar instructions here.
-; GCN1: v_mad_u32_u24 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
-; GCN1: v_bfe_i32 v{{[0-9]}}, [[MAD]], 0, 16
-; GCN2:	s_mul_i32 [[MUL:s[0-9]]], {{[s][0-9], [s][0-9]}}
-; GCN2:	s_add_i32 [[MAD:s[0-9]]], [[MUL]], s{{[0-9]}}
-; GCN2:	s_sext_i32_i16 s0, [[MAD]]
-; GCN2:	v_mov_b32_e32 v0, s0
+; GCN:	s_mul_i32 [[MUL:s[0-9]]], {{[s][0-9], [s][0-9]}}
+; GCN:	s_add_i32 [[MAD:s[0-9]]], [[MUL]], s{{[0-9]}}
+; GCN:	s_sext_i32_i16 [[EXT:s[0-9]]], [[MAD]]
+; GCN:	v_mov_b32_e32 v0, [[EXT]]
 define amdgpu_kernel void @i16_mad24(i32 addrspace(1)* %out, i16 %a, i16 %b, i16 %c) {
 entry:
   %0 = mul i16 %a, %b
@@ -47,16 +47,15 @@ entry:
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; FUNC-LABEL: {{^}}i8_mad24:
-; EG: MULADD_UINT24 {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; EG: MULLO_INT {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; EG: ADD_INT {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
 ; The result must be sign-extended
 ; EG: BFE_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PV.[[MAD_CHAN]], 0.0, literal.x
 ; EG: 8
-; GCN1: v_mad_u32_u24 [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
-; GCN1: v_bfe_i32 v{{[0-9]}}, [[MUL]], 0, 8
-; GCN2:	s_mul_i32 [[MUL:s[0-9]]], {{[s][0-9], [s][0-9]}}
-; GCN2:	s_add_i32 [[MAD:s[0-9]]], [[MUL]], s{{[0-9]}}
-; GCN2:	s_sext_i32_i8 s0, [[MAD]]
-; GCN2:	v_mov_b32_e32 v0, s0
+; GCN:	s_mul_i32 [[MUL:s[0-9]]], {{[s][0-9], [s][0-9]}}
+; GCN:	s_add_i32 [[MAD:s[0-9]]], [[MUL]], s{{[0-9]}}
+; GCN:	s_sext_i32_i8 [[EXT:s[0-9]]], [[MAD]]
+; GCN:	v_mov_b32_e32 v0, [[EXT]]
 define amdgpu_kernel void @i8_mad24(i32 addrspace(1)* %out, i8 %a, i8 %b, i8 %c) {
 entry:
   %0 = mul i8 %a, %b
@@ -90,8 +89,10 @@ entry:
 
 ; FUNC-LABEL: {{^}}extra_and:
 ; SI-NOT: v_and
-; SI: v_mad_u32_u24
-; SI: v_mad_u32_u24
+; SI: s_mul_i32
+; SI: s_mul_i32
+; SI: s_add_i32
+; SI: s_add_i32
 define amdgpu_kernel void @extra_and(i32 addrspace(1)* %arg, i32 %arg2, i32 %arg3) {
 bb:
   br label %bb4
@@ -119,9 +120,11 @@ bb18:                                             ; preds = %bb4
 }
 
 ; FUNC-LABEL: {{^}}dont_remove_shift
-; SI: v_lshr
-; SI: v_mad_u32_u24
-; SI: v_mad_u32_u24
+; SI: s_lshr
+; SI: s_mul_i32
+; SI: s_mul_i32
+; SI: s_add_i32
+; SI: s_add_i32
 define amdgpu_kernel void @dont_remove_shift(i32 addrspace(1)* %arg, i32 %arg2, i32 %arg3) {
 bb:
   br label %bb4
@@ -149,7 +152,8 @@ bb18:                                             ; preds = %bb4
 }
 
 ; FUNC-LABEL: {{^}}i8_mad_sat_16:
-; EG: MULADD_UINT24 {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; EG: MULLO_INT {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; EG: ADD_INT {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
 ; The result must be sign-extended
 ; EG: BFE_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PV.[[MAD_CHAN]], 0.0, literal.x
 ; EG: 8
@@ -182,7 +186,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i8_mad_32:
-; EG: MULADD_UINT24 {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; EG: MULLO_INT {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; EG: ADD_INT {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
 ; The result must be sign-extended
 ; EG: BFE_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PV.[[MAD_CHAN]], 0.0, literal.x
 ; EG: 8
@@ -209,7 +214,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i8_mad_64:
-; EG: MULADD_UINT24 {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; EG: MULLO_INT {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; EG: ADD_INT {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
 ; The result must be sign-extended
 ; EG: BFE_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PV.[[MAD_CHAN]], 0.0, literal.x
 ; EG: 8

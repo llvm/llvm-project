@@ -530,7 +530,7 @@ TEST(DocumentSymbols, Unnamed) {
                                        WithDetail("int"), Children()))),
                   AllOf(WithName("UnnamedStruct"),
                         WithKind(SymbolKind::Variable),
-                        WithDetail("struct (anonymous)"), Children())));
+                        WithDetail("struct (unnamed)"), Children())));
 }
 
 TEST(DocumentSymbols, InHeaderFile) {
@@ -650,8 +650,8 @@ TEST(DocumentSymbols, Enums) {
   EXPECT_THAT(
       getSymbols(TU.build()),
       ElementsAre(
-          AllOf(WithName("(anonymous enum)"), WithDetail("enum"),
-                Children(AllOf(WithName("Red"), WithDetail("(anonymous)")))),
+          AllOf(WithName("(anonymous enum)"), WithDetail("enum"), 
+                Children(AllOf(WithName("Red"), WithDetail("(unnamed)")))),
           AllOf(WithName("Color"), WithDetail("enum"),
                 Children(AllOf(WithName("Green"), WithDetail("Color")))),
           AllOf(WithName("Color2"), WithDetail("enum"),
@@ -659,7 +659,7 @@ TEST(DocumentSymbols, Enums) {
           AllOf(WithName("ns"),
                 Children(AllOf(WithName("(anonymous enum)"), WithDetail("enum"),
                                Children(AllOf(WithName("Black"),
-                                              WithDetail("(anonymous)"))))))));
+                                              WithDetail("(unnamed)"))))))));
 }
 
 TEST(DocumentSymbols, FromMacro) {

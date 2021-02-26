@@ -790,9 +790,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   else
     FPM.addPass(GVN());
 
-  // Specially optimize memory movement as it doesn't look like dataflow in SSA.
-  FPM.addPass(MemCpyOptPass());
-
   // Sparse conditional constant propagation.
   // FIXME: It isn't clear why we do this *after* loop passes rather than
   // before...
@@ -817,6 +814,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // the simplifications and basic cleanup after all the simplifications.
   // TODO: Investigate if this is too expensive.
   FPM.addPass(ADCEPass());
+
+  // Specially optimize memory movement as it doesn't look like dataflow in SSA.
+  FPM.addPass(MemCpyOptPass());
 
   FPM.addPass(DSEPass());
   FPM.addPass(createFunctionToLoopPassAdaptor(
@@ -1081,15 +1081,16 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
     // RequireAnalysisPass for PSI before subsequent non-module passes.
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
-    // Do not invoke ICP in the ThinLTOPrelink phase as it makes it hard
-    // for the profile annotation to be accurate in the ThinLTO backend.
-    if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+    // Do not invoke ICP in the LTOPrelink phase as it makes it hard
+    // for the profile annotation to be accurate in the LTO backend.
+    if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink &&
+        Phase != ThinOrFullLTOPhase::FullLTOPreLink)
       // We perform early indirect call promotion here, before globalopt.
       // This is important for the ThinLTO backend phase because otherwise
       // imported available_externally functions look unreferenced and are
       // removed.
-      MPM.addPass(PGOIndirectCallPromotion(
-          Phase == ThinOrFullLTOPhase::ThinLTOPostLink, true /* SamplePGO */));
+      MPM.addPass(
+          PGOIndirectCallPromotion(true /* IsInLTO */, true /* SamplePGO */));
   }
 
   if (AttributorRun & AttributorRunOption::MODULE)
@@ -1497,6 +1498,12 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   if (PGOOpt && PGOOpt->PseudoProbeForProfiling)
     MPM.addPass(PseudoProbeUpdatePass());
 
+  // Handle OptimizerLastEPCallbacks added by clang on PreLink. Actual
+  // optimization is going to be done in PostLink stage, but clang can't
+  // add callbacks there in case of in-process ThinLTO called by linker.
+  for (auto &C : OptimizerLastEPCallbacks)
+    C(MPM, Level);
+
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
@@ -1532,8 +1539,17 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
   }
 
-  if (Level == OptimizationLevel::O0)
+  if (Level == OptimizationLevel::O0) {
+    // Run a second time to clean up any type tests left behind by WPD for use
+    // in ICP.
+    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
+    // Drop available_externally and unreferenced globals. This is necessary
+    // with ThinLTO in order to avoid leaving undefined references to dead
+    // globals in the object file.
+    MPM.addPass(EliminateAvailableExternallyPass());
+    MPM.addPass(GlobalDCEPass());
     return MPM;
+  }
 
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
@@ -1764,8 +1780,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   LPM.addPass(LoopFullUnrollPass(Level.getSpeedupLevel(),
                                  /* OnlyWhenForced= */ !PTO.LoopUnrolling,
                                  PTO.ForgetAllSCEVInLoopUnroll));
+  // The loop passes in LPM (LoopFullUnrollPass) do not preserve MemorySSA.
+  // *All* loop passes must preserve it, in order to be able to use it.
   MainFPM.addPass(createFunctionToLoopPassAdaptor(
-      std::move(LPM), EnableMSSALoopDependency, /*UseBlockFrequencyInfo=*/true,
+      std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/true,
       DebugLogging));
 
   MainFPM.addPass(LoopDistributePass());

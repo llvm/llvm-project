@@ -70,7 +70,7 @@ include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_MACHINE}/entr
 include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_MACHINE}/headers.txt")
 
 set(TARGET_ENTRYPOINT_NAME_LIST "")
-foreach(entrypoint IN LISTS TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS)
+foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   string(FIND ${entrypoint} "." last_dot_loc REVERSE)
   if(${last_dot_loc} EQUAL -1)
     message(FATAL "Invalid entrypoint target name ${entrypoint}; Expected a '.' "

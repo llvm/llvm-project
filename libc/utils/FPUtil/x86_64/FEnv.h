@@ -74,7 +74,7 @@ static inline int exceptionStatusToMacro(uint16_t status) {
          (status & ExceptionFlags::Inexact ? FE_INEXACT : 0);
 }
 
-struct X87State {
+struct X87StateDescriptor {
   uint16_t ControlWord;
   uint16_t Unused1;
   uint16_t StatusWord;
@@ -82,6 +82,15 @@ struct X87State {
   // TODO: Elaborate the remaining 20 bytes as required.
   uint32_t _[5];
 };
+
+struct FPState {
+  X87StateDescriptor X87Status;
+  uint32_t MXCSR;
+};
+
+static_assert(
+    sizeof(fenv_t) == sizeof(FPState),
+    "Internal floating point state does not match the public fenv_t type.");
 
 static inline uint16_t getX87ControlWord() {
   uint16_t w;
@@ -113,11 +122,11 @@ static inline void writeMXCSR(uint32_t w) {
   __asm__ __volatile__("ldmxcsr %0" : : "m"(w) :);
 }
 
-static inline void getX87State(X87State &s) {
+static inline void getX87StateDescriptor(X87StateDescriptor &s) {
   __asm__ __volatile__("fnstenv %0" : "=m"(s));
 }
 
-static inline void writeX87State(const X87State &s) {
+static inline void writeX87StateDescriptor(const X87StateDescriptor &s) {
   __asm__ __volatile__("fldenv %0" : : "m"(s) :);
 }
 
@@ -194,6 +203,21 @@ static inline int testExcept(int excepts) {
       (statusValue & internal::getMXCSR()));
 }
 
+// Sets the exception flags but does not trigger the exception handler.
+static inline int setExcept(int excepts) {
+  uint16_t statusValue = internal::getStatusValueForExcept(excepts);
+  internal::X87StateDescriptor state;
+  internal::getX87StateDescriptor(state);
+  state.StatusWord |= statusValue;
+  internal::writeX87StateDescriptor(state);
+
+  uint32_t mxcsr = internal::getMXCSR();
+  mxcsr |= statusValue;
+  internal::writeMXCSR(mxcsr);
+
+  return 0;
+}
+
 static inline int raiseExcept(int excepts) {
   uint16_t statusValue = internal::getStatusValueForExcept(excepts);
 
@@ -211,38 +235,38 @@ static inline int raiseExcept(int excepts) {
   // when raising the next exception.
 
   if (statusValue & internal::ExceptionFlags::Invalid) {
-    internal::X87State state;
-    internal::getX87State(state);
+    internal::X87StateDescriptor state;
+    internal::getX87StateDescriptor(state);
     state.StatusWord |= internal::ExceptionFlags::Invalid;
-    internal::writeX87State(state);
+    internal::writeX87StateDescriptor(state);
     internal::fwait();
   }
   if (statusValue & internal::ExceptionFlags::DivByZero) {
-    internal::X87State state;
-    internal::getX87State(state);
+    internal::X87StateDescriptor state;
+    internal::getX87StateDescriptor(state);
     state.StatusWord |= internal::ExceptionFlags::DivByZero;
-    internal::writeX87State(state);
+    internal::writeX87StateDescriptor(state);
     internal::fwait();
   }
   if (statusValue & internal::ExceptionFlags::Overflow) {
-    internal::X87State state;
-    internal::getX87State(state);
+    internal::X87StateDescriptor state;
+    internal::getX87StateDescriptor(state);
     state.StatusWord |= internal::ExceptionFlags::Overflow;
-    internal::writeX87State(state);
+    internal::writeX87StateDescriptor(state);
     internal::fwait();
   }
   if (statusValue & internal::ExceptionFlags::Underflow) {
-    internal::X87State state;
-    internal::getX87State(state);
+    internal::X87StateDescriptor state;
+    internal::getX87StateDescriptor(state);
     state.StatusWord |= internal::ExceptionFlags::Underflow;
-    internal::writeX87State(state);
+    internal::writeX87StateDescriptor(state);
     internal::fwait();
   }
   if (statusValue & internal::ExceptionFlags::Inexact) {
-    internal::X87State state;
-    internal::getX87State(state);
+    internal::X87StateDescriptor state;
+    internal::getX87StateDescriptor(state);
     state.StatusWord |= internal::ExceptionFlags::Inexact;
-    internal::writeX87State(state);
+    internal::writeX87StateDescriptor(state);
     internal::fwait();
   }
 
@@ -306,6 +330,21 @@ static inline int setRound(int mode) {
       mxcsrValue;
   internal::writeMXCSR(mxcsrControl);
 
+  return 0;
+}
+
+static inline int getEnv(fenv_t *envp) {
+  internal::FPState *state = reinterpret_cast<internal::FPState *>(envp);
+  internal::getX87StateDescriptor(state->X87Status);
+  state->MXCSR = internal::getMXCSR();
+  return 0;
+}
+
+static inline int setEnv(const fenv_t *envp) {
+  const internal::FPState *state =
+      reinterpret_cast<const internal::FPState *>(envp);
+  internal::writeX87StateDescriptor(state->X87Status);
+  internal::writeMXCSR(state->MXCSR);
   return 0;
 }
 

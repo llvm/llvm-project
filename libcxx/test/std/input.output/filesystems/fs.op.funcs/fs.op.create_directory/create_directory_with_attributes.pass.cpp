@@ -147,7 +147,7 @@ TEST_CASE(dest_is_symlink_to_unexisting) {
 TEST_CASE(dest_is_symlink_to_dir) {
   scoped_test_env env;
   const path dir = env.create_dir("dir");
-  const path sym = env.create_symlink(dir, "sym_name");
+  const path sym = env.create_directory_symlink(dir, "sym_name");
   const path attr_dir = env.create_dir("attr_dir");
   {
     std::error_code ec = GetTestEC();

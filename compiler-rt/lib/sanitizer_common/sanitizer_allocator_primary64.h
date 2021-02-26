@@ -19,7 +19,7 @@ template<class SizeClassAllocator> struct SizeClassAllocator64LocalCache;
 // The template parameter Params is a class containing the actual parameters.
 //
 // Space: a portion of address space of kSpaceSize bytes starting at SpaceBeg.
-// If kSpaceBeg is ~0 then SpaceBeg is chosen dynamically my mmap.
+// If kSpaceBeg is ~0 then SpaceBeg is chosen dynamically by mmap.
 // Otherwise SpaceBeg=kSpaceBeg (fixed address).
 // kSpaceSize is a power of two.
 // At the beginning the entire space is mprotect-ed, then small parts of it

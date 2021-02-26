@@ -11,9 +11,9 @@ define amdgpu_ps float @raw_buffer_load__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sgpr(s32) = COPY $sgpr6
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; CHECK:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY6]](s32), [[COPY4]], [[COPY5]], 0, 0, 0 :: (dereferenceable load 4 from custom "BufferResource", align 1, addrspace 4)
@@ -32,9 +32,9 @@ define amdgpu_ps float @raw_buffer_load__sgpr_rsrc__sgpr_val__sgpr_voffset__sgpr
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:sgpr(s32) = COPY $sgpr6
   ; CHECK:   [[COPY5:%[0-9]+]]:sgpr(s32) = COPY $sgpr7
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; CHECK:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[COPY4]](s32)
@@ -55,9 +55,9 @@ define amdgpu_ps float @raw_buffer_load__vgpr_rsrc__vgpr_val__vgpr_voffset__sgpr
   ; CHECK:   [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr3
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; CHECK:   [[DEF:%[0-9]+]]:vgpr(s32) = G_IMPLICIT_DEF
@@ -102,9 +102,9 @@ define amdgpu_ps float @raw_buffer_load__sgpr_rsrc__vgpr_val__vgpr_voffset__vgpr
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr4
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; CHECK:   [[DEF:%[0-9]+]]:vgpr(s32) = G_IMPLICIT_DEF
@@ -140,9 +140,9 @@ define amdgpu_ps float @raw_buffer_load__vgpr_rsrc__vgpr_val__vgpr_voffset__vgpr
   ; CHECK:   [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr3
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr4
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr5
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; CHECK:   [[DEF:%[0-9]+]]:vgpr(s32) = G_IMPLICIT_DEF

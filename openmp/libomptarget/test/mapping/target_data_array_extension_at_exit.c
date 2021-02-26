@@ -19,8 +19,8 @@
 
 // RUN: %libomptarget-compile-x86_64-pc-linux-gnu \
 // RUN:   -fopenmp-version=51 -DEXTENDS=BEFORE
-// XUN: %libomptarget-run-x86_64-pc-linux-gnu 2>&1 \
-// XUN: | %fcheck-x86_64-pc-linux-gnu
+// RUN: %libomptarget-run-x86_64-pc-linux-gnu 2>&1 \
+// RUN: | %fcheck-x86_64-pc-linux-gnu
 
 // --------------------------------------------------
 // Check extends after

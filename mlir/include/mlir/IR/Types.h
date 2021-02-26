@@ -32,8 +32,9 @@ namespace mlir {
 /// Derived type classes are expected to implement several required
 /// implementation hooks:
 ///  * Optional:
-///    - static LogicalResult verifyConstructionInvariants(Location loc,
-///                                                        Args... args)
+///    - static LogicalResult verify(
+///                                function_ref<InFlightDiagnostic()> emitError,
+///                                Args... args)
 ///      * This method is invoked when calling the 'TypeBase::get/getChecked'
 ///        methods to ensure that the arguments passed in are valid to construct
 ///        a type instance with.
@@ -92,8 +93,7 @@ public:
   bool operator!() const { return impl == nullptr; }
 
   template <typename U> bool isa() const;
-  template <typename First, typename Second, typename... Rest>
-  bool isa() const;
+  template <typename First, typename Second, typename... Rest> bool isa() const;
   template <typename U> U dyn_cast() const;
   template <typename U> U dyn_cast_or_null() const;
   template <typename U> U cast() const;

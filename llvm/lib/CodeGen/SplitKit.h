@@ -44,6 +44,7 @@ class MachineRegisterInfo;
 class TargetInstrInfo;
 class TargetRegisterInfo;
 class VirtRegMap;
+class VirtRegAuxInfo;
 
 /// Determines the latest safe point in a block in which we can insert a split,
 /// spill or other instruction related with CurLI.
@@ -272,6 +273,7 @@ class LLVM_LIBRARY_VISIBILITY SplitEditor {
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
   const MachineBlockFrequencyInfo &MBFI;
+  VirtRegAuxInfo &VRAI;
 
 public:
   /// ComplementSpillMode - Select how the complement live range should be
@@ -457,9 +459,9 @@ private:
 public:
   /// Create a new SplitEditor for editing the LiveInterval analyzed by SA.
   /// Newly created intervals will be appended to newIntervals.
-  SplitEditor(SplitAnalysis &sa, AAResults &aa, LiveIntervals &lis,
-              VirtRegMap &vrm, MachineDominatorTree &mdt,
-              MachineBlockFrequencyInfo &mbfi);
+  SplitEditor(SplitAnalysis &SA, AAResults &AA, LiveIntervals &LIS,
+              VirtRegMap &VRM, MachineDominatorTree &MDT,
+              MachineBlockFrequencyInfo &MBFI, VirtRegAuxInfo &VRAI);
 
   /// reset - Prepare for a new split.
   void reset(LiveRangeEdit&, ComplementSpillMode = SM_Partition);

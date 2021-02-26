@@ -118,7 +118,7 @@ TEST_CASE(dest_is_symlink_to_dir)
 {
     scoped_test_env env;
     const path dir = env.create_dir("dir");
-    const path sym = env.create_symlink(dir, "sym_name");
+    const path sym = env.create_directory_symlink(dir, "sym_name");
     std::error_code ec = GetTestEC();
     TEST_CHECK(create_directory(sym, ec) == false);
     TEST_CHECK(!ec);

@@ -129,6 +129,15 @@ func @mul(%size_arg : !shape.size, %index_arg : index) {
   return
 }
 
+func @div(%size_arg : !shape.size, %index_arg : index) {
+  %size_div = shape.div %size_arg, %size_arg
+      : !shape.size, !shape.size -> !shape.size
+  %index_div = shape.div %index_arg, %index_arg : index, index -> index
+  %mixed_div = shape.div %size_arg, %index_arg
+      : !shape.size, index -> !shape.size
+  return
+}
+
 func @add(%size_arg : !shape.size, %index_arg : index) {
   %size_sum = shape.add %size_arg, %size_arg
       : !shape.size, !shape.size -> !shape.size

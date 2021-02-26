@@ -342,13 +342,12 @@ void SubtargetEmitter::FormItineraryOperandCycleString(Record *ItinData,
     ItinData->getValueAsListOfInts("OperandCycles");
 
   // For each operand cycle
-  unsigned N = NOperandCycles = OperandCycleList.size();
-  for (unsigned i = 0; i < N;) {
+  NOperandCycles = OperandCycleList.size();
+  ListSeparator LS;
+  for (int OCycle : OperandCycleList) {
     // Next operand cycle
-    const int OCycle = OperandCycleList[i];
-
+    ItinString += LS;
     ItinString += "  " + itostr(OCycle);
-    if (++i < N) ItinString += ", ";
   }
 }
 
@@ -359,13 +358,14 @@ void SubtargetEmitter::FormItineraryBypassString(const std::string &Name,
   RecVec BypassList = ItinData->getValueAsListOfDefs("Bypasses");
   unsigned N = BypassList.size();
   unsigned i = 0;
-  for (; i < N;) {
+  ListSeparator LS;
+  for (; i < N; ++i) {
+    ItinString += LS;
     ItinString += Name + "Bypass::" + BypassList[i]->getName().str();
-    if (++i < NOperandCycles) ItinString += ", ";
   }
-  for (; i < NOperandCycles;) {
+  for (; i < NOperandCycles; ++i) {
+    ItinString += LS;
     ItinString += " 0";
-    if (++i < NOperandCycles) ItinString += ", ";
   }
 }
 

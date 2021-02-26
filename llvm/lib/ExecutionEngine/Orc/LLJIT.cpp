@@ -922,7 +922,8 @@ Error LLJITBuilderState::prepareForConstruction() {
   }
 
   LLVM_DEBUG({
-    dbgs() << "  JITTargetMachineBuilder is " << JTMB << "\n"
+    dbgs() << "  JITTargetMachineBuilder is "
+           << JITTargetMachineBuilderPrinter(*JTMB, "  ")
            << "  Pre-constructed ExecutionSession: " << (ES ? "Yes" : "No")
            << "\n"
            << "  DataLayout: ";

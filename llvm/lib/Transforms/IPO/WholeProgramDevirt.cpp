@@ -814,7 +814,7 @@ void updateVCallVisibilityInIndex(
   for (auto &P : Index) {
     for (auto &S : P.second.SummaryList) {
       auto *GVar = dyn_cast<GlobalVarSummary>(S.get());
-      if (!GVar || GVar->vTableFuncs().empty() ||
+      if (!GVar ||
           GVar->getVCallVisibility() != GlobalObject::VCallVisibilityPublic ||
           // Don't upgrade the visibility for symbols exported to the dynamic
           // linker, as we have no information on their eventual use.
@@ -1005,10 +1005,8 @@ bool DevirtIndex::tryFindVirtualCallTargets(
   for (const TypeIdOffsetVtableInfo &P : TIdInfo) {
     // Find a representative copy of the vtable initializer.
     // We can have multiple available_externally, linkonce_odr and weak_odr
-    // vtable initializers, however currently clang does not attach type
-    // metadata to available_externally, and therefore the summary will not
-    // contain any vtable functions. We can also have multiple external
-    // vtable initializers in the case of comdats, which we cannot check here.
+    // vtable initializers. We can also have multiple external vtable
+    // initializers in the case of comdats, which we cannot check here.
     // The linker should give an error in this case.
     //
     // Also, handle the case of same-named local Vtables with the same path
@@ -1024,16 +1022,21 @@ bool DevirtIndex::tryFindVirtualCallTargets(
         LocalFound = true;
       }
       auto *CurVS = cast<GlobalVarSummary>(S->getBaseObject());
-      if (!CurVS->vTableFuncs().empty()) {
+      if (!CurVS->vTableFuncs().empty() ||
+          // Previously clang did not attach the necessary type metadata to
+          // available_externally vtables, in which case there would not
+          // be any vtable functions listed in the summary and we need
+          // to treat this case conservatively (in case the bitcode is old).
+          // However, we will also not have any vtable functions in the
+          // case of a pure virtual base class. In that case we do want
+          // to set VS to avoid treating it conservatively.
+          !GlobalValue::isAvailableExternallyLinkage(S->linkage())) {
         VS = CurVS;
         // We cannot perform whole program devirtualization analysis on a vtable
         // with public LTO visibility.
         if (VS->getVCallVisibility() == GlobalObject::VCallVisibilityPublic)
           return false;
-      } else
-        // Currently clang will not attach the necessary type metadata to
-        // available_externally vtables.
-        assert(GlobalValue::isAvailableExternallyLinkage(S->linkage()));
+      }
     }
     // There will be no VS if all copies are available_externally having no
     // type metadata. In that case we can't safely perform WPD.

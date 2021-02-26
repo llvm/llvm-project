@@ -424,7 +424,7 @@ def anyext_trunc_fold: GICombineRule <
   (defs root:$root, anyext_trunc_fold_matchinfo:$matchinfo),
   (match (wip_match_opcode G_ANYEXT):$root,
          [{ return Helper.matchCombineAnyExtTrunc(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.applyCombineAnyExtTrunc(*${root}, ${matchinfo}); }])
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
 // Fold ([asz]ext ([asz]ext x)) -> ([asz]ext x).
@@ -468,7 +468,7 @@ def fabs_fabs_fold: GICombineRule<
   (defs root:$root, fabs_fabs_fold_matchinfo:$matchinfo),
   (match (wip_match_opcode G_FABS):$root,
          [{ return Helper.matchCombineFAbsOfFAbs(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.applyCombineFAbsOfFAbs(*${root}, ${matchinfo}); }])
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
 // Fold (unmerge cst) -> cst1, cst2, ...

@@ -693,6 +693,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
   setOperationAction(ISD::FLT_ROUNDS_, MVT::i32, Custom);
+  setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
 
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, Custom);
   setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, Custom);
@@ -1841,6 +1842,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::URHADD)
     MAKE_CASE(AArch64ISD::SHADD)
     MAKE_CASE(AArch64ISD::UHADD)
+    MAKE_CASE(AArch64ISD::SDOT)
+    MAKE_CASE(AArch64ISD::UDOT)
     MAKE_CASE(AArch64ISD::SMINV)
     MAKE_CASE(AArch64ISD::UMINV)
     MAKE_CASE(AArch64ISD::SMAXV)
@@ -3455,6 +3458,50 @@ SDValue AArch64TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
   return DAG.getMergeValues({AND, Chain}, dl);
 }
 
+SDValue AArch64TargetLowering::LowerSET_ROUNDING(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue RMValue = Op->getOperand(1);
+
+  // The rounding mode is in bits 23:22 of the FPCR.
+  // The llvm.set.rounding argument value to the rounding mode in FPCR mapping
+  // is 0->3, 1->0, 2->1, 3->2. The formula we use to implement this is
+  // ((arg - 1) & 3) << 22).
+  //
+  // The argument of llvm.set.rounding must be within the segment [0, 3], so
+  // NearestTiesToAway (4) is not handled here. It is responsibility of the code
+  // generated llvm.set.rounding to ensure this condition.
+
+  // Calculate new value of FPCR[23:22].
+  RMValue = DAG.getNode(ISD::SUB, DL, MVT::i32, RMValue,
+                        DAG.getConstant(1, DL, MVT::i32));
+  RMValue = DAG.getNode(ISD::AND, DL, MVT::i32, RMValue,
+                        DAG.getConstant(0x3, DL, MVT::i32));
+  RMValue =
+      DAG.getNode(ISD::SHL, DL, MVT::i32, RMValue,
+                  DAG.getConstant(AArch64::RoundingBitsPos, DL, MVT::i32));
+  RMValue = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, RMValue);
+
+  // Get current value of FPCR.
+  SDValue Ops[] = {
+      Chain, DAG.getTargetConstant(Intrinsic::aarch64_get_fpcr, DL, MVT::i64)};
+  SDValue FPCR =
+      DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, {MVT::i64, MVT::Other}, Ops);
+  Chain = FPCR.getValue(1);
+  FPCR = FPCR.getValue(0);
+
+  // Put new rounding mode into FPSCR[23:22].
+  const int RMMask = ~(AArch64::Rounding::rmMask << AArch64::RoundingBitsPos);
+  FPCR = DAG.getNode(ISD::AND, DL, MVT::i64, FPCR,
+                     DAG.getConstant(RMMask, DL, MVT::i64));
+  FPCR = DAG.getNode(ISD::OR, DL, MVT::i64, FPCR, RMValue);
+  SDValue Ops2[] = {
+      Chain, DAG.getTargetConstant(Intrinsic::aarch64_set_fpcr, DL, MVT::i64),
+      FPCR};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
+}
+
 SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
@@ -3815,14 +3862,19 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
   }
-
+  case Intrinsic::aarch64_neon_sabd:
   case Intrinsic::aarch64_neon_uabd: {
-    return DAG.getNode(AArch64ISD::UABD, dl, Op.getValueType(),
-                       Op.getOperand(1), Op.getOperand(2));
+    unsigned Opcode = IntNo == Intrinsic::aarch64_neon_uabd ? AArch64ISD::UABD
+                                                            : AArch64ISD::SABD;
+    return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1),
+                       Op.getOperand(2));
   }
-  case Intrinsic::aarch64_neon_sabd: {
-    return DAG.getNode(AArch64ISD::SABD, dl, Op.getValueType(),
-                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::aarch64_neon_sdot:
+  case Intrinsic::aarch64_neon_udot: {
+    unsigned Opcode = IntNo == Intrinsic::aarch64_neon_udot ? AArch64ISD::UDOT
+                                                            : AArch64ISD::SDOT;
+    return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1),
+                       Op.getOperand(2), Op.getOperand(3));
   }
   }
 }
@@ -4378,6 +4430,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerFSINCOS(Op, DAG);
   case ISD::FLT_ROUNDS_:
     return LowerFLT_ROUNDS_(Op, DAG);
+  case ISD::SET_ROUNDING:
+    return LowerSET_ROUNDING(Op, DAG);
   case ISD::MUL:
     return LowerMUL(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
@@ -11706,11 +11760,9 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(Op0);
   SDValue Ones = DAG.getConstant(1, DL, Op0VT);
   SDValue Zeros = DAG.getConstant(0, DL, MVT::v4i32);
-  auto DotIntrisic = (ExtOpcode == ISD::ZERO_EXTEND)
-                         ? Intrinsic::aarch64_neon_udot
-                         : Intrinsic::aarch64_neon_sdot;
-  SDValue Dot = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Zeros.getValueType(),
-                            DAG.getConstant(DotIntrisic, DL, MVT::i32), Zeros,
+  auto DotOpcode =
+      (ExtOpcode == ISD::ZERO_EXTEND) ? AArch64ISD::UDOT : AArch64ISD::SDOT;
+  SDValue Dot = DAG.getNode(DotOpcode, DL, Zeros.getValueType(), Zeros,
                             Ones, Op0.getOperand(0));
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, N->getValueType(0), Dot);
 }

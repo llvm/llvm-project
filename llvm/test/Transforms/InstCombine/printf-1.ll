@@ -132,7 +132,7 @@ define void @test_simplify6() {
 
 define void @test_simplify7() {
 ; CHECK-LABEL: @test_simplify7(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @percent_d, i32 0, i32 0), i32 187)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @percent_d, i32 0, i32 0), i32 187)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_simplify7(
@@ -146,11 +146,11 @@ define void @test_simplify7() {
 
 define void @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @percent_f, i32 0, i32 0), double 1.870000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @percent_f, i32 0, i32 0), double 1.870000e+00)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_no_simplify1(
-; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @percent_f, i32 0, i32 0), double 1.870000e+00)
+; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @percent_f, i32 0, i32 0), double 1.870000e+00)
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @percent_f, i32 0, i32 0
@@ -160,11 +160,11 @@ define void @test_no_simplify1() {
 
 define void @test_no_simplify2(i8* %fmt, double %d) {
 ; CHECK-LABEL: @test_no_simplify2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) [[FMT:%.*]], double [[D:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) [[FMT:%.*]], double [[D:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_no_simplify2(
-; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) [[FMT:%.*]], double [[D:%.*]])
+; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) [[FMT:%.*]], double [[D:%.*]])
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
   call i32 (i8*, ...) @printf(i8* %fmt, double %d)
@@ -173,7 +173,7 @@ define void @test_no_simplify2(i8* %fmt, double %d) {
 
 define i32 @test_no_simplify3() {
 ; CHECK-LABEL: @test_no_simplify3(
-; CHECK-NEXT:    [[RET:%.*]] = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([2 x i8], [2 x i8]* @h, i32 0, i32 0))
+; CHECK-NEXT:    [[RET:%.*]] = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x i8], [2 x i8]* @h, i32 0, i32 0))
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 ; CHECK-IPRINTF-LABEL: @test_no_simplify3(

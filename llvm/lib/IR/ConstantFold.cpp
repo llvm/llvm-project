@@ -348,14 +348,22 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
   }
 }
 
+/// Wrapper around getFoldedSizeOfImpl() that adds caching.
+static Constant *getFoldedSizeOf(Type *Ty, Type *DestTy, bool Folded,
+                                 DenseMap<Type *, Constant *> &Cache);
+
 /// Return a ConstantExpr with type DestTy for sizeof on Ty, with any known
 /// factors factored out. If Folded is false, return null if no factoring was
 /// possible, to avoid endlessly bouncing an unfoldable expression back into the
 /// top-level folder.
-static Constant *getFoldedSizeOf(Type *Ty, Type *DestTy, bool Folded) {
+static Constant *getFoldedSizeOfImpl(Type *Ty, Type *DestTy, bool Folded,
+                                     DenseMap<Type *, Constant *> &Cache) {
+  // This is the actual implementation of getFoldedSizeOf(). To get the caching
+  // behavior, we need to call getFoldedSizeOf() when we recurse.
+
   if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
     Constant *N = ConstantInt::get(DestTy, ATy->getNumElements());
-    Constant *E = getFoldedSizeOf(ATy->getElementType(), DestTy, true);
+    Constant *E = getFoldedSizeOf(ATy->getElementType(), DestTy, true, Cache);
     return ConstantExpr::getNUWMul(E, N);
   }
 
@@ -367,11 +375,11 @@ static Constant *getFoldedSizeOf(Type *Ty, Type *DestTy, bool Folded) {
         return ConstantExpr::getNullValue(DestTy);
       // Check for a struct with all members having the same size.
       Constant *MemberSize =
-        getFoldedSizeOf(STy->getElementType(0), DestTy, true);
+          getFoldedSizeOf(STy->getElementType(0), DestTy, true, Cache);
       bool AllSame = true;
       for (unsigned i = 1; i != NumElems; ++i)
         if (MemberSize !=
-            getFoldedSizeOf(STy->getElementType(i), DestTy, true)) {
+            getFoldedSizeOf(STy->getElementType(i), DestTy, true, Cache)) {
           AllSame = false;
           break;
         }
@@ -385,10 +393,10 @@ static Constant *getFoldedSizeOf(Type *Ty, Type *DestTy, bool Folded) {
   // to an arbitrary pointee.
   if (PointerType *PTy = dyn_cast<PointerType>(Ty))
     if (!PTy->getElementType()->isIntegerTy(1))
-      return
-        getFoldedSizeOf(PointerType::get(IntegerType::get(PTy->getContext(), 1),
-                                         PTy->getAddressSpace()),
-                        DestTy, true);
+      return getFoldedSizeOf(
+          PointerType::get(IntegerType::get(PTy->getContext(), 1),
+                           PTy->getAddressSpace()),
+          DestTy, true, Cache);
 
   // If there's no interesting folding happening, bail so that we don't create
   // a constant that looks like it needs folding but really doesn't.
@@ -401,6 +409,20 @@ static Constant *getFoldedSizeOf(Type *Ty, Type *DestTy, bool Folded) {
                                                     DestTy, false),
                             C, DestTy);
   return C;
+}
+
+static Constant *getFoldedSizeOf(Type *Ty, Type *DestTy, bool Folded,
+                                 DenseMap<Type *, Constant *> &Cache) {
+  // Check for previously generated folded size constant.
+  auto It = Cache.find(Ty);
+  if (It != Cache.end())
+    return It->second;
+  return Cache[Ty] = getFoldedSizeOfImpl(Ty, DestTy, Folded, Cache);
+}
+
+static Constant *getFoldedSizeOf(Type *Ty, Type *DestTy, bool Folded) {
+  DenseMap<Type *, Constant *> Cache;
+  return getFoldedSizeOf(Ty, DestTy, Folded, Cache);
 }
 
 /// Return a ConstantExpr with type DestTy for alignof on Ty, with any known

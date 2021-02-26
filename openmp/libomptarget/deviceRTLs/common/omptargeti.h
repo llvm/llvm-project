@@ -30,8 +30,7 @@ INLINE void omptarget_nvptx_TaskDescr::SetRuntimeSched(omp_sched_t sched) {
   items.flags |= val;
 }
 
-INLINE void
-omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr() {
+INLINE void omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr() {
   // slow method
   // flag:
   //   default sched is static,
@@ -53,10 +52,9 @@ INLINE void omptarget_nvptx_TaskDescr::InitLevelOneTaskDescr(
   //   dyn is off (unused now anyway, but may need to sample from host ?)
   //   in L1 parallel
 
-  items.flags =
-      TaskDescr_InPar | TaskDescr_IsParConstr; // set flag to parallel
+  items.flags = TaskDescr_InPar | TaskDescr_IsParConstr; // set flag to parallel
   items.threadId =
-      GetThreadIdInBlock(); // get ids from cuda (only called for 1st level)
+      GetThreadIdInBlock();   // get ids from cuda (only called for 1st level)
   items.runtimeChunkSize = 1; // preferred chunking statik with chunk 1
   prev = parentTaskDescr;
 }

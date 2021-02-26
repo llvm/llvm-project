@@ -61,6 +61,10 @@ namespace tensor {
 /// ```
 bool canFoldIntoConsumerOp(CastOp castOp);
 
+/// Performs folding of any operand of `op` if it comes from a tensor::CastOp
+/// that can be folded.
+LogicalResult foldTensorCast(Operation *op);
+
 } // namespace tensor
 } // namespace mlir
 

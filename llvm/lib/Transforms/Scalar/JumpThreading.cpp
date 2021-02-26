@@ -733,23 +733,26 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
 
   // Handle some boolean conditions.
   if (I->getType()->getPrimitiveSizeInBits() == 1) {
+    using namespace PatternMatch;
+
     assert(Preference == WantInteger && "One-bit non-integer type?");
     // X | true -> true
     // X & false -> false
-    if (I->getOpcode() == Instruction::Or ||
-        I->getOpcode() == Instruction::And) {
+    Value *Op0, *Op1;
+    if (match(I, m_LogicalOr(m_Value(Op0), m_Value(Op1))) ||
+        match(I, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
       PredValueInfoTy LHSVals, RHSVals;
 
-      computeValueKnownInPredecessorsImpl(I->getOperand(0), BB, LHSVals,
-                                      WantInteger, RecursionSet, CxtI);
-      computeValueKnownInPredecessorsImpl(I->getOperand(1), BB, RHSVals,
-                                          WantInteger, RecursionSet, CxtI);
+      computeValueKnownInPredecessorsImpl(Op0, BB, LHSVals, WantInteger,
+                                          RecursionSet, CxtI);
+      computeValueKnownInPredecessorsImpl(Op1, BB, RHSVals, WantInteger,
+                                          RecursionSet, CxtI);
 
       if (LHSVals.empty() && RHSVals.empty())
         return false;
 
       ConstantInt *InterestingVal;
-      if (I->getOpcode() == Instruction::Or)
+      if (match(I, m_LogicalOr()))
         InterestingVal = ConstantInt::getTrue(I->getContext());
       else
         InterestingVal = ConstantInt::getFalse(I->getContext());
@@ -2076,6 +2079,15 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
     ValueMapping[PN] = NewPN;
   }
 
+  // Clone noalias scope declarations in the threaded block. When threading a
+  // loop exit, we would otherwise end up with two idential scope declarations
+  // visible at the same time.
+  SmallVector<MDNode *> NoAliasScopes;
+  DenseMap<MDNode *, MDNode *> ClonedScopes;
+  LLVMContext &Context = PredBB->getContext();
+  identifyNoAliasScopesToClone(BI, BE, NoAliasScopes);
+  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, "thread", Context);
+
   // Clone the non-phi instructions of the source basic block into NewBB,
   // keeping track of the mapping and using it to remap operands in the cloned
   // instructions.
@@ -2084,6 +2096,7 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
     New->setName(BI->getName());
     NewBB->getInstList().push_back(New);
     ValueMapping[&*BI] = New;
+    adaptNoAliasScopes(New, ClonedScopes, Context);
 
     // Remap operands to patch up intra-block references.
     for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)

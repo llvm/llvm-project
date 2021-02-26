@@ -230,7 +230,7 @@ static Error executeObjcopyOnArchive(CopyConfig &Config,
 
 static Error restoreStatOnFile(StringRef Filename,
                                const sys::fs::file_status &Stat,
-                               bool PreserveDates) {
+                               const CopyConfig &Config) {
   int FD;
 
   // Writing to stdout should not be treated as an error here, just
@@ -242,7 +242,7 @@ static Error restoreStatOnFile(StringRef Filename,
           sys::fs::openFileForWrite(Filename, FD, sys::fs::CD_OpenExisting))
     return createFileError(Filename, EC);
 
-  if (PreserveDates)
+  if (Config.PreserveDates)
     if (auto EC = sys::fs::setLastAccessAndModificationTime(
             FD, Stat.getLastAccessedTime(), Stat.getLastModificationTime()))
       return createFileError(Filename, EC);
@@ -250,17 +250,17 @@ static Error restoreStatOnFile(StringRef Filename,
   sys::fs::file_status OStat;
   if (std::error_code EC = sys::fs::status(FD, OStat))
     return createFileError(Filename, EC);
-  if (OStat.type() == sys::fs::file_type::regular_file)
+  if (OStat.type() == sys::fs::file_type::regular_file) {
+    sys::fs::perms Perm = Stat.permissions();
+    if (Config.InputFilename != Config.OutputFilename)
+      Perm = static_cast<sys::fs::perms>(Perm & ~sys::fs::getUmask() & ~06000);
 #ifdef _WIN32
-    if (auto EC = sys::fs::setPermissions(
-            Filename, static_cast<sys::fs::perms>(Stat.permissions() &
-                                                  ~sys::fs::getUmask())))
+    if (auto EC = sys::fs::setPermissions(Filename, Perm))
 #else
-    if (auto EC = sys::fs::setPermissions(
-            FD, static_cast<sys::fs::perms>(Stat.permissions() &
-                                            ~sys::fs::getUmask())))
+    if (auto EC = sys::fs::setPermissions(FD, Perm))
 #endif
       return createFileError(Filename, EC);
+  }
 
   if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
     return createFileError(Filename, EC);
@@ -320,14 +320,12 @@ static Error executeObjcopy(CopyConfig &Config) {
     }
   }
 
-  if (Error E =
-          restoreStatOnFile(Config.OutputFilename, Stat, Config.PreserveDates))
+  if (Error E = restoreStatOnFile(Config.OutputFilename, Stat, Config))
     return E;
 
   if (!Config.SplitDWO.empty()) {
     Stat.permissions(static_cast<sys::fs::perms>(0666));
-    if (Error E =
-            restoreStatOnFile(Config.SplitDWO, Stat, Config.PreserveDates))
+    if (Error E = restoreStatOnFile(Config.SplitDWO, Stat, Config))
       return E;
   }
 

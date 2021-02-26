@@ -607,7 +607,7 @@ a function that can be used by LLDB's python command code:
 
 ::
 
-  #!/usr/bin/python
+  #!/usr/bin/env python
 
   import lldb
   import commands
@@ -715,7 +715,7 @@ print the process, thread and frame objects if the process stopped:
 
 ::
 
-  #!/usr/bin/python
+  #!/usr/bin/env python
 
   import lldb
   import os

@@ -43,6 +43,7 @@
 ! HELP-NEXT: -o <file>              Write output to <file>
 ! HELP-NEXT: -U <macro>             Undefine macro <macro>
 ! HELP-NEXT: --version              Print version information
+! HELP-NEXT: -Xflang <arg>          Pass <arg> to the flang compiler
 
 !-------------------------------------------------------------
 ! EXPECTED OUTPUT FOR FLANG FRONTEND DRIVER (flang-new -fc1)
@@ -59,6 +60,9 @@
 ! HELP-FC1-NEXT: -fdebug-dump-parse-tree Dump the parse tree
 ! HELP-FC1-NEXT: -fdebug-dump-provenance Dump provenance
 ! HELP-FC1-NEXT: -fdebug-dump-symbols    Dump symbols after the semantic analysis
+! HELP-FC1-NEXT: -fdebug-measure-parse-tree
+! HELP-FC1-NEXT:                         Measure the parse tree
+! HELP-FC1-NEXT: -fdebug-pre-fir-tree    Dump the pre-FIR tree
 ! HELP-FC1-NEXT: -fdebug-unparse-with-symbols
 ! HELP-FC1-NEXT:                        Unparse and stop.
 ! HELP-FC1-NEXT: -fdebug-unparse        Unparse and stop.
@@ -76,6 +80,7 @@
 ! HELP-FC1-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-FC1-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-FC1-NEXT: -o <file>              Write output to <file>
+! HELP-FC1-NEXT: -test-io               Run the InputOuputTest action. Use for development and testing only.
 ! HELP-FC1-NEXT: -U <macro>             Undefine macro <macro>
 ! HELP-FC1-NEXT: --version              Print version information
 

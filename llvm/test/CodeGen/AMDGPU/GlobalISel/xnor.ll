@@ -19,13 +19,6 @@ entry:
 define amdgpu_ps i32 @scalar_xnor_v2i16_one_use(<2 x i16> inreg %a, <2 x i16> inreg %b) {
 ; GFX7-LABEL: scalar_xnor_v2i16_one_use:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_mov_b32 s4, 0xffff
-; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX7-NEXT:    s_and_b32 s0, s0, s4
-; GFX7-NEXT:    s_or_b32 s0, s1, s0
-; GFX7-NEXT:    s_lshl_b32 s1, s3, 16
-; GFX7-NEXT:    s_and_b32 s2, s2, s4
-; GFX7-NEXT:    s_or_b32 s1, s1, s2
 ; GFX7-NEXT:    s_xor_b32 s0, s0, s1
 ; GFX7-NEXT:    s_xor_b32 s0, s0, -1
 ; GFX7-NEXT:    ; return to shader part epilog

@@ -290,7 +290,8 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       // consideration when it tries to merge entries in the section.
       Reloc::Model ReloModel = TM.getRelocationModel();
       if (ReloModel == Reloc::Static || ReloModel == Reloc::ROPI ||
-          ReloModel == Reloc::RWPI || ReloModel == Reloc::ROPI_RWPI)
+          ReloModel == Reloc::RWPI || ReloModel == Reloc::ROPI_RWPI ||
+          !C->needsDynamicRelocation())
         return SectionKind::getReadOnly();
 
       // Otherwise, the dynamic linker needs to fix it up, put it in the

@@ -29,8 +29,7 @@ INLINE uint32_t omptarget_nvptx_Queue<ElementType, SIZE>::DEQUEUE_TICKET() {
 }
 
 template <typename ElementType, uint32_t SIZE>
-INLINE uint32_t
-omptarget_nvptx_Queue<ElementType, SIZE>::ID(uint32_t ticket) {
+INLINE uint32_t omptarget_nvptx_Queue<ElementType, SIZE>::ID(uint32_t ticket) {
   return (ticket / SIZE) * 2;
 }
 

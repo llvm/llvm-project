@@ -54,7 +54,7 @@ static inline kmp_depnode_t *__kmp_node_ref(kmp_depnode_t *node) {
 
 enum { KMP_DEPHASH_OTHER_SIZE = 97, KMP_DEPHASH_MASTER_SIZE = 997 };
 
-size_t sizes[] = { 997, 2003, 4001, 8191, 16001, 32003, 64007, 131071, 270029 };
+size_t sizes[] = {997, 2003, 4001, 8191, 16001, 32003, 64007, 131071, 270029};
 const size_t MAX_GEN = 8;
 
 static inline size_t __kmp_dephash_hash(kmp_intptr_t addr, size_t hsize) {
@@ -152,11 +152,11 @@ static kmp_dephash_t *__kmp_dephash_create(kmp_info_t *thread,
 #define ENTRY_LAST_INS 0
 #define ENTRY_LAST_MTXS 1
 
-static kmp_dephash_entry *
-__kmp_dephash_find(kmp_info_t *thread, kmp_dephash_t **hash, kmp_intptr_t addr) {
+static kmp_dephash_entry *__kmp_dephash_find(kmp_info_t *thread,
+                                             kmp_dephash_t **hash,
+                                             kmp_intptr_t addr) {
   kmp_dephash_t *h = *hash;
-  if (h->nelements != 0
-      && h->nconflicts/h->size >= 1) {
+  if (h->nelements != 0 && h->nconflicts / h->size >= 1) {
     *hash = __kmp_dephash_extend(thread, h);
     h = *hash;
   }
@@ -537,13 +537,13 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
           OMPT_LOAD_OR_GET_RETURN_ADDRESS(gtid));
     }
 
-    new_taskdata->ompt_task_info.frame.enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+    new_taskdata->ompt_task_info.frame.enter_frame.ptr =
+        OMPT_GET_FRAME_ADDRESS(0);
   }
 
 #if OMPT_OPTIONAL
   /* OMPT grab all dependences if requested by the tool */
-  if (ndeps + ndeps_noalias > 0 &&
-      ompt_enabled.ompt_callback_dependences) {
+  if (ndeps + ndeps_noalias > 0 && ompt_enabled.ompt_callback_dependences) {
     kmp_int32 i;
 
     int ompt_ndeps = ndeps + ndeps_noalias;

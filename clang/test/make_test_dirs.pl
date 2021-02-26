@@ -1,9 +1,10 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 #
 # Simple little Perl script that takes the cxx-sections.data file as
 # input and generates a directory structure that mimics the standard's
 # structure.
 use English;
+use warnings;
 
 $current_indent_level = -4;
 while ($line = <STDIN>) {

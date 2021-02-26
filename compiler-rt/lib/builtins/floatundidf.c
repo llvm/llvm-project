@@ -20,7 +20,7 @@
 
 #include "int_lib.h"
 
-#ifndef __SOFT_FP__
+#ifndef __SOFTFP__
 // Support for systems that have hardware floating-point; we'll set the inexact
 // flag as a side-effect of this computation.
 

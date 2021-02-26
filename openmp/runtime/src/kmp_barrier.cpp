@@ -204,7 +204,7 @@ static bool __kmp_linear_barrier_release_template(
              other_threads[i]->th.th_bar[bt].bb.b_go + KMP_BARRIER_STATE_BUMP));
         ANNOTATE_BARRIER_BEGIN(other_threads[i]);
         kmp_flag_64<> flag(&other_threads[i]->th.th_bar[bt].bb.b_go,
-                         other_threads[i]);
+                           other_threads[i]);
         flag.release();
       }
     }
@@ -288,10 +288,9 @@ static bool __kmp_linear_barrier_release_cancellable(
 }
 
 // Tree barrier
-static void
-__kmp_tree_barrier_gather(enum barrier_type bt, kmp_info_t *this_thr, int gtid,
-                          int tid, void (*reduce)(void *, void *)
-                                       USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
+static void __kmp_tree_barrier_gather(
+    enum barrier_type bt, kmp_info_t *this_thr, int gtid, int tid,
+    void (*reduce)(void *, void *) USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
   KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(KMP_tree_gather);
   kmp_team_t *team = this_thr->th.th_team;
   kmp_bstate_t *thr_bar = &this_thr->th.th_bar[bt].bb;
@@ -508,10 +507,9 @@ static void __kmp_tree_barrier_release(
 }
 
 // Hyper Barrier
-static void
-__kmp_hyper_barrier_gather(enum barrier_type bt, kmp_info_t *this_thr, int gtid,
-                           int tid, void (*reduce)(void *, void *)
-                                        USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
+static void __kmp_hyper_barrier_gather(
+    enum barrier_type bt, kmp_info_t *this_thr, int gtid, int tid,
+    void (*reduce)(void *, void *) USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
   KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(KMP_hyper_gather);
   kmp_team_t *team = this_thr->th.th_team;
   kmp_bstate_t *thr_bar = &this_thr->th.th_bar[bt].bb;
@@ -2027,7 +2025,8 @@ void __kmp_fork_barrier(int gtid, int tid) {
 #endif
     if (!KMP_MASTER_TID(ds_tid) && ompt_enabled.ompt_callback_implicit_task) {
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
-          ompt_scope_end, NULL, task_data, 0, ds_tid, ompt_task_implicit); // TODO: Can this be ompt_task_initial?
+          ompt_scope_end, NULL, task_data, 0, ds_tid,
+          ompt_task_implicit); // TODO: Can this be ompt_task_initial?
     }
   }
 #endif
@@ -2108,7 +2107,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
 #if KMP_AFFINITY_SUPPORTED
         || (__kmp_affinity_type == affinity_balanced && team->t.t_size_changed)
 #endif
-            ) {
+    ) {
       // NULL means use the affinity-format-var ICV
       __kmp_aux_display_affinity(gtid, NULL);
       this_thr->th.th_prev_num_threads = team->t.t_nproc;

@@ -10,6 +10,7 @@
 #include "flang/Common/default-kinds.h"
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendOptions.h"
+#include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
@@ -23,13 +24,22 @@
 
 using namespace Fortran::frontend;
 
-void reportFatalSemanticErrors(const Fortran::semantics::Semantics &semantics,
+/// Report fatal semantic errors if present.
+///
+/// \param semantics The semantics instance
+/// \param diags The diagnostics engine instance
+/// \param bufferName The file or buffer name
+///
+/// \return True if fatal semantic errors are present, false if not
+bool reportFatalSemanticErrors(const Fortran::semantics::Semantics &semantics,
     clang::DiagnosticsEngine &diags, const llvm::StringRef &bufferName) {
   if (semantics.AnyFatalError()) {
     unsigned DiagID = diags.getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Semantic errors in %0");
     diags.Report(DiagID) << bufferName;
+    return true;
   }
+  return false;
 }
 
 bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
@@ -245,6 +255,56 @@ void DebugDumpParseTreeAction::ExecuteAction() {
   // Report fatal semantic errors
   reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
       GetCurrentFileOrBufferName());
+}
+
+void DebugMeasureParseTreeAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+
+  // Parse. In case of failure, report and return.
+  ci.parsing().Parse(llvm::outs());
+
+  if (ci.parsing().messages().AnyFatalError()) {
+    unsigned diagID = ci.diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Could not parse %0");
+    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
+
+    ci.parsing().messages().Emit(
+        llvm::errs(), this->instance().allCookedSources());
+    return;
+  }
+
+  // Report the diagnostics from parsing
+  ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+
+  auto &parseTree{*ci.parsing().parseTree()};
+
+  // Measure the parse tree
+  MeasurementVisitor visitor;
+  Fortran::parser::Walk(parseTree, visitor);
+  llvm::outs() << "Parse tree comprises " << visitor.objects
+               << " objects and occupies " << visitor.bytes
+               << " total bytes.\n";
+}
+
+void DebugPreFIRTreeAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+  // Report and exit if fatal semantic errors are present
+  if (reportFatalSemanticErrors(
+          semantics(), ci.diagnostics(), GetCurrentFileOrBufferName())) {
+    return;
+  }
+
+  auto &parseTree{*ci.parsing().parseTree()};
+
+  // Dump pre-FIR tree
+  if (auto ast{Fortran::lower::createPFT(
+          parseTree, ci.invocation().semanticsContext())}) {
+    Fortran::lower::dumpPFT(llvm::outs(), *ast);
+  } else {
+    unsigned diagID = ci.diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Pre FIR Tree is NULL.");
+    ci.diagnostics().Report(diagID);
+  }
 }
 
 void EmitObjAction::ExecuteAction() {

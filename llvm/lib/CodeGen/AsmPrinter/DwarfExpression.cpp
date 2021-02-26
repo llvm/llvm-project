@@ -400,6 +400,7 @@ void DwarfExpression::finalizeEntryValue() {
   // Emit the entry value's DWARF block operand.
   commitTemporaryBuffer();
 
+  LocationFlags &= ~EntryValue;
   LocationKind = SavedLocationKind;
   IsEmittingEntryValue = false;
 }

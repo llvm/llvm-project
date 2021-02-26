@@ -23,7 +23,7 @@ class BuiltinTrapTestCase(TestBase):
 
     # gcc generates incorrect linetable
     @expectedFailureAll(archs="arm", compiler="gcc", triple=".*-android")
-    @expectedFailureAll(archs=['aarch64'], oslist=no_match(['linux']))
+    @expectedFailureAll(archs=['aarch64'], oslist=no_match(['freebsd', 'linux']))
     @skipIfWindows
     def test_with_run_command(self):
         """Test that LLDB handles a function with __builtin_trap correctly."""

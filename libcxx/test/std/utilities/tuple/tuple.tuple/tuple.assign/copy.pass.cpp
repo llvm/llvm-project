@@ -34,6 +34,16 @@ struct MoveAssignable {
   MoveAssignable& operator=(MoveAssignable const&) = delete;
   MoveAssignable& operator=(MoveAssignable&&) = default;
 };
+struct NothrowCopyAssignable {
+  NothrowCopyAssignable& operator=(NothrowCopyAssignable const&) noexcept { return *this; }
+};
+struct PotentiallyThrowingCopyAssignable {
+  PotentiallyThrowingCopyAssignable& operator=(PotentiallyThrowingCopyAssignable const&) { return *this; }
+};
+
+struct CopyAssignableInt {
+  CopyAssignableInt& operator=(int&) { return *this; }
+};
 
 int main(int, char**)
 {
@@ -89,8 +99,8 @@ int main(int, char**)
         static_assert(!std::is_copy_assignable<T>::value, "");
     }
     {
-        using T = std::tuple<int, NonAssignable>;
-        static_assert(!std::is_copy_assignable<T>::value, "");
+      using T = std::tuple<int, NonAssignable>;
+      static_assert(!std::is_copy_assignable<T>::value, "");
     }
     {
         using T = std::tuple<int, CopyAssignable>;
@@ -100,6 +110,30 @@ int main(int, char**)
         using T = std::tuple<int, MoveAssignable>;
         static_assert(!std::is_copy_assignable<T>::value, "");
     }
+    {
+        using T = std::tuple<int, int, int>;
+        using P = std::pair<int, int>;
+        static_assert(!std::is_assignable<T&, P>::value, "");
+    }
+    {
+        // test const requirement
+        using T = std::tuple<CopyAssignableInt, CopyAssignableInt>;
+        using P = std::pair<int, int>;
+        static_assert(!std::is_assignable<T&, P const>::value, "");
+    }
+    {
+        using T = std::tuple<int, MoveAssignable>;
+        using P = std::pair<int, MoveAssignable>;
+        static_assert(!std::is_assignable<T&, P&>::value, "");
+    }
+    {
+        using T = std::tuple<NothrowCopyAssignable, int>;
+        static_assert(std::is_nothrow_copy_assignable<T>::value, "");
+    }
+    {
+        using T = std::tuple<PotentiallyThrowingCopyAssignable, int>;
+        static_assert(!std::is_nothrow_copy_assignable<T>::value, "");
+    }
 
-  return 0;
+    return 0;
 }

@@ -15,18 +15,38 @@ namespace AMDGPU {
 namespace SendMsg {
 
 // This must be in sync with llvm::AMDGPU::SendMsg::Id enum members, see SIDefines.h.
-const char* const IdSymbolic[] = {
+const char *const IdSymbolic_PreGFX11[ID_GAPS_LAST_] = {
   nullptr,
   "MSG_INTERRUPT",
   "MSG_GS",
   "MSG_GS_DONE",
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
+  "MSG_SAVEWAVE",
+  "MSG_STALL_WAVE_GEN",
+  "MSG_HALT_WAVES",
+  "MSG_ORDERED_PS_DONE",
+  "MSG_EARLY_PRIM_DEALLOC",
   "MSG_GS_ALLOC_REQ",
   "MSG_GET_DOORBELL",
+  "MSG_GET_DDID",
+  nullptr,
+  nullptr,
+  nullptr,
+  "MSG_SYSMSG"
+};
+
+// This must be in sync with llvm::AMDGPU::SendMsg::Id enum members, see SIDefines.h.
+const char *const IdSymbolic_GFX11Plus[ID_GAPS_LAST_] = {
+  nullptr,
+  "MSG_INTERRUPT",
+  "MSG_HS_TESSFACTOR",
+  "MSG_DEALLOC_VGPRS",
+  nullptr,
+  "MSG_STALL_WAVE_GEN",
+  "MSG_HALT_WAVES",
+  "MSG_ORDERED_PS_DONE",
+  nullptr,
+  "MSG_GS_ALLOC_REQ",
+  nullptr,
   nullptr,
   nullptr,
   nullptr,
@@ -35,7 +55,7 @@ const char* const IdSymbolic[] = {
 };
 
 // These two must be in sync with llvm::AMDGPU::SendMsg::Op enum members, see SIDefines.h.
-const char* const OpSysSymbolic[] = {
+const char *const OpSysSymbolic[OP_SYS_LAST_] = {
   nullptr,
   "SYSMSG_OP_ECC_ERR_INTERRUPT",
   "SYSMSG_OP_REG_RD",
@@ -43,7 +63,7 @@ const char* const OpSysSymbolic[] = {
   "SYSMSG_OP_TTRACE_PC"
 };
 
-const char* const OpGsSymbolic[] = {
+const char *const OpGsSymbolic[OP_GS_LAST_] = {
   "GS_OP_NOP",
   "GS_OP_CUT",
   "GS_OP_EMIT",

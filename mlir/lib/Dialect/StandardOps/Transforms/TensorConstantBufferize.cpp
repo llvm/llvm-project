@@ -61,9 +61,9 @@ GlobalCreator::GlobalCreator(ModuleOp module) {
     auto global = globalBuilder.create<GlobalMemrefOp>(
         op.getLoc(), (Twine("__constant_") + os.str()).str(),
         /*sym_visibility=*/globalBuilder.getStringAttr("private"),
-        /*type=*/
-        TypeAttr::get(typeConverter.convertType(type)), /*initial_value=*/
-        op.getValue().cast<ElementsAttr>(), /*constant=*/true);
+        /*type=*/typeConverter.convertType(type),
+        /*initial_value=*/op.getValue().cast<ElementsAttr>(),
+        /*constant=*/true);
     symbolTable.insert(global);
     // The symbol table inserts at the end of the module, but globals are a bit
     // nicer if they are at the beginning.

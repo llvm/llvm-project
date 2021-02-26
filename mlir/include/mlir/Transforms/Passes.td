@@ -730,4 +730,22 @@ def SymbolDCE : Pass<"symbol-dce"> {
   }];
   let constructor = "mlir::createSymbolDCEPass()";
 }
+
+def ViewOpGraphPass : Pass<"symbol-dce", "ModuleOp"> {
+  let summary = "Print graphviz view of module";
+  let description = [{
+    This pass prints a graphviz per block of a module.
+
+    - Op are represented as nodes;
+    - Uses as edges;
+  }];
+  let constructor = "mlir::createPrintOpGraphPass()";
+  let options = [
+    Option<"title", "title", "std::string",
+           /*default=*/"", "The prefix of the title of the graph">,
+    Option<"shortNames", "short-names", "bool", /*default=*/"false",
+           "Use short names">
+  ];
+}
+
 #endif // MLIR_TRANSFORMS_PASSES

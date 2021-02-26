@@ -622,31 +622,33 @@ unsigned getDefaultFormatEncoding(const MCSubtargetInfo &STI);
 namespace SendMsg {
 
 LLVM_READONLY
-int64_t getMsgId(const StringRef Name);
+int64_t getMsgId(const StringRef Name, const MCSubtargetInfo &STI);
 
 LLVM_READONLY
 int64_t getMsgOpId(int64_t MsgId, const StringRef Name);
 
 LLVM_READNONE
-StringRef getMsgName(int64_t MsgId);
+StringRef getMsgName(int64_t MsgId, const MCSubtargetInfo &STI);
 
 LLVM_READNONE
-StringRef getMsgOpName(int64_t MsgId, int64_t OpId);
+StringRef getMsgOpName(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI);
 
 LLVM_READNONE
 bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict = true);
 
 LLVM_READNONE
-bool isValidMsgOp(int64_t MsgId, int64_t OpId, bool Strict = true);
+bool isValidMsgOp(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI,
+                  bool Strict = true);
 
 LLVM_READNONE
-bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId, bool Strict = true);
+bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId,
+                      const MCSubtargetInfo &STI, bool Strict = true);
 
 LLVM_READNONE
-bool msgRequiresOp(int64_t MsgId);
+bool msgRequiresOp(int64_t MsgId, const MCSubtargetInfo &STI);
 
 LLVM_READNONE
-bool msgSupportsStream(int64_t MsgId, int64_t OpId);
+bool msgSupportsStream(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI);
 
 void decodeMsg(unsigned Val,
                uint16_t &MsgId,

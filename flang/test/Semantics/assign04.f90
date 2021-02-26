@@ -126,7 +126,7 @@ real function f9() result(r)
   f9 = 1.0
 end
 
-!ERROR: No explicit type declared for 'n'
+!ERROR: No explicit type declared for dummy argument 'n'
 subroutine s10(a, n)
   implicit none
   real a(n)
