@@ -2308,8 +2308,8 @@ bool Sema::tryExprAsCall(Expr &E, QualType &ZeroArgCallReturnTy,
 ///  ill-formed expression.
 static void noteOverloads(Sema &S, const UnresolvedSetImpl &Overloads,
                           const SourceLocation FinalNoteLoc) {
-  int ShownOverloads = 0;
-  int SuppressedOverloads = 0;
+  unsigned ShownOverloads = 0;
+  unsigned SuppressedOverloads = 0;
   for (UnresolvedSetImpl::iterator It = Overloads.begin(),
        DeclsEnd = Overloads.end(); It != DeclsEnd; ++It) {
     if (ShownOverloads >= S.Diags.getNumOverloadCandidatesToShow()) {
