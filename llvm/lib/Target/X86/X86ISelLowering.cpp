@@ -1467,13 +1467,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::ANY_EXTEND,  VT, Custom);
     }
 
-    for (auto VT : { MVT::v1i1, MVT::v2i1, MVT::v4i1, MVT::v8i1, MVT::v16i1 }) {
-      setOperationAction(ISD::UADDSAT,          VT, Custom);
-      setOperationAction(ISD::SADDSAT,          VT, Custom);
-      setOperationAction(ISD::USUBSAT,          VT, Custom);
-      setOperationAction(ISD::SSUBSAT,          VT, Custom);
-      setOperationAction(ISD::VSELECT,          VT,  Expand);
-    }
+    for (auto VT : { MVT::v1i1, MVT::v2i1, MVT::v4i1, MVT::v8i1, MVT::v16i1 })
+      setOperationAction(ISD::VSELECT,          VT, Expand);
 
     for (auto VT : { MVT::v2i1, MVT::v4i1, MVT::v8i1, MVT::v16i1 }) {
       setOperationAction(ISD::SETCC,            VT, Custom);
@@ -1851,11 +1846,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::v32i1, MVT::v64i1 }) {
       setOperationAction(ISD::VSELECT,            VT, Expand);
-      setOperationAction(ISD::UADDSAT,            VT, Custom);
-      setOperationAction(ISD::SADDSAT,            VT, Custom);
-      setOperationAction(ISD::USUBSAT,            VT, Custom);
-      setOperationAction(ISD::SSUBSAT,            VT, Custom);
-
       setOperationAction(ISD::TRUNCATE,           VT, Custom);
       setOperationAction(ISD::SETCC,              VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
@@ -27161,20 +27151,6 @@ static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
   SDValue X = Op.getOperand(0), Y = Op.getOperand(1);
   unsigned Opcode = Op.getOpcode();
   SDLoc DL(Op);
-
-  if (VT.getScalarType() == MVT::i1) {
-    switch (Opcode) {
-    default: llvm_unreachable("Expected saturated arithmetic opcode");
-    case ISD::UADDSAT:
-    case ISD::SADDSAT:
-      // *addsat i1 X, Y --> X | Y
-      return DAG.getNode(ISD::OR, DL, VT, X, Y);
-    case ISD::USUBSAT:
-    case ISD::SSUBSAT:
-      // *subsat i1 X, Y --> X & ~Y
-      return DAG.getNode(ISD::AND, DL, VT, X, DAG.getNOT(DL, Y, VT));
-    }
-  }
 
   if (VT == MVT::v32i16 || VT == MVT::v64i8 ||
       (VT.is256BitVector() && !Subtarget.hasInt256())) {
