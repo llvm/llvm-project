@@ -1548,9 +1548,9 @@ private:
               if (isHeap) {
                 TODO(loc, "assignment to allocatable not implemented");
               }
-              // Target of the pointer must be assigned. See Fortran
-              // 2018 10.2.1.3 p2
-              const bool isPointer = sym && Fortran::semantics::IsPointer(*sym);
+              // Nothing to do for pointers, the target will be assigned.
+              // as per 2018 10.2.1.3 p2. genExprAddr on a pointer returns
+              // the target address.
               if (assign.lhs.Rank() > 0) {
                 // Array assignment
                 // See Fortran 2018 10.2.1.3 p5, p6, and p7
@@ -1566,9 +1566,7 @@ private:
                 // Conversions should have been inserted by semantic analysis,
                 // but they can be incorrect between the rhs and lhs. Correct
                 // that here.
-                auto addr =
-                    fir::getBase(isPointer ? genExprValue(assign.lhs, stmtCtx)
-                                           : genExprAddr(assign.lhs, stmtCtx));
+                auto addr = fir::getBase(genExprAddr(assign.lhs, stmtCtx));
                 auto val = createFIRExpr(loc, &assign.rhs, stmtCtx);
                 // A function with multiple entry points returning different
                 // types tags all result variables with one of the largest
@@ -1852,8 +1850,12 @@ private:
     if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
       auto symTy = genType(var);
       // Pointers may have an initial target
-      if (Fortran::semantics::IsPointer(sym))
-        mlir::emitError(loc, "TODO: global pointer initialization");
+      if (Fortran::semantics::IsPointer(sym)) {
+        const auto *details =
+            sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+        if (details && details->init())
+          mlir::emitError(loc, "TODO: global pointer initialization");
+      }
       auto init = [&](Fortran::lower::FirOpBuilder &b) {
         auto box =
             Fortran::lower::createUnallocatedBox(b, loc, symTy, llvm::None);

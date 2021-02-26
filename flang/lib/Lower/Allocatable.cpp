@@ -22,6 +22,7 @@
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
@@ -202,6 +203,19 @@ public:
       mlir::emitError(
           loc, "TODO: read allocatable or pointer derived type LEN parameters");
     return readBaseAddress();
+  }
+
+  /// Return the loaded fir.box.
+  mlir::Value getIrBox() const {
+    assert(irBox);
+    return irBox;
+  }
+
+  /// Read the lower bounds
+  void getLowerBounds(llvm::SmallVectorImpl<mlir::Value> &lbounds) {
+    auto rank = box.rank();
+    for (decltype(rank) dim = 0; dim < rank; ++dim)
+      lbounds.push_back(std::get<0>(readShape(dim)));
   }
 
 private:
@@ -828,6 +842,14 @@ Fortran::lower::createUnallocatedBox(Fortran::lower::FirOpBuilder &builder,
                                       lenParams);
 }
 
+/// Is this symbol a pointer to a pointer array that does not have the
+/// CONTIGUOUS attribute ?
+static inline bool
+isNonContiguousArrayPointer(const Fortran::semantics::Symbol &sym) {
+  return Fortran::semantics::IsPointer(sym) && sym.Rank() != 0 &&
+         !sym.attrs().test(Fortran::semantics::Attr::CONTIGUOUS);
+}
+
 /// In case it is safe to track the properties in variables outside a
 /// descriptor, create the variables to hold the mutable properties of the
 /// entity var. The variables are not initialized here.
@@ -844,9 +866,12 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
   // arguments. All.) Volatile means the variable may change in ways not defined
   // per Fortran, so lowering can most likely not keep the descriptor and values
   // in sync as needed.
+  // Pointers to non contiguous arrays need to be represented with a fir.box to
+  // account for the discontiguity.
   if (var.isGlobal() || Fortran::semantics::IsDummy(sym) ||
       sym.attrs().test(Fortran::semantics::Attr::VOLATILE) ||
-      useAllocateRuntime || useDescForMutableBox)
+      isNonContiguousArrayPointer(sym) || useAllocateRuntime ||
+      useDescForMutableBox)
     return {};
   fir::MutableProperties mutableProperties;
   auto name = converter.mangleName(sym);
@@ -922,17 +947,44 @@ Fortran::lower::createTempMutableBox(Fortran::lower::FirOpBuilder &builder,
 // MutableBoxValue reading interface implementation
 //===----------------------------------------------------------------------===//
 
+/// Helper to decide if a MutableBoxValue must be read to an IrBoxValue or
+/// can be read to a reified box value.
+static bool readToIrBoxValue(const fir::MutableBoxValue &box) {
+  // If this is described by a set of local variables, the value
+  // should not be tracked as a fir.box.
+  if (box.isDescribedByVariables())
+    return false;
+  // Polymorphism might be a source of discontiguity, even on allocatables.
+  // Track value as fir.box
+  if (box.isDerived() || box.isUnlimitedPolymorphic())
+    return true;
+  // Intrinsic alloctables are contiguous, no need to track the value by
+  // fir.box.
+  if (box.isAllocatable() || box.rank() == 0)
+    return false;
+  // Pointer are known to be contiguous at compile time iff they have the
+  // CONTIGUOUS attribute.
+  return !fir::valueHasFirAttribute(box.getAddr(),
+                                    fir::getContiguousAttrName());
+}
+
 Fortran::lower::SymbolBox
 Fortran::lower::genMutableBoxRead(Fortran::lower::FirOpBuilder &builder,
                                   mlir::Location loc,
                                   const fir::MutableBoxValue &box) {
   if (box.hasAssumedRank())
     TODO(loc, "Assumed rank allocatables or pointers");
-  if (box.isPointer())
-    TODO(loc, "pointer"); // deal with non contiguity;
   llvm::SmallVector<mlir::Value, 2> lbounds;
   llvm::SmallVector<mlir::Value, 2> extents;
   llvm::SmallVector<mlir::Value, 2> lengths;
+  if (readToIrBoxValue(box)) {
+    auto reader = MutablePropertyReader(builder, loc, box);
+    reader.getLowerBounds(lbounds);
+    return fir::IrBoxValue{reader.getIrBox(), lbounds,
+                           box.nonDeferredLenParams()};
+  }
+  // Contiguous intrinsic type entity: all the data can be extracted from the
+  // fir.box.
   auto addr =
       MutablePropertyReader(builder, loc, box).read(lbounds, extents, lengths);
   auto rank = box.rank();
@@ -942,8 +994,6 @@ Fortran::lower::genMutableBoxRead(Fortran::lower::FirOpBuilder &builder,
       return fir::CharArrayBoxValue{addr, len, extents, lbounds};
     return fir::CharBoxValue{addr, len};
   }
-  if (box.isDerived())
-    TODO(loc, "derived type MutableBoxValue opening");
   if (rank)
     return fir::ArrayBoxValue{addr, extents, lbounds};
   return fir::AbstractBox{addr};
@@ -964,7 +1014,7 @@ mlir::Value Fortran::lower::genIsAllocatedOrAssociatedTest(
 // MutableBoxValue syncing implementation
 //===----------------------------------------------------------------------===//
 
-/// Depending on the implementation, allocatable descriptor and the
+/// Depending on the implementation, allocatable/pointer descriptor and the
 /// MutableBoxValue need to be synced before and after calls passing the
 /// descriptor. These calls will generate the syncing if needed and be no-op
 mlir::Value
