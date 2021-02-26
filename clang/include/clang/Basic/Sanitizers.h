@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <cassert>
 #include <cstdint>
 
@@ -192,6 +193,10 @@ inline SanitizerMask getPPTransparentSanitizers() {
          SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
          SanitizerKind::Undefined | SanitizerKind::FloatDivideByZero;
 }
+
+StringRef AsanDtorKindToString(llvm::AsanDtorKind kind);
+
+llvm::AsanDtorKind AsanDtorKindFromString(StringRef kind);
 
 } // namespace clang
 

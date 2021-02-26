@@ -60,4 +60,23 @@ namespace clang {
 llvm::hash_code hash_value(const clang::SanitizerMask &Arg) {
   return Arg.hash_value();
 }
+
+StringRef AsanDtorKindToString(llvm::AsanDtorKind kind) {
+  switch (kind) {
+  case llvm::AsanDtorKind::None:
+    return "none";
+  case llvm::AsanDtorKind::Global:
+    return "global";
+  case llvm::AsanDtorKind::Invalid:
+    return "invalid";
+  }
+}
+
+llvm::AsanDtorKind AsanDtorKindFromString(StringRef kindStr) {
+  return llvm::StringSwitch<llvm::AsanDtorKind>(kindStr)
+      .Case("none", llvm::AsanDtorKind::None)
+      .Case("global", llvm::AsanDtorKind::Global)
+      .Default(llvm::AsanDtorKind::Invalid);
+}
+
 } // namespace clang
