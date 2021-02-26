@@ -250,7 +250,7 @@ static void print(OpAsmPrinter &p, AssumingOp op) {
   p.printRegion(op.doRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/yieldsResults);
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
 }
 
 namespace {
@@ -415,7 +415,7 @@ OpFoldResult ConcatOp::fold(ArrayRef<Attribute> operands) {
 
 static void print(OpAsmPrinter &p, ConstShapeOp &op) {
   p << "shape.const_shape ";
-  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{"shape"});
+  p.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/{"shape"});
   p << "[";
   interleaveComma(op.shape().getValues<int64_t>(), p,
                   [&](int64_t i) { p << i; });
@@ -723,7 +723,7 @@ void print(OpAsmPrinter &p, FunctionLibraryOp op) {
   p << op.getOperationName() << ' ';
   p.printSymbolName(op.getName());
   p.printOptionalAttrDictWithKeyword(
-      op.getAttrs(), {SymbolTable::getSymbolAttrName(), "mapping"});
+      op->getAttrs(), {SymbolTable::getSymbolAttrName(), "mapping"});
   p.printRegion(op.getOperation()->getRegion(0), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
   p << " mapping ";
@@ -1100,7 +1100,7 @@ static void print(OpAsmPrinter &p, ReduceOp op) {
     << ") : " << op.shape().getType();
   p.printOptionalArrowTypeList(op.getResultTypes());
   p.printRegion(op.region());
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
 }
 
 #define GET_OP_CLASSES

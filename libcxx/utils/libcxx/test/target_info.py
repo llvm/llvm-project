@@ -27,6 +27,9 @@ class DefaultTargetInfo(object):
     def is_windows(self):
         return self.platform() == 'win32'
 
+    def is_mingw(self):
+        return False
+
     def is_darwin(self):
         return self.platform() == 'darwin'
 
@@ -183,6 +186,13 @@ class LinuxRemoteTI(LinuxLocalTI):
 class WindowsLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(WindowsLocalTI, self).__init__(full_config)
+
+class MingwLocalTI(WindowsLocalTI):
+    def __init__(self, full_config):
+        super(MingwLocalTI, self).__init__(full_config)
+
+    def is_mingw(self):
+        return True
 
 def make_target_info(full_config):
     default = "libcxx.test.target_info.LocalTI"

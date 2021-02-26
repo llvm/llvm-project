@@ -3977,9 +3977,10 @@ LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B,LLVMAtomicRMWBinOp op,
                                LLVMAtomicOrdering ordering,
                                LLVMBool singleThread) {
   AtomicRMWInst::BinOp intop = mapFromLLVMRMWBinOp(op);
-  return wrap(unwrap(B)->CreateAtomicRMW(intop, unwrap(PTR), unwrap(Val),
-    mapFromLLVMOrdering(ordering), singleThread ? SyncScope::SingleThread
-                                                : SyncScope::System));
+  return wrap(unwrap(B)->CreateAtomicRMW(
+      intop, unwrap(PTR), unwrap(Val), MaybeAlign(),
+      mapFromLLVMOrdering(ordering),
+      singleThread ? SyncScope::SingleThread : SyncScope::System));
 }
 
 LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
@@ -3988,10 +3989,11 @@ LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
                                     LLVMAtomicOrdering FailureOrdering,
                                     LLVMBool singleThread) {
 
-  return wrap(unwrap(B)->CreateAtomicCmpXchg(unwrap(Ptr), unwrap(Cmp),
-                unwrap(New), mapFromLLVMOrdering(SuccessOrdering),
-                mapFromLLVMOrdering(FailureOrdering),
-                singleThread ? SyncScope::SingleThread : SyncScope::System));
+  return wrap(unwrap(B)->CreateAtomicCmpXchg(
+      unwrap(Ptr), unwrap(Cmp), unwrap(New), MaybeAlign(),
+      mapFromLLVMOrdering(SuccessOrdering),
+      mapFromLLVMOrdering(FailureOrdering),
+      singleThread ? SyncScope::SingleThread : SyncScope::System));
 }
 
 unsigned LLVMGetNumMaskElements(LLVMValueRef SVInst) {

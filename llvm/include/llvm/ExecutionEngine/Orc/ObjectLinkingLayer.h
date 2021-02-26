@@ -52,10 +52,13 @@ class ObjectLinkingLayerJITLinkContext;
 /// Clients can use this class to add relocatable object files to an
 /// ExecutionSession, and it typically serves as the base layer (underneath
 /// a compiling layer like IRCompileLayer) for the rest of the JIT.
-class ObjectLinkingLayer : public ObjectLayer, private ResourceManager {
+class ObjectLinkingLayer : public RTTIExtends<ObjectLinkingLayer, ObjectLayer>,
+                           private ResourceManager {
   friend class ObjectLinkingLayerJITLinkContext;
 
 public:
+  static char ID;
+
   /// Plugin instances can be added to the ObjectLinkingLayer to receive
   /// callbacks when code is loaded or emitted, and when JITLink is being
   /// configured.

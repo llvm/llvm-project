@@ -46,8 +46,7 @@ GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
 // Returns F.getComdat() if it exists.
 // Otherwise creates a new comdat, sets F's comdat, and returns it.
 // Returns nullptr on failure.
-Comdat *GetOrCreateFunctionComdat(Function &F, Triple &T,
-                                  const std::string &ModuleId);
+Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {

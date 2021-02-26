@@ -196,6 +196,9 @@ clang-format
 - ``BasedOnStyle: InheritParentConfig`` allows to use the ``.clang-format`` of
   the parent directories to overwrite only parts of it.
 
+- Option ``IndentAccessModifiers`` has been added to be able to give access
+  modifiers their own indentation level inside records.
+
 libclang
 --------
 

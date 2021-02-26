@@ -71,10 +71,12 @@ public:
       NewHeader.State = Chunk::State::Available;
       Chunk::compareExchangeHeader(Allocator.Cookie, Ptr, &NewHeader, &Header);
 
-      if (allocatorSupportsMemoryTagging<Params>())
-        Ptr = untagPointer(Ptr);
       void *BlockBegin = Allocator::getBlockBegin(Ptr, &NewHeader);
-      Cache.deallocate(NewHeader.ClassId, BlockBegin);
+      const uptr ClassId = NewHeader.ClassId;
+      if (LIKELY(ClassId))
+        Cache.deallocate(ClassId, BlockBegin);
+      else
+        Allocator.Secondary.deallocate(BlockBegin);
     }
 
     // We take a shortcut when allocating a quarantine batch by working with the
@@ -236,26 +238,11 @@ public:
     TSD->Cache.destroy(&Stats);
   }
 
-  ALWAYS_INLINE void *getHeaderTaggedPointer(void *Ptr) {
-    if (!allocatorSupportsMemoryTagging<Params>())
-      return Ptr;
-    auto UntaggedPtr = untagPointer(Ptr);
-    if (UntaggedPtr != Ptr)
-      return UntaggedPtr;
-    // Secondary, or pointer allocated while memory tagging is unsupported or
-    // disabled. The tag mismatch is okay in the latter case because tags will
-    // not be checked.
-    return addHeaderTag(Ptr);
-  }
-
-  ALWAYS_INLINE uptr addHeaderTag(uptr Ptr) {
-    if (!allocatorSupportsMemoryTagging<Params>())
-      return Ptr;
-    return addFixedTag(Ptr, 2);
-  }
-
-  ALWAYS_INLINE void *addHeaderTag(void *Ptr) {
-    return reinterpret_cast<void *>(addHeaderTag(reinterpret_cast<uptr>(Ptr)));
+  ALWAYS_INLINE void *untagPointerMaybe(void *Ptr) {
+    if (allocatorSupportsMemoryTagging<Params>())
+      return reinterpret_cast<void *>(
+          untagPointer(reinterpret_cast<uptr>(Ptr)));
+    return Ptr;
   }
 
   NOINLINE u32 collectStackTrace() {
@@ -352,7 +339,7 @@ public:
         TSD->unlock();
     }
     if (UNLIKELY(ClassId == 0))
-      Block = Secondary.allocate(Options, Size, Alignment, &SecondaryBlockEnd,
+      Block = Secondary.allocate(NeededSize, Alignment, &SecondaryBlockEnd,
                                  FillContents);
 
     if (UNLIKELY(!Block)) {
@@ -448,21 +435,12 @@ public:
           TaggedPtr = prepareTaggedChunk(Ptr, Size, OddEvenMask, BlockEnd);
         }
         storeAllocationStackMaybe(Options, Ptr);
-      } else {
-        Block = addHeaderTag(Block);
-        Ptr = addHeaderTag(Ptr);
-        if (UNLIKELY(FillContents != NoFill)) {
-          // This condition is not necessarily unlikely, but since memset is
-          // costly, we might as well mark it as such.
-          memset(Block, FillContents == ZeroFill ? 0 : PatternFillByte,
-                 PrimaryT::getSizeByClassId(ClassId));
-        }
+      } else if (UNLIKELY(FillContents != NoFill)) {
+        // This condition is not necessarily unlikely, but since memset is
+        // costly, we might as well mark it as such.
+        memset(Block, FillContents == ZeroFill ? 0 : PatternFillByte,
+               PrimaryT::getSizeByClassId(ClassId));
       }
-    } else {
-      Block = addHeaderTag(Block);
-      Ptr = addHeaderTag(Ptr);
-      if (UNLIKELY(useMemoryTagging<Params>(Options)))
-        storeTags(reinterpret_cast<uptr>(Block), reinterpret_cast<uptr>(Ptr));
     }
 
     Chunk::UnpackedHeader Header = {};
@@ -516,7 +494,7 @@ public:
     if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(Ptr), MinAlignment)))
       reportMisalignedPointer(AllocatorAction::Deallocating, Ptr);
 
-    Ptr = getHeaderTaggedPointer(Ptr);
+    Ptr = untagPointerMaybe(Ptr);
 
     Chunk::UnpackedHeader Header;
     Chunk::loadHeader(Cookie, Ptr, &Header);
@@ -555,7 +533,7 @@ public:
     }
 
     void *OldTaggedPtr = OldPtr;
-    OldPtr = getHeaderTaggedPointer(OldPtr);
+    OldPtr = untagPointerMaybe(OldPtr);
 
     // The following cases are handled by the C wrappers.
     DCHECK_NE(OldPtr, nullptr);
@@ -591,7 +569,7 @@ public:
                                   Chunk::Origin::Malloc);
     }
 
-    void *BlockBegin = getBlockBegin(OldTaggedPtr, &OldHeader);
+    void *BlockBegin = getBlockBegin(OldPtr, &OldHeader);
     uptr BlockEnd;
     uptr OldSize;
     const uptr ClassId = OldHeader.ClassId;
@@ -601,19 +579,18 @@ public:
       OldSize = OldHeader.SizeOrUnusedBytes;
     } else {
       BlockEnd = SecondaryT::getBlockEnd(BlockBegin);
-      OldSize = BlockEnd - (reinterpret_cast<uptr>(OldTaggedPtr) +
-                            OldHeader.SizeOrUnusedBytes);
+      OldSize = BlockEnd -
+                (reinterpret_cast<uptr>(OldPtr) + OldHeader.SizeOrUnusedBytes);
     }
     // If the new chunk still fits in the previously allocated block (with a
     // reasonable delta), we just keep the old block, and update the chunk
     // header to reflect the size change.
-    if (reinterpret_cast<uptr>(OldTaggedPtr) + NewSize <= BlockEnd) {
+    if (reinterpret_cast<uptr>(OldPtr) + NewSize <= BlockEnd) {
       if (NewSize > OldSize || (OldSize - NewSize) < getPageSizeCached()) {
         Chunk::UnpackedHeader NewHeader = OldHeader;
         NewHeader.SizeOrUnusedBytes =
             (ClassId ? NewSize
-                     : BlockEnd -
-                           (reinterpret_cast<uptr>(OldTaggedPtr) + NewSize)) &
+                     : BlockEnd - (reinterpret_cast<uptr>(OldPtr) + NewSize)) &
             Chunk::SizeOrUnusedBytesMask;
         Chunk::compareExchangeHeader(Cookie, OldPtr, &NewHeader, &OldHeader);
         if (UNLIKELY(ClassId && useMemoryTagging<Params>(Options))) {
@@ -706,30 +683,14 @@ public:
     initThreadMaybe();
     const uptr From = Base;
     const uptr To = Base + Size;
-    bool MayHaveTaggedPrimary = allocatorSupportsMemoryTagging<Params>() &&
-                                systemSupportsMemoryTagging();
-    auto Lambda = [this, From, To, MayHaveTaggedPrimary, Callback,
-                   Arg](uptr Block) {
+    auto Lambda = [this, From, To, Callback, Arg](uptr Block) {
       if (Block < From || Block >= To)
         return;
       uptr Chunk;
       Chunk::UnpackedHeader Header;
-      if (MayHaveTaggedPrimary) {
-        // A chunk header can either have a zero tag (tagged primary) or the
-        // header tag (secondary, or untagged primary). We don't know which so
-        // try both.
-        ScopedDisableMemoryTagChecks x;
-        if (!getChunkFromBlock(Block, &Chunk, &Header) &&
-            !getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header))
-          return;
-      } else {
-        if (!getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header))
-          return;
-      }
-      if (Header.State == Chunk::State::Allocated) {
+      if (getChunkFromBlock(Block, &Chunk, &Header) &&
+          Header.State == Chunk::State::Allocated) {
         uptr TaggedChunk = Chunk;
-        if (allocatorSupportsMemoryTagging<Params>())
-          TaggedChunk = untagPointer(TaggedChunk);
         if (useMemoryTagging<Params>(Primary.Options.load()))
           TaggedChunk = loadTag(Chunk);
         Callback(TaggedChunk, getSize(reinterpret_cast<void *>(Chunk), &Header),
@@ -790,7 +751,7 @@ public:
       return GuardedAlloc.getSize(Ptr);
 #endif // GWP_ASAN_HOOKS
 
-    Ptr = getHeaderTaggedPointer(const_cast<void *>(Ptr));
+    Ptr = untagPointerMaybe(const_cast<void *>(Ptr));
     Chunk::UnpackedHeader Header;
     Chunk::loadHeader(Cookie, Ptr, &Header);
     // Getting the usable size of a chunk only makes sense if it's allocated.
@@ -815,7 +776,7 @@ public:
 #endif // GWP_ASAN_HOOKS
     if (!Ptr || !isAligned(reinterpret_cast<uptr>(Ptr), MinAlignment))
       return false;
-    Ptr = getHeaderTaggedPointer(const_cast<void *>(Ptr));
+    Ptr = untagPointerMaybe(const_cast<void *>(Ptr));
     Chunk::UnpackedHeader Header;
     return Chunk::isValid(Cookie, Ptr, &Header) &&
            Header.State == Chunk::State::Allocated;
@@ -825,17 +786,8 @@ public:
     return useMemoryTagging<Params>(Primary.Options.load());
   }
   void disableMemoryTagging() {
-    // If we haven't been initialized yet, we need to initialize now in order to
-    // prevent a future call to initThreadMaybe() from enabling memory tagging
-    // based on feature detection. But don't call initThreadMaybe() because it
-    // may end up calling the allocator (via pthread_atfork, via the post-init
-    // callback), which may cause mappings to be created with memory tagging
-    // enabled.
-    TSDRegistry.initOnceMaybe(this);
-    if (allocatorSupportsMemoryTagging<Params>()) {
-      Secondary.disableMemoryTagging();
+    if (allocatorSupportsMemoryTagging<Params>())
       Primary.Options.clear(OptionBit::UseMemoryTagging);
-    }
   }
 
   void setTrackAllocationStacks(bool Track) {
@@ -1076,8 +1028,6 @@ private:
     const uptr SizeOrUnusedBytes = Header->SizeOrUnusedBytes;
     if (LIKELY(Header->ClassId))
       return SizeOrUnusedBytes;
-    if (allocatorSupportsMemoryTagging<Params>())
-      Ptr = untagPointer(const_cast<void *>(Ptr));
     return SecondaryT::getBlockEnd(getBlockBegin(Ptr, Header)) -
            reinterpret_cast<uptr>(Ptr) - SizeOrUnusedBytes;
   }
@@ -1103,14 +1053,11 @@ private:
     // If the quarantine is disabled, the actual size of a chunk is 0 or larger
     // than the maximum allowed, we return a chunk directly to the backend.
     // This purposefully underflows for Size == 0.
-    const bool BypassQuarantine = !Quarantine.getCacheSize() ||
-                                  ((Size - 1) >= QuarantineMaxChunkSize) ||
-                                  !NewHeader.ClassId;
+    const bool BypassQuarantine =
+        !Quarantine.getCacheSize() || ((Size - 1) >= QuarantineMaxChunkSize);
     if (BypassQuarantine) {
       NewHeader.State = Chunk::State::Available;
       Chunk::compareExchangeHeader(Cookie, Ptr, &NewHeader, Header);
-      if (allocatorSupportsMemoryTagging<Params>())
-        Ptr = untagPointer(Ptr);
       void *BlockBegin = getBlockBegin(Ptr, &NewHeader);
       const uptr ClassId = NewHeader.ClassId;
       if (LIKELY(ClassId)) {
@@ -1120,10 +1067,7 @@ private:
         if (UnlockRequired)
           TSD->unlock();
       } else {
-        if (UNLIKELY(useMemoryTagging<Params>(Options)))
-          storeTags(reinterpret_cast<uptr>(BlockBegin),
-                    reinterpret_cast<uptr>(Ptr));
-        Secondary.deallocate(Options, BlockBegin);
+        Secondary.deallocate(BlockBegin);
       }
     } else {
       NewHeader.State = Chunk::State::Quarantined;

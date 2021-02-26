@@ -153,14 +153,13 @@ static void replaceLoopInvariantUses(Loop &L, Value *Invariant,
   assert(!isa<Constant>(Invariant) && "Why are we unswitching on a constant?");
 
   // Replace uses of LIC in the loop with the given constant.
-  for (auto UI = Invariant->use_begin(), UE = Invariant->use_end(); UI != UE;) {
-    // Grab the use and walk past it so we can clobber it in the use list.
-    Use *U = &*UI++;
-    Instruction *UserI = dyn_cast<Instruction>(U->getUser());
+  // We use make_early_inc_range as set invalidates the iterator.
+  for (Use &U : llvm::make_early_inc_range(Invariant->uses())) {
+    Instruction *UserI = dyn_cast<Instruction>(U.getUser());
 
     // Replace this use within the loop body.
     if (UserI && L.contains(UserI))
-      U->set(&Replacement);
+      U.set(&Replacement);
   }
 }
 
@@ -2294,21 +2293,19 @@ static void unswitchNontrivialInvariants(
         Direction ? ConstantInt::getFalse(BI->getContext())
                   : ConstantInt::getTrue(BI->getContext());
     for (Value *Invariant : Invariants)
-      for (auto UI = Invariant->use_begin(), UE = Invariant->use_end();
-           UI != UE;) {
-        // Grab the use and walk past it so we can clobber it in the use list.
-        Use *U = &*UI++;
-        Instruction *UserI = dyn_cast<Instruction>(U->getUser());
+      // Use make_early_inc_range here as set invalidates the iterator.
+      for (Use &U : llvm::make_early_inc_range(Invariant->uses())) {
+        Instruction *UserI = dyn_cast<Instruction>(U.getUser());
         if (!UserI)
           continue;
 
         // Replace it with the 'continue' side if in the main loop body, and the
         // unswitched if in the cloned blocks.
         if (DT.dominates(LoopPH, UserI->getParent()))
-          U->set(ContinueReplacement);
+          U.set(ContinueReplacement);
         else if (ReplaceUnswitched &&
                  DT.dominates(ClonedPH, UserI->getParent()))
-          U->set(UnswitchedReplacement);
+          U.set(UnswitchedReplacement);
       }
   }
 

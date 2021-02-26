@@ -46,7 +46,7 @@ int main(int, char**) {
     assert(f.sbumpc() == '2');
     assert(f.sbumpc() == '3');
   }
-  std::remove(p.c_str());
+  std::remove(p.string().c_str());
   {
     std::wfilebuf f;
     assert(f.open(p, std::ios_base::out) != 0);
@@ -61,7 +61,7 @@ int main(int, char**) {
     assert(f.sbumpc() == L'2');
     assert(f.sbumpc() == L'3');
   }
-  remove(p.c_str());
+  remove(p.string().c_str());
 
   return 0;
 }

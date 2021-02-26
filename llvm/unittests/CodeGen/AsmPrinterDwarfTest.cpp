@@ -50,19 +50,21 @@ protected:
     if (!AsmPrinterFixtureBase::init(TripleStr, DwarfVersion, DwarfFormat))
       return false;
 
-    // Create a symbol which will be emitted in the tests and associate it
-    // with a section because that is required in some code paths.
+    // AsmPrinter::emitDwarfSymbolReference(Label, true) gets the associated
+    // section from `Label` to find its BeginSymbol.
+    // Prepare the test symbol `Val` accordingly.
 
     Val = TestPrinter->getCtx().createTempSymbol();
-    Sec = TestPrinter->getCtx().getELFSection(".tst", ELF::SHT_PROGBITS, 0);
+    MCSection *Sec =
+        TestPrinter->getCtx().getELFSection(".tst", ELF::SHT_PROGBITS, 0);
     SecBeginSymbol = Sec->getBeginSymbol();
     TestPrinter->getMS().SwitchSection(Sec);
-    TestPrinter->getMS().emitLabel(Val);
+    Val->setFragment(&Sec->getDummyFragment());
+
     return true;
   }
 
   MCSymbol *Val = nullptr;
-  MCSection *Sec = nullptr;
   MCSymbol *SecBeginSymbol = nullptr;
 };
 
@@ -326,21 +328,28 @@ protected:
     if (!AsmPrinterFixtureBase::init(TripleStr, DwarfVersion, DwarfFormat))
       return false;
 
-    Hi = TestPrinter->getCtx().createTempSymbol();
-    Lo = TestPrinter->getCtx().createTempSymbol();
     return true;
   }
-
-  MCSymbol *Hi = nullptr;
-  MCSymbol *Lo = nullptr;
 };
 
 TEST_F(AsmPrinterEmitDwarfUnitLengthAsHiLoDiffTest, DWARF32) {
   if (!init("x86_64-pc-linux", /*DwarfVersion=*/4, dwarf::DWARF32))
     return;
 
-  EXPECT_CALL(TestPrinter->getMS(), emitAbsoluteSymbolDiff(Hi, Lo, 4));
-  TestPrinter->getAP()->emitDwarfUnitLength(Hi, Lo, "");
+  InSequence S;
+  const MCSymbol *Hi = nullptr;
+  const MCSymbol *Lo = nullptr;
+  EXPECT_CALL(TestPrinter->getMS(), emitAbsoluteSymbolDiff(_, _, 4))
+      .WillOnce(DoAll(SaveArg<0>(&Hi), SaveArg<1>(&Lo)));
+  MCSymbol *LTmp = nullptr;
+  EXPECT_CALL(TestPrinter->getMS(), emitLabel(_, _))
+      .WillOnce(SaveArg<0>(&LTmp));
+
+  MCSymbol *HTmp = TestPrinter->getAP()->emitDwarfUnitLength("", "");
+  EXPECT_NE(Lo, nullptr);
+  EXPECT_EQ(Lo, LTmp);
+  EXPECT_NE(Hi, nullptr);
+  EXPECT_EQ(Hi, HTmp);
 }
 
 TEST_F(AsmPrinterEmitDwarfUnitLengthAsHiLoDiffTest, DWARF64) {
@@ -348,10 +357,20 @@ TEST_F(AsmPrinterEmitDwarfUnitLengthAsHiLoDiffTest, DWARF64) {
     return;
 
   InSequence S;
+  const MCSymbol *Hi = nullptr;
+  const MCSymbol *Lo = nullptr;
   EXPECT_CALL(TestPrinter->getMS(), emitIntValue(dwarf::DW_LENGTH_DWARF64, 4));
-  EXPECT_CALL(TestPrinter->getMS(), emitAbsoluteSymbolDiff(Hi, Lo, 8));
+  EXPECT_CALL(TestPrinter->getMS(), emitAbsoluteSymbolDiff(_, _, 8))
+      .WillOnce(DoAll(SaveArg<0>(&Hi), SaveArg<1>(&Lo)));
+  MCSymbol *LTmp = nullptr;
+  EXPECT_CALL(TestPrinter->getMS(), emitLabel(_, _))
+      .WillOnce(SaveArg<0>(&LTmp));
 
-  TestPrinter->getAP()->emitDwarfUnitLength(Hi, Lo, "");
+  MCSymbol *HTmp = TestPrinter->getAP()->emitDwarfUnitLength("", "");
+  EXPECT_NE(Lo, nullptr);
+  EXPECT_EQ(Lo, LTmp);
+  EXPECT_NE(Hi, nullptr);
+  EXPECT_EQ(Hi, HTmp);
 }
 
 class AsmPrinterHandlerTest : public AsmPrinterFixtureBase {

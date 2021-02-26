@@ -65,9 +65,8 @@ TEST_CASE(test_without_ec) {
   scoped_test_env env;
   path f = env.create_file("foo", 42);
   path d = env.create_dir("dir");
-  path fifo = env.create_fifo("fifo");
   path hl = env.create_hardlink("foo", "hl");
-  for (auto p : {hl, f, d, fifo}) {
+  auto test_path = [=](const path &p) {
     directory_entry e(p);
     file_status st = status(p);
     file_status sym_st = symlink_status(p);
@@ -83,7 +82,14 @@ TEST_CASE(test_without_ec) {
     TEST_CHECK(e.is_regular_file() == is_regular_file(st));
     TEST_CHECK(e.is_socket() == is_socket(st));
     TEST_CHECK(e.is_symlink() == is_symlink(sym_st));
-  }
+  };
+  test_path(f);
+  test_path(d);
+  test_path(hl);
+#ifndef _WIN32
+  path fifo = env.create_fifo("fifo");
+  test_path(fifo);
+#endif
 }
 
 TEST_CASE(test_with_ec) {
@@ -95,9 +101,8 @@ TEST_CASE(test_with_ec) {
   scoped_test_env env;
   path f = env.create_file("foo", 42);
   path d = env.create_dir("dir");
-  path fifo = env.create_fifo("fifo");
   path hl = env.create_hardlink("foo", "hl");
-  for (auto p : {hl, f, d, fifo}) {
+  auto test_path = [=](const path &p) {
     directory_entry e(p);
     std::error_code status_ec = GetTestEC();
     std::error_code sym_status_ec = GetTestEC(1);
@@ -141,7 +146,14 @@ TEST_CASE(test_with_ec) {
 
     TEST_CHECK(e.is_symlink(ec) == is_symlink(sym_st));
     TEST_CHECK(CheckEC(sym_status_ec));
-  }
+  };
+  test_path(f);
+  test_path(d);
+  test_path(hl);
+#ifndef _WIN32
+  path fifo = env.create_fifo("fifo");
+  test_path(fifo);
+#endif
 }
 
 TEST_CASE(test_with_ec_dne) {

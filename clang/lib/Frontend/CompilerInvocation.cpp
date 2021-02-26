@@ -663,7 +663,7 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
   // Generate arguments from the dummy invocation. If Generate is the
   // inverse of Parse, the newly generated arguments must have the same
   // semantics as the original.
-  SmallVector<const char *> GeneratedArgs1;
+  SmallVector<const char *, 16> GeneratedArgs1;
   Generate(DummyInvocation, GeneratedArgs1, SA);
 
   // Run the second parse, now on the generated arguments, and with the real
@@ -683,7 +683,7 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
 
   // Generate arguments again, this time from the options we will end up using
   // for the rest of the compilation.
-  SmallVector<const char *> GeneratedArgs2;
+  SmallVector<const char *, 16> GeneratedArgs2;
   Generate(RealInvocation, GeneratedArgs2, SA);
 
   // Compares two lists of generated arguments.
@@ -1361,8 +1361,8 @@ void CompilerInvocation::GenerateCodeGenArgs(
     GenerateArg(Args, OPT_fdebug_prefix_map_EQ,
                 Prefix.first + "=" + Prefix.second, SA);
 
-  for (const auto &Prefix : Opts.ProfilePrefixMap)
-    GenerateArg(Args, OPT_fprofile_prefix_map_EQ,
+  for (const auto &Prefix : Opts.CoveragePrefixMap)
+    GenerateArg(Args, OPT_fcoverage_prefix_map_EQ,
                 Prefix.first + "=" + Prefix.second, SA);
 
   if (Opts.NewStructPathTBAA)
@@ -1636,9 +1636,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         {std::string(Split.first), std::string(Split.second)});
   }
 
-  for (const auto &Arg : Args.getAllArgValues(OPT_fprofile_prefix_map_EQ)) {
+  for (const auto &Arg : Args.getAllArgValues(OPT_fcoverage_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
-    Opts.ProfilePrefixMap.insert(
+    Opts.CoveragePrefixMap.insert(
         {std::string(Split.first), std::string(Split.second)});
   }
 
@@ -3583,11 +3583,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     if (Name == "full" || Name == "branch") {
       Opts.CFProtectionBranch = 1;
     }
-  }
-
-
-  if (auto *A = Args.getLastArg(OPT_cuid_EQ)) {
-    Opts.CUID = std::string(A->getValue());
   }
 
   if (Opts.ObjC) {

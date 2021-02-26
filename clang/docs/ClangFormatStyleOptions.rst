@@ -2360,6 +2360,33 @@ the configuration (without a prefix: ``Auto``).
   ``ClassImpl.hpp`` would not have the main include file put on top
   before any other include.
 
+**IndentAccessModifiers** (``bool``)
+  Specify whether access modifiers should have their own indentation level.
+
+  When ``false``, access modifiers are indented (or outdented) relative to
+  the record members, respecting the ``AccessModifierOffset``. Record
+  members are indented one level below the record.
+  When ``true``, access modifiers get their own indentation level. As a
+  consequence, record members are indented 2 levels below the record,
+  regardless of the access modifier presence. Value of the
+  ``AccessModifierOffset`` is ignored.
+
+  .. code-block:: c++
+
+     false:                                 true:
+     class C {                      vs.     class C {
+       class D {                                class D {
+         void bar();                                void bar();
+       protected:                                 protected:
+         D();                                       D();
+       };                                       };
+     public:                                  public:
+       C();                                     C();
+     };                                     };
+     void foo() {                           void foo() {
+       return 1;                              return 1;
+     }                                      }
+
 **IndentCaseBlocks** (``bool``)
   Indent case label blocks one level from the case label.
 

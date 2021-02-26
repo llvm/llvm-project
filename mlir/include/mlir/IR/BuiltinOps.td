@@ -85,7 +85,7 @@ def FuncOp : Builtin_Op<"func", [
     static FuncOp create(Location location, StringRef name, FunctionType type,
                          ArrayRef<NamedAttribute> attrs = {});
     static FuncOp create(Location location, StringRef name, FunctionType type,
-                         iterator_range<dialect_attr_iterator> attrs);
+                         Operation::dialect_attr_range attrs);
     static FuncOp create(Location location, StringRef name, FunctionType type,
                          ArrayRef<NamedAttribute> attrs,
                          ArrayRef<DictionaryAttr> argAttrs);

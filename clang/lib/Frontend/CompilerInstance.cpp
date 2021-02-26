@@ -97,6 +97,54 @@ void CompilerInstance::setVerboseOutputStream(std::unique_ptr<raw_ostream> Value
 void CompilerInstance::setTarget(TargetInfo *Value) { Target = Value; }
 void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 
+bool CompilerInstance::createTarget() {
+  // Create the target instance.
+  setTarget(TargetInfo::CreateTargetInfo(getDiagnostics(),
+                                         getInvocation().TargetOpts));
+  if (!hasTarget())
+    return false;
+
+  // Create TargetInfo for the other side of CUDA/OpenMP/SYCL compilation.
+  if ((getLangOpts().CUDA || getLangOpts().OpenMPIsDevice ||
+       getLangOpts().SYCLIsDevice) &&
+      !getFrontendOpts().AuxTriple.empty()) {
+    auto TO = std::make_shared<TargetOptions>();
+    TO->Triple = llvm::Triple::normalize(getFrontendOpts().AuxTriple);
+    if (getFrontendOpts().AuxTargetCPU)
+      TO->CPU = getFrontendOpts().AuxTargetCPU.getValue();
+    if (getFrontendOpts().AuxTargetFeatures)
+      TO->FeaturesAsWritten = getFrontendOpts().AuxTargetFeatures.getValue();
+    TO->HostTriple = getTarget().getTriple().str();
+    setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), TO));
+  }
+
+  if (!getTarget().hasStrictFP() && !getLangOpts().ExpStrictFP) {
+    if (getLangOpts().getFPRoundingMode() !=
+        llvm::RoundingMode::NearestTiesToEven) {
+      getDiagnostics().Report(diag::warn_fe_backend_unsupported_fp_rounding);
+      getLangOpts().setFPRoundingMode(llvm::RoundingMode::NearestTiesToEven);
+    }
+    if (getLangOpts().getFPExceptionMode() != LangOptions::FPE_Ignore) {
+      getDiagnostics().Report(diag::warn_fe_backend_unsupported_fp_exceptions);
+      getLangOpts().setFPExceptionMode(LangOptions::FPE_Ignore);
+    }
+    // FIXME: can we disable FEnvAccess?
+  }
+
+  // Inform the target of the language options.
+  // FIXME: We shouldn't need to do this, the target should be immutable once
+  // created. This complexity should be lifted elsewhere.
+  getTarget().adjust(getLangOpts());
+
+  // Adjust target options based on codegen options.
+  getTarget().adjustTargetOptions(getCodeGenOpts(), getTargetOpts());
+
+  if (auto *Aux = getAuxTarget())
+    getTarget().setAuxTarget(Aux);
+
+  return true;
+}
+
 llvm::vfs::FileSystem &CompilerInstance::getVirtualFileSystem() const {
   return getFileManager().getVirtualFileSystem();
 }
@@ -878,50 +926,8 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   if (!Act.PrepareToExecute(*this))
     return false;
 
-  // Create the target instance.
-  setTarget(TargetInfo::CreateTargetInfo(getDiagnostics(),
-                                         getInvocation().TargetOpts));
-  if (!hasTarget())
+  if (!createTarget())
     return false;
-
-  // Create TargetInfo for the other side of CUDA/OpenMP/SYCL compilation.
-  if ((getLangOpts().CUDA || getLangOpts().OpenMPIsDevice ||
-       getLangOpts().SYCLIsDevice) &&
-      !getFrontendOpts().AuxTriple.empty()) {
-    auto TO = std::make_shared<TargetOptions>();
-    TO->Triple = llvm::Triple::normalize(getFrontendOpts().AuxTriple);
-    if (getFrontendOpts().AuxTargetCPU)
-      TO->CPU = getFrontendOpts().AuxTargetCPU.getValue();
-    if (getFrontendOpts().AuxTargetFeatures)
-      TO->FeaturesAsWritten = getFrontendOpts().AuxTargetFeatures.getValue();
-    TO->HostTriple = getTarget().getTriple().str();
-    setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), TO));
-  }
-
-  if (!getTarget().hasStrictFP() && !getLangOpts().ExpStrictFP) {
-    if (getLangOpts().getFPRoundingMode() !=
-        llvm::RoundingMode::NearestTiesToEven) {
-      getDiagnostics().Report(diag::warn_fe_backend_unsupported_fp_rounding);
-      getLangOpts().setFPRoundingMode(llvm::RoundingMode::NearestTiesToEven);
-    }
-    if (getLangOpts().getFPExceptionMode() != LangOptions::FPE_Ignore) {
-      getDiagnostics().Report(diag::warn_fe_backend_unsupported_fp_exceptions);
-      getLangOpts().setFPExceptionMode(LangOptions::FPE_Ignore);
-    }
-    // FIXME: can we disable FEnvAccess?
-  }
-
-  // Inform the target of the language options.
-  //
-  // FIXME: We shouldn't need to do this, the target should be immutable once
-  // created. This complexity should be lifted elsewhere.
-  getTarget().adjust(getLangOpts());
-
-  // Adjust target options based on codegen options.
-  getTarget().adjustTargetOptions(getCodeGenOpts(), getTargetOpts());
-
-  if (auto *Aux = getAuxTarget())
-    getTarget().setAuxTarget(Aux);
 
   // rewriter project will change target built-in bool type from its default.
   if (getFrontendOpts().ProgramAction == frontend::RewriteObjC)

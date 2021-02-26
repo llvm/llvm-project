@@ -119,7 +119,7 @@ void TestConvVectorization::runOnOperation() {
 
   // Ensure we drop the marker in the end.
   module.walk([](linalg::LinalgOp op) {
-    op.removeAttr(linalg::LinalgTransforms::kLinalgTransformMarker);
+    op->removeAttr(linalg::LinalgTransforms::kLinalgTransformMarker);
   });
 }
 

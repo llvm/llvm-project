@@ -6432,16 +6432,6 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
     }
   }
 
-  // Virtual functions cannot be marked as 'notail'.
-  if (auto *Attr = ND.getAttr<NotTailCalledAttr>())
-    if (auto *MD = dyn_cast<CXXMethodDecl>(&ND))
-      if (MD->isVirtual()) {
-        S.Diag(ND.getLocation(),
-               diag::err_invalid_attribute_on_virtual_function)
-            << Attr;
-        ND.dropAttr<NotTailCalledAttr>();
-      }
-
   // Check the attributes on the function type, if any.
   if (const auto *FD = dyn_cast<FunctionDecl>(&ND)) {
     // Don't declare this variable in the second operand of the for-statement;

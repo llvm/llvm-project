@@ -28,7 +28,7 @@ struct RegionOpConversion : public ConvertOpToLLVMPattern<OpType> {
   matchAndRewrite(OpType curOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto newOp = rewriter.create<OpType>(curOp.getLoc(), TypeRange(), operands,
-                                         curOp.getAttrs());
+                                         curOp->getAttrs());
     rewriter.inlineRegionBefore(curOp.region(), newOp.region(),
                                 newOp.region().end());
     if (failed(rewriter.convertRegionTypes(&newOp.region(),

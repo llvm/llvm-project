@@ -1780,7 +1780,9 @@ void freeIndirectFunctionPtr() {
 }
 
 void freeFunctionPtr() {
-  free((void *)fnptr); // expected-warning {{Argument to free() is a function pointer}}
+  free((void *)fnptr);
+  // expected-warning@-1{{Argument to free() is a function pointer}}
+  // expected-warning@-2{{attempt to call free on non-heap object '(void *)fnptr'}}
 }
 
 void allocateSomeMemory(void *offendingParameter, void **ptr) {

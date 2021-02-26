@@ -15453,6 +15453,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
+  CHECK_PARSE_BOOL(IndentAccessModifiers);
   CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentGotoLabels);
@@ -19154,6 +19155,57 @@ TEST_F(FormatTest, StatementAttributeLikeMacros) {
             "  Q_EMIT        signal(MyChar);\n"
             "}",
             format(Source, Style));
+}
+
+TEST_F(FormatTest, IndentAccessModifiers) {
+  FormatStyle Style = getLLVMStyle();
+  Style.IndentAccessModifiers = true;
+  // Members are *two* levels below the record;
+  // Style.IndentWidth == 2, thus yielding a 4 spaces wide indentation.
+  verifyFormat("class C {\n"
+               "    int i;\n"
+               "};\n",
+               Style);
+  verifyFormat("union C {\n"
+               "    int i;\n"
+               "    unsigned u;\n"
+               "};\n",
+               Style);
+  // Access modifiers should be indented one level below the record.
+  verifyFormat("class C {\n"
+               "  public:\n"
+               "    int i;\n"
+               "};\n",
+               Style);
+  verifyFormat("struct S {\n"
+               "  private:\n"
+               "    class C {\n"
+               "        int j;\n"
+               "\n"
+               "      public:\n"
+               "        C();\n"
+               "    };\n"
+               "\n"
+               "  public:\n"
+               "    int i;\n"
+               "};\n",
+               Style);
+  // Enumerations are not records and should be unaffected.
+  Style.AllowShortEnumsOnASingleLine = false;
+  verifyFormat("enum class E\n"
+               "{\n"
+               "  A,\n"
+               "  B\n"
+               "};\n",
+               Style);
+  // Test with a different indentation width;
+  // also proves that the result is Style.AccessModifierOffset agnostic.
+  Style.IndentWidth = 3;
+  verifyFormat("class C {\n"
+               "   public:\n"
+               "      int i;\n"
+               "};\n",
+               Style);
 }
 } // namespace
 } // namespace format

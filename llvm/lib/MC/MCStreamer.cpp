@@ -429,9 +429,7 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
     TS->emitLabel(Symbol);
 }
 
-void MCStreamer::emitCFISections(bool EH, bool Debug) {
-  assert(EH || Debug);
-}
+void MCStreamer::emitCFISections(bool EH, bool Debug) {}
 
 void MCStreamer::emitCFIStartProc(bool IsSimple, SMLoc Loc) {
   if (hasUnfinishedDwarfFrameInfo())
@@ -1006,12 +1004,19 @@ void MCStreamer::emitDwarfUnitLength(uint64_t Length, const Twine &Comment) {
   emitIntValue(Length, dwarf::getDwarfOffsetByteSize(Context.getDwarfFormat()));
 }
 
-void MCStreamer::emitDwarfUnitLength(const MCSymbol *Hi, const MCSymbol *Lo,
-                                     const Twine &Comment) {
+MCSymbol *MCStreamer::emitDwarfUnitLength(const Twine &Prefix,
+                                          const Twine &Comment) {
   maybeEmitDwarf64Mark();
   AddComment(Comment);
+  MCSymbol *Lo = Context.createTempSymbol(Prefix + "_start");
+  MCSymbol *Hi = Context.createTempSymbol(Prefix + "_end");
+
   emitAbsoluteSymbolDiff(
       Hi, Lo, dwarf::getDwarfOffsetByteSize(Context.getDwarfFormat()));
+  // emit the begin symbol after we generate the length field.
+  emitLabel(Lo);
+  // Return the Hi symbol to the caller.
+  return Hi;
 }
 
 void MCStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {

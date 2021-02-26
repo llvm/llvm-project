@@ -205,6 +205,7 @@ public:
         // automic update currently can only be promoted across the current
         // loop, not the whole loop nest.
         Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, LiveInValue,
+                                MaybeAlign(),
                                 AtomicOrdering::SequentiallyConsistent);
       else {
         LoadInst *OldVal = Builder.CreateLoad(Ty, Addr, "pgocount.promoted");
@@ -702,7 +703,7 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
   if (Options.Atomic || AtomicCounterUpdateAll ||
       (Index == 0 && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
-                            AtomicOrdering::Monotonic);
+                            MaybeAlign(), AtomicOrdering::Monotonic);
   } else {
     Value *IncStep = Inc->getStep();
     Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
