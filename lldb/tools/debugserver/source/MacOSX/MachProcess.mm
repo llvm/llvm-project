@@ -2740,6 +2740,30 @@ std::string MachProcess::GetMacCatalystVersionString() {
   return {};
 }
 
+#if defined(WITH_SPRINGBOARD) || defined(WITH_BKS) || defined(WITH_FBS)
+/// Get the app bundle from the given path. Returns the empty string if the
+/// path doesn't appear to be an app bundle.
+static std::string GetAppBundle(std::string path) {
+  auto pos = path.rfind(".app");
+  // Path doesn't contain `.app`.
+  if (pos == std::string::npos)
+    return {};
+  // Path has `.app` extension.
+  if (pos == path.size() - 4)
+    return path.substr(0, pos + 4);
+
+  // Look for `.app` before a path separator.
+  do {
+    if (path[pos + 4] == '/')
+      return path.substr(0, pos + 4);
+    path = path.substr(0, pos);
+    pos = path.rfind(".app");
+  } while (pos != std::string::npos);
+
+  return {};
+}
+#endif
+
 // Do the process specific setup for attach.  If this returns NULL, then there's
 // no
 // platform specific stuff to be done to wait for the attach.  If you get
@@ -2763,10 +2787,8 @@ const void *MachProcess::PrepareForAttach(const char *path,
   if (!waitfor)
     return NULL;
 
-  const char *app_ext = strstr(path, ".app");
-  const bool is_app =
-      app_ext != NULL && (app_ext[4] == '\0' || app_ext[4] == '/');
-  if (!is_app) {
+  std::string app_bundle_path = GetAppBundle(path);
+  if (app_bundle_path.empty()) {
     DNBLogThreadedIf(
         LOG_PROCESS,
         "MachProcess::PrepareForAttach(): path '%s' doesn't contain .app, "
@@ -2791,8 +2813,6 @@ const void *MachProcess::PrepareForAttach(const char *path,
   if (launch_flavor != eLaunchFlavorSpringBoard)
     return NULL;
 #endif
-
-  std::string app_bundle_path(path, app_ext + strlen(".app"));
 
   CFStringRef bundleIDCFStr =
       CopyBundleIDForPath(app_bundle_path.c_str(), attach_err);
@@ -3141,61 +3161,42 @@ pid_t MachProcess::LaunchForDebug(
     break;
 #ifdef WITH_FBS
   case eLaunchFlavorFBS: {
-    const char *app_ext = strstr(path, ".app");
-    if (app_ext && (app_ext[4] == '\0' || app_ext[4] == '/')) {
-      std::string app_bundle_path(path, app_ext + strlen(".app"));
+    std::string app_bundle_path = GetAppBundle(path);
+    if (!app_bundle_path.empty()) {
       m_flags |= (eMachProcessFlagsUsingFBS | eMachProcessFlagsBoardCalculated);
       if (BoardServiceLaunchForDebug(app_bundle_path.c_str(), argv, envp,
                                      no_stdio, disable_aslr, event_data,
                                      unmask_signals, launch_err) != 0)
         return m_pid; // A successful SBLaunchForDebug() returns and assigns a
                       // non-zero m_pid.
-      else
-        break; // We tried a FBS launch, but didn't succeed lets get out
     }
+    DNBLog("Failed to launch '%s' with FBS", app_bundle_path);
   } break;
 #endif
 #ifdef WITH_BKS
   case eLaunchFlavorBKS: {
-    const char *app_ext = strstr(path, ".app");
-    if (app_ext && (app_ext[4] == '\0' || app_ext[4] == '/')) {
-      std::string app_bundle_path(path, app_ext + strlen(".app"));
+    std::string app_bundle_path = GetAppBundle(path);
+    if (!app_bundle_path.empty()) {
       m_flags |= (eMachProcessFlagsUsingBKS | eMachProcessFlagsBoardCalculated);
       if (BoardServiceLaunchForDebug(app_bundle_path.c_str(), argv, envp,
                                      no_stdio, disable_aslr, event_data,
                                      unmask_signals, launch_err) != 0)
         return m_pid; // A successful SBLaunchForDebug() returns and assigns a
                       // non-zero m_pid.
-      else
-        break; // We tried a BKS launch, but didn't succeed lets get out
     }
+    DNBLog("Failed to launch '%s' with BKS", app_bundle_path);
   } break;
 #endif
 #ifdef WITH_SPRINGBOARD
-
   case eLaunchFlavorSpringBoard: {
-    //  .../whatever.app/whatever ?
-    //  Or .../com.apple.whatever.app/whatever -- be careful of ".app" in
-    //  "com.apple.whatever" here
-    const char *app_ext = strstr(path, ".app/");
-    if (app_ext == NULL) {
-      // .../whatever.app ?
-      int len = strlen(path);
-      if (len > 5) {
-        if (strcmp(path + len - 4, ".app") == 0) {
-          app_ext = path + len - 4;
-        }
-      }
-    }
-    if (app_ext) {
-      std::string app_bundle_path(path, app_ext + strlen(".app"));
+    std::string app_bundle_path = GetAppBundle(path);
+    if (!app_bundle_path.empty()) {
       if (SBLaunchForDebug(app_bundle_path.c_str(), argv, envp, no_stdio,
                            disable_aslr, unmask_signals, launch_err) != 0)
         return m_pid; // A successful SBLaunchForDebug() returns and assigns a
                       // non-zero m_pid.
-      else
-        break; // We tried a springboard launch, but didn't succeed lets get out
     }
+    DNBLog("Failed to launch '%s' with SpringBoard", app_bundle_path);
   } break;
 
 #endif
@@ -3208,7 +3209,7 @@ pid_t MachProcess::LaunchForDebug(
     break;
 
   default:
-    // Invalid  launch
+    DNBLog("Failed to launch: invalid launch flavor: %d", launch_flavor);
     launch_err.SetError(NUB_GENERIC_ERROR, DNBError::Generic);
     return INVALID_NUB_PROCESS;
   }
