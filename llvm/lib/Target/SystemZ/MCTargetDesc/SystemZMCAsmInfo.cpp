@@ -12,10 +12,14 @@
 
 using namespace llvm;
 
+enum AsmDialect { AD_ATT = 0, AD_HLASM = 1 };
+
 SystemZMCAsmInfo::SystemZMCAsmInfo(const Triple &TT) {
   CodePointerSize = 8;
   CalleeSaveStackSlotSize = 8;
   IsLittleEndian = false;
+
+  AssemblerDialect = TT.isOSzOS() ? AD_HLASM : AD_ATT;
 
   MaxInstLength = 6;
 
