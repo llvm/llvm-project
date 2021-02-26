@@ -27,12 +27,45 @@
 <h1>C++ Support in Clang</h1>
 <!--*************************************************************************-->
 
-<p>Clang fully implements all published ISO C++ standards
-(<a href="#cxx98">C++98 / C++03</a>,
-<a href="#cxx11">C++11</a>,
-<a href="#cxx14">C++14</a>, and
-<a href="#cxx17">C++17</a>), and some of the upcoming <a
-href="#cxx20">C++20</a> standard.
+<p>Clang implements the following published and upcoming ISO C++ standards:</p>
+
+<table width="689" border="1" cellspacing="0">
+<tr>
+ <th>Language Standard</th>
+ <th>Flag</th>
+ <th>Available in Clang?</th>
+</tr>
+<tr>
+ <td><a href="#cxx98">C++98 / C++03</a></td>
+ <td><tt>-std=c++98</tt></td>
+ <td class="full" align="center">Yes (other than <tt>export</tt>)</td>
+</tr>
+<tr>
+ <td><a href="#cxx11">C++11</a></td>
+ <td><tt>-std=c++11</tt></td>
+ <td class="full" align="center">Clang 3.3</td>
+</tr>
+<tr>
+ <td><a href="#cxx14">C++14</a></td>
+ <td><tt>-std=c++14</tt></td>
+ <td class="full" align="center">Clang 3.4</td>
+</tr>
+<tr>
+ <td><a href="#cxx17">C++17</a></td>
+ <td><tt>-std=c++17</tt></td>
+ <td class="full" align="center">Clang 5</td>
+</tr>
+<tr>
+ <td><a href="#cxx20">C++20</a></td>
+ <td><tt>-std=c++20</tt></td>
+ <td class="partial" align="center">Partial</td>
+</tr>
+<tr>
+ <td><a href="#cxx23">C++2b (tentatively C++23)</a></td>
+ <td><tt>-std=c++2b</tt></td>
+ <td class="none" align="center">No</td>
+</tr>
+</table>
 
 <p>The Clang community is continually striving to improve C++ standards
 compliance between releases by submitting and tracking <a
@@ -823,7 +856,7 @@ code. This issue is expected to be rectified soon.
 <h2 id="cxx20">C++20 implementation status</h2>
 
 <p>Clang has support for some of the features of the
-ISO C++ 2020 Draft International Standard.
+<a href="https://www.iso.org/standard/79358.html">ISO C++ 2020 standard</a>.
 
 <p>You can use Clang in C++20 mode with the <code>-std=c++20</code> option
 (use <code>-std=c++2a</code> in Clang 9 and earlier).</p>
@@ -1215,6 +1248,37 @@ ISO C++ 2020 Draft International Standard.
 <tt>-std=c++20</tt>, but can be enabled with <tt>-fchar8_t</tt>.
 </span>
 </p>
+</details>
+
+<h2 id="cxx23">C++2b implementation status</h2>
+
+<p>Clang has support for some of the features of the C++ standard following
+C++20, informally referred to as C++2b.
+
+<p>You can use Clang in C++2b mode with the <code>-std=c++2b</code> option.</p>
+
+<details open>
+<summary>List of features and minimum Clang version with support</summary>
+
+<table width="689" border="1" cellspacing="0">
+ <tr>
+    <th>Language Feature</th>
+    <th>C++2b Proposal</th>
+    <th>Available in Clang?</th>
+ </tr>
+    <!-- Fall 2020 papers -->
+    <tr>
+      <td>Literal suffix <tt>uz</tt>, <tt>z</tt> for <tt>size_t</tt>, <tt>ssize_t</tt></td>
+      <td><a href="https://wg21.link/p0330r8">P0330R8</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <!-- Spring 2021 papers -->
+    <tr>
+      <td>Make <tt>()</tt> in lambdas optional in all cases</td>
+      <td><a href="https://wg21.link/p1102r2">P1102R2</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+</table>
 </details>
 
 <h2 id="dr">Defect reports</h2>
