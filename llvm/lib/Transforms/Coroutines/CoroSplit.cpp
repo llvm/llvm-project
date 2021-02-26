@@ -848,23 +848,15 @@ void CoroCloner::create() {
   // so protect against that.
   auto savedLinkage = NewF->getLinkage();
   NewF->setLinkage(llvm::GlobalValue::ExternalLinkage);
-  auto &Context = NewF->getContext();
 
   CloneFunctionInto(NewF, &OrigF, VMap, /*ModuleLevelChanges=*/true, Returns);
-
-  // Adjust the scope line of the clone to the line number of the suspend point.
-  if (DISubprogram *SP = NewF->getSubprogram()) {
-    assert(SP != OrigF.getSubprogram() && SP->isDistinct());
-    if (ActiveSuspend)
-      if (auto DL = ActiveSuspend->getDebugLoc())
-        SP->setScopeLine(DL->getLine());
-    SP->replaceLinkageName(MDString::get(Context, NewF->getName()));
-  }
 
   NewF->setLinkage(savedLinkage);
   NewF->setVisibility(savedVisibility);
   NewF->setUnnamedAddr(savedUnnamedAddr);
   NewF->setDLLStorageClass(savedDLLStorageClass);
+
+  auto &Context = NewF->getContext();
 
   // Replace the attributes of the new function:
   auto OrigAttrs = NewF->getAttributes();
