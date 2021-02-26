@@ -120,8 +120,8 @@ void UseNodiscardCheck::check(const MatchFinder::MatchResult &Result) {
 
   ASTContext &Context = *Result.Context;
 
-  auto Diag = diag(RetLoc, "function %0 should be marked " + NoDiscardMacro)
-              << MatchedDecl;
+  auto Diag = diag(RetLoc, "function %0 should be marked %1")
+              << MatchedDecl << NoDiscardMacro;
 
   // Check for the existence of the keyword being used as the ``[[nodiscard]]``.
   if (!doesNoDiscardMacroExist(Context, NoDiscardMacro))
