@@ -259,3 +259,80 @@ func @conv_3d_input_ncdhw_filter_dhwcf(%input: memref<?x?x?x?x?xf32>, %filter: m
 // CHECK-NEXT:      %[[MUL:.+]] = mulf %[[BBARG0]], %[[BBARG1]] : f32
 // CHECK-NEXT:      %[[ADD:.+]] = addf %[[BBARG2]], %[[MUL]] : f32
 // CHECK-NEXT:      linalg.yield %[[ADD]] : f32
+
+// -----
+
+func @pooling_nhwc_sum(%input: memref<?x?x?x?xf32>, %fake: memref<2x3xf32>, %init: memref<?x?x?x?xf32>) {
+  linalg.pooling_nhwc_sum {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+    ins(%input, %fake: memref<?x?x?x?xf32>, memref<2x3xf32>)
+    outs(%init: memref<?x?x?x?xf32>)
+  return
+}
+
+// CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+// CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+
+// CHECK: func @pooling_nhwc_sum
+
+// CHECK: linalg.generic
+// CHECK-SAME: indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]]]
+// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]}
+// CHECK-SAME: ins(%{{.+}}, %{{.+}} : memref<?x?x?x?xf32>, memref<2x3xf32>)
+// CHECK-SAME: outs(%{{.+}} : memref<?x?x?x?xf32>)
+
+// CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32, %[[BBARG2:.+]]: f32)
+// CHECK-NEXT:      %[[RES:.+]] = addf %[[BBARG2]], %[[BBARG0]] : f32
+// CHECK-NEXT:      linalg.yield %[[RES]] : f32
+
+// -----
+
+func @pooling_nhwc_max(%input: memref<?x?x?x?xf32>, %fake: memref<2x3xf32>, %init: memref<?x?x?x?xf32>) {
+  linalg.pooling_nhwc_max {dilations = dense<1> : tensor<2xi64>, strides = dense<[2, 3]> : tensor<2xi64>}
+    ins(%input, %fake: memref<?x?x?x?xf32>, memref<2x3xf32>)
+    outs(%init: memref<?x?x?x?xf32>)
+  return
+}
+
+// CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 * 2 + d4, d2 * 3 + d5, d3)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+// CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+
+// CHECK: func @pooling_nhwc_max
+
+// CHECK: linalg.generic
+// CHECK-SAME: indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]]]
+// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]}
+// CHECK-SAME: ins(%{{.+}}, %{{.+}} : memref<?x?x?x?xf32>, memref<2x3xf32>)
+// CHECK-SAME: outs(%{{.+}} : memref<?x?x?x?xf32>)
+
+// CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32, %[[BBARG2:.+]]: f32)
+// CHECK-NEXT:      %[[CMP:.+]] = cmpf ogt, %[[BBARG0]], %[[BBARG2]] : f32
+// CHECK-NEXT:      %[[RES:.+]] = select %[[CMP]], %[[BBARG0]], %[[BBARG2]] : f32
+// CHECK-NEXT:      linalg.yield %[[RES]] : f32
+
+// -----
+
+func @pooling_nhwc_min(%input: memref<?x?x?x?xf32>, %fake: memref<2x3xf32>, %init: memref<?x?x?x?xf32>) {
+  linalg.pooling_nhwc_min {dilations = dense<3> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>}
+    ins(%input, %fake: memref<?x?x?x?xf32>, memref<2x3xf32>)
+    outs(%init: memref<?x?x?x?xf32>)
+  return
+}
+
+// CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 * 2 + d4 * 3, d2 * 2 + d5 * 3, d3)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+// CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+
+// CHECK: func @pooling_nhwc_min
+
+// CHECK: linalg.generic
+// CHECK-SAME: indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]]]
+// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]}
+// CHECK-SAME: ins(%{{.+}}, %{{.+}} : memref<?x?x?x?xf32>, memref<2x3xf32>)
+// CHECK-SAME: outs(%{{.+}} : memref<?x?x?x?xf32>)
+
+// CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32, %[[BBARG2:.+]]: f32)
+// CHECK-NEXT:      %[[CMP:.+]] = cmpf olt, %[[BBARG0]], %[[BBARG2]] : f32
+// CHECK-NEXT:      %[[RES:.+]] = select %[[CMP]], %[[BBARG0]], %[[BBARG2]] : f32
+// CHECK-NEXT:      linalg.yield %[[RES]] : f32
