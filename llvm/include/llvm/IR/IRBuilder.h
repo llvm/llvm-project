@@ -1704,21 +1704,30 @@ public:
     return Insert(new FenceInst(Context, Ordering, SSID), Name);
   }
 
-  AtomicCmpXchgInst *CreateAtomicCmpXchg(
-      Value *Ptr, Value *Cmp, Value *New, AtomicOrdering SuccessOrdering,
-      AtomicOrdering FailureOrdering, SyncScope::ID SSID = SyncScope::System) {
-    const DataLayout &DL = BB->getModule()->getDataLayout();
-    Align Alignment(DL.getTypeStoreSize(New->getType()));
-    return Insert(new AtomicCmpXchgInst(
-        Ptr, Cmp, New, Alignment, SuccessOrdering, FailureOrdering, SSID));
+  AtomicCmpXchgInst *
+  CreateAtomicCmpXchg(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
+                      AtomicOrdering SuccessOrdering,
+                      AtomicOrdering FailureOrdering,
+                      SyncScope::ID SSID = SyncScope::System) {
+    if (!Align) {
+      const DataLayout &DL = BB->getModule()->getDataLayout();
+      Align = llvm::Align(DL.getTypeStoreSize(New->getType()));
+    }
+
+    return Insert(new AtomicCmpXchgInst(Ptr, Cmp, New, *Align, SuccessOrdering,
+                                        FailureOrdering, SSID));
   }
 
-  AtomicRMWInst *CreateAtomicRMW(AtomicRMWInst::BinOp Op, Value *Ptr, Value *Val,
+  AtomicRMWInst *CreateAtomicRMW(AtomicRMWInst::BinOp Op, Value *Ptr,
+                                 Value *Val, MaybeAlign Align,
                                  AtomicOrdering Ordering,
                                  SyncScope::ID SSID = SyncScope::System) {
-    const DataLayout &DL = BB->getModule()->getDataLayout();
-    Align Alignment(DL.getTypeStoreSize(Val->getType()));
-    return Insert(new AtomicRMWInst(Op, Ptr, Val, Alignment, Ordering, SSID));
+    if (!Align) {
+      const DataLayout &DL = BB->getModule()->getDataLayout();
+      Align = llvm::Align(DL.getTypeStoreSize(Val->getType()));
+    }
+
+    return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID));
   }
 
   Value *CreateGEP(Value *Ptr, ArrayRef<Value *> IdxList,

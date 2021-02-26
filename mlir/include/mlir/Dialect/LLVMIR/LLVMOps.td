@@ -1526,6 +1526,7 @@ def AtomicOrdering : I64EnumAttr<
 
 def LLVM_AtomicRMWType : AnyTypeOf<[LLVM_AnyFloat, LLVM_AnyInteger]>;
 
+// FIXME: Need to add alignment attribute to MLIR atomicrmw operation.
 def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw"> {
   let arguments = (ins AtomicBinOp:$bin_op,
                    LLVM_PointerTo<LLVM_AtomicRMWType>:$ptr,
@@ -1533,6 +1534,7 @@ def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw"> {
   let results = (outs LLVM_AtomicRMWType:$res);
   let llvmBuilder = [{
     $res = builder.CreateAtomicRMW(getLLVMAtomicBinOp($bin_op), $ptr, $val,
+                                   llvm::MaybeAlign(),
                                    getLLVMAtomicOrdering($ordering));
   }];
   let parser = [{ return parseAtomicRMWOp(parser, result); }];
@@ -1553,6 +1555,7 @@ def LLVM_AtomicCmpXchgResultType : Type<And<[
  "an LLVM struct type with any integer or pointer followed by a single-bit "
  "integer">;
 
+// FIXME: Need to add alignment attribute to MLIR cmpxchg operation.
 def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg"> {
   let arguments = (ins LLVM_PointerTo<LLVM_AtomicCmpXchgType>:$ptr,
                    LLVM_AtomicCmpXchgType:$cmp, LLVM_AtomicCmpXchgType:$val,
@@ -1560,7 +1563,7 @@ def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg"> {
                    AtomicOrdering:$failure_ordering);
   let results = (outs LLVM_AtomicCmpXchgResultType:$res);
   let llvmBuilder = [{
-    $res = builder.CreateAtomicCmpXchg($ptr, $cmp, $val,
+    $res = builder.CreateAtomicCmpXchg($ptr, $cmp, $val, llvm::MaybeAlign(),
                    getLLVMAtomicOrdering($success_ordering),
                    getLLVMAtomicOrdering($failure_ordering));
   }];
