@@ -679,10 +679,9 @@ PreservedAnalyses GVN::run(Function &F, FunctionAnalysisManager &AM) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void GVN::dump(DenseMap<uint32_t, Value*>& d) const {
   errs() << "{\n";
-  for (DenseMap<uint32_t, Value*>::iterator I = d.begin(),
-       E = d.end(); I != E; ++I) {
-      errs() << I->first << "\n";
-      I->second->dump();
+  for (auto &I : d) {
+    errs() << I.first << "\n";
+    I.second->dump();
   }
   errs() << "}\n";
 }
@@ -1850,8 +1849,8 @@ bool GVN::ValueTable::areCallValsEqual(uint32_t Num, uint32_t NewNum,
       MD->getNonLocalCallDependency(Call);
 
   // Check to see if the Call has no function local clobber.
-  for (unsigned i = 0; i < deps.size(); i++) {
-    if (deps[i].getResult().isNonFuncLocal())
+  for (const NonLocalDepEntry &D : deps) {
+    if (D.getResult().isNonFuncLocal())
       return true;
   }
   return false;
@@ -2733,9 +2732,8 @@ void GVN::verifyRemoved(const Instruction *Inst) const {
 
   // Walk through the value number scope to make sure the instruction isn't
   // ferreted away in it.
-  for (DenseMap<uint32_t, LeaderTableEntry>::const_iterator
-       I = LeaderTable.begin(), E = LeaderTable.end(); I != E; ++I) {
-    const LeaderTableEntry *Node = &I->second;
+  for (const auto &I : LeaderTable) {
+    const LeaderTableEntry *Node = &I.second;
     assert(Node->Val != Inst && "Inst still in value numbering scope!");
 
     while (Node->Next) {

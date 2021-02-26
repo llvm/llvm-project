@@ -1272,9 +1272,7 @@ bool LoopInterchangeTransform::transform() {
         assert(!NewI->mayHaveSideEffects() &&
                "Moving instructions with side-effects may change behavior of "
                "the loop nest!");
-        for (auto UI = WorkList[i]->use_begin(), UE = WorkList[i]->use_end();
-             UI != UE;) {
-          Use &U = *UI++;
+        for (Use &U : llvm::make_early_inc_range(WorkList[i]->uses())) {
           Instruction *UserI = cast<Instruction>(U.getUser());
           if (!InnerLoop->contains(UserI->getParent()) ||
               UserI->getParent() == NewLatch || UserI == InductionPHI)

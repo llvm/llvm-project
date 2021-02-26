@@ -224,15 +224,14 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
   SmallVector<WeakTrackingVH, 16> DeadInsts;
   for (const auto Node : depth_first(DT)) {
     BasicBlock *BB = Node->getBlock();
-    for (auto I = BB->begin(); I != BB->end(); ++I) {
-      Instruction *OrigI = &*I;
+    for (Instruction &OrigI : *BB) {
       const SCEV *OrigSCEV = nullptr;
-      if (Instruction *NewI = tryReassociate(OrigI, OrigSCEV)) {
+      if (Instruction *NewI = tryReassociate(&OrigI, OrigSCEV)) {
         Changed = true;
-        OrigI->replaceAllUsesWith(NewI);
+        OrigI.replaceAllUsesWith(NewI);
 
         // Add 'OrigI' to the list of dead instructions.
-        DeadInsts.push_back(WeakTrackingVH(OrigI));
+        DeadInsts.push_back(WeakTrackingVH(&OrigI));
         // Add the rewritten instruction to SeenExprs; the original
         // instruction is deleted.
         const SCEV *NewSCEV = SE->getSCEV(NewI);
@@ -260,7 +259,7 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
         if (NewSCEV != OrigSCEV)
           SeenExprs[OrigSCEV].push_back(WeakTrackingVH(NewI));
       } else if (OrigSCEV)
-        SeenExprs[OrigSCEV].push_back(WeakTrackingVH(OrigI));
+        SeenExprs[OrigSCEV].push_back(WeakTrackingVH(&OrigI));
     }
   }
   // Delete all dead instructions from 'DeadInsts'.
