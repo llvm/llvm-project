@@ -395,6 +395,9 @@ public:
   /// Replace the current AuxTarget.
   void setAuxTarget(TargetInfo *Value);
 
+  // Create Target and AuxTarget based on current options
+  bool createTarget();
+
   /// }
   /// @name Virtual File System
   /// {
