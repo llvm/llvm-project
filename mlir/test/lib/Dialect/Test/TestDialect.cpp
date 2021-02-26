@@ -804,9 +804,9 @@ static void print(OpAsmPrinter &p, StringAttrPrettyNameOp op) {
   }
 
   if (namesDisagree)
-    p.printOptionalAttrDictWithKeyword(op.getAttrs());
+    p.printOptionalAttrDictWithKeyword(op->getAttrs());
   else
-    p.printOptionalAttrDictWithKeyword(op.getAttrs(), {"names"});
+    p.printOptionalAttrDictWithKeyword(op->getAttrs(), {"names"});
 }
 
 // We set the SSA name in the asm syntax to the contents of the name
