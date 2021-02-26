@@ -20,6 +20,7 @@
 #include <forward_list>
 #include <list>
 #include <map>
+#include <memory>
 #include <queue>
 #include <set>
 #include <span>
@@ -201,9 +202,11 @@ void test()
     test_not_const<std::array<      volatile int, 1>>();
     test_false    <std::array<const volatile int, 1>>();
     test_true     <std::deque<               int>>();
+#ifdef _LIBCPP_VERSION
     test_true     <std::deque<const          int>>();
     test_true     <std::deque<      volatile int>>();
     test_true     <std::deque<const volatile int>>();
+#endif // _LIBCPP_VERSION
     test_true     <std::forward_list<int>>();
     test_true     <std::list<int>>();
     test_true     <std::vector<int>>();
@@ -222,9 +225,11 @@ void test()
 
     // Container adaptors
     test_true     <std::stack<               int>>();
+#ifdef _LIBCPP_VERSION
     test_true     <std::stack<const          int>>();
     test_true     <std::stack<      volatile int>>();
     test_true     <std::stack<const volatile int>>();
+#endif // _LIBCPP_VERSION
     test_true     <std::queue<int>>();
     test_true     <std::priority_queue<int>>();
 
