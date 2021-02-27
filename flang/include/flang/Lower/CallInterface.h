@@ -140,7 +140,7 @@ public:
     /// through this argument.
     Property property;
     /// MLIR attributes for this argument
-    llvm::SmallVector<mlir::NamedAttribute, 1> attributes;
+    llvm::SmallVector<mlir::NamedAttribute> attributes;
   };
 
   /// PassedEntity is what is provided back to the CallInterface user.
@@ -165,7 +165,7 @@ public:
   std::size_t getNumFIRArguments() const { return inputs.size(); }
   std::size_t getNumFIRResults() const { return outputs.size(); }
   /// Return the MLIR output types.
-  llvm::SmallVector<mlir::Type, 1> getResultType() const;
+  llvm::SmallVector<mlir::Type> getResultType() const;
 
   /// Return a container of Symbol/ActualArgument* and how they must
   /// be plugged with the mlir::FuncOp.
@@ -197,10 +197,10 @@ protected:
   void mapPassedEntities();
   void mapBackInputToPassedEntity(const FirPlaceHolder &, FirValue);
 
-  llvm::SmallVector<FirPlaceHolder, 1> outputs;
-  llvm::SmallVector<FirPlaceHolder, 4> inputs;
+  llvm::SmallVector<FirPlaceHolder> outputs;
+  llvm::SmallVector<FirPlaceHolder> inputs;
   mlir::FuncOp func;
-  llvm::SmallVector<PassedEntity, 4> passedArguments;
+  llvm::SmallVector<PassedEntity> passedArguments;
   std::optional<PassedEntity> passedResult;
 
   Fortran::lower::AbstractConverter &converter;
@@ -224,8 +224,9 @@ public:
       : CallInterface{c}, procRef{p} {
     declare();
     mapPassedEntities();
-    actualInputs = llvm::SmallVector<mlir::Value, 3>(getNumFIRArguments());
+    actualInputs.resize(getNumFIRArguments());
   }
+
   /// CRTP callbacks
   bool hasAlternateReturns() const;
   std::string getMangledName() const;
@@ -235,6 +236,7 @@ public:
     return procRef;
   };
   bool isMainProgram() const { return false; }
+
   /// Returns true if this is a call to a procedure pointer of a dummy
   /// procedure.
   bool isIndirectCall() const;
@@ -244,23 +246,27 @@ public:
   void placeInput(const PassedEntity &passedEntity, mlir::Value arg);
   void placeAddressAndLengthInput(const PassedEntity &passedEntity,
                                   mlir::Value addr, mlir::Value len);
+
   /// If this is a call to a procedure pointer or dummy, returns the related
   /// symbol. Nullptr otherwise.
   const Fortran::semantics::Symbol *getIfIndirectCallSymbol() const;
+
   /// Get the input vector once it is complete.
-  const llvm::SmallVector<mlir::Value, 3> &getInputs() const {
-    assert(verifyActualInputs() && "lowered arguments are incomplete");
+  llvm::ArrayRef<mlir::Value> getInputs() const {
+    if (!verifyActualInputs())
+      llvm::report_fatal_error("lowered arguments are incomplete");
     return actualInputs;
   }
-  /// Return result length when the function return non
-  /// allocatable/pointer character.
+
+  /// Return result length when the function returns a non-allocatable,
+  /// non-pointer character.
   mlir::Value getResultLength();
 
 private:
   /// Check that the input vector is complete.
   bool verifyActualInputs() const;
   const Fortran::evaluate::ProcedureRef &procRef;
-  llvm::SmallVector<mlir::Value, 3> actualInputs;
+  llvm::SmallVector<mlir::Value> actualInputs;
 };
 
 //===----------------------------------------------------------------------===//
