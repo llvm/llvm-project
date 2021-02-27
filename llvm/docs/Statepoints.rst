@@ -393,7 +393,7 @@ to unmanaged code. The resulting relocation sequence is:
     ret i8 addrspace(1)* %obj.relocated
   }
 
-During lowering, this will result in a instruction selection DAG that looks
+During lowering, this will result in an instruction selection DAG that looks
 something like:
 
 ::
@@ -703,7 +703,7 @@ Safepoint Semantics & Verification
 
 The fundamental correctness property for the compiled code's
 correctness w.r.t. the garbage collector is a dynamic one.  It must be
-the case that there is no dynamic trace such that a operation
+the case that there is no dynamic trace such that an operation
 involving a potentially relocated pointer is observably-after a
 safepoint which could relocate it.  'observably-after' is this usage
 means that an outside observer could observe this sequence of events

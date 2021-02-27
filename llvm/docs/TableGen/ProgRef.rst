@@ -509,7 +509,7 @@ primary value. Here are the possible suffixes for some primary *value*.
 The paste operator
 ------------------
 
-The paste operator (``#``) is the only infix operator availabe in TableGen
+The paste operator (``#``) is the only infix operator available in TableGen
 expressions. It allows you to concatenate strings or lists, but has a few
 unusual features.
 

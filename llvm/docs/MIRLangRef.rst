@@ -834,7 +834,7 @@ represented by an empty ``DebugLoc`` object in the machine instruction.
 Fixed variable locations
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-There are several ways of specifying variable locations. The simpliest is
+There are several ways of specifying variable locations. The simplest is
 describing a variable that is permanently located on the stack. In the stack
 or fixedStack attribute of the machine function, the variable, scope, and
 any qualifying location modifier are provided:

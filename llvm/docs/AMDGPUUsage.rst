@@ -528,7 +528,7 @@ AMDGPU supports target IDs. See `Clang Offload Bundler
 description. The AMDGPU target specific information is:
 
 **processor**
-  Is a AMDGPU processor or alternative processor name specified in
+  Is an AMDGPU processor or alternative processor name specified in
   :ref:`amdgpu-processor-table`. The non-canonical form target ID allows both
   the primary processor and alternative processor names. The canonical form
   target ID only allow the primary processor name.
@@ -4580,7 +4580,7 @@ There are different methods used for initializing flat scratch:
 Private Segment Buffer
 ++++++++++++++++++++++
 
-Private Segment Buffer SGPR register is used to initilize 4 SGPRs
+Private Segment Buffer SGPR register is used to initialize 4 SGPRs
 that are used as a V# to access scratch. CP uses the value provided by the
 runtime. It is used, together with Scratch Wavefront Offset as an offset, to
 access the private memory space using a segment address. See
@@ -6042,7 +6042,7 @@ For GFX90A:
     wavefront.
 
   * No special action is required for coherence between wavefronts in the same
-    work-group since they exeute on the same CU. The exception is when in
+    work-group since they execute on the same CU. The exception is when in
     tgsplit execution mode as wavefronts of the same work-group can be in
     different CUs and so a ``buffer_wbinvl1_vol`` is required as described in
     the following item.

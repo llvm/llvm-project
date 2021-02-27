@@ -500,7 +500,7 @@ If a DWARF expression is ill-formed, then the result is undefined.
 The following sections detail the rules for when a DWARF expression is
 ill-formed or results in an evaluation error.
 
-A DWARF expression can either be encoded as a operation expression (see
+A DWARF expression can either be encoded as an operation expression (see
 :ref:`amdgpu-dwarf-operation-expressions`), or as a location list expression
 (see :ref:`amdgpu-dwarf-location-list-expressions`).
 
