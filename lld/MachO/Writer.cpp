@@ -449,9 +449,16 @@ void Writer::scanRelocations() {
       continue;
     }
 
-    for (Reloc &r : isec->relocs) {
-      if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND))
+    for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
+      Reloc &r = *it;
+      if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
+        // Skip over the following UNSIGNED relocation -- it's just there as the
+        // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
+        // to emit rebase opcodes for it.
+        it = std::next(it);
+        assert(isa<Defined>(it->referent.dyn_cast<lld::macho::Symbol *>()));
         continue;
+      }
       if (auto *sym = r.referent.dyn_cast<lld::macho::Symbol *>()) {
         if (auto *undefined = dyn_cast<Undefined>(sym))
           treatUndefinedSymbol(*undefined);
