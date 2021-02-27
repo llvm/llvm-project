@@ -127,8 +127,8 @@ Attribute Dialect::parseAttribute(DialectAsmParser &parser, Type type) const {
 Type Dialect::parseType(DialectAsmParser &parser) const {
   // If this dialect allows unknown types, then represent this with OpaqueType.
   if (allowsUnknownTypes()) {
-    auto ns = Identifier::get(getNamespace(), getContext());
-    return OpaqueType::get(getContext(), ns, parser.getFullSymbolSpec());
+    Identifier ns = Identifier::get(getNamespace(), getContext());
+    return OpaqueType::get(ns, parser.getFullSymbolSpec());
   }
 
   parser.emitError(parser.getNameLoc())

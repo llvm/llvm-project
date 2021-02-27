@@ -48,14 +48,14 @@ Location CallSiteLoc::getCaller() const { return getImpl()->caller; }
 //===----------------------------------------------------------------------===//
 
 Location FileLineColLoc::get(Identifier filename, unsigned line,
-                             unsigned column, MLIRContext *context) {
-  return Base::get(context, filename, line, column);
+                             unsigned column) {
+  return Base::get(filename.getContext(), filename, line, column);
 }
 
 Location FileLineColLoc::get(StringRef filename, unsigned line, unsigned column,
                              MLIRContext *context) {
   return get(Identifier::get(filename.empty() ? "-" : filename, context), line,
-             column, context);
+             column);
 }
 
 StringRef FileLineColLoc::getFilename() const { return getImpl()->filename; }
@@ -112,8 +112,8 @@ Location NameLoc::get(Identifier name, Location child) {
   return Base::get(child->getContext(), name, child);
 }
 
-Location NameLoc::get(Identifier name, MLIRContext *context) {
-  return get(name, UnknownLoc::get(context));
+Location NameLoc::get(Identifier name) {
+  return get(name, UnknownLoc::get(name.getContext()));
 }
 
 /// Return the name identifier.

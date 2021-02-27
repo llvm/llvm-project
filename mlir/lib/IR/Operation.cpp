@@ -35,8 +35,10 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
 }
 
 /// Return the name of the dialect this operation is registered to.
-StringRef OperationName::getDialect() const {
-  return getStringRef().split('.').first;
+StringRef OperationName::getDialectNamespace() const {
+  if (Dialect *dialect = getDialect())
+    return dialect->getNamespace();
+  return representation.get<Identifier>().strref().split('.').first;
 }
 
 /// Return the operation name with dialect name stripped, if it has one.
@@ -213,14 +215,7 @@ MLIRContext *Operation::getContext() { return location->getContext(); }
 
 /// Return the dialect this operation is associated with, or nullptr if the
 /// associated dialect is not registered.
-Dialect *Operation::getDialect() {
-  if (auto *abstractOp = getAbstractOperation())
-    return &abstractOp->dialect;
-
-  // If this operation hasn't been registered or doesn't have abstract
-  // operation, try looking up the dialect name in the context.
-  return getContext()->getLoadedDialect(getName().getDialect());
-}
+Dialect *Operation::getDialect() { return getName().getDialect(); }
 
 Region *Operation::getParentRegion() {
   return block ? block->getParent() : nullptr;
