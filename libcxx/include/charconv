@@ -79,6 +79,7 @@ namespace std {
 #include <__utility/to_underlying.h>
 #include <cmath> // for log2f
 #include <cstdint>
+#include <cstdlib> // for _LIBCPP_UNREACHABLE
 #include <cstring>
 #include <limits>
 #include <type_traits>
@@ -401,32 +402,53 @@ __to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
 }
 
 template <typename _Tp>
+_LIBCPP_AVAILABILITY_TO_CHARS _LIBCPP_INLINE_VISIBILITY int __to_chars_integral_width(_Tp __value, unsigned __base) {
+  _LIBCPP_ASSERT(__value >= 0, "The function requires a non-negative value.");
+
+  unsigned __base_2 = __base * __base;
+  unsigned __base_3 = __base_2 * __base;
+  unsigned __base_4 = __base_2 * __base_2;
+
+  int __r = 0;
+  while (true) {
+    if (__value < __base)
+      return __r + 1;
+    if (__value < __base_2)
+      return __r + 2;
+    if (__value < __base_3)
+      return __r + 3;
+    if (__value < __base_4)
+      return __r + 4;
+
+    __value /= __base_4;
+    __r += 4;
+  }
+
+  _LIBCPP_UNREACHABLE();
+}
+
+template <typename _Tp>
 _LIBCPP_AVAILABILITY_TO_CHARS
 inline _LIBCPP_INLINE_VISIBILITY to_chars_result
 __to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
                     false_type)
 {
-    if (__base == 10)
-        return __to_chars_itoa(__first, __last, __value, false_type());
+  if (__base == 10)
+    return __to_chars_itoa(__first, __last, __value, false_type());
 
-    auto __p = __last;
-    while (__p != __first)
-    {
-        auto __c = __value % __base;
-        __value /= __base;
-        *--__p = "0123456789abcdefghijklmnopqrstuvwxyz"[__c];
-        if (__value == 0)
-            break;
-    }
+  ptrdiff_t __cap = __last - __first;
+  int __n = __to_chars_integral_width(__value, __base);
+  if (__n > __cap)
+    return {__last, errc::value_too_large};
 
-    auto __len = __last - __p;
-    if (__value != 0 || !__len)
-        return {__last, errc::value_too_large};
-    else
-    {
-        _VSTD::memmove(__first, __p, __len);
-        return {__first + __len, {}};
-    }
+  __last = __first + __n;
+  char* __p = __last;
+  do {
+    unsigned __c = __value % __base;
+    __value /= __base;
+    *--__p = "0123456789abcdefghijklmnopqrstuvwxyz"[__c];
+  } while (__value != 0);
+  return {__last, errc(0)};
 }
 
 template <typename _Tp, typename enable_if<is_integral<_Tp>::value, int>::type = 0>
