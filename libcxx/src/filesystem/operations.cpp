@@ -412,6 +412,7 @@ errc __win_err_to_errc(int err) {
       {ERROR_ACCESS_DENIED, errc::permission_denied},
       {ERROR_ALREADY_EXISTS, errc::file_exists},
       {ERROR_BAD_NETPATH, errc::no_such_file_or_directory},
+      {ERROR_BAD_PATHNAME, errc::no_such_file_or_directory},
       {ERROR_BAD_UNIT, errc::no_such_device},
       {ERROR_BROKEN_PIPE, errc::broken_pipe},
       {ERROR_BUFFER_OVERFLOW, errc::filename_too_long},
