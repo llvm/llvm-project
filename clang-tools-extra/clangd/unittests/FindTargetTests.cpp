@@ -1593,6 +1593,35 @@ TEST_F(FindExplicitReferencesTest, All) {
               "0: targets = {f}\n"
               "1: targets = {I::x}\n"
               "2: targets = {I::setY:}\n"},
+          {
+          // Objective-C: methods
+              R"cpp(
+            @interface I
+              -(void) a:(int)x b:(int)y;
+            @end
+            void foo(I *i) {
+              [$0^i $1^a:1 b:2];
+            }
+          )cpp",
+              "0: targets = {i}\n"
+              "1: targets = {I::a:b:}\n"
+          },
+          {
+          // Objective-C: protocols
+              R"cpp(
+            @interface I
+            @end
+            @protocol P
+            @end
+            void foo() {
+              // FIXME: should reference P
+              $0^I<P> *$1^x;
+            }
+          )cpp",
+              "0: targets = {I}\n"
+              "1: targets = {x}, decl\n"
+          },
+
           // Designated initializers.
           {R"cpp(
             void foo() {

@@ -40,11 +40,27 @@ namespace {
 /// Some names are not written in the source code and cannot be highlighted,
 /// e.g. anonymous classes. This function detects those cases.
 bool canHighlightName(DeclarationName Name) {
-  if (Name.getNameKind() == DeclarationName::CXXConstructorName ||
-      Name.getNameKind() == DeclarationName::CXXUsingDirective)
+  switch (Name.getNameKind()) {
+  case DeclarationName::Identifier: {
+    auto *II = Name.getAsIdentifierInfo();
+    return II && !II->getName().empty();
+  }
+  case DeclarationName::CXXConstructorName:
+  case DeclarationName::CXXDestructorName:
     return true;
-  auto *II = Name.getAsIdentifierInfo();
-  return II && !II->getName().empty();
+  case DeclarationName::ObjCZeroArgSelector:
+  case DeclarationName::ObjCOneArgSelector:
+  case DeclarationName::ObjCMultiArgSelector:
+    // Multi-arg selectors need special handling, and we handle 0/1 arg
+    // selectors there too.
+    return false;
+  case DeclarationName::CXXConversionFunctionName:
+  case DeclarationName::CXXOperatorName:
+  case DeclarationName::CXXDeductionGuideName:
+  case DeclarationName::CXXLiteralOperatorName:
+  case DeclarationName::CXXUsingDirective:
+    return false;
+  }
 }
 
 llvm::Optional<HighlightingKind> kindForType(const Type *TP);
@@ -73,13 +89,20 @@ llvm::Optional<HighlightingKind> kindForDecl(const NamedDecl *D) {
       return llvm::None;
     return HighlightingKind::Class;
   }
-  if (isa<ClassTemplateDecl>(D) || isa<RecordDecl>(D) ||
-      isa<CXXConstructorDecl>(D))
+  if (isa<ClassTemplateDecl, RecordDecl, CXXConstructorDecl, ObjCInterfaceDecl,
+          ObjCImplementationDecl>(D))
     return HighlightingKind::Class;
+  if (isa<ObjCProtocolDecl>(D))
+    return HighlightingKind::Interface;
+  if (isa<ObjCCategoryDecl>(D))
+    return HighlightingKind::Namespace;
   if (auto *MD = dyn_cast<CXXMethodDecl>(D))
     return MD->isStatic() ? HighlightingKind::StaticMethod
                           : HighlightingKind::Method;
-  if (isa<FieldDecl>(D))
+  if (auto *OMD = dyn_cast<ObjCMethodDecl>(D))
+    return OMD->isClassMethod() ? HighlightingKind::StaticMethod
+                                : HighlightingKind::Method;
+  if (isa<FieldDecl, ObjCPropertyDecl>(D))
     return HighlightingKind::Field;
   if (isa<EnumDecl>(D))
     return HighlightingKind::Enum;
@@ -87,11 +110,14 @@ llvm::Optional<HighlightingKind> kindForDecl(const NamedDecl *D) {
     return HighlightingKind::EnumConstant;
   if (isa<ParmVarDecl>(D))
     return HighlightingKind::Parameter;
-  if (auto *VD = dyn_cast<VarDecl>(D))
+  if (auto *VD = dyn_cast<VarDecl>(D)) {
+    if (isa<ImplicitParamDecl>(VD)) // e.g. ObjC Self
+      return llvm::None;
     return VD->isStaticDataMember()
                ? HighlightingKind::StaticField
                : VD->isLocalVarDecl() ? HighlightingKind::LocalVariable
                                       : HighlightingKind::Variable;
+  }
   if (const auto *BD = dyn_cast<BindingDecl>(D))
     return BD->getDeclContext()->isFunctionOrMethod()
                ? HighlightingKind::LocalVariable
@@ -115,6 +141,8 @@ llvm::Optional<HighlightingKind> kindForType(const Type *TP) {
     return HighlightingKind::Primitive;
   if (auto *TD = dyn_cast<TemplateTypeParmType>(TP))
     return kindForDecl(TD->getDecl());
+  if (isa<ObjCObjectPointerType>(TP))
+    return HighlightingKind::Class;
   if (auto *TD = TP->getAsTagDecl())
     return kindForDecl(TD);
   return llvm::None;
@@ -439,6 +467,36 @@ public:
     return true;
   }
 
+  // We handle objective-C selectors specially, because one reference can
+  // cover several non-contiguous tokens.
+  void highlightObjCSelector(const ArrayRef<SourceLocation> &Locs, bool Decl,
+                             bool Class) {
+    HighlightingKind Kind =
+        Class ? HighlightingKind::StaticMethod : HighlightingKind::Method;
+    for (SourceLocation Part : Locs) {
+      auto &Tok =
+          H.addToken(Part, Kind).addModifier(HighlightingModifier::ClassScope);
+      if (Decl)
+        Tok.addModifier(HighlightingModifier::Declaration);
+      if (Class)
+        Tok.addModifier(HighlightingModifier::Static);
+    }
+  }
+
+  bool VisitObjCMethodDecl(ObjCMethodDecl *OMD) {
+    llvm::SmallVector<SourceLocation> Locs;
+    OMD->getSelectorLocs(Locs);
+    highlightObjCSelector(Locs, /*Decl=*/true, OMD->isClassMethod());
+    return true;
+  }
+
+  bool VisitObjCMessageExpr(ObjCMessageExpr *OME) {
+    llvm::SmallVector<SourceLocation> Locs;
+    OME->getSelectorLocs(Locs);
+    highlightObjCSelector(Locs, /*Decl=*/false, OME->isClassMessage());
+    return true;
+  }
+
   bool VisitOverloadExpr(OverloadExpr *E) {
     if (!E->decls().empty())
       return true; // handled by findExplicitReferences.
@@ -602,6 +660,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "StaticField";
   case HighlightingKind::Class:
     return OS << "Class";
+  case HighlightingKind::Interface:
+    return OS << "Interface";
   case HighlightingKind::Enum:
     return OS << "Enum";
   case HighlightingKind::EnumConstant:
@@ -695,6 +755,8 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
     return "property";
   case HighlightingKind::Class:
     return "class";
+  case HighlightingKind::Interface:
+    return "interface";
   case HighlightingKind::Enum:
     return "enum";
   case HighlightingKind::EnumConstant:
