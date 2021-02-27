@@ -1966,6 +1966,47 @@ fir::GlobalOp fir::createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
   return result;
 }
 
+bool fir::valueHasFirAttribute(mlir::Value value,
+                               llvm::StringRef attributeName) {
+  // If this is a fir.box that was loaded, the fir attributes will be on the
+  // related fir.ref<fir.box> creation.
+  if (value.getType().isa<fir::BoxType>())
+    if (auto definingOp = value.getDefiningOp())
+      if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(definingOp))
+        value = loadOp.memref();
+  // If this is a function argument, look in the argument attributes.
+  if (auto blockArg = value.dyn_cast<mlir::BlockArgument>()) {
+    if (blockArg.getOwner() && blockArg.getOwner()->isEntryBlock())
+      if (auto funcOp =
+              mlir::dyn_cast<mlir::FuncOp>(blockArg.getOwner()->getParentOp()))
+        if (funcOp.getArgAttr(blockArg.getArgNumber(), attributeName))
+          return true;
+    return false;
+  }
+
+  if (auto definingOp = value.getDefiningOp()) {
+    // If this is an allocated value, look at the allocation attributes.
+    if (mlir::isa<fir::AllocMemOp>(definingOp) ||
+        mlir::isa<AllocaOp>(definingOp))
+      return definingOp->hasAttr(attributeName);
+    // If this is an imported global, look at AddrOfOp and GlobalOp attributes.
+    // Both operations are looked at because use/host associated variable (the
+    // AddrOfOp) can have ASYNCHRONOUS/VOLATILE attributes even if the ultimate
+    // entity (the globalOp) does not have them.
+    if (auto addressOfOp = mlir::dyn_cast<fir::AddrOfOp>(definingOp)) {
+      if (addressOfOp->hasAttr(attributeName))
+        return true;
+      if (auto module = definingOp->getParentOfType<mlir::ModuleOp>())
+        if (auto globalOp =
+                module.lookupSymbol<fir::GlobalOp>(addressOfOp.symbol()))
+          return globalOp->hasAttr(attributeName);
+    }
+  }
+  // TODO: Construct associated entities attributes. Decide where the fir
+  // attributes must be placed/looked for in this case.
+  return false;
+}
+
 // Tablegen operators
 
 #define GET_OP_CLASSES
