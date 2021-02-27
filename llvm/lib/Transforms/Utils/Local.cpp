@@ -1702,11 +1702,9 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                     DIBuilder &Builder, int Offset) {
   if (auto *L = LocalAsMetadata::getIfExists(AI))
     if (auto *MDV = MetadataAsValue::getIfExists(AI->getContext(), L))
-      for (auto UI = MDV->use_begin(), UE = MDV->use_end(); UI != UE;) {
-        Use &U = *UI++;
+      for (Use &U : llvm::make_early_inc_range(MDV->uses()))
         if (auto *DVI = dyn_cast<DbgValueInst>(U.getUser()))
           replaceOneDbgValueForAlloca(DVI, NewAllocaAddress, Builder, Offset);
-      }
 }
 
 /// Wrap \p V in a ValueAsMetadata instance.
