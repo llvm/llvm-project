@@ -44,8 +44,9 @@ template <typename T>
 struct TDerived : TBase<T> {
   virtual void tfunk(T t);
   // Should not apply fix for template.
-  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: method 'TDerived::tfunk' has {{.*}} 'TBase::tfunc'
-  // CHECK-FIXES: virtual void tfunc(T t);
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: method 'TDerived<double>::tfunk' has {{.*}} 'TBase<double>::tfunc'
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: method 'TDerived<int>::tfunk' has {{.*}} 'TBase<int>::tfunc'
+  // CHECK-FIXES: virtual void tfunk(T t);
 };
 
 TDerived<int> T1;
