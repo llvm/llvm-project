@@ -14,9 +14,9 @@
 # CHECK:       {{0*}}[[#%x, SUB4ADDR:]] l {{.*}} __DATA,__data _sub4
 # CHECK-LABEL: Contents of section __DATA,__data:
 # CHECK:       [[#SUB1ADDR]] 10000000
-# CHECK-NEXT:  [[#SUB2ADDR]] f0ffffff
-# CHECK-NEXT:  [[#SUB3ADDR]] 10000000 00000000
-# CHECK-NEXT:  [[#SUB4ADDR]] f0ffffff ffffffff
+# CHECK-NEXT:  [[#SUB2ADDR]] f2ffffff
+# CHECK-NEXT:  [[#SUB3ADDR]] 14000000 00000000
+# CHECK-NEXT:  [[#SUB4ADDR]] f6ffffff ffffffff
 # CHECK:       Rebase table:
 # CHECK-NEXT:  segment  section            address     type
 # CHECK-EMPTY:
@@ -36,13 +36,13 @@ _sub1:
   .long _minuend_1 - _subtrahend_1
   .space 12
 _sub2:
-  .long _minuend_2 - _subtrahend_2
+  .long _minuend_2 - _subtrahend_2 + 2
   .space 12
 _sub3:
-  .quad _minuend_1 - _subtrahend_1
+  .quad _minuend_1 - _subtrahend_1 + 4
   .space 8
 _sub4:
-  .quad _minuend_2 - _subtrahend_2
+  .quad _minuend_2 - _subtrahend_2 + 6
 
 .text
 .p2align 2

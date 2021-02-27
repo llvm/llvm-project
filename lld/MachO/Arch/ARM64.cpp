@@ -79,8 +79,23 @@ const TargetInfo::RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
 
 uint64_t ARM64::getEmbeddedAddend(MemoryBufferRef mb, const section_64 &sec,
                                   const relocation_info rel) const {
-  // TODO(gkm): extract embedded addend just so we can assert that it is 0
-  return 0;
+  if (rel.r_type != ARM64_RELOC_UNSIGNED) {
+    // All other reloc types should use the ADDEND relocation to store their
+    // addends.
+    // TODO(gkm): extract embedded addend just so we can assert that it is 0
+    return 0;
+  }
+
+  auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
+  const uint8_t *loc = buf + sec.offset + rel.r_address;
+  switch (rel.r_length) {
+  case 2:
+    return read32le(loc);
+  case 3:
+    return read64le(loc);
+  default:
+    llvm_unreachable("invalid r_length");
+  }
 }
 
 inline uint64_t bitField(uint64_t value, int right, int width, int left) {
