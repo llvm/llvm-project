@@ -679,9 +679,8 @@ unsigned LLVMCountParamTypes(LLVMTypeRef FunctionTy) {
 
 void LLVMGetParamTypes(LLVMTypeRef FunctionTy, LLVMTypeRef *Dest) {
   FunctionType *Ty = unwrap<FunctionType>(FunctionTy);
-  for (FunctionType::param_iterator I = Ty->param_begin(),
-                                    E = Ty->param_end(); I != E; ++I)
-    *Dest++ = wrap(*I);
+  for (Type *T : Ty->params())
+    *Dest++ = wrap(T);
 }
 
 /*--.. Operations on struct types ..........................................--*/
@@ -723,9 +722,8 @@ unsigned LLVMCountStructElementTypes(LLVMTypeRef StructTy) {
 
 void LLVMGetStructElementTypes(LLVMTypeRef StructTy, LLVMTypeRef *Dest) {
   StructType *Ty = unwrap<StructType>(StructTy);
-  for (StructType::element_iterator I = Ty->element_begin(),
-                                    E = Ty->element_end(); I != E; ++I)
-    *Dest++ = wrap(*I);
+  for (Type *T : Ty->elements())
+    *Dest++ = wrap(T);
 }
 
 LLVMTypeRef LLVMStructGetTypeAtIndex(LLVMTypeRef StructTy, unsigned i) {
@@ -2495,9 +2493,8 @@ unsigned LLVMCountParams(LLVMValueRef FnRef) {
 
 void LLVMGetParams(LLVMValueRef FnRef, LLVMValueRef *ParamRefs) {
   Function *Fn = unwrap<Function>(FnRef);
-  for (Function::arg_iterator I = Fn->arg_begin(),
-                              E = Fn->arg_end(); I != E; I++)
-    *ParamRefs++ = wrap(&*I);
+  for (Argument &A : Fn->args())
+    *ParamRefs++ = wrap(&A);
 }
 
 LLVMValueRef LLVMGetParam(LLVMValueRef FnRef, unsigned index) {
