@@ -192,15 +192,17 @@ void Block::eraseArguments(llvm::BitVector eraseIndices) {
   // We do this in reverse so that we erase later indices before earlier
   // indices, to avoid shifting the later indices.
   unsigned originalNumArgs = getNumArguments();
+  int64_t firstErased = originalNumArgs;
   for (unsigned i = 0; i < originalNumArgs; ++i) {
     int64_t currentPos = originalNumArgs - i - 1;
     if (eraseIndices.test(currentPos)) {
       arguments[currentPos].destroy();
       arguments.erase(arguments.begin() + currentPos);
+      firstErased = currentPos;
     }
   }
   // Update the cached position for the arguments after the first erased one.
-  int64_t index = eraseIndices.find_first();
+  int64_t index = firstErased;
   for (BlockArgument arg : llvm::drop_begin(arguments, index))
     arg.setArgNumber(index++);
 }
