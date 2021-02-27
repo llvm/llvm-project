@@ -255,7 +255,7 @@ static void printCallOp(mlir::OpAsmPrinter &p, fir::CallOp &op) {
   else
     p << op.getOperand(0);
   p << '(' << op->getOperands().drop_front(isDirect ? 0 : 1) << ')';
-  p.printOptionalAttrDict(op.getAttrs(), {fir::CallOp::calleeAttrName()});
+  p.printOptionalAttrDict(op->getAttrs(), {fir::CallOp::calleeAttrName()});
   auto resultTypes{op.getResultTypes()};
   llvm::SmallVector<Type, 8> argTypes(
       llvm::drop_begin(op.getOperandTypes(), isDirect ? 0 : 1));
@@ -336,7 +336,7 @@ static void printCmpOp(OpAsmPrinter &p, OPTY op) {
   p.printOperand(op.lhs());
   p << ", ";
   p.printOperand(op.rhs());
-  p.printOptionalAttrDict(op.getAttrs(),
+  p.printOptionalAttrDict(op->getAttrs(),
                           /*elidedAttrs=*/{OPTY::getPredicateAttrName()});
   p << " : " << op.lhs().getType();
 }
