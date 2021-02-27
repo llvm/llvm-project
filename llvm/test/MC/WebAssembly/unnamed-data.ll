@@ -74,11 +74,11 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:       - Index:       0
 ; CHECK-NEXT:         Name:        .rodata..L.str1
 ; CHECK-NEXT:         Alignment:   0
-; CHECK-NEXT:         Flags:       [ ]
+; CHECK-NEXT:         Flags:       [ STRINGS ]
 ; CHECK-NEXT:       - Index:       1
 ; CHECK-NEXT:         Name:        .rodata..L.str2
 ; CHECK-NEXT:         Alignment:   0
-; CHECK-NEXT:         Flags:       [ ]
+; CHECK-NEXT:         Flags:       [ STRINGS ]
 ; CHECK-NEXT:       - Index:       2
 ; CHECK-NEXT:         Name:        .data.a
 ; CHECK-NEXT:         Alignment:   3
