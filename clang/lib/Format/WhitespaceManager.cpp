@@ -709,6 +709,8 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
         for (FormatToken *Next = C.Tok->Next; Next; Next = Next->Next) {
           if (Next->is(tok::comment))
             continue;
+          if (Next->is(TT_PointerOrReference))
+            return false;
           if (!Next->Tok.getIdentifierInfo())
             break;
           if (Next->isOneOf(TT_StartOfName, TT_FunctionDeclarationName,

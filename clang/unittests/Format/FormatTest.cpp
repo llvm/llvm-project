@@ -13945,6 +13945,20 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   verifyFormat("int      oneTwoThree{0}; // comment\n"
                "unsigned oneTwo;         // comment",
                Alignment);
+  verifyFormat("unsigned int *      a;\n"
+               "int *               b;\n"
+               "unsigned int Const *c;\n"
+               "unsigned int const *d;\n"
+               "unsigned int Const &e;\n"
+               "unsigned int const &f;",
+               Alignment);
+  verifyFormat("Const unsigned int *c;\n"
+               "const unsigned int *d;\n"
+               "Const unsigned int &e;\n"
+               "const unsigned int &f;\n"
+               "const unsigned      g;\n"
+               "Const unsigned      h;",
+               Alignment);
   EXPECT_EQ("float const a = 5;\n"
             "\n"
             "int oneTwoThree = 123;",
@@ -14249,6 +14263,38 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   EXPECT_EQ("DECOR1 /**/ int8_t /**/ DECOR2 /**/\n"
             "foo(int a);",
             format("DECOR1 /**/ int8_t /**/ DECOR2 /**/ foo (int a);", Style));
+
+  Alignment.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("unsigned int*       a;\n"
+               "int*                b;\n"
+               "unsigned int Const* c;\n"
+               "unsigned int const* d;\n"
+               "unsigned int Const& e;\n"
+               "unsigned int const& f;",
+               Alignment);
+  verifyFormat("Const unsigned int* c;\n"
+               "const unsigned int* d;\n"
+               "Const unsigned int& e;\n"
+               "const unsigned int& f;\n"
+               "const unsigned      g;\n"
+               "Const unsigned      h;",
+               Alignment);
+
+  Alignment.PointerAlignment = FormatStyle::PAS_Middle;
+  verifyFormat("unsigned int *       a;\n"
+               "int *                b;\n"
+               "unsigned int Const * c;\n"
+               "unsigned int const * d;\n"
+               "unsigned int Const & e;\n"
+               "unsigned int const & f;",
+               Alignment);
+  verifyFormat("Const unsigned int * c;\n"
+               "const unsigned int * d;\n"
+               "Const unsigned int & e;\n"
+               "const unsigned int & f;\n"
+               "const unsigned       g;\n"
+               "Const unsigned       h;",
+               Alignment);
 }
 
 TEST_F(FormatTest, LinuxBraceBreaking) {
