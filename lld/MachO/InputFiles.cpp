@@ -287,6 +287,10 @@ void ObjFile::parseRelocations(const section_64 &sec,
       p.type = relInfo.r_type;
       p.referent = symbols[relInfo.r_symbolnum];
       relInfo = relInfos[++i];
+      // SUBTRACTOR relocations should always be followed by an UNSIGNED one
+      // indicating the minuend symbol.
+      assert(target->hasAttr(relInfo.r_type, RelocAttrBits::UNSIGNED) &&
+             relInfo.r_extern);
     }
     Reloc r;
     r.type = relInfo.r_type;
@@ -317,8 +321,7 @@ void ObjFile::parseRelocations(const section_64 &sec,
     }
 
     InputSection *subsec = findContainingSubsection(subsecMap, &r.offset);
-    if (p.type != GENERIC_RELOC_INVALID &&
-        target->hasAttr(p.type, RelocAttrBits::SUBTRAHEND))
+    if (p.type != GENERIC_RELOC_INVALID)
       subsec->relocs.push_back(p);
     subsec->relocs.push_back(r);
   }
