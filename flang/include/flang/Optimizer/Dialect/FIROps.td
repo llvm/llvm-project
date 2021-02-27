@@ -668,7 +668,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
       printSuccessorAtIndex(p, i);
     }
     p << ']';
-    p.printOptionalAttrDict(getAttrs(), {getCasesAttr(), getCompareOffsetAttr(),
+    p.printOptionalAttrDict((*this)->getAttrs(), {getCasesAttr(), getCompareOffsetAttr(),
         getTargetOffsetAttr(), getOperandSegmentSizeAttr()});
   }];
 
@@ -796,7 +796,7 @@ def fir_SelectCaseOp : fir_SwitchTerminatorOp<"select_case"> {
       printSuccessorAtIndex(p, i);
     }
     p << ']';
-    p.printOptionalAttrDict(getAttrs(), {getCasesAttr(), getCompareOffsetAttr(),
+    p.printOptionalAttrDict((*this)->getAttrs(), {getCasesAttr(), getCompareOffsetAttr(),
         getTargetOffsetAttr(), getOperandSegmentSizeAttr()});
   }];
 
@@ -903,7 +903,7 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
       printSuccessorAtIndex(p, i);
     }
     p << ']';
-    p.printOptionalAttrDict(getAttrs(), {getCasesAttr(), getCompareOffsetAttr(),
+    p.printOptionalAttrDict((*this)->getAttrs(), {getCasesAttr(), getCompareOffsetAttr(),
         getTargetOffsetAttr(), getOperandSegmentSizeAttr()});
   }];
 
@@ -1028,7 +1028,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect]> {
     } else if (auto map = (*this)->getAttr(layoutName())) {
       p << " [" << map << ']';
     }
-    p.printOptionalAttrDict(getAttrs(), {layoutName(), lenpName()});
+    p.printOptionalAttrDict((*this)->getAttrs(), {layoutName(), lenpName()});
     p << " : ";
     p.printFunctionalType(getOperation());
   }];
@@ -1782,7 +1782,7 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
 
   let printer = [{
     p << getOperationName() << ' ' << (*this)->getOperands();
-    p.printOptionalAttrDict(getAttrs(), /*elidedAttrs=*/{baseType()});
+    p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{baseType()});
     p << " : ";
     p.printFunctionalType((*this)->getOperandTypes(),
         (*this)->getResultTypes());
@@ -2557,7 +2557,7 @@ def fir_DispatchOp : fir_Op<"dispatch",
       p.printOperands(args());
     }
     p << ')';
-    p.printOptionalAttrDict(getAttrs(), {"fn_type", "method"});
+    p.printOptionalAttrDict((*this)->getAttrs(), {"fn_type", "method"});
     auto resTy{getResultTypes()};
     llvm::SmallVector<mlir::Type, 8> argTy(getOperandTypes());
     p << " : " << mlir::FunctionType::get(getContext(), argTy, resTy);
@@ -2986,7 +2986,7 @@ def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoSideEffect]> {
 
   let printer = [{
     p << getOperationName() << ' ' << (*this)->getAttr("in_type");
-    p.printOptionalAttrDict(getAttrs(), {"in_type"});
+    p.printOptionalAttrDict((*this)->getAttrs(), {"in_type"});
   }];
 
   let builders = [
