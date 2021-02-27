@@ -35,27 +35,24 @@ void SuspiciousMemsetUsageCheck::registerMatchers(MatchFinder *Finder) {
           callee(MemsetDecl),
           hasArgument(1, characterLiteral(equals(static_cast<unsigned>('0')))
                              .bind("char-zero-fill")),
-          unless(
-              eachOf(hasArgument(0, anyOf(hasType(pointsTo(isAnyCharacter())),
-                                          hasType(arrayType(hasElementType(
-                                              isAnyCharacter()))))),
-                     isInTemplateInstantiation()))),
+          unless(hasArgument(
+              0, anyOf(hasType(pointsTo(isAnyCharacter())),
+                       hasType(arrayType(hasElementType(isAnyCharacter()))))))),
       this);
 
   // Look for memset with an integer literal in its fill_char argument.
   // Will check if it gets truncated.
-  Finder->addMatcher(callExpr(callee(MemsetDecl),
-                              hasArgument(1, integerLiteral().bind("num-fill")),
-                              unless(isInTemplateInstantiation())),
-                     this);
+  Finder->addMatcher(
+      callExpr(callee(MemsetDecl),
+               hasArgument(1, integerLiteral().bind("num-fill"))),
+      this);
 
   // Look for memset(x, y, 0) as that is most likely an argument swap.
   Finder->addMatcher(
       callExpr(callee(MemsetDecl),
                unless(hasArgument(1, anyOf(characterLiteral(equals(
                                                static_cast<unsigned>('0'))),
-                                           integerLiteral()))),
-               unless(isInTemplateInstantiation()))
+                                           integerLiteral()))))
           .bind("call"),
       this);
 }
