@@ -3433,37 +3433,21 @@ define <4 x i32> @smulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: smulo_v4i1:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrad $31, %xmm1, %xmm1
-; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
-; AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpslld $31, %xmm0, %xmm1
-; AVX1-NEXT:    vpsrad $31, %xmm1, %xmm2
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vmovmskps %xmm1, %eax
-; AVX1-NEXT:    movb %al, (%rdi)
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: smulo_v4i1:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
-; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm0
-; AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpslld $31, %xmm0, %xmm1
-; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm2
-; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm2, %xmm0
-; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vmovmskps %xmm1, %eax
-; AVX2-NEXT:    movb %al, (%rdi)
-; AVX2-NEXT:    retq
+; AVX-LABEL: smulo_v4i1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpslld $31, %xmm0, %xmm1
+; AVX-NEXT:    vpsrad $31, %xmm1, %xmm2
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vmovmskps %xmm1, %eax
+; AVX-NEXT:    movb %al, (%rdi)
+; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: smulo_v4i1:
 ; AVX512:       # %bb.0:
