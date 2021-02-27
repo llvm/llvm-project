@@ -131,10 +131,13 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB2_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    tileloadd (%r15,%r12), %tmm0
+; CHECK-NEXT:    movabsq $64, %rax
+; CHECK-NEXT:    tilestored %tmm0, 1024(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    tileloadd (%r15,%r12), %tmm0
+; CHECK-NEXT:    movabsq $64, %rax
+; CHECK-NEXT:    tileloadd 1024(%rsp,%rax), %tmm0 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tilestored %tmm0, (%r13,%r12)
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
