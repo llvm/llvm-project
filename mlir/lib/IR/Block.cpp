@@ -200,9 +200,8 @@ void Block::eraseArguments(llvm::BitVector eraseIndices) {
     }
   }
   // Update the cached position for the arguments after the first erased one.
-  int64_t index = 0;
-  for (BlockArgument arg :
-       llvm::drop_begin(arguments, eraseIndices.find_first()))
+  int64_t index = eraseIndices.find_first();
+  for (BlockArgument arg : llvm::drop_begin(arguments, index))
     arg.setArgNumber(index++);
 }
 
