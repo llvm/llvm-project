@@ -148,7 +148,7 @@ public:
   static bool isOutermostParallel(__isl_keep isl_ast_node *Node);
 
   /// Is this loop an innermost parallel loop?
-  static bool isInnermostParallel(__isl_keep isl_ast_node *Node);
+  static bool isInnermostParallel(const isl::ast_node &Node);
 
   /// Is this loop a reduction parallel loop?
   static bool isReductionParallel(__isl_keep isl_ast_node *Node);
