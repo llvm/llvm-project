@@ -48,8 +48,7 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
                      VEX, T8XD;
 
     // Pseduo instruction for RA.
-    let isReMaterializable = 1, canFoldAsLoad = 1 in
-      def PTILELOADDV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
+    def PTILELOADDV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
                                                       GR16:$src2,
                                                       opaquemem:$src3), []>;
     def PTILESTOREDV : PseudoI<(outs), (ins GR16:$src1,
