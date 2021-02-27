@@ -1,11 +1,18 @@
-# REQUIRES: x86
+# REQUIRES: x86, aarch64
 # RUN: rm -rf %t; split-file %s %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/my_personality.s -o %t/my_personality.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/main.s -o %t/main.o
-# RUN: %lld -pie -lSystem -lc++ %t/my_personality.o %t/main.o -o %t/personality-first
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/personality-first | FileCheck %s --check-prefixes=FIRST,CHECK
-# RUN: %lld -pie -lSystem -lc++ %t/main.o %t/my_personality.o -o %t/personality-second
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/personality-second | FileCheck %s --check-prefixes=SECOND,CHECK
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/my-personality.s -o %t/x86_64-my-personality.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/main.s -o %t/x86_64-main.o
+# RUN: %lld -arch x86_64 -pie -lSystem -lc++ %t/x86_64-my-personality.o %t/x86_64-main.o -o %t/x86_64-personality-first
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK
+# RUN: %lld -arch x86_64 -pie -lSystem -lc++ %t/x86_64-main.o %t/x86_64-my-personality.o -o %t/x86_64-personality-second
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK
+
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin19.0.0 %t/my-personality.s -o %t/arm64-my-personality.o
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin19.0.0 %t/main.s -o %t/arm64-main.o
+# RUN: %lld -arch arm64 -pie -lSystem -lc++ %t/arm64-my-personality.o %t/arm64-main.o -o %t/arm64-personality-first
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK
+# RUN: %lld -arch arm64 -pie -lSystem -lc++ %t/arm64-main.o %t/arm64-my-personality.o -o %t/arm64-personality-second
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK
 
 # FIRST:      Indirect symbols for (__DATA_CONST,__got)
 # FIRST-NEXT: address                    index name
@@ -37,29 +44,32 @@
 # CHECK-NEXT: __DATA_CONST __got          0x{{[0-9a-f]*}}  pointer
 # CHECK-NOT:  __TEXT
 
-#--- my_personality.s
+#--- my-personality.s
 .globl _my_personality, _exception0
 .text
+.p2align 2
 _foo:
   .cfi_startproc
 ## This will generate a section relocation.
   .cfi_personality 155, _my_personality
   .cfi_lsda 16, _exception0
   .cfi_def_cfa_offset 16
-  retq
+  ret
   .cfi_endproc
 
+.p2align 2
 _bar:
   .cfi_startproc
 ## Check that we dedup references to the same statically-linked personality.
   .cfi_personality 155, _my_personality
   .cfi_lsda 16, _exception0
   .cfi_def_cfa_offset 16
-  retq
+  ret
   .cfi_endproc
 
+.p2align 2
 _my_personality:
-  retq
+  ret
 
 .section __TEXT,__gcc_except_tab
 _exception0:
@@ -69,14 +79,16 @@ _exception0:
 .globl _main, _my_personality, _exception1
 
 .text
+.p2align 2
 _main:
   .cfi_startproc
   .cfi_personality 155, ___gxx_personality_v0
   .cfi_lsda 16, _exception1
   .cfi_def_cfa_offset 16
-  retq
+  ret
   .cfi_endproc
 
+.p2align 2
 _baz:
   .cfi_startproc
 ## This will generate a symbol relocation. Check that we reuse the personality
@@ -84,7 +96,7 @@ _baz:
   .cfi_personality 155, _my_personality
   .cfi_lsda 16, _exception1
   .cfi_def_cfa_offset 16
-  retq
+  ret
   .cfi_endproc
 
 
