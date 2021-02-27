@@ -72,6 +72,7 @@ struct LinalgTensorDef {
   std::string name;
   LinalgTensorUsageDef usage;
   SerializedAffineMap shape;
+  std::string elementTypeVar;
 };
 
 enum class LinalgIteratorTypeDef {
@@ -92,9 +93,17 @@ struct ScalarApply {
   std::vector<ScalarExpression> operands;
 };
 
+struct ScalarSymbolicCast {
+  std::string typeVar;
+  // NOTE: This must be of arity 1, but to break the self-referential cycle,
+  // we use a heap allocated vector.
+  std::vector<ScalarExpression> operands;
+};
+
 struct ScalarExpression {
-  Optional<std::string> scalarArg;
-  Optional<ScalarApply> scalarApply;
+  Optional<std::string> arg;
+  Optional<ScalarApply> apply;
+  Optional<ScalarSymbolicCast> symbolicCast;
 };
 
 struct ScalarAssign {
@@ -163,12 +172,15 @@ struct MappingTraits<LinalgStructuredOpConfig> {
 ///   - `shape`: An AffineMap from all op symbols to the specific shape
 ///     of this argument. Each shape must be normalized over the same list of
 ///     symbols and have no dimension inputs.
+///   - `element_type_var`: The symbolic type variable that binds to the scalar
+///     element type of this TensorDef.
 template <>
 struct MappingTraits<LinalgTensorDef> {
   static void mapping(IO &io, LinalgTensorDef &info) {
     io.mapRequired("name", info.name);
     io.mapRequired("usage", info.usage);
     io.mapRequired("shape", info.shape);
+    io.mapRequired("element_type_var", info.elementTypeVar);
   }
 };
 
@@ -230,11 +242,13 @@ struct MappingTraits<ScalarAssign> {
 ///   - `scalar_arg`: Name of an argument to the op.
 ///   - `scalar_apply`: Result of evaluating a named function (see
 ///      `ScalarApply`).
+///   - `symbolic_cast`: Cast to a symbolic TypeVar bound elsewhere.
 template <>
 struct MappingTraits<ScalarExpression> {
   static void mapping(IO &io, ScalarExpression &info) {
-    io.mapOptional("scalar_arg", info.scalarArg);
-    io.mapOptional("scalar_apply", info.scalarApply);
+    io.mapOptional("scalar_arg", info.arg);
+    io.mapOptional("scalar_apply", info.apply);
+    io.mapOptional("symbolic_cast", info.symbolicCast);
   }
 };
 
@@ -247,6 +261,14 @@ template <>
 struct MappingTraits<ScalarApply> {
   static void mapping(IO &io, ScalarApply &info) {
     io.mapRequired("fn_name", info.fnName);
+    io.mapRequired("operands", info.operands);
+  }
+};
+
+template <>
+struct MappingTraits<ScalarSymbolicCast> {
+  static void mapping(IO &io, ScalarSymbolicCast &info) {
+    io.mapRequired("type_var", info.typeVar);
     io.mapRequired("operands", info.operands);
   }
 };
@@ -343,6 +365,15 @@ static Optional<int>
 findTensorDefArgIndex(StringRef name, SmallVectorImpl<LinalgTensorDef> &args) {
   for (auto it : llvm::enumerate(args)) {
     if (it.value().name == name)
+      return it.index();
+  }
+  return None;
+}
+
+static Optional<int>
+findTypeVarArgIndex(StringRef typeVar, SmallVectorImpl<LinalgTensorDef> &args) {
+  for (auto it : llvm::enumerate(args)) {
+    if (it.value().elementTypeVar == typeVar)
       return it.index();
   }
   return None;
@@ -726,9 +757,9 @@ void {0}::regionBuilder(Block &block, ValueRange captures) {{
       std::function<Optional<std::string>(ScalarExpression &)>
           generateExpression =
               [&](ScalarExpression &expression) -> Optional<std::string> {
-        if (expression.scalarArg) {
-          Optional<int> argIndex =
-              findTensorDefArgIndex(*expression.scalarArg, args);
+        if (expression.arg) {
+          // Argument reference.
+          Optional<int> argIndex = findTensorDefArgIndex(*expression.arg, args);
           if (!argIndex) {
             emitError(genContext.getLoc())
                 << "scalar argument not defined on the op: " << arg.name;
@@ -736,10 +767,11 @@ void {0}::regionBuilder(Block &block, ValueRange captures) {{
           }
           return std::string(
               llvm::formatv("block.getArgument({0})", *argIndex));
-        } else if (expression.scalarApply) {
+        } else if (expression.apply) {
+          // Apply function.
           // Recursively generate operands.
           SmallVector<std::string> operandCppValues;
-          for (ScalarExpression &operand : expression.scalarApply->operands) {
+          for (ScalarExpression &operand : expression.apply->operands) {
             auto operandCppValue = generateExpression(operand);
             if (!operandCppValue)
               return None;
@@ -748,8 +780,40 @@ void {0}::regionBuilder(Block &block, ValueRange captures) {{
           std::string cppIdent = llvm::formatv("value{0}", ++localCounter);
           stmts.push_back(
               llvm::formatv("Value {0} = helper.applyfn__{1}({2});", cppIdent,
-                            expression.scalarApply->fnName,
+                            expression.apply->fnName,
                             interleaveToString(operandCppValues, ", ")));
+          return cppIdent;
+        } else if (expression.symbolicCast) {
+          // Symbolic cast.
+          // Operands must be arity 1.
+          if (expression.symbolicCast->operands.size() != 1) {
+            emitError(genContext.getLoc())
+                << "symbolic_cast operand arity must be 1";
+            return None;
+          }
+          Optional<std::string> operandCppValue =
+              generateExpression(expression.symbolicCast->operands[0]);
+          if (!operandCppValue)
+            return None;
+
+          // Try to map the TypeVar to an arg index (which map to block arg
+          // indices), since we can just get that type directly.
+          // TODO: Handle free type variables which do not map to an argument.
+          Optional<int> typeArgIndex =
+              findTypeVarArgIndex(expression.symbolicCast->typeVar, args);
+          if (!typeArgIndex) {
+            emitError(genContext.getLoc())
+                << "type variable " << expression.symbolicCast->typeVar
+                << ", used in a symbolic cast must map to an argument but it "
+                << "does not";
+            return None;
+          }
+          std::string typeCppValue =
+              llvm::formatv("block.getArgument({0}).getType()", *typeArgIndex);
+          std::string cppIdent = llvm::formatv("value{0}", ++localCounter);
+          stmts.push_back(llvm::formatv("Value {0} = helper.cast({1}, {2});",
+                                        cppIdent, typeCppValue,
+                                        *operandCppValue));
           return cppIdent;
         } else {
           emitError(genContext.getLoc()) << "unknown ScalarExpression type";

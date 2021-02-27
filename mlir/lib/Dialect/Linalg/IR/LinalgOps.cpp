@@ -155,6 +155,45 @@ class RegionBuilderHelper {
 public:
   RegionBuilderHelper(Block &block) : block(block) {}
 
+  // Generates operations to cast the given operand to a specified type.
+  // If the cast cannot be performed, a warning will be issued and the
+  // operand returned as-is (which will presumably yield a verification
+  // issue downstream).
+  Value cast(Type toType, Value operand) {
+    OpBuilder builder = getBuilder(operand);
+    auto loc = operand.getLoc();
+
+    if (operand.getType() == toType)
+      return operand;
+    if (auto toIntType = toType.dyn_cast<IntegerType>()) {
+      // If operand is floating point, cast directly to the int type.
+      if (operand.getType().isa<FloatType>())
+        return builder.create<FPToSIOp>(loc, toType, operand);
+      if (auto fromIntType = operand.getType().dyn_cast<IntegerType>()) {
+        // Either sign extend or truncate.
+        if (toIntType.getWidth() > fromIntType.getWidth())
+          return builder.create<SignExtendIOp>(loc, toType, operand);
+        else if (toIntType.getWidth() < fromIntType.getWidth())
+          return builder.create<TruncateIOp>(loc, toType, operand);
+      }
+    } else if (auto toFloatType = toType.dyn_cast<FloatType>()) {
+      // If operand is integer, cast directly to the float type.
+      // Note that it is unclear how to cast from BF16<->FP16.
+      if (operand.getType().isa<IntegerType>())
+        return builder.create<SIToFPOp>(loc, toFloatType, operand);
+      if (auto fromFloatType = operand.getType().dyn_cast<FloatType>()) {
+        if (toFloatType.getWidth() > fromFloatType.getWidth())
+          return builder.create<FPExtOp>(loc, toFloatType, operand);
+        else if (toFloatType.getWidth() < fromFloatType.getWidth())
+          return builder.create<FPTruncOp>(loc, toFloatType, operand);
+      }
+    }
+
+    emitWarning(operand.getLoc()) << "could not cast operand of type "
+                                  << operand.getType() << " to " << toType;
+    return operand;
+  }
+
   Value applyfn__add(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder(lhs);
     if (isFloatingPoint(lhs))
