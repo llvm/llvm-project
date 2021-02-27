@@ -296,8 +296,7 @@ public:
   using Base::getChecked;
 
   /// Get or create a new OpaqueAttr with the provided dialect and string data.
-  static OpaqueAttr get(MLIRContext *context, Identifier dialect,
-                        StringRef attrData, Type type);
+  static OpaqueAttr get(Identifier dialect, StringRef attrData, Type type);
 
   /// Get or create a new OpaqueAttr with the provided dialect and string data.
   /// If the given identifier is not a valid namespace for a dialect, then a

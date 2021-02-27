@@ -1944,8 +1944,8 @@ Location spirv::Deserializer::createFileLineColLoc(OpBuilder opBuilder) {
   auto fileName = debugInfoMap.lookup(debugLine->fileID).str();
   if (fileName.empty())
     fileName = "<unknown>";
-  return opBuilder.getFileLineColLoc(opBuilder.getIdentifier(fileName),
-                                     debugLine->line, debugLine->col);
+  return FileLineColLoc::get(opBuilder.getIdentifier(fileName), debugLine->line,
+                             debugLine->col);
 }
 
 LogicalResult
