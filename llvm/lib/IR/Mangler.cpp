@@ -98,12 +98,11 @@ static void addByteCountSuffix(raw_ostream &OS, const Function *F,
 
   const unsigned PtrSize = DL.getPointerSize();
 
-  for (Function::const_arg_iterator AI = F->arg_begin(), AE = F->arg_end();
-       AI != AE; ++AI) {
+  for (const Argument &A : F->args()) {
     // 'Dereference' type in case of byval or inalloca parameter attribute.
-    uint64_t AllocSize = AI->hasPassPointeeByValueCopyAttr() ?
-      AI->getPassPointeeByValueCopySize(DL) :
-      DL.getTypeAllocSize(AI->getType());
+    uint64_t AllocSize = A.hasPassPointeeByValueCopyAttr() ?
+      A.getPassPointeeByValueCopySize(DL) :
+      DL.getTypeAllocSize(A.getType());
 
     // Size should be aligned to pointer size.
     ArgWords += alignTo(AllocSize, PtrSize);

@@ -82,8 +82,8 @@ DILocation *DILocation::getMergedLocations(ArrayRef<const DILocation *> Locs) {
   if (Locs.size() == 1)
     return Locs[0];
   auto *Merged = Locs[0];
-  for (auto I = std::next(Locs.begin()), E = Locs.end(); I != E; ++I) {
-    Merged = getMergedLocation(Merged, *I);
+  for (const DILocation *L : llvm::drop_begin(Locs)) {
+    Merged = getMergedLocation(Merged, L);
     if (Merged == nullptr)
       break;
   }
