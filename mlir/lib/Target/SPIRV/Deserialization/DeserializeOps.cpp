@@ -331,7 +331,8 @@ Deserializer::processOp<spirv::EntryPointOp>(ArrayRef<uint32_t> words) {
     return emitError(unknownLoc,
                      "missing Execution Model specification in OpEntryPoint");
   }
-  auto execModel = opBuilder.getI32IntegerAttr(words[wordIndex++]);
+  auto execModel = spirv::ExecutionModelAttr::get(
+      context, static_cast<spirv::ExecutionModel>(words[wordIndex++]));
   if (wordIndex >= words.size()) {
     return emitError(unknownLoc, "missing <id> in OpEntryPoint");
   }
@@ -383,7 +384,8 @@ Deserializer::processOp<spirv::ExecutionModeOp>(ArrayRef<uint32_t> words) {
   if (wordIndex >= words.size()) {
     return emitError(unknownLoc, "missing Execution Mode in OpExecutionMode");
   }
-  auto execMode = opBuilder.getI32IntegerAttr(words[wordIndex++]);
+  auto execMode = spirv::ExecutionModeAttr::get(
+      context, static_cast<spirv::ExecutionMode>(words[wordIndex++]));
 
   // Get the values
   SmallVector<Attribute, 4> attrListElems;
@@ -417,8 +419,11 @@ Deserializer::processOp<spirv::ControlBarrierOp>(ArrayRef<uint32_t> operands) {
     argAttrs.push_back(argAttr);
   }
 
-  opBuilder.create<spirv::ControlBarrierOp>(unknownLoc, argAttrs[0],
-                                            argAttrs[1], argAttrs[2]);
+  opBuilder.create<spirv::ControlBarrierOp>(
+      unknownLoc, argAttrs[0].cast<spirv::ScopeAttr>(),
+      argAttrs[1].cast<spirv::ScopeAttr>(),
+      argAttrs[2].cast<spirv::MemorySemanticsAttr>());
+
   return success();
 }
 
@@ -483,8 +488,9 @@ Deserializer::processOp<spirv::MemoryBarrierOp>(ArrayRef<uint32_t> operands) {
     argAttrs.push_back(argAttr);
   }
 
-  opBuilder.create<spirv::MemoryBarrierOp>(unknownLoc, argAttrs[0],
-                                           argAttrs[1]);
+  opBuilder.create<spirv::MemoryBarrierOp>(
+      unknownLoc, argAttrs[0].cast<spirv::ScopeAttr>(),
+      argAttrs[1].cast<spirv::MemorySemanticsAttr>());
   return success();
 }
 
