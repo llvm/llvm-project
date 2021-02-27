@@ -3,9 +3,9 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/x86_64.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t/arm64.o
 # RUN: %lld -lSystem %t/x86_64.o -o %t/x86_64
-# RUN: llvm-objdump --syms --full-contents %t/x86_64 | FileCheck %s
+# RUN: llvm-objdump --syms --full-contents --rebase %t/x86_64 | FileCheck %s
 # RUN: %lld -arch arm64 -lSystem %t/arm64.o -o %t/arm64
-# RUN: llvm-objdump --syms --full-contents %t/arm64 | FileCheck %s
+# RUN: llvm-objdump --syms --full-contents --rebase %t/arm64 | FileCheck %s
 
 # CHECK-LABEL: SYMBOL TABLE:
 # CHECK:       {{0*}}[[#%x, SUB1ADDR:]] l {{.*}} __DATA,__data _sub1
@@ -17,6 +17,9 @@
 # CHECK-NEXT:  [[#SUB2ADDR]] f0ffffff
 # CHECK-NEXT:  [[#SUB3ADDR]] 10000000 00000000
 # CHECK-NEXT:  [[#SUB4ADDR]] f0ffffff ffffffff
+# CHECK:       Rebase table:
+# CHECK-NEXT:  segment  section            address     type
+# CHECK-EMPTY:
 
 .globl _main, _subtrahend_1, _subtrahend_2, _minued1, _minued2
 

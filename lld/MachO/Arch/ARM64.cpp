@@ -47,7 +47,6 @@ struct ARM64 : TargetInfo {
 
 // Random notes on reloc types:
 // ADDEND always pairs with BRANCH26, PAGE21, or PAGEOFF12
-// SUBTRACTOR always pairs with UNSIGNED (a delta between two sections)
 // POINTER_TO_GOT: ld64 supports a 4-byte pc-relative form as well as an 8-byte
 // absolute version of this relocation. The semantics of the absolute relocation
 // are weird -- it results in the value of the GOT slot being written, instead
