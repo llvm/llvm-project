@@ -34,6 +34,12 @@ struct MoveAssignable {
   MoveAssignable& operator=(MoveAssignable const&) = delete;
   MoveAssignable& operator=(MoveAssignable&&) = default;
 };
+struct NothrowCopyAssignable {
+  NothrowCopyAssignable& operator=(NothrowCopyAssignable const&) noexcept { return *this; }
+};
+struct PotentiallyThrowingCopyAssignable {
+  PotentiallyThrowingCopyAssignable& operator=(PotentiallyThrowingCopyAssignable const&) { return *this; }
+};
 
 struct CopyAssignableInt {
   CopyAssignableInt& operator=(int&) { return *this; }
@@ -119,6 +125,14 @@ int main(int, char**)
       using P = std::pair<int, MoveAssignable>;
       static_assert(!std::is_assignable<T&, P&>::value, "");
     }
+    {
+        using T = std::tuple<NothrowCopyAssignable, int>;
+        static_assert(std::is_nothrow_copy_assignable<T>::value, "");
+    }
+    {
+        using T = std::tuple<PotentiallyThrowingCopyAssignable, int>;
+        static_assert(!std::is_nothrow_copy_assignable<T>::value, "");
+    }
 
-  return 0;
+    return 0;
 }

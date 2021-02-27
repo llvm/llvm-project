@@ -768,7 +768,8 @@ bool MemRefDependenceGraph::init(FuncOp f) {
       SmallVector<MemoryEffects::EffectInstance, 1> effects;
       effectInterface.getEffects(effects);
       if (llvm::any_of(effects, [](const MemoryEffects::EffectInstance &it) {
-            return isa<MemoryEffects::Write>(it.getEffect());
+            return isa<MemoryEffects::Write, MemoryEffects::Free>(
+                it.getEffect());
           })) {
         Node node(nextNodeId++, &op);
         nodes.insert({node.id, node});

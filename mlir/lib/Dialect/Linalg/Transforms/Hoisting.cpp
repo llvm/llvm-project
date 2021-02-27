@@ -35,53 +35,6 @@ using llvm::dbgs;
 using namespace mlir;
 using namespace mlir::linalg;
 
-void mlir::linalg::hoistViewAllocOps(FuncOp func) {
-  bool changed = true;
-  while (changed) {
-    changed = false;
-    func.walk([&changed](Operation *op) {
-      if (!isa<AllocOp, AllocaOp, DeallocOp>(op))
-        return;
-
-      LLVM_DEBUG(DBGS() << "Candidate for hoisting: " << *op << "\n");
-      auto loop = dyn_cast<scf::ForOp>(op->getParentOp());
-      LLVM_DEBUG(DBGS() << "Parent op: " << *op->getParentOp() << "\n");
-
-      // Only hoist out of immediately enclosing scf::ForOp.
-      if (!loop)
-        return;
-
-      // If any operand is defined inside the loop don't hoist.
-      if (llvm::any_of(op->getOperands(), [&](Value v) {
-            return !loop.isDefinedOutsideOfLoop(v);
-          }))
-        return;
-
-      LLVM_DEBUG(DBGS() << "All operands defined outside \n");
-
-      // If alloc has other uses than ViewLikeOp and DeallocOp don't hoist.
-      Value v;
-      if (op->getNumResults() > 0) {
-        assert(op->getNumResults() == 1 && "Unexpected multi-result alloc");
-        v = op->getResult(0);
-      }
-      if (v && !llvm::all_of(v.getUses(), [&](OpOperand &operand) {
-            return isa<ViewLikeOpInterface, DeallocOp>(operand.getOwner());
-          })) {
-        LLVM_DEBUG(DBGS() << "Found non view-like or dealloc use: bail\n");
-        return;
-      }
-
-      // Move AllocOp before the loop.
-      if (isa<AllocOp, AllocaOp>(op))
-        (void)loop.moveOutOfLoop({op});
-      else // Move DeallocOp outside of the loop.
-        op->moveAfter(loop);
-      changed = true;
-    });
-  }
-}
-
 namespace {
 /// Represents a unit of hoistable TransferWriteOp. This may comprise other
 /// instructions that need to be hoisted too.

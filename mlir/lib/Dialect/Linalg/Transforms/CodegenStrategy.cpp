@@ -61,7 +61,6 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
       });
     }
     promoteSingleIterationLoops(cast<FuncOp>(op));
-    hoistViewAllocOps(cast<FuncOp>(op));
     if (lateCodegenStrategyOptions.enableHoistRedundantVectorTransfers)
       hoistRedundantVectorTransfers(cast<FuncOp>(op));
     if (lateCodegenStrategyOptions.enableHoistRedundantVectorTransfersOnTensor)

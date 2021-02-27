@@ -91,6 +91,6 @@ def : Pat<(and (riscv_remuw (assertzexti32 GPR:$rs1),
 // Although the sexti32 operands may not have originated from an i32 srem,
 // this pattern is safe as it is impossible for two sign extended inputs to
 // produce a result where res[63:32]=0 and res[31]=1.
-def : Pat<(srem (sexti32 GPR:$rs1), (sexti32 GPR:$rs2)),
+def : Pat<(srem (sexti32 (i64 GPR:$rs1)), (sexti32 (i64 GPR:$rs2))),
           (REMW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtM, IsRV64]

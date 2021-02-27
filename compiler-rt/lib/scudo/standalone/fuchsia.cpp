@@ -134,6 +134,16 @@ void unmap(void *Addr, uptr Size, uptr Flags, MapPlatformData *Data) {
   }
 }
 
+void setMemoryPermission(UNUSED uptr Addr, UNUSED uptr Size, UNUSED uptr Flags,
+                         UNUSED MapPlatformData *Data) {
+  const zx_vm_option_t Prot =
+      (Flags & MAP_NOACCESS) ? 0 : (ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  DCHECK(Data);
+  DCHECK_NE(Data->Vmar, ZX_HANDLE_INVALID);
+  if (_zx_vmar_protect(Data->Vmar, Prot, Addr, Size) != ZX_OK)
+    dieOnMapUnmapError();
+}
+
 void releasePagesToOS(UNUSED uptr BaseAddress, uptr Offset, uptr Size,
                       MapPlatformData *Data) {
   DCHECK(Data);

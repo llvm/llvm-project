@@ -512,6 +512,10 @@ Operation *NormalizeMemRefs::createOpResultsNormalized(FuncOp funcOp,
   // affine map, `oldOp` is returned without modification.
   if (resultTypeNormalized) {
     OpBuilder bb(oldOp);
+    for (auto &oldRegion : oldOp->getRegions()) {
+      Region *newRegion = result.addRegion();
+      newRegion->takeBody(oldRegion);
+    }
     return bb.createOperation(result);
   } else
     return oldOp;

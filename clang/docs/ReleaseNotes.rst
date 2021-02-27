@@ -71,7 +71,7 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
-- ...
+- -Wshadow now also checks for shadowed structured bindings
 
 Removed Compiler Flags
 -------------------------

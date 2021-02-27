@@ -68,7 +68,7 @@ def fir_BoxProcType : FIR_Type<"BoxProc", "boxproc"> {
   }];
 
   let genAccessors = 1;
-  let genVerifyInvariantsDecl = 1;
+  let genVerifyDecl = 1;
 }
 
 def fir_BoxType : FIR_Type<"Box", "box"> {
@@ -91,7 +91,7 @@ def fir_BoxType : FIR_Type<"Box", "box"> {
   }];
 
   let genAccessors = 1;
-  let genVerifyInvariantsDecl = 1;
+  let genVerifyDecl = 1;
 }
 
 def fir_CharacterType : FIR_Type<"Character", "char"> {

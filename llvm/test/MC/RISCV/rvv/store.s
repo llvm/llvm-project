@@ -10,9 +10,9 @@
 
 vse1.v v24, (a0)
 # CHECK-INST: vse1.v v24, (a0)
-# CHECK-ENCODING: [0x27,0x0c,0xb5,0x00]
+# CHECK-ENCODING: [0x27,0x0c,0xb5,0x02]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 27 0c b5 00 <unknown>
+# CHECK-UNKNOWN: 27 0c b5 02 <unknown>
 
 vse8.v v24, (a0), v0.t
 # CHECK-INST: vse8.v v24, (a0), v0.t

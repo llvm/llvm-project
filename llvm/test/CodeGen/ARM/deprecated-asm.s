@@ -1,6 +1,6 @@
 // REQUIRES: asserts
 // RUN: llvm-mc < %s  -triple=armv4t-linux-gnueabi -filetype=obj -o %t.o -no-deprecated-warn -stats 2>&1 | FileCheck %s
-// RUN: llvm-mc < %s  -triple=armv4t-linux-gnueabi -filetype=obj -o %t.o 2>&1 | FileCheck %s -check-prefix=WARN
+// RUN: llvm-mc < %s  -triple=armv4t-linux-gnueabi -filetype=obj -o %t.o -stats 2>&1 | FileCheck %s
 
 	.text
 	.syntax unified

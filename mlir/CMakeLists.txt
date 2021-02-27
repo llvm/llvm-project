@@ -141,13 +141,6 @@ if (MLIR_INCLUDE_TESTS)
   endif()
   add_subdirectory(test)
 endif()
-if (MLIR_INCLUDE_INTEGRATION_TESTS)
-  set(INTEL_SDE_EXECUTABLE "" CACHE STRING
-      "If set, arch-specific integration tests are run with Intel SDE.")
-  option(MLIR_RUN_AVX512_TESTS "Run AVX512 tests.")
-  add_definitions(-DMLIR_INCLUDE_INTEGRATION_TESTS)
-  add_subdirectory(integration_test)
-endif()
 # Tools needs to come late to ensure that MLIR_ALL_LIBS is populated.
 # Generally things after this point may depend on MLIR_ALL_LIBS or libMLIR.so.
 add_subdirectory(tools)

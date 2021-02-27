@@ -1186,7 +1186,7 @@ invalid lanes is disabled.
     ======================================== ================================================
     Syntax                                   Description
     ======================================== ================================================
-    bound_ctrl:0                             Enables data sharing with invalid lanes.
+    bound_ctrl:1                             Enables data sharing with invalid lanes.
 
                                              Accessing data from an invalid lane will
                                              return zero.

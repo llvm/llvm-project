@@ -31,7 +31,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT: declare zeroext i64 @__dfsan_load_label_and_origin(i8*, i64) #1
 
 ; CHECK: declare void @__dfsan_unimplemented(i8*)
-; CHECK: declare void @__dfsan_set_label(i16 zeroext, i8*, i64)
+; CHECK: declare void @__dfsan_set_label(i16 zeroext, i32 zeroext, i8*, i64)
 ; CHECK: declare void @__dfsan_nonzero_label()
 ; CHECK: declare void @__dfsan_vararg_wrapper(i8*)
 ; CHECK: declare zeroext i32 @__dfsan_chain_origin(i32 zeroext)

@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_LEX_MODULEMAP_H
 #define LLVM_CLANG_LEX_MODULEMAP_H
 
-#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
@@ -38,6 +37,7 @@ namespace clang {
 
 class DiagnosticsEngine;
 class DirectoryEntry;
+class FileEntry;
 class FileManager;
 class HeaderSearch;
 class SourceManager;
@@ -648,12 +648,12 @@ public:
 
   /// Sets the umbrella header of the given module to the given
   /// header.
-  void setUmbrellaHeader(Module *Mod, FileEntryRef UmbrellaHeader,
+  void setUmbrellaHeader(Module *Mod, const FileEntry *UmbrellaHeader,
                          Twine NameAsWritten);
 
   /// Sets the umbrella directory of the given module to the given
   /// directory.
-  void setUmbrellaDir(Module *Mod, DirectoryEntryRef UmbrellaDir,
+  void setUmbrellaDir(Module *Mod, const DirectoryEntry *UmbrellaDir,
                       Twine NameAsWritten);
 
   /// Adds this header to the given module.

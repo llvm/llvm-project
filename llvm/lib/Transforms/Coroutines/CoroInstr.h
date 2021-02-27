@@ -376,6 +376,18 @@ public:
   }
 };
 
+/// This represents the llvm.coro.async.size.replace instruction.
+class LLVM_LIBRARY_VISIBILITY CoroAsyncSizeReplace : public IntrinsicInst {
+public:
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_async_size_replace;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 /// This represents the llvm.coro.frame instruction.
 class LLVM_LIBRARY_VISIBILITY CoroFrameInst : public IntrinsicInst {
 public:

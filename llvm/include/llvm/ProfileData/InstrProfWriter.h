@@ -64,10 +64,12 @@ public:
                               function_ref<void(Error)> Warn);
 
   /// Write the profile to \c OS
-  void write(raw_fd_ostream &OS);
+  Error write(raw_fd_ostream &OS);
 
   /// Write the profile in text format to \c OS
   Error writeText(raw_fd_ostream &OS);
+
+  Error validateRecord(const InstrProfRecord &Func);
 
   /// Write \c Record in text format to \c OS
   static void writeRecordInText(StringRef Name, uint64_t Hash,
@@ -114,7 +116,8 @@ private:
   void addRecord(StringRef Name, uint64_t Hash, InstrProfRecord &&I,
                  uint64_t Weight, function_ref<void(Error)> Warn);
   bool shouldEncodeData(const ProfilingData &PD);
-  void writeImpl(ProfOStream &OS);
+
+  Error writeImpl(ProfOStream &OS);
 };
 
 } // end namespace llvm

@@ -609,51 +609,48 @@ public:
     return thisT()->getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
   }
 
-  /// Estimate the overhead of scalarizing an instruction's unique
-  /// non-constant operands. The types of the arguments are ordinarily
-  /// scalar, in which case the costs are multiplied with VF.
+  /// Estimate the overhead of scalarizing an instructions unique
+  /// non-constant operands. The (potentially vector) types to use for each of
+  /// argument are passes via Tys.
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                            unsigned VF) {
+                                            ArrayRef<Type *> Tys) {
+    assert(Args.size() == Tys.size() && "Expected matching Args and Tys");
+
     unsigned Cost = 0;
     SmallPtrSet<const Value*, 4> UniqueOperands;
-    for (const Value *A : Args) {
+    for (int I = 0, E = Args.size(); I != E; I++) {
       // Disregard things like metadata arguments.
-      Type *Ty = A->getType();
+      const Value *A = Args[I];
+      Type *Ty = Tys[I];
       if (!Ty->isIntOrIntVectorTy() && !Ty->isFPOrFPVectorTy() &&
           !Ty->isPtrOrPtrVectorTy())
         continue;
 
       if (!isa<Constant>(A) && UniqueOperands.insert(A).second) {
-        auto *VecTy = dyn_cast<VectorType>(Ty);
-        if (VecTy) {
-          // If A is a vector operand, VF should be 1 or correspond to A.
-          assert((VF == 1 ||
-                  VF == cast<FixedVectorType>(VecTy)->getNumElements()) &&
-                 "Vector argument does not match VF");
-        }
-        else
-          VecTy = FixedVectorType::get(Ty, VF);
-
-        Cost += getScalarizationOverhead(VecTy, false, true);
+        if (auto *VecTy = dyn_cast<VectorType>(Ty))
+          Cost += getScalarizationOverhead(VecTy, false, true);
       }
     }
 
     return Cost;
   }
 
-  unsigned getScalarizationOverhead(VectorType *InTy,
-                                    ArrayRef<const Value *> Args) {
-    auto *Ty = cast<FixedVectorType>(InTy);
-
+  /// Estimate the overhead of scalarizing the inputs and outputs of an
+  /// instruction, with return type RetTy and arguments Args of type Tys. If
+  /// Args are unknown (empty), then the cost associated with one argument is
+  /// added as a heuristic.
+  unsigned getScalarizationOverhead(VectorType *RetTy,
+                                    ArrayRef<const Value *> Args,
+                                    ArrayRef<Type *> Tys) {
     unsigned Cost = 0;
 
-    Cost += getScalarizationOverhead(Ty, true, false);
+    Cost += getScalarizationOverhead(RetTy, true, false);
     if (!Args.empty())
-      Cost += getOperandsScalarizationOverhead(Args, Ty->getNumElements());
+      Cost += getOperandsScalarizationOverhead(Args, Tys);
     else
       // When no information on arguments is provided, we add the cost
       // associated with one argument as a heuristic.
-      Cost += getScalarizationOverhead(Ty, false, true);
+      Cost += getScalarizationOverhead(RetTy, false, true);
 
     return Cost;
   }
@@ -710,7 +707,8 @@ public:
           Opd1PropInfo, Opd2PropInfo, Args, CxtI);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
-      return getScalarizationOverhead(VTy, Args) + Num * Cost;
+      SmallVector<Type *> Tys(Args.size(), Ty);
+      return getScalarizationOverhead(VTy, Args, Tys) + Num * Cost;
     }
 
     // We don't know anything about this scalar instruction.
@@ -1211,12 +1209,9 @@ public:
 
     Type *RetTy = ICA.getReturnType();
 
-    ElementCount VF = ICA.getVectorFactor();
     ElementCount RetVF =
         (RetTy->isVectorTy() ? cast<VectorType>(RetTy)->getElementCount()
                              : ElementCount::getFixed(1));
-    assert((RetVF.isScalar() || VF.isScalar()) &&
-           "VF > 1 and RetVF is a vector type");
     const IntrinsicInst *I = ICA.getInst();
     const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
     FastMathFlags FMF = ICA.getFlags();
@@ -1226,15 +1221,13 @@ public:
 
     case Intrinsic::cttz:
       // FIXME: If necessary, this should go in target-specific overrides.
-      if (VF.isScalar() && RetVF.isScalar() &&
-          getTLI()->isCheapToSpeculateCttz())
+      if (RetVF.isScalar() && getTLI()->isCheapToSpeculateCttz())
         return TargetTransformInfo::TCC_Basic;
       break;
 
     case Intrinsic::ctlz:
       // FIXME: If necessary, this should go in target-specific overrides.
-      if (VF.isScalar() && RetVF.isScalar() &&
-          getTLI()->isCheapToSpeculateCtlz())
+      if (RetVF.isScalar() && getTLI()->isCheapToSpeculateCtlz())
         return TargetTransformInfo::TCC_Basic;
       break;
 
@@ -1242,16 +1235,14 @@ public:
       return thisT()->getMemcpyCost(ICA.getInst());
 
     case Intrinsic::masked_scatter: {
-      assert(VF.isScalar() && "Can't vectorize types here.");
       const Value *Mask = Args[3];
       bool VarMask = !isa<Constant>(Mask);
       Align Alignment = cast<ConstantInt>(Args[2])->getAlignValue();
       return thisT()->getGatherScatterOpCost(Instruction::Store,
-                                             Args[0]->getType(), Args[1],
+                                             ICA.getArgTypes()[0], Args[1],
                                              VarMask, Alignment, CostKind, I);
     }
     case Intrinsic::masked_gather: {
-      assert(VF.isScalar() && "Can't vectorize types here.");
       const Value *Mask = Args[2];
       bool VarMask = !isa<Constant>(Mask);
       Align Alignment = cast<ConstantInt>(Args[1])->getAlignValue();
@@ -1294,13 +1285,13 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
-      IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, 1, I);
+      IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, I, 1);
       return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
     }
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul: {
       IntrinsicCostAttributes Attrs(
-          IID, RetTy, {Args[0]->getType(), Args[1]->getType()}, FMF, 1, I);
+          IID, RetTy, {Args[0]->getType(), Args[1]->getType()}, FMF, I, 1);
       return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
     }
     case Intrinsic::fshl:
@@ -1352,32 +1343,20 @@ public:
       return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 
     // Assume that we need to scalarize this intrinsic.
-    SmallVector<Type *, 4> Types;
-    for (const Value *Op : Args) {
-      Type *OpTy = Op->getType();
-      assert(VF.isScalar() || !OpTy->isVectorTy());
-      Types.push_back(VF.isScalar()
-                          ? OpTy
-                          : FixedVectorType::get(OpTy, VF.getKnownMinValue()));
-    }
-
-    if (VF.isVector() && !RetTy->isVoidTy())
-      RetTy = FixedVectorType::get(RetTy, VF.getKnownMinValue());
-
     // Compute the scalarization overhead based on Args for a vector
-    // intrinsic. A vectorizer will pass a scalar RetTy and VF > 1, while
-    // CostModel will pass a vector RetTy and VF is 1.
+    // intrinsic.
     unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
-    if (RetVF.isVector() || VF.isVector()) {
+    if (RetVF.isVector()) {
       ScalarizationCost = 0;
       if (!RetTy->isVoidTy())
         ScalarizationCost +=
             getScalarizationOverhead(cast<VectorType>(RetTy), true, false);
       ScalarizationCost +=
-          getOperandsScalarizationOverhead(Args, VF.getKnownMinValue());
+          getOperandsScalarizationOverhead(Args, ICA.getArgTypes());
     }
 
-    IntrinsicCostAttributes Attrs(IID, RetTy, Types, FMF, ScalarizationCost, I);
+    IntrinsicCostAttributes Attrs(IID, RetTy, ICA.getArgTypes(), FMF, I,
+                                  ScalarizationCost);
     return thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
   }
 
@@ -1620,7 +1599,7 @@ public:
       // SatMin -> Overflow && SumDiff >= 0
       unsigned Cost = 0;
       IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
-                                    ScalarizationCostPassed);
+                                    nullptr, ScalarizationCostPassed);
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
       Cost +=
           thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
@@ -1641,7 +1620,7 @@ public:
 
       unsigned Cost = 0;
       IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
-                                    ScalarizationCostPassed);
+                                    nullptr, ScalarizationCostPassed);
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
       Cost +=
           thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,

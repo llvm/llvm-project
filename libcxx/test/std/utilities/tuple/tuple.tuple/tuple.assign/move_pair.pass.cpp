@@ -37,9 +37,20 @@ struct D
     explicit D(int i) : B(i) {}
 };
 
-struct NonMoveAssignable {
-  NonMoveAssignable& operator=(NonMoveAssignable const&) = default;
-  NonMoveAssignable& operator=(NonMoveAssignable&&) = delete;
+struct NonAssignable
+{
+  NonAssignable& operator=(NonAssignable const&) = delete;
+  NonAssignable& operator=(NonAssignable&&) = delete;
+};
+
+struct NothrowMoveAssignable
+{
+    NothrowMoveAssignable& operator=(NothrowMoveAssignable&&) noexcept { return *this; }
+};
+
+struct PotentiallyThrowingMoveAssignable
+{
+    PotentiallyThrowingMoveAssignable& operator=(PotentiallyThrowingMoveAssignable&&) { return *this; }
 };
 
 int main(int, char**)
@@ -54,15 +65,28 @@ int main(int, char**)
         assert(std::get<1>(t1)->id_ == 3);
     }
     {
-      using T = std::tuple<int, NonMoveAssignable>;
-      using P = std::pair<int, NonMoveAssignable>;
-      static_assert(!std::is_assignable<T&, P&&>::value, "");
+        using T = std::tuple<int, NonAssignable>;
+        using P = std::pair<int, NonAssignable>;
+        static_assert(!std::is_assignable<T&, P&&>::value, "");
     }
     {
       using T = std::tuple<int, int, int>;
       using P = std::pair<int, int>;
       static_assert(!std::is_assignable<T&, P&&>::value, "");
     }
+    {
+        typedef std::tuple<NothrowMoveAssignable, long> Tuple;
+        typedef std::pair<NothrowMoveAssignable, int> Pair;
+        static_assert(std::is_nothrow_assignable<Tuple&, Pair&&>::value, "");
+        static_assert(!std::is_assignable<Tuple&, Pair const&&>::value, "");
+    }
+    {
+        typedef std::tuple<PotentiallyThrowingMoveAssignable, long> Tuple;
+        typedef std::pair<PotentiallyThrowingMoveAssignable, int> Pair;
+        static_assert(std::is_assignable<Tuple&, Pair&&>::value, "");
+        static_assert(!std::is_nothrow_assignable<Tuple&, Pair&&>::value, "");
+        static_assert(!std::is_assignable<Tuple&, Pair const&&>::value, "");
+    }
 
-  return 0;
+    return 0;
 }

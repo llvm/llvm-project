@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_MODULE_H
 
 #include "support/Function.h"
+#include "support/Threading.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -36,13 +37,26 @@ class TUScheduler;
 ///    Server facilities (scheduler etc) are available.
 ///  - ClangdServer will not be destroyed until all the requests are done.
 ///    FIXME: Block server shutdown until all the modules are idle.
+///  - When shutting down, ClangdServer will wait for all requests to
+///    finish, call stop(), and then blockUntilIdle().
 ///  - modules will be destroyed after ClangdLSPServer is destroyed.
+///
+/// Modules are not threadsafe in general. A module's entrypoints are:
+///   - method handlers registered in initializeLSP()
+///   - public methods called directly via ClangdServer.getModule<T>()->...
+///   - specific overridable "hook" methods inherited from Module
+/// Unless otherwise specified, these are only called on the main thread.
 ///
 /// Conventionally, standard modules live in the `clangd` namespace, and other
 /// exposed details live in a sub-namespace.
 class Module {
 public:
-  virtual ~Module() = default;
+  virtual ~Module() {
+    /// Perform shutdown sequence on destruction in case the ClangdServer was
+    /// never initialized. Usually redundant, but shutdown is idempotent.
+    stop();
+    blockUntilIdle(Deadline::infinity());
+  }
 
   /// Called by the server to connect this module to LSP.
   /// The module should register the methods/notifications/commands it handles,
@@ -62,6 +76,20 @@ public:
   };
   /// Called by the server to prepare this module for use.
   void initialize(const Facilities &F);
+
+  /// Requests that the module cancel background work and go idle soon.
+  /// Does not block, the caller will call blockUntilIdle() instead.
+  /// After a module is stop()ed, it should not receive any more requests.
+  /// Called by the server when shutting down.
+  /// May be called multiple times, should be idempotent.
+  virtual void stop() {}
+
+  /// Waits until the module is idle (no background work) or a deadline expires.
+  /// In general all modules should eventually go idle, though it may take a
+  /// long time (e.g. background indexing).
+  /// Modules should go idle quickly if stop() has been called.
+  /// Called by the server when shutting down, and also by tests.
+  virtual bool blockUntilIdle(Deadline) { return true; }
 
 protected:
   /// Accessors for modules to access shared server facilities they depend on.

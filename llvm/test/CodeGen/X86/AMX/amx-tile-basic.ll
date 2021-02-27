@@ -19,6 +19,9 @@ define void @test_amx(i8* %pointer, i8* %base, i64 %stride) {
 ; CHECK-NEXT:    tileloadd (%rsi,%rdx), %tmm1
 ; CHECK-NEXT:    tileloadd (%rsi,%rdx), %tmm2
 ; CHECK-NEXT:    tdpbssd %tmm2, %tmm1, %tmm0
+; CHECK-NEXT:    tdpbsud %tmm2, %tmm1, %tmm0
+; CHECK-NEXT:    tdpbusd %tmm2, %tmm1, %tmm0
+; CHECK-NEXT:    tdpbuud %tmm2, %tmm1, %tmm0
 ; CHECK-NEXT:    tilestored %tmm0, (%rdi,%rdx)
 ; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    vzeroupper
@@ -26,8 +29,11 @@ define void @test_amx(i8* %pointer, i8* %base, i64 %stride) {
   %c = call x86_amx @llvm.x86.tilezero.internal(i16 8, i16 8)
   %a = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 8, i8* %base, i64 %stride)
   %b = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 8, i8* %base, i64 %stride)
-  %d = call x86_amx @llvm.x86.tdpbssd.internal(i16 8, i16 8, i16 8, x86_amx %c, x86_amx %a, x86_amx %b)
-  call void @llvm.x86.tilestored64.internal(i16 8, i16 8, i8* %pointer, i64 %stride, x86_amx %d)
+  %d0 = call x86_amx @llvm.x86.tdpbssd.internal(i16 8, i16 8, i16 8, x86_amx %c, x86_amx %a, x86_amx %b)
+  %d1 = call x86_amx @llvm.x86.tdpbsud.internal(i16 8, i16 8, i16 8, x86_amx %d0, x86_amx %a, x86_amx %b)
+  %d2 = call x86_amx @llvm.x86.tdpbusd.internal(i16 8, i16 8, i16 8, x86_amx %d1, x86_amx %a, x86_amx %b)
+  %d3 = call x86_amx @llvm.x86.tdpbuud.internal(i16 8, i16 8, i16 8, x86_amx %d2, x86_amx %a, x86_amx %b)
+  call void @llvm.x86.tilestored64.internal(i16 8, i16 8, i8* %pointer, i64 %stride, x86_amx %d3)
 
   ret void
 }
@@ -35,4 +41,7 @@ define void @test_amx(i8* %pointer, i8* %base, i64 %stride) {
 declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
 declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
 declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
+declare x86_amx @llvm.x86.tdpbsud.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
+declare x86_amx @llvm.x86.tdpbusd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
+declare x86_amx @llvm.x86.tdpbuud.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
 declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)

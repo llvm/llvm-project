@@ -17,6 +17,7 @@
 
 namespace mlir {
 class AbstractOperation;
+class DebugActionManager;
 class DiagnosticEngine;
 class Dialect;
 class DialectRegistry;
@@ -154,6 +155,9 @@ public:
   /// Returns the storage uniquer used for constructing attribute storage
   /// instances. This should not be used directly.
   StorageUniquer &getAttributeUniquer();
+
+  /// Returns the manager of debug actions within the context.
+  DebugActionManager &getDebugActionManager();
 
   /// These APIs are tracking whether the context will be used in a
   /// multithreading environment: this has no effect other than enabling

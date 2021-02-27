@@ -319,3 +319,16 @@ func @use_value_of_external(%A: memref<16xf64, #tile>, %B: f64) -> (memref<8xf64
 }
 // CHECK: %[[res:[0-9]+]] = call @external_func_B(%[[A]], %[[B]]) : (memref<4x4xf64>, f64) -> memref<2x4xf64>
 // CHECK: return %{{.*}} : memref<2x4xf64>
+
+// CHECK-LABEL: func @affine_parallel_norm
+func @affine_parallel_norm() ->  memref<8xf32, #tile> {
+  %c = constant 23.0 : f32
+  %a = alloc() : memref<8xf32, #tile>
+  // CHECK: affine.parallel (%{{.*}}) = (0) to (8) reduce ("assign") -> (memref<2x4xf32>)
+  %1 = affine.parallel (%i) = (0) to (8) reduce ("assign") ->  memref<8xf32, #tile> {
+    affine.store %c, %a[%i] : memref<8xf32, #tile>
+    // CHECK: affine.yield %{{.*}} : memref<2x4xf32>
+    affine.yield %a : memref<8xf32, #tile>
+  }
+  return %1 : memref<8xf32, #tile>
+}

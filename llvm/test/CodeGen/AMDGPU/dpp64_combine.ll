@@ -3,8 +3,8 @@
 
 ; GCN-LABEL: {{^}}dpp64_ceil:
 ; GCN:           global_load_dwordx2 [[V:v\[[0-9:]+\]]],
-; DPP64:         v_ceil_f64_dpp [[V]], [[V]] row_newbcast:1 row_mask:0xf bank_mask:0xf bound_ctrl:0{{$}}
-; DPP32-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_share:1 row_mask:0xf bank_mask:0xf bound_ctrl:0{{$}}
+; DPP64:         v_ceil_f64_dpp [[V]], [[V]] row_newbcast:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
+; DPP32-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_share:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp64_ceil(i64 addrspace(1)* %arg, i64 %in1) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, i64 addrspace(1)* %arg, i32 %id
@@ -19,8 +19,8 @@ define amdgpu_kernel void @dpp64_ceil(i64 addrspace(1)* %arg, i64 %in1) {
 
 ; GCN-LABEL: {{^}}dpp64_rcp:
 ; GCN:           global_load_dwordx2 [[V:v\[[0-9:]+\]]],
-; DPP64:         v_rcp_f64_dpp [[V]], [[V]] row_newbcast:1 row_mask:0xf bank_mask:0xf bound_ctrl:0{{$}}
-; DPP32-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_share:1 row_mask:0xf bank_mask:0xf bound_ctrl:0{{$}}
+; DPP64:         v_rcp_f64_dpp [[V]], [[V]] row_newbcast:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
+; DPP32-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_share:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp64_rcp(i64 addrspace(1)* %arg, i64 %in1) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, i64 addrspace(1)* %arg, i32 %id
@@ -34,7 +34,7 @@ define amdgpu_kernel void @dpp64_rcp(i64 addrspace(1)* %arg, i64 %in1) {
 }
 
 ; GCN-LABEL: {{^}}dpp64_rcp_unsupported_ctl:
-; GCN-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:0{{$}}
+; GCN-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 ; GCN:         v_rcp_f64_e32
 define amdgpu_kernel void @dpp64_rcp_unsupported_ctl(i64 addrspace(1)* %arg, i64 %in1) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -50,8 +50,8 @@ define amdgpu_kernel void @dpp64_rcp_unsupported_ctl(i64 addrspace(1)* %arg, i64
 
 ; GCN-LABEL: {{^}}dpp64_div:
 ; GCN:            global_load_dwordx2 [[V:v\[[0-9:]+\]]],
-; GFX90A-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_newbcast:1 row_mask:0xf bank_mask:0xf bound_ctrl:0{{$}}
-; GFX10-COUNT-2:  v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_share:1 row_mask:0xf bank_mask:0xf bound_ctrl:0{{$}}
+; GFX90A-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_newbcast:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
+; GFX10-COUNT-2:  v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_share:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 ; GCN:            v_div_scale_f64
 ; GCN:            v_rcp_f64_e32
 define amdgpu_kernel void @dpp64_div(i64 addrspace(1)* %arg, i64 %in1) {

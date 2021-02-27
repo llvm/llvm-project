@@ -1,8 +1,9 @@
-// RUN: %check_clang_tidy %s cert-sig30-c %t -- -- -isystem %S/Inputs/Headers
+// RUN: %check_clang_tidy %s bugprone-signal-handler %t -- -- -isystem %S/Inputs/Headers
 
 #include "signal.h"
-#include "stdio.h"
 #include "stdlib.h"
+#include "stdio.h"
+#include "system-other.h"
 
 // The function should be classified as system call even if there is
 // declaration the in source file.
@@ -16,17 +17,9 @@ void handler_abort(int) {
   abort();
 }
 
-void handler__Exit(int) {
-  _Exit(0);
-}
-
-void handler_quick_exit(int) {
-  quick_exit(0);
-}
-
 void handler_other(int) {
   printf("1234");
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [cert-sig30-c]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
 }
 
 void handler_signal(int) {
@@ -40,7 +33,7 @@ void f_ok() {
 
 void f_bad() {
   printf("1234");
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [cert-sig30-c]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
 }
 
 void f_extern();
@@ -55,13 +48,11 @@ void handler_bad(int) {
 
 void handler_extern(int) {
   f_extern();
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'f_extern' may not be asynchronous-safe; calling it from a signal handler may be dangerous [cert-sig30-c]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'f_extern' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
 }
 
 void test() {
   signal(SIGINT, handler_abort);
-  signal(SIGINT, handler__Exit);
-  signal(SIGINT, handler_quick_exit);
   signal(SIGINT, handler_signal);
   signal(SIGINT, handler_other);
 
@@ -69,9 +60,9 @@ void test() {
   signal(SIGINT, handler_bad);
   signal(SIGINT, handler_extern);
 
-  signal(SIGINT, quick_exit);
+  signal(SIGINT, _Exit);
   signal(SIGINT, other_call);
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'other_call' may not be asynchronous-safe; calling it from a signal handler may be dangerous [cert-sig30-c]
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'other_call' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
 
   signal(SIGINT, SIG_IGN);
   signal(SIGINT, SIG_DFL);

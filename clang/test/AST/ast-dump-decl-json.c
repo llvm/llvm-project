@@ -576,8 +576,8 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "e",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "enum TestEnumDeclAnon::(anonymous at {{.*}}:31:3)",
-// CHECK-NEXT:     "qualType": "enum (anonymous enum at {{.*}}:31:3)"
+// CHECK-NEXT:     "desugaredQualType": "enum TestEnumDeclAnon::(unnamed at {{.*}}:31:3)",
+// CHECK-NEXT:     "qualType": "enum (unnamed enum at {{.*}}:31:3)"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -764,8 +764,8 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "testRecordDeclAnon1",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "struct TestRecordDeclAnon1::(anonymous at {{.*}}:46:3)",
-// CHECK-NEXT:     "qualType": "struct (anonymous struct at {{.*}}:46:3)"
+// CHECK-NEXT:     "desugaredQualType": "struct TestRecordDeclAnon1::(unnamed at {{.*}}:46:3)",
+// CHECK-NEXT:     "qualType": "struct (unnamed struct at {{.*}}:46:3)"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -1133,7 +1133,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  "name": "TestFunctionDecl",
 // CHECK-NEXT:  "mangledName": "TestFunctionDecl",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "int (int, enum (anonymous enum at {{.*}}:69:29))"
+// CHECK-NEXT:   "qualType": "int (int, enum (unnamed enum at {{.*}}:69:29))"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -1187,8 +1187,8 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "name": "y",
 // CHECK-NEXT:    "mangledName": "y",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "enum (anonymous at {{.*}}:69:29)",
-// CHECK-NEXT:     "qualType": "enum (anonymous enum at {{.*}}:69:29)"
+// CHECK-NEXT:     "desugaredQualType": "enum (unnamed at {{.*}}:69:29)",
+// CHECK-NEXT:     "qualType": "enum (unnamed enum at {{.*}}:69:29)"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {

@@ -108,7 +108,7 @@ struct Builder {
 
   Error addModule(Module *M);
   Error addSymbol(const ModuleSymbolTable &Msymtab,
-                  const SmallPtrSet<GlobalValue *, 8> &Used,
+                  const SmallPtrSet<GlobalValue *, 4> &Used,
                   ModuleSymbolTable::Symbol Sym);
 
   Error build(ArrayRef<Module *> Mods);
@@ -119,8 +119,9 @@ Error Builder::addModule(Module *M) {
     return make_error<StringError>("input module has no datalayout",
                                    inconvertibleErrorCode());
 
-  SmallPtrSet<GlobalValue *, 8> Used;
-  collectUsedGlobalVariables(*M, Used, /*CompilerUsed*/ false);
+  SmallVector<GlobalValue *, 4> UsedV;
+  collectUsedGlobalVariables(*M, UsedV, /*CompilerUsed=*/false);
+  SmallPtrSet<GlobalValue *, 4> Used(UsedV.begin(), UsedV.end());
 
   ModuleSymbolTable Msymtab;
   Msymtab.addModule(M);
@@ -193,7 +194,7 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
 }
 
 Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
-                         const SmallPtrSet<GlobalValue *, 8> &Used,
+                         const SmallPtrSet<GlobalValue *, 4> &Used,
                          ModuleSymbolTable::Symbol Msym) {
   Syms.emplace_back();
   storage::Symbol &Sym = Syms.back();

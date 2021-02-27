@@ -54,7 +54,7 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::COFF;
-using llvm::sys::Process;
+using namespace llvm::sys;
 
 namespace lld {
 namespace coff {
@@ -622,6 +622,14 @@ static uint64_t getDefaultImageBase() {
   return config->dll ? 0x10000000 : 0x400000;
 }
 
+static std::string rewritePath(StringRef s) {
+  if (fs::exists(s))
+    return relativeToRoot(s);
+  return std::string(s);
+}
+
+// Reconstructs command line arguments so that so that you can re-run
+// the same command with the same inputs. This is for --reproduce.
 static std::string createResponseFile(const opt::InputArgList &args,
                                       ArrayRef<StringRef> filePaths,
                                       ArrayRef<StringRef> searchPaths) {
@@ -642,6 +650,24 @@ static std::string createResponseFile(const opt::InputArgList &args,
     case OPT_manifestinput:
     case OPT_manifestuac:
       break;
+    case OPT_call_graph_ordering_file:
+    case OPT_deffile:
+    case OPT_natvis:
+      os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << '\n';
+      break;
+    case OPT_order: {
+      StringRef orderFile = arg->getValue();
+      orderFile.consume_front("@");
+      os << arg->getSpelling() << '@' << quote(rewritePath(orderFile)) << '\n';
+      break;
+    }
+    case OPT_pdbstream: {
+      const std::pair<StringRef, StringRef> nameFile =
+          StringRef(arg->getValue()).split("=");
+      os << arg->getSpelling() << nameFile.first << '='
+         << quote(rewritePath(nameFile.second)) << '\n';
+      break;
+    }
     case OPT_implib:
     case OPT_pdb:
     case OPT_pdbstripped:
@@ -838,6 +864,9 @@ static void parseModuleDefs(StringRef path) {
   COFFModuleDefinition m = check(parseCOFFModuleDefinition(
       mb->getMemBufferRef(), config->machine, config->mingw));
 
+  // Include in /reproduce: output if applicable.
+  driver->takeBuffer(std::move(mb));
+
   if (config->outputFile.empty())
     config->outputFile = std::string(saver.save(m.OutputFile));
   config->importName = std::string(saver.save(m.ImportName));
@@ -938,6 +967,9 @@ static void parseOrderFile(StringRef arg) {
     else
       config->order[s] = INT_MIN + config->order.size();
   }
+
+  // Include in /reproduce: output if applicable.
+  driver->takeBuffer(std::move(mb));
 }
 
 static void parseCallGraphFile(StringRef path) {
@@ -978,6 +1010,9 @@ static void parseCallGraphFile(StringRef path) {
       if (SectionChunk *to = findSection(fields[1]))
         config->callGraphProfile[{from, to}] += count;
   }
+
+  // Include in /reproduce: output if applicable.
+  driver->takeBuffer(std::move(mb));
 }
 
 static void readCallGraphsFromObjectFiles() {

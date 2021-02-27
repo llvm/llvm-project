@@ -23,7 +23,15 @@ void setRandomTag(void *Ptr, uptr Size, uptr ExcludeMask, uptr *TaggedBegin,
 
 #if defined(__aarch64__) || defined(SCUDO_FUZZ)
 
+// We assume that Top-Byte Ignore is enabled if the architecture supports memory
+// tagging. Not all operating systems enable TBI, so we only claim architectural
+// support for memory tagging if the operating system enables TBI.
+#if SCUDO_LINUX
 inline constexpr bool archSupportsMemoryTagging() { return true; }
+#else
+inline constexpr bool archSupportsMemoryTagging() { return false; }
+#endif
+
 inline constexpr uptr archMemoryTagGranuleSize() { return 16; }
 
 inline uptr untagPointer(uptr Ptr) { return Ptr & ((1ULL << 56) - 1); }
@@ -119,6 +127,8 @@ inline uptr selectRandomTag(uptr Ptr, uptr ExcludeMask) {
       : [Ptr] "r"(Ptr), [ExcludeMask] "r"(ExcludeMask));
   return TaggedPtr;
 }
+
+inline uptr addFixedTag(uptr Ptr, uptr Tag) { return Ptr | (Tag << 56); }
 
 inline uptr storeTags(uptr Begin, uptr End) {
   DCHECK(Begin % 16 == 0);
@@ -245,6 +255,12 @@ inline uptr selectRandomTag(uptr Ptr, uptr ExcludeMask) {
   UNREACHABLE("memory tagging not supported");
 }
 
+inline uptr addFixedTag(uptr Ptr, uptr Tag) {
+  (void)Ptr;
+  (void)Tag;
+  UNREACHABLE("memory tagging not supported");
+}
+
 inline uptr storeTags(uptr Begin, uptr End) {
   (void)Begin;
   (void)End;
@@ -278,6 +294,10 @@ inline void setRandomTag(void *Ptr, uptr Size, uptr ExcludeMask,
                          uptr *TaggedBegin, uptr *TaggedEnd) {
   *TaggedBegin = selectRandomTag(reinterpret_cast<uptr>(Ptr), ExcludeMask);
   *TaggedEnd = storeTags(*TaggedBegin, *TaggedBegin + Size);
+}
+
+inline void *untagPointer(void *Ptr) {
+  return reinterpret_cast<void *>(untagPointer(reinterpret_cast<uptr>(Ptr)));
 }
 
 template <typename Config>

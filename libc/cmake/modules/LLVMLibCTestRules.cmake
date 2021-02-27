@@ -164,6 +164,11 @@ function(add_libc_testsuite suite_name)
   add_dependencies(check-libc ${suite_name})
 endfunction(add_libc_testsuite)
 
+function(add_libc_exhaustive_testsuite suite_name)
+  add_custom_target(${suite_name})
+  add_dependencies(exhaustive-check-libc ${suite_name})
+endfunction(add_libc_exhaustive_testsuite)
+
 # Rule to add a fuzzer test.
 # Usage
 #    add_libc_fuzzer(

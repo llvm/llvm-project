@@ -1359,7 +1359,7 @@ void ELFState<ELFT>::writeSectionContent(
     // Write the address of the function.
     CBA.write<uintX_t>(E.Address, ELFT::TargetEndianness);
     // Write number of BBEntries (number of basic blocks in the function). This
-    // is overriden by the 'NumBlocks' YAML field if specified.
+    // is overridden by the 'NumBlocks' YAML field when specified.
     uint32_t NumBlocks =
         E.NumBlocks.getValueOr(E.BBEntries ? E.BBEntries->size() : 0);
     SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);

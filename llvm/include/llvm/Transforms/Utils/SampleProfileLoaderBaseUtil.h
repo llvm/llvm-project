@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERUTIL_H
-#define LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERUTIL_H
+#ifndef LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERBASEUTIL_H
+#define LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERBASEUTIL_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -95,4 +95,4 @@ bool callsiteIsHot(const FunctionSamples *CallsiteFS, ProfileSummaryInfo *PSI,
 } // end of namespace sampleprofutil
 } // end of namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERUTIL_H
+#endif // LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERBASEUTIL_H

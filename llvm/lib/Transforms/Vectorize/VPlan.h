@@ -277,8 +277,10 @@ class VPBlockBase {
   /// which is the branch condition.
   VPUser CondBitUser;
 
-  /// Current block predicate - null if the block does not need a predicate.
-  VPValue *Predicate = nullptr;
+  /// If the block is predicated, its predicate is stored as an operand of this
+  /// VPUser to maintain the def-use relations. Otherwise there is no operand
+  /// here.
+  VPUser PredicateUser;
 
   /// VPlan containing the block. Can only be set on the entry block of the
   /// plan.
@@ -424,35 +426,18 @@ public:
   }
 
   /// \return the condition bit selecting the successor.
-  VPValue *getCondBit() {
-    if (CondBitUser.getNumOperands())
-      return CondBitUser.getOperand(0);
-    return nullptr;
-  }
+  VPValue *getCondBit();
+  /// \return the condition bit selecting the successor.
+  const VPValue *getCondBit() const;
+  /// Set the condition bit selecting the successor.
+  void setCondBit(VPValue *CV);
 
-  const VPValue *getCondBit() const {
-    if (CondBitUser.getNumOperands())
-      return CondBitUser.getOperand(0);
-    return nullptr;
-  }
-
-  void setCondBit(VPValue *CV) {
-    if (!CV) {
-      if (CondBitUser.getNumOperands() == 1)
-        CondBitUser.removeLastOperand();
-      return;
-    }
-    if (CondBitUser.getNumOperands() == 1)
-      CondBitUser.setOperand(0, CV);
-    else
-      CondBitUser.addOperand(CV);
-  }
-
-  VPValue *getPredicate() { return Predicate; }
-
-  const VPValue *getPredicate() const { return Predicate; }
-
-  void setPredicate(VPValue *Pred) { Predicate = Pred; }
+  /// \return the block's predicate.
+  VPValue *getPredicate();
+  /// \return the block's predicate.
+  const VPValue *getPredicate() const;
+  /// Set the block's predicate.
+  void setPredicate(VPValue *Pred);
 
   /// Set a given VPBlockBase \p Successor as the single successor of this
   /// VPBlockBase. This VPBlockBase is not added as predecessor of \p Successor.
@@ -885,9 +870,14 @@ public:
 /// A recipe for handling all phi nodes except for integer and FP inductions.
 /// For reduction PHIs, RdxDesc must point to the corresponding recurrence
 /// descriptor and the start value is the first operand of the recipe.
+/// In the VPlan native path, all incoming VPValues & VPBasicBlock pairs are
+/// managed in the recipe directly.
 class VPWidenPHIRecipe : public VPRecipeBase, public VPValue {
   /// Descriptor for a reduction PHI.
   RecurrenceDescriptor *RdxDesc = nullptr;
+
+  /// List of incoming blocks. Only used in the VPlan native path.
+  SmallVector<VPBasicBlock *, 2> IncomingBlocks;
 
 public:
   /// Create a new VPWidenPHIRecipe for the reduction \p Phi described by \p
@@ -908,6 +898,9 @@ public:
   static inline bool classof(const VPDef *D) {
     return D->getVPDefID() == VPRecipeBase::VPWidenPHISC;
   }
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPVWidenPHISC;
+  }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
@@ -920,6 +913,18 @@ public:
   VPValue *getStartValue() {
     return getNumOperands() == 0 ? nullptr : getOperand(0);
   }
+
+  /// Adds a pair (\p IncomingV, \p IncomingBlock) to the phi.
+  void addIncoming(VPValue *IncomingV, VPBasicBlock *IncomingBlock) {
+    addOperand(IncomingV);
+    IncomingBlocks.push_back(IncomingBlock);
+  }
+
+  /// Returns the \p I th incoming VPValue.
+  VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
+
+  /// Returns the \p I th incoming VPBasicBlock.
+  VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select

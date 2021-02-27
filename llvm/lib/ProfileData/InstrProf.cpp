@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Config/config.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -95,6 +96,10 @@ static std::string getInstrProfErrString(instrprof_error Err) {
     return "Truncated profile data";
   case instrprof_error::malformed:
     return "Malformed instrumentation profile data";
+  case instrprof_error::invalid_prof:
+    return "Invalid profile created. Please file a bug "
+           "at: " BUG_REPORT_URL
+           " and include the profraw files that caused this error.";
   case instrprof_error::unknown_function:
     return "No profile data available for function";
   case instrprof_error::hash_mismatch:

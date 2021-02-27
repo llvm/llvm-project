@@ -358,7 +358,7 @@ OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
     return nullptr;
 
   // TODO: Support folding with more than 2 input shapes
-  if (operands.size() > 2 && !operands[2].isa<StringAttr>())
+  if (shapes().size() > 2)
     return nullptr;
 
   auto rhsShape = llvm::to_vector<6>(

@@ -57,10 +57,6 @@ Identifier OperationName::getIdentifier() const {
   return representation.get<Identifier>();
 }
 
-const AbstractOperation *OperationName::getAbstractOperation() const {
-  return representation.dyn_cast<const AbstractOperation *>();
-}
-
 OperationName OperationName::getFromOpaquePointer(const void *pointer) {
   return OperationName(
       RepresentationUnion::getFromOpaqueValue(const_cast<void *>(pointer)));

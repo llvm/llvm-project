@@ -107,9 +107,8 @@ static bool getARMStoreDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
   assert(MI.getNumOperands() >= 4 && "expected >= 4 arguments");
   for (unsigned OI = 4, OE = MI.getNumOperands(); OI < OE; ++OI) {
     assert(MI.getOperand(OI).isReg() && "expected register");
-    if (MI.getOperand(OI).getReg() == ARM::SP ||
-        MI.getOperand(OI).getReg() == ARM::PC) {
-      Info = "use of SP or PC in the list is deprecated";
+    if (MI.getOperand(OI).getReg() == ARM::PC) {
+      Info = "use of PC in the list is deprecated";
       return true;
     }
   }
@@ -134,9 +133,6 @@ static bool getARMLoadDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
     case ARM::PC:
       ListContainsPC = true;
       break;
-    case ARM::SP:
-      Info = "use of SP in the list is deprecated";
-      return true;
     }
   }
 

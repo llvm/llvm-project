@@ -86,7 +86,9 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class VUnitStrideLoadMask<string opcodestr>
     : RVInstVLU<0b000, LSWidth8.Value{3}, LUMOPUnitStrideMask, LSWidth8.Value{2-0},
                 (outs VR:$vd),
-                (ins GPR:$rs1), opcodestr, "$vd, (${rs1})">;
+                (ins GPR:$rs1), opcodestr, "$vd, (${rs1})"> {
+  let vm = 1;
+}
 
 // load vd, (rs1), vm
 class VUnitStrideLoad<RISCVLSUMOP lumop, RISCVWidth width,
@@ -143,11 +145,13 @@ class VIndexedSegmentLoad<bits<3> nf, RISCVMOP mop, RISCVWidth width,
 } // hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
-// store vd, vs3, (rs1), vm
+// store vd, vs3, (rs1)
 class VUnitStrideStoreMask<string opcodestr>
     : RVInstVSU<0b000, LSWidth8.Value{3}, SUMOPUnitStrideMask, LSWidth8.Value{2-0},
                 (outs), (ins VR:$vs3, GPR:$rs1), opcodestr,
-                "$vs3, (${rs1})">;
+                "$vs3, (${rs1})"> {
+  let vm = 1;
+}
 
 // store vd, vs3, (rs1), vm
 class VUnitStrideStore<RISCVLSUMOP sumop, RISCVWidth width,

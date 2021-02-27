@@ -74,7 +74,6 @@ void TestConvVectorization::runOnOperation() {
       llvm_unreachable("Unexpected failure in cleanup pass pipeline.");
     op->walk([](FuncOp func) {
       promoteSingleIterationLoops(func);
-      linalg::hoistViewAllocOps(func);
       linalg::hoistRedundantVectorTransfers(func);
     });
     return success();

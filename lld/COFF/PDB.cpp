@@ -1093,7 +1093,14 @@ void PDBLinker::addNatvisFiles() {
       warn("Cannot open input file: " + file);
       continue;
     }
-    builder.addInjectedSource(file, std::move(*dataOrErr));
+    std::unique_ptr<MemoryBuffer> data = std::move(*dataOrErr);
+
+    // Can't use takeBuffer() here since addInjectedSource() takes ownership.
+    if (driver->tar)
+      driver->tar->append(relativeToRoot(data->getBufferIdentifier()),
+                          data->getBuffer());
+
+    builder.addInjectedSource(file, std::move(data));
   }
 }
 
@@ -1106,7 +1113,9 @@ void PDBLinker::addNamedStreams() {
       warn("Cannot open input file: " + file);
       continue;
     }
-    exitOnErr(builder.addNamedStream(stream, (*dataOrErr)->getBuffer()));
+    std::unique_ptr<MemoryBuffer> data = std::move(*dataOrErr);
+    exitOnErr(builder.addNamedStream(stream, data->getBuffer()));
+    driver->takeBuffer(std::move(data));
   }
 }
 

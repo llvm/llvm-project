@@ -202,8 +202,11 @@ void FTN_STDCALL FTN_SET_DISP_NUM_BUFFERS(int KMP_DEREF arg) {
 #else
   // ignore after initialization because some teams have already
   // allocated dispatch buffers
-  if (__kmp_init_serial == 0 && (KMP_DEREF arg) > 0)
-    __kmp_dispatch_num_buffers = KMP_DEREF arg;
+  int num_buffers = KMP_DEREF arg;
+  if (__kmp_init_serial == FALSE && num_buffers >= KMP_MIN_DISP_NUM_BUFF &&
+      num_buffers <= KMP_MAX_DISP_NUM_BUFF) {
+    __kmp_dispatch_num_buffers = num_buffers;
+  }
 #endif
 }
 

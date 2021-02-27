@@ -2788,18 +2788,22 @@ namespace {
 
 /// An easy to access representation of llvm.used and llvm.compiler.used.
 class LLVMUsed {
-  SmallPtrSet<GlobalValue *, 8> Used;
-  SmallPtrSet<GlobalValue *, 8> CompilerUsed;
+  SmallPtrSet<GlobalValue *, 4> Used;
+  SmallPtrSet<GlobalValue *, 4> CompilerUsed;
   GlobalVariable *UsedV;
   GlobalVariable *CompilerUsedV;
 
 public:
   LLVMUsed(Module &M) {
-    UsedV = collectUsedGlobalVariables(M, Used, false);
-    CompilerUsedV = collectUsedGlobalVariables(M, CompilerUsed, true);
+    SmallVector<GlobalValue *, 4> Vec;
+    UsedV = collectUsedGlobalVariables(M, Vec, false);
+    Used = {Vec.begin(), Vec.end()};
+    Vec.clear();
+    CompilerUsedV = collectUsedGlobalVariables(M, Vec, true);
+    CompilerUsed = {Vec.begin(), Vec.end()};
   }
 
-  using iterator = SmallPtrSet<GlobalValue *, 8>::iterator;
+  using iterator = SmallPtrSet<GlobalValue *, 4>::iterator;
   using used_iterator_range = iterator_range<iterator>;
 
   iterator usedBegin() { return Used.begin(); }

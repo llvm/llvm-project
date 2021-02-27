@@ -23,8 +23,7 @@
 namespace llvm {
 class raw_ostream;
 class StringRef;
-template <typename>
-class ArrayRef;
+template <typename> class ArrayRef;
 class hash_code;
 } // namespace llvm
 
@@ -149,8 +148,9 @@ public:
 
   mlir::Type getEleTy() const;
 
-  static mlir::LogicalResult verifyConstructionInvariants(mlir::Location,
-                                                          mlir::Type eleTy);
+  static mlir::LogicalResult
+  verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+         mlir::Type eleTy);
 };
 
 /// The type of a LEN parameter name. Implementations may defer the layout of a
@@ -174,8 +174,9 @@ public:
 
   mlir::Type getEleTy() const;
 
-  static mlir::LogicalResult verifyConstructionInvariants(mlir::Location,
-                                                          mlir::Type eleTy);
+  static mlir::LogicalResult
+  verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+         mlir::Type eleTy);
 };
 
 /// The type of a reference to an entity in memory.
@@ -188,8 +189,9 @@ public:
 
   mlir::Type getEleTy() const;
 
-  static mlir::LogicalResult verifyConstructionInvariants(mlir::Location,
-                                                          mlir::Type eleTy);
+  static mlir::LogicalResult
+  verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+         mlir::Type eleTy);
 };
 
 /// A sequence type is a multi-dimensional array of values. The sequence type
@@ -239,8 +241,8 @@ public:
   static constexpr Extent getUnknownExtent() { return -1; }
 
   static mlir::LogicalResult
-  verifyConstructionInvariants(mlir::Location loc, const Shape &shape,
-                               mlir::Type eleTy, mlir::AffineMapAttr map);
+  verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+         const Shape &shape, mlir::Type eleTy, mlir::AffineMapAttr map);
 };
 
 bool operator==(const SequenceType::Shape &, const SequenceType::Shape &);
@@ -256,8 +258,9 @@ public:
   static TypeDescType get(mlir::Type ofType);
   mlir::Type getOfTy() const;
 
-  static mlir::LogicalResult verifyConstructionInvariants(mlir::Location,
-                                                          mlir::Type ofType);
+  static mlir::LogicalResult
+  verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+         mlir::Type ofType);
 };
 
 // Derived types
@@ -290,8 +293,9 @@ public:
 
   detail::RecordTypeStorage const *uniqueKey() const;
 
-  static mlir::LogicalResult verifyConstructionInvariants(mlir::Location,
-                                                          llvm::StringRef name);
+  static mlir::LogicalResult
+  verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+         llvm::StringRef name);
 };
 
 /// Is `t` a FIR Real or MLIR Float type?
@@ -318,7 +322,8 @@ public:
   uint64_t getLen() const;
 
   static mlir::LogicalResult
-  verifyConstructionInvariants(mlir::Location, uint64_t len, mlir::Type eleTy);
+  verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError, uint64_t len,
+         mlir::Type eleTy);
   static bool isValidElementType(mlir::Type t) {
     return isa_real(t) || isa_integer(t);
   }

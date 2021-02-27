@@ -297,6 +297,8 @@ private:
   /// Try to select SBFX/UBFX instructions for ARM.
   bool tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned);
 
+  bool tryInsertVectorElt(SDNode *N);
+
   // Select special operations if node forms integer ABS pattern
   bool tryABSOp(SDNode *N);
 
@@ -3022,6 +3024,97 @@ void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool IsIntrinsic,
   CurDAG->RemoveDeadNode(N);
 }
 
+bool ARMDAGToDAGISel::tryInsertVectorElt(SDNode *N) {
+  if (!Subtarget->hasMVEIntegerOps())
+    return false;
+
+  SDLoc dl(N);
+
+  // We are trying to use VMOV/VMOVX/VINS to more efficiently lower insert and
+  // extracts of v8f16 and v8i16 vectors. Check that we have two adjacent
+  // inserts of the correct type:
+  SDValue Ins1 = SDValue(N, 0);
+  SDValue Ins2 = N->getOperand(0);
+  EVT VT = Ins1.getValueType();
+  if (Ins2.getOpcode() != ISD::INSERT_VECTOR_ELT || !Ins2.hasOneUse() ||
+      !isa<ConstantSDNode>(Ins1.getOperand(2)) ||
+      !isa<ConstantSDNode>(Ins2.getOperand(2)) ||
+      (VT != MVT::v8f16 && VT != MVT::v8i16) || (Ins2.getValueType() != VT))
+    return false;
+
+  unsigned Lane1 = Ins1.getConstantOperandVal(2);
+  unsigned Lane2 = Ins2.getConstantOperandVal(2);
+  if (Lane2 % 2 != 0 || Lane1 != Lane2 + 1)
+    return false;
+
+  // If the inserted values will be able to use T/B already, leave it to the
+  // existing tablegen patterns. For example VCVTT/VCVTB.
+  SDValue Val1 = Ins1.getOperand(1);
+  SDValue Val2 = Ins2.getOperand(1);
+  if (Val1.getOpcode() == ISD::FP_ROUND || Val2.getOpcode() == ISD::FP_ROUND)
+    return false;
+
+  // Check if the inserted values are both extracts.
+  if ((Val1.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
+       Val1.getOpcode() == ARMISD::VGETLANEu) &&
+      (Val2.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
+       Val2.getOpcode() == ARMISD::VGETLANEu) &&
+      isa<ConstantSDNode>(Val1.getOperand(1)) &&
+      isa<ConstantSDNode>(Val2.getOperand(1)) &&
+      (Val1.getOperand(0).getValueType() == MVT::v8f16 ||
+       Val1.getOperand(0).getValueType() == MVT::v8i16) &&
+      (Val2.getOperand(0).getValueType() == MVT::v8f16 ||
+       Val2.getOperand(0).getValueType() == MVT::v8i16)) {
+    unsigned ExtractLane1 = Val1.getConstantOperandVal(1);
+    unsigned ExtractLane2 = Val2.getConstantOperandVal(1);
+
+    // If the two extracted lanes are from the same place and adjacent, this
+    // simplifies into a f32 lane move.
+    if (Val1.getOperand(0) == Val2.getOperand(0) && ExtractLane2 % 2 == 0 &&
+        ExtractLane1 == ExtractLane2 + 1) {
+      SDValue NewExt = CurDAG->getTargetExtractSubreg(
+          ARM::ssub_0 + ExtractLane2 / 2, dl, MVT::f32, Val1.getOperand(0));
+      SDValue NewIns = CurDAG->getTargetInsertSubreg(
+          ARM::ssub_0 + Lane2 / 2, dl, VT, Ins2.getOperand(0),
+          NewExt);
+      ReplaceUses(Ins1, NewIns);
+      return true;
+    }
+
+    // Else v8i16 pattern of an extract and an insert, with a optional vmovx for
+    // extracting odd lanes.
+    if (VT == MVT::v8i16) {
+      SDValue Inp1 = CurDAG->getTargetExtractSubreg(
+          ARM::ssub_0 + ExtractLane1 / 2, dl, MVT::f32, Val1.getOperand(0));
+      SDValue Inp2 = CurDAG->getTargetExtractSubreg(
+          ARM::ssub_0 + ExtractLane2 / 2, dl, MVT::f32, Val2.getOperand(0));
+      if (ExtractLane1 % 2 != 0)
+        Inp1 = SDValue(CurDAG->getMachineNode(ARM::VMOVH, dl, MVT::f32, Inp1), 0);
+      if (ExtractLane2 % 2 != 0)
+        Inp2 = SDValue(CurDAG->getMachineNode(ARM::VMOVH, dl, MVT::f32, Inp2), 0);
+      SDNode *VINS = CurDAG->getMachineNode(ARM::VINSH, dl, MVT::f32, Inp2, Inp1);
+      SDValue NewIns =
+          CurDAG->getTargetInsertSubreg(ARM::ssub_0 + Lane2 / 2, dl, MVT::v4f32,
+                                        Ins2.getOperand(0), SDValue(VINS, 0));
+      ReplaceUses(Ins1, NewIns);
+      return true;
+    }
+  }
+
+  // The inserted values are not extracted - if they are f16 then insert them
+  // directly using a VINS.
+  if (VT == MVT::v8f16) {
+    SDNode *VINS = CurDAG->getMachineNode(ARM::VINSH, dl, MVT::f32, Val2, Val1);
+    SDValue NewIns =
+        CurDAG->getTargetInsertSubreg(ARM::ssub_0 + Lane2 / 2, dl, MVT::v4f32,
+                                      Ins2.getOperand(0), SDValue(VINS, 0));
+    ReplaceUses(Ins1, NewIns);
+    return true;
+  }
+
+  return false;
+}
+
 bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
   if (!Subtarget->hasV6T2Ops())
     return false;
@@ -3442,6 +3535,11 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       CurDAG->SelectNodeTo(N, Opc, MVT::i32, Ops);
       return;
     }
+  }
+  case ISD::INSERT_VECTOR_ELT: {
+    if (tryInsertVectorElt(N))
+      return;
+    break;
   }
   case ISD::SRL:
     if (tryV6T2BitfieldExtractOp(N, false))
