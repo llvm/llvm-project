@@ -629,12 +629,10 @@ def move_to_ro_segment : MultiArg<["-"], "move_to_ro_segment", 2>,
 def rename_section : MultiArg<["-"], "rename_section", 4>,
      MetaVarName<"<from_segment> <from_section> <to_segment> <to_section>">,
      HelpText<"Rename <from_segment>/<from_section> as <to_segment>/<to_section>">,
-     Flags<[HelpHidden]>,
      Group<grp_rare>;
 def rename_segment : MultiArg<["-"], "rename_segment", 2>,
      MetaVarName<"<from_segment> <to_segment>">,
      HelpText<"Rename <from_segment> as <to_segment>">,
-     Flags<[HelpHidden]>,
      Group<grp_rare>;
 def trace_symbol_layout : Flag<["-"], "trace_symbol_layout">,
      HelpText<"Show where and why symbols move, as specified by -move_to_ro_segment, -move_to_rw_segment, -rename_section, and -rename_segment">,
