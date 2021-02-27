@@ -333,21 +333,23 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
 
   else if (Personality == EHPersonality::Wasm_CXX) {
     WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
-    // Map all BB references in the WinEH data to MBBs.
-    DenseMap<BBOrMBB, BBOrMBB> NewMap;
+    // Map all BB references in the Wasm EH data to MBBs.
+    DenseMap<BBOrMBB, BBOrMBB> SrcToUnwindDest;
     for (auto &KV : EHInfo.SrcToUnwindDest) {
       const auto *Src = KV.first.get<const BasicBlock *>();
-      const auto *Dst = KV.second.get<const BasicBlock *>();
-      NewMap[MBBMap[Src]] = MBBMap[Dst];
+      const auto *Dest = KV.second.get<const BasicBlock *>();
+      SrcToUnwindDest[MBBMap[Src]] = MBBMap[Dest];
     }
-    EHInfo.SrcToUnwindDest = std::move(NewMap);
-    NewMap.clear();
-    for (auto &KV : EHInfo.UnwindDestToSrc) {
-      const auto *Src = KV.first.get<const BasicBlock *>();
-      const auto *Dst = KV.second.get<const BasicBlock *>();
-      NewMap[MBBMap[Src]] = MBBMap[Dst];
+    EHInfo.SrcToUnwindDest = std::move(SrcToUnwindDest);
+    DenseMap<BBOrMBB, SmallPtrSet<BBOrMBB, 4>> UnwindDestToSrcs;
+    for (auto &KV : EHInfo.UnwindDestToSrcs) {
+      const auto *Dest = KV.first.get<const BasicBlock *>();
+      UnwindDestToSrcs[MBBMap[Dest]] = SmallPtrSet<BBOrMBB, 4>();
+      for (const auto &P : KV.second)
+        UnwindDestToSrcs[MBBMap[Dest]].insert(
+            MBBMap[P.get<const BasicBlock *>()]);
     }
-    EHInfo.UnwindDestToSrc = std::move(NewMap);
+    EHInfo.UnwindDestToSrcs = std::move(UnwindDestToSrcs);
   }
 }
 
