@@ -2715,7 +2715,14 @@ def Unused : InheritableAttr {
 def Used : InheritableAttr {
   let Spellings = [GCC<"used">];
   let Subjects = SubjectList<[NonLocalVar, Function, ObjCMethod]>;
-  let Documentation = [Undocumented];
+  let Documentation = [UsedDocs];
+  let SimpleHandler = 1;
+}
+
+def Retain : InheritableAttr {
+  let Spellings = [GCC<"retain">];
+  let Subjects = SubjectList<[NonLocalVar, Function, ObjCMethod]>;
+  let Documentation = [RetainDocs];
   let SimpleHandler = 1;
 }
 
