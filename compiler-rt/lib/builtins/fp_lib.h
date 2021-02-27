@@ -299,20 +299,104 @@ static __inline fp_t __compiler_rt_logbX(fp_t x) {
     return exp - exponentBias - shift; // Unbias exponent
   }
 }
+
+// Avoid using scalbn from libm. Unlike libc/libm scalbn, this function never
+// sets errno on underflow/overflow.
+static __inline fp_t __compiler_rt_scalbnX(fp_t x, int y) {
+  const rep_t rep = toRep(x);
+  int exp = (rep & exponentMask) >> significandBits;
+
+  if (x == 0.0 || exp == maxExponent)
+    return x; // +/- 0.0, NaN, or inf: return x
+
+  // Normalize subnormal input.
+  rep_t sig = rep & significandMask;
+  if (exp == 0) {
+    exp += normalize(&sig);
+    sig &= ~implicitBit; // clear the implicit bit again
+  }
+
+  if (__builtin_sadd_overflow(exp, y, &exp)) {
+    // Saturate the exponent, which will guarantee an underflow/overflow below.
+    exp = (y >= 0) ? INT_MAX : INT_MIN;
+  }
+
+  // Return this value: [+/-] 1.sig * 2 ** (exp - exponentBias).
+  const rep_t sign = rep & signBit;
+  if (exp >= maxExponent) {
+    // Overflow, which could produce infinity or the largest-magnitude value,
+    // depending on the rounding mode.
+    return fromRep(sign | ((rep_t)(maxExponent - 1) << significandBits)) * 2.0f;
+  } else if (exp <= 0) {
+    // Subnormal or underflow. Use floating-point multiply to handle truncation
+    // correctly.
+    fp_t tmp = fromRep(sign | (REP_C(1) << significandBits) | sig);
+    exp += exponentBias - 1;
+    if (exp < 1)
+      exp = 1;
+    tmp *= fromRep((rep_t)exp << significandBits);
+    return tmp;
+  } else
+    return fromRep(sign | ((rep_t)exp << significandBits) | sig);
+}
+
+// Avoid using fmax from libm.
+static __inline fp_t __compiler_rt_fmaxX(fp_t x, fp_t y) {
+  // If either argument is NaN, return the other argument. If both are NaN,
+  // arbitrarily return the second one. Otherwise, if both arguments are +/-0,
+  // arbitrarily return the first one.
+  return (crt_isnan(x) || x < y) ? y : x;
+}
+
 #endif
 
 #if defined(SINGLE_PRECISION)
+
 static __inline fp_t __compiler_rt_logbf(fp_t x) {
   return __compiler_rt_logbX(x);
 }
+static __inline fp_t __compiler_rt_scalbnf(fp_t x, int y) {
+  return __compiler_rt_scalbnX(x, y);
+}
+static __inline fp_t __compiler_rt_fmaxf(fp_t x, fp_t y) {
+#if defined(__aarch64__)
+  // Use __builtin_fmaxf which turns into an fmaxnm instruction on AArch64.
+  return __builtin_fmaxf(x, y);
+#else
+  // __builtin_fmaxf frequently turns into a libm call, so inline the function.
+  return __compiler_rt_fmaxX(x, y);
+#endif
+}
+
 #elif defined(DOUBLE_PRECISION)
+
 static __inline fp_t __compiler_rt_logb(fp_t x) {
   return __compiler_rt_logbX(x);
 }
+static __inline fp_t __compiler_rt_scalbn(fp_t x, int y) {
+  return __compiler_rt_scalbnX(x, y);
+}
+static __inline fp_t __compiler_rt_fmax(fp_t x, fp_t y) {
+#if defined(__aarch64__)
+  // Use __builtin_fmax which turns into an fmaxnm instruction on AArch64.
+  return __builtin_fmax(x, y);
+#else
+  // __builtin_fmax frequently turns into a libm call, so inline the function.
+  return __compiler_rt_fmaxX(x, y);
+#endif
+}
+
 #elif defined(QUAD_PRECISION)
+
 #if defined(CRT_LDBL_128BIT)
 static __inline fp_t __compiler_rt_logbl(fp_t x) {
   return __compiler_rt_logbX(x);
+}
+static __inline fp_t __compiler_rt_scalbnl(fp_t x, int y) {
+  return __compiler_rt_scalbnX(x, y);
+}
+static __inline fp_t __compiler_rt_fmaxl(fp_t x, fp_t y) {
+  return __compiler_rt_fmaxX(x, y);
 }
 #else
 // The generic implementation only works for ieee754 floating point. For other
@@ -320,7 +404,14 @@ static __inline fp_t __compiler_rt_logbl(fp_t x) {
 static __inline long double __compiler_rt_logbl(long double x) {
   return crt_logbl(x);
 }
-#endif
-#endif
+static __inline long double __compiler_rt_scalbnl(long double x, int y) {
+  return crt_scalbnl(x, y);
+}
+static __inline long double __compiler_rt_fmaxl(long double x, long double y) {
+  return crt_fmaxl(x, y);
+}
+#endif // CRT_LDBL_128BIT
+
+#endif // *_PRECISION
 
 #endif // FP_LIB_HEADER
