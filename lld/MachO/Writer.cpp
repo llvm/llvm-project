@@ -704,6 +704,16 @@ static void sortSegmentsAndSections() {
   }
 }
 
+static NamePair maybeRenameSection(NamePair key) {
+  auto newNames = config->sectionRenameMap.find(key);
+  if (newNames != config->sectionRenameMap.end())
+    return newNames->second;
+  auto newName = config->segmentRenameMap.find(key.first);
+  if (newName != config->segmentRenameMap.end())
+    return std::make_pair(newName->second, key.second);
+  return key;
+}
+
 void Writer::createOutputSections() {
   // First, create hidden sections
   stringTableSection = make<StringTableSection>();
@@ -726,13 +736,12 @@ void Writer::createOutputSections() {
   }
 
   // Then merge input sections into output sections.
-  MapVector<std::pair<StringRef, StringRef>, MergedOutputSection *>
-      mergedOutputSections;
+  MapVector<NamePair, MergedOutputSection *> mergedOutputSections;
   for (InputSection *isec : inputSections) {
-    MergedOutputSection *&osec =
-        mergedOutputSections[{isec->segname, isec->name}];
+    NamePair names = maybeRenameSection({isec->segname, isec->name});
+    MergedOutputSection *&osec = mergedOutputSections[names];
     if (osec == nullptr)
-      osec = make<MergedOutputSection>(isec->name);
+      osec = make<MergedOutputSection>(names.second);
     osec->mergeInput(isec);
   }
 
