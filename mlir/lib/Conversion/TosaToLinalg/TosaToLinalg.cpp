@@ -442,6 +442,21 @@ public:
   }
 };
 
+// At the codegen level any identity operations should be removed. Any cases
+// where identity is load-bearing (e.g. cross device computation) should be
+// handled before lowering to codegen.
+template <typename SrcOp>
+class IdentityNConverter : public OpRewritePattern<SrcOp> {
+public:
+  using OpRewritePattern<SrcOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SrcOp op,
+                                PatternRewriter &rewriter) const final {
+    rewriter.replaceOp(op, op.getOperation()->getOperands());
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
@@ -462,5 +477,6 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PointwiseConverter<tosa::MaximumOp>, PointwiseConverter<tosa::MinimumOp>,
       PointwiseConverter<tosa::CeilOp>, PointwiseConverter<tosa::FloorOp>,
       PointwiseConverter<tosa::ClampOp>, PointwiseConverter<tosa::ReluNOp>,
-      ReshapeOpConverter>(context);
+      IdentityNConverter<tosa::IdentityOp>,
+      IdentityNConverter<tosa::IdentityNOp>, ReshapeOpConverter>(context);
 }
