@@ -293,6 +293,14 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
   }
 }
 
+void TargetLoweringObjectFileELF::getModuleMetadata(Module &M) {
+  SmallVector<GlobalValue *, 4> Vec;
+  collectUsedGlobalVariables(M, Vec, false);
+  for (GlobalValue *GV : Vec)
+    if (auto *GO = dyn_cast<GlobalObject>(GV))
+      Used.insert(GO);
+}
+
 void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
                                                      Module &M) const {
   auto &C = getContext();
@@ -687,9 +695,15 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
   // MD_associated in a unique section.
   unsigned UniqueID = MCContext::GenericSectionID;
   const MCSymbolELF *LinkedToSym = getLinkedToSymbol(GO, TM);
-  if (GO->getMetadata(LLVMContext::MD_associated)) {
+  const bool Associated = GO->getMetadata(LLVMContext::MD_associated);
+  const bool Retain = Used.count(GO);
+  if (Associated || Retain) {
     UniqueID = NextUniqueID++;
-    Flags |= ELF::SHF_LINK_ORDER;
+    if (Associated)
+      Flags |= ELF::SHF_LINK_ORDER;
+    if (Retain && (getContext().getAsmInfo()->useIntegratedAssembler() ||
+                   getContext().getAsmInfo()->binutilsIsAtLeast(2, 36)))
+      Flags |= ELF::SHF_GNU_RETAIN;
   } else {
     if (getContext().getAsmInfo()->useIntegratedAssembler() ||
         getContext().getAsmInfo()->binutilsIsAtLeast(2, 35)) {
@@ -802,12 +816,17 @@ static MCSectionELF *selectELFSectionForGlobal(
 
 static MCSection *selectELFSectionForGlobal(
     MCContext &Ctx, const GlobalObject *GO, SectionKind Kind, Mangler &Mang,
-    const TargetMachine &TM, bool EmitUniqueSection,  unsigned Flags,
-    unsigned *NextUniqueID) {
+    const TargetMachine &TM, bool Retain, bool EmitUniqueSection,
+    unsigned Flags, unsigned *NextUniqueID) {
   const MCSymbolELF *LinkedToSym = getLinkedToSymbol(GO, TM);
   if (LinkedToSym) {
     EmitUniqueSection = true;
     Flags |= ELF::SHF_LINK_ORDER;
+  }
+  if (Retain && (Ctx.getAsmInfo()->useIntegratedAssembler() ||
+                 Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36))) {
+    EmitUniqueSection = true;
+    Flags |= ELF::SHF_GNU_RETAIN;
   }
 
   MCSectionELF *Section = selectELFSectionForGlobal(
@@ -832,16 +851,17 @@ MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
   }
   EmitUniqueSection |= GO->hasComdat();
   return selectELFSectionForGlobal(getContext(), GO, Kind, getMangler(), TM,
-                                   EmitUniqueSection, Flags, &NextUniqueID);
+                                   Used.count(GO), EmitUniqueSection, Flags,
+                                   &NextUniqueID);
 }
 
 MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
     const Function &F, const TargetMachine &TM) const {
   SectionKind Kind = SectionKind::getText();
   unsigned Flags = getELFSectionFlags(Kind);
-  return selectELFSectionForGlobal(getContext(), &F, Kind, getMangler(), TM,
-                                   /* EmitUniqueSection = */ true, Flags,
-                                   &NextUniqueID);
+  return selectELFSectionForGlobal(
+      getContext(), &F, Kind, getMangler(), TM, Used.count(&F),
+      /*EmitUniqueSection=*/true, Flags, &NextUniqueID);
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForJumpTable(
