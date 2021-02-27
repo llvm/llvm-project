@@ -80,4 +80,4 @@ HWASAN_FLAG(bool, malloc_bisect_dump, false,
 // testsuite can run since we manually ensure any pointer arguments to syscalls
 // are untagged before the call.
 HWASAN_FLAG(bool, fail_without_syscall_abi, true,
-	    "Exit if fail to request relaxed syscall ABI.")
+            "Exit if fail to request relaxed syscall ABI.")
