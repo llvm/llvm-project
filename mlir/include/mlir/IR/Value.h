@@ -249,13 +249,17 @@ inline raw_ostream &operator<<(raw_ostream &os, Value value) {
 namespace detail {
 /// The internal implementation of a BlockArgument.
 class BlockArgumentImpl : public IRObjectWithUseList<OpOperand> {
-  BlockArgumentImpl(Type type, Block *owner) : type(type), owner(owner) {}
+  BlockArgumentImpl(Type type, Block *owner, int64_t index)
+      : type(type), owner(owner), index(index) {}
 
   /// The type of this argument.
   Type type;
 
   /// The owner of this argument.
   Block *owner;
+
+  /// The position in the argument list.
+  int64_t index;
 
   /// Allow access to owner and constructor.
   friend BlockArgument;
@@ -281,12 +285,12 @@ public:
   void setType(Type newType) { getImpl()->type = newType; }
 
   /// Returns the number of this argument.
-  unsigned getArgNumber() const;
+  unsigned getArgNumber() const { return getImpl()->index; }
 
 private:
   /// Allocate a new argument with the given type and owner.
-  static BlockArgument create(Type type, Block *owner) {
-    return new detail::BlockArgumentImpl(type, owner);
+  static BlockArgument create(Type type, Block *owner, int64_t index) {
+    return new detail::BlockArgumentImpl(type, owner, index);
   }
 
   /// Destroy and deallocate this argument.
@@ -298,7 +302,10 @@ private:
         ownerAndKind.getPointer());
   }
 
-  /// Allow access to `create` and `destroy`.
+  /// Cache the position in the block argument list.
+  void setArgNumber(int64_t index) { getImpl()->index = index; }
+
+  /// Allow access to `create`, `destroy` and `setArgNumber`.
   friend Block;
 
   /// Allow access to 'getImpl'.
