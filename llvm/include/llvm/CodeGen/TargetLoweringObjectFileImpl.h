@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H
 #define LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 
@@ -32,6 +33,7 @@ class TargetMachine;
 class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
   bool UseInitArray = false;
   mutable unsigned NextUniqueID = 1;  // ID 0 is reserved for execute-only sections
+  SmallPtrSet<GlobalObject *, 2> Used;
 
 protected:
   MCSymbolRefExpr::VariantKind PLTRelativeVariantKind =
@@ -42,6 +44,8 @@ public:
   ~TargetLoweringObjectFileELF() override = default;
 
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+
+  void getModuleMetadata(Module &M) override;
 
   /// Emit Obj-C garbage collection and linker options.
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
