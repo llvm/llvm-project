@@ -258,6 +258,11 @@ static void SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
   TheDriver.CCLogDiagnostics = !!::getenv("CC_LOG_DIAGNOSTICS");
   if (TheDriver.CCLogDiagnostics)
     TheDriver.CCLogDiagnosticsFilename = ::getenv("CC_LOG_DIAGNOSTICS_FILE");
+
+  // Handle CC_PRINT_PROC_STAT and CC_PRINT_PROC_STAT_FILE.
+  TheDriver.CCPrintProcessStats = !!::getenv("CC_PRINT_PROC_STAT");
+  if (TheDriver.CCPrintProcessStats)
+    TheDriver.CCPrintStatReportFilename = ::getenv("CC_PRINT_PROC_STAT_FILE");
 }
 
 static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
