@@ -2246,6 +2246,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
     : op(op), adaptor(op.getAdaptorName()) {
   adaptor.newField("::mlir::ValueRange", "odsOperands");
   adaptor.newField("::mlir::DictionaryAttr", "odsAttrs");
+  adaptor.newField("::mlir::RegionRange", "odsRegions");
   const auto *attrSizedOperands =
       op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments");
   {
@@ -2253,10 +2254,12 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
     paramList.emplace_back("::mlir::ValueRange", "values");
     paramList.emplace_back("::mlir::DictionaryAttr", "attrs",
                            attrSizedOperands ? "" : "nullptr");
+    paramList.emplace_back("::mlir::RegionRange", "regions", "{}");
     auto *constructor = adaptor.addConstructorAndPrune(std::move(paramList));
 
     constructor->addMemberInitializer("odsOperands", "values");
     constructor->addMemberInitializer("odsAttrs", "attrs");
+    constructor->addMemberInitializer("odsRegions", "regions");
   }
 
   {
@@ -2264,8 +2267,13 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
         llvm::formatv("{0}&", op.getCppClassName()).str(), "op");
     constructor->addMemberInitializer("odsOperands", "op->getOperands()");
     constructor->addMemberInitializer("odsAttrs", "op->getAttrDictionary()");
+    constructor->addMemberInitializer("odsRegions", "op->getRegions()");
   }
 
+  {
+    auto *m = adaptor.addMethodAndPrune("::mlir::ValueRange", "getOperands");
+    m->body() << "  return odsOperands;";
+  }
   std::string sizeAttrInit =
       formatv(adapterSegmentSizeAttrInitCode, "operand_segment_sizes");
   generateNamedOperandGetters(op, adaptor, sizeAttrInit,
@@ -2299,11 +2307,37 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
     body << "  return attr;\n";
   };
 
+  {
+    auto *m =
+        adaptor.addMethodAndPrune("::mlir::DictionaryAttr", "getAttributes");
+    m->body() << "  return odsAttrs;";
+  }
   for (auto &namedAttr : op.getAttributes()) {
     const auto &name = namedAttr.name;
     const auto &attr = namedAttr.attr;
     if (!attr.isDerivedAttr())
       emitAttr(name, attr);
+  }
+
+  unsigned numRegions = op.getNumRegions();
+  if (numRegions > 0) {
+    auto *m = adaptor.addMethodAndPrune("::mlir::RegionRange", "getRegions");
+    m->body() << "  return odsRegions;";
+  }
+  for (unsigned i = 0; i < numRegions; ++i) {
+    const auto &region = op.getRegion(i);
+    if (region.name.empty())
+      continue;
+
+    // Generate the accessors for a variadic region.
+    if (region.isVariadic()) {
+      auto *m = adaptor.addMethodAndPrune("::mlir::RegionRange", region.name);
+      m->body() << formatv("  return odsRegions.drop_front({0});", i);
+      continue;
+    }
+
+    auto *m = adaptor.addMethodAndPrune("::mlir::Region &", region.name);
+    m->body() << formatv("  return *odsRegions[{0}];", i);
   }
 
   // Add verification function.

@@ -1,6 +1,8 @@
-// RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck  %s
+// RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck %s
 // RUN: mlir-tblgen -gen-op-decls -op-include-regex="test.a_op" -I %S/../../include %s | FileCheck  %s --check-prefix=REDUCE_INC
 // RUN: mlir-tblgen -gen-op-decls -op-exclude-regex="test.a_op" -I %S/../../include %s | FileCheck  %s --check-prefix=REDUCE_EXC
+
+// RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s --check-prefix=DEFS
 
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -58,6 +60,8 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   ::mlir::ValueRange b();
 // CHECK:   ::mlir::IntegerAttr attr1();
 // CHECK:   ::mlir::FloatAttr attr2();
+// CHECK:   ::mlir::Region &someRegion();
+// CHECK:   ::mlir::RegionRange someRegions();
 // CHECK: private:
 // CHECK:   ::mlir::ValueRange odsOperands;
 // CHECK: };
@@ -95,6 +99,13 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   // Display a graph for debugging purposes.
 // CHECK:   void displayGraph();
 // CHECK: };
+
+// DEFS-LABEL: NS::AOp definitions
+
+// DEFS: AOpAdaptor::AOpAdaptor(::mlir::ValueRange values, ::mlir::DictionaryAttr attrs, ::mlir::RegionRange regions) : odsOperands(values), odsAttrs(attrs), odsRegions(regions)
+// DEFS: ::mlir::RegionRange AOpAdaptor::getRegions()
+// DEFS: ::mlir::RegionRange AOpAdaptor::someRegions()
+// DEFS-NEXT: return odsRegions.drop_front(1);
 
 // Check AttrSizedOperandSegments
 // ---
