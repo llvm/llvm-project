@@ -764,12 +764,12 @@ compilations steps.
   is sent to. If it specifies a regular file, the data are saved to this file in
   CSV format:
 
-.. code-block:: console
+  .. code-block:: console
 
-   $ clang -fproc-stat-report=abc foo.c
-   $ cat abc
-   clang-11,"/tmp/foo-123456.o",92000,84000,87536
-   ld,"a.out",900,8000,53568
+    $ clang -fproc-stat-report=abc foo.c
+    $ cat abc
+    clang-11,"/tmp/foo-123456.o",92000,84000,87536
+    ld,"a.out",900,8000,53568
 
   The data on each row represent:
   
@@ -780,18 +780,37 @@ compilations steps.
   * peak memory usage in Kb.
   
   It is possible to specify this option without any value. In this case statistics
-  is printed on standard output in human readable format:
+  are printed on standard output in human readable format:
   
-.. code-block:: console
+  .. code-block:: console
 
-  $ clang -fproc-stat-report foo.c
-  clang-11: output=/tmp/foo-855a8e.o, total=68.000 ms, user=60.000 ms, mem=86920 Kb
-  ld: output=a.out, total=8.000 ms, user=4.000 ms, mem=52320 Kb
+    $ clang -fproc-stat-report foo.c
+    clang-11: output=/tmp/foo-855a8e.o, total=68.000 ms, user=60.000 ms, mem=86920 Kb
+    ld: output=a.out, total=8.000 ms, user=4.000 ms, mem=52320 Kb
   
   The report file specified in the option is locked for write, so this option
   can be used to collect statistics in parallel builds. The report file is not
   cleared, new data is appended to it, thus making posible to accumulate build
   statistics.
+
+  You can also use environment variables to control the process statistics reporting.
+  Setting ``CC_PRINT_PROC_STAT`` to ``1`` enables the feature, the report goes to
+  stdout in human readable format.
+  Setting ``CC_PRINT_PROC_STAT_FILE`` to a fully qualified file path makes it report
+  process statistics to the given file in the CSV format. Specifying a relative
+  path will likely lead to multiple files with the same name created in different
+  directories, since the path is relative to a changing working directory.
+
+  These environment variables are handy when you need to request the statistics
+  report without changing your build scripts or alter the existing set of compiler
+  options. Note that ``-fproc-stat-report`` take precedence over ``CC_PRINT_PROC_STAT``
+  and ``CC_PRINT_PROC_STAT_FILE``.
+
+  .. code-block:: console
+
+    $ export CC_PRINT_PROC_STAT=1
+    $ export CC_PRINT_PROC_STAT_FILE=~/project-build-proc-stat.csv
+    $ make
 
 Other Options
 -------------
