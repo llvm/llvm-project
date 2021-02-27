@@ -7685,10 +7685,14 @@ private:
 
     if (Args[0]->getType()->isOverloadableType())
       S.LookupOverloadedBinOp(CandidateSet, OO, Fns, Args);
-    else {
+    else if (OO == OO_EqualEqual ||
+             !Args[0]->getType()->isFunctionPointerType()) {
       // FIXME: We determine whether this is a valid expression by checking to
       // see if there's a viable builtin operator candidate for it. That isn't
       // really what the rules ask us to do, but should give the right results.
+      //
+      // Note that the builtin operator for relational comparisons on function
+      // pointers is the only known case which cannot be used.
       S.AddBuiltinOperatorCandidates(OO, FD->getLocation(), Args, CandidateSet);
     }
 
