@@ -829,7 +829,7 @@ Further Future Work
    *speculative* JIT compilation: compilation of code that is not needed yet,
    but which we have reason to believe will be needed in the future. This can be
    used to hide compile latency and improve JIT throughput. A proof-of-concept
-   exmaple of speculative compilation with ORC has already been developed (see
+   example of speculative compilation with ORC has already been developed (see
    ``llvm/examples/SpeculativeJIT``). Future work on this is likely to focus on
    re-using and improving existing profiling support (currently used by PGO) to
    feed speculation decisions, as well as built-in tools to simplify use of

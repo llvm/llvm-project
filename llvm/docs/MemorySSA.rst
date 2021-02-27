@@ -176,7 +176,7 @@ Going from the top down:
   this block could either be ``2`` or ``3``.
 - ``MemoryUse(5)`` notes that ``load i8, i8* %p1`` is a use of memory, and that
   it's clobbered by ``5``.
-- ``4 = MemoryDef(5)`` notes that ``store i8 2, i8* %p2`` is a definition; it's
+- ``4 = MemoryDef(5)`` notes that ``store i8 2, i8* %p2`` is a definition; its
   reaching definition is ``5``.
 - ``MemoryUse(1)`` notes that ``load i8, i8* %p3`` is just a user of memory,
   and the last thing that could clobber this use is above ``while.cond`` (e.g.
@@ -233,7 +233,7 @@ queries ``GlobalsAA``, one that always stops at ``MemoryPhi`` nodes, etc).
 Default walker APIs
 ^^^^^^^^^^^^^^^^^^^
 
-There are two main APIs used to retrive the clobbering access using the walker:
+There are two main APIs used to retrieve the clobbering access using the walker:
 
 -  ``MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA);`` return the
    clobbering memory access for ``MA``, caching all intermediate results

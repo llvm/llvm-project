@@ -264,7 +264,7 @@ Abbreviated Record Encoding
 
 ``[<abbrevid>, fields...]``
 
-An abbreviated record is a abbreviation id followed by a set of fields that are
+An abbreviated record is an abbreviation id followed by a set of fields that are
 encoded according to the `abbreviation definition`_.  This allows records to be
 encoded significantly more densely than records encoded with the
 `UNABBREV_RECORD`_ type, and allows the abbreviation types to be specified in

@@ -16,7 +16,7 @@ accessible. If it is not, please submit a patch (:doc:`Contributing`) or file a
 bug (:doc:`HowToSubmitABug`).
 
 JITLink is a library for :ref:`jit_linking`. It was built to support the ORC JIT
-APIs and is most commonly accesed via ORC's ObjectLinkingLayer API. JITLink was
+APIs and is most commonly accessed via ORC's ObjectLinkingLayer API. JITLink was
 developed with the aim of supporting the full set of features provided by each
 object format; including static initializers, exception handling, thread local
 variables, and language runtime registration. Supporting these features enables
@@ -520,7 +520,7 @@ certain points by the introduction of JITLink :ref:`passes`:
       working memory and fixed up. Passes run at this stage can make late
       optimizations to the graph and content based on address layout.
 
-      Notable use cases: GOT and PLT relaxation, where GOT and PLT acceses are
+      Notable use cases: GOT and PLT relaxation, where GOT and PLT accesses are
       bypassed for fixup targets that are directly accessible under the assigned
       memory layout.
 
@@ -787,7 +787,7 @@ for them by an ``ObjectLinkingLayer`` instance, but they can be created manually
    ``ObjectLinkingLayer`` usually creates ``LinkGraphs``.
 
   #. ``createLinkGraph_<Object-Format>_<Architecture>`` can be used when
-      both the object format and achitecture are known ahead of time.
+      both the object format and architecture are known ahead of time.
 
   #. ``createLinkGraph_<Object-Format>`` can be used when the object format is
      known ahead of time, but the architecture is not. In this case the
@@ -894,7 +894,7 @@ main function using the -args option:
       printf("arg %i is \"%s\"\n", i, argv[i]);
   }
 
-  % cat pring-args-main.c
+  % cat print-args-main.c
   void print_args(int argc, char *argv[]);
 
   int main(int argc, char *argv[]) {
@@ -1093,7 +1093,7 @@ Major outstanding projects include:
 JITLink Availability and Feature Status
 ---------------------------------------
 
-.. list-table:: Avalability and Status
+.. list-table:: Availability and Status
    :widths: 10 30 30 30
    :header-rows: 1
 
