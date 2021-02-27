@@ -80,7 +80,7 @@ Fortran::lower::CallerInterface::getIfIndirectCallSymbol() const {
 mlir::Location Fortran::lower::CallerInterface::getCalleeLocation() const {
   const auto &proc = procRef.proc();
   // FIXME: If the callee is defined in the same file but after the current
-  // unit we do cannot get its location here and the funcOp is created at the
+  // unit we cannot get its location here and the funcOp is created at the
   // wrong location (i.e, the caller location).
   if (const auto *symbol = proc.GetSymbol())
     return converter.genLocation(symbol->name());
@@ -95,8 +95,8 @@ Fortran::lower::CallerInterface::characterize() const {
       Fortran::evaluate::characteristics::Procedure::Characterize(
           procRef.proc(), foldingContext);
   assert(characteristic && "Failed to get characteristic from procRef");
-  // The characteristic may not contain the argument characteristic if no
-  // the ProcedureDesignator has no interface.
+  // The characteristic may not contain the argument characteristic if the
+  // ProcedureDesignator has no interface.
   if (!characteristic->HasExplicitInterface()) {
     for (const auto &arg : procRef.arguments()) {
       if (arg.value().isAlternateReturn()) {
@@ -341,7 +341,7 @@ getResultEntity(Fortran::lower::pft::FunctionLikeUnit &funit) {
 /// Bypass helpers to manipulate entities since they are not any symbol/actual
 /// argument to associate. See SignatureBuilder below.
 using FakeEntity = bool;
-using FakeEntities = llvm::SmallVector<FakeEntity, 2>;
+using FakeEntities = llvm::SmallVector<FakeEntity>;
 static FakeEntities
 getEntityContainer(const Fortran::evaluate::characteristics::Procedure &proc) {
   FakeEntities enities(proc.dummyArguments.size());
@@ -545,7 +545,7 @@ private:
 
     bool isOptional = false;
     [[maybe_unused]] auto loc = interface.converter.genLocation();
-    llvm::SmallVector<mlir::NamedAttribute, 2> attrs;
+    llvm::SmallVector<mlir::NamedAttribute> attrs;
     auto addMLIRAttr = [&](llvm::StringRef attr) {
       attrs.emplace_back(mlir::Identifier::get(attr, &mlirContext),
                          UnitAttr::get(&mlirContext));
@@ -713,8 +713,8 @@ void Fortran::lower::CallInterface<T>::buildExplicitInterface(
 
 template <typename T>
 mlir::FunctionType Fortran::lower::CallInterface<T>::genFunctionType() const {
-  llvm::SmallVector<mlir::Type, 1> returnTys;
-  llvm::SmallVector<mlir::Type, 4> inputTys;
+  llvm::SmallVector<mlir::Type> returnTys;
+  llvm::SmallVector<mlir::Type> inputTys;
   for (const auto &placeHolder : outputs)
     returnTys.emplace_back(placeHolder.type);
   for (const auto &placeHolder : inputs)
@@ -724,9 +724,9 @@ mlir::FunctionType Fortran::lower::CallInterface<T>::genFunctionType() const {
 }
 
 template <typename T>
-llvm::SmallVector<mlir::Type, 1>
+llvm::SmallVector<mlir::Type>
 Fortran::lower::CallInterface<T>::getResultType() const {
-  llvm::SmallVector<mlir::Type, 1> types;
+  llvm::SmallVector<mlir::Type> types;
   for (const auto &out : outputs)
     types.emplace_back(out.type);
   return types;
