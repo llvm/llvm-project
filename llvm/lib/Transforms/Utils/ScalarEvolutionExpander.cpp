@@ -929,9 +929,8 @@ bool SCEVExpander::isNormalAddRecExprPHI(PHINode *PN, Instruction *IncV,
   // Addrec operands are always loop-invariant, so this can only happen
   // if there are instructions which haven't been hoisted.
   if (L == IVIncInsertLoop) {
-    for (User::op_iterator OI = IncV->op_begin()+1,
-           OE = IncV->op_end(); OI != OE; ++OI)
-      if (Instruction *OInst = dyn_cast<Instruction>(OI))
+    for (Use &Op : llvm::drop_begin(IncV->operands()))
+      if (Instruction *OInst = dyn_cast<Instruction>(Op))
         if (!SE.DT.dominates(OInst, IVIncInsertPos))
           return false;
   }
@@ -978,10 +977,10 @@ Instruction *SCEVExpander::getIVIncOperand(Instruction *IncV,
   case Instruction::BitCast:
     return dyn_cast<Instruction>(IncV->getOperand(0));
   case Instruction::GetElementPtr:
-    for (auto I = IncV->op_begin() + 1, E = IncV->op_end(); I != E; ++I) {
-      if (isa<Constant>(*I))
+    for (Use &U : llvm::drop_begin(IncV->operands())) {
+      if (isa<Constant>(U))
         continue;
-      if (Instruction *OInst = dyn_cast<Instruction>(*I)) {
+      if (Instruction *OInst = dyn_cast<Instruction>(U)) {
         if (!SE.DT.dominates(OInst, InsertPos))
           return nullptr;
       }
