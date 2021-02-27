@@ -2131,6 +2131,7 @@ Error DWARFLinker::loadClangModule(
       Unit->markEverythingAsKept();
     }
   }
+  assert(Unit && "CompileUnit is not set!");
   if (!Unit->getOrigUnit().getUnitDIE().hasChildren())
     return Error::success();
   if (!Quiet && Options.Verbose) {
