@@ -278,9 +278,6 @@ void ObjFile::parseRelocations(const section_64 &sec,
       continue;
     if (relInfo.r_address & R_SCATTERED)
       fatal("TODO: Scattered relocations not supported");
-    uint64_t embeddedAddend = target->getEmbeddedAddend(mb, sec, relInfo);
-    assert(!(embeddedAddend && pairedAddend));
-    uint64_t totalAddend = pairedAddend + embeddedAddend;
 
     Reloc p;
     if (target->hasAttr(relInfo.r_type, RelocAttrBits::SUBTRAHEND)) {
@@ -292,6 +289,9 @@ void ObjFile::parseRelocations(const section_64 &sec,
       assert(target->hasAttr(relInfo.r_type, RelocAttrBits::UNSIGNED) &&
              relInfo.r_extern);
     }
+    uint64_t embeddedAddend = target->getEmbeddedAddend(mb, sec, relInfo);
+    assert(!(embeddedAddend && pairedAddend));
+    uint64_t totalAddend = pairedAddend + embeddedAddend;
     Reloc r;
     r.type = relInfo.r_type;
     r.pcrel = relInfo.r_pcrel;
