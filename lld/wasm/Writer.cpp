@@ -890,12 +890,13 @@ void Writer::combineOutputSegments() {
       }
       bool first = true;
       for (InputSegment *inSeg : s->inputSegments) {
-        uint32_t alignment = first ? s->alignment : 0;
+        if (first)
+          inSeg->alignment = std::max(inSeg->alignment, s->alignment);
         first = false;
 #ifndef NDEBUG
         uint64_t oldVA = inSeg->getVA();
 #endif
-        combined->addInputSegment(inSeg, alignment);
+        combined->addInputSegment(inSeg);
 #ifndef NDEBUG
         uint64_t newVA = inSeg->getVA();
         assert(oldVA == newVA);
