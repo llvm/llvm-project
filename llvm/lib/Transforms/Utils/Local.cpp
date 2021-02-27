@@ -918,6 +918,7 @@ static void gatherIncomingValuesToPhi(PHINode *PN,
 /// \param IncomingValues A map from block to value.
 static void replaceUndefValuesInPhi(PHINode *PN,
                                     const IncomingValueMap &IncomingValues) {
+  SmallVector<unsigned> TrueUndefOps;
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
     Value *V = PN->getIncomingValue(i);
 
@@ -925,9 +926,30 @@ static void replaceUndefValuesInPhi(PHINode *PN,
 
     BasicBlock *BB = PN->getIncomingBlock(i);
     IncomingValueMap::const_iterator It = IncomingValues.find(BB);
-    if (It == IncomingValues.end()) continue;
 
+    // Keep track of undef/poison incoming values. Those must match, so we fix
+    // them up below if needed.
+    // Note: this is conservatively correct, but we could try harder and group
+    // the undef values per incoming basic block.
+    if (It == IncomingValues.end()) {
+      TrueUndefOps.push_back(i);
+      continue;
+    }
+
+    // There is a defined value for this incoming block, so map this undef
+    // incoming value to the defined value.
     PN->setIncomingValue(i, It->second);
+  }
+
+  // If there are both undef and poison values incoming, then convert those
+  // values to undef. It is invalid to have different values for the same
+  // incoming block.
+  unsigned PoisonCount = count_if(TrueUndefOps, [&](unsigned i) {
+    return isa<PoisonValue>(PN->getIncomingValue(i));
+  });
+  if (PoisonCount != 0 && PoisonCount != TrueUndefOps.size()) {
+    for (unsigned i : TrueUndefOps)
+      PN->setIncomingValue(i, UndefValue::get(PN->getType()));
   }
 }
 
