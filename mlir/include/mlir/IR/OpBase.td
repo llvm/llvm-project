@@ -491,7 +491,7 @@ def AnyComplex : Type<CPred<"$_self.isa<::mlir::ComplexType>()">,
 class OpaqueType<string dialect, string name, string summary>
   : Type<CPred<"isOpaqueTypeWithName($_self, \""#dialect#"\", \""#name#"\")">,
          summary, "::mlir::OpaqueType">,
-    BuildableType<"::mlir::OpaqueType::get($_builder.getContext(), "
+    BuildableType<"::mlir::OpaqueType::get("
                   "$_builder.getIdentifier(\"" # dialect # "\"), \""
                   # name # "\")">;
 
