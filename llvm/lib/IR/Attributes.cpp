@@ -1869,9 +1869,8 @@ bool AttrBuilder::operator==(const AttrBuilder &B) const {
   if (Attrs != B.Attrs)
     return false;
 
-  for (td_const_iterator I = TargetDepAttrs.begin(),
-         E = TargetDepAttrs.end(); I != E; ++I)
-    if (B.TargetDepAttrs.find(I->first) == B.TargetDepAttrs.end())
+  for (const auto &TDA : TargetDepAttrs)
+    if (B.TargetDepAttrs.find(TDA.first) == B.TargetDepAttrs.end())
       return false;
 
   return Alignment == B.Alignment && StackAlignment == B.StackAlignment &&
