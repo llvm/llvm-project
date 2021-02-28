@@ -994,7 +994,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   SmallVector<ArgInfo, 8> InArgs;
   if (!Info.OrigRet.Ty->isVoidTy())
-    splitToValueTypes(Info.OrigRet, InArgs, DL, MRI, F.getCallingConv());
+    splitToValueTypes(Info.OrigRet, InArgs, DL, MRI, Info.CallConv);
 
   // If we can lower as a tail call, do that instead.
   bool CanTailCallOpt =
