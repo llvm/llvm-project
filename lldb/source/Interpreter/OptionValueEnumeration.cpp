@@ -95,10 +95,6 @@ void OptionValueEnumeration::SetEnumerations(
   m_enumerations.Sort();
 }
 
-lldb::OptionValueSP OptionValueEnumeration::DeepCopy() const {
-  return OptionValueSP(new OptionValueEnumeration(*this));
-}
-
 void OptionValueEnumeration::AutoComplete(CommandInterpreter &interpreter,
                                           CompletionRequest &request) {
   const uint32_t num_enumerators = m_enumerations.GetSize();

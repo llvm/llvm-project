@@ -3962,15 +3962,10 @@ enum {
   ePropertyExperimental,
 };
 
-class TargetOptionValueProperties : public OptionValueProperties {
+class TargetOptionValueProperties
+    : public Cloneable<TargetOptionValueProperties, OptionValueProperties> {
 public:
-  TargetOptionValueProperties(ConstString name) : OptionValueProperties(name) {}
-
-  // This constructor is used when creating TargetOptionValueProperties when it
-  // is part of a new lldb_private::Target instance. It will copy all current
-  // global property values as needed
-  TargetOptionValueProperties(const TargetPropertiesSP &target_properties_sp)
-      : OptionValueProperties(*target_properties_sp->GetValueProperties()) {}
+  TargetOptionValueProperties(ConstString name) : Cloneable(name) {}
 
   const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
                                      bool will_modify,
@@ -4001,11 +3996,12 @@ enum {
 #include "TargetPropertiesEnum.inc"
 };
 
-class TargetExperimentalOptionValueProperties : public OptionValueProperties {
+class TargetExperimentalOptionValueProperties
+    : public Cloneable<TargetExperimentalOptionValueProperties,
+                       OptionValueProperties> {
 public:
   TargetExperimentalOptionValueProperties()
-      : OptionValueProperties(
-            ConstString(Properties::GetExperimentalSettingsName())) {}
+      : Cloneable(ConstString(Properties::GetExperimentalSettingsName())) {}
 };
 
 TargetExperimentalProperties::TargetExperimentalProperties()
@@ -4018,8 +4014,8 @@ TargetExperimentalProperties::TargetExperimentalProperties()
 TargetProperties::TargetProperties(Target *target)
     : Properties(), m_launch_info(), m_target(target) {
   if (target) {
-    m_collection_sp = std::make_shared<TargetOptionValueProperties>(
-        Target::GetGlobalProperties());
+    m_collection_sp =
+        OptionValueProperties::CreateLocalCopy(*Target::GetGlobalProperties());
 
     // Set callbacks to update launch_info whenever "settins set" updated any
     // of these properties

@@ -83,16 +83,10 @@ using namespace std::chrono;
 #define DISABLE_MEM_CACHE_DEFAULT true
 #endif
 
-class ProcessOptionValueProperties : public OptionValueProperties {
+class ProcessOptionValueProperties
+    : public Cloneable<ProcessOptionValueProperties, OptionValueProperties> {
 public:
-  ProcessOptionValueProperties(ConstString name)
-      : OptionValueProperties(name) {}
-
-  // This constructor is used when creating ProcessOptionValueProperties when
-  // it is part of a new lldb_private::Process instance. It will copy all
-  // current global property values as needed
-  ProcessOptionValueProperties(ProcessProperties *global_properties)
-      : OptionValueProperties(*global_properties->GetValueProperties()) {}
+  ProcessOptionValueProperties(ConstString name) : Cloneable(name) {}
 
   const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
                                      bool will_modify,
@@ -131,10 +125,12 @@ enum {
 #include "TargetPropertiesEnum.inc"
 };
 
-class ProcessExperimentalOptionValueProperties : public OptionValueProperties {
+class ProcessExperimentalOptionValueProperties
+    : public Cloneable<ProcessExperimentalOptionValueProperties,
+                       OptionValueProperties> {
 public:
   ProcessExperimentalOptionValueProperties()
-      : OptionValueProperties(
+      : Cloneable(
             ConstString(Properties::GetExperimentalSettingsName())) {}
 };
 
@@ -157,8 +153,8 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
         ConstString("thread"), ConstString("Settings specific to threads."),
         true, Thread::GetGlobalProperties()->GetValueProperties());
   } else {
-    m_collection_sp = std::make_shared<ProcessOptionValueProperties>(
-        Process::GetGlobalProperties().get());
+    m_collection_sp =
+        OptionValueProperties::CreateLocalCopy(*Process::GetGlobalProperties());
     m_collection_sp->SetValueChangedCallback(
         ePropertyPythonOSPluginPath,
         [this] { m_process->LoadOperatingSystemPlugin(true); });

@@ -14,7 +14,8 @@
 
 namespace lldb_private {
 
-class OptionValuePathMappings : public OptionValue {
+class OptionValuePathMappings
+    : public Cloneable<OptionValuePathMappings, OptionValue> {
 public:
   OptionValuePathMappings(bool notify_changes)
       : m_notify_changes(notify_changes) {}
@@ -36,8 +37,6 @@ public:
     m_path_mappings.Clear(m_notify_changes);
     m_value_was_set = false;
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   bool IsAggregateValue() const override { return true; }
 
