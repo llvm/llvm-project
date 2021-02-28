@@ -664,6 +664,7 @@ void MipsCallLowering::subTargetRegTypeForCallingConv(
   }
 }
 
+// FIXME: This should be removed and the generic version used
 void MipsCallLowering::splitToValueTypes(
     const DataLayout &DL, const ArgInfo &OrigArg, unsigned OriginalIndex,
     SmallVectorImpl<ArgInfo> &SplitArgs,

@@ -285,43 +285,6 @@ static bool doesCalleeRestoreStack(CallingConv::ID CallConv, bool TailCallOpt) {
   return CallConv == CallingConv::Fast && TailCallOpt;
 }
 
-void AArch64CallLowering::splitToValueTypes(
-    const ArgInfo &OrigArg, SmallVectorImpl<ArgInfo> &SplitArgs,
-    const DataLayout &DL, MachineRegisterInfo &MRI, CallingConv::ID CallConv) const {
-  const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
-  LLVMContext &Ctx = OrigArg.Ty->getContext();
-
-  SmallVector<EVT, 4> SplitVTs;
-  SmallVector<uint64_t, 4> Offsets;
-  ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitVTs, &Offsets, 0);
-
-  if (SplitVTs.size() == 0)
-    return;
-
-  if (SplitVTs.size() == 1) {
-    // No splitting to do, but we want to replace the original type (e.g. [1 x
-    // double] -> double).
-    SplitArgs.emplace_back(OrigArg.Regs[0], SplitVTs[0].getTypeForEVT(Ctx),
-                           OrigArg.Flags[0], OrigArg.IsFixed);
-    return;
-  }
-
-  // Create one ArgInfo for each virtual register in the original ArgInfo.
-  assert(OrigArg.Regs.size() == SplitVTs.size() && "Regs / types mismatch");
-
-  bool NeedsRegBlock = TLI.functionArgumentNeedsConsecutiveRegisters(
-      OrigArg.Ty, CallConv, false);
-  for (unsigned i = 0, e = SplitVTs.size(); i < e; ++i) {
-    Type *SplitTy = SplitVTs[i].getTypeForEVT(Ctx);
-    SplitArgs.emplace_back(OrigArg.Regs[i], SplitTy, OrigArg.Flags[0],
-                           OrigArg.IsFixed);
-    if (NeedsRegBlock)
-      SplitArgs.back().Flags[0].setInConsecutiveRegs();
-  }
-
-  SplitArgs.back().Flags[0].setInConsecutiveRegsLast();
-}
-
 bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                       const Value *Val,
                                       ArrayRef<Register> VRegs,
@@ -423,7 +386,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
         // Reset the arg flags after modifying CurVReg.
         setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, F);
       }
-     splitToValueTypes(CurArgInfo, SplitArgs, DL, MRI, CC);
+      splitToValueTypes(CurArgInfo, SplitArgs, DL, CC);
     }
 
     OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFn, AssignFn);
@@ -508,7 +471,7 @@ bool AArch64CallLowering::lowerFormalArguments(
     ArgInfo OrigArg{VRegs[i], Arg.getType()};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, F);
 
-    splitToValueTypes(OrigArg, SplitArgs, DL, MRI, F.getCallingConv());
+    splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv());
     ++i;
   }
 
@@ -986,7 +949,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   SmallVector<ArgInfo, 8> OutArgs;
   for (auto &OrigArg : Info.OrigArgs) {
-    splitToValueTypes(OrigArg, OutArgs, DL, MRI, Info.CallConv);
+    splitToValueTypes(OrigArg, OutArgs, DL, Info.CallConv);
     // AAPCS requires that we zero-extend i1 to 8 bits by the caller.
     if (OrigArg.Ty->isIntegerTy(1))
       OutArgs.back().Flags[0].setZExt();
@@ -994,7 +957,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   SmallVector<ArgInfo, 8> InArgs;
   if (!Info.OrigRet.Ty->isVoidTy())
-    splitToValueTypes(Info.OrigRet, InArgs, DL, MRI, Info.CallConv);
+    splitToValueTypes(Info.OrigRet, InArgs, DL, Info.CallConv);
 
   // If we can lower as a tail call, do that instead.
   bool CanTailCallOpt =

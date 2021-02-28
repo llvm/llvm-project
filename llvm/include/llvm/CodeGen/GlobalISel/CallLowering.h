@@ -244,6 +244,13 @@ protected:
   void setArgFlags(ArgInfo &Arg, unsigned OpIdx, const DataLayout &DL,
                    const FuncInfoTy &FuncInfo) const;
 
+  /// Break \p OrigArgInfo into one or more pieces the calling convention can
+  /// process, returned in \p SplitArgs. For example, this should break structs
+  /// down into individual fields.
+  void splitToValueTypes(const ArgInfo &OrigArgInfo,
+                         SmallVectorImpl<ArgInfo> &SplitArgs,
+                         const DataLayout &DL, CallingConv::ID CallConv) const;
+
   /// Generate instructions for packing \p SrcRegs into one big register
   /// corresponding to the aggregate type \p PackedTy.
   ///
