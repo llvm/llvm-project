@@ -480,23 +480,31 @@ define i32 @test18(i32 %hi, i32 %lo, i32 %bits) nounwind {
   ret i32 %sh
 }
 
-; PR34641 - Masked Shift Counts
+; These are not valid shld/shrd patterns. When the shift amount modulo
+; the bitwidth is zero, the result should be an OR of both operands not a
+; shift.
 
-define i32 @shld_safe_i32(i32, i32, i32) {
-; X86-LABEL: shld_safe_i32:
+define i32 @not_shld_i32(i32, i32, i32) {
+; X86-LABEL: not_shld_i32:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shldl %cl, %edx, %eax
+; X86-NEXT:    shll %cl, %edx
+; X86-NEXT:    negb %cl
+; X86-NEXT:    shrl %cl, %eax
+; X86-NEXT:    orl %edx, %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: shld_safe_i32:
+; X64-LABEL: not_shld_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    shll %cl, %edi
+; X64-NEXT:    negb %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shldl %cl, %esi, %eax
+; X64-NEXT:    shrl %cl, %eax
+; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    retq
   %4 = and i32 %2, 31
   %5 = shl i32 %0, %4
@@ -507,21 +515,27 @@ define i32 @shld_safe_i32(i32, i32, i32) {
   ret i32 %9
 }
 
-define i32 @shrd_safe_i32(i32, i32, i32) {
-; X86-LABEL: shrd_safe_i32:
+define i32 @not_shrd_i32(i32, i32, i32) {
+; X86-LABEL: not_shrd_i32:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrdl %cl, %edx, %eax
+; X86-NEXT:    shrl %cl, %edx
+; X86-NEXT:    negb %cl
+; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    orl %edx, %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: shrd_safe_i32:
+; X64-LABEL: not_shrd_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    shrl %cl, %edi
+; X64-NEXT:    negb %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shrdl %cl, %esi, %eax
+; X64-NEXT:    shll %cl, %eax
+; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    retq
   %4 = and i32 %2, 31
   %5 = lshr i32 %0, %4
