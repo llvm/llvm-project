@@ -34,6 +34,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PriorityQueue.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -1600,14 +1601,6 @@ static bool computePath(SUnit *Cur, SetVector<SUnit *> &Path,
   return FoundPath;
 }
 
-/// Return true if Set1 is a subset of Set2.
-template <class S1Ty, class S2Ty> static bool isSubset(S1Ty &Set1, S2Ty &Set2) {
-  for (typename S1Ty::iterator I = Set1.begin(), E = Set1.end(); I != E; ++I)
-    if (Set2.count(*I) == 0)
-      return false;
-  return true;
-}
-
 /// Compute the live-out registers for the instructions in a node-set.
 /// The live-out registers are those that are defined in the node-set,
 /// but not used. Except for use operands of Phis.
@@ -1711,7 +1704,7 @@ void SwingSchedulerDAG::colocateNodeSets(NodeSetType &NodeSets) {
       SmallSetVector<SUnit *, 8> S2;
       if (N2.empty() || !succ_L(N2, S2))
         continue;
-      if (isSubset(S1, S2) && S1.size() == S2.size()) {
+      if (llvm::set_is_subset(S1, S2) && S1.size() == S2.size()) {
         N1.setColocate(++Colocate);
         N2.setColocate(Colocate);
         break;
@@ -1883,11 +1876,11 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
     LLVM_DEBUG(dbgs() << "NodeSet size " << Nodes.size() << "\n");
     OrderKind Order;
     SmallSetVector<SUnit *, 8> N;
-    if (pred_L(NodeOrder, N) && isSubset(N, Nodes)) {
+    if (pred_L(NodeOrder, N) && llvm::set_is_subset(N, Nodes)) {
       R.insert(N.begin(), N.end());
       Order = BottomUp;
       LLVM_DEBUG(dbgs() << "  Bottom up (preds) ");
-    } else if (succ_L(NodeOrder, N) && isSubset(N, Nodes)) {
+    } else if (succ_L(NodeOrder, N) && llvm::set_is_subset(N, Nodes)) {
       R.insert(N.begin(), N.end());
       Order = TopDown;
       LLVM_DEBUG(dbgs() << "  Top down (succs) ");
