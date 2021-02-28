@@ -693,8 +693,11 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen,
                            unsigned exp) {
   // Test if the load was hoisted to a higher loop nest.
   Value val = merger.exp(exp).val;
-  if (val)
+  if (val) {
+    if (codegen.curVecLength > 1 && !val.getType().isa<VectorType>())
+      return genVectorInvariantValue(codegen, rewriter, val);
     return val;
+  }
   // Actual load.
   SmallVector<Value, 4> args;
   unsigned tensor = merger.exp(exp).e0;
@@ -1186,9 +1189,19 @@ static void genStmt(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   unsigned l0 = merger.set(lts)[0];
   unsigned ldx = at == 0 ? -1u : topSort[at - 1];
   genInvariants(merger, codegen, rewriter, op, exp, ldx, /*hoist=*/true);
-  bool needsUniv = genInit(merger, codegen, rewriter, op, topSort, at,
-                           merger.lat(l0).bits) &&
-                   lsize > 1;
+  bool needsUniv = false;
+  if (genInit(merger, codegen, rewriter, op, topSort, at,
+              merger.lat(l0).bits)) {
+    // Maintain the universal index only if it is actually
+    // consumed by a subsequent lattice point.
+    for (unsigned i = 1; i < lsize; i++) {
+      unsigned li = merger.set(lts)[i];
+      if (!merger.hasAnyDimOf(merger.lat(li).simple, Dim::kSparse)) {
+        needsUniv = true;
+        break;
+      }
+    }
+  }
 
   // Emit a loop for every lattice point L0 >= Li.
   for (unsigned i = 0; i < lsize; i++) {
