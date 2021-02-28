@@ -1088,9 +1088,8 @@ int SlotTracker::processIndex() {
 
   // Start numbering the TypeIds after the GUIDs.
   TypeIdNext = GUIDNext;
-  for (auto TidIter = TheIndex->typeIds().begin();
-       TidIter != TheIndex->typeIds().end(); TidIter++)
-    CreateTypeIdSlot(TidIter->second.first);
+  for (const auto &TID : TheIndex->typeIds())
+    CreateTypeIdSlot(TID.second.first);
 
   ST_DEBUG("end processIndex!\n");
   return TypeIdNext;
@@ -4028,8 +4027,8 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Out << ' ';
     writeOperand(I.getOperand(0), true); Out << ", ";
     writeOperand(I.getOperand(1), true);
-    for (const unsigned *i = IVI->idx_begin(), *e = IVI->idx_end(); i != e; ++i)
-      Out << ", " << *i;
+    for (unsigned i : IVI->indices())
+      Out << ", " << i;
   } else if (const LandingPadInst *LPI = dyn_cast<LandingPadInst>(&I)) {
     Out << ' ';
     TypePrinter.print(I.getType(), Out);
@@ -4431,9 +4430,8 @@ void AssemblyWriter::writeAllAttributeGroups() {
   std::vector<std::pair<AttributeSet, unsigned>> asVec;
   asVec.resize(Machine.as_size());
 
-  for (SlotTracker::as_iterator I = Machine.as_begin(), E = Machine.as_end();
-       I != E; ++I)
-    asVec[I->second] = *I;
+  for (auto &I : llvm::make_range(Machine.as_begin(), Machine.as_end()))
+    asVec[I.second] = I;
 
   for (const auto &I : asVec)
     Out << "attributes #" << I.second << " = { "
