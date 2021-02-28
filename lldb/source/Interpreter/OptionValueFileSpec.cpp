@@ -84,10 +84,6 @@ Status OptionValueFileSpec::SetValueFromString(llvm::StringRef value,
   return error;
 }
 
-lldb::OptionValueSP OptionValueFileSpec::DeepCopy() const {
-  return OptionValueSP(new OptionValueFileSpec(*this));
-}
-
 void OptionValueFileSpec::AutoComplete(CommandInterpreter &interpreter,
                                        CompletionRequest &request) {
   CommandCompletions::InvokeCommonCompletionCallbacks(

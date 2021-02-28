@@ -311,15 +311,16 @@ bool OptionValueDictionary::DeleteValueForKey(ConstString key) {
   return false;
 }
 
-lldb::OptionValueSP OptionValueDictionary::DeepCopy() const {
-  OptionValueDictionary *copied_dict =
-      new OptionValueDictionary(m_type_mask, m_raw_value_dump);
-  lldb::OptionValueSP copied_value_sp(copied_dict);
-  collection::const_iterator pos, end = m_values.end();
-  for (pos = m_values.begin(); pos != end; ++pos) {
-    StreamString strm;
-    strm.Printf("%s=", pos->first.GetCString());
-    copied_dict->SetValueForKey(pos->first, pos->second->DeepCopy(), true);
-  }
-  return copied_value_sp;
+OptionValueSP
+OptionValueDictionary::DeepCopy(const OptionValueSP &new_parent) const {
+  auto copy_sp = OptionValue::DeepCopy(new_parent);
+  // copy_sp->GetAsDictionary cannot be used here as it doesn't work for derived
+  // types that override GetType returning a different value.
+  auto *dict_value_ptr = static_cast<OptionValueDictionary *>(copy_sp.get());
+  lldbassert(dict_value_ptr);
+
+  for (auto &value : dict_value_ptr->m_values)
+    value.second = value.second->DeepCopy(copy_sp);
+
+  return copy_sp;
 }

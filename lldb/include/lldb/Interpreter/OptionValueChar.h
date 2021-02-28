@@ -13,7 +13,7 @@
 
 namespace lldb_private {
 
-class OptionValueChar : public OptionValue {
+class OptionValueChar : public Cloneable<OptionValueChar, OptionValue> {
 public:
   OptionValueChar(char value)
       : m_current_value(value), m_default_value(value) {}
@@ -53,8 +53,6 @@ public:
   void SetCurrentValue(char value) { m_current_value = value; }
 
   void SetDefaultValue(char value) { m_default_value = value; }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
 protected:
   char m_current_value;

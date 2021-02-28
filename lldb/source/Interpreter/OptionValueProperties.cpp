@@ -22,26 +22,6 @@ using namespace lldb_private;
 
 OptionValueProperties::OptionValueProperties(ConstString name) : m_name(name) {}
 
-OptionValueProperties::OptionValueProperties(
-    const OptionValueProperties &global_properties)
-    : OptionValue(global_properties),
-      m_name(global_properties.m_name),
-      m_properties(global_properties.m_properties),
-      m_name_to_index(global_properties.m_name_to_index) {
-  // We now have an exact copy of "global_properties". We need to now find all
-  // non-global settings and copy the property values so that all non-global
-  // settings get new OptionValue instances created for them.
-  const size_t num_properties = m_properties.size();
-  for (size_t i = 0; i < num_properties; ++i) {
-    // Duplicate any values that are not global when constructing properties
-    // from a global copy
-    if (!m_properties[i].IsGlobal()) {
-      lldb::OptionValueSP new_value_sp(m_properties[i].GetValue()->DeepCopy());
-      m_properties[i].SetOptionValue(new_value_sp);
-    }
-  }
-}
-
 size_t OptionValueProperties::GetNumProperties() const {
   return m_properties.size();
 }
@@ -562,8 +542,32 @@ Status OptionValueProperties::DumpPropertyValue(const ExecutionContext *exe_ctx,
   return error;
 }
 
-lldb::OptionValueSP OptionValueProperties::DeepCopy() const {
-  llvm_unreachable("this shouldn't happen");
+OptionValuePropertiesSP
+OptionValueProperties::CreateLocalCopy(const Properties &global_properties) {
+  auto global_props_sp = global_properties.GetValueProperties();
+  lldbassert(global_props_sp);
+
+  auto copy_sp = global_props_sp->DeepCopy(global_props_sp->GetParent());
+  return std::static_pointer_cast<OptionValueProperties>(copy_sp);
+}
+
+OptionValueSP
+OptionValueProperties::DeepCopy(const OptionValueSP &new_parent) const {
+  auto copy_sp = OptionValue::DeepCopy(new_parent);
+  // copy_sp->GetAsProperties cannot be used here as it doesn't work for derived
+  // types that override GetType returning a different value.
+  auto *props_value_ptr = static_cast<OptionValueProperties *>(copy_sp.get());
+  lldbassert(props_value_ptr);
+
+  for (auto &property : props_value_ptr->m_properties) {
+    // Duplicate any values that are not global when constructing properties
+    // from a global copy.
+    if (!property.IsGlobal()) {
+      auto value_sp = property.GetValue()->DeepCopy(copy_sp);
+      property.SetOptionValue(value_sp);
+    }
+  }
+  return copy_sp;
 }
 
 const Property *OptionValueProperties::GetPropertyAtPath(

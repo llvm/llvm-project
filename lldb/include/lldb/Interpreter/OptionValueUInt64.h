@@ -14,7 +14,7 @@
 
 namespace lldb_private {
 
-class OptionValueUInt64 : public OptionValue {
+class OptionValueUInt64 : public Cloneable<OptionValueUInt64, OptionValue> {
 public:
   OptionValueUInt64() = default;
 
@@ -46,8 +46,6 @@ public:
     m_current_value = m_default_value;
     m_value_was_set = false;
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   // Subclass specific functions
 

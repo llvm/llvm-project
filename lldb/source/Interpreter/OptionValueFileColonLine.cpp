@@ -134,10 +134,6 @@ Status OptionValueFileColonLine::SetValueFromString(llvm::StringRef value,
   return error;
 }
 
-lldb::OptionValueSP OptionValueFileColonLine::DeepCopy() const {
-  return OptionValueSP(new OptionValueFileColonLine(*this));
-}
-
 void OptionValueFileColonLine::AutoComplete(CommandInterpreter &interpreter,
                                             CompletionRequest &request) {
   CommandCompletions::InvokeCommonCompletionCallbacks(

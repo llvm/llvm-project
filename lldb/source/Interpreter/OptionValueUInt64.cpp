@@ -68,7 +68,3 @@ Status OptionValueUInt64::SetValueFromString(llvm::StringRef value_ref,
   }
   return error;
 }
-
-lldb::OptionValueSP OptionValueUInt64::DeepCopy() const {
-  return OptionValueSP(new OptionValueUInt64(*this));
-}

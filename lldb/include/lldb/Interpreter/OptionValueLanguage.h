@@ -15,7 +15,7 @@
 
 namespace lldb_private {
 
-class OptionValueLanguage : public OptionValue {
+class OptionValueLanguage : public Cloneable<OptionValueLanguage, OptionValue> {
 public:
   OptionValueLanguage(lldb::LanguageType value)
       : m_current_value(value), m_default_value(value) {}
@@ -41,8 +41,6 @@ public:
     m_current_value = m_default_value;
     m_value_was_set = false;
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   // Subclass specific functions
 
