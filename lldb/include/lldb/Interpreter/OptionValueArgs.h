@@ -21,7 +21,7 @@ public:
 
   ~OptionValueArgs() override = default;
 
-  size_t GetArgs(Args &args);
+  size_t GetArgs(Args &args) const;
 
   Type GetType() const override { return eTypeArgs; }
 };
