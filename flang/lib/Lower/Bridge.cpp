@@ -243,6 +243,11 @@ public:
     return lookupSymbol(sym).getAddr();
   }
 
+  void setSymbolAddress(Fortran::lower::SymbolRef sym,
+                        mlir::Value val) override final {
+    addSymbol(sym, val, /*forced=*/true);
+  }
+
   bool lookupLabelSet(Fortran::lower::SymbolRef sym,
                       Fortran::lower::pft::LabelSet &labelSet) override final {
     auto &owningProc = *getEval().getOwningProcedure();
@@ -757,6 +762,19 @@ private:
     // Generate begin loop code directly for infinite and while loops.
     auto &eval = getEval();
     bool unstructuredContext = eval.lowerAsUnstructured();
+    // If loop is part of an OpenMP Construct then the OpenMP dialect
+    // workshare loop operation has already been created. Only the
+    // body needs to be created here.
+    const Fortran::parser::OpenMPConstruct *ompConstruct{nullptr};
+    if (eval.parentConstruct) {
+      ompConstruct =
+          eval.parentConstruct->getIf<Fortran::parser::OpenMPConstruct>();
+      if (std::get_if<Fortran::parser::OpenMPLoopConstruct>(&ompConstruct->u)) {
+        for (auto &e : eval.getNestedEvaluations())
+          genFIR(e, unstructuredContext);
+        return;
+      }
+    }
     auto &doStmtEval = eval.getFirstNestedEvaluation();
     auto *doStmt = doStmtEval.getIf<Fortran::parser::NonLabelDoStmt>();
     const auto &loopControl =

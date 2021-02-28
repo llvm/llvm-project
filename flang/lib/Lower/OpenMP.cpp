@@ -50,22 +50,27 @@ static void genObjectList(const Fortran::parser::OmpObjectList &objectList,
 }
 
 template <typename Op>
-static void createBodyOfOp(Op &op, Fortran::lower::FirOpBuilder &firOpBuilder,
-                           mlir::Location &loc) {
-  if constexpr (std::is_same_v<Op, omp::WsLoopOp>) {
-    unsigned int numIVs = op.step().size();
-    SmallVector<Type, 8> argTypes(numIVs, firOpBuilder.getIndexType());
-    firOpBuilder.createBlock(&op.getRegion(), {}, argTypes);
+static void createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
+                           mlir::Location &loc,
+                           const Fortran::semantics::Symbol *arg = nullptr) {
+  auto &firOpBuilder = converter.getFirOpBuilder();
+  // If an argument for the region is provided then create the block with that
+  // argument. Also update the symbol's address with the mlir argument value.
+  // e.g. For loops the argument is the induction variable. And all further
+  // uses of the induction variable should use this mlir value.
+  if (arg) {
+    firOpBuilder.createBlock(&op.getRegion(), {}, {converter.genType(*arg)});
+    converter.setSymbolAddress(*arg, op.getRegion().front().getArgument(0));
   } else {
     firOpBuilder.createBlock(&op.getRegion());
   }
   auto &block = op.getRegion().back();
   firOpBuilder.setInsertionPointToStart(&block);
+  // Ensure the block is well-formed by inserting terminators.
   if constexpr (std::is_same_v<Op, omp::WsLoopOp>) {
     mlir::ValueRange results;
     firOpBuilder.create<mlir::omp::YieldOp>(loc, results);
   } else {
-    // Ensure the block is well-formed.
     firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
   }
   // Reset the insertion point to the start of the first block.
@@ -269,7 +274,7 @@ static void createParallelOp(Fortran::lower::AbstractConverter &converter,
         }
       }
     }
-    createBodyOfOp<omp::ParallelOp>(parallelOp, firOpBuilder, currentLocation);
+    createBodyOfOp<omp::ParallelOp>(parallelOp, converter, currentLocation);
 }
 
 static void
@@ -289,7 +294,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     auto &firOpBuilder = converter.getFirOpBuilder();
     auto currentLocation = converter.getCurrentLocation();
     auto masterOp = firOpBuilder.create<mlir::omp::MasterOp>(currentLocation);
-    createBodyOfOp<omp::MasterOp>(masterOp, firOpBuilder, currentLocation);
+    createBodyOfOp<omp::MasterOp>(masterOp, converter, currentLocation);
   }
 }
 
@@ -344,8 +349,10 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
   const auto &loopControl =
       std::get<std::optional<Fortran::parser::LoopControl>>(doStmt->t);
-  if (const auto *bounds =
-          std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u)) {
+  const Fortran::parser::LoopControl::Bounds *bounds{
+      std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u)};
+  Fortran::semantics::Symbol *iv{nullptr};
+  if (bounds) {
     Fortran::lower::StatementContext stmtCtx;
     lowerBound.push_back(fir::getBase(converter.genExprValue(
         *Fortran::semantics::GetExpr(bounds->lower), stmtCtx)));
@@ -360,6 +367,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       step.push_back(firOpBuilder.createIntegerConstant(
           currentLocation, firOpBuilder.getIntegerType(32), 1));
     }
+    iv = bounds->name.thing.symbol;
   }
   // FIXME: Add support for following clauses:
   // 1. linear
@@ -435,7 +443,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       if (std::get_if<Fortran::parser::OmpClause::Nowait>(&clause.u))
         wsLoopOp.nowaitAttr(firOpBuilder.getUnitAttr());
   }
-  createBodyOfOp<omp::WsLoopOp>(wsLoopOp, firOpBuilder, currentLocation);
+
+  createBodyOfOp<omp::WsLoopOp>(wsLoopOp, converter, currentLocation, iv);
 }
 
 void Fortran::lower::genOpenMPConstruct(
