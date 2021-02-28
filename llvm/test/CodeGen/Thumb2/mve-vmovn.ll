@@ -801,3 +801,144 @@ entry:
   %out = shufflevector <16 x i8> %src1, <16 x i8> undef, <16 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14>
   ret <16 x i8> %out
 }
+
+
+define arm_aapcs_vfpcc <8 x i16> @vmovn32trunct_undef2(<8 x i16> %a) {
+; CHECK-LABEL: vmovn32trunct_undef2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn32trunct_undef2:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    bx lr
+entry:
+  %c1 = call <4 x i32> @llvm.arm.mve.vreinterpretq.v4i32.v8i16(<8 x i16> %a)
+  %c2 = call <4 x i32> @llvm.arm.mve.vreinterpretq.v4i32.v8i16(<8 x i16> undef)
+  %strided.vec = shufflevector <4 x i32> %c1, <4 x i32> %c2, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  %out = trunc <8 x i32> %strided.vec to <8 x i16>
+  ret <8 x i16> %out
+}
+
+define arm_aapcs_vfpcc <8 x i16> @vmovn32trunct_undef1(<8 x i16> %a) {
+; CHECK-LABEL: vmovn32trunct_undef1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmovnt.i32 q0, q0
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn32trunct_undef1:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    vrev64.16 q1, q0
+; CHECKBE-NEXT:    vmovnt.i32 q1, q1
+; CHECKBE-NEXT:    vrev64.16 q0, q1
+; CHECKBE-NEXT:    bx lr
+entry:
+  %c1 = call <4 x i32> @llvm.arm.mve.vreinterpretq.v4i32.v8i16(<8 x i16> undef)
+  %c2 = call <4 x i32> @llvm.arm.mve.vreinterpretq.v4i32.v8i16(<8 x i16> %a)
+  %strided.vec = shufflevector <4 x i32> %c1, <4 x i32> %c2, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  %out = trunc <8 x i32> %strided.vec to <8 x i16>
+  ret <8 x i16> %out
+}
+
+define arm_aapcs_vfpcc <8 x i16> @vmovn16b_undef2(<16 x i8> %a) {
+; CHECK-LABEL: vmovn16b_undef2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn16b_undef2:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    vrev64.8 q1, q0
+; CHECKBE-NEXT:    vrev64.16 q0, q1
+; CHECKBE-NEXT:    bx lr
+entry:
+  %c1 = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v16i8(<16 x i8> %a)
+  %c2 = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v16i8(<16 x i8> undef)
+  %out = shufflevector <8 x i16> %c1, <8 x i16> %c2, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  ret <8 x i16> %out
+}
+
+define arm_aapcs_vfpcc <8 x i16> @vmovn16b_undef1(<16 x i8> %a) {
+; CHECK-LABEL: vmovn16b_undef1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn16b_undef1:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    vrev64.8 q1, q0
+; CHECKBE-NEXT:    vrev64.16 q0, q1
+; CHECKBE-NEXT:    bx lr
+entry:
+  %c1 = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v16i8(<16 x i8> undef)
+  %c2 = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v16i8(<16 x i8> %a)
+  %out = shufflevector <8 x i16> %c1, <8 x i16> %c2, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  ret <8 x i16> %out
+}
+
+define arm_aapcs_vfpcc <8 x i16> @vmovn32_badlanes(<4 x i32> %src1) {
+; CHECK-LABEL: vmovn32_badlanes:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 q1[1], r0
+; CHECK-NEXT:    vmov r0, s1
+; CHECK-NEXT:    vmov.16 q1[3], r0
+; CHECK-NEXT:    vmov.16 q1[5], r0
+; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov.16 q1[7], r0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn32_badlanes:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    vrev64.32 q1, q0
+; CHECKBE-NEXT:    vmov r0, s4
+; CHECKBE-NEXT:    vmov.16 q2[1], r0
+; CHECKBE-NEXT:    vmov r0, s5
+; CHECKBE-NEXT:    vmov.16 q2[3], r0
+; CHECKBE-NEXT:    vmov.16 q2[5], r0
+; CHECKBE-NEXT:    vmov r0, s6
+; CHECKBE-NEXT:    vmov.16 q2[7], r0
+; CHECKBE-NEXT:    vrev64.16 q0, q2
+; CHECKBE-NEXT:    bx lr
+entry:
+  %strided.vec = shufflevector <4 x i32> %src1, <4 x i32> undef, <8 x i32> <i32 4, i32 0, i32 5, i32 1, i32 6, i32 1, i32 7, i32 2>
+  %out = trunc <8 x i32> %strided.vec to <8 x i16>
+  ret <8 x i16> %out
+}
+
+define arm_aapcs_vfpcc <16 x i8> @vmovn16trunct_undef2(<16 x i8> %a) {
+; CHECK-LABEL: vmovn16trunct_undef2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn16trunct_undef2:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    bx lr
+entry:
+  %c1 = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v16i8(<16 x i8> %a)
+  %c2 = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v16i8(<16 x i8> undef)
+  %strided.vec = shufflevector <8 x i16> %c1, <8 x i16> %c2, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  %out = trunc <16 x i16> %strided.vec to <16 x i8>
+  ret <16 x i8> %out
+}
+
+define arm_aapcs_vfpcc <16 x i8> @vmovn16trunct_undef1(<16 x i8> %a) {
+; CHECK-LABEL: vmovn16trunct_undef1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmovnt.i16 q0, q0
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn16trunct_undef1:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    vrev64.8 q1, q0
+; CHECKBE-NEXT:    vmovnt.i16 q1, q1
+; CHECKBE-NEXT:    vrev64.8 q0, q1
+; CHECKBE-NEXT:    bx lr
+entry:
+  %c1 = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v16i8(<16 x i8> undef)
+  %c2 = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v16i8(<16 x i8> %a)
+  %strided.vec = shufflevector <8 x i16> %c1, <8 x i16> %c2, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  %out = trunc <16 x i16> %strided.vec to <16 x i8>
+  ret <16 x i8> %out
+}
+
+declare <4 x i32> @llvm.arm.mve.vreinterpretq.v4i32.v8i16(<8 x i16>)
+declare <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v16i8(<16 x i8>)
