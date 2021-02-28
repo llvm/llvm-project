@@ -304,3 +304,16 @@ func @test_reshape_downrank_6D(%arg0: tensor<1x2x3x5x7x11xf32>) -> tensor<6x5x77
   %0 = "tosa.reshape"(%arg0) {new_shape = [2, 3]} : (tensor<1x2x3x5x7x11xf32>) -> tensor<6x5x77xf32>
   return %0 : tensor<6x5x77xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @test_identity
+func @test_identity(%arg0: tensor<1xf32>, %arg1: tensor<1xi32>) -> (tensor<1xf32>, tensor<1xi32>) {
+  %0 = "tosa.identity"(%arg0) : (tensor<1xf32>) -> tensor<1xf32>
+  %1 = "tosa.identity"(%arg1) : (tensor<1xi32>) -> tensor<1xi32>
+
+  %2:2 = "tosa.identityn"(%0, %1) : (tensor<1xf32>, tensor<1xi32>) -> (tensor<1xf32>, tensor<1xi32>)
+
+  // CHECK: return %arg0, %arg1
+  return %2#0, %2#1 : tensor<1xf32>, tensor<1xi32>
+}

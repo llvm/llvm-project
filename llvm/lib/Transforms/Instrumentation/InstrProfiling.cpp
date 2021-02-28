@@ -1086,7 +1086,16 @@ bool InstrProfiling::emitRuntimeHook() {
 }
 
 void InstrProfiling::emitUses() {
-  if (!UsedVars.empty())
+  // The metadata sections are parallel arrays. Optimizers (e.g.
+  // GlobalOpt/ConstantMerge) may not discard associated sections as a unit, so
+  // we conservatively retain all unconditionally in the compiler.
+  //
+  // On ELF, the linker can guarantee the associated sections will be retained
+  // or discarded as a unit, so llvm.compiler.used is sufficient. Otherwise,
+  // conservatively make all of them retained by the linker.
+  if (TT.isOSBinFormatELF())
+    appendToCompilerUsed(*M, UsedVars);
+  else
     appendToUsed(*M, UsedVars);
 }
 

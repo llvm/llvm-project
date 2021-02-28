@@ -15,6 +15,25 @@ struct E {
 struct F { void operator==(F) const; };
 struct G { bool operator==(G) const = delete; }; // expected-note {{deleted here}}
 
+struct H1 {
+  bool operator==(const H1 &) const = default;
+  bool operator<(const H1 &) const = default; // expected-warning {{implicitly deleted}}
+  // expected-note@-1 {{because there is no viable comparison function}}
+  void (*x)();
+};
+struct H2 {
+  bool operator==(const H2 &) const = default;
+  bool operator<(const H2 &) const = default; // expected-warning {{implicitly deleted}}
+  // expected-note@-1 {{because there is no viable comparison function}}
+  void (H2::*x)();
+};
+struct H3 {
+  bool operator==(const H3 &) const = default;
+  bool operator<(const H3 &) const = default; // expected-warning {{implicitly deleted}}
+  // expected-note@-1 {{because there is no viable comparison function}}
+  int H3::*x;
+};
+
 template<typename T> struct X {
   X();
   bool operator==(const X&) const = default; // #x expected-note 4{{deleted here}}

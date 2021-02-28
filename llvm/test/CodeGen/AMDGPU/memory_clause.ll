@@ -184,8 +184,9 @@ define void @mubuf_clause(<4 x i32> addrspace(5)* noalias nocapture readonly %ar
 ; GCN-NEXT:    buffer_load_dword v15, v0, s[0:3], 0 offen offset:48
 ; GCN-NEXT:    buffer_load_dword v16, v0, s[0:3], 0 offen offset:52
 ; GCN-NEXT:    buffer_load_dword v17, v0, s[0:3], 0 offen offset:56
-; GCN-NEXT:    v_add_u32_e32 v1, v1, v2
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:60
+; GCN-NEXT:    v_add_u32_e32 v1, v1, v2
 ; GCN-NEXT:    s_waitcnt vmcnt(12)
 ; GCN-NEXT:    buffer_store_dword v6, v1, s[0:3], 0 offen offset:12
 ; GCN-NEXT:    buffer_store_dword v5, v1, s[0:3], 0 offen offset:8

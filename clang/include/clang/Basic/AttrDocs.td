@@ -57,6 +57,55 @@ global variable or function should be in after translation.
   let Heading = "section, __declspec(allocate)";
 }
 
+def UsedDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This attribute, when attached to a function or variable definition, indicates
+that there may be references to the entity which are not apparent in the source
+code.  For example, it may be referenced from inline ``asm``, or it may be
+found through a dynamic symbol or section lookup.
+
+The compiler must emit the definition even if it appears to be unused, and it
+must not apply optimizations which depend on fully understanding how the entity
+is used.
+
+Whether this attribute has any effect on the linker depends on the target and
+the linker. Most linkers support the feature of section garbage collection
+(``--gc-sections``), also known as "dead stripping" (``ld64 -dead_strip``) or
+discarding unreferenced sections (``link.exe /OPT:REF``). On COFF and Mach-O
+targets (Windows and Apple platforms), the `used` attribute prevents symbols
+from being removed by linker section GC. On ELF targets, it has no effect on its
+own, and the linker may remove the definition if it is not otherwise referenced.
+This linker GC can be avoided by also adding the ``retain`` attribute.  Note
+that ``retain`` requires special support from the linker; see that attribute's
+documentation for further information.
+  }];
+}
+
+def RetainDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This attribute, when attached to a function or variable definition, prevents
+section garbage collection in the linker. It does not prevent other discard
+mechanisms, such as archive member selection, and COMDAT group resolution.
+
+If the compiler does not emit the definition, e.g. because it was not used in
+the translation unit or the compiler was able to eliminate all of the uses,
+this attribute has no effect.  This attribute is typically combined with the
+``used`` attribute to force the definition to be emitted and preserved into the
+final linked image.
+
+This attribute is only necessary on ELF targets; other targets prevent section
+garbage collection by the linker when using the ``used`` attribute alone.
+Using the attributes together should result in consistent behavior across
+targets.
+
+This attribute requires the linker to support the ``SHF_GNU_RETAIN`` extension.
+This support is available in GNU ``ld`` and ``gold`` as of binutils 2.36, as
+well as in ``ld.lld`` 13.
+  }];
+}
+
 def InitPriorityDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{

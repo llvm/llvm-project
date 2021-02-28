@@ -44,6 +44,7 @@ intermediate LLVM representation.
    MCJITDesignAndImplementation
    ORCv2
    JITLink
+   NewPassManager
    NVPTXUsage
    Phabricator
    Passes

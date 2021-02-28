@@ -1155,36 +1155,44 @@ def gi_arith_extended_reg32to64_i64 :
     GIComplexPatternEquiv<arith_extended_reg32to64_i64>;
 
 // Floating-point immediate.
-def fpimm16 : Operand<f16>,
-              FPImmLeaf<f16, [{
-      return AArch64_AM::getFP16Imm(Imm) != -1;
-    }], SDNodeXForm<fpimm, [{
+
+def fpimm16XForm : SDNodeXForm<fpimm, [{
       APFloat InVal = N->getValueAPF();
       uint32_t enc = AArch64_AM::getFP16Imm(InVal);
       return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
-    }]>> {
-  let ParserMatchClass = FPImmOperand;
-  let PrintMethod = "printFPImmOperand";
-}
-def fpimm32 : Operand<f32>,
-              FPImmLeaf<f32, [{
-      return AArch64_AM::getFP32Imm(Imm) != -1;
-    }], SDNodeXForm<fpimm, [{
+    }]>;
+
+def fpimm32XForm : SDNodeXForm<fpimm, [{
       APFloat InVal = N->getValueAPF();
       uint32_t enc = AArch64_AM::getFP32Imm(InVal);
       return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
-    }]>> {
+    }]>;
+
+def fpimm64XForm : SDNodeXForm<fpimm, [{
+      APFloat InVal = N->getValueAPF();
+      uint32_t enc = AArch64_AM::getFP64Imm(InVal);
+      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+    }]>;
+
+def fpimm16 : Operand<f16>,
+              FPImmLeaf<f16, [{
+      return AArch64_AM::getFP16Imm(Imm) != -1;
+    }], fpimm16XForm> {
+  let ParserMatchClass = FPImmOperand;
+  let PrintMethod = "printFPImmOperand";
+}
+
+def fpimm32 : Operand<f32>,
+              FPImmLeaf<f32, [{
+      return AArch64_AM::getFP32Imm(Imm) != -1;
+    }], fpimm32XForm> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
 }
 def fpimm64 : Operand<f64>,
               FPImmLeaf<f64, [{
       return AArch64_AM::getFP64Imm(Imm) != -1;
-    }], SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = AArch64_AM::getFP64Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
-    }]>> {
+    }], fpimm64XForm> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
 }
@@ -1197,6 +1205,13 @@ def fpimm8 : Operand<i32> {
 def fpimm0 : FPImmLeaf<fAny, [{
   return Imm.isExactlyValue(+0.0);
 }]>;
+
+def gi_fpimm16 : GICustomOperandRenderer<"renderFPImm16">,
+  GISDNodeXFormEquiv<fpimm16XForm>;
+def gi_fpimm32 : GICustomOperandRenderer<"renderFPImm32">,
+  GISDNodeXFormEquiv<fpimm32XForm>;
+def gi_fpimm64 : GICustomOperandRenderer<"renderFPImm64">,
+  GISDNodeXFormEquiv<fpimm64XForm>;
 
 // Vector lane operands
 class AsmVectorIndex<int Min, int Max, string NamePrefix=""> : AsmOperandClass {
