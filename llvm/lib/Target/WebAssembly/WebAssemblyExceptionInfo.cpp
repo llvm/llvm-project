@@ -19,6 +19,8 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -38,9 +40,37 @@ bool WebAssemblyExceptionInfo::runOnMachineFunction(MachineFunction &MF) {
                        "********** Function: "
                     << MF.getName() << '\n');
   releaseMemory();
+  if (MF.getTarget().getMCAsmInfo()->getExceptionHandlingType() !=
+          ExceptionHandling::Wasm ||
+      !MF.getFunction().hasPersonalityFn())
+    return false;
   auto &MDT = getAnalysis<MachineDominatorTree>();
   auto &MDF = getAnalysis<MachineDominanceFrontier>();
   recalculate(MF, MDT, MDF);
+  LLVM_DEBUG(dump());
+  return false;
+}
+
+// Check if Dst is reachable from Src using BFS. Search only within BBs
+// dominated by Header.
+static bool isReachableAmongDominated(const MachineBasicBlock *Src,
+                                      const MachineBasicBlock *Dst,
+                                      const MachineBasicBlock *Header,
+                                      const MachineDominatorTree &MDT) {
+  assert(MDT.dominates(Header, Dst));
+  SmallVector<const MachineBasicBlock *, 8> WL;
+  SmallPtrSet<const MachineBasicBlock *, 8> Visited;
+  WL.push_back(Src);
+
+  while (!WL.empty()) {
+    const auto *MBB = WL.pop_back_val();
+    if (MBB == Dst)
+      return true;
+    Visited.insert(MBB);
+    for (auto *Succ : MBB->successors())
+      if (!Visited.count(Succ) && MDT.dominates(Header, Succ))
+        WL.push_back(Succ);
+  }
   return false;
 }
 
@@ -83,30 +113,103 @@ void WebAssemblyExceptionInfo::recalculate(
   // Here we extract those unwind destinations from their (incorrect) parent
   // exception. Note that the unwind destinations may not be an immediate
   // children of the parent exception, so we have to traverse the parent chain.
+  //
+  // We should traverse BBs in the preorder of the dominator tree, because
+  // otherwise the result can be incorrect. For example, when there are three
+  // exceptions A, B, and C and A > B > C (> is subexception relationship here),
+  // and A's unwind destination is B and B's is C. When we visit B before A, we
+  // end up extracting C only out of B but not out of A.
   const auto *EHInfo = MF.getWasmEHFuncInfo();
-  for (auto &MBB : MF) {
-    if (!MBB.isEHPad())
+  DenseMap<WebAssemblyException *, WebAssemblyException *> UnwindWEMap;
+  for (auto *DomNode : depth_first(&MDT)) {
+    MachineBasicBlock *EHPad = DomNode->getBlock();
+    if (!EHPad->isEHPad())
       continue;
-    auto *EHPad = &MBB;
     if (!EHInfo->hasUnwindDest(EHPad))
       continue;
     auto *UnwindDest = EHInfo->getUnwindDest(EHPad);
     auto *WE = getExceptionFor(EHPad);
-    auto *UnwindDestWE = getExceptionFor(UnwindDest);
-    if (WE->contains(UnwindDestWE)) {
+    auto *UnwindWE = getExceptionFor(UnwindDest);
+    if (WE->contains(UnwindWE)) {
+      UnwindWEMap[WE] = UnwindWE;
+      LLVM_DEBUG(dbgs() << "ExceptionInfo fix: " << WE->getEHPad()->getNumber()
+                        << "." << WE->getEHPad()->getName()
+                        << "'s exception is taken out of "
+                        << UnwindWE->getEHPad()->getNumber() << "."
+                        << UnwindWE->getEHPad()->getName() << "'s exception\n");
       if (WE->getParentException())
-        UnwindDestWE->setParentException(WE->getParentException());
+        UnwindWE->setParentException(WE->getParentException());
       else
-        UnwindDestWE->setParentException(nullptr);
+        UnwindWE->setParentException(nullptr);
     }
   }
 
-  // Add BBs to exceptions
+  // Add BBs to exceptions' block set first
+  for (auto *DomNode : post_order(&MDT)) {
+    MachineBasicBlock *MBB = DomNode->getBlock();
+    WebAssemblyException *WE = getExceptionFor(MBB);
+    for (; WE; WE = WE->getParentException())
+      WE->addToBlocksSet(MBB);
+  }
+
+  // After fixing subexception relationship between unwind destinations above,
+  // there can still be remaining discrepancies.
+  //
+  // For example, suppose Exception A is dominated by EHPad A and Exception B is
+  // dominated by EHPad B. EHPad A's unwind destination is EHPad B, but because
+  // EHPad B is dominated by EHPad A, the initial grouping makes Exception B a
+  // subexception of Exception A, and we fix it by taking Exception B out of
+  // Exception A above. But there can still be remaining BBs within Exception A
+  // that are reachable from Exception B. These BBs semantically don't belong
+  // to Exception A and were not a part of 'catch' clause or cleanup code in the
+  // original code, but they just happened to be grouped within Exception A
+  // because they were dominated by EHPad A. We fix this case by taking those
+  // BBs out of the incorrect exception and all its subexceptions that it
+  // belongs to.
+  for (auto &KV : UnwindWEMap) {
+    WebAssemblyException *WE = KV.first;
+    WebAssemblyException *UnwindWE = KV.second;
+
+    for (auto *MBB : WE->getBlocksSet()) {
+      if (MBB->isEHPad()) {
+        // If this assertion is triggered, it would be a violation of scoping
+        // rules in ll files, because this means an instruction in an outer
+        // scope tries to unwind to an EH pad in an inner scope.
+        assert(!isReachableAmongDominated(UnwindWE->getEHPad(), MBB,
+                                          WE->getEHPad(), MDT) &&
+               "Outer scope unwinds to inner scope. Bug in scope rules?");
+        continue;
+      }
+      if (isReachableAmongDominated(UnwindWE->getEHPad(), MBB, WE->getEHPad(),
+                                    MDT)) {
+        LLVM_DEBUG(dbgs() << "Remainder BB: " << MBB->getNumber() << "."
+                          << MBB->getName() << " is ");
+        WebAssemblyException *InnerWE = getExceptionFor(MBB);
+        while (InnerWE != WE) {
+          LLVM_DEBUG(dbgs()
+                     << "  removed from " << InnerWE->getEHPad()->getNumber()
+                     << "." << InnerWE->getEHPad()->getName()
+                     << "'s exception\n");
+          InnerWE->removeFromBlocksSet(MBB);
+          InnerWE = InnerWE->getParentException();
+        }
+        WE->removeFromBlocksSet(MBB);
+        LLVM_DEBUG(dbgs() << "  removed from " << WE->getEHPad()->getNumber()
+                          << "." << WE->getEHPad()->getName()
+                          << "'s exception\n");
+        changeExceptionFor(MBB, WE->getParentException());
+        if (WE->getParentException())
+          WE->getParentException()->addToBlocksSet(MBB);
+      }
+    }
+  }
+
+  // Add BBs to exceptions' block vector
   for (auto DomNode : post_order(&MDT)) {
     MachineBasicBlock *MBB = DomNode->getBlock();
     WebAssemblyException *WE = getExceptionFor(MBB);
     for (; WE; WE = WE->getParentException())
-      WE->addBlock(MBB);
+      WE->addToBlocksVector(MBB);
   }
 
   SmallVector<WebAssemblyException*, 8> ExceptionPointers;
