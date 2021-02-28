@@ -234,7 +234,7 @@ public:
 
   void SetDisplayRecognizedArguments(bool b);
 
-  const ProcessLaunchInfo &GetProcessLaunchInfo();
+  const ProcessLaunchInfo &GetProcessLaunchInfo() const;
 
   void SetProcessLaunchInfo(const ProcessLaunchInfo &launch_info);
 
