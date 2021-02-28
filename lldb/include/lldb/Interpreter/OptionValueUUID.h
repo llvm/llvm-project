@@ -18,7 +18,7 @@ class OptionValueUUID : public OptionValue {
 public:
   OptionValueUUID() = default;
 
-  OptionValueUUID(const UUID &uuid) : OptionValue(), m_uuid(uuid) {}
+  OptionValueUUID(const UUID &uuid) : m_uuid(uuid) {}
 
   ~OptionValueUUID() override = default;
 

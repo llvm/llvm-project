@@ -15,8 +15,7 @@ using namespace lldb_private;
 
 OptionValueEnumeration::OptionValueEnumeration(
     const OptionEnumValues &enumerators, enum_type value)
-    : OptionValue(), m_current_value(value), m_default_value(value),
-      m_enumerations() {
+    : m_current_value(value), m_default_value(value) {
   SetEnumerations(enumerators);
 }
 

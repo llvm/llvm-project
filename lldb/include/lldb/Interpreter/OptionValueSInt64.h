@@ -19,13 +19,10 @@ public:
   OptionValueSInt64() = default;
 
   OptionValueSInt64(int64_t value)
-      : OptionValue(), m_current_value(value), m_default_value(value),
-        m_min_value(INT64_MIN), m_max_value(INT64_MAX) {}
+      : m_current_value(value), m_default_value(value) {}
 
   OptionValueSInt64(int64_t current_value, int64_t default_value)
-      : OptionValue(), m_current_value(current_value),
-        m_default_value(default_value), m_min_value(INT64_MIN),
-        m_max_value(INT64_MAX) {}
+      : m_current_value(current_value), m_default_value(default_value) {}
 
   OptionValueSInt64(const OptionValueSInt64 &rhs) = default;
 

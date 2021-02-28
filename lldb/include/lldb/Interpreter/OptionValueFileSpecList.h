@@ -21,7 +21,7 @@ public:
   OptionValueFileSpecList() = default;
 
   OptionValueFileSpecList(const FileSpecList &current_value)
-      : OptionValue(), m_current_value(current_value) {}
+      : m_current_value(current_value) {}
 
   ~OptionValueFileSpecList() override = default;
 

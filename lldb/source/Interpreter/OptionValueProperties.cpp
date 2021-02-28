@@ -20,13 +20,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-OptionValueProperties::OptionValueProperties(ConstString name)
-    : OptionValue(), m_name(name), m_properties(), m_name_to_index() {}
+OptionValueProperties::OptionValueProperties(ConstString name) : m_name(name) {}
 
 OptionValueProperties::OptionValueProperties(
     const OptionValueProperties &global_properties)
     : OptionValue(global_properties),
-      std::enable_shared_from_this<OptionValueProperties>(),
       m_name(global_properties.m_name),
       m_properties(global_properties.m_properties),
       m_name_to_index(global_properties.m_name_to_index) {

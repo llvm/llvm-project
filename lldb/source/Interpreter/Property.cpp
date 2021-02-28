@@ -22,7 +22,7 @@ using namespace lldb_private;
 
 Property::Property(const PropertyDefinition &definition)
     : m_name(definition.name), m_description(definition.description),
-      m_value_sp(), m_is_global(definition.global) {
+      m_is_global(definition.global) {
   switch (definition.type) {
   case OptionValue::eTypeInvalid:
   case OptionValue::eTypeProperties:

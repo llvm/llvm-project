@@ -16,11 +16,10 @@ namespace lldb_private {
 class OptionValueChar : public OptionValue {
 public:
   OptionValueChar(char value)
-      : OptionValue(), m_current_value(value), m_default_value(value) {}
+      : m_current_value(value), m_default_value(value) {}
 
   OptionValueChar(char current_value, char default_value)
-      : OptionValue(), m_current_value(current_value),
-        m_default_value(default_value) {}
+      : m_current_value(current_value), m_default_value(default_value) {}
 
   ~OptionValueChar() override = default;
 

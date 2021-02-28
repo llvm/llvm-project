@@ -15,9 +15,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-OptionValueFormatEntity::OptionValueFormatEntity(const char *default_format)
-    : OptionValue(), m_current_format(), m_default_format(), m_current_entry(),
-      m_default_entry() {
+OptionValueFormatEntity::OptionValueFormatEntity(const char *default_format) {
   if (default_format && default_format[0]) {
     llvm::StringRef default_format_str(default_format);
     Status error = FormatEntity::Parse(default_format_str, m_default_entry);

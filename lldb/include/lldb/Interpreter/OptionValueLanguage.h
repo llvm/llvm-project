@@ -18,12 +18,11 @@ namespace lldb_private {
 class OptionValueLanguage : public OptionValue {
 public:
   OptionValueLanguage(lldb::LanguageType value)
-      : OptionValue(), m_current_value(value), m_default_value(value) {}
+      : m_current_value(value), m_default_value(value) {}
 
   OptionValueLanguage(lldb::LanguageType current_value,
                       lldb::LanguageType default_value)
-      : OptionValue(), m_current_value(current_value),
-        m_default_value(default_value) {}
+      : m_current_value(current_value), m_default_value(default_value) {}
 
   ~OptionValueLanguage() override = default;
 
