@@ -18,9 +18,9 @@ namespace lldb_private {
 
 class OptionGroupValueObjectDisplay : public OptionGroup {
 public:
-  OptionGroupValueObjectDisplay();
+  OptionGroupValueObjectDisplay() = default;
 
-  ~OptionGroupValueObjectDisplay() override;
+  ~OptionGroupValueObjectDisplay() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 

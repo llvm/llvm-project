@@ -18,9 +18,9 @@ namespace lldb_private {
 
 class OptionGroupUUID : public OptionGroup {
 public:
-  OptionGroupUUID();
+  OptionGroupUUID() = default;
 
-  ~OptionGroupUUID() override;
+  ~OptionGroupUUID() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 

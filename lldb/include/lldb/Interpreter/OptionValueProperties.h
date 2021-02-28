@@ -23,8 +23,7 @@ class OptionValueProperties
     : public OptionValue,
       public std::enable_shared_from_this<OptionValueProperties> {
 public:
-  OptionValueProperties()
-      : OptionValue(), m_name(), m_properties(), m_name_to_index() {}
+  OptionValueProperties() = default;
 
   OptionValueProperties(ConstString name);
 
