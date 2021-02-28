@@ -17,6 +17,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 
@@ -676,10 +677,7 @@ static void compareLoops(const LoopT *L, const LoopT *OtherL,
   const SmallPtrSetImpl<const BlockT *> &OtherBlocksSet =
       OtherL->getBlocksSet();
   assert(BlocksSet.size() == OtherBlocksSet.size() &&
-         llvm::all_of(BlocksSet,
-                      [&OtherBlocksSet](const BlockT *BB) {
-                        return OtherBlocksSet.count(BB);
-                      }) &&
+         llvm::set_is_subset(BlocksSet, OtherBlocksSet) &&
          "Mismatched basic blocks in BlocksSets!");
 }
 #endif
