@@ -81,8 +81,6 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
 
 }
 
-OptionGroupPythonClassWithDict::~OptionGroupPythonClassWithDict() {}
-
 Status OptionGroupPythonClassWithDict::SetOptionValue(
     uint32_t option_idx,
     llvm::StringRef option_arg,

@@ -29,7 +29,7 @@ public:
                                  int key_option = 'k', 
                                  int value_option = 'v');
                       
-  ~OptionGroupPythonClassWithDict() override;
+  ~OptionGroupPythonClassWithDict() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
     return llvm::ArrayRef<OptionDefinition>(m_option_definition);

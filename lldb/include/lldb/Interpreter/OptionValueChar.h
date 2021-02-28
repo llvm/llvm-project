@@ -22,7 +22,7 @@ public:
       : OptionValue(), m_current_value(current_value),
         m_default_value(default_value) {}
 
-  ~OptionValueChar() override {}
+  ~OptionValueChar() override = default;
 
   // Virtual subclass pure virtual overrides
 

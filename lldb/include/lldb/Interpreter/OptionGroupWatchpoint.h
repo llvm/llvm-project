@@ -17,9 +17,9 @@ namespace lldb_private {
 
 class OptionGroupWatchpoint : public OptionGroup {
 public:
-  OptionGroupWatchpoint();
+  OptionGroupWatchpoint() = default;
 
-  ~OptionGroupWatchpoint() override;
+  ~OptionGroupWatchpoint() override = default;
 
   static bool IsWatchSizeSupported(uint32_t watch_size);
 

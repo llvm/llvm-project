@@ -17,7 +17,7 @@ namespace lldb_private {
 
 class OptionValueArch : public OptionValue {
 public:
-  OptionValueArch() : OptionValue(), m_current_value(), m_default_value() {}
+  OptionValueArch() = default;
 
   OptionValueArch(const char *triple)
       : OptionValue(), m_current_value(triple), m_default_value() {
@@ -31,7 +31,7 @@ public:
       : OptionValue(), m_current_value(current_value),
         m_default_value(default_value) {}
 
-  ~OptionValueArch() override {}
+  ~OptionValueArch() override = default;
 
   // Virtual subclass pure virtual overrides
 

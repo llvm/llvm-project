@@ -20,8 +20,6 @@ OptionValueEnumeration::OptionValueEnumeration(
   SetEnumerations(enumerators);
 }
 
-OptionValueEnumeration::~OptionValueEnumeration() {}
-
 void OptionValueEnumeration::DumpValue(const ExecutionContext *exe_ctx,
                                        Stream &strm, uint32_t dump_mask) {
   if (dump_mask & eDumpOptionType)

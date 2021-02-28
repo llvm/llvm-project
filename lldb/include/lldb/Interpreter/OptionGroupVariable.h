@@ -20,7 +20,7 @@ class OptionGroupVariable : public OptionGroup {
 public:
   OptionGroupVariable(bool show_frame_options);
 
-  ~OptionGroupVariable() override;
+  ~OptionGroupVariable() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 

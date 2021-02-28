@@ -70,8 +70,6 @@ OptionGroupVariable::OptionGroupVariable(bool show_frame_options)
     : OptionGroup(), include_frame_options(show_frame_options),
       summary(ValidateNamedSummary), summary_string(ValidateSummaryString) {}
 
-OptionGroupVariable::~OptionGroupVariable() {}
-
 Status
 OptionGroupVariable::SetOptionValue(uint32_t option_idx,
                                     llvm::StringRef option_arg,

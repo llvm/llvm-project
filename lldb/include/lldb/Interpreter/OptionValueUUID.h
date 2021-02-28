@@ -16,11 +16,11 @@ namespace lldb_private {
 
 class OptionValueUUID : public OptionValue {
 public:
-  OptionValueUUID() : OptionValue(), m_uuid() {}
+  OptionValueUUID() = default;
 
   OptionValueUUID(const UUID &uuid) : OptionValue(), m_uuid(uuid) {}
 
-  ~OptionValueUUID() override {}
+  ~OptionValueUUID() override = default;
 
   // Virtual subclass pure virtual overrides
 

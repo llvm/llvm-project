@@ -16,8 +16,6 @@ using namespace lldb_private;
 OptionGroupOutputFile::OptionGroupOutputFile()
     : m_file(), m_append(false, false) {}
 
-OptionGroupOutputFile::~OptionGroupOutputFile() {}
-
 static const uint32_t SHORT_OPTION_APND = 0x61706e64; // 'apnd'
 
 static constexpr OptionDefinition g_option_table[] = {
