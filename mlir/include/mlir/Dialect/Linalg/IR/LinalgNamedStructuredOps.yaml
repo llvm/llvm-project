@@ -15,14 +15,17 @@ structured_op: !LinalgStructuredOpConfig
     name: A
     usage: input
     shape: affine_map<()[s0, s1, s2] -> (s0, s2)>
+    element_type_var: T1
   - !<LinalgTensorDef>
     name: B
     usage: input
     shape: affine_map<()[s0, s1, s2] -> (s2, s1)>
+    element_type_var: T2
   - !<LinalgTensorDef>
     name: C
     usage: output
     shape: affine_map<()[s0, s1, s2] -> (s0, s1)>
+    element_type_var: U
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0, d2)>
@@ -46,7 +49,15 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              scalar_arg: A
+              symbolic_cast:
+                type_var: U
+                operands:
+                - !ScalarExpression
+                  scalar_arg: A
             - !ScalarExpression
-              scalar_arg: B
+              symbolic_cast:
+                type_var: U
+                operands:
+                - !ScalarExpression
+                  scalar_arg: B
 
