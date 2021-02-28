@@ -27306,7 +27306,7 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
 
     SDValue BLo, BHi;
     if (ISD::isBuildVectorOfConstantSDNodes(B.getNode())) {
-      // If the LHS is a constant, manually unpackl/unpackh.
+      // If the RHS is a constant, manually unpackl/unpackh.
       SmallVector<SDValue, 16> LoOps, HiOps;
       for (unsigned i = 0; i != NumElts; i += 16) {
         for (unsigned j = 0; j != 8; ++j) {
@@ -27549,7 +27549,7 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
 
   SDValue BLo, BHi;
   if (ISD::isBuildVectorOfConstantSDNodes(B.getNode())) {
-    // If the LHS is a constant, manually unpackl/unpackh and extend.
+    // If the RHS is a constant, manually unpackl/unpackh and extend.
     SmallVector<SDValue, 16> LoOps, HiOps;
     for (unsigned i = 0; i != NumElts; i += 16) {
       for (unsigned j = 0; j != 8; ++j) {
