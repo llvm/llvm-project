@@ -91,7 +91,8 @@ std::unique_ptr<TarWriter> macho::tar;
 int InputFile::idCount = 0;
 
 // Open a given file path and return it as a memory-mapped file.
-Optional<MemoryBufferRef> macho::readFile(StringRef path) {
+// Perform no sanity checks--just open, map & return.
+Optional<MemoryBufferRef> macho::readRawFile(StringRef path) {
   // Open a file.
   auto mbOrErr = MemoryBuffer::getFile(path);
   if (auto ec = mbOrErr.getError()) {
@@ -102,6 +103,27 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   std::unique_ptr<MemoryBuffer> &mb = *mbOrErr;
   MemoryBufferRef mbref = mb->getMemBufferRef();
   make<std::unique_ptr<MemoryBuffer>>(std::move(mb)); // take mb ownership
+  return mbref;
+}
+
+// Open a given file path and return it as a memory-mapped file.
+// Assume the file has one of a variety of linkable formats and
+// perform some basic sanity checks, notably minimum length.
+Optional<MemoryBufferRef> macho::readLinkableFile(StringRef path) {
+  Optional<MemoryBufferRef> maybeMbref = readRawFile(path);
+  if (!maybeMbref) {
+    return None;
+  }
+  MemoryBufferRef mbref = *maybeMbref;
+
+  // LD64 hard-codes 20 as minimum header size, which is presumably
+  // the smallest header among the the various linkable input formats
+  // LLD are less demanding. We insist on having only enough data for
+  // a magic number.
+  if (mbref.getBufferSize() < sizeof(uint32_t)) {
+    error("file is too small to contain a magic number: " + path);
+    return None;
+  }
 
   // If this is a regular non-fat file, return it.
   const char *buf = mbref.getBufferStart();
@@ -544,7 +566,7 @@ void ObjFile::parseDebugInfo() {
 
 // The path can point to either a dylib or a .tbd file.
 static Optional<DylibFile *> loadDylib(StringRef path, DylibFile *umbrella) {
-  Optional<MemoryBufferRef> mbref = readFile(path);
+  Optional<MemoryBufferRef> mbref = readLinkableFile(path);
   if (!mbref) {
     error("could not read dylib file at " + path);
     return {};
