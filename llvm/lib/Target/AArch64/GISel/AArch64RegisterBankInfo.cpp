@@ -666,9 +666,12 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case AArch64::G_DUP: {
     Register ScalarReg = MI.getOperand(1).getReg();
+    LLT ScalarTy = MRI.getType(ScalarReg);
     auto ScalarDef = MRI.getVRegDef(ScalarReg);
-    if (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
-        onlyDefinesFP(*ScalarDef, MRI, TRI))
+    // s8 is an exception for G_DUP, which we always want on gpr.
+    if (ScalarTy.getSizeInBits() != 8 &&
+        (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
+         onlyDefinesFP(*ScalarDef, MRI, TRI)))
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
     else
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR};

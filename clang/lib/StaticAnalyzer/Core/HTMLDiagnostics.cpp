@@ -10,11 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/IssueHash.h"
-#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Stmt.h"
+#include "clang/Analysis/IssueHash.h"
+#include "clang/Analysis/MacroExpansionContext.h"
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -135,14 +136,16 @@ private:
 void ento::createHTMLDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputDir, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const cross_tu::CrossTranslationUnitContext &CTU,
+    const MacroExpansionContext &MacroExpansions) {
 
   // FIXME: HTML is currently our default output type, but if the output
   // directory isn't specified, it acts like if it was in the minimal text
   // output mode. This doesn't make much sense, we should have the minimal text
   // as our default. In the case of backward compatibility concerns, this could
   // be preserved with -analyzer-config-compatibility-mode=true.
-  createTextMinimalPathDiagnosticConsumer(DiagOpts, C, OutputDir, PP, CTU);
+  createTextMinimalPathDiagnosticConsumer(DiagOpts, C, OutputDir, PP, CTU,
+                                          MacroExpansions);
 
   // TODO: Emit an error here.
   if (OutputDir.empty())
@@ -154,8 +157,10 @@ void ento::createHTMLDiagnosticConsumer(
 void ento::createHTMLSingleFileDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputDir, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
-  createTextMinimalPathDiagnosticConsumer(DiagOpts, C, OutputDir, PP, CTU);
+    const cross_tu::CrossTranslationUnitContext &CTU,
+    const clang::MacroExpansionContext &MacroExpansions) {
+  createTextMinimalPathDiagnosticConsumer(DiagOpts, C, OutputDir, PP, CTU,
+                                          MacroExpansions);
 
   // TODO: Emit an error here.
   if (OutputDir.empty())
@@ -167,23 +172,29 @@ void ento::createHTMLSingleFileDiagnosticConsumer(
 void ento::createPlistHTMLDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &prefix, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const cross_tu::CrossTranslationUnitContext &CTU,
+    const MacroExpansionContext &MacroExpansions) {
   createHTMLDiagnosticConsumer(
-      DiagOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP,
-      CTU);
-  createPlistMultiFileDiagnosticConsumer(DiagOpts, C, prefix, PP, CTU);
+      DiagOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP, CTU,
+      MacroExpansions);
+  createPlistMultiFileDiagnosticConsumer(DiagOpts, C, prefix, PP, CTU,
+                                         MacroExpansions);
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, prefix, PP,
-                                          CTU);
+                                          CTU, MacroExpansions);
 }
 
 void ento::createSarifHTMLDiagnosticConsumer(
-  PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &sarif_file, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
-  createHTMLDiagnosticConsumer(DiagOpts, C, std::string(llvm::sys::path::parent_path(sarif_file)), PP, CTU);
-  createSarifDiagnosticConsumer(DiagOpts, C, sarif_file, PP, CTU);
-  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, sarif_file, PP,
-                                          CTU);
+    const cross_tu::CrossTranslationUnitContext &CTU,
+    const MacroExpansionContext &MacroExpansions) {
+  createHTMLDiagnosticConsumer(
+      DiagOpts, C, std::string(llvm::sys::path::parent_path(sarif_file)), PP,
+      CTU, MacroExpansions);
+  createSarifDiagnosticConsumer(DiagOpts, C, sarif_file, PP, CTU,
+                                MacroExpansions);
+  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, sarif_file,
+                                          PP, CTU, MacroExpansions);
 }
 
 //===----------------------------------------------------------------------===//

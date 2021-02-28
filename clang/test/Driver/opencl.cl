@@ -19,6 +19,8 @@
 // RUN: %clang -S -### -cl-uniform-work-group-size %s 2>&1 | FileCheck --check-prefix=CHECK-UNIFORM-WG %s
 // RUN: not %clang -cl-std=c99 -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-C99 %s
 // RUN: not %clang -cl-std=invalid -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID %s
+// RUN: %clang -S -### -target spir-unknown-unknown %s 2>&1 | FileCheck --check-prefix=CHECK-W-SPIR-COMPAT %s
+// RUN: %clang -S -### -target amdgcn-amd-amdhsa-opencl %s 2>&1 | FileCheck --check-prefix=CHECK-NO-W-SPIR-COMPAT %s
 
 // CHECK-CL: "-cc1" {{.*}} "-cl-std=CL"
 // CHECK-CL10: "-cc1" {{.*}} "-cl-std=CL1.0"
@@ -44,5 +46,8 @@
 // CHECK-UNIFORM-WG: "-cc1" {{.*}} "-cl-uniform-work-group-size"
 // CHECK-C99: error: invalid value 'c99' in '-cl-std=c99'
 // CHECK-INVALID: error: invalid value 'invalid' in '-cl-std=invalid'
+
+// CHECK-W-SPIR-COMPAT: "-Wspir-compat"
+// CHECK-NO-W-SPIR-COMPAT-NOT: "-Wspir-compat"
 
 kernel void func(void);

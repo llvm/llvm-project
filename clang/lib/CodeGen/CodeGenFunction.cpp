@@ -711,14 +711,14 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   CurFnInfo = &FnInfo;
   assert(CurFn->isDeclaration() && "Function already has body?");
 
-  // If this function has been blacklisted for any of the enabled sanitizers,
+  // If this function is ignored for any of the enabled sanitizers,
   // disable the sanitizer for the function.
   do {
 #define SANITIZER(NAME, ID)                                                    \
   if (SanOpts.empty())                                                         \
     break;                                                                     \
   if (SanOpts.has(SanitizerKind::ID))                                          \
-    if (CGM.isInSanitizerBlacklist(SanitizerKind::ID, Fn, Loc))                \
+    if (CGM.isInNoSanitizeList(SanitizerKind::ID, Fn, Loc))                    \
       SanOpts.set(SanitizerKind::ID, false);
 
 #include "clang/Basic/Sanitizers.def"

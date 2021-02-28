@@ -899,7 +899,7 @@ void Liveness::resetLiveIns() {
       B.removeLiveIn(I);
     // Add the newly computed live-ins.
     const RegisterAggr &LiveIns = LiveMap[&B];
-    for (const RegisterRef &R : make_range(LiveIns.rr_begin(), LiveIns.rr_end()))
+    for (const RegisterRef R : make_range(LiveIns.rr_begin(), LiveIns.rr_end()))
       B.addLiveIn({MCPhysReg(R.Reg), R.Mask});
   }
 }

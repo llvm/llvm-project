@@ -181,8 +181,9 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned MinTrailingZeros = LHS.countMinTrailingZeros();
 
   // Minimum shift amount low bits are known zero.
-  if (RHS.getMinValue().ult(BitWidth)) {
-    MinTrailingZeros += RHS.getMinValue().getZExtValue();
+  APInt MinShiftAmount = RHS.getMinValue();
+  if (MinShiftAmount.ult(BitWidth)) {
+    MinTrailingZeros += MinShiftAmount.getZExtValue();
     MinTrailingZeros = std::min(MinTrailingZeros, BitWidth);
   }
 
@@ -208,8 +209,9 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned MinLeadingZeros = LHS.countMinLeadingZeros();
 
   // Minimum shift amount high bits are known zero.
-  if (RHS.getMinValue().ult(BitWidth)) {
-    MinLeadingZeros += RHS.getMinValue().getZExtValue();
+  APInt MinShiftAmount = RHS.getMinValue();
+  if (MinShiftAmount.ult(BitWidth)) {
+    MinLeadingZeros += MinShiftAmount.getZExtValue();
     MinLeadingZeros = std::min(MinLeadingZeros, BitWidth);
   }
 
@@ -234,13 +236,14 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned MinLeadingOnes = LHS.countMinLeadingOnes();
 
   // Minimum shift amount high bits are known sign bits.
-  if (RHS.getMinValue().ult(BitWidth)) {
+  APInt MinShiftAmount = RHS.getMinValue();
+  if (MinShiftAmount.ult(BitWidth)) {
     if (MinLeadingZeros) {
-      MinLeadingZeros += RHS.getMinValue().getZExtValue();
+      MinLeadingZeros += MinShiftAmount.getZExtValue();
       MinLeadingZeros = std::min(MinLeadingZeros, BitWidth);
     }
     if (MinLeadingOnes) {
-      MinLeadingOnes += RHS.getMinValue().getZExtValue();
+      MinLeadingOnes += MinShiftAmount.getZExtValue();
       MinLeadingOnes = std::min(MinLeadingOnes, BitWidth);
     }
   }

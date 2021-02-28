@@ -2835,3 +2835,34 @@ func @should_fuse_multi_store_producer_with_scaping_memrefs_and_preserve_src(
 
   return
 }
+
+// -----
+func @should_not_fuse_due_to_dealloc(%arg0: memref<16xf32>){
+  %A = alloc() : memref<16xf32>
+  %C = alloc() : memref<16xf32>
+  %cst_1 = constant 1.000000e+00 : f32
+  affine.for %arg1 = 0 to 16 {
+    %a = affine.load %arg0[%arg1] : memref<16xf32>
+    affine.store %a, %A[%arg1] : memref<16xf32>
+    affine.store %a, %C[%arg1] : memref<16xf32>
+  }
+  dealloc %C : memref<16xf32>
+  %B = alloc() : memref<16xf32>
+  affine.for %arg1 = 0 to 16 {
+    %a = affine.load %A[%arg1] : memref<16xf32>
+    %b = addf %cst_1, %a : f32
+    affine.store %b, %B[%arg1] : memref<16xf32>
+  }
+  dealloc %A : memref<16xf32>
+  return
+}
+// CHECK-LABEL: func @should_not_fuse_due_to_dealloc
+// CHECK:         affine.for
+// CHECK-NEXT:      affine.load
+// CHECK-NEXT:      affine.store
+// CHECK-NEXT:      affine.store
+// CHECK:         dealloc
+// CHECK:         affine.for
+// CHECK-NEXT:      affine.load
+// CHECK-NEXT:      addf
+// CHECK-NEXT:      affine.store

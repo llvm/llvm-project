@@ -155,8 +155,9 @@ static Type parseAnyType(DialectAsmParser &parser, Location loc) {
     return nullptr;
   }
 
-  return AnyQuantizedType::getChecked(typeFlags, storageType, expressedType,
-                                      storageTypeMin, storageTypeMax, loc);
+  return AnyQuantizedType::getChecked(loc, typeFlags, storageType,
+                                      expressedType, storageTypeMin,
+                                      storageTypeMax);
 }
 
 static ParseResult parseQuantParams(DialectAsmParser &parser, double &scale,
@@ -279,13 +280,13 @@ static Type parseUniformType(DialectAsmParser &parser, Location loc) {
     ArrayRef<double> scalesRef(scales.begin(), scales.end());
     ArrayRef<int64_t> zeroPointsRef(zeroPoints.begin(), zeroPoints.end());
     return UniformQuantizedPerAxisType::getChecked(
-        typeFlags, storageType, expressedType, scalesRef, zeroPointsRef,
-        quantizedDimension, storageTypeMin, storageTypeMax, loc);
+        loc, typeFlags, storageType, expressedType, scalesRef, zeroPointsRef,
+        quantizedDimension, storageTypeMin, storageTypeMax);
   }
 
-  return UniformQuantizedType::getChecked(typeFlags, storageType, expressedType,
-                                          scales.front(), zeroPoints.front(),
-                                          storageTypeMin, storageTypeMax, loc);
+  return UniformQuantizedType::getChecked(
+      loc, typeFlags, storageType, expressedType, scales.front(),
+      zeroPoints.front(), storageTypeMin, storageTypeMax);
 }
 
 /// Parses an CalibratedQuantizedType.
@@ -313,7 +314,7 @@ static Type parseCalibratedType(DialectAsmParser &parser, Location loc) {
     return nullptr;
   }
 
-  return CalibratedQuantizedType::getChecked(expressedType, min, max, loc);
+  return CalibratedQuantizedType::getChecked(loc, expressedType, min, max);
 }
 
 /// Parse a type registered to this dialect.

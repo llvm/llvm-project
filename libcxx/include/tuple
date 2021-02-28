@@ -55,8 +55,7 @@ public:
         explicit(see-below) tuple(allocator_arg_t, const Alloc& a, pair<U1, U2>&&);
 
     tuple& operator=(const tuple&);
-    tuple&
-        operator=(tuple&&) noexcept(AND(is_nothrow_move_assignable<T>::value ...));
+    tuple& operator=(tuple&&) noexcept(is_nothrow_move_assignable_v<T> && ...);
     template <class... U>
         tuple& operator=(const tuple<U...>&);
     template <class... U>
@@ -65,6 +64,11 @@ public:
         tuple& operator=(const pair<U1, U2>&); // iff sizeof...(T) == 2
     template <class U1, class U2>
         tuple& operator=(pair<U1, U2>&&); // iff sizeof...(T) == 2
+
+    template<class U, size_t N>
+        tuple& operator=(array<U, N> const&) // iff sizeof...(T) == N, EXTENSION
+    template<class U, size_t N>
+        tuple& operator=(array<U, N>&&) // iff sizeof...(T) == N, EXTENSION
 
     void swap(tuple&) noexcept(AND(swap(declval<T&>(), declval<T&>())...));
 };
@@ -257,15 +261,6 @@ public:
     __tuple_leaf(const __tuple_leaf& __t) = default;
     __tuple_leaf(__tuple_leaf&& __t) = default;
 
-    template <class _Tp>
-        _LIBCPP_INLINE_VISIBILITY
-        __tuple_leaf&
-        operator=(_Tp&& __t) _NOEXCEPT_((is_nothrow_assignable<_Hp&, _Tp>::value))
-        {
-            __value_ = _VSTD::forward<_Tp>(__t);
-            return *this;
-        }
-
     _LIBCPP_INLINE_VISIBILITY
     int swap(__tuple_leaf& __t) _NOEXCEPT_(__is_nothrow_swappable<__tuple_leaf>::value)
     {
@@ -330,15 +325,6 @@ public:
 
     __tuple_leaf(__tuple_leaf const &) = default;
     __tuple_leaf(__tuple_leaf &&) = default;
-
-    template <class _Tp>
-        _LIBCPP_INLINE_VISIBILITY
-        __tuple_leaf&
-        operator=(_Tp&& __t) _NOEXCEPT_((is_nothrow_assignable<_Hp&, _Tp>::value))
-        {
-            _Hp::operator=(_VSTD::forward<_Tp>(__t));
-            return *this;
-        }
 
     _LIBCPP_INLINE_VISIBILITY
     int
@@ -429,49 +415,30 @@ struct _LIBCPP_DECLSPEC_EMPTY_BASES __tuple_impl<__tuple_indices<_Indx...>, _Tp.
                                        typename __make_tuple_types<_Tuple>::type>::type>(_VSTD::get<_Indx>(__t)))...
             {}
 
-    template <class _Tuple>
-        _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            __tuple_assignable<_Tuple, tuple<_Tp...> >::value,
-            __tuple_impl&
-        >::type
-        operator=(_Tuple&& __t) _NOEXCEPT_((__all<is_nothrow_assignable<_Tp&, typename tuple_element<_Indx,
-                                       typename __make_tuple_types<_Tuple>::type>::type>::value...>::value))
-        {
-            __swallow(__tuple_leaf<_Indx, _Tp>::operator=(_VSTD::forward<typename tuple_element<_Indx,
-                                       typename __make_tuple_types<_Tuple>::type>::type>(_VSTD::get<_Indx>(__t)))...);
-            return *this;
-        }
-
     __tuple_impl(const __tuple_impl&) = default;
     __tuple_impl(__tuple_impl&&) = default;
-
-    _LIBCPP_INLINE_VISIBILITY
-    __tuple_impl&
-    operator=(const __tuple_impl& __t) _NOEXCEPT_((__all<is_nothrow_copy_assignable<_Tp>::value...>::value))
-    {
-        __swallow(__tuple_leaf<_Indx, _Tp>::operator=(static_cast<const __tuple_leaf<_Indx, _Tp>&>(__t).get())...);
-        return *this;
-    }
-
-    _LIBCPP_INLINE_VISIBILITY
-    __tuple_impl&
-    operator=(__tuple_impl&& __t) _NOEXCEPT_((__all<is_nothrow_move_assignable<_Tp>::value...>::value))
-    {
-        __swallow(__tuple_leaf<_Indx, _Tp>::operator=(_VSTD::forward<_Tp>(static_cast<__tuple_leaf<_Indx, _Tp>&>(__t).get()))...);
-        return *this;
-    }
 
     _LIBCPP_INLINE_VISIBILITY
     void swap(__tuple_impl& __t)
         _NOEXCEPT_(__all<__is_nothrow_swappable<_Tp>::value...>::value)
     {
-        __swallow(__tuple_leaf<_Indx, _Tp>::swap(static_cast<__tuple_leaf<_Indx, _Tp>&>(__t))...);
+        _VSTD::__swallow(__tuple_leaf<_Indx, _Tp>::swap(static_cast<__tuple_leaf<_Indx, _Tp>&>(__t))...);
     }
 };
 
+template<class _Dest, class _Source, size_t ..._Np>
+_LIBCPP_INLINE_VISIBILITY
+void __memberwise_copy_assign(_Dest& __dest, _Source const& __source, __tuple_indices<_Np...>) {
+    _VSTD::__swallow(((_VSTD::get<_Np>(__dest) = _VSTD::get<_Np>(__source)), void(), 0)...);
+}
 
+template<class _Dest, class _Source, class ..._Up, size_t ..._Np>
+_LIBCPP_INLINE_VISIBILITY
+void __memberwise_forward_assign(_Dest& __dest, _Source&& __source, __tuple_types<_Up...>, __tuple_indices<_Np...>) {
+    _VSTD::__swallow(((
+        _VSTD::get<_Np>(__dest) = _VSTD::forward<_Up>(_VSTD::get<_Np>(_VSTD::forward<_Source>(__source)))
+    ), void(), 0)...);
+}
 
 template <class ..._Tp>
 class _LIBCPP_TEMPLATE_VIS tuple
@@ -916,39 +883,129 @@ public:
         tuple(allocator_arg_t, const _Alloc& __a, _Tuple&& __t)
             : __base_(allocator_arg_t(), __a, _VSTD::forward<_Tuple>(__t)) {}
 
-    using _CanCopyAssign = __all<is_copy_assignable<_Tp>::value...>;
-    using _CanMoveAssign = __all<is_move_assignable<_Tp>::value...>;
-
+    // [tuple.assign]
     _LIBCPP_INLINE_VISIBILITY
-    tuple& operator=(typename conditional<_CanCopyAssign::value, tuple, __nat>::type const& __t)
-        _NOEXCEPT_((__all<is_nothrow_copy_assignable<_Tp>::value...>::value))
+    tuple& operator=(_If<_And<is_copy_assignable<_Tp>...>::value, tuple, __nat> const& __tuple)
+        _NOEXCEPT_((_And<is_nothrow_copy_assignable<_Tp>...>::value))
     {
-        __base_.operator=(__t.__base_);
+        _VSTD::__memberwise_copy_assign(*this, __tuple,
+            typename __make_tuple_indices<sizeof...(_Tp)>::type());
         return *this;
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    tuple& operator=(typename conditional<_CanMoveAssign::value, tuple, __nat>::type&& __t)
-        _NOEXCEPT_((__all<is_nothrow_move_assignable<_Tp>::value...>::value))
+    tuple& operator=(_If<_And<is_move_assignable<_Tp>...>::value, tuple, __nat>&& __tuple)
+        _NOEXCEPT_((_And<is_nothrow_move_assignable<_Tp>...>::value))
     {
-        __base_.operator=(static_cast<_BaseT&&>(__t.__base_));
+        _VSTD::__memberwise_forward_assign(*this, _VSTD::move(__tuple),
+            __tuple_types<_Tp...>(),
+            typename __make_tuple_indices<sizeof...(_Tp)>::type());
         return *this;
     }
 
-    template <class _Tuple,
-              class = typename enable_if
-                      <
-                         __tuple_assignable<_Tuple, tuple>::value
-                      >::type
-             >
-        _LIBCPP_INLINE_VISIBILITY
-        tuple&
-        operator=(_Tuple&& __t) _NOEXCEPT_((is_nothrow_assignable<_BaseT&, _Tuple>::value))
-        {
-            __base_.operator=(_VSTD::forward<_Tuple>(__t));
-            return *this;
-        }
+    template<class... _Up, _EnableIf<
+        _And<
+            _BoolConstant<sizeof...(_Tp) == sizeof...(_Up)>,
+            is_assignable<_Tp&, _Up const&>...
+        >::value
+    ,int> = 0>
+    _LIBCPP_INLINE_VISIBILITY
+    tuple& operator=(tuple<_Up...> const& __tuple)
+        _NOEXCEPT_((_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value))
+    {
+        _VSTD::__memberwise_copy_assign(*this, __tuple,
+            typename __make_tuple_indices<sizeof...(_Tp)>::type());
+        return *this;
+    }
 
+    template<class... _Up, _EnableIf<
+        _And<
+            _BoolConstant<sizeof...(_Tp) == sizeof...(_Up)>,
+            is_assignable<_Tp&, _Up>...
+        >::value
+    ,int> = 0>
+    _LIBCPP_INLINE_VISIBILITY
+    tuple& operator=(tuple<_Up...>&& __tuple)
+        _NOEXCEPT_((_And<is_nothrow_assignable<_Tp&, _Up>...>::value))
+    {
+        _VSTD::__memberwise_forward_assign(*this, _VSTD::move(__tuple),
+            __tuple_types<_Up...>(),
+            typename __make_tuple_indices<sizeof...(_Tp)>::type());
+        return *this;
+    }
+
+    template<class _Up1, class _Up2, class _Dep = true_type, _EnableIf<
+        _And<_Dep,
+            _BoolConstant<sizeof...(_Tp) == 2>,
+            is_assignable<_FirstType<_Tp..., _Dep>&, _Up1 const&>,
+            is_assignable<_SecondType<_Tp..., _Dep>&, _Up2 const&>
+        >::value
+    ,int> = 0>
+    _LIBCPP_INLINE_VISIBILITY
+    tuple& operator=(pair<_Up1, _Up2> const& __pair)
+        _NOEXCEPT_((_And<
+            is_nothrow_assignable<_FirstType<_Tp...>&, _Up1 const&>,
+            is_nothrow_assignable<_SecondType<_Tp...>&, _Up2 const&>
+        >::value))
+    {
+        _VSTD::get<0>(*this) = __pair.first;
+        _VSTD::get<1>(*this) = __pair.second;
+        return *this;
+    }
+
+    template<class _Up1, class _Up2, class _Dep = true_type, _EnableIf<
+        _And<_Dep,
+            _BoolConstant<sizeof...(_Tp) == 2>,
+            is_assignable<_FirstType<_Tp..., _Dep>&, _Up1>,
+            is_assignable<_SecondType<_Tp..., _Dep>&, _Up2>
+        >::value
+    ,int> = 0>
+    _LIBCPP_INLINE_VISIBILITY
+    tuple& operator=(pair<_Up1, _Up2>&& __pair)
+        _NOEXCEPT_((_And<
+            is_nothrow_assignable<_FirstType<_Tp...>&, _Up1>,
+            is_nothrow_assignable<_SecondType<_Tp...>&, _Up2>
+        >::value))
+    {
+        _VSTD::get<0>(*this) = _VSTD::move(__pair.first);
+        _VSTD::get<1>(*this) = _VSTD::move(__pair.second);
+        return *this;
+    }
+
+    // EXTENSION
+    template<class _Up, size_t _Np, class = _EnableIf<
+        _And<
+            _BoolConstant<_Np == sizeof...(_Tp)>,
+            is_assignable<_Tp&, _Up const&>...
+        >::value
+    > >
+    _LIBCPP_INLINE_VISIBILITY
+    tuple& operator=(array<_Up, _Np> const& __array)
+        _NOEXCEPT_((_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value))
+    {
+        _VSTD::__memberwise_copy_assign(*this, __array,
+            typename __make_tuple_indices<sizeof...(_Tp)>::type());
+        return *this;
+    }
+
+    // EXTENSION
+    template<class _Up, size_t _Np, class = void, class = _EnableIf<
+        _And<
+            _BoolConstant<_Np == sizeof...(_Tp)>,
+            is_assignable<_Tp&, _Up>...
+        >::value
+    > >
+    _LIBCPP_INLINE_VISIBILITY
+    tuple& operator=(array<_Up, _Np>&& __array)
+        _NOEXCEPT_((_And<is_nothrow_assignable<_Tp&, _Up>...>::value))
+    {
+        _VSTD::__memberwise_forward_assign(*this, _VSTD::move(__array),
+            __tuple_types<_If<true, _Up, _Tp>...>(),
+            typename __make_tuple_indices<sizeof...(_Tp)>::type());
+        return *this;
+    }
+
+    // [tuple.swap]
     _LIBCPP_INLINE_VISIBILITY
     void swap(tuple& __t) _NOEXCEPT_(__all<__is_nothrow_swappable<_Tp>::value...>::value)
         {__base_.swap(__t.__base_);}

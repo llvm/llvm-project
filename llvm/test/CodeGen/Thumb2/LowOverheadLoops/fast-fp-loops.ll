@@ -372,8 +372,6 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    bpl .LBB2_8
 ; CHECK-NEXT:  .LBB2_7: @ %cond.load12
 ; CHECK-NEXT:    @ in Loop: Header=BB2_3 Depth=1
-; CHECK-NEXT:    vmovx.f16 s24, s20
-; CHECK-NEXT:    vins.f16 s20, s24
 ; CHECK-NEXT:    vldr.16 s24, [r0, #6]
 ; CHECK-NEXT:    vins.f16 s21, s24
 ; CHECK-NEXT:  .LBB2_8: @ %else13
@@ -418,14 +416,10 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    @ in Loop: Header=BB2_3 Depth=1
 ; CHECK-NEXT:    vldr.16 s24, [r0, #2]
 ; CHECK-NEXT:    vins.f16 s20, s24
-; CHECK-NEXT:    vmovx.f16 s24, s21
-; CHECK-NEXT:    vins.f16 s21, s24
 ; CHECK-NEXT:    lsls r4, r2, #29
 ; CHECK-NEXT:    bpl .LBB2_6
 ; CHECK-NEXT:  .LBB2_14: @ %cond.load9
 ; CHECK-NEXT:    @ in Loop: Header=BB2_3 Depth=1
-; CHECK-NEXT:    vmovx.f16 s24, s20
-; CHECK-NEXT:    vins.f16 s20, s24
 ; CHECK-NEXT:    vmovx.f16 s24, s21
 ; CHECK-NEXT:    vldr.16 s21, [r0, #4]
 ; CHECK-NEXT:    vins.f16 s21, s24
@@ -441,14 +435,10 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    @ in Loop: Header=BB2_3 Depth=1
 ; CHECK-NEXT:    vldr.16 s28, [r1, #2]
 ; CHECK-NEXT:    vins.f16 s24, s28
-; CHECK-NEXT:    vmovx.f16 s28, s25
-; CHECK-NEXT:    vins.f16 s25, s28
 ; CHECK-NEXT:    lsls r4, r2, #29
 ; CHECK-NEXT:    bpl .LBB2_11
 ; CHECK-NEXT:  .LBB2_17: @ %cond.load22
 ; CHECK-NEXT:    @ in Loop: Header=BB2_3 Depth=1
-; CHECK-NEXT:    vmovx.f16 s28, s24
-; CHECK-NEXT:    vins.f16 s24, s28
 ; CHECK-NEXT:    vmovx.f16 s28, s25
 ; CHECK-NEXT:    vldr.16 s25, [r1, #4]
 ; CHECK-NEXT:    vins.f16 s25, s28
@@ -456,8 +446,6 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    bpl.w .LBB2_2
 ; CHECK-NEXT:  .LBB2_18: @ %cond.load25
 ; CHECK-NEXT:    @ in Loop: Header=BB2_3 Depth=1
-; CHECK-NEXT:    vmovx.f16 s28, s24
-; CHECK-NEXT:    vins.f16 s24, s28
 ; CHECK-NEXT:    vldr.16 s28, [r1, #6]
 ; CHECK-NEXT:    vins.f16 s25, s28
 ; CHECK-NEXT:    b .LBB2_2

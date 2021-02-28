@@ -1036,3 +1036,11 @@ void llvm::identifyNoAliasScopesToClone(
       if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
         NoAliasDeclScopes.push_back(Decl->getScopeList());
 }
+
+void llvm::identifyNoAliasScopesToClone(
+    BasicBlock::iterator Start, BasicBlock::iterator End,
+    SmallVectorImpl<MDNode *> &NoAliasDeclScopes) {
+  for (Instruction &I : make_range(Start, End))
+    if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
+      NoAliasDeclScopes.push_back(Decl->getScopeList());
+}

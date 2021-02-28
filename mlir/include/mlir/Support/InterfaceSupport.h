@@ -152,10 +152,8 @@ class InterfaceMap {
 public:
   InterfaceMap(InterfaceMap &&) = default;
   ~InterfaceMap() {
-    if (interfaces) {
-      for (auto &it : *interfaces)
-        free(it.second);
-    }
+    for (auto &it : interfaces)
+      free(it.second);
   }
 
   /// Construct an InterfaceMap with the given set of template types. For
@@ -182,15 +180,22 @@ public:
   /// Returns an instance of the concept object for the given interface if it
   /// was registered to this map, null otherwise.
   template <typename T> typename T::Concept *lookup() const {
-    void *inst = interfaces ? interfaces->lookup(T::getInterfaceID()) : nullptr;
-    return reinterpret_cast<typename T::Concept *>(inst);
+    return reinterpret_cast<typename T::Concept *>(lookup(T::getInterfaceID()));
   }
 
 private:
+  /// Compare two TypeID instances by comparing the underlying pointer.
+  static bool compare(TypeID lhs, TypeID rhs) {
+    return lhs.getAsOpaquePointer() < rhs.getAsOpaquePointer();
+  }
+
   InterfaceMap() = default;
   InterfaceMap(MutableArrayRef<std::pair<TypeID, void *>> elements)
-      : interfaces(std::make_unique<llvm::SmallDenseMap<TypeID, void *>>(
-            elements.begin(), elements.end())) {}
+      : interfaces(elements.begin(), elements.end()) {
+    llvm::sort(interfaces, [](const auto &lhs, const auto &rhs) {
+      return compare(lhs.first, rhs.first);
+    });
+  }
 
   template <typename... Ts>
   static InterfaceMap getImpl(std::tuple<Ts...> *) {
@@ -200,9 +205,17 @@ private:
     return InterfaceMap(elements);
   }
 
-  /// The internal map of interfaces. This is constructed statically for each
-  /// set of interfaces.
-  std::unique_ptr<llvm::SmallDenseMap<TypeID, void *>> interfaces;
+  /// Returns an instance of the concept object for the given interface id if it
+  /// was registered to this map, null otherwise.
+  void *lookup(TypeID id) const {
+    auto it = llvm::lower_bound(interfaces, id, [](const auto &it, TypeID id) {
+      return compare(it.first, id);
+    });
+    return (it != interfaces.end() && it->first == id) ? it->second : nullptr;
+  }
+
+  /// A list of interface instances, sorted by TypeID.
+  SmallVector<std::pair<TypeID, void *>> interfaces;
 };
 
 } // end namespace detail

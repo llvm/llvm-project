@@ -1919,44 +1919,6 @@ let Predicates = [HasMVEInt] in {
             (INSERT_SUBREG (v8f16 (IMPLICIT_DEF)), (f16 HPR:$src), ssub_0)>;
   def : Pat<(v8f16 (scalar_to_vector GPR:$src)),
             (MVE_VMOV_to_lane_16 (v8f16 (IMPLICIT_DEF)), rGPR:$src, (i32 0))>;
-
-  foreach LANE = [0, 2, 4, 6] in {
-    defvar SSUB = !cast<SubRegIndex>("ssub_"#!srl(LANE, 1));
-
-    // v8f16 pattern for inserting two lanes using a VINS
-    def : Pat<(insertelt (insertelt (v8f16 MQPR:$srcV), (f16 HPR:$src1), LANE),
-                         (f16 HPR:$src2), !add(LANE,1)),
-              (COPY_TO_REGCLASS (INSERT_SUBREG (v4f32 (COPY_TO_REGCLASS MQPR:$srcV, MQPR)),
-                                  (VINSH (COPY_TO_REGCLASS HPR:$src1, SPR),
-                                         (COPY_TO_REGCLASS HPR:$src2, SPR)),
-                                 SSUB), MQPR)>;
-
-    // v8i16 pattern for extracting 2 even lane elements and inserting them using a VINS
-    def : Pat<(ARMinsertelt (ARMinsertelt (v8i16 MQPR:$srcV),
-                                          (ARMvgetlaneu (v8i16 MQPR:$src1), imm_even:$lane1),
-                                          LANE),
-                           (ARMvgetlaneu (v8i16 MQPR:$src2), imm_even:$lane2),
-                           !add(LANE,1)),
-              (COPY_TO_REGCLASS (INSERT_SUBREG (v4f32 (COPY_TO_REGCLASS MQPR:$srcV, MQPR)),
-                                  (VINSH (EXTRACT_SUBREG (v8f16 (COPY_TO_REGCLASS MQPR:$src1, MQPR)),
-                                                         (SSubReg_f16_reg imm_even:$lane1)),
-                                         (EXTRACT_SUBREG (v8f16 (COPY_TO_REGCLASS MQPR:$src2, MQPR)),
-                                                         (SSubReg_f16_reg imm_even:$lane2))),
-                                 SSUB), MQPR)>;
-
-    // v8i16 pattern for extracting an element using VMOVX and inserting another using a VINS
-    def : Pat<(ARMinsertelt (ARMinsertelt (v8i16 MQPR:$srcV),
-                                          (ARMvgetlaneu (v8i16 MQPR:$src1), imm_odd:$lane1),
-                                          LANE),
-                            (ARMvgetlaneu (v8i16 MQPR:$src2), imm_even:$lane2),
-                            !add(LANE,1)),
-              (COPY_TO_REGCLASS (INSERT_SUBREG (v4f32 (COPY_TO_REGCLASS MQPR:$srcV, MQPR)),
-                                  (VINSH (VMOVH (EXTRACT_SUBREG (v8f16 (COPY_TO_REGCLASS MQPR:$src1, MQPR)),
-                                                                (SSubReg_f16_reg imm_odd:$lane1))),
-                                                (EXTRACT_SUBREG (v8f16 (COPY_TO_REGCLASS MQPR:$src2, MQPR)),
-                                                                (SSubReg_f16_reg imm_even:$lane2))),
-                                 SSUB), MQPR)>;
-  }
 }
 
 // end of mve_bit instructions

@@ -227,6 +227,11 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
                                GlobalStats &GlobalStats,
                                LocationStats &LocStats,
                                InlinedVarsTy *InlinedVariables) {
+  const dwarf::Tag Tag = Die.getTag();
+  // Skip CU node.
+  if (Tag == dwarf::DW_TAG_compile_unit)
+    return;
+
   bool HasLoc = false;
   bool HasSrcLoc = false;
   bool HasType = false;
@@ -234,23 +239,22 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   uint64_t ScopeBytesCovered = 0;
   uint64_t BytesEntryValuesCovered = 0;
   auto &FnStats = FnStatMap[FnPrefix];
-  bool IsParam = Die.getTag() == dwarf::DW_TAG_formal_parameter;
-  bool IsLocalVar = Die.getTag() == dwarf::DW_TAG_variable;
-  bool IsConstantMember = Die.getTag() == dwarf::DW_TAG_member &&
+  bool IsParam = Tag == dwarf::DW_TAG_formal_parameter;
+  bool IsLocalVar = Tag == dwarf::DW_TAG_variable;
+  bool IsConstantMember = Tag == dwarf::DW_TAG_member &&
                           Die.find(dwarf::DW_AT_const_value);
 
   // For zero covered inlined variables the locstats will be
   // calculated later.
   bool DeferLocStats = false;
 
-  if (Die.getTag() == dwarf::DW_TAG_call_site ||
-      Die.getTag() == dwarf::DW_TAG_GNU_call_site) {
+  if (Tag == dwarf::DW_TAG_call_site || Tag == dwarf::DW_TAG_GNU_call_site) {
     GlobalStats.CallSiteDIEs++;
     return;
   }
 
-  if (Die.getTag() == dwarf::DW_TAG_call_site_parameter ||
-      Die.getTag() == dwarf::DW_TAG_GNU_call_site_parameter) {
+  if (Tag == dwarf::DW_TAG_call_site_parameter ||
+      Tag == dwarf::DW_TAG_GNU_call_site_parameter) {
     GlobalStats.CallSiteParamDIEs++;
     return;
   }
@@ -448,6 +452,10 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
                                   InlinedVarsTyMap &GlobalInlinedFnInfo,
                                   InlinedFnInstacesTy &InlinedFnsToBeProcessed,
                                   InlinedVarsTy *InlinedVarsPtr = nullptr) {
+  // Skip NULL nodes.
+  if (Die.isNULL())
+    return;
+
   const dwarf::Tag Tag = Die.getTag();
   // Skip function types.
   if (Tag == dwarf::DW_TAG_subroutine_type)

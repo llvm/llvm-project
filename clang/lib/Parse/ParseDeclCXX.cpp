@@ -856,6 +856,16 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
                                        DeclFromDeclSpec);
 }
 
+static FixItHint getStaticAssertNoMessageFixIt(const Expr *AssertExpr,
+                                               SourceLocation EndExprLoc) {
+  if (const auto *BO = dyn_cast_or_null<BinaryOperator>(AssertExpr)) {
+    if (BO->getOpcode() == BO_LAnd &&
+        isa<StringLiteral>(BO->getRHS()->IgnoreImpCasts()))
+      return FixItHint::CreateReplacement(BO->getOperatorLoc(), ",");
+  }
+  return FixItHint::CreateInsertion(EndExprLoc, ", \"\"");
+}
+
 /// ParseStaticAssertDeclaration - Parse C++0x or C11 static_assert-declaration.
 ///
 /// [C++0x] static_assert-declaration:
@@ -892,12 +902,11 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd){
 
   ExprResult AssertMessage;
   if (Tok.is(tok::r_paren)) {
-    Diag(Tok, getLangOpts().CPlusPlus17
-                  ? diag::warn_cxx14_compat_static_assert_no_message
-                  : diag::ext_static_assert_no_message)
-      << (getLangOpts().CPlusPlus17
-              ? FixItHint()
-              : FixItHint::CreateInsertion(Tok.getLocation(), ", \"\""));
+    if (getLangOpts().CPlusPlus17)
+      Diag(Tok, diag::warn_cxx14_compat_static_assert_no_message);
+    else
+      Diag(Tok, diag::ext_static_assert_no_message)
+          << getStaticAssertNoMessageFixIt(AssertExpr.get(), Tok.getLocation());
   } else {
     if (ExpectAndConsume(tok::comma)) {
       SkipUntil(tok::semi);

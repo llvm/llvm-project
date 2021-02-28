@@ -63,6 +63,10 @@ OpenCL Specific Options
 In addition to the options described in :doc:`UsersManual` there are the
 following options specific to the OpenCL frontend.
 
+All the options in this section are frontend-only and therefore if used
+with regular clang driver they require frontend forwarding, e.g. ``-cc1``
+or ``-Xclang``.
+
 .. _opencl_cl_ext:
 
 .. option:: -cl-ext
@@ -76,9 +80,6 @@ can be either one of `the OpenCL published extensions
 or any vendor extension. Alternatively, ``'all'`` can be used to enable
 or disable all known extensions.
 
-Note that this is a frontend-only flag and therefore it requires the use of
-flags that forward options to the frontend e.g. ``-cc1`` or ``-Xclang``.
-
 Example disabling double support for the 64-bit SPIR target:
 
    .. code-block:: console
@@ -90,6 +91,65 @@ Enabling all extensions except double support in R600 AMD GPU can be done using:
    .. code-block:: console
 
      $ clang -cc1 -triple r600-unknown-unknown -cl-ext=-all,+cl_khr_fp16 test.cl
+
+.. _opencl_finclude_default_header:
+
+.. option:: -finclude-default-header
+
+Adds most of builtin types and function declarations during compilations. By
+default the OpenCL headers are not loaded by the frontend and therefore certain
+builtin types and most of builtin functions are not declared. To load them
+automatically this flag can be passed to the frontend (see also :ref:`the
+section on the OpenCL Header <opencl_header>`):
+
+   .. code-block:: console
+
+     $ clang -Xclang -finclude-default-header test.cl
+
+Alternatively the internal header `opencl-c.h` containing the declarations
+can be included manually using ``-include`` or ``-I`` followed by the path
+to the header location. The header can be found in the clang source tree or
+installation directory.
+
+   .. code-block:: console
+
+     $ clang -I<path to clang sources>/lib/Headers/opencl-c.h test.cl
+     $ clang -I<path to clang installation>/lib/clang/<llvm version>/include/opencl-c.h/opencl-c.h test.cl
+
+In this example it is assumed that the kernel code contains
+``#include <opencl-c.h>`` just as a regular C include.
+
+Because the header is very large and long to parse, PCH (:doc:`PCHInternals`)
+and modules (:doc:`Modules`) can be used internally to improve the compilation
+speed.
+
+To enable modules for OpenCL:
+
+   .. code-block:: console
+
+     $ clang -target spir-unknown-unknown -c -emit-llvm -Xclang -finclude-default-header -fmodules -fimplicit-module-maps -fm     odules-cache-path=<path to the generated module> test.cl
+
+Another way to circumvent long parsing latency for the OpenCL builtin
+declarations is to use mechanism enabled by :ref:`-fdeclare-opencl-builtins
+<opencl_fdeclare_opencl_builtins>` flag that is available as an alternative
+feature.
+
+.. _opencl_fdeclare_opencl_builtins:
+
+.. option:: -fdeclare-opencl-builtins
+
+In addition to regular header includes with builtin types and functions using
+:ref:`-finclude-default-header <opencl_finclude_default_header>`, clang
+supports a fast mechanism to declare builtin functions with
+``-fdeclare-opencl-builtins``. This does not declare the builtin types and
+therefore it has to be used in combination with ``-finclude-default-header``
+if full functionality is required.
+
+**Example of Use**:
+
+    .. code-block:: console
+ 
+      $ clang -Xclang -fdeclare-opencl-builtins test.cl
 
 .. _opencl_fake_address_space_map:
 
@@ -107,9 +167,6 @@ also :ref:`the section on the address space attribute <opencl_addrsp>`).
    .. code-block:: console
 
      $ clang -cc1 -ffake-address-space-map test.cl
-
-Note that this is a frontend-only flag and therefore it requires the use of
-flags that forward options to the frontend e.g. ``-cc1`` or ``-Xclang``.
 
 OpenCL builtins
 ---------------
@@ -134,8 +191,8 @@ There are some standard OpenCL functions that are implemented as Clang builtins:
 **Fast builtin function declarations**
 
 The implementation of the fast builtin function declarations (available via the
-:ref:`-fdeclare-opencl-builtins option <opencl_fast_builtins>`) consists of the
-following main components:
+:ref:`-fdeclare-opencl-builtins option <opencl_fdeclare_opencl_builtins>`) consists
+of the following main components:
 
 - A TableGen definitions file ``OpenCLBuiltins.td``.  This contains a compact
   representation of the supported builtin functions.  When adding new builtin
@@ -262,30 +319,6 @@ and provide early feedback or contribute with further improvements.
 Feel free to contact us on `cfe-dev
 <https://lists.llvm.org/mailman/listinfo/cfe-dev>`_ or via `Bugzilla
 <https://bugs.llvm.org/>`__.
-
-.. _opencl_fast_builtins:
-
-Fast builtin function declarations
-----------------------------------
-
-In addition to regular header includes with builtin types and functions using
-``-finclude-default-header`` explained in :doc:`UsersManual`, clang
-supports a fast mechanism to declare builtin functions with
-``-fdeclare-opencl-builtins``. This does not declare the builtin types and
-therefore it has to be used in combination with ``-finclude-default-header``
-if full functionality is required.
-
-**Example of Use**:
-
-    .. code-block:: console
-
-      $ clang -Xclang -fdeclare-opencl-builtins test.cl
-
-Note that this is a frontend-only flag and therefore it requires the use of
-flags that forward options to the frontend, e.g. ``-cc1`` or ``-Xclang``.
-
-As this feature is still in experimental phase some changes might still occur
-on the command line interface side.
 
 C++ libraries for OpenCL
 ------------------------

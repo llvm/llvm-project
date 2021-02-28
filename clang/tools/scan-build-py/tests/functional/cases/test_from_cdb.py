@@ -102,7 +102,11 @@ class OutputFormatTest(unittest.TestCase):
     def get_plist_count(directory):
         return len(glob.glob(os.path.join(directory, 'report-*.plist')))
 
-    def test_default_creates_html_report(self):
+    @staticmethod
+    def get_sarif_count(directory):
+        return len(glob.glob(os.path.join(directory, 'result-*.sarif')))
+
+    def test_default_only_creates_html_report(self):
         with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
             exit_code, reportdir = run_analyzer(tmpdir, cdb, [])
@@ -110,8 +114,9 @@ class OutputFormatTest(unittest.TestCase):
                 os.path.exists(os.path.join(reportdir, 'index.html')))
             self.assertEqual(self.get_html_count(reportdir), 2)
             self.assertEqual(self.get_plist_count(reportdir), 0)
+            self.assertEqual(self.get_sarif_count(reportdir), 0)
 
-    def test_plist_and_html_creates_html_report(self):
+    def test_plist_and_html_creates_html_and_plist_reports(self):
         with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
             exit_code, reportdir = run_analyzer(tmpdir, cdb, ['--plist-html'])
@@ -119,8 +124,9 @@ class OutputFormatTest(unittest.TestCase):
                 os.path.exists(os.path.join(reportdir, 'index.html')))
             self.assertEqual(self.get_html_count(reportdir), 2)
             self.assertEqual(self.get_plist_count(reportdir), 5)
+            self.assertEqual(self.get_sarif_count(reportdir), 0)
 
-    def test_plist_does_not_creates_html_report(self):
+    def test_plist_only_creates_plist_report(self):
         with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
             exit_code, reportdir = run_analyzer(tmpdir, cdb, ['--plist'])
@@ -128,6 +134,31 @@ class OutputFormatTest(unittest.TestCase):
                 os.path.exists(os.path.join(reportdir, 'index.html')))
             self.assertEqual(self.get_html_count(reportdir), 0)
             self.assertEqual(self.get_plist_count(reportdir), 5)
+            self.assertEqual(self.get_sarif_count(reportdir), 0)
+
+    def test_sarif_only_creates_sarif_result(self):
+        with libear.TemporaryDirectory() as tmpdir:
+            cdb = prepare_cdb('regular', tmpdir)
+            exit_code, reportdir = run_analyzer(tmpdir, cdb, ['--sarif'])
+            self.assertFalse(
+                os.path.exists(os.path.join(reportdir, 'index.html')))
+            self.assertTrue(
+                os.path.exists(os.path.join(reportdir, 'results-merged.sarif')))
+            self.assertEqual(self.get_html_count(reportdir), 0)
+            self.assertEqual(self.get_plist_count(reportdir), 0)
+            self.assertEqual(self.get_sarif_count(reportdir), 5)
+
+    def test_sarif_and_html_creates_sarif_and_html_reports(self):
+        with libear.TemporaryDirectory() as tmpdir:
+            cdb = prepare_cdb('regular', tmpdir)
+            exit_code, reportdir = run_analyzer(tmpdir, cdb, ['--sarif-html'])
+            self.assertTrue(
+                os.path.exists(os.path.join(reportdir, 'index.html')))
+            self.assertTrue(
+                os.path.exists(os.path.join(reportdir, 'results-merged.sarif')))
+            self.assertEqual(self.get_html_count(reportdir), 2)
+            self.assertEqual(self.get_plist_count(reportdir), 0)
+            self.assertEqual(self.get_sarif_count(reportdir), 5)
 
 
 class FailureReportTest(unittest.TestCase):

@@ -231,6 +231,10 @@ enum NodeType : unsigned {
   UABD,
   SABD,
 
+  // udot/sdot instructions
+  UDOT,
+  SDOT,
+
   // Vector across-lanes min/max
   // Only the lower result lane is defined.
   SMINV,

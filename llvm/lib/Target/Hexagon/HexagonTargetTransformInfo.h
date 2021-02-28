@@ -107,7 +107,7 @@ public:
   unsigned getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
                                     bool Insert, bool Extract);
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                            unsigned VF);
+                                            ArrayRef<Type *> Tys);
   unsigned getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type*> Tys,
                             TTI::TargetCostKind CostKind);
   unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,

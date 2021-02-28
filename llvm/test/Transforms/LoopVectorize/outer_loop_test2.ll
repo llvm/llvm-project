@@ -32,8 +32,8 @@
 ; CHECK: br label %[[InnerForBody:.*]]
 
 ; CHECK: [[InnerForBody]]:
-; CHECK: %[[InnerInd:.*]] = phi <4 x i64> [ %[[InnerIndNext:.*]], %[[InnerForBody]] ], [ zeroinitializer, %[[InnerForPh]] ]
-; CHECK: %[[AccumPhi:.*]] = phi <4 x i32> [ %[[AccumPhiNext:.*]], %[[InnerForBody]] ], [ %[[WideAVal]], %[[InnerForPh]] ]
+; CHECK: %[[InnerInd:.*]] = phi <4 x i64> [ zeroinitializer, %[[InnerForPh]] ], [ %[[InnerIndNext:.*]], %[[InnerForBody]] ]
+; CHECK: %[[AccumPhi:.*]] = phi <4 x i32> [ %[[WideAVal]], %[[InnerForPh]] ], [ %[[AccumPhiNext:.*]], %[[InnerForBody]] ]
 ; CHECK: %[[BAddr:.*]] = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, <4 x i64> %[[InnerInd]]
 ; CHECK: %[[WideBVal:.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %[[BAddr]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
 ; CHECK: %[[Add1:.*]] = add nsw <4 x i32> %[[WideBVal]], %[[VecIndTr]]

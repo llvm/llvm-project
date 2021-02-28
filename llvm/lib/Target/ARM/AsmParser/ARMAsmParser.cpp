@@ -7658,6 +7658,33 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
                    "source register and base register can't be identical");
     return false;
   }
+  case ARM::t2LDR_PRE_imm:
+  case ARM::t2LDR_POST_imm:
+  case ARM::t2STR_PRE_imm:
+  case ARM::t2STR_POST_imm: {
+    // Rt must be different from Rn.
+    const unsigned Rt = MRI->getEncodingValue(Inst.getOperand(0).getReg());
+    const unsigned Rn = MRI->getEncodingValue(Inst.getOperand(1).getReg());
+
+    if (Rt == Rn)
+      return Error(Operands[3]->getStartLoc(),
+                   "destination register and base register can't be identical");
+    if (Inst.getOpcode() == ARM::t2LDR_POST_imm ||
+        Inst.getOpcode() == ARM::t2STR_POST_imm) {
+      int Imm = Inst.getOperand(2).getImm();
+      if (Imm > 255 || Imm < -255)
+        return Error(Operands[5]->getStartLoc(),
+                     "operand must be in range [-255, 255]");
+    }
+    if (Inst.getOpcode() == ARM::t2STR_PRE_imm ||
+        Inst.getOpcode() == ARM::t2STR_POST_imm) {
+      if (Inst.getOperand(0).getReg() == ARM::PC) {
+        return Error(Operands[3]->getStartLoc(),
+                     "operand must be a register in range [r0, r14]");
+      }
+    }
+    return false;
+  }
   case ARM::LDR_PRE_IMM:
   case ARM::LDR_PRE_REG:
   case ARM::t2LDR_PRE:
@@ -8622,6 +8649,34 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     }
     TmpInst.addOperand(Inst.getOperand(3));
     TmpInst.addOperand(Inst.getOperand(4));
+    Inst = TmpInst;
+    return true;
+  }
+  // Aliases for imm syntax of LDR instructions.
+  case ARM::t2LDR_PRE_imm:
+  case ARM::t2LDR_POST_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(Inst.getOpcode() == ARM::t2LDR_PRE_imm ? ARM::t2LDR_PRE
+                                                             : ARM::t2LDR_POST);
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  // Aliases for imm syntax of STR instructions.
+  case ARM::t2STR_PRE_imm:
+  case ARM::t2STR_POST_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(Inst.getOpcode() == ARM::t2STR_PRE_imm ? ARM::t2STR_PRE
+                                                             : ARM::t2STR_POST);
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
     Inst = TmpInst;
     return true;
   }

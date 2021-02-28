@@ -1270,11 +1270,9 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
 
   SmallVector<ExtPoint,4> ExtPoints;
 
-  for (MachineRegisterInfo::reg_iterator RI = MRI.reg_begin(Edit->getReg()),
-       RE = MRI.reg_end(); RI != RE;) {
-    MachineOperand &MO = *RI;
+  for (MachineOperand &MO :
+       llvm::make_early_inc_range(MRI.reg_operands(Edit->getReg()))) {
     MachineInstr *MI = MO.getParent();
-    ++RI;
     // LiveDebugVariables should have handled all DBG_VALUE instructions.
     if (MI->isDebugValue()) {
       LLVM_DEBUG(dbgs() << "Zapping " << *MI);

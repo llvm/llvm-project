@@ -137,6 +137,13 @@ public:
   // Configuration Interface
   //===--------------------------------------------------------------------===//
 
+  /// If possible, pre-allocate \p ExtraSize bytes for stream data.
+  /// i.e. it extends internal buffers to keep additional ExtraSize bytes.
+  /// So that the stream could keep at least tell() + ExtraSize bytes
+  /// without re-allocations. reserveExtraSpace() does not change
+  /// the size/data of the stream.
+  virtual void reserveExtraSpace(uint64_t ExtraSize) {}
+
   /// Set the stream to be buffered, with an automatically determined buffer
   /// size.
   void SetBuffered();
@@ -626,6 +633,10 @@ public:
     flush();
     return OS;
   }
+
+  void reserveExtraSpace(uint64_t ExtraSize) override {
+    OS.reserve(tell() + ExtraSize);
+  }
 };
 
 /// A raw_ostream that writes to an SmallVector or SmallString.  This is a
@@ -659,6 +670,10 @@ public:
 
   /// Return a StringRef for the vector contents.
   StringRef str() const { return StringRef(OS.data(), OS.size()); }
+
+  void reserveExtraSpace(uint64_t ExtraSize) override {
+    OS.reserve(tell() + ExtraSize);
+  }
 };
 
 /// A raw_ostream that discards all output.

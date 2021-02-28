@@ -27,6 +27,15 @@ declare void @my_other_async_function(i8* %async.ctxt)
      to i32),
      i32 128    ; Initial async context size without space for frame
 }>
+@my_async_function_pa_fp = constant <{ i32, i32 }>
+  <{ i32 trunc (
+       i64 sub (
+         i64 ptrtoint (void (i8*, %async.task*, %async.actor*)* @my_async_function_pa to i64),
+         i64 ptrtoint (i32* getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @my_async_function_pa_fp, i32 0, i32 1) to i64)
+       )
+     to i32),
+     i32 8
+}>
 
 ; Function that implements the dispatch to the callee function.
 define swiftcc void @my_async_function.my_other_async_function_fp.apply(i8* %fnPtr, i8* %async.ctxt, %async.task* %task, %async.actor* %actor) {
@@ -99,8 +108,15 @@ entry:
   unreachable
 }
 
+define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %actor) {
+  call void @llvm.coro.async.size.replace(i8* bitcast (<{i32, i32}>* @my_async_function_pa_fp to i8*), i8* bitcast (<{i32, i32}>* @my_async_function_fp to i8*))
+  call swiftcc void @my_async_function(i8* %ctxt, %async.task* %task, %async.actor* %actor)
+  ret void
+}
+
 ; Make sure we update the async function pointer
 ; CHECK: @my_async_function_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
+; CHECK: @my_async_function_pa_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
 ; CHECK: @my_async_function2_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
 
 ; CHECK-LABEL: define swiftcc void @my_async_function(i8* %async.ctxt, %async.task* %task, %async.actor* %actor) {
@@ -511,3 +527,4 @@ declare void @llvm.coro.async.context.dealloc(i8*)
 declare swiftcc void @asyncReturn(i8*, %async.task*, %async.actor*)
 declare swiftcc void @asyncSuspend(i8*, %async.task*, %async.actor*)
 declare i8* @llvm.coro.async.resume()
+declare void @llvm.coro.async.size.replace(i8*, i8*)

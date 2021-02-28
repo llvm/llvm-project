@@ -4,15 +4,12 @@
 ; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck -check-prefix=CM -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}test_smul24_i32:
-; GCN-NOT: bfe
-; GCN: v_mul_i32_i24
+; GCN: s_mul_i32
 
 ; Signed 24-bit multiply is not supported on pre-Cayman GPUs.
 ; EG: MULLO_INT
 
-; Make sure we are not masking the inputs
-; CM-NOT: AND
-; CM: MUL_INT24
+; CM: MULLO_INT
 define amdgpu_kernel void @test_smul24_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %a.shl = shl i32 %a, 8
@@ -63,11 +60,10 @@ entry:
 ; GCN: s_load_dword s
 ; GCN: s_load_dword s
 
-; GCN-NOT: bfe
 ; GCN-NOT: ashr
 
 ; GCN-DAG: v_mul_hi_i32_i24_e32
-; GCN-DAG: v_mul_i32_i24_e32
+; GCN-DAG: s_mul_i32
 
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @test_smul24_i64(i64 addrspace(1)* %out, [8 x i32], i32 %a, [8 x i32], i32 %b) #0 {
@@ -85,7 +81,7 @@ define amdgpu_kernel void @test_smul24_i64(i64 addrspace(1)* %out, [8 x i32], i3
 ; FUNC-LABEL: {{^}}test_smul24_i64_square:
 ; GCN: s_load_dword [[A:s[0-9]+]]
 ; GCN-DAG: v_mul_hi_i32_i24_e64 v{{[0-9]+}}, [[A]], [[A]]
-; GCN-DAG: v_mul_i32_i24_e64 v{{[0-9]+}}, [[A]], [[A]]
+; GCN-DAG: s_mul_i32 s{{[0-9]+}}, [[A]], [[A]]
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @test_smul24_i64_square(i64 addrspace(1)* %out, i32 %a, i32 %b) #0 {
   %shl.i = shl i32 %a, 8
@@ -103,7 +99,7 @@ define amdgpu_kernel void @test_smul24_i64_square(i64 addrspace(1)* %out, i32 %a
 ; GCN-NOT: and
 ; GCN-NOT: lshr
 
-; GCN-DAG: v_mul_i32_i24_e32
+; GCN-DAG: s_mul_i32
 ; GCN-DAG: v_mul_hi_i32_i24_e32
 ; SI: v_lshl_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, 31
 ; SI: v_ashr_i64 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, 31
@@ -148,8 +144,9 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}simplify_i24_crash:
-; GCN: v_mul_i32_i24_e32 v[[VAL_LO:[0-9]+]]
-; GCN: v_mov_b32_e32 v[[VAL_HI:[0-9]+]], v[[VAL_LO]]
+; GCN: s_mul_i32 s[[VAL:[0-9]+]]
+; GCN: v_mov_b32_e32 v[[VAL_LO:[0-9]+]], s[[VAL]]
+; GCN: v_mov_b32_e32 v[[VAL_HI:[0-9]+]], s[[VAL]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[VAL_LO]]:[[VAL_HI]]{{\]}}
 define amdgpu_kernel void @simplify_i24_crash(<2 x i32> addrspace(1)* %out, i32 %arg0, <2 x i32> %arg1, <2 x i32> %arg2) {
 bb:

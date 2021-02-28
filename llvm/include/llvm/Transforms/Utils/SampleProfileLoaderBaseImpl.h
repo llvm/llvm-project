@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERIMPL_H
-#define LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERIMPL_H
+#ifndef LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERBASEIMPL_H
+#define LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERBASEIMPL_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -855,4 +855,4 @@ void SampleProfileLoaderBaseImpl::computeDominanceAndLoopInfo(Function &F) {
 #undef DEBUG_TYPE
 
 } // namespace llvm
-#endif // LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERIMPL_H
+#endif // LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERBASEIMPL_H

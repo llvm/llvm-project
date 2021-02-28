@@ -72,16 +72,10 @@ void DWARFDebugInfo::ParseUnitsFor(DIERef::Section section) {
   DWARFDataExtractor data = section == DIERef::Section::DebugTypes
                                 ? m_context.getOrLoadDebugTypesData()
                                 : m_context.getOrLoadDebugInfoData();
-  const llvm::DWARFUnitIndex *index = nullptr;
-  if (m_context.isDwo())
-    index = &llvm::getDWARFUnitIndex(m_context.GetAsLLVM(),
-                                     section == DIERef::Section::DebugTypes
-                                         ? llvm::DW_SECT_EXT_TYPES
-                                         : llvm::DW_SECT_INFO);
   lldb::offset_t offset = 0;
   while (data.ValidOffset(offset)) {
     llvm::Expected<DWARFUnitSP> unit_sp = DWARFUnit::extract(
-        m_dwarf, m_units.size(), data, section, &offset, index);
+        m_dwarf, m_units.size(), data, section, &offset);
 
     if (!unit_sp) {
       // FIXME: Propagate this error up.

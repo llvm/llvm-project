@@ -9,6 +9,17 @@
 #ifndef _OPENCL_H_
 #define _OPENCL_H_
 
+//===----- opencl-c-base.h - OpenCL C language base definitions -----------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _OPENCL_BASE_H_
+#define _OPENCL_BASE_H_
+
 // Define extension macros
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -23,31 +34,6 @@
 #define cl_khr_subgroup_clustered_reduce 1
 #endif // defined(__SPIR__)
 #endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
-
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
-
-#ifndef cl_khr_depth_images
-#define cl_khr_depth_images
-#endif //cl_khr_depth_images
-#endif //defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
-
-#if __OPENCL_C_VERSION__ < CL_VERSION_2_0
-#ifdef cl_khr_3d_image_writes
-#pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
-#endif //cl_khr_3d_image_writes
-#endif //__OPENCL_C_VERSION__ < CL_VERSION_2_0
-
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
-#pragma OPENCL EXTENSION cl_intel_planar_yuv : begin
-#pragma OPENCL EXTENSION cl_intel_planar_yuv : end
-#endif // defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
-
-#define __ovld __attribute__((overloadable))
-#define __conv __attribute__((convergent))
-
-// Optimizations
-#define __purefn __attribute__((pure))
-#define __cnfn __attribute__((const))
 
 // Define feature macros for OpenCL C 2.0
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ == 200)
@@ -103,17 +89,17 @@ typedef __SIZE_TYPE__ size_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
 
 /**
-* A signed integer type with the property that any valid pointer to
-* void can be converted to this type, then converted back to pointer
-* to void, and the result will compare equal to the original pointer.
-*/
+ * A signed integer type with the property that any valid pointer to
+ * void can be converted to this type, then converted back to pointer
+ * to void, and the result will compare equal to the original pointer.
+ */
 typedef __INTPTR_TYPE__ intptr_t;
 
 /**
-* An unsigned integer type with the property that any valid pointer to
-* void can be converted to this type, then converted back to pointer
-* to void, and the result will compare equal to the original pointer.
-*/
+ * An unsigned integer type with the property that any valid pointer to
+ * void can be converted to this type, then converted back to pointer
+ * to void, and the result will compare equal to the original pointer.
+ */
 typedef __UINTPTR_TYPE__ uintptr_t;
 
 // built-in vector data types:
@@ -181,7 +167,7 @@ typedef double double8 __attribute__((ext_vector_type(8)));
 typedef double double16 __attribute__((ext_vector_type(16)));
 #endif
 
-#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
+#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
 #define NULL ((void*)0)
 #endif
 
@@ -217,7 +203,7 @@ typedef double double16 __attribute__((ext_vector_type(16)));
 #define NAN as_float(INT_MAX)
 
 #define FP_ILOGB0    INT_MIN
-#define FP_ILOGBNAN    INT_MAX
+#define FP_ILOGBNAN  INT_MAX
 
 #define FLT_DIG 6
 #define FLT_MANT_DIG 24
@@ -298,21 +284,461 @@ typedef double double16 __attribute__((ext_vector_type(16)));
 
 #endif //cl_khr_fp16
 
-#define CHAR_BIT    8
-#define SCHAR_MAX  127
-#define SCHAR_MIN  (-128)
-#define UCHAR_MAX  255
+#define CHAR_BIT  8
+#define SCHAR_MAX 127
+#define SCHAR_MIN (-128)
+#define UCHAR_MAX 255
 #define CHAR_MAX  SCHAR_MAX
 #define CHAR_MIN  SCHAR_MIN
-#define USHRT_MAX  65535
+#define USHRT_MAX 65535
 #define SHRT_MAX  32767
 #define SHRT_MIN  (-32768)
 #define UINT_MAX  0xffffffff
-#define INT_MAX    2147483647
-#define INT_MIN    (-2147483647-1)
-#define ULONG_MAX  0xffffffffffffffffUL
+#define INT_MAX   2147483647
+#define INT_MIN   (-2147483647-1)
+#define ULONG_MAX 0xffffffffffffffffUL
 #define LONG_MAX  0x7fffffffffffffffL
 #define LONG_MIN  (-0x7fffffffffffffffL-1)
+
+// OpenCL v1.1 s6.11.8, v1.2 s6.12.8, v2.0 s6.13.8 - Synchronization Functions
+
+// Flag type and values for barrier, mem_fence, read_mem_fence, write_mem_fence
+typedef uint cl_mem_fence_flags;
+
+/**
+ * Queue a memory fence to ensure correct
+ * ordering of memory operations to local memory
+ */
+#define CLK_LOCAL_MEM_FENCE    0x01
+
+/**
+ * Queue a memory fence to ensure correct
+ * ordering of memory operations to global memory
+ */
+#define CLK_GLOBAL_MEM_FENCE   0x02
+
+#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+
+typedef enum memory_scope {
+  memory_scope_work_item = __OPENCL_MEMORY_SCOPE_WORK_ITEM,
+  memory_scope_work_group = __OPENCL_MEMORY_SCOPE_WORK_GROUP,
+  memory_scope_device = __OPENCL_MEMORY_SCOPE_DEVICE,
+  memory_scope_all_svm_devices = __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES,
+#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups)
+  memory_scope_sub_group = __OPENCL_MEMORY_SCOPE_SUB_GROUP
+#endif
+} memory_scope;
+
+/**
+ * Queue a memory fence to ensure correct ordering of memory
+ * operations between work-items of a work-group to
+ * image memory.
+ */
+#define CLK_IMAGE_MEM_FENCE  0x04
+
+#ifndef ATOMIC_VAR_INIT
+#define ATOMIC_VAR_INIT(x) (x)
+#endif //ATOMIC_VAR_INIT
+#define ATOMIC_FLAG_INIT 0
+
+// enum values aligned with what clang uses in EmitAtomicExpr()
+typedef enum memory_order
+{
+  memory_order_relaxed = __ATOMIC_RELAXED,
+  memory_order_acquire = __ATOMIC_ACQUIRE,
+  memory_order_release = __ATOMIC_RELEASE,
+  memory_order_acq_rel = __ATOMIC_ACQ_REL,
+  memory_order_seq_cst = __ATOMIC_SEQ_CST
+} memory_order;
+
+#endif // defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+
+// OpenCL v1.1 s6.11.3, v1.2 s6.12.14, v2.0 s6.13.14 - Image Read and Write Functions
+
+// These values need to match the runtime equivalent
+//
+// Addressing Mode.
+//
+#define CLK_ADDRESS_NONE                0
+#define CLK_ADDRESS_CLAMP_TO_EDGE       2
+#define CLK_ADDRESS_CLAMP               4
+#define CLK_ADDRESS_REPEAT              6
+#define CLK_ADDRESS_MIRRORED_REPEAT     8
+
+//
+// Coordination Normalization
+//
+#define CLK_NORMALIZED_COORDS_FALSE     0
+#define CLK_NORMALIZED_COORDS_TRUE      1
+
+//
+// Filtering Mode.
+//
+#define CLK_FILTER_NEAREST              0x10
+#define CLK_FILTER_LINEAR               0x20
+
+#ifdef cl_khr_gl_msaa_sharing
+#pragma OPENCL EXTENSION cl_khr_gl_msaa_sharing : enable
+#endif //cl_khr_gl_msaa_sharing
+
+//
+// Channel Datatype.
+//
+#define CLK_SNORM_INT8        0x10D0
+#define CLK_SNORM_INT16       0x10D1
+#define CLK_UNORM_INT8        0x10D2
+#define CLK_UNORM_INT16       0x10D3
+#define CLK_UNORM_SHORT_565   0x10D4
+#define CLK_UNORM_SHORT_555   0x10D5
+#define CLK_UNORM_INT_101010  0x10D6
+#define CLK_SIGNED_INT8       0x10D7
+#define CLK_SIGNED_INT16      0x10D8
+#define CLK_SIGNED_INT32      0x10D9
+#define CLK_UNSIGNED_INT8     0x10DA
+#define CLK_UNSIGNED_INT16    0x10DB
+#define CLK_UNSIGNED_INT32    0x10DC
+#define CLK_HALF_FLOAT        0x10DD
+#define CLK_FLOAT             0x10DE
+#define CLK_UNORM_INT24       0x10DF
+
+// Channel order, numbering must be aligned with cl_channel_order in cl.h
+//
+#define CLK_R         0x10B0
+#define CLK_A         0x10B1
+#define CLK_RG        0x10B2
+#define CLK_RA        0x10B3
+#define CLK_RGB       0x10B4
+#define CLK_RGBA      0x10B5
+#define CLK_BGRA      0x10B6
+#define CLK_ARGB      0x10B7
+#define CLK_INTENSITY 0x10B8
+#define CLK_LUMINANCE 0x10B9
+#define CLK_Rx                0x10BA
+#define CLK_RGx               0x10BB
+#define CLK_RGBx              0x10BC
+#define CLK_DEPTH             0x10BD
+#define CLK_DEPTH_STENCIL     0x10BE
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
+#define CLK_sRGB              0x10BF
+#define CLK_sRGBx             0x10C0
+#define CLK_sRGBA             0x10C1
+#define CLK_sBGRA             0x10C2
+#define CLK_ABGR              0x10C3
+#endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
+
+// OpenCL v2.0 s6.13.16 - Pipe Functions
+#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+#define CLK_NULL_RESERVE_ID (__builtin_astype(((void*)(__SIZE_MAX__)), reserve_id_t))
+
+// OpenCL v2.0 s6.13.17 - Enqueue Kernels
+#define CL_COMPLETE                                 0x0
+#define CL_RUNNING                                  0x1
+#define CL_SUBMITTED                                0x2
+#define CL_QUEUED                                   0x3
+
+#define CLK_SUCCESS                                 0
+#define CLK_ENQUEUE_FAILURE                         -101
+#define CLK_INVALID_QUEUE                           -102
+#define CLK_INVALID_NDRANGE                         -160
+#define CLK_INVALID_EVENT_WAIT_LIST                 -57
+#define CLK_DEVICE_QUEUE_FULL                       -161
+#define CLK_INVALID_ARG_SIZE                        -51
+#define CLK_EVENT_ALLOCATION_FAILURE                -100
+#define CLK_OUT_OF_RESOURCES                        -5
+
+#define CLK_NULL_QUEUE                              0
+#define CLK_NULL_EVENT (__builtin_astype(((__SIZE_MAX__)), clk_event_t))
+
+// execution model related definitions
+#define CLK_ENQUEUE_FLAGS_NO_WAIT                   0x0
+#define CLK_ENQUEUE_FLAGS_WAIT_KERNEL               0x1
+#define CLK_ENQUEUE_FLAGS_WAIT_WORK_GROUP           0x2
+
+typedef int kernel_enqueue_flags_t;
+typedef int clk_profiling_info;
+
+// Profiling info name (see capture_event_profiling_info)
+#define CLK_PROFILING_COMMAND_EXEC_TIME 0x1
+
+#define MAX_WORK_DIM 3
+
+typedef struct {
+  unsigned int workDimension;
+  size_t globalWorkOffset[MAX_WORK_DIM];
+  size_t globalWorkSize[MAX_WORK_DIM];
+  size_t localWorkSize[MAX_WORK_DIM];
+} ndrange_t;
+
+#endif // defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+
+/**
+ * OpenCL v1.1/1.2/2.0 s6.2.4.2 - as_type operators
+ * Reinterprets a data type as another data type of the same size
+ */
+#define as_char(x) __builtin_astype((x), char)
+#define as_char2(x) __builtin_astype((x), char2)
+#define as_char3(x) __builtin_astype((x), char3)
+#define as_char4(x) __builtin_astype((x), char4)
+#define as_char8(x) __builtin_astype((x), char8)
+#define as_char16(x) __builtin_astype((x), char16)
+
+#define as_uchar(x) __builtin_astype((x), uchar)
+#define as_uchar2(x) __builtin_astype((x), uchar2)
+#define as_uchar3(x) __builtin_astype((x), uchar3)
+#define as_uchar4(x) __builtin_astype((x), uchar4)
+#define as_uchar8(x) __builtin_astype((x), uchar8)
+#define as_uchar16(x) __builtin_astype((x), uchar16)
+
+#define as_short(x) __builtin_astype((x), short)
+#define as_short2(x) __builtin_astype((x), short2)
+#define as_short3(x) __builtin_astype((x), short3)
+#define as_short4(x) __builtin_astype((x), short4)
+#define as_short8(x) __builtin_astype((x), short8)
+#define as_short16(x) __builtin_astype((x), short16)
+
+#define as_ushort(x) __builtin_astype((x), ushort)
+#define as_ushort2(x) __builtin_astype((x), ushort2)
+#define as_ushort3(x) __builtin_astype((x), ushort3)
+#define as_ushort4(x) __builtin_astype((x), ushort4)
+#define as_ushort8(x) __builtin_astype((x), ushort8)
+#define as_ushort16(x) __builtin_astype((x), ushort16)
+
+#define as_int(x) __builtin_astype((x), int)
+#define as_int2(x) __builtin_astype((x), int2)
+#define as_int3(x) __builtin_astype((x), int3)
+#define as_int4(x) __builtin_astype((x), int4)
+#define as_int8(x) __builtin_astype((x), int8)
+#define as_int16(x) __builtin_astype((x), int16)
+
+#define as_uint(x) __builtin_astype((x), uint)
+#define as_uint2(x) __builtin_astype((x), uint2)
+#define as_uint3(x) __builtin_astype((x), uint3)
+#define as_uint4(x) __builtin_astype((x), uint4)
+#define as_uint8(x) __builtin_astype((x), uint8)
+#define as_uint16(x) __builtin_astype((x), uint16)
+
+#define as_long(x) __builtin_astype((x), long)
+#define as_long2(x) __builtin_astype((x), long2)
+#define as_long3(x) __builtin_astype((x), long3)
+#define as_long4(x) __builtin_astype((x), long4)
+#define as_long8(x) __builtin_astype((x), long8)
+#define as_long16(x) __builtin_astype((x), long16)
+
+#define as_ulong(x) __builtin_astype((x), ulong)
+#define as_ulong2(x) __builtin_astype((x), ulong2)
+#define as_ulong3(x) __builtin_astype((x), ulong3)
+#define as_ulong4(x) __builtin_astype((x), ulong4)
+#define as_ulong8(x) __builtin_astype((x), ulong8)
+#define as_ulong16(x) __builtin_astype((x), ulong16)
+
+#define as_float(x) __builtin_astype((x), float)
+#define as_float2(x) __builtin_astype((x), float2)
+#define as_float3(x) __builtin_astype((x), float3)
+#define as_float4(x) __builtin_astype((x), float4)
+#define as_float8(x) __builtin_astype((x), float8)
+#define as_float16(x) __builtin_astype((x), float16)
+
+#ifdef cl_khr_fp64
+#define as_double(x) __builtin_astype((x), double)
+#define as_double2(x) __builtin_astype((x), double2)
+#define as_double3(x) __builtin_astype((x), double3)
+#define as_double4(x) __builtin_astype((x), double4)
+#define as_double8(x) __builtin_astype((x), double8)
+#define as_double16(x) __builtin_astype((x), double16)
+#endif // cl_khr_fp64
+
+#ifdef cl_khr_fp16
+#define as_half(x) __builtin_astype((x), half)
+#define as_half2(x) __builtin_astype((x), half2)
+#define as_half3(x) __builtin_astype((x), half3)
+#define as_half4(x) __builtin_astype((x), half4)
+#define as_half8(x) __builtin_astype((x), half8)
+#define as_half16(x) __builtin_astype((x), half16)
+#endif // cl_khr_fp16
+
+// OpenCL v1.1 s6.9, v1.2/2.0 s6.10 - Function qualifiers
+
+#define __kernel_exec(X, typen) __kernel \
+	__attribute__((work_group_size_hint(X, 1, 1))) \
+	__attribute__((vec_type_hint(typen)))
+
+#define kernel_exec(X, typen) __kernel \
+	__attribute__((work_group_size_hint(X, 1, 1))) \
+	__attribute__((vec_type_hint(typen)))
+
+#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
+// OpenCL v1.2 s6.12.13, v2.0 s6.13.13 - printf
+
+int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)));
+#endif
+
+#ifdef cl_intel_device_side_avc_motion_estimation
+#pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : begin
+
+#define CLK_AVC_ME_MAJOR_16x16_INTEL 0x0
+#define CLK_AVC_ME_MAJOR_16x8_INTEL 0x1
+#define CLK_AVC_ME_MAJOR_8x16_INTEL 0x2
+#define CLK_AVC_ME_MAJOR_8x8_INTEL 0x3
+
+#define CLK_AVC_ME_MINOR_8x8_INTEL 0x0
+#define CLK_AVC_ME_MINOR_8x4_INTEL 0x1
+#define CLK_AVC_ME_MINOR_4x8_INTEL 0x2
+#define CLK_AVC_ME_MINOR_4x4_INTEL 0x3
+
+#define CLK_AVC_ME_MAJOR_FORWARD_INTEL 0x0
+#define CLK_AVC_ME_MAJOR_BACKWARD_INTEL 0x1
+#define CLK_AVC_ME_MAJOR_BIDIRECTIONAL_INTEL 0x2
+
+#define CLK_AVC_ME_PARTITION_MASK_ALL_INTEL 0x0
+#define CLK_AVC_ME_PARTITION_MASK_16x16_INTEL 0x7E
+#define CLK_AVC_ME_PARTITION_MASK_16x8_INTEL 0x7D
+#define CLK_AVC_ME_PARTITION_MASK_8x16_INTEL 0x7B
+#define CLK_AVC_ME_PARTITION_MASK_8x8_INTEL 0x77
+#define CLK_AVC_ME_PARTITION_MASK_8x4_INTEL 0x6F
+#define CLK_AVC_ME_PARTITION_MASK_4x8_INTEL 0x5F
+#define CLK_AVC_ME_PARTITION_MASK_4x4_INTEL 0x3F
+
+#define CLK_AVC_ME_SLICE_TYPE_PRED_INTEL 0x0
+#define CLK_AVC_ME_SLICE_TYPE_BPRED_INTEL 0x1
+#define CLK_AVC_ME_SLICE_TYPE_INTRA_INTEL 0x2
+
+#define CLK_AVC_ME_SEARCH_WINDOW_EXHAUSTIVE_INTEL 0x0
+#define CLK_AVC_ME_SEARCH_WINDOW_SMALL_INTEL 0x1
+#define CLK_AVC_ME_SEARCH_WINDOW_TINY_INTEL 0x2
+#define CLK_AVC_ME_SEARCH_WINDOW_EXTRA_TINY_INTEL 0x3
+#define CLK_AVC_ME_SEARCH_WINDOW_DIAMOND_INTEL 0x4
+#define CLK_AVC_ME_SEARCH_WINDOW_LARGE_DIAMOND_INTEL 0x5
+#define CLK_AVC_ME_SEARCH_WINDOW_RESERVED0_INTEL 0x6
+#define CLK_AVC_ME_SEARCH_WINDOW_RESERVED1_INTEL 0x7
+#define CLK_AVC_ME_SEARCH_WINDOW_CUSTOM_INTEL 0x8
+
+#define CLK_AVC_ME_SAD_ADJUST_MODE_NONE_INTEL 0x0
+#define CLK_AVC_ME_SAD_ADJUST_MODE_HAAR_INTEL 0x2
+
+#define CLK_AVC_ME_SUBPIXEL_MODE_INTEGER_INTEL 0x0
+#define CLK_AVC_ME_SUBPIXEL_MODE_HPEL_INTEL 0x1
+#define CLK_AVC_ME_SUBPIXEL_MODE_QPEL_INTEL 0x3
+
+#define CLK_AVC_ME_COST_PRECISION_QPEL_INTEL 0x0
+#define CLK_AVC_ME_COST_PRECISION_HPEL_INTEL 0x1
+#define CLK_AVC_ME_COST_PRECISION_PEL_INTEL 0x2
+#define CLK_AVC_ME_COST_PRECISION_DPEL_INTEL 0x3
+
+#define CLK_AVC_ME_BIDIR_WEIGHT_QUARTER_INTEL 0x10
+#define CLK_AVC_ME_BIDIR_WEIGHT_THIRD_INTEL 0x15
+#define CLK_AVC_ME_BIDIR_WEIGHT_HALF_INTEL 0x20
+#define CLK_AVC_ME_BIDIR_WEIGHT_TWO_THIRD_INTEL 0x2B
+#define CLK_AVC_ME_BIDIR_WEIGHT_THREE_QUARTER_INTEL 0x30
+
+#define CLK_AVC_ME_BORDER_REACHED_LEFT_INTEL 0x0
+#define CLK_AVC_ME_BORDER_REACHED_RIGHT_INTEL 0x2
+#define CLK_AVC_ME_BORDER_REACHED_TOP_INTEL 0x4
+#define CLK_AVC_ME_BORDER_REACHED_BOTTOM_INTEL 0x8
+
+#define CLK_AVC_ME_INTRA_16x16_INTEL 0x0
+#define CLK_AVC_ME_INTRA_8x8_INTEL 0x1
+#define CLK_AVC_ME_INTRA_4x4_INTEL 0x2
+
+#define CLK_AVC_ME_SKIP_BLOCK_PARTITION_16x16_INTEL 0x0
+#define CLK_AVC_ME_SKIP_BLOCK_PARTITION_8x8_INTEL 0x4000
+
+#define CLK_AVC_ME_SKIP_BLOCK_16x16_FORWARD_ENABLE_INTEL (0x1 << 24)
+#define CLK_AVC_ME_SKIP_BLOCK_16x16_BACKWARD_ENABLE_INTEL (0x2 << 24)
+#define CLK_AVC_ME_SKIP_BLOCK_16x16_DUAL_ENABLE_INTEL (0x3 << 24)
+#define CLK_AVC_ME_SKIP_BLOCK_8x8_FORWARD_ENABLE_INTEL (0x55 << 24)
+#define CLK_AVC_ME_SKIP_BLOCK_8x8_BACKWARD_ENABLE_INTEL (0xAA << 24)
+#define CLK_AVC_ME_SKIP_BLOCK_8x8_DUAL_ENABLE_INTEL (0xFF << 24)
+#define CLK_AVC_ME_SKIP_BLOCK_8x8_0_FORWARD_ENABLE_INTEL (0x1 << 24)
+#define CLK_AVC_ME_SKIP_BLOCK_8x8_0_BACKWARD_ENABLE_INTEL (0x2 << 24)
+#define CLK_AVC_ME_SKIP_BLOCK_8x8_1_FORWARD_ENABLE_INTEL (0x1 << 26)
+#define CLK_AVC_ME_SKIP_BLOCK_8x8_1_BACKWARD_ENABLE_INTEL (0x2 << 26)
+#define CLK_AVC_ME_SKIP_BLOCK_8x8_2_FORWARD_ENABLE_INTEL (0x1 << 28)
+#define CLK_AVC_ME_SKIP_BLOCK_8x8_2_BACKWARD_ENABLE_INTEL (0x2 << 28)
+#define CLK_AVC_ME_SKIP_BLOCK_8x8_3_FORWARD_ENABLE_INTEL (0x1 << 30)
+#define CLK_AVC_ME_SKIP_BLOCK_8x8_3_BACKWARD_ENABLE_INTEL (0x2 << 30)
+
+#define CLK_AVC_ME_BLOCK_BASED_SKIP_4x4_INTEL 0x00
+#define CLK_AVC_ME_BLOCK_BASED_SKIP_8x8_INTEL 0x80
+
+#define CLK_AVC_ME_INTRA_LUMA_PARTITION_MASK_ALL_INTEL 0x0
+#define CLK_AVC_ME_INTRA_LUMA_PARTITION_MASK_16x16_INTEL 0x6
+#define CLK_AVC_ME_INTRA_LUMA_PARTITION_MASK_8x8_INTEL 0x5
+#define CLK_AVC_ME_INTRA_LUMA_PARTITION_MASK_4x4_INTEL 0x3
+
+#define CLK_AVC_ME_INTRA_NEIGHBOR_LEFT_MASK_ENABLE_INTEL 0x60
+#define CLK_AVC_ME_INTRA_NEIGHBOR_UPPER_MASK_ENABLE_INTEL 0x10
+#define CLK_AVC_ME_INTRA_NEIGHBOR_UPPER_RIGHT_MASK_ENABLE_INTEL 0x8
+#define CLK_AVC_ME_INTRA_NEIGHBOR_UPPER_LEFT_MASK_ENABLE_INTEL 0x4
+
+#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_VERTICAL_INTEL 0x0
+#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_HORIZONTAL_INTEL 0x1
+#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_DC_INTEL 0x2
+#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_DIAGONAL_DOWN_LEFT_INTEL 0x3
+#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_DIAGONAL_DOWN_RIGHT_INTEL 0x4
+#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_PLANE_INTEL 0x4
+#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_VERTICAL_RIGHT_INTEL 0x5
+#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_HORIZONTAL_DOWN_INTEL 0x6
+#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_VERTICAL_LEFT_INTEL 0x7
+#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_HORIZONTAL_UP_INTEL 0x8
+#define CLK_AVC_ME_CHROMA_PREDICTOR_MODE_DC_INTEL 0x0
+#define CLK_AVC_ME_CHROMA_PREDICTOR_MODE_HORIZONTAL_INTEL 0x1
+#define CLK_AVC_ME_CHROMA_PREDICTOR_MODE_VERTICAL_INTEL 0x2
+#define CLK_AVC_ME_CHROMA_PREDICTOR_MODE_PLANE_INTEL 0x3
+
+#define CLK_AVC_ME_FRAME_FORWARD_INTEL 0x1
+#define CLK_AVC_ME_FRAME_BACKWARD_INTEL 0x2
+#define CLK_AVC_ME_FRAME_DUAL_INTEL 0x3
+
+#define CLK_AVC_ME_INTERLACED_SCAN_TOP_FIELD_INTEL 0x0
+#define CLK_AVC_ME_INTERLACED_SCAN_BOTTOM_FIELD_INTEL 0x1
+
+#define CLK_AVC_ME_INITIALIZE_INTEL 0x0
+
+#define CLK_AVC_IME_PAYLOAD_INITIALIZE_INTEL 0x0
+#define CLK_AVC_REF_PAYLOAD_INITIALIZE_INTEL 0x0
+#define CLK_AVC_SIC_PAYLOAD_INITIALIZE_INTEL 0x0
+
+#define CLK_AVC_IME_RESULT_INITIALIZE_INTEL 0x0
+#define CLK_AVC_REF_RESULT_INITIALIZE_INTEL 0x0
+#define CLK_AVC_SIC_RESULT_INITIALIZE_INTEL 0x0
+
+#define CLK_AVC_IME_RESULT_SINGLE_REFERENCE_STREAMOUT_INITIALIZE_INTEL 0x0
+#define CLK_AVC_IME_RESULT_SINGLE_REFERENCE_STREAMIN_INITIALIZE_INTEL 0x0
+#define CLK_AVC_IME_RESULT_DUAL_REFERENCE_STREAMOUT_INITIALIZE_INTEL 0x0
+#define CLK_AVC_IME_RESULT_DUAL_REFERENCE_STREAMIN_INITIALIZE_INTEL 0x0
+
+#pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : end
+#endif // cl_intel_device_side_avc_motion_estimation
+
+// Disable any extensions we may have enabled previously.
+#pragma OPENCL EXTENSION all : disable
+
+#endif //_OPENCL_BASE_H_
+
+#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+#ifndef cl_khr_depth_images
+#define cl_khr_depth_images
+#endif //cl_khr_depth_images
+#endif //defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+
+#if __OPENCL_C_VERSION__ < CL_VERSION_2_0
+#ifdef cl_khr_3d_image_writes
+#pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
+#endif //cl_khr_3d_image_writes
+#endif //__OPENCL_C_VERSION__ < CL_VERSION_2_0
+
+#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
+#pragma OPENCL EXTENSION cl_intel_planar_yuv : begin
+#pragma OPENCL EXTENSION cl_intel_planar_yuv : end
+#endif // defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
+
+#define __ovld __attribute__((overloadable))
+#define __conv __attribute__((convergent))
+
+// Optimizations
+#define __purefn __attribute__((pure))
+#define __cnfn __attribute__((const))
+
 
 // OpenCL v1.1/1.2/2.0 s6.2.3 - Explicit conversions
 
@@ -6617,101 +7043,6 @@ half16 __ovld __cnfn convert_half16_rtz(double16);
 
 #endif // cl_khr_fp16
 
-/**
- * OpenCL v1.1/1.2/2.0 s6.2.4.2 - as_type operators
- * Reinterprets a data type as another data type of the same size
- */
-#define as_char(x) __builtin_astype((x),   char)
-#define as_char2(x) __builtin_astype((x),  char2)
-#define as_char3(x) __builtin_astype((x),  char3)
-#define as_char4(x) __builtin_astype((x),  char4)
-#define as_char8(x) __builtin_astype((x),  char8)
-#define as_char16(x) __builtin_astype((x), char16)
-
-#define as_uchar(x) __builtin_astype((x),   uchar)
-#define as_uchar2(x) __builtin_astype((x),  uchar2)
-#define as_uchar3(x) __builtin_astype((x),  uchar3)
-#define as_uchar4(x) __builtin_astype((x),  uchar4)
-#define as_uchar8(x) __builtin_astype((x),  uchar8)
-#define as_uchar16(x) __builtin_astype((x), uchar16)
-
-#define as_short(x) __builtin_astype((x),   short)
-#define as_short2(x) __builtin_astype((x),  short2)
-#define as_short3(x) __builtin_astype((x),  short3)
-#define as_short4(x) __builtin_astype((x),  short4)
-#define as_short8(x) __builtin_astype((x),  short8)
-#define as_short16(x) __builtin_astype((x), short16)
-
-#define as_ushort(x) __builtin_astype((x),   ushort)
-#define as_ushort2(x) __builtin_astype((x),  ushort2)
-#define as_ushort3(x) __builtin_astype((x),  ushort3)
-#define as_ushort4(x) __builtin_astype((x),  ushort4)
-#define as_ushort8(x) __builtin_astype((x),  ushort8)
-#define as_ushort16(x) __builtin_astype((x), ushort16)
-
-#define as_int(x) __builtin_astype((x),   int)
-#define as_int2(x) __builtin_astype((x),  int2)
-#define as_int3(x) __builtin_astype((x),  int3)
-#define as_int4(x) __builtin_astype((x),  int4)
-#define as_int8(x) __builtin_astype((x),  int8)
-#define as_int16(x) __builtin_astype((x), int16)
-
-#define as_uint(x) __builtin_astype((x),   uint)
-#define as_uint2(x) __builtin_astype((x),  uint2)
-#define as_uint3(x) __builtin_astype((x),  uint3)
-#define as_uint4(x) __builtin_astype((x),  uint4)
-#define as_uint8(x) __builtin_astype((x),  uint8)
-#define as_uint16(x) __builtin_astype((x), uint16)
-
-#define as_long(x) __builtin_astype((x),   long)
-#define as_long2(x) __builtin_astype((x),  long2)
-#define as_long3(x) __builtin_astype((x),  long3)
-#define as_long4(x) __builtin_astype((x),  long4)
-#define as_long8(x) __builtin_astype((x),  long8)
-#define as_long16(x) __builtin_astype((x), long16)
-
-#define as_ulong(x) __builtin_astype((x),   ulong)
-#define as_ulong2(x) __builtin_astype((x),  ulong2)
-#define as_ulong3(x) __builtin_astype((x),  ulong3)
-#define as_ulong4(x) __builtin_astype((x),  ulong4)
-#define as_ulong8(x) __builtin_astype((x),  ulong8)
-#define as_ulong16(x) __builtin_astype((x), ulong16)
-
-#define as_float(x) __builtin_astype((x),   float)
-#define as_float2(x) __builtin_astype((x),  float2)
-#define as_float3(x) __builtin_astype((x),  float3)
-#define as_float4(x) __builtin_astype((x),  float4)
-#define as_float8(x) __builtin_astype((x),  float8)
-#define as_float16(x) __builtin_astype((x), float16)
-
-#ifdef cl_khr_fp64
-#define as_double(x) __builtin_astype((x),   double)
-#define as_double2(x) __builtin_astype((x),  double2)
-#define as_double3(x) __builtin_astype((x),  double3)
-#define as_double4(x) __builtin_astype((x),  double4)
-#define as_double8(x) __builtin_astype((x),  double8)
-#define as_double16(x) __builtin_astype((x), double16)
-#endif //cl_khr_fp64
-
-#ifdef cl_khr_fp16
-#define as_half(x) __builtin_astype((x),   half)
-#define as_half2(x) __builtin_astype((x),  half2)
-#define as_half3(x) __builtin_astype((x),  half3)
-#define as_half4(x) __builtin_astype((x),  half4)
-#define as_half8(x) __builtin_astype((x),  half8)
-#define as_half16(x) __builtin_astype((x), half16)
-#endif //cl_khr_fp16
-
-// OpenCL v1.1 s6.9, v1.2/2.0 s6.10 - Function qualifiers
-
-#define __kernel_exec(X, typen) __kernel \
-	__attribute__((work_group_size_hint(X, 1, 1))) \
-	__attribute__((vec_type_hint(typen)))
-
-#define kernel_exec(X, typen) __kernel \
-	__attribute__((work_group_size_hint(X, 1, 1))) \
-	__attribute__((vec_type_hint(typen)))
-
 // OpenCL v1.1 s6.11.1, v1.2 s6.12.1, v2.0 s6.13.1 - Work-item Functions
 
 /**
@@ -12780,30 +13111,6 @@ void __ovld vstorea_half16_rtn(double16 data,size_t offset, __private half *p);
 
 // OpenCL v1.1 s6.11.8, v1.2 s6.12.8, v2.0 s6.13.8 - Synchronization Functions
 
-// Flag type and values for barrier, mem_fence, read_mem_fence, write_mem_fence
-typedef uint cl_mem_fence_flags;
-
-/**
- * Queue a memory fence to ensure correct
- * ordering of memory operations to local memory
- */
-#define CLK_LOCAL_MEM_FENCE    0x01
-
-/**
- * Queue a memory fence to ensure correct
- * ordering of memory operations to global memory
- */
-#define CLK_GLOBAL_MEM_FENCE   0x02
-
-#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
-/**
- * Queue a memory fence to ensure correct ordering of memory
- * operations between work-items of a work-group to
- * image memory.
- */
-#define CLK_IMAGE_MEM_FENCE  0x04
-#endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
-
 /**
  * All work-items in a work-group executing the kernel
  * on a processor must execute this function before any
@@ -12837,17 +13144,6 @@ typedef uint cl_mem_fence_flags;
 void __ovld __conv barrier(cl_mem_fence_flags flags);
 
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
-
-typedef enum memory_scope {
-  memory_scope_work_item = __OPENCL_MEMORY_SCOPE_WORK_ITEM,
-  memory_scope_work_group = __OPENCL_MEMORY_SCOPE_WORK_GROUP,
-  memory_scope_device = __OPENCL_MEMORY_SCOPE_DEVICE,
-  memory_scope_all_svm_devices = __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES,
-#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups)
-  memory_scope_sub_group = __OPENCL_MEMORY_SCOPE_SUB_GROUP
-#endif
-} memory_scope;
-
 void __ovld __conv work_group_barrier(cl_mem_fence_flags flags, memory_scope scope);
 void __ovld __conv work_group_barrier(cl_mem_fence_flags flags);
 #endif //defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
@@ -13687,20 +13983,6 @@ unsigned long __ovld atom_xor(volatile __local unsigned long *p, unsigned long v
 // OpenCL v2.0 s6.13.11 - Atomics Functions
 
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
-#ifndef ATOMIC_VAR_INIT
-#define ATOMIC_VAR_INIT(x) (x)
-#endif //ATOMIC_VAR_INIT
-#define ATOMIC_FLAG_INIT 0
-
-// enum values aligned with what clang uses in EmitAtomicExpr()
-typedef enum memory_order
-{
-  memory_order_relaxed = __ATOMIC_RELAXED,
-  memory_order_acquire = __ATOMIC_ACQUIRE,
-  memory_order_release = __ATOMIC_RELEASE,
-  memory_order_acq_rel = __ATOMIC_ACQ_REL,
-  memory_order_seq_cst = __ATOMIC_SEQ_CST
-} memory_order;
 
 // double atomics support requires extensions cl_khr_int64_base_atomics and cl_khr_int64_extended_atomics
 #if defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics)
@@ -14503,35 +14785,7 @@ half16 __ovld __cnfn shuffle2(half8 x, half8 y, ushort16 mask);
 half16 __ovld __cnfn shuffle2(half16 x, half16 y, ushort16 mask);
 #endif //cl_khr_fp16
 
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
-// OpenCL v1.2 s6.12.13, v2.0 s6.13.13 - printf
-
-int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)));
-#endif
-
 // OpenCL v1.1 s6.11.3, v1.2 s6.12.14, v2.0 s6.13.14 - Image Read and Write Functions
-
-// These values need to match the runtime equivalent
-//
-// Addressing Mode.
-//
-#define CLK_ADDRESS_NONE                0
-#define CLK_ADDRESS_CLAMP_TO_EDGE       2
-#define CLK_ADDRESS_CLAMP               4
-#define CLK_ADDRESS_REPEAT              6
-#define CLK_ADDRESS_MIRRORED_REPEAT     8
-
-//
-// Coordination Normalization
-//
-#define CLK_NORMALIZED_COORDS_FALSE     0
-#define CLK_NORMALIZED_COORDS_TRUE      1
-
-//
-// Filtering Mode.
-//
-#define CLK_FILTER_NEAREST              0x10
-#define CLK_FILTER_LINEAR               0x20
 
 #ifdef cl_khr_gl_msaa_sharing
 #pragma OPENCL EXTENSION cl_khr_gl_msaa_sharing : enable
@@ -15323,26 +15577,6 @@ int __ovld get_image_num_mip_levels(read_write image2d_depth_t image);
  * CLK_FLOAT
  */
 
-//
-// Channel Datatype.
-//
-#define CLK_SNORM_INT8        0x10D0
-#define CLK_SNORM_INT16       0x10D1
-#define CLK_UNORM_INT8        0x10D2
-#define CLK_UNORM_INT16       0x10D3
-#define CLK_UNORM_SHORT_565   0x10D4
-#define CLK_UNORM_SHORT_555   0x10D5
-#define CLK_UNORM_INT_101010  0x10D6
-#define CLK_SIGNED_INT8       0x10D7
-#define CLK_SIGNED_INT16      0x10D8
-#define CLK_SIGNED_INT32      0x10D9
-#define CLK_UNSIGNED_INT8     0x10DA
-#define CLK_UNSIGNED_INT16    0x10DB
-#define CLK_UNSIGNED_INT32    0x10DC
-#define CLK_HALF_FLOAT        0x10DD
-#define CLK_FLOAT             0x10DE
-#define CLK_UNORM_INT24       0x10DF
-
 int __ovld __cnfn get_image_channel_data_type(read_only image1d_t image);
 int __ovld __cnfn get_image_channel_data_type(read_only image1d_buffer_t image);
 int __ovld __cnfn get_image_channel_data_type(read_only image2d_t image);
@@ -15414,30 +15648,6 @@ int __ovld __cnfn get_image_channel_data_type(read_write image2d_array_msaa_dept
  * CLK_INTENSITY
  * CLK_LUMINANCE
  */
-// Channel order, numbering must be aligned with cl_channel_order in cl.h
-//
-#define CLK_R         0x10B0
-#define CLK_A         0x10B1
-#define CLK_RG        0x10B2
-#define CLK_RA        0x10B3
-#define CLK_RGB       0x10B4
-#define CLK_RGBA      0x10B5
-#define CLK_BGRA      0x10B6
-#define CLK_ARGB      0x10B7
-#define CLK_INTENSITY 0x10B8
-#define CLK_LUMINANCE 0x10B9
-#define CLK_Rx                0x10BA
-#define CLK_RGx               0x10BB
-#define CLK_RGBx              0x10BC
-#define CLK_DEPTH             0x10BD
-#define CLK_DEPTH_STENCIL     0x10BE
-#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
-#define CLK_sRGB              0x10BF
-#define CLK_sRGBx             0x10C0
-#define CLK_sRGBA             0x10C1
-#define CLK_sBGRA             0x10C2
-#define CLK_ABGR              0x10C3
-#endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 int __ovld __cnfn get_image_channel_order(read_only image1d_t image);
 int __ovld __cnfn get_image_channel_order(read_only image1d_buffer_t image);
@@ -15716,51 +15926,12 @@ double __ovld __conv work_group_scan_inclusive_max(double x);
 
 // OpenCL v2.0 s6.13.16 - Pipe Functions
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
-#define CLK_NULL_RESERVE_ID (__builtin_astype(((void*)(__SIZE_MAX__)), reserve_id_t))
 bool __ovld is_valid_reserve_id(reserve_id_t reserve_id);
 #endif //defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
 
 
 // OpenCL v2.0 s6.13.17 - Enqueue Kernels
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
-
-#define CL_COMPLETE                                 0x0
-#define CL_RUNNING                                  0x1
-#define CL_SUBMITTED                                0x2
-#define CL_QUEUED                                   0x3
-
-#define CLK_SUCCESS                                 0
-#define CLK_ENQUEUE_FAILURE                         -101
-#define CLK_INVALID_QUEUE                           -102
-#define CLK_INVALID_NDRANGE                         -160
-#define CLK_INVALID_EVENT_WAIT_LIST                 -57
-#define CLK_DEVICE_QUEUE_FULL                       -161
-#define CLK_INVALID_ARG_SIZE                        -51
-#define CLK_EVENT_ALLOCATION_FAILURE                -100
-#define CLK_OUT_OF_RESOURCES                        -5
-
-#define CLK_NULL_QUEUE                              0
-#define CLK_NULL_EVENT (__builtin_astype(((__SIZE_MAX__)), clk_event_t))
-
-// execution model related definitions
-#define CLK_ENQUEUE_FLAGS_NO_WAIT                   0x0
-#define CLK_ENQUEUE_FLAGS_WAIT_KERNEL               0x1
-#define CLK_ENQUEUE_FLAGS_WAIT_WORK_GROUP           0x2
-
-typedef int kernel_enqueue_flags_t;
-typedef int clk_profiling_info;
-
-// Profiling info name (see capture_event_profiling_info)
-#define CLK_PROFILING_COMMAND_EXEC_TIME 0x1
-
-#define MAX_WORK_DIM        3
-
-typedef struct {
-    unsigned int workDimension;
-    size_t globalWorkOffset[MAX_WORK_DIM];
-    size_t globalWorkSize[MAX_WORK_DIM];
-    size_t localWorkSize[MAX_WORK_DIM];
-} ndrange_t;
 
 ndrange_t __ovld ndrange_1D(size_t);
 ndrange_t __ovld ndrange_1D(size_t, size_t);
@@ -16872,138 +17043,6 @@ void        __ovld __conv intel_sub_group_block_write_us8( __global ushort* p, u
 #ifdef cl_intel_device_side_avc_motion_estimation
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : begin
 
-#define CLK_AVC_ME_MAJOR_16x16_INTEL 0x0
-#define CLK_AVC_ME_MAJOR_16x8_INTEL 0x1
-#define CLK_AVC_ME_MAJOR_8x16_INTEL 0x2
-#define CLK_AVC_ME_MAJOR_8x8_INTEL 0x3
-
-#define CLK_AVC_ME_MINOR_8x8_INTEL 0x0
-#define CLK_AVC_ME_MINOR_8x4_INTEL 0x1
-#define CLK_AVC_ME_MINOR_4x8_INTEL 0x2
-#define CLK_AVC_ME_MINOR_4x4_INTEL 0x3
-
-#define CLK_AVC_ME_MAJOR_FORWARD_INTEL 0x0
-#define CLK_AVC_ME_MAJOR_BACKWARD_INTEL 0x1
-#define CLK_AVC_ME_MAJOR_BIDIRECTIONAL_INTEL 0x2
-
-#define CLK_AVC_ME_PARTITION_MASK_ALL_INTEL 0x0
-#define CLK_AVC_ME_PARTITION_MASK_16x16_INTEL 0x7E
-#define CLK_AVC_ME_PARTITION_MASK_16x8_INTEL 0x7D
-#define CLK_AVC_ME_PARTITION_MASK_8x16_INTEL 0x7B
-#define CLK_AVC_ME_PARTITION_MASK_8x8_INTEL 0x77
-#define CLK_AVC_ME_PARTITION_MASK_8x4_INTEL 0x6F
-#define CLK_AVC_ME_PARTITION_MASK_4x8_INTEL 0x5F
-#define CLK_AVC_ME_PARTITION_MASK_4x4_INTEL 0x3F
-
-#define CLK_AVC_ME_SLICE_TYPE_PRED_INTEL 0x0
-#define CLK_AVC_ME_SLICE_TYPE_BPRED_INTEL 0x1
-#define CLK_AVC_ME_SLICE_TYPE_INTRA_INTEL 0x2
-
-#define CLK_AVC_ME_SEARCH_WINDOW_EXHAUSTIVE_INTEL 0x0
-#define CLK_AVC_ME_SEARCH_WINDOW_SMALL_INTEL 0x1
-#define CLK_AVC_ME_SEARCH_WINDOW_TINY_INTEL 0x2
-#define CLK_AVC_ME_SEARCH_WINDOW_EXTRA_TINY_INTEL 0x3
-#define CLK_AVC_ME_SEARCH_WINDOW_DIAMOND_INTEL 0x4
-#define CLK_AVC_ME_SEARCH_WINDOW_LARGE_DIAMOND_INTEL 0x5
-#define CLK_AVC_ME_SEARCH_WINDOW_RESERVED0_INTEL 0x6
-#define CLK_AVC_ME_SEARCH_WINDOW_RESERVED1_INTEL 0x7
-#define CLK_AVC_ME_SEARCH_WINDOW_CUSTOM_INTEL 0x8
-
-#define CLK_AVC_ME_SAD_ADJUST_MODE_NONE_INTEL 0x0
-#define CLK_AVC_ME_SAD_ADJUST_MODE_HAAR_INTEL 0x2
-
-#define CLK_AVC_ME_SUBPIXEL_MODE_INTEGER_INTEL 0x0
-#define CLK_AVC_ME_SUBPIXEL_MODE_HPEL_INTEL 0x1
-#define CLK_AVC_ME_SUBPIXEL_MODE_QPEL_INTEL 0x3
-
-#define CLK_AVC_ME_COST_PRECISION_QPEL_INTEL 0x0
-#define CLK_AVC_ME_COST_PRECISION_HPEL_INTEL 0x1
-#define CLK_AVC_ME_COST_PRECISION_PEL_INTEL 0x2
-#define CLK_AVC_ME_COST_PRECISION_DPEL_INTEL 0x3
-
-#define CLK_AVC_ME_BIDIR_WEIGHT_QUARTER_INTEL 0x10
-#define CLK_AVC_ME_BIDIR_WEIGHT_THIRD_INTEL 0x15
-#define CLK_AVC_ME_BIDIR_WEIGHT_HALF_INTEL 0x20
-#define CLK_AVC_ME_BIDIR_WEIGHT_TWO_THIRD_INTEL 0x2B
-#define CLK_AVC_ME_BIDIR_WEIGHT_THREE_QUARTER_INTEL 0x30
-
-#define CLK_AVC_ME_BORDER_REACHED_LEFT_INTEL 0x0
-#define CLK_AVC_ME_BORDER_REACHED_RIGHT_INTEL 0x2
-#define CLK_AVC_ME_BORDER_REACHED_TOP_INTEL 0x4
-#define CLK_AVC_ME_BORDER_REACHED_BOTTOM_INTEL 0x8
-
-#define CLK_AVC_ME_INTRA_16x16_INTEL 0x0
-#define CLK_AVC_ME_INTRA_8x8_INTEL 0x1
-#define CLK_AVC_ME_INTRA_4x4_INTEL 0x2
-
-#define CLK_AVC_ME_SKIP_BLOCK_PARTITION_16x16_INTEL 0x0
-#define CLK_AVC_ME_SKIP_BLOCK_PARTITION_8x8_INTEL 0x4000
-
-#define CLK_AVC_ME_SKIP_BLOCK_16x16_FORWARD_ENABLE_INTEL (0x1 << 24)
-#define CLK_AVC_ME_SKIP_BLOCK_16x16_BACKWARD_ENABLE_INTEL (0x2 << 24)
-#define CLK_AVC_ME_SKIP_BLOCK_16x16_DUAL_ENABLE_INTEL (0x3 << 24)
-#define CLK_AVC_ME_SKIP_BLOCK_8x8_FORWARD_ENABLE_INTEL (0x55 << 24)
-#define CLK_AVC_ME_SKIP_BLOCK_8x8_BACKWARD_ENABLE_INTEL (0xAA << 24)
-#define CLK_AVC_ME_SKIP_BLOCK_8x8_DUAL_ENABLE_INTEL (0xFF << 24)
-#define CLK_AVC_ME_SKIP_BLOCK_8x8_0_FORWARD_ENABLE_INTEL (0x1 << 24)
-#define CLK_AVC_ME_SKIP_BLOCK_8x8_0_BACKWARD_ENABLE_INTEL (0x2 << 24)
-#define CLK_AVC_ME_SKIP_BLOCK_8x8_1_FORWARD_ENABLE_INTEL (0x1 << 26)
-#define CLK_AVC_ME_SKIP_BLOCK_8x8_1_BACKWARD_ENABLE_INTEL (0x2 << 26)
-#define CLK_AVC_ME_SKIP_BLOCK_8x8_2_FORWARD_ENABLE_INTEL (0x1 << 28)
-#define CLK_AVC_ME_SKIP_BLOCK_8x8_2_BACKWARD_ENABLE_INTEL (0x2 << 28)
-#define CLK_AVC_ME_SKIP_BLOCK_8x8_3_FORWARD_ENABLE_INTEL (0x1 << 30)
-#define CLK_AVC_ME_SKIP_BLOCK_8x8_3_BACKWARD_ENABLE_INTEL (0x2 << 30)
-
-#define CLK_AVC_ME_BLOCK_BASED_SKIP_4x4_INTEL 0x00
-#define CLK_AVC_ME_BLOCK_BASED_SKIP_8x8_INTEL 0x80
-
-#define CLK_AVC_ME_INTRA_LUMA_PARTITION_MASK_ALL_INTEL 0x0
-#define CLK_AVC_ME_INTRA_LUMA_PARTITION_MASK_16x16_INTEL 0x6
-#define CLK_AVC_ME_INTRA_LUMA_PARTITION_MASK_8x8_INTEL 0x5
-#define CLK_AVC_ME_INTRA_LUMA_PARTITION_MASK_4x4_INTEL 0x3
-
-#define CLK_AVC_ME_INTRA_NEIGHBOR_LEFT_MASK_ENABLE_INTEL 0x60
-#define CLK_AVC_ME_INTRA_NEIGHBOR_UPPER_MASK_ENABLE_INTEL 0x10
-#define CLK_AVC_ME_INTRA_NEIGHBOR_UPPER_RIGHT_MASK_ENABLE_INTEL 0x8
-#define CLK_AVC_ME_INTRA_NEIGHBOR_UPPER_LEFT_MASK_ENABLE_INTEL 0x4
-
-#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_VERTICAL_INTEL 0x0
-#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_HORIZONTAL_INTEL 0x1
-#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_DC_INTEL 0x2
-#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_DIAGONAL_DOWN_LEFT_INTEL 0x3
-#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_DIAGONAL_DOWN_RIGHT_INTEL 0x4
-#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_PLANE_INTEL 0x4
-#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_VERTICAL_RIGHT_INTEL 0x5
-#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_HORIZONTAL_DOWN_INTEL 0x6
-#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_VERTICAL_LEFT_INTEL 0x7
-#define CLK_AVC_ME_LUMA_PREDICTOR_MODE_HORIZONTAL_UP_INTEL 0x8
-#define CLK_AVC_ME_CHROMA_PREDICTOR_MODE_DC_INTEL 0x0
-#define CLK_AVC_ME_CHROMA_PREDICTOR_MODE_HORIZONTAL_INTEL 0x1
-#define CLK_AVC_ME_CHROMA_PREDICTOR_MODE_VERTICAL_INTEL 0x2
-#define CLK_AVC_ME_CHROMA_PREDICTOR_MODE_PLANE_INTEL 0x3
-
-#define CLK_AVC_ME_FRAME_FORWARD_INTEL 0x1
-#define CLK_AVC_ME_FRAME_BACKWARD_INTEL 0x2
-#define CLK_AVC_ME_FRAME_DUAL_INTEL 0x3
-
-#define CLK_AVC_ME_INTERLACED_SCAN_TOP_FIELD_INTEL 0x0
-#define CLK_AVC_ME_INTERLACED_SCAN_BOTTOM_FIELD_INTEL 0x1
-
-#define CLK_AVC_ME_INITIALIZE_INTEL 0x0
-
-#define CLK_AVC_IME_PAYLOAD_INITIALIZE_INTEL 0x0
-#define CLK_AVC_REF_PAYLOAD_INITIALIZE_INTEL 0x0
-#define CLK_AVC_SIC_PAYLOAD_INITIALIZE_INTEL 0x0
-
-#define CLK_AVC_IME_RESULT_INITIALIZE_INTEL 0x0
-#define CLK_AVC_REF_RESULT_INITIALIZE_INTEL 0x0
-#define CLK_AVC_SIC_RESULT_INITIALIZE_INTEL 0x0
-
-#define CLK_AVC_IME_RESULT_SINGLE_REFERENCE_STREAMOUT_INITIALIZE_INTEL 0x0
-#define CLK_AVC_IME_RESULT_SINGLE_REFERENCE_STREAMIN_INITIALIZE_INTEL 0x0
-#define CLK_AVC_IME_RESULT_DUAL_REFERENCE_STREAMOUT_INITIALIZE_INTEL 0x0
-#define CLK_AVC_IME_RESULT_DUAL_REFERENCE_STREAMIN_INITIALIZE_INTEL 0x0
-
 // MCE built-in functions
 uchar __ovld
 intel_sub_group_avc_mce_get_default_inter_base_multi_reference_penalty(
@@ -17499,9 +17538,6 @@ intel_sub_group_avc_mce_convert_to_sic_result(
     intel_sub_group_avc_mce_result_t result);
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : end
 #endif // cl_intel_device_side_avc_motion_estimation
-
-// Disable any extensions we may have enabled previously.
-#pragma OPENCL EXTENSION all : disable
 
 #ifdef cl_amd_media_ops
 uint __ovld amd_bitalign(uint a, uint b, uint c);

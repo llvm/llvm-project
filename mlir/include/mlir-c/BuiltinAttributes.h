@@ -98,8 +98,9 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirFloatAttrDoubleGet(MlirContext ctx,
 
 /// Same as "mlirFloatAttrDoubleGet", but if the type is not valid for a
 /// construction of a FloatAttr, returns a null MlirAttribute.
-MLIR_CAPI_EXPORTED MlirAttribute
-mlirFloatAttrDoubleGetChecked(MlirType type, double value, MlirLocation loc);
+MLIR_CAPI_EXPORTED MlirAttribute mlirFloatAttrDoubleGetChecked(MlirLocation loc,
+                                                               MlirType type,
+                                                               double value);
 
 /// Returns the value stored in the given floating point attribute, interpreting
 /// the value as double.

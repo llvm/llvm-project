@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -23,6 +24,7 @@
 namespace clang {
 namespace clangd {
 namespace {
+using llvm::Succeeded;
 using testing::ElementsAre;
 
 MATCHER_P(DiagMessage, M, "") {
@@ -40,6 +42,7 @@ protected:
     Base = ClangdServer::optsForTest();
     // This is needed to we can test index-based operations like call hierarchy.
     Base.BuildDynamicSymbolIndex = true;
+    Base.Modules = &Modules;
   }
 
   LSPClient &start() {
@@ -67,6 +70,7 @@ protected:
 
   MockFS FS;
   ClangdLSPServer::Options Opts;
+  ModuleSet Modules;
 
 private:
   // Color logs so we can distinguish them from test output.
@@ -244,9 +248,7 @@ TEST_F(LSPTest, ModulesTest) {
           [Reply(std::move(Reply)), Value(Value)]() mutable { Reply(Value); });
     }
   };
-  ModuleSet Mods;
-  Mods.add(std::make_unique<MathModule>());
-  Opts.Modules = &Mods;
+  Modules.add(std::make_unique<MathModule>());
 
   auto &Client = start();
   Client.notify("add", 2);
@@ -254,6 +256,104 @@ TEST_F(LSPTest, ModulesTest) {
   EXPECT_EQ(10, Client.call("get", nullptr).takeValue());
   EXPECT_THAT(Client.takeNotifications("changed"),
               ElementsAre(llvm::json::Value(2), llvm::json::Value(10)));
+}
+
+// Creates a Callback that writes its received value into an Optional<Expected>.
+template <typename T>
+llvm::unique_function<void(llvm::Expected<T>)>
+capture(llvm::Optional<llvm::Expected<T>> &Out) {
+  Out.reset();
+  return [&Out](llvm::Expected<T> V) { Out.emplace(std::move(V)); };
+}
+
+TEST_F(LSPTest, ModulesThreadingTest) {
+  // A module that does its work on a background thread, and so exercises the
+  // block/shutdown protocol.
+  class AsyncCounter final : public Module {
+    bool ShouldStop = false;
+    int State = 0;
+    std::deque<Callback<int>> Queue; // null = increment, non-null = read.
+    std::condition_variable CV;
+    std::mutex Mu;
+    std::thread Thread;
+
+    void run() {
+      std::unique_lock<std::mutex> Lock(Mu);
+      while (true) {
+        CV.wait(Lock, [&] { return ShouldStop || !Queue.empty(); });
+        if (ShouldStop) {
+          Queue.clear();
+          CV.notify_all();
+          return;
+        }
+        Callback<int> &Task = Queue.front();
+        if (Task)
+          Task(State);
+        else
+          ++State;
+        Queue.pop_front();
+        CV.notify_all();
+      }
+    }
+
+    bool blockUntilIdle(Deadline D) override {
+      std::unique_lock<std::mutex> Lock(Mu);
+      return clangd::wait(Lock, CV, D, [this] { return Queue.empty(); });
+    }
+
+    void stop() override {
+      {
+        std::lock_guard<std::mutex> Lock(Mu);
+        ShouldStop = true;
+      }
+      CV.notify_all();
+    }
+
+  public:
+    AsyncCounter() : Thread([this] { run(); }) {}
+    ~AsyncCounter() {
+      // Verify shutdown sequence was performed.
+      // Real modules would not do this, to be robust to no ClangdServer.
+      EXPECT_TRUE(ShouldStop) << "ClangdServer should request shutdown";
+      EXPECT_EQ(Queue.size(), 0u) << "ClangdServer should block until idle";
+      Thread.join();
+    }
+
+    void initializeLSP(LSPBinder &Bind, const llvm::json::Object &ClientCaps,
+                       llvm::json::Object &ServerCaps) override {
+      Bind.notification("increment", this, &AsyncCounter::increment);
+    }
+
+    // Get the current value, bypassing the queue.
+    // Used to verify that sync->blockUntilIdle avoids races in tests.
+    int getSync() {
+      std::lock_guard<std::mutex> Lock(Mu);
+      return State;
+    }
+
+    // Increment the current value asynchronously.
+    void increment(const std::nullptr_t &) {
+      {
+        std::lock_guard<std::mutex> Lock(Mu);
+        Queue.push_back(nullptr);
+      }
+      CV.notify_all();
+    }
+  };
+
+  Modules.add(std::make_unique<AsyncCounter>());
+  auto &Client = start();
+
+  Client.notify("increment", nullptr);
+  Client.notify("increment", nullptr);
+  Client.notify("increment", nullptr);
+  EXPECT_THAT_EXPECTED(Client.call("sync", nullptr).take(), Succeeded());
+  EXPECT_EQ(3, Modules.get<AsyncCounter>()->getSync());
+  // Throw some work on the queue to make sure shutdown blocks on it.
+  Client.notify("increment", nullptr);
+  Client.notify("increment", nullptr);
+  Client.notify("increment", nullptr);
+  // And immediately shut down. Module destructor verifies that we blocked.
 }
 
 } // namespace

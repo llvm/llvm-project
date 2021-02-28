@@ -36,10 +36,6 @@ class TypeBuilder : public Builder {
 public:
   using Builder::Builder;
 
-  /// Return an optional code body used for the `getChecked` variant of this
-  /// builder.
-  Optional<StringRef> getCheckedBody() const;
-
   /// Returns true if this builder is able to infer the MLIRContext parameter.
   bool hasInferredContextParameter() const;
 };
@@ -106,9 +102,9 @@ public:
   // generated.
   bool genAccessors() const;
 
-  // Return true if we need to generate the verifyConstructionInvariants
-  // declaration and getChecked method.
-  bool genVerifyInvariantsDecl() const;
+  // Return true if we need to generate the verify declaration and getChecked
+  // method.
+  bool genVerifyDecl() const;
 
   // Returns the dialects extra class declaration code.
   Optional<StringRef> getExtraDecls() const;

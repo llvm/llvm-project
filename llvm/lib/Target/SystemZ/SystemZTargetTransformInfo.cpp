@@ -487,8 +487,10 @@ int SystemZTTIImpl::getArithmeticInstrCost(
 
     if (DivRemConstPow2)
       return (NumVectors * (SignedDivRem ? SDivPow2Cost : 1));
-    if (DivRemConst)
-      return VF * DivMulSeqCost + getScalarizationOverhead(VTy, Args);
+    if (DivRemConst) {
+      SmallVector<Type *> Tys(Args.size(), Ty);
+      return VF * DivMulSeqCost + getScalarizationOverhead(VTy, Args, Tys);
+    }
     if ((SignedDivRem || UnsignedDivRem) && VF > 4)
       // Temporary hack: disable high vectorization factors with integer
       // division/remainder, which will get scalarized and handled with
@@ -511,7 +513,9 @@ int SystemZTTIImpl::getArithmeticInstrCost(
         // inserting and extracting the values.
         unsigned ScalarCost =
             getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind);
-        unsigned Cost = (VF * ScalarCost) + getScalarizationOverhead(VTy, Args);
+        SmallVector<Type *> Tys(Args.size(), Ty);
+        unsigned Cost =
+            (VF * ScalarCost) + getScalarizationOverhead(VTy, Args, Tys);
         // FIXME: VF 2 for these FP operations are currently just as
         // expensive as for VF 4.
         if (VF == 2)
@@ -528,7 +532,9 @@ int SystemZTTIImpl::getArithmeticInstrCost(
 
     // There is no native support for FRem.
     if (Opcode == Instruction::FRem) {
-      unsigned Cost = (VF * LIBCALL_COST) + getScalarizationOverhead(VTy, Args);
+      SmallVector<Type *> Tys(Args.size(), Ty);
+      unsigned Cost =
+          (VF * LIBCALL_COST) + getScalarizationOverhead(VTy, Args, Tys);
       // FIXME: VF 2 for float is currently just as expensive as for VF 4.
       if (VF == 2 && ScalarBits == 32)
         Cost *= 2;

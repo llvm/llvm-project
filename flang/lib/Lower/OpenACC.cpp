@@ -910,7 +910,7 @@ genACC(Fortran::lower::AbstractConverter &converter,
   } else if (standaloneDirective.v == llvm::acc::Directive::ACCD_shutdown) {
     genACCInitShutdownOp<mlir::acc::ShutdownOp>(converter, accClauseList);
   } else if (standaloneDirective.v == llvm::acc::Directive::ACCD_set) {
-    TODO("OpenACC set directive not lowered yet!");
+    TODO(converter.genLocation(), "OpenACC set directive not lowered yet!");
   } else if (standaloneDirective.v == llvm::acc::Directive::ACCD_update) {
     genACCUpdateOp(converter, accClauseList);
   }
@@ -1003,7 +1003,8 @@ void Fortran::lower::genOpenACCConstruct(
           },
           [&](const Fortran::parser::OpenACCCombinedConstruct
                   &combinedConstruct) {
-            TODO("OpenACC Combined construct not lowered yet!");
+            TODO(converter.genLocation(),
+                 "OpenACC Combined construct not lowered yet!");
           },
           [&](const Fortran::parser::OpenACCLoopConstruct &loopConstruct) {
             genACC(converter, eval, loopConstruct);
@@ -1014,16 +1015,19 @@ void Fortran::lower::genOpenACCConstruct(
           },
           [&](const Fortran::parser::OpenACCRoutineConstruct
                   &routineConstruct) {
-            TODO("OpenACC Routine construct not lowered yet!");
+            TODO(converter.genLocation(),
+                 "OpenACC Routine construct not lowered yet!");
           },
           [&](const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
-            TODO("OpenACC Cache construct not lowered yet!");
+            TODO(converter.genLocation(),
+                 "OpenACC Cache construct not lowered yet!");
           },
           [&](const Fortran::parser::OpenACCWaitConstruct &waitConstruct) {
             genACC(converter, eval, waitConstruct);
           },
           [&](const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
-            TODO("OpenACC Atomic construct not lowered yet!");
+            TODO(converter.genLocation(),
+                 "OpenACC Atomic construct not lowered yet!");
           },
       },
       accConstruct.u);

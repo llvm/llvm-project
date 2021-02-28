@@ -4621,11 +4621,22 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, CNode);
       return;
     }
-    case Intrinsic::x86_tdpbssd_internal: {
+
+    case Intrinsic::x86_tdpbssd_internal:
+    case Intrinsic::x86_tdpbsud_internal:
+    case Intrinsic::x86_tdpbusd_internal:
+    case Intrinsic::x86_tdpbuud_internal: {
       if (!Subtarget->hasAMXTILE())
         break;
       SDValue Chain = Node->getOperand(0);
-      unsigned Opc = X86::PTDPBSSDV;
+      unsigned Opc;
+      switch (IntNo) {
+      case Intrinsic::x86_tdpbssd_internal: Opc = X86::PTDPBSSDV; break;
+      case Intrinsic::x86_tdpbsud_internal: Opc = X86::PTDPBSUDV; break;
+      case Intrinsic::x86_tdpbusd_internal: Opc = X86::PTDPBUSDV; break;
+      case Intrinsic::x86_tdpbuud_internal: Opc = X86::PTDPBUUDV; break;
+      default: llvm_unreachable("Impossible intrinsic");
+      }
       SDValue Ops[] = {Node->getOperand(2),
                        Node->getOperand(3),
                        Node->getOperand(4),

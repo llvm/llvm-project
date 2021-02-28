@@ -681,8 +681,7 @@ private:
 
 } // namespace detail
 
-template <typename A, typename B>
-bool inbounds(A v, B lb, B ub) {
+template <typename A, typename B> bool inbounds(A v, B lb, B ub) {
   return v >= lb && v < ub;
 }
 
@@ -759,8 +758,8 @@ RealType fir::RealType::get(mlir::MLIRContext *ctxt, KindTy kind) {
 KindTy fir::RealType::getFKind() const { return getImpl()->getFKind(); }
 
 mlir::LogicalResult
-fir::BoxType::verifyConstructionInvariants(mlir::Location, mlir::Type eleTy,
-                                           mlir::AffineMapAttr map) {
+fir::BoxType::verify(llvm::function_ref<mlir::InFlightDiagnostic()>,
+                     mlir::Type eleTy, mlir::AffineMapAttr map) {
   // TODO
   return mlir::success();
 }
@@ -775,15 +774,14 @@ mlir::Type fir::ReferenceType::getEleTy() const {
   return getImpl()->getElementType();
 }
 
-mlir::LogicalResult
-fir::ReferenceType::verifyConstructionInvariants(mlir::Location loc,
-                                                 mlir::Type eleTy) {
+mlir::LogicalResult fir::ReferenceType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type eleTy) {
   if (eleTy.isa<ShapeType>() || eleTy.isa<ShapeShiftType>() ||
       eleTy.isa<SliceType>() || eleTy.isa<FieldType>() ||
       eleTy.isa<LenType>() || eleTy.isa<ReferenceType>() ||
       eleTy.isa<TypeDescType>())
-    return mlir::emitError(loc, "cannot build a reference to type: ")
-           << eleTy << '\n';
+    return emitError() << "cannot build a reference to type: " << eleTy << '\n';
   return mlir::success();
 }
 
@@ -807,12 +805,11 @@ static bool canBePointerOrHeapElementType(mlir::Type eleTy) {
          eleTy.isa<ReferenceType>() || eleTy.isa<TypeDescType>();
 }
 
-mlir::LogicalResult
-fir::PointerType::verifyConstructionInvariants(mlir::Location loc,
-                                               mlir::Type eleTy) {
+mlir::LogicalResult fir::PointerType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type eleTy) {
   if (canBePointerOrHeapElementType(eleTy))
-    return mlir::emitError(loc, "cannot build a pointer to type: ")
-           << eleTy << '\n';
+    return emitError() << "cannot build a pointer to type: " << eleTy << '\n';
   return mlir::success();
 }
 
@@ -828,11 +825,11 @@ mlir::Type fir::HeapType::getEleTy() const {
 }
 
 mlir::LogicalResult
-fir::HeapType::verifyConstructionInvariants(mlir::Location loc,
-                                            mlir::Type eleTy) {
+fir::HeapType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                      mlir::Type eleTy) {
   if (canBePointerOrHeapElementType(eleTy))
-    return mlir::emitError(loc, "cannot build a heap pointer to type: ")
-           << eleTy << '\n';
+    return emitError() << "cannot build a heap pointer to type: " << eleTy
+                       << '\n';
   return mlir::success();
 }
 
@@ -884,8 +881,9 @@ bool fir::SequenceType::hasConstantInterior() const {
   return true;
 }
 
-mlir::LogicalResult fir::SequenceType::verifyConstructionInvariants(
-    mlir::Location loc, const SequenceType::Shape &shape, mlir::Type eleTy,
+mlir::LogicalResult fir::SequenceType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    const SequenceType::Shape &shape, mlir::Type eleTy,
     mlir::AffineMapAttr map) {
   // DIMENSION attribute can only be applied to an intrinsic or record type
   if (eleTy.isa<BoxType>() || eleTy.isa<BoxCharType>() ||
@@ -895,8 +893,8 @@ mlir::LogicalResult fir::SequenceType::verifyConstructionInvariants(
       eleTy.isa<PointerType>() || eleTy.isa<ReferenceType>() ||
       eleTy.isa<TypeDescType>() || eleTy.isa<fir::VectorType>() ||
       eleTy.isa<SequenceType>())
-    return mlir::emitError(loc, "cannot build an array of this element type: ")
-           << eleTy << '\n';
+    return emitError() << "cannot build an array of this element type: "
+                       << eleTy << '\n';
   return mlir::success();
 }
 
@@ -955,11 +953,11 @@ detail::RecordTypeStorage const *fir::RecordType::uniqueKey() const {
   return getImpl();
 }
 
-mlir::LogicalResult
-fir::RecordType::verifyConstructionInvariants(mlir::Location loc,
-                                              llvm::StringRef name) {
+mlir::LogicalResult fir::RecordType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    llvm::StringRef name) {
   if (name.size() == 0)
-    return mlir::emitError(loc, "record types must have a name");
+    return emitError() << "record types must have a name";
   return mlir::success();
 }
 
@@ -981,16 +979,16 @@ TypeDescType fir::TypeDescType::get(mlir::Type ofType) {
 
 mlir::Type fir::TypeDescType::getOfTy() const { return getImpl()->getOfType(); }
 
-mlir::LogicalResult
-fir::TypeDescType::verifyConstructionInvariants(mlir::Location loc,
-                                                mlir::Type eleTy) {
+mlir::LogicalResult fir::TypeDescType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type eleTy) {
   if (eleTy.isa<BoxType>() || eleTy.isa<BoxCharType>() ||
       eleTy.isa<BoxProcType>() || eleTy.isa<ShapeType>() ||
       eleTy.isa<ShapeShiftType>() || eleTy.isa<SliceType>() ||
       eleTy.isa<FieldType>() || eleTy.isa<LenType>() ||
       eleTy.isa<ReferenceType>() || eleTy.isa<TypeDescType>())
-    return mlir::emitError(loc, "cannot build a type descriptor of type: ")
-           << eleTy << '\n';
+    return emitError() << "cannot build a type descriptor of type: " << eleTy
+                       << '\n';
   return mlir::success();
 }
 
@@ -1006,12 +1004,11 @@ mlir::Type fir::VectorType::getEleTy() const { return getImpl()->getEleTy(); }
 
 uint64_t fir::VectorType::getLen() const { return getImpl()->getLen(); }
 
-mlir::LogicalResult
-fir::VectorType::verifyConstructionInvariants(mlir::Location loc, uint64_t len,
-                                              mlir::Type eleTy) {
+mlir::LogicalResult fir::VectorType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError, uint64_t len,
+    mlir::Type eleTy) {
   if (!(fir::isa_real(eleTy) || fir::isa_integer(eleTy)))
-    return mlir::emitError(loc, "cannot build a vector of type ")
-           << eleTy << '\n';
+    return emitError() << "cannot build a vector of type " << eleTy << '\n';
   return mlir::success();
 }
 
@@ -1173,14 +1170,14 @@ mlir::Type BoxProcType::parse(mlir::MLIRContext *context,
 }
 
 mlir::LogicalResult
-BoxProcType::verifyConstructionInvariants(mlir::Location loc,
-                                          mlir::Type eleTy) {
+BoxProcType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                    mlir::Type eleTy) {
   if (eleTy.isa<mlir::FunctionType>())
     return mlir::success();
   if (auto refTy = eleTy.dyn_cast<ReferenceType>())
     if (refTy.isa<mlir::FunctionType>())
       return mlir::success();
-  return mlir::emitError(loc, "invalid type for boxproc") << eleTy << '\n';
+  return emitError() << "invalid type for boxproc" << eleTy << '\n';
 }
 
 //===----------------------------------------------------------------------===//

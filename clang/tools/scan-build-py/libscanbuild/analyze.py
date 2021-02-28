@@ -356,11 +356,14 @@ def report_directory(hint, keep, output_format):
         yield name
     finally:
         if os.listdir(name):
-            if output_format != 'sarif':
+            if output_format not in ['sarif', 'sarif-html']: # FIXME:
                 # 'scan-view' currently does not support sarif format.
                 msg = "Run 'scan-view %s' to examine bug reports."
+            elif output_format == 'sarif-html':
+                msg = "Run 'scan-view %s' to examine bug reports or see " \
+                    "merged sarif results at %s/results-merged.sarif."
             else:
-                msg = "View result at %s/results-merged.sarif."
+                msg = "View merged sarif results at %s/results-merged.sarif."
             keep = True
         else:
             if keep:
@@ -438,7 +441,7 @@ def require(required):
           'direct_args',  # arguments from command line
           'force_debug',  # kill non debug macros
           'output_dir',  # where generated report files shall go
-          'output_format',  # it's 'plist', 'html', 'plist-html', 'plist-multi-file', or 'sarif'
+          'output_format',  # it's 'plist', 'html', 'plist-html', 'plist-multi-file', 'sarif', or 'sarif-html'
           'output_failures',  # generate crash reports or not
           'ctu'])  # ctu control options
 def run(opts):
@@ -542,7 +545,9 @@ def run_analyzer(opts, continuation=report_failure):
                                               dir=opts['output_dir'])
             os.close(handle)
             return name
-        elif opts['output_format'] == 'sarif':
+        elif opts['output_format'] in {
+                'sarif',
+                'sarif-html'}:
             (handle, name) = tempfile.mkstemp(prefix='result-',
                                               suffix='.sarif',
                                               dir=opts['output_dir'])

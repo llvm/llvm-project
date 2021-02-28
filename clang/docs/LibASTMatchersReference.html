@@ -7152,7 +7152,8 @@ void foo()
     f = 42;
 }
 The matcher:
-  decompositionDecl(hasBinding(0, bindingDecl(hasName("f").bind("fBinding"))))
+  decompositionDecl(hasBinding(0,
+  bindingDecl(hasName("f").bind("fBinding"))))
 matches the decomposition decl with 'f' bound to "fBinding".
 </pre></td></tr>
 

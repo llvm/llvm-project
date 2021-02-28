@@ -182,27 +182,29 @@ static const char *const typeDefParsePrint = R"(
     void print(::mlir::DialectAsmPrinter &printer) const;
 )";
 
-/// The code block for the verifyConstructionInvariants and getChecked.
+/// The code block for the verify method declaration.
 ///
-/// {0}: The name of the typeDef class.
-/// {1}: List of parameters, parameters style.
+/// {0}: List of parameters, parameters style.
 static const char *const typeDefDeclVerifyStr = R"(
-    static ::mlir::LogicalResult verifyConstructionInvariants(::mlir::Location loc{1});
+    using Base::getChecked;
+    static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError{0});
 )";
 
 /// Emit the builders for the given type.
 static void emitTypeBuilderDecls(const TypeDef &typeDef, raw_ostream &os,
                                  TypeParamCommaFormatter &paramTypes) {
   StringRef typeClass = typeDef.getCppClassName();
-  bool genCheckedMethods = typeDef.genVerifyInvariantsDecl();
+  bool genCheckedMethods = typeDef.genVerifyDecl();
   if (!typeDef.skipDefaultBuilders()) {
     os << llvm::formatv(
         "    static {0} get(::mlir::MLIRContext *context{1});\n", typeClass,
         paramTypes);
     if (genCheckedMethods) {
-      os << llvm::formatv(
-          "    static {0} getChecked(::mlir::Location loc{1});\n", typeClass,
-          paramTypes);
+      os << llvm::formatv("    static {0} "
+                          "getChecked(llvm::function_ref<::mlir::"
+                          "InFlightDiagnostic()> emitError, "
+                          "::mlir::MLIRContext *context{1});\n",
+                          typeClass, paramTypes);
     }
   }
 
@@ -231,10 +233,14 @@ static void emitTypeBuilderDecls(const TypeDef &typeDef, raw_ostream &os,
 
     // Generate the `getChecked` variant of the builder.
     if (genCheckedMethods) {
-      os << "    static " << typeClass << " getChecked(::mlir::Location loc";
+      os << "    static " << typeClass
+         << " getChecked(llvm::function_ref<mlir::InFlightDiagnostic()> "
+            "emitError";
+      if (!builder.hasInferredContextParameter())
+        os << ", ::mlir::MLIRContext *context";
       if (!paramStr.empty())
-        os << ", " << paramStr;
-      os << ");\n";
+        os << ", ";
+      os << paramStr << ");\n";
     }
   }
 }
@@ -265,9 +271,8 @@ static void emitTypeDefDecl(const TypeDef &typeDef, raw_ostream &os) {
     emitTypeBuilderDecls(typeDef, os, emitTypeNamePairsAfterComma);
 
     // Emit the verify invariants declaration.
-    if (typeDef.genVerifyInvariantsDecl())
-      os << llvm::formatv(typeDefDeclVerifyStr, typeDef.getCppClassName(),
-                          emitTypeNamePairsAfterComma);
+    if (typeDef.genVerifyDecl())
+      os << llvm::formatv(typeDefDeclVerifyStr, emitTypeNamePairsAfterComma);
   }
 
   // Emit the mnenomic, if specified.
@@ -515,10 +520,18 @@ void emitParserPrinter(TypeDef typeDef, raw_ostream &os) {
   }
 }
 
+/// Replace all instances of 'from' to 'to' in `str` and return the new string.
+static std::string replaceInStr(std::string str, StringRef from, StringRef to) {
+  size_t pos = 0;
+  while ((pos = str.find(from.data(), pos, from.size())) != std::string::npos)
+    str.replace(pos, from.size(), to.data(), to.size());
+  return str;
+}
+
 /// Emit the builders for the given type.
 static void emitTypeBuilderDefs(const TypeDef &typeDef, raw_ostream &os,
                                 ArrayRef<TypeParameter> typeDefParams) {
-  bool genCheckedMethods = typeDef.genVerifyInvariantsDecl();
+  bool genCheckedMethods = typeDef.genVerifyDecl();
   StringRef typeClass = typeDef.getCppClassName();
   if (!typeDef.skipDefaultBuilders()) {
     os << llvm::formatv(
@@ -531,8 +544,10 @@ static void emitTypeBuilderDefs(const TypeDef &typeDef, raw_ostream &os,
                                 typeDefParams));
     if (genCheckedMethods) {
       os << llvm::formatv(
-          "{0} {0}::getChecked(::mlir::Location loc{1}) {{\n"
-          "  return Base::getChecked(loc{2});\n}\n",
+          "{0} {0}::getChecked("
+          "llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, "
+          "::mlir::MLIRContext *context{1}) {{\n"
+          "  return Base::getChecked(emitError, context{2});\n}\n",
           typeClass,
           TypeParamCommaFormatter(
               TypeParamCommaFormatter::EmitFormat::TypeNamePairs,
@@ -542,16 +557,15 @@ static void emitTypeBuilderDefs(const TypeDef &typeDef, raw_ostream &os,
     }
   }
 
+  auto builderFmtCtx =
+      FmtContext().addSubst("_ctxt", "context").addSubst("_get", "Base::get");
+  auto inferredCtxBuilderFmtCtx = FmtContext().addSubst("_get", "Base::get");
+  auto checkedBuilderFmtCtx = FmtContext().addSubst("_ctxt", "context");
+
   // Generate the builders specified by the user.
-  auto builderFmtCtx = FmtContext().addSubst("_ctxt", "context");
-  auto checkedBuilderFmtCtx = FmtContext()
-                                  .addSubst("_loc", "loc")
-                                  .addSubst("_ctxt", "loc.getContext()");
   for (const TypeBuilder &builder : typeDef.getBuilders()) {
     Optional<StringRef> body = builder.getBody();
-    Optional<StringRef> checkedBody =
-        genCheckedMethods ? builder.getCheckedBody() : llvm::None;
-    if (!body && !checkedBody)
+    if (!body)
       continue;
     std::string paramStr;
     llvm::raw_string_ostream paramOS(paramStr);
@@ -565,27 +579,33 @@ static void emitTypeBuilderDefs(const TypeDef &typeDef, raw_ostream &os,
     paramOS.flush();
 
     // Emit the `get` variant of the builder.
-    if (body) {
-      os << llvm::formatv("{0} {0}::get(", typeClass);
-      if (!builder.hasInferredContextParameter()) {
-        os << "::mlir::MLIRContext *context";
-        if (!paramStr.empty())
-          os << ", ";
-        os << llvm::formatv("{0}) {{\n  {1};\n}\n", paramStr,
-                            tgfmt(*body, &builderFmtCtx).str());
-      } else {
-        os << llvm::formatv("{0}) {{\n  {1};\n}\n", paramStr, *body);
-      }
+    os << llvm::formatv("{0} {0}::get(", typeClass);
+    if (!builder.hasInferredContextParameter()) {
+      os << "::mlir::MLIRContext *context";
+      if (!paramStr.empty())
+        os << ", ";
+      os << llvm::formatv("{0}) {{\n  {1};\n}\n", paramStr,
+                          tgfmt(*body, &builderFmtCtx).str());
+    } else {
+      os << llvm::formatv("{0}) {{\n  {1};\n}\n", paramStr,
+                          tgfmt(*body, &inferredCtxBuilderFmtCtx).str());
     }
 
     // Emit the `getChecked` variant of the builder.
-    if (checkedBody) {
-      os << llvm::formatv("{0} {0}::getChecked(::mlir::Location loc",
+    if (genCheckedMethods) {
+      os << llvm::formatv("{0} "
+                          "{0}::getChecked(llvm::function_ref<::mlir::"
+                          "InFlightDiagnostic()> emitErrorFn",
                           typeClass);
+      std::string checkedBody =
+          replaceInStr(body->str(), "$_get(", "Base::getChecked(emitErrorFn, ");
+      if (!builder.hasInferredContextParameter()) {
+        os << ", ::mlir::MLIRContext *context";
+        checkedBody = tgfmt(checkedBody, &checkedBuilderFmtCtx).str();
+      }
       if (!paramStr.empty())
-        os << ", " << paramStr;
-      os << llvm::formatv(") {{\n  {0};\n}\n",
-                          tgfmt(*checkedBody, &checkedBuilderFmtCtx));
+        os << ", ";
+      os << llvm::formatv("{0}) {{\n  {1};\n}\n", paramStr, checkedBody);
     }
   }
 }

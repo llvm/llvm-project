@@ -27,6 +27,19 @@ set(MLIR_ROCM_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 set(MLIR_SPIRV_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 set(MLIR_VULKAN_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
+if (MLIR_INCLUDE_INTEGRATION_TESTS)
+  set(INTEL_SDE_EXECUTABLE "" CACHE STRING
+      "If set, arch-specific integration tests are run with Intel SDE.")
+  option(MLIR_RUN_AVX512_TESTS "Run AVX512 tests.")
+  # Passed to lit.site.cfg.py.in to set up the path where to find the libraries.
+  set(MLIR_INTEGRATION_TEST_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+
+  # Copy test data over.
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
+            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.tns
+          DESTINATION ${MLIR_INTEGRATION_TEST_DIR}/data/)
+endif()
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py

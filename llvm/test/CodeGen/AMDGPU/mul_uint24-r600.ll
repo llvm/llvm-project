@@ -1,8 +1,9 @@
-; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck -check-prefixes=FUNC,R600,CM %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefixes=FUNC,R600,EG %s
 
 ; FUNC-LABEL: {{^}}test_umul24_i32:
-; EG: MUL_UINT24 {{[* ]*}}T{{[0-9]\.[XYZW]}}, KC0[2].Z, KC0[2].W
+; CM: MULLO_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, T{{[0-9]}}.W, T{{[0-9]}}.Z
+; EG: MULLO_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PS, PV.W
 define amdgpu_kernel void @test_umul24_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) {
 entry:
   %0 = shl i32 %a, 8
@@ -16,9 +17,10 @@ entry:
 
 ; The result must be sign-extended.
 ; FUNC-LABEL: {{^}}test_umul24_i16_sext:
-; EG: MUL_UINT24 {{[* ]*}}T{{[0-9]}}.[[MUL_CHAN:[XYZW]]]
-; EG: BFE_INT {{[* ]*}}T{{[0-9]}}.{{[XYZW]}}, PV.[[MUL_CHAN]], 0.0, literal.x
-; EG: 16
+; R600: MULLO_INT {{[* ]*}}T{{[0-9]}}.[[MUL_CHAN:[XYZW]]]
+; CM: BFE_INT {{[* ]*}}T{{[0-9]}}.{{[XYZW]}}, PV.[[MUL_CHAN]], 0.0, literal.x
+; EG: BFE_INT {{[* ]*}}T{{[0-9]}}.{{[XYZW]}}, PS, 0.0, literal.x
+; R600: 16
 define amdgpu_kernel void @test_umul24_i16_sext(i32 addrspace(1)* %out, i16 %a, i16 %b) {
 entry:
   %mul = mul i16 %a, %b
@@ -29,8 +31,9 @@ entry:
 
 ; The result must be sign-extended.
 ; FUNC-LABEL: {{^}}test_umul24_i8:
-; EG: MUL_UINT24 {{[* ]*}}T{{[0-9]}}.[[MUL_CHAN:[XYZW]]]
-; EG: BFE_INT {{[* ]*}}T{{[0-9]}}.{{[XYZW]}}, PV.[[MUL_CHAN]], 0.0, literal.x
+; R600: MULLO_INT {{[* ]*}}T{{[0-9]}}.[[MUL_CHAN:[XYZW]]]
+; CM: BFE_INT {{[* ]*}}T{{[0-9]}}.{{[XYZW]}}, PV.[[MUL_CHAN]], 0.0, literal.x
+; EG: BFE_INT {{[* ]*}}T{{[0-9]}}.{{[XYZW]}}, PS, 0.0, literal.x
 define amdgpu_kernel void @test_umul24_i8(i32 addrspace(1)* %out, i8 %a, i8 %b) {
 entry:
   %mul = mul i8 %a, %b
@@ -40,7 +43,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}test_umulhi24_i32_i64:
-; EG: MULHI_UINT24 {{[* ]*}}T{{[0-9]\.[XYZW]}}, KC0[2].Z, KC0[2].W
+; R600: MULHI_UINT24 {{[* ]*}}T{{[0-9]\.[XYZW]}}, KC0[2].Z, KC0[2].W
 define amdgpu_kernel void @test_umulhi24_i32_i64(i32 addrspace(1)* %out, i32 %a, i32 %b) {
 entry:
   %a.24 = and i32 %a, 16777215
@@ -55,7 +58,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}test_umulhi24:
-; EG: MULHI_UINT24 {{[* ]*}}T{{[0-9]\.[XYZW]}}, KC0[2].W, KC0[3].Y
+; R600: MULHI_UINT24 {{[* ]*}}T{{[0-9]\.[XYZW]}}, KC0[2].W, KC0[3].Y
 define amdgpu_kernel void @test_umulhi24(i32 addrspace(1)* %out, i64 %a, i64 %b) {
 entry:
   %a.24 = and i64 %a, 16777215
@@ -70,7 +73,7 @@ entry:
 ; Multiply with 24-bit inputs and 64-bit output.
 ; FUNC-LABEL: {{^}}test_umul24_i64:
 ; EG; MUL_UINT24
-; EG: MULHI
+; R600: MULHI
 define amdgpu_kernel void @test_umul24_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 entry:
   %tmp0 = shl i64 %a, 40

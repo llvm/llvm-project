@@ -19,6 +19,7 @@ import shlex
 import tempfile
 import shutil
 from distutils.spawn import find_executable
+import multiprocessing
 
 verbose = False
 creduce_cmd = None
@@ -64,7 +65,7 @@ def write_to_script(text, filename):
   os.chmod(filename, os.stat(filename).st_mode | stat.S_IEXEC)
 
 class Reduce(object):
-  def __init__(self, crash_script, file_to_reduce):
+  def __init__(self, crash_script, file_to_reduce, core_number):
     crash_script_name, crash_script_ext = os.path.splitext(crash_script)
     file_reduce_name, file_reduce_ext = os.path.splitext(file_to_reduce)
 
@@ -78,6 +79,7 @@ class Reduce(object):
     self.expected_output = []
     self.needs_stack_trace = False
     self.creduce_flags = ["--tidy"]
+    self.creduce_flags = ["--n", str(core_number)]
 
     self.read_clang_args(crash_script, file_to_reduce)
     self.read_expected_output()
@@ -394,6 +396,9 @@ def main():
   parser.add_argument('--creduce', dest='creduce', type=str,
                       help="The path to the `creduce` executable. "
                       "Required if `creduce` is not in PATH environment.")
+  parser.add_argument('--n', dest='core_number', type=int, 
+                      default=max(4, multiprocessing.cpu_count() / 2),
+                      help="Number of cores to use.")
   parser.add_argument('-v', '--verbose', action='store_true')
   args = parser.parse_args()
 
@@ -401,11 +406,12 @@ def main():
   llvm_bin = os.path.abspath(args.llvm_bin) if args.llvm_bin else None
   creduce_cmd = check_cmd('creduce', None, args.creduce)
   clang_cmd = check_cmd('clang', llvm_bin, args.clang)
+  core_number = args.core_number
 
   crash_script = check_file(args.crash_script[0])
   file_to_reduce = check_file(args.file_to_reduce[0])
 
-  r = Reduce(crash_script, file_to_reduce)
+  r = Reduce(crash_script, file_to_reduce, core_number)
 
   r.simplify_clang_args()
   r.write_interestingness_test()

@@ -2,6 +2,67 @@
 # RUN: llc -mtriple aarch64 -verify-machineinstrs -run-pass=legalizer -debugify-and-strip-all-safe %s -o - | FileCheck %s
 
 ---
+name:            narrow_scalar_usubo_s128
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: narrow_scalar_usubo_s128
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[COPY]], [[COPY2]]
+    ; CHECK: %17:_(s64), %carry_out:_(s1) = G_USUBE [[COPY1]], [[COPY3]], [[USUBO1]]
+    ; CHECK: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
+    ; CHECK: $x0 = COPY [[USUBO]](s64)
+    ; CHECK: $x1 = COPY %17(s64)
+    ; CHECK: $x2 = COPY %carry_out_ext(s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %lhs:_(s128) = G_MERGE_VALUES %0, %1
+    %rhs:_(s128) = G_MERGE_VALUES %2, %3
+    %sub:_(s128), %carry_out:_(s1) = G_USUBO %lhs, %rhs
+    %sub0:_(s64), %sub1:_(s64) = G_UNMERGE_VALUES %sub
+    %carry_out_ext:_(s64) = G_ANYEXT %carry_out
+    $x0 = COPY %sub0
+    $x1 = COPY %sub1
+    $x2 = COPY %carry_out_ext
+
+...
+---
+name:            narrow_scalar_usubo_big_nonpow2
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: narrow_scalar_usubo_big_nonpow2
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[COPY]], [[COPY1]]
+    ; CHECK: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[COPY1]], [[COPY2]], [[USUBO1]]
+    ; CHECK: %22:_(s64), %carry_out:_(s1) = G_USUBE [[COPY2]], [[COPY3]], [[USUBE1]]
+    ; CHECK: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
+    ; CHECK: $x0 = COPY [[USUBO]](s64)
+    ; CHECK: $x1 = COPY [[USUBE]](s64)
+    ; CHECK: $x2 = COPY %22(s64)
+    ; CHECK: $x3 = COPY %carry_out_ext(s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %lhs:_(s192) = G_MERGE_VALUES %0, %1, %2
+    %rhs:_(s192) = G_MERGE_VALUES %1, %2, %3
+    %sub:_(s192), %carry_out:_(s1) = G_USUBO %lhs, %rhs
+    %sub0:_(s64), %sub1:_(s64), %sub2:_(s64) = G_UNMERGE_VALUES %sub
+    %carry_out_ext:_(s64) = G_ANYEXT %carry_out
+    $x0 = COPY %sub0
+    $x1 = COPY %sub1
+    $x2 = COPY %sub2
+    $x3 = COPY %carry_out_ext
+
+...
+---
 name:            test_scalar_usubo_small
 body:             |
   bb.0.entry:

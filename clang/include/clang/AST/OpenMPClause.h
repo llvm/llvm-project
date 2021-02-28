@@ -833,7 +833,7 @@ public:
   /// Build an empty 'sizes' AST node for deserialization.
   ///
   /// \param C     Context of the AST.
-  /// \param Sizes Number of items in the clause.
+  /// \param NumSizes Number of items in the clause.
   static OMPSizesClause *CreateEmpty(const ASTContext &C, unsigned NumSizes);
 
   /// Sets the location of '('.

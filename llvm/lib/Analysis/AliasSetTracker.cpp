@@ -283,9 +283,8 @@ Instruction* AliasSet::getUniqueInstruction() {
 
 void AliasSetTracker::clear() {
   // Delete all the PointerRec entries.
-  for (PointerMapType::iterator I = PointerMap.begin(), E = PointerMap.end();
-       I != E; ++I)
-    I->second->eraseFromList();
+  for (auto &I : PointerMap)
+    I.second->eraseFromList();
 
   PointerMap.clear();
 
@@ -303,12 +302,11 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
                                                     bool &MustAliasAll) {
   AliasSet *FoundSet = nullptr;
   AliasResult AllAR = MustAlias;
-  for (iterator I = begin(), E = end(); I != E;) {
-    iterator Cur = I++;
-    if (Cur->Forward)
+  for (AliasSet &AS : llvm::make_early_inc_range(*this)) {
+    if (AS.Forward)
       continue;
 
-    AliasResult AR = Cur->aliasesPointer(Ptr, Size, AAInfo, AA);
+    AliasResult AR = AS.aliasesPointer(Ptr, Size, AAInfo, AA);
     if (AR == NoAlias)
       continue;
 
@@ -317,10 +315,10 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
 
     if (!FoundSet) {
       // If this is the first alias set ptr can go into, remember it.
-      FoundSet = &*Cur;
+      FoundSet = &AS;
     } else {
       // Otherwise, we must merge the sets.
-      FoundSet->mergeSetIn(*Cur, *this);
+      FoundSet->mergeSetIn(AS, *this);
     }
   }
 
@@ -330,16 +328,15 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
 
 AliasSet *AliasSetTracker::findAliasSetForUnknownInst(Instruction *Inst) {
   AliasSet *FoundSet = nullptr;
-  for (iterator I = begin(), E = end(); I != E;) {
-    iterator Cur = I++;
-    if (Cur->Forward || !Cur->aliasesUnknownInst(Inst, AA))
+  for (AliasSet &AS : llvm::make_early_inc_range(*this)) {
+    if (AS.Forward || !AS.aliasesUnknownInst(Inst, AA))
       continue;
     if (!FoundSet) {
       // If this is the first alias set ptr can go into, remember it.
-      FoundSet = &*Cur;
+      FoundSet = &AS;
     } else {
       // Otherwise, we must merge the sets.
-      FoundSet->mergeSetIn(*Cur, *this);
+      FoundSet->mergeSetIn(AS, *this);
     }
   }
   return FoundSet;
