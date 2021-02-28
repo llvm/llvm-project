@@ -248,38 +248,50 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValueLanguage(
 bool OptionValueProperties::GetPropertyAtIndexAsArgs(
     const ExecutionContext *exe_ctx, uint32_t idx, Args &args) const {
   const Property *property = GetPropertyAtIndex(exe_ctx, false, idx);
-  if (property) {
-    OptionValue *value = property->GetValue().get();
-    if (value) {
-      const OptionValueArray *array = value->GetAsArray();
-      if (array)
-        return array->GetArgs(args);
-      else {
-        const OptionValueDictionary *dict = value->GetAsDictionary();
-        if (dict)
-          return dict->GetArgs(args);
-      }
-    }
-  }
+  if (!property)
+    return false;
+
+  OptionValue *value = property->GetValue().get();
+  if (!value)
+    return false;
+
+  const OptionValueArgs *arguments = value->GetAsArgs();
+  if (arguments)
+    return arguments->GetArgs(args);
+
+  const OptionValueArray *array = value->GetAsArray();
+  if (array)
+    return array->GetArgs(args);
+
+  const OptionValueDictionary *dict = value->GetAsDictionary();
+  if (dict)
+    return dict->GetArgs(args);
+
   return false;
 }
 
 bool OptionValueProperties::SetPropertyAtIndexFromArgs(
     const ExecutionContext *exe_ctx, uint32_t idx, const Args &args) {
   const Property *property = GetPropertyAtIndex(exe_ctx, true, idx);
-  if (property) {
-    OptionValue *value = property->GetValue().get();
-    if (value) {
-      OptionValueArray *array = value->GetAsArray();
-      if (array)
-        return array->SetArgs(args, eVarSetOperationAssign).Success();
-      else {
-        OptionValueDictionary *dict = value->GetAsDictionary();
-        if (dict)
-          return dict->SetArgs(args, eVarSetOperationAssign).Success();
-      }
-    }
-  }
+  if (!property)
+    return false;
+
+  OptionValue *value = property->GetValue().get();
+  if (!value)
+    return false;
+
+  OptionValueArgs *arguments = value->GetAsArgs();
+  if (arguments)
+    return arguments->SetArgs(args, eVarSetOperationAssign).Success();
+
+  OptionValueArray *array = value->GetAsArray();
+  if (array)
+    return array->SetArgs(args, eVarSetOperationAssign).Success();
+
+  OptionValueDictionary *dict = value->GetAsDictionary();
+  if (dict)
+    return dict->SetArgs(args, eVarSetOperationAssign).Success();
+
   return false;
 }
 
