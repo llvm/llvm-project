@@ -174,24 +174,23 @@ Symbol *SymbolTable::addDSOHandle(const MachHeaderSection *header) {
 }
 
 void lld::macho::treatUndefinedSymbol(const Undefined &sym) {
-  std::string message = "undefined symbol: " + toString(sym);
-  std::string fileName = toString(sym.getFile());
-
-  if (!fileName.empty())
-    message += "\n>>> referenced by " + fileName;
+  auto message = [](const Undefined &sym) {
+    std::string message = "undefined symbol: " + toString(sym);
+    std::string fileName = toString(sym.getFile());
+    if (!fileName.empty())
+      message += "\n>>> referenced by " + fileName;
+    return message;
+  };
   switch (config->undefinedSymbolTreatment) {
-  case UndefinedSymbolTreatment::suppress:
-    error("-undefined suppress unimplemented");
-    break;
   case UndefinedSymbolTreatment::error:
-    error(message);
+    error(message(sym));
     break;
   case UndefinedSymbolTreatment::warning:
-    warn(message);
-    error("-undefined warning unimplemented");
-    break;
+    warn(message(sym));
+    LLVM_FALLTHROUGH;
   case UndefinedSymbolTreatment::dynamic_lookup:
-    error("dynamic_lookup unimplemented for " + message);
+  case UndefinedSymbolTreatment::suppress:
+    symtab->addDynamicLookup(sym.getName());
     break;
   case UndefinedSymbolTreatment::unknown:
     llvm_unreachable("unknown -undefined TREATMENT");
