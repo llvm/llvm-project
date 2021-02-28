@@ -26,21 +26,16 @@ public:
   OptionValueString() = default;
 
   OptionValueString(ValidatorCallback validator, void *baton = nullptr)
-      : OptionValue(), m_current_value(), m_default_value(), m_options(),
-        m_validator(validator), m_validator_baton(baton) {}
+      : m_validator(validator), m_validator_baton(baton) {}
 
-  OptionValueString(const char *value)
-      : OptionValue(), m_current_value(), m_default_value(), m_options(),
-        m_validator(), m_validator_baton() {
+  OptionValueString(const char *value) {
     if (value && value[0]) {
       m_current_value.assign(value);
       m_default_value.assign(value);
     }
   }
 
-  OptionValueString(const char *current_value, const char *default_value)
-      : OptionValue(), m_current_value(), m_default_value(), m_options(),
-        m_validator(), m_validator_baton() {
+  OptionValueString(const char *current_value, const char *default_value) {
     if (current_value && current_value[0])
       m_current_value.assign(current_value);
     if (default_value && default_value[0])
@@ -49,8 +44,7 @@ public:
 
   OptionValueString(const char *value, ValidatorCallback validator,
                     void *baton = nullptr)
-      : OptionValue(), m_current_value(), m_default_value(), m_options(),
-        m_validator(validator), m_validator_baton(baton) {
+      : m_validator(validator), m_validator_baton(baton) {
     if (value && value[0]) {
       m_current_value.assign(value);
       m_default_value.assign(value);
@@ -59,8 +53,7 @@ public:
 
   OptionValueString(const char *current_value, const char *default_value,
                     ValidatorCallback validator, void *baton = nullptr)
-      : OptionValue(), m_current_value(), m_default_value(), m_options(),
-        m_validator(validator), m_validator_baton(baton) {
+      : m_validator(validator), m_validator_baton(baton) {
     if (current_value && current_value[0])
       m_current_value.assign(current_value);
     if (default_value && default_value[0])

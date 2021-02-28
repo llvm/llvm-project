@@ -17,7 +17,7 @@ namespace lldb_private {
 class OptionValueRegex : public OptionValue {
 public:
   OptionValueRegex(const char *value = nullptr)
-      : OptionValue(), m_regex(llvm::StringRef::withNullAsEmpty(value)),
+      : m_regex(llvm::StringRef::withNullAsEmpty(value)),
         m_default_regex_str(llvm::StringRef::withNullAsEmpty(value).str()) {}
 
   ~OptionValueRegex() override = default;

@@ -17,7 +17,7 @@ namespace lldb_private {
 class OptionValuePathMappings : public OptionValue {
 public:
   OptionValuePathMappings(bool notify_changes)
-      : OptionValue(), m_path_mappings(), m_notify_changes(notify_changes) {}
+      : m_notify_changes(notify_changes) {}
 
   ~OptionValuePathMappings() override = default;
 

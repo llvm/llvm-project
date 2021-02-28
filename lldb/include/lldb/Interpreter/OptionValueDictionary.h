@@ -19,8 +19,7 @@ class OptionValueDictionary : public OptionValue {
 public:
   OptionValueDictionary(uint32_t type_mask = UINT32_MAX,
                         bool raw_value_dump = true)
-      : OptionValue(), m_type_mask(type_mask), m_values(),
-        m_raw_value_dump(raw_value_dump) {}
+      : m_type_mask(type_mask), m_raw_value_dump(raw_value_dump) {}
 
   ~OptionValueDictionary() override = default;
 
