@@ -106,7 +106,6 @@ public:
   const char *GetDefaultValue() const { return m_default_value.c_str(); }
   llvm::StringRef GetDefaultValueAsRef() const { return m_default_value; }
 
-  Status SetCurrentValue(const char *) = delete;
   Status SetCurrentValue(llvm::StringRef value);
 
   Status AppendToCurrentValue(const char *value);
