@@ -1015,11 +1015,13 @@ struct Attributor {
   ///                  the abstract attributes.
   /// \param CGUpdater Helper to update an underlying call graph.
   /// \param Allowed If not null, a set limiting the attribute opportunities.
+  /// \param DeleteFns Whether to delete functions
   Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
              CallGraphUpdater &CGUpdater,
-             DenseSet<const char *> *Allowed = nullptr)
+             DenseSet<const char *> *Allowed = nullptr, bool DeleteFns = true)
       : Allocator(InfoCache.Allocator), Functions(Functions),
-        InfoCache(InfoCache), CGUpdater(CGUpdater), Allowed(Allowed) {}
+        InfoCache(InfoCache), CGUpdater(CGUpdater), Allowed(Allowed),
+        DeleteFns(DeleteFns) {}
 
   ~Attributor();
 
@@ -1330,7 +1332,10 @@ struct Attributor {
   void deleteAfterManifest(BasicBlock &BB) { ToBeDeletedBlocks.insert(&BB); }
 
   /// Record that \p F is deleted after information was manifested.
-  void deleteAfterManifest(Function &F) { ToBeDeletedFunctions.insert(&F); }
+  void deleteAfterManifest(Function &F) {
+    if (DeleteFns)
+      ToBeDeletedFunctions.insert(&F);
+  }
 
   /// If \p V is assumed to be a constant, return it, if it is unclear yet,
   /// return None, otherwise return `nullptr`.
@@ -1655,6 +1660,9 @@ private:
 
   /// If not null, a set limiting the attribute opportunities.
   const DenseSet<const char *> *Allowed;
+
+  /// Whether to delete functions.
+  const bool DeleteFns;
 
   /// A set to remember the functions we already assume to be live and visited.
   DenseSet<const Function *> VisitedFunctions;
