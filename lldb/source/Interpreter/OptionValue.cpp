@@ -569,7 +569,7 @@ bool OptionValue::DumpQualifiedName(Stream &strm) const {
 }
 
 OptionValueSP OptionValue::DeepCopy(const OptionValueSP &new_parent) const {
-  auto &&clone = Clone();
+  auto clone = Clone();
   clone->SetParent(new_parent);
   return clone;
 }
