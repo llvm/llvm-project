@@ -38003,6 +38003,19 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
 
     if (SDValue HAddSub = foldShuffleOfHorizOp(N, DAG))
       return HAddSub;
+
+    // Fold shuffle(not(x),undef) -> not(shuffle(x,undef)).
+    if (N->getOpcode() == ISD::VECTOR_SHUFFLE &&
+        N->getOperand(0).getOpcode() == ISD::XOR &&
+        N->getOperand(1).isUndef() &&
+        N->isOnlyUserOf(N->getOperand(0).getNode())) {
+      if (SDValue Not = IsNOT(N->getOperand(0), DAG, true)) {
+        SDValue NewShuffle = DAG.getVectorShuffle(
+            VT, dl, DAG.getBitcast(VT, Not), DAG.getUNDEF(VT),
+            cast<ShuffleVectorSDNode>(N)->getMask());
+        return DAG.getNOT(dl, NewShuffle, VT);
+      }
+    }
   }
 
   // Attempt to combine into a vector load/broadcast.
