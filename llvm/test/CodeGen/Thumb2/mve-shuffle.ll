@@ -135,19 +135,19 @@ define arm_aapcs_vfpcc <4 x i32> @shuffle3step_i32(<16 x i32> %src) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vmov.f32 s14, s8
-; CHECK-NEXT:    vmov.f32 s15, s11
-; CHECK-NEXT:    vmov.f32 s16, s1
-; CHECK-NEXT:    vmov.f32 s12, s2
-; CHECK-NEXT:    vmov.f32 s17, s4
-; CHECK-NEXT:    vmov.f32 s1, s3
-; CHECK-NEXT:    vmov.f32 s18, s7
-; CHECK-NEXT:    vmov.f32 s2, s6
-; CHECK-NEXT:    vmov.f32 s19, s10
-; CHECK-NEXT:    vmov.f32 s3, s9
-; CHECK-NEXT:    vmov.f32 s13, s5
-; CHECK-NEXT:    vadd.i32 q0, q0, q4
-; CHECK-NEXT:    vadd.i32 q0, q0, q3
+; CHECK-NEXT:    vmov.f32 s12, s1
+; CHECK-NEXT:    vmov.f32 s16, s0
+; CHECK-NEXT:    vmov.f32 s13, s4
+; CHECK-NEXT:    vmov.f32 s17, s3
+; CHECK-NEXT:    vmov.f32 s14, s7
+; CHECK-NEXT:    vmov.f32 s18, s6
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov.f32 s6, s8
+; CHECK-NEXT:    vmov.f32 s15, s10
+; CHECK-NEXT:    vmov.f32 s19, s9
+; CHECK-NEXT:    vadd.i32 q3, q4, q3
+; CHECK-NEXT:    vmov.f32 s7, s11
+; CHECK-NEXT:    vadd.i32 q0, q3, q1
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1164,19 +1164,19 @@ define arm_aapcs_vfpcc <4 x float> @shuffle3step_f32(<16 x float> %src) {
 ; CHECKFP:       @ %bb.0: @ %entry
 ; CHECKFP-NEXT:    .vsave {d8, d9}
 ; CHECKFP-NEXT:    vpush {d8, d9}
-; CHECKFP-NEXT:    vmov.f32 s14, s8
-; CHECKFP-NEXT:    vmov.f32 s15, s11
-; CHECKFP-NEXT:    vmov.f32 s16, s1
-; CHECKFP-NEXT:    vmov.f32 s12, s2
-; CHECKFP-NEXT:    vmov.f32 s17, s4
-; CHECKFP-NEXT:    vmov.f32 s1, s3
-; CHECKFP-NEXT:    vmov.f32 s18, s7
-; CHECKFP-NEXT:    vmov.f32 s2, s6
-; CHECKFP-NEXT:    vmov.f32 s19, s10
-; CHECKFP-NEXT:    vmov.f32 s3, s9
-; CHECKFP-NEXT:    vmov.f32 s13, s5
-; CHECKFP-NEXT:    vadd.f32 q0, q0, q4
-; CHECKFP-NEXT:    vadd.f32 q0, q0, q3
+; CHECKFP-NEXT:    vmov.f32 s12, s1
+; CHECKFP-NEXT:    vmov.f32 s16, s0
+; CHECKFP-NEXT:    vmov.f32 s13, s4
+; CHECKFP-NEXT:    vmov.f32 s17, s3
+; CHECKFP-NEXT:    vmov.f32 s14, s7
+; CHECKFP-NEXT:    vmov.f32 s18, s6
+; CHECKFP-NEXT:    vmov.f32 s4, s2
+; CHECKFP-NEXT:    vmov.f32 s6, s8
+; CHECKFP-NEXT:    vmov.f32 s15, s10
+; CHECKFP-NEXT:    vmov.f32 s19, s9
+; CHECKFP-NEXT:    vadd.f32 q3, q4, q3
+; CHECKFP-NEXT:    vmov.f32 s7, s11
+; CHECKFP-NEXT:    vadd.f32 q0, q3, q1
 ; CHECKFP-NEXT:    vpop {d8, d9}
 ; CHECKFP-NEXT:    bx lr
 entry:
