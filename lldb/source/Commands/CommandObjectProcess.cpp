@@ -17,7 +17,6 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
-#include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -109,12 +108,7 @@ public:
             interpreter, "process launch",
             "Launch the executable in the debugger.", nullptr,
             eCommandRequiresTarget, "restart"),
-        m_options(), m_class_options("scripted process"), m_all_options() {
-    m_all_options.Append(&m_options);
-    m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
-                         LLDB_OPT_SET_1);
-    m_all_options.Finalize();
-
+        m_options() {
     CommandArgumentEntry arg;
     CommandArgumentData run_args_arg;
 
@@ -141,7 +135,7 @@ public:
         request, nullptr);
   }
 
-  Options *GetOptions() override { return &m_all_options; }
+  Options *GetOptions() override { return &m_options; }
 
   const char *GetRepeatCommand(Args &current_command_args,
                                uint32_t index) override {
@@ -184,15 +178,6 @@ protected:
       // The user did not explicitly specify whether to disable ASLR.  Fall
       // back to the target.disable-aslr setting.
       disable_aslr = target->GetDisableASLR();
-    }
-
-    if (!m_class_options.GetName().empty()) {
-      m_options.launch_info.SetProcessPluginName("ScriptedProcess");
-      m_options.launch_info.SetScriptedProcessClassName(
-          m_class_options.GetName());
-      m_options.launch_info.SetScriptedProcessDictionarySP(
-          m_class_options.GetStructuredData());
-      target->SetProcessLaunchInfo(m_options.launch_info);
     }
 
     if (disable_aslr)
@@ -268,8 +253,6 @@ protected:
   }
 
   CommandOptionsProcessLaunch m_options;
-  OptionGroupPythonClassWithDict m_class_options;
-  OptionGroupOptions m_all_options;
 };
 
 #define LLDB_OPTIONS_process_attach

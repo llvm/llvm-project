@@ -104,20 +104,6 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     FILES "${LLDB_SOURCE_DIR}/examples/python/in_call_stack.py"
           "${LLDB_SOURCE_DIR}/examples/python/symbolication.py")
 
-  create_python_package(
-    ${swig_target}
-    ${lldb_python_target_dir}
-    "plugins"
-    FILES
-    "${LLDB_SOURCE_DIR}/examples/python/scripted_process/scripted_process.py")
-
-  create_python_package(
-    ${swig_target}
-    ${lldb_python_target_dir}
-    "plugins"
-    FILES
-    "${LLDB_SOURCE_DIR}/examples/python/scripted_process/scripted_process.py")
-
   if(APPLE)
     create_python_package(
       ${swig_target}

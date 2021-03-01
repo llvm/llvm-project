@@ -30,7 +30,7 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Status error;
-  const int short_option = g_process_launch_options[option_idx].short_option;
+  const int short_option = m_getopt_table[option_idx].val;
 
   switch (short_option) {
   case 's': // Stop at program entry point
