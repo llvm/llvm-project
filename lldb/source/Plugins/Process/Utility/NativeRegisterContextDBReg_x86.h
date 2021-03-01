@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextWatchpoint_x86.h -------------------*- C++ -*-===//
+//===-- NativeRegisterContextDBReg_x86.h ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_NativeRegisterContextWatchpoint_x86_h
-#define lldb_NativeRegisterContextWatchpoint_x86_h
+#ifndef lldb_NativeRegisterContextDBReg_x86_h
+#define lldb_NativeRegisterContextDBReg_x86_h
 
 #include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
 
 namespace lldb_private {
 
-class NativeRegisterContextWatchpoint_x86
+class NativeRegisterContextDBReg_x86
     : public virtual NativeRegisterContextRegisterInfo {
 public:
   Status IsWatchpointHit(uint32_t wp_index, bool &is_hit) override;
@@ -45,4 +45,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // #ifndef lldb_NativeRegisterContextWatchpoint_x86_h
+#endif // #ifndef lldb_NativeRegisterContextDBReg_x86_h
