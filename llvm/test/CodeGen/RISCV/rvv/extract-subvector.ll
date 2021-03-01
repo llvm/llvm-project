@@ -358,6 +358,51 @@ define <vscale x 2 x half> @extract_nxv2f16_nxv16f16_4(<vscale x 16 x half> %vec
   ret <vscale x 2 x half> %c
 }
 
+define <vscale x 8 x i1> @extract_nxv64i1_nxv8i1_0(<vscale x 64 x i1> %mask) {
+; CHECK-LABEL: extract_nxv64i1_nxv8i1_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %c = call <vscale x 8 x i1> @llvm.experimental.vector.extract.nxv8i1(<vscale x 64 x i1> %mask, i64 0)
+  ret <vscale x 8 x i1> %c
+}
+
+define <vscale x 8 x i1> @extract_nxv64i1_nxv8i1_8(<vscale x 64 x i1> %mask) {
+; CHECK-LABEL: extract_nxv64i1_nxv8i1_8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    vsetvli a1, zero, e8,m1,ta,mu
+; CHECK-NEXT:    vslidedown.vx v0, v0, a0
+; CHECK-NEXT:    ret
+  %c = call <vscale x 8 x i1> @llvm.experimental.vector.extract.nxv8i1(<vscale x 64 x i1> %mask, i64 8)
+  ret <vscale x 8 x i1> %c
+}
+
+define <vscale x 2 x i1> @extract_nxv64i1_nxv2i1_0(<vscale x 64 x i1> %mask) {
+; CHECK-LABEL: extract_nxv64i1_nxv2i1_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %c = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1(<vscale x 64 x i1> %mask, i64 0)
+  ret <vscale x 2 x i1> %c
+}
+
+define <vscale x 2 x i1> @extract_nxv64i1_nxv2i1_2(<vscale x 64 x i1> %mask) {
+; CHECK-LABEL: extract_nxv64i1_nxv2i1_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8,m8,ta,mu
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    vsetvli a1, zero, e8,m1,ta,mu
+; CHECK-NEXT:    vslidedown.vx v25, v8, a0
+; CHECK-NEXT:    vsetvli a0, zero, e8,mf4,ta,mu
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    ret
+  %c = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1(<vscale x 64 x i1> %mask, i64 2)
+  ret <vscale x 2 x i1> %c
+}
+
 declare <vscale x 1 x i8> @llvm.experimental.vector.extract.nxv1i8.nxv8i8(<vscale x 8 x i8> %vec, i64 %idx)
 
 declare <vscale x 2 x i8> @llvm.experimental.vector.extract.nxv2i8.nxv32i8(<vscale x 32 x i8> %vec, i64 %idx)
@@ -373,3 +418,6 @@ declare <vscale x 4 x i32> @llvm.experimental.vector.extract.nxv4i32.nxv16i32(<v
 declare <vscale x 8 x i32> @llvm.experimental.vector.extract.nxv8i32.nxv16i32(<vscale x 16 x i32> %vec, i64 %idx)
 
 declare <vscale x 2 x half> @llvm.experimental.vector.extract.nxv2f16.nxv16f16(<vscale x 16 x half> %vec, i64 %idx)
+
+declare <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1(<vscale x 64 x i1> %vec, i64 %idx)
+declare <vscale x 8 x i1> @llvm.experimental.vector.extract.nxv8i1(<vscale x 64 x i1> %vec, i64 %idx)

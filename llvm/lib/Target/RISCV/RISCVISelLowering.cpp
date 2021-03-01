@@ -419,6 +419,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Mask VTs are custom-expanded into a series of standard nodes
       setOperationAction(ISD::TRUNCATE, VT, Custom);
+      setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
     }
 
     for (MVT VT : IntVecVTs) {
@@ -537,12 +538,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::LOAD, VT, Custom);
         setOperationAction(ISD::STORE, VT, Custom);
 
+        setOperationAction(ISD::SETCC, VT, Custom);
+
+        setOperationAction(ISD::TRUNCATE, VT, Custom);
+
         // Operations below are different for between masks and other vectors.
         if (VT.getVectorElementType() == MVT::i1) {
           setOperationAction(ISD::AND, VT, Custom);
           setOperationAction(ISD::OR, VT, Custom);
           setOperationAction(ISD::XOR, VT, Custom);
-          setOperationAction(ISD::SETCC, VT, Custom);
           continue;
         }
 
@@ -578,7 +582,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::VSELECT, VT, Custom);
 
-        setOperationAction(ISD::TRUNCATE, VT, Custom);
         setOperationAction(ISD::ANY_EXTEND, VT, Custom);
         setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
         setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
@@ -2119,28 +2122,35 @@ SDValue RISCVTargetLowering::lowerVectorMaskTrunc(SDValue Op,
   assert(MaskVT.isVector() && MaskVT.getVectorElementType() == MVT::i1 &&
          "Unexpected type for vector mask lowering");
   SDValue Src = Op.getOperand(0);
-  EVT VecVT = Src.getValueType();
+  MVT VecVT = Src.getSimpleValueType();
 
-  // Be careful not to introduce illegal scalar types at this stage, and be
-  // careful also about splatting constants as on RV32, vXi64 SPLAT_VECTOR is
-  // illegal and must be expanded. Since we know that the constants are
-  // sign-extended 32-bit values, we use SPLAT_VECTOR_I64 directly.
-  bool IsRV32E64 =
-      !Subtarget.is64Bit() && VecVT.getVectorElementType() == MVT::i64;
+  // If this is a fixed vector, we need to convert it to a scalable vector.
+  MVT ContainerVT = VecVT;
+  if (VecVT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(DAG, VecVT, Subtarget);
+    Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
+  }
+
   SDValue SplatOne = DAG.getConstant(1, DL, Subtarget.getXLenVT());
   SDValue SplatZero = DAG.getConstant(0, DL, Subtarget.getXLenVT());
 
-  if (!IsRV32E64) {
-    SplatOne = DAG.getSplatVector(VecVT, DL, SplatOne);
-    SplatZero = DAG.getSplatVector(VecVT, DL, SplatZero);
-  } else {
-    SplatOne = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, SplatOne);
-    SplatZero = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, SplatZero);
+  SplatOne = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT, SplatOne);
+  SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT, SplatZero);
+
+  if (VecVT.isScalableVector()) {
+    SDValue Trunc = DAG.getNode(ISD::AND, DL, VecVT, Src, SplatOne);
+    return DAG.getSetCC(DL, MaskVT, Trunc, SplatZero, ISD::SETNE);
   }
 
-  SDValue Trunc = DAG.getNode(ISD::AND, DL, VecVT, Src, SplatOne);
+  SDValue Mask, VL;
+  std::tie(Mask, VL) = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
 
-  return DAG.getSetCC(DL, MaskVT, Trunc, SplatZero, ISD::SETNE);
+  MVT MaskContainerVT = ContainerVT.changeVectorElementType(MVT::i1);
+  SDValue Trunc =
+      DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT, Src, SplatOne, Mask, VL);
+  Trunc = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskContainerVT, Trunc, SplatZero,
+                      DAG.getCondCode(ISD::SETNE), Mask, VL);
+  return convertFromScalableVector(MaskVT, Trunc, DAG, Subtarget);
 }
 
 SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
@@ -2511,6 +2521,43 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   unsigned OrigIdx = Op.getConstantOperandVal(1);
   const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
+  // We don't have the ability to slide mask vectors down indexed by their i1
+  // elements; the smallest we can do is i8. Often we are able to bitcast to
+  // equivalent i8 vectors. Note that when extracting a fixed-length vector
+  // from a scalable one, we might not necessarily have enough scalable
+  // elements to safely divide by 8: v8i1 = extract nxv1i1 is valid.
+  if (SubVecVT.getVectorElementType() == MVT::i1 && OrigIdx != 0) {
+    if (VecVT.getVectorMinNumElements() >= 8 &&
+        SubVecVT.getVectorMinNumElements() >= 8) {
+      assert(OrigIdx % 8 == 0 && "Invalid index");
+      assert(VecVT.getVectorMinNumElements() % 8 == 0 &&
+             SubVecVT.getVectorMinNumElements() % 8 == 0 &&
+             "Unexpected mask vector lowering");
+      OrigIdx /= 8;
+      SubVecVT =
+          MVT::getVectorVT(MVT::i8, SubVecVT.getVectorMinNumElements() / 8,
+                           SubVecVT.isScalableVector());
+      VecVT = MVT::getVectorVT(MVT::i8, VecVT.getVectorMinNumElements() / 8,
+                               VecVT.isScalableVector());
+      Vec = DAG.getBitcast(VecVT, Vec);
+    } else {
+      // We can't slide this mask vector down, indexed by its i1 elements.
+      // This poses a problem when we wish to extract a scalable vector which
+      // can't be re-expressed as a larger type. Just choose the slow path and
+      // extend to a larger type, then truncate back down.
+      // TODO: We could probably improve this when extracting certain fixed
+      // from fixed, where we can extract as i8 and shift the correct element
+      // right to reach the desired subvector?
+      MVT ExtVecVT = VecVT.changeVectorElementType(MVT::i8);
+      MVT ExtSubVecVT = SubVecVT.changeVectorElementType(MVT::i8);
+      Vec = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVecVT, Vec);
+      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtSubVecVT, Vec,
+                        Op.getOperand(1));
+      SDValue SplatZero = DAG.getConstant(0, DL, ExtSubVecVT);
+      return DAG.getSetCC(DL, SubVecVT, Vec, SplatZero, ISD::SETNE);
+    }
+  }
+
   // If the subvector vector is a fixed-length type, we cannot use subregister
   // manipulation to simplify the codegen; we don't know which register of a
   // LMUL group contains the specific subvector as we only know the minimum
@@ -2577,8 +2624,12 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
 
   // Now the vector is in the right position, extract our final subvector. This
   // should resolve to a COPY.
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Slidedown,
-                     DAG.getConstant(0, DL, XLenVT));
+  Slidedown = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Slidedown,
+                          DAG.getConstant(0, DL, XLenVT));
+
+  // We might have bitcast from a mask type: cast back to the original type if
+  // required.
+  return DAG.getBitcast(Op.getSimpleValueType(), Slidedown);
 }
 
 SDValue
