@@ -317,3 +317,21 @@ func @test_identity(%arg0: tensor<1xf32>, %arg1: tensor<1xi32>) -> (tensor<1xf32
   // CHECK: return %arg0, %arg1
   return %2#0, %2#1 : tensor<1xf32>, tensor<1xi32>
 }
+
+// -----
+
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d2, d0, d1)>
+// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+
+// CHECK-LABEL: @test_transpose
+// CHECK-SAME: ([[ARG0:%.+]]: tensor<1x2x3xi32>)
+func @test_transpose(%arg0: tensor<1x2x3xi32>) -> () {
+  %0 = constant dense<[1, 2, 0]> : tensor<3xi32>
+  // CHECK: [[INIT:%.+]] = linalg.init_tensor [2, 3, 1]
+  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel"]} ins([[ARG0]] : tensor<1x2x3xi32>) outs([[OUT:%.+]] : tensor<2x3x1xi32>)
+  // CHECK: ^bb0([[ARG1:%.+]]: i32, [[ARG2:%.+]]: i32)
+  // CHECK:   linalg.yield [[ARG1]]
+  // CHECK: }
+  %1 = "tosa.transpose"(%arg0, %0) : (tensor<1x2x3xi32>, tensor<3xi32>) -> (tensor<2x3x1xi32>)
+  return
+}

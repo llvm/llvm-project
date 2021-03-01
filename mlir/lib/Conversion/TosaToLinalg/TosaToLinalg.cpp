@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -438,6 +439,48 @@ public:
 
     rewriter.replaceOpWithNewOp<linalg::TensorReshapeOp>(
         reshape, resultTy, args[0], reassociationMap);
+
+    return success();
+  }
+};
+
+class TransposeConverter : public OpRewritePattern<tosa::TransposeOp> {
+public:
+  using OpRewritePattern<tosa::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TransposeOp op,
+                                PatternRewriter &rewriter) const final {
+    DenseIntElementsAttr perms;
+    if (!matchPattern(op.perms(), m_Constant(&perms))) {
+      return failure();
+    }
+
+    auto resultTy = op.getType().cast<ShapedType>();
+    if (!resultTy.hasStaticShape())
+      return failure();
+
+    SmallVector<AffineExpr, 2> inputExprs;
+    inputExprs.resize(resultTy.getRank());
+    for (auto permutation : llvm::enumerate(perms.getIntValues())) {
+      inputExprs[permutation.value().getZExtValue()] =
+          rewriter.getAffineDimExpr(permutation.index());
+    }
+
+    auto initTensor = rewriter.create<linalg::InitTensorOp>(
+        op.getLoc(), ArrayRef<Value>({}), resultTy.getShape(),
+        resultTy.getElementType());
+
+    SmallVector<AffineMap, 2> affineMaps = {
+        AffineMap::get(resultTy.getRank(), /*symbolCount=*/0, inputExprs,
+                       rewriter.getContext()),
+        rewriter.getMultiDimIdentityMap(resultTy.getRank())};
+
+    rewriter.replaceOpWithNewOp<linalg::GenericOp>(
+        op, resultTy, op.input1(), ValueRange{initTensor}, affineMaps,
+        getNParallelLoopsAttrs(resultTy.getRank()),
+        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+          nestedBuilder.create<linalg::YieldOp>(op.getLoc(), *args.begin());
+        });
     return success();
   }
 };
@@ -478,5 +521,6 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PointwiseConverter<tosa::CeilOp>, PointwiseConverter<tosa::FloorOp>,
       PointwiseConverter<tosa::ClampOp>, PointwiseConverter<tosa::ReluNOp>,
       IdentityNConverter<tosa::IdentityOp>,
-      IdentityNConverter<tosa::IdentityNOp>, ReshapeOpConverter>(context);
+      IdentityNConverter<tosa::IdentityNOp>,
+      ReshapeOpConverter, TransposeConverter>(context);
 }
