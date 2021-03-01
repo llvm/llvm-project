@@ -345,6 +345,10 @@ public:
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpCopyIn);
     return false;
   }
+  bool Pre(const parser::OmpClause::Copyprivate &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpCopyPrivate);
+    return false;
+  }
   bool Pre(const parser::OmpLinearClause &x) {
     std::visit(common::visitors{
                    [&](const parser::OmpLinearClause::WithoutModifier
@@ -419,7 +423,7 @@ private:
       Symbol::Flag::OmpThreadprivate};
 
   static constexpr Symbol::Flags dataCopyingAttributeFlags{
-      Symbol::Flag::OmpCopyIn};
+      Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
 
   std::vector<const parser::Name *> allocateNames_; // on one directive
   SymbolSet privateDataSharingAttributeObjects_; // on one directive
@@ -464,7 +468,6 @@ private:
 
   void CheckDataCopyingClause(
       const parser::Name &, const Symbol &, Symbol::Flag);
-
   void CheckAssocLoopLevel(std::int64_t level, const parser::OmpClause *clause);
   void CheckPrivateDSAObject(
       const parser::Name &, const Symbol &, Symbol::Flag);
@@ -475,6 +478,7 @@ private:
     sourceLabels_.clear();
     targetLabels_.clear();
   };
+  bool HasSymbolInEnclosingScope(const Symbol &, Scope &);
 };
 
 template <typename T>
@@ -1494,16 +1498,39 @@ void ResolveOmpParts(
 void OmpAttributeVisitor::CheckDataCopyingClause(
     const parser::Name &name, const Symbol &symbol, Symbol::Flag ompFlag) {
   const auto *checkSymbol{&symbol};
-  if (ompFlag == Symbol::Flag::OmpCopyIn) {
-    if (const auto *details{symbol.detailsIf<HostAssocDetails>()})
-      checkSymbol = &details->symbol();
+  if (const auto *details{symbol.detailsIf<HostAssocDetails>()})
+    checkSymbol = &details->symbol();
 
+  if (ompFlag == Symbol::Flag::OmpCopyIn) {
     // List of items/objects that can appear in a 'copyin' clause must be
     // 'threadprivate'
     if (!checkSymbol->test(Symbol::Flag::OmpThreadprivate))
       context_.Say(name.source,
           "Non-THREADPRIVATE object '%s' in COPYIN clause"_err_en_US,
           checkSymbol->name());
+  } else if (ompFlag == Symbol::Flag::OmpCopyPrivate &&
+      GetContext().directive == llvm::omp::Directive::OMPD_single) {
+    // A list item that appears in a 'copyprivate' clause may not appear on a
+    // 'private' or 'firstprivate' clause on a single construct
+    if (IsObjectWithDSA(symbol) &&
+        (symbol.test(Symbol::Flag::OmpPrivate) ||
+            symbol.test(Symbol::Flag::OmpFirstPrivate))) {
+      context_.Say(name.source,
+          "COPYPRIVATE variable '%s' may not appear on a PRIVATE or "
+          "FIRSTPRIVATE clause on a SINGLE construct"_err_en_US,
+          symbol.name());
+    } else {
+      // List of items/objects that can appear in a 'copyprivate' clause must be
+      // either 'private' or 'threadprivate' in enclosing context.
+      if (!checkSymbol->test(Symbol::Flag::OmpThreadprivate) &&
+          !(HasSymbolInEnclosingScope(symbol, currScope()) &&
+              symbol.test(Symbol::Flag::OmpPrivate))) {
+        context_.Say(name.source,
+            "COPYPRIVATE variable '%s' is not PRIVATE or THREADPRIVATE in "
+            "outer context"_err_en_US,
+            symbol.name());
+      }
+    }
   }
 }
 
@@ -1577,6 +1604,13 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
                 llvm::omp::getOpenMPDirectiveName(sourceContext->directive)
                     .str()));
   }
+}
+
+bool OmpAttributeVisitor::HasSymbolInEnclosingScope(
+    const Symbol &symbol, Scope &scope) {
+  const auto symbols{scope.parent().GetSymbols()};
+  auto it{std::find(symbols.begin(), symbols.end(), symbol)};
+  return it != symbols.end();
 }
 
 } // namespace Fortran::semantics

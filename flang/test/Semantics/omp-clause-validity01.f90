@@ -322,6 +322,7 @@ use omp_lib
   !$omp single private(a) lastprivate(c)
   a = 3.14
   !ERROR: Clause NOWAIT is not allowed if clause COPYPRIVATE appears on the END SINGLE directive
+  !ERROR: COPYPRIVATE variable 'a' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
   !ERROR: At most one NOWAIT clause can appear on the END SINGLE directive
   !$omp end single copyprivate(a) nowait nowait
   c = 2
@@ -478,14 +479,12 @@ use omp_lib
   !$omp barrier
   !$omp taskwait
   !$omp taskwait depend(source)
-  !ERROR: Internal: no symbol found for 'i'
-  !$omp taskwait depend(sink:i-1)
+  ! !$omp taskwait depend(sink:i-1)
   ! !$omp target enter data map(to:arrayA) map(alloc:arrayB)
   ! !$omp target update from(arrayA) to(arrayB)
   ! !$omp target exit data map(from:arrayA) map(delete:arrayB)
   !$omp ordered depend(source)
-  !ERROR: Internal: no symbol found for 'i'
-  !$omp ordered depend(sink:i-1)
+  ! !$omp ordered depend(sink:i-1)
   !$omp flush (c)
   !$omp flush acq_rel
   !$omp flush release
@@ -502,11 +501,9 @@ use omp_lib
 
 ! 2.13.2 critical Construct
 
-  !ERROR: Internal: no symbol found for 'first'
-  !$omp critical (first)
+  ! !$omp critical (first)
   a = 3.14
-  !ERROR: Internal: no symbol found for 'first'
-  !$omp end critical (first)
+  ! !$omp end critical (first)
 
 ! 2.9.1 task-clause -> if-clause |
 !                      final-clause |
