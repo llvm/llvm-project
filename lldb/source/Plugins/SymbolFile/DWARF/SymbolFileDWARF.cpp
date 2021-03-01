@@ -3126,8 +3126,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       continue;
     switch (attr) {
     case DW_AT_decl_file:
-      decl.SetFile(
-          attributes.CompileUnitAtIndex(i)->GetFile(form_value.Unsigned()));
+      decl.SetFile(sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(
+          form_value.Unsigned()));
       break;
     case DW_AT_decl_line:
       decl.SetLine(form_value.Unsigned());
