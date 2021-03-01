@@ -1228,7 +1228,8 @@ def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins WAIT_FLAG:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
-def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i16imm:$simm16), "$simm16">;
+def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
+    [(int_amdgcn_s_sethalt timm:$simm16)]>;
 def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16">;
 
 // On SI the documentation says sleep for approximately 64 * low 2
