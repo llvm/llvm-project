@@ -669,8 +669,10 @@ def Qy : Flag<["-"], "Qy">, Flags<[CC1Option]>,
   HelpText<"Emit metadata containing compiler name and version">;
 def Qn : Flag<["-"], "Qn">, Flags<[CC1Option]>,
   HelpText<"Do not emit metadata containing compiler name and version">;
-def : Flag<["-"], "fident">, Group<f_Group>, Alias<Qy>, Flags<[CC1Option]>;
-def : Flag<["-"], "fno-ident">, Group<f_Group>, Alias<Qn>, Flags<[CC1Option]>;
+def : Flag<["-"], "fident">, Group<f_Group>, Alias<Qy>,
+  Flags<[CoreOption, CC1Option]>;
+def : Flag<["-"], "fno-ident">, Group<f_Group>, Alias<Qn>,
+  Flags<[CoreOption, CC1Option]>;
 def Qunused_arguments : Flag<["-"], "Qunused-arguments">, Flags<[NoXarchOption, CoreOption]>,
   HelpText<"Don't emit warning for unused driver arguments">;
 def Q : Flag<["-"], "Q">, IgnoredGCCCompat;
