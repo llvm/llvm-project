@@ -564,7 +564,7 @@ def bitcode_symbol_map : Separate<["-"], "bitcode_symbol_map">,
 def grp_rare : OptionGroup<"rare">, HelpText<"RARELY USED">;
 
 def v : Flag<["-"], "v">,
-     HelpText<"Print the linker version and search paths and exit">,
+     HelpText<"Print the linker version and search paths in addition to linking">,
      Group<grp_rare>;
 def adhoc_codesign : Flag<["-"], "adhoc_codesign">,
      HelpText<"Write an ad-hoc code signature to the output file.">,
