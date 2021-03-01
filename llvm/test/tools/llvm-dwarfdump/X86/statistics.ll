@@ -64,8 +64,6 @@
 ; CHECK-NEXT: "#bytes in __apple_types": 133,
 ; CHECK-NEXT: "#bytes in __debug_line": 126,
 
-
-
 ; ModuleID = '/tmp/quality.cpp'
 source_filename = "/tmp/quality.cpp"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

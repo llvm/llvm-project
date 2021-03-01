@@ -77,7 +77,7 @@ unsigned StringMapImpl::LookupBucketFor(StringRef Name) {
     init(16);
     HTSize = NumBuckets;
   }
-  unsigned FullHashValue = djbHash(Name);
+  unsigned FullHashValue = djbHash(Name, 0);
   unsigned BucketNo = FullHashValue & (HTSize - 1);
   unsigned *HashTable = (unsigned *)(TheTable + NumBuckets + 1);
 
@@ -133,7 +133,7 @@ int StringMapImpl::FindKey(StringRef Key) const {
   unsigned HTSize = NumBuckets;
   if (HTSize == 0)
     return -1; // Really empty table?
-  unsigned FullHashValue = djbHash(Key);
+  unsigned FullHashValue = djbHash(Key, 0);
   unsigned BucketNo = FullHashValue & (HTSize - 1);
   unsigned *HashTable = (unsigned *)(TheTable + NumBuckets + 1);
 

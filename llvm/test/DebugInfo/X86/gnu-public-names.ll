@@ -66,13 +66,9 @@
 
 ; ASM: .section        .debug_gnu_pubnames
 ; ASM: .byte   32                      # Attributes: VARIABLE, EXTERNAL
-; ASM-NEXT: .asciz  "C::static_member_variable"       # External Name
-; ASM: .byte   32                      # Attributes: VARIABLE, EXTERNAL
 ; ASM-NEXT: .asciz  "global_variable"       # External Name
 
 ; ASM: .section        .debug_gnu_pubtypes
-; ASM: .byte   16                      # Attributes: TYPE, EXTERNAL
-; ASM-NEXT: .asciz  "named_enum_class" # External Name
 ; ASM: .byte   16                      # Attributes: TYPE, EXTERNAL
 ; ASM-NEXT: .asciz  "C"                     # External Name
 
@@ -245,11 +241,6 @@
 ; CHECK-LABEL: .debug_gnu_pubnames contents:
 ; CHECK-NEXT: length = {{.*}}, version = 0x0002, unit_offset = 0x00000000, unit_size = {{.*}}
 ; CHECK-NEXT: Offset     Linkage  Kind     Name
-; CHECK-NEXT:  [[STATIC_MEM_VAR]] EXTERNAL VARIABLE "C::static_member_variable"
-; CHECK-NEXT:  [[STATIC_MEM_FUNC]] EXTERNAL FUNCTION "C::static_member_function"
-; CHECK-NEXT:  [[UNNAMED_ENUM_ENUMERATOR]] STATIC VARIABLE  "unnamed_enum_enumerator"
-; CHECK-NEXT:                  EXTERNAL FUNCTION "f7"
-; CHECK-NEXT:                  EXTERNAL FUNCTION "f3"
 ; CHECK-NEXT:  [[GLOBAL_FUNC]] EXTERNAL FUNCTION "global_function"
 ; CHECK-NEXT:  [[NS]] EXTERNAL TYPE     "ns"
 ; CHECK-NEXT:  [[OUTER_ANON_C]] STATIC VARIABLE "outer::(anonymous namespace)::c"
@@ -268,19 +259,22 @@
 ; CHECK-NEXT:  [[NAMED_ENUM_CLASS_ENUMERATOR]] STATIC VARIABLE  "named_enum_class_enumerator"
 ; CHECK-NEXT:  [[MEM_FUNC]] EXTERNAL FUNCTION "C::member_function"
 ; CHECK-NEXT:  [[GLOB_VAR]] EXTERNAL VARIABLE "global_variable"
-; CHECK-NEXT:  [[ANON_INNER]] EXTERNAL TYPE "(anonymous namespace)::inner"
 ; CHECK-NEXT:  [[GLOB_NS_VAR]] EXTERNAL VARIABLE "ns::global_namespace_variable"
+; CHECK-NEXT:  [[ANON_INNER]] EXTERNAL TYPE "(anonymous namespace)::inner"
 ; CHECK-NEXT:  [[D_VAR]] EXTERNAL VARIABLE "ns::d"
 ; CHECK-NEXT:  [[NAMED_ENUM_ENUMERATOR]] STATIC VARIABLE  "named_enum_enumerator"
+; CHECK-NEXT:  [[STATIC_MEM_VAR]] EXTERNAL VARIABLE "C::static_member_variable"
+; CHECK-NEXT:  [[STATIC_MEM_FUNC]] EXTERNAL FUNCTION "C::static_member_function"
+; CHECK-NEXT:  [[UNNAMED_ENUM_ENUMERATOR]] STATIC VARIABLE  "unnamed_enum_enumerator"
 
 ; CHECK-LABEL: debug_gnu_pubtypes contents:
 ; CHECK: Offset     Linkage  Kind     Name
-; CHECK-NEXT:  [[INT]] STATIC   TYPE     "int"
-; CHECK-NEXT:  [[NAMED_ENUM_CLASS]] EXTERNAL TYPE     "named_enum_class"
 ; CHECK-NEXT:  [[C]] EXTERNAL TYPE     "C"
 ; CHECK-NEXT:  [[UNSIGNED_INT]] STATIC   TYPE     "unsigned int"
 ; CHECK-NEXT:  [[D]] EXTERNAL TYPE     "ns::D"
 ; CHECK-NEXT:  [[NAMED_ENUM]] EXTERNAL TYPE     "named_enum"
+; CHECK-NEXT:  [[INT]] STATIC   TYPE     "int"
+; CHECK-NEXT:  [[NAMED_ENUM_CLASS]] EXTERNAL TYPE     "named_enum_class"
 
 %struct.C = type { i8 }
 %"struct.ns::D" = type { i32 }
