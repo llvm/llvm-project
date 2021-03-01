@@ -11852,22 +11852,6 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(
   case ISD::INTRINSIC_W_CHAIN:
     return AMDGPU::isIntrinsicSourceOfDivergence(
         cast<ConstantSDNode>(N->getOperand(1))->getZExtValue());
-  case ISD::ATOMIC_CMP_SWAP:
-  case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
-  case ISD::ATOMIC_SWAP:
-  case ISD::ATOMIC_LOAD_ADD:
-  case ISD::ATOMIC_LOAD_SUB:
-  case ISD::ATOMIC_LOAD_AND:
-  case ISD::ATOMIC_LOAD_CLR:
-  case ISD::ATOMIC_LOAD_OR:
-  case ISD::ATOMIC_LOAD_XOR:
-  case ISD::ATOMIC_LOAD_NAND:
-  case ISD::ATOMIC_LOAD_MIN:
-  case ISD::ATOMIC_LOAD_MAX:
-  case ISD::ATOMIC_LOAD_UMIN:
-  case ISD::ATOMIC_LOAD_UMAX:
-  case ISD::ATOMIC_LOAD_FADD:
-  case ISD::ATOMIC_LOAD_FSUB:
   case AMDGPUISD::ATOMIC_CMP_SWAP:
   case AMDGPUISD::ATOMIC_INC:
   case AMDGPUISD::ATOMIC_DEC:
@@ -11890,9 +11874,15 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(
   case AMDGPUISD::BUFFER_ATOMIC_FADD:
   case AMDGPUISD::BUFFER_ATOMIC_FMIN:
   case AMDGPUISD::BUFFER_ATOMIC_FMAX:
+    // Target-specific read-modify-write atomics are sources of divergence.
     return true;
+  default:
+    if (auto *A = dyn_cast<AtomicSDNode>(N)) {
+      // Generic read-modify-write atomics are sources of divergence.
+      return A->readMem() && A->writeMem();
+    }
+    return false;
   }
-  return false;
 }
 
 bool SITargetLowering::denormalsEnabledForType(const SelectionDAG &DAG,
