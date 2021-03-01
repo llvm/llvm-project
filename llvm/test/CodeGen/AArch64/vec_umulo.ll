@@ -316,59 +316,53 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) nounwind {
 ; CHECK-LABEL: umulo_v2i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul x9, x7, x2
-; CHECK-NEXT:    umulh x10, x2, x6
-; CHECK-NEXT:    madd x9, x3, x6, x9
-; CHECK-NEXT:    add x15, x10, x9
-; CHECK-NEXT:    cmp x15, x10
-; CHECK-NEXT:    cset w10, lo
-; CHECK-NEXT:    cmp x9, #0 // =0
-; CHECK-NEXT:    csel w10, wzr, w10, eq
 ; CHECK-NEXT:    cmp x7, #0 // =0
-; CHECK-NEXT:    umulh x11, x3, x6
-; CHECK-NEXT:    mul x13, x5, x0
-; CHECK-NEXT:    cset w17, ne
-; CHECK-NEXT:    cmp x3, #0 // =0
-; CHECK-NEXT:    umulh x12, x7, x2
-; CHECK-NEXT:    umulh x9, x0, x4
-; CHECK-NEXT:    madd x13, x1, x4, x13
-; CHECK-NEXT:    cset w18, ne
-; CHECK-NEXT:    cmp xzr, x11
-; CHECK-NEXT:    ldr x8, [sp]
-; CHECK-NEXT:    add x11, x9, x13
-; CHECK-NEXT:    and w17, w18, w17
-; CHECK-NEXT:    cset w18, ne
-; CHECK-NEXT:    cmp xzr, x12
-; CHECK-NEXT:    orr w12, w17, w18
-; CHECK-NEXT:    cset w17, ne
-; CHECK-NEXT:    cmp x11, x9
-; CHECK-NEXT:    orr w9, w12, w17
-; CHECK-NEXT:    cset w12, lo
-; CHECK-NEXT:    cmp x13, #0 // =0
-; CHECK-NEXT:    mul x14, x2, x6
-; CHECK-NEXT:    csel w12, wzr, w12, eq
-; CHECK-NEXT:    cmp x5, #0 // =0
-; CHECK-NEXT:    stp x14, x15, [x8, #16]
-; CHECK-NEXT:    umulh x14, x1, x4
+; CHECK-NEXT:    umulh x8, x3, x6
 ; CHECK-NEXT:    cset w13, ne
+; CHECK-NEXT:    cmp x3, #0 // =0
+; CHECK-NEXT:    umulh x9, x7, x2
+; CHECK-NEXT:    mul x10, x7, x2
+; CHECK-NEXT:    cset w14, ne
+; CHECK-NEXT:    cmp xzr, x8
+; CHECK-NEXT:    ldr x8, [sp]
+; CHECK-NEXT:    umulh x11, x2, x6
+; CHECK-NEXT:    madd x10, x3, x6, x10
+; CHECK-NEXT:    and w13, w14, w13
+; CHECK-NEXT:    cset w14, ne
+; CHECK-NEXT:    cmp xzr, x9
+; CHECK-NEXT:    orr w13, w13, w14
+; CHECK-NEXT:    cset w14, ne
+; CHECK-NEXT:    adds x10, x11, x10
+; CHECK-NEXT:    mul x12, x2, x6
+; CHECK-NEXT:    orr w13, w13, w14
+; CHECK-NEXT:    cset w14, hs
+; CHECK-NEXT:    cmp x5, #0 // =0
+; CHECK-NEXT:    umulh x17, x1, x4
+; CHECK-NEXT:    stp x12, x10, [x8, #16]
+; CHECK-NEXT:    cset w10, ne
 ; CHECK-NEXT:    cmp x1, #0 // =0
-; CHECK-NEXT:    umulh x16, x5, x0
-; CHECK-NEXT:    cset w17, ne
-; CHECK-NEXT:    cmp xzr, x14
-; CHECK-NEXT:    and w13, w17, w13
-; CHECK-NEXT:    cset w14, ne
-; CHECK-NEXT:    cmp xzr, x16
-; CHECK-NEXT:    orr w13, w13, w14
-; CHECK-NEXT:    cset w14, ne
-; CHECK-NEXT:    orr w13, w13, w14
-; CHECK-NEXT:    orr w12, w13, w12
+; CHECK-NEXT:    umulh x9, x5, x0
+; CHECK-NEXT:    mul x11, x5, x0
+; CHECK-NEXT:    cset w12, ne
+; CHECK-NEXT:    cmp xzr, x17
+; CHECK-NEXT:    umulh x15, x0, x4
+; CHECK-NEXT:    madd x11, x1, x4, x11
+; CHECK-NEXT:    and w10, w12, w10
+; CHECK-NEXT:    cset w12, ne
+; CHECK-NEXT:    cmp xzr, x9
+; CHECK-NEXT:    orr w9, w10, w12
+; CHECK-NEXT:    cset w10, ne
+; CHECK-NEXT:    adds x11, x15, x11
 ; CHECK-NEXT:    orr w9, w9, w10
-; CHECK-NEXT:    fmov s0, w12
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    cset w10, hs
+; CHECK-NEXT:    orr w9, w9, w10
+; CHECK-NEXT:    orr w10, w13, w14
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    mov v0.s[1], w10
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
-; CHECK-NEXT:    mul x15, x0, x4
+; CHECK-NEXT:    mul x16, x0, x4
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #31
-; CHECK-NEXT:    stp x15, x11, [x8]
+; CHECK-NEXT:    stp x16, x11, [x8]
 ; CHECK-NEXT:    ret
   %t = call {<2 x i128>, <2 x i1>} @llvm.umul.with.overflow.v2i128(<2 x i128> %a0, <2 x i128> %a1)
   %val = extractvalue {<2 x i128>, <2 x i1>} %t, 0
