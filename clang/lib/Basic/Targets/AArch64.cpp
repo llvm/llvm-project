@@ -540,8 +540,6 @@ AArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_AArch64VectorCall:
   case CC_Win64:
     return CCCR_OK;
-  case CC_SwiftAsync:
-    return checkSwiftAsyncCCSupported();
   default:
     return CCCR_Warning;
   }
@@ -816,8 +814,6 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_Swift:
   case CC_Win64:
     return CCCR_OK;
-  case CC_SwiftAsync:
-    return checkSwiftAsyncCCSupported();
   default:
     return CCCR_Warning;
   }

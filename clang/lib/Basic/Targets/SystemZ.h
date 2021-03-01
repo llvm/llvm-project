@@ -143,8 +143,6 @@ public:
     case CC_Swift:
     case CC_OpenCLKernel:
       return CCCR_OK;
-    case CC_SwiftAsync:
-      return checkSwiftAsyncCCSupported();
     default:
       return CCCR_Warning;
     }
