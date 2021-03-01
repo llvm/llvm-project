@@ -5,6 +5,8 @@
 "`P1679R3 <https://wg21.link/P1679R3>`__","LWG","string contains function","Autumn 2020","|Complete|","12.0"
 "","","","","",""
 "`P1682R3 <https://wg21.link/P1682R3>`__","LWG","std::to_underlying for enumerations","February 2021","",""
+"`P2017R1 <https://wg21.link/P2017R1>`__","LWG","Conditionally borrowed ranges","February 2021","",""
+"`P2160R1 <https://wg21.link/P2160R1>`__","LWG","Locks lock lockables","February 2021","",""
 "`P2162R2 <https://wg21.link/P2162R2>`__","LWG","Inheriting from std::variant","February 2021","",""
 "`P2212R2 <https://wg21.link/P2212R2>`__","LWG","Relax Requirements for time_point::clock","February 2021","",""
 "`P2259R1 <https://wg21.link/P2259R1>`__","LWG","Repairing input range adaptors and counted_iterator","February 2021","",""
