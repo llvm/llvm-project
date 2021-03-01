@@ -1370,7 +1370,7 @@ def int_amdgcn_ps_live : Intrinsic <
 // Query currently live lanes.
 // Returns true if lane is live (and not a helper lane).
 def int_amdgcn_live_mask : Intrinsic <[llvm_i1_ty],
-  [], [IntrReadMem, IntrInaccessibleMemOnly]
+  [], [IntrReadMem, IntrInaccessibleMemOnly, IntrWillReturn]
 >;
 
 def int_amdgcn_mbcnt_lo :
@@ -2021,49 +2021,49 @@ def int_amdgcn_mfma_f32_32x32x4bf16_1k : GCCBuiltin<"__builtin_amdgcn_mfma_f32_3
   Intrinsic<[llvm_v32f32_ty],
             [llvm_v4i16_ty, llvm_v4i16_ty, llvm_v32f32_ty,
             llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrConvergent, IntrNoMem,
+            [IntrConvergent, IntrNoMem, IntrWillReturn,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
 def int_amdgcn_mfma_f32_16x16x4bf16_1k : GCCBuiltin<"__builtin_amdgcn_mfma_f32_16x16x4bf16_1k">,
   Intrinsic<[llvm_v16f32_ty],
             [llvm_v4i16_ty, llvm_v4i16_ty, llvm_v16f32_ty,
             llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrConvergent, IntrNoMem,
+            [IntrConvergent, IntrNoMem, IntrWillReturn,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
 def int_amdgcn_mfma_f32_4x4x4bf16_1k : GCCBuiltin<"__builtin_amdgcn_mfma_f32_4x4x4bf16_1k">,
   Intrinsic<[llvm_v4f32_ty],
             [llvm_v4i16_ty, llvm_v4i16_ty, llvm_v4f32_ty,
             llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrConvergent, IntrNoMem,
+            [IntrConvergent, IntrNoMem, IntrWillReturn,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
 def int_amdgcn_mfma_f32_32x32x8bf16_1k : GCCBuiltin<"__builtin_amdgcn_mfma_f32_32x32x8bf16_1k">,
   Intrinsic<[llvm_v16f32_ty],
             [llvm_v4i16_ty, llvm_v4i16_ty, llvm_v16f32_ty,
             llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrConvergent, IntrNoMem,
+            [IntrConvergent, IntrNoMem, IntrWillReturn,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
 def int_amdgcn_mfma_f32_16x16x16bf16_1k : GCCBuiltin<"__builtin_amdgcn_mfma_f32_16x16x16bf16_1k">,
   Intrinsic<[llvm_v4f32_ty],
             [llvm_v4i16_ty, llvm_v4i16_ty, llvm_v4f32_ty,
             llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrConvergent, IntrNoMem,
+            [IntrConvergent, IntrNoMem, IntrWillReturn,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
 def int_amdgcn_mfma_f64_16x16x4f64 : GCCBuiltin<"__builtin_amdgcn_mfma_f64_16x16x4f64">,
   Intrinsic<[llvm_v4f64_ty],
             [llvm_double_ty, llvm_double_ty, llvm_v4f64_ty,
             llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrConvergent, IntrNoMem,
+            [IntrConvergent, IntrNoMem, IntrWillReturn,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
 def int_amdgcn_mfma_f64_4x4x4f64 : GCCBuiltin<"__builtin_amdgcn_mfma_f64_4x4x4f64">,
   Intrinsic<[llvm_double_ty],
             [llvm_double_ty, llvm_double_ty, llvm_double_ty,
             llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrConvergent, IntrNoMem,
+            [IntrConvergent, IntrNoMem, IntrWillReturn,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
 //===----------------------------------------------------------------------===//
