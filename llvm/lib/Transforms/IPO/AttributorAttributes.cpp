@@ -3690,10 +3690,9 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
     return 0;
   }
   if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
-    if (GEP->hasAllConstantIndices()) {
+    if (GEP->hasAllConstantIndices())
       TrackUse = true;
-      return 0;
-    }
+    return 0;
   }
 
   MaybeAlign MA;
