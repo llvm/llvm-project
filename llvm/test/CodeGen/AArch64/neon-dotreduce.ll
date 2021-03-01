@@ -273,11 +273,9 @@ define i32 @test_udot_v16i8_double_nomla(<16 x i8> %a, <16 x i8> %b, <16 x i8> %
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v1.16b, #1
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-NEXT:    udot v4.4s, v1.16b, v0.16b
 ; CHECK-NEXT:    udot v3.4s, v1.16b, v2.16b
-; CHECK-NEXT:    add v0.4s, v4.4s, v3.4s
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    udot v3.4s, v1.16b, v0.16b
+; CHECK-NEXT:    addv s0, v3.4s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -390,11 +388,9 @@ define i32 @test_sdot_v16i8_double_nomla(<16 x i8> %a, <16 x i8> %b, <16 x i8> %
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v1.16b, #1
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-NEXT:    sdot v4.4s, v1.16b, v0.16b
 ; CHECK-NEXT:    sdot v3.4s, v1.16b, v2.16b
-; CHECK-NEXT:    add v0.4s, v4.4s, v3.4s
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    sdot v3.4s, v1.16b, v0.16b
+; CHECK-NEXT:    addv s0, v3.4s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
