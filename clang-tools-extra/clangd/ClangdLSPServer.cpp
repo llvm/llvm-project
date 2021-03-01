@@ -59,8 +59,8 @@ constexpr trace::Metric LSPLatency("lsp_latency", trace::Metric::Distribution,
 
 // LSP defines file versions as numbers that increase.
 // ClangdServer treats them as opaque and therefore uses strings instead.
-std::string encodeVersion(int64_t LSPVersion) {
-  return llvm::to_string(LSPVersion);
+std::string encodeVersion(llvm::Optional<int64_t> LSPVersion) {
+  return LSPVersion ? llvm::to_string(*LSPVersion) : "";
 }
 llvm::Optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
   int64_t Result;
@@ -124,15 +124,15 @@ CompletionItemKindBitset defaultCompletionItemKinds() {
 // Makes sure edits in \p FE are applicable to latest file contents reported by
 // editor. If not generates an error message containing information about files
 // that needs to be saved.
-llvm::Error validateEdits(const DraftStore &DraftMgr, const FileEdits &FE) {
+llvm::Error validateEdits(const ClangdServer &Server, const FileEdits &FE) {
   size_t InvalidFileCount = 0;
   llvm::StringRef LastInvalidFile;
   for (const auto &It : FE) {
-    if (auto Draft = DraftMgr.getDraft(It.first())) {
+    if (auto Draft = Server.getDraft(It.first())) {
       // If the file is open in user's editor, make sure the version we
       // saw and current version are compatible as this is the text that
       // will be replaced by editors.
-      if (!It.second.canApplyTo(Draft->Contents)) {
+      if (!It.second.canApplyTo(*Draft)) {
         ++InvalidFileCount;
         LastInvalidFile = It.first();
       }
@@ -648,8 +648,8 @@ void ClangdLSPServer::onDocumentDidOpen(
 
   const std::string &Contents = Params.textDocument.text;
 
-  auto Version = DraftMgr.addDraft(File, Params.textDocument.version, Contents);
-  Server->addDocument(File, Contents, encodeVersion(Version),
+  Server->addDocument(File, Contents,
+                      encodeVersion(Params.textDocument.version),
                       WantDiagnostics::Yes);
 }
 
@@ -661,25 +661,28 @@ void ClangdLSPServer::onDocumentDidChange(
                                                   : WantDiagnostics::No;
 
   PathRef File = Params.textDocument.uri.file();
-  llvm::Expected<DraftStore::Draft> Draft = DraftMgr.updateDraft(
-      File, Params.textDocument.version, Params.contentChanges);
-  if (!Draft) {
-    // If this fails, we are most likely going to be not in sync anymore with
-    // the client.  It is better to remove the draft and let further operations
-    // fail rather than giving wrong results.
-    DraftMgr.removeDraft(File);
-    Server->removeDocument(File);
-    elog("Failed to update {0}: {1}", File, Draft.takeError());
+  auto Code = Server->getDraft(File);
+  if (!Code) {
+    log("Trying to incrementally change non-added document: {0}", File);
     return;
   }
-
-  Server->addDocument(File, Draft->Contents, encodeVersion(Draft->Version),
+  for (const auto &Change : Params.contentChanges) {
+    if (auto Err = applyChange(*Code, Change)) {
+      // If this fails, we are most likely going to be not in sync anymore with
+      // the client.  It is better to remove the draft and let further
+      // operations fail rather than giving wrong results.
+      Server->removeDocument(File);
+      elog("Failed to update {0}: {1}", File, std::move(Err));
+      return;
+    }
+  }
+  Server->addDocument(File, *Code, encodeVersion(Params.textDocument.version),
                       WantDiags, Params.forceRebuild);
 }
 
 void ClangdLSPServer::onDocumentDidSave(
     const DidSaveTextDocumentParams &Params) {
-  reparseOpenFilesIfNeeded([](llvm::StringRef) { return true; });
+  Server->reparseOpenFilesIfNeeded([](llvm::StringRef) { return true; });
 }
 
 void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
@@ -720,13 +723,8 @@ void ClangdLSPServer::onCommandApplyEdit(const WorkspaceEdit &WE,
 
 void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
                                           Callback<llvm::json::Value> Reply) {
-  auto Code = DraftMgr.getDraft(Args.file.file());
-  if (!Code)
-    return Reply(error("trying to apply a code action for a non-added file"));
-
-  auto Action = [this, Reply = std::move(Reply), File = Args.file,
-                 Code = std::move(*Code)](
-                    llvm::Expected<Tweak::Effect> R) mutable {
+  auto Action = [this, Reply = std::move(Reply),
+                 File = Args.file](llvm::Expected<Tweak::Effect> R) mutable {
     if (!R)
       return Reply(R.takeError());
 
@@ -742,7 +740,7 @@ void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
     if (R->ApplyEdits.empty())
       return Reply("Tweak applied.");
 
-    if (auto Err = validateEdits(DraftMgr, R->ApplyEdits))
+    if (auto Err = validateEdits(*Server, R->ApplyEdits))
       return Reply(std::move(Err));
 
     WorkspaceEdit WE;
@@ -808,7 +806,7 @@ void ClangdLSPServer::onPrepareRename(const TextDocumentPositionParams &Params,
 void ClangdLSPServer::onRename(const RenameParams &Params,
                                Callback<WorkspaceEdit> Reply) {
   Path File = std::string(Params.textDocument.uri.file());
-  if (!DraftMgr.getDraft(File))
+  if (!Server->getDraft(File))
     return Reply(llvm::make_error<LSPError>(
         "onRename called for non-added file", ErrorCode::InvalidParams));
   Server->rename(
@@ -817,7 +815,7 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
        this](llvm::Expected<RenameResult> R) mutable {
         if (!R)
           return Reply(R.takeError());
-        if (auto Err = validateEdits(DraftMgr, R->GlobalChanges))
+        if (auto Err = validateEdits(*Server, R->GlobalChanges))
           return Reply(std::move(Err));
         WorkspaceEdit Result;
         Result.changes.emplace();
@@ -832,7 +830,6 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
 void ClangdLSPServer::onDocumentDidClose(
     const DidCloseTextDocumentParams &Params) {
   PathRef File = Params.textDocument.uri.file();
-  DraftMgr.removeDraft(File);
   Server->removeDocument(File);
 
   {
@@ -857,52 +854,35 @@ void ClangdLSPServer::onDocumentOnTypeFormatting(
     const DocumentOnTypeFormattingParams &Params,
     Callback<std::vector<TextEdit>> Reply) {
   auto File = Params.textDocument.uri.file();
-  auto Code = DraftMgr.getDraft(File);
-  if (!Code)
-    return Reply(llvm::make_error<LSPError>(
-        "onDocumentOnTypeFormatting called for non-added file",
-        ErrorCode::InvalidParams));
-
-  Server->formatOnType(File, Code->Contents, Params.position, Params.ch,
-                       std::move(Reply));
+  Server->formatOnType(File, Params.position, Params.ch, std::move(Reply));
 }
 
 void ClangdLSPServer::onDocumentRangeFormatting(
     const DocumentRangeFormattingParams &Params,
     Callback<std::vector<TextEdit>> Reply) {
   auto File = Params.textDocument.uri.file();
-  auto Code = DraftMgr.getDraft(File);
-  if (!Code)
-    return Reply(llvm::make_error<LSPError>(
-        "onDocumentRangeFormatting called for non-added file",
-        ErrorCode::InvalidParams));
-
-  Server->formatRange(
-      File, Code->Contents, Params.range,
-      [Code = Code->Contents, Reply = std::move(Reply)](
-          llvm::Expected<tooling::Replacements> Result) mutable {
-        if (Result)
-          Reply(replacementsToEdits(Code, Result.get()));
-        else
-          Reply(Result.takeError());
-      });
+  auto Code = Server->getDraft(File);
+  Server->formatFile(File, Params.range,
+                     [Code = std::move(Code), Reply = std::move(Reply)](
+                         llvm::Expected<tooling::Replacements> Result) mutable {
+                       if (Result)
+                         Reply(replacementsToEdits(*Code, Result.get()));
+                       else
+                         Reply(Result.takeError());
+                     });
 }
 
 void ClangdLSPServer::onDocumentFormatting(
     const DocumentFormattingParams &Params,
     Callback<std::vector<TextEdit>> Reply) {
   auto File = Params.textDocument.uri.file();
-  auto Code = DraftMgr.getDraft(File);
-  if (!Code)
-    return Reply(llvm::make_error<LSPError>(
-        "onDocumentFormatting called for non-added file",
-        ErrorCode::InvalidParams));
-
-  Server->formatFile(File, Code->Contents,
-                     [Code = Code->Contents, Reply = std::move(Reply)](
+  auto Code = Server->getDraft(File);
+  Server->formatFile(File,
+                     /*Rng=*/llvm::None,
+                     [Code = std::move(Code), Reply = std::move(Reply)](
                          llvm::Expected<tooling::Replacements> Result) mutable {
                        if (Result)
-                         Reply(replacementsToEdits(Code, Result.get()));
+                         Reply(replacementsToEdits(*Code, Result.get()));
                        else
                          Reply(Result.takeError());
                      });
@@ -978,11 +958,6 @@ static llvm::Optional<Command> asCommand(const CodeAction &Action) {
 void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
                                    Callback<llvm::json::Value> Reply) {
   URIForFile File = Params.textDocument.uri;
-  auto Code = DraftMgr.getDraft(File.file());
-  if (!Code)
-    return Reply(llvm::make_error<LSPError>(
-        "onCodeAction called for non-added file", ErrorCode::InvalidParams));
-
   // Checks whether a particular CodeActionKind is included in the response.
   auto KindAllowed = [Only(Params.context.only)](llvm::StringRef Kind) {
     if (Only.empty())
@@ -1005,8 +980,8 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
 
   // Now enumerate the semantic code actions.
   auto ConsumeActions =
-      [Reply = std::move(Reply), File, Code = std::move(*Code),
-       Selection = Params.range, FixIts = std::move(FixIts), this](
+      [Reply = std::move(Reply), File, Selection = Params.range,
+       FixIts = std::move(FixIts), this](
           llvm::Expected<std::vector<ClangdServer::TweakRef>> Tweaks) mutable {
         if (!Tweaks)
           return Reply(Tweaks.takeError());
@@ -1246,7 +1221,7 @@ void ClangdLSPServer::applyConfiguration(
     }
   }
 
-  reparseOpenFilesIfNeeded(
+  Server->reparseOpenFilesIfNeeded(
       [&](llvm::StringRef File) { return ModifiedFiles.count(File) != 0; });
 }
 
@@ -1557,17 +1532,17 @@ bool ClangdLSPServer::shouldRunCompletion(
     const CompletionParams &Params) const {
   if (Params.context.triggerKind != CompletionTriggerKind::TriggerCharacter)
     return true;
-  auto Code = DraftMgr.getDraft(Params.textDocument.uri.file());
+  auto Code = Server->getDraft(Params.textDocument.uri.file());
   if (!Code)
     return true; // completion code will log the error for untracked doc.
-  auto Offset = positionToOffset(Code->Contents, Params.position,
+  auto Offset = positionToOffset(*Code, Params.position,
                                  /*AllowColumnsBeyondLineLength=*/false);
   if (!Offset) {
     vlog("could not convert position '{0}' to offset for file '{1}'",
          Params.position, Params.textDocument.uri.file());
     return true;
   }
-  return allowImplicitCompletion(Code->Contents, *Offset);
+  return allowImplicitCompletion(*Code, *Offset);
 }
 
 void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
@@ -1679,17 +1654,6 @@ void ClangdLSPServer::onFileUpdated(PathRef File, const TUStatus &Status) {
        Status.ASTActivity.K == ASTAction::RunningAction))
     return;
   NotifyFileStatus(Status.render(File));
-}
-
-void ClangdLSPServer::reparseOpenFilesIfNeeded(
-    llvm::function_ref<bool(llvm::StringRef File)> Filter) {
-  // Reparse only opened files that were modified.
-  for (const Path &FilePath : DraftMgr.getActiveFiles())
-    if (Filter(FilePath))
-      if (auto Draft = DraftMgr.getDraft(FilePath)) // else disappeared in race?
-        Server->addDocument(FilePath, std::move(Draft->Contents),
-                            encodeVersion(Draft->Version),
-                            WantDiagnostics::Auto);
 }
 
 } // namespace clangd
