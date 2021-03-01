@@ -64,11 +64,6 @@ private:
   using MemHandler =
       std::function<void(MachineIRBuilder &, int, CCValAssign &)>;
 
-  void splitToValueTypes(const ArgInfo &OrigArgInfo,
-                         SmallVectorImpl<ArgInfo> &SplitArgs,
-                         const DataLayout &DL, MachineRegisterInfo &MRI,
-                         CallingConv::ID CallConv) const;
-
   bool lowerTailCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
                      SmallVectorImpl<ArgInfo> &OutArgs) const;
 
