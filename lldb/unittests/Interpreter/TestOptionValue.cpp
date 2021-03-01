@@ -14,6 +14,7 @@ using namespace lldb_private;
 
 class Callback {
 public:
+  virtual ~Callback() = default;
   virtual void Invoke() const {}
   void operator()() const { Invoke(); }
 };
