@@ -9,6 +9,7 @@
 #include "Annotations.h"
 #include "ClangdServer.h"
 #include "Diagnostics.h"
+#include "GlobalCompilationDatabase.h"
 #include "Matchers.h"
 #include "ParsedAST.h"
 #include "Preamble.h"
@@ -43,12 +44,15 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::AllOf;
 using ::testing::AnyOf;
+using ::testing::Contains;
 using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::Field;
 using ::testing::IsEmpty;
+using ::testing::Not;
 using ::testing::Pair;
 using ::testing::Pointee;
 using ::testing::SizeIs;
@@ -1159,6 +1163,105 @@ TEST_F(TUSchedulerTests, AsyncPreambleThread) {
   });
   RunASTAction.wait();
   Ready.notify();
+}
+
+// If a header file is missing from the CDB (or inferred using heuristics), and
+// it's included by another open file, then we parse it using that files flags.
+TEST_F(TUSchedulerTests, IncluderCache) {
+  static std::string Main = testPath("main.cpp"), Main2 = testPath("main2.cpp"),
+                     Main3 = testPath("main3.cpp"),
+                     NoCmd = testPath("no_cmd.h"),
+                     Unreliable = testPath("unreliable.h"),
+                     OK = testPath("ok.h"),
+                     NotIncluded = testPath("not_included.h");
+  class NoHeadersCDB : public GlobalCompilationDatabase {
+    llvm::Optional<tooling::CompileCommand>
+    getCompileCommand(PathRef File) const override {
+      if (File == NoCmd || File == NotIncluded)
+        return llvm::None;
+      auto Basic = getFallbackCommand(File);
+      Basic.Heuristic.clear();
+      if (File == Unreliable) {
+        Basic.Heuristic = "not reliable";
+      } else if (File == Main) {
+        Basic.CommandLine.push_back("-DMAIN");
+      } else if (File == Main2) {
+        Basic.CommandLine.push_back("-DMAIN2");
+      } else if (File == Main3) {
+        Basic.CommandLine.push_back("-DMAIN3");
+      }
+      return Basic;
+    }
+  } CDB;
+  TUScheduler S(CDB, optsForTest());
+  auto GetFlags = [&](PathRef Header) {
+    S.update(Header, getInputs(Header, ";"), WantDiagnostics::Yes);
+    EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+    tooling::CompileCommand Cmd;
+    S.runWithPreamble("GetFlags", Header, TUScheduler::StaleOrAbsent,
+                      [&](llvm::Expected<InputsAndPreamble> Inputs) {
+                        ASSERT_FALSE(!Inputs) << Inputs.takeError();
+                        Cmd = std::move(Inputs->Command);
+                      });
+    EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+    return Cmd.CommandLine;
+  };
+
+  for (const auto &Path : {NoCmd, Unreliable, OK, NotIncluded})
+    FS.Files[Path] = ";";
+
+  // Initially these files have normal commands from the CDB.
+  EXPECT_THAT(GetFlags(Main), Contains("-DMAIN")) << "sanity check";
+  EXPECT_THAT(GetFlags(NoCmd), Not(Contains("-DMAIN"))) << "no includes yet";
+
+  // Now make Main include the others, and some should pick up its flags.
+  const char *AllIncludes = R"cpp(
+    #include "no_cmd.h"
+    #include "ok.h"
+    #include "unreliable.h"
+  )cpp";
+  S.update(Main, getInputs(Main, AllIncludes), WantDiagnostics::Yes);
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_THAT(GetFlags(NoCmd), Contains("-DMAIN"))
+      << "Included from main file, has no own command";
+  EXPECT_THAT(GetFlags(Unreliable), Contains("-DMAIN"))
+      << "Included from main file, own command is heuristic";
+  EXPECT_THAT(GetFlags(OK), Not(Contains("-DMAIN")))
+      << "Included from main file, but own command is used";
+  EXPECT_THAT(GetFlags(NotIncluded), Not(Contains("-DMAIN")))
+      << "Not included from main file";
+
+  // Open another file - it won't overwrite the associations with Main.
+  std::string SomeIncludes = R"cpp(
+    #include "no_cmd.h"
+    #include "not_included.h"
+  )cpp";
+  S.update(Main2, getInputs(Main2, SomeIncludes), WantDiagnostics::Yes);
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_THAT(GetFlags(NoCmd),
+              AllOf(Contains("-DMAIN"), Not(Contains("-DMAIN2"))))
+      << "mainfile association is stable";
+  EXPECT_THAT(GetFlags(NotIncluded),
+              AllOf(Contains("-DMAIN2"), Not(Contains("-DMAIN"))))
+      << "new headers are associated with new mainfile";
+
+  // Remove includes from main - this marks the associations as invalid but
+  // doesn't actually remove them until another preamble claims them.
+  S.update(Main, getInputs(Main, ""), WantDiagnostics::Yes);
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_THAT(GetFlags(NoCmd),
+              AllOf(Contains("-DMAIN"), Not(Contains("-DMAIN2"))))
+      << "mainfile association not updated yet!";
+
+  // Open yet another file - this time it claims the associations.
+  S.update(Main3, getInputs(Main3, SomeIncludes), WantDiagnostics::Yes);
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_THAT(GetFlags(NoCmd), Contains("-DMAIN3"))
+      << "association invalidated and then claimed by main3";
+  EXPECT_THAT(GetFlags(Unreliable), Contains("-DMAIN"))
+      << "association invalidated but not reclaimed";
+  EXPECT_THAT(GetFlags(NotIncluded), Contains("-DMAIN2"))
+      << "association still valid";
 }
 
 } // namespace
