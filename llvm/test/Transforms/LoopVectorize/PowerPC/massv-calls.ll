@@ -236,7 +236,7 @@ for.end:
 
 define void @sqrt_f64(double* nocapture %varray) {
 ; CHECK-LABEL: @sqrt_f64(
-; CHECK: __sqrtd2_massv{{.*}}<2 x double>
+; CHECK-NOT: __sqrtd2_massv{{.*}}<2 x double>
 ; CHECK: ret void
 ;
 entry:
@@ -259,7 +259,7 @@ for.end:
 
 define void @sqrt_f32(float* nocapture %varray) {
 ; CHECK-LABEL: @sqrt_f32(
-; CHECK: __sqrtf4_massv{{.*}}<4 x float>
+; CHECK-NOT: __sqrtf4_massv{{.*}}<4 x float>
 ; CHECK: ret void
 ;
 entry:
