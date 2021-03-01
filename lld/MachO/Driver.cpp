@@ -796,11 +796,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     config->namespaceKind = arg->getOption().getID() == OPT_twolevel_namespace
                                 ? NamespaceKind::twolevel
                                 : NamespaceKind::flat;
-    if (config->namespaceKind == NamespaceKind::flat) {
-      warn("Option '" + arg->getOption().getPrefixedName() +
-           "' is not yet implemented. Stay tuned...");
-      config->namespaceKind = NamespaceKind::twolevel;
-    }
   }
 
   config->systemLibraryRoots = getSystemLibraryRoots(args);
