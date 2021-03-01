@@ -278,47 +278,6 @@ static ISD::NodeType extOpcodeToISDExtOpcode(unsigned MIOpc) {
   }
 }
 
-// FIXME: This should move to generic code.
-void AMDGPUCallLowering::splitToValueTypes(MachineIRBuilder &B,
-                                           const ArgInfo &OrigArg,
-                                           SmallVectorImpl<ArgInfo> &SplitArgs,
-                                           const DataLayout &DL,
-                                           CallingConv::ID CallConv) const {
-  const SITargetLowering &TLI = *getTLI<SITargetLowering>();
-  LLVMContext &Ctx = OrigArg.Ty->getContext();
-
-  SmallVector<EVT, 4> SplitVTs;
-  ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitVTs);
-
-  assert(OrigArg.Regs.size() == SplitVTs.size());
-
-  if (SplitVTs.size() == 0)
-    return;
-
-  if (SplitVTs.size() == 1) {
-    // No splitting to do, but we want to replace the original type (e.g. [1 x
-    // double] -> double).
-    SplitArgs.emplace_back(OrigArg.Regs[0], SplitVTs[0].getTypeForEVT(Ctx),
-                           OrigArg.Flags[0], OrigArg.IsFixed);
-    return;
-  }
-
-  // Create one ArgInfo for each virtual register in the original ArgInfo.
-  assert(OrigArg.Regs.size() == SplitVTs.size() && "Regs / types mismatch");
-
-  bool NeedsRegBlock = TLI.functionArgumentNeedsConsecutiveRegisters(
-      OrigArg.Ty, CallConv, false);
-  for (unsigned i = 0, e = SplitVTs.size(); i < e; ++i) {
-    Type *SplitTy = SplitVTs[i].getTypeForEVT(Ctx);
-    SplitArgs.emplace_back(OrigArg.Regs[i], SplitTy, OrigArg.Flags[0],
-                           OrigArg.IsFixed);
-    if (NeedsRegBlock)
-      SplitArgs.back().Flags[0].setInConsecutiveRegs();
-  }
-
-  SplitArgs.back().Flags[0].setInConsecutiveRegsLast();
-}
-
 void AMDGPUCallLowering::processSplitArgs(
     MachineIRBuilder &B, const ArgInfo &OrigArg,
     const SmallVectorImpl<ArgInfo> &SplitArg,
@@ -498,7 +457,7 @@ bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
       setArgFlags(RetInfo, AttributeList::ReturnIndex, DL, F);
     }
 
-    splitToValueTypes(B, RetInfo, PreSplitRetInfos, DL, CC);
+    splitToValueTypes(RetInfo, PreSplitRetInfos, DL, CC);
 
     // FIXME: This splitting should mostly be done by handleAssignments
     processSplitArgs(B, RetInfo,
@@ -824,7 +783,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     const unsigned OrigArgIdx = Idx + AttributeList::FirstArgIndex;
     setArgFlags(OrigArg, OrigArgIdx, DL, F);
 
-    splitToValueTypes(B, OrigArg, SplitArgs, DL, CC);
+    splitToValueTypes(OrigArg, SplitArgs, DL, CC);
     ++Idx;
   }
 
@@ -1117,7 +1076,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   SmallVector<ArgInfo, 8> SplitArg;
   for (auto &OrigArg : Info.OrigArgs) {
-    splitToValueTypes(MIRBuilder, OrigArg, SplitArg, DL, Info.CallConv);
+    splitToValueTypes(OrigArg, SplitArg, DL, Info.CallConv);
 
     processSplitArgs(
       MIRBuilder, OrigArg, SplitArg, OutArgs, DL, Info.CallConv, true,
@@ -1232,7 +1191,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
                     Info.DemoteRegister, Info.DemoteStackIndex);
   } else if (!Info.OrigRet.Ty->isVoidTy()) {
-    splitToValueTypes(MIRBuilder, Info.OrigRet, InArgs, DL, Info.CallConv);
+    splitToValueTypes(Info.OrigRet, InArgs, DL, Info.CallConv);
   }
 
   // Make sure the raw argument copies are inserted before the marshalling to
