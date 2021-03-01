@@ -55,9 +55,7 @@ entry:
 define <2 x i32> @test_vdot_u32_zero(<2 x i32> %a, <8 x i8> %b, <8 x i8> %c) #0 {
 ; CHECK-LABEL: test_vdot_u32_zero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    udot v3.2s, v1.8b, v2.8b
-; CHECK-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-NEXT:    udot v0.2s, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
 entry:
   %vdot1.i = call <2 x i32> @llvm.aarch64.neon.udot.v2i32.v8i8(<2 x i32> zeroinitializer, <8 x i8> %b, <8 x i8> %c) #2
@@ -68,9 +66,7 @@ entry:
 define <4 x i32> @test_vdotq_u32_zero(<4 x i32> %a, <16 x i8> %b, <16 x i8> %c) #0 {
 ; CHECK-LABEL: test_vdotq_u32_zero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    udot v3.4s, v1.16b, v2.16b
-; CHECK-NEXT:    add v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    udot v0.4s, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %vdot1.i = call <4 x i32> @llvm.aarch64.neon.udot.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> %b, <16 x i8> %c) #2
@@ -81,9 +77,7 @@ entry:
 define <2 x i32> @test_vdot_s32_zero(<2 x i32> %a, <8 x i8> %b, <8 x i8> %c) #0 {
 ; CHECK-LABEL: test_vdot_s32_zero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    sdot v3.2s, v1.8b, v2.8b
-; CHECK-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-NEXT:    sdot v0.2s, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
 entry:
   %vdot1.i = call <2 x i32> @llvm.aarch64.neon.sdot.v2i32.v8i8(<2 x i32> zeroinitializer, <8 x i8> %b, <8 x i8> %c) #2
@@ -94,9 +88,7 @@ entry:
 define <4 x i32> @test_vdotq_s32_zero(<4 x i32> %a, <16 x i8> %b, <16 x i8> %c) #0 {
 ; CHECK-LABEL: test_vdotq_s32_zero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    sdot v3.4s, v1.16b, v2.16b
-; CHECK-NEXT:    add v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    sdot v0.4s, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %vdot1.i = call <4 x i32> @llvm.aarch64.neon.sdot.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> %b, <16 x i8> %c) #2
@@ -161,6 +153,11 @@ entry:
 
 
 define <2 x i32> @test_vdot_lane_u32_zero(<2 x i32> %a, <8 x i8> %b, <8 x i8> %c) {
+; CHECK-LABEL: test_vdot_lane_u32_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    udot v0.2s, v1.8b, v2.4b[1]
+; CHECK-NEXT:    ret
 entry:
   %.cast = bitcast <8 x i8> %c to <2 x i32>
   %shuffle = shufflevector <2 x i32> %.cast, <2 x i32> undef, <2 x i32> <i32 1, i32 1>
@@ -171,6 +168,11 @@ entry:
 }
 
 define <4 x i32> @test_vdotq_lane_u32_zero(<4 x i32> %a, <16 x i8> %b, <8 x i8> %c) {
+; CHECK-LABEL: test_vdotq_lane_u32_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    udot v0.4s, v1.16b, v2.4b[1]
+; CHECK-NEXT:    ret
 entry:
   %.cast = bitcast <8 x i8> %c to <2 x i32>
   %shuffle = shufflevector <2 x i32> %.cast, <2 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
@@ -183,9 +185,7 @@ entry:
 define <2 x i32> @test_vdot_laneq_u32_zero(<2 x i32> %a, <8 x i8> %b, <16 x i8> %c) {
 ; CHECK-LABEL: test_vdot_laneq_u32_zero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    udot v3.2s, v1.8b, v2.4b[1]
-; CHECK-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-NEXT:    udot v0.2s, v1.8b, v2.4b[1]
 ; CHECK-NEXT:    ret
 entry:
   %.cast = bitcast <16 x i8> %c to <4 x i32>
@@ -199,9 +199,7 @@ entry:
 define <4 x i32> @test_vdotq_laneq_u32_zero(<4 x i32> %a, <16 x i8> %b, <16 x i8> %c) {
 ; CHECK-LABEL: test_vdotq_laneq_u32_zero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    udot v3.4s, v1.16b, v2.4b[1]
-; CHECK-NEXT:    add v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    udot v0.4s, v1.16b, v2.4b[1]
 ; CHECK-NEXT:    ret
 entry:
   %.cast = bitcast <16 x i8> %c to <4 x i32>
@@ -269,6 +267,11 @@ entry:
 
 
 define <2 x i32> @test_vdot_lane_s32_zero(<2 x i32> %a, <8 x i8> %b, <8 x i8> %c) {
+; CHECK-LABEL: test_vdot_lane_s32_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    sdot v0.2s, v1.8b, v2.4b[1]
+; CHECK-NEXT:    ret
 entry:
   %.cast = bitcast <8 x i8> %c to <2 x i32>
   %shuffle = shufflevector <2 x i32> %.cast, <2 x i32> undef, <2 x i32> <i32 1, i32 1>
@@ -279,6 +282,11 @@ entry:
 }
 
 define <4 x i32> @test_vdotq_lane_s32_zero(<4 x i32> %a, <16 x i8> %b, <8 x i8> %c) {
+; CHECK-LABEL: test_vdotq_lane_s32_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    sdot v0.4s, v1.16b, v2.4b[1]
+; CHECK-NEXT:    ret
 entry:
   %.cast = bitcast <8 x i8> %c to <2 x i32>
   %shuffle = shufflevector <2 x i32> %.cast, <2 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
@@ -291,9 +299,7 @@ entry:
 define <2 x i32> @test_vdot_laneq_s32_zero(<2 x i32> %a, <8 x i8> %b, <16 x i8> %c) {
 ; CHECK-LABEL: test_vdot_laneq_s32_zero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    sdot v3.2s, v1.8b, v2.4b[1]
-; CHECK-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-NEXT:    sdot v0.2s, v1.8b, v2.4b[1]
 ; CHECK-NEXT:    ret
 entry:
   %.cast = bitcast <16 x i8> %c to <4 x i32>
@@ -307,9 +313,7 @@ entry:
 define <4 x i32> @test_vdotq_laneq_s32_zero(<4 x i32> %a, <16 x i8> %b, <16 x i8> %c) {
 ; CHECK-LABEL: test_vdotq_laneq_s32_zero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    sdot v3.4s, v1.16b, v2.4b[1]
-; CHECK-NEXT:    add v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    sdot v0.4s, v1.16b, v2.4b[1]
 ; CHECK-NEXT:    ret
 entry:
   %.cast = bitcast <16 x i8> %c to <4 x i32>
