@@ -157,7 +157,7 @@ getFileStyleFromOptions(const ClangTidyCheck::OptionsView &Options) {
     StyleString.pop_back();
     StyleString.pop_back();
     auto CaseOptional =
-        Options.getOptional<IdentifierNamingCheck::CaseType>(StyleString);
+        Options.get<IdentifierNamingCheck::CaseType>(StyleString);
 
     if (CaseOptional || !Prefix.empty() || !Postfix.empty() ||
         !IgnoredRegexpStr.empty())
