@@ -1188,6 +1188,9 @@ namespace AMDGPU {
   int getDPPOp32(uint16_t Opcode);
 
   LLVM_READONLY
+  int getDPPOp64(uint16_t Opcode);
+
+  LLVM_READONLY
   int getBasicFromSDWAOp(uint16_t Opcode);
 
   LLVM_READONLY

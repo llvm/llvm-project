@@ -2598,7 +2598,7 @@ def getDPPOp64 : InstrMapping {
   let FilterClass = "VOP";
   let RowFields = ["OpName"];
   let ColFields = ["AsmVariantName"];
-  let KeyCol = ["Default"];
+  let KeyCol = ["VOP3"];
   let ValueCols = [["VOP3_DPP"]];
 }
 

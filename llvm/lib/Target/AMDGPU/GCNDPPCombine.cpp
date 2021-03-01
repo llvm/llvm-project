@@ -98,7 +98,7 @@ public:
   }
 
 private:
-  int getDPPOp(unsigned Op, bool IsShrinkable) const;
+  int getDPPOp(unsigned Op, bool HasVOP3DPP, bool IsShrinkable) const;
   bool isShrinkable(MachineInstr &OrigMI, unsigned OrigOp) const;
 };
 
@@ -115,6 +115,7 @@ FunctionPass *llvm::createGCNDPPCombinePass() {
 }
 
 bool GCNDPPCombine::isShrinkable(MachineInstr &OrigMI, unsigned OrigOp) const {
+  // TODO-GFX11 shrink 64bit VOPC
   if (!TII->isVOP3(OrigOp)) {
     return false;
   }
@@ -134,14 +135,22 @@ bool GCNDPPCombine::isShrinkable(MachineInstr &OrigMI, unsigned OrigOp) const {
   return true;
 }
 
-int GCNDPPCombine::getDPPOp(unsigned Op, bool IsShrinkable) const {
+int GCNDPPCombine::getDPPOp(unsigned Op, bool HasVOP3DPP,
+                            bool IsShrinkable) const {
   auto DPP32 = AMDGPU::getDPPOp32(Op);
+  auto DPP64 = AMDGPU::getDPPOp64(Op);
   if (IsShrinkable) {
     assert(DPP32 == -1);
     auto E32 = AMDGPU::getVOPe32(Op);
     DPP32 = (E32 == -1) ? -1 : AMDGPU::getDPPOp32(E32);
   }
-  return (DPP32 == -1 || TII->pseudoToMCOpcode(DPP32) == -1) ? -1 : DPP32;
+  if (DPP32 != -1 && TII->pseudoToMCOpcode(DPP32) != -1) {
+    return DPP32;
+  }
+  if (HasVOP3DPP && DPP64 != -1 && TII->pseudoToMCOpcode(DPP64) != -1) {
+    return DPP64;
+  }
+  return -1;
 }
 
 // tracks the register operand definition and returns:
@@ -177,8 +186,9 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
   assert(MovMI.getOpcode() == AMDGPU::V_MOV_B32_dpp ||
          MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO);
 
+  bool HasVOP3DPP = ST->hasVOP3DPP();
   auto OrigOp = OrigMI.getOpcode();
-  auto DPPOp = getDPPOp(OrigOp, IsShrinkable);
+  auto DPPOp = getDPPOp(OrigOp, HasVOP3DPP, IsShrinkable);
   if (DPPOp == -1) {
     LLVM_DEBUG(dbgs() << "  failed: no DPP opcode\n");
     return nullptr;
@@ -194,6 +204,14 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     assert(Dst);
     DPPInst.add(*Dst);
     int NumOperands = 1;
+    // For VOP3B encoding
+    if (auto *SDst = TII->getNamedOperand(OrigMI, AMDGPU::OpName::sdst)) {
+      if (TII->isOperandLegal(*DPPInst.getInstr(), NumOperands, SDst)) {
+        DPPInst.add(*SDst);
+        ++NumOperands;
+      }
+      // If we shrunk a 64bit vop3b to 32bits, just ignore the sdst
+    }
 
     const int OldIdx = AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::old);
     if (OldIdx != -1) {
@@ -219,7 +237,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
                                           AMDGPU::OpName::src0_modifiers)) {
       assert(NumOperands == AMDGPU::getNamedOperandIdx(DPPOp,
                                           AMDGPU::OpName::src0_modifiers));
-      assert(0LL == (Mod0->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG)));
+      assert(HasVOP3DPP ||
+             (0LL == (Mod0->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG))));
       DPPInst.addImm(Mod0->getImm());
       ++NumOperands;
     } else if (AMDGPU::getNamedOperandIdx(DPPOp,
@@ -242,7 +261,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
                                           AMDGPU::OpName::src1_modifiers)) {
       assert(NumOperands == AMDGPU::getNamedOperandIdx(DPPOp,
                                           AMDGPU::OpName::src1_modifiers));
-      assert(0LL == (Mod1->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG)));
+      assert(HasVOP3DPP ||
+             (0LL == (Mod1->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG))));
       DPPInst.addImm(Mod1->getImm());
       ++NumOperands;
     } else if (AMDGPU::getNamedOperandIdx(DPPOp,
@@ -259,7 +279,15 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       DPPInst.add(*Src1);
       ++NumOperands;
     }
-
+    if (auto *Mod2 = TII->getNamedOperand(OrigMI,
+                                          AMDGPU::OpName::src2_modifiers)) {
+      assert(NumOperands == AMDGPU::getNamedOperandIdx(DPPOp,
+                                          AMDGPU::OpName::src2_modifiers));
+      assert(HasVOP3DPP ||
+             (0LL == (Mod2->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG))));
+      DPPInst.addImm(Mod2->getImm());
+      ++NumOperands;
+    }
     if (auto *Src2 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src2)) {
       if (!TII->getNamedOperand(*DPPInst.getInstr(), AMDGPU::OpName::src2) ||
           !TII->isOperandLegal(*DPPInst.getInstr(), NumOperands, Src2)) {
@@ -268,8 +296,21 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
         break;
       }
       DPPInst.add(*Src2);
+      ++NumOperands;
     }
-
+    if (HasVOP3DPP) {
+      auto *ClampOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::clamp);
+      if (ClampOpr &&
+          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::clamp) != -1) {
+        DPPInst.addImm(ClampOpr->getImm());
+      }
+      auto *OmodOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::omod);
+      if (OmodOpr &&
+          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::omod) != -1) {
+        DPPInst.addImm(OmodOpr->getImm());
+      }
+      // TODO-GFX11 vop3p fields
+    }
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl));
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::row_mask));
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::bank_mask));
@@ -524,7 +565,9 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     }
 
     bool IsShrinkable = isShrinkable(OrigMI, OrigOp);
-    if (!(IsShrinkable || TII->isVOP1(OrigOp) || TII->isVOP2(OrigOp))) {
+    if (!(IsShrinkable ||
+          (TII->isVOP3(OrigOp) && ST->hasVOP3DPP()) ||
+          TII->isVOP1(OrigOp) || TII->isVOP2(OrigOp))) {
       LLVM_DEBUG(dbgs() << "  failed: not VOP1/2/3\n");
       break;
     }
