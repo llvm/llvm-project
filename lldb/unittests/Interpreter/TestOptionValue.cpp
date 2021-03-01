@@ -14,12 +14,13 @@ using namespace lldb_private;
 
 class Callback {
 public:
-  virtual ~Callback() = default;
   virtual void Invoke() const {}
   void operator()() const { Invoke(); }
+protected:
+  ~Callback() = default;
 };
 
-class MockCallback : public Callback {
+class MockCallback final : public Callback {
 public:
   MOCK_CONST_METHOD0(Invoke, void());
 };
