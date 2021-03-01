@@ -29,7 +29,7 @@ public:
                                  int key_option = 'k', 
                                  int value_option = 'v');
                       
-  ~OptionGroupPythonClassWithDict() override;
+  ~OptionGroupPythonClassWithDict() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
     return llvm::ArrayRef<OptionDefinition>(m_option_definition);
@@ -37,7 +37,6 @@ public:
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                         ExecutionContext *execution_context) override;
-  Status SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
   Status OptionParsingFinished(ExecutionContext *execution_context) override;

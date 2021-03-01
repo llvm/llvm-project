@@ -276,22 +276,22 @@ DefinedFunction::DefinedFunction(StringRef name, uint32_t flags, InputFile *f,
                      function ? &function->signature : nullptr),
       function(function) {}
 
-uint64_t DefinedData::getVirtualAddress() const {
-  LLVM_DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
+uint64_t DefinedData::getVA(uint64_t addend) const {
+  LLVM_DEBUG(dbgs() << "getVA: " << getName() << "\n");
   if (segment)
-    return segment->getVA() + offset;
-  return offset;
+    return segment->getVA(value + addend);
+  return value;
 }
 
-void DefinedData::setVirtualAddress(uint64_t value) {
-  LLVM_DEBUG(dbgs() << "setVirtualAddress " << name << " -> " << value << "\n");
+void DefinedData::setVA(uint64_t value_) {
+  LLVM_DEBUG(dbgs() << "setVA " << name << " -> " << value_ << "\n");
   assert(!segment);
-  offset = value;
+  value = value_;
 }
 
 uint64_t DefinedData::getOutputSegmentOffset() const {
   LLVM_DEBUG(dbgs() << "getOutputSegmentOffset: " << getName() << "\n");
-  return segment->outputSegmentOffset + offset;
+  return segment->outputSegmentOffset + value;
 }
 
 uint64_t DefinedData::getOutputSegmentIndex() const {

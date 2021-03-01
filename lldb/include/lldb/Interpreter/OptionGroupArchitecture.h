@@ -18,9 +18,9 @@ namespace lldb_private {
 
 class OptionGroupArchitecture : public OptionGroup {
 public:
-  OptionGroupArchitecture();
+  OptionGroupArchitecture() = default;
 
-  ~OptionGroupArchitecture() override;
+  ~OptionGroupArchitecture() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 

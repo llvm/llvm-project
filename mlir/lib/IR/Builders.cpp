@@ -29,11 +29,6 @@ Identifier Builder::getIdentifier(StringRef str) {
 
 Location Builder::getUnknownLoc() { return UnknownLoc::get(context); }
 
-Location Builder::getFileLineColLoc(Identifier filename, unsigned line,
-                                    unsigned column) {
-  return FileLineColLoc::get(filename, line, column, context);
-}
-
 Location Builder::getFusedLoc(ArrayRef<Location> locs, Attribute metadata) {
   return FusedLoc::get(locs, metadata, context);
 }

@@ -46,13 +46,6 @@ public:
   /// Verify the given operation.
   LogicalResult verify(Operation &op);
 
-  /// Returns the registered dialect for a dialect-specific attribute.
-  Dialect *getDialectForAttribute(const NamedAttribute &attr) {
-    assert(attr.first.strref().contains('.') && "expected dialect attribute");
-    auto dialectNamePair = attr.first.strref().split('.');
-    return ctx->getLoadedDialect(dialectNamePair.first);
-  }
-
 private:
   /// Verify the given potentially nested region or block.
   LogicalResult verifyRegion(Region &region);
@@ -81,10 +74,6 @@ private:
 
   /// Dominance information for this operation, when checking dominance.
   DominanceInfo *domInfo = nullptr;
-
-  /// Mapping between dialect namespace and if that dialect supports
-  /// unregistered operations.
-  llvm::StringMap<bool> dialectAllowsUnknownOps;
 };
 } // end anonymous namespace
 
@@ -170,15 +159,14 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
   /// Verify that all of the attributes are okay.
   for (auto attr : op.getAttrs()) {
     // Check for any optional dialect specific attributes.
-    if (!attr.first.strref().contains('.'))
-      continue;
-    if (auto *dialect = getDialectForAttribute(attr))
+    if (auto *dialect = attr.first.getDialect())
       if (failed(dialect->verifyOperationAttribute(&op, attr)))
         return failure();
   }
 
   // If we can get operation info for this, check the custom hook.
-  auto *opInfo = op.getAbstractOperation();
+  OperationName opName = op.getName();
+  auto *opInfo = opName.getAbstractOperation();
   if (opInfo && failed(opInfo->verifyInvariants(&op)))
     return failure();
 
@@ -213,33 +201,21 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
     return success();
 
   // Otherwise, verify that the parent dialect allows un-registered operations.
-  auto dialectPrefix = op.getName().getDialect();
-
-  // Check for an existing answer for the operation dialect.
-  auto it = dialectAllowsUnknownOps.find(dialectPrefix);
-  if (it == dialectAllowsUnknownOps.end()) {
-    // If the operation dialect is registered, query it directly.
-    if (auto *dialect = ctx->getLoadedDialect(dialectPrefix))
-      it = dialectAllowsUnknownOps
-               .try_emplace(dialectPrefix, dialect->allowsUnknownOperations())
-               .first;
-    // Otherwise, unregistered dialects (when allowed by the context)
-    // conservatively allow unknown operations.
-    else {
-      if (!op.getContext()->allowsUnregisteredDialects() && !op.getDialect())
-        return op.emitOpError()
-               << "created with unregistered dialect. If this is "
-                  "intended, please call allowUnregisteredDialects() on the "
-                  "MLIRContext, or use -allow-unregistered-dialect with "
-                  "mlir-opt";
-
-      it = dialectAllowsUnknownOps.try_emplace(dialectPrefix, true).first;
+  Dialect *dialect = opName.getDialect();
+  if (!dialect) {
+    if (!ctx->allowsUnregisteredDialects()) {
+      return op.emitOpError()
+             << "created with unregistered dialect. If this is "
+                "intended, please call allowUnregisteredDialects() on the "
+                "MLIRContext, or use -allow-unregistered-dialect with "
+                "mlir-opt";
     }
+    return success();
   }
 
-  if (!it->second) {
+  if (!dialect->allowsUnknownOperations()) {
     return op.emitError("unregistered operation '")
-           << op.getName() << "' found in dialect ('" << dialectPrefix
+           << op.getName() << "' found in dialect ('" << dialect->getNamespace()
            << "') that does not allow unknown operations";
   }
 

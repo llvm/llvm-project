@@ -24,6 +24,10 @@ namespace macho {
 class Symbol;
 struct SymbolPriorityEntry;
 
+using NamePair = std::pair<llvm::StringRef, llvm::StringRef>;
+using SectionRenameMap = llvm::DenseMap<NamePair, NamePair>;
+using SegmentRenameMap = llvm::DenseMap<llvm::StringRef, llvm::StringRef>;
+
 struct PlatformInfo {
   llvm::MachO::PlatformKind kind;
   llvm::VersionTuple minimum;
@@ -76,6 +80,8 @@ struct Configuration {
   std::vector<llvm::StringRef> runtimePaths;
   std::vector<Symbol *> explicitUndefineds;
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
+  SectionRenameMap sectionRenameMap;
+  SegmentRenameMap segmentRenameMap;
 };
 
 // The symbol with the highest priority should be ordered first in the output

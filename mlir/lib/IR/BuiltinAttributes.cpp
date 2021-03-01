@@ -382,9 +382,8 @@ IntegerSet IntegerSetAttr::getValue() const { return getImpl()->value; }
 // OpaqueAttr
 //===----------------------------------------------------------------------===//
 
-OpaqueAttr OpaqueAttr::get(MLIRContext *context, Identifier dialect,
-                           StringRef attrData, Type type) {
-  return Base::get(context, dialect, attrData, type);
+OpaqueAttr OpaqueAttr::get(Identifier dialect, StringRef attrData, Type type) {
+  return Base::get(dialect.getContext(), dialect, attrData, type);
 }
 
 OpaqueAttr OpaqueAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,

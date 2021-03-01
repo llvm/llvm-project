@@ -455,9 +455,8 @@ void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *Old,
     // Cope with being called on a BasicBlock that doesn't have a terminator
     // yet. Clang's CodeGenFunction::EmitReturnBlock() likes to do this.
     return;
-  llvm::for_each(successors(TI), [Old, New](BasicBlock *Succ) {
+  for (BasicBlock *Succ : successors(TI))
     Succ->replacePhiUsesWith(Old, New);
-  });
 }
 
 void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *New) {

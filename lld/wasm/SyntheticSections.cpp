@@ -324,7 +324,7 @@ void GlobalSection::generateRelocationCode(raw_ostream &os) const {
 
       // Add the virtual address of the data symbol
       writeU8(os, opcode_ptr_const, "CONST");
-      writeSleb128(os, d->getVirtualAddress(), "offset");
+      writeSleb128(os, d->getVA(), "offset");
     } else if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
       if (f->isStub)
         continue;
@@ -363,7 +363,7 @@ void GlobalSection::writeBody() {
     WasmInitExpr initExpr;
     initExpr.Opcode = WASM_OPCODE_I32_CONST;
     if (auto *d = dyn_cast<DefinedData>(sym))
-      initExpr.Value.Int32 = d->getVirtualAddress();
+      initExpr.Value.Int32 = d->getVA();
     else if (auto *f = dyn_cast<FunctionSymbol>(sym))
       initExpr.Value.Int32 = f->isStub ? 0 : f->getTableIndex();
     else {
@@ -377,7 +377,7 @@ void GlobalSection::writeBody() {
     WasmGlobalType type{WASM_TYPE_I32, false};
     WasmInitExpr initExpr;
     initExpr.Opcode = WASM_OPCODE_I32_CONST;
-    initExpr.Value.Int32 = sym->getVirtualAddress();
+    initExpr.Value.Int32 = sym->getVA();
     writeGlobalType(os, type);
     writeInitExpr(os, initExpr);
   }

@@ -234,7 +234,7 @@ DefinedData *SymbolTable::addOptionalDataSymbol(StringRef name,
     return nullptr;
   LLVM_DEBUG(dbgs() << "addOptionalDataSymbol: " << name << "\n");
   auto *rtn = replaceSymbol<DefinedData>(s, name, WASM_SYMBOL_VISIBILITY_HIDDEN);
-  rtn->setVirtualAddress(value);
+  rtn->setVA(value);
   rtn->referenced = true;
   return rtn;
 }

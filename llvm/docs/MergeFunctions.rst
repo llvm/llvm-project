@@ -134,7 +134,7 @@ How it could this be done? Just convert each function to a number, and gather
 all of them in a special hash-table. Functions with equal hashes are equal.
 Good hashing means, that every function part must be taken into account. That
 means we have to convert every function part into some number, and then add it
-into the hash. The lookup-up time would be small, but such a approach adds some
+into the hash. The lookup-up time would be small, but such an approach adds some
 delay due to the hashing routine.
 
 Logarithmical search

@@ -173,7 +173,8 @@ public:
 
 extern llvm::SetVector<InputFile *> inputFiles;
 
-llvm::Optional<MemoryBufferRef> readFile(StringRef path);
+llvm::Optional<MemoryBufferRef> readRawFile(StringRef path);
+llvm::Optional<MemoryBufferRef> readLinkableFile(StringRef path);
 
 const llvm::MachO::load_command *
 findCommand(const llvm::MachO::mach_header_64 *, uint32_t type);

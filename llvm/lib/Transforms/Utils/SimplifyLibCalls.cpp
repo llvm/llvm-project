@@ -842,8 +842,8 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
                                  StrLen, B, DL, TLI);
     if (!StrNCmp)
       return nullptr;
-    for (auto UI = CI->user_begin(), UE = CI->user_end(); UI != UE;) {
-      ICmpInst *Old = cast<ICmpInst>(*UI++);
+    for (User *U : llvm::make_early_inc_range(CI->users())) {
+      ICmpInst *Old = cast<ICmpInst>(U);
       Value *Cmp =
           B.CreateICmp(Old->getPredicate(), StrNCmp,
                        ConstantInt::getNullValue(StrNCmp->getType()), "cmp");
