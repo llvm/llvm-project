@@ -23,7 +23,7 @@
 
 # LOAD:          cmd LC_LOAD_DYLIB
 # LOAD-NEXT:               cmdsize
-# LOAD-NEXT:                  name /usr/lib/libSystem.B.dylib
+# LOAD-NEXT:                  name /usr/lib/libSystem.dylib
 # LOAD-NEXT:            time stamp
 # LOAD-NEXT:       current version 1.1.1
 # LOAD-NEXT: compatibility version
