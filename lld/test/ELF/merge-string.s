@@ -7,16 +7,16 @@
 // RUN: ld.lld -O 0 %t.o -o %t.so -shared
 // RUN: llvm-readobj -S --section-data --symbols %t.so | FileCheck --check-prefix=NOMERGE %s
 
-        .section	.rodata1,"aMS",@progbits,1
-	.asciz	"abc"
+        .section        .rodata1,"aMS",@progbits,1
+        .asciz  "abc"
 foo:
-	.ascii	"a"
+        .ascii  "a"
 bar:
         .asciz  "bc"
         .asciz  "bc"
 
         .section        .rodata2,"aMS",@progbits,2
-        .align  2
+        .p2align  1
 zed:
         .short  20
         .short  0
