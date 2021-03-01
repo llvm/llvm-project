@@ -945,68 +945,53 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     auto Idx = Node->getConstantOperandVal(2);
     MVT SubVecVT = SubV.getSimpleValueType();
 
-    // TODO: This method of selecting INSERT_SUBVECTOR should work
-    // with any type of insertion (fixed <-> scalable) but we don't yet
-    // correctly identify the canonical register class for fixed-length types.
-    // For now, keep the two paths separate.
-    if (VT.isScalableVector() && SubVecVT.isScalableVector()) {
-      const auto *TRI = Subtarget->getRegisterInfo();
-      unsigned SubRegIdx;
-      std::tie(SubRegIdx, Idx) =
-          RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
-              VT, SubVecVT, Idx, TRI);
+    MVT SubVecContainerVT = SubVecVT;
+    // Establish the correct scalable-vector types for any fixed-length type.
+    if (SubVecVT.isFixedLengthVector())
+      SubVecContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
+          *CurDAG, SubVecVT, *Subtarget);
+    if (VT.isFixedLengthVector())
+      VT = RISCVTargetLowering::getContainerForFixedLengthVector(*CurDAG, VT,
+                                                                 *Subtarget);
 
-      // If the Idx hasn't been completely eliminated then this is a subvector
-      // insert which doesn't naturally align to a vector register. These must
-      // be handled using instructions to manipulate the vector registers.
-      if (Idx != 0)
-        break;
+    const auto *TRI = Subtarget->getRegisterInfo();
+    unsigned SubRegIdx;
+    std::tie(SubRegIdx, Idx) =
+        RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+            VT, SubVecContainerVT, Idx, TRI);
 
-      RISCVVLMUL SubVecLMUL = RISCVTargetLowering::getLMUL(SubVecVT);
-      bool IsSubVecPartReg = SubVecLMUL == RISCVVLMUL::LMUL_F2 ||
-                             SubVecLMUL == RISCVVLMUL::LMUL_F4 ||
-                             SubVecLMUL == RISCVVLMUL::LMUL_F8;
-      (void)IsSubVecPartReg; // Silence unused variable warning without asserts.
-      assert((!IsSubVecPartReg || V.isUndef()) &&
-             "Expecting lowering to have created legal INSERT_SUBVECTORs when "
-             "the subvector is smaller than a full-sized register");
+    // If the Idx hasn't been completely eliminated then this is a subvector
+    // insert which doesn't naturally align to a vector register. These must
+    // be handled using instructions to manipulate the vector registers.
+    if (Idx != 0)
+      break;
 
-      // If we haven't set a SubRegIdx, then we must be going between LMUL<=1
-      // types (VR -> VR). This can be done as a copy.
-      if (SubRegIdx == RISCV::NoSubRegister) {
-        unsigned InRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(VT);
-        assert(RISCVTargetLowering::getRegClassIDForVecVT(SubVecVT) ==
-                   RISCV::VRRegClassID &&
-               InRegClassID == RISCV::VRRegClassID &&
-               "Unexpected subvector extraction");
-        SDValue RC = CurDAG->getTargetConstant(InRegClassID, DL, XLenVT);
-        SDNode *NewNode = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
-                                                 DL, VT, SubV, RC);
-        return ReplaceNode(Node, NewNode);
-      }
+    RISCVVLMUL SubVecLMUL = RISCVTargetLowering::getLMUL(SubVecVT);
+    bool IsSubVecPartReg = SubVecLMUL == RISCVVLMUL::LMUL_F2 ||
+                           SubVecLMUL == RISCVVLMUL::LMUL_F4 ||
+                           SubVecLMUL == RISCVVLMUL::LMUL_F8;
+    (void)IsSubVecPartReg; // Silence unused variable warning without asserts.
+    assert((!IsSubVecPartReg || V.isUndef()) &&
+           "Expecting lowering to have created legal INSERT_SUBVECTORs when "
+           "the subvector is smaller than a full-sized register");
 
-      SDNode *NewNode = CurDAG->getMachineNode(
-          TargetOpcode::INSERT_SUBREG, DL, VT, V, SubV,
-          CurDAG->getTargetConstant(SubRegIdx, DL, XLenVT));
+    // If we haven't set a SubRegIdx, then we must be going between
+    // equally-sized LMUL groups (e.g. VR -> VR). This can be done as a copy.
+    if (SubRegIdx == RISCV::NoSubRegister) {
+      unsigned InRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(VT);
+      assert(RISCVTargetLowering::getRegClassIDForVecVT(SubVecContainerVT) ==
+                 InRegClassID &&
+             "Unexpected subvector extraction");
+      SDValue RC = CurDAG->getTargetConstant(InRegClassID, DL, XLenVT);
+      SDNode *NewNode = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
+                                               DL, VT, SubV, RC);
       return ReplaceNode(Node, NewNode);
     }
 
-    if (VT.isScalableVector() && SubVecVT.isFixedLengthVector()) {
-      // Bail when not a "cast" like insert_subvector.
-      if (Idx != 0)
-        break;
-      if (!Node->getOperand(0).isUndef())
-        break;
-
-      unsigned RegClassID = RISCVTargetLowering::getRegClassIDForVecVT(VT);
-
-      SDValue RC = CurDAG->getTargetConstant(RegClassID, DL, XLenVT);
-      SDNode *NewNode = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
-                                               DL, VT, SubV, RC);
-      ReplaceNode(Node, NewNode);
-      return;
-    }
-    break;
+    SDNode *NewNode = CurDAG->getMachineNode(
+        TargetOpcode::INSERT_SUBREG, DL, VT, V, SubV,
+        CurDAG->getTargetConstant(SubRegIdx, DL, XLenVT));
+    return ReplaceNode(Node, NewNode);
   }
   case ISD::EXTRACT_SUBVECTOR: {
     SDValue V = Node->getOperand(0);
