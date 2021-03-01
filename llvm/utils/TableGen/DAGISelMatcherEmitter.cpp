@@ -898,14 +898,13 @@ void MatcherTableEmitter::EmitNodePredicatesFunction(
   for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
     // Emit the predicate code corresponding to this pattern.
     const TreePredicateFn PredFn = Preds[i];
-
     assert(!PredFn.isAlwaysTrue() && "No code in this predicate");
-    OS << "  case " << i << ": {\n";
-    for (auto *SimilarPred :
-             NodePredicatesByCodeToRun[PredFn.getCodeToRunOnSDNode()])
-      OS << "    // " << TreePredicateFn(SimilarPred).getFnName() <<'\n';
+    std::string PredFnCodeStr = PredFn.getCodeToRunOnSDNode();
 
-    OS << PredFn.getCodeToRunOnSDNode() << "\n  }\n";
+    OS << "  case " << i << ": {\n";
+    for (auto *SimilarPred : NodePredicatesByCodeToRun[PredFnCodeStr])
+      OS << "    // " << TreePredicateFn(SimilarPred).getFnName() << '\n';
+    OS << PredFnCodeStr << "\n  }\n";
   }
   OS << "  }\n";
   OS << "}\n";
