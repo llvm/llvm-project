@@ -53,6 +53,17 @@ namespace BraceInit {
   // CHECK: @_ZN9BraceInit1xE ={{.*}} constant i32* @_ZGRN9BraceInit1xE_
 }
 
+namespace RefTempSubobject {
+  struct SelfReferential {
+    int *p = ints;
+    int ints[3] = {1, 2, 3};
+  };
+
+  // CHECK: @_ZGRN16RefTempSubobject2srE_ = internal global { i32*, [3 x i32] } { {{.*}} getelementptr {{.*}} @_ZGRN16RefTempSubobject2srE_ {{.*}}, [3 x i32] [i32 1, i32 2, i32 3] }
+  // CHECK: @_ZN16RefTempSubobject2srE = {{.*}} constant {{.*}} @_ZGRN16RefTempSubobject2srE_
+  constexpr const SelfReferential &sr = SelfReferential();
+}
+
 struct A {
   A();
   ~A();
