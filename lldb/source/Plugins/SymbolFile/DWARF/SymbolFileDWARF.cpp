@@ -16,6 +16,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
@@ -74,6 +75,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #include <algorithm>
 #include <map>
@@ -467,22 +469,32 @@ void SymbolFileDWARF::InitializeObject() {
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
 
   if (!GetGlobalPluginProperties()->IgnoreFileIndexes()) {
+    StreamString module_desc;
+    GetObjectFile()->GetModule()->GetDescription(module_desc.AsRawOstream(),
+                                                 lldb::eDescriptionLevelBrief);
     DWARFDataExtractor apple_names, apple_namespaces, apple_types, apple_objc;
     LoadSectionData(eSectionTypeDWARFAppleNames, apple_names);
     LoadSectionData(eSectionTypeDWARFAppleNamespaces, apple_namespaces);
     LoadSectionData(eSectionTypeDWARFAppleTypes, apple_types);
     LoadSectionData(eSectionTypeDWARFAppleObjC, apple_objc);
 
-    m_index = AppleDWARFIndex::Create(
-        *GetObjectFile()->GetModule(), apple_names, apple_namespaces,
-        apple_types, apple_objc, m_context.getOrLoadStrData());
+    if (apple_names.GetByteSize() > 0 || apple_namespaces.GetByteSize() > 0 ||
+        apple_types.GetByteSize() > 0 || apple_objc.GetByteSize() > 0) {
+      Progress progress(llvm::formatv("Loading Apple DWARF index for {0}",
+                                      module_desc.GetData()));
+      m_index = AppleDWARFIndex::Create(
+          *GetObjectFile()->GetModule(), apple_names, apple_namespaces,
+          apple_types, apple_objc, m_context.getOrLoadStrData());
 
-    if (m_index)
-      return;
+      if (m_index)
+        return;
+    }
 
     DWARFDataExtractor debug_names;
     LoadSectionData(eSectionTypeDWARFDebugNames, debug_names);
     if (debug_names.GetByteSize() > 0) {
+      Progress progress(
+          llvm::formatv("Loading DWARF5 index for {0}", module_desc.GetData()));
       llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>> index_or =
           DebugNamesDWARFIndex::Create(*GetObjectFile()->GetModule(),
                                        debug_names,

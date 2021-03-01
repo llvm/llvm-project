@@ -440,7 +440,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         '''
         self.build_and_create_debug_adaptor()
         program = self.getBuildArtifact("a.out")
-        
+
         terminateCommands = ['expr 4+2']
         self.launch(program=program,
                     terminateCommands=terminateCommands)
@@ -450,3 +450,57 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.vscode.request_disconnect(terminateDebuggee=True)
         output = self.collect_console(duration=1.0)
         self.verify_commands('terminateCommands', output, terminateCommands)
+
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_progress_events(self):
+        '''
+            Tests the progress events to ensure we are receiving them.
+        '''
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        # Set a breakpoint at 'main'. This will cause all of the symbol tables
+        # for all modules in LLDB to be parsed and we should get a progress
+        # event for each shared library.
+        breakpoint_ids = self.set_function_breakpoints(['main'])
+        self.continue_to_breakpoints(breakpoint_ids)
+        # Make sure we at least got some progress events
+        self.assertTrue(len(self.vscode.progress_events) > 0)
+        # Track all 'progressStart' events by saving all 'progressId' values.
+        progressStart_ids = set()
+        # Track all 'progressEnd' events by saving all 'progressId' values.
+        progressEnd_ids = set()
+        # We will watch for events whose title starts with
+        # 'Parsing symbol table for ' and we will save the remainder of the
+        # line which will contain the shared library basename. Since we set a
+        # breakpoint by name for 'main', we will expect to see progress events
+        # for all shared libraries that say that the symbol table is being
+        # parsed.
+        symtab_progress_shlibs = set()
+        # Get a list of modules in the current target so we can verify that
+        # we do in fact get a progress event for each shared library.
+        target_shlibs = self.vscode.get_modules()
+
+        # Iterate over all progress events and save all start and end IDs, and
+        # remember any shared libraries that got symbol table parsing progress
+        # events.
+        for progress_event in self.vscode.progress_events:
+            event_type = progress_event['event']
+            if event_type == 'progressStart':
+                progressStart_ids.add(progress_event['body']['progressId'])
+                title = progress_event['body']['title']
+                if title.startswith('Parsing symbol table for '):
+                    symtab_progress_shlibs.add(title[25:])
+            if event_type == 'progressEnd':
+                progressEnd_ids.add(progress_event['body']['progressId'])
+        # Make sure for each 'progressStart' event, we got a matching
+        # 'progressEnd' event.
+        self.assertTrue(progressStart_ids == progressEnd_ids,
+                        ('Make sure we got a "progressEnd" for each '
+                         '"progressStart" event that we have.'))
+        # Verify we got a symbol table parsing progress event for each shared
+        # library in our target.
+        for target_shlib_basename in target_shlibs.keys():
+            self.assertTrue(target_shlib_basename in symtab_progress_shlibs,
+                            'Make sure we got a symbol table progress event for "%s"' % (target_shlib_basename))
