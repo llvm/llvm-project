@@ -200,5 +200,24 @@ int main(int, char**)
     assert(m.get_allocator().get_id() == 48);
     }
 
+    {
+    // Examples from LWG3025
+    std::unordered_map m{std::pair{1, 1}, {2, 2}, {3, 3}};
+    ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, int>);
+
+    std::unordered_map m2{m.begin(), m.end()};
+    ASSERT_SAME_TYPE(decltype(m2), std::unordered_map<int, int>);
+    }
+
+    {
+    // Examples from LWG3531
+    std::unordered_map m1{{std::pair{1, 2}, {3, 4}}, 0};
+    ASSERT_SAME_TYPE(decltype(m1), std::unordered_map<int, int>);
+
+    using value_type = std::pair<const int, int>;
+    std::unordered_map m2{{value_type{1, 2}, {3, 4}}, 0};
+    ASSERT_SAME_TYPE(decltype(m2), std::unordered_map<int, int>);
+    }
+
     return 0;
 }
