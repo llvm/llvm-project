@@ -21196,23 +21196,28 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(B, C, M2)
     // Don't try to fold shuffles with illegal type.
     // Only fold if this shuffle is the only user of the other shuffle.
-    if (N0.getOpcode() == ISD::VECTOR_SHUFFLE &&
-        N->isOnlyUserOf(N0.getNode())) {
-      // The incoming shuffle must be of the same type as the result of the
-      // current shuffle.
-      auto *OtherSV = cast<ShuffleVectorSDNode>(N0);
-      assert(OtherSV->getOperand(0).getValueType() == VT &&
-             "Shuffle types don't match");
+    // Try matching shuffle(C,shuffle(A,B)) commutted patterns as well.
+    for (int i = 0; i != 2; ++i) {
+      if (N->getOperand(i).getOpcode() == ISD::VECTOR_SHUFFLE &&
+          N->isOnlyUserOf(N->getOperand(i).getNode())) {
+        // The incoming shuffle must be of the same type as the result of the
+        // current shuffle.
+        auto *OtherSV = cast<ShuffleVectorSDNode>(N->getOperand(i));
+        assert(OtherSV->getOperand(0).getValueType() == VT &&
+               "Shuffle types don't match");
 
-      SDValue SV0, SV1;
-      SmallVector<int, 4> Mask;
-      if (MergeInnerShuffle(false, SVN, OtherSV, N1, TLI, SV0, SV1, Mask)) {
-        // Check if all indices in Mask are Undef. In case, propagate Undef.
-        if (llvm::all_of(Mask, [](int M) { return M < 0; }))
-          return DAG.getUNDEF(VT);
+        SDValue SV0, SV1;
+        SmallVector<int, 4> Mask;
+        if (MergeInnerShuffle(i != 0, SVN, OtherSV, N->getOperand(1 - i), TLI,
+                              SV0, SV1, Mask)) {
+          // Check if all indices in Mask are Undef. In case, propagate Undef.
+          if (llvm::all_of(Mask, [](int M) { return M < 0; }))
+            return DAG.getUNDEF(VT);
 
-        return DAG.getVectorShuffle(VT, SDLoc(N), SV0 ? SV0 : DAG.getUNDEF(VT),
-                                    SV1 ? SV1 : DAG.getUNDEF(VT), Mask);
+          return DAG.getVectorShuffle(VT, SDLoc(N),
+                                      SV0 ? SV0 : DAG.getUNDEF(VT),
+                                      SV1 ? SV1 : DAG.getUNDEF(VT), Mask);
+        }
       }
     }
 
