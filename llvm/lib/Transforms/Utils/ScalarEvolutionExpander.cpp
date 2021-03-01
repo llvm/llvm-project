@@ -2678,7 +2678,7 @@ bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
   return false;
 }
 
-SCEVExpanderCleaner::~SCEVExpanderCleaner() {
+void SCEVExpanderCleaner::cleanup() {
   // Result is used, nothing to remove.
   if (ResultUsed)
     return;
