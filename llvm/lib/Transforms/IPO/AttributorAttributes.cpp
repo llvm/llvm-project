@@ -1600,6 +1600,19 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
   if (!UseV->getType()->isPointerTy())
     return 0;
 
+  // We need to follow common pointer manipulation uses to the accesses they
+  // feed into. We can try to be smart to avoid looking through things we do not
+  // like for now, e.g., non-inbounds GEPs.
+  if (isa<CastInst>(I)) {
+    TrackUse = true;
+    return 0;
+  }
+
+  if (isa<GetElementPtrInst>(I)) {
+    TrackUse = true;
+    return 0;
+  }
+
   Type *PtrTy = UseV->getType();
   const Function *F = I->getFunction();
   bool NullPointerIsDefined =
@@ -1629,19 +1642,6 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
                                                   /* TrackDependence */ false);
     IsNonNull |= DerefAA.isKnownNonNull();
     return DerefAA.getKnownDereferenceableBytes();
-  }
-
-  // We need to follow common pointer manipulation uses to the accesses they
-  // feed into. We can try to be smart to avoid looking through things we do not
-  // like for now, e.g., non-inbounds GEPs.
-  if (isa<CastInst>(I)) {
-    TrackUse = true;
-    return 0;
-  }
-
-  if (isa<GetElementPtrInst>(I)) {
-    TrackUse = true;
-    return 0;
   }
 
   int64_t Offset;
