@@ -489,6 +489,18 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
 
 }
 
+/// Return true if value V represents the GC value. The behavior is conservative
+/// in case it is not sure that value is not GC the function returns true.
+static bool isGCValue(const Value *V, SelectionDAGBuilder &Builder) {
+  auto *Ty = V->getType();
+  if (!Ty->isPtrOrPtrVectorTy())
+    return false;
+  if (auto *GFI = Builder.GFI)
+    if (auto IsManaged = GFI->getStrategy().isGCManagedPointer(Ty))
+      return *IsManaged;
+  return true; // conservative
+}
+
 /// Lower deopt state and gc pointer arguments of the statepoint.  The actual
 /// lowering is described in lowerIncomingStatepointValue.  This function is
 /// responsible for lowering everything in the right position and playing some
@@ -607,21 +619,11 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
 
   LLVM_DEBUG(dbgs() << LowerAsVReg.size() << " pointers will go in vregs\n");
 
-  auto isGCValue = [&](const Value *V) {
-    auto *Ty = V->getType();
-    if (!Ty->isPtrOrPtrVectorTy())
-      return false;
-    if (auto *GFI = Builder.GFI)
-      if (auto IsManaged = GFI->getStrategy().isGCManagedPointer(Ty))
-        return *IsManaged;
-    return true; // conservative
-  };
-
   auto requireSpillSlot = [&](const Value *V) {
     if (!Builder.DAG.getTargetLoweringInfo().isTypeLegal(
              Builder.getValue(V).getValueType()))
       return true;
-    if (isGCValue(V))
+    if (isGCValue(V, Builder))
       return !LowerAsVReg.count(Builder.getValue(V));
     return !(LiveInDeopt || UseRegistersForDeoptValues);
   };
@@ -730,8 +732,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   NumOfStatepoints++;
   // Clear state
   StatepointLowering.startNewStatepoint(*this);
-  assert(SI.Bases.size() == SI.Ptrs.size() &&
-         SI.Ptrs.size() <= SI.GCRelocates.size());
+  assert(SI.Bases.size() == SI.Ptrs.size());
 
   LLVM_DEBUG(dbgs() << "Lowering statepoint " << *SI.StatepointInstr << "\n");
 #ifndef NDEBUG
@@ -1042,6 +1043,21 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
     if (Seen.insert(DerivedSD).second) {
       SI.Bases.push_back(Relocate->getBasePtr());
       SI.Ptrs.push_back(Relocate->getDerivedPtr());
+    }
+  }
+
+  // If we find a deopt value which isn't explicitly added, we need to
+  // ensure it gets lowered such that gc cycles occurring before the
+  // deoptimization event during the lifetime of the call don't invalidate
+  // the pointer we're deopting with.  Note that we assume that all
+  // pointers passed to deopt are base pointers; relaxing that assumption
+  // would require relatively large changes to how we represent relocations.
+  for (Value *V : I.deopt_operands()) {
+    if (!isGCValue(V, *this))
+      continue;
+    if (Seen.insert(getValue(V)).second) {
+      SI.Bases.push_back(V);
+      SI.Ptrs.push_back(V);
     }
   }
 
