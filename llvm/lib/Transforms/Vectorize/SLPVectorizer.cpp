@@ -6152,17 +6152,18 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
       I = ConsecutiveChain[I];
     }
 
-    // If a vector register can't hold 1 element, we are done.
     unsigned MaxVecRegSize = R.getMaxVecRegSize();
     unsigned EltSize = R.getVectorElementSize(Operands[0]);
-    if (MaxVecRegSize % EltSize != 0)
-      continue;
+    unsigned MaxElts = llvm::PowerOf2Floor(MaxVecRegSize / EltSize);
 
-    unsigned MaxElts = MaxVecRegSize / EltSize;
+    unsigned MinVF = std::max(2U, R.getMinVecRegSize() / EltSize);
+    unsigned MaxVF = std::min(R.getMaximumVF(EltSize, Instruction::Store),
+                              MaxElts);
+
     // FIXME: Is division-by-2 the correct step? Should we assert that the
     // register size is a power-of-2?
     unsigned StartIdx = 0;
-    for (unsigned Size = llvm::PowerOf2Ceil(MaxElts); Size >= 2; Size /= 2) {
+    for (unsigned Size = MaxVF; Size >= MinVF; Size /= 2) {
       for (unsigned Cnt = StartIdx, E = Operands.size(); Cnt + Size <= E;) {
         ArrayRef<Value *> Slice = makeArrayRef(Operands).slice(Cnt, Size);
         if (!VectorizedStores.count(Slice.front()) &&
