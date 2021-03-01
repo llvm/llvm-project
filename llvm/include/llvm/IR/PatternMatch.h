@@ -2446,6 +2446,9 @@ m_LogicalAnd(const LHS &L, const RHS &R) {
   return LogicalOp_match<LHS, RHS, Instruction::And>(L, R);
 }
 
+/// Matches L && R where L and R are arbitrary values.
+inline auto m_LogicalAnd() { return m_LogicalAnd(m_Value(), m_Value()); }
+
 /// Matches L || R either in the form of L | R or L ? true : R.
 /// Note that the latter form is poison-blocking.
 template <typename LHS, typename RHS>

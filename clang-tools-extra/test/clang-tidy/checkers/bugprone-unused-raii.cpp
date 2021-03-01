@@ -64,6 +64,13 @@ void test() {
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
 // CHECK-FIXES: FooBar give_me_a_name;
 
+  Foo{42};
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: Foo give_me_a_name{42};
+  FooBar{};
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: FooBar give_me_a_name;
+
   templ<FooBar>();
   templ<Bar>();
 
