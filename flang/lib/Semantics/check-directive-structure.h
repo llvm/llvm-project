@@ -209,6 +209,17 @@ protected:
     dirContext_.emplace_back(source, dir);
   }
 
+  DirectiveContext *GetEnclosingContextWithDir(D dir) {
+    CHECK(!dirContext_.empty());
+    auto it{dirContext_.rbegin()};
+    while (++it != dirContext_.rend()) {
+      if (it->directive == dir) {
+        return &(*it);
+      }
+    }
+    return nullptr;
+  }
+
   bool CurrentDirectiveIsNested() { return dirContext_.size() > 0; };
 
   void SetClauseSets(D dir) {
