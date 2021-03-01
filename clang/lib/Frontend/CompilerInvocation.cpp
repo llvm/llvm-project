@@ -2022,19 +2022,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
-  if (LangOptsRef.Sanitize.has(SanitizerKind::Address)) {
-    if (Arg *A =
-            Args.getLastArg(options::OPT_sanitize_address_destructor_kind_EQ)) {
-      auto destructorKind = AsanDtorKindFromString(A->getValue());
-      if (destructorKind == llvm::AsanDtorKind::Invalid) {
-        Diags.Report(clang::diag::err_drv_unsupported_option_argument)
-            << A->getOption().getName() << A->getValue();
-      } else {
-        Opts.setSanitizeAddressDtorKind(destructorKind);
-      }
-    }
-  }
-
   Success &=
       parsePointerAuthOptions(Opts.PointerAuth, Args, LangOptsRef, T, Diags);
 
