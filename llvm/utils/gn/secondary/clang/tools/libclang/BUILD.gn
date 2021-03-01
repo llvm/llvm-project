@@ -1,5 +1,4 @@
 import("//clang/lib/ARCMigrate/enable.gni")
-import("//clang/tools/libclang/include_clang_tools_extra.gni")
 import("//llvm/version.gni")
 
 # This build file is just enough to get check-clang to pass, it's missing
@@ -39,16 +38,6 @@ target(libclang_target_type, "libclang") {
   }
 
   defines = []
-
-  # FIXME: Once the GN build has a way to select which bits to build,
-  # only include this dependency if clang-tools-extra is part of the build.
-  if (libclang_include_clang_tools_extra) {
-    defines += [ "CLANG_TOOL_EXTRA_BUILD" ]
-    deps += [
-      "//clang-tools-extra/clang-include-fixer/plugin",
-      "//clang-tools-extra/clang-tidy/plugin",
-    ]
-  }
 
   if (host_os == "win") {
     defines += [ "_CINDEX_LIB_" ]

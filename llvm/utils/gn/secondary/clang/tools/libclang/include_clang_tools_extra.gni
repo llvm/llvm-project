@@ -1,4 +1,0 @@
-declare_args() {
-  # Whether to include code from clang-tools-extra in libclang.
-  libclang_include_clang_tools_extra = false
-}
