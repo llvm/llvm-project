@@ -1309,7 +1309,10 @@ public:
       appendRecipe(Recipe);
   }
 
-  ~VPBasicBlock() override { Recipes.clear(); }
+  ~VPBasicBlock() override {
+    while (!Recipes.empty())
+      Recipes.pop_back();
+  }
 
   /// Instruction iterators...
   using iterator = RecipeListTy::iterator;
