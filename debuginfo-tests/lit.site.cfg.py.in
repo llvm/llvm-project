@@ -3,6 +3,7 @@
 import sys
 import lit.util
 
+config.targets_to_build = "@TARGETS_TO_BUILD@".split()
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.llvm_libs_dir = "@LLVM_LIBS_DIR@"

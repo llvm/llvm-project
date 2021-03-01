@@ -1179,8 +1179,7 @@ For example, if the failure in the previous example came from `canonicalize`,
 the following reproducer will be generated:
 
 ```mlir
-// configuration: -pass-pipeline='func(canonicalize)'
-// note: verifyPasses=false
+// configuration: -pass-pipeline='func(canonicalize)' -verify-each
 
 module {
   func @foo() {

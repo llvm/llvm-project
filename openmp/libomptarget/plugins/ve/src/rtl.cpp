@@ -444,3 +444,5 @@ int32_t __tgt_rtl_run_target_region(int32_t ID, void *Entry, void **Args,
   return __tgt_rtl_run_target_team_region(ID, Entry, Args, Offsets, NumArgs, 1,
                                           1, 0);
 }
+
+int32_t __tgt_rtl_supports_empty_images() { return 1; }

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUASMUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUASMUTILS_H
 
+#include "SIDefines.h"
+
 namespace llvm {
 
 class StringLiteral;
@@ -17,9 +19,9 @@ namespace AMDGPU {
 
 namespace SendMsg { // Symbolic names for the sendmsg(...) syntax.
 
-extern const char* const IdSymbolic[];
-extern const char* const OpSysSymbolic[];
-extern const char* const OpGsSymbolic[];
+extern const char *const IdSymbolic[ID_GAPS_LAST_];
+extern const char *const OpSysSymbolic[OP_SYS_LAST_];
+extern const char *const OpGsSymbolic[OP_GS_LAST_];
 
 } // namespace SendMsg
 

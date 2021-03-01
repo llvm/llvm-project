@@ -786,7 +786,7 @@ def SReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32, v16i64, v16f64], 32,
 }
 
 // Register class for all vector registers (VGPRs + Interpolation Registers)
-class VRegClass<int numRegs, list<ValueType> regTypes, dag regList> :
+class VRegClassBase<int numRegs, list<ValueType> regTypes, dag regList> :
     RegisterClass<"AMDGPU", regTypes, 32, regList> {
   let Size = !mul(numRegs, 32);
 
@@ -796,31 +796,46 @@ class VRegClass<int numRegs, list<ValueType> regTypes, dag regList> :
   let Weight = numRegs;
 }
 
-def VReg_64 : VRegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4i16, p0, p1, p4],
-                        (add VGPR_64)>;
-def VReg_96 : VRegClass<3, [v3i32, v3f32], (add VGPR_96)>;
-def VReg_128 : VRegClass<4, [v4i32, v4f32, v2i64, v2f64], (add VGPR_128)>;
-def VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
-def VReg_192 : VRegClass<6, [untyped], (add VGPR_192)>;
-def VReg_256 : VRegClass<8, [v8i32, v8f32, v4i64, v4f64], (add VGPR_256)>;
-def VReg_512 : VRegClass<16, [v16i32, v16f32, v8i64, v8f64], (add VGPR_512)>;
-def VReg_1024 : VRegClass<32, [v32i32, v32f32, v16i64, v16f64], (add VGPR_1024)>;
+// Define a register tuple class, along with one requiring an even
+// aligned base register.
+multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList> {
+  // Define the regular class.
+  def "" : VRegClassBase<numRegs, regTypes, regList>;
 
-class ARegClass<int numRegs, list<ValueType> regTypes, dag regList> :
-    VRegClass<numRegs, regTypes, regList> {
-  // Requires n v_accvgpr_write and n v_accvgpr_read to copy + burn 1 vgpr
-  let CopyCost = !add(numRegs, numRegs, 1);
+  // Define 2-aligned variant
+  def _Align2 : VRegClassBase<numRegs, regTypes, (decimate regList, 2)>;
 }
 
-def AReg_64 : ARegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4i16],
+defm VReg_64 : VRegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4i16, p0, p1, p4],
+                                (add VGPR_64)>;
+defm VReg_96 : VRegClass<3, [v3i32, v3f32], (add VGPR_96)>;
+defm VReg_128 : VRegClass<4, [v4i32, v4f32, v2i64, v2f64], (add VGPR_128)>;
+defm VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
+
+defm VReg_192 : VRegClass<6, [untyped], (add VGPR_192)>;
+defm VReg_256 : VRegClass<8, [v8i32, v8f32, v4i64, v4f64], (add VGPR_256)>;
+defm VReg_512 : VRegClass<16, [v16i32, v16f32, v8i64, v8f64], (add VGPR_512)>;
+defm VReg_1024 : VRegClass<32, [v32i32, v32f32, v16i64, v16f64], (add VGPR_1024)>;
+
+multiclass ARegClass<int numRegs, list<ValueType> regTypes, dag regList> {
+  let CopyCost = !add(numRegs, numRegs, 1) in {
+    // Define the regular class.
+    def "" : VRegClassBase<numRegs, regTypes, regList>;
+
+    // Define 2-aligned variant
+    def _Align2 : VRegClassBase<numRegs, regTypes, (decimate regList, 2)>;
+  }
+}
+
+defm AReg_64 : ARegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4i16],
                         (add AGPR_64)>;
-def AReg_96 : ARegClass<3, [v3i32, v3f32], (add AGPR_96)>;
-def AReg_128 : ARegClass<4, [v4i32, v4f32, v2i64, v2f64], (add AGPR_128)>;
-def AReg_160 : ARegClass<5, [v5i32, v5f32], (add AGPR_160)>;
-def AReg_192 : ARegClass<6, [untyped], (add AGPR_192)>;
-def AReg_256 : ARegClass<8, [v8i32, v8f32, v4i64, v4f64], (add AGPR_256)>;
-def AReg_512 : ARegClass<16, [v16i32, v16f32, v8i64, v8f64], (add AGPR_512)>;
-def AReg_1024 : ARegClass<32, [v32i32, v32f32, v16i64, v16f64], (add AGPR_1024)>;
+defm AReg_96 : ARegClass<3, [v3i32, v3f32], (add AGPR_96)>;
+defm AReg_128 : ARegClass<4, [v4i32, v4f32, v2i64, v2f64], (add AGPR_128)>;
+defm AReg_160 : ARegClass<5, [v5i32, v5f32], (add AGPR_160)>;
+defm AReg_192 : ARegClass<6, [untyped], (add AGPR_192)>;
+defm AReg_256 : ARegClass<8, [v8i32, v8f32, v4i64, v4f64], (add AGPR_256)>;
+defm AReg_512 : ARegClass<16, [v16i32, v16f32, v8i64, v8f64], (add AGPR_512)>;
+defm AReg_1024 : ARegClass<32, [v32i32, v32f32, v16i64, v16f64], (add AGPR_1024)>;
 
 } // End GeneratePressureSet = 0
 

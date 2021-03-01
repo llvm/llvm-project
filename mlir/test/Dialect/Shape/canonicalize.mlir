@@ -173,7 +173,19 @@ func @f() -> !shape.shape {
   %e0 = constant 3 : index
   %e1 = constant 5 : index
   %e2 = constant 11 : index
-  %ret = shape.from_extents %e0, %e1, %e2
+  %ret = shape.from_extents %e0, %e1, %e2 : index, index, index
+  return %ret : !shape.shape
+}
+
+// -----
+
+// fold_const_size
+// CHECK-LABEL: func @fold_const_size()
+func @fold_const_size() -> !shape.shape {
+  // CHECK: shape.const_shape [3, 5] : !shape.shape
+  %e0 = shape.const_size 3
+  %e1 = shape.const_size 5
+  %ret = shape.from_extents %e0, %e1 : !shape.size, !shape.size
   return %ret : !shape.shape
 }
 
@@ -183,7 +195,7 @@ func @f() -> !shape.shape {
 func @no_fold(%arg0: index) -> !shape.shape {
   // CHECK-NOT: shape.const_shape
   %e0 = constant 3 : index
-  %ret = shape.from_extents %e0, %arg0
+  %ret = shape.from_extents %e0, %arg0 : index, index
   return %ret : !shape.shape
 }
 

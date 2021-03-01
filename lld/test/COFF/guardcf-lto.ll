@@ -1,7 +1,7 @@
 ; REQUIRES: x86
 ; Set up an import library for a DLL that will do the indirect call.
 ; RUN: echo -e 'LIBRARY library\nEXPORTS\n  do_indirect_call\n' > %t.def
-; RUN: lld-link -lib -def:%t.def -out:%t.lib -machine:x64
+; RUN: lld-link -def:%t.def -out:%t.lib -machine:x64
 
 ; Generate an object that will have the load configuration normally provided by
 ; the CRT.

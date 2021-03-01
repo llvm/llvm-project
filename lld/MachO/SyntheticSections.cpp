@@ -24,6 +24,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SHA256.h"
+
+#if defined(__APPLE__)
+#include <sys/mman.h>
+#endif
 
 using namespace llvm;
 using namespace llvm::support;
@@ -886,4 +891,94 @@ void StringTableSection::writeTo(uint8_t *buf) const {
     memcpy(buf + off, str.data(), str.size());
     off += str.size() + 1; // account for null terminator
   }
+}
+
+CodeSignatureSection::CodeSignatureSection()
+    : LinkEditSection(segment_names::linkEdit, section_names::codeSignature) {
+  align = 16; // required by libstuff
+  fileName = config->outputFile;
+  size_t slashIndex = fileName.rfind("/");
+  if (slashIndex != std::string::npos)
+    fileName = fileName.drop_front(slashIndex + 1);
+  allHeadersSize = alignTo<16>(fixedHeadersSize + fileName.size() + 1);
+  fileNamePad = allHeadersSize - fixedHeadersSize - fileName.size();
+}
+
+uint32_t CodeSignatureSection::getBlockCount() const {
+  return (fileOff + blockSize - 1) / blockSize;
+}
+
+uint64_t CodeSignatureSection::getRawSize() const {
+  return allHeadersSize + getBlockCount() * hashSize;
+}
+
+void CodeSignatureSection::writeHashes(uint8_t *buf) const {
+  uint8_t *code = buf;
+  uint8_t *codeEnd = buf + fileOff;
+  uint8_t *hashes = codeEnd + allHeadersSize;
+  while (code < codeEnd) {
+    StringRef block(reinterpret_cast<char *>(code),
+                    std::min(codeEnd - code, static_cast<ssize_t>(blockSize)));
+    SHA256 hasher;
+    hasher.update(block);
+    StringRef hash = hasher.final();
+    assert(hash.size() == hashSize);
+    memcpy(hashes, hash.data(), hashSize);
+    code += blockSize;
+    hashes += hashSize;
+  }
+#if defined(__APPLE__)
+  // This is macOS-specific work-around and makes no sense for any
+  // other host OS. See https://openradar.appspot.com/FB8914231
+  //
+  // The macOS kernel maintains a signature-verification cache to
+  // quickly validate applications at time of execve(2).  The trouble
+  // is that for the kernel creates the cache entry at the time of the
+  // mmap(2) call, before we have a chance to write either the code to
+  // sign or the signature header+hashes.  The fix is to invalidate
+  // all cached data associated with the output file, thus discarding
+  // the bogus prematurely-cached signature.
+  msync(buf, fileOff + getSize(), MS_INVALIDATE);
+#endif
+}
+
+void CodeSignatureSection::writeTo(uint8_t *buf) const {
+  using namespace llvm::MachO;
+  uint32_t signatureSize = static_cast<uint32_t>(getSize());
+  auto *superBlob = reinterpret_cast<CS_SuperBlob *>(buf);
+  write32be(&superBlob->magic, CSMAGIC_EMBEDDED_SIGNATURE);
+  write32be(&superBlob->length, signatureSize);
+  write32be(&superBlob->count, 1);
+  auto *blobIndex = reinterpret_cast<CS_BlobIndex *>(&superBlob[1]);
+  write32be(&blobIndex->type, CSSLOT_CODEDIRECTORY);
+  write32be(&blobIndex->offset, blobHeadersSize);
+  auto *codeDirectory =
+      reinterpret_cast<CS_CodeDirectory *>(buf + blobHeadersSize);
+  write32be(&codeDirectory->magic, CSMAGIC_CODEDIRECTORY);
+  write32be(&codeDirectory->length, signatureSize - blobHeadersSize);
+  write32be(&codeDirectory->version, CS_SUPPORTSEXECSEG);
+  write32be(&codeDirectory->flags, CS_ADHOC | CS_LINKER_SIGNED);
+  write32be(&codeDirectory->hashOffset,
+            sizeof(CS_CodeDirectory) + fileName.size() + fileNamePad);
+  write32be(&codeDirectory->identOffset, sizeof(CS_CodeDirectory));
+  codeDirectory->nSpecialSlots = 0;
+  write32be(&codeDirectory->nCodeSlots, getBlockCount());
+  write32be(&codeDirectory->codeLimit, fileOff);
+  codeDirectory->hashSize = static_cast<uint8_t>(hashSize);
+  codeDirectory->hashType = kSecCodeSignatureHashSHA256;
+  codeDirectory->platform = 0;
+  codeDirectory->pageSize = blockSizeShift;
+  codeDirectory->spare2 = 0;
+  codeDirectory->scatterOffset = 0;
+  codeDirectory->teamOffset = 0;
+  codeDirectory->spare3 = 0;
+  codeDirectory->codeLimit64 = 0;
+  OutputSegment *textSeg = getOrCreateOutputSegment(segment_names::text);
+  write64be(&codeDirectory->execSegBase, textSeg->fileOff);
+  write64be(&codeDirectory->execSegLimit, textSeg->fileSize);
+  write64be(&codeDirectory->execSegFlags,
+            config->outputType == MH_EXECUTE ? CS_EXECSEG_MAIN_BINARY : 0);
+  auto *id = reinterpret_cast<char *>(&codeDirectory[1]);
+  memcpy(id, fileName.begin(), fileName.size());
+  memset(id + fileName.size(), 0, fileNamePad);
 }

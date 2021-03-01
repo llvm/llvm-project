@@ -31,6 +31,7 @@
 using namespace lldb_private;
 
 #define PREFIX_NAME "<lldb wrapper prefix>"
+#define SUFFIX_NAME "<lldb wrapper suffix>"
 
 const llvm::StringRef ClangExpressionSourceCode::g_prefix_file_name = PREFIX_NAME;
 
@@ -72,6 +73,9 @@ extern "C"
     int printf(const char * __restrict, ...);
 }
 )";
+
+const char *ClangExpressionSourceCode::g_expression_suffix =
+    "\n;\n#line 1 \"" SUFFIX_NAME "\"\n";
 
 namespace {
 
@@ -180,7 +184,7 @@ lldb_private::ClangExpressionSourceCode::ClangExpressionSourceCode(
   // containing only the user expression. This will hide our wrapper code
   // from the user when we render diagnostics with Clang.
   m_start_marker = "#line 1 \"" + filename.str() + "\"\n";
-  m_end_marker = "\n;\n#line 1 \"<lldb wrapper suffix>\"\n";
+  m_end_marker = g_expression_suffix;
 }
 
 namespace {

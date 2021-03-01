@@ -93,9 +93,9 @@ private:
   LoweringCallback loweringCallback;
   BlobGenerator blobGenerator;
   llvm::Triple triple;
-  StringRef targetChip;
-  StringRef features;
-  StringRef blobAnnotation;
+  std::string targetChip;
+  std::string features;
+  std::string blobAnnotation;
 };
 
 } // anonymous namespace

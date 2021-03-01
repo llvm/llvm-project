@@ -23,19 +23,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.__errno_location
 
-    # fenv.h entrypoints
-    libc.src.fenv.feclearexcept
-    libc.src.fenv.fegetenv
-    libc.src.fenv.fegetexceptflag
-    libc.src.fenv.fegetround
-    libc.src.fenv.feholdexcept
-    libc.src.fenv.fesetenv
-    libc.src.fenv.fesetexceptflag
-    libc.src.fenv.fesetround
-    libc.src.fenv.feraiseexcept
-    libc.src.fenv.fetestexcept
-    libc.src.fenv.feupdateenv
-
     # signal.h entrypoints
     libc.src.signal.raise
     libc.src.signal.sigaction
@@ -96,6 +83,19 @@ set(TARGET_LIBC_ENTRYPOINTS
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
+    # fenv.h entrypoints
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.fegetenv
+    libc.src.fenv.fegetexceptflag
+    libc.src.fenv.fegetround
+    libc.src.fenv.feholdexcept
+    libc.src.fenv.fesetenv
+    libc.src.fenv.fesetexceptflag
+    libc.src.fenv.fesetround
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.fenv.feupdateenv
+
     # math.h entrypoints
     libc.src.math.copysign
     libc.src.math.copysignf
@@ -177,4 +177,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
+)
+
+set(TARGET_LLVMLIBC_ENTRYPOINTS
+  ${TARGET_LIBC_ENTRYPOINTS}
+  ${TARGET_LIBM_ENTRYPOINTS}
 )

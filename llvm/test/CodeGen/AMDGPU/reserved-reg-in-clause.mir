@@ -1,28 +1,27 @@
 # RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs -run-pass si-form-memory-clauses %s -o - | FileCheck -check-prefix=GCN %s
 
 # Make sure we do not produce early-clobber list with odd subregs.
-# Odd vector subregs are reserved on gfx90a and verifier complaints after RA.
 
 # GCN-LABEL: name: long_reg_clause
-# GCN: dead early-clobber %2.sub0_sub1_sub2_sub3:areg_512, undef early-clobber %4.sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15:areg_512, dead early-clobber %3:areg_512 = BUNDLE %0, implicit $exec {
+# GCN: dead early-clobber %2.sub0_sub1_sub2_sub3:areg_512_align2, undef early-clobber %4.sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15:areg_512_align2, dead early-clobber %3:areg_512_align2 = BUNDLE %0, implicit $exec {
 ---
 name: long_reg_clause
 body:             |
   bb.0.entry:
-    %0:vreg_64 = IMPLICIT_DEF
-    undef %1.sub12_sub13_sub14_sub15:areg_512 = GLOBAL_LOAD_DWORDX4 %0, -208, 0, 0, 0, 0, implicit $exec
-    %1.sub8_sub9_sub10_sub11:areg_512 = GLOBAL_LOAD_DWORDX4 %0, -224, 0, 0, 0, 0, implicit $exec
-    %1.sub4_sub5_sub6_sub7:areg_512 = GLOBAL_LOAD_DWORDX4 %0, -240, 0, 0, 0, 0, implicit $exec
-    dead %1.sub0_sub1_sub2_sub3:areg_512 = GLOBAL_LOAD_DWORDX4 %0, -256, 0, 0, 0, 0, implicit $exec
-    undef %2.sub12_sub13_sub14_sub15:areg_512 = GLOBAL_LOAD_DWORDX4 %0, -80, 0, 0, 0, 0, implicit $exec
-    %2.sub8_sub9_sub10_sub11:areg_512 = GLOBAL_LOAD_DWORDX4 %0, -96, 0, 0, 0, 0, implicit $exec
-    %2.sub4_sub5_sub6_sub7:areg_512 = GLOBAL_LOAD_DWORDX4 %0, -112, 0, 0, 0, 0, implicit $exec
-    dead %2.sub0_sub1_sub2_sub3:areg_512 = GLOBAL_LOAD_DWORDX4 %0, -128, 0, 0, 0, 0, implicit $exec
-    undef %3.sub12_sub13_sub14_sub15:areg_512 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, 0, 0, 0, implicit $exec
-    %3.sub8_sub9_sub10_sub11:areg_512 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, 0, 0, 0, implicit $exec
-    %3.sub4_sub5_sub6_sub7:areg_512 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, 0, 0, 0, implicit $exec
-    dead %3.sub0_sub1_sub2_sub3:areg_512 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, 0, 0, implicit $exec
-    undef %4.sub12_sub13_sub14_sub15:areg_512 = GLOBAL_LOAD_DWORDX4 %0, 176, 0, 0, 0, 0, implicit $exec
-    %4.sub8_sub9_sub10_sub11:areg_512 = GLOBAL_LOAD_DWORDX4 %0, 160, 0, 0, 0, 0, implicit $exec
-    %4.sub4_sub5_sub6_sub7:areg_512 = GLOBAL_LOAD_DWORDX4 %0, 144, 0, 0, 0, 0, implicit $exec
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    undef %1.sub12_sub13_sub14_sub15:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, -208, 0, 0, 0, 0, implicit $exec
+    %1.sub8_sub9_sub10_sub11:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, -224, 0, 0, 0, 0, implicit $exec
+    %1.sub4_sub5_sub6_sub7:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, -240, 0, 0, 0, 0, implicit $exec
+    dead %1.sub0_sub1_sub2_sub3:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, -256, 0, 0, 0, 0, implicit $exec
+    undef %2.sub12_sub13_sub14_sub15:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, -80, 0, 0, 0, 0, implicit $exec
+    %2.sub8_sub9_sub10_sub11:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, -96, 0, 0, 0, 0, implicit $exec
+    %2.sub4_sub5_sub6_sub7:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, -112, 0, 0, 0, 0, implicit $exec
+    dead %2.sub0_sub1_sub2_sub3:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, -128, 0, 0, 0, 0, implicit $exec
+    undef %3.sub12_sub13_sub14_sub15:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, 0, 0, 0, implicit $exec
+    %3.sub8_sub9_sub10_sub11:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, 0, 0, 0, implicit $exec
+    %3.sub4_sub5_sub6_sub7:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, 0, 0, 0, implicit $exec
+    dead %3.sub0_sub1_sub2_sub3:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, 0, 0, implicit $exec
+    undef %4.sub12_sub13_sub14_sub15:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, 176, 0, 0, 0, 0, implicit $exec
+    %4.sub8_sub9_sub10_sub11:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, 160, 0, 0, 0, 0, implicit $exec
+    %4.sub4_sub5_sub6_sub7:areg_512_align2 = GLOBAL_LOAD_DWORDX4 %0, 144, 0, 0, 0, 0, implicit $exec
 ...

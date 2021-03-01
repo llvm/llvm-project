@@ -144,6 +144,8 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
     DIFinder.emplace();
 
     SPClonedWithinModule = OldFunc->getSubprogram();
+    if (SPClonedWithinModule)
+      DIFinder->processSubprogram(SPClonedWithinModule);
   } else {
     assert((NewFunc->getParent() == nullptr ||
             NewFunc->getParent() != OldFunc->getParent()) &&
@@ -195,7 +197,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   }
 
   if (Changes < CloneFunctionChangeType::DifferentModule &&
-      (SPClonedWithinModule || DIFinder->subprogram_count() > 0)) {
+      DIFinder->subprogram_count() > 0) {
     // Turn on module-level changes, since we need to clone (some of) the
     // debug info metadata.
     //
@@ -208,14 +210,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
       (void)VMap.MD().try_emplace(N, N);
     };
 
-    // Avoid cloning what the subprogram references.
-    if (SPClonedWithinModule) {
-      mapToSelfIfNew(SPClonedWithinModule->getUnit());
-      mapToSelfIfNew(SPClonedWithinModule->getType());
-      mapToSelfIfNew(SPClonedWithinModule->getFile());
-    }
-
-    // Avoid cloning other subprograms, compile units, and types.
+    // Avoid cloning types, compile units, and (other) subprograms.
     for (DISubprogram *ISP : DIFinder->subprograms())
       if (ISP != SPClonedWithinModule)
         mapToSelfIfNew(ISP);
@@ -225,6 +220,9 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
 
     for (DIType *Type : DIFinder->types())
       mapToSelfIfNew(Type);
+  } else {
+    assert(!SPClonedWithinModule &&
+           "Subprogram should be in DIFinder->subprogram_count()...");
   }
 
   // Duplicate the metadata that is attached to the cloned function.

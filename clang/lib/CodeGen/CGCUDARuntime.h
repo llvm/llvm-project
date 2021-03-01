@@ -86,13 +86,9 @@ public:
   virtual void handleVarRegistration(const VarDecl *VD,
                                      llvm::GlobalVariable &Var) = 0;
 
-  /// Constructs and returns a module initialization function or nullptr if it's
-  /// not needed. Must be called after all kernels have been emitted.
-  virtual llvm::Function *makeModuleCtorFunction() = 0;
-
-  /// Returns a module cleanup function or nullptr if it's not needed.
-  /// Must be called after ModuleCtorFunction
-  virtual llvm::Function *makeModuleDtorFunction() = 0;
+  /// Finalize generated LLVM module. Returns a module constructor function
+  /// to be added or a null pointer.
+  virtual llvm::Function *finalizeModule() = 0;
 
   /// Returns function or variable name on device side even if the current
   /// compilation is for host.

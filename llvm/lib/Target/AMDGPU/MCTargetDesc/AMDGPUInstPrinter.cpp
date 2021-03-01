@@ -1266,8 +1266,8 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
   decodeMsg(Imm16, MsgId, OpId, StreamId);
 
   if (isValidMsgId(MsgId, STI) &&
-      isValidMsgOp(MsgId, OpId) &&
-      isValidMsgStream(MsgId, OpId, StreamId)) {
+      isValidMsgOp(MsgId, OpId, STI) &&
+      isValidMsgStream(MsgId, OpId, StreamId, STI)) {
     O << "sendmsg(" << getMsgName(MsgId);
     if (msgRequiresOp(MsgId)) {
       O << ", " << getMsgOpName(MsgId, OpId);

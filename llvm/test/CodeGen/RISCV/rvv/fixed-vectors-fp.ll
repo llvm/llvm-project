@@ -7,8 +7,7 @@
 define void @fadd_v8f16(<8 x half>* %x, <8 x half>* %y) {
 ; CHECK-LABEL: fadd_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 8
-; CHECK-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
 ; CHECK-NEXT:    vfadd.vv v25, v25, v26
@@ -24,8 +23,7 @@ define void @fadd_v8f16(<8 x half>* %x, <8 x half>* %y) {
 define void @fadd_v4f32(<4 x float>* %x, <4 x float>* %y) {
 ; CHECK-LABEL: fadd_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 4
-; CHECK-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
 ; CHECK-NEXT:    vfadd.vv v25, v25, v26
@@ -41,8 +39,7 @@ define void @fadd_v4f32(<4 x float>* %x, <4 x float>* %y) {
 define void @fadd_v2f64(<2 x double>* %x, <2 x double>* %y) {
 ; CHECK-LABEL: fadd_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 2
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vle64.v v26, (a1)
 ; CHECK-NEXT:    vfadd.vv v25, v25, v26
@@ -58,8 +55,7 @@ define void @fadd_v2f64(<2 x double>* %x, <2 x double>* %y) {
 define void @fsub_v8f16(<8 x half>* %x, <8 x half>* %y) {
 ; CHECK-LABEL: fsub_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 8
-; CHECK-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
 ; CHECK-NEXT:    vfsub.vv v25, v25, v26
@@ -75,8 +71,7 @@ define void @fsub_v8f16(<8 x half>* %x, <8 x half>* %y) {
 define void @fsub_v4f32(<4 x float>* %x, <4 x float>* %y) {
 ; CHECK-LABEL: fsub_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 4
-; CHECK-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
 ; CHECK-NEXT:    vfsub.vv v25, v25, v26
@@ -92,8 +87,7 @@ define void @fsub_v4f32(<4 x float>* %x, <4 x float>* %y) {
 define void @fsub_v2f64(<2 x double>* %x, <2 x double>* %y) {
 ; CHECK-LABEL: fsub_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 2
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vle64.v v26, (a1)
 ; CHECK-NEXT:    vfsub.vv v25, v25, v26
@@ -109,8 +103,7 @@ define void @fsub_v2f64(<2 x double>* %x, <2 x double>* %y) {
 define void @fmul_v8f16(<8 x half>* %x, <8 x half>* %y) {
 ; CHECK-LABEL: fmul_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 8
-; CHECK-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
 ; CHECK-NEXT:    vfmul.vv v25, v25, v26
@@ -126,8 +119,7 @@ define void @fmul_v8f16(<8 x half>* %x, <8 x half>* %y) {
 define void @fmul_v4f32(<4 x float>* %x, <4 x float>* %y) {
 ; CHECK-LABEL: fmul_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 4
-; CHECK-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
 ; CHECK-NEXT:    vfmul.vv v25, v25, v26
@@ -143,8 +135,7 @@ define void @fmul_v4f32(<4 x float>* %x, <4 x float>* %y) {
 define void @fmul_v2f64(<2 x double>* %x, <2 x double>* %y) {
 ; CHECK-LABEL: fmul_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 2
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vle64.v v26, (a1)
 ; CHECK-NEXT:    vfmul.vv v25, v25, v26
@@ -160,8 +151,7 @@ define void @fmul_v2f64(<2 x double>* %x, <2 x double>* %y) {
 define void @fdiv_v8f16(<8 x half>* %x, <8 x half>* %y) {
 ; CHECK-LABEL: fdiv_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 8
-; CHECK-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
 ; CHECK-NEXT:    vfdiv.vv v25, v25, v26
@@ -177,8 +167,7 @@ define void @fdiv_v8f16(<8 x half>* %x, <8 x half>* %y) {
 define void @fdiv_v4f32(<4 x float>* %x, <4 x float>* %y) {
 ; CHECK-LABEL: fdiv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 4
-; CHECK-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
 ; CHECK-NEXT:    vfdiv.vv v25, v25, v26
@@ -194,8 +183,7 @@ define void @fdiv_v4f32(<4 x float>* %x, <4 x float>* %y) {
 define void @fdiv_v2f64(<2 x double>* %x, <2 x double>* %y) {
 ; CHECK-LABEL: fdiv_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 2
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vle64.v v26, (a1)
 ; CHECK-NEXT:    vfdiv.vv v25, v25, v26
@@ -211,8 +199,7 @@ define void @fdiv_v2f64(<2 x double>* %x, <2 x double>* %y) {
 define void @fneg_v8f16(<8 x half>* %x) {
 ; CHECK-LABEL: fneg_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfsgnjn.vv v25, v25, v25
 ; CHECK-NEXT:    vse16.v v25, (a0)
@@ -226,8 +213,7 @@ define void @fneg_v8f16(<8 x half>* %x) {
 define void @fneg_v4f32(<4 x float>* %x) {
 ; CHECK-LABEL: fneg_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 4
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vfsgnjn.vv v25, v25, v25
 ; CHECK-NEXT:    vse32.v v25, (a0)
@@ -241,8 +227,7 @@ define void @fneg_v4f32(<4 x float>* %x) {
 define void @fneg_v2f64(<2 x double>* %x) {
 ; CHECK-LABEL: fneg_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vfsgnjn.vv v25, v25, v25
 ; CHECK-NEXT:    vse64.v v25, (a0)
@@ -256,8 +241,7 @@ define void @fneg_v2f64(<2 x double>* %x) {
 define void @fabs_v8f16(<8 x half>* %x) {
 ; CHECK-LABEL: fabs_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfsgnjx.vv v25, v25, v25
 ; CHECK-NEXT:    vse16.v v25, (a0)
@@ -272,8 +256,7 @@ declare <8 x half> @llvm.fabs.v8f16(<8 x half>)
 define void @fabs_v4f32(<4 x float>* %x) {
 ; CHECK-LABEL: fabs_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 4
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vfsgnjx.vv v25, v25, v25
 ; CHECK-NEXT:    vse32.v v25, (a0)
@@ -288,8 +271,7 @@ declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
 define void @fabs_v2f64(<2 x double>* %x) {
 ; CHECK-LABEL: fabs_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vfsgnjx.vv v25, v25, v25
 ; CHECK-NEXT:    vse64.v v25, (a0)
@@ -304,8 +286,7 @@ declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 define void @sqrt_v8f16(<8 x half>* %x) {
 ; CHECK-LABEL: sqrt_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfsqrt.v v25, v25
 ; CHECK-NEXT:    vse16.v v25, (a0)
@@ -320,8 +301,7 @@ declare <8 x half> @llvm.sqrt.v8f16(<8 x half>)
 define void @sqrt_v4f32(<4 x float>* %x) {
 ; CHECK-LABEL: sqrt_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 4
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vfsqrt.v v25, v25
 ; CHECK-NEXT:    vse32.v v25, (a0)
@@ -336,8 +316,7 @@ declare <4 x float> @llvm.sqrt.v4f32(<4 x float>)
 define void @sqrt_v2f64(<2 x double>* %x) {
 ; CHECK-LABEL: sqrt_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vfsqrt.v v25, v25
 ; CHECK-NEXT:    vse64.v v25, (a0)
@@ -352,8 +331,7 @@ declare <2 x double> @llvm.sqrt.v2f64(<2 x double>)
 define void @fma_v8f16(<8 x half>* %x, <8 x half>* %y, <8 x half>* %z) {
 ; CHECK-LABEL: fma_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 8
-; CHECK-NEXT:    vsetvli a3, a3, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
 ; CHECK-NEXT:    vle16.v v27, (a2)
@@ -372,8 +350,7 @@ declare <8 x half> @llvm.fma.v8f16(<8 x half>, <8 x half>, <8 x half>)
 define void @fma_v4f32(<4 x float>* %x, <4 x float>* %y, <4 x float>* %z) {
 ; CHECK-LABEL: fma_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 4
-; CHECK-NEXT:    vsetvli a3, a3, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
 ; CHECK-NEXT:    vle32.v v27, (a2)
@@ -392,8 +369,7 @@ declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
 define void @fma_v2f64(<2 x double>* %x, <2 x double>* %y, <2 x double>* %z) {
 ; CHECK-LABEL: fma_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 2
-; CHECK-NEXT:    vsetvli a3, a3, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vle64.v v26, (a1)
 ; CHECK-NEXT:    vle64.v v27, (a2)
@@ -412,8 +388,7 @@ declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>)
 define void @fmsub_v8f16(<8 x half>* %x, <8 x half>* %y, <8 x half>* %z) {
 ; CHECK-LABEL: fmsub_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 8
-; CHECK-NEXT:    vsetvli a3, a3, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
 ; CHECK-NEXT:    vle16.v v27, (a2)
@@ -432,8 +407,7 @@ define void @fmsub_v8f16(<8 x half>* %x, <8 x half>* %y, <8 x half>* %z) {
 define void @fnmsub_v4f32(<4 x float>* %x, <4 x float>* %y, <4 x float>* %z) {
 ; CHECK-LABEL: fnmsub_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 4
-; CHECK-NEXT:    vsetvli a3, a3, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
 ; CHECK-NEXT:    vle32.v v27, (a2)
@@ -452,8 +426,7 @@ define void @fnmsub_v4f32(<4 x float>* %x, <4 x float>* %y, <4 x float>* %z) {
 define void @fnmadd_v2f64(<2 x double>* %x, <2 x double>* %y, <2 x double>* %z) {
 ; CHECK-LABEL: fnmadd_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 2
-; CHECK-NEXT:    vsetvli a3, a3, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vle64.v v26, (a1)
 ; CHECK-NEXT:    vle64.v v27, (a2)
@@ -473,8 +446,7 @@ define void @fnmadd_v2f64(<2 x double>* %x, <2 x double>* %y, <2 x double>* %z) 
 define void @fadd_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ; LMULMAX2-LABEL: fadd_v16f16:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 16
-; LMULMAX2-NEXT:    vsetvli a2, a2, e16,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 16, e16,m2,ta,mu
 ; LMULMAX2-NEXT:    vle16.v v26, (a0)
 ; LMULMAX2-NEXT:    vle16.v v28, (a1)
 ; LMULMAX2-NEXT:    vfadd.vv v26, v26, v28
@@ -483,8 +455,7 @@ define void @fadd_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: fadd_v16f16:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 8
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vle16.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle16.v v26, (a2)
@@ -499,8 +470,7 @@ define void @fadd_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ;
 ; LMULMAX1-RV64-LABEL: fadd_v16f16:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 8
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vle16.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a2, a1, 16
 ; LMULMAX1-RV64-NEXT:    vle16.v v26, (a2)
@@ -522,8 +492,7 @@ define void @fadd_v16f16(<16 x half>* %x, <16 x half>* %y) {
 define void @fadd_v8f32(<8 x float>* %x, <8 x float>* %y) {
 ; LMULMAX2-LABEL: fadd_v8f32:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 8
-; LMULMAX2-NEXT:    vsetvli a2, a2, e32,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 8, e32,m2,ta,mu
 ; LMULMAX2-NEXT:    vle32.v v26, (a0)
 ; LMULMAX2-NEXT:    vle32.v v28, (a1)
 ; LMULMAX2-NEXT:    vfadd.vv v26, v26, v28
@@ -532,8 +501,7 @@ define void @fadd_v8f32(<8 x float>* %x, <8 x float>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: fadd_v8f32:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 4
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vle32.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle32.v v26, (a2)
@@ -548,8 +516,7 @@ define void @fadd_v8f32(<8 x float>* %x, <8 x float>* %y) {
 ;
 ; LMULMAX1-RV64-LABEL: fadd_v8f32:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 4
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vle32.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a2, a1, 16
 ; LMULMAX1-RV64-NEXT:    vle32.v v26, (a2)
@@ -571,8 +538,7 @@ define void @fadd_v8f32(<8 x float>* %x, <8 x float>* %y) {
 define void @fadd_v4f64(<4 x double>* %x, <4 x double>* %y) {
 ; LMULMAX2-LABEL: fadd_v4f64:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 4
-; LMULMAX2-NEXT:    vsetvli a2, a2, e64,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 4, e64,m2,ta,mu
 ; LMULMAX2-NEXT:    vle64.v v26, (a0)
 ; LMULMAX2-NEXT:    vle64.v v28, (a1)
 ; LMULMAX2-NEXT:    vfadd.vv v26, v26, v28
@@ -581,8 +547,7 @@ define void @fadd_v4f64(<4 x double>* %x, <4 x double>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: fadd_v4f64:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 2
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vle64.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle64.v v26, (a2)
@@ -597,8 +562,7 @@ define void @fadd_v4f64(<4 x double>* %x, <4 x double>* %y) {
 ;
 ; LMULMAX1-RV64-LABEL: fadd_v4f64:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 2
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vle64.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a2, a1, 16
 ; LMULMAX1-RV64-NEXT:    vle64.v v26, (a2)
@@ -620,8 +584,7 @@ define void @fadd_v4f64(<4 x double>* %x, <4 x double>* %y) {
 define void @fsub_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ; LMULMAX2-LABEL: fsub_v16f16:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 16
-; LMULMAX2-NEXT:    vsetvli a2, a2, e16,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 16, e16,m2,ta,mu
 ; LMULMAX2-NEXT:    vle16.v v26, (a0)
 ; LMULMAX2-NEXT:    vle16.v v28, (a1)
 ; LMULMAX2-NEXT:    vfsub.vv v26, v26, v28
@@ -630,8 +593,7 @@ define void @fsub_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: fsub_v16f16:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 8
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vle16.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle16.v v26, (a2)
@@ -646,8 +608,7 @@ define void @fsub_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ;
 ; LMULMAX1-RV64-LABEL: fsub_v16f16:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 8
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vle16.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a2, a1, 16
 ; LMULMAX1-RV64-NEXT:    vle16.v v26, (a2)
@@ -669,8 +630,7 @@ define void @fsub_v16f16(<16 x half>* %x, <16 x half>* %y) {
 define void @fsub_v8f32(<8 x float>* %x, <8 x float>* %y) {
 ; LMULMAX2-LABEL: fsub_v8f32:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 8
-; LMULMAX2-NEXT:    vsetvli a2, a2, e32,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 8, e32,m2,ta,mu
 ; LMULMAX2-NEXT:    vle32.v v26, (a0)
 ; LMULMAX2-NEXT:    vle32.v v28, (a1)
 ; LMULMAX2-NEXT:    vfsub.vv v26, v26, v28
@@ -679,8 +639,7 @@ define void @fsub_v8f32(<8 x float>* %x, <8 x float>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: fsub_v8f32:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 4
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vle32.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle32.v v26, (a2)
@@ -695,8 +654,7 @@ define void @fsub_v8f32(<8 x float>* %x, <8 x float>* %y) {
 ;
 ; LMULMAX1-RV64-LABEL: fsub_v8f32:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 4
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vle32.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a2, a1, 16
 ; LMULMAX1-RV64-NEXT:    vle32.v v26, (a2)
@@ -718,8 +676,7 @@ define void @fsub_v8f32(<8 x float>* %x, <8 x float>* %y) {
 define void @fsub_v4f64(<4 x double>* %x, <4 x double>* %y) {
 ; LMULMAX2-LABEL: fsub_v4f64:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 4
-; LMULMAX2-NEXT:    vsetvli a2, a2, e64,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 4, e64,m2,ta,mu
 ; LMULMAX2-NEXT:    vle64.v v26, (a0)
 ; LMULMAX2-NEXT:    vle64.v v28, (a1)
 ; LMULMAX2-NEXT:    vfsub.vv v26, v26, v28
@@ -728,8 +685,7 @@ define void @fsub_v4f64(<4 x double>* %x, <4 x double>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: fsub_v4f64:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 2
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vle64.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle64.v v26, (a2)
@@ -744,8 +700,7 @@ define void @fsub_v4f64(<4 x double>* %x, <4 x double>* %y) {
 ;
 ; LMULMAX1-RV64-LABEL: fsub_v4f64:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 2
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vle64.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a2, a1, 16
 ; LMULMAX1-RV64-NEXT:    vle64.v v26, (a2)
@@ -767,8 +722,7 @@ define void @fsub_v4f64(<4 x double>* %x, <4 x double>* %y) {
 define void @fmul_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ; LMULMAX2-LABEL: fmul_v16f16:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 16
-; LMULMAX2-NEXT:    vsetvli a2, a2, e16,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 16, e16,m2,ta,mu
 ; LMULMAX2-NEXT:    vle16.v v26, (a0)
 ; LMULMAX2-NEXT:    vle16.v v28, (a1)
 ; LMULMAX2-NEXT:    vfmul.vv v26, v26, v28
@@ -777,8 +731,7 @@ define void @fmul_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: fmul_v16f16:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 8
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vle16.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle16.v v26, (a2)
@@ -793,8 +746,7 @@ define void @fmul_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ;
 ; LMULMAX1-RV64-LABEL: fmul_v16f16:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 8
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vle16.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a2, a1, 16
 ; LMULMAX1-RV64-NEXT:    vle16.v v26, (a2)
@@ -816,8 +768,7 @@ define void @fmul_v16f16(<16 x half>* %x, <16 x half>* %y) {
 define void @fmul_v8f32(<8 x float>* %x, <8 x float>* %y) {
 ; LMULMAX2-LABEL: fmul_v8f32:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 8
-; LMULMAX2-NEXT:    vsetvli a2, a2, e32,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 8, e32,m2,ta,mu
 ; LMULMAX2-NEXT:    vle32.v v26, (a0)
 ; LMULMAX2-NEXT:    vle32.v v28, (a1)
 ; LMULMAX2-NEXT:    vfmul.vv v26, v26, v28
@@ -826,8 +777,7 @@ define void @fmul_v8f32(<8 x float>* %x, <8 x float>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: fmul_v8f32:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 4
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vle32.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle32.v v26, (a2)
@@ -842,8 +792,7 @@ define void @fmul_v8f32(<8 x float>* %x, <8 x float>* %y) {
 ;
 ; LMULMAX1-RV64-LABEL: fmul_v8f32:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 4
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vle32.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a2, a1, 16
 ; LMULMAX1-RV64-NEXT:    vle32.v v26, (a2)
@@ -865,8 +814,7 @@ define void @fmul_v8f32(<8 x float>* %x, <8 x float>* %y) {
 define void @fmul_v4f64(<4 x double>* %x, <4 x double>* %y) {
 ; LMULMAX2-LABEL: fmul_v4f64:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 4
-; LMULMAX2-NEXT:    vsetvli a2, a2, e64,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 4, e64,m2,ta,mu
 ; LMULMAX2-NEXT:    vle64.v v26, (a0)
 ; LMULMAX2-NEXT:    vle64.v v28, (a1)
 ; LMULMAX2-NEXT:    vfmul.vv v26, v26, v28
@@ -875,8 +823,7 @@ define void @fmul_v4f64(<4 x double>* %x, <4 x double>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: fmul_v4f64:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 2
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vle64.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle64.v v26, (a2)
@@ -891,8 +838,7 @@ define void @fmul_v4f64(<4 x double>* %x, <4 x double>* %y) {
 ;
 ; LMULMAX1-RV64-LABEL: fmul_v4f64:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 2
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vle64.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a2, a1, 16
 ; LMULMAX1-RV64-NEXT:    vle64.v v26, (a2)
@@ -914,8 +860,7 @@ define void @fmul_v4f64(<4 x double>* %x, <4 x double>* %y) {
 define void @fdiv_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ; LMULMAX2-LABEL: fdiv_v16f16:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 16
-; LMULMAX2-NEXT:    vsetvli a2, a2, e16,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 16, e16,m2,ta,mu
 ; LMULMAX2-NEXT:    vle16.v v26, (a0)
 ; LMULMAX2-NEXT:    vle16.v v28, (a1)
 ; LMULMAX2-NEXT:    vfdiv.vv v26, v26, v28
@@ -924,8 +869,7 @@ define void @fdiv_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: fdiv_v16f16:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 8
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vle16.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle16.v v26, (a2)
@@ -940,8 +884,7 @@ define void @fdiv_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ;
 ; LMULMAX1-RV64-LABEL: fdiv_v16f16:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 8
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vle16.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a2, a1, 16
 ; LMULMAX1-RV64-NEXT:    vle16.v v26, (a2)
@@ -963,8 +906,7 @@ define void @fdiv_v16f16(<16 x half>* %x, <16 x half>* %y) {
 define void @fdiv_v8f32(<8 x float>* %x, <8 x float>* %y) {
 ; LMULMAX2-LABEL: fdiv_v8f32:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 8
-; LMULMAX2-NEXT:    vsetvli a2, a2, e32,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 8, e32,m2,ta,mu
 ; LMULMAX2-NEXT:    vle32.v v26, (a0)
 ; LMULMAX2-NEXT:    vle32.v v28, (a1)
 ; LMULMAX2-NEXT:    vfdiv.vv v26, v26, v28
@@ -973,8 +915,7 @@ define void @fdiv_v8f32(<8 x float>* %x, <8 x float>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: fdiv_v8f32:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 4
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vle32.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle32.v v26, (a2)
@@ -989,8 +930,7 @@ define void @fdiv_v8f32(<8 x float>* %x, <8 x float>* %y) {
 ;
 ; LMULMAX1-RV64-LABEL: fdiv_v8f32:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 4
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vle32.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a2, a1, 16
 ; LMULMAX1-RV64-NEXT:    vle32.v v26, (a2)
@@ -1012,8 +952,7 @@ define void @fdiv_v8f32(<8 x float>* %x, <8 x float>* %y) {
 define void @fdiv_v4f64(<4 x double>* %x, <4 x double>* %y) {
 ; LMULMAX2-LABEL: fdiv_v4f64:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 4
-; LMULMAX2-NEXT:    vsetvli a2, a2, e64,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 4, e64,m2,ta,mu
 ; LMULMAX2-NEXT:    vle64.v v26, (a0)
 ; LMULMAX2-NEXT:    vle64.v v28, (a1)
 ; LMULMAX2-NEXT:    vfdiv.vv v26, v26, v28
@@ -1022,8 +961,7 @@ define void @fdiv_v4f64(<4 x double>* %x, <4 x double>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: fdiv_v4f64:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a2, zero, 2
-; LMULMAX1-RV32-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vle64.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle64.v v26, (a2)
@@ -1038,8 +976,7 @@ define void @fdiv_v4f64(<4 x double>* %x, <4 x double>* %y) {
 ;
 ; LMULMAX1-RV64-LABEL: fdiv_v4f64:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a2, zero, 2
-; LMULMAX1-RV64-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vle64.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a2, a1, 16
 ; LMULMAX1-RV64-NEXT:    vle64.v v26, (a2)
@@ -1061,8 +998,7 @@ define void @fdiv_v4f64(<4 x double>* %x, <4 x double>* %y) {
 define void @fneg_v16f16(<16 x half>* %x) {
 ; LMULMAX2-LABEL: fneg_v16f16:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a1, zero, 16
-; LMULMAX2-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a1, 16, e16,m2,ta,mu
 ; LMULMAX2-NEXT:    vle16.v v26, (a0)
 ; LMULMAX2-NEXT:    vfsgnjn.vv v26, v26, v26
 ; LMULMAX2-NEXT:    vse16.v v26, (a0)
@@ -1070,8 +1006,7 @@ define void @fneg_v16f16(<16 x half>* %x) {
 ;
 ; LMULMAX1-LABEL: fneg_v16f16:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a1, zero, 8
-; LMULMAX1-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vle16.v v25, (a1)
 ; LMULMAX1-NEXT:    vle16.v v26, (a0)
@@ -1089,8 +1024,7 @@ define void @fneg_v16f16(<16 x half>* %x) {
 define void @fneg_v8f32(<8 x float>* %x) {
 ; LMULMAX2-LABEL: fneg_v8f32:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a1, zero, 8
-; LMULMAX2-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
 ; LMULMAX2-NEXT:    vle32.v v26, (a0)
 ; LMULMAX2-NEXT:    vfsgnjn.vv v26, v26, v26
 ; LMULMAX2-NEXT:    vse32.v v26, (a0)
@@ -1098,8 +1032,7 @@ define void @fneg_v8f32(<8 x float>* %x) {
 ;
 ; LMULMAX1-LABEL: fneg_v8f32:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a1, zero, 4
-; LMULMAX1-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vle32.v v25, (a1)
 ; LMULMAX1-NEXT:    vle32.v v26, (a0)
@@ -1117,8 +1050,7 @@ define void @fneg_v8f32(<8 x float>* %x) {
 define void @fneg_v4f64(<4 x double>* %x) {
 ; LMULMAX2-LABEL: fneg_v4f64:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a1, zero, 4
-; LMULMAX2-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a1, 4, e64,m2,ta,mu
 ; LMULMAX2-NEXT:    vle64.v v26, (a0)
 ; LMULMAX2-NEXT:    vfsgnjn.vv v26, v26, v26
 ; LMULMAX2-NEXT:    vse64.v v26, (a0)
@@ -1126,8 +1058,7 @@ define void @fneg_v4f64(<4 x double>* %x) {
 ;
 ; LMULMAX1-LABEL: fneg_v4f64:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a1, zero, 2
-; LMULMAX1-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vle64.v v25, (a1)
 ; LMULMAX1-NEXT:    vle64.v v26, (a0)
@@ -1145,8 +1076,7 @@ define void @fneg_v4f64(<4 x double>* %x) {
 define void @fma_v16f16(<16 x half>* %x, <16 x half>* %y, <16 x half>* %z) {
 ; LMULMAX2-LABEL: fma_v16f16:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a3, zero, 16
-; LMULMAX2-NEXT:    vsetvli a3, a3, e16,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a3, 16, e16,m2,ta,mu
 ; LMULMAX2-NEXT:    vle16.v v26, (a0)
 ; LMULMAX2-NEXT:    vle16.v v28, (a1)
 ; LMULMAX2-NEXT:    vle16.v v30, (a2)
@@ -1156,8 +1086,7 @@ define void @fma_v16f16(<16 x half>* %x, <16 x half>* %y, <16 x half>* %z) {
 ;
 ; LMULMAX1-LABEL: fma_v16f16:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a3, zero, 8
-; LMULMAX1-NEXT:    vsetvli a3, a3, e16,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli a3, 8, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    vle16.v v25, (a0)
 ; LMULMAX1-NEXT:    addi a3, a0, 16
 ; LMULMAX1-NEXT:    vle16.v v26, (a3)
@@ -1184,8 +1113,7 @@ declare <16 x half> @llvm.fma.v16f16(<16 x half>, <16 x half>, <16 x half>)
 define void @fma_v8f32(<8 x float>* %x, <8 x float>* %y, <8 x float>* %z) {
 ; LMULMAX2-LABEL: fma_v8f32:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a3, zero, 8
-; LMULMAX2-NEXT:    vsetvli a3, a3, e32,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a3, 8, e32,m2,ta,mu
 ; LMULMAX2-NEXT:    vle32.v v26, (a0)
 ; LMULMAX2-NEXT:    vle32.v v28, (a1)
 ; LMULMAX2-NEXT:    vle32.v v30, (a2)
@@ -1195,8 +1123,7 @@ define void @fma_v8f32(<8 x float>* %x, <8 x float>* %y, <8 x float>* %z) {
 ;
 ; LMULMAX1-LABEL: fma_v8f32:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a3, zero, 4
-; LMULMAX1-NEXT:    vsetvli a3, a3, e32,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli a3, 4, e32,m1,ta,mu
 ; LMULMAX1-NEXT:    vle32.v v25, (a0)
 ; LMULMAX1-NEXT:    addi a3, a0, 16
 ; LMULMAX1-NEXT:    vle32.v v26, (a3)
@@ -1223,8 +1150,7 @@ declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>)
 define void @fma_v4f64(<4 x double>* %x, <4 x double>* %y, <4 x double>* %z) {
 ; LMULMAX2-LABEL: fma_v4f64:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a3, zero, 4
-; LMULMAX2-NEXT:    vsetvli a3, a3, e64,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli a3, 4, e64,m2,ta,mu
 ; LMULMAX2-NEXT:    vle64.v v26, (a0)
 ; LMULMAX2-NEXT:    vle64.v v28, (a1)
 ; LMULMAX2-NEXT:    vle64.v v30, (a2)
@@ -1234,8 +1160,7 @@ define void @fma_v4f64(<4 x double>* %x, <4 x double>* %y, <4 x double>* %z) {
 ;
 ; LMULMAX1-LABEL: fma_v4f64:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a3, zero, 2
-; LMULMAX1-NEXT:    vsetvli a3, a3, e64,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli a3, 2, e64,m1,ta,mu
 ; LMULMAX1-NEXT:    vle64.v v25, (a0)
 ; LMULMAX1-NEXT:    addi a3, a0, 16
 ; LMULMAX1-NEXT:    vle64.v v26, (a3)
@@ -1262,8 +1187,7 @@ declare <4 x double> @llvm.fma.v4f64(<4 x double>, <4 x double>, <4 x double>)
 define void @fadd_vf_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-LABEL: fadd_vf_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfadd.vf v25, v25, fa0
 ; CHECK-NEXT:    vse16.v v25, (a0)
@@ -1279,8 +1203,7 @@ define void @fadd_vf_v8f16(<8 x half>* %x, half %y) {
 define void @fadd_vf_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-LABEL: fadd_vf_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 4
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vfadd.vf v25, v25, fa0
 ; CHECK-NEXT:    vse32.v v25, (a0)
@@ -1296,8 +1219,7 @@ define void @fadd_vf_v4f32(<4 x float>* %x, float %y) {
 define void @fadd_vf_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-LABEL: fadd_vf_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vfadd.vf v25, v25, fa0
 ; CHECK-NEXT:    vse64.v v25, (a0)
@@ -1313,8 +1235,7 @@ define void @fadd_vf_v2f64(<2 x double>* %x, double %y) {
 define void @fadd_fv_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-LABEL: fadd_fv_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfadd.vf v25, v25, fa0
 ; CHECK-NEXT:    vse16.v v25, (a0)
@@ -1330,8 +1251,7 @@ define void @fadd_fv_v8f16(<8 x half>* %x, half %y) {
 define void @fadd_fv_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-LABEL: fadd_fv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 4
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vfadd.vf v25, v25, fa0
 ; CHECK-NEXT:    vse32.v v25, (a0)
@@ -1347,8 +1267,7 @@ define void @fadd_fv_v4f32(<4 x float>* %x, float %y) {
 define void @fadd_fv_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-LABEL: fadd_fv_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vfadd.vf v25, v25, fa0
 ; CHECK-NEXT:    vse64.v v25, (a0)
@@ -1364,8 +1283,7 @@ define void @fadd_fv_v2f64(<2 x double>* %x, double %y) {
 define void @fsub_vf_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-LABEL: fsub_vf_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfsub.vf v25, v25, fa0
 ; CHECK-NEXT:    vse16.v v25, (a0)
@@ -1381,8 +1299,7 @@ define void @fsub_vf_v8f16(<8 x half>* %x, half %y) {
 define void @fsub_vf_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-LABEL: fsub_vf_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 4
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vfsub.vf v25, v25, fa0
 ; CHECK-NEXT:    vse32.v v25, (a0)
@@ -1398,8 +1315,7 @@ define void @fsub_vf_v4f32(<4 x float>* %x, float %y) {
 define void @fsub_vf_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-LABEL: fsub_vf_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vfsub.vf v25, v25, fa0
 ; CHECK-NEXT:    vse64.v v25, (a0)
@@ -1415,8 +1331,7 @@ define void @fsub_vf_v2f64(<2 x double>* %x, double %y) {
 define void @fsub_fv_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-LABEL: fsub_fv_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfrsub.vf v25, v25, fa0
 ; CHECK-NEXT:    vse16.v v25, (a0)
@@ -1432,8 +1347,7 @@ define void @fsub_fv_v8f16(<8 x half>* %x, half %y) {
 define void @fsub_fv_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-LABEL: fsub_fv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 4
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vfrsub.vf v25, v25, fa0
 ; CHECK-NEXT:    vse32.v v25, (a0)
@@ -1449,8 +1363,7 @@ define void @fsub_fv_v4f32(<4 x float>* %x, float %y) {
 define void @fsub_fv_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-LABEL: fsub_fv_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vfrsub.vf v25, v25, fa0
 ; CHECK-NEXT:    vse64.v v25, (a0)
@@ -1466,8 +1379,7 @@ define void @fsub_fv_v2f64(<2 x double>* %x, double %y) {
 define void @fmul_vf_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-LABEL: fmul_vf_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfmul.vf v25, v25, fa0
 ; CHECK-NEXT:    vse16.v v25, (a0)
@@ -1483,8 +1395,7 @@ define void @fmul_vf_v8f16(<8 x half>* %x, half %y) {
 define void @fmul_vf_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-LABEL: fmul_vf_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 4
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vfmul.vf v25, v25, fa0
 ; CHECK-NEXT:    vse32.v v25, (a0)
@@ -1500,8 +1411,7 @@ define void @fmul_vf_v4f32(<4 x float>* %x, float %y) {
 define void @fmul_vf_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-LABEL: fmul_vf_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vfmul.vf v25, v25, fa0
 ; CHECK-NEXT:    vse64.v v25, (a0)
@@ -1517,8 +1427,7 @@ define void @fmul_vf_v2f64(<2 x double>* %x, double %y) {
 define void @fmul_fv_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-LABEL: fmul_fv_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfmul.vf v25, v25, fa0
 ; CHECK-NEXT:    vse16.v v25, (a0)
@@ -1534,8 +1443,7 @@ define void @fmul_fv_v8f16(<8 x half>* %x, half %y) {
 define void @fmul_fv_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-LABEL: fmul_fv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 4
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vfmul.vf v25, v25, fa0
 ; CHECK-NEXT:    vse32.v v25, (a0)
@@ -1551,8 +1459,7 @@ define void @fmul_fv_v4f32(<4 x float>* %x, float %y) {
 define void @fmul_fv_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-LABEL: fmul_fv_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vfmul.vf v25, v25, fa0
 ; CHECK-NEXT:    vse64.v v25, (a0)
@@ -1568,8 +1475,7 @@ define void @fmul_fv_v2f64(<2 x double>* %x, double %y) {
 define void @fdiv_vf_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-LABEL: fdiv_vf_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfdiv.vf v25, v25, fa0
 ; CHECK-NEXT:    vse16.v v25, (a0)
@@ -1585,8 +1491,7 @@ define void @fdiv_vf_v8f16(<8 x half>* %x, half %y) {
 define void @fdiv_vf_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-LABEL: fdiv_vf_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 4
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vfdiv.vf v25, v25, fa0
 ; CHECK-NEXT:    vse32.v v25, (a0)
@@ -1602,8 +1507,7 @@ define void @fdiv_vf_v4f32(<4 x float>* %x, float %y) {
 define void @fdiv_vf_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-LABEL: fdiv_vf_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vfdiv.vf v25, v25, fa0
 ; CHECK-NEXT:    vse64.v v25, (a0)
@@ -1619,8 +1523,7 @@ define void @fdiv_vf_v2f64(<2 x double>* %x, double %y) {
 define void @fdiv_fv_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-LABEL: fdiv_fv_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfrdiv.vf v25, v25, fa0
 ; CHECK-NEXT:    vse16.v v25, (a0)
@@ -1636,8 +1539,7 @@ define void @fdiv_fv_v8f16(<8 x half>* %x, half %y) {
 define void @fdiv_fv_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-LABEL: fdiv_fv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 4
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vfrdiv.vf v25, v25, fa0
 ; CHECK-NEXT:    vse32.v v25, (a0)
@@ -1653,8 +1555,7 @@ define void @fdiv_fv_v4f32(<4 x float>* %x, float %y) {
 define void @fdiv_fv_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-LABEL: fdiv_fv_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vfrdiv.vf v25, v25, fa0
 ; CHECK-NEXT:    vse64.v v25, (a0)
@@ -1670,8 +1571,7 @@ define void @fdiv_fv_v2f64(<2 x double>* %x, double %y) {
 define void @fma_vf_v8f16(<8 x half>* %x, <8 x half>* %y, half %z) {
 ; CHECK-LABEL: fma_vf_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 8
-; CHECK-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
 ; CHECK-NEXT:    vfmacc.vf v26, fa0, v25
@@ -1689,8 +1589,7 @@ define void @fma_vf_v8f16(<8 x half>* %x, <8 x half>* %y, half %z) {
 define void @fma_vf_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 ; CHECK-LABEL: fma_vf_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 4
-; CHECK-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
 ; CHECK-NEXT:    vfmacc.vf v26, fa0, v25
@@ -1708,8 +1607,7 @@ define void @fma_vf_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 define void @fma_vf_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
 ; CHECK-LABEL: fma_vf_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 2
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vle64.v v26, (a1)
 ; CHECK-NEXT:    vfmacc.vf v26, fa0, v25
@@ -1727,8 +1625,7 @@ define void @fma_vf_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
 define void @fma_fv_v8f16(<8 x half>* %x, <8 x half>* %y, half %z) {
 ; CHECK-LABEL: fma_fv_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 8
-; CHECK-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
 ; CHECK-NEXT:    vfmacc.vf v26, fa0, v25
@@ -1746,8 +1643,7 @@ define void @fma_fv_v8f16(<8 x half>* %x, <8 x half>* %y, half %z) {
 define void @fma_fv_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 ; CHECK-LABEL: fma_fv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 4
-; CHECK-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
 ; CHECK-NEXT:    vfmacc.vf v26, fa0, v25
@@ -1765,8 +1661,7 @@ define void @fma_fv_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 define void @fma_fv_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
 ; CHECK-LABEL: fma_fv_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 2
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vle64.v v26, (a1)
 ; CHECK-NEXT:    vfmacc.vf v26, fa0, v25
@@ -1784,8 +1679,7 @@ define void @fma_fv_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
 define void @fmsub_vf_v8f16(<8 x half>* %x, <8 x half>* %y, half %z) {
 ; CHECK-LABEL: fmsub_vf_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 8
-; CHECK-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
 ; CHECK-NEXT:    vfmsac.vf v26, fa0, v25
@@ -1804,8 +1698,7 @@ define void @fmsub_vf_v8f16(<8 x half>* %x, <8 x half>* %y, half %z) {
 define void @fnmsub_vf_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 ; CHECK-LABEL: fnmsub_vf_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 4
-; CHECK-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
 ; CHECK-NEXT:    vfnmsac.vf v26, fa0, v25
@@ -1824,8 +1717,7 @@ define void @fnmsub_vf_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 define void @fnmadd_vf_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
 ; CHECK-LABEL: fnmadd_vf_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 2
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vle64.v v26, (a1)
 ; CHECK-NEXT:    vfnmacc.vf v26, fa0, v25
@@ -1845,8 +1737,7 @@ define void @fnmadd_vf_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
 define void @fnmsub_fv_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 ; CHECK-LABEL: fnmsub_fv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 4
-; CHECK-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
 ; CHECK-NEXT:    vfnmsac.vf v26, fa0, v25
@@ -1865,8 +1756,7 @@ define void @fnmsub_fv_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 define void @fnmadd_fv_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
 ; CHECK-LABEL: fnmadd_fv_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 2
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vle64.v v26, (a1)
 ; CHECK-NEXT:    vfnmacc.vf v26, fa0, v25

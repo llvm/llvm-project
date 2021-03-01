@@ -75,18 +75,21 @@ static int InitLibrary(DeviceTy &Device) {
    */
   int32_t device_id = Device.DeviceID;
   int rc = OFFLOAD_SUCCESS;
+  bool supportsEmptyImages = Device.RTL->supports_empty_images &&
+                             Device.RTL->supports_empty_images() > 0;
 
   Device.PendingGlobalsMtx.lock();
   PM->TrlTblMtx.lock();
-  for (HostEntriesBeginToTransTableTy::iterator entry_it =
-           PM->HostEntriesBeginToTransTable.begin();
-       entry_it != PM->HostEntriesBeginToTransTable.end(); ++entry_it) {
-    TranslationTable *TransTable = &entry_it->second;
+  for (auto *HostEntriesBegin : PM->HostEntriesBeginRegistrationOrder) {
+    TranslationTable *TransTable =
+        &PM->HostEntriesBeginToTransTable[HostEntriesBegin];
     if (TransTable->HostTable.EntriesBegin ==
-        TransTable->HostTable.EntriesEnd) {
+            TransTable->HostTable.EntriesEnd &&
+        !supportsEmptyImages) {
       // No host entry so no need to proceed
       continue;
     }
+
     if (TransTable->TargetsTable[device_id] != 0) {
       // Library entries have already been processed
       continue;

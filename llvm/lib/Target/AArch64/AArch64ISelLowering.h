@@ -16,6 +16,7 @@
 
 #include "AArch64.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/CallingConv.h"
@@ -806,6 +807,13 @@ public:
   /// NOTE: Once BUILD_VECTOR is legal or can be custom lowered for all legal
   /// vector types this override can be removed.
   bool mergeStoresAfterLegalization(EVT VT) const override;
+
+  // If the platform/function should have a redzone, return the size in bytes.
+  unsigned getRedZoneSize(const Function &F) const {
+    if (F.hasFnAttribute(Attribute::NoRedZone))
+      return 0;
+    return 128;
+  }
 
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can

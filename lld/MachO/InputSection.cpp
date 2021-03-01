@@ -40,12 +40,10 @@ static uint64_t resolveSymbolVA(uint8_t *loc, const lld::macho::Symbol &sym,
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
     if (sym.isInStubs())
       return in.stubs->addr + sym.stubsIndex * target->stubSize;
-  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT | RelocAttrBits::LOAD)) {
+  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
     if (sym.isInGot())
       return in.got->addr + sym.gotIndex * WordSize;
-  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    return in.got->addr + sym.gotIndex * WordSize;
-  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV | RelocAttrBits::LOAD)) {
+  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     if (sym.isInGot())
       return in.tlvPointers->addr + sym.gotIndex * WordSize;
     assert(isa<Defined>(&sym));

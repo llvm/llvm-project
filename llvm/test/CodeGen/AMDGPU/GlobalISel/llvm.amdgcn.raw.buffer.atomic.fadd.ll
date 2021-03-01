@@ -177,13 +177,13 @@ define amdgpu_ps void @raw_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__sgp
   ; GFX90A:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX90A:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX90A:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-  ; GFX90A:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
+  ; GFX90A:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX90A:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; GFX90A:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; GFX90A:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; GFX90A:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
-  ; GFX90A:   [[COPY9:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
-  ; GFX90A:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
+  ; GFX90A:   [[COPY9:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub0_sub1
+  ; GFX90A:   [[COPY10:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; GFX90A:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
   ; GFX90A: bb.2:
   ; GFX90A:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -263,11 +263,11 @@ define amdgpu_ps void @raw_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__0_v
   ; GFX90A:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX90A:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX90A:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-  ; GFX90A:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
+  ; GFX90A:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX90A:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; GFX90A:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
-  ; GFX90A:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
-  ; GFX90A:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
+  ; GFX90A:   [[COPY7:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub0_sub1
+  ; GFX90A:   [[COPY8:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; GFX90A:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
   ; GFX90A: bb.2:
   ; GFX90A:   successors: %bb.3(0x40000000), %bb.2(0x40000000)

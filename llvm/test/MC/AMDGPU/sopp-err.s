@@ -82,6 +82,26 @@ s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
 s_sendmsg sendmsg(MSG_GS_DONE, 0, 0)
 // GCN: error: message operation does not support streams
 
+s_sendmsg sendmsg(MSG_SAVEWAVE)
+// SICI: error: invalid message id
+
+s_sendmsg sendmsg(MSG_STALL_WAVE_GEN)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+
+s_sendmsg sendmsg(MSG_HALT_WAVES)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+
+s_sendmsg sendmsg(MSG_ORDERED_PS_DONE)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+
+s_sendmsg sendmsg(MSG_EARLY_PRIM_DEALLOC)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+// GFX10: error: invalid message id
+
 s_sendmsg sendmsg(MSG_GS_ALLOC_REQ)
 // VI: error: invalid message id
 // SICI: error: invalid message id
@@ -90,6 +110,14 @@ s_sendmsg sendmsg(MSG_GS_ALLOC_REQ, 0)
 // VI: error: invalid message id
 // SICI: error: invalid message id
 // GFX10: error: message does not support operations
+
+s_sendmsg sendmsg(MSG_GET_DOORBELL)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+
+s_sendmsg sendmsg(MSG_GET_DDID)
+// SICI: error: invalid message id
+// VI: error: invalid message id
 
 s_sendmsg sendmsg(-1)
 // VI: error: invalid message id

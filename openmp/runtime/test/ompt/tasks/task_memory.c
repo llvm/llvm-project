@@ -77,9 +77,9 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   ompt_get_unique_id = (ompt_get_unique_id_t)lookup("ompt_get_unique_id");
   ompt_get_task_memory = (ompt_get_task_memory_t)lookup("ompt_get_task_memory");
 
-  register_callback(ompt_callback_implicit_task);
-  register_callback(ompt_callback_task_create);
-  register_callback(ompt_callback_task_schedule);
+  register_ompt_callback(ompt_callback_implicit_task);
+  register_ompt_callback(ompt_callback_task_create);
+  register_ompt_callback(ompt_callback_task_schedule);
   printf("0: NULL_POINTER=%p\n", (void *)NULL);
   return 1; // success
 }

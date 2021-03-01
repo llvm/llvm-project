@@ -647,10 +647,16 @@ adds sp, #-4096
         dbg #5
         dbg #0
         dbg #15
+        dbg.w #0
+        it ne
+        dbgne.w #0
 
 @ CHECK: dbg	#5                      @ encoding: [0xaf,0xf3,0xf5,0x80]
 @ CHECK: dbg	#0                      @ encoding: [0xaf,0xf3,0xf0,0x80]
 @ CHECK: dbg	#15                     @ encoding: [0xaf,0xf3,0xff,0x80]
+@ CHECK: dbg	#0                      @ encoding: [0xaf,0xf3,0xf0,0x80]
+@ CHECK: it	ne                      @ encoding: [0x18,0xbf]
+@ CHECK: dbgne	#0                      @ encoding: [0xaf,0xf3,0xf0,0x80]
 
 
 @------------------------------------------------------------------------------

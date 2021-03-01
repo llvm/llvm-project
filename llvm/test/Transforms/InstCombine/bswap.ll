@@ -596,19 +596,7 @@ define i64 @bswap_and_mask_2(i64 %0) {
 
 define i64 @bswap_trunc(i64 %x01234567) {
 ; CHECK-LABEL: @bswap_trunc(
-; CHECK-NEXT:    [[X7ZZZZZZZ:%.*]] = shl i64 [[X01234567:%.*]], 56
-; CHECK-NEXT:    [[XZ0123456:%.*]] = lshr i64 [[X01234567]], 8
-; CHECK-NEXT:    [[XZZZZZ012:%.*]] = lshr i64 [[X01234567]], 40
-; CHECK-NEXT:    [[X3456:%.*]] = trunc i64 [[XZ0123456]] to i32
-; CHECK-NEXT:    [[XZ012:%.*]] = trunc i64 [[XZZZZZ012]] to i32
-; CHECK-NEXT:    [[X6543:%.*]] = call i32 @llvm.bswap.i32(i32 [[X3456]])
-; CHECK-NEXT:    [[X210Z:%.*]] = call i32 @llvm.bswap.i32(i32 [[XZ012]])
-; CHECK-NEXT:    [[XZ210:%.*]] = lshr exact i32 [[X210Z]], 8
-; CHECK-NEXT:    [[XZZZZ6543:%.*]] = zext i32 [[X6543]] to i64
-; CHECK-NEXT:    [[XZZZZZ210:%.*]] = zext i32 [[XZ210]] to i64
-; CHECK-NEXT:    [[XZ6543ZZZ:%.*]] = shl nuw nsw i64 [[XZZZZ6543]], 24
-; CHECK-NEXT:    [[XZ6543210:%.*]] = or i64 [[XZ6543ZZZ]], [[XZZZZZ210]]
-; CHECK-NEXT:    [[X76543210:%.*]] = or i64 [[XZ6543210]], [[X7ZZZZZZZ]]
+; CHECK-NEXT:    [[X76543210:%.*]] = call i64 @llvm.bswap.i64(i64 [[X01234567:%.*]])
 ; CHECK-NEXT:    ret i64 [[X76543210]]
 ;
   %x7zzzzzzz = shl i64 %x01234567, 56

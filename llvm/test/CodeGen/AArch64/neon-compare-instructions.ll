@@ -1241,8 +1241,7 @@ define <2 x i64> @cmltz2xi64(<2 x i64> %A) {
 define <8 x i8> @cmneqz8xi8(<8 x i8> %A) {
 ; CHECK-LABEL: cmneqz8xi8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    cmtst v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    ret
   %tmp3 = icmp ne <8 x i8> %A, zeroinitializer;
   %tmp4 = sext <8 x i1> %tmp3 to <8 x i8>
@@ -1252,8 +1251,7 @@ define <8 x i8> @cmneqz8xi8(<8 x i8> %A) {
 define <16 x i8> @cmneqz16xi8(<16 x i8> %A) {
 ; CHECK-LABEL: cmneqz16xi8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
-; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    cmtst v0.16b, v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %tmp3 = icmp ne <16 x i8> %A, zeroinitializer;
   %tmp4 = sext <16 x i1> %tmp3 to <16 x i8>
@@ -1263,8 +1261,7 @@ define <16 x i8> @cmneqz16xi8(<16 x i8> %A) {
 define <4 x i16> @cmneqz4xi16(<4 x i16> %A) {
 ; CHECK-LABEL: cmneqz4xi16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmeq v0.4h, v0.4h, #0
-; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    cmtst v0.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    ret
   %tmp3 = icmp ne <4 x i16> %A, zeroinitializer;
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i16>
@@ -1274,8 +1271,7 @@ define <4 x i16> @cmneqz4xi16(<4 x i16> %A) {
 define <8 x i16> @cmneqz8xi16(<8 x i16> %A) {
 ; CHECK-LABEL: cmneqz8xi16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmeq v0.8h, v0.8h, #0
-; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    cmtst v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    ret
   %tmp3 = icmp ne <8 x i16> %A, zeroinitializer;
   %tmp4 = sext <8 x i1> %tmp3 to <8 x i16>
@@ -1285,8 +1281,7 @@ define <8 x i16> @cmneqz8xi16(<8 x i16> %A) {
 define <2 x i32> @cmneqz2xi32(<2 x i32> %A) {
 ; CHECK-LABEL: cmneqz2xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmeq v0.2s, v0.2s, #0
-; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    cmtst v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp3 = icmp ne <2 x i32> %A, zeroinitializer;
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
@@ -1296,8 +1291,7 @@ define <2 x i32> @cmneqz2xi32(<2 x i32> %A) {
 define <4 x i32> @cmneqz4xi32(<4 x i32> %A) {
 ; CHECK-LABEL: cmneqz4xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
-; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    cmtst v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp3 = icmp ne <4 x i32> %A, zeroinitializer;
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
@@ -1307,8 +1301,7 @@ define <4 x i32> @cmneqz4xi32(<4 x i32> %A) {
 define <2 x i64> @cmneqz2xi64(<2 x i64> %A) {
 ; CHECK-LABEL: cmneqz2xi64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmeq v0.2d, v0.2d, #0
-; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    cmtst v0.2d, v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp3 = icmp ne <2 x i64> %A, zeroinitializer;
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>

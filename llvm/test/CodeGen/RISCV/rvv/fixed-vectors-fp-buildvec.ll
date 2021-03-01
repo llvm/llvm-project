@@ -12,8 +12,7 @@ define void @buildvec_no_vid_v4f32(<4 x float>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI0_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI0_0)
-; CHECK-NEXT:    addi a2, zero, 4
-; CHECK-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a1)
 ; CHECK-NEXT:    vse32.v v25, (a0)
 ; CHECK-NEXT:    ret

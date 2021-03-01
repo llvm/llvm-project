@@ -713,6 +713,30 @@ void XCOFFObjectWriter::writeRelocations() {
 }
 
 void XCOFFObjectWriter::writeSymbolTable(const MCAsmLayout &Layout) {
+  // Write symbol 0 as C_FILE.
+  // FIXME: support 64-bit C_FILE symbol.
+  //
+  // n_name. The n_name of a C_FILE symbol is the source filename when no
+  // auxiliary entries are present. The source filename is alternatively
+  // provided by an auxiliary entry, in which case the n_name of the C_FILE
+  // symbol is `.file`.
+  // FIXME: add the real source filename.
+  writeSymbolName(".file");
+  // n_value. The n_value of a C_FILE symbol is its symbol table index.
+  W.write<uint32_t>(0);
+  // n_scnum. N_DEBUG is a reserved section number for indicating a special
+  // symbolic debugging symbol.
+  W.write<int16_t>(XCOFF::ReservedSectionNum::N_DEBUG);
+  // n_type. The n_type field of a C_FILE symbol encodes the source language and
+  // CPU version info; zero indicates no info.
+  W.write<uint16_t>(0);
+  // n_sclass. The C_FILE symbol provides source file-name information,
+  // source-language ID and CPU-version ID information and some other optional
+  // infos.
+  W.write<uint8_t>(XCOFF::C_FILE);
+  // n_numaux. No aux entry for now.
+  W.write<uint8_t>(0);
+
   for (const auto &Csect : UndefinedCsects) {
     writeSymbolTableEntryForControlSection(
         Csect, XCOFF::ReservedSectionNum::N_UNDEF, Csect.MCCsect->getStorageClass());
@@ -785,9 +809,8 @@ void XCOFFObjectWriter::finalizeSectionInfo() {
 }
 
 void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
-  // The first symbol table entry is for the file name. We are not emitting it
-  // yet, so start at index 0.
-  uint32_t SymbolTableIndex = 0;
+  // The first symbol table entry (at index 0) is for the file name.
+  uint32_t SymbolTableIndex = 1;
 
   // Calculate indices for undefined symbols.
   for (auto &Csect : UndefinedCsects) {

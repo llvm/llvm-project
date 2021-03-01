@@ -5,10 +5,10 @@
 ---
 name:            test_fmamk_reg_imm_f64
 registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
-  - { id: 3, class: vreg_64 }
+  - { id: 0, class: vreg_64_align2 }
+  - { id: 1, class: vreg_64_align2 }
+  - { id: 2, class: vreg_64_align2 }
+  - { id: 3, class: vreg_64_align2 }
 body:             |
   bb.0:
 
@@ -24,10 +24,10 @@ body:             |
 ---
 name:            test_fmamk_imm_reg_f64
 registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
-  - { id: 3, class: vreg_64 }
+  - { id: 0, class: vreg_128_align2 }
+  - { id: 1, class: vreg_64_align2 }
+  - { id: 2, class: vreg_64_align2 }
+  - { id: 3, class: vreg_64_align2 }
 body:             |
   bb.0:
 
@@ -43,9 +43,9 @@ body:             |
 ---
 name:            test_fmaak_f64
 registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
+  - { id: 0, class: vreg_128_align2 }
+  - { id: 1, class: vreg_64_align2 }
+  - { id: 2, class: vreg_64_align2 }
 body:             |
   bb.0:
 
@@ -56,15 +56,15 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_sgpr_src0_f64
-# GCN: V_FMA_F64_e64 0, killed %0, 0, %1, 0, %2:vreg_64, 0, 0, implicit $mode, implicit $exec
+# GCN: V_FMA_F64_e64 0, killed %0, 0, %1, 0, %2:vreg_64_align2, 0, 0, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_sgpr_src0_f64
 registers:
   - { id: 0, class: sreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
-  - { id: 3, class: vreg_64 }
+  - { id: 1, class: vreg_64_align2 }
+  - { id: 2, class: vreg_64_align2 }
+  - { id: 3, class: vreg_64_align2 }
 body:             |
   bb.0:
 
@@ -75,14 +75,14 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_inlineimm_src0_f64
-# GCN: V_FMA_F64_e64 0, 4611686018427387904, 0, %0, 0, %1:vreg_64, 0, 0, implicit $mode, implicit $exec
+# GCN: V_FMA_F64_e64 0, 4611686018427387904, 0, %0, 0, %1:vreg_64_align2, 0, 0, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_inlineimm_src0_f64
 registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
+  - { id: 0, class: vreg_64_align2 }
+  - { id: 1, class: vreg_64_align2 }
+  - { id: 2, class: vreg_64_align2 }
 body:             |
   bb.0:
 
@@ -92,14 +92,14 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_otherimm_src0_f64
-# GCN: V_FMA_F64_e64 0, 4611686018427387904, 0, %0, 0, %1:vreg_64, 0, 0, implicit $mode, implicit $exec
+# GCN: V_FMA_F64_e64 0, 4611686018427387904, 0, %0, 0, %1:vreg_64_align2, 0, 0, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_otherimm_src0_f64
 registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
+  - { id: 0, class: vreg_64_align2 }
+  - { id: 1, class: vreg_64_align2 }
+  - { id: 2, class: vreg_64_align2 }
 body:             |
   bb.0:
 
@@ -113,9 +113,9 @@ body:             |
 ---
 name:            test_fmaak_other_constantlike_src0_f64
 registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
+  - { id: 0, class: vreg_64_align2 }
+  - { id: 1, class: vreg_64_align2 }
+  - { id: 2, class: vreg_64_align2 }
 stack:
   - { id: 0, name: "", type: default, offset: 0, size: 128, alignment: 8,
       callee-saved-register: '', local-offset: 0, debug-info-variable: '',
@@ -133,10 +133,10 @@ body:             |
 ---
 name:            test_fmamk_reg_unfoldable_literal_src0_f64
 registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
-  - { id: 3, class: vreg_64 }
+  - { id: 0, class: vreg_64_align2 }
+  - { id: 1, class: vreg_64_align2 }
+  - { id: 2, class: vreg_64_align2 }
+  - { id: 3, class: vreg_64_align2 }
 body:             |
   bb.0:
 
@@ -152,10 +152,10 @@ body:             |
 ---
 name:            test_fmamk_reg_unfoldable_literal_src1_f64
 registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
-  - { id: 3, class: vreg_64 }
+  - { id: 0, class: vreg_64_align2 }
+  - { id: 1, class: vreg_64_align2 }
+  - { id: 2, class: vreg_64_align2 }
+  - { id: 3, class: vreg_64_align2 }
 body:             |
   bb.0:
 
@@ -171,10 +171,10 @@ body:             |
 ---
 name:            test_fmaak_reg_unfoldable_literal_src2_f64
 registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
-  - { id: 3, class: vreg_64 }
+  - { id: 0, class: vreg_64_align2 }
+  - { id: 1, class: vreg_64_align2 }
+  - { id: 2, class: vreg_64_align2 }
+  - { id: 3, class: vreg_64_align2 }
 body:             |
   bb.0:
 

@@ -23,6 +23,7 @@
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/lldb-types.h"
 
 #include "Plugins/ExpressionParser/Clang/CxxModuleHandler.h"
@@ -148,7 +149,10 @@ public:
     DeclOrigin() : ctx(nullptr), decl(nullptr) {}
 
     DeclOrigin(clang::ASTContext *_ctx, clang::Decl *_decl)
-        : ctx(_ctx), decl(_decl) {}
+        : ctx(_ctx), decl(_decl) {
+      // The decl has to be in its associated ASTContext.
+      assert(_decl == nullptr || &_decl->getASTContext() == _ctx);
+    }
 
     DeclOrigin(const DeclOrigin &rhs) {
       ctx = rhs.ctx;
@@ -190,6 +194,10 @@ public:
         : clang::ASTImporter(*target_ctx, master.m_file_manager, *source_ctx,
                              master.m_file_manager, true /*minimal*/),
           m_master(master), m_source_ctx(source_ctx) {
+      // Target and source ASTContext shouldn't be identical. Importing AST
+      // nodes within the same AST doesn't make any sense as the whole idea
+      // is to import them to a different AST.
+      lldbassert(target_ctx != source_ctx && "Can't import into itself");
       setODRHandling(clang::ASTImporter::ODRHandlingType::Liberal);
     }
 
@@ -272,6 +280,13 @@ public:
     /// Sets the DeclOrigin for the given Decl and overwrites any existing
     /// DeclOrigin.
     void setOrigin(const clang::Decl *decl, DeclOrigin origin) {
+      // Setting the origin of any decl to itself (or to a different decl
+      // in the same ASTContext) doesn't make any sense. It will also cause
+      // ASTImporterDelegate::ImportImpl to infinite recurse when trying to find
+      // the 'original' Decl when importing code.
+      assert(&decl->getASTContext() != origin.ctx &&
+             "Trying to set decl origin to its own ASTContext?");
+      assert(decl != origin.decl && "Trying to set decl origin to itself?");
       m_origins[decl] = origin;
     }
 

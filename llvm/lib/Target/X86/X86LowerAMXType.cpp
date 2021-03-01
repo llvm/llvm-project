@@ -70,7 +70,8 @@ static std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   case Intrinsic::x86_tdpbssd_internal:
   case Intrinsic::x86_tdpbsud_internal:
   case Intrinsic::x86_tdpbusd_internal:
-  case Intrinsic::x86_tdpbuud_internal: {
+  case Intrinsic::x86_tdpbuud_internal:
+  case Intrinsic::x86_tdpbf16ps_internal: {
     switch (OpNo) {
     case 3:
       Row = II->getArgOperand(0);

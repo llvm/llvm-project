@@ -6,10 +6,8 @@
 define {i64, i1} @t1() nounwind {
 ; CHECK-LABEL: t1:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movl $8, %ecx
-; CHECK-NEXT:    movl $9, %eax
-; CHECK-NEXT:    mulq %rcx
-; CHECK-NEXT:    seto %dl
+; CHECK-NEXT:    movl $72, %eax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    retq
   %1 = call {i64, i1} @llvm.umul.with.overflow.i64(i64 9, i64 8)
   ret {i64, i1} %1
@@ -28,10 +26,8 @@ define {i64, i1} @t2() nounwind {
 define {i64, i1} @t3() nounwind {
 ; CHECK-LABEL: t3:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movq $-1, %rcx
-; CHECK-NEXT:    movl $9, %eax
-; CHECK-NEXT:    mulq %rcx
-; CHECK-NEXT:    seto %dl
+; CHECK-NEXT:    movq $-9, %rax
+; CHECK-NEXT:    movb $1, %dl
 ; CHECK-NEXT:    retq
   %1 = call {i64, i1} @llvm.umul.with.overflow.i64(i64 9, i64 -1)
   ret {i64, i1} %1

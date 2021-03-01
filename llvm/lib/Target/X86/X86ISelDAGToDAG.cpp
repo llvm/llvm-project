@@ -4626,7 +4626,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::x86_tdpbsud_internal:
     case Intrinsic::x86_tdpbusd_internal:
     case Intrinsic::x86_tdpbuud_internal: {
-      if (!Subtarget->hasAMXTILE())
+      if (!Subtarget->hasAMXINT8())
         break;
       SDValue Chain = Node->getOperand(0);
       unsigned Opc;

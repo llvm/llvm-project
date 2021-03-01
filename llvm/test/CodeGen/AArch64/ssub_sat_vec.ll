@@ -369,42 +369,28 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK-LABEL: v2i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x7, #0 // =0
-; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    cmp x3, #0 // =0
-; CHECK-NEXT:    cset w10, lt
-; CHECK-NEXT:    cmp w10, w9
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    subs x11, x2, x6
+; CHECK-NEXT:    subs x8, x2, x6
 ; CHECK-NEXT:    sbcs x12, x3, x7
+; CHECK-NEXT:    mov x9, #9223372036854775807
+; CHECK-NEXT:    eor x10, x3, x7
 ; CHECK-NEXT:    cmp x12, #0 // =0
-; CHECK-NEXT:    mov x8, #9223372036854775807
-; CHECK-NEXT:    cset w15, lt
-; CHECK-NEXT:    cinv x14, x8, ge
-; CHECK-NEXT:    cmp w10, w15
-; CHECK-NEXT:    cset w10, ne
-; CHECK-NEXT:    asr x13, x12, #63
-; CHECK-NEXT:    tst w9, w10
-; CHECK-NEXT:    csel x2, x13, x11, ne
-; CHECK-NEXT:    csel x3, x14, x12, ne
-; CHECK-NEXT:    cmp x5, #0 // =0
-; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    cmp x1, #0 // =0
-; CHECK-NEXT:    cset w10, lt
-; CHECK-NEXT:    cmp w10, w9
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    subs x11, x0, x4
-; CHECK-NEXT:    sbcs x12, x1, x5
-; CHECK-NEXT:    cmp x12, #0 // =0
-; CHECK-NEXT:    cset w13, lt
-; CHECK-NEXT:    cinv x8, x8, ge
-; CHECK-NEXT:    cmp w10, w13
-; CHECK-NEXT:    cset w10, ne
-; CHECK-NEXT:    tst w9, w10
-; CHECK-NEXT:    asr x9, x12, #63
-; CHECK-NEXT:    csel x9, x9, x11, ne
-; CHECK-NEXT:    csel x1, x8, x12, ne
-; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    eor x13, x3, x12
+; CHECK-NEXT:    cinv x14, x9, ge
+; CHECK-NEXT:    tst x10, x13
+; CHECK-NEXT:    asr x10, x12, #63
+; CHECK-NEXT:    csel x2, x10, x8, lt
+; CHECK-NEXT:    csel x3, x14, x12, lt
+; CHECK-NEXT:    subs x8, x0, x4
+; CHECK-NEXT:    sbcs x10, x1, x5
+; CHECK-NEXT:    eor x11, x1, x5
+; CHECK-NEXT:    cmp x10, #0 // =0
+; CHECK-NEXT:    eor x12, x1, x10
+; CHECK-NEXT:    cinv x9, x9, ge
+; CHECK-NEXT:    tst x11, x12
+; CHECK-NEXT:    asr x11, x10, #63
+; CHECK-NEXT:    csel x8, x11, x8, lt
+; CHECK-NEXT:    csel x1, x9, x10, lt
+; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret

@@ -198,10 +198,10 @@ def Shape_FromExtentsOp : Shape_Op<"from_extents", [NoSideEffect]> {
     %s1 = shape.from_extents
     ```
   }];
-  let arguments = (ins Variadic<Index>:$extents);
+  let arguments = (ins Variadic<Shape_SizeOrIndexType>:$extents);
   let results = (outs Shape_ShapeType:$shape);
 
-  let assemblyFormat = "$extents attr-dict";
+  let assemblyFormat = "$extents attr-dict `:` type($extents)";
 
   let hasFolder = 1;
 }

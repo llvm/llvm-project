@@ -155,7 +155,7 @@
 ; OBJ-NEXT:   NumberOfSections: 3
 ; OBJ-NEXT:   TimeStamp:
 ; OBJ-NEXT:   SymbolTableOffset: 0x10C
-; OBJ-NEXT:   SymbolTableEntries: 44
+; OBJ-NEXT:   SymbolTableEntries: 45
 ; OBJ-NEXT:   OptionalHeaderSize: 0x0
 ; OBJ-NEXT:   Flags: 0x0
 ; OBJ-NEXT: }
@@ -209,7 +209,17 @@
 ; SYMS-NEXT: Arch: powerpc
 ; SYMS-NEXT: AddressSize: 32bit
 ; SYMS:      Symbols [
-; SYMS:        Symbol {
+; SYMS-NEXT:   Symbol {
+; SYMS-NEXT:     Index: 0
+; SYMS-NEXT:     Name: .file
+; SYMS-NEXT:     Value (SymbolTableIndex): 0x0
+; SYMS-NEXT:     Section: N_DEBUG
+; SYMS-NEXT:     Source Language ID: TB_C (0x0)
+; SYMS-NEXT:     CPU Version ID: 0x0
+; SYMS-NEXT:     StorageClass: C_FILE (0x67)
+; SYMS-NEXT:     NumberOfAuxEntries: 0
+; SYMS-NEXT:   }
+; SYMS-NEXT:   Symbol {
 ; SYMS-NEXT:     Index: [[#INDX:]]
 ; SYMS-NEXT:     Name: .text
 ; SYMS-NEXT:     Value (RelocatableAddress): 0x0

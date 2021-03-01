@@ -32,9 +32,6 @@ func private @method_impl(!fir.box<!fir.type<derived3{f:f32}>>)
 func private @nop()
 func private @get_func() -> (() -> ())
 
-// CHECK-LABEL: func private @attr1() -> none attributes {a = #fir.opaque<>, b = #fir.opaque<>}
-func private @attr1() -> none attributes {a = #fir.opaque<>, b = #fir.opaque<>}
-
 // CHECK-LABEL:       func @instructions() {
 func @instructions() {
 // CHECK: [[VAL_0:%.*]] = fir.alloca !fir.array<10xi32>
@@ -603,4 +600,23 @@ func @early_exit(%ok : i1, %k : i32) -> i1 {
 // CHECK: return [[VAL_190]] : i1
 // CHECK: }
   return %newOk#0 : i1
+}
+
+// CHECK-LABEL: @test_misc_ops(
+// CHECK-SAME: [[ARR1:%.*]]: !fir.ref<!fir.array<?x?xf32>>, [[INDXM:%.*]]: index, [[INDXN:%.*]]: index, [[INDXO:%.*]]: index, [[INDXP:%.*]]: index)
+func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
+  // CHECK: [[I10:%.*]] = constant 10 : index
+  // CHECK: [[J20:%.*]] = constant 20 : index
+  // CHECK: [[C2:%.*]] = constant 2 : index
+  // CHECK: [[C9:%.*]] = constant 9 : index
+  // CHECK: [[C1_I32:%.*]] = constant 9 : i32
+  %i10 = constant 10 : index
+  %j20 = constant 20 : index
+  %c2 = constant 2 : index
+  %c9 = constant 9 : index
+  %c1_i32 = constant 9 : i32
+
+  // CHECK: [[ARR2:%.*]] = fir.zero_bits !fir.array<10xi32>
+  %arr2 = fir.zero_bits !fir.array<10xi32>
+  return
 }

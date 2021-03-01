@@ -686,7 +686,8 @@ void RTNAME(Trim)(Descriptor &result, const Descriptor &string,
     terminator.Crash(
         "TRIM: bad string type code %d", static_cast<int>(string.raw().type));
   }
-  result.Establish(string.type(), resultBytes, nullptr, 0);
+  result.Establish(string.type(), resultBytes, nullptr, 0, nullptr,
+      CFI_attribute_allocatable);
   RUNTIME_CHECK(terminator, result.Allocate(nullptr, nullptr) == CFI_SUCCESS);
   std::memcpy(result.OffsetElement(), string.OffsetElement(), resultBytes);
 }

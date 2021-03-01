@@ -34,19 +34,36 @@ using namespace lldb_private;
 
 char ClangUtilityFunction::ID;
 
-/// Constructor
-///
-/// \param[in] text
-///     The text of the function.  Must be a full translation unit.
-///
-/// \param[in] name
-///     The name of the function, as used in the text.
 ClangUtilityFunction::ClangUtilityFunction(ExecutionContextScope &exe_scope,
-                                           std::string text, std::string name)
+                                           std::string text, std::string name,
+                                           bool enable_debugging)
     : UtilityFunction(
           exe_scope,
-          std::string(ClangExpressionSourceCode::g_expression_prefix) + text,
-          std::move(name)) {}
+          std::string(ClangExpressionSourceCode::g_expression_prefix) + text +
+              std::string(ClangExpressionSourceCode::g_expression_suffix),
+          std::move(name), enable_debugging) {
+  // Write the source code to a file so that LLDB's source manager can display
+  // it when debugging the code.
+  if (enable_debugging) {
+    int temp_fd = -1;
+    llvm::SmallString<128> result_path;
+    llvm::sys::fs::createTemporaryFile("lldb", "expr", temp_fd, result_path);
+    if (temp_fd != -1) {
+      lldb_private::NativeFile file(temp_fd, File::eOpenOptionWrite, true);
+      text = "#line 1 \"" + std::string(result_path) + "\"\n" + text;
+      size_t bytes_written = text.size();
+      file.Write(text.c_str(), bytes_written);
+      if (bytes_written == text.size()) {
+        // If we successfully wrote the source to a temporary file, replace the
+        // function text with the next text containing the line directive.
+        m_function_text =
+            std::string(ClangExpressionSourceCode::g_expression_prefix) + text +
+            std::string(ClangExpressionSourceCode::g_expression_suffix);
+      }
+      file.Close();
+    }
+  }
+}
 
 ClangUtilityFunction::~ClangUtilityFunction() {}
 

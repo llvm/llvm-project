@@ -154,6 +154,10 @@ EXECUTION OPTIONS
  suite take the most time to execute.  Note that this option is most useful
  with ``-j 1``.
 
+.. option:: --ignore-fail
+
+ Exit with status zero even if some tests fail.
+
 .. option:: --no-indirectly-run-check
 
  Do not error if a test would not be run if the user had specified the

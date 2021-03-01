@@ -27,6 +27,7 @@ public:
   /// the user expression.
   static const llvm::StringRef g_prefix_file_name;
   static const char *g_expression_prefix;
+  static const char *g_expression_suffix;
 
   /// The possible ways an expression can be wrapped.
   enum class WrapKind {

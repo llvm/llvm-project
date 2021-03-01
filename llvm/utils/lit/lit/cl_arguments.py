@@ -130,6 +130,10 @@ def parse_args():
     execution_group.add_argument("--allow-empty-runs",
             help="Do not fail the run if all tests are filtered out",
             action="store_true")
+    execution_group.add_argument("--ignore-fail",
+            dest="ignoreFail",
+            action="store_true",
+            help="Exit with status zero even if some tests fail")
     execution_group.add_argument("--no-indirectly-run-check",
             dest="indirectlyRunCheck",
             help="Do not error if a test would not be run if the user had "

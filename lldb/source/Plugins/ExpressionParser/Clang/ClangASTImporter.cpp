@@ -830,6 +830,10 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
 
   // Check which ASTContext this declaration originally came from.
   DeclOrigin origin = m_master.GetDeclOrigin(From);
+
+  // Prevent infinite recursion when the origin tracking contains a cycle.
+  assert(origin.decl != From && "Origin points to itself?");
+
   // If it originally came from the target ASTContext then we can just
   // pretend that the original is the one we imported. This can happen for
   // example when inspecting a persistent declaration from the scratch
@@ -1088,22 +1092,23 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
     DeclOrigin origin = from_context_md->getOrigin(from);
 
     if (origin.Valid()) {
-      if (!to_context_md->hasOrigin(to) || user_id != LLDB_INVALID_UID)
-        if (origin.ctx != &to->getASTContext())
+      if (origin.ctx != &to->getASTContext()) {
+        if (!to_context_md->hasOrigin(to) || user_id != LLDB_INVALID_UID)
           to_context_md->setOrigin(to, origin);
 
-      ImporterDelegateSP direct_completer =
-          m_master.GetDelegate(&to->getASTContext(), origin.ctx);
+        ImporterDelegateSP direct_completer =
+            m_master.GetDelegate(&to->getASTContext(), origin.ctx);
 
-      if (direct_completer.get() != this)
-        direct_completer->ASTImporter::Imported(origin.decl, to);
+        if (direct_completer.get() != this)
+          direct_completer->ASTImporter::Imported(origin.decl, to);
 
-      LLDB_LOG(log,
-               "    [ClangASTImporter] Propagated origin "
-               "(Decl*){0}/(ASTContext*){1} from (ASTContext*){2} to "
-               "(ASTContext*){3}",
-               origin.decl, origin.ctx, &from->getASTContext(),
-               &to->getASTContext());
+        LLDB_LOG(log,
+                 "    [ClangASTImporter] Propagated origin "
+                 "(Decl*){0}/(ASTContext*){1} from (ASTContext*){2} to "
+                 "(ASTContext*){3}",
+                 origin.decl, origin.ctx, &from->getASTContext(),
+                 &to->getASTContext());
+      }
     } else {
       if (m_new_decl_listener)
         m_new_decl_listener->NewDeclImported(from, to);

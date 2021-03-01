@@ -91,7 +91,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   {
     using T = std::pair<int, NotAssignable>;
     using P = std::pair<int, NotAssignable>;
-    static_assert(!std::is_assignable<T, P&&>::value, "");
+    static_assert(!std::is_assignable<T&, P&&>::value, "");
   }
   return true;
 }

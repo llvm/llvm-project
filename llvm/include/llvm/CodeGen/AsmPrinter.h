@@ -639,9 +639,6 @@ public:
   /// Emit 32- or 64-bit value depending on the DWARF format.
   void emitDwarfLengthOrOffset(uint64_t Value) const;
 
-  /// Emit a special value of 0xffffffff if producing 64-bit debugging info.
-  void maybeEmitDwarf64Mark() const;
-
   /// Emit a unit length field. The actual format, DWARF32 or DWARF64, is chosen
   /// according to the settings.
   void emitDwarfUnitLength(uint64_t Length, const Twine &Comment) const;

@@ -227,6 +227,10 @@ public:
 
   void UpdateLaunchInfoFromProperties();
 
+  void SetDebugUtilityExpression(bool debug);
+
+  bool GetDebugUtilityExpression() const;
+
 private:
   // Callbacks for m_launch_info.
   void Arg0ValueChangedCallback();

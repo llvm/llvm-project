@@ -123,14 +123,11 @@ define zeroext i1 @saddo1.i64(i64 %v1, i64 %v2, i64* %res) {
 ; RV32-NEXT:    add a2, a0, a2
 ; RV32-NEXT:    sltu a0, a2, a0
 ; RV32-NEXT:    add a5, a5, a0
-; RV32-NEXT:    slti a0, a5, 0
-; RV32-NEXT:    slti a1, a1, 0
-; RV32-NEXT:    xor a0, a1, a0
-; RV32-NEXT:    snez a0, a0
-; RV32-NEXT:    slti a3, a3, 0
+; RV32-NEXT:    xor a0, a1, a5
 ; RV32-NEXT:    xor a1, a1, a3
-; RV32-NEXT:    seqz a1, a1
+; RV32-NEXT:    not a1, a1
 ; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    slti a0, a0, 0
 ; RV32-NEXT:    sw a2, 0(a4)
 ; RV32-NEXT:    sw a5, 4(a4)
 ; RV32-NEXT:    ret
@@ -154,18 +151,15 @@ entry:
 define zeroext i1 @saddo2.i64(i64 %v1, i64* %res) {
 ; RV32-LABEL: saddo2.i64:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    addi a3, zero, -1
-; RV32-NEXT:    slt a3, a3, a1
-; RV32-NEXT:    addi a4, a0, 4
-; RV32-NEXT:    sltu a0, a4, a0
-; RV32-NEXT:    add a5, a1, a0
-; RV32-NEXT:    slti a0, a5, 0
-; RV32-NEXT:    slti a1, a1, 0
-; RV32-NEXT:    xor a0, a1, a0
-; RV32-NEXT:    snez a0, a0
-; RV32-NEXT:    and a0, a3, a0
-; RV32-NEXT:    sw a4, 0(a2)
-; RV32-NEXT:    sw a5, 4(a2)
+; RV32-NEXT:    addi a3, a0, 4
+; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:    add a4, a1, a0
+; RV32-NEXT:    xor a0, a1, a4
+; RV32-NEXT:    not a1, a1
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    slti a0, a0, 0
+; RV32-NEXT:    sw a3, 0(a2)
+; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: saddo2.i64:
@@ -189,11 +183,9 @@ define zeroext i1 @saddo3.i64(i64 %v1, i64* %res) {
 ; RV32-NEXT:    sltu a0, a3, a0
 ; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    addi a4, a0, -1
-; RV32-NEXT:    slti a0, a4, 0
-; RV32-NEXT:    slti a1, a1, 0
-; RV32-NEXT:    xor a0, a1, a0
-; RV32-NEXT:    snez a0, a0
+; RV32-NEXT:    xor a0, a1, a4
 ; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    slti a0, a0, 0
 ; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    ret
@@ -329,18 +321,14 @@ define zeroext i1 @ssubo.i64(i64 %v1, i64 %v2, i64* %res) {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    sltu a6, a0, a2
 ; RV32-NEXT:    sub a5, a1, a3
-; RV32-NEXT:    sub a7, a5, a6
-; RV32-NEXT:    slti a6, a7, 0
-; RV32-NEXT:    slti a1, a1, 0
-; RV32-NEXT:    xor a5, a1, a6
-; RV32-NEXT:    snez a5, a5
-; RV32-NEXT:    slti a3, a3, 0
+; RV32-NEXT:    sub a5, a5, a6
+; RV32-NEXT:    xor a6, a1, a5
 ; RV32-NEXT:    xor a1, a1, a3
-; RV32-NEXT:    snez a1, a1
-; RV32-NEXT:    and a1, a1, a5
+; RV32-NEXT:    and a1, a1, a6
+; RV32-NEXT:    slti a1, a1, 0
 ; RV32-NEXT:    sub a0, a0, a2
 ; RV32-NEXT:    sw a0, 0(a4)
-; RV32-NEXT:    sw a7, 4(a4)
+; RV32-NEXT:    sw a5, 4(a4)
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    ret
 ;
@@ -776,15 +764,11 @@ define i64 @saddo.select.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    add a5, a0, a2
 ; RV32-NEXT:    sltu a5, a5, a0
 ; RV32-NEXT:    add a4, a4, a5
-; RV32-NEXT:    slti a4, a4, 0
-; RV32-NEXT:    slti a5, a1, 0
-; RV32-NEXT:    xor a4, a5, a4
-; RV32-NEXT:    snez a6, a4
-; RV32-NEXT:    slti a4, a3, 0
-; RV32-NEXT:    xor a4, a5, a4
-; RV32-NEXT:    seqz a4, a4
-; RV32-NEXT:    and a4, a4, a6
-; RV32-NEXT:    bnez a4, .LBB24_2
+; RV32-NEXT:    xor a4, a1, a4
+; RV32-NEXT:    xor a5, a1, a3
+; RV32-NEXT:    not a5, a5
+; RV32-NEXT:    and a4, a5, a4
+; RV32-NEXT:    bltz a4, .LBB24_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a2
 ; RV32-NEXT:    mv a1, a3
@@ -816,15 +800,12 @@ define i1 @saddo.not.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    add a2, a0, a2
 ; RV32-NEXT:    sltu a0, a2, a0
 ; RV32-NEXT:    add a0, a4, a0
-; RV32-NEXT:    slti a0, a0, 0
-; RV32-NEXT:    slti a1, a1, 0
 ; RV32-NEXT:    xor a0, a1, a0
-; RV32-NEXT:    snez a0, a0
-; RV32-NEXT:    slti a2, a3, 0
-; RV32-NEXT:    xor a1, a1, a2
-; RV32-NEXT:    seqz a1, a1
+; RV32-NEXT:    xor a1, a1, a3
+; RV32-NEXT:    not a1, a1
 ; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    xori a0, a0, 1
+; RV32-NEXT:    addi a1, zero, -1
+; RV32-NEXT:    slt a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: saddo.not.i64:
@@ -1027,15 +1008,10 @@ define i64 @ssubo.select.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    sltu a4, a0, a2
 ; RV32-NEXT:    sub a5, a1, a3
 ; RV32-NEXT:    sub a4, a5, a4
-; RV32-NEXT:    slti a4, a4, 0
-; RV32-NEXT:    slti a5, a1, 0
-; RV32-NEXT:    xor a4, a5, a4
-; RV32-NEXT:    snez a6, a4
-; RV32-NEXT:    slti a4, a3, 0
-; RV32-NEXT:    xor a4, a5, a4
-; RV32-NEXT:    snez a4, a4
-; RV32-NEXT:    and a4, a4, a6
-; RV32-NEXT:    bnez a4, .LBB32_2
+; RV32-NEXT:    xor a4, a1, a4
+; RV32-NEXT:    xor a5, a1, a3
+; RV32-NEXT:    and a4, a5, a4
+; RV32-NEXT:    bltz a4, .LBB32_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a2
 ; RV32-NEXT:    mv a1, a3
@@ -1066,15 +1042,11 @@ define i1 @ssub.not.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a2, a1, a3
 ; RV32-NEXT:    sub a0, a2, a0
-; RV32-NEXT:    slti a0, a0, 0
-; RV32-NEXT:    slti a1, a1, 0
 ; RV32-NEXT:    xor a0, a1, a0
-; RV32-NEXT:    snez a0, a0
-; RV32-NEXT:    slti a2, a3, 0
-; RV32-NEXT:    xor a1, a1, a2
-; RV32-NEXT:    snez a1, a1
+; RV32-NEXT:    xor a1, a1, a3
 ; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    xori a0, a0, 1
+; RV32-NEXT:    addi a1, zero, -1
+; RV32-NEXT:    slt a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ssub.not.i64:
@@ -1562,15 +1534,12 @@ define zeroext i1 @saddo.br.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    add a2, a0, a2
 ; RV32-NEXT:    sltu a0, a2, a0
 ; RV32-NEXT:    add a0, a4, a0
-; RV32-NEXT:    slti a0, a0, 0
-; RV32-NEXT:    slti a1, a1, 0
 ; RV32-NEXT:    xor a0, a1, a0
-; RV32-NEXT:    snez a0, a0
-; RV32-NEXT:    slti a2, a3, 0
-; RV32-NEXT:    xor a1, a1, a2
-; RV32-NEXT:    seqz a1, a1
+; RV32-NEXT:    xor a1, a1, a3
+; RV32-NEXT:    not a1, a1
 ; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    beqz a0, .LBB47_2
+; RV32-NEXT:    addi a1, zero, -1
+; RV32-NEXT:    blt a1, a0, .LBB47_2
 ; RV32-NEXT:  # %bb.1: # %overflow
 ; RV32-NEXT:    mv a0, zero
 ; RV32-NEXT:    ret
@@ -1734,15 +1703,11 @@ define zeroext i1 @ssubo.br.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a2, a1, a3
 ; RV32-NEXT:    sub a0, a2, a0
-; RV32-NEXT:    slti a0, a0, 0
-; RV32-NEXT:    slti a1, a1, 0
 ; RV32-NEXT:    xor a0, a1, a0
-; RV32-NEXT:    snez a0, a0
-; RV32-NEXT:    slti a2, a3, 0
-; RV32-NEXT:    xor a1, a1, a2
-; RV32-NEXT:    snez a1, a1
+; RV32-NEXT:    xor a1, a1, a3
 ; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    beqz a0, .LBB51_2
+; RV32-NEXT:    addi a1, zero, -1
+; RV32-NEXT:    blt a1, a0, .LBB51_2
 ; RV32-NEXT:  # %bb.1: # %overflow
 ; RV32-NEXT:    mv a0, zero
 ; RV32-NEXT:    ret
