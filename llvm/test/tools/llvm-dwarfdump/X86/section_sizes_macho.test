@@ -17,6 +17,7 @@
 # CHECK-NEXT:__apple_namespac        36 (1.92%)
 # CHECK-NEXT:__apple_types           71 (3.79%)
 # CHECK-NEXT:__debug_line            61 (3.26%)
+
 # CHECK-EMPTY:
 # CHECK-NEXT: Total Size: 588  (31.41%)
 # CHECK-NEXT: Total File Size: 1872

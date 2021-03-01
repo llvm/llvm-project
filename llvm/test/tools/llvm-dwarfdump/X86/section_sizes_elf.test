@@ -15,6 +15,7 @@
 # CHECK-NEXT:.debug_type            26 (2.48%)
 # CHECK-NEXT:.debug_foo            100 (9.54%)
 # CHECK-NEXT:.debug_info.dwo         9 (0.86%)
+#
 # CHECK-EMPTY:
 # CHECK-NEXT: Total Size: 172  (16.41%)
 # CHECK-NEXT: Total File Size: 1048
