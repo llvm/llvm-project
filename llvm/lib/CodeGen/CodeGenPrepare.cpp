@@ -3813,7 +3813,7 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
   // to see if ScaleReg is actually X+C.  If so, we can turn this into adding
   // X*Scale + C*Scale to addr mode.
   ConstantInt *CI = nullptr; Value *AddLHS = nullptr;
-  if (isa<Instruction>(ScaleReg) &&  // not a constant expr.
+  if (isa<Instruction>(ScaleReg) && // not a constant expr.
       match(ScaleReg, m_Add(m_Value(AddLHS), m_ConstantInt(CI))) &&
       CI->getValue().isSignedIntN(64)) {
     TestAddrMode.InBounds = false;
