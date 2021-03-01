@@ -554,6 +554,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
 
         setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+        setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
         setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
         setOperationAction(ISD::ADD, VT, Custom);
@@ -610,6 +611,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
         setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+        setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
         setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
         setOperationAction(ISD::LOAD, VT, Custom);
@@ -1019,6 +1021,19 @@ getDefaultScalableVLOps(MVT VecVT, SDLoc DL, SelectionDAG &DAG,
                         const RISCVSubtarget &Subtarget) {
   assert(VecVT.isScalableVector() && "Expecting a scalable vector");
   return getDefaultVLOps(VecVT, VecVT, DL, DAG, Subtarget);
+}
+
+// The state of RVV BUILD_VECTOR and VECTOR_SHUFFLE lowering is that very few
+// of either is (currently) supported. This can get us into an infinite loop
+// where we try to lower a BUILD_VECTOR as a VECTOR_SHUFFLE as a BUILD_VECTOR
+// as a ..., etc.
+// Until either (or both) of these can reliably lower any node, reporting that
+// we don't want to expand BUILD_VECTORs via VECTOR_SHUFFLEs at least breaks
+// the infinite loop. Note that this lowers BUILD_VECTOR through the stack,
+// which is not desirable.
+bool RISCVTargetLowering::shouldExpandBuildVectorWithShuffles(
+    EVT VT, unsigned DefinedValues) const {
+  return false;
 }
 
 static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
@@ -2179,6 +2194,16 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue Val = Op.getOperand(1);
   SDValue Idx = Op.getOperand(2);
 
+  MVT ContainerVT = VecVT;
+  // If the operand is a fixed-length vector, convert to a scalable one.
+  if (VecVT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(DAG, VecVT, Subtarget);
+    Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+  }
+
+  SDValue Mask, VL;
+  std::tie(Mask, VL) = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
+
   // Custom-legalize INSERT_VECTOR_ELT where XLEN>=SEW, so that the vector is
   // first slid down into position, the value is inserted into the first
   // position, and the vector is slid back up. We do this to simplify patterns.
@@ -2186,20 +2211,16 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   if (Subtarget.is64Bit() || Val.getValueType() != MVT::i64) {
     if (isNullConstant(Idx))
       return Op;
-    SDValue Mask, VL;
-    std::tie(Mask, VL) = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
-    SDValue Slidedown = DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VecVT,
-                                    DAG.getUNDEF(VecVT), Vec, Idx, Mask, VL);
+    SDValue Slidedown =
+        DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
+                    DAG.getUNDEF(ContainerVT), Vec, Idx, Mask, VL);
     SDValue InsertElt0 =
-        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecVT, Slidedown, Val,
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ContainerVT, Slidedown, Val,
                     DAG.getConstant(0, DL, Subtarget.getXLenVT()));
 
-    return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, VecVT, Vec, InsertElt0, Idx,
-                       Mask, VL);
+    return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, ContainerVT, Vec, InsertElt0,
+                       Idx, Mask, VL);
   }
-
-  if (!VecVT.isScalableVector())
-    return SDValue();
 
   // Custom-legalize INSERT_VECTOR_ELT where XLEN<SEW, as the SEW element type
   // is illegal (currently only vXi64 RV32).
@@ -2212,17 +2233,21 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   // This essentially merges the original vector with the inserted element by
   // using a mask whose only set bit is that corresponding to the insert
   // index.
-  SDValue SplattedVal = DAG.getSplatVector(VecVT, DL, Val);
-  SDValue SplattedIdx = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Idx);
+  SDValue SplattedVal = DAG.getSplatVector(ContainerVT, DL, Val);
+  SDValue SplattedIdx =
+      DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT, Idx, VL);
 
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
-  SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, VecVT, Mask, VL);
+  SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, ContainerVT, Mask, VL);
   auto SetCCVT =
-      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VecVT);
-  SDValue SelectCond = DAG.getSetCC(DL, SetCCVT, VID, SplattedIdx, ISD::SETEQ);
-
-  return DAG.getNode(ISD::VSELECT, DL, VecVT, SelectCond, SplattedVal, Vec);
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ContainerVT);
+  SDValue SelectCond =
+      DAG.getNode(RISCVISD::SETCC_VL, DL, SetCCVT, VID, SplattedIdx,
+                  DAG.getCondCode(ISD::SETEQ), Mask, VL);
+  SDValue Select = DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT,
+                               SelectCond, SplattedVal, Vec, VL);
+  if (!VecVT.isFixedLengthVector())
+    return Select;
+  return convertFromScalableVector(VecVT, Select, DAG, Subtarget);
 }
 
 // Custom-lower EXTRACT_VECTOR_ELT operations to slide the vector down, then
