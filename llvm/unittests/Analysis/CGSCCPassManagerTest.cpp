@@ -252,6 +252,7 @@ public:
             "  call void @h1()\n"
             "  ret void\n"
             "}\n")) {
+    FAM.registerPass([&] { return FunctionStatusAnalysis(); });
     FAM.registerPass([&] { return TargetLibraryAnalysis(); });
     MAM.registerPass([&] { return LazyCallGraphAnalysis(); });
     MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });

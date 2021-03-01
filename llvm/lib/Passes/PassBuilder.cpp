@@ -279,6 +279,11 @@ static cl::opt<bool> EnableO3NonTrivialUnswitching(
     "enable-npm-O3-nontrivial-unswitch", cl::init(true), cl::Hidden,
     cl::ZeroOrMore, cl::desc("Enable non-trivial loop unswitching for -O3"));
 
+static cl::opt<bool> DoNotRerunFunctionPasses(
+    "cgscc-npm-no-fp-rerun", cl::init(false),
+    cl::desc("Do not rerun function passes wrapped by the scc pass adapter, if "
+             "they were run already and the function hasn't changed."));
+
 PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = true;
   LoopVectorization = true;
@@ -1022,8 +1027,10 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   // Lastly, add the core function simplification pipeline nested inside the
   // CGSCC walk.
-  MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
-      buildFunctionSimplificationPipeline(Level, Phase)));
+  auto FSP = buildFunctionSimplificationPipeline(Level, Phase);
+  if (DoNotRerunFunctionPasses)
+    FSP.addPass(RequireAnalysisPass<FunctionStatusAnalysis, Function>());
+  MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(std::move(FSP)));
 
   return MIWP;
 }
@@ -1182,6 +1189,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(SyntheticCountsPropagation());
 
   MPM.addPass(buildInlinerPipeline(Level, Phase));
+  if (DoNotRerunFunctionPasses)
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        InvalidateAnalysisPass<FunctionStatusAnalysis>()));
 
   if (EnableMemProfiler && Phase != ThinOrFullLTOPhase::ThinLTOPreLink) {
     MPM.addPass(createModuleToFunctionPassAdaptor(MemProfilerPass()));
