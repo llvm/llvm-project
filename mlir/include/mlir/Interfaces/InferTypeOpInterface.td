@@ -116,4 +116,20 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
   ];
 }
 
+// Convenience class grouping together type and shaped type op interfaces for
+// ops that have tensor return types.
+class InferTensorType<list<string> overridenMethods = []> {
+  list<OpTrait> traits = [
+    // Op implements infer type op interface.
+    InferTypeOpInterface,
+    // The op will have methods implementing the ShapedType type inference
+    // interface.
+    DeclareOpInterfaceMethods<InferShapedTypeOpInterface, overridenMethods>,
+    // The op produces tensors and will use the ShapedType type infer interface
+    // along with knowledge that it is producing Tensors to infer the type.
+    NativeOpTrait<"InferTensorType">
+  ];
+}
+defvar InferTensorTypeWithReify = InferTensorType<["reifyReturnTypeShapes"]>;
+
 #endif // MLIR_INFERTYPEOPINTERFACE
