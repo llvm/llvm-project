@@ -124,16 +124,6 @@ if(NOT APPLE_EMBEDDED)
   )
 endif()
 
-# IOS framework bundles are flat
-if(NOT APPLE_EMBEDDED)
-  add_custom_command(TARGET liblldb POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-            Versions/Current/XPCServices
-            ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/XPCServices
-    COMMENT "LLDB.framework: create symlink XPCServices"
-  )
-endif()
-
 # Add an rpath pointing to the directory where LLDB.framework is installed.
 # This allows frameworks (relying on @rpath) to be installed in the same folder and found at runtime.
 set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH
