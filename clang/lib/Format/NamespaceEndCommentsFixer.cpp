@@ -22,10 +22,6 @@ namespace clang {
 namespace format {
 
 namespace {
-// The maximal number of unwrapped lines that a short namespace spans.
-// Short namespaces don't need an end comment.
-static const int kShortNamespaceMaxLines = 1;
-
 // Computes the name of a namespace given the namespace token.
 // Returns "" for anonymous namespace.
 std::string computeName(const FormatToken *NamespaceTok) {
@@ -283,7 +279,7 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
         computeEndCommentText(NamespaceName, AddNewline, NamespaceTok,
                               Style.SpacesInLineCommentPrefix.Minimum);
     if (!hasEndComment(EndCommentPrevTok)) {
-      bool isShort = I - StartLineIndex <= kShortNamespaceMaxLines + 1;
+      bool isShort = I - StartLineIndex <= Style.ShortNamespaceLines + 1;
       if (!isShort)
         addEndComment(EndCommentPrevTok, EndCommentText, SourceMgr, &Fixes);
     } else if (!validEndComment(EndCommentPrevTok, NamespaceName,

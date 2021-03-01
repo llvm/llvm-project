@@ -2210,14 +2210,16 @@ the configuration (without a prefix: ``Auto``).
   not use this in config files, etc. Use at your own risk.
 
 **FixNamespaceComments** (``bool``)
-  If ``true``, clang-format adds missing namespace end comments and
-  fixes invalid existing ones.
+  If ``true``, clang-format adds missing namespace end comments for
+  short namespaces and fixes invalid existing ones. Short ones are
+  controlled by "ShortNamespaceLines".
 
   .. code-block:: c++
 
      true:                                  false:
      namespace a {                  vs.     namespace a {
      foo();                                 foo();
+     bar();                                 bar();
      } // namespace a                       }
 
 **ForEachMacros** (``std::vector<std::string>``)
@@ -2367,7 +2369,7 @@ the configuration (without a prefix: ``Auto``).
   the record members, respecting the ``AccessModifierOffset``. Record
   members are indented one level below the record.
   When ``true``, access modifiers get their own indentation level. As a
-  consequence, record members are indented 2 levels below the record,
+  consequence, record members are always indented 2 levels below the record,
   regardless of the access modifier presence. Value of the
   ``AccessModifierOffset`` is ignored.
 
@@ -3040,43 +3042,72 @@ the configuration (without a prefix: ``Auto``).
      /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
       * information */
 
+**ShortNamespaceLines** (``unsigned``)
+  The maximal number of unwrapped lines that a short namespace spans.
+  Defaults to 1.
+
+  This determines the maximum length of short namespaces by counting
+  unwrapped lines (i.e. containing neither opening nor closing
+  namespace brace) and makes "FixNamespaceComments" omit adding
+  end comments for those.
+
+  .. code-block:: c++
+
+     ShortNamespaceLines: 1     vs.     ShortNamespaceLines: 0
+     namespace a {                      namespace a {
+       int foo;                           int foo;
+     }                                  } // namespace a
+
+     ShortNamespaceLines: 1     vs.     ShortNamespaceLines: 0
+     namespace b {                      namespace b {
+       int foo;                           int foo;
+       int bar;                           int bar;
+     } // namespace b                   } // namespace b
+
 **SortIncludes** (``SortIncludesOptions``)
   Controls if and how clang-format will sort ``#includes``.
+  If ``Never``, includes are never sorted.
+  If ``CaseInsensitive``, includes are sorted in an ASCIIbetical or case
+  insensitive fashion.
+  If ``CaseSensitive``, includes are sorted in an alphabetical or case
+  sensitive fashion.
 
-  Possible Values:
+  Possible values:
 
-  * ``SI_Never`` (in configuration ``Never``)
+  * ``SI_Never`` (in configuration: ``Never``)
     Includes are never sorted.
 
     .. code-block:: c++
 
-      #include "B/A.h"
-      #include "A/B.h"
-      #include "a/b.h"
-      #include "A/b.h"
-      #include "B/a.h"
+       #include "B/A.h"
+       #include "A/B.h"
+       #include "a/b.h"
+       #include "A/b.h"
+       #include "B/a.h"
 
-  * ``SI_CaseInsensitive`` (in configuration ``CaseInsensitive``)
+  * ``SI_CaseInsensitive`` (in configuration: ``CaseInsensitive``)
     Includes are sorted in an ASCIIbetical or case insensitive fashion.
 
     .. code-block:: c++
 
-      #include "A/B.h"
-      #include "A/b.h"
-      #include "B/A.h"
-      #include "B/a.h"
-      #include "a/b.h"
+       #include "A/B.h"
+       #include "A/b.h"
+       #include "B/A.h"
+       #include "B/a.h"
+       #include "a/b.h"
 
-  * ``SI_CaseSensitive`` (in configuration ``CaseSensitive``)
+  * ``SI_CaseSensitive`` (in configuration: ``CaseSensitive``)
     Includes are sorted in an alphabetical or case sensitive fashion.
 
     .. code-block:: c++
 
-      #include "A/B.h"
-      #include "A/b.h"
-      #include "a/b.h"
-      #include "B/A.h"
-      #include "B/a.h"
+       #include "A/B.h"
+       #include "A/b.h"
+       #include "a/b.h"
+       #include "B/A.h"
+       #include "B/a.h"
+
+
 
 **SortJavaStaticImport** (``SortJavaStaticImportOptions``)
   When sorting Java imports, by default static imports are placed before
