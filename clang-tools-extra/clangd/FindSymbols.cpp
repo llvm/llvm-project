@@ -172,6 +172,26 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
 }
 
 namespace {
+std::string getSymbolName(ASTContext &Ctx, const NamedDecl &ND) {
+  // Print `MyClass(Category)` instead of `Category` and `MyClass()` instead
+  // of `anonymous`.
+  if (const auto *Container = dyn_cast<ObjCContainerDecl>(&ND))
+    return printObjCContainer(*Container);
+  // Differentiate between class and instance methods: print `-foo` instead of
+  // `foo` and `+sharedInstance` instead of `sharedInstance`.
+  if (const auto *Method = dyn_cast<ObjCMethodDecl>(&ND)) {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+
+    OS << (Method->isInstanceMethod() ? '-' : '+');
+    Method->getSelector().print(OS);
+
+    OS.flush();
+    return Name;
+  }
+  return printName(Ctx, ND);
+}
+
 std::string getSymbolDetail(ASTContext &Ctx, const NamedDecl &ND) {
   PrintingPolicy P(Ctx.getPrintingPolicy());
   P.SuppressScope = true;
@@ -220,7 +240,7 @@ llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   SymbolKind SK = indexSymbolKindToSymbolKind(SymInfo.Kind);
 
   DocumentSymbol SI;
-  SI.name = printName(Ctx, ND);
+  SI.name = getSymbolName(Ctx, ND);
   SI.kind = SK;
   SI.deprecated = ND.isDeprecated();
   SI.range = Range{sourceLocToPosition(SM, SymbolRange->getBegin()),
