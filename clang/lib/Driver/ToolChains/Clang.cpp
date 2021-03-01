@@ -3979,8 +3979,8 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
       }
     }
 
-  if (T.isOSBinFormatELF() && !SplitDWARFInlining)
-    CmdArgs.push_back("-fno-split-dwarf-inlining");
+  if (T.isOSBinFormatELF() && SplitDWARFInlining)
+    CmdArgs.push_back("-fsplit-dwarf-inlining");
 
   // After we've dealt with all combinations of things that could
   // make DebugInfoKind be other than None or DebugLineTablesOnly,

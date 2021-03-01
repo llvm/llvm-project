@@ -2669,9 +2669,9 @@ defm debug_ranges_base_address : BoolFOption<"debug-ranges-base-address",
   PosFlag<SetTrue, [CC1Option], "Use DWARF base address selection entries in .debug_ranges">,
   NegFlag<SetFalse>>;
 defm split_dwarf_inlining : BoolFOption<"split-dwarf-inlining",
-  CodeGenOpts<"SplitDwarfInlining">, DefaultTrue,
-  NegFlag<SetFalse, [CC1Option]>,
-  PosFlag<SetTrue, [], "Provide minimal debug info in the object/executable"
+  CodeGenOpts<"SplitDwarfInlining">, DefaultFalse,
+  NegFlag<SetFalse, []>,
+  PosFlag<SetTrue, [CC1Option], "Provide minimal debug info in the object/executable"
           " to facilitate online symbolication/stack traces in the absence of"
           " .dwo/.dwp files when using Split DWARF">>;
 def fdebug_default_version: Joined<["-"], "fdebug-default-version=">, Group<f_Group>,
