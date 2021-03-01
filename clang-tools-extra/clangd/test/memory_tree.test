@@ -70,7 +70,11 @@
 # CHECK-NEXT:           }
 # CHECK-NEXT:         },
 # CHECK-NEXT:         "_self": {{[0-9]+}},
-# CHECK-NEXT:         "_total": {{[0-9]+}}
+# CHECK-NEXT:         "_total": {{[0-9]+}},
+# CHECK-NEXT:         "header_includer_cache": {
+# CHECK-NEXT:           "_self": {{[0-9]+}},
+# CHECK-NEXT:           "_total": {{[0-9]+}}
+# CHECK-NEXT:         }
 # CHECK-NEXT:       }
 # CHECK-NEXT:     }
 # CHECK-NEXT:   }
