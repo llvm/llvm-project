@@ -22,7 +22,7 @@
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
-#include "Plugins/Process/Utility/NativeRegisterContextWatchpoint_x86.h"
+#include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 
 #define LLDB_INVALID_XSAVE_OFFSET UINT32_MAX
@@ -34,7 +34,7 @@ class NativeProcessFreeBSD;
 
 class NativeRegisterContextFreeBSD_x86_64
     : public NativeRegisterContextFreeBSD,
-      public NativeRegisterContextWatchpoint_x86 {
+      public NativeRegisterContextDBReg_x86 {
 public:
   NativeRegisterContextFreeBSD_x86_64(const ArchSpec &target_arch,
                                       NativeThreadProtocol &native_thread);

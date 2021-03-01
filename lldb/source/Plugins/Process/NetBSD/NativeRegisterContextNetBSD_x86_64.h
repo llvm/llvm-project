@@ -22,7 +22,7 @@
 
 #include "Plugins/Process/NetBSD/NativeRegisterContextNetBSD.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
-#include "Plugins/Process/Utility/NativeRegisterContextWatchpoint_x86.h"
+#include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 
 namespace lldb_private {
@@ -32,7 +32,7 @@ class NativeProcessNetBSD;
 
 class NativeRegisterContextNetBSD_x86_64
     : public NativeRegisterContextNetBSD,
-      public NativeRegisterContextWatchpoint_x86 {
+      public NativeRegisterContextDBReg_x86 {
 public:
   NativeRegisterContextNetBSD_x86_64(const ArchSpec &target_arch,
                                      NativeThreadProtocol &native_thread);
