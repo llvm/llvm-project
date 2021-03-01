@@ -1879,8 +1879,24 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
     setAddrOfLocalVar(VD, Recovered);
 
     if (isa<ImplicitParamDecl>(VD)) {
-      CXXThisValue = Builder.CreateLoad(Recovered, "this");
-      CXXABIThisValue = CXXThisValue;
+      CXXABIThisAlignment = ParentCGF.CXXABIThisAlignment;
+      CXXThisAlignment = ParentCGF.CXXThisAlignment;
+      CXXABIThisValue = Builder.CreateLoad(Recovered, "this");
+      if (ParentCGF.LambdaThisCaptureField) {
+        LambdaThisCaptureField = ParentCGF.LambdaThisCaptureField;
+        // We are in a lambda function where "this" is captured so the
+        // CXXThisValue need to be loaded from the lambda capture
+        LValue ThisFieldLValue =
+            EmitLValueForLambdaField(LambdaThisCaptureField);
+        if (!LambdaThisCaptureField->getType()->isPointerType()) {
+          CXXThisValue = ThisFieldLValue.getAddress(*this).getPointer();
+        } else {
+          CXXThisValue = EmitLoadOfLValue(ThisFieldLValue, SourceLocation())
+                             .getScalarVal();
+        }
+      } else {
+        CXXThisValue = CXXABIThisValue;
+      }
     }
   }
 
@@ -1949,6 +1965,7 @@ void CodeGenFunction::startOutlinedSEHHelper(CodeGenFunction &ParentCGF,
   StartFunction(GlobalDecl(), RetTy, Fn, FnInfo, Args,
                 OutlinedStmt->getBeginLoc(), OutlinedStmt->getBeginLoc());
   CurSEHParent = ParentCGF.CurSEHParent;
+  CurCodeDecl = ParentCGF.CurCodeDecl;
 
   CGM.SetInternalFunctionAttributes(GlobalDecl(), CurFn, FnInfo);
   EmitCapturedLocals(ParentCGF, OutlinedStmt, IsFilter);
