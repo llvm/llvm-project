@@ -8,9 +8,6 @@ declare <4 x float> @__cbrtf4_massv(<4 x float>)
 declare <2 x double> @__powd2_massv(<2 x double>, <2 x double>)
 declare <4 x float> @__powf4_massv(<4 x float>, <4 x float>)
 
-declare <2 x double> @__sqrtd2_massv(<2 x double>)
-declare <4 x float> @__sqrtf4_massv(<4 x float>)
-
 declare <2 x double> @__expd2_massv(<2 x double>)
 declare <4 x float> @__expf4_massv(<4 x float>)
 
@@ -115,29 +112,6 @@ define <4 x float>  @pow_f32_massv(<4 x float> %opnd1, <4 x float> %opnd2) {
 ; CHECK-ALL: blr
 ;
  %1 = call <4 x float> @__powf4_massv(<4 x float> %opnd1, <4 x float> %opnd2)
-  ret <4 x float> %1 
-}
-
-; sqrt
-define <2 x double>  @sqrt_f64_massv(<2 x double> %opnd) {
-; CHECK-ALL-LABEL: @sqrt_f64_massv
-; CHECK-PWR9: bl __sqrtd2_P9
-; CHECK-PWR8: bl __sqrtd2_P8
-; CHECK-NOT: bl __sqrtd2_massv
-; CHECK-ALL: blr
-;
-  %1 = call <2 x double> @__sqrtd2_massv(<2 x double> %opnd)
-  ret <2 x double> %1 
-}
-
-define <4 x float>  @sqrt_f32_massv(<4 x float> %opnd) {
-; CHECK-ALL-LABEL: @sqrt_f32_massv
-; CHECK-PWR9: bl __sqrtf4_P9
-; CHECK-PWR8: bl __sqrtf4_P8
-; CHECK-NOT: bl __sqrtf4_massv
-; CHECK-ALL: blr
-;
-  %1 = call <4 x float> @__sqrtf4_massv(<4 x float> %opnd)
   ret <4 x float> %1 
 }
 
