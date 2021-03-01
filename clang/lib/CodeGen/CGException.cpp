@@ -1702,10 +1702,8 @@ struct CaptureFinder : ConstStmtVisitor<CaptureFinder> {
 
   void VisitDeclRefExpr(const DeclRefExpr *E) {
     // If this is already a capture, just make sure we capture 'this'.
-    if (E->refersToEnclosingVariableOrCapture()) {
+    if (E->refersToEnclosingVariableOrCapture())
       Captures.insert(ParentThis);
-      return;
-    }
 
     const auto *D = dyn_cast<VarDecl>(E->getDecl());
     if (D && D->isLocalVarDeclOrParm() && D->hasLocalStorage())
@@ -1865,17 +1863,18 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
 
   // Create llvm.localrecover calls for all captures.
   for (const VarDecl *VD : Finder.Captures) {
-    if (isa<ImplicitParamDecl>(VD)) {
-      CGM.ErrorUnsupported(VD, "'this' captured by SEH");
-      CXXThisValue = llvm::UndefValue::get(ConvertTypeForMem(VD->getType()));
-      continue;
-    }
     if (VD->getType()->isVariablyModifiedType()) {
       CGM.ErrorUnsupported(VD, "VLA captured by SEH");
       continue;
     }
     assert((isa<ImplicitParamDecl>(VD) || VD->isLocalVarDeclOrParm()) &&
            "captured non-local variable");
+
+    auto L = ParentCGF.LambdaCaptureFields.find(VD);
+    if (L != ParentCGF.LambdaCaptureFields.end()) {
+      LambdaCaptureFields[VD] = L->second;
+      continue;
+    }
 
     // If this decl hasn't been declared yet, it will be declared in the
     // OutlinedStmt.
@@ -1884,8 +1883,14 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
       continue;
 
     Address ParentVar = I->second;
-    setAddrOfLocalVar(
-        VD, recoverAddrOfEscapedLocal(ParentCGF, ParentVar, ParentFP));
+    Address Recovered =
+        recoverAddrOfEscapedLocal(ParentCGF, ParentVar, ParentFP);
+    setAddrOfLocalVar(VD, Recovered);
+
+    if (isa<ImplicitParamDecl>(VD)) {
+      CXXThisValue = Builder.CreateLoad(Recovered, "this");
+      CXXABIThisValue = CXXThisValue;
+    }
   }
 
   if (Finder.SEHCodeSlot.isValid()) {
