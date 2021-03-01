@@ -1276,20 +1276,33 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   return SinkCast(CI);
 }
 
+/// If given \p PN is an inductive variable with value IVInc coming from the
+/// backedge, and on each iteration it gets increased by Step, return pair
+/// <IVInc, Step>. Otherwise, return None.
+static Optional<std::pair<Instruction *, Constant *> >
+getIVIncrement(const PHINode *PN, const LoopInfo *LI) {
+  const Loop *L = LI->getLoopFor(PN->getParent());
+  if (!L || L->getHeader() != PN->getParent() || !L->getLoopLatch())
+    return None;
+  auto *IVInc =
+      dyn_cast<Instruction>(PN->getIncomingValueForBlock(L->getLoopLatch()));
+  if (!IVInc)
+    return None;
+  Constant *Step = nullptr;
+  if (match(IVInc, m_Sub(m_Specific(PN), m_Constant(Step))))
+    return std::make_pair(IVInc, ConstantExpr::getNeg(Step));
+  if (match(IVInc, m_Add(m_Specific(PN), m_Constant(Step))))
+    return std::make_pair(IVInc, Step);
+  return None;
+}
+
 static bool isIVIncrement(const BinaryOperator *BO, const LoopInfo *LI) {
   auto *PN = dyn_cast<PHINode>(BO->getOperand(0));
   if (!PN)
     return false;
-  const Loop *L = LI->getLoopFor(BO->getParent());
-  if (!L || L->getHeader() != PN->getParent() || !L->getLoopLatch())
-    return false;
-  const BasicBlock *Latch = L->getLoopLatch();
-  if (PN->getIncomingValueForBlock(Latch) != BO)
-    return false;
-  if (!L->isLoopInvariant(BO->getOperand(1)))
-    // Avoid complexities w/loop varying steps.
-    return false;
-  return true;
+  if (auto IVInc = getIVIncrement(PN, LI))
+    return IVInc->first == BO;
+  return false;
 }
 
 bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
