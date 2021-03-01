@@ -3679,8 +3679,7 @@ struct AADereferenceableCallSiteReturned final
 
 // ------------------------ Align Argument Attribute ------------------------
 
-static unsigned getKnownAlignForUse(Attributor &A,
-                                    AbstractAttribute &QueryingAA,
+static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
                                     Value &AssociatedValue, const Use *U,
                                     const Instruction *I, bool &TrackUse) {
   // We need to follow common pointer manipulation uses to the accesses they
@@ -3721,7 +3720,7 @@ static unsigned getKnownAlignForUse(Attributor &A,
       MA = LI->getAlign();
   }
 
-  if (!MA || *MA <= 1)
+  if (!MA || *MA <= QueryingAA.getKnownAlign())
     return 0;
 
   unsigned Alignment = MA->value();
