@@ -1293,6 +1293,12 @@ getIVIncrement(const PHINode *PN, const LoopInfo *LI) {
     return std::make_pair(IVInc, ConstantExpr::getNeg(Step));
   if (match(IVInc, m_Add(m_Specific(PN), m_Constant(Step))))
     return std::make_pair(IVInc, Step);
+  if (match(IVInc, m_ExtractValue<0>(m_Intrinsic<Intrinsic::usub_with_overflow>(
+                       m_Specific(PN), m_Constant(Step)))))
+    return std::make_pair(IVInc, ConstantExpr::getNeg(Step));
+  if (match(IVInc, m_ExtractValue<0>(m_Intrinsic<Intrinsic::uadd_with_overflow>(
+                       m_Specific(PN), m_Constant(Step)))))
+    return std::make_pair(IVInc, Step);
   return None;
 }
 
