@@ -1611,7 +1611,7 @@ static void allocateCFISave(MachineFunction &MF, int &FI, Register Reg) {
     int NewFI = MF.getFrameInfo().CreateStackObject(
         TRI->getSpillSize(*RC), TRI->getSpillAlign(*RC), true, nullptr,
         TargetStackID::SGPRSpill);
-    if (MFI->allocateSGPRSpillToVGPR(MF, NewFI)) {
+    if (TRI->spillSGPRToVGPR() && MFI->allocateSGPRSpillToVGPR(MF, NewFI)) {
       FI = NewFI;
     } else {
       // Remove dead <NewFI> index
