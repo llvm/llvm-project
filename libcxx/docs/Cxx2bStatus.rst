@@ -39,12 +39,12 @@ Paper Status
 
 .. _issues-status-cxx2b:
 
-.. Library Working Group Issues Status
-.. ====================================
+Library Working Group Issues Status
+====================================
 
-.. .. csv-table::
-..    :file: Cxx2bStatusIssuesStatus.csv
-..    :header-rows: 1
-..    :widths: auto
+.. csv-table::
+   :file: Cxx2bStatusIssuesStatus.csv
+   :header-rows: 1
+   :widths: auto
 
-Last Updated: 30-Nov-2020
+Last Updated: 01-Mar-2021
