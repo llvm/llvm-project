@@ -79,17 +79,28 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
              const tooling::CompilationDatabase &Compilations,
              ArrayRef<std::string> InputFiles,
              llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS,
-             bool EnableCheckProfile = false,
+             bool ApplyAnyFix, bool EnableCheckProfile = false,
              llvm::StringRef StoreCheckProfile = StringRef());
+
+/// Controls what kind of fixes clang-tidy is allowed to apply.
+enum FixBehaviour {
+  /// Don't try to apply any fix.
+  FB_NoFix,
+  /// Only apply fixes added to warnings.
+  FB_Fix,
+  /// Apply fixes found in notes.
+  FB_FixNotes
+};
 
 // FIXME: This interface will need to be significantly extended to be useful.
 // FIXME: Implement confidence levels for displaying/fixing errors.
 //
-/// Displays the found \p Errors to the users. If \p Fix is true, \p
-/// Errors containing fixes are automatically applied and reformatted. If no
-/// clang-format configuration file is found, the given \P FormatStyle is used.
+/// Displays the found \p Errors to the users. If \p Fix is \ref FB_Fix or \ref
+/// FB_FixNotes, \p Errors containing fixes are automatically applied and
+/// reformatted. If no clang-format configuration file is found, the given \P
+/// FormatStyle is used.
 void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
-                  ClangTidyContext &Context, bool Fix,
+                  ClangTidyContext &Context, FixBehaviour Fix,
                   unsigned &WarningsAsErrorsCount,
                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
 
