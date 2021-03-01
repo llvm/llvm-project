@@ -618,6 +618,9 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   };
 
   auto requireSpillSlot = [&](const Value *V) {
+    if (!Builder.DAG.getTargetLoweringInfo().isTypeLegal(
+             Builder.getValue(V).getValueType()))
+      return true;
     if (isGCValue(V))
       return !LowerAsVReg.count(Builder.getValue(V));
     return !(LiveInDeopt || UseRegistersForDeoptValues);
