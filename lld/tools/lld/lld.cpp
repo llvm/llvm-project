@@ -56,7 +56,7 @@ enum Flavor {
   Gnu,       // -flavor gnu
   WinLink,   // -flavor link
   Darwin,    // -flavor darwin
-  DarwinNew, // -flavor darwinnew
+  DarwinOld, // -flavor darwinold
   Wasm,      // -flavor wasm
 };
 
@@ -70,8 +70,9 @@ static Flavor getFlavor(StringRef s) {
       .CasesLower("ld", "ld.lld", "gnu", Gnu)
       .CasesLower("wasm", "ld-wasm", Wasm)
       .CaseLower("link", WinLink)
-      .CasesLower("ld64", "ld64.lld", "darwin", Darwin)
-      .CasesLower("darwinnew", "ld64.lld.darwinnew", DarwinNew)
+      .CasesLower("ld64", "ld64.lld", "darwin", "darwinnew",
+                  "ld64.lld.darwinnew", Darwin)
+      .CasesLower("darwinold", "ld64.lld.darwinold", DarwinOld)
       .Default(Invalid);
 }
 
@@ -154,9 +155,9 @@ static int lldMain(int argc, const char **argv, llvm::raw_ostream &stdoutOS,
   case WinLink:
     return !coff::link(args, exitEarly, stdoutOS, stderrOS);
   case Darwin:
-    return !mach_o::link(args, exitEarly, stdoutOS, stderrOS);
-  case DarwinNew:
     return !macho::link(args, exitEarly, stdoutOS, stderrOS);
+  case DarwinOld:
+    return !mach_o::link(args, exitEarly, stdoutOS, stderrOS);
   case Wasm:
     return !lld::wasm::link(args, exitEarly, stdoutOS, stderrOS);
   default:
