@@ -39,31 +39,21 @@ Type Value::getType() const {
   OpResult result = cast<OpResult>();
   Operation *owner = result.getOwner();
   if (owner->hasSingleResult)
-    return owner->resultType;
-  return owner->resultType.cast<TupleType>().getType(result.getResultNumber());
+    return owner->resultTypeOrSize.type;
+  return owner->getResultTypes()[result.getResultNumber()];
 }
 
 /// Mutate the type of this Value to be of the specified type.
 void Value::setType(Type newType) {
   if (BlockArgument arg = dyn_cast<BlockArgument>())
     return arg.setType(newType);
+
   OpResult result = cast<OpResult>();
-
-  // If the owner has a single result, simply update it directly.
   Operation *owner = result.getOwner();
-  if (owner->hasSingleResult) {
-    owner->resultType = newType;
-    return;
-  }
-  unsigned resultNo = result.getResultNumber();
-
-  // Otherwise, rebuild the tuple if the new type is different from the current.
-  auto curTypes = owner->resultType.cast<TupleType>().getTypes();
-  if (curTypes[resultNo] == newType)
-    return;
-  auto newTypes = llvm::to_vector<4>(curTypes);
-  newTypes[resultNo] = newType;
-  owner->resultType = TupleType::get(newType.getContext(), newTypes);
+  if (owner->hasSingleResult)
+    owner->resultTypeOrSize.type = newType;
+  else
+    owner->getTrailingObjects<Type>()[result.getResultNumber()] = newType;
 }
 
 /// If this value is the result of an Operation, return the operation that
