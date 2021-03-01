@@ -27,7 +27,7 @@ namespace mlir {
 /// 'Block' class.
 class alignas(8) Operation final
     : public llvm::ilist_node_with_parent<Operation, Block>,
-      private llvm::TrailingObjects<Operation, BlockOperand, Region,
+      private llvm::TrailingObjects<Operation, BlockOperand, Region, Type,
                                     detail::OperandStorage> {
 public:
   /// Create a new Operation with the specific fields.
@@ -651,7 +651,7 @@ private:
 
   /// Returns a pointer to the use list for the given trailing result.
   detail::TrailingOpResult *getTrailingResult(unsigned resultNumber) {
-    // Trailing results are stored in reverse order after(before in memory) the
+    // Trailing results are stored in reverse order after (before in memory) the
     // inline results.
     return reinterpret_cast<detail::TrailingOpResult *>(
                getInlineResult(OpResult::getMaxInlineResults() - 1)) -
@@ -695,11 +695,18 @@ private:
   /// states recorded here:
   /// - 0 results : The type below is null.
   /// - 1 result  : The single result type is held here.
-  /// - N results : The type here is a tuple holding the result types.
-  /// Note: We steal a bit for 'hasSingleResult' from somewhere else so that we
-  /// can use 'resultType` in an ArrayRef<Type>.
+  /// - N results : The type here is empty and instead the result types are held
+  ///               in trailing storage.
   bool hasSingleResult : 1;
-  Type resultType;
+
+  /// Union representing either the Type of a single result operation (if
+  /// hasSingleResult) or the number of result types for multi-result.
+  union {
+    // Type, set if single result Operation.
+    Type type = nullptr;
+    // Size, set if not a single result Operation.
+    unsigned size;
+  } resultTypeOrSize;
 
   /// This holds the name of the operation.
   OperationName name;
@@ -720,12 +727,15 @@ private:
   friend class llvm::ilist_node_with_parent<Operation, Block>;
 
   // This stuff is used by the TrailingObjects template.
-  friend llvm::TrailingObjects<Operation, BlockOperand, Region,
+  friend llvm::TrailingObjects<Operation, BlockOperand, Region, Type,
                                detail::OperandStorage>;
   size_t numTrailingObjects(OverloadToken<BlockOperand>) const {
     return numSuccs;
   }
   size_t numTrailingObjects(OverloadToken<Region>) const { return numRegions; }
+  size_t numTrailingObjects(OverloadToken<Type>) const {
+    return hasSingleResult ? 0 : resultTypeOrSize.size;
+  }
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, Operation &op) {
