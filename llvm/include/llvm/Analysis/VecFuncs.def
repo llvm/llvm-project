@@ -156,10 +156,6 @@ TLI_DEFINE_VECFUNC("pow", "__powd2_massv", FIXED(2))
 TLI_DEFINE_VECFUNC("llvm.pow.f64", "__powd2_massv", FIXED(2))
 TLI_DEFINE_VECFUNC("powf", "__powf4_massv", FIXED(4))
 TLI_DEFINE_VECFUNC("llvm.pow.f32", "__powf4_massv", FIXED(4))
-TLI_DEFINE_VECFUNC("sqrt", "__sqrtd2_massv", FIXED(2))
-TLI_DEFINE_VECFUNC("llvm.sqrt.f64", "__sqrtd2_massv", FIXED(2))
-TLI_DEFINE_VECFUNC("sqrtf", "__sqrtf4_massv", FIXED(4))
-TLI_DEFINE_VECFUNC("llvm.sqrt.f32", "__sqrtf4_massv", FIXED(4))
 
 // Exponential and Logarithmic Functions
 TLI_DEFINE_VECFUNC("exp", "__expd2_massv", FIXED(2))
