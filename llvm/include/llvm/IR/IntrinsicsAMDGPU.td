@@ -1283,6 +1283,10 @@ def int_amdgcn_s_decperflevel :
                                 IntrHasSideEffects, IntrWillReturn]> {
 }
 
+def int_amdgcn_s_sethalt :
+  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
+                                IntrHasSideEffects, IntrWillReturn]>;
+
 def int_amdgcn_s_getreg :
   GCCBuiltin<"__builtin_amdgcn_s_getreg">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
