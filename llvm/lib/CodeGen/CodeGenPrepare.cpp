@@ -1276,23 +1276,30 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   return SinkCast(CI);
 }
 
+static bool isIVIncrement(const BinaryOperator *BO, const LoopInfo *LI) {
+  auto *PN = dyn_cast<PHINode>(BO->getOperand(0));
+  if (!PN)
+    return false;
+  const Loop *L = LI->getLoopFor(BO->getParent());
+  if (!L || L->getHeader() != PN->getParent() || !L->getLoopLatch())
+    return false;
+  const BasicBlock *Latch = L->getLoopLatch();
+  if (PN->getIncomingValueForBlock(Latch) != BO)
+    return false;
+  if (!L->isLoopInvariant(BO->getOperand(1)))
+    // Avoid complexities w/loop varying steps.
+    return false;
+  return true;
+}
+
 bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
                                                  Value *Arg0, Value *Arg1,
                                                  CmpInst *Cmp,
                                                  Intrinsic::ID IID) {
-  auto isIVIncrement = [this, &Cmp](BinaryOperator *BO) {
-    auto *PN = dyn_cast<PHINode>(BO->getOperand(0));
-    if (!PN)
+  auto IsReplacableIVIncrement = [this, &Cmp](BinaryOperator *BO) {
+    if (!isIVIncrement(BO, LI))
       return false;
     const Loop *L = LI->getLoopFor(BO->getParent());
-    if (!L || L->getHeader() != PN->getParent() || !L->getLoopLatch())
-      return false;
-    const BasicBlock *Latch = L->getLoopLatch();
-    if (PN->getIncomingValueForBlock(Latch) != BO)
-      return false;
-    if (!L->isLoopInvariant(BO->getOperand(1)))
-      // Avoid complexities w/loop varying steps.
-      return false;
     // IV increment may have other users than the IV. We do not want to make
     // dominance queries to analyze the legality of moving it towards the cmp,
     // so just check that there is no other users.
@@ -1305,9 +1312,9 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     // cheap check because no CFG changes & dom tree recomputation happens
     // during the transform.
     Function *F = BO->getParent()->getParent();
-    return getDT(*F).dominates(Cmp->getParent(), Latch);
+    return getDT(*F).dominates(Cmp->getParent(), L->getLoopLatch());
   };
-  if (BO->getParent() != Cmp->getParent() && !isIVIncrement(BO)) {
+  if (BO->getParent() != Cmp->getParent() && !IsReplacableIVIncrement(BO)) {
     // We used to use a dominator tree here to allow multi-block optimization.
     // But that was problematic because:
     // 1. It could cause a perf regression by hoisting the math op into the
