@@ -712,10 +712,12 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
+  errorHandler().cleanupCallback = []() { freeArena(); };
+
+  errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
   stderrOS.enable_colors(stderrOS.has_colors());
   // TODO: Set up error handler properly, e.g. the errorLimitExceededMsg
 
-  errorHandler().cleanupCallback = []() { freeArena(); };
 
   MachOOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
