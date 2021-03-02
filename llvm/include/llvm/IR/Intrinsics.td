@@ -134,9 +134,13 @@ def IntrWillReturn : IntrinsicProperty<1>;
 // Parallels the cold attribute on LLVM IR functions.
 def IntrCold : IntrinsicProperty;
 
-// IntrNoduplicate - Calls to this intrinsic cannot be duplicated.
+// IntrNoDuplicate - Calls to this intrinsic cannot be duplicated.
 // Parallels the noduplicate attribute on LLVM IR functions.
 def IntrNoDuplicate : IntrinsicProperty;
+
+// IntrNoMerge - Calls to this intrinsic cannot be merged
+// Parallels the nomerge attribute on LLVM IR functions.
+def IntrNoMerge : IntrinsicProperty;
 
 // IntrConvergent - Calls to this intrinsic are convergent and may not be made
 // control-dependent on any additional values.
