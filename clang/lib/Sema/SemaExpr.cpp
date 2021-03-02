@@ -6552,12 +6552,25 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   // so there's some risk when calling out to non-interrupt handler functions
   // that the callee might not preserve them. This is easy to diagnose here,
   // but can be very challenging to debug.
-  if (auto *Caller = getCurFunctionDecl())
+  // Likewise, X86 interrupt handlers may only call routines with attribute
+  // no_caller_saved_registers since there is no efficient way to
+  // save and restore the non-GPR state.
+  if (auto *Caller = getCurFunctionDecl()) {
     if (Caller->hasAttr<ARMInterruptAttr>()) {
       bool VFP = Context.getTargetInfo().hasFeature("vfp");
-      if (VFP && (!FDecl || !FDecl->hasAttr<ARMInterruptAttr>()))
+      if (VFP && (!FDecl || !FDecl->hasAttr<ARMInterruptAttr>())) {
         Diag(Fn->getExprLoc(), diag::warn_arm_interrupt_calling_convention);
+        if (FDecl)
+          Diag(FDecl->getLocation(), diag::note_callee_decl) << FDecl;
+      }
     }
+    if (Caller->hasAttr<AnyX86InterruptAttr>() &&
+        ((!FDecl || !FDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>()))) {
+      Diag(Fn->getExprLoc(), diag::err_anyx86_interrupt_regsave);
+      if (FDecl)
+        Diag(FDecl->getLocation(), diag::note_callee_decl) << FDecl;
+    }
+  }
 
   // Promote the function operand.
   // We special-case function promotion here because we only allow promoting
