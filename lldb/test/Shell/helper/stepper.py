@@ -68,7 +68,7 @@ def doit(dbg, cmd):
 
 def doquit(dbg):
     "Quit the stepper script interpreter."
-    exit(0)
+    exit(1)
 
 
 def should_stop_stepping(process):
