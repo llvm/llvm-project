@@ -1306,11 +1306,10 @@ TCParser::parseAffineExprs(EagerDiscoveryMode discoveryMode,
       result.symbol = getAffineSymbolExpr(symbols.size(), parser.context);
       symbols.emplace_back("<attr-use>", result.symbol);
       registeredAttrUseToSymbol[result.getKey()] = result.symbol;
+      attrUses.push_back(result);
     } else {
       result.symbol = symbolIt->second;
     }
-
-    attrUses.push_back(result);
 
     return result.symbol;
   };
