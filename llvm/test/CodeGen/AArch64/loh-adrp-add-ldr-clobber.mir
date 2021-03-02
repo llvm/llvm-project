@@ -1,4 +1,5 @@
 # RUN: llc -o /dev/null %s -mtriple=aarch64-apple-ios -run-pass=aarch64-collect-loh -debug-only=aarch64-collect-loh 2>&1 | FileCheck %s
+# REQUIRES: asserts
 --- |
   @sym2 = local_unnamed_addr global [10000000 x i32] zeroinitializer, align 8
   @sym = local_unnamed_addr global i32 zeroinitializer, align 8
