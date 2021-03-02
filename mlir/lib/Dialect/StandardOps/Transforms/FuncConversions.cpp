@@ -102,9 +102,61 @@ public:
 };
 } // end anonymous namespace
 
-void mlir::populateBranchOpInterfaceAndReturnOpTypeConversionPattern(
+void mlir::populateBranchOpInterfaceTypeConversionPattern(
     OwningRewritePatternList &patterns, MLIRContext *ctx,
     TypeConverter &typeConverter) {
-  patterns.insert<BranchOpInterfaceTypeConversion, ReturnOpTypeConversion>(
-      typeConverter, ctx);
+  patterns.insert<BranchOpInterfaceTypeConversion>(typeConverter, ctx);
+}
+
+bool mlir::isLegalForBranchOpInterfaceTypeConversionPattern(
+    Operation *op, TypeConverter &converter) {
+  // All successor operands of branch like operations must be rewritten.
+  if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
+    for (int p = 0, e = op->getBlock()->getNumSuccessors(); p < e; ++p) {
+      auto successorOperands = branchOp.getSuccessorOperands(p);
+      if (successorOperands.hasValue() &&
+          !converter.isLegal(successorOperands.getValue().getTypes()))
+        return false;
+    }
+    return true;
+  }
+
+  return false;
+}
+
+void mlir::populateReturnOpTypeConversionPattern(
+    OwningRewritePatternList &patterns, MLIRContext *ctx,
+    TypeConverter &typeConverter) {
+  patterns.insert<ReturnOpTypeConversion>(typeConverter, ctx);
+}
+
+bool mlir::isLegalForReturnOpTypeConversionPattern(Operation *op,
+                                                   TypeConverter &converter,
+                                                   bool returnOpAlwaysLegal) {
+  // If this is a `return` and the user pass wants to convert/transform across
+  // function boundaries, then `converter` is invoked to check whether the the
+  // `return` op is legal.
+  if (dyn_cast<ReturnOp>(op) && !returnOpAlwaysLegal)
+    return converter.isLegal(op);
+
+  // ReturnLike operations have to be legalized with their parent. For
+  // return this is handled, for other ops they remain as is.
+  if (op->hasTrait<OpTrait::ReturnLike>())
+    return true;
+
+  return false;
+}
+
+bool mlir::isNotBranchOpInterfaceOrReturnLikeOp(Operation *op) {
+  // If it is not a terminator, ignore it.
+  if (!op->mightHaveTrait<OpTrait::IsTerminator>())
+    return true;
+
+  // If it is not the last operation in the block, also ignore it. We do
+  // this to handle unknown operations, as well.
+  Block *block = op->getBlock();
+  if (!block || &block->back() != op)
+    return true;
+
+  return false;
 }
