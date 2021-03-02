@@ -55,7 +55,7 @@
 
          ;; Calling conventions
          "ccc" "fastcc" "coldcc" "webkit_jscc" "anyregcc" "preserve_mostcc" "preserve_allcc"
-         "cxx_fast_tlscc" "swiftcc"
+         "cxx_fast_tlscc" "swiftcc" "swifttailcc" "tailcc"
 
          "atomic" "volatile" "personality" "prologue" "section") 'symbols) . font-lock-keyword-face)
    ;; Arithmetic and Logical Operators
