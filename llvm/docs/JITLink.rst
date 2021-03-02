@@ -568,8 +568,8 @@ Passes
 ------
 
 JITLink passes are ``std::function<Error(LinkGraph&)>`` instances. They are free
-to inspect and modify the given ``LinkGraph`` and are subject to the constraints
-of whatever phase they are running in (see :ref:`generic_link_algorithm`). If a
+to inspect and modify the given ``LinkGraph`` subject to the constraints of
+whatever phase they are running in (see :ref:`generic_link_algorithm`). If a
 pass returns ``Error::success()`` then linking continues. If a pass returns
 a failure value then linking is stopped and the ``JITLinkContext`` is notified
 that the link failed.
