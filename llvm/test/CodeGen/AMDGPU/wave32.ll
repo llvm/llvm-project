@@ -701,6 +701,7 @@ break:
   ret <4 x float> %c.iv
 }
 
+; NOTE: llvm.amdgcn.wwm is deprecated, use llvm.amdgcn.strict.wwm instead.
 ; GCN-LABEL: {{^}}test_wwm1:
 ; GFX1032: s_or_saveexec_b32 [[SAVE:s[0-9]+]], -1
 ; GFX1032: s_mov_b32 exec_lo, [[SAVE]]
@@ -743,6 +744,50 @@ endif:
   %out.2 = phi float [ %out.1, %if ], [ 0.0, %main_body ]
   ret float %out.2
 }
+
+; GCN-LABEL: {{^}}test_strict_wwm1:
+; GFX1032: s_or_saveexec_b32 [[SAVE:s[0-9]+]], -1
+; GFX1032: s_mov_b32 exec_lo, [[SAVE]]
+; GFX1064: s_or_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], -1
+; GFX1064: s_mov_b64 exec, [[SAVE]]
+define amdgpu_ps float @test_strict_wwm1(i32 inreg %idx0, i32 inreg %idx1, float %src0, float %src1) {
+main_body:
+  %out = fadd float %src0, %src1
+  %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
+  ret float %out.0
+}
+
+; GCN-LABEL: {{^}}test_strict_wwm2:
+; GFX1032: v_cmp_gt_u32_e32 vcc_lo, 32, v{{[0-9]+}}
+; GFX1032: s_and_saveexec_b32 [[SAVE1:s[0-9]+]], vcc_lo
+; GFX1032: s_or_saveexec_b32 [[SAVE2:s[0-9]+]], -1
+; GFX1032: s_mov_b32 exec_lo, [[SAVE2]]
+; GFX1032: s_or_b32 exec_lo, exec_lo, [[SAVE1]]
+; GFX1064: v_cmp_gt_u32_e32 vcc, 32, v{{[0-9]+}}
+; GFX1064: s_and_saveexec_b64 [[SAVE1:s\[[0-9:]+\]]], vcc{{$}}
+; GFX1064: s_or_saveexec_b64 [[SAVE2:s\[[0-9:]+\]]], -1
+; GFX1064: s_mov_b64 exec, [[SAVE2]]
+; GFX1064: s_or_b64 exec, exec, [[SAVE1]]
+define amdgpu_ps float @test_strict_wwm2(i32 inreg %idx) {
+main_body:
+  ; use mbcnt to make sure the branch is divergent
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %cc = icmp uge i32 %hi, 32
+  br i1 %cc, label %endif, label %if
+
+if:
+  %src = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx, i32 0, i32 0, i32 0)
+  %out = fadd float %src, %src
+  %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
+  %out.1 = fadd float %src, %out.0
+  br label %endif
+
+endif:
+  %out.2 = phi float [ %out.1, %if ], [ 0.0, %main_body ]
+  ret float %out.2
+}
+
 
 ; GCN-LABEL: {{^}}test_wqm1:
 ; GFX1032: s_mov_b32 [[ORIG:s[0-9]+]], exec_lo
@@ -1123,6 +1168,7 @@ declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32)
 declare i64 @llvm.amdgcn.set.inactive.i64(i64, i64)
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32)
 declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
+declare float @llvm.amdgcn.strict.wwm.f32(float)
 declare float @llvm.amdgcn.wwm.f32(float)
 declare i32 @llvm.amdgcn.wqm.i32(i32)
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32)

@@ -3,10 +3,10 @@
 ---
 # Check for awareness that s_or_saveexec_b64 clobbers SCC
 #
-#CHECK: ENTER_WWM
+#CHECK: ENTER_STRICT_WWM
 #CHECK: S_CMP_LT_I32
 #CHECK: S_CSELECT_B32
-name:            test_wwm_scc
+name:            test_strict_wwm_scc
 alignment:       1
 exposesReturnsTwice: false
 legalized:       false
@@ -44,7 +44,7 @@ body:             |
     %12 = V_ADD_CO_U32_e32 %3, %3, implicit-def $vcc, implicit $exec
     %5 = S_CSELECT_B32 %2, %1, implicit $scc
     %11 = V_ADD_CO_U32_e32 %5, %12, implicit-def $vcc, implicit $exec
-    $vgpr0 = WWM %11, implicit $exec
+    $vgpr0 = STRICT_WWM %11, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr0
 
 ...
@@ -56,10 +56,10 @@ body:             |
 #CHECK: %bb.1
 #CHECK: S_CMP_LT_I32
 #CHECK: COPY $scc
-#CHECK: ENTER_WWM
+#CHECK: ENTER_STRICT_WWM
 #CHECK: $scc = COPY
 #CHECK: S_CSELECT_B32
-name:            test_wwm_scc2
+name:            test_strict_wwm_scc2
 tracksRegLiveness: true
 body:             |
   bb.0:
@@ -77,7 +77,7 @@ body:             |
     %12:vgpr_32 = V_ADD_CO_U32_e32 %3:vgpr_32, %3:vgpr_32, implicit-def $vcc, implicit $exec
     %5:sgpr_32 = S_CSELECT_B32 %2:sgpr_32, %1:sgpr_32, implicit $scc
     %11:vgpr_32 = V_ADD_CO_U32_e32 %5:sgpr_32, %12:vgpr_32, implicit-def $vcc, implicit $exec
-    $vgpr0 = WWM %11:vgpr_32, implicit $exec
+    $vgpr0 = STRICT_WWM %11:vgpr_32, implicit $exec
     $vgpr1 = COPY %10:vgpr_32
     SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
 
@@ -136,19 +136,19 @@ body:             |
     %10:vgpr_32 = V_SET_INACTIVE_B32 %11, undef %12:sreg_32, implicit $exec, implicit-def $scc
     %14:vgpr_32 = COPY %7
     %13:vgpr_32 = V_MOV_B32_dpp %14, killed %10, 323, 12, 15, 0, implicit $exec
-    early-clobber %15:vgpr_32 = WWM killed %13, implicit $exec
+    early-clobber %15:vgpr_32 = STRICT_WWM killed %13, implicit $exec
     BUFFER_STORE_DWORD_OFFSET_exact killed %15, %6, %7, 4, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
 
 ---
-# Ensure that wwm is not put around an EXEC copy
+# Ensure that strict_wwm is not put around an EXEC copy
 #CHECK-LABEL: name: copy_exec
 #CHECK: %7:sreg_64 = COPY $exec
-#CHECK-NEXT: %14:sreg_64 = ENTER_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
+#CHECK-NEXT: %14:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
 #CHECK-NEXT: %8:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-#CHECK-NEXT: $exec = EXIT_WWM %14
+#CHECK-NEXT: $exec = EXIT_STRICT_WWM %14
 #CHECK-NEXT: %9:vgpr_32 = V_MBCNT_LO_U32_B32_e64 %7.sub0, 0, implicit $exec
 name:            copy_exec
 tracksRegLiveness: true
@@ -169,7 +169,7 @@ body:             |
     %10:vgpr_32 = V_MBCNT_LO_U32_B32_e64 %8.sub0:sreg_64, 0, implicit $exec
     %11:vgpr_32 = V_MOV_B32_dpp %9:vgpr_32, %10:vgpr_32, 312, 15, 15, 0, implicit $exec
     %12:sreg_32 = V_READLANE_B32 %11:vgpr_32, 63
-    early-clobber %13:sreg_32 = WWM %9:vgpr_32, implicit $exec
+    early-clobber %13:sreg_32 = STRICT_WWM %9:vgpr_32, implicit $exec
 
     %14:vgpr_32 = COPY %13
     BUFFER_STORE_DWORD_OFFSET_exact killed %14, %4, %5, 4, 0, 0, 0, 0, 0, 0, implicit $exec
@@ -237,12 +237,12 @@ body:             |
 ---
 # Check that unnecessary instruction do not get marked for WWM
 #
-#CHECK-NOT: ENTER_WWM
+#CHECK-NOT: ENTER_STRICT_WWM
 #CHECK: BUFFER_LOAD_DWORDX2
-#CHECK-NOT: ENTER_WWM
+#CHECK-NOT: ENTER_STRICT_WWM
 #CHECK: V_SET_INACTIVE_B32
 #CHECK: V_SET_INACTIVE_B32
-#CHECK: ENTER_WWM
+#CHECK: ENTER_STRICT_WWM
 #CHECK: V_MAX
 name:            test_wwm_set_inactive_propagation
 tracksRegLiveness: true
@@ -255,7 +255,7 @@ body:             |
     %2.sub0:vreg_64 = V_SET_INACTIVE_B32 %2.sub0:vreg_64, 0, implicit $exec, implicit-def $scc
     %2.sub1:vreg_64 = V_SET_INACTIVE_B32 %2.sub1:vreg_64, 0, implicit $exec, implicit-def $scc
     %3:vreg_64 = nnan nsz arcp contract reassoc nofpexcept V_MAX_F64_e64 0, %2:vreg_64, 0, %2:vreg_64, 0, 0, implicit $mode, implicit $exec
-    $vgpr0 = WWM %3.sub0:vreg_64, implicit $exec
-    $vgpr1 = WWM %3.sub1:vreg_64, implicit $exec
+    $vgpr0 = STRICT_WWM %3.sub0:vreg_64, implicit $exec
+    $vgpr1 = STRICT_WWM %3.sub1:vreg_64, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
 ...
