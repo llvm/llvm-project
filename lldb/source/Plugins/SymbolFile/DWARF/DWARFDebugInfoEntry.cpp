@@ -183,6 +183,10 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
             break;
 
           default:
+            cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+                "{0x%8.8x}: Unsupported DW_FORM_0x%x, please file a bug and "
+                "attach the file at the start of this error message",
+                m_offset, (unsigned)form);
             *offset_ptr = m_offset;
             return false;
           }
