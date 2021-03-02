@@ -176,7 +176,7 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
   const AVRInstrInfo &TII = *STI.getInstrInfo();
 
   // Early exit if there is no need to restore the frame pointer.
-  if (!FrameSize) {
+  if (!FrameSize && !MF.getFrameInfo().hasVarSizedObjects()) {
     restoreStatusRegister(MF, MBB);
     return;
   }
@@ -193,22 +193,24 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
     --MBBI;
   }
 
-  unsigned Opcode;
+  if (FrameSize) {
+    unsigned Opcode;
 
-  // Select the optimal opcode depending on how big it is.
-  if (isUInt<6>(FrameSize)) {
-    Opcode = AVR::ADIWRdK;
-  } else {
-    Opcode = AVR::SUBIWRdK;
-    FrameSize = -FrameSize;
+    // Select the optimal opcode depending on how big it is.
+    if (isUInt<6>(FrameSize)) {
+      Opcode = AVR::ADIWRdK;
+    } else {
+      Opcode = AVR::SUBIWRdK;
+      FrameSize = -FrameSize;
+    }
+
+    // Restore the frame pointer by doing FP += <size>.
+    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opcode), AVR::R29R28)
+                          .addReg(AVR::R29R28, RegState::Kill)
+                          .addImm(FrameSize);
+    // The SREG implicit def is dead.
+    MI->getOperand(3).setIsDead();
   }
-
-  // Restore the frame pointer by doing FP += <size>.
-  MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opcode), AVR::R29R28)
-                         .addReg(AVR::R29R28, RegState::Kill)
-                         .addImm(FrameSize);
-  // The SREG implicit def is dead.
-  MI->getOperand(3).setIsDead();
 
   // Write back R29R28 to SP and temporarily disable interrupts.
   BuildMI(MBB, MBBI, DL, TII.get(AVR::SPWRITE), AVR::SP)
@@ -230,7 +232,8 @@ bool AVRFrameLowering::hasFP(const MachineFunction &MF) const {
   const AVRMachineFunctionInfo *FuncInfo = MF.getInfo<AVRMachineFunctionInfo>();
 
   return (FuncInfo->getHasSpills() || FuncInfo->getHasAllocas() ||
-          FuncInfo->getHasStackArgs());
+          FuncInfo->getHasStackArgs() ||
+          MF.getFrameInfo().hasVarSizedObjects());
 }
 
 bool AVRFrameLowering::spillCalleeSavedRegisters(
@@ -479,57 +482,5 @@ char AVRFrameAnalyzer::ID = 0;
 
 /// Creates instance of the frame analyzer pass.
 FunctionPass *createAVRFrameAnalyzerPass() { return new AVRFrameAnalyzer(); }
-
-/// Create the Dynalloca Stack Pointer Save/Restore pass.
-/// Insert a copy of SP before allocating the dynamic stack memory and restore
-/// it in function exit to restore the original SP state. This avoids the need
-/// of reserving a register pair for a frame pointer.
-struct AVRDynAllocaSR : public MachineFunctionPass {
-  static char ID;
-  AVRDynAllocaSR() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    // Early exit when there are no variable sized objects in the function.
-    if (!MF.getFrameInfo().hasVarSizedObjects()) {
-      return false;
-    }
-
-    const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
-    const TargetInstrInfo &TII = *STI.getInstrInfo();
-    MachineBasicBlock &EntryMBB = MF.front();
-    MachineBasicBlock::iterator MBBI = EntryMBB.begin();
-    DebugLoc DL = EntryMBB.findDebugLoc(MBBI);
-
-    Register SPCopy =
-        MF.getRegInfo().createVirtualRegister(&AVR::DREGSRegClass);
-
-    // Create a copy of SP in function entry before any dynallocas are
-    // inserted.
-    BuildMI(EntryMBB, MBBI, DL, TII.get(AVR::COPY), SPCopy).addReg(AVR::SP);
-
-    // Restore SP in all exit basic blocks.
-    for (MachineBasicBlock &MBB : MF) {
-      // If last instruction is a return instruction, add a restore copy.
-      if (!MBB.empty() && MBB.back().isReturn()) {
-        MBBI = MBB.getLastNonDebugInstr();
-        DL = MBBI->getDebugLoc();
-        BuildMI(MBB, MBBI, DL, TII.get(AVR::COPY), AVR::SP)
-            .addReg(SPCopy, RegState::Kill);
-      }
-    }
-
-    return true;
-  }
-
-  StringRef getPassName() const override {
-    return "AVR dynalloca stack pointer save/restore";
-  }
-};
-
-char AVRDynAllocaSR::ID = 0;
-
-/// createAVRDynAllocaSRPass - returns an instance of the dynalloca stack
-/// pointer save/restore pass.
-FunctionPass *createAVRDynAllocaSRPass() { return new AVRDynAllocaSR(); }
 
 } // end of namespace llvm
