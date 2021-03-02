@@ -78,6 +78,7 @@ enum DiagnosticKind {
   DK_MIRParser,
   DK_PGOProfile,
   DK_Unsupported,
+  DK_SrcMgr,
   DK_FirstPluginKind // Must be last value to work with
                      // getNextAvailablePluginDiagnosticKind
 };
@@ -916,6 +917,7 @@ private:
 };
 
 /// Diagnostic information for machine IR parser.
+// FIXME: Remove this, use DiagnosticInfoSrcMgr instead.
 class DiagnosticInfoMIRParser : public DiagnosticInfo {
   const SMDiagnostic &Diagnostic;
 
@@ -1013,6 +1015,49 @@ public:
   const Twine &getMessage() const { return Msg; }
 
   void print(DiagnosticPrinter &DP) const override;
+};
+
+static DiagnosticSeverity getDiagnosticSeverity(SourceMgr::DiagKind DK) {
+  switch (DK) {
+  case llvm::SourceMgr::DK_Error:
+    return DS_Error;
+    break;
+  case llvm::SourceMgr::DK_Warning:
+    return DS_Warning;
+    break;
+  case llvm::SourceMgr::DK_Note:
+    return DS_Note;
+    break;
+  case llvm::SourceMgr::DK_Remark:
+    return DS_Remark;
+    break;
+  }
+  llvm_unreachable("unknown SourceMgr::DiagKind");
+}
+
+/// Diagnostic information for SMDiagnostic reporting.
+class DiagnosticInfoSrcMgr : public DiagnosticInfo {
+  const SMDiagnostic &Diagnostic;
+
+  // For inlineasm !srcloc translation.
+  bool InlineAsmDiag;
+  unsigned LocCookie;
+
+public:
+  DiagnosticInfoSrcMgr(const SMDiagnostic &Diagnostic,
+                       bool InlineAsmDiag = true, unsigned LocCookie = 0)
+      : DiagnosticInfo(DK_SrcMgr, getDiagnosticSeverity(Diagnostic.getKind())),
+        Diagnostic(Diagnostic), InlineAsmDiag(InlineAsmDiag),
+        LocCookie(LocCookie) {}
+
+  bool isInlineAsmDiag() const { return InlineAsmDiag; }
+  const SMDiagnostic &getSMDiag() const { return Diagnostic; }
+  unsigned getLocCookie() const { return LocCookie; }
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_SrcMgr;
+  }
 };
 
 } // end namespace llvm
