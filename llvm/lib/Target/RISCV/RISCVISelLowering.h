@@ -243,6 +243,9 @@ public:
                     bool ForCodeSize) const override;
 
   bool hasBitPreservingFPLogic(EVT VT) const override;
+  bool
+  shouldExpandBuildVectorWithShuffles(EVT VT,
+                                      unsigned DefinedValues) const override;
 
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
