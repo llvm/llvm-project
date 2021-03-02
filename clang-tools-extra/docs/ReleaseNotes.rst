@@ -101,6 +101,13 @@ Changes in existing checks
 
   Added an option to choose the set of allowed functions.
 
+- Improved :doc:`readability-uniqueptr-delete-release
+  <clang-tidy/checks/readability-uniqueptr-delete-release>` check.
+
+  Added an option to choose whether to refactor by calling the ``reset`` member
+  function or assignment to ``nullptr``.
+  Added support for pointers to ``std::unique_ptr``.
+
 Improvements to include-fixer
 -----------------------------
 
