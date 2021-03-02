@@ -1057,9 +1057,9 @@ public:
       auto recTy = ty.cast<fir::RecordType>();
       const auto *sym = &field->GetLastSymbol();
       auto name = toStringRef(sym->name());
-      coorArgs.push_back(builder.create<fir::FieldIndexOp>(
-          loc, fldTy, name, mlir::TypeAttr::get(recTy),
-          /*lenparams=*/mlir::ValueRange{}));
+      coorArgs.push_back(
+          builder.create<fir::FieldIndexOp>(loc, fldTy, name, recTy,
+                                            /*lenparams=*/mlir::ValueRange{}));
       ty = recTy.getType(name);
     }
     ty = builder.getRefType(ty);

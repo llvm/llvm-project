@@ -34,6 +34,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Config/abi-breaking.h"
@@ -367,10 +369,10 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
     if (ty == resultTy) {
       // Do not emit the bitcast if ty and resultTy are the same.
       rewriter.replaceOpWithNewOp<mlir::LLVM::AllocaOp>(alloc, ty, size,
-                                                        alloc.getAttrs());
+                                                        alloc->getAttrs());
     } else {
       auto al = rewriter.create<mlir::LLVM::AllocaOp>(loc, ty, size,
-                                                      alloc.getAttrs());
+                                                      alloc->getAttrs());
       rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(alloc, resultTy, al);
     }
     return success();
@@ -411,7 +413,7 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
       size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, opnd);
     heap->setAttr("callee", rewriter.getSymbolRefAttr(mallocFunc));
     auto malloc = rewriter.create<mlir::LLVM::CallOp>(
-        loc, getVoidPtrType(heap.getContext()), size, heap.getAttrs());
+        loc, getVoidPtrType(heap.getContext()), size, heap->getAttrs());
     rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(heap, ty,
                                                        malloc.getResult(0));
     return success();
@@ -467,7 +469,7 @@ struct FreeMemOpConversion : public FIROpConversion<fir::FreeMemOp> {
     freemem->setAttr("callee", rewriter.getSymbolRefAttr(freeFunc));
     rewriter.create<mlir::LLVM::CallOp>(
         loc, mlir::LLVM::LLVMVoidType::get(freemem.getContext()),
-        mlir::ValueRange{bitcast}, freemem.getAttrs());
+        mlir::ValueRange{bitcast}, freemem->getAttrs());
     rewriter.eraseOp(freemem);
     return success();
   }
@@ -703,7 +705,7 @@ struct CallOpConversion : public FIROpConversion<fir::CallOp> {
     for (auto r : call.getResults())
       resultTys.push_back(convertType(r.getType()));
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(call, resultTys, operands,
-                                                    call.getAttrs());
+                                                    call->getAttrs());
     return success();
   }
 };
@@ -730,14 +732,14 @@ struct CmpcOpConversion : public FIROpConversion<fir::CmpcOp> {
         rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, operands[1],
                                                     pos0)};
     auto rcp =
-        rewriter.create<mlir::LLVM::FCmpOp>(loc, resTy, rp, cmp.getAttrs());
+        rewriter.create<mlir::LLVM::FCmpOp>(loc, resTy, rp, cmp->getAttrs());
     auto pos1 = mlir::ArrayAttr::get(ctxt, rewriter.getI32IntegerAttr(1));
     SmallVector<mlir::Value, 2> ip{
         rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, operands[0], pos1),
         rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, operands[1],
                                                     pos1)};
     auto icp =
-        rewriter.create<mlir::LLVM::FCmpOp>(loc, resTy, ip, cmp.getAttrs());
+        rewriter.create<mlir::LLVM::FCmpOp>(loc, resTy, ip, cmp->getAttrs());
     SmallVector<mlir::Value, 2> cp{rcp, icp};
     switch (cmp.getPredicate()) {
     case mlir::CmpFPredicate::OEQ: // .EQ.
@@ -762,7 +764,7 @@ struct CmpfOpConversion : public FIROpConversion<fir::CmpfOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto type = convertType(cmp.getType());
     rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(cmp, type, operands,
-                                                    cmp.getAttrs());
+                                                    cmp->getAttrs());
     return success();
   }
 };
@@ -2261,7 +2263,7 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       rewriter.replaceOp(load, operands[0]);
     } else {
       auto ty = convertType(load.getType());
-      auto at = load.getAttrs();
+      auto at = load->getAttrs();
       rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(load, ty, operands, at);
     }
     return success();
@@ -2928,11 +2930,22 @@ struct FIRToLLVMLoweringPass
                     mlir::StandardOpsDialect, mlir::LLVM::LLVMDialect>();
   }
 
+  void registerDialectInterfaces(mlir::MLIRContext *context) {
+    mlir::DialectRegistry registry;
+    registry.insert<mlir::omp::OpenMPDialect>();
+    registry
+        .addDialectInterface<mlir::omp::OpenMPDialect,
+                             mlir::OpenMPDialectLLVMIRTranslationInterface>();
+    registerLLVMDialectTranslation(registry);
+    context->appendDialectRegistry(registry);
+  }
+
   void runOnOperation() override final {
     if (disableFirToLLVMIR)
       return;
 
     auto *context = getModule().getContext();
+    registerDialectInterfaces(context);
     fir::LLVMTypeConverter typeConverter{getModule()};
     auto loc = mlir::UnknownLoc::get(context);
     mlir::OwningRewritePatternList pattern;
@@ -2967,10 +2980,10 @@ struct FIRToLLVMLoweringPass
     // The OpenMP dialect is legal for Operations without regions, for those
     // which contains regions it is legal if the region contains only the
     // LLVM dialect.
-    target.addDynamicallyLegalOp<omp::ParallelOp, omp::WsLoopOp, omp::MasterOp>(
-        [&](Operation *op) {
-          return typeConverter.isLegal(&op->getRegion(0));
-        });
+    target.addDynamicallyLegalOp<mlir::omp::ParallelOp, mlir::omp::WsLoopOp,
+                                 mlir::omp::MasterOp>([&](Operation *op) {
+      return typeConverter.isLegal(&op->getRegion(0));
+    });
     target.addLegalDialect<mlir::omp::OpenMPDialect>();
 
     // required NOPs for applying a full conversion
@@ -2997,6 +3010,7 @@ struct LLVMIRLoweringPass
     if (disableLLVM)
       return;
 
+    auto *ctx = getModule().getContext();
     auto optName = getModule().getName();
     LLVMContext llvmCtx;
     if (auto llvmModule = mlir::translateModuleToLLVMIR(
@@ -3005,7 +3019,6 @@ struct LLVMIRLoweringPass
       return;
     }
 
-    auto *ctx = getModule().getContext();
     mlir::emitError(mlir::UnknownLoc::get(ctx), "could not emit LLVM-IR\n");
     signalPassFailure();
   }

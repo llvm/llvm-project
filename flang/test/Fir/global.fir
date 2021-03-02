@@ -21,8 +21,8 @@ fir.global @g_ci5 constant : i32 {
 // CHECK: @i_i515 = internal global i32 515
 fir.global internal @i_i515 (515:i32) : i32
 
-// CHECK: @C_i511 = common global i32 511
-fir.global common @C_i511 (511:i32) : i32
+// CHECK: @C_i511 = common global i32 0
+fir.global common @C_i511 (0:i32) : i32
 
 // CHECK: @w_i86 = weak global i32 86
 fir.global weak @w_i86 (86:i32) : i32
