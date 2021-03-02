@@ -3048,6 +3048,7 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 2; }
   }];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 
