@@ -496,7 +496,7 @@ limit the amount of information that gets parsed to only the
 information that is requested. These bits also can indicate what
 actually did get resolved during query function calls.
 
-Each definition corresponds to a one of the member variables
+Each definition corresponds to one of the member variables
 in this class, and requests that that item be resolved, or
 indicates that the member did get resolved.
 

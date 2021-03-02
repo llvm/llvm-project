@@ -787,7 +787,7 @@ Writing lldb frame recognizers in Python
 Frame recognizers allow for retrieving information about special frames based
 on ABI, arguments or other special properties of that frame, even without
 source code or debug info. Currently, one use case is to extract function
-arguments that would otherwise be unaccesible, or augment existing arguments.
+arguments that would otherwise be inaccessible, or augment existing arguments.
 
 Adding a custom frame recognizer is done by implementing a Python class and
 using the 'frame recognizer add' command. The Python class should have a
