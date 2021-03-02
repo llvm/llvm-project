@@ -51,7 +51,7 @@ std::vector<Example> generateRandomDataset(int NumExamples) {
                       : RandInt(20));
     E.setSemaSaysInScope(FlipCoin(0.5));      // Boolean.
     E.setScope(RandInt(4));                   // 4 Scopes.
-    E.setContextKind(RandInt(32));            // 32 Context kinds.
+    E.setContextKind(RandInt(36));            // 36 Context kinds.
     E.setIsInstanceMember(FlipCoin(0.5));     // Boolean.
     E.setHadContextType(FlipCoin(0.6));       // Boolean.
     E.setHadSymbolType(FlipCoin(0.6));        // Boolean.
