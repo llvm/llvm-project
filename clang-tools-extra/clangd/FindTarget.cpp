@@ -716,20 +716,18 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
         if (!D.isFieldDesignator())
           continue;
 
-        llvm::SmallVector<const NamedDecl *, 1> Targets;
-        if (D.getField())
-          Targets.push_back(D.getField());
-        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(), D.getFieldLoc(),
-                                    /*IsDecl=*/false, std::move(Targets)});
+        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                    D.getFieldLoc(),
+                                    /*IsDecl=*/false,
+                                    {D.getField()}});
       }
     }
 
     void VisitGotoStmt(const GotoStmt *GS) {
-      llvm::SmallVector<const NamedDecl *, 1> Targets;
-      if (const auto *L = GS->getLabel())
-        Targets.push_back(L);
-      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(), GS->getLabelLoc(),
-                                  /*IsDecl=*/false, std::move(Targets)});
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  GS->getLabelLoc(),
+                                  /*IsDecl=*/false,
+                                  {GS->getLabel()}});
     }
 
     void VisitLabelStmt(const LabelStmt *LS) {
@@ -882,17 +880,15 @@ public:
   // TemplateArgumentLoc is the only way to get locations for references to
   // template template parameters.
   bool TraverseTemplateArgumentLoc(TemplateArgumentLoc A) {
-    llvm::SmallVector<const NamedDecl *, 1> Targets;
     switch (A.getArgument().getKind()) {
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
-      if (const auto *D = A.getArgument()
-                              .getAsTemplateOrTemplatePattern()
-                              .getAsTemplateDecl())
-        Targets.push_back(D);
       reportReference(ReferenceLoc{A.getTemplateQualifierLoc(),
                                    A.getTemplateNameLoc(),
-                                   /*IsDecl=*/false, Targets},
+                                   /*IsDecl=*/false,
+                                   {A.getArgument()
+                                        .getAsTemplateOrTemplatePattern()
+                                        .getAsTemplateDecl()}},
                       DynTypedNode::create(A.getArgument()));
       break;
     case TemplateArgument::Declaration:
@@ -975,11 +971,14 @@ private:
   }
 
   void visitNode(DynTypedNode N) {
-    for (const auto &R : explicitReference(N))
-      reportReference(R, N);
+    for (auto &R : explicitReference(N))
+      reportReference(std::move(R), N);
   }
 
-  void reportReference(const ReferenceLoc &Ref, DynTypedNode N) {
+  void reportReference(ReferenceLoc &&Ref, DynTypedNode N) {
+    // Strip null targets that can arise from invalid code.
+    // (This avoids having to check for null everywhere we insert)
+    llvm::erase_value(Ref.Targets, nullptr);
     // Our promise is to return only references from the source code. If we lack
     // location information, skip these nodes.
     // Normally this should not happen in practice, unless there are bugs in the
