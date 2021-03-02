@@ -71,6 +71,9 @@ public:
   unsigned getAVOperandEncoding(const MCInst &MI, unsigned OpNo,
                                 SmallVectorImpl<MCFixup> &Fixups,
                                 const MCSubtargetInfo &STI) const override;
+
+private:
+  uint64_t getImplicitOpSelHiEncoding(int Opcode) const;
 };
 
 } // end anonymous namespace
@@ -279,28 +282,38 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   }
 }
 
+uint64_t SIMCCodeEmitter::getImplicitOpSelHiEncoding(int Opcode) const {
+  using namespace AMDGPU::VOP3PEncoding;
+  using namespace AMDGPU::OpName;
+
+  if (AMDGPU::getNamedOperandIdx(Opcode, op_sel_hi) != -1) {
+    if (AMDGPU::getNamedOperandIdx(Opcode, src2) != -1)
+      return 0;
+    if (AMDGPU::getNamedOperandIdx(Opcode, src1) != -1)
+      return OP_SEL_HI_2;
+    if (AMDGPU::getNamedOperandIdx(Opcode, src0) != -1)
+      return OP_SEL_HI_1 | OP_SEL_HI_2;
+  }
+  return OP_SEL_HI_0 | OP_SEL_HI_1 | OP_SEL_HI_2;
+}
+
 void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        const MCSubtargetInfo &STI) const {
   verifyInstructionPredicates(MI,
                               computeAvailableFeatures(STI.getFeatureBits()));
 
+  int Opcode = MI.getOpcode();
   uint64_t Encoding = getBinaryCodeForInstr(MI, Fixups, STI);
-  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  const MCInstrDesc &Desc = MCII.get(Opcode);
   unsigned bytes = Desc.getSize();
 
-  switch (MI.getOpcode()) {
-  case AMDGPU::V_ACCVGPR_READ_B32_vi:
-  case AMDGPU::V_ACCVGPR_WRITE_B32_vi:
-    // Set unused op_sel_hi bits to 1.
-    // FIXME: This shall be done for all VOP3P but not MAI instructions with
-    // unused op_sel_hi bits if corresponding operands do not exist.
-    // accvgpr_read/write are different, however. These are VOP3P, MAI, have
-    // src0, but do not use op_sel.
-    Encoding |= (1ull << 14) | (1ull << 59) | (1ull << 60);
-    break;
-  default:
-    break;
+  // Set unused op_sel_hi bits to 1 for VOP3P and MAI instructions.
+  // Note that accvgpr_read/write are MAI, have src0, but do not use op_sel.
+  if ((Desc.TSFlags & SIInstrFlags::VOP3P) ||
+      Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||
+      Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_vi) {
+    Encoding |= getImplicitOpSelHiEncoding(Opcode);
   }
 
   for (unsigned i = 0; i < bytes; i++) {

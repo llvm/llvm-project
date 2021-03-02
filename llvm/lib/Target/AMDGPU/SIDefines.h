@@ -737,6 +737,17 @@ enum Target : unsigned {
 };
 
 } // namespace Exp
+
+namespace VOP3PEncoding {
+
+enum OpSel : uint64_t {
+  OP_SEL_HI_0 = UINT64_C(1) << 59,
+  OP_SEL_HI_1 = UINT64_C(1) << 60,
+  OP_SEL_HI_2 = UINT64_C(1) << 14,
+};
+
+} // namespace VOP3PEncoding
+
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028
