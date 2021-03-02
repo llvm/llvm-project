@@ -82,8 +82,7 @@ define void @f3(<2 x i16> %x, i16* %a) {
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[XX:%.*]] = phi <2 x i16> [ [[X:%.*]], [[ENTRY:%.*]] ], [ undef, [[CONT]] ]
 ; CHECK-NEXT:    [[AA:%.*]] = phi i16* [ [[A:%.*]], [[ENTRY]] ], [ undef, [[CONT]] ]
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <2 x i16> [[XX]], <2 x i16> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[REORDER_SHUFFLE]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[XX]], <2 x i16> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 0
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 1
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 2
