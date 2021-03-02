@@ -1867,7 +1867,8 @@ define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i1
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 1 from %fixed-stack.3, align 16, addrspace 5)
   ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 1 from %fixed-stack.2, align 4, addrspace 5)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 2 from %fixed-stack.2, align 4, addrspace 5)
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD1]](s16)
   ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
   ; CHECK:   [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load 2 from %fixed-stack.1, align 8, addrspace 5)
   ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
@@ -1880,7 +1881,7 @@ define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i1
   ; CHECK:   [[COPY36:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store 128 into `<32 x i32> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   G_STORE [[LOAD]](s1), [[COPY33]](p1) :: (volatile store 1 into `i1 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD1]](s8), [[COPY34]](p1) :: (volatile store 1 into `i8 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[TRUNC]](s8), [[COPY34]](p1) :: (volatile store 1 into `i8 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   G_STORE [[LOAD2]](s16), [[COPY35]](p1) :: (volatile store 2 into `i16 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   G_STORE [[LOAD3]](s16), [[COPY36]](p1) :: (volatile store 2 into `half addrspace(1)* undef`, addrspace 1)
   ; CHECK:   [[COPY37:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
