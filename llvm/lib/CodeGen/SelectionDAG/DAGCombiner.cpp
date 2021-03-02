@@ -9302,31 +9302,32 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
 }
 
 static SDValue foldBoolSelectToLogic(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::SELECT && "Expected a select");
+  assert((N->getOpcode() == ISD::SELECT || N->getOpcode() == ISD::VSELECT) &&
+         "Expected a (v)select");
   SDValue Cond = N->getOperand(0);
   SDValue T = N->getOperand(1), F = N->getOperand(2);
   EVT VT = N->getValueType(0);
-  if (VT != Cond.getValueType() || VT != MVT::i1)
+  if (VT != Cond.getValueType() || VT.getScalarSizeInBits() != 1)
     return SDValue();
 
   // select Cond, Cond, F --> or Cond, F
   // select Cond, 1, F    --> or Cond, F
-  if (Cond == T || isOneConstant(T))
+  if (Cond == T || isOneOrOneSplat(T))
     return DAG.getNode(ISD::OR, SDLoc(N), VT, Cond, F);
 
   // select Cond, T, Cond --> and Cond, T
   // select Cond, T, 0    --> and Cond, T
-  if (Cond == F || isNullConstant(F))
+  if (Cond == F || isNullOrNullSplat(F))
     return DAG.getNode(ISD::AND, SDLoc(N), VT, Cond, T);
 
   // select Cond, T, 1 --> or (not Cond), T
-  if (isOneConstant(F)) {
+  if (isOneOrOneSplat(F)) {
     SDValue NotCond = DAG.getNOT(SDLoc(N), Cond, VT);
     return DAG.getNode(ISD::OR, SDLoc(N), VT, NotCond, T);
   }
 
   // select Cond, 0, F --> and (not Cond), F
-  if (isNullConstant(T)) {
+  if (isNullOrNullSplat(T)) {
     SDValue NotCond = DAG.getNOT(SDLoc(N), Cond, VT);
     return DAG.getNode(ISD::AND, SDLoc(N), VT, NotCond, F);
   }
@@ -9786,6 +9787,9 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   SDLoc DL(N);
 
   if (SDValue V = DAG.simplifySelect(N0, N1, N2))
+    return V;
+
+  if (SDValue V = foldBoolSelectToLogic(N, DAG))
     return V;
 
   // vselect (not Cond), N1, N2 -> vselect Cond, N2, N1
