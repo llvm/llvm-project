@@ -3174,7 +3174,7 @@ void TypeCastOp::build(OpBuilder &builder, OperationState &result,
       VectorType::get(extractShape(memRefType),
                       getElementTypeOrSelf(getElementTypeOrSelf(memRefType)));
   result.addTypes(
-      MemRefType::get({}, vectorType, {}, memRefType.getMemorySpace()));
+      MemRefType::get({}, vectorType, {}, memRefType.getMemorySpaceAsInt()));
 }
 
 static LogicalResult verify(TypeCastOp op) {
@@ -3183,8 +3183,8 @@ static LogicalResult verify(TypeCastOp op) {
     return op.emitOpError("expects operand to be a memref with no layout");
   if (!op.getResultMemRefType().getAffineMaps().empty())
     return op.emitOpError("expects result to be a memref with no layout");
-  if (op.getResultMemRefType().getMemorySpace() !=
-      op.getMemRefType().getMemorySpace())
+  if (op.getResultMemRefType().getMemorySpaceAsInt() !=
+      op.getMemRefType().getMemorySpaceAsInt())
     return op.emitOpError("expects result in same memory space");
 
   auto sourceType = op.getMemRefType();

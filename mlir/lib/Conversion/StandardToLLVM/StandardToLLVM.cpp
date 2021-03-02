@@ -316,7 +316,8 @@ LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
   Type elementType = unwrap(convertType(type.getElementType()));
   if (!elementType)
     return {};
-  auto ptrTy = LLVM::LLVMPointerType::get(elementType, type.getMemorySpace());
+  auto ptrTy =
+      LLVM::LLVMPointerType::get(elementType, type.getMemorySpaceAsInt());
   auto indexTy = getIndexType();
 
   SmallVector<Type, 5> results = {ptrTy, ptrTy, indexTy};
@@ -388,7 +389,7 @@ Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) {
   Type elementType = unwrap(convertType(type.getElementType()));
   if (!elementType)
     return {};
-  return LLVM::LLVMPointerType::get(elementType, type.getMemorySpace());
+  return LLVM::LLVMPointerType::get(elementType, type.getMemorySpaceAsInt());
 }
 
 /// Convert an n-D vector type to an LLVM vector type via (n-1)-D array type
@@ -1081,7 +1082,8 @@ bool ConvertToLLVMPattern::isConvertibleAndHasIdentityMaps(
 Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
   auto elementType = type.getElementType();
   auto structElementType = unwrap(typeConverter->convertType(elementType));
-  return LLVM::LLVMPointerType::get(structElementType, type.getMemorySpace());
+  return LLVM::LLVMPointerType::get(structElementType,
+                                    type.getMemorySpaceAsInt());
 }
 
 void ConvertToLLVMPattern::getMemRefDescriptorSizes(
@@ -1899,7 +1901,7 @@ struct AllocOpLowering : public AllocLikeOpLowering {
 
     Value alignedPtr = allocatedPtr;
     if (alignment) {
-      auto intPtrType = getIntPtrType(memRefType.getMemorySpace());
+      auto intPtrType = getIntPtrType(memRefType.getMemorySpaceAsInt());
       // Compute the aligned type pointer.
       Value allocatedInt =
           rewriter.create<LLVM::PtrToIntOp>(loc, intPtrType, allocatedPtr);
@@ -2247,7 +2249,7 @@ struct GlobalMemrefOpLowering : public ConvertOpToLLVMPattern<GlobalMemrefOp> {
 
     rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         global, arrayTy, global.constant(), linkage, global.sym_name(),
-        initialValue, type.getMemorySpace());
+        initialValue, type.getMemorySpaceAsInt());
     return success();
   }
 };
@@ -2266,7 +2268,7 @@ struct GetGlobalMemrefOpLowering : public AllocLikeOpLowering {
                                           Operation *op) const override {
     auto getGlobalOp = cast<GetGlobalMemrefOp>(op);
     MemRefType type = getGlobalOp.result().getType().cast<MemRefType>();
-    unsigned memSpace = type.getMemorySpace();
+    unsigned memSpace = type.getMemorySpaceAsInt();
 
     Type arrayTy = convertGlobalMemrefTypeToLLVM(type, *getTypeConverter());
     auto addressOf = rewriter.create<LLVM::AddressOfOp>(
@@ -2462,7 +2464,7 @@ static void extractPointersAndOffset(Location loc,
   }
 
   unsigned memorySpace =
-      operandType.cast<UnrankedMemRefType>().getMemorySpace();
+      operandType.cast<UnrankedMemRefType>().getMemorySpaceAsInt();
   Type elementType = operandType.cast<UnrankedMemRefType>().getElementType();
   Type llvmElementType = unwrap(typeConverter.convertType(elementType));
   Type elementPtrPtrType = LLVM::LLVMPointerType::get(
@@ -2591,7 +2593,7 @@ private:
     // Extract address space and element type.
     auto targetType =
         reshapeOp.getResult().getType().cast<UnrankedMemRefType>();
-    unsigned addressSpace = targetType.getMemorySpace();
+    unsigned addressSpace = targetType.getMemorySpaceAsInt();
     Type elementType = targetType.getElementType();
 
     // Create the unranked memref descriptor that holds the ranked one. The
@@ -2751,7 +2753,7 @@ private:
     auto unrankedMemRefType = operandType.cast<UnrankedMemRefType>();
     auto scalarMemRefType =
         MemRefType::get({}, unrankedMemRefType.getElementType());
-    unsigned addressSpace = unrankedMemRefType.getMemorySpace();
+    unsigned addressSpace = unrankedMemRefType.getMemorySpaceAsInt();
 
     // Extract pointer to the underlying ranked descriptor and bitcast it to a
     // memref<element_type> descriptor pointer to minimize the number of GEP
@@ -3265,7 +3267,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
     Value bitcastPtr = rewriter.create<LLVM::BitcastOp>(
         loc,
         LLVM::LLVMPointerType::get(targetElementTy,
-                                   viewMemRefType.getMemorySpace()),
+                                   viewMemRefType.getMemorySpaceAsInt()),
         extracted);
     targetMemRef.setAllocatedPtr(rewriter, loc, bitcastPtr);
 
@@ -3274,7 +3276,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
     bitcastPtr = rewriter.create<LLVM::BitcastOp>(
         loc,
         LLVM::LLVMPointerType::get(targetElementTy,
-                                   viewMemRefType.getMemorySpace()),
+                                   viewMemRefType.getMemorySpaceAsInt()),
         extracted);
     targetMemRef.setAlignedPtr(rewriter, loc, bitcastPtr);
 
@@ -3491,7 +3493,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<ViewOp> {
     Value bitcastPtr = rewriter.create<LLVM::BitcastOp>(
         loc,
         LLVM::LLVMPointerType::get(targetElementTy,
-                                   srcMemRefType.getMemorySpace()),
+                                   srcMemRefType.getMemorySpaceAsInt()),
         allocatedPtr);
     targetMemRef.setAllocatedPtr(rewriter, loc, bitcastPtr);
 
@@ -3502,7 +3504,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<ViewOp> {
     bitcastPtr = rewriter.create<LLVM::BitcastOp>(
         loc,
         LLVM::LLVMPointerType::get(targetElementTy,
-                                   srcMemRefType.getMemorySpace()),
+                                   srcMemRefType.getMemorySpaceAsInt()),
         alignedPtr);
     targetMemRef.setAlignedPtr(rewriter, loc, bitcastPtr);
 
