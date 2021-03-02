@@ -9,12 +9,15 @@
 #ifndef LLDB_INTERPRETER_SCRIPTINTERPRETER_H
 #define LLDB_INTERPRETER_SCRIPTINTERPRETER_H
 
+#include "lldb/API/SBData.h"
+#include "lldb/API/SBError.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/PseudoTerminal.h"
+#include "lldb/Interpreter/ScriptedProcessInterface.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -83,7 +86,9 @@ public:
     eScriptReturnTypeOpaqueObject
   };
 
-  ScriptInterpreter(Debugger &debugger, lldb::ScriptLanguage script_lang);
+  ScriptInterpreter(
+      Debugger &debugger, lldb::ScriptLanguage script_lang,
+      lldb::ScriptedProcessInterfaceUP scripted_process_interface_up = {});
 
   ~ScriptInterpreter() override = default;
 
@@ -528,9 +533,19 @@ public:
 
   lldb::ScriptLanguage GetLanguage() { return m_script_lang; }
 
+  ScriptedProcessInterface &GetScriptedProcessInterface() {
+    return *m_scripted_process_interface_up;
+  }
+
+  lldb::DataExtractorSP
+  GetDataExtractorFromSBData(const lldb::SBData &data) const;
+
+  Status GetStatusFromSBError(const lldb::SBError &error) const;
+
 protected:
   Debugger &m_debugger;
   lldb::ScriptLanguage m_script_lang;
+  lldb::ScriptedProcessInterfaceUP m_scripted_process_interface_up;
 };
 
 } // namespace lldb_private

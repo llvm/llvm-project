@@ -17,8 +17,6 @@ namespace lldb {
 
 class LLDB_API SBThreadPlan {
 
-  friend class lldb_private::ThreadPlan;
-
 public:
   SBThreadPlan();
 
