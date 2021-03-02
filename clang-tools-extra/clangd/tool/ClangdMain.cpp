@@ -39,7 +39,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
 #include <cstdlib>
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <string>
