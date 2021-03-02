@@ -3731,26 +3731,35 @@ inline const char *Registers_hexagon::getRegisterName(int regNum) {
 /// Registers_riscv holds the register state of a thread in a RISC-V
 /// process.
 
-# if __riscv_xlen == 32
+// This check makes it safe when LIBUNWIND_ENABLE_CROSS_UNWINDING enabled.
+# ifdef __riscv
+#  if __riscv_xlen == 32
 typedef uint32_t reg_t;
-# elif __riscv_xlen == 64
+#  elif __riscv_xlen == 64
 typedef uint64_t reg_t;
-# else
-#  error "Unsupported __riscv_xlen"
-# endif
-
-# if defined(__riscv_flen)
-#  if __riscv_flen == 64
-typedef double fp_t;
-#  elif __riscv_flen == 32
-typedef float fp_t;
 #  else
-#   error "Unsupported __riscv_flen"
+#   error "Unsupported __riscv_xlen"
 #  endif
-# else
+
+#  if defined(__riscv_flen)
+#   if __riscv_flen == 64
+typedef double fp_t;
+#   elif __riscv_flen == 32
+typedef float fp_t;
+#   else
+#    error "Unsupported __riscv_flen"
+#   endif
+#  else
 // This is just for supressing undeclared error of fp_t.
 typedef double fp_t;
-# endif
+#  endif
+# else
+// Use Max possible width when cross unwinding
+typedef uint64_t reg_t;
+typedef double fp_t;
+# define __riscv_xlen 64
+# define __riscv_flen 64
+#endif
 
 /// Registers_riscv holds the register state of a thread.
 class _LIBUNWIND_HIDDEN Registers_riscv {
