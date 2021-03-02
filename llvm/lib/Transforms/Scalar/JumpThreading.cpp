@@ -2874,11 +2874,14 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
       continue;
 
     auto isUnfoldCandidate = [BB](SelectInst *SI, Value *V) {
+      using namespace PatternMatch;
+
       // Check if SI is in BB and use V as condition.
       if (SI->getParent() != BB)
         return false;
       Value *Cond = SI->getCondition();
-      return (Cond && Cond == V && Cond->getType()->isIntegerTy(1));
+      bool IsAndOr = match(SI, m_CombineOr(m_LogicalAnd(), m_LogicalOr()));
+      return Cond && Cond == V && Cond->getType()->isIntegerTy(1) && !IsAndOr;
     };
 
     SelectInst *SI = nullptr;
