@@ -216,7 +216,8 @@ bool WebAssemblyLateEHPrepare::addCatchAlls(MachineFunction &MF) {
     if (InsertPos == MBB.end() ||
         !WebAssembly::isCatch(InsertPos->getOpcode())) {
       Changed = true;
-      BuildMI(MBB, InsertPos, InsertPos->getDebugLoc(),
+      BuildMI(MBB, InsertPos,
+              InsertPos == MBB.end() ? DebugLoc() : InsertPos->getDebugLoc(),
               TII.get(WebAssembly::CATCH_ALL));
     }
   }

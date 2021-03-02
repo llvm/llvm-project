@@ -9161,16 +9161,3 @@ cxindex::Logger::~Logger() {
     OS << "--------------------------------------------------\n";
   }
 }
-
-#ifdef CLANG_TOOL_EXTRA_BUILD
-// This anchor is used to force the linker to link the clang-tidy plugin.
-extern volatile int ClangTidyPluginAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED ClangTidyPluginAnchorDestination =
-    ClangTidyPluginAnchorSource;
-
-// This anchor is used to force the linker to link the clang-include-fixer
-// plugin.
-extern volatile int ClangIncludeFixerPluginAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED ClangIncludeFixerPluginAnchorDestination =
-    ClangIncludeFixerPluginAnchorSource;
-#endif

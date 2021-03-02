@@ -3939,33 +3939,32 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
     // %1 = { iNh, i1 } @umul.with.overflow.iNh(iNh %LHS.HI, iNh %RHS.LO)
     // %2 = { iNh, i1 } @umul.with.overflow.iNh(iNh %RHS.HI, iNh %LHS.LO)
     // %3 = mul nuw iN (%LHS.LOW as iN), (%RHS.LOW as iN)
-    // %4 = add iN (%1.0 as iN) << Nh, (%2.0 as iN) << Nh
-    // %5 = { iN, i1 } @uadd.with.overflow.iN( %4, %3 )
+    // %4 = add iNh %1.0, %2.0 as iN
+    // %5 = { iNh, i1 } @uadd.with.overflow.iNh(iNh %4, iNh %3.HIGH)
     //
-    // %res = { %5.0, %0 || %1.1 || %2.1 || %5.1 }
+    // %lo = %3.LO
+    // %hi = %5.0
+    // %ovf = %0 || %1.1 || %2.1 || %5.1
     SDValue LHS = N->getOperand(0), RHS = N->getOperand(1);
     SDValue LHSHigh, LHSLow, RHSHigh, RHSLow;
     GetExpandedInteger(LHS, LHSLow, LHSHigh);
     GetExpandedInteger(RHS, RHSLow, RHSHigh);
     EVT HalfVT = LHSLow.getValueType();
     EVT BitVT = N->getValueType(1);
-    SDVTList VTHalfMulO = DAG.getVTList(HalfVT, BitVT);
-    SDVTList VTFullAddO = DAG.getVTList(VT, BitVT);
+    SDVTList VTHalfWithO = DAG.getVTList(HalfVT, BitVT);
 
     SDValue HalfZero = DAG.getConstant(0, dl, HalfVT);
     SDValue Overflow = DAG.getNode(ISD::AND, dl, BitVT,
       DAG.getSetCC(dl, BitVT, LHSHigh, HalfZero, ISD::SETNE),
       DAG.getSetCC(dl, BitVT, RHSHigh, HalfZero, ISD::SETNE));
 
-    SDValue One = DAG.getNode(ISD::UMULO, dl, VTHalfMulO, LHSHigh, RHSLow);
+    SDValue One = DAG.getNode(ISD::UMULO, dl, VTHalfWithO, LHSHigh, RHSLow);
     Overflow = DAG.getNode(ISD::OR, dl, BitVT, Overflow, One.getValue(1));
-    SDValue OneInHigh = DAG.getNode(ISD::BUILD_PAIR, dl, VT, HalfZero,
-                                    One.getValue(0));
 
-    SDValue Two = DAG.getNode(ISD::UMULO, dl, VTHalfMulO, RHSHigh, LHSLow);
+    SDValue Two = DAG.getNode(ISD::UMULO, dl, VTHalfWithO, RHSHigh, LHSLow);
     Overflow = DAG.getNode(ISD::OR, dl, BitVT, Overflow, Two.getValue(1));
-    SDValue TwoInHigh = DAG.getNode(ISD::BUILD_PAIR, dl, VT, HalfZero,
-                                    Two.getValue(0));
+
+    SDValue HighSum = DAG.getNode(ISD::ADD, dl, HalfVT, One, Two);
 
     // Cannot use `UMUL_LOHI` directly, because some 32-bit targets (ARM) do not
     // know how to expand `i64,i64 = umul_lohi a, b` and abort (why isn’t this
@@ -3976,10 +3975,10 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
     SDValue Three = DAG.getNode(ISD::MUL, dl, VT,
       DAG.getNode(ISD::ZERO_EXTEND, dl, VT, LHSLow),
       DAG.getNode(ISD::ZERO_EXTEND, dl, VT, RHSLow));
-    SDValue Four = DAG.getNode(ISD::ADD, dl, VT, OneInHigh, TwoInHigh);
-    SDValue Five = DAG.getNode(ISD::UADDO, dl, VTFullAddO, Three, Four);
-    Overflow = DAG.getNode(ISD::OR, dl, BitVT, Overflow, Five.getValue(1));
-    SplitInteger(Five, Lo, Hi);
+    SplitInteger(Three, Lo, Hi);
+
+    Hi = DAG.getNode(ISD::UADDO, dl, VTHalfWithO, Hi, HighSum);
+    Overflow = DAG.getNode(ISD::OR, dl, BitVT, Overflow, Hi.getValue(1));
     ReplaceValueWith(SDValue(N, 1), Overflow);
     return;
   }

@@ -330,8 +330,7 @@ void ObjFile::parseRelocations(const section_64 &sec,
         // The implicit addend for pcrel section relocations is the pcrel offset
         // in terms of the addresses in the input file. Here we adjust it so
         // that it describes the offset from the start of the referent section.
-        // TODO: The offset of 4 is probably not right for ARM64, nor for
-        //       relocations with r_length != 2.
+        assert(target->hasAttr(r.type, RelocAttrBits::BYTE4));
         referentOffset =
             sec.addr + relInfo.r_address + 4 + totalAddend - referentSec.addr;
       } else {
