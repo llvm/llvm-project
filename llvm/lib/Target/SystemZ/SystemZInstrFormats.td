@@ -1921,9 +1921,13 @@ class ICV<string name>
 
 // Defines a class that makes it easier to define
 // a MnemonicAlias when CondVariant's are involved.
-class MnemonicCondBranchAlias<CondVariant V, string from, string to>
-  : MnemonicAlias<!subst("#", V.suffix, from), !subst("#", V.suffix, to),
-                  V.asmvariant>;
+multiclass MnemonicCondBranchAlias<CondVariant V, string from, string to,
+                                   string asmvariant = V.asmvariant> {
+  if !or(!eq(V.asmvariant, ""), !eq(V.asmvariant, asmvariant)) then
+    def "" : MnemonicAlias<!subst("#", V.suffix, from),
+                           !subst("#", V.suffix, to),
+                           asmvariant>;
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction definitions with semantics
