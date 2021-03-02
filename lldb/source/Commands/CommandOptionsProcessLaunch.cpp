@@ -130,7 +130,7 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
       launch_info.SetShell(HostInfo::GetDefaultShell());
     break;
 
-  case 'v':
+  case 'E':
     launch_info.GetEnvironment().insert(option_arg);
     break;
 
