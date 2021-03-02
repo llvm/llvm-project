@@ -39,7 +39,6 @@ class AAResults;
 class AliasSetTracker;
 class BasicBlock;
 class LoadInst;
-class Loop;
 class AnyMemSetInst;
 class AnyMemTransferInst;
 class raw_ostream;
@@ -343,7 +342,6 @@ class AliasSetTracker {
   struct ASTCallbackVHDenseMapInfo : public DenseMapInfo<Value *> {};
 
   AAResults &AA;
-  Loop *L = nullptr;
   ilist<AliasSet> AliasSets;
 
   using PointerMapType = DenseMap<ASTCallbackVH, AliasSet::PointerRec *,
