@@ -282,7 +282,7 @@ LogicalResult verifyAtLeastNSuccessors(Operation *op, unsigned numSuccessors);
 LogicalResult verifyOperandSizeAttr(Operation *op, StringRef sizeAttrName);
 LogicalResult verifyResultSizeAttr(Operation *op, StringRef sizeAttrName);
 LogicalResult verifyNoRegionArguments(Operation *op);
-LogicalResult verifyElementwiseMappable(Operation *op);
+LogicalResult verifyElementwise(Operation *op);
 } // namespace impl
 
 /// Helper class for implementing traits.  Clients are not expected to interact
@@ -1213,92 +1213,143 @@ template <typename ConcrentType>
 struct MemRefsNormalizable
     : public TraitBase<ConcrentType, MemRefsNormalizable> {};
 
-/// This trait tags scalar ops that also can be applied to vectors/tensors, with
-/// their semantics on vectors/tensors being elementwise application.
+/// This trait tags element-wise ops that operate on scalars, vectors, or
+/// tensors.
 ///
 /// NOTE: Not all ops that are "elementwise" in some abstract sense satisfy this
-/// trait. In particular, broadcasting behavior is not allowed. This trait
-/// describes a set of invariants that allow systematic
-/// vectorization/tensorization, and the reverse, scalarization. The properties
-/// needed for this also can be used to implement a number of
-/// transformations/analyses/interfaces.
+/// trait. In particular, broadcasting behavior is not allowed.
 ///
-/// An `ElementwiseMappable` op must satisfy the following properties:
+/// An `Elementwise` op must satisfy the following properties:
 ///
-/// 1. If any result is a vector (resp. tensor), then at least one operand must
-/// be a vector (resp. tensor).
-/// 2. If any operand is a vector (resp. tensor), then there must be at least
-/// one result, and all results must be vectors (resp. tensors).
-/// 3. The static types of all vector (resp. tensor) operands and results must
-/// have the same shape.
-/// 4. In the case of tensor operands, the dynamic shapes of all tensor operands
-/// must be the same, otherwise the op has undefined behavior.
-/// 5. ("systematic scalarization" property) If an op has vector/tensor
-/// operands/results, then the same op, with the operand/result types changed to
-/// their corresponding element type, shall be a verifier-valid op.
-/// 6. The semantics of the op on vectors (resp. tensors) shall be the same as
-/// applying the scalarized version of the op for each corresponding element of
-/// the vector (resp. tensor) operands in parallel.
-/// 7. ("systematic vectorization/tensorization" property) If an op has
-/// scalar operands/results, the op shall remain verifier-valid if all scalar
-/// operands are replaced with vectors/tensors of the same shape and
-/// corresponding element types.
+/// 1. If any result is a vector/tensor then at least one operand must also be a
+///    vector/tensor.
+/// 2. If any operand is a vector/tensor then there must be at least one result
+///    and all results must be vectors/tensors.
+/// 3. All operand and result vector/tensor types must be of the same shape. The
+///    shape may be dynamic in which case the op's behaviour is undefined for
+///    non-matching shapes.
+/// 4. The operation must be elementwise on its vector/tensor operands and
+///    results. When applied to single-element vectors/tensors, the result must
+///    be the same per elememnt.
 ///
-/// Together, these properties provide an easy way for scalar operations to
-/// conveniently generalize their behavior to vectors/tensors, and systematize
-/// conversion between these forms.
+/// TODO: Avoid hardcoding vector/tensor, and generalize this trait to a new
+/// interface `ElementwiseTypeInterface` that describes the container types for
+/// which the operation is elementwise.
+///
+/// Rationale:
+/// - 1. and 2. guarantee a well-defined iteration space and exclude the cases
+///   of 0 non-scalar operands or 0 non-scalar results, which complicate a
+///   generic definition of the iteration space.
+/// - 3. guarantees that folding can be done across scalars/vectors/tensors with
+///   the same pattern, as otherwise lots of special handling for type
+///   mismatches would be needed.
+/// - 4. guarantees that no error handling is needed. Higher-level dialects
+///   should reify any needed guards or error handling code before lowering to
+///   an `Elementwise` op.
+template <typename ConcreteType>
+struct Elementwise : public TraitBase<ConcreteType, Elementwise> {
+  static LogicalResult verifyTrait(Operation *op) {
+    return ::mlir::OpTrait::impl::verifyElementwise(op);
+  }
+};
+
+/// This trait tags `Elementwise` operatons that can be systematically
+/// scalarized. All vector/tensor operands and results are then replaced by
+/// scalars of the respective element type. Semantically, this is the operation
+/// on a single element per vector/tensor.
+///
+/// Rationale:
+/// Allow to define the vector/tensor semantics of elementwise operations based
+/// on scalars. This provides a constructive procedure for IR transformations
+/// to, e.g., create scalar loop bodies from tensor ops.
+///
+/// Example:
+/// ```
+/// %tensor_select = "std.select"(%pred_tensor, %true_val, %false_val)
+///                      : (tensor<?xi1>, tensor<?xf32>, tensor<?xf32>)
+///                      -> tensor<?xf32>
+/// ```
+/// can be scalarized to
+///
+/// ```
+/// %scalar_select = "std.select"(%pred, %true_val_scalar, %false_val_scalar)
+///                      : (i1, f32, f32) -> f32
+/// ```
+template <typename ConcreteType>
+struct Scalarizable : public TraitBase<ConcreteType, Scalarizable> {
+  static LogicalResult verifyTrait(Operation *op) {
+    static_assert(
+        ConcreteType::template hasTrait<Elementwise>(),
+        "`Scalarizable` trait is only applicable to `Elementwise` ops.");
+    return success();
+  }
+};
+
+/// This trait tags `Elementwise` operatons that can be systematically
+/// vectorized. All scalar operands and results are then replaced by vectors
+/// with the respective element type. Semantically, this is the operation on
+/// multiple arguments simultaneously.
+///
+/// Rationale:
+/// Provide the reverse to `Scalarizable` which, when chained together, allows
+/// reasoning about the relationship between the tensor and vector case.
+/// Additionally, it permits reasoning about promoting scalars to vectors via
+/// broadcasting in cases like `%select_scalar_pred` above.
+template <typename ConcreteType>
+struct Vectorizable : public TraitBase<ConcreteType, Vectorizable> {
+  static LogicalResult verifyTrait(Operation *op) {
+    static_assert(
+        ConcreteType::template hasTrait<Elementwise>(),
+        "`Vectorizable` trait is only applicable to `Elementwise` ops.");
+    return success();
+  }
+};
+
+/// This trait tags `Elementwise` operatons that can be systematically
+/// tensorized. All scalar operands and results are then replaced by tensors
+/// with the respective element type. Semantically, this is the operation on
+/// multiple arguments simultaneously.
+///
+/// Rationale:
+/// Provide the reverse to `Scalarizable` which, when chained together, allows
+/// reasoning about the relationship between the tensor and vector case.
+/// Additionally, it permits reasoning about promoting scalars to tensors via
+/// broadcasting in cases like `%select_scalar_pred` above.
 ///
 /// Examples:
 /// ```
 /// %scalar = "std.addf"(%a, %b) : (f32, f32) -> f32
-/// // Applying the systematic vectorization/tensorization property, this op
-/// // must also be valid:
-/// %tensor = "std.addf"(%a_tensor, %b_tensor)
-///           : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>)
-///
-/// // These properties generalize well to the cases of non-scalar operands.
-/// %select_scalar_pred = "std.select"(%pred, %true_val, %false_val)
-///                       : (i1, tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
-/// // Applying the systematic vectorization / tensorization property, this
-/// // op must also be valid:
-/// %select_tensor_pred = "std.select"(%pred_tensor, %true_val, %false_val)
-///                       : (tensor<?xi1>, tensor<?xf32>, tensor<?xf32>)
-///                       -> tensor<?xf32>
-/// // Applying the systematic scalarization property, this op must also
-/// // be valid.
-/// %select_scalar = "std.select"(%pred, %true_val_scalar, %false_val_scalar)
-///                  : (i1, f32, f32) -> f32
+/// ```
+/// can be tensorized to
+/// ```
+/// %tensor = "std.addf"(%a, %b) : (tensor<?xf32>, tensor<?xf32>)
+///               -> tensor<?xf32>)
 /// ```
 ///
-/// TODO: Avoid hardcoding vector/tensor, and generalize this to any type
-/// implementing a new "ElementwiseMappableTypeInterface" that describes types
-/// for which it makes sense to apply a scalar function to each element.
-///
-/// Rationale:
-/// - 1. and 2. guarantee a well-defined iteration space for 6.
-///   - These also exclude the cases of 0 non-scalar operands or 0 non-scalar
-///     results, which complicate a generic definition of the iteration space.
-/// - 3. guarantees that folding can be done across scalars/vectors/tensors
-///   with the same pattern, as otherwise lots of special handling of type
-///   mismatches would be needed.
-/// - 4. guarantees that no error handling cases need to be considered.
-///   - Higher-level dialects should reify any needed guards / error handling
-///   code before lowering to an ElementwiseMappable op.
-/// - 5. and 6. allow defining the semantics on vectors/tensors via the scalar
-///   semantics and provide a constructive procedure for IR transformations
-///   to e.g. create scalar loop bodies from tensor ops.
-/// - 7. provides the reverse of 5., which when chained together allows
-///   reasoning about the relationship between the tensor and vector case.
-///   Additionally, it permits reasoning about promoting scalars to
-///   vectors/tensors via broadcasting in cases like `%select_scalar_pred`
-///   above.
+/// ```
+/// %scalar_pred = "std.select"(%pred, %true_val, %false_val)
+///                    : (i1, tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
+/// ```
+/// can be tensorized to
+/// ```
+/// %tensor_pred = "std.select"(%pred, %true_val, %false_val)
+///                    : (tensor<?xi1>, tensor<?xf32>, tensor<?xf32>)
+///                    -> tensor<?xf32>
+/// ```
 template <typename ConcreteType>
-struct ElementwiseMappable
-    : public TraitBase<ConcreteType, ElementwiseMappable> {
+struct Tensorizable : public TraitBase<ConcreteType, Tensorizable> {
   static LogicalResult verifyTrait(Operation *op) {
-    return ::mlir::OpTrait::impl::verifyElementwiseMappable(op);
+    static_assert(
+        ConcreteType::template hasTrait<Elementwise>(),
+        "`Tensorizable` trait is only applicable to `Elementwise` ops.");
+    return success();
   }
 };
+
+/// Together, `Elementwise`, `Scalarizable`, `Vectorizable`, and `Tensorizable`
+/// provide an easy way for scalar operations to conveniently generalize their
+/// behavior to vectors/tensors, and systematize conversion between these forms.
+bool hasElementwiseMappableTraits(Operation *op);
 
 } // end namespace OpTrait
 
