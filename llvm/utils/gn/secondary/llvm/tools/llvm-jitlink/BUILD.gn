@@ -15,7 +15,9 @@ executable("llvm-jitlink") {
     "llvm-jitlink-macho.cpp",
     "llvm-jitlink.cpp",
   ]
-  if (host_os != "mac" && host_os != "win") {
+  if (host_os == "win") {
+    ldflags = [ "/export:llvm_orc_registerJITLoaderGDBWrapper" ]
+  } else if (host_os != "mac") {
     # Corresponds to export_executable_symbols() in cmake.
     ldflags = [ "-rdynamic" ]
   }
