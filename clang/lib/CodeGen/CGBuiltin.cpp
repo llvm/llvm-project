@@ -3078,15 +3078,37 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // isfinite(x) --> fabs(x) != infinity
     // x != NaN via the ordered compare in either case.
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
-    // FIXME: for strictfp/IEEE-754 we need to not trap on SNaN here.
     Value *V = EmitScalarExpr(E->getArg(0));
-    Value *Fabs = EmitFAbs(*this, V);
-    Constant *Infinity = ConstantFP::getInfinity(V->getType());
-    CmpInst::Predicate Pred = (BuiltinID == Builtin::BI__builtin_isinf)
-                                  ? CmpInst::FCMP_OEQ
-                                  : CmpInst::FCMP_ONE;
-    Value *FCmp = Builder.CreateFCmp(Pred, Fabs, Infinity, "cmpinf");
-    return RValue::get(Builder.CreateZExt(FCmp, ConvertType(E->getType())));
+    llvm::Type *Ty = V->getType();
+    if (!Builder.getIsFPConstrained() ||
+        Builder.getDefaultConstrainedExcept() == fp::ebIgnore ||
+        !Ty->isIEEE()) {
+      Value *Fabs = EmitFAbs(*this, V);
+      Constant *Infinity = ConstantFP::getInfinity(V->getType());
+      CmpInst::Predicate Pred = (BuiltinID == Builtin::BI__builtin_isinf)
+                                    ? CmpInst::FCMP_OEQ
+                                    : CmpInst::FCMP_ONE;
+      Value *FCmp = Builder.CreateFCmp(Pred, Fabs, Infinity, "cmpinf");
+      return RValue::get(Builder.CreateZExt(FCmp, ConvertType(E->getType())));
+    }
+
+    if (Value *Result = getTargetHooks().testFPKind(V, BuiltinID, Builder, CGM))
+      return RValue::get(Result);
+
+    // Inf values have all exp bits set and a zero significand. Therefore:
+    // isinf(V) == ((V << 1) == ((exp mask) << 1))
+    unsigned bitsize = Ty->getScalarSizeInBits();
+    llvm::IntegerType *IntTy = Builder.getIntNTy(bitsize);
+    Value *IntV = Builder.CreateBitCast(V, IntTy);
+    Value *Shl1 = Builder.CreateShl(IntV, 1);
+    const llvm::fltSemantics &Semantics = Ty->getFltSemantics();
+    APInt ExpMask = APFloat::getInf(Semantics).bitcastToAPInt();
+    Value *ExpMaskShl1 = llvm::ConstantInt::get(IntTy, ExpMask.shl(1));
+    if (BuiltinID == Builtin::BI__builtin_isinf)
+      V = Builder.CreateICmpEQ(Shl1, ExpMaskShl1);
+    else
+      V = Builder.CreateICmpNE(Shl1, ExpMaskShl1);
+    return RValue::get(Builder.CreateZExt(V, ConvertType(E->getType())));
   }
 
   case Builtin::BI__builtin_isinf_sign: {
