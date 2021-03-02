@@ -14,7 +14,7 @@
 # BAD1-DAG: error: invalid name for segment or section: S/ASHY_SEG
 # BAD1-DAG: error: invalid name for segment or section: st*rry_sect
 # BAD1-DAG: error: invalid name for segment or section: -o
-# BAD1-DAG: error: file is too small to contain a magic number:
+# BAD1-DAG: error: {{.*}}: unhandled file type
 
 # RUN: not %lld \
 # RUN:     -rename_segment H#SHY_SEG PL+SSY_SEG \
@@ -24,7 +24,7 @@
 # BAD2-DAG: error: invalid name for segment or section: H#SHY_SEG
 # BAD2-DAG: error: invalid name for segment or section: PL+SSY_SEG
 # BAD2-DAG: error: invalid name for segment or section: -o
-# BAD2-DAG: error: file is too small to contain a magic number:
+# BAD2-DAG: error: {{.*}}: unhandled file type
 
 ## Check that section and segment renames happen
 # RUN: %lld \

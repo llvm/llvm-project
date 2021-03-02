@@ -263,7 +263,7 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
 
 static InputFile *addFile(StringRef path, bool forceLoadArchive,
                           bool isBundleLoader = false) {
-  Optional<MemoryBufferRef> buffer = readLinkableFile(path);
+  Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return nullptr;
   MemoryBufferRef mbref = *buffer;
@@ -279,7 +279,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
       error(path + ": archive has no index; run ranlib to add one");
 
     if (config->allLoad || forceLoadArchive) {
-      if (Optional<MemoryBufferRef> buffer = readLinkableFile(path)) {
+      if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           if (Optional<InputFile *> file = loadArchiveMember(
                   member.mbref, member.modTime, path, /*objCOnly=*/false)) {
@@ -300,7 +300,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
       // we already found that it contains an ObjC symbol. We should also
       // consider creating a LazyObjFile class in order to avoid double-loading
       // these files here and below (as part of the ArchiveFile).
-      if (Optional<MemoryBufferRef> buffer = readLinkableFile(path)) {
+      if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           if (Optional<InputFile *> file = loadArchiveMember(
                   member.mbref, member.modTime, path, /*objCOnly=*/true)) {
@@ -403,7 +403,7 @@ void macho::parseLCLinkerOption(InputFile* f, unsigned argc, StringRef data) {
 }
 
 static void addFileList(StringRef path) {
-  Optional<MemoryBufferRef> buffer = readRawFile(path);
+  Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
   MemoryBufferRef mbref = *buffer;
@@ -426,7 +426,7 @@ static void addFileList(StringRef path) {
 //
 // The file can also have line comments that start with '#'.
 static void parseOrderFile(StringRef path) {
-  Optional<MemoryBufferRef> buffer = readRawFile(path);
+  Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer) {
     error("Could not read order file at " + path);
     return;
@@ -940,7 +940,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     StringRef segName = arg->getValue(0);
     StringRef sectName = arg->getValue(1);
     StringRef fileName = arg->getValue(2);
-    Optional<MemoryBufferRef> buffer = readRawFile(fileName);
+    Optional<MemoryBufferRef> buffer = readFile(fileName);
     if (buffer)
       inputFiles.insert(make<OpaqueFile>(*buffer, segName, sectName));
   }
