@@ -107,6 +107,26 @@ void RTNAME(CharacterMaxLoc)(Descriptor &result, const Descriptor &x,
 void RTNAME(CharacterMinLoc)(Descriptor &result, const Descriptor &x,
     int dim = 0, const Descriptor *mask = nullptr, int kind = sizeof(int),
     bool back = false, const char *sourceFile = nullptr, int sourceLine = 0);
+
+std::size_t RTNAME(Scan1)(
+    const char *, std::size_t, const char *set, std::size_t, bool back = false);
+std::size_t RTNAME(Scan2)(const char16_t *, std::size_t, const char16_t *set,
+    std::size_t, bool back = false);
+std::size_t RTNAME(Scan4)(const char32_t *, std::size_t, const char32_t *set,
+    std::size_t, bool back = false);
+void RTNAME(Scan)(Descriptor &result, const Descriptor &string,
+    const Descriptor &set, const Descriptor *back /*can be null*/, int kind,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+
+std::size_t RTNAME(Verify1)(
+    const char *, std::size_t, const char *set, std::size_t, bool back = false);
+std::size_t RTNAME(Verify2)(const char16_t *, std::size_t, const char16_t *set,
+    std::size_t, bool back = false);
+std::size_t RTNAME(Verify4)(const char32_t *, std::size_t, const char32_t *set,
+    std::size_t, bool back = false);
+void RTNAME(Verify)(Descriptor &result, const Descriptor &string,
+    const Descriptor &set, const Descriptor *back /*can be null*/, int kind,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 }
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_CHARACTER_H_
