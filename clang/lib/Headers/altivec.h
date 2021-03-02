@@ -14024,48 +14024,70 @@ static __inline__ void __ATTRS_o_ai vec_stvrxl(vector float __a, int __b,
 static __inline__ vector signed char __ATTRS_o_ai vec_promote(signed char __a,
                                                               int __b) {
   vector signed char __res = (vector signed char)(0);
-  __res[__b] = __a;
+  __res[__b & 0x7] = __a;
   return __res;
 }
 
 static __inline__ vector unsigned char __ATTRS_o_ai
 vec_promote(unsigned char __a, int __b) {
   vector unsigned char __res = (vector unsigned char)(0);
-  __res[__b] = __a;
+  __res[__b & 0x7] = __a;
   return __res;
 }
 
 static __inline__ vector short __ATTRS_o_ai vec_promote(short __a, int __b) {
   vector short __res = (vector short)(0);
-  __res[__b] = __a;
+  __res[__b & 0x7] = __a;
   return __res;
 }
 
 static __inline__ vector unsigned short __ATTRS_o_ai
 vec_promote(unsigned short __a, int __b) {
   vector unsigned short __res = (vector unsigned short)(0);
-  __res[__b] = __a;
+  __res[__b & 0x7] = __a;
   return __res;
 }
 
 static __inline__ vector int __ATTRS_o_ai vec_promote(int __a, int __b) {
   vector int __res = (vector int)(0);
-  __res[__b] = __a;
+  __res[__b & 0x3] = __a;
   return __res;
 }
 
 static __inline__ vector unsigned int __ATTRS_o_ai vec_promote(unsigned int __a,
                                                                int __b) {
   vector unsigned int __res = (vector unsigned int)(0);
-  __res[__b] = __a;
+  __res[__b & 0x3] = __a;
   return __res;
 }
 
 static __inline__ vector float __ATTRS_o_ai vec_promote(float __a, int __b) {
   vector float __res = (vector float)(0);
-  __res[__b] = __a;
+  __res[__b & 0x3] = __a;
   return __res;
 }
+
+#ifdef __VSX__
+static __inline__ vector double __ATTRS_o_ai vec_promote(double __a, int __b) {
+  vector double __res = (vector double)(0);
+  __res[__b & 0x1] = __a;
+  return __res;
+}
+
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_promote(signed long long __a, int __b) {
+  vector signed long long __res = (vector signed long long)(0);
+  __res[__b & 0x1] = __a;
+  return __res;
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_promote(unsigned long long __a, int __b) {
+  vector unsigned long long __res = (vector unsigned long long)(0);
+  __res[__b & 0x1] = __a;
+  return __res;
+}
+#endif
 
 /* vec_splats */
 
