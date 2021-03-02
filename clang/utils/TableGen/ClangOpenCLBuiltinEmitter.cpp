@@ -60,8 +60,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -69,7 +69,6 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <set>
 
 using namespace llvm;
 
@@ -667,7 +666,7 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
       Records.getAllDerivedDefinitions("ImageType");
 
   // Map an image type name to its 3 access-qualified types (RO, WO, RW).
-  std::map<StringRef, SmallVector<Record *, 3>> ImageTypesMap;
+  StringMap<SmallVector<Record *, 3>> ImageTypesMap;
   for (auto *IT : ImageTypes) {
     auto Entry = ImageTypesMap.find(IT->getValueAsString("Name"));
     if (Entry == ImageTypesMap.end()) {
@@ -685,11 +684,11 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
   // tells which one is needed.  Emit a switch statement that puts the
   // corresponding QualType into "QT".
   for (const auto &ITE : ImageTypesMap) {
-    OS << "    case OCLT_" << ITE.first.str() << ":\n"
+    OS << "    case OCLT_" << ITE.getKey() << ":\n"
        << "      switch (Ty.AccessQualifier) {\n"
        << "        case OCLAQ_None:\n"
        << "          llvm_unreachable(\"Image without access qualifier\");\n";
-    for (const auto &Image : ITE.second) {
+    for (const auto &Image : ITE.getValue()) {
       OS << StringSwitch<const char *>(
                 Image->getValueAsString("AccessQualifier"))
                 .Case("RO", "        case OCLAQ_ReadOnly:\n")
