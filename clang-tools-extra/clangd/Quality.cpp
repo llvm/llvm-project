@@ -580,16 +580,12 @@ evaluateDecisionForest(const SymbolQualitySignals &Quality,
   // multiplciative boost (like NameMatch). This allows us to weigh the
   // prediciton score and NameMatch appropriately.
   Scores.ExcludingName = pow(Base, Evaluate(E));
-  // Following cases are not part of the generated training dataset:
-  //  - Symbols with `NeedsFixIts`.
-  //  - Forbidden symbols.
-  //  - Keywords: Dataset contains only macros and decls.
+  // NeedsFixIts is not part of the DecisionForest as generating training
+  // data that needs fixits is not-feasible.
   if (Relevance.NeedsFixIts)
     Scores.ExcludingName *= 0.5;
   if (Relevance.Forbidden)
     Scores.ExcludingName *= 0;
-  if (Quality.Category == SymbolQualitySignals::Keyword)
-    Scores.ExcludingName *= 4;
 
   // NameMatch should be a multiplier on total score to support rescoring.
   Scores.Total = Relevance.NameMatch * Scores.ExcludingName;
