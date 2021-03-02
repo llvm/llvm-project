@@ -2370,7 +2370,10 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   // manager changed or buffer changed (like in a nested include) then just
   // print the normal diagnostic using its Filename and LineNo.
   if (!Parser->CppHashInfo.LineNumber || DiagBuf != CppHashBuf) {
-    Parser->getContext().diagnose(Diag);
+    if (Parser->SavedDiagHandler)
+      Parser->SavedDiagHandler(Diag, Parser->SavedDiagContext);
+    else
+      Parser->getContext().diagnose(Diag);
     return;
   }
 
@@ -2389,7 +2392,10 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
                        Diag.getColumnNo(), Diag.getKind(), Diag.getMessage(),
                        Diag.getLineContents(), Diag.getRanges());
 
-  Parser->getContext().diagnose(NewDiag);
+  if (Parser->SavedDiagHandler)
+    Parser->SavedDiagHandler(Diag, Parser->SavedDiagContext);
+  else
+    Parser->getContext().diagnose(NewDiag);
 }
 
 // FIXME: This is mostly duplicated from the function in AsmLexer.cpp. The
