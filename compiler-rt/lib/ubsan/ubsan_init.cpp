@@ -33,6 +33,11 @@ static void CommonInit() {
   InitializeSuppressions();
 }
 
+static void UbsanDie() {
+  if (common_flags()->print_module_map >= 1)
+    DumpProcessMap();
+}
+
 static void CommonStandaloneInit() {
   SanitizerToolName = GetSanititizerToolName();
   CacheBinaryName();
@@ -42,6 +47,10 @@ static void CommonStandaloneInit() {
   AndroidLogInit();
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
   CommonInit();
+
+  // Only add die callback when running in standalone mode to avoid printing
+  // the same information from multiple sanitizers' output
+  AddDieCallback(UbsanDie);
   Symbolizer::LateInitialize();
 }
 
