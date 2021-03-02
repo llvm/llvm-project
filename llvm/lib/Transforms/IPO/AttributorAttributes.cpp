@@ -4478,6 +4478,13 @@ struct AANoCaptureCallSiteReturned final : AANoCaptureImpl {
   AANoCaptureCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AANoCaptureImpl(IRP, A) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    const Function *F = getAnchorScope();
+    // Check what state the associated function can actually capture.
+    determineFunctionCaptureCapabilities(getIRPosition(), *F, *this);
+  }
+
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSRET_ATTR(nocapture)
