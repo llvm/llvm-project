@@ -233,7 +233,7 @@ define <4 x i1> @or_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vblendvps %xmm0, {{.*}}(%rip), %xmm1, %xmm0
+; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %a = icmp eq <4 x i32> %x, %y
   %b = icmp sgt <4 x i32> %z, %w
@@ -244,9 +244,9 @@ define <4 x i1> @or_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) 
 define <4 x i1> @and_not_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) {
 ; CHECK-LABEL: and_not_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm2
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpandn %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm1
+; CHECK-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %a = icmp eq <4 x i32> %x, %y
   %b = icmp sgt <4 x i32> %z, %w
@@ -258,9 +258,10 @@ define <4 x i1> @or_not_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> 
 ; CHECK-LABEL: or_not_vec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm2 = [1,1,1,1]
-; CHECK-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %a = icmp eq <4 x i32> %x, %y
   %b = icmp sgt <4 x i32> %z, %w

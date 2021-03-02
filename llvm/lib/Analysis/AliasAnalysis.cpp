@@ -958,6 +958,17 @@ AAResults llvm::createLegacyPMAAResults(Pass &P, Function &F,
   return AAR;
 }
 
+Optional<int64_t>
+BatchAAResults::getClobberOffset(const MemoryLocation &LocA,
+                                 const MemoryLocation &LocB) const {
+  if (!LocA.Size.hasValue() || !LocB.Size.hasValue())
+    return None;
+  const Value *V1 = LocA.Ptr->stripPointerCastsForAliasAnalysis();
+  const Value *V2 = LocB.Ptr->stripPointerCastsForAliasAnalysis();
+  return AAQI.getClobberOffset(V1, V2, LocA.Size.getValue(),
+                               LocB.Size.getValue());
+}
+
 bool llvm::isNoAliasCall(const Value *V) {
   if (const auto *Call = dyn_cast<CallBase>(V))
     return Call->hasRetAttr(Attribute::NoAlias);

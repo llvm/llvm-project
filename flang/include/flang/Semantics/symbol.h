@@ -15,10 +15,9 @@
 #include "flang/Common/reference.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include <array>
-#include <functional>
 #include <list>
 #include <optional>
-#include <unordered_set>
+#include <set>
 #include <vector>
 
 namespace llvm {
@@ -596,7 +595,7 @@ public:
   bool operator==(const Symbol &that) const { return this == &that; }
   bool operator!=(const Symbol &that) const { return !(*this == that); }
   bool operator<(const Symbol &that) const {
-    // For maps of symbols: collate them by source location
+    // For sets of symbols: collate them by source location
     return name_.begin() < that.name_.begin();
   }
 
@@ -766,13 +765,7 @@ inline bool operator<(SymbolRef x, SymbolRef y) { return *x < *y; }
 inline bool operator<(MutableSymbolRef x, MutableSymbolRef y) {
   return *x < *y;
 }
-struct SymbolHash {
-  std::size_t operator()(SymbolRef symRef) const {
-    std::hash<std::string> hasher;
-    return hasher(symRef->name().ToString());
-  }
-};
-using SymbolSet = std::unordered_set<SymbolRef, SymbolHash>;
+using SymbolSet = std::set<SymbolRef>;
 
 } // namespace Fortran::semantics
 

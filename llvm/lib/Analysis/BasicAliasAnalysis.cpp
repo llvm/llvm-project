@@ -1144,24 +1144,43 @@ AliasResult BasicAAResult::aliasGEP(
   // that the objects are partially overlapping.  If the difference is
   // greater, we know they do not overlap.
   if (DecompGEP1.Offset != 0 && DecompGEP1.VarIndices.empty()) {
-    if (DecompGEP1.Offset.sge(0)) {
-      if (V2Size.hasValue()) {
-        if (DecompGEP1.Offset.ult(V2Size.getValue()))
-          return PartialAlias;
-        return NoAlias;
-      }
-    } else {
-      // We have the situation where:
+    APInt &Off = DecompGEP1.Offset;
+
+    // Initialize for Off >= 0 (V2 <= GEP1) case.
+    const Value *LeftPtr = V2;
+    const Value *RightPtr = GEP1;
+    LocationSize VLeftSize = V2Size;
+    LocationSize VRightSize = V1Size;
+
+    if (Off.isNegative()) {
+      // Swap if we have the situation where:
       // +                +
       // | BaseOffset     |
       // ---------------->|
       // |-->V1Size       |-------> V2Size
       // GEP1             V2
-      if (V1Size.hasValue()) {
-        if ((-DecompGEP1.Offset).ult(V1Size.getValue()))
-          return PartialAlias;
-        return NoAlias;
+      std::swap(LeftPtr, RightPtr);
+      std::swap(VLeftSize, VRightSize);
+      Off = -Off;
+    }
+
+    if (VLeftSize.hasValue()) {
+      const uint64_t LSize = VLeftSize.getValue();
+      if (Off.ult(LSize)) {
+        // Conservatively drop processing if a phi was visited and/or offset is
+        // too big.
+        if (VisitedPhiBBs.empty() && VRightSize.hasValue() &&
+            Off.ule(INT64_MAX)) {
+          // Memory referenced by right pointer is nested. Save the offset in
+          // cache.
+          const uint64_t RSize = VRightSize.getValue();
+          if ((Off + RSize).ule(LSize))
+            AAQI.setClobberOffset(LeftPtr, RightPtr, LSize, RSize,
+                                  Off.getSExtValue());
+        }
+        return PartialAlias;
       }
+      return NoAlias;
     }
   }
 

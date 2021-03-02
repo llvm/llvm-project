@@ -1,6 +1,9 @@
 ; RUN: lli --jit-kind=orc-lazy --per-module-lazy \
 ; RUN:     --generate=__dump_jit_debug_descriptor %s | FileCheck %s
 ;
+; RUN: lli --jit-kind=orc-lazy --per-module-lazy --jit-linker=jitlink \
+; RUN:     --generate=__dump_jit_debug_descriptor %s | FileCheck %s
+;
 ; CHECK: Reading __jit_debug_descriptor at 0x{{.*}}
 ; CHECK: Version: 1
 ; CHECK: Action: JIT_REGISTER_FN
