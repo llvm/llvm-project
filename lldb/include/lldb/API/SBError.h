@@ -11,10 +11,6 @@
 
 #include "lldb/API/SBDefines.h"
 
-namespace lldb_private {
-class ScriptInterpreter;
-} // namespace lldb_private
-
 namespace lldb {
 
 class LLDB_API SBError {
@@ -76,8 +72,6 @@ protected:
   friend class SBValue;
   friend class SBWatchpoint;
   friend class SBFile;
-
-  friend class lldb_private::ScriptInterpreter;
 
   lldb_private::Status *get();
 

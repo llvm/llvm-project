@@ -1,4 +1,4 @@
-//===-- CommandOptionsProcessLaunch.h ---------------------------*- C++ -*-===//
+//===-- CommandOptionsProcessLaunch.h -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,9 +16,9 @@ namespace lldb_private {
 
 // CommandOptionsProcessLaunch
 
-class CommandOptionsProcessLaunch : public lldb_private::OptionGroup {
+class CommandOptionsProcessLaunch : public lldb_private::Options {
 public:
-  CommandOptionsProcessLaunch() : lldb_private::OptionGroup() {
+  CommandOptionsProcessLaunch() : lldb_private::Options() {
     // Keep default values of all options in one place: OptionParsingStarting
     // ()
     OptionParsingStarting(nullptr);

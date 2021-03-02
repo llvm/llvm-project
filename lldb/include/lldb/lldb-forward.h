@@ -174,7 +174,6 @@ class RichManglingContext;
 class Scalar;
 class ScriptInterpreter;
 class ScriptInterpreterLocker;
-class ScriptedProcessInterface;
 class ScriptedSyntheticChildren;
 class SearchFilter;
 class Section;
@@ -342,7 +341,6 @@ typedef std::shared_ptr<lldb_private::Listener> ListenerSP;
 typedef std::weak_ptr<lldb_private::Listener> ListenerWP;
 typedef std::shared_ptr<lldb_private::MemoryHistory> MemoryHistorySP;
 typedef std::unique_ptr<lldb_private::MemoryRegionInfo> MemoryRegionInfoUP;
-typedef std::shared_ptr<lldb_private::MemoryRegionInfo> MemoryRegionInfoSP;
 typedef std::shared_ptr<lldb_private::Module> ModuleSP;
 typedef std::weak_ptr<lldb_private::Module> ModuleWP;
 typedef std::shared_ptr<lldb_private::ObjectFile> ObjectFileSP;
@@ -393,8 +391,6 @@ typedef std::shared_ptr<lldb_private::ScriptSummaryFormat>
     ScriptSummaryFormatSP;
 typedef std::shared_ptr<lldb_private::ScriptInterpreter> ScriptInterpreterSP;
 typedef std::unique_ptr<lldb_private::ScriptInterpreter> ScriptInterpreterUP;
-typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
-    ScriptedProcessInterfaceUP;
 typedef std::shared_ptr<lldb_private::Section> SectionSP;
 typedef std::unique_ptr<lldb_private::SectionList> SectionListUP;
 typedef std::weak_ptr<lldb_private::Section> SectionWP;

@@ -1009,14 +1009,11 @@ public:
                             "Launch a new process on a remote platform.",
                             "platform process launch program",
                             eCommandRequiresTarget | eCommandTryTargetAPILock),
-        m_options(), m_all_options() {
-    m_all_options.Append(&m_options);
-    m_all_options.Finalize();
-  }
+        m_options() {}
 
   ~CommandObjectPlatformProcessLaunch() override = default;
 
-  Options *GetOptions() override { return &m_all_options; }
+  Options *GetOptions() override { return &m_options; }
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -1088,7 +1085,6 @@ protected:
   }
 
   CommandOptionsProcessLaunch m_options;
-  OptionGroupOptions m_all_options;
 };
 
 // "platform process list"
