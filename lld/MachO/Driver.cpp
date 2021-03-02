@@ -847,8 +847,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
             (config->frameworkSearchPaths.size()
                  ? "\n\t" + join(config->frameworkSearchPaths, "\n\t")
                  : ""));
-    freeArena();
-    return !errorCount();
   }
 
   initLLVM(); // must be run before any call to addFile()
