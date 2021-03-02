@@ -122,16 +122,14 @@ attr(
 // IMPL-LABEL: ArrayAttr Test5Op::indexing_maps() {
 // IMPL: auto cst0 = getAffineConstantExpr(strides().getValue<int>({ 0 }), context);
 // IMPL: auto cst1 = getAffineConstantExpr(strides().getValue<int>({ 1 }), context);
-// IMPL: auto cst2 = getAffineConstantExpr(strides().getValue<int>({ 0 }), context);
-// IMPL: auto cst3 = getAffineConstantExpr(strides().getValue<int>({ 1 }), context);
 // IMPL: auto map0 = AffineMap::get(7, 9, {d0, d1 * s7 + d4, d2 * s8 + d5, d6}, context);
-// IMPL: map0 = map0.replaceDimsAndSymbols({}, { s0, s1, s2, s3, s4, s5, s6, cst2, cst3 }, 7, 0);
+// IMPL: map0 = map0.replaceDimsAndSymbols({}, { s0, s1, s2, s3, s4, s5, s6, cst0, cst1 }, 7, 0);
 // IMPL: map0 = simplifyAffineMap(map0);
 // IMPL: auto map1 = AffineMap::get(7, 9, {d3, d4, d5, d6}, context);
-// IMPL: map1 = map1.replaceDimsAndSymbols({}, { s0, s1, s2, s3, s4, s5, s6, cst2, cst3 }, 7, 0);
+// IMPL: map1 = map1.replaceDimsAndSymbols({}, { s0, s1, s2, s3, s4, s5, s6, cst0, cst1 }, 7, 0);
 // IMPL: map1 = simplifyAffineMap(map1);
 // IMPL: auto map2 = AffineMap::get(7, 7, {d0, d1, d2, d3}, context);
-// IMPL: map2 = map2.replaceDimsAndSymbols({}, { s0, s1, s2, s3, s4, s5, s6, cst2, cst3 }, 7, 0);
+// IMPL: map2 = map2.replaceDimsAndSymbols({}, { s0, s1, s2, s3, s4, s5, s6, cst0, cst1 }, 7, 0);
 // IMPL: map2 = simplifyAffineMap(map2);
 // IMPL: return {{.+}}.getAffineMapArrayAttr({ map0, map1, map2 });
 //
