@@ -151,6 +151,10 @@ Build System Changes
 These are major changes to the build system that have happened since the 12.0.0
 release of Clang. Users of the build system should adjust accordingly.
 
+- The option ``LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA`` no longer exists. There were
+  two releases with that flag forced off, and no uses were added that forced it
+  on. The recommended replacement is clangd.
+
 - ...
 
 AST Matchers
