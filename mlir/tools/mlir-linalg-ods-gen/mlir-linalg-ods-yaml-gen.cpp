@@ -129,12 +129,12 @@ struct LinalgOpConfig {
 // Mapping traits.
 //===----------------------------------------------------------------------===//
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(LinalgTensorDef);
-LLVM_YAML_IS_SEQUENCE_VECTOR(SerializedAffineMap);
-LLVM_YAML_IS_SEQUENCE_VECTOR(LinalgIteratorTypeDef);
-LLVM_YAML_IS_SEQUENCE_VECTOR(ScalarAssign);
-LLVM_YAML_IS_SEQUENCE_VECTOR(ScalarExpression);
-LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(LinalgOpConfig);
+LLVM_YAML_IS_SEQUENCE_VECTOR(LinalgTensorDef)
+LLVM_YAML_IS_SEQUENCE_VECTOR(SerializedAffineMap)
+LLVM_YAML_IS_SEQUENCE_VECTOR(LinalgIteratorTypeDef)
+LLVM_YAML_IS_SEQUENCE_VECTOR(ScalarAssign)
+LLVM_YAML_IS_SEQUENCE_VECTOR(ScalarExpression)
+LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(LinalgOpConfig)
 
 namespace llvm {
 namespace yaml {
