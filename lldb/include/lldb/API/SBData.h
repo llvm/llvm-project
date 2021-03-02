@@ -11,10 +11,6 @@
 
 #include "lldb/API/SBDefines.h"
 
-namespace lldb_private {
-class ScriptInterpreter;
-} // namespace lldb_private
-
 namespace lldb {
 
 class LLDB_API SBData {
@@ -150,8 +146,6 @@ private:
   friend class SBSection;
   friend class SBTarget;
   friend class SBValue;
-
-  friend class lldb_private::ScriptInterpreter;
 
   lldb::DataExtractorSP m_opaque_sp;
 };

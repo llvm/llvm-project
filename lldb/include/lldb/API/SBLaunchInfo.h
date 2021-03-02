@@ -171,14 +171,6 @@ public:
 
   void SetDetachOnError(bool enable);
 
-  const char *GetScriptedProcessClassName() const;
-
-  void SetScriptedProcessClassName(const char *class_name);
-
-  lldb::SBStructuredData GetScriptedProcessDictionary() const;
-
-  void SetScriptedProcessDictionary(lldb::SBStructuredData dict);
-
 protected:
   friend class SBPlatform;
   friend class SBTarget;

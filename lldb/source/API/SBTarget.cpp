@@ -446,7 +446,6 @@ SBProcess SBTarget::Launch(SBLaunchInfo &sb_launch_info, SBError &error) {
     if (arch_spec.IsValid())
       launch_info.GetArchitecture() = arch_spec;
 
-    target_sp->SetProcessLaunchInfo(launch_info);
     error.SetError(target_sp->Launch(launch_info, nullptr));
     sb_launch_info.set_ref(launch_info);
     sb_process.SetSP(target_sp->GetProcessSP());
