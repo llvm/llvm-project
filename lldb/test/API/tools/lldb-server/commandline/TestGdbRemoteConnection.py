@@ -128,14 +128,14 @@ class TestGdbRemoteConnection(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfRemote  # reverse connect is not a supported use case for now
-    def test_reverse_connect_llgs(self):
+    def test_reverse_connect(self):
         # Reverse connect is the default connection method.
         self.connect_to_debug_monitor()
         # Verify we can do the handshake.  If that works, we'll call it good.
         self.do_handshake(self.sock)
 
     @skipIfRemote
-    def test_named_pipe_llgs(self):
+    def test_named_pipe(self):
         family, type, proto, _, addr = socket.getaddrinfo(
             self.stub_hostname, 0, proto=socket.IPPROTO_TCP)[0]
         self.sock = socket.socket(family, type, proto)
