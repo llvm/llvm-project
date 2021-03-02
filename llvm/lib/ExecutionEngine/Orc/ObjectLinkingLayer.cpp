@@ -486,7 +486,7 @@ void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
   auto ObjBuffer = O->getMemBufferRef();
   auto Ctx = std::make_unique<ObjectLinkingLayerJITLinkContext>(
       *this, std::move(R), std::move(O));
-  if (auto G = createLinkGraphFromObject(std::move(ObjBuffer)))
+  if (auto G = createLinkGraphFromObject(ObjBuffer))
     link(std::move(*G), std::move(Ctx));
   else
     Ctx->notifyFailed(G.takeError());
