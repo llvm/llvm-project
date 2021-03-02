@@ -9301,6 +9301,39 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
   return SDValue();
 }
 
+static SDValue foldBoolSelectToLogic(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::SELECT && "Expected a select");
+  SDValue Cond = N->getOperand(0);
+  SDValue T = N->getOperand(1), F = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  if (VT != Cond.getValueType() || VT != MVT::i1)
+    return SDValue();
+
+  // select Cond, Cond, F --> or Cond, F
+  // select Cond, 1, F    --> or Cond, F
+  if (Cond == T || isOneConstant(T))
+    return DAG.getNode(ISD::OR, SDLoc(N), VT, Cond, F);
+
+  // select Cond, T, Cond --> and Cond, T
+  // select Cond, T, 0    --> and Cond, T
+  if (Cond == F || isNullConstant(F))
+    return DAG.getNode(ISD::AND, SDLoc(N), VT, Cond, T);
+
+  // select Cond, T, 1 --> or (not Cond), T
+  if (isOneConstant(F)) {
+    SDValue NotCond = DAG.getNOT(SDLoc(N), Cond, VT);
+    return DAG.getNode(ISD::OR, SDLoc(N), VT, NotCond, T);
+  }
+
+  // select Cond, 0, F --> and (not Cond), F
+  if (isNullConstant(T)) {
+    SDValue NotCond = DAG.getNOT(SDLoc(N), Cond, VT);
+    return DAG.getNode(ISD::AND, SDLoc(N), VT, NotCond, F);
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -9313,30 +9346,11 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   if (SDValue V = DAG.simplifySelect(N0, N1, N2))
     return V;
 
-  // fold (select X, X, Y) -> (or X, Y)
-  // fold (select X, 1, Y) -> (or C, Y)
-  if (VT == VT0 && VT == MVT::i1 && (N0 == N1 || isOneConstant(N1)))
-    return DAG.getNode(ISD::OR, DL, VT, N0, N2);
-
   if (SDValue V = foldSelectOfConstants(N))
     return V;
 
-  // fold (select C, 0, X) -> (and (not C), X)
-  if (VT == VT0 && VT == MVT::i1 && isNullConstant(N1)) {
-    SDValue NOTNode = DAG.getNOT(SDLoc(N0), N0, VT);
-    AddToWorklist(NOTNode.getNode());
-    return DAG.getNode(ISD::AND, DL, VT, NOTNode, N2);
-  }
-  // fold (select C, X, 1) -> (or (not C), X)
-  if (VT == VT0 && VT == MVT::i1 && isOneConstant(N2)) {
-    SDValue NOTNode = DAG.getNOT(SDLoc(N0), N0, VT);
-    AddToWorklist(NOTNode.getNode());
-    return DAG.getNode(ISD::OR, DL, VT, NOTNode, N1);
-  }
-  // fold (select X, Y, X) -> (and X, Y)
-  // fold (select X, Y, 0) -> (and X, Y)
-  if (VT == VT0 && VT == MVT::i1 && (N0 == N2 || isNullConstant(N2)))
-    return DAG.getNode(ISD::AND, DL, VT, N0, N1);
+  if (SDValue V = foldBoolSelectToLogic(N, DAG))
+    return V;
 
   // If we can fold this based on the true/false value, do so.
   if (SimplifySelectOps(N, N1, N2))
