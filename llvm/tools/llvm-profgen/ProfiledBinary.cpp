@@ -217,14 +217,25 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
   if (ShowDisassemblyOnly)
     outs() << '<' << SymbolName << ">:\n";
 
+  auto WarnInvalidInsts = [](uint64_t Start, uint64_t End) {
+    WithColor::warning() << "Invalid instructions at "
+                         << format("%8" PRIx64, Start) << " - "
+                         << format("%8" PRIx64, End) << "\n";
+  };
+
   uint64_t Offset = StartOffset;
+  // Size of a consecutive invalid instruction range starting from Offset -1
+  // backwards.
+  uint64_t InvalidInstLength = 0;
   while (Offset < EndOffset) {
     MCInst Inst;
     uint64_t Size;
     // Disassemble an instruction.
-    if (!DisAsm->getInstruction(Inst, Size, Bytes.slice(Offset - SectionOffset),
-                                Offset + PreferredBaseAddress, nulls()))
-      return false;
+    bool Disassembled =
+        DisAsm->getInstruction(Inst, Size, Bytes.slice(Offset - SectionOffset),
+                               Offset + PreferredBaseAddress, nulls());
+    if (Size == 0)
+      Size = 1;
 
     if (ShowDisassemblyOnly) {
       if (ShowPseudoProbe) {
@@ -233,37 +244,51 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       }
       outs() << format("%8" PRIx64 ":", Offset);
       size_t Start = outs().tell();
-      IPrinter->printInst(&Inst, Offset + Size, "", *STI.get(), outs());
+      if (Disassembled)
+        IPrinter->printInst(&Inst, Offset + Size, "", *STI.get(), outs());
+      else
+        outs() << "\t<unknown>";
       if (ShowSourceLocations) {
         unsigned Cur = outs().tell() - Start;
         if (Cur < 40)
           outs().indent(40 - Cur);
-        InstructionPointer Inst(this, Offset);
-        outs() << getReversedLocWithContext(symbolize(Inst));
+        InstructionPointer IP(this, Offset);
+        outs() << getReversedLocWithContext(symbolize(IP));
       }
       outs() << "\n";
     }
 
-    const MCInstrDesc &MCDesc = MII->get(Inst.getOpcode());
+    if (Disassembled) {
+      const MCInstrDesc &MCDesc = MII->get(Inst.getOpcode());
+      // Populate a vector of the symbolized callsite at this location
+      // We don't need symbolized info for probe-based profile, just use an
+      // empty stack as an entry to indicate a valid binary offset
+      FrameLocationStack SymbolizedCallStack;
+      if (!UsePseudoProbes) {
+        InstructionPointer IP(this, Offset);
+        SymbolizedCallStack = symbolize(IP, true);
+      }
+      Offset2LocStackMap[Offset] = SymbolizedCallStack;
+      // Populate address maps.
+      CodeAddrs.push_back(Offset);
+      if (MCDesc.isCall())
+        CallAddrs.insert(Offset);
+      else if (MCDesc.isReturn())
+        RetAddrs.insert(Offset);
 
-    // Populate a vector of the symbolized callsite at this location
-    // We don't need symbolized info for probe-based profile, just use an empty
-    // stack as an entry to indicate a valid binary offset
-    FrameLocationStack SymbolizedCallStack;
-    if (!UsePseudoProbes) {
-      InstructionPointer IP(this, Offset);
-      SymbolizedCallStack = symbolize(IP, true);
+      if (InvalidInstLength) {
+        WarnInvalidInsts(Offset - InvalidInstLength, Offset - 1);
+        InvalidInstLength = 0;
+      }
+    } else {
+      InvalidInstLength += Size;
     }
-    Offset2LocStackMap[Offset] = SymbolizedCallStack;
-    // Populate address maps.
-    CodeAddrs.push_back(Offset);
-    if (MCDesc.isCall())
-      CallAddrs.insert(Offset);
-    else if (MCDesc.isReturn())
-      RetAddrs.insert(Offset);
 
     Offset += Size;
   }
+
+  if (InvalidInstLength)
+    WarnInvalidInsts(Offset - InvalidInstLength, Offset - 1);
 
   if (ShowDisassemblyOnly)
     outs() << "\n";
