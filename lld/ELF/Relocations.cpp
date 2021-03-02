@@ -1763,14 +1763,17 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
 // Find or create a ThunkSection within the InputSectionDescription (ISD) that
 // is in range of Src. An ISD maps to a range of InputSections described by a
 // linker script section pattern such as { .text .text.* }.
-ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os, InputSection *isec,
+ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os,
+                                           InputSection *isec,
                                            InputSectionDescription *isd,
-                                           uint32_t type, uint64_t src) {
+                                           const Relocation &rel,
+                                           uint64_t src) {
   for (std::pair<ThunkSection *, uint32_t> tp : isd->thunkSections) {
     ThunkSection *ts = tp.first;
-    uint64_t tsBase = os->addr + ts->outSecOff;
-    uint64_t tsLimit = tsBase + ts->getSize();
-    if (target->inBranchRange(type, src, (src > tsLimit) ? tsBase : tsLimit))
+    uint64_t tsBase = os->addr + ts->outSecOff + rel.addend;
+    uint64_t tsLimit = tsBase + ts->getSize() + rel.addend;
+    if (target->inBranchRange(rel.type, src,
+                              (src > tsLimit) ? tsBase : tsLimit))
       return ts;
   }
 
@@ -1780,9 +1783,11 @@ ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os, InputSection *isec
   // possible. Error if InputSection is so large we cannot place ThunkSection
   // anywhere in Range.
   uint64_t thunkSecOff = isec->outSecOff;
-  if (!target->inBranchRange(type, src, os->addr + thunkSecOff)) {
+  if (!target->inBranchRange(rel.type, src,
+                             os->addr + thunkSecOff + rel.addend)) {
     thunkSecOff = isec->outSecOff + isec->getSize();
-    if (!target->inBranchRange(type, src, os->addr + thunkSecOff))
+    if (!target->inBranchRange(rel.type, src,
+                               os->addr + thunkSecOff + rel.addend))
       fatal("InputSection too large for range extension thunk " +
             isec->getObjMsg(src - (os->addr + isec->outSecOff)));
   }
@@ -1933,7 +1938,11 @@ static int64_t getPCBias(RelType type) {
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
                                                 Relocation &rel, uint64_t src) {
   std::vector<Thunk *> *thunkVec = nullptr;
-  int64_t addend = rel.addend + getPCBias(rel.type);
+  // Arm and Thumb have a PC Bias of 8 and 4 respectively, this is cancelled
+  // out in the relocation addend. We compensate for the PC bias so that
+  // an Arm and Thumb relocation to the same destination get the same keyAddend,
+  // which is usually 0.
+  int64_t keyAddend = rel.addend + getPCBias(rel.type);
 
   // We use a ((section, offset), addend) pair to find the thunk position if
   // possible so that we create only one thunk for aliased symbols or ICFed
@@ -1943,17 +1952,16 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
   if (auto *d = dyn_cast<Defined>(rel.sym))
     if (!d->isInPlt() && d->section)
       thunkVec = &thunkedSymbolsBySectionAndAddend[{
-          {d->section->repl, d->value}, addend}];
+          {d->section->repl, d->value}, keyAddend}];
   if (!thunkVec)
-    thunkVec = &thunkedSymbols[{rel.sym, addend}];
+    thunkVec = &thunkedSymbols[{rel.sym, keyAddend}];
 
   // Check existing Thunks for Sym to see if they can be reused
   for (Thunk *t : *thunkVec)
     if (isThunkSectionCompatible(isec, t->getThunkTargetSym()->section) &&
         t->isCompatibleWith(*isec, rel) &&
         target->inBranchRange(rel.type, src,
-                              t->getThunkTargetSym()->getVA(rel.addend) +
-                                  getPCBias(rel.type)))
+                              t->getThunkTargetSym()->getVA(rel.addend)))
       return std::make_pair(t, false);
 
   // No existing compatible Thunk in range, create a new one
@@ -1968,8 +1976,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
 // relocation back to its original non-Thunk target.
 bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
   if (Thunk *t = thunks.lookup(rel.sym)) {
-    if (target->inBranchRange(rel.type, src,
-                              rel.sym->getVA(rel.addend) + getPCBias(rel.type)))
+    if (target->inBranchRange(rel.type, src, rel.sym->getVA(rel.addend)))
       return true;
     rel.sym = &t->destination;
     rel.addend = t->addend;
@@ -2041,7 +2048,7 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
               if (auto *tis = t->getTargetInputSection())
                 ts = getISThunkSec(tis);
               else
-                ts = getISDThunkSec(os, isec, isd, rel.type, src);
+                ts = getISDThunkSec(os, isec, isd, rel, src);
               ts->addThunk(t);
               thunks[t->getThunkTargetSym()] = t;
             }
