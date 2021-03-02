@@ -292,7 +292,11 @@ ELFDebugObject::finalizeWorkingMemory(JITLinkContext &Ctx) {
   size_t Size = Buffer->getBufferSize();
 
   // Allocate working memory for debug object in read-only segment.
-  auto AllocOrErr = MemMgr.allocate(JD, {{ReadOnly, {Alignment, Size, 0}}});
+  JITLinkMemoryManager::SegmentsRequestMap SingleReadOnlySegment;
+  SingleReadOnlySegment[ReadOnly] =
+      JITLinkMemoryManager::SegmentRequest(Alignment, Size, 0);
+
+  auto AllocOrErr = MemMgr.allocate(JD, SingleReadOnlySegment);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
 
