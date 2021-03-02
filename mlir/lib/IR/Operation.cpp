@@ -1085,7 +1085,7 @@ static bool areSameShapedTypeIgnoringElementType(ShapedType a, ShapedType b) {
   return a.getShape() == b.getShape();
 }
 
-LogicalResult OpTrait::impl::verifyElementwiseMappable(Operation *op) {
+LogicalResult OpTrait::impl::verifyElementwise(Operation *op) {
   auto isMappableType = [](Type type) {
     return type.isa<VectorType, TensorType>();
   };
@@ -1125,6 +1125,11 @@ LogicalResult OpTrait::impl::verifyElementwiseMappable(Operation *op) {
   }
 
   return success();
+}
+
+bool OpTrait::hasElementwiseMappableTraits(Operation *op) {
+  return op->hasTrait<Elementwise>() && op->hasTrait<Scalarizable>() &&
+         op->hasTrait<Vectorizable>() && op->hasTrait<Tensorizable>();
 }
 
 //===----------------------------------------------------------------------===//
