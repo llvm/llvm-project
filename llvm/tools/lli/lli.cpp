@@ -22,6 +22,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/Interpreter.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
@@ -32,6 +33,9 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/ExecutionEngine/Orc/TPCEHFrameRegistrar.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/IRBuilder.h"
@@ -78,6 +82,7 @@ static codegen::RegisterCodeGenFlags CGF;
 namespace {
 
   enum class JITKind { MCJIT, OrcLazy };
+  enum class JITLinkerKind { Default, RuntimeDyld, JITLink };
 
   cl::opt<std::string>
   InputFile(cl::desc("<input bitcode>"), cl::Positional, cl::init("-"));
@@ -95,6 +100,16 @@ namespace {
       cl::values(clEnumValN(JITKind::MCJIT, "mcjit", "MCJIT"),
                  clEnumValN(JITKind::OrcLazy, "orc-lazy",
                             "Orc-based lazy JIT.")));
+
+  cl::opt<JITLinkerKind>
+      JITLinker("jit-linker", cl::desc("Choose the dynamic linker/loader."),
+                cl::init(JITLinkerKind::Default),
+                cl::values(clEnumValN(JITLinkerKind::Default, "default",
+                                      "Default for platform and JIT-kind"),
+                           clEnumValN(JITLinkerKind::RuntimeDyld, "rtdyld",
+                                      "RuntimeDyld"),
+                           clEnumValN(JITLinkerKind::JITLink, "jitlink",
+                                      "Orc-specific linker")));
 
   cl::opt<unsigned>
   LazyJITCompileThreads("compile-threads",
@@ -258,6 +273,11 @@ namespace {
       cl::Hidden);
 
   ExitOnError ExitOnErr;
+}
+
+LLVM_ATTRIBUTE_USED void linkComponents() {
+  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
+         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper;
 }
 
 //===----------------------------------------------------------------------===//
@@ -893,6 +913,20 @@ int runOrcLazyJIT(const char *ProgName) {
     }
   }
 
+  std::unique_ptr<orc::TargetProcessControl> TPC = nullptr;
+  if (JITLinker == JITLinkerKind::JITLink) {
+    TPC = ExitOnErr(orc::SelfTargetProcessControl::Create(
+        std::make_shared<orc::SymbolStringPool>()));
+
+    Builder.setObjectLinkingLayerCreator([&TPC](orc::ExecutionSession &ES,
+                                                const Triple &) {
+      auto L = std::make_unique<orc::ObjectLinkingLayer>(ES, TPC->getMemMgr());
+      L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
+          ES, ExitOnErr(orc::TPCEHFrameRegistrar::Create(*TPC))));
+      return L;
+    });
+  }
+
   auto J = ExitOnErr(Builder.create());
 
   auto *ObjLayer = &J->getObjLinkingLayer();
@@ -997,13 +1031,19 @@ int runOrcLazyJIT(const char *ProgName) {
     AltEntryThreads.push_back(std::thread([EntryPoint]() { EntryPoint(); }));
   }
 
-  // Run main.
-  auto MainSym = ExitOnErr(J->lookup("main"));
+  // Resolve and run the main function.
+  JITEvaluatedSymbol MainSym = ExitOnErr(J->lookup("main"));
+  int Result;
 
-  typedef int (*MainFnPtr)(int, char *[]);
-  auto Result = orc::runAsMain(
-      jitTargetAddressToFunction<MainFnPtr>(MainSym.getAddress()), InputArgv,
-      StringRef(InputFile));
+  if (TPC) {
+    // TargetProcessControl-based execution with JITLink.
+    Result = ExitOnErr(TPC->runAsMain(MainSym.getAddress(), InputArgv));
+  } else {
+    // Manual in-process execution with RuntimeDyld.
+    using MainFnTy = int(int, char *[]);
+    auto MainFn = jitTargetAddressToFunction<MainFnTy *>(MainSym.getAddress());
+    Result = orc::runAsMain(MainFn, InputArgv, StringRef(InputFile));
+  }
 
   // Wait for -entry-point threads.
   for (auto &AltEntryThread : AltEntryThreads)
