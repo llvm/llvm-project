@@ -372,6 +372,17 @@ static void addSoftPointerAuthPass(const PassManagerBuilder &Builder,
   PM.add(createSoftPointerAuthPass());
 }
 
+static void addEntryExitInstrumentationPass(const PassManagerBuilder &Builder,
+                                            legacy::PassManagerBase &PM) {
+  PM.add(createEntryExitInstrumenterPass());
+}
+
+static void
+addPostInlineEntryExitInstrumentationPass(const PassManagerBuilder &Builder,
+                                          legacy::PassManagerBase &PM) {
+  PM.add(createPostInlineEntryExitInstrumenterPass());
+}
+
 static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
                                          const CodeGenOptions &CodeGenOpts) {
   TargetLibraryInfoImpl *TLII = new TargetLibraryInfoImpl(TargetTriple);
@@ -794,6 +805,20 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
                            addSoftPointerAuthPass);
     PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
                            addSoftPointerAuthPass);
+  }
+
+  if (CodeGenOpts.InstrumentFunctions ||
+      CodeGenOpts.InstrumentFunctionEntryBare ||
+      CodeGenOpts.InstrumentFunctionsAfterInlining ||
+      CodeGenOpts.InstrumentForProfiling) {
+    PMBuilder.addExtension(PassManagerBuilder::EP_EarlyAsPossible,
+                           addEntryExitInstrumentationPass);
+    PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
+                           addEntryExitInstrumentationPass);
+    PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
+                           addPostInlineEntryExitInstrumentationPass);
+    PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
+                           addPostInlineEntryExitInstrumentationPass);
   }
 
   // Set up the per-function pass manager.
@@ -1333,11 +1358,19 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
                                            /*DropTypeTests=*/true));
           });
 
-    if (Level != PassBuilder::OptimizationLevel::O0) {
+    if (CodeGenOpts.InstrumentFunctions ||
+        CodeGenOpts.InstrumentFunctionEntryBare ||
+        CodeGenOpts.InstrumentFunctionsAfterInlining ||
+        CodeGenOpts.InstrumentForProfiling) {
       PB.registerPipelineStartEPCallback(
           [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
             MPM.addPass(createModuleToFunctionPassAdaptor(
                 EntryExitInstrumenterPass(/*PostInlining=*/false)));
+          });
+      PB.registerOptimizerLastEPCallback(
+          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+            MPM.addPass(createModuleToFunctionPassAdaptor(
+                EntryExitInstrumenterPass(/*PostInlining=*/true)));
           });
     }
 
