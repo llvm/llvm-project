@@ -70,9 +70,7 @@ public:
     return E->getKind() == MFEK_Test;
   }
 
-  /// Serialize the extension.
-  friend llvm::raw_ostream &
-  operator<<(llvm::raw_ostream &OS, const TestModuleFileExtension &Extension);
+  std::string str() const;
 };
 
 } // end namespace clang
