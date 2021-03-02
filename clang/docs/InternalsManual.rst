@@ -936,7 +936,7 @@ and the result is assigned to the key path on success.
 .. code-block:: text
 
   def mstack_probe_size : Joined<["-"], "mstack-probe-size=">, Flags<[CC1Option]>,
-    MarshallingInfoStringInt<CodeGenOpts<"StackProbeSize">, "4096">;
+    MarshallingInfoInt<CodeGenOpts<"StackProbeSize">, "4096">;
 
 **Enumeration**
 
