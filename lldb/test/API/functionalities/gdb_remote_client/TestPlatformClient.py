@@ -1,6 +1,7 @@
 import lldb
 import binascii
 import os
+import time
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 from gdbclientutils import *
@@ -64,3 +65,41 @@ class TestPlatformClient(GDBRemoteTestBase):
                         substrs=["error: no processes were found on the \"remote-linux\" platform"])
         finally:
             self.dbg.GetSelectedPlatform().DisconnectRemote()
+
+    class TimeoutResponder(MockGDBServerResponder):
+        """A mock server, which takes a very long time to compute the working
+        directory."""
+        def __init__(self):
+            MockGDBServerResponder.__init__(self)
+
+        def qGetWorkingDir(self):
+            time.sleep(10)
+            return hexlify("/foo/bar")
+
+    def test_no_timeout(self):
+        """Test that we honor the timeout setting. With a large enough timeout,
+        we should get the CWD successfully."""
+
+        self.server.responder = TestPlatformClient.TimeoutResponder()
+        self.runCmd("settings set plugin.process.gdb-remote.packet-timeout 30")
+        plat = lldb.SBPlatform("remote-linux")
+        try:
+            self.assertSuccess(plat.ConnectRemote(lldb.SBPlatformConnectOptions("connect://"
+                + self.server.get_connect_address())))
+            self.assertEqual(plat.GetWorkingDirectory(), "/foo/bar")
+        finally:
+            plat.DisconnectRemote()
+
+    def test_timeout(self):
+        """Test that we honor the timeout setting. With a small timeout, CWD
+        retrieval should fail."""
+
+        self.server.responder = TestPlatformClient.TimeoutResponder()
+        self.runCmd("settings set plugin.process.gdb-remote.packet-timeout 3")
+        plat = lldb.SBPlatform("remote-linux")
+        try:
+            self.assertSuccess(plat.ConnectRemote(lldb.SBPlatformConnectOptions("connect://"
+                + self.server.get_connect_address())))
+            self.assertIsNone(plat.GetWorkingDirectory())
+        finally:
+            plat.DisconnectRemote()
