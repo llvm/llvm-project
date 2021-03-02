@@ -3652,7 +3652,7 @@ bool DeclarationVisitor::HasCycle(
     haveInterface = false;
     if (const Symbol * interfaceSymbol{thisInterface->symbol()}) {
       if (procsInCycle.count(*interfaceSymbol) > 0) {
-        for (const auto procInCycle : procsInCycle) {
+        for (const auto &procInCycle : procsInCycle) {
           Say(procInCycle->name(),
               "The interface for procedure '%s' is recursively "
               "defined"_err_en_US,
