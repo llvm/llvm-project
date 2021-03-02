@@ -67,8 +67,6 @@ enum class CallingConv : uint8_t {
   Eabi,
   Vectorcall,
   Regcall,
-  Swift,      // Clang-only
-  SwiftAsync, // Clang-only
 };
 
 enum class ReferenceKind : uint8_t { None, LValueRef, RValueRef };
