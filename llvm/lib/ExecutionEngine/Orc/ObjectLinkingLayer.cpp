@@ -10,6 +10,8 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
+#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 #include <vector>
 
@@ -39,6 +41,11 @@ public:
   }
 
   JITLinkMemoryManager &getMemoryManager() override { return Layer.MemMgr; }
+
+  void notifyMaterializing(LinkGraph &G) {
+    for (auto &P : Layer.Plugins)
+      P->notifyMaterializing(*MR, G, *this, ObjBuffer->getMemBufferRef());
+  }
 
   void notifyFailed(Error Err) override {
     for (auto &P : Layer.Plugins)
@@ -483,19 +490,24 @@ ObjectLinkingLayer::~ObjectLinkingLayer() {
 void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                               std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Object must not be null");
-  auto ObjBuffer = O->getMemBufferRef();
+  MemoryBufferRef ObjBuffer = O->getMemBufferRef();
+
   auto Ctx = std::make_unique<ObjectLinkingLayerJITLinkContext>(
       *this, std::move(R), std::move(O));
-  if (auto G = createLinkGraphFromObject(ObjBuffer))
+  if (auto G = createLinkGraphFromObject(ObjBuffer)) {
+    Ctx->notifyMaterializing(**G);
     link(std::move(*G), std::move(Ctx));
-  else
+  } else {
     Ctx->notifyFailed(G.takeError());
+  }
 }
 
 void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                               std::unique_ptr<LinkGraph> G) {
-  link(std::move(G), std::make_unique<ObjectLinkingLayerJITLinkContext>(
-                         *this, std::move(R), nullptr));
+  auto Ctx = std::make_unique<ObjectLinkingLayerJITLinkContext>(
+      *this, std::move(R), nullptr);
+  Ctx->notifyMaterializing(*G);
+  link(std::move(G), std::move(Ctx));
 }
 
 void ObjectLinkingLayer::modifyPassConfig(MaterializationResponsibility &MR,
