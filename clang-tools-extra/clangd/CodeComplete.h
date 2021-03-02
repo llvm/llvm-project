@@ -133,7 +133,7 @@ struct CodeCompleteOptions {
   enum CodeCompletionRankingModel {
     Heuristics,
     DecisionForest,
-  } RankingModel = DecisionForest;
+  } RankingModel = Heuristics;
 
   /// Callback used to score a CompletionCandidate if DecisionForest ranking
   /// model is enabled.
