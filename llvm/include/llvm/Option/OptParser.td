@@ -172,7 +172,7 @@ class MarshallingInfoString<KeyPathAndMacro kpm, code defaultvalue="std::string(
   code Denormalizer = "denormalizeString";
 }
 
-class MarshallingInfoStringInt<KeyPathAndMacro kpm, code defaultvalue="0", code type="unsigned">
+class MarshallingInfoInt<KeyPathAndMacro kpm, code defaultvalue="0", code type="unsigned">
   : MarshallingInfo<kpm, defaultvalue> {
   code Normalizer = "normalizeStringIntegral<"#type#">";
   code Denormalizer = "denormalizeString<"#type#">";
