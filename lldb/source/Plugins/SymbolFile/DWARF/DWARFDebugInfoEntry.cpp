@@ -49,161 +49,159 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
   // assert (fixed_form_sizes);  // For best performance this should be
   // specified!
 
-  if (m_abbr_idx) {
-    lldb::offset_t offset = *offset_ptr;
-    const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
-    if (abbrevDecl == nullptr) {
-      cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-          "{0x%8.8x}: invalid abbreviation code %u, please file a bug and "
-          "attach the file at the start of this error message",
-          m_offset, (unsigned)abbr_idx);
-      // WE can't parse anymore if the DWARF is borked...
-      *offset_ptr = UINT32_MAX;
-      return false;
-    }
-    m_tag = abbrevDecl->Tag();
-    m_has_children = abbrevDecl->HasChildren();
-    // Skip all data in the .debug_info or .debug_types for the attributes
-    const uint32_t numAttributes = abbrevDecl->NumAttributes();
-    uint32_t i;
-    dw_form_t form;
-    for (i = 0; i < numAttributes; ++i) {
-      form = abbrevDecl->GetFormByIndexUnchecked(i);
-      llvm::Optional<uint8_t> fixed_skip_size =
-          DWARFFormValue::GetFixedSize(form, cu);
-      if (fixed_skip_size)
-        offset += *fixed_skip_size;
-      else {
-        bool form_is_indirect = false;
-        do {
-          form_is_indirect = false;
-          uint32_t form_size = 0;
-          switch (form) {
-          // Blocks if inlined data that have a length field and the data bytes
-          // inlined in the .debug_info/.debug_types
-          case DW_FORM_exprloc:
-          case DW_FORM_block:
-            form_size = data.GetULEB128(&offset);
-            break;
-          case DW_FORM_block1:
-            form_size = data.GetU8_unchecked(&offset);
-            break;
-          case DW_FORM_block2:
-            form_size = data.GetU16_unchecked(&offset);
-            break;
-          case DW_FORM_block4:
-            form_size = data.GetU32_unchecked(&offset);
-            break;
-
-          // Inlined NULL terminated C-strings
-          case DW_FORM_string:
-            data.GetCStr(&offset);
-            break;
-
-          // Compile unit address sized values
-          case DW_FORM_addr:
-            form_size = cu->GetAddressByteSize();
-            break;
-          case DW_FORM_ref_addr:
-            if (cu->GetVersion() <= 2)
-              form_size = cu->GetAddressByteSize();
-            else
-              form_size = 4;
-            break;
-
-          // 0 sized form
-          case DW_FORM_flag_present:
-            form_size = 0;
-            break;
-
-          // 1 byte values
-          case DW_FORM_addrx1:
-          case DW_FORM_data1:
-          case DW_FORM_flag:
-          case DW_FORM_ref1:
-          case DW_FORM_strx1:
-            form_size = 1;
-            break;
-
-          // 2 byte values
-          case DW_FORM_addrx2:
-          case DW_FORM_data2:
-          case DW_FORM_ref2:
-          case DW_FORM_strx2:
-            form_size = 2;
-            break;
-
-          // 3 byte values
-          case DW_FORM_addrx3:
-          case DW_FORM_strx3:
-            form_size = 3;
-            break;
-
-          // 4 byte values
-          case DW_FORM_addrx4:
-          case DW_FORM_data4:
-          case DW_FORM_ref4:
-          case DW_FORM_strx4:
-            form_size = 4;
-            break;
-
-          // 8 byte values
-          case DW_FORM_data8:
-          case DW_FORM_ref8:
-          case DW_FORM_ref_sig8:
-            form_size = 8;
-            break;
-
-          // signed or unsigned LEB 128 values
-          case DW_FORM_addrx:
-          case DW_FORM_loclistx:
-          case DW_FORM_rnglistx:
-          case DW_FORM_sdata:
-          case DW_FORM_udata:
-          case DW_FORM_ref_udata:
-          case DW_FORM_GNU_addr_index:
-          case DW_FORM_GNU_str_index:
-          case DW_FORM_strx:
-            data.Skip_LEB128(&offset);
-            break;
-
-          case DW_FORM_indirect:
-            form_is_indirect = true;
-            form = data.GetULEB128(&offset);
-            break;
-
-          case DW_FORM_strp:
-          case DW_FORM_line_strp:
-          case DW_FORM_sec_offset:
-            data.GetU32(&offset);
-            break;
-
-          case DW_FORM_implicit_const:
-            form_size = 0;
-            break;
-
-          default:
-            cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-                "{0x%8.8x}: Unsupported DW_FORM_0x%x, please file a bug and "
-                "attach the file at the start of this error message",
-                m_offset, (unsigned)form);
-            *offset_ptr = m_offset;
-            return false;
-          }
-          offset += form_size;
-
-        } while (form_is_indirect);
-      }
-    }
-    *offset_ptr = offset;
-    return true;
-  } else {
+  if (m_abbr_idx == 0) {
     m_tag = llvm::dwarf::DW_TAG_null;
     m_has_children = false;
     return true; // NULL debug tag entry
   }
 
-  return false;
+  lldb::offset_t offset = *offset_ptr;
+  const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
+  if (abbrevDecl == nullptr) {
+    cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+        "{0x%8.8x}: invalid abbreviation code %u, please file a bug and "
+        "attach the file at the start of this error message",
+        m_offset, (unsigned)abbr_idx);
+    // WE can't parse anymore if the DWARF is borked...
+    *offset_ptr = UINT32_MAX;
+    return false;
+  }
+  m_tag = abbrevDecl->Tag();
+  m_has_children = abbrevDecl->HasChildren();
+  // Skip all data in the .debug_info or .debug_types for the attributes
+  const uint32_t numAttributes = abbrevDecl->NumAttributes();
+  uint32_t i;
+  dw_form_t form;
+  for (i = 0; i < numAttributes; ++i) {
+    form = abbrevDecl->GetFormByIndexUnchecked(i);
+    llvm::Optional<uint8_t> fixed_skip_size =
+        DWARFFormValue::GetFixedSize(form, cu);
+    if (fixed_skip_size)
+      offset += *fixed_skip_size;
+    else {
+      bool form_is_indirect = false;
+      do {
+        form_is_indirect = false;
+        uint32_t form_size = 0;
+        switch (form) {
+        // Blocks if inlined data that have a length field and the data bytes
+        // inlined in the .debug_info/.debug_types
+        case DW_FORM_exprloc:
+        case DW_FORM_block:
+          form_size = data.GetULEB128(&offset);
+          break;
+        case DW_FORM_block1:
+          form_size = data.GetU8_unchecked(&offset);
+          break;
+        case DW_FORM_block2:
+          form_size = data.GetU16_unchecked(&offset);
+          break;
+        case DW_FORM_block4:
+          form_size = data.GetU32_unchecked(&offset);
+          break;
+
+        // Inlined NULL terminated C-strings
+        case DW_FORM_string:
+          data.GetCStr(&offset);
+          break;
+
+        // Compile unit address sized values
+        case DW_FORM_addr:
+          form_size = cu->GetAddressByteSize();
+          break;
+        case DW_FORM_ref_addr:
+          if (cu->GetVersion() <= 2)
+            form_size = cu->GetAddressByteSize();
+          else
+            form_size = 4;
+          break;
+
+        // 0 sized form
+        case DW_FORM_flag_present:
+          form_size = 0;
+          break;
+
+        // 1 byte values
+        case DW_FORM_addrx1:
+        case DW_FORM_data1:
+        case DW_FORM_flag:
+        case DW_FORM_ref1:
+        case DW_FORM_strx1:
+          form_size = 1;
+          break;
+
+        // 2 byte values
+        case DW_FORM_addrx2:
+        case DW_FORM_data2:
+        case DW_FORM_ref2:
+        case DW_FORM_strx2:
+          form_size = 2;
+          break;
+
+        // 3 byte values
+        case DW_FORM_addrx3:
+        case DW_FORM_strx3:
+          form_size = 3;
+          break;
+
+        // 4 byte values
+        case DW_FORM_addrx4:
+        case DW_FORM_data4:
+        case DW_FORM_ref4:
+        case DW_FORM_strx4:
+          form_size = 4;
+          break;
+
+        // 8 byte values
+        case DW_FORM_data8:
+        case DW_FORM_ref8:
+        case DW_FORM_ref_sig8:
+          form_size = 8;
+          break;
+
+        // signed or unsigned LEB 128 values
+        case DW_FORM_addrx:
+        case DW_FORM_loclistx:
+        case DW_FORM_rnglistx:
+        case DW_FORM_sdata:
+        case DW_FORM_udata:
+        case DW_FORM_ref_udata:
+        case DW_FORM_GNU_addr_index:
+        case DW_FORM_GNU_str_index:
+        case DW_FORM_strx:
+          data.Skip_LEB128(&offset);
+          break;
+
+        case DW_FORM_indirect:
+          form_is_indirect = true;
+          form = data.GetULEB128(&offset);
+          break;
+
+        case DW_FORM_strp:
+        case DW_FORM_line_strp:
+        case DW_FORM_sec_offset:
+          data.GetU32(&offset);
+          break;
+
+        case DW_FORM_implicit_const:
+          form_size = 0;
+          break;
+
+        default:
+          cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+              "{0x%8.8x}: Unsupported DW_FORM_0x%x, please file a bug and "
+              "attach the file at the start of this error message",
+              m_offset, (unsigned)form);
+          *offset_ptr = m_offset;
+          return false;
+        }
+        offset += form_size;
+
+      } while (form_is_indirect);
+    }
+  }
+  *offset_ptr = offset;
+  return true;
 }
 
 static DWARFRangeList GetRangesOrReportError(DWARFUnit &unit,
