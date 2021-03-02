@@ -1229,7 +1229,7 @@ Status Thread::UnwindInnermostExpression() {
   return error;
 }
 
-ThreadPlanSP Thread::QueueFundamentalPlan(bool abort_other_plans) {
+ThreadPlanSP Thread::QueueBasePlan(bool abort_other_plans) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanBase(*this));
   QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
