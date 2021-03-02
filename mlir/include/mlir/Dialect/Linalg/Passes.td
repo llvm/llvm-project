@@ -151,12 +151,16 @@ def LinalgDetensorize : FunctionPass<"linalg-detensorize"> {
     linalg-on-tensor op is checked to see whether *all* its operands can be
     detensored. If so, those operands are converted to their primitive
     counterparts and the linalg op is replaced by an equivalent op that takes
-    those new primitive values as operands. Therefore, the detensoring process
-    can be divided into 2 main logical phases:
+    those new primitive values as operands. Therefore, detensoring an op can be
+    divided into 2 main logical phases:
 
     1. Detect/match an op that can be detensored.
     2. Detensor the operands of the op and replace it with a primitive
        equivalent.
+
+    In addition to detensoring individual ops, this pass detensors internal
+    control flow inside a function. All blocks except for the entry block are
+    detensored by converting their arguments whenever possible.
   }];
 }
 
