@@ -474,6 +474,12 @@ public:
       Region *region, TypeConverter &converter,
       TypeConverter::SignatureConversion *entryConversion = nullptr);
 
+  /// Convert the types of block arguments within the given region except for
+  /// the entry region. This replaces each non-entry block with a new block
+  /// containing the updated signature.
+  LogicalResult convertNonEntryRegionTypes(Region *region,
+                                           TypeConverter &converter);
+
   /// Replace all the uses of the block argument `from` with value `to`.
   void replaceUsesOfBlockArgument(BlockArgument from, Value to);
 

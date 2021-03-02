@@ -42,7 +42,7 @@ public:
   virtual uint32_t getSize() const { return data().size(); }
   virtual uint32_t getInputSize() const { return getSize(); };
 
-  virtual void writeTo(uint8_t *sectionStart) const;
+  virtual void writeTo(uint8_t *buf) const;
 
   ArrayRef<WasmRelocation> getRelocations() const { return relocations; }
   void setRelocations(ArrayRef<WasmRelocation> rs) { relocations = rs; }
@@ -98,13 +98,14 @@ protected:
 class InputSegment : public InputChunk {
 public:
   InputSegment(const WasmSegment &seg, ObjFile *f)
-      : InputChunk(f, InputChunk::DataSegment), segment(seg) {}
+      : InputChunk(f, InputChunk::DataSegment), segment(seg) {
+    alignment = segment.Data.Alignment;
+  }
 
   static bool classof(const InputChunk *c) { return c->kind() == DataSegment; }
 
   void generateRelocationCode(raw_ostream &os) const;
 
-  uint32_t getAlignment() const { return segment.Data.Alignment; }
   StringRef getName() const override { return segment.Data.Name; }
   StringRef getDebugName() const override { return StringRef(); }
   uint32_t getComdat() const override { return segment.Data.Comdat; }
@@ -114,7 +115,8 @@ public:
   uint64_t getVA(uint64_t offset = 0) const;
 
   const OutputSegment *outputSeg = nullptr;
-  int32_t outputSegmentOffset = 0;
+  uint32_t outputSegmentOffset = 0;
+  uint32_t alignment = 0;
 
 protected:
   ArrayRef<uint8_t> data() const override { return segment.Data.Content; }
@@ -137,7 +139,7 @@ public:
            c->kind() == InputChunk::SyntheticFunction;
   }
 
-  void writeTo(uint8_t *sectionStart) const override;
+  void writeTo(uint8_t *buf) const override;
   StringRef getName() const override { return function->SymbolName; }
   StringRef getDebugName() const override { return function->DebugName; }
   llvm::Optional<StringRef> getExportName() const {

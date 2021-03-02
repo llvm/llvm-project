@@ -71,8 +71,46 @@ func @log() {
   return
 }
 
+// -------------------------------------------------------------------------- //
+// Log.
+// -------------------------------------------------------------------------- //
+func @exp() {
+  // CHECK: 2.71828
+  %0 = constant 1.0 : f32
+  %1 = math.exp %0 : f32
+  vector.print %1 : f32
+
+  // CHECK: 0.778802, 2.117, 2.71828, 3.85742
+  %2 = constant dense<[-0.25, 0.75, 1.0, 1.35]> : vector<4xf32>
+  %3 = math.exp %2 : vector<4xf32>
+  vector.print %3 : vector<4xf32>
+
+  // CHECK: 1
+  %zero = constant 0.0 : f32
+  %exp_zero = math.exp %zero : f32
+  vector.print %exp_zero : f32
+
+  // CHECK: 1.17549e-38, 1.38879e-11, 7.20049e+10, inf
+  %special_vec = constant dense<[-89.0, -25.0, 25.0, 89.0]> : vector<4xf32>
+  %exp_special_vec = math.exp %special_vec : vector<4xf32>
+  vector.print %exp_special_vec : vector<4xf32>
+
+  // CHECK: inf
+  %inf = constant 0x7f800000 : f32
+  %exp_inf = math.exp %inf : f32
+  vector.print %exp_inf : f32
+
+  // CHECK: 0
+  %negative_inf = constant 0xff800000 : f32
+  %exp_negative_inf = math.exp %negative_inf : f32
+  vector.print %exp_negative_inf : f32
+
+  return
+}
+
 func @main() {
   call @tanh(): () -> ()
   call @log(): () -> ()
+  call @exp(): () -> ()
   return
 }

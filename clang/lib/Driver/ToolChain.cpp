@@ -620,11 +620,11 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD,
 
     std::string LinkerPath(GetProgramPath(LinkerName.c_str()));
     if (llvm::sys::fs::can_execute(LinkerPath)) {
-      // FIXME: Remove LinkerIsLLDDarwinNew once there's only one MachO lld.
+      // FIXME: Remove lld.darwinnew here once it's the only MachO lld.
       if (LinkerIsLLD)
-        *LinkerIsLLD = UseLinker == "lld" || UseLinker == "lld.darwinold";
+        *LinkerIsLLD = UseLinker == "lld" || UseLinker == "lld.darwinnew";
       if (LinkerIsLLDDarwinNew)
-        *LinkerIsLLDDarwinNew = UseLinker == "lld";
+        *LinkerIsLLDDarwinNew = UseLinker == "lld.darwinnew";
       return LinkerPath;
     }
   }

@@ -1145,6 +1145,7 @@ def OpenMP : DiagGroup<"openmp", [
 
 // Backend warnings.
 def BackendInlineAsm : DiagGroup<"inline-asm">;
+def BackendSourceMgr : DiagGroup<"source-mgr">;
 def BackendFrameLargerThanEQ : DiagGroup<"frame-larger-than=">;
 def BackendPlugin : DiagGroup<"backend-plugin">;
 def RemarkBackendPlugin : DiagGroup<"remark-backend-plugin">;

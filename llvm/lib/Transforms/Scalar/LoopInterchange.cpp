@@ -186,12 +186,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
 // matrix by exchanging the two columns.
 static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
                                     unsigned ToIndx) {
-  unsigned numRows = DepMatrix.size();
-  for (unsigned i = 0; i < numRows; ++i) {
-    char TmpVal = DepMatrix[i][ToIndx];
-    DepMatrix[i][ToIndx] = DepMatrix[i][FromIndx];
-    DepMatrix[i][FromIndx] = TmpVal;
-  }
+  for (unsigned I = 0, E = DepMatrix.size(); I < E; ++I)
+    std::swap(DepMatrix[I][ToIndx], DepMatrix[I][FromIndx]);
 }
 
 // Checks if outermost non '=','S'or'I' dependence in the dependence matrix is

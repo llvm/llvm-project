@@ -270,7 +270,7 @@ MlirAffineMap mlirMemRefTypeGetAffineMap(MlirType type, intptr_t pos) {
 }
 
 unsigned mlirMemRefTypeGetMemorySpace(MlirType type) {
-  return unwrap(type).cast<MemRefType>().getMemorySpace();
+  return unwrap(type).cast<MemRefType>().getMemorySpaceAsInt();
 }
 
 bool mlirTypeIsAUnrankedMemRef(MlirType type) {
@@ -289,7 +289,7 @@ MlirType mlirUnrankedMemRefTypeGetChecked(MlirLocation loc,
 }
 
 unsigned mlirUnrankedMemrefGetMemorySpace(MlirType type) {
-  return unwrap(type).cast<UnrankedMemRefType>().getMemorySpace();
+  return unwrap(type).cast<UnrankedMemRefType>().getMemorySpaceAsInt();
 }
 
 //===----------------------------------------------------------------------===//

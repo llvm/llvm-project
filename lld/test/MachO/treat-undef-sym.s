@@ -10,13 +10,24 @@
 # RUN:     FileCheck %s -check-prefix=INVAL-WARNING
 # RUN: not %lld -undefined suppress -o /dev/null %t.o 2>&1 | \
 # RUN:     FileCheck %s -check-prefix=INVAL-SUPPRESS
+# RUN: %lld -undefined dynamic_lookup -lSystem -o %t.out %t.o 2>&1 | \
+# RUN:     FileCheck %s -check-prefix=SUPPRESS --allow-empty
+# RUN: llvm-objdump --macho --lazy-bind %t.out \
+# RUN:     | FileCheck --check-prefix=BIND %s
 
-# FIXME: Enable these -undefined checks once -flat_namespace is implemented.
-# RN: %no_fatal_warnings_lld -flat_namespace -undefined warning \
-# RN:     -o /dev/null %t.o 2>&1 | \
-# RN:     FileCheck %s -check-prefix=WARNING
-# RN: %lld -flat_namespace -undefined suppress -o /dev/null %t.o 2>&1 | \
-# RN:     FileCheck %s -check-prefix=SUPPRESS --allow-empty
+# RUN: %no_fatal_warnings_lld -lSystem -flat_namespace -undefined warning \
+# RUN:     -o %t.out %t.o 2>&1 | \
+# RUN:     FileCheck %s -check-prefix=WARNING
+# RUN: llvm-objdump --macho --lazy-bind %t.out \
+# RUN:     | FileCheck --check-prefix=BIND %s
+# RUN: %lld -flat_namespace -lSystem -undefined suppress -o %t.out %t.o 2>&1 | \
+# RUN:     FileCheck %s -check-prefix=SUPPRESS --allow-empty
+# RUN: llvm-objdump --macho --lazy-bind %t.out \
+# RUN:     | FileCheck --check-prefix=BIND %s
+# RUN: %lld -flat_namespace -lSystem -undefined dynamic_lookup -o %t.out %t.o 2>&1 | \
+# RUN:     FileCheck %s -check-prefix=SUPPRESS --allow-empty
+# RUN: llvm-objdump --macho --lazy-bind %t.out \
+# RUN:     | FileCheck --check-prefix=BIND %s
 
 # ERROR: error: undefined symbol: _bar
 # ERROR-NEXT: >>> referenced by
@@ -27,7 +38,6 @@
 # INVAL-SUPPRESS: error: '-undefined suppress' only valid with '-flat_namespace'
 # INVAL-SUPPRESS-NEXT: error: undefined symbol: _bar
 
-
 # WARNING: warning: undefined symbol: _bar
 # WARNING-NEXT: >>> referenced by
 
@@ -36,6 +46,9 @@
 # UNKNOWN: unknown -undefined TREATMENT 'bogus'
 # UNKNOWN-NEXT: error: undefined symbol: _bar
 # UNKNOWN-NEXT: >>> referenced by
+
+# BIND: Lazy bind table:
+# BIND: __DATA   __la_symbol_ptr    0x{{[0-9a-f]*}} flat-namespace   _bar
 
 .globl _main
 _main:

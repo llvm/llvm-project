@@ -1964,12 +1964,14 @@ struct FormatStyle {
   /// not use this in config files, etc. Use at your own risk.
   bool ExperimentalAutoDetectBinPacking;
 
-  /// If ``true``, clang-format adds missing namespace end comments and
-  /// fixes invalid existing ones.
+  /// If ``true``, clang-format adds missing namespace end comments for
+  /// short namespaces and fixes invalid existing ones. Short ones are
+  /// controlled by "ShortNamespaceLines".
   /// \code
   ///    true:                                  false:
   ///    namespace a {                  vs.     namespace a {
   ///    foo();                                 foo();
+  ///    bar();                                 bar();
   ///    } // namespace a                       }
   /// \endcode
   bool FixNamespaceComments;
@@ -2644,6 +2646,27 @@ struct FormatStyle {
   bool ReflowComments;
   // clang-format on
 
+  /// The maximal number of unwrapped lines that a short namespace spans.
+  /// Defaults to 1.
+  ///
+  /// This determines the maximum length of short namespaces by counting
+  /// unwrapped lines (i.e. containing neither opening nor closing
+  /// namespace brace) and makes "FixNamespaceComments" omit adding
+  /// end comments for those.
+  /// \code
+  ///    ShortNamespaceLines: 1     vs.     ShortNamespaceLines: 0
+  ///    namespace a {                      namespace a {
+  ///      int foo;                           int foo;
+  ///    }                                  } // namespace a
+  ///
+  ///    ShortNamespaceLines: 1     vs.     ShortNamespaceLines: 0
+  ///    namespace b {                      namespace b {
+  ///      int foo;                           int foo;
+  ///      int bar;                           int bar;
+  ///    } // namespace b                   } // namespace b
+  /// \endcode
+  unsigned ShortNamespaceLines;
+
   /// Include sorting options.
   enum SortIncludesOptions : unsigned char {
     /// Includes are never sorted.
@@ -3224,6 +3247,7 @@ struct FormatStyle {
                R.PenaltyBreakTemplateDeclaration &&
            PointerAlignment == R.PointerAlignment &&
            RawStringFormats == R.RawStringFormats &&
+           ShortNamespaceLines == R.ShortNamespaceLines &&
            SortIncludes == R.SortIncludes &&
            SortJavaStaticImport == R.SortJavaStaticImport &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&

@@ -1314,9 +1314,6 @@ public:
   /// will be automatically deleted if this context is deleted.
   SmallPtrSet<Module*, 4> OwnedModules;
 
-  LLVMContext::InlineAsmDiagHandlerTy InlineAsmDiagHandler = nullptr;
-  void *InlineAsmDiagContext = nullptr;
-
   /// The main remark streamer used by all the other streamers (e.g. IR, MIR,
   /// frontends, etc.). This should only be used by the specific streamers, and
   /// never directly.

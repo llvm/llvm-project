@@ -3280,9 +3280,8 @@ unsigned LLVMGetNumHandlers(LLVMValueRef CatchSwitch) {
 
 void LLVMGetHandlers(LLVMValueRef CatchSwitch, LLVMBasicBlockRef *Handlers) {
   CatchSwitchInst *CSI = unwrap<CatchSwitchInst>(CatchSwitch);
-  for (CatchSwitchInst::handler_iterator I = CSI->handler_begin(),
-                                         E = CSI->handler_end(); I != E; ++I)
-    *Handlers++ = wrap(*I);
+  for (const BasicBlock *H : CSI->handlers())
+    *Handlers++ = wrap(H);
 }
 
 LLVMValueRef LLVMGetParentCatchSwitch(LLVMValueRef CatchPad) {

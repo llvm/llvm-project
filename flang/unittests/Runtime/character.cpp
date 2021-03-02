@@ -46,6 +46,24 @@ static void Compare(const char *x, const char *y, std::size_t xBytes,
   TestCharCompare(y, x, yBytes, xBytes, -expect);
 }
 
+static void Scan(
+    const char *str, const char *set, bool back, std::size_t expect) {
+  auto res{RTNAME(Scan1)(str, std::strlen(str), set, std::strlen(set), back)};
+  if (res != expect) {
+    Fail() << "Scan(" << str << ',' << set << ",back=" << back << "): got "
+           << res << ", should be " << expect << '\n';
+  }
+}
+
+static void Verify(
+    const char *str, const char *set, bool back, std::size_t expect) {
+  auto res{RTNAME(Verify1)(str, std::strlen(str), set, std::strlen(set), back)};
+  if (res != expect) {
+    Fail() << "Verify(" << str << ',' << set << ",back=" << back << "): got "
+           << res << ", should be " << expect << '\n';
+  }
+}
+
 int main() {
   StartTests();
   for (std::size_t j{0}; j < 8; ++j) {
@@ -55,5 +73,17 @@ int main() {
   Compare("abc", "def", 3, 3, -1);
   Compare("ab ", "abc", 3, 2, 0);
   Compare("abc", "abc", 2, 3, -1);
+  Scan("abc", "abc", false, 1);
+  Scan("abc", "abc", true, 3);
+  Scan("abc", "cde", false, 3);
+  Scan("abc", "cde", true, 3);
+  Scan("abc", "x", false, 0);
+  Scan("", "x", false, 0);
+  Verify("abc", "abc", false, 0);
+  Verify("abc", "abc", true, 0);
+  Verify("abc", "cde", false, 1);
+  Verify("abc", "cde", true, 2);
+  Verify("abc", "x", false, 1);
+  Verify("", "x", false, 0);
   return EndTests();
 }

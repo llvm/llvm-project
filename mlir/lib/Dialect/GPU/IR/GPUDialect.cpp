@@ -727,7 +727,7 @@ static LogicalResult verifyAttributions(Operation *op,
     if (!type)
       return op->emitOpError() << "expected memref type in attribution";
 
-    if (type.getMemorySpace() != memorySpace) {
+    if (type.getMemorySpaceAsInt() != memorySpace) {
       return op->emitOpError()
              << "expected memory space " << memorySpace << " in attribution";
     }

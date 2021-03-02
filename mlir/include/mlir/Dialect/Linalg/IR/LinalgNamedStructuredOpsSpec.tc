@@ -1,9 +1,3 @@
-ods_def<MatmulOp>
-implements_interface<LinalgContractionOpInterface> :
-def matmul(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
-  C(m, n) = std_addf<k>(C(m, n), std_mulf(A(m, k), B(k, n)));
-}
-
 ods_def<MatmulColumnMajorOp>
 implements_interface<LinalgContractionOpInterface> :
 def matmul_column_major(A: f32(K, M), B: f32(N, K)) -> (C: f32(N, M)) {
@@ -30,12 +24,6 @@ def matmul_i32_i32_i32(A: i32(M, K), B: i32(K, N)) -> (C: i32(M, N)) {
   C(m, n) = std_addi<k>(C(m, n), std_muli(A(m, k), B(k, n)));
 }
 
-ods_def<MatvecOp>
-implements_interface<LinalgContractionOpInterface> :
-def matvec(A: f32(M, N), y: f32(N)) -> (x: f32(M)) {
-  x(m) = std_addf<n>(x(m), std_mulf(A(m, n), y(n)));
-}
-
 ods_def<MatvecI8I8I32Op>
 implements_interface<LinalgContractionOpInterface> :
 def matvec_i8_i8_i32(A: i8(M, N), y: i8(N)) -> (x: i32(M)) {
@@ -52,12 +40,6 @@ ods_def<MatvecI32I32I32Op>
 implements_interface<LinalgContractionOpInterface> :
 def matvec_i32_i32_i32(A: i32(M, N), y: i32(N)) -> (x: i32(M)) {
   x(m) = std_addi<n>(x(m), std_muli(A(m, n), y(n)));
-}
-
-ods_def<VecmatOp>
-implements_interface<LinalgContractionOpInterface> :
-def vecmat(y: f32(M), A: f32(M, N)) -> (x: f32(N)) {
-  x(n) = std_addf<m>(x(n), std_mulf(y(m), A(m, n)));
 }
 
 ods_def<VecmatI8I8I32Op>
@@ -78,12 +60,6 @@ def vecmat_i32_i32_i32(y: i32(M), A: i32(M, N)) -> (x: i32(N)) {
   x(n) = std_addi<m>(x(n), std_muli(y(m), A(m, n)));
 }
 
-ods_def<DotOp>
-implements_interface<LinalgContractionOpInterface> :
-def dot(A: f32(M), B: f32(M)) -> (C: f32()) {
-  C() = std_addf<m>(C(), std_mulf(A(m), B(m)));
-}
-
 ods_def<DotI8I8I32Op>
 implements_interface<LinalgContractionOpInterface> :
 def dot_i8_i8_i32(A: i8(M), B: i8(M)) -> (C: i32()) {
@@ -100,12 +76,6 @@ ods_def<DotI32I32I32Op>
 implements_interface<LinalgContractionOpInterface> :
 def dot_i32_i32_i32(A: i32(M), B: i32(M)) -> (C: i32()) {
   C() = std_addi<m>(C(), std_muli(A(m), B(m)));
-}
-
-ods_def<BatchMatmulOp>
-implements_interface<LinalgContractionOpInterface> :
-def batch_matmul(A: f32(Batch, M, K), B: f32(Batch, K, N)) -> (C: f32(Batch, M, N)) {
-  C(b, m, n) = std_addf<k>(C(b, m, n), std_mulf(A(b, m, k), B(b, k, n)));
 }
 
 ods_def<BatchMatmulI8I8I32Op>

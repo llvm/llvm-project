@@ -448,7 +448,6 @@ def alias_list : Separate<["-"], "alias_list">,
      Group<grp_resolve>;
 def flat_namespace : Flag<["-"], "flat_namespace">,
      HelpText<"Resolve symbols from all dylibs, both direct and transitive. Do not record source libraries: dyld must re-search at runtime and use the first definition found">,
-     Flags<[HelpHidden]>,
      Group<grp_resolve>;
 def twolevel_namespace : Flag<["-"], "twolevel_namespace">,
      HelpText<"Make dyld look up symbols by (dylib,name) pairs (default)">,
@@ -564,7 +563,7 @@ def bitcode_symbol_map : Separate<["-"], "bitcode_symbol_map">,
 def grp_rare : OptionGroup<"rare">, HelpText<"RARELY USED">;
 
 def v : Flag<["-"], "v">,
-     HelpText<"Print the linker version and search paths and exit">,
+     HelpText<"Print the linker version and search paths in addition to linking">,
      Group<grp_rare>;
 def adhoc_codesign : Flag<["-"], "adhoc_codesign">,
      HelpText<"Write an ad-hoc code signature to the output file.">,

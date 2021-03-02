@@ -67,7 +67,7 @@
 
 # LOAD:          cmd LC_LOAD_DYLIB
 # LOAD-NEXT: cmdsize
-# LOAD-NEXT:    name /usr/lib/libSystem.B.dylib
+# LOAD-NEXT:    name /usr/lib/libSystem.dylib
 # LOAD:          cmd LC_LOAD_DYLIB
 # LOAD-NEXT: cmdsize
 # LOAD-NEXT:    name /System/Library/Frameworks/Foo.framework/Versions/A/Foo

@@ -647,13 +647,13 @@ TEST(CompletionTest, ScopedWithFilter) {
 }
 
 TEST(CompletionTest, ReferencesAffectRanking) {
-  auto Results = completions("int main() { abs^ }", {ns("absl"), func("absb")});
-  EXPECT_THAT(Results.Completions,
-              HasSubsequence(Named("absb"), Named("absl")));
-  Results = completions("int main() { abs^ }",
-                        {withReferences(10000, ns("absl")), func("absb")});
-  EXPECT_THAT(Results.Completions,
-              HasSubsequence(Named("absl"), Named("absb")));
+  EXPECT_THAT(completions("int main() { abs^ }", {func("absA"), func("absB")})
+                  .Completions,
+              HasSubsequence(Named("absA"), Named("absB")));
+  EXPECT_THAT(completions("int main() { abs^ }",
+                          {func("absA"), withReferences(1000, func("absB"))})
+                  .Completions,
+              HasSubsequence(Named("absB"), Named("absA")));
 }
 
 TEST(CompletionTest, ContextWords) {

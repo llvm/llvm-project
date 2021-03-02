@@ -155,3 +155,115 @@ define <2 x double> @test7f(<2 x double> %a, <2 x double> %b, <2 x double>* %p) 
   ret <2 x double> %r
 }
 
+define i1 @and(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    sete %sil
+; CHECK-NEXT:    cmpl %ecx, %edx
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    andb %sil, %al
+; CHECK-NEXT:    retq
+  %a = icmp eq i32 %x, %y
+  %b = icmp sgt i32 %z, %w
+  %s = select i1 %a, i1 %b, i1 false
+  ret i1 %s
+}
+
+define i1 @or(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    sete %sil
+; CHECK-NEXT:    cmpl %ecx, %edx
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    orb %sil, %al
+; CHECK-NEXT:    retq
+  %a = icmp eq i32 %x, %y
+  %b = icmp sgt i32 %z, %w
+  %s = select i1 %a, i1 true, i1 %b
+  ret i1 %s
+}
+
+define i1 @and_not(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: and_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    setne %sil
+; CHECK-NEXT:    cmpl %ecx, %edx
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    andb %sil, %al
+; CHECK-NEXT:    retq
+  %a = icmp eq i32 %x, %y
+  %b = icmp sgt i32 %z, %w
+  %s = select i1 %a, i1 false, i1 %b
+  ret i1 %s
+}
+
+define i1 @or_not(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: or_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    setne %sil
+; CHECK-NEXT:    cmpl %ecx, %edx
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    orb %sil, %al
+; CHECK-NEXT:    retq
+  %a = icmp eq i32 %x, %y
+  %b = icmp sgt i32 %z, %w
+  %s = select i1 %a, i1 %b, i1 true
+  ret i1 %s
+}
+
+define <4 x i1> @and_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) {
+; CHECK-LABEL: and_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm1
+; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %a = icmp eq <4 x i32> %x, %y
+  %b = icmp sgt <4 x i32> %z, %w
+  %s = select <4 x i1> %a, <4 x i1> %b, <4 x i1> zeroinitializer
+  ret <4 x i1> %s
+}
+
+define <4 x i1> @or_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) {
+; CHECK-LABEL: or_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm1
+; CHECK-NEXT:    vblendvps %xmm0, {{.*}}(%rip), %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = icmp eq <4 x i32> %x, %y
+  %b = icmp sgt <4 x i32> %z, %w
+  %s = select <4 x i1> %a, <4 x i1> <i1 1, i1 1, i1 1, i1 1>, <4 x i1> %b
+  ret <4 x i1> %s
+}
+
+define <4 x i1> @and_not_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) {
+; CHECK-LABEL: and_not_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm2
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpandn %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %a = icmp eq <4 x i32> %x, %y
+  %b = icmp sgt <4 x i32> %z, %w
+  %s = select <4 x i1> %a, <4 x i1> zeroinitializer, <4 x i1> %b
+  ret <4 x i1> %s
+}
+
+define <4 x i1> @or_not_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) {
+; CHECK-LABEL: or_not_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm1
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm2 = [1,1,1,1]
+; CHECK-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %a = icmp eq <4 x i32> %x, %y
+  %b = icmp sgt <4 x i32> %z, %w
+  %s = select <4 x i1> %a, <4 x i1> %b, <4 x i1> <i1 1, i1 1, i1 1, i1 1>
+  ret <4 x i1> %s
+}

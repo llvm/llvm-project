@@ -206,7 +206,7 @@ ShapedType ShapedType::clone(ArrayRef<int64_t> shape, Type elementType) {
 
   if (auto other = dyn_cast<UnrankedMemRefType>()) {
     MemRefType::Builder b(shape, elementType);
-    b.setMemorySpace(other.getMemorySpace());
+    b.setMemorySpace(other.getMemorySpaceAsInt());
     return b;
   }
 
@@ -229,7 +229,7 @@ ShapedType ShapedType::clone(ArrayRef<int64_t> shape) {
   if (auto other = dyn_cast<UnrankedMemRefType>()) {
     MemRefType::Builder b(shape, other.getElementType());
     b.setShape(shape);
-    b.setMemorySpace(other.getMemorySpace());
+    b.setMemorySpace(other.getMemorySpaceAsInt());
     return b;
   }
 
@@ -250,7 +250,7 @@ ShapedType ShapedType::clone(Type elementType) {
   }
 
   if (auto other = dyn_cast<UnrankedMemRefType>()) {
-    return UnrankedMemRefType::get(elementType, other.getMemorySpace());
+    return UnrankedMemRefType::get(elementType, other.getMemorySpaceAsInt());
   }
 
   if (isa<TensorType>()) {
@@ -472,7 +472,7 @@ UnrankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
 // BaseMemRefType
 //===----------------------------------------------------------------------===//
 
-unsigned BaseMemRefType::getMemorySpace() const {
+unsigned BaseMemRefType::getMemorySpaceAsInt() const {
   return static_cast<ImplType *>(impl)->memorySpace;
 }
 

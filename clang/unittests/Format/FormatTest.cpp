@@ -19253,6 +19253,33 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                "};\n",
                Style);
 }
+
+TEST_F(FormatTest, LimitlessStringsAndComments) {
+  auto Style = getLLVMStyleWithColumns(0);
+  constexpr StringRef Code =
+      "/**\n"
+      " * This is a multiline comment with quite some long lines, at least for "
+      "the LLVM Style.\n"
+      " * We will redo this with strings and line comments. Just to  check if "
+      "everything is working.\n"
+      " */\n"
+      "bool foo() {\n"
+      "  /* Single line multi line comment. */\n"
+      "  const std::string String = \"This is a multiline string with quite "
+      "some long lines, at least for the LLVM Style.\"\n"
+      "                             \"We already did it with multi line "
+      "comments, and we will do it with line comments. Just to check if "
+      "everything is working.\";\n"
+      "  // This is a line comment (block) with quite some long lines, at "
+      "least for the LLVM Style.\n"
+      "  // We already did this with multi line comments and strings. Just to "
+      "check if everything is working.\n"
+      "  const std::string SmallString = \"Hello World\";\n"
+      "  // Small line comment\n"
+      "  return String.size() > SmallString.size();\n"
+      "}";
+  EXPECT_EQ(Code, format(Code, Style));
+}
 } // namespace
 } // namespace format
 } // namespace clang

@@ -251,16 +251,6 @@ protected:
                          SmallVectorImpl<ArgInfo> &SplitArgs,
                          const DataLayout &DL, CallingConv::ID CallConv) const;
 
-  /// Generate instructions for packing \p SrcRegs into one big register
-  /// corresponding to the aggregate type \p PackedTy.
-  ///
-  /// \param SrcRegs should contain one virtual register for each base type in
-  ///                \p PackedTy, as returned by computeValueLLTs.
-  ///
-  /// \return The packed register.
-  Register packRegs(ArrayRef<Register> SrcRegs, Type *PackedTy,
-                    MachineIRBuilder &MIRBuilder) const;
-
   /// Generate instructions for unpacking \p SrcReg into the \p DstRegs
   /// corresponding to the aggregate type \p PackedTy.
   ///

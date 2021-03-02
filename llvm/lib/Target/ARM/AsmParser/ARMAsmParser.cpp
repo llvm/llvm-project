@@ -7950,7 +7950,10 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     break;
   case ARM::t2B: {
     int op = (Operands[2]->isImm()) ? 2 : 3;
-    if (!static_cast<ARMOperand &>(*Operands[op]).isSignedOffset<24, 1>())
+    ARMOperand &Operand = static_cast<ARMOperand &>(*Operands[op]);
+    // Delay the checks of symbolic expressions until they are resolved.
+    if (!isa<MCBinaryExpr>(Operand.getImm()) &&
+        !Operand.isSignedOffset<24, 1>())
       return Error(Operands[op]->getStartLoc(), "branch target out of range");
     break;
   }
