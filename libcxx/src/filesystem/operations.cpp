@@ -1023,7 +1023,8 @@ bool __create_directories(const path& p, error_code* ec) {
       if (ec && *ec) {
         return false;
       }
-    }
+    } else if (not is_directory(parent_st))
+      return err.report(errc::not_a_directory);
   }
   return __create_directory(p, ec);
 }
