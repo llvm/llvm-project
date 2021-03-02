@@ -555,12 +555,20 @@ kmp_set_disp_num_buffers                    890
     omp_cgroup_mem_alloc                   DATA
     omp_pteam_mem_alloc                    DATA
     omp_thread_mem_alloc                   DATA
+    # Preview of target memory support
+    llvm_omp_target_host_mem_alloc         DATA
+    llvm_omp_target_shared_mem_alloc       DATA
+    llvm_omp_target_device_mem_alloc       DATA
 
     omp_default_mem_space                  DATA
     omp_large_cap_mem_space                DATA
     omp_const_mem_space                    DATA
     omp_high_bw_mem_space                  DATA
     omp_low_lat_mem_space                  DATA
+    # Preview of target memory support
+    llvm_omp_target_host_mem_space         DATA
+    llvm_omp_target_shared_mem_space       DATA
+    llvm_omp_target_device_mem_space       DATA
 
 %ifndef stub
     # Ordinals between 900 and 999 are reserved
