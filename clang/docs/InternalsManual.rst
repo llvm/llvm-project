@@ -770,7 +770,7 @@ uses key paths, which are declared in two steps. First, a tablegen definition
 for the ``CompilerInvocation`` member is created by inheriting from
 ``KeyPathAndMacro``:
 
-.. code-block::
+.. code-block:: text
 
   // Options.td
 
@@ -861,7 +861,7 @@ information required for parsing or generating the command line argument.
 The key path defaults to ``false`` and is set to ``true`` when the flag is
 present on command line.
 
-.. code-block::
+.. code-block:: text
 
   def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Flags<[CC1Option]>,
     MarshallingInfoFlag<LangOpts<"IgnoreExceptions">>;
@@ -871,7 +871,7 @@ present on command line.
 The key path defaults to ``true`` and is set to ``false`` when the flag is
 present on command line.
 
-.. code-block::
+.. code-block:: text
 
   def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Flags<[CC1Option]>,
     MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
@@ -883,7 +883,7 @@ boolean value that's statically unknown in the tablegen file). Then, the key
 path is set to the value associated with the flag that appears last on command
 line.
 
-.. code-block::
+.. code-block:: text
 
   defm legacy_pass_manager : BoolOption<"f", "legacy-pass-manager",
     CodeGenOpts<"LegacyPassManager">, DefaultFalse,
@@ -911,7 +911,7 @@ the positive and negative flag and their common help text suffix.
 The key path defaults to the specified string, or an empty one, if omitted. When
 the option appears on the command line, the argument value is simply copied.
 
-.. code-block::
+.. code-block:: text
 
   def isysroot : JoinedOrSeparate<["-"], "isysroot">, Flags<[CC1Option]>,
     MarshallingInfoString<HeaderSearchOpts<"Sysroot">, [{"/"}]>;
@@ -922,7 +922,7 @@ The key path defaults to an empty ``std::vector<std::string>``. Values specified
 with each appearance of the option on the command line are appended to the
 vector.
 
-.. code-block::
+.. code-block:: text
 
   def frewrite_map_file : Separate<["-"], "frewrite-map-file">, Flags<[CC1Option]>,
     MarshallingInfoStringVector<CodeGenOpts<"RewriteMapFiles">>;
@@ -933,7 +933,7 @@ The key path defaults to the specified integer value, or ``0`` if omitted. When
 the option appears on the command line, its value gets parsed by ``llvm::APInt``
 and the result is assigned to the key path on success.
 
-.. code-block::
+.. code-block:: text
 
   def mstack_probe_size : Joined<["-"], "mstack-probe-size=">, Flags<[CC1Option]>,
     MarshallingInfoStringInt<CodeGenOpts<"StackProbeSize">, "4096">;
@@ -950,7 +950,7 @@ same index is assigned to the key path (also correctly scoped). The number of
 comma-separated string values and elements of the array within
 ``NormalizedValues`` must match.
 
-.. code-block::
+.. code-block:: text
 
   def mthread_model : Separate<["-"], "mthread-model">, Flags<[CC1Option]>,
     Values<"posix,single">, NormalizedValues<["POSIX", "Single"]>,
@@ -970,7 +970,7 @@ annotation. Then, if any of the elements of ``ImpliedByAnyOf`` evaluate to true,
 the key path value is changed to the specified value or ``true`` if missing.
 Finally, the command line is parsed according to the primary annotation.
 
-.. code-block::
+.. code-block:: text
 
   def fms_extensions : Flag<["-"], "fms-extensions">, Flags<[CC1Option]>,
     MarshallingInfoFlag<LangOpts<"MicrosoftExt">>,
@@ -981,7 +981,7 @@ Finally, the command line is parsed according to the primary annotation.
 The option is parsed only if the expression in ``ShouldParseIf`` evaluates to
 true.
 
-.. code-block::
+.. code-block:: text
 
   def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">, Flags<[CC1Option]>,
     MarshallingInfoFlag<LangOpts<"OpenMPIRBuilder">>,
