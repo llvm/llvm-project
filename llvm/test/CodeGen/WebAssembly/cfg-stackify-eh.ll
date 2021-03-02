@@ -233,8 +233,8 @@ unreachable:                                      ; preds = %rethrow5
 ; CHECK:         catch
 ; CHECK:           try
 ; CHECK:             call      __cxa_end_catch
-; CHECK:           catch
-; CHECK:             call      __clang_call_terminate
+; CHECK:           catch_all
+; CHECK:             call      _ZSt9terminatev
 ; CHECK:             unreachable
 ; CHECK:           end_try
 ; CHECK:           rethrow   0                         # to caller
@@ -291,8 +291,7 @@ invoke.cont2:                                     ; preds = %ehcleanup
 
 terminate:                                        ; preds = %ehcleanup
   %6 = cleanuppad within %5 []
-  %7 = call i8* @llvm.wasm.get.exception(token %6)
-  call void @__clang_call_terminate(i8* %7) [ "funclet"(token %6) ]
+  call void @_ZSt9terminatev() [ "funclet"(token %6) ]
   unreachable
 }
 
@@ -806,8 +805,7 @@ invoke.cont:                                      ; preds = %entry
 
 terminate:                                        ; preds = %entry
   %0 = cleanuppad within none []
-  %1 = tail call i8* @llvm.wasm.get.exception(token %0)
-  call void @__clang_call_terminate(i8* %1) [ "funclet"(token %0) ]
+  call void @_ZSt9terminatev() [ "funclet"(token %0) ]
   unreachable
 }
 
@@ -876,8 +874,7 @@ for.end:                                          ; preds = %for.cond
 
 terminate7:                                       ; preds = %ehcleanup
   %10 = cleanuppad within %9 []
-  %11 = call i8* @llvm.wasm.get.exception(token %10)
-  call void @__clang_call_terminate(i8* %11) [ "funclet"(token %10) ]
+  call void @_ZSt9terminatev() [ "funclet"(token %10) ]
   unreachable
 }
 
@@ -1046,8 +1043,7 @@ invoke.cont:                                      ; preds = %catch.start
 
 ehcleanup:                                        ; preds = %catch.start
   %5 = cleanuppad within %1 []
-  %6 = call i8* @llvm.wasm.get.exception(token %5)
-  call void @__clang_call_terminate(i8* %6) [ "funclet"(token %5) ]
+  call void @_ZSt9terminatev() [ "funclet"(token %5) ]
   unreachable
 
 while.end:                                        ; preds = %while.body, %while.cond
@@ -1570,8 +1566,7 @@ declare i8* @llvm.wasm.get.exception(token) #0
 ; Function Attrs: nounwind
 declare i32 @llvm.wasm.get.ehselector(token) #0
 declare i8* @__cxa_allocate_exception(i32) #0
-; Function Attrs: noreturn
-declare void @__cxa_throw(i8*, i8*, i8*) #1
+declare void @__cxa_throw(i8*, i8*, i8*)
 ; Function Attrs: noreturn
 declare void @llvm.wasm.rethrow() #1
 ; Function Attrs: nounwind
@@ -1580,7 +1575,6 @@ declare i32 @llvm.eh.typeid.for(i8*) #0
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare i8* @__cxa_get_exception_ptr(i8*)
-declare void @__clang_call_terminate(i8*)
 declare void @_ZSt9terminatev()
 ; Function Attrs: nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i32, i1 immarg) #0

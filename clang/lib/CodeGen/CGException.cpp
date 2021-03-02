@@ -1552,17 +1552,8 @@ llvm::BasicBlock *CodeGenFunction::getTerminateFunclet() {
   CurrentFuncletPad = Builder.CreateCleanupPad(ParentPad);
 
   // Emit the __std_terminate call.
-  llvm::Value *Exn = nullptr;
-  // In case of wasm personality, we need to pass the exception value to
-  // __clang_call_terminate function.
-  if (getLangOpts().CPlusPlus &&
-      EHPersonality::get(*this).isWasmPersonality()) {
-    llvm::Function *GetExnFn =
-        CGM.getIntrinsic(llvm::Intrinsic::wasm_get_exception);
-    Exn = Builder.CreateCall(GetExnFn, CurrentFuncletPad);
-  }
   llvm::CallInst *terminateCall =
-      CGM.getCXXABI().emitTerminateForUnexpectedException(*this, Exn);
+      CGM.getCXXABI().emitTerminateForUnexpectedException(*this, nullptr);
   terminateCall->setDoesNotReturn();
   Builder.CreateUnreachable();
 
