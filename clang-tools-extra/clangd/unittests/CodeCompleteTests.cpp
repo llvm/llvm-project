@@ -1657,7 +1657,7 @@ TEST(CompletionTest, OverloadBundling) {
   std::string Context = R"cpp(
     struct X {
       // Overload with int
-      int a(int);
+      int a(int) __attribute__((deprecated("", "")));
       // Overload with bool
       int a(bool);
       int b(float);
@@ -1695,6 +1695,7 @@ TEST(CompletionTest, OverloadBundling) {
   EXPECT_EQ(A.ReturnType, "int"); // All overloads return int.
   // For now we just return one of the doc strings arbitrarily.
   ASSERT_TRUE(A.Documentation);
+  ASSERT_FALSE(A.Deprecated); // Not all overloads deprecated.
   EXPECT_THAT(
       A.Documentation->asPlainText(),
       AnyOf(HasSubstr("Overload with int"), HasSubstr("Overload with bool")));
