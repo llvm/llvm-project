@@ -369,7 +369,7 @@ static std::optional<Procedure> CharacterizeProcedure(
     std::string procsList{GetSeenProcs(seenProcs)};
     context.messages().Say(symbol.name(),
         "Procedure '%s' is recursively defined.  Procedures in the cycle:"
-        " %s"_err_en_US,
+        " '%s'"_err_en_US,
         symbol.name(), procsList);
     return std::nullopt;
   }
