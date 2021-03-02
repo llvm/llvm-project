@@ -194,12 +194,6 @@ private:
   /// produce '->' and '::', respectively.
   bool shouldRunCompletion(const CompletionParams &Params) const;
 
-  /// Requests a reparse of currently opened files using their latest source.
-  /// This will typically only rebuild if something other than the source has
-  /// changed (e.g. the CDB yields different flags, or files included in the
-  /// preamble have been modified).
-  void reparseOpenFilesIfNeeded(
-      llvm::function_ref<bool(llvm::StringRef File)> Filter);
   void applyConfiguration(const ConfigurationSettings &Settings);
 
   /// Runs profiling and exports memory usage metrics if tracing is enabled and
@@ -282,8 +276,6 @@ private:
   BackgroundQueue::Stats PendingBackgroundIndexProgress;
   /// LSP extension: skip WorkDoneProgressCreate, just send progress streams.
   bool BackgroundIndexSkipCreate = false;
-  // Store of the current versions of the open documents.
-  DraftStore DraftMgr;
 
   Options Opts;
   // The CDB is created by the "initialize" LSP method.
