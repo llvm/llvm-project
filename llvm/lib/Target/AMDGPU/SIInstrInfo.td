@@ -1623,8 +1623,11 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
     !if (!eq(NumSrcArgs, 1),
       !if (HasModifiers,
         // VOP1 with modifiers
-        (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-             clampmod0:$clamp, omod0:$omod)
+        !if(HasOMod,
+          (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
+               clampmod0:$clamp, omod0:$omod),
+          (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
+               clampmod0:$clamp))
       /* else */,
         // VOP1 without modifiers
         !if (HasClamp,
