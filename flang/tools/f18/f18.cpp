@@ -102,6 +102,7 @@ struct DriverOptions {
   bool dumpSymbols{false};
   bool debugNoSemantics{false};
   bool debugModuleWriter{false};
+  bool defaultReal8{false};
   bool measureTree{false};
   bool unparseTypedExprsToF18_FC{false};
   std::vector<std::string> F18_FCArgs;
@@ -563,10 +564,20 @@ int main(int argc, char *const argv[]) {
       }
     } else if (arg.substr(0, 2) == "-U") {
       predefinitions.emplace_back(arg.substr(2), std::optional<std::string>{});
-    } else if (arg == "-fdefault-double-8") {
-      defaultKinds.set_defaultRealKind(4);
     } else if (arg == "-r8" || arg == "-fdefault-real-8") {
+      driver.defaultReal8 = true;
       defaultKinds.set_defaultRealKind(8);
+      defaultKinds.set_doublePrecisionKind(16);
+    } else if (arg == "-fdefault-double-8") {
+      if (!driver.defaultReal8) {
+        // -fdefault-double-8 has to be used with -fdefault-real-8
+        // to be compatible with gfortran. See:
+        // https://gcc.gnu.org/onlinedocs/gfortran/Fortran-Dialect-Options.html
+        llvm::errs()
+            << "Use of `-fdefault-double-8` requires `-fdefault-real-8`\n";
+        return EXIT_FAILURE;
+      }
+      defaultKinds.set_doublePrecisionKind(8);
     } else if (arg == "-i8" || arg == "-fdefault-integer-8") {
       defaultKinds.set_defaultIntegerKind(8);
       defaultKinds.set_subscriptIntegerKind(8);
