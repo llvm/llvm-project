@@ -536,6 +536,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+        setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
 
         setOperationAction(ISD::LOAD, VT, Custom);
         setOperationAction(ISD::STORE, VT, Custom);
@@ -1494,6 +1495,20 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerBUILD_VECTOR(Op, DAG, Subtarget);
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG, Subtarget);
+  case ISD::CONCAT_VECTORS: {
+    // Split CONCAT_VECTORS into a series of INSERT_SUBVECTOR nodes. This is
+    // better than going through the stack, as the default expansion does.
+    SDLoc DL(Op);
+    MVT VT = Op.getSimpleValueType();
+    assert(VT.isFixedLengthVector() && "Unexpected CONCAT_VECTORS lowering");
+    unsigned NumOpElts =
+        Op.getOperand(0).getSimpleValueType().getVectorNumElements();
+    SDValue Vec = DAG.getUNDEF(VT);
+    for (const auto &OpIdx : enumerate(Op->ops()))
+      Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Vec, OpIdx.value(),
+                        DAG.getIntPtrConstant(OpIdx.index() * NumOpElts, DL));
+    return Vec;
+  }
   case ISD::LOAD:
     return lowerFixedLengthVectorLoadToRVV(Op, DAG);
   case ISD::STORE:
