@@ -2475,14 +2475,9 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
     for (const auto &PluginArg : PluginArgs.second)
       GenerateArg(Args, OPT_plugin_arg, PluginArgs.first + PluginArg, SA);
 
-  for (const auto &Ext : Opts.ModuleFileExtensions) {
-    if (auto *TestExt = dyn_cast_or_null<TestModuleFileExtension>(Ext.get())) {
-      std::string Buffer;
-      llvm::raw_string_ostream OS(Buffer);
-      OS << *TestExt;
-      GenerateArg(Args, OPT_ftest_module_file_extension_EQ, OS.str(), SA);
-    }
-  }
+  for (const auto &Ext : Opts.ModuleFileExtensions)
+    if (auto *TestExt = dyn_cast_or_null<TestModuleFileExtension>(Ext.get()))
+      GenerateArg(Args, OPT_ftest_module_file_extension_EQ, TestExt->str(), SA);
 
   if (!Opts.CodeCompletionAt.FileName.empty())
     GenerateArg(Args, OPT_code_completion_at, Opts.CodeCompletionAt.ToString(),
