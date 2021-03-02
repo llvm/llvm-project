@@ -1,5 +1,5 @@
 // RUN: rm -f %t.buf.profraw %t.profraw
-// RUN: %clang_profgen -o %t %s
+// RUN: %clang_profgen -w -o %t %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t %t.buf.profraw
 // RUN: llvm-profdata show %t.buf.profraw | FileCheck %s -check-prefix=WRITE-BUFFER
 // RUN: not llvm-profdata show %t.profraw 2>&1 | FileCheck %s -check-prefix=ALREADY-DUMPED
@@ -43,9 +43,9 @@ int main(int argc, const char *argv[]) {
 
   char *buf = malloc(bufsize);
   int ret = __llvm_profile_write_buffer_internal(buf,
-  		  __llvm_profile_begin_data(), __llvm_profile_end_data(),
-                  __llvm_profile_begin_counters(), __llvm_profile_end_counters(),
-                  __llvm_profile_begin_names(), __llvm_profile_end_names());
+      __llvm_profile_begin_data(), __llvm_profile_end_data(),
+      __llvm_profile_begin_counters(), __llvm_profile_end_counters(),
+      __llvm_profile_begin_names(), __llvm_profile_end_names());
 
   if (ret != 0) {
     fprintf(stderr, "failed to write buffer");
