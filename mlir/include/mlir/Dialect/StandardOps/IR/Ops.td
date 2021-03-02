@@ -71,9 +71,9 @@ class CastOp<string mnemonic, list<OpTrait> traits = []> :
 
 // Base class for arithmetic cast operations.
 class ArithmeticCastOp<string mnemonic, list<OpTrait> traits = []> :
-    CastOp<mnemonic,
-    !listconcat(traits, [ElementwiseMappable,
-                         DeclareOpInterfaceMethods<VectorUnrollOpInterface>])> {
+    CastOp<mnemonic, traits # [
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
+    ElementwiseMappable.traits> {
 }
 
 // Base class for unary ops. Requires single operand and result. Individual
@@ -95,21 +95,18 @@ class UnaryOpSameOperandAndResultType<string mnemonic,
 }
 
 class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
-    UnaryOpSameOperandAndResultType<mnemonic,
-      !listconcat(traits,
-                  [DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
-                   ElementwiseMappable])>,
-    Arguments<(ins FloatLike:$operand)>;
+    UnaryOpSameOperandAndResultType<mnemonic, traits # [
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
+    ElementwiseMappable.traits>, Arguments<(ins FloatLike:$operand)>;
 
 // Base class for standard arithmetic operations.  Requires operands and
 // results to be of the same type, but does not constrain them to specific
 // types.
 class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-    Op<StandardOps_Dialect, mnemonic,
-       !listconcat(traits, [NoSideEffect,
-                            SameOperandsAndResultType,
-                            DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
-                            ElementwiseMappable])> {
+    Op<StandardOps_Dialect, mnemonic, traits # [NoSideEffect,
+    SameOperandsAndResultType,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
+    ElementwiseMappable.traits> {
 
   let results = (outs AnyType:$result);
 
@@ -930,12 +927,10 @@ def CmpFPredicateAttr : I64EnumAttr<
   let cppNamespace = "::mlir";
 }
 
-def CmpFOp : Std_Op<"cmpf",
-    [NoSideEffect, SameTypeOperands, ElementwiseMappable,
-     DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
-     TypesMatchWith<
-       "result type has i1 element type and same shape as operands",
-       "lhs", "result", "getI1SameShape($_self)">]> {
+def CmpFOp : Std_Op<"cmpf", [NoSideEffect, SameTypeOperands,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>, TypesMatchWith<
+    "result type has i1 element type and same shape as operands",
+    "lhs", "result", "getI1SameShape($_self)">] # ElementwiseMappable.traits> {
   let summary = "floating-point comparison operation";
   let description = [{
     The `cmpf` operation compares its two operands according to the float
@@ -1015,12 +1010,10 @@ def CmpIPredicateAttr : I64EnumAttr<
   let cppNamespace = "::mlir";
 }
 
-def CmpIOp : Std_Op<"cmpi",
-    [NoSideEffect, SameTypeOperands, ElementwiseMappable,
-     DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
-     TypesMatchWith<
-       "result type has i1 element type and same shape as operands",
-       "lhs", "result", "getI1SameShape($_self)">]> {
+def CmpIOp : Std_Op<"cmpi", [NoSideEffect, SameTypeOperands,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>, TypesMatchWith<
+    "result type has i1 element type and same shape as operands",
+    "lhs", "result", "getI1SameShape($_self)">] # ElementwiseMappable.traits> {
   let summary = "integer comparison operation";
   let description = [{
     The `cmpi` operation is a generic comparison for integer-like types. Its two
@@ -2160,8 +2153,9 @@ def ReturnOp : Std_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
 //===----------------------------------------------------------------------===//
 
 def SelectOp : Std_Op<"select", [NoSideEffect,
-     AllTypesMatch<["true_value", "false_value", "result"]>,
-     ElementwiseMappable, DeclareOpInterfaceMethods<VectorUnrollOpInterface>]> {
+    AllTypesMatch<["true_value", "false_value", "result"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
+    ElementwiseMappable.traits> {
   let summary = "select operation";
   let description = [{
     The `select` operation chooses one value based on a binary condition
@@ -2391,9 +2385,9 @@ def SignedShiftRightOp : IntBinaryOp<"shift_right_signed"> {
 // SignExtendIOp
 //===----------------------------------------------------------------------===//
 
-def SignExtendIOp : Std_Op<"sexti",
-    [NoSideEffect, ElementwiseMappable,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface>]> {
+def SignExtendIOp : Std_Op<"sexti", [NoSideEffect,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
+    ElementwiseMappable.traits> {
   let summary = "integer sign extension operation";
   let description = [{
     The integer sign extension operation takes an integer input of
@@ -3220,9 +3214,9 @@ def TransposeOp : Std_Op<"transpose", [NoSideEffect]>,
 // TruncateIOp
 //===----------------------------------------------------------------------===//
 
-def TruncateIOp : Std_Op<"trunci",
-  [NoSideEffect, ElementwiseMappable,
-   DeclareOpInterfaceMethods<VectorUnrollOpInterface>,]> {
+def TruncateIOp : Std_Op<"trunci", [NoSideEffect,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
+    ElementwiseMappable.traits> {
   let summary = "integer truncation operation";
   let description = [{
     The integer truncation operation takes an integer input of
@@ -3463,9 +3457,9 @@ def XOrOp : IntBinaryOp<"xor", [Commutative]> {
 // ZeroExtendIOp
 //===----------------------------------------------------------------------===//
 
-def ZeroExtendIOp : Std_Op<"zexti",
-  [NoSideEffect, ElementwiseMappable,
-   DeclareOpInterfaceMethods<VectorUnrollOpInterface>,]> {
+def ZeroExtendIOp : Std_Op<"zexti", [NoSideEffect,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
+    ElementwiseMappable.traits> {
   let summary = "integer zero extension operation";
   let description = [{
     The integer zero extension operation takes an integer input of
