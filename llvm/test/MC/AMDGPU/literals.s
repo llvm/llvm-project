@@ -597,7 +597,7 @@ v_max_f32 v0, vccz, v0
 v_max_f64 v[0:1], scc, v[0:1]
 
 // NOSICIVI: error: instruction not supported on this GPU
-// GFX9: v_pk_add_f16 v0, src_execz, v0  ; encoding: [0x00,0x00,0x8f,0xd3,0xfc,0x00,0x02,0x18]
+// GFX9: v_pk_add_f16 v0, src_execz, v0  ; encoding: [0x00,0x40,0x8f,0xd3,0xfc,0x00,0x02,0x18]
 v_pk_add_f16 v0, execz, v0
 
 // NOSICI: error: instruction not supported on this GPU
@@ -737,7 +737,7 @@ v_max_f32 v0, src_shared_base, v0
 v_max_f64 v[0:1], src_shared_base, v[0:1]
 
 // NOSICIVI: error: instruction not supported on this GPU
-// GFX9: v_pk_add_f16 v0, src_shared_base, v0 ; encoding: [0x00,0x00,0x8f,0xd3,0xeb,0x00,0x02,0x18]
+// GFX9: v_pk_add_f16 v0, src_shared_base, v0 ; encoding: [0x00,0x40,0x8f,0xd3,0xeb,0x00,0x02,0x18]
 v_pk_add_f16 v0, src_shared_base, v0
 
 // GFX9: v_ceil_f16_e64 v0, -src_shared_base ; encoding: [0x00,0x00,0x85,0xd1,0xeb,0x00,0x00,0x20]
