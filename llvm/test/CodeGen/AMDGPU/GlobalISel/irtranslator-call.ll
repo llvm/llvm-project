@@ -513,8 +513,9 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s8)
-  ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[C]](s8)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT]](s16)
+  ; CHECK:   $vgpr0 = COPY [[ANYEXT1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -923,7 +924,6 @@ define amdgpu_kernel void @test_call_external_void_func_i64_imm() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 123
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i64
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -944,6 +944,7 @@ define amdgpu_kernel void @test_call_external_void_func_i64_imm() #0 {
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -979,7 +980,6 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: (load 16 from `<2 x i64> addrspace(1)* null`, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s64>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2i64
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1000,6 +1000,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s64>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -1039,7 +1040,6 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64_imm() #0 {
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934593
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 17179869187
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C1]](s64)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x s64>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2i64
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1060,6 +1060,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64_imm() #0 {
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C4]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x s64>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -1098,9 +1099,6 @@ define amdgpu_kernel void @test_call_external_void_func_i48(i32) #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (volatile load 6 from `i48 addrspace(1)* undef`, align 8, addrspace 1)
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(s48) = G_IMPLICIT_DEF
-  ; CHECK:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[LOAD]](s48), [[DEF1]](s48)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s96)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i48
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1121,6 +1119,9 @@ define amdgpu_kernel void @test_call_external_void_func_i48(i32) #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(s48) = G_IMPLICIT_DEF
+  ; CHECK:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[LOAD]](s48), [[DEF1]](s48)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s96)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -1158,9 +1159,6 @@ define amdgpu_kernel void @test_call_external_void_func_i48_signext(i32) #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (volatile load 6 from `i48 addrspace(1)* undef`, align 8, addrspace 1)
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(s48) = G_IMPLICIT_DEF
-  ; CHECK:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[LOAD]](s48), [[DEF1]](s48)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s96)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i48_signext
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1181,6 +1179,9 @@ define amdgpu_kernel void @test_call_external_void_func_i48_signext(i32) #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(s48) = G_IMPLICIT_DEF
+  ; CHECK:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[LOAD]](s48), [[DEF1]](s48)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s96)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -1218,9 +1219,6 @@ define amdgpu_kernel void @test_call_external_void_func_i48_zeroext(i32) #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (volatile load 6 from `i48 addrspace(1)* undef`, align 8, addrspace 1)
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(s48) = G_IMPLICIT_DEF
-  ; CHECK:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[LOAD]](s48), [[DEF1]](s48)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s96)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i48_zeroext
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1241,6 +1239,9 @@ define amdgpu_kernel void @test_call_external_void_func_i48_zeroext(i32) #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(s48) = G_IMPLICIT_DEF
+  ; CHECK:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[LOAD]](s48), [[DEF1]](s48)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s96)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -1277,7 +1278,6 @@ define amdgpu_kernel void @test_call_external_void_func_p0_imm(i8* %arg) #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load 8 from %ir.arg.kernarg.offset.cast, align 16, addrspace 4)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](p0)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_p0
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1298,6 +1298,7 @@ define amdgpu_kernel void @test_call_external_void_func_p0_imm(i8* %arg) #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](p0)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -1333,7 +1334,6 @@ define amdgpu_kernel void @test_call_external_void_func_v2p0() #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x p0>) = G_LOAD [[C]](p1) :: (load 16 from `<2 x i8*> addrspace(1)* null`, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x p0>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2p0
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1354,6 +1354,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2p0() #0 {
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x p0>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -1396,7 +1397,6 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[DEF]](s64)
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: (load 16 from `<2 x i64> addrspace(1)* null`, addrspace 1)
   ; CHECK:   [[SHUF:%[0-9]+]]:_(<3 x s64>) = G_SHUFFLE_VECTOR [[LOAD]](<2 x s64>), [[BUILD_VECTOR]], shufflemask(0, 1, 2)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SHUF]](<3 x s64>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v3i64
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1417,6 +1417,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C4]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SHUF]](<3 x s64>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -1463,7 +1464,6 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C2]](s64)
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: (load 16 from `<2 x i64> addrspace(1)* null`, addrspace 1)
   ; CHECK:   [[SHUF:%[0-9]+]]:_(<4 x s64>) = G_SHUFFLE_VECTOR [[LOAD]](<2 x s64>), [[BUILD_VECTOR]], shufflemask(0, 1, 2, 3)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SHUF]](<4 x s64>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v4i64
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1484,6 +1484,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C5]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SHUF]](<4 x s64>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -1635,7 +1636,6 @@ define amdgpu_kernel void @test_call_external_void_func_v2f32_imm() #0 {
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.000000e+00
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2f32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1656,6 +1656,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2f32_imm() #0 {
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C4]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -1693,7 +1694,6 @@ define amdgpu_kernel void @test_call_external_void_func_v3f32_imm() #0 {
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.000000e+00
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_FCONSTANT float 4.000000e+00
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32), [[C2]](s32)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v3f32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1714,6 +1714,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3f32_imm() #0 {
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C5]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -1754,7 +1755,6 @@ define amdgpu_kernel void @test_call_external_void_func_v5f32_imm() #0 {
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_FCONSTANT float -1.000000e+00
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_FCONSTANT float 5.000000e-01
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32), [[C2]](s32), [[C3]](s32), [[C4]](s32)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<5 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v5f32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1775,6 +1775,7 @@ define amdgpu_kernel void @test_call_external_void_func_v5f32_imm() #0 {
   ; CHECK:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C7]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<5 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -1812,7 +1813,6 @@ define amdgpu_kernel void @test_call_external_void_func_f64_imm() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 4.000000e+00
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_f64
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1833,6 +1833,7 @@ define amdgpu_kernel void @test_call_external_void_func_f64_imm() #0 {
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -1869,7 +1870,6 @@ define amdgpu_kernel void @test_call_external_void_func_v2f64_imm() #0 {
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 2.000000e+00
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 4.000000e+00
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C1]](s64)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x s64>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2f64
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1890,6 +1890,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2f64_imm() #0 {
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C4]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x s64>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -1929,7 +1930,6 @@ define amdgpu_kernel void @test_call_external_void_func_v3f64_imm() #0 {
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 4.000000e+00
   ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double 8.000000e+00
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C1]](s64), [[C2]](s64)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s64>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v3f64
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1950,6 +1950,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3f64_imm() #0 {
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C5]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s64>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -2044,9 +2045,6 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[DEF]](p1) :: (load 6 from `<3 x i16> addrspace(1)* undef`, align 8, addrspace 1)
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[LOAD]](<3 x s16>), [[DEF1]](<3 x s16>)
-  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v3i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2067,6 +2065,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[LOAD]](<3 x s16>), [[DEF1]](<3 x s16>)
+  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
   ; CHECK:   $vgpr0 = COPY [[UV]](<2 x s16>)
   ; CHECK:   $vgpr1 = COPY [[UV1]](<2 x s16>)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -2103,9 +2104,6 @@ define amdgpu_kernel void @test_call_external_void_func_v3f16() #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[DEF]](p1) :: (load 6 from `<3 x half> addrspace(1)* undef`, align 8, addrspace 1)
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[LOAD]](<3 x s16>), [[DEF1]](<3 x s16>)
-  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v3f16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2126,6 +2124,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3f16() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[LOAD]](<3 x s16>), [[DEF1]](<3 x s16>)
+  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
   ; CHECK:   $vgpr0 = COPY [[UV]](<2 x s16>)
   ; CHECK:   $vgpr1 = COPY [[UV1]](<2 x s16>)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -2162,7 +2163,6 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16() #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[DEF]](p1) :: (load 8 from `<4 x i16> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v4i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2183,6 +2183,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
   ; CHECK:   $vgpr0 = COPY [[UV]](<2 x s16>)
   ; CHECK:   $vgpr1 = COPY [[UV1]](<2 x s16>)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -2222,7 +2223,6 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16_imm() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 3
   ; CHECK:   [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 4
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C1]](s16), [[C2]](s16), [[C3]](s16)
-  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s16>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v4i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2243,6 +2243,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16_imm() #0 {
   ; CHECK:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C6]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s16>)
   ; CHECK:   $vgpr0 = COPY [[UV]](<2 x s16>)
   ; CHECK:   $vgpr1 = COPY [[UV1]](<2 x s16>)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -2278,9 +2279,6 @@ define amdgpu_kernel void @test_call_external_void_func_v5i16() #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<5 x s16>) = G_LOAD [[DEF]](p1) :: (load 10 from `<5 x i16> addrspace(1)* undef`, align 16, addrspace 1)
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(<5 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<10 x s16>) = G_CONCAT_VECTORS [[LOAD]](<5 x s16>), [[DEF1]](<5 x s16>)
-  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<10 x s16>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v5i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2301,6 +2299,9 @@ define amdgpu_kernel void @test_call_external_void_func_v5i16() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(<5 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<10 x s16>) = G_CONCAT_VECTORS [[LOAD]](<5 x s16>), [[DEF1]](<5 x s16>)
+  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<10 x s16>)
   ; CHECK:   $vgpr0 = COPY [[UV]](<2 x s16>)
   ; CHECK:   $vgpr1 = COPY [[UV1]](<2 x s16>)
   ; CHECK:   $vgpr2 = COPY [[UV2]](<2 x s16>)
@@ -2338,9 +2339,6 @@ define amdgpu_kernel void @test_call_external_void_func_v7i16() #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<7 x s16>) = G_LOAD [[DEF]](p1) :: (load 14 from `<7 x i16> addrspace(1)* undef`, align 16, addrspace 1)
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(<7 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<14 x s16>) = G_CONCAT_VECTORS [[LOAD]](<7 x s16>), [[DEF1]](<7 x s16>)
-  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<14 x s16>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v7i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2361,6 +2359,9 @@ define amdgpu_kernel void @test_call_external_void_func_v7i16() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(<7 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<14 x s16>) = G_CONCAT_VECTORS [[LOAD]](<7 x s16>), [[DEF1]](<7 x s16>)
+  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<14 x s16>)
   ; CHECK:   $vgpr0 = COPY [[UV]](<2 x s16>)
   ; CHECK:   $vgpr1 = COPY [[UV1]](<2 x s16>)
   ; CHECK:   $vgpr2 = COPY [[UV2]](<2 x s16>)
@@ -2399,9 +2400,6 @@ define amdgpu_kernel void @test_call_external_void_func_v63i16() #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<63 x s16>) = G_LOAD [[DEF]](p1) :: (load 126 from `<63 x i16> addrspace(1)* undef`, align 128, addrspace 1)
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(<63 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<126 x s16>) = G_CONCAT_VECTORS [[LOAD]](<63 x s16>), [[DEF1]](<63 x s16>)
-  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>), [[UV11:%[0-9]+]]:_(<2 x s16>), [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>), [[UV14:%[0-9]+]]:_(<2 x s16>), [[UV15:%[0-9]+]]:_(<2 x s16>), [[UV16:%[0-9]+]]:_(<2 x s16>), [[UV17:%[0-9]+]]:_(<2 x s16>), [[UV18:%[0-9]+]]:_(<2 x s16>), [[UV19:%[0-9]+]]:_(<2 x s16>), [[UV20:%[0-9]+]]:_(<2 x s16>), [[UV21:%[0-9]+]]:_(<2 x s16>), [[UV22:%[0-9]+]]:_(<2 x s16>), [[UV23:%[0-9]+]]:_(<2 x s16>), [[UV24:%[0-9]+]]:_(<2 x s16>), [[UV25:%[0-9]+]]:_(<2 x s16>), [[UV26:%[0-9]+]]:_(<2 x s16>), [[UV27:%[0-9]+]]:_(<2 x s16>), [[UV28:%[0-9]+]]:_(<2 x s16>), [[UV29:%[0-9]+]]:_(<2 x s16>), [[UV30:%[0-9]+]]:_(<2 x s16>), [[UV31:%[0-9]+]]:_(<2 x s16>), [[UV32:%[0-9]+]]:_(<2 x s16>), [[UV33:%[0-9]+]]:_(<2 x s16>), [[UV34:%[0-9]+]]:_(<2 x s16>), [[UV35:%[0-9]+]]:_(<2 x s16>), [[UV36:%[0-9]+]]:_(<2 x s16>), [[UV37:%[0-9]+]]:_(<2 x s16>), [[UV38:%[0-9]+]]:_(<2 x s16>), [[UV39:%[0-9]+]]:_(<2 x s16>), [[UV40:%[0-9]+]]:_(<2 x s16>), [[UV41:%[0-9]+]]:_(<2 x s16>), [[UV42:%[0-9]+]]:_(<2 x s16>), [[UV43:%[0-9]+]]:_(<2 x s16>), [[UV44:%[0-9]+]]:_(<2 x s16>), [[UV45:%[0-9]+]]:_(<2 x s16>), [[UV46:%[0-9]+]]:_(<2 x s16>), [[UV47:%[0-9]+]]:_(<2 x s16>), [[UV48:%[0-9]+]]:_(<2 x s16>), [[UV49:%[0-9]+]]:_(<2 x s16>), [[UV50:%[0-9]+]]:_(<2 x s16>), [[UV51:%[0-9]+]]:_(<2 x s16>), [[UV52:%[0-9]+]]:_(<2 x s16>), [[UV53:%[0-9]+]]:_(<2 x s16>), [[UV54:%[0-9]+]]:_(<2 x s16>), [[UV55:%[0-9]+]]:_(<2 x s16>), [[UV56:%[0-9]+]]:_(<2 x s16>), [[UV57:%[0-9]+]]:_(<2 x s16>), [[UV58:%[0-9]+]]:_(<2 x s16>), [[UV59:%[0-9]+]]:_(<2 x s16>), [[UV60:%[0-9]+]]:_(<2 x s16>), [[UV61:%[0-9]+]]:_(<2 x s16>), [[UV62:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<126 x s16>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v63i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2422,6 +2420,9 @@ define amdgpu_kernel void @test_call_external_void_func_v63i16() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(<63 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<126 x s16>) = G_CONCAT_VECTORS [[LOAD]](<63 x s16>), [[DEF1]](<63 x s16>)
+  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>), [[UV11:%[0-9]+]]:_(<2 x s16>), [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>), [[UV14:%[0-9]+]]:_(<2 x s16>), [[UV15:%[0-9]+]]:_(<2 x s16>), [[UV16:%[0-9]+]]:_(<2 x s16>), [[UV17:%[0-9]+]]:_(<2 x s16>), [[UV18:%[0-9]+]]:_(<2 x s16>), [[UV19:%[0-9]+]]:_(<2 x s16>), [[UV20:%[0-9]+]]:_(<2 x s16>), [[UV21:%[0-9]+]]:_(<2 x s16>), [[UV22:%[0-9]+]]:_(<2 x s16>), [[UV23:%[0-9]+]]:_(<2 x s16>), [[UV24:%[0-9]+]]:_(<2 x s16>), [[UV25:%[0-9]+]]:_(<2 x s16>), [[UV26:%[0-9]+]]:_(<2 x s16>), [[UV27:%[0-9]+]]:_(<2 x s16>), [[UV28:%[0-9]+]]:_(<2 x s16>), [[UV29:%[0-9]+]]:_(<2 x s16>), [[UV30:%[0-9]+]]:_(<2 x s16>), [[UV31:%[0-9]+]]:_(<2 x s16>), [[UV32:%[0-9]+]]:_(<2 x s16>), [[UV33:%[0-9]+]]:_(<2 x s16>), [[UV34:%[0-9]+]]:_(<2 x s16>), [[UV35:%[0-9]+]]:_(<2 x s16>), [[UV36:%[0-9]+]]:_(<2 x s16>), [[UV37:%[0-9]+]]:_(<2 x s16>), [[UV38:%[0-9]+]]:_(<2 x s16>), [[UV39:%[0-9]+]]:_(<2 x s16>), [[UV40:%[0-9]+]]:_(<2 x s16>), [[UV41:%[0-9]+]]:_(<2 x s16>), [[UV42:%[0-9]+]]:_(<2 x s16>), [[UV43:%[0-9]+]]:_(<2 x s16>), [[UV44:%[0-9]+]]:_(<2 x s16>), [[UV45:%[0-9]+]]:_(<2 x s16>), [[UV46:%[0-9]+]]:_(<2 x s16>), [[UV47:%[0-9]+]]:_(<2 x s16>), [[UV48:%[0-9]+]]:_(<2 x s16>), [[UV49:%[0-9]+]]:_(<2 x s16>), [[UV50:%[0-9]+]]:_(<2 x s16>), [[UV51:%[0-9]+]]:_(<2 x s16>), [[UV52:%[0-9]+]]:_(<2 x s16>), [[UV53:%[0-9]+]]:_(<2 x s16>), [[UV54:%[0-9]+]]:_(<2 x s16>), [[UV55:%[0-9]+]]:_(<2 x s16>), [[UV56:%[0-9]+]]:_(<2 x s16>), [[UV57:%[0-9]+]]:_(<2 x s16>), [[UV58:%[0-9]+]]:_(<2 x s16>), [[UV59:%[0-9]+]]:_(<2 x s16>), [[UV60:%[0-9]+]]:_(<2 x s16>), [[UV61:%[0-9]+]]:_(<2 x s16>), [[UV62:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<126 x s16>)
   ; CHECK:   $vgpr0 = COPY [[UV]](<2 x s16>)
   ; CHECK:   $vgpr1 = COPY [[UV1]](<2 x s16>)
   ; CHECK:   $vgpr2 = COPY [[UV2]](<2 x s16>)
@@ -2491,9 +2492,6 @@ define amdgpu_kernel void @test_call_external_void_func_v65i16() #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<65 x s16>) = G_LOAD [[DEF]](p1) :: (load 130 from `<65 x i16> addrspace(1)* undef`, align 256, addrspace 1)
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(<65 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<130 x s16>) = G_CONCAT_VECTORS [[LOAD]](<65 x s16>), [[DEF1]](<65 x s16>)
-  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>), [[UV11:%[0-9]+]]:_(<2 x s16>), [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>), [[UV14:%[0-9]+]]:_(<2 x s16>), [[UV15:%[0-9]+]]:_(<2 x s16>), [[UV16:%[0-9]+]]:_(<2 x s16>), [[UV17:%[0-9]+]]:_(<2 x s16>), [[UV18:%[0-9]+]]:_(<2 x s16>), [[UV19:%[0-9]+]]:_(<2 x s16>), [[UV20:%[0-9]+]]:_(<2 x s16>), [[UV21:%[0-9]+]]:_(<2 x s16>), [[UV22:%[0-9]+]]:_(<2 x s16>), [[UV23:%[0-9]+]]:_(<2 x s16>), [[UV24:%[0-9]+]]:_(<2 x s16>), [[UV25:%[0-9]+]]:_(<2 x s16>), [[UV26:%[0-9]+]]:_(<2 x s16>), [[UV27:%[0-9]+]]:_(<2 x s16>), [[UV28:%[0-9]+]]:_(<2 x s16>), [[UV29:%[0-9]+]]:_(<2 x s16>), [[UV30:%[0-9]+]]:_(<2 x s16>), [[UV31:%[0-9]+]]:_(<2 x s16>), [[UV32:%[0-9]+]]:_(<2 x s16>), [[UV33:%[0-9]+]]:_(<2 x s16>), [[UV34:%[0-9]+]]:_(<2 x s16>), [[UV35:%[0-9]+]]:_(<2 x s16>), [[UV36:%[0-9]+]]:_(<2 x s16>), [[UV37:%[0-9]+]]:_(<2 x s16>), [[UV38:%[0-9]+]]:_(<2 x s16>), [[UV39:%[0-9]+]]:_(<2 x s16>), [[UV40:%[0-9]+]]:_(<2 x s16>), [[UV41:%[0-9]+]]:_(<2 x s16>), [[UV42:%[0-9]+]]:_(<2 x s16>), [[UV43:%[0-9]+]]:_(<2 x s16>), [[UV44:%[0-9]+]]:_(<2 x s16>), [[UV45:%[0-9]+]]:_(<2 x s16>), [[UV46:%[0-9]+]]:_(<2 x s16>), [[UV47:%[0-9]+]]:_(<2 x s16>), [[UV48:%[0-9]+]]:_(<2 x s16>), [[UV49:%[0-9]+]]:_(<2 x s16>), [[UV50:%[0-9]+]]:_(<2 x s16>), [[UV51:%[0-9]+]]:_(<2 x s16>), [[UV52:%[0-9]+]]:_(<2 x s16>), [[UV53:%[0-9]+]]:_(<2 x s16>), [[UV54:%[0-9]+]]:_(<2 x s16>), [[UV55:%[0-9]+]]:_(<2 x s16>), [[UV56:%[0-9]+]]:_(<2 x s16>), [[UV57:%[0-9]+]]:_(<2 x s16>), [[UV58:%[0-9]+]]:_(<2 x s16>), [[UV59:%[0-9]+]]:_(<2 x s16>), [[UV60:%[0-9]+]]:_(<2 x s16>), [[UV61:%[0-9]+]]:_(<2 x s16>), [[UV62:%[0-9]+]]:_(<2 x s16>), [[UV63:%[0-9]+]]:_(<2 x s16>), [[UV64:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<130 x s16>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v65i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2514,6 +2512,9 @@ define amdgpu_kernel void @test_call_external_void_func_v65i16() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(<65 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<130 x s16>) = G_CONCAT_VECTORS [[LOAD]](<65 x s16>), [[DEF1]](<65 x s16>)
+  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>), [[UV11:%[0-9]+]]:_(<2 x s16>), [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>), [[UV14:%[0-9]+]]:_(<2 x s16>), [[UV15:%[0-9]+]]:_(<2 x s16>), [[UV16:%[0-9]+]]:_(<2 x s16>), [[UV17:%[0-9]+]]:_(<2 x s16>), [[UV18:%[0-9]+]]:_(<2 x s16>), [[UV19:%[0-9]+]]:_(<2 x s16>), [[UV20:%[0-9]+]]:_(<2 x s16>), [[UV21:%[0-9]+]]:_(<2 x s16>), [[UV22:%[0-9]+]]:_(<2 x s16>), [[UV23:%[0-9]+]]:_(<2 x s16>), [[UV24:%[0-9]+]]:_(<2 x s16>), [[UV25:%[0-9]+]]:_(<2 x s16>), [[UV26:%[0-9]+]]:_(<2 x s16>), [[UV27:%[0-9]+]]:_(<2 x s16>), [[UV28:%[0-9]+]]:_(<2 x s16>), [[UV29:%[0-9]+]]:_(<2 x s16>), [[UV30:%[0-9]+]]:_(<2 x s16>), [[UV31:%[0-9]+]]:_(<2 x s16>), [[UV32:%[0-9]+]]:_(<2 x s16>), [[UV33:%[0-9]+]]:_(<2 x s16>), [[UV34:%[0-9]+]]:_(<2 x s16>), [[UV35:%[0-9]+]]:_(<2 x s16>), [[UV36:%[0-9]+]]:_(<2 x s16>), [[UV37:%[0-9]+]]:_(<2 x s16>), [[UV38:%[0-9]+]]:_(<2 x s16>), [[UV39:%[0-9]+]]:_(<2 x s16>), [[UV40:%[0-9]+]]:_(<2 x s16>), [[UV41:%[0-9]+]]:_(<2 x s16>), [[UV42:%[0-9]+]]:_(<2 x s16>), [[UV43:%[0-9]+]]:_(<2 x s16>), [[UV44:%[0-9]+]]:_(<2 x s16>), [[UV45:%[0-9]+]]:_(<2 x s16>), [[UV46:%[0-9]+]]:_(<2 x s16>), [[UV47:%[0-9]+]]:_(<2 x s16>), [[UV48:%[0-9]+]]:_(<2 x s16>), [[UV49:%[0-9]+]]:_(<2 x s16>), [[UV50:%[0-9]+]]:_(<2 x s16>), [[UV51:%[0-9]+]]:_(<2 x s16>), [[UV52:%[0-9]+]]:_(<2 x s16>), [[UV53:%[0-9]+]]:_(<2 x s16>), [[UV54:%[0-9]+]]:_(<2 x s16>), [[UV55:%[0-9]+]]:_(<2 x s16>), [[UV56:%[0-9]+]]:_(<2 x s16>), [[UV57:%[0-9]+]]:_(<2 x s16>), [[UV58:%[0-9]+]]:_(<2 x s16>), [[UV59:%[0-9]+]]:_(<2 x s16>), [[UV60:%[0-9]+]]:_(<2 x s16>), [[UV61:%[0-9]+]]:_(<2 x s16>), [[UV62:%[0-9]+]]:_(<2 x s16>), [[UV63:%[0-9]+]]:_(<2 x s16>), [[UV64:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<130 x s16>)
   ; CHECK:   $vgpr0 = COPY [[UV]](<2 x s16>)
   ; CHECK:   $vgpr1 = COPY [[UV1]](<2 x s16>)
   ; CHECK:   $vgpr2 = COPY [[UV2]](<2 x s16>)
@@ -2586,7 +2587,6 @@ define amdgpu_kernel void @test_call_external_void_func_v66i16() #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<66 x s16>) = G_LOAD [[DEF]](p1) :: (load 132 from `<66 x i16> addrspace(1)* undef`, align 256, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>), [[UV11:%[0-9]+]]:_(<2 x s16>), [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>), [[UV14:%[0-9]+]]:_(<2 x s16>), [[UV15:%[0-9]+]]:_(<2 x s16>), [[UV16:%[0-9]+]]:_(<2 x s16>), [[UV17:%[0-9]+]]:_(<2 x s16>), [[UV18:%[0-9]+]]:_(<2 x s16>), [[UV19:%[0-9]+]]:_(<2 x s16>), [[UV20:%[0-9]+]]:_(<2 x s16>), [[UV21:%[0-9]+]]:_(<2 x s16>), [[UV22:%[0-9]+]]:_(<2 x s16>), [[UV23:%[0-9]+]]:_(<2 x s16>), [[UV24:%[0-9]+]]:_(<2 x s16>), [[UV25:%[0-9]+]]:_(<2 x s16>), [[UV26:%[0-9]+]]:_(<2 x s16>), [[UV27:%[0-9]+]]:_(<2 x s16>), [[UV28:%[0-9]+]]:_(<2 x s16>), [[UV29:%[0-9]+]]:_(<2 x s16>), [[UV30:%[0-9]+]]:_(<2 x s16>), [[UV31:%[0-9]+]]:_(<2 x s16>), [[UV32:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<66 x s16>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v66i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2607,6 +2607,7 @@ define amdgpu_kernel void @test_call_external_void_func_v66i16() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>), [[UV11:%[0-9]+]]:_(<2 x s16>), [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>), [[UV14:%[0-9]+]]:_(<2 x s16>), [[UV15:%[0-9]+]]:_(<2 x s16>), [[UV16:%[0-9]+]]:_(<2 x s16>), [[UV17:%[0-9]+]]:_(<2 x s16>), [[UV18:%[0-9]+]]:_(<2 x s16>), [[UV19:%[0-9]+]]:_(<2 x s16>), [[UV20:%[0-9]+]]:_(<2 x s16>), [[UV21:%[0-9]+]]:_(<2 x s16>), [[UV22:%[0-9]+]]:_(<2 x s16>), [[UV23:%[0-9]+]]:_(<2 x s16>), [[UV24:%[0-9]+]]:_(<2 x s16>), [[UV25:%[0-9]+]]:_(<2 x s16>), [[UV26:%[0-9]+]]:_(<2 x s16>), [[UV27:%[0-9]+]]:_(<2 x s16>), [[UV28:%[0-9]+]]:_(<2 x s16>), [[UV29:%[0-9]+]]:_(<2 x s16>), [[UV30:%[0-9]+]]:_(<2 x s16>), [[UV31:%[0-9]+]]:_(<2 x s16>), [[UV32:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<66 x s16>)
   ; CHECK:   $vgpr0 = COPY [[UV]](<2 x s16>)
   ; CHECK:   $vgpr1 = COPY [[UV1]](<2 x s16>)
   ; CHECK:   $vgpr2 = COPY [[UV2]](<2 x s16>)
@@ -2734,7 +2735,6 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32() #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[DEF]](p1) :: (load 8 from `<2 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2755,6 +2755,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -2792,7 +2793,6 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32_imm() #0 {
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2813,6 +2813,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32_imm() #0 {
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C4]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -2851,7 +2852,6 @@ define amdgpu_kernel void @test_call_external_void_func_v3i32_imm(i32) #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32), [[C2]](s32)
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v3i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2872,6 +2872,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i32_imm(i32) #0 {
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C5]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -2912,7 +2913,6 @@ define amdgpu_kernel void @test_call_external_void_func_v3i32_i32(i32) #0 {
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32), [[C2]](s32)
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 6
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v3i32_i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2933,6 +2933,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i32_i32(i32) #0 {
   ; CHECK:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C6]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -2970,7 +2971,6 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32() #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: (load 16 from `<4 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<4 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v4i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2991,6 +2991,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<4 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -3032,7 +3033,6 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32_imm() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32), [[C2]](s32), [[C3]](s32)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v4i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3053,6 +3053,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32_imm() #0 {
   ; CHECK:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C6]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -3094,7 +3095,6 @@ define amdgpu_kernel void @test_call_external_void_func_v5i32_imm() #0 {
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32), [[C2]](s32), [[C3]](s32), [[C4]](s32)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<5 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v5i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3115,6 +3115,7 @@ define amdgpu_kernel void @test_call_external_void_func_v5i32_imm() #0 {
   ; CHECK:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C7]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<5 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -3154,7 +3155,6 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<8 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<8 x s32>) = G_LOAD [[LOAD]](p1) :: (load 32 from %ir.ptr, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<8 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v8i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3175,6 +3175,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<8 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -3225,7 +3226,6 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32_imm() #0 {
   ; CHECK:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
   ; CHECK:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32), [[C2]](s32), [[C3]](s32), [[C4]](s32), [[C5]](s32), [[C6]](s32), [[C7]](s32)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v8i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3246,6 +3246,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32_imm() #0 {
   ; CHECK:   [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C10]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -3288,7 +3289,6 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<16 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[LOAD]](p1) :: (load 64 from %ir.ptr, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<16 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v16i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3309,6 +3309,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<16 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -3361,7 +3362,6 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<32 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load 128 from %ir.ptr, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v32i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3382,6 +3382,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -3456,7 +3457,6 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<32 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load 128 from %ir.ptr0, addrspace 1)
   ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[DEF1]](p1) :: (load 4 from `i32 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v32i32_i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3477,6 +3477,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -3556,7 +3557,6 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load 128 from %ir.ptr0, addrspace 1)
   ; CHECK:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[DEF1]](p1) :: (load 1 from `i8 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[COPY10]](p1) :: (load 2 from `i16 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v32i32_i8_i8_i16
   ; CHECK:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3577,6 +3577,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY20]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -3612,17 +3613,19 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C3]](s32)
   ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[LOAD2]](s8)
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C4]](s32)
-  ; CHECK:   G_STORE [[LOAD2]](s8), [[PTR_ADD2]](p5) :: (store 1 into stack + 4, align 4, addrspace 5)
+  ; CHECK:   G_STORE [[ANYEXT]](s16), [[PTR_ADD2]](p5) :: (store 2 into stack + 4, align 4, addrspace 5)
+  ; CHECK:   [[COPY22:%[0-9]+]]:_(s16) = COPY [[ANYEXT]](s16)
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C5]](s32)
-  ; CHECK:   G_STORE [[LOAD2]](s8), [[PTR_ADD3]](p5) :: (store 1 into stack + 8, align 8, addrspace 5)
+  ; CHECK:   G_STORE [[COPY22]](s16), [[PTR_ADD3]](p5) :: (store 2 into stack + 8, align 8, addrspace 5)
   ; CHECK:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C6]](s32)
   ; CHECK:   G_STORE [[LOAD3]](s16), [[PTR_ADD4]](p5) :: (store 2 into stack + 12, align 4, addrspace 5)
-  ; CHECK:   [[COPY22:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY22]](<4 x s32>)
+  ; CHECK:   [[COPY23:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY23]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY11]](p4)
   ; CHECK:   $sgpr6_sgpr7 = COPY [[COPY12]](p4)
   ; CHECK:   $sgpr8_sgpr9 = COPY [[PTR_ADD]](p4)
@@ -3664,7 +3667,6 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load 128 from %ir.ptr0, addrspace 1)
   ; CHECK:   [[LOAD2:%[0-9]+]]:_(p3) = G_LOAD [[DEF1]](p1) :: (load 4 from `i8 addrspace(3)* addrspace(1)* undef`, addrspace 1)
   ; CHECK:   [[LOAD3:%[0-9]+]]:_(p5) = G_LOAD [[COPY10]](p1) :: (load 4 from `i8 addrspace(5)* addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v32i32_p3_p5
   ; CHECK:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3685,6 +3687,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY20]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -3787,8 +3790,9 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD1]](s8)
-  ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[LOAD1]](s8)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT]](s16)
+  ; CHECK:   $vgpr0 = COPY [[ANYEXT1]](s32)
   ; CHECK:   $vgpr1 = COPY [[LOAD2]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
@@ -3822,8 +3826,9 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32() #0 {
   ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 4 from %ir.ptr0 + 4, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_gfx_void_func_struct_i8_i32
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD1]](s8)
-  ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[LOAD1]](s8)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT]](s16)
+  ; CHECK:   $vgpr0 = COPY [[ANYEXT1]](s32)
   ; CHECK:   $vgpr1 = COPY [[LOAD2]](s32)
   ; CHECK:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY1]](<4 x s32>)
@@ -3850,8 +3855,9 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32_inreg() #
   ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 4 from %ir.ptr0 + 4, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_gfx_void_func_struct_i8_i32_inreg
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD1]](s8)
-  ; CHECK:   $sgpr4 = COPY [[ANYEXT]](s32)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[LOAD1]](s8)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT]](s16)
+  ; CHECK:   $sgpr4 = COPY [[ANYEXT1]](s32)
   ; CHECK:   $sgpr5 = COPY [[LOAD2]](s32)
   ; CHECK:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY1]](<4 x s32>)
@@ -3949,9 +3955,6 @@ define amdgpu_kernel void @test_call_external_void_func_v2i8() #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<2 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[LOAD]](p1) :: (load 2 from %ir.ptr, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<2 x s8>)
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
-  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[UV1]](s8)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2i8
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3972,6 +3975,9 @@ define amdgpu_kernel void @test_call_external_void_func_v2i8() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<2 x s8>)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[UV1]](s8)
   ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT]](s16)
   ; CHECK:   $vgpr0 = COPY [[ANYEXT2]](s32)
   ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT1]](s16)
@@ -4012,10 +4018,6 @@ define amdgpu_kernel void @test_call_external_void_func_v3i8() #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<3 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[LOAD]](p1) :: (load 3 from %ir.ptr, align 4, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<3 x s8>)
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
-  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[UV1]](s8)
-  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s16) = G_ANYEXT [[UV2]](s8)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v3i8
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -4036,6 +4038,10 @@ define amdgpu_kernel void @test_call_external_void_func_v3i8() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<3 x s8>)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[UV1]](s8)
+  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s16) = G_ANYEXT [[UV2]](s8)
   ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT]](s16)
   ; CHECK:   $vgpr0 = COPY [[ANYEXT3]](s32)
   ; CHECK:   [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT1]](s16)
@@ -4078,11 +4084,6 @@ define amdgpu_kernel void @test_call_external_void_func_v4i8() #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<4 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<4 x s8>) = G_LOAD [[LOAD]](p1) :: (load 4 from %ir.ptr, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<4 x s8>)
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
-  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[UV1]](s8)
-  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s16) = G_ANYEXT [[UV2]](s8)
-  ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s16) = G_ANYEXT [[UV3]](s8)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v4i8
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -4103,6 +4104,11 @@ define amdgpu_kernel void @test_call_external_void_func_v4i8() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<4 x s8>)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[UV1]](s8)
+  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s16) = G_ANYEXT [[UV2]](s8)
+  ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s16) = G_ANYEXT [[UV3]](s8)
   ; CHECK:   [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT]](s16)
   ; CHECK:   $vgpr0 = COPY [[ANYEXT4]](s32)
   ; CHECK:   [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT1]](s16)
@@ -4147,15 +4153,6 @@ define amdgpu_kernel void @test_call_external_void_func_v8i8() #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<8 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<8 x s8>) = G_LOAD [[LOAD]](p1) :: (load 8 from %ir.ptr, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<8 x s8>)
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
-  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[UV1]](s8)
-  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s16) = G_ANYEXT [[UV2]](s8)
-  ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s16) = G_ANYEXT [[UV3]](s8)
-  ; CHECK:   [[ANYEXT4:%[0-9]+]]:_(s16) = G_ANYEXT [[UV4]](s8)
-  ; CHECK:   [[ANYEXT5:%[0-9]+]]:_(s16) = G_ANYEXT [[UV5]](s8)
-  ; CHECK:   [[ANYEXT6:%[0-9]+]]:_(s16) = G_ANYEXT [[UV6]](s8)
-  ; CHECK:   [[ANYEXT7:%[0-9]+]]:_(s16) = G_ANYEXT [[UV7]](s8)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v8i8
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -4176,6 +4173,15 @@ define amdgpu_kernel void @test_call_external_void_func_v8i8() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<8 x s8>)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[UV1]](s8)
+  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s16) = G_ANYEXT [[UV2]](s8)
+  ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s16) = G_ANYEXT [[UV3]](s8)
+  ; CHECK:   [[ANYEXT4:%[0-9]+]]:_(s16) = G_ANYEXT [[UV4]](s8)
+  ; CHECK:   [[ANYEXT5:%[0-9]+]]:_(s16) = G_ANYEXT [[UV5]](s8)
+  ; CHECK:   [[ANYEXT6:%[0-9]+]]:_(s16) = G_ANYEXT [[UV6]](s8)
+  ; CHECK:   [[ANYEXT7:%[0-9]+]]:_(s16) = G_ANYEXT [[UV7]](s8)
   ; CHECK:   [[ANYEXT8:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT]](s16)
   ; CHECK:   $vgpr0 = COPY [[ANYEXT8]](s32)
   ; CHECK:   [[ANYEXT9:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT1]](s16)
@@ -4228,23 +4234,6 @@ define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<16 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[LOAD]](p1) :: (load 16 from %ir.ptr, addrspace 1)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8), [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8), [[UV10:%[0-9]+]]:_(s8), [[UV11:%[0-9]+]]:_(s8), [[UV12:%[0-9]+]]:_(s8), [[UV13:%[0-9]+]]:_(s8), [[UV14:%[0-9]+]]:_(s8), [[UV15:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<16 x s8>)
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
-  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[UV1]](s8)
-  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s16) = G_ANYEXT [[UV2]](s8)
-  ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s16) = G_ANYEXT [[UV3]](s8)
-  ; CHECK:   [[ANYEXT4:%[0-9]+]]:_(s16) = G_ANYEXT [[UV4]](s8)
-  ; CHECK:   [[ANYEXT5:%[0-9]+]]:_(s16) = G_ANYEXT [[UV5]](s8)
-  ; CHECK:   [[ANYEXT6:%[0-9]+]]:_(s16) = G_ANYEXT [[UV6]](s8)
-  ; CHECK:   [[ANYEXT7:%[0-9]+]]:_(s16) = G_ANYEXT [[UV7]](s8)
-  ; CHECK:   [[ANYEXT8:%[0-9]+]]:_(s16) = G_ANYEXT [[UV8]](s8)
-  ; CHECK:   [[ANYEXT9:%[0-9]+]]:_(s16) = G_ANYEXT [[UV9]](s8)
-  ; CHECK:   [[ANYEXT10:%[0-9]+]]:_(s16) = G_ANYEXT [[UV10]](s8)
-  ; CHECK:   [[ANYEXT11:%[0-9]+]]:_(s16) = G_ANYEXT [[UV11]](s8)
-  ; CHECK:   [[ANYEXT12:%[0-9]+]]:_(s16) = G_ANYEXT [[UV12]](s8)
-  ; CHECK:   [[ANYEXT13:%[0-9]+]]:_(s16) = G_ANYEXT [[UV13]](s8)
-  ; CHECK:   [[ANYEXT14:%[0-9]+]]:_(s16) = G_ANYEXT [[UV14]](s8)
-  ; CHECK:   [[ANYEXT15:%[0-9]+]]:_(s16) = G_ANYEXT [[UV15]](s8)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v16i8
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -4265,6 +4254,23 @@ define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8), [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8), [[UV10:%[0-9]+]]:_(s8), [[UV11:%[0-9]+]]:_(s8), [[UV12:%[0-9]+]]:_(s8), [[UV13:%[0-9]+]]:_(s8), [[UV14:%[0-9]+]]:_(s8), [[UV15:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<16 x s8>)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[UV1]](s8)
+  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s16) = G_ANYEXT [[UV2]](s8)
+  ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s16) = G_ANYEXT [[UV3]](s8)
+  ; CHECK:   [[ANYEXT4:%[0-9]+]]:_(s16) = G_ANYEXT [[UV4]](s8)
+  ; CHECK:   [[ANYEXT5:%[0-9]+]]:_(s16) = G_ANYEXT [[UV5]](s8)
+  ; CHECK:   [[ANYEXT6:%[0-9]+]]:_(s16) = G_ANYEXT [[UV6]](s8)
+  ; CHECK:   [[ANYEXT7:%[0-9]+]]:_(s16) = G_ANYEXT [[UV7]](s8)
+  ; CHECK:   [[ANYEXT8:%[0-9]+]]:_(s16) = G_ANYEXT [[UV8]](s8)
+  ; CHECK:   [[ANYEXT9:%[0-9]+]]:_(s16) = G_ANYEXT [[UV9]](s8)
+  ; CHECK:   [[ANYEXT10:%[0-9]+]]:_(s16) = G_ANYEXT [[UV10]](s8)
+  ; CHECK:   [[ANYEXT11:%[0-9]+]]:_(s16) = G_ANYEXT [[UV11]](s8)
+  ; CHECK:   [[ANYEXT12:%[0-9]+]]:_(s16) = G_ANYEXT [[UV12]](s8)
+  ; CHECK:   [[ANYEXT13:%[0-9]+]]:_(s16) = G_ANYEXT [[UV13]](s8)
+  ; CHECK:   [[ANYEXT14:%[0-9]+]]:_(s16) = G_ANYEXT [[UV14]](s8)
+  ; CHECK:   [[ANYEXT15:%[0-9]+]]:_(s16) = G_ANYEXT [[UV15]](s8)
   ; CHECK:   [[ANYEXT16:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT]](s16)
   ; CHECK:   $vgpr0 = COPY [[ANYEXT16]](s32)
   ; CHECK:   [[ANYEXT17:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT1]](s16)
@@ -4335,8 +4341,6 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[INT]], [[C]](s64)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8 from %ir.tmp.kernarg.offset.cast, align 16, addrspace 4)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<32 x s32>)
-  ; CHECK:   [[UV32:%[0-9]+]]:_(s32), [[UV33:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](s64)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @stack_passed_f64_arg
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -4357,6 +4361,7 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<32 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
@@ -4392,6 +4397,7 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
   ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD2]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   [[UV32:%[0-9]+]]:_(s32), [[UV33:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](s64)
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C5]](s32)
   ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD3]](p5) :: (store 4 into stack + 4, addrspace 5)
@@ -4457,18 +4463,6 @@ define void @stack_12xv3i32() #0 {
   ; CHECK:   [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 14
   ; CHECK:   [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
   ; CHECK:   [[BUILD_VECTOR11:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[C13]](s32), [[C14]](s32), [[C15]](s32)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
-  ; CHECK:   [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<3 x s32>)
-  ; CHECK:   [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR2]](<3 x s32>)
-  ; CHECK:   [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR3]](<3 x s32>)
-  ; CHECK:   [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR4]](<3 x s32>)
-  ; CHECK:   [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR5]](<3 x s32>)
-  ; CHECK:   [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR6]](<3 x s32>)
-  ; CHECK:   [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR7]](<3 x s32>)
-  ; CHECK:   [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR8]](<3 x s32>)
-  ; CHECK:   [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR9]](<3 x s32>)
-  ; CHECK:   [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR10]](<3 x s32>)
-  ; CHECK:   [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32), [[UV35:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR11]](<3 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_12xv3i32
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -4479,36 +4473,47 @@ define void @stack_12xv3i32() #0 {
   ; CHECK:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
+  ; CHECK:   [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<3 x s32>)
   ; CHECK:   $vgpr3 = COPY [[UV3]](s32)
   ; CHECK:   $vgpr4 = COPY [[UV4]](s32)
   ; CHECK:   $vgpr5 = COPY [[UV5]](s32)
+  ; CHECK:   [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR2]](<3 x s32>)
   ; CHECK:   $vgpr6 = COPY [[UV6]](s32)
   ; CHECK:   $vgpr7 = COPY [[UV7]](s32)
   ; CHECK:   $vgpr8 = COPY [[UV8]](s32)
+  ; CHECK:   [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR3]](<3 x s32>)
   ; CHECK:   $vgpr9 = COPY [[UV9]](s32)
   ; CHECK:   $vgpr10 = COPY [[UV10]](s32)
   ; CHECK:   $vgpr11 = COPY [[UV11]](s32)
+  ; CHECK:   [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR4]](<3 x s32>)
   ; CHECK:   $vgpr12 = COPY [[UV12]](s32)
   ; CHECK:   $vgpr13 = COPY [[UV13]](s32)
   ; CHECK:   $vgpr14 = COPY [[UV14]](s32)
+  ; CHECK:   [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR5]](<3 x s32>)
   ; CHECK:   $vgpr15 = COPY [[UV15]](s32)
   ; CHECK:   $vgpr16 = COPY [[UV16]](s32)
   ; CHECK:   $vgpr17 = COPY [[UV17]](s32)
+  ; CHECK:   [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR6]](<3 x s32>)
   ; CHECK:   $vgpr18 = COPY [[UV18]](s32)
   ; CHECK:   $vgpr19 = COPY [[UV19]](s32)
   ; CHECK:   $vgpr20 = COPY [[UV20]](s32)
+  ; CHECK:   [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR7]](<3 x s32>)
   ; CHECK:   $vgpr21 = COPY [[UV21]](s32)
   ; CHECK:   $vgpr22 = COPY [[UV22]](s32)
   ; CHECK:   $vgpr23 = COPY [[UV23]](s32)
+  ; CHECK:   [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR8]](<3 x s32>)
   ; CHECK:   $vgpr24 = COPY [[UV24]](s32)
   ; CHECK:   $vgpr25 = COPY [[UV25]](s32)
   ; CHECK:   $vgpr26 = COPY [[UV26]](s32)
+  ; CHECK:   [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR9]](<3 x s32>)
   ; CHECK:   $vgpr27 = COPY [[UV27]](s32)
   ; CHECK:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK:   $vgpr29 = COPY [[UV29]](s32)
+  ; CHECK:   [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR10]](<3 x s32>)
   ; CHECK:   $vgpr30 = COPY [[UV30]](s32)
   ; CHECK:   [[COPY17:%[0-9]+]]:_(p5) = COPY $sgpr32
   ; CHECK:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -4517,6 +4522,7 @@ define void @stack_12xv3i32() #0 {
   ; CHECK:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C17]](s32)
   ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; CHECK:   [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32), [[UV35:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR11]](<3 x s32>)
   ; CHECK:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C18]](s32)
   ; CHECK:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store 4 into stack + 8, align 8, addrspace 5)
@@ -4598,18 +4604,6 @@ define void @stack_12xv3f32() #0 {
   ; CHECK:   [[C14:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.400000e+01
   ; CHECK:   [[C15:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.500000e+01
   ; CHECK:   [[BUILD_VECTOR11:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[C13]](s32), [[C14]](s32), [[C15]](s32)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
-  ; CHECK:   [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<3 x s32>)
-  ; CHECK:   [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR2]](<3 x s32>)
-  ; CHECK:   [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR3]](<3 x s32>)
-  ; CHECK:   [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR4]](<3 x s32>)
-  ; CHECK:   [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR5]](<3 x s32>)
-  ; CHECK:   [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR6]](<3 x s32>)
-  ; CHECK:   [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR7]](<3 x s32>)
-  ; CHECK:   [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR8]](<3 x s32>)
-  ; CHECK:   [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR9]](<3 x s32>)
-  ; CHECK:   [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR10]](<3 x s32>)
-  ; CHECK:   [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32), [[UV35:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR11]](<3 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_12xv3f32
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -4620,36 +4614,47 @@ define void @stack_12xv3f32() #0 {
   ; CHECK:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
+  ; CHECK:   [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<3 x s32>)
   ; CHECK:   $vgpr3 = COPY [[UV3]](s32)
   ; CHECK:   $vgpr4 = COPY [[UV4]](s32)
   ; CHECK:   $vgpr5 = COPY [[UV5]](s32)
+  ; CHECK:   [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR2]](<3 x s32>)
   ; CHECK:   $vgpr6 = COPY [[UV6]](s32)
   ; CHECK:   $vgpr7 = COPY [[UV7]](s32)
   ; CHECK:   $vgpr8 = COPY [[UV8]](s32)
+  ; CHECK:   [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR3]](<3 x s32>)
   ; CHECK:   $vgpr9 = COPY [[UV9]](s32)
   ; CHECK:   $vgpr10 = COPY [[UV10]](s32)
   ; CHECK:   $vgpr11 = COPY [[UV11]](s32)
+  ; CHECK:   [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR4]](<3 x s32>)
   ; CHECK:   $vgpr12 = COPY [[UV12]](s32)
   ; CHECK:   $vgpr13 = COPY [[UV13]](s32)
   ; CHECK:   $vgpr14 = COPY [[UV14]](s32)
+  ; CHECK:   [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR5]](<3 x s32>)
   ; CHECK:   $vgpr15 = COPY [[UV15]](s32)
   ; CHECK:   $vgpr16 = COPY [[UV16]](s32)
   ; CHECK:   $vgpr17 = COPY [[UV17]](s32)
+  ; CHECK:   [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR6]](<3 x s32>)
   ; CHECK:   $vgpr18 = COPY [[UV18]](s32)
   ; CHECK:   $vgpr19 = COPY [[UV19]](s32)
   ; CHECK:   $vgpr20 = COPY [[UV20]](s32)
+  ; CHECK:   [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR7]](<3 x s32>)
   ; CHECK:   $vgpr21 = COPY [[UV21]](s32)
   ; CHECK:   $vgpr22 = COPY [[UV22]](s32)
   ; CHECK:   $vgpr23 = COPY [[UV23]](s32)
+  ; CHECK:   [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR8]](<3 x s32>)
   ; CHECK:   $vgpr24 = COPY [[UV24]](s32)
   ; CHECK:   $vgpr25 = COPY [[UV25]](s32)
   ; CHECK:   $vgpr26 = COPY [[UV26]](s32)
+  ; CHECK:   [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR9]](<3 x s32>)
   ; CHECK:   $vgpr27 = COPY [[UV27]](s32)
   ; CHECK:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK:   $vgpr29 = COPY [[UV29]](s32)
+  ; CHECK:   [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR10]](<3 x s32>)
   ; CHECK:   $vgpr30 = COPY [[UV30]](s32)
   ; CHECK:   [[COPY17:%[0-9]+]]:_(p5) = COPY $sgpr32
   ; CHECK:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -4658,6 +4663,7 @@ define void @stack_12xv3f32() #0 {
   ; CHECK:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C17]](s32)
   ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; CHECK:   [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32), [[UV35:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR11]](<3 x s32>)
   ; CHECK:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C18]](s32)
   ; CHECK:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store 4 into stack + 8, align 8, addrspace 5)
@@ -4735,14 +4741,6 @@ define void @stack_8xv5i32() #0 {
   ; CHECK:   [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 14
   ; CHECK:   [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
   ; CHECK:   [[BUILD_VECTOR7:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[C11]](s32), [[C12]](s32), [[C13]](s32), [[C14]](s32), [[C15]](s32)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<5 x s32>)
-  ; CHECK:   [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<5 x s32>)
-  ; CHECK:   [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR2]](<5 x s32>)
-  ; CHECK:   [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR3]](<5 x s32>)
-  ; CHECK:   [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR4]](<5 x s32>)
-  ; CHECK:   [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR5]](<5 x s32>)
-  ; CHECK:   [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32), [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR6]](<5 x s32>)
-  ; CHECK:   [[UV35:%[0-9]+]]:_(s32), [[UV36:%[0-9]+]]:_(s32), [[UV37:%[0-9]+]]:_(s32), [[UV38:%[0-9]+]]:_(s32), [[UV39:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR7]](<5 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_8xv5i32
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -4753,36 +4751,43 @@ define void @stack_8xv5i32() #0 {
   ; CHECK:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<5 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
   ; CHECK:   $vgpr3 = COPY [[UV3]](s32)
   ; CHECK:   $vgpr4 = COPY [[UV4]](s32)
+  ; CHECK:   [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<5 x s32>)
   ; CHECK:   $vgpr5 = COPY [[UV5]](s32)
   ; CHECK:   $vgpr6 = COPY [[UV6]](s32)
   ; CHECK:   $vgpr7 = COPY [[UV7]](s32)
   ; CHECK:   $vgpr8 = COPY [[UV8]](s32)
   ; CHECK:   $vgpr9 = COPY [[UV9]](s32)
+  ; CHECK:   [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR2]](<5 x s32>)
   ; CHECK:   $vgpr10 = COPY [[UV10]](s32)
   ; CHECK:   $vgpr11 = COPY [[UV11]](s32)
   ; CHECK:   $vgpr12 = COPY [[UV12]](s32)
   ; CHECK:   $vgpr13 = COPY [[UV13]](s32)
   ; CHECK:   $vgpr14 = COPY [[UV14]](s32)
+  ; CHECK:   [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR3]](<5 x s32>)
   ; CHECK:   $vgpr15 = COPY [[UV15]](s32)
   ; CHECK:   $vgpr16 = COPY [[UV16]](s32)
   ; CHECK:   $vgpr17 = COPY [[UV17]](s32)
   ; CHECK:   $vgpr18 = COPY [[UV18]](s32)
   ; CHECK:   $vgpr19 = COPY [[UV19]](s32)
+  ; CHECK:   [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR4]](<5 x s32>)
   ; CHECK:   $vgpr20 = COPY [[UV20]](s32)
   ; CHECK:   $vgpr21 = COPY [[UV21]](s32)
   ; CHECK:   $vgpr22 = COPY [[UV22]](s32)
   ; CHECK:   $vgpr23 = COPY [[UV23]](s32)
   ; CHECK:   $vgpr24 = COPY [[UV24]](s32)
+  ; CHECK:   [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR5]](<5 x s32>)
   ; CHECK:   $vgpr25 = COPY [[UV25]](s32)
   ; CHECK:   $vgpr26 = COPY [[UV26]](s32)
   ; CHECK:   $vgpr27 = COPY [[UV27]](s32)
   ; CHECK:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK:   $vgpr29 = COPY [[UV29]](s32)
+  ; CHECK:   [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32), [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR6]](<5 x s32>)
   ; CHECK:   $vgpr30 = COPY [[UV30]](s32)
   ; CHECK:   [[COPY17:%[0-9]+]]:_(p5) = COPY $sgpr32
   ; CHECK:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -4797,6 +4802,7 @@ define void @stack_8xv5i32() #0 {
   ; CHECK:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C19]](s32)
   ; CHECK:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store 4 into stack + 12, addrspace 5)
+  ; CHECK:   [[UV35:%[0-9]+]]:_(s32), [[UV36:%[0-9]+]]:_(s32), [[UV37:%[0-9]+]]:_(s32), [[UV38:%[0-9]+]]:_(s32), [[UV39:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR7]](<5 x s32>)
   ; CHECK:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; CHECK:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C20]](s32)
   ; CHECK:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store 4 into stack + 16, align 16, addrspace 5)
@@ -4876,14 +4882,6 @@ define void @stack_8xv5f32() #0 {
   ; CHECK:   [[C14:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.400000e+01
   ; CHECK:   [[C15:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.500000e+01
   ; CHECK:   [[BUILD_VECTOR7:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[C11]](s32), [[C12]](s32), [[C13]](s32), [[C14]](s32), [[C15]](s32)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<5 x s32>)
-  ; CHECK:   [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<5 x s32>)
-  ; CHECK:   [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR2]](<5 x s32>)
-  ; CHECK:   [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR3]](<5 x s32>)
-  ; CHECK:   [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR4]](<5 x s32>)
-  ; CHECK:   [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR5]](<5 x s32>)
-  ; CHECK:   [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32), [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR6]](<5 x s32>)
-  ; CHECK:   [[UV35:%[0-9]+]]:_(s32), [[UV36:%[0-9]+]]:_(s32), [[UV37:%[0-9]+]]:_(s32), [[UV38:%[0-9]+]]:_(s32), [[UV39:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR7]](<5 x s32>)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_8xv5f32
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -4894,36 +4892,43 @@ define void @stack_8xv5f32() #0 {
   ; CHECK:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<5 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
   ; CHECK:   $vgpr3 = COPY [[UV3]](s32)
   ; CHECK:   $vgpr4 = COPY [[UV4]](s32)
+  ; CHECK:   [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<5 x s32>)
   ; CHECK:   $vgpr5 = COPY [[UV5]](s32)
   ; CHECK:   $vgpr6 = COPY [[UV6]](s32)
   ; CHECK:   $vgpr7 = COPY [[UV7]](s32)
   ; CHECK:   $vgpr8 = COPY [[UV8]](s32)
   ; CHECK:   $vgpr9 = COPY [[UV9]](s32)
+  ; CHECK:   [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR2]](<5 x s32>)
   ; CHECK:   $vgpr10 = COPY [[UV10]](s32)
   ; CHECK:   $vgpr11 = COPY [[UV11]](s32)
   ; CHECK:   $vgpr12 = COPY [[UV12]](s32)
   ; CHECK:   $vgpr13 = COPY [[UV13]](s32)
   ; CHECK:   $vgpr14 = COPY [[UV14]](s32)
+  ; CHECK:   [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR3]](<5 x s32>)
   ; CHECK:   $vgpr15 = COPY [[UV15]](s32)
   ; CHECK:   $vgpr16 = COPY [[UV16]](s32)
   ; CHECK:   $vgpr17 = COPY [[UV17]](s32)
   ; CHECK:   $vgpr18 = COPY [[UV18]](s32)
   ; CHECK:   $vgpr19 = COPY [[UV19]](s32)
+  ; CHECK:   [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR4]](<5 x s32>)
   ; CHECK:   $vgpr20 = COPY [[UV20]](s32)
   ; CHECK:   $vgpr21 = COPY [[UV21]](s32)
   ; CHECK:   $vgpr22 = COPY [[UV22]](s32)
   ; CHECK:   $vgpr23 = COPY [[UV23]](s32)
   ; CHECK:   $vgpr24 = COPY [[UV24]](s32)
+  ; CHECK:   [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR5]](<5 x s32>)
   ; CHECK:   $vgpr25 = COPY [[UV25]](s32)
   ; CHECK:   $vgpr26 = COPY [[UV26]](s32)
   ; CHECK:   $vgpr27 = COPY [[UV27]](s32)
   ; CHECK:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK:   $vgpr29 = COPY [[UV29]](s32)
+  ; CHECK:   [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32), [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR6]](<5 x s32>)
   ; CHECK:   $vgpr30 = COPY [[UV30]](s32)
   ; CHECK:   [[COPY17:%[0-9]+]]:_(p5) = COPY $sgpr32
   ; CHECK:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -4938,6 +4943,7 @@ define void @stack_8xv5f32() #0 {
   ; CHECK:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C19]](s32)
   ; CHECK:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store 4 into stack + 12, addrspace 5)
+  ; CHECK:   [[UV35:%[0-9]+]]:_(s32), [[UV36:%[0-9]+]]:_(s32), [[UV37:%[0-9]+]]:_(s32), [[UV38:%[0-9]+]]:_(s32), [[UV39:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR7]](<5 x s32>)
   ; CHECK:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; CHECK:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C20]](s32)
   ; CHECK:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store 4 into stack + 16, align 16, addrspace 5)

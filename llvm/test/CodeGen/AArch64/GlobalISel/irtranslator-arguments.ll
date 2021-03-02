@@ -27,9 +27,9 @@ declare void @use_s128(i128 %a, i128 %b)
 ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
 ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
 ; CHECK:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[MV]](s128)
-; CHECK:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[MV1]](s128)
 ; CHECK:   $x0 = COPY [[UV]](s64)
 ; CHECK:   $x1 = COPY [[UV1]](s64)
+; CHECK:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[MV1]](s128)
 ; CHECK:   $x2 = COPY [[UV2]](s64)
 ; CHECK:   $x3 = COPY [[UV3]](s64)
 ; CHECK:   BL @use_s128, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3

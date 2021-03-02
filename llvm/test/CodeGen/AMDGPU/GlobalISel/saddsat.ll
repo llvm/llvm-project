@@ -2724,8 +2724,13 @@ define <2 x i16> @v_saddsat_v2i16(<2 x i16> %lhs, <2 x i16> %rhs) {
 ; GFX6-NEXT:    v_max_i32_e32 v2, v4, v2
 ; GFX6-NEXT:    v_min_i32_e32 v2, v2, v3
 ; GFX6-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
-; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 16, v0
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 16, v1
+; GFX6-NEXT:    s_mov_b32 s4, 0xffff
+; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 16, v0
+; GFX6-NEXT:    v_and_b32_e32 v1, s4, v1
+; GFX6-NEXT:    v_and_b32_e32 v0, s4, v0
+; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_saddsat_v2i16:
