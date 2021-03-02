@@ -123,11 +123,8 @@ Operation *Operation::create(Location location, OperationName name,
   // into account the size of the operation, its trailing objects, and its
   // prefixed objects.
   size_t byteSize =
-      totalSizeToAlloc<BlockOperand, Region, Type, detail::OperandStorage>(
-          numSuccessors, numRegions,
-          // Result type storage only needed if there is not 0 or 1 results.
-          resultTypes.size() == 1 ? 0 : resultTypes.size(),
-          needsOperandStorage ? 1 : 0) +
+      totalSizeToAlloc<BlockOperand, Region, detail::OperandStorage>(
+          numSuccessors, numRegions, needsOperandStorage ? 1 : 0) +
       detail::OperandStorage::additionalAllocSize(numOperands);
   size_t prefixByteSize = llvm::alignTo(
       Operation::prefixAllocSize(numTrailingResults, numInlineResults),
@@ -175,18 +172,13 @@ Operation::Operation(Location location, OperationName name,
   assert(attributes && "unexpected null attribute dictionary");
   assert(llvm::all_of(resultTypes, [](Type t) { return t; }) &&
          "unexpected null result type");
-  if (resultTypes.empty()) {
-    resultTypeOrSize.size = 0;
-  } else {
-    // If there is a single result it is stored in-place, otherwise use trailing
-    // type storage.
+  if (!resultTypes.empty()) {
+    // If there is a single result it is stored in-place, otherwise use a tuple.
     hasSingleResult = resultTypes.size() == 1;
-    if (hasSingleResult) {
-      resultTypeOrSize.type = resultTypes.front();
-    } else {
-      resultTypeOrSize.size = resultTypes.size();
-      llvm::copy(resultTypes, getTrailingObjects<Type>());
-    }
+    if (hasSingleResult)
+      resultType = resultTypes.front();
+    else
+      resultType = TupleType::get(location->getContext(), resultTypes);
   }
 }
 
@@ -553,15 +545,17 @@ void Operation::dropAllDefinedValueUses() {
 
 /// Return the number of results held by this operation.
 unsigned Operation::getNumResults() {
-  if (hasSingleResult)
-    return 1;
-  return resultTypeOrSize.size;
+  if (!resultType)
+    return 0;
+  return hasSingleResult ? 1 : resultType.cast<TupleType>().size();
 }
 
 auto Operation::getResultTypes() -> result_type_range {
+  if (!resultType)
+    return llvm::None;
   if (hasSingleResult)
-    return resultTypeOrSize.type;
-  return ArrayRef<Type>(getTrailingObjects<Type>(), resultTypeOrSize.size);
+    return resultType;
+  return resultType.cast<TupleType>().getTypes();
 }
 
 void Operation::setSuccessor(Block *block, unsigned index) {
