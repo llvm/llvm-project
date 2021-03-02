@@ -6,7 +6,7 @@ subroutine fooscalar()
   ! Test lowering of local allocatable specification
   real, allocatable :: x
   ! CHECK: %[[xAddrVar:.*]] = fir.alloca !fir.heap<f32> {name = "_QFfooscalarEx.addr"}
-  ! CHECK: %[[nullAddr:.*]] = fir.convert %c0{{.*}} : (index) -> !fir.heap<f32>
+  ! CHECK: %[[nullAddr:.*]] = fir.zero_bits !fir.heap<f32>
   ! CHECK: fir.store %[[nullAddr]] to %[[xAddrVar]] : !fir.ref<!fir.heap<f32>>
 
   ! Test allocation of local allocatables
@@ -23,7 +23,7 @@ subroutine fooscalar()
   deallocate(x)
   ! CHECK: %[[xAddr2:.*]] = fir.load %[[xAddrVar]] : !fir.ref<!fir.heap<f32>>
   ! CHECK: fir.freemem %[[xAddr2]] : !fir.heap<f32>
-  ! CHECK: %[[nullAddr1:.*]] = fir.convert %c0_0 : (index) -> !fir.heap<f32>
+  ! CHECK: %[[nullAddr1:.*]] = fir.zero_bits !fir.heap<f32>
   ! fir.store %[[nullAddr1]] to %[[xAddrVar]] : !fir.ref<!fir.heap<f32>>
 end subroutine
 
@@ -34,7 +34,7 @@ subroutine foodim1()
   ! CHECK-DAG: %[[xAddrVar:.*]] = fir.alloca !fir.heap<!fir.array<?xf32>> {name = "_QFfoodim1Ex.addr"}
   ! CHECK-DAG: %[[xLbVar:.*]] = fir.alloca index {name = "_QFfoodim1Ex.lb0"}
   ! CHECK-DAG: %[[xExtVar:.*]] = fir.alloca index {name = "_QFfoodim1Ex.ext0"}
-  ! CHECK: %[[nullAddr:.*]] = fir.convert %c0{{.*}} : (index) -> !fir.heap<!fir.array<?xf32>>
+  ! CHECK: %[[nullAddr:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   ! CHECK: fir.store %[[nullAddr]] to %[[xAddrVar]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
 
   ! Test allocation of local allocatables
@@ -57,7 +57,7 @@ subroutine foodim1()
   deallocate(x)
   ! CHECK: %[[xAddr1:.*]] = fir.load %1 : !fir.ref<!fir.heap<!fir.array<?xf32>>>
   ! CHECK: fir.freemem %[[xAddr1]] : !fir.heap<!fir.array<?xf32>>
-  ! CHECK: %[[nullAddr1:.*]] = fir.convert %c0{{.*}} : (index) -> !fir.heap<!fir.array<?xf32>>
+  ! CHECK: %[[nullAddr1:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   ! CHECK: fir.store %[[nullAddr1]] to %[[xAddrVar]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
 end subroutine
 
