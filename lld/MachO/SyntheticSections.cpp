@@ -78,7 +78,10 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   hdr->filetype = config->outputType;
   hdr->ncmds = loadCommands.size();
   hdr->sizeofcmds = sizeOfCmds;
-  hdr->flags = MachO::MH_NOUNDEFS | MachO::MH_DYLDLINK | MachO::MH_TWOLEVEL;
+  hdr->flags = MachO::MH_DYLDLINK;
+
+  if (config->namespaceKind == NamespaceKind::twolevel)
+    hdr->flags |= MachO::MH_NOUNDEFS | MachO::MH_TWOLEVEL;
 
   if (config->outputType == MachO::MH_DYLIB && !config->hasReexports)
     hdr->flags |= MachO::MH_NO_REEXPORTED_DYLIBS;
@@ -280,8 +283,9 @@ static void encodeBinding(const Symbol *sym, const OutputSection *osec,
 
 // Non-weak bindings need to have their dylib ordinal encoded as well.
 static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
-  return dysym.isDynamicLookup() ? MachO::BIND_SPECIAL_DYLIB_FLAT_LOOKUP
-                                 : dysym.getFile()->ordinal;
+  return config->namespaceKind == NamespaceKind::flat || dysym.isDynamicLookup()
+             ? MachO::BIND_SPECIAL_DYLIB_FLAT_LOOKUP
+             : dysym.getFile()->ordinal;
 }
 
 static void encodeDylibOrdinal(int16_t ordinal, raw_svector_ostream &os) {
@@ -816,13 +820,15 @@ void SymtabSection::writeTo(uint8_t *buf) const {
       nList->n_desc |= defined->isExternalWeakDef() ? MachO::N_WEAK_DEF : 0;
     } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
       uint16_t n_desc = nList->n_desc;
-      if (dysym->isDynamicLookup())
+      int16_t ordinal = ordinalForDylibSymbol(*dysym);
+      if (ordinal == MachO::BIND_SPECIAL_DYLIB_FLAT_LOOKUP)
         MachO::SET_LIBRARY_ORDINAL(n_desc, MachO::DYNAMIC_LOOKUP_ORDINAL);
-      else if (dysym->getFile()->isBundleLoader)
+      else if (ordinal == MachO::BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE)
         MachO::SET_LIBRARY_ORDINAL(n_desc, MachO::EXECUTABLE_ORDINAL);
-      else
-        MachO::SET_LIBRARY_ORDINAL(
-            n_desc, static_cast<uint8_t>(dysym->getFile()->ordinal));
+      else {
+        assert(ordinal > 0);
+        MachO::SET_LIBRARY_ORDINAL(n_desc, static_cast<uint8_t>(ordinal));
+      }
 
       nList->n_type = MachO::N_EXT;
       n_desc |= dysym->isWeakDef() ? MachO::N_WEAK_DEF : 0;

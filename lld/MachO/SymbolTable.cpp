@@ -181,12 +181,14 @@ void lld::macho::treatUndefinedSymbol(const Undefined &sym) {
     message += "\n>>> referenced by " + fileName;
   switch (config->undefinedSymbolTreatment) {
   case UndefinedSymbolTreatment::suppress:
+    error("-undefined suppress unimplemented");
     break;
   case UndefinedSymbolTreatment::error:
     error(message);
     break;
   case UndefinedSymbolTreatment::warning:
     warn(message);
+    error("-undefined warning unimplemented");
     break;
   case UndefinedSymbolTreatment::dynamic_lookup:
     error("dynamic_lookup unimplemented for " + message);
