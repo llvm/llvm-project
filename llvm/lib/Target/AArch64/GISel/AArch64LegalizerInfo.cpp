@@ -636,12 +636,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v2s64, s64}})
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
-
-      // Deal with larger scalar types, which will be implicitly truncated.
-      .legalIf([=](const LegalityQuery &Query) {
-        return Query.Types[0].getScalarSizeInBits() <
-               Query.Types[1].getSizeInBits();
-      })
       .minScalarSameAs(1, 0);
 
   getActionDefinitionsBuilder(G_CTLZ)
