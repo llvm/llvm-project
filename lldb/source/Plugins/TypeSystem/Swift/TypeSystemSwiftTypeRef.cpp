@@ -1593,6 +1593,8 @@ bool Equivalent(llvm::Optional<T> l, T r) {
     auto result = IMPL();                                                      \
     if (!m_swift_ast_context)                                                  \
       return result;                                                           \
+    if ((TYPE) && !ReconstructType(TYPE))                                      \
+      return result;                                                           \
     bool equivalent =                                                          \
         !ReconstructType(TYPE) /* missing .swiftmodule */ ||                   \
         (Equivalent(result, m_swift_ast_context->REFERENCE ARGS));             \
