@@ -96,7 +96,7 @@ void MCContext::initInlineSourceManager() {
 
 void MCContext::reset() {
   SrcMgr = nullptr;
-  InlineSrcMgr.release();
+  InlineSrcMgr.reset();
   LocInfos.clear();
   DiagHandler = defaultDiagHandler;
 
