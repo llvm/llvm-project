@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ExecutionUtils.h"
 #include "RemoteJITUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
@@ -241,6 +242,19 @@ namespace {
                             "Dump modules to the current "
                             "working directory. (WARNING: "
                             "will overwrite existing files).")),
+      cl::Hidden);
+
+  cl::list<BuiltinFunctionKind> GenerateBuiltinFunctions(
+      "generate",
+      cl::desc("Provide built-in functions for access by JITed code "
+               "(jit-kind=orc-lazy only)"),
+      cl::values(clEnumValN(BuiltinFunctionKind::DumpDebugDescriptor,
+                            "__dump_jit_debug_descriptor",
+                            "Dump __jit_debug_descriptor contents to stdout"),
+                 clEnumValN(BuiltinFunctionKind::DumpDebugObjects,
+                            "__dump_jit_debug_objects",
+                            "Dump __jit_debug_descriptor in-memory debug "
+                            "objects as tool output")),
       cl::Hidden);
 
   ExitOnError ExitOnErr;
@@ -915,6 +929,11 @@ int runOrcLazyJIT(const char *ProgName) {
             [MainName = Mangle("main")](const orc::SymbolStringPtr &Name) {
               return Name != MainName;
             })));
+
+  if (GenerateBuiltinFunctions.size() > 0)
+    J->getMainJITDylib().addGenerator(
+        std::make_unique<LLIBuiltinFunctionGenerator>(GenerateBuiltinFunctions,
+                                                      Mangle));
 
   // Add the main module.
   ExitOnErr(J->addLazyIRModule(std::move(MainModule)));
