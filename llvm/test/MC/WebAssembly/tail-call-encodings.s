@@ -17,8 +17,8 @@ foo1:
 foo2:
     .functype foo2 () -> ()
 
-    # REF: return_call_indirect (i32) -> (i32), __indirect_function_table # encoding: [0x13,
-    # CHECK: return_call_indirect (i32) -> (i32), 0 # encoding: [0x13,
+    # REF: return_call_indirect __indirect_function_table, (i32) -> (i32) # encoding: [0x13,
+    # CHECK: return_call_indirect (i32) -> (i32) # encoding: [0x13,
     # CHECK-NEXT: fixup A - offset: 1, value: .Ltypeindex0@TYPEINDEX, kind: fixup_uleb128_i32
     return_call_indirect (i32) -> (i32)
 
