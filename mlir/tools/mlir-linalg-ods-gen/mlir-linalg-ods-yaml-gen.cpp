@@ -651,11 +651,18 @@ static SmallVector<AffineExpr> getSymbolBindings({0} self) {
       // {2}: Statements
       static const char structuredOpIndexingMapsFormat[] = R"FMT(
 ArrayAttr {0}::indexing_maps() {
+  static const char memoizeAttr[] = "linalg.memoized_indexing_maps";
+  ArrayAttr cached = getOperation()->getAttrOfType<ArrayAttr>(memoizeAttr);
+  if (cached)
+    return cached;
+
   MLIRContext *context = getContext();
   auto symbolBindings = getSymbolBindings(*this);
   SmallVector<AffineMap> maps;
   {2}
-  return Builder(context).getAffineMapArrayAttr(maps);
+  cached = Builder(context).getAffineMapArrayAttr(maps);
+  getOperation()->setAttr(memoizeAttr, cached);
+  return cached;
 }
 )FMT";
 
