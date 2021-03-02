@@ -22,7 +22,6 @@ def note_fe_inline_asm_here : Note<"instantiated into assembly here">;
 def err_fe_source_mgr : Error<"%0">, CatSourceMgr;
 def warn_fe_source_mgr : Warning<"%0">, CatSourceMgr, InGroup<BackendSourceMgr>;
 def note_fe_source_mgr : Note<"%0">, CatSourceMgr;
-def remark_fe_source_mgr: Remark<"%0">, CatSourceMgr, InGroup<BackendSourceMgr>;
 def err_fe_cannot_link_module : Error<"cannot link module '%0': %1">,
   DefaultFatal;
 
