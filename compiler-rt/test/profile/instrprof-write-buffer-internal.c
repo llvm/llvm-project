@@ -1,3 +1,7 @@
+// UNSUPPORTED: windows
+// The sanitizer-windows bot is saying:
+// instrprof-write-buffer-internal.c.tmp.buf.profraw: Invalid instrumentation profile data (file header is corrupt)
+
 // RUN: rm -f %t.buf.profraw %t.profraw
 // RUN: %clang_profgen -w -o %t %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t %t.buf.profraw
