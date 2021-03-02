@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -linalg-generalize-named-ops | FileCheck %s
 
 func @generalize_matmul_tensor_f32(%A : tensor<16x8xf32>, %B: tensor<8x32xf32>, %C: tensor<16x32xf32>) -> tensor<16x32xf32> {
-  %0 = linalg.polymorphic_matmul ins(%A, %B: tensor<16x8xf32>, tensor<8x32xf32>)
+  %0 = linalg.matmul ins(%A, %B: tensor<16x8xf32>, tensor<8x32xf32>)
                           outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
   return %0: tensor<16x32xf32>
 }
@@ -16,7 +16,7 @@ func @generalize_matmul_tensor_f32(%A : tensor<16x8xf32>, %B: tensor<8x32xf32>, 
 // -----
 
 func @generalize_matmul_tensor_i32(%A : tensor<16x8xi32>, %B: tensor<8x32xi32>, %C: tensor<16x32xi32>) -> tensor<16x32xi32> {
-  %0 = linalg.polymorphic_matmul ins(%A, %B: tensor<16x8xi32>, tensor<8x32xi32>)
+  %0 = linalg.matmul ins(%A, %B: tensor<16x8xi32>, tensor<8x32xi32>)
                           outs(%C: tensor<16x32xi32>) -> tensor<16x32xi32>
   return %0: tensor<16x32xi32>
 }
@@ -31,7 +31,7 @@ func @generalize_matmul_tensor_i32(%A : tensor<16x8xi32>, %B: tensor<8x32xi32>, 
 // -----
 // Verifies floating point to integer cast.
 func @generalize_matmul_tensor_f32_f32_i16(%A : tensor<16x8xf32>, %B: tensor<8x32xf32>, %C: tensor<16x32xi16>) -> tensor<16x32xi16> {
-  %0 = linalg.polymorphic_matmul ins(%A, %B: tensor<16x8xf32>, tensor<8x32xf32>)
+  %0 = linalg.matmul ins(%A, %B: tensor<16x8xf32>, tensor<8x32xf32>)
                           outs(%C: tensor<16x32xi16>) -> tensor<16x32xi16>
   return %0: tensor<16x32xi16>
 }
@@ -48,7 +48,7 @@ func @generalize_matmul_tensor_f32_f32_i16(%A : tensor<16x8xf32>, %B: tensor<8x3
 // -----
 // Verifies sign extension cast.
 func @generalize_matmul_tensor_i8_i8_i32(%A : tensor<16x8xi8>, %B: tensor<8x32xi8>, %C: tensor<16x32xi32>) -> tensor<16x32xi32> {
-  %0 = linalg.polymorphic_matmul ins(%A, %B: tensor<16x8xi8>, tensor<8x32xi8>)
+  %0 = linalg.matmul ins(%A, %B: tensor<16x8xi8>, tensor<8x32xi8>)
                           outs(%C: tensor<16x32xi32>) -> tensor<16x32xi32>
   return %0: tensor<16x32xi32>
 }
@@ -65,7 +65,7 @@ func @generalize_matmul_tensor_i8_i8_i32(%A : tensor<16x8xi8>, %B: tensor<8x32xi
 // -----
 // Verifies that different argument types is legal.
 func @generalize_matmul_tensor_i8_i16_i32(%A : tensor<16x8xi8>, %B: tensor<8x32xi16>, %C: tensor<16x32xi32>) -> tensor<16x32xi32> {
-  %0 = linalg.polymorphic_matmul ins(%A, %B: tensor<16x8xi8>, tensor<8x32xi16>)
+  %0 = linalg.matmul ins(%A, %B: tensor<16x8xi8>, tensor<8x32xi16>)
                           outs(%C: tensor<16x32xi32>) -> tensor<16x32xi32>
   return %0: tensor<16x32xi32>
 }
@@ -82,7 +82,7 @@ func @generalize_matmul_tensor_i8_i16_i32(%A : tensor<16x8xi8>, %B: tensor<8x32x
 // -----
 // Somewhat non-sensical but checks integer truncation cast.
 func @generalize_matmul_tensor_i32_i32_i16(%A : tensor<16x8xi32>, %B: tensor<8x32xi32>, %C: tensor<16x32xi16>) -> tensor<16x32xi16> {
-  %0 = linalg.polymorphic_matmul ins(%A, %B: tensor<16x8xi32>, tensor<8x32xi32>)
+  %0 = linalg.matmul ins(%A, %B: tensor<16x8xi32>, tensor<8x32xi32>)
                           outs(%C: tensor<16x32xi16>) -> tensor<16x32xi16>
   return %0: tensor<16x32xi16>
 }
@@ -99,7 +99,7 @@ func @generalize_matmul_tensor_i32_i32_i16(%A : tensor<16x8xi32>, %B: tensor<8x3
 // -----
 // Verifies integer to floating point cast.
 func @generalize_matmul_tensor_i8_i8_f32(%A : tensor<16x8xi8>, %B: tensor<8x32xi8>, %C: tensor<16x32xf32>) -> tensor<16x32xf32> {
-  %0 = linalg.polymorphic_matmul ins(%A, %B: tensor<16x8xi8>, tensor<8x32xi8>)
+  %0 = linalg.matmul ins(%A, %B: tensor<16x8xi8>, tensor<8x32xi8>)
                           outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
   return %0: tensor<16x32xf32>
 }
@@ -116,7 +116,7 @@ func @generalize_matmul_tensor_i8_i8_f32(%A : tensor<16x8xi8>, %B: tensor<8x32xi
 // -----
 // Verifies floating point extension cast.
 func @generalize_matmul_tensor_f16_f16_f32(%A : tensor<16x8xf16>, %B: tensor<8x32xf16>, %C: tensor<16x32xf32>) -> tensor<16x32xf32> {
-  %0 = linalg.polymorphic_matmul ins(%A, %B: tensor<16x8xf16>, tensor<8x32xf16>)
+  %0 = linalg.matmul ins(%A, %B: tensor<16x8xf16>, tensor<8x32xf16>)
                           outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
   return %0: tensor<16x32xf32>
 }
@@ -133,7 +133,7 @@ func @generalize_matmul_tensor_f16_f16_f32(%A : tensor<16x8xf16>, %B: tensor<8x3
 // -----
 // Verifies floating point truncation.
 func @generalize_matmul_tensor_f64_f64_f32(%A : tensor<16x8xf64>, %B: tensor<8x32xf64>, %C: tensor<16x32xf32>) -> tensor<16x32xf32> {
-  %0 = linalg.polymorphic_matmul ins(%A, %B: tensor<16x8xf64>, tensor<8x32xf64>)
+  %0 = linalg.matmul ins(%A, %B: tensor<16x8xf64>, tensor<8x32xf64>)
                           outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
   return %0: tensor<16x32xf32>
 }
