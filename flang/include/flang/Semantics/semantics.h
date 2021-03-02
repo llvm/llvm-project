@@ -199,7 +199,7 @@ private:
     IndexVarKind kind;
   };
   std::map<SymbolRef, const IndexVarInfo> activeIndexVars_;
-  SymbolSet errorSymbols_;
+  std::set<SymbolRef> errorSymbols_;
   std::set<std::string> tempNames_;
 };
 
