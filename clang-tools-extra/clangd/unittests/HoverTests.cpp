@@ -490,30 +490,30 @@ class Foo {})cpp";
          HI.Value = "3";
        }},
       {R"cpp(
-        enum Color { RED, GREEN, };
+        enum Color { RED = -123, GREEN = 5, };
         Color x = [[GR^EEN]];
        )cpp",
        [](HoverInfo &HI) {
          HI.Name = "GREEN";
          HI.NamespaceScope = "";
          HI.LocalScope = "Color::";
-         HI.Definition = "GREEN";
+         HI.Definition = "GREEN = 5";
          HI.Kind = index::SymbolKind::EnumConstant;
          HI.Type = "enum Color";
-         HI.Value = "1"; // Numeric when hovering on the enumerator name.
+         HI.Value = "5"; // Numeric on the enumerator name, no hex as small.
        }},
       {R"cpp(
-        enum Color { RED, GREEN, };
-        Color x = GREEN;
+        enum Color { RED = -123, GREEN = 5, };
+        Color x = RED;
         Color y = [[^x]];
        )cpp",
        [](HoverInfo &HI) {
          HI.Name = "x";
          HI.NamespaceScope = "";
-         HI.Definition = "Color x = GREEN";
+         HI.Definition = "Color x = RED";
          HI.Kind = index::SymbolKind::Variable;
          HI.Type = "enum Color";
-         HI.Value = "GREEN (1)"; // Symbolic when hovering on an expression.
+         HI.Value = "RED (0xffffff85)"; // Symbolic on an expression.
        }},
       {R"cpp(
         template<int a, int b> struct Add {
@@ -543,7 +543,7 @@ class Foo {})cpp";
          HI.ReturnType = "int";
          HI.Parameters.emplace();
          HI.NamespaceScope = "";
-         HI.Value = "42";
+         HI.Value = "42 (0x2a)";
        }},
       {R"cpp(
         const char *[[ba^r]] = "1234";
@@ -1468,12 +1468,12 @@ TEST(Hover, All) {
             HI.Definition = "static int hey = 10";
             HI.Documentation = "Global variable";
             // FIXME: Value shouldn't be set in this case
-            HI.Value = "10";
+            HI.Value = "10 (0xa)";
           }},
       {
           R"cpp(// Global variable in namespace
             namespace ns1 {
-              static int hey = 10;
+              static long long hey = -36637162602497;
             }
             void foo() {
               ns1::[[he^y]]++;
@@ -1483,9 +1483,9 @@ TEST(Hover, All) {
             HI.Name = "hey";
             HI.Kind = index::SymbolKind::Variable;
             HI.NamespaceScope = "ns1::";
-            HI.Type = "int";
-            HI.Definition = "static int hey = 10";
-            HI.Value = "10";
+            HI.Type = "long long";
+            HI.Definition = "static long long hey = -36637162602497";
+            HI.Value = "-36637162602497 (0xffffdeadbeefffff)"; // needs 64 bits
           }},
       {
           R"cpp(// Field in anonymous struct
