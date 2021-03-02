@@ -27,6 +27,35 @@
 #define PPC64_OFFS_V      824
 #elif defined(__APPLE__) && defined(__aarch64__)
 #define SEPARATOR %%
+#elif defined(__riscv)
+# define RISCV_ISIZE (__riscv_xlen / 8)
+# define RISCV_FOFFSET (RISCV_ISIZE * 32)
+# if defined(__riscv_flen)
+#  define RISCV_FSIZE (__riscv_flen / 8)
+# endif
+
+# if __riscv_xlen == 64
+#  define ILOAD ld
+#  define ISTORE sd
+# elif __riscv_xlen == 32
+#  define ILOAD lw
+#  define ISTORE sw
+# else
+#  error "Unsupported __riscv_xlen"
+# endif
+
+# if defined(__riscv_flen)
+#  if __riscv_flen == 64
+#   define FLOAD fld
+#   define FSTORE fsd
+#  elif __riscv_flen == 32
+#   define FLOAD flw
+#   define FSTORE fsw
+#  else
+#   error "Unsupported __riscv_flen"
+#  endif
+# endif
+# define SEPARATOR ;
 #else
 #define SEPARATOR ;
 #endif
