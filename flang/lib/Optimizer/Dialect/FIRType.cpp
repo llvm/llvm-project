@@ -432,10 +432,9 @@ void fir::HeapType::print(mlir::DialectAsmPrinter &printer) const {
   printer << getMnemonic() << "<" << getEleTy() << '>';
 }
 
-mlir::LogicalResult -
-    fir::HeapType::verify(
-        llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-        -mlir::Type eleTy) {
+mlir::LogicalResult
+fir::HeapType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                      mlir::Type eleTy) {
   if (canBePointerOrHeapElementType(eleTy))
     return emitError() << "cannot build a heap pointer to type: " << eleTy
                        << '\n';
@@ -860,7 +859,7 @@ mlir::LogicalResult fir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError, uint64_t len,
     mlir::Type eleTy) {
   if (!(fir::isa_real(eleTy) || fir::isa_integer(eleTy)))
-    return emitError << "cannot build a vector of type " << eleTy << '\n';
+    return emitError() << "cannot build a vector of type " << eleTy << '\n';
   return mlir::success();
 }
 
