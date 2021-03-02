@@ -21,7 +21,7 @@
 # RUN:  --implicit-check-not LC_LOAD_DYLIB
 # LIB:          cmd LC_LOAD_DYLIB
 # LIB-NEXT: cmdsize
-# LIB-NEXT:    name /usr/lib/libSystem.B.dylib
+# LIB-NEXT:    name /usr/lib/libSystem.dylib
 
 # RUN: llvm-as %t/invalid.ll -o %t/invalid.o
 # RUN: not %lld %t/invalid.o -o /dev/null 2>&1 | FileCheck --check-prefix=INVALID %s
