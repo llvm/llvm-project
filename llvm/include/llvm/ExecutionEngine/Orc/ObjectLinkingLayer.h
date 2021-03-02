@@ -72,6 +72,13 @@ public:
                                   const Triple &TT,
                                   jitlink::PassConfiguration &Config) {}
 
+    // Deprecated. Don't use this in new code. There will be a proper mechanism
+    // for capturing object buffers.
+    virtual void notifyMaterializing(MaterializationResponsibility &MR,
+                                     jitlink::LinkGraph &G,
+                                     jitlink::JITLinkContext &Ctx,
+                                     MemoryBufferRef InputObject) {}
+
     virtual void notifyLoaded(MaterializationResponsibility &MR) {}
     virtual Error notifyEmitted(MaterializationResponsibility &MR) {
       return Error::success();

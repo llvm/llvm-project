@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMOrcTargetProcess
+  JITLoaderGDB.cpp
   RegisterEHFrames.cpp
   TargetExecutionUtils.cpp
 
