@@ -121,7 +121,9 @@ void macho::prepareCompactUnwind(InputSection *isec) {
     if (auto *s = r.referent.dyn_cast<lld::macho::Symbol *>()) {
       if (auto *undefined = dyn_cast<Undefined>(s)) {
         treatUndefinedSymbol(*undefined);
-        continue;
+        // treatUndefinedSymbol() can replace s with a DylibSymbol; re-check.
+        if (isa<Undefined>(s))
+          continue;
       }
       if (auto *defined = dyn_cast<Defined>(s)) {
         // Check if we have created a synthetic symbol at the same address.
