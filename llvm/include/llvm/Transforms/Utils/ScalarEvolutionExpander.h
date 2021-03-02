@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
@@ -506,10 +507,12 @@ public:
   SCEVExpanderCleaner(SCEVExpander &Expander, DominatorTree &DT)
       : Expander(Expander), DT(DT), ResultUsed(false) {}
 
-  ~SCEVExpanderCleaner();
+  ~SCEVExpanderCleaner() { cleanup(); }
 
   /// Indicate that the result of the expansion is used.
   void markResultUsed() { ResultUsed = true; }
+
+  void cleanup();
 };
 } // namespace llvm
 

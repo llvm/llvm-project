@@ -173,27 +173,33 @@ bool SIPostRABundler::runOnMachineFunction(MachineFunction &MF) {
         // clauses to hint register allocation. Look for kills that look like
         // this, and erase them.
         if (Next != E && Next->isKill()) {
-          MachineInstr &Kill = *Next;
 
           // TODO: Should maybe back-propagate kill flags to the bundle.
           for (const MachineInstr &BundleMI : make_range(BundleStart, Next))
             collectUsedRegUnits(BundleMI, BundleUsedRegUnits);
-          collectUsedRegUnits(Kill, KillUsedRegUnits);
 
           BundleUsedRegUnits.flip();
-          KillUsedRegUnits &= BundleUsedRegUnits;
 
-          // Erase the kill if it's a subset of the used registers.
-          //
-          // TODO: Should we just remove all kills? Is there any real reason to
-          // keep them after RA?
-          if (KillUsedRegUnits.none()) {
-            ++Next;
-            Kill.eraseFromParent();
+          while (Next != E && Next->isKill()) {
+            MachineInstr &Kill = *Next;
+            collectUsedRegUnits(Kill, KillUsedRegUnits);
+
+            KillUsedRegUnits &= BundleUsedRegUnits;
+
+            // Erase the kill if it's a subset of the used registers.
+            //
+            // TODO: Should we just remove all kills? Is there any real reason to
+            // keep them after RA?
+            if (KillUsedRegUnits.none()) {
+              ++Next;
+              Kill.eraseFromParent();
+            } else
+              break;
+
+            KillUsedRegUnits.reset();
           }
 
           BundleUsedRegUnits.reset();
-          KillUsedRegUnits.reset();
         }
 
         finalizeBundle(MBB, BundleStart, Next);

@@ -279,24 +279,21 @@ static void encodeBinding(const Symbol *sym, const OutputSection *osec,
 }
 
 // Non-weak bindings need to have their dylib ordinal encoded as well.
-static void encodeDylibOrdinal(const DylibSymbol *dysym, Binding *lastBinding,
-                               raw_svector_ostream &os) {
+static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
+  return dysym.isDynamicLookup() ? MachO::BIND_SPECIAL_DYLIB_FLAT_LOOKUP
+                                 : dysym.getFile()->ordinal;
+}
+
+static void encodeDylibOrdinal(int16_t ordinal, raw_svector_ostream &os) {
   using namespace llvm::MachO;
-  if (lastBinding == nullptr ||
-      lastBinding->ordinal != dysym->getFile()->ordinal) {
-    if (dysym->getFile()->ordinal <= 0) {
-      os << static_cast<uint8_t>(
-          BIND_OPCODE_SET_DYLIB_SPECIAL_IMM |
-          (dysym->getFile()->ordinal & BIND_IMMEDIATE_MASK));
-    } else if (dysym->getFile()->ordinal <= BIND_IMMEDIATE_MASK) {
-      os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
-                                 dysym->getFile()->ordinal);
-    } else {
-      os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
-      encodeULEB128(dysym->getFile()->ordinal, os);
-    }
-    if (lastBinding != nullptr)
-      lastBinding->ordinal = dysym->getFile()->ordinal;
+  if (ordinal <= 0) {
+    os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_SPECIAL_IMM |
+                               (ordinal & BIND_IMMEDIATE_MASK));
+  } else if (ordinal <= BIND_IMMEDIATE_MASK) {
+    os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM | ordinal);
+  } else {
+    os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
+    encodeULEB128(ordinal, os);
   }
 }
 
@@ -332,7 +329,11 @@ void BindingSection::finalizeContents() {
     return a.target.getVA() < b.target.getVA();
   });
   for (const BindingEntry &b : bindings) {
-    encodeDylibOrdinal(b.dysym, &lastBinding, os);
+    int16_t ordinal = ordinalForDylibSymbol(*b.dysym);
+    if (ordinal != lastBinding.ordinal) {
+      encodeDylibOrdinal(ordinal, os);
+      lastBinding.ordinal = ordinal;
+    }
     if (auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
       encodeBinding(b.dysym, isec->parent, isec->outSecOff + b.target.offset,
                     b.addend, /*isWeakBinding=*/false, lastBinding, os);
@@ -554,7 +555,7 @@ uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
   uint64_t offset = in.lazyPointers->addr - dataSeg->firstSection()->addr +
                     sym.stubsIndex * WordSize;
   encodeULEB128(offset, os);
-  encodeDylibOrdinal(&sym, nullptr, os);
+  encodeDylibOrdinal(ordinalForDylibSymbol(sym), os);
 
   uint8_t flags = MachO::BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM;
   if (sym.isWeakRef())
@@ -815,13 +816,16 @@ void SymtabSection::writeTo(uint8_t *buf) const {
       nList->n_desc |= defined->isExternalWeakDef() ? MachO::N_WEAK_DEF : 0;
     } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
       uint16_t n_desc = nList->n_desc;
-      if (dysym->getFile()->isBundleLoader)
+      if (dysym->isDynamicLookup())
+        MachO::SET_LIBRARY_ORDINAL(n_desc, MachO::DYNAMIC_LOOKUP_ORDINAL);
+      else if (dysym->getFile()->isBundleLoader)
         MachO::SET_LIBRARY_ORDINAL(n_desc, MachO::EXECUTABLE_ORDINAL);
       else
         MachO::SET_LIBRARY_ORDINAL(
             n_desc, static_cast<uint8_t>(dysym->getFile()->ordinal));
 
       nList->n_type = MachO::N_EXT;
+      n_desc |= dysym->isWeakDef() ? MachO::N_WEAK_DEF : 0;
       n_desc |= dysym->isWeakRef() ? MachO::N_WEAK_REF : 0;
       nList->n_desc = n_desc;
     }

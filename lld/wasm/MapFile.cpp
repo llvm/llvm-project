@@ -80,13 +80,13 @@ getSymbolStrings(ArrayRef<Symbol *> syms) {
     auto *chunk = syms[i]->getChunk();
     if (chunk == nullptr)
       return;
-    uint64_t fileOffset = chunk->outputSec->getOffset() + chunk->outputOffset;
+    uint64_t fileOffset = chunk->outputSec->getOffset() + chunk->outSecOff;
     uint64_t vma = -1;
     uint64_t size = 0;
     if (auto *DD = dyn_cast<DefinedData>(syms[i])) {
-      vma = DD->getVirtualAddress();
+      vma = DD->getVA();
       size = DD->getSize();
-      fileOffset += DD->offset;
+      fileOffset += DD->value;
     }
     if (auto *DF = dyn_cast<DefinedFunction>(syms[i])) {
       size = DF->function->getSize();
@@ -126,7 +126,7 @@ void lld::wasm::writeMapFile(ArrayRef<OutputSection *> outputSections) {
     os << toString(*osec) << '\n';
     if (auto *code = dyn_cast<CodeSection>(osec)) {
       for (auto *chunk : code->functions) {
-        writeHeader(os, -1, chunk->outputSec->getOffset() + chunk->outputOffset,
+        writeHeader(os, -1, chunk->outputSec->getOffset() + chunk->outSecOff,
                     chunk->getSize());
         os.indent(8) << toString(chunk) << '\n';
         for (Symbol *sym : sectionSyms[chunk])
@@ -139,7 +139,7 @@ void lld::wasm::writeMapFile(ArrayRef<OutputSection *> outputSections) {
         os << oseg->name << '\n';
         for (auto *chunk : oseg->inputSegments) {
           writeHeader(os, chunk->getVA(),
-                      chunk->outputSec->getOffset() + chunk->outputOffset,
+                      chunk->outputSec->getOffset() + chunk->outSecOff,
                       chunk->getSize());
           os.indent(8) << toString(chunk) << '\n';
           for (Symbol *sym : sectionSyms[chunk])

@@ -20,6 +20,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <map>
 #include <memory>
 #include <string>
@@ -173,7 +174,7 @@ public:
   std::string DebugCompilationDir;
 
   /// The string to embed in coverage mapping as the current working directory.
-  std::string ProfileCompilationDir;
+  std::string CoverageCompilationDir;
 
   /// The string to embed in the debug information for the compile unit, if
   /// non-empty.
@@ -184,7 +185,7 @@ public:
   std::string RecordCommandLine;
 
   std::map<std::string, std::string> DebugPrefixMap;
-  std::map<std::string, std::string> ProfilePrefixMap;
+  std::map<std::string, std::string> CoveragePrefixMap;
 
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;

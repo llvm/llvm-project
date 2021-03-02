@@ -467,13 +467,13 @@ private:
   bool calcCompactRegion(GlobalSplitCandidate&);
   void splitAroundRegion(LiveRangeEdit&, ArrayRef<unsigned>);
   void calcGapWeights(MCRegister, SmallVectorImpl<float> &);
-  Register canReassign(LiveInterval &VirtReg, Register PrevReg);
-  bool shouldEvict(LiveInterval &A, bool, LiveInterval &B, bool);
+  Register canReassign(LiveInterval &VirtReg, Register PrevReg) const;
+  bool shouldEvict(LiveInterval &A, bool, LiveInterval &B, bool) const;
   bool canEvictInterference(LiveInterval &, MCRegister, bool, EvictionCost &,
-                            const SmallVirtRegSet &);
+                            const SmallVirtRegSet &) const;
   bool canEvictInterferenceInRange(LiveInterval &VirtReg, MCRegister PhysReg,
                                    SlotIndex Start, SlotIndex End,
-                                   EvictionCost &MaxCost);
+                                   EvictionCost &MaxCost) const;
   MCRegister getCheapestEvicteeWeight(const AllocationOrder &Order,
                                       LiveInterval &VirtReg, SlotIndex Start,
                                       SlotIndex End, float *BestEvictWeight);
@@ -483,10 +483,10 @@ private:
                                   SmallLISet &RecoloringCandidates,
                                   const SmallVirtRegSet &FixedRegisters);
 
-  Register tryAssign(LiveInterval&, AllocationOrder&,
+  MCRegister tryAssign(LiveInterval&, AllocationOrder&,
                      SmallVectorImpl<Register>&,
                      const SmallVirtRegSet&);
-  unsigned tryEvict(LiveInterval &, AllocationOrder &,
+  MCRegister tryEvict(LiveInterval &, AllocationOrder &,
                     SmallVectorImpl<Register> &, uint8_t,
                     const SmallVirtRegSet &);
   MCRegister tryRegionSplit(LiveInterval &, AllocationOrder &,
@@ -763,11 +763,11 @@ LiveInterval *RAGreedy::dequeue(PQueue &CurQueue) {
 //===----------------------------------------------------------------------===//
 
 /// tryAssign - Try to assign VirtReg to an available register.
-Register RAGreedy::tryAssign(LiveInterval &VirtReg,
+MCRegister RAGreedy::tryAssign(LiveInterval &VirtReg,
                              AllocationOrder &Order,
                              SmallVectorImpl<Register> &NewVRegs,
                              const SmallVirtRegSet &FixedRegisters) {
-  Register PhysReg;
+  MCRegister PhysReg;
   for (auto I = Order.begin(), E = Order.end(); I != E && !PhysReg; ++I) {
     assert(*I);
     if (!Matrix->checkInterference(VirtReg, *I)) {
@@ -809,7 +809,7 @@ Register RAGreedy::tryAssign(LiveInterval &VirtReg,
 
   LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << " is available at cost "
                     << Cost << '\n');
-  Register CheapReg = tryEvict(VirtReg, Order, NewVRegs, Cost, FixedRegisters);
+  MCRegister CheapReg = tryEvict(VirtReg, Order, NewVRegs, Cost, FixedRegisters);
   return CheapReg ? CheapReg : PhysReg;
 }
 
@@ -817,7 +817,7 @@ Register RAGreedy::tryAssign(LiveInterval &VirtReg,
 //                         Interference eviction
 //===----------------------------------------------------------------------===//
 
-Register RAGreedy::canReassign(LiveInterval &VirtReg, Register PrevReg) {
+Register RAGreedy::canReassign(LiveInterval &VirtReg, Register PrevReg) const {
   auto Order =
       AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
   MCRegister PhysReg;
@@ -857,7 +857,7 @@ Register RAGreedy::canReassign(LiveInterval &VirtReg, Register PrevReg) {
 /// @param B          The live range to be evicted.
 /// @param BreaksHint True when B is already assigned to its preferred register.
 bool RAGreedy::shouldEvict(LiveInterval &A, bool IsHint,
-                           LiveInterval &B, bool BreaksHint) {
+                           LiveInterval &B, bool BreaksHint) const {
   bool CanSplit = getStage(B) < RS_Spill;
 
   // Be fairly aggressive about following hints as long as the evictee can be
@@ -881,9 +881,9 @@ bool RAGreedy::shouldEvict(LiveInterval &A, bool IsHint,
 /// @param MaxCost Only look for cheaper candidates and update with new cost
 ///                when returning true.
 /// @returns True when interference can be evicted cheaper than MaxCost.
-bool RAGreedy::canEvictInterference(LiveInterval &VirtReg, MCRegister PhysReg,
-                                    bool IsHint, EvictionCost &MaxCost,
-                                    const SmallVirtRegSet &FixedRegisters) {
+bool RAGreedy::canEvictInterference(
+    LiveInterval &VirtReg, MCRegister PhysReg, bool IsHint,
+    EvictionCost &MaxCost, const SmallVirtRegSet &FixedRegisters) const {
   // It is only possible to evict virtual register interference.
   if (Matrix->checkInterference(VirtReg, PhysReg) > LiveRegMatrix::IK_VirtReg)
     return false;
@@ -982,7 +982,7 @@ bool RAGreedy::canEvictInterference(LiveInterval &VirtReg, MCRegister PhysReg,
 bool RAGreedy::canEvictInterferenceInRange(LiveInterval &VirtReg,
                                            MCRegister PhysReg, SlotIndex Start,
                                            SlotIndex End,
-                                           EvictionCost &MaxCost) {
+                                           EvictionCost &MaxCost) const {
   EvictionCost Cost;
 
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
@@ -1113,7 +1113,7 @@ bool RAGreedy::isUnusedCalleeSavedReg(MCRegister PhysReg) const {
 /// @param  VirtReg Currently unassigned virtual register.
 /// @param  Order   Physregs to try.
 /// @return         Physreg to assign VirtReg, or 0.
-unsigned RAGreedy::tryEvict(LiveInterval &VirtReg, AllocationOrder &Order,
+MCRegister RAGreedy::tryEvict(LiveInterval &VirtReg, AllocationOrder &Order,
                             SmallVectorImpl<Register> &NewVRegs,
                             uint8_t CostPerUseLimit,
                             const SmallVirtRegSet &FixedRegisters) {
@@ -1178,10 +1178,8 @@ unsigned RAGreedy::tryEvict(LiveInterval &VirtReg, AllocationOrder &Order,
       break;
   }
 
-  if (!BestPhys)
-    return 0;
-
-  evictInterference(VirtReg, BestPhys, NewVRegs);
+  if (BestPhys.isValid())
+    evictInterference(VirtReg, BestPhys, NewVRegs);
   return BestPhys;
 }
 

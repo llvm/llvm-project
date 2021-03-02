@@ -748,6 +748,22 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   std::pair<Intrinsic::ID, bool>
   canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL);
 
+  /// Attempt to match a simple first order recurrence cycle of the form:
+  ///   %iv = phi Ty [%Start, %Entry], [%Inc, %backedge]
+  ///   %inc = binop %iv, %step
+  /// OR
+  ///   %iv = phi Ty [%Start, %Entry], [%Inc, %backedge]
+  ///   %inc = binop %step, %iv
+  ///
+  /// WARNING: For non-commutative operators, we will match both forms.  This
+  /// results in some odd recurrence structures.  Callers may wish to filter
+  /// out recurrences where the phi is not the LHS of the returned operator.
+  ///
+  /// NOTE: This is intentional simple.  If you want the ability to analyze
+  /// non-trivial loop conditons, see ScalarEvolution instead.
+  bool matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
+                             Value *&Start, Value *&Step);
+
   /// Return true if RHS is known to be implied true by LHS.  Return false if
   /// RHS is known to be implied false by LHS.  Otherwise, return None if no
   /// implication can be made.

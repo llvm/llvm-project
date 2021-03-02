@@ -252,14 +252,14 @@ void Writer::layoutMemory() {
   }
 
   if (WasmSym::globalBase)
-    WasmSym::globalBase->setVirtualAddress(memoryPtr);
+    WasmSym::globalBase->setVA(memoryPtr);
 
   uint64_t dataStart = memoryPtr;
 
   // Arbitrarily set __dso_handle handle to point to the start of the data
   // segments.
   if (WasmSym::dsoHandle)
-    WasmSym::dsoHandle->setVirtualAddress(dataStart);
+    WasmSym::dsoHandle->setVA(dataStart);
 
   out.dylinkSec->memAlign = 0;
   for (OutputSegment *seg : segments) {
@@ -291,14 +291,14 @@ void Writer::layoutMemory() {
     WasmSym::initMemoryFlag = symtab->addSyntheticDataSymbol(
         "__wasm_init_memory_flag", WASM_SYMBOL_VISIBILITY_HIDDEN);
     WasmSym::initMemoryFlag->markLive();
-    WasmSym::initMemoryFlag->setVirtualAddress(memoryPtr);
+    WasmSym::initMemoryFlag->setVA(memoryPtr);
     log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}",
                 "__wasm_init_memory_flag", memoryPtr, 4, 4));
     memoryPtr += 4;
   }
 
   if (WasmSym::dataEnd)
-    WasmSym::dataEnd->setVirtualAddress(memoryPtr);
+    WasmSym::dataEnd->setVA(memoryPtr);
 
   uint64_t staticDataSize = memoryPtr - dataStart;
   log("mem: static data = " + Twine(staticDataSize));
@@ -313,7 +313,7 @@ void Writer::layoutMemory() {
     // The fact that this comes last means that a malloc/brk implementation
     // can grow the heap at runtime.
     log("mem: heap base   = " + Twine(memoryPtr));
-    WasmSym::heapBase->setVirtualAddress(memoryPtr);
+    WasmSym::heapBase->setVA(memoryPtr);
   }
 
   uint64_t maxMemorySetting = 1ULL
@@ -980,7 +980,7 @@ void Writer::createInitMemoryFunction() {
   assert(WasmSym::initMemory);
   assert(WasmSym::initMemoryFlag);
   assert(hasPassiveInitializedSegments());
-  uint64_t flagAddress = WasmSym::initMemoryFlag->getVirtualAddress();
+  uint64_t flagAddress = WasmSym::initMemoryFlag->getVA();
   bool is64 = config->is64.getValueOr(false);
   std::string bodyContent;
   {
@@ -1369,7 +1369,7 @@ void Writer::run() {
   if (!config->isPic) {
     config->tableBase = 1;
     if (WasmSym::definedTableBase)
-      WasmSym::definedTableBase->setVirtualAddress(config->tableBase);
+      WasmSym::definedTableBase->setVA(config->tableBase);
   }
 
   log("-- createOutputSegments");

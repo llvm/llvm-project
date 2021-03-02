@@ -12,6 +12,9 @@
   define void @unreachable_ehpad_test() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
     ret void
   }
+  define void @empty_cleanuppad_test() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+    ret void
+  }
 ...
 
 ---
@@ -79,5 +82,32 @@ body: |
   ; CHECK: bb.2
   bb.2:
   ; predecessors: %bb.0, %bb.1
+    RETURN implicit-def dead $arguments
+...
+
+---
+# Regression test for a bug that LateEHPrepare::addCatchAll didn't handle empty
+# cleanup pads. (It tried to get debug info from end() iterator.)
+name: empty_cleanuppad_test
+liveins:
+  - { reg: '$arguments' }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.3
+    EH_LABEL <mcsymbol .Ltmp0>
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    EH_LABEL <mcsymbol .Ltmp1>
+    BR %bb.3, implicit-def dead $arguments
+
+  ;; Empty cleanuppad
+  bb.1 (landing-pad):
+    successors: %bb.2
+    EH_LABEL <mcsymbol .Ltmp2>
+
+  bb.2:
+    successors: %bb.3
+    CLEANUPRET implicit-def dead $arguments
+
+  bb.3:
     RETURN implicit-def dead $arguments
 ...

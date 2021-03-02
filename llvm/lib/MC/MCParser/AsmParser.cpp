@@ -4073,29 +4073,20 @@ bool AsmParser::parseDirectiveCFISections() {
   bool EH = false;
   bool Debug = false;
 
-  if (parseIdentifier(Name))
-    return TokError("Expected an identifier");
-
-  if (Name == ".eh_frame")
-    EH = true;
-  else if (Name == ".debug_frame")
-    Debug = true;
-
-  if (getLexer().is(AsmToken::Comma)) {
-    Lex();
-
-    if (parseIdentifier(Name))
-      return TokError("Expected an identifier");
-
-    if (Name == ".eh_frame")
-      EH = true;
-    else if (Name == ".debug_frame")
-      Debug = true;
+  if (!parseOptionalToken(AsmToken::EndOfStatement)) {
+    for (;;) {
+      if (parseIdentifier(Name))
+        return TokError("expected .eh_frame or .debug_frame");
+      if (Name == ".eh_frame")
+        EH = true;
+      else if (Name == ".debug_frame")
+        Debug = true;
+      if (parseOptionalToken(AsmToken::EndOfStatement))
+        break;
+      if (parseToken(AsmToken::Comma))
+        return true;
+    }
   }
-
-  if (parseToken(AsmToken::EndOfStatement))
-    return addErrorSuffix(" in '.cfi_sections' directive");
-
   getStreamer().emitCFISections(EH, Debug);
   return false;
 }

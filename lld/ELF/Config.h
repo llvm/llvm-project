@@ -239,6 +239,7 @@ struct Configuration {
   bool zRelro;
   bool zRodynamic;
   bool zShstk;
+  bool zStartStopGC;
   uint8_t zStartStopVisibility;
   bool zText;
   bool zRetpolineplt;

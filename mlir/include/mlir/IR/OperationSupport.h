@@ -314,7 +314,15 @@ public:
   OperationName(StringRef name, MLIRContext *context);
 
   /// Return the name of the dialect this operation is registered to.
-  StringRef getDialect() const;
+  StringRef getDialectNamespace() const;
+
+  /// Return the Dialect this operation is registered to if it is loaded in the
+  /// context, or nullptr if the dialect isn't loaded.
+  Dialect *getDialect() const {
+    if (const auto *abstractOp = getAbstractOperation())
+      return &abstractOp->dialect;
+    return representation.get<Identifier>().getDialect();
+  }
 
   /// Return the operation name with dialect name stripped, if it has one.
   StringRef stripDialect() const;

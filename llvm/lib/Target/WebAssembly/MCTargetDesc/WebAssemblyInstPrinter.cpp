@@ -68,7 +68,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     for (auto I = Start, E = MI->getNumOperands(); I < E; ++I) {
       if (MI->getOpcode() == WebAssembly::CALL_INDIRECT &&
           I - Start == NumVariadicDefs) {
-        // Skip type and flags arguments when printing for tests
+        // Skip type and table arguments when printing for tests.
         ++I;
         continue;
       }
@@ -281,9 +281,9 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   } else if (Op.isImm()) {
     O << Op.getImm();
   } else if (Op.isSFPImm()) {
-    O << ::toString(APFloat(bit_cast<float>(Op.getSFPImm())));
+    O << ::toString(APFloat(APFloat::IEEEsingle(), APInt(32, Op.getSFPImm())));
   } else if (Op.isDFPImm()) {
-    O << ::toString(APFloat(bit_cast<double>(Op.getDFPImm())));
+    O << ::toString(APFloat(APFloat::IEEEdouble(), APInt(64, Op.getDFPImm())));
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     // call_indirect instructions have a TYPEINDEX operand that we print

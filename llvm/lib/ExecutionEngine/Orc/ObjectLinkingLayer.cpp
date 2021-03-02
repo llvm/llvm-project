@@ -459,15 +459,19 @@ private:
 
 ObjectLinkingLayer::Plugin::~Plugin() {}
 
+char ObjectLinkingLayer::ID;
+
+using BaseT = RTTIExtends<ObjectLinkingLayer, ObjectLayer>;
+
 ObjectLinkingLayer::ObjectLinkingLayer(ExecutionSession &ES,
                                        JITLinkMemoryManager &MemMgr)
-    : ObjectLayer(ES), MemMgr(MemMgr) {
+    : BaseT(ES), MemMgr(MemMgr) {
   ES.registerResourceManager(*this);
 }
 
 ObjectLinkingLayer::ObjectLinkingLayer(
     ExecutionSession &ES, std::unique_ptr<JITLinkMemoryManager> MemMgr)
-    : ObjectLayer(ES), MemMgr(*MemMgr), MemMgrOwnership(std::move(MemMgr)) {
+    : BaseT(ES), MemMgr(*MemMgr), MemMgrOwnership(std::move(MemMgr)) {
   ES.registerResourceManager(*this);
 }
 

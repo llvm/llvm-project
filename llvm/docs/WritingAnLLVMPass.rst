@@ -35,11 +35,12 @@ code, to compiling, loading, and executing it.  After the basics are down, more
 advanced features are discussed.
 
 .. warning::
-  This document deals with the legacy pass manager. LLVM now uses the new
-  pass manager by default, which has its own way of defining passes. For more
-  details, see :doc:`WritingAnLLVMNewPMPass`. To use the legacy pass manager
-  with ``opt``, pass the ``-enable-new-pm=0`` flag to all ``opt``
-  invocations.
+  This document deals with the legacy pass manager. LLVM uses the new pass
+  manager by default for the optimization pipeline (the codegen pipeline is
+  still using the legacy pass manager), which has its own way of defining
+  passes. For more details, see :doc:`WritingAnLLVMNewPMPass` and
+  :doc:`NewPassManager`. To use the legacy pass manager with ``opt``, pass
+  the ``-enable-new-pm=0`` flag to all ``opt`` invocations.
 
 Quick Start --- Writing hello world
 ===================================

@@ -142,6 +142,30 @@ int main(int, char**)
         using T = std::tuple<PotentiallyThrowingMoveAssignable, int>;
         static_assert(!std::is_nothrow_move_assignable<T>::value, "");
     }
+    {
+        // We assign through the reference and don't move out of the incoming ref,
+        // so this doesn't work (but would if the type were CopyAssignable).
+        using T1 = std::tuple<MoveAssignable&, int>;
+        static_assert(!std::is_move_assignable<T1>::value, "");
+
+        // ... works if it's CopyAssignable
+        using T2 = std::tuple<CopyAssignable&, int>;
+        static_assert(std::is_move_assignable<T2>::value, "");
+
+        // For rvalue-references, we can move-assign if the type is MoveAssignable
+        // or CopyAssignable (since in the worst case the move will decay into a copy).
+        using T3 = std::tuple<MoveAssignable&&, int>;
+        using T4 = std::tuple<CopyAssignable&&, int>;
+        static_assert(std::is_move_assignable<T3>::value, "");
+        static_assert(std::is_move_assignable<T4>::value, "");
+
+        // In all cases, we can't move-assign if the types are not assignable,
+        // since we assign through the reference.
+        using T5 = std::tuple<NonAssignable&, int>;
+        using T6 = std::tuple<NonAssignable&&, int>;
+        static_assert(!std::is_move_assignable<T5>::value, "");
+        static_assert(!std::is_move_assignable<T6>::value, "");
+    }
 
     return 0;
 }

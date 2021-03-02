@@ -18,7 +18,7 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
      bool is_class,
      int class_option,
      int key_option, 
-     int value_option) : OptionGroup(), m_is_class(is_class) {
+     int value_option) : m_is_class(is_class) {
   m_key_usage_text.assign("The key for a key/value pair passed to the "
                           "implementation of a ");
   m_key_usage_text.append(class_use);
@@ -80,8 +80,6 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
   m_option_definition[3].usage_text = m_class_usage_text.data();
 
 }
-
-OptionGroupPythonClassWithDict::~OptionGroupPythonClassWithDict() {}
 
 Status OptionGroupPythonClassWithDict::SetOptionValue(
     uint32_t option_idx,

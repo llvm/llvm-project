@@ -194,8 +194,13 @@ public:
   bool isWeakRef() const override { return refState == RefState::Weak; }
   bool isReferenced() const { return refState != RefState::Unreferenced; }
   bool isTlv() const override { return tlv; }
+  bool isDynamicLookup() const { return file == nullptr; }
   bool hasStubsHelper() const { return stubsHelperIndex != UINT32_MAX; }
-  DylibFile *getFile() const { return cast<DylibFile>(file); }
+
+  DylibFile *getFile() const {
+    assert(!isDynamicLookup());
+    return cast<DylibFile>(file);
+  }
 
   static bool classof(const Symbol *s) { return s->kind() == DylibKind; }
 

@@ -228,7 +228,7 @@ static void applyPatterns(FuncOp funcOp) {
 
   // Drop the marker.
   funcOp.walk([](LinalgOp op) {
-    op.removeAttr(LinalgTransforms::kLinalgTransformMarker);
+    op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
   });
 }
 
@@ -532,7 +532,7 @@ static void applyTileAndPadPattern(FuncOp funcOp) {
 void TestLinalgTransforms::runOnFunction() {
   auto lambda = [&](void *) {
     getFunction().walk([](LinalgOp op) {
-      op.removeAttr(LinalgTransforms::kLinalgTransformMarker);
+      op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
     });
   };
   std::unique_ptr<void, decltype(lambda)> cleanupGuard{(void *)1, lambda};

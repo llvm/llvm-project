@@ -13,15 +13,14 @@
 
 namespace lldb_private {
 
-class OptionValueArgs : public OptionValueArray {
+class OptionValueArgs : public Cloneable<OptionValueArgs, OptionValueArray> {
 public:
   OptionValueArgs()
-      : OptionValueArray(
-            OptionValue::ConvertTypeToMask(OptionValue::eTypeString)) {}
+      : Cloneable(OptionValue::ConvertTypeToMask(OptionValue::eTypeString)) {}
 
-  ~OptionValueArgs() override {}
+  ~OptionValueArgs() override = default;
 
-  size_t GetArgs(Args &args);
+  size_t GetArgs(Args &args) const;
 
   Type GetType() const override { return eTypeArgs; }
 };

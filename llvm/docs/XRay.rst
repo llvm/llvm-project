@@ -316,7 +316,7 @@ Minimizing Binary Size
 
 XRay supports several different instrumentation points including ``function-entry``,
 ``function-exit``, ``custom``, and ``typed`` points. These can be enabled individually
-using the ``-fxray-instrumentaton-bundle=`` flag. For example if you only wanted to
+using the ``-fxray-instrumentation-bundle=`` flag. For example if you only wanted to
 instrument function entry and custom points you could specify:
 
 ::

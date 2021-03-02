@@ -5,7 +5,8 @@
 
 func @gather8(%base: memref<?xf32>, %indices: vector<8xi32>,
               %mask: vector<8xi1>, %pass_thru: vector<8xf32>) -> vector<8xf32> {
-  %g = vector.gather %base[%indices], %mask, %pass_thru
+  %c0 = constant 0: index
+  %g = vector.gather %base[%c0][%indices], %mask, %pass_thru
     : memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
   return %g : vector<8xf32>
 }

@@ -336,7 +336,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #   define __cpp_lib_latch                              201907L
 # endif
 # define __cpp_lib_list_remove_return_type              201806L
-# if defined(__cpp_concepts) && __cpp_concepts >= 201811L
+# ifndef _LIBCPP_HAS_NO_CONCEPTS
 #   define __cpp_lib_math_constants                     201907L
 # endif
 // # define __cpp_lib_polymorphic_allocator                201902L

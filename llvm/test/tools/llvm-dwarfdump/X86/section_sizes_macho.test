@@ -9,14 +9,14 @@
 # CHECK-NEXT:----------------------------------------------------
 # CHECK-NEXT:SECTION           SIZE (b)
 # CHECK-NEXT:----------------  --------
+# CHECK-NEXT:__debug_str            183 (9.78%)
+# CHECK-NEXT:__debug_abbrev          58 (3.10%)
 # CHECK-NEXT:__debug_info            83 (4.43%)
 # CHECK-NEXT:__apple_names           60 (3.21%)
-# CHECK-NEXT:__apple_types           71 (3.79%)
-# CHECK-NEXT:__debug_abbrev          58 (3.10%)
-# CHECK-NEXT:__apple_namespac        36 (1.92%)
-# CHECK-NEXT:__debug_line            61 (3.26%)
-# CHECK-NEXT:__debug_str            183 (9.78%)
 # CHECK-NEXT:__apple_objc            36 (1.92%)
+# CHECK-NEXT:__apple_namespac        36 (1.92%)
+# CHECK-NEXT:__apple_types           71 (3.79%)
+# CHECK-NEXT:__debug_line            61 (3.26%)
 # CHECK-EMPTY:
 # CHECK-NEXT: Total Size: 588  (31.41%)
 # CHECK-NEXT: Total File Size: 1872

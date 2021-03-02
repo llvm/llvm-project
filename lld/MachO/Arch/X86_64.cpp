@@ -51,7 +51,7 @@ const TargetInfo::RelocAttrs &X86_64::getRelocAttrs(uint8_t type) const {
       {"BRANCH", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
       {"GOT_LOAD", B(PCREL) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
       {"GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
-      {"SUBTRACTOR", B(SUBTRAHEND)},
+      {"SUBTRACTOR", B(SUBTRAHEND) | B(BYTE4) | B(BYTE8)},
       {"SIGNED_1", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
       {"SIGNED_2", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
       {"SIGNED_4", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},

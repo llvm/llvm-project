@@ -1,4 +1,4 @@
-//===--- VarBypassDetector.h - Bypass jumps detector --------------*- C++ -*-=//
+//===--- VarBypassDetector.cpp - Bypass jumps detector ------------*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

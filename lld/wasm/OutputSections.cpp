@@ -88,7 +88,7 @@ void CodeSection::finalizeContents() {
 
   for (InputFunction *func : functions) {
     func->outputSec = this;
-    func->outputOffset = bodySize;
+    func->outSecOff = bodySize;
     func->calculateSize();
     // All functions should have a non-empty body at this point
     assert(func->getSize());
@@ -180,8 +180,8 @@ void DataSection::finalizeContents() {
 
     for (InputSegment *inputSeg : segment->inputSegments) {
       inputSeg->outputSec = this;
-      inputSeg->outputOffset = segment->sectionOffset + segment->header.size() +
-                               inputSeg->outputSegmentOffset;
+      inputSeg->outSecOff = segment->sectionOffset + segment->header.size() +
+                            inputSeg->outputSegmentOffset;
     }
   }
 
@@ -243,7 +243,7 @@ void CustomSection::finalizeContents() {
   for (InputSection *section : inputSections) {
     assert(!section->discarded);
     section->outputSec = this;
-    section->outputOffset = payloadSize;
+    section->outSecOff = payloadSize;
     payloadSize += section->getSize();
   }
 

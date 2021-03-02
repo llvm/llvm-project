@@ -132,7 +132,7 @@ std::string macho::createResponseFile(const opt::InputArgList &args) {
       os << "-o " << quote(path::filename(arg->getValue())) << "\n";
       break;
     case OPT_filelist:
-      if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
+      if (Optional<MemoryBufferRef> buffer = readRawFile(arg->getValue()))
         for (StringRef path : args::getLines(*buffer))
           os << quote(rewritePath(path)) << "\n";
       break;

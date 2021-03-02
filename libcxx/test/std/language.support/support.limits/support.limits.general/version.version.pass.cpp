@@ -2883,7 +2883,7 @@
 #   error "__cpp_lib_map_try_emplace should have the value 201411L in c++20"
 # endif
 
-# if defined(__cpp_concepts) && __cpp_concepts >= 201811L
+# ifndef _LIBCPP_HAS_NO_CONCEPTS
 #   ifndef __cpp_lib_math_constants
 #     error "__cpp_lib_math_constants should be defined in c++20"
 #   endif
@@ -2892,9 +2892,9 @@
 #   endif
 # else
 #   ifdef __cpp_lib_math_constants
-#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201811L is not defined!"
+#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201907L is not defined!"
 #   endif
-# endif
+# endif // _LIBCPP_HAS_NO_CONCEPTS
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_math_special_functions
@@ -4099,7 +4099,7 @@
 #   error "__cpp_lib_map_try_emplace should have the value 201411L in c++2b"
 # endif
 
-# if defined(__cpp_concepts) && __cpp_concepts >= 201811L
+# if !_LIBCPP_HAS_NO_CONCEPTS
 #   ifndef __cpp_lib_math_constants
 #     error "__cpp_lib_math_constants should be defined in c++2b"
 #   endif
@@ -4108,9 +4108,9 @@
 #   endif
 # else
 #   ifdef __cpp_lib_math_constants
-#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201811L is not defined!"
+#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201907L is not defined!"
 #   endif
-# endif
+# endif // !_LIBCPP_HAS_NO_CONCEPTS
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_math_special_functions

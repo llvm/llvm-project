@@ -1276,23 +1276,49 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   return SinkCast(CI);
 }
 
+/// If given \p PN is an inductive variable with value IVInc coming from the
+/// backedge, and on each iteration it gets increased by Step, return pair
+/// <IVInc, Step>. Otherwise, return None.
+static Optional<std::pair<Instruction *, Constant *> >
+getIVIncrement(const PHINode *PN, const LoopInfo *LI) {
+  const Loop *L = LI->getLoopFor(PN->getParent());
+  if (!L || L->getHeader() != PN->getParent() || !L->getLoopLatch())
+    return None;
+  auto *IVInc =
+      dyn_cast<Instruction>(PN->getIncomingValueForBlock(L->getLoopLatch()));
+  if (!IVInc)
+    return None;
+  Constant *Step = nullptr;
+  if (match(IVInc, m_Sub(m_Specific(PN), m_Constant(Step))))
+    return std::make_pair(IVInc, ConstantExpr::getNeg(Step));
+  if (match(IVInc, m_Add(m_Specific(PN), m_Constant(Step))))
+    return std::make_pair(IVInc, Step);
+  if (match(IVInc, m_ExtractValue<0>(m_Intrinsic<Intrinsic::usub_with_overflow>(
+                       m_Specific(PN), m_Constant(Step)))))
+    return std::make_pair(IVInc, ConstantExpr::getNeg(Step));
+  if (match(IVInc, m_ExtractValue<0>(m_Intrinsic<Intrinsic::uadd_with_overflow>(
+                       m_Specific(PN), m_Constant(Step)))))
+    return std::make_pair(IVInc, Step);
+  return None;
+}
+
+static bool isIVIncrement(const BinaryOperator *BO, const LoopInfo *LI) {
+  auto *PN = dyn_cast<PHINode>(BO->getOperand(0));
+  if (!PN)
+    return false;
+  if (auto IVInc = getIVIncrement(PN, LI))
+    return IVInc->first == BO;
+  return false;
+}
+
 bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
                                                  Value *Arg0, Value *Arg1,
                                                  CmpInst *Cmp,
                                                  Intrinsic::ID IID) {
-  auto isIVIncrement = [this, &Cmp](BinaryOperator *BO) {
-    auto *PN = dyn_cast<PHINode>(BO->getOperand(0));
-    if (!PN)
+  auto IsReplacableIVIncrement = [this, &Cmp](BinaryOperator *BO) {
+    if (!isIVIncrement(BO, LI))
       return false;
     const Loop *L = LI->getLoopFor(BO->getParent());
-    if (!L || L->getHeader() != PN->getParent() || !L->getLoopLatch())
-      return false;
-    const BasicBlock *Latch = L->getLoopLatch();
-    if (PN->getIncomingValueForBlock(Latch) != BO)
-      return false;
-    if (auto *Step = dyn_cast<Instruction>(BO->getOperand(1)))
-      if (L->contains(Step->getParent()))
-        return false;
     // IV increment may have other users than the IV. We do not want to make
     // dominance queries to analyze the legality of moving it towards the cmp,
     // so just check that there is no other users.
@@ -1305,9 +1331,9 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     // cheap check because no CFG changes & dom tree recomputation happens
     // during the transform.
     Function *F = BO->getParent()->getParent();
-    return getDT(*F).dominates(Cmp->getParent(), Latch);
+    return getDT(*F).dominates(Cmp->getParent(), L->getLoopLatch());
   };
-  if (BO->getParent() != Cmp->getParent() && !isIVIncrement(BO)) {
+  if (BO->getParent() != Cmp->getParent() && !IsReplacableIVIncrement(BO)) {
     // We used to use a dominator tree here to allow multi-block optimization.
     // But that was problematic because:
     // 1. It could cause a perf regression by hoisting the math op into the
@@ -3806,7 +3832,7 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
   // to see if ScaleReg is actually X+C.  If so, we can turn this into adding
   // X*Scale + C*Scale to addr mode.
   ConstantInt *CI = nullptr; Value *AddLHS = nullptr;
-  if (isa<Instruction>(ScaleReg) &&  // not a constant expr.
+  if (isa<Instruction>(ScaleReg) && // not a constant expr.
       match(ScaleReg, m_Add(m_Value(AddLHS), m_ConstantInt(CI))) &&
       CI->getValue().isSignedIntN(64)) {
     TestAddrMode.InBounds = false;

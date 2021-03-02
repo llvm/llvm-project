@@ -5749,6 +5749,11 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
       Inst.eraseFromParent();
       continue;
 
+    case AMDGPU::S_BREV_B64:
+      splitScalar64BitUnaryOp(Worklist, Inst, AMDGPU::S_BREV_B32, true);
+      Inst.eraseFromParent();
+      continue;
+
     case AMDGPU::S_NOT_B64:
       splitScalar64BitUnaryOp(Worklist, Inst, AMDGPU::S_NOT_B32);
       Inst.eraseFromParent();
@@ -6300,7 +6305,7 @@ void SIInstrInfo::splitScalarBinOpN2(SetVectorType& Worklist,
 
 void SIInstrInfo::splitScalar64BitUnaryOp(
     SetVectorType &Worklist, MachineInstr &Inst,
-    unsigned Opcode) const {
+    unsigned Opcode, bool Swap) const {
   MachineBasicBlock &MBB = *Inst.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
 
@@ -6332,6 +6337,9 @@ void SIInstrInfo::splitScalar64BitUnaryOp(
 
   Register DestSub1 = MRI.createVirtualRegister(NewDestSubRC);
   MachineInstr &HiHalf = *BuildMI(MBB, MII, DL, InstDesc, DestSub1).add(SrcReg0Sub1);
+
+  if (Swap)
+    std::swap(DestSub0, DestSub1);
 
   Register FullDestReg = MRI.createVirtualRegister(NewDestRC);
   BuildMI(MBB, MII, DL, get(TargetOpcode::REG_SEQUENCE), FullDestReg)

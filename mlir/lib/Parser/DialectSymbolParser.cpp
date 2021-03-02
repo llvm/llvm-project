@@ -563,7 +563,7 @@ Type Parser::parseExtendedType() {
 
         // Otherwise, form a new opaque type.
         return OpaqueType::getChecked(
-            getEncodedSourceLocation(loc), state.context,
+            getEncodedSourceLocation(loc),
             Identifier::get(dialectName, state.context), symbolData);
       });
 }

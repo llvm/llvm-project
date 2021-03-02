@@ -520,7 +520,9 @@ enum NodeType {
   /// The elements of VECTOR1 starting at IDX are overwritten with VECTOR2.
   /// Elements IDX through (IDX + num_elements(T) - 1) must be valid VECTOR1
   /// indices. If this condition cannot be determined statically but is false at
-  /// runtime, then the result vector is undefined.
+  /// runtime, then the result vector is undefined. The IDX parameter must be a
+  /// vector index constant type, which for most targets will be an integer
+  /// pointer type.
   ///
   /// This operation supports inserting a fixed-width vector into a scalable
   /// vector, but not the other way around.

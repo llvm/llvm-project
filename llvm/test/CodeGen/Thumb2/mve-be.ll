@@ -355,4 +355,13 @@ entry:
   ret void
 }
 
+define arm_aapcs_vfpcc <8 x half> @undef_one() {
+; CHECK-LABEL: undef_one:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    bx lr
+    %c = call <8 x half> @llvm.arm.mve.vreinterpretq.v8f16.v4f32(<4 x float> undef)
+    ret <8 x half> %c
+}
+
+declare <8 x half> @llvm.arm.mve.vreinterpretq.v8f16.v4f32(<4 x float>)
 declare <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v4i32(<4 x i32>)

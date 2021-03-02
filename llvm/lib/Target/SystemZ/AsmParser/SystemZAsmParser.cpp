@@ -12,6 +12,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -427,6 +428,27 @@ private:
                                   int64_t MaxVal, bool AllowTLS);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
+
+  // Both the hlasm and att variants still rely on the basic gnu asm
+  // format with respect to inputs, clobbers, outputs etc.
+  //
+  // However, calling the overriden getAssemblerDialect() method in
+  // AsmParser is problematic. It either returns the AssemblerDialect field
+  // in the MCAsmInfo instance if the AssemblerDialect field in AsmParser is
+  // unset, otherwise it returns the private AssemblerDialect field in
+  // AsmParser.
+  //
+  // The problematic part is because, we forcibly set the inline asm dialect
+  // in the AsmParser instance in AsmPrinterInlineAsm.cpp. Soo any query
+  // to the overriden getAssemblerDialect function in AsmParser.cpp, will
+  // not return the assembler dialect set in the respective MCAsmInfo instance.
+  //
+  // For this purpose, we explicitly query the SystemZMCAsmInfo instance
+  // here, to get the "correct" assembler dialect, and use it in various
+  // functions.
+  unsigned getMAIAssemblerDialect() {
+    return Parser.getContext().getAsmInfo()->getAssemblerDialect();
+  }
 
 public:
   SystemZAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
@@ -1325,7 +1347,7 @@ bool SystemZAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 
   // Apply mnemonic aliases first, before doing anything else, in
   // case the target uses it.
-  applyMnemonicAliases(Name, getAvailableFeatures(), 0 /*VariantID*/);
+  applyMnemonicAliases(Name, getAvailableFeatures(), getMAIAssemblerDialect());
 
   Operands.push_back(SystemZOperand::createToken(Name, NameLoc));
 
@@ -1428,9 +1450,11 @@ bool SystemZAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   MCInst Inst;
   unsigned MatchResult;
 
+  unsigned Dialect = getMAIAssemblerDialect();
+
   FeatureBitset MissingFeatures;
-  MatchResult = MatchInstructionImpl(Operands, Inst, ErrorInfo,
-                                     MissingFeatures, MatchingInlineAsm);
+  MatchResult = MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,
+                                     MatchingInlineAsm, Dialect);
   switch (MatchResult) {
   case Match_Success:
     Inst.setLoc(IDLoc);
@@ -1467,7 +1491,7 @@ bool SystemZAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_MnemonicFail: {
     FeatureBitset FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
     std::string Suggestion = SystemZMnemonicSpellCheck(
-      ((SystemZOperand &)*Operands[0]).getToken(), FBS);
+        ((SystemZOperand &)*Operands[0]).getToken(), FBS, Dialect);
     return Error(IDLoc, "invalid instruction" + Suggestion,
                  ((SystemZOperand &)*Operands[0]).getLocRange());
   }

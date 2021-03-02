@@ -1701,13 +1701,10 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 
 void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
   // Emit size of content not including length itself
-  if (!DD->useSectionsAsReferences()) {
-    StringRef Prefix = isDwoUnit() ? "debug_info_dwo_" : "debug_info_";
-    MCSymbol *BeginLabel = Asm->createTempSymbol(Prefix + "start");
-    EndLabel = Asm->createTempSymbol(Prefix + "end");
-    Asm->emitDwarfUnitLength(EndLabel, BeginLabel, "Length of Unit");
-    Asm->OutStreamer->emitLabel(BeginLabel);
-  } else
+  if (!DD->useSectionsAsReferences())
+    EndLabel = Asm->emitDwarfUnitLength(
+        isDwoUnit() ? "debug_info_dwo" : "debug_info", "Length of Unit");
+  else
     Asm->emitDwarfUnitLength(getHeaderSize() + getUnitDie().getSize(),
                              "Length of Unit");
 

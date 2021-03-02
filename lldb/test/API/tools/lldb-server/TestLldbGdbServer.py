@@ -208,6 +208,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         return " avx " in cpuinfo
 
     @expectedFailureAll(oslist=["windows"]) # no avx for now.
+    @skipIf(archs=no_match(['amd64', 'i386', 'x86_64']))
     @add_test_categories(["llgs"])
     def test_qRegisterInfo_contains_avx_registers(self):
         self.build()

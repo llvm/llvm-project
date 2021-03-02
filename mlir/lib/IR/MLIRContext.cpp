@@ -520,9 +520,11 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
     // Refresh all the identifiers dialect field, this catches cases where a
     // dialect may be loaded after identifier prefixed with this dialect name
     // were already created.
+    llvm::SmallString<32> dialectPrefix(dialectNamespace);
+    dialectPrefix.push_back('.');
     for (auto &identifierEntry : impl.identifiers)
-      if (!identifierEntry.second &&
-          identifierEntry.first().startswith(dialectNamespace))
+      if (identifierEntry.second.is<MLIRContext *>() &&
+          identifierEntry.first().startswith(dialectPrefix))
         identifierEntry.second = dialect.get();
 
     // Actually register the interfaces with delayed registration.

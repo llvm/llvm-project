@@ -865,15 +865,14 @@ void PredicateInfoPrinterLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
 
 // Replace ssa_copy calls created by PredicateInfo with their operand.
 static void replaceCreatedSSACopys(PredicateInfo &PredInfo, Function &F) {
-  for (auto I = inst_begin(F), E = inst_end(F); I != E;) {
-    Instruction *Inst = &*I++;
-    const auto *PI = PredInfo.getPredicateInfoFor(Inst);
-    auto *II = dyn_cast<IntrinsicInst>(Inst);
+  for (Instruction &Inst : llvm::make_early_inc_range(instructions(F))) {
+    const auto *PI = PredInfo.getPredicateInfoFor(&Inst);
+    auto *II = dyn_cast<IntrinsicInst>(&Inst);
     if (!PI || !II || II->getIntrinsicID() != Intrinsic::ssa_copy)
       continue;
 
-    Inst->replaceAllUsesWith(II->getOperand(0));
-    Inst->eraseFromParent();
+    Inst.replaceAllUsesWith(II->getOperand(0));
+    Inst.eraseFromParent();
   }
 }
 

@@ -128,7 +128,7 @@ uint64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   case R_WASM_FUNCTION_OFFSET_I64:
     return reloc.Addend;
   case R_WASM_SECTION_OFFSET_I32:
-    return getSectionSymbol(reloc.Index)->section->outputOffset + reloc.Addend;
+    return getSectionSymbol(reloc.Index)->section->getOffset(reloc.Addend);
   default:
     llvm_unreachable("unexpected relocation type");
   }
@@ -245,7 +245,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone) 
     // backward compat with old object files built with `-fPIC`.
     if (D->segment && D->segment->outputSeg->name == ".tdata")
       return D->getOutputSegmentOffset() + reloc.Addend;
-    return D->getVirtualAddress() + reloc.Addend;
+    return D->getVA(reloc.Addend);
   }
   case R_WASM_MEMORY_ADDR_TLS_SLEB:
     if (isa<UndefinedData>(sym) || sym->isUndefWeak())
@@ -266,11 +266,11 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone) 
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64: {
     auto *f = cast<DefinedFunction>(sym);
-    return f->function->outputOffset +
-           (f->function->getFunctionCodeOffset() + reloc.Addend);
+    return f->function->getOffset(f->function->getFunctionCodeOffset() +
+                                  reloc.Addend);
   }
   case R_WASM_SECTION_OFFSET_I32:
-    return getSectionSymbol(reloc.Index)->section->outputOffset + reloc.Addend;
+    return getSectionSymbol(reloc.Index)->section->getOffset(reloc.Addend);
   case R_WASM_TABLE_NUMBER_LEB:
     return getTableSymbol(reloc.Index)->getTableNumber();
   default:
