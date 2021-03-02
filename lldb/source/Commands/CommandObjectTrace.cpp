@@ -116,7 +116,7 @@ protected:
             Trace::FindPlugin(GetDebugger(), *session_file,
                               json_file.GetDirectory().AsCString())) {
       lldb::TraceSP trace_sp = traceOrErr.get();
-      if (m_options.m_verbose)
+      if (m_options.m_verbose && trace_sp)
         result.AppendMessageWithFormat("loading trace with plugin %s\n",
                                        trace_sp->GetPluginName().AsCString());
     } else
