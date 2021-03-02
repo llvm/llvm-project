@@ -5518,13 +5518,22 @@ def t2CSINC : CS<"csinc", 0b1001>;
 def t2CSINV : CS<"csinv", 0b1010>;
 def t2CSNEG : CS<"csneg", 0b1011>;
 
+
 let Predicates = [HasV8_1MMainline] in {
-  def : T2Pat<(ARMcsinc GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm),
-              (t2CSINC GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm)>;
-  def : T2Pat<(ARMcsinv GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm),
-              (t2CSINV GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm)>;
-  def : T2Pat<(ARMcsneg GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm),
-              (t2CSNEG GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm)>;
+  multiclass CSPats<SDNode Node, Instruction Insn> {
+    def : T2Pat<(Node GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm),
+                (Insn GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm)>;
+    def : T2Pat<(Node (i32 0), GPRwithZR:$fval, imm0_31:$imm),
+                (Insn ZR, GPRwithZR:$fval, imm0_31:$imm)>;
+    def : T2Pat<(Node GPRwithZR:$tval, (i32 0), imm0_31:$imm),
+                (Insn GPRwithZR:$tval, ZR, imm0_31:$imm)>;
+    def : T2Pat<(Node (i32 0), (i32 0), imm0_31:$imm),
+                (Insn ZR, ZR, imm0_31:$imm)>;
+  }
+
+  defm : CSPats<ARMcsinc, t2CSINC>;
+  defm : CSPats<ARMcsinv, t2CSINV>;
+  defm : CSPats<ARMcsneg, t2CSNEG>;
 
   multiclass ModifiedV8_1CSEL<Instruction Insn, dag modvalue> {
     def : T2Pat<(ARMcmov modvalue, GPRwithZR:$tval, cmovpred:$imm),
