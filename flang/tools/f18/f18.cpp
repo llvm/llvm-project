@@ -667,6 +667,7 @@ int main(int argc, char *const argv[]) {
           << "  -ed                  enable fixed form D lines\n"
           << "  -E                   prescan & preprocess only\n"
           << "  -module dir          module output directory (default .)\n"
+          << "  -module-dir/-J <dir> Put MODULE files in <dir>\n"
           << "  -flatin              interpret source as Latin-1 (ISO 8859-1) "
              "rather than UTF-8\n"
           << "  -fsyntax-only        parsing and semantics only, no output "
