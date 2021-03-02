@@ -9312,22 +9312,22 @@ static SDValue foldBoolSelectToLogic(SDNode *N, SelectionDAG &DAG) {
 
   // select Cond, Cond, F --> or Cond, F
   // select Cond, 1, F    --> or Cond, F
-  if (Cond == T || isOneOrOneSplat(T))
+  if (Cond == T || isOneOrOneSplat(T, /* AllowUndefs */ true))
     return DAG.getNode(ISD::OR, SDLoc(N), VT, Cond, F);
 
   // select Cond, T, Cond --> and Cond, T
   // select Cond, T, 0    --> and Cond, T
-  if (Cond == F || isNullOrNullSplat(F))
+  if (Cond == F || isNullOrNullSplat(F, /* AllowUndefs */ true))
     return DAG.getNode(ISD::AND, SDLoc(N), VT, Cond, T);
 
   // select Cond, T, 1 --> or (not Cond), T
-  if (isOneOrOneSplat(F)) {
+  if (isOneOrOneSplat(F, /* AllowUndefs */ true)) {
     SDValue NotCond = DAG.getNOT(SDLoc(N), Cond, VT);
     return DAG.getNode(ISD::OR, SDLoc(N), VT, NotCond, T);
   }
 
   // select Cond, 0, F --> and (not Cond), F
-  if (isNullOrNullSplat(T)) {
+  if (isNullOrNullSplat(T, /* AllowUndefs */ true)) {
     SDValue NotCond = DAG.getNOT(SDLoc(N), Cond, VT);
     return DAG.getNode(ISD::AND, SDLoc(N), VT, NotCond, F);
   }
