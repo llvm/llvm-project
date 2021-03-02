@@ -1,6 +1,9 @@
 ; RUN: lli --jit-kind=orc-lazy --per-module-lazy \
 ; RUN:     --generate=__dump_jit_debug_objects %s | llvm-dwarfdump --diff - | FileCheck %s
 ;
+; RUN: lli --jit-kind=orc-lazy --per-module-lazy --jit-linker=jitlink \
+; RUN:     --generate=__dump_jit_debug_objects %s | llvm-dwarfdump --diff - | FileCheck %s
+;
 ; CHECK: -:	file format elf64-x86-64
 ; CHECK: .debug_info contents:
 ; CHECK: 0x00000000: Compile Unit: length = 0x00000047, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x0000004b)
