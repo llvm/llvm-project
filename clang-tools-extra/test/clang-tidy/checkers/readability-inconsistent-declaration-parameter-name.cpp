@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-inconsistent-declaration-parameter-name %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s readability-inconsistent-declaration-parameter-name %t -- --fix-notes -- -fno-delayed-template-parsing
 
 void consistentFunction(int a, int b, int c);
 void consistentFunction(int a, int b, int c);

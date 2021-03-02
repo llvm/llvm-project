@@ -70,6 +70,10 @@ Improvements to clang-tidy
 - The `run-clang-tidy.py` helper script is now installed in `bin/` as
   `run-clang-tidy`. It was previously installed in `share/clang/`.
 
+- Added command line option `--fix-notes` to apply fixes found in notes
+  attached to warnings. These are typically cases where we are less confident
+  the fix will have the desired effect.
+
 New checks
 ^^^^^^^^^^
 
