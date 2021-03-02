@@ -32,7 +32,8 @@ ProcessLaunchInfo::ProcessLaunchInfo()
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(0),
       m_file_actions(), m_pty(new PseudoTerminal), m_resume_count(0),
       m_monitor_callback(nullptr), m_monitor_callback_baton(nullptr),
-      m_monitor_signals(false), m_listener_sp(), m_hijack_listener_sp() {}
+      m_monitor_signals(false), m_listener_sp(), m_hijack_listener_sp(),
+      m_scripted_process_class_name(), m_scripted_process_dictionary_sp() {}
 
 ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      const FileSpec &stdout_file_spec,
@@ -42,7 +43,8 @@ ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(launch_flags),
       m_file_actions(), m_pty(new PseudoTerminal), m_resume_count(0),
       m_monitor_callback(nullptr), m_monitor_callback_baton(nullptr),
-      m_monitor_signals(false), m_listener_sp(), m_hijack_listener_sp() {
+      m_monitor_signals(false), m_listener_sp(), m_hijack_listener_sp(),
+      m_scripted_process_class_name(), m_scripted_process_dictionary_sp() {
   if (stdin_file_spec) {
     FileAction file_action;
     const bool read = true;
@@ -171,6 +173,8 @@ void ProcessLaunchInfo::Clear() {
   m_resume_count = 0;
   m_listener_sp.reset();
   m_hijack_listener_sp.reset();
+  m_scripted_process_class_name.clear();
+  m_scripted_process_dictionary_sp.reset();
 }
 
 void ProcessLaunchInfo::SetMonitorProcessCallback(
