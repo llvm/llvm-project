@@ -985,3 +985,41 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
 }
 
 void CallLowering::ValueHandler::anchor() {}
+
+Register CallLowering::IncomingValueHandler::buildExtensionHint(CCValAssign &VA,
+                                                                Register SrcReg,
+                                                                LLT NarrowTy) {
+  switch (VA.getLocInfo()) {
+  case CCValAssign::LocInfo::ZExt: {
+    return MIRBuilder
+        .buildAssertZExt(MRI.cloneVirtualRegister(SrcReg), SrcReg,
+                         NarrowTy.getScalarSizeInBits())
+        .getReg(0);
+  }
+  case CCValAssign::LocInfo::SExt: {
+    return MIRBuilder
+        .buildAssertSExt(MRI.cloneVirtualRegister(SrcReg), SrcReg,
+                         NarrowTy.getScalarSizeInBits())
+        .getReg(0);
+    break;
+  }
+  default:
+    return SrcReg;
+  }
+}
+
+void CallLowering::IncomingValueHandler::assignValueToReg(Register ValVReg,
+                                                          Register PhysReg,
+                                                          CCValAssign &VA) {
+  const LLT LocTy(VA.getLocVT());
+  const LLT ValTy = MRI.getType(ValVReg);
+
+  if (ValTy.getSizeInBits() == LocTy.getSizeInBits()) {
+    MIRBuilder.buildCopy(ValVReg, PhysReg);
+    return;
+  }
+
+  auto Copy = MIRBuilder.buildCopy(LocTy, PhysReg);
+  auto Hint = buildExtensionHint(VA, Copy.getReg(0), ValTy);
+  MIRBuilder.buildTrunc(ValVReg, Hint);
+}
