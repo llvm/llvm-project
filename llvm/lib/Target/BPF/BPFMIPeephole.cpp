@@ -475,6 +475,9 @@ bool BPFMIPeepholeTruncElim::eliminateTruncSeq(void) {
       if (MI.getOpcode() == BPF::SRL_ri &&
           MI.getOperand(2).getImm() == 32) {
         SrcReg = MI.getOperand(1).getReg();
+        if (!MRI->hasOneNonDBGUse(SrcReg))
+          continue;
+
         MI2 = MRI->getVRegDef(SrcReg);
         DstReg = MI.getOperand(0).getReg();
 
