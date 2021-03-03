@@ -49882,11 +49882,16 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
 
   // See if we're broadcasting the scalar value, in which case just reuse that.
   // Ensure the same SDValue from the SDNode use is being used.
-  // TODO: Handle different vector sizes when we have test coverage.
   for (SDNode *User : Src->uses())
-    if (User->getOpcode() == X86ISD::VBROADCAST && Src == User->getOperand(0) &&
-        User->getValueSizeInBits(0).getFixedSize() == VT.getFixedSizeInBits())
-      return SDValue(User, 0);
+    if (User->getOpcode() == X86ISD::VBROADCAST && Src == User->getOperand(0)) {
+      unsigned SizeInBits = VT.getFixedSizeInBits();
+      unsigned BroadcastSizeInBits = User->getValueSizeInBits(0).getFixedSize();
+      if (BroadcastSizeInBits == SizeInBits)
+        return SDValue(User, 0);
+      if (BroadcastSizeInBits > SizeInBits)
+        return extractSubVector(SDValue(User, 0), 0, DAG, DL, SizeInBits);
+      // TODO: Handle BroadcastSizeInBits < SizeInBits when we have test coverage.
+    }
 
   return SDValue();
 }
