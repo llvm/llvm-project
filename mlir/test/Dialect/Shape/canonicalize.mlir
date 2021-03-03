@@ -360,7 +360,7 @@ func @f(%arg0 : !shape.shape) {
   // CHECK-NEXT: shape.const_witness true
   // CHECK-NEXT: consume.witness
   // CHECK-NEXT: return
-  %0 = shape.cstr_eq %arg0, %arg0, %arg0
+  %0 = shape.cstr_eq %arg0, %arg0, %arg0 : !shape.shape, !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
@@ -375,7 +375,7 @@ func @f() {
   %cs0 = shape.const_shape [0, 1] : !shape.shape
   %cs1 = shape.const_shape [0, 1] : !shape.shape
   %cs2 = shape.const_shape [0, 1] : !shape.shape
-  %0 = shape.cstr_eq %cs0, %cs1, %cs2
+  %0 = shape.cstr_eq %cs0, %cs1, %cs2 : !shape.shape, !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
@@ -391,7 +391,7 @@ func @f() {
   // CHECK-NEXT: return
   %cs0 = shape.const_shape [0, 1] : !shape.shape
   %cs1 = shape.const_shape [3, 1] : !shape.shape
-  %0 = shape.cstr_eq %cs0, %cs1
+  %0 = shape.cstr_eq %cs0, %cs1 : !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
@@ -403,7 +403,7 @@ func @f(%arg0: !shape.shape, %arg1: !shape.shape) {
   // CHECK-NEXT: shape.cstr_eq
   // CHECK-NEXT: consume.witness
   // CHECK-NEXT: return
-  %0 = shape.cstr_eq %arg0, %arg1
+  %0 = shape.cstr_eq %arg0, %arg1 : !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }

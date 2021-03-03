@@ -783,7 +783,7 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable",
   let verifier = [{ return ::verify(*this); }];
 }
 
-def Shape_CstrEqOp : Shape_Op<"cstr_eq", [Commutative]> {
+def Shape_CstrEqOp : Shape_Op<"cstr_eq", [Commutative, InferTypeOpInterface]> {
   let summary = "Determines if all input shapes are equal";
   let description = [{
     Given 1 or more input shapes, determine if all shapes are the exact same.
@@ -796,10 +796,21 @@ def Shape_CstrEqOp : Shape_Op<"cstr_eq", [Commutative]> {
     %w1 = shape.cstr_eq [2,2], [1,2] // Failure
     ```
   }];
-  let arguments = (ins Variadic<Shape_ShapeType>:$inputs);
+  let arguments = (ins Variadic<Shape_ShapeOrExtentTensorType>:$shapes);
   let results = (outs Shape_WitnessType:$result);
 
-  let assemblyFormat = "$inputs attr-dict";
+  let assemblyFormat = "$shapes attr-dict `:` type($shapes)";
+
+  let extraClassDeclaration = [{
+    // TODO: This should really be automatic. Figure out how to not need this defined.
+    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
+    ::llvm::Optional<::mlir::Location> location, ::mlir::ValueRange operands,
+    ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+    ::llvm::SmallVectorImpl<::mlir::Type>&inferredReturnTypes) {
+      inferredReturnTypes.push_back(::mlir::shape::WitnessType::get(context));
+      return success();
+    };
+  }];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
