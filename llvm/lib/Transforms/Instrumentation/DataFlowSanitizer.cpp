@@ -1899,7 +1899,7 @@ Align DFSanFunction::getShadowAlign(Align InstAlignment) {
 
 Align DFSanFunction::getOriginAlign(Align InstAlignment) {
   const Align Alignment = llvm::assumeAligned(InstAlignment.value());
-  return Align(std::max(kMinOriginAlignment, Alignment));
+  return Align(std::max(MinOriginAlignment, Alignment));
 }
 
 bool DFSanFunction::useCallbackLoadLabelAndOrigin(uint64_t Size,
@@ -1917,7 +1917,7 @@ bool DFSanFunction::useCallbackLoadLabelAndOrigin(uint64_t Size,
     return false;
 
   const Align Alignment = llvm::assumeAligned(InstAlignment.value());
-  if (Alignment >= kMinOriginAlignment &&
+  if (Alignment >= MinOriginAlignment &&
       Size % (64 / DFS.ShadowWidthBits) == 0)
     return false;
 
