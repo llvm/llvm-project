@@ -130,11 +130,11 @@ define void @one_size_unknown(i8* %p, i32 %size) {
 
 ; If part of the addressing is done with non-inbounds GEPs, we can't use
 ; properties implied by the last gep w/the whole offset. In this case,
-; %random = %alloc - 4 bytes is well defined, and results in %p1 == %alloca.
+; %random = %alloc - 4 bytes is well defined, and results in %step == %alloca,
+; leaving %p as an entirely inbounds gep pointing inside %alloca
 ; CHECK-LABEL: Function: all_inbounds:
 ; CHECK: MayAlias: i32* %alloca, i8* %p0
-; CHECK: NoAlias:  i32* %alloca, i8* %p1
-; FIXME: Result produced is currently wrong.
+; CHECK: MayAlias:  i32* %alloca, i8* %p1
 define void @all_inbounds() {
   %alloca = alloca i32, i32 4
   %random = call i8* @random.i8(i32* %alloca)
