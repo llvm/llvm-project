@@ -362,6 +362,22 @@ bool LoopInvariantCodeMotion::runOnLoop(
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   std::unique_ptr<SinkAndHoistLICMFlags> Flags;
 
+  // Don't sink stores from loops with coroutine suspend instructions.
+  // LICM would sink instructions into the default destination of
+  // the coroutine switch. The default destination of the switch is to
+  // handle the case where the coroutine is suspended, by which point the
+  // coroutine frame may have been destroyed. No instruction can be sunk there.
+  // FIXME: This would unfortunately hurt the performance of coroutines, however
+  // there is currently no general solution for this. Similar issues could also
+  // potentially happen in other passes where instructions are being moved
+  // across that edge.
+  bool HasCoroSuspendInst = llvm::any_of(L->getBlocks(), [](BasicBlock *BB) {
+    return llvm::any_of(*BB, [](Instruction &I) {
+      IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+      return II && II->getIntrinsicID() == Intrinsic::coro_suspend;
+    });
+  });
+
   if (!MSSA) {
     LLVM_DEBUG(dbgs() << "LICM: Using Alias Set Tracker.\n");
     CurAST = collectAliasInfoForLoop(L, LI, AA);
@@ -408,7 +424,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
   // preheader for SSA updater, so also avoid sinking when no preheader
   // is available.
   if (!DisablePromotion && Preheader && L->hasDedicatedExits() &&
-      !Flags->tooManyMemoryAccesses()) {
+      !Flags->tooManyMemoryAccesses() && !HasCoroSuspendInst) {
     // Figure out the loop exits and their insertion points
     SmallVector<BasicBlock *, 8> ExitBlocks;
     L->getUniqueExitBlocks(ExitBlocks);
