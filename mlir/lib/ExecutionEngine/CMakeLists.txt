@@ -4,6 +4,7 @@
 set(LLVM_OPTIONAL_SOURCES
   AsyncRuntime.cpp
   CRunnerUtils.cpp
+  CudaRuntimeWrappers.cpp
   SparseUtils.cpp
   ExecutionEngine.cpp
   RunnerUtils.cpp
@@ -102,3 +103,34 @@ add_mlir_library(mlir_async_runtime
 set_property(TARGET mlir_async_runtime PROPERTY CXX_VISIBILITY_PRESET hidden)
 target_compile_definitions(mlir_async_runtime PRIVATE mlir_async_runtime_EXPORTS)
 
+if(MLIR_CUDA_RUNNER_ENABLED)
+  # Configure CUDA support. Using check_language first allows us to give a
+  # custom error message.
+  include(CheckLanguage)
+  check_language(CUDA)
+  if (CMAKE_CUDA_COMPILER)
+    enable_language(CUDA)
+  else()
+    message(SEND_ERROR
+      "Building the mlir cuda runner requires a working CUDA install")
+  endif()
+
+  # We need the libcuda.so library.
+  find_library(CUDA_RUNTIME_LIBRARY cuda)
+
+  add_mlir_library(mlir_cuda_runtime
+    SHARED
+    CudaRuntimeWrappers.cpp
+
+    EXCLUDE_FROM_LIBMLIR
+  )
+  set_property(TARGET mlir_cuda_runtime PROPERTY CXX_STANDARD 14)
+  target_include_directories(mlir_cuda_runtime
+    PRIVATE
+    ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+  )
+  target_link_libraries(mlir_cuda_runtime
+    PRIVATE
+    ${CUDA_RUNTIME_LIBRARY}
+  )
+endif()
