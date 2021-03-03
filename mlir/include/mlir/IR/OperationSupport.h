@@ -556,36 +556,6 @@ private:
 } // end namespace detail
 
 //===----------------------------------------------------------------------===//
-// ResultStorage
-//===----------------------------------------------------------------------===//
-
-namespace detail {
-/// This class provides the implementation for an in-line operation result. This
-/// is an operation result whose number can be stored inline inside of the bits
-/// of an Operation*.
-struct alignas(8) InLineOpResult : public IRObjectWithUseList<OpOperand> {};
-/// This class provides the implementation for an out-of-line operation result.
-/// This is an operation result whose number cannot be stored inline inside of
-/// the bits of an Operation*.
-struct alignas(8) TrailingOpResult : public IRObjectWithUseList<OpOperand> {
-  TrailingOpResult(uint64_t trailingResultNumber)
-      : trailingResultNumber(trailingResultNumber) {}
-
-  /// Returns the parent operation of this trailing result.
-  Operation *getOwner();
-
-  /// Return the proper result number of this op result.
-  unsigned getResultNumber() {
-    return trailingResultNumber + OpResult::getMaxInlineResults();
-  }
-
-  /// The trailing result number, or the offset from the beginning of the
-  /// trailing array.
-  uint64_t trailingResultNumber;
-};
-} // end namespace detail
-
-//===----------------------------------------------------------------------===//
 // OpPrintingFlags
 //===----------------------------------------------------------------------===//
 
@@ -757,53 +727,35 @@ private:
 
 /// This class implements the result iterators for the Operation class.
 class ResultRange final
-    : public llvm::indexed_accessor_range<ResultRange, Operation *, OpResult,
-                                          OpResult, OpResult> {
+    : public llvm::detail::indexed_accessor_range_base<
+          ResultRange, detail::OpResultImpl *, OpResult, OpResult, OpResult> {
 public:
-  using indexed_accessor_range<ResultRange, Operation *, OpResult, OpResult,
-                               OpResult>::indexed_accessor_range;
-  ResultRange(Operation *op);
+  using RangeBaseT::RangeBaseT;
 
   /// Returns the types of the values within this range.
-  using type_iterator = ArrayRef<Type>::iterator;
-  using type_range = ArrayRef<Type>;
-  type_range getTypes() const;
+  using type_iterator = ValueTypeIterator<iterator>;
+  using type_range = ValueTypeRange<ResultRange>;
+  type_range getTypes() const { return {begin(), end()}; }
   auto getType() const { return getTypes(); }
 
 private:
-  /// See `llvm::indexed_accessor_range` for details.
-  static OpResult dereference(Operation *op, ptrdiff_t index);
+  /// See `llvm::detail::indexed_accessor_range_base` for details.
+  static detail::OpResultImpl *offset_base(detail::OpResultImpl *object,
+                                           ptrdiff_t index) {
+    return object->getNextResultAtOffset(index);
+  }
+  /// See `llvm::detail::indexed_accessor_range_base` for details.
+  static OpResult dereference_iterator(detail::OpResultImpl *object,
+                                       ptrdiff_t index) {
+    return offset_base(object, index);
+  }
 
-  /// Allow access to `dereference_iterator`.
-  friend llvm::indexed_accessor_range<ResultRange, Operation *, OpResult,
-                                      OpResult, OpResult>;
+  /// Allow access to `offset_base` and `dereference_iterator`.
+  friend RangeBaseT;
 };
 
 //===----------------------------------------------------------------------===//
 // ValueRange
-
-namespace detail {
-/// The type representing the owner of a ValueRange. This is either a list of
-/// values, operands, or an Operation+start index for results.
-struct ValueRangeOwner {
-  ValueRangeOwner(const Value *owner) : ptr(owner), startIndex(0) {}
-  ValueRangeOwner(OpOperand *owner) : ptr(owner), startIndex(0) {}
-  ValueRangeOwner(Operation *owner, unsigned startIndex)
-      : ptr(owner), startIndex(startIndex) {}
-  bool operator==(const ValueRangeOwner &rhs) const { return ptr == rhs.ptr; }
-
-  /// The owner pointer of the range. The owner has represents three distinct
-  /// states:
-  /// const Value *: The owner is the base to a contiguous array of Value.
-  /// OpOperand *  : The owner is the base to a contiguous array of operands.
-  /// void*        : This owner is an Operation*. It is marked as void* here
-  ///                because the definition of Operation is not visible here.
-  PointerUnion<const Value *, OpOperand *, void *> ptr;
-
-  /// Ths start index into the range. This is only used for Operation* owners.
-  unsigned startIndex;
-};
-} // end namespace detail
 
 /// This class provides an abstraction over the different types of ranges over
 /// Values. In many cases, this prevents the need to explicitly materialize a
@@ -812,8 +764,15 @@ struct ValueRangeOwner {
 /// parameter.
 class ValueRange final
     : public llvm::detail::indexed_accessor_range_base<
-          ValueRange, detail::ValueRangeOwner, Value, Value, Value> {
+          ValueRange,
+          PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>,
+          Value, Value, Value> {
 public:
+  /// The type representing the owner of a ValueRange. This is either a list of
+  /// values, operands, or results.
+  using OwnerT =
+      PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>;
+
   using RangeBaseT::RangeBaseT;
 
   template <typename Arg,
@@ -841,8 +800,6 @@ public:
   auto getType() const { return getTypes(); }
 
 private:
-  using OwnerT = detail::ValueRangeOwner;
-
   /// See `llvm::detail::indexed_accessor_range_base` for details.
   static OwnerT offset_base(const OwnerT &owner, ptrdiff_t index);
   /// See `llvm::detail::indexed_accessor_range_base` for details.
