@@ -247,8 +247,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
     {
         const objc_opt_t *objc_opt = (objc_opt_t *)objc_opt_ro_ptr;
         const objc_opt_v14_t* objc_opt_v14 = (objc_opt_v14_t*)objc_opt_ro_ptr;
-        const bool is_v14_format = objc_opt->version >= 14;
-        if (is_v14_format)
+        if (objc_opt->version >= 14)
         {
             DEBUG_PRINTF ("objc_opt->version = %u\n", objc_opt_v14->version);
             DEBUG_PRINTF ("objc_opt->flags = %u\n", objc_opt_v14->flags);
@@ -266,7 +265,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
         if (objc_opt->version == 12 || objc_opt->version == 13 || objc_opt->version == 14 || objc_opt->version == 15)
         {
             const objc_clsopt_t* clsopt = NULL;
-            if (is_v14_format)
+            if (objc_opt->version >= 14)
                 clsopt = (const objc_clsopt_t*)((uint8_t *)objc_opt_v14 + objc_opt_v14->clsopt_offset);
             else
                 clsopt = (const objc_clsopt_t*)((uint8_t *)objc_opt + objc_opt->clsopt_offset);
