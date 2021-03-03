@@ -775,6 +775,12 @@ int main(int argc, char **argv) {
                 "full list of passes, see the '--print-passes' flag.\n";
       return 1;
     }
+    if (legacy::debugPassSpecified()) {
+      errs()
+          << "-debug-pass does not work with the new PM, either use "
+             "-debug-pass-manager, or use the legacy PM (-enable-new-pm=0)\n";
+      return 1;
+    }
     if (PassPipeline.getNumOccurrences() > 0 && PassList.size() > 0) {
       errs()
           << "Cannot specify passes via both -foo-pass and --passes=foo-pass\n";
