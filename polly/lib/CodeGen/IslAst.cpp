@@ -186,7 +186,7 @@ static isl_printer *cbPrintFor(__isl_take isl_printer *Printer,
 
   if (IslAstInfo::isExecutedInParallel(Node))
     Printer = printLine(Printer, OmpPragmaStr);
-  else if (IslAstInfo::isOutermostParallel(Node))
+  else if (IslAstInfo::isOutermostParallel(isl::manage_copy(Node)))
     Printer = printLine(Printer, KnownParallelStr + BrokenReductionsStr);
 
   isl_pw_aff_free(DD);
@@ -483,7 +483,7 @@ static void walkAstForStatistics(__isl_keep isl_ast_node *Ast) {
             NumParallel++;
           if (IslAstInfo::isInnermostParallel(isl::manage_copy(Node)))
             NumInnermostParallel++;
-          if (IslAstInfo::isOutermostParallel(Node))
+          if (IslAstInfo::isOutermostParallel(isl::manage_copy(Node)))
             NumOutermostParallel++;
           if (IslAstInfo::isReductionParallel(Node))
             NumReductionParallel++;
@@ -602,7 +602,7 @@ bool IslAstInfo::isInnermost(__isl_keep isl_ast_node *Node) {
 
 bool IslAstInfo::isParallel(__isl_keep isl_ast_node *Node) {
   return IslAstInfo::isInnermostParallel(isl::manage_copy(Node)) ||
-         IslAstInfo::isOutermostParallel(Node);
+         IslAstInfo::isOutermostParallel(isl::manage_copy(Node));
 }
 
 bool IslAstInfo::isInnermostParallel(const isl::ast_node &Node) {
@@ -610,8 +610,8 @@ bool IslAstInfo::isInnermostParallel(const isl::ast_node &Node) {
   return Payload && Payload->IsInnermostParallel;
 }
 
-bool IslAstInfo::isOutermostParallel(__isl_keep isl_ast_node *Node) {
-  IslAstUserPayload *Payload = getNodePayload(isl::manage_copy(Node));
+bool IslAstInfo::isOutermostParallel(const isl::ast_node &Node) {
+  IslAstUserPayload *Payload = getNodePayload(Node);
   return Payload && Payload->IsOutermostParallel;
 }
 
@@ -636,7 +636,8 @@ bool IslAstInfo::isExecutedInParallel(__isl_keep isl_ast_node *Node) {
   if (!PollyParallelForce && isInnermost(Node))
     return false;
 
-  return isOutermostParallel(Node) && !isReductionParallel(Node);
+  return isOutermostParallel(isl::manage_copy(Node)) &&
+         !isReductionParallel(Node);
 }
 
 __isl_give isl_union_map *

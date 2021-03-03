@@ -869,7 +869,7 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   if (IsDirect) {
     MIB.addGlobalAddress(Func);
   } else {
-    // Placehoder for the type index.
+    // Placeholder for the type index.
     MIB.addImm(0);
     // The table into which this call_indirect indexes.
     MCSymbolWasm *Table = WebAssembly::getOrCreateFunctionTableSymbol(

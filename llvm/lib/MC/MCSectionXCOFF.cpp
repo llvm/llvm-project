@@ -38,6 +38,15 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     return;
   }
 
+  // Initialized TLS data.
+  if (getKind().isThreadData()) {
+    // We only expect XMC_TL here for initialized TLS data.
+    if (getMappingClass() != XCOFF::XMC_TL)
+      report_fatal_error("Unhandled storage-mapping class for .tdata csect.");
+    printCsectDirective(OS);
+    return;
+  }
+
   if (getKind().isData()) {
     switch (getMappingClass()) {
     case XCOFF::XMC_RW:
@@ -57,16 +66,32 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     return;
   }
 
-  if (getKind().isBSSLocal() || getKind().isCommon()) {
+  // Common csect type (uninitialized storage) does not have to print csect
+  // directive for section switching.
+  if (getCSectType() == XCOFF::XTY_CM) {
     assert((getMappingClass() == XCOFF::XMC_RW ||
-            getMappingClass() == XCOFF::XMC_BS) &&
-           "Generated a storage-mapping class for a common/bss csect we don't "
+            getMappingClass() == XCOFF::XMC_BS ||
+            getMappingClass() == XCOFF::XMC_UL) &&
+           "Generated a storage-mapping class for a common/bss/tbss csect we "
+           "don't "
            "understand how to switch to.");
-    assert(getCSectType() == XCOFF::XTY_CM &&
-           "wrong csect type for .bss csect");
-    // Don't have to print a directive for switching to section for commons.
-    // '.comm' and '.lcomm' directives for the variable will create the needed
-    // csect.
+    // Common symbols and local zero-initialized symbols for TLS and Non-TLS are
+    // eligible for .bss/.tbss csect, getKind().isThreadBSS() is used to cover
+    // TLS common and zero-initialized local symbols since linkage type (in the
+    // GlobalVariable) is not accessible in this class.
+    assert((getKind().isBSSLocal() || getKind().isCommon() ||
+            getKind().isThreadBSS()) &&
+           "wrong symbol type for .bss/.tbss csect");
+    // Don't have to print a directive for switching to section for commons and
+    // zero-initialized TLS data. The '.comm' and '.lcomm' directives of the
+    // variable will create the needed csect.
+    return;
+  }
+
+  // Zero-initialized TLS data with weak or external linkage are not eligible to
+  // be put into common csect.
+  if (getKind().isThreadBSS()) {
+    printCsectDirective(OS);
     return;
   }
 

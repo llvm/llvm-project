@@ -41,6 +41,8 @@ static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
   switch (result.GetValueType()) {
   case Value::ValueType::Scalar:
     return result.GetScalar();
+  case Value::ValueType::LoadAddress:
+    return LLDB_INVALID_ADDRESS;
   case Value::ValueType::HostAddress: {
     // Convert small buffers to scalars to simplify the tests.
     DataBufferHeap &buf = result.GetBuffer();
@@ -344,6 +346,12 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   ASSERT_TRUE(process_sp);
 
   ExecutionContext exe_ctx(process_sp);
-  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit4, DW_OP_deref}, {}, {}, &exe_ctx),
+  // Implicit location: *0x4.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit4, DW_OP_deref, DW_OP_stack_value},
+                                {}, {}, &exe_ctx),
                        llvm::HasValue(GetScalar(32, 0x07060504, false)));
+  // Memory location: *(*0x4).
+  // Evaluate returns LLDB_INVALID_ADDRESS for all load addresses.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit4, DW_OP_deref}, {}, {}, &exe_ctx),
+                       llvm::HasValue(Scalar(LLDB_INVALID_ADDRESS)));
 }

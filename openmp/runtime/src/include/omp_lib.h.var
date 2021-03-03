@@ -214,6 +214,13 @@
       parameter(omp_pteam_mem_alloc=7)
       integer(kind=omp_allocator_handle_kind)omp_thread_mem_alloc
       parameter(omp_thread_mem_alloc=8)
+      ! Preview of target memory support
+      integer(kind=omp_allocator_handle_kind)llvm_omp_target_host_mem_alloc
+      parameter(llvm_omp_target_host_mem_alloc=100)
+      integer(kind=omp_allocator_handle_kind)llvm_omp_target_shared_mem_alloc
+      parameter(llvm_omp_target_shared_mem_alloc=101)
+      integer(kind=omp_allocator_handle_kind)llvm_omp_target_device_mem_alloc
+      parameter(llvm_omp_target_device_mem_alloc=102)
 
       integer(kind=omp_memspace_handle_kind)omp_default_mem_space
       parameter(omp_default_mem_space=0)
@@ -225,6 +232,13 @@
       parameter(omp_high_bw_mem_space=3)
       integer(kind=omp_memspace_handle_kind)omp_low_lat_mem_space
       parameter(omp_low_lat_mem_space=4)
+      ! Preview of target memory support
+      integer(kind=omp_memspace_handle_kind)llvm_omp_target_host_mem_space
+      parameter(llvm_omp_target_host_mem_space=100)
+      integer(kind=omp_memspace_handle_kind)llvm_omp_target_shared_mem_space
+      parameter(llvm_omp_target_shared_mem_space=101)
+      integer(kind=omp_memspace_handle_kind)llvm_omp_target_device_mem_space
+      parameter(llvm_omp_target_device_mem_space=102)
 
       integer(kind=omp_pause_resource_kind)omp_pause_resume
       parameter(omp_pause_resume=0)

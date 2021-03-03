@@ -1986,7 +1986,8 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
     LLVM_DEBUG(dbgs() << "Fold: " << *Cmp.MI << " and: " << *Br.MI);
     MachineInstr *NewBR =
         BuildMI(*MBB, Br.MI, Br.MI->getDebugLoc(), TII->get(Cmp.NewOpc))
-            .addReg(Reg, getKillRegState(RegKilled))
+            .addReg(Reg, getKillRegState(RegKilled) |
+                             getRegState(Cmp.MI->getOperand(0)))
             .addMBB(DestBB, Br.MI->getOperand(0).getTargetFlags());
 
     Cmp.MI->eraseFromParent();

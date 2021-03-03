@@ -2268,17 +2268,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_bind_front
-#     error "__cpp_lib_bind_front should be defined in c++20"
-#   endif
-#   if __cpp_lib_bind_front != 201907L
-#     error "__cpp_lib_bind_front should have the value 201907L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_bind_front
-#     error "__cpp_lib_bind_front should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_bind_front
+#   error "__cpp_lib_bind_front should be defined in c++20"
+# endif
+# if __cpp_lib_bind_front != 201907L
+#   error "__cpp_lib_bind_front should have the value 201907L in c++20"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -3481,17 +3475,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_bind_front
-#     error "__cpp_lib_bind_front should be defined in c++2b"
-#   endif
-#   if __cpp_lib_bind_front != 201907L
-#     error "__cpp_lib_bind_front should have the value 201907L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_bind_front
-#     error "__cpp_lib_bind_front should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_bind_front
+#   error "__cpp_lib_bind_front should be defined in c++2b"
+# endif
+# if __cpp_lib_bind_front != 201907L
+#   error "__cpp_lib_bind_front should have the value 201907L in c++2b"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

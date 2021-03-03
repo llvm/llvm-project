@@ -5683,13 +5683,6 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     "(const " << Target.getName() << "Subtarget *)&MF.getSubtarget(), &MF);\n"
     "}\n";
 
-  if (Target.getName() == "X86" || Target.getName() == "AArch64") {
-    // TODO: Implement PGSO.
-    OS << "static bool shouldOptForSize(const MachineFunction *MF) {\n";
-    OS << "    return MF->getFunction().hasOptSize();\n";
-    OS << "}\n\n";
-  }
-
   SubtargetFeatureInfo::emitComputeAvailableFeatures(
       Target.getName(), "InstructionSelector",
       "computeAvailableFunctionFeatures", FunctionFeatures, OS,

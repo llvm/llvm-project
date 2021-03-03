@@ -2842,7 +2842,6 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(<33 x i32> 
   ; GCN:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[INT]], [[C]](s64)
   ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 4 from %ir.idx.kernarg.offset.cast, align 8, addrspace 4)
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
-  ; GCN:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](p1)
   ; GCN:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_v33i32_func_v33i32_i32
   ; GCN:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2864,6 +2863,7 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(<33 x i32> 
   ; GCN:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; GCN:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; GCN:   $vgpr0 = COPY [[FRAME_INDEX]](p5)
+  ; GCN:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](p1)
   ; GCN:   $vgpr1 = COPY [[UV]](s32)
   ; GCN:   $vgpr2 = COPY [[UV1]](s32)
   ; GCN:   $vgpr3 = COPY [[LOAD1]](s32)

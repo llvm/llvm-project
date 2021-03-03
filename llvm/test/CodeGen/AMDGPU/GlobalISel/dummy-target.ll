@@ -81,12 +81,17 @@ define <2 x i16> @halfinsts_add_v2i16(<2 x i16> %arg0) #1 {
   ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
   ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[LSHR1]](s32)
   ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY4]], [[COPY5]]
+  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
   ; CHECK:   [[COPY6:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY6]], [[C1]]
   ; CHECK:   [[COPY7:%[0-9]+]]:_(s32) = COPY [[ADD1]](s32)
-  ; CHECK:   $vgpr0 = COPY [[COPY6]](s32)
-  ; CHECK:   $vgpr1 = COPY [[COPY7]](s32)
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY7]], [[C1]]
+  ; CHECK:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
+  ; CHECK:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; CHECK:   [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; CHECK:   $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
   ; CHECK:   [[COPY8:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
-  ; CHECK:   S_SETPC_B64_return [[COPY8]], implicit $vgpr0, implicit $vgpr1
+  ; CHECK:   S_SETPC_B64_return [[COPY8]], implicit $vgpr0
   %add = add <2 x i16> %arg0, %arg0
   ret <2 x i16> %add
 }

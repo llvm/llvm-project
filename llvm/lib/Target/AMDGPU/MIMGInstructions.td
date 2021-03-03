@@ -1035,7 +1035,7 @@ defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<0xef>, AMDGPUSample_c_cd
 //def IMAGE_SAMPLER : MIMG_NoPattern_ <"image_sampler", 0x0000007f>;
 
 let SubtargetPredicate = HasGFX10_BEncoding in
-defm IMAGE_MSAA_LOAD : MIMG_NoSampler <mimgopc<0x80>, "image_msaa_load", 1, 0, 0, 1>;
+defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<0x80>, "image_msaa_load", 1, 0, 0, 1>;
 
 defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0xe6>, "image_bvh_intersect_ray", 11, 0>;
 defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0xe6>, "image_bvh_intersect_ray", 8, 1>;

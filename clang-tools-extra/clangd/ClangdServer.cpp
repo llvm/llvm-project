@@ -194,13 +194,14 @@ ClangdServer::~ClangdServer() {
 void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
                                llvm::StringRef Version,
                                WantDiagnostics WantDiags, bool ForceRebuild) {
+  std::string ActualVersion = DraftMgr.addDraft(File, Version, Contents);
   ParseOptions Opts;
 
   // Compile command is set asynchronously during update, as it can be slow.
   ParseInputs Inputs;
   Inputs.TFS = &TFS;
   Inputs.Contents = std::string(Contents);
-  Inputs.Version = Version.str();
+  Inputs.Version = std::move(ActualVersion);
   Inputs.ForceRebuild = ForceRebuild;
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;
@@ -209,6 +210,23 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
   if (NewFile && BackgroundIdx)
     BackgroundIdx->boostRelated(File);
+}
+
+void ClangdServer::reparseOpenFilesIfNeeded(
+    llvm::function_ref<bool(llvm::StringRef File)> Filter) {
+  // Reparse only opened files that were modified.
+  for (const Path &FilePath : DraftMgr.getActiveFiles())
+    if (Filter(FilePath))
+      if (auto Draft = DraftMgr.getDraft(FilePath)) // else disappeared in race?
+        addDocument(FilePath, std::move(Draft->Contents), Draft->Version,
+                    WantDiagnostics::Auto);
+}
+
+llvm::Optional<std::string> ClangdServer::getDraft(PathRef File) const {
+  auto Draft = DraftMgr.getDraft(File);
+  if (!Draft)
+    return llvm::None;
+  return std::move(Draft->Contents);
 }
 
 std::function<Context(PathRef)>
@@ -288,7 +306,10 @@ ClangdServer::createConfiguredContextProvider(const config::Provider *Provider,
   };
 }
 
-void ClangdServer::removeDocument(PathRef File) { WorkScheduler->remove(File); }
+void ClangdServer::removeDocument(PathRef File) {
+  DraftMgr.removeDraft(File);
+  WorkScheduler->remove(File);
+}
 
 void ClangdServer::codeComplete(PathRef File, Position Pos,
                                 const clangd::CodeCompleteOptions &Opts,
@@ -372,31 +393,55 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
                                  std::move(Action));
 }
 
-void ClangdServer::formatRange(PathRef File, llvm::StringRef Code, Range Rng,
-                               Callback<tooling::Replacements> CB) {
-  llvm::Expected<size_t> Begin = positionToOffset(Code, Rng.start);
-  if (!Begin)
-    return CB(Begin.takeError());
-  llvm::Expected<size_t> End = positionToOffset(Code, Rng.end);
-  if (!End)
-    return CB(End.takeError());
-  formatCode(File, Code, {tooling::Range(*Begin, *End - *Begin)},
-             std::move(CB));
-}
-
-void ClangdServer::formatFile(PathRef File, llvm::StringRef Code,
+void ClangdServer::formatFile(PathRef File, llvm::Optional<Range> Rng,
                               Callback<tooling::Replacements> CB) {
-  // Format everything.
-  formatCode(File, Code, {tooling::Range(0, Code.size())}, std::move(CB));
+  auto Code = getDraft(File);
+  if (!Code)
+    return CB(llvm::make_error<LSPError>("trying to format non-added document",
+                                         ErrorCode::InvalidParams));
+  tooling::Range RequestedRange;
+  if (Rng) {
+    llvm::Expected<size_t> Begin = positionToOffset(*Code, Rng->start);
+    if (!Begin)
+      return CB(Begin.takeError());
+    llvm::Expected<size_t> End = positionToOffset(*Code, Rng->end);
+    if (!End)
+      return CB(End.takeError());
+    RequestedRange = tooling::Range(*Begin, *End - *Begin);
+  } else {
+    RequestedRange = tooling::Range(0, Code->size());
+  }
+
+  // Call clang-format.
+  auto Action = [File = File.str(), Code = std::move(*Code),
+                 Ranges = std::vector<tooling::Range>{RequestedRange},
+                 CB = std::move(CB), this]() mutable {
+    format::FormatStyle Style = getFormatStyleForFile(File, Code, TFS);
+    tooling::Replacements IncludeReplaces =
+        format::sortIncludes(Style, Code, Ranges, File);
+    auto Changed = tooling::applyAllReplacements(Code, IncludeReplaces);
+    if (!Changed)
+      return CB(Changed.takeError());
+
+    CB(IncludeReplaces.merge(format::reformat(
+        Style, *Changed,
+        tooling::calculateRangesAfterReplacements(IncludeReplaces, Ranges),
+        File)));
+  };
+  WorkScheduler->runQuick("Format", File, std::move(Action));
 }
 
-void ClangdServer::formatOnType(PathRef File, llvm::StringRef Code,
-                                Position Pos, StringRef TriggerText,
+void ClangdServer::formatOnType(PathRef File, Position Pos,
+                                StringRef TriggerText,
                                 Callback<std::vector<TextEdit>> CB) {
-  llvm::Expected<size_t> CursorPos = positionToOffset(Code, Pos);
+  auto Code = getDraft(File);
+  if (!Code)
+    return CB(llvm::make_error<LSPError>("trying to format non-added document",
+                                         ErrorCode::InvalidParams));
+  llvm::Expected<size_t> CursorPos = positionToOffset(*Code, Pos);
   if (!CursorPos)
     return CB(CursorPos.takeError());
-  auto Action = [File = File.str(), Code = Code.str(),
+  auto Action = [File = File.str(), Code = std::move(*Code),
                  TriggerText = TriggerText.str(), CursorPos = *CursorPos,
                  CB = std::move(CB), this]() mutable {
     auto Style = format::getStyle(format::DefaultFormatStyle, File,
@@ -614,27 +659,6 @@ void ClangdServer::switchSourceHeader(
     CB(getCorrespondingHeaderOrSource(Path, InpAST->AST, Index));
   };
   WorkScheduler->runWithAST("SwitchHeaderSource", Path, std::move(Action));
-}
-
-void ClangdServer::formatCode(PathRef File, llvm::StringRef Code,
-                              llvm::ArrayRef<tooling::Range> Ranges,
-                              Callback<tooling::Replacements> CB) {
-  // Call clang-format.
-  auto Action = [File = File.str(), Code = Code.str(), Ranges = Ranges.vec(),
-                 CB = std::move(CB), this]() mutable {
-    format::FormatStyle Style = getFormatStyleForFile(File, Code, TFS);
-    tooling::Replacements IncludeReplaces =
-        format::sortIncludes(Style, Code, Ranges, File);
-    auto Changed = tooling::applyAllReplacements(Code, IncludeReplaces);
-    if (!Changed)
-      return CB(Changed.takeError());
-
-    CB(IncludeReplaces.merge(format::reformat(
-        Style, *Changed,
-        tooling::calculateRangesAfterReplacements(IncludeReplaces, Ranges),
-        File)));
-  };
-  WorkScheduler->runQuick("Format", File, std::move(Action));
 }
 
 void ClangdServer::findDocumentHighlights(
