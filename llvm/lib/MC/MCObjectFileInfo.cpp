@@ -888,6 +888,11 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
       XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_RO, XCOFF::XTY_SD),
       /* MultiSymbolsAllowed*/ true);
 
+  TLSDataSection = Ctx->getXCOFFSection(
+      ".tdata", SectionKind::getThreadData(),
+      XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_TL, XCOFF::XTY_SD),
+      /* MultiSymbolsAllowed*/ true);
+
   TOCBaseSection = Ctx->getXCOFFSection(
       "TOC", SectionKind::getData(),
       XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_TC0,
