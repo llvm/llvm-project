@@ -229,20 +229,14 @@ define void @insert_v8i32_v2i32_2(<8 x i32>* %vp, <2 x i32>* %svp) {
 ;
 ; LMULMAX1-LABEL: insert_v8i32_v2i32_2:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi sp, sp, -32
-; LMULMAX1-NEXT:    .cfi_def_cfa_offset 32
 ; LMULMAX1-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
 ; LMULMAX1-NEXT:    vle32.v v25, (a1)
 ; LMULMAX1-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; LMULMAX1-NEXT:    vle32.v v26, (a0)
-; LMULMAX1-NEXT:    vse32.v v26, (sp)
-; LMULMAX1-NEXT:    addi a1, sp, 8
-; LMULMAX1-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
-; LMULMAX1-NEXT:    vse32.v v25, (a1)
+; LMULMAX1-NEXT:    vsetivli a1, 4, e32,m1,tu,mu
+; LMULMAX1-NEXT:    vslideup.vi v26, v25, 2
 ; LMULMAX1-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
-; LMULMAX1-NEXT:    vle32.v v25, (sp)
-; LMULMAX1-NEXT:    vse32.v v25, (a0)
-; LMULMAX1-NEXT:    addi sp, sp, 32
+; LMULMAX1-NEXT:    vse32.v v26, (a0)
 ; LMULMAX1-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
   %vec = load <8 x i32>, <8 x i32>* %vp
@@ -266,22 +260,15 @@ define void @insert_v8i32_v2i32_6(<8 x i32>* %vp, <2 x i32>* %svp) {
 ;
 ; LMULMAX1-LABEL: insert_v8i32_v2i32_6:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi sp, sp, -32
-; LMULMAX1-NEXT:    .cfi_def_cfa_offset 32
 ; LMULMAX1-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
 ; LMULMAX1-NEXT:    vle32.v v25, (a1)
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; LMULMAX1-NEXT:    vle32.v v26, (a0)
-; LMULMAX1-NEXT:    addi a1, sp, 16
-; LMULMAX1-NEXT:    vse32.v v26, (a1)
-; LMULMAX1-NEXT:    addi a2, sp, 24
-; LMULMAX1-NEXT:    vsetivli a3, 2, e32,m1,ta,mu
-; LMULMAX1-NEXT:    vse32.v v25, (a2)
-; LMULMAX1-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
-; LMULMAX1-NEXT:    vle32.v v25, (a1)
-; LMULMAX1-NEXT:    vse32.v v25, (a0)
-; LMULMAX1-NEXT:    addi sp, sp, 32
+; LMULMAX1-NEXT:    vsetivli a1, 4, e32,m1,tu,mu
+; LMULMAX1-NEXT:    vslideup.vi v26, v25, 2
+; LMULMAX1-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
+; LMULMAX1-NEXT:    vse32.v v26, (a0)
 ; LMULMAX1-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
   %vec = load <8 x i32>, <8 x i32>* %vp
@@ -302,20 +289,12 @@ define void @insert_v8i32_undef_v2i32_6(<8 x i32>* %vp, <2 x i32>* %svp) {
 ;
 ; LMULMAX1-LABEL: insert_v8i32_undef_v2i32_6:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi sp, sp, -32
-; LMULMAX1-NEXT:    .cfi_def_cfa_offset 32
 ; LMULMAX1-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
 ; LMULMAX1-NEXT:    vle32.v v25, (a1)
-; LMULMAX1-NEXT:    addi a1, sp, 24
-; LMULMAX1-NEXT:    vse32.v v25, (a1)
 ; LMULMAX1-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
-; LMULMAX1-NEXT:    vle32.v v25, (sp)
-; LMULMAX1-NEXT:    addi a1, sp, 16
-; LMULMAX1-NEXT:    vle32.v v26, (a1)
-; LMULMAX1-NEXT:    vse32.v v25, (a0)
+; LMULMAX1-NEXT:    vslideup.vi v26, v25, 2
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse32.v v26, (a0)
-; LMULMAX1-NEXT:    addi sp, sp, 32
 ; LMULMAX1-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
   %v = call <8 x i32> @llvm.experimental.vector.insert.v2i32.v8i32(<8 x i32> undef, <2 x i32> %sv, i64 6)
@@ -393,15 +372,38 @@ define void @insert_v32i1_v8i1_0(<32 x i1>* %vp, <8 x i1>* %svp) {
   ret void
 }
 
-; FIXME: SplitVecRes_INSERT_SUBVECTOR crashes on this one when trying to spill
-; to the stack.
-;define void @insert_v32i1_v8i1_16(<32 x i1>* %vp, <8 x i1>* %svp) {
-;  %v = load <32 x i1>, <32 x i1>* %vp
-;  %sv = load <8 x i1>, <8 x i1>* %svp
-;  %c = call <32 x i1> @llvm.experimental.vector.insert.v8i1.v32i1(<32 x i1> %v, <8 x i1> %sv, i64 16)
-;  store <32 x i1> %c, <32 x i1>* %vp
-;  ret void
-;}
+define void @insert_v32i1_v8i1_16(<32 x i1>* %vp, <8 x i1>* %svp) {
+; LMULMAX2-LABEL: insert_v32i1_v8i1_16:
+; LMULMAX2:       # %bb.0:
+; LMULMAX2-NEXT:    addi a2, zero, 32
+; LMULMAX2-NEXT:    vsetvli a3, a2, e8,m2,ta,mu
+; LMULMAX2-NEXT:    vle1.v v25, (a0)
+; LMULMAX2-NEXT:    vsetivli a3, 8, e8,m1,ta,mu
+; LMULMAX2-NEXT:    vle1.v v26, (a1)
+; LMULMAX2-NEXT:    vsetivli a1, 3, e8,m1,tu,mu
+; LMULMAX2-NEXT:    vslideup.vi v25, v26, 2
+; LMULMAX2-NEXT:    vsetvli a1, a2, e8,m2,ta,mu
+; LMULMAX2-NEXT:    vse1.v v25, (a0)
+; LMULMAX2-NEXT:    ret
+;
+; LMULMAX1-LABEL: insert_v32i1_v8i1_16:
+; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    addi a0, a0, 2
+; LMULMAX1-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
+; LMULMAX1-NEXT:    vle1.v v25, (a0)
+; LMULMAX1-NEXT:    vsetivli a2, 8, e8,m1,ta,mu
+; LMULMAX1-NEXT:    vle1.v v26, (a1)
+; LMULMAX1-NEXT:    vsetivli a1, 1, e8,m1,tu,mu
+; LMULMAX1-NEXT:    vslideup.vi v25, v26, 0
+; LMULMAX1-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
+; LMULMAX1-NEXT:    vse1.v v25, (a0)
+; LMULMAX1-NEXT:    ret
+  %v = load <32 x i1>, <32 x i1>* %vp
+  %sv = load <8 x i1>, <8 x i1>* %svp
+  %c = call <32 x i1> @llvm.experimental.vector.insert.v8i1.v32i1(<32 x i1> %v, <8 x i1> %sv, i64 16)
+  store <32 x i1> %c, <32 x i1>* %vp
+  ret void
+}
 
 define void @insert_v8i1_v4i1_0(<8 x i1>* %vp, <4 x i1>* %svp) {
 ; CHECK-LABEL: insert_v8i1_v4i1_0:
