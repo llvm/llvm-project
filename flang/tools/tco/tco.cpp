@@ -52,6 +52,8 @@ static cl::opt<std::string> targetTriple("target",
                                          cl::desc("specify a target triple"),
                                          cl::init("native"));
 
+#include "flang/Tools/CLOptions.inc"
+
 static void printModuleBody(mlir::ModuleOp mod, raw_ostream &output) {
   for (auto &op : mod.getBody()->without_terminator())
     output << op << '\n';
@@ -125,8 +127,8 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     // pm.addPass(fir::createMemToRegPass());
     pm.addPass(fir::createFirCodeGenRewritePass());
     pm.addPass(fir::createFirTargetRewritePass());
-    pm.addPass(fir::createFIRToLLVMPass());
-    pm.addPass(fir::createLLVMDialectToLLVMPass(out.os()));
+    fir::addFIRToLLVMPass(pm);
+    fir::addLLVMDialectToLLVMPass(pm, out.os());
   }
 
   // run the pass manager
