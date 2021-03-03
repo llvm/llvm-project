@@ -26,16 +26,16 @@
 
 ; ALIGN:Input was:
 ; ALIGN-NEXT:<<<<<<
-; ALIGN-NEXT:           1: hello world
+; ALIGN-NEXT:           1: hello world 
 ; ALIGN-NEXT:check:1       ^~~~~
-; ALIGN-NEXT:check:2'0           X~~~~ error: no match found
-; ALIGN-NEXT:           2: goodbye
-; ALIGN-NEXT:check:2'0     ~~~~~~~
-; ALIGN-NEXT:           3: world
-; ALIGN-NEXT:check:2'0     ~~~~~
-; ALIGN-NEXT:           4: unicorn
-; ALIGN-NEXT:check:2'0     ~~~~~~~
-; ALIGN-NEXT:check:2'1     ?       possible intended match
+; ALIGN-NEXT:check:2'0          X~~~~~~ error: no match found
+; ALIGN-NEXT:           2: goodbye 
+; ALIGN-NEXT:check:2'0     ~~~~~~~~
+; ALIGN-NEXT:           3: world 
+; ALIGN-NEXT:check:2'0     ~~~~~~
+; ALIGN-NEXT:           4: unicorn 
+; ALIGN-NEXT:check:2'0     ~~~~~~~~
+; ALIGN-NEXT:check:2'1     ?        possible intended match
 ; ALIGN-NEXT:>>>>>>
 ; ALIGN-NOT:{{.}}
 
@@ -70,13 +70,14 @@
 ; CHK: {{.*}}possible intended match here{{.*}}
 
 ; CHK:        <<<<<<
-; CHK-NEXT:              1: hello
+; CHK-NEXT:              1: hello 
 ; CHK-V-NEXT: check:1       ^~~~~
-; CHK-NEXT:              2: again
-; CHK-NEXT:   check:2'0     X~~~~ error: no match found
-; CHK-NEXT:              3: whirled
-; CHK-NEXT:   check:2'0     ~~~~~~~
-; CHK-NEXT:   check:2'1     ?       possible intended match
+; CHK-NEXT:   check:2'0          X error: no match found
+; CHK-NEXT:              2: again 
+; CHK-NEXT:   check:2'0     ~~~~~~
+; CHK-NEXT:              3: whirled 
+; CHK-NEXT:   check:2'0     ~~~~~~~~
+; CHK-NEXT:   check:2'1     ?        possible intended match
 ; CHK-NEXT:   >>>>>>
 ; CHK-NOT:    {{.}}
 
@@ -109,13 +110,17 @@
 ; CNT: {{.*}}error:{{.*}}
 
 ; CNT:          <<<<<<
-; CNT-NEXT:                1: pete
+; CNT-NEXT:                1: pete 
 ; CNT-V-NEXT:   count:1'0     ^~~~
-; CNT-NEXT:                2: repete
+; CNT-NEXT:                2: repete 
 ; CNT-V-NEXT:   count:1'1       ^~~~
-; CNT-NEXT:                3: repeat
-; CNT-Q-NEXT:   count:1       X~~~~~ error: no match found
-; CNT-V-NEXT:   count:1'2     X~~~~~ error: no match found
+; CNT-Q-NEXT:   count:1'0           X error: no match found
+; CNT-V-NEXT:   count:1'2           X error: no match found
+; CNT-NEXT:                3: repeat 
+; CNT-Q-NEXT:   count:1'0     ~~~~~~~
+; CNT-Q-NEXT:   count:1'1     ?       possible intended match
+; CNT-V-NEXT:   count:1'2     ~~~~~~~
+; CNT-V-NEXT:   count:1'3     ?       possible intended match
 ; CNT-NEXT:     >>>>>>
 ; CNT-NOT:      {{.}}
 
@@ -149,12 +154,11 @@
 ; NXT: {{.*}}error:{{.*}}
 
 ; NXT:        <<<<<<
-; NXT-NEXT:            1: hello
+; NXT-NEXT:            1: hello 
 ; NXT-V-NEXT: check:1     ^~~~~
-; NXT-NEXT:            2: again
+; NXT-NEXT:            2: again 
 ; NXT-V-NEXT: next:2      ^~~~~
-; NXT-NEXT:            3:
-; NXT-NEXT:   next:3      X error: no match found
+; NXT-NEXT:   next:3           X error: no match found
 ; NXT-NEXT:   >>>>>>
 ; NXT-NOT:    {{.}}
 
@@ -168,11 +172,11 @@
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=NXT2
 
 ; NXT2:      <<<<<<
-; NXT2-NEXT:         1: hello
-; NXT2-NEXT:         2: again
-; NXT2-NEXT:         3: yonder
-; NXT2-NEXT:         4: world
-; NXT2-NEXT: next:3     !~~~~ error: match on wrong line
+; NXT2-NEXT:         1: hello 
+; NXT2-NEXT:         2: again 
+; NXT2-NEXT:         3: yonder 
+; NXT2-NEXT:         4: world 
+; NXT2-NEXT: next:3     !~~~~  error: match on wrong line
 ; NXT2-NEXT: >>>>>>
 ; NXT2-NOT:  {{.}}
 
@@ -206,10 +210,10 @@
 ; SAM: {{.*}}error:{{.*}}
 
 ; SAM:        <<<<<<
-; SAM-NEXT:            1: hello world!
+; SAM-NEXT:            1: hello world! 
 ; SAM-V-NEXT: check:1     ^~~~~
 ; SAM-V-NEXT: same:2            ^~~~~
-; SAM-NEXT:   same:3                 X error: no match found
+; SAM-NEXT:   same:3                 X~ error: no match found
 ; SAM-NEXT:   >>>>>>
 ; SAM-NOT:    {{.}}
 
@@ -226,11 +230,11 @@
 ; SAM2: {{.*}}error:{{.*}}
 
 ; SAM2:      <<<<<<
-; SAM2-NEXT:          1: hello world!
+; SAM2-NEXT:          1: hello world! 
 ; SAM2-NEXT: check:1     ^~~~~
 ; SAM2-NEXT: same:2            ^~~~~
-; SAM2-NEXT:          2: again
-; SAM2-NEXT: same:3      !~~~~ error: match on wrong line
+; SAM2-NEXT:          2: again 
+; SAM2-NEXT: same:3      !~~~~  error: match on wrong line
 ; SAM2-NEXT: >>>>>>
 ; SAM2-NOT:  {{.}}
 
@@ -273,13 +277,14 @@
 ; EMP: {{.*}}error:{{.*}}
 
 ; EMP:        <<<<<<
-; EMP-NEXT:            1: hello
+; EMP-NEXT:            1: hello 
 ; EMP-V-NEXT: check:1     ^~~~~
 ; EMP-NEXT:            2:
 ; EMP-V-NEXT: empty:2     ^
-; EMP-NEXT:            3: world
-; EMP-NEXT:   empty:3     X~~~~ error: no match found
-; EMP-NEXT:            4: label
+; EMP-NEXT:   empty:3          X error: no match found
+; EMP-NEXT:            3: world 
+; EMP-NEXT:   empty:3     ~~~~~~
+; EMP-NEXT:            4: label 
 ; EMP-V-NEXT: label:4     ^~~~~
 ; EMP-NEXT:   empty:3     ~~~~~
 ; EMP-NEXT:   >>>>>>
@@ -310,11 +315,11 @@
 ; EMP2: {{.*}}error:{{.*}}
 
 ; EMP2:        <<<<<<
-; EMP2-NEXT:            1: hello
+; EMP2-NEXT:            1: hello 
 ; EMP2-V-NEXT: check:1     ^~~~~
-; EMP2-NEXT:            2: world
+; EMP2-NEXT:            2: world 
 ; EMP2-NEXT:            3:
-; EMP2-NEXT:   empty:2     !     error: match on wrong line
+; EMP2-NEXT:   empty:2     !      error: match on wrong line
 ; EMP2-NEXT:   >>>>>>
 ; EMP2-NOT:    {{.}}
 
@@ -348,13 +353,13 @@
 ; NOT: {{.*}}error:{{.*}}
 
 ; NOT:         <<<<<<
-; NOT-NEXT:           1: hello
-; NOT-VV-NEXT: not:1     X~~~~
-; NOT-NEXT:           2: world
-; NOT-VV-NEXT: not:1     ~~~~~
-; NOT-NEXT:    not:2     !~~~~ error: no match expected
-; NOT-NEXT:           3: again
-; NOT-VV-NEXT: not:1     ~~~~~
+; NOT-NEXT:           1: hello 
+; NOT-VV-NEXT: not:1     X~~~~~
+; NOT-NEXT:           2: world 
+; NOT-VV-NEXT: not:1     ~~~~~~
+; NOT-NEXT:    not:2     !~~~~  error: no match expected
+; NOT-NEXT:           3: again 
+; NOT-VV-NEXT: not:1     ~~~~~~
 ; NOT-VV-NEXT:        4:
 ; NOT-VV-NEXT: eof:2     ^
 ; NOT-NEXT:    >>>>>>
@@ -381,12 +386,12 @@
 ; NOT2: {{.*}}error:{{.*}}
 
 ; NOT2:         <<<<<<
-; NOT2-NEXT:             1: hello
-; NOT2-VV-NEXT: not:1       X~~~~
-; NOT2-NEXT:             2: world
-; NOT2-VV-NEXT: not:1       ~~~~~
-; NOT2-NEXT:    not:2       !~~~~ error: no match expected
-; NOT2-NEXT:             3: again
+; NOT2-NEXT:             1: hello 
+; NOT2-VV-NEXT: not:1       X~~~~~
+; NOT2-NEXT:             2: world 
+; NOT2-VV-NEXT: not:1       ~~~~~~
+; NOT2-NEXT:    not:2       !~~~~  error: no match expected
+; NOT2-NEXT:             3: again 
 ; NOT2-V-NEXT:  check:3       ^~~
 ; NOT2-VV-NEXT: not:1       ~~
 ; NOT2-NEXT:    >>>>>>
@@ -431,18 +436,21 @@
 ; DAG: {{.*}}error:{{.*}}
 
 ; DAG:         <<<<<<
-; DAG-NEXT:             1: abc
+; DAG-NEXT:             1: abc 
 ; DAG-V-NEXT:  dag:2       ^~~
-; DAG-VV-NEXT: dag:3'0     !~~ discard: overlaps earlier match
-; DAG-NEXT:             2: def
+; DAG-VV-NEXT: dag:3'0     !~~  discard: overlaps earlier match
+; DAG-NEXT:             2: def 
 ; DAG-V-NEXT:  dag:1       ^~~
-; DAG-VV-NEXT: dag:4'0     !~~ discard: overlaps earlier match
-; DAG-NEXT:             3: abc
+; DAG-VV-NEXT: dag:4'0     !~~  discard: overlaps earlier match
+; DAG-Q-NEXT:  dag:4          X error: no match found
+; DAG-VQ-NEXT: dag:4          X error: no match found
+; DAG-VV-NEXT: dag:4'1        X error: no match found
+; DAG-NEXT:             3: abc 
 ; DAG-VQ-NEXT: dag:3       ^~~
 ; DAG-VV-NEXT: dag:3'1     ^~~
-; DAG-Q-NEXT:  dag:4       X~~ error: no match found
-; DAG-VQ-NEXT: dag:4       X~~ error: no match found
-; DAG-VV-NEXT: dag:4'1     X~~ error: no match found
+; DAG-Q-NEXT:  dag:4       ~~~~
+; DAG-VQ-NEXT: dag:4       ~~~~
+; DAG-VV-NEXT: dag:4'1     ~~~~
 ; DAG-NEXT:    >>>>>>
 ; DAG-NOT:     {{.}}
 
@@ -476,20 +484,20 @@
 ; DAG1L:{{.*}}error:{{.*}}
 
 ;         DAG1L:<<<<<<
-;    DAG1L-NEXT:         1: abc def abc def
+;    DAG1L-NEXT:         1: abc def abc def 
 ;  DAG1L-V-NEXT:dag:1           ^~~
 ;  DAG1L-V-NEXT:dag:2        ^~
-; DAG1L-VV-NEXT:dag:3'0     !~~             discard: overlaps earlier match
+; DAG1L-VV-NEXT:dag:3'0     !~~              discard: overlaps earlier match
 ; DAG1L-VQ-NEXT:dag:3               ^~~
 ; DAG1L-VV-NEXT:dag:3'1             ^~~
-; DAG1L-VV-NEXT:dag:4'0         !~          discard: overlaps earlier match
+; DAG1L-VV-NEXT:dag:4'0         !~           discard: overlaps earlier match
 ; DAG1L-VQ-NEXT:dag:4                   ^~
 ; DAG1L-VV-NEXT:dag:4'1                 ^~
-; DAG1L-VV-NEXT:dag:5'0         !~~         discard: overlaps earlier match
-; DAG1L-VV-NEXT:dag:5'1                 !~~ discard: overlaps earlier match
-;  DAG1L-Q-NEXT:dag:5                     X error: no match found
-; DAG1L-VQ-NEXT:dag:5                     X error: no match found
-; DAG1L-VV-NEXT:dag:5'2                   X error: no match found
+; DAG1L-VV-NEXT:dag:5'0         !~~          discard: overlaps earlier match
+; DAG1L-VV-NEXT:dag:5'1                 !~~  discard: overlaps earlier match
+;  DAG1L-Q-NEXT:dag:5                     X~ error: no match found
+; DAG1L-VQ-NEXT:dag:5                     X~ error: no match found
+; DAG1L-VV-NEXT:dag:5'2                   X~ error: no match found
 ;    DAG1L-NEXT:>>>>>>
 ;     DAG1L-NOT:{{.}}
 
@@ -529,16 +537,17 @@
 ; LAB: {{.*}}possible intended match{{.*}}
 
 ; LAB:         <<<<<<
-; LAB-NEXT:               1: lab0
+; LAB-NEXT:               1: lab0 
 ; LAB-V-NEXT:  label:1'0     ^~~~
 ; LAB-V-NEXT:  label:1'1     ^~~~
-; LAB-NEXT:               2: foo
-; LAB-NEXT:    label:3'0     X~~ error: no match found
-; LAB-NEXT:               3: lab1
+; LAB-NEXT:    label:3'0         X error: no match found
+; LAB-NEXT:               2: foo 
 ; LAB-NEXT:    label:3'0     ~~~~
-; LAB-NEXT:    label:3'1     ?    possible intended match
-; LAB-NEXT:               4: bar
-; LAB-NEXT:    label:3'0     ~~~
+; LAB-NEXT:               3: lab1 
+; LAB-NEXT:    label:3'0     ~~~~~
+; LAB-NEXT:    label:3'1     ?     possible intended match
+; LAB-NEXT:               4: bar 
+; LAB-NEXT:    label:3'0     ~~~~
 ; LAB-NEXT:    >>>>>>
 ; LAB-NOT:     {{.}}
 
@@ -584,7 +593,7 @@
 ; IMPNOT:{{.*}}error:{{.*}}
 
 ;         IMPNOT:<<<<<<
-;    IMPNOT-NEXT:          1: hello world again!
+;    IMPNOT-NEXT:          1: hello world again! 
 ;  IMPNOT-V-NEXT:check:1      ^~~
 ; IMPNOT-VV-NEXT:not:imp1     X
 ; IMPNOT-VV-NEXT:not:imp2     X
@@ -596,7 +605,7 @@
 ;  IMPNOT-V-NEXT:check:3                       ^
 ; IMPNOT-VV-NEXT:not:imp1              X~~~~~~~
 ; IMPNOT-VV-NEXT:not:imp2              X~~~~~~~
-;    IMPNOT-NEXT:not:imp3                 !~~~~  error: no match expected
+;    IMPNOT-NEXT:not:imp3                 !~~~~   error: no match expected
 ;    IMPNOT-NEXT:>>>>>>
 ;     IMPNOT-NOT:{{.}}
 
@@ -617,16 +626,17 @@
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=SUBST-POS
 
 ;      SUBST-POS:<<<<<<
-; SUBST-POS-NEXT:           1: def-match1 def-match2
+; SUBST-POS-NEXT:           1: def-match1 def-match2 
 ; SUBST-POS-NEXT:check:1'0     ^~~~~~~~~~~~~~~~~~~~~
-; SUBST-POS-NEXT:check:1'1                           with "DEF_MATCH1" equal to "def-match1"
-; SUBST-POS-NEXT:check:1'2                           with "DEF_MATCH2" equal to "def-match2"
-; SUBST-POS-NEXT:           2: def-match1 def-nomatch
-; SUBST-POS-NEXT:check:2'0     X~~~~~~~~~~~~~~~~~~~~~ error: no match found
+; SUBST-POS-NEXT:check:1'1                            with "DEF_MATCH1" equal to "def-match1"
+; SUBST-POS-NEXT:check:1'2                            with "DEF_MATCH2" equal to "def-match2"
+; SUBST-POS-NEXT:check:2'0                          X error: no match found
 ; SUBST-POS-NEXT:check:2'1                            with "DEF_MATCH1" equal to "def-match1"
 ; SUBST-POS-NEXT:check:2'2                            uses undefined variable(s): "UNDEF"
 ; SUBST-POS-NEXT:check:2'3                            with "DEF_NOMATCH" equal to "foobar"
-; SUBST-POS-NEXT:check:2'4              ?             possible intended match
+; SUBST-POS-NEXT:           2: def-match1 def-nomatch 
+; SUBST-POS-NEXT:check:2'0     ~~~~~~~~~~~~~~~~~~~~~~~
+; SUBST-POS-NEXT:check:2'4              ?              possible intended match
 ; SUBST-POS-NEXT:>>>>>>
 
 ;--------------------------------------------------
@@ -653,17 +663,17 @@
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=SUBST-NEG
 
 ;      SUBST-NEG:<<<<<<
-; SUBST-NEG-NEXT:         1: def-match1 def-nomatch
-; SUBST-NEG-NEXT:not:1'0     X~~~~~~~~~~~~~~~~~~~~~
-; SUBST-NEG-NEXT:not:1'1                            with "DEF_MATCH1" equal to "def-match1"
-; SUBST-NEG-NEXT:not:1'2                            uses undefined variable(s): "UNDEF"
-; SUBST-NEG-NEXT:not:1'3                            with "DEF_NOMATCH" equal to "foobar"
-; SUBST-NEG-NEXT:         2: def-match1 def-match2
-; SUBST-NEG-NEXT:not:1'0     ~~~~~~~~~~~~~~~~~~~~~
-; SUBST-NEG-NEXT:not:2'0     !~~~~~~~~~~~~~~~~~~~~ error: no match expected
-; SUBST-NEG-NEXT:not:2'1                           with "DEF_MATCH1" equal to "def-match1"
-; SUBST-NEG-NEXT:not:2'2                           with "DEF_MATCH2" equal to "def-match2"
-; SUBST-NEG-NEXT:         3: END
+; SUBST-NEG-NEXT:         1: def-match1 def-nomatch 
+; SUBST-NEG-NEXT:not:1'0     X~~~~~~~~~~~~~~~~~~~~~~
+; SUBST-NEG-NEXT:not:1'1                             with "DEF_MATCH1" equal to "def-match1"
+; SUBST-NEG-NEXT:not:1'2                             uses undefined variable(s): "UNDEF"
+; SUBST-NEG-NEXT:not:1'3                             with "DEF_NOMATCH" equal to "foobar"
+; SUBST-NEG-NEXT:         2: def-match1 def-match2 
+; SUBST-NEG-NEXT:not:1'0     ~~~~~~~~~~~~~~~~~~~~~~
+; SUBST-NEG-NEXT:not:2'0     !~~~~~~~~~~~~~~~~~~~~  error: no match expected
+; SUBST-NEG-NEXT:not:2'1                            with "DEF_MATCH1" equal to "def-match1"
+; SUBST-NEG-NEXT:not:2'2                            with "DEF_MATCH2" equal to "def-match2"
+; SUBST-NEG-NEXT:         3: END 
 ; SUBST-NEG-NEXT:check:3     ^~~
 ; SUBST-NEG-NEXT:>>>>>>
 
@@ -695,26 +705,26 @@
 ; RUN: | FileCheck -strict-whitespace -match-full-lines %s -check-prefix=CAPTURE-NEG
 
 ;      CAPTURE-NEG:<<<<<<
-; CAPTURE-NEG-NEXT:           1: strvar: foo
+; CAPTURE-NEG-NEXT:           1: strvar: foo 
 ; CAPTURE-NEG-NEXT:check:1'0     ^~~~~~~~~~~
-; CAPTURE-NEG-NEXT:check:1'1             ^~~ captured var "STRVAR"
-; CAPTURE-NEG-NEXT:           2: numvar no expr: 51
+; CAPTURE-NEG-NEXT:check:1'1             ^~~  captured var "STRVAR"
+; CAPTURE-NEG-NEXT:           2: numvar no expr: 51 
 ; CAPTURE-NEG-NEXT:check:2'0     ^~~~~~~~~~~~~~~~~~
-; CAPTURE-NEG-NEXT:check:2'1                     ^~ captured var "NUMVAR_NO_EXPR"
-; CAPTURE-NEG-NEXT:           3: numvar expr: -49
+; CAPTURE-NEG-NEXT:check:2'1                     ^~  captured var "NUMVAR_NO_EXPR"
+; CAPTURE-NEG-NEXT:           3: numvar expr: -49 
 ; CAPTURE-NEG-NEXT:check:3'0     ^~~~~~~~~~~~~~~~
-; CAPTURE-NEG-NEXT:check:3'1                      with "%d,NUMVAR_EXPR:2-NUMVAR_NO_EXPR" equal to "-49"
-; CAPTURE-NEG-NEXT:check:3'2                  ^~~ captured var "NUMVAR_EXPR"
-; CAPTURE-NEG-NEXT:           4: many: foo 100 8 bar
+; CAPTURE-NEG-NEXT:check:3'1                       with "%d,NUMVAR_EXPR:2-NUMVAR_NO_EXPR" equal to "-49"
+; CAPTURE-NEG-NEXT:check:3'2                  ^~~  captured var "NUMVAR_EXPR"
+; CAPTURE-NEG-NEXT:           4: many: foo 100 8 bar 
 ; CAPTURE-NEG-NEXT:check:4'0     ^~~~~~~~~~~~~~~~~~~
-; CAPTURE-NEG-NEXT:check:4'1           ^~~           captured var "VAR1"
-; CAPTURE-NEG-NEXT:check:4'2               ^~~       captured var "VAR3"
-; CAPTURE-NEG-NEXT:check:4'3                   ^     captured var "VAR2"
-; CAPTURE-NEG-NEXT:check:4'4                     ^~~ captured var "VAR4"
-; CAPTURE-NEG-NEXT:           5: var in neg match: foo
-; CAPTURE-NEG-NEXT:not:5'0       !~~~~~~~~~~~~~~~~~~~~ error: no match expected
-; CAPTURE-NEG-NEXT:not:5'1                         !~~ captured var "VAR"
-; CAPTURE-NEG-NEXT:           6: END
+; CAPTURE-NEG-NEXT:check:4'1           ^~~            captured var "VAR1"
+; CAPTURE-NEG-NEXT:check:4'2               ^~~        captured var "VAR3"
+; CAPTURE-NEG-NEXT:check:4'3                   ^      captured var "VAR2"
+; CAPTURE-NEG-NEXT:check:4'4                     ^~~  captured var "VAR4"
+; CAPTURE-NEG-NEXT:           5: var in neg match: foo 
+; CAPTURE-NEG-NEXT:not:5'0       !~~~~~~~~~~~~~~~~~~~~  error: no match expected
+; CAPTURE-NEG-NEXT:not:5'1                         !~~  captured var "VAR"
+; CAPTURE-NEG-NEXT:           6: END 
 ; CAPTURE-NEG-NEXT:check:6       ^~~
 ; CAPTURE-NEG-NEXT:>>>>>>
 
@@ -743,10 +753,10 @@
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=SUBST_NEXT
 
 ;      SUBST_NEXT:<<<<<<
-; SUBST_NEXT-NEXT:          1: pre var
+; SUBST_NEXT-NEXT:          1: pre var 
 ; SUBST_NEXT-NEXT:check:1      ^~~
-; SUBST_NEXT-NEXT:next:2'0         !~~ error: match on wrong line
-; SUBST_NEXT-NEXT:next:2'1             with "VAR" equal to "var"
+; SUBST_NEXT-NEXT:next:2'0         !~~  error: match on wrong line
+; SUBST_NEXT-NEXT:next:2'1              with "VAR" equal to "var"
 ; SUBST_NEXT-NEXT:>>>>>>
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
@@ -765,11 +775,11 @@
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=SUBST_SAME
 
 ;      SUBST_SAME:<<<<<<
-; SUBST_SAME-NEXT:          1: pre
+; SUBST_SAME-NEXT:          1: pre 
 ; SUBST_SAME-NEXT:check:1      ^~~
-; SUBST_SAME-NEXT:          2: var
-; SUBST_SAME-NEXT:same:2'0     !~~ error: match on wrong line
-; SUBST_SAME-NEXT:same:2'1         with "VAR" equal to "var"
+; SUBST_SAME-NEXT:          2: var 
+; SUBST_SAME-NEXT:same:2'0     !~~  error: match on wrong line
+; SUBST_SAME-NEXT:same:2'1          with "VAR" equal to "var"
 ; SUBST_SAME-NEXT:>>>>>>
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
@@ -790,13 +800,13 @@
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=SUBST_DAG
 
 ;      SUBST_DAG:<<<<<<
-; SUBST_DAG-NEXT:         1: var
+; SUBST_DAG-NEXT:         1: var 
 ; SUBST_DAG-NEXT:dag:1       ^~~
-; SUBST_DAG-NEXT:dag:2'0     !~~ discard: overlaps earlier match
-; SUBST_DAG-NEXT:dag:2'1         with "VAR" equal to "var"
-; SUBST_DAG-NEXT:         2: var
+; SUBST_DAG-NEXT:dag:2'0     !~~  discard: overlaps earlier match
+; SUBST_DAG-NEXT:dag:2'1          with "VAR" equal to "var"
+; SUBST_DAG-NEXT:         2: var 
 ; SUBST_DAG-NEXT:dag:2'2     ^~~
-; SUBST_DAG-NEXT:dag:2'3         with "VAR" equal to "var"
-; SUBST_DAG-NEXT:         3: END
+; SUBST_DAG-NEXT:dag:2'3          with "VAR" equal to "var"
+; SUBST_DAG-NEXT:         3: END 
 ; SUBST_DAG-NEXT:check:3     ^~~
 ; SUBST_DAG-NEXT:>>>>>>
