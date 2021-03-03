@@ -24,4 +24,11 @@ def CstrBroadcastableToRequire : Pat<(Shape_CstrBroadcastableOp $shapes),
               (Shape_IsBroadcastableOp $shapes),
               (BroadcastableStringAttr))>;
 
+def EqStringAttr : NativeCodeCall<[{
+  $_builder.getStringAttr("required equal shapes")
+}]>;
+
+def CstrEqToRequire : Pat<(Shape_CstrEqOp $shapes),
+  (Shape_CstrRequireOp (Shape_ShapeEqOp $shapes), (EqStringAttr))>;
+
 #endif // MLIR_CONVERSION_SHAPETOSTANDARD_TD
