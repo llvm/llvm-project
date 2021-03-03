@@ -11,7 +11,7 @@
 
 // std::find with vector<bool>::iterator
 
-// https://bugs.llvm.org/show_bug.cgi?id=16816
+// https://llvm.org/PR16816
 
 #include <vector>
 #include <algorithm>
