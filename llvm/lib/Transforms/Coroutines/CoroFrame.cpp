@@ -2283,9 +2283,17 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
       // See if there are materializable instructions across suspend points.
       for (Instruction &I : instructions(F))
         if (materializable(I))
-          for (User *U : I.users())
-            if (Checker.isDefinitionAcrossSuspend(I, U))
+          for (User *U : I.users()) {
+            // FIXME: Instead of blocking sinking to coro.suspend we should
+            // change rematerialization to rematerialize in the predecessor
+            // block.
+            // We block because later code -- calling isSuspendBlock -- relies
+            // on the form that the coro.suspend is in its own block.
+            bool IsInCoroSuspendBlock = isa<AnyCoroSuspendInst>(U);
+            if (Checker.isDefinitionAcrossSuspend(I, U) &&
+                !IsInCoroSuspendBlock)
               Spills[&I].push_back(cast<Instruction>(U));
+          }
 
       if (Spills.empty())
         break;
