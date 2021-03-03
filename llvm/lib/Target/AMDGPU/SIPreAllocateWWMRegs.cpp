@@ -185,13 +185,13 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B64)
         RegsAssigned |= processDef(MI.getOperand(0));
 
-      if (MI.getOpcode() == AMDGPU::ENTER_WWM) {
+      if (MI.getOpcode() == AMDGPU::ENTER_STRICT_WWM) {
         LLVM_DEBUG(dbgs() << "entering WWM region: " << MI << "\n");
         InWWM = true;
         continue;
       }
 
-      if (MI.getOpcode() == AMDGPU::EXIT_WWM) {
+      if (MI.getOpcode() == AMDGPU::EXIT_STRICT_WWM) {
         LLVM_DEBUG(dbgs() << "exiting WWM region: " << MI << "\n");
         InWWM = false;
       }
