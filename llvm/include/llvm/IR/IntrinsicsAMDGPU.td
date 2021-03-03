@@ -798,8 +798,8 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimIntrinsics = {
               "STORE_MIP", [], [AMDGPUArg<llvm_anyfloat_ty, "vdata">],
               [IntrWriteMem, IntrWillReturn], [SDNPMemOperand], 1>;
 
-  defm int_amdgcn_image_msaa_load
-    : AMDGPUImageDimIntrinsicsAll<"MSAA_LOAD", [llvm_any_ty], [], [IntrReadMem],
+  defm int_amdgcn_image_msaa_load_x
+    : AMDGPUImageDimIntrinsicsAll<"MSAA_LOAD_X", [llvm_any_ty], [], [IntrReadMem],
                                   [SDNPMemOperand]>,
       AMDGPUImageDMaskIntrinsic;
 
