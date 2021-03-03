@@ -42,6 +42,7 @@ CODEGENOPT(Backchain         , 1, 0) ///< -mbackchain
 CODEGENOPT(IgnoreXCOFFVisibility         , 1, 0) ///< -mignore-xcoff-visibility
 CODEGENOPT(ControlFlowGuardNoChecks  , 1, 0) ///< -cfguard-no-checks
 CODEGENOPT(ControlFlowGuard  , 1, 0) ///< -cfguard
+CODEGENOPT(EHContGuard       , 1, 0) ///< -ehcontguard
 CODEGENOPT(CXAAtExit         , 1, 1) ///< Use __cxa_atexit for calling destructors.
 CODEGENOPT(RegisterGlobalDtorsWithAtExit, 1, 1) ///< Use atexit or __cxa_atexit to register global destructors.
 CODEGENOPT(CXXCtorDtorAliases, 1, 0) ///< Emit complete ctors/dtors as linker
