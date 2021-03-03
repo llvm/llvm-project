@@ -1621,6 +1621,10 @@ def int_amdgcn_wwm : Intrinsic<[llvm_any_ty],
   [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable,
                        IntrConvergent, IntrWillReturn]
 >;
+def int_amdgcn_strict_wqm : Intrinsic<[llvm_any_ty],
+  [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable,
+                       IntrConvergent, IntrWillReturn]
+>;
 
 // Given a value, copies it while setting all the inactive lanes to a given
 // value. Note that OpenGL helper lanes are considered active, so if the

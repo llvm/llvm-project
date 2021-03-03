@@ -38,6 +38,9 @@ private:
   RegisterClassInfo RegClassInfo;
 
   std::vector<unsigned> RegsToRewrite;
+#ifndef NDEBUG
+  void printWWMInfo(const MachineInstr &MI);
+#endif
 
 public:
   static char ID;
@@ -154,6 +157,31 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
   MRI->freezeReservedRegs(MF);
 }
 
+#ifndef NDEBUG
+LLVM_DUMP_METHOD void
+SIPreAllocateWWMRegs::printWWMInfo(const MachineInstr &MI) {
+
+  unsigned Opc = MI.getOpcode();
+
+  if (Opc == AMDGPU::ENTER_STRICT_WWM || Opc == AMDGPU::ENTER_STRICT_WQM) {
+    dbgs() << "Entering ";
+  } else {
+    assert(Opc == AMDGPU::EXIT_STRICT_WWM || Opc == AMDGPU::EXIT_STRICT_WQM);
+    dbgs() << "Exiting ";
+  }
+
+  if (Opc == AMDGPU::ENTER_STRICT_WWM || Opc == AMDGPU::EXIT_STRICT_WWM) {
+    dbgs() << "Strict WWM ";
+  } else {
+    assert(Opc == AMDGPU::ENTER_STRICT_WQM || Opc == AMDGPU::EXIT_STRICT_WQM);
+    dbgs() << "Strict WQM ";
+  }
+
+  dbgs() << "region: " << MI;
+}
+
+#endif
+
 bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "SIPreAllocateWWMRegs: function " << MF.getName() << "\n");
 
@@ -185,21 +213,23 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B64)
         RegsAssigned |= processDef(MI.getOperand(0));
 
-      if (MI.getOpcode() == AMDGPU::ENTER_STRICT_WWM) {
-        LLVM_DEBUG(dbgs() << "entering WWM region: " << MI << "\n");
+      if (MI.getOpcode() == AMDGPU::ENTER_STRICT_WWM ||
+          MI.getOpcode() == AMDGPU::ENTER_STRICT_WQM) {
+        LLVM_DEBUG(printWWMInfo(MI));
         InWWM = true;
         continue;
       }
 
-      if (MI.getOpcode() == AMDGPU::EXIT_STRICT_WWM) {
-        LLVM_DEBUG(dbgs() << "exiting WWM region: " << MI << "\n");
+      if (MI.getOpcode() == AMDGPU::EXIT_STRICT_WWM ||
+          MI.getOpcode() == AMDGPU::EXIT_STRICT_WQM) {
+        LLVM_DEBUG(printWWMInfo(MI));
         InWWM = false;
       }
 
       if (!InWWM)
         continue;
 
-      LLVM_DEBUG(dbgs() << "processing " << MI << "\n");
+      LLVM_DEBUG(dbgs() << "Processing " << MI);
 
       for (MachineOperand &DefOpnd : MI.defs()) {
         RegsAssigned |= processDef(DefOpnd);
