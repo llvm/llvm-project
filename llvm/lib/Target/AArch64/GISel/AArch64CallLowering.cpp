@@ -70,34 +70,7 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         CCValAssign &VA) override {
     markPhysRegUsed(PhysReg);
-    switch (VA.getLocInfo()) {
-    default:
-      MIRBuilder.buildCopy(ValVReg, PhysReg);
-      break;
-    case CCValAssign::LocInfo::ZExt: {
-      auto WideTy = LLT{VA.getLocVT()};
-      auto NarrowTy = MRI.getType(ValVReg);
-      MIRBuilder.buildTrunc(ValVReg,
-                            MIRBuilder.buildAssertZExt(
-                                WideTy, MIRBuilder.buildCopy(WideTy, PhysReg),
-                                NarrowTy.getSizeInBits()));
-      break;
-    }
-    case CCValAssign::LocInfo::SExt: {
-      auto WideTy = LLT{VA.getLocVT()};
-      auto NarrowTy = MRI.getType(ValVReg);
-      MIRBuilder.buildTrunc(ValVReg,
-                            MIRBuilder.buildAssertSExt(
-                                WideTy, MIRBuilder.buildCopy(WideTy, PhysReg),
-                                NarrowTy.getSizeInBits()));
-      break;
-    }
-    case CCValAssign::LocInfo::AExt: {
-      auto Copy = MIRBuilder.buildCopy(LLT{VA.getLocVT()}, PhysReg);
-      MIRBuilder.buildTrunc(ValVReg, Copy);
-      break;
-    }
-    }
+    IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, uint64_t MemSize,

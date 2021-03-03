@@ -209,6 +209,14 @@ public:
     IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                          CCAssignFn *AssignFn)
         : ValueHandler(true, MIRBuilder, MRI, AssignFn) {}
+
+    /// Insert G_ASSERT_ZEXT/G_ASSERT_SEXT or other hint instruction based on \p
+    /// VA, returning the new register if a hint was inserted.
+    Register buildExtensionHint(CCValAssign &VA, Register SrcReg, LLT NarrowTy);
+
+    /// Provides a default implementation for argument handling.
+    void assignValueToReg(Register ValVReg, Register PhysReg,
+                          CCValAssign &VA) override;
   };
 
   struct OutgoingValueHandler : public ValueHandler {
