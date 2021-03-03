@@ -3395,7 +3395,7 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default:
     break;
-#define BUILTIN(ID, TYPE, ATTRS) case RISCV::BI##ID:
+#define RISCVV_BUILTIN(ID, TYPE, ATTRS) case RISCV::BI##ID:
 #include "clang/Basic/BuiltinsRISCV.def"
     if (!TI.hasFeature("experimental-v"))
       return Diag(TheCall->getBeginLoc(), diag::err_riscvv_builtin_requires_v)
