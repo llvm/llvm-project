@@ -836,7 +836,7 @@ public:
 /// Matches overloaded operators with a specific name.
 ///
 /// The type argument ArgT is not used by this matcher but is used by
-/// PolymorphicMatcherWithParam1 and should be StringRef.
+/// PolymorphicMatcher and should be StringRef.
 template <typename T, typename ArgT>
 class HasOverloadedOperatorNameMatcher : public SingleNodeMatcherInterface<T> {
   static_assert(std::is_same<T, CXXOperatorCallExpr>::value ||
@@ -919,7 +919,7 @@ Matcher<ObjCMessageExpr> hasAnySelectorFunc(
 
 /// Matches declarations for QualType and CallExpr.
 ///
-/// Type argument DeclMatcherT is required by PolymorphicMatcherWithParam1 but
+/// Type argument DeclMatcherT is required by PolymorphicMatcher but
 /// not actually used.
 template <typename T, typename DeclMatcherT>
 class HasDeclarationMatcher : public MatcherInterface<T> {
@@ -1156,6 +1156,18 @@ template <class T> struct ExtractFunctionArgMeta;
 template <class T> struct ExtractFunctionArgMeta<void(T)> {
   using type = T;
 };
+
+template <class T, class Tuple, std::size_t... I>
+constexpr T *new_from_tuple_impl(Tuple &&t, std::index_sequence<I...>) {
+  return new T(std::get<I>(std::forward<Tuple>(t))...);
+}
+
+template <class T, class Tuple> constexpr T *new_from_tuple(Tuple &&t) {
+  return new_from_tuple_impl<T>(
+      std::forward<Tuple>(t),
+      std::make_index_sequence<
+          std::tuple_size<std::remove_reference_t<Tuple>>::value>{});
+}
 
 /// Default type lists for ArgumentAdaptingMatcher matchers.
 using AdaptativeDefaultFromTypes = AllNodeBaseTypes;
@@ -1426,7 +1438,7 @@ private:
 /// \c HasMatcher<To, T>(InnerMatcher).
 ///
 /// If a matcher does not need knowledge about the inner type, prefer to use
-/// PolymorphicMatcherWithParam1.
+/// PolymorphicMatcher.
 template <template <typename ToArg, typename FromArg> class ArgumentAdapterT,
           typename FromTypes = AdaptativeDefaultFromTypes,
           typename ToTypes = AdaptativeDefaultToTypes>
@@ -1491,39 +1503,23 @@ private:
   MatcherType InnerMatcher;
 };
 
-/// A PolymorphicMatcherWithParamN<MatcherT, P1, ..., PN> object can be
+/// A PolymorphicMatcher<MatcherT, P1, ..., PN> object can be
 /// created from N parameters p1, ..., pN (of type P1, ..., PN) and
 /// used as a Matcher<T> where a MatcherT<T, P1, ..., PN>(p1, ..., pN)
 /// can be constructed.
 ///
 /// For example:
-/// - PolymorphicMatcherWithParam0<IsDefinitionMatcher>()
+/// - PolymorphicMatcher<IsDefinitionMatcher>()
 ///   creates an object that can be used as a Matcher<T> for any type T
 ///   where an IsDefinitionMatcher<T>() can be constructed.
-/// - PolymorphicMatcherWithParam1<ValueEqualsMatcher, int>(42)
+/// - PolymorphicMatcher<ValueEqualsMatcher, int>(42)
 ///   creates an object that can be used as a Matcher<T> for any type T
 ///   where a ValueEqualsMatcher<T, int>(42) can be constructed.
-template <template <typename T> class MatcherT,
-          typename ReturnTypesF = void(AllNodeBaseTypes)>
-class PolymorphicMatcherWithParam0 {
+template <template <typename T, typename... Params> class MatcherT,
+          typename ReturnTypesF, typename... ParamTypes>
+class PolymorphicMatcher {
 public:
-  using ReturnTypes = typename ExtractFunctionArgMeta<ReturnTypesF>::type;
-
-  template <typename T>
-  operator Matcher<T>() const {
-    static_assert(TypeListContainsSuperOf<ReturnTypes, T>::value,
-                  "right polymorphic conversion");
-    return Matcher<T>(new MatcherT<T>());
-  }
-};
-
-template <template <typename T, typename P1> class MatcherT,
-          typename P1,
-          typename ReturnTypesF = void(AllNodeBaseTypes)>
-class PolymorphicMatcherWithParam1 {
-public:
-  explicit PolymorphicMatcherWithParam1(const P1 &Param1)
-      : Param1(Param1) {}
+  PolymorphicMatcher(const ParamTypes &... Params) : Params(Params...) {}
 
   using ReturnTypes = typename ExtractFunctionArgMeta<ReturnTypesF>::type;
 
@@ -1531,33 +1527,11 @@ public:
   operator Matcher<T>() const {
     static_assert(TypeListContainsSuperOf<ReturnTypes, T>::value,
                   "right polymorphic conversion");
-    return Matcher<T>(new MatcherT<T, P1>(Param1));
+    return Matcher<T>(new_from_tuple<MatcherT<T, ParamTypes...>>(Params));
   }
 
 private:
-  const P1 Param1;
-};
-
-template <template <typename T, typename P1, typename P2> class MatcherT,
-          typename P1, typename P2,
-          typename ReturnTypesF = void(AllNodeBaseTypes)>
-class PolymorphicMatcherWithParam2 {
-public:
-  PolymorphicMatcherWithParam2(const P1 &Param1, const P2 &Param2)
-      : Param1(Param1), Param2(Param2) {}
-
-  using ReturnTypes = typename ExtractFunctionArgMeta<ReturnTypesF>::type;
-
-  template <typename T>
-  operator Matcher<T>() const {
-    static_assert(TypeListContainsSuperOf<ReturnTypes, T>::value,
-                  "right polymorphic conversion");
-    return Matcher<T>(new MatcherT<T, P1, P2>(Param1, Param2));
-  }
-
-private:
-  const P1 Param1;
-  const P2 Param2;
+  const std::tuple<ParamTypes...> Params;
 };
 
 /// Matches nodes of type T that have child nodes of type ChildT for
@@ -2174,7 +2148,7 @@ inline Optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
 /// Matches overloaded operators with a specific name.
 ///
 /// The type argument ArgT is not used by this matcher but is used by
-/// PolymorphicMatcherWithParam1 and should be std::vector<std::string>>.
+/// PolymorphicMatcher and should be std::vector<std::string>>.
 template <typename T, typename ArgT = std::vector<std::string>>
 class HasAnyOperatorNameMatcher : public SingleNodeMatcherInterface<T> {
   static_assert(std::is_same<T, BinaryOperator>::value ||
@@ -2223,16 +2197,19 @@ private:
   const std::vector<std::string> Names;
 };
 
-using HasOpNameMatcher = PolymorphicMatcherWithParam1<
-    HasAnyOperatorNameMatcher, std::vector<std::string>,
-    void(TypeList<BinaryOperator, CXXOperatorCallExpr,
-                  CXXRewrittenBinaryOperator, UnaryOperator>)>;
+using HasOpNameMatcher =
+    PolymorphicMatcher<HasAnyOperatorNameMatcher,
+                       void(
+                           TypeList<BinaryOperator, CXXOperatorCallExpr,
+                                    CXXRewrittenBinaryOperator, UnaryOperator>),
+                       std::vector<std::string>>;
 
 HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
 
-using HasOverloadOpNameMatcher = PolymorphicMatcherWithParam1<
-    HasOverloadedOperatorNameMatcher, std::vector<std::string>,
-    void(TypeList<CXXOperatorCallExpr, FunctionDecl>)>;
+using HasOverloadOpNameMatcher =
+    PolymorphicMatcher<HasOverloadedOperatorNameMatcher,
+                       void(TypeList<CXXOperatorCallExpr, FunctionDecl>),
+                       std::vector<std::string>>;
 
 HasOverloadOpNameMatcher
 hasAnyOverloadedOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
