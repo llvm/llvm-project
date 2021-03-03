@@ -754,47 +754,16 @@ foreach fvti = AllFloatVectors in {
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
-// Vector Element Inserts/Extracts
+// Vector Element Extracts
 //===----------------------------------------------------------------------===//
-
-// The built-in TableGen 'insertelt' node must return the same type as the
-// vector element type. On RISC-V, XLenVT is the only legal integer type, so
-// for integer inserts we use a custom node which inserts an XLenVT-typed
-// value.
-def riscv_insert_vector_elt
-    : SDNode<"ISD::INSERT_VECTOR_ELT",
-             SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>, SDTCisVT<2, XLenVT>,
-                                  SDTCisPtrTy<3>]>, []>;
-
-let Predicates = [HasStdExtV] in
-foreach vti = AllIntegerVectors in {
-  def : Pat<(vti.Vector (riscv_insert_vector_elt (vti.Vector vti.RegClass:$merge),
-                                                 vti.ScalarRegClass:$rs1, 0)),
-            (!cast<Instruction>("PseudoVMV_S_X_"#vti.LMul.MX)
-                vti.RegClass:$merge,
-                (vti.Scalar vti.ScalarRegClass:$rs1),
-                vti.AVL, vti.SEW)>;
-}
-
 let Predicates = [HasStdExtV, HasStdExtF] in
 foreach vti = AllFloatVectors in {
-  defvar MX = vti.LMul.MX;
   defvar vmv_f_s_inst = !cast<Instruction>(!strconcat("PseudoVFMV_",
                                                        vti.ScalarSuffix,
-                                                       "_S_", MX));
-  defvar vmv_s_f_inst = !cast<Instruction>(!strconcat("PseudoVFMV_S_",
-                                                       vti.ScalarSuffix,
-                                                       "_", vti.LMul.MX));
-  // Only pattern-match insert/extract-element operations where the index is
-  // 0. Any other index will have been custom-lowered to slide the vector
-  // correctly into place (and, in the case of insert, slide it back again
-  // afterwards).
+                                                       "_S_", vti.LMul.MX));
+  // Only pattern-match extract-element operations where the index is 0. Any
+  // other index will have been custom-lowered to slide the vector correctly
+  // into place.
   def : Pat<(vti.Scalar (extractelt (vti.Vector vti.RegClass:$rs2), 0)),
             (vmv_f_s_inst vti.RegClass:$rs2, vti.SEW)>;
-
-  def : Pat<(vti.Vector (insertelt (vti.Vector vti.RegClass:$merge),
-                                   vti.ScalarRegClass:$rs1, 0)),
-            (vmv_s_f_inst vti.RegClass:$merge,
-                    (vti.Scalar vti.ScalarRegClass:$rs1),
-                    vti.AVL, vti.SEW)>;
 }
