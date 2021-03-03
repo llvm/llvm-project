@@ -2119,7 +2119,7 @@ class SwitchStmt final : public Stmt,
   friend TrailingObjects;
 
   /// Points to a linked list of case and default statements.
-  SwitchCase *FirstCase;
+  SwitchCase *FirstCase = nullptr;
 
   // SwitchStmt is followed by several trailing objects,
   // some of which optional. Note that it would be more convenient to
