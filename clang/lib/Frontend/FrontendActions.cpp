@@ -867,6 +867,7 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::ObjC:
   case Language::ObjCXX:
   case Language::OpenCL:
+  case Language::OpenCLCXX:
   case Language::CUDA:
   case Language::HIP:
     break;
