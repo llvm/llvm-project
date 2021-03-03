@@ -15,7 +15,7 @@ syn case match
 " Types also include struct, array, vector, etc. but these don't
 " benefit as much from having dedicated highlighting rules.
 syn keyword llvmType void half bfloat float double x86_fp80 fp128 ppc_fp128
-syn keyword llvmType label metadata x86_mmx
+syn keyword llvmType label metadata x86_mmx x86_amx
 syn keyword llvmType type label opaque token
 syn match   llvmType /\<i\d\+\>/
 
