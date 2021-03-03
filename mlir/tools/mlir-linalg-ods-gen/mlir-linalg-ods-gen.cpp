@@ -35,6 +35,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 
 #include <map>
+#include <set>
 
 #define DEBUG_TYPE "linalg-ods-gen"
 
@@ -2341,14 +2342,14 @@ void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef cppOpName,
     (linalg_yield(ValueRange{ {3} }));
   })FMT";
 
-  unsigned idx = 0;
   std::string valueHandleStr;
   llvm::raw_string_ostream valueHandleStringStream(valueHandleStr);
-  llvm::interleaveComma(
-      llvm::seq<int>(0, state.numArgs), valueHandleStringStream, [&](auto) {
-        valueHandleStringStream << "_" << idx << "(args[" << idx << "])";
-        idx++;
-      });
+  std::set<unsigned> usedTensorId;
+  for (const auto &iter : state.orderedTensorArgs)
+    usedTensorId.insert(iter.second);
+  llvm::interleaveComma(usedTensorId, valueHandleStringStream, [&](auto idx) {
+    valueHandleStringStream << "_" << idx << "(args[" << idx << "])";
+  });
 
   std::string expressionsStr;
   llvm::raw_string_ostream expressionStringStream(expressionsStr);
