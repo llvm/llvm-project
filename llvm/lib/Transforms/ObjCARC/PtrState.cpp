@@ -11,7 +11,6 @@
 #include "ObjCARC.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
-#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -277,13 +276,6 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
       InsertAfter = skipDebugIntrinsics(InsertAfter);
 
     InsertReverseInsertPt(&*InsertAfter);
-
-    // Don't insert anything between a call/invoke with operand bundle
-    // "clang.arc.attachedcall" and the retainRV/claimRV call that uses the call
-    // result.
-    if (auto *CB = dyn_cast<CallBase>(Inst))
-      if (objcarc::hasAttachedCallOpBundle(CB))
-        SetCFGHazardAfflicted(true);
   };
 
   // Check for possible direct uses.
@@ -374,9 +366,10 @@ bool TopDownPtrState::MatchWithRelease(ARCMDKindCache &Cache,
   llvm_unreachable("Sequence unknown enum value");
 }
 
-bool TopDownPtrState::HandlePotentialAlterRefCount(
-    Instruction *Inst, const Value *Ptr, ProvenanceAnalysis &PA,
-    ARCInstKind Class, const BundledRetainClaimRVs &BundledRVs) {
+bool TopDownPtrState::HandlePotentialAlterRefCount(Instruction *Inst,
+                                                   const Value *Ptr,
+                                                   ProvenanceAnalysis &PA,
+                                                   ARCInstKind Class) {
   // Check for possible releases. Treat clang.arc.use as a releasing instruction
   // to prevent sinking a retain past it.
   if (!CanDecrementRefCount(Inst, Ptr, PA, Class) &&
@@ -391,12 +384,6 @@ bool TopDownPtrState::HandlePotentialAlterRefCount(
     SetSeq(S_CanRelease);
     assert(!HasReverseInsertPts());
     InsertReverseInsertPt(Inst);
-
-    // Don't insert anything between a call/invoke with operand bundle
-    // "clang.arc.attachedcall" and the retainRV/claimRV call that uses the call
-    // result.
-    if (BundledRVs.contains(Inst))
-      SetCFGHazardAfflicted(true);
 
     // One call can't cause a transition from S_Retain to S_CanRelease
     // and S_CanRelease to S_Use. If we've made the first transition,
