@@ -2157,8 +2157,8 @@ TargetLoweringObjectFileXCOFF::getTargetSymbol(const GlobalValue *GV,
       return cast<MCSectionXCOFF>(
                  getSectionForFunctionDescriptor(cast<Function>(GO), TM))
           ->getQualNameSymbol();
-    if ((TM.getDataSections() && !GO->hasSection()) || GOKind.isCommon() ||
-        GOKind.isBSSLocal())
+    if ((TM.getDataSections() && !GO->hasSection()) || GO->hasCommonLinkage() ||
+        GOKind.isBSSLocal() || GOKind.isThreadBSSLocal())
       return cast<MCSectionXCOFF>(SectionForGlobal(GO, GOKind, TM))
           ->getQualNameSymbol();
   }
@@ -2196,24 +2196,31 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForExternalReference(
   SmallString<128> Name;
   getNameWithPrefix(Name, GO, TM);
 
+  XCOFF::StorageMappingClass SMC =
+      isa<Function>(GO) ? XCOFF::XMC_DS : XCOFF::XMC_UA;
+  if (GO->isThreadLocal())
+    SMC = XCOFF::XMC_UL;
+
   // Externals go into a csect of type ER.
   return getContext().getXCOFFSection(
       Name, SectionKind::getMetadata(),
-      XCOFF::CsectProperties(isa<Function>(GO) ? XCOFF::XMC_DS : XCOFF::XMC_UA,
-                             XCOFF::XTY_ER));
+      XCOFF::CsectProperties(SMC, XCOFF::XTY_ER));
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   // Common symbols go into a csect with matching name which will get mapped
   // into the .bss section.
-  if (Kind.isBSSLocal() || Kind.isCommon()) {
+  // Zero-initialized local TLS symbols go into a csect with matching name which
+  // will get mapped into the .tbss section.
+  if (Kind.isBSSLocal() || GO->hasCommonLinkage() || Kind.isThreadBSSLocal()) {
     SmallString<128> Name;
     getNameWithPrefix(Name, GO, TM);
+    XCOFF::StorageMappingClass SMC = Kind.isBSSLocal() ? XCOFF::XMC_BS
+                                     : Kind.isCommon() ? XCOFF::XMC_RW
+                                                       : XCOFF::XMC_UL;
     return getContext().getXCOFFSection(
-        Name, Kind,
-        XCOFF::CsectProperties(
-            Kind.isBSSLocal() ? XCOFF::XMC_BS : XCOFF::XMC_RW, XCOFF::XTY_CM));
+        Name, Kind, XCOFF::CsectProperties(SMC, XCOFF::XTY_CM));
   }
 
   if (Kind.isMergeableCString()) {
@@ -2268,6 +2275,20 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
           XCOFF::CsectProperties(XCOFF::XMC_RO, XCOFF::XTY_SD));
     }
     return ReadOnlySection;
+  }
+
+  // External/weak TLS data and initialized local TLS data are not eligible
+  // to be put into common csect. If data sections are enabled, thread
+  // data are emitted into separate sections. Otherwise, thread data
+  // are emitted into the .tdata section.
+  if (Kind.isThreadLocal()) {
+    if (TM.getDataSections()) {
+      SmallString<128> Name;
+      getNameWithPrefix(Name, GO, TM);
+      return getContext().getXCOFFSection(
+          Name, Kind, XCOFF::CsectProperties(XCOFF::XMC_TL, XCOFF::XTY_SD));
+    }
+    return TLSDataSection;
   }
 
   report_fatal_error("XCOFF other section types not yet implemented.");
