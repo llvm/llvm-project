@@ -19,7 +19,8 @@ include "mlir/Dialect/PDL/IR/PDLDialect.td"
 // PDL Types
 //===----------------------------------------------------------------------===//
 
-class PDL_Type<string name, string typeMnemonic> : TypeDef<PDL_Dialect, name> {
+class PDL_Type<string name, string typeMnemonic>
+    : TypeDef<PDL_Dialect, name, "::mlir::pdl::PDLType"> {
   let mnemonic = typeMnemonic;
 }
 
@@ -45,6 +46,27 @@ def PDL_Operation : PDL_Type<"Operation", "operation"> {
     This type represents a handle to an instance of an `mlir::Operation *`,
     bound to a value that is usable within a PDL pattern or rewrite.
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::RangeType
+//===----------------------------------------------------------------------===//
+
+def PDL_Range : PDL_Type<"Range", "range"> {
+  let summary = "PDL handle to a range of a given sub-type";
+  let description = [{
+    This type represents a range of instances of the given PDL element type,
+    i.e. `Attribute`, `Operation`, `Type`, or `Value`.
+  }];
+  let parameters = (ins "Type":$elementType);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins "Type":$elementType), [{
+      return $_get(elementType.getContext(), elementType);
+    }]>,
+  ];
+  let genVerifyDecl = 1;
+  let skipDefaultBuilders = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -75,10 +97,8 @@ def PDL_Value : PDL_Type<"Value", "value"> {
 // Additional Type Constraints
 //===----------------------------------------------------------------------===//
 
-// A positional value is a location on a pattern DAG, which may be an attribute,
-// operation, or operand/result.
-def PDL_PositionalValue :
-    AnyTypeOf<[PDL_Attribute, PDL_Operation, PDL_Type, PDL_Value],
-              "Positional Value">;
+def PDL_AnyType : Type<
+  CPred<"$_self.isa<::mlir::pdl::PDLType>()">, "pdl type",
+        "::mlir::pdl::PDLType">;
 
 #endif // MLIR_DIALECT_PDL_IR_PDLTYPES
