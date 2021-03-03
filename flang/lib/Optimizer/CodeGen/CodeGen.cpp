@@ -63,14 +63,6 @@ using namespace llvm;
 
 using OperandTy = ArrayRef<mlir::Value>;
 
-static cl::opt<bool>
-    disableFirToLLVMIR("disable-fir2llvmir",
-                       cl::desc("disable FIR to LLVM-IR dialect pass"),
-                       cl::init(false), cl::Hidden);
-
-static cl::opt<bool> disableLLVM("disable-llvm", cl::desc("disable LLVM pass"),
-                                 cl::init(false), cl::Hidden);
-
 namespace fir {
 /// return true if all `Value`s in `operands` are `ConstantOp`s
 bool allConstants(OperandTy operands) {
@@ -2941,9 +2933,6 @@ struct FIRToLLVMLoweringPass
   }
 
   void runOnOperation() override final {
-    if (disableFirToLLVMIR)
-      return;
-
     auto *context = getModule().getContext();
     registerDialectInterfaces(context);
     fir::LLVMTypeConverter typeConverter{getModule()};
@@ -3007,9 +2996,6 @@ struct LLVMIRLoweringPass
   mlir::ModuleOp getModule() { return getOperation(); }
 
   void runOnOperation() override final {
-    if (disableLLVM)
-      return;
-
     auto *ctx = getModule().getContext();
     auto optName = getModule().getName();
     LLVMContext llvmCtx;

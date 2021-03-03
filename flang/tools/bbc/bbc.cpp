@@ -129,6 +129,8 @@ static llvm::cl::opt<bool> dumpModuleOnFailure("dump-module-on-failure",
 static llvm::cl::opt<std::string>
     targetTriple("target", llvm::cl::desc("specify a target triple"));
 
+#include "flang/Tools/CLOptions.inc"
+
 //===----------------------------------------------------------------------===//
 
 using ProgramName = std::string;
@@ -302,7 +304,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     // Continue to lower from MLIR down to LLVM IR. Emit LLVM and MLIR.
     pm.addPass(fir::createFirCodeGenRewritePass());
     pm.addPass(fir::createFirTargetRewritePass());
-    pm.addPass(fir::createFIRToLLVMPass());
+    fir::addFIRToLLVMPass(pm);
 
     std::error_code ec;
     llvm::ToolOutputFile outFile(outputName + ".ll", ec,
@@ -311,7 +313,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
       llvm::errs() << "can't open output file " + outputName + ".ll";
       return mlir::failure();
     }
-    pm.addPass(fir::createLLVMDialectToLLVMPass(outFile.os()));
+    fir::addLLVMDialectToLLVMPass(pm, outFile.os());
     if (mlir::succeeded(pm.run(mlirModule))) {
       outFile.keep();
       printModule(mlirModule, out);
