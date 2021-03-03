@@ -284,7 +284,7 @@ static void encodeBinding(const Symbol *sym, const OutputSection *osec,
 // Non-weak bindings need to have their dylib ordinal encoded as well.
 static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
   return config->namespaceKind == NamespaceKind::flat || dysym.isDynamicLookup()
-             ? MachO::BIND_SPECIAL_DYLIB_FLAT_LOOKUP
+             ? (int16_t)MachO::BIND_SPECIAL_DYLIB_FLAT_LOOKUP
              : dysym.getFile()->ordinal;
 }
 
