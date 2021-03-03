@@ -12,7 +12,7 @@ test0:
 # CHECK:	.text
 # CHECK-LABEL: test0:
 # CHECK-NEXT:	.functype	test0 (i32) -> (i32)
-# CHECK-NEXT:	call_indirect	(f64) -> (f64)
+# CHECK-NEXT:	call_indirect	__indirect_function_table, (f64) -> (f64)
 # CHECK-NEXT:	end_function
 
 # BIN:      --- !WASM

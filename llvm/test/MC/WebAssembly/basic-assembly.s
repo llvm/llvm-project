@@ -156,7 +156,7 @@ empty_fref_table:
 # CHECK-NEXT:      i64.const   1234
 # CHECK-NEXT:      call        something2
 # CHECK-NEXT:      i32.const   0
-# CHECK-NEXT:      call_indirect (i32, f64) -> (), __indirect_function_table
+# CHECK-NEXT:      call_indirect __indirect_function_table, (i32, f64) -> ()
 # CHECK-NEXT:      i32.const   1
 # CHECK-NEXT:      i32.add
 # CHECK-NEXT:      local.tee   0
