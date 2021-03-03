@@ -9,9 +9,12 @@
 #ifndef LLD_MACHO_CONFIG_H
 #define LLD_MACHO_CONFIG_H
 
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TextAPI/MachO/Architecture.h"
 #include "llvm/TextAPI/MachO/Platform.h"
@@ -47,6 +50,21 @@ enum class UndefinedSymbolTreatment {
   dynamic_lookup,
 };
 
+class SymbolPatterns {
+  // GlobPattern can also match literals,
+  // but we prefer the O(1) lookup of DenseSet.
+  llvm::DenseSet<llvm::CachedHashStringRef> literals;
+  std::vector<llvm::GlobPattern> globs;
+
+public:
+  bool empty() const { return literals.empty() && globs.empty(); }
+  void clear();
+  void insert(llvm::StringRef symbolName);
+  bool matchLiteral(llvm::StringRef symbolName) const;
+  bool matchGlob(llvm::StringRef symbolName) const;
+  bool match(llvm::StringRef symbolName) const;
+};
+
 struct Configuration {
   Symbol *entry;
   bool hasReexports = false;
@@ -80,9 +98,13 @@ struct Configuration {
   std::vector<llvm::StringRef> frameworkSearchPaths;
   std::vector<llvm::StringRef> runtimePaths;
   std::vector<Symbol *> explicitUndefineds;
+
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
   SectionRenameMap sectionRenameMap;
   SegmentRenameMap segmentRenameMap;
+
+  SymbolPatterns exportedSymbols;
+  SymbolPatterns unexportedSymbols;
 };
 
 // The symbol with the highest priority should be ordered first in the output
