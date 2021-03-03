@@ -438,12 +438,12 @@ bool AVRExpandPseudo::expand<AVR::NEGWRd>(Block &MBB, BlockIt MBBI) {
       .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
       .addReg(DstLoReg, getKillRegState(DstIsKill));
 
-  // Do an extra SBCI.
+  // Do an extra SBC.
   auto MISBCI =
-      buildMI(MBB, MBBI, AVR::SBCIRdK)
+      buildMI(MBB, MBBI, AVR::SBCRdRr)
           .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
           .addReg(DstHiReg, getKillRegState(DstIsKill))
-          .addImm(0);
+          .addReg(ZERO_REGISTER);
   if (ImpIsDead)
     MISBCI->getOperand(3).setIsDead();
   // SREG is always implicitly killed
