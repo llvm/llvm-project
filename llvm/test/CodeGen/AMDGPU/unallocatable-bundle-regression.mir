@@ -40,24 +40,24 @@ body:             |
     ; CHECK: renamable $sgpr13 = COPY renamable $sgpr5
     ; CHECK: renamable $sgpr14 = COPY renamable $sgpr5
     ; CHECK: renamable $sgpr15 = COPY renamable $sgpr5
-    ; CHECK: renamable $vgpr5_vgpr6 = COPY renamable $sgpr0_sgpr1
+    ; CHECK: renamable $vgpr5_vgpr6 = COPY killed renamable $sgpr0_sgpr1
     ; CHECK: renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23 = S_LOAD_DWORDX8_IMM renamable $sgpr4_sgpr5, 1088, 0, 0 :: (dereferenceable load 32, addrspace 6)
     ; CHECK: renamable $sgpr80_sgpr81_sgpr82_sgpr83 = S_LOAD_DWORDX4_IMM renamable $sgpr4_sgpr5, 0, 0, 0 :: (load 16, addrspace 6)
     ; CHECK: renamable $sgpr0 = S_MOV_B32 1200
     ; CHECK: renamable $sgpr1 = COPY renamable $sgpr5
     ; CHECK: renamable $sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX8_IMM renamable $sgpr4_sgpr5, 1152, 0, 0 :: (dereferenceable load 32, addrspace 6)
     ; CHECK: renamable $sgpr84_sgpr85_sgpr86_sgpr87 = S_LOAD_DWORDX4_IMM renamable $sgpr0_sgpr1, 0, 0, 0 :: (load 16, addrspace 6)
-    ; CHECK: KILL renamable $sgpr0, renamable $sgpr1
+    ; CHECK: KILL killed renamable $sgpr0, renamable $sgpr1
     ; CHECK: renamable $sgpr0 = S_MOV_B32 1264
     ; CHECK: renamable $sgpr1 = COPY renamable $sgpr5
     ; CHECK: renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM renamable $sgpr4_sgpr5, 1216, 0, 0 :: (dereferenceable load 32, addrspace 6)
     ; CHECK: renamable $sgpr88_sgpr89_sgpr90_sgpr91 = S_LOAD_DWORDX4_IMM renamable $sgpr0_sgpr1, 0, 0, 0 :: (load 16, addrspace 6)
-    ; CHECK: KILL renamable $sgpr0, renamable $sgpr1
+    ; CHECK: KILL killed renamable $sgpr0, renamable $sgpr1
     ; CHECK: renamable $sgpr0 = S_MOV_B32 1328
     ; CHECK: renamable $sgpr1 = COPY renamable $sgpr5
     ; CHECK: renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX8_IMM renamable $sgpr4_sgpr5, 1280, 0, 0 :: (dereferenceable load 32, addrspace 6)
     ; CHECK: renamable $sgpr92_sgpr93_sgpr94_sgpr95 = S_LOAD_DWORDX4_IMM renamable $sgpr0_sgpr1, 0, 0, 0 :: (load 16, addrspace 6)
-    ; CHECK: KILL renamable $sgpr0, renamable $sgpr1
+    ; CHECK: KILL killed renamable $sgpr0, renamable $sgpr1
     ; CHECK: renamable $sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59 = S_LOAD_DWORDX8_IMM renamable $sgpr4_sgpr5, 1344, 0, 0 :: (dereferenceable load 32, addrspace 6)
     ; CHECK: renamable $sgpr0 = S_MOV_B32 1392
     ; CHECK: renamable $sgpr1 = COPY renamable $sgpr5
@@ -66,10 +66,10 @@ body:             |
     ; CHECK: renamable $sgpr3 = COPY renamable $sgpr5
     ; CHECK: renamable $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75 = S_LOAD_DWORDX8_IMM renamable $sgpr4_sgpr5, 1472, 0, 0 :: (dereferenceable load 32, addrspace 6)
     ; CHECK: renamable $sgpr4 = S_MOV_B32 1520
-    ; CHECK: renamable $sgpr96_sgpr97_sgpr98_sgpr99 = S_LOAD_DWORDX4_IMM renamable $sgpr2_sgpr3, 0, 0, 0 :: (load 16, addrspace 6)
-    ; CHECK: renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr4_sgpr5, 0, 0, 0 :: (load 16, addrspace 6)
-    ; CHECK: renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM renamable $sgpr0_sgpr1, 0, 0, 0 :: (load 16, addrspace 6)
-    ; CHECK: renamable $vgpr7 = IMAGE_SAMPLE_LZ_V1_V2_gfx10 renamable $vgpr5_vgpr6, renamable $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, renamable $sgpr76_sgpr77_sgpr78_sgpr79, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom "ImageResource")
+    ; CHECK: renamable $sgpr96_sgpr97_sgpr98_sgpr99 = S_LOAD_DWORDX4_IMM killed renamable $sgpr2_sgpr3, 0, 0, 0 :: (load 16, addrspace 6)
+    ; CHECK: renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM killed renamable $sgpr4_sgpr5, 0, 0, 0 :: (load 16, addrspace 6)
+    ; CHECK: renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM killed renamable $sgpr0_sgpr1, 0, 0, 0 :: (load 16, addrspace 6)
+    ; CHECK: renamable $vgpr7 = IMAGE_SAMPLE_LZ_V1_V2_gfx10 renamable $vgpr5_vgpr6, killed renamable $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, killed renamable $sgpr76_sgpr77_sgpr78_sgpr79, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom "ImageResource")
     ; CHECK: renamable $vgpr8 = IMAGE_SAMPLE_LZ_V1_V2_gfx10 renamable $vgpr5_vgpr6, killed renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23, killed renamable $sgpr80_sgpr81_sgpr82_sgpr83, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom "ImageResource")
     ; CHECK: renamable $vgpr9 = IMAGE_SAMPLE_LZ_V1_V2_gfx10 renamable $vgpr5_vgpr6, killed renamable $sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, killed renamable $sgpr84_sgpr85_sgpr86_sgpr87, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom "ImageResource")
     ; CHECK: renamable $vgpr10 = IMAGE_SAMPLE_LZ_V1_V2_gfx10 renamable $vgpr5_vgpr6, renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43, renamable $sgpr88_sgpr89_sgpr90_sgpr91, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom "ImageResource")
@@ -100,7 +100,7 @@ body:             |
     ; CHECK: renamable $vgpr0 = V_MAX3_F32_e64 0, killed $vgpr0, 0, killed $vgpr1, 0, killed $vgpr3, 0, 0, implicit $mode, implicit $exec
     ; CHECK: renamable $sgpr0 = nofpexcept V_CMP_GT_F32_e64 0, 1028443341, 0, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; CHECK: renamable $vgpr0 = V_CNDMASK_B32_e64 0, 0, 0, 1065353216, killed $sgpr0, implicit $exec
-    ; CHECK: EXP_DONE 12, killed renamable $vgpr0, renamable $vgpr2, undef renamable $vgpr0, undef renamable $vgpr0, -1, 0, 15, implicit $exec
+    ; CHECK: EXP_DONE 12, killed renamable $vgpr0, killed renamable $vgpr2, undef renamable $vgpr0, undef renamable $vgpr0, -1, 0, 15, implicit $exec
     ; CHECK: S_ENDPGM 0
     %0:vgpr_32 = COPY $vgpr0
     undef %1.sub0:sgpr_64 = COPY $sgpr0
