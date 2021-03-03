@@ -88,7 +88,7 @@ llvm::Expected<std::vector<SymbolInformation>>
 getWorkspaceSymbols(llvm::StringRef Query, int Limit,
                     const SymbolIndex *const Index, llvm::StringRef HintPath) {
   std::vector<SymbolInformation> Result;
-  if (Query.empty() || !Index)
+  if (!Index)
     return Result;
 
   // Lookup for qualified names are performed as:
