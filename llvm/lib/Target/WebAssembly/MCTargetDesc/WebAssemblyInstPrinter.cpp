@@ -48,8 +48,35 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                        StringRef Annot,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &OS) {
-  // Print the instruction (this uses the AsmStrings from the .td files).
-  printInstruction(MI, Address, OS);
+  switch (MI->getOpcode()) {
+  case WebAssembly::CALL_INDIRECT_S:
+  case WebAssembly::RET_CALL_INDIRECT_S: {
+    // A special case for call_indirect (and ret_call_indirect), if the table
+    // operand is a symbol: the order of the type and table operands is inverted
+    // in the text format relative to the binary format.  Otherwise if table the
+    // operand isn't a symbol, then we have an MVP compilation unit, and the
+    // table shouldn't appear in the output.
+    OS << "\t";
+    OS << getMnemonic(MI).first;
+    OS << " ";
+
+    assert(MI->getNumOperands() == 2);
+    const unsigned TypeOperand = 0;
+    const unsigned TableOperand = 1;
+    if (MI->getOperand(TableOperand).isExpr()) {
+      printOperand(MI, TableOperand, OS);
+      OS << ", ";
+    } else {
+      assert(MI->getOperand(TableOperand).getImm() == 0);
+    }
+    printOperand(MI, TypeOperand, OS);
+    break;
+  }
+  default:
+    // Print the instruction (this uses the AsmStrings from the .td files).
+    printInstruction(MI, Address, OS);
+    break;
+  }
 
   // Print any additional variadic operands.
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());

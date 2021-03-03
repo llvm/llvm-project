@@ -35,8 +35,8 @@ entry:
 ; CHECK-NEXT: i32.const 1
 ; CHECK-NEXT: local.get 0
 ; CHECK-NEXT: i32.wrap_i64
-; CHECK-NEXT: call_indirect (i32) -> (), 0
-; REF:        call_indirect (i32) -> (), __indirect_function_table
+; CHECK-NEXT: call_indirect (i32) -> ()
+; REF:        call_indirect __indirect_function_table, (i32) -> ()
 
 ; CHECK:      .functype test () -> ()
 ; CHECK-NEXT: i64.const bar
