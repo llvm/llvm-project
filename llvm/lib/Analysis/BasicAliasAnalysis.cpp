@@ -477,6 +477,13 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       return Decomposed;
     }
 
+    // Track whether we've seen at least one in bounds gep, and if so, whether
+    // all geps parsed were in bounds.
+    if (Decomposed.InBounds == None)
+      Decomposed.InBounds = GEPOp->isInBounds();
+    else if (!GEPOp->isInBounds())
+      Decomposed.InBounds = false;
+
     // Don't attempt to analyze GEPs over unsized objects.
     if (!GEPOp->getSourceElementType()->isSized()) {
       Decomposed.Base = V;
@@ -1051,7 +1058,7 @@ bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
       const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
       LocationSize MaybeObjectAccessSize) {
   // If the object access size is unknown, or the GEP isn't inbounds, bail.
-  if (!MaybeObjectAccessSize.hasValue() || !GEPOp->isInBounds())
+  if (!MaybeObjectAccessSize.hasValue() || !*DecompGEP.InBounds)
     return false;
 
   const uint64_t ObjectAccessSize = MaybeObjectAccessSize.getValue();

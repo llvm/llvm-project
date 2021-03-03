@@ -143,6 +143,9 @@ private:
     SmallVector<VariableGEPIndex, 4> VarIndices;
     // Is GEP index scale compile-time constant.
     bool HasCompileTimeConstantScale;
+    // Are all operations inbounds GEPs or non-indexing operations?
+    // (None iff expression doesn't involve any geps)
+    Optional<bool> InBounds;
 
     void dump() const {
       print(dbgs());
