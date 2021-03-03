@@ -367,7 +367,7 @@ body:             |
 
 # GCN-LABEL: vgpr_lo16_sub{{$}}
 # GCN: renamable $vgpr0 = V_AND_B32_e32 killed $vgpr3, killed $vgpr1, implicit $exec
-# GCN: renamable $vgpr1_lo16 = COPY renamable $vgpr0_lo16
+# GCN: renamable $vgpr1_lo16 = COPY killed renamable $vgpr0_lo16
 ---
 name:            vgpr_lo16_sub
 tracksRegLiveness: true
@@ -404,7 +404,7 @@ body: |
 
 # GCN-LABEL: vgpr_hi16_sub{{$}}
 # GCN: renamable $vgpr0 = V_AND_B32_e32 killed $vgpr3, killed $vgpr1, implicit $exec
-# GCN: renamable $vgpr1_hi16 = COPY renamable $vgpr0_hi16
+# GCN: renamable $vgpr1_hi16 = COPY killed renamable $vgpr0_hi16
 ---
 name:            vgpr_hi16_sub
 tracksRegLiveness: true
@@ -441,7 +441,7 @@ body: |
 
 # GCN-LABEL: sgpr_lo16_sub{{$}}
 # GCN: renamable $sgpr0 = S_AND_B32 killed renamable $sgpr14, $sgpr0, implicit-def $scc
-# GCN: renamable $sgpr1_lo16 = COPY renamable $sgpr0_lo16
+# GCN: renamable $sgpr1_lo16 = COPY killed renamable $sgpr0_lo16
 ---
 name:            sgpr_lo16_sub
 tracksRegLiveness: true
@@ -498,7 +498,7 @@ body: |
 # Test that bank of subreg is considered during scavenging.
 # If handled incorrectly an infinite loop occurs.
 # GCN-LABEL: s0_vs_s15_16_17_sub1{{$}}
-# GCN: S_AND_B32 renamable $sgpr13, $sgpr0,
+# GCN: S_AND_B32 killed renamable $sgpr13, $sgpr0,
 ---
 name:            s0_vs_s15_16_17_sub1
 tracksRegLiveness: true
@@ -531,7 +531,7 @@ body: |
 # GCN: $vgpr40_vgpr41_vgpr42_vgpr43 = IMPLICIT_DEF
 # GCN: $vgpr44_vgpr45_vgpr46_vgpr47 = IMPLICIT_DEF
 # GCN: $vgpr0_vgpr1 = V_ADD_F64_e64 0, $vgpr11_vgpr12, 0, killed $vgpr16_vgpr17, 0, 0, implicit $mode, implicit $exec
-# GCN: $vgpr0_vgpr1 = V_ADD_F64_e64 0, $vgpr9_vgpr10, 0, killed $vgpr14_vgpr15, 0, 0, implicit $mode, implicit $exec
+# GCN: $vgpr0_vgpr1 = V_ADD_F64_e64 0, killed $vgpr9_vgpr10, 0, killed $vgpr14_vgpr15, 0, 0, implicit $mode, implicit $exec
 ---
 name:            vgpr_sub_dependence
 tracksRegLiveness: true

@@ -130,11 +130,11 @@ define void @one_size_unknown(i8* %p, i32 %size) {
 
 ; If part of the addressing is done with non-inbounds GEPs, we can't use
 ; properties implied by the last gep w/the whole offset. In this case,
-; %random = %alloc - 4 bytes is well defined, and results in %p1 == %alloca.
+; %random = %alloc - 4 bytes is well defined, and results in %step == %alloca,
+; leaving %p as an entirely inbounds gep pointing inside %alloca
 ; CHECK-LABEL: Function: all_inbounds:
 ; CHECK: MayAlias: i32* %alloca, i8* %p0
-; CHECK: NoAlias:  i32* %alloca, i8* %p1
-; FIXME: Result produced is currently wrong.
+; CHECK: MayAlias:  i32* %alloca, i8* %p1
 define void @all_inbounds() {
   %alloca = alloca i32, i32 4
   %random = call i8* @random.i8(i32* %alloca)
@@ -148,8 +148,7 @@ define void @all_inbounds() {
 ; For all values of %x, %p0 and %p1 can't alias because %random would
 ; have to be out of bounds (and thus a contradiction) for them to be equal.
 ; CHECK-LABEL: Function: common_factor:
-; CHECK: MayAlias:  i32* %p0, i32* %p1
-; TODO: Missing oppurtunity
+; CHECK: NoAlias:  i32* %p0, i32* %p1
 define void @common_factor(i32 %x) {
   %alloca = alloca i32, i32 4
   %random = call i8* @random.i8(i32* %alloca)

@@ -80,6 +80,12 @@ private:
   /// directory, recursively collect all of the paths within the directory.
   void collectPaths(const std::string &Path);
 
+  /// Check if the two given files are the same file.
+  bool isEquivalentFile(StringRef FilePath1, StringRef FilePath2);
+
+  /// Retrieve a file status with a cache.
+  Optional<sys::fs::file_status> getFileStatus(StringRef FilePath);
+
   /// Return a memory buffer for the given source file.
   ErrorOr<const MemoryBuffer &> getSourceFile(StringRef SourceFile);
 
@@ -152,6 +158,9 @@ private:
   /// The coverage data path to be remapped from, and the source path to be
   /// remapped to, when using -path-equivalence.
   Optional<std::pair<std::string, std::string>> PathRemapping;
+
+  /// File status cache used when finding the same file.
+  StringMap<Optional<sys::fs::file_status>> FileStatusCache;
 
   /// The architecture the coverage mapping data targets.
   std::vector<StringRef> CoverageArches;
@@ -239,6 +248,27 @@ void CodeCoverageTool::collectPaths(const std::string &Path) {
   }
 }
 
+Optional<sys::fs::file_status>
+CodeCoverageTool::getFileStatus(StringRef FilePath) {
+  auto It = FileStatusCache.try_emplace(FilePath);
+  auto &CachedStatus = It.first->getValue();
+  if (!It.second)
+    return CachedStatus;
+
+  sys::fs::file_status Status;
+  if (!sys::fs::status(FilePath, Status))
+    CachedStatus = Status;
+  return CachedStatus;
+}
+
+bool CodeCoverageTool::isEquivalentFile(StringRef FilePath1,
+                                        StringRef FilePath2) {
+  auto Status1 = getFileStatus(FilePath1);
+  auto Status2 = getFileStatus(FilePath2);
+  return Status1.hasValue() && Status2.hasValue() &&
+         sys::fs::equivalent(Status1.getValue(), Status2.getValue());
+}
+
 ErrorOr<const MemoryBuffer &>
 CodeCoverageTool::getSourceFile(StringRef SourceFile) {
   // If we've remapped filenames, look up the real location for this file.
@@ -249,7 +279,7 @@ CodeCoverageTool::getSourceFile(StringRef SourceFile) {
       SourceFile = Loc->second;
   }
   for (const auto &Files : LoadedSourceFiles)
-    if (sys::fs::equivalent(SourceFile, Files.first))
+    if (isEquivalentFile(SourceFile, Files.first))
       return *Files.second;
   auto Buffer = MemoryBuffer::getFile(SourceFile);
   if (auto EC = Buffer.getError()) {

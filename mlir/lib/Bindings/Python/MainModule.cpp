@@ -10,6 +10,7 @@
 
 #include "PybindUtils.h"
 
+#include "ExecutionEngine.h"
 #include "Globals.h"
 #include "IRModules.h"
 #include "Pass.h"
@@ -216,4 +217,9 @@ PYBIND11_MODULE(_mlir, m) {
   auto passModule =
       m.def_submodule("passmanager", "MLIR Pass Management Bindings");
   populatePassManagerSubmodule(passModule);
+
+  // Define and populate ExecutionEngine submodule.
+  auto executionEngineModule =
+      m.def_submodule("execution_engine", "MLIR JIT Execution Engine");
+  populateExecutionEngineSubmodule(executionEngineModule);
 }

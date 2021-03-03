@@ -2329,7 +2329,7 @@ uninitialized_move_n(_InputIt __first, _Size __n, _ForwardIt __first_res) {
 
 // NOTE: Relaxed and acq/rel atomics (for increment and decrement respectively)
 // should be sufficient for thread safety.
-// See https://bugs.llvm.org/show_bug.cgi?id=22803
+// See https://llvm.org/PR22803
 #if defined(__clang__) && __has_builtin(__atomic_add_fetch)          \
                        && defined(__ATOMIC_RELAXED)                  \
                        && defined(__ATOMIC_ACQ_REL)
