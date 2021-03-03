@@ -26,6 +26,6 @@ body: |
     ; CHECK-NEXT: PUSHWRr $r29r28, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $r29r28 = SBCIWRdK $r29r28, -64, implicit-def $sreg, implicit $sreg
     ; CHECK-NEXT: STWPtrRr $r29r28, $r1r0
-    ; CHECK-NEXT: POPWRd $r29r28, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $r29r28 = POPWRd implicit-def $sp, implicit $sp
     STDWPtrQRr $r29r28, 64, $r1r0
 ...
