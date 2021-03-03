@@ -1,4 +1,4 @@
-//===-- MVEVPTOptimisationsPass.cpp ---------------------------------------===//
+//===-- MVETPAndVPTOptimisationsPass.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,13 +41,13 @@ MergeEndDec("arm-enable-merge-loopenddec", cl::Hidden,
     cl::init(true));
 
 namespace {
-class MVEVPTOptimisations : public MachineFunctionPass {
+class MVETPAndVPTOptimisations : public MachineFunctionPass {
 public:
   static char ID;
   const Thumb2InstrInfo *TII;
   MachineRegisterInfo *MRI;
 
-  MVEVPTOptimisations() : MachineFunctionPass(ID) {}
+  MVETPAndVPTOptimisations() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
@@ -76,16 +76,16 @@ private:
   bool ConvertVPSEL(MachineBasicBlock &MBB);
 };
 
-char MVEVPTOptimisations::ID = 0;
+char MVETPAndVPTOptimisations::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS_BEGIN(MVEVPTOptimisations, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(MVETPAndVPTOptimisations, DEBUG_TYPE,
                       "ARM MVE TailPred and VPT Optimisations pass", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_END(MVEVPTOptimisations, DEBUG_TYPE,
+INITIALIZE_PASS_END(MVETPAndVPTOptimisations, DEBUG_TYPE,
                     "ARM MVE TailPred and VPT Optimisations pass", false, false)
 
 static MachineInstr *LookThroughCOPY(MachineInstr *MI,
@@ -180,7 +180,7 @@ static bool findLoopComponents(MachineLoop *ML, MachineRegisterInfo *MRI,
 // loop. The t2LoopEndDec is a branching terminator that produces a value (the
 // decrement) around the loop edge, which means we need to be careful that they
 // will be valid to allocate without any spilling.
-bool MVEVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
+bool MVETPAndVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
   if (!MergeEndDec)
     return false;
 
@@ -271,7 +271,7 @@ bool MVEVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
 // instructions. This keeps the VCTP count reg operand on the t2DoLoopStartTP
 // instruction, making the backend ARMLowOverheadLoops passes job of finding the
 // VCTP operand much simpler.
-bool MVEVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
+bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
                                               MachineDominatorTree *DT) {
   LLVM_DEBUG(dbgs() << "ConvertTailPredLoop on loop "
                     << ML->getHeader()->getName() << "\n");
@@ -443,7 +443,7 @@ static bool IsWritingToVCCR(MachineInstr &Instr) {
 // And returns the newly inserted VPNOT.
 // This optimization is done in the hopes of preventing spills/reloads of VPR by
 // reducing the number of VCCR values with overlapping lifetimes.
-MachineInstr &MVEVPTOptimisations::ReplaceRegisterUseWithVPNOT(
+MachineInstr &MVETPAndVPTOptimisations::ReplaceRegisterUseWithVPNOT(
     MachineBasicBlock &MBB, MachineInstr &Instr, MachineOperand &User,
     Register Target) {
   Register NewResult = MRI->createVirtualRegister(MRI->getRegClass(Target));
@@ -528,7 +528,7 @@ static bool MoveVPNOTBeforeFirstUser(MachineBasicBlock &MBB,
 //    %Foo = (some op that uses %B)
 //    %TMP2:vccr = VPNOT %B
 //    %Bar = (some op that uses %A)
-bool MVEVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
+bool MVETPAndVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator Iter = MBB.begin(), End = MBB.end();
   SmallVector<MachineInstr *, 4> DeadInstructions;
   bool Modified = false;
@@ -656,7 +656,7 @@ bool MVEVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
 }
 
 // This optimisation replaces VCMPs with VPNOTs when they are equivalent.
-bool MVEVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
+bool MVETPAndVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
   SmallVector<MachineInstr *, 4> DeadInstructions;
 
   // The last VCMP that we have seen and that couldn't be replaced.
@@ -729,7 +729,7 @@ bool MVEVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
   return !DeadInstructions.empty();
 }
 
-bool MVEVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
+bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
                                                MachineDominatorTree *DT) {
   // Scan through the block, looking for instructions that use constants moves
   // into VPR that are the negative of one another. These are expected to be
@@ -818,7 +818,7 @@ bool MVEVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
 // instructions. We turn a vselect into a VPSEL in ISEL, but they have slightly
 // different semantics under tail predication. Until that is modelled we just
 // convert to a VMOVT (via a predicated VORR) instead.
-bool MVEVPTOptimisations::ConvertVPSEL(MachineBasicBlock &MBB) {
+bool MVETPAndVPTOptimisations::ConvertVPSEL(MachineBasicBlock &MBB) {
   bool HasVCTP = false;
   SmallVector<MachineInstr *, 4> DeadInstructions;
 
@@ -852,7 +852,7 @@ bool MVEVPTOptimisations::ConvertVPSEL(MachineBasicBlock &MBB) {
   return !DeadInstructions.empty();
 }
 
-bool MVEVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
+bool MVETPAndVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
   const ARMSubtarget &STI =
       static_cast<const ARMSubtarget &>(Fn.getSubtarget());
 
@@ -884,7 +884,7 @@ bool MVEVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
   return Modified;
 }
 
-/// createMVEVPTOptimisationsPass
-FunctionPass *llvm::createMVEVPTOptimisationsPass() {
-  return new MVEVPTOptimisations();
+/// createMVETPAndVPTOptimisationsPass
+FunctionPass *llvm::createMVETPAndVPTOptimisationsPass() {
+  return new MVETPAndVPTOptimisations();
 }

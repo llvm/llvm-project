@@ -655,7 +655,7 @@ let Command = "process launch" in {
     Desc<"Set the current working directory to <path> when running the inferior.">;
   def process_launch_arch : Option<"arch", "a">, Arg<"Architecture">,
     Desc<"Set the architecture for the process to launch when ambiguous.">;
-  def process_launch_environment : Option<"environment", "v">,
+  def process_launch_environment : Option<"environment", "E">,
     Arg<"None">, Desc<"Specify an environment variable name/value string "
     "(--environment NAME=VALUE). Can be specified multiple times for subsequent "
     "environment entries.">;

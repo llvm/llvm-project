@@ -2,7 +2,7 @@
 archs:            [ x86_64, arm64 ]
 uuids:            [ 'x86_64: 00000000-0000-0000-0000-000000000000', 'arm64: 00000000-0000-0000-0000-000000000010' ]
 platform:         macosx
-install-name:     '/usr/lib/libSystem.B.dylib'
+install-name:     '/usr/lib/libSystem.dylib'
 current-version:  0001.001.1
 exports:
   - archs:        [ 'x86_64', 'arm64' ]

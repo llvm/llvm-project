@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_CLONEABLE_H
 #define LLDB_UTILITY_CLONEABLE_H
 
+#include <memory>
 #include <type_traits>
 
 namespace lldb_private {

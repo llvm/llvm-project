@@ -10,7 +10,6 @@
 // that do not rely on any of the library functions.
 //
 //===----------------------------------------------------------------------===//
-
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -20,6 +19,7 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include <limits.h>
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -27,6 +27,8 @@ using namespace mlir::vector;
 using TypePredicate = llvm::function_ref<bool(Type)>;
 
 static bool isF32(Type type) { return type.isF32(); }
+
+static bool isI32(Type type) { return type.isInteger(32); }
 
 // Returns vector width if the element type is matching the predicate (scalars
 // that do match the predicate have width equal to `1`).
@@ -153,6 +155,30 @@ static std::pair<Value, Value> frexp(ImplicitLocOpBuilder &builder, Value arg,
   return {normalizedFraction, exponent};
 }
 
+// Computes exp2 for an i32 argument.
+static Value exp2I32(ImplicitLocOpBuilder &builder, Value arg) {
+  assert(isI32(elementType(arg.getType())) && "argument must be i32 type");
+
+  int width = vectorWidth(arg.getType());
+
+  auto bcast = [&](Value value) -> Value {
+    return broadcast(builder, value, width);
+  };
+
+  auto f32Vec = broadcast(builder.getF32Type(), width);
+  // The exponent of f32 located at 23-bit.
+  auto exponetBitLocation = bcast(i32Cst(builder, 23));
+  // Set the exponent bias to zero.
+  auto bias = bcast(i32Cst(builder, 127));
+
+  Value biasedArg = builder.create<AddIOp>(arg, bias);
+  Value exp2ValueInt =
+      builder.create<ShiftLeftOp>(biasedArg, exponetBitLocation);
+  Value exp2ValueF32 = builder.create<LLVM::BitcastOp>(f32Vec, exp2ValueInt);
+
+  return exp2ValueF32;
+}
+
 //----------------------------------------------------------------------------//
 // TanhOp approximation.
 //----------------------------------------------------------------------------//
@@ -230,6 +256,11 @@ TanhApproximation::matchAndRewrite(math::TanhOp op,
   return success();
 }
 
+#define LN2_VALUE                                                              \
+  0.693147180559945309417232121458176568075500134360255254120680009493393621L
+#define LN2E_VALUE                                                             \
+  1.442695040888963407359924681001892137426645954152985934135449406931109219L
+
 //----------------------------------------------------------------------------//
 // LogOp approximation.
 //----------------------------------------------------------------------------//
@@ -246,9 +277,6 @@ public:
                                 PatternRewriter &rewriter) const final;
 };
 } // namespace
-
-#define LN2_VALUE                                                              \
-  0.693147180559945309417232121458176568075500134360255254120680009493393621L
 
 LogicalResult
 LogApproximation::matchAndRewrite(math::LogOp op,
@@ -354,8 +382,124 @@ LogApproximation::matchAndRewrite(math::LogOp op,
 }
 
 //----------------------------------------------------------------------------//
+// Exp approximation.
+//----------------------------------------------------------------------------//
+
+namespace {
+
+struct ExpApproximation : public OpRewritePattern<math::ExpOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(math::ExpOp op,
+                                PatternRewriter &rewriter) const final;
+};
+} // namespace
+
+// Approximate exp(x) using its reduced range exp(y) where y is in the range
+// [0, ln(2)], let y = x - floor(x / ln(2)) * ln(2) = x - k * ln(2), exp(x)
+// = exp(y) * 2^k. exp(y).
+LogicalResult
+ExpApproximation::matchAndRewrite(math::ExpOp op,
+                                  PatternRewriter &rewriter) const {
+  auto width = vectorWidth(op.operand().getType(), isF32);
+  if (!width.hasValue())
+    return rewriter.notifyMatchFailure(op, "unsupported operand type");
+  ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+
+  // TODO: Consider a common pattern rewriter with all methods below to
+  // write the approximations.
+  auto bcast = [&](Value value) -> Value {
+    return broadcast(builder, value, *width);
+  };
+  auto fmla = [&](Value a, Value b, Value c) {
+    return builder.create<FmaFOp>(a, b, c);
+  };
+  auto mul = [&](Value a, Value b) -> Value {
+    return builder.create<MulFOp>(a, b);
+  };
+  auto sub = [&](Value a, Value b) -> Value {
+    return builder.create<SubFOp>(a, b);
+  };
+  auto floor = [&](Value a) { return builder.create<FloorFOp>(a); };
+
+  Value cstLn2 = bcast(f32Cst(builder, static_cast<float>(LN2_VALUE)));
+  Value cstLN2E = bcast(f32Cst(builder, static_cast<float>(LN2E_VALUE)));
+
+  // Polynomial coefficients.
+  Value cstCephesExpP0 = bcast(f32Cst(builder, 1.0));
+  Value cstCephesExpP1 = bcast(f32Cst(builder, 1.0));
+  Value cstCephesExpP2 = bcast(f32Cst(builder, 0.49970514590562437052f));
+  Value cstCephesExpP3 = bcast(f32Cst(builder, 0.16873890085469545053f));
+  Value cstCephesExpP4 = bcast(f32Cst(builder, 0.03668965196652099192f));
+  Value cstCephesExpP5 = bcast(f32Cst(builder, 0.01314350012789660196f));
+
+  Value x = op.operand();
+
+  // Reduced y = x - floor(x / ln(2)) * ln(2) = x - k * ln(2)
+  Value xL2Inv = mul(x, cstLN2E);
+  Value kF32 = floor(xL2Inv);
+  Value kLn2 = mul(kF32, cstLn2);
+  Value y = sub(x, kLn2);
+
+  // Use Estrin's evaluation scheme with 3 independent parts:
+  // P(y)^y : (c0 + c1 y) + (c2 + c3 y) y^2 + (c4 + c5 y) y^4
+  Value y2 = mul(y, y);
+  Value y4 = mul(y2, y2);
+
+  Value q0 = fmla(cstCephesExpP1, y, cstCephesExpP0);
+  Value q1 = fmla(cstCephesExpP3, y, cstCephesExpP2);
+  Value q2 = fmla(cstCephesExpP5, y, cstCephesExpP4);
+  Value expY = fmla(q1, y2, q0);
+  expY = fmla(q2, y4, expY);
+
+  auto i32Vec = broadcast(builder.getI32Type(), *width);
+
+  // exp2(k)
+  Value k = builder.create<FPToSIOp>(kF32, i32Vec);
+  Value exp2KValue = exp2I32(builder, k);
+
+  // exp(x) = exp(y) * exp2(k)
+  expY = mul(expY, exp2KValue);
+
+  // Handle overflow, inf and underflow of exp(x). exp(x) range is [0, inf], its
+  // partitioned as the following:
+  // exp(x) = 0, x <= -inf
+  // exp(x) = underflow (min_float), x <= -88
+  // exp(x) = inf (min_float), x >= 88
+  // Note: |k| = 127 is the value where the 8-bits exponent saturates.
+  Value zerof32Const = bcast(f32Cst(builder, 0));
+  auto constPosInfinity =
+      bcast(f32Cst(builder, std::numeric_limits<float>::infinity()));
+  auto constNegIfinity =
+      bcast(f32Cst(builder, -std::numeric_limits<float>::infinity()));
+  auto underflow = bcast(f32Cst(builder, std::numeric_limits<float>::min()));
+
+  Value kMaxConst = bcast(i32Cst(builder, 127));
+  Value kMaxNegConst = bcast(i32Cst(builder, -127));
+  Value rightBound = builder.create<CmpIOp>(CmpIPredicate::sle, k, kMaxConst);
+  Value leftBound = builder.create<CmpIOp>(CmpIPredicate::sge, k, kMaxNegConst);
+
+  Value isNegInfinityX =
+      builder.create<CmpFOp>(CmpFPredicate::OEQ, x, constNegIfinity);
+  Value isPostiveX =
+      builder.create<CmpFOp>(CmpFPredicate::OGT, x, zerof32Const);
+  Value isComputable = builder.create<AndOp>(rightBound, leftBound);
+
+  expY = builder.create<SelectOp>(
+      isComputable, expY,
+      builder.create<SelectOp>(
+          isPostiveX, constPosInfinity,
+          builder.create<SelectOp>(isNegInfinityX, zerof32Const, underflow)));
+
+  rewriter.replaceOp(op, expY);
+
+  return success();
+}
+
+//----------------------------------------------------------------------------//
 
 void mlir::populateMathPolynomialApproximationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
-  patterns.insert<TanhApproximation, LogApproximation>(ctx);
+  patterns.insert<TanhApproximation, LogApproximation, ExpApproximation>(ctx);
 }

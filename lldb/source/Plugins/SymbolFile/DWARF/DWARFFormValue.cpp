@@ -150,40 +150,40 @@ struct FormSize {
   uint8_t valid:1, size:7;
 };
 static FormSize g_form_sizes[] = {
-  {0,0}, // 0x00 unused
-  {0,0}, // 0x01 DW_FORM_addr
-  {0,0}, // 0x02 unused
-  {0,0}, // 0x03 DW_FORM_block2
-  {0,0}, // 0x04 DW_FORM_block4
-  {1,2}, // 0x05 DW_FORM_data2
-  {1,4}, // 0x06 DW_FORM_data4
-  {1,8}, // 0x07 DW_FORM_data8
-  {0,0}, // 0x08 DW_FORM_string
-  {0,0}, // 0x09 DW_FORM_block
-  {0,0}, // 0x0a DW_FORM_block1
-  {1,1}, // 0x0b DW_FORM_data1
-  {1,1}, // 0x0c DW_FORM_flag
-  {0,0}, // 0x0d DW_FORM_sdata
-  {1,4}, // 0x0e DW_FORM_strp
-  {0,0}, // 0x0f DW_FORM_udata
-  {0,0}, // 0x10 DW_FORM_ref_addr (addr size for DWARF2 and earlier, 4 bytes for
-         // DWARF32, 8 bytes for DWARF32 in DWARF 3 and later
-  {1,1}, // 0x11 DW_FORM_ref1
-  {1,2}, // 0x12 DW_FORM_ref2
-  {1,4}, // 0x13 DW_FORM_ref4
-  {1,8}, // 0x14 DW_FORM_ref8
-  {0,0}, // 0x15 DW_FORM_ref_udata
-  {0,0}, // 0x16 DW_FORM_indirect
-  {1,4}, // 0x17 DW_FORM_sec_offset
-  {0,0}, // 0x18 DW_FORM_exprloc
-  {1,0}, // 0x19 DW_FORM_flag_present
-  {0,0}, // 0x1a
-  {0,0}, // 0x1b
-  {0,0}, // 0x1c
-  {0,0}, // 0x1d
-  {0,0}, // 0x1e
-  {0,0}, // 0x1f
-  {1,8}, // 0x20 DW_FORM_ref_sig8
+    {0, 0}, // 0x00 unused
+    {0, 0}, // 0x01 DW_FORM_addr
+    {0, 0}, // 0x02 unused
+    {0, 0}, // 0x03 DW_FORM_block2
+    {0, 0}, // 0x04 DW_FORM_block4
+    {1, 2}, // 0x05 DW_FORM_data2
+    {1, 4}, // 0x06 DW_FORM_data4
+    {1, 8}, // 0x07 DW_FORM_data8
+    {0, 0}, // 0x08 DW_FORM_string
+    {0, 0}, // 0x09 DW_FORM_block
+    {0, 0}, // 0x0a DW_FORM_block1
+    {1, 1}, // 0x0b DW_FORM_data1
+    {1, 1}, // 0x0c DW_FORM_flag
+    {0, 0}, // 0x0d DW_FORM_sdata
+    {1, 4}, // 0x0e DW_FORM_strp
+    {0, 0}, // 0x0f DW_FORM_udata
+    {0, 0}, // 0x10 DW_FORM_ref_addr (addr size for DWARF2 and earlier, 4 bytes
+            // for DWARF32, 8 bytes for DWARF32 in DWARF 3 and later
+    {1, 1},  // 0x11 DW_FORM_ref1
+    {1, 2},  // 0x12 DW_FORM_ref2
+    {1, 4},  // 0x13 DW_FORM_ref4
+    {1, 8},  // 0x14 DW_FORM_ref8
+    {0, 0},  // 0x15 DW_FORM_ref_udata
+    {0, 0},  // 0x16 DW_FORM_indirect
+    {1, 4},  // 0x17 DW_FORM_sec_offset
+    {0, 0},  // 0x18 DW_FORM_exprloc
+    {1, 0},  // 0x19 DW_FORM_flag_present
+    {0, 0},  // 0x1a DW_FORM_strx (ULEB128)
+    {0, 0},  // 0x1b DW_FORM_addrx (ULEB128)
+    {1, 4},  // 0x1c DW_FORM_ref_sup4
+    {0, 0},  // 0x1d DW_FORM_strp_sup (4 bytes for DWARF32, 8 bytes for DWARF64)
+    {1, 16}, // 0x1e DW_FORM_data16
+    {1, 4},  // 0x1f DW_FORM_line_strp
+    {1, 8},  // 0x20 DW_FORM_ref_sig8
 };
 
 llvm::Optional<uint8_t>
@@ -286,6 +286,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
     // 32 bit for DWARF 32, 64 for DWARF 64
     case DW_FORM_sec_offset:
     case DW_FORM_strp:
+    case DW_FORM_line_strp:
       *offset_ptr += 4;
       return true;
 
@@ -398,7 +399,8 @@ void DWARFFormValue::Dump(Stream &s) const {
   case DW_FORM_udata:
     s.PutULEB128(uvalue);
     break;
-  case DW_FORM_strp: {
+  case DW_FORM_strp:
+  case DW_FORM_line_strp: {
     const char *dbg_str = AsCString();
     if (dbg_str) {
       s.QuotedCString(dbg_str);
@@ -606,6 +608,7 @@ bool DWARFFormValue::FormIsSupported(dw_form_t form) {
     case DW_FORM_flag:
     case DW_FORM_sdata:
     case DW_FORM_strp:
+    case DW_FORM_line_strp:
     case DW_FORM_strx:
     case DW_FORM_strx1:
     case DW_FORM_strx2:

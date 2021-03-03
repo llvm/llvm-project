@@ -184,7 +184,7 @@ AARCH64_CPU_NAME("apple-a9", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
 AARCH64_CPU_NAME("apple-a10", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_CRC | AArch64::AEK_RDM))
 AARCH64_CPU_NAME("apple-a11", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                 (AArch64::AEK_NONE))
+                 (AArch64::AEK_FP16))
 AARCH64_CPU_NAME("apple-a12", ARMV8_3A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_FP16))
 AARCH64_CPU_NAME("apple-a13", ARMV8_4A, FK_CRYPTO_NEON_FP_ARMV8, false,

@@ -224,31 +224,6 @@ void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   SplitArgs.back().Flags[0].setInConsecutiveRegsLast();
 }
 
-Register CallLowering::packRegs(ArrayRef<Register> SrcRegs, Type *PackedTy,
-                                MachineIRBuilder &MIRBuilder) const {
-  assert(SrcRegs.size() > 1 && "Nothing to pack");
-
-  const DataLayout &DL = MIRBuilder.getMF().getDataLayout();
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-
-  LLT PackedLLT = getLLTForType(*PackedTy, DL);
-
-  SmallVector<LLT, 8> LLTs;
-  SmallVector<uint64_t, 8> Offsets;
-  computeValueLLTs(DL, *PackedTy, LLTs, &Offsets);
-  assert(LLTs.size() == SrcRegs.size() && "Regs / types mismatch");
-
-  Register Dst = MRI->createGenericVirtualRegister(PackedLLT);
-  MIRBuilder.buildUndef(Dst);
-  for (unsigned i = 0; i < SrcRegs.size(); ++i) {
-    Register NewDst = MRI->createGenericVirtualRegister(PackedLLT);
-    MIRBuilder.buildInsert(NewDst, Dst, SrcRegs[i], Offsets[i]);
-    Dst = NewDst;
-  }
-
-  return Dst;
-}
-
 void CallLowering::unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg,
                               Type *PackedTy,
                               MachineIRBuilder &MIRBuilder) const {

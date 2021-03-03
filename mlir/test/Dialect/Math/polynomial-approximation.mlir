@@ -20,3 +20,16 @@ func @vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   %1 = math.log %0 : vector<8xf32>
   return %1 : vector<8xf32>
 }
+
+// CHECK-LABEL: @exp_scalar
+func @exp_scalar(%arg0: f32) -> f32 {
+  %0 = math.exp %arg0 : f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @exp_vector
+func @exp_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
+  // CHECK-NOT: math.exp
+  %0 = math.exp %arg0 : vector<8xf32>
+  return %0 : vector<8xf32>
+}

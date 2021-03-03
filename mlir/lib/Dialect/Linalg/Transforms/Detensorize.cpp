@@ -21,6 +21,20 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
+static Value sourceMaterializationCallback(OpBuilder &builder, Type type,
+                                           ValueRange inputs, Location loc) {
+  assert(inputs.size() == 1);
+  // A detensored value is converted back by creating a new tensor from its
+  // element(s).
+  auto createNewTensorOp = builder.create<tensor::FromElementsOp>(
+      loc, inputs[0].getType(), inputs[0]);
+
+  // FromElementsOp results in a tensor<1xdtype>, we need to reshape that to
+  // a tensor<dtype> instead.
+  return builder.create<linalg::TensorReshapeOp>(
+      loc, type, createNewTensorOp, ArrayRef<ReassociationExprs>{});
+}
+
 namespace {
 /// Defines the criteria a TensorType must follow in order to be considered
 /// "detensorable".
@@ -64,6 +78,29 @@ public:
   }
 };
 
+/// A conversion pattern for detensoring internal (non-entry) blocks within a
+/// function.
+struct FunctionNonEntryBlockConversion : public ConversionPattern {
+  FunctionNonEntryBlockConversion(StringRef functionLikeOpName,
+                                  MLIRContext *ctx, TypeConverter &converter)
+      : ConversionPattern(functionLikeOpName, /*benefit=*/1, converter, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.startRootUpdate(op);
+
+    if (failed(rewriter.convertNonEntryRegionTypes(
+            &mlir::impl::getFunctionBody(op), *typeConverter))) {
+      rewriter.cancelRootUpdate(op);
+      return failure();
+    }
+
+    rewriter.finalizeRootUpdate(op);
+    return success();
+  }
+};
+
 class DetensorizeTypeConverter : public TypeConverter {
 public:
   DetensorizeTypeConverter() {
@@ -84,18 +121,8 @@ public:
       return builder.create<tensor::ExtractOp>(loc, inputs[0], ValueRange{});
     });
 
-    // A detensored value is converted back by creating a new tensor from its
-    // element(s).
-    addSourceMaterialization([](OpBuilder &builder, Type type,
-                                ValueRange inputs, Location loc) -> Value {
-      auto createNewTensorOp = builder.create<tensor::FromElementsOp>(
-          loc, inputs[0].getType(), inputs[0]);
-
-      // FromElementsOp results in a tensor<1xdtype>, we need to reshape that to
-      // a tensor<dtype> instead.
-      return builder.create<linalg::TensorReshapeOp>(
-          loc, type, createNewTensorOp, ArrayRef<ReassociationExprs>{});
-    });
+    addSourceMaterialization(sourceMaterializationCallback);
+    addArgumentMaterialization(sourceMaterializationCallback);
   }
 };
 
@@ -139,22 +166,43 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
     OwningRewritePatternList patterns;
     ConversionTarget target(*context);
 
-    target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
-    target.addLegalDialect<linalg::LinalgDialect>();
     target.addDynamicallyLegalOp<GenericOp>([&](GenericOp op) {
-      // If any of the operands or results cannot be detensored, the op is
-      // considered legal and won't be detensored.
-      return llvm::any_of(
-          op.getShapedOperandTypes(), [](ShapedType shapedType) {
-            assert(shapedType.isa<TensorType>());
-            return !canBeDetensored(shapedType.cast<TensorType>());
-          });
+      // If any of the operands or results cannot be detensored (i.e. they are
+      // all legal according the DetensorizeTypeConverter), the op is considered
+      // legal and won't be detensored.
+      return llvm::any_of(op.getShapedOperandTypes(),
+                          [&](ShapedType shapedType) {
+                            return typeConverter.isLegal(shapedType);
+                          });
+    });
+
+    target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
+      // A function is legal if all of its non-entry blocks are legal. We don't
+      // legalize the entry block (i.e. the function's signature) since
+      // detensoring can't happen along external calling convention boundaries,
+      // which we conservatively approximate as all function signatures.
+      return llvm::all_of(llvm::drop_begin(op.getBody(), 1), [&](Block &block) {
+        return typeConverter.isLegal(block.getArgumentTypes());
+      });
+    });
+
+    target.markUnknownOpDynamicallyLegal([&](Operation *op) {
+      return isNotBranchOpInterfaceOrReturnLikeOp(op) ||
+             isLegalForBranchOpInterfaceTypeConversionPattern(op,
+                                                              typeConverter) ||
+             isLegalForReturnOpTypeConversionPattern(
+                 op, typeConverter, /*returnOpAlwaysLegal*/ true);
     });
 
     patterns.insert<DetensorizeGenericOp>(typeConverter, context);
+    patterns.insert<FunctionNonEntryBlockConversion>(FuncOp::getOperationName(),
+                                                     context, typeConverter);
+    // Since non-entry block arguments get detensorized, we also need to update
+    // the control flow inside the function to reflect the correct types.
+    populateBranchOpInterfaceTypeConversionPattern(patterns, context,
+                                                   typeConverter);
 
-    if (failed(
-            applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyFullConversion(getFunction(), target, std::move(patterns))))
       signalPassFailure();
 
     OwningRewritePatternList canonPatterns;
@@ -162,8 +210,6 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
     if (failed(applyPatternsAndFoldGreedily(getFunction(),
                                             std::move(canonPatterns))))
       signalPassFailure();
-
-    // TODO Properly handle control flow within function boundaries.
   }
 };
 } // namespace

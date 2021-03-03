@@ -15,4 +15,8 @@ executable("llvm-jitlink") {
     "llvm-jitlink-macho.cpp",
     "llvm-jitlink.cpp",
   ]
+  if (host_os != "mac" && host_os != "win") {
+    # Corresponds to export_executable_symbols() in cmake.
+    ldflags = [ "-rdynamic" ]
+  }
 }

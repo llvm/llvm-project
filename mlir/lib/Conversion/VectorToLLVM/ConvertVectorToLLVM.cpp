@@ -188,7 +188,7 @@ static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
   SmallVector<int64_t, 4> strides;
   auto successStrides = getStridesAndOffset(memRefType, strides, offset);
   if (failed(successStrides) || strides.back() != 1 ||
-      memRefType.getMemorySpace() != 0)
+      memRefType.getMemorySpaceAsInt() != 0)
     return failure();
   auto pType = MemRefDescriptor(memref).getElementPtrType();
   auto ptrsType = LLVM::getFixedVectorType(pType, vType.getDimSize(0));
@@ -200,7 +200,7 @@ static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
 // will be in the same address space as the incoming memref type.
 static Value castDataPtr(ConversionPatternRewriter &rewriter, Location loc,
                          Value ptr, MemRefType memRefType, Type vt) {
-  auto pType = LLVM::LLVMPointerType::get(vt, memRefType.getMemorySpace());
+  auto pType = LLVM::LLVMPointerType::get(vt, memRefType.getMemorySpaceAsInt());
   return rewriter.create<LLVM::BitcastOp>(loc, pType, ptr);
 }
 

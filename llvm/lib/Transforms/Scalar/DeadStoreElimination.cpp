@@ -2504,7 +2504,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
 
     MemoryAccess *Current = KillingDef;
     LLVM_DEBUG(dbgs() << "Trying to eliminate MemoryDefs killed by "
-                      << *KillingDef << " (" << *SI << ")\n");
+                      << *Current << " (" << *SI << ")\n");
 
     unsigned ScanLimit = MemorySSAScanLimit;
     unsigned WalkerStepLimit = MemorySSAUpwardsStepLimit;

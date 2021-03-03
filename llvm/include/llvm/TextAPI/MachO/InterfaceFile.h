@@ -338,6 +338,9 @@ public:
   ///\param Document The library to inline with top level library.
   void addDocument(std::shared_ptr<InterfaceFile> &&Document);
 
+  /// Returns the pointer to parent document if exists or nullptr otherwise.
+  InterfaceFile *getParent() const { return Parent; }
+
   /// Get the list of inlined libraries.
   ///
   /// \return Returns a list of the inlined frameworks.
@@ -431,6 +434,7 @@ private:
   std::vector<std::shared_ptr<InterfaceFile>> Documents;
   std::vector<std::pair<Target, std::string>> UUIDs;
   SymbolMapType Symbols;
+  InterfaceFile *Parent = nullptr;
 };
 
 template <typename DerivedT, typename KeyInfoT, typename BucketT>

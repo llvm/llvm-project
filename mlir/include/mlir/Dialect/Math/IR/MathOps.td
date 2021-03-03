@@ -17,10 +17,9 @@ class MathOp<string mnemonic, list<OpTrait> traits = []>
     : Op<Math_Dialect, mnemonic, traits # [NoSideEffect]>;
 
 class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
-    MathOp<mnemonic,
-      traits # [DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
-                ElementwiseMappable,
-                SameOperandsAndResultType]> {
+    MathOp<mnemonic, traits #
+    [DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
+    SameOperandsAndResultType] # ElementwiseMappable.traits> {
   let arguments = (ins FloatLike:$operand);
 
   let results = (outs FloatLike:$result);
@@ -29,10 +28,9 @@ class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 class FloatBinaryOp<string mnemonic, list<OpTrait> traits = []> :
-    MathOp<mnemonic,
-      traits # [DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
-                ElementwiseMappable,
-                SameOperandsAndResultType]> {
+    MathOp<mnemonic, traits # [
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
+    SameOperandsAndResultType] # ElementwiseMappable.traits> {
   let arguments = (ins FloatLike:$lhs, FloatLike:$rhs);
   let results = (outs FloatLike:$result);
 

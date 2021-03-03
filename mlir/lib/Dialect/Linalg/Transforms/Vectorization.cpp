@@ -205,7 +205,7 @@ vectorizeOneOp(OpBuilder &builder, Operation *op,
     return VectorizationResult{VectorizationStatus::NewOp, builder.clone(*op)};
 
   // 3. Only ElementwiseMappable are allowed in the generic vectorization.
-  if (!op->hasTrait<OpTrait::ElementwiseMappable>())
+  if (!OpTrait::hasElementwiseMappableTraits(op))
     return VectorizationResult{VectorizationStatus::Failure, nullptr};
 
   // 4. Generic vectorization path for ElementwiseMappable ops.
@@ -323,7 +323,7 @@ static bool hasOnlyScalarElementwiseOp(Region &r) {
     return false;
   for (Operation &op : r.front()) {
     if (!(isa<ConstantOp, linalg::YieldOp>(op) ||
-          op.hasTrait<OpTrait::ElementwiseMappable>()) ||
+          OpTrait::hasElementwiseMappableTraits(&op)) ||
         llvm::any_of(op.getResultTypes(),
                      [](Type type) { return !type.isIntOrIndexOrFloat(); }))
       return false;

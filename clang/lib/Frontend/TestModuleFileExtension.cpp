@@ -128,11 +128,10 @@ TestModuleFileExtension::createExtensionReader(
                                                     new TestModuleFileExtension::Reader(this, Stream));
 }
 
-namespace clang {
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const TestModuleFileExtension &Extension) {
-  return OS << Extension.BlockName << ":" << Extension.MajorVersion << ":"
-            << Extension.MinorVersion << ":" << Extension.Hashed << ":"
-            << Extension.UserInfo;
+std::string TestModuleFileExtension::str() const {
+  std::string Buffer;
+  llvm::raw_string_ostream OS(Buffer);
+  OS << BlockName << ":" << MajorVersion << ":" << MinorVersion << ":" << Hashed
+     << ":" << UserInfo;
+  return OS.str();
 }
-} // namespace clang

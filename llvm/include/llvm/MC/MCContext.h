@@ -35,6 +35,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -59,6 +60,8 @@ namespace llvm {
   class MCSymbolELF;
   class MCSymbolWasm;
   class MCSymbolXCOFF;
+  class MDNode;
+  class SMDiagnostic;
   class SMLoc;
   class SourceMgr;
 
@@ -68,13 +71,19 @@ namespace llvm {
   class MCContext {
   public:
     using SymbolTable = StringMap<MCSymbol *, BumpPtrAllocator &>;
+    using DiagHandlerTy =
+        std::function<void(const SMDiagnostic &, bool, const SourceMgr &,
+                           std::vector<const MDNode *> &)>;
 
   private:
     /// The SourceMgr for this object, if any.
     const SourceMgr *SrcMgr;
 
     /// The SourceMgr for inline assembly, if any.
-    SourceMgr *InlineSrcMgr;
+    std::unique_ptr<SourceMgr> InlineSrcMgr;
+    std::vector<const MDNode *> LocInfos;
+
+    DiagHandlerTy DiagHandler;
 
     /// The MCAsmInfo for this target.
     const MCAsmInfo *MAI;
@@ -299,6 +308,9 @@ namespace llvm {
 
     bool HadError = false;
 
+    void reportCommon(SMLoc Loc,
+                      std::function<void(SMDiagnostic &, const SourceMgr *)>);
+
     MCSymbol *createSymbolImpl(const StringMapEntry<bool> *Name,
                                bool CanBeUnnamed);
     MCSymbol *createSymbol(StringRef Name, bool AlwaysAddSuffix,
@@ -363,7 +375,15 @@ namespace llvm {
 
     const SourceMgr *getSourceManager() const { return SrcMgr; }
 
-    void setInlineSourceManager(SourceMgr *SM) { InlineSrcMgr = SM; }
+    void initInlineSourceManager();
+    SourceMgr *getInlineSourceManager() {
+      assert(InlineSrcMgr);
+      return InlineSrcMgr.get();
+    }
+    std::vector<const MDNode *> &getLocInfos() { return LocInfos; }
+    void setDiagnosticHandler(DiagHandlerTy DiagHandler) {
+      this->DiagHandler = DiagHandler;
+    }
 
     const MCAsmInfo *getAsmInfo() const { return MAI; }
 
@@ -748,13 +768,13 @@ namespace llvm {
     void deallocate(void *Ptr) {}
 
     bool hadError() { return HadError; }
+    void diagnose(const SMDiagnostic &SMD);
     void reportError(SMLoc L, const Twine &Msg);
     void reportWarning(SMLoc L, const Twine &Msg);
     // Unrecoverable error has occurred. Display the best diagnostic we can
     // and bail via exit(1). For now, most MC backend errors are unrecoverable.
     // FIXME: We should really do something about that.
-    LLVM_ATTRIBUTE_NORETURN void reportFatalError(SMLoc L,
-                                                  const Twine &Msg);
+    LLVM_ATTRIBUTE_NORETURN void reportFatalError(SMLoc L, const Twine &Msg);
 
     const MCAsmMacro *lookupMacro(StringRef Name) {
       StringMap<MCAsmMacro>::iterator I = MacroMap.find(Name);

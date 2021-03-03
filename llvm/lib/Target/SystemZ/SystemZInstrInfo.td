@@ -81,7 +81,7 @@ let isBranch = 1, isTerminator = 1, Uses = [CC] in {
   foreach V = [ "E", "NE", "H", "NH", "L", "NL", "HE", "NHE", "LE", "NLE",
                 "Z", "NZ", "P", "NP", "M", "NM", "LH", "NLH", "O", "NO" ] in {
     def JAsm#V  : FixedCondBranchRI <CV<V>, "j#",  0xA74>;
-    def JGAsm#V : FixedCondBranchRIL<CV<V>, "jg#", 0xC04>;
+    def JGAsm#V : FixedCondBranchRIL<CV<V>, "j{g|l}#", 0xC04>;
     let isIndirectBranch = 1 in {
       def BAsm#V  : FixedCondBranchRX <CV<V>, "b#",  0x47>;
       def BRAsm#V : FixedCondBranchRR <CV<V>, "b#r", 0x07>;
@@ -95,7 +95,7 @@ let isBranch = 1, isTerminator = 1, Uses = [CC] in {
 // conditional branches with the condition mask set to "always".
 let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
   def J  : FixedCondBranchRI <CondAlways, "j",  0xA74, br>;
-  def JG : FixedCondBranchRIL<CondAlways, "jg", 0xC04>;
+  def JG : FixedCondBranchRIL<CondAlways, "j{g|lu}", 0xC04>;
   let isIndirectBranch = 1 in {
     def B  : FixedCondBranchRX<CondAlways, "b",  0x47>;
     def BR : FixedCondBranchRR<CondAlways, "br", 0x07, brind>;
@@ -117,7 +117,8 @@ def NOPR_bare : InstAlias<"nopr", (BCRAsm 0, R0D), 0>;
 def JNOP : InstAlias<"jnop\t$RI2", (BRCAsm 0, brtarget16:$RI2), 0>;
 
 // An alias of BRCL 0, label
-def JGNOP : InstAlias<"jgnop\t$RI2", (BRCLAsm 0, brtarget32:$RI2), 0>;
+// jgnop on att ; jlnop on hlasm
+def JGNOP : InstAlias<"{jgnop|jlnop}\t$RI2", (BRCLAsm 0, brtarget32:$RI2), 0>;
 
 // Fused compare-and-branch instructions.
 //
@@ -2375,10 +2376,12 @@ def JXHG  : MnemonicAlias<"jxhg", "brxhg">;
 def JXLEG : MnemonicAlias<"jxleg", "brxlg">;
 
 def BRU   : MnemonicAlias<"bru", "j">;
-def BRUL  : MnemonicAlias<"brul", "jg">;
+def BRUL  : MnemonicAlias<"brul", "jg", "att">;
+def BRUL_HLASM  : MnemonicAlias<"brul", "jlu", "hlasm">;
 
 foreach V = [ "E", "NE", "H", "NH", "L", "NL", "HE", "NHE", "LE", "NLE",
               "Z", "NZ", "P", "NP", "M", "NM", "LH", "NLH", "O", "NO" ] in {
-  def BRUAsm#V : MnemonicCondBranchAlias <CV<V>, "br#", "j#">;
-  def BRULAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jg#">;
+  defm BRUAsm#V  : MnemonicCondBranchAlias <CV<V>, "br#", "j#">;
+  defm BRULAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jg#", "att">;
+  defm BRUL_HLASMAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jl#", "hlasm">;
 }

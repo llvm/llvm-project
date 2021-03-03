@@ -330,6 +330,10 @@ void DiagnosticInfoMIRParser::print(DiagnosticPrinter &DP) const {
   DP << Diagnostic;
 }
 
+void DiagnosticInfoSrcMgr::print(DiagnosticPrinter &DP) const {
+  DP << Diagnostic;
+}
+
 DiagnosticInfoOptimizationFailure::DiagnosticInfoOptimizationFailure(
     const char *PassName, StringRef RemarkName, const DiagnosticLocation &Loc,
     const Value *CodeRegion)

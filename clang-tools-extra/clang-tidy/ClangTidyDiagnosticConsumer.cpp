@@ -260,11 +260,11 @@ std::string ClangTidyContext::getCheckName(unsigned DiagnosticID) const {
 
 ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
     ClangTidyContext &Ctx, DiagnosticsEngine *ExternalDiagEngine,
-    bool RemoveIncompatibleErrors)
+    bool RemoveIncompatibleErrors, bool GetFixesFromNotes)
     : Context(Ctx), ExternalDiagEngine(ExternalDiagEngine),
       RemoveIncompatibleErrors(RemoveIncompatibleErrors),
-      LastErrorRelatesToUserCode(false), LastErrorPassesLineFilter(false),
-      LastErrorWasIgnored(false) {}
+      GetFixesFromNotes(GetFixesFromNotes), LastErrorRelatesToUserCode(false),
+      LastErrorPassesLineFilter(false), LastErrorWasIgnored(false) {}
 
 void ClangTidyDiagnosticConsumer::finalizeLastError() {
   if (!Errors.empty()) {
@@ -372,6 +372,24 @@ bool shouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
          LineIsMarkedWithNOLINTinMacro(Info.getSourceManager(),
                                        Info.getLocation(), Info.getID(),
                                        Context, AllowIO);
+}
+
+const llvm::StringMap<tooling::Replacements> *
+getFixIt(const tooling::Diagnostic &Diagnostic, bool GetFixFromNotes) {
+  if (!Diagnostic.Message.Fix.empty())
+    return &Diagnostic.Message.Fix;
+  if (!GetFixFromNotes)
+    return nullptr;
+  const llvm::StringMap<tooling::Replacements> *Result = nullptr;
+  for (const auto &Note : Diagnostic.Notes) {
+    if (!Note.Fix.empty()) {
+      if (Result)
+        // We have 2 different fixes in notes, bail out.
+        return nullptr;
+      Result = &Note.Fix;
+    }
+  }
+  return Result;
 }
 
 } // namespace tidy
@@ -658,7 +676,7 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
       std::pair<ClangTidyError *, llvm::StringMap<tooling::Replacements> *>>
       ErrorFixes;
   for (auto &Error : Errors) {
-    if (const auto *Fix = tooling::selectFirstFix(Error))
+    if (const auto *Fix = getFixIt(Error, GetFixesFromNotes))
       ErrorFixes.emplace_back(
           &Error, const_cast<llvm::StringMap<tooling::Replacements> *>(Fix));
   }

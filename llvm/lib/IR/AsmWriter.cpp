@@ -4373,9 +4373,8 @@ void AssemblyWriter::writeMDNode(unsigned Slot, const MDNode *Node) {
 void AssemblyWriter::writeAllMDNodes() {
   SmallVector<const MDNode *, 16> Nodes;
   Nodes.resize(Machine.mdn_size());
-  for (SlotTracker::mdn_iterator I = Machine.mdn_begin(), E = Machine.mdn_end();
-       I != E; ++I)
-    Nodes[I->second] = cast<MDNode>(I->first);
+  for (auto &I : llvm::make_range(Machine.mdn_begin(), Machine.mdn_end()))
+    Nodes[I.second] = cast<MDNode>(I.first);
 
   for (unsigned i = 0, e = Nodes.size(); i != e; ++i) {
     writeMDNode(i, Nodes[i]);
