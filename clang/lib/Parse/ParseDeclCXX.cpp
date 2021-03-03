@@ -880,8 +880,13 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd){
 
   if (Tok.is(tok::kw__Static_assert) && !getLangOpts().C11)
     Diag(Tok, diag::ext_c11_feature) << Tok.getName();
-  if (Tok.is(tok::kw_static_assert))
-    Diag(Tok, diag::warn_cxx98_compat_static_assert);
+  if (Tok.is(tok::kw_static_assert)) {
+    if (!getLangOpts().CPlusPlus)
+      Diag(Tok, diag::ext_ms_static_assert)
+          << FixItHint::CreateReplacement(Tok.getLocation(), "_Static_assert");
+    else
+      Diag(Tok, diag::warn_cxx98_compat_static_assert);
+  }
 
   SourceLocation StaticAssertLoc = ConsumeToken();
 
@@ -902,11 +907,17 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd){
 
   ExprResult AssertMessage;
   if (Tok.is(tok::r_paren)) {
+    unsigned DiagVal;
     if (getLangOpts().CPlusPlus17)
-      Diag(Tok, diag::warn_cxx14_compat_static_assert_no_message);
+      DiagVal = diag::warn_cxx14_compat_static_assert_no_message;
+    else if (getLangOpts().CPlusPlus)
+      DiagVal = diag::ext_cxx_static_assert_no_message;
+    else if (getLangOpts().C2x)
+      DiagVal = diag::warn_c17_compat_static_assert_no_message;
     else
-      Diag(Tok, diag::ext_static_assert_no_message)
-          << getStaticAssertNoMessageFixIt(AssertExpr.get(), Tok.getLocation());
+      DiagVal = diag::ext_c_static_assert_no_message;
+    Diag(Tok, DiagVal) << getStaticAssertNoMessageFixIt(AssertExpr.get(),
+                                                        Tok.getLocation());
   } else {
     if (ExpectAndConsume(tok::comma)) {
       SkipUntil(tok::semi);
