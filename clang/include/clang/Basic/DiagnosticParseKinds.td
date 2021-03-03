@@ -961,6 +961,13 @@ def err_lambda_capture_multiple_ellipses : Error<
   "multiple ellipses in pack capture">;
 def err_capture_default_first : Error<
   "capture default must be first">;
+def ext_decl_attrs_on_lambda : ExtWarn<
+  "an attribute specifier sequence in this position is a C++2b extension">,
+  InGroup<CXX2b>;
+def warn_cxx20_compat_decl_attrs_on_lambda : Warning<
+  "an attribute specifier sequence in this position is incompatible with C++ "
+  "standards before C++2b">, InGroup<CXXPre2bCompat>, DefaultIgnore;
+
 // C++17 lambda expressions
 def err_expected_star_this_capture : Error<
   "expected 'this' following '*' in lambda capture list">;
