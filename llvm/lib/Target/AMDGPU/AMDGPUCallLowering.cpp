@@ -29,28 +29,22 @@ using namespace llvm;
 
 namespace {
 
-struct AMDGPUValueHandler : public CallLowering::ValueHandler {
-  AMDGPUValueHandler(bool IsIncoming, MachineIRBuilder &B,
-                     MachineRegisterInfo &MRI, CCAssignFn *AssignFn)
-      : ValueHandler(IsIncoming, B, MRI, AssignFn) {}
-
-  /// Wrapper around extendRegister to ensure we extend to a full 32-bit
-  /// register.
-  Register extendRegisterMin32(Register ValVReg, CCValAssign &VA) {
-    if (VA.getLocVT().getSizeInBits() < 32) {
-      // 16-bit types are reported as legal for 32-bit registers. We need to
-      // extend and do a 32-bit copy to avoid the verifier complaining about it.
-      return MIRBuilder.buildAnyExt(LLT::scalar(32), ValVReg).getReg(0);
-    }
-
-    return extendRegister(ValVReg, VA);
+/// Wrapper around extendRegister to ensure we extend to a full 32-bit register.
+static Register extendRegisterMin32(CallLowering::ValueHandler &Handler,
+                                    Register ValVReg, CCValAssign &VA) {
+  if (VA.getLocVT().getSizeInBits() < 32) {
+    // 16-bit types are reported as legal for 32-bit registers. We need to
+    // extend and do a 32-bit copy to avoid the verifier complaining about it.
+    return Handler.MIRBuilder.buildAnyExt(LLT::scalar(32), ValVReg).getReg(0);
   }
-};
 
-struct AMDGPUOutgoingValueHandler : public AMDGPUValueHandler {
+  return Handler.extendRegister(ValVReg, VA);
+}
+
+struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   AMDGPUOutgoingValueHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                              MachineInstrBuilder MIB, CCAssignFn *AssignFn)
-      : AMDGPUValueHandler(false, B, MRI, AssignFn), MIB(MIB) {}
+      : OutgoingValueHandler(B, MRI, AssignFn), MIB(MIB) {}
 
   MachineInstrBuilder MIB;
 
@@ -66,7 +60,7 @@ struct AMDGPUOutgoingValueHandler : public AMDGPUValueHandler {
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         CCValAssign &VA) override {
-    Register ExtReg = extendRegisterMin32(ValVReg, VA);
+    Register ExtReg = extendRegisterMin32(*this, ValVReg, VA);
 
     // If this is a scalar return, insert a readfirstlane just in case the value
     // ends up in a VGPR.
@@ -93,12 +87,12 @@ struct AMDGPUOutgoingValueHandler : public AMDGPUValueHandler {
   }
 };
 
-struct AMDGPUIncomingArgHandler : public AMDGPUValueHandler {
+struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
   uint64_t StackUsed = 0;
 
   AMDGPUIncomingArgHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                            CCAssignFn *AssignFn)
-      : AMDGPUValueHandler(true, B, MRI, AssignFn) {}
+      : IncomingValueHandler(B, MRI, AssignFn) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -119,22 +113,16 @@ struct AMDGPUIncomingArgHandler : public AMDGPUValueHandler {
       // 16-bit types are reported as legal for 32-bit registers. We need to do
       // a 32-bit copy, and truncate to avoid the verifier complaining about it.
       auto Copy = MIRBuilder.buildCopy(LLT::scalar(32), PhysReg);
-      MIRBuilder.buildTrunc(ValVReg, Copy);
+
+      // If we have signext/zeroext, it applies to the whole 32-bit register
+      // before truncation.
+      auto Extended =
+          buildExtensionHint(VA, Copy.getReg(0), LLT(VA.getLocVT()));
+      MIRBuilder.buildTrunc(ValVReg, Extended);
       return;
     }
 
-    switch (VA.getLocInfo()) {
-    case CCValAssign::LocInfo::SExt:
-    case CCValAssign::LocInfo::ZExt:
-    case CCValAssign::LocInfo::AExt: {
-      auto Copy = MIRBuilder.buildCopy(LLT{VA.getLocVT()}, PhysReg);
-      MIRBuilder.buildTrunc(ValVReg, Copy);
-      break;
-    }
-    default:
-      MIRBuilder.buildCopy(ValVReg, PhysReg);
-      break;
-    }
+    IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, uint64_t MemSize,
@@ -180,8 +168,7 @@ struct CallReturnHandler : public AMDGPUIncomingArgHandler {
   MachineInstrBuilder MIB;
 };
 
-struct AMDGPUOutgoingArgHandler : public AMDGPUValueHandler {
-  MachineInstrBuilder MIB;
+struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
   CCAssignFn *AssignFnVarArg;
 
   /// For tail calls, the byte offset of the call's argument area from the
@@ -197,7 +184,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUValueHandler {
                            MachineRegisterInfo &MRI, MachineInstrBuilder MIB,
                            CCAssignFn *AssignFn, CCAssignFn *AssignFnVarArg,
                            bool IsTailCall = false, int FPDiff = 0)
-      : AMDGPUValueHandler(false, MIRBuilder, MRI, AssignFn), MIB(MIB),
+      : AMDGPUOutgoingValueHandler(MIRBuilder, MRI, MIB, AssignFn),
         AssignFnVarArg(AssignFnVarArg), FPDiff(FPDiff), IsTailCall(IsTailCall) {
   }
 
@@ -226,7 +213,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUValueHandler {
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         CCValAssign &VA) override {
     MIB.addUse(PhysReg, RegState::Implicit);
-    Register ExtReg = extendRegisterMin32(ValVReg, VA);
+    Register ExtReg = extendRegisterMin32(*this, ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
