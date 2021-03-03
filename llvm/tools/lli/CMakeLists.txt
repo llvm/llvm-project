@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   ExecutionEngine
   IRReader
   Interpreter
+  JITLink
   MC
   MCJIT
   Object
