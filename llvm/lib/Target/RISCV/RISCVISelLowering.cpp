@@ -837,6 +837,7 @@ static unsigned getBranchOpcodeForIntCondCode(ISD::CondCode CC) {
 }
 
 RISCVVLMUL RISCVTargetLowering::getLMUL(MVT VT) {
+  assert(VT.isScalableVector() && "Expecting a scalable vector type");
   unsigned KnownSize = VT.getSizeInBits().getKnownMinValue();
   if (VT.getVectorElementType() == MVT::i1)
     KnownSize *= 8;

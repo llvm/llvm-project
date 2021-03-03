@@ -966,7 +966,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (Idx != 0)
       break;
 
-    RISCVVLMUL SubVecLMUL = RISCVTargetLowering::getLMUL(SubVecVT);
+    RISCVVLMUL SubVecLMUL = RISCVTargetLowering::getLMUL(SubVecContainerVT);
     bool IsSubVecPartReg = SubVecLMUL == RISCVVLMUL::LMUL_F2 ||
                            SubVecLMUL == RISCVVLMUL::LMUL_F4 ||
                            SubVecLMUL == RISCVVLMUL::LMUL_F8;
