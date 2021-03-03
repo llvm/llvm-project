@@ -66,8 +66,8 @@ module @constraints {
   // CHECK:       pdl_interp.apply_constraint "multi_constraint" [true](%[[INPUT]], %[[INPUT1]] : !pdl.value, !pdl.value)
 
   pdl.pattern : benefit(1) {
-    %input0 = pdl.input
-    %input1 = pdl.input
+    %input0 = pdl.operand
+    %input1 = pdl.operand
 
     pdl.apply_constraint "multi_constraint"[true](%input0, %input1 : !pdl.value, !pdl.value)
 
@@ -94,7 +94,7 @@ module @inputs {
   // CHECK-DAG:  pdl_interp.are_equal %[[INPUT]], %[[INPUT1]] : !pdl.value
   pdl.pattern : benefit(1) {
     %type = pdl.type : i64
-    %input = pdl.input : %type
+    %input = pdl.operand : %type
     %root = pdl.operation(%input, %input)
     pdl.rewrite %root with "rewriter"
   }
