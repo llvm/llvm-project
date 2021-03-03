@@ -71,7 +71,9 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: public:
 // CHECK:   using Op::Op;
 // CHECK:   using Adaptor = AOpAdaptor;
-// CHECK:   static ::llvm::StringRef getOperationName();
+// CHECK:   static constexpr ::llvm::StringLiteral getOperationName() {
+// CHECK:     return ::llvm::StringLiteral("test.a_op");
+// CHECK:   }
 // CHECK:   ::mlir::Operation::operand_range getODSOperands(unsigned index);
 // CHECK:   ::mlir::Value a();
 // CHECK:   ::mlir::Operation::operand_range b();
