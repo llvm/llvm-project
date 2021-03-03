@@ -34,6 +34,17 @@ namespace {
 
 typedef DirectoryWatcher::Event::EventKind EventKind;
 
+// We've observed this test being significantly flaky when running on a heavily
+// loaded machine (e.g. when it's being run as part of the full check-clang
+// suite). Set a high timeout value to avoid this flakiness. The 60s timeout
+// value was determined empirically. It's a timeout value, not a sleep value,
+// and the test should require much less time in practice the vast majority of
+// instances. The cases where we do come close to (or still end up hitting) the
+// longer timeout are most likely to occur when other tests are also running at
+// the same time (e.g. as part of the full check-clang suite), in which case the
+// latency of the timeout will be masked by the latency of the other tests.
+constexpr std::chrono::seconds EventualResultTimeout(60);
+
 struct DirectoryWatcherTestFixture {
   std::string TestRootDir;
   std::string TestWatchedDir;
@@ -243,7 +254,7 @@ void checkEventualResultWithTimeout(VerifyingConsumer &TestConsumer) {
   std::thread worker(std::move(task));
   worker.detach();
 
-  EXPECT_TRUE(WaitForExpectedStateResult.wait_for(std::chrono::seconds(3)) ==
+  EXPECT_TRUE(WaitForExpectedStateResult.wait_for(EventualResultTimeout) ==
               std::future_status::ready)
       << "The expected result state wasn't reached before the time-out.";
   std::unique_lock<std::mutex> L(TestConsumer.Mtx);
