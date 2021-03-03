@@ -219,8 +219,7 @@ Type Parser::parseMemRefType() {
     return nullptr;
 
   // Check that memref is formed from allowed types.
-  if (!elementType.isIntOrIndexOrFloat() &&
-      !elementType.isa<VectorType, ComplexType>())
+  if (!BaseMemRefType::isValidElementType(elementType))
     return emitError(typeLoc, "invalid memref element type"), nullptr;
 
   // Parse semi-affine-map-composition.
