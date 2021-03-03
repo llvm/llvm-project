@@ -1071,7 +1071,7 @@ AliasResult BasicAAResult::aliasGEP(
       isBaseOfObject(DecompGEP2.Base))
     return NoAlias;
 
-  if (const GEPOperator *GEP2 = dyn_cast<GEPOperator>(V2)) {
+  if (isa<GEPOperator>(V2)) {
     // Symmetric case to above.
     if (*DecompGEP2.InBounds && DecompGEP1.VarIndices.empty() &&
         V1Size.hasValue() && DecompGEP1.Offset.sle(-V1Size.getValue()) &&
