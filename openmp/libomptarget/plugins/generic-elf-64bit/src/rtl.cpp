@@ -250,8 +250,23 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   return DeviceInfo.getOffloadEntriesTable(device_id);
 }
 
-void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *hst_ptr) {
-  void *ptr = malloc(size);
+// Sample implementation of explicit memory allocator. For this plugin all kinds
+// are equivalent to each other.
+void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *hst_ptr,
+                           int32_t kind) {
+  void *ptr = NULL;
+
+  switch (kind) {
+  case TARGET_ALLOC_DEVICE:
+  case TARGET_ALLOC_HOST:
+  case TARGET_ALLOC_SHARED:
+  case TARGET_ALLOC_DEFAULT:
+    ptr = malloc(size);
+    break;
+  default:
+    REPORT("Invalid target data allocation kind");
+  }
+
   return ptr;
 }
 

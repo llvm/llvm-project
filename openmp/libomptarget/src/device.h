@@ -185,13 +185,16 @@ struct DeviceTy {
   __tgt_target_table *load_binary(void *Img);
 
   // device memory allocation/deallocation routines
-  /// Allocates \p Size bytes on the device and returns the address/nullptr when
+  /// Allocates \p Size bytes on the device, host or shared memory space
+  /// (depending on \p Kind) and returns the address/nullptr when
   /// succeeds/fails. \p HstPtr is an address of the host data which the
   /// allocated target data will be associated with. If it is unknown, the
   /// default value of \p HstPtr is nullptr. Note: this function doesn't do
   /// pointer association. Actually, all the __tgt_rtl_data_alloc
-  /// implementations ignore \p HstPtr.
-  void *allocData(int64_t Size, void *HstPtr = nullptr);
+  /// implementations ignore \p HstPtr. \p Kind dictates what allocator should
+  /// be used (host, shared, device).
+  void *allocData(int64_t Size, void *HstPtr = nullptr,
+                  int32_t Kind = TARGET_ALLOC_DEFAULT);
   /// Deallocates memory which \p TgtPtrBegin points at and returns
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
   int32_t deleteData(void *TgtPtrBegin);
