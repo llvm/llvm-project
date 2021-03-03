@@ -534,7 +534,7 @@ macro(add_custom_libcxx name prefix)
   if(LIBCXX_USE_TOOLCHAIN)
     set(compiler_args -DCMAKE_C_COMPILER=${COMPILER_RT_TEST_COMPILER}
                       -DCMAKE_CXX_COMPILER=${COMPILER_RT_TEST_CXX_COMPILER})
-    if(NOT COMPILER_RT_STANDALONE_BUILD AND NOT RUNTIMES_BUILD)
+    if(NOT COMPILER_RT_STANDALONE_BUILD AND NOT LLVM_RUNTIMES_BUILD)
       set(toolchain_deps $<TARGET_FILE:clang>)
       set(force_deps DEPENDS $<TARGET_FILE:clang>)
     endif()
