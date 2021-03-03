@@ -60,7 +60,7 @@ def SPV_AddressOfOp : SPV_Op<"mlir.addressof", [InFunctionScope, NoSideEffect]> 
 
   let autogenSerialization = 0;
 
-  let builders = [OpBuilderDAG<(ins "spirv::GlobalVariableOp":$var)>];
+  let builders = [OpBuilder<(ins "spirv::GlobalVariableOp":$var)>];
 
   let assemblyFormat = "$variable attr-dict `:` type($pointer)";
 }
@@ -189,7 +189,7 @@ def SPV_EntryPointOp : SPV_Op<"EntryPoint", [InModuleScope]> {
   let autogenSerialization = 0;
 
   let builders = [
-    OpBuilderDAG<(ins "spirv::ExecutionModel":$executionModel,
+    OpBuilder<(ins "spirv::ExecutionModel":$executionModel,
       "spirv::FuncOp":$function, "ArrayRef<Attribute>":$interfaceVars)>];
 }
 
@@ -239,7 +239,7 @@ def SPV_ExecutionModeOp : SPV_Op<"ExecutionMode", [InModuleScope]> {
   let autogenSerialization = 0;
 
   let builders = [
-    OpBuilderDAG<(ins "spirv::FuncOp":$function,
+    OpBuilder<(ins "spirv::FuncOp":$function,
       "spirv::ExecutionMode":$executionMode, "ArrayRef<int32_t>":$params)>];
 }
 
@@ -292,7 +292,7 @@ def SPV_FuncOp : SPV_Op<"func", [
   let verifier = [{ return success(); }];
 
   let builders = [
-    OpBuilderDAG<(ins "StringRef":$name, "FunctionType":$type,
+    OpBuilder<(ins "StringRef":$name, "FunctionType":$type,
       CArg<"spirv::FunctionControl", "spirv::FunctionControl::None">:$control,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
 
@@ -379,14 +379,14 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
   let results = (outs);
 
   let builders = [
-    OpBuilderDAG<(ins "TypeAttr":$type, "ArrayRef<NamedAttribute>":$namedAttrs),
+    OpBuilder<(ins "TypeAttr":$type, "ArrayRef<NamedAttribute>":$namedAttrs),
     [{
       $_state.addAttribute("type", type);
       $_state.addAttributes(namedAttrs);
     }]>,
-    OpBuilderDAG<(ins "Type":$type, "StringRef":$name,
+    OpBuilder<(ins "Type":$type, "StringRef":$name,
       "unsigned":$descriptorSet, "unsigned":$binding)>,
-    OpBuilderDAG<(ins "Type":$type, "StringRef":$name,
+    OpBuilder<(ins "Type":$type, "StringRef":$name,
       "spirv::BuiltIn":$builtin)>
   ];
 
@@ -463,8 +463,8 @@ def SPV_ModuleOp : SPV_Op<"module",
   let regions = (region SizedRegion<1>:$body);
 
   let builders = [
-    OpBuilderDAG<(ins CArg<"Optional<StringRef>", "llvm::None">:$name)>,
-    OpBuilderDAG<(ins "spirv::AddressingModel":$addressing_model,
+    OpBuilder<(ins CArg<"Optional<StringRef>", "llvm::None">:$name)>,
+    OpBuilder<(ins "spirv::AddressingModel":$addressing_model,
       "spirv::MemoryModel":$memory_model,
       CArg<"Optional<StringRef>", "llvm::None">:$name)>
   ];

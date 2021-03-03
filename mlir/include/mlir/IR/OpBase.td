@@ -2015,7 +2015,7 @@ def successor;
 // type. For example, the following signature specification
 //
 // ```
-// OpBuilderDAG<(ins "int":$integerArg, CArg<"float", "3.0f">:$floatArg)>
+// OpBuilder<(ins "int":$integerArg, CArg<"float", "3.0f">:$floatArg)>
 // ```
 //
 // has an integer parameter and a float parameter with a default value.
@@ -2023,7 +2023,7 @@ def successor;
 // If an empty string is passed in for `body`, then *only* the builder
 // declaration will be generated; this provides a way to define complicated
 // builders entirely in C++.
-class OpBuilderDAG<dag p, code b = ""> {
+class OpBuilder<dag p, code b = ""> {
   dag dagParams = p;
   code body = b;
 }
@@ -2103,7 +2103,7 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   //                   ValueRange operands,
   //                   ArrayRef<NamedAttribute> attributes);
   // ```
-  list<OpBuilderDAG> builders = ?;
+  list<OpBuilder> builders = ?;
 
   // Avoid generating default build functions.  Custom builders must be
   // provided.

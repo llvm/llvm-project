@@ -346,7 +346,7 @@ def PDLInterp_CreateAttributeOp
   let assemblyFormat = "$value attr-dict";
 
   let builders = [
-    OpBuilderDAG<(ins "Attribute":$value), [{
+    OpBuilder<(ins "Attribute":$value), [{
       build($_builder, $_state, $_builder.getType<pdl::AttributeType>(), value);
     }]>];
 }
@@ -410,7 +410,7 @@ def PDLInterp_CreateOperationOp
   let results = (outs PDL_Operation:$operation);
 
   let builders = [
-    OpBuilderDAG<(ins "StringRef":$name, "ValueRange":$types,
+    OpBuilder<(ins "StringRef":$name, "ValueRange":$types,
       "ValueRange":$operands, "ValueRange":$attributes,
       "ArrayAttr":$attributeNames), [{
       build($_builder, $_state, $_builder.getType<pdl::OperationType>(), name,
@@ -442,7 +442,7 @@ def PDLInterp_CreateTypeOp : PDLInterp_Op<"create_type", [NoSideEffect]> {
   let assemblyFormat = "$value attr-dict";
 
   let builders = [
-    OpBuilderDAG<(ins "TypeAttr":$type), [{
+    OpBuilder<(ins "TypeAttr":$type), [{
       build($_builder, $_state, $_builder.getType<pdl::TypeType>(), type);
     }]>
   ];
@@ -537,7 +537,7 @@ def PDLInterp_GetAttributeTypeOp
   let assemblyFormat = "`of` $value attr-dict";
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$value), [{
+    OpBuilder<(ins "Value":$value), [{
       build($_builder, $_state, $_builder.getType<pdl::TypeType>(), value);
     }]>
   ];
@@ -638,7 +638,7 @@ def PDLInterp_GetValueTypeOp : PDLInterp_Op<"get_value_type", [NoSideEffect]> {
   let assemblyFormat = "`of` $value attr-dict";
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$value), [{
+    OpBuilder<(ins "Value":$value), [{
       build($_builder, $_state, $_builder.getType<pdl::TypeType>(), value);
     }]>
   ];
@@ -665,7 +665,7 @@ def PDLInterp_InferredTypeOp : PDLInterp_Op<"inferred_type"> {
   let assemblyFormat = "attr-dict";
 
   let builders = [
-    OpBuilderDAG<(ins), [{
+    OpBuilder<(ins), [{
       build($_builder, $_state, $_builder.getType<pdl::TypeType>());
     }]>,
   ];
@@ -780,7 +780,7 @@ def PDLInterp_SwitchAttributeOp
   }];
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$attribute, "ArrayRef<Attribute>":$caseValues,
+    OpBuilder<(ins "Value":$attribute, "ArrayRef<Attribute>":$caseValues,
       "Block *":$defaultDest, "BlockRange":$dests), [{
     build($_builder, $_state, attribute, $_builder.getArrayAttr(caseValues),
           defaultDest, dests);
@@ -813,7 +813,7 @@ def PDLInterp_SwitchOperandCountOp
   }];
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$operation, "ArrayRef<int32_t>":$counts,
+    OpBuilder<(ins "Value":$operation, "ArrayRef<int32_t>":$counts,
       "Block *":$defaultDest, "BlockRange":$dests), [{
     build($_builder, $_state, operation, $_builder.getI32VectorAttr(counts),
           defaultDest, dests);
@@ -847,7 +847,7 @@ def PDLInterp_SwitchOperationNameOp
   }];
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$operation, "ArrayRef<OperationName>":$names,
+    OpBuilder<(ins "Value":$operation, "ArrayRef<OperationName>":$names,
       "Block *":$defaultDest, "BlockRange":$dests), [{
       auto stringNames = llvm::to_vector<8>(llvm::map_range(names,
           [](OperationName name) { return name.getStringRef(); }));
@@ -883,7 +883,7 @@ def PDLInterp_SwitchResultCountOp
   }];
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$operation, "ArrayRef<int32_t>":$counts,
+    OpBuilder<(ins "Value":$operation, "ArrayRef<int32_t>":$counts,
       "Block *":$defaultDest, "BlockRange":$dests), [{
     build($_builder, $_state, operation, $_builder.getI32VectorAttr(counts),
           defaultDest, dests);
@@ -915,7 +915,7 @@ def PDLInterp_SwitchTypeOp : PDLInterp_SwitchOp<"switch_type", [NoSideEffect]> {
   }];
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$edge, "TypeRange":$types, "Block *":$defaultDest,
+    OpBuilder<(ins "Value":$edge, "TypeRange":$types, "Block *":$defaultDest,
       "BlockRange":$dests), [{
       build($_builder, $_state, edge, $_builder.getTypeArrayAttr(types),
             defaultDest, dests);
