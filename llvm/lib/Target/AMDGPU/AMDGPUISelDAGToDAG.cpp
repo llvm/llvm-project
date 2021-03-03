@@ -2645,6 +2645,9 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_strict_wwm:
     Opcode = AMDGPU::STRICT_WWM;
     break;
+  case Intrinsic::amdgcn_strict_wqm:
+    Opcode = AMDGPU::STRICT_WQM;
+    break;
   case Intrinsic::amdgcn_interp_p1_f16:
     SelectInterpP1F16(N);
     return;

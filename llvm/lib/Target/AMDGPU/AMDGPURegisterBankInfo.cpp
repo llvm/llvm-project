@@ -3958,6 +3958,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_mov_dpp:
     case Intrinsic::amdgcn_strict_wwm:
     case Intrinsic::amdgcn_wwm:
+    case Intrinsic::amdgcn_strict_wqm:
     case Intrinsic::amdgcn_wqm:
     case Intrinsic::amdgcn_softwqm:
     case Intrinsic::amdgcn_set_inactive:
