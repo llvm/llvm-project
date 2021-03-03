@@ -944,6 +944,10 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   for (auto &OrigArg : Info.OrigArgs)
     splitToValueTypes(OrigArg, OutArgs, DL, Info.CallConv);
 
+  SmallVector<ArgInfo, 8> InArgs;
+  if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy())
+    splitToValueTypes(Info.OrigRet, InArgs, DL, Info.CallConv);
+
   // If we can lower as a tail call, do that instead.
   bool CanTailCallOpt = false;
 
@@ -1031,26 +1035,8 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         1));
   }
 
-  auto OrigInsertPt = MIRBuilder.getInsertPt();
-
   // Now we can add the actual call instruction to the correct position.
   MIRBuilder.insertInstr(MIB);
-
-  // Insert this now to give us an anchor point for managing the insert point.
-  MachineInstrBuilder CallSeqEnd =
-    MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKDOWN);
-
-  SmallVector<ArgInfo, 8> InArgs;
-  if (!Info.CanLowerReturn) {
-    insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
-                    Info.DemoteRegister, Info.DemoteStackIndex);
-  } else if (!Info.OrigRet.Ty->isVoidTy()) {
-    splitToValueTypes(Info.OrigRet, InArgs, DL, Info.CallConv);
-  }
-
-  // Make sure the raw argument copies are inserted before the marshalling to
-  // the original types.
-  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), CallSeqEnd);
 
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arguments, the physical register must be an
@@ -1065,10 +1051,15 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   uint64_t CalleePopBytes = NumBytes;
-  CallSeqEnd.addImm(0)
+
+  MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKDOWN)
+            .addImm(0)
             .addImm(CalleePopBytes);
 
-  // Restore the insert point to after the call sequence.
-  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), OrigInsertPt);
+  if (!Info.CanLowerReturn) {
+    insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
+                    Info.DemoteRegister, Info.DemoteStackIndex);
+  }
+
   return true;
 }
