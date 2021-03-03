@@ -37,6 +37,8 @@
     fprintf(stderr, "'%s' failed with '%s'\n", #expr, name);                   \
   }(expr)
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wglobal-constructors"
 // Static reference to CUDA primary context for device ordinal 0.
 static CUcontext Context = [] {
   CUDA_REPORT_IF_ERROR(cuInit(/*flags=*/0));
@@ -46,6 +48,7 @@ static CUcontext Context = [] {
   CUDA_REPORT_IF_ERROR(cuDevicePrimaryCtxRetain(&context, device));
   return context;
 }();
+#pragma clang diagnostic pop
 
 // Sets the `Context` for the duration of the instance and restores the previous
 // context on destruction.
