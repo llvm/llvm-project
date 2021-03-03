@@ -358,6 +358,16 @@ Changes in existing checks
 
   Added `std::basic_string_view` to default list of ``string``-like types.
 
+Deprecated checks
+^^^^^^^^^^^^^^^^^
+
+- The :doc:`readability-deleted-default
+  <clang-tidy/checks/readability-deleted-default>` check has been deprecated.
+  
+  The clang warning `Wdefaulted-function-deleted
+  <https://clang.llvm.org/docs/DiagnosticsReference.html#wdefaulted-function-deleted>`_
+  will diagnose the same issues and is enabled by default.
+
 Improvements to include-fixer
 -----------------------------
 
