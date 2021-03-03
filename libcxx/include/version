@@ -290,7 +290,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_barrier)
 #   define __cpp_lib_barrier                            201907L
 # endif
-// # define __cpp_lib_bind_front                           201907L
+# define __cpp_lib_bind_front                           201907L
 // # define __cpp_lib_bit_cast                             201806L
 // # define __cpp_lib_bitops                               201907L
 # define __cpp_lib_bounded_array_traits                 201902L
