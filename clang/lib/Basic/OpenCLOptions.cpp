@@ -19,6 +19,11 @@ bool OpenCLOptions::isEnabled(llvm::StringRef Ext) const {
   return E != OptMap.end() && E->second.Enabled;
 }
 
+bool OpenCLOptions::isWithPragma(llvm::StringRef Ext) const {
+  auto E = OptMap.find(Ext);
+  return E != OptMap.end() && E->second.WithPragma;
+}
+
 bool OpenCLOptions::isSupported(llvm::StringRef Ext,
                                 const LangOptions &LO) const {
   auto E = OptMap.find(Ext);
@@ -69,6 +74,10 @@ void OpenCLOptions::enable(llvm::StringRef Ext, bool V) {
   OptMap[Ext].Enabled = V;
 }
 
+void OpenCLOptions::acceptsPragma(llvm::StringRef Ext, bool V) {
+  OptMap[Ext].WithPragma = V;
+}
+
 void OpenCLOptions::support(llvm::StringRef Ext, bool V) {
   assert(!Ext.empty() && "Extension is empty.");
   assert(Ext[0] != '+' && Ext[0] != '-');
@@ -76,10 +85,9 @@ void OpenCLOptions::support(llvm::StringRef Ext, bool V) {
 }
 
 OpenCLOptions::OpenCLOptions() {
-#define OPENCL_GENERIC_EXTENSION(Ext, AvailVer, CoreVer, OptVer)               \
-  OptMap[#Ext].Avail = AvailVer;                                               \
-  OptMap[#Ext].Core = CoreVer;                                                 \
-  OptMap[#Ext].Opt = OptVer;
+#define OPENCL_GENERIC_EXTENSION(Ext, WithPragma, AvailVer, CoreVer, OptVer)   \
+  OptMap.insert_or_assign(                                                     \
+      #Ext, OpenCLOptionInfo{WithPragma, AvailVer, CoreVer, OptVer});
 #include "clang/Basic/OpenCLExtensions.def"
 }
 

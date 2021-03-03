@@ -3,15 +3,13 @@
 // RUN: %clang_cc1 -x cl -cl-std=CL1.2 %s -verify -triple spir-unknown-unknown
 // RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple spir-unknown-unknown
 // RUN: %clang_cc1 -x cl -cl-std=clc++ %s -verify -triple spir-unknown-unknown
+// RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple spir-unknown-unknown
 // RUN: %clang_cc1 -x cl -cl-std=CL %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=CL1.1 %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=CL1.2 %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=clc++ %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
-
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200) && !defined(TEST_CORE_FEATURES)
-// expected-no-diagnostics
-#endif
+// RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 
 // Extensions in all versions
 #ifndef cl_clang_storage_class_specifiers
@@ -100,7 +98,7 @@
 #error "Missing cl_khr_3d_image_writes define"
 #endif
 #pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200) && defined TEST_CORE_FEATURES
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ == 200) && defined TEST_CORE_FEATURES
 // expected-warning@-2{{OpenCL extension 'cl_khr_3d_image_writes' is core feature or supported optional core feature - ignoring}}
 #endif
 
@@ -215,3 +213,55 @@
 // expected-warning@+2{{unsupported OpenCL extension 'cl_intel_device_side_avc_motion_estimation' - ignoring}}
 #endif
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : enable
+
+// Check that pragmas for the OpenCL 3.0 features are rejected.
+
+#pragma OPENCL EXTENSION __opencl_c_int64 : disable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_int64' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_3d_image_writes : disable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_3d_image_writes' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_atomic_order_acq_rel : disable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_atomic_order_acq_rel' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_atomic_order_seq_cst : disable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_atomic_order_seq_cst' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_device_enqueue : disable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_device_enqueue' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_fp64 : disable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_fp64' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_generic_address_space : disable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_generic_address_space' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_images : disable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_images' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_pipes : disable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_pipes' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_program_scope_global_variables : disable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_program_scope_global_variables' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_read_write_images : disable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_read_write_images' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_subgroups : disable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_subgroups' - ignoring}}
+
+#pragma OPENCL EXTENSION __opencl_c_int64 : enable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_int64' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_3d_image_writes : enable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_3d_image_writes' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_atomic_order_acq_rel : enable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_atomic_order_acq_rel' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_atomic_order_seq_cst : enable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_atomic_order_seq_cst' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_device_enqueue : enable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_device_enqueue' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_fp64 : enable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_fp64' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_generic_address_space : enable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_generic_address_space' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_images : enable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_images' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_pipes : enable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_pipes' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_program_scope_global_variables : enable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_program_scope_global_variables' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_read_write_images : enable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_read_write_images' - ignoring}}
+#pragma OPENCL EXTENSION __opencl_c_subgroups : enable
+//expected-warning@-1{{unknown OpenCL extension '__opencl_c_subgroups' - ignoring}}
