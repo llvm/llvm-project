@@ -27,9 +27,8 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/ObjCARCAnalysisUtils.h"
-#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
@@ -62,7 +61,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -1652,99 +1650,6 @@ void llvm::updateProfileCallee(
   }
 }
 
-/// An operand bundle "clang.arc.attachedcall" on a call indicates the call
-/// result is implicitly consumed by a call to retainRV or claimRV immediately
-/// after the call. This function inlines the retainRV/claimRV calls.
-///
-/// There are three cases to consider:
-///
-/// 1. If there is a call to autoreleaseRV that takes a pointer to the returned
-///    object in the callee return block, the autoreleaseRV call and the
-///    retainRV/claimRV call in the caller cancel out. If the call in the caller
-///    is a claimRV call, a call to objc_release is emitted.
-///
-/// 2. If there is a call in the callee return block that doesn't have operand
-///    bundle "clang.arc.attachedcall", the operand bundle on the original call
-///    is transferred to the call in the callee.
-///
-/// 3. Otherwise, a call to objc_retain is inserted if the call in the caller is
-///    a retainRV call.
-static void
-inlineRetainOrClaimRVCalls(CallBase &CB,
-                           const SmallVectorImpl<ReturnInst *> &Returns) {
-  Module *Mod = CB.getModule();
-  bool IsRetainRV = objcarc::hasAttachedCallOpBundle(&CB, true),
-       IsClaimRV = !IsRetainRV;
-
-  for (auto *RI : Returns) {
-    Value *RetOpnd = objcarc::GetRCIdentityRoot(RI->getOperand(0));
-    BasicBlock::reverse_iterator I = ++(RI->getIterator().getReverse());
-    BasicBlock::reverse_iterator EI = RI->getParent()->rend();
-    bool InsertRetainCall = IsRetainRV;
-    IRBuilder<> Builder(RI->getContext());
-
-    // Walk backwards through the basic block looking for either a matching
-    // autoreleaseRV call or an unannotated call.
-    for (; I != EI;) {
-      auto CurI = I++;
-
-      // Ignore casts.
-      if (isa<CastInst>(*CurI))
-        continue;
-
-      if (auto *II = dyn_cast<IntrinsicInst>(&*CurI)) {
-        if (II->getIntrinsicID() == Intrinsic::objc_autoreleaseReturnValue &&
-            II->hasNUses(0) &&
-            objcarc::GetRCIdentityRoot(II->getOperand(0)) == RetOpnd) {
-          // If we've found a matching authoreleaseRV call:
-          // - If claimRV is attached to the call, insert a call to objc_release
-          //   and erase the autoreleaseRV call.
-          // - If retainRV is attached to the call, just erase the autoreleaseRV
-          //   call.
-          if (IsClaimRV) {
-            Builder.SetInsertPoint(II);
-            Function *IFn =
-                Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
-            Value *BC =
-                Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
-            Builder.CreateCall(IFn, BC, "");
-          }
-          II->eraseFromParent();
-          InsertRetainCall = false;
-        }
-      } else if (auto *CI = dyn_cast<CallInst>(&*CurI)) {
-        if (objcarc::GetRCIdentityRoot(CI) == RetOpnd &&
-            !objcarc::hasAttachedCallOpBundle(CI)) {
-          // If we've found an unannotated call that defines RetOpnd, add a
-          // "clang.arc.attachedcall" operand bundle.
-          Value *BundleArgs[] = {ConstantInt::get(
-              Builder.getInt64Ty(),
-              objcarc::getAttachedCallOperandBundleEnum(IsRetainRV))};
-          OperandBundleDef OB("clang.arc.attachedcall", BundleArgs);
-          auto *NewCall = CallBase::addOperandBundle(
-              CI, LLVMContext::OB_clang_arc_attachedcall, OB, CI);
-          NewCall->copyMetadata(*CI);
-          CI->replaceAllUsesWith(NewCall);
-          CI->eraseFromParent();
-          InsertRetainCall = false;
-        }
-      }
-
-      break;
-    }
-
-    if (InsertRetainCall) {
-      // The retainRV is attached to the call and we've failed to find a
-      // matching autoreleaseRV or an annotated call in the callee. Emit a call
-      // to objc_retain.
-      Builder.SetInsertPoint(RI);
-      Function *IFn = Intrinsic::getDeclaration(Mod, Intrinsic::objc_retain);
-      Value *BC = Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
-      Builder.CreateCall(IFn, BC, "");
-    }
-  }
-}
-
 /// This function inlines the called function into the basic block of the
 /// caller. This returns false if it is not possible to inline this call.
 /// The program is still in a well defined state if this occurs though.
@@ -1781,8 +1686,6 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         continue;
       // ... and "funclet" operand bundles.
       if (Tag == LLVMContext::OB_funclet)
-        continue;
-      if (Tag == LLVMContext::OB_clang_arc_attachedcall)
         continue;
 
       return InlineResult::failure("unsupported operand bundle");
@@ -1949,10 +1852,6 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                               &InlinedFunctionInfo, &CB);
     // Remember the first block that is newly cloned over.
     FirstNewBlock = LastBlock; ++FirstNewBlock;
-
-    // Insert retainRV/clainRV runtime calls.
-    if (objcarc::hasAttachedCallOpBundle(&CB))
-      inlineRetainOrClaimRVCalls(CB, Returns);
 
     if (IFI.CallerBFI != nullptr && IFI.CalleeBFI != nullptr)
       // Update the BFI of blocks cloned into the caller.

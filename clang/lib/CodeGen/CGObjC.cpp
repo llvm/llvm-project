@@ -23,7 +23,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
@@ -2079,15 +2078,6 @@ void CodeGenFunction::EmitARCIntrinsicUse(ArrayRef<llvm::Value*> values) {
   EmitNounwindRuntimeCall(fn, values);
 }
 
-/// Emit a call to "clang.arc.noop.use", which consumes the result of a call
-/// that has operand bundle "clang.arc.attachedcall".
-void CodeGenFunction::EmitARCNoopIntrinsicUse(ArrayRef<llvm::Value *> values) {
-  llvm::Function *&fn = CGM.getObjCEntrypoints().clang_arc_noop_use;
-  if (!fn)
-    fn = CGM.getIntrinsic(llvm::Intrinsic::objc_clang_arc_noop_use);
-  EmitNounwindRuntimeCall(fn, values);
-}
-
 static void setARCRuntimeFunctionLinkage(CodeGenModule &CGM, llvm::Value *RTF) {
   if (auto *F = dyn_cast<llvm::Function>(RTF)) {
     // If the target runtime doesn't naturally support ARC, emit weak
@@ -2314,11 +2304,10 @@ static void emitAutoreleasedReturnValueMarker(CodeGenFunction &CGF) {
     // with this marker yet, so leave a breadcrumb for the ARC
     // optimizer to pick up.
     } else {
-      const char *retainRVMarkerKey = llvm::objcarc::getRVMarkerModuleFlagStr();
-      if (!CGF.CGM.getModule().getModuleFlag(retainRVMarkerKey)) {
+      const char *markerKey = "clang.arc.retainAutoreleasedReturnValueMarker";
+      if (!CGF.CGM.getModule().getModuleFlag(markerKey)) {
         auto *str = llvm::MDString::get(CGF.getLLVMContext(), assembly);
-        CGF.CGM.getModule().addModuleFlag(llvm::Module::Error,
-                                          retainRVMarkerKey, str);
+        CGF.CGM.getModule().addModuleFlag(llvm::Module::Error, markerKey, str);
       }
     }
   }
@@ -2328,47 +2317,6 @@ static void emitAutoreleasedReturnValueMarker(CodeGenFunction &CGF) {
     CGF.Builder.CreateCall(marker, None, CGF.getBundlesForFunclet(marker));
 }
 
-static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
-                                               bool IsRetainRV,
-                                               CodeGenFunction &CGF) {
-  emitAutoreleasedReturnValueMarker(CGF);
-
-  // Add operand bundle "clang.arc.attachedcall" to the call instead of emitting
-  // retainRV or claimRV calls in the IR. We currently do this only when the
-  // optimization level isn't -O0 since global-isel, which is currently run at
-  // -O0, doesn't know about the operand bundle.
-
-  // FIXME: Do this when the target isn't aarch64.
-  if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-      CGF.CGM.getTarget().getTriple().isAArch64()) {
-    llvm::Value *bundleArgs[] = {llvm::ConstantInt::get(
-        CGF.Int64Ty,
-        llvm::objcarc::getAttachedCallOperandBundleEnum(IsRetainRV))};
-    llvm::OperandBundleDef OB("clang.arc.attachedcall", bundleArgs);
-    auto *oldCall = cast<llvm::CallBase>(value);
-    llvm::CallBase *newCall = llvm::CallBase::addOperandBundle(
-        oldCall, llvm::LLVMContext::OB_clang_arc_attachedcall, OB, oldCall);
-    newCall->copyMetadata(*oldCall);
-    oldCall->replaceAllUsesWith(newCall);
-    oldCall->eraseFromParent();
-    CGF.EmitARCNoopIntrinsicUse(newCall);
-    return newCall;
-  }
-
-  bool isNoTail =
-      CGF.CGM.getTargetCodeGenInfo().markARCOptimizedReturnCallsAsNoTail();
-  llvm::CallInst::TailCallKind tailKind =
-      isNoTail ? llvm::CallInst::TCK_NoTail : llvm::CallInst::TCK_None;
-  ObjCEntrypoints &EPs = CGF.CGM.getObjCEntrypoints();
-  llvm::Function *&EP = IsRetainRV
-                            ? EPs.objc_retainAutoreleasedReturnValue
-                            : EPs.objc_unsafeClaimAutoreleasedReturnValue;
-  llvm::Intrinsic::ID IID =
-      IsRetainRV ? llvm::Intrinsic::objc_retainAutoreleasedReturnValue
-                 : llvm::Intrinsic::objc_unsafeClaimAutoreleasedReturnValue;
-  return emitARCValueOperation(CGF, value, nullptr, EP, IID, tailKind);
-}
-
 /// Retain the given object which is the result of a function call.
 ///   call i8* \@objc_retainAutoreleasedReturnValue(i8* %value)
 ///
@@ -2376,7 +2324,15 @@ static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
 /// call with completely different semantics.
 llvm::Value *
 CodeGenFunction::EmitARCRetainAutoreleasedReturnValue(llvm::Value *value) {
-  return emitOptimizedARCReturnCall(value, true, *this);
+  emitAutoreleasedReturnValueMarker(*this);
+  llvm::CallInst::TailCallKind tailKind =
+      CGM.getTargetCodeGenInfo().markARCOptimizedReturnCallsAsNoTail()
+          ? llvm::CallInst::TCK_NoTail
+          : llvm::CallInst::TCK_None;
+  return emitARCValueOperation(
+      *this, value, nullptr,
+      CGM.getObjCEntrypoints().objc_retainAutoreleasedReturnValue,
+      llvm::Intrinsic::objc_retainAutoreleasedReturnValue, tailKind);
 }
 
 /// Claim a possibly-autoreleased return value at +0.  This is only
@@ -2388,7 +2344,15 @@ CodeGenFunction::EmitARCRetainAutoreleasedReturnValue(llvm::Value *value) {
 ///   call i8* \@objc_unsafeClaimAutoreleasedReturnValue(i8* %value)
 llvm::Value *
 CodeGenFunction::EmitARCUnsafeClaimAutoreleasedReturnValue(llvm::Value *value) {
-  return emitOptimizedARCReturnCall(value, false, *this);
+  emitAutoreleasedReturnValueMarker(*this);
+  llvm::CallInst::TailCallKind tailKind =
+      CGM.getTargetCodeGenInfo().markARCOptimizedReturnCallsAsNoTail()
+          ? llvm::CallInst::TCK_NoTail
+          : llvm::CallInst::TCK_None;
+  return emitARCValueOperation(
+      *this, value, nullptr,
+      CGM.getObjCEntrypoints().objc_unsafeClaimAutoreleasedReturnValue,
+      llvm::Intrinsic::objc_unsafeClaimAutoreleasedReturnValue, tailKind);
 }
 
 /// Release the given object.
