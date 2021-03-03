@@ -1803,6 +1803,8 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
                                                                    SimplifiedS);
     if (auto *Dir = dyn_cast<OMPTileDirective>(SimplifiedS))
       SimplifiedS = Dir->getTransformedStmt();
+    if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(SimplifiedS))
+      SimplifiedS = CanonLoop->getLoopStmt();
     if (const auto *For = dyn_cast<ForStmt>(SimplifiedS)) {
       S = For->getBody();
     } else {
@@ -1890,6 +1892,121 @@ void CodeGenFunction::EmitOMPLoopBody(const OMPLoopDirective &D,
   BreakContinueStack.pop_back();
 }
 
+using EmittedClosureTy = std::pair<llvm::Function *, llvm::Value *>;
+
+/// Emit a captured statement and return the function as well as its captured
+/// closure context.
+static EmittedClosureTy emitCapturedStmtFunc(CodeGenFunction &ParentCGF,
+                                             const CapturedStmt *S) {
+  LValue CapStruct = ParentCGF.InitCapturedStruct(*S);
+  CodeGenFunction CGF(ParentCGF.CGM, /*suppressNewContext=*/true);
+  std::unique_ptr<CodeGenFunction::CGCapturedStmtInfo> CSI =
+      std::make_unique<CodeGenFunction::CGCapturedStmtInfo>(*S);
+  CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, CSI.get());
+  llvm::Function *F = CGF.GenerateCapturedStmtFunction(*S);
+
+  return {F, CapStruct.getPointer(ParentCGF)};
+}
+
+/// Emit a call to a previously captured closure.
+static llvm::CallInst *
+emitCapturedStmtCall(CodeGenFunction &ParentCGF, EmittedClosureTy Cap,
+                     llvm::ArrayRef<llvm::Value *> Args) {
+  // Append the closure context to the argument.
+  SmallVector<llvm::Value *> EffectiveArgs;
+  EffectiveArgs.reserve(Args.size() + 1);
+  llvm::append_range(EffectiveArgs, Args);
+  EffectiveArgs.push_back(Cap.second);
+
+  return ParentCGF.Builder.CreateCall(Cap.first, EffectiveArgs);
+}
+
+llvm::CanonicalLoopInfo *
+CodeGenFunction::EmitOMPCollapsedCanonicalLoopNest(const Stmt *S, int Depth) {
+  assert(Depth == 1 && "Nested loops with OpenMPIRBuilder not yet implemented");
+
+  EmitStmt(S);
+  assert(OMPLoopNestStack.size() >= (size_t)Depth && "Found too few loops");
+
+  // The last added loop is the outermost one.
+  return OMPLoopNestStack.back();
+}
+
+void CodeGenFunction::EmitOMPCanonicalLoop(const OMPCanonicalLoop *S) {
+  const Stmt *SyntacticalLoop = S->getLoopStmt();
+  if (!getLangOpts().OpenMPIRBuilder) {
+    // Ignore if OpenMPIRBuilder is not enabled.
+    EmitStmt(SyntacticalLoop);
+    return;
+  }
+
+  LexicalScope ForScope(*this, S->getSourceRange());
+
+  // Emit init statements. The Distance/LoopVar funcs may reference variable
+  // declarations they contain.
+  const Stmt *BodyStmt;
+  if (const auto *For = dyn_cast<ForStmt>(SyntacticalLoop)) {
+    if (const Stmt *InitStmt = For->getInit())
+      EmitStmt(InitStmt);
+    BodyStmt = For->getBody();
+  } else if (const auto *RangeFor =
+                 dyn_cast<CXXForRangeStmt>(SyntacticalLoop)) {
+    if (const DeclStmt *RangeStmt = RangeFor->getRangeStmt())
+      EmitStmt(RangeStmt);
+    if (const DeclStmt *BeginStmt = RangeFor->getBeginStmt())
+      EmitStmt(BeginStmt);
+    if (const DeclStmt *EndStmt = RangeFor->getEndStmt())
+      EmitStmt(EndStmt);
+    if (const DeclStmt *LoopVarStmt = RangeFor->getLoopVarStmt())
+      EmitStmt(LoopVarStmt);
+    BodyStmt = RangeFor->getBody();
+  } else
+    llvm_unreachable("Expected for-stmt or range-based for-stmt");
+
+  // Emit closure for later use. By-value captures will be captured here.
+  const CapturedStmt *DistanceFunc = S->getDistanceFunc();
+  EmittedClosureTy DistanceClosure = emitCapturedStmtFunc(*this, DistanceFunc);
+  const CapturedStmt *LoopVarFunc = S->getLoopVarFunc();
+  EmittedClosureTy LoopVarClosure = emitCapturedStmtFunc(*this, LoopVarFunc);
+
+  // Call the distance function to get the number of iterations of the loop to
+  // come.
+  QualType LogicalTy = DistanceFunc->getCapturedDecl()
+                           ->getParam(0)
+                           ->getType()
+                           .getNonReferenceType();
+  Address CountAddr = CreateMemTemp(LogicalTy, ".count.addr");
+  emitCapturedStmtCall(*this, DistanceClosure, {CountAddr.getPointer()});
+  llvm::Value *DistVal = Builder.CreateLoad(CountAddr, ".count");
+
+  // Emit the loop structure.
+  llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+  auto BodyGen = [&, this](llvm::OpenMPIRBuilder::InsertPointTy CodeGenIP,
+                           llvm::Value *IndVar) {
+    Builder.restoreIP(CodeGenIP);
+
+    // Emit the loop body: Convert the logical iteration number to the loop
+    // variable and emit the body.
+    const DeclRefExpr *LoopVarRef = S->getLoopVarRef();
+    LValue LCVal = EmitLValue(LoopVarRef);
+    Address LoopVarAddress = LCVal.getAddress(*this);
+    emitCapturedStmtCall(*this, LoopVarClosure,
+                         {LoopVarAddress.getPointer(), IndVar});
+
+    RunCleanupsScope BodyScope(*this);
+    EmitStmt(BodyStmt);
+  };
+  llvm::CanonicalLoopInfo *CL =
+      OMPBuilder.createCanonicalLoop(Builder, BodyGen, DistVal);
+
+  // Finish up the loop.
+  Builder.restoreIP(CL->getAfterIP());
+  ForScope.ForceCleanup();
+
+  // Remember the CanonicalLoopInfo for parent AST nodes consuming it.
+  OMPLoopNestStack.push_back(CL);
+}
+
 void CodeGenFunction::EmitOMPInnerLoop(
     const OMPExecutableDirective &S, bool RequiresCleanup, const Expr *LoopCond,
     const Expr *IncExpr,
@@ -1907,6 +2024,7 @@ void CodeGenFunction::EmitOMPInnerLoop(
   const CapturedStmt *ICS = OMPED.getInnermostCapturedStmt();
   const Stmt *SS = ICS->getCapturedStmt();
   const AttributedStmt *AS = dyn_cast_or_null<AttributedStmt>(SS);
+  OMPLoopNestStack.clear();
   if (AS)
     LoopStack.push(CondBlock, CGM.getContext(), CGM.getCodeGenOpts(),
                    AS->getAttrs(), SourceLocToDebugLoc(R.getBegin()),
@@ -2461,6 +2579,7 @@ void CodeGenFunction::EmitOMPOuterLoop(
   llvm::BasicBlock *CondBlock = createBasicBlock("omp.dispatch.cond");
   EmitBlock(CondBlock);
   const SourceRange R = S.getSourceRange();
+  OMPLoopNestStack.clear();
   LoopStack.push(CondBlock, SourceLocToDebugLoc(R.getBegin()),
                  SourceLocToDebugLoc(R.getEnd()));
 
@@ -2544,6 +2663,7 @@ void CodeGenFunction::EmitOMPOuterLoop(
   }
 
   EmitBranch(CondBlock);
+  OMPLoopNestStack.clear();
   LoopStack.pop();
   // Emit the fall-through block.
   EmitBlock(LoopExit.getBlock());
@@ -3386,10 +3506,38 @@ static bool emitWorksharingDirective(CodeGenFunction &CGF,
   return HasLastprivates;
 }
 
+static bool isSupportedByOpenMPIRBuilder(const OMPForDirective &S) {
+  if (S.hasCancel())
+    return false;
+  for (OMPClause *C : S.clauses())
+    if (!isa<OMPNowaitClause>(C))
+      return false;
+
+  return true;
+}
+
 void CodeGenFunction::EmitOMPForDirective(const OMPForDirective &S) {
   bool HasLastprivates = false;
-  auto &&CodeGen = [&S, &HasLastprivates](CodeGenFunction &CGF,
-                                          PrePostActionTy &) {
+  bool UseOMPIRBuilder =
+      CGM.getLangOpts().OpenMPIRBuilder && isSupportedByOpenMPIRBuilder(S);
+  auto &&CodeGen = [this, &S, &HasLastprivates,
+                    UseOMPIRBuilder](CodeGenFunction &CGF, PrePostActionTy &) {
+    // Use the OpenMPIRBuilder if enabled.
+    if (UseOMPIRBuilder) {
+      // Emit the associated statement and get its loop representation.
+      const Stmt *Inner = S.getRawStmt();
+      llvm::CanonicalLoopInfo *CLI =
+          EmitOMPCollapsedCanonicalLoopNest(Inner, 1);
+
+      bool NeedsBarrier = !S.getSingleClause<OMPNowaitClause>();
+      llvm::OpenMPIRBuilder &OMPBuilder =
+          CGM.getOpenMPRuntime().getOMPBuilder();
+      llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
+          AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
+      OMPBuilder.createWorkshareLoop(Builder, CLI, AllocaIP, NeedsBarrier);
+      return;
+    }
+
     HasLastprivates = emitWorksharingDirective(CGF, S, S.hasCancel());
   };
   {
@@ -3400,9 +3548,11 @@ void CodeGenFunction::EmitOMPForDirective(const OMPForDirective &S) {
                                                 S.hasCancel());
   }
 
-  // Emit an implicit barrier at the end.
-  if (!S.getSingleClause<OMPNowaitClause>() || HasLastprivates)
-    CGM.getOpenMPRuntime().emitBarrierCall(*this, S.getBeginLoc(), OMPD_for);
+  if (!UseOMPIRBuilder) {
+    // Emit an implicit barrier at the end.
+    if (!S.getSingleClause<OMPNowaitClause>() || HasLastprivates)
+      CGM.getOpenMPRuntime().emitBarrierCall(*this, S.getBeginLoc(), OMPD_for);
+  }
   // Check for outer lastprivate conditional update.
   checkForLastprivateConditionalUpdate(*this, S);
 }

@@ -17284,18 +17284,17 @@ static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
 
 
 /// Capture the given variable in the captured region.
-static bool captureInCapturedRegion(CapturedRegionScopeInfo *RSI,
-                                    VarDecl *Var,
-                                    SourceLocation Loc,
-                                    const bool BuildAndDiagnose,
-                                    QualType &CaptureType,
-                                    QualType &DeclRefType,
-                                    const bool RefersToCapturedVariable,
-                                    Sema &S, bool Invalid) {
+static bool captureInCapturedRegion(
+    CapturedRegionScopeInfo *RSI, VarDecl *Var, SourceLocation Loc,
+    const bool BuildAndDiagnose, QualType &CaptureType, QualType &DeclRefType,
+    const bool RefersToCapturedVariable, Sema::TryCaptureKind Kind,
+    bool IsTopScope, Sema &S, bool Invalid) {
   // By default, capture variables by reference.
   bool ByRef = true;
-  // Using an LValue reference type is consistent with Lambdas (see below).
-  if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
+  if (IsTopScope && Kind != Sema::TryCapture_Implicit) {
+    ByRef = (Kind == Sema::TryCapture_ExplicitByRef);
+  } else if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
+    // Using an LValue reference type is consistent with Lambdas (see below).
     if (S.isOpenMPCapturedDecl(Var)) {
       bool HasConst = DeclRefType.isConstQualified();
       DeclRefType = DeclRefType.getUnqualifiedType();
@@ -17641,9 +17640,9 @@ bool Sema::tryCaptureVariable(
                                DeclRefType, Nested, *this, Invalid);
       Nested = true;
     } else if (CapturedRegionScopeInfo *RSI = dyn_cast<CapturedRegionScopeInfo>(CSI)) {
-      Invalid = !captureInCapturedRegion(RSI, Var, ExprLoc, BuildAndDiagnose,
-                                         CaptureType, DeclRefType, Nested,
-                                         *this, Invalid);
+      Invalid = !captureInCapturedRegion(
+          RSI, Var, ExprLoc, BuildAndDiagnose, CaptureType, DeclRefType, Nested,
+          Kind, /*IsTopScope*/ I == N - 1, *this, Invalid);
       Nested = true;
     } else {
       LambdaScopeInfo *LSI = cast<LambdaScopeInfo>(CSI);

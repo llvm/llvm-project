@@ -31,6 +31,7 @@ public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize).
   OpenMPIRBuilder(Module &M) : M(M), Builder(M.getContext()) {}
+  ~OpenMPIRBuilder();
 
   /// Initialize the internal state, this will put structures types and
   /// potentially other helpers into the underlying module. Must be called
@@ -38,10 +39,12 @@ public:
   void initialize();
 
   /// Finalize the underlying module, e.g., by outlining regions.
+  /// \param Fn                    The function to be finalized. If not used,
+  ///                              all functions are finalized.
   /// \param AllowExtractorSinking Flag to include sinking instructions,
   ///                              emitted by CodeExtractor, in the
   ///                              outlined region. Default is false.
-  void finalize(bool AllowExtractorSinking = false);
+  void finalize(Function *Fn = nullptr, bool AllowExtractorSinking = false);
 
   /// Add attributes known for \p FnID to \p Fn.
   void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
@@ -364,6 +367,31 @@ public:
                                                bool NeedsBarrier,
                                                Value *Chunk = nullptr);
 
+  /// Modifies the canonical loop to be a workshare loop.
+  ///
+  /// This takes a \p LoopInfo representing a canonical loop, such as the one
+  /// created by \p createCanonicalLoop and emits additional instructions to
+  /// turn it into a workshare loop. In particular, it calls to an OpenMP
+  /// runtime function in the preheader to obtain the loop bounds to be used in
+  /// the current thread, updates the relevant instructions in the canonical
+  /// loop and calls to an OpenMP runtime finalization function after the loop.
+  ///
+  /// \param Loc      The source location description, the insertion location
+  ///                 is not used.
+  /// \param CLI      A descriptor of the canonical loop to workshare.
+  /// \param AllocaIP An insertion point for Alloca instructions usable in the
+  ///                 preheader of the loop.
+  /// \param NeedsBarrier Indicates whether a barrier must be insterted after
+  ///                     the loop.
+  /// \param Chunk    The size of loop chunk considered as a unit when
+  ///                 scheduling. If \p nullptr, defaults to 1.
+  ///
+  /// \returns Updated CanonicalLoopInfo.
+  CanonicalLoopInfo *createWorkshareLoop(const LocationDescription &Loc,
+                                         CanonicalLoopInfo *CLI,
+                                         InsertPointTy AllocaIP,
+                                         bool NeedsBarrier);
+
   /// Tile a loop nest.
   ///
   /// Tiles the loops of \p Loops by the tile sizes in \p TileSizes. Loops in
@@ -543,6 +571,9 @@ public:
     /// vector and set.
     void collectBlocks(SmallPtrSetImpl<BasicBlock *> &BlockSet,
                        SmallVectorImpl<BasicBlock *> &BlockVector);
+
+    /// Return the function that contains the region to be outlined.
+    Function *getFunction() const { return EntryBB->getParent(); }
   };
 
   /// Collection of regions that need to be outlined during finalization.
@@ -915,6 +946,8 @@ public:
   OpenMPIRBuilder::InsertPointTy getAfterIP() const {
     return {After, After->begin()};
   };
+
+  Function *getFunction() const { return Header->getParent(); }
 
   /// Consistency self-check.
   void assertOK() const;
