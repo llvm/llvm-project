@@ -759,10 +759,12 @@ Value *CoroCloner::deriveNewFramePointer() {
   // with the active suspend. The frame is located as a tail to the async
   // context header.
   case coro::ABI::Async: {
-    auto *CalleeContext = NewF->getArg(Shape.AsyncLowering.ContextArgNo);
+    auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
+    auto *CalleeContext =
+        NewF->getArg(ActiveAsyncSuspend->getStorageArgumentIndex());
     auto *FramePtrTy = Shape.FrameTy->getPointerTo();
-    auto *ProjectionFunc = cast<CoroSuspendAsyncInst>(ActiveSuspend)
-                               ->getAsyncContextProjectionFunction();
+    auto *ProjectionFunc =
+        ActiveAsyncSuspend->getAsyncContextProjectionFunction();
     auto DbgLoc =
         cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend])->getDebugLoc();
     // Calling i8* (i8*)
@@ -880,12 +882,14 @@ void CoroCloner::create() {
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.FrameSize, Shape.FrameAlign);
     break;
-  case coro::ABI::Async:
-    if (OrigF.hasParamAttribute(Shape.AsyncLowering.ContextArgNo,
-                                Attribute::SwiftAsync)) {
-      addAsyncContextAttrs(NewAttrs, Context, Shape.AsyncLowering.ContextArgNo);
+  case coro::ABI::Async: {
+    auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
+    auto ContextArgIndex = ActiveAsyncSuspend->getStorageArgumentIndex();
+    if (OrigF.hasParamAttribute(ContextArgIndex, Attribute::SwiftAsync)) {
+      addAsyncContextAttrs(NewAttrs, Context, ContextArgIndex);
     }
     break;
+  }
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
     // If we have a continuation prototype, just use its attributes,
@@ -1486,7 +1490,8 @@ static void replaceAsyncResumeFunction(CoroSuspendAsyncInst *Suspend,
   auto *Val = Builder.CreateBitOrPointerCast(Continuation, Int8PtrTy);
   ResumeIntrinsic->replaceAllUsesWith(Val);
   ResumeIntrinsic->eraseFromParent();
-  Suspend->setOperand(0, UndefValue::get(Int8PtrTy));
+  Suspend->setOperand(CoroSuspendAsyncInst::ResumeFunctionArg,
+                      UndefValue::get(Int8PtrTy));
 }
 
 /// Coerce the arguments in \p FnArgs according to \p FnTy in \p CallArgs.
@@ -1581,7 +1586,8 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
     // Insert the call to the tail call function and inline it.
     auto *Fn = Suspend->getMustTailCallFunction();
     SmallVector<Value *, 8> Args(Suspend->args());
-    auto FnArgs = ArrayRef<Value *>(Args).drop_front(3);
+    auto FnArgs = ArrayRef<Value *>(Args).drop_front(
+        CoroSuspendAsyncInst::MustTailCallFuncArg + 1);
     auto *TailCall =
         coro::createMustTailCall(Suspend->getDebugLoc(), Fn, FnArgs, Builder);
     Builder.CreateRetVoid();
