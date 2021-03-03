@@ -175,18 +175,6 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     }
   }
 
-  // enable parsing of OpenMP
-  if (enableOpenMP) {
-    options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
-    options.predefinitions.emplace_back("_OPENMP", "201511");
-  }
-
-  // enable parsing of OpenACC
-  if (enableOpenACC) {
-    options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
-    options.predefinitions.emplace_back("_OPENACC", "201911");
-  }
-
   // prep for prescan and parse
   options.searchDirectories = includeDirs;
   Fortran::parser::Parsing parsing{semanticsContext.allCookedSources()};
@@ -360,6 +348,18 @@ int main(int argc, char **argv) {
 #if __x86_64__
   options.predefinitions.emplace_back("__x86_64__", "1");
 #endif
+
+  // enable parsing of OpenMP
+  if (enableOpenMP) {
+    options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
+    options.predefinitions.emplace_back("_OPENMP", "201511");
+  }
+
+  // enable parsing of OpenACC
+  if (enableOpenACC) {
+    options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
+    options.predefinitions.emplace_back("_OPENACC", "201911");
+  }
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
   Fortran::parser::AllSources allSources;
