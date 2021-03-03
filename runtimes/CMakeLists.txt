@@ -82,10 +82,6 @@ include(CheckCCompilerFlag)
 # these flags.
 if (NOT MSVC)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++ -nostdlib++")
-
-  if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR AND "libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -isystem ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR}/include")
-  endif()
 endif()
 
 # Avoid checking whether the compiler is working.
@@ -94,10 +90,8 @@ set(LLVM_COMPILER_CHECKED ON)
 # Handle common options used by all runtimes.
 include(AddLLVM)
 include(HandleLLVMOptions)
-include(FindPythonInterp)
 
-# Remove the -nostdlib++ option we've added earlier.
-string(REPLACE "-nostdlib++" "" CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
 if(CMAKE_HOST_APPLE AND APPLE)
@@ -114,12 +108,11 @@ foreach(entry ${runtimes})
   string(REPLACE "-" "_" canon_name ${projName})
   string(TOUPPER ${canon_name} canon_name)
 
-  # The subdirectories need to treat this as standalone builds. D57992 tried
-  # to get rid of this, but the runtimes treat *_STANDALONE_BUILD=OFF as if
-  # llvm & clang are configured in the same CMake, and setup dependencies
-  # against their targets. OpenMP has fixed the issue so we don't set the
-  # variable.
-  if (NOT ${canon_name} STREQUAL "OPENMP")
+  # TODO: compiler-rt has to use standalone build for now. We tried to remove
+  # this in D57992 but this broke the build because compiler-rt assumes that
+  # LLVM and Clang are configured in the same build to set up dependencies. We
+  # should clean up the compiler-rt build and remove this eventually.
+  if ("${canon_name}" STREQUAL "COMPILER_RT")
     set(${canon_name}_STANDALONE_BUILD ON)
   endif()
 
