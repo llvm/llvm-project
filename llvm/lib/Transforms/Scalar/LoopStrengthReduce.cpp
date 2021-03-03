@@ -5561,6 +5561,46 @@ void LSRInstance::ImplementSolution(
 
   Changed |= RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts,
                                                                   &TLI, MSSAU);
+
+  // In our cost analysis above, we assume that each addrec consumes exactly
+  // one register, and arrange to have increments inserted just before the
+  // latch to maximimize the chance this is true.  However, if we reused
+  // existing IVs, we now need to move the increments to match our
+  // expectations.  Otherwise, our cost modeling results in us having a
+  // chosen a non-optimal result for the actual schedule.  (And yes, this
+  // scheduling decision does impact later codegen.)
+  for (PHINode &PN : L->getHeader()->phis()) {
+    // First, filter out anything not an obvious addrec
+    if (!SE.isSCEVable(PN.getType()) || !isa<SCEVAddRecExpr>(SE.getSCEV(&PN)))
+      continue;
+    Instruction *IncV =
+        dyn_cast<Instruction>(PN.getIncomingValueForBlock(L->getLoopLatch()));
+    if (!IncV)
+      continue;
+
+    if (IncV->getOpcode() != Instruction::Add &&
+        IncV->getOpcode() != Instruction::Sub)
+      continue;
+
+    if (IncV->getOperand(0) != &PN &&
+        !isa<Constant>(IncV->getOperand(1)))
+      // If not a constant step, might increase register pressure
+      // (We assume constants have been canonicalized to RHS)
+      continue;
+
+    if (IncV->getParent() == IVIncInsertPos->getParent())
+      // Only bother moving across blocks.  Isel can handle block local case.
+      continue;
+
+    // Can we legally schedule inc at the desired point?
+    if (!llvm::all_of(IncV->uses(),
+                      [&](Use &U) {return DT.dominates(IVIncInsertPos, U);}))
+      continue;
+    IncV->moveBefore(IVIncInsertPos);
+    Changed = true;
+  }
+
+
 }
 
 LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
