@@ -1,7 +1,7 @@
 // RUN: mlir-cuda-runner %s \
 // RUN:   -gpu-to-cubin="gpu-binary-annotation=nvvm.cubin" \
 // RUN:   -gpu-to-llvm="gpu-binary-annotation=nvvm.cubin" \
-// RUN:   --shared-libs=%cuda_wrapper_library_dir/libcuda-runtime-wrappers%shlibext \
+// RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
@@ -49,17 +49,17 @@ func @main() {
   store %cst10, %data[%c1, %c4] : memref<2x6xi32>
   store %cst11, %data[%c1, %c5] : memref<2x6xi32>
 
-  // XOR
+  // MAX
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c2, %grid_y = %c1, %grid_z = %c1)
              threads(%tx, %ty, %tz) in (%block_x = %c6, %block_y = %c1, %block_z = %c1) {
     %val = load %data[%bx, %tx] : memref<2x6xi32>
-    %reduced = "gpu.all_reduce"(%val) ({}) { op = "xor" } : (i32) -> (i32)
+    %reduced = "gpu.all_reduce"(%val) ({}) { op = "max" } : (i32) -> (i32)
     store %reduced, %sum[%bx] : memref<2xi32>
     gpu.terminator
   }
 
   call @print_memref_i32(%cast_sum) : (memref<*xi32>) -> ()
-  // CHECK: [31, 1]
+  // CHECK: [16, 11]
 
   return
 }
