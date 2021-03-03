@@ -77,6 +77,7 @@
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -5570,33 +5571,37 @@ void LSRInstance::ImplementSolution(
   // chosen a non-optimal result for the actual schedule.  (And yes, this
   // scheduling decision does impact later codegen.)
   for (PHINode &PN : L->getHeader()->phis()) {
-    // First, filter out anything not an obvious addrec
-    if (!SE.isSCEVable(PN.getType()) || !isa<SCEVAddRecExpr>(SE.getSCEV(&PN)))
-      continue;
-    Instruction *IncV =
-        dyn_cast<Instruction>(PN.getIncomingValueForBlock(L->getLoopLatch()));
-    if (!IncV)
+    BinaryOperator *BO = nullptr;
+    Value *Start = nullptr, *Step = nullptr;
+    if (!matchSimpleRecurrence(&PN, BO, Start, Step))
       continue;
 
-    if (IncV->getOpcode() != Instruction::Add &&
-        IncV->getOpcode() != Instruction::Sub)
+    switch (BO->getOpcode()) {
+    case Instruction::Sub:
+      if (BO->getOperand(0) != &PN)
+        // sub is non-commutative - match handling elsewhere in LSR
+        continue;
+      break;
+    case Instruction::Add:
+      break;
+    default:
       continue;
+    };
 
-    if (IncV->getOperand(0) != &PN &&
-        !isa<Constant>(IncV->getOperand(1)))
+    if (!isa<Constant>(Step))
       // If not a constant step, might increase register pressure
       // (We assume constants have been canonicalized to RHS)
       continue;
 
-    if (IncV->getParent() == IVIncInsertPos->getParent())
+    if (BO->getParent() == IVIncInsertPos->getParent())
       // Only bother moving across blocks.  Isel can handle block local case.
       continue;
 
     // Can we legally schedule inc at the desired point?
-    if (!llvm::all_of(IncV->uses(),
+    if (!llvm::all_of(BO->uses(),
                       [&](Use &U) {return DT.dominates(IVIncInsertPos, U);}))
       continue;
-    IncV->moveBefore(IVIncInsertPos);
+    BO->moveBefore(IVIncInsertPos);
     Changed = true;
   }
 
