@@ -757,7 +757,7 @@ Defs = [SREG] in
   // Expands to:
   // neg Rd+1
   // neg Rd
-  // sbci Rd+1, 0
+  // sbc Rd+1, r1
   def NEGWRd : Pseudo<(outs DREGS:$rd),
                       (ins DREGS:$src),
                       "negw\t$rd",
