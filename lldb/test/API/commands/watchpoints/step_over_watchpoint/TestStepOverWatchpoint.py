@@ -14,7 +14,7 @@ class TestStepOverWatchpoint(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(
-        oslist=["linux"],
+        oslist=["freebsd", "linux"],
         archs=[
             'aarch64',
             'arm'],
