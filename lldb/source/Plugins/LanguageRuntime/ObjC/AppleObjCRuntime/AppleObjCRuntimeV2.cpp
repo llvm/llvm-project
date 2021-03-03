@@ -121,14 +121,20 @@ __lldb_apple_objc_v2_get_dynamic_class_info (void *gdb_objc_realized_classes_ptr
     if (grc)
     {
         const unsigned num_classes = grc->num_classes;
+        DEBUG_PRINTF ("num_classes = %u\n", grc->num_classes);
         if (class_infos_ptr)
         {
+            const unsigned num_buckets_minus_one = grc->num_buckets_minus_one;
+            DEBUG_PRINTF ("num_buckets_minus_one = %u\n", num_buckets_minus_one);
+
             const size_t max_class_infos = class_infos_byte_size/sizeof(ClassInfo);
+            DEBUG_PRINTF ("max_class_infos = %u\n", max_class_infos);
+
             ClassInfo *class_infos = (ClassInfo *)class_infos_ptr;
             BucketInfo *buckets = (BucketInfo *)grc->buckets;
-            
+
             uint32_t idx = 0;
-            for (unsigned i=0; i<=grc->num_buckets_minus_one; ++i)
+            for (unsigned i=0; i<=num_buckets_minus_one; ++i)
             {
                 if (buckets[i].name_ptr != NX_MAPNOTAKEY)
                 {
@@ -140,6 +146,7 @@ __lldb_apple_objc_v2_get_dynamic_class_info (void *gdb_objc_realized_classes_ptr
                             h = ((h << 5) + h) + c;
                         class_infos[idx].hash = h;
                         class_infos[idx].isa = buckets[i].isa;
+                        DEBUG_PRINTF ("[%u] isa = %8p %s\n", idx, class_infos[idx].isa, buckets[i].name_ptr);
                     }
                     ++idx;
                 }
