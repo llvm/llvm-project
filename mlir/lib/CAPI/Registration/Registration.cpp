@@ -10,7 +10,7 @@
 
 #include "mlir/CAPI/IR.h"
 #include "mlir/InitAllDialects.h"
-#include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 
 void mlirRegisterAllDialects(MlirContext context) {
   mlir::registerAllDialects(*unwrap(context));

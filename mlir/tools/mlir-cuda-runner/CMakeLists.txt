@@ -37,11 +37,12 @@ if(MLIR_CUDA_RUNNER_ENABLED)
     MLIRGPU
     MLIRIR
     MLIRLLVMIR
+    MLIRLLVMToLLVMIRTranslation
     MLIRNVVMIR
     MLIRParser
     MLIRStandard
     MLIRSupport
-    MLIRTargetLLVMIR
+    MLIRTargetLLVMIRExport
     MLIRNVVMToLLVMIRTranslation
     MLIRTransforms
     MLIRTranslation

@@ -6,31 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the dialect interface for translating the LLVM dialect
-// to LLVM IR.
+// This provides registration calls for LLVM dialect to LLVM IR translation.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_TARGET_LLVMIR_DIALECT_LLVMIR_LLVMTOLLVMIRTRANSLATION_H
 #define MLIR_TARGET_LLVMIR_DIALECT_LLVMIR_LLVMTOLLVMIRTRANSLATION_H
 
-#include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
-
 namespace mlir {
 
-/// Implementation of the dialect interface that converts operations belonging
-/// to the LLVM dialect to LLVM IR.
-class LLVMDialectLLVMIRTranslationInterface
-    : public LLVMTranslationDialectInterface {
-public:
-  using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
+class DialectRegistry;
+class MLIRContext;
 
-  /// Translates the given operation to LLVM IR using the provided IR builder
-  /// and saving the state in `moduleTranslation`.
-  LogicalResult
-  convertOperation(Operation *op, llvm::IRBuilderBase &builder,
-                   LLVM::ModuleTranslation &moduleTranslation) const final;
-};
+/// Register the LLVM dialect and the translation from it to the LLVM IR in the
+/// given registry;
+void registerLLVMDialectTranslation(DialectRegistry &registry);
+
+/// Register the LLVM dialect and the translation from it in the registry
+/// associated with the given context.
+void registerLLVMDialectTranslation(MLIRContext &context);
 
 } // namespace mlir
 

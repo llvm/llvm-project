@@ -4,4 +4,5 @@ add_mlir_public_c_api_library(MLIRCEXECUTIONENGINE
 
   LINK_LIBS PUBLIC
   MLIRExecutionEngine
+  MLIRLLVMToLLVMIRTranslation
 )
