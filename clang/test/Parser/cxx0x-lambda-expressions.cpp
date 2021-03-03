@@ -101,7 +101,6 @@ class C {
   }
 
   void attributes() {
-    [] [[]] {}; // expected-error {{lambda requires '()' before attribute specifier}}
     [] __attribute__((noreturn)) {}; // expected-error {{lambda requires '()' before attribute specifier}}
     []() [[]]
       mutable {}; // expected-error {{expected body of lambda expression}}
@@ -116,6 +115,14 @@ class C {
     []() __attribute__((noreturn)) mutable { while(1); };
     []() mutable
       __attribute__((noreturn)) { while(1); }; // expected-error {{expected body of lambda expression}}
+
+    // Testing support for P2173 on adding attributes to the declaration
+    // rather than the type.
+    [] [[]] () {}; // expected-warning {{an attribute specifier sequence in this position is a C++2b extension}}
+#if __cplusplus > 201703L
+    [] <typename> [[]] () {};  // expected-warning {{an attribute specifier sequence in this position is a C++2b extension}}
+#endif
+    [] [[]] {}; // expected-warning {{an attribute specifier sequence in this position is a C++2b extension}}
   }
 };
 

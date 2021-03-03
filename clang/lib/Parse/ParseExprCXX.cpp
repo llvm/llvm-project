@@ -1302,6 +1302,17 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     }
   }
 
+  // Implement WG21 P2173, which allows attributes immediately before the
+  // lambda declarator and applies them to the corresponding function operator
+  // or operator template declaration. We accept this as a conforming extension
+  // in all language modes that support lambdas.
+  if (isCXX11AttributeSpecifier()) {
+    Diag(Tok, getLangOpts().CPlusPlus2b
+                  ? diag::warn_cxx20_compat_decl_attrs_on_lambda
+                  : diag::ext_decl_attrs_on_lambda);
+    MaybeParseCXX11Attributes(D);
+  }
+
   TypeResult TrailingReturnType;
   SourceLocation TrailingReturnTypeLoc;
   if (Tok.is(tok::l_paren)) {
