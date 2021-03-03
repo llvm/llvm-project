@@ -767,3 +767,25 @@ func @dim_reshape_collapse(%arg0 : tensor<2x3x5x4x?x7xf32>) -> (index, index)
 //      CHECK:   %[[D0:.+]] = dim %[[ARG0]], %[[C4]]
 //      CHECK:   %[[D1:.+]] = affine.apply #[[MAP]]()[%[[D0]]]
 //      CHECK:   return %[[C5]], %[[D1]]
+
+// -----
+
+func @propogate_casts(%arg0 : tensor<?x?xf32>, %arg1 : f32, %arg2 : index,
+    %arg3 : index) -> tensor<?x?xf32> {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c21 = constant 21 : index
+  %c42 = constant 42 : index
+  %0 = linalg.init_tensor [%c21, %c42] : tensor<?x?xf32>
+  %1 = linalg.fill(%0, %arg1) : tensor<?x?xf32>, f32 -> tensor<?x?xf32>
+  %2 = dim %arg0, %c0 : tensor<?x?xf32>
+  %3 = dim %arg0, %c1 : tensor<?x?xf32>
+  %4 = subtensor_insert %arg0 into %1[%arg2, %arg3] [%2, %3] [1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
+  return %4 : tensor<?x?xf32>
+}
+// CHECK-LABEL: func @propogate_casts
+//       CHECK:   %[[INIT:.+]] = linalg.init_tensor [21, 42]
+//       CHECK:   %[[FILL:.+]] = linalg.fill(%[[INIT]], %{{.+}})
+//       CHECK:   %[[INSERTED:.+]] = subtensor_insert %{{.+}} into %[[FILL]]
+//       CHECK:   %[[RESULT:.+]] = tensor.cast %[[INSERTED]]
+//       CHECK:   return %[[RESULT]]
