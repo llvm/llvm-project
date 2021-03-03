@@ -539,7 +539,6 @@ bool InstrProfiling::run(
   NamesVar = nullptr;
   NamesSize = 0;
   ProfileDataMap.clear();
-  CompilerUsedVars.clear();
   UsedVars.clear();
   TT = Triple(M.getTargetTriple());
 
@@ -922,7 +921,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   ProfileDataMap[NamePtr] = PD;
 
   // Mark the data variable as used so that it isn't stripped out.
-  CompilerUsedVars.push_back(Data);
+  UsedVars.push_back(Data);
   // Now that the linkage set by the FE has been passed to the data and counter
   // variables, reset Name variable's linkage and visibility to private so that
   // it can be removed later by the compiler.
@@ -977,8 +976,6 @@ void InstrProfiling::emitVNodes() {
       Constant::getNullValue(VNodesTy), getInstrProfVNodesVarName());
   VNodesVar->setSection(
       getInstrProfSectionName(IPSK_vnodes, TT.getObjectFormat()));
-  // VNodesVar is used by runtime but not referenced via relocation by other
-  // sections. Conservatively make it linker retained.
   UsedVars.push_back(VNodesVar);
 }
 
@@ -1007,8 +1004,6 @@ void InstrProfiling::emitNameData() {
   // linker from inserting padding before the start of the names section or
   // between names entries.
   NamesVar->setAlignment(Align(1));
-  // NamesVar is used by runtime but not referenced via relocation by other
-  // sections. Conservatively make it linker retained.
   UsedVars.push_back(NamesVar);
 
   for (auto *NamePtr : ReferencedNames)
@@ -1036,9 +1031,6 @@ void InstrProfiling::emitRegistration() {
                        getInstrProfRegFuncName(), M);
 
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", RegisterF));
-  for (Value *Data : CompilerUsedVars)
-    if (Data != NamesVar && !isa<Function>(Data))
-      IRB.CreateCall(RuntimeRegisterF, IRB.CreateBitCast(Data, VoidPtrTy));
   for (Value *Data : UsedVars)
     if (Data != NamesVar && !isa<Function>(Data))
       IRB.CreateCall(RuntimeRegisterF, IRB.CreateBitCast(Data, VoidPtrTy));
@@ -1089,7 +1081,7 @@ bool InstrProfiling::emitRuntimeHook() {
   IRB.CreateRet(Load);
 
   // Mark the user variable as used so that it isn't stripped out.
-  CompilerUsedVars.push_back(User);
+  UsedVars.push_back(User);
   return true;
 }
 
@@ -1102,14 +1094,9 @@ void InstrProfiling::emitUses() {
   // or discarded as a unit, so llvm.compiler.used is sufficient. Otherwise,
   // conservatively make all of them retained by the linker.
   if (TT.isOSBinFormatELF())
-    appendToCompilerUsed(*M, CompilerUsedVars);
+    appendToCompilerUsed(*M, UsedVars);
   else
-    appendToUsed(*M, CompilerUsedVars);
-
-  // We do not add proper references from used metadata sections to NamesVar and
-  // VNodesVar, so we have to be conservative and place them in llvm.used
-  // regardless of the target,
-  appendToUsed(*M, UsedVars);
+    appendToUsed(*M, UsedVars);
 }
 
 void InstrProfiling::emitInitialization() {

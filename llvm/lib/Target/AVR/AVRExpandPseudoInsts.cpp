@@ -438,12 +438,12 @@ bool AVRExpandPseudo::expand<AVR::NEGWRd>(Block &MBB, BlockIt MBBI) {
       .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
       .addReg(DstLoReg, getKillRegState(DstIsKill));
 
-  // Do an extra SBCI.
+  // Do an extra SBC.
   auto MISBCI =
-      buildMI(MBB, MBBI, AVR::SBCIRdK)
+      buildMI(MBB, MBBI, AVR::SBCRdRr)
           .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
           .addReg(DstHiReg, getKillRegState(DstIsKill))
-          .addImm(0);
+          .addReg(ZERO_REGISTER);
   if (ImpIsDead)
     MISBCI->getOperand(3).setIsDead();
   // SREG is always implicitly killed
@@ -650,10 +650,10 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtr>(Block &MBB, BlockIt MBBI) {
 
   if (TmpReg) {
     // Move the high byte into the final destination.
-    buildMI(MBB, MBBI, AVR::MOVRdRr).addReg(DstHiReg).addReg(TmpReg);
+    buildMI(MBB, MBBI, AVR::MOVRdRr, DstHiReg).addReg(TmpReg);
 
     // Move the low byte from the scratch space into the final destination.
-    buildMI(MBB, MBBI, AVR::POPRd).addReg(DstLoReg);
+    buildMI(MBB, MBBI, AVR::POPRd, DstLoReg);
   }
 
   MIBLO.setMemRefs(MI.memoperands());
@@ -767,10 +767,10 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
 
   if (TmpReg) {
     // Move the high byte into the final destination.
-    buildMI(MBB, MBBI, AVR::MOVRdRr).addReg(DstHiReg).addReg(TmpReg);
+    buildMI(MBB, MBBI, AVR::MOVRdRr, DstHiReg).addReg(TmpReg);
 
     // Move the low byte from the scratch space into the final destination.
-    buildMI(MBB, MBBI, AVR::POPRd).addReg(DstLoReg);
+    buildMI(MBB, MBBI, AVR::POPRd, DstLoReg);
   }
 
   MIBLO.setMemRefs(MI.memoperands());
@@ -815,10 +815,10 @@ bool AVRExpandPseudo::expand<AVR::LPMWRdZ>(Block &MBB, BlockIt MBBI) {
 
   if (TmpReg) {
     // Move the high byte into the final destination.
-    buildMI(MBB, MBBI, AVR::MOVRdRr).addReg(DstHiReg).addReg(TmpReg);
+    buildMI(MBB, MBBI, AVR::MOVRdRr, DstHiReg).addReg(TmpReg);
 
     // Move the low byte from the scratch space into the final destination.
-    buildMI(MBB, MBBI, AVR::POPRd).addReg(DstLoReg);
+    buildMI(MBB, MBBI, AVR::POPRd, DstLoReg);
   }
 
   MIBLO.setMemRefs(MI.memoperands());
@@ -1750,8 +1750,9 @@ bool AVRExpandPseudo::expand<AVR::ASRW8Rd>(Block &MBB, BlockIt MBBI) {
       .addReg(DstHiReg, getKillRegState(DstIsKill));
 
   // Move the sign bit to the C flag.
-  buildMI(MBB, MBBI, AVR::ADDRdRr).addReg(DstHiReg)
-      .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
+  buildMI(MBB, MBBI, AVR::ADDRdRr)
+      .addReg(DstHiReg, RegState::Define, getDeadRegState(DstIsDead))
+      .addReg(DstHiReg, getKillRegState(DstIsKill) | getDeadRegState(DstIsDead))
       .addReg(DstHiReg, getKillRegState(DstIsKill));
 
   // Set upper byte to 0 or -1.

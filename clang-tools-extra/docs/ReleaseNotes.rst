@@ -112,6 +112,16 @@ Changes in existing checks
   function or assignment to ``nullptr``.
   Added support for pointers to ``std::unique_ptr``.
 
+Deprecated checks
+^^^^^^^^^^^^^^^^^
+
+- The :doc:`readability-deleted-default
+  <clang-tidy/checks/readability-deleted-default>` check has been deprecated.
+  
+  The clang warning `Wdefaulted-function-deleted
+  <https://clang.llvm.org/docs/DiagnosticsReference.html#wdefaulted-function-deleted>`_
+  will diagnose the same issues and is enabled by default.
+
 Improvements to include-fixer
 -----------------------------
 

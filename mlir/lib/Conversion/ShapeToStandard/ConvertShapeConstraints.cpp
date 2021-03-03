@@ -39,6 +39,7 @@ public:
 void mlir::populateConvertShapeConstraintsConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
   patterns.insert<CstrBroadcastableToRequire>(ctx);
+  patterns.insert<CstrEqToRequire>(ctx);
   patterns.insert<ConvertCstrRequireOp>(ctx);
 }
 

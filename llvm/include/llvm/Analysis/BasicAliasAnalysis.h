@@ -150,15 +150,15 @@ private:
     }
     void print(raw_ostream &OS) const {
       OS << "(DecomposedGEP Base=" << Base->getName()
-	 << ", Offset=" << Offset
-	 << ", VarIndices=[";
+         << ", Offset=" << Offset
+         << ", VarIndices=[";
       for (size_t i = 0; i < VarIndices.size(); i++) {
-       if (i != 0)
-         OS << ", ";
-       VarIndices[i].print(OS);
+        if (i != 0)
+          OS << ", ";
+        VarIndices[i].print(OS);
       }
       OS << "], HasCompileTimeConstantScale=" << HasCompileTimeConstantScale
-	 << ")";
+         << ")";
     }
   };
 

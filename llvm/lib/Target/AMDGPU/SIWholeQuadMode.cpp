@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This pass adds instructions to enable whole quad mode for pixel
-/// shaders, and whole wavefront mode for all programs.
+/// This pass adds instructions to enable whole quad mode (strict or non-strict)
+/// for pixel shaders, and strict whole wavefront mode for all programs.
+///
+/// The "strict" prefix indicates that inactive lanes do not take part in
+/// control flow, specifically an inactive lane enabled by a strict WQM/WWM will
+/// always be enabled irrespective of control flow decisions. Conversely in
+/// non-strict WQM inactive lanes may control flow decisions.
 ///
 /// Whole quad mode is required for derivative computations, but it interferes
 /// with shader side effects (stores and atomics). It ensures that WQM is
@@ -26,12 +31,21 @@
 ///   ...
 ///   S_MOV_B64 EXEC, Tmp
 ///
-/// We also compute when a sequence of instructions requires Whole Wavefront
-/// Mode (StrictWWM) and insert instructions to save and restore it:
+/// We also compute when a sequence of instructions requires strict whole
+/// wavefront mode (StrictWWM) and insert instructions to save and restore it:
 ///
-/// S_OR_SAVEEXEC_B64 Tmp, -1
-/// ...
-/// S_MOV_B64 EXEC, Tmp
+///   S_OR_SAVEEXEC_B64 Tmp, -1
+///   ...
+///   S_MOV_B64 EXEC, Tmp
+///
+/// When a sequence of instructions requires strict whole quad mode (StrictWQM)
+/// we use a similar save and restore mechanism and force whole quad mode for
+/// those instructions:
+///
+///  S_MOV_B64 Tmp, EXEC
+///  S_WQM_B64 EXEC, EXEC
+///  ...
+///  S_MOV_B64 EXEC, Tmp
 ///
 /// In order to avoid excessive switching during sequences of Exact
 /// instructions, the pass first analyzes which instructions must be run in WQM
@@ -77,7 +91,9 @@ namespace {
 enum {
   StateWQM = 0x1,
   StateStrictWWM = 0x2,
-  StateExact = 0x4,
+  StateStrictWQM = 0x4,
+  StateExact = 0x8,
+  StateStrict = StateStrictWWM | StateStrictWQM,
 };
 
 struct PrintState {
@@ -89,19 +105,23 @@ public:
 
 #ifndef NDEBUG
 static raw_ostream &operator<<(raw_ostream &OS, const PrintState &PS) {
-  if (PS.State & StateWQM)
-    OS << "WQM";
-  if (PS.State & StateStrictWWM) {
-    if (PS.State & StateWQM)
-      OS << '|';
-    OS << "StrictWWM";
-  }
-  if (PS.State & StateExact) {
-    if (PS.State & (StateWQM | StateStrictWWM))
-      OS << '|';
-    OS << "Exact";
-  }
 
+  static const std::pair<char, const char *> Mapping[] = {
+      std::make_pair(StateWQM, "WQM"),
+      std::make_pair(StateStrictWWM, "StrictWWM"),
+      std::make_pair(StateStrictWQM, "StrictWQM"),
+      std::make_pair(StateExact, "Exact")};
+  char State = PS.State;
+  for (auto M : Mapping) {
+    if (State & M.first) {
+      OS << M.second;
+      State &= ~M.first;
+
+      if (State)
+        OS << '|';
+    }
+  }
+  assert(State == 0);
   return OS;
 }
 #endif
@@ -151,7 +171,7 @@ private:
   DenseMap<const MachineInstr *, InstrInfo> Instructions;
   MapVector<MachineBasicBlock *, BlockInfo> Blocks;
 
-  // Tracks state (WQM/StrictWWM/Exact) after a given instruction
+  // Tracks state (WQM/StrictWWM/StrictWQM/Exact) after a given instruction
   DenseMap<const MachineInstr *, char> StateTransition;
 
   SmallVector<MachineInstr *, 2> LiveMaskQueries;
@@ -184,10 +204,11 @@ private:
                Register SaveWQM);
   void toWQM(MachineBasicBlock &MBB, MachineBasicBlock::iterator Before,
              Register SavedWQM);
-  void toStrictWWM(MachineBasicBlock &MBB, MachineBasicBlock::iterator Before,
-                   Register SaveOrig);
-  void fromStrictWWM(MachineBasicBlock &MBB, MachineBasicBlock::iterator Before,
-                     Register SavedOrig, char NonStrictWWMState);
+  void toStrictMode(MachineBasicBlock &MBB, MachineBasicBlock::iterator Before,
+                    Register SaveOrig, char StrictStateNeeded);
+  void fromStrictMode(MachineBasicBlock &MBB,
+                      MachineBasicBlock::iterator Before, Register SavedOrig,
+                      char NonStrictState, char CurrentStrictState);
 
   MachineBasicBlock *splitBlock(MachineBasicBlock *BB, MachineInstr *TermMI);
 
@@ -473,9 +494,17 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         GlobalFlags |= StateStrictWWM;
         LowerToMovInstrs.push_back(&MI);
         continue;
+      } else if (Opcode == AMDGPU::STRICT_WQM) {
+        // STRICT_WQM is similar to STRICTWWM, but instead of enabling all
+        // threads of the wave like STRICTWWM, STRICT_WQM enables all threads in
+        // quads that have at least one active thread.
+        markInstructionUses(MI, StateStrictWQM, Worklist);
+        GlobalFlags |= StateStrictWQM;
+        LowerToMovInstrs.push_back(&MI);
+        continue;
       } else if (Opcode == AMDGPU::V_SET_INACTIVE_B32 ||
                  Opcode == AMDGPU::V_SET_INACTIVE_B64) {
-        III.Disabled = StateStrictWWM;
+        III.Disabled = StateStrict;
         MachineOperand &Inactive = MI.getOperand(2);
         if (Inactive.isReg()) {
           if (Inactive.isUndef()) {
@@ -493,7 +522,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
           Worklist.push_back(&MBB);
         }
         GlobalFlags |= StateExact;
-        III.Disabled = StateWQM | StateStrictWWM;
+        III.Disabled = StateWQM | StateStrict;
         continue;
       } else {
         if (Opcode == AMDGPU::SI_PS_LIVE || Opcode == AMDGPU::SI_LIVE_MASK) {
@@ -570,7 +599,7 @@ void SIWholeQuadMode::propagateInstruction(MachineInstr &MI,
 
   // Propagate backwards within block
   if (MachineInstr *PrevMI = MI.getPrevNode()) {
-    char InNeeds = (II.Needs & ~StateStrictWWM) | II.OutNeeds;
+    char InNeeds = (II.Needs & ~StateStrict) | II.OutNeeds;
     if (!PrevMI->isPHI()) {
       InstrInfo &PrevII = Instructions[PrevMI];
       if ((PrevII.OutNeeds | InNeeds) != PrevII.OutNeeds) {
@@ -586,10 +615,12 @@ void SIWholeQuadMode::propagateInstruction(MachineInstr &MI,
   if (II.Needs != 0)
     markInstructionUses(MI, II.Needs, Worklist);
 
-  // Ensure we process a block containing StrictWWM, even if it does not require
-  // any WQM transitions.
+  // Ensure we process a block containing StrictWWM/StrictWQM, even if it does
+  // not require any WQM transitions.
   if (II.Needs & StateStrictWWM)
     BI.Needs |= StateStrictWWM;
+  if (II.Needs & StateStrictWQM)
+    BI.Needs |= StateStrictWQM;
 }
 
 void SIWholeQuadMode::propagateBlock(MachineBasicBlock &MBB,
@@ -1105,30 +1136,48 @@ void SIWholeQuadMode::toWQM(MachineBasicBlock &MBB,
   StateTransition[MI] = StateWQM;
 }
 
-void SIWholeQuadMode::toStrictWWM(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator Before,
-                                  Register SaveOrig) {
+void SIWholeQuadMode::toStrictMode(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator Before,
+                                   Register SaveOrig, char StrictStateNeeded) {
   MachineInstr *MI;
-
   assert(SaveOrig);
-  MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::ENTER_STRICT_WWM),
-               SaveOrig)
-           .addImm(-1);
+  assert(StrictStateNeeded == StateStrictWWM ||
+         StrictStateNeeded == StateStrictWQM);
+
+  if (StrictStateNeeded == StateStrictWWM) {
+    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::ENTER_STRICT_WWM),
+                 SaveOrig)
+             .addImm(-1);
+  } else {
+    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::ENTER_STRICT_WQM),
+                 SaveOrig)
+             .addImm(-1);
+  }
   LIS->InsertMachineInstrInMaps(*MI);
   StateTransition[MI] = StateStrictWWM;
 }
 
-void SIWholeQuadMode::fromStrictWWM(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator Before,
-                                    Register SavedOrig,
-                                    char NonStrictWWMState) {
+void SIWholeQuadMode::fromStrictMode(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator Before,
+                                     Register SavedOrig, char NonStrictState,
+                                     char CurrentStrictState) {
   MachineInstr *MI;
 
   assert(SavedOrig);
-  MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::EXIT_STRICT_WWM), Exec)
-           .addReg(SavedOrig);
+  assert(CurrentStrictState == StateStrictWWM ||
+         CurrentStrictState == StateStrictWQM);
+
+  if (CurrentStrictState == StateStrictWWM) {
+    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::EXIT_STRICT_WWM),
+                 Exec)
+             .addReg(SavedOrig);
+  } else {
+    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::EXIT_STRICT_WQM),
+                 Exec)
+             .addReg(SavedOrig);
+  }
   LIS->InsertMachineInstrInMaps(*MI);
-  StateTransition[MI] = NonStrictWWMState;
+  StateTransition[MI] = NonStrictState;
 }
 
 void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
@@ -1149,10 +1198,10 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
                     << ":\n");
 
   Register SavedWQMReg;
-  Register SavedNonStrictWWMReg;
+  Register SavedNonStrictReg;
   bool WQMFromExec = IsEntry;
   char State = (IsEntry || !(BI.InNeeds & StateWQM)) ? StateExact : StateWQM;
-  char NonStrictWWMState = 0;
+  char NonStrictState = 0;
   const TargetRegisterClass *BoolRC = TRI->getBoolRC();
 
   auto II = MBB.getFirstNonPHI(), IE = MBB.end();
@@ -1166,25 +1215,25 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
   // Exact or vice versa.
   MachineBasicBlock::iterator FirstWQM = IE;
 
-  // This stores the first instruction where it's safe to switch from StrictWWM
-  // to Exact/WQM or to switch to StrictWWM. It must always be the same as, or
-  // after, FirstWQM since if it's safe to switch to/from StrictWWM, it must be
-  // safe to switch to/from WQM as well.
-  MachineBasicBlock::iterator FirstStrictWWM = IE;
+  // This stores the first instruction where it's safe to switch from Strict
+  // mode to Exact/WQM or to switch to Strict mode. It must always be the same
+  // as, or after, FirstWQM since if it's safe to switch to/from Strict, it must
+  // be safe to switch to/from WQM as well.
+  MachineBasicBlock::iterator FirstStrict = IE;
 
   // Record initial state is block information.
   BI.InitialState = State;
 
   for (;;) {
     MachineBasicBlock::iterator Next = II;
-    char Needs = StateExact | StateWQM; // StrictWWM is disabled by default
+    char Needs = StateExact | StateWQM; // Strict mode is disabled by default.
     char OutNeeds = 0;
 
     if (FirstWQM == IE)
       FirstWQM = II;
 
-    if (FirstStrictWWM == IE)
-      FirstStrictWWM = II;
+    if (FirstStrict == IE)
+      FirstStrict = II;
 
     // First, figure out the allowed states (Needs) based on the propagated
     // flags.
@@ -1196,6 +1245,8 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
         if (III != Instructions.end()) {
           if (III->second.Needs & StateStrictWWM)
             Needs = StateStrictWWM;
+          else if (III->second.Needs & StateStrictWQM)
+            Needs = StateStrictWQM;
           else if (III->second.Needs & StateWQM)
             Needs = StateWQM;
           else
@@ -1204,8 +1255,8 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
         }
       } else {
         // If the instruction doesn't actually need a correct EXEC, then we can
-        // safely leave StrictWWM enabled.
-        Needs = StateExact | StateWQM | StateStrictWWM;
+        // safely leave Strict mode enabled.
+        Needs = StateExact | StateWQM | StateStrict;
       }
 
       if (MI.isTerminator() && OutNeeds == StateExact)
@@ -1225,27 +1276,28 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
     // Now, transition if necessary.
     if (!(Needs & State)) {
       MachineBasicBlock::iterator First;
-      if (State == StateStrictWWM || Needs == StateStrictWWM) {
-        // We must switch to or from StrictWWM
-        First = FirstStrictWWM;
+      if (State == StateStrictWWM || Needs == StateStrictWWM ||
+          State == StateStrictWQM || Needs == StateStrictWQM) {
+        // We must switch to or from Strict mode.
+        First = FirstStrict;
       } else {
-        // We only need to switch to/from WQM, so we can use FirstWQM
+        // We only need to switch to/from WQM, so we can use FirstWQM.
         First = FirstWQM;
       }
 
-      // Whether we need to save SCC depends on start and end states
+      // Whether we need to save SCC depends on start and end states.
       bool SaveSCC = false;
       switch (State) {
       case StateExact:
       case StateStrictWWM:
-        // Exact/WWM -> WWM: save SCC
-        // Exact/WWM -> WQM: save SCC if WQM mask is generated from exec
-        // Exact/WWM -> Exact: no save
-        SaveSCC =
-            (Needs & StateStrictWWM) || ((Needs & StateWQM) && WQMFromExec);
+      case StateStrictWQM:
+        // Exact/Strict -> Strict: save SCC
+        // Exact/Strict -> WQM: save SCC if WQM mask is generated from exec
+        // Exact/Strict -> Exact: no save
+        SaveSCC = (Needs & StateStrict) || ((Needs & StateWQM) && WQMFromExec);
         break;
       case StateWQM:
-        // WQM -> Exact/WMM: save SCC
+        // WQM -> Exact/Strict: save SCC
         SaveSCC = !(Needs & StateWQM);
         break;
       default:
@@ -1255,20 +1307,25 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
       MachineBasicBlock::iterator Before =
           prepareInsertion(MBB, First, II, Needs == StateWQM, SaveSCC);
 
-      if (State == StateStrictWWM) {
-        assert(SavedNonStrictWWMReg);
-        fromStrictWWM(MBB, Before, SavedNonStrictWWMReg, NonStrictWWMState);
-        LIS->createAndComputeVirtRegInterval(SavedNonStrictWWMReg);
-        SavedNonStrictWWMReg = 0;
-        State = NonStrictWWMState;
+      if (State & StateStrict) {
+        assert(State == StateStrictWWM || State == StateStrictWQM);
+        assert(SavedNonStrictReg);
+        fromStrictMode(MBB, Before, SavedNonStrictReg, NonStrictState, State);
+
+        LIS->createAndComputeVirtRegInterval(SavedNonStrictReg);
+        SavedNonStrictReg = 0;
+        State = NonStrictState;
       }
 
-      if (Needs == StateStrictWWM) {
-        NonStrictWWMState = State;
-        assert(!SavedNonStrictWWMReg);
-        SavedNonStrictWWMReg = MRI->createVirtualRegister(BoolRC);
-        toStrictWWM(MBB, Before, SavedNonStrictWWMReg);
-        State = StateStrictWWM;
+      if (Needs & StateStrict) {
+        NonStrictState = State;
+        assert(Needs == StateStrictWWM || Needs == StateStrictWQM);
+        assert(!SavedNonStrictReg);
+        SavedNonStrictReg = MRI->createVirtualRegister(BoolRC);
+
+        toStrictMode(MBB, Before, SavedNonStrictReg, Needs);
+        State = Needs;
+
       } else {
         if (State == StateWQM && (Needs & StateExact) && !(Needs & StateWQM)) {
           if (!WQMFromExec && (OutNeeds & StateWQM)) {
@@ -1298,10 +1355,10 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
       }
     }
 
-    if (Needs != (StateExact | StateWQM | StateStrictWWM)) {
+    if (Needs != (StateExact | StateWQM | StateStrict)) {
       if (Needs != (StateExact | StateWQM))
         FirstWQM = IE;
-      FirstStrictWWM = IE;
+      FirstStrict = IE;
     }
 
     if (II == IE)
@@ -1310,7 +1367,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
     II = Next;
   }
   assert(!SavedWQMReg);
-  assert(!SavedNonStrictWWMReg);
+  assert(!SavedNonStrictReg);
 }
 
 void SIWholeQuadMode::lowerLiveMaskQueries() {
@@ -1402,6 +1459,10 @@ void SIWholeQuadMode::lowerKillInstrs(bool IsWQM) {
 }
 
 bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "SI Whole Quad Mode on " << MF.getName()
+                    << " ------------- \n");
+  LLVM_DEBUG(MF.dump(););
+
   Instructions.clear();
   Blocks.clear();
   LiveMaskQueries.clear();
@@ -1442,10 +1503,9 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
 
   LiveMaskReg = Exec;
 
-  // Shader is simple does not need WQM/StrictWWM or any complex lowering
-  if (!(GlobalFlags & (StateWQM | StateStrictWWM)) &&
-      LowerToCopyInstrs.empty() && LowerToMovInstrs.empty() &&
-      KillInstrs.empty()) {
+  // Shader is simple does not need any state changes or any complex lowering
+  if (!(GlobalFlags & (StateWQM | StateStrict)) && LowerToCopyInstrs.empty() &&
+      LowerToMovInstrs.empty() && KillInstrs.empty()) {
     lowerLiveMaskQueries();
     return !LiveMaskQueries.empty();
   }

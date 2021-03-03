@@ -424,35 +424,6 @@ CallBase::BundleOpInfo &CallBase::getBundleOpInfoForOperand(unsigned OpIdx) {
   return *Current;
 }
 
-CallBase *CallBase::addOperandBundle(CallBase *CB, uint32_t ID,
-                                     OperandBundleDef OB,
-                                     Instruction *InsertPt) {
-  if (CB->getOperandBundle(ID))
-    return CB;
-
-  SmallVector<OperandBundleDef, 1> Bundles;
-  CB->getOperandBundlesAsDefs(Bundles);
-  Bundles.push_back(OB);
-  return Create(CB, Bundles, InsertPt);
-}
-
-CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
-                                        Instruction *InsertPt) {
-  SmallVector<OperandBundleDef, 1> Bundles;
-  bool CreateNew = false;
-
-  for (unsigned I = 0, E = CB->getNumOperandBundles(); I != E; ++I) {
-    auto Bundle = CB->getOperandBundleAt(I);
-    if (Bundle.getTagID() == ID) {
-      CreateNew = true;
-      continue;
-    }
-    Bundles.emplace_back(Bundle);
-  }
-
-  return CreateNew ? Create(CB, Bundles, InsertPt) : CB;
-}
-
 //===----------------------------------------------------------------------===//
 //                        CallInst Implementation
 //===----------------------------------------------------------------------===//

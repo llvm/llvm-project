@@ -33,13 +33,14 @@ template <typename... Ts> void test(Ts... a) {
   []() mutable {};
   []() noexcept {};
   []() -> int { return 0; };
+  [] [[noreturn]] () {};
 }
 // CHECK:Dumping test:
-// CHECK-NEXT:FunctionTemplateDecl {{.*}} <{{.*}}ast-dump-lambda.cpp:15:1, line:36:1> line:15:32{{( imported)?}} test
+// CHECK-NEXT:FunctionTemplateDecl {{.*}} <{{.*}}ast-dump-lambda.cpp:15:1, line:37:1> line:15:32{{( imported)?}} test
 // CHECK-NEXT:|-TemplateTypeParmDecl {{.*}} <col:11, col:23> col:23{{( imported)?}} referenced typename depth 0 index 0 ... Ts
-// CHECK-NEXT:`-FunctionDecl {{.*}} <col:27, line:36:1> line:15:32{{( imported)?}} test 'void (Ts...)'
+// CHECK-NEXT:`-FunctionDecl {{.*}} <col:27, line:37:1> line:15:32{{( imported)?}} test 'void (Ts...)'
 // CHECK-NEXT:  |-ParmVarDecl {{.*}} <col:37, col:43> col:43{{( imported)?}} referenced a 'Ts...' pack
-// CHECK-NEXT:  `-CompoundStmt {{.*}} <col:46, line:36:1>
+// CHECK-NEXT:  `-CompoundStmt {{.*}} <col:46, line:37:1>
 // CHECK-NEXT:    |-DeclStmt {{.*}} <line:16:3, line:21:4>
 // CHECK-NEXT:    | `-CXXRecordDecl {{.*}} <line:16:3, line:21:3> line:16:10{{( imported)?}}{{( <undeserialized declarations>)?}} struct V definition
 // CHECK-NEXT:    |   |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
@@ -275,7 +276,25 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:18> col:3{{( imported)?}} implicit constexpr operator auto (*)() noexcept 'auto (*() const noexcept)() noexcept' inline
 // CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:18> col:3{{( imported)?}} implicit __invoke 'auto () noexcept' static inline
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:17, col:18>
-// CHECK-NEXT:    `-LambdaExpr {{.*}} <line:35:3, col:27> '(lambda at {{.*}}ast-dump-lambda.cpp:35:3)'
+// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:35:3, col:27> '(lambda at {{.*}}ast-dump-lambda.cpp:35:3)'
+// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
+// CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
+// CHECK-NEXT:    | | | |-DefaultConstructor defaulted_is_constexpr
+// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
+// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:    | | | |-MoveAssignment
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
+// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:11, col:27> col:3{{( imported)?}} operator() 'auto () const -> int' inline
+// CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:15, col:27>
+// CHECK-NEXT:    | | |   `-ReturnStmt {{.*}} <col:17, col:24>
+// CHECK-NEXT:    | | |     `-IntegerLiteral {{.*}} <col:24> 'int' 0
+// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:27> col:3{{( imported)?}} implicit constexpr operator int (*)() 'auto (*() const noexcept)() -> int' inline
+// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:27> col:3{{( imported)?}} implicit __invoke 'auto () -> int' static inline
+// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:15, col:27>
+// CHECK-NEXT:    |   `-ReturnStmt {{.*}} <col:17, col:24>
+// CHECK-NEXT:    |     `-IntegerLiteral {{.*}} <col:24> 'int' 0
+// CHECK-NEXT:    `-LambdaExpr {{.*}} <line:36:3, col:23> '(lambda at {{.*}}ast-dump-lambda.cpp:36:3)'
 // CHECK-NEXT:      |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
 // CHECK-NEXT:      | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
 // CHECK-NEXT:      | | |-DefaultConstructor defaulted_is_constexpr
@@ -284,12 +303,9 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:      | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:      | | |-MoveAssignment
 // CHECK-NEXT:      | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:      | |-CXXMethodDecl {{.*}} <col:11, col:27> col:3{{( imported)?}} operator() 'auto () const -> int' inline
-// CHECK-NEXT:      | | `-CompoundStmt {{.*}} <col:15, col:27>
-// CHECK-NEXT:      | |   `-ReturnStmt {{.*}} <col:17, col:24>
-// CHECK-NEXT:      | |     `-IntegerLiteral {{.*}} <col:24> 'int' 0
-// CHECK-NEXT:      | |-CXXConversionDecl {{.*}} <col:3, col:27> col:3{{( imported)?}} implicit constexpr operator int (*)() 'auto (*() const noexcept)() -> int' inline
-// CHECK-NEXT:      | `-CXXMethodDecl {{.*}} <col:3, col:27> col:3{{( imported)?}} implicit __invoke 'auto () -> int' static inline
-// CHECK-NEXT:      `-CompoundStmt {{.*}} <col:15, col:27>
-// CHECK-NEXT:        `-ReturnStmt {{.*}} <col:17, col:24>
-// CHECK-NEXT:          `-IntegerLiteral {{.*}} <col:24> 'int' 0
+// CHECK-NEXT:      | |-CXXMethodDecl {{.*}} <col:20, col:23> col:3{{( imported)?}} operator() 'auto () const' inline
+// CHECK-NEXT:      | | |-CompoundStmt {{.*}} <col:22, col:23>
+// CHECK-NEXT:      | | `-CXX11NoReturnAttr {{.*}} <col:8>
+// CHECK-NEXT:      | |-CXXConversionDecl {{.*}} <col:3, col:23> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
+// CHECK-NEXT:      | `-CXXMethodDecl {{.*}} <col:3, col:23> col:3{{( imported)?}} implicit __invoke 'auto ()' static inline
+// CHECK-NEXT:      `-CompoundStmt {{.*}} <col:22, col:23>

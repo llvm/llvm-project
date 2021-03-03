@@ -10,16 +10,6 @@
 ;   }
 ; }
 
-; CHECK-LABEL: define void @"\01?g@@YAXXZ"()
-; CHECK-LABEL: catch
-; CHECK: call void asm sideeffect "movl{{.*}}%ebp, %ebp{{.*}}", ""() [ "funclet"(token %1) ]
-
-; CHECK-LABEL: catch.1
-; CHECK: call void asm sideeffect "movl{{.*}}%ebp, %ebp{{.*}}", ""() [ "funclet"(token %1) ]
-
-; CHECK-LABEL: invoke.cont
-; CHECK: call void asm sideeffect "movl{{.*}}%ebp, %ebp{{.*}}", ""(){{$}}
-
 define void @"\01?g@@YAXXZ"() personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
 entry:
   %call = invoke i8* @"\01?f@@YAPAUobjc_object@@XZ"()
@@ -50,41 +40,23 @@ invoke.cont:                                      ; preds = %entry
   ret void
 }
 
-; CHECK-LABEL: define dso_local void @"?test_attr_claimRV@@YAXXZ"()
-; CHECK: %[[CALL4:.*]] = notail call i8* @"?noexcept_func@@YAPAUobjc_object@@XZ"() [ "clang.arc.attachedcall"(i64 1) ]
-; CHECK: call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %[[CALL4]])
-
-; CHECK: %[[V1:.*]] = cleanuppad
-; CHECK: %[[CALL:.*]] = notail call i8* @"?noexcept_func@@YAPAUobjc_object@@XZ"() [ "funclet"(token %[[V1]]), "clang.arc.attachedcall"(i64 1) ]
-; CHECK: call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %[[CALL]]) [ "funclet"(token %[[V1]]) ]
-
-define dso_local void @"?test_attr_claimRV@@YAXXZ"() local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
-entry:
-  invoke void @"?foo@@YAXXZ"()
-          to label %invoke.cont unwind label %ehcleanup
-
-invoke.cont:                                      ; preds = %entry
-  %call.i4 = tail call i8* @"?noexcept_func@@YAPAUobjc_object@@XZ"() #2 [ "clang.arc.attachedcall"(i64 1) ]
-  ret void
-
-ehcleanup:                                        ; preds = %entry
-  %0 = cleanuppad within none []
-  %call.i = call i8* @"?noexcept_func@@YAPAUobjc_object@@XZ"() #2 [ "funclet"(token %0), "clang.arc.attachedcall"(i64 1) ]
-  cleanupret from %0 unwind to caller
-}
-
 declare i8* @"\01?f@@YAPAUobjc_object@@XZ"()
 
 declare i32 @__CxxFrameHandler3(...)
 
-declare void @"?foo@@YAXXZ"()
-declare i8* @"?noexcept_func@@YAPAUobjc_object@@XZ"()
-
 declare dllimport i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
-declare i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8*)
 
 declare dllimport void @llvm.objc.release(i8*)
 
 !llvm.module.flags = !{!0}
 
 !0 = !{i32 1, !"clang.arc.retainAutoreleasedReturnValueMarker", !"movl\09%ebp, %ebp\09\09// marker for objc_retainAutoreleaseReturnValue"}
+
+; CHECK-LABEL: catch
+; CHECK: call void asm sideeffect "movl{{.*}}%ebp, %ebp{{.*}}", ""() [ "funclet"(token %1) ]
+
+; CHECK-LABEL: catch.1
+; CHECK: call void asm sideeffect "movl{{.*}}%ebp, %ebp{{.*}}", ""() [ "funclet"(token %1) ]
+
+; CHECK-LABEL: invoke.cont
+; CHECK: call void asm sideeffect "movl{{.*}}%ebp, %ebp{{.*}}", ""(){{$}}
