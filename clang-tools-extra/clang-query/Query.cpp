@@ -48,8 +48,6 @@ bool HelpQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
         "    AsIs                            "
         "Print and match the AST as clang sees it.  This mode is the "
         "default.\n"
-        "    IgnoreImplicitCastsAndParentheses  "
-        "Omit implicit casts and parens in matching and dumping.\n"
         "    IgnoreUnlessSpelledInSource     "
         "Omit AST nodes unless spelled in the source.\n"
         "  set output <feature>              "
