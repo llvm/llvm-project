@@ -7,6 +7,7 @@ add_flang_library(FIROptimizer
   Dialect/FIRType.cpp
 
   Support/FIRContext.cpp
+  Support/InitFIR.cpp
   Support/InternalNames.cpp
   Support/KindMapping.cpp
 

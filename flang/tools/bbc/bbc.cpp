@@ -228,6 +228,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   fir::support::registerDialects(registry);
   mlir::MLIRContext ctx(registry);
   fir::support::loadDialects(ctx);
+  fir::support::registerLLVMTranslation(ctx);
   auto &defKinds = semanticsContext.defaultKinds();
   fir::KindMapping kindMap(
       &ctx, llvm::ArrayRef<fir::KindTy>{fromDefaultKinds(defKinds)});

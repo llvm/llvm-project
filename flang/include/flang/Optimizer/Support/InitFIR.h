@@ -75,6 +75,9 @@ inline void registerMLIRPassesForFortranTools() {
   fir::registerOptCodeGenPasses();
 }
 
+/// Register the interfaces needed to lower to LLVM IR.
+void registerLLVMTranslation(mlir::MLIRContext &context);
+
 } // namespace fir::support
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_INITFIR_H

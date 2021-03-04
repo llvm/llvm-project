@@ -78,6 +78,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   fir::support::registerDialects(registry);
   mlir::MLIRContext context(registry);
   fir::support::loadDialects(context);
+  fir::support::registerLLVMTranslation(context);
   auto owningRef = mlir::parseSourceFile(sourceMgr, &context);
 
   if (!owningRef) {
