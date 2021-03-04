@@ -33,7 +33,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Target/LLVMIR.h"
-#include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -2913,19 +2912,8 @@ class FIRToLLVMLowering : public fir::FIRToLLVMLoweringBase<FIRToLLVMLowering> {
 public:
   mlir::ModuleOp getModule() { return getOperation(); }
 
-  void registerDialectInterfaces(mlir::MLIRContext *context) {
-    mlir::DialectRegistry registry;
-    registry.insert<mlir::omp::OpenMPDialect>();
-    registry
-        .addDialectInterface<mlir::omp::OpenMPDialect,
-                             mlir::OpenMPDialectLLVMIRTranslationInterface>();
-    registerLLVMDialectTranslation(registry);
-    context->appendDialectRegistry(registry);
-  }
-
   void runOnOperation() override final {
     auto *context = getModule().getContext();
-    registerDialectInterfaces(context);
     fir::LLVMTypeConverter typeConverter{getModule()};
     auto loc = mlir::UnknownLoc::get(context);
     mlir::OwningRewritePatternList pattern;
