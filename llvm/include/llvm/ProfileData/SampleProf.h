@@ -359,14 +359,7 @@ public:
 
   /// Merge the samples in \p Other into this record.
   /// Optionally scale sample counts by \p Weight.
-  sampleprof_error merge(const SampleRecord &Other, uint64_t Weight = 1) {
-    sampleprof_error Result = addSamples(Other.getSamples(), Weight);
-    for (const auto &I : Other.getCallTargets()) {
-      MergeResult(Result, addCalledTarget(I.first(), I.second, Weight));
-    }
-    return Result;
-  }
-
+  sampleprof_error merge(const SampleRecord &Other, uint64_t Weight = 1);
   void print(raw_ostream &OS, unsigned Indent) const;
   void dump() const;
 
@@ -569,16 +562,15 @@ public:
       // For CSSPGO, in order to conserve profile size, we no longer write out
       // locations profile for those not hit during training, so we need to
       // treat them as zero instead of error here.
-      if (ProfileIsCS)
-        return 0;
-      return std::error_code();
-      // A missing counter for a probe likely means the probe was not executed.
-      // Treat it as a zero count instead of an unknown count to help edge
-      // weight inference.
-      if (FunctionSamples::ProfileIsProbeBased)
+      if (FunctionSamples::ProfileIsCS || FunctionSamples::ProfileIsProbeBased)
         return 0;
       return std::error_code();
     } else {
+      // Return error for an invalid sample count which is usually assigned to
+      // dangling probe.
+      if (FunctionSamples::ProfileIsProbeBased &&
+          ret->second.getSamples() == FunctionSamples::InvalidProbeCount)
+        return std::error_code();
       return ret->second.getSamples();
     }
   }
@@ -844,6 +836,10 @@ public:
   const FunctionSamples *findFunctionSamples(
       const DILocation *DIL,
       SampleProfileReaderItaniumRemapper *Remapper = nullptr) const;
+
+  // The invalid sample count is used to represent samples collected for a
+  // dangling probe.
+  static constexpr uint64_t InvalidProbeCount = UINT64_MAX;
 
   static bool ProfileIsProbeBased;
 

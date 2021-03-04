@@ -20,6 +20,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Target/TargetMachine.h"
 #include <unordered_map>
 
@@ -47,7 +48,10 @@ public:
     const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
     bool Changed = false;
     for (MachineBasicBlock &MBB : MF) {
+      MachineInstr *FirstInstr = nullptr;
       for (MachineInstr &MI : MBB) {
+        if (!MI.isPseudo())
+          FirstInstr = &MI;
         if (MI.isCall()) {
           if (DILocation *DL = MI.getDebugLoc()) {
             auto Value = DL->getDiscriminator();
@@ -63,6 +67,47 @@ public:
               Changed = true;
             }
           }
+        }
+      }
+
+      // Walk the block backwards, move PSEUDO_PROBE before the first real
+      // instruction to fix out-of-order probes. There is a problem with probes
+      // as the terminator of the block. During the offline counts processing,
+      // the samples collected on the first physical instruction following a
+      // probe will be counted towards the probe. This logically equals to
+      // treating the instruction next to a probe as if it is from the same
+      // block of the probe. This is accurate most of the time unless the
+      // instruction can be reached from multiple flows, which means it actually
+      // starts a new block. Samples collected on such probes may cause
+      // imprecision with the counts inference algorithm. Fortunately, if
+      // there are still other native instructions preceding the probe we can
+      // use them as a place holder to collect samples for the probe.
+      if (FirstInstr) {
+        auto MII = MBB.rbegin();
+        while (MII != MBB.rend()) {
+          // Skip all pseudo probes followed by a real instruction since they
+          // are not dangling.
+          if (!MII->isPseudo())
+            break;
+          auto Cur = MII++;
+          if (Cur->getOpcode() != TargetOpcode::PSEUDO_PROBE)
+            continue;
+          // Move the dangling probe before FirstInstr.
+          auto *ProbeInstr = &*Cur;
+          MBB.remove(ProbeInstr);
+          MBB.insert(FirstInstr, ProbeInstr);
+          Changed = true;
+        }
+      } else {
+        // Probes not surrounded by any real instructions in the same block are
+        // called dangling probes. Since there's no good way to pick up a sample
+        // collection point for dangling probes at compile time, they are being
+        // tagged so that the profile correlation tool will not report any
+        // samples collected for them and it's up to the counts inference tool
+        // to get them a reasonable count.
+        for (MachineInstr &MI : MBB) {
+          if (MI.isPseudoProbe())
+            MI.addPseudoProbeAttribute(PseudoProbeAttributes::Dangling);
         }
       }
     }
