@@ -19,11 +19,9 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    cset r4, hi
 ; CHECK-NEXT:    cmp r5, r0
 ; CHECK-NEXT:    cset r5, hi
-; CHECK-NEXT:    ands r4, r5
-; CHECK-NEXT:    lsls r4, r4, #31
-; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq.w r5, lr, r12
-; CHECK-NEXT:    lslseq.w r5, r5, #31
+; CHECK-NEXT:    tst r5, r4
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    andseq.w r5, lr, r12
 ; CHECK-NEXT:    beq .LBB0_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
 ; CHECK-NEXT:    subs r5, r3, #1

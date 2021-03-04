@@ -20,11 +20,9 @@ define void @tailpred(half* nocapture readonly %pSrcA, half* nocapture readonly 
 ; CHECK-NEXT:    cset r4, hi
 ; CHECK-NEXT:    cmp r5, r2
 ; CHECK-NEXT:    cset r5, hi
-; CHECK-NEXT:    ands r4, r5
-; CHECK-NEXT:    lsls r4, r4, #31
-; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq.w r5, lr, r12
-; CHECK-NEXT:    lslseq.w r5, r5, #31
+; CHECK-NEXT:    tst r5, r4
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    andseq.w r5, lr, r12
 ; CHECK-NEXT:    beq .LBB0_4
 ; CHECK-NEXT:  @ %bb.2: @ %while.body.preheader
 ; CHECK-NEXT:    dls lr, r3
@@ -130,11 +128,9 @@ define void @notailpred(half* nocapture readonly %pSrcA, half* nocapture readonl
 ; CHECK-NEXT:    cset r5, hi
 ; CHECK-NEXT:    cmp r4, r2
 ; CHECK-NEXT:    cset r4, hi
-; CHECK-NEXT:    ands r5, r4
-; CHECK-NEXT:    lsls r5, r5, #31
-; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq r7, r6
-; CHECK-NEXT:    lslseq.w r7, r7, #31
+; CHECK-NEXT:    tst r4, r5
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    andseq.w r7, r7, r6
 ; CHECK-NEXT:    beq .LBB1_7
 ; CHECK-NEXT:  .LBB1_3:
 ; CHECK-NEXT:    mov r5, r3
