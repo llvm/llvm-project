@@ -2080,7 +2080,7 @@ let AddedComplexity = 20 in {
   defm: Loadxi_pat<sextloadi8,      i32,   anyimm0, L2_loadrb_io>;
   defm: Loadxi_pat<sextloadi16,     i32,   anyimm1, L2_loadrh_io>;
   defm: Loadxi_pat<sextloadv2i8,    v2i16, anyimm1, L2_loadbsw2_io>;
-  defm: Loadxi_pat<sextloadv4i8,    v4i16, anyimm2, L2_loadbzw4_io>;
+  defm: Loadxi_pat<sextloadv4i8,    v4i16, anyimm2, L2_loadbsw4_io>;
   defm: Loadxi_pat<zextloadi1,      i32,   anyimm0, L2_loadrub_io>;
   defm: Loadxi_pat<zextloadi8,      i32,   anyimm0, L2_loadrub_io>;
   defm: Loadxi_pat<zextloadi16,     i32,   anyimm1, L2_loadruh_io>;
@@ -2132,7 +2132,7 @@ let AddedComplexity  = 60 in {
   def: Loadxu_pat<sextloadi8,   i32,   anyimm0, L4_loadrb_ur>;
   def: Loadxu_pat<sextloadi16,  i32,   anyimm1, L4_loadrh_ur>;
   def: Loadxu_pat<sextloadv2i8, v2i16, anyimm1, L4_loadbsw2_ur>;
-  def: Loadxu_pat<sextloadv4i8, v4i16, anyimm2, L4_loadbzw4_ur>;
+  def: Loadxu_pat<sextloadv4i8, v4i16, anyimm2, L4_loadbsw4_ur>;
   def: Loadxu_pat<zextloadi1,   i32,   anyimm0, L4_loadrub_ur>;
   def: Loadxu_pat<zextloadi8,   i32,   anyimm0, L4_loadrub_ur>;
   def: Loadxu_pat<zextloadi16,  i32,   anyimm1, L4_loadruh_ur>;
