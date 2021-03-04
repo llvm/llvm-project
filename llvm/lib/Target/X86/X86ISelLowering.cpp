@@ -36553,12 +36553,15 @@ static SDValue combineX86ShufflesRecursively(
   // Remove unused/repeated shuffle source ops.
   resolveTargetShuffleInputsAndMask(Ops, Mask);
 
-  // Handle the all undef/zero cases early.
+  // Handle the all undef/zero/ones cases early.
   if (all_of(Mask, [](int Idx) { return Idx == SM_SentinelUndef; }))
     return DAG.getUNDEF(Root.getValueType());
   if (all_of(Mask, [](int Idx) { return Idx < 0; }))
     return getZeroVector(Root.getSimpleValueType(), Subtarget, DAG,
                          SDLoc(Root));
+  if (Ops.size() == 1 && ISD::isBuildVectorAllOnes(Ops[0].getNode()) &&
+      none_of(Mask, [](int M) { return M == SM_SentinelZero; }))
+    return getOnesVector(Root.getValueType(), DAG, SDLoc(Root));
 
   assert(!Ops.empty() && "Shuffle with no inputs detected");
   HasVariableMask |= IsOpVariableMask;
@@ -36887,28 +36890,53 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
   return SDValue();
 }
 
-// Canonicalize UNARYSHUFFLE(XOR(X,-1)) -> XOR(UNARYSHUFFLE(X),-1) to
-// help expose the 'NOT' pattern further up the DAG.
-// TODO: This might be beneficial for any binop with a 'splattable' operand.
+// Canonicalize SHUFFLE(BINOP(X,C)) -> BINOP(SHUFFLE(X),SHUFFLE(C)).
 static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
                                              const SDLoc &DL) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT ShuffleVT = N.getValueType();
+
+  auto IsMergeableWithShuffle = [](SDValue Op) {
+    // AllZeros/AllOnes constants are freely shuffled.
+    return ISD::isBuildVectorAllOnes(Op.getNode()) ||
+           ISD::isBuildVectorAllZeros(Op.getNode());
+  };
+  auto IsSafeToMoveShuffle = [ShuffleVT](SDValue Op, unsigned BinOp) {
+    // Ensure we only shuffle whole vector src elements, unless its logical
+    // binops where we can more aggressively move shuffles from dst to src.
+    return BinOp == ISD::AND || BinOp == ISD::OR || BinOp == ISD::XOR ||
+           (Op.getScalarValueSizeInBits() <= ShuffleVT.getScalarSizeInBits());
+  };
+
   unsigned Opc = N.getOpcode();
   switch (Opc) {
+  case X86ISD::VBROADCAST:
   case X86ISD::MOVDDUP:
   case X86ISD::PSHUFD: {
-    SDValue N0 = N.getOperand(0);
-    if (N->isOnlyUserOf(N.getOperand(0).getNode())) {
-      if (SDValue Not = IsNOT(N0, DAG, /*OneUse*/ true)) {
-        Not = DAG.getBitcast(ShuffleVT, Not);
-        Not = Opc == X86ISD::MOVDDUP
-                  ? DAG.getNode(Opc, DL, ShuffleVT, Not)
-                  : DAG.getNode(Opc, DL, ShuffleVT, Not, N.getOperand(1));
-        EVT IntVT = Not.getValueType().changeTypeToInteger();
-        SDValue AllOnes = DAG.getConstant(-1, DL, IntVT);
-        Not = DAG.getBitcast(IntVT, Not);
-        Not = DAG.getNode(ISD::XOR, DL, IntVT, Not, AllOnes);
-        return DAG.getBitcast(ShuffleVT, Not);
+    if (N.getOperand(0).getValueType() == ShuffleVT &&
+        N->isOnlyUserOf(N.getOperand(0).getNode())) {
+      SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(0));
+      unsigned SrcOpcode = N0.getOpcode();
+      if (TLI.isBinOp(SrcOpcode) && IsSafeToMoveShuffle(N0, SrcOpcode)) {
+        SDValue Op00 = N0.getOperand(0);
+        SDValue Op01 = N0.getOperand(1);
+        if (IsMergeableWithShuffle(Op00) || IsMergeableWithShuffle(Op01)) {
+          SDValue LHS, RHS;
+          Op00 = DAG.getBitcast(ShuffleVT, Op00);
+          Op01 = DAG.getBitcast(ShuffleVT, Op01);
+          if (N.getNumOperands() == 2) {
+            LHS = DAG.getNode(Opc, DL, ShuffleVT, Op00, N.getOperand(1));
+            RHS = DAG.getNode(Opc, DL, ShuffleVT, Op01, N.getOperand(1));
+          } else {
+            LHS = DAG.getNode(Opc, DL, ShuffleVT, Op00);
+            RHS = DAG.getNode(Opc, DL, ShuffleVT, Op01);
+          }
+          EVT OpVT = N0.getValueType();
+          return DAG.getBitcast(ShuffleVT,
+                                DAG.getNode(SrcOpcode, DL, OpVT,
+                                            DAG.getBitcast(OpVT, LHS),
+                                            DAG.getBitcast(OpVT, RHS)));
+        }
       }
     }
     break;
