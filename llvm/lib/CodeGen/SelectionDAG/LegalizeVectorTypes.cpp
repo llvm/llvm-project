@@ -1268,7 +1268,7 @@ void DAGTypeLegalizer::SplitVecRes_INSERT_SUBVECTOR(SDNode *N, SDValue &Lo,
   // vector, and insert into the lower half of the split vector directly.
   // Similarly if the subvector is fully in the high half.
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
-  if (IdxVal >= 0 && IdxVal + SubElems <= LoElems) {
+  if (IdxVal + SubElems <= LoElems) {
     Lo = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, LoVT, Lo, SubVec, Idx);
     return;
   }
