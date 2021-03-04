@@ -2619,6 +2619,7 @@ def BXJ : ABI<0b0001, (outs), (ins GPR:$func), NoItinerary, "bxj", "\t$func",
   let Inst{7-4} = 0b0010;
   let Inst{3-0} = func;
   let isBranch = 1;
+  let isIndirectBranch = 1;
 }
 
 // Tail calls.
