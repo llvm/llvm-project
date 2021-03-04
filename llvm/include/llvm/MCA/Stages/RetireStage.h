@@ -16,6 +16,7 @@
 #ifndef LLVM_MCA_STAGES_RETIRESTAGE_H
 #define LLVM_MCA_STAGES_RETIRESTAGE_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MCA/HardwareUnits/LSUnit.h"
 #include "llvm/MCA/HardwareUnits/RegisterFile.h"
 #include "llvm/MCA/HardwareUnits/RetireControlUnit.h"
@@ -29,6 +30,7 @@ class RetireStage final : public Stage {
   RetireControlUnit &RCU;
   RegisterFile &PRF;
   LSUnitBase &LSU;
+  SmallVector<InstRef, 4> RetireInst;
 
   RetireStage(const RetireStage &Other) = delete;
   RetireStage &operator=(const RetireStage &Other) = delete;
@@ -37,7 +39,9 @@ public:
   RetireStage(RetireControlUnit &R, RegisterFile &F, LSUnitBase &LS)
       : Stage(), RCU(R), PRF(F), LSU(LS) {}
 
-  bool hasWorkToComplete() const override { return !RCU.isEmpty(); }
+  bool hasWorkToComplete() const override {
+    return !RCU.isEmpty() || !RetireInst.empty();
+  }
   Error cycleStart() override;
   Error execute(InstRef &IR) override;
   void notifyInstructionRetired(const InstRef &IR) const;

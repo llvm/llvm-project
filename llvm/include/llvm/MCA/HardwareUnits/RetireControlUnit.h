@@ -104,6 +104,9 @@ public:
 #ifndef NDEBUG
   void dump() const;
 #endif
+
+  // Assigned to instructions that are not handled by the RCU.
+  static const unsigned UnhandledTokenID = ~0U;
 };
 
 } // namespace mca

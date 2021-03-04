@@ -130,6 +130,9 @@ Changes to the LLVM tools
 * The options ``--build-id-link-{dir,input,output}`` have been deleted.
   (`D96310 <https://reviews.llvm.org/D96310>`_)
 
+* Support for in-order processors has been added to ``llvm-mca``.
+  (`D94928 <https://reviews.llvm.org/D94928>`_)
+
 Changes to LLDB
 ---------------------------------
 

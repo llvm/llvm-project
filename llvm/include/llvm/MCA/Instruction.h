@@ -375,6 +375,7 @@ struct InstrDesc {
   bool HasSideEffects;
   bool BeginGroup;
   bool EndGroup;
+  bool RetireOOO;
 
   // True if all buffered resources are in-order, and there is at least one
   // buffer which is a dispatch hazard (BufferSize = 0).
