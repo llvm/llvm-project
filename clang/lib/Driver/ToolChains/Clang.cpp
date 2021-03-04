@@ -6437,7 +6437,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs);
 
     if (Args.hasFlag(options::OPT_munsafe_fp_atomics,
-                     options::OPT_mno_unsafe_fp_atomics))
+                     options::OPT_mno_unsafe_fp_atomics, /*Default=*/false))
       CmdArgs.push_back("-munsafe-fp-atomics");
   }
 
