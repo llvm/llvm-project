@@ -56,7 +56,8 @@ def AffineDialectDemotion : FunctionPass<"demote-affine"> {
 }
 
 def FirLoopResultOpt : FunctionPass<"fir-loop-result-opt"> {
-  let summary = "Optimizes `fir.do_loop` by removing unused final iteration values.";
+  let summary =
+    "Optimizes `fir.do_loop` by removing unused final iteration values.";
   let description = [{
     TODO - do we need this if we overhaul fir.do_loop a bit?
   }];
@@ -67,7 +68,8 @@ def FirLoopResultOpt : FunctionPass<"fir-loop-result-opt"> {
 }
 
 def MemRefDataFlowOpt : FunctionPass<"fir-memref-dataflow-opt"> {
-  let summary = "Perform store/load forwarding and potentially removing dead stores.";
+  let summary =
+    "Perform store/load forwarding and potentially removing dead stores.";
   let description = [{
     This pass performs store to load forwarding to eliminate memory accesses and
     potentially the entire allocation if all the accesses are forwarded.
