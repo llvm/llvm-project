@@ -44,7 +44,8 @@ add_mlir_library(MLIRExecutionEngine
 
   LINK_LIBS PUBLIC
   MLIRLLVMIR
-  MLIRTargetLLVMIR
+  MLIRLLVMToLLVMIRTranslation
+  MLIRTargetLLVMIRExport
   )
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
@@ -67,7 +68,8 @@ add_mlir_library(MLIRJitRunner
   MLIRIR
   MLIRParser
   MLIRStandard
-  MLIRTargetLLVMIR
+  MLIRLLVMToLLVMIRTranslation
+  MLIRTargetLLVMIRExport
   MLIRTransforms
   MLIRStandardToLLVM
   MLIRSupport

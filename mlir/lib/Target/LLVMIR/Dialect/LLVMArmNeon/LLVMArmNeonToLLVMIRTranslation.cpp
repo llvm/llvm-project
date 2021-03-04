@@ -22,12 +22,35 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
-LogicalResult
-mlir::LLVMArmNeonDialectLLVMIRTranslationInterface::convertOperation(
-    Operation *op, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation) const {
-  Operation &opInst = *op;
+namespace {
+/// Implementation of the dialect interface that converts operations belonging
+/// to the LLVMArmNeon dialect to LLVM IR.
+class LLVMArmNeonDialectLLVMIRTranslationInterface
+    : public LLVMTranslationDialectInterface {
+public:
+  using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
+
+  /// Translates the given operation to LLVM IR using the provided IR builder
+  /// and saving the state in `moduleTranslation`.
+  LogicalResult
+  convertOperation(Operation *op, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) const final {
+    Operation &opInst = *op;
 #include "mlir/Dialect/LLVMIR/LLVMArmNeonConversions.inc"
 
-  return failure();
+    return failure();
+  }
+};
+} // end namespace
+
+void mlir::registerLLVMArmNeonDialectTranslation(DialectRegistry &registry) {
+  registry.insert<LLVM::LLVMArmNeonDialect>();
+  registry.addDialectInterface<LLVM::LLVMArmNeonDialect,
+                               LLVMArmNeonDialectLLVMIRTranslationInterface>();
+}
+
+void mlir::registerLLVMArmNeonDialectTranslation(MLIRContext &context) {
+  DialectRegistry registry;
+  registerLLVMArmNeonDialectTranslation(registry);
+  context.appendDialectRegistry(registry);
 }

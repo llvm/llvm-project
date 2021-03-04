@@ -5,5 +5,6 @@ add_mlir_public_c_api_library(MLIRCAPIRegistration
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
+  MLIRLLVMToLLVMIRTranslation
   ${dialect_libs}
 )

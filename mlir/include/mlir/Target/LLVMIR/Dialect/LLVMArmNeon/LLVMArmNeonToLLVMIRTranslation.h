@@ -6,31 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the dialect interface for translating the LLVMArmNeon
-// dialect to LLVM IR.
+// This provides registration calls for LLVMArmNeon dialect to LLVM IR
+// translation.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_TARGET_LLVMIR_DIALECT_LLVMARMNEON_LLVMARMNEONTOLLVMIRTRANSLATION_H
 #define MLIR_TARGET_LLVMIR_DIALECT_LLVMARMNEON_LLVMARMNEONTOLLVMIRTRANSLATION_H
 
-#include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
-
 namespace mlir {
 
-/// Implementation of the dialect interface that converts operations belonging
-/// to the LLVMArmNeon dialect to LLVM IR.
-class LLVMArmNeonDialectLLVMIRTranslationInterface
-    : public LLVMTranslationDialectInterface {
-public:
-  using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
+class DialectRegistry;
+class MLIRContext;
 
-  /// Translates the given operation to LLVM IR using the provided IR builder
-  /// and saving the state in `moduleTranslation`.
-  LogicalResult
-  convertOperation(Operation *op, llvm::IRBuilderBase &builder,
-                   LLVM::ModuleTranslation &moduleTranslation) const final;
-};
+/// Register the LLVMArmNeon dialect and the translation from it to the LLVM IR
+/// in the given registry;
+void registerLLVMArmNeonDialectTranslation(DialectRegistry &registry);
+
+/// Register the LLVMArmNeon dialect and the translation from it in the registry
+/// associated with the given context.
+void registerLLVMArmNeonDialectTranslation(MLIRContext &context);
 
 } // namespace mlir
 

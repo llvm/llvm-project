@@ -446,8 +446,32 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   return failure();
 }
 
-LogicalResult mlir::LLVMDialectLLVMIRTranslationInterface::convertOperation(
-    Operation *op, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation) const {
-  return convertOperationImpl(*op, builder, moduleTranslation);
+namespace {
+/// Implementation of the dialect interface that converts operations belonging
+/// to the LLVM dialect to LLVM IR.
+class LLVMDialectLLVMIRTranslationInterface
+    : public LLVMTranslationDialectInterface {
+public:
+  using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
+
+  /// Translates the given operation to LLVM IR using the provided IR builder
+  /// and saving the state in `moduleTranslation`.
+  LogicalResult
+  convertOperation(Operation *op, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) const final {
+    return convertOperationImpl(*op, builder, moduleTranslation);
+  }
+};
+} // end namespace
+
+void mlir::registerLLVMDialectTranslation(DialectRegistry &registry) {
+  registry.insert<LLVM::LLVMDialect>();
+  registry.addDialectInterface<LLVM::LLVMDialect,
+                               LLVMDialectLLVMIRTranslationInterface>();
+}
+
+void mlir::registerLLVMDialectTranslation(MLIRContext &context) {
+  DialectRegistry registry;
+  registerLLVMDialectTranslation(registry);
+  context.appendDialectRegistry(registry);
 }

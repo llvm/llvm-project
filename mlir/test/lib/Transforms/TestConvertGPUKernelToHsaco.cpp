@@ -10,7 +10,7 @@
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/Support/TargetSelect.h"
@@ -22,14 +22,6 @@ static OwnedBlob compileIsaToHsacoForTesting(const std::string &, Location,
                                              StringRef) {
   const char data[] = "HSACO";
   return std::make_unique<std::vector<char>>(data, data + sizeof(data) - 1);
-}
-
-static void registerROCDLDialectTranslation(MLIRContext &context) {
-  DialectRegistry registry;
-  registry.insert<ROCDL::ROCDLDialect>();
-  registry.addDialectInterface<ROCDL::ROCDLDialect,
-                               ROCDLDialectLLVMIRTranslationInterface>();
-  context.appendDialectRegistry(registry);
 }
 
 static std::unique_ptr<llvm::Module>

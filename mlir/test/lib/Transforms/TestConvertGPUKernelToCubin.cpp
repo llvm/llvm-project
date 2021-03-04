@@ -10,7 +10,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/Support/TargetSelect.h"
@@ -22,19 +22,6 @@ static OwnedBlob compilePtxToCubinForTesting(const std::string &, Location,
                                              StringRef) {
   const char data[] = "CUBIN";
   return std::make_unique<std::vector<char>>(data, data + sizeof(data) - 1);
-}
-
-static void registerNVVMDialectTranslation(MLIRContext &context) {
-  if (auto *dialect = context.getLoadedDialect<NVVM::NVVMDialect>()) {
-    if (!dialect->getRegisteredInterface<
-            NVVMDialectLLVMIRTranslationInterface>()) {
-      DialectRegistry registry;
-      registry.insert<NVVM::NVVMDialect>();
-      registry.addDialectInterface<NVVM::NVVMDialect,
-                                   NVVMDialectLLVMIRTranslationInterface>();
-      context.appendDialectRegistry(registry);
-    }
-  }
 }
 
 static std::unique_ptr<llvm::Module>

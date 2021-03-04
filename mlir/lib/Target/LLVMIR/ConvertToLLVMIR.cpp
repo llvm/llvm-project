@@ -10,48 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Target/LLVMIR.h"
-
-#include "mlir/Dialect/LLVMIR/LLVMAVX512Dialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMArmNeonDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMArmSVEDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMAVX512/LLVMAVX512ToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMArmNeon/LLVMArmNeonToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMArmSVE/LLVMArmSVEToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/ModuleTranslation.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/Target/LLVMIR/Dialect/All.h"
+#include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Translation.h"
-
-#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/Support/ToolOutputFile.h"
 
 using namespace mlir;
-
-void mlir::registerLLVMDialectTranslation(DialectRegistry &registry) {
-  registry.insert<LLVM::LLVMDialect>();
-  registry.addDialectInterface<LLVM::LLVMDialect,
-                               LLVMDialectLLVMIRTranslationInterface>();
-}
-
-void mlir::registerLLVMDialectTranslation(MLIRContext &context) {
-  auto *dialect = context.getLoadedDialect<LLVM::LLVMDialect>();
-  if (!dialect || dialect->getRegisteredInterface<
-                      LLVMDialectLLVMIRTranslationInterface>() == nullptr) {
-    DialectRegistry registry;
-    registry.insert<LLVM::LLVMDialect>();
-    registry.addDialectInterface<LLVM::LLVMDialect,
-                                 LLVMDialectLLVMIRTranslationInterface>();
-    context.appendDialectRegistry(registry);
-  }
-}
 
 namespace mlir {
 void registerToLLVMIRTranslation() {
@@ -67,25 +33,7 @@ void registerToLLVMIRTranslation() {
         return success();
       },
       [](DialectRegistry &registry) {
-        registry.insert<omp::OpenMPDialect, LLVM::LLVMAVX512Dialect,
-                        LLVM::LLVMArmSVEDialect, LLVM::LLVMArmNeonDialect,
-                        NVVM::NVVMDialect, ROCDL::ROCDLDialect>();
-        registry.addDialectInterface<omp::OpenMPDialect,
-                                     OpenMPDialectLLVMIRTranslationInterface>();
-        registry
-            .addDialectInterface<LLVM::LLVMAVX512Dialect,
-                                 LLVMAVX512DialectLLVMIRTranslationInterface>();
-        registry.addDialectInterface<
-            LLVM::LLVMArmNeonDialect,
-            LLVMArmNeonDialectLLVMIRTranslationInterface>();
-        registry
-            .addDialectInterface<LLVM::LLVMArmSVEDialect,
-                                 LLVMArmSVEDialectLLVMIRTranslationInterface>();
-        registry.addDialectInterface<NVVM::NVVMDialect,
-                                     NVVMDialectLLVMIRTranslationInterface>();
-        registry.addDialectInterface<ROCDL::ROCDLDialect,
-                                     ROCDLDialectLLVMIRTranslationInterface>();
-        registerLLVMDialectTranslation(registry);
+        registerAllToLLVMIRTranslations(registry);
       });
 }
 } // namespace mlir

@@ -78,11 +78,12 @@ if(MLIR_ROCM_RUNNER_ENABLED)
     MLIRGPU
     MLIRIR
     MLIRLLVMIR
+    MLIRLLVMToLLVMIRTranslation
     MLIRParser
     MLIRROCDLIR
     MLIRStandard
     MLIRSupport
-    MLIRTargetLLVMIR
+    MLIRTargetLLVMIRExport
     MLIRROCDLToLLVMIRTranslation
     MLIRTransforms
     MLIRTranslation

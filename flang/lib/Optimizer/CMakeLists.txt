@@ -19,8 +19,8 @@ add_flang_library(FIROptimizer
 
   LINK_LIBS
   ${dialect_libs}
-  MLIRTargetLLVMIR
-  MLIRTargetLLVMIRModuleTranslation
+  MLIRLLVMToLLVMIRTranslation
+  MLIRTargetLLVMIRExport
 
   LINK_COMPONENTS
   AsmParser
