@@ -1056,8 +1056,7 @@ struct Attributor {
   /// the `Attributor::recordDependence` method.
   template <typename AAType>
   const AAType &getAAFor(const AbstractAttribute &QueryingAA,
-                         const IRPosition &IRP,
-                         DepClassTy DepClass = DepClassTy::REQUIRED) {
+                         const IRPosition &IRP, DepClassTy DepClass) {
     return getOrCreateAAFor<AAType>(IRP, &QueryingAA, DepClass,
                                     /* ForceUpdate */ false);
   }
@@ -1069,8 +1068,7 @@ struct Attributor {
   /// was assumed dead.
   template <typename AAType>
   const AAType &getAndUpdateAAFor(const AbstractAttribute &QueryingAA,
-                                  const IRPosition &IRP,
-                                  DepClassTy DepClass = DepClassTy::REQUIRED) {
+                                  const IRPosition &IRP, DepClassTy DepClass) {
     return getOrCreateAAFor<AAType>(IRP, &QueryingAA, DepClass,
                                     /* ForceUpdate */ true);
   }
@@ -1081,10 +1079,9 @@ struct Attributor {
   /// function.
   /// NOTE: ForceUpdate is ignored in any stage other than the update stage.
   template <typename AAType>
-  const AAType &getOrCreateAAFor(const IRPosition &IRP,
-                                 const AbstractAttribute *QueryingAA = nullptr,
-                                 DepClassTy DepClass = DepClassTy::REQUIRED,
-                                 bool ForceUpdate = false) {
+  const AAType &
+  getOrCreateAAFor(const IRPosition &IRP, const AbstractAttribute *QueryingAA,
+                   DepClassTy DepClass, bool ForceUpdate = false) {
     if (AAType *AAPtr = lookupAAFor<AAType>(IRP, QueryingAA, DepClass)) {
       if (ForceUpdate && Phase == AttributorPhase::UPDATE)
         updateAA(*AAPtr);
@@ -1159,6 +1156,11 @@ struct Attributor {
       recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA),
                        DepClass);
     return AA;
+  }
+  template <typename AAType>
+  const AAType &getOrCreateAAFor(const IRPosition &IRP) {
+    return getOrCreateAAFor<AAType>(IRP, /* QueryingAA */ nullptr,
+                                    DepClassTy::NONE);
   }
 
   /// Return the attribute of \p AAType for \p IRP if existing. This also allows
