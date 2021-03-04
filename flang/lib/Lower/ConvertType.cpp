@@ -365,7 +365,7 @@ struct TypeBuilder {
   /// lowered to avoid infinite loops.
   mlir::Type getTypeIfDerivedAlreadyInConstruction(
       const Fortran::lower::SymbolRef derivedSym) const {
-    for (const auto [sym, type] : derivedTypeInConstruction)
+    for (const auto &[sym, type] : derivedTypeInConstruction)
       if (sym == derivedSym)
         return type;
     return {};
