@@ -1,0 +1,123 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+  - Type:            IMPORT
+    Imports:
+      - Module:          env
+        Field:           table_a
+        Kind:            TABLE
+        Table:
+          Index:           0
+          ElemType:        FUNCREF
+          Limits:
+            Initial:         0x0
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            TABLE
+    Tables:
+      - Index:           1
+        ElemType:        FUNCREF
+        Limits:
+          Initial:         0x0
+      - Index:           2
+        ElemType:        EXTERNREF
+        Limits:
+          Initial:         0x0
+      - Index:           3
+        ElemType:        FUNCREF
+        Limits:
+          Flags:           [ HAS_MAX ]
+          Initial:         0x3
+          Maximum:         0x3
+  - Type:            EXPORT
+    Exports:
+      - Name:            table_b
+        Kind:            TABLE
+        Index:           1
+      - Name:            table_c
+        Kind:            TABLE
+        Index:           2
+  - Type:            ELEM
+    Segments:
+      - Flags:           2
+        TableNumber:     3
+        ElemKind:        FUNCREF
+        Offset:
+          Opcode:          I32_CONST
+          Value:           1
+        Functions:       [ 0, 0 ]
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            0B
+...
+
+#      CHECK: --- !WASM
+# CHECK-NEXT: FileHeader:
+# CHECK-NEXT:   Version:         0x1
+# CHECK-NEXT: Sections:
+# CHECK-NEXT:   - Type:            TYPE
+# CHECK-NEXT:     Signatures:
+# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:         ParamTypes:      []
+# CHECK-NEXT:         ReturnTypes:     []
+# CHECK-NEXT:   - Type:            IMPORT
+# CHECK-NEXT:     Imports:
+# CHECK-NEXT:       - Module:          env
+# CHECK-NEXT:         Field:           table_a
+# CHECK-NEXT:         Kind:            TABLE
+# CHECK-NEXT:         Table:
+# CHECK-NEXT:           Index:           0
+# CHECK-NEXT:           ElemType:        FUNCREF
+# CHECK-NEXT:           Limits:
+# CHECK-NEXT:             Initial:         0x0
+# CHECK-NEXT:   - Type:            FUNCTION
+# CHECK-NEXT:     FunctionTypes:   [ 0 ]
+# CHECK-NEXT:   - Type:            TABLE
+# CHECK-NEXT:     Tables:
+# CHECK-NEXT:       - Index:           1
+# CHECK-NEXT:         ElemType:        FUNCREF
+# CHECK-NEXT:         Limits:
+# CHECK-NEXT:           Initial:         0x0
+# CHECK-NEXT:       - Index:           2
+# CHECK-NEXT:         ElemType:        EXTERNREF
+# CHECK-NEXT:         Limits:
+# CHECK-NEXT:           Initial:         0x0
+# CHECK-NEXT:       - Index:           3
+# CHECK-NEXT:         ElemType:        FUNCREF
+# CHECK-NEXT:         Limits:
+# CHECK-NEXT:           Flags:           [ HAS_MAX ]
+# CHECK-NEXT:           Initial:         0x3
+# CHECK-NEXT:           Maximum:         0x3
+# CHECK-NEXT:   - Type:            EXPORT
+# CHECK-NEXT:     Exports:
+# CHECK-NEXT:       - Name:            table_b
+# CHECK-NEXT:         Kind:            TABLE
+# CHECK-NEXT:         Index:           1
+# CHECK-NEXT:       - Name:            table_c
+# CHECK-NEXT:         Kind:            TABLE
+# CHECK-NEXT:         Index:           2
+# CHECK-NEXT:   - Type:            ELEM
+# CHECK-NEXT:     Segments:
+# CHECK-NEXT:       - Flags:           2
+# CHECK-NEXT:         TableNumber:     3
+# CHECK-NEXT:         ElemKind:        FUNCREF
+# CHECK-NEXT:         Offset:
+# CHECK-NEXT:           Opcode:          I32_CONST
+# CHECK-NEXT:           Value:           1
+# CHECK-NEXT:         Functions:       [ 0, 0 ]
+# CHECK-NEXT:   - Type:            CODE
+# CHECK-NEXT:     Functions:
+# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:         Locals:          []
+# CHECK-NEXT:         Body:            0B
+# CHECK-NEXT: ...
