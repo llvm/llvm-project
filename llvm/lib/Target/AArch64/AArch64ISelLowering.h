@@ -57,6 +57,10 @@ enum NodeType : unsigned {
   // AUTH_TC_RETURN chain, callee, fpdiff, auth key #, discriminator, operands.
   AUTH_TC_RETURN,
 
+  // Pseudo for a OBJC call that gets emitted together with a special `mov
+  // x29, x29` marker instruction.
+  CALL_RVMARKER,
+
   // Produces the full sequence of instructions for getting the thread pointer
   // offset of a variable into X0, using the TLSDesc model.
   TLSDESC_CALLSEQ,
@@ -435,10 +439,6 @@ enum NodeType : unsigned {
   LDP,
   STP,
   STNP,
-
-  // Pseudo for a OBJC call that gets emitted together with a special `mov
-  // x29, x29` marker instruction.
-  CALL_RVMARKER
 };
 
 } // end namespace AArch64ISD
