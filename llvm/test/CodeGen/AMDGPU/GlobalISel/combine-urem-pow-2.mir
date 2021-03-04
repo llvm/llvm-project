@@ -156,3 +156,74 @@ body:             |
     %rem:_(<2 x s16>) = G_UREM %var, %four_vec
     $vgpr0 = COPY %rem
 ...
+
+---
+name: v_urem_v2i32_pow2k_denom
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; GCN-LABEL: name: v_urem_v2i32_pow2k_denom
+    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GCN: %pow2:_(s32) = G_CONSTANT i32 4096
+    ; GCN: %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2(s32), %pow2(s32)
+    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; GCN: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
+    ; GCN: [[ADD:%[0-9]+]]:_(<2 x s32>) = G_ADD %pow2_vec, [[BUILD_VECTOR]]
+    ; GCN: %rem:_(<2 x s32>) = G_AND %var, [[ADD]]
+    ; GCN: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
+    %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %pow2:_(s32) = G_CONSTANT i32 4096
+    %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2(s32), %pow2(s32)
+    %rem:_(<2 x s32>) = G_UREM %var, %pow2_vec
+    $vgpr0_vgpr1 = COPY %rem
+...
+
+---
+name: v_urem_v2i32_pow2k_not_splat_denom
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; GCN-LABEL: name: v_urem_v2i32_pow2k_not_splat_denom
+    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GCN: %pow2_1:_(s32) = G_CONSTANT i32 4096
+    ; GCN: %pow2_2:_(s32) = G_CONSTANT i32 2048
+    ; GCN: %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2_1(s32), %pow2_2(s32)
+    ; GCN: %rem:_(<2 x s32>) = G_UREM %var, %pow2_vec
+    ; GCN: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
+    %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %pow2_1:_(s32) = G_CONSTANT i32 4096
+    %pow2_2:_(s32) = G_CONSTANT i32 2048
+    %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2_1(s32), %pow2_2(s32)
+    %rem:_(<2 x s32>) = G_UREM %var, %pow2_vec
+    $vgpr0_vgpr1 = COPY %rem
+...
+
+---
+name: v_urem_v2i64_pow2k_denom
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; GCN-LABEL: name: v_urem_v2i64_pow2k_denom
+    ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN: %var:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN: %pow2:_(s64) = G_CONSTANT i64 4096
+    ; GCN: %pow2_vec:_(<2 x s64>) = G_BUILD_VECTOR %pow2(s64), %pow2(s64)
+    ; GCN: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; GCN: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; GCN: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD %pow2_vec, [[BUILD_VECTOR]]
+    ; GCN: %rem:_(<2 x s64>) = G_AND %var, [[ADD]]
+    ; GCN: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %rem(<2 x s64>)
+    %var:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %pow2:_(s64) = G_CONSTANT i64 4096
+    %pow2_vec:_(<2 x s64>) = G_BUILD_VECTOR %pow2(s64), %pow2(s64)
+    %rem:_(<2 x s64>) = G_UREM %var, %pow2_vec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %rem
+...
