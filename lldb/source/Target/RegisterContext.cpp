@@ -150,6 +150,20 @@ bool RegisterContext::SetPC(uint64_t pc) {
   return success;
 }
 
+bool RegisterContext::GetPCForSymbolication(Address &address) {
+  addr_t pc = GetPC(LLDB_INVALID_ADDRESS);
+  if (pc == LLDB_INVALID_ADDRESS)
+    return false;
+  TargetSP target_sp = m_thread.CalculateTarget();
+  if (!target_sp.get())
+    return false;
+
+  if (!BehavesLikeZerothFrame() && pc != 0)
+    pc--;
+  address.SetLoadAddress(pc, target_sp.get());
+  return true;
+}
+
 bool RegisterContext::SetPC(Address addr) {
   TargetSP target_sp = m_thread.CalculateTarget();
   Target *target = target_sp.get();

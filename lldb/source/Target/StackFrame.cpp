@@ -213,6 +213,35 @@ const Address &StackFrame::GetFrameCodeAddress() {
   return m_frame_code_addr;
 }
 
+// This can't be rewritten into a call to
+// RegisterContext::GetPCForSymbolication because this
+// StackFrame may have been constructed with a special pc,
+// e.g. tail-call artificial frames.
+Address StackFrame::GetFrameCodeAddressForSymbolication() {
+  Address lookup_addr(GetFrameCodeAddress());
+  if (!lookup_addr.IsValid())
+    return lookup_addr;
+  if (m_behaves_like_zeroth_frame)
+    return lookup_addr;
+
+  addr_t offset = lookup_addr.GetOffset();
+  if (offset > 0) {
+    lookup_addr.SetOffset(offset - 1);
+  } else {
+    // lookup_addr is the start of a section.  We need do the math on the
+    // actual load address and re-compute the section.  We're working with
+    // a 'noreturn' function at the end of a section.
+    TargetSP target_sp = CalculateTarget();
+    if (target_sp) {
+      addr_t addr_minus_one = lookup_addr.GetOpcodeLoadAddress(
+                                  target_sp.get(), AddressClass::eCode) -
+                              1;
+      lookup_addr.SetOpcodeLoadAddress(addr_minus_one, target_sp.get());
+    }
+  }
+  return lookup_addr;
+}
+
 bool StackFrame::ChangePC(addr_t pc) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // We can't change the pc value of a history stack frame - it is immutable.
@@ -288,30 +317,7 @@ StackFrame::GetSymbolContext(SymbolContextItem resolve_scope) {
     // If this is not frame zero, then we need to subtract 1 from the PC value
     // when doing address lookups since the PC will be on the instruction
     // following the function call instruction...
-
-    Address lookup_addr(GetFrameCodeAddress());
-    if (!m_behaves_like_zeroth_frame && lookup_addr.IsValid()) {
-      addr_t offset = lookup_addr.GetOffset();
-      if (offset > 0) {
-        lookup_addr.SetOffset(offset - 1);
-
-      } else {
-        // lookup_addr is the start of a section.  We need do the math on the
-        // actual load address and re-compute the section.  We're working with
-        // a 'noreturn' function at the end of a section.
-        ThreadSP thread_sp(GetThread());
-        if (thread_sp) {
-          TargetSP target_sp(thread_sp->CalculateTarget());
-          if (target_sp) {
-            addr_t addr_minus_one =
-                lookup_addr.GetLoadAddress(target_sp.get()) - 1;
-            lookup_addr.SetLoadAddress(addr_minus_one, target_sp.get());
-          } else {
-            lookup_addr.SetOffset(offset - 1);
-          }
-        }
-      }
-    }
+    Address lookup_addr(GetFrameCodeAddressForSymbolication());
 
     if (m_sc.module_sp) {
       // We have something in our stack frame symbol context, lets check if we
