@@ -2679,24 +2679,24 @@ struct FormatStyle {
     ///    #include "B/a.h"
     /// \endcode
     SI_Never,
-    /// Includes are sorted in an ASCIIbetical or case insensitive fashion.
+    /// Includes are sorted in an ASCIIbetical or case sensitive fashion.
     /// \code
     ///    #include "A/B.h"
     ///    #include "A/b.h"
     ///    #include "B/A.h"
     ///    #include "B/a.h"
     ///    #include "a/b.h"
-    /// \endcode
-    SI_CaseInsensitive,
-    /// Includes are sorted in an alphabetical or case sensitive fashion.
-    /// \code
-    ///    #include "A/B.h"
-    ///    #include "A/b.h"
-    ///    #include "a/b.h"
-    ///    #include "B/A.h"
-    ///    #include "B/a.h"
     /// \endcode
     SI_CaseSensitive,
+    /// Includes are sorted in an alphabetical or case insensitive fashion.
+    /// \code
+    ///    #include "A/B.h"
+    ///    #include "A/b.h"
+    ///    #include "a/b.h"
+    ///    #include "B/A.h"
+    ///    #include "B/a.h"
+    /// \endcode
+    SI_CaseInsensitive,
   };
 
   /// Controls if and how clang-format will sort ``#includes``.

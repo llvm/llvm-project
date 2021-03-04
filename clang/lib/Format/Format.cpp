@@ -423,7 +423,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::SortIncludesOptions> {
 
     // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::SI_Never);
-    IO.enumCase(Value, "true", FormatStyle::SI_CaseInsensitive);
+    IO.enumCase(Value, "true", FormatStyle::SI_CaseSensitive);
   }
 };
 
@@ -1047,7 +1047,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.PenaltyIndentedWhitespace = 0;
 
   LLVMStyle.DisableFormat = false;
-  LLVMStyle.SortIncludes = FormatStyle::SI_CaseInsensitive;
+  LLVMStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
   LLVMStyle.SortUsingDeclarations = true;
   LLVMStyle.StatementAttributeLikeMacros.push_back("Q_EMIT");
@@ -1250,7 +1250,7 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
         "java",
         "javax",
     };
-    ChromiumStyle.SortIncludes = FormatStyle::SI_CaseInsensitive;
+    ChromiumStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
   } else if (Language == FormatStyle::LK_JavaScript) {
     ChromiumStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     ChromiumStyle.AllowShortLoopsOnASingleLine = false;
@@ -2248,7 +2248,7 @@ static void sortCppIncludes(const FormatStyle &Style,
     Indices.push_back(i);
   }
 
-  if (Style.SortIncludes == FormatStyle::SI_CaseSensitive) {
+  if (Style.SortIncludes == FormatStyle::SI_CaseInsensitive) {
     llvm::stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
       const auto LHSFilenameLower = Includes[LHSI].Filename.lower();
       const auto RHSFilenameLower = Includes[RHSI].Filename.lower();
