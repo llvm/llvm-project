@@ -848,13 +848,12 @@ Session::Session(std::unique_ptr<TargetProcessControl> TPC, Error &Err)
     return;
   }
 
-  if (!NoExec && !this->TPC->getTargetTriple().isOSWindows())
+  if (!NoExec && !this->TPC->getTargetTriple().isOSWindows()) {
     ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
         ES, ExitOnErr(TPCEHFrameRegistrar::Create(*this->TPC))));
-
-  if (!this->TPC->getTargetTriple().isOSWindows())
     ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
         ES, ExitOnErr(createJITLoaderGDBRegistrar(*this->TPC))));
+  }
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
 
