@@ -164,6 +164,19 @@ EXTERN void __tgt_target_data_begin_mapper(ident_t *loc, int64_t device_id,
     DP("Use default device id %" PRId64 "\n", device_id);
   }
 
+  // Proposed behavior for OpenMP 5.2 in OpenMP spec github issue 2669.
+  if (omp_get_num_devices() == 0) {
+    DP("omp_get_num_devices() == 0 but offload is manadatory\n");
+    HandleTargetOutcome(false, loc);
+    return;
+  }
+
+  if (device_id == omp_get_initial_device()) {
+    DP("Device is host (%" PRId64 "), returning as if offload is disabled\n",
+       device_id);
+    return;
+  }
+
   if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
     DP("Failed to get device %" PRId64 " ready\n", device_id);
     HandleTargetOutcome(false, loc);
@@ -244,6 +257,19 @@ EXTERN void __tgt_target_data_end_mapper(ident_t *loc, int64_t device_id,
   // No devices available?
   if (device_id == OFFLOAD_DEVICE_DEFAULT) {
     device_id = omp_get_default_device();
+  }
+
+  // Proposed behavior for OpenMP 5.2 in OpenMP spec github issue 2669.
+  if (omp_get_num_devices() == 0) {
+    DP("omp_get_num_devices() == 0 but offload is manadatory\n");
+    HandleTargetOutcome(false, loc);
+    return;
+  }
+
+  if (device_id == omp_get_initial_device()) {
+    DP("Device is host (%" PRId64 "), returning as if offload is disabled\n",
+       device_id);
+    return;
   }
 
   PM->RTLsMtx.lock();
@@ -331,6 +357,19 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *loc, int64_t device_id,
     device_id = omp_get_default_device();
   }
 
+  // Proposed behavior for OpenMP 5.2 in OpenMP spec github issue 2669.
+  if (omp_get_num_devices() == 0) {
+    DP("omp_get_num_devices() == 0 but offload is manadatory\n");
+    HandleTargetOutcome(false, loc);
+    return;
+  }
+
+  if (device_id == omp_get_initial_device()) {
+    DP("Device is host (%" PRId64 "), returning as if offload is disabled\n",
+       device_id);
+    return;
+  }
+
   if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
     DP("Failed to get device %" PRId64 " ready\n", device_id);
     HandleTargetOutcome(false, loc);
@@ -397,6 +436,20 @@ EXTERN int __tgt_target_mapper(ident_t *loc, int64_t device_id, void *host_ptr,
 
   if (device_id == OFFLOAD_DEVICE_DEFAULT) {
     device_id = omp_get_default_device();
+  }
+
+  // Proposed behavior for OpenMP 5.2 in OpenMP spec github issue 2669.
+  if (omp_get_num_devices() == 0) {
+    DP("omp_get_num_devices() == 0 but offload is manadatory\n");
+    HandleTargetOutcome(false, loc);
+    return OFFLOAD_FAIL;
+  }
+
+  if (device_id == omp_get_initial_device()) {
+    DP("Device is host (%" PRId64 "), returning OFFLOAD_FAIL as if offload is "
+       "disabled\n",
+       device_id);
+    return OFFLOAD_FAIL;
   }
 
   if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
@@ -484,6 +537,20 @@ EXTERN int __tgt_target_teams_mapper(ident_t *loc, int64_t device_id,
     device_id = omp_get_default_device();
   }
 
+  // Proposed behavior for OpenMP 5.2 in OpenMP spec github issue 2669.
+  if (omp_get_num_devices() == 0) {
+    DP("omp_get_num_devices() == 0 but offload is manadatory\n");
+    HandleTargetOutcome(false, loc);
+    return OFFLOAD_FAIL;
+  }
+
+  if (device_id == omp_get_initial_device()) {
+    DP("Device is host (%" PRId64 "), returning OFFLOAD_FAIL as if offload is "
+       "disabled\n",
+       device_id);
+    return OFFLOAD_FAIL;
+  }
+
   if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
     REPORT("Failed to get device %" PRId64 " ready\n", device_id);
     HandleTargetOutcome(false, loc);
@@ -561,6 +628,19 @@ EXTERN void __kmpc_push_target_tripcount(ident_t *loc, int64_t device_id,
 
   if (device_id == OFFLOAD_DEVICE_DEFAULT) {
     device_id = omp_get_default_device();
+  }
+
+  // Proposed behavior for OpenMP 5.2 in OpenMP spec github issue 2669.
+  if (omp_get_num_devices() == 0) {
+    DP("omp_get_num_devices() == 0 but offload is manadatory\n");
+    HandleTargetOutcome(false, loc);
+    return;
+  }
+
+  if (device_id == omp_get_initial_device()) {
+    DP("Device is host (%" PRId64 "), returning as if offload is disabled\n",
+       device_id);
+    return;
   }
 
   if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
