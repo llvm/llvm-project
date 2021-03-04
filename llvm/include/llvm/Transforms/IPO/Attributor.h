@@ -3033,7 +3033,7 @@ struct AADereferenceable
 };
 
 using AAAlignmentStateType =
-    IncIntegerState<uint32_t, Value::MaximumAlignment, 0>;
+    IncIntegerState<uint32_t, Value::MaximumAlignment, 1>;
 /// An abstract interface for all align attributes.
 struct AAAlign : public IRAttribute<
                      Attribute::Alignment,
