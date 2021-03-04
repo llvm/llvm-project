@@ -100,7 +100,7 @@ private:
   /// All loops currently under construction.
   llvm::SmallVector<llvm::Loop *, 8> ActiveLoops;
 
-  /// Metadata pointing to parallel loops currently under construction.
+  /// Access groups for the parallel loops currently under construction.
   llvm::SmallVector<llvm::MDNode *, 8> ParallelLoops;
 
   /// The alias scope domain for the current SCoP.
