@@ -904,8 +904,8 @@ public:
     typedef _Key                                     key_type;
     typedef _Tp                                      mapped_type;
     typedef pair<const key_type, mapped_type>        value_type;
-    typedef typename __identity<_Compare>::type      key_compare;
-    typedef typename __identity<_Allocator>::type    allocator_type;
+    typedef __identity_t<_Compare>                   key_compare;
+    typedef __identity_t<_Allocator>                 allocator_type;
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
 
@@ -1674,8 +1674,8 @@ public:
     typedef _Key                                     key_type;
     typedef _Tp                                      mapped_type;
     typedef pair<const key_type, mapped_type>        value_type;
-    typedef typename __identity<_Compare>::type      key_compare;
-    typedef typename __identity<_Allocator>::type    allocator_type;
+    typedef __identity_t<_Compare>                   key_compare;
+    typedef __identity_t<_Allocator>                 allocator_type;
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
 
