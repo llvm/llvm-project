@@ -1067,58 +1067,94 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
   return MadeChange;
 }
 
-static bool tryToShorten(Instruction *EarlierWrite, int64_t &EarlierOffset,
-                         uint64_t &EarlierSize, int64_t LaterOffset,
+static bool tryToShorten(Instruction *EarlierWrite, int64_t &EarlierStart,
+                         uint64_t &EarlierSize, int64_t LaterStart,
                          uint64_t LaterSize, bool IsOverwriteEnd) {
-  // TODO: base this on the target vector size so that if the earlier
-  // store was too small to get vector writes anyway then its likely
-  // a good idea to shorten it
-  // Power of 2 vector writes are probably always a bad idea to optimize
-  // as any store/memset/memcpy is likely using vector instructions so
-  // shortening it to not vector size is likely to be slower
   auto *EarlierIntrinsic = cast<AnyMemIntrinsic>(EarlierWrite);
-  unsigned EarlierWriteAlign = EarlierIntrinsic->getDestAlignment();
-  if (!IsOverwriteEnd)
-    LaterOffset = int64_t(LaterOffset + LaterSize);
+  Align PrefAlign = EarlierIntrinsic->getDestAlign().valueOrOne();
 
-  if (!(isPowerOf2_64(LaterOffset) && EarlierWriteAlign <= LaterOffset) &&
-      !((EarlierWriteAlign != 0) && LaterOffset % EarlierWriteAlign == 0))
-    return false;
+  // We assume that memet/memcpy operates in chunks of the "largest" native
+  // type size and aligned on the same value. That means optimal start and size
+  // of memset/memcpy should be modulo of preferred alignment of that type. That
+  // is it there is no any sense in trying to reduce store size any further
+  // since any "extra" stores comes for free anyway.
+  // On the other hand, maximum alignment we can achieve is limited by alignment
+  // of initial store.
 
-  int64_t NewLength = IsOverwriteEnd
-                          ? LaterOffset - EarlierOffset
-                          : EarlierSize - (LaterOffset - EarlierOffset);
+  // TODO: Limit maximum alignment by preferred (or abi?) alignment of the
+  // "largest" native type.
+  // Note: What is the proper way to get that value?
+  // Should TargetTransformInfo::getRegisterBitWidth be used or anything else?
+  // PrefAlign = std::min(DL.getPrefTypeAlign(LargestType), PrefAlign);
 
+  int64_t ToRemoveStart = 0;
+  uint64_t ToRemoveSize = 0;
+  // Compute start and size of the region to remove. Make sure 'PrefAlign' is
+  // maintained on the remaining store.
+  if (IsOverwriteEnd) {
+    // Calculate required adjustment for 'LaterStart'in order to keep remaining
+    // store size aligned on 'PerfAlign'.
+    uint64_t Off =
+        offsetToAlignment(uint64_t(LaterStart - EarlierStart), PrefAlign);
+    ToRemoveStart = LaterStart + Off;
+    if (EarlierSize <= uint64_t(ToRemoveStart - EarlierStart))
+      return false;
+    ToRemoveSize = EarlierSize - uint64_t(ToRemoveStart - EarlierStart);
+  } else {
+    ToRemoveStart = EarlierStart;
+    assert(LaterSize >= uint64_t(EarlierStart - LaterStart) &&
+           "Not overlapping accesses?");
+    ToRemoveSize = LaterSize - uint64_t(EarlierStart - LaterStart);
+    // Calculate required adjustment for 'ToRemoveSize'in order to keep
+    // start of the remaining store aligned on 'PerfAlign'.
+    uint64_t Off = offsetToAlignment(ToRemoveSize, PrefAlign);
+    if (Off != 0) {
+      if (ToRemoveSize <= (PrefAlign.value() - Off))
+        return false;
+      ToRemoveSize -= PrefAlign.value() - Off;
+    }
+    assert(isAligned(PrefAlign, ToRemoveSize) &&
+           "Should preserve selected alignment");
+  }
+
+  assert(ToRemoveSize > 0 && "Shouldn't reach here if nothing to remove");
+  assert(EarlierSize > ToRemoveSize && "Can't remove more than original size");
+
+  uint64_t NewSize = EarlierSize - ToRemoveSize;
   if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(EarlierWrite)) {
     // When shortening an atomic memory intrinsic, the newly shortened
     // length must remain an integer multiple of the element size.
     const uint32_t ElementSize = AMI->getElementSizeInBytes();
-    if (0 != NewLength % ElementSize)
+    if (0 != NewSize % ElementSize)
       return false;
   }
 
   LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  OW "
                     << (IsOverwriteEnd ? "END" : "BEGIN") << ": "
-                    << *EarlierWrite << "\n  KILLER (offset " << LaterOffset
-                    << ", " << EarlierSize << ")\n");
+                    << *EarlierWrite << "\n  KILLER [" << ToRemoveStart << ", "
+                    << int64_t(ToRemoveStart + ToRemoveSize) << ")\n");
 
   Value *EarlierWriteLength = EarlierIntrinsic->getLength();
   Value *TrimmedLength =
-      ConstantInt::get(EarlierWriteLength->getType(), NewLength);
+      ConstantInt::get(EarlierWriteLength->getType(), NewSize);
   EarlierIntrinsic->setLength(TrimmedLength);
+  EarlierIntrinsic->setDestAlignment(PrefAlign);
 
-  EarlierSize = NewLength;
   if (!IsOverwriteEnd) {
-    int64_t OffsetMoved = (LaterOffset - EarlierOffset);
     Value *Indices[1] = {
-        ConstantInt::get(EarlierWriteLength->getType(), OffsetMoved)};
+        ConstantInt::get(EarlierWriteLength->getType(), ToRemoveSize)};
     GetElementPtrInst *NewDestGEP = GetElementPtrInst::CreateInBounds(
         EarlierIntrinsic->getRawDest()->getType()->getPointerElementType(),
         EarlierIntrinsic->getRawDest(), Indices, "", EarlierWrite);
     NewDestGEP->setDebugLoc(EarlierIntrinsic->getDebugLoc());
     EarlierIntrinsic->setDest(NewDestGEP);
-    EarlierOffset = EarlierOffset + OffsetMoved;
   }
+
+  // Finally update start and size of earlier access.
+  if (!IsOverwriteEnd)
+    EarlierStart += ToRemoveSize;
+  EarlierSize = NewSize;
+
   return true;
 }
 
