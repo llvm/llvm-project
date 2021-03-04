@@ -238,6 +238,11 @@ class SettingsCommandTestCase(TestBase):
         self.assertTrue(found_env_var,
                         "MY_ENV_VAR was not set in LunchInfo object")
 
+        self.assertEqual(launch_info.GetNumArguments(), 3)
+        self.assertEqual(launch_info.GetArgumentAtIndex(0), "A")
+        self.assertEqual(launch_info.GetArgumentAtIndex(1), "B")
+        self.assertEqual(launch_info.GetArgumentAtIndex(2), "C")
+        
         self.expect(
             'target show-launch-environment',
             substrs=["MY_ENV_VAR=YES"])

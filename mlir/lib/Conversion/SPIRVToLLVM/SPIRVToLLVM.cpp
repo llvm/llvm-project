@@ -420,7 +420,7 @@ public:
       return success();
     }
     rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(constOp, dstType, operands,
-                                                  constOp.getAttrs());
+                                                  constOp->getAttrs());
     return success();
   }
 };
@@ -625,7 +625,7 @@ public:
     if (!dstType)
       return failure();
     rewriter.template replaceOpWithNewOp<LLVMOp>(operation, dstType, operands,
-                                                 operation.getAttrs());
+                                                 operation->getAttrs());
     return success();
   }
 };
@@ -799,14 +799,14 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     if (callOp.getNumResults() == 0) {
       rewriter.replaceOpWithNewOp<LLVM::CallOp>(callOp, llvm::None, operands,
-                                                callOp.getAttrs());
+                                                callOp->getAttrs());
       return success();
     }
 
     // Function returns a single result.
     auto dstType = typeConverter.convertType(callOp.getType(0));
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(callOp, dstType, operands,
-                                              callOp.getAttrs());
+                                              callOp->getAttrs());
     return success();
   }
 };
@@ -1547,8 +1547,8 @@ void mlir::encodeBindAttribute(ModuleOp module) {
         if (failed(SymbolTable::replaceAllSymbolUses(op, name, spvModule)))
           op.emitError("unable to replace all symbol uses for ") << name;
         SymbolTable::setSymbolName(op, name);
-        op.removeAttr(kDescriptorSet);
-        op.removeAttr(kBinding);
+        op->removeAttr(kDescriptorSet);
+        op->removeAttr(kBinding);
       }
     });
   }

@@ -843,6 +843,18 @@ TEST_F(InterpolateTest, DriverModes) {
   EXPECT_EQ(getCommand("bar.h"), "clang -D bar.cpp --driver-mode=cl /TP");
 }
 
+TEST(TransferCompileCommandTest, Smoke) {
+  CompileCommand Cmd;
+  Cmd.Filename = "foo.cc";
+  Cmd.CommandLine = {"clang", "-Wall", "foo.cc"};
+  Cmd.Directory = "dir";
+  CompileCommand Transferred = transferCompileCommand(std::move(Cmd), "foo.h");
+  EXPECT_EQ(Transferred.Filename, "foo.h");
+  EXPECT_THAT(Transferred.CommandLine,
+              ElementsAre("clang", "-Wall", "-x", "c++-header", "foo.h"));
+  EXPECT_EQ(Transferred.Directory, "dir");
+}
+
 TEST(CompileCommandTest, EqualityOperator) {
   CompileCommand CCRef("/foo/bar", "hello.c", {"a", "b"}, "hello.o");
   CompileCommand CCTest = CCRef;

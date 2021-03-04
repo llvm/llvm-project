@@ -1368,9 +1368,7 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   if (EHPadToUnwindDest.empty())
     return false;
   NumCatchUnwindMismatches += EHPadToUnwindDest.size();
-  // <current branch dest, future branch dest> map, because fixing catch unwind
-  // mismatches can invalidate branch destinations
-  DenseMap<MachineBasicBlock *, MachineBasicBlock *> BrDestMap;
+  SmallPtrSet<MachineBasicBlock *, 4> NewEndTryBBs;
 
   for (auto &P : EHPadToUnwindDest) {
     MachineBasicBlock *EHPad = P.first;
@@ -1378,8 +1376,7 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
     MachineInstr *Try = EHPadToTry[EHPad];
     MachineInstr *EndTry = BeginToEnd[Try];
     addTryDelegate(Try, EndTry, UnwindDest);
-    BrDestMap[EndTry->getParent()] =
-        EndTry->getParent()->getNextNode()->getNextNode();
+    NewEndTryBBs.insert(EndTry->getParent());
   }
 
   // Adding a try-delegate wrapping an existing try-catch-end can make existing
@@ -1423,17 +1420,29 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   // As we can see in this case, when branches target a BB that has both
   // 'end_try' and 'end_block' and the BB is split to insert a 'delegate', we
   // have to remap existing branch destinations so that they target not the
-  // 'end_try' BB but the new 'end_block' BB, which should be the second next BB
-  // of 'end_try' (because there is a 'delegate' BB in between). In this
-  // example, the 'br bb3' instruction should be remapped to 'br split_bb'.
+  // 'end_try' BB but the new 'end_block' BB. There can be multiple 'delegate's
+  // in between, so we try to find the next BB with 'end_block' instruction. In
+  // this example, the 'br bb3' instruction should be remapped to 'br split_bb'.
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (MI.isTerminator()) {
         for (auto &MO : MI.operands()) {
-          if (MO.isMBB()) {
-            auto It = BrDestMap.find(MO.getMBB());
-            if (It != BrDestMap.end())
-              MO.setMBB(It->second);
+          if (MO.isMBB() && NewEndTryBBs.count(MO.getMBB())) {
+            auto *BrDest = MO.getMBB();
+            bool FoundEndBlock = false;
+            for (; std::next(BrDest->getIterator()) != MF.end();
+                 BrDest = BrDest->getNextNode()) {
+              for (const auto &MI : *BrDest) {
+                if (MI.getOpcode() == WebAssembly::END_BLOCK) {
+                  FoundEndBlock = true;
+                  break;
+                }
+              }
+              if (FoundEndBlock)
+                break;
+            }
+            assert(FoundEndBlock);
+            MO.setMBB(BrDest);
           }
         }
       }

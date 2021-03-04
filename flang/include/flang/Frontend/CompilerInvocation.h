@@ -69,6 +69,9 @@ class CompilerInvocation : public CompilerInvocationBase {
   // of options.
   std::string moduleDir_ = ".";
 
+  // Fortran Dialect options
+  Fortran::common::IntrinsicTypeDefaultKinds defaultKinds_;
+
 public:
   CompilerInvocation() = default;
 
@@ -87,6 +90,13 @@ public:
 
   std::string &moduleDir() { return moduleDir_; }
   const std::string &moduleDir() const { return moduleDir_; }
+
+  Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds() {
+    return defaultKinds_;
+  }
+  const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds() const {
+    return defaultKinds_;
+  }
 
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.

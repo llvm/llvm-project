@@ -122,13 +122,13 @@ void ClangOpcodesEmitter::EmitInterp(raw_ostream &OS, StringRef N, Record *R) {
 
     // Emit calls to read arguments.
     for (size_t I = 0, N = Args.size(); I < N; ++I) {
-      OS << "\tauto V" << I;
+      OS << "  auto V" << I;
       OS << " = ";
       OS << "PC.read<" << Args[I]->getValueAsString("Name") << ">();\n";
     }
 
     // Emit a call to the template method and pass arguments.
-    OS << "\tif (!" << N;
+    OS << "  if (!" << N;
     PrintTypes(OS, TS);
     OS << "(S";
     if (ChangesPC)
@@ -140,15 +140,15 @@ void ClangOpcodesEmitter::EmitInterp(raw_ostream &OS, StringRef N, Record *R) {
     for (size_t I = 0, N = Args.size(); I < N; ++I)
       OS << ", V" << I;
     OS << "))\n";
-    OS << "\t\treturn false;\n";
+    OS << "    return false;\n";
 
     // Bail out if interpreter returned.
     if (CanReturn) {
-      OS << "\tif (!S.Current || S.Current->isRoot())\n";
-      OS << "\t\treturn true;\n";
+      OS << "  if (!S.Current || S.Current->isRoot())\n";
+      OS << "    return true;\n";
     }
 
-    OS << "\tcontinue;\n";
+    OS << "  continue;\n";
     OS << "}\n";
   });
   OS << "#endif\n";
@@ -158,14 +158,14 @@ void ClangOpcodesEmitter::EmitDisasm(raw_ostream &OS, StringRef N, Record *R) {
   OS << "#ifdef GET_DISASM\n";
   Enumerate(R, N, [R, &OS](ArrayRef<Record *>, const Twine &ID) {
     OS << "case OP_" << ID << ":\n";
-    OS << "\tPrintName(\"" << ID << "\");\n";
-    OS << "\tOS << \"\\t\"";
+    OS << "  PrintName(\"" << ID << "\");\n";
+    OS << "  OS << \"\\t\"";
 
     for (auto *Arg : R->getValueAsListOfDefs("Args"))
       OS << " << PC.read<" << Arg->getValueAsString("Name") << ">() << \" \"";
 
-    OS << "<< \"\\n\";\n";
-    OS << "\tcontinue;\n";
+    OS << " << \"\\n\";\n";
+    OS << "  continue;\n";
   });
   OS << "#endif\n";
 }
@@ -181,11 +181,11 @@ void ClangOpcodesEmitter::EmitEmitter(raw_ostream &OS, StringRef N, Record *R) {
     // Emit the list of arguments.
     OS << "bool ByteCodeEmitter::emit" << ID << "(";
     for (size_t I = 0, N = Args.size(); I < N; ++I)
-      OS << Args[I]->getValueAsString("Name") << " A" << I << ",";
+      OS << Args[I]->getValueAsString("Name") << " A" << I << ", ";
     OS << "const SourceInfo &L) {\n";
 
     // Emit a call to write the opcodes.
-    OS << "\treturn emitOp<";
+    OS << "  return emitOp<";
     for (size_t I = 0, N = Args.size(); I < N; ++I) {
       if (I != 0)
         OS << ", ";
@@ -250,7 +250,7 @@ void ClangOpcodesEmitter::EmitGroup(raw_ostream &OS, StringRef N, Record *R) {
 
   // Emit the dispatch implementation in the source.
   OS << "#if defined(GET_EVAL_IMPL) || defined(GET_LINK_IMPL)\n";
-  OS << "bool \n";
+  OS << "bool\n";
   OS << "#if defined(GET_EVAL_IMPL)\n";
   OS << "EvalEmitter\n";
   OS << "#else\n";
@@ -271,13 +271,14 @@ void ClangOpcodesEmitter::EmitGroup(raw_ostream &OS, StringRef N, Record *R) {
       // Custom evaluator methods dispatch to template methods.
       if (R->getValueAsBit("HasCustomEval")) {
         OS << "#ifdef GET_LINK_IMPL\n";
-        OS << "return emit" << ID << "\n";
+        OS << "    return emit" << ID << "\n";
         OS << "#else\n";
-        OS << "return emit" << N;
+        OS << "    return emit" << N;
         PrintTypes(OS, TS);
         OS << "\n#endif\n";
+        OS << "      ";
       } else {
-        OS << "return emit" << ID;
+        OS << "    return emit" << ID;
       }
 
       OS << "(";
@@ -290,19 +291,19 @@ void ClangOpcodesEmitter::EmitGroup(raw_ostream &OS, StringRef N, Record *R) {
 
     // Print a switch statement selecting T.
     if (auto *TypeClass = dyn_cast<DefInit>(Types->getElement(I))) {
-      OS << "switch (T" << I << "){\n";
+      OS << "  switch (T" << I << ") {\n";
       auto Cases = TypeClass->getDef()->getValueAsListOfDefs("Types");
       for (auto *Case : Cases) {
-        OS << "case PT_" << Case->getName() << ":\n";
+        OS << "  case PT_" << Case->getName() << ":\n";
         TS.push_back(Case);
         Rec(I + 1, ID + Case->getName());
         TS.pop_back();
       }
       // Emit a default case if not all types are present.
       if (Cases.size() < NumTypes)
-        OS << "default: llvm_unreachable(\"invalid type\");\n";
-      OS << "}\n";
-      OS << "llvm_unreachable(\"invalid enum value\");\n";
+        OS << "  default: llvm_unreachable(\"invalid type\");\n";
+      OS << "  }\n";
+      OS << "  llvm_unreachable(\"invalid enum value\");\n";
     } else {
       PrintFatalError("Expected a type class");
     }
@@ -323,12 +324,12 @@ void ClangOpcodesEmitter::EmitEval(raw_ostream &OS, StringRef N, Record *R) {
 
     OS << "bool EvalEmitter::emit" << ID << "(";
     for (size_t I = 0, N = Args.size(); I < N; ++I)
-      OS << Args[I]->getValueAsString("Name") << " A" << I << ",";
+      OS << Args[I]->getValueAsString("Name") << " A" << I << ", ";
     OS << "const SourceInfo &L) {\n";
-    OS << "if (!isActive()) return true;\n";
-    OS << "CurrentSource = L;\n";
+    OS << "  if (!isActive()) return true;\n";
+    OS << "  CurrentSource = L;\n";
 
-    OS << "return " << N;
+    OS << "  return " << N;
     PrintTypes(OS, TS);
     OS << "(S, OpPC";
     for (size_t I = 0, N = Args.size(); I < N; ++I)

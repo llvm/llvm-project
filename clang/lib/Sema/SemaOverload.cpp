@@ -10355,18 +10355,15 @@ void ImplicitConversionSequence::DiagnoseAmbiguousConversion(
                                  const PartialDiagnostic &PDiag) const {
   S.Diag(CaretLoc, PDiag)
     << Ambiguous.getFromType() << Ambiguous.getToType();
-  // FIXME: The note limiting machinery is borrowed from
-  // OverloadCandidateSet::NoteCandidates; there's an opportunity for
-  // refactoring here.
-  const OverloadsShown ShowOverloads = S.Diags.getShowOverloads();
   unsigned CandsShown = 0;
   AmbiguousConversionSequence::const_iterator I, E;
   for (I = Ambiguous.begin(), E = Ambiguous.end(); I != E; ++I) {
-    if (CandsShown >= 4 && ShowOverloads == Ovl_Best)
+    if (CandsShown >= S.Diags.getNumOverloadCandidatesToShow())
       break;
     ++CandsShown;
     S.NoteOverloadCandidate(I->first, I->second);
   }
+  S.Diags.overloadCandidatesShown(CandsShown);
   if (I != E)
     S.Diag(SourceLocation(), diag::note_ovl_too_many_candidates) << int(E - I);
 }
@@ -11644,7 +11641,7 @@ bool OverloadCandidateSet::shouldDeferDiags(Sema &S, ArrayRef<Expr *> Args,
                  (Cand.Function->template hasAttr<CUDAHostAttr>() &&
                   Cand.Function->template hasAttr<CUDADeviceAttr>());
         });
-    DeferHint = WrongSidedCands.size();
+    DeferHint = !WrongSidedCands.empty();
   }
   return DeferHint;
 }
@@ -11677,10 +11674,8 @@ void OverloadCandidateSet::NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
   for (; I != E; ++I) {
     OverloadCandidate *Cand = *I;
 
-    // Set an arbitrary limit on the number of candidate functions we'll spam
-    // the user with.  FIXME: This limit should depend on details of the
-    // candidate list.
-    if (CandsShown >= 4 && ShowOverloads == Ovl_Best) {
+    if (CandsShown >= S.Diags.getNumOverloadCandidatesToShow() &&
+        ShowOverloads == Ovl_Best) {
       break;
     }
     ++CandsShown;
@@ -11708,6 +11703,10 @@ void OverloadCandidateSet::NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
       NoteBuiltinOperatorCandidate(S, Opc, OpLoc, Cand);
     }
   }
+
+  // Inform S.Diags that we've shown an overload set with N elements.  This may
+  // inform the future value of S.Diags.getNumOverloadCandidatesToShow().
+  S.Diags.overloadCandidatesShown(CandsShown);
 
   if (I != E)
     S.Diag(OpLoc, diag::note_ovl_too_many_candidates,

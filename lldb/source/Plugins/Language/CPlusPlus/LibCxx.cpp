@@ -463,7 +463,7 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEndCreator(
 
 lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     LibcxxUniquePtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_compressed_pair_sp() {
+    : SyntheticChildrenFrontEnd(*valobj_sp) {
   if (valobj_sp)
     Update();
 }
@@ -480,19 +480,27 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEndCreator(
 
 size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     CalculateNumChildren() {
-  return (m_compressed_pair_sp ? 1 : 0);
+  return (m_value_ptr_sp ? 1 : 0);
 }
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::GetChildAtIndex(
     size_t idx) {
-  if (!m_compressed_pair_sp)
+  if (!m_value_ptr_sp)
     return lldb::ValueObjectSP();
 
-  if (idx != 0)
-    return lldb::ValueObjectSP();
+  if (idx == 0)
+    return m_value_ptr_sp;
 
-  return m_compressed_pair_sp;
+  if (idx == 1) {
+    Status status;
+    auto value_sp = m_value_ptr_sp->Dereference(status);
+    if (status.Success()) {
+      return value_sp;
+    }
+  }
+
+  return lldb::ValueObjectSP();
 }
 
 bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
@@ -505,7 +513,7 @@ bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   if (!ptr_sp)
     return false;
 
-  m_compressed_pair_sp = GetValueOfLibCXXCompressedPair(*ptr_sp);
+  m_value_ptr_sp = GetValueOfLibCXXCompressedPair(*ptr_sp);
 
   return false;
 }
@@ -519,6 +527,8 @@ size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (name == "__value_")
     return 0;
+  if (name == "$$dereference$$")
+    return 1;
   return UINT32_MAX;
 }
 

@@ -172,7 +172,7 @@ static void print(OpAsmPrinter &p, ForOp op) {
   p.printRegion(op.region(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/op.hasIterOperands());
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
 }
 
 static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
@@ -679,7 +679,7 @@ static void print(OpAsmPrinter &p, IfOp op) {
                   /*printBlockTerminators=*/printBlockTerminators);
   }
 
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
@@ -996,7 +996,7 @@ static void print(OpAsmPrinter &p, ParallelOp op) {
   p.printOptionalArrowTypeList(op.getResultTypes());
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
-      op.getAttrs(), /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
+      op->getAttrs(), /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
 }
 
 Region &ParallelOp::getLoopBody() { return region(); }
@@ -1266,7 +1266,7 @@ static void print(OpAsmPrinter &p, scf::WhileOp op) {
   p.printRegion(op.before(), /*printEntryBlockArgs=*/false);
   p << " do";
   p.printRegion(op.after());
-  p.printOptionalAttrDictWithKeyword(op.getAttrs());
+  p.printOptionalAttrDictWithKeyword(op->getAttrs());
 }
 
 /// Verifies that two ranges of types match, i.e. have the same number of

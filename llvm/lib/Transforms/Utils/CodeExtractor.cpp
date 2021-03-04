@@ -426,9 +426,8 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   BasicBlock *NewExitBlock = CommonExitBlock->splitBasicBlock(
       CommonExitBlock->getFirstNonPHI()->getIterator());
 
-  for (auto PI = pred_begin(CommonExitBlock), PE = pred_end(CommonExitBlock);
-       PI != PE;) {
-    BasicBlock *Pred = *PI++;
+  for (BasicBlock *Pred :
+       llvm::make_early_inc_range(predecessors(CommonExitBlock))) {
     if (Blocks.count(Pred))
       continue;
     Pred->getTerminator()->replaceUsesOfWith(CommonExitBlock, NewExitBlock);

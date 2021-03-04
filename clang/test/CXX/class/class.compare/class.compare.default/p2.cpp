@@ -39,6 +39,14 @@ void f(A2 a) {
   void(a >= a);
 }
 
+struct A3 {
+  int &x; // expected-note {{because class 'A3' has a reference member}}
+
+  bool operator==(const A3 &) const = default; // expected-warning {{implicitly deleted}}
+  bool operator<(const A3 &) const = default;  // expected-warning {{implicitly deleted}}
+  // expected-note@-1 {{because there is no viable comparison function}}
+};
+
 struct B1 {
   struct {
     int x;

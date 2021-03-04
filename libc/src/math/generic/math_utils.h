@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_MATH_MATH_UTILS_H
 
 #include "src/__support/common.h"
-#include "src/errno/llvmlibc_errno.h"
 #include "utils/CPP/TypeTraits.h"
 #include <errno.h>
 #include <math.h>
@@ -56,7 +55,7 @@ template <> struct XFlowValues<double> {
 
 template <typename T> static inline T with_errno(T x, int err) {
   if (math_errhandling & MATH_ERRNO)
-    llvmlibc_errno = err;
+    errno = err; // NOLINT
   return x;
 }
 

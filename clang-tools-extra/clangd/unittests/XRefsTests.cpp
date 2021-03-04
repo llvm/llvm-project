@@ -115,10 +115,23 @@ TEST(HighlightsTest, All) {
           f.[[^~]]Foo();
         }
       )cpp",
+      R"cpp(// ObjC methods with split selectors.
+        @interface Foo
+          +(void) [[x]]:(int)a [[y]]:(int)b;
+        @end
+        @implementation Foo
+          +(void) [[x]]:(int)a [[y]]:(int)b {}
+        @end
+        void go() {
+          [Foo [[x]]:2 [[^y]]:4];
+        }
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
-    auto AST = TestTU::withCode(T.code()).build();
+    auto TU = TestTU::withCode(T.code());
+    TU.ExtraArgs.push_back("-xobjective-c++");
+    auto AST = TU.build();
     EXPECT_THAT(findDocumentHighlights(AST, T.point()), HighlightsFrom(T))
         << Test;
   }

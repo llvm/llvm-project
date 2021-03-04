@@ -231,6 +231,21 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.
 ; GCN-NEXT:    buffer_load_dword v13, v28, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v14, v29, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v15, v30, s[0:3], 0 offen
+; GCN-NEXT:    ; kill: killed $vgpr30
+; GCN-NEXT:    ; kill: killed $vgpr19
+; GCN-NEXT:    ; kill: killed $vgpr23
+; GCN-NEXT:    ; kill: killed $vgpr27
+; GCN-NEXT:    ; kill: killed $vgpr20
+; GCN-NEXT:    ; kill: killed $vgpr24
+; GCN-NEXT:    ; kill: killed $vgpr28
+; GCN-NEXT:    ; kill: killed $vgpr17
+; GCN-NEXT:    ; kill: killed $vgpr21
+; GCN-NEXT:    ; kill: killed $vgpr25
+; GCN-NEXT:    ; kill: killed $vgpr0
+; GCN-NEXT:    ; kill: killed $vgpr29
+; GCN-NEXT:    ; kill: killed $vgpr18
+; GCN-NEXT:    ; kill: killed $vgpr22
+; GCN-NEXT:    ; kill: killed $vgpr26
 ; GCN-NEXT:    buffer_load_dword v16, v31, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v17, v32, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v18, v33, s[0:3], 0 offen
@@ -246,6 +261,21 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.
 ; GCN-NEXT:    buffer_load_dword v28, v43, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v29, v44, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v30, v45, s[0:3], 0 offen
+; GCN-NEXT:    ; kill: killed $vgpr45
+; GCN-NEXT:    ; kill: killed $vgpr34
+; GCN-NEXT:    ; kill: killed $vgpr38
+; GCN-NEXT:    ; kill: killed $vgpr42
+; GCN-NEXT:    ; kill: killed $vgpr31
+; GCN-NEXT:    ; kill: killed $vgpr35
+; GCN-NEXT:    ; kill: killed $vgpr39
+; GCN-NEXT:    ; kill: killed $vgpr43
+; GCN-NEXT:    ; kill: killed $vgpr32
+; GCN-NEXT:    ; kill: killed $vgpr36
+; GCN-NEXT:    ; kill: killed $vgpr40
+; GCN-NEXT:    ; kill: killed $vgpr44
+; GCN-NEXT:    ; kill: killed $vgpr33
+; GCN-NEXT:    ; kill: killed $vgpr37
+; GCN-NEXT:    ; kill: killed $vgpr41
 ; GCN-NEXT:    buffer_load_dword v31, v46, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v32, v47, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v33, v48, s[0:3], 0 offen
@@ -261,6 +291,21 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.
 ; GCN-NEXT:    buffer_load_dword v43, v58, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v44, v59, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v45, v60, s[0:3], 0 offen
+; GCN-NEXT:    ; kill: killed $vgpr60
+; GCN-NEXT:    ; kill: killed $vgpr49
+; GCN-NEXT:    ; kill: killed $vgpr53
+; GCN-NEXT:    ; kill: killed $vgpr57
+; GCN-NEXT:    ; kill: killed $vgpr46
+; GCN-NEXT:    ; kill: killed $vgpr50
+; GCN-NEXT:    ; kill: killed $vgpr54
+; GCN-NEXT:    ; kill: killed $vgpr58
+; GCN-NEXT:    ; kill: killed $vgpr47
+; GCN-NEXT:    ; kill: killed $vgpr51
+; GCN-NEXT:    ; kill: killed $vgpr55
+; GCN-NEXT:    ; kill: killed $vgpr59
+; GCN-NEXT:    ; kill: killed $vgpr48
+; GCN-NEXT:    ; kill: killed $vgpr52
+; GCN-NEXT:    ; kill: killed $vgpr56
 ; GCN-NEXT:    buffer_load_dword v46, v61, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v47, v62, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v48, v63, s[0:3], 0 offen
@@ -276,9 +321,27 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.
 ; GCN-NEXT:    buffer_load_dword v58, v73, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v59, v74, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v60, v75, s[0:3], 0 offen
+; GCN-NEXT:    ; kill: killed $vgpr64
+; GCN-NEXT:    ; kill: killed $vgpr68
+; GCN-NEXT:    ; kill: killed $vgpr72
+; GCN-NEXT:    ; kill: killed $vgpr61
+; GCN-NEXT:    ; kill: killed $vgpr65
+; GCN-NEXT:    ; kill: killed $vgpr69
+; GCN-NEXT:    ; kill: killed $vgpr73
+; GCN-NEXT:    ; kill: killed $vgpr62
+; GCN-NEXT:    ; kill: killed $vgpr66
+; GCN-NEXT:    ; kill: killed $vgpr70
+; GCN-NEXT:    ; kill: killed $vgpr74
+; GCN-NEXT:    ; kill: killed $vgpr63
+; GCN-NEXT:    ; kill: killed $vgpr67
+; GCN-NEXT:    ; kill: killed $vgpr71
+; GCN-NEXT:    ; kill: killed $vgpr75
 ; GCN-NEXT:    buffer_load_dword v61, v76, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v62, v77, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v63, v78, s[0:3], 0 offen
+; GCN-NEXT:    ; kill: killed $vgpr76
+; GCN-NEXT:    ; kill: killed $vgpr77
+; GCN-NEXT:    ; kill: killed $vgpr78
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:256
 ; GCN-NEXT:    v_mov_b32_e32 v64, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)

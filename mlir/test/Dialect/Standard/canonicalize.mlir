@@ -252,3 +252,51 @@ func @rank_reducing_subtensor_insert_of_cast(%a : tensor<16x32xi8>, %b : tensor<
   %res = subtensor_insert %cast into %b[0, 1, 0] [1, 1, 16] [1, 1, 1] : tensor<?x32xi8> into tensor<4x6x16x32xi8>
   return %res : tensor<4x6x16x32xi8>
 }
+
+// -----
+
+func @subtensor_canonicalize(%arg0 : tensor<2x?xi32>, %arg1 : tensor<i32>,
+    %arg2 : index, %arg3 : index) -> tensor<?x?xi32> {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c8 = constant 8 : index
+  %0 = dim %arg0, %c1 : tensor<2x?xi32>
+  %1 = tensor.extract %arg1[] : tensor<i32>
+  %2 = tensor.generate %arg2, %c8 {
+  ^bb0(%arg4: index, %arg5: index):
+    tensor.yield %1 : i32
+  } : tensor<?x?xi32>
+  %3 = subtensor_insert %arg0 into %2[%c0, %arg3] [%c2, %0] [%c1, %c1] : tensor<2x?xi32> into tensor<?x?xi32>
+  return %3 : tensor<?x?xi32>
+}
+// CHECK-LABEL: func @subtensor_canonicalize
+//       CHECK:   %[[UPDATED:.+]] = subtensor_insert %{{.+}} into %{{.+}}[0, %{{.+}}] [2, %{{.+}}] [1, 1]
+//  CHECK-SAME:     tensor<2x?xi32> into tensor<?x8xi32>
+//       CHECK:   %[[CAST:.+]] = tensor.cast %[[UPDATED]]
+//       CHECK:   return %[[CAST]]
+
+// -----
+
+func @subtensor_insert_output_dest_canonicalize(%arg0 : tensor<2x3xi32>, %arg1 : tensor<i32>) -> tensor<3x9xi32> {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c9 = constant 9 : index
+  %c3 = constant 3 : index
+  %2 = tensor.extract %arg1[] : tensor<i32>
+  %4 = tensor.generate %c3, %c9 {
+  ^bb0(%arg2: index, %arg3: index):
+    tensor.yield %2 : i32
+  } : tensor<?x?xi32>
+  %5 = subtensor_insert %arg0 into %4[%c0, %c1] [%c2, %c3] [1, 1] : tensor<2x3xi32> into tensor<?x?xi32>
+  %6 = tensor.cast %5 : tensor<?x?xi32> to tensor<3x9xi32>
+  return %6 : tensor<3x9xi32>
+}
+// CHECK-LABEL: func @subtensor_insert_output_dest_canonicalize
+//  CHECK-SAME:   %[[ARG0:[a-zA-z0-9_]+]]: tensor<2x3xi32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<i32>
+//       CHECK:   %[[PAD:.+]] = tensor.extract %[[ARG1]]
+//       CHECK:   %[[GENERATE:.+]] = tensor.generate
+//       CHECK:   %[[RESULT:.+]] = subtensor_insert %[[ARG0]] into %[[GENERATE]]
+//       CHECK:   return %[[RESULT]]

@@ -36,7 +36,7 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
   // If this is an input value that has been visited in the tree, add a
   // constraint to ensure that both instances refer to the same value.
   if (!it.second &&
-      isa<pdl::AttributeOp, pdl::InputOp, pdl::TypeOp>(val.getDefiningOp())) {
+      isa<pdl::AttributeOp, pdl::OperandOp, pdl::TypeOp>(val.getDefiningOp())) {
     auto minMaxPositions = std::minmax(pos, it.first->second, comparePosDepth);
     predList.emplace_back(minMaxPositions.second,
                           builder.getEqualTo(minMaxPositions.first));
@@ -67,8 +67,8 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
     // Prevent traversal into a null value.
     predList.emplace_back(pos, builder.getIsNotNull());
 
-    // If this is a typed input, add a type constraint.
-    if (auto in = val.getDefiningOp<pdl::InputOp>()) {
+    // If this is a typed operand, add a type constraint.
+    if (auto in = val.getDefiningOp<pdl::OperandOp>()) {
       if (Value type = in.type()) {
         getTreePredicates(predList, type, builder, inputs,
                           builder.getType(pos));

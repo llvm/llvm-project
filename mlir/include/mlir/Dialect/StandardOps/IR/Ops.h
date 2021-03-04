@@ -177,10 +177,10 @@ public:
     return getDstMemRef().getType().cast<MemRefType>().getRank();
   }
   unsigned getSrcMemorySpace() {
-    return getSrcMemRef().getType().cast<MemRefType>().getMemorySpace();
+    return getSrcMemRef().getType().cast<MemRefType>().getMemorySpaceAsInt();
   }
   unsigned getDstMemorySpace() {
-    return getDstMemRef().getType().cast<MemRefType>().getMemorySpace();
+    return getDstMemRef().getType().cast<MemRefType>().getMemorySpaceAsInt();
   }
 
   // Returns the destination memref indices for this DMA operation.

@@ -262,6 +262,19 @@ CallBase *CallBase::Create(CallBase *CB, ArrayRef<OperandBundleDef> Bundles,
   }
 }
 
+CallBase *CallBase::Create(CallBase *CI, OperandBundleDef OpB,
+                           Instruction *InsertPt) {
+  SmallVector<OperandBundleDef, 2> OpDefs;
+  for (unsigned i = 0, e = CI->getNumOperandBundles(); i < e; ++i) {
+    auto ChildOB = CI->getOperandBundleAt(i);
+    if (ChildOB.getTagName() != OpB.getTag())
+      OpDefs.emplace_back(ChildOB);
+  }
+  OpDefs.emplace_back(OpB);
+  return CallBase::Create(CI, OpDefs, InsertPt);
+}
+
+
 Function *CallBase::getCaller() { return getParent()->getParent(); }
 
 unsigned CallBase::getNumSubclassExtraOperandsDynamic() const {
@@ -424,35 +437,6 @@ CallBase::BundleOpInfo &CallBase::getBundleOpInfoForOperand(unsigned OpIdx) {
   return *Current;
 }
 
-CallBase *CallBase::addOperandBundle(CallBase *CB, uint32_t ID,
-                                     OperandBundleDef OB,
-                                     Instruction *InsertPt) {
-  if (CB->getOperandBundle(ID))
-    return CB;
-
-  SmallVector<OperandBundleDef, 1> Bundles;
-  CB->getOperandBundlesAsDefs(Bundles);
-  Bundles.push_back(OB);
-  return Create(CB, Bundles, InsertPt);
-}
-
-CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
-                                        Instruction *InsertPt) {
-  SmallVector<OperandBundleDef, 1> Bundles;
-  bool CreateNew = false;
-
-  for (unsigned I = 0, E = CB->getNumOperandBundles(); I != E; ++I) {
-    auto Bundle = CB->getOperandBundleAt(I);
-    if (Bundle.getTagID() == ID) {
-      CreateNew = true;
-      continue;
-    }
-    Bundles.emplace_back(Bundle);
-  }
-
-  return CreateNew ? Create(CB, Bundles, InsertPt) : CB;
-}
-
 //===----------------------------------------------------------------------===//
 //                        CallInst Implementation
 //===----------------------------------------------------------------------===//
@@ -533,18 +517,6 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   NewCI->setAttributes(CI->getAttributes());
   NewCI->setDebugLoc(CI->getDebugLoc());
   return NewCI;
-}
-
-CallInst *CallInst::CreateWithReplacedBundle(CallInst *CI, OperandBundleDef OpB,
-                                             Instruction *InsertPt) {
-  SmallVector<OperandBundleDef, 2> OpDefs;
-  for (unsigned i = 0, e = CI->getNumOperandBundles(); i < e; ++i) {
-    auto ChildOB = CI->getOperandBundleAt(i);
-    if (ChildOB.getTagName() != OpB.getTag())
-      OpDefs.emplace_back(ChildOB);
-  }
-  OpDefs.emplace_back(OpB);
-  return CallInst::Create(CI, OpDefs, InsertPt);
 }
 
 // Update profile weight for call instruction by scaling it using the ratio
@@ -857,19 +829,6 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
   NewII->setAttributes(II->getAttributes());
   NewII->setDebugLoc(II->getDebugLoc());
   return NewII;
-}
-
-InvokeInst *InvokeInst::CreateWithReplacedBundle(InvokeInst *II,
-                                                 OperandBundleDef OpB,
-                                                 Instruction *InsertPt) {
-  SmallVector<OperandBundleDef, 2> OpDefs;
-  for (unsigned i = 0, e = II->getNumOperandBundles(); i < e; ++i) {
-    auto ChildOB = II->getOperandBundleAt(i);
-    if (ChildOB.getTagName() != OpB.getTag())
-      OpDefs.emplace_back(ChildOB);
-  }
-  OpDefs.emplace_back(OpB);
-  return InvokeInst::Create(II, OpDefs, InsertPt);
 }
 
 LandingPadInst *InvokeInst::getLandingPadInst() const {
@@ -2105,13 +2064,13 @@ static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
   assert(!Mask.empty() && "Shuffle mask must contain elements");
   bool UsesLHS = false;
   bool UsesRHS = false;
-  for (int i = 0, NumMaskElts = Mask.size(); i < NumMaskElts; ++i) {
-    if (Mask[i] == -1)
+  for (int I : Mask) {
+    if (I == -1)
       continue;
-    assert(Mask[i] >= 0 && Mask[i] < (NumOpElts * 2) &&
+    assert(I >= 0 && I < (NumOpElts * 2) &&
            "Out-of-bounds shuffle mask element");
-    UsesLHS |= (Mask[i] < NumOpElts);
-    UsesRHS |= (Mask[i] >= NumOpElts);
+    UsesLHS |= (I < NumOpElts);
+    UsesRHS |= (I >= NumOpElts);
     if (UsesLHS && UsesRHS)
       return false;
   }

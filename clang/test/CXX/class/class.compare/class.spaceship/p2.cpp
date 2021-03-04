@@ -155,3 +155,20 @@ namespace BadDeducedType {
     friend CmpCat auto operator<=>(const D&, const D&) = default;
   };
 }
+
+namespace PR48856 {
+  struct A {
+    auto operator<=>(const A &) const = default; // expected-warning {{implicitly deleted}}
+    void (*x)();                                 // expected-note {{because there is no viable comparison function for member 'x'}}
+  };
+
+  struct B {
+    auto operator<=>(const B &) const = default; // expected-warning {{implicitly deleted}}
+    void (B::*x)();                              // expected-note {{because there is no viable comparison function for member 'x'}}
+  };
+
+  struct C {
+    auto operator<=>(const C &) const = default; // expected-warning {{implicitly deleted}}
+    int C::*x;                                   // expected-note {{because there is no viable comparison function for member 'x'}}
+  };
+}

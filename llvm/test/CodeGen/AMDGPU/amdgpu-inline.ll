@@ -1,7 +1,8 @@
-; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -O3 -S -inline-threshold=1 < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-INL1 %s
-; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -O3 -S < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-INLDEF %s
-; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -passes='default<O3>' -S -inline-threshold=1 < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-INL1 %s
-; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -passes='default<O3>' -S < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-INLDEF %s
+; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -O3 -S -inline-threshold=1 < %s | FileCheck -check-prefixes=GCN,GCN-INL1,GCN-MAXBBDEF %s
+; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -O3 -S < %s | FileCheck -check-prefixes=GCN,GCN-INLDEF,GCN-MAXBBDEF %s
+; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -passes='default<O3>' -S -inline-threshold=1 < %s | FileCheck -check-prefixes=GCN,GCN-INL1,GCN-MAXBBDEF %s
+; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -passes='default<O3>' -S < %s | FileCheck -check-prefixes=GCN,GCN-INLDEF,GCN-MAXBBDEF %s
+; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -passes='default<O3>' -S -amdgpu-inline-max-bb=1 < %s | FileCheck -check-prefixes=GCN,GCN-MAXBB1 %s
 
 define coldcc float @foo(float %x, float %y) {
 entry:
@@ -57,12 +58,14 @@ entry:
 }
 
 ; GCN: define amdgpu_kernel void @test_inliner(
-; GCN-INL1:   %c1 = tail call coldcc float @foo(
-; GCN-INLDEF: %cmp.i = fcmp ogt float %tmp2, 0.000000e+00
-; GCN:        %div.i{{[0-9]*}} = fdiv float 1.000000e+00, %c
-; GCN:        %div.i{{[0-9]*}} = fdiv float 2.000000e+00, %tmp1.i
-; GCN:        call void @foo_noinline(
-; GCN:        tail call float @_Z3sinf(
+; GCN-INL1:     %c1 = tail call coldcc float @foo(
+; GCN-INLDEF:   %cmp.i = fcmp ogt float %tmp2, 0.000000e+00
+; GCN-MAXBBDEF: %div.i{{[0-9]*}} = fdiv float 1.000000e+00, %c
+; GCN-MAXBBDEF: %div.i{{[0-9]*}} = fdiv float 2.000000e+00, %tmp1.i
+; GCN-MAXBB1:   call coldcc void @foo_private_ptr
+; GCN-MAXBB1:   call coldcc void @foo_private_ptr2
+; GCN:          call void @foo_noinline(
+; GCN:          tail call float @_Z3sinf(
 define amdgpu_kernel void @test_inliner(float addrspace(1)* nocapture %a, i32 %n) {
 entry:
   %pvt_arr = alloca [64 x float], align 4, addrspace(5)
@@ -95,7 +98,8 @@ entry:
 }
 
 ; GCN: define amdgpu_kernel void @test_inliner_multi_pvt_ptr(
-; GCN: %div.i{{[0-9]*}} = fdiv float 2.000000e+00, %tmp1.i
+; GCN-MAXBBDEF: %div.i{{[0-9]*}} = fdiv float 2.000000e+00, %tmp1.i
+; GCN-MAXBB1:   call coldcc void @foo_private_ptr2
 define amdgpu_kernel void @test_inliner_multi_pvt_ptr(float addrspace(1)* nocapture %a, i32 %n, float %v) {
 entry:
   %pvt_arr1 = alloca [32 x float], align 4, addrspace(5)
@@ -144,6 +148,24 @@ entry:
   %tmp16 = load float, float addrspace(5)* %arrayidx16, align 4
   %tmp17 = fadd float %tmp15, %tmp16
   store float %tmp17, float addrspace(1)* %arrayidx, align 4
+  ret void
+}
+
+; GCN: define amdgpu_kernel void @test_inliner_maxbb_singlebb(
+; GCN: tail call float @_Z3sinf
+define amdgpu_kernel void @test_inliner_maxbb_singlebb(float addrspace(1)* nocapture %a, i32 %n) {
+entry:
+  %cmp = icmp eq i32 %n, 1
+  br i1 %cmp, label %bb.1, label %bb.2
+  br label %bb.1
+
+bb.1:
+  store float 1.0, float* undef
+  br label %bb.2
+
+bb.2:
+  %c = call float @sin_wrapper(float 1.0)
+  store float %c, float addrspace(1)* %a
   ret void
 }
 

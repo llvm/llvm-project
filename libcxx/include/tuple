@@ -436,7 +436,7 @@ template<class _Dest, class _Source, class ..._Up, size_t ..._Np>
 _LIBCPP_INLINE_VISIBILITY
 void __memberwise_forward_assign(_Dest& __dest, _Source&& __source, __tuple_types<_Up...>, __tuple_indices<_Np...>) {
     _VSTD::__swallow(((
-        _VSTD::get<_Np>(__dest) = _VSTD::forward<_Up>(_VSTD::get<_Np>(_VSTD::forward<_Source>(__source)))
+        _VSTD::get<_Np>(__dest) = _VSTD::forward<_Up>(_VSTD::get<_Np>(__source))
     ), void(), 0)...);
 }
 
@@ -967,8 +967,8 @@ public:
             is_nothrow_assignable<_SecondType<_Tp...>&, _Up2>
         >::value))
     {
-        _VSTD::get<0>(*this) = _VSTD::move(__pair.first);
-        _VSTD::get<1>(*this) = _VSTD::move(__pair.second);
+        _VSTD::get<0>(*this) = _VSTD::forward<_Up1>(__pair.first);
+        _VSTD::get<1>(*this) = _VSTD::forward<_Up2>(__pair.second);
         return *this;
     }
 

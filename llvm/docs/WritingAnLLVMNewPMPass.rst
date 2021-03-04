@@ -29,6 +29,11 @@ We start by showing you how to construct a pass, from setting up the build,
 creating the pass, to executing and testing it. Looking at existing passes is
 always a great way to learn details.
 
+.. warning::
+  This document deals with the new pass manager. LLVM uses the legacy pass
+  manager for the codegen pipeline. For more details, see
+  :doc:`WritingAnLLVMPass` and :doc:`NewPassManager`.
+
 Quick Start --- Writing hello world
 ===================================
 

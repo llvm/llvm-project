@@ -13,15 +13,14 @@
 
 namespace lldb_private {
 
-class OptionValueBoolean : public OptionValue {
+class OptionValueBoolean : public Cloneable<OptionValueBoolean, OptionValue> {
 public:
   OptionValueBoolean(bool value)
-      : OptionValue(), m_current_value(value), m_default_value(value) {}
+      : m_current_value(value), m_default_value(value) {}
   OptionValueBoolean(bool current_value, bool default_value)
-      : OptionValue(), m_current_value(current_value),
-        m_default_value(default_value) {}
+      : m_current_value(current_value), m_default_value(default_value) {}
 
-  ~OptionValueBoolean() override {}
+  ~OptionValueBoolean() override = default;
 
   // Virtual subclass pure virtual overrides
 
@@ -71,8 +70,6 @@ public:
   void SetCurrentValue(bool value) { m_current_value = value; }
 
   void SetDefaultValue(bool value) { m_default_value = value; }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
 protected:
   bool m_current_value;

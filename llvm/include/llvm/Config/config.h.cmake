@@ -317,6 +317,9 @@
 /* Define to the extension used for shared libraries, say, ".so". */
 #cmakedefine LTDL_SHLIB_EXT "${LTDL_SHLIB_EXT}"
 
+/* Define to the extension used for plugin libraries, say, ".so". */
+#cmakedefine LLVM_PLUGIN_EXT "${LLVM_PLUGIN_EXT}"
+
 /* Define to the address where bug reports for this package should be sent. */
 #cmakedefine PACKAGE_BUGREPORT "${PACKAGE_BUGREPORT}"
 

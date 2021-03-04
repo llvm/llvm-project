@@ -110,6 +110,24 @@ public:
     return branchMapping.lookup(op);
   }
 
+  /// Returns the LLVM metadata corresponding to a reference to an mlir LLVM
+  /// dialect access group operation.
+  llvm::MDNode *getAccessGroup(Operation &opInst,
+                               SymbolRefAttr accessGroupRef) const;
+
+  /// Returns the LLVM metadata corresponding to a llvm loop's codegen
+  /// options attribute.
+  llvm::MDNode *lookupLoopOptionsMetadata(Attribute options) const {
+    return loopOptionsMetadataMapping.lookup(options);
+  }
+
+  void mapLoopOptionsMetadata(Attribute options, llvm::MDNode *metadata) {
+    auto result = loopOptionsMetadataMapping.try_emplace(options, metadata);
+    (void)result;
+    assert(result.second &&
+           "attempting to map loop options that was already mapped");
+  }
+
   /// Converts the type from MLIR LLVM dialect to LLVM.
   llvm::Type *convertType(Type type);
 
@@ -167,6 +185,10 @@ private:
   LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);
 
+  /// Process access_group LLVM Metadata operations and create LLVM
+  /// metadata nodes.
+  LogicalResult createAccessGroupMetadata();
+
   /// Translates dialect attributes attached to the given operation.
   LogicalResult convertDialectAttributes(Operation *op);
 
@@ -198,6 +220,16 @@ private:
   /// they are converted to. This allows for connecting PHI nodes to the source
   /// values after all operations are converted.
   DenseMap<Operation *, llvm::Instruction *> branchMapping;
+
+  /// Mapping from an access group metadata optation to its LLVM metadata.
+  /// This map is populated on module entry and is used to annotate loops (as
+  /// identified via their branches) and contained memory accesses.
+  DenseMap<Operation *, llvm::MDNode *> accessGroupMetadataMapping;
+
+  /// Mapping from an attribute describing loop codegen options to its LLVM
+  /// metadata. The metadata is attached to Latch block branches with this
+  /// attribute.
+  DenseMap<Attribute, llvm::MDNode *> loopOptionsMetadataMapping;
 };
 
 namespace detail {

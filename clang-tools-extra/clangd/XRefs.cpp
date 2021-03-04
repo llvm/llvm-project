@@ -882,8 +882,8 @@ public:
   };
 
   ReferenceFinder(const ParsedAST &AST,
-                  const llvm::DenseSet<SymbolID> &TargetIDs)
-      : AST(AST), TargetIDs(TargetIDs) {}
+                  const llvm::DenseSet<SymbolID> &TargetIDs, bool PerToken)
+      : PerToken(PerToken), AST(AST), TargetIDs(TargetIDs) {}
 
   std::vector<Reference> take() && {
     llvm::sort(References, [](const Reference &L, const Reference &R) {
@@ -915,21 +915,43 @@ public:
     if (!TargetIDs.contains(ID))
       return true;
     const auto &TB = AST.getTokens();
-    Loc = SM.getFileLoc(Loc);
-    if (const auto *Tok = TB.spelledTokenAt(Loc))
-      References.push_back({*Tok, Roles, ID});
+
+    llvm::SmallVector<SourceLocation, 1> Locs;
+    if (PerToken) {
+      // Check whether this is one of the few constructs where the reference
+      // can be split over several tokens.
+      if (auto *OME = llvm::dyn_cast_or_null<ObjCMessageExpr>(ASTNode.OrigE)) {
+        OME->getSelectorLocs(Locs);
+      } else if (auto *OMD =
+                     llvm::dyn_cast_or_null<ObjCMethodDecl>(ASTNode.OrigD)) {
+        OMD->getSelectorLocs(Locs);
+      }
+      // Sanity check: we expect the *first* token to match the reported loc.
+      // Otherwise, maybe it was e.g. some other kind of reference to a Decl.
+      if (!Locs.empty() && Locs.front() != Loc)
+        Locs.clear(); // First token doesn't match, assume our guess was wrong.
+    }
+    if (Locs.empty())
+      Locs.push_back(Loc);
+
+    for (SourceLocation L : Locs) {
+      L = SM.getFileLoc(L);
+      if (const auto *Tok = TB.spelledTokenAt(L))
+        References.push_back({*Tok, Roles, ID});
+    }
     return true;
   }
 
 private:
+  bool PerToken; // If true, report 3 references for split ObjC selector names.
   std::vector<Reference> References;
   const ParsedAST &AST;
   const llvm::DenseSet<SymbolID> &TargetIDs;
 };
 
 std::vector<ReferenceFinder::Reference>
-findRefs(const llvm::DenseSet<SymbolID> &IDs, ParsedAST &AST) {
-  ReferenceFinder RefFinder(AST, IDs);
+findRefs(const llvm::DenseSet<SymbolID> &IDs, ParsedAST &AST, bool PerToken) {
+  ReferenceFinder RefFinder(AST, IDs, PerToken);
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
@@ -1224,7 +1246,7 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
         for (const NamedDecl *ND : Decls)
           if (auto ID = getSymbolID(ND))
             Targets.insert(ID);
-        for (const auto &Ref : findRefs(Targets, AST))
+        for (const auto &Ref : findRefs(Targets, AST, /*PerToken=*/true))
           Result.push_back(toHighlight(Ref, SM));
         return true;
       }
@@ -1376,7 +1398,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     }
 
     // We traverse the AST to find references in the main file.
-    auto MainFileRefs = findRefs(Targets, AST);
+    auto MainFileRefs = findRefs(Targets, AST, /*PerToken=*/false);
     // We may get multiple refs with the same location and different Roles, as
     // cross-reference is only interested in locations, we deduplicate them
     // by the location to avoid emitting duplicated locations.

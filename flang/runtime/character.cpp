@@ -94,7 +94,8 @@ static void Compare(Descriptor &result, const Descriptor &x,
     elements *= ub[j];
     xAt[j] = yAt[j] = 1;
   }
-  result.Establish(TypeCategory::Logical, 1, ub, rank);
+  result.Establish(
+      TypeCategory::Logical, 1, nullptr, rank, ub, CFI_attribute_allocatable);
   if (result.Allocate(lb, ub) != CFI_SUCCESS) {
     terminator.Crash("Compare: could not allocate storage for result");
   }
@@ -145,7 +146,8 @@ static void AdjustLRHelper(Descriptor &result, const Descriptor &string,
     stringAt[j] = 1;
   }
   std::size_t elementBytes{string.ElementBytes()};
-  result.Establish(string.type(), elementBytes, ub, rank);
+  result.Establish(string.type(), elementBytes, nullptr, rank, ub,
+      CFI_attribute_allocatable);
   if (result.Allocate(lb, ub) != CFI_SUCCESS) {
     terminator.Crash("ADJUSTL/R: could not allocate storage for result");
   }
@@ -196,7 +198,8 @@ static void LenTrim(Descriptor &result, const Descriptor &string,
     elements *= ub[j];
     stringAt[j] = 1;
   }
-  result.Establish(TypeCategory::Integer, sizeof(INT), ub, rank);
+  result.Establish(TypeCategory::Integer, sizeof(INT), nullptr, rank, ub,
+      CFI_attribute_allocatable);
   if (result.Allocate(lb, ub) != CFI_SUCCESS) {
     terminator.Crash("LEN_TRIM: could not allocate storage for result");
   }
@@ -229,6 +232,133 @@ static void LenTrimKind(Descriptor &result, const Descriptor &string, int kind,
     break;
   default:
     terminator.Crash("LEN_TRIM: bad KIND=%d", kind);
+  }
+}
+
+// SCAN and VERIFY implementation help.  These intrinsic functions
+// do pretty much the same thing, so they're templatized with a
+// distinguishing flag.
+
+template <typename CHAR, bool IS_VERIFY = false>
+inline std::size_t ScanVerify(const CHAR *x, std::size_t xLen, const CHAR *set,
+    std::size_t setLen, bool back) {
+  std::size_t at{back ? xLen : 1};
+  int increment{back ? -1 : 1};
+  for (; xLen-- > 0; at += increment) {
+    CHAR ch{x[at - 1]};
+    bool inSet{false};
+    // TODO: If set is sorted, could use binary search
+    for (std::size_t j{0}; j < setLen; ++j) {
+      if (set[j] == ch) {
+        inSet = true;
+        break;
+      }
+    }
+    if (inSet != IS_VERIFY) {
+      return at;
+    }
+  }
+  return 0;
+}
+
+// Specialization for one-byte characters
+template <bool IS_VERIFY = false>
+inline std::size_t ScanVerify(const char *x, std::size_t xLen, const char *set,
+    std::size_t setLen, bool back) {
+  std::size_t at{back ? xLen : 1};
+  int increment{back ? -1 : 1};
+  if (xLen > 0) {
+    std::uint64_t bitSet[256 / 64]{0};
+    std::uint64_t one{1};
+    for (std::size_t j{0}; j < setLen; ++j) {
+      unsigned setCh{static_cast<unsigned char>(set[j])};
+      bitSet[setCh / 64] |= one << (setCh % 64);
+    }
+    for (; xLen-- > 0; at += increment) {
+      unsigned ch{static_cast<unsigned char>(x[at - 1])};
+      bool inSet{((bitSet[ch / 64] >> (ch % 64)) & 1) != 0};
+      if (inSet != IS_VERIFY) {
+        return at;
+      }
+    }
+  }
+  return 0;
+}
+
+static bool IsLogicalElementTrue(
+    const Descriptor &logical, const SubscriptValue at[]) {
+  // A LOGICAL value is false if and only if all of its bytes are zero.
+  const char *p{logical.Element<char>(at)};
+  for (std::size_t j{logical.ElementBytes()}; j-- > 0; ++p) {
+    if (*p) {
+      return true;
+    }
+  }
+  return false;
+}
+
+template <typename INT, typename CHAR, bool IS_VERIFY = false>
+static void ScanVerify(Descriptor &result, const Descriptor &string,
+    const Descriptor &set, const Descriptor *back,
+    const Terminator &terminator) {
+  int rank{string.rank() ? string.rank()
+                         : set.rank() ? set.rank() : back ? back->rank() : 0};
+  SubscriptValue lb[maxRank], ub[maxRank], stringAt[maxRank], setAt[maxRank],
+      backAt[maxRank];
+  SubscriptValue elements{1};
+  for (int j{0}; j < rank; ++j) {
+    lb[j] = 1;
+    ub[j] = string.rank()
+        ? string.GetDimension(j).Extent()
+        : set.rank() ? set.GetDimension(j).Extent()
+                     : back ? back->GetDimension(j).Extent() : 1;
+    elements *= ub[j];
+    stringAt[j] = setAt[j] = backAt[j] = 1;
+  }
+  result.Establish(TypeCategory::Integer, sizeof(INT), nullptr, rank, ub,
+      CFI_attribute_allocatable);
+  if (result.Allocate(lb, ub) != CFI_SUCCESS) {
+    terminator.Crash("SCAN/VERIFY: could not allocate storage for result");
+  }
+  std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
+  std::size_t setElementChars{set.ElementBytes() >> shift<CHAR>};
+  for (SubscriptValue resultAt{0}; elements-- > 0; resultAt += sizeof(INT),
+       string.IncrementSubscripts(stringAt), set.IncrementSubscripts(setAt),
+       back && back->IncrementSubscripts(backAt)) {
+    *result.OffsetElement<INT>(resultAt) =
+        ScanVerify<CHAR, IS_VERIFY>(string.Element<CHAR>(stringAt),
+            stringElementChars, set.Element<CHAR>(setAt), setElementChars,
+            back && IsLogicalElementTrue(*back, backAt));
+  }
+}
+
+template <typename CHAR, bool IS_VERIFY = false>
+static void ScanVerifyKind(Descriptor &result, const Descriptor &string,
+    const Descriptor &set, const Descriptor *back, int kind,
+    const Terminator &terminator) {
+  switch (kind) {
+  case 1:
+    ScanVerify<std::int8_t, CHAR, IS_VERIFY>(
+        result, string, set, back, terminator);
+    break;
+  case 2:
+    ScanVerify<std::int16_t, CHAR, IS_VERIFY>(
+        result, string, set, back, terminator);
+    break;
+  case 4:
+    ScanVerify<std::int32_t, CHAR, IS_VERIFY>(
+        result, string, set, back, terminator);
+    break;
+  case 8:
+    ScanVerify<std::int64_t, CHAR, IS_VERIFY>(
+        result, string, set, back, terminator);
+    break;
+  case 16:
+    ScanVerify<common::uint128_t, CHAR, IS_VERIFY>(
+        result, string, set, back, terminator);
+    break;
+  default:
+    terminator.Crash("SCAN/VERIFY: bad KIND=%d", kind);
   }
 }
 
@@ -608,7 +738,7 @@ void RTNAME(CharacterPad1)(char *lhs, std::size_t bytes, std::size_t offset) {
   }
 }
 
-// Intrinsic functions
+// Intrinsic function entry points
 
 void RTNAME(AdjustL)(Descriptor &result, const Descriptor &string,
     const char *sourceFile, int sourceLine) {
@@ -649,11 +779,47 @@ void RTNAME(LenTrim)(Descriptor &result, const Descriptor &string, int kind,
   }
 }
 
+std::size_t RTNAME(Scan1)(const char *x, std::size_t xLen, const char *set,
+    std::size_t setLen, bool back) {
+  return ScanVerify<char, false>(x, xLen, set, setLen, back);
+}
+std::size_t RTNAME(Scan2)(const char16_t *x, std::size_t xLen,
+    const char16_t *set, std::size_t setLen, bool back) {
+  return ScanVerify<char16_t, false>(x, xLen, set, setLen, back);
+}
+std::size_t RTNAME(Scan4)(const char32_t *x, std::size_t xLen,
+    const char32_t *set, std::size_t setLen, bool back) {
+  return ScanVerify<char32_t, false>(x, xLen, set, setLen, back);
+}
+
+void RTNAME(Scan)(Descriptor &result, const Descriptor &string,
+    const Descriptor &set, const Descriptor *back, int kind,
+    const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  switch (string.raw().type) {
+  case CFI_type_char:
+    ScanVerifyKind<char, false>(result, string, set, back, kind, terminator);
+    break;
+  case CFI_type_char16_t:
+    ScanVerifyKind<char16_t, false>(
+        result, string, set, back, kind, terminator);
+    break;
+  case CFI_type_char32_t:
+    ScanVerifyKind<char32_t, false>(
+        result, string, set, back, kind, terminator);
+    break;
+  default:
+    terminator.Crash(
+        "SCAN: bad string type code %d", static_cast<int>(string.raw().type));
+  }
+}
+
 void RTNAME(Repeat)(Descriptor &result, const Descriptor &string,
     std::size_t ncopies, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   std::size_t origBytes{string.ElementBytes()};
-  result.Establish(string.type(), origBytes * ncopies, nullptr, 0);
+  result.Establish(string.type(), origBytes * ncopies, nullptr, 0, nullptr,
+      CFI_attribute_allocatable);
   if (result.Allocate(nullptr, nullptr) != CFI_SUCCESS) {
     terminator.Crash("REPEAT could not allocate storage for result");
   }
@@ -690,6 +856,39 @@ void RTNAME(Trim)(Descriptor &result, const Descriptor &string,
       CFI_attribute_allocatable);
   RUNTIME_CHECK(terminator, result.Allocate(nullptr, nullptr) == CFI_SUCCESS);
   std::memcpy(result.OffsetElement(), string.OffsetElement(), resultBytes);
+}
+
+std::size_t RTNAME(Verify1)(const char *x, std::size_t xLen, const char *set,
+    std::size_t setLen, bool back) {
+  return ScanVerify<char, true>(x, xLen, set, setLen, back);
+}
+std::size_t RTNAME(Verify2)(const char16_t *x, std::size_t xLen,
+    const char16_t *set, std::size_t setLen, bool back) {
+  return ScanVerify<char16_t, true>(x, xLen, set, setLen, back);
+}
+std::size_t RTNAME(Verify4)(const char32_t *x, std::size_t xLen,
+    const char32_t *set, std::size_t setLen, bool back) {
+  return ScanVerify<char32_t, true>(x, xLen, set, setLen, back);
+}
+
+void RTNAME(Verify)(Descriptor &result, const Descriptor &string,
+    const Descriptor &set, const Descriptor *back, int kind,
+    const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  switch (string.raw().type) {
+  case CFI_type_char:
+    ScanVerifyKind<char, true>(result, string, set, back, kind, terminator);
+    break;
+  case CFI_type_char16_t:
+    ScanVerifyKind<char16_t, true>(result, string, set, back, kind, terminator);
+    break;
+  case CFI_type_char32_t:
+    ScanVerifyKind<char32_t, true>(result, string, set, back, kind, terminator);
+    break;
+  default:
+    terminator.Crash(
+        "VERIFY: bad string type code %d", static_cast<int>(string.raw().type));
+  }
 }
 
 void RTNAME(CharacterMax)(Descriptor &accumulator, const Descriptor &x,

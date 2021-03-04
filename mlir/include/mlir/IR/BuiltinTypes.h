@@ -293,7 +293,7 @@ public:
   static bool classof(Type type);
 
   /// Returns the memory space in which data referred to by this memref resides.
-  unsigned getMemorySpace() const;
+  unsigned getMemorySpaceAsInt() const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -314,7 +314,7 @@ public:
     explicit Builder(MemRefType other)
         : shape(other.getShape()), elementType(other.getElementType()),
           affineMaps(other.getAffineMaps()),
-          memorySpace(other.getMemorySpace()) {}
+          memorySpace(other.getMemorySpaceAsInt()) {}
 
     // Build from scratch.
     Builder(ArrayRef<int64_t> shape, Type elementType)

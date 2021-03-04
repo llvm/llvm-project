@@ -100,12 +100,14 @@
     <list name="types">
       <item> addrspace </item>
       <item> half </item>
+      <item> bfloat </item>
       <item> float </item>
       <item> double </item>
       <item> fp128 </item>
       <item> x86_fp80 </item>
       <item> ppc_fp128 </item>
-      <item> x86mmx </item>
+      <item> x86_mmx </item>
+      <item> x86_amx </item>
       <item> void </item>
       <item> label </item>
       <item> metadata </item>

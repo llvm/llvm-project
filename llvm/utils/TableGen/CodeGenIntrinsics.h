@@ -120,6 +120,9 @@ struct CodeGenIntrinsic {
   /// True if the intrinsic is marked as noduplicate.
   bool isNoDuplicate;
 
+  /// True if the intrinsic is marked as nomerge.
+  bool isNoMerge;
+
   /// True if the intrinsic is no-return.
   bool isNoReturn;
 

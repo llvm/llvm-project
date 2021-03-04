@@ -106,7 +106,8 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   // If this is a regular non-fat file, return it.
   const char *buf = mbref.getBufferStart();
   auto *hdr = reinterpret_cast<const MachO::fat_header *>(buf);
-  if (read32be(&hdr->magic) != MachO::FAT_MAGIC) {
+  if (mbref.getBufferSize() < sizeof(uint32_t) ||
+      read32be(&hdr->magic) != MachO::FAT_MAGIC) {
     if (tar)
       tar->append(relativeToRoot(path), mbref.getBuffer());
     return mbref;
@@ -278,16 +279,20 @@ void ObjFile::parseRelocations(const section_64 &sec,
       continue;
     if (relInfo.r_address & R_SCATTERED)
       fatal("TODO: Scattered relocations not supported");
-    uint64_t embeddedAddend = target->getEmbeddedAddend(mb, sec, relInfo);
-    assert(!(embeddedAddend && pairedAddend));
-    uint64_t totalAddend = pairedAddend + embeddedAddend;
 
     Reloc p;
     if (target->hasAttr(relInfo.r_type, RelocAttrBits::SUBTRAHEND)) {
       p.type = relInfo.r_type;
       p.referent = symbols[relInfo.r_symbolnum];
       relInfo = relInfos[++i];
+      // SUBTRACTOR relocations should always be followed by an UNSIGNED one
+      // indicating the minuend symbol.
+      assert(target->hasAttr(relInfo.r_type, RelocAttrBits::UNSIGNED) &&
+             relInfo.r_extern);
     }
+    uint64_t embeddedAddend = target->getEmbeddedAddend(mb, sec, relInfo);
+    assert(!(embeddedAddend && pairedAddend));
+    uint64_t totalAddend = pairedAddend + embeddedAddend;
     Reloc r;
     r.type = relInfo.r_type;
     r.pcrel = relInfo.r_pcrel;
@@ -304,8 +309,7 @@ void ObjFile::parseRelocations(const section_64 &sec,
         // The implicit addend for pcrel section relocations is the pcrel offset
         // in terms of the addresses in the input file. Here we adjust it so
         // that it describes the offset from the start of the referent section.
-        // TODO: The offset of 4 is probably not right for ARM64, nor for
-        //       relocations with r_length != 2.
+        assert(target->hasAttr(r.type, RelocAttrBits::BYTE4));
         referentOffset =
             sec.addr + relInfo.r_address + 4 + totalAddend - referentSec.addr;
       } else {
@@ -317,8 +321,7 @@ void ObjFile::parseRelocations(const section_64 &sec,
     }
 
     InputSection *subsec = findContainingSubsection(subsecMap, &r.offset);
-    if (p.type != GENERIC_RELOC_INVALID &&
-        target->hasAttr(p.type, RelocAttrBits::SUBTRAHEND))
+    if (p.type != GENERIC_RELOC_INVALID)
       subsec->relocs.push_back(p);
     subsec->relocs.push_back(r);
   }
@@ -483,6 +486,7 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
           getArchitectureName(config->arch));
     return;
   }
+  // TODO: check platform too
 
   if (const load_command *cmd = findCommand(hdr, LC_LINKER_OPTION)) {
     auto *c = reinterpret_cast<const linker_option_command *>(cmd);
@@ -551,27 +555,23 @@ static Optional<DylibFile *> loadDylib(StringRef path, DylibFile *umbrella) {
 
 // TBD files are parsed into a series of TAPI documents (InterfaceFiles), with
 // the first document storing child pointers to the rest of them. When we are
-// processing a given TBD file, we store that top-level document here. When
-// processing re-exports, we search its children for potentially matching
-// documents in the same TBD file. Note that the children themselves don't
-// point to further documents, i.e. this is a two-level tree.
+// processing a given TBD file, we store that top-level document in
+// currentTopLevelTapi. When processing re-exports, we search its children for
+// potentially matching documents in the same TBD file. Note that the children
+// themselves don't point to further documents, i.e. this is a two-level tree.
 //
-// ld64 allows a TAPI re-export to reference documents nested within other TBD
-// files, but that seems like a strange design, so this is an intentional
-// deviation.
-const InterfaceFile *currentTopLevelTapi = nullptr;
-
 // Re-exports can either refer to on-disk files, or to documents within .tbd
 // files.
-static Optional<DylibFile *> loadReexportHelper(StringRef path,
-                                                DylibFile *umbrella) {
+static Optional<DylibFile *>
+findDylib(StringRef path, DylibFile *umbrella,
+          const InterfaceFile *currentTopLevelTapi) {
   if (path::is_absolute(path, path::Style::posix))
     for (StringRef root : config->systemLibraryRoots)
       if (Optional<std::string> dylibPath =
               resolveDylibPath((root + path).str()))
         return loadDylib(*dylibPath, umbrella);
 
-  // TODO: Expand @loader_path, @executable_path etc
+  // TODO: Expand @loader_path, @executable_path, @rpath etc, handle -dylib_path
 
   if (currentTopLevelTapi) {
     for (InterfaceFile &child :
@@ -585,7 +585,6 @@ static Optional<DylibFile *> loadReexportHelper(StringRef path,
   if (Optional<std::string> dylibPath = resolveDylibPath(path))
     return loadDylib(*dylibPath, umbrella);
 
-  error("unable to locate re-export with install name " + path);
   return {};
 }
 
@@ -609,9 +608,13 @@ static bool isImplicitlyLinked(StringRef path) {
   return false;
 }
 
-void loadReexport(StringRef path, DylibFile *umbrella) {
-  Optional<DylibFile *> reexport = loadReexportHelper(path, umbrella);
-  if (reexport && isImplicitlyLinked(path))
+void loadReexport(StringRef path, DylibFile *umbrella,
+                  const InterfaceFile *currentTopLevelTapi) {
+  Optional<DylibFile *> reexport =
+      findDylib(path, umbrella, currentTopLevelTapi);
+  if (!reexport)
+    error("unable to locate re-export with install name " + path);
+  else if (isImplicitlyLinked(path))
     inputFiles.insert(*reexport);
 }
 
@@ -655,21 +658,33 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     return;
   }
 
-  if (hdr->flags & MH_NO_REEXPORTED_DYLIBS)
-    return;
-
   const uint8_t *p =
       reinterpret_cast<const uint8_t *>(hdr) + sizeof(mach_header_64);
   for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
     auto *cmd = reinterpret_cast<const load_command *>(p);
     p += cmd->cmdsize;
-    if (cmd->cmd != LC_REEXPORT_DYLIB)
-      continue;
 
-    auto *c = reinterpret_cast<const dylib_command *>(cmd);
-    StringRef reexportPath =
-        reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
-    loadReexport(reexportPath, umbrella);
+    if (!(hdr->flags & MH_NO_REEXPORTED_DYLIBS) &&
+        cmd->cmd == LC_REEXPORT_DYLIB) {
+      const auto *c = reinterpret_cast<const dylib_command *>(cmd);
+      StringRef reexportPath =
+          reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
+      loadReexport(reexportPath, umbrella, nullptr);
+    }
+
+    // FIXME: What about LC_LOAD_UPWARD_DYLIB, LC_LAZY_LOAD_DYLIB,
+    // LC_LOAD_WEAK_DYLIB, LC_REEXPORT_DYLIB (..are reexports from dylibs with
+    // MH_NO_REEXPORTED_DYLIBS loaded for -flat_namespace)?
+    if (config->namespaceKind == NamespaceKind::flat &&
+        cmd->cmd == LC_LOAD_DYLIB) {
+      const auto *c = reinterpret_cast<const dylib_command *>(cmd);
+      StringRef dylibPath =
+          reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
+      Optional<DylibFile *> dylib = findDylib(dylibPath, umbrella, nullptr);
+      if (!dylib)
+        error(Twine("unable to locate library '") + dylibPath +
+              "' loaded from '" + toString(this) + "' for -flat_namespace");
+    }
   }
 }
 
@@ -722,17 +737,11 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
     }
   }
 
-  bool isTopLevelTapi = false;
-  if (currentTopLevelTapi == nullptr) {
-    currentTopLevelTapi = &interface;
-    isTopLevelTapi = true;
-  }
+  const InterfaceFile *topLevel =
+      interface.getParent() == nullptr ? &interface : interface.getParent();
 
   for (InterfaceFileRef intfRef : interface.reexportedLibraries())
-    loadReexport(intfRef.getInstallName(), umbrella);
-
-  if (isTopLevelTapi)
-    currentTopLevelTapi = nullptr;
+    loadReexport(intfRef.getInstallName(), umbrella, topLevel);
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)

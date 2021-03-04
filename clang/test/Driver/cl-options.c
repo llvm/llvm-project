@@ -614,6 +614,13 @@
 // RUN: %clang_cl /guard:nochecks -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDNOCHECKSINVALID %s
 // CFGUARDNOCHECKSINVALID: invalid value 'nochecks' in '/guard:'
 
+// RUN: %clang_cl  -### -- %s 2>&1 | FileCheck -check-prefix=NOEHCONTGUARD %s
+// RUN: %clang_cl /guard:ehcont- -### -- %s 2>&1 | FileCheck -check-prefix=NOEHCONTGUARD %s
+// NOEHCONTGUARD-NOT: -ehcontguard
+
+// RUN: %clang_cl /guard:ehcont -### -- %s 2>&1 | FileCheck -check-prefix=EHCONTGUARD %s
+// EHCONTGUARD: -ehcontguard
+
 // RUN: %clang_cl /guard:foo -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDINVALID %s
 // CFGUARDINVALID: invalid value 'foo' in '/guard:'
 
@@ -639,6 +646,8 @@
 // RUN:     -fdiagnostics-parseable-fixits \
 // RUN:     -fdiagnostics-absolute-paths \
 // RUN:     -ferror-limit=10 \
+// RUN:     -fident \
+// RUN:     -fno-ident \
 // RUN:     -fmsc-version=1800 \
 // RUN:     -fno-strict-aliasing \
 // RUN:     -fstrict-aliasing \

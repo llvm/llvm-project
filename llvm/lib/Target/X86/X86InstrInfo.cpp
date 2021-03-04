@@ -1006,6 +1006,7 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case X86::MOV64ri:
   case X86::MOV64ri32:
   case X86::MOV8ri:
+  case X86::PTILEZEROV:
     return true;
 
   case X86::MOV8rm:

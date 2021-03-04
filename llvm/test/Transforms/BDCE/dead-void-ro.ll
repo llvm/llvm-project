@@ -14,5 +14,5 @@ define void @PR34211(i16* %p) {
 
 declare void @no_side_effects_so_dead(i16) #0
 
-attributes #0 = { nounwind readnone }
+attributes #0 = { nounwind readnone willreturn }
 

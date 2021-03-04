@@ -8,7 +8,7 @@ Please refer to the `LLVM Getting Started Guide
 <https://llvm.org/docs/GettingStarted.html>`_ for general information on how to
 get started on the LLVM project. A detailed explanation on how to build and
 test LLDB can be found in the `build instructions <build.html>`_ and `test
-instructions <test.html>`_ respecitvely.
+instructions <test.html>`_ respectively.
 
 Contributing to LLDB
 --------------------

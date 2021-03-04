@@ -438,11 +438,11 @@ f37:
 // CHECK:        }
 
 .ifdef ERR
-// ERR: [[#@LINE+1]]:15: error: Expected an identifier
+// ERR: [[#@LINE+1]]:15: error: expected .eh_frame or .debug_frame
 .cfi_sections $
-// ERR: [[#@LINE+1]]:28: error: unexpected token in '.cfi_sections' directive
+// ERR: [[#@LINE+1]]:28: error: unexpected token
 .cfi_sections .debug_frame $
-// ERR: [[#@LINE+1]]:39: error: unexpected token in '.cfi_sections' directive
+// ERR: [[#@LINE+1]]:39: error: unexpected token
 .cfi_sections .debug_frame, .eh_frame $
 
 // ERR: [[#@LINE+1]]:16: error: unexpected token in '.cfi_startproc' directive

@@ -80,7 +80,7 @@ void DemandedBitsWrapperPass::print(raw_ostream &OS, const Module *M) const {
 
 static bool isAlwaysLive(Instruction *I) {
   return I->isTerminator() || isa<DbgInfoIntrinsic>(I) || I->isEHPad() ||
-         I->mayHaveSideEffects();
+         I->mayHaveSideEffects() || !I->willReturn();
 }
 
 void DemandedBits::determineLiveOperandBits(

@@ -259,14 +259,16 @@ BreakpointSP LanguageRuntime::CreateExceptionBreakpoint(
   return exc_breakpt_sp;
 }
 
-UnwindPlanSP LanguageRuntime::GetRuntimeUnwindPlan(Thread &thread,
-                                                   RegisterContext *regctx) {
+UnwindPlanSP
+LanguageRuntime::GetRuntimeUnwindPlan(Thread &thread, RegisterContext *regctx,
+                                      bool &behaves_like_zeroth_frame) {
   ProcessSP process_sp = thread.GetProcess();
   if (!process_sp.get())
     return UnwindPlanSP();
   for (const lldb::LanguageType lang_type : Language::GetSupportedLanguages()) {
     if (LanguageRuntime *runtime = process_sp->GetLanguageRuntime(lang_type)) {
-      UnwindPlanSP plan_sp = runtime->GetRuntimeUnwindPlan(process_sp, regctx);
+      UnwindPlanSP plan_sp = runtime->GetRuntimeUnwindPlan(
+          process_sp, regctx, behaves_like_zeroth_frame);
       if (plan_sp.get())
         return plan_sp;
     }

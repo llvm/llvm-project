@@ -3187,8 +3187,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   // and at most one "preallocated" operand bundle.
   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
-       FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
-       FoundAttachedCallBundle = false;
+       FoundPreallocatedBundle = false, FoundGCLiveBundle = false;;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -3229,18 +3228,8 @@ void Verifier::visitCallBase(CallBase &Call) {
       Assert(!FoundGCLiveBundle, "Multiple gc-live operand bundles",
              Call);
       FoundGCLiveBundle = true;
-    } else if (Tag == LLVMContext::OB_clang_arc_attachedcall) {
-      Assert(!FoundAttachedCallBundle,
-             "Multiple \"clang.arc.attachedcall\" operand bundles", Call);
-      FoundAttachedCallBundle = true;
     }
   }
-
-  if (FoundAttachedCallBundle)
-    Assert(FTy->getReturnType()->isPointerTy(),
-           "a call with operand bundle \"clang.arc.attachedcall\" must call a "
-           "function returning a pointer",
-           Call);
 
   // Verify that each inlinable callsite of a debug-info-bearing function in a
   // debug-info-bearing function has a debug location attached to it. Failure to
@@ -3671,10 +3660,9 @@ void Verifier::visitStoreInst(StoreInst &SI) {
 /// Check that SwiftErrorVal is used as a swifterror argument in CS.
 void Verifier::verifySwiftErrorCall(CallBase &Call,
                                     const Value *SwiftErrorVal) {
-  unsigned Idx = 0;
-  for (auto I = Call.arg_begin(), E = Call.arg_end(); I != E; ++I, ++Idx) {
-    if (*I == SwiftErrorVal) {
-      Assert(Call.paramHasAttr(Idx, Attribute::SwiftError),
+  for (const auto &I : llvm::enumerate(Call.args())) {
+    if (I.value() == SwiftErrorVal) {
+      Assert(Call.paramHasAttr(I.index(), Attribute::SwiftError),
              "swifterror value when used in a callsite should be marked "
              "with swifterror attribute",
              SwiftErrorVal, Call);

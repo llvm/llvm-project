@@ -26,7 +26,7 @@ mlir::Type TupleType =
 auto UnknownLoc = mlir::UnknownLoc::get(&Context);
 auto FileLineColLoc = mlir::FileLineColLoc::get("file", 7, 8, &Context);
 auto OpaqueLoc = mlir::OpaqueLoc::get<uintptr_t>(9, &Context);
-auto NameLoc = mlir::NameLoc::get(Identifier, &Context);
+auto NameLoc = mlir::NameLoc::get(Identifier);
 auto CallSiteLoc = mlir::CallSiteLoc::get(FileLineColLoc, OpaqueLoc);
 auto FusedLoc = mlir::FusedLoc::get({FileLineColLoc, NameLoc}, &Context);
 

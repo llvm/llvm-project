@@ -107,17 +107,16 @@ void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
     FixItHints.push_back(
         FixItHint::CreateReplacement(SourceRange(AssertLoc), "static_assert"));
 
-    std::string StaticAssertMSG = ", \"\"";
     if (AssertExprRoot) {
       FixItHints.push_back(FixItHint::CreateRemoval(
           SourceRange(AssertExprRoot->getOperatorLoc())));
       FixItHints.push_back(FixItHint::CreateRemoval(
           SourceRange(AssertMSG->getBeginLoc(), AssertMSG->getEndLoc())));
-      StaticAssertMSG = (Twine(", \"") + AssertMSG->getString() + "\"").str();
+      FixItHints.push_back(FixItHint::CreateInsertion(
+          LastParenLoc, (Twine(", \"") + AssertMSG->getString() + "\"").str()));
+    } else if (!Opts.CPlusPlus17) {
+      FixItHints.push_back(FixItHint::CreateInsertion(LastParenLoc, ", \"\""));
     }
-
-    FixItHints.push_back(
-        FixItHint::CreateInsertion(LastParenLoc, StaticAssertMSG));
   }
 
   diag(AssertLoc, "found assert() that could be replaced by static_assert()")

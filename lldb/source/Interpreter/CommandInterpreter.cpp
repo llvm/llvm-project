@@ -122,9 +122,8 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
       IOHandlerDelegate(IOHandlerDelegate::Completion::LLDBCommand),
       m_debugger(debugger), m_synchronous_execution(true),
       m_skip_lldbinit_files(false), m_skip_app_init_files(false),
-      m_command_io_handler_sp(), m_comment_char('#'),
-      m_batch_command_mode(false), m_truncation_warning(eNoTruncation),
-      m_command_source_depth(0), m_result(), m_transcript_stream() {
+      m_comment_char('#'), m_batch_command_mode(false),
+      m_truncation_warning(eNoTruncation), m_command_source_depth(0) {
   SetEventName(eBroadcastBitThreadShouldExit, "thread-should-exit");
   SetEventName(eBroadcastBitResetPrompt, "reset-prompt");
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");

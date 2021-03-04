@@ -451,7 +451,7 @@ def MyOp : Op<"my_op", []> {
   let arguments = (ins F32Attr:$attr);
 
   let builders = [
-    OpBuilderDAG<(ins "float":$val)>
+    OpBuilder<(ins "float":$val)>
   ];
 }
 ```
@@ -489,7 +489,7 @@ def MyOp : Op<"my_op", []> {
   let arguments = (ins F32Attr:$attr);
 
   let builders = [
-    OpBuilderDAG<(ins "float":$val), [{
+    OpBuilder<(ins "float":$val), [{
       $_state.addAttribute("attr", $_builder.getF32FloatAttr(val));
     }]>
   ];
@@ -511,7 +511,7 @@ def MyOp : Op<"my_op", []> {
   let arguments = (ins F32Attr:$attr);
 
   let builders = [
-    OpBuilderDAG<(ins CArg<"float", "0.5f">:$val), [{
+    OpBuilder<(ins CArg<"float", "0.5f">:$val), [{
       $_state.addAttribute("attr", $_builder.getF32FloatAttr(val));
     }]>
   ];

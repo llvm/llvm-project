@@ -34,31 +34,60 @@ static llvm::Intrinsic::ID getShflBflyIntrinsicId(llvm::Type *resultType,
                                  : llvm::Intrinsic::nvvm_shfl_sync_bfly_i32;
 }
 
-LogicalResult mlir::NVVMDialectLLVMIRTranslationInterface::convertOperation(
-    Operation *op, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation) const {
-  Operation &opInst = *op;
+namespace {
+/// Implementation of the dialect interface that converts operations belonging
+/// to the NVVM dialect to LLVM IR.
+class NVVMDialectLLVMIRTranslationInterface
+    : public LLVMTranslationDialectInterface {
+public:
+  using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
+
+  /// Translates the given operation to LLVM IR using the provided IR builder
+  /// and saving the state in `moduleTranslation`.
+  LogicalResult
+  convertOperation(Operation *op, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) const final {
+    Operation &opInst = *op;
 #include "mlir/Dialect/LLVMIR/NVVMConversions.inc"
 
-  return failure();
+    return failure();
+  }
+
+  /// Attaches module-level metadata for functions marked as kernels.
+  LogicalResult
+  amendOperation(Operation *op, NamedAttribute attribute,
+                 LLVM::ModuleTranslation &moduleTranslation) const final {
+    if (attribute.first == NVVM::NVVMDialect::getKernelFuncAttrName()) {
+      auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
+      if (!func)
+        return failure();
+
+      llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
+      llvm::Function *llvmFunc =
+          moduleTranslation.lookupFunction(func.getName());
+      llvm::Metadata *llvmMetadata[] = {
+          llvm::ValueAsMetadata::get(llvmFunc),
+          llvm::MDString::get(llvmContext, "kernel"),
+          llvm::ValueAsMetadata::get(
+              llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 1))};
+      llvm::MDNode *llvmMetadataNode =
+          llvm::MDNode::get(llvmContext, llvmMetadata);
+      moduleTranslation.getOrInsertNamedModuleMetadata("nvvm.annotations")
+          ->addOperand(llvmMetadataNode);
+    }
+    return success();
+  }
+};
+} // end namespace
+
+void mlir::registerNVVMDialectTranslation(DialectRegistry &registry) {
+  registry.insert<NVVM::NVVMDialect>();
+  registry.addDialectInterface<NVVM::NVVMDialect,
+                               NVVMDialectLLVMIRTranslationInterface>();
 }
 
-LogicalResult mlir::NVVMDialectLLVMIRTranslationInterface::amendOperation(
-    Operation *op, NamedAttribute attribute,
-    LLVM::ModuleTranslation &moduleTranslation) const {
-  if (attribute.first == NVVM::NVVMDialect::getKernelFuncAttrName()) {
-    auto func = cast<LLVM::LLVMFuncOp>(op);
-    llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
-    llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
-    llvm::Metadata *llvmMetadata[] = {
-        llvm::ValueAsMetadata::get(llvmFunc),
-        llvm::MDString::get(llvmContext, "kernel"),
-        llvm::ValueAsMetadata::get(
-            llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 1))};
-    llvm::MDNode *llvmMetadataNode =
-        llvm::MDNode::get(llvmContext, llvmMetadata);
-    moduleTranslation.getOrInsertNamedModuleMetadata("nvvm.annotations")
-        ->addOperand(llvmMetadataNode);
-  }
-  return success();
+void mlir::registerNVVMDialectTranslation(MLIRContext &context) {
+  DialectRegistry registry;
+  registerNVVMDialectTranslation(registry);
+  context.appendDialectRegistry(registry);
 }

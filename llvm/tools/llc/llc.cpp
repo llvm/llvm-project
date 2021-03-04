@@ -290,6 +290,22 @@ struct LLCDiagnosticHandler : public DiagnosticHandler {
   bool *HasError;
   LLCDiagnosticHandler(bool *HasErrorPtr) : HasError(HasErrorPtr) {}
   bool handleDiagnostics(const DiagnosticInfo &DI) override {
+    if (DI.getKind() == llvm::DK_SrcMgr) {
+      const auto &DISM = cast<DiagnosticInfoSrcMgr>(DI);
+      const SMDiagnostic &SMD = DISM.getSMDiag();
+
+      if (SMD.getKind() == SourceMgr::DK_Error)
+        *HasError = true;
+
+      SMD.print(nullptr, errs());
+
+      // For testing purposes, we print the LocCookie here.
+      if (DISM.isInlineAsmDiag() && DISM.getLocCookie())
+        WithColor::note() << "!srcloc = " << DISM.getLocCookie() << "\n";
+
+      return true;
+    }
+
     if (DI.getSeverity() == DS_Error)
       *HasError = true;
 
@@ -304,19 +320,6 @@ struct LLCDiagnosticHandler : public DiagnosticHandler {
     return true;
   }
 };
-
-static void InlineAsmDiagHandler(const SMDiagnostic &SMD, void *Context,
-                                 unsigned LocCookie) {
-  bool *HasError = static_cast<bool *>(Context);
-  if (SMD.getKind() == SourceMgr::DK_Error)
-    *HasError = true;
-
-  SMD.print(nullptr, errs());
-
-  // For testing purposes, we print the LocCookie here.
-  if (LocCookie)
-    WithColor::note() << "!srcloc = " << LocCookie << "\n";
-}
 
 // main - Entry point for the llc compiler.
 //
@@ -367,7 +370,6 @@ int main(int argc, char **argv) {
   bool HasError = false;
   Context.setDiagnosticHandler(
       std::make_unique<LLCDiagnosticHandler>(&HasError));
-  Context.setInlineAsmDiagnosticHandler(InlineAsmDiagHandler, &HasError);
 
   Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
       setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,

@@ -60,6 +60,16 @@ struct SExtiValueBuilder : public ValueBuilder<SignExtendIOp> {
 
 using std_sexti32 = SExtiValueBuilder<32>;
 
+template <CmpFPredicate Predicate>
+struct CmpFValueBuilder : public ValueBuilder<CmpFOp> {
+  using ValueBuilder<CmpFOp>::ValueBuilder;
+  template <typename... Args>
+  CmpFValueBuilder(Args... args) : ValueBuilder<CmpFOp>(Predicate, args...) {}
+};
+
+using std_cmpf_ogt = CmpFValueBuilder<CmpFPredicate::OGT>;
+using std_cmpf_olt = CmpFValueBuilder<CmpFPredicate::OLT>;
+
 /// Branches into `block` with `operands`.
 BranchOp std_br(Block *block, ValueRange operands);
 

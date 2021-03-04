@@ -149,6 +149,18 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
                          (thread_state_t)&m_state.context.gpr, &count);
   if (DNBLogEnabledForAny(LOG_THREAD)) {
     uint64_t *x = &m_state.context.gpr.__x[0];
+
+#if defined(__LP64__)
+        uint64_t log_fp = arm_thread_state64_get_fp(m_state.context.gpr);
+        uint64_t log_lr = arm_thread_state64_get_lr(m_state.context.gpr);
+        uint64_t log_sp = arm_thread_state64_get_sp(m_state.context.gpr);
+        uint64_t log_pc = arm_thread_state64_get_pc(m_state.context.gpr);
+#else
+        uint64_t log_fp = m_state.context.gpr.__fp;
+        uint64_t log_fp = m_state.context.gpr.__lr;
+        uint64_t log_fp = m_state.context.gpr.__sp;
+        uint64_t log_fp = m_state.context.gpr.__pc,
+#endif
     DNBLogThreaded(
         "thread_get_state(0x%4.4x, %u, &gpr, %u) => 0x%8.8x (count = %u) regs"
         "\n   x0=%16.16llx"
@@ -189,16 +201,7 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
         x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[0], x[11],
         x[12], x[13], x[14], x[15], x[16], x[17], x[18], x[19], x[20], x[21],
         x[22], x[23], x[24], x[25], x[26], x[27], x[28],
-#if defined(__LP64__)
-        (uint64_t) arm_thread_state64_get_fp (m_state.context.gpr),
-        (uint64_t) arm_thread_state64_get_lr (m_state.context.gpr),
-        (uint64_t) arm_thread_state64_get_sp (m_state.context.gpr),
-        (uint64_t) arm_thread_state64_get_pc (m_state.context.gpr),
-#else
-        m_state.context.gpr.__fp, m_state.context.gpr.__lr,
-        m_state.context.gpr.__sp, m_state.context.gpr.__pc,
-#endif
-        m_state.context.gpr.__cpsr);
+        log_fp, log_lr, log_sp, log_pc, m_state.context.gpr.__cpsr);
   }
   m_state.SetError(set, Read, kret);
   return kret;
@@ -2280,7 +2283,7 @@ nub_size_t DNBArchMachARM64::SetRegisterContext(const void *buf,
 
     // Copy each struct individually to avoid any padding that might be between
     // the structs in m_state.context
-    uint8_t *p = (uint8_t *)buf;
+    uint8_t *p = const_cast<uint8_t*>(reinterpret_cast<const uint8_t *>(buf));
     ::memcpy(&m_state.context.gpr, p, sizeof(m_state.context.gpr));
     p += sizeof(m_state.context.gpr);
     ::memcpy(&m_state.context.vfp, p, sizeof(m_state.context.vfp));
@@ -2288,7 +2291,7 @@ nub_size_t DNBArchMachARM64::SetRegisterContext(const void *buf,
     ::memcpy(&m_state.context.exc, p, sizeof(m_state.context.exc));
     p += sizeof(m_state.context.exc);
 
-    size_t bytes_written = p - (uint8_t *)buf;
+    size_t bytes_written = p - reinterpret_cast<const uint8_t *>(buf);
     UNUSED_IF_ASSERT_DISABLED(bytes_written);
     assert(bytes_written == size);
     SetGPRState();

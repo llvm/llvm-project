@@ -1064,10 +1064,12 @@ bool DWARFExpression::Evaluate(
           return false;
         }
         stack.back().GetScalar() = load_Addr;
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-        // Fall through to load address code below...
+        // Fall through to load address promotion code below.
       } LLVM_FALLTHROUGH;
       case Value::ValueType::Scalar:
+        // Promote Scalar to LoadAddress and fall through.
+        stack.back().SetValueType(Value::ValueType::LoadAddress);
+        LLVM_FALLTHROUGH;
       case Value::ValueType::LoadAddress:
         if (exe_ctx) {
           if (process) {

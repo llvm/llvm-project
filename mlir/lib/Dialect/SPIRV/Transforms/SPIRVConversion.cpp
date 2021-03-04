@@ -344,7 +344,8 @@ static Optional<Type> convertTensorType(const spirv::TargetEnv &targetEnv,
 static Optional<Type> convertMemrefType(const spirv::TargetEnv &targetEnv,
                                         MemRefType type) {
   Optional<spirv::StorageClass> storageClass =
-      SPIRVTypeConverter::getStorageClassForMemorySpace(type.getMemorySpace());
+      SPIRVTypeConverter::getStorageClassForMemorySpace(
+          type.getMemorySpaceAsInt());
   if (!storageClass) {
     LLVM_DEBUG(llvm::dbgs()
                << type << " illegal: cannot convert memory space\n");
@@ -498,7 +499,7 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
                                           : TypeRange()));
 
   // Copy over all attributes other than the function name and type.
-  for (const auto &namedAttr : funcOp.getAttrs()) {
+  for (const auto &namedAttr : funcOp->getAttrs()) {
     if (namedAttr.first != impl::getTypeAttrName() &&
         namedAttr.first != SymbolTable::getSymbolAttrName())
       newFuncOp->setAttr(namedAttr.first, namedAttr.second);

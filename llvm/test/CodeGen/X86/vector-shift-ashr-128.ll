@@ -653,9 +653,9 @@ define <2 x i64> @splatvar_shift_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; XOPAVX2-LABEL: splatvar_shift_v2i64:
 ; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpbroadcastq %xmm1, %xmm1
 ; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOPAVX2-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; XOPAVX2-NEXT:    vpbroadcastq %xmm1, %xmm1
 ; XOPAVX2-NEXT:    vpshaq %xmm1, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    retq
 ;
@@ -855,9 +855,9 @@ define <16 x i8> @splatvar_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ;
 ; XOPAVX2-LABEL: splatvar_shift_v16i8:
 ; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOPAVX2-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
-; XOPAVX2-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; XOPAVX2-NEXT:    vpshab %xmm1, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    retq
 ;

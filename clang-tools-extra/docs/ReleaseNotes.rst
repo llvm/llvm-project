@@ -70,6 +70,10 @@ Improvements to clang-tidy
 - The `run-clang-tidy.py` helper script is now installed in `bin/` as
   `run-clang-tidy`. It was previously installed in `share/clang/`.
 
+- Added command line option `--fix-notes` to apply fixes found in notes
+  attached to warnings. These are typically cases where we are less confident
+  the fix will have the desired effect.
+
 New checks
 ^^^^^^^^^^
 
@@ -100,6 +104,23 @@ Changes in existing checks
   <clang-tidy/checks/bugprone-signal-handler>` check.
 
   Added an option to choose the set of allowed functions.
+
+- Improved :doc:`readability-uniqueptr-delete-release
+  <clang-tidy/checks/readability-uniqueptr-delete-release>` check.
+
+  Added an option to choose whether to refactor by calling the ``reset`` member
+  function or assignment to ``nullptr``.
+  Added support for pointers to ``std::unique_ptr``.
+
+Deprecated checks
+^^^^^^^^^^^^^^^^^
+
+- The :doc:`readability-deleted-default
+  <clang-tidy/checks/readability-deleted-default>` check has been deprecated.
+  
+  The clang warning `Wdefaulted-function-deleted
+  <https://clang.llvm.org/docs/DiagnosticsReference.html#wdefaulted-function-deleted>`_
+  will diagnose the same issues and is enabled by default.
 
 Improvements to include-fixer
 -----------------------------

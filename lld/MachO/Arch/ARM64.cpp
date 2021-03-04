@@ -47,7 +47,6 @@ struct ARM64 : TargetInfo {
 
 // Random notes on reloc types:
 // ADDEND always pairs with BRANCH26, PAGE21, or PAGEOFF12
-// SUBTRACTOR always pairs with UNSIGNED (a delta between two sections)
 // POINTER_TO_GOT: ld64 supports a 4-byte pc-relative form as well as an 8-byte
 // absolute version of this relocation. The semantics of the absolute relocation
 // are weird -- it results in the value of the GOT slot being written, instead
@@ -58,7 +57,7 @@ const TargetInfo::RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
 #define B(x) RelocAttrBits::x
       {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) |
                        B(DYSYM8) | B(BYTE4) | B(BYTE8)},
-      {"SUBTRACTOR", B(SUBTRAHEND) | B(BYTE8)},
+      {"SUBTRACTOR", B(SUBTRAHEND) | B(BYTE4) | B(BYTE8)},
       {"BRANCH26", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
       {"PAGE21", B(PCREL) | B(EXTERN) | B(BYTE4)},
       {"PAGEOFF12", B(ABSOLUTE) | B(EXTERN) | B(BYTE4)},
@@ -80,8 +79,23 @@ const TargetInfo::RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
 
 uint64_t ARM64::getEmbeddedAddend(MemoryBufferRef mb, const section_64 &sec,
                                   const relocation_info rel) const {
-  // TODO(gkm): extract embedded addend just so we can assert that it is 0
-  return 0;
+  if (rel.r_type != ARM64_RELOC_UNSIGNED) {
+    // All other reloc types should use the ADDEND relocation to store their
+    // addends.
+    // TODO(gkm): extract embedded addend just so we can assert that it is 0
+    return 0;
+  }
+
+  auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
+  const uint8_t *loc = buf + sec.offset + rel.r_address;
+  switch (rel.r_length) {
+  case 2:
+    return read32le(loc);
+  case 3:
+    return read64le(loc);
+  default:
+    llvm_unreachable("invalid r_length");
+  }
 }
 
 inline uint64_t bitField(uint64_t value, int right, int width, int left) {

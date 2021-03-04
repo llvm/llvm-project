@@ -1148,7 +1148,7 @@ void GCNPassConfig::addPreGlobalInstructionSelect() {
 }
 
 bool GCNPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect());
+  addPass(new InstructionSelect(getOptLevel()));
   // TODO: Fix instruction selection to do the right thing for image
   // instructions with tfe or lwe in the first place, instead of running a
   // separate pass to fix them up?
@@ -1161,12 +1161,10 @@ void GCNPassConfig::addPreRegAlloc() {
     addPass(createAMDGPUMachineCFGStructurizerPass());
   }
   addPass(createSIInsertScratchBoundsPass());
-  addPass(createSIWholeQuadModePass());
   addPass(createSIInsertWaterfallPass());
 }
 
 void GCNPassConfig::addFastRegAlloc() {
-  addPass(createSIWholeQuadModePass());
   // FIXME: We have to disable the verifier here because of PHIElimination +
   // TwoAddressInstructions disabling it.
 
@@ -1175,13 +1173,18 @@ void GCNPassConfig::addFastRegAlloc() {
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowID, false);
 
-  // This must be run just after RegisterCoalescing.
-  insertPass(&RegisterCoalescerID, &SIPreAllocateWWMRegsID, false);
+  insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
+  insertPass(&TwoAddressInstructionPassID, &SIPreAllocateWWMRegsID);
 
   TargetPassConfig::addFastRegAlloc();
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
+  // Allow the scheduler to run before SIWholeQuadMode inserts exec manipulation
+  // instructions that cause scheduling barriers.
+  insertPass(&MachineSchedulerID, &SIWholeQuadModeID);
+  insertPass(&MachineSchedulerID, &SIPreAllocateWWMRegsID);
+
   if (OptExecMaskPreRA)
     insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
   insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
@@ -1190,9 +1193,6 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowID, false);
-
-  // This must be run just after RegisterCoalescing.
-  insertPass(&RegisterCoalescerID, &SIPreAllocateWWMRegsID, false);
 
   if (EnableDCEInRA)
     insertPass(&DetectDeadLanesID, &DeadMachineInstructionElimID);

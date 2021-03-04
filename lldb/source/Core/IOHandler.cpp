@@ -265,17 +265,31 @@ IOHandlerEditline::IOHandlerEditline(
     m_editline_up = std::make_unique<Editline>(editline_name, GetInputFILE(),
                                                GetOutputFILE(), GetErrorFILE(),
                                                m_color_prompts);
-    m_editline_up->SetIsInputCompleteCallback(IsInputCompleteCallback, this);
-    m_editline_up->SetAutoCompleteCallback(AutoCompleteCallback, this);
-    if (debugger.GetUseAutosuggestion() && debugger.GetUseColor())
-      m_editline_up->SetSuggestionCallback(SuggestionCallback, this);
+    m_editline_up->SetIsInputCompleteCallback(
+        [this](Editline *editline, StringList &lines) {
+          return this->IsInputCompleteCallback(editline, lines);
+        });
+
+    m_editline_up->SetAutoCompleteCallback([this](CompletionRequest &request) {
+      this->AutoCompleteCallback(request);
+    });
+
+    if (debugger.GetUseAutosuggestion() && debugger.GetUseColor()) {
+      m_editline_up->SetSuggestionCallback([this](llvm::StringRef line) {
+        return this->SuggestionCallback(line);
+      });
+    }
     // See if the delegate supports fixing indentation
     const char *indent_chars = delegate.IOHandlerGetFixIndentationCharacters();
     if (indent_chars) {
       // The delegate does support indentation, hook it up so when any
       // indentation character is typed, the delegate gets a chance to fix it
-      m_editline_up->SetFixIndentationCallback(FixIndentationCallback, this,
-                                               indent_chars);
+      FixIndentationCallbackType f = [this](Editline *editline,
+                                            const StringList &lines,
+                                            int cursor_position) {
+        return this->FixIndentationCallback(editline, lines, cursor_position);
+      };
+      m_editline_up->SetFixIndentationCallback(std::move(f), indent_chars);
     }
   }
 #endif
@@ -425,37 +439,23 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
 
 #if LLDB_ENABLE_LIBEDIT
 bool IOHandlerEditline::IsInputCompleteCallback(Editline *editline,
-                                                StringList &lines,
-                                                void *baton) {
-  IOHandlerEditline *editline_reader = (IOHandlerEditline *)baton;
-  return editline_reader->m_delegate.IOHandlerIsInputComplete(*editline_reader,
-                                                              lines);
+                                                StringList &lines) {
+  return m_delegate.IOHandlerIsInputComplete(*this, lines);
 }
 
 int IOHandlerEditline::FixIndentationCallback(Editline *editline,
                                               const StringList &lines,
-                                              int cursor_position,
-                                              void *baton) {
-  IOHandlerEditline *editline_reader = (IOHandlerEditline *)baton;
-  return editline_reader->m_delegate.IOHandlerFixIndentation(
-      *editline_reader, lines, cursor_position);
+                                              int cursor_position) {
+  return m_delegate.IOHandlerFixIndentation(*this, lines, cursor_position);
 }
 
 llvm::Optional<std::string>
-IOHandlerEditline::SuggestionCallback(llvm::StringRef line, void *baton) {
-  IOHandlerEditline *editline_reader = static_cast<IOHandlerEditline *>(baton);
-  if (editline_reader)
-    return editline_reader->m_delegate.IOHandlerSuggestion(*editline_reader,
-                                                           line);
-
-  return llvm::None;
+IOHandlerEditline::SuggestionCallback(llvm::StringRef line) {
+  return m_delegate.IOHandlerSuggestion(*this, line);
 }
 
-void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request,
-                                             void *baton) {
-  IOHandlerEditline *editline_reader = (IOHandlerEditline *)baton;
-  if (editline_reader)
-    editline_reader->m_delegate.IOHandlerComplete(*editline_reader, request);
+void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request) {
+  m_delegate.IOHandlerComplete(*this, request);
 }
 #endif
 

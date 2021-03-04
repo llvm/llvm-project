@@ -111,7 +111,7 @@ def Tosa_PadOpQuantizationAttr : StructAttr<"PadOpQuantizationAttr",
 // This builder is called on all convolution operators except for TransposeConv,
 // which has specialized output shape semantics. The builder also defines the
 // bitwidth of the output given the bit width of the input & weight content.
-def Tosa_ConvOpQuantInfoBuilder : OpBuilderDAG<
+def Tosa_ConvOpQuantInfoBuilder : OpBuilder<
   (ins "Type":$outputType, "Value":$input, "Value":$weight, "Value":$bias,
        "ArrayAttr":$pad, "ArrayAttr":$stride, "ArrayAttr":$dilation),
   [{
@@ -121,7 +121,7 @@ def Tosa_ConvOpQuantInfoBuilder : OpBuilderDAG<
   }]>;
 
 // Handles tosa.transpose_conv2d which has an outpad and output shape attribute.
-def Tosa_TransConvOpQuantInfoBuilder : OpBuilderDAG<
+def Tosa_TransConvOpQuantInfoBuilder : OpBuilder<
   (ins "Type":$outputType, "Value":$input, "Value":$weight, "Value":$bias,
        "ArrayAttr":$outpad, "ArrayAttr":$stride, "ArrayAttr":$dilation,
        "ArrayAttr":$outputShape),
@@ -134,7 +134,7 @@ def Tosa_TransConvOpQuantInfoBuilder : OpBuilderDAG<
 
 // The tosa.fully_connected op has its own builder as it does not have
 // strides/dilation/padding.
-def Tosa_FCOpQuantInfoBuilder : OpBuilderDAG<
+def Tosa_FCOpQuantInfoBuilder : OpBuilder<
   (ins "Type":$outputType, "Value":$input, "Value":$weight, "Value":$bias),
   [{
     buildFCOpWithQuantInfo($_builder, $_state, outputType,
@@ -145,7 +145,7 @@ def Tosa_FCOpQuantInfoBuilder : OpBuilderDAG<
 // op must be constructed where the weight is not a constant. In this case,
 // the fully_connected op must be expressed using matmul.
 // TODO: Add link to the leglization document explaining this.
-def Tosa_MatMulOpQuantInfoBuilder : OpBuilderDAG<
+def Tosa_MatMulOpQuantInfoBuilder : OpBuilder<
   (ins "Type":$outputType, "Value":$a, "Value":$b),
   [{
     buildMatMulOpWithQuantInfo($_builder, $_state, outputType,
@@ -155,7 +155,7 @@ def Tosa_MatMulOpQuantInfoBuilder : OpBuilderDAG<
 // Both the tosa.avg_pool2d and unary ops use the same
 // UnaruOpQuantizationAttr but the avg_pool operator has its own builder as it
 // has additional parameters not part of the unary ops.
-def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilderDAG<
+def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilder<
   (ins "Type":$outputType, "Value":$input, "ArrayAttr":$kernel,
        "ArrayAttr":$stride, "ArrayAttr":$pad),
   [{
@@ -166,7 +166,7 @@ def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilderDAG<
 // This builder is called on single-parameter unary operators that have a scale
 // relationship between their input and output, expressed by the
 // UnaryOpQuantizationAttr.
-def Tosa_UnaryOpQuantInfoBuilder : OpBuilderDAG<
+def Tosa_UnaryOpQuantInfoBuilder : OpBuilder<
   (ins "Type":$outputType, "Value":$input),
   [{
     buildUnaryOpWithQuantInfo($_builder, $_state, outputType, input);
@@ -175,7 +175,7 @@ def Tosa_UnaryOpQuantInfoBuilder : OpBuilderDAG<
 // This builder is called on the TOSA pad operator that needs to create its own
 // OptionalAttr quantization_attr parameter to scale the padding values
 // correctly.
-def Tosa_PadOpQuantInfoBuilder : OpBuilderDAG<
+def Tosa_PadOpQuantInfoBuilder : OpBuilder<
   (ins "Type":$outputType, "Value":$input, "Value":$paddings),
   [{
     buildPadOpWithQuantInfo($_builder, $_state, outputType,

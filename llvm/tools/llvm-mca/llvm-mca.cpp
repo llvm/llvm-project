@@ -257,14 +257,15 @@ static void processOptionImpl(cl::opt<bool> &O, const cl::opt<bool> &Default) {
     O = Default.getValue();
 }
 
-static void processViewOptions() {
+static void processViewOptions(bool IsOutOfOrder) {
   if (!EnableAllViews.getNumOccurrences() &&
       !EnableAllStats.getNumOccurrences())
     return;
 
   if (EnableAllViews.getNumOccurrences()) {
     processOptionImpl(PrintSummaryView, EnableAllViews);
-    processOptionImpl(EnableBottleneckAnalysis, EnableAllViews);
+    if (IsOutOfOrder)
+      processOptionImpl(EnableBottleneckAnalysis, EnableAllViews);
     processOptionImpl(PrintResourcePressureView, EnableAllViews);
     processOptionImpl(PrintTimelineView, EnableAllViews);
     processOptionImpl(PrintInstructionInfoView, EnableAllViews);
@@ -327,9 +328,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Apply overrides to llvm-mca specific options.
-  processViewOptions();
-
   if (MCPU == "native")
     MCPU = std::string(llvm::sys::getHostCPUName());
 
@@ -339,10 +337,10 @@ int main(int argc, char **argv) {
   if (!STI->isCPUStringValid(MCPU))
     return 1;
 
-  if (!PrintInstructionTables && !STI->getSchedModel().isOutOfOrder()) {
-    WithColor::error() << "please specify an out-of-order cpu. '" << MCPU
-                       << "' is an in-order cpu.\n";
-    return 1;
+  bool IsOutOfOrder = STI->getSchedModel().isOutOfOrder();
+  if (!PrintInstructionTables && !IsOutOfOrder) {
+    WithColor::warning() << "support for in-order CPU '" << MCPU
+                         << "' is experimental.\n";
   }
 
   if (!STI->getSchedModel().hasInstrSchedModel()) {
@@ -357,6 +355,9 @@ int main(int argc, char **argv) {
           << "instruction itineraries are currently unsupported.\n";
     return 1;
   }
+
+  // Apply overrides to llvm-mca specific options.
+  processViewOptions(IsOutOfOrder);
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
   assert(MRI && "Unable to create target register info!");
@@ -539,6 +540,11 @@ int main(int argc, char **argv) {
           std::make_unique<mca::SummaryView>(SM, Insts, DispatchWidth));
 
     if (EnableBottleneckAnalysis) {
+      if (!IsOutOfOrder) {
+        WithColor::warning()
+            << "bottleneck analysis is not supported for in-order CPU '" << MCPU
+            << "'.\n";
+      }
       Printer.addView(std::make_unique<mca::BottleneckAnalysis>(
           *STI, *IP, Insts, S.getNumIterations()));
     }

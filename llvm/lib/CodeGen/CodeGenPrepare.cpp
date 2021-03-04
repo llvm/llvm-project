@@ -377,6 +377,7 @@ class TypePromotionTransaction;
     }
 
     void removeAllAssertingVHReferences(Value *V);
+    bool eliminateAssumptions(Function &F);
     bool eliminateFallThrough(Function &F);
     bool eliminateMostlyEmptyBlocks(Function &F);
     BasicBlock *findDestBlockOfMergeableEmptyBlock(BasicBlock *BB);
@@ -506,6 +507,11 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     }
   }
 
+  // Get rid of @llvm.assume builtins before attempting to eliminate empty
+  // blocks, since there might be blocks that only contain @llvm.assume calls
+  // (plus arguments that we can get rid of).
+  EverMadeChange |= eliminateAssumptions(F);
+
   // Eliminate blocks that contain only PHI nodes and an
   // unconditional branch.
   EverMadeChange |= eliminateMostlyEmptyBlocks(F);
@@ -612,6 +618,28 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
 #endif
 
   return EverMadeChange;
+}
+
+bool CodeGenPrepare::eliminateAssumptions(Function &F) {
+  bool MadeChange = false;
+  for (BasicBlock &BB : F) {
+    CurInstIterator = BB.begin();
+    while (CurInstIterator != BB.end()) {
+      Instruction *I = &*(CurInstIterator++);
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+        if (II->getIntrinsicID() != Intrinsic::assume)
+          continue;
+        MadeChange = true;
+        Value *Operand = II->getOperand(0);
+        II->eraseFromParent();
+
+        resetIteratorIfInvalidatedWhileCalling(&BB, [&]() {
+          RecursivelyDeleteTriviallyDeadInstructions(Operand, TLInfo, nullptr);
+        });
+      }
+    }
+  }
+  return MadeChange;
 }
 
 /// An instruction is about to be deleted, so remove all references to it in our
@@ -1276,23 +1304,49 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   return SinkCast(CI);
 }
 
+/// If given \p PN is an inductive variable with value IVInc coming from the
+/// backedge, and on each iteration it gets increased by Step, return pair
+/// <IVInc, Step>. Otherwise, return None.
+static Optional<std::pair<Instruction *, Constant *> >
+getIVIncrement(const PHINode *PN, const LoopInfo *LI) {
+  const Loop *L = LI->getLoopFor(PN->getParent());
+  if (!L || L->getHeader() != PN->getParent() || !L->getLoopLatch())
+    return None;
+  auto *IVInc =
+      dyn_cast<Instruction>(PN->getIncomingValueForBlock(L->getLoopLatch()));
+  if (!IVInc)
+    return None;
+  Constant *Step = nullptr;
+  if (match(IVInc, m_Sub(m_Specific(PN), m_Constant(Step))))
+    return std::make_pair(IVInc, ConstantExpr::getNeg(Step));
+  if (match(IVInc, m_Add(m_Specific(PN), m_Constant(Step))))
+    return std::make_pair(IVInc, Step);
+  if (match(IVInc, m_ExtractValue<0>(m_Intrinsic<Intrinsic::usub_with_overflow>(
+                       m_Specific(PN), m_Constant(Step)))))
+    return std::make_pair(IVInc, ConstantExpr::getNeg(Step));
+  if (match(IVInc, m_ExtractValue<0>(m_Intrinsic<Intrinsic::uadd_with_overflow>(
+                       m_Specific(PN), m_Constant(Step)))))
+    return std::make_pair(IVInc, Step);
+  return None;
+}
+
+static bool isIVIncrement(const BinaryOperator *BO, const LoopInfo *LI) {
+  auto *PN = dyn_cast<PHINode>(BO->getOperand(0));
+  if (!PN)
+    return false;
+  if (auto IVInc = getIVIncrement(PN, LI))
+    return IVInc->first == BO;
+  return false;
+}
+
 bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
                                                  Value *Arg0, Value *Arg1,
                                                  CmpInst *Cmp,
                                                  Intrinsic::ID IID) {
-  auto isIVIncrement = [this, &Cmp](BinaryOperator *BO) {
-    auto *PN = dyn_cast<PHINode>(BO->getOperand(0));
-    if (!PN)
+  auto IsReplacableIVIncrement = [this, &Cmp](BinaryOperator *BO) {
+    if (!isIVIncrement(BO, LI))
       return false;
     const Loop *L = LI->getLoopFor(BO->getParent());
-    if (!L || L->getHeader() != PN->getParent() || !L->getLoopLatch())
-      return false;
-    const BasicBlock *Latch = L->getLoopLatch();
-    if (PN->getIncomingValueForBlock(Latch) != BO)
-      return false;
-    if (auto *Step = dyn_cast<Instruction>(BO->getOperand(1)))
-      if (L->contains(Step->getParent()))
-        return false;
     // IV increment may have other users than the IV. We do not want to make
     // dominance queries to analyze the legality of moving it towards the cmp,
     // so just check that there is no other users.
@@ -1305,9 +1359,9 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     // cheap check because no CFG changes & dom tree recomputation happens
     // during the transform.
     Function *F = BO->getParent()->getParent();
-    return getDT(*F).dominates(Cmp->getParent(), Latch);
+    return getDT(*F).dominates(Cmp->getParent(), L->getLoopLatch());
   };
-  if (BO->getParent() != Cmp->getParent() && !isIVIncrement(BO)) {
+  if (BO->getParent() != Cmp->getParent() && !IsReplacableIVIncrement(BO)) {
     // We used to use a dominator tree here to allow multi-block optimization.
     // But that was problematic because:
     // 1. It could cause a perf regression by hoisting the math op into the
@@ -2092,18 +2146,8 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
   if (II) {
     switch (II->getIntrinsicID()) {
     default: break;
-    case Intrinsic::assume: {
-      Value *Operand = II->getOperand(0);
-      II->eraseFromParent();
-      // Prune the operand, it's most likely dead.
-      resetIteratorIfInvalidatedWhileCalling(BB, [&]() {
-        RecursivelyDeleteTriviallyDeadInstructions(
-            Operand, TLInfo, nullptr,
-            [&](Value *V) { removeAllAssertingVHReferences(V); });
-      });
-      return true;
-    }
-
+    case Intrinsic::assume:
+      llvm_unreachable("llvm.assume should have been removed already");
     case Intrinsic::experimental_widenable_condition: {
       // Give up on future widening oppurtunties so that we can fold away dead
       // paths and merge blocks before going into block-local instruction
@@ -3038,6 +3082,8 @@ class AddressingModeMatcher {
   const TargetLowering &TLI;
   const TargetRegisterInfo &TRI;
   const DataLayout &DL;
+  const LoopInfo &LI;
+  const DominatorTree &DT;
 
   /// AccessTy/MemoryInst - This is the type for the access (e.g. double) and
   /// the memory instruction that we're computing this address for.
@@ -3073,16 +3119,17 @@ class AddressingModeMatcher {
 
   AddressingModeMatcher(
       SmallVectorImpl<Instruction *> &AMI, const TargetLowering &TLI,
-      const TargetRegisterInfo &TRI, Type *AT, unsigned AS, Instruction *MI,
+      const TargetRegisterInfo &TRI, const LoopInfo &LI,
+      const DominatorTree &DT, Type *AT, unsigned AS, Instruction *MI,
       ExtAddrMode &AM, const SetOfInstrs &InsertedInsts,
       InstrToOrigTy &PromotedInsts, TypePromotionTransaction &TPT,
       std::pair<AssertingVH<GetElementPtrInst>, int64_t> &LargeOffsetGEP,
       bool OptSize, ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI)
       : AddrModeInsts(AMI), TLI(TLI), TRI(TRI),
-        DL(MI->getModule()->getDataLayout()), AccessTy(AT), AddrSpace(AS),
-        MemoryInst(MI), AddrMode(AM), InsertedInsts(InsertedInsts),
-        PromotedInsts(PromotedInsts), TPT(TPT), LargeOffsetGEP(LargeOffsetGEP),
-        OptSize(OptSize), PSI(PSI), BFI(BFI) {
+        DL(MI->getModule()->getDataLayout()), LI(LI), DT(DT), AccessTy(AT),
+        AddrSpace(AS), MemoryInst(MI), AddrMode(AM),
+        InsertedInsts(InsertedInsts), PromotedInsts(PromotedInsts), TPT(TPT),
+        LargeOffsetGEP(LargeOffsetGEP), OptSize(OptSize), PSI(PSI), BFI(BFI) {
     IgnoreProfitability = false;
   }
 
@@ -3097,18 +3144,17 @@ public:
   static ExtAddrMode
   Match(Value *V, Type *AccessTy, unsigned AS, Instruction *MemoryInst,
         SmallVectorImpl<Instruction *> &AddrModeInsts,
-        const TargetLowering &TLI, const TargetRegisterInfo &TRI,
-        const SetOfInstrs &InsertedInsts, InstrToOrigTy &PromotedInsts,
-        TypePromotionTransaction &TPT,
+        const TargetLowering &TLI, const LoopInfo &LI, const DominatorTree &DT,
+        const TargetRegisterInfo &TRI, const SetOfInstrs &InsertedInsts,
+        InstrToOrigTy &PromotedInsts, TypePromotionTransaction &TPT,
         std::pair<AssertingVH<GetElementPtrInst>, int64_t> &LargeOffsetGEP,
         bool OptSize, ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
     ExtAddrMode Result;
 
-    bool Success = AddressingModeMatcher(AddrModeInsts, TLI, TRI, AccessTy, AS,
-                                         MemoryInst, Result, InsertedInsts,
-                                         PromotedInsts, TPT, LargeOffsetGEP,
-                                         OptSize, PSI, BFI)
-                       .matchAddr(V, 0);
+    bool Success = AddressingModeMatcher(
+        AddrModeInsts, TLI, TRI, LI, DT, AccessTy, AS, MemoryInst, Result,
+        InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI,
+        BFI).matchAddr(V, 0);
     (void)Success; assert(Success && "Couldn't select *anything*?");
     return Result;
   }
@@ -3804,10 +3850,12 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
 
   // Okay, we decided that we can add ScaleReg+Scale to AddrMode.  Check now
   // to see if ScaleReg is actually X+C.  If so, we can turn this into adding
-  // X*Scale + C*Scale to addr mode.
+  // X*Scale + C*Scale to addr mode. If we found available IV increment, do not
+  // go any further: we can reuse it and cannot eliminate it.
   ConstantInt *CI = nullptr; Value *AddLHS = nullptr;
-  if (isa<Instruction>(ScaleReg) &&  // not a constant expr.
+  if (isa<Instruction>(ScaleReg) && // not a constant expr.
       match(ScaleReg, m_Add(m_Value(AddLHS), m_ConstantInt(CI))) &&
+      !isIVIncrement(cast<BinaryOperator>(ScaleReg), &LI) &&
       CI->getValue().isSignedIntN(64)) {
     TestAddrMode.InBounds = false;
     TestAddrMode.ScaledReg = AddLHS;
@@ -3820,9 +3868,65 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
       AddrMode = TestAddrMode;
       return true;
     }
+    // Restore status quo.
+    TestAddrMode = AddrMode;
   }
 
-  // Otherwise, not (x+c)*scale, just return what we have.
+  auto GetConstantStep = [this](const Value * V)
+      ->Optional<std::pair<Instruction *, APInt> > {
+    auto *PN = dyn_cast<PHINode>(V);
+    if (!PN)
+      return None;
+    auto IVInc = getIVIncrement(PN, &LI);
+    if (!IVInc)
+      return None;
+    // TODO: The result of the intrinsics above is two-compliment. However when
+    // IV inc is expressed as add or sub, iv.next is potentially a poison value.
+    // If it has nuw or nsw flags, we need to make sure that these flags are
+    // inferrable at the point of memory instruction. Otherwise we are replacing
+    // well-defined two-compliment computation with poison. Currently, to avoid
+    // potentially complex analysis needed to prove this, we reject such cases.
+    if (auto *OIVInc = dyn_cast<OverflowingBinaryOperator>(IVInc->first))
+      if (OIVInc->hasNoSignedWrap() || OIVInc->hasNoUnsignedWrap())
+        return None;
+    if (auto *ConstantStep = dyn_cast<ConstantInt>(IVInc->second))
+      return std::make_pair(IVInc->first, ConstantStep->getValue());
+    return None;
+  };
+
+  // Try to account for the following special case:
+  // 1. ScaleReg is an inductive variable;
+  // 2. We use it with non-zero offset;
+  // 3. IV's increment is available at the point of memory instruction.
+  //
+  // In this case, we may reuse the IV increment instead of the IV Phi to
+  // achieve the following advantages:
+  // 1. If IV step matches the offset, we will have no need in the offset;
+  // 2. Even if they don't match, we will reduce the overlap of living IV
+  //    and IV increment, that will potentially lead to better register
+  //    assignment.
+  if (AddrMode.BaseOffs) {
+    if (auto IVStep = GetConstantStep(ScaleReg)) {
+      Instruction *IVInc = IVStep->first;
+      APInt Step = IVStep->second;
+      APInt Offset = Step * AddrMode.Scale;
+      if (Offset.isSignedIntN(64) && DT.dominates(IVInc, MemoryInst)) {
+        TestAddrMode.InBounds = false;
+        TestAddrMode.ScaledReg = IVInc;
+        TestAddrMode.BaseOffs -= Offset.getLimitedValue();
+        // If this addressing mode is legal, commit it..
+        if (TLI.isLegalAddressingMode(DL, TestAddrMode, AccessTy, AddrSpace)) {
+          AddrModeInsts.push_back(cast<Instruction>(IVInc));
+          AddrMode = TestAddrMode;
+          return true;
+        }
+        // Restore status quo.
+        TestAddrMode = AddrMode;
+      }
+    }
+  }
+
+  // Otherwise, just return what we have.
   return true;
 }
 
@@ -4912,9 +5016,10 @@ isProfitableToFoldIntoAddressingMode(Instruction *I, ExtAddrMode &AMBefore,
                                                                       0);
     TypePromotionTransaction::ConstRestorationPt LastKnownGood =
         TPT.getRestorationPoint();
-    AddressingModeMatcher Matcher(
-        MatchedAddrModeInsts, TLI, TRI, AddressAccessTy, AS, MemoryInst, Result,
-        InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI, BFI);
+    AddressingModeMatcher Matcher(MatchedAddrModeInsts, TLI, TRI, LI, DT,
+                                  AddressAccessTy, AS, MemoryInst, Result,
+                                  InsertedInsts, PromotedInsts, TPT,
+                                  LargeOffsetGEP, OptSize, PSI, BFI);
     Matcher.IgnoreProfitability = true;
     bool Success = Matcher.matchAddr(Address, 0);
     (void)Success; assert(Success && "Couldn't select *anything*?");
@@ -5017,9 +5122,10 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     AddrModeInsts.clear();
     std::pair<AssertingVH<GetElementPtrInst>, int64_t> LargeOffsetGEP(nullptr,
                                                                       0);
+    Function *F = MemoryInst->getParent()->getParent();
     ExtAddrMode NewAddrMode = AddressingModeMatcher::Match(
-        V, AccessTy, AddrSpace, MemoryInst, AddrModeInsts, *TLI, *TRI,
-        InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI,
+        V, AccessTy, AddrSpace, MemoryInst, AddrModeInsts, *TLI, *LI, getDT(*F),
+        *TRI, InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI,
         BFI.get());
 
     GetElementPtrInst *GEP = LargeOffsetGEP.first;

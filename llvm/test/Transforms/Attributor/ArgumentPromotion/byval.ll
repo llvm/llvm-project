@@ -152,15 +152,15 @@ define i32 @main() nounwind  {
 ; IS__TUNIT_NPM-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; IS__TUNIT_NPM-NEXT:    store i64 2, i64* [[TMP4]], align 4
-; IS__TUNIT_NPM-NEXT:    [[S_CAST:%.*]] = bitcast %struct.ss* [[S]] to i32*
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[S_CAST]], align 8
-; IS__TUNIT_NPM-NEXT:    [[S_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i64, i64* [[S_0_1]], align 8
-; IS__TUNIT_NPM-NEXT:    [[C0:%.*]] = call i32 @f(i32 [[TMP0]], i64 [[TMP1]]) [[ATTR0]]
 ; IS__TUNIT_NPM-NEXT:    [[S_CAST1:%.*]] = bitcast %struct.ss* [[S]] to i32*
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[S_CAST1]], align 32
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[S_CAST1]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[S_0_12:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load i64, i64* [[S_0_12]], align 32
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i64, i64* [[S_0_12]], align 8
+; IS__TUNIT_NPM-NEXT:    [[C0:%.*]] = call i32 @f(i32 [[TMP0]], i64 [[TMP1]]) [[ATTR0]]
+; IS__TUNIT_NPM-NEXT:    [[S_CAST:%.*]] = bitcast %struct.ss* [[S]] to i32*
+; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[S_CAST]], align 32
+; IS__TUNIT_NPM-NEXT:    [[S_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
+; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load i64, i64* [[S_0_1]], align 32
 ; IS__TUNIT_NPM-NEXT:    [[C1:%.*]] = call i32 @g(i32 [[TMP2]], i64 [[TMP3]]) [[ATTR0]]
 ; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = add i32 [[C0]], [[C1]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[A]]

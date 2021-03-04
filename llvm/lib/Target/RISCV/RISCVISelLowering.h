@@ -100,6 +100,9 @@ enum NodeType : unsigned {
   // VMV_X_S matches the semantics of vmv.x.s. The result is always XLenVT sign
   // extended from the vector element size.
   VMV_X_S,
+  // VMV_S_XF_VL matches the semantics of vmv.s.x/vmv.s.f, depending on the
+  // types of its operands. It carries a VL operand.
+  VMV_S_XF_VL,
   // Splats an i64 scalar to a vector type (with element type i64) where the
   // scalar is a sign-extended i32.
   SPLAT_VECTOR_I64,
@@ -243,6 +246,9 @@ public:
                     bool ForCodeSize) const override;
 
   bool hasBitPreservingFPLogic(EVT VT) const override;
+  bool
+  shouldExpandBuildVectorWithShuffles(EVT VT,
+                                      unsigned DefinedValues) const override;
 
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;

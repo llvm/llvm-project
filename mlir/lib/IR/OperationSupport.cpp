@@ -361,23 +361,6 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
 }
 
 //===----------------------------------------------------------------------===//
-// ResultStorage
-//===----------------------------------------------------------------------===//
-
-/// Returns the parent operation of this trailing result.
-Operation *detail::TrailingOpResult::getOwner() {
-  // We need to do some arithmetic to get the operation pointer. Trailing
-  // results are stored in reverse order before the inline results of the
-  // operation, so move the trailing owner up to the start of the array.
-  TrailingOpResult *trailingIt = this + (trailingResultNumber + 1);
-
-  // Move the owner past the inline op results to get to the operation.
-  auto *inlineResultIt = reinterpret_cast<InLineOpResult *>(trailingIt) +
-                         OpResult::getMaxInlineResults();
-  return reinterpret_cast<Operation *>(inlineResultIt);
-}
-
-//===----------------------------------------------------------------------===//
 // Operation Value-Iterators
 //===----------------------------------------------------------------------===//
 
@@ -484,21 +467,6 @@ void MutableOperandRange::updateLength(unsigned newLength) {
 }
 
 //===----------------------------------------------------------------------===//
-// ResultRange
-
-ResultRange::ResultRange(Operation *op)
-    : ResultRange(op, /*startIndex=*/0, op->getNumResults()) {}
-
-ArrayRef<Type> ResultRange::getTypes() const {
-  return getBase()->getResultTypes().slice(getStartIndex(), size());
-}
-
-/// See `llvm::indexed_accessor_range` for details.
-OpResult ResultRange::dereference(Operation *op, ptrdiff_t index) {
-  return op->getResult(index);
-}
-
-//===----------------------------------------------------------------------===//
 // ValueRange
 
 ValueRange::ValueRange(ArrayRef<Value> values)
@@ -506,28 +474,24 @@ ValueRange::ValueRange(ArrayRef<Value> values)
 ValueRange::ValueRange(OperandRange values)
     : ValueRange(values.begin().getBase(), values.size()) {}
 ValueRange::ValueRange(ResultRange values)
-    : ValueRange(
-          {values.getBase(), static_cast<unsigned>(values.getStartIndex())},
-          values.size()) {}
+    : ValueRange(values.getBase(), values.size()) {}
 
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 ValueRange::OwnerT ValueRange::offset_base(const OwnerT &owner,
                                            ptrdiff_t index) {
-  if (auto *value = owner.ptr.dyn_cast<const Value *>())
+  if (const auto *value = owner.dyn_cast<const Value *>())
     return {value + index};
-  if (auto *operand = owner.ptr.dyn_cast<OpOperand *>())
+  if (auto *operand = owner.dyn_cast<OpOperand *>())
     return {operand + index};
-  Operation *operation = reinterpret_cast<Operation *>(owner.ptr.get<void *>());
-  return {operation, owner.startIndex + static_cast<unsigned>(index)};
+  return owner.get<detail::OpResultImpl *>()->getNextResultAtOffset(index);
 }
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
-  if (auto *value = owner.ptr.dyn_cast<const Value *>())
+  if (const auto *value = owner.dyn_cast<const Value *>())
     return value[index];
-  if (auto *operand = owner.ptr.dyn_cast<OpOperand *>())
+  if (auto *operand = owner.dyn_cast<OpOperand *>())
     return operand[index].get();
-  Operation *operation = reinterpret_cast<Operation *>(owner.ptr.get<void *>());
-  return operation->getResult(owner.startIndex + index);
+  return owner.get<detail::OpResultImpl *>()->getNextResultAtOffset(index);
 }
 
 //===----------------------------------------------------------------------===//
@@ -538,26 +502,9 @@ llvm::hash_code OperationEquivalence::computeHash(Operation *op, Flags flags) {
   // Hash operations based upon their:
   //   - Operation Name
   //   - Attributes
-  llvm::hash_code hash =
-      llvm::hash_combine(op->getName(), op->getAttrDictionary());
-
   //   - Result Types
-  ArrayRef<Type> resultTypes = op->getResultTypes();
-  switch (resultTypes.size()) {
-  case 0:
-    // We don't need to add anything to the hash.
-    break;
-  case 1:
-    // Add in the result type.
-    hash = llvm::hash_combine(hash, resultTypes.front());
-    break;
-  default:
-    // Use the type buffer as the hash, as we can guarantee it is the same for
-    // any given range of result types. This takes advantage of the fact the
-    // result types >1 are stored in a TupleType and uniqued.
-    hash = llvm::hash_combine(hash, resultTypes.data());
-    break;
-  }
+  llvm::hash_code hash = llvm::hash_combine(
+      op->getName(), op->getAttrDictionary(), op->getResultTypes());
 
   //   - Operands
   bool ignoreOperands = flags & Flags::IgnoreOperands;
@@ -584,26 +531,8 @@ bool OperationEquivalence::isEquivalentTo(Operation *lhs, Operation *rhs,
   if (lhs->getAttrDictionary() != rhs->getAttrDictionary())
     return false;
   // Compare result types.
-  ArrayRef<Type> lhsResultTypes = lhs->getResultTypes();
-  ArrayRef<Type> rhsResultTypes = rhs->getResultTypes();
-  if (lhsResultTypes.size() != rhsResultTypes.size())
+  if (lhs->getResultTypes() != rhs->getResultTypes())
     return false;
-  switch (lhsResultTypes.size()) {
-  case 0:
-    break;
-  case 1:
-    // Compare the single result type.
-    if (lhsResultTypes.front() != rhsResultTypes.front())
-      return false;
-    break;
-  default:
-    // Use the type buffer for the comparison, as we can guarantee it is the
-    // same for any given range of result types. This takes advantage of the
-    // fact the result types >1 are stored in a TupleType and uniqued.
-    if (lhsResultTypes.data() != rhsResultTypes.data())
-      return false;
-    break;
-  }
   // Compare operands.
   bool ignoreOperands = flags & Flags::IgnoreOperands;
   if (ignoreOperands)

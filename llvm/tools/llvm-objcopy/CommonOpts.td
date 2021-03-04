@@ -99,7 +99,8 @@ def X : Flag<["-"], "X">,
 
 def discard_all
     : Flag<["--"], "discard-all">,
-      HelpText<"Remove all local symbols except file and section symbols">;
+      HelpText<"Remove all local symbols except file and section symbols. Also "
+               "remove all debug sections">;
 def x : Flag<["-"], "x">,
         Alias<discard_all>,
         HelpText<"Alias for --discard-all">;

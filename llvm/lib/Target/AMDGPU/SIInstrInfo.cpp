@@ -1943,16 +1943,29 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.eraseFromParent();
     break;
   }
-  case AMDGPU::ENTER_WWM: {
+  case AMDGPU::ENTER_STRICT_WWM: {
     // This only gets its own opcode so that SIPreAllocateWWMRegs can tell when
-    // WWM is entered.
+    // Whole Wave Mode is entered.
     MI.setDesc(get(ST.isWave32() ? AMDGPU::S_OR_SAVEEXEC_B32
                                  : AMDGPU::S_OR_SAVEEXEC_B64));
     break;
   }
-  case AMDGPU::EXIT_WWM: {
+  case AMDGPU::ENTER_STRICT_WQM: {
     // This only gets its own opcode so that SIPreAllocateWWMRegs can tell when
-    // WWM is exited.
+    // STRICT_WQM is entered.
+    const unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+    const unsigned WQMOp = ST.isWave32() ? AMDGPU::S_WQM_B32 : AMDGPU::S_WQM_B64;
+    const unsigned MovOp = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+    BuildMI(MBB, MI, DL, get(MovOp), MI.getOperand(0).getReg()).addReg(Exec);
+    BuildMI(MBB, MI, DL, get(WQMOp), Exec).addReg(Exec);
+
+    MI.eraseFromParent();
+    break;
+  }
+  case AMDGPU::EXIT_STRICT_WWM:
+  case AMDGPU::EXIT_STRICT_WQM: {
+    // This only gets its own opcode so that SIPreAllocateWWMRegs can tell when
+    // WWM/STICT_WQM is exited.
     MI.setDesc(get(ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64));
     break;
   }
@@ -2376,8 +2389,6 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
     case AMDGPU::SI_ELSE:
     case AMDGPU::SI_KILL_I1_TERMINATOR:
     case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
-    case AMDGPU::SI_DEMOTE_CLEANUP_B32_TERMINATOR:
-    case AMDGPU::SI_DEMOTE_CLEANUP_B64_TERMINATOR:
       // FIXME: It's messy that these need to be considered here at all.
       return true;
     default:
@@ -4419,7 +4430,8 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::INSERT_SUBREG: return AMDGPU::INSERT_SUBREG;
   case AMDGPU::WQM: return AMDGPU::WQM;
   case AMDGPU::SOFT_WQM: return AMDGPU::SOFT_WQM;
-  case AMDGPU::WWM: return AMDGPU::WWM;
+  case AMDGPU::STRICT_WWM: return AMDGPU::STRICT_WWM;
+  case AMDGPU::STRICT_WQM: return AMDGPU::STRICT_WQM;
   case AMDGPU::S_MOV_B32: {
     const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
     return MI.getOperand(1).isReg() ||
@@ -5755,6 +5767,11 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
       Inst.eraseFromParent();
       continue;
 
+    case AMDGPU::S_BREV_B64:
+      splitScalar64BitUnaryOp(Worklist, Inst, AMDGPU::S_BREV_B32, true);
+      Inst.eraseFromParent();
+      continue;
+
     case AMDGPU::S_NOT_B64:
       splitScalar64BitUnaryOp(Worklist, Inst, AMDGPU::S_NOT_B32);
       Inst.eraseFromParent();
@@ -6306,7 +6323,7 @@ void SIInstrInfo::splitScalarBinOpN2(SetVectorType& Worklist,
 
 void SIInstrInfo::splitScalar64BitUnaryOp(
     SetVectorType &Worklist, MachineInstr &Inst,
-    unsigned Opcode) const {
+    unsigned Opcode, bool Swap) const {
   MachineBasicBlock &MBB = *Inst.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
 
@@ -6338,6 +6355,9 @@ void SIInstrInfo::splitScalar64BitUnaryOp(
 
   Register DestSub1 = MRI.createVirtualRegister(NewDestSubRC);
   MachineInstr &HiHalf = *BuildMI(MBB, MII, DL, InstDesc, DestSub1).add(SrcReg0Sub1);
+
+  if (Swap)
+    std::swap(DestSub0, DestSub1);
 
   Register FullDestReg = MRI.createVirtualRegister(NewDestRC);
   BuildMI(MBB, MII, DL, get(TargetOpcode::REG_SEQUENCE), FullDestReg)
@@ -6648,7 +6668,8 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
     case AMDGPU::COPY:
     case AMDGPU::WQM:
     case AMDGPU::SOFT_WQM:
-    case AMDGPU::WWM:
+    case AMDGPU::STRICT_WWM:
+    case AMDGPU::STRICT_WQM:
     case AMDGPU::REG_SEQUENCE:
     case AMDGPU::PHI:
     case AMDGPU::INSERT_SUBREG:
@@ -6817,7 +6838,8 @@ const TargetRegisterClass *SIInstrInfo::getDestEquivalentVGPRClass(
   case AMDGPU::INSERT_SUBREG:
   case AMDGPU::WQM:
   case AMDGPU::SOFT_WQM:
-  case AMDGPU::WWM: {
+  case AMDGPU::STRICT_WWM:
+  case AMDGPU::STRICT_WQM: {
     const TargetRegisterClass *SrcRC = getOpRegClass(Inst, 1);
     if (RI.hasAGPRs(SrcRC)) {
       if (RI.hasAGPRs(NewDstRC))
@@ -7307,8 +7329,6 @@ bool SIInstrInfo::isKillTerminator(unsigned Opcode) {
   switch (Opcode) {
   case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
   case AMDGPU::SI_KILL_I1_TERMINATOR:
-  case AMDGPU::SI_DEMOTE_CLEANUP_B32_TERMINATOR:
-  case AMDGPU::SI_DEMOTE_CLEANUP_B64_TERMINATOR:
     return true;
   default:
     return false;

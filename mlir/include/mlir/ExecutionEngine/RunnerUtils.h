@@ -191,6 +191,16 @@ void MemRefDataPrinter<T>::printLast(std::ostream &os, T *base, int64_t dim,
   os << "]";
 }
 
+template <typename T, int N> void printMemRefShape(StridedMemRefType<T, N> &M) {
+  std::cout << "Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<T>(M));
+}
+
+template <typename T> void printMemRefShape(UnrankedMemRefType<T> &M) {
+  std::cout << "Unranked Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<T>(M));
+}
+
 template <typename T>
 void printMemRef(const DynamicMemRefType<T> &M) {
   printMemRefMetaData(std::cout, M);
@@ -327,6 +337,17 @@ int64_t verifyMemRef(UnrankedMemRefType<T> &actual,
 ////////////////////////////////////////////////////////////////////////////////
 // Currently exposed C API.
 ////////////////////////////////////////////////////////////////////////////////
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_print_memref_shape_i8(UnrankedMemRefType<int8_t> *M);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_print_memref_shape_i32(UnrankedMemRefType<int32_t> *M);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_print_memref_shape_i64(UnrankedMemRefType<int64_t> *M);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_print_memref_shape_f32(UnrankedMemRefType<float> *M);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_print_memref_shape_f64(UnrankedMemRefType<double> *M);
+
 extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_print_memref_i8(UnrankedMemRefType<int8_t> *M);
 extern "C" MLIR_RUNNERUTILS_EXPORT void

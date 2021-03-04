@@ -14,6 +14,7 @@ scopeName: source.llvm
 patterns:
   - match: "\\bvoid\\b|\
             \\bhalf\\b|\
+            \\bbfloat\\b|\
             \\bfloat\\b|\
             \\bdouble\\b|\
             \\bx86_fp80\\b|\
@@ -22,6 +23,7 @@ patterns:
             \\blabel\\b|\
             \\bmetadata\\b|\
             \\bx86_mmx\\b|\
+            \\bx86_amx\\b|\
             \\btype\\b|\
             \\blabel\\b|\
             \\bopaque\\b|\

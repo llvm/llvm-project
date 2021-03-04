@@ -2556,7 +2556,7 @@ static void print(spirv::ModuleOp moduleOp, OpAsmPrinter &printer) {
     elidedAttrs.push_back(spirv::ModuleOp::getVCETripleAttrName());
   }
 
-  printer.printOptionalAttrDictWithKeyword(moduleOp.getAttrs(), elidedAttrs);
+  printer.printOptionalAttrDictWithKeyword(moduleOp->getAttrs(), elidedAttrs);
   printer.printRegion(moduleOp.body(), /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/false);
 }

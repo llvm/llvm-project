@@ -449,13 +449,22 @@ void Writer::scanRelocations() {
       continue;
     }
 
-    for (Reloc &r : isec->relocs) {
-      if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND))
+    for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
+      Reloc &r = *it;
+      if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
+        // Skip over the following UNSIGNED relocation -- it's just there as the
+        // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
+        // to emit rebase opcodes for it.
+        it = std::next(it);
+        assert(isa<Defined>(it->referent.dyn_cast<lld::macho::Symbol *>()));
         continue;
+      }
       if (auto *sym = r.referent.dyn_cast<lld::macho::Symbol *>()) {
         if (auto *undefined = dyn_cast<Undefined>(sym))
           treatUndefinedSymbol(*undefined);
-        else if (target->validateSymbolRelocation(sym, isec, r))
+        // treatUndefinedSymbol() can replace sym with a DylibSymbol; re-check.
+        if (!isa<Undefined>(sym) &&
+            target->validateSymbolRelocation(sym, isec, r))
           prepareSymbolRelocation(sym, isec, r);
       } else {
         assert(r.referent.is<InputSection *>());
@@ -472,6 +481,8 @@ void Writer::scanSymbols() {
       if (defined->overridesWeakDef)
         in.weakBinding->addNonWeakDefinition(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+      if (dysym->isDynamicLookup())
+        continue;
       dysym->getFile()->refState =
           std::max(dysym->getFile()->refState, dysym->refState);
     }
@@ -695,6 +706,16 @@ static void sortSegmentsAndSections() {
   }
 }
 
+static NamePair maybeRenameSection(NamePair key) {
+  auto newNames = config->sectionRenameMap.find(key);
+  if (newNames != config->sectionRenameMap.end())
+    return newNames->second;
+  auto newName = config->segmentRenameMap.find(key.first);
+  if (newName != config->segmentRenameMap.end())
+    return std::make_pair(newName->second, key.second);
+  return key;
+}
+
 void Writer::createOutputSections() {
   // First, create hidden sections
   stringTableSection = make<StringTableSection>();
@@ -717,13 +738,12 @@ void Writer::createOutputSections() {
   }
 
   // Then merge input sections into output sections.
-  MapVector<std::pair<StringRef, StringRef>, MergedOutputSection *>
-      mergedOutputSections;
+  MapVector<NamePair, MergedOutputSection *> mergedOutputSections;
   for (InputSection *isec : inputSections) {
-    MergedOutputSection *&osec =
-        mergedOutputSections[{isec->segname, isec->name}];
+    NamePair names = maybeRenameSection({isec->segname, isec->name});
+    MergedOutputSection *&osec = mergedOutputSections[names];
     if (osec == nullptr)
-      osec = make<MergedOutputSection>(isec->name);
+      osec = make<MergedOutputSection>(names.second);
     osec->mergeInput(isec);
   }
 

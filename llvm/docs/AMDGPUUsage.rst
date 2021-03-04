@@ -484,9 +484,13 @@ For example:
                      - ``--offload-arch``         loaded and executed in a process that has a
                                                   matching setting for SRAMECC.
 
-                                                  If not specified, generate code that can be
-                                                  loaded and executed in a process with either
-                                                  setting of SRAMECC.
+                                                  If not specified for code object V2 to V3, generate
+                                                  code that can be loaded and executed in a process
+                                                  with SRAMECC enabled.
+
+                                                  If not specified for code object V4, generate
+                                                  code that can be loaded and executed in a process
+                                                  with either setting of SRAMECC.
 
      tgsplit           ``-m[no-]tgsplit``         Enable/disable generating code that assumes
                                                   work-groups are launched in threadgroup split mode.
@@ -502,20 +506,26 @@ For example:
                      - ``--offload-arch``         loaded and executed in a process that has a
                                                   matching setting for XNACK replay.
 
-                                                  If not specified, generate code that can be
-                                                  loaded and executed in a process with either
-                                                  setting of XNACK replay.
+                                                  If not specified for code object V2 to V3, generate
+                                                  code that can be loaded and executed in a process
+                                                  with XNACK replay enabled.
 
-                                                  This is used for demand paging and page
-                                                  migration. If XNACK replay is enabled in
-                                                  the device, then if a page fault occurs
-                                                  the code may execute incorrectly if the
-                                                  ``xnack`` feature is not enabled. Executing
-                                                  code that has the feature enabled on a
-                                                  device that does not have XNACK replay
-                                                  enabled will execute correctly but may
-                                                  be less performant than code with the
-                                                  feature disabled.
+                                                  If not specified for code object V4, generate
+                                                  code that can be loaded and executed in a process
+                                                  with either setting of XNACK replay.
+
+                                                  XNACK replay can be used for demand paging and
+                                                  page migration. If enabled in the device, then if
+                                                  a page fault occurs the code may execute
+                                                  incorrectly unless generated with XNACK replay
+                                                  enabled, or generated for code object V4 without
+                                                  specifying XNACK replay. Executing code that was
+                                                  generated with XNACK replay enabled, or generated
+                                                  for code object V4 without specifying XNACK replay,
+                                                  on a device that does not have XNACK replay
+                                                  enabled will execute correctly but may be less
+                                                  performant than code generated for XNACK replay
+                                                  disabled.
      =============== ============================ ==================================================
 
 .. _amdgpu-target-id:
@@ -528,7 +538,7 @@ AMDGPU supports target IDs. See `Clang Offload Bundler
 description. The AMDGPU target specific information is:
 
 **processor**
-  Is a AMDGPU processor or alternative processor name specified in
+  Is an AMDGPU processor or alternative processor name specified in
   :ref:`amdgpu-processor-table`. The non-canonical form target ID allows both
   the primary processor and alternative processor names. The canonical form
   target ID only allow the primary processor name.
@@ -4580,7 +4590,7 @@ There are different methods used for initializing flat scratch:
 Private Segment Buffer
 ++++++++++++++++++++++
 
-Private Segment Buffer SGPR register is used to initilize 4 SGPRs
+Private Segment Buffer SGPR register is used to initialize 4 SGPRs
 that are used as a V# to access scratch. CP uses the value provided by the
 runtime. It is used, together with Scratch Wavefront Offset as an offset, to
 access the private memory space using a segment address. See
@@ -6042,7 +6052,7 @@ For GFX90A:
     wavefront.
 
   * No special action is required for coherence between wavefronts in the same
-    work-group since they exeute on the same CU. The exception is when in
+    work-group since they execute on the same CU. The exception is when in
     tgsplit execution mode as wavefronts of the same work-group can be in
     different CUs and so a ``buffer_wbinvl1_vol`` is required as described in
     the following item.

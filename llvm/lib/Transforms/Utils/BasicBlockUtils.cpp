@@ -33,6 +33,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -432,7 +433,7 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
   return !ToBeRemoved.empty();
 }
 
-bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB) {
+bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB, bool RemovePseudoOp) {
   bool MadeChanges = false;
   // By using the "backward scan" strategy before the "forward scan" strategy we
   // can remove both dbg.value (2) and (3) in a situation like this:
@@ -447,6 +448,8 @@ bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB) {
   // already is described as having the value V1 at (1).
   MadeChanges |= removeRedundantDbgInstrsUsingBackwardScan(BB);
   MadeChanges |= removeRedundantDbgInstrsUsingForwardScan(BB);
+  if (RemovePseudoOp)
+    MadeChanges |= removeRedundantPseudoProbes(BB);
 
   if (MadeChanges)
     LLVM_DEBUG(dbgs() << "Removed redundant dbg instrs from: "
@@ -1080,9 +1083,8 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
 
   // If the return instruction returns a value, and if the value was a
   // PHI node in "BB", propagate the right value into the return.
-  for (User::op_iterator i = NewRet->op_begin(), e = NewRet->op_end();
-       i != e; ++i) {
-    Value *V = *i;
+  for (Use &Op : NewRet->operands()) {
+    Value *V = Op;
     Instruction *NewBC = nullptr;
     if (BitCastInst *BCI = dyn_cast<BitCastInst>(V)) {
       // Return value might be bitcasted. Clone and insert it before the
@@ -1090,7 +1092,7 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
       V = BCI->getOperand(0);
       NewBC = BCI->clone();
       Pred->getInstList().insert(NewRet->getIterator(), NewBC);
-      *i = NewBC;
+      Op = NewBC;
     }
 
     Instruction *NewEV = nullptr;
@@ -1102,7 +1104,7 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
         Pred->getInstList().insert(NewBC->getIterator(), NewEV);
       } else {
         Pred->getInstList().insert(NewRet->getIterator(), NewEV);
-        *i = NewEV;
+        Op = NewEV;
       }
     }
 
@@ -1113,7 +1115,7 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
         } else if (NewBC)
           NewBC->setOperand(0, PN->getIncomingValueForBlock(Pred));
         else
-          *i = PN->getIncomingValueForBlock(Pred);
+          Op = PN->getIncomingValueForBlock(Pred);
       }
     }
   }

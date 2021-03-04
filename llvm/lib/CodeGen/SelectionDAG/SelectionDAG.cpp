@@ -5323,6 +5323,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
+    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+      return getNode(ISD::AND, DL, VT, N1, N2);
     if (N2C && (N1.getOpcode() == ISD::VSCALE) && Flags.hasNoSignedWrap()) {
       const APInt &MulImm = N1->getConstantOperandAPInt(0);
       const APInt &N2CImm = N2C->getAPIntValue();
@@ -5606,9 +5608,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                 N1VT.getVectorMinNumElements()) &&
            "Extract subvector overflow!");
     assert(N2C->getAPIntValue().getBitWidth() ==
-               TLI->getVectorIdxTy(getDataLayout())
-                   .getSizeInBits()
-                   .getFixedSize() &&
+               TLI->getVectorIdxTy(getDataLayout()).getFixedSizeInBits() &&
            "Constant index for EXTRACT_SUBVECTOR has an invalid size");
 
     // Trivial extraction.
@@ -5828,6 +5828,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
              cast<ConstantSDNode>(N3)->getZExtValue()) <=
                 VT.getVectorMinNumElements()) &&
            "Insert subvector overflow!");
+    assert(cast<ConstantSDNode>(N3)->getAPIntValue().getBitWidth() ==
+               TLI->getVectorIdxTy(getDataLayout()).getFixedSizeInBits() &&
+           "Constant index for INSERT_SUBVECTOR has an invalid size");
 
     // Trivial insertion.
     if (VT == N2VT)
@@ -9250,17 +9253,17 @@ bool llvm::isNullOrNullSplat(SDValue N, bool AllowUndefs) {
   return C && C->isNullValue();
 }
 
-bool llvm::isOneOrOneSplat(SDValue N) {
+bool llvm::isOneOrOneSplat(SDValue N, bool AllowUndefs) {
   // TODO: may want to use peekThroughBitcast() here.
   unsigned BitWidth = N.getScalarValueSizeInBits();
-  ConstantSDNode *C = isConstOrConstSplat(N);
+  ConstantSDNode *C = isConstOrConstSplat(N, AllowUndefs);
   return C && C->isOne() && C->getValueSizeInBits(0) == BitWidth;
 }
 
-bool llvm::isAllOnesOrAllOnesSplat(SDValue N) {
+bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {
   N = peekThroughBitcasts(N);
   unsigned BitWidth = N.getScalarValueSizeInBits();
-  ConstantSDNode *C = isConstOrConstSplat(N);
+  ConstantSDNode *C = isConstOrConstSplat(N, AllowUndefs);
   return C && C->isAllOnesValue() && C->getValueSizeInBits(0) == BitWidth;
 }
 

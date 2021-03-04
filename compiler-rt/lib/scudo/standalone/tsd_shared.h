@@ -38,13 +38,6 @@ struct TSDRegistrySharedT {
     initLinkerInitialized(Instance);
   }
 
-  void initOnceMaybe(Allocator *Instance) {
-    ScopedLock L(Mutex);
-    if (LIKELY(Initialized))
-      return;
-    initLinkerInitialized(Instance); // Sets Initialized.
-  }
-
   void unmapTestOnly() { setCurrentTSD(nullptr); }
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance,
@@ -144,6 +137,13 @@ private:
   void setDisableMemInit(bool B) {
     *getTlsPtr() &= ~1ULL;
     *getTlsPtr() |= B;
+  }
+
+  void initOnceMaybe(Allocator *Instance) {
+    ScopedLock L(Mutex);
+    if (LIKELY(Initialized))
+      return;
+    initLinkerInitialized(Instance); // Sets Initialized.
   }
 
   NOINLINE void initThread(Allocator *Instance) {

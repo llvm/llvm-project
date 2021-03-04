@@ -87,13 +87,12 @@ public:
   /// operand bundle tags without comparing strings. Keep this in sync with
   /// LLVMContext::LLVMContext().
   enum : unsigned {
-    OB_deopt = 0,                  // "deopt"
-    OB_funclet = 1,                // "funclet"
-    OB_gc_transition = 2,          // "gc-transition"
-    OB_cfguardtarget = 3,          // "cfguardtarget"
-    OB_preallocated = 4,           // "preallocated"
-    OB_gc_live = 5,                // "gc-live"
-    OB_clang_arc_attachedcall = 6, // "clang.arc.attachedcall"
+    OB_deopt = 0,         // "deopt"
+    OB_funclet = 1,       // "funclet"
+    OB_gc_transition = 2, // "gc-transition"
+    OB_cfguardtarget = 3, // "cfguardtarget"
+    OB_preallocated = 4,  // "preallocated"
+    OB_gc_live = 5,       // "gc-live"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
@@ -153,30 +152,9 @@ public:
   void enableDebugTypeODRUniquing();
   void disableDebugTypeODRUniquing();
 
-  using InlineAsmDiagHandlerTy = void (*)(const SMDiagnostic&, void *Context,
-                                          unsigned LocCookie);
-
   /// Defines the type of a yield callback.
   /// \see LLVMContext::setYieldCallback.
   using YieldCallbackTy = void (*)(LLVMContext *Context, void *OpaqueHandle);
-
-  /// setInlineAsmDiagnosticHandler - This method sets a handler that is invoked
-  /// when problems with inline asm are detected by the backend.  The first
-  /// argument is a function pointer and the second is a context pointer that
-  /// gets passed into the DiagHandler.
-  ///
-  /// LLVMContext doesn't take ownership or interpret either of these
-  /// pointers.
-  void setInlineAsmDiagnosticHandler(InlineAsmDiagHandlerTy DiagHandler,
-                                     void *DiagContext = nullptr);
-
-  /// getInlineAsmDiagnosticHandler - Return the diagnostic handler set by
-  /// setInlineAsmDiagnosticHandler.
-  InlineAsmDiagHandlerTy getInlineAsmDiagnosticHandler() const;
-
-  /// getInlineAsmDiagnosticContext - Return the diagnostic context set by
-  /// setInlineAsmDiagnosticHandler.
-  void *getInlineAsmDiagnosticContext() const;
 
   /// setDiagnosticHandlerCallBack - This method sets a handler call back
   /// that is invoked when the backend needs to report anything to the user.

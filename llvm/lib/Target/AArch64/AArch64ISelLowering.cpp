@@ -29,7 +29,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -5712,12 +5711,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   unsigned CallOpc = AArch64ISD::CALL;
-  // Calls with operand bundle "clang.arc.attachedcall" are special. They should
-  // be expanded to the call, directly followed by a special marker sequence.
-  // Use the CALL_RVMARKER to do that.
-  if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
-    assert(!IsTailCall &&
-           "tail calls cannot be marked with clang.arc.attachedcall");
+  // Calls marked with "rv_marker" are special. They should be expanded to the
+  // call, directly followed by a special marker sequence. Use the CALL_RVMARKER
+  // to do that.
+  if (CLI.CB && CLI.CB->hasRetAttr("rv_marker")) {
+    assert(!IsTailCall && "tail calls cannot be marked with rv_marker");
     CallOpc = AArch64ISD::CALL_RVMARKER;
   }
 
@@ -8023,7 +8021,7 @@ static SDValue WidenVector(SDValue V64Reg, SelectionDAG &DAG) {
   SDLoc DL(V64Reg);
 
   return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideTy, DAG.getUNDEF(WideTy),
-                     V64Reg, DAG.getConstant(0, DL, MVT::i32));
+                     V64Reg, DAG.getConstant(0, DL, MVT::i64));
 }
 
 /// getExtFactor - Determine the adjustment factor for the position when
@@ -13217,6 +13215,29 @@ static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
                      DAG.getConstant(0, DL, MVT::i64));
 }
 
+// ADD(UDOT(zero, x, y), A) -->  UDOT(A, x, y)
+static SDValue performAddDotCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  if (N->getOpcode() != ISD::ADD)
+    return SDValue();
+
+  SDValue Dot = N->getOperand(0);
+  SDValue A = N->getOperand(1);
+  // Handle commutivity
+  auto isZeroDot = [](SDValue Dot) {
+    return (Dot.getOpcode() == AArch64ISD::UDOT ||
+            Dot.getOpcode() == AArch64ISD::SDOT) &&
+           ISD::isBuildVectorAllZeros(Dot.getOperand(0).getNode());
+  };
+  if (!isZeroDot(Dot))
+    std::swap(Dot, A);
+  if (!isZeroDot(Dot))
+    return SDValue();
+
+  return DAG.getNode(Dot.getOpcode(), SDLoc(N), VT, A, Dot.getOperand(1),
+                     Dot.getOperand(2));
+}
+
 // The basic add/sub long vector instructions have variants with "2" on the end
 // which act on the high-half of their inputs. They are normally matched by
 // patterns like:
@@ -13275,6 +13296,8 @@ static SDValue performAddSubCombine(SDNode *N,
                                     SelectionDAG &DAG) {
   // Try to change sum of two reductions.
   if (SDValue Val = performUADDVCombine(N, DAG))
+    return Val;
+  if (SDValue Val = performAddDotCombine(N, DAG))
     return Val;
 
   return performAddSubLongCombine(N, DCI, DAG);

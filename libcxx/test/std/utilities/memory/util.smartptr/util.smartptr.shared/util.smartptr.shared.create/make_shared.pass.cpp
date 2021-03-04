@@ -63,7 +63,7 @@ static void resultDeletor(Result (*pf)()) {
 }
 
 void test_pointer_to_function() {
-    { // https://bugs.llvm.org/show_bug.cgi?id=27566
+    { // https://llvm.org/PR27566
       std::shared_ptr<Result()> x(&theFunction, &resultDeletor);
       std::shared_ptr<Result()> y(theFunction, resultDeletor);
     }
@@ -86,7 +86,7 @@ int main(int, char**)
     assert(p->get_char() == 'e');
     }
 
-    { // https://bugs.llvm.org/show_bug.cgi?id=24137
+    { // https://llvm.org/PR24137
     std::shared_ptr<Foo> p1       = std::make_shared<Foo>();
     assert(p1.get());
     std::shared_ptr<const Foo> p2 = std::make_shared<const Foo>();

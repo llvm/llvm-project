@@ -62,12 +62,13 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
     MLIRIR
     MLIRJitRunner
     MLIRLLVMIR
+    MLIRLLVMToLLVMIRTranslation
     MLIRParser
     MLIRSPIRV
     MLIRSPIRVTransforms
     MLIRStandard
     MLIRSupport
-    MLIRTargetLLVMIR
+    MLIRTargetLLVMIRExport
     MLIRTransforms
     MLIRTranslation
     ${Vulkan_LIBRARY}

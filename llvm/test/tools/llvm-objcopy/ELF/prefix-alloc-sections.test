@@ -2,6 +2,15 @@
 # RUN: llvm-objcopy --prefix-alloc-sections=.prefix %t %t2
 # RUN: llvm-readobj --sections %t2 | FileCheck %s
 
+## Show that an empty string is permitted as the argument to
+## --prefix-alloc-sections.
+# RUN: llvm-objcopy --prefix-alloc-sections= %t2 %t3
+# RUN: cmp %t2 %t3
+
+## Show that only the last prefix is applied.
+# RUN: llvm-objcopy --prefix-alloc-sections=.bar --prefix-alloc-sections=.prefix %t %t4
+# RUN: cmp %t2 %t4
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64

@@ -73,10 +73,21 @@ static OmpDirectiveSet simdSet{Directive::OMPD_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd};
 static OmpDirectiveSet taskGeneratingSet{
     OmpDirectiveSet{Directive::OMPD_task} | taskloopSet};
+static OmpClauseSet privateSet{
+    Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
+static OmpClauseSet privateReductionSet{
+    OmpClauseSet{Clause::OMPC_reduction} | privateSet};
 } // namespace omp
 } // namespace llvm
 
 namespace Fortran::semantics {
+
+// Mapping from 'Symbol' to 'Source' to keep track of the variables
+// used in multiple clauses
+using SymbolSourceMap = std::multimap<const Symbol *, parser::CharBlock>;
+// Multimap to check the triple <current_dir, enclosing_dir, enclosing_clause>
+using DirectivesClauseTriple = std::multimap<llvm::omp::Directive,
+    std::pair<llvm::omp::Directive, const OmpClauseSet>>;
 
 class OmpStructureChecker
     : public DirectiveStructureChecker<llvm::omp::Directive, llvm::omp::Clause,
@@ -158,8 +169,10 @@ private:
   void CheckIsVarPartOfAnotherVar(const parser::OmpObjectList &objList);
   void CheckIntentInPointer(
       const parser::OmpObjectList &, const llvm::omp::Clause);
-  void GetSymbolsInObjectList(
-      const parser::OmpObjectList &, std::vector<const Symbol *> &);
+  void GetSymbolsInObjectList(const parser::OmpObjectList &, SymbolSourceMap &);
+  void CheckDefinableObjects(SymbolSourceMap &, const llvm::omp::Clause);
+  void CheckPrivateSymbolsInOuterCxt(
+      SymbolSourceMap &, DirectivesClauseTriple &, const llvm::omp::Clause);
   const parser::Name GetLoopIndex(const parser::DoConstruct *x);
   void SetLoopInfo(const parser::OpenMPLoopConstruct &x);
   void CheckIsLoopIvPartOfClause(

@@ -126,11 +126,9 @@ static Optional<std::string> findFramework(StringRef name) {
 }
 
 static TargetInfo *createTargetInfo(opt::InputArgList &args) {
-  // TODO: should unspecified arch be an error rather than defaulting?
-  // Jez: ld64 seems to make unspecified arch an error when LTO is
-  // being used. I'm not sure why though. Feels like we should be able
-  // to infer the arch from our input files regardless
-  StringRef archName = args.getLastArgValue(OPT_arch, "x86_64");
+  StringRef archName = args.getLastArgValue(OPT_arch);
+  if (archName.empty())
+    fatal("must specify -arch");
   config->arch = MachO::getArchitectureFromName(archName);
   switch (MachO::getCPUTypeFromArchitecture(config->arch).first) {
   case MachO::CPU_TYPE_X86_64:
@@ -560,13 +558,20 @@ static std::string lowerDash(StringRef s) {
                      map_iterator(s.end(), toLowerDash));
 }
 
-static void handlePlatformVersion(const opt::Arg *arg) {
+static PlatformInfo getPlatformVersion(const opt::ArgList &args) {
+  const opt::Arg *arg = args.getLastArg(OPT_platform_version);
+  PlatformInfo platform;
+  if (!arg) {
+    error("must specify -platform_version");
+    return platform;
+  }
+
   StringRef platformStr = arg->getValue(0);
   StringRef minVersionStr = arg->getValue(1);
   StringRef sdkVersionStr = arg->getValue(2);
 
   // TODO(compnerd) see if we can generate this case list via XMACROS
-  config->platform.kind =
+  platform.kind =
       StringSwitch<PlatformKind>(lowerDash(platformStr))
           .Cases("macos", "1", PlatformKind::macOS)
           .Cases("ios", "2", PlatformKind::iOS)
@@ -579,23 +584,25 @@ static void handlePlatformVersion(const opt::Arg *arg) {
           .Cases("watchos-simulator", "9", PlatformKind::watchOSSimulator)
           .Cases("driverkit", "10", PlatformKind::driverKit)
           .Default(PlatformKind::unknown);
-  if (config->platform.kind == PlatformKind::unknown)
+  if (platform.kind == PlatformKind::unknown)
     error(Twine("malformed platform: ") + platformStr);
   // TODO: check validity of version strings, which varies by platform
   // NOTE: ld64 accepts version strings with 5 components
   // llvm::VersionTuple accepts no more than 4 components
   // Has Apple ever published version strings with 5 components?
-  if (config->platform.minimum.tryParse(minVersionStr))
+  if (platform.minimum.tryParse(minVersionStr))
     error(Twine("malformed minimum version: ") + minVersionStr);
-  if (config->platform.sdk.tryParse(sdkVersionStr))
+  if (platform.sdk.tryParse(sdkVersionStr))
     error(Twine("malformed sdk version: ") + sdkVersionStr);
+  return platform;
 }
 
-static void handleUndefined(const opt::Arg *arg) {
-  StringRef treatmentStr = arg->getValue(0);
+static UndefinedSymbolTreatment
+getUndefinedSymbolTreatment(const opt::ArgList &args) {
+  StringRef treatmentStr = args.getLastArgValue(OPT_undefined);
   auto treatment =
       StringSwitch<UndefinedSymbolTreatment>(treatmentStr)
-          .Case("error", UndefinedSymbolTreatment::error)
+          .Cases("error", "", UndefinedSymbolTreatment::error)
           .Case("warning", UndefinedSymbolTreatment::warning)
           .Case("suppress", UndefinedSymbolTreatment::suppress)
           .Case("dynamic_lookup", UndefinedSymbolTreatment::dynamic_lookup)
@@ -613,7 +620,7 @@ static void handleUndefined(const opt::Arg *arg) {
       error("'-undefined suppress' only valid with '-flat_namespace'");
     treatment = UndefinedSymbolTreatment::error;
   }
-  config->undefinedSymbolTreatment = treatment;
+  return treatment;
 }
 
 static void warnIfDeprecatedOption(const opt::Option &opt) {
@@ -712,10 +719,12 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
+  errorHandler().cleanupCallback = []() { freeArena(); };
+
+  errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
   stderrOS.enable_colors(stderrOS.has_colors());
   // TODO: Set up error handler properly, e.g. the errorLimitExceededMsg
 
-  errorHandler().cleanupCallback = []() { freeArena(); };
 
   MachOOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
@@ -750,6 +759,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config = make<Configuration>();
   symtab = make<SymbolTable>();
   target = createTargetInfo(args);
+  config->platform = getPlatformVersion(args);
 
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
                                        /*file=*/nullptr,
@@ -758,6 +768,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     config->explicitUndefineds.push_back(symtab->addUndefined(
         arg->getValue(), /*file=*/nullptr, /*isWeakRef=*/false));
   }
+
+  for (auto *arg : args.filtered(OPT_U))
+    symtab->addDynamicLookup(arg->getValue());
+
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->installName =
       args.getLastArgValue(OPT_install_name, config->outputFile);
@@ -786,16 +800,12 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     config->staticLink = (arg->getOption().getID() == OPT_static);
 
   if (const opt::Arg *arg =
-          args.getLastArg(OPT_flat_namespace, OPT_twolevel_namespace)) {
+          args.getLastArg(OPT_flat_namespace, OPT_twolevel_namespace))
     config->namespaceKind = arg->getOption().getID() == OPT_twolevel_namespace
                                 ? NamespaceKind::twolevel
                                 : NamespaceKind::flat;
-    if (config->namespaceKind == NamespaceKind::flat) {
-      warn("Option '" + arg->getOption().getPrefixedName() +
-           "' is not yet implemented. Stay tuned...");
-      config->namespaceKind = NamespaceKind::twolevel;
-    }
-  }
+
+  config->undefinedSymbolTreatment = getUndefinedSymbolTreatment(args);
 
   config->systemLibraryRoots = getSystemLibraryRoots(args);
   config->librarySearchPaths =
@@ -811,6 +821,24 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       parseDylibVersion(args, OPT_compatibility_version);
   config->dylibCurrentVersion = parseDylibVersion(args, OPT_current_version);
 
+  // Reject every special character except '.' and '$'
+  // TODO(gkm): verify that this is the proper set of invalid chars
+  StringRef invalidNameChars("!\"#%&'()*+,-/:;<=>?@[\\]^`{|}~");
+  auto validName = [invalidNameChars](StringRef s) {
+    if (s.find_first_of(invalidNameChars) != StringRef::npos)
+      error("invalid name for segment or section: " + s);
+    return s;
+  };
+  for (opt::Arg *arg : args.filtered(OPT_rename_section)) {
+    config->sectionRenameMap[{validName(arg->getValue(0)),
+                              validName(arg->getValue(1))}] = {
+        validName(arg->getValue(2)), validName(arg->getValue(3))};
+  }
+  for (opt::Arg *arg : args.filtered(OPT_rename_segment)) {
+    config->segmentRenameMap[validName(arg->getValue(0))] =
+        validName(arg->getValue(1));
+  }
+
   config->saveTemps = args.hasArg(OPT_save_temps);
 
   if (args.hasArg(OPT_v)) {
@@ -823,18 +851,17 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
             (config->frameworkSearchPaths.size()
                  ? "\n\t" + join(config->frameworkSearchPaths, "\n\t")
                  : ""));
-    freeArena();
-    return !errorCount();
   }
 
   initLLVM(); // must be run before any call to addFile()
 
+  // This loop should be reserved for options whose exact ordering matters.
+  // Other options should be handled via filtered() and/or getLastArg().
   for (const auto &arg : args) {
     const auto &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
     warnIfUnimplementedOption(opt);
 
-    // TODO: are any of these better handled via filtered() or getLastArg()?
     switch (opt.getID()) {
     case OPT_INPUT:
       addFile(arg->getValue(), false);
@@ -857,12 +884,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_framework:
     case OPT_weak_framework:
       addFramework(arg->getValue(), opt.getID() == OPT_weak_framework);
-      break;
-    case OPT_platform_version:
-      handlePlatformVersion(arg);
-      break;
-    case OPT_undefined:
-      handleUndefined(arg);
       break;
     default:
       break;

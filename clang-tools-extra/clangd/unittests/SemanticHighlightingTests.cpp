@@ -75,6 +75,7 @@ void checkHighlightings(llvm::StringRef Code,
   TU.Code = std::string(Test.code());
 
   TU.ExtraArgs.push_back("-std=c++20");
+  TU.ExtraArgs.push_back("-xobjective-c++");
 
   for (auto File : AdditionalFiles)
     TU.AdditionalFiles.insert({File.first, std::string(File.second)});
@@ -644,6 +645,48 @@ sizeof...($TemplateParameter[[Elements]]);
       )cpp",
       R"cpp(
       <:[deprecated]:> int $Variable_decl_deprecated[[x]];
+      )cpp",
+      R"cpp(
+        // ObjC: Classes and methods
+        @class $Class_decl[[Forward]];
+
+        @interface $Class_decl[[Foo]]
+        @end
+        @interface $Class_decl[[Bar]] : $Class[[Foo]]
+        -($Class[[id]]) $Method_decl[[x]]:(int)$Parameter_decl[[a]] $Method_decl[[y]]:(int)$Parameter_decl[[b]];
+        +(void) $StaticMethod_decl_static[[explode]];
+        @end
+        @implementation $Class_decl[[Bar]]
+        -($Class[[id]]) $Method_decl[[x]]:(int)$Parameter_decl[[a]] $Method_decl[[y]]:(int)$Parameter_decl[[b]] {
+          return self;
+        }
+        +(void) $StaticMethod_decl_static[[explode]] {}
+        @end
+
+        void $Function_decl[[m]]($Class[[Bar]] *$Parameter_decl[[b]]) {
+          [$Parameter[[b]] $Method[[x]]:1 $Method[[y]]:2];
+          [$Class[[Bar]] $StaticMethod_static[[explode]]];
+        }
+      )cpp",
+      R"cpp(
+        // ObjC: Protocols
+        @protocol $Interface_decl[[Protocol]]
+        @end
+        @protocol $Interface_decl[[Protocol2]] <$Interface[[Protocol]]>
+        @end
+        @interface $Class_decl[[Klass]] <$Interface[[Protocol]]>
+        @end
+        // FIXME: protocol list in ObjCObjectType should be highlighted.
+        id<Protocol> $Variable_decl[[x]];
+      )cpp",
+      R"cpp(
+        // ObjC: Categories
+        @interface $Class_decl[[Foo]]
+        @end
+        @interface $Class[[Foo]]($Namespace_decl[[Bar]])
+        @end
+        @implementation $Class[[Foo]]($Namespace_decl[[Bar]])
+        @end
       )cpp",
   };
   for (const auto &TestCase : TestCases)

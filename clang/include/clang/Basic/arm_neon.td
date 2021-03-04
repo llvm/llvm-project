@@ -646,7 +646,7 @@ def VABS    : SInst<"vabs", "..", "csifQcQsQiQf">;
 def VQABS   : SInst<"vqabs", "..", "csiQcQsQi">;
 def VNEG    : SOpInst<"vneg", "..", "csifQcQsQiQf", OP_NEG>;
 def VQNEG   : SInst<"vqneg", "..", "csiQcQsQi">;
-def VCLS    : SInst<"vcls", "..", "csiQcQsQi">;
+def VCLS    : SInst<"vcls", "S.", "csiUcUsUiQcQsQiQUcQUsQUi">;
 def VCLZ    : IInst<"vclz", "..", "csiUcUsUiQcQsQiQUcQUsQUi">;
 def VCNT    : WInst<"vcnt", "..", "UccPcQUcQcQPc">;
 def VRECPE  : SInst<"vrecpe", "..", "fUiQfQUi">;

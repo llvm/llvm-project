@@ -316,7 +316,8 @@ LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
   Type elementType = unwrap(convertType(type.getElementType()));
   if (!elementType)
     return {};
-  auto ptrTy = LLVM::LLVMPointerType::get(elementType, type.getMemorySpace());
+  auto ptrTy =
+      LLVM::LLVMPointerType::get(elementType, type.getMemorySpaceAsInt());
   auto indexTy = getIndexType();
 
   SmallVector<Type, 5> results = {ptrTy, ptrTy, indexTy};
@@ -388,7 +389,7 @@ Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) {
   Type elementType = unwrap(convertType(type.getElementType()));
   if (!elementType)
     return {};
-  return LLVM::LLVMPointerType::get(elementType, type.getMemorySpace());
+  return LLVM::LLVMPointerType::get(elementType, type.getMemorySpaceAsInt());
 }
 
 /// Convert an n-D vector type to an LLVM vector type via (n-1)-D array type
@@ -1081,7 +1082,8 @@ bool ConvertToLLVMPattern::isConvertibleAndHasIdentityMaps(
 Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
   auto elementType = type.getElementType();
   auto structElementType = unwrap(typeConverter->convertType(elementType));
-  return LLVM::LLVMPointerType::get(structElementType, type.getMemorySpace());
+  return LLVM::LLVMPointerType::get(structElementType,
+                                    type.getMemorySpaceAsInt());
 }
 
 void ConvertToLLVMPattern::getMemRefDescriptorSizes(
@@ -1216,7 +1218,8 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
                                    FuncOp funcOp, LLVM::LLVMFuncOp newFuncOp) {
   auto type = funcOp.getType();
   SmallVector<NamedAttribute, 4> attributes;
-  filterFuncAttributes(funcOp.getAttrs(), /*filterArgAttrs=*/false, attributes);
+  filterFuncAttributes(funcOp->getAttrs(), /*filterArgAttrs=*/false,
+                       attributes);
   auto wrapperFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
       typeConverter.convertFunctionTypeCWrapper(type), LLVM::Linkage::External,
@@ -1265,7 +1268,8 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   assert(wrapperType && "unexpected type conversion failure");
 
   SmallVector<NamedAttribute, 4> attributes;
-  filterFuncAttributes(funcOp.getAttrs(), /*filterArgAttrs=*/false, attributes);
+  filterFuncAttributes(funcOp->getAttrs(), /*filterArgAttrs=*/false,
+                       attributes);
 
   // Create the auxiliary function.
   auto wrapperFunc = builder.create<LLVM::LLVMFuncOp>(
@@ -1343,7 +1347,7 @@ protected:
     // Propagate argument attributes to all converted arguments obtained after
     // converting a given original argument.
     SmallVector<NamedAttribute, 4> attributes;
-    filterFuncAttributes(funcOp.getAttrs(), /*filterArgAttrs=*/true,
+    filterFuncAttributes(funcOp->getAttrs(), /*filterArgAttrs=*/true,
                          attributes);
     for (unsigned i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
       auto attr = impl::getArgAttrDict(funcOp, i);
@@ -1897,7 +1901,7 @@ struct AllocOpLowering : public AllocLikeOpLowering {
 
     Value alignedPtr = allocatedPtr;
     if (alignment) {
-      auto intPtrType = getIntPtrType(memRefType.getMemorySpace());
+      auto intPtrType = getIntPtrType(memRefType.getMemorySpaceAsInt());
       // Compute the aligned type pointer.
       Value allocatedInt =
           rewriter.create<LLVM::PtrToIntOp>(loc, intPtrType, allocatedPtr);
@@ -2127,7 +2131,7 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
         rewriter);
     auto newOp = rewriter.create<LLVM::CallOp>(
         callOp.getLoc(), packedResult ? TypeRange(packedResult) : TypeRange(),
-        promoted, callOp.getAttrs());
+        promoted, callOp->getAttrs());
 
     SmallVector<Value, 4> results;
     if (numResults < 2) {
@@ -2245,7 +2249,7 @@ struct GlobalMemrefOpLowering : public ConvertOpToLLVMPattern<GlobalMemrefOp> {
 
     rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         global, arrayTy, global.constant(), linkage, global.sym_name(),
-        initialValue, type.getMemorySpace());
+        initialValue, type.getMemorySpaceAsInt());
     return success();
   }
 };
@@ -2264,7 +2268,7 @@ struct GetGlobalMemrefOpLowering : public AllocLikeOpLowering {
                                           Operation *op) const override {
     auto getGlobalOp = cast<GetGlobalMemrefOp>(op);
     MemRefType type = getGlobalOp.result().getType().cast<MemRefType>();
-    unsigned memSpace = type.getMemorySpace();
+    unsigned memSpace = type.getMemorySpaceAsInt();
 
     Type arrayTy = convertGlobalMemrefTypeToLLVM(type, *getTypeConverter());
     auto addressOf = rewriter.create<LLVM::AddressOfOp>(
@@ -2460,7 +2464,7 @@ static void extractPointersAndOffset(Location loc,
   }
 
   unsigned memorySpace =
-      operandType.cast<UnrankedMemRefType>().getMemorySpace();
+      operandType.cast<UnrankedMemRefType>().getMemorySpaceAsInt();
   Type elementType = operandType.cast<UnrankedMemRefType>().getElementType();
   Type llvmElementType = unwrap(typeConverter.convertType(elementType));
   Type elementPtrPtrType = LLVM::LLVMPointerType::get(
@@ -2589,7 +2593,7 @@ private:
     // Extract address space and element type.
     auto targetType =
         reshapeOp.getResult().getType().cast<UnrankedMemRefType>();
-    unsigned addressSpace = targetType.getMemorySpace();
+    unsigned addressSpace = targetType.getMemorySpaceAsInt();
     Type elementType = targetType.getElementType();
 
     // Create the unranked memref descriptor that holds the ranked one. The
@@ -2749,7 +2753,7 @@ private:
     auto unrankedMemRefType = operandType.cast<UnrankedMemRefType>();
     auto scalarMemRefType =
         MemRefType::get({}, unrankedMemRefType.getElementType());
-    unsigned addressSpace = unrankedMemRefType.getMemorySpace();
+    unsigned addressSpace = unrankedMemRefType.getMemorySpaceAsInt();
 
     // Extract pointer to the underlying ranked descriptor and bitcast it to a
     // memref<element_type> descriptor pointer to minimize the number of GEP
@@ -3034,7 +3038,7 @@ struct OneToOneLLVMTerminatorLowering
   matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<TargetOp>(op, operands, op->getSuccessors(),
-                                          op.getAttrs());
+                                          op->getAttrs());
     return success();
   }
 };
@@ -3082,12 +3086,12 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
     // If ReturnOp has 0 or 1 operand, create it and return immediately.
     if (numArguments == 0) {
       rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), ValueRange(),
-                                                  op.getAttrs());
+                                                  op->getAttrs());
       return success();
     }
     if (numArguments == 1) {
       rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
-          op, TypeRange(), updatedOperands, op.getAttrs());
+          op, TypeRange(), updatedOperands, op->getAttrs());
       return success();
     }
 
@@ -3103,7 +3107,7 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
           rewriter.getI64ArrayAttr(i));
     }
     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), packed,
-                                                op.getAttrs());
+                                                op->getAttrs());
     return success();
   }
 };
@@ -3263,7 +3267,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
     Value bitcastPtr = rewriter.create<LLVM::BitcastOp>(
         loc,
         LLVM::LLVMPointerType::get(targetElementTy,
-                                   viewMemRefType.getMemorySpace()),
+                                   viewMemRefType.getMemorySpaceAsInt()),
         extracted);
     targetMemRef.setAllocatedPtr(rewriter, loc, bitcastPtr);
 
@@ -3272,7 +3276,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
     bitcastPtr = rewriter.create<LLVM::BitcastOp>(
         loc,
         LLVM::LLVMPointerType::get(targetElementTy,
-                                   viewMemRefType.getMemorySpace()),
+                                   viewMemRefType.getMemorySpaceAsInt()),
         extracted);
     targetMemRef.setAlignedPtr(rewriter, loc, bitcastPtr);
 
@@ -3489,7 +3493,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<ViewOp> {
     Value bitcastPtr = rewriter.create<LLVM::BitcastOp>(
         loc,
         LLVM::LLVMPointerType::get(targetElementTy,
-                                   srcMemRefType.getMemorySpace()),
+                                   srcMemRefType.getMemorySpaceAsInt()),
         allocatedPtr);
     targetMemRef.setAllocatedPtr(rewriter, loc, bitcastPtr);
 
@@ -3500,7 +3504,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<ViewOp> {
     bitcastPtr = rewriter.create<LLVM::BitcastOp>(
         loc,
         LLVM::LLVMPointerType::get(targetElementTy,
-                                   srcMemRefType.getMemorySpace()),
+                                   srcMemRefType.getMemorySpaceAsInt()),
         alignedPtr);
     targetMemRef.setAlignedPtr(rewriter, loc, bitcastPtr);
 
@@ -3862,7 +3866,7 @@ void mlir::populateStdToLLVMConversionPatterns(
 /// supported LLVM IR type.  In particular, if more than one value is returned,
 /// create an LLVM IR structure type with elements that correspond to each of
 /// the MLIR types converted with `convertType`.
-Type LLVMTypeConverter::packFunctionResults(ArrayRef<Type> types) {
+Type LLVMTypeConverter::packFunctionResults(TypeRange types) {
   assert(!types.empty() && "expected non-empty list of type");
 
   if (types.size() == 1)

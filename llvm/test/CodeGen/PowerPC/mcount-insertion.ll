@@ -1,4 +1,4 @@
-; RUN: opt -ee-instrument < %s | opt -inline | llc -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s
+; RUN: opt -ee-instrument < %s | opt -inline | opt -post-inline-ee-instrument | llc -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s
 
 ; The run-line mimics how Clang might run the instrumentation passes.
 

@@ -1003,6 +1003,7 @@ private:
     context().SetError(symbol);
     return symbol;
   }
+  bool HasCycle(const Symbol &, const ProcInterface &);
 };
 
 // Resolve construct entities and statement entities.
@@ -2132,7 +2133,7 @@ static bool NeedsType(const Symbol &symbol) {
 
 void ScopeHandler::ApplyImplicitRules(
     Symbol &symbol, bool allowForwardReference) {
-  if (!NeedsType(symbol)) {
+  if (context().HasError(symbol) || !NeedsType(symbol)) {
     return;
   }
   if (const DeclTypeSpec * type{GetImplicitType(symbol)}) {
@@ -3156,6 +3157,13 @@ bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
 // A subprogram declared with SUBROUTINE or FUNCTION
 bool SubprogramVisitor::BeginSubprogram(
     const parser::Name &name, Symbol::Flag subpFlag, bool hasModulePrefix) {
+  if (hasModulePrefix && currScope().IsGlobal()) { // C1547
+    Say(name,
+        "'%s' is a MODULE procedure which must be declared within a "
+        "MODULE or SUBMODULE"_err_en_US);
+    return false;
+  }
+
   if (hasModulePrefix && !inInterfaceBlock() &&
       !IsSeparateModuleProcedureInterface(
           FindSymbol(currScope().parent(), name))) {
@@ -3641,6 +3649,35 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
   }
 }
 
+bool DeclarationVisitor::HasCycle(
+    const Symbol &procSymbol, const ProcInterface &interface) {
+  SymbolSet procsInCycle;
+  procsInCycle.insert(procSymbol);
+  const ProcInterface *thisInterface{&interface};
+  bool haveInterface{true};
+  while (haveInterface) {
+    haveInterface = false;
+    if (const Symbol * interfaceSymbol{thisInterface->symbol()}) {
+      if (procsInCycle.count(*interfaceSymbol) > 0) {
+        for (const auto &procInCycle : procsInCycle) {
+          Say(procInCycle->name(),
+              "The interface for procedure '%s' is recursively "
+              "defined"_err_en_US,
+              procInCycle->name());
+          context().SetError(*procInCycle);
+        }
+        return true;
+      } else if (const auto *procDetails{
+                     interfaceSymbol->detailsIf<ProcEntityDetails>()}) {
+        haveInterface = true;
+        thisInterface = &procDetails->interface();
+        procsInCycle.insert(*interfaceSymbol);
+      }
+    }
+  }
+  return false;
+}
+
 Symbol &DeclarationVisitor::DeclareProcEntity(
     const parser::Name &name, Attrs attrs, const ProcInterface &interface) {
   Symbol &symbol{DeclareEntity<ProcEntityDetails>(name, attrs)};
@@ -3650,20 +3687,20 @@ Symbol &DeclarationVisitor::DeclareProcEntity(
           "The interface for procedure '%s' has already been "
           "declared"_err_en_US);
       context().SetError(symbol);
-    } else {
-      if (interface.type()) {
+    } else if (HasCycle(symbol, interface)) {
+      return symbol;
+    } else if (interface.type()) {
+      symbol.set(Symbol::Flag::Function);
+    } else if (interface.symbol()) {
+      if (interface.symbol()->test(Symbol::Flag::Function)) {
         symbol.set(Symbol::Flag::Function);
-      } else if (interface.symbol()) {
-        if (interface.symbol()->test(Symbol::Flag::Function)) {
-          symbol.set(Symbol::Flag::Function);
-        } else if (interface.symbol()->test(Symbol::Flag::Subroutine)) {
-          symbol.set(Symbol::Flag::Subroutine);
-        }
+      } else if (interface.symbol()->test(Symbol::Flag::Subroutine)) {
+        symbol.set(Symbol::Flag::Subroutine);
       }
-      details->set_interface(interface);
-      SetBindNameOn(symbol);
-      SetPassNameOn(symbol);
     }
+    details->set_interface(interface);
+    SetBindNameOn(symbol);
+    SetPassNameOn(symbol);
   }
   return symbol;
 }
@@ -5005,7 +5042,7 @@ Symbol *DeclarationVisitor::NoteInterfaceName(const parser::Name &name) {
 
 void DeclarationVisitor::CheckExplicitInterface(const parser::Name &name) {
   if (const Symbol * symbol{name.symbol}) {
-    if (!symbol->HasExplicitInterface()) {
+    if (!context().HasError(*symbol) && !symbol->HasExplicitInterface()) {
       Say(name,
           "'%s' must be an abstract interface or a procedure with "
           "an explicit interface"_err_en_US,

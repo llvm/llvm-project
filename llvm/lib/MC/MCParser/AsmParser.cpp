@@ -2348,7 +2348,7 @@ bool AsmParser::parseCppHashLineFilenameComment(SMLoc L, bool SaveLocInfo) {
 /// will use the last parsed cpp hash line filename comment
 /// for the Filename and LineNo if any in the diagnostic.
 void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
-  const AsmParser *Parser = static_cast<const AsmParser *>(Context);
+  auto *Parser = static_cast<AsmParser *>(Context);
   raw_ostream &OS = errs();
 
   const SourceMgr &DiagSrcMgr = *Diag.getSourceMgr();
@@ -2369,12 +2369,11 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   // If we have not parsed a cpp hash line filename comment or the source
   // manager changed or buffer changed (like in a nested include) then just
   // print the normal diagnostic using its Filename and LineNo.
-  if (!Parser->CppHashInfo.LineNumber || &DiagSrcMgr != &Parser->SrcMgr ||
-      DiagBuf != CppHashBuf) {
+  if (!Parser->CppHashInfo.LineNumber || DiagBuf != CppHashBuf) {
     if (Parser->SavedDiagHandler)
       Parser->SavedDiagHandler(Diag, Parser->SavedDiagContext);
     else
-      Diag.print(nullptr, OS);
+      Parser->getContext().diagnose(Diag);
     return;
   }
 
@@ -2394,9 +2393,9 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
                        Diag.getLineContents(), Diag.getRanges());
 
   if (Parser->SavedDiagHandler)
-    Parser->SavedDiagHandler(NewDiag, Parser->SavedDiagContext);
+    Parser->SavedDiagHandler(Diag, Parser->SavedDiagContext);
   else
-    NewDiag.print(nullptr, OS);
+    Parser->getContext().diagnose(NewDiag);
 }
 
 // FIXME: This is mostly duplicated from the function in AsmLexer.cpp. The
@@ -4073,29 +4072,20 @@ bool AsmParser::parseDirectiveCFISections() {
   bool EH = false;
   bool Debug = false;
 
-  if (parseIdentifier(Name))
-    return TokError("Expected an identifier");
-
-  if (Name == ".eh_frame")
-    EH = true;
-  else if (Name == ".debug_frame")
-    Debug = true;
-
-  if (getLexer().is(AsmToken::Comma)) {
-    Lex();
-
-    if (parseIdentifier(Name))
-      return TokError("Expected an identifier");
-
-    if (Name == ".eh_frame")
-      EH = true;
-    else if (Name == ".debug_frame")
-      Debug = true;
+  if (!parseOptionalToken(AsmToken::EndOfStatement)) {
+    for (;;) {
+      if (parseIdentifier(Name))
+        return TokError("expected .eh_frame or .debug_frame");
+      if (Name == ".eh_frame")
+        EH = true;
+      else if (Name == ".debug_frame")
+        Debug = true;
+      if (parseOptionalToken(AsmToken::EndOfStatement))
+        break;
+      if (parseToken(AsmToken::Comma))
+        return true;
+    }
   }
-
-  if (parseToken(AsmToken::EndOfStatement))
-    return addErrorSuffix(" in '.cfi_sections' directive");
-
   getStreamer().emitCFISections(EH, Debug);
   return false;
 }

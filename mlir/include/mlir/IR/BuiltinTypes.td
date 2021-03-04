@@ -293,6 +293,15 @@ def Builtin_Opaque : Builtin_Type<"Opaque"> {
     "Identifier":$dialectNamespace,
     StringRefParameter<"">:$typeData
   );
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "Identifier":$dialectNamespace, CArg<"StringRef", "{}">:$typeData
+    ), [{
+      return $_get(dialectNamespace.getContext(), dialectNamespace, typeData);
+    }]>
+  ];
+  let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
 }
 

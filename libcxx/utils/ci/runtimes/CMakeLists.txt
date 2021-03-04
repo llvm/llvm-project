@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13.4)
-project(LLVM_RUNTIMES)
+project(LLVM_RUNTIMES C CXX ASM)
 
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 

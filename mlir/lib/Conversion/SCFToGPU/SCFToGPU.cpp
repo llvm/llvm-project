@@ -520,7 +520,7 @@ static LogicalResult processParallelLoop(
 
   // Propagate custom user defined optional attributes, that can be used at
   // later stage, such as extension data for GPU kernel dispatch
-  for (const auto &namedAttr : parallelOp.getAttrs()) {
+  for (const auto &namedAttr : parallelOp->getAttrs()) {
     if (namedAttr.first == gpu::getMappingAttrName() ||
         namedAttr.first == ParallelOp::getOperandSegmentSizeAttr())
       continue;

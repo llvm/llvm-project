@@ -258,6 +258,12 @@ const FormatEntity::Entry *Debugger::GetFrameFormatUnique() const {
   return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
 }
 
+uint32_t Debugger::GetStopDisassemblyMaxSize() const {
+  const uint32_t idx = ePropertyStopDisassemblyMaxSize;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_debugger_properties[idx].default_uint_value);
+}
+
 bool Debugger::GetNotifyVoid() const {
   const uint32_t idx = ePropertyNotiftVoid;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(

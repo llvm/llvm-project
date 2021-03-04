@@ -1285,6 +1285,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isVector() || !SrcTy.isVector())
       report("G_CONCAT_VECTOR requires vector source and destination operands",
              MI);
+
+    if (MI->getNumOperands() < 3)
+      report("G_CONCAT_VECTOR requires at least 2 source operands", MI);
+
     for (unsigned i = 2; i < MI->getNumOperands(); ++i) {
       if (MRI->getType(MI->getOperand(1).getReg()) !=
           MRI->getType(MI->getOperand(i).getReg()))

@@ -76,7 +76,7 @@ def FuncOp : Builtin_Op<"func", [
                        OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region AnyRegion:$body);
 
-  let builders = [OpBuilderDAG<(ins
+  let builders = [OpBuilder<(ins
     "StringRef":$name, "FunctionType":$type,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
     CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)
@@ -85,7 +85,7 @@ def FuncOp : Builtin_Op<"func", [
     static FuncOp create(Location location, StringRef name, FunctionType type,
                          ArrayRef<NamedAttribute> attrs = {});
     static FuncOp create(Location location, StringRef name, FunctionType type,
-                         iterator_range<dialect_attr_iterator> attrs);
+                         Operation::dialect_attr_range attrs);
     static FuncOp create(Location location, StringRef name, FunctionType type,
                          ArrayRef<NamedAttribute> attrs,
                          ArrayRef<DictionaryAttr> argAttrs);
@@ -184,7 +184,7 @@ def ModuleOp : Builtin_Op<"module", [
   let regions = (region SizedRegion<1>:$body);
 
   let assemblyFormat = "($sym_name^)? attr-dict-with-keyword $body";
-  let builders = [OpBuilderDAG<(ins CArg<"Optional<StringRef>", "{}">:$name)>];
+  let builders = [OpBuilder<(ins CArg<"Optional<StringRef>", "{}">:$name)>];
   let extraClassDeclaration = [{
     /// Construct a module from the given location with an optional name.
     static ModuleOp create(Location loc, Optional<StringRef> name = llvm::None);

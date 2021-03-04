@@ -121,17 +121,18 @@ def WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 // turned into a copy by WQM pass, but does not seed WQM requirements.
 def SOFT_WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 
-// Pseudoinstruction for @llvm.amdgcn.wwm. It is turned into a copy post-RA, so
+// Pseudoinstruction for @llvm.amdgcn.strict.wwm. It is turned into a copy post-RA, so
 // that the @earlyclobber is respected. The @earlyclobber is to make sure that
-// the instruction that defines $src0 (which is run in WWM) doesn't
+// the instruction that defines $src0 (which is run in Whole Wave Mode) doesn't
 // accidentally clobber inactive channels of $vdst.
 let Constraints = "@earlyclobber $vdst" in {
-def WWM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
+def STRICT_WWM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
+def STRICT_WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 }
 
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
 
-def ENTER_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
+def ENTER_STRICT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
   let Uses = [EXEC];
   let Defs = [EXEC, SCC];
   let hasSideEffects = 0;
@@ -139,7 +140,21 @@ def ENTER_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
   let mayStore = 0;
 }
 
-def EXIT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
+def EXIT_STRICT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+def ENTER_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
+  let Uses = [EXEC];
+  let Defs = [EXEC, SCC];
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -343,23 +358,21 @@ multiclass PseudoInstKill <dag ins> {
   // required in degenerate cases (when V_CMPX cannot be used due to constant
   // bus limitations) and because it allows us to avoid having to track SCC
   // liveness across basic blocks.
-  let Defs = [EXEC,VCC,SCC] in
+  let Defs = [EXEC,SCC] in
   def _PSEUDO : PseudoInstSI <(outs), ins> {
     let isConvergent = 1;
     let usesCustomInserter = 1;
   }
 
-  let Defs = [EXEC,VCC,SCC] in
+  let Defs = [EXEC,SCC] in
   def _TERMINATOR : SPseudoInstSI <(outs), ins> {
     let isTerminator = 1;
   }
 }
 
 defm SI_KILL_I1 : PseudoInstKill <(ins SCSrc_i1:$src, i1imm:$killvalue)>;
+let Defs = [VCC] in
 defm SI_KILL_F32_COND_IMM : PseudoInstKill <(ins VSrc_b32:$src0, i32imm:$src1, i32imm:$cond)>;
-
-let Defs = [EXEC] in
-def SI_KILL_CLEANUP : SPseudoInstSI <(outs), (ins)>;
 
 let Defs = [EXEC,VCC] in
 def SI_ILLEGAL_COPY : SPseudoInstSI <
@@ -383,29 +396,19 @@ def SI_PS_LIVE : PseudoInstSI <
 }
 
 let Uses = [EXEC] in {
-def SI_WQM_HELPER : PseudoInstSI <
+def SI_LIVE_MASK : PseudoInstSI <
   (outs SReg_1:$dst), (ins),
-  [(set i1:$dst, (int_amdgcn_wqm_helper))]> {
+  [(set i1:$dst, (int_amdgcn_live_mask))]> {
   let SALU = 1;
 }
-
-let Defs = [EXEC] in {
+let Defs = [EXEC,SCC] in {
 // Demote: Turn a pixel shader thread into a helper lane.
-def SI_DEMOTE_I1 : SPseudoInstSI <(outs), (ins SCSrc_i1:$src, i1imm:$killvalue)> {
-}
-// Demote clean up terminators are added to indicate points where the execmask
-// can be cleaned using the specified livemask.
-// This allows the early termination of threads if their quad has become only
-// helper lanes as a result of demotes.
-def SI_DEMOTE_CLEANUP_B32_TERMINATOR : SPseudoInstSI <(outs), (ins SSrc_b32:$livemask)> {
-  let isTerminator = 1;
-}
-def SI_DEMOTE_CLEANUP_B64_TERMINATOR : SPseudoInstSI <(outs), (ins SSrc_b64:$livemask)> {
-  let isTerminator = 1;
-}
-} // End Defs = [EXEC]
-
+def SI_DEMOTE_I1 : SPseudoInstSI <(outs), (ins SCSrc_i1:$src, i1imm:$killvalue)>;
+} // End Defs = [EXEC,SCC]
 } // End Uses = [EXEC]
+
+// FIXME: temporarily support old version of live mask intrinsic:
+def : GCNPat<(int_amdgcn_wqm_helper), (SI_LIVE_MASK)>;
 
 def SI_MASKED_UNREACHABLE : SPseudoInstSI <(outs), (ins),
   [(int_amdgcn_unreachable)],
@@ -776,6 +779,11 @@ def : Pat <
 >;
 
 def : Pat <
+  (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
+  (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
+>;
+
+def : Pat <
   (int_amdgcn_wqm_demote i1:$src),
   (SI_DEMOTE_I1 SCSrc_i1:$src, 0)
 >;
@@ -783,16 +791,6 @@ def : Pat <
 def : Pat <
   (int_amdgcn_wqm_demote (i1 (not i1:$src))),
   (SI_DEMOTE_I1 SCSrc_i1:$src, -1)
->;
-
-def : Pat <
-  (AMDGPUkill i32:$src),
-  (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, 0, 3) // 3 means SETOGE
->;
-
-def : Pat <
-  (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
-  (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
 >;
 
   // TODO: we could add more variants for other types of conditionals

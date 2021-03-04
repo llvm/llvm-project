@@ -462,9 +462,9 @@ TEST(LiveIntervalTest, EarlyClobberSubRegMoveUp) {
   liveIntervalTest(R"MIR(
     %4:sreg_32 = IMPLICIT_DEF
     %6:sreg_32 = IMPLICIT_DEF
-    undef early-clobber %9.sub0:sreg_64 = WWM %4:sreg_32, implicit $exec
+    undef early-clobber %9.sub0:sreg_64 = STRICT_WWM %4:sreg_32, implicit $exec
     %5:sreg_32 = S_FLBIT_I32_B32 %9.sub0:sreg_64
-    early-clobber %9.sub1:sreg_64 = WWM %6:sreg_32, implicit $exec
+    early-clobber %9.sub1:sreg_64 = STRICT_WWM %6:sreg_32, implicit $exec
     %7:sreg_32 = S_FLBIT_I32_B32 %9.sub1:sreg_64
 )MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
     testHandleMove(MF, LIS, 4, 3);

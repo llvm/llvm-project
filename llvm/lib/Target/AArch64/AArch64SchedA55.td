@@ -151,6 +151,8 @@ def CortexA55WriteFPALU_F5 : SchedWriteRes<[CortexA55UnitFPALU]> { let Latency =
 
 // FP Mul, Div, Sqrt. Div/Sqrt are not pipelined
 def : WriteRes<WriteFMul, [CortexA55UnitFPMAC]> { let Latency = 4; }
+
+let RetireOOO = 1 in {
 def : WriteRes<WriteFDiv, [CortexA55UnitFPDIV]> { let Latency = 22;
                                             let ResourceCycles = [29]; }
 def CortexA55WriteFMAC : SchedWriteRes<[CortexA55UnitFPMAC]> { let Latency = 4; }
@@ -166,7 +168,7 @@ def CortexA55WriteFSqrtSP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 
                                                       let ResourceCycles = [9]; }
 def CortexA55WriteFSqrtDP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 22;
                                                       let ResourceCycles = [19]; }
-
+}
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.
 
@@ -336,4 +338,6 @@ def : InstRW<[CortexA55WriteFDivDP], (instregex "^FDIVv.*64$")>;
 def : InstRW<[CortexA55WriteFSqrtHP], (instregex "^.*SQRT.*16$")>;
 def : InstRW<[CortexA55WriteFSqrtSP], (instregex "^.*SQRT.*32$")>;
 def : InstRW<[CortexA55WriteFSqrtDP], (instregex "^.*SQRT.*64$")>;
+
+def A55RCU : RetireControlUnit<64, 0>;
 }

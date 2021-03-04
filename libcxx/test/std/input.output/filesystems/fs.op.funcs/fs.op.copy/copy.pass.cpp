@@ -67,8 +67,10 @@ TEST_CASE(test_error_reporting)
     scoped_test_env env;
     const path file = env.create_file("file1", 42);
     const path dir = env.create_dir("dir");
+#ifndef _WIN32
     const path fifo = env.create_fifo("fifo");
     TEST_REQUIRE(is_other(fifo));
+#endif
 
     const auto test_ec = GetTestEC();
 
@@ -96,6 +98,7 @@ TEST_CASE(test_error_reporting)
         TEST_REQUIRE(ec != test_ec);
         TEST_CHECK(checkThrow(dir, file, ec));
     }
+#ifndef _WIN32
     { // is_other(from)
         std::error_code ec = test_ec;
         fs::copy(fifo, dir, ec);
@@ -110,6 +113,7 @@ TEST_CASE(test_error_reporting)
         TEST_REQUIRE(ec != test_ec);
         TEST_CHECK(checkThrow(file, fifo, ec));
     }
+#endif
 }
 
 TEST_CASE(from_is_symlink)

@@ -477,6 +477,13 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       return Decomposed;
     }
 
+    // Track whether we've seen at least one in bounds gep, and if so, whether
+    // all geps parsed were in bounds.
+    if (Decomposed.InBounds == None)
+      Decomposed.InBounds = GEPOp->isInBounds();
+    else if (!GEPOp->isInBounds())
+      Decomposed.InBounds = false;
+
     // Don't attempt to analyze GEPs over unsized objects.
     if (!GEPOp->getSourceElementType()->isSized()) {
       Decomposed.Base = V;
@@ -1016,62 +1023,17 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
   return AAResultBase::getModRefInfo(Call1, Call2, AAQI);
 }
 
-// If a we have (a) a GEP and (b) a pointer based on an alloca, and the
-// beginning of the object the GEP points would have a negative offset with
-// repsect to the alloca, that means the GEP can not alias pointer (b).
-// Note that the pointer based on the alloca may not be a GEP. For
-// example, it may be the alloca itself.
-// The same applies if (b) is based on a GlobalVariable. Note that just being
-// based on isIdentifiedObject() is not enough - we need an identified object
-// that does not permit access to negative offsets. For example, a negative
-// offset from a noalias argument or call can be inbounds w.r.t the actual
-// underlying object.
-//
-// For example, consider:
-//
-//   struct { int f0, int f1, ...} foo;
-//   foo alloca;
-//   foo* random = bar(alloca);
-//   int *f0 = &alloca.f0
-//   int *f1 = &random->f1;
-//
-// Which is lowered, approximately, to:
-//
-//  %alloca = alloca %struct.foo
-//  %random = call %struct.foo* @random(%struct.foo* %alloca)
-//  %f0 = getelementptr inbounds %struct, %struct.foo* %alloca, i32 0, i32 0
-//  %f1 = getelementptr inbounds %struct, %struct.foo* %random, i32 0, i32 1
-//
-// Assume %f1 and %f0 alias. Then %f1 would point into the object allocated
-// by %alloca. Since the %f1 GEP is inbounds, that means %random must also
-// point into the same object. But since %f0 points to the beginning of %alloca,
-// the highest %f1 can be is (%alloca + 3). This means %random can not be higher
-// than (%alloca - 1), and so is not inbounds, a contradiction.
-bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
-      const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
-      LocationSize MaybeObjectAccessSize) {
-  // If the object access size is unknown, or the GEP isn't inbounds, bail.
-  if (!MaybeObjectAccessSize.hasValue() || !GEPOp->isInBounds())
-    return false;
-
-  const uint64_t ObjectAccessSize = MaybeObjectAccessSize.getValue();
-
-  // We need the object to be an alloca or a globalvariable, and want to know
-  // the offset of the pointer from the object precisely, so no variable
-  // indices are allowed.
-  if (!(isa<AllocaInst>(DecompObject.Base) ||
-        isa<GlobalVariable>(DecompObject.Base)) ||
-      !DecompObject.VarIndices.empty())
-    return false;
-
-  // If the GEP has no variable indices, we know the precise offset
-  // from the base, then use it. If the GEP has variable indices,
-  // we can't get exact GEP offset to identify pointer alias. So return
-  // false in that case.
-  if (!DecompGEP.VarIndices.empty())
-    return false;
-
-  return DecompGEP.Offset.sge(DecompObject.Offset + (int64_t)ObjectAccessSize);
+/// Return true if we know V to the base address of the corresponding memory
+/// object.  This implies that any address less than V must be out of bounds
+/// for the underlying object.  Note that just being isIdentifiedObject() is
+/// not enough - For example, a negative offset from a noalias argument or call
+/// can be inbounds w.r.t the actual underlying object.
+static bool isBaseOfObject(const Value *V) {
+  // TODO: We can handle other cases here
+  // 1) For GC languages, arguments to functions are often required to be
+  //    base pointers.
+  // 2) Result of allocation routines are often base pointers.  Leverage TLI.
+  return (isa<AllocaInst>(V) || isa<GlobalVariable>(V));
 }
 
 /// Provides a bunch of ad-hoc rules to disambiguate a GEP instruction against
@@ -1097,28 +1059,30 @@ AliasResult BasicAAResult::aliasGEP(
          "DecomposeGEPExpression returned a result different from "
          "getUnderlyingObject");
 
-  // If the GEP's offset relative to its base is such that the base would
-  // fall below the start of the object underlying V2, then the GEP and V2
-  // cannot alias.
-  if (isGEPBaseAtNegativeOffset(GEP1, DecompGEP1, DecompGEP2, V2Size))
+  // Subtract the GEP2 pointer from the GEP1 pointer to find out their
+  // symbolic difference.
+  DecompGEP1.Offset -= DecompGEP2.Offset;
+  GetIndexDifference(DecompGEP1.VarIndices, DecompGEP2.VarIndices);
+
+  // If an inbounds GEP would have to start from an out of bounds address
+  // for the two to alias, then we can assume noalias.
+  if (*DecompGEP1.InBounds && DecompGEP1.VarIndices.empty() &&
+      V2Size.hasValue() && DecompGEP1.Offset.sge(V2Size.getValue()) &&
+      isBaseOfObject(DecompGEP2.Base))
     return NoAlias;
 
-  if (const GEPOperator *GEP2 = dyn_cast<GEPOperator>(V2)) {
-    // Check for the GEP base being at a negative offset, this time in the other
-    // direction.
-    if (isGEPBaseAtNegativeOffset(GEP2, DecompGEP2, DecompGEP1, V1Size))
-      return NoAlias;
+  if (isa<GEPOperator>(V2)) {
+    // Symmetric case to above.
+    if (*DecompGEP2.InBounds && DecompGEP1.VarIndices.empty() &&
+        V1Size.hasValue() && DecompGEP1.Offset.sle(-V1Size.getValue()) &&
+        isBaseOfObject(DecompGEP1.Base))
+    return NoAlias;
   } else {
     // TODO: This limitation exists for compile-time reasons. Relax it if we
     // can avoid exponential pathological cases.
     if (!V1Size.hasValue() && !V2Size.hasValue())
       return MayAlias;
   }
-
-  // Subtract the GEP2 pointer from the GEP1 pointer to find out their
-  // symbolic difference.
-  DecompGEP1.Offset -= DecompGEP2.Offset;
-  GetIndexDifference(DecompGEP1.VarIndices, DecompGEP2.VarIndices);
 
   // For GEPs with identical offsets, we can preserve the size and AAInfo
   // when performing the alias check on the underlying objects.
@@ -1144,24 +1108,43 @@ AliasResult BasicAAResult::aliasGEP(
   // that the objects are partially overlapping.  If the difference is
   // greater, we know they do not overlap.
   if (DecompGEP1.Offset != 0 && DecompGEP1.VarIndices.empty()) {
-    if (DecompGEP1.Offset.sge(0)) {
-      if (V2Size.hasValue()) {
-        if (DecompGEP1.Offset.ult(V2Size.getValue()))
-          return PartialAlias;
-        return NoAlias;
-      }
-    } else {
-      // We have the situation where:
+    APInt &Off = DecompGEP1.Offset;
+
+    // Initialize for Off >= 0 (V2 <= GEP1) case.
+    const Value *LeftPtr = V2;
+    const Value *RightPtr = GEP1;
+    LocationSize VLeftSize = V2Size;
+    LocationSize VRightSize = V1Size;
+
+    if (Off.isNegative()) {
+      // Swap if we have the situation where:
       // +                +
       // | BaseOffset     |
       // ---------------->|
       // |-->V1Size       |-------> V2Size
       // GEP1             V2
-      if (V1Size.hasValue()) {
-        if ((-DecompGEP1.Offset).ult(V1Size.getValue()))
-          return PartialAlias;
-        return NoAlias;
+      std::swap(LeftPtr, RightPtr);
+      std::swap(VLeftSize, VRightSize);
+      Off = -Off;
+    }
+
+    if (VLeftSize.hasValue()) {
+      const uint64_t LSize = VLeftSize.getValue();
+      if (Off.ult(LSize)) {
+        // Conservatively drop processing if a phi was visited and/or offset is
+        // too big.
+        if (VisitedPhiBBs.empty() && VRightSize.hasValue() &&
+            Off.ule(INT64_MAX)) {
+          // Memory referenced by right pointer is nested. Save the offset in
+          // cache.
+          const uint64_t RSize = VRightSize.getValue();
+          if ((Off + RSize).ule(LSize))
+            AAQI.setClobberOffset(LeftPtr, RightPtr, LSize, RSize,
+                                  Off.getSExtValue());
+        }
+        return PartialAlias;
       }
+      return NoAlias;
     }
   }
 

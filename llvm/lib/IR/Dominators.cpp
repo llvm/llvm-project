@@ -222,9 +222,7 @@ bool DominatorTree::dominates(const BasicBlockEdge &BBE,
   // other predecessors. Since the only way out of X is via NormalDest, X can
   // only properly dominate a node if NormalDest dominates that node too.
   int IsDuplicateEdge = 0;
-  for (const_pred_iterator PI = pred_begin(End), E = pred_end(End);
-       PI != E; ++PI) {
-    const BasicBlock *BB = *PI;
+  for (const BasicBlock *BB : predecessors(End)) {
     if (BB == Start) {
       // If there are multiple edges between Start and End, by definition they
       // can't dominate anything.

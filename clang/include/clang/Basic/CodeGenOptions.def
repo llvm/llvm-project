@@ -42,6 +42,7 @@ CODEGENOPT(Backchain         , 1, 0) ///< -mbackchain
 CODEGENOPT(IgnoreXCOFFVisibility         , 1, 0) ///< -mignore-xcoff-visibility
 CODEGENOPT(ControlFlowGuardNoChecks  , 1, 0) ///< -cfguard-no-checks
 CODEGENOPT(ControlFlowGuard  , 1, 0) ///< -cfguard
+CODEGENOPT(EHContGuard       , 1, 0) ///< -ehcontguard
 CODEGENOPT(CXAAtExit         , 1, 1) ///< Use __cxa_atexit for calling destructors.
 CODEGENOPT(RegisterGlobalDtorsWithAtExit, 1, 1) ///< Use atexit or __cxa_atexit to register global destructors.
 CODEGENOPT(CXXCtorDtorAliases, 1, 0) ///< Emit complete ctors/dtors as linker
@@ -214,6 +215,9 @@ CODEGENOPT(SanitizeAddressGlobalsDeadStripping, 1, 0) ///< Enable linker dead st
 CODEGENOPT(SanitizeAddressUseOdrIndicator, 1, 0) ///< Enable ODR indicator globals
 CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in
                                              ///< MemorySanitizer
+ENUM_CODEGENOPT(SanitizeAddressDtorKind, llvm::AsanDtorKind, 2,
+                llvm::AsanDtorKind::Global)  ///< Set how ASan global
+                                             ///< destructors are emitted.
 CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0) ///< Enable use-after-delete detection
                                              ///< in MemorySanitizer
 CODEGENOPT(SanitizeCfiCrossDso, 1, 0) ///< Enable cross-dso support in CFI.

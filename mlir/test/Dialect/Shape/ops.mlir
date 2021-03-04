@@ -102,7 +102,7 @@ func @test_constraints() {
   %1 = shape.const_shape [1, 2, 3] : !shape.shape
   %true = constant true
   %w0 = shape.cstr_broadcastable %0, %1 : !shape.shape, !shape.shape
-  %w1 = shape.cstr_eq %0, %1
+  %w1 = shape.cstr_eq %0, %1 : !shape.shape, !shape.shape
   %w2 = shape.const_witness true
   %w3 = shape.const_witness false
   %w4 = shape.cstr_require %true, "msg"
@@ -111,6 +111,12 @@ func @test_constraints() {
     %2 = "shape.any"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
     shape.assuming_yield %2 : !shape.shape
   }
+  return
+}
+
+func @eq_on_extent_tensors(%lhs : tensor<?xindex>,
+                                      %rhs : tensor<?xindex>) {
+  %w0 = shape.cstr_eq %lhs, %rhs : tensor<?xindex>, tensor<?xindex>
   return
 }
 

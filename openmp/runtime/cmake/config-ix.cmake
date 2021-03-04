@@ -175,6 +175,10 @@ if (IA32 OR INTEL64)
       }
       int main() { int a = __kmp_umwait(0, 1000); return a; }")
   check_cxx_source_compiles("${source_code}" LIBOMP_HAVE_WAITPKG_INTRINSICS)
+  set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+  if (LIBOMP_HAVE_MRTM_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -mrtm")
+  endif()
   set(source_code "// check for attribute rtm and rtm intrinsics
       #ifdef IMMINTRIN_H
       #include <immintrin.h>
@@ -191,6 +195,7 @@ if (IA32 OR INTEL64)
       int main() { int a = __kmp_xbegin(); return a; }")
   check_cxx_source_compiles("${source_code}" LIBOMP_HAVE_RTM_INTRINSICS)
   set(CMAKE_REQUIRED_DEFINITIONS)
+  set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
 endif()
 
 # Find perl executable

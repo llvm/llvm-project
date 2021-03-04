@@ -73,28 +73,16 @@ GlobalVariable *llvm::createPrivateGlobalForString(Module &M, StringRef Str,
   return GV;
 }
 
-Comdat *llvm::GetOrCreateFunctionComdat(Function &F, Triple &T,
-                                        const std::string &ModuleId) {
+Comdat *llvm::getOrCreateFunctionComdat(Function &F, Triple &T) {
   if (auto Comdat = F.getComdat()) return Comdat;
   assert(F.hasName());
   Module *M = F.getParent();
-  std::string Name = std::string(F.getName());
-
-  // Make a unique comdat name for internal linkage things on ELF. On COFF, the
-  // name of the comdat group identifies the leader symbol of the comdat group.
-  // The linkage of the leader symbol is considered during comdat resolution,
-  // and internal symbols with the same name from different objects will not be
-  // merged.
-  if (T.isOSBinFormatELF() && F.hasLocalLinkage()) {
-    if (ModuleId.empty())
-      return nullptr;
-    Name += ModuleId;
-  }
 
   // Make a new comdat for the function. Use the "no duplicates" selection kind
-  // for non-weak symbols if the object file format supports it.
-  Comdat *C = M->getOrInsertComdat(Name);
-  if (T.isOSBinFormatCOFF() && !F.isWeakForLinker())
+  // if the object file format supports it. For COFF we restrict it to non-weak
+  // symbols.
+  Comdat *C = M->getOrInsertComdat(F.getName());
+  if (T.isOSBinFormatELF() || (T.isOSBinFormatCOFF() && !F.isWeakForLinker()))
     C->setSelectionKind(Comdat::NoDuplicates);
   F.setComdat(C);
   return C;

@@ -123,7 +123,9 @@ TEST_CASE(symlink_status_file_types_test)
 #if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(_WIN32) // No support for domain sockets
         {env.create_socket("socket"), file_type::socket},
 #endif
+#ifndef _WIN32
         {env.create_fifo("fifo"), file_type::fifo}
+#endif
     };
     for (const auto& TC : cases) {
         // test non-throwing case

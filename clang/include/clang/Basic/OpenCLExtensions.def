@@ -16,8 +16,12 @@
 // If extensions are to be enumerated with information about whether
 // an extension is core or optional core and minimum OpenCL version
 // when an extension becomes available,
-// define OPENCL_GENERIC_EXTENSION(ext, avail, core, opt) where
+// define OPENCL_GENERIC_EXTENSION(ext, pragma, avail, core, opt) where
 //   ext - name of the extension or optional core feature.
+//   pragma - true if extension needs pragmas or false otherwise.
+//            NOTE: extension pragma without any documentation detailing
+//            its behavior explicitly is deprecated. Therefore the default
+//            value is false.
 //   avail - minimum OpenCL version supporting it.
 //   core - OpenCL versions mask when the extension becomes core feature.
 //          0U indicates not a core feature.
@@ -50,67 +54,67 @@
 #endif // OPENCL_GENERIC_EXTENSION
 
 // Declaration helpers
-#define OPENCL_EXTENSION(ext, avail) OPENCL_GENERIC_EXTENSION(ext, avail, 0U, 0U)
-#define OPENCL_COREFEATURE(ext, avail, core)  OPENCL_GENERIC_EXTENSION(ext, avail, core, 0U)
-#define OPENCL_OPTIONALCOREFEATURE(ext, avail, opt) OPENCL_GENERIC_EXTENSION(ext, avail, 0U, opt)
+#define OPENCL_EXTENSION(ext, pragma, avail) OPENCL_GENERIC_EXTENSION(ext, pragma, avail, 0U, 0U)
+#define OPENCL_COREFEATURE(ext, pragma, avail, core)  OPENCL_GENERIC_EXTENSION(ext, pragma, avail, core, 0U)
+#define OPENCL_OPTIONALCOREFEATURE(ext, pragma, avail, opt) OPENCL_GENERIC_EXTENSION(ext, pragma, avail, 0U, opt)
 
 // OpenCL 1.0.
-OPENCL_COREFEATURE(cl_khr_byte_addressable_store, 100, OCL_C_11P)
-OPENCL_COREFEATURE(cl_khr_global_int32_base_atomics, 100, OCL_C_11P)
-OPENCL_COREFEATURE(cl_khr_global_int32_extended_atomics, 100, OCL_C_11P)
-OPENCL_COREFEATURE(cl_khr_local_int32_base_atomics, 100, OCL_C_11P)
-OPENCL_COREFEATURE(cl_khr_local_int32_extended_atomics, 100, OCL_C_11P)
-OPENCL_OPTIONALCOREFEATURE(cl_khr_fp64, 100, OCL_C_12P)
-OPENCL_EXTENSION(cl_khr_fp16, 100)
-OPENCL_EXTENSION(cl_khr_int64_base_atomics, 100)
-OPENCL_EXTENSION(cl_khr_int64_extended_atomics, 100)
-OPENCL_COREFEATURE(cl_khr_3d_image_writes, 100, OCL_C_20)
+OPENCL_COREFEATURE(cl_khr_byte_addressable_store, true, 100, OCL_C_11P)
+OPENCL_COREFEATURE(cl_khr_global_int32_base_atomics, true, 100, OCL_C_11P)
+OPENCL_COREFEATURE(cl_khr_global_int32_extended_atomics, true, 100, OCL_C_11P)
+OPENCL_COREFEATURE(cl_khr_local_int32_base_atomics, true, 100, OCL_C_11P)
+OPENCL_COREFEATURE(cl_khr_local_int32_extended_atomics, true, 100, OCL_C_11P)
+OPENCL_OPTIONALCOREFEATURE(cl_khr_fp64, true, 100, OCL_C_12P)
+OPENCL_EXTENSION(cl_khr_fp16, true, 100)
+OPENCL_EXTENSION(cl_khr_int64_base_atomics, true, 100)
+OPENCL_EXTENSION(cl_khr_int64_extended_atomics, true, 100)
+OPENCL_COREFEATURE(cl_khr_3d_image_writes, true, 100, OCL_C_20)
 
 // EMBEDDED_PROFILE
-OPENCL_EXTENSION(cles_khr_int64, 110)
+OPENCL_EXTENSION(cles_khr_int64, true, 110)
 
 // OpenCL 1.2.
-OPENCL_EXTENSION(cl_khr_depth_images, 120)
-OPENCL_EXTENSION(cl_khr_gl_msaa_sharing, 120)
+OPENCL_EXTENSION(cl_khr_depth_images, true, 120)
+OPENCL_EXTENSION(cl_khr_gl_msaa_sharing,true, 120)
 
 // OpenCL 2.0.
-OPENCL_EXTENSION(cl_khr_mipmap_image, 200)
-OPENCL_EXTENSION(cl_khr_mipmap_image_writes, 200)
-OPENCL_EXTENSION(cl_khr_srgb_image_writes, 200)
-OPENCL_EXTENSION(cl_khr_subgroups, 200)
+OPENCL_EXTENSION(cl_khr_mipmap_image, true, 200)
+OPENCL_EXTENSION(cl_khr_mipmap_image_writes, true, 200)
+OPENCL_EXTENSION(cl_khr_srgb_image_writes, true, 200)
+OPENCL_EXTENSION(cl_khr_subgroups, true, 200)
 
 // Clang Extensions.
-OPENCL_EXTENSION(cl_clang_storage_class_specifiers, 100)
-OPENCL_EXTENSION(__cl_clang_function_pointers, 100)
-OPENCL_EXTENSION(__cl_clang_variadic_functions, 100)
+OPENCL_EXTENSION(cl_clang_storage_class_specifiers, true, 100)
+OPENCL_EXTENSION(__cl_clang_function_pointers, true, 100)
+OPENCL_EXTENSION(__cl_clang_variadic_functions, true, 100)
 
 // AMD OpenCL extensions
-OPENCL_EXTENSION(cl_amd_media_ops, 100)
-OPENCL_EXTENSION(cl_amd_media_ops2, 100)
+OPENCL_EXTENSION(cl_amd_media_ops, true, 100)
+OPENCL_EXTENSION(cl_amd_media_ops2, true, 100)
 
 // ARM OpenCL extensions
-OPENCL_EXTENSION(cl_arm_integer_dot_product_int8, 120)
-OPENCL_EXTENSION(cl_arm_integer_dot_product_accumulate_int8, 120)
-OPENCL_EXTENSION(cl_arm_integer_dot_product_accumulate_int16, 120)
-OPENCL_EXTENSION(cl_arm_integer_dot_product_accumulate_saturate_int8, 120)
+OPENCL_EXTENSION(cl_arm_integer_dot_product_int8, true, 120)
+OPENCL_EXTENSION(cl_arm_integer_dot_product_accumulate_int8, true, 120)
+OPENCL_EXTENSION(cl_arm_integer_dot_product_accumulate_int16, true, 120)
+OPENCL_EXTENSION(cl_arm_integer_dot_product_accumulate_saturate_int8, true, 120)
 
 // Intel OpenCL extensions
-OPENCL_EXTENSION(cl_intel_subgroups, 120)
-OPENCL_EXTENSION(cl_intel_subgroups_short, 120)
-OPENCL_EXTENSION(cl_intel_device_side_avc_motion_estimation, 120)
+OPENCL_EXTENSION(cl_intel_subgroups, true, 120)
+OPENCL_EXTENSION(cl_intel_subgroups_short, true, 120)
+OPENCL_EXTENSION(cl_intel_device_side_avc_motion_estimation, true, 120)
 
 // OpenCL C 3.0 features (6.2.1. Features)
-OPENCL_OPTIONALCOREFEATURE(__opencl_c_pipes, 300, OCL_C_30)
-OPENCL_OPTIONALCOREFEATURE(__opencl_c_generic_address_space, 300, OCL_C_30)
-OPENCL_OPTIONALCOREFEATURE(__opencl_c_atomic_order_acq_rel, 300, OCL_C_30)
-OPENCL_OPTIONALCOREFEATURE(__opencl_c_atomic_order_seq_cst, 300, OCL_C_30)
-OPENCL_OPTIONALCOREFEATURE(__opencl_c_subgroups, 300, OCL_C_30)
-OPENCL_OPTIONALCOREFEATURE(__opencl_c_3d_image_writes, 300, OCL_C_30)
-OPENCL_OPTIONALCOREFEATURE(__opencl_c_device_enqueue, 300, OCL_C_30)
-OPENCL_OPTIONALCOREFEATURE(__opencl_c_read_write_images, 300, OCL_C_30)
-OPENCL_OPTIONALCOREFEATURE(__opencl_c_program_scope_global_variables, 300, OCL_C_30)
-OPENCL_OPTIONALCOREFEATURE(__opencl_c_fp64, 300, OCL_C_30)
-OPENCL_OPTIONALCOREFEATURE(__opencl_c_images, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_pipes, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_generic_address_space, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_atomic_order_acq_rel, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_atomic_order_seq_cst, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_subgroups, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_3d_image_writes, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_device_enqueue, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_read_write_images, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_program_scope_global_variables, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_fp64, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_images, false, 300, OCL_C_30)
 
 #undef OPENCL_OPTIONALCOREFEATURE
 #undef OPENCL_COREFEATURE

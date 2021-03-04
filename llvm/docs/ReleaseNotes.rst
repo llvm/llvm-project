@@ -51,6 +51,9 @@ Non-comprehensive list of changes in this release
 
    Makes programs 10x faster by doing Special New Thing.
 
+* Windows Control-flow Enforcement Technology: the ``-ehcontguard`` option now
+  emits valid unwind entrypoints which are validated when the context is being
+  set during exception handling.
 
 Changes to the LLVM IR
 ----------------------
@@ -126,6 +129,9 @@ Changes to the LLVM tools
 
 * The options ``--build-id-link-{dir,input,output}`` have been deleted.
   (`D96310 <https://reviews.llvm.org/D96310>`_)
+
+* Support for in-order processors has been added to ``llvm-mca``.
+  (`D94928 <https://reviews.llvm.org/D94928>`_)
 
 Changes to LLDB
 ---------------------------------

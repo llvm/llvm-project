@@ -107,7 +107,10 @@ public:
 // CK0-DAG: [[DIF:%.+]] = sub i64 [[BPTRI]], [[PTRI]]
 // CK0-DAG: [[NORM:%.+]] = sdiv exact i64 [[DIF]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
 // CK0-DAG: [[PTRSNE:%.+]] = icmp ne i64 [[NORM]], 0
-// CK0-DAG: [[CMP:%.+]] = or i1 [[ISARRAY]], [[PTRSNE]]
+// CK0-DAG: [[PTRANDOBJ:%.+]] = and i64 [[TYPE]], 16
+// CK0-DAG: [[ISPTRANDOBJ:%.+]] = icmp ne i64 [[PTRANDOBJ]], 0
+// CK0-DAG: [[CMPA:%.+]] = and i1 [[PTRSNE]], [[ISPTRANDOBJ]]
+// CK0-DAG: [[CMP:%.+]] = or i1 [[ISARRAY]], [[CMPA]]
 // CK0-DAG: [[TYPEDEL:%.+]] = and i64 [[TYPE]], 8
 // CK0-DAG: [[ISNOTDEL:%.+]] = icmp eq i64 [[TYPEDEL]], 0
 // CK0-DAG: [[CMP1:%.+]] = and i1 [[CMP]], [[ISNOTDEL]]
@@ -115,7 +118,7 @@ public:
 // CK0: [[INIT]]
 // CK0-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK0-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
-// CK0-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
+// CK0-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], 281474976710652
 // CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]], {{.*}})
 // CK0: br label %[[LHEAD:[^,]+]]
 
@@ -218,20 +221,14 @@ public:
 
 // CK0: [[LEXIT]]
 // CK0: [[ISARRAY:%.+]] = icmp sgt i64 [[SIZE]], 1
-// CK0: [[BPTRI:%.+]] = ptrtoint i8* [[BPTR]] to i64
-// CK0: [[PTRI:%.+]] = ptrtoint i8* [[BEGIN]] to i64
-// CK0: [[DIF:%.+]] = sub i64 [[BPTRI]], [[PTRI]]
-// CK0: [[NORM:%.+]] = sdiv exact i64 [[DIF]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
-// CK0: [[PTRSNE:%.+]] = icmp ne i64 [[NORM]], 0
-// CK0: [[CMP:%.+]] = or i1 [[ISARRAY]], [[PTRSNE]]
 // CK0: [[TYPEDEL:%.+]] = and i64 [[TYPE]], 8
 // CK0: [[ISNOTDEL:%.+]] = icmp ne i64 [[TYPEDEL]], 0
-// CK0: [[CMP1:%.+]] = and i1 [[CMP]], [[ISNOTDEL]]
+// CK0: [[CMP1:%.+]] = and i1 [[ISARRAY]], [[ISNOTDEL]]
 // CK0: br i1 [[CMP1]], label %[[EVALDEL:[^,]+]], label %[[DONE]]
 // CK0: [[EVALDEL]]
 // CK0-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK0-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
-// CK0-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
+// CK0-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], 281474976710652
 // CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]], {{.*}})
 // CK0: br label %[[DONE]]
 // CK0: [[DONE]]
@@ -659,7 +656,10 @@ public:
 // CK1-DAG: [[DIF:%.+]] = sub i64 [[BPTRI]], [[PTRI]]
 // CK1-DAG: [[NORM:%.+]] = sdiv exact i64 [[DIF]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
 // CK1-DAG: [[PTRSNE:%.+]] = icmp ne i64 [[NORM]], 0
-// CK1-DAG: [[CMP:%.+]] = or i1 [[ISARRAY]], [[PTRSNE]]
+// CK1-DAG: [[PTRANDOBJ:%.+]] = and i64 [[TYPE]], 16
+// CK1-DAG: [[ISPTRANDOBJ:%.+]] = icmp ne i64 [[PTRANDOBJ]], 0
+// CK1-DAG: [[CMPA:%.+]] = and i1 [[PTRSNE]], [[ISPTRANDOBJ]]
+// CK1-DAG: [[CMP:%.+]] = or i1 [[ISARRAY]], [[CMPA]]
 // CK1-DAG: [[TYPEDEL:%.+]] = and i64 [[TYPE]], 8
 // CK1-DAG: [[ISNOTDEL:%.+]] = icmp eq i64 [[TYPEDEL]], 0
 // CK1-DAG: [[CMP1:%.+]] = and i1 [[CMP]], [[ISNOTDEL]]
@@ -667,7 +667,7 @@ public:
 
 // CK1: [[INITEVALDEL]]
 // CK1-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 4
-// CK1-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
+// CK1-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], 281474976710652
 // CK1: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]], {{.*}})
 // CK1: br label %[[LHEAD:[^,]+]]
 
@@ -709,17 +709,11 @@ public:
 
 // CK1: [[LEXIT]]
 // CK1: [[ISARRAY:%.+]] = icmp sgt i64 [[SIZE]], 1
-// CK1: [[BPTRI:%.+]] = ptrtoint i8* [[BPTR]] to i64
-// CK1: [[PTRI:%.+]] = ptrtoint i8* [[BEGIN]] to i64
-// CK1: [[DIF:%.+]] = sub i64 [[BPTRI]], [[PTRI]]
-// CK1: [[NORM:%.+]] = sdiv exact i64 [[DIF]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
-// CK1: [[PTRSNE:%.+]] = icmp ne i64 [[NORM]], 0
-// CK1: [[CMP:%.+]] = or i1 [[ISARRAY]], [[PTRSNE]]
 // CK1: [[TYPEDEL:%.+]] = and i64 [[TYPE]], 8
 // CK1: [[ISNOTDEL:%.+]] = icmp ne i64 [[TYPEDEL]], 0
-// CK1: [[CMP1:%.+]] = and i1 [[CMP]], [[ISNOTDEL]]
+// CK1: [[CMP1:%.+]] = and i1 [[ISARRAY]], [[ISNOTDEL]]
 // CK1-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 4
-// CK1-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
+// CK1-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], 281474976710652
 // CK1: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]], {{.*}})
 // CK1: br label %[[DONE]]
 // CK1: [[DONE]]
@@ -783,7 +777,10 @@ public:
 // CK2-DAG: [[DIF:%.+]] = sub i64 [[BPTRI]], [[PTRI]]
 // CK2-DAG: [[NORM:%.+]] = sdiv exact i64 [[DIF]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
 // CK2-DAG: [[PTRSNE:%.+]] = icmp ne i64 [[NORM]], 0
-// CK2-DAG: [[CMP:%.+]] = or i1 [[ISARRAY]], [[PTRSNE]]
+// CK2-DAG: [[PTRANDOBJ:%.+]] = and i64 [[TYPE]], 16
+// CK2-DAG: [[ISPTRANDOBJ:%.+]] = icmp ne i64 [[PTRANDOBJ]], 0
+// CK2-DAG: [[CMPA:%.+]] = and i1 [[PTRSNE]], [[ISPTRANDOBJ]]
+// CK2-DAG: [[CMP:%.+]] = or i1 [[ISARRAY]], [[CMPA]]
 // CK2-DAG: [[TYPEDEL:%.+]] = and i64 [[TYPE]], 8
 // CK2-DAG: [[ISNOTDEL:%.+]] = icmp eq i64 [[TYPEDEL]], 0
 // CK2-DAG: [[CMP1:%.+]] = and i1 [[CMP]], [[ISNOTDEL]]
@@ -791,7 +788,7 @@ public:
 
 // CK2: [[INITEVALDEL]]
 // CK2-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
-// CK2-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
+// CK2-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], 281474976710652
 // CK2: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]], {{.*}})
 // CK2: br label %[[LHEAD:[^,]+]]
 
@@ -833,19 +830,13 @@ public:
 
 // CK2: [[LEXIT]]
 // CK2: [[ISARRAY:%.+]] = icmp sgt i64 [[SIZE]], 1
-// CK2: [[BPTRI:%.+]] = ptrtoint i8* [[BPTR]] to i64
-// CK2: [[PTRI:%.+]] = ptrtoint i8* [[BEGIN]] to i64
-// CK2: [[DIF:%.+]] = sub i64 [[BPTRI]], [[PTRI]]
-// CK2: [[NORM:%.+]] = sdiv exact i64 [[DIF]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
-// CK2: [[PTRSNE:%.+]] = icmp ne i64 [[NORM]], 0
-// CK2: [[CMP:%.+]] = or i1 [[ISARRAY]], [[PTRSNE]]
 // CK2: [[TYPEDEL:%.+]] = and i64 [[TYPE]], 8
 // CK2: [[ISNOTDEL:%.+]] = icmp ne i64 [[TYPEDEL]], 0
-// CK2: [[CMP1:%.+]] = and i1 [[CMP]], [[ISNOTDEL]]
+// CK2: [[CMP1:%.+]] = and i1 [[ISARRAY]], [[ISNOTDEL]]
 // CK2: br i1 [[CMP1]], label %[[EVALDEL:[^,]+]], label %[[DONE]]
 // CK2: [[EVALDEL]]
 // CK2-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
-// CK2-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
+// CK2-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], 281474976710652
 // CK2: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]], {{.*}})
 // CK2: br label %[[DONE]]
 // CK2: [[DONE]]
@@ -990,7 +981,10 @@ public:
 // CK4-DAG: [[DIF:%.+]] = sub i64 [[BPTRI]], [[PTRI]]
 // CK4-DAG: [[NORM:%.+]] = sdiv exact i64 [[DIF]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
 // CK4-DAG: [[PTRSNE:%.+]] = icmp ne i64 [[NORM]], 0
-// CK4-DAG: [[CMP:%.+]] = or i1 [[ISARRAY]], [[PTRSNE]]
+// CK4-DAG: [[PTRANDOBJ:%.+]] = and i64 [[TYPE]], 16
+// CK4-DAG: [[ISPTRANDOBJ:%.+]] = icmp ne i64 [[PTRANDOBJ]], 0
+// CK4-DAG: [[CMPA:%.+]] = and i1 [[PTRSNE]], [[ISPTRANDOBJ]]
+// CK4-DAG: [[CMP:%.+]] = or i1 [[ISARRAY]], [[CMPA]]
 // CK4-DAG: [[TYPEDEL:%.+]] = and i64 [[TYPE]], 8
 // CK4-DAG: [[ISNOTDEL:%.+]] = icmp eq i64 [[TYPEDEL]], 0
 // CK4-DAG: [[CMP1:%.+]] = and i1 [[CMP]], [[ISNOTDEL]]
@@ -999,7 +993,7 @@ public:
 // CK4: [[INITEVALDEL]]
 // CK4-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK4-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
-// CK4-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
+// CK4-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], 281474976710652
 // CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]], {{.*}})
 // CK4: br label %[[LHEAD:[^,]+]]
 
@@ -1102,20 +1096,14 @@ public:
 
 // CK4: [[LEXIT]]
 // CK4: [[ISARRAY:%.+]] = icmp sgt i64 [[SIZE]], 1
-// CK4: [[BPTRI:%.+]] = ptrtoint i8* [[BPTR]] to i64
-// CK4: [[PTRI:%.+]] = ptrtoint i8* [[BEGIN]] to i64
-// CK4: [[DIF:%.+]] = sub i64 [[BPTRI]], [[PTRI]]
-// CK4: [[NORM:%.+]] = sdiv exact i64 [[DIF]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
-// CK4: [[PTRSNE:%.+]] = icmp ne i64 [[NORM]], 0
-// CK4: [[CMP:%.+]] = or i1 [[ISARRAY]], [[PTRSNE]]
 // CK4: [[TYPEDEL:%.+]] = and i64 [[TYPE]], 8
 // CK4: [[ISNOTDEL:%.+]] = icmp ne i64 [[TYPEDEL]], 0
-// CK4: [[CMP1:%.+]] = and i1 [[CMP]], [[ISNOTDEL]]
+// CK4: [[CMP1:%.+]] = and i1 [[ISARRAY]], [[ISNOTDEL]]
 // CK4: br i1 [[CMP1]], label %[[EVALDEL:[^,]+]], label %[[DONE]]
 // CK4: [[EVALDEL]]
 // CK4-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK4-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
-// CK4-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
+// CK4-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], 281474976710652
 // CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]], {{.*}})
 // CK4: br label %[[DONE]]
 // CK4: [[DONE]]
