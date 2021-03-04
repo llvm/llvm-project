@@ -27,6 +27,13 @@ def Test_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
+
+  let extraClassDeclaration = [{
+    Attribute parseAttribute(DialectAsmParser &parser,
+                             Type type) const override;
+    void printAttribute(Attribute attr,
+                        DialectAsmPrinter &printer) const override;
+  }];
 }
 
 class TEST_Op<string mnemonic, list<OpTrait> traits = []> :
