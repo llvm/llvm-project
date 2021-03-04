@@ -19,7 +19,7 @@ public:
       : OptionValueArray(
             OptionValue::ConvertTypeToMask(OptionValue::eTypeString)) {}
 
-  ~OptionValueArgs() override {}
+  ~OptionValueArgs() override = default;
 
   size_t GetArgs(Args &args);
 

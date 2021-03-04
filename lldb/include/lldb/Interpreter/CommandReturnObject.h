@@ -26,7 +26,7 @@ class CommandReturnObject {
 public:
   CommandReturnObject(bool colors);
 
-  ~CommandReturnObject();
+  ~CommandReturnObject() = default;
 
   llvm::StringRef GetOutputData() {
     lldb::StreamSP stream_sp(m_out_stream.GetStreamAtIndex(eStreamStringIndex));

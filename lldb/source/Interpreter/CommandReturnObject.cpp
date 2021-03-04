@@ -45,8 +45,6 @@ CommandReturnObject::CommandReturnObject(bool colors)
       m_status(eReturnStatusStarted), m_did_change_process_state(false),
       m_interactive(true) {}
 
-CommandReturnObject::~CommandReturnObject() {}
-
 void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
   if (!format)
     return;

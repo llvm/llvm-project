@@ -30,8 +30,6 @@ ScriptInterpreter::ScriptInterpreter(Debugger &debugger,
                                      lldb::ScriptLanguage script_lang)
     : m_debugger(debugger), m_script_lang(script_lang) {}
 
-ScriptInterpreter::~ScriptInterpreter() {}
-
 void ScriptInterpreter::CollectDataForBreakpointCommandCallback(
     std::vector<BreakpointOptions *> &bp_options_vec,
     CommandReturnObject &result) {

@@ -25,7 +25,7 @@ public:
   OptionValueFileSpec(const FileSpec &current_value,
                       const FileSpec &default_value, bool resolve = true);
 
-  ~OptionValueFileSpec() override {}
+  ~OptionValueFileSpec() override = default;
 
   // Virtual subclass pure virtual overrides
 
