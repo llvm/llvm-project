@@ -99,14 +99,14 @@ public:
     }
 
     struct timespec Res;
-    if (!clock_getres(CLOCK_MONOTONIC_RAW, &Res)) {
+    if (clock_getres(CLOCK_MONOTONIC_RAW, &Res)) {
       std::cerr << "Failed to get performance frequency\n";
       return false;
     }
     // clock_getres returns counts per nanosecond
-    // If we need milliseconds we multiply by 10^3
+    // If we need milliseconds we multiply by 10^6
     // TODO: granularity as env var
-    PCFreq = (Res.tv_sec * 1e9 + Res.tv_nsec) * 1e3;
+    PCFreq = (Res.tv_sec * 1e9 + Res.tv_nsec) * 1e6;
     return true;
   }
   virtual double getTimer() override {
