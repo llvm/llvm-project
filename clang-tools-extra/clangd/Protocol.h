@@ -261,6 +261,7 @@ enum class TraceLevel {
 bool fromJSON(const llvm::json::Value &E, TraceLevel &Out, llvm::json::Path);
 
 struct NoParams {};
+inline llvm::json::Value toJSON(const NoParams &) { return nullptr; }
 inline bool fromJSON(const llvm::json::Value &, NoParams &, llvm::json::Path) {
   return true;
 }
@@ -473,6 +474,10 @@ struct ClientCapabilities {
   /// This is a clangd extension.
   /// window.implicitWorkDoneProgressCreate
   bool ImplicitProgressCreation = false;
+
+  /// Whether the client implementation supports a refresh request sent from the
+  /// server to the client.
+  bool SemanticTokenRefreshSupport = false;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &,
               llvm::json::Path);

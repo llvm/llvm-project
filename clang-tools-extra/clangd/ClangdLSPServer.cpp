@@ -579,7 +579,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   {
     LSPBinder Binder(Handlers, *this);
-    bindMethods(Binder);
+    bindMethods(Binder, Params.capabilities);
     if (Opts.Modules)
       for (auto &Mod : *Opts.Modules)
         Mod.initializeLSP(Binder, Params.rawCapabilities, ServerCaps);
@@ -1406,8 +1406,7 @@ void ClangdLSPServer::onAST(const ASTParams &Params,
   Server->getAST(Params.textDocument.uri.file(), Params.range, std::move(CB));
 }
 
-ClangdLSPServer::ClangdLSPServer(Transport &Transp,
-                                 const ThreadsafeFS &TFS,
+ClangdLSPServer::ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
                                  const ClangdLSPServer::Options &Opts)
     : ShouldProfile(/*Period=*/std::chrono::minutes(5),
                     /*Delay=*/std::chrono::minutes(1)),
@@ -1427,7 +1426,8 @@ ClangdLSPServer::ClangdLSPServer(Transport &Transp,
   Bind.method("initialize", this, &ClangdLSPServer::onInitialize);
 }
 
-void ClangdLSPServer::bindMethods(LSPBinder &Bind) {
+void ClangdLSPServer::bindMethods(LSPBinder &Bind,
+                                  const ClientCapabilities &Caps) {
   // clang-format off
   Bind.notification("initialized", this, &ClangdLSPServer::onInitialized);
   Bind.method("shutdown", this, &ClangdLSPServer::onShutdown);
@@ -1481,6 +1481,8 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind) {
   BeginWorkDoneProgress = Bind.outgoingNotification("$/progress");
   ReportWorkDoneProgress = Bind.outgoingNotification("$/progress");
   EndWorkDoneProgress = Bind.outgoingNotification("$/progress");
+  if(Caps.SemanticTokenRefreshSupport)
+    SemanticTokensRefresh = Bind.outgoingMethod("workspace/semanticTokens/refresh");
   // clang-format on
 }
 
@@ -1656,5 +1658,14 @@ void ClangdLSPServer::onFileUpdated(PathRef File, const TUStatus &Status) {
   NotifyFileStatus(Status.render(File));
 }
 
+void ClangdLSPServer::onSemanticsMaybeChanged(PathRef File) {
+  if (SemanticTokensRefresh) {
+    SemanticTokensRefresh(NoParams{}, [](llvm::Expected<std::nullptr_t> E) {
+      if (E)
+        return;
+      elog("Failed to refresh semantic tokens: {0}", E.takeError());
+    });
+  }
+}
 } // namespace clangd
 } // namespace clang
