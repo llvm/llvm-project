@@ -388,3 +388,61 @@ entry:
   store i64 3, i64* %base64_3, align 8
   ret void
 }
+
+define void @ow_end_align1(i8* nocapture %p) {
+; CHECK-LABEL: @ow_end_align1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[P1]], i8 0, i64 27, i1 false)
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, i8* [[P1]], i64 27
+; CHECK-NEXT:    [[P2_I64:%.*]] = bitcast i8* [[P2]] to i64*
+; CHECK-NEXT:    store i64 1, i64* [[P2_I64]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds i8, i8* %p, i64 1
+  call void @llvm.memset.p0i8.i64(i8* align 1 %p1, i8 0, i64 32, i1 false)
+  %p2 = getelementptr inbounds i8, i8* %p1, i64 27
+  %p2.i64 = bitcast i8* %p2 to i64*
+  store i64 1, i64* %p2.i64, align 1
+  ret void
+}
+
+define void @ow_end_align4(i8* nocapture %p) {
+; CHECK-LABEL: @ow_end_align4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[P1]], i8 0, i64 28, i1 false)
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, i8* [[P1]], i64 27
+; CHECK-NEXT:    [[P2_I64:%.*]] = bitcast i8* [[P2]] to i64*
+; CHECK-NEXT:    store i64 1, i64* [[P2_I64]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds i8, i8* %p, i64 1
+  call void @llvm.memset.p0i8.i64(i8* align 4 %p1, i8 0, i64 32, i1 false)
+  %p2 = getelementptr inbounds i8, i8* %p1, i64 27
+  %p2.i64 = bitcast i8* %p2 to i64*
+  store i64 1, i64* %p2.i64, align 1
+  ret void
+}
+
+define void @ow_end_align8(i8* nocapture %p) {
+; CHECK-LABEL: @ow_end_align8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[P1]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, i8* [[P1]], i64 27
+; CHECK-NEXT:    [[P2_I64:%.*]] = bitcast i8* [[P2]] to i64*
+; CHECK-NEXT:    store i64 1, i64* [[P2_I64]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds i8, i8* %p, i64 1
+  call void @llvm.memset.p0i8.i64(i8* align 8 %p1, i8 0, i64 32, i1 false)
+  %p2 = getelementptr inbounds i8, i8* %p1, i64 27
+  %p2.i64 = bitcast i8* %p2 to i64*
+  store i64 1, i64* %p2.i64, align 1
+  ret void
+}
+
