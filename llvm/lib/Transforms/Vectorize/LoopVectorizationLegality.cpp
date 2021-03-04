@@ -674,8 +674,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         InductionDescriptor ID;
         if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
-          if (ID.hasUnsafeAlgebra())
-            Requirements->addExactFPMathInst(ID.getUnsafeAlgebraInst());
+          Requirements->addExactFPMathInst(ID.getExactFPMathInst());
           continue;
         }
 

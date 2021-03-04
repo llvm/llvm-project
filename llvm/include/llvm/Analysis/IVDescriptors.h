@@ -302,23 +302,15 @@ public:
                              PredicatedScalarEvolution &PSE,
                              InductionDescriptor &D, bool Assume = false);
 
-  /// Returns true if the induction type is FP and the binary operator does
-  /// not have the "fast-math" property. Such operation requires a relaxed FP
-  /// mode.
-  bool hasUnsafeAlgebra() {
-    return (IK == IK_FpInduction) && InductionBinOp &&
-           !cast<FPMathOperator>(InductionBinOp)->isFast();
-  }
-
-  /// Returns induction operator that does not have "fast-math" property
-  /// and requires FP unsafe mode.
-  Instruction *getUnsafeAlgebraInst() {
-    if (IK != IK_FpInduction)
-      return nullptr;
-
-    if (!InductionBinOp || cast<FPMathOperator>(InductionBinOp)->isFast())
-      return nullptr;
-    return InductionBinOp;
+  /// Returns floating-point induction operator that does not allow
+  /// reassociation (transforming the induction requires an override of normal
+  /// floating-point rules).
+  /// TODO: This should not require the full 'fast' FMF, but caller code
+  ///       may need to be fixed to propagate FMF correctly.
+  Instruction *getExactFPMathInst() {
+    if (IK == IK_FpInduction && InductionBinOp && !InductionBinOp->isFast())
+      return InductionBinOp;
+    return nullptr;
   }
 
   /// Returns binary opcode of the induction operator.
