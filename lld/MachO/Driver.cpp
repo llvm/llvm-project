@@ -126,11 +126,9 @@ static Optional<std::string> findFramework(StringRef name) {
 }
 
 static TargetInfo *createTargetInfo(opt::InputArgList &args) {
-  // TODO: should unspecified arch be an error rather than defaulting?
-  // Jez: ld64 seems to make unspecified arch an error when LTO is
-  // being used. I'm not sure why though. Feels like we should be able
-  // to infer the arch from our input files regardless
-  StringRef archName = args.getLastArgValue(OPT_arch, "x86_64");
+  StringRef archName = args.getLastArgValue(OPT_arch);
+  if (archName.empty())
+    fatal("must specify -arch");
   config->arch = MachO::getArchitectureFromName(archName);
   switch (MachO::getCPUTypeFromArchitecture(config->arch).first) {
   case MachO::CPU_TYPE_X86_64:
@@ -563,8 +561,10 @@ static std::string lowerDash(StringRef s) {
 static PlatformInfo getPlatformVersion(const opt::ArgList &args) {
   const opt::Arg *arg = args.getLastArg(OPT_platform_version);
   PlatformInfo platform;
-  if (!arg)
+  if (!arg) {
+    error("must specify -platform_version");
     return platform;
+  }
 
   StringRef platformStr = arg->getValue(0);
   StringRef minVersionStr = arg->getValue(1);
