@@ -3912,12 +3912,15 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
       Instruction *IVInc = IVStep->first;
       APInt Step = IVStep->second;
       APInt Offset = Step * AddrMode.Scale;
-      if (Offset.isSignedIntN(64) && getDTFn().dominates(IVInc, MemoryInst)) {
+      if (Offset.isSignedIntN(64)) {
         TestAddrMode.InBounds = false;
         TestAddrMode.ScaledReg = IVInc;
         TestAddrMode.BaseOffs -= Offset.getLimitedValue();
         // If this addressing mode is legal, commit it..
-        if (TLI.isLegalAddressingMode(DL, TestAddrMode, AccessTy, AddrSpace)) {
+        // (Note that we defer the (expensive) domtree base legality check
+        // to the very last possible point.)
+        if (TLI.isLegalAddressingMode(DL, TestAddrMode, AccessTy, AddrSpace) &&
+            getDTFn().dominates(IVInc, MemoryInst)) {
           AddrModeInsts.push_back(cast<Instruction>(IVInc));
           AddrMode = TestAddrMode;
           return true;
