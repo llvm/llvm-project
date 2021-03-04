@@ -44,7 +44,7 @@ class ModuleOp;
 ///   - If 2 spv.globalVariable's have either the same descriptor set + binding
 ///   or the same build_in attribute value, then replace one of them using the
 ///   other.
-///   - If 2 spv.specConstant's have the same spec_id attribute value, then
+///   - If 2 spv.SpecConstant's have the same spec_id attribute value, then
 ///   replace one of them using the other.
 ///   - If 2 spv.func's are identical replace one of them using the other.
 ///

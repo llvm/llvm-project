@@ -508,7 +508,7 @@ spv.module Logical GLSL450 {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc = 42 : i32
+  spv.SpecConstant @sc = 42 : i32
   // CHECK-LABEL: @variable_init_spec_constant
   spv.func @variable_init_spec_constant() -> () "None" {
     %0 = spv.mlir.referenceof @sc : i32

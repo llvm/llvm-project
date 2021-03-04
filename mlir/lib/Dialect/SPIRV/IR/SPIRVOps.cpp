@@ -2067,7 +2067,7 @@ static LogicalResult verify(spirv::GlobalVariableOp varOp) {
     if (!initOp ||
         !isa<spirv::GlobalVariableOp, spirv::SpecConstantOp>(initOp)) {
       return varOp.emitOpError("initializer must be result of a "
-                               "spv.specConstant or spv.globalVariable op");
+                               "spv.SpecConstant or spv.globalVariable op");
     }
   }
 
@@ -2644,7 +2644,7 @@ static LogicalResult verify(spirv::ReferenceOfOp referenceOfOp) {
 
   if (!specConstOp && !specConstCompositeOp)
     return referenceOfOp.emitOpError(
-        "expected spv.specConstant or spv.SpecConstantComposite symbol");
+        "expected spv.SpecConstant or spv.SpecConstantComposite symbol");
 
   if (referenceOfOp.reference().getType() != constType)
     return referenceOfOp.emitOpError("result type mismatch with the referenced "
@@ -2814,7 +2814,7 @@ spirv::SelectionOp spirv::SelectionOp::createIfThen(
 }
 
 //===----------------------------------------------------------------------===//
-// spv.specConstant
+// spv.SpecConstant
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseSpecConstantOp(OpAsmParser &parser,
@@ -3390,7 +3390,7 @@ static LogicalResult verifyMatrixTimesMatrix(spirv::MatrixTimesMatrixOp op) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.specConstantComposite
+// spv.SpecConstantComposite
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseSpecConstantCompositeOp(OpAsmParser &parser,
