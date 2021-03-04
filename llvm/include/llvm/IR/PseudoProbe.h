@@ -92,6 +92,8 @@ Optional<PseudoProbe> extractProbe(const Instruction &Inst);
 void setProbeDistributionFactor(Instruction &Inst, float Factor);
 
 bool moveAndDanglePseudoProbes(BasicBlock *From, Instruction *To);
+
+bool removeRedundantPseudoProbes(BasicBlock *Block);
 } // end namespace llvm
 
 #endif // LLVM_IR_PSEUDOPROBE_H
