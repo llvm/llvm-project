@@ -26,11 +26,9 @@ define arm_aapcs_vfpcc void @float_float_mul(float* nocapture readonly %a, float
 ; CHECK-NEXT:    cmp r4, r2
 ; CHECK-NEXT:    cset r4, hi
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    ands r5, r4
-; CHECK-NEXT:    lsls r5, r5, #31
-; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq r7, r6
-; CHECK-NEXT:    lslseq.w r7, r7, #31
+; CHECK-NEXT:    tst r4, r5
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    andseq.w r7, r7, r6
 ; CHECK-NEXT:    beq .LBB0_11
 ; CHECK-NEXT:  .LBB0_4: @ %for.body.preheader22
 ; CHECK-NEXT:    mvn.w r7, r12
@@ -241,11 +239,9 @@ define arm_aapcs_vfpcc void @float_float_add(float* nocapture readonly %a, float
 ; CHECK-NEXT:    cmp r4, r2
 ; CHECK-NEXT:    cset r4, hi
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    ands r5, r4
-; CHECK-NEXT:    lsls r5, r5, #31
-; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq r7, r6
-; CHECK-NEXT:    lslseq.w r7, r7, #31
+; CHECK-NEXT:    tst r4, r5
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    andseq.w r7, r7, r6
 ; CHECK-NEXT:    beq .LBB1_11
 ; CHECK-NEXT:  .LBB1_4: @ %for.body.preheader22
 ; CHECK-NEXT:    mvn.w r7, r12
@@ -456,11 +452,9 @@ define arm_aapcs_vfpcc void @float_float_sub(float* nocapture readonly %a, float
 ; CHECK-NEXT:    cmp r4, r2
 ; CHECK-NEXT:    cset r4, hi
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    ands r5, r4
-; CHECK-NEXT:    lsls r5, r5, #31
-; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq r7, r6
-; CHECK-NEXT:    lslseq.w r7, r7, #31
+; CHECK-NEXT:    tst r4, r5
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    andseq.w r7, r7, r6
 ; CHECK-NEXT:    beq .LBB2_11
 ; CHECK-NEXT:  .LBB2_4: @ %for.body.preheader22
 ; CHECK-NEXT:    mvn.w r7, r12

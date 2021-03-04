@@ -1012,11 +1012,11 @@ define arm_aapcs_vfpcc <4 x i32> @ext_ops_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    cset r0, eq
 ; CHECK-NEXT:    mul r1, r8, r1
-; CHECK-NEXT:    tst.w r0, #1
+; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    cset r4, eq
-; CHECK-NEXT:    tst.w r4, #1
+; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    csetm r4, ne
 ; CHECK-NEXT:    vmov.32 q4[1], r4
 ; CHECK-NEXT:    vmov q4[2], q4[0], r4, r0
@@ -1026,12 +1026,12 @@ define arm_aapcs_vfpcc <4 x i32> @ext_ops_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-NEXT:    orr.w r1, r1, r9, asr #31
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    tst.w r1, #1
+; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    csetm r1, ne
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    cset r7, eq
 ; CHECK-NEXT:    vmov.32 q0[1], r1
-; CHECK-NEXT:    tst.w r7, #1
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    csetm r7, ne
 ; CHECK-NEXT:    vmov q0[2], q0[0], r1, r7
 ; CHECK-NEXT:    mla r7, r3, r5, r0

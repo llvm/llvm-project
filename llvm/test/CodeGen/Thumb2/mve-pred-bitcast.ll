@@ -397,7 +397,7 @@ define arm_aapcs_vfpcc i2 @bitcast_from_v2i1(<2 x i64> %a) {
 ; CHECK-LE-NEXT:    cset r0, eq
 ; CHECK-LE-NEXT:    orrs r1, r2
 ; CHECK-LE-NEXT:    cset r1, eq
-; CHECK-LE-NEXT:    ands r1, r1, #1
+; CHECK-LE-NEXT:    cmp r1, #0
 ; CHECK-LE-NEXT:    it ne
 ; CHECK-LE-NEXT:    mvnne r1, #1
 ; CHECK-LE-NEXT:    bfi r1, r0, #0, #1
@@ -418,7 +418,7 @@ define arm_aapcs_vfpcc i2 @bitcast_from_v2i1(<2 x i64> %a) {
 ; CHECK-BE-NEXT:    cset r0, eq
 ; CHECK-BE-NEXT:    orrs r1, r2
 ; CHECK-BE-NEXT:    cset r1, eq
-; CHECK-BE-NEXT:    ands r1, r1, #1
+; CHECK-BE-NEXT:    cmp r1, #0
 ; CHECK-BE-NEXT:    it ne
 ; CHECK-BE-NEXT:    mvnne r1, #1
 ; CHECK-BE-NEXT:    bfi r1, r0, #0, #1
