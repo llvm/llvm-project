@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   ARMCodeGen
   ARMDesc
   ARMInfo
+  AsmParser
   CodeGen
   GlobalISel
   MC
