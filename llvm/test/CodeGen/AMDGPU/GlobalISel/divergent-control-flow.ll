@@ -139,9 +139,6 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_and_b32 s4, s4, 1
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
 ; CHECK-NEXT:    s_cbranch_scc1 BB4_4
 ; CHECK-NEXT:  ; %bb.1: ; %bb2
 ; CHECK-NEXT:    s_getpc_b64 s[6:7]
@@ -160,9 +157,6 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:  ; %bb.2: ; %bb7
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:  BB4_3: ; %bb8
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_and_b32 s4, s4, 1
 ; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
 ; CHECK-NEXT:    s_cbranch_scc0 BB4_5
 ; CHECK-NEXT:  BB4_4: ; %bb12
