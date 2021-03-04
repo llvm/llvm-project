@@ -2775,14 +2775,6 @@ public:
   static DIExpression *appendToStack(const DIExpression *Expr,
                                      ArrayRef<uint64_t> Ops);
 
-  /// Create a copy of \p Expr by appending the given list of \p Ops to each
-  /// instance of the operand `DW_OP_LLVM_arg, \p ArgNo`. This is used to
-  /// modify a specific location used by \p Expr, such as when salvaging that
-  /// location.
-  static DIExpression *appendOpsToArg(const DIExpression *Expr,
-                                      ArrayRef<uint64_t> Ops, unsigned ArgNo,
-                                      bool StackValue = false);
-
   /// Create a DIExpression to describe one part of an aggregate variable that
   /// is fragmented across multiple Values. The DW_OP_LLVM_fragment operation
   /// will be appended to the elements of \c Expr. If \c Expr already contains

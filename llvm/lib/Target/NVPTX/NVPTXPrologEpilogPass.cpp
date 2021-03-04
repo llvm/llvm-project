@@ -65,25 +65,16 @@ bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
         // way with simply the frame index and offset rather than any
         // target-specific addressing mode.
         if (MI.isDebugValue()) {
-          MachineOperand &Op = MI.getOperand(i);
-          assert(
-              MI.isDebugOperand(&Op) &&
-              "Frame indices can only appear as a debug operand in a DBG_VALUE*"
-              " machine instruction");
+          assert(i == 0 && "Frame indices can only appear as the first "
+                           "operand of a DBG_VALUE machine instruction");
           Register Reg;
-          auto Offset =
-              TFI.getFrameIndexReference(MF, Op.getIndex(), Reg);
-          Op.ChangeToRegister(Reg, /*isDef=*/false);
-          Op.setIsDebug();
-          const DIExpression *DIExpr = MI.getDebugExpression();
-          if (MI.isNonListDebugValue()) {
-            DIExpr = TRI.prependOffsetExpression(MI.getDebugExpression(), DIExpression::ApplyOffset, Offset);
-          } else {
-	    SmallVector<uint64_t, 3> Ops;
-            TRI.getOffsetOpcodes(Offset, Ops);
-            unsigned OpIdx = MI.getDebugOperandIndex(&Op);
-            DIExpr = DIExpression::appendOpsToArg(DIExpr, Ops, OpIdx);
-          }
+          int64_t Offset =
+              TFI.getFrameIndexReference(MF, MI.getOperand(0).getIndex(), Reg)
+                  .getFixed();
+          MI.getOperand(0).ChangeToRegister(Reg, /*isDef=*/false);
+          MI.getOperand(0).setIsDebug();
+          auto *DIExpr = DIExpression::prepend(
+              MI.getDebugExpression(), DIExpression::ApplyOffset, Offset);
           MI.getDebugExpressionOp().setMetadata(DIExpr);
           continue;
         }

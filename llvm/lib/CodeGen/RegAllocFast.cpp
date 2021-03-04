@@ -408,8 +408,7 @@ void RegAllocFast::spill(MachineBasicBlock::iterator Before, Register VirtReg,
   // to just reference the stack slot.
   SmallVectorImpl<MachineInstr *> &LRIDbgValues = LiveDbgValueMap[VirtReg];
   for (MachineInstr *DBG : LRIDbgValues) {
-    MachineInstr *NewDV =
-        buildDbgValueForSpill(*MBB, Before, *DBG, FI, AssignedReg);
+    MachineInstr *NewDV = buildDbgValueForSpill(*MBB, Before, *DBG, FI);
     assert(NewDV->getParent() == MBB && "dangling parent pointer");
     (void)NewDV;
     LLVM_DEBUG(dbgs() << "Inserting debug info due to spill:\n" << *NewDV);
@@ -425,14 +424,9 @@ void RegAllocFast::spill(MachineBasicBlock::iterator Before, Register VirtReg,
     }
 
     // Rewrite unassigned dbg_values to use the stack slot.
-    // TODO We can potentially do this for list debug values as well if we know
-    // how the dbg_values are getting unassigned.
-    if (DBG->isNonListDebugValue()) {
-      MachineOperand &MO = DBG->getDebugOperand(0);
-      if (MO.isReg() && MO.getReg() == 0) {
-        updateDbgValueForSpill(*DBG, FI, 0);
-      }
-    }
+    MachineOperand &MO = DBG->getOperand(0);
+    if (MO.isReg() && MO.getReg() == 0)
+      updateDbgValueForSpill(*DBG, FI);
   }
   // Now this register is spilled there is should not be any DBG_VALUE
   // pointing to this register because they are all pointing to spilled value
@@ -629,7 +623,8 @@ void RegAllocFast::assignDanglingDebugValues(MachineInstr &Definition,
   SmallVectorImpl<MachineInstr*> &Dangling = UDBGValIter->second;
   for (MachineInstr *DbgValue : Dangling) {
     assert(DbgValue->isDebugValue());
-    if (!DbgValue->hasDebugOperandForReg(VirtReg))
+    MachineOperand &MO = DbgValue->getOperand(0);
+    if (!MO.isReg())
       continue;
 
     // Test whether the physreg survives from the definition to the DBG_VALUE.
@@ -644,11 +639,9 @@ void RegAllocFast::assignDanglingDebugValues(MachineInstr &Definition,
         break;
       }
     }
-    for (MachineOperand &MO : DbgValue->getDebugOperandsForReg(VirtReg)) {
-      MO.setReg(SetToReg);
-      if (SetToReg != 0)
-        MO.setIsRenamable();
-    }
+    MO.setReg(SetToReg);
+    if (SetToReg != 0)
+      MO.setIsRenamable();
   }
   Dangling.clear();
 }
@@ -1367,44 +1360,37 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
 }
 
 void RegAllocFast::handleDebugValue(MachineInstr &MI) {
-  SmallSet<Register, 4> SeenRegisters;
-  for (MachineOperand &MO : MI.debug_operands()) {
-    // Ignore DBG_VALUEs that aren't based on virtual registers. These are
-    // mostly constants and frame indices.
-    if (!MO.isReg())
-      continue;
-    Register Reg = MO.getReg();
-    if (!Register::isVirtualRegister(Reg))
-      continue;
-    // Only process each register once per MI, each use of that register will
-    // be updated if necessary.
-    if (!SeenRegisters.insert(Reg).second)
-      continue;
+  MachineOperand &MO = MI.getDebugOperand(0);
 
-    // Already spilled to a stackslot?
-    int SS = StackSlotForVirtReg[Reg];
-    if (SS != -1) {
-      // Modify DBG_VALUE now that the value is in a spill slot.
-      updateDbgValueForSpill(MI, SS, Reg);
-      LLVM_DEBUG(dbgs() << "Rewrite DBG_VALUE for spilled memory: " << MI);
-      continue;
-    }
+  // Ignore DBG_VALUEs that aren't based on virtual registers. These are
+  // mostly constants and frame indices.
+  if (!MO.isReg())
+    return;
+  Register Reg = MO.getReg();
+  if (!Register::isVirtualRegister(Reg))
+    return;
 
-    // See if this virtual register has already been allocated to a physical
-    // register or spilled to a stack slot.
-    LiveRegMap::iterator LRI = findLiveVirtReg(Reg);
-    if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
-      // Update every use of Reg within MI.
-      for (auto &RegMO : MI.getDebugOperandsForReg(Reg))
-        setPhysReg(MI, RegMO, LRI->PhysReg);
-    } else {
-      DanglingDbgValues[Reg].push_back(&MI);
-    }
-
-    // If Reg hasn't been spilled, put this DBG_VALUE in LiveDbgValueMap so
-    // that future spills of Reg will have DBG_VALUEs.
-    LiveDbgValueMap[Reg].push_back(&MI);
+  // Already spilled to a stackslot?
+  int SS = StackSlotForVirtReg[Reg];
+  if (SS != -1) {
+    // Modify DBG_VALUE now that the value is in a spill slot.
+    updateDbgValueForSpill(MI, SS);
+    LLVM_DEBUG(dbgs() << "Rewrite DBG_VALUE for spilled memory: " << MI);
+    return;
   }
+
+  // See if this virtual register has already been allocated to a physical
+  // register or spilled to a stack slot.
+  LiveRegMap::iterator LRI = findLiveVirtReg(Reg);
+  if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
+    setPhysReg(MI, MO, LRI->PhysReg);
+  } else {
+    DanglingDbgValues[Reg].push_back(&MI);
+  }
+
+  // If Reg hasn't been spilled, put this DBG_VALUE in LiveDbgValueMap so
+  // that future spills of Reg will have DBG_VALUEs.
+  LiveDbgValueMap[Reg].push_back(&MI);
 }
 
 void RegAllocFast::handleBundle(MachineInstr &MI) {
@@ -1486,12 +1472,13 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
   for (auto &UDBGPair : DanglingDbgValues) {
     for (MachineInstr *DbgValue : UDBGPair.second) {
       assert(DbgValue->isDebugValue() && "expected DBG_VALUE");
+      MachineOperand &MO = DbgValue->getOperand(0);
       // Nothing to do if the vreg was spilled in the meantime.
-      if (!DbgValue->hasDebugOperandForReg(UDBGPair.first))
+      if (!MO.isReg())
         continue;
       LLVM_DEBUG(dbgs() << "Register did not survive for " << *DbgValue
                  << '\n');
-      DbgValue->setDebugValueUndef();
+      MO.setReg(0);
     }
   }
   DanglingDbgValues.clear();

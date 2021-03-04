@@ -905,7 +905,7 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
 /// means the target will need to handle MI in EmitInstruction.
 static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   // This code handles only the 4-operand target-independent form.
-  if (MI->isNonListDebugValue() && MI->getNumOperands() != 4)
+  if (MI->getNumOperands() != 4)
     return false;
 
   SmallString<128> Str;
@@ -1228,7 +1228,6 @@ void AsmPrinter::emitFunctionBody() {
         emitInlineAsm(&MI);
         break;
       case TargetOpcode::DBG_VALUE:
-      case TargetOpcode::DBG_VALUE_LIST:
         if (isVerbose()) {
           if (!emitDebugValueComment(&MI, *this))
             emitInstruction(&MI);
