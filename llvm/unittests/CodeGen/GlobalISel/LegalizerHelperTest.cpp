@@ -1988,9 +1988,9 @@ TEST_F(AArch64GISelMITest, LibcallSRem) {
   CHECK: $x1 = COPY [[COPY]]
   CHECK: BL &__moddi3
   CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
-  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
   CHECK: $x0 = COPY [[UV]]
   CHECK: $x1 = COPY [[UV1]]
+  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
   CHECK: $x2 = COPY [[UV2]]
   CHECK: $x3 = COPY [[UV3]]
   CHECK: BL &__modti3
@@ -2045,9 +2045,9 @@ TEST_F(AArch64GISelMITest, LibcallURem) {
   CHECK: $x1 = COPY [[COPY]]
   CHECK: BL &__umoddi3
   CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
-  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
   CHECK: $x0 = COPY [[UV]]
   CHECK: $x1 = COPY [[UV1]]
+  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
   CHECK: $x2 = COPY [[UV2]]
   CHECK: $x3 = COPY [[UV3]]
   CHECK: BL &__umodti3

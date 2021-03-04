@@ -26,6 +26,10 @@ class Module;
 
 namespace legacy {
 
+// Whether or not -debug-pass has been specified. For use to check if it's
+// specified alongside the new PM.
+bool debugPassSpecified();
+
 class PassManagerImpl;
 class FunctionPassManagerImpl;
 

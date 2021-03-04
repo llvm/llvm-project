@@ -8,17 +8,34 @@
 // RUN: wasm-ld --experimental-pic -shared -Bsymbolic %t.o -o %t1.so
 // RUN: obj2yaml %t1.so | FileCheck -check-prefix=SYMBOLIC %s
 
-// NOOPTION  - Type:            IMPORT
-// NOOPTION:            - Module:          GOT.func
-// NOOPTION-NEXT:         Field:           foo
-// NOOPTION-NEXT:         Kind:            GLOBAL
-// NOOPTION-NEXT:         GlobalType:      I32
-// NOOPTION-NEXT:         GlobalMutable:   true
-// NOOPTION-NEXT:       - Module:          GOT.mem
-// NOOPTION-NEXT:         Field:           bar
-// NOOPTION-NEXT:         Kind:            GLOBAL
-// NOOPTION-NEXT:         GlobalType:      I32
-// NOOPTION-NEXT:         GlobalMutable:   true
+// NOOPTION:       - Type:            IMPORT
+// NOOPTION-NEXT:    Imports:
+// NOOPTION-NEXT:      - Module:          env
+// NOOPTION-NEXT:        Field:           memory
+// NOOPTION-NEXT:        Kind:            MEMORY
+// NOOPTION-NEXT:        Memory:
+// NOOPTION-NEXT:          Initial:         0x1
+// NOOPTION-NEXT:      - Module:          env
+// NOOPTION-NEXT:        Field:           __memory_base
+// NOOPTION-NEXT:        Kind:            GLOBAL
+// NOOPTION-NEXT:        GlobalType:      I32
+// NOOPTION-NEXT:        GlobalMutable:   false
+// NOOPTION-NEXT:      - Module:          env
+// NOOPTION-NEXT:        Field:           __table_base
+// NOOPTION-NEXT:        Kind:            GLOBAL
+// NOOPTION-NEXT:        GlobalType:      I32
+// NOOPTION-NEXT:        GlobalMutable:   false
+// NOOPTION-NEXT:      - Module:          GOT.func
+// NOOPTION-NEXT:        Field:           foo
+// NOOPTION-NEXT:        Kind:            GLOBAL
+// NOOPTION-NEXT:        GlobalType:      I32
+// NOOPTION-NEXT:        GlobalMutable:   true
+// NOOPTION-NEXT:      - Module:          GOT.mem
+// NOOPTION-NEXT:        Field:           bar
+// NOOPTION-NEXT:        Kind:            GLOBAL
+// NOOPTION-NEXT:        GlobalType:      I32
+// NOOPTION-NEXT:        GlobalMutable:   true
+// NOOPTION-NEXT:  - Type:            FUNCTION
 
 //      NOOPTION:  - Type:            GLOBAL
 // NOOPTION-NEXT:    Globals:
@@ -32,6 +49,33 @@
 
 // SYMBOLIC-NOT:   - Module:          GOT.mem
 // SYMBOLIC-NOT:   - Module:          GOT.func
+
+// SYMBOLIC:       - Type:            IMPORT
+// SYMBOLIC-NEXT:    Imports:
+// SYMBOLIC-NEXT:      - Module:          env
+// SYMBOLIC-NEXT:        Field:           memory
+// SYMBOLIC-NEXT:        Kind:            MEMORY
+// SYMBOLIC-NEXT:        Memory:
+// SYMBOLIC-NEXT:          Initial:         0x1
+// SYMBOLIC-NEXT:      - Module:          env
+// SYMBOLIC-NEXT:        Field:           __memory_base
+// SYMBOLIC-NEXT:        Kind:            GLOBAL
+// SYMBOLIC-NEXT:        GlobalType:      I32
+// SYMBOLIC-NEXT:        GlobalMutable:   false
+// SYMBOLIC-NEXT:      - Module:          env
+// SYMBOLIC-NEXT:        Field:           __table_base
+// SYMBOLIC-NEXT:        Kind:            GLOBAL
+// SYMBOLIC-NEXT:        GlobalType:      I32
+// SYMBOLIC-NEXT:        GlobalMutable:   false
+// SYMBOLIC-NEXT:      - Module:          env
+// SYMBOLIC-NEXT:        Field:           __indirect_function_table
+// SYMBOLIC-NEXT:        Kind:            TABLE
+// SYMBOLIC-NEXT:        Table:
+// SYMBOLIC-NEXT:          Index:           0
+// SYMBOLIC-NEXT:          ElemType:        FUNCREF
+// SYMBOLIC-NEXT:          Limits:
+// SYMBOLIC-NEXT:            Initial:         0x1
+// SYMBOLIC-NEXT:  - Type:            FUNCTION
 
 // SYMBOLIC:       - Type:            GLOBAL
 // SYMBOLIC-NEXT:    Globals:

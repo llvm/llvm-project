@@ -5,15 +5,17 @@
 # RUN:     -L Local \
 # RUN:     -L Weak \
 # RUN:     -L GlobalCommon \
+# RUN:     -L Missing \
 # RUN:     %t %t2
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
-# RUN: llvm-objcopy --regex --localize-symbol='.*' %t %t3
+# RUN: llvm-objcopy --regex --localize-symbol='[GLW].*' %t %t3
 # RUN: cmp %t2 %t3
 # RUN: echo "  Global # comment  " > %t-list.txt
 # RUN: echo "GlobalUndef" >> %t-list.txt
 # RUN: echo "Local" >> %t-list.txt
 # RUN: echo "Weak" >> %t-list.txt
 # RUN: echo "GlobalCommon" >> %t-list.txt
+# RUN: echo "Missing" >> %t-list.txt
 # RUN: echo " # comment " >> %t-list.txt
 # RUN: llvm-objcopy --localize-symbols %t-list.txt %t %t4
 # RUN: cmp %t2 %t4
@@ -68,6 +70,9 @@ Symbols:
     Section:  .text
     Value:    0x1008
     Binding:  STB_WEAK
+  - Name:     Unmentioned
+    Section:  .text
+    Binding:  STB_GLOBAL
 
 #CHECK: Symbols [
 #CHECK-NEXT:  Symbol {
@@ -122,6 +127,15 @@ Symbols:
 #CHECK-NEXT:    Binding: Global
 #CHECK-NEXT:    Type: Object
 #CHECK-NEXT:    Other: 0
-#CHECK-NEXT:    Section: Common (0xF
+#CHECK-NEXT:    Section: Common
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: Unmentioned
+#CHECK-NEXT:    Value:
+#CHECK-NEXT:    Size:
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type:
+#CHECK-NEXT:    Other:
+#CHECK-NEXT:    Section: .text
 #CHECK-NEXT:  }
 #CHECK-NEXT:]

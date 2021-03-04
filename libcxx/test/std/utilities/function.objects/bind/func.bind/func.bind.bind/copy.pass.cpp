@@ -15,7 +15,7 @@
 // template<Returnable R, CopyConstructible Fn, CopyConstructible... Types>
 //   unspecified bind(Fn, Types...);
 
-// https://bugs.llvm.org/show_bug.cgi?id=16385
+// https://llvm.org/PR16385
 
 #include <functional>
 #include <cmath>

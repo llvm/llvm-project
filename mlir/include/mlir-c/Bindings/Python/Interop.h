@@ -25,6 +25,7 @@
 
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir-c/ExecutionEngine.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Pass.h"
@@ -33,6 +34,8 @@
 #define MLIR_PYTHON_CAPSULE_AFFINE_MAP "mlir.ir.AffineMap._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_ATTRIBUTE "mlir.ir.Attribute._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_CONTEXT "mlir.ir.Context._CAPIPtr"
+#define MLIR_PYTHON_CAPSULE_EXECUTION_ENGINE                                   \
+  "mlir.execution_engine.ExecutionEngine._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_INTEGER_SET "mlir.ir.IntegerSet._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_LOCATION "mlir.ir.Location._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_MODULE "mlir.ir.Module._CAPIPtr"
@@ -259,6 +262,27 @@ static inline MlirIntegerSet mlirPythonCapsuleToIntegerSet(PyObject *capsule) {
   void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_INTEGER_SET);
   MlirIntegerSet integerSet = {ptr};
   return integerSet;
+}
+
+/** Creates a capsule object encapsulating the raw C-API MlirExecutionEngine.
+ * The returned capsule does not extend or affect ownership of any Python
+ * objects that reference the set in any way. */
+static inline PyObject *
+mlirPythonExecutionEngineToCapsule(MlirExecutionEngine jit) {
+  return PyCapsule_New(MLIR_PYTHON_GET_WRAPPED_POINTER(jit),
+                       MLIR_PYTHON_CAPSULE_EXECUTION_ENGINE, NULL);
+}
+
+/** Extracts an MlirExecutionEngine from a capsule as produced from
+ * mlirPythonIntegerSetToCapsule. If the capsule is not of the right type, then
+ * a null set is returned (as checked via mlirExecutionEngineIsNull). In such a
+ * case, the Python APIs will have already set an error. */
+static inline MlirExecutionEngine
+mlirPythonCapsuleToExecutionEngine(PyObject *capsule) {
+  void *ptr =
+      PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_EXECUTION_ENGINE);
+  MlirExecutionEngine jit = {ptr};
+  return jit;
 }
 
 #ifdef __cplusplus

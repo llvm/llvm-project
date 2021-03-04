@@ -3305,7 +3305,11 @@ static void replaceWithNewOp(PatternRewriter &rewriter, SubViewOp op,
 
 static void replaceWithNewOp(PatternRewriter &rewriter, SubTensorOp op,
                              SubTensorOp newOp) {
-  rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
+  Value replacement = newOp.getResult();
+  if (replacement.getType() != op.getType())
+    replacement =
+        rewriter.create<tensor::CastOp>(op.getLoc(), op.getType(), replacement);
+  rewriter.replaceOp(op, replacement);
 }
 
 /// Pattern to rewrite a subview op with constant arguments.
@@ -3789,10 +3793,9 @@ void mlir::SubTensorInsertOp::build(OpBuilder &b, OperationState &result,
 }
 
 OpFoldResult SubTensorInsertOp::fold(ArrayRef<Attribute>) {
-  if (getSourceType() == getType() &&
+  if (getSourceType().hasStaticShape() && getType().hasStaticShape() &&
+      getSourceType() == getType() &&
       succeeded(foldIdentityOffsetSizeAndStrideOpInterface(*this, getType())))
-    return this->source();
-  if (succeeded(tensor::foldTensorCast(*this)))
     return this->source();
   return OpFoldResult();
 }
@@ -3847,9 +3850,9 @@ struct SubTensorInsertOpCastFolder final
     : public OpRewritePattern<SubTensorInsertOp> {
   using OpRewritePattern<SubTensorInsertOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(SubTensorInsertOp subTensorOp,
+  LogicalResult matchAndRewrite(SubTensorInsertOp subTensorInsertOp,
                                 PatternRewriter &rewriter) const override {
-    if (llvm::any_of(subTensorOp.getOperands(), [](Value operand) {
+    if (llvm::any_of(subTensorInsertOp.getOperands(), [](Value operand) {
           return matchPattern(operand, m_ConstantIndex());
         }))
       return failure();
@@ -3860,21 +3863,25 @@ struct SubTensorInsertOpCastFolder final
         return llvm::None;
       return castOp.source();
     };
-    Optional<Value> sourceCastSource = getSourceOfCastOp(subTensorOp.source());
-    Optional<Value> destCastSource = getSourceOfCastOp(subTensorOp.dest());
-    if (!sourceCastSource && !destCastSource &&
-        subTensorOp.dest().getType() == subTensorOp.getResult().getType())
+    Optional<Value> sourceCastSource =
+        getSourceOfCastOp(subTensorInsertOp.source());
+    Optional<Value> destCastSource =
+        getSourceOfCastOp(subTensorInsertOp.dest());
+    if (!sourceCastSource && !destCastSource)
       return failure();
 
-    auto newOp = rewriter.create<SubTensorInsertOp>(
-        subTensorOp.getLoc(),
-        (sourceCastSource ? *sourceCastSource : subTensorOp.source()),
-        (destCastSource ? *destCastSource : subTensorOp.dest()),
-        subTensorOp.getMixedOffsets(), subTensorOp.getMixedSizes(),
-        subTensorOp.getMixedStrides());
+    Value replacement = rewriter.create<SubTensorInsertOp>(
+        subTensorInsertOp.getLoc(),
+        (sourceCastSource ? *sourceCastSource : subTensorInsertOp.source()),
+        (destCastSource ? *destCastSource : subTensorInsertOp.dest()),
+        subTensorInsertOp.getMixedOffsets(), subTensorInsertOp.getMixedSizes(),
+        subTensorInsertOp.getMixedStrides());
 
-    rewriter.replaceOpWithNewOp<tensor::CastOp>(subTensorOp,
-                                                subTensorOp.getType(), newOp);
+    if (replacement.getType() != subTensorInsertOp.getType()) {
+      replacement = rewriter.create<tensor::CastOp>(
+          subTensorInsertOp.getLoc(), subTensorInsertOp.getType(), replacement);
+    }
+    rewriter.replaceOp(subTensorInsertOp, replacement);
     return success();
   }
 };

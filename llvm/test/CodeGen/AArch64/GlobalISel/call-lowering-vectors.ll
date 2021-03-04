@@ -19,12 +19,9 @@ define i24 @test_v3i8(<3 x i8> %a) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $w0, $w1, $w2
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
-  ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY $w2
-  ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[COPY4]](s32)
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY3]](s32), [[COPY5]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(<3 x s8>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
   ; CHECK:   [[BITCAST:%[0-9]+]]:_(s24) = G_BITCAST [[TRUNC]](<3 x s8>)
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[BITCAST]](s24)

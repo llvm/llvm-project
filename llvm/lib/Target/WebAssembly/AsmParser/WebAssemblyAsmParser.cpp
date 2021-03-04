@@ -487,35 +487,38 @@ public:
         WebAssemblyOperand::IntOp{static_cast<int64_t>(BT)}));
   }
 
-  bool addFunctionTableOperand(OperandVector &Operands, MCSymbolWasm *Sym,
-                               SMLoc StartLoc, SMLoc EndLoc) {
-    const auto *Val = MCSymbolRefExpr::create(Sym, getContext());
-    Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        WebAssemblyOperand::Symbol, StartLoc, EndLoc,
-        WebAssemblyOperand::SymOp{Val}));
-    return false;
-  }
-
-  bool addFunctionTableOperand(OperandVector &Operands, StringRef TableName,
-                               SMLoc StartLoc, SMLoc EndLoc) {
-    return addFunctionTableOperand(
-        Operands, GetOrCreateFunctionTableSymbol(getContext(), TableName),
-        StartLoc, EndLoc);
-  }
-
-  bool addDefaultFunctionTableOperand(OperandVector &Operands, SMLoc StartLoc,
-                                      SMLoc EndLoc) {
+  bool parseFunctionTableOperand(std::unique_ptr<WebAssemblyOperand> *Op) {
     if (STI->checkFeatures("+reference-types")) {
-      return addFunctionTableOperand(Operands, DefaultFunctionTable, StartLoc,
-                                     EndLoc);
+      // If the reference-types feature is enabled, there is an explicit table
+      // operand.  To allow the same assembly to be compiled with or without
+      // reference types, we allow the operand to be omitted, in which case we
+      // default to __indirect_function_table.
+      auto &Tok = Lexer.getTok();
+      if (Tok.is(AsmToken::Identifier)) {
+        auto *Sym =
+            GetOrCreateFunctionTableSymbol(getContext(), Tok.getString());
+        const auto *Val = MCSymbolRefExpr::create(Sym, getContext());
+        *Op = std::make_unique<WebAssemblyOperand>(
+            WebAssemblyOperand::Symbol, Tok.getLoc(), Tok.getEndLoc(),
+            WebAssemblyOperand::SymOp{Val});
+        Parser.Lex();
+        return expect(AsmToken::Comma, ",");
+      } else {
+        const auto *Val =
+            MCSymbolRefExpr::create(DefaultFunctionTable, getContext());
+        *Op = std::make_unique<WebAssemblyOperand>(
+            WebAssemblyOperand::Symbol, SMLoc(), SMLoc(),
+            WebAssemblyOperand::SymOp{Val});
+        return false;
+      }
     } else {
       // For the MVP there is at most one table whose number is 0, but we can't
       // write a table symbol or issue relocations.  Instead we just ensure the
       // table is live and write a zero.
       getStreamer().emitSymbolAttribute(DefaultFunctionTable, MCSA_NoDeadStrip);
-      Operands.push_back(std::make_unique<WebAssemblyOperand>(
-          WebAssemblyOperand::Integer, StartLoc, EndLoc,
-          WebAssemblyOperand::IntOp{0}));
+      *Op = std::make_unique<WebAssemblyOperand>(WebAssemblyOperand::Integer,
+                                                 SMLoc(), SMLoc(),
+                                                 WebAssemblyOperand::IntOp{0});
       return false;
     }
   }
@@ -556,7 +559,7 @@ public:
     bool ExpectBlockType = false;
     bool ExpectFuncType = false;
     bool ExpectHeapType = false;
-    bool ExpectFunctionTable = false;
+    std::unique_ptr<WebAssemblyOperand> FunctionTable;
     if (Name == "block") {
       push(Block);
       ExpectBlockType = true;
@@ -602,8 +605,12 @@ public:
       if (pop(Name, Function) || ensureEmptyNestingStack())
         return true;
     } else if (Name == "call_indirect" || Name == "return_call_indirect") {
+      // These instructions have differing operand orders in the text format vs
+      // the binary formats.  The MC instructions follow the binary format, so
+      // here we stash away the operand and append it later.
+      if (parseFunctionTableOperand(&FunctionTable))
+        return true;
       ExpectFuncType = true;
-      ExpectFunctionTable = true;
     } else if (Name == "ref.null") {
       ExpectHeapType = true;
     }
@@ -631,16 +638,6 @@ public:
       Operands.push_back(std::make_unique<WebAssemblyOperand>(
           WebAssemblyOperand::Symbol, Loc.getLoc(), Loc.getEndLoc(),
           WebAssemblyOperand::SymOp{Expr}));
-
-      // Allow additional operands after the signature, notably for
-      // call_indirect against a named table.
-      if (Lexer.isNot(AsmToken::EndOfStatement)) {
-        if (expect(AsmToken::Comma, ","))
-          return true;
-        if (Lexer.is(AsmToken::EndOfStatement)) {
-          return error("Unexpected trailing comma");
-        }
-      }
     }
 
     while (Lexer.isNot(AsmToken::EndOfStatement)) {
@@ -665,11 +662,6 @@ public:
           Operands.push_back(std::make_unique<WebAssemblyOperand>(
               WebAssemblyOperand::Integer, Id.getLoc(), Id.getEndLoc(),
               WebAssemblyOperand::IntOp{static_cast<int64_t>(HeapType)}));
-          Parser.Lex();
-        } else if (ExpectFunctionTable) {
-          if (addFunctionTableOperand(Operands, Id.getString(), Id.getLoc(),
-                                      Id.getEndLoc()))
-            return true;
           Parser.Lex();
         } else {
           // Assume this identifier is a label.
@@ -737,12 +729,8 @@ public:
       // Support blocks with no operands as default to void.
       addBlockTypeOperand(Operands, NameLoc, WebAssembly::BlockType::Void);
     }
-    if (ExpectFunctionTable && Operands.size() == 2) {
-      // If call_indirect doesn't specify a target table, supply one.
-      if (addDefaultFunctionTableOperand(Operands, NameLoc,
-                                         SMLoc::getFromPointer(Name.end())))
-        return true;
-    }
+    if (FunctionTable)
+      Operands.push_back(std::move(FunctionTable));
     Parser.Lex();
     return false;
   }

@@ -161,8 +161,7 @@ public:
   /// Convert the given set of types, filling 'results' as necessary. This
   /// returns failure if the conversion of any of the types fails, success
   /// otherwise.
-  LogicalResult convertTypes(ArrayRef<Type> types,
-                             SmallVectorImpl<Type> &results);
+  LogicalResult convertTypes(TypeRange types, SmallVectorImpl<Type> &results);
 
   /// Return true if the given type is legal for this type converter, i.e. the
   /// type converts to itself.

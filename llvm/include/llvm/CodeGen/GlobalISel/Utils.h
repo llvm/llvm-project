@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_UTILS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
@@ -23,6 +24,7 @@
 namespace llvm {
 
 class AnalysisUsage;
+class BlockFrequencyInfo;
 class GISelKnownBits;
 class MachineFunction;
 class MachineInstr;
@@ -32,6 +34,7 @@ class MachineOptimizationRemarkMissed;
 struct MachinePointerInfo;
 class MachineRegisterInfo;
 class MCInstrDesc;
+class ProfileSummaryInfo;
 class RegisterBankInfo;
 class TargetInstrInfo;
 class TargetLowering;
@@ -283,5 +286,9 @@ bool isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
 /// Returns an integer representing true, as defined by the
 /// TargetBooleanContents.
 int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector, bool IsFP);
+
+/// Returns true if the given block should be optimized for size.
+bool shouldOptForSize(const MachineBasicBlock &MBB, ProfileSummaryInfo *PSI,
+                      BlockFrequencyInfo *BFI);
 } // End namespace llvm.
 #endif

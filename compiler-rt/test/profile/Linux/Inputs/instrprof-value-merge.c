@@ -34,37 +34,37 @@ int main(int argc, char *argv[]) {
   }
 }
 
-// CHECK: Counters:
-// CHECK:   main:
-// CHECK:     Hash: 0x0a9bd81e87ab6e87
-// CHECK:     Counters: 6
-// CHECK:     Indirect Call Site Count: 3
-// CHECK:     Number of Memory Intrinsics Calls: 3
-// CHECK:     Block counts: [27, 297, 12, 132, 3, 2]
-// CHECK:     Indirect Target Results:
-// CHECK:         [ 0, foo, 3 ]
-// CHECK:         [ 1, foo, 27 ]
-// CHECK:         [ 2, foo, 297 ]
-// CHECK:     Memory Intrinsic Size Results:
-// CHECK:         [ 0, 4, 2 ]
-// CHECK:         [ 1, 5, 12 ]
-// CHECK:         [ 2, 6, 132 ]
-// CHECK: Instrumentation level: IR
-// CHECK: Functions shown: 1
-// CHECK: Total functions: 3
-// CHECK: Maximum function count: 327
-// CHECK: Maximum internal block count: 297
-// CHECK: Statistics for indirect call sites profile:
-// CHECK:   Total number of sites: 3
-// CHECK:   Total number of sites with values: 3
-// CHECK:   Total number of profiled values: 3
-// CHECK:   Value sites histogram:
-// CHECK:         NumTargets, SiteCount
-// CHECK:         1, 3
-// CHECK: Statistics for memory intrinsic calls sizes profile:
-// CHECK:   Total number of sites: 3
-// CHECK:   Total number of sites with values: 3
-// CHECK:   Total number of profiled values: 3
-// CHECK:   Value sites histogram:
-// CHECK:         NumTargets, SiteCount
-// CHECK:         1, 3
+// CHECK:      Counters:
+// CHECK-NEXT:   main:
+// CHECK-NEXT:     Hash: 0x0a9bd81e87ab6e87
+// CHECK-NEXT:     Counters: 6
+// CHECK-NEXT:     Indirect Call Site Count: 3
+// CHECK-NEXT:     Number of Memory Intrinsics Calls: 3
+// CHECK-NEXT:     Block counts: [27, 297, 12, 132, 3, 2]
+// CHECK-NEXT:     Indirect Target Results:
+// CHECK-NEXT:         [ 0, foo, 3 ]
+// CHECK-NEXT:         [ 1, foo, 27 ]
+// CHECK-NEXT:         [ 2, foo, 297 ]
+// CHECK-NEXT:     Memory Intrinsic Size Results:
+// CHECK-NEXT:         [ 0, 4, 2 ]
+// CHECK-NEXT:         [ 1, 5, 12 ]
+// CHECK-NEXT:         [ 2, 6, 132 ]
+// CHECK-NEXT: Instrumentation level: IR  entry_first = 0
+// CHECK-NEXT: Functions shown: 1
+// CHECK-NEXT: Total functions: 3
+// CHECK-NEXT: Maximum function count: 327
+// CHECK-NEXT: Maximum internal block count: 297
+// CHECK-NEXT: Statistics for indirect call sites profile:
+// CHECK-NEXT:   Total number of sites: 3
+// CHECK-NEXT:   Total number of sites with values: 3
+// CHECK-NEXT:   Total number of profiled values: 3
+// CHECK-NEXT:   Value sites histogram:
+// CHECK-NEXT:         NumTargets, SiteCount
+// CHECK-NEXT:         1, 3
+// CHECK-NEXT: Statistics for memory intrinsic calls sizes profile:
+// CHECK-NEXT:   Total number of sites: 3
+// CHECK-NEXT:   Total number of sites with values: 3
+// CHECK-NEXT:   Total number of profiled values: 3
+// CHECK-NEXT:   Value sites histogram:
+// CHECK-NEXT:         NumTargets, SiteCount
+// CHECK-NEXT:         1, 3

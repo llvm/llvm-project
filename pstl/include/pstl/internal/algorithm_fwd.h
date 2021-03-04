@@ -592,7 +592,7 @@ __pattern_reverse(_ExecutionPolicy&&, _BidirectionalIterator, _BidirectionalIter
 
 template <class _ExecutionPolicy, class _RandomAccessIterator, class _IsVector>
 void
-__pattern_reverse(_RandomAccessIterator&&, _RandomAccessIterator, _RandomAccessIterator, _IsVector,
+__pattern_reverse(_ExecutionPolicy&&, _RandomAccessIterator, _RandomAccessIterator, _IsVector,
                   /*is_parallel=*/std::true_type);
 
 //------------------------------------------------------------------------

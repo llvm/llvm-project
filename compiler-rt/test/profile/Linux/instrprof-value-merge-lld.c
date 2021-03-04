@@ -1,4 +1,5 @@
 // REQUIRES: lld-available
+/// Test ld with GC.
 
 // RUN: %clang_pgogen -o %t -O3 %S/Inputs/instrprof-value-merge.c -fuse-ld=lld -ffunction-sections -fdata-sections -Wl,--gc-sections -z start-stop-gc
 // RUN: rm -rf %t.profdir

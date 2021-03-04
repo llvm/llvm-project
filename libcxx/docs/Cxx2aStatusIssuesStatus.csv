@@ -147,7 +147,7 @@
 "`3158 <https://wg21.link/LWG3158>`__","``tuple(allocator_arg_t, const Alloc&)``\  should be conditionally explicit","Cologne","",""
 "`3169 <https://wg21.link/LWG3169>`__","``ranges``\  permutation generators discard useful information","Cologne","",""
 "`3183 <https://wg21.link/LWG3183>`__","Normative permission to specialize Ranges variable templates","Cologne","",""
-"`3184 <https://wg21.link/LWG3184>`__","Inconsistencies in ``bind_front``\  wording","Cologne","",""
+"`3184 <https://wg21.link/LWG3184>`__","Inconsistencies in ``bind_front``\  wording","Cologne","|Complete|","13.0"
 "`3185 <https://wg21.link/LWG3185>`__","Uses-allocator construction functions missing ``constexpr``\  and ``noexcept``\ ","Cologne","",""
 "`3186 <https://wg21.link/LWG3186>`__","``ranges``\  removal, partition, and ``partial_sort_copy``\  algorithms discard useful information","Cologne","",""
 "`3187 <https://wg21.link/LWG3187>`__","`P0591R4 <https://wg21.link/p0591r4>`__ reverted DR 2586 fixes to ``scoped_allocator_adaptor::construct()``\ ","Cologne","",""

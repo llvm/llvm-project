@@ -65,14 +65,17 @@ static inline bool isOpenCLVersionIsContainedInMask(const LangOptions &LO,
 class OpenCLOptions {
 public:
   struct OpenCLOptionInfo {
+    // Does this option have pragma.
+    bool WithPragma = false;
+
     // Option starts to be available in this OpenCL version
-    unsigned Avail;
+    unsigned Avail = 100U;
 
     // Option becomes core feature in this OpenCL versions
-    unsigned Core;
+    unsigned Core = 0U;
 
     // Option becomes optional core feature in this OpenCL versions
-    unsigned Opt;
+    unsigned Opt = 0U;
 
     // Is this option supported
     bool Supported = false;
@@ -80,8 +83,10 @@ public:
     // Is this option enabled
     bool Enabled = false;
 
-    OpenCLOptionInfo(unsigned A = 100, unsigned C = 0U, unsigned O = 0U)
-        : Avail(A), Core(C), Opt(O) {}
+    OpenCLOptionInfo() = default;
+    OpenCLOptionInfo(bool Pragma, unsigned AvailV, unsigned CoreV,
+                     unsigned OptV)
+        : WithPragma(Pragma), Avail(AvailV), Core(CoreV), Opt(OptV) {}
 
     bool isCore() const { return Core != 0U; }
 
@@ -109,6 +114,8 @@ public:
 
   bool isEnabled(llvm::StringRef Ext) const;
 
+  bool isWithPragma(llvm::StringRef Ext) const;
+
   // Is supported as either an extension or an (optional) core feature for
   // OpenCL version \p LO.
   bool isSupported(llvm::StringRef Ext, const LangOptions &LO) const;
@@ -130,6 +137,11 @@ public:
   // Is supported OpenCL extension for OpenCL version \p LO.
   // For supported core or optional core feature, return false.
   bool isSupportedExtension(llvm::StringRef Ext, const LangOptions &LO) const;
+
+  // FIXME: Whether extension should accept pragma should not
+  // be reset dynamically. But it currently required when
+  // registering new extensions via pragmas.
+  void acceptsPragma(llvm::StringRef Ext, bool V = true);
 
   void enable(llvm::StringRef Ext, bool V = true);
 

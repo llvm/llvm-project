@@ -542,7 +542,7 @@ The behavior of ``__fp16`` is specified by the ARM C Language Extensions (`ACLE 
 Clang uses the ``binary16`` format from IEEE 754-2008 for ``__fp16``, not the ARM
 alternative format.
 
-``_Float16`` is an extended floating-point type.  This means that, just like arithmetic on
+``_Float16`` is an interchange floating-point type.  This means that, just like arithmetic on
 ``float`` or ``double``, arithmetic on ``_Float16`` operands is formally performed in the
 ``_Float16`` type, so that e.g. the result of adding two ``_Float16`` values has type
 ``_Float16``.  The behavior of ``_Float16`` is specified by ISO/IEC TS 18661-3:2015

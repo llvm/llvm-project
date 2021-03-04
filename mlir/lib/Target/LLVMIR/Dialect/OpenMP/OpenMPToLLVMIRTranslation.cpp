@@ -168,8 +168,9 @@ convertOmpMaster(Operation &opInst, llvm::IRBuilderBase &builder,
 }
 
 /// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
-LogicalResult convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
-                               LLVM::ModuleTranslation &moduleTranslation) {
+static LogicalResult
+convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
+                 LLVM::ModuleTranslation &moduleTranslation) {
   auto loop = cast<omp::WsLoopOp>(opInst);
   // TODO: this should be in the op verifier instead.
   if (loop.lowerBound().empty())
@@ -248,9 +249,27 @@ LogicalResult convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+namespace {
+
+/// Implementation of the dialect interface that converts operations belonging
+/// to the OpenMP dialect to LLVM IR.
+class OpenMPDialectLLVMIRTranslationInterface
+    : public LLVMTranslationDialectInterface {
+public:
+  using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
+
+  /// Translates the given operation to LLVM IR using the provided IR builder
+  /// and saving the state in `moduleTranslation`.
+  LogicalResult
+  convertOperation(Operation *op, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) const final;
+};
+
+} // end namespace
+
 /// Given an OpenMP MLIR operation, create the corresponding LLVM IR
 /// (including OpenMP runtime calls).
-LogicalResult mlir::OpenMPDialectLLVMIRTranslationInterface::convertOperation(
+LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
     Operation *op, llvm::IRBuilderBase &builder,
     LLVM::ModuleTranslation &moduleTranslation) const {
 
@@ -301,4 +320,16 @@ LogicalResult mlir::OpenMPDialectLLVMIRTranslationInterface::convertOperation(
         return inst->emitError("unsupported OpenMP operation: ")
                << inst->getName();
       });
+}
+
+void mlir::registerOpenMPDialectTranslation(DialectRegistry &registry) {
+  registry.insert<omp::OpenMPDialect>();
+  registry.addDialectInterface<omp::OpenMPDialect,
+                               OpenMPDialectLLVMIRTranslationInterface>();
+}
+
+void mlir::registerOpenMPDialectTranslation(MLIRContext &context) {
+  DialectRegistry registry;
+  registerOpenMPDialectTranslation(registry);
+  context.appendDialectRegistry(registry);
 }

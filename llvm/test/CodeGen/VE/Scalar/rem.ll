@@ -83,8 +83,7 @@ define signext i16 @remi16(i16 signext %a, i16 signext %b) {
 ; CHECK-NEXT:    divs.w.sx %s2, %s0, %s1
 ; CHECK-NEXT:    muls.w.sx %s1, %s2, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s1
-; CHECK-NEXT:    sll %s0, %s0, 48
-; CHECK-NEXT:    sra.l %s0, %s0, 48
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a32 = sext i16 %a to i32
   %b32 = sext i16 %b to i32
@@ -113,8 +112,7 @@ define signext i8 @remi8(i8 signext %a, i8 signext %b) {
 ; CHECK-NEXT:    divs.w.sx %s2, %s0, %s1
 ; CHECK-NEXT:    muls.w.sx %s1, %s2, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s1
-; CHECK-NEXT:    sll %s0, %s0, 56
-; CHECK-NEXT:    sra.l %s0, %s0, 56
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a32 = sext i8 %a to i32
   %b32 = sext i8 %b to i32

@@ -58,8 +58,8 @@ define %pair @pair_call_return() {
 ; CHECK-LABEL: pair_call_indirect:
 ; CHECK-NEXT: .functype pair_call_indirect (i32) -> (i32, i64)
 ; CHECK-NEXT: local.get 0{{$}}
-; CHECK-NEXT: call_indirect () -> (i32, i64), 0{{$}}
-; REF:        call_indirect () -> (i32, i64), __indirect_function_table{{$}}
+; CHECK-NEXT: call_indirect () -> (i32, i64){{$}}
+; REF:        call_indirect __indirect_function_table, () -> (i32, i64){{$}}
 ; CHECK-NEXT: end_function{{$}}
 ; REGS: call_indirect $push{{[0-9]+}}=, $push{{[0-9]+}}=, $0{{$}}
 define %pair @pair_call_indirect(%pair()* %f) {

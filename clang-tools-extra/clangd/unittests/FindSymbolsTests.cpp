@@ -216,7 +216,9 @@ TEST(WorkspaceSymbols, GlobalNamespaceQueries) {
                   AllOf(QName("foo"), WithKind(SymbolKind::Function)),
                   AllOf(QName("ns"), WithKind(SymbolKind::Namespace))));
   EXPECT_THAT(getSymbols(TU, ":"), IsEmpty());
-  EXPECT_THAT(getSymbols(TU, ""), IsEmpty());
+  EXPECT_THAT(getSymbols(TU, ""),
+              UnorderedElementsAre(QName("foo"), QName("Foo"), QName("Foo::a"),
+                                   QName("ns"), QName("ns::foo2")));
 }
 
 TEST(WorkspaceSymbols, Enums) {

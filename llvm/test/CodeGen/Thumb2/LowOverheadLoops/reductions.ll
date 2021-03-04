@@ -661,7 +661,7 @@ define i32 @wrongop(%struct.date* nocapture readonly %pd) {
 ; CHECK-NEXT:    movw r3, :lower16:days
 ; CHECK-NEXT:    movs r4, #52
 ; CHECK-NEXT:    movt r3, :upper16:days
-; CHECK-NEXT:    mla r1, r1, r4, r3
+; CHECK-NEXT:    smlabb r1, r1, r4, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q0, r3
 ; CHECK-NEXT:    vmov.32 q0[0], r0

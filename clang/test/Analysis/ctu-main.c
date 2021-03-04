@@ -69,3 +69,8 @@ void testStructDefInArgument() {
   d.b = 0;
   clang_analyzer_eval(structInProto(&d) == 0); // expected-warning{{TRUE}} expected-warning{{FALSE}}
 }
+
+int switchWithoutCases(int);
+void testSwitchStmtCrash(int x) {
+  switchWithoutCases(x);
+}

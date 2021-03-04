@@ -1,56 +1,68 @@
 # Ensure that a nonexistent path is ignored with a syslibroot
 
-RUN: ld64.lld -v -dylib -o /dev/null -syslibroot /var/empty | FileCheck %s -check-prefix CHECK-NONEXISTENT-SYSLIBROOT
+RUN: ld64.lld -arch x86_64 -platform_version macos 10 11 -v -dylib -o /dev/null \
+RUN:   -syslibroot /var/empty | FileCheck %s -check-prefix CHECK-NONEXISTENT-SYSLIBROOT
 
 CHECK-NONEXISTENT-SYSLIBROOT: Library search paths:
 CHECK-NONEXISTENT-SYSLIBROOT-NEXT: Framework search paths:
 
 RUN: mkdir -p %t/usr/lib
-RUN: ld64.lld -v -dylib -o /dev/null -syslibroot %t 2>&1 | FileCheck %s -check-prefix CHECK-SYSLIBROOT -DROOT=%t
+RUN: ld64.lld -arch x86_64 -platform_version macos 10 11 -v -dylib -o /dev/null \
+RUN:   -syslibroot %t 2>&1 | FileCheck %s -check-prefix CHECK-SYSLIBROOT -DROOT=%t
 
 CHECK-SYSLIBROOT-NOT: directory not found{{.*}}usr/local/lib
 CHECK-SYSLIBROOT: Library search paths:
 CHECK-SYSLIBROOT-NEXT: [[ROOT]]/usr/lib
 
 RUN: mkdir -p %t/Library/libxml2-development
-RUN: ld64.lld -v -dylib -o /dev/null -syslibroot %t -L /Library/libxml2-development | FileCheck %s -check-prefix CHECK-ABSOLUTE-PATH-REROOTED -DROOT=%t
+RUN: ld64.lld -arch x86_64 -platform_version macos 10 11 -v -dylib -o /dev/null \
+RUN:   -syslibroot %t -L /Library/libxml2-development | FileCheck %s -check-prefix CHECK-ABSOLUTE-PATH-REROOTED -DROOT=%t
 
 CHECK-ABSOLUTE-PATH-REROOTED: Library search paths:
 CHECK-ABSOLUTE-PATH-REROOTED: [[ROOT]]/Library/libxml2-development
 CHECK-ABSOLUTE-PATH-REROOTED: [[ROOT]]/usr/lib
 
-RUN: ld64.lld -v -dylib -o /dev/null -syslibroot %t -L %t/Library/libxml2-development | FileCheck %s -check-prefix CHECK-PATH-WITHOUT-REROOT -DPATH=%t/Library/libxml2-development
+RUN: ld64.lld -arch x86_64 -platform_version macos 10 11 -v -dylib -o /dev/null \
+RUN:   -syslibroot %t -L %t/Library/libxml2-development | FileCheck %s -check-prefix CHECK-PATH-WITHOUT-REROOT -DPATH=%t/Library/libxml2-development
 CHECK-PATH-WITHOUT-REROOT:      Library search paths:
 CHECK-PATH-WITHOUT-REROOT-NEXT: [[PATH]]
 
 RUN: mkdir -p %t.2/usr/lib
-RUN: ld64.lld -v -dylib -o /dev/null -syslibroot %t -syslibroot %t.2 | FileCheck %s -check-prefix CHECK-SYSLIBROOT-MATRIX -DROOT=%t
+RUN: ld64.lld -arch x86_64 -platform_version macos 10 11 -v -dylib -o /dev/null \
+RUN:   -syslibroot %t -syslibroot %t.2 | FileCheck %s -check-prefix CHECK-SYSLIBROOT-MATRIX -DROOT=%t
 
 CHECK-SYSLIBROOT-MATRIX: Library search paths:
 CHECK-SYSLIBROOT-MATRIX: [[ROOT]]/usr/lib
 CHECK-SYSLIBROOT-MATRIX: [[ROOT]].2/usr/lib
 
-RUN: ld64.lld -v -dylib -o /dev/null -syslibroot %t -syslibroot %t.2 -syslibroot / | FileCheck %s -check-prefix CHECK-SYSLIBROOT-IGNORED -DROOT=%t
+RUN: ld64.lld -arch x86_64 -platform_version macos 10 11 -v -dylib -o /dev/null \
+RUN:   -syslibroot %t -syslibroot %t.2 -syslibroot / | \
+RUN:   FileCheck %s -check-prefix CHECK-SYSLIBROOT-IGNORED -DROOT=%t
 
 CHECK-SYSLIBROOT-IGNORED: Library search paths:
 CHECK-SYSLIBROOT-IGNORED-NOT: [[ROOT]]/usr/lib
 CHECK-SYSLIBROOT-IGNORED-NOT: [[ROOT]].2/usr/lib
 
 RUN: mkdir -p %t/System/Library/Frameworks
-RUN: ld64.lld -v -dylib -o /dev/null -syslibroot %t | FileCheck %s -check-prefix CHECK-SYSLIBROOT-FRAMEWORK -DROOT=%t
+RUN: ld64.lld -arch x86_64 -platform_version macos 10 11 -v -dylib -o /dev/null \
+RUN:   -syslibroot %t | FileCheck %s -check-prefix CHECK-SYSLIBROOT-FRAMEWORK -DROOT=%t
 
 CHECK-SYSLIBROOT-FRAMEWORK: Framework search paths:
 CHECK-SYSLIBROOT-FRAMEWORK: [[ROOT]]/System/Library/Frameworks
 
 RUN: mkdir -p %t/Library/Frameworks
 RUN: mkdir -p %t.2/Library/Frameworks
-RUN: ld64.lld -v -dylib -o /dev/null -syslibroot %t -syslibroot %t.2 -F /Library/Frameworks | FileCheck %s -check-prefix CHECK-SYSLIBROOT-FRAMEWORK-MATRIX -DROOT=%t
+RUN: ld64.lld -arch x86_64 -platform_version macos 10 11 -v -dylib -o /dev/null \
+RUN:   -syslibroot %t -syslibroot %t.2 -F /Library/Frameworks | \
+RUN:   FileCheck %s -check-prefix CHECK-SYSLIBROOT-FRAMEWORK-MATRIX -DROOT=%t
 
 CHECK-SYSLIBROOT-FRAMEWORK-MATRIX: Framework search paths:
 CHECK-SYSLIBROOT-FRAMEWORK-MATRIX: [[ROOT]]/Library/Frameworks
 CHECK-SYSLIBROOT-FRAMEWORK-MATRIX: [[ROOT]].2/Library/Frameworks
 
-RUN: ld64.lld -v -dylib -o /dev/null -syslibroot %t -syslibroot %t.2 -syslibroot / -F /Library/Frameworks | FileCheck %s -check-prefix CHECK-SYSLIBROOT-FRAMEWORK-IGNORED -DROOT=%t
+RUN: ld64.lld -arch x86_64 -platform_version macos 10 11 -v -dylib -o /dev/null \
+RUN:   -syslibroot %t -syslibroot %t.2 -syslibroot / -F /Library/Frameworks | \
+RUN:   FileCheck %s -check-prefix CHECK-SYSLIBROOT-FRAMEWORK-IGNORED -DROOT=%t
 
 CHECK-SYSLIBROOT-FRAMEWORK-IGNORED: Framework search paths:
 CHECK-SYSLIBROOT-FRAMEWORK-IGNORED-NOT: [[ROOT]]/Library/Frameworks

@@ -12,6 +12,7 @@
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "CodeComplete.h"
 #include "ConfigProvider.h"
+#include "DraftStore.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
 #include "Module.h"
@@ -27,6 +28,7 @@
 #include "support/Cancellation.h"
 #include "support/Function.h"
 #include "support/MemoryTree.h"
+#include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -73,6 +75,14 @@ public:
     /// Not called concurrently.
     virtual void
     onBackgroundIndexProgress(const BackgroundQueue::Stats &Stats) {}
+
+    /// Called when the meaning of a source code may have changed without an
+    /// edit. Usually clients assume that responses to requests are valid until
+    /// they next edit the file. If they're invalidated at other times, we
+    /// should tell the client. In particular, when an asynchronous preamble
+    /// build finishes, we can provide more accurate semantic tokens, so we
+    /// should tell the client to refresh.
+    virtual void onSemanticsMaybeChanged(PathRef File) {}
   };
   /// Creates a context provider that loads and installs config.
   /// Errors in loading config are reported as diagnostics via Callbacks.
@@ -176,7 +186,7 @@ public:
   /// separate thread. When the parsing is complete, DiagConsumer passed in
   /// constructor will receive onDiagnosticsReady callback.
   /// Version identifies this snapshot and is propagated to ASTs, preambles,
-  /// diagnostics etc built from it.
+  /// diagnostics etc built from it. If empty, a version number is generated.
   void addDocument(PathRef File, StringRef Contents,
                    llvm::StringRef Version = "null",
                    WantDiagnostics WD = WantDiagnostics::Auto,
@@ -187,6 +197,13 @@ public:
   /// be delivered, even if requested with WantDiags::Auto or WantDiags::Yes.
   /// An empty set of diagnostics will be delivered, with Version = "".
   void removeDocument(PathRef File);
+
+  /// Requests a reparse of currently opened files using their latest source.
+  /// This will typically only rebuild if something other than the source has
+  /// changed (e.g. the CDB yields different flags, or files included in the
+  /// preamble have been modified).
+  void reparseOpenFilesIfNeeded(
+      llvm::function_ref<bool(llvm::StringRef File)> Filter);
 
   /// Run code completion for \p File at \p Pos.
   ///
@@ -253,18 +270,15 @@ public:
   void findReferences(PathRef File, Position Pos, uint32_t Limit,
                       Callback<ReferencesResult> CB);
 
-  /// Run formatting for \p Rng inside \p File with content \p Code.
-  void formatRange(PathRef File, StringRef Code, Range Rng,
-                   Callback<tooling::Replacements> CB);
-
-  /// Run formatting for the whole \p File with content \p Code.
-  void formatFile(PathRef File, StringRef Code,
+  /// Run formatting for the \p File with content \p Code.
+  /// If \p Rng is non-null, formats only that region.
+  void formatFile(PathRef File, llvm::Optional<Range> Rng,
                   Callback<tooling::Replacements> CB);
 
   /// Run formatting after \p TriggerText was typed at \p Pos in \p File with
   /// content \p Code.
-  void formatOnType(PathRef File, StringRef Code, Position Pos,
-                    StringRef TriggerText, Callback<std::vector<TextEdit>> CB);
+  void formatOnType(PathRef File, Position Pos, StringRef TriggerText,
+                    Callback<std::vector<TextEdit>> CB);
 
   /// Test the validity of a rename operation.
   ///
@@ -334,6 +348,8 @@ public:
   /// FIXME: those metrics might be useful too, we should add them.
   llvm::StringMap<TUScheduler::FileStats> fileStats() const;
 
+  llvm::Optional<std::string> getDraft(PathRef File) const;
+
   // Blocks the main thread until the server is idle. Only for use in tests.
   // Returns false if the timeout expires.
   // FIXME: various subcomponents each get the full timeout, so it's more of
@@ -345,10 +361,6 @@ public:
   void profile(MemoryTree &MT) const;
 
 private:
-  void formatCode(PathRef File, llvm::StringRef Code,
-                  ArrayRef<tooling::Range> Ranges,
-                  Callback<tooling::Replacements> CB);
-
   ModuleSet *Modules;
   const GlobalCompilationDatabase &CDB;
   const ThreadsafeFS &TFS;
@@ -377,6 +389,11 @@ private:
 
   llvm::Optional<std::string> WorkspaceRoot;
   llvm::Optional<TUScheduler> WorkScheduler;
+
+  // Store of the current versions of the open documents.
+  // Only written from the main thread (despite being threadsafe).
+  // FIXME: TUScheduler also keeps these, unify?
+  DraftStore DraftMgr;
 };
 
 } // namespace clangd

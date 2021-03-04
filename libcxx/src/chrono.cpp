@@ -107,19 +107,19 @@ static system_clock::time_point __libcpp_system_clock_now() {
 const bool system_clock::is_steady;
 
 system_clock::time_point
-system_clock::now() _NOEXCEPT
+system_clock::now() noexcept
 {
     return __libcpp_system_clock_now();
 }
 
 time_t
-system_clock::to_time_t(const time_point& t) _NOEXCEPT
+system_clock::to_time_t(const time_point& t) noexcept
 {
     return time_t(duration_cast<seconds>(t.time_since_epoch()).count());
 }
 
 system_clock::time_point
-system_clock::from_time_t(time_t t) _NOEXCEPT
+system_clock::from_time_t(time_t t) noexcept
 {
     return system_clock::time_point(seconds(t));
 }
@@ -255,7 +255,7 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
 const bool steady_clock::is_steady;
 
 steady_clock::time_point
-steady_clock::now() _NOEXCEPT
+steady_clock::now() noexcept
 {
     return __libcpp_steady_clock_now();
 }

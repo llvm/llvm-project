@@ -213,6 +213,10 @@ ProcessGDBRemote::CreateInstance(lldb::TargetSP target_sp,
   return process_sp;
 }
 
+std::chrono::seconds ProcessGDBRemote::GetPacketTimeout() {
+  return std::chrono::seconds(GetGlobalPluginProperties()->GetPacketTimeout());
+}
+
 bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
                                 bool plugin_specified_by_name) {
   if (plugin_specified_by_name)

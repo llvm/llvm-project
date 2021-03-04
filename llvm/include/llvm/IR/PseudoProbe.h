@@ -27,6 +27,11 @@ constexpr const char *PseudoProbeDescMetadataName = "llvm.pseudo_probe_desc";
 
 enum class PseudoProbeType { Block = 0, IndirectCall, DirectCall };
 
+enum class PseudoProbeAttributes {
+  Reserved = 0x1, // Reserved for future use.
+  Dangling = 0x2, // The probe is dangling.
+};
+
 // The saturated distrution factor representing 100% for block probes.
 constexpr static uint64_t PseudoProbeFullDistributionFactor =
     std::numeric_limits<uint64_t>::max();
@@ -76,12 +81,19 @@ struct PseudoProbe {
   uint32_t Type;
   uint32_t Attr;
   float Factor;
+
+  bool isDangling() const {
+    return Attr & (uint32_t)PseudoProbeAttributes::Dangling;
+  }
 };
 
 Optional<PseudoProbe> extractProbe(const Instruction &Inst);
 
 void setProbeDistributionFactor(Instruction &Inst, float Factor);
 
+bool moveAndDanglePseudoProbes(BasicBlock *From, Instruction *To);
+
+bool removeRedundantPseudoProbes(BasicBlock *Block);
 } // end namespace llvm
 
 #endif // LLVM_IR_PSEUDOPROBE_H

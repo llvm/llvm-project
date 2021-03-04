@@ -31,7 +31,6 @@ namespace LLVM {
 
 namespace detail {
 class TypeToLLVMIRTranslatorImpl;
-class TypeFromLLVMIRTranslatorImpl;
 } // namespace detail
 
 /// Utility class to translate MLIR LLVM dialect types to LLVM IR. Stores the
@@ -54,22 +53,6 @@ public:
 private:
   /// Private implementation.
   std::unique_ptr<detail::TypeToLLVMIRTranslatorImpl> impl;
-};
-
-/// Utility class to translate LLVM IR types to the MLIR LLVM dialect. Stores
-/// the translation state, in particular any identified structure types that are
-/// reused across translations.
-class TypeFromLLVMIRTranslator {
-public:
-  TypeFromLLVMIRTranslator(MLIRContext &context);
-  ~TypeFromLLVMIRTranslator();
-
-  /// Translates the given LLVM IR type to the MLIR LLVM dialect.
-  Type translateType(llvm::Type *type);
-
-private:
-  /// Private implementation.
-  std::unique_ptr<detail::TypeFromLLVMIRTranslatorImpl> impl;
 };
 
 } // namespace LLVM

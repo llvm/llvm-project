@@ -35,8 +35,8 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
     AnyRegion:$someRegion,
     VariadicRegion<AnyRegion>:$someRegions
   );
-  let builders = [OpBuilderDAG<(ins "Value":$val)>,
-                  OpBuilderDAG<(ins CArg<"int", "0">:$integer)>];
+  let builders = [OpBuilder<(ins "Value":$val)>,
+                  OpBuilder<(ins CArg<"int", "0">:$integer)>];
   let parser = [{ foo }];
   let printer = [{ bar }];
   let verifier = [{ baz }];
@@ -71,7 +71,9 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: public:
 // CHECK:   using Op::Op;
 // CHECK:   using Adaptor = AOpAdaptor;
-// CHECK:   static ::llvm::StringRef getOperationName();
+// CHECK:   static constexpr ::llvm::StringLiteral getOperationName() {
+// CHECK:     return ::llvm::StringLiteral("test.a_op");
+// CHECK:   }
 // CHECK:   ::mlir::Operation::operand_range getODSOperands(unsigned index);
 // CHECK:   ::mlir::Value a();
 // CHECK:   ::mlir::Operation::operand_range b();
@@ -294,7 +296,7 @@ def NS_ResultWithDialectTypeOp : NS_Op<"op_with_dialect_type", []> {
 
 def NS_SkipDefaultBuildersOp : NS_Op<"skip_default_builders", []> {
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilderDAG<(ins "Value":$val)>];
+  let builders = [OpBuilder<(ins "Value":$val)>];
 }
 
 // CHECK-LABEL: NS::SkipDefaultBuildersOp declarations

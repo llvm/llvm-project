@@ -25,7 +25,7 @@ __unexpected(unexpected_handler func);
 
 _LIBCXXABI_HIDDEN _LIBCXXABI_NORETURN
 void
-__terminate(terminate_handler func) _NOEXCEPT;
+__terminate(terminate_handler func) noexcept;
 
 }  // std
 

@@ -363,20 +363,12 @@ define amdgpu_ps { i32, i32 } @s_andn2_v2i16_multi_foldable_use(<2 x i16> inreg 
 }
 
 define <2 x i16> @v_andn2_v2i16(<2 x i16> %src0, <2 x i16> %src1) {
-; GFX6-LABEL: v_andn2_v2i16:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_xor_b32_e32 v1, -1, v1
-; GFX6-NEXT:    v_and_b32_e32 v0, v0, v1
-; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-LABEL: v_andn2_v2i16:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_xor_b32_e32 v1, -1, v1
-; GFX9-NEXT:    v_and_b32_e32 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: v_andn2_v2i16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GCN-NEXT:    v_and_b32_e32 v0, v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
   %not.src1 = xor <2 x i16> %src1, <i16 -1, i16 -1>
   %and = and <2 x i16> %src0, %not.src1
   ret <2 x i16> %and

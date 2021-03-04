@@ -722,7 +722,7 @@ void TargetInfo::getOpenCLFeatureDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // FIXME: OpenCL options which affect language semantics/syntax
   // should be moved into LangOptions, thus macro definitions of
-  // such options is better to be done in clang::InitializePreprocessor
+  // such options is better to be done in clang::InitializePreprocessor.
   auto defineOpenCLExtMacro = [&](llvm::StringRef Name, unsigned AvailVer,
                                   unsigned CoreVersions,
                                   unsigned OptionalVersions) {
@@ -730,12 +730,12 @@ void TargetInfo::getOpenCLFeatureDefines(const LangOptions &Opts,
     // OpenCL version
     auto It = getTargetOpts().OpenCLFeaturesMap.find(Name);
     if ((It != getTargetOpts().OpenCLFeaturesMap.end()) && It->getValue() &&
-        OpenCLOptions::OpenCLOptionInfo(AvailVer, CoreVersions,
+        OpenCLOptions::OpenCLOptionInfo(false, AvailVer, CoreVersions,
                                         OptionalVersions)
             .isAvailableIn(Opts))
       Builder.defineMacro(Name);
   };
-#define OPENCL_GENERIC_EXTENSION(Ext, Avail, Core, Opt)                        \
+#define OPENCL_GENERIC_EXTENSION(Ext, WithPragma, Avail, Core, Opt)            \
   defineOpenCLExtMacro(#Ext, Avail, Core, Opt);
 #include "clang/Basic/OpenCLExtensions.def"
 
