@@ -1763,12 +1763,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     // Create new statepoint instruction.
     OperandBundleDef NewBundle("gc-live", NewLiveGc);
-    if (isa<CallInst>(II))
-      return CallInst::CreateWithReplacedBundle(cast<CallInst>(II), NewBundle);
-    else
-      return InvokeInst::CreateWithReplacedBundle(cast<InvokeInst>(II),
-                                                  NewBundle);
-    break;
+    return CallBase::Create(II, NewBundle);
   }
   case Intrinsic::experimental_guard: {
     // Is this guard followed by another guard?  We scan forward over a small
