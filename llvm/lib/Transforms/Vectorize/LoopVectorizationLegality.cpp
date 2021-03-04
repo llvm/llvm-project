@@ -250,11 +250,11 @@ bool LoopVectorizationRequirements::doesNotMeet(
     Function *F, Loop *L, const LoopVectorizeHints &Hints) {
   const char *PassName = Hints.vectorizeAnalysisPassName();
   bool Failed = false;
-  if (UnsafeAlgebraInst && !Hints.allowReordering()) {
+  if (ExactFPMathInst && !Hints.allowReordering()) {
     ORE.emit([&]() {
       return OptimizationRemarkAnalysisFPCommute(
-                 PassName, "CantReorderFPOps", UnsafeAlgebraInst->getDebugLoc(),
-                 UnsafeAlgebraInst->getParent())
+                 PassName, "CantReorderFPOps", ExactFPMathInst->getDebugLoc(),
+                 ExactFPMathInst->getParent())
              << "loop not vectorized: cannot prove it is safe to reorder "
                 "floating-point operations";
     });
@@ -651,8 +651,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         RecurrenceDescriptor RedDes;
         if (RecurrenceDescriptor::isReductionPHI(Phi, TheLoop, RedDes, DB, AC,
                                                  DT)) {
-          if (RedDes.hasUnsafeAlgebra())
-            Requirements->addUnsafeAlgebraInst(RedDes.getUnsafeAlgebraInst());
+          Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
           AllowedExit.insert(RedDes.getLoopExitInstr());
           Reductions[Phi] = RedDes;
           continue;
@@ -676,7 +675,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
           if (ID.hasUnsafeAlgebra())
-            Requirements->addUnsafeAlgebraInst(ID.getUnsafeAlgebraInst());
+            Requirements->addExactFPMathInst(ID.getUnsafeAlgebraInst());
           continue;
         }
 

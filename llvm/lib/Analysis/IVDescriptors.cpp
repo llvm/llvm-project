@@ -469,7 +469,7 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
 
   // Save the description of this reduction variable.
   RecurrenceDescriptor RD(RdxStart, ExitInstruction, Kind, FMF,
-                          ReduxDesc.getUnsafeAlgebraInst(), RecurrenceType,
+                          ReduxDesc.getExactFPMathInst(), RecurrenceType,
                           IsSigned, CastInsts);
   RedDes = RD;
 
@@ -569,7 +569,7 @@ RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurKind Kind,
   default:
     return InstDesc(false, I);
   case Instruction::PHI:
-    return InstDesc(I, Prev.getRecKind(), Prev.getUnsafeAlgebraInst());
+    return InstDesc(I, Prev.getRecKind(), Prev.getExactFPMathInst());
   case Instruction::Sub:
   case Instruction::Add:
     return InstDesc(Kind == RecurKind::Add, I);
