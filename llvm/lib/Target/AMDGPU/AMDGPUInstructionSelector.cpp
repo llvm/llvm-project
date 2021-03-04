@@ -3712,23 +3712,19 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
   Optional<int> FI;
   Register VAddr = Root.getReg();
   if (const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg())) {
-    if (isBaseWithConstantOffset(Root, *MRI)) {
-      const MachineOperand &LHS = RootDef->getOperand(1);
-      const MachineOperand &RHS = RootDef->getOperand(2);
-      const MachineInstr *LHSDef = MRI->getVRegDef(LHS.getReg());
-      const MachineInstr *RHSDef = MRI->getVRegDef(RHS.getReg());
-      if (LHSDef && RHSDef) {
-        int64_t PossibleOffset =
-            RHSDef->getOperand(1).getCImm()->getSExtValue();
-        if (SIInstrInfo::isLegalMUBUFImmOffset(PossibleOffset) &&
-            (!STI.privateMemoryResourceIsRangeChecked() ||
-             KnownBits->signBitIsZero(LHS.getReg()))) {
-          if (LHSDef->getOpcode() == AMDGPU::G_FRAME_INDEX)
-            FI = LHSDef->getOperand(1).getIndex();
-          else
-            VAddr = LHS.getReg();
-          Offset = PossibleOffset;
-        }
+    Register PtrBase;
+    int64_t ConstOffset;
+    std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(VAddr, *MRI);
+    if (ConstOffset != 0) {
+      if (SIInstrInfo::isLegalMUBUFImmOffset(ConstOffset) &&
+          (!STI.privateMemoryResourceIsRangeChecked() ||
+           KnownBits->signBitIsZero(PtrBase))) {
+        const MachineInstr *PtrBaseDef = MRI->getVRegDef(PtrBase);
+        if (PtrBaseDef->getOpcode() == AMDGPU::G_FRAME_INDEX)
+          FI = PtrBaseDef->getOperand(1).getIndex();
+        else
+          VAddr = PtrBase;
+        Offset = ConstOffset;
       }
     } else if (RootDef->getOpcode() == AMDGPU::G_FRAME_INDEX) {
       FI = RootDef->getOperand(1).getIndex();
