@@ -22,7 +22,7 @@ body:             |
     ; CHECK: G_STORE [[FPEXT]](<2 x s64>), [[COPY1]](p0) :: (store 16, align 32)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; CHECK: G_STORE [[FPEXT1]](<2 x s64>), [[PTR_ADD]](p0) :: (store 16 + 16)
+    ; CHECK: G_STORE [[FPEXT1]](<2 x s64>), [[PTR_ADD]](p0) :: (store 16 into undef + 16)
     ; CHECK: RET_ReallyLR
     %0:_(<4 x s32>) = COPY $q0
     %1:_(p0) = COPY $x0
