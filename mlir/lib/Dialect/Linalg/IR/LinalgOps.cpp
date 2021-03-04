@@ -2427,7 +2427,19 @@ struct FoldTensorCastOp : public RewritePattern {
     // Clone op.
     Operation *newOp =
         linalgOp.clone(rewriter, op->getLoc(), newResultTypes, newOperands);
-    rewriter.replaceOp(op, newOp->getResults());
+    SmallVector<Value, 4> replacements;
+    replacements.reserve(newOp->getNumResults());
+    for (auto result : llvm::zip(op->getResults(), newOp->getResults())) {
+      Value oldResult = std::get<0>(result);
+      Value newResult = std::get<1>(result);
+      if (newResult.getType() != oldResult.getType()) {
+        replacements.push_back(rewriter.create<tensor::CastOp>(
+            op->getLoc(), oldResult.getType(), newResult));
+      } else {
+        replacements.push_back(newResult);
+      }
+    }
+    rewriter.replaceOp(op, replacements);
 
     return success();
   }
