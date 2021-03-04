@@ -521,7 +521,6 @@ define arm_aapcs_vfpcc <4 x i32> @i1and_vmov(<4 x i32> %a, <4 x i32> %b, i32 %c)
 ; CHECKLE-NEXT:    cmp r0, #0
 ; CHECKLE-NEXT:    mov.w r1, #15
 ; CHECKLE-NEXT:    cset r0, eq
-; CHECKLE-NEXT:    and r0, r0, #1
 ; CHECKLE-NEXT:    rsbs r0, r0, #0
 ; CHECKLE-NEXT:    ands r0, r1
 ; CHECKLE-NEXT:    vmsr p0, r0
@@ -534,9 +533,8 @@ define arm_aapcs_vfpcc <4 x i32> @i1and_vmov(<4 x i32> %a, <4 x i32> %b, i32 %c)
 ; CHECKBE-NEXT:    mov.w r1, #15
 ; CHECKBE-NEXT:    cset r0, eq
 ; CHECKBE-NEXT:    vrev64.32 q2, q1
-; CHECKBE-NEXT:    and r0, r0, #1
-; CHECKBE-NEXT:    vrev64.32 q1, q0
 ; CHECKBE-NEXT:    rsbs r0, r0, #0
+; CHECKBE-NEXT:    vrev64.32 q1, q0
 ; CHECKBE-NEXT:    ands r0, r1
 ; CHECKBE-NEXT:    vmsr p0, r0
 ; CHECKBE-NEXT:    vpsel q1, q1, q2
@@ -557,7 +555,6 @@ define arm_aapcs_vfpcc <4 x i32> @i1or_vmov(<4 x i32> %a, <4 x i32> %b, i32 %c) 
 ; CHECKLE-NEXT:    cmp r0, #0
 ; CHECKLE-NEXT:    mov.w r1, #15
 ; CHECKLE-NEXT:    cset r0, eq
-; CHECKLE-NEXT:    and r0, r0, #1
 ; CHECKLE-NEXT:    rsbs r0, r0, #0
 ; CHECKLE-NEXT:    orrs r0, r1
 ; CHECKLE-NEXT:    vmsr p0, r0
@@ -570,9 +567,8 @@ define arm_aapcs_vfpcc <4 x i32> @i1or_vmov(<4 x i32> %a, <4 x i32> %b, i32 %c) 
 ; CHECKBE-NEXT:    mov.w r1, #15
 ; CHECKBE-NEXT:    cset r0, eq
 ; CHECKBE-NEXT:    vrev64.32 q2, q1
-; CHECKBE-NEXT:    and r0, r0, #1
-; CHECKBE-NEXT:    vrev64.32 q1, q0
 ; CHECKBE-NEXT:    rsbs r0, r0, #0
+; CHECKBE-NEXT:    vrev64.32 q1, q0
 ; CHECKBE-NEXT:    orrs r0, r1
 ; CHECKBE-NEXT:    vmsr p0, r0
 ; CHECKBE-NEXT:    vpsel q1, q1, q2
