@@ -272,21 +272,13 @@ EXTERN void __tgt_target_data_end_mapper(ident_t *loc, int64_t device_id,
     return;
   }
 
-  PM->RTLsMtx.lock();
-  size_t DevicesSize = PM->Devices.size();
-  PM->RTLsMtx.unlock();
-  if (DevicesSize <= (size_t)device_id) {
-    DP("Device ID  %" PRId64 " does not have a matching RTL.\n", device_id);
+  if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
+    DP("Failed to get device %" PRId64 " ready\n", device_id);
     HandleTargetOutcome(false, loc);
     return;
   }
 
   DeviceTy &Device = PM->Devices[device_id];
-  if (!Device.IsInit) {
-    DP("Uninit device: ignore");
-    HandleTargetOutcome(false, loc);
-    return;
-  }
 
   if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
     printKernelArguments(loc, device_id, arg_num, arg_sizes, arg_types,
