@@ -119,6 +119,7 @@ if(MLIR_BINDINGS_PYTHON_ENABLED)
     MLIRBindingsPythonExtension
     MLIRBindingsPythonTestOps
     MLIRTransformsBindingsPythonExtension
+    MLIRConversionsBindingsPythonExtension
   )
 endif()
 
