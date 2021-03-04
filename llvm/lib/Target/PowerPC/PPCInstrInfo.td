@@ -4646,6 +4646,12 @@ def : InstAlias<"mftbu $Rx", (MFTB gprc:$Rx, 269)>;
 
 def : InstAlias<"xnop", (XORI R0, R0, 0)>;
 
+def : InstAlias<"mtxer $Rx", (MTSPR 1, gprc:$Rx)>;
+def : InstAlias<"mfxer $Rx", (MFSPR gprc:$Rx, 1)>;
+
+//Disable this alias on AIX for now because as does not support them.
+let Predicates = [ModernAs] in {
+
 foreach BR = 0-7 in {
     def : InstAlias<"mfbr"#BR#" $Rx",
                     (MFDCR gprc:$Rx, !add(BR, 0x80))>,
@@ -4657,15 +4663,8 @@ foreach BR = 0-7 in {
 
 def : InstAlias<"mtmsrd $RS", (MTMSRD gprc:$RS, 0)>;
 def : InstAlias<"mtmsr $RS", (MTMSR gprc:$RS, 0)>;
-
-def : InstAlias<"mtxer $Rx", (MTSPR 1, gprc:$Rx)>;
-def : InstAlias<"mfxer $Rx", (MFSPR gprc:$Rx, 1)>;
-
-//Disable this alias on AIX for now because as does not support them.
-let Predicates = [ModernAs] in {
 def : InstAlias<"mtudscr $Rx", (MTSPR 3, gprc:$Rx)>;
 def : InstAlias<"mfudscr $Rx", (MFSPR gprc:$Rx, 3)>;
-}
 
 def : InstAlias<"mfrtcu $Rx", (MFSPR gprc:$Rx, 4)>;
 def : InstAlias<"mfrtcl $Rx", (MFSPR gprc:$Rx, 5)>;
@@ -4795,6 +4794,7 @@ def : InstAlias<"mfdccr $Rx", (MFSPR gprc:$Rx, 1018)>, Requires<[IsPPC4xx]>;
 def : InstAlias<"mticcr $Rx", (MTSPR 1019, gprc:$Rx)>, Requires<[IsPPC4xx]>;
 def : InstAlias<"mficcr $Rx", (MFSPR gprc:$Rx, 1019)>, Requires<[IsPPC4xx]>;
 
+}
 
 def : InstAlias<"tlbie $RB", (TLBIE R0, gprc:$RB)>;
 

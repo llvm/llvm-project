@@ -989,9 +989,9 @@ def : InstAlias<"mfxer $Rx", (MFSPR8 g8rc:$Rx, 1)>;
 
 //Disable this alias on AIX for now because as does not support them.
 let Predicates = [ModernAs] in {
-  def : InstAlias<"mtudscr $Rx", (MTSPR8 3, g8rc:$Rx)>;
-  def : InstAlias<"mfudscr $Rx", (MFSPR8 g8rc:$Rx, 3)>;
-}
+
+def : InstAlias<"mtudscr $Rx", (MTSPR8 3, g8rc:$Rx)>;
+def : InstAlias<"mfudscr $Rx", (MFSPR8 g8rc:$Rx, 3)>;
 
 def : InstAlias<"mfrtcu $Rx", (MFSPR8 g8rc:$Rx, 4)>;
 def : InstAlias<"mfrtcl $Rx", (MFSPR8 g8rc:$Rx, 5)>;
@@ -1049,6 +1049,8 @@ def : InstAlias<"mfpvr $RT", (MFSPR8 g8rc:$RT, 287)>;
 
 def : InstAlias<"mfspefscr $Rx", (MFSPR8 g8rc:$Rx, 512)>;
 def : InstAlias<"mtspefscr $Rx", (MTSPR8 512, g8rc:$Rx)>;
+
+}
 
 //===----------------------------------------------------------------------===//
 // Load/Store instructions.
