@@ -827,7 +827,8 @@ static llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
 #if TARGET_OS_IPHONE
   bool capture = input_args.hasArg(OPT_capture);
 #else
-  bool capture = true;
+  bool repl = input_args.hasArg(OPT_repl) || input_args.hasArg(OPT_repl_);
+  bool capture = !repl || input_args.hasArg(OPT_capture);
 #endif
   // END SWIFT
   bool generate_on_exit = input_args.hasArg(OPT_generate_on_exit);
