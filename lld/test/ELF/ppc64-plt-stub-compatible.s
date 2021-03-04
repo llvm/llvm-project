@@ -29,9 +29,9 @@ callee:
 
 # T2-LABEL: <p9codegen>:
 # T2-NEXT:    10010300: addis 2, 12, 1
-# T2-NEXT:    10010304: addi 2, 2, -32384
+# T2-NEXT:    10010304: addi 2, 2, -32368
 # T2-NEXT:    10010308: addis 4, 2, -1
-# T2-NEXT:    1001030c: lwa 3, 32428(4)
+# T2-NEXT:    1001030c: lwa 3, 32412(4)
 # T2-NEXT:    10010310: bl 0x10010330
 # T2-NEXT:    10010314: ld 2, 24(1)
 # T2-NEXT:    10010318: blr
@@ -49,7 +49,7 @@ callee:
 # T2-NEXT:    10010340: bctr
 
 # T2-LABEL: <__plt_pcrel_callee>:
-# T2-NEXT:    10010350: pld 12, 328(0), 1
+# T2-NEXT:    10010350: pld 12, 344(0), 1
 # T2-NEXT:    10010358: mtctr 12
 # T2-NEXT:    1001035c: bctr
 .ifdef T2
@@ -83,24 +83,24 @@ Global:
 
 # T3-LABEL: <p9codegen>:
 # T3-NEXT:    10010310: addis 2, 12, 1
-# T3-NEXT:    10010314: addi 2, 2, -32408
+# T3-NEXT:    10010314: addi 2, 2, -32392
 # T3-NEXT:    10010318: addis 4, 2, -1
-# T3-NEXT:    1001031c: lwa 3, 32436(4)
-# T3-NEXT:    10010320: bl 0x10010340
+# T3-NEXT:    1001031c: lwa 3, 32420(4)
+# T3-NEXT:    10010320: bl 0x10010350
 # T3-NEXT:    10010324: ld 2, 24(1)
 # T3-NEXT:    10010328: blr
 
 # T3-LABEL: <__plt_pcrel_callee>:
-# T3-NEXT:    10010330: pld 12, 352(0), 1
+# T3-NEXT:    10010330: pld 12, 368(0), 1
 # T3-NEXT:    10010338: mtctr 12
 # T3-NEXT:    1001033c: bctr
 
 # T3-LABEL: <__plt_callee>:
-# T3-NEXT:    10010340: std 2, 24(1)
-# T3-NEXT:    10010344: addis 12, 2, 0
-# T3-NEXT:    10010348: ld 12, -32744(12)
-# T3-NEXT:    1001034c: mtctr 12
-# T3-NEXT:    10010350: bctr
+# T3-NEXT:    10010350: std 2, 24(1)
+# T3-NEXT:    10010354: addis 12, 2, 0
+# T3-NEXT:    10010358: ld 12, -32744(12)
+# T3-NEXT:    1001035c: mtctr 12
+# T3-NEXT:    10010360: bctr
 .ifdef T3
 .section .text_start, "ax", %progbits
 p10codegen:
