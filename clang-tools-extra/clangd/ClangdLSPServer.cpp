@@ -580,8 +580,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   {
     LSPBinder Binder(Handlers, *this);
     bindMethods(Binder, Params.capabilities);
-    if (Opts.Modules)
-      for (auto &Mod : *Opts.Modules)
+    if (Opts.FeatureModules)
+      for (auto &Mod : *Opts.FeatureModules)
         Mod.initializeLSP(Binder, Params.rawCapabilities, ServerCaps);
   }
 
