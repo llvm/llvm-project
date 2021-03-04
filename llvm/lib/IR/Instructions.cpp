@@ -262,6 +262,19 @@ CallBase *CallBase::Create(CallBase *CB, ArrayRef<OperandBundleDef> Bundles,
   }
 }
 
+CallBase *CallBase::Create(CallBase *CI, OperandBundleDef OpB,
+                           Instruction *InsertPt) {
+  SmallVector<OperandBundleDef, 2> OpDefs;
+  for (unsigned i = 0, e = CI->getNumOperandBundles(); i < e; ++i) {
+    auto ChildOB = CI->getOperandBundleAt(i);
+    if (ChildOB.getTagName() != OpB.getTag())
+      OpDefs.emplace_back(ChildOB);
+  }
+  OpDefs.emplace_back(OpB);
+  return CallBase::Create(CI, OpDefs, InsertPt);
+}
+
+
 Function *CallBase::getCaller() { return getParent()->getParent(); }
 
 unsigned CallBase::getNumSubclassExtraOperandsDynamic() const {
@@ -504,18 +517,6 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   NewCI->setAttributes(CI->getAttributes());
   NewCI->setDebugLoc(CI->getDebugLoc());
   return NewCI;
-}
-
-CallInst *CallInst::CreateWithReplacedBundle(CallInst *CI, OperandBundleDef OpB,
-                                             Instruction *InsertPt) {
-  SmallVector<OperandBundleDef, 2> OpDefs;
-  for (unsigned i = 0, e = CI->getNumOperandBundles(); i < e; ++i) {
-    auto ChildOB = CI->getOperandBundleAt(i);
-    if (ChildOB.getTagName() != OpB.getTag())
-      OpDefs.emplace_back(ChildOB);
-  }
-  OpDefs.emplace_back(OpB);
-  return CallInst::Create(CI, OpDefs, InsertPt);
 }
 
 // Update profile weight for call instruction by scaling it using the ratio
@@ -828,19 +829,6 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
   NewII->setAttributes(II->getAttributes());
   NewII->setDebugLoc(II->getDebugLoc());
   return NewII;
-}
-
-InvokeInst *InvokeInst::CreateWithReplacedBundle(InvokeInst *II,
-                                                 OperandBundleDef OpB,
-                                                 Instruction *InsertPt) {
-  SmallVector<OperandBundleDef, 2> OpDefs;
-  for (unsigned i = 0, e = II->getNumOperandBundles(); i < e; ++i) {
-    auto ChildOB = II->getOperandBundleAt(i);
-    if (ChildOB.getTagName() != OpB.getTag())
-      OpDefs.emplace_back(ChildOB);
-  }
-  OpDefs.emplace_back(OpB);
-  return InvokeInst::Create(II, OpDefs, InsertPt);
 }
 
 LandingPadInst *InvokeInst::getLandingPadInst() const {
