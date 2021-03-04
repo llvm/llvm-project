@@ -805,7 +805,7 @@ private:
     __compressed_pair<__rep, allocator_type> __r_;
 
 public:
-    _LIBCPP_FUNC_VIS
+    _LIBCPP_TEMPLATE_DATA_VIS
     static const size_type npos = -1;
 
     _LIBCPP_INLINE_VISIBILITY basic_string()
@@ -4404,7 +4404,7 @@ _LIBCPP_FUNC_VIS wstring to_wstring(double __val);
 _LIBCPP_FUNC_VIS wstring to_wstring(long double __val);
 
 template<class _CharT, class _Traits, class _Allocator>
-_LIBCPP_FUNC_VIS
+_LIBCPP_TEMPLATE_DATA_VIS
 const typename basic_string<_CharT, _Traits, _Allocator>::size_type
                basic_string<_CharT, _Traits, _Allocator>::npos;
 
