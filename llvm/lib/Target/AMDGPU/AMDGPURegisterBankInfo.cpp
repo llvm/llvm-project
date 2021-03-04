@@ -4336,6 +4336,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[M0Idx] = AMDGPU::getValueMapping(M0Bank, 32);
       break;
     }
+    case Intrinsic::amdgcn_ds_add_gs_reg_rtn:
+    case Intrinsic::amdgcn_ds_sub_gs_reg_rtn: {
+      OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+      OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      break;
+    }
     default:
       return getInvalidInstructionMapping();
     }
