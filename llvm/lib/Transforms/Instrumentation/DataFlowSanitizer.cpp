@@ -2346,6 +2346,7 @@ void DFSanVisitor::visitCASOrRMW(Align InstAlignment, Instruction &I) {
   const Align ShadowAlign = DFSF.getShadowAlign(InstAlignment);
   DFSF.storeZeroPrimitiveShadow(Addr, Size, ShadowAlign, &I);
   DFSF.setShadow(&I, DFSF.DFS.getZeroShadow(&I));
+  DFSF.setOrigin(&I, DFSF.DFS.ZeroOrigin);
 }
 
 void DFSanVisitor::visitAtomicRMWInst(AtomicRMWInst &I) {
