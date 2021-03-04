@@ -550,7 +550,10 @@ public:
                                            unsigned Depth) const override;
 
   ISD::NodeType getExtendForAtomicOps() const override {
-    return ISD::ANY_EXTEND;
+    return ISD::ZERO_EXTEND;
+  }
+  ISD::NodeType getExtendForAtomicCmpSwapArg() const override {
+    return ISD::ZERO_EXTEND;
   }
 
   bool supportSwiftError() const override {

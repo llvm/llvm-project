@@ -4056,7 +4056,10 @@ SDValue SystemZTargetLowering::lowerATOMIC_CMP_SWAP(SDValue Op,
   SDValue Success = emitSETCC(DAG, DL, AtomicOp.getValue(1),
                               SystemZ::CCMASK_ICMP, SystemZ::CCMASK_CMP_EQ);
 
-  DAG.ReplaceAllUsesOfValueWith(Op.getValue(0), AtomicOp.getValue(0));
+  // emitAtomicCmpSwapW() will zero extend the result (original value).
+  SDValue OrigVal = DAG.getNode(ISD::AssertZext, DL, WideVT, AtomicOp.getValue(0),
+                                DAG.getValueType(NarrowVT));
+  DAG.ReplaceAllUsesOfValueWith(Op.getValue(0), OrigVal);
   DAG.ReplaceAllUsesOfValueWith(Op.getValue(1), Success);
   DAG.ReplaceAllUsesOfValueWith(Op.getValue(2), AtomicOp.getValue(2));
   return SDValue();
@@ -7578,7 +7581,6 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
 MachineBasicBlock *
 SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
                                           MachineBasicBlock *MBB) const {
-
   MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
@@ -7588,7 +7590,7 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   Register Dest = MI.getOperand(0).getReg();
   MachineOperand Base = earlyUseOperand(MI.getOperand(1));
   int64_t Disp = MI.getOperand(2).getImm();
-  Register OrigCmpVal = MI.getOperand(3).getReg();
+  Register CmpVal = MI.getOperand(3).getReg();
   Register OrigSwapVal = MI.getOperand(4).getReg();
   Register BitShift = MI.getOperand(5).getReg();
   Register NegBitShift = MI.getOperand(6).getReg();
@@ -7597,19 +7599,19 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
 
   const TargetRegisterClass *RC = &SystemZ::GR32BitRegClass;
 
-  // Get the right opcodes for the displacement.
+  // Get the right opcodes for the displacement and zero-extension.
   unsigned LOpcode  = TII->getOpcodeForOffset(SystemZ::L,  Disp);
   unsigned CSOpcode = TII->getOpcodeForOffset(SystemZ::CS, Disp);
+  unsigned ZExtOpcode  = BitSize == 8 ? SystemZ::LLCR : SystemZ::LLHR;
   assert(LOpcode && CSOpcode && "Displacement out of range");
 
   // Create virtual registers for temporary results.
   Register OrigOldVal = MRI.createVirtualRegister(RC);
   Register OldVal = MRI.createVirtualRegister(RC);
-  Register CmpVal = MRI.createVirtualRegister(RC);
   Register SwapVal = MRI.createVirtualRegister(RC);
   Register StoreVal = MRI.createVirtualRegister(RC);
+  Register OldValRot = MRI.createVirtualRegister(RC);
   Register RetryOldVal = MRI.createVirtualRegister(RC);
-  Register RetryCmpVal = MRI.createVirtualRegister(RC);
   Register RetrySwapVal = MRI.createVirtualRegister(RC);
 
   // Insert 2 basic blocks for the loop.
@@ -7631,34 +7633,32 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
 
   //  LoopMBB:
   //   %OldVal        = phi [ %OrigOldVal, EntryBB ], [ %RetryOldVal, SetMBB ]
-  //   %CmpVal        = phi [ %OrigCmpVal, EntryBB ], [ %RetryCmpVal, SetMBB ]
   //   %SwapVal       = phi [ %OrigSwapVal, EntryBB ], [ %RetrySwapVal, SetMBB ]
-  //   %Dest          = RLL %OldVal, BitSize(%BitShift)
+  //   %OldValRot     = RLL %OldVal, BitSize(%BitShift)
   //                      ^^ The low BitSize bits contain the field
   //                         of interest.
-  //   %RetryCmpVal   = RISBG32 %CmpVal, %Dest, 32, 63-BitSize, 0
+  //   %RetrySwapVal = RISBG32 %SwapVal, %OldValRot, 32, 63-BitSize, 0
   //                      ^^ Replace the upper 32-BitSize bits of the
-  //                         comparison value with those that we loaded,
-  //                         so that we can use a full word comparison.
-  //   CR %Dest, %RetryCmpVal
+  //                         swap value with those that we loaded and rotated.
+  //   %Dest = LL[CH] %OldValRot
+  //   CR %Dest, %CmpVal
   //   JNE DoneMBB
   //   # Fall through to SetMBB
   MBB = LoopMBB;
   BuildMI(MBB, DL, TII->get(SystemZ::PHI), OldVal)
     .addReg(OrigOldVal).addMBB(StartMBB)
     .addReg(RetryOldVal).addMBB(SetMBB);
-  BuildMI(MBB, DL, TII->get(SystemZ::PHI), CmpVal)
-    .addReg(OrigCmpVal).addMBB(StartMBB)
-    .addReg(RetryCmpVal).addMBB(SetMBB);
   BuildMI(MBB, DL, TII->get(SystemZ::PHI), SwapVal)
     .addReg(OrigSwapVal).addMBB(StartMBB)
     .addReg(RetrySwapVal).addMBB(SetMBB);
-  BuildMI(MBB, DL, TII->get(SystemZ::RLL), Dest)
+  BuildMI(MBB, DL, TII->get(SystemZ::RLL), OldValRot)
     .addReg(OldVal).addReg(BitShift).addImm(BitSize);
-  BuildMI(MBB, DL, TII->get(SystemZ::RISBG32), RetryCmpVal)
-    .addReg(CmpVal).addReg(Dest).addImm(32).addImm(63 - BitSize).addImm(0);
+  BuildMI(MBB, DL, TII->get(SystemZ::RISBG32), RetrySwapVal)
+    .addReg(SwapVal).addReg(OldValRot).addImm(32).addImm(63 - BitSize).addImm(0);
+  BuildMI(MBB, DL, TII->get(ZExtOpcode), Dest)
+    .addReg(OldValRot);
   BuildMI(MBB, DL, TII->get(SystemZ::CR))
-    .addReg(Dest).addReg(RetryCmpVal);
+    .addReg(Dest).addReg(CmpVal);
   BuildMI(MBB, DL, TII->get(SystemZ::BRC))
     .addImm(SystemZ::CCMASK_ICMP)
     .addImm(SystemZ::CCMASK_CMP_NE).addMBB(DoneMBB);
@@ -7666,17 +7666,12 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   MBB->addSuccessor(SetMBB);
 
   //  SetMBB:
-  //   %RetrySwapVal = RISBG32 %SwapVal, %Dest, 32, 63-BitSize, 0
-  //                      ^^ Replace the upper 32-BitSize bits of the new
-  //                         value with those that we loaded.
-  //   %StoreVal    = RLL %RetrySwapVal, -BitSize(%NegBitShift)
+  //   %StoreVal     = RLL %RetrySwapVal, -BitSize(%NegBitShift)
   //                      ^^ Rotate the new field to its proper position.
-  //   %RetryOldVal = CS %Dest, %StoreVal, Disp(%Base)
+  //   %RetryOldVal  = CS %OldVal, %StoreVal, Disp(%Base)
   //   JNE LoopMBB
   //   # fall through to ExitMMB
   MBB = SetMBB;
-  BuildMI(MBB, DL, TII->get(SystemZ::RISBG32), RetrySwapVal)
-    .addReg(SwapVal).addReg(Dest).addImm(32).addImm(63 - BitSize).addImm(0);
   BuildMI(MBB, DL, TII->get(SystemZ::RLL), StoreVal)
     .addReg(RetrySwapVal).addReg(NegBitShift).addImm(-BitSize);
   BuildMI(MBB, DL, TII->get(CSOpcode), RetryOldVal)
