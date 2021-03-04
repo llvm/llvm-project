@@ -2595,6 +2595,15 @@ struct RemoveIdentityLinalgOps : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
+    if (auto copyOp = dyn_cast<CopyOp>(op)) {
+      assert(copyOp.hasBufferSemantics());
+      if (copyOp.input() == copyOp.output() &&
+          copyOp.inputPermutation() == copyOp.outputPermutation()) {
+        rewriter.eraseOp(op);
+        return success();
+      }
+    }
+
     if (!isa<GenericOp, IndexedGenericOp>(op))
       return failure();
     LinalgOp genericOp = cast<LinalgOp>(op);
