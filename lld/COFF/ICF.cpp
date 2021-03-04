@@ -40,6 +40,7 @@ static Timer icfTimer("ICF", Timer::root());
 
 class ICF {
 public:
+  ICF(ICFLevel icfLevel) : icfLevel(icfLevel){};
   void run(ArrayRef<Chunk *> v);
 
 private:
@@ -62,6 +63,7 @@ private:
   std::vector<SectionChunk *> chunks;
   int cnt = 0;
   std::atomic<bool> repeat = {false};
+  ICFLevel icfLevel = ICFLevel::All;
 };
 
 // Returns true if section S is subject of ICF.
@@ -81,8 +83,9 @@ bool ICF::isEligible(SectionChunk *c) {
   if (!c->isCOMDAT() || !c->live || writable)
     return false;
 
-  // Code sections are eligible.
-  if (c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
+  // Under regular (not safe) ICF, all code sections are eligible.
+  if ((icfLevel == ICFLevel::All) &&
+      c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
     return true;
 
   // .pdata and .xdata unwind info sections are eligible.
@@ -314,7 +317,9 @@ void ICF::run(ArrayRef<Chunk *> vec) {
 }
 
 // Entry point to ICF.
-void doICF(ArrayRef<Chunk *> chunks) { ICF().run(chunks); }
+void doICF(ArrayRef<Chunk *> chunks, ICFLevel icfLevel) {
+  ICF(icfLevel).run(chunks);
+}
 
 } // namespace coff
 } // namespace lld
