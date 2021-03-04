@@ -112,6 +112,27 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
+/// Merge the samples in \p Other into this record.
+/// Optionally scale sample counts by \p Weight.
+sampleprof_error SampleRecord::merge(const SampleRecord &Other,
+                                     uint64_t Weight) {
+  sampleprof_error Result;
+  // With pseudo probes, merge a dangling sample with a non-dangling sample
+  // should result in a dangling sample.
+  if (FunctionSamples::ProfileIsProbeBased &&
+      (getSamples() == FunctionSamples::InvalidProbeCount ||
+       Other.getSamples() == FunctionSamples::InvalidProbeCount)) {
+    NumSamples = FunctionSamples::InvalidProbeCount;
+    Result = sampleprof_error::success;
+  } else {
+    Result = addSamples(Other.getSamples(), Weight);
+  }
+  for (const auto &I : Other.getCallTargets()) {
+    MergeResult(Result, addCalledTarget(I.first(), I.second, Weight));
+  }
+  return Result;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LineLocation::dump() const { print(dbgs()); }
 #endif
