@@ -338,7 +338,7 @@ void test_exceptions() {
 #endif
 }
 
-// See https://bugs.llvm.org/show_bug.cgi?id=31916
+// See https://llvm.org/PR31916
 void test_caller_accepts_nonconst() {
   struct A {};
   struct Visitor {
