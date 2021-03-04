@@ -22,7 +22,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Host.h"
 
 #include <memory>
 #include <string>
@@ -736,8 +735,6 @@ private:
   }
 
   Error checkFeatureSupport() const override {
-    using namespace sys::detail::x86;
-
     // LBR is the only feature we conditionally support now.
     // So if LBR is not requested, then we should be able to run the benchmarks.
     if (LbrSamplingPeriod == 0)
@@ -745,18 +742,13 @@ private:
 
 #if defined(__linux__) && defined(HAVE_LIBPFM) &&                              \
     defined(LIBPFM_HAS_FIELD_CYCLES)
-    // FIXME: Fix this.
-    // https://bugs.llvm.org/show_bug.cgi?id=48918
-    // For now, only do the check if we see an Intel machine because
-    // the counter uses some intel-specific magic and it could
-    // be confuse and think an AMD machine actually has LBR support.
-    if (getVendorSignature() == VendorSignatures::GENUINE_INTEL)
-      // If the kernel supports it, the hardware still may not have it.
-      return X86LbrCounter::checkLbrSupport();
-#endif
+    // If the kernel supports it, the hardware still may not have it.
+    return X86LbrCounter::checkLbrSupport();
+#else
     return llvm::make_error<llvm::StringError>(
         "LBR not supported on this kernel and/or platform",
         llvm::errc::not_supported);
+#endif
   }
 
   std::unique_ptr<SavedState> withSavedState() const override {
