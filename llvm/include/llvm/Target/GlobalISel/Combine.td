@@ -427,16 +427,6 @@ def anyext_trunc_fold: GICombineRule <
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
-// Fold (zext (trunc x)) -> x if the source type is same as the destination type
-// and truncated bits are known to be zero.
-def zext_trunc_fold_matchinfo : GIDefMatchData<"Register">;
-def zext_trunc_fold: GICombineRule <
-  (defs root:$root, zext_trunc_fold_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_ZEXT):$root,
-         [{ return Helper.matchCombineZextTrunc(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
->;
-
 // Fold ([asz]ext ([asz]ext x)) -> ([asz]ext x).
 def ext_ext_fold_matchinfo : GIDefMatchData<"std::tuple<Register, unsigned>">;
 def ext_ext_fold: GICombineRule <
@@ -593,8 +583,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p]>;
 
 def known_bits_simplifications : GICombineGroup<[
-  redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,
-  zext_trunc_fold]>;
+  redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
 
