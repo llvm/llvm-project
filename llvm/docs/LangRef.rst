@@ -11934,13 +11934,8 @@ safepoint sequence of which this ``gc.relocation`` is a part.
 Despite the typing of this as a generic token, *only* the value defined 
 by a ``gc.statepoint`` is legal here.
 
-The second and third arguments are both indices into operands of their
-corresponding statepoint.  If the statepoint has a :ref:`gc-live <ob_gc_live>`
-operand bundle, then both arguments are indices into the operand bundle's
-operands. If there is no "gc-live" bundle, then the index is into the
-statepoint's list of arguments.  This index must land within the 'gc
-parameter' section of the statepoint's argument list.  Use of the "gc-live"
-form is recommended.
+The second and third arguments are both indices into operands of the
+corresponding statepoint's :ref:`gc-live <ob_gc_live>` operand bundle.
 
 The second argument is an index which specifies the allocation for the pointer
 being relocated. The associated value must be within the object with which the
