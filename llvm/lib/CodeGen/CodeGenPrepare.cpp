@@ -377,6 +377,7 @@ class TypePromotionTransaction;
     }
 
     void removeAllAssertingVHReferences(Value *V);
+    bool eliminateAssumptions(Function &F);
     bool eliminateFallThrough(Function &F);
     bool eliminateMostlyEmptyBlocks(Function &F);
     BasicBlock *findDestBlockOfMergeableEmptyBlock(BasicBlock *BB);
@@ -506,6 +507,11 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     }
   }
 
+  // Get rid of @llvm.assume builtins before attempting to eliminate empty
+  // blocks, since there might be blocks that only contain @llvm.assume calls
+  // (plus arguments that we can get rid of).
+  EverMadeChange |= eliminateAssumptions(F);
+
   // Eliminate blocks that contain only PHI nodes and an
   // unconditional branch.
   EverMadeChange |= eliminateMostlyEmptyBlocks(F);
@@ -612,6 +618,28 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
 #endif
 
   return EverMadeChange;
+}
+
+bool CodeGenPrepare::eliminateAssumptions(Function &F) {
+  bool MadeChange = false;
+  for (BasicBlock &BB : F) {
+    CurInstIterator = BB.begin();
+    while (CurInstIterator != BB.end()) {
+      Instruction *I = &*(CurInstIterator++);
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+        if (II->getIntrinsicID() != Intrinsic::assume)
+          continue;
+        MadeChange = true;
+        Value *Operand = II->getOperand(0);
+        II->eraseFromParent();
+
+        resetIteratorIfInvalidatedWhileCalling(&BB, [&]() {
+          RecursivelyDeleteTriviallyDeadInstructions(Operand, TLInfo, nullptr);
+        });
+      }
+    }
+  }
+  return MadeChange;
 }
 
 /// An instruction is about to be deleted, so remove all references to it in our
@@ -2118,18 +2146,8 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
   if (II) {
     switch (II->getIntrinsicID()) {
     default: break;
-    case Intrinsic::assume: {
-      Value *Operand = II->getOperand(0);
-      II->eraseFromParent();
-      // Prune the operand, it's most likely dead.
-      resetIteratorIfInvalidatedWhileCalling(BB, [&]() {
-        RecursivelyDeleteTriviallyDeadInstructions(
-            Operand, TLInfo, nullptr,
-            [&](Value *V) { removeAllAssertingVHReferences(V); });
-      });
-      return true;
-    }
-
+    case Intrinsic::assume:
+      llvm_unreachable("llvm.assume should have been removed already");
     case Intrinsic::experimental_widenable_condition: {
       // Give up on future widening oppurtunties so that we can fold away dead
       // paths and merge blocks before going into block-local instruction
