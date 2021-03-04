@@ -1043,6 +1043,16 @@ def VRegSrc_32 : RegisterOperand<VGPR_32> {
 }
 
 //===----------------------------------------------------------------------===//
+// VGPRSrc_*
+//===----------------------------------------------------------------------===//
+
+// An 8-bit RegisterOperand wrapper for a VGPR
+def VGPRSrc_32 : RegisterOperand<VGPR_32> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+}
+// TODO-GFX11 Add a 16bit RegisterOperand
+
+//===----------------------------------------------------------------------===//
 //  ASrc_* Operands with an AccVGPR
 //===----------------------------------------------------------------------===//
 

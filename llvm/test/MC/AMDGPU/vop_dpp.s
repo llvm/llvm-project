@@ -115,19 +115,19 @@ v_mov_b32 v0, v0 quad_perm:[1,3,0,1] bank_mask:0x1 bound_ctrl:0
 // Check modifiers
 //===----------------------------------------------------------------------===//
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_add_f32_dpp v0, -v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x00,0x00,0x02,0x00,0x01,0x19,0xa1]
 v_add_f32 v0, -v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_add_f32_dpp v0, v0, |v0| row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x00,0x00,0x02,0x00,0x01,0x89,0xa1]
 v_add_f32 v0, v0, |v0| row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_add_f32_dpp v0, -v0, |v0| row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x00,0x00,0x02,0x00,0x01,0x99,0xa1]
 v_add_f32 v0, -v0, |v0| row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_add_f32_dpp v0, |v0|, -v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x00,0x00,0x02,0x00,0x01,0x69,0xa1]
 v_add_f32 v0, |v0|, -v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
@@ -136,18 +136,18 @@ v_add_f32 v0, |v0|, -v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 //===----------------------------------------------------------------------===//
 
 // NOSICI: error: not a valid operand.
-// GCN: v_nop row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x00,0x00,0x7e,0x00,0x01,0x09,0xa1]
+// GCN: v_nop row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x00,0x00,0x7e,0x00,0x01,0x09,0xa1]
 v_nop row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_u32_f32_dpp v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x0e,0x00,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_u32_f32 v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_fract_f32_dpp v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x36,0x00,0x7e,0x00,0x01,0x09,0xa1]
 v_fract_f32 v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_sin_f32_dpp v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x52,0x00,0x7e,0x00,0x01,0x09,0xa1]
 v_sin_f32 v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
@@ -155,95 +155,95 @@ v_sin_f32 v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 // VI9: v_mov_b32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x02,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_mov_b32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_f32_i32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x0a,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_f32_i32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_f32_u32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x0c,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_f32_u32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_i32_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x10,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_i32_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_f16_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x14,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_f16_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_f32_f16_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x16,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_f32_f16 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_rpi_i32_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x18,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_rpi_i32_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_flr_i32_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x1a,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_flr_i32_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_off_f32_i4_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x1c,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_off_f32_i4 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_f32_ubyte0_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x22,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_f32_ubyte0 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_f32_ubyte1_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x24,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_f32_ubyte1 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_f32_ubyte2_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x26,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_f32_ubyte2 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cvt_f32_ubyte3_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x28,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cvt_f32_ubyte3 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_trunc_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x38,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_trunc_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_ceil_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x3a,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_ceil_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_rndne_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x3c,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_rndne_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_floor_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x3e,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_floor_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_exp_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x40,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_exp_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_log_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x42,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_log_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_rcp_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x44,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_rcp_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_rcp_iflag_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x46,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_rcp_iflag_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_rsq_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x48,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_rsq_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_sqrt_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x4e,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_sqrt_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_cos_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x54,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_cos_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
@@ -267,22 +267,22 @@ v_ffbl_b32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 // VI9: v_ffbh_i32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x5e,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_ffbh_i32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_frexp_exp_i32_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x66,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_frexp_exp_i32_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_frexp_mant_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x68,0x02,0x7e,0x00,0x01,0x09,0xa1]
 v_frexp_mant_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
 // VI9: v_log_legacy_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x98,0x02,0x7e,0x00,0x01,0x09,0xa1]
 // NOSI: error: instruction not supported on this GPU
-// NOCI: error: not a valid operand.
+// NOCI: error: operands are not valid for this GPU or mode
 v_log_legacy_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
 // VI9: v_exp_legacy_f32_dpp v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x96,0x02,0x7e,0x00,0x01,0x09,0xa1]
 // NOSI: error: instruction not supported on this GPU
-// NOCI: error: not a valid operand.
+// NOCI: error: operands are not valid for this GPU or mode
 v_exp_legacy_f32 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
 // NOSICI: error: instruction not supported on this GPU
@@ -382,23 +382,23 @@ v_screen_partition_4se_b32_dpp v5, v1 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask
 //===----------------------------------------------------------------------===//
 // ToDo: VOP2bInst instructions: v_add_u32, v_sub_u32 ... (vcc and ApplyMnemonic in AsmMatcherEmitter.cpp)
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_mac_f32_dpp v0, v0, v0  row_shl:1 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x00,0x00,0x2c,0x00,0x01,0x01,0xff]
 v_mac_f32 v0, v0, v0 row_shl:1
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_mac_f32_dpp v0, v0, v0  row_shr:15 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x00,0x00,0x2c,0x00,0x1f,0x01,0xff]
 v_mac_f32 v0, v0, v0 row_shr:0xf
 
-// NOSICI: error: not a valid operand.
-// VI9: v_mac_f32_dpp v0, v0, v0 quad_perm:[1,3,0,1] row_mask:0xa bank_mask:0xf bound_ctrl:1 ; encoding: [0xfa,0x00,0x00,0x2c,0x00,0x4d,0x08,0xaf]
+// NOSICI: error: operands are not valid for this GPU or mode
+// VI9: v_mac_f32_dpp v0, v0, v0  quad_perm:[1,3,0,1] row_mask:0xa bank_mask:0xf bound_ctrl:1 ; encoding: [0xfa,0x00,0x00,0x2c,0x00,0x4d,0x08,0xaf]
 v_mac_f32 v0, v0, v0 quad_perm:[1,3,0,1] row_mask:0xa bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_add_f32_dpp v0, v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x00,0x00,0x02,0x00,0x01,0x09,0xa1]
 v_add_f32 v0, v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_min_f32_dpp v0, v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x00,0x00,0x14,0x00,0x01,0x09,0xa1]
 v_min_f32 v0, v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
@@ -406,19 +406,19 @@ v_min_f32 v0, v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 // VI9: v_and_b32_dpp v0, v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x00,0x00,0x26,0x00,0x01,0x09,0xa1]
 v_and_b32 v0, v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_mul_i32_i24_dpp v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x0c,0x02,0x01,0x09,0xa1]
 v_mul_i32_i24 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_sub_f32_dpp v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x04,0x02,0x01,0x09,0xa1]
 v_sub_f32 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_subrev_f32_dpp v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x06,0x02,0x01,0x09,0xa1]
 v_subrev_f32 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_mul_f32_dpp v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x0a,0x02,0x01,0x09,0xa1]
 v_mul_f32 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
@@ -426,7 +426,7 @@ v_mul_f32 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 // VI9: v_mul_hi_i32_i24_dpp v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x0e,0x02,0x01,0x09,0xa1]
 v_mul_hi_i32_i24 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_mul_u32_u24_dpp v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x10,0x02,0x01,0x09,0xa1]
 v_mul_u32_u24 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
@@ -434,7 +434,7 @@ v_mul_u32_u24 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 // VI9: v_mul_hi_u32_u24_dpp v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x12,0x02,0x01,0x09,0xa1]
 v_mul_hi_u32_u24 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // VI9: v_max_f32_dpp v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x16,0x02,0x01,0x09,0xa1]
 v_max_f32 v1, v2 v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
@@ -551,46 +551,46 @@ v_min_i16 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 v_ldexp_f16 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: not a valid operand.
+// NOGFX9: error: operands are not valid for this GPU or mode
 // VI: v_add_u32_dpp v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x32,0x02,0x01,0x09,0xa1]
 v_add_u32 v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: not a valid operand.
+// NOGFX9: error: operands are not valid for this GPU or mode
 // VI: v_sub_u32_dpp v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x34,0x02,0x01,0x09,0xa1]
 v_sub_u32 v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: not a valid operand.
+// NOGFX9: error: operands are not valid for this GPU or mode
 // VI: v_subrev_u32_dpp v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x36,0x02,0x01,0x09,0xa1]
 v_subrev_u32 v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // NOGFX9: error: instruction not supported on this GPU
 // VI: v_addc_u32_dpp v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x38,0x02,0x01,0x09,0xa1]
 v_addc_u32 v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // NOGFX9: error: instruction not supported on this GPU
 // VI: v_subb_u32_dpp v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x3a,0x02,0x01,0x09,0xa1]
 v_subb_u32 v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // NOGFX9: error: instruction not supported on this GPU
 // VI: v_subbrev_u32_dpp v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x3c,0x02,0x01,0x09,0xa1]
 v_subbrev_u32 v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // NOVI: error: instruction not supported on this GPU
 // GFX9: v_add_co_u32_dpp v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x32,0x02,0x01,0x09,0xa1]
 v_add_co_u32 v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // NOVI: error: instruction not supported on this GPU
 // GFX9: v_sub_co_u32_dpp v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x34,0x02,0x01,0x09,0xa1]
 v_sub_co_u32 v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand.
+// NOSICI: error: operands are not valid for this GPU or mode
 // NOVI: error: instruction not supported on this GPU
 // GFX9: v_subrev_co_u32_dpp v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x06,0x02,0x36,0x02,0x01,0x09,0xa1]
 v_subrev_co_u32 v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
@@ -619,7 +619,7 @@ v_cndmask_b32_dpp v5, v1, v2, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
 v_cndmask_b32_dpp v5, v1, v2, vcc row_shl:15 row_mask:0x0 bank_mask:0x0
 
 //===----------------------------------------------------------------------===//
-// Check that immideates and scalar regs are not supported
+// Check that immediates and scalar regs are not supported
 //===----------------------------------------------------------------------===//
 
 // NOSICI: error: not a valid operand
@@ -632,7 +632,7 @@ v_mov_b32 v0, 1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 // NOGFX9: error: invalid operand for instruction
 v_and_b32 v0, 42, v1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand
+// NOSICI: error: invalid operand for instruction
 // NOVI: error: invalid operand for instruction
 // NOGFX9: error: invalid operand for instruction
 v_add_f32 v0, v1, 345 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
@@ -647,7 +647,7 @@ v_mov_b32 v0, s1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 // NOGFX9: error: invalid operand for instruction
 v_and_b32 v0, s42, v1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error: not a valid operand
+// NOSICI: error: invalid operand for instruction
 // NOVI: error: invalid operand for instruction
 // NOGFX9: error: invalid operand for instruction
 v_add_f32 v0, v1, s45 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
