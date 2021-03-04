@@ -10,7 +10,7 @@
 #include "mlir/CAPI/ExecutionEngine.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
-#include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;

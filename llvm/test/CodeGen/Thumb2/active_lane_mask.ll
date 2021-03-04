@@ -464,11 +464,11 @@ define void @test_width2(i32* nocapture readnone %x, i32* nocapture %y, i8 zeroe
 ; CHECK-NEXT:    eor.w r0, r5, r3
 ; CHECK-NEXT:    orrs.w r0, r0, r12
 ; CHECK-NEXT:    cset r0, ne
-; CHECK-NEXT:    tst.w r0, #1
+; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    teq.w r7, r9
 ; CHECK-NEXT:    cset r2, ne
-; CHECK-NEXT:    tst.w r2, #1
+; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, ne
 ; CHECK-NEXT:    vmov q4[2], q4[0], r2, r0
 ; CHECK-NEXT:    vmov q4[3], q4[1], r2, r0

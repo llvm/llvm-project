@@ -628,6 +628,71 @@ Symbol *SymbolTable::addUndefinedTable(StringRef name,
   return s;
 }
 
+TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
+  WasmLimits limits{0, 0, 0}; // Set by the writer.
+  WasmTableType *type = make<WasmTableType>();
+  type->ElemType = uint8_t(ValType::FUNCREF);
+  type->Limits = limits;
+  StringRef module(defaultModule);
+  uint32_t flags = config->exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
+  flags |= WASM_SYMBOL_UNDEFINED;
+  Symbol *sym = addUndefinedTable(name, name, module, flags, nullptr, type);
+  sym->markLive();
+  sym->forceExport = config->exportTable;
+  return cast<TableSymbol>(sym);
+}
+
+TableSymbol *SymbolTable::createDefinedIndirectFunctionTable(StringRef name) {
+  const uint32_t invalidIndex = -1;
+  WasmLimits limits{0, 0, 0}; // Set by the writer.
+  WasmTableType type{uint8_t(ValType::FUNCREF), limits};
+  WasmTable desc{invalidIndex, type, name};
+  InputTable *table = make<InputTable>(desc, nullptr);
+  uint32_t flags = config->exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
+  TableSymbol *sym = addSyntheticTable(name, flags, table);
+  sym->markLive();
+  sym->forceExport = config->exportTable;
+  return sym;
+}
+
+// Whether or not we need an indirect function table is usually a function of
+// whether an input declares a need for it.  However sometimes it's possible for
+// no input to need the indirect function table, but then a late
+// addInternalGOTEntry causes a function to be allocated an address.  In that
+// case address we synthesize a definition at the last minute.
+TableSymbol *SymbolTable::resolveIndirectFunctionTable(bool required) {
+  Symbol *existing = find(functionTableName);
+  if (existing) {
+    if (!isa<TableSymbol>(existing)) {
+      error(Twine("reserved symbol must be of type table: `") +
+            functionTableName + "`");
+      return nullptr;
+    }
+    if (existing->isDefined()) {
+      error(Twine("reserved symbol must not be defined in input files: `") +
+            functionTableName + "`");
+      return nullptr;
+    }
+  }
+
+  if (config->importTable) {
+    if (existing)
+      return cast<TableSymbol>(existing);
+    if (required)
+      return createUndefinedIndirectFunctionTable(functionTableName);
+  } else if ((existing && existing->isLive()) || config->exportTable ||
+             required) {
+    // A defined table is required.  Either because the user request an exported
+    // table or because the table symbol is already live.  The existing table is
+    // guaranteed to be undefined due to the check above.
+    return createDefinedIndirectFunctionTable(functionTableName);
+  }
+
+  // An indirect function table will only be present in the symbol table if
+  // needed by a reloc; if we get here, we don't need one.
+  return nullptr;
+}
+
 void SymbolTable::addLazy(ArchiveFile *file, const Archive::Symbol *sym) {
   LLVM_DEBUG(dbgs() << "addLazy: " << sym->getName() << "\n");
   StringRef name = sym->getName();

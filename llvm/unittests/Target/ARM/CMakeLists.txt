@@ -4,6 +4,7 @@ include_directories(
   )
 
 set(LLVM_LINK_COMPONENTS
+  ${LLVM_TARGETS_TO_BUILD}
   ARMCodeGen
   ARMDesc
   ARMInfo
@@ -16,5 +17,6 @@ set(LLVM_LINK_COMPONENTS
 )
 
 add_llvm_target_unittest(ARMTests
+  ARMSelectionDAGTest.cpp
   MachineInstrTest.cpp
   )

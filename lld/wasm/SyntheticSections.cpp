@@ -296,6 +296,12 @@ void GlobalSection::assignIndexes() {
   isSealed = true;
 }
 
+static void ensureIndirectFunctionTable() {
+  if (!WasmSym::indirectFunctionTable)
+    WasmSym::indirectFunctionTable =
+        symtab->resolveIndirectFunctionTable(/*required =*/true);
+}
+
 void GlobalSection::addInternalGOTEntry(Symbol *sym) {
   assert(!isSealed);
   if (sym->requiresGOT)
@@ -303,8 +309,10 @@ void GlobalSection::addInternalGOTEntry(Symbol *sym) {
   LLVM_DEBUG(dbgs() << "addInternalGOTEntry: " << sym->getName() << " "
                     << toString(sym->kind()) << "\n");
   sym->requiresGOT = true;
-  if (auto *F = dyn_cast<FunctionSymbol>(sym))
+  if (auto *F = dyn_cast<FunctionSymbol>(sym)) {
+    ensureIndirectFunctionTable();
     out.elemSec->addEntry(F);
+  }
   internalGotSymbols.push_back(sym);
 }
 

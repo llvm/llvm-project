@@ -795,48 +795,6 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
     symtab->wrap(w.sym, w.real, w.wrap);
 }
 
-static TableSymbol *createDefinedIndirectFunctionTable(StringRef name) {
-  const uint32_t invalidIndex = -1;
-  WasmLimits limits{0, 0, 0}; // Set by the writer.
-  WasmTableType type{uint8_t(ValType::FUNCREF), limits};
-  WasmTable desc{invalidIndex, type, name};
-  InputTable *table = make<InputTable>(desc, nullptr);
-  uint32_t flags = config->exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
-  TableSymbol *sym = symtab->addSyntheticTable(name, flags, table);
-  sym->markLive();
-  sym->forceExport = config->exportTable;
-  return sym;
-}
-
-static TableSymbol *resolveIndirectFunctionTable() {
-  Symbol *existing = symtab->find(functionTableName);
-  if (existing) {
-    if (!isa<TableSymbol>(existing)) {
-      error(Twine("reserved symbol must be of type table: `") +
-            functionTableName + "`");
-      return nullptr;
-    }
-    if (existing->isDefined()) {
-      error(Twine("reserved symbol must not be defined in input files: `") +
-            functionTableName + "`");
-      return nullptr;
-    }
-  }
-
-  if (config->importTable) {
-    return cast_or_null<TableSymbol>(existing);
-  } else if ((existing && existing->isLive()) || config->exportTable) {
-    // A defined table is required.  Either because the user request an exported
-    // table or because the table symbol is already live.  The existing table is
-    // guaranteed to be undefined due to the check above.
-    return createDefinedIndirectFunctionTable(functionTableName);
-  }
-
-  // An indirect function table will only be present in the symbol table if
-  // needed by a reloc; if we get here, we don't need one.
-  return nullptr;
-}
-
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   WasmOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
@@ -1021,8 +979,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Do size optimizations: garbage collection
   markLive();
 
-  // Provide the indirect funciton table if needed.
-  WasmSym::indirectFunctionTable = resolveIndirectFunctionTable();
+  // Provide the indirect function table if needed.
+  WasmSym::indirectFunctionTable =
+      symtab->resolveIndirectFunctionTable(/*required =*/false);
 
   if (errorCount())
     return;

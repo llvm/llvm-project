@@ -3064,6 +3064,8 @@ class AddressingModeMatcher {
   const TargetLowering &TLI;
   const TargetRegisterInfo &TRI;
   const DataLayout &DL;
+  const LoopInfo &LI;
+  const DominatorTree &DT;
 
   /// AccessTy/MemoryInst - This is the type for the access (e.g. double) and
   /// the memory instruction that we're computing this address for.
@@ -3099,16 +3101,17 @@ class AddressingModeMatcher {
 
   AddressingModeMatcher(
       SmallVectorImpl<Instruction *> &AMI, const TargetLowering &TLI,
-      const TargetRegisterInfo &TRI, Type *AT, unsigned AS, Instruction *MI,
+      const TargetRegisterInfo &TRI, const LoopInfo &LI,
+      const DominatorTree &DT, Type *AT, unsigned AS, Instruction *MI,
       ExtAddrMode &AM, const SetOfInstrs &InsertedInsts,
       InstrToOrigTy &PromotedInsts, TypePromotionTransaction &TPT,
       std::pair<AssertingVH<GetElementPtrInst>, int64_t> &LargeOffsetGEP,
       bool OptSize, ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI)
       : AddrModeInsts(AMI), TLI(TLI), TRI(TRI),
-        DL(MI->getModule()->getDataLayout()), AccessTy(AT), AddrSpace(AS),
-        MemoryInst(MI), AddrMode(AM), InsertedInsts(InsertedInsts),
-        PromotedInsts(PromotedInsts), TPT(TPT), LargeOffsetGEP(LargeOffsetGEP),
-        OptSize(OptSize), PSI(PSI), BFI(BFI) {
+        DL(MI->getModule()->getDataLayout()), LI(LI), DT(DT), AccessTy(AT),
+        AddrSpace(AS), MemoryInst(MI), AddrMode(AM),
+        InsertedInsts(InsertedInsts), PromotedInsts(PromotedInsts), TPT(TPT),
+        LargeOffsetGEP(LargeOffsetGEP), OptSize(OptSize), PSI(PSI), BFI(BFI) {
     IgnoreProfitability = false;
   }
 
@@ -3123,18 +3126,17 @@ public:
   static ExtAddrMode
   Match(Value *V, Type *AccessTy, unsigned AS, Instruction *MemoryInst,
         SmallVectorImpl<Instruction *> &AddrModeInsts,
-        const TargetLowering &TLI, const TargetRegisterInfo &TRI,
-        const SetOfInstrs &InsertedInsts, InstrToOrigTy &PromotedInsts,
-        TypePromotionTransaction &TPT,
+        const TargetLowering &TLI, const LoopInfo &LI, const DominatorTree &DT,
+        const TargetRegisterInfo &TRI, const SetOfInstrs &InsertedInsts,
+        InstrToOrigTy &PromotedInsts, TypePromotionTransaction &TPT,
         std::pair<AssertingVH<GetElementPtrInst>, int64_t> &LargeOffsetGEP,
         bool OptSize, ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
     ExtAddrMode Result;
 
-    bool Success = AddressingModeMatcher(AddrModeInsts, TLI, TRI, AccessTy, AS,
-                                         MemoryInst, Result, InsertedInsts,
-                                         PromotedInsts, TPT, LargeOffsetGEP,
-                                         OptSize, PSI, BFI)
-                       .matchAddr(V, 0);
+    bool Success = AddressingModeMatcher(
+        AddrModeInsts, TLI, TRI, LI, DT, AccessTy, AS, MemoryInst, Result,
+        InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI,
+        BFI).matchAddr(V, 0);
     (void)Success; assert(Success && "Couldn't select *anything*?");
     return Result;
   }
@@ -3830,10 +3832,12 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
 
   // Okay, we decided that we can add ScaleReg+Scale to AddrMode.  Check now
   // to see if ScaleReg is actually X+C.  If so, we can turn this into adding
-  // X*Scale + C*Scale to addr mode.
+  // X*Scale + C*Scale to addr mode. If we found available IV increment, do not
+  // go any further: we can reuse it and cannot eliminate it.
   ConstantInt *CI = nullptr; Value *AddLHS = nullptr;
   if (isa<Instruction>(ScaleReg) && // not a constant expr.
       match(ScaleReg, m_Add(m_Value(AddLHS), m_ConstantInt(CI))) &&
+      !isIVIncrement(cast<BinaryOperator>(ScaleReg), &LI) &&
       CI->getValue().isSignedIntN(64)) {
     TestAddrMode.InBounds = false;
     TestAddrMode.ScaledReg = AddLHS;
@@ -3846,9 +3850,63 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
       AddrMode = TestAddrMode;
       return true;
     }
+    // Restore status quo.
+    TestAddrMode = AddrMode;
   }
 
-  // Otherwise, not (x+c)*scale, just return what we have.
+  auto GetConstantStep = [this](const Value * V)
+      ->Optional<std::pair<Instruction *, APInt> > {
+    auto *PN = dyn_cast<PHINode>(V);
+    if (!PN)
+      return None;
+    auto IVInc = getIVIncrement(PN, &LI);
+    if (!IVInc)
+      return None;
+    // TODO: The result of the intrinsics above is two-compliment. However when
+    // IV inc is expressed as add or sub, iv.next is potentially a poison value.
+    // If it has nuw or nsw flags, we need to make sure that these flags are
+    // inferrable at the point of memory instruction. Otherwise we are replacing
+    // well-defined two-compliment computation with poison. Currently, to avoid
+    // potentially complex analysis needed to prove this, we reject such cases.
+    if (auto *OIVInc = dyn_cast<OverflowingBinaryOperator>(IVInc->first))
+      if (OIVInc->hasNoSignedWrap() || OIVInc->hasNoUnsignedWrap())
+        return None;
+    if (auto *ConstantStep = dyn_cast<ConstantInt>(IVInc->second))
+      return std::make_pair(IVInc->first, ConstantStep->getValue());
+    return None;
+  };
+
+  // Try to account for the following special case:
+  // 1. ScaleReg is an inductive variable;
+  // 2. We use it with non-zero offset;
+  // 3. IV's increment is available at the point of memory instruction.
+  //
+  // In this case, we may reuse the IV increment instead of the IV Phi to
+  // achieve the following advantages:
+  // 1. If IV step matches the offset, we will have no need in the offset;
+  if (AddrMode.BaseOffs) {
+    if (auto IVStep = GetConstantStep(ScaleReg)) {
+      Instruction *IVInc = IVStep->first;
+      APInt Step = IVStep->second;
+      APInt Offset = Step * AddrMode.Scale;
+      if (Offset.isSignedIntN(64) && TestAddrMode.BaseOffs == Offset &&
+          DT.dominates(IVInc, MemoryInst)) {
+        TestAddrMode.InBounds = false;
+        TestAddrMode.ScaledReg = IVInc;
+        TestAddrMode.BaseOffs -= Offset.getLimitedValue();
+        // If this addressing mode is legal, commit it..
+        if (TLI.isLegalAddressingMode(DL, TestAddrMode, AccessTy, AddrSpace)) {
+          AddrModeInsts.push_back(cast<Instruction>(IVInc));
+          AddrMode = TestAddrMode;
+          return true;
+        }
+        // Restore status quo.
+        TestAddrMode = AddrMode;
+      }
+    }
+  }
+
+  // Otherwise, just return what we have.
   return true;
 }
 
@@ -4938,9 +4996,10 @@ isProfitableToFoldIntoAddressingMode(Instruction *I, ExtAddrMode &AMBefore,
                                                                       0);
     TypePromotionTransaction::ConstRestorationPt LastKnownGood =
         TPT.getRestorationPoint();
-    AddressingModeMatcher Matcher(
-        MatchedAddrModeInsts, TLI, TRI, AddressAccessTy, AS, MemoryInst, Result,
-        InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI, BFI);
+    AddressingModeMatcher Matcher(MatchedAddrModeInsts, TLI, TRI, LI, DT,
+                                  AddressAccessTy, AS, MemoryInst, Result,
+                                  InsertedInsts, PromotedInsts, TPT,
+                                  LargeOffsetGEP, OptSize, PSI, BFI);
     Matcher.IgnoreProfitability = true;
     bool Success = Matcher.matchAddr(Address, 0);
     (void)Success; assert(Success && "Couldn't select *anything*?");
@@ -5043,9 +5102,10 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     AddrModeInsts.clear();
     std::pair<AssertingVH<GetElementPtrInst>, int64_t> LargeOffsetGEP(nullptr,
                                                                       0);
+    Function *F = MemoryInst->getParent()->getParent();
     ExtAddrMode NewAddrMode = AddressingModeMatcher::Match(
-        V, AccessTy, AddrSpace, MemoryInst, AddrModeInsts, *TLI, *TRI,
-        InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI,
+        V, AccessTy, AddrSpace, MemoryInst, AddrModeInsts, *TLI, *LI, getDT(*F),
+        *TRI, InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI,
         BFI.get());
 
     GetElementPtrInst *GEP = LargeOffsetGEP.first;

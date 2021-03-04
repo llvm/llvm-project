@@ -17800,6 +17800,28 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = KnownOp.zext(32);
     break;
   }
+  case ARMISD::CSINC:
+  case ARMISD::CSINV:
+  case ARMISD::CSNEG: {
+    KnownBits KnownOp0 = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    KnownBits KnownOp1 = DAG.computeKnownBits(Op->getOperand(1), Depth + 1);
+
+    // The result is either:
+    // CSINC: KnownOp0 or KnownOp1 + 1
+    // CSINV: KnownOp0 or ~KnownOp1
+    // CSNEG: KnownOp0 or KnownOp1 * -1
+    if (Op.getOpcode() == ARMISD::CSINC)
+      KnownOp1 = KnownBits::computeForAddSub(
+          true, false, KnownOp1, KnownBits::makeConstant(APInt(32, 1)));
+    else if (Op.getOpcode() == ARMISD::CSINV)
+      std::swap(KnownOp1.Zero, KnownOp1.One);
+    else if (Op.getOpcode() == ARMISD::CSNEG)
+      KnownOp1 = KnownBits::computeForMul(
+          KnownOp1, KnownBits::makeConstant(APInt(32, -1)));
+
+    Known = KnownBits::commonBits(KnownOp0, KnownOp1);
+    break;
+  }
   }
 }
 

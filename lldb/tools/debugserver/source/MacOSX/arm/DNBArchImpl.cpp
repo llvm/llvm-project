@@ -2118,7 +2118,7 @@ nub_size_t DNBArchMachARM::SetRegisterContext(const void *buf,
 
     // Copy each struct individually to avoid any padding that might be between
     // the structs in m_state.context
-    uint8_t *p = (uint8_t *)buf;
+    uint8_t *p = const_cast<uint8_t*>(reinterpret_cast<const uint8_t *>(buf));
     ::memcpy(&m_state.context.gpr, p, sizeof(m_state.context.gpr));
     p += sizeof(m_state.context.gpr);
     ::memcpy(&m_state.context.vfp, p, sizeof(m_state.context.vfp));
@@ -2126,7 +2126,7 @@ nub_size_t DNBArchMachARM::SetRegisterContext(const void *buf,
     ::memcpy(&m_state.context.exc, p, sizeof(m_state.context.exc));
     p += sizeof(m_state.context.exc);
 
-    size_t bytes_written = p - (uint8_t *)buf;
+    size_t bytes_written = p - reinterpret_cast<const uint8_t *>(buf);
     UNUSED_IF_ASSERT_DISABLED(bytes_written);
     assert(bytes_written == size);
 

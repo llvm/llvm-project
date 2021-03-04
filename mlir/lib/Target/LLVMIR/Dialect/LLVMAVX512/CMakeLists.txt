@@ -12,5 +12,5 @@ add_mlir_translation_library(MLIRLLVMAVX512ToLLVMIRTranslation
   MLIRLLVMAVX512
   MLIRLLVMIR
   MLIRSupport
-  MLIRTargetLLVMIRModuleTranslation
+  MLIRTargetLLVMIRExport
   )
