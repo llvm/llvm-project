@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iterator>
 #include <string>
 #include <system_error>
 #include <type_traits>
@@ -712,6 +713,66 @@ public:
   buffer_unique_ostream(std::unique_ptr<raw_ostream> OS)
       : raw_svector_ostream(Buffer), OS(std::move(OS)) {}
   ~buffer_unique_ostream() override { *OS << str(); }
+};
+
+/// Wrapper to make a raw_ostream look like an output iterator.
+/// Designed to match the API of std::ostream_iterator.
+/// Enables reusing STL algorithms with raw_ostream. For example:
+///
+/// \code{.cpp}
+///
+/// std::vector<int> V = { 1, 2, 3 };
+/// std::copy(V.begin(), V.end(), raw_ostream_iterator<int>(outs(), ", "));
+///
+/// \endcode
+///
+/// The code above outputs: "1, 2, 3, "
+template <class T, class CharT = char> class raw_ostream_iterator {
+  raw_ostream &OutStream;
+  const CharT *Delim;
+
+public:
+  using iterator_category = std::output_iterator_tag;
+  using value_type = void;
+  using difference_type = void;
+  using pointer = void;
+  using reference = void;
+  using char_type = CharT;
+
+  /// Constructs the iterator with \p Stream as the associated stream and \p
+  /// Delim as the delimiter.
+  ///
+  /// \param Stream The output stream to be accessed by this iterator.
+  ///
+  /// \param Delim The null-terminated character string to be inserted into the
+  /// stream after each output.
+  raw_ostream_iterator(raw_ostream &Stream, const CharT *Delim)
+      : OutStream(Stream), Delim(Delim) {}
+
+  /// Constructs the iterator with \p Stream as the associated stream and a null
+  /// pointer as the delimiter.
+  ///
+  /// \param Stream The output stream to be accessed by this iterator.
+  raw_ostream_iterator(raw_ostream &Stream)
+      : OutStream(Stream), Delim(nullptr) {}
+
+  /// Inserts \p Value into the associated stream, then inserts the delimiter,
+  /// if one was specified at construction time.
+  ///
+  /// \param value The object to insert.
+  raw_ostream_iterator &operator=(const T &Value) {
+    OutStream << Value;
+    if (Delim != 0)
+      OutStream << Delim;
+    return *this;
+  }
+
+  /// No-op. Provided to satisfy the requirements of LegacyOutputIterator.
+  ///@{
+  raw_ostream_iterator &operator*() { return *this; }
+  raw_ostream_iterator &operator++() { return *this; }
+  raw_ostream_iterator &operator++(int) { return *this; }
+  ///@}
 };
 
 } // end namespace llvm
