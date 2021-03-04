@@ -1,14 +1,16 @@
 // RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++1z -triple %itanium_abi_triple -main-file-name switch.cpp %s | FileCheck %s
 
 // CHECK: foo
-void foo(int i) {   // CHECK-NEXT: File 0, [[@LINE]]:17 -> [[@LINE+9]]:2 = #0
+void foo(int i) {   // CHECK-NEXT: File 0, [[@LINE]]:17 -> [[@LINE+11]]:2 = #0
   switch(i) {       // CHECK-NEXT: Branch,File 0, [[@LINE]]:10 -> [[@LINE]]:11 = ((#0 - #2) - #3), (#2 + #3)
-                    // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:13 -> [[@LINE+4]]:10 = 0
+                    // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:13 -> [[@LINE+5]]:10 = 0
   case 1:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:11 = #2
     return;         // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #2, (#0 - #2)
+                    // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:12 -> [[@LINE+1]]:3 = 0
   case 2:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:10 = #3
     break;          // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #3, (#0 - #3)
-  }                 // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:10 -> [[@LINE+1]]:3 = #1
+
+  }                 // CHECK-NEXT: Gap,File 0, [[@LINE]]:4 -> [[@LINE+1]]:3 = #1
   int x = 0;        // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:2 = #1
 }
 
@@ -47,27 +49,28 @@ void baz() {        // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+5]]:2 = #0
 }
 
                     // CHECK-NEXT: main
-int main() {        // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+38]]:2 = #0
+int main() {        // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+39]]:2 = #0
   int i = 0;
   switch(i) {       // CHECK-NEXT: Gap,File 0, [[@LINE]]:13 -> [[@LINE+8]]:10 = 0
   case 0:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = #2
     i = 1;          // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #2, (#0 - #2)
-    break;
+    break;          // CHECK-NEXT: Gap,File 0, [[@LINE]]:11 -> [[@LINE+1]]:3 = 0
   case 1:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = #3
     i = 2;          // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #3, (#0 - #3)
-    break;
+    break;          // CHECK-NEXT: Gap,File 0, [[@LINE]]:11 -> [[@LINE+1]]:3 = 0
   default:          // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:10 = #4
     break;          // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:10 = #4, (#0 - #4)
-  }                 // CHECK-NEXT: File 0, [[@LINE-1]]:10 -> [[@LINE+1]]:3 = #1
-  switch(i) {       // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+26]]:2 = #1
-  case 0:           // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:13 -> [[@LINE+6]]:10 = 0
+  }                 // CHECK-NEXT: Gap,File 0, [[@LINE]]:4 -> [[@LINE+1]]:3 = #1
+  switch(i) {       // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+27]]:2 = #1
+  case 0:           // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:13 -> [[@LINE+7]]:10 = 0
     i = 1;          // CHECK-NEXT: File 0, [[@LINE-1]]:3 -> [[@LINE+1]]:10 = #6
     break;          // CHECK-NEXT: Branch,File 0, [[@LINE-2]]:3 -> [[@LINE-2]]:9 = #6, (#1 - #6)
+                    // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:11 -> [[@LINE+1]]:3 = 0
   case 1:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+3]]:10 = #7
     i = 2;          // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #7, (#1 - #7)
   default:          // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:10 = (#7 + #8)
     break;          // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:10 = #8, (#1 - #8)
-  }                 // CHECK-NEXT: File 0, [[@LINE-1]]:10 -> [[@LINE+2]]:3 = #5
+  }                 // CHECK-NEXT: Gap,File 0, [[@LINE]]:4 -> [[@LINE+2]]:3 = #5
                     // CHECK-NEXT: File 0, [[@LINE+1]]:3 -> [[@LINE+17]]:2 = #5
   switch(i) {       // CHECK-NEXT: Branch,File 0, [[@LINE]]:10 -> [[@LINE]]:11 = ((((#5 - #10) - #11) - #12) - #13), (((#10 + #11) + #12) + #13)
                     // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:13 -> [[@LINE+8]]:11 = 0
@@ -93,7 +96,7 @@ int pr44011(int i) { // CHECK-NEXT: File 0, [[@LINE]]:20 -> {{.*}}:2 = #0
 
   case 1:            // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:13 = #2
     return 0;        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #2, (#0 - #2)
-
+                     // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:14 -> [[@LINE+1]]:3 = 0
   default:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:13 = #3
     return 1;        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:10 = #3, (#0 - #3)
   }
@@ -109,7 +112,7 @@ int fallthrough(int i) { // CHECK-NEXT: File 0, [[@LINE]]:24 -> [[@LINE+14]]:2 =
     i = 23;         // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #2, (#0 - #2)
   case 2:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = (#2 + #3)
     i = 11;         // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #3, (#0 - #3)
-    break;
+    break;          // CHECK-NEXT: Gap,File 0, [[@LINE]]:11 -> [[@LINE+1]]:3 = 0
   case 3:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+4]]:10 = #4
                     // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #4, (#0 - #4)
   case 4:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = (#4 + #5)
@@ -120,12 +123,14 @@ int fallthrough(int i) { // CHECK-NEXT: File 0, [[@LINE]]:24 -> [[@LINE+14]]:2 =
 
 void abort(void) __attribute((noreturn));
                    // CHECK: noret
-int noret(int x) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+9]]:2
-  switch (x) {     // CHECK-NEXT: Gap,File 0, [[@LINE]]:14 -> [[@LINE+6]]:14 = 0
+int noret(int x) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+11]]:2
+  switch (x) {     // CHECK-NEXT: Gap,File 0, [[@LINE]]:14 -> [[@LINE+8]]:14 = 0
   default:         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:12
     abort();      // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:10 = #2, (#0 - #2)
+                  // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:13 -> [[@LINE+1]]:3 = 0
   case 1:         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:13
     return 5;     // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #3, (#0 - #3)
+                  // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:14 -> [[@LINE+1]]:3 = 0
   case 2:         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:14
     return 10;    // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #4, (#0 - #4)
   }
