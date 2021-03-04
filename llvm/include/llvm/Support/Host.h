@@ -65,6 +65,21 @@ namespace sys {
   StringRef getHostCPUNameForARM(StringRef ProcCpuinfoContent);
   StringRef getHostCPUNameForS390x(StringRef ProcCpuinfoContent);
   StringRef getHostCPUNameForBPF();
+
+  /// Helper functions to extract CPU details from CPUID on x86.
+#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||            \
+    defined(_M_X64)
+  namespace x86 {
+  enum class VendorSignatures {
+    UNKNOWN,
+    GENUINE_INTEL,
+    AUTHENTIC_AMD,
+  };
+
+  /// Returns the host CPU's vendor.
+  VendorSignatures getVendorSignature();
+  } // namespace x86
+#endif
   }
 }
 }
