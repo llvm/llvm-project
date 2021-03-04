@@ -56,6 +56,26 @@ struct BitmaskEnumStorage : public AttributeStorage {
 
   KeyTy value = 0;
 };
+
+struct LoopOptionAttrStorage : public AttributeStorage {
+  using KeyTy = std::pair<uint64_t, int32_t>;
+
+  explicit LoopOptionAttrStorage(uint64_t option, int32_t value)
+      : option(option), value(value) {}
+
+  bool operator==(const KeyTy &key) const {
+    return key == KeyTy(option, value);
+  }
+
+  static LoopOptionAttrStorage *
+  construct(mlir::AttributeStorageAllocator &allocator, const KeyTy &key) {
+    return new (allocator.allocate<LoopOptionAttrStorage>())
+        LoopOptionAttrStorage(key.first, key.second);
+  }
+
+  uint64_t option;
+  int32_t value;
+};
 } // namespace detail
 } // namespace LLVM
 } // namespace mlir
@@ -2158,7 +2178,7 @@ static LogicalResult verify(FenceOp &op) {
 //===----------------------------------------------------------------------===//
 
 void LLVMDialect::initialize() {
-  addAttributes<FMFAttr>();
+  addAttributes<FMFAttr, LoopOptionAttr>();
 
   // clang-format off
   addTypes<LLVMVoidType,
@@ -2213,6 +2233,57 @@ LogicalResult LLVMDialect::verifyDataLayoutString(
 /// Verify LLVM dialect attributes.
 LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
                                                     NamedAttribute attr) {
+  // If the `llvm.loop` attribute is present, enforce the following structure,
+  // which the module translation can assume.
+  if (attr.first.strref() == LLVMDialect::getLoopAttrName()) {
+    auto loopAttr = attr.second.dyn_cast<DictionaryAttr>();
+    if (!loopAttr)
+      return op->emitOpError() << "expected '" << LLVMDialect::getLoopAttrName()
+                               << "' to be a dictionary attribute";
+    Optional<NamedAttribute> parallelAccessGroup =
+        loopAttr.getNamed(LLVMDialect::getParallelAccessAttrName());
+    if (parallelAccessGroup.hasValue()) {
+      auto accessGroups = parallelAccessGroup->second.dyn_cast<ArrayAttr>();
+      if (!accessGroups)
+        return op->emitOpError()
+               << "expected '" << LLVMDialect::getParallelAccessAttrName()
+               << "' to be an array attribute";
+      for (Attribute attr : accessGroups) {
+        auto accessGroupRef = attr.dyn_cast<SymbolRefAttr>();
+        if (!accessGroupRef)
+          return op->emitOpError()
+                 << "expected '" << attr << "' to be a symbol reference";
+        StringRef metadataName = accessGroupRef.getRootReference();
+        auto metadataOp =
+            SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
+                op->getParentOp(), metadataName);
+        if (!metadataOp)
+          return op->emitOpError()
+                 << "expected '" << attr << "' to reference a metadata op";
+        StringRef accessGroupName = accessGroupRef.getLeafReference();
+        Operation *accessGroupOp =
+            SymbolTable::lookupNearestSymbolFrom(metadataOp, accessGroupName);
+        if (!accessGroupOp)
+          return op->emitOpError()
+                 << "expected '" << attr << "' to reference an access_group op";
+      }
+    }
+
+    Optional<NamedAttribute> loopOptions =
+        loopAttr.getNamed(LLVMDialect::getLoopOptionsAttrName());
+    if (loopOptions.hasValue()) {
+      auto options = loopOptions->second.dyn_cast<ArrayAttr>();
+      if (!options)
+        return op->emitOpError()
+               << "expected '" << LLVMDialect::getLoopOptionsAttrName()
+               << "' to be an array attribute";
+      if (!llvm::all_of(options, [](Attribute option) {
+            return option.isa<LoopOptionAttr>();
+          }))
+        return op->emitOpError() << "invalid loop options list " << options;
+    }
+  }
+
   // If the data layout attribute is present, it must use the LLVM data layout
   // syntax. Try parsing it and report errors in case of failure. Users of this
   // attribute may assume it is well-formed and can pass it to the (asserting)
@@ -2343,6 +2414,109 @@ Attribute FMFAttr::parse(DialectAsmParser &parser) {
   return FMFAttr::get(flags, parser.getBuilder().getContext());
 }
 
+LoopOptionAttr LoopOptionAttr::getDisableUnroll(MLIRContext *context,
+                                                bool disable) {
+  auto option = LoopOptionCase::disable_unroll;
+  return Base::get(context, static_cast<uint64_t>(option),
+                   static_cast<int32_t>(disable));
+}
+
+LoopOptionAttr LoopOptionAttr::getDisableLICM(MLIRContext *context,
+                                              bool disable) {
+  auto option = LoopOptionCase::disable_licm;
+  return Base::get(context, static_cast<uint64_t>(option),
+                   static_cast<int32_t>(disable));
+}
+
+LoopOptionAttr LoopOptionAttr::getInterleaveCount(MLIRContext *context,
+                                                  int32_t count) {
+  auto option = LoopOptionCase::interleave_count;
+  return Base::get(context, static_cast<uint64_t>(option),
+                   static_cast<int32_t>(count));
+}
+
+LoopOptionCase LoopOptionAttr::getCase() const {
+  return static_cast<LoopOptionCase>(getImpl()->option);
+}
+
+bool LoopOptionAttr::getBool() const {
+  LoopOptionCase option = getCase();
+  (void)option;
+  assert(option == LoopOptionCase::disable_licm ||
+         option == LoopOptionCase::disable_unroll &&
+             "expected a boolean loop option");
+  return static_cast<bool>(getImpl()->value);
+}
+
+int32_t LoopOptionAttr::getInt() const {
+  LoopOptionCase option = getCase();
+  (void)option;
+  assert(option == LoopOptionCase::interleave_count &&
+         "expected an integer loop option");
+  return getImpl()->value;
+}
+
+void LoopOptionAttr::print(DialectAsmPrinter &printer) const {
+  printer << "loopopt<" << stringifyEnum(getCase()) << " = ";
+  switch (getCase()) {
+  case LoopOptionCase::disable_licm:
+  case LoopOptionCase::disable_unroll:
+    printer << (getBool() ? "true" : "false");
+    break;
+  case LoopOptionCase::interleave_count:
+    printer << getInt();
+    break;
+  }
+  printer << ">";
+}
+
+Attribute LoopOptionAttr::parse(DialectAsmParser &parser) {
+  if (failed(parser.parseLess()))
+    return {};
+
+  StringRef optionName;
+  if (failed(parser.parseKeyword(&optionName)))
+    return {};
+
+  auto option = symbolizeLoopOptionCase(optionName);
+  if (!option) {
+    parser.emitError(parser.getNameLoc(), "unknown loop option: ")
+        << optionName;
+    return {};
+  }
+
+  if (failed(parser.parseEqual()))
+    return {};
+
+  int32_t value;
+  switch (*option) {
+  case LoopOptionCase::disable_licm:
+  case LoopOptionCase::disable_unroll:
+    if (succeeded(parser.parseOptionalKeyword("true")))
+      value = 1;
+    else if (succeeded(parser.parseOptionalKeyword("false")))
+      value = 0;
+    else {
+      parser.emitError(parser.getNameLoc(),
+                       "expected boolean value 'true' or 'false'");
+      return {};
+    }
+    break;
+  case LoopOptionCase::interleave_count:
+    if (failed(parser.parseInteger(value))) {
+      parser.emitError(parser.getNameLoc(), "expected integer value");
+      return {};
+    }
+    break;
+  }
+
+  if (failed(parser.parseGreater()))
+    return {};
+
+  return Base::get(parser.getBuilder().getContext(),
+                   static_cast<uint64_t>(*option), value);
+}
+
 Attribute LLVMDialect::parseAttribute(DialectAsmParser &parser,
                                       Type type) const {
   if (type) {
@@ -2356,14 +2530,18 @@ Attribute LLVMDialect::parseAttribute(DialectAsmParser &parser,
   if (attrKind == "fastmath")
     return FMFAttr::parse(parser);
 
-  parser.emitError(parser.getNameLoc(), "Unknown attrribute type: ")
-      << attrKind;
+  if (attrKind == "loopopt")
+    return LoopOptionAttr::parse(parser);
+
+  parser.emitError(parser.getNameLoc(), "Unknown attribute type: ") << attrKind;
   return {};
 }
 
 void LLVMDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
   if (auto fmf = attr.dyn_cast<FMFAttr>())
     fmf.print(os);
+  else if (auto lopt = attr.dyn_cast<LoopOptionAttr>())
+    lopt.print(os);
   else
     llvm_unreachable("Unknown attribute type");
 }

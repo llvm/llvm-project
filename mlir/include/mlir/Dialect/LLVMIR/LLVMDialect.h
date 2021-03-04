@@ -48,6 +48,7 @@ namespace detail {
 struct LLVMTypeStorage;
 struct LLVMDialectImpl;
 struct BitmaskEnumStorage;
+struct LoopOptionAttrStorage;
 } // namespace detail
 
 /// An attribute that specifies LLVM instruction fastmath flags.
@@ -59,6 +60,38 @@ public:
   static FMFAttr get(FastmathFlags flags, MLIRContext *context);
 
   FastmathFlags getFlags() const;
+
+  void print(DialectAsmPrinter &p) const;
+  static Attribute parse(DialectAsmParser &parser);
+};
+
+/// An attribute that specifies LLVM loop codegen options.
+class LoopOptionAttr
+    : public Attribute::AttrBase<LoopOptionAttr, Attribute,
+                                 detail::LoopOptionAttrStorage> {
+public:
+  using Base::Base;
+
+  /// Specifies the llvm.loop.unroll.disable metadata.
+  static LoopOptionAttr getDisableUnroll(MLIRContext *context,
+                                         bool disable = true);
+
+  /// Specifies the llvm.licm.disable metadata.
+  static LoopOptionAttr getDisableLICM(MLIRContext *context,
+                                       bool disable = true);
+
+  /// Specifies the llvm.loop.interleave.count metadata.
+  static LoopOptionAttr getInterleaveCount(MLIRContext *context, int32_t count);
+
+  /// Returns the loop option, e.g. parallel_access.
+  LoopOptionCase getCase() const;
+
+  /// Returns if the loop option is activated. Only valid for boolean options.
+  bool getBool() const;
+
+  /// Returns the integer value associated with a loop option. Only valid for
+  /// integer options.
+  int32_t getInt() const;
 
   void print(DialectAsmPrinter &p) const;
   static Attribute parse(DialectAsmParser &parser);

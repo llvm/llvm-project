@@ -32,6 +32,9 @@ def LLVM_Dialect : Dialect {
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
     static StringRef getAlignAttrName() { return "llvm.align"; }
     static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
+    static StringRef getLoopAttrName() { return "llvm.loop"; }
+    static StringRef getParallelAccessAttrName() { return "parallel_access"; }
+    static StringRef getLoopOptionsAttrName() { return "options"; }
 
     /// Verifies if the given string is a well-formed data layout descriptor.
     /// Uses `reportError` to report errors.
