@@ -129,7 +129,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     return;
   }
 
-  unsigned BitWidth = DstTy.getScalarSizeInBits();
+  unsigned BitWidth = DstTy.getSizeInBits();
   auto CacheEntry = ComputeKnownBitsCache.find(R);
   if (CacheEntry != ComputeKnownBitsCache.end()) {
     Known = CacheEntry->second;
@@ -139,6 +139,9 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     return;
   }
   Known = KnownBits(BitWidth); // Don't know anything
+
+  if (DstTy.isVector())
+    return; // TODO: Handle vectors.
 
   // Depth may get bigger than max depth if it gets passed to a different
   // GISelKnownBits object.
@@ -161,25 +164,6 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     TL.computeKnownBitsForTargetInstr(*this, R, Known, DemandedElts, MRI,
                                       Depth);
     break;
-  case TargetOpcode::G_BUILD_VECTOR: {
-    // Collect the known bits that are shared by every demanded vector element.
-    Known.Zero.setAllBits(); Known.One.setAllBits();
-    for (unsigned i = 0, e = MI.getNumOperands() - 1; i < e; ++i) {
-      if (!DemandedElts[i])
-        continue;
-
-      computeKnownBitsImpl(MI.getOperand(i + 1).getReg(), Known2, DemandedElts,
-                           Depth + 1);
-
-      // Known bits are the values that are shared by every demanded element.
-      Known = KnownBits::commonBits(Known, Known2);
-
-      // If we don't know any bits, early out.
-      if (Known.isUnknown())
-        break;
-    }
-    break;
-  }
   case TargetOpcode::COPY:
   case TargetOpcode::G_PHI:
   case TargetOpcode::PHI: {
@@ -260,8 +244,6 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_PTR_ADD: {
-    if (DstTy.isVector())
-      break;
     // G_PTR_ADD is like G_ADD. FIXME: Is this true for all targets?
     LLT Ty = MRI.getType(MI.getOperand(1).getReg());
     if (DL.isNonIntegralAddressSpace(Ty.getAddressSpace()))
@@ -350,8 +332,6 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_ICMP: {
-    if (DstTy.isVector())
-      break;
     if (TL.getBooleanContents(DstTy.isVector(),
                               Opcode == TargetOpcode::G_FCMP) ==
             TargetLowering::ZeroOrOneBooleanContent &&
@@ -389,8 +369,6 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_ZEXTLOAD: {
-    if (DstTy.isVector())
-      break;
     // Everything above the retrieved bits is zero
     Known.Zero.setBitsFrom((*MI.memoperands_begin())->getSizeInBits());
     break;
@@ -424,8 +402,6 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_PTRTOINT:
-    if (DstTy.isVector())
-      break;
     // Fall through and handle them the same as zext/trunc.
     LLVM_FALLTHROUGH;
   case TargetOpcode::G_ASSERT_ZEXT:
@@ -464,8 +440,6 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_UNMERGE_VALUES: {
-    if (DstTy.isVector())
-      break;
     unsigned NumOps = MI.getNumOperands();
     Register SrcReg = MI.getOperand(NumOps - 1).getReg();
     if (MRI.getType(SrcReg).isVector())
