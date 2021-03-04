@@ -674,7 +674,7 @@ def OpFuncRef : TEST_Op<"op_funcref"> {
   let description = [{
     The "test.op_funcref" is a test op with a reference to a function symbol.
   }];
-  let builders = [OpBuilderDAG<(ins "FuncOp":$function)>];
+  let builders = [OpBuilder<(ins "FuncOp":$function)>];
 }
 
 // Pattern add the argument plus a increasing static number hidden in
@@ -1162,7 +1162,7 @@ def MixedVResultOp3 : TEST_Op<"mixed_variadic_out3",
   // We will use this op in a nested result pattern, where we cannot deduce the
   // result type. So need to provide a builder not requiring result types.
   let builders = [
-    OpBuilderDAG<(ins "IntegerAttr":$count),
+    OpBuilder<(ins "IntegerAttr":$count),
     [{
       auto i32Type = $_builder.getIntegerType(32);
       $_state.addTypes(i32Type); // $output1
@@ -1221,7 +1221,7 @@ def LegalOpB : TEST_Op<"legal_op_b">, Results<(outs I32)>;
 def IllegalOpTerminator : TEST_Op<"illegal_op_terminator", [Terminator]>;
 def IllegalOpWithRegion : TEST_Op<"illegal_op_with_region"> {
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilderDAG<(ins),
+  let builders = [OpBuilder<(ins),
     [{
        Region *bodyRegion = $_state.addRegion();
        OpBuilder::InsertionGuard g($_builder);
@@ -1265,7 +1265,7 @@ def TestRecursiveRewriteOp : TEST_Op<"recursive_rewrite"> {
 def TestRegionBuilderOp : TEST_Op<"region_builder">;
 def TestReturnOp : TEST_Op<"return", [ReturnLike, Terminator]> {
   let arguments = (ins Variadic<AnyType>);
-  let builders = [OpBuilderDAG<(ins),
+  let builders = [OpBuilder<(ins),
     [{ build($_builder, $_state, {}); }]>
   ];
 }
@@ -1830,7 +1830,7 @@ def RegionYieldOp : TEST_Op<"region_yield",
   let assemblyFormat = [{
     $result `:` type($result) attr-dict
   }];
-  let builders = [OpBuilderDAG<(ins),
+  let builders = [OpBuilder<(ins),
     [{ build($_builder, $_state, {}); }]>
   ];
 }

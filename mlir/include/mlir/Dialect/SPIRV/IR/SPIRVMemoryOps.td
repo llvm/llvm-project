@@ -74,7 +74,7 @@ def SPV_AccessChainOp : SPV_Op<"AccessChain", [NoSideEffect]> {
     SPV_AnyPtr:$component_ptr
   );
 
-  let builders = [OpBuilderDAG<(ins "Value":$basePtr, "ValueRange":$indices)>];
+  let builders = [OpBuilder<(ins "Value":$basePtr, "ValueRange":$indices)>];
 
   let hasCanonicalizer = 1;
 }
@@ -183,7 +183,7 @@ def SPV_LoadOp : SPV_Op<"Load", []> {
   );
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$basePtr,
+    OpBuilder<(ins "Value":$basePtr,
       CArg<"IntegerAttr", "{}">:$memory_access,
       CArg<"IntegerAttr", "{}">:$alignment)>
   ];
@@ -232,7 +232,7 @@ def SPV_StoreOp : SPV_Op<"Store", []> {
   let results = (outs);
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$ptr, "Value":$value,
+    OpBuilder<(ins "Value":$ptr, "Value":$value,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$namedAttrs),
     [{
       $_state.addOperands(ptr);

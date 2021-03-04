@@ -382,7 +382,7 @@ def OpenACC_YieldOp : OpenACC_Op<"yield", [Terminator,
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [OpBuilderDAG<(ins), [{ /* nothing to do */ }]>];
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
   let verifier = ?;
 

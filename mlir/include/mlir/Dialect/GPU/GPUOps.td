@@ -197,7 +197,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "StringRef":$name, "FunctionType":$type,
+    OpBuilder<(ins "StringRef":$name, "FunctionType":$type,
       CArg<"TypeRange", "{}">:$workgroupAttributions,
       CArg<"TypeRange", "{}">:$privateAttributions,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
@@ -377,7 +377,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "GPUFuncOp":$kernelFunc, "KernelDim3":$gridSize,
+    OpBuilder<(ins "GPUFuncOp":$kernelFunc, "KernelDim3":$gridSize,
       "KernelDim3":$blockSize, "ValueRange":$kernelOperands)>
   ];
 
@@ -496,7 +496,7 @@ def GPU_LaunchOp : GPU_Op<"launch">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$gridSizeX, "Value":$gridSizeY,
+    OpBuilder<(ins "Value":$gridSizeX, "Value":$gridSizeY,
       "Value":$gridSizeZ, "Value":$blockSizeX, "Value":$blockSizeY,
       "Value":$blockSizeZ)>
   ];
@@ -543,7 +543,7 @@ def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
     by an invocation of the `gpu.func`.
   }];
 
-  let builders = [OpBuilderDAG<(ins), [{ // empty}]>];
+  let builders = [OpBuilder<(ins), [{ // empty}]>];
 
   let parser = [{ return parseReturnOp(parser, result); }];
   let printer = [{ p << getOperationName(); }];
@@ -722,7 +722,7 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
 
     ```
   }];
-  let builders = [OpBuilderDAG<(ins "StringRef":$name)>];
+  let builders = [OpBuilder<(ins "StringRef":$name)>];
   let parser = [{ return ::parseGPUModuleOp(parser, result); }];
   let printer = [{ return ::print(p, *this); }];
   let regions = (region SizedRegion<1>:$body);

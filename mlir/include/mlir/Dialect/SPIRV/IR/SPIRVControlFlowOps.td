@@ -54,7 +54,7 @@ def SPV_BranchOp : SPV_Op<"Branch", [
   let verifier = [{ return success(); }];
 
   let builders = [
-    OpBuilderDAG<(ins "Block *":$successor, CArg<"ValueRange", "{}">:$arguments),
+    OpBuilder<(ins "Block *":$successor, CArg<"ValueRange", "{}">:$arguments),
     [{
       $_state.addSuccessors(successor);
       $_state.addOperands(arguments);
@@ -134,7 +134,7 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
                               AnySuccessor:$falseTarget);
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$condition, "Block *":$trueBlock,
+    OpBuilder<(ins "Value":$condition, "Block *":$trueBlock,
       "ValueRange":$trueArguments, "Block *":$falseBlock,
       "ValueRange":$falseArguments,
       CArg<"Optional<std::pair<uint32_t, uint32_t>>", "{}">:$weights),
@@ -286,7 +286,7 @@ def SPV_LoopOp : SPV_Op<"loop", [InFunctionScope]> {
 
   let regions = (region AnyRegion:$body);
 
-  let builders = [OpBuilderDAG<(ins)>];
+  let builders = [OpBuilder<(ins)>];
 
   let extraClassDeclaration = [{
     // Returns the entry block.
