@@ -450,7 +450,8 @@ static void clampReturnedValueStates(Attributor &A, const AAType &QueryingAA,
   // Callback for each possibly returned value.
   auto CheckReturnValue = [&](Value &RV) -> bool {
     const IRPosition &RVPos = IRPosition::value(RV);
-    const AAType &AA = A.getAAFor<AAType>(QueryingAA, RVPos);
+    const AAType &AA =
+        A.getAAFor<AAType>(QueryingAA, RVPos, DepClassTy::REQUIRED);
     LLVM_DEBUG(dbgs() << "[Attributor] RV: " << RV << " AA: " << AA.getAsStr()
                       << " @ " << RVPos << "\n");
     const StateType &AAS = AA.getState();
@@ -512,7 +513,8 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
     if (ACSArgPos.getPositionKind() == IRPosition::IRP_INVALID)
       return false;
 
-    const AAType &AA = A.getAAFor<AAType>(QueryingAA, ACSArgPos);
+    const AAType &AA =
+        A.getAAFor<AAType>(QueryingAA, ACSArgPos, DepClassTy::REQUIRED);
     LLVM_DEBUG(dbgs() << "[Attributor] ACS: " << *ACS.getInstruction()
                       << " AA: " << AA.getAsStr() << " @" << ACSArgPos << "\n");
     const StateType &AAS = AA.getState();
@@ -571,7 +573,7 @@ struct AACallSiteReturnedFromReturned : public BaseType {
       return S.indicatePessimisticFixpoint();
 
     IRPosition FnPos = IRPosition::returned(*AssociatedFunction);
-    const AAType &AA = A.getAAFor<AAType>(*this, FnPos);
+    const AAType &AA = A.getAAFor<AAType>(*this, FnPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(S, AA.getState());
   }
 };
@@ -708,8 +710,8 @@ struct AANoUnwindImpl : AANoUnwind {
         return true;
 
       if (const auto *CB = dyn_cast<CallBase>(&I)) {
-        const auto &NoUnwindAA =
-            A.getAAFor<AANoUnwind>(*this, IRPosition::callsite_function(*CB));
+        const auto &NoUnwindAA = A.getAAFor<AANoUnwind>(
+            *this, IRPosition::callsite_function(*CB), DepClassTy::REQUIRED);
         return NoUnwindAA.isAssumedNoUnwind();
       }
       return false;
@@ -751,7 +753,7 @@ struct AANoUnwindCallSite final : AANoUnwindImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto &FnAA = A.getAAFor<AANoUnwind>(*this, FnPos);
+    auto &FnAA = A.getAAFor<AANoUnwind>(*this, FnPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
@@ -1084,7 +1086,8 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
 
     // TODO: use the function scope once we have call site AAReturnedValues.
     const auto &RetValAA = A.getAAFor<AAReturnedValues>(
-        *this, IRPosition::function(*CB->getCalledFunction()));
+        *this, IRPosition::function(*CB->getCalledFunction()),
+        DepClassTy::REQUIRED);
     LLVM_DEBUG(dbgs() << "[AAReturnedValues] Found another AAReturnedValues: "
                       << RetValAA << "\n");
 
@@ -1344,11 +1347,9 @@ ChangeStatus AANoSyncImpl::updateImpl(Attributor &A) {
       if (CB->hasFnAttr(Attribute::NoSync))
         return true;
 
-      const auto &NoSyncAA =
-          A.getAAFor<AANoSync>(*this, IRPosition::callsite_function(*CB));
-      if (NoSyncAA.isAssumedNoSync())
-        return true;
-      return false;
+      const auto &NoSyncAA = A.getAAFor<AANoSync>(
+          *this, IRPosition::callsite_function(*CB), DepClassTy::REQUIRED);
+      return NoSyncAA.isAssumedNoSync();
     }
 
     if (!isVolatile(&I) && !isNonRelaxedAtomic(&I))
@@ -1403,7 +1404,7 @@ struct AANoSyncCallSite final : AANoSyncImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto &FnAA = A.getAAFor<AANoSync>(*this, FnPos);
+    auto &FnAA = A.getAAFor<AANoSync>(*this, FnPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
@@ -1423,8 +1424,8 @@ struct AANoFreeImpl : public AANoFree {
       if (CB.hasFnAttr(Attribute::NoFree))
         return true;
 
-      const auto &NoFreeAA =
-          A.getAAFor<AANoFree>(*this, IRPosition::callsite_function(CB));
+      const auto &NoFreeAA = A.getAAFor<AANoFree>(
+          *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
       return NoFreeAA.isAssumedNoFree();
     };
 
@@ -1468,7 +1469,7 @@ struct AANoFreeCallSite final : AANoFreeImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto &FnAA = A.getAAFor<AANoFree>(*this, FnPos);
+    auto &FnAA = A.getAAFor<AANoFree>(*this, FnPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
@@ -1504,7 +1505,8 @@ struct AANoFreeFloating : AANoFreeImpl {
         unsigned ArgNo = CB->getArgOperandNo(&U);
 
         const auto &NoFreeArg = A.getAAFor<AANoFree>(
-            *this, IRPosition::callsite_argument(*CB, ArgNo));
+            *this, IRPosition::callsite_argument(*CB, ArgNo),
+            DepClassTy::REQUIRED);
         return NoFreeArg.isAssumedNoFree();
       }
 
@@ -1550,7 +1552,7 @@ struct AANoFreeCallSiteArgument final : AANoFreeFloating {
     if (!Arg)
       return indicatePessimisticFixpoint();
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
-    auto &ArgAA = A.getAAFor<AANoFree>(*this, ArgPos);
+    auto &ArgAA = A.getAAFor<AANoFree>(*this, ArgPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(getState(), ArgAA.getState());
   }
 
@@ -1756,7 +1758,8 @@ struct AANonNullFloating : public AANonNullImpl {
 
     auto VisitValueCB = [&](Value &V, const Instruction *CtxI,
                             AANonNull::StateType &T, bool Stripped) -> bool {
-      const auto &AA = A.getAAFor<AANonNull>(*this, IRPosition::value(V));
+      const auto &AA = A.getAAFor<AANonNull>(*this, IRPosition::value(V),
+                                             DepClassTy::REQUIRED);
       if (!Stripped && this == &AA) {
         if (!isKnownNonZero(&V, DL, 0, AC, CtxI, DT))
           T.indicatePessimisticFixpoint();
@@ -1874,8 +1877,8 @@ struct AANoRecurseFunction final : AANoRecurseImpl {
       if (CB.hasFnAttr(Attribute::NoRecurse))
         return true;
 
-      const auto &NoRecurseAA =
-          A.getAAFor<AANoRecurse>(*this, IRPosition::callsite_function(CB));
+      const auto &NoRecurseAA = A.getAAFor<AANoRecurse>(
+          *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
       if (!NoRecurseAA.isAssumedNoRecurse())
         return false;
 
@@ -1915,7 +1918,7 @@ struct AANoRecurseCallSite final : AANoRecurseImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto &FnAA = A.getAAFor<AANoRecurse>(*this, FnPos);
+    auto &FnAA = A.getAAFor<AANoRecurse>(*this, FnPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
@@ -2205,8 +2208,8 @@ private:
   // use for specific processing.
   Optional<Value *> stopOnUndefOrAssumed(Attributor &A, const Value *V,
                                          Instruction *I) {
-    const auto &ValueSimplifyAA =
-        A.getAAFor<AAValueSimplify>(*this, IRPosition::value(*V));
+    const auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
+        *this, IRPosition::value(*V), DepClassTy::REQUIRED);
     Optional<Value *> SimplifiedV =
         ValueSimplifyAA.getAssumedSimplifiedValue(A);
     if (!ValueSimplifyAA.isKnown()) {
@@ -2290,12 +2293,14 @@ struct AAWillReturnImpl : public AAWillReturn {
   ChangeStatus updateImpl(Attributor &A) override {
     auto CheckForWillReturn = [&](Instruction &I) {
       IRPosition IPos = IRPosition::callsite_function(cast<CallBase>(I));
-      const auto &WillReturnAA = A.getAAFor<AAWillReturn>(*this, IPos);
+      const auto &WillReturnAA =
+          A.getAAFor<AAWillReturn>(*this, IPos, DepClassTy::REQUIRED);
       if (WillReturnAA.isKnownWillReturn())
         return true;
       if (!WillReturnAA.isAssumedWillReturn())
         return false;
-      const auto &NoRecurseAA = A.getAAFor<AANoRecurse>(*this, IPos);
+      const auto &NoRecurseAA =
+          A.getAAFor<AANoRecurse>(*this, IPos, DepClassTy::REQUIRED);
       return NoRecurseAA.isAssumedNoRecurse();
     };
 
@@ -2340,7 +2345,7 @@ struct AAWillReturnCallSite final : AAWillReturnImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto &FnAA = A.getAAFor<AAWillReturn>(*this, FnPos);
+    auto &FnAA = A.getAAFor<AAWillReturn>(*this, FnPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
@@ -2420,8 +2425,8 @@ struct AANoAliasFloating final : AANoAliasImpl {
                                    Val->getType()->getPointerAddressSpace()))
       indicateOptimisticFixpoint();
     else if (Val != &getAssociatedValue()) {
-      const auto &ValNoAliasAA =
-          A.getAAFor<AANoAlias>(*this, IRPosition::value(*Val));
+      const auto &ValNoAliasAA = A.getAAFor<AANoAlias>(
+          *this, IRPosition::value(*Val), DepClassTy::OPTIONAL);
       if (ValNoAliasAA.isKnownNoAlias())
         indicateOptimisticFixpoint();
     }
@@ -2461,14 +2466,15 @@ struct AANoAliasArgument final
     // function, otherwise we give up for now.
 
     // If the function is no-sync, no-alias cannot break synchronization.
-    const auto &NoSyncAA = A.getAAFor<AANoSync>(
-        *this, IRPosition::function_scope(getIRPosition()));
+    const auto &NoSyncAA =
+        A.getAAFor<AANoSync>(*this, IRPosition::function_scope(getIRPosition()),
+                             DepClassTy::OPTIONAL);
     if (NoSyncAA.isAssumedNoSync())
       return Base::updateImpl(A);
 
     // If the argument is read-only, no-alias cannot break synchronization.
-    const auto &MemBehaviorAA =
-        A.getAAFor<AAMemoryBehavior>(*this, getIRPosition());
+    const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(
+        *this, getIRPosition(), DepClassTy::OPTIONAL);
     if (MemBehaviorAA.isAssumedReadOnly())
       return Base::updateImpl(A);
 
@@ -2593,8 +2599,8 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
         return true;
 
       if (ScopeFn) {
-        const auto &ReachabilityAA =
-            A.getAAFor<AAReachability>(*this, IRPosition::function(*ScopeFn));
+        const auto &ReachabilityAA = A.getAAFor<AAReachability>(
+            *this, IRPosition::function(*ScopeFn), DepClassTy::OPTIONAL);
 
         if (!ReachabilityAA.isAssumedReachable(A, *UserI, *getCtxI()))
           return true;
@@ -2605,7 +2611,8 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
             unsigned ArgNo = CB->getArgOperandNo(&U);
 
             const auto &NoCaptureAA = A.getAAFor<AANoCapture>(
-                *this, IRPosition::callsite_argument(*CB, ArgNo));
+                *this, IRPosition::callsite_argument(*CB, ArgNo),
+                DepClassTy::OPTIONAL);
 
             if (NoCaptureAA.isAssumedNoCapture())
               return true;
@@ -2703,11 +2710,13 @@ struct AANoAliasReturned final : AANoAliasImpl {
         return false;
 
       const IRPosition &RVPos = IRPosition::value(RV);
-      const auto &NoAliasAA = A.getAAFor<AANoAlias>(*this, RVPos);
+      const auto &NoAliasAA =
+          A.getAAFor<AANoAlias>(*this, RVPos, DepClassTy::REQUIRED);
       if (!NoAliasAA.isAssumedNoAlias())
         return false;
 
-      const auto &NoCaptureAA = A.getAAFor<AANoCapture>(*this, RVPos);
+      const auto &NoCaptureAA =
+          A.getAAFor<AANoCapture>(*this, RVPos, DepClassTy::REQUIRED);
       return NoCaptureAA.isAssumedNoCaptureMaybeReturned();
     };
 
@@ -2742,7 +2751,7 @@ struct AANoAliasCallSiteReturned final : AANoAliasImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::returned(*F);
-    auto &FnAA = A.getAAFor<AANoAlias>(*this, FnPos);
+    auto &FnAA = A.getAAFor<AANoAlias>(*this, FnPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
@@ -2932,7 +2941,7 @@ struct AAIsDeadCallSiteArgument : public AAIsDeadValueImpl {
     if (!Arg)
       return indicatePessimisticFixpoint();
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
-    auto &ArgAA = A.getAAFor<AAIsDead>(*this, ArgPos);
+    auto &ArgAA = A.getAAFor<AAIsDead>(*this, ArgPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(getState(), ArgAA.getState());
   }
 
@@ -3561,8 +3570,8 @@ struct AADereferenceableFloating : AADereferenceableImpl {
       const Value *Base =
           stripAndAccumulateMinimalOffsets(A, *this, &V, DL, Offset, false);
 
-      const auto &AA =
-          A.getAAFor<AADereferenceable>(*this, IRPosition::value(*Base));
+      const auto &AA = A.getAAFor<AADereferenceable>(
+          *this, IRPosition::value(*Base), DepClassTy::REQUIRED);
       int64_t DerefBytes = 0;
       if (!Stripped && this == &AA) {
         // Use IR information if we did not strip anything.
@@ -3842,7 +3851,8 @@ struct AAAlignFloating : AAAlignImpl {
 
     auto VisitValueCB = [&](Value &V, const Instruction *,
                             AAAlign::StateType &T, bool Stripped) -> bool {
-      const auto &AA = A.getAAFor<AAAlign>(*this, IRPosition::value(V));
+      const auto &AA = A.getAAFor<AAAlign>(*this, IRPosition::value(V),
+                                           DepClassTy::REQUIRED);
       if (!Stripped && this == &AA) {
         int64_t Offset;
         unsigned Alignment = 1;
@@ -4023,7 +4033,7 @@ struct AANoReturnCallSite final : AANoReturnImpl {
     AANoReturnImpl::initialize(A);
     if (Function *F = getAssociatedFunction()) {
       const IRPosition &FnPos = IRPosition::function(*F);
-      auto &FnAA = A.getAAFor<AANoReturn>(*this, FnPos);
+      auto &FnAA = A.getAAFor<AANoReturn>(*this, FnPos, DepClassTy::REQUIRED);
       if (!FnAA.isAssumedNoReturn())
         indicatePessimisticFixpoint();
     }
@@ -4037,7 +4047,7 @@ struct AANoReturnCallSite final : AANoReturnImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto &FnAA = A.getAAFor<AANoReturn>(*this, FnPos);
+    auto &FnAA = A.getAAFor<AANoReturn>(*this, FnPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
@@ -4239,7 +4249,8 @@ struct AACaptureUseTracker final : public CaptureTracker {
     const IRPosition &CSArgPos = IRPosition::callsite_argument(*CB, ArgNo);
     // If we have a abstract no-capture attribute for the argument we can use
     // it to justify a non-capture attribute here. This allows recursion!
-    auto &ArgNoCaptureAA = A.getAAFor<AANoCapture>(NoCaptureAA, CSArgPos);
+    auto &ArgNoCaptureAA =
+        A.getAAFor<AANoCapture>(NoCaptureAA, CSArgPos, DepClassTy::REQUIRED);
     if (ArgNoCaptureAA.isAssumedNoCapture())
       return isCapturedIn(/* Memory */ false, /* Integer */ false,
                           /* Return */ false);
@@ -4423,7 +4434,7 @@ struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
     if (!Arg)
       return indicatePessimisticFixpoint();
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
-    auto &ArgAA = A.getAAFor<AANoCapture>(*this, ArgPos);
+    auto &ArgAA = A.getAAFor<AANoCapture>(*this, ArgPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(getState(), ArgAA.getState());
   }
 
@@ -4517,7 +4528,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     // FIXME: Add a typecast support.
 
     auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
-        QueryingAA, IRPosition::value(QueryingValue));
+        QueryingAA, IRPosition::value(QueryingValue), DepClassTy::REQUIRED);
 
     Optional<Value *> QueryingValueSimplified =
         ValueSimplifyAA.getAssumedSimplifiedValue(A);
@@ -4651,7 +4662,8 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
     if (Arg->hasByValAttr()) {
       // TODO: We probably need to verify synchronization is not an issue, e.g.,
       //       there is no race by not copying a constant byval.
-      const auto &MemAA = A.getAAFor<AAMemoryBehavior>(*this, getIRPosition());
+      const auto &MemAA = A.getAAFor<AAMemoryBehavior>(*this, getIRPosition(),
+                                                       DepClassTy::REQUIRED);
       if (!MemAA.isAssumedReadOnly())
         return indicatePessimisticFixpoint();
     }
@@ -4818,7 +4830,8 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
     // The index is the operand that we assume is not null.
     unsigned PtrIdx = Op0IsNull;
     auto &PtrNonNullAA = A.getAAFor<AANonNull>(
-        *this, IRPosition::value(*ICmp->getOperand(PtrIdx)));
+        *this, IRPosition::value(*ICmp->getOperand(PtrIdx)),
+        DepClassTy::REQUIRED);
     if (!PtrNonNullAA.isAssumedNonNull())
       return false;
 
@@ -4851,7 +4864,8 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
 
     auto VisitValueCB = [&](Value &V, const Instruction *CtxI, bool &,
                             bool Stripped) -> bool {
-      auto &AA = A.getAAFor<AAValueSimplify>(*this, IRPosition::value(V));
+      auto &AA = A.getAAFor<AAValueSimplify>(*this, IRPosition::value(V),
+                                             DepClassTy::REQUIRED);
       if (!Stripped && this == &AA) {
         // TODO: Look the instruction and check recursively.
 
@@ -5107,11 +5121,13 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
         unsigned ArgNo = CB->getArgOperandNo(&U);
 
         const auto &NoCaptureAA = A.getAAFor<AANoCapture>(
-            *this, IRPosition::callsite_argument(*CB, ArgNo));
+            *this, IRPosition::callsite_argument(*CB, ArgNo),
+            DepClassTy::REQUIRED);
 
         // If a callsite argument use is nofree, we are fine.
         const auto &ArgNoFreeAA = A.getAAFor<AANoFree>(
-            *this, IRPosition::callsite_argument(*CB, ArgNo));
+            *this, IRPosition::callsite_argument(*CB, ArgNo),
+            DepClassTy::REQUIRED);
 
         if (!NoCaptureAA.isAssumedNoCapture() ||
             !ArgNoFreeAA.isAssumedNoFree()) {
@@ -5277,7 +5293,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
         return false;
 
       // Check that all call sites agree on a type.
-      auto &PrivCSArgAA = A.getAAFor<AAPrivatizablePtr>(*this, ACSArgPos);
+      auto &PrivCSArgAA =
+          A.getAAFor<AAPrivatizablePtr>(*this, ACSArgPos, DepClassTy::REQUIRED);
       Optional<Type *> CSTy = PrivCSArgAA.getPrivatizableType();
 
       LLVM_DEBUG({
@@ -5394,8 +5411,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
 
           if (CBArgNo != int(ArgNo))
             continue;
-          const auto &CBArgPrivAA =
-              A.getAAFor<AAPrivatizablePtr>(*this, IRPosition::argument(CBArg));
+          const auto &CBArgPrivAA = A.getAAFor<AAPrivatizablePtr>(
+              *this, IRPosition::argument(CBArg), DepClassTy::REQUIRED);
           if (CBArgPrivAA.isValidState()) {
             auto CBArgPrivTy = CBArgPrivAA.getPrivatizableType();
             if (!CBArgPrivTy.hasValue())
@@ -5441,7 +5458,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       Function *DCCallee = DC->getCalledFunction();
       if (unsigned(DCArgNo) < DCCallee->arg_size()) {
         const auto &DCArgPrivAA = A.getAAFor<AAPrivatizablePtr>(
-            *this, IRPosition::argument(*DCCallee->getArg(DCArgNo)));
+            *this, IRPosition::argument(*DCCallee->getArg(DCArgNo)),
+            DepClassTy::REQUIRED);
         if (DCArgPrivAA.isValidState()) {
           auto DCArgPrivTy = DCArgPrivAA.getPrivatizableType();
           if (!DCArgPrivTy.hasValue())
@@ -5606,7 +5624,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     Argument *Arg = getAssociatedArgument();
     // Query AAAlign attribute for alignment of associated argument to
     // determine the best alignment of loads.
-    const auto &AlignAA = A.getAAFor<AAAlign>(*this, IRPosition::value(*Arg));
+    const auto &AlignAA =
+        A.getAAFor<AAAlign>(*this, IRPosition::value(*Arg), DepClassTy::NONE);
 
     // Callback to repair the associated function. A new alloca is placed at the
     // beginning and initialized with the values passed through arguments. The
@@ -5693,8 +5712,8 @@ struct AAPrivatizablePtrFloating : public AAPrivatizablePtrImpl {
         if (CI->isOne())
           return Obj->getType()->getPointerElementType();
     if (auto *Arg = dyn_cast<Argument>(Obj)) {
-      auto &PrivArgAA =
-          A.getAAFor<AAPrivatizablePtr>(*this, IRPosition::argument(*Arg));
+      auto &PrivArgAA = A.getAAFor<AAPrivatizablePtr>(
+          *this, IRPosition::argument(*Arg), DepClassTy::REQUIRED);
       if (PrivArgAA.isAssumedPrivatizablePtr())
         return Obj->getType()->getPointerElementType();
     }
@@ -5731,19 +5750,21 @@ struct AAPrivatizablePtrCallSiteArgument final
       return indicatePessimisticFixpoint();
 
     const IRPosition &IRP = getIRPosition();
-    auto &NoCaptureAA = A.getAAFor<AANoCapture>(*this, IRP);
+    auto &NoCaptureAA =
+        A.getAAFor<AANoCapture>(*this, IRP, DepClassTy::REQUIRED);
     if (!NoCaptureAA.isAssumedNoCapture()) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] pointer might be captured!\n");
       return indicatePessimisticFixpoint();
     }
 
-    auto &NoAliasAA = A.getAAFor<AANoAlias>(*this, IRP);
+    auto &NoAliasAA = A.getAAFor<AANoAlias>(*this, IRP, DepClassTy::REQUIRED);
     if (!NoAliasAA.isAssumedNoAlias()) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] pointer might alias!\n");
       return indicatePessimisticFixpoint();
     }
 
-    const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(*this, IRP);
+    const auto &MemBehaviorAA =
+        A.getAAFor<AAMemoryBehavior>(*this, IRP, DepClassTy::REQUIRED);
     if (!MemBehaviorAA.isAssumedReadOnly()) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] pointer is written!\n");
       return indicatePessimisticFixpoint();
@@ -6015,7 +6036,8 @@ struct AAMemoryBehaviorCallSiteArgument final : AAMemoryBehaviorArgument {
     //       redirecting requests to the callee argument.
     Argument *Arg = getAssociatedArgument();
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
-    auto &ArgAA = A.getAAFor<AAMemoryBehavior>(*this, ArgPos);
+    auto &ArgAA =
+        A.getAAFor<AAMemoryBehavior>(*this, ArgPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(getState(), ArgAA.getState());
   }
 
@@ -6104,7 +6126,8 @@ struct AAMemoryBehaviorCallSite final : AAMemoryBehaviorImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto &FnAA = A.getAAFor<AAMemoryBehavior>(*this, FnPos);
+    auto &FnAA =
+        A.getAAFor<AAMemoryBehavior>(*this, FnPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
@@ -6130,7 +6153,7 @@ ChangeStatus AAMemoryBehaviorFunction::updateImpl(Attributor &A) {
     // state is as optimistic as it gets.
     if (const auto *CB = dyn_cast<CallBase>(&I)) {
       const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(
-          *this, IRPosition::callsite_function(*CB));
+          *this, IRPosition::callsite_function(*CB), DepClassTy::REQUIRED);
       intersectAssumedBits(MemBehaviorAA.getAssumed());
       return !isAtFixpoint();
     }
@@ -6653,8 +6676,8 @@ void AAMemoryLocationImpl::categorizePtrValue(
     } else if (isa<AllocaInst>(V)) {
       MLK = NO_LOCAL_MEM;
     } else if (const auto *CB = dyn_cast<CallBase>(&V)) {
-      const auto &NoAliasAA =
-          A.getAAFor<AANoAlias>(*this, IRPosition::callsite_returned(*CB));
+      const auto &NoAliasAA = A.getAAFor<AANoAlias>(
+          *this, IRPosition::callsite_returned(*CB), DepClassTy::OPTIONAL);
       if (NoAliasAA.isAssumedNoAlias())
         MLK = NO_MALLOCED_MEM;
       else
@@ -6724,8 +6747,8 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
   if (auto *CB = dyn_cast<CallBase>(&I)) {
 
     // First check if we assume any memory is access is visible.
-    const auto &CBMemLocationAA =
-        A.getAAFor<AAMemoryLocation>(*this, IRPosition::callsite_function(*CB));
+    const auto &CBMemLocationAA = A.getAAFor<AAMemoryLocation>(
+        *this, IRPosition::callsite_function(*CB), DepClassTy::OPTIONAL);
     LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Categorize call site: " << I
                       << " [" << CBMemLocationAA << "]\n");
 
@@ -6872,7 +6895,8 @@ struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto &FnAA = A.getAAFor<AAMemoryLocation>(*this, FnPos);
+    auto &FnAA =
+        A.getAAFor<AAMemoryLocation>(*this, FnPos, DepClassTy::REQUIRED);
     bool Changed = false;
     auto AccessPred = [&](const Instruction *I, const Value *Ptr,
                           AccessKind Kind, MemoryLocationsKind MLK) {
@@ -7179,13 +7203,13 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
       return false;
 
-    auto &LHSAA =
-        A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(*LHS));
+    auto &LHSAA = A.getAAFor<AAValueConstantRange>(
+        *this, IRPosition::value(*LHS), DepClassTy::REQUIRED);
     QuerriedAAs.push_back(&LHSAA);
     auto LHSAARange = LHSAA.getAssumedConstantRange(A, CtxI);
 
-    auto &RHSAA =
-        A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(*RHS));
+    auto &RHSAA = A.getAAFor<AAValueConstantRange>(
+        *this, IRPosition::value(*RHS), DepClassTy::REQUIRED);
     QuerriedAAs.push_back(&RHSAA);
     auto RHSAARange = RHSAA.getAssumedConstantRange(A, CtxI);
 
@@ -7208,8 +7232,8 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     if (!OpV.getType()->isIntegerTy())
       return false;
 
-    auto &OpAA =
-        A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(OpV));
+    auto &OpAA = A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(OpV),
+                                                  DepClassTy::REQUIRED);
     QuerriedAAs.push_back(&OpAA);
     T.unionAssumed(
         OpAA.getAssumed().castOp(CastI->getOpcode(), getState().getBitWidth()));
@@ -7226,11 +7250,11 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
       return false;
 
-    auto &LHSAA =
-        A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(*LHS));
+    auto &LHSAA = A.getAAFor<AAValueConstantRange>(
+        *this, IRPosition::value(*LHS), DepClassTy::REQUIRED);
     QuerriedAAs.push_back(&LHSAA);
-    auto &RHSAA =
-        A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(*RHS));
+    auto &RHSAA = A.getAAFor<AAValueConstantRange>(
+        *this, IRPosition::value(*RHS), DepClassTy::REQUIRED);
     QuerriedAAs.push_back(&RHSAA);
 
     auto LHSAARange = LHSAA.getAssumedConstantRange(A, CtxI);
@@ -7279,8 +7303,8 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
       if (!I || isa<CallBase>(I)) {
 
         // If the value is not instruction, we query AA to Attributor.
-        const auto &AA =
-            A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(V));
+        const auto &AA = A.getAAFor<AAValueConstantRange>(
+            *this, IRPosition::value(V), DepClassTy::REQUIRED);
 
         // Clamp operator is not used to utilize a program point CtxI.
         T.unionAssumed(AA.getAssumedConstantRange(A, CtxI));
@@ -7612,11 +7636,13 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
       return indicatePessimisticFixpoint();
 
-    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS));
+    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS),
+                                                DepClassTy::REQUIRED);
     if (!LHSAA.isValidState())
       return indicatePessimisticFixpoint();
 
-    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS));
+    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS),
+                                                DepClassTy::REQUIRED);
     if (!RHSAA.isValidState())
       return indicatePessimisticFixpoint();
 
@@ -7674,11 +7700,13 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       return indicatePessimisticFixpoint();
 
     // TODO: Use assumed simplified condition value
-    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS));
+    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS),
+                                                DepClassTy::REQUIRED);
     if (!LHSAA.isValidState())
       return indicatePessimisticFixpoint();
 
-    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS));
+    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS),
+                                                DepClassTy::REQUIRED);
     if (!RHSAA.isValidState())
       return indicatePessimisticFixpoint();
 
@@ -7700,7 +7728,8 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     assert(CI->getNumOperands() == 1 && "Expected cast to be unary!");
     uint32_t ResultBitWidth = CI->getDestTy()->getIntegerBitWidth();
     Value *Src = CI->getOperand(0);
-    auto &SrcAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*Src));
+    auto &SrcAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*Src),
+                                                DepClassTy::REQUIRED);
     if (!SrcAA.isValidState())
       return indicatePessimisticFixpoint();
     const DenseSet<APInt> &SrcAAPVS = SrcAA.getAssumedSet();
@@ -7723,11 +7752,13 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
       return indicatePessimisticFixpoint();
 
-    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS));
+    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS),
+                                                DepClassTy::REQUIRED);
     if (!LHSAA.isValidState())
       return indicatePessimisticFixpoint();
 
-    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS));
+    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS),
+                                                DepClassTy::REQUIRED);
     if (!RHSAA.isValidState())
       return indicatePessimisticFixpoint();
 
@@ -7766,7 +7797,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     for (unsigned u = 0, e = PHI->getNumIncomingValues(); u < e; u++) {
       Value *IncomingValue = PHI->getIncomingValue(u);
       auto &PotentialValuesAA = A.getAAFor<AAPotentialValues>(
-          *this, IRPosition::value(*IncomingValue));
+          *this, IRPosition::value(*IncomingValue), DepClassTy::REQUIRED);
       if (!PotentialValuesAA.isValidState())
         return indicatePessimisticFixpoint();
       if (PotentialValuesAA.undefIsContained())
@@ -7870,7 +7901,8 @@ struct AAPotentialValuesCallSiteArgument : AAPotentialValuesFloating {
   ChangeStatus updateImpl(Attributor &A) override {
     Value &V = getAssociatedValue();
     auto AssumedBefore = getAssumed();
-    auto &AA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(V));
+    auto &AA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(V),
+                                             DepClassTy::REQUIRED);
     const auto &S = AA.getAssumed();
     unionAssumed(S);
     return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
@@ -7963,7 +7995,8 @@ struct AANoUndefFloating : public AANoUndefImpl {
   ChangeStatus updateImpl(Attributor &A) override {
     auto VisitValueCB = [&](Value &V, const Instruction *CtxI,
                             AANoUndef::StateType &T, bool Stripped) -> bool {
-      const auto &AA = A.getAAFor<AANoUndef>(*this, IRPosition::value(V));
+      const auto &AA = A.getAAFor<AANoUndef>(*this, IRPosition::value(V),
+                                             DepClassTy::REQUIRED);
       if (!Stripped && this == &AA) {
         T.indicatePessimisticFixpoint();
       } else {

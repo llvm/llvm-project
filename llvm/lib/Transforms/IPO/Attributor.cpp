@@ -864,7 +864,8 @@ bool Attributor::checkForAllReturnedValuesAndReturnInsts(
   // and liveness information.
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
-  const auto &AARetVal = getAAFor<AAReturnedValues>(QueryingAA, QueryIRP);
+  const auto &AARetVal =
+      getAAFor<AAReturnedValues>(QueryingAA, QueryIRP, DepClassTy::REQUIRED);
   if (!AARetVal.getState().isValidState())
     return false;
 
@@ -881,7 +882,8 @@ bool Attributor::checkForAllReturnedValues(
 
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
-  const auto &AARetVal = getAAFor<AAReturnedValues>(QueryingAA, QueryIRP);
+  const auto &AARetVal =
+      getAAFor<AAReturnedValues>(QueryingAA, QueryIRP, DepClassTy::REQUIRED);
   if (!AARetVal.getState().isValidState())
     return false;
 
