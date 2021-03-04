@@ -1,5 +1,4 @@
 
-
 set(LLVM_TARGET_DEFINITIONS RewritePatterns.td)
 mlir_tablegen(RewritePatterns.inc -gen-rewriters)
 add_public_tablegen_target(RewritePatternsIncGen)
