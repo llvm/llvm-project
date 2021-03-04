@@ -94,17 +94,17 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
   spv.func @use_composite() -> (i32) "None" {
     // CHECK: [[USE1:%.*]] = spv.mlir.referenceof @sc_i32_1 : i32
-    // CHECK: [[USE2:%.*]] = spv.constant 0 : i32
+    // CHECK: [[USE2:%.*]] = spv.Constant 0 : i32
 
     // CHECK: [[RES1:%.*]] = spv.SpecConstantOperation wraps "spv.ISub"([[USE1]], [[USE2]]) : (i32, i32) -> i32
 
     // CHECK: [[USE3:%.*]] = spv.mlir.referenceof @sc_i32_1 : i32
-    // CHECK: [[USE4:%.*]] = spv.constant 0 : i32
+    // CHECK: [[USE4:%.*]] = spv.Constant 0 : i32
 
     // CHECK: [[RES2:%.*]] = spv.SpecConstantOperation wraps "spv.ISub"([[USE3]], [[USE4]]) : (i32, i32) -> i32
 
     %0 = spv.mlir.referenceof @sc_i32_1 : i32
-    %1 = spv.constant 0 : i32
+    %1 = spv.Constant 0 : i32
     %2 = spv.SpecConstantOperation wraps "spv.ISub"(%0, %1) : (i32, i32) -> i32
 
     // CHECK: [[RES3:%.*]] = spv.SpecConstantOperation wraps "spv.IMul"([[RES1]], [[RES2]]) : (i32, i32) -> i32

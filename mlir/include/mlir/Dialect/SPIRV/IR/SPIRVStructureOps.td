@@ -67,7 +67,7 @@ def SPV_AddressOfOp : SPV_Op<"mlir.addressof", [InFunctionScope, NoSideEffect]> 
 
 // -----
 
-def SPV_ConstantOp : SPV_Op<"constant", [ConstantLike, NoSideEffect]> {
+def SPV_ConstantOp : SPV_Op<"Constant", [ConstantLike, NoSideEffect]> {
   let summary = "The op that declares a SPIR-V normal constant";
 
   let description = [{
@@ -81,7 +81,7 @@ def SPV_ConstantOp : SPV_Op<"constant", [ConstantLike, NoSideEffect]> {
     * ...
 
     Having such a plethora of constant instructions renders IR transformations
-    more tedious. Therefore, we use a single `spv.constant` op to represent
+    more tedious. Therefore, we use a single `spv.Constant` op to represent
     them all. Note that conversion between those SPIR-V constant instructions
     and this op is purely mechanical; so it can be scoped to the binary
     (de)serialization process.
@@ -89,16 +89,16 @@ def SPV_ConstantOp : SPV_Op<"constant", [ConstantLike, NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    spv-constant-op ::= ssa-id `=` `spv.constant` attribute-value
+    spv.Constant-op ::= ssa-id `=` `spv.Constant` attribute-value
                         (`:` spirv-type)?
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.constant true
-    %1 = spv.constant dense<[2, 3]> : vector<2xf32>
-    %2 = spv.constant [dense<3.0> : vector<2xf32>] : !spv.array<1xvector<2xf32>>
+    %0 = spv.Constant true
+    %1 = spv.Constant dense<[2, 3]> : vector<2xf32>
+    %2 = spv.Constant [dense<3.0> : vector<2xf32>] : !spv.array<1xvector<2xf32>>
     ```
 
     TODO: support constant structs
@@ -572,7 +572,7 @@ def SPV_SpecConstantOp : SPV_Op<"SpecConstant", [InModuleScope, Symbol]> {
     * `OpSpecConstantTrue` and `OpSpecConstantFalse` for boolean constants
     * `OpSpecConstant` for scalar constants
 
-    Similar as `spv.constant`, this op represents all of the above cases.
+    Similar as `spv.Constant`, this op represents all of the above cases.
     `OpSpecConstantComposite` and `OpSpecConstantOp` are modelled with
     separate ops.
 
@@ -731,8 +731,8 @@ def SPV_SpecConstantOperationOp : SPV_Op<"SpecConstantOperation", [
 
     #### Example:
     ```mlir
-    %0 = spv.constant 1: i32
-    %1 = spv.constant 1: i32
+    %0 = spv.Constant 1: i32
+    %1 = spv.Constant 1: i32
 
     %2 = spv.SpecConstantOperation wraps "spv.IAdd"(%0, %1) : (i32, i32) -> i32
     ```

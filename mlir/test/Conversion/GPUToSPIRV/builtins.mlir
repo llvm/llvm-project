@@ -88,7 +88,7 @@ module attributes {gpu.container_module} {
       // Note that this ignores the workgroup size specification in gpu.launch.
       // We may want to define gpu.workgroup_size and convert it to the entry
       // point ABI we want here.
-      // CHECK: spv.constant 32 : i32
+      // CHECK: spv.Constant 32 : i32
       %0 = "gpu.block_dim"() {dimension = "x"} : () -> index
       gpu.return
     }
@@ -110,7 +110,7 @@ module attributes {gpu.container_module} {
     gpu.func @builtin_workgroup_size_y() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[32, 4, 1]>: vector<3xi32>}} {
       // The constant value is obtained from the spv.entry_point_abi.
-      // CHECK: spv.constant 4 : i32
+      // CHECK: spv.Constant 4 : i32
       %0 = "gpu.block_dim"() {dimension = "y"} : () -> index
       gpu.return
     }
@@ -132,7 +132,7 @@ module attributes {gpu.container_module} {
     gpu.func @builtin_workgroup_size_z() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[32, 4, 1]>: vector<3xi32>}} {
       // The constant value is obtained from the spv.entry_point_abi.
-      // CHECK: spv.constant 1 : i32
+      // CHECK: spv.Constant 1 : i32
       %0 = "gpu.block_dim"() {dimension = "z"} : () -> index
       gpu.return
     }

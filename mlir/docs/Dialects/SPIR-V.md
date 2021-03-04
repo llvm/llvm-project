@@ -88,7 +88,7 @@ The SPIR-V dialect adopts the following conventions for IR:
 *   Ops with `snake_case` names are those that have different representation
     from corresponding instructions (or concepts) in the specification. These
     ops are mostly for defining the SPIR-V structure. For example, `spv.module`
-    and `spv.constant`. They may correspond to one or more instructions during
+    and `spv.Constant`. They may correspond to one or more instructions during
     (de)serialization.
 *   Ops with `mlir.snake_case` names are those that have no corresponding
     instructions (or concepts) in the binary format. They are introduced to
@@ -166,7 +166,7 @@ instructions are represented in the SPIR-V dialect:
 #### Unify and localize constants
 
 *   Various normal constant instructions are represented by the same
-    `spv.constant` op. Those instructions are just for constants of different
+    `spv.Constant` op. Those instructions are just for constants of different
     types; using one op to represent them reduces IR verbosity and makes
     transformations less tedious.
 *   Normal constants are not placed in `spv.module`'s region; they are localized
@@ -475,7 +475,7 @@ For example,
 can be represented in the dialect as
 
 ```mlir
-%0 = "spv.constant"() { value = 42 : i32 } : () -> i32
+%0 = "spv.Constant"() { value = 42 : i32 } : () -> i32
 %1 = "spv.Variable"(%0) { storage_class = "Function" } : (i32) -> !spv.ptr<i32, Function>
 %2 = "spv.IAdd"(%0, %0) : (i32, i32) -> i32
 ```
@@ -581,9 +581,9 @@ It will be represented as
 
 ```mlir
 func @selection(%cond: i1) -> () {
-  %zero = spv.constant 0: i32
-  %one = spv.constant 1: i32
-  %two = spv.constant 2: i32
+  %zero = spv.Constant 0: i32
+  %one = spv.Constant 1: i32
+  %two = spv.Constant 2: i32
   %x = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
   spv.selection {
@@ -669,8 +669,8 @@ It will be represented as
 
 ```mlir
 func @loop(%count : i32) -> () {
-  %zero = spv.constant 0: i32
-  %one = spv.constant 1: i32
+  %zero = spv.Constant 0: i32
+  %one = spv.Constant 1: i32
   %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
   spv.loop {
@@ -732,15 +732,15 @@ func @foo() -> () {
   %var = spv.Variable : !spv.ptr<i32, Function>
 
   spv.selection {
-    %true = spv.constant true
+    %true = spv.Constant true
     spv.BranchConditional %true, ^true, ^false
 
   ^true:
-    %zero = spv.constant 0 : i32
+    %zero = spv.Constant 0 : i32
     spv.Branch ^phi(%zero: i32)
 
   ^false:
-    %one = spv.constant 1 : i32
+    %one = spv.Constant 1 : i32
     spv.Branch ^phi(%one: i32)
 
   ^phi(%arg: i32):
@@ -964,7 +964,7 @@ the representational differences between SPIR-V dialect and binary format:
     instructions.
 *   Types are serialized into `OpType*` instructions in the SPIR-V binary module
     section for types, constants, and global variables.
-*   `spv.constant`s are unified and placed in the SPIR-V binary module section
+*   `spv.Constant`s are unified and placed in the SPIR-V binary module section
     for types, constants, and global variables.
 *   Attributes on ops, if not part of the op's binary encoding, are emitted as
     `OpDecorate*` instructions in the SPIR-V binary module section for
@@ -980,7 +980,7 @@ Similarly, a few transformations are performed during deserialization:
     capabilities, extended instruction sets, etc.) will be placed as attributes
     on `spv.module`.
 *   `OpType*` instructions will be converted into proper `mlir::Type`s.
-*   `OpConstant*` instructions are materialized as `spv.constant` at each use
+*   `OpConstant*` instructions are materialized as `spv.Constant` at each use
     site.
 *   `OpVariable` instructions will be converted to `spv.globalVariable` ops if
     in module-level; otherwise they will be converted into `spv.Variable` ops.
