@@ -3899,7 +3899,11 @@ void SubTensorInsertOp::getCanonicalizationPatterns(
 
 OpFoldResult TensorLoadOp::fold(ArrayRef<Attribute>) {
   if (auto tensorToMemref = memref().getDefiningOp<TensorToMemrefOp>())
-    return tensorToMemref.tensor();
+    // Approximate alias analysis by conservatively folding only when no there
+    // is no interleaved operation.
+    if (tensorToMemref->getBlock() == this->getOperation()->getBlock() &&
+        tensorToMemref->getNextNode() == this->getOperation())
+      return tensorToMemref.tensor();
   return {};
 }
 
