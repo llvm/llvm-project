@@ -229,21 +229,37 @@ long long strtoll_l(const char *__nptr, char **__endptr,
     int __base, locale_t locale) {
   return strtoll(__nptr, __endptr, __base);
 }
+
 static inline
 long strtol_l(const char *__nptr, char **__endptr,
     int __base, locale_t locale) {
   return strtol(__nptr, __endptr, __base);
 }
+
+static inline
+double strtod_l(const char *__nptr, char **__endptr,
+    locale_t locale) {
+  return strtod(__nptr, __endptr);
+}
+
+static inline
+float strtof_l(const char *__nptr, char **__endptr,
+    locale_t locale) {
+  return strtof(__nptr, __endptr);
+}
+
 static inline
 long double strtold_l(const char *__nptr, char **__endptr,
     locale_t locale) {
   return strtold(__nptr, __endptr);
 }
+
 static inline
 unsigned long long strtoull_l(const char *__nptr, char **__endptr,
     int __base, locale_t locale) {
   return strtoull(__nptr, __endptr, __base);
 }
+
 static inline
 unsigned long strtoul_l(const char *__nptr, char **__endptr,
     int __base, locale_t locale) {

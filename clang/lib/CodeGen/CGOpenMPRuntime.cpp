@@ -1648,9 +1648,13 @@ static void getTargetEntryUniqueInfo(ASTContext &C, SourceLocation Loc,
   assert(PLoc.isValid() && "Source location is expected to be always valid.");
 
   llvm::sys::fs::UniqueID ID;
-  if (auto EC = llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID))
-    SM.getDiagnostics().Report(diag::err_cannot_open_file)
-        << PLoc.getFilename() << EC.message();
+  if (auto EC = llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID)) {
+    PLoc = SM.getPresumedLoc(Loc, /*UseLineDirectives=*/false);
+    assert(PLoc.isValid() && "Source location is expected to be always valid.");
+    if (auto EC = llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID))
+      SM.getDiagnostics().Report(diag::err_cannot_open_file)
+          << PLoc.getFilename() << EC.message();
+  }
 
   DeviceID = ID.getDevice();
   FileID = ID.getFile();

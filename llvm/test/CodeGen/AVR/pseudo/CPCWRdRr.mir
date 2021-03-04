@@ -14,6 +14,7 @@
 name:            test_cpcwrdrr
 body: |
   bb.0.entry:
+    liveins: $r21r20, $r23r22, $sreg
 
     ; CHECK-LABEL: test_cpcwrdrr
 

@@ -2593,8 +2593,70 @@ static LogicalResult verify(TransferWriteOp op) {
                               [&op](Twine t) { return op.emitOpError(t); });
 }
 
-LogicalResult TransferWriteOp::fold(ArrayRef<Attribute>,
-                                    SmallVectorImpl<OpFoldResult> &) {
+/// Fold:
+/// ```
+///    %t1 = ...
+///    %v = vector.transfer_read %t0[%c0...], {masked = [false...]} :
+///      tensor<static_sizesxf32>, vector<static_sizesxf32>
+///    %t2 = vector.transfer_write %v, %t1[%c0...] {masked = [false...]} :
+///      vector<static_sizesxf32>, tensor<static_sizesxf32>
+/// ```
+///
+/// into:
+///
+/// ```
+///    %t0
+/// ```
+///
+/// The producer of t1 may or may not be DCE'd depending on whether it is a
+/// block argument or has side effects.
+static LogicalResult foldReadInitWrite(TransferWriteOp write,
+                                       ArrayRef<Attribute>,
+                                       SmallVectorImpl<OpFoldResult> &results) {
+  auto rankedTensorType = write.source().getType().dyn_cast<RankedTensorType>();
+  // If not operating on tensors, bail.
+  if (!rankedTensorType)
+    return failure();
+  // If no read, bail.
+  auto read = write.vector().getDefiningOp<vector::TransferReadOp>();
+  if (!read)
+    return failure();
+  // For now, only accept minor identity. Future: composition is minor identity.
+  if (!read.permutation_map().isMinorIdentity() ||
+      !write.permutation_map().isMinorIdentity())
+    return failure();
+  // Bail on mismatching ranks.
+  if (read.getTransferRank() != write.getTransferRank())
+    return failure();
+  // Bail on masked.
+  if (read.hasMaskedDim() || write.hasMaskedDim())
+    return failure();
+  // Tensor types must be the same.
+  if (read.source().getType() != rankedTensorType)
+    return failure();
+  // Vector types must be the same.
+  if (read.getVectorType() != write.getVectorType())
+    return failure();
+  // Vector and Tensor shapes must match.
+  if (read.getVectorType().getShape() != rankedTensorType.getShape())
+    return failure();
+  // If any index is nonzero.
+  auto isNotConstantZero = [](Value v) {
+    auto cstOp = v.getDefiningOp<ConstantIndexOp>();
+    return !cstOp || cstOp.getValue() != 0;
+  };
+  if (llvm::any_of(read.indices(), isNotConstantZero) ||
+      llvm::any_of(write.indices(), isNotConstantZero))
+    return failure();
+  // Success.
+  results.push_back(read.source());
+  return success();
+}
+
+LogicalResult TransferWriteOp::fold(ArrayRef<Attribute> operands,
+                                    SmallVectorImpl<OpFoldResult> &results) {
+  if (succeeded(foldReadInitWrite(*this, operands, results)))
+    return success();
   if (succeeded(foldTransferMaskAttribute(*this)))
     return success();
   return foldMemRefCast(*this);

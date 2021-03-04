@@ -221,13 +221,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
     }
   }
 
-  // Extensions
-  if (args.hasArg(clang::driver::options::OPT_fopenacc)) {
-    opts.features_.Enable(Fortran::common::LanguageFeature::OpenACC);
-  }
-  if (args.hasArg(clang::driver::options::OPT_fopenmp)) {
-    opts.features_.Enable(Fortran::common::LanguageFeature::OpenMP);
-  }
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::driver::options::OPT_fimplicit_none,
               clang::driver::options::OPT_fno_implicit_none)) {
@@ -315,6 +308,48 @@ static void parseSemaArgs(std::string &moduleDir, llvm::opt::ArgList &args,
     moduleDir = moduleDirList[0];
 }
 
+/// Parses all Dialect related arguments and populates the variables
+/// options accordingly.
+static void parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
+    clang::DiagnosticsEngine &diags) {
+
+  // -fdefault* family
+  if (args.hasArg(clang::driver::options::OPT_fdefault_real_8)) {
+    res.defaultKinds().set_defaultRealKind(8);
+    res.defaultKinds().set_doublePrecisionKind(16);
+  }
+  if (args.hasArg(clang::driver::options::OPT_fdefault_integer_8)) {
+    res.defaultKinds().set_defaultIntegerKind(8);
+    res.defaultKinds().set_subscriptIntegerKind(8);
+    res.defaultKinds().set_sizeIntegerKind(8);
+  }
+  if (args.hasArg(clang::driver::options::OPT_fdefault_double_8)) {
+    if (!args.hasArg(clang::driver::options::OPT_fdefault_real_8)) {
+      // -fdefault-double-8 has to be used with -fdefault-real-8
+      // to be compatible with gfortran
+      const unsigned diagID =
+          diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+              "Use of `-fdefault-double-8` requires `-fdefault-real-8`");
+      diags.Report(diagID);
+    }
+    // https://gcc.gnu.org/onlinedocs/gfortran/Fortran-Dialect-Options.html
+    res.defaultKinds().set_doublePrecisionKind(8);
+  }
+  if (args.hasArg(clang::driver::options::OPT_flarge_sizes))
+    res.defaultKinds().set_sizeIntegerKind(8);
+
+  // -fopenmp and -fopenacc
+  if (args.hasArg(clang::driver::options::OPT_fopenacc)) {
+    res.frontendOpts().features_.Enable(
+        Fortran::common::LanguageFeature::OpenACC);
+  }
+  if (args.hasArg(clang::driver::options::OPT_fopenmp)) {
+    res.frontendOpts().features_.Enable(
+        Fortran::common::LanguageFeature::OpenMP);
+  }
+  return;
+}
+
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
     llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags) {
@@ -346,6 +381,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
   parsePreprocessorArgs(res.preprocessorOpts(), args);
   // Parse semantic args
   parseSemaArgs(res.moduleDir(), args, diags);
+  // Parse dialect arguments
+  parseDialectArgs(res, args, diags);
 
   return success;
 }
@@ -454,8 +491,7 @@ void CompilerInvocation::setSemanticsOpts(
   const auto &fortranOptions = fortranOpts();
 
   semanticsContext_ = std::make_unique<semantics::SemanticsContext>(
-      *(new Fortran::common::IntrinsicTypeDefaultKinds()),
-      fortranOptions.features, allCookedSources);
+      defaultKinds(), fortranOptions.features, allCookedSources);
 
   auto &moduleDirJ = moduleDir();
   semanticsContext_->set_moduleDirectory(moduleDirJ)

@@ -789,3 +789,15 @@ func @propogate_casts(%arg0 : tensor<?x?xf32>, %arg1 : f32, %arg2 : index,
 //       CHECK:   %[[INSERTED:.+]] = subtensor_insert %{{.+}} into %[[FILL]]
 //       CHECK:   %[[RESULT:.+]] = tensor.cast %[[INSERTED]]
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+// CHECK-LABEL: @self_copy
+func @self_copy(%arg0 : memref<2x3x?x4xf32>) {
+
+//   CHECK-NOT: linalg.copy
+  linalg.copy(%arg0, %arg0): memref<2x3x?x4xf32>, memref<2x3x?x4xf32>
+
+//   CHECK: return
+  return
+}
