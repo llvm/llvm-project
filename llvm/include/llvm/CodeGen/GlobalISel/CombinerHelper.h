@@ -316,9 +316,6 @@ public:
   bool matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
   bool applyCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
 
-  /// Transform zext(trunc(x)) to x.
-  bool matchCombineZextTrunc(MachineInstr &MI, Register &Reg);
-
   /// Transform [asz]ext([asz]ext(x)) to [asz]ext x.
   bool matchCombineExtOfExt(MachineInstr &MI,
                             std::tuple<Register, unsigned> &MatchInfo);

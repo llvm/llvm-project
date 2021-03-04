@@ -404,14 +404,18 @@ define amdgpu_ps i32 @s_shl_i32_zext_i16(i16 inreg %x) {
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX8-NEXT:    s_and_b32 s0, s0, 0x3fff
-; GFX8-NEXT:    s_lshl_b32 s0, s0, 2
+; GFX8-NEXT:    s_bfe_u32 s1, 2, 0x100000
+; GFX8-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX8-NEXT:    s_bfe_u32 s0, s0, 0x100000
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl_i32_zext_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX9-NEXT:    s_and_b32 s0, s0, 0x3fff
-; GFX9-NEXT:    s_lshl_b32 s0, s0, 2
+; GFX9-NEXT:    s_bfe_u32 s1, 2, 0x100000
+; GFX9-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX9-NEXT:    s_bfe_u32 s0, s0, 0x100000
 ; GFX9-NEXT:    ; return to shader part epilog
   %and = and i16 %x, 16383
   %ext = zext i16 %and to i32
@@ -460,10 +464,13 @@ define amdgpu_ps <2 x i32> @s_shl_v2i32_zext_v2i16(<2 x i16> inreg %x) {
 ; GFX8-LABEL: s_shl_v2i32_zext_v2i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_movk_i32 s2, 0x3fff
+; GFX8-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX8-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX8-NEXT:    s_mov_b32 s3, s2
-; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX8-NEXT:    s_and_b32 s0, s0, s4
 ; GFX8-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
+; GFX8-NEXT:    s_mov_b32 s5, s4
+; GFX8-NEXT:    s_and_b64 s[0:1], s[0:1], s[4:5]
 ; GFX8-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX8-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX8-NEXT:    ; return to shader part epilog
