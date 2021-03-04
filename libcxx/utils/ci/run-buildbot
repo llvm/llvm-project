@@ -384,6 +384,18 @@ legacy-standalone)
     echo "+++ Running the libc++abi tests"
     ninja -C "${BUILD_DIR}/libcxxabi" check-cxxabi
 ;;
+aarch64)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake"
+    check-cxx-cxxabi
+;;
+aarch64-noexceptions)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake" \
+    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
+    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
+    check-cxx-cxxabi
+;;
 *)
     echo "${BUILDER} is not a known configuration"
     exit 1

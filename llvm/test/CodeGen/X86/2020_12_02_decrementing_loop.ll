@@ -44,16 +44,14 @@ failure:                                          ; preds = %backedge
 define i32 @test_01a(i32* %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_01a:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB1_1: ## %loop
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    subq $1, %rax
+; CHECK-NEXT:    subq $1, %rsi
 ; CHECK-NEXT:    jb LBB1_4
 ; CHECK-NEXT:  ## %bb.2: ## %backedge
 ; CHECK-NEXT:    ## in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    cmpl %edx, -28(%rdi,%rsi,4)
-; CHECK-NEXT:    movq %rax, %rsi
+; CHECK-NEXT:    cmpl %edx, -24(%rdi,%rsi,4)
 ; CHECK-NEXT:    jne LBB1_1
 ; CHECK-NEXT:  ## %bb.3: ## %failure
 ; CHECK-NEXT:    ud2

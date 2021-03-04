@@ -8,11 +8,17 @@
 ; CHECK-DAG:  %polly.loop_cond[[CInner:[0-9]*]] = icmp sle i64 %polly.indvar_next{{[0-9]*}}, 511
 ; CHECK-DAG:  br i1 %polly.loop_cond[[CInner]], label %polly.loop_header{{[0-9]*}}, label %polly.loop_exit{{[0-9]*}}, !llvm.loop ![[IDInner:[0-9]*]]
 ;
-; CHECK-DAG: store i32 %{{[a-z_0-9]*}}, i32* %{{[a-z_0-9]*}}, {{[ ._!,a-zA-Z0-9]*}}, !llvm.mem.parallel_loop_access !4
+; CHECK-DAG: store i32 %{{[a-z_0-9]*}}, i32* %{{[a-z_0-9]*}}, {{[ ._!,a-zA-Z0-9]*}}, !llvm.access.group ![[GROUPLST6:[0-9]+]]
 ;
-; CHECK-DAG: ![[IDOuter]] = distinct !{![[IDOuter]]}
-; CHECK-DAG: ![[IDInner]] = distinct !{![[IDInner]]}
-; CHECK-DAG: !4 = !{![[IDOuter]], ![[IDInner]]}
+; CHECK-DAG: ![[IDOuter]] = distinct !{![[IDOuter]], ![[ACCGROUP1:[0-9]+]]}
+; CHECK-DAG: ![[ACCGROUP1]] = !{!"llvm.loop.parallel_accesses", ![[GROUP2:[0-9]+]]}
+; CHECK-DAG: ![[GROUP2]] = distinct !{}
+; CHECK-DAG: ![[GROUPLST6]] = !{![[GROUP2]], ![[GROUP7:[0-9]+]]}
+; CHECK-DAG: ![[GROUP7]] = distinct !{}
+; CHECK-DAG: ![[IDInner]] = distinct !{![[IDInner]], ![[ACCGROUP9:[0-9]+]]}
+; CHECK-DAG: ![[ACCGROUP9]] = !{!"llvm.loop.parallel_accesses", ![[GROUP7]]}
+
+;
 ;
 ;    void jd(int *A) {
 ;      for (int i = 0; i < 1024; i++)

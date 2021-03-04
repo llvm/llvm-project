@@ -81,7 +81,7 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative, NoSideEffect]> {
     $shapes attr-dict `:` type($shapes) `->` type($result)
   }];
 
-  let builders = [OpBuilderDAG<(ins "::mlir::Type":$result,
+  let builders = [OpBuilder<(ins "::mlir::Type":$result,
                                 "::mlir::Value":$lhs, "::mlir::Value":$rhs,
                                 "/*optional*/ ::mlir::StringAttr":$error), [{
       build($_builder, $_state, result, ::llvm::makeArrayRef({lhs, rhs}), error);
@@ -132,7 +132,7 @@ def Shape_ConstSizeOp : Shape_Op<"const_size", [
   let arguments = (ins IndexAttr:$value);
   let results = (outs Shape_SizeType:$result);
 
-  let builders = [OpBuilderDAG<(ins "int64_t":$value)>];
+  let builders = [OpBuilder<(ins "int64_t":$value)>];
 
   let assemblyFormat = "$value attr-dict";
   let hasFolder = 1;
@@ -184,7 +184,7 @@ def Shape_ShapeEqOp : Shape_Op<"shape_eq", [NoSideEffect, Commutative,
 
   // Convenience builder alias for the binary version.
   let builders = [
-  OpBuilderDAG<(ins "::mlir::Value":$lhs, "::mlir::Value":$rhs),
+  OpBuilder<(ins "::mlir::Value":$lhs, "::mlir::Value":$rhs),
     [{ build($_builder, $_state, ::llvm::makeArrayRef({lhs, rhs})); }]>,
   ];
   let extraClassDeclaration = [{
@@ -262,7 +262,7 @@ def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable",
   let results = (outs I1:$result);
 
   let builders = [
-  OpBuilderDAG<(ins "::mlir::Value":$lhs, "::mlir::Value":$rhs),
+  OpBuilder<(ins "::mlir::Value":$lhs, "::mlir::Value":$rhs),
     [{ build($_builder, $_state, ::llvm::makeArrayRef({lhs, rhs})); }]>,
   ];
   let extraClassDeclaration = [{
@@ -330,7 +330,7 @@ def Shape_GetExtentOp : Shape_Op<"get_extent", [NoSideEffect]> {
 
   let builders = [
     // Builder that allows passing a constant dimension as a simple integer.
-    OpBuilderDAG<(ins "Value":$shape, "int64_t":$dim)>
+    OpBuilder<(ins "Value":$shape, "int64_t":$dim)>
   ];
 
   let extraClassDeclaration = [{
@@ -429,7 +429,7 @@ def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
   let arguments = (ins Shape_ShapeOrExtentTensorType:$shape);
   let results = (outs Shape_SizeOrIndexType:$result);
 
-  let builders = [OpBuilderDAG<(ins "Value":$shape)>];
+  let builders = [OpBuilder<(ins "Value":$shape)>];
 
   let assemblyFormat = "$shape attr-dict `:` type($shape) `->` type($result)";
 
@@ -477,7 +477,7 @@ def Shape_ReduceOp : Shape_Op<"reduce",
   let results = (outs Variadic<AnyType>:$result);
   let regions = (region SizedRegion<1>:$region);
 
-  let builders = [OpBuilderDAG<(ins "Value":$shape, "ValueRange":$initVals)>];
+  let builders = [OpBuilder<(ins "Value":$shape, "ValueRange":$initVals)>];
 
   let verifier = [{ return ::verify(*this); }];
   let printer = [{ return ::print(p, *this); }];
@@ -497,7 +497,7 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of", [NoSideEffect]> {
 
   let assemblyFormat = "$arg attr-dict `:` type($arg) `->` type($result)";
 
-  let builders = [OpBuilderDAG<(ins "Value":$arg)>];
+  let builders = [OpBuilder<(ins "Value":$arg)>];
 
   let verifier = [{ return ::verifyShapeOrExtentTensorOp(*this); }];
   let hasCanonicalizer = 1;
@@ -574,7 +574,7 @@ def Shape_YieldOp : Shape_Op<"yield",
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [OpBuilderDAG<(ins),
+  let builders = [OpBuilder<(ins),
     [{ build($_builder, $_state, llvm::None); }]>
   ];
 
@@ -753,7 +753,7 @@ def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [OpBuilderDAG<(ins), [{ /* nothing to do */ }]>];
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
@@ -781,7 +781,7 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable",
   let assemblyFormat = "$shapes attr-dict `:` type($shapes)";
 
   let builders = [
-  OpBuilderDAG<(ins "::mlir::Value":$lhs, "::mlir::Value":$rhs),
+  OpBuilder<(ins "::mlir::Value":$lhs, "::mlir::Value":$rhs),
     [{ build($_builder, $_state, ::llvm::makeArrayRef({lhs, rhs})); }]>,
   ];
 
@@ -920,7 +920,7 @@ def Shape_FunctionLibraryOp : Shape_Op<"function_library",
     FuncOp getShapeFunction(Operation *op);
   }];
 
-  let builders = [OpBuilderDAG<(ins "StringRef":$name)>];
+  let builders = [OpBuilder<(ins "StringRef":$name)>];
   let skipDefaultBuilders = 1;
 
   let printer = [{ ::print(p, *this); }];

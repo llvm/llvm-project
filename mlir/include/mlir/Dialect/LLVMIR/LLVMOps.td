@@ -64,7 +64,7 @@ class LLVM_Builder<string builder> {
 }
 
 def LLVM_OneResultOpBuilder :
-  OpBuilderDAG<(ins "Type":$resultType, "ValueRange":$operands,
+  OpBuilder<(ins "Type":$resultType, "ValueRange":$operands,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
   [{
     if (resultType) $_state.addTypes(resultType);
@@ -75,7 +75,7 @@ def LLVM_OneResultOpBuilder :
   }]>;
 
 def LLVM_ZeroResultOpBuilder :
-  OpBuilderDAG<(ins "ValueRange":$operands,
+  OpBuilder<(ins "ValueRange":$operands,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
   [{
     $_state.addOperands(operands);
@@ -87,7 +87,7 @@ def LLVM_ZeroResultOpBuilder :
 // Compatibility builder that takes an instance of wrapped llvm::VoidType
 // to indicate no result.
 def LLVM_VoidResultTypeOpBuilder :
-  OpBuilderDAG<(ins "Type":$resultType, "ValueRange":$operands,
+  OpBuilder<(ins "Type":$resultType, "ValueRange":$operands,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
   [{
     assert(isCompatibleType(resultType) && "result must be an LLVM type");
@@ -99,7 +99,7 @@ def LLVM_VoidResultTypeOpBuilder :
 
 // Opaque builder used for terminator operations that contain successors.
 def LLVM_TerminatorPassthroughOpBuilder :
-  OpBuilderDAG<(ins "ValueRange":$operands, "SuccessorRange":$destinations,
+  OpBuilder<(ins "ValueRange":$operands, "SuccessorRange":$destinations,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
   [{
     $_state.addOperands(operands);
@@ -194,7 +194,7 @@ def LLVM_ICmpOp : LLVM_Op<"icmp", [NoSideEffect]> {
     $res = builder.CreateICmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);
   }];
   let builders = [
-    OpBuilderDAG<(ins "ICmpPredicate":$predicate, "Value":$lhs, "Value":$rhs),
+    OpBuilder<(ins "ICmpPredicate":$predicate, "Value":$lhs, "Value":$rhs),
     [{
       build($_builder, $_state, IntegerType::get(lhs.getType().getContext(), 1),
             $_builder.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
@@ -244,7 +244,7 @@ def LLVM_FCmpOp : LLVM_Op<"fcmp", [
     $res = builder.CreateFCmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);
   }];
   let builders = [
-    OpBuilderDAG<(ins "FCmpPredicate":$predicate, "Value":$lhs, "Value":$rhs,
+    OpBuilder<(ins "FCmpPredicate":$predicate, "Value":$lhs, "Value":$rhs,
                   CArg<"FastmathFlags", "{}">:$fmf),
     [{
       build($_builder, $_state, IntegerType::get(lhs.getType().getContext(), 1),
@@ -301,7 +301,7 @@ def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
     $res = inst;
   }];
   let builders = [
-    OpBuilderDAG<(ins "Type":$resultType, "Value":$arraySize,
+    OpBuilder<(ins "Type":$resultType, "Value":$arraySize,
       "unsigned":$alignment),
     [{
       if (alignment == 0)
@@ -335,13 +335,13 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
     $res = inst;
   }];
   let builders = [
-    OpBuilderDAG<(ins "Value":$addr, CArg<"unsigned", "0">:$alignment,
+    OpBuilder<(ins "Value":$addr, CArg<"unsigned", "0">:$alignment,
       CArg<"bool", "false">:$isVolatile, CArg<"bool", "false">:$isNonTemporal),
     [{
       auto type = addr.getType().cast<LLVMPointerType>().getElementType();
       build($_builder, $_state, type, addr, alignment, isVolatile, isNonTemporal);
     }]>,
-    OpBuilderDAG<(ins "Type":$t, "Value":$addr,
+    OpBuilder<(ins "Type":$t, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal)>];
   let parser = [{ return parseLoadOp(parser, result); }];
@@ -357,7 +357,7 @@ def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpWithAlignmentAndAttributes {
     auto *inst = builder.CreateStore($value, $addr, $volatile_);
   }] # setAlignmentCode # setNonTemporalMetadataCode;
   let builders = [
-    OpBuilderDAG<(ins "Value":$value, "Value":$addr,
+    OpBuilder<(ins "Value":$value, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal)>
     ];
@@ -429,14 +429,14 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                               AnySuccessor:$unwindDest);
 
   let builders = [
-    OpBuilderDAG<(ins "TypeRange":$tys, "FlatSymbolRefAttr":$callee,
+    OpBuilder<(ins "TypeRange":$tys, "FlatSymbolRefAttr":$callee,
       "ValueRange":$ops, "Block*":$normal, "ValueRange":$normalOps,
       "Block*":$unwind, "ValueRange":$unwindOps),
     [{
       $_state.addAttribute("callee", callee);
       build($_builder, $_state, tys, ops, normal, normalOps, unwind, unwindOps);
     }]>,
-    OpBuilderDAG<(ins "TypeRange":$tys, "ValueRange":$ops, "Block*":$normal,
+    OpBuilder<(ins "TypeRange":$tys, "ValueRange":$ops, "Block*":$normal,
       "ValueRange":$normalOps, "Block*":$unwind, "ValueRange":$unwindOps),
     [{
       build($_builder, $_state, tys, /*callee=*/FlatSymbolRefAttr(), ops, normalOps,
@@ -492,7 +492,7 @@ def LLVM_CallOp : LLVM_Op<"call",
                    DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
   let results = (outs Variadic<LLVM_Type>);
   let builders = [
-    OpBuilderDAG<(ins "LLVMFuncOp":$func, "ValueRange":$operands,
+    OpBuilder<(ins "LLVMFuncOp":$func, "ValueRange":$operands,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
     [{
       Type resultType = func.getType().getReturnType();
@@ -513,7 +513,7 @@ def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [NoSideEffect]> {
     $res = builder.CreateExtractElement($vector, $position);
   }];
   let builders = [
-    OpBuilderDAG<(ins "Value":$vector, "Value":$position,
+    OpBuilder<(ins "Value":$vector, "Value":$position,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
   let parser = [{ return parseExtractElementOp(parser, result); }];
   let printer = [{ printExtractElementOp(p, *this); }];
@@ -548,7 +548,7 @@ def LLVM_InsertValueOp : LLVM_Op<"insertvalue", [NoSideEffect]> {
                                      extractPosition($position));
   }];
   let builders = [
-    OpBuilderDAG<(ins "Value":$container, "Value":$value, "ArrayAttr":$position),
+    OpBuilder<(ins "Value":$container, "Value":$value, "ArrayAttr":$position),
     [{
       build($_builder, $_state, container.getType(), container, value, position);
     }]>];
@@ -564,7 +564,7 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector", [NoSideEffect]> {
       $res = builder.CreateShuffleVector($v1, $v2, mask);
   }];
   let builders = [
-    OpBuilderDAG<(ins "Value":$v1, "Value":$v2, "ArrayAttr":$mask,
+    OpBuilder<(ins "Value":$v1, "Value":$v2, "ArrayAttr":$mask,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
   let verifier = [{
     auto type1 = v1().getType();
@@ -588,7 +588,7 @@ def LLVM_SelectOp
                    LLVM_Type:$trueValue, LLVM_Type:$falseValue);
   let results = (outs LLVM_Type:$res);
   let builders = [
-    OpBuilderDAG<(ins "Value":$condition, "Value":$lhs, "Value":$rhs),
+    OpBuilder<(ins "Value":$condition, "Value":$lhs, "Value":$rhs),
     [{
       build($_builder, $_state, lhs.getType(), condition, lhs, rhs);
     }]>];
@@ -628,7 +628,7 @@ def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
   }];
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$condition, "Block *":$trueDest,
+    OpBuilder<(ins "Value":$condition, "Block *":$trueDest,
       "ValueRange":$trueOperands, "Block *":$falseDest,
       "ValueRange":$falseOperands,
       CArg<"Optional<std::pair<uint32_t, uint32_t>>", "{}">:$weights),
@@ -642,7 +642,7 @@ def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
         build($_builder, $_state, condition, trueOperands, falseOperands, weightsAttr,
               trueDest, falseDest);
   }]>,
-  OpBuilderDAG<(ins "Value":$condition, "Block *":$trueDest,
+  OpBuilder<(ins "Value":$condition, "Block *":$trueDest,
     "Block *":$falseDest, CArg<"ValueRange", "{}">:$falseOperands),
   [{
       build($_builder, $_state, condition, trueDest, ValueRange(), falseDest,
@@ -710,7 +710,7 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
   }];
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$value,
+    OpBuilder<(ins "Value":$value,
       "Block *":$defaultDestination,
       "ValueRange":$defaultOperands,
       CArg<"ArrayRef<int32_t>", "{}">:$caseValues,
@@ -809,7 +809,7 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof"> {
   }];
 
   let builders = [
-    OpBuilderDAG<(ins "GlobalOp":$global,
+    OpBuilder<(ins "GlobalOp":$global,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       build($_builder, $_state,
@@ -817,7 +817,7 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof"> {
             global.sym_name());
       $_state.addAttributes(attrs);
     }]>,
-    OpBuilderDAG<(ins "LLVMFuncOp":$func,
+    OpBuilder<(ins "LLVMFuncOp":$func,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       build($_builder, $_state,
@@ -976,7 +976,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
   let regions = (region AnyRegion:$initializer);
 
   let builders = [
-    OpBuilderDAG<(ins "Type":$type, "bool":$isConstant, "Linkage":$linkage,
+    OpBuilder<(ins "Type":$type, "bool":$isConstant, "Linkage":$linkage,
       "StringRef":$name, "Attribute":$value, CArg<"unsigned", "0">:$addrSpace,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
@@ -1050,7 +1050,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func",
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "StringRef":$name, "Type":$type,
+    OpBuilder<(ins "StringRef":$name, "Type":$type,
       CArg<"Linkage", "Linkage::External">:$linkage,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
       CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)>

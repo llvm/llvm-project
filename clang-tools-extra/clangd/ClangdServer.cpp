@@ -73,6 +73,8 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
                      const CanonicalIncludes &CanonIncludes) override {
     if (FIndex)
       FIndex->updatePreamble(Path, Version, Ctx, std::move(PP), CanonIncludes);
+    if (ServerCallbacks)
+      ServerCallbacks->onSemanticsMaybeChanged(Path);
   }
 
   void onMainAST(PathRef Path, ParsedAST &AST, PublishFn Publish) override {

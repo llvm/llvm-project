@@ -403,6 +403,10 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
         }
       }
     }
+    if (auto *SemanticTokens = Workspace->getObject("semanticTokens")) {
+      if (auto RefreshSupport = SemanticTokens->getBoolean("refreshSupport"))
+        R.SemanticTokenRefreshSupport = *RefreshSupport;
+    }
   }
   if (auto *Window = O->getObject("window")) {
     if (auto WorkDoneProgress = Window->getBoolean("workDoneProgress"))

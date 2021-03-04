@@ -154,7 +154,7 @@ def ForOp : SCF_Op<"for",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "Value":$lowerBound, "Value":$upperBound, "Value":$step,
+    OpBuilder<(ins "Value":$lowerBound, "Value":$upperBound, "Value":$step,
       CArg<"ValueRange", "llvm::None">:$iterArgs,
       CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
            "nullptr">)>
@@ -261,15 +261,15 @@ def IfOp : SCF_Op<"if",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "Value":$cond, "bool":$withElseRegion)>,
-    OpBuilderDAG<(ins "TypeRange":$resultTypes, "Value":$cond,
+    OpBuilder<(ins "Value":$cond, "bool":$withElseRegion)>,
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond,
       "bool":$withElseRegion)>,
-    OpBuilderDAG<(ins "TypeRange":$resultTypes, "Value":$cond,
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "buildTerminatedBody">:$thenBuilder,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "nullptr">:$elseBuilder)>,
-    OpBuilderDAG<(ins "Value":$cond,
+    OpBuilder<(ins "Value":$cond,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "buildTerminatedBody">:$thenBuilder,
       CArg<"function_ref<void(OpBuilder &, Location)>",
@@ -352,11 +352,11 @@ def ParallelOp : SCF_Op<"parallel",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
+    OpBuilder<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
       "ValueRange":$steps, "ValueRange":$initVals,
       CArg<"function_ref<void (OpBuilder &, Location, ValueRange, ValueRange)>",
            "nullptr">:$bodyBuilderFn)>,
-    OpBuilderDAG<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
+    OpBuilder<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
       "ValueRange":$steps,
       CArg<"function_ref<void (OpBuilder &, Location, ValueRange)>",
            "nullptr">:$bodyBuilderFn)>,
@@ -412,7 +412,7 @@ def ReduceOp : SCF_Op<"reduce", [HasParent<"ParallelOp">]> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "Value":$operand,
+    OpBuilder<(ins "Value":$operand,
       CArg<"function_ref<void (OpBuilder &, Location, Value, Value)>",
            "nullptr">:$bodyBuilderFn)>
   ];
@@ -582,7 +582,7 @@ def YieldOp : SCF_Op<"yield", [NoSideEffect, ReturnLike, Terminator,
   }];
 
   let arguments = (ins Variadic<AnyType>:$results);
-  let builders = [OpBuilderDAG<(ins), [{ /* nothing to do */ }]>];
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
   let assemblyFormat =
       [{  attr-dict ($results^ `:` type($results))? }];

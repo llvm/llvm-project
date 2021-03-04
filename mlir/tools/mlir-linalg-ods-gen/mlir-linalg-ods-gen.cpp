@@ -1886,7 +1886,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
 
       let skipDefaultBuilders = 1;
       let builders = [
-        OpBuilderDAG<
+        OpBuilder<
         (ins "ValueRange":$inputs, "ValueRange":$outputs),
         [{{
           $_state.addOperands(inputs);
@@ -1902,7 +1902,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
             TypeRange(inputs),
             TypeRange(outputs)/*, TODO: support captures*/);
         }]>,
-        OpBuilderDAG<
+        OpBuilder<
         (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
              "ValueRange":$outputs),
         [{{
@@ -1920,7 +1920,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
             TypeRange(inputs),
             TypeRange(outputs)/*, TODO: support captures*/);
         }]>,
-        OpBuilderDAG<
+        OpBuilder<
         (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
              CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
         [{{
@@ -1995,7 +1995,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
     std::string attrStmtsList = llvm::join(attrStmts, "\n");
 
     const char *builderFmt = R"FMT(
-      , OpBuilderDAG<
+      , OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
            "ValueRange":$outputs, {1}),
       [{{

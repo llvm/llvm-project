@@ -837,6 +837,7 @@ static unsigned getBranchOpcodeForIntCondCode(ISD::CondCode CC) {
 }
 
 RISCVVLMUL RISCVTargetLowering::getLMUL(MVT VT) {
+  assert(VT.isScalableVector() && "Expecting a scalable vector type");
   unsigned KnownSize = VT.getSizeInBits().getKnownMinValue();
   if (VT.getVectorElementType() == MVT::i1)
     KnownSize *= 8;
@@ -2210,14 +2211,12 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   //   (slideup vec, (insertelt (slidedown impdef, vec, idx), val, 0), idx),
   if (Subtarget.is64Bit() || Val.getValueType() != MVT::i64) {
     if (isNullConstant(Idx))
-      return Op;
+      return DAG.getNode(RISCVISD::VMV_S_XF_VL, DL, ContainerVT, Vec, Val, VL);
     SDValue Slidedown =
         DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
                     DAG.getUNDEF(ContainerVT), Vec, Idx, Mask, VL);
     SDValue InsertElt0 =
-        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ContainerVT, Slidedown, Val,
-                    DAG.getConstant(0, DL, Subtarget.getXLenVT()));
-
+        DAG.getNode(RISCVISD::VMV_S_XF_VL, DL, ContainerVT, Slidedown, Val, VL);
     return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, ContainerVT, Vec, InsertElt0,
                        Idx, Mask, VL);
   }
@@ -5735,6 +5734,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VMV_V_X_VL)
   NODE_NAME_CASE(VFMV_V_F_VL)
   NODE_NAME_CASE(VMV_X_S)
+  NODE_NAME_CASE(VMV_S_XF_VL)
   NODE_NAME_CASE(SPLAT_VECTOR_I64)
   NODE_NAME_CASE(READ_VLENB)
   NODE_NAME_CASE(TRUNCATE_VECTOR_VL)
