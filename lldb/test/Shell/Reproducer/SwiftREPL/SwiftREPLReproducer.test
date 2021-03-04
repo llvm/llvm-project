@@ -1,0 +1,4 @@
+// RUN: %lldb --repl < %s 2>&1 | FileCheck %s
+// REQUIRES: swift
+:reproducer status
+// CHECK: Reproducer is off.
