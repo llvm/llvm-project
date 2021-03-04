@@ -300,7 +300,7 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
                                                     const AAMDNodes &AAInfo,
                                                     bool &MustAliasAll) {
   AliasSet *FoundSet = nullptr;
-  AliasResult AllAR = MustAlias;
+  MustAliasAll = true;
   for (AliasSet &AS : llvm::make_early_inc_range(*this)) {
     if (AS.Forward)
       continue;
@@ -309,8 +309,8 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
     if (AR == NoAlias)
       continue;
 
-    AllAR =
-        AliasResult(AllAR & AR); // Possible downgrade to May/Partial, even No
+    if (AR != MustAlias)
+      MustAliasAll = false;
 
     if (!FoundSet) {
       // If this is the first alias set ptr can go into, remember it.
@@ -321,7 +321,6 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
     }
   }
 
-  MustAliasAll = (AllAR == MustAlias);
   return FoundSet;
 }
 
