@@ -119,8 +119,20 @@ Error Builder::addModule(Module *M) {
     return make_error<StringError>("input module has no datalayout",
                                    inconvertibleErrorCode());
 
+  // Symbols in the llvm.used list will get the FB_Used bit and will not be
+  // internalized. We do this for llvm.compiler.used as well:
+  //
+  // IR symbol table tracks module-level asm symbol references but not inline
+  // asm. A symbol only referenced by inline asm is not in the IR symbol table,
+  // so we may not know that the definition (in another translation unit) is
+  // referenced. That definition may have __attribute__((used)) (which lowers to
+  // llvm.compiler.used on ELF targets) to communicate to the compiler that it
+  // may be used by inline asm. The usage is perfectly fine, so we treat
+  // llvm.compiler.used conservatively as llvm.used to work around our own
+  // limitation.
   SmallVector<GlobalValue *, 4> UsedV;
   collectUsedGlobalVariables(*M, UsedV, /*CompilerUsed=*/false);
+  collectUsedGlobalVariables(*M, UsedV, /*CompilerUsed=*/true);
   SmallPtrSet<GlobalValue *, 4> Used(UsedV.begin(), UsedV.end());
 
   ModuleSymbolTable Msymtab;
