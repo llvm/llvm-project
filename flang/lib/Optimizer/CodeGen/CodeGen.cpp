@@ -13,6 +13,7 @@
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "CGOps.h"
 #include "DescriptorModel.h"
+#include "PassDetail.h"
 #include "Target.h"
 #include "flang/Lower/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/Dialect/FIRAttr.h"
@@ -27,8 +28,6 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -2910,17 +2909,9 @@ struct NegcOpConversion : public FIROpConversion<fir::NegcOp> {
 ///
 /// This pass lowers all FIR dialect operations to LLVM IR dialect.  An
 /// MLIR pass is used to lower residual Std dialect to LLVM IR dialect.
-struct FIRToLLVMLoweringPass
-    : public mlir::PassWrapper<FIRToLLVMLoweringPass,
-                               mlir::OperationPass<mlir::ModuleOp>> {
-  FIRToLLVMLoweringPass() {}
-
+class FIRToLLVMLowering : public fir::FIRToLLVMLoweringBase<FIRToLLVMLowering> {
+public:
   mlir::ModuleOp getModule() { return getOperation(); }
-
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<fir::FIROpsDialect, fir::FIRCodeGenDialect,
-                    mlir::StandardOpsDialect, mlir::LLVM::LLVMDialect>();
-  }
 
   void registerDialectInterfaces(mlir::MLIRContext *context) {
     mlir::DialectRegistry registry;
@@ -3016,16 +3007,10 @@ private:
 } // namespace
 
 std::unique_ptr<mlir::Pass> fir::createFIRToLLVMPass() {
-  return std::make_unique<FIRToLLVMLoweringPass>();
+  return std::make_unique<FIRToLLVMLowering>();
 }
 
 std::unique_ptr<mlir::Pass>
 fir::createLLVMDialectToLLVMPass(raw_ostream &output) {
   return std::make_unique<LLVMIRLoweringPass>(output);
 }
-
-// Register the FIR to LLVM-IR pass
-static mlir::PassRegistration<FIRToLLVMLoweringPass>
-    passLowFIR("fir-to-llvmir",
-               "Conversion of the FIR dialect to the LLVM-IR dialect",
-               [] { return std::make_unique<FIRToLLVMLoweringPass>(); });
