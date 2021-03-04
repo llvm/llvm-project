@@ -108,3 +108,11 @@ void t17(void) {
   // expected-warning@-1{{Argument to free() is the address of the function 'iptr', which is not memory allocated by malloc()}}
   // expected-warning@-2{{attempt to call free on non-heap object 'iptr'}}
 }
+
+struct S {
+  const char* p;
+};
+
+void t18 (struct S s) {
+  free((void*)(unsigned long long)s.p); // no warning
+}
