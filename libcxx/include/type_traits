@@ -525,6 +525,9 @@ struct __void_t { typedef void type; };
 template <class _Tp>
 struct __identity { typedef _Tp type; };
 
+template <class _Tp>
+using __identity_t _LIBCPP_NODEBUG_TYPE = typename __identity<_Tp>::type;
+
 template <class _Tp, bool>
 struct _LIBCPP_TEMPLATE_VIS __dependent_type : public _Tp {};
 
@@ -4022,8 +4025,8 @@ struct __result_of_mp;
 
 template <class _MP, class _Tp>
 struct __result_of_mp<_MP, _Tp, true>
-    : public __identity<typename __member_pointer_traits<_MP>::_ReturnType>
 {
+    using type = typename __member_pointer_traits<_MP>::_ReturnType;
 };
 
 // member data pointer
@@ -4034,13 +4037,13 @@ struct __result_of_mdp;
 template <class _Rp, class _Class, class _Tp>
 struct __result_of_mdp<_Rp _Class::*, _Tp, false>
 {
-    typedef typename __apply_cv<decltype(*_VSTD::declval<_Tp>()), _Rp>::type& type;
+    using type = typename __apply_cv<decltype(*_VSTD::declval<_Tp>()), _Rp>::type&;
 };
 
 template <class _Rp, class _Class, class _Tp>
 struct __result_of_mdp<_Rp _Class::*, _Tp, true>
 {
-    typedef typename __apply_cv<_Tp, _Rp>::type& type;
+    using type = typename __apply_cv<_Tp, _Rp>::type&;
 };
 
 template <class _Rp, class _Class, class _Tp>
