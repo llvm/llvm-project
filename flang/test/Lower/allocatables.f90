@@ -147,3 +147,61 @@ subroutine char_explicit_dyn(l1, l2)
   ! CHECK-DAG: %[[cAddrcast:.*]] = fir.convert %[[cAddr]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK: fir.emboxchar %[[cAddrcast]], %[[cLenCast4]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 end subroutine
+
+! CHECK-LABEL: _QPspecifiers(
+subroutine specifiers
+  allocatable jj1(:), jj2(:,:), jj3(:)
+  ! CHECK: [[STAT:%[0-9]+]] = fir.alloca i32 {name = "_QFspecifiersEsss"}
+  integer sss
+  character*30 :: mmm = "None"
+  ! CHECK: fir.call @_FortranAAllocatableSetBounds
+  ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableAllocate
+  ! CHECK: fir.store [[RESULT]] to [[STAT]]
+  ! CHECK: fir.if %{{[0-9]+}} {
+  ! CHECK: fir.call @_FortranAAllocatableSetBounds
+  ! CHECK: fir.call @_FortranAAllocatableSetBounds
+  ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableAllocate
+  ! CHECK: fir.store [[RESULT]] to [[STAT]]
+  ! CHECK: fir.if %{{[0-9]+}} {
+  ! CHECK: fir.call @_FortranAAllocatableSetBounds
+  ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableAllocate
+  ! CHECK: fir.store [[RESULT]] to [[STAT]]
+  ! CHECK-NOT: fir.if %{{[0-9]+}} {
+  ! CHECK-COUNT-2: }
+  ! CHECK-NOT: }
+  allocate(jj1(3), jj2(3,3), jj3(3), stat=sss, errmsg=mmm)
+! print*, sss, mmm, "(initial message unchanged)"
+  ! CHECK: fir.call @_FortranAAllocatableSetBounds
+  ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableAllocate
+  ! CHECK: fir.call @_FortranAAllocatableSetBounds
+  ! CHECK: fir.call @_FortranAAllocatableSetBounds
+  ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableAllocate
+  ! CHECK: fir.call @_FortranAAllocatableSetBounds
+  ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableAllocate
+  allocate(jj1(3), jj2(3,3), jj3(3), stat=sss, errmsg=mmm)
+! print*, sss, mmm, "(new error message)"
+! jj1(1) = 10; jj1(2) = 11; jj1(3) = 12
+! jj2(1,1) = 20; jj2(2,1) = 21; jj2(3,1) = 22
+! jj2(1,2) = 23; jj2(2,2) = 24; jj2(3,2) = 25
+! jj2(1,3) = 26; jj2(2,3) = 27; jj2(3,3) = 28
+! jj3(1) = 30; jj3(2) = 31; jj3(3) = 32
+! print*, jj1, '-', jj2, ' -', jj3
+  ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableDeallocate
+  ! CHECK: fir.store [[RESULT]] to [[STAT]]
+  ! CHECK: fir.if %{{[0-9]+}} {
+  ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableDeallocate
+  ! CHECK: fir.store [[RESULT]] to [[STAT]]
+  ! CHECK: fir.if %{{[0-9]+}} {
+  ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableDeallocate
+  ! CHECK: fir.store [[RESULT]] to [[STAT]]
+  ! CHECK-NOT: fir.if %{{[0-9]+}} {
+  ! CHECK-COUNT-2: }
+  ! CHECK-NOT: }
+  deallocate(jj1, jj2, jj3, stat=sss, errmsg=mmm)
+! print*, sss, mmm, "(prior error message retained)"
+  ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableDeallocate
+  ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableDeallocate
+  ! CHECK: [[RESULT:%[0-9]+]] = fir.call @_FortranAAllocatableDeallocate
+  deallocate(jj1, jj2, jj3, stat=sss, errmsg=mmm)
+! print*, sss, mmm, "(new error message)"
+end subroutine specifiers
