@@ -110,9 +110,9 @@ body:             |
     ; CHECK-NEXT: [[OFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; CHECK-NEXT: [[ADDR2:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR1]], [[OFF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY [[ADDR2]]
-    ; CHECK-NEXT: [[V2:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 4 + 4, align 1)
+    ; CHECK-NEXT: [[V2:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 4 from undef + 4, align 1)
     ; CHECK-NEXT: G_STORE [[V1]](s32), [[ADDR1]](p0) :: (store 4, align 1)
-    ; CHECK-NEXT: G_STORE [[V2]](s32), [[ADDR2]](p0) :: (store 4 + 4, align 1)
+    ; CHECK-NEXT: G_STORE [[V2]](s32), [[ADDR2]](p0) :: (store 4 into undef + 4, align 1)
     %0(p0) = COPY $r0
     %1(s64) = G_LOAD %0(p0) :: (load 8, align 1)
     G_STORE %1(s64), %0(p0) :: (store 8, align 1)
@@ -147,19 +147,19 @@ body:             |
     ; CHECK-NEXT: [[OFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; CHECK-NEXT: [[ADDR2:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR1]], [[OFF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY [[ADDR2]]
-    ; CHECK-NEXT: [[V2:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 4 + 4, align 1)
+    ; CHECK-NEXT: [[V2:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 4 from undef + 4, align 1)
     ; CHECK-NEXT: G_STORE [[V1]](s32), [[ADDR1]](p0) :: (store 4, align 1)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY [[ADDR2]]
-    ; CHECK-NEXT: G_STORE [[V2]](s32), [[COPY2]](p0) :: (store 4 + 4, align 1)
+    ; CHECK-NEXT: G_STORE [[V2]](s32), [[COPY2]](p0) :: (store 4 into undef + 4, align 1)
     %0(p0) = COPY $r0
     %1(s64) = G_LOAD %0(p0) :: (load 8, align 1)
     G_STORE %1(s64), %0(p0) :: (store 8, align 1)
 
     ; CHECK: [[V1:%[0-9]+]]:_(s32) = G_LOAD [[ADDR1]](p0) :: (load 4)
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(p0) = COPY [[ADDR2]]
-    ; CHECK-NEXT: [[V2:%[0-9]+]]:_(s32) = G_LOAD [[COPY3]](p0) :: (load 4 + 4)
+    ; CHECK-NEXT: [[V2:%[0-9]+]]:_(s32) = G_LOAD [[COPY3]](p0) :: (load 4 from undef + 4)
     ; CHECK-NEXT: G_STORE [[V1]](s32), [[ADDR1]](p0) :: (store 4)
-    ; CHECK-NEXT: G_STORE [[V2]](s32), [[ADDR2]](p0) :: (store 4 + 4)
+    ; CHECK-NEXT: G_STORE [[V2]](s32), [[ADDR2]](p0) :: (store 4 into undef + 4)
     %2(s64) = G_LOAD %0(p0) :: (load 8, align 4)
     G_STORE %2(s64), %0(p0) :: (store 8, align 4)
 
