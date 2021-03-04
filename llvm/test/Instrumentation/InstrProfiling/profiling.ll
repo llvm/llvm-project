@@ -62,7 +62,7 @@ declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 ; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i8*))
 ; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_bar to i8*))
 ; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_baz to i8*))
-; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_names_function(i8* getelementptr inbounds ([19 x i8], [19 x i8]* @__llvm_prf_nm, i32 0, i32 0), i64 19)
+; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_names_function(i8* getelementptr inbounds {{.*}} @__llvm_prf_nm
 ; ELF_GENERIC-NEXT:   ret void
 ; ELF_GENERIC-NEXT: }
 
