@@ -1,5 +1,34 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
+// CHECK-LABEL: func @depthwise_conv_2d_input_nhwc_filter_hwcf_tensor
+func @depthwise_conv_2d_input_nhwc_filter_hwcf_tensor(%input: tensor<2x4x5x2xf32>, %filter: tensor<2x2x2x3xf32>) -> tensor<2x3x4x2x3xf32> {
+  %zero = constant 0.000000e+00 : f32
+  %init = linalg.init_tensor [2, 3, 4, 2, 3] : tensor<2x3x4x2x3xf32>
+  %fill = linalg.fill(%init, %zero) : tensor<2x3x4x2x3xf32>, f32 -> tensor<2x3x4x2x3xf32>
+  // CHECK:      %{{.+}} = linalg.depthwise_conv_2d_input_nhwc_filter_hwcf
+  // CHECK-SAME:   {strides = dense<1> : tensor<2xi64>}
+  // CHECK-SAME:   ins(%{{.+}}, %{{.+}} : tensor<2x4x5x2xf32>, tensor<2x2x2x3xf32>)
+  // CHECK-SAME:   outs(%{{.+}} : tensor<2x3x4x2x3xf32>)
+  %0 = linalg.depthwise_conv_2d_input_nhwc_filter_hwcf
+     { strides = dense<1> : tensor<2xi64> }
+     ins(%input, %filter : tensor<2x4x5x2xf32>, tensor<2x2x2x3xf32>)
+    outs(%fill : tensor<2x3x4x2x3xf32>) -> tensor<2x3x4x2x3xf32>
+  return %0 : tensor<2x3x4x2x3xf32>
+}
+
+// CHECK-LABEL: func @depthwise_conv_2d_input_nhwc_filter_hwcf_memref
+func @depthwise_conv_2d_input_nhwc_filter_hwcf_memref(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3xf32>, %output: memref<2x3x4x2x3xf32>) {
+  // CHECK:      linalg.depthwise_conv_2d_input_nhwc_filter_hwcf
+  // CHECK-SAME:   {strides = dense<1> : tensor<2xi64>}
+  // CHECK-SAME:   ins(%{{.+}}, %{{.+}} : memref<2x4x5x2xf32>, memref<2x2x2x3xf32>)
+  // CHECK-SAME:   outs(%{{.+}} : memref<2x3x4x2x3xf32>)
+  linalg.depthwise_conv_2d_input_nhwc_filter_hwcf
+     { strides = dense<1> : tensor<2xi64> }
+     ins(%input, %filter : memref<2x4x5x2xf32>, memref<2x2x2x3xf32>)
+    outs(%output : memref<2x3x4x2x3xf32>)
+  return
+}
+
 // CHECK-LABEL: func @depthwise_conv_2d_input_nhwc_filter_hwc_tensor
 func @depthwise_conv_2d_input_nhwc_filter_hwc_tensor(%input: tensor<1x113x113x96xf32>, %filter: tensor<3x3x96xf32>) -> tensor<1x56x56x96xf32> {
   %init = linalg.init_tensor [1, 56, 56, 96] : tensor<1x56x56x96xf32>
