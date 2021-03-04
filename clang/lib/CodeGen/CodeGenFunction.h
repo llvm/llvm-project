@@ -4539,8 +4539,8 @@ private:
 
   void deferPlaceholderReplacement(llvm::Instruction *Old, llvm::Value *New);
 
-  llvm::SmallVector<std::pair<llvm::Instruction *, llvm::Value *>, 4>
-  DeferredReplacements;
+  llvm::SmallVector<std::pair<llvm::WeakTrackingVH, llvm::Value *>, 4>
+      DeferredReplacements;
 
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const VarDecl *VD, Address Addr) {
