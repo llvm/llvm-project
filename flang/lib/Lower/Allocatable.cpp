@@ -311,7 +311,7 @@ public:
 
   /// Update MutableBoxValue with a new fir.box. This requires that the mutable
   /// box is not described by a set of variables, since they could not describe
-  /// all that can be describe in the new fir.box (e.g. non contiguous entity).
+  /// all that can be described in the new fir.box (e.g. non contiguous entity).
   void updateWithIrBox(mlir::Value newBox) {
     assert(!box.isDescribedByVariables());
     builder.create<fir::StoreOp>(loc, newBox, box.getAddr());
@@ -325,6 +325,15 @@ public:
       builder.create<fir::StoreOp>(loc, builder.createNullConstant(loc, nullTy),
                                    addrVar);
     } else {
+      // Note that the dynamic type of polymorphic entities must be reset to the
+      // declaration type of the mutable box. See Fortran 2018 7.8.2 NOTE 1.
+      // For those, we cannot simply set the address to zero. The way we are
+      // currently unallocating fir.box guarantees that we are resetting the
+      // type to the declared type. Beware if changing this.
+      // Note: the standard is not clear in Deallocate and p => NULL semantics
+      // regarding the new dynamic type the entity must have. So far, assume
+      // this is just like NULLIFY and the dynamic type must be set to the
+      // declared type, not retain the previous dynamic type.
       auto deallocatedBox = createUnallocatedBox(builder, loc, box.getBoxTy(),
                                                  box.nonDeferredLenParams());
       builder.create<fir::StoreOp>(loc, deallocatedBox, box.getAddr());
@@ -1013,11 +1022,10 @@ mlir::Value Fortran::lower::genIsAllocatedOrAssociatedTest(
 // MutableBoxValue writing interface implementation
 //===----------------------------------------------------------------------===//
 
-void Fortran::lower::associateMutableBox(Fortran::lower::FirOpBuilder &builder,
-                                         mlir::Location loc,
-                                         const fir::MutableBoxValue &box,
-                                         const fir::ExtendedValue &source,
-                                         mlir::ValueRange lbounds) {
+void Fortran::lower::associateMutableBoxWithShift(
+    Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+    const fir::MutableBoxValue &box, const fir::ExtendedValue &source,
+    mlir::ValueRange lbounds) {
   MutablePropertyWriter writer(builder, loc, box);
   source.match(
       [&](const fir::UnboxedValue &addr) {

@@ -85,15 +85,15 @@ Fortran::lower::SymbolBox genMutableBoxRead(Fortran::lower::FirOpBuilder &,
 /// Update a MutableBoxValue to describe entity \p source (that must be in
 /// memory). If \lbounds is not empty, it is used to defined the MutableBoxValue
 /// lower bounds, otherwise, the lower bounds from \p source are used.
-void associateMutableBox(Fortran::lower::FirOpBuilder &, mlir::Location,
-                         const fir::MutableBoxValue &,
-                         const fir::ExtendedValue &source,
-                         mlir::ValueRange lbounds);
+void associateMutableBoxWithShift(Fortran::lower::FirOpBuilder &,
+                                  mlir::Location, const fir::MutableBoxValue &,
+                                  const fir::ExtendedValue &source,
+                                  mlir::ValueRange lbounds);
 
 /// Update a MutableBoxValue to describe entity \p source (that must be in
 /// memory) with a new array layout given by \p lbounds and \p ubounds.
 /// \p source must be known to be contiguous at compile time, or it must have
-/// rank 1.
+/// rank 1 (constraint from Fortran 2018 standard 10.2.2.3 point 9).
 void associateMutableBoxWithRemap(Fortran::lower::FirOpBuilder &,
                                   mlir::Location, const fir::MutableBoxValue &,
                                   const fir::ExtendedValue &source,

@@ -52,7 +52,7 @@ subroutine test_array_char(p, x)
   ! CHECK: %[[c:.*]]:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   ! CHECK: %[[xaddr:.*]] = fir.convert %[[c]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,?>>>
   ! CHECK: %[[shape:.*]] = fir.shape %c100{{.*}}
-  ! CHECK: %[[box:.*]] = fir.embox %[[xaddr]](%[[shape]]) typeparams %[[c]]#1 
+  ! CHECK: %[[box:.*]] = fir.embox %[[xaddr]](%[[shape]]) typeparams %[[c]]#1
   ! CHECK: fir.store %[[box]] to %[[p]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
   p => x
 end subroutine
@@ -87,7 +87,7 @@ subroutine test_array_with_new_lbs(p, x)
   p(4:) => x
 end subroutine
 
-! Test F2018 10.2.2.3 point 9: bounds remapping  
+! Test F2018 10.2.2.3 point 9: bounds remapping
 ! CHECK-LABEL: func @_QPtest_array_remap(
 ! CHECK-SAME: %[[p:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>,
 ! CHECK-SAME: %[[x:.*]]: !fir.ref<!fir.array<100xf32>> {fir.target})
@@ -191,7 +191,7 @@ subroutine test_array_non_contig_rhs_new_lbs(p, x)
   p(4:) => x
 end subroutine
 
-! Test F2018 10.2.2.3 point 9: bounds remapping  
+! Test F2018 10.2.2.3 point 9: bounds remapping
 ! CHECK-LABEL: func @_QPtest_array_non_contig_remap(
 ! CHECK-SAME: %[[p:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>,
 ! CHECK-SAME: %[[x:.*]]: !fir.box<!fir.array<?xf32>> {fir.target})

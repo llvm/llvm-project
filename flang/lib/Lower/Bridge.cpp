@@ -1476,22 +1476,27 @@ private:
   void genFIR(const Fortran::parser::NullifyStmt &stmt) {
     auto loc = toLocation();
     for (auto &po : stmt.v) {
-      std::visit(Fortran::common::visitors{
-                     [&](const Fortran::parser::Name &sym) {
-                       auto ty = genType(*sym.symbol);
-                       auto load = builder->create<fir::LoadOp>(
-                           loc, getSymbolAddress(*sym.symbol));
-                       auto idxTy = builder->getIndexType();
-                       auto zero = builder->create<mlir::ConstantOp>(
-                           loc, idxTy, builder->getIntegerAttr(idxTy, 0));
-                       auto cast = builder->createConvert(loc, ty, zero);
-                       builder->create<fir::StoreOp>(loc, cast, load);
-                     },
-                     [&](const Fortran::parser::StructureComponent &) {
-                       TODO(loc, "StructureComponent NullifyStmt lowering");
-                     },
-                 },
-                 po.u);
+      std::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::parser::Name &name) {
+                assert(name.symbol);
+                auto pointer = lookupSymbol(*name.symbol);
+                pointer.match(
+                    [&](const fir::MutableBoxValue &box) {
+                      Fortran::lower::disassociateMutableBox(*builder, loc,
+                                                             box);
+                    },
+                    [&](const auto &) {
+                      fir::emitFatalError(
+                          loc,
+                          "entity in nullify was not lowered as a pointer");
+                    });
+              },
+              [&](const Fortran::parser::StructureComponent &) {
+                TODO(loc, "StructureComponent NullifyStmt lowering");
+              },
+          },
+          po.u);
     }
   }
 
@@ -1660,8 +1665,8 @@ private:
                              ? Fortran::lower::createSomeArrayBox(
                                    *this, assign.rhs, localSymbols, stmtCtx)
                              : genExprAddr(assign.rhs, stmtCtx);
-              Fortran::lower::associateMutableBox(*builder, loc, lhs, rhs,
-                                                  lbounds);
+              Fortran::lower::associateMutableBoxWithShift(*builder, loc, lhs,
+                                                           rhs, lbounds);
             },
             [&](const Fortran::evaluate::Assignment::BoundsRemapping
                     &boundExprs) {
