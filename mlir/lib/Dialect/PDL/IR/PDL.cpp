@@ -10,10 +10,8 @@
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::pdl;
@@ -430,27 +428,3 @@ static LogicalResult verify(TypeOp op) {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/PDL/IR/PDLOps.cpp.inc"
-
-//===----------------------------------------------------------------------===//
-// TableGen'd type method definitions
-//===----------------------------------------------------------------------===//
-
-#define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/PDL/IR/PDLOpsTypes.cpp.inc"
-
-Type PDLDialect::parseType(DialectAsmParser &parser) const {
-  StringRef keyword;
-  if (parser.parseKeyword(&keyword))
-    return Type();
-  if (Type type = generatedTypeParser(getContext(), parser, keyword))
-    return type;
-
-  parser.emitError(parser.getNameLoc(), "invalid 'pdl' type: `")
-      << keyword << "'";
-  return Type();
-}
-
-void PDLDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  if (failed(generatedTypePrinter(type, printer)))
-    llvm_unreachable("unknown 'pdl' type");
-}
