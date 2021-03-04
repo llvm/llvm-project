@@ -43,7 +43,7 @@ verifyHasBindingUseInMatcher(Operation *op,
   for (Operation *user : op->getUsers()) {
     if (user->getBlock() != matcherBlock)
       continue;
-    if (isa<AttributeOp, InputOp, OperationOp, RewriteOp>(user))
+    if (isa<AttributeOp, OperandOp, OperationOp, RewriteOp>(user))
       return success();
   }
   return op->emitOpError()
@@ -78,10 +78,10 @@ static LogicalResult verify(AttributeOp op) {
 }
 
 //===----------------------------------------------------------------------===//
-// pdl::InputOp
+// pdl::OperandOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(InputOp op) {
+static LogicalResult verify(OperandOp op) {
   return verifyHasBindingUseInMatcher(op);
 }
 
@@ -419,7 +419,7 @@ static LogicalResult verify(RewriteOp op) {
 
 static LogicalResult verify(TypeOp op) {
   return verifyHasBindingUseInMatcher(
-      op, "`pdl.attribute`, `pdl.input`, or `pdl.operation`");
+      op, "`pdl.attribute`, `pdl.operand`, or `pdl.operation`");
 }
 
 //===----------------------------------------------------------------------===//
