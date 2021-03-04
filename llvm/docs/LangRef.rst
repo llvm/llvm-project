@@ -17903,8 +17903,8 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.lifetime.start``' intrinsic specifies the start of
-:ref:`a memory object's lifetime <objectlifetime>`.
+The '``llvm.lifetime.start``' intrinsic specifies the start of a memory
+object's lifetime.
 
 Arguments:
 """"""""""
@@ -17949,8 +17949,8 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.lifetime.end``' intrinsic specifies the end of
-:ref:`a memory object's lifetime <objectlifetime>`.
+The '``llvm.lifetime.end``' intrinsic specifies the end of a memory object's
+lifetime.
 
 Arguments:
 """"""""""
