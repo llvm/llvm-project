@@ -6,5 +6,5 @@ RUN: not %lld -dylib -arch x86_64 %S/Inputs/libincompatible.tbd %t/x86_64-test.o
 RUN:   -o /dev/null 2>&1 | FileCheck %s --check-prefix=ARCH
 RUN: not %lld -dylib -arch arm64 -platform_version ios-simulator 14.0 15.0 %t/arm64-test.o \
 RUN:   %S/Inputs/libincompatible.tbd -o /dev/null 2>&1 | FileCheck %s --check-prefix=PLATFORM
-ARCH:     error: {{.*}}libincompatible.tbd is incompatible with x86_64 (macOS)
-PLATFORM: error: {{.*}}libincompatible.tbd is incompatible with arm64 (iOS Simulator)
+ARCH:     error: {{.*}}libincompatible.tbd(/usr/lib/libincompatible.dylib) is incompatible with x86_64 (macOS)
+PLATFORM: error: {{.*}}libincompatible.tbd(/usr/lib/libincompatible.dylib) is incompatible with arm64 (iOS Simulator)
