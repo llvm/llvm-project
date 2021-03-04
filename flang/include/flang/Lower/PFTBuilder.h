@@ -23,6 +23,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/symbol.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::lower::pft {
@@ -599,9 +600,13 @@ struct FunctionLikeUnit : public ProgramUnit {
   }
 
   /// Return a reference to the subprogram symbol of this FunctionLikeUnit.
+  /// This should not be called if the FunctionLikeUnit is the main program
+  /// since anonymous main programs do not have a symbol.
   const semantics::Symbol &getSubprogramSymbol() const {
     auto *symbol = entryPointList[activeEntry].first;
-    assert(symbol && "not inside a procedure");
+    if (!symbol)
+      llvm::report_fatal_error(
+          "not inside a procedure; do not call on main program.");
     return *symbol;
   }
 
