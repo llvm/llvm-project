@@ -16,6 +16,19 @@
 
 include "mlir/Pass/PassBase.td"
 
+def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
+  let summary = "Convert FIR dialect to LLVM-IR dialect";
+  let description = [{
+    Convert the FIR dialect to the LLVM-IR dialect of MLIR. This conversion
+    will also convert ops in the standard and FIRCG dialects.
+  }];
+  let constructor = "fir::createFIRToLLVMPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "fir::FIRCodeGenDialect", "mlir::BuiltinDialect",
+    "mlir::LLVM::LLVMDialect", "mlir::omp::OpenMPDialect"
+  ];
+}
+
 def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
   let summary = "Rewrite some FIR ops into their code-gen forms.";
   let description = [{
@@ -28,10 +41,11 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
 }
 
 def TargetRewrite : Pass<"target-rewrite", "mlir::ModuleOp"> {
-  let summary = "Rewrite some FIR dialect into target specific forms. "
-                "Certain abstractions in the FIR dialect need to be rewritten "
-                "to reflect representations that may differ based on the "
-                "target machine.";
+  let summary = "Rewrite some FIR dialect into target specific forms.";
+  let description = [{
+      Certain abstractions in the FIR dialect need to be rewritten to reflect
+      representations that may differ based on the target machine.
+  }];
   let constructor = "fir::createFirTargetRewritePass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "fir::FIRCodeGenDialect"
