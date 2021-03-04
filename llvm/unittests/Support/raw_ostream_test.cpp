@@ -377,6 +377,114 @@ TEST(raw_fd_ostreamTest, multiple_raw_fd_ostream_to_stdout) {
   { raw_fd_ostream("-", EC, sys::fs::OpenFlags::OF_None); }
 }
 
+// Basic functionality tests for raw_ostream_iterator.
+TEST(raw_ostream_iteratorTest, raw_ostream_iterator_basic) {
+  std::string S;
+
+  // Expect no output if nothing is written to the iterator.
+  {
+    S = "";
+    raw_string_ostream Str(S);
+    raw_ostream_iterator<char> It(Str);
+  }
+  EXPECT_EQ(S, "");
+  {
+    S = "";
+    raw_string_ostream Str(S);
+    raw_ostream_iterator<char> It(Str, ",");
+  }
+  EXPECT_EQ(S, "");
+
+  // Output one char.
+  {
+    S = "";
+    raw_string_ostream Str(S);
+    raw_ostream_iterator<char> It(Str);
+    *It = 'x';
+  }
+  EXPECT_EQ(S, "x");
+  {
+    S = "";
+    raw_string_ostream Str(S);
+    raw_ostream_iterator<char> It(Str, ",");
+    *It = 'x';
+  }
+  EXPECT_EQ(S, "x,");
+
+  // Output one int.
+  {
+    S = "";
+    raw_string_ostream Str(S);
+    raw_ostream_iterator<int> It(Str);
+    *It = 5;
+  }
+  EXPECT_EQ(S, "5");
+  {
+    S = "";
+    raw_string_ostream Str(S);
+    raw_ostream_iterator<int> It(Str, ",");
+    *It = 5;
+  }
+  EXPECT_EQ(S, "5,");
+
+  // Output a few ints.
+  {
+    S = "";
+    raw_string_ostream Str(S);
+    raw_ostream_iterator<int> It(Str);
+    *It = 5;
+    *It = 3;
+    *It = 2;
+  }
+  EXPECT_EQ(S, "532");
+  {
+    S = "";
+    raw_string_ostream Str(S);
+    raw_ostream_iterator<int> It(Str, ",");
+    *It = 5;
+    *It = 3;
+    *It = 2;
+  }
+  EXPECT_EQ(S, "5,3,2,");
+}
+
+template <class T, class InputIt>
+std::string iterator_str(InputIt First, InputIt Last) {
+  std::string S;
+  {
+    raw_string_ostream Str(S);
+    std::copy(First, Last, raw_ostream_iterator<T>(Str));
+  }
+  return S;
+}
+
+template <class T, class InputIt>
+std::string iterator_str(InputIt First, InputIt Last, const char *Delim) {
+  std::string S;
+  {
+    raw_string_ostream Str(S);
+    std::copy(First, Last, raw_ostream_iterator<T>(Str, Delim));
+  }
+  return S;
+}
+
+// Test using raw_ostream_iterator as an output iterator with a std algorithm.
+TEST(raw_ostream_iteratorTest, raw_ostream_iterator_std_copy) {
+  // Test the empty case.
+  std::vector<char> Empty = {};
+  EXPECT_EQ("", iterator_str<char>(Empty.begin(), Empty.end()));
+  EXPECT_EQ("", iterator_str<char>(Empty.begin(), Empty.end(), ", "));
+
+  // Test without a delimiter.
+  std::vector<char> V1 = {'a', 'b', 'c'};
+  EXPECT_EQ("abc", iterator_str<char>(V1.begin(), V1.end()));
+
+  // Test with a delimiter.
+  std::vector<int> V2 = {1, 2, 3};
+  EXPECT_EQ("1, 2, 3, ", iterator_str<int>(V2.begin(), V2.end(), ", "));
+}
+
+
 TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
   std::string TiedToBuffer;
   raw_string_ostream TiedTo(TiedToBuffer);
