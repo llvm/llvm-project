@@ -2902,8 +2902,6 @@ struct NegcOpConversion : public FIROpConversion<fir::NegcOp> {
   }
 };
 
-// Lower a SELECT operation into a cascade of conditional branches. The last
-// case must be the `true` condition.
 /// Convert FIR dialect to LLVM dialect
 ///
 /// This pass lowers all FIR dialect operations to LLVM IR dialect.  An
