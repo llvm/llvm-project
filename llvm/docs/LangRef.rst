@@ -2553,7 +2553,7 @@ A memory object, or simply object, is a region of a memory space that is
 reserved by a memory allocation such as :ref:`alloca <i_alloca>`, heap
 allocation calls, and global variable definitions.
 Once it is allocated, the bytes stored in the region can only be read or written
-through a pointer that is :ref:`based on <_pointeraliasing>` the allocation
+through a pointer that is :ref:`based on <pointeraliasing>` the allocation
 value.
 If a pointer that is not based on the object tries to read or write to the
 object, it is undefined behavior.
