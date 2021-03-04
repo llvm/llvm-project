@@ -99,7 +99,7 @@ if(CMAKE_HOST_APPLE AND APPLE)
 endif()
 
 # This can be used to detect whether we're in the runtimes build.
-set(RUNTIMES_BUILD ON)
+set(LLVM_RUNTIMES_BUILD ON)
 
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
