@@ -1,7 +1,7 @@
 // REQUIRES: lld-available
 /// Test ld with GC.
 
-// RUN: %clang_pgogen -o %t -O3 %S/Inputs/instrprof-value-merge.c -fuse-ld=lld -ffunction-sections -fdata-sections -Wl,--gc-sections
+// RUN: %clang_pgogen -o %t -O3 %S/Inputs/instrprof-value-merge.c -fuse-ld=lld -ffunction-sections -fdata-sections -Wl,--gc-sections -z start-stop-gc
 // RUN: rm -rf %t.profdir
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/default_%m.profraw %run %t
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/default_%m.profraw %run %t
