@@ -3866,7 +3866,7 @@ void mlir::populateStdToLLVMConversionPatterns(
 /// supported LLVM IR type.  In particular, if more than one value is returned,
 /// create an LLVM IR structure type with elements that correspond to each of
 /// the MLIR types converted with `convertType`.
-Type LLVMTypeConverter::packFunctionResults(ArrayRef<Type> types) {
+Type LLVMTypeConverter::packFunctionResults(TypeRange types) {
   assert(!types.empty() && "expected non-empty list of type");
 
   if (types.size() == 1)

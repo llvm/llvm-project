@@ -88,11 +88,10 @@ LogicalResult mlir::verifyCompatibleShape(Type type1, Type type2) {
 
 /// Returns success if the given two arrays have the same number of elements and
 /// each pair wise entries have compatible shape.
-LogicalResult mlir::verifyCompatibleShapes(ArrayRef<Type> types1,
-                                           ArrayRef<Type> types2) {
+LogicalResult mlir::verifyCompatibleShapes(TypeRange types1, TypeRange types2) {
   if (types1.size() != types2.size())
     return failure();
-  for (auto it : zip_first(types1, types2))
+  for (auto it : llvm::zip_first(types1, types2))
     if (failed(verifyCompatibleShape(std::get<0>(it), std::get<1>(it))))
       return failure();
   return success();

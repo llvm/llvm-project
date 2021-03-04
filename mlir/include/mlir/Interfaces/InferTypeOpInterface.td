@@ -50,8 +50,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
                " for an op.",
       /*retTy=*/"bool",
       /*methodName=*/"isCompatibleReturnTypes",
-      /*args=*/(ins "::llvm::ArrayRef<::mlir::Type>":$lhs,
-                    "::llvm::ArrayRef<::mlir::Type>":$rhs),
+      /*args=*/(ins "::mlir::TypeRange":$lhs, "::mlir::TypeRange":$rhs),
       /*methodBody=*/[{
         return ConcreteOp::isCompatibleReturnTypes(lhs, rhs);
       }],

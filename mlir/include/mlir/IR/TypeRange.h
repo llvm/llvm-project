@@ -34,11 +34,11 @@ class ValueTypeRange;
 /// a SmallVector/std::vector. This class should be used in places that are not
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
-class TypeRange
-    : public llvm::detail::indexed_accessor_range_base<
-          TypeRange,
-          llvm::PointerUnion<const Value *, const Type *, OpOperand *>, Type,
-          Type, Type> {
+class TypeRange : public llvm::detail::indexed_accessor_range_base<
+                      TypeRange,
+                      llvm::PointerUnion<const Value *, const Type *,
+                                         OpOperand *, detail::OpResultImpl *>,
+                      Type, Type, Type> {
 public:
   using RangeBaseT::RangeBaseT;
   TypeRange(ArrayRef<Type> types = llvm::None);
@@ -64,7 +64,9 @@ private:
   /// * A pointer to the first element of an array of values.
   /// * A pointer to the first element of an array of types.
   /// * A pointer to the first element of an array of operands.
-  using OwnerT = llvm::PointerUnion<const Value *, const Type *, OpOperand *>;
+  /// * A pointer to the first element of an array of results.
+  using OwnerT = llvm::PointerUnion<const Value *, const Type *, OpOperand *,
+                                    detail::OpResultImpl *>;
 
   /// See `llvm::detail::indexed_accessor_range_base` for details.
   static OwnerT offset_base(OwnerT object, ptrdiff_t index);
@@ -110,6 +112,18 @@ public:
       ValueTypeIterator<typename ValueRangeT::iterator>>::iterator_range;
   template <typename Container>
   ValueTypeRange(Container &&c) : ValueTypeRange(c.begin(), c.end()) {}
+
+  /// Return the type at the given index.
+  Type operator[](size_t index) const {
+    assert(index < size() && "invalid index into type range");
+    return *(this->begin() + index);
+  }
+
+  /// Return the size of this range.
+  size_t size() const { return llvm::size(*this); }
+
+  /// Return first type in the range.
+  Type front() { return (*this)[0]; }
 
   /// Compare this range with another.
   template <typename OtherT>
