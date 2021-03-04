@@ -47,6 +47,18 @@ def LLVM_FMFAttr : DialectAttr<
           "::mlir::LLVM::FMFAttr::get($0, $_builder.getContext())";
 }
 
+def LOptDisableUnroll : I32EnumAttrCase<"disable_unroll", 1>;
+def LOptDisableLICM : I32EnumAttrCase<"disable_licm", 2>;
+def LOptInterleaveCount : I32EnumAttrCase<"interleave_count", 3>;
+
+def LoopOptionCase : I32EnumAttr<
+    "LoopOptionCase",
+    "LLVM loop option",
+    [LOptDisableUnroll, LOptDisableLICM, LOptInterleaveCount
+    ]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
 class LLVM_Builder<string builder> {
   string llvmBuilder = builder;
 }
@@ -825,6 +837,48 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof"> {
 
   let assemblyFormat = "$global_name attr-dict `:` type($res)";
   let verifier = "return ::verify(*this);";
+}
+
+def LLVM_MetadataOp : LLVM_Op<"metadata", [
+   NoRegionArguments, SymbolTable, Symbol
+]> {
+  let arguments = (ins
+    SymbolNameAttr:$sym_name
+  );
+  let summary = "LLVM dialect metadata.";
+  let description = [{
+    llvm.metadata op defines one or more metadata nodes. Currently the
+    llvm.access_group metadata op is supported.
+
+    Example:
+      llvm.metadata @metadata {
+        llvm.access_group @group1
+        llvm.access_group @group2
+        llvm.return
+      }
+  }];
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "$sym_name attr-dict-with-keyword $body";
+}
+
+def LLVM_AccessGroupMetadataOp : LLVM_Op<"access_group", [
+  HasParent<"MetadataOp">, Symbol
+]> {
+  let arguments = (ins
+    SymbolNameAttr:$sym_name
+  );
+  let summary = "LLVM dialect access group metadata.";
+  let description = [{
+    Defines an access group metadata that can be attached to any instruction
+    that potentially accesses memory. The access group may be attached to a
+    memory accessing instruction via the `llvm.access.group` metadata and
+    a branch instruction in the loop latch block via the
+    `llvm.loop.parallel_accesses` metadata.
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#llvm-access-group-metadata
+  }];
+  let assemblyFormat = "$sym_name attr-dict";
 }
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
