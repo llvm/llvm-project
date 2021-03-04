@@ -169,6 +169,12 @@ void test_char(char c, signed char s, unsigned char u, uint8_t n) {
 
   NSLog(@"%@", 'abcd'); // expected-warning{{format specifies type 'id' but the argument has type 'int'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:13}:"%d"
+
+  NSLog(@"%hhd", 'a'); // expected-warning{{format specifies type 'char' but the argument has type 'int'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:15}:"%d"
+
+  NSLog(@"%hhu", 'a'); // expected-warning{{format specifies type 'unsigned char' but the argument has type 'int'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:15}:"%d"
 }
 
 void multichar_constants_false_negative() {
