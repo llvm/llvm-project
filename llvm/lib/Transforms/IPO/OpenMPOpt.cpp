@@ -703,8 +703,8 @@ private:
         // Emit a load instruction and replace the use of the output value
         // with it.
         for (Instruction *UsrI : OutsideUsers) {
-          LoadInst *LoadI = new LoadInst(I.getType(), AllocaI,
-                                         I.getName() + ".seq.output.load", UsrI);
+          LoadInst *LoadI = new LoadInst(
+              I.getType(), AllocaI, I.getName() + ".seq.output.load", UsrI);
           UsrI->replaceUsesOfWith(&I, LoadI);
         }
       }
@@ -1955,8 +1955,8 @@ struct AAICVTrackerFunction : public AAICVTracker {
     if (CalledFunction->isDeclaration())
       return nullptr;
 
-    const auto &ICVTrackingAA =
-        A.getAAFor<AAICVTracker>(*this, IRPosition::callsite_returned(*CB));
+    const auto &ICVTrackingAA = A.getAAFor<AAICVTracker>(
+        *this, IRPosition::callsite_returned(*CB), DepClassTy::REQUIRED);
 
     if (ICVTrackingAA.isAssumedTracked())
       return ICVTrackingAA.getUniqueReplacementValue(ICV);
@@ -2072,7 +2072,7 @@ struct AAICVTrackerFunctionReturned : AAICVTracker {
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     const auto &ICVTrackingAA = A.getAAFor<AAICVTracker>(
-        *this, IRPosition::function(*getAnchorScope()));
+        *this, IRPosition::function(*getAnchorScope()), DepClassTy::REQUIRED);
 
     if (!ICVTrackingAA.isAssumedTracked())
       return indicatePessimisticFixpoint();
@@ -2155,7 +2155,7 @@ struct AAICVTrackerCallSite : AAICVTracker {
 
   ChangeStatus updateImpl(Attributor &A) override {
     const auto &ICVTrackingAA = A.getAAFor<AAICVTracker>(
-        *this, IRPosition::function(*getAnchorScope()));
+        *this, IRPosition::function(*getAnchorScope()), DepClassTy::REQUIRED);
 
     // We don't have any information, so we assume it changes the ICV.
     if (!ICVTrackingAA.isAssumedTracked())
@@ -2211,7 +2211,8 @@ struct AAICVTrackerCallSiteReturned : AAICVTracker {
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     const auto &ICVTrackingAA = A.getAAFor<AAICVTracker>(
-        *this, IRPosition::returned(*getAssociatedFunction()));
+        *this, IRPosition::returned(*getAssociatedFunction()),
+        DepClassTy::REQUIRED);
 
     // We don't have any information, so we assume it changes the ICV.
     if (!ICVTrackingAA.isAssumedTracked())

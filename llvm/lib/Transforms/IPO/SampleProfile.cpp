@@ -536,6 +536,11 @@ ErrorOr<uint64_t> SampleProfileLoader::getProbeWeight(const Instruction &Inst) {
   if (!Probe)
     return std::error_code();
 
+  // Ignore danling probes since they are logically deleted and should not
+  // consume any profile samples.
+  if (Probe->isDangling())
+    return std::error_code();
+
   const FunctionSamples *FS = findFunctionSamples(Inst);
   if (!FS)
     return std::error_code();

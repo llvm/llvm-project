@@ -65,6 +65,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -1121,6 +1122,12 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     if (MDNode *LoopMD = TI->getMetadata(LoopMDKind))
       for (BasicBlock *Pred : predecessors(BB))
         Pred->getTerminator()->setMetadata(LoopMDKind, LoopMD);
+
+  // For AutoFDO, since BB is going to be removed, we won't be able to sample
+  // it. To avoid assigning a zero weight for BB, move all its pseudo probes
+  // into Succ and mark them dangling. This should allow the counts inference a
+  // chance to get a more reasonable weight for BB.
+  moveAndDanglePseudoProbes(BB, &*Succ->getFirstInsertionPt());
 
   // Everything that jumped to BB now goes to Succ.
   BB->replaceAllUsesWith(Succ);
@@ -2795,6 +2802,13 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
   // TODO: Extend llvm.dbg.value to take more than one SSA Value (PR39141) to
   // encode predicated DIExpressions that yield different results on different
   // code paths.
+
+  // A hoisted conditional probe should be treated as dangling so that it will
+  // not be over-counted when the samples collected on the non-conditional path
+  // are counted towards the conditional path. We leave it for the counts
+  // inference algorithm to figure out a proper count for a danglng probe.
+  moveAndDanglePseudoProbes(BB, InsertPt);
+
   for (BasicBlock::iterator II = BB->begin(), IE = BB->end(); II != IE;) {
     Instruction *I = &*II;
     I->dropUnknownNonDebugMetadata();

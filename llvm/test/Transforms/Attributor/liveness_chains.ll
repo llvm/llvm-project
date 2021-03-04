@@ -37,7 +37,7 @@ define i32 @chain_alive(i32 %arg) {
 ; CHECK: Function Attrs: nounwind readonly
 ; CHECK-LABEL: define {{[^@]+}}@chain_alive
 ; CHECK-SAME: (i32 [[ARG:%.*]]) [[ATTR0:#.*]] {
-; CHECK-NEXT:    [[INIT:%.*]] = call i32 @source() [[ATTR2:#.*]]
+; CHECK-NEXT:    [[INIT:%.*]] = call i32 @source() [[ATTR0]]
 ; CHECK-NEXT:    [[V0:%.*]] = add i32 [[ARG]], [[INIT]]
 ; CHECK-NEXT:    [[V1:%.*]] = add i32 [[INIT]], [[V0]]
 ; CHECK-NEXT:    [[V2:%.*]] = add i32 [[V0]], [[V1]]

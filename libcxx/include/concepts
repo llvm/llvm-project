@@ -210,6 +210,15 @@ concept unsigned_integral = integral<_Tp> && !signed_integral<_Tp>;
 template<class _Tp>
 concept floating_point = is_floating_point_v<_Tp>;
 
+// [concept.assignable]
+template<class _Lhs, class _Rhs>
+concept assignable_from =
+  is_lvalue_reference_v<_Lhs> &&
+  common_reference_with<const remove_reference_t<_Lhs>&, const remove_reference_t<_Rhs>&> &&
+  requires (_Lhs __lhs, _Rhs&& __rhs) {
+    { __lhs = _VSTD::forward<_Rhs>(__rhs) } -> same_as<_Lhs>;
+  };
+
 // [concept.destructible]
 
 template<class _Tp>

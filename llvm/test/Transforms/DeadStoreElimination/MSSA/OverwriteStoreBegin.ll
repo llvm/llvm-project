@@ -234,12 +234,13 @@ entry:
   ret void
 }
 
-define void @dontwrite2to9(i32* nocapture %p) {
-; CHECK-LABEL: @dontwrite2to9(
+define void @write2to10(i32* nocapture %p) {
+; CHECK-LABEL: @write2to10(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[P3:%.*]] = bitcast i32* [[ARRAYIDX0]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[P3]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[P3]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP0]], i8 0, i64 28, i1 false)
 ; CHECK-NEXT:    [[P4:%.*]] = bitcast i32* [[P]] to i16*
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i16, i16* [[P4]], i64 1
 ; CHECK-NEXT:    [[P5:%.*]] = bitcast i16* [[ARRAYIDX2]] to i64*
@@ -257,12 +258,13 @@ entry:
   ret void
 }
 
-define void @dontwrite2to9_atomic(i32* nocapture %p) {
-; CHECK-LABEL: @dontwrite2to9_atomic(
+define void @write2to10_atomic(i32* nocapture %p) {
+; CHECK-LABEL: @write2to10_atomic(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[P3:%.*]] = bitcast i32* [[ARRAYIDX0]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 4 [[P3]], i8 0, i64 32, i32 4)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[P3]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 4 [[TMP0]], i8 0, i64 28, i32 4)
 ; CHECK-NEXT:    [[P4:%.*]] = bitcast i32* [[P]] to i16*
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i16, i16* [[P4]], i64 1
 ; CHECK-NEXT:    [[P5:%.*]] = bitcast i16* [[ARRAYIDX2]] to i64*
@@ -391,3 +393,55 @@ entry:
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture, i8, i64, i32) nounwind
 
+define void @ow_begin_align1(i8* nocapture %p) {
+; CHECK-LABEL: @ow_begin_align1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[P1]], i64 7
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP0]], i8 0, i64 25, i1 false)
+; CHECK-NEXT:    [[P2:%.*]] = bitcast i8* [[P]] to i64*
+; CHECK-NEXT:    store i64 1, i64* [[P2]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds i8, i8* %p, i64 1
+  call void @llvm.memset.p0i8.i64(i8* align 1 %p1, i8 0, i64 32, i1 false)
+  %p2 = bitcast i8* %p to i64*
+  store i64 1, i64* %p2, align 1
+  ret void
+}
+
+define void @ow_end_align4(i8* nocapture %p) {
+; CHECK-LABEL: @ow_end_align4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[P1]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP0]], i8 0, i64 28, i1 false)
+; CHECK-NEXT:    [[P2:%.*]] = bitcast i8* [[P]] to i64*
+; CHECK-NEXT:    store i64 1, i64* [[P2]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds i8, i8* %p, i64 1
+  call void @llvm.memset.p0i8.i64(i8* align 4 %p1, i8 0, i64 32, i1 false)
+  %p2 = bitcast i8* %p to i64*
+  store i64 1, i64* %p2, align 1
+  ret void
+}
+
+define void @ow_end_align8(i8* nocapture %p) {
+; CHECK-LABEL: @ow_end_align8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[P1]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    [[P2:%.*]] = bitcast i8* [[P]] to i64*
+; CHECK-NEXT:    store i64 1, i64* [[P2]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds i8, i8* %p, i64 1
+  call void @llvm.memset.p0i8.i64(i8* align 8 %p1, i8 0, i64 32, i1 false)
+  %p2 = bitcast i8* %p to i64*
+  store i64 1, i64* %p2, align 1
+  ret void
+}
