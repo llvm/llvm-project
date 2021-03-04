@@ -462,7 +462,7 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
         BasicBlock *Succ = BI->getSuccessor(0);
         if (
             // The terminator must be the only non-phi instruction in BB.
-            BB.getFirstNonPHIOrDbg()->isTerminator() &&
+            BB.getFirstNonPHIOrDbg(true)->isTerminator() &&
             // Don't alter Loop headers and latches to ensure another pass can
             // detect and transform nested loops later.
             !LoopHeaders.count(&BB) && !LoopHeaders.count(Succ) &&

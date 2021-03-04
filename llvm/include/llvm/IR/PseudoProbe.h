@@ -81,12 +81,17 @@ struct PseudoProbe {
   uint32_t Type;
   uint32_t Attr;
   float Factor;
+
+  bool isDangling() const {
+    return Attr & (uint32_t)PseudoProbeAttributes::Dangling;
+  }
 };
 
 Optional<PseudoProbe> extractProbe(const Instruction &Inst);
 
 void setProbeDistributionFactor(Instruction &Inst, float Factor);
 
+bool moveAndDanglePseudoProbes(BasicBlock *From, Instruction *To);
 } // end namespace llvm
 
 #endif // LLVM_IR_PSEUDOPROBE_H

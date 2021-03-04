@@ -96,4 +96,38 @@ void setProbeDistributionFactor(Instruction &Inst, float Factor) {
     }
   }
 }
+
+void addPseudoProbeAttribute(PseudoProbeInst &Inst,
+                             PseudoProbeAttributes Attr) {
+  IRBuilder<> Builder(&Inst);
+  uint32_t OldAttr = Inst.getAttributes()->getZExtValue();
+  uint32_t NewAttr = OldAttr | (uint32_t)Attr;
+  if (OldAttr != NewAttr)
+    Inst.replaceUsesOfWith(Inst.getAttributes(), Builder.getInt32(NewAttr));
+}
+
+/// A block emptied (i.e., with all instructions moved out of it) won't be
+/// sampled at run time. In such cases, AutoFDO will be informed of zero samples
+/// collected for the block. This is not accurate and could lead to misleading
+/// weights assigned for the block. A way to mitigate that is to treat such
+/// block as having unknown counts in the AutoFDO profile loader and allow the
+/// counts inference tool a chance to calculate a relatively reasonable weight
+/// for it. This can be done by moving all pseudo probes in the emptied block
+/// i.e, /c From, to before /c To and tag them dangling. Note that this is
+/// not needed for dead blocks which really have a zero weight. It's per
+/// transforms to decide whether to call this function or not.
+bool moveAndDanglePseudoProbes(BasicBlock *From, Instruction *To) {
+  SmallVector<PseudoProbeInst *, 4> ToBeMoved;
+  for (auto &I : *From) {
+    if (auto *II = dyn_cast<PseudoProbeInst>(&I)) {
+      addPseudoProbeAttribute(*II, PseudoProbeAttributes::Dangling);
+      ToBeMoved.push_back(II);
+    }
+  }
+
+  for (auto *I : ToBeMoved)
+    I->moveBefore(To);
+
+  return !ToBeMoved.empty();
+}
 } // namespace llvm
