@@ -8,7 +8,7 @@ module @external {
   // CHECK:   func @pdl_generated_rewriter(%[[ROOT:.*]]: !pdl.operation, %[[INPUT:.*]]: !pdl.value)
   // CHECK:     pdl_interp.apply_rewrite "rewriter" [true](%[[INPUT]] : !pdl.value) on %[[ROOT]]
   pdl.pattern : benefit(1) {
-    %input = pdl.input
+    %input = pdl.operand
     %root = pdl.operation "foo.op"(%input)
     pdl.rewrite %root with "rewriter"[true](%input : !pdl.value)
   }
@@ -59,7 +59,7 @@ module @operation_operands {
   // CHECK:     %[[OPERAND1:.*]] = pdl_interp.get_result 0 of %[[NEWOP]]
   // CHECK:     pdl_interp.create_operation "foo.op2"(%[[OPERAND1]])
   pdl.pattern : benefit(1) {
-    %operand = pdl.input
+    %operand = pdl.operand
     %root = pdl.operation "foo.op"(%operand)
     pdl.rewrite %root {
       %type = pdl.type : i32
@@ -80,7 +80,7 @@ module @operation_operands {
   // CHECK:     %[[OPERAND1:.*]] = pdl_interp.get_result 0 of %[[NEWOP]]
   // CHECK:     pdl_interp.create_operation "foo.op2"(%[[OPERAND1]])
   pdl.pattern : benefit(1) {
-    %operand = pdl.input
+    %operand = pdl.operand
     %root = pdl.operation "foo.op"(%operand)
     pdl.rewrite %root {
       %type = pdl.type : i32
