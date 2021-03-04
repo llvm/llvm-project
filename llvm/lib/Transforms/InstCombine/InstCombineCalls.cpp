@@ -1672,99 +1672,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     AC.updateAffectedValues(II);
     break;
   }
-  case Intrinsic::experimental_gc_statepoint: {
-    GCStatepointInst &GCSP = *cast<GCStatepointInst>(II);
-    SmallPtrSet<Value *, 32> LiveGcValues;
-    for (const GCRelocateInst *Reloc : GCSP.getGCRelocates()) {
-      GCRelocateInst &GCR = *const_cast<GCRelocateInst *>(Reloc);
-
-      // Remove the relocation if unused.
-      if (GCR.use_empty()) {
-        eraseInstFromFunction(GCR);
-        continue;
-      }
-
-      Value *DerivedPtr = GCR.getDerivedPtr();
-      Value *BasePtr = GCR.getBasePtr();
-
-      // Undef is undef, even after relocation.
-      if (isa<UndefValue>(DerivedPtr) || isa<UndefValue>(BasePtr)) {
-        replaceInstUsesWith(GCR, UndefValue::get(GCR.getType()));
-        eraseInstFromFunction(GCR);
-        continue;
-      }
-
-      if (auto *PT = dyn_cast<PointerType>(GCR.getType())) {
-        // The relocation of null will be null for most any collector.
-        // TODO: provide a hook for this in GCStrategy.  There might be some
-        // weird collector this property does not hold for.
-        if (isa<ConstantPointerNull>(DerivedPtr)) {
-          // Use null-pointer of gc_relocate's type to replace it.
-          replaceInstUsesWith(GCR, ConstantPointerNull::get(PT));
-          eraseInstFromFunction(GCR);
-          continue;
-        }
-
-        // isKnownNonNull -> nonnull attribute
-        if (!GCR.hasRetAttr(Attribute::NonNull) &&
-            isKnownNonZero(DerivedPtr, DL, 0, &AC, II, &DT)) {
-          GCR.addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
-          // We discovered new fact, re-check users.
-          Worklist.pushUsersToWorkList(GCR);
-        }
-      }
-
-      // If we have two copies of the same pointer in the statepoint argument
-      // list, canonicalize to one.  This may let us common gc.relocates.
-      if (GCR.getBasePtr() == GCR.getDerivedPtr() &&
-          GCR.getBasePtrIndex() != GCR.getDerivedPtrIndex()) {
-        auto *OpIntTy = GCR.getOperand(2)->getType();
-        GCR.setOperand(2, ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
-      }
-
-      // TODO: bitcast(relocate(p)) -> relocate(bitcast(p))
-      // Canonicalize on the type from the uses to the defs
-
-      // TODO: relocate((gep p, C, C2, ...)) -> gep(relocate(p), C, C2, ...)
-      LiveGcValues.insert(BasePtr);
-      LiveGcValues.insert(DerivedPtr);
-    }
-    Optional<OperandBundleUse> Bundle =
-        GCSP.getOperandBundle(LLVMContext::OB_gc_live);
-    unsigned NumOfGCLives = LiveGcValues.size();
-    if (!Bundle.hasValue() || NumOfGCLives == Bundle->Inputs.size())
-      break;
-    // We can reduce the size of gc live bundle.
-    DenseMap<Value *, unsigned> Val2Idx;
-    std::vector<Value *> NewLiveGc;
-    for (unsigned I = 0, E = Bundle->Inputs.size(); I < E; ++I) {
-      Value *V = Bundle->Inputs[I];
-      if (Val2Idx.count(V))
-        continue;
-      if (LiveGcValues.count(V)) {
-        Val2Idx[V] = NewLiveGc.size();
-        NewLiveGc.push_back(V);
-      } else
-        Val2Idx[V] = NumOfGCLives;
-    }
-    // Update all gc.relocates
-    for (const GCRelocateInst *Reloc : GCSP.getGCRelocates()) {
-      GCRelocateInst &GCR = *const_cast<GCRelocateInst *>(Reloc);
-      Value *BasePtr = GCR.getBasePtr();
-      assert(Val2Idx.count(BasePtr) && Val2Idx[BasePtr] != NumOfGCLives &&
-             "Missed live gc for base pointer");
-      auto *OpIntTy1 = GCR.getOperand(1)->getType();
-      GCR.setOperand(1, ConstantInt::get(OpIntTy1, Val2Idx[BasePtr]));
-      Value *DerivedPtr = GCR.getDerivedPtr();
-      assert(Val2Idx.count(DerivedPtr) && Val2Idx[DerivedPtr] != NumOfGCLives &&
-             "Missed live gc for derived pointer");
-      auto *OpIntTy2 = GCR.getOperand(2)->getType();
-      GCR.setOperand(2, ConstantInt::get(OpIntTy2, Val2Idx[DerivedPtr]));
-    }
-    // Create new statepoint instruction.
-    OperandBundleDef NewBundle("gc-live", NewLiveGc);
-    return CallBase::Create(II, NewBundle);
-  }
   case Intrinsic::experimental_guard: {
     // Is this guard followed by another guard?  We scan forward over a small
     // fixed window of instructions to handle common cases with conditions
@@ -1900,6 +1807,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   }
+  // Some intrinsics (like experimental_gc_statepoint) can be used in invoke
+  // context, so it is handled in visitCallBase and we should trigger it.
   return visitCallBase(*II);
 }
 
@@ -2261,6 +2170,104 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
 
   if (isAllocLikeFn(&Call, &TLI))
     return visitAllocSite(Call);
+
+  // Handle intrinsics which can be used in both call and invoke context.
+  switch (Call.getIntrinsicID()) {
+  case Intrinsic::experimental_gc_statepoint: {
+    GCStatepointInst &GCSP = *cast<GCStatepointInst>(&Call);
+    SmallPtrSet<Value *, 32> LiveGcValues;
+    for (const GCRelocateInst *Reloc : GCSP.getGCRelocates()) {
+      GCRelocateInst &GCR = *const_cast<GCRelocateInst *>(Reloc);
+
+      // Remove the relocation if unused.
+      if (GCR.use_empty()) {
+        eraseInstFromFunction(GCR);
+        continue;
+      }
+
+      Value *DerivedPtr = GCR.getDerivedPtr();
+      Value *BasePtr = GCR.getBasePtr();
+
+      // Undef is undef, even after relocation.
+      if (isa<UndefValue>(DerivedPtr) || isa<UndefValue>(BasePtr)) {
+        replaceInstUsesWith(GCR, UndefValue::get(GCR.getType()));
+        eraseInstFromFunction(GCR);
+        continue;
+      }
+
+      if (auto *PT = dyn_cast<PointerType>(GCR.getType())) {
+        // The relocation of null will be null for most any collector.
+        // TODO: provide a hook for this in GCStrategy.  There might be some
+        // weird collector this property does not hold for.
+        if (isa<ConstantPointerNull>(DerivedPtr)) {
+          // Use null-pointer of gc_relocate's type to replace it.
+          replaceInstUsesWith(GCR, ConstantPointerNull::get(PT));
+          eraseInstFromFunction(GCR);
+          continue;
+        }
+
+        // isKnownNonNull -> nonnull attribute
+        if (!GCR.hasRetAttr(Attribute::NonNull) &&
+            isKnownNonZero(DerivedPtr, DL, 0, &AC, &Call, &DT)) {
+          GCR.addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+          // We discovered new fact, re-check users.
+          Worklist.pushUsersToWorkList(GCR);
+        }
+      }
+
+      // If we have two copies of the same pointer in the statepoint argument
+      // list, canonicalize to one.  This may let us common gc.relocates.
+      if (GCR.getBasePtr() == GCR.getDerivedPtr() &&
+          GCR.getBasePtrIndex() != GCR.getDerivedPtrIndex()) {
+        auto *OpIntTy = GCR.getOperand(2)->getType();
+        GCR.setOperand(2, ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
+      }
+
+      // TODO: bitcast(relocate(p)) -> relocate(bitcast(p))
+      // Canonicalize on the type from the uses to the defs
+
+      // TODO: relocate((gep p, C, C2, ...)) -> gep(relocate(p), C, C2, ...)
+      LiveGcValues.insert(BasePtr);
+      LiveGcValues.insert(DerivedPtr);
+    }
+    Optional<OperandBundleUse> Bundle =
+        GCSP.getOperandBundle(LLVMContext::OB_gc_live);
+    unsigned NumOfGCLives = LiveGcValues.size();
+    if (!Bundle.hasValue() || NumOfGCLives == Bundle->Inputs.size())
+      break;
+    // We can reduce the size of gc live bundle.
+    DenseMap<Value *, unsigned> Val2Idx;
+    std::vector<Value *> NewLiveGc;
+    for (unsigned I = 0, E = Bundle->Inputs.size(); I < E; ++I) {
+      Value *V = Bundle->Inputs[I];
+      if (Val2Idx.count(V))
+        continue;
+      if (LiveGcValues.count(V)) {
+        Val2Idx[V] = NewLiveGc.size();
+        NewLiveGc.push_back(V);
+      } else
+        Val2Idx[V] = NumOfGCLives;
+    }
+    // Update all gc.relocates
+    for (const GCRelocateInst *Reloc : GCSP.getGCRelocates()) {
+      GCRelocateInst &GCR = *const_cast<GCRelocateInst *>(Reloc);
+      Value *BasePtr = GCR.getBasePtr();
+      assert(Val2Idx.count(BasePtr) && Val2Idx[BasePtr] != NumOfGCLives &&
+             "Missed live gc for base pointer");
+      auto *OpIntTy1 = GCR.getOperand(1)->getType();
+      GCR.setOperand(1, ConstantInt::get(OpIntTy1, Val2Idx[BasePtr]));
+      Value *DerivedPtr = GCR.getDerivedPtr();
+      assert(Val2Idx.count(DerivedPtr) && Val2Idx[DerivedPtr] != NumOfGCLives &&
+             "Missed live gc for derived pointer");
+      auto *OpIntTy2 = GCR.getOperand(2)->getType();
+      GCR.setOperand(2, ConstantInt::get(OpIntTy2, Val2Idx[DerivedPtr]));
+    }
+    // Create new statepoint instruction.
+    OperandBundleDef NewBundle("gc-live", NewLiveGc);
+    return CallBase::Create(&Call, NewBundle);
+  }
+  default: { break; }
+  }
 
   return Changed ? &Call : nullptr;
 }

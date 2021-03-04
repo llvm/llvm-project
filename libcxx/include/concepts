@@ -180,6 +180,23 @@ concept common_reference_with =
   convertible_to<_Tp, common_reference_t<_Tp, _Up>> &&
   convertible_to<_Up, common_reference_t<_Tp, _Up>>;
 
+// [concept.common]
+template<class _Tp, class _Up>
+concept common_with =
+  same_as<common_type_t<_Tp, _Up>, common_type_t<_Up, _Tp>> &&
+  requires {
+    static_cast<common_type_t<_Tp, _Up>>(_VSTD::declval<_Tp>());
+    static_cast<common_type_t<_Tp, _Up>>(_VSTD::declval<_Up>());
+  } &&
+  common_reference_with<
+    add_lvalue_reference_t<const _Tp>,
+    add_lvalue_reference_t<const _Up>> &&
+  common_reference_with<
+    add_lvalue_reference_t<common_type_t<_Tp, _Up>>,
+    common_reference_t<
+      add_lvalue_reference_t<const _Tp>,
+      add_lvalue_reference_t<const _Up>>>;
+
 // [concepts.arithmetic], arithmetic concepts
 template<class _Tp>
 concept integral = is_integral_v<_Tp>;
