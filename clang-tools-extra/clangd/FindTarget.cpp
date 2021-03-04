@@ -12,6 +12,7 @@
 #include "support/Logger.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
@@ -633,6 +634,61 @@ llvm::SmallVector<ReferenceLoc> refInDecl(const Decl *D,
                                   /*IsDecl=*/false,
                                   {DG->getDeducedTemplate()}});
     }
+
+    void VisitObjCMethodDecl(const ObjCMethodDecl *OMD) {
+      // The name may have several tokens, we can only report the first.
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OMD->getSelectorStartLoc(),
+                                  /*IsDecl=*/true,
+                                  {OMD}});
+    }
+
+    void visitProtocolList(
+        llvm::iterator_range<ObjCProtocolList::iterator> Protocols,
+        llvm::iterator_range<const SourceLocation *> Locations) {
+      for (const auto &P : llvm::zip(Protocols, Locations)) {
+        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                    std::get<1>(P),
+                                    /*IsDecl=*/false,
+                                    {std::get<0>(P)}});
+      }
+    }
+
+    void VisitObjCInterfaceDecl(const ObjCInterfaceDecl *OID) {
+      if (OID->isThisDeclarationADefinition())
+        visitProtocolList(OID->protocols(), OID->protocol_locs());
+      Base::VisitObjCInterfaceDecl(OID); // Visit the interface's name.
+    }
+
+    void VisitObjCCategoryDecl(const ObjCCategoryDecl *OCD) {
+      visitProtocolList(OCD->protocols(), OCD->protocol_locs());
+      // getLocation is the extended class's location, not the category's.
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OCD->getLocation(),
+                                  /*IsDecl=*/false,
+                                  {OCD->getClassInterface()}});
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OCD->getCategoryNameLoc(),
+                                  /*IsDecl=*/true,
+                                  {OCD}});
+    }
+
+    void VisitObjCCategoryImplDecl(const ObjCCategoryImplDecl *OCID) {
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OCID->getLocation(),
+                                  /*IsDecl=*/false,
+                                  {OCID->getClassInterface()}});
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OCID->getCategoryNameLoc(),
+                                  /*IsDecl=*/true,
+                                  {OCID->getCategoryDecl()}});
+    }
+
+    void VisitObjCProtocolDecl(const ObjCProtocolDecl *OPD) {
+      if (OPD->isThisDeclarationADefinition())
+        visitProtocolList(OPD->protocols(), OPD->protocol_locs());
+      Base::VisitObjCProtocolDecl(OPD); // Visit the protocol's name.
+    }
   };
 
   Visitor V{Resolver};
@@ -709,6 +765,14 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
           /*IsDecl=*/false,
           // Select the getter, setter, or @property depending on the call.
           explicitReferenceTargets(DynTypedNode::create(*E), {}, Resolver)});
+    }
+
+    void VisitObjCMessageExpr(const ObjCMessageExpr *E) {
+      // The name may have several tokens, we can only report the first.
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  E->getSelectorStartLoc(),
+                                  /*IsDecl=*/false,
+                                  {E->getMethodDecl()}});
     }
 
     void VisitDesignatedInitExpr(const DesignatedInitExpr *DIE) {
@@ -824,6 +888,16 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
                          /*IsDecl=*/false,
                          {L.getTypedefNameDecl()}};
     }
+
+    void VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc L) {
+      Ref = ReferenceLoc{NestedNameSpecifierLoc(),
+                         L.getNameLoc(),
+                         /*IsDecl=*/false,
+                         {L.getIFaceDecl()}};
+    }
+
+    // FIXME: add references to protocols in ObjCObjectTypeLoc and maybe
+    // ObjCObjectPointerTypeLoc.
   };
 
   Visitor V{Resolver};
