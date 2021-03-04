@@ -173,6 +173,13 @@ concept convertible_to =
     static_cast<_To>(__f());
   };
 
+// [concept.commonref]
+template<class _Tp, class _Up>
+concept common_reference_with =
+  same_as<common_reference_t<_Tp, _Up>, common_reference_t<_Up, _Tp>> &&
+  convertible_to<_Tp, common_reference_t<_Tp, _Up>> &&
+  convertible_to<_Up, common_reference_t<_Tp, _Up>>;
+
 // [concepts.arithmetic], arithmetic concepts
 template<class _Tp>
 concept integral = is_integral_v<_Tp>;
