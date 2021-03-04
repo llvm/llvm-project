@@ -70,7 +70,6 @@ extern "C" {
 #include <mach/mach_time.h>
 #include <mach/vm_statistics.h>
 #include <malloc/malloc.h>
-#include <os/lock.h>
 #include <os/log.h>
 #include <pthread.h>
 #include <sched.h>
@@ -507,42 +506,22 @@ void MprotectMallocZones(void *addr, int prot) {
 }
 
 BlockingMutex::BlockingMutex() {
-  // Initialize all member variables to 0
   internal_memset(this, 0, sizeof(*this));
-  static_assert(sizeof(os_unfair_lock_t) <= sizeof(opaque_storage_),
-                "Not enough space in opaque storage to use os_unfair_lock");
-  static_assert(sizeof(OSSpinLock) <= sizeof(opaque_storage_),
-                "Not enough space in opaque storage to use OSSpinLock");
 }
 
-static bool UnfairLockAvailable() { return bool(os_unfair_lock_lock); }
-static_assert(OS_UNFAIR_LOCK_INIT._os_unfair_lock_opaque == 0,
-              "os_unfair_lock does not initialize to 0");
-static_assert(OS_SPINLOCK_INIT == 0, "OSSpinLock does not initialize to 0");
-
 void BlockingMutex::Lock() {
+  CHECK(sizeof(OSSpinLock) <= sizeof(opaque_storage_));
+  CHECK_EQ(OS_SPINLOCK_INIT, 0);
   CHECK_EQ(owner_, 0);
-  if (UnfairLockAvailable()) {
-    os_unfair_lock_lock((os_unfair_lock *)&opaque_storage_);
-  } else {
-    OSSpinLockLock((OSSpinLock *)&opaque_storage_);
-  }
+  OSSpinLockLock((OSSpinLock*)&opaque_storage_);
 }
 
 void BlockingMutex::Unlock() {
-  if (UnfairLockAvailable()) {
-    os_unfair_lock_unlock((os_unfair_lock *)&opaque_storage_);
-  } else {
-    OSSpinLockUnlock((OSSpinLock *)&opaque_storage_);
-  }
+  OSSpinLockUnlock((OSSpinLock*)&opaque_storage_);
 }
 
 void BlockingMutex::CheckLocked() {
-  if (UnfairLockAvailable()) {
-    CHECK_NE((*(os_unfair_lock *)&opaque_storage_)._os_unfair_lock_opaque, 0);
-  } else {
-    CHECK_NE(*(OSSpinLock *)&opaque_storage_, 0);
-  }
+  CHECK_NE(*(OSSpinLock*)&opaque_storage_, 0);
 }
 
 u64 NanoTime() {
