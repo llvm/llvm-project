@@ -1048,7 +1048,7 @@ void InlineSpiller::spillAroundUses(Register Reg) {
       // Modify DBG_VALUE now that the value is in a spill slot.
       MachineBasicBlock *MBB = MI->getParent();
       LLVM_DEBUG(dbgs() << "Modifying debug info due to spill:\t" << *MI);
-      buildDbgValueForSpill(*MBB, MI, *MI, StackSlot, Reg);
+      buildDbgValueForSpill(*MBB, MI, *MI, StackSlot);
       MBB->erase(MI);
       continue;
     }

@@ -1301,8 +1301,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
     break;
 
-  case AArch64::DBG_VALUE:
-  case AArch64::DBG_VALUE_LIST: {
+  case AArch64::DBG_VALUE: {
     if (isVerbose() && OutStreamer->hasRawTextSupport()) {
       SmallString<128> TmpStr;
       raw_svector_ostream OS(TmpStr);
@@ -1323,7 +1322,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       OutStreamer->emitCFIBKeyFrame();
       return;
     }
-    }
+  }
 
   case AArch64::AUT:
   case AArch64::AUTPAC: {
