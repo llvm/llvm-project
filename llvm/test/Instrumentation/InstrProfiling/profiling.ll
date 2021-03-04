@@ -1,10 +1,14 @@
-; RUN: opt < %s -mtriple=x86_64 -passes=instrprof -S | FileCheck %s --check-prefixes=CHECK,ELF
+; RUN: opt < %s -mtriple=x86_64 -passes=instrprof -S | FileCheck %s --check-prefixes=CHECK,ELF,ELF_GENERIC
+; RUN: opt < %s -mtriple=x86_64-linux -passes=instrprof -S | FileCheck %s --check-prefixes=CHECK,ELF_LINUX
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -passes=instrprof -S | FileCheck %s --check-prefixes=CHECK,MACHO
 ; RUN: opt < %s -mtriple=x86_64-windows -passes=instrprof -S | FileCheck %s --check-prefixes=CHECK,WIN
 
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -instrprof -S | FileCheck %s
 
-; CHECK: @__llvm_profile_runtime = external global i32
+; ELF_GENERIC: @__llvm_profile_runtime = external global i32
+; ELF_LINUX-NOT: @__llvm_profile_runtime
+; MACHO: @__llvm_profile_runtime = external global i32
+; WIN: @__llvm_profile_runtime = external global i32
 
 @__profn_foo = hidden constant [3 x i8] c"foo"
 ; CHECK-NOT: __profn_foo
@@ -53,3 +57,13 @@ declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 ; ELF:   @llvm.compiler.used = appending global {{.*}} @__llvm_profile_runtime_user {{.*}} @__profd_foo {{.*}} @__profd_bar {{.*}} @__profd_baz
 ; MACHO: @llvm.used = appending global {{.*}} @__llvm_profile_runtime_user {{.*}} @__profd_foo {{.*}} @__profd_bar {{.*}} @__profd_baz
 ; WIN:   @llvm.used = appending global {{.*}} @__llvm_profile_runtime_user {{.*}} @__profd_foo {{.*}} @__profd_bar {{.*}} @__profd_baz
+
+; ELF_GENERIC:      define internal void @__llvm_profile_register_functions() unnamed_addr {
+; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i8*))
+; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_bar to i8*))
+; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_baz to i8*))
+; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_names_function(i8* getelementptr inbounds ([19 x i8], [19 x i8]* @__llvm_prf_nm, i32 0, i32 0), i64 19)
+; ELF_GENERIC-NEXT:   ret void
+; ELF_GENERIC-NEXT: }
+
+; ELF_LINUX-NOT: @__llvm_profile_register_functions()
