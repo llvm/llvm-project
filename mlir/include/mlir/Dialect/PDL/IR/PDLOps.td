@@ -52,7 +52,7 @@ def PDL_ApplyConstraintOp
   }];
 
   let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_PositionalValue>:$args,
+                       Variadic<PDL_AnyType>:$args,
                        OptionalAttr<ArrayAttr>:$constParams);
   let assemblyFormat = [{
     $name ($constParams^)? `(` $args `:` type($args) `)` attr-dict
@@ -136,9 +136,9 @@ def PDL_CreateNativeOp
   }];
 
   let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_PositionalValue>:$args,
+                       Variadic<PDL_AnyType>:$args,
                        OptionalAttr<ArrayAttr>:$constParams);
-  let results = (outs PDL_PositionalValue:$result);
+  let results = (outs PDL_AnyType:$result);
   let assemblyFormat = [{
     $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `:` type($result)
     attr-dict
@@ -403,7 +403,7 @@ def PDL_RewriteOp : PDL_Op<"rewrite", [
 
   let arguments = (ins PDL_Operation:$root,
                        OptionalAttr<StrAttr>:$name,
-                       Variadic<PDL_PositionalValue>:$externalArgs,
+                       Variadic<PDL_AnyType>:$externalArgs,
                        OptionalAttr<ArrayAttr>:$externalConstParams);
   let regions = (region AnyRegion:$body);
   let assemblyFormat = [{

@@ -113,7 +113,7 @@ def PDLInterp_ApplyConstraintOp : PDLInterp_PredicateOp<"apply_constraint"> {
   }];
 
   let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_PositionalValue>:$args,
+                       Variadic<PDL_AnyType>:$args,
                        OptionalAttr<ArrayAttr>:$constParams);
   let assemblyFormat = [{
     $name ($constParams^)? `(` $args `:` type($args) `)` attr-dict `->`
@@ -151,7 +151,7 @@ def PDLInterp_ApplyRewriteOp : PDLInterp_Op<"apply_rewrite"> {
   }];
   let arguments = (ins StrAttr:$name,
                        PDL_Operation:$root,
-                       Variadic<PDL_PositionalValue>:$args,
+                       Variadic<PDL_AnyType>:$args,
                        OptionalAttr<ArrayAttr>:$constParams);
   let assemblyFormat = [{
     $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `on` $root
@@ -178,8 +178,7 @@ def PDLInterp_AreEqualOp
     ```
   }];
 
-  let arguments = (ins PDL_PositionalValue:$lhs,
-                       PDL_PositionalValue:$rhs);
+  let arguments = (ins PDL_AnyType:$lhs, PDL_AnyType:$rhs);
   let assemblyFormat = "operands `:` type($lhs) attr-dict `->` successors";
 }
 
@@ -374,9 +373,9 @@ def PDLInterp_CreateNativeOp : PDLInterp_Op<"create_native"> {
   }];
 
   let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_PositionalValue>:$args,
+                       Variadic<PDL_AnyType>:$args,
                        OptionalAttr<ArrayAttr>:$constParams);
-  let results = (outs PDL_PositionalValue:$result);
+  let results = (outs PDL_AnyType:$result);
   let assemblyFormat = [{
     $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `:` type($result)
     attr-dict
@@ -691,7 +690,7 @@ def PDLInterp_IsNotNullOp
     ```
   }];
 
-  let arguments = (ins PDL_PositionalValue:$value);
+  let arguments = (ins PDL_AnyType:$value);
   let assemblyFormat = "$value `:` type($value) attr-dict `->` successors";
 }
 
@@ -716,7 +715,7 @@ def PDLInterp_RecordMatchOp
     ```
   }];
 
-  let arguments = (ins Variadic<PDL_PositionalValue>:$inputs,
+  let arguments = (ins Variadic<PDL_AnyType>:$inputs,
                        Variadic<PDL_Operation>:$matchedOps,
                        SymbolRefAttr:$rewriter,
                        OptionalAttr<StrAttr>:$rootKind,
