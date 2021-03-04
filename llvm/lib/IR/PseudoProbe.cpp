@@ -15,6 +15,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include <unordered_set>
 
 using namespace llvm;
 
@@ -129,5 +130,41 @@ bool moveAndDanglePseudoProbes(BasicBlock *From, Instruction *To) {
     I->moveBefore(To);
 
   return !ToBeMoved.empty();
+}
+
+/// Same dangling probes in one blocks are redundant since they all have the
+/// same semantic that is to rely on the counts inference too to get reasonable
+/// count for the same original block. Therefore, there's no need to keep
+/// multiple copies of them.
+bool removeRedundantPseudoProbes(BasicBlock *Block) {
+
+  auto Hash = [](const PseudoProbeInst *I) {
+    return std::hash<uint64_t>()(I->getFuncGuid()->getZExtValue()) ^
+           std::hash<uint64_t>()(I->getIndex()->getZExtValue());
+  };
+
+  auto IsEqual = [](const PseudoProbeInst *Left, const PseudoProbeInst *Right) {
+    return Left->getFuncGuid() == Right->getFuncGuid() &&
+           Left->getIndex() == Right->getIndex() &&
+           Left->getAttributes() == Right->getAttributes() &&
+           Left->getDebugLoc() == Right->getDebugLoc();
+  };
+
+  SmallVector<PseudoProbeInst *, 4> ToBeRemoved;
+  std::unordered_set<PseudoProbeInst *, decltype(Hash), decltype(IsEqual)>
+      DanglingProbes(0, Hash, IsEqual);
+
+  for (auto &I : *Block) {
+    if (auto *II = dyn_cast<PseudoProbeInst>(&I)) {
+      if (II->getAttributes()->getZExtValue() &
+          (uint32_t)PseudoProbeAttributes::Dangling)
+        if (!DanglingProbes.insert(II).second)
+          ToBeRemoved.push_back(II);
+    }
+  }
+
+  for (auto *I : ToBeRemoved)
+    I->eraseFromParent();
+  return !ToBeRemoved.empty();
 }
 } // namespace llvm
