@@ -762,19 +762,6 @@ private:
     // Generate begin loop code directly for infinite and while loops.
     auto &eval = getEval();
     bool unstructuredContext = eval.lowerAsUnstructured();
-    // If loop is part of an OpenMP Construct then the OpenMP dialect
-    // workshare loop operation has already been created. Only the
-    // body needs to be created here.
-    const Fortran::parser::OpenMPConstruct *ompConstruct{nullptr};
-    if (eval.parentConstruct) {
-      ompConstruct =
-          eval.parentConstruct->getIf<Fortran::parser::OpenMPConstruct>();
-      if (std::get_if<Fortran::parser::OpenMPLoopConstruct>(&ompConstruct->u)) {
-        for (auto &e : eval.getNestedEvaluations())
-          genFIR(e, unstructuredContext);
-        return;
-      }
-    }
     auto &doStmtEval = eval.getFirstNestedEvaluation();
     auto *doStmt = doStmtEval.getIf<Fortran::parser::NonLabelDoStmt>();
     const auto &loopControl =
@@ -1158,9 +1145,20 @@ private:
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
     auto insertPt = builder->saveInsertionPoint();
+    localSymbols.pushScope();
     genOpenMPConstruct(*this, getEval(), omp);
-    for (auto &e : getEval().getNestedEvaluations())
+    // If loop is part of an OpenMP Construct then the OpenMP dialect
+    // workshare loop operation has already been created. Only the
+    // body needs to be created here and the do_loop can be skipped.
+    Fortran::lower::pft::Evaluation *curEval{nullptr};
+    if (std::get_if<Fortran::parser::OpenMPLoopConstruct>(&omp.u)) {
+      curEval = &getEval().getFirstNestedEvaluation();
+    } else {
+      curEval = &getEval();
+    }
+    for (auto &e : curEval->getNestedEvaluations())
       genFIR(e);
+    localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
   }
 
