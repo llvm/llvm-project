@@ -55,3 +55,13 @@ catch:
 exit:
   ret void
 }
+
+; CHECK-LABEL: @test_clang_arc_attachedcall(
+; CHECK: tail call i8* @getObj(
+
+declare i8* @getObj()
+
+define i8* @test_clang_arc_attachedcall() {
+  %r = call i8* @getObj() [ "clang.arc.attachedcall"(i64 0) ]
+  ret i8* %r
+}

@@ -250,7 +250,8 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls,
       // Special-case operand bundle "ptrauth".
       bool IsNoTail =
           CI->isNoTailCall() || CI->hasOperandBundlesOtherThan(
-                                    {LLVMContext::OB_ptrauth});
+                                    {LLVMContext::OB_ptrauth,
+                                     LLVMContext::OB_clang_arc_attachedcall});
 
       if (!IsNoTail && CI->doesNotAccessMemory()) {
         // A call to a readnone function whose arguments are all things computed
