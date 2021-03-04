@@ -45,4 +45,4 @@ int f1(int x) {       // CHECK-NEXT: File 0, [[@LINE]]:15 -> [[@LINE+8]]:2 = #0
     co_return x + 42; // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:4 -> [[@LINE-1]]:10 = (#0 - #1)
   }                   // CHECK-NEXT: File 0, [[@LINE-2]]:10 -> [[@LINE]]:4 = (#0 - #1)
   co_return x;        // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:4 -> [[@LINE]]:3 = #1
-} // CHECK-NEXT: File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:14 = #1
+} // CHECK-NEXT: File 0, [[@LINE-1]]:3 -> [[@LINE]]:2 = #1
