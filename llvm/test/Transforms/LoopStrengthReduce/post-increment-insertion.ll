@@ -13,13 +13,13 @@ define i32 @test_01(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[LEN:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i32, i32* [[SCEVGEP]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[SCEVGEP1]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 -1
@@ -145,13 +145,13 @@ define i32 @test_04(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[LEN:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = sub i64 [[IV]], 1
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i32, i32* [[SCEVGEP]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[SCEVGEP1]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
+; CHECK-NEXT:    [[IV_NEXT]] = sub i64 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 -1
