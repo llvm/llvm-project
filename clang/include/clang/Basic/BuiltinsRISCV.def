@@ -11,8 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(BUILTIN) && !defined(RISCVV_BUILTIN)
-#define RISCVV_BUILTIN(ID, TYPE, ATTRS) BUILTIN(ID, TYPE, ATTRS)
+#if defined(BUILTIN) && !defined(TARGET_BUILTIN)
+#   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
+#if defined(TARGET_BUILTIN) && !defined(RISCVV_BUILTIN)
+#define RISCVV_BUILTIN(ID, TYPE, ATTRS) TARGET_BUILTIN(ID, TYPE, ATTRS, "experimental-v")
 #endif
 
 RISCVV_BUILTIN(__builtin_rvv_vadd_vv_i8m1_vl, "q8Scq8Scq8Scz", "n")
