@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/errno.h"
-#include "src/errno/llvmlibc_errno.h"
 #include "src/math/sincosf.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/CPP/Array.h"
@@ -19,6 +17,7 @@
 #include "utils/UnitTest/Test.h"
 #include <math.h>
 
+#include <errno.h>
 #include <stdint.h>
 
 using __llvm_libc::fputil::isNegativeQuietNaN;
@@ -33,52 +32,52 @@ using __llvm_libc::testing::sdcomp26094Values;
 namespace mpfr = __llvm_libc::testing::mpfr;
 
 TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
-  llvmlibc_errno = 0;
+  errno = 0;
   float sin, cos;
 
   __llvm_libc::sincosf(valueFromBits(BitPatterns::aQuietNaN), &sin, &cos);
   EXPECT_TRUE(isQuietNaN(cos));
   EXPECT_TRUE(isQuietNaN(sin));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_EQ(errno, 0);
 
   __llvm_libc::sincosf(valueFromBits(BitPatterns::aNegativeQuietNaN), &sin,
                        &cos);
   EXPECT_TRUE(isNegativeQuietNaN(cos));
   EXPECT_TRUE(isNegativeQuietNaN(sin));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_EQ(errno, 0);
 
   __llvm_libc::sincosf(valueFromBits(BitPatterns::aSignallingNaN), &sin, &cos);
   EXPECT_TRUE(isQuietNaN(cos));
   EXPECT_TRUE(isQuietNaN(sin));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_EQ(errno, 0);
 
   __llvm_libc::sincosf(valueFromBits(BitPatterns::aNegativeSignallingNaN), &sin,
                        &cos);
   EXPECT_TRUE(isNegativeQuietNaN(cos));
   EXPECT_TRUE(isNegativeQuietNaN(sin));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_EQ(errno, 0);
 
   __llvm_libc::sincosf(valueFromBits(BitPatterns::zero), &sin, &cos);
   EXPECT_EQ(BitPatterns::one, valueAsBits(cos));
   EXPECT_EQ(BitPatterns::zero, valueAsBits(sin));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_EQ(errno, 0);
 
   __llvm_libc::sincosf(valueFromBits(BitPatterns::negZero), &sin, &cos);
   EXPECT_EQ(BitPatterns::one, valueAsBits(cos));
   EXPECT_EQ(BitPatterns::negZero, valueAsBits(sin));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_EQ(errno, 0);
 
-  llvmlibc_errno = 0;
+  errno = 0;
   __llvm_libc::sincosf(valueFromBits(BitPatterns::inf), &sin, &cos);
   EXPECT_TRUE(isQuietNaN(cos));
   EXPECT_TRUE(isQuietNaN(sin));
-  EXPECT_EQ(llvmlibc_errno, EDOM);
+  EXPECT_EQ(errno, EDOM);
 
-  llvmlibc_errno = 0;
+  errno = 0;
   __llvm_libc::sincosf(valueFromBits(BitPatterns::negInf), &sin, &cos);
   EXPECT_TRUE(isQuietNaN(cos));
   EXPECT_TRUE(isQuietNaN(sin));
-  EXPECT_EQ(llvmlibc_errno, EDOM);
+  EXPECT_EQ(errno, EDOM);
 }
 
 TEST(LlvmLibcSinCosfTest, InFloatRange) {
