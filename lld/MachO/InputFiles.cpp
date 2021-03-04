@@ -669,7 +669,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
       const auto *c = reinterpret_cast<const dylib_command *>(cmd);
       StringRef reexportPath =
           reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
-      loadReexport(reexportPath, umbrella, nullptr);
+      loadReexport(reexportPath, exportingFile, nullptr);
     }
 
     // FIXME: What about LC_LOAD_UPWARD_DYLIB, LC_LAZY_LOAD_DYLIB,
@@ -741,7 +741,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
       interface.getParent() == nullptr ? &interface : interface.getParent();
 
   for (InterfaceFileRef intfRef : interface.reexportedLibraries())
-    loadReexport(intfRef.getInstallName(), umbrella, topLevel);
+    loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)
