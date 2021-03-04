@@ -15,6 +15,41 @@
 
 #include "mlir/ExecutionEngine/RunnerUtils.h"
 
+extern "C" void
+_mlir_ciface_print_memref_shape_i8(UnrankedMemRefType<int8_t> *M) {
+  std::cout << "Unranked Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<int8_t>(*M));
+  std::cout << "\n";
+}
+
+extern "C" void
+_mlir_ciface_print_memref_shape_i32(UnrankedMemRefType<int32_t> *M) {
+  std::cout << "Unranked Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<int32_t>(*M));
+  std::cout << "\n";
+}
+
+extern "C" void
+_mlir_ciface_print_memref_shape_i64(UnrankedMemRefType<int64_t> *M) {
+  std::cout << "Unranked Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<int64_t>(*M));
+  std::cout << "\n";
+}
+
+extern "C" void
+_mlir_ciface_print_memref_shape_f32(UnrankedMemRefType<float> *M) {
+  std::cout << "Unranked Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<float>(*M));
+  std::cout << "\n";
+}
+
+extern "C" void
+_mlir_ciface_print_memref_shape_f64(UnrankedMemRefType<double> *M) {
+  std::cout << "Unranked Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<double>(*M));
+  std::cout << "\n";
+}
+
 extern "C" void _mlir_ciface_print_memref_vector_4x4xf32(
     StridedMemRefType<Vector2D<4, 4, float>, 2> *M) {
   impl::printMemRef(*M);
