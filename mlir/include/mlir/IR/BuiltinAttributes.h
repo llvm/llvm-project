@@ -16,21 +16,29 @@
 
 namespace mlir {
 class AffineMap;
+class FlatSymbolRefAttr;
 class FunctionType;
 class IntegerSet;
 class Location;
 class ShapedType;
+} // namespace mlir
 
+//===----------------------------------------------------------------------===//
+// Tablegen Attribute Declarations
+//===----------------------------------------------------------------------===//
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/IR/BuiltinAttributes.h.inc"
+
+//===----------------------------------------------------------------------===//
+// C++ Attribute Declarations
+//===----------------------------------------------------------------------===//
+
+namespace mlir {
 namespace detail {
 
-struct AffineMapAttributeStorage;
-struct ArrayAttributeStorage;
-struct DictionaryAttributeStorage;
 struct IntegerAttributeStorage;
-struct IntegerSetAttributeStorage;
 struct FloatAttributeStorage;
-struct OpaqueAttributeStorage;
-struct StringAttributeStorage;
 struct SymbolRefAttributeStorage;
 struct TypeAttributeStorage;
 
@@ -40,139 +48,6 @@ struct DenseStringElementsAttributeStorage;
 struct OpaqueElementsAttributeStorage;
 struct SparseElementsAttributeStorage;
 } // namespace detail
-
-//===----------------------------------------------------------------------===//
-// AffineMapAttr
-//===----------------------------------------------------------------------===//
-
-class AffineMapAttr
-    : public Attribute::AttrBase<AffineMapAttr, Attribute,
-                                 detail::AffineMapAttributeStorage> {
-public:
-  using Base::Base;
-  using ValueType = AffineMap;
-
-  static AffineMapAttr get(AffineMap value);
-
-  AffineMap getValue() const;
-};
-
-//===----------------------------------------------------------------------===//
-// ArrayAttr
-//===----------------------------------------------------------------------===//
-
-/// Array attributes are lists of other attributes.  They are not necessarily
-/// type homogenous given that attributes don't, in general, carry types.
-class ArrayAttr : public Attribute::AttrBase<ArrayAttr, Attribute,
-                                             detail::ArrayAttributeStorage> {
-public:
-  using Base::Base;
-  using ValueType = ArrayRef<Attribute>;
-
-  static ArrayAttr get(MLIRContext *context, ArrayRef<Attribute> value);
-
-  ArrayRef<Attribute> getValue() const;
-  Attribute operator[](unsigned idx) const;
-
-  /// Support range iteration.
-  using iterator = llvm::ArrayRef<Attribute>::iterator;
-  iterator begin() const { return getValue().begin(); }
-  iterator end() const { return getValue().end(); }
-  size_t size() const { return getValue().size(); }
-  bool empty() const { return size() == 0; }
-
-private:
-  /// Class for underlying value iterator support.
-  template <typename AttrTy>
-  class attr_value_iterator final
-      : public llvm::mapped_iterator<ArrayAttr::iterator,
-                                     AttrTy (*)(Attribute)> {
-  public:
-    explicit attr_value_iterator(ArrayAttr::iterator it)
-        : llvm::mapped_iterator<ArrayAttr::iterator, AttrTy (*)(Attribute)>(
-              it, [](Attribute attr) { return attr.cast<AttrTy>(); }) {}
-    AttrTy operator*() const { return (*this->I).template cast<AttrTy>(); }
-  };
-
-public:
-  template <typename AttrTy>
-  iterator_range<attr_value_iterator<AttrTy>> getAsRange() {
-    return llvm::make_range(attr_value_iterator<AttrTy>(begin()),
-                            attr_value_iterator<AttrTy>(end()));
-  }
-  template <typename AttrTy, typename UnderlyingTy = typename AttrTy::ValueType>
-  auto getAsValueRange() {
-    return llvm::map_range(getAsRange<AttrTy>(), [](AttrTy attr) {
-      return static_cast<UnderlyingTy>(attr.getValue());
-    });
-  }
-};
-
-//===----------------------------------------------------------------------===//
-// DictionaryAttr
-//===----------------------------------------------------------------------===//
-
-/// Dictionary attribute is an attribute that represents a sorted collection of
-/// named attribute values. The elements are sorted by name, and each name must
-/// be unique within the collection.
-class DictionaryAttr
-    : public Attribute::AttrBase<DictionaryAttr, Attribute,
-                                 detail::DictionaryAttributeStorage> {
-public:
-  using Base::Base;
-  using ValueType = ArrayRef<NamedAttribute>;
-
-  /// Construct a dictionary attribute with the provided list of named
-  /// attributes. This method assumes that the provided list is unordered. If
-  /// the caller can guarantee that the attributes are ordered by name,
-  /// getWithSorted should be used instead.
-  static DictionaryAttr get(MLIRContext *context,
-                            ArrayRef<NamedAttribute> value);
-
-  /// Construct a dictionary with an array of values that is known to already be
-  /// sorted by name and uniqued.
-  static DictionaryAttr getWithSorted(ArrayRef<NamedAttribute> value,
-                                      MLIRContext *context);
-
-  ArrayRef<NamedAttribute> getValue() const;
-
-  /// Return the specified attribute if present, null otherwise.
-  Attribute get(StringRef name) const;
-  Attribute get(Identifier name) const;
-
-  /// Return the specified named attribute if present, None otherwise.
-  Optional<NamedAttribute> getNamed(StringRef name) const;
-  Optional<NamedAttribute> getNamed(Identifier name) const;
-
-  /// Support range iteration.
-  using iterator = llvm::ArrayRef<NamedAttribute>::iterator;
-  iterator begin() const;
-  iterator end() const;
-  bool empty() const { return size() == 0; }
-  size_t size() const;
-
-  /// Sorts the NamedAttributes in the array ordered by name as expected by
-  /// getWithSorted and returns whether the values were sorted.
-  /// Requires: uniquely named attributes.
-  static bool sort(ArrayRef<NamedAttribute> values,
-                   SmallVectorImpl<NamedAttribute> &storage);
-
-  /// Sorts the NamedAttributes in the array ordered by name as expected by
-  /// getWithSorted in place on an array and returns whether the values needed
-  /// to be sorted.
-  /// Requires: uniquely named attributes.
-  static bool sortInPlace(SmallVectorImpl<NamedAttribute> &array);
-
-  /// Returns an entry with a duplicate name in `array`, if it exists, else
-  /// returns llvm::None. If `isSorted` is true, the array is assumed to be
-  /// sorted else it will be sorted in place before finding the duplicate entry.
-  static Optional<NamedAttribute>
-  findDuplicate(SmallVectorImpl<NamedAttribute> &array, bool isSorted);
-
-private:
-  /// Return empty dictionary.
-  static DictionaryAttr getEmpty(MLIRContext *context);
-};
 
 //===----------------------------------------------------------------------===//
 // FloatAttr
@@ -267,109 +142,8 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// IntegerSetAttr
+// FlatSymbolRefAttr
 //===----------------------------------------------------------------------===//
-
-class IntegerSetAttr
-    : public Attribute::AttrBase<IntegerSetAttr, Attribute,
-                                 detail::IntegerSetAttributeStorage> {
-public:
-  using Base::Base;
-  using ValueType = IntegerSet;
-
-  static IntegerSetAttr get(IntegerSet value);
-
-  IntegerSet getValue() const;
-};
-
-//===----------------------------------------------------------------------===//
-// OpaqueAttr
-//===----------------------------------------------------------------------===//
-
-/// Opaque attributes represent attributes of non-registered dialects. These are
-/// attribute represented in their raw string form, and can only usefully be
-/// tested for attribute equality.
-class OpaqueAttr : public Attribute::AttrBase<OpaqueAttr, Attribute,
-                                              detail::OpaqueAttributeStorage> {
-public:
-  using Base::Base;
-  using Base::getChecked;
-
-  /// Get or create a new OpaqueAttr with the provided dialect and string data.
-  static OpaqueAttr get(Identifier dialect, StringRef attrData, Type type);
-
-  /// Get or create a new OpaqueAttr with the provided dialect and string data.
-  /// If the given identifier is not a valid namespace for a dialect, then a
-  /// null attribute is returned.
-  static OpaqueAttr getChecked(function_ref<InFlightDiagnostic()> emitError,
-                               Identifier dialect, StringRef attrData,
-                               Type type);
-
-  /// Returns the dialect namespace of the opaque attribute.
-  Identifier getDialectNamespace() const;
-
-  /// Returns the raw attribute data of the opaque attribute.
-  StringRef getAttrData() const;
-
-  /// Verify the construction of an opaque attribute.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              Identifier dialect, StringRef attrData,
-                              Type type);
-};
-
-//===----------------------------------------------------------------------===//
-// StringAttr
-//===----------------------------------------------------------------------===//
-
-class StringAttr : public Attribute::AttrBase<StringAttr, Attribute,
-                                              detail::StringAttributeStorage> {
-public:
-  using Base::Base;
-  using ValueType = StringRef;
-
-  /// Get an instance of a StringAttr with the given string.
-  static StringAttr get(MLIRContext *context, StringRef bytes);
-
-  /// Get an instance of a StringAttr with the given string and Type.
-  static StringAttr get(StringRef bytes, Type type);
-
-  StringRef getValue() const;
-};
-
-//===----------------------------------------------------------------------===//
-// SymbolRefAttr
-//===----------------------------------------------------------------------===//
-
-class FlatSymbolRefAttr;
-
-/// A symbol reference attribute represents a symbolic reference to another
-/// operation.
-class SymbolRefAttr
-    : public Attribute::AttrBase<SymbolRefAttr, Attribute,
-                                 detail::SymbolRefAttributeStorage> {
-public:
-  using Base::Base;
-
-  /// Construct a symbol reference for the given value name.
-  static FlatSymbolRefAttr get(MLIRContext *ctx, StringRef value);
-
-  /// Construct a symbol reference for the given value name, and a set of nested
-  /// references that are further resolve to a nested symbol.
-  static SymbolRefAttr get(MLIRContext *ctx, StringRef value,
-                           ArrayRef<FlatSymbolRefAttr> references);
-
-  /// Returns the name of the top level symbol reference, i.e. the root of the
-  /// reference path.
-  StringRef getRootReference() const;
-
-  /// Returns the name of the fully resolved symbol, i.e. the leaf of the
-  /// reference path.
-  StringRef getLeafReference() const;
-
-  /// Returns the set of nested references representing the path to the symbol
-  /// nested under the root reference.
-  ArrayRef<FlatSymbolRefAttr> getNestedReferences() const;
-};
 
 /// A symbol reference with a reference path containing a single element. This
 /// is used to refer to an operation within the current symbol table.
@@ -395,35 +169,6 @@ public:
 private:
   using SymbolRefAttr::get;
   using SymbolRefAttr::getNestedReferences;
-};
-
-//===----------------------------------------------------------------------===//
-// Type
-//===----------------------------------------------------------------------===//
-
-class TypeAttr : public Attribute::AttrBase<TypeAttr, Attribute,
-                                            detail::TypeAttributeStorage> {
-public:
-  using Base::Base;
-  using ValueType = Type;
-
-  static TypeAttr get(Type value);
-
-  Type getValue() const;
-};
-
-//===----------------------------------------------------------------------===//
-// UnitAttr
-//===----------------------------------------------------------------------===//
-
-/// Unit attributes are attributes that hold no specific value and are given
-/// meaning by their existence.
-class UnitAttr
-    : public Attribute::AttrBase<UnitAttr, Attribute, AttributeStorage> {
-public:
-  using Base::Base;
-
-  static UnitAttr get(MLIRContext *context);
 };
 
 //===----------------------------------------------------------------------===//
@@ -1459,6 +1204,10 @@ auto ElementsAttr::getValues() const -> iterator_range<T> {
 }
 
 } // end namespace mlir.
+
+//===----------------------------------------------------------------------===//
+// Attribute Utilities
+//===----------------------------------------------------------------------===//
 
 namespace llvm {
 
