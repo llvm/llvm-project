@@ -309,7 +309,7 @@ public:
     }
     return true;
   }
-  uint32_t size() override { return getMayUseShortThunk() ? 8 : 20; }
+  uint32_t size() override { return getMayUseShortThunk() ? 8 : 32; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
 
@@ -330,7 +330,7 @@ private:
 class PPC64R12SetupStub final : public Thunk {
 public:
   PPC64R12SetupStub(Symbol &dest) : Thunk(dest, 0) { alignment = 16; }
-  uint32_t size() override { return 16; }
+  uint32_t size() override { return 32; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
 };
@@ -345,7 +345,7 @@ public:
 class PPC64PCRelPLTStub final : public Thunk {
 public:
   PPC64PCRelPLTStub(Symbol &dest) : Thunk(dest, 0) { alignment = 16; }
-  uint32_t size() override { return 16; }
+  uint32_t size() override { return 32; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
   bool isCompatibleWith(const InputSection &isec,
@@ -362,7 +362,7 @@ public:
 // used.
 class PPC64LongBranchThunk : public Thunk {
 public:
-  uint32_t size() override { return 16; }
+  uint32_t size() override { return 32; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
   bool isCompatibleWith(const InputSection &isec,
@@ -406,7 +406,7 @@ public:
       : Thunk(dest, addend) {
     alignment = 16;
   }
-  uint32_t size() override { return 16; }
+  uint32_t size() override { return 32; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
   bool isCompatibleWith(const InputSection &isec,
@@ -922,17 +922,34 @@ bool PPC64PltCallStub::isCompatibleWith(const InputSection &isec,
 
 void PPC64R2SaveStub::writeTo(uint8_t *buf) {
   const int64_t offset = computeOffset();
-  write32(buf + 0, 0xf8410018);                         // std  r2,24(r1)
+  write32(buf + 0, 0xf8410018); // std  r2,24(r1)
   // The branch offset needs to fit in 26 bits.
   if (getMayUseShortThunk()) {
     write32(buf + 4, 0x48000000 | (offset & 0x03fffffc)); // b    <offset>
   } else if (isInt<34>(offset)) {
-    const uint64_t paddi = PADDI_R12_NO_DISP |
-                           (((offset >> 16) & 0x3ffff) << 32) |
-                           (offset & 0xffff);
-    writePrefixedInstruction(buf + 4, paddi); // paddi r12, 0, func@pcrel, 1
-    write32(buf + 12, MTCTR_R12);             // mtctr r12
-    write32(buf + 16, BCTR);                  // bctr
+    int nextInstOffset;
+    if (!config->Power10Stub) {
+      uint64_t tocOffset = destination.getVA() - getPPC64TocBase();
+      if (tocOffset >> 16 > 0) {
+        const uint64_t addi = ADDI_R12_TO_R12_NO_DISP | (tocOffset & 0xffff);
+        const uint64_t addis = ADDIS_R12_TO_R2_NO_DISP | ((tocOffset >> 16) & 0xffff);
+        write32(buf + 4, addis); // addis r12, r2 , top of offset
+        write32(buf + 8, addi);  // addi  r12, r12, bottom of offset
+        nextInstOffset = 12;
+      } else {
+        const uint64_t addi = ADDI_R12_TO_R2_NO_DISP | (tocOffset & 0xffff);
+        write32(buf + 4, addi); // addi r12, r2, offset
+        nextInstOffset = 8;
+      }
+    } else {
+      const uint64_t paddi = PADDI_R12_NO_DISP |
+                             (((offset >> 16) & 0x3ffff) << 32) |
+                             (offset & 0xffff);
+      writePrefixedInstruction(buf + 4, paddi); // paddi r12, 0, func@pcrel, 1
+      nextInstOffset = 12;
+    }
+    write32(buf + nextInstOffset, MTCTR_R12); // mtctr r12
+    write32(buf + nextInstOffset + 4, BCTR);  // bctr
   } else {
     in.ppc64LongBranchTarget->addEntry(&destination, addend);
     const int64_t offsetFromTOC =
@@ -952,12 +969,25 @@ void PPC64R12SetupStub::writeTo(uint8_t *buf) {
   int64_t offset = destination.getVA() - getThunkTargetSym()->getVA();
   if (!isInt<34>(offset))
     reportRangeError(buf, offset, 34, destination, "R12 setup stub offset");
-  uint64_t paddi = PADDI_R12_NO_DISP | (((offset >> 16) & 0x3ffff) << 32) |
-                   (offset & 0xffff);
 
-  writePrefixedInstruction(buf + 0, paddi); // paddi r12, 0, func@pcrel, 1
-  write32(buf + 8, MTCTR_R12);              // mtctr r12
-  write32(buf + 12, BCTR);                  // bctr
+  int nextInstOffset;
+  if (!config->Power10Stub) {
+    uint32_t off = destination.getVA(addend) - getThunkTargetSym()->getVA() - 8;
+    write32(buf + 0, 0x7c0802a6);                      // mflr r12
+    write32(buf + 4, 0x429f0005);                      // bcl 20,31,.+4
+    write32(buf + 8, 0x7d6802a6);                      // mflr r11
+    write32(buf + 12, 0x7d8803a6);                     // mtlr r12
+    write32(buf + 16, 0x3d8b0000 | computeHiBits(off));// addis r12,r11,off@ha
+    write32(buf + 20, 0x398c0000 | (off & 0xffff));    // addi r12,r12,off@l
+    nextInstOffset = 24;
+  } else {
+    uint64_t paddi = PADDI_R12_NO_DISP | (((offset >> 16) & 0x3ffff) << 32) |
+                     (offset & 0xffff);
+    writePrefixedInstruction(buf + 0, paddi); // paddi r12, 0, func@pcrel, 1
+    nextInstOffset = 8;
+  }
+  write32(buf + nextInstOffset, MTCTR_R12); // mtctr r12
+  write32(buf + nextInstOffset + 4, BCTR);  // bctr
 }
 
 void PPC64R12SetupStub::addSymbols(ThunkSection &isec) {
@@ -966,16 +996,29 @@ void PPC64R12SetupStub::addSymbols(ThunkSection &isec) {
 }
 
 void PPC64PCRelPLTStub::writeTo(uint8_t *buf) {
+  int nextInstOffset = 0;
   int64_t offset = destination.getGotPltVA() - getThunkTargetSym()->getVA();
-  if (!isInt<34>(offset))
-    reportRangeError(buf, offset, 34, destination,
-                     "PC-relative PLT stub offset");
-  uint64_t pld =
-      PLD_R12_NO_DISP | (((offset >> 16) & 0x3ffff) << 32) | (offset & 0xffff);
 
-  writePrefixedInstruction(buf + 0, pld); // pld r12, func@plt@pcrel
-  write32(buf + 8, MTCTR_R12);            // mtctr r12
-  write32(buf + 12, BCTR);                // bctr
+  if (config->Power10Stub) {
+    if (!isInt<34>(offset))
+      reportRangeError(buf, offset, 34, destination,
+                       "PC-relative PLT stub offset");
+    const uint64_t pld = PLD_R12_NO_DISP | (((offset >> 16) & 0x3ffff) << 32) |
+                   (offset & 0xffff);
+    writePrefixedInstruction(buf + 0, pld); // pld r12, func@plt@pcrel
+    nextInstOffset = 8;
+  } else {
+    uint32_t off = destination.getVA(addend) - getThunkTargetSym()->getVA() - 8;
+    write32(buf + 0, 0x7c0802a6);            // mflr r12
+    write32(buf + 4, 0x429f0005);            // bcl 20,31,.+4
+    write32(buf + 8, 0x7d6802a6);            // mflr r11
+    write32(buf + 12, 0x7d8803a6);           // mtlr r12
+    write32(buf + 16, 0x3d8b0000 | computeHiBits(off)); // addis r12,r11,off@ha
+    write32(buf + 20, 0x398c0000 | (off & 0xffff)); // addi r12,r12,off@l
+    nextInstOffset = 24;
+  }
+  write32(buf + nextInstOffset, MTCTR_R12); // mtctr r12
+  write32(buf + nextInstOffset + 4, BCTR);  // bctr
 }
 
 void PPC64PCRelPLTStub::addSymbols(ThunkSection &isec) {
@@ -1009,12 +1052,25 @@ void PPC64PCRelLongBranchThunk::writeTo(uint8_t *buf) {
   if (!isInt<34>(offset))
     reportRangeError(buf, offset, 34, destination,
                      "PC-relative long branch stub offset");
-  uint64_t paddi = PADDI_R12_NO_DISP | (((offset >> 16) & 0x3ffff) << 32) |
-                   (offset & 0xffff);
 
-  writePrefixedInstruction(buf + 0, paddi); // paddi r12, 0, func@pcrel, 1
-  write32(buf + 8, MTCTR_R12);              // mtctr r12
-  write32(buf + 12, BCTR);                  // bctr
+  int nextInstOffset;
+  if (!config->Power10Stub) {
+    uint32_t off = destination.getVA(addend) - getThunkTargetSym()->getVA() - 8;
+    write32(buf + 0, 0x7c0802a6);                      // mflr r12
+    write32(buf + 4, 0x429f0005);                      // bcl 20,31,.+4
+    write32(buf + 8, 0x7d6802a6);                      // mflr r11
+    write32(buf + 12, 0x7d8803a6);                     // mtlr r12
+    write32(buf + 16, 0x3d8b0000 | computeHiBits(off)); // addis r12,r11,off@ha
+    write32(buf + 20, 0x398c0000 | (off & 0xffff));    // addi r12,r12,off@l
+    nextInstOffset = 24;
+  } else {
+    uint64_t paddi = PADDI_R12_NO_DISP | (((offset >> 16) & 0x3ffff) << 32) |
+                     (offset & 0xffff);
+    writePrefixedInstruction(buf + 0, paddi); // paddi r12, 0, func@pcrel, 1
+    nextInstOffset = 8;
+  }
+  write32(buf + nextInstOffset, MTCTR_R12); // mtctr r12
+  write32(buf + nextInstOffset + 4, BCTR);  // bctr
 }
 
 void PPC64PCRelLongBranchThunk::addSymbols(ThunkSection &isec) {
