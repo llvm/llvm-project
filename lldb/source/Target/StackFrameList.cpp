@@ -522,27 +522,10 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
     SymbolContext unwind_sc = unwind_frame_sp->GetSymbolContext(
         eSymbolContextBlock | eSymbolContextFunction);
     Block *unwind_block = unwind_sc.block;
+    TargetSP target_sp = m_thread.CalculateTarget();
     if (unwind_block) {
-      Address curr_frame_address(unwind_frame_sp->GetFrameCodeAddress());
-      TargetSP target_sp = m_thread.CalculateTarget();
-      // Be sure to adjust the frame address to match the address that was
-      // used to lookup the symbol context above. If we are in the first
-      // concrete frame, then we lookup using the current address, else we
-      // decrement the address by one to get the correct location.
-      if (idx > 0) {
-        if (curr_frame_address.GetOffset() == 0) {
-          // If curr_frame_address points to the first address in a section
-          // then after adjustment it will point to an other section. In that
-          // case resolve the address again to the correct section plus
-          // offset form.
-          addr_t load_addr = curr_frame_address.GetOpcodeLoadAddress(
-              target_sp.get(), AddressClass::eCode);
-          curr_frame_address.SetOpcodeLoadAddress(
-              load_addr - 1, target_sp.get(), AddressClass::eCode);
-        } else {
-          curr_frame_address.Slide(-1);
-        }
-      }
+      Address curr_frame_address(
+          unwind_frame_sp->GetFrameCodeAddressForSymbolication());
 
       SymbolContext next_frame_sc;
       Address next_frame_address;

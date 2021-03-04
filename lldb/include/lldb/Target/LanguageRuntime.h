@@ -183,9 +183,29 @@ public:
   /// asynchronous calls they made, but are part of a logical backtrace that
   /// we want to show the developer because that's how they think of the
   /// program flow.
+  ///
+  /// \param[in] thread
+  ///     The thread that the unwind is happening on.
+  ///
+  /// \param[in] regctx
+  ///     The RegisterContext for the frame we need to create an UnwindPlan.
+  ///     We don't yet have a StackFrame when we're selecting the UnwindPlan.
+  ///
+  /// \param[out] behaves_like_zeroth_frame
+  ///     With normal ABI calls, all stack frames except the zeroth frame need
+  ///     to have the return-pc value backed up by 1 for symbolication purposes.
+  ///     For these LanguageRuntime unwind plans, they may not follow normal ABI
+  ///     calling conventions and the return pc may need to be symbolicated
+  ///     as-is.
+  ///
+  /// \return
+  ///     Returns an UnwindPlan to find the caller frame if it should be used,
+  ///     instead of the UnwindPlan that would normally be used for this
+  ///     function.
   static lldb::UnwindPlanSP
   GetRuntimeUnwindPlan(lldb_private::Thread &thread,
-                       lldb_private::RegisterContext *regctx);
+                       lldb_private::RegisterContext *regctx,
+                       bool &behaves_like_zeroth_frame);
 
 protected:
   // The static GetRuntimeUnwindPlan method above is only implemented in the
@@ -193,7 +213,8 @@ protected:
   // provide one of these UnwindPlans.
   virtual lldb::UnwindPlanSP
   GetRuntimeUnwindPlan(lldb::ProcessSP process_sp,
-                       lldb_private::RegisterContext *regctx) {
+                       lldb_private::RegisterContext *regctx,
+                       bool &behaves_like_zeroth_frame) {
     return lldb::UnwindPlanSP();
   }
 
