@@ -806,7 +806,7 @@ bool MachineOutliner::outline(Module &M,
             if (MOP.isDef()) {
               // Introduce DefRegs set to skip the redundant register.
               DefRegs.insert(MOP.getReg());
-              if (UseRegs.count(MOP.getReg()))
+              if (!MOP.isDead() && UseRegs.count(MOP.getReg()))
                 // Since the regiester is modeled as defined,
                 // it is not necessary to be put in use register set.
                 UseRegs.erase(MOP.getReg());
