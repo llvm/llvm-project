@@ -5,8 +5,8 @@
 # RUN: llvm-nm %t | FileCheck %s
 
 # CHECK-DAG: 0000000010010000 t __long_branch_callee
-# CHECK-DAG: 0000000010010010 T _start
-# CHECK-DAG: 0000000012010008 T callee
+# CHECK-DAG: 0000000010010020 T _start
+# CHECK-DAG: 0000000012010018 T callee
 
 # The bl instruction jumps to the local entry. The distance requires a long branch stub:
 # localentry(callee) - _start = 0x12010008+8 - 0x10010010 = 0x2000000
