@@ -593,7 +593,7 @@ LogicalResult ModuleTranslation::convertDialectAttributes(Operation *op) {
 /// Check whether the module contains only supported ops directly in its body.
 static LogicalResult checkSupportedModuleOps(Operation *m) {
   for (Operation &o : getModuleBody(m).getOperations())
-    if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp>(&o) &&
+    if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp, LLVM::MetadataOp>(&o) &&
         !o.hasTrait<OpTrait::IsTerminator>())
       return o.emitOpError("unsupported module-level operation");
   return success();
@@ -630,6 +630,29 @@ LogicalResult ModuleTranslation::convertFunctions() {
       return failure();
   }
 
+  return success();
+}
+
+llvm::MDNode *
+ModuleTranslation::getAccessGroup(Operation &opInst,
+                                  SymbolRefAttr accessGroupRef) const {
+  auto metadataName = accessGroupRef.getRootReference();
+  auto accessGroupName = accessGroupRef.getLeafReference();
+  auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
+      opInst.getParentOp(), metadataName);
+  auto *accessGroupOp =
+      SymbolTable::lookupNearestSymbolFrom(metadataOp, accessGroupName);
+  return accessGroupMetadataMapping.lookup(accessGroupOp);
+}
+
+LogicalResult ModuleTranslation::createAccessGroupMetadata() {
+  mlirModule->walk([&](LLVM::MetadataOp metadatas) {
+    metadatas.walk([&](LLVM::AccessGroupMetadataOp op) {
+      llvm::LLVMContext &ctx = llvmModule->getContext();
+      llvm::MDNode *accessGroup = llvm::MDNode::getDistinct(ctx, {});
+      accessGroupMetadataMapping.insert({op, accessGroup});
+    });
+  });
   return success();
 }
 
@@ -696,6 +719,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.convertFunctionSignatures()))
     return nullptr;
   if (failed(translator.convertGlobals()))
+    return nullptr;
+  if (failed(translator.createAccessGroupMetadata()))
     return nullptr;
   if (failed(translator.convertFunctions()))
     return nullptr;
