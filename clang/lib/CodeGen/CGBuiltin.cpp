@@ -5823,6 +5823,14 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vrecpsq_v, aarch64_neon_frecps, Add1ArgType),
   NEONMAP2(vrhadd_v, aarch64_neon_urhadd, aarch64_neon_srhadd, Add1ArgType | UnsignedAlts),
   NEONMAP2(vrhaddq_v, aarch64_neon_urhadd, aarch64_neon_srhadd, Add1ArgType | UnsignedAlts),
+  NEONMAP1(vrnd32x_v, aarch64_neon_frint32x, Add1ArgType),
+  NEONMAP1(vrnd32xq_v, aarch64_neon_frint32x, Add1ArgType),
+  NEONMAP1(vrnd32z_v, aarch64_neon_frint32z, Add1ArgType),
+  NEONMAP1(vrnd32zq_v, aarch64_neon_frint32z, Add1ArgType),
+  NEONMAP1(vrnd64x_v, aarch64_neon_frint64x, Add1ArgType),
+  NEONMAP1(vrnd64xq_v, aarch64_neon_frint64x, Add1ArgType),
+  NEONMAP1(vrnd64z_v, aarch64_neon_frint64z, Add1ArgType),
+  NEONMAP1(vrnd64zq_v, aarch64_neon_frint64z, Add1ArgType),
   NEONMAP0(vrndi_v),
   NEONMAP0(vrndiq_v),
   NEONMAP2(vrshl_v, aarch64_neon_urshl, aarch64_neon_srshl, Add1ArgType | UnsignedAlts),
@@ -10538,6 +10546,30 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
               ? Intrinsic::experimental_constrained_trunc
               : Intrinsic::trunc;
     return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vrndz");
+  }
+  case NEON::BI__builtin_neon_vrnd32x_v:
+  case NEON::BI__builtin_neon_vrnd32xq_v: {
+    Ops.push_back(EmitScalarExpr(E->getArg(0)));
+    Int = Intrinsic::aarch64_neon_frint32x;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrnd32x");
+  }
+  case NEON::BI__builtin_neon_vrnd32z_v:
+  case NEON::BI__builtin_neon_vrnd32zq_v: {
+    Ops.push_back(EmitScalarExpr(E->getArg(0)));
+    Int = Intrinsic::aarch64_neon_frint32z;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrnd32z");
+  }
+  case NEON::BI__builtin_neon_vrnd64x_v:
+  case NEON::BI__builtin_neon_vrnd64xq_v: {
+    Ops.push_back(EmitScalarExpr(E->getArg(0)));
+    Int = Intrinsic::aarch64_neon_frint64x;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrnd64x");
+  }
+  case NEON::BI__builtin_neon_vrnd64z_v:
+  case NEON::BI__builtin_neon_vrnd64zq_v: {
+    Ops.push_back(EmitScalarExpr(E->getArg(0)));
+    Int = Intrinsic::aarch64_neon_frint64z;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrnd64z");
   }
   case NEON::BI__builtin_neon_vrnd_v:
   case NEON::BI__builtin_neon_vrndq_v: {
