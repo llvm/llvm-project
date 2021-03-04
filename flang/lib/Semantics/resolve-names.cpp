@@ -3157,6 +3157,13 @@ bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
 // A subprogram declared with SUBROUTINE or FUNCTION
 bool SubprogramVisitor::BeginSubprogram(
     const parser::Name &name, Symbol::Flag subpFlag, bool hasModulePrefix) {
+  if (hasModulePrefix && currScope().IsGlobal()) { // C1547
+    Say(name,
+        "'%s' is a MODULE procedure which must be declared within a "
+        "MODULE or SUBMODULE"_err_en_US);
+    return false;
+  }
+
   if (hasModulePrefix && !inInterfaceBlock() &&
       !IsSeparateModuleProcedureInterface(
           FindSymbol(currScope().parent(), name))) {
