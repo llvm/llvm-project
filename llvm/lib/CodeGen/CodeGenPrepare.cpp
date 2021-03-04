@@ -3884,13 +3884,15 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
   // In this case, we may reuse the IV increment instead of the IV Phi to
   // achieve the following advantages:
   // 1. If IV step matches the offset, we will have no need in the offset;
+  // 2. Even if they don't match, we will reduce the overlap of living IV
+  //    and IV increment, that will potentially lead to better register
+  //    assignment.
   if (AddrMode.BaseOffs) {
     if (auto IVStep = GetConstantStep(ScaleReg)) {
       Instruction *IVInc = IVStep->first;
       APInt Step = IVStep->second;
       APInt Offset = Step * AddrMode.Scale;
-      if (Offset.isSignedIntN(64) && TestAddrMode.BaseOffs == Offset &&
-          DT.dominates(IVInc, MemoryInst)) {
+      if (Offset.isSignedIntN(64) && DT.dominates(IVInc, MemoryInst)) {
         TestAddrMode.InBounds = false;
         TestAddrMode.ScaledReg = IVInc;
         TestAddrMode.BaseOffs -= Offset.getLimitedValue();

@@ -12,10 +12,10 @@ define i32 @test_01(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i64 [[IV]], [[LEN:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[IV]], 4
+; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[IV_NEXT]], 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P:%.*]] to i8*
 ; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, i8* [[TMP0]], i64 [[SUNKADDR]]
-; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, i8* [[SUNKADDR1]], i64 -4
+; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, i8* [[SUNKADDR1]], i64 -8
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[SUNKADDR2]] to i32*
 ; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[TMP1]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
