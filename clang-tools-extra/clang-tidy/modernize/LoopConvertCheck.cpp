@@ -83,6 +83,17 @@ static const StatementMatcher incrementVarMatcher() {
   return declRefExpr(to(varDecl(equalsBoundNode(InitVarName))));
 }
 
+static StatementMatcher
+arrayConditionMatcher(internal::Matcher<Expr> LimitExpr) {
+  return binaryOperator(
+      anyOf(allOf(hasOperatorName("<"), hasLHS(integerComparisonMatcher()),
+                  hasRHS(LimitExpr)),
+            allOf(hasOperatorName(">"), hasLHS(LimitExpr),
+                  hasRHS(integerComparisonMatcher())),
+            allOf(hasOperatorName("!="),
+                  hasOperands(integerComparisonMatcher(), LimitExpr))));
+}
+
 /// The matcher for loops over arrays.
 /// \code
 ///   for (int i = 0; i < 3 + 2; ++i) { ... }
@@ -99,18 +110,12 @@ StatementMatcher makeArrayLoopMatcher() {
   StatementMatcher ArrayBoundMatcher =
       expr(hasType(isInteger())).bind(ConditionBoundName);
 
-  return forStmt(
-             unless(isInTemplateInstantiation()),
-             hasLoopInit(declStmt(hasSingleDecl(initToZeroMatcher()))),
-             hasCondition(anyOf(
-                 binaryOperator(hasOperatorName("<"),
-                                hasLHS(integerComparisonMatcher()),
-                                hasRHS(ArrayBoundMatcher)),
-                 binaryOperator(hasOperatorName(">"), hasLHS(ArrayBoundMatcher),
-                                hasRHS(integerComparisonMatcher())))),
-             hasIncrement(
-                 unaryOperator(hasOperatorName("++"),
-                               hasUnaryOperand(incrementVarMatcher()))))
+  return forStmt(unless(isInTemplateInstantiation()),
+                 hasLoopInit(declStmt(hasSingleDecl(initToZeroMatcher()))),
+                 hasCondition(arrayConditionMatcher(ArrayBoundMatcher)),
+                 hasIncrement(
+                     unaryOperator(hasOperatorName("++"),
+                                   hasUnaryOperand(incrementVarMatcher()))))
       .bind(LoopNameArray);
 }
 
@@ -278,22 +283,16 @@ StatementMatcher makePseudoArrayLoopMatcher() {
                      declRefExpr(to(varDecl(equalsBoundNode(EndVarName))))),
                  EndInitMatcher));
 
-  return forStmt(
-             unless(isInTemplateInstantiation()),
-             hasLoopInit(
-                 anyOf(declStmt(declCountIs(2),
-                                containsDeclaration(0, initToZeroMatcher()),
-                                containsDeclaration(1, EndDeclMatcher)),
-                       declStmt(hasSingleDecl(initToZeroMatcher())))),
-             hasCondition(anyOf(
-                 binaryOperator(hasOperatorName("<"),
-                                hasLHS(integerComparisonMatcher()),
-                                hasRHS(IndexBoundMatcher)),
-                 binaryOperator(hasOperatorName(">"), hasLHS(IndexBoundMatcher),
-                                hasRHS(integerComparisonMatcher())))),
-             hasIncrement(
-                 unaryOperator(hasOperatorName("++"),
-                               hasUnaryOperand(incrementVarMatcher()))))
+  return forStmt(unless(isInTemplateInstantiation()),
+                 hasLoopInit(
+                     anyOf(declStmt(declCountIs(2),
+                                    containsDeclaration(0, initToZeroMatcher()),
+                                    containsDeclaration(1, EndDeclMatcher)),
+                           declStmt(hasSingleDecl(initToZeroMatcher())))),
+                 hasCondition(arrayConditionMatcher(IndexBoundMatcher)),
+                 hasIncrement(
+                     unaryOperator(hasOperatorName("++"),
+                                   hasUnaryOperand(incrementVarMatcher()))))
       .bind(LoopNamePseudoArray);
 }
 
