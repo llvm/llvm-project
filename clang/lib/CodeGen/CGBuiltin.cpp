@@ -17437,6 +17437,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     case WebAssembly::BI__builtin_wasm_widen_high_u_i32x4_i64x2:
       IntNo = Intrinsic::wasm_widen_high_unsigned;
       break;
+    default:
+      llvm_unreachable("unexpected builtin ID");
     }
     Function *Callee = CGM.getIntrinsic(IntNo);
     return Builder.CreateCall(Callee, Vec);
@@ -17455,6 +17457,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     case WebAssembly::BI__builtin_wasm_widen_u_i8x16_i32x4:
       IntNo = Intrinsic::wasm_widen_unsigned;
       break;
+    default:
+      llvm_unreachable("unexpected builtin ID");
     }
     Function *Callee = CGM.getIntrinsic(IntNo);
     return Builder.CreateCall(Callee, {Vec, SubVec});
@@ -17470,6 +17474,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     case WebAssembly::BI__builtin_wasm_convert_low_u_i32x4_f64x2:
       IntNo = Intrinsic::wasm_convert_low_unsigned;
       break;
+    default:
+      llvm_unreachable("unexpected builtin ID");
     }
     Function *Callee = CGM.getIntrinsic(IntNo);
     return Builder.CreateCall(Callee, Vec);
@@ -17485,6 +17491,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     case WebAssembly::BI__builtin_wasm_trunc_saturate_zero_u_f64x2_i32x4:
       IntNo = Intrinsic::wasm_trunc_saturate_zero_unsigned;
       break;
+    default:
+      llvm_unreachable("unexpected builtin ID");
     }
     Function *Callee = CGM.getIntrinsic(IntNo);
     return Builder.CreateCall(Callee, Vec);
