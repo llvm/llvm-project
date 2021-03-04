@@ -435,7 +435,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
 
     let skipDefaultBuilders = 1;
     let builders = [
-      OpBuilderDAG<
+      OpBuilder<
       (ins "ValueRange":$inputs, "ValueRange":$outputs),
       [{{
         $_state.addOperands(inputs);
@@ -451,7 +451,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
           TypeRange(inputs),
           TypeRange(outputs)/*, TODO: support captures*/);
       }]>,
-      OpBuilderDAG<
+      OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
             "ValueRange":$outputs),
       [{{
@@ -469,7 +469,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
           TypeRange(inputs),
           TypeRange(outputs)/*, TODO: support captures*/);
       }]>,
-      OpBuilderDAG<
+      OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
             CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
       [{{

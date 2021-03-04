@@ -164,7 +164,7 @@ It has one output.
 
 // Test attribute builder
 // ODS-LABEL: def Test7Op
-// ODS:         OpBuilderDAG<
+// ODS:         OpBuilder<
 // ODS:           (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
 // ODS:            "ValueRange":$outputs, "Attribute":$attr_a, "Attribute":$attr_b)
 // ODS:           $_state.addAttribute("attr_a", attr_a);

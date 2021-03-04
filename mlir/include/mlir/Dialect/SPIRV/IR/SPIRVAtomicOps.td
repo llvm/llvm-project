@@ -49,7 +49,7 @@ class SPV_AtomicUpdateWithValueOp<string mnemonic, list<OpTrait> traits = []> :
   );
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$pointer, "::mlir::spirv::Scope":$scope,
+    OpBuilder<(ins "Value":$pointer, "::mlir::spirv::Scope":$scope,
       "::mlir::spirv::MemorySemantics":$memory, "Value":$value),
     [{build($_builder, $_state, value.getType(), pointer, scope, memory, value);}]>
   ];
