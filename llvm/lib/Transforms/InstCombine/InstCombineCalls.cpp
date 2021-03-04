@@ -1799,6 +1799,34 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_and: {
+    // Canonicalize logical or/and reductions:
+    // Or reduction for i1 is represented as:
+    // %val = bitcast <ReduxWidth x i1> to iReduxWidth
+    // %res = cmp ne iReduxWidth %val, 0
+    // And reduction for i1 is represented as:
+    // %val = bitcast <ReduxWidth x i1> to iReduxWidth
+    // %res = cmp eq iReduxWidth %val, 11111
+    Value *Arg = II->getArgOperand(0);
+    Type *RetTy = II->getType();
+    if (RetTy == Builder.getInt1Ty())
+      if (auto *FVTy = dyn_cast<FixedVectorType>(Arg->getType())) {
+        Value *Res = Builder.CreateBitCast(
+            Arg, Builder.getIntNTy(FVTy->getNumElements()));
+        if (IID == Intrinsic::vector_reduce_and) {
+          Res = Builder.CreateICmpEQ(
+              Res, ConstantInt::getAllOnesValue(Res->getType()));
+        } else {
+          assert(IID == Intrinsic::vector_reduce_or &&
+                 "Expected or reduction.");
+          Res = Builder.CreateIsNotNull(Res);
+        }
+        replaceInstUsesWith(CI, Res);
+        return eraseInstFromFunction(CI);
+      }
+    break;
+  }
   default: {
     // Handle target specific intrinsics
     Optional<Instruction *> V = targetInstCombineIntrinsic(*II);
