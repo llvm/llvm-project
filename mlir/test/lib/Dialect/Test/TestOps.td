@@ -420,6 +420,14 @@ def OperandsHaveSameType :
   let arguments = (ins AnyType:$x, AnyType:$y);
 }
 
+def ResultHasSameTypeAsAttr :
+    TEST_Op<"result_has_same_type_as_attr",
+            [AllTypesMatch<["attr", "result"]>]> {
+  let arguments = (ins AnyAttr:$attr);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "$attr `->` type($result) attr-dict";
+}
+
 def OperandZeroAndResultHaveSameType :
     TEST_Op<"operand0_and_result_have_same_type",
             [AllTypesMatch<["x", "res"]>]> {

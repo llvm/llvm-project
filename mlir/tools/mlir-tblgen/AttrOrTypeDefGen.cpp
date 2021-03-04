@@ -485,31 +485,90 @@ static void emitStorageParameterAllocation(const AttrOrTypeDef &def,
   }
 }
 
-void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
-  SmallVector<AttrOrTypeParameter, 4> parameters;
-  def.getParameters(parameters);
+/// Builds a code block that initializes the attribute storage of 'def'.
+/// Attribute initialization is separated from Type initialization given that
+/// the Attribute also needs to initialize its self-type, which has multiple
+/// means of initialization.
+static std::string buildAttributeStorageParamInitializer(
+    const AttrOrTypeDef &def, ArrayRef<AttrOrTypeParameter> parameters) {
+  std::string paramInitializer;
+  llvm::raw_string_ostream paramOS(paramInitializer);
+  paramOS << "::mlir::AttributeStorage(";
 
-  // Collect the parameter names and types.
-  auto parameterNames =
-      map_range(parameters, [](AttrOrTypeParameter parameter) {
-        return parameter.getName();
-      });
+  // If this is an attribute, we need to check for value type initialization.
+  Optional<size_t> selfParamIndex;
+  for (auto it : llvm::enumerate(parameters)) {
+    const auto *selfParam = dyn_cast<AttributeSelfTypeParameter>(&it.value());
+    if (!selfParam)
+      continue;
+    if (selfParamIndex) {
+      llvm::PrintFatalError(def.getLoc(),
+                            "Only one attribute parameter can be marked as "
+                            "AttributeSelfTypeParameter");
+    }
+    paramOS << selfParam->getName();
+    selfParamIndex = it.index();
+  }
+
+  // If we didn't find a self param, but the def has a type builder we use that
+  // to construct the type.
+  if (!selfParamIndex) {
+    const AttrDef &attrDef = cast<AttrDef>(def);
+    if (Optional<StringRef> typeBuilder = attrDef.getTypeBuilder()) {
+      FmtContext fmtContext;
+      for (const AttrOrTypeParameter &param : parameters)
+        fmtContext.addSubst(("_" + param.getName()).str(), param.getName());
+      paramOS << tgfmt(*typeBuilder, &fmtContext);
+    }
+  }
+  paramOS << ")";
+
+  // Append the parameters to the initializer.
+  for (auto it : llvm::enumerate(parameters))
+    if (it.index() != selfParamIndex)
+      paramOS << llvm::formatv(", {0}({0})", it.value().getName());
+
+  return paramOS.str();
+}
+
+void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
+  SmallVector<AttrOrTypeParameter, 4> params;
+  def.getParameters(params);
+
+  // Collect the parameter types.
   auto parameterTypes =
-      map_range(parameters, [](AttrOrTypeParameter parameter) {
+      llvm::map_range(params, [](const AttrOrTypeParameter &parameter) {
         return parameter.getCppType();
       });
-  auto parameterList = join(parameterNames, ", ");
-  auto parameterTypeList = join(parameterTypes, ", ");
+  std::string parameterTypeList = llvm::join(parameterTypes, ", ");
+
+  // Collect the parameter initializer.
+  std::string paramInitializer;
+  if (isAttrGenerator) {
+    paramInitializer = buildAttributeStorageParamInitializer(def, params);
+
+  } else {
+    llvm::raw_string_ostream initOS(paramInitializer);
+    llvm::interleaveComma(params, initOS, [&](const AttrOrTypeParameter &it) {
+      initOS << llvm::formatv("{0}({0})", it.getName());
+    });
+  }
+
+  // Construct the parameter list that is used when a concrete instance of the
+  // storage exists.
+  auto nonStaticParameterNames = llvm::map_range(params, [](const auto &param) {
+    return isa<AttributeSelfTypeParameter>(param) ? "getType()"
+                                                  : param.getName();
+  });
 
   // 1) Emit most of the storage class up until the hashKey body.
   os << formatv(
       defStorageClassBeginStr, def.getStorageNamespace(),
       def.getStorageClassName(),
       ParamCommaFormatter(ParamCommaFormatter::EmitFormat::TypeNamePairs,
-                          parameters, /*prependComma=*/false),
-      ParamCommaFormatter(ParamCommaFormatter::EmitFormat::TypeNameInitializer,
-                          parameters, /*prependComma=*/false),
-      parameterList, parameterTypeList, valueType);
+                          params, /*prependComma=*/false),
+      paramInitializer, llvm::join(nonStaticParameterNames, ", "),
+      parameterTypeList, valueType);
 
   // 2) Emit the haskKey method.
   os << "  static ::llvm::hash_code hashKey(const KeyTy &key) {\n";
@@ -517,7 +576,7 @@ void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
   // Extract each parameter from the key.
   os << "      return ::llvm::hash_combine(";
   llvm::interleaveComma(
-      llvm::seq<unsigned>(0, parameters.size()), os,
+      llvm::seq<unsigned>(0, params.size()), os,
       [&](unsigned it) { os << "std::get<" << it << ">(key)"; });
   os << ");\n    }\n";
 
@@ -535,9 +594,9 @@ void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
     // First, unbox the parameters.
     os << formatv(defStorageClassConstructorBeginStr, def.getStorageClassName(),
                   valueType);
-    for (unsigned i = 0, e = parameters.size(); i < e; ++i) {
+    for (unsigned i = 0, e = params.size(); i < e; ++i) {
       os << formatv("      auto {0} = std::get<{1}>(key);\n",
-                    parameters[i].getName(), i);
+                    params[i].getName(), i);
     }
 
     // Second, reassign the parameter variables with allocation code, if it's
@@ -545,14 +604,18 @@ void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
     emitStorageParameterAllocation(def, os);
 
     // Last, return an allocated copy.
+    auto parameterNames = llvm::map_range(
+        params, [](const auto &param) { return param.getName(); });
     os << formatv(defStorageClassConstructorEndStr, def.getStorageClassName(),
-                  parameterList);
+                  llvm::join(parameterNames, ", "));
   }
 
   // 4) Emit the parameters as storage class members.
-  for (auto parameter : parameters) {
-    os << "      " << parameter.getCppType() << " " << parameter.getName()
-       << ";\n";
+  for (const AttrOrTypeParameter &parameter : params) {
+    // Attribute value types are not stored as fields in the storage.
+    if (!isa<AttributeSelfTypeParameter>(parameter))
+      os << "      " << parameter.getCppType() << " " << parameter.getName()
+         << ";\n";
   }
   os << "  };\n";
 
@@ -708,10 +771,14 @@ void DefGenerator::emitDefDef(const AttrOrTypeDef &def) {
     // Otherwise, let the user define the exact accessor definition.
     if (def.genAccessors() && def.genStorageClass()) {
       for (const AttrOrTypeParameter &parameter : parameters) {
+        StringRef paramStorageName = isa<AttributeSelfTypeParameter>(parameter)
+                                         ? "getType()"
+                                         : parameter.getName();
+
         SmallString<16> name = parameter.getName();
         name[0] = llvm::toUpper(name[0]);
         os << formatv("{0} {3}::get{1}() const {{ return getImpl()->{2}; }\n",
-                      parameter.getCppType(), name, parameter.getName(),
+                      parameter.getCppType(), name, paramStorageName,
                       def.getCppClassName());
       }
     }
