@@ -22,12 +22,35 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
-LogicalResult
-mlir::LLVMArmSVEDialectLLVMIRTranslationInterface::convertOperation(
-    Operation *op, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation) const {
-  Operation &opInst = *op;
+namespace {
+/// Implementation of the dialect interface that converts operations belonging
+/// to the LLVMArmSVE dialect to LLVM IR.
+class LLVMArmSVEDialectLLVMIRTranslationInterface
+    : public LLVMTranslationDialectInterface {
+public:
+  using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
+
+  /// Translates the given operation to LLVM IR using the provided IR builder
+  /// and saving the state in `moduleTranslation`.
+  LogicalResult
+  convertOperation(Operation *op, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) const final {
+    Operation &opInst = *op;
 #include "mlir/Dialect/LLVMIR/LLVMArmSVEConversions.inc"
 
-  return failure();
+    return failure();
+  }
+};
+} // end namespace
+
+void mlir::registerLLVMArmSVEDialectTranslation(DialectRegistry &registry) {
+  registry.insert<LLVM::LLVMArmSVEDialect>();
+  registry.addDialectInterface<LLVM::LLVMArmSVEDialect,
+                               LLVMArmSVEDialectLLVMIRTranslationInterface>();
+}
+
+void mlir::registerLLVMArmSVEDialectTranslation(MLIRContext &context) {
+  DialectRegistry registry;
+  registerLLVMArmSVEDialectTranslation(registry);
+  context.appendDialectRegistry(registry);
 }

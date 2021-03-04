@@ -51,6 +51,7 @@ add_mlir_library(MLIRTestTransforms
   MLIRGPUToGPURuntimeTransforms
   MLIRLinalg
   MLIRLinalgTransforms
+  MLIRLLVMToLLVMIRTranslation
   MLIRMathTransforms
   MLIRNVVMIR
   MLIRNVVMToLLVMIRTranslation
@@ -60,7 +61,7 @@ add_mlir_library(MLIRTestTransforms
   MLIRSCF
   MLIRSCFTransforms
   MLIRStandardOpsTransforms
-  MLIRTargetLLVMIR
+  MLIRTargetLLVMIRExport
   MLIRTestDialect
   MLIRTransformUtils
   MLIRVector

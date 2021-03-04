@@ -12,5 +12,5 @@ add_mlir_translation_library(MLIRLLVMArmNeonToLLVMIRTranslation
   MLIRLLVMArmNeon
   MLIRLLVMIR
   MLIRSupport
-  MLIRTargetLLVMIRModuleTranslation
+  MLIRTargetLLVMIRExport
   )

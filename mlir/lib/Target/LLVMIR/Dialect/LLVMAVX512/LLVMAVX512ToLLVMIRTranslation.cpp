@@ -22,12 +22,35 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
-LogicalResult
-mlir::LLVMAVX512DialectLLVMIRTranslationInterface::convertOperation(
-    Operation *op, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation) const {
-  Operation &opInst = *op;
+namespace {
+/// Implementation of the dialect interface that converts operations belonging
+/// to the LLVMAVX512 dialect to LLVM IR.
+class LLVMAVX512DialectLLVMIRTranslationInterface
+    : public LLVMTranslationDialectInterface {
+public:
+  using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
+
+  /// Translates the given operation to LLVM IR using the provided IR builder
+  /// and saving the state in `moduleTranslation`.
+  LogicalResult
+  convertOperation(Operation *op, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) const final {
+    Operation &opInst = *op;
 #include "mlir/Dialect/LLVMIR/LLVMAVX512Conversions.inc"
 
-  return failure();
+    return failure();
+  }
+};
+} // end namespace
+
+void mlir::registerLLVMAVX512DialectTranslation(DialectRegistry &registry) {
+  registry.insert<LLVM::LLVMAVX512Dialect>();
+  registry.addDialectInterface<LLVM::LLVMAVX512Dialect,
+                               LLVMAVX512DialectLLVMIRTranslationInterface>();
+}
+
+void mlir::registerLLVMAVX512DialectTranslation(MLIRContext &context) {
+  DialectRegistry registry;
+  registerLLVMAVX512DialectTranslation(registry);
+  context.appendDialectRegistry(registry);
 }
