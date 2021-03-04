@@ -92,25 +92,6 @@ void test_isinf_sign(double d) {
   return;
 }
 
-// CHECK-LABEL: @test_fp16_isnan(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[H_ADDR:%.*]] = alloca half, align 2
-// CHECK-NEXT:    store half [[H:%.*]], half* [[H_ADDR]], align 2
-// CHECK-NEXT:    [[TMP0:%.*]] = load half, half* [[H_ADDR]], align 2
-// CHECK-NEXT:    [[BITCAST:%.*]] = bitcast half [[TMP0]] to i16
-// CHECK-NEXT:    [[ABS:%.*]] = and i16 [[BITCAST]], [[#%u,0x7FFF]]
-// CHECK-NEXT:    [[TMP1:%.*]] = sub i16 [[#%u,0x7C00]], [[ABS]]
-// CHECK-NEXT:    [[ISNAN:%.*]] = lshr i16 [[TMP1]], 15
-// CHECK-NEXT:    [[RES:%.*]] = zext i16 [[ISNAN]] to i32
-// CHECK-NEXT:    call void @p(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.[[#STRID:STRID+1]], i64 0, i64 0), i32 [[RES]]) [[ATTR4]]
-// CHECK-NEXT:    ret void
-//
-void test_fp16_isnan(__fp16 h) {
-  P(isnan, (h));
-
-  return;
-}
-
 // CHECK-LABEL: @test_float_isnan(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
