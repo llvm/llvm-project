@@ -576,15 +576,13 @@ the equivalent location is used.
 
 After MIR locations are assigned to each variable, machine pseudo-instructions
 corresponding to each ``llvm.dbg.value`` and ``llvm.dbg.addr`` intrinsic are
-inserted. There are two forms of this type of instruction.
-
-The first form, ``DBG_VALUE``, appears thus:
+inserted. These ``DBG_VALUE`` instructions appear thus:
 
 .. code-block:: text
 
   DBG_VALUE %1, $noreg, !123, !DIExpression()
 
-And has the following operands:
+And have the following operands:
  * The first operand can record the variable location as a register,
    a frame index, an immediate, or the base address register if the original
    debug intrinsic referred to memory. ``$noreg`` indicates the variable
@@ -595,22 +593,6 @@ And has the following operands:
    latter.
  * Operand 3 is the Variable field of the original debug intrinsic.
  * Operand 4 is the Expression field of the original debug intrinsic.
-
-The second form, ``DBG_VALUE_LIST``, appears thus:
-
-.. code-block:: text
-
-  DBG_VALUE_LIST !123, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), %1, %2
-
-And has the following operands:
- * The first operand is the Variable field of the original debug intrinsic.
- * The second operand is the Expression field of the original debug intrinsic.
- * Any number of operands, from the 3rd onwards, record a sequence of variable
-   location operands, which may take any of the same values as the first
-   operand of the ``DBG_VALUE`` instruction above. These variable location
-   operands are inserted into the final DWARF Expression in positions indicated
-   by the DW_OP_LLVM_arg operator in the DIExpression, as described in
-   :ref:`DIExpression<_DIExpression>`.
 
 The position at which the DBG_VALUEs are inserted should correspond to the
 positions of their matching ``llvm.dbg.value`` intrinsics in the IR block.  As

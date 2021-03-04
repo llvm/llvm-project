@@ -77,10 +77,6 @@ HANDLE_TARGET_OPCODE(SUBREG_TO_REG)
 /// DBG_VALUE - a mapping of the llvm.dbg.value intrinsic
 HANDLE_TARGET_OPCODE(DBG_VALUE)
 
-/// DBG_VALUE - a mapping of the llvm.dbg.value intrinsic with a variadic
-/// list of locations
-HANDLE_TARGET_OPCODE(DBG_VALUE_LIST)
-
 /// DBG_INSTR_REF - A mapping of llvm.dbg.value referring to the instruction
 /// that defines the value, rather than a virtual register.
 HANDLE_TARGET_OPCODE(DBG_INSTR_REF)
