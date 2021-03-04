@@ -2450,8 +2450,10 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
   bool NeedsLargeIndexes = false;
   if (Obj.sections().size() >= SHN_LORESERVE) {
     SectionTableRef Sections = Obj.sections();
+    // Sections doesn't include the null section header, so account for this
+    // when skipping the first N sections.
     NeedsLargeIndexes =
-        any_of(drop_begin(Sections, SHN_LORESERVE),
+        any_of(drop_begin(Sections, SHN_LORESERVE - 1),
                [](const SectionBase &Sec) { return Sec.HasSymbol; });
     // TODO: handle case where only one section needs the large index table but
     // only needs it because the large index table hasn't been removed yet.
