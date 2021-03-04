@@ -2568,8 +2568,8 @@ operations that don't dereference it such as
 This explains code motion of these instructions across operations that
 impact the object's lifetime.
 A stack object's lifetime can be explicitly specified using
-:ref:`llvm.lifetime.start <_int_lifestart>` and
-:ref:`llvm.lifetime.end <_int_lifeend>` intrinsic function calls.
+:ref:`llvm.lifetime.start <int_lifestart>` and
+:ref:`llvm.lifetime.end <int_lifeend>` intrinsic function calls.
 
 .. _pointeraliasing:
 
@@ -17836,7 +17836,7 @@ Memory Use Markers
 ------------------
 
 This class of intrinsics provides information about the
-:ref:`lifetime of memory objects <_objectlifetime>` and ranges where variables
+:ref:`lifetime of memory objects <objectlifetime>` and ranges where variables
 are immutable.
 
 .. _int_lifestart:
@@ -17855,7 +17855,7 @@ Overview:
 """""""""
 
 The '``llvm.lifetime.start``' intrinsic specifies the start of
-:ref:`a memory object's lifetime <_objectlifetime>`.
+:ref:`a memory object's lifetime <objectlifetime>`.
 
 Arguments:
 """"""""""
@@ -17901,7 +17901,7 @@ Overview:
 """""""""
 
 The '``llvm.lifetime.end``' intrinsic specifies the end of
-:ref:`a memory object's lifetime <_objectlifetime>`.
+:ref:`a memory object's lifetime <objectlifetime>`.
 
 Arguments:
 """"""""""
