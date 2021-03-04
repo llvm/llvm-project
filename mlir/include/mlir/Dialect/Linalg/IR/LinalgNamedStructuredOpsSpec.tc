@@ -151,6 +151,45 @@ def conv_3d_ncdhw(I: f32(N, C, D, H, W), K: f32(F, C, KD, KH, KW)) -> (O: f32(N,
       std_mulf(I(n, c, d + kd, h + kh, w + kw), K(f, c, kd, kh, kw)));
 }
 
+ods_def<DepthwiseConvInputNHWCFilterHWCFOp>:
+def depthwise_conv_2d_input_nhwc_filter_hwcf
+      (I: f32(N, IH, IW, CI), K: f32(KH, KW, CI, CO))
+   -> (O: f32(N, OH, OW, CI, CO))
+  attr(strides: 2xi64)
+"""A general depth-wise 2-D convolution operation.
+
+This operation performs depth-wise 2-D convolution over an input `I` and filter
+`F` and generates output `O` using the following computation:
+
+```
+  O(n, oh, ow, ci, co) = std_addf<kh, kw>(
+      O(n, oh, ow, ci, co),
+      std_mulf(I(n, oh * strides[0] + kh, ow * strides[1] + kw, ci),
+               K(kh, kw, ci, co)));
+```
+
+where
+
+* `I` is a 4-D tensor with shape `(N, IH, IW, CI)`.
+* `F` is a 4-D tensor with shape `(KH, KW, CI, CO)`.
+* `O` is a 5-D tensor with shape `(N, OH, OW, CI, CO)`.
+* `strides` is a 2-element vector attribute for window strides along the
+  height/width dimension.
+
+The indexing maps for these three tensors contain 7 dimensions, following the
+order of (`N`, `OH`, `OW`, `CI`, `CO`, `KH`, `KW`).
+
+Note: this op only supports any channel multiplier, which is `CO`. To map back
+to 4D result as DepthwiseConvInputNHWCFilterHWCOp, you will have to create a
+Linalg reshape op which collapses `CI` and `CO` into one dimension.
+"""
+{
+  O(n, oh, ow, ci, co) = std_addf<kh, kw>(
+      O(n, oh, ow, ci, co),
+      std_mulf(I(n, oh * strides[0] + kh, ow * strides[1] + kw, ci),
+               K(kh, kw, ci, co)));
+}
+
 ods_def<DepthwiseConvInputNHWCFilterHWCOp>:
 def depthwise_conv_2d_input_nhwc_filter_hwc
       (I: f32(N, IH, IW, C), K: f32(KH, KW, C))
@@ -162,8 +201,10 @@ This operation performs depth-wise 2-D convolution over an input `I` and filter
 `F` and generates output `O` using the following computation:
 
 ```
-O(n, oh, ow, c) = std_addf<kh, kw>(std_mulf(
-  I(n, oh * strides[0] + kh, ow * strides[1] + kw, c), K(kh, kw, c)))
+O(n, oh, ow, c) = std_addf<kh, kw>(
+    O(n, oh, ow, c),
+    std_mulf(I(n, oh * strides[0] + kh, ow * strides[1] + kw, c),
+             K(kh, kw, c)));
 ```
 
 where

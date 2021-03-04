@@ -77,6 +77,7 @@
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -5561,6 +5562,50 @@ void LSRInstance::ImplementSolution(
 
   Changed |= RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts,
                                                                   &TLI, MSSAU);
+
+  // In our cost analysis above, we assume that each addrec consumes exactly
+  // one register, and arrange to have increments inserted just before the
+  // latch to maximimize the chance this is true.  However, if we reused
+  // existing IVs, we now need to move the increments to match our
+  // expectations.  Otherwise, our cost modeling results in us having a
+  // chosen a non-optimal result for the actual schedule.  (And yes, this
+  // scheduling decision does impact later codegen.)
+  for (PHINode &PN : L->getHeader()->phis()) {
+    BinaryOperator *BO = nullptr;
+    Value *Start = nullptr, *Step = nullptr;
+    if (!matchSimpleRecurrence(&PN, BO, Start, Step))
+      continue;
+
+    switch (BO->getOpcode()) {
+    case Instruction::Sub:
+      if (BO->getOperand(0) != &PN)
+        // sub is non-commutative - match handling elsewhere in LSR
+        continue;
+      break;
+    case Instruction::Add:
+      break;
+    default:
+      continue;
+    };
+
+    if (!isa<Constant>(Step))
+      // If not a constant step, might increase register pressure
+      // (We assume constants have been canonicalized to RHS)
+      continue;
+
+    if (BO->getParent() == IVIncInsertPos->getParent())
+      // Only bother moving across blocks.  Isel can handle block local case.
+      continue;
+
+    // Can we legally schedule inc at the desired point?
+    if (!llvm::all_of(BO->uses(),
+                      [&](Use &U) {return DT.dominates(IVIncInsertPos, U);}))
+      continue;
+    BO->moveBefore(IVIncInsertPos);
+    Changed = true;
+  }
+
+
 }
 
 LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,

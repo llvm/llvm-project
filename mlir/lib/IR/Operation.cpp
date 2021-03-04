@@ -105,11 +105,15 @@ Operation *Operation::create(Location location, OperationName name,
                              TypeRange resultTypes, ValueRange operands,
                              DictionaryAttr attributes, BlockRange successors,
                              unsigned numRegions) {
+  assert(llvm::all_of(resultTypes, [](Type t) { return t; }) &&
+         "unexpected null result type");
+
   // We only need to allocate additional memory for a subset of results.
   unsigned numTrailingResults = OpResult::getNumTrailing(resultTypes.size());
   unsigned numInlineResults = OpResult::getNumInline(resultTypes.size());
   unsigned numSuccessors = successors.size();
   unsigned numOperands = operands.size();
+  unsigned numResults = resultTypes.size();
 
   // If the operation is known to have no operands, don't allocate an operand
   // storage.
@@ -134,17 +138,20 @@ Operation *Operation::create(Location location, OperationName name,
 
   // Create the new Operation.
   Operation *op =
-      ::new (rawMem) Operation(location, name, resultTypes, numSuccessors,
+      ::new (rawMem) Operation(location, name, numResults, numSuccessors,
                                numRegions, attributes, needsOperandStorage);
 
   assert((numSuccessors == 0 || op->mightHaveTrait<OpTrait::IsTerminator>()) &&
          "unexpected successors in a non-terminator operation");
 
   // Initialize the results.
-  for (unsigned i = 0; i < numInlineResults; ++i)
-    new (op->getInlineResult(i)) detail::InLineOpResult();
-  for (unsigned i = 0; i < numTrailingResults; ++i)
-    new (op->getTrailingResult(i)) detail::TrailingOpResult(i);
+  auto resultTypeIt = resultTypes.begin();
+  for (unsigned i = 0; i < numInlineResults; ++i, ++resultTypeIt)
+    new (op->getInlineOpResult(i)) detail::InlineOpResult(*resultTypeIt, i);
+  for (unsigned i = 0; i < numTrailingResults; ++i, ++resultTypeIt) {
+    new (op->getOutOfLineOpResult(i))
+        detail::OutOfLineOpResult(*resultTypeIt, i);
+  }
 
   // Initialize the regions.
   for (unsigned i = 0; i != numRegions; ++i)
@@ -162,24 +169,13 @@ Operation *Operation::create(Location location, OperationName name,
   return op;
 }
 
-Operation::Operation(Location location, OperationName name,
-                     TypeRange resultTypes, unsigned numSuccessors,
-                     unsigned numRegions, DictionaryAttr attributes,
-                     bool hasOperandStorage)
-    : location(location), numSuccs(numSuccessors), numRegions(numRegions),
-      hasOperandStorage(hasOperandStorage), hasSingleResult(false), name(name),
+Operation::Operation(Location location, OperationName name, unsigned numResults,
+                     unsigned numSuccessors, unsigned numRegions,
+                     DictionaryAttr attributes, bool hasOperandStorage)
+    : location(location), numResults(numResults), numSuccs(numSuccessors),
+      numRegions(numRegions), hasOperandStorage(hasOperandStorage), name(name),
       attrs(attributes) {
   assert(attributes && "unexpected null attribute dictionary");
-  assert(llvm::all_of(resultTypes, [](Type t) { return t; }) &&
-         "unexpected null result type");
-  if (!resultTypes.empty()) {
-    // If there is a single result it is stored in-place, otherwise use a tuple.
-    hasSingleResult = resultTypes.size() == 1;
-    if (hasSingleResult)
-      resultType = resultTypes.front();
-    else
-      resultType = TupleType::get(location->getContext(), resultTypes);
-  }
 }
 
 // Operations are deleted through the destroy() member because they are
@@ -541,21 +537,6 @@ void Operation::dropAllDefinedValueUses() {
   for (auto &region : getRegions())
     for (auto &block : region)
       block.dropAllDefinedValueUses();
-}
-
-/// Return the number of results held by this operation.
-unsigned Operation::getNumResults() {
-  if (!resultType)
-    return 0;
-  return hasSingleResult ? 1 : resultType.cast<TupleType>().size();
-}
-
-auto Operation::getResultTypes() -> result_type_range {
-  if (!resultType)
-    return llvm::None;
-  if (hasSingleResult)
-    return resultType;
-  return resultType.cast<TupleType>().getTypes();
 }
 
 void Operation::setSuccessor(Block *block, unsigned index) {
@@ -925,7 +906,7 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultType(Operation *op) {
 
   auto type = op->getResult(0).getType();
   auto elementType = getElementTypeOrSelf(type);
-  for (auto resultType : op->getResultTypes().drop_front(1)) {
+  for (auto resultType : llvm::drop_begin(op->getResultTypes())) {
     if (getElementTypeOrSelf(resultType) != elementType ||
         failed(verifyCompatibleShape(resultType, type)))
       return op->emitOpError()

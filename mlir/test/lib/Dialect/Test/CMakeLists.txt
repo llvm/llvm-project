@@ -11,10 +11,15 @@ mlir_tablegen(TestOpInterfaces.h.inc -gen-op-interface-decls)
 mlir_tablegen(TestOpInterfaces.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRTestInterfaceIncGen)
 
+set(LLVM_TARGET_DEFINITIONS TestAttrDefs.td)
+mlir_tablegen(TestAttrDefs.h.inc -gen-attrdef-decls)
+mlir_tablegen(TestAttrDefs.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIRTestAttrDefIncGen)
+
 set(LLVM_TARGET_DEFINITIONS TestTypeDefs.td)
 mlir_tablegen(TestTypeDefs.h.inc -gen-typedef-decls)
 mlir_tablegen(TestTypeDefs.cpp.inc -gen-typedef-defs)
-add_public_tablegen_target(MLIRTestDefIncGen)
+add_public_tablegen_target(MLIRTestTypeDefIncGen)
 
 
 set(LLVM_TARGET_DEFINITIONS TestOps.td)
@@ -30,6 +35,7 @@ add_public_tablegen_target(MLIRTestOpsIncGen)
 
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestDialect
+  TestAttributes.cpp
   TestDialect.cpp
   TestInterfaces.cpp
   TestPatterns.cpp
@@ -39,8 +45,9 @@ add_mlir_library(MLIRTestDialect
   EXCLUDE_FROM_LIBMLIR
 
   DEPENDS
+  MLIRTestAttrDefIncGen
   MLIRTestInterfaceIncGen
-  MLIRTestDefIncGen
+  MLIRTestTypeDefIncGen
   MLIRTestOpsIncGen
 
   LINK_LIBS PUBLIC

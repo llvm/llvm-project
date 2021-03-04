@@ -1760,6 +1760,14 @@ earlier passes.
 
 Areas Requiring Attention
 =========================
+#. When coro.suspend returns -1, the coroutine is suspended, and it's possible
+   that the coroutine has already been destroyed (hence the frame has been freed).
+   We cannot access anything on the frame on the suspend path.
+   However there is nothing that prevents the compiler from moving instructions
+   along that path (e.g. LICM), which can lead to use-after-free. At the moment
+   we disabled LICM for loops that have coro.suspend, but the general problem still
+   exists and requires a general solution.
+
 #. Take advantage of the lifetime intrinsics for the data that goes into the
    coroutine frame. Leave lifetime intrinsics as is for the data that stays in
    allocas.

@@ -23,14 +23,15 @@ namespace tblgen {
 // Simple RAII helper for defining ifdef-undef-endif scopes.
 class IfDefScope {
 public:
-  IfDefScope(llvm::StringRef name, llvm::raw_ostream &os) : name(name), os(os) {
+  IfDefScope(llvm::StringRef name, llvm::raw_ostream &os)
+      : name(name.str()), os(os) {
     os << "#ifdef " << name << "\n"
        << "#undef " << name << "\n\n";
   }
   ~IfDefScope() { os << "\n#endif  // " << name << "\n\n"; }
 
 private:
-  llvm::StringRef name;
+  std::string name;
   llvm::raw_ostream &os;
 };
 

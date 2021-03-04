@@ -486,6 +486,7 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
           getArchitectureName(config->arch));
     return;
   }
+  // TODO: check platform too
 
   if (const load_command *cmd = findCommand(hdr, LC_LINKER_OPTION)) {
     auto *c = reinterpret_cast<const linker_option_command *>(cmd);

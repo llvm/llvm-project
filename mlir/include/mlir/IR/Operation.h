@@ -272,10 +272,10 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Return the number of results held by this operation.
-  unsigned getNumResults();
+  unsigned getNumResults() { return numResults; }
 
   /// Get the 'idx'th result of this operation.
-  OpResult getResult(unsigned idx) { return OpResult(this, idx); }
+  OpResult getResult(unsigned idx) { return OpResult(getOpResultImpl(idx)); }
 
   /// Support result iteration.
   using result_range = ResultRange;
@@ -283,7 +283,10 @@ public:
 
   result_iterator result_begin() { return getResults().begin(); }
   result_iterator result_end() { return getResults().end(); }
-  result_range getResults() { return result_range(this); }
+  result_range getResults() {
+    return numResults == 0 ? result_range(nullptr, 0)
+                           : result_range(getInlineOpResult(0), numResults);
+  }
 
   result_range getOpResults() { return getResults(); }
   OpResult getOpResult(unsigned idx) { return getResult(idx); }
@@ -293,7 +296,7 @@ public:
   using result_type_range = result_range::type_range;
   result_type_iterator result_type_begin() { return getResultTypes().begin(); }
   result_type_iterator result_type_end() { return getResultTypes().end(); }
-  result_type_range getResultTypes();
+  result_type_range getResultTypes() { return getResults().getTypes(); }
 
   //===--------------------------------------------------------------------===//
   // Attributes
@@ -620,7 +623,7 @@ private:
   bool hasValidOrder() { return orderIndex != kInvalidOrderIdx; }
 
 private:
-  Operation(Location location, OperationName name, TypeRange resultTypes,
+  Operation(Location location, OperationName name, unsigned numResults,
             unsigned numSuccessors, unsigned numRegions,
             DictionaryAttr attributes, bool hasOperandStorage);
 
@@ -630,17 +633,17 @@ private:
 
   /// Returns the additional size necessary for allocating the given objects
   /// before an Operation in-memory.
-  static size_t prefixAllocSize(unsigned numTrailingResults,
+  static size_t prefixAllocSize(unsigned numOutOfLineResults,
                                 unsigned numInlineResults) {
-    return sizeof(detail::TrailingOpResult) * numTrailingResults +
-           sizeof(detail::InLineOpResult) * numInlineResults;
+    return sizeof(detail::OutOfLineOpResult) * numOutOfLineResults +
+           sizeof(detail::InlineOpResult) * numInlineResults;
   }
   /// Returns the additional size allocated before this Operation in-memory.
   size_t prefixAllocSize() {
     unsigned numResults = getNumResults();
-    unsigned numTrailingResults = OpResult::getNumTrailing(numResults);
+    unsigned numOutOfLineResults = OpResult::getNumTrailing(numResults);
     unsigned numInlineResults = OpResult::getNumInline(numResults);
-    return prefixAllocSize(numTrailingResults, numInlineResults);
+    return prefixAllocSize(numOutOfLineResults, numInlineResults);
   }
 
   /// Returns the operand storage object.
@@ -649,20 +652,29 @@ private:
     return *getTrailingObjects<detail::OperandStorage>();
   }
 
-  /// Returns a pointer to the use list for the given trailing result.
-  detail::TrailingOpResult *getTrailingResult(unsigned resultNumber) {
-    // Trailing results are stored in reverse order after(before in memory) the
-    // inline results.
-    return reinterpret_cast<detail::TrailingOpResult *>(
-               getInlineResult(OpResult::getMaxInlineResults() - 1)) -
+  /// Returns a pointer to the use list for the given out-of-line result.
+  detail::OutOfLineOpResult *getOutOfLineOpResult(unsigned resultNumber) {
+    // Out-of-line results are stored in reverse order after (before in memory)
+    // the inline results.
+    return reinterpret_cast<detail::OutOfLineOpResult *>(getInlineOpResult(
+               detail::OpResultImpl::getMaxInlineResults() - 1)) -
            ++resultNumber;
   }
 
   /// Returns a pointer to the use list for the given inline result.
-  detail::InLineOpResult *getInlineResult(unsigned resultNumber) {
+  detail::InlineOpResult *getInlineOpResult(unsigned resultNumber) {
     // Inline results are stored in reverse order before the operation in
     // memory.
-    return reinterpret_cast<detail::InLineOpResult *>(this) - ++resultNumber;
+    return reinterpret_cast<detail::InlineOpResult *>(this) - ++resultNumber;
+  }
+
+  /// Returns a pointer to the use list for the given result, which may be
+  /// either inline or out-of-line.
+  detail::OpResultImpl *getOpResultImpl(unsigned resultNumber) {
+    unsigned maxInlineResults = detail::OpResultImpl::getMaxInlineResults();
+    if (resultNumber < maxInlineResults)
+      return getInlineOpResult(resultNumber);
+    return getOutOfLineOpResult(resultNumber - maxInlineResults);
   }
 
   /// Provide a 'getParent' method for ilist_node_with_parent methods.
@@ -683,23 +695,14 @@ private:
   /// O(1) local dominance checks between operations.
   mutable unsigned orderIndex = 0;
 
+  const unsigned numResults;
   const unsigned numSuccs;
-  const unsigned numRegions : 30;
+  const unsigned numRegions : 31;
 
   /// This bit signals whether this operation has an operand storage or not. The
   /// operand storage may be elided for operations that are known to never have
   /// operands.
   bool hasOperandStorage : 1;
-
-  /// This holds the result types of the operation. There are three different
-  /// states recorded here:
-  /// - 0 results : The type below is null.
-  /// - 1 result  : The single result type is held here.
-  /// - N results : The type here is a tuple holding the result types.
-  /// Note: We steal a bit for 'hasSingleResult' from somewhere else so that we
-  /// can use 'resultType` in an ArrayRef<Type>.
-  bool hasSingleResult : 1;
-  Type resultType;
 
   /// This holds the name of the operation.
   OperationName name;

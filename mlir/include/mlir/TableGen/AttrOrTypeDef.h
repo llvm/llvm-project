@@ -1,4 +1,4 @@
-//===-- TypeDef.h - Record wrapper for type definitions ---------*- C++ -*-===//
+//===-- AttrOrTypeDef.h - Wrapper for attr and type definitions -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// TypeDef wrapper to simplify using TableGen Record defining a MLIR type.
+// AttrOrTypeDef, AttrDef, and TypeDef wrappers to simplify using TableGen
+// Record defining a MLIR attributes and types.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TABLEGEN_TYPEDEF_H
-#define MLIR_TABLEGEN_TYPEDEF_H
+#ifndef MLIR_TABLEGEN_ATTRORTYPEDEF_H
+#define MLIR_TABLEGEN_ATTRORTYPEDEF_H
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Builder.h"
@@ -25,14 +26,14 @@ class SMLoc;
 namespace mlir {
 namespace tblgen {
 class Dialect;
-class TypeParameter;
+class AttrOrTypeParameter;
 
 //===----------------------------------------------------------------------===//
-// TypeBuilder
+// AttrOrTypeBuilder
 //===----------------------------------------------------------------------===//
 
-/// Wrapper class that represents a Tablegen TypeBuilder.
-class TypeBuilder : public Builder {
+/// Wrapper class that represents a Tablegen AttrOrTypeBuilder.
+class AttrOrTypeBuilder : public Builder {
 public:
   using Builder::Builder;
 
@@ -41,22 +42,22 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// TypeDef
+// AttrOrTypeDef
 //===----------------------------------------------------------------------===//
 
-/// Wrapper class that contains a TableGen TypeDef's record and provides helper
-/// methods for accessing them.
-class TypeDef {
+/// Wrapper class that contains a TableGen AttrOrTypeDef's record and provides
+/// helper methods for accessing them.
+class AttrOrTypeDef {
 public:
-  explicit TypeDef(const llvm::Record *def);
+  explicit AttrOrTypeDef(const llvm::Record *def);
 
-  // Get the dialect for which this type belongs.
+  // Get the dialect for which this def belongs.
   Dialect getDialect() const;
 
-  // Returns the name of this TypeDef record.
+  // Returns the name of this AttrOrTypeDef record.
   StringRef getName() const;
 
-  // Query functions for the documentation of the operator.
+  // Query functions for the documentation of the def.
   bool hasDescription() const;
   StringRef getDescription() const;
   bool hasSummary() const;
@@ -65,13 +66,13 @@ public:
   // Returns the name of the C++ class to generate.
   StringRef getCppClassName() const;
 
-  // Returns the name of the C++ base class to use when generating this type.
+  // Returns the name of the C++ base class to use when generating this def.
   StringRef getCppBaseClassName() const;
 
-  // Returns the name of the storage class for this type.
+  // Returns the name of the storage class for this def.
   StringRef getStorageClassName() const;
 
-  // Returns the C++ namespace for this types storage class.
+  // Returns the C++ namespace for this def's storage class.
   StringRef getStorageNamespace() const;
 
   // Returns true if we should generate the storage class.
@@ -80,10 +81,11 @@ public:
   // Indicates whether or not to generate the storage class constructor.
   bool hasStorageCustomConstructor() const;
 
-  // Fill a list with this types parameters. See TypeDef in OpBase.td for
+  // Fill a list with this def's parameters. See AttrOrTypeDef in OpBase.td for
   // documentation of parameter usage.
-  void getParameters(SmallVectorImpl<TypeParameter> &) const;
-  // Return the number of type parameters
+  void getParameters(SmallVectorImpl<AttrOrTypeParameter> &) const;
+
+  // Return the number of parameters
   unsigned getNumParameters() const;
 
   // Return the keyword/mnemonic to use in the printer/parser methods if we are
@@ -94,19 +96,18 @@ public:
   // return a non-value. Otherwise, return the contents of that code block.
   Optional<StringRef> getPrinterCode() const;
 
-  // Returns the code to use as the types parser method. If not specified,
-  // return a non-value. Otherwise, return the contents of that code block.
+  // Returns the code to use as the parser method. If not specified, returns
+  // None. Otherwise, returns the contents of that code block.
   Optional<StringRef> getParserCode() const;
 
-  // Returns true if the accessors based on the types parameters should be
-  // generated.
+  // Returns true if the accessors based on the parameters should be generated.
   bool genAccessors() const;
 
   // Return true if we need to generate the verify declaration and getChecked
   // method.
   bool genVerifyDecl() const;
 
-  // Returns the dialects extra class declaration code.
+  // Returns the def's extra class declaration code.
   Optional<StringRef> getExtraDecls() const;
 
   // Get the code location (for error printing).
@@ -116,54 +117,80 @@ public:
   // generation.
   bool skipDefaultBuilders() const;
 
-  // Returns the builders of this type.
-  ArrayRef<TypeBuilder> getBuilders() const { return builders; }
+  // Returns the builders of this def.
+  ArrayRef<AttrOrTypeBuilder> getBuilders() const { return builders; }
 
-  // Returns whether two TypeDefs are equal by checking the equality of the
-  // underlying record.
-  bool operator==(const TypeDef &other) const;
+  // Returns whether two AttrOrTypeDefs are equal by checking the equality of
+  // the underlying record.
+  bool operator==(const AttrOrTypeDef &other) const;
 
-  // Compares two TypeDefs by comparing the names of the dialects.
-  bool operator<(const TypeDef &other) const;
+  // Compares two AttrOrTypeDefs by comparing the names of the dialects.
+  bool operator<(const AttrOrTypeDef &other) const;
 
-  // Returns whether the TypeDef is defined.
+  // Returns whether the AttrOrTypeDef is defined.
   operator bool() const { return def != nullptr; }
 
 private:
   const llvm::Record *def;
 
   // The builders of this type definition.
-  SmallVector<TypeBuilder> builders;
+  SmallVector<AttrOrTypeBuilder> builders;
 };
 
 //===----------------------------------------------------------------------===//
-// TypeParameter
+// AttrDef
 //===----------------------------------------------------------------------===//
 
-// A wrapper class for tblgen TypeParameter, arrays of which belong to TypeDefs
-// to parameterize them.
-class TypeParameter {
+/// This class represents a wrapper around a tablegen AttrDef record.
+class AttrDef : public AttrOrTypeDef {
 public:
-  explicit TypeParameter(const llvm::DagInit *def, unsigned num)
-      : def(def), num(num) {}
+  using AttrOrTypeDef::AttrOrTypeDef;
+};
+
+//===----------------------------------------------------------------------===//
+// TypeDef
+//===----------------------------------------------------------------------===//
+
+/// This class represents a wrapper around a tablegen TypeDef record.
+class TypeDef : public AttrOrTypeDef {
+public:
+  using AttrOrTypeDef::AttrOrTypeDef;
+};
+
+//===----------------------------------------------------------------------===//
+// AttrOrTypeParameter
+//===----------------------------------------------------------------------===//
+
+// A wrapper class for tblgen AttrOrTypeParameter, arrays of which belong to
+// AttrOrTypeDefs to parameterize them.
+class AttrOrTypeParameter {
+public:
+  explicit AttrOrTypeParameter(const llvm::DagInit *def, unsigned index)
+      : def(def), index(index) {}
 
   // Get the parameter name.
   StringRef getName() const;
+
   // If specified, get the custom allocator code for this parameter.
   Optional<StringRef> getAllocator() const;
+
   // Get the C++ type of this parameter.
   StringRef getCppType() const;
+
   // Get a description of this parameter for documentation purposes.
   Optional<StringRef> getSummary() const;
+
   // Get the assembly syntax documentation.
   StringRef getSyntax() const;
 
 private:
+  /// The underlying tablegen parameter list this parameter is a part of.
   const llvm::DagInit *def;
-  const unsigned num;
+  /// The index of the parameter within the parameter list (`def`).
+  unsigned index;
 };
 
 } // end namespace tblgen
 } // end namespace mlir
 
-#endif // MLIR_TABLEGEN_TYPEDEF_H
+#endif // MLIR_TABLEGEN_ATTRORTYPEDEF_H

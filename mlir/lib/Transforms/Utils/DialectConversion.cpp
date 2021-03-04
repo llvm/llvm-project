@@ -2499,9 +2499,9 @@ Type TypeConverter::convertType(Type t) {
 /// Convert the given set of types, filling 'results' as necessary. This
 /// returns failure if the conversion of any of the types fails, success
 /// otherwise.
-LogicalResult TypeConverter::convertTypes(ArrayRef<Type> types,
+LogicalResult TypeConverter::convertTypes(TypeRange types,
                                           SmallVectorImpl<Type> &results) {
-  for (auto type : types)
+  for (Type type : types)
     if (failed(convertType(type, results)))
       return failure();
   return success();

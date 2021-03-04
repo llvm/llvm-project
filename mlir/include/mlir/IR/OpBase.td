@@ -2465,20 +2465,20 @@ def replaceWithValue;
 
 
 //===----------------------------------------------------------------------===//
-// Data type generation
+// Attribute and Type generation
 //===----------------------------------------------------------------------===//
 
-// Class for defining a custom type getter.
+// Class for defining a custom getter.
 //
-// TableGen generates several generic getter methods for each type by default,
-// corresponding to the specified dag parameters. If the default generated ones
-// cannot cover some use case, custom getters can be defined using instances of
-// this class.
+// TableGen generates several generic getter methods for each attribute and type
+// by default, corresponding to the specified dag parameters. If the default
+// generated ones cannot cover some use case, custom getters can be defined
+// using instances of this class.
 //
 // The signature of the `get` is always either:
 //
 // ```c++
-// static <Type-Name> get(MLIRContext *context, <other-parameters>...) {
+// static <ClassName> get(MLIRContext *context, <other-parameters>...) {
 //   <body>...
 // }
 // ```
@@ -2486,7 +2486,7 @@ def replaceWithValue;
 // or:
 //
 // ```c++
-// static <TypeName> get(MLIRContext *context, <parameters>...);
+// static <ClassName> get(MLIRContext *context, <parameters>...);
 // ```
 //
 // To define a custom getter, the parameter list and body should be passed
@@ -2503,7 +2503,7 @@ def replaceWithValue;
 // type. For example, the following signature specification
 //
 // ```
-// TypeBuilder<(ins "int":$integerArg, CArg<"float", "3.0f">:$floatArg)>
+// AttrOrTypeBuilder<(ins "int":$integerArg, CArg<"float", "3.0f">:$floatArg)>
 // ```
 //
 // has an integer parameter and a float parameter with a default value.
@@ -2514,7 +2514,7 @@ def replaceWithValue;
 // method should be invoked using `$_get`, e.g.:
 //
 // ```
-// TypeBuilder<(ins "int":$integerArg, CArg<"float", "3.0f">:$floatArg), [{
+// AttrOrTypeBuilder<(ins "int":$integerArg, CArg<"float", "3.0f">:$floatArg), [{
 //   return $_get($_ctxt, integerArg, floatArg);
 // }]>
 // ```
@@ -2522,7 +2522,7 @@ def replaceWithValue;
 // This is necessary because the `body` is also used to generate `getChecked`
 // methods, which have a different underlying `Base::get*` call.
 //
-class TypeBuilder<dag parameters, code bodyCode = ""> {
+class AttrOrTypeBuilder<dag parameters, code bodyCode = ""> {
   dag dagParams = parameters;
   code body = bodyCode;
 
@@ -2530,33 +2530,42 @@ class TypeBuilder<dag parameters, code bodyCode = ""> {
   // is not implicitly added to the parameter list.
   bit hasInferredContextParam = 0;
 }
+class AttrBuilder<dag parameters, code bodyCode = "">
+  : AttrOrTypeBuilder<parameters, bodyCode>;
+class TypeBuilder<dag parameters, code bodyCode = "">
+  : AttrOrTypeBuilder<parameters, bodyCode>;
 
-// A class of TypeBuilder that is able to infer the MLIRContext parameter from
-// one of the other builder parameters. Instances of this builder do not have
-// `MLIRContext *` implicitly added to the parameter list.
-class TypeBuilderWithInferredContext<dag parameters, code bodyCode = "">
+// A class of AttrOrTypeBuilder that is able to infer the MLIRContext parameter
+// from one of the other builder parameters. Instances of this builder do not
+// have `MLIRContext *` implicitly added to the parameter list.
+class AttrOrTypeBuilderWithInferredContext<dag parameters, code bodyCode = "">
   : TypeBuilder<parameters, bodyCode> {
   let hasInferredContextParam = 1;
 }
+class AttrBuilderWithInferredContext<dag parameters, code bodyCode = "">
+  : AttrOrTypeBuilderWithInferredContext<parameters, bodyCode>;
+class TypeBuilderWithInferredContext<dag parameters, code bodyCode = "">
+  : AttrOrTypeBuilderWithInferredContext<parameters, bodyCode>;
 
-// Define a new type, named `name`, belonging to `dialect` that inherits from
-// the given C++ base class.
-class TypeDef<Dialect dialect, string name,
-              string baseCppClass = "::mlir::Type">
-    : DialectType<dialect, CPred<"">, /*descr*/"", name # "Type"> {
-  // The name of the C++ base class to use for this Type.
+// Define a new attribute or type, named `name`, that inherits from the given
+// C++ base class.
+class AttrOrTypeDef<string valueType, string name, string baseCppClass> {
+  // The name of the C++ base class to use for this def.
   string cppBaseClassName = baseCppClass;
 
-  // Additional, longer human-readable description of what the op does.
+  // Additional, longer human-readable description of what the def does.
   string description = "";
 
   // Name of storage class to generate or use.
-  string storageClass = name # "TypeStorage";
+  string storageClass = name # valueType # "Storage";
+
   // Namespace (withing dialect c++ namespace) in which the storage class
   // resides.
   string storageNamespace = "detail";
+
   // Specify if the storage class is to be generated.
   bit genStorageClass = 1;
+
   // Specify that the generated storage class has a constructor which is written
   // in C++.
   bit hasStorageCustomConstructor = 0;
@@ -2568,38 +2577,38 @@ class TypeDef<Dialect dialect, string name,
   //    (ins
   //        "<c++ type>":$param1Name,
   //        "<c++ type>":$param2Name,
-  //        TypeParameter<"c++ type", "param description">:$param3Name)
-  // TypeParameters (or more likely one of their subclasses) are required to add
-  // more information about the parameter, specifically:
+  //        AttrOrTypeParameter<"c++ type", "param description">:$param3Name)
+  // AttrOrTypeParameters (or more likely one of their subclasses) are required
+  // to add more information about the parameter, specifically:
   //  - Documentation
   //  - Code to allocate the parameter (if allocation is needed in the storage
   //    class constructor)
   //
   // For example:
-  //    (ins
-  //        "int":$width,
-  //        ArrayRefParameter<"bool", "list of bools">:$yesNoArray)
+  //    (ins "int":$width,
+  //         ArrayRefParameter<"bool", "list of bools">:$yesNoArray)
   //
-  // (ArrayRefParameter is a subclass of TypeParameter which has allocation code
-  // for re-allocating ArrayRefs. It is defined below.)
+  // (ArrayRefParameter is a subclass of AttrOrTypeParameter which has
+  // allocation code for re-allocating ArrayRefs. It is defined below.)
   dag parameters = (ins);
 
-  // Custom type builder methods.
+  // Custom builder methods.
   // In addition to the custom builders provided here, and unless
   // skipDefaultBuilders is set, a default builder is generated with the
   // following signature:
   //
   // ```c++
-  // static <TypeName> get(MLIRContext *, <parameters>);
+  // static <ClassName> get(MLIRContext *, <parameters>);
   // ```
   //
-  // Note that builders should only be provided when a type has parameters.
-  list<TypeBuilder> builders = ?;
+  // Note that builders should only be provided when a def has parameters.
+  list<AttrOrTypeBuilder> builders = ?;
 
   // Use the lowercased name as the keyword for parsing/printing. Specify only
   // if you want tblgen to generate declarations and/or definitions of
-  // printer/parser for this type.
+  // the printer/parser.
   string mnemonic = ?;
+
   // If 'mnemonic' specified,
   //   If null, generate just the declarations.
   //   If a non-empty code block, just use that code as the definition code.
@@ -2607,29 +2616,53 @@ class TypeDef<Dialect dialect, string name,
   code printer = ?;
   code parser = ?;
 
-  // If set, generate accessors for each Type parameter.
+  // If set, generate accessors for each parameter.
   bit genAccessors = 1;
+
   // Avoid generating default get/getChecked functions. Custom get methods must
   // be provided.
   bit skipDefaultBuilders = 0;
+
   // Generate the verify and getChecked methods.
   bit genVerifyDecl = 0;
+
   // Extra code to include in the class declaration.
   code extraClassDeclaration = [{}];
+}
 
-  // The predicate for when this type is used as a type constraint.
+// Define a new attribute, named `name`, belonging to `dialect` that inherits
+// from the given C++ base class.
+class AttrDef<Dialect dialect, string name,
+              string baseCppClass = "::mlir::Attribute">
+    : DialectAttr<dialect, CPred<"">, /*descr*/"">,
+      AttrOrTypeDef<"Attr", name, baseCppClass> {
+  // The name of the C++ Attribute class.
+  string cppClassName = name # "Attr";
+
+  // The predicate for when this def is used as a constraint.
   let predicate = CPred<"$_self.isa<" # dialect.cppNamespace #
                                  "::" # cppClassName # ">()">;
+}
+
+// Define a new type, named `name`, belonging to `dialect` that inherits from
+// the given C++ base class.
+class TypeDef<Dialect dialect, string name,
+              string baseCppClass = "::mlir::Type">
+    : DialectType<dialect, CPred<"">, /*descr*/"", name # "Type">,
+      AttrOrTypeDef<"Type", name, baseCppClass> {
   // A constant builder provided when the type has no parameters.
   let builderCall = !if(!empty(parameters),
                            "$_builder.getType<" # dialect.cppNamespace #
                                "::" # cppClassName # ">()",
                            "");
+  // The predicate for when this def is used as a constraint.
+  let predicate = CPred<"$_self.isa<" # dialect.cppNamespace #
+                                 "::" # cppClassName # ">()">;
 }
 
 // 'Parameters' should be subclasses of this or simple strings (which is a
-// shorthand for TypeParameter<"C++Type">).
-class TypeParameter<string type, string desc> {
+// shorthand for AttrOrTypeParameter<"C++Type">).
+class AttrOrTypeParameter<string type, string desc> {
   // Custom memory allocation code for storage constructor.
   code allocator = ?;
   // The C++ type of this parameter.
@@ -2639,28 +2672,30 @@ class TypeParameter<string type, string desc> {
   // The format string for the asm syntax (documentation only).
   string syntax = ?;
 }
+class AttrParameter<string type, string desc> : AttrOrTypeParameter<type, desc>;
+class TypeParameter<string type, string desc> : AttrOrTypeParameter<type, desc>;
 
 // For StringRefs, which require allocation.
 class StringRefParameter<string desc> :
-    TypeParameter<"::llvm::StringRef", desc> {
+    AttrOrTypeParameter<"::llvm::StringRef", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
 }
 
 // For standard ArrayRefs, which require allocation.
 class ArrayRefParameter<string arrayOf, string desc> :
-    TypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
+    AttrOrTypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
 }
 
 // For classes which require allocation and have their own allocateInto method.
 class SelfAllocationParameter<string type, string desc> :
-    TypeParameter<type, desc> {
+    AttrOrTypeParameter<type, desc> {
   let allocator = [{$_dst = $_self.allocateInto($_allocator);}];
 }
 
 // For ArrayRefs which contain things which allocate themselves.
 class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
-    TypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
+    AttrOrTypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
   let allocator = [{
     llvm::SmallVector<}] # arrayOf # [{, 4> tmpFields;
     for (size_t i = 0, e = $_self.size(); i < e; ++i)
@@ -2668,6 +2703,5 @@ class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
     $_dst = $_allocator.copyInto(ArrayRef<}] # arrayOf # [{>(tmpFields));
   }];
 }
-
 
 #endif // OP_BASE

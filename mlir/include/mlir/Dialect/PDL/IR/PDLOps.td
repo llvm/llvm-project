@@ -52,7 +52,7 @@ def PDL_ApplyConstraintOp
   }];
 
   let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_PositionalValue>:$args,
+                       Variadic<PDL_AnyType>:$args,
                        OptionalAttr<ArrayAttr>:$constParams);
   let assemblyFormat = [{
     $name ($constParams^)? `(` $args `:` type($args) `)` attr-dict
@@ -136,9 +136,9 @@ def PDL_CreateNativeOp
   }];
 
   let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_PositionalValue>:$args,
+                       Variadic<PDL_AnyType>:$args,
                        OptionalAttr<ArrayAttr>:$constParams);
-  let results = (outs PDL_PositionalValue:$result);
+  let results = (outs PDL_AnyType:$result);
   let assemblyFormat = [{
     $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `:` type($result)
     attr-dict
@@ -169,28 +169,28 @@ def PDL_EraseOp : PDL_Op<"erase", [HasParent<"pdl::RewriteOp">]> {
 }
 
 //===----------------------------------------------------------------------===//
-// pdl::InputOp
+// pdl::OperandOp
 //===----------------------------------------------------------------------===//
 
-def PDL_InputOp : PDL_Op<"input", [HasParent<"pdl::PatternOp">]> {
-  let summary = "Define an input value in a pattern";
+def PDL_OperandOp : PDL_Op<"operand", [HasParent<"pdl::PatternOp">]> {
+  let summary = "Define an external input operand in a pattern";
   let description = [{
-    `pdl.input` operations capture external operand edges into an operation
+    `pdl.operand` operations capture external operand edges into an operation
     node that originate from operations or block arguments not otherwise
     specified within the pattern (e.g. via `pdl.operation`). These operations
-    define, and partially constrain, input operands of a given operation.
-    A `pdl.input` may partially constrain an input operand by specifying an
-    expected value type (via a `pdl.type` operation).
+    define individual operands of a given operation. A `pdl.operand` may
+    partially constrain an operand by specifying an expected value type
+    (via a `pdl.type` operation).
 
     Example:
 
     ```mlir
-    // Define an input operand:
-    %operand = pdl.input
+    // Define an external operand:
+    %operand = pdl.operand
 
-    // Define an input operand with an expected type:
+    // Define an external operand with an expected type:
     %type = pdl.type : i32
-    %attr = pdl.input : %type
+    %operand = pdl.operand : %type
     ```
   }];
 
@@ -289,10 +289,10 @@ def PDL_PatternOp : PDL_Op<"pattern", [IsolatedFromAbove, Symbol]> {
 
     ```mlir
     // Provide a pattern matching "foo.op" that replaces the root with its
-    // input.
+    // operand.
     pdl.pattern : benefit(1) {
       %resultType = pdl.type
-      %inputOperand = pdl.input
+      %inputOperand = pdl.operand
       %root, %results = pdl.operation "foo.op"(%inputOperand) -> (%resultType)
       pdl.rewrite %root {
         pdl.replace %root with (%inputOperand)
@@ -403,7 +403,7 @@ def PDL_RewriteOp : PDL_Op<"rewrite", [
 
   let arguments = (ins PDL_Operation:$root,
                        OptionalAttr<StrAttr>:$name,
-                       Variadic<PDL_PositionalValue>:$externalArgs,
+                       Variadic<PDL_AnyType>:$externalArgs,
                        OptionalAttr<ArrayAttr>:$externalConstParams);
   let regions = (region AnyRegion:$body);
   let assemblyFormat = [{

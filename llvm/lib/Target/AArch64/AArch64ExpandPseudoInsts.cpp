@@ -673,8 +673,10 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
   // Skip register arguments. Those are added during ISel, but are not
   // needed for the concrete branch.
   while (!MI.getOperand(RegMaskStartIdx).isRegMask()) {
-    assert(MI.getOperand(RegMaskStartIdx).isReg() &&
-           "should only skip register operands");
+    auto MOP = MI.getOperand(RegMaskStartIdx);
+    assert(MOP.isReg() && "can only add register operands");
+    OriginalCall->addOperand(MachineOperand::CreateReg(
+        MOP.getReg(), /*Def=*/false, /*Implicit=*/true));
     RegMaskStartIdx++;
   }
   for (; RegMaskStartIdx < MI.getNumOperands(); ++RegMaskStartIdx)

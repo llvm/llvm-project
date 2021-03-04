@@ -3392,16 +3392,13 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
 bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
                                          unsigned BuiltinID,
                                          CallExpr *TheCall) {
-  switch (BuiltinID) {
-  default:
-    break;
-#define RISCVV_BUILTIN(ID, TYPE, ATTRS) case RISCV::BI##ID:
-#include "clang/Basic/BuiltinsRISCV.def"
-    if (!TI.hasFeature("experimental-v"))
-      return Diag(TheCall->getBeginLoc(), diag::err_riscvv_builtin_requires_v)
-             << TheCall->getSourceRange();
-    break;
-  }
+  // CodeGenFunction can also detect this, but this gives a better error
+  // message.
+  StringRef Features = Context.BuiltinInfo.getRequiredFeatures(BuiltinID);
+  if (Features.find("experimental-v") != StringRef::npos &&
+      !TI.hasFeature("experimental-v"))
+    return Diag(TheCall->getBeginLoc(), diag::err_riscvv_builtin_requires_v)
+           << TheCall->getSourceRange();
 
   return false;
 }
