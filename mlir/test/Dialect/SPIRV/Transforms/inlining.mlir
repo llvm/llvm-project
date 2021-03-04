@@ -33,7 +33,7 @@ spv.module Logical GLSL450 {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @data bind(0, 0) : !spv.ptr<!spv.struct<(!spv.rtarray<i32> [0])>, StorageBuffer>
+  spv.GlobalVariable @data bind(0, 0) : !spv.ptr<!spv.struct<(!spv.rtarray<i32> [0])>, StorageBuffer>
   spv.func @callee() "None" {
     %0 = spv.mlir.addressof @data : !spv.ptr<!spv.struct<(!spv.rtarray<i32> [0])>, StorageBuffer>
     %1 = spv.Constant 0: i32
@@ -184,8 +184,8 @@ spv.module Logical GLSL450 {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @arg_0 bind(0, 0) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
-  spv.globalVariable @arg_1 bind(0, 1) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
+  spv.GlobalVariable @arg_0 bind(0, 0) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
+  spv.GlobalVariable @arg_1 bind(0, 1) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
 
   // CHECK: @inline_into_selection_region
   spv.func @inline_into_selection_region() "None" {

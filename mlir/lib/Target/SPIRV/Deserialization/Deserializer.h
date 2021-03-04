@@ -239,7 +239,7 @@ private:
 
   /// Processes the OpVariable instructions at current `offset` into `binary`.
   /// It is expected that this method is used for variables that are to be
-  /// defined at module scope and will be deserialized into a spv.globalVariable
+  /// defined at module scope and will be deserialized into a spv.GlobalVariable
   /// instruction.
   LogicalResult processGlobalVariable(ArrayRef<uint32_t> operands);
 

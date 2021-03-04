@@ -26,19 +26,19 @@ spv.func @access_chain_array(%arg0 : i32) "None" {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.globalVariable and spv.mlir.addressof
+// spv.GlobalVariable and spv.mlir.addressof
 //===----------------------------------------------------------------------===//
 
 spv.module Logical GLSL450 {
   // CHECK: llvm.mlir.global external constant @var() : f32
-  spv.globalVariable @var : !spv.ptr<f32, Input>
+  spv.GlobalVariable @var : !spv.ptr<f32, Input>
 }
 
 spv.module Logical GLSL450 {
   //       CHECK: llvm.mlir.global private @struct() : !llvm.struct<packed (f32, array<10 x f32>)>
   // CHECK-LABEL: @func
   //       CHECK:   llvm.mlir.addressof @struct : !llvm.ptr<struct<packed (f32, array<10 x f32>)>>
-  spv.globalVariable @struct : !spv.ptr<!spv.struct<(f32, !spv.array<10xf32>)>, Private>
+  spv.GlobalVariable @struct : !spv.ptr<!spv.struct<(f32, !spv.array<10xf32>)>, Private>
   spv.func @func() "None" {
     %0 = spv.mlir.addressof @struct : !spv.ptr<!spv.struct<(f32, !spv.array<10xf32>)>, Private>
     spv.Return
@@ -49,7 +49,7 @@ spv.module Logical GLSL450 {
   //       CHECK: llvm.mlir.global external @bar_descriptor_set0_binding0() : i32
   // CHECK-LABEL: @foo
   //       CHECK:   llvm.mlir.addressof @bar_descriptor_set0_binding0 : !llvm.ptr<i32>
-  spv.globalVariable @bar bind(0, 0) : !spv.ptr<i32, StorageBuffer>
+  spv.GlobalVariable @bar bind(0, 0) : !spv.ptr<i32, StorageBuffer>
   spv.func @foo() "None" {
     %0 = spv.mlir.addressof @bar : !spv.ptr<i32, StorageBuffer>
     spv.Return
@@ -60,7 +60,7 @@ spv.module @name Logical GLSL450 {
   //       CHECK: llvm.mlir.global external @name_bar_descriptor_set0_binding0() : i32
   // CHECK-LABEL: @foo
   //       CHECK:   llvm.mlir.addressof @name_bar_descriptor_set0_binding0 : !llvm.ptr<i32>
-  spv.globalVariable @bar bind(0, 0) : !spv.ptr<i32, StorageBuffer>
+  spv.GlobalVariable @bar bind(0, 0) : !spv.ptr<i32, StorageBuffer>
   spv.func @foo() "None" {
     %0 = spv.mlir.addressof @bar : !spv.ptr<i32, StorageBuffer>
     spv.Return

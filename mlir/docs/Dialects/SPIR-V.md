@@ -176,7 +176,7 @@ instructions are represented in the SPIR-V dialect:
 
 #### Adopt symbol-based global variables and specialization constant
 
-*   Global variables are defined with the `spv.globalVariable` op. They do not
+*   Global variables are defined with the `spv.GlobalVariable` op. They do not
     generate SSA values. Instead they have symbols and should be referenced via
     symbols. To use global variables in a function block, `spv.mlir.addressof` is
     needed to turn the symbol into an SSA value.
@@ -982,11 +982,11 @@ Similarly, a few transformations are performed during deserialization:
 *   `OpType*` instructions will be converted into proper `mlir::Type`s.
 *   `OpConstant*` instructions are materialized as `spv.Constant` at each use
     site.
-*   `OpVariable` instructions will be converted to `spv.globalVariable` ops if
+*   `OpVariable` instructions will be converted to `spv.GlobalVariable` ops if
     in module-level; otherwise they will be converted into `spv.Variable` ops.
 *   Every use of a module-level `OpVariable` instruction will materialize a
     `spv.mlir.addressof` op to turn the symbol of the corresponding
-    `spv.globalVariable` into an SSA value.
+    `spv.GlobalVariable` into an SSA value.
 *   Every use of a `OpSpecConstant` instruction will materialize a
     `spv.mlir.referenceof` op to turn the symbol of the corresponding
     `spv.SpecConstant` into an SSA value.
@@ -1069,7 +1069,7 @@ point function within the `spv.module` on lowering. A later pass
 point function and its ABI consistent with the Vulkan validation
 rules. Specifically,
 
-*   Creates `spv.globalVariable`s for the arguments, and replaces all uses of
+*   Creates `spv.GlobalVariable`s for the arguments, and replaces all uses of
     the argument with this variable. The SSA value used for replacement is
     obtained using the `spv.mlir.addressof` operation.
 *   Adds the `spv.EntryPoint` and `spv.ExecutionMode` operations into the
@@ -1078,15 +1078,15 @@ rules. Specifically,
 #### Setting layout for shader interface variables
 
 SPIR-V validation rules for shaders require composite objects to be explicitly
-laid out. If a `spv.globalVariable` is not explicitly laid out, the utility
+laid out. If a `spv.GlobalVariable` is not explicitly laid out, the utility
 method `mlir::spirv::decorateType` implements a layout consistent with
 the [Vulkan shader requirements][VulkanShaderInterface].
 
 #### Creating builtin variables
 
-In SPIR-V dialect, builtins are represented using `spv.globalVariable`s, with
+In SPIR-V dialect, builtins are represented using `spv.GlobalVariable`s, with
 `spv.mlir.addressof` used to get a handle to the builtin as an SSA value.  The
-method `mlir::spirv::getBuiltinVariableValue` creates a `spv.globalVariable` for
+method `mlir::spirv::getBuiltinVariableValue` creates a `spv.GlobalVariable` for
 the builtin in the current `spv.module` if it does not exist already, and
 returns an SSA value generated from an `spv.mlir.addressof` operation.
 
