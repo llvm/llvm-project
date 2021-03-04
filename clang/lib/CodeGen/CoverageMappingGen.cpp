@@ -104,21 +104,26 @@ class SourceMappingRegion {
   /// The region's ending location.
   Optional<SourceLocation> LocEnd;
 
+  /// Whether this region should be emitted after its parent is emitted.
+  bool DeferRegion;
+
   /// Whether this region is a gap region. The count from a gap region is set
   /// as the line execution count if there are no other regions on the line.
   bool GapRegion;
 
 public:
   SourceMappingRegion(Counter Count, Optional<SourceLocation> LocStart,
-                      Optional<SourceLocation> LocEnd, bool GapRegion = false)
-      : Count(Count), LocStart(LocStart), LocEnd(LocEnd), GapRegion(GapRegion) {
-  }
+                      Optional<SourceLocation> LocEnd, bool DeferRegion = false,
+                      bool GapRegion = false)
+      : Count(Count), LocStart(LocStart), LocEnd(LocEnd),
+        DeferRegion(DeferRegion), GapRegion(GapRegion) {}
 
   SourceMappingRegion(Counter Count, Optional<Counter> FalseCount,
                       Optional<SourceLocation> LocStart,
-                      Optional<SourceLocation> LocEnd, bool GapRegion = false)
+                      Optional<SourceLocation> LocEnd, bool DeferRegion = false,
+                      bool GapRegion = false)
       : Count(Count), FalseCount(FalseCount), LocStart(LocStart),
-        LocEnd(LocEnd), GapRegion(GapRegion) {}
+        LocEnd(LocEnd), DeferRegion(DeferRegion), GapRegion(GapRegion) {}
 
   const Counter &getCounter() const { return Count; }
 
@@ -149,6 +154,10 @@ public:
     assert(LocEnd && "Region has no end location");
     return *LocEnd;
   }
+
+  bool isDeferred() const { return DeferRegion; }
+
+  void setDeferred(bool Deferred) { DeferRegion = Deferred; }
 
   bool isGap() const { return GapRegion; }
 
@@ -535,6 +544,10 @@ struct CounterCoverageMappingBuilder
   /// A stack of currently live regions.
   std::vector<SourceMappingRegion> RegionStack;
 
+  /// The currently deferred region: its end location and count can be set once
+  /// its parent has been popped from the region stack.
+  Optional<SourceMappingRegion> DeferredRegion;
+
   CounterExpressionBuilder Builder;
 
   /// A location in the most recently visited file or macro.
@@ -543,11 +556,8 @@ struct CounterCoverageMappingBuilder
   /// expressions cross file or macro boundaries.
   SourceLocation MostRecentLocation;
 
-  /// Whether the visitor at a terminate statement.
-  bool HasTerminateStmt = false;
-
-  /// Gap region counter after terminate statement.
-  Counter GapRegionCounter;
+  /// Location of the last terminated region.
+  Optional<std::pair<SourceLocation, size_t>> LastTerminatedRegion;
 
   /// Return a counter for the subtraction of \c RHS from \c LHS
   Counter subtractCounters(Counter LHS, Counter RHS) {
@@ -580,11 +590,75 @@ struct CounterCoverageMappingBuilder
 
     if (StartLoc && !FalseCount.hasValue()) {
       MostRecentLocation = *StartLoc;
+      completeDeferred(Count, MostRecentLocation);
     }
 
-    RegionStack.emplace_back(Count, FalseCount, StartLoc, EndLoc);
+    RegionStack.emplace_back(Count, FalseCount, StartLoc, EndLoc,
+                             FalseCount.hasValue());
 
     return RegionStack.size() - 1;
+  }
+
+  /// Complete any pending deferred region by setting its end location and
+  /// count, and then pushing it onto the region stack.
+  size_t completeDeferred(Counter Count, SourceLocation DeferredEndLoc) {
+    size_t Index = RegionStack.size();
+    if (!DeferredRegion)
+      return Index;
+
+    // Consume the pending region.
+    SourceMappingRegion DR = DeferredRegion.getValue();
+    DeferredRegion = None;
+
+    // If the region ends in an expansion, find the expansion site.
+    FileID StartFile = SM.getFileID(DR.getBeginLoc());
+    if (SM.getFileID(DeferredEndLoc) != StartFile) {
+      if (isNestedIn(DeferredEndLoc, StartFile)) {
+        do {
+          DeferredEndLoc = getIncludeOrExpansionLoc(DeferredEndLoc);
+        } while (StartFile != SM.getFileID(DeferredEndLoc));
+      } else {
+        return Index;
+      }
+    }
+
+    // The parent of this deferred region ends where the containing decl ends,
+    // so the region isn't useful.
+    if (DR.getBeginLoc() == DeferredEndLoc)
+      return Index;
+
+    // If we're visiting statements in non-source order (e.g switch cases or
+    // a loop condition) we can't construct a sensible deferred region.
+    if (!SpellingRegion(SM, DR.getBeginLoc(), DeferredEndLoc).isInSourceOrder())
+      return Index;
+
+    DR.setGap(true);
+    DR.setCounter(Count);
+    DR.setEndLoc(DeferredEndLoc);
+    handleFileExit(DeferredEndLoc);
+    RegionStack.push_back(DR);
+    return Index;
+  }
+
+  /// Complete a deferred region created after a terminated region at the
+  /// top-level.
+  void completeTopLevelDeferredRegion(Counter Count,
+                                      SourceLocation DeferredEndLoc) {
+    if (DeferredRegion || !LastTerminatedRegion)
+      return;
+
+    if (LastTerminatedRegion->second != RegionStack.size())
+      return;
+
+    SourceLocation Start = LastTerminatedRegion->first;
+    if (SM.getFileID(Start) != SM.getMainFileID())
+      return;
+
+    SourceMappingRegion DR = RegionStack.back();
+    DR.setStartLoc(Start);
+    DR.setDeferred(false);
+    DeferredRegion = DR;
+    completeDeferred(Count, DeferredEndLoc);
   }
 
   size_t locationDepth(SourceLocation Loc) {
@@ -602,6 +676,7 @@ struct CounterCoverageMappingBuilder
   /// function's \c SourceRegions.
   void popRegions(size_t ParentIndex) {
     assert(RegionStack.size() >= ParentIndex && "parent not in stack");
+    bool ParentOfDeferredRegion = false;
     while (RegionStack.size() > ParentIndex) {
       SourceMappingRegion &Region = RegionStack.back();
       if (Region.hasStartLoc()) {
@@ -671,9 +746,32 @@ struct CounterCoverageMappingBuilder
         assert(SM.isWrittenInSameFile(Region.getBeginLoc(), EndLoc));
         assert(SpellingRegion(SM, Region).isInSourceOrder());
         SourceRegions.push_back(Region);
+
+        if (ParentOfDeferredRegion) {
+          ParentOfDeferredRegion = false;
+
+          // If there's an existing deferred region, keep the old one, because
+          // it means there are two consecutive returns (or a similar pattern).
+          if (!DeferredRegion.hasValue() &&
+              // File IDs aren't gathered within macro expansions, so it isn't
+              // useful to try and create a deferred region inside of one.
+              !EndLoc.isMacroID())
+            DeferredRegion =
+                SourceMappingRegion(Counter::getZero(), EndLoc, None);
         }
+      } else if (Region.isDeferred()) {
+        assert(!ParentOfDeferredRegion && "Consecutive deferred regions");
+        ParentOfDeferredRegion = true;
+      }
       RegionStack.pop_back();
+
+      // If the zero region pushed after the last terminated region no longer
+      // exists, clear its cached information.
+      if (LastTerminatedRegion &&
+          RegionStack.size() < LastTerminatedRegion->second)
+        LastTerminatedRegion = None;
     }
+    assert(!ParentOfDeferredRegion && "Deferred region with no parent");
   }
 
   /// Return the currently active region.
@@ -857,6 +955,8 @@ struct CounterCoverageMappingBuilder
     handleFileExit(StartLoc);
     if (!Region.hasStartLoc())
       Region.setStartLoc(StartLoc);
+
+    completeDeferred(Region.getCounter(), StartLoc);
   }
 
   /// Mark \c S as a terminator, starting a zero region.
@@ -867,21 +967,14 @@ struct CounterCoverageMappingBuilder
     if (!Region.hasEndLoc())
       Region.setEndLoc(EndLoc);
     pushRegion(Counter::getZero());
-    HasTerminateStmt = true;
+    auto &ZeroRegion = getRegion();
+    ZeroRegion.setDeferred(true);
+    LastTerminatedRegion = {EndLoc, RegionStack.size()};
   }
 
   /// Find a valid gap range between \p AfterLoc and \p BeforeLoc.
   Optional<SourceRange> findGapAreaBetween(SourceLocation AfterLoc,
                                            SourceLocation BeforeLoc) {
-    // If AfterLoc is in function-like macro, use the right parenthesis
-    // location.
-    if (AfterLoc.isMacroID()) {
-      FileID FID = SM.getFileID(AfterLoc);
-      const SrcMgr::ExpansionInfo *EI = &SM.getSLocEntry(FID).getExpansion();
-      if (EI->isFunctionMacroExpansion())
-        AfterLoc = EI->getExpansionLocEnd();
-    }
-
     size_t StartDepth = locationDepth(AfterLoc);
     size_t EndDepth = locationDepth(BeforeLoc);
     while (!SM.isWrittenInSameFile(AfterLoc, BeforeLoc)) {
@@ -911,8 +1004,7 @@ struct CounterCoverageMappingBuilder
     // file, the range may not be in source order.
     if (AfterLoc.isMacroID() || BeforeLoc.isMacroID())
       return None;
-    if (!SM.isWrittenInSameFile(AfterLoc, BeforeLoc) ||
-        !SpellingRegion(SM, AfterLoc, BeforeLoc).isInSourceOrder())
+    if (!SM.isWrittenInSameFile(AfterLoc, BeforeLoc))
       return None;
     return {{AfterLoc, BeforeLoc}};
   }
@@ -941,13 +1033,15 @@ struct CounterCoverageMappingBuilder
       CoverageMappingModuleGen &CVM,
       llvm::DenseMap<const Stmt *, unsigned> &CounterMap, SourceManager &SM,
       const LangOptions &LangOpts)
-      : CoverageMappingBuilder(CVM, SM, LangOpts), CounterMap(CounterMap) {}
+      : CoverageMappingBuilder(CVM, SM, LangOpts), CounterMap(CounterMap),
+        DeferredRegion(None) {}
 
   /// Write the mapping data to the output stream
   void write(llvm::raw_ostream &OS) {
     llvm::SmallVector<unsigned, 8> VirtualFileMapping;
     gatherFileIDs(VirtualFileMapping);
     SourceRegionFilter Filter = emitExpansionRegions();
+    assert(!DeferredRegion && "Deferred region never completed");
     emitSourceRegions(Filter);
     gatherSkippedRegions();
 
@@ -962,32 +1056,15 @@ struct CounterCoverageMappingBuilder
   void VisitStmt(const Stmt *S) {
     if (S->getBeginLoc().isValid())
       extendRegion(S);
-    const Stmt *LastStmt = nullptr;
-    bool SaveTerminateStmt = HasTerminateStmt;
-    HasTerminateStmt = false;
-    GapRegionCounter = Counter::getZero();
     for (const Stmt *Child : S->children())
-      if (Child) {
-        // If last statement contains terminate statements, add a gap area
-        // between the two statements. Skipping attributed statements, because
-        // they don't have valid start location.
-        if (LastStmt && HasTerminateStmt && !dyn_cast<AttributedStmt>(Child)) {
-          auto Gap = findGapAreaBetween(getEnd(LastStmt), getStart(Child));
-          if (Gap)
-            fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(),
-                                 GapRegionCounter);
-          SaveTerminateStmt = true;
-          HasTerminateStmt = false;
-        }
+      if (Child)
         this->Visit(Child);
-        LastStmt = Child;
-      }
-    if (SaveTerminateStmt)
-      HasTerminateStmt = true;
     handleFileExit(getEnd(S));
   }
 
   void VisitDecl(const Decl *D) {
+    assert(!DeferredRegion && "Deferred region never completed");
+
     Stmt *Body = D->getBody();
 
     // Do not propagate region counts into system headers.
@@ -1005,6 +1082,11 @@ struct CounterCoverageMappingBuilder
     propagateCounts(getRegionCounter(Body), Body,
                     /*VisitChildren=*/!Defaulted);
     assert(RegionStack.empty() && "Regions entered but never exited");
+
+    // Discard the last uncompleted deferred region in a decl, if one exists.
+    // This prevents lines at the end of a function containing only whitespace
+    // or closing braces from being marked as uncovered.
+    DeferredRegion = None;
   }
 
   void VisitReturnStmt(const ReturnStmt *S) {
@@ -1038,6 +1120,8 @@ struct CounterCoverageMappingBuilder
   void VisitLabelStmt(const LabelStmt *S) {
     Counter LabelCount = getRegionCounter(S);
     SourceLocation Start = getStart(S);
+    completeTopLevelDeferredRegion(LabelCount, Start);
+    completeDeferred(LabelCount, Start);
     // We can't extendRegion here or we risk overlapping with our new region.
     handleFileExit(Start);
     pushRegion(LabelCount, Start);
@@ -1082,9 +1166,6 @@ struct CounterCoverageMappingBuilder
     Counter BackedgeCount = propagateCounts(BodyCount, S->getBody());
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
-    bool BodyHasTerminateStmt = HasTerminateStmt;
-    HasTerminateStmt = false;
-
     // Go back to handle the condition.
     Counter CondCount =
         addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
@@ -1098,12 +1179,8 @@ struct CounterCoverageMappingBuilder
 
     Counter OutCount =
         addCounters(BC.BreakCount, subtractCounters(CondCount, BodyCount));
-    if (OutCount != ParentCount) {
+    if (OutCount != ParentCount)
       pushRegion(OutCount);
-      GapRegionCounter = OutCount;
-      if (BodyHasTerminateStmt)
-        HasTerminateStmt = true;
-    }
 
     // Create Branch Region around condition.
     createBranchRegion(S->getCond(), BodyCount,
@@ -1122,25 +1199,17 @@ struct CounterCoverageMappingBuilder
         propagateCounts(addCounters(ParentCount, BodyCount), S->getBody());
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
-    bool BodyHasTerminateStmt = HasTerminateStmt;
-    HasTerminateStmt = false;
-
     Counter CondCount = addCounters(BackedgeCount, BC.ContinueCount);
     propagateCounts(CondCount, S->getCond());
 
     Counter OutCount =
         addCounters(BC.BreakCount, subtractCounters(CondCount, BodyCount));
-    if (OutCount != ParentCount) {
+    if (OutCount != ParentCount)
       pushRegion(OutCount);
-      GapRegionCounter = OutCount;
-    }
 
     // Create Branch Region around condition.
     createBranchRegion(S->getCond(), BodyCount,
                        subtractCounters(CondCount, BodyCount));
-
-    if (BodyHasTerminateStmt)
-      HasTerminateStmt = true;
   }
 
   void VisitForStmt(const ForStmt *S) {
@@ -1160,9 +1229,6 @@ struct CounterCoverageMappingBuilder
     extendRegion(S->getBody());
     Counter BackedgeCount = propagateCounts(BodyCount, S->getBody());
     BreakContinue BodyBC = BreakContinueStack.pop_back_val();
-
-    bool BodyHasTerminateStmt = HasTerminateStmt;
-    HasTerminateStmt = false;
 
     // The increment is essentially part of the body but it needs to include
     // the count for all the continue statements.
@@ -1188,12 +1254,8 @@ struct CounterCoverageMappingBuilder
 
     Counter OutCount = addCounters(BodyBC.BreakCount, IncrementBC.BreakCount,
                                    subtractCounters(CondCount, BodyCount));
-    if (OutCount != ParentCount) {
+    if (OutCount != ParentCount)
       pushRegion(OutCount);
-      GapRegionCounter = OutCount;
-      if (BodyHasTerminateStmt)
-        HasTerminateStmt = true;
-    }
 
     // Create Branch Region around condition.
     createBranchRegion(S->getCond(), BodyCount,
@@ -1215,9 +1277,6 @@ struct CounterCoverageMappingBuilder
     Counter BackedgeCount = propagateCounts(BodyCount, S->getBody());
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
-    bool BodyHasTerminateStmt = HasTerminateStmt;
-    HasTerminateStmt = false;
-
     // The body count applies to the area immediately after the range.
     auto Gap = findGapAreaBetween(S->getRParenLoc(), getStart(S->getBody()));
     if (Gap)
@@ -1227,12 +1286,8 @@ struct CounterCoverageMappingBuilder
         addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
     Counter OutCount =
         addCounters(BC.BreakCount, subtractCounters(LoopCount, BodyCount));
-    if (OutCount != ParentCount) {
+    if (OutCount != ParentCount)
       pushRegion(OutCount);
-      GapRegionCounter = OutCount;
-      if (BodyHasTerminateStmt)
-        HasTerminateStmt = true;
-    }
 
     // Create Branch Region around condition.
     createBranchRegion(S->getCond(), BodyCount,
@@ -1260,10 +1315,8 @@ struct CounterCoverageMappingBuilder
         addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
     Counter OutCount =
         addCounters(BC.BreakCount, subtractCounters(LoopCount, BodyCount));
-    if (OutCount != ParentCount) {
+    if (OutCount != ParentCount)
       pushRegion(OutCount);
-      GapRegionCounter = OutCount;
-    }
   }
 
   void VisitSwitchStmt(const SwitchStmt *S) {
@@ -1283,7 +1336,8 @@ struct CounterCoverageMappingBuilder
         // the unreachable code at the beginning of the switch body.
         size_t Index = pushRegion(Counter::getZero(), getStart(CS));
         getRegion().setGap(true);
-        Visit(Body);
+        for (const auto *Child : CS->children())
+          Visit(Child);
 
         // Set the end for the body of the switch, if it isn't already set.
         for (size_t i = RegionStack.size(); i != Index; --i) {
@@ -1305,7 +1359,6 @@ struct CounterCoverageMappingBuilder
     Counter ExitCount = getRegionCounter(S);
     SourceLocation ExitLoc = getEnd(S);
     pushRegion(ExitCount);
-    GapRegionCounter = ExitCount;
 
     // Ensure that handleFileExit recognizes when the end location is located
     // in a different file.
@@ -1348,8 +1401,6 @@ struct CounterCoverageMappingBuilder
     else
       pushRegion(Count, getStart(S));
 
-    GapRegionCounter = Count;
-
     if (const auto *CS = dyn_cast<CaseStmt>(S)) {
       Visit(CS->getLHS());
       if (const Expr *RHS = CS->getRHS())
@@ -1384,25 +1435,17 @@ struct CounterCoverageMappingBuilder
 
     Counter ElseCount = subtractCounters(ParentCount, ThenCount);
     if (const Stmt *Else = S->getElse()) {
-      bool ThenHasTerminateStmt = HasTerminateStmt;
-      HasTerminateStmt = false;
-
       // The 'else' count applies to the area immediately after the 'then'.
       Gap = findGapAreaBetween(getEnd(S->getThen()), getStart(Else));
       if (Gap)
         fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), ElseCount);
       extendRegion(Else);
       OutCount = addCounters(OutCount, propagateCounts(ElseCount, Else));
-
-      if (ThenHasTerminateStmt)
-        HasTerminateStmt = true;
     } else
       OutCount = addCounters(OutCount, ElseCount);
 
-    if (OutCount != ParentCount) {
+    if (OutCount != ParentCount)
       pushRegion(OutCount);
-      GapRegionCounter = OutCount;
-    }
 
     // Create Branch Region around condition.
     createBranchRegion(S->getCond(), ThenCount,
