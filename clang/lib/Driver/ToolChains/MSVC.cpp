@@ -509,6 +509,10 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-guard:cf");
     } else if (GuardArgs.equals_lower("cf-")) {
       CmdArgs.push_back("-guard:cf-");
+    } else if (GuardArgs.equals_lower("ehcont")) {
+      CmdArgs.push_back("-guard:ehcont");
+    } else if (GuardArgs.equals_lower("ehcont-")) {
+      CmdArgs.push_back("-guard:ehcont-");
     }
   }
 

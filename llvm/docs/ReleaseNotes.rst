@@ -51,6 +51,9 @@ Non-comprehensive list of changes in this release
 
    Makes programs 10x faster by doing Special New Thing.
 
+* Windows Control-flow Enforcement Technology: the ``-ehcontguard`` option now
+  emits valid unwind entrypoints which are validated when the context is being
+  set during exception handling.
 
 Changes to the LLVM IR
 ----------------------
