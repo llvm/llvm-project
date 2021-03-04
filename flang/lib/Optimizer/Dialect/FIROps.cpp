@@ -957,9 +957,10 @@ static void print(mlir::OpAsmPrinter &p, fir::IterWhileOp op) {
     llvm::interleaveComma(
         llvm::zip(regionArgs.drop_front(), operands.drop_front()), p,
         [&](auto it) { p << std::get<0>(it) << " = " << std::get<1>(it); });
-    auto resTypes = op.finalValue() ? op.getResultTypes()
-                                    : op.getResultTypes().drop_front();
-    p << ") -> (" << resTypes << ')';
+    p << ") -> (";
+    llvm::interleaveComma(
+        llvm::drop_begin(op.getResultTypes(), op.finalValue() ? 0 : 1), p);
+    p << ")";
   } else if (op.finalValue()) {
     p << " -> (" << op.getResultTypes() << ')';
   }
