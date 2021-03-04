@@ -334,7 +334,8 @@ private:
 
 class LCBuildVersion : public LoadCommand {
 public:
-  LCBuildVersion(const PlatformInfo &platform) : platform(platform) {}
+  LCBuildVersion(PlatformKind platform, const PlatformInfo &platformInfo)
+      : platform(platform), platformInfo(platformInfo) {}
 
   const int ntools = 1;
 
@@ -346,13 +347,13 @@ public:
     auto *c = reinterpret_cast<build_version_command *>(buf);
     c->cmd = LC_BUILD_VERSION;
     c->cmdsize = getSize();
-    c->platform = static_cast<uint32_t>(platform.kind);
-    c->minos = ((platform.minimum.getMajor() << 020) |
-                (platform.minimum.getMinor().getValueOr(0) << 010) |
-                platform.minimum.getSubminor().getValueOr(0));
-    c->sdk = ((platform.sdk.getMajor() << 020) |
-              (platform.sdk.getMinor().getValueOr(0) << 010) |
-              platform.sdk.getSubminor().getValueOr(0));
+    c->platform = static_cast<uint32_t>(platform);
+    c->minos = ((platformInfo.minimum.getMajor() << 020) |
+                (platformInfo.minimum.getMinor().getValueOr(0) << 010) |
+                platformInfo.minimum.getSubminor().getValueOr(0));
+    c->sdk = ((platformInfo.sdk.getMajor() << 020) |
+              (platformInfo.sdk.getMinor().getValueOr(0) << 010) |
+              platformInfo.sdk.getSubminor().getValueOr(0));
     c->ntools = ntools;
     auto *t = reinterpret_cast<build_tool_version *>(&c[1]);
     t->tool = TOOL_LD;
@@ -360,7 +361,8 @@ public:
                  LLVM_VERSION_PATCH;
   }
 
-  const PlatformInfo &platform;
+  PlatformKind platform;
+  const PlatformInfo &platformInfo;
 };
 
 // Stores a unique identifier for the output file based on an MD5 hash of its
@@ -523,7 +525,8 @@ void Writer::createLoadCommands() {
   uuidCommand = make<LCUuid>();
   in.header->addLoadCommand(uuidCommand);
 
-  in.header->addLoadCommand(make<LCBuildVersion>(config->platform));
+  in.header->addLoadCommand(
+      make<LCBuildVersion>(config->target.Platform, config->platformInfo));
 
   int64_t dylibOrdinal = 1;
   for (InputFile *file : inputFiles) {
@@ -723,7 +726,7 @@ void Writer::createOutputSections() {
   symtabSection = make<SymtabSection>(*stringTableSection);
   indirectSymtabSection = make<IndirectSymtabSection>();
   if (config->outputType == MH_EXECUTE &&
-      (config->arch == AK_arm64 || config->arch == AK_arm64e))
+      (config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e))
     codeSignatureSection = make<CodeSignatureSection>();
 
   switch (config->outputType) {

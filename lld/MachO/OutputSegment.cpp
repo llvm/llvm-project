@@ -31,7 +31,7 @@ static uint32_t initProt(StringRef name) {
 }
 
 static uint32_t maxProt(StringRef name) {
-  assert(config->arch != AK_i386 &&
+  assert(config->target.Arch != AK_i386 &&
          "TODO: i386 has different maxProt requirements");
   return initProt(name);
 }
