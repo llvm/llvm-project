@@ -6709,6 +6709,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       // ValNo of the custom MemLoc, so we can compare it to the ValNo of the
       // matching custom RegLocs.
       const unsigned OriginalValNo = VA.getValNo();
+      (void)OriginalValNo;
 
       auto HandleCustomVecRegLoc = [&]() {
         assert(I != End && ArgLocs[I].isRegLoc() && ArgLocs[I].needsCustom() &&
