@@ -1019,6 +1019,8 @@ bool __create_directories(const path& p, error_code* ec) {
     if (not status_known(parent_st))
       return err.report(m_ec);
     if (not exists(parent_st)) {
+      if (parent == p)
+        return err.report(errc::invalid_argument);
       __create_directories(parent, ec);
       if (ec && *ec) {
         return false;
