@@ -170,8 +170,8 @@ clang-format
 
 - Option ``SortIncludes`` has been updated from a ``bool`` to an
   ``enum`` with backwards compatibility. In addition to the previous
-  ``true``/``false`` states (now ``CaseInsensitive``/``Never``), a third
-  state has been added (``CaseSensitive``) which causes an alphabetical sort
+  ``true``/``false`` states (now ``CaseSensitive``/``Never``), a third
+  state has been added (``CaseInsensitive``) which causes an alphabetical sort
   with case used as a tie-breaker.
 
   .. code-block:: c++
@@ -183,14 +183,14 @@ clang-format
     #include "A/b.h"
     #include "B/a.h"
 
-    // CaseInsensitive (previously true)
+    // CaseSensitive (previously true)
     #include "A/B.h"
     #include "A/b.h"
     #include "B/A.h"
     #include "B/a.h"
     #include "a/b.h"
 
-    // CaseSensitive
+    // CaseInsensitive
     #include "A/B.h"
     #include "A/b.h"
     #include "a/b.h"
