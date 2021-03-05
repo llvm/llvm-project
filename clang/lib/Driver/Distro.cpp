@@ -36,10 +36,10 @@ static Distro::DistroType DetectOsRelease(llvm::vfs::FileSystem &VFS) {
   for (StringRef Line : Lines)
     if (Version == Distro::UnknownDistro && Line.startswith("ID="))
       Version = llvm::StringSwitch<Distro::DistroType>(Line.substr(3))
+                    .Case("alpine", Distro::AlpineLinux)
                     .Case("fedora", Distro::Fedora)
                     .Case("gentoo", Distro::Gentoo)
                     .Case("arch", Distro::ArchLinux)
-                    .Case("exherbo", Distro::Exherbo)
                     // On SLES, /etc/os-release was introduced in SLES 11.
                     .Case("sles", Distro::OpenSUSE)
                     .Case("opensuse", Distro::OpenSUSE)
