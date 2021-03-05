@@ -207,6 +207,14 @@ static cl::opt<bool> ClTrackSelectControlFlow(
              "to results."),
     cl::Hidden, cl::init(true));
 
+// TODO: This default value follows MSan. DFSan may use a different value.
+static cl::opt<int> ClInstrumentWithCallThreshold(
+    "dfsan-instrument-with-call-threshold",
+    cl::desc("If the function being instrumented requires more than "
+             "this number of origin stores, use callbacks instead of "
+             "inline checks (-1 means never use callbacks)."),
+    cl::Hidden, cl::init(3500));
+
 // Controls how to track origins.
 // * 0: do not track origins.
 // * 1: track origins at memory store operations.
@@ -426,6 +434,7 @@ class DataFlowSanitizer {
   FunctionCallee DFSanMaybeStoreOriginFn;
   SmallPtrSet<Value *, 16> DFSanRuntimeFunctions;
   MDNode *ColdCallWeights;
+  MDNode *OriginStoreWeights;
   DFSanABIList ABIList;
   DenseMap<Value *, Function *> UnwrappedFnMap;
   AttrBuilder ReadOnlyNoneAttrs;
@@ -578,8 +587,9 @@ struct DFSanFunction {
   std::pair<Value *, Value *> loadShadowOrigin(Value *ShadowAddr, uint64_t Size,
                                                Align InstAlignment,
                                                Instruction *Pos);
-  void storePrimitiveShadow(Value *Addr, uint64_t Size, Align Alignment,
-                            Value *PrimitiveShadow, Instruction *Pos);
+  void storePrimitiveShadowOrigin(Value *Addr, uint64_t Size,
+                                  Align InstAlignment, Value *PrimitiveShadow,
+                                  Value *Origin, Instruction *Pos);
   /// Applies PrimitiveShadow to all primitive subtypes of T, returning
   /// the expanded shadow value.
   ///
@@ -633,6 +643,33 @@ private:
   /// checks if it is possible to load labels and origins without using the
   /// callback function.
   bool useCallbackLoadLabelAndOrigin(uint64_t Size, Align InstAlignment);
+
+  /// Returns a chain at the current stack with previous origin V.
+  Value *updateOrigin(Value *V, IRBuilder<> &IRB);
+
+  /// Creates an Intptr = Origin | Origin << 32 if Intptr's size is 64. Returns
+  /// Origin otherwise.
+  Value *originToIntptr(IRBuilder<> &IRB, Value *Origin);
+
+  /// Stores Origin into the address range [StoreOriginAddr, StoreOriginAddr +
+  /// Size).
+  void paintOrigin(IRBuilder<> &IRB, Value *Origin, Value *StoreOriginAddr,
+                   uint64_t StoreOriginSize, Align Alignment);
+
+  /// Stores Origin in terms of its Shadow value.
+  /// * Do not write origins for zero shadows because we do not trace origins
+  ///   for untainted sinks.
+  /// * Use __dfsan_maybe_store_origin if there are too many origin store
+  ///   instrumentations.
+  void storeOrigin(Instruction *Pos, Value *Addr, uint64_t Size, Value *Shadow,
+                   Value *Origin, Value *StoreOriginAddr, Align InstAlignment);
+
+  /// Convert a scalar value to an i1 by comparing with 0.
+  Value *convertToBool(Value *V, IRBuilder<> &IRB, const Twine &Name = "");
+
+  bool shouldInstrumentWithCall();
+
+  int NumOriginStores = 0;
 };
 
 class DFSanVisitor : public InstVisitor<DFSanVisitor> {
@@ -837,6 +874,11 @@ static Value *expandFromPrimitiveShadowRecursive(
   llvm_unreachable("Unexpected shadow type");
 }
 
+bool DFSanFunction::shouldInstrumentWithCall() {
+  return ClInstrumentWithCallThreshold >= 0 &&
+         NumOriginStores >= ClInstrumentWithCallThreshold;
+}
+
 Value *DFSanFunction::expandFromPrimitiveShadow(Type *T, Value *PrimitiveShadow,
                                                 Instruction *Pos) {
   Type *ShadowTy = DFS.getShadowTy(T);
@@ -1009,6 +1051,7 @@ bool DataFlowSanitizer::init(Module &M) {
                         /*isVarArg=*/false);
 
   ColdCallWeights = MDBuilder(*Ctx).createBranchWeights(1, 1000);
+  OriginStoreWeights = MDBuilder(*Ctx).createBranchWeights(1, 1000);
   return true;
 }
 
@@ -2212,6 +2255,99 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
   }
 }
 
+Value *DFSanFunction::updateOrigin(Value *V, IRBuilder<> &IRB) {
+  if (!DFS.shouldTrackOrigins())
+    return V;
+  return IRB.CreateCall(DFS.DFSanChainOriginFn, V);
+}
+
+Value *DFSanFunction::originToIntptr(IRBuilder<> &IRB, Value *Origin) {
+  const unsigned OriginSize = DataFlowSanitizer::OriginWidthBytes;
+  const DataLayout &DL = F->getParent()->getDataLayout();
+  unsigned IntptrSize = DL.getTypeStoreSize(DFS.IntptrTy);
+  if (IntptrSize == OriginSize)
+    return Origin;
+  assert(IntptrSize == OriginSize * 2);
+  Origin = IRB.CreateIntCast(Origin, DFS.IntptrTy, /* isSigned */ false);
+  return IRB.CreateOr(Origin, IRB.CreateShl(Origin, OriginSize * 8));
+}
+
+void DFSanFunction::paintOrigin(IRBuilder<> &IRB, Value *Origin,
+                                Value *StoreOriginAddr,
+                                uint64_t StoreOriginSize, Align Alignment) {
+  const unsigned OriginSize = DataFlowSanitizer::OriginWidthBytes;
+  const DataLayout &DL = F->getParent()->getDataLayout();
+  const Align IntptrAlignment = DL.getABITypeAlign(DFS.IntptrTy);
+  unsigned IntptrSize = DL.getTypeStoreSize(DFS.IntptrTy);
+  assert(IntptrAlignment >= MinOriginAlignment);
+  assert(IntptrSize >= OriginSize);
+
+  unsigned Ofs = 0;
+  Align CurrentAlignment = Alignment;
+  if (Alignment >= IntptrAlignment && IntptrSize > OriginSize) {
+    Value *IntptrOrigin = originToIntptr(IRB, Origin);
+    Value *IntptrStoreOriginPtr = IRB.CreatePointerCast(
+        StoreOriginAddr, PointerType::get(DFS.IntptrTy, 0));
+    for (unsigned I = 0; I < StoreOriginSize / IntptrSize; ++I) {
+      Value *Ptr =
+          I ? IRB.CreateConstGEP1_32(DFS.IntptrTy, IntptrStoreOriginPtr, I)
+            : IntptrStoreOriginPtr;
+      IRB.CreateAlignedStore(IntptrOrigin, Ptr, CurrentAlignment);
+      Ofs += IntptrSize / OriginSize;
+      CurrentAlignment = IntptrAlignment;
+    }
+  }
+
+  for (unsigned I = Ofs; I < (StoreOriginSize + OriginSize - 1) / OriginSize;
+       ++I) {
+    Value *GEP = I ? IRB.CreateConstGEP1_32(DFS.OriginTy, StoreOriginAddr, I)
+                   : StoreOriginAddr;
+    IRB.CreateAlignedStore(Origin, GEP, CurrentAlignment);
+    CurrentAlignment = MinOriginAlignment;
+  }
+}
+
+Value *DFSanFunction::convertToBool(Value *V, IRBuilder<> &IRB,
+                                    const Twine &Name) {
+  Type *VTy = V->getType();
+  assert(VTy->isIntegerTy());
+  if (VTy->getIntegerBitWidth() == 1)
+    // Just converting a bool to a bool, so do nothing.
+    return V;
+  return IRB.CreateICmpNE(V, ConstantInt::get(VTy, 0), Name);
+}
+
+void DFSanFunction::storeOrigin(Instruction *Pos, Value *Addr, uint64_t Size,
+                                Value *Shadow, Value *Origin,
+                                Value *StoreOriginAddr, Align InstAlignment) {
+  // Do not write origins for zero shadows because we do not trace origins for
+  // untainted sinks.
+  const Align OriginAlignment = getOriginAlign(InstAlignment);
+  Value *CollapsedShadow = collapseToPrimitiveShadow(Shadow, Pos);
+  IRBuilder<> IRB(Pos);
+  if (auto *ConstantShadow = dyn_cast<Constant>(CollapsedShadow)) {
+    if (!ConstantShadow->isZeroValue())
+      paintOrigin(IRB, updateOrigin(Origin, IRB), StoreOriginAddr, Size,
+                  OriginAlignment);
+    return;
+  }
+
+  if (shouldInstrumentWithCall()) {
+    IRB.CreateCall(DFS.DFSanMaybeStoreOriginFn,
+                   {CollapsedShadow,
+                    IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                    ConstantInt::get(DFS.IntptrTy, Size), Origin});
+  } else {
+    Value *Cmp = convertToBool(CollapsedShadow, IRB, "_dfscmp");
+    Instruction *CheckTerm = SplitBlockAndInsertIfThen(
+        Cmp, &*IRB.GetInsertPoint(), false, DFS.OriginStoreWeights, &DT);
+    IRBuilder<> IRBNew(CheckTerm);
+    paintOrigin(IRBNew, updateOrigin(Origin, IRBNew), StoreOriginAddr, Size,
+                OriginAlignment);
+    ++NumOriginStores;
+  }
+}
+
 void DFSanFunction::storeZeroPrimitiveShadow(Value *Addr, uint64_t Size,
                                              Align ShadowAlign,
                                              Instruction *Pos) {
@@ -2226,30 +2362,46 @@ void DFSanFunction::storeZeroPrimitiveShadow(Value *Addr, uint64_t Size,
   // Do not write origins for 0 shadows because we do not trace origins for
   // untainted sinks.
 }
-void DFSanFunction::storePrimitiveShadow(Value *Addr, uint64_t Size,
-                                         Align Alignment,
-                                         Value *PrimitiveShadow,
-                                         Instruction *Pos) {
+
+void DFSanFunction::storePrimitiveShadowOrigin(Value *Addr, uint64_t Size,
+                                               Align InstAlignment,
+                                               Value *PrimitiveShadow,
+                                               Value *Origin,
+                                               Instruction *Pos) {
+  const bool ShouldTrackOrigins = DFS.shouldTrackOrigins() && Origin;
+
   if (AllocaInst *AI = dyn_cast<AllocaInst>(Addr)) {
-    const auto I = AllocaShadowMap.find(AI);
-    if (I != AllocaShadowMap.end()) {
+    const auto SI = AllocaShadowMap.find(AI);
+    if (SI != AllocaShadowMap.end()) {
       IRBuilder<> IRB(Pos);
-      IRB.CreateStore(PrimitiveShadow, I->second);
+      IRB.CreateStore(PrimitiveShadow, SI->second);
+
+      // Do not write origins for 0 shadows because we do not trace origins for
+      // untainted sinks.
+      if (ShouldTrackOrigins && !DFS.isZeroShadow(PrimitiveShadow)) {
+        const auto OI = AllocaOriginMap.find(AI);
+        assert(OI != AllocaOriginMap.end() && Origin);
+        IRB.CreateStore(Origin, OI->second);
+      }
       return;
     }
   }
 
-  const Align ShadowAlign(Alignment.value() * DFS.ShadowWidthBytes);
+  const Align ShadowAlign = getShadowAlign(InstAlignment);
   if (DFS.isZeroShadow(PrimitiveShadow)) {
     storeZeroPrimitiveShadow(Addr, Size, ShadowAlign, Pos);
     return;
   }
 
   IRBuilder<> IRB(Pos);
-  Value *ShadowAddr = DFS.getShadowAddress(Addr, Pos);
+  Value *ShadowAddr, *OriginAddr;
+  std::tie(ShadowAddr, OriginAddr) =
+      DFS.getShadowOriginAddress(Addr, InstAlignment, Pos);
+
   const unsigned ShadowVecSize = 128 / DFS.ShadowWidthBits;
   uint64_t Offset = 0;
-  if (Size >= ShadowVecSize) {
+  uint64_t LeftSize = Size;
+  if (LeftSize >= ShadowVecSize) {
     auto *ShadowVecTy =
         FixedVectorType::get(DFS.PrimitiveShadowTy, ShadowVecSize);
     Value *ShadowVec = UndefValue::get(ShadowVecTy);
@@ -2264,17 +2416,22 @@ void DFSanFunction::storePrimitiveShadow(Value *Addr, uint64_t Size,
       Value *CurShadowVecAddr =
           IRB.CreateConstGEP1_32(ShadowVecTy, ShadowVecAddr, Offset);
       IRB.CreateAlignedStore(ShadowVec, CurShadowVecAddr, ShadowAlign);
-      Size -= ShadowVecSize;
+      LeftSize -= ShadowVecSize;
       ++Offset;
-    } while (Size >= ShadowVecSize);
+    } while (LeftSize >= ShadowVecSize);
     Offset *= ShadowVecSize;
   }
-  while (Size > 0) {
+  while (LeftSize > 0) {
     Value *CurShadowAddr =
         IRB.CreateConstGEP1_32(DFS.PrimitiveShadowTy, ShadowAddr, Offset);
     IRB.CreateAlignedStore(PrimitiveShadow, CurShadowAddr, ShadowAlign);
-    --Size;
+    --LeftSize;
     ++Offset;
+  }
+
+  if (ShouldTrackOrigins) {
+    storeOrigin(Pos, Addr, Size, PrimitiveShadow, Origin, OriginAddr,
+                InstAlignment);
   }
 }
 
@@ -2310,19 +2467,36 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
   if (SI.isAtomic())
     SI.setOrdering(addReleaseOrdering(SI.getOrdering()));
 
-  const Align Alignment = ClPreserveAlignment ? SI.getAlign() : Align(1);
+  const bool ShouldTrackOrigins =
+      DFSF.DFS.shouldTrackOrigins() && !SI.isAtomic();
+  std::vector<Value *> Shadows;
+  std::vector<Value *> Origins;
 
   Value *Shadow =
       SI.isAtomic() ? DFSF.DFS.getZeroShadow(Val) : DFSF.getShadow(Val);
+
+  if (ShouldTrackOrigins) {
+    Shadows.push_back(Shadow);
+    Origins.push_back(DFSF.getOrigin(Val));
+  }
+
   Value *PrimitiveShadow;
   if (ClCombinePointerLabelsOnStore) {
     Value *PtrShadow = DFSF.getShadow(SI.getPointerOperand());
+    if (ShouldTrackOrigins) {
+      Shadows.push_back(PtrShadow);
+      Origins.push_back(DFSF.getOrigin(SI.getPointerOperand()));
+    }
     PrimitiveShadow = DFSF.combineShadows(Shadow, PtrShadow, &SI);
   } else {
     PrimitiveShadow = DFSF.collapseToPrimitiveShadow(Shadow, &SI);
   }
-  DFSF.storePrimitiveShadow(SI.getPointerOperand(), Size, Alignment,
-                            PrimitiveShadow, &SI);
+  Value *Origin = nullptr;
+  if (ShouldTrackOrigins) {
+    Origin = DFSF.combineOrigins(Shadows, Origins, &SI);
+  }
+  DFSF.storePrimitiveShadowOrigin(SI.getPointerOperand(), Size, SI.getAlign(),
+                                  PrimitiveShadow, Origin, &SI);
   if (ClEventCallbacks) {
     IRBuilder<> IRB(&SI);
     Value *Addr8 = IRB.CreateBitCast(SI.getPointerOperand(), DFSF.DFS.Int8Ptr);

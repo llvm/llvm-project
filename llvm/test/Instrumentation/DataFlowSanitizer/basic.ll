@@ -1,5 +1,5 @@
-; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,CHECK_NO_ORIGIN
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-16-labels=true -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN
+; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,CHECK_NO_ORIGIN -DSHADOW_MASK=-123145302310913
+; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-16-labels=true -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN -DSHADOW_MASK=-123145302310913
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -12,6 +12,23 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 ; CHECK: @__dfsan_shadow_ptr_mask = external global i64
+
+define i8 @load(i8* %p) {
+  ; CHECK-LABEL: define i8 @"dfs$load"
+  ; CHECK: and i64 {{.*}}, [[SHADOW_MASK]]
+  ; CHECK: ret i8 %a
+  %a = load i8, i8* %p
+  ret i8 %a
+}
+
+define void @store(i8* %p) {
+  ; CHECK-LABEL: define void @"dfs$store"
+  ; CHECK: and i64 {{.*}}, [[SHADOW_MASK]]
+  ; CHECK: ret void
+  store i8 0, i8* %p
+  ret void
+}
+
 ; CHECK: declare void @__dfsan_load_callback(i[[#SBITS]], i8*)
 ; CHECK: declare void @__dfsan_store_callback(i[[#SBITS]], i8*)
 ; CHECK: declare void @__dfsan_mem_transfer_callback(i[[#SBITS]]*, i64)
@@ -39,7 +56,3 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: declare zeroext i32 @__dfsan_chain_origin(i32 zeroext)
 ; CHECK: declare void @__dfsan_mem_origin_transfer(i8*, i8*, i64)
 ; CHECK: declare void @__dfsan_maybe_store_origin(i[[#SBITS]] zeroext, i8*, i64, i32 zeroext)
-
-define void @foo() {
-  ret void
-}
