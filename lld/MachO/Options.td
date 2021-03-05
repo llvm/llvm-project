@@ -566,11 +566,10 @@ def v : Flag<["-"], "v">,
      HelpText<"Print the linker version and search paths in addition to linking">,
      Group<grp_rare>;
 def adhoc_codesign : Flag<["-"], "adhoc_codesign">,
-     HelpText<"Write an ad-hoc code signature to the output file.">,
-     Flags<[HelpHidden]>,
+     HelpText<"Write an ad-hoc code signature to the output file (default for arm64 binaries)">,
      Group<grp_rare>;
 def no_adhoc_codesign : Flag<["-"], "no_adhoc_codesign">,
-     HelpText<"Do not write an ad-hoc code signature to the output file.">,
+     HelpText<"Do not write an ad-hoc code signature to the output file (default for x86_64 binaries)">,
      Group<grp_rare>;
 def version_details : Flag<["-"], "version_details">,
      HelpText<"Print the linker version in JSON form">,
