@@ -2181,6 +2181,10 @@ void coro::salvageDebugInfo(
         Storage = IInst->getArgOperand(0);
       else
         break;
+    } else if (auto *Phi = dyn_cast<PHINode>(Storage)) {
+      if (Phi->getNumIncomingValues() != 1)
+        return;
+      Storage = Phi->getIncomingValue(0);
     } else
       break;
   }
