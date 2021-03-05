@@ -61,7 +61,7 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
   bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
                        BlockAndValueMapping &) const final {
     // Return true here when inlining into spv.func, spv.selection, and
-    // spv.loop operations.
+    // spv.mlir.loop operations.
     auto *op = dest->getParentOp();
     return isa<spirv::FuncOp, spirv::SelectionOp, spirv::LoopOp>(op);
   }

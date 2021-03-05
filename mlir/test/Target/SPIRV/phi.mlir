@@ -182,8 +182,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 // CHECK:   spv.Branch ^[[FN_BB:.*]](%{{.*}} : i32)
 // CHECK: ^[[FN_BB]](%[[FN_BB_ARG:.*]]: i32):
-// CHECK:   spv.loop {
-    spv.loop {
+// CHECK:   spv.mlir.loop {
+    spv.mlir.loop {
 // CHECK:     spv.Branch ^bb1(%[[FN_BB_ARG]] : i32)
       spv.Branch ^bb1(%30 : i32)
 // CHECK:   ^[[LP1_HDR:.*]](%[[LP1_HDR_ARG:.*]]: i32):
@@ -200,8 +200,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       %35 = spv.IMul %20, %5 : i32
 // CHECK:     spv.Branch ^[[LP1_CNT:.*]](%[[MUL]] : i32)
 // CHECK:   ^[[LP1_CNT]](%[[LP1_CNT_ARG:.*]]: i32):
-// CHECK:     spv.loop {
-      spv.loop {
+// CHECK:     spv.mlir.loop {
+      spv.mlir.loop {
 // CHECK:       spv.Branch ^[[LP2_HDR:.*]](%[[LP1_CNT_ARG]] : i32)
         spv.Branch ^bb1(%34 : i32)
 // CHECK:     ^[[LP2_HDR]](%[[LP2_HDR_ARG:.*]]: i32):
@@ -251,8 +251,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 // CHECK:        spv.Constant 43
 // CHECK-NEXT:   spv.Branch ^[[BB1:.+]](%{{.+}} : i32)
 // CHECK-NEXT: ^[[BB1]](%{{.+}}: i32):
-// CHECK-NEXT:   spv.loop
-    spv.loop { // loop 1
+// CHECK-NEXT:   spv.mlir.loop
+    spv.mlir.loop { // loop 1
       spv.Branch ^bb1(%val1 : i32)
     ^bb1(%loop1_bb_arg: i32):
       %loop1_lt = spv.SLessThan %loop1_bb_arg, %cst4 : i32
@@ -267,8 +267,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 // CHECK:        spv.Constant 44
 // CHECK-NEXT:   spv.Branch ^[[BB2:.+]](%{{.+}} : i32)
 // CHECK-NEXT: ^[[BB2]](%{{.+}}: i32):
-// CHECK-NEXT:   spv.loop
-    spv.loop { // loop 2
+// CHECK-NEXT:   spv.mlir.loop
+    spv.mlir.loop { // loop 2
       spv.Branch ^bb1(%val2 : i32)
     ^bb1(%loop2_bb_arg: i32):
       %loop2_lt = spv.SLessThan %loop2_bb_arg, %cst4 : i32
