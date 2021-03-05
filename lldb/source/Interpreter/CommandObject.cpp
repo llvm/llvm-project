@@ -49,8 +49,6 @@ CommandObject::CommandObject(CommandInterpreter &interpreter,
   m_cmd_syntax = std::string(syntax);
 }
 
-CommandObject::~CommandObject() {}
-
 Debugger &CommandObject::GetDebugger() { return m_interpreter.GetDebugger(); }
 
 llvm::StringRef CommandObject::GetHelp() { return m_cmd_help_short; }

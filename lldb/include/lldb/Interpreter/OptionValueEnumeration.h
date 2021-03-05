@@ -31,7 +31,7 @@ public:
 
   OptionValueEnumeration(const OptionEnumValues &enumerators, enum_type value);
 
-  ~OptionValueEnumeration() override;
+  ~OptionValueEnumeration() override = default;
 
   // Virtual subclass pure virtual overrides
 
