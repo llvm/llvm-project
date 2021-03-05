@@ -594,6 +594,10 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["utility"],
     "unimplemented": True,
   }, {
+    "name": "__cpp_lib_to_underlying",
+    "values": { "c++2b": 202102 },
+    "headers": ["utility"],
+  }, {
     "name": "__cpp_lib_transformation_trait_aliases",
     "values": { "c++14": 201304 },
     "headers": ["type_traits"],
