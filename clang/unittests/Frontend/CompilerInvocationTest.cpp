@@ -11,6 +11,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Serialization/ModuleFileExtension.h"
 #include "llvm/Support/Host.h"
 
 #include "gmock/gmock.h"
@@ -741,6 +742,58 @@ TEST_F(CommandLineTest, DigraphsEnabled) {
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fdigraphs")));
+}
+
+struct DummyModuleFileExtension
+    : public llvm::RTTIExtends<DummyModuleFileExtension, ModuleFileExtension> {
+  static char ID;
+
+  ModuleFileExtensionMetadata getExtensionMetadata() const override {
+    return {};
+  };
+
+  llvm::hash_code hashExtension(llvm::hash_code Code) const override {
+    return {};
+  }
+
+  std::unique_ptr<ModuleFileExtensionWriter>
+  createExtensionWriter(ASTWriter &Writer) override {
+    return {};
+  }
+
+  std::unique_ptr<ModuleFileExtensionReader>
+  createExtensionReader(const ModuleFileExtensionMetadata &Metadata,
+                        ASTReader &Reader, serialization::ModuleFile &Mod,
+                        const llvm::BitstreamCursor &Stream) override {
+    return {};
+  }
+};
+
+char DummyModuleFileExtension::ID = 0;
+
+TEST_F(CommandLineTest, TestModuleFileExtension) {
+  const char *Args[] = {"-ftest-module-file-extension=first:2:1:0:first",
+                        "-ftest-module-file-extension=second:3:2:1:second"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_THAT(Invocation.getFrontendOpts().ModuleFileExtensions.size(), 2);
+
+  // Exercise the check that only serializes instances of
+  // TestModuleFileExtension by providing an instance of another
+  // ModuleFileExtension subclass.
+  Invocation.getFrontendOpts().ModuleFileExtensions.push_back(
+      std::make_shared<DummyModuleFileExtension>());
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs,
+              ContainsN(HasSubstr("-ftest-module-file-extension="), 2));
+  ASSERT_THAT(
+      GeneratedArgs,
+      Contains(StrEq("-ftest-module-file-extension=first:2:1:0:first")));
+  ASSERT_THAT(
+      GeneratedArgs,
+      Contains(StrEq("-ftest-module-file-extension=second:3:2:1:second")));
 }
 
 TEST_F(CommandLineTest, RoundTrip) {
