@@ -39,6 +39,7 @@ static Distro::DistroType DetectOsRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("fedora", Distro::Fedora)
                     .Case("gentoo", Distro::Gentoo)
                     .Case("arch", Distro::ArchLinux)
+                    .Case("exherbo", Distro::Exherbo)
                     // On SLES, /etc/os-release was introduced in SLES 11.
                     .Case("sles", Distro::OpenSUSE)
                     .Case("opensuse", Distro::OpenSUSE)
@@ -188,15 +189,6 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
   }
 
   // ...and others.
-  if (VFS.exists("/etc/exherbo-release"))
-    return Distro::Exherbo;
-
-  if (VFS.exists("/etc/alpine-release"))
-    return Distro::AlpineLinux;
-
-  if (VFS.exists("/etc/arch-release"))
-    return Distro::ArchLinux;
-
   if (VFS.exists("/etc/gentoo-release"))
     return Distro::Gentoo;
 
