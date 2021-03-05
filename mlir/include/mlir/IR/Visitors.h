@@ -49,6 +49,9 @@ public:
   bool wasInterrupted() const { return result == Interrupt; }
 };
 
+/// Traversal order for region, block and operation walk utilities.
+enum class WalkOrder { PreOrder, PostOrder };
+
 namespace detail {
 /// Helper templates to deduce the first argument of a callback parameter.
 template <typename Ret, typename Arg> Arg first_argument_type(Ret (*)(Arg));
@@ -64,17 +67,21 @@ template <typename T>
 using first_argument = decltype(first_argument_type(std::declval<T>()));
 
 /// Walk all of the regions, blocks, or operations nested under (and including)
-/// the given operation.
-void walk(Operation *op, function_ref<void(Region *)> callback);
-void walk(Operation *op, function_ref<void(Block *)> callback);
-void walk(Operation *op, function_ref<void(Operation *)> callback);
-
+/// the given operation. The walk order is specified by 'order'.
+void walk(Operation *op, function_ref<void(Region *)> callback,
+          WalkOrder order);
+void walk(Operation *op, function_ref<void(Block *)> callback, WalkOrder order);
+void walk(Operation *op, function_ref<void(Operation *)> callback,
+          WalkOrder order);
 /// Walk all of the regions, blocks, or operations nested under (and including)
-/// the given operation. These functions walk until an interrupt result is
-/// returned by the callback.
-WalkResult walk(Operation *op, function_ref<WalkResult(Region *)> callback);
-WalkResult walk(Operation *op, function_ref<WalkResult(Block *)> callback);
-WalkResult walk(Operation *op, function_ref<WalkResult(Operation *)> callback);
+/// the given operation. The walk order is specified by 'order'. These functions
+/// walk until an interrupt result is returned by the callback.
+WalkResult walk(Operation *op, function_ref<WalkResult(Region *)> callback,
+                WalkOrder order);
+WalkResult walk(Operation *op, function_ref<WalkResult(Block *)> callback,
+                WalkOrder order);
+WalkResult walk(Operation *op, function_ref<WalkResult(Operation *)> callback,
+                WalkOrder order);
 
 // Below are a set of functions to walk nested operations. Users should favor
 // the direct `walk` methods on the IR classes(Operation/Block/etc) over these
@@ -82,7 +89,8 @@ WalkResult walk(Operation *op, function_ref<WalkResult(Operation *)> callback);
 // upon the type of the callback function.
 
 /// Walk all of the regions, blocks, or operations nested under (and including)
-/// the given operation. This method is selected for callbacks that operate on
+/// the given operation. The walk order is specified by 'Order' (post-order
+/// by default). This method is selected for callbacks that operate on
 /// Region*, Block*, and Operation*.
 ///
 /// Example:
@@ -90,22 +98,25 @@ WalkResult walk(Operation *op, function_ref<WalkResult(Operation *)> callback);
 ///   op->walk([](Block *b) { ... });
 ///   op->walk([](Operation *op) { ... });
 template <
-    typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
+    WalkOrder Order = WalkOrder::PostOrder, typename FuncTy,
+    typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
 typename std::enable_if<
     llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value, RetT>::type
 walk(Operation *op, FuncTy &&callback) {
-  return walk(op, function_ref<RetT(ArgT)>(callback));
+  return detail::walk(op, function_ref<RetT(ArgT)>(callback), Order);
 }
 
 /// Walk all of the operations of type 'ArgT' nested under and including the
-/// given operation. This method is selected for void returning callbacks that
-/// operate on a specific derived operation type.
+/// given operation. The walk order for regions, blocks and operations is
+/// specified by 'Order' (post-order by default). This method is selected for
+/// void returning callbacks that operate on a specific derived operation type.
 ///
 /// Example:
 ///   op->walk([](ReturnOp op) { ... });
 template <
-    typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
+    WalkOrder Order = WalkOrder::PostOrder, typename FuncTy,
+    typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
 typename std::enable_if<
     !llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value &&
@@ -116,12 +127,14 @@ walk(Operation *op, FuncTy &&callback) {
     if (auto derivedOp = dyn_cast<ArgT>(op))
       callback(derivedOp);
   };
-  return detail::walk(op, function_ref<RetT(Operation *)>(wrapperFn));
+  return detail::walk(op, function_ref<RetT(Operation *)>(wrapperFn), Order);
 }
 
 /// Walk all of the operations of type 'ArgT' nested under and including the
-/// given operation. This method is selected for WalkReturn returning
-/// interruptible callbacks that operate on a specific derived operation type.
+/// given operation. The walk order for regions, blocks and operations is
+/// specified by 'Order' (post-order by default). This method is selected for
+/// WalkReturn returning interruptible callbacks that operate on a specific
+/// derived operation type.
 ///
 /// Example:
 ///   op->walk([](ReturnOp op) {
@@ -130,7 +143,8 @@ walk(Operation *op, FuncTy &&callback) {
 ///     return WalkResult::advance();
 ///   });
 template <
-    typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
+    WalkOrder Order = WalkOrder::PostOrder, typename FuncTy,
+    typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
 typename std::enable_if<
     !llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value &&
@@ -142,7 +156,7 @@ walk(Operation *op, FuncTy &&callback) {
       return callback(derivedOp);
     return WalkResult::advance();
   };
-  return detail::walk(op, function_ref<RetT(Operation *)>(wrapperFn));
+  return detail::walk(op, function_ref<RetT(Operation *)>(wrapperFn), Order);
 }
 
 /// Utility to provide the return type of a templated walk method.
