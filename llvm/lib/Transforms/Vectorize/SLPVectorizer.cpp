@@ -1909,7 +1909,7 @@ private:
     bool aliased = true;
     if (Loc1.Ptr && Loc2.Ptr && isSimple(Inst1) && isSimple(Inst2)) {
       // Do the alias check.
-      aliased = AA->alias(Loc1, Loc2);
+      aliased = !AA->isNoAlias(Loc1, Loc2);
     }
     // Store the result in the cache.
     result = aliased;

@@ -71,7 +71,7 @@ static void replaceWithConstant(Constant *Value,
 // See if any operand of the call instruction references the coroutine frame.
 static bool operandReferences(CallInst *CI, AllocaInst *Frame, AAResults &AA) {
   for (Value *Op : CI->operand_values())
-    if (AA.alias(Op, Frame) != NoAlias)
+    if (!AA.isNoAlias(Op, Frame))
       return true;
   return false;
 }

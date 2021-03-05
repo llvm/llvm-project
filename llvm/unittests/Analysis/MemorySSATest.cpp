@@ -1038,7 +1038,7 @@ TEST_F(MemorySSATest, TestLoadMustAlias) {
   }
   for (LoadInst *V : {LA3, LA4}) {
     MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
-    EXPECT_EQ(MemUse->getOptimizedAccessType(), MustAlias)
+    EXPECT_EQ(MemUse->getOptimizedAccessType(), AliasResult::MustAlias)
         << "Load " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1087,7 +1087,7 @@ TEST_F(MemorySSATest, TestStoreMustAlias) {
       EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
           << "Store " << I << " doesn't have the correct alias information";
     else
-      EXPECT_EQ(MemDef->getOptimizedAccessType(), MustAlias)
+      EXPECT_EQ(MemDef->getOptimizedAccessType(), AliasResult::MustAlias)
           << "Store " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1121,7 +1121,7 @@ TEST_F(MemorySSATest, TestLoadMayAlias) {
   unsigned I = 0;
   for (LoadInst *V : {LA1, LB1}) {
     MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
-    EXPECT_EQ(MemUse->getOptimizedAccessType(), MayAlias)
+    EXPECT_EQ(MemUse->getOptimizedAccessType(), AliasResult::MayAlias)
         << "Load " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1129,7 +1129,7 @@ TEST_F(MemorySSATest, TestLoadMayAlias) {
   }
   for (LoadInst *V : {LA2, LB2}) {
     MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
-    EXPECT_EQ(MemUse->getOptimizedAccessType(), MustAlias)
+    EXPECT_EQ(MemUse->getOptimizedAccessType(), AliasResult::MustAlias)
         << "Load " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1189,13 +1189,13 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
     EXPECT_EQ(MemDef->isOptimized(), true)
         << "Store " << I << " was not optimized";
     if (I == 1 || I == 3 || I == 4)
-      EXPECT_EQ(MemDef->getOptimizedAccessType(), MayAlias)
+      EXPECT_EQ(MemDef->getOptimizedAccessType(), AliasResult::MayAlias)
           << "Store " << I << " doesn't have the correct alias information";
     else if (I == 0 || I == 2)
       EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
           << "Store " << I << " doesn't have the correct alias information";
     else
-      EXPECT_EQ(MemDef->getOptimizedAccessType(), MustAlias)
+      EXPECT_EQ(MemDef->getOptimizedAccessType(), AliasResult::MustAlias)
           << "Store " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
