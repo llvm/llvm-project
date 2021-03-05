@@ -485,18 +485,28 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Walk the operation by calling the callback for each nested operation
-  /// (including this one). The walk order for regions, blocks and operations is
-  /// specified by 'Order' (post-order by default). The callback method can take
-  /// any of the following forms:
+  /// (including this one), block or region, depending on the callback provided.
+  /// Regions, blocks and operations at the same nesting level are visited in
+  /// lexicographical order. The walk order for enclosing regions, blocks and
+  /// operations with respect to their nested ones is specified by 'Order'
+  /// (post-order by default). A callback on a block or operation is allowed to
+  /// erase that block or operation if either:
+  ///   * the walk is in post-order, or
+  ///   * the walk is in pre-order and the walk is skipped after the erasure.
+  ///
+  /// The callback method can take any of the following forms:
   ///   void(Operation*) : Walk all operations opaquely.
   ///     * op->walk([](Operation *nestedOp) { ...});
   ///   void(OpT) : Walk all operations of the given derived type.
   ///     * op->walk([](ReturnOp returnOp) { ...});
   ///   WalkResult(Operation*|OpT) : Walk operations, but allow for
-  ///                                interruption/cancellation.
+  ///                                interruption/skipping.
   ///     * op->walk([](... op) {
-  ///         // Interrupt, i.e cancel, the walk based on some invariant.
+  ///         // Skip the walk of this op based on some invariant.
   ///         if (some_invariant)
+  ///           return WalkResult::skip();
+  ///         // Interrupt, i.e cancel, the walk based on some invariant.
+  ///         if (another_invariant)
   ///           return WalkResult::interrupt();
   ///         return WalkResult::advance();
   ///       });

@@ -165,9 +165,15 @@ public:
   /// handlers that may be listening.
   InFlightDiagnostic emitRemark(const Twine &message = {});
 
-  /// Walk the operation by calling the callback for each nested
-  /// operation(including this one). The walk order for regions, blocks and
-  /// operations is specified by 'Order' (post-order by default).
+  /// Walk the operation by calling the callback for each nested operation
+  /// (including this one), block or region, depending on the callback provided.
+  /// Regions, blocks and operations at the same nesting level are visited in
+  /// lexicographical order. The walk order for enclosing regions, blocks and
+  /// operations with respect to their nested ones is specified by 'Order'
+  /// (post-order by default). A callback on a block or operation is allowed to
+  /// erase that block or operation if either:
+  ///   * the walk is in post-order, or
+  ///   * the walk is in pre-order and the walk is skipped after the erasure.
   /// See Operation::walk for more details.
   template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
             typename RetT = detail::walkResultType<FnT>>

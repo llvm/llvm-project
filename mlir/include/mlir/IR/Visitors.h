@@ -24,10 +24,15 @@ class Operation;
 class Block;
 class Region;
 
-/// A utility result that is used to signal if a walk method should be
-/// interrupted or advance.
+/// A utility result that is used to signal how to proceed with an ongoing walk:
+///   * Interrupt: the walk will be interrupted and no more operations, regions
+///   or blocks will be visited.
+///   * Advance: the walk will continue.
+///   * Skip: the walk of the current operation, region or block and their
+///   nested elements that haven't been visited already will be skipped and will
+///   continue with the next operation, region or block.
 class WalkResult {
-  enum ResultEnum { Interrupt, Advance } result;
+  enum ResultEnum { Interrupt, Advance, Skip } result;
 
 public:
   WalkResult(ResultEnum result) : result(result) {}
@@ -44,9 +49,13 @@ public:
 
   static WalkResult interrupt() { return {Interrupt}; }
   static WalkResult advance() { return {Advance}; }
+  static WalkResult skip() { return {Skip}; }
 
   /// Returns true if the walk was interrupted.
   bool wasInterrupted() const { return result == Interrupt; }
+
+  /// Returns true if the walk was skipped.
+  bool wasSkipped() const { return result == Skip; }
 };
 
 /// Traversal order for region, block and operation walk utilities.
@@ -67,15 +76,27 @@ template <typename T>
 using first_argument = decltype(first_argument_type(std::declval<T>()));
 
 /// Walk all of the regions, blocks, or operations nested under (and including)
-/// the given operation. The walk order is specified by 'order'.
+/// the given operation. Regions, blocks and operations at the same nesting
+/// level are visited in lexicographical order. The walk order for enclosing
+/// regions, blocks and operations with respect to their nested ones is
+/// specified by 'order'. These methods are invoked for void-returning
+/// callbacks. A callback on a block or operation is allowed to erase that block
+/// or operation only if the walk is in post-order. See non-void method for
+/// pre-order erasure.
 void walk(Operation *op, function_ref<void(Region *)> callback,
           WalkOrder order);
 void walk(Operation *op, function_ref<void(Block *)> callback, WalkOrder order);
 void walk(Operation *op, function_ref<void(Operation *)> callback,
           WalkOrder order);
 /// Walk all of the regions, blocks, or operations nested under (and including)
-/// the given operation. The walk order is specified by 'order'. These functions
-/// walk until an interrupt result is returned by the callback.
+/// the given operation. Regions, blocks and operations at the same nesting
+/// level are visited in lexicographical order. The walk order for enclosing
+/// regions, blocks and operations with respect to their nested ones is
+/// specified by 'order'. This method is invoked for skippable or interruptible
+/// callbacks. A callback on a block or operation is allowed to erase that block
+/// or operation if either:
+///   * the walk is in post-order, or
+///   * the walk is in pre-order and the walk is skipped after the erasure.
 WalkResult walk(Operation *op, function_ref<WalkResult(Region *)> callback,
                 WalkOrder order);
 WalkResult walk(Operation *op, function_ref<WalkResult(Block *)> callback,
@@ -89,9 +110,15 @@ WalkResult walk(Operation *op, function_ref<WalkResult(Operation *)> callback,
 // upon the type of the callback function.
 
 /// Walk all of the regions, blocks, or operations nested under (and including)
-/// the given operation. The walk order is specified by 'Order' (post-order
-/// by default). This method is selected for callbacks that operate on
-/// Region*, Block*, and Operation*.
+/// the given operation. Regions, blocks and operations at the same nesting
+/// level are visited in lexicographical order. The walk order for enclosing
+/// regions, blocks and operations with respect to their nested ones is
+/// specified by 'Order' (post-order by default). A callback on a block or
+/// operation is allowed to erase that block or operation if either:
+///   * the walk is in post-order, or
+///   * the walk is in pre-order and the walk is skipped after the erasure.
+/// This method is selected for callbacks that operate on Region*, Block*, and
+/// Operation*.
 ///
 /// Example:
 ///   op->walk([](Region *r) { ... });
@@ -108,9 +135,13 @@ walk(Operation *op, FuncTy &&callback) {
 }
 
 /// Walk all of the operations of type 'ArgT' nested under and including the
-/// given operation. The walk order for regions, blocks and operations is
-/// specified by 'Order' (post-order by default). This method is selected for
-/// void returning callbacks that operate on a specific derived operation type.
+/// given operation. Regions, blocks and operations at the same nesting
+/// level are visited in lexicographical order. The walk order for enclosing
+/// regions, blocks and operations with respect to their nested ones is
+/// specified by 'order' (post-order by default). This method is selected for
+/// void-returning callbacks that operate on a specific derived operation type.
+/// A callback on an operation is allowed to erase that operation only if the
+/// walk is in post-order. See non-void method for pre-order erasure.
 ///
 /// Example:
 ///   op->walk([](ReturnOp op) { ... });
@@ -131,14 +162,21 @@ walk(Operation *op, FuncTy &&callback) {
 }
 
 /// Walk all of the operations of type 'ArgT' nested under and including the
-/// given operation. The walk order for regions, blocks and operations is
-/// specified by 'Order' (post-order by default). This method is selected for
-/// WalkReturn returning interruptible callbacks that operate on a specific
-/// derived operation type.
+/// given operation. Regions, blocks and operations at the same nesting level
+/// are visited in lexicographical order. The walk order for enclosing regions,
+/// blocks and operations with respect to their nested ones is specified by
+/// 'Order' (post-order by default). This method is selected for WalkReturn
+/// returning skippable or interruptible callbacks that operate on a specific
+/// derived operation type. A callback on an operation is allowed to erase that
+/// operation if either:
+///   * the walk is in post-order, or
+///   * the walk is in pre-order and the walk is skipped after the erasure.
 ///
 /// Example:
 ///   op->walk([](ReturnOp op) {
 ///     if (some_invariant)
+///       return WalkResult::skip();
+///     if (another_invariant)
 ///       return WalkResult::interrupt();
 ///     return WalkResult::advance();
 ///   });
