@@ -389,6 +389,9 @@ clang-format
   ``AlignConsecutiveDeclarations`` and ``AlignConsecutiveMacros`` have been modified to allow
   alignment across empty lines and/or comments.
 
+- Support for Whitesmiths has been improved, with fixes for ``namespace`` blocks
+  and ``case`` blocks and labels.
+
 libclang
 --------
 
