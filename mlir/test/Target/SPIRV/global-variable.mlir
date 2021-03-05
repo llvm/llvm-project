@@ -28,7 +28,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @foo() "None" {
     // CHECK: %[[ADDR:.*]] = spv.mlir.addressof @globalInvocationID : !spv.ptr<vector<3xi32>, Input>
     %0 = spv.mlir.addressof @globalInvocationID : !spv.ptr<vector<3xi32>, Input>
-    %1 = spv.constant 0: i32
+    %1 = spv.Constant 0: i32
     // CHECK: spv.AccessChain %[[ADDR]]
     %2 = spv.AccessChain %0[%1] : !spv.ptr<vector<3xi32>, Input>, i32
     spv.Return

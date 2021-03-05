@@ -7,7 +7,7 @@
 // CHECK-LABEL: @access_chain
 spv.func @access_chain() "None" {
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
-  %0 = spv.constant 1: i32
+  %0 = spv.Constant 1: i32
   %1 = spv.Variable : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: llvm.getelementptr %{{.*}}[%[[ZERO]], %[[ONE]], %[[ONE]]] : (!llvm.ptr<struct<packed (f32, array<4 x f32>)>>, i32, i32, i32) -> !llvm.ptr<f32>
@@ -176,7 +176,7 @@ spv.func @variable_scalar_with_initialization() "None" {
   // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCATED:.*]] = llvm.alloca %[[SIZE]] x i64 : (i32) -> !llvm.ptr<i64>
   // CHECK: llvm.store %[[VALUE]], %[[ALLOCATED]] : !llvm.ptr<i64>
-  %c = spv.constant 0 : i64
+  %c = spv.Constant 0 : i64
   %0 = spv.Variable init(%c) : !spv.ptr<i64, Function>
   spv.Return
 }
@@ -195,7 +195,7 @@ spv.func @variable_vector_with_initialization() "None" {
   // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCATED:.*]] = llvm.alloca %[[SIZE]] x vector<3xi1> : (i32) -> !llvm.ptr<vector<3xi1>>
   // CHECK: llvm.store %[[VALUE]], %[[ALLOCATED]] : !llvm.ptr<vector<3xi1>>
-  %c = spv.constant dense<false> : vector<3xi1>
+  %c = spv.Constant dense<false> : vector<3xi1>
   %0 = spv.Variable init(%c) : !spv.ptr<vector<3xi1>, Function>
   spv.Return
 }

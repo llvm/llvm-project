@@ -7,7 +7,7 @@
 spv.module Logical GLSL450 {
   spv.globalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
   spv.func @access_chain() -> () "None" {
-    %0 = spv.constant 1: i32
+    %0 = spv.Constant 1: i32
     // CHECK: [[VAR1:%.*]] = spv.mlir.addressof @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4 x f32>)>, Input>
     // CHECK-NEXT: spv.AccessChain [[VAR1]][{{.*}}, {{.*}}] : !spv.ptr<!spv.struct<(f32, !spv.array<4 x f32>)>, Input>
     %1 = spv.mlir.addressof @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
@@ -49,29 +49,29 @@ spv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.constant
+// spv.Constant
 //===----------------------------------------------------------------------===//
 
 func @const() -> () {
-  // CHECK: spv.constant true
-  // CHECK: spv.constant 42 : i32
-  // CHECK: spv.constant 5.000000e-01 : f32
-  // CHECK: spv.constant dense<[2, 3]> : vector<2xi32>
-  // CHECK: spv.constant [dense<3.000000e+00> : vector<2xf32>] : !spv.array<1 x vector<2xf32>>
-  // CHECK: spv.constant dense<1> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
-  // CHECK: spv.constant dense<1.000000e+00> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
-  // CHECK: spv.constant dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
-  // CHECK: spv.constant dense<{{\[}}[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  // CHECK: spv.Constant true
+  // CHECK: spv.Constant 42 : i32
+  // CHECK: spv.Constant 5.000000e-01 : f32
+  // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
+  // CHECK: spv.Constant [dense<3.000000e+00> : vector<2xf32>] : !spv.array<1 x vector<2xf32>>
+  // CHECK: spv.Constant dense<1> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
+  // CHECK: spv.Constant dense<1.000000e+00> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  // CHECK: spv.Constant dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
+  // CHECK: spv.Constant dense<{{\[}}[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
 
-  %0 = spv.constant true
-  %1 = spv.constant 42 : i32
-  %2 = spv.constant 0.5 : f32
-  %3 = spv.constant dense<[2, 3]> : vector<2xi32>
-  %4 = spv.constant [dense<3.0> : vector<2xf32>] : !spv.array<1xvector<2xf32>>
-  %5 = spv.constant dense<1> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
-  %6 = spv.constant dense<1.0> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
-  %7 = spv.constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
-  %8 = spv.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  %0 = spv.Constant true
+  %1 = spv.Constant 42 : i32
+  %2 = spv.Constant 0.5 : f32
+  %3 = spv.Constant dense<[2, 3]> : vector<2xi32>
+  %4 = spv.Constant [dense<3.0> : vector<2xf32>] : !spv.array<1xvector<2xf32>>
+  %5 = spv.Constant dense<1> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
+  %6 = spv.Constant dense<1.0> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  %7 = spv.Constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
+  %8 = spv.Constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
   return
 }
 
@@ -79,7 +79,7 @@ func @const() -> () {
 
 func @unaccepted_std_attr() -> () {
   // expected-error @+1 {{cannot have value of type 'none'}}
-  %0 = spv.constant unit : none
+  %0 = spv.Constant unit : none
   return
 }
 
@@ -87,7 +87,7 @@ func @unaccepted_std_attr() -> () {
 
 func @array_constant() -> () {
   // expected-error @+1 {{has array element whose type ('vector<2xi32>') does not match the result element type ('vector<2xf32>')}}
-  %0 = spv.constant [dense<3.0> : vector<2xf32>, dense<4> : vector<2xi32>] : !spv.array<2xvector<2xf32>>
+  %0 = spv.Constant [dense<3.0> : vector<2xf32>, dense<4> : vector<2xi32>] : !spv.array<2xvector<2xf32>>
   return
 }
 
@@ -95,7 +95,7 @@ func @array_constant() -> () {
 
 func @array_constant() -> () {
   // expected-error @+1 {{must have spv.array result type for array value}}
-  %0 = spv.constant [dense<3.0> : vector<2xf32>] : !spv.rtarray<vector<2xf32>>
+  %0 = spv.Constant [dense<3.0> : vector<2xf32>] : !spv.rtarray<vector<2xf32>>
   return
 }
 
@@ -103,7 +103,7 @@ func @array_constant() -> () {
 
 func @non_nested_array_constant() -> () {
   // expected-error @+1 {{only support nested array result type}}
-  %0 = spv.constant dense<3.0> : tensor<2x2xf32> : !spv.array<2xvector<2xf32>>
+  %0 = spv.Constant dense<3.0> : tensor<2x2xf32> : !spv.array<2xvector<2xf32>>
   return
 }
 
@@ -111,21 +111,21 @@ func @non_nested_array_constant() -> () {
 
 func @value_result_type_mismatch() -> () {
   // expected-error @+1 {{must have spv.array result type for array value}}
-  %0 = "spv.constant"() {value = dense<0> : tensor<4xi32>} : () -> (vector<4xi32>)
+  %0 = "spv.Constant"() {value = dense<0> : tensor<4xi32>} : () -> (vector<4xi32>)
 }
 
 // -----
 
 func @value_result_type_mismatch() -> () {
   // expected-error @+1 {{result element type ('i32') does not match value element type ('f32')}}
-  %0 = spv.constant dense<1.0> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x i32>>
+  %0 = spv.Constant dense<1.0> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x i32>>
 }
 
 // -----
 
 func @value_result_num_elements_mismatch() -> () {
   // expected-error @+1 {{result number of elements (6) does not match value number of elements (4)}}
-  %0 = spv.constant dense<1.0> : tensor<2x2xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  %0 = spv.Constant dense<1.0> : tensor<2x2xf32> : !spv.array<2 x !spv.array<3 x f32>>
   return
 }
 
@@ -308,7 +308,7 @@ spv.module Logical GLSL450 {
 
 // TODO: Fix test case after initialization with normal constant is addressed
 // spv.module Logical GLSL450 {
-//   %0 = spv.constant 4.0 : f32
+//   %0 = spv.Constant 4.0 : f32
 //   // CHECK1: spv.Variable init(%0) : !spv.ptr<f32, Private>
 //   spv.globalVariable @var1 init(%0) : !spv.ptr<f32, Private>
 // }
@@ -337,7 +337,7 @@ spv.module Logical GLSL450 {
 
 // TODO: Fix test case after initialization with constant is addressed
 // spv.module Logical GLSL450 {
-//   %0 = spv.constant 4.0 : f32
+//   %0 = spv.Constant 4.0 : f32
 //   // CHECK1: spv.globalVariable @var1 initializer(%0) {binding = 5 : i32} : !spv.ptr<f32, Private>
 //   spv.globalVariable @var1 initializer(%0) {binding = 5 : i32} : !spv.ptr<f32, Private>
 // }
@@ -480,7 +480,7 @@ spv.module Logical GLSL450 {
 // expected-error@+2 {{expects regions to end with 'spv.mlir.endmodule'}}
 // expected-note@+1 {{in custom textual format, the absence of terminator implies 'spv.mlir.endmodule'}}
 "spv.module"() ({
-  %0 = spv.constant true
+  %0 = spv.Constant true
 }) {addressing_model = 0 : i32, memory_model = 1 : i32} : () -> ()
 
 // -----
@@ -561,7 +561,7 @@ spv.module Logical GLSL450 {
   spv.func @compute() -> f32 "None" {
     // CHECK: spv.mlir.referenceof @sc3 : f32
     %0 = spv.mlir.referenceof @sc3 : f32
-    %1 = spv.constant 6.0 : f32
+    %1 = spv.Constant 6.0 : f32
     %2 = spv.FAdd %0, %1 : f32
     spv.ReturnValue %2 : f32
   }
@@ -801,10 +801,10 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @foo() -> i32 "None" {
-    // CHECK: [[LHS:%.*]] = spv.constant
-    %0 = spv.constant 1: i32
-    // CHECK: [[RHS:%.*]] = spv.constant
-    %1 = spv.constant 1: i32
+    // CHECK: [[LHS:%.*]] = spv.Constant
+    %0 = spv.Constant 1: i32
+    // CHECK: [[RHS:%.*]] = spv.Constant
+    %1 = spv.Constant 1: i32
 
     // CHECK: spv.SpecConstantOperation wraps "spv.IAdd"([[LHS]], [[RHS]]) : (i32, i32) -> i32
     %2 = spv.SpecConstantOperation wraps "spv.IAdd"(%0, %1) : (i32, i32) -> i32
@@ -831,7 +831,7 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @foo() -> i32 "None" {
-    %0 = spv.constant 1: i32
+    %0 = spv.Constant 1: i32
     // expected-error @+1 {{op expects parent op 'spv.SpecConstantOperation'}}
     spv.mlir.yield %0 : i32
   }

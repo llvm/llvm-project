@@ -5,8 +5,8 @@
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // for (int i = 0; i < count; ++i) {}
   spv.func @loop(%count : i32) -> () "None" {
-    %zero = spv.constant 0: i32
-    %one = spv.constant 1: i32
+    %zero = spv.Constant 0: i32
+    %one = spv.Constant 1: i32
     %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
 // CHECK:        spv.Branch ^bb1
@@ -35,7 +35,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     ^continue:
 // CHECK-NEXT:     spv.Load
       %val1 = spv.Load "Function" %var : i32
-// CHECK-NEXT:     spv.constant 1
+// CHECK-NEXT:     spv.Constant 1
 // CHECK-NEXT:     spv.IAdd
       %add = spv.IAdd %val1, %one : i32
 // CHECK-NEXT:     spv.Store
@@ -64,13 +64,13 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.globalVariable @GV2 bind(0, 1) : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>
   spv.func @loop_kernel() "None" {
     %0 = spv.mlir.addressof @GV1 : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>
-    %1 = spv.constant 0 : i32
+    %1 = spv.Constant 0 : i32
     %2 = spv.AccessChain %0[%1] : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>, i32
     %3 = spv.mlir.addressof @GV2 : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>
     %5 = spv.AccessChain %3[%1] : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>, i32
-    %6 = spv.constant 4 : i32
-    %7 = spv.constant 42 : i32
-    %8 = spv.constant 2 : i32
+    %6 = spv.Constant 4 : i32
+    %7 = spv.Constant 42 : i32
+    %8 = spv.Constant 2 : i32
 // CHECK:        spv.Branch ^bb1(%{{.*}} : i32)
 // CHECK-NEXT: ^bb1(%[[OUTARG:.*]]: i32):
 // CHECK-NEXT:   spv.loop {
@@ -112,8 +112,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   //   for (int j = 0; j < count; ++j) { }
   // }
   spv.func @loop(%count : i32) -> () "None" {
-    %zero = spv.constant 0: i32
-    %one = spv.constant 1: i32
+    %zero = spv.Constant 0: i32
+    %one = spv.Constant 1: i32
     %ivar = spv.Variable init(%zero) : !spv.ptr<i32, Function>
     %jvar = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
@@ -135,7 +135,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 // CHECK-NEXT:   ^bb2:
     ^body:
-// CHECK-NEXT:     spv.constant 0
+// CHECK-NEXT:     spv.Constant 0
 // CHECK-NEXT: 		 spv.Store
       spv.Store "Function" %jvar, %zero : i32
 // CHECK-NEXT:     spv.Branch ^bb3
@@ -164,7 +164,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       ^continue:
 // CHECK-NEXT:       spv.Load
         %jval1 = spv.Load "Function" %jvar : i32
-// CHECK-NEXT:       spv.constant 1
+// CHECK-NEXT:       spv.Constant 1
 // CHECK-NEXT:       spv.IAdd
         %add = spv.IAdd %jval1, %one : i32
 // CHECK-NEXT:       spv.Store
@@ -185,7 +185,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     ^continue:
 // CHECK-NEXT:     spv.Load
       %ival1 = spv.Load "Function" %ivar : i32
-// CHECK-NEXT:     spv.constant 1
+// CHECK-NEXT:     spv.Constant 1
 // CHECK-NEXT:     spv.IAdd
       %add = spv.IAdd %ival1, %one : i32
 // CHECK-NEXT:     spv.Store

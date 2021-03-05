@@ -59,12 +59,12 @@ module attributes {
       %12 = addi %arg3, %0 : index
       // CHECK: %[[INDEX2:.*]] = spv.IAdd %[[ARG4]], %[[LOCALINVOCATIONIDX]]
       %13 = addi %arg4, %3 : index
-      // CHECK: %[[ZERO:.*]] = spv.constant 0 : i32
-      // CHECK: %[[OFFSET1_0:.*]] = spv.constant 0 : i32
-      // CHECK: %[[STRIDE1_1:.*]] = spv.constant 4 : i32
+      // CHECK: %[[ZERO:.*]] = spv.Constant 0 : i32
+      // CHECK: %[[OFFSET1_0:.*]] = spv.Constant 0 : i32
+      // CHECK: %[[STRIDE1_1:.*]] = spv.Constant 4 : i32
       // CHECK: %[[UPDATE1_1:.*]] = spv.IMul %[[STRIDE1_1]], %[[INDEX1]] : i32
       // CHECK: %[[OFFSET1_1:.*]] = spv.IAdd %[[OFFSET1_0]], %[[UPDATE1_1]] : i32
-      // CHECK: %[[STRIDE1_2:.*]] = spv.constant 1 : i32
+      // CHECK: %[[STRIDE1_2:.*]] = spv.Constant 1 : i32
       // CHECK: %[[UPDATE1_2:.*]] = spv.IMul %[[STRIDE1_2]], %[[INDEX2]] : i32
       // CHECK: %[[OFFSET1_2:.*]] = spv.IAdd %[[OFFSET1_1]], %[[UPDATE1_2]] : i32
       // CHECK: %[[PTR1:.*]] = spv.AccessChain %[[ARG0]]{{\[}}%[[ZERO]], %[[OFFSET1_2]]{{\]}}

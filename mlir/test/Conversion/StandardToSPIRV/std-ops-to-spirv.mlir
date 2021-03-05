@@ -410,53 +410,53 @@ module attributes {
 
 // CHECK-LABEL: @constant
 func @constant() {
-  // CHECK: spv.constant true
+  // CHECK: spv.Constant true
   %0 = constant true
-  // CHECK: spv.constant 42 : i32
+  // CHECK: spv.Constant 42 : i32
   %1 = constant 42 : i32
-  // CHECK: spv.constant 5.000000e-01 : f32
+  // CHECK: spv.Constant 5.000000e-01 : f32
   %2 = constant 0.5 : f32
-  // CHECK: spv.constant dense<[2, 3]> : vector<2xi32>
+  // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
   %3 = constant dense<[2, 3]> : vector<2xi32>
-  // CHECK: spv.constant 1 : i32
+  // CHECK: spv.Constant 1 : i32
   %4 = constant 1 : index
-  // CHECK: spv.constant dense<1> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<1> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
   %5 = constant dense<1> : tensor<2x3xi32>
-  // CHECK: spv.constant dense<1.000000e+00> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
+  // CHECK: spv.Constant dense<1.000000e+00> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
   %6 = constant dense<1.0> : tensor<2x3xf32>
-  // CHECK: spv.constant dense<{{\[}}1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
   %7 = constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32>
-  // CHECK: spv.constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
   %8 = constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32>
-  // CHECK: spv.constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
   %9 =  constant dense<[[1, 2], [3, 4], [5, 6]]> : tensor<3x2xi32>
-  // CHECK: spv.constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
   %10 =  constant dense<[1, 2, 3, 4, 5, 6]> : tensor<6xi32>
   return
 }
 
 // CHECK-LABEL: @constant_16bit
 func @constant_16bit() {
-  // CHECK: spv.constant 4 : i16
+  // CHECK: spv.Constant 4 : i16
   %0 = constant 4 : i16
-  // CHECK: spv.constant 5.000000e+00 : f16
+  // CHECK: spv.Constant 5.000000e+00 : f16
   %1 = constant 5.0 : f16
-  // CHECK: spv.constant dense<[2, 3]> : vector<2xi16>
+  // CHECK: spv.Constant dense<[2, 3]> : vector<2xi16>
   %2 = constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16, stride=2>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16, stride=2>
   %3 = constant dense<4.0> : tensor<5xf16>
   return
 }
 
 // CHECK-LABEL: @constant_64bit
 func @constant_64bit() {
-  // CHECK: spv.constant 4 : i64
+  // CHECK: spv.Constant 4 : i64
   %0 = constant 4 : i64
-  // CHECK: spv.constant 5.000000e+00 : f64
+  // CHECK: spv.Constant 5.000000e+00 : f64
   %1 = constant 5.0 : f64
-  // CHECK: spv.constant dense<[2, 3]> : vector<2xi64>
+  // CHECK: spv.Constant dense<[2, 3]> : vector<2xi64>
   %2 = constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64, stride=8>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64, stride=8>
   %3 = constant dense<4.0> : tensor<5xf64>
   return
 }
@@ -472,58 +472,58 @@ module attributes {
 
 // CHECK-LABEL: @constant_16bit
 func @constant_16bit() {
-  // CHECK: spv.constant 4 : i32
+  // CHECK: spv.Constant 4 : i32
   %0 = constant 4 : i16
-  // CHECK: spv.constant 5.000000e+00 : f32
+  // CHECK: spv.Constant 5.000000e+00 : f32
   %1 = constant 5.0 : f16
-  // CHECK: spv.constant dense<[2, 3]> : vector<2xi32>
+  // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
   %2 = constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
   %3 = constant dense<4.0> : tensor<5xf16>
-  // CHECK: spv.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
+  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
   %4 = constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
   return
 }
 
 // CHECK-LABEL: @constant_64bit
 func @constant_64bit() {
-  // CHECK: spv.constant 4 : i32
+  // CHECK: spv.Constant 4 : i32
   %0 = constant 4 : i64
-  // CHECK: spv.constant 5.000000e+00 : f32
+  // CHECK: spv.Constant 5.000000e+00 : f32
   %1 = constant 5.0 : f64
-  // CHECK: spv.constant dense<[2, 3]> : vector<2xi32>
+  // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
   %2 = constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
   %3 = constant dense<4.0> : tensor<5xf64>
-  // CHECK: spv.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
+  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
   %4 = constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
   return
 }
 
 // CHECK-LABEL: @corner_cases
 func @corner_cases() {
-  // CHECK: %{{.*}} = spv.constant -1 : i32
+  // CHECK: %{{.*}} = spv.Constant -1 : i32
   %0 = constant 4294967295  : i64 // 2^32 - 1
-  // CHECK: %{{.*}} = spv.constant 2147483647 : i32
+  // CHECK: %{{.*}} = spv.Constant 2147483647 : i32
   %1 = constant 2147483647  : i64 // 2^31 - 1
-  // CHECK: %{{.*}} = spv.constant -2147483648 : i32
+  // CHECK: %{{.*}} = spv.Constant -2147483648 : i32
   %2 = constant 2147483648  : i64 // 2^31
-  // CHECK: %{{.*}} = spv.constant -2147483648 : i32
+  // CHECK: %{{.*}} = spv.Constant -2147483648 : i32
   %3 = constant -2147483648 : i64 // -2^31
 
-  // CHECK: %{{.*}} = spv.constant -1 : i32
+  // CHECK: %{{.*}} = spv.Constant -1 : i32
   %5 = constant -1 : i64
-  // CHECK: %{{.*}} = spv.constant -2 : i32
+  // CHECK: %{{.*}} = spv.Constant -2 : i32
   %6 = constant -2 : i64
-  // CHECK: %{{.*}} = spv.constant -1 : i32
+  // CHECK: %{{.*}} = spv.Constant -1 : i32
   %7 = constant -1 : index
-  // CHECK: %{{.*}} = spv.constant -2 : i32
+  // CHECK: %{{.*}} = spv.Constant -2 : i32
   %8 = constant -2 : index
 
 
-  // CHECK: spv.constant false
+  // CHECK: spv.Constant false
   %9 = constant false
-  // CHECK: spv.constant true
+  // CHECK: spv.Constant true
   %10 = constant true
 
   return
@@ -639,8 +639,8 @@ func @uitofp_i32_f32(%arg0 : i32) -> f32 {
 
 // CHECK-LABEL: @uitofp_i1_f32
 func @uitofp_i1_f32(%arg0 : i1) -> f32 {
-  // CHECK: %[[ZERO:.+]] = spv.constant 0.000000e+00 : f32
-  // CHECK: %[[ONE:.+]] = spv.constant 1.000000e+00 : f32
+  // CHECK: %[[ZERO:.+]] = spv.Constant 0.000000e+00 : f32
+  // CHECK: %[[ONE:.+]] = spv.Constant 1.000000e+00 : f32
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : i1, f32
   %0 = std.uitofp %arg0 : i1 to f32
   return %0 : f32
@@ -648,8 +648,8 @@ func @uitofp_i1_f32(%arg0 : i1) -> f32 {
 
 // CHECK-LABEL: @uitofp_i1_f64
 func @uitofp_i1_f64(%arg0 : i1) -> f64 {
-  // CHECK: %[[ZERO:.+]] = spv.constant 0.000000e+00 : f64
-  // CHECK: %[[ONE:.+]] = spv.constant 1.000000e+00 : f64
+  // CHECK: %[[ZERO:.+]] = spv.Constant 0.000000e+00 : f64
+  // CHECK: %[[ONE:.+]] = spv.Constant 1.000000e+00 : f64
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : i1, f64
   %0 = std.uitofp %arg0 : i1 to f64
   return %0 : f64
@@ -657,8 +657,8 @@ func @uitofp_i1_f64(%arg0 : i1) -> f64 {
 
 // CHECK-LABEL: @uitofp_vec_i1_f32
 func @uitofp_vec_i1_f32(%arg0 : vector<4xi1>) -> vector<4xf32> {
-  // CHECK: %[[ZERO:.+]] = spv.constant dense<0.000000e+00> : vector<4xf32>
-  // CHECK: %[[ONE:.+]] = spv.constant dense<1.000000e+00> : vector<4xf32>
+  // CHECK: %[[ZERO:.+]] = spv.Constant dense<0.000000e+00> : vector<4xf32>
+  // CHECK: %[[ONE:.+]] = spv.Constant dense<1.000000e+00> : vector<4xf32>
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xf32>
   %0 = std.uitofp %arg0 : vector<4xi1> to vector<4xf32>
   return %0 : vector<4xf32>
@@ -666,11 +666,11 @@ func @uitofp_vec_i1_f32(%arg0 : vector<4xi1>) -> vector<4xf32> {
 
 // CHECK-LABEL: @uitofp_vec_i1_f64
 spv.func @uitofp_vec_i1_f64(%arg0: vector<4xi1>) -> vector<4xf64> "None" {
-  // CHECK: %[[ZERO:.+]] = spv.constant dense<0.000000e+00> : vector<4xf64>
-  // CHECK: %[[ONE:.+]] = spv.constant dense<1.000000e+00> : vector<4xf64>
+  // CHECK: %[[ZERO:.+]] = spv.Constant dense<0.000000e+00> : vector<4xf64>
+  // CHECK: %[[ONE:.+]] = spv.Constant dense<1.000000e+00> : vector<4xf64>
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xf64>
-  %0 = spv.constant dense<0.000000e+00> : vector<4xf64>
-  %1 = spv.constant dense<1.000000e+00> : vector<4xf64>
+  %0 = spv.Constant dense<0.000000e+00> : vector<4xf64>
+  %1 = spv.Constant dense<1.000000e+00> : vector<4xf64>
   %2 = spv.Select %arg0, %1, %0 : vector<4xi1>, vector<4xf64>
   spv.ReturnValue %2 : vector<4xf64>
 }
@@ -705,8 +705,8 @@ func @zexti2(%arg0 : i32) -> i64 {
 
 // CHECK-LABEL: @zexti3
 func @zexti3(%arg0 : i1) -> i32 {
-  // CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
-  // CHECK: %[[ONE:.+]] = spv.constant 1 : i32
+  // CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
+  // CHECK: %[[ONE:.+]] = spv.Constant 1 : i32
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : i1, i32
   %0 = std.zexti %arg0 : i1 to i32
   return %0 : i32
@@ -714,8 +714,8 @@ func @zexti3(%arg0 : i1) -> i32 {
 
 // CHECK-LABEL: @zexti4
 func @zexti4(%arg0 : vector<4xi1>) -> vector<4xi32> {
-  // CHECK: %[[ZERO:.+]] = spv.constant dense<0> : vector<4xi32>
-  // CHECK: %[[ONE:.+]] = spv.constant dense<1> : vector<4xi32>
+  // CHECK: %[[ZERO:.+]] = spv.Constant dense<0> : vector<4xi32>
+  // CHECK: %[[ONE:.+]] = spv.Constant dense<1> : vector<4xi32>
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xi32>
   %0 = std.zexti %arg0 : vector<4xi1> to vector<4xi32>
   return %0 : vector<4xi32>
@@ -723,8 +723,8 @@ func @zexti4(%arg0 : vector<4xi1>) -> vector<4xi32> {
 
 // CHECK-LABEL: @zexti5
 func @zexti5(%arg0 : vector<4xi1>) -> vector<4xi64> {
-  // CHECK: %[[ZERO:.+]] = spv.constant dense<0> : vector<4xi64>
-  // CHECK: %[[ONE:.+]] = spv.constant dense<1> : vector<4xi64>
+  // CHECK: %[[ZERO:.+]] = spv.Constant dense<0> : vector<4xi64>
+  // CHECK: %[[ONE:.+]] = spv.Constant dense<1> : vector<4xi64>
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xi64>
   %0 = std.zexti %arg0 : vector<4xi1> to vector<4xi64>
   return %0 : vector<4xi64>
@@ -746,11 +746,11 @@ func @trunci2(%arg0: i32) -> i16 {
 
 // CHECK-LABEL: @trunc_to_i1
 func @trunc_to_i1(%arg0: i32) -> i1 {
-  // CHECK: %[[MASK:.*]] = spv.constant 1 : i32
+  // CHECK: %[[MASK:.*]] = spv.Constant 1 : i32
   // CHECK: %[[MASKED_SRC:.*]] = spv.BitwiseAnd %{{.*}}, %[[MASK]] : i32
   // CHECK: %[[IS_ONE:.*]] = spv.IEqual %[[MASKED_SRC]], %[[MASK]] : i32
-  // CHECK-DAG: %[[TRUE:.*]] = spv.constant true
-  // CHECK-DAG: %[[FALSE:.*]] = spv.constant false
+  // CHECK-DAG: %[[TRUE:.*]] = spv.Constant true
+  // CHECK-DAG: %[[FALSE:.*]] = spv.Constant false
   // CHECK: spv.Select %[[IS_ONE]], %[[TRUE]], %[[FALSE]] : i1, i1
   %0 = std.trunci %arg0 : i32 to i1
   return %0 : i1
@@ -758,11 +758,11 @@ func @trunc_to_i1(%arg0: i32) -> i1 {
 
 // CHECK-LABEL: @trunc_to_veci1
 func @trunc_to_veci1(%arg0: vector<4xi32>) -> vector<4xi1> {
-  // CHECK: %[[MASK:.*]] = spv.constant dense<1> : vector<4xi32>
+  // CHECK: %[[MASK:.*]] = spv.Constant dense<1> : vector<4xi32>
   // CHECK: %[[MASKED_SRC:.*]] = spv.BitwiseAnd %{{.*}}, %[[MASK]] : vector<4xi32>
   // CHECK: %[[IS_ONE:.*]] = spv.IEqual %[[MASKED_SRC]], %[[MASK]] : vector<4xi32>
-  // CHECK-DAG: %[[TRUE:.*]] = spv.constant dense<true> : vector<4xi1>
-  // CHECK-DAG: %[[FALSE:.*]] = spv.constant dense<false> : vector<4xi1>
+  // CHECK-DAG: %[[TRUE:.*]] = spv.Constant dense<true> : vector<4xi1>
+  // CHECK-DAG: %[[FALSE:.*]] = spv.Constant dense<false> : vector<4xi1>
   // CHECK: spv.Select %[[IS_ONE]], %[[TRUE]], %[[FALSE]] : vector<4xi1>, vector<4xi1>
   %0 = std.trunci %arg0 : vector<4xi32> to vector<4xi1>
   return %0 : vector<4xi1>
@@ -871,13 +871,13 @@ func @select(%arg0 : i32, %arg1 : i32) {
 // CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<(!spv.array<1 x f32, stride=4> [0])>, StorageBuffer>,
 // CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<(!spv.array<1 x f32, stride=4> [0])>, StorageBuffer>)
 func @load_store_zero_rank_float(%arg0: memref<f32>, %arg1: memref<f32>) {
-  //      CHECK: [[ZERO1:%.*]] = spv.constant 0 : i32
+  //      CHECK: [[ZERO1:%.*]] = spv.Constant 0 : i32
   //      CHECK: spv.AccessChain [[ARG0]][
   // CHECK-SAME: [[ZERO1]], [[ZERO1]]
   // CHECK-SAME: ] :
   //      CHECK: spv.Load "StorageBuffer" %{{.*}} : f32
   %0 = load %arg0[] : memref<f32>
-  //      CHECK: [[ZERO2:%.*]] = spv.constant 0 : i32
+  //      CHECK: [[ZERO2:%.*]] = spv.Constant 0 : i32
   //      CHECK: spv.AccessChain [[ARG1]][
   // CHECK-SAME: [[ZERO2]], [[ZERO2]]
   // CHECK-SAME: ] :
@@ -890,13 +890,13 @@ func @load_store_zero_rank_float(%arg0: memref<f32>, %arg1: memref<f32>) {
 // CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<(!spv.array<1 x i32, stride=4> [0])>, StorageBuffer>,
 // CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<(!spv.array<1 x i32, stride=4> [0])>, StorageBuffer>)
 func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
-  //      CHECK: [[ZERO1:%.*]] = spv.constant 0 : i32
+  //      CHECK: [[ZERO1:%.*]] = spv.Constant 0 : i32
   //      CHECK: spv.AccessChain [[ARG0]][
   // CHECK-SAME: [[ZERO1]], [[ZERO1]]
   // CHECK-SAME: ] :
   //      CHECK: spv.Load "StorageBuffer" %{{.*}} : i32
   %0 = load %arg0[] : memref<i32>
-  //      CHECK: [[ZERO2:%.*]] = spv.constant 0 : i32
+  //      CHECK: [[ZERO2:%.*]] = spv.Constant 0 : i32
   //      CHECK: spv.AccessChain [[ARG1]][
   // CHECK-SAME: [[ZERO2]], [[ZERO2]]
   // CHECK-SAME: ] :
@@ -919,19 +919,19 @@ module attributes {
 
 // CHECK-LABEL: @load_i8
 func @load_i8(%arg0: memref<i8>) {
-  //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
-  //     CHECK: %[[FOUR1:.+]] = spv.constant 4 : i32
+  //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
+  //     CHECK: %[[FOUR1:.+]] = spv.Constant 4 : i32
   //     CHECK: %[[QUOTIENT:.+]] = spv.SDiv %[[ZERO]], %[[FOUR1]] : i32
   //     CHECK: %[[PTR:.+]] = spv.AccessChain %{{.+}}[%[[ZERO]], %[[QUOTIENT]]]
   //     CHECK: %[[LOAD:.+]] = spv.Load  "StorageBuffer" %[[PTR]]
-  //     CHECK: %[[FOUR2:.+]] = spv.constant 4 : i32
-  //     CHECK: %[[EIGHT:.+]] = spv.constant 8 : i32
+  //     CHECK: %[[FOUR2:.+]] = spv.Constant 4 : i32
+  //     CHECK: %[[EIGHT:.+]] = spv.Constant 8 : i32
   //     CHECK: %[[IDX:.+]] = spv.UMod %[[ZERO]], %[[FOUR2]] : i32
   //     CHECK: %[[BITS:.+]] = spv.IMul %[[IDX]], %[[EIGHT]] : i32
   //     CHECK: %[[VALUE:.+]] = spv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
-  //     CHECK: %[[MASK:.+]] = spv.constant 255 : i32
+  //     CHECK: %[[MASK:.+]] = spv.Constant 255 : i32
   //     CHECK: %[[T1:.+]] = spv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
-  //     CHECK: %[[T2:.+]] = spv.constant 24 : i32
+  //     CHECK: %[[T2:.+]] = spv.Constant 24 : i32
   //     CHECK: %[[T3:.+]] = spv.ShiftLeftLogical %[[T1]], %[[T2]] : i32, i32
   //     CHECK: spv.ShiftRightArithmetic %[[T3]], %[[T2]] : i32, i32
   %0 = load %arg0[] : memref<i8>
@@ -941,23 +941,23 @@ func @load_i8(%arg0: memref<i8>) {
 // CHECK-LABEL: @load_i16
 //       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: i32)
 func @load_i16(%arg0: memref<10xi16>, %index : index) {
-  //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
-  //     CHECK: %[[OFFSET:.+]] = spv.constant 0 : i32
-  //     CHECK: %[[ONE:.+]] = spv.constant 1 : i32
+  //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
+  //     CHECK: %[[OFFSET:.+]] = spv.Constant 0 : i32
+  //     CHECK: %[[ONE:.+]] = spv.Constant 1 : i32
   //     CHECK: %[[UPDATE:.+]] = spv.IMul %[[ONE]], %[[ARG1]] : i32
   //     CHECK: %[[FLAT_IDX:.+]] = spv.IAdd %[[OFFSET]], %[[UPDATE]] : i32
-  //     CHECK: %[[TWO1:.+]] = spv.constant 2 : i32
+  //     CHECK: %[[TWO1:.+]] = spv.Constant 2 : i32
   //     CHECK: %[[QUOTIENT:.+]] = spv.SDiv %[[FLAT_IDX]], %[[TWO1]] : i32
   //     CHECK: %[[PTR:.+]] = spv.AccessChain %{{.+}}[%[[ZERO]], %[[QUOTIENT]]]
   //     CHECK: %[[LOAD:.+]] = spv.Load  "StorageBuffer" %[[PTR]]
-  //     CHECK: %[[TWO2:.+]] = spv.constant 2 : i32
-  //     CHECK: %[[SIXTEEN:.+]] = spv.constant 16 : i32
+  //     CHECK: %[[TWO2:.+]] = spv.Constant 2 : i32
+  //     CHECK: %[[SIXTEEN:.+]] = spv.Constant 16 : i32
   //     CHECK: %[[IDX:.+]] = spv.UMod %[[FLAT_IDX]], %[[TWO2]] : i32
   //     CHECK: %[[BITS:.+]] = spv.IMul %[[IDX]], %[[SIXTEEN]] : i32
   //     CHECK: %[[VALUE:.+]] = spv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
-  //     CHECK: %[[MASK:.+]] = spv.constant 65535 : i32
+  //     CHECK: %[[MASK:.+]] = spv.Constant 65535 : i32
   //     CHECK: %[[T1:.+]] = spv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
-  //     CHECK: %[[T2:.+]] = spv.constant 16 : i32
+  //     CHECK: %[[T2:.+]] = spv.Constant 16 : i32
   //     CHECK: %[[T3:.+]] = spv.ShiftLeftLogical %[[T1]], %[[T2]] : i32, i32
   //     CHECK: spv.ShiftRightArithmetic %[[T3]], %[[T2]] : i32, i32
   %0 = load %arg0[%index] : memref<10xi16>
@@ -985,17 +985,17 @@ func @load_f32(%arg0: memref<f32>) {
 // CHECK-LABEL: @store_i8
 //       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: i32)
 func @store_i8(%arg0: memref<i8>, %value: i8) {
-  //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
-  //     CHECK: %[[FOUR:.+]] = spv.constant 4 : i32
-  //     CHECK: %[[EIGHT:.+]] = spv.constant 8 : i32
+  //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
+  //     CHECK: %[[FOUR:.+]] = spv.Constant 4 : i32
+  //     CHECK: %[[EIGHT:.+]] = spv.Constant 8 : i32
   //     CHECK: %[[IDX:.+]] = spv.UMod %[[ZERO]], %[[FOUR]] : i32
   //     CHECK: %[[OFFSET:.+]] = spv.IMul %[[IDX]], %[[EIGHT]] : i32
-  //     CHECK: %[[MASK1:.+]] = spv.constant 255 : i32
+  //     CHECK: %[[MASK1:.+]] = spv.Constant 255 : i32
   //     CHECK: %[[TMP1:.+]] = spv.ShiftLeftLogical %[[MASK1]], %[[OFFSET]] : i32, i32
   //     CHECK: %[[MASK:.+]] = spv.Not %[[TMP1]] : i32
   //     CHECK: %[[CLAMPED_VAL:.+]] = spv.BitwiseAnd %[[ARG1]], %[[MASK1]] : i32
   //     CHECK: %[[STORE_VAL:.+]] = spv.ShiftLeftLogical %[[CLAMPED_VAL]], %[[OFFSET]] : i32, i32
-  //     CHECK: %[[FOUR2:.+]] = spv.constant 4 : i32
+  //     CHECK: %[[FOUR2:.+]] = spv.Constant 4 : i32
   //     CHECK: %[[ACCESS_IDX:.+]] = spv.SDiv %[[ZERO]], %[[FOUR2]] : i32
   //     CHECK: %[[PTR:.+]] = spv.AccessChain %[[ARG0]][%[[ZERO]], %[[ACCESS_IDX]]]
   //     CHECK: spv.AtomicAnd "Device" "AcquireRelease" %[[PTR]], %[[MASK]]
@@ -1007,21 +1007,21 @@ func @store_i8(%arg0: memref<i8>, %value: i8) {
 // CHECK-LABEL: @store_i16
 //       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: i32, %[[ARG2:.+]]: i32)
 func @store_i16(%arg0: memref<10xi16>, %index: index, %value: i16) {
-  //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
-  //     CHECK: %[[OFFSET:.+]] = spv.constant 0 : i32
-  //     CHECK: %[[ONE:.+]] = spv.constant 1 : i32
+  //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
+  //     CHECK: %[[OFFSET:.+]] = spv.Constant 0 : i32
+  //     CHECK: %[[ONE:.+]] = spv.Constant 1 : i32
   //     CHECK: %[[UPDATE:.+]] = spv.IMul %[[ONE]], %[[ARG1]] : i32
   //     CHECK: %[[FLAT_IDX:.+]] = spv.IAdd %[[OFFSET]], %[[UPDATE]] : i32
-  //     CHECK: %[[TWO:.+]] = spv.constant 2 : i32
-  //     CHECK: %[[SIXTEEN:.+]] = spv.constant 16 : i32
+  //     CHECK: %[[TWO:.+]] = spv.Constant 2 : i32
+  //     CHECK: %[[SIXTEEN:.+]] = spv.Constant 16 : i32
   //     CHECK: %[[IDX:.+]] = spv.UMod %[[FLAT_IDX]], %[[TWO]] : i32
   //     CHECK: %[[OFFSET:.+]] = spv.IMul %[[IDX]], %[[SIXTEEN]] : i32
-  //     CHECK: %[[MASK1:.+]] = spv.constant 65535 : i32
+  //     CHECK: %[[MASK1:.+]] = spv.Constant 65535 : i32
   //     CHECK: %[[TMP1:.+]] = spv.ShiftLeftLogical %[[MASK1]], %[[OFFSET]] : i32, i32
   //     CHECK: %[[MASK:.+]] = spv.Not %[[TMP1]] : i32
   //     CHECK: %[[CLAMPED_VAL:.+]] = spv.BitwiseAnd %[[ARG2]], %[[MASK1]] : i32
   //     CHECK: %[[STORE_VAL:.+]] = spv.ShiftLeftLogical %[[CLAMPED_VAL]], %[[OFFSET]] : i32, i32
-  //     CHECK: %[[TWO2:.+]] = spv.constant 2 : i32
+  //     CHECK: %[[TWO2:.+]] = spv.Constant 2 : i32
   //     CHECK: %[[ACCESS_IDX:.+]] = spv.SDiv %[[FLAT_IDX]], %[[TWO2]] : i32
   //     CHECK: %[[PTR:.+]] = spv.AccessChain %[[ARG0]][%[[ZERO]], %[[ACCESS_IDX]]]
   //     CHECK: spv.AtomicAnd "Device" "AcquireRelease" %[[PTR]], %[[MASK]]
@@ -1062,19 +1062,19 @@ module attributes {
 
 // CHECK-LABEL: @load_i8
 func @load_i8(%arg0: memref<i8>) {
-  //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
-  //     CHECK: %[[FOUR1:.+]] = spv.constant 4 : i32
+  //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
+  //     CHECK: %[[FOUR1:.+]] = spv.Constant 4 : i32
   //     CHECK: %[[QUOTIENT:.+]] = spv.SDiv %[[ZERO]], %[[FOUR1]] : i32
   //     CHECK: %[[PTR:.+]] = spv.AccessChain %{{.+}}[%[[ZERO]], %[[QUOTIENT]]]
   //     CHECK: %[[LOAD:.+]] = spv.Load  "StorageBuffer" %[[PTR]]
-  //     CHECK: %[[FOUR2:.+]] = spv.constant 4 : i32
-  //     CHECK: %[[EIGHT:.+]] = spv.constant 8 : i32
+  //     CHECK: %[[FOUR2:.+]] = spv.Constant 4 : i32
+  //     CHECK: %[[EIGHT:.+]] = spv.Constant 8 : i32
   //     CHECK: %[[IDX:.+]] = spv.UMod %[[ZERO]], %[[FOUR2]] : i32
   //     CHECK: %[[BITS:.+]] = spv.IMul %[[IDX]], %[[EIGHT]] : i32
   //     CHECK: %[[VALUE:.+]] = spv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
-  //     CHECK: %[[MASK:.+]] = spv.constant 255 : i32
+  //     CHECK: %[[MASK:.+]] = spv.Constant 255 : i32
   //     CHECK: %[[T1:.+]] = spv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
-  //     CHECK: %[[T2:.+]] = spv.constant 24 : i32
+  //     CHECK: %[[T2:.+]] = spv.Constant 24 : i32
   //     CHECK: %[[T3:.+]] = spv.ShiftLeftLogical %[[T1]], %[[T2]] : i32, i32
   //     CHECK: spv.ShiftRightArithmetic %[[T3]], %[[T2]] : i32, i32
   %0 = load %arg0[] : memref<i8>
@@ -1093,17 +1093,17 @@ func @load_i16(%arg0: memref<i16>) {
 // CHECK-LABEL: @store_i8
 //       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: i32)
 func @store_i8(%arg0: memref<i8>, %value: i8) {
-  //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
-  //     CHECK: %[[FOUR:.+]] = spv.constant 4 : i32
-  //     CHECK: %[[EIGHT:.+]] = spv.constant 8 : i32
+  //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
+  //     CHECK: %[[FOUR:.+]] = spv.Constant 4 : i32
+  //     CHECK: %[[EIGHT:.+]] = spv.Constant 8 : i32
   //     CHECK: %[[IDX:.+]] = spv.UMod %[[ZERO]], %[[FOUR]] : i32
   //     CHECK: %[[OFFSET:.+]] = spv.IMul %[[IDX]], %[[EIGHT]] : i32
-  //     CHECK: %[[MASK1:.+]] = spv.constant 255 : i32
+  //     CHECK: %[[MASK1:.+]] = spv.Constant 255 : i32
   //     CHECK: %[[TMP1:.+]] = spv.ShiftLeftLogical %[[MASK1]], %[[OFFSET]] : i32, i32
   //     CHECK: %[[MASK:.+]] = spv.Not %[[TMP1]] : i32
   //     CHECK: %[[CLAMPED_VAL:.+]] = spv.BitwiseAnd %[[ARG1]], %[[MASK1]] : i32
   //     CHECK: %[[STORE_VAL:.+]] = spv.ShiftLeftLogical %[[CLAMPED_VAL]], %[[OFFSET]] : i32, i32
-  //     CHECK: %[[FOUR2:.+]] = spv.constant 4 : i32
+  //     CHECK: %[[FOUR2:.+]] = spv.Constant 4 : i32
   //     CHECK: %[[ACCESS_IDX:.+]] = spv.SDiv %[[ZERO]], %[[FOUR2]] : i32
   //     CHECK: %[[PTR:.+]] = spv.AccessChain %[[ARG0]][%[[ZERO]], %[[ACCESS_IDX]]]
   //     CHECK: spv.AtomicAnd "Device" "AcquireRelease" %[[PTR]], %[[MASK]]

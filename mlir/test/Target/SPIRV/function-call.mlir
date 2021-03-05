@@ -3,7 +3,7 @@
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.globalVariable @var1 : !spv.ptr<!spv.array<4xf32>, Input>
   spv.func @fmain() -> i32 "None" {
-    %0 = spv.constant 16 : i32
+    %0 = spv.Constant 16 : i32
     %1 = spv.mlir.addressof @var1 : !spv.ptr<!spv.array<4xf32>, Input>
     // CHECK: {{%.*}} = spv.FunctionCall @f_0({{%.*}}) : (i32) -> i32
     %3 = spv.FunctionCall @f_0(%0) : (i32) -> i32
@@ -24,7 +24,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   }
 
   spv.func @f_loop_with_function_call(%count : i32) -> () "None" {
-    %zero = spv.constant 0: i32
+    %zero = spv.Constant 0: i32
     %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
     spv.loop {
       spv.Branch ^header
@@ -44,7 +44,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     spv.Return
   }
   spv.func @f_inc(%arg0 : !spv.ptr<i32, Function>) -> () "None" {
-      %one = spv.constant 1 : i32
+      %one = spv.Constant 1 : i32
       %0 = spv.Load "Function" %arg0 : i32
       %1 = spv.IAdd %0, %one : i32
       spv.Store "Function" %arg0, %1 : i32
