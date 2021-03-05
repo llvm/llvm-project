@@ -1,4 +1,4 @@
-//===--- Module.h - Plugging features into clangd -----------------*-C++-*-===//
+//===--- FeatureModule.h - Plugging features into clangd ----------*-C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_MODULE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_MODULE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FEATUREMODULE_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FEATUREMODULE_H
 
 #include "support/Function.h"
 #include "support/Threading.h"
@@ -26,11 +26,11 @@ class SymbolIndex;
 class ThreadsafeFS;
 class TUScheduler;
 
-/// A Module contributes a vertical feature to clangd.
+/// A FeatureModule contributes a vertical feature to clangd.
 ///
 /// The lifetime of a module is roughly:
-///  - modules are created before the LSP server, in ClangdMain.cpp
-///  - these modules are then passed to ClangdLSPServer in a ModuleSet
+///  - feature modules are created before the LSP server, in ClangdMain.cpp
+///  - these modules are then passed to ClangdLSPServer in a FeatureModuleSet
 ///  - initializeLSP() is called when the editor calls initialize.
 //   - initialize() is then called by ClangdServer as it is constructed.
 ///  - module hooks can be called by the server at this point.
@@ -39,31 +39,31 @@ class TUScheduler;
 ///    FIXME: Block server shutdown until all the modules are idle.
 ///  - When shutting down, ClangdServer will wait for all requests to
 ///    finish, call stop(), and then blockUntilIdle().
-///  - modules will be destroyed after ClangdLSPServer is destroyed.
+///  - feature modules will be destroyed after ClangdLSPServer is destroyed.
 ///
-/// Modules are not threadsafe in general. A module's entrypoints are:
+/// FeatureModules are not threadsafe in general. A module's entrypoints are:
 ///   - method handlers registered in initializeLSP()
-///   - public methods called directly via ClangdServer.getModule<T>()->...
-///   - specific overridable "hook" methods inherited from Module
+///   - public methods called directly via ClangdServer.featureModule<T>()->...
+///   - specific overridable "hook" methods inherited from FeatureModule
 /// Unless otherwise specified, these are only called on the main thread.
 ///
-/// Conventionally, standard modules live in the `clangd` namespace, and other
-/// exposed details live in a sub-namespace.
-class Module {
+/// Conventionally, standard feature modules live in the `clangd` namespace,
+/// and other exposed details live in a sub-namespace.
+class FeatureModule {
 public:
-  virtual ~Module() {
+  virtual ~FeatureModule() {
     /// Perform shutdown sequence on destruction in case the ClangdServer was
     /// never initialized. Usually redundant, but shutdown is idempotent.
     stop();
     blockUntilIdle(Deadline::infinity());
   }
 
-  /// Called by the server to connect this module to LSP.
+  /// Called by the server to connect this feature module to LSP.
   /// The module should register the methods/notifications/commands it handles,
   /// and update the server capabilities to advertise them.
   ///
   /// This is only called if the module is running in ClangdLSPServer!
-  /// Modules with a public interface should satisfy it without LSP bindings.
+  /// FeatureModules with a public interface should work without LSP bindings.
   virtual void initializeLSP(LSPBinder &Bind,
                              const llvm::json::Object &ClientCaps,
                              llvm::json::Object &ServerCaps) {}
@@ -87,7 +87,7 @@ public:
   /// Waits until the module is idle (no background work) or a deadline expires.
   /// In general all modules should eventually go idle, though it may take a
   /// long time (e.g. background indexing).
-  /// Modules should go idle quickly if stop() has been called.
+  /// FeatureModules should go idle quickly if stop() has been called.
   /// Called by the server when shutting down, and also by tests.
   virtual bool blockUntilIdle(Deadline) { return true; }
 
@@ -101,7 +101,7 @@ protected:
   /// The filesystem is used to read source files on disk.
   const ThreadsafeFS &fs() { return facilities().FS; }
 
-  /// Types of function objects that modules use for outgoing calls.
+  /// Types of function objects that feature modules use for outgoing calls.
   /// (Bound throuh LSPBinder, made available here for convenience).
   template <typename P>
   using OutgoingNotification = llvm::unique_function<void(const P &)>;
@@ -112,28 +112,28 @@ private:
   llvm::Optional<Facilities> Fac;
 };
 
-/// A ModuleSet is a collection of modules installed in clangd.
+/// A FeatureModuleSet is a collection of feature modules installed in clangd.
 ///
-/// Modules can be looked up by type, or used through the Module interface.
+/// Modules can be looked up by type, or used via the FeatureModule interface.
 /// This allows individual modules to expose a public API.
-/// For this reason, there can be only one module of each type.
+/// For this reason, there can be only one feature module of each type.
 ///
-/// ModuleSet owns the modules. It is itself owned by main, not ClangdServer.
-class ModuleSet {
-  std::vector<std::unique_ptr<Module>> Modules;
-  llvm::DenseMap<void *, Module *> Map;
+/// The set owns the modules. It is itself owned by main, not ClangdServer.
+class FeatureModuleSet {
+  std::vector<std::unique_ptr<FeatureModule>> Modules;
+  llvm::DenseMap<void *, FeatureModule *> Map;
 
   template <typename Mod> struct ID {
-    static_assert(std::is_base_of<Module, Mod>::value &&
+    static_assert(std::is_base_of<FeatureModule, Mod>::value &&
                       std::is_final<Mod>::value,
                   "Modules must be final classes derived from clangd::Module");
     static int Key;
   };
 
-  bool addImpl(void *Key, std::unique_ptr<Module>, const char *Source);
+  bool addImpl(void *Key, std::unique_ptr<FeatureModule>, const char *Source);
 
 public:
-  ModuleSet() = default;
+  FeatureModuleSet() = default;
 
   using iterator = llvm::pointee_iterator<decltype(Modules)::iterator>;
   using const_iterator =
@@ -150,11 +150,11 @@ public:
     return static_cast<Mod *>(Map.lookup(&ID<Mod>::Key));
   }
   template <typename Mod> const Mod *get() const {
-    return const_cast<ModuleSet *>(this)->get<Mod>();
+    return const_cast<FeatureModuleSet *>(this)->get<Mod>();
   }
 };
 
-template <typename Mod> int ModuleSet::ID<Mod>::Key;
+template <typename Mod> int FeatureModuleSet::ID<Mod>::Key;
 
 } // namespace clangd
 } // namespace clang
