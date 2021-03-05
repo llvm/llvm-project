@@ -1109,6 +1109,12 @@ static Value *createStepForVF(IRBuilder<> &B, Constant *Step, ElementCount VF) {
 
 namespace llvm {
 
+/// Return the runtime value for VF.
+Value *getRuntimeVF(IRBuilder<> &B, Type *Ty, ElementCount VF) {
+  Constant *EC = ConstantInt::get(Ty, VF.getKnownMinValue());
+  return VF.isScalable() ? B.CreateVScale(EC) : EC;
+}
+
 void reportVectorizationFailure(const StringRef DebugMsg,
     const StringRef OREMsg, const StringRef ORETag,
     OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I) {
@@ -2555,7 +2561,8 @@ void InnerLoopVectorizer::packScalarIntoVectorValue(VPValue *Def,
   Value *ScalarInst = State.get(Def, Instance);
   Value *VectorValue = State.get(Def, Instance.Part);
   VectorValue = Builder.CreateInsertElement(
-      VectorValue, ScalarInst, State.Builder.getInt32(Instance.Lane));
+      VectorValue, ScalarInst,
+      Instance.Lane.getAsRuntimeExpr(State.Builder, VF));
   State.set(Def, VectorValue, Instance.Part);
 }
 
@@ -2967,7 +2974,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPValue *Def,
     auto InputInstance = Instance;
     if (!Operand || !OrigLoop->contains(Operand) ||
         (Cost->isUniformAfterVectorization(Operand, State.VF)))
-      InputInstance.Lane = 0;
+      InputInstance.Lane = VPLane::getFirstLane();
     auto *NewOp = State.get(User.getOperand(op), InputInstance);
     Cloned->setOperand(op, NewOp);
   }
@@ -4439,14 +4446,13 @@ void InnerLoopVectorizer::fixLCSSAPHIs(VPTransformState &State) {
 
     auto *IncomingValue = LCSSAPhi.getIncomingValue(0);
     // Non-instruction incoming values will have only one value.
-    unsigned LastLane = 0;
-    if (isa<Instruction>(IncomingValue))
-      LastLane = Cost->isUniformAfterVectorization(
-                     cast<Instruction>(IncomingValue), VF)
-                     ? 0
-                     : VF.getKnownMinValue() - 1;
-    assert((!VF.isScalable() || LastLane == 0) &&
-           "scalable vectors dont support non-uniform scalars yet");
+
+    VPLane Lane = VPLane::getFirstLane();
+    if (isa<Instruction>(IncomingValue) &&
+        !Cost->isUniformAfterVectorization(cast<Instruction>(IncomingValue),
+                                           VF))
+      Lane = VPLane::getLastLaneForVF(VF);
+
     // Can be a loop invariant incoming value or the last scalar value to be
     // extracted from the vectorized loop.
     Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());
@@ -4454,7 +4460,7 @@ void InnerLoopVectorizer::fixLCSSAPHIs(VPTransformState &State) {
         OrigLoop->isLoopInvariant(IncomingValue)
             ? IncomingValue
             : State.get(State.Plan->getVPValue(IncomingValue),
-                        VPIteration(UF - 1, LastLane));
+                        VPIteration(UF - 1, Lane));
     LCSSAPhi.addIncoming(lastIncomingValue, LoopMiddleBlock);
   }
 }
@@ -9132,7 +9138,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     // Insert scalar instance packing it into a vector.
     if (AlsoPack && State.VF.isVector()) {
       // If we're constructing lane 0, initialize to start from poison.
-      if (State.Instance->Lane == 0) {
+      if (State.Instance->Lane.isFirstLane()) {
         assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
         Value *Poison = PoisonValue::get(
             VectorType::get(getUnderlyingValue()->getType(), State.VF));
@@ -9160,7 +9166,7 @@ void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
   assert(State.Instance && "Branch on Mask works only on single instance.");
 
   unsigned Part = State.Instance->Part;
-  unsigned Lane = State.Instance->Lane;
+  unsigned Lane = State.Instance->Lane.getKnownLane();
 
   Value *ConditionBit = nullptr;
   VPValue *BlockInMask = getMask();
