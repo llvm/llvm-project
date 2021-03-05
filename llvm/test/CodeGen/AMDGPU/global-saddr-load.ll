@@ -788,17 +788,28 @@ define amdgpu_ps float @global_load_saddr_i8_zext_vgpr_ptrtoint_commute_add_imm_
 
 ; Base pointer is uniform, but also in VGPRs
 define amdgpu_ps float @global_load_saddr_uniform_ptr_in_vgprs(i32 %voffset) {
-; GCN-LABEL: global_load_saddr_uniform_ptr_in_vgprs:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    ds_read_b64 v[1:2], v1
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s0, v1
-; GCN-NEXT:    v_readfirstlane_b32 s1, v2
-; GCN-NEXT:    s_nop 4
-; GCN-NEXT:    global_load_ubyte v0, v0, s[0:1]
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
+; GFX9-LABEL: global_load_saddr_uniform_ptr_in_vgprs:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    ds_read_b64 v[1:2], v1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX9-NEXT:    s_nop 4
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: global_load_saddr_uniform_ptr_in_vgprs:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    ds_read_b64 v[1:2], v1
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX10-NEXT:    global_load_ubyte v0, v0, s[0:1]
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
   %sbase = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(3)* @ptr.in.lds
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -810,17 +821,28 @@ define amdgpu_ps float @global_load_saddr_uniform_ptr_in_vgprs(i32 %voffset) {
 
 ; Base pointer is uniform, but also in VGPRs, with imm offset
 define amdgpu_ps float @global_load_saddr_uniform_ptr_in_vgprs_immoffset(i32 %voffset) {
-; GCN-LABEL: global_load_saddr_uniform_ptr_in_vgprs_immoffset:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    ds_read_b64 v[1:2], v1
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s0, v1
-; GCN-NEXT:    v_readfirstlane_b32 s1, v2
-; GCN-NEXT:    s_nop 4
-; GCN-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:42
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
+; GFX9-LABEL: global_load_saddr_uniform_ptr_in_vgprs_immoffset:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    ds_read_b64 v[1:2], v1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX9-NEXT:    s_nop 4
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:42
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: global_load_saddr_uniform_ptr_in_vgprs_immoffset:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    ds_read_b64 v[1:2], v1
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX10-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:42
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
   %sbase = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(3)* @ptr.in.lds
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
