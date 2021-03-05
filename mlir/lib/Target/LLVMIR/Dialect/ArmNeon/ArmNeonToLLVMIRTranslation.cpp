@@ -1,4 +1,4 @@
-//===- LLVMArmNeonToLLVMIRTranslation.cpp - LLVMArmNeon to LLVM IR --------===//
+//===- ArmNeonToLLVMIRTranslation.cpp - Translate ArmNeon to LLVM IR ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a translation between the MLIR LLVMArmNeon dialect and
+// This file implements a translation between the MLIR ArmNeon dialect and
 // LLVM IR.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Target/LLVMIR/Dialect/LLVMArmNeon/LLVMArmNeonToLLVMIRTranslation.h"
-#include "mlir/Dialect/LLVMIR/LLVMArmNeonDialect.h"
+#include "mlir/Target/LLVMIR/Dialect/ArmNeon/ArmNeonToLLVMIRTranslation.h"
+#include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -25,7 +25,7 @@ using namespace mlir::LLVM;
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
 /// to the LLVMArmNeon dialect to LLVM IR.
-class LLVMArmNeonDialectLLVMIRTranslationInterface
+class ArmNeonDialectLLVMIRTranslationInterface
     : public LLVMTranslationDialectInterface {
 public:
   using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
@@ -36,21 +36,21 @@ public:
   convertOperation(Operation *op, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) const final {
     Operation &opInst = *op;
-#include "mlir/Dialect/LLVMIR/LLVMArmNeonConversions.inc"
+#include "mlir/Dialect/ArmNeon/ArmNeonConversions.inc"
 
     return failure();
   }
 };
 } // end namespace
 
-void mlir::registerLLVMArmNeonDialectTranslation(DialectRegistry &registry) {
-  registry.insert<LLVM::LLVMArmNeonDialect>();
-  registry.addDialectInterface<LLVM::LLVMArmNeonDialect,
-                               LLVMArmNeonDialectLLVMIRTranslationInterface>();
+void mlir::registerArmNeonDialectTranslation(DialectRegistry &registry) {
+  registry.insert<arm_neon::ArmNeonDialect>();
+  registry.addDialectInterface<arm_neon::ArmNeonDialect,
+                               ArmNeonDialectLLVMIRTranslationInterface>();
 }
 
-void mlir::registerLLVMArmNeonDialectTranslation(MLIRContext &context) {
+void mlir::registerArmNeonDialectTranslation(MLIRContext &context) {
   DialectRegistry registry;
-  registerLLVMArmNeonDialectTranslation(registry);
+  registerArmNeonDialectTranslation(registry);
   context.appendDialectRegistry(registry);
 }
