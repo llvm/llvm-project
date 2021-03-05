@@ -990,6 +990,10 @@ def : Pat<(brcond GPR:$cond, bb:$imm12), (BNE GPR:$cond, X0, bb:$imm12)>;
 def : Pat<(brcond (XLenVT (xor GPR:$cond, 1)), bb:$imm12),
           (BEQ GPR:$cond, X0, bb:$imm12)>;
 
+// Match X > -1, the canonical form of X >= 0, to the bgez pattern.
+def : Pat<(brcond (XLenVT (setgt GPR:$rs1, -1)), bb:$imm12),
+          (BGE GPR:$rs1, X0, bb:$imm12)>;
+
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,
                PseudoInstExpansion<(JAL X0, simm21_lsb0_jal:$imm20)>;

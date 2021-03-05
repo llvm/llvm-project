@@ -1,0 +1,27 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
+
+--- |
+
+  define void @memoperands() {
+    ret void
+  }
+
+...
+---
+name:            memoperands
+body: |
+  bb.0:
+    liveins: $x0, $w0
+
+    ; CHECK-LABEL: name: memoperands
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]]
+    ; CHECK: G_STORE [[TRUNC]](s8), [[COPY]](p1) :: (store 1, addrspace 1)
+    ; CHECK: G_STORE [[TRUNC]](s8), [[COPY]](p1) :: (store 1 into undef + 1, addrspace 1)
+    %0:_(p1) = COPY $x0
+    %1:_(s32) = COPY $w0
+    %2:_(s8) = G_TRUNC %1
+    G_STORE %2(s8), %0(p1) :: (store 1, addrspace 1)
+    G_STORE %2(s8), %0(p1) :: (store 1 into undef + 1, addrspace 1)
+...

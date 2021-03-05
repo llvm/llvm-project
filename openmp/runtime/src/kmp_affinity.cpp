@@ -2176,6 +2176,10 @@ static int __kmp_affinity_create_cpuinfo_map(AddrUnsPair **address2os,
     // FIXME - this will match "node_<n> <garbage>"
     unsigned level;
     if (KMP_SSCANF(buf, "node_%u id", &level) == 1) {
+      // validate the input fisrt:
+      if (level > (unsigned)__kmp_xproc) { // level is too big
+        level = __kmp_xproc;
+      }
       if (nodeIdIndex + level >= maxIndex) {
         maxIndex = nodeIdIndex + level;
       }
@@ -4346,8 +4350,6 @@ static void __kmp_aux_affinity_initialize(void) {
         depth = __kmp_affinity_create_hwloc_map(&address2os, &msg_id);
         if (depth == 0) {
           KMP_EXIT_AFF_NONE;
-        } else if (depth < 0 && __kmp_affinity_verbose) {
-          KMP_INFORM(AffIgnoringHwloc, "KMP_AFFINITY");
         }
       } else if (__kmp_affinity_verbose) {
         KMP_INFORM(AffIgnoringHwloc, "KMP_AFFINITY");

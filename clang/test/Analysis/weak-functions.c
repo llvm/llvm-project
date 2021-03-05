@@ -71,7 +71,9 @@ void f3(void (*f)(void), void (*g)(void)) {
 void free(void *) __attribute__((weak_import));
 
 void t10 () {
-  free((void*)&t10); // expected-warning {{Argument to free() is the address of the function 't10', which is not memory allocated by malloc()}}
+  free((void*)&t10);
+  // expected-warning@-1{{Argument to free() is the address of the function 't10', which is not memory allocated by malloc()}}
+  // expected-warning@-2{{attempt to call free on non-heap object 't10'}}
 }
 
 //===----------------------------------------------------------------------===

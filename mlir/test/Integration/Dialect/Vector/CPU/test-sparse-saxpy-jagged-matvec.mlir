@@ -57,7 +57,7 @@ func @spmv8x8(%AVAL: memref<4xvector<8xf32>>,
   %b_out = scf.for %k = %c0 to %cn step %c1 iter_args(%b_iter = %b) -> (vector<8xf32>) {
     %aval = load %AVAL[%k] : memref<4xvector<8xf32>>
     %aidx = load %AIDX[%k] : memref<4xvector<8xi32>>
-    %0 = vector.gather %X[%aidx], %mask, %pass
+    %0 = vector.gather %X[%c0][%aidx], %mask, %pass
        : memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
     %b_new = vector.fma %aval, %0, %b_iter : vector<8xf32>
     scf.yield %b_new : vector<8xf32>

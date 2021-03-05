@@ -292,10 +292,9 @@ void ModuleSummaryIndex::propagateAttributes(
     if (!IsDSOLocal)
       // Mark the flag in all summaries false so that we can do quick check
       // without going through the whole list.
-      llvm::for_each(P.second.SummaryList,
-                     [](const std::unique_ptr<GlobalValueSummary> &Summary) {
-                       return Summary->setDSOLocal(false);
-                     });
+      for (const std::unique_ptr<GlobalValueSummary> &Summary :
+           P.second.SummaryList)
+        Summary->setDSOLocal(false);
   }
   setWithAttributePropagation();
   setWithDSOLocalPropagation();

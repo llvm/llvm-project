@@ -412,6 +412,7 @@ errc __win_err_to_errc(int err) {
       {ERROR_ACCESS_DENIED, errc::permission_denied},
       {ERROR_ALREADY_EXISTS, errc::file_exists},
       {ERROR_BAD_NETPATH, errc::no_such_file_or_directory},
+      {ERROR_BAD_PATHNAME, errc::no_such_file_or_directory},
       {ERROR_BAD_UNIT, errc::no_such_device},
       {ERROR_BROKEN_PIPE, errc::broken_pipe},
       {ERROR_BUFFER_OVERFLOW, errc::filename_too_long},
@@ -1019,11 +1020,14 @@ bool __create_directories(const path& p, error_code* ec) {
     if (not status_known(parent_st))
       return err.report(m_ec);
     if (not exists(parent_st)) {
+      if (parent == p)
+        return err.report(errc::invalid_argument);
       __create_directories(parent, ec);
       if (ec && *ec) {
         return false;
       }
-    }
+    } else if (not is_directory(parent_st))
+      return err.report(errc::not_a_directory);
   }
   return __create_directory(p, ec);
 }
@@ -1095,7 +1099,7 @@ void __create_symlink(path const& from, path const& to, error_code* ec) {
 path __current_path(error_code* ec) {
   ErrorHandler<path> err("current_path", ec);
 
-#if defined(_LIBCPP_WIN32API)
+#if defined(_LIBCPP_WIN32API) || defined(__GLIBC__) || defined(__APPLE__)
   // Common extension outside of POSIX getcwd() spec, without needing to
   // preallocate a buffer. Also supported by a number of other POSIX libcs.
   int size = 0;

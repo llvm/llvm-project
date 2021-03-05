@@ -10,10 +10,8 @@
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::pdl;
@@ -45,7 +43,7 @@ verifyHasBindingUseInMatcher(Operation *op,
   for (Operation *user : op->getUsers()) {
     if (user->getBlock() != matcherBlock)
       continue;
-    if (isa<AttributeOp, InputOp, OperationOp, RewriteOp>(user))
+    if (isa<AttributeOp, OperandOp, OperationOp, RewriteOp>(user))
       return success();
   }
   return op->emitOpError()
@@ -80,10 +78,10 @@ static LogicalResult verify(AttributeOp op) {
 }
 
 //===----------------------------------------------------------------------===//
-// pdl::InputOp
+// pdl::OperandOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(InputOp op) {
+static LogicalResult verify(OperandOp op) {
   return verifyHasBindingUseInMatcher(op);
 }
 
@@ -183,7 +181,7 @@ static void print(OpAsmPrinter &p, OperationOp op) {
   // Print the result type constraints of the operation.
   if (!op.results().empty())
     p << " -> " << op.types();
-  p.printOptionalAttrDict(op.getAttrs(),
+  p.printOptionalAttrDict(op->getAttrs(),
                           {"attributeNames", "name", "operand_segment_sizes"});
 }
 
@@ -421,7 +419,7 @@ static LogicalResult verify(RewriteOp op) {
 
 static LogicalResult verify(TypeOp op) {
   return verifyHasBindingUseInMatcher(
-      op, "`pdl.attribute`, `pdl.input`, or `pdl.operation`");
+      op, "`pdl.attribute`, `pdl.operand`, or `pdl.operation`");
 }
 
 //===----------------------------------------------------------------------===//
@@ -430,27 +428,3 @@ static LogicalResult verify(TypeOp op) {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/PDL/IR/PDLOps.cpp.inc"
-
-//===----------------------------------------------------------------------===//
-// TableGen'd type method definitions
-//===----------------------------------------------------------------------===//
-
-#define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/PDL/IR/PDLOpsTypes.cpp.inc"
-
-Type PDLDialect::parseType(DialectAsmParser &parser) const {
-  StringRef keyword;
-  if (parser.parseKeyword(&keyword))
-    return Type();
-  if (Type type = generatedTypeParser(getContext(), parser, keyword))
-    return type;
-
-  parser.emitError(parser.getNameLoc(), "invalid 'pdl' type: `")
-      << keyword << "'";
-  return Type();
-}
-
-void PDLDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  if (failed(generatedTypePrinter(type, printer)))
-    llvm_unreachable("unknown 'pdl' type");
-}

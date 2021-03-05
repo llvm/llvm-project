@@ -203,9 +203,9 @@ void AsmPrinter::emitDwarfUnitLength(uint64_t Length,
   OutStreamer->emitDwarfUnitLength(Length, Comment);
 }
 
-void AsmPrinter::emitDwarfUnitLength(const MCSymbol *Hi, const MCSymbol *Lo,
-                                     const Twine &Comment) const {
-  OutStreamer->emitDwarfUnitLength(Hi, Lo, Comment);
+MCSymbol *AsmPrinter::emitDwarfUnitLength(const Twine &Prefix,
+                                          const Twine &Comment) const {
+  return OutStreamer->emitDwarfUnitLength(Prefix, Comment);
 }
 
 void AsmPrinter::emitCallSiteOffset(const MCSymbol *Hi, const MCSymbol *Lo,

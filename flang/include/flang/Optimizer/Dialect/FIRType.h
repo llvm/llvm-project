@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_DIALECT_FIRTYPE_H
-#define OPTIMIZER_DIALECT_FIRTYPE_H
+#ifndef FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H
+#define FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -23,7 +23,8 @@
 namespace llvm {
 class raw_ostream;
 class StringRef;
-template <typename> class ArrayRef;
+template <typename>
+class ArrayRef;
 class hash_code;
 } // namespace llvm
 
@@ -80,6 +81,10 @@ bool isa_aggregate(mlir::Type t);
 /// not a memory reference type, then returns a null `Type`.
 mlir::Type dyn_cast_ptrEleTy(mlir::Type t);
 
+/// Extract the `Type` pointed to from a FIR memory reference or box type. If
+/// `t` is not a memory reference or box type, then returns a null `Type`.
+mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t);
+
 /// Is `t` a FIR Real or MLIR Float type?
 inline bool isa_real(mlir::Type t) {
   return t.isa<fir::RealType>() || t.isa<mlir::FloatType>();
@@ -125,4 +130,4 @@ inline bool singleIndirectionLevel(mlir::Type ty) {
 
 } // namespace fir
 
-#endif // OPTIMIZER_DIALECT_FIRTYPE_H
+#endif // FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H

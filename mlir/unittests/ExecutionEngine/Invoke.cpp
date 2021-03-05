@@ -19,7 +19,8 @@
 #include "mlir/InitAllDialects.h"
 #include "mlir/Parser.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -231,7 +232,7 @@ TEST(NativeMemRefJit, JITCallback) {
     elt = count++;
 
   std::string moduleStr = R"mlir(
-  func private @callback(%arg0: memref<?x?xf32>, %coefficient: i32)  attributes { llvm.emit_c_interface } 
+  func private @callback(%arg0: memref<?x?xf32>, %coefficient: i32)  attributes { llvm.emit_c_interface }
   func @caller_for_callback(%arg0: memref<?x?xf32>, %coefficient: i32) attributes { llvm.emit_c_interface } {
     %unranked = memref_cast %arg0: memref<?x?xf32> to memref<*xf32>
     call @callback(%arg0, %coefficient) : (memref<?x?xf32>, i32) -> ()

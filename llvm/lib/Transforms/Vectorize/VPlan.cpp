@@ -58,6 +58,19 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const VPValue &V) {
   return OS;
 }
 
+Value *VPLane::getAsRuntimeExpr(IRBuilder<> &Builder,
+                                const ElementCount &VF) const {
+  switch (LaneKind) {
+  case VPLane::Kind::ScalableLast:
+    // Lane = RuntimeVF - VF.getKnownMinValue() + Lane
+    return Builder.CreateSub(getRuntimeVF(Builder, Builder.getInt32Ty(), VF),
+                             Builder.getInt32(VF.getKnownMinValue() - Lane));
+  case VPLane::Kind::First:
+    return Builder.getInt32(Lane);
+  }
+  llvm_unreachable("Unknown lane kind");
+}
+
 VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
     : SubclassID(SC), UnderlyingVal(UV), Def(Def) {
   if (Def)
@@ -244,18 +257,20 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
   if (!Def->getDef())
     return Def->getLiveInIRValue();
 
-  if (hasScalarValue(Def, Instance))
-    return Data.PerPartScalars[Def][Instance.Part][Instance.Lane];
+  if (hasScalarValue(Def, Instance)) {
+    return Data
+        .PerPartScalars[Def][Instance.Part][Instance.Lane.mapToCacheIndex(VF)];
+  }
 
   assert(hasVectorValue(Def, Instance.Part));
   auto *VecPart = Data.PerPartOutput[Def][Instance.Part];
   if (!VecPart->getType()->isVectorTy()) {
-    assert(Instance.Lane == 0 && "cannot get lane > 0 for scalar");
+    assert(Instance.Lane.isFirstLane() && "cannot get lane > 0 for scalar");
     return VecPart;
   }
   // TODO: Cache created scalar values.
-  auto *Extract =
-      Builder.CreateExtractElement(VecPart, Builder.getInt32(Instance.Lane));
+  Value *Lane = Instance.Lane.getAsRuntimeExpr(Builder, VF);
+  auto *Extract = Builder.CreateExtractElement(VecPart, Lane);
   // set(Def, Extract, Instance);
   return Extract;
 }
@@ -427,7 +442,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
     assert(!State->VF.isScalable() && "VF is assumed to be non scalable.");
     for (unsigned Lane = 0, VF = State->VF.getKnownMinValue(); Lane < VF;
          ++Lane) {
-      State->Instance->Lane = Lane;
+      State->Instance->Lane = VPLane(Lane, VPLane::Kind::First);
       // Visit the VPBlocks connected to \p this, starting from it.
       for (VPBlockBase *Block : RPOT) {
         LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
@@ -546,7 +561,7 @@ void VPInstruction::dump() const {
 
 void VPInstruction::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << "EMIT ";
+  O << Indent << "EMIT ";
 
   if (hasResult()) {
     printAsOperand(O, SlotTracker);
@@ -808,7 +823,9 @@ void VPlanPrinter::dumpBasicBlock(const VPBasicBlock *BasicBlock) {
 
   for (const VPRecipeBase &Recipe : *BasicBlock) {
     OS << " +\n" << Indent << "\"";
-    Recipe.print(OS, Indent, SlotTracker);
+    // Don't indent inside the recipe printer as we printed it before the
+    // opening quote already.
+    Recipe.print(OS, "", SlotTracker);
     OS << "\\l\"";
   }
 
@@ -869,7 +886,7 @@ void VPlanPrinter::printAsIngredient(raw_ostream &O, const Value *V) {
 
 void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << "WIDEN-CALL ";
+  O << Indent << "WIDEN-CALL ";
 
   auto *CI = cast<CallInst>(getUnderlyingInstr());
   if (CI->getType()->isVoidTy())
@@ -886,7 +903,7 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
-  O << "WIDEN-SELECT ";
+  O << Indent << "WIDEN-SELECT ";
   printAsOperand(O, SlotTracker);
   O << " = select ";
   getOperand(0)->printAsOperand(O, SlotTracker);
@@ -899,7 +916,7 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << "WIDEN ";
+  O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
   O << " = " << getUnderlyingInstr()->getOpcodeName() << " ";
   printOperands(O, SlotTracker);
@@ -907,7 +924,7 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
-  O << "WIDEN-INDUCTION";
+  O << Indent << "WIDEN-INDUCTION";
   if (getTruncInst()) {
     O << "\\l\"";
     O << " +\n" << Indent << "\"  " << VPlanIngredient(IV) << "\\l\"";
@@ -919,7 +936,7 @@ void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
-  O << "WIDEN-GEP ";
+  O << Indent << "WIDEN-GEP ";
   O << (IsPtrLoopInvariant ? "Inv" : "Var");
   size_t IndicesNumber = IsIndexLoopInvariant.size();
   for (size_t I = 0; I < IndicesNumber; ++I)
@@ -933,12 +950,12 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
-  O << "WIDEN-PHI " << VPlanIngredient(getUnderlyingValue());
+  O << Indent << "WIDEN-PHI " << VPlanIngredient(getUnderlyingValue());
 }
 
 void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << "BLEND ";
+  O << Indent << "BLEND ";
   Phi->printAsOperand(O, false);
   O << " =";
   if (getNumIncomingValues() == 1) {
@@ -958,7 +975,7 @@ void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << "REDUCE ";
+  O << Indent << "REDUCE ";
   printAsOperand(O, SlotTracker);
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
@@ -974,7 +991,7 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << (IsUniform ? "CLONE " : "REPLICATE ");
+  O << Indent << (IsUniform ? "CLONE " : "REPLICATE ");
 
   if (!getUnderlyingInstr()->getType()->isVoidTy()) {
     printAsOperand(O, SlotTracker);
@@ -989,7 +1006,7 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
-  O << "PHI-PREDICATED-INSTRUCTION ";
+  O << Indent << "PHI-PREDICATED-INSTRUCTION ";
   printAsOperand(O, SlotTracker);
   O << " = ";
   printOperands(O, SlotTracker);
@@ -997,7 +1014,7 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
-  O << "WIDEN ";
+  O << Indent << "WIDEN ";
 
   if (!isStore()) {
     getVPValue()->printAsOperand(O, SlotTracker);
@@ -1035,7 +1052,7 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
 
 void VPWidenCanonicalIVRecipe::print(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
-  O << "EMIT ";
+  O << Indent << "EMIT ";
   getVPValue()->printAsOperand(O, SlotTracker);
   O << " = WIDEN-CANONICAL-INDUCTION";
 }

@@ -581,8 +581,9 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         continue;
       case AMDGPU::COPY:
       case AMDGPU::WQM:
+      case AMDGPU::STRICT_WQM:
       case AMDGPU::SOFT_WQM:
-      case AMDGPU::WWM: {
+      case AMDGPU::STRICT_WWM: {
         Register DstReg = MI.getOperand(0).getReg();
 
         const TargetRegisterClass *SrcRC, *DstRC;

@@ -5355,14 +5355,14 @@ public:
         if (!(--RemainingLists)) {
           ++DeclCur;
           ++NumListsCur;
-          if (SupportsMapper)
-            ++MapperCur;
           RemainingLists = *NumListsCur;
           assert(RemainingLists && "No lists in the following declaration??");
         }
       }
 
       ++ListSizeCur;
+      if (SupportsMapper)
+        ++MapperCur;
       return *this;
     }
   };

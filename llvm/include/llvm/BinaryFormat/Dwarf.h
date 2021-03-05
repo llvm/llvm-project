@@ -43,30 +43,49 @@ namespace dwarf {
 // enumeration base type.
 
 enum LLVMConstants : uint32_t {
-  // LLVM mock tags (see also llvm/BinaryFormat/Dwarf.def).
-  DW_TAG_invalid = ~0U,        // Tag for invalid results.
-  DW_VIRTUALITY_invalid = ~0U, // Virtuality for invalid results.
-  DW_MACINFO_invalid = ~0U,    // Macinfo type for invalid results.
+  /// LLVM mock tags (see also llvm/BinaryFormat/Dwarf.def).
+  /// \{
+  DW_TAG_invalid = ~0U,        ///< Tag for invalid results.
+  DW_VIRTUALITY_invalid = ~0U, ///< Virtuality for invalid results.
+  DW_MACINFO_invalid = ~0U,    ///< Macinfo type for invalid results.
+  /// \}
 
-  // Special values for an initial length field.
-  DW_LENGTH_lo_reserved = 0xfffffff0, // Lower bound of the reserved range.
-  DW_LENGTH_DWARF64 = 0xffffffff,     // Indicator of 64-bit DWARF format.
-  DW_LENGTH_hi_reserved = 0xffffffff, // Upper bound of the reserved range.
+  /// Special values for an initial length field.
+  /// \{
+  DW_LENGTH_lo_reserved = 0xfffffff0, ///< Lower bound of the reserved range.
+  DW_LENGTH_DWARF64 = 0xffffffff,     ///< Indicator of 64-bit DWARF format.
+  DW_LENGTH_hi_reserved = 0xffffffff, ///< Upper bound of the reserved range.
+  /// \}
 
-  // Other constants.
-  DWARF_VERSION = 4,       // Default dwarf version we output.
-  DW_PUBTYPES_VERSION = 2, // Section version number for .debug_pubtypes.
-  DW_PUBNAMES_VERSION = 2, // Section version number for .debug_pubnames.
-  DW_ARANGES_VERSION = 2,  // Section version number for .debug_aranges.
-  // Identifiers we use to distinguish vendor extensions.
-  DWARF_VENDOR_DWARF = 0, // Defined in v2 or later of the DWARF standard.
+  /// Other constants.
+  /// \{
+  DWARF_VERSION = 4,       ///< Default dwarf version we output.
+  DW_PUBTYPES_VERSION = 2, ///< Section version number for .debug_pubtypes.
+  DW_PUBNAMES_VERSION = 2, ///< Section version number for .debug_pubnames.
+  DW_ARANGES_VERSION = 2,  ///< Section version number for .debug_aranges.
+  /// \}
+
+  /// Identifiers we use to distinguish vendor extensions.
+  /// \{
+  DWARF_VENDOR_DWARF = 0, ///< Defined in v2 or later of the DWARF standard.
   DWARF_VENDOR_APPLE = 1,
   DWARF_VENDOR_BORLAND = 2,
   DWARF_VENDOR_GNU = 3,
   DWARF_VENDOR_GOOGLE = 4,
   DWARF_VENDOR_LLVM = 5,
   DWARF_VENDOR_MIPS = 6,
-  DWARF_VENDOR_WASM = 7
+  DWARF_VENDOR_WASM = 7,
+  DWARF_VENDOR_ALTIUM,
+  DWARF_VENDOR_COMPAQ,
+  DWARF_VENDOR_GHS,
+  DWARF_VENDOR_GO,
+  DWARF_VENDOR_HP,
+  DWARF_VENDOR_IBM,
+  DWARF_VENDOR_INTEL,
+  DWARF_VENDOR_PGI,
+  DWARF_VENDOR_SUN,
+  DWARF_VENDOR_UPC,
+  ///\}
 };
 
 /// Constants that define the DWARF format as 32 or 64 bit.

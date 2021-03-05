@@ -171,9 +171,6 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
 
 static MCSymbolWasm *GetOrCreateFunctionTableSymbol(MCContext &Ctx,
                                                     const StringRef &Name) {
-  // FIXME: Duplicates functionality from
-  // MC/WasmObjectWriter::recordRelocation, as well as WebAssemblyCodegen's
-  // WebAssembly:getOrCreateFunctionTableSymbol.
   MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
   if (Sym) {
     if (!Sym->isFunctionTable())
@@ -223,6 +220,7 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
   };
   std::vector<NestingType> NestingStack;
 
+  MCSymbolWasm *DefaultFunctionTable = nullptr;
   MCSymbol *LastFunctionLabel = nullptr;
 
 public:
@@ -231,6 +229,15 @@ public:
       : MCTargetAsmParser(Options, STI, MII), Parser(Parser),
         Lexer(Parser.getLexer()) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+  }
+
+  void Initialize(MCAsmParser &Parser) override {
+    MCAsmParserExtension::Initialize(Parser);
+
+    DefaultFunctionTable = GetOrCreateFunctionTableSymbol(
+        getContext(), "__indirect_function_table");
+    if (!STI->checkFeatures("+reference-types"))
+      DefaultFunctionTable->setOmitFromLinkingSection();
   }
 
 #define GET_ASSEMBLER_HEADER
@@ -480,6 +487,42 @@ public:
         WebAssemblyOperand::IntOp{static_cast<int64_t>(BT)}));
   }
 
+  bool parseFunctionTableOperand(std::unique_ptr<WebAssemblyOperand> *Op) {
+    if (STI->checkFeatures("+reference-types")) {
+      // If the reference-types feature is enabled, there is an explicit table
+      // operand.  To allow the same assembly to be compiled with or without
+      // reference types, we allow the operand to be omitted, in which case we
+      // default to __indirect_function_table.
+      auto &Tok = Lexer.getTok();
+      if (Tok.is(AsmToken::Identifier)) {
+        auto *Sym =
+            GetOrCreateFunctionTableSymbol(getContext(), Tok.getString());
+        const auto *Val = MCSymbolRefExpr::create(Sym, getContext());
+        *Op = std::make_unique<WebAssemblyOperand>(
+            WebAssemblyOperand::Symbol, Tok.getLoc(), Tok.getEndLoc(),
+            WebAssemblyOperand::SymOp{Val});
+        Parser.Lex();
+        return expect(AsmToken::Comma, ",");
+      } else {
+        const auto *Val =
+            MCSymbolRefExpr::create(DefaultFunctionTable, getContext());
+        *Op = std::make_unique<WebAssemblyOperand>(
+            WebAssemblyOperand::Symbol, SMLoc(), SMLoc(),
+            WebAssemblyOperand::SymOp{Val});
+        return false;
+      }
+    } else {
+      // For the MVP there is at most one table whose number is 0, but we can't
+      // write a table symbol or issue relocations.  Instead we just ensure the
+      // table is live and write a zero.
+      getStreamer().emitSymbolAttribute(DefaultFunctionTable, MCSA_NoDeadStrip);
+      *Op = std::make_unique<WebAssemblyOperand>(WebAssemblyOperand::Integer,
+                                                 SMLoc(), SMLoc(),
+                                                 WebAssemblyOperand::IntOp{0});
+      return false;
+    }
+  }
+
   bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override {
     // Note: Name does NOT point into the sourcecode, but to a local, so
@@ -516,6 +559,7 @@ public:
     bool ExpectBlockType = false;
     bool ExpectFuncType = false;
     bool ExpectHeapType = false;
+    std::unique_ptr<WebAssemblyOperand> FunctionTable;
     if (Name == "block") {
       push(Block);
       ExpectBlockType = true;
@@ -561,16 +605,12 @@ public:
       if (pop(Name, Function) || ensureEmptyNestingStack())
         return true;
     } else if (Name == "call_indirect" || Name == "return_call_indirect") {
+      // These instructions have differing operand orders in the text format vs
+      // the binary formats.  The MC instructions follow the binary format, so
+      // here we stash away the operand and append it later.
+      if (parseFunctionTableOperand(&FunctionTable))
+        return true;
       ExpectFuncType = true;
-      // Ensure that the object file has a __indirect_function_table import, as
-      // we call_indirect against it.
-      auto &Ctx = getStreamer().getContext();
-      MCSymbolWasm *Sym =
-          GetOrCreateFunctionTableSymbol(Ctx, "__indirect_function_table");
-      // Until call_indirect emits TABLE_NUMBER relocs against this symbol, mark
-      // it as NO_STRIP so as to ensure that the indirect function table makes
-      // it to linked output.
-      Sym->setNoStrip();
     } else if (Name == "ref.null") {
       ExpectHeapType = true;
     }
@@ -586,7 +626,7 @@ public:
         return true;
       // Got signature as block type, don't need more
       ExpectBlockType = false;
-      auto &Ctx = getStreamer().getContext();
+      auto &Ctx = getContext();
       // The "true" here will cause this to be a nameless symbol.
       MCSymbol *Sym = Ctx.createTempSymbol("typeindex", true);
       auto *WasmSym = cast<MCSymbolWasm>(Sym);
@@ -689,6 +729,8 @@ public:
       // Support blocks with no operands as default to void.
       addBlockTypeOperand(Operands, NameLoc, WebAssembly::BlockType::Void);
     }
+    if (FunctionTable)
+      Operands.push_back(std::move(FunctionTable));
     Parser.Lex();
     return false;
   }

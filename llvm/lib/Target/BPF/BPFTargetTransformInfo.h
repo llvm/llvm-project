@@ -18,6 +18,7 @@
 #include "BPFTargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 namespace llvm {
 class BPFTTIImpl : public BasicTTIImplBase<BPFTTIImpl> {
@@ -41,6 +42,17 @@ public:
       return TTI::TCC_Free;
 
     return TTI::TCC_Basic;
+  }
+
+  int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                         CmpInst::Predicate VecPred,
+                         TTI::TargetCostKind CostKind,
+                         const llvm::Instruction *I = nullptr) {
+    if (Opcode == Instruction::Select)
+      return SCEVCheapExpansionBudget;
+
+    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                     I);
   }
 };
 

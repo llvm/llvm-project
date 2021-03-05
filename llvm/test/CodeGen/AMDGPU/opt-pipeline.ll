@@ -10,7 +10,6 @@
 ; GCN-O0-NEXT:   FunctionPass Manager
 ; GCN-O0-NEXT:     Early propagate attributes from kernels to functions
 ; GCN-O0-NEXT:     Replace builtin math calls with that native versions.
-; GCN-O0-NEXT:     Instrument function entry/exit with calls to e.g. mcount() (pre inlining)
 
 ; GCN-O0-NEXT: Pass Arguments:
 ; GCN-O0-NEXT: Target Library Information
@@ -42,7 +41,6 @@
 ; GCN-O1-NEXT:     Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:     Function Alias Analysis Results
 ; GCN-O1-NEXT:     Simplify well-known AMD library calls
-; GCN-O1-NEXT:     Instrument function entry/exit with calls to e.g. mcount() (pre inlining)
 ; GCN-O1-NEXT:     Simplify the CFG
 ; GCN-O1-NEXT:     Dominator Tree Construction
 ; GCN-O1-NEXT:     SROA
@@ -352,7 +350,6 @@
 ; GCN-O2-NEXT:     Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:     Function Alias Analysis Results
 ; GCN-O2-NEXT:     Simplify well-known AMD library calls
-; GCN-O2-NEXT:     Instrument function entry/exit with calls to e.g. mcount() (pre inlining)
 ; GCN-O2-NEXT:     Simplify the CFG
 ; GCN-O2-NEXT:     Dominator Tree Construction
 ; GCN-O2-NEXT:     SROA
@@ -707,7 +704,6 @@
 ; GCN-O3-NEXT:     Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:     Function Alias Analysis Results
 ; GCN-O3-NEXT:     Simplify well-known AMD library calls
-; GCN-O3-NEXT:     Instrument function entry/exit with calls to e.g. mcount() (pre inlining)
 ; GCN-O3-NEXT:     Simplify the CFG
 ; GCN-O3-NEXT:     Dominator Tree Construction
 ; GCN-O3-NEXT:     SROA

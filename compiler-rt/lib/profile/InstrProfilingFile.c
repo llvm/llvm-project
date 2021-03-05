@@ -265,7 +265,8 @@ static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
 
   // Truncate the file in case merging of value profile did not happend to
   // prevent from leaving garbage data at the end of the profile file.
-  COMPILER_RT_FTRUNCATE(ProfileFile, __llvm_profile_get_size_for_buffer());
+  (void)COMPILER_RT_FTRUNCATE(ProfileFile,
+                              __llvm_profile_get_size_for_buffer());
 
   (void)munmap(ProfileBuffer, ProfileFileSize);
   *MergeDone = 1;

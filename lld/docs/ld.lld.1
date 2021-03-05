@@ -802,6 +802,8 @@ The stack size is recorded as the size of the
 .Dv PT_GNU_STACK
 program segment.
 .Pp
+.It Cm start-stop-gc
+Don't let __start_/__stop_ references retain non-SHF_LINK_ORDER non-SHF_GROUP C identifier name sections.
 .It Cm text
 Do not allow relocations against read-only segments.
 This is the default.

@@ -58,7 +58,7 @@ def SPV_AccessChainOp : SPV_Op<"AccessChain", [NoSideEffect]> {
     #### Example:
 
     ```mlir
-    %0 = "spv.constant"() { value = 1: i32} : () -> i32
+    %0 = "spv.Constant"() { value = 1: i32} : () -> i32
     %1 = spv.Variable : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Function>
     %2 = spv.AccessChain %1[%0] : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Function>
     %3 = spv.Load "Function" %2 ["Volatile"] : !spv.array<4xf32>
@@ -74,7 +74,7 @@ def SPV_AccessChainOp : SPV_Op<"AccessChain", [NoSideEffect]> {
     SPV_AnyPtr:$component_ptr
   );
 
-  let builders = [OpBuilderDAG<(ins "Value":$basePtr, "ValueRange":$indices)>];
+  let builders = [OpBuilder<(ins "Value":$basePtr, "ValueRange":$indices)>];
 
   let hasCanonicalizer = 1;
 }
@@ -183,7 +183,7 @@ def SPV_LoadOp : SPV_Op<"Load", []> {
   );
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$basePtr,
+    OpBuilder<(ins "Value":$basePtr,
       CArg<"IntegerAttr", "{}">:$memory_access,
       CArg<"IntegerAttr", "{}">:$alignment)>
   ];
@@ -232,7 +232,7 @@ def SPV_StoreOp : SPV_Op<"Store", []> {
   let results = (outs);
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$ptr, "Value":$value,
+    OpBuilder<(ins "Value":$ptr, "Value":$value,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$namedAttrs),
     [{
       $_state.addOperands(ptr);
@@ -276,7 +276,7 @@ def SPV_VariableOp : SPV_Op<"Variable", []> {
     #### Example:
 
     ```mlir
-    %0 = spv.constant ...
+    %0 = spv.Constant ...
 
     %1 = spv.Variable : !spv.ptr<f32, Function>
     %2 = spv.Variable init(%0): !spv.ptr<f32, Function>

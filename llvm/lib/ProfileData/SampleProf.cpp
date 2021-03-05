@@ -16,6 +16,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/ProfileData/SampleProfReader.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -28,6 +29,11 @@
 
 using namespace llvm;
 using namespace sampleprof;
+
+static cl::opt<uint64_t> ProfileSymbolListCutOff(
+    "profile-symbol-list-cutoff", cl::Hidden, cl::init(-1), cl::ZeroOrMore,
+    cl::desc("Cutoff value about how many symbols in profile symbol list "
+             "will be used. This is very useful for performance debugging"));
 
 namespace llvm {
 namespace sampleprof {
@@ -104,6 +110,27 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
                                           const LineLocation &Loc) {
   Loc.print(OS);
   return OS;
+}
+
+/// Merge the samples in \p Other into this record.
+/// Optionally scale sample counts by \p Weight.
+sampleprof_error SampleRecord::merge(const SampleRecord &Other,
+                                     uint64_t Weight) {
+  sampleprof_error Result;
+  // With pseudo probes, merge a dangling sample with a non-dangling sample
+  // should result in a dangling sample.
+  if (FunctionSamples::ProfileIsProbeBased &&
+      (getSamples() == FunctionSamples::InvalidProbeCount ||
+       Other.getSamples() == FunctionSamples::InvalidProbeCount)) {
+    NumSamples = FunctionSamples::InvalidProbeCount;
+    Result = sampleprof_error::success;
+  } else {
+    Result = addSamples(Other.getSamples(), Weight);
+  }
+  for (const auto &I : Other.getCallTargets()) {
+    MergeResult(Result, addCalledTarget(I.first(), I.second, Weight));
+  }
+  return Result;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -274,12 +301,14 @@ std::error_code ProfileSymbolList::read(const uint8_t *Data,
                                         uint64_t ListSize) {
   const char *ListStart = reinterpret_cast<const char *>(Data);
   uint64_t Size = 0;
-  while (Size < ListSize) {
+  uint64_t StrNum = 0;
+  while (Size < ListSize && StrNum < ProfileSymbolListCutOff) {
     StringRef Str(ListStart + Size);
     add(Str);
     Size += Str.size() + 1;
+    StrNum++;
   }
-  if (Size != ListSize)
+  if (Size != ListSize && StrNum != ProfileSymbolListCutOff)
     return sampleprof_error::malformed;
   return sampleprof_error::success;
 }

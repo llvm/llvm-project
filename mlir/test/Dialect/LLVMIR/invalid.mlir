@@ -713,3 +713,122 @@ llvm.mlir.global common @non_zero_compound_global_common_linkage(dense<[0, 0, 0,
 
 // expected-error@below {{expected array type for 'appending' linkage}}
 llvm.mlir.global appending @non_array_type_global_appending_linkage() : i32
+
+// -----
+
+module {
+  llvm.func @loopOptions() {
+      // expected-error@below {{expected 'llvm.loop' to be a dictionary attribute}}
+      llvm.br ^bb4 {llvm.loop = "test"}
+    ^bb4:
+      llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @loopOptions() {
+      // expected-error@below {{expected 'parallel_access' to be an array attribute}}
+      llvm.br ^bb4 {llvm.loop = {parallel_access = "loop"}}
+    ^bb4:
+      llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @loopOptions() {
+      // expected-error@below {{expected '"loop"' to be a symbol reference}}
+      llvm.br ^bb4 {llvm.loop = {parallel_access = ["loop"]}}
+    ^bb4:
+      llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @loopOptions() {
+      // expected-error@below {{expected '@func1' to reference a metadata op}}
+      llvm.br ^bb4 {llvm.loop = {parallel_access = [@func1]}}
+    ^bb4:
+      llvm.return
+  }
+  llvm.func @func1() {
+    llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @loopOptions() {
+      // expected-error@below {{expected '@metadata' to reference an access_group op}}
+      llvm.br ^bb4 {llvm.loop = {parallel_access = [@metadata]}}
+    ^bb4:
+      llvm.return
+  }
+  llvm.metadata @metadata {
+    llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @loopOptions() {
+      // expected-error@below {{expected 'options' to be an array attribute}}
+      llvm.br ^bb4 {llvm.loop = {options = "name"}}
+    ^bb4:
+      llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @loopOptions() {
+      // expected-error@below {{invalid loop options list}}
+      llvm.br ^bb4 {llvm.loop = {options = ["name"]}}
+    ^bb4:
+      llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+      // expected-error@below {{attribute 'access_groups' failed to satisfy constraint: symbol ref array attribute}}
+      %0 = llvm.load %arg0 { "access_groups" = "test" } : !llvm.ptr<i32>
+      llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+      // expected-error@below {{expected '@func1' to reference a metadata op}}
+      %0 = llvm.load %arg0 { "access_groups" = [@func1] } : !llvm.ptr<i32>
+      llvm.return
+  }
+  llvm.func @func1() {
+    llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+      // expected-error@below {{expected '@metadata' to reference an access_group op}}
+      %0 = llvm.load %arg0 { "access_groups" = [@metadata] } : !llvm.ptr<i32>
+      llvm.return
+  }
+  llvm.metadata @metadata {
+    llvm.return
+  }
+}

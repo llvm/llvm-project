@@ -85,7 +85,7 @@ public:
 
   ScriptInterpreter(Debugger &debugger, lldb::ScriptLanguage script_lang);
 
-  ~ScriptInterpreter() override;
+  ~ScriptInterpreter() override = default;
 
   struct ExecuteScriptOptions {
   public:

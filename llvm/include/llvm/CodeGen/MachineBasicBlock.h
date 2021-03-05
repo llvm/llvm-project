@@ -607,6 +607,10 @@ public:
   /// operands in the successor blocks which refer to FromMBB to refer to this.
   void transferSuccessorsAndUpdatePHIs(MachineBasicBlock *FromMBB);
 
+  /// move all pseudo probes in this block to the end of /c ToMBB To and tag
+  /// them dangling.
+  void moveAndDanglePseudoProbes(MachineBasicBlock *ToMBB);
+
   /// Return true if any of the successors have probabilities attached to them.
   bool hasSuccessorProbabilities() const { return !Probs.empty(); }
 
@@ -666,17 +670,43 @@ public:
   instr_iterator getFirstInstrTerminator();
 
   /// Returns an iterator to the first non-debug instruction in the basic block,
-  /// or end().
-  iterator getFirstNonDebugInstr();
-  const_iterator getFirstNonDebugInstr() const {
-    return const_cast<MachineBasicBlock *>(this)->getFirstNonDebugInstr();
+  /// or end(). Skip any pseudo probe operation if \c SkipPseudoOp is true.
+  /// Pseudo probes are like debug instructions which do not turn into real
+  /// machine code. We try to use the function to skip both debug instructions
+  /// and pseudo probe operations to avoid API proliferation. This should work
+  /// most of the time when considering optimizing the rest of code in the
+  /// block, except for certain cases where pseudo probes are designed to block
+  /// the optimizations. For example, code merge like optimizations are supposed
+  /// to be blocked by pseudo probes for better AutoFDO profile quality.
+  /// Therefore, they should be considered as a valid instruction when this
+  /// function is called in a context of such optimizations. On the other hand,
+  /// \c SkipPseudoOp should be true when it's used in optimizations that
+  /// unlikely hurt profile quality, e.g., without block merging.
+  /// TODO: flip the default value of \c SkipPseudoOp to maximize code quality
+  /// with pseudo probes.
+  iterator getFirstNonDebugInstr(bool SkipPseudoOp = false);
+  const_iterator getFirstNonDebugInstr(bool SkipPseudoOp = false) const {
+    return const_cast<MachineBasicBlock *>(this)->getFirstNonDebugInstr(
+        SkipPseudoOp);
   }
 
   /// Returns an iterator to the last non-debug instruction in the basic block,
-  /// or end().
-  iterator getLastNonDebugInstr();
-  const_iterator getLastNonDebugInstr() const {
-    return const_cast<MachineBasicBlock *>(this)->getLastNonDebugInstr();
+  /// or end(). Skip any pseudo operation if \c SkipPseudoOp is true.
+  /// Pseudo probes are like debug instructions which do not turn into real
+  /// machine code. We try to use the function to skip both debug instructions
+  /// and pseudo probe operations to avoid API proliferation. This should work
+  /// most of the time when considering optimizing the rest of code in the
+  /// block, except for certain cases where pseudo probes are designed to block
+  /// the optimizations. For example, code merge like optimizations are supposed
+  /// to be blocked by pseudo probes for better AutoFDO profile quality.
+  /// Therefore, they should be considered as a valid instruction when this
+  /// function is called in a context of such optimizations. On the other hand,
+  /// \c SkipPseudoOp should be true when it's used in optimizations that
+  /// unlikely hurt profile quality, e.g., without block merging.
+  iterator getLastNonDebugInstr(bool SkipPseudoOp = false);
+  const_iterator getLastNonDebugInstr(bool SkipPseudoOp = false) const {
+    return const_cast<MachineBasicBlock *>(this)->getLastNonDebugInstr(
+        SkipPseudoOp);
   }
 
   /// Convenience function that returns true if the block ends in a return
@@ -1065,9 +1095,11 @@ public:
 /// and return the resulting iterator. This function should only be used
 /// MachineBasicBlock::{iterator, const_iterator, instr_iterator,
 /// const_instr_iterator} and the respective reverse iterators.
-template<typename IterT>
-inline IterT skipDebugInstructionsForward(IterT It, IterT End) {
-  while (It != End && It->isDebugInstr())
+template <typename IterT>
+inline IterT skipDebugInstructionsForward(IterT It, IterT End,
+                                          bool SkipPseudoOp = false) {
+  while (It != End &&
+         (It->isDebugInstr() || (SkipPseudoOp && It->isPseudoProbe())))
     ++It;
   return It;
 }
@@ -1076,31 +1108,36 @@ inline IterT skipDebugInstructionsForward(IterT It, IterT End) {
 /// and return the resulting iterator. This function should only be used
 /// MachineBasicBlock::{iterator, const_iterator, instr_iterator,
 /// const_instr_iterator} and the respective reverse iterators.
-template<class IterT>
-inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin) {
-  while (It != Begin && It->isDebugInstr())
+template <class IterT>
+inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin,
+                                           bool SkipPseudoOp = false) {
+  while (It != Begin &&
+         (It->isDebugInstr() || (SkipPseudoOp && It->isPseudoProbe())))
     --It;
   return It;
 }
 
 /// Increment \p It, then continue incrementing it while it points to a debug
 /// instruction. A replacement for std::next.
-template <typename IterT> inline IterT next_nodbg(IterT It, IterT End) {
-  return skipDebugInstructionsForward(std::next(It), End);
+template <typename IterT>
+inline IterT next_nodbg(IterT It, IterT End, bool SkipPseudoOp = false) {
+  return skipDebugInstructionsForward(std::next(It), End, SkipPseudoOp);
 }
 
 /// Decrement \p It, then continue decrementing it while it points to a debug
 /// instruction. A replacement for std::prev.
-template <typename IterT> inline IterT prev_nodbg(IterT It, IterT Begin) {
-  return skipDebugInstructionsBackward(std::prev(It), Begin);
+template <typename IterT>
+inline IterT prev_nodbg(IterT It, IterT Begin, bool SkipPseudoOp = false) {
+  return skipDebugInstructionsBackward(std::prev(It), Begin, SkipPseudoOp);
 }
 
 /// Construct a range iterator which begins at \p It and moves forwards until
 /// \p End is reached, skipping any debug instructions.
 template <typename IterT>
-inline auto instructionsWithoutDebug(IterT It, IterT End) {
-  return make_filter_range(make_range(It, End), [](const MachineInstr &MI) {
-    return !MI.isDebugInstr();
+inline auto instructionsWithoutDebug(IterT It, IterT End,
+                                     bool SkipPseudoOp = false) {
+  return make_filter_range(make_range(It, End), [=](const MachineInstr &MI) {
+    return !MI.isDebugInstr() && !(SkipPseudoOp && MI.isPseudoProbe());
   });
 }
 

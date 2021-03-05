@@ -1147,9 +1147,15 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
   if (!CallerMode.isInlineCompatible(CalleeMode))
     return false;
 
+  if (Callee->hasFnAttribute(Attribute::AlwaysInline) ||
+      Callee->hasFnAttribute(Attribute::InlineHint))
+    return true;
+
   // Hack to make compile times reasonable.
-  if (InlineMaxBB && !Callee->hasFnAttribute(Attribute::InlineHint)) {
-    // Single BB does not increase total BB amount, thus subtract 1.
+  if (InlineMaxBB) {
+    // Single BB does not increase total BB amount.
+    if (Callee->size() == 1)
+      return true;
     size_t BBSize = Caller->size() + Callee->size() - 1;
     return BBSize <= InlineMaxBB;
   }

@@ -452,7 +452,7 @@ PPCRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     // For Power9 we allow the user to enable GPR to vector spills.
     // FIXME: Currently limited to spilling GP8RC. A follow on patch will add
     // support to spill GPRC.
-    if (TM.isELFv2ABI()) {
+    if (TM.isELFv2ABI() || Subtarget.isAIXABI()) {
       if (Subtarget.hasP9Vector() && EnableGPRToVecSpills &&
           RC == &PPC::G8RCRegClass) {
         InflateGP8RC++;

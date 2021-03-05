@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 #
 # Program:  findsym.pl
 #
@@ -7,6 +7,8 @@
 #
 # Syntax:   findsym.pl <directory_with_libraries_in_it> <symbol>
 #
+
+use warnings;
 
 # Give first option a name.
 my $Directory = $ARGV[0];

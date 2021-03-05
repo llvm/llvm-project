@@ -56,7 +56,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp,
   // Create the new function operation. Only copy those attributes that are
   // not specific to function modeling.
   SmallVector<NamedAttribute, 4> attributes;
-  for (const auto &attr : gpuFuncOp.getAttrs()) {
+  for (const auto &attr : gpuFuncOp->getAttrs()) {
     if (attr.first == SymbolTable::getSymbolAttrName() ||
         attr.first == impl::getTypeAttrName() ||
         attr.first == gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName())

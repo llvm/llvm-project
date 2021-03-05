@@ -51,8 +51,6 @@ private:
 using LLVMJITLinkChannel = orc::shared::FDRawByteChannel;
 using LLVMJITLinkRPCEndpoint =
     orc::shared::MultiThreadedRPCEndpoint<LLVMJITLinkChannel>;
-using LLVMJITLinkRemoteMemoryManager =
-    orc::OrcRPCTPCJITLinkMemoryManager<LLVMJITLinkRPCEndpoint>;
 using LLVMJITLinkRemoteMemoryAccess =
     orc::OrcRPCTPCMemoryAccess<LLVMJITLinkRPCEndpoint>;
 

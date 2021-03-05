@@ -12,6 +12,7 @@
 #include "support/Logger.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
@@ -633,6 +634,61 @@ llvm::SmallVector<ReferenceLoc> refInDecl(const Decl *D,
                                   /*IsDecl=*/false,
                                   {DG->getDeducedTemplate()}});
     }
+
+    void VisitObjCMethodDecl(const ObjCMethodDecl *OMD) {
+      // The name may have several tokens, we can only report the first.
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OMD->getSelectorStartLoc(),
+                                  /*IsDecl=*/true,
+                                  {OMD}});
+    }
+
+    void visitProtocolList(
+        llvm::iterator_range<ObjCProtocolList::iterator> Protocols,
+        llvm::iterator_range<const SourceLocation *> Locations) {
+      for (const auto &P : llvm::zip(Protocols, Locations)) {
+        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                    std::get<1>(P),
+                                    /*IsDecl=*/false,
+                                    {std::get<0>(P)}});
+      }
+    }
+
+    void VisitObjCInterfaceDecl(const ObjCInterfaceDecl *OID) {
+      if (OID->isThisDeclarationADefinition())
+        visitProtocolList(OID->protocols(), OID->protocol_locs());
+      Base::VisitObjCInterfaceDecl(OID); // Visit the interface's name.
+    }
+
+    void VisitObjCCategoryDecl(const ObjCCategoryDecl *OCD) {
+      visitProtocolList(OCD->protocols(), OCD->protocol_locs());
+      // getLocation is the extended class's location, not the category's.
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OCD->getLocation(),
+                                  /*IsDecl=*/false,
+                                  {OCD->getClassInterface()}});
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OCD->getCategoryNameLoc(),
+                                  /*IsDecl=*/true,
+                                  {OCD}});
+    }
+
+    void VisitObjCCategoryImplDecl(const ObjCCategoryImplDecl *OCID) {
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OCID->getLocation(),
+                                  /*IsDecl=*/false,
+                                  {OCID->getClassInterface()}});
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OCID->getCategoryNameLoc(),
+                                  /*IsDecl=*/true,
+                                  {OCID->getCategoryDecl()}});
+    }
+
+    void VisitObjCProtocolDecl(const ObjCProtocolDecl *OPD) {
+      if (OPD->isThisDeclarationADefinition())
+        visitProtocolList(OPD->protocols(), OPD->protocol_locs());
+      Base::VisitObjCProtocolDecl(OPD); // Visit the protocol's name.
+    }
   };
 
   Visitor V{Resolver};
@@ -711,25 +767,31 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
           explicitReferenceTargets(DynTypedNode::create(*E), {}, Resolver)});
     }
 
+    void VisitObjCMessageExpr(const ObjCMessageExpr *E) {
+      // The name may have several tokens, we can only report the first.
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  E->getSelectorStartLoc(),
+                                  /*IsDecl=*/false,
+                                  {E->getMethodDecl()}});
+    }
+
     void VisitDesignatedInitExpr(const DesignatedInitExpr *DIE) {
       for (const DesignatedInitExpr::Designator &D : DIE->designators()) {
         if (!D.isFieldDesignator())
           continue;
 
-        llvm::SmallVector<const NamedDecl *, 1> Targets;
-        if (D.getField())
-          Targets.push_back(D.getField());
-        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(), D.getFieldLoc(),
-                                    /*IsDecl=*/false, std::move(Targets)});
+        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                    D.getFieldLoc(),
+                                    /*IsDecl=*/false,
+                                    {D.getField()}});
       }
     }
 
     void VisitGotoStmt(const GotoStmt *GS) {
-      llvm::SmallVector<const NamedDecl *, 1> Targets;
-      if (const auto *L = GS->getLabel())
-        Targets.push_back(L);
-      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(), GS->getLabelLoc(),
-                                  /*IsDecl=*/false, std::move(Targets)});
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  GS->getLabelLoc(),
+                                  /*IsDecl=*/false,
+                                  {GS->getLabel()}});
     }
 
     void VisitLabelStmt(const LabelStmt *LS) {
@@ -826,6 +888,16 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
                          /*IsDecl=*/false,
                          {L.getTypedefNameDecl()}};
     }
+
+    void VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc L) {
+      Ref = ReferenceLoc{NestedNameSpecifierLoc(),
+                         L.getNameLoc(),
+                         /*IsDecl=*/false,
+                         {L.getIFaceDecl()}};
+    }
+
+    // FIXME: add references to protocols in ObjCObjectTypeLoc and maybe
+    // ObjCObjectPointerTypeLoc.
   };
 
   Visitor V{Resolver};
@@ -882,17 +954,15 @@ public:
   // TemplateArgumentLoc is the only way to get locations for references to
   // template template parameters.
   bool TraverseTemplateArgumentLoc(TemplateArgumentLoc A) {
-    llvm::SmallVector<const NamedDecl *, 1> Targets;
     switch (A.getArgument().getKind()) {
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
-      if (const auto *D = A.getArgument()
-                              .getAsTemplateOrTemplatePattern()
-                              .getAsTemplateDecl())
-        Targets.push_back(D);
       reportReference(ReferenceLoc{A.getTemplateQualifierLoc(),
                                    A.getTemplateNameLoc(),
-                                   /*IsDecl=*/false, Targets},
+                                   /*IsDecl=*/false,
+                                   {A.getArgument()
+                                        .getAsTemplateOrTemplatePattern()
+                                        .getAsTemplateDecl()}},
                       DynTypedNode::create(A.getArgument()));
       break;
     case TemplateArgument::Declaration:
@@ -975,11 +1045,14 @@ private:
   }
 
   void visitNode(DynTypedNode N) {
-    for (const auto &R : explicitReference(N))
-      reportReference(R, N);
+    for (auto &R : explicitReference(N))
+      reportReference(std::move(R), N);
   }
 
-  void reportReference(const ReferenceLoc &Ref, DynTypedNode N) {
+  void reportReference(ReferenceLoc &&Ref, DynTypedNode N) {
+    // Strip null targets that can arise from invalid code.
+    // (This avoids having to check for null everywhere we insert)
+    llvm::erase_value(Ref.Targets, nullptr);
     // Our promise is to return only references from the source code. If we lack
     // location information, skip these nodes.
     // Normally this should not happen in practice, unless there are bugs in the

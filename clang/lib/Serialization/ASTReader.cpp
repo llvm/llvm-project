@@ -3628,6 +3628,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         auto &OptInfo = OpenCLExtensions.OptMap[Name];
         OptInfo.Supported = Record[I++] != 0;
         OptInfo.Enabled = Record[I++] != 0;
+        OptInfo.WithPragma = Record[I++] != 0;
         OptInfo.Avail = Record[I++];
         OptInfo.Core = Record[I++];
         OptInfo.Opt = Record[I++];

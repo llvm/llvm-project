@@ -40,8 +40,7 @@ define void @foo(i32 %a, i32 *%b, i1 %c) nounwind {
 ; RV32I-NEXT:    bnez a0, .LBB0_13
 ; RV32I-NEXT:  # %bb.11: # %test12
 ; RV32I-NEXT:    lw a0, 0(a1)
-; RV32I-NEXT:    addi a2, zero, -1
-; RV32I-NEXT:    blt a2, a0, .LBB0_13
+; RV32I-NEXT:    bgez a0, .LBB0_13
 ; RV32I-NEXT:  # %bb.12: # %test13
 ; RV32I-NEXT:    lw a0, 0(a1)
 ; RV32I-NEXT:  .LBB0_13: # %end

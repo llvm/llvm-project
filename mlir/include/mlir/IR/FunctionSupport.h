@@ -566,9 +566,9 @@ void FunctionLike<ConcreteType>::setArgAttrs(
   SmallString<8> nameOut;
   getArgAttrName(index, nameOut);
 
-  if (attributes.empty())
-    return (void)static_cast<ConcreteType *>(this)->removeAttr(nameOut);
   Operation *op = this->getOperation();
+  if (attributes.empty())
+    return (void)op->removeAttr(nameOut);
   op->setAttr(nameOut, DictionaryAttr::get(op->getContext(), attributes));
 }
 

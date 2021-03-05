@@ -86,14 +86,14 @@ func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
   // CHECK:       spv.selection {
   // CHECK-NEXT:    spv.BranchConditional {{%.*}}, [[TRUE:\^.*]], [[FALSE:\^.*]]
   // CHECK-NEXT:  [[TRUE]]:
-  // CHECK:         %[[RET1TRUE:.*]] = spv.constant 0.000000e+00 : f32
-  // CHECK:         %[[RET2TRUE:.*]] = spv.constant 1.000000e+00 : f32
+  // CHECK:         %[[RET1TRUE:.*]] = spv.Constant 0.000000e+00 : f32
+  // CHECK:         %[[RET2TRUE:.*]] = spv.Constant 1.000000e+00 : f32
   // CHECK-DAG:     spv.Store "Function" %[[VAR1]], %[[RET1TRUE]] : f32
   // CHECK-DAG:     spv.Store "Function" %[[VAR2]], %[[RET2TRUE]] : f32
   // CHECK:         spv.Branch ^[[MERGE:.*]]
   // CHECK-NEXT:  [[FALSE]]:
-  // CHECK:         %[[RET2FALSE:.*]] = spv.constant 2.000000e+00 : f32
-  // CHECK:         %[[RET1FALSE:.*]] = spv.constant 3.000000e+00 : f32
+  // CHECK:         %[[RET2FALSE:.*]] = spv.Constant 2.000000e+00 : f32
+  // CHECK:         %[[RET1FALSE:.*]] = spv.Constant 3.000000e+00 : f32
   // CHECK-DAG:     spv.Store "Function" %[[VAR1]], %[[RET1FALSE]] : f32
   // CHECK-DAG:     spv.Store "Function" %[[VAR2]], %[[RET2FALSE]] : f32
   // CHECK:         spv.Branch ^[[MERGE]]

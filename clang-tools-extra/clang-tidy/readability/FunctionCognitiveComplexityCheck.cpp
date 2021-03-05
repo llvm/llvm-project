@@ -492,11 +492,13 @@ public:
 FunctionCognitiveComplexityCheck::FunctionCognitiveComplexityCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      Threshold(Options.get("Threshold", CognitiveComplexity::DefaultLimit)) {}
+      Threshold(Options.get("Threshold", CognitiveComplexity::DefaultLimit)),
+      DescribeBasicIncrements(Options.get("DescribeBasicIncrements", true)) {}
 
 void FunctionCognitiveComplexityCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "Threshold", Threshold);
+  Options.store(Opts, "DescribeBasicIncrements", DescribeBasicIncrements);
 }
 
 void FunctionCognitiveComplexityCheck::registerMatchers(MatchFinder *Finder) {
@@ -536,6 +538,9 @@ void FunctionCognitiveComplexityCheck::check(
   else
     diag(Loc, "lambda has cognitive complexity of %0 (threshold %1)")
         << Visitor.CC.Total << Threshold;
+
+  if (!DescribeBasicIncrements)
+    return;
 
   // Output all the basic increments of complexity.
   for (const auto &Detail : Visitor.CC.Details) {

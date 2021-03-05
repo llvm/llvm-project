@@ -44,6 +44,8 @@ BUILTIN(__builtin_amdgcn_grid_size_z, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_mbcnt_hi, "UiUiUi", "nc")
 BUILTIN(__builtin_amdgcn_mbcnt_lo, "UiUiUi", "nc")
 
+TARGET_BUILTIN(__builtin_amdgcn_s_memtime, "LUi", "n", "s-memtime-inst")
+
 //===----------------------------------------------------------------------===//
 // Instruction builtins.
 //===----------------------------------------------------------------------===//
@@ -105,7 +107,6 @@ BUILTIN(__builtin_amdgcn_cubeid, "ffff", "nc")
 BUILTIN(__builtin_amdgcn_cubesc, "ffff", "nc")
 BUILTIN(__builtin_amdgcn_cubetc, "ffff", "nc")
 BUILTIN(__builtin_amdgcn_cubema, "ffff", "nc")
-BUILTIN(__builtin_amdgcn_s_memtime, "LUi", "n")
 BUILTIN(__builtin_amdgcn_s_sleep, "vIi", "n")
 BUILTIN(__builtin_amdgcn_s_incperflevel, "vIi", "n")
 BUILTIN(__builtin_amdgcn_s_decperflevel, "vIi", "n")

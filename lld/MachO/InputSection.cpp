@@ -59,13 +59,13 @@ void InputSection::writeTo(uint8_t *buf) {
 
   for (size_t i = 0; i < relocs.size(); i++) {
     auto *fromSym = target->hasAttr(relocs[i].type, RelocAttrBits::SUBTRAHEND)
-                        ? relocs[i++].referent.dyn_cast<Symbol *>()
+                        ? relocs[i++].referent.get<Symbol *>()
                         : nullptr;
     const Reloc &r = relocs[i];
     uint8_t *loc = buf + r.offset;
     uint64_t referentVA = 0;
     if (fromSym) {
-      auto *toSym = r.referent.dyn_cast<Symbol *>();
+      auto *toSym = r.referent.get<Symbol *>();
       referentVA = toSym->getVA() - fromSym->getVA();
     } else if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
       if (target->hasAttr(r.type, RelocAttrBits::LOAD) &&

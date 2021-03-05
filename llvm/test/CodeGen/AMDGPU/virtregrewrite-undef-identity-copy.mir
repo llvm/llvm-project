@@ -40,7 +40,7 @@ body:             |
     ; CHECK: $sgpr4 = COPY $sgpr95
     ; CHECK: $vgpr0 = COPY renamable $vgpr40
     ; CHECK: $vgpr1 = COPY renamable $vgpr41
-    ; CHECK: $vgpr2 = COPY renamable $vgpr42
+    ; CHECK: $vgpr2 = COPY killed renamable $vgpr42
     ; CHECK: $vgpr3 = KILL undef renamable $vgpr3
     ; CHECK: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr6_sgpr7, @bar, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit-def $vgpr0
     ; CHECK: ADJCALLSTACKDOWN 0, 4, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95

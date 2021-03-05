@@ -15,8 +15,12 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+#include <numeric>
 
 using namespace mlir;
 
@@ -339,6 +343,163 @@ public:
   }
 };
 
+class ReshapeOpConverter : public OpConversionPattern<tosa::ReshapeOp> {
+public:
+  using OpConversionPattern<tosa::ReshapeOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(tosa::ReshapeOp reshape, ArrayRef<Value> args,
+                  ConversionPatternRewriter &rewriter) const final {
+    typename tosa::ReshapeOp::Adaptor operands(args);
+
+    ShapedType operandTy = operands.input1().getType().cast<ShapedType>();
+    ShapedType resultTy = reshape.getType().template cast<ShapedType>();
+
+    if (!operandTy.hasStaticShape() || !resultTy.hasStaticShape())
+      return failure();
+
+    // Compute the reassociation maps for the linalg operation.
+    ArrayRef<int64_t> expandedShape =
+        (operandTy.getRank() > resultTy.getRank() ? operandTy.getShape()
+                                                  : resultTy.getShape());
+    ArrayRef<int64_t> collapsedShape =
+        (operandTy.getRank() > resultTy.getRank() ? resultTy.getShape()
+                                                  : operandTy.getShape());
+    unsigned currSrcDim = 0, currDstDim = 0;
+    SmallVector<linalg::ReassociationExprs, 4> reassociationMap(
+        collapsedShape.size());
+
+    // First scan all dimensions in the source shapes to see whether we have a
+    // perfect case where consecutive dimensions in source are collapsed. For
+    // such case we can just generate one single linalg.reshape.
+    bool isCollapsingSource = true;
+    while (currSrcDim < expandedShape.size() &&
+           currDstDim < collapsedShape.size()) {
+      int64_t dstSize = collapsedShape[currDstDim];
+      int64_t srcSize = expandedShape[currSrcDim];
+      while (srcSize < dstSize && currSrcDim < expandedShape.size()) {
+        reassociationMap[currDstDim].push_back(
+            rewriter.getAffineDimExpr(currSrcDim++));
+        srcSize *= expandedShape[currSrcDim];
+      }
+      if (srcSize == dstSize) {
+        reassociationMap[currDstDim].push_back(
+            rewriter.getAffineDimExpr(currSrcDim++));
+        // If the next dim in collapsedShape is not 1, treat subsequent dims in
+        // expandedShape which are 1 to be collapsed.
+        if (currDstDim == collapsedShape.size() - 1 ||
+            collapsedShape[currDstDim + 1] != 1) {
+          while (currSrcDim < expandedShape.size() &&
+                 expandedShape[currSrcDim] == 1) {
+            reassociationMap[currDstDim].push_back(
+                rewriter.getAffineDimExpr(currSrcDim++));
+          }
+        }
+      } else {
+        isCollapsingSource = false;
+        break;
+      }
+      currDstDim++;
+    }
+    if (currSrcDim != expandedShape.size() ||
+        currDstDim != collapsedShape.size())
+      isCollapsingSource = false;
+
+    // Otherwise, we need to first reduce all source dimensions into one and
+    // then expand to the destination dimensions.
+    if (!isCollapsingSource) {
+      auto getIdentityExprs = [&rewriter](int n) {
+        SmallVector<AffineExpr, 4> exprs;
+        for (int i = 0; i < n; ++i)
+          exprs.push_back(rewriter.getAffineDimExpr(i));
+        return exprs;
+      };
+      Location loc = reshape.getLoc();
+      int64_t totalElems =
+          std::accumulate(expandedShape.begin(), expandedShape.end(), 1,
+                          std::multiplies<int64_t>());
+      auto elemTy = operandTy.getElementType();
+      SmallVector<linalg::ReassociationExprs, 4> collapsingMap = {
+          // Use operandTy here because we need to collapse all operands
+          // dimensions.
+          getIdentityExprs(operandTy.getShape().size())};
+      SmallVector<linalg::ReassociationExprs, 4> expandingMap = {
+          // Use resultTy here because we need to expand to all result
+          // dimensions.
+          getIdentityExprs(resultTy.getShape().size())};
+
+      auto collapsedTy = RankedTensorType::get({totalElems}, elemTy);
+      Value collapsedOp = rewriter.create<linalg::TensorReshapeOp>(
+          loc, collapsedTy, args[0], collapsingMap);
+      rewriter.replaceOpWithNewOp<linalg::TensorReshapeOp>(
+          reshape, resultTy, collapsedOp, expandingMap);
+
+      return success();
+    }
+
+    rewriter.replaceOpWithNewOp<linalg::TensorReshapeOp>(
+        reshape, resultTy, args[0], reassociationMap);
+
+    return success();
+  }
+};
+
+class TransposeConverter : public OpRewritePattern<tosa::TransposeOp> {
+public:
+  using OpRewritePattern<tosa::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TransposeOp op,
+                                PatternRewriter &rewriter) const final {
+    DenseIntElementsAttr perms;
+    if (!matchPattern(op.perms(), m_Constant(&perms))) {
+      return failure();
+    }
+
+    auto resultTy = op.getType().cast<ShapedType>();
+    if (!resultTy.hasStaticShape())
+      return failure();
+
+    SmallVector<AffineExpr, 2> inputExprs;
+    inputExprs.resize(resultTy.getRank());
+    for (auto permutation : llvm::enumerate(perms.getIntValues())) {
+      inputExprs[permutation.value().getZExtValue()] =
+          rewriter.getAffineDimExpr(permutation.index());
+    }
+
+    auto initTensor = rewriter.create<linalg::InitTensorOp>(
+        op.getLoc(), ArrayRef<Value>({}), resultTy.getShape(),
+        resultTy.getElementType());
+
+    SmallVector<AffineMap, 2> affineMaps = {
+        AffineMap::get(resultTy.getRank(), /*symbolCount=*/0, inputExprs,
+                       rewriter.getContext()),
+        rewriter.getMultiDimIdentityMap(resultTy.getRank())};
+
+    rewriter.replaceOpWithNewOp<linalg::GenericOp>(
+        op, resultTy, op.input1(), ValueRange{initTensor}, affineMaps,
+        getNParallelLoopsAttrs(resultTy.getRank()),
+        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+          nestedBuilder.create<linalg::YieldOp>(op.getLoc(), *args.begin());
+        });
+    return success();
+  }
+};
+
+// At the codegen level any identity operations should be removed. Any cases
+// where identity is load-bearing (e.g. cross device computation) should be
+// handled before lowering to codegen.
+template <typename SrcOp>
+class IdentityNConverter : public OpRewritePattern<SrcOp> {
+public:
+  using OpRewritePattern<SrcOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SrcOp op,
+                                PatternRewriter &rewriter) const final {
+    rewriter.replaceOp(op, op.getOperation()->getOperands());
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
@@ -358,6 +519,8 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PointwiseConverter<tosa::GreaterEqualOp>,
       PointwiseConverter<tosa::MaximumOp>, PointwiseConverter<tosa::MinimumOp>,
       PointwiseConverter<tosa::CeilOp>, PointwiseConverter<tosa::FloorOp>,
-      PointwiseConverter<tosa::ClampOp>, PointwiseConverter<tosa::ReluNOp>>(
-      context);
+      PointwiseConverter<tosa::ClampOp>, PointwiseConverter<tosa::ReluNOp>,
+      IdentityNConverter<tosa::IdentityOp>,
+      IdentityNConverter<tosa::IdentityNOp>,
+      ReshapeOpConverter, TransposeConverter>(context);
 }

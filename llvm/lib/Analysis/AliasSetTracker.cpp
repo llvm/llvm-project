@@ -14,7 +14,6 @@
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -301,7 +300,7 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
                                                     const AAMDNodes &AAInfo,
                                                     bool &MustAliasAll) {
   AliasSet *FoundSet = nullptr;
-  AliasResult AllAR = MustAlias;
+  MustAliasAll = true;
   for (AliasSet &AS : llvm::make_early_inc_range(*this)) {
     if (AS.Forward)
       continue;
@@ -310,8 +309,8 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
     if (AR == NoAlias)
       continue;
 
-    AllAR =
-        AliasResult(AllAR & AR); // Possible downgrade to May/Partial, even No
+    if (AR != MustAlias)
+      MustAliasAll = false;
 
     if (!FoundSet) {
       // If this is the first alias set ptr can go into, remember it.
@@ -322,7 +321,6 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
     }
   }
 
-  MustAliasAll = (AllAR == MustAlias);
   return FoundSet;
 }
 
@@ -534,15 +532,6 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
           MemoryLocation(ASI.getPointer(), ASI.getSize(), ASI.getAAInfo()),
           (AliasSet::AccessLattice)AS.Access);
   }
-}
-
-void AliasSetTracker::addAllInstructionsInLoopUsingMSSA() {
-  assert(MSSA && L && "MSSA and L must be available");
-  for (const BasicBlock *BB : L->blocks())
-    if (auto *Accesses = MSSA->getBlockAccesses(BB))
-      for (auto &Access : *Accesses)
-        if (auto *MUD = dyn_cast<MemoryUseOrDef>(&Access))
-          add(MUD->getMemoryInst());
 }
 
 // deleteValue method - This method is used to remove a pointer value from the

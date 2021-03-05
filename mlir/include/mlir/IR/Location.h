@@ -129,8 +129,7 @@ public:
   using Base::Base;
 
   /// Return a uniqued FileLineCol location object.
-  static Location get(Identifier filename, unsigned line, unsigned column,
-                      MLIRContext *context);
+  static Location get(Identifier filename, unsigned line, unsigned column);
   static Location get(StringRef filename, unsigned line, unsigned column,
                       MLIRContext *context);
 
@@ -174,7 +173,7 @@ public:
   static Location get(Identifier name, Location child);
 
   /// Return a uniqued name location object with an unknown child.
-  static Location get(Identifier name, MLIRContext *context);
+  static Location get(Identifier name);
 
   /// Return the name identifier.
   Identifier getName() const;

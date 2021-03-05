@@ -4563,10 +4563,6 @@ Address AIXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   if (Ty->isAnyComplexType())
     llvm::report_fatal_error("complex type is not supported on AIX yet");
 
-  if (Ty->isVectorType())
-    llvm::report_fatal_error(
-        "vector types are not yet supported for variadic functions on AIX");
-
   auto TypeInfo = getContext().getTypeInfoInChars(Ty);
   TypeInfo.Align = getParamTypeAlignment(Ty);
 

@@ -36,6 +36,8 @@ struct ImageDimIntrinsicInfo;
 class AMDGPUInstrInfo;
 class AMDGPURegisterBankInfo;
 class AMDGPUTargetMachine;
+class BlockFrequencyInfo;
+class ProfileSummaryInfo;
 class GCNSubtarget;
 class MachineInstr;
 class MachineIRBuilder;
@@ -60,8 +62,9 @@ public:
   bool select(MachineInstr &I) override;
   static const char *getName();
 
-  void setupMF(MachineFunction &MF, GISelKnownBits &KB,
-               CodeGenCoverage &CoverageInfo) override;
+  void setupMF(MachineFunction &MF, GISelKnownBits *KB,
+               CodeGenCoverage &CoverageInfo, ProfileSummaryInfo *PSI,
+               BlockFrequencyInfo *BFI) override;
 
 private:
   struct GEPInfo {

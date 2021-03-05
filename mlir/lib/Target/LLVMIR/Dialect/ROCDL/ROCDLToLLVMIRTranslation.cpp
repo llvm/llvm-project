@@ -41,27 +41,55 @@ static llvm::Value *createDeviceFunctionCall(llvm::IRBuilderBase &builder,
   return builder.CreateCall(fn, ArrayRef<llvm::Value *>(fn_op0));
 }
 
-LogicalResult mlir::ROCDLDialectLLVMIRTranslationInterface::convertOperation(
-    Operation *op, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation) const {
-  Operation &opInst = *op;
+namespace {
+/// Implementation of the dialect interface that converts operations belonging
+/// to the ROCDL dialect to LLVM IR.
+class ROCDLDialectLLVMIRTranslationInterface
+    : public LLVMTranslationDialectInterface {
+public:
+  using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
+
+  /// Translates the given operation to LLVM IR using the provided IR builder
+  /// and saving the state in `moduleTranslation`.
+  LogicalResult
+  convertOperation(Operation *op, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) const final {
+    Operation &opInst = *op;
 #include "mlir/Dialect/LLVMIR/ROCDLConversions.inc"
 
-  return failure();
+    return failure();
+  }
+
+  /// Attaches module-level metadata for functions marked as kernels.
+  LogicalResult
+  amendOperation(Operation *op, NamedAttribute attribute,
+                 LLVM::ModuleTranslation &moduleTranslation) const final {
+    if (attribute.first == ROCDL::ROCDLDialect::getKernelFuncAttrName()) {
+      auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
+      if (!func)
+        return failure();
+
+      // For GPU kernels,
+      // 1. Insert AMDGPU_KERNEL calling convention.
+      // 2. Insert amdgpu-flat-workgroup-size(1, 1024) attribute.
+      llvm::Function *llvmFunc =
+          moduleTranslation.lookupFunction(func.getName());
+      llvmFunc->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+      llvmFunc->addFnAttr("amdgpu-flat-work-group-size", "1, 1024");
+    }
+    return success();
+  }
+};
+} // end namespace
+
+void mlir::registerROCDLDialectTranslation(DialectRegistry &registry) {
+  registry.insert<ROCDL::ROCDLDialect>();
+  registry.addDialectInterface<ROCDL::ROCDLDialect,
+                               ROCDLDialectLLVMIRTranslationInterface>();
 }
 
-LogicalResult mlir::ROCDLDialectLLVMIRTranslationInterface::amendOperation(
-    Operation *op, NamedAttribute attribute,
-    LLVM::ModuleTranslation &moduleTranslation) const {
-  if (attribute.first == ROCDL::ROCDLDialect::getKernelFuncAttrName()) {
-    auto func = cast<LLVM::LLVMFuncOp>(op);
-
-    // For GPU kernels,
-    // 1. Insert AMDGPU_KERNEL calling convention.
-    // 2. Insert amdgpu-flat-workgroup-size(1, 1024) attribute.
-    llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
-    llvmFunc->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
-    llvmFunc->addFnAttr("amdgpu-flat-work-group-size", "1, 1024");
-  }
-  return success();
+void mlir::registerROCDLDialectTranslation(MLIRContext &context) {
+  DialectRegistry registry;
+  registerROCDLDialectTranslation(registry);
+  context.appendDialectRegistry(registry);
 }

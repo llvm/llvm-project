@@ -630,7 +630,6 @@ CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
 CHECK_SIMPLE_CLAUSE(Allocate, OMPC_allocate)
 CHECK_SIMPLE_CLAUSE(Capture, OMPC_capture)
 CHECK_SIMPLE_CLAUSE(Copyin, OMPC_copyin)
-CHECK_SIMPLE_CLAUSE(Copyprivate, OMPC_copyprivate)
 CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
 CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
 CHECK_SIMPLE_CLAUSE(Destroy, OMPC_destroy)
@@ -655,7 +654,6 @@ CHECK_SIMPLE_CLAUSE(Threadprivate, OMPC_threadprivate)
 CHECK_SIMPLE_CLAUSE(Threads, OMPC_threads)
 CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
 CHECK_SIMPLE_CLAUSE(IsDevicePtr, OMPC_is_device_ptr)
-CHECK_SIMPLE_CLAUSE(Lastprivate, OMPC_lastprivate)
 CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
 CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
 CHECK_SIMPLE_CLAUSE(Nogroup, OMPC_nogroup)
@@ -744,7 +742,40 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
 void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_firstprivate);
   CheckIsLoopIvPartOfClause(llvmOmpClause::OMPC_firstprivate, x.v);
+
+  SymbolSourceMap currSymbols;
+  GetSymbolsInObjectList(x.v, currSymbols);
+
+  DirectivesClauseTriple dirClauseTriple;
+  // Check firstprivate variables in worksharing constructs
+  dirClauseTriple.emplace(llvm::omp::Directive::OMPD_do,
+      std::make_pair(
+          llvm::omp::Directive::OMPD_parallel, llvm::omp::privateReductionSet));
+  dirClauseTriple.emplace(llvm::omp::Directive::OMPD_sections,
+      std::make_pair(
+          llvm::omp::Directive::OMPD_parallel, llvm::omp::privateReductionSet));
+  dirClauseTriple.emplace(llvm::omp::Directive::OMPD_single,
+      std::make_pair(
+          llvm::omp::Directive::OMPD_parallel, llvm::omp::privateReductionSet));
+  // Check firstprivate variables in distribute construct
+  dirClauseTriple.emplace(llvm::omp::Directive::OMPD_distribute,
+      std::make_pair(
+          llvm::omp::Directive::OMPD_teams, llvm::omp::privateReductionSet));
+  dirClauseTriple.emplace(llvm::omp::Directive::OMPD_distribute,
+      std::make_pair(llvm::omp::Directive::OMPD_target_teams,
+          llvm::omp::privateReductionSet));
+  // Check firstprivate variables in task and taskloop constructs
+  dirClauseTriple.emplace(llvm::omp::Directive::OMPD_task,
+      std::make_pair(llvm::omp::Directive::OMPD_parallel,
+          OmpClauseSet{llvm::omp::Clause::OMPC_reduction}));
+  dirClauseTriple.emplace(llvm::omp::Directive::OMPD_taskloop,
+      std::make_pair(llvm::omp::Directive::OMPD_parallel,
+          OmpClauseSet{llvm::omp::Clause::OMPC_reduction}));
+
+  CheckPrivateSymbolsInOuterCxt(
+      currSymbols, dirClauseTriple, llvm::omp::Clause::OMPC_firstprivate);
 }
+
 void OmpStructureChecker::CheckIsLoopIvPartOfClause(
     llvmOmpClause clause, const parser::OmpObjectList &ompObjectList) {
   for (const auto &ompObject : ompObjectList.v) {
@@ -975,6 +1006,31 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_copyprivate);
+  CheckIntentInPointer(x.v, llvm::omp::Clause::OMPC_copyprivate);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_lastprivate);
+
+  DirectivesClauseTriple dirClauseTriple;
+  SymbolSourceMap currSymbols;
+  GetSymbolsInObjectList(x.v, currSymbols);
+  CheckDefinableObjects(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
+
+  // Check lastprivate variables in worksharing constructs
+  dirClauseTriple.emplace(llvm::omp::Directive::OMPD_do,
+      std::make_pair(
+          llvm::omp::Directive::OMPD_parallel, llvm::omp::privateReductionSet));
+  dirClauseTriple.emplace(llvm::omp::Directive::OMPD_sections,
+      std::make_pair(
+          llvm::omp::Directive::OMPD_parallel, llvm::omp::privateReductionSet));
+
+  CheckPrivateSymbolsInOuterCxt(
+      currSymbols, dirClauseTriple, llvm::omp::Clause::OMPC_lastprivate);
+}
+
 llvm::StringRef OmpStructureChecker::getClauseName(llvm::omp::Clause clause) {
   return llvm::omp::getOpenMPClauseName(clause);
 }
@@ -1036,11 +1092,13 @@ void OmpStructureChecker::CheckDependArraySection(
 
 void OmpStructureChecker::CheckIntentInPointer(
     const parser::OmpObjectList &objectList, const llvm::omp::Clause clause) {
-  std::vector<const Symbol *> symbols;
+  SymbolSourceMap symbols;
   GetSymbolsInObjectList(objectList, symbols);
-  for (const auto *symbol : symbols) {
+  for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
+    const auto *symbol{it->first};
+    const auto source{it->second};
     if (IsPointer(*symbol) && IsIntentIn(*symbol)) {
-      context_.Say(GetContext().clauseSource,
+      context_.Say(source,
           "Pointer '%s' with the INTENT(IN) attribute may not appear "
           "in a %s clause"_err_en_US,
           symbol->name(),
@@ -1050,18 +1108,95 @@ void OmpStructureChecker::CheckIntentInPointer(
 }
 
 void OmpStructureChecker::GetSymbolsInObjectList(
-    const parser::OmpObjectList &objectList,
-    std::vector<const Symbol *> &symbols) {
+    const parser::OmpObjectList &objectList, SymbolSourceMap &symbols) {
   for (const auto &ompObject : objectList.v) {
     if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
       if (const auto *symbol{name->symbol}) {
         if (const auto *commonBlockDetails{
                 symbol->detailsIf<CommonBlockDetails>()}) {
           for (const auto &object : commonBlockDetails->objects()) {
-            symbols.emplace_back(&object->GetUltimate());
+            symbols.emplace(&object->GetUltimate(), name->source);
           }
         } else {
-          symbols.emplace_back(&symbol->GetUltimate());
+          symbols.emplace(&symbol->GetUltimate(), name->source);
+        }
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::CheckDefinableObjects(
+    SymbolSourceMap &symbols, const llvm::omp::Clause clause) {
+  for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
+    const auto *symbol{it->first};
+    const auto source{it->second};
+    if (auto msg{WhyNotModifiable(*symbol, context_.FindScope(source))}) {
+      context_
+          .Say(source,
+              "Variable '%s' on the %s clause is not definable"_err_en_US,
+              symbol->name(),
+              parser::ToUpperCaseLetters(getClauseName(clause).str()))
+          .Attach(source, std::move(*msg), symbol->name());
+    }
+  }
+}
+
+void OmpStructureChecker::CheckPrivateSymbolsInOuterCxt(
+    SymbolSourceMap &currSymbols, DirectivesClauseTriple &dirClauseTriple,
+    const llvm::omp::Clause currClause) {
+  SymbolSourceMap enclosingSymbols;
+  auto range{dirClauseTriple.equal_range(GetContext().directive)};
+  for (auto dirIter{range.first}; dirIter != range.second; ++dirIter) {
+    auto enclosingDir{dirIter->second.first};
+    auto enclosingClauseSet{dirIter->second.second};
+    if (auto *enclosingContext{GetEnclosingContextWithDir(enclosingDir)}) {
+      for (auto it{enclosingContext->clauseInfo.begin()};
+           it != enclosingContext->clauseInfo.end(); ++it) {
+        // TODO: Replace the hard-coded clause names by using autogen checks or
+        // a function which maps parser::OmpClause::<name> to the corresponding
+        // llvm::omp::Clause::OMPC_<name>
+        std::visit(common::visitors{
+                       [&](const parser::OmpClause::Private &x) {
+                         if (enclosingClauseSet.test(
+                                 llvm::omp::Clause::OMPC_private)) {
+                           GetSymbolsInObjectList(x.v, enclosingSymbols);
+                         }
+                       },
+                       [&](const parser::OmpClause::Firstprivate &x) {
+                         if (enclosingClauseSet.test(
+                                 llvm::omp::Clause::OMPC_firstprivate)) {
+                           GetSymbolsInObjectList(x.v, enclosingSymbols);
+                         }
+                       },
+                       [&](const parser::OmpClause::Lastprivate &x) {
+                         if (enclosingClauseSet.test(
+                                 llvm::omp::Clause::OMPC_lastprivate)) {
+                           GetSymbolsInObjectList(x.v, enclosingSymbols);
+                         }
+                       },
+                       [&](const parser::OmpClause::Reduction &x) {
+                         if (enclosingClauseSet.test(
+                                 llvm::omp::Clause::OMPC_reduction)) {
+                           const auto &ompObjectList{
+                               std::get<parser::OmpObjectList>(x.v.t)};
+                           GetSymbolsInObjectList(
+                               ompObjectList, enclosingSymbols);
+                         }
+                       },
+                       [&](const auto &) {},
+                   },
+            it->second->u);
+      }
+
+      // Check if the symbols in current context are private in outer context
+      for (auto iter{currSymbols.begin()}; iter != currSymbols.end(); ++iter) {
+        const auto *symbol{iter->first};
+        const auto source{iter->second};
+        if (enclosingSymbols.find(symbol) != enclosingSymbols.end()) {
+          context_.Say(source,
+              "%s variable '%s' is PRIVATE in outer context"_err_en_US,
+              parser::ToUpperCaseLetters(getClauseName(currClause).str()),
+              symbol->name());
         }
       }
     }

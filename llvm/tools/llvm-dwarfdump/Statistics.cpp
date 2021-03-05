@@ -642,9 +642,8 @@ static void printLocationStats(json::OStream &J, const char *Key,
 }
 
 static void printSectionSizes(json::OStream &J, const SectionSizes &Sizes) {
-  for (const auto &DebugSec : Sizes.DebugSectionSizes)
-    J.attribute((Twine("#bytes in ") + DebugSec.getKey()).str(),
-                int64_t(DebugSec.getValue()));
+  for (const auto &It : Sizes.DebugSectionSizes)
+    J.attribute((Twine("#bytes in ") + It.first).str(), int64_t(It.second));
 }
 
 /// Stop tracking inlined variables with a location.

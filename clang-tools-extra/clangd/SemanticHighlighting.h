@@ -37,6 +37,7 @@ enum class HighlightingKind {
   Field,
   StaticField,
   Class,
+  Interface,
   Enum,
   EnumConstant,
   Typedef,

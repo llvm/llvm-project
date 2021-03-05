@@ -19,9 +19,11 @@ include "mlir/IR/OpBase.td"
 // DEF: ::mlir::test::SingleParameterType,
 // DEF: ::mlir::test::IntegerType
 
-// DEF-LABEL: ::mlir::Type generatedTypeParser(::mlir::MLIRContext *context, ::mlir::DialectAsmParser &parser, ::llvm::StringRef mnemonic)
+// DEF-LABEL: ::mlir::Type generatedTypeParser(::mlir::MLIRContext *context,
+// DEF-NEXT: ::mlir::DialectAsmParser &parser,
+// DEF-NEXT: ::llvm::StringRef mnemonic) {
 // DEF: if (mnemonic == ::mlir::test::CompoundAType::getMnemonic()) return ::mlir::test::CompoundAType::parse(context, parser);
-// DEF return ::mlir::Type();
+// DEF: return ::mlir::Type();
 
 def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect
@@ -59,7 +61,9 @@ def B_CompoundTypeA : TestType<"CompoundA"> {
 // DECL-LABEL: class CompoundAType : public ::mlir::Type
 // DECL: static CompoundAType getChecked(llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
 // DECL: static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
-// DECL: static ::llvm::StringRef getMnemonic() { return "cmpnd_a"; }
+// DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
+// DECL:   return ::llvm::StringLiteral("cmpnd_a");
+// DECL: }
 // DECL: static ::mlir::Type parse(::mlir::MLIRContext *context,
 // DECL-NEXT: ::mlir::DialectAsmParser &parser);
 // DECL: void print(::mlir::DialectAsmPrinter &printer) const;
@@ -77,7 +81,9 @@ def C_IndexType : TestType<"Index"> {
     );
 
 // DECL-LABEL: class IndexType : public ::mlir::Type
-// DECL: static ::llvm::StringRef getMnemonic() { return "index"; }
+// DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
+// DECL:   return ::llvm::StringLiteral("index");
+// DECL: }
 // DECL: static ::mlir::Type parse(::mlir::MLIRContext *context,
 // DECL-NEXT: ::mlir::DialectAsmParser &parser);
 // DECL: void print(::mlir::DialectAsmPrinter &printer) const;

@@ -179,10 +179,10 @@ class LoopVectorizationRequirements {
 public:
   LoopVectorizationRequirements(OptimizationRemarkEmitter &ORE) : ORE(ORE) {}
 
-  void addUnsafeAlgebraInst(Instruction *I) {
-    // First unsafe algebra instruction.
-    if (!UnsafeAlgebraInst)
-      UnsafeAlgebraInst = I;
+  /// Track the 1st floating-point instruction that can not be reassociated.
+  void addExactFPMathInst(Instruction *I) {
+    if (I && !ExactFPMathInst)
+      ExactFPMathInst = I;
   }
 
   void addRuntimePointerChecks(unsigned Num) { NumRuntimePointerChecks = Num; }
@@ -191,7 +191,7 @@ public:
 
 private:
   unsigned NumRuntimePointerChecks = 0;
-  Instruction *UnsafeAlgebraInst = nullptr;
+  Instruction *ExactFPMathInst = nullptr;
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter &ORE;

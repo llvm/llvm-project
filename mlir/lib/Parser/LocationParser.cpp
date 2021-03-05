@@ -145,7 +145,7 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
                    "expected ')' after child location of NameLoc"))
       return failure();
   } else {
-    loc = NameLoc::get(Identifier::get(str, ctx), ctx);
+    loc = NameLoc::get(Identifier::get(str, ctx));
   }
 
   return success();

@@ -259,11 +259,12 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
         // incorrect because we may end up delegating/rethrowing to an inner
         // scope in CFGStackify. So here we make sure those unwind destinations
         // are deferred until their unwind source's exception is sorted.
-        if (EHInfo && EHInfo->hasUnwindSrc(Succ)) {
-          auto *UnwindSrc = EHInfo->getUnwindSrc(Succ);
+        if (EHInfo && EHInfo->hasUnwindSrcs(Succ)) {
+          SmallPtrSet<MachineBasicBlock *, 4> UnwindSrcs =
+              EHInfo->getUnwindSrcs(Succ);
           bool IsDeferred = false;
-          for (Entry &E : reverse(Entries)) {
-            if (E.TheRegion->getHeader() == UnwindSrc) {
+          for (Entry &E : Entries) {
+            if (UnwindSrcs.count(E.TheRegion->getHeader())) {
               E.Deferred.push_back(Succ);
               IsDeferred = true;
               break;

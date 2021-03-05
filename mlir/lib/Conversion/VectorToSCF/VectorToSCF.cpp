@@ -115,9 +115,11 @@ public:
         VectorType::get(vectorType.getShape().take_back(minorRank),
                         vectorType.getElementType());
     /// Memref of minor vector type is used for individual transfers.
-    memRefMinorVectorType = MemRefType::get(
-        majorVectorType.getShape(), minorVectorType, {},
-        xferOp.getShapedType().template cast<MemRefType>().getMemorySpace());
+    memRefMinorVectorType =
+        MemRefType::get(majorVectorType.getShape(), minorVectorType, {},
+                        xferOp.getShapedType()
+                            .template cast<MemRefType>()
+                            .getMemorySpaceAsInt());
   }
 
   LogicalResult doReplace();

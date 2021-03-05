@@ -80,7 +80,7 @@ struct map {
 
 // CHECK-INIT-LIST-LABEL: _Z5Test4v:
 std::map<int, int> Test4() { // CHECK-INIT-LIST: File 0, [[@LINE]]:28 -> [[@LINE+3]]:2 = #0
-  abort();
+  abort();                           // CHECK-INIT-LIST-NEXT: Gap,File 0, [[@LINE]]:11 -> [[@LINE+1]]:3 = 0
   return std::map<int, int>{{0, 0}}; // CHECK-INIT-LIST-NEXT: [[@LINE]]:3 -> [[@LINE]]:36 = 0
 }
 

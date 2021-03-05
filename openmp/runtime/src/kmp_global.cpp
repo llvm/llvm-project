@@ -319,6 +319,13 @@ omp_allocator_handle_t const omp_pteam_mem_alloc =
     (omp_allocator_handle_t const)7;
 omp_allocator_handle_t const omp_thread_mem_alloc =
     (omp_allocator_handle_t const)8;
+// Preview of target memory support
+omp_allocator_handle_t const llvm_omp_target_host_mem_alloc =
+    (omp_allocator_handle_t const)100;
+omp_allocator_handle_t const llvm_omp_target_shared_mem_alloc =
+    (omp_allocator_handle_t const)101;
+omp_allocator_handle_t const llvm_omp_target_device_mem_alloc =
+    (omp_allocator_handle_t const)102;
 omp_allocator_handle_t const kmp_max_mem_alloc =
     (omp_allocator_handle_t const)1024;
 omp_allocator_handle_t __kmp_def_allocator = omp_default_mem_alloc;
@@ -333,6 +340,13 @@ omp_memspace_handle_t const omp_high_bw_mem_space =
     (omp_memspace_handle_t const)3;
 omp_memspace_handle_t const omp_low_lat_mem_space =
     (omp_memspace_handle_t const)4;
+// Preview of target memory support
+omp_memspace_handle_t const llvm_omp_target_host_mem_space =
+    (omp_memspace_handle_t const)100;
+omp_memspace_handle_t const llvm_omp_target_shared_mem_space =
+    (omp_memspace_handle_t const)101;
+omp_memspace_handle_t const llvm_omp_target_device_mem_space =
+    (omp_memspace_handle_t const)102;
 
 /* This check ensures that the compiler is passing the correct data type for the
    flags formal parameter of the function kmpc_omp_task_alloc(). If the type is

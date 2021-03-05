@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -850,4 +851,11 @@ int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
     return -1;
   }
   llvm_unreachable("Invalid boolean contents");
+}
+
+bool llvm::shouldOptForSize(const MachineBasicBlock &MBB,
+                            ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
+  const auto &F = MBB.getParent()->getFunction();
+  return F.hasOptSize() || F.hasMinSize() ||
+         llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
 }

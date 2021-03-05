@@ -9,9 +9,9 @@
 # CHECK-NEXT:----------------------------------------------------
 # CHECK-NEXT:SECTION        SIZE (b)
 # CHECK-NEXT:-------------  --------
-# CHECK-NEXT:.debug_info           2 (0.70%)
-# CHECK-NEXT:.debug_abbrev         1 (0.35%)
 # CHECK-NEXT:.debug_str            1 (0.35%)
+# CHECK-NEXT:.debug_abbrev         1 (0.35%)
+# CHECK-NEXT:.debug_info           2 (0.70%)
 # CHECK-EMPTY:
 # CHECK-NEXT: Total Size: 4  (1.40%)
 # CHECK-NEXT: Total File Size: 286

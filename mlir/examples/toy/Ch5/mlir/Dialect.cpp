@@ -177,7 +177,7 @@ static mlir::ParseResult parseConstantOp(mlir::OpAsmParser &parser,
 /// strings, attributes, operands, types, etc.
 static void print(mlir::OpAsmPrinter &printer, ConstantOp op) {
   printer << "toy.constant ";
-  printer.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{"value"});
+  printer.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/{"value"});
   printer << op.value();
 }
 

@@ -393,6 +393,14 @@ protected:
   /// absolute difference.
   bool DwarfFDESymbolsUseAbsDiff = false;
 
+  /// True if the target supports generating the DWARF line table through using
+  /// the .loc/.file directives. Defaults to true.
+  bool UsesDwarfFileAndLocDirectives = true;
+
+  /// True if the target needs the DWARF section length in the header (if any)
+  /// of the DWARF section in the assembly file. Defaults to true.
+  bool DwarfSectionSizeRequired = true;
+
   /// True if dwarf register numbers are printed instead of symbolic register
   /// names in .cfi_* directives.  Defaults to false.
   bool DwarfRegNumForCFI = false;
@@ -692,6 +700,14 @@ public:
   }
   bool supportsHeterogeneousDebuggingExtensions() const {
     return SupportsHeterogeneousDebuggingExtensions;
+  }
+
+  bool usesDwarfFileAndLocDirectives() const {
+    return UsesDwarfFileAndLocDirectives;
+  }
+
+  bool needsDwarfSectionSizeInHeader() const {
+    return DwarfSectionSizeRequired;
   }
 
   void addInitialFrameState(const MCCFIInstruction &Inst);

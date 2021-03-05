@@ -118,6 +118,7 @@ protected:
   DataExtractor m_reg_data;
   bool m_read_all_at_once;
   bool m_write_all_at_once;
+  bool m_gpacket_cached;
 
 private:
   // Helper function for ReadRegisterBytes().

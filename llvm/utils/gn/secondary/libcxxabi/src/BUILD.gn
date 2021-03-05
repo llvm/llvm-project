@@ -62,6 +62,9 @@ config("cxxabi_config") {
   include_dirs = [
     "//libcxxabi/include",
     "//libcxx/include",
+
+    # stdlib_stdexcept.cpp depends on libc++ internals.
+    "//libcxx",
   ]
   cflags_cc = [ "-nostdinc++" ]
   defines = [ "_LIBCXXABI_BUILDING_LIBRARY" ]

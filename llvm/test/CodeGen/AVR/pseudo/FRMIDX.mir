@@ -18,6 +18,7 @@ registers:
   - { id: 0, class: _ }
 body: |
   bb.0.entry:
+    liveins: $r31r30
 
     ; CHECK-LABEL: test
 

@@ -4,6 +4,7 @@ LIBCXX_ROOT = "@LIBCXX_SOURCE_DIR@"
 INSTALL_ROOT = "@CMAKE_BINARY_DIR@"
 COMPILER = "@CMAKE_CXX_COMPILER@"
 EXEC_ROOT = "@LIBCXX_BINARY_DIR@"
+CMAKE_OSX_SYSROOT = "@CMAKE_OSX_SYSROOT@";
 
 import os
 import pipes
@@ -25,12 +26,24 @@ config.test_exec_root = EXEC_ROOT
 # Configure basic substitutions
 runPy = os.path.join(LIBCXX_ROOT, 'utils', 'run.py')
 config.substitutions.append(('%{cxx}', COMPILER))
-config.substitutions.append(('%{flags}', ''))
-config.substitutions.append(('%{compile_flags}', '-nostdinc++ -isystem {} -I {}'.format(os.path.join(INSTALL_ROOT, 'include', 'c++', 'v1'),
-                                                                                        os.path.join(LIBCXX_ROOT, 'test', 'support'))))
-config.substitutions.append(('%{link_flags}', '-nostdlib++ {} {}'.format(os.path.join(INSTALL_ROOT, 'lib', 'libc++.a'),
-                                                                         os.path.join(INSTALL_ROOT, 'lib', 'libc++abi.a'))))
-config.substitutions.append(('%{exec}', '{} {} --execdir %T -- '.format(pipes.quote(sys.executable), pipes.quote(runPy))))
+config.substitutions.append(('%{flags}',
+    '-isysroot {}'.format(CMAKE_OSX_SYSROOT) if CMAKE_OSX_SYSROOT else ''
+))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -isystem {} -I {}'.format(
+        os.path.join(INSTALL_ROOT, 'include', 'c++', 'v1'),
+        os.path.join(LIBCXX_ROOT, 'test', 'support'))
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ {} {}'.format(
+        os.path.join(INSTALL_ROOT, 'lib', 'libc++.a'),
+        os.path.join(INSTALL_ROOT, 'lib', 'libc++abi.a'))
+))
+config.substitutions.append(('%{exec}',
+    '{} {} --execdir %T -- '.format(
+        pipes.quote(sys.executable),
+        pipes.quote(runPy))
+))
 
 # Add parameters and features to the config
 libcxx.test.newconfig.configure(

@@ -6,31 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the dialect interface for translating the LLVMAVX512
-// dialect to LLVM IR.
+// This provides registration calls for LLVMAVX512 dialect to LLVM IR
+// translation.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_TARGET_LLVMIR_DIALECT_LLVMAVX512_LLVMAVX512TOLLVMIRTRANSLATION_H
 #define MLIR_TARGET_LLVMIR_DIALECT_LLVMAVX512_LLVMAVX512TOLLVMIRTRANSLATION_H
 
-#include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
-
 namespace mlir {
 
-/// Implementation of the dialect interface that converts operations belonging
-/// to the LLVMAVX512 dialect to LLVM IR.
-class LLVMAVX512DialectLLVMIRTranslationInterface
-    : public LLVMTranslationDialectInterface {
-public:
-  using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
+class DialectRegistry;
+class MLIRContext;
 
-  /// Translates the given operation to LLVM IR using the provided IR builder
-  /// and saving the state in `moduleTranslation`.
-  LogicalResult
-  convertOperation(Operation *op, llvm::IRBuilderBase &builder,
-                   LLVM::ModuleTranslation &moduleTranslation) const final;
-};
+/// Register the LLVMAVX512 dialect and the translation from it to the LLVM IR
+/// in the given registry;
+void registerLLVMAVX512DialectTranslation(DialectRegistry &registry);
+
+/// Register the LLVMAVX512 dialect and the translation from it in the registry
+/// associated with the given context.
+void registerLLVMAVX512DialectTranslation(MLIRContext &context);
 
 } // namespace mlir
 

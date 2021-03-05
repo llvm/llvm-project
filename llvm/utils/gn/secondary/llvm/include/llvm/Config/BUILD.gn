@@ -279,12 +279,16 @@ write_cmake_config("config") {
   }
 
   if (current_os == "mac") {
-    values += [ "LTDL_SHLIB_EXT=.dylib" ]
+    shlib_ext = ".dylib"
   } else if (current_os == "win") {
-    values += [ "LTDL_SHLIB_EXT=.dll" ]
+    shlib_ext = ".dll"
   } else {
-    values += [ "LTDL_SHLIB_EXT=.so" ]
+    shlib_ext = ".so"
   }
+  values += [
+    "LLVM_PLUGIN_EXT=$shlib_ext",
+    "LTDL_SHLIB_EXT=$shlib_ext",
+  ]
 
   if (llvm_enable_libedit) {
     values += [ "HAVE_LIBEDIT=1" ]

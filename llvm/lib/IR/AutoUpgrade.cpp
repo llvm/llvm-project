@@ -14,6 +14,7 @@
 
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/IR/ObjCARCUtil.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
@@ -3594,7 +3595,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                           Name.startswith("atomic.load.add.f64.p"))) {
       Value *Ptr = CI->getArgOperand(0);
       Value *Val = CI->getArgOperand(1);
-      Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val,
+      Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
                                     AtomicOrdering::SequentiallyConsistent);
     } else if (IsNVVM && (Name == "max.i" || Name == "max.ll" ||
                           Name == "max.ui" || Name == "max.ull")) {
@@ -4038,7 +4039,7 @@ bool llvm::UpgradeDebugInfo(Module &M) {
 /// returns true if module is modified.
 static bool UpgradeRetainReleaseMarker(Module &M) {
   bool Changed = false;
-  const char *MarkerKey = "clang.arc.retainAutoreleasedReturnValueMarker";
+  const char *MarkerKey = objcarc::getRVMarkerModuleFlagStr();
   NamedMDNode *ModRetainReleaseMarker = M.getNamedMetadata(MarkerKey);
   if (ModRetainReleaseMarker) {
     MDNode *Op = ModRetainReleaseMarker->getOperand(0);

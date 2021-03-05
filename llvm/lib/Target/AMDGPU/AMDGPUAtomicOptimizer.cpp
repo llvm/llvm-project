@@ -517,7 +517,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
     }
 
     // Finally mark the readlanes in the WWM section.
-    NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, NewV);
+    NewV = B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, NewV);
   } else {
     switch (Op) {
     default:
@@ -621,7 +621,8 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
     // from the first lane, to get our lane's index into the atomic result.
     Value *LaneOffset = nullptr;
     if (ValDivergent) {
-      LaneOffset = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, ExclScan);
+      LaneOffset =
+          B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, ExclScan);
     } else {
       switch (Op) {
       default:

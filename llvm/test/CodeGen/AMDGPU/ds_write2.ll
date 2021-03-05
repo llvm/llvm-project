@@ -200,14 +200,16 @@ define amdgpu_kernel void @simple_write2_two_val_subreg2_mixed_f32(float addrspa
 ; GFX9-LABEL: simple_write2_two_val_subreg2_mixed_f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
-; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-NEXT:    ; kill: killed $vgpr4
+; GFX9-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[1:2], v5, s[0:1] glc
+; GFX9-NEXT:    global_load_dwordx2 v[1:2], v4, s[0:1] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[3:4], v5, s[0:1] offset:8 glc
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[0:1] offset:8 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    ds_write2_b32 v0, v1, v4 offset1:8
+; GFX9-NEXT:    ds_write2_b32 v0, v1, v3 offset1:8
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep.0 = getelementptr <2 x float>, <2 x float> addrspace(1)* %in, i32 %x.i

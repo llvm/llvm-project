@@ -30,7 +30,7 @@ need not be a scary or mystical process! Now that you've seen some of
 the basics, I strongly encourage you to take the code and hack on it.
 For example, try adding:
 
--  **global variables** - While global variables have questional value
+-  **global variables** - While global variables have questionable value
    in modern software engineering, they are often useful when putting
    together quick little hacks like the Kaleidoscope compiler itself.
    Fortunately, our current setup makes it very easy to add global

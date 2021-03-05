@@ -47,6 +47,11 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
+namespace llvm {
+class BlockFrequencyInfo;
+class ProfileSummaryInfo;
+}
+
 namespace {
 
 #define GET_GLOBALISEL_PREDICATE_BITSET
@@ -62,9 +67,10 @@ public:
   bool select(MachineInstr &I) override;
   static const char *getName() { return DEBUG_TYPE; }
 
-  void setupMF(MachineFunction &MF, GISelKnownBits &KB,
-               CodeGenCoverage &CoverageInfo) override {
-    InstructionSelector::setupMF(MF, KB, CoverageInfo);
+  void setupMF(MachineFunction &MF, GISelKnownBits *KB,
+               CodeGenCoverage &CoverageInfo, ProfileSummaryInfo *PSI,
+               BlockFrequencyInfo *BFI) override {
+    InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
 
     // hasFnAttribute() is expensive to call on every BRCOND selection, so
     // cache it here for each run of the selector.
@@ -244,12 +250,6 @@ private:
                                      Register VecReg, unsigned LaneIdx,
                                      MachineIRBuilder &MIRBuilder) const;
 
-  /// Helper function for selecting G_FCONSTANT. If the G_FCONSTANT can be
-  /// materialized using a FMOV instruction, then update MI and return it.
-  /// Otherwise, do nothing and return a nullptr.
-  MachineInstr *emitFMovForFConstant(MachineInstr &MI,
-                                     MachineRegisterInfo &MRI) const;
-
   /// Emit a CSet for an integer compare.
   ///
   /// \p DefReg and \p SrcReg are expected to be 32-bit scalar registers.
@@ -393,6 +393,12 @@ private:
                           int OpIdx = -1) const;
   void renderLogicalImm64(MachineInstrBuilder &MIB, const MachineInstr &I,
                           int OpIdx = -1) const;
+  void renderFPImm16(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                     int OpIdx = -1) const;
+  void renderFPImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                     int OpIdx = -1) const;
+  void renderFPImm64(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                     int OpIdx = -1) const;
 
   // Materialize a GlobalValue or BlockAddress using a movz+movk sequence.
   void materializeLargeCMVal(MachineInstr &I, const Value *V,
@@ -2425,12 +2431,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
                         : (DefSize == 64 ? AArch64::FPR64RegClass 
                                          : AArch64::FPR128RegClass);
 
-      // Can we use a FMOV instruction to represent the immediate?
-      if (emitFMovForFConstant(I, MRI))
-        return true;
-
       // For 64b values, emit a constant pool load instead.
-      if (DefSize == 64 || DefSize == 128) {
+      // For s32, use a cp load if we have optsize/minsize.
+      if (DefSize == 64 || DefSize == 128 ||
+          (DefSize == 32 && shouldOptForSize(&MF))) {
         auto *FPImm = I.getOperand(1).getFPImm();
         MachineIRBuilder MIB(I);
         auto *LoadMI = emitLoadFromConstantPool(FPImm, MIB);
@@ -4055,10 +4059,18 @@ MachineInstr *AArch64InstructionSelector::emitLoadFromConstantPool(
                                     AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
     break;
   case 8:
-    LoadMI = &*MIRBuilder
-                 .buildInstr(AArch64::LDRDui, {&AArch64::FPR64RegClass}, {Adrp})
-                 .addConstantPoolIndex(
-                     CPIdx, 0, AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+    LoadMI =
+        &*MIRBuilder
+              .buildInstr(AArch64::LDRDui, {&AArch64::FPR64RegClass}, {Adrp})
+              .addConstantPoolIndex(CPIdx, 0,
+                                    AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+    break;
+  case 4:
+    LoadMI =
+        &*MIRBuilder
+              .buildInstr(AArch64::LDRSui, {&AArch64::FPR32RegClass}, {Adrp})
+              .addConstantPoolIndex(CPIdx, 0,
+                                    AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
     break;
   default:
     LLVM_DEBUG(dbgs() << "Could not load from constant pool of type "
@@ -4385,39 +4397,6 @@ MachineInstr *AArch64InstructionSelector::emitVectorConcat(
           .addImm(0);
   constrainSelectedInstRegOperands(*InsElt, TII, TRI, RBI);
   return &*InsElt;
-}
-
-MachineInstr *AArch64InstructionSelector::emitFMovForFConstant(
-    MachineInstr &I, MachineRegisterInfo &MRI) const {
-  assert(I.getOpcode() == TargetOpcode::G_FCONSTANT &&
-         "Expected a G_FCONSTANT!");
-  MachineOperand &ImmOp = I.getOperand(1);
-  unsigned DefSize = MRI.getType(I.getOperand(0).getReg()).getSizeInBits();
-
-  // Only handle 32 and 64 bit defs for now.
-  if (DefSize != 32 && DefSize != 64)
-    return nullptr;
-
-  // Don't handle null values using FMOV.
-  if (ImmOp.getFPImm()->isNullValue())
-    return nullptr;
-
-  // Get the immediate representation for the FMOV.
-  const APFloat &ImmValAPF = ImmOp.getFPImm()->getValueAPF();
-  int Imm = DefSize == 32 ? AArch64_AM::getFP32Imm(ImmValAPF)
-                          : AArch64_AM::getFP64Imm(ImmValAPF);
-
-  // If this is -1, it means the immediate can't be represented as the requested
-  // floating point value. Bail.
-  if (Imm == -1)
-    return nullptr;
-
-  // Update MI to represent the new FMOV instruction, constrain it, and return.
-  ImmOp.ChangeToImmediate(Imm);
-  unsigned MovOpc = DefSize == 32 ? AArch64::FMOVSi : AArch64::FMOVDi;
-  I.setDesc(TII.get(MovOpc));
-  constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  return &I;
 }
 
 MachineInstr *
@@ -5963,6 +5942,33 @@ void AArch64InstructionSelector::renderLogicalImm64(
   uint64_t CstVal = I.getOperand(1).getCImm()->getZExtValue();
   uint64_t Enc = AArch64_AM::encodeLogicalImmediate(CstVal, 64);
   MIB.addImm(Enc);
+}
+
+void AArch64InstructionSelector::renderFPImm16(MachineInstrBuilder &MIB,
+                                               const MachineInstr &MI,
+                                               int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT && OpIdx == -1 &&
+         "Expected G_FCONSTANT");
+  MIB.addImm(
+      AArch64_AM::getFP16Imm(MI.getOperand(1).getFPImm()->getValueAPF()));
+}
+
+void AArch64InstructionSelector::renderFPImm32(MachineInstrBuilder &MIB,
+                                               const MachineInstr &MI,
+                                               int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT && OpIdx == -1 &&
+         "Expected G_FCONSTANT");
+  MIB.addImm(
+      AArch64_AM::getFP32Imm(MI.getOperand(1).getFPImm()->getValueAPF()));
+}
+
+void AArch64InstructionSelector::renderFPImm64(MachineInstrBuilder &MIB,
+                                               const MachineInstr &MI,
+                                               int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT && OpIdx == -1 &&
+         "Expected G_FCONSTANT");
+  MIB.addImm(
+      AArch64_AM::getFP64Imm(MI.getOperand(1).getFPImm()->getValueAPF()));
 }
 
 bool AArch64InstructionSelector::isLoadStoreOfNumBytes(

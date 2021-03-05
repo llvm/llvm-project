@@ -15,7 +15,7 @@ define i16 @neg16(i16 %x) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    neg r25
 ; CHECK-NEXT:    neg r24
-; CHECK-NEXT:    sbci r25, 0
+; CHECK-NEXT:    sbc r25, r1
 ; CHECK-NEXT:    ret
   %sub = sub i16 0, %x
   ret i16 %sub

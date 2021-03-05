@@ -15,6 +15,12 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+namespace llvm {
+namespace MachO {
+class InterfaceFile;
+} // namespace MachO
+} // namespace llvm
+
 namespace lld {
 namespace macho {
 

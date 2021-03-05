@@ -5,9 +5,9 @@
 //===----------------------------------------------------------------------===//
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
+  spv.GlobalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
   spv.func @access_chain() -> () "None" {
-    %0 = spv.constant 1: i32
+    %0 = spv.Constant 1: i32
     // CHECK: [[VAR1:%.*]] = spv.mlir.addressof @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4 x f32>)>, Input>
     // CHECK-NEXT: spv.AccessChain [[VAR1]][{{.*}}, {{.*}}] : !spv.ptr<!spv.struct<(f32, !spv.array<4 x f32>)>, Input>
     %1 = spv.mlir.addressof @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
@@ -19,7 +19,7 @@ spv.module Logical GLSL450 {
 // -----
 
 // Allow taking address of global variables in other module-like ops
-spv.globalVariable @var : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
+spv.GlobalVariable @var : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
 func @addressof() -> () {
   // CHECK: spv.mlir.addressof @var
   %1 = spv.mlir.addressof @var : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
@@ -29,9 +29,9 @@ func @addressof() -> () {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
+  spv.GlobalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
   spv.func @foo() -> () "None" {
-    // expected-error @+1 {{expected spv.globalVariable symbol}}
+    // expected-error @+1 {{expected spv.GlobalVariable symbol}}
     %0 = spv.mlir.addressof @var2 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
   }
 }
@@ -39,7 +39,7 @@ spv.module Logical GLSL450 {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
+  spv.GlobalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
   spv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced global variable's type}}
     %0 = spv.mlir.addressof @var1 : !spv.ptr<f32, Input>
@@ -49,29 +49,29 @@ spv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.constant
+// spv.Constant
 //===----------------------------------------------------------------------===//
 
 func @const() -> () {
-  // CHECK: spv.constant true
-  // CHECK: spv.constant 42 : i32
-  // CHECK: spv.constant 5.000000e-01 : f32
-  // CHECK: spv.constant dense<[2, 3]> : vector<2xi32>
-  // CHECK: spv.constant [dense<3.000000e+00> : vector<2xf32>] : !spv.array<1 x vector<2xf32>>
-  // CHECK: spv.constant dense<1> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
-  // CHECK: spv.constant dense<1.000000e+00> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
-  // CHECK: spv.constant dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
-  // CHECK: spv.constant dense<{{\[}}[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  // CHECK: spv.Constant true
+  // CHECK: spv.Constant 42 : i32
+  // CHECK: spv.Constant 5.000000e-01 : f32
+  // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
+  // CHECK: spv.Constant [dense<3.000000e+00> : vector<2xf32>] : !spv.array<1 x vector<2xf32>>
+  // CHECK: spv.Constant dense<1> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
+  // CHECK: spv.Constant dense<1.000000e+00> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  // CHECK: spv.Constant dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
+  // CHECK: spv.Constant dense<{{\[}}[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
 
-  %0 = spv.constant true
-  %1 = spv.constant 42 : i32
-  %2 = spv.constant 0.5 : f32
-  %3 = spv.constant dense<[2, 3]> : vector<2xi32>
-  %4 = spv.constant [dense<3.0> : vector<2xf32>] : !spv.array<1xvector<2xf32>>
-  %5 = spv.constant dense<1> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
-  %6 = spv.constant dense<1.0> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
-  %7 = spv.constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
-  %8 = spv.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  %0 = spv.Constant true
+  %1 = spv.Constant 42 : i32
+  %2 = spv.Constant 0.5 : f32
+  %3 = spv.Constant dense<[2, 3]> : vector<2xi32>
+  %4 = spv.Constant [dense<3.0> : vector<2xf32>] : !spv.array<1xvector<2xf32>>
+  %5 = spv.Constant dense<1> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
+  %6 = spv.Constant dense<1.0> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  %7 = spv.Constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
+  %8 = spv.Constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
   return
 }
 
@@ -79,7 +79,7 @@ func @const() -> () {
 
 func @unaccepted_std_attr() -> () {
   // expected-error @+1 {{cannot have value of type 'none'}}
-  %0 = spv.constant unit : none
+  %0 = spv.Constant unit : none
   return
 }
 
@@ -87,7 +87,7 @@ func @unaccepted_std_attr() -> () {
 
 func @array_constant() -> () {
   // expected-error @+1 {{has array element whose type ('vector<2xi32>') does not match the result element type ('vector<2xf32>')}}
-  %0 = spv.constant [dense<3.0> : vector<2xf32>, dense<4> : vector<2xi32>] : !spv.array<2xvector<2xf32>>
+  %0 = spv.Constant [dense<3.0> : vector<2xf32>, dense<4> : vector<2xi32>] : !spv.array<2xvector<2xf32>>
   return
 }
 
@@ -95,7 +95,7 @@ func @array_constant() -> () {
 
 func @array_constant() -> () {
   // expected-error @+1 {{must have spv.array result type for array value}}
-  %0 = spv.constant [dense<3.0> : vector<2xf32>] : !spv.rtarray<vector<2xf32>>
+  %0 = spv.Constant [dense<3.0> : vector<2xf32>] : !spv.rtarray<vector<2xf32>>
   return
 }
 
@@ -103,7 +103,7 @@ func @array_constant() -> () {
 
 func @non_nested_array_constant() -> () {
   // expected-error @+1 {{only support nested array result type}}
-  %0 = spv.constant dense<3.0> : tensor<2x2xf32> : !spv.array<2xvector<2xf32>>
+  %0 = spv.Constant dense<3.0> : tensor<2x2xf32> : !spv.array<2xvector<2xf32>>
   return
 }
 
@@ -111,21 +111,21 @@ func @non_nested_array_constant() -> () {
 
 func @value_result_type_mismatch() -> () {
   // expected-error @+1 {{must have spv.array result type for array value}}
-  %0 = "spv.constant"() {value = dense<0> : tensor<4xi32>} : () -> (vector<4xi32>)
+  %0 = "spv.Constant"() {value = dense<0> : tensor<4xi32>} : () -> (vector<4xi32>)
 }
 
 // -----
 
 func @value_result_type_mismatch() -> () {
   // expected-error @+1 {{result element type ('i32') does not match value element type ('f32')}}
-  %0 = spv.constant dense<1.0> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x i32>>
+  %0 = spv.Constant dense<1.0> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x i32>>
 }
 
 // -----
 
 func @value_result_num_elements_mismatch() -> () {
   // expected-error @+1 {{result number of elements (6) does not match value number of elements (4)}}
-  %0 = spv.constant dense<1.0> : tensor<2x2xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  %0 = spv.Constant dense<1.0> : tensor<2x2xf32> : !spv.array<2 x !spv.array<3 x f32>>
   return
 }
 
@@ -144,8 +144,8 @@ spv.module Logical GLSL450 {
 }
 
 spv.module Logical GLSL450 {
-   spv.globalVariable @var2 : !spv.ptr<f32, Input>
-   spv.globalVariable @var3 : !spv.ptr<f32, Output>
+   spv.GlobalVariable @var2 : !spv.ptr<f32, Input>
+   spv.GlobalVariable @var3 : !spv.ptr<f32, Output>
    spv.func @do_something(%arg0 : !spv.ptr<f32, Input>, %arg1 : !spv.ptr<f32, Output>) -> () "None" {
      %1 = spv.Load "Input" %arg0 : f32
      spv.Store "Output" %arg1, %1 : f32
@@ -298,93 +298,93 @@ spv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.globalVariable
+// spv.GlobalVariable
 //===----------------------------------------------------------------------===//
 
 spv.module Logical GLSL450 {
-  // CHECK: spv.globalVariable @var0 : !spv.ptr<f32, Input>
-  spv.globalVariable @var0 : !spv.ptr<f32, Input>
+  // CHECK: spv.GlobalVariable @var0 : !spv.ptr<f32, Input>
+  spv.GlobalVariable @var0 : !spv.ptr<f32, Input>
 }
 
 // TODO: Fix test case after initialization with normal constant is addressed
 // spv.module Logical GLSL450 {
-//   %0 = spv.constant 4.0 : f32
+//   %0 = spv.Constant 4.0 : f32
 //   // CHECK1: spv.Variable init(%0) : !spv.ptr<f32, Private>
-//   spv.globalVariable @var1 init(%0) : !spv.ptr<f32, Private>
+//   spv.GlobalVariable @var1 init(%0) : !spv.ptr<f32, Private>
 // }
 
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc = 4.0 : f32
-  // CHECK: spv.globalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
-  spv.globalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
+  spv.SpecConstant @sc = 4.0 : f32
+  // CHECK: spv.GlobalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
+  spv.GlobalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
 }
 
 // -----
 
 // Allow initializers coming from other module-like ops
-spv.specConstant @sc = 4.0 : f32
-// CHECK: spv.globalVariable @var initializer(@sc)
-spv.globalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
+spv.SpecConstant @sc = 4.0 : f32
+// CHECK: spv.GlobalVariable @var initializer(@sc)
+spv.GlobalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
 
 // -----
 
 spv.module Logical GLSL450 {
-  // CHECK: spv.globalVariable @var0 bind(1, 2) : !spv.ptr<f32, Uniform>
-  spv.globalVariable @var0 bind(1, 2) : !spv.ptr<f32, Uniform>
+  // CHECK: spv.GlobalVariable @var0 bind(1, 2) : !spv.ptr<f32, Uniform>
+  spv.GlobalVariable @var0 bind(1, 2) : !spv.ptr<f32, Uniform>
 }
 
 // TODO: Fix test case after initialization with constant is addressed
 // spv.module Logical GLSL450 {
-//   %0 = spv.constant 4.0 : f32
-//   // CHECK1: spv.globalVariable @var1 initializer(%0) {binding = 5 : i32} : !spv.ptr<f32, Private>
-//   spv.globalVariable @var1 initializer(%0) {binding = 5 : i32} : !spv.ptr<f32, Private>
+//   %0 = spv.Constant 4.0 : f32
+//   // CHECK1: spv.GlobalVariable @var1 initializer(%0) {binding = 5 : i32} : !spv.ptr<f32, Private>
+//   spv.GlobalVariable @var1 initializer(%0) {binding = 5 : i32} : !spv.ptr<f32, Private>
 // }
 
 // -----
 
 spv.module Logical GLSL450 {
-  // CHECK: spv.globalVariable @var1 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
-  spv.globalVariable @var1 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
-  // CHECK: spv.globalVariable @var2 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
-  spv.globalVariable @var2 {built_in = "GlobalInvocationID"} : !spv.ptr<vector<3xi32>, Input>
+  // CHECK: spv.GlobalVariable @var1 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
+  spv.GlobalVariable @var1 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
+  // CHECK: spv.GlobalVariable @var2 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
+  spv.GlobalVariable @var2 {built_in = "GlobalInvocationID"} : !spv.ptr<vector<3xi32>, Input>
 }
 
 // -----
 
 // Allow in other module-like ops
 module {
-  // CHECK: spv.globalVariable
-  spv.globalVariable @var0 : !spv.ptr<f32, Input>
+  // CHECK: spv.GlobalVariable
+  spv.GlobalVariable @var0 : !spv.ptr<f32, Input>
 }
 
 // -----
 
 spv.module Logical GLSL450 {
   // expected-error @+1 {{expected spv.ptr type}}
-  spv.globalVariable @var0 : f32
+  spv.GlobalVariable @var0 : f32
 }
 
 // -----
 
 spv.module Logical GLSL450 {
-  // expected-error @+1 {{op initializer must be result of a spv.specConstant or spv.globalVariable op}}
-  spv.globalVariable @var0 initializer(@var1) : !spv.ptr<f32, Private>
+  // expected-error @+1 {{op initializer must be result of a spv.SpecConstant or spv.GlobalVariable op}}
+  spv.GlobalVariable @var0 initializer(@var1) : !spv.ptr<f32, Private>
 }
 
 // -----
 
 spv.module Logical GLSL450 {
   // expected-error @+1 {{storage class cannot be 'Generic'}}
-  spv.globalVariable @var0 : !spv.ptr<f32, Generic>
+  spv.GlobalVariable @var0 : !spv.ptr<f32, Generic>
 }
 
 // -----
 
 spv.module Logical GLSL450 {
   // expected-error @+1 {{storage class cannot be 'Function'}}
-  spv.globalVariable @var0 : !spv.ptr<f32, Function>
+  spv.GlobalVariable @var0 : !spv.ptr<f32, Function>
 }
 
 // -----
@@ -392,7 +392,7 @@ spv.module Logical GLSL450 {
 spv.module Logical GLSL450 {
   spv.func @foo() "None" {
     // expected-error @+1 {{op must appear in a module-like op's block}}
-    spv.globalVariable @var0 : !spv.ptr<f32, Input>
+    spv.GlobalVariable @var0 : !spv.ptr<f32, Input>
     spv.Return
   }
 }
@@ -480,7 +480,7 @@ spv.module Logical GLSL450 {
 // expected-error@+2 {{expects regions to end with 'spv.mlir.endmodule'}}
 // expected-note@+1 {{in custom textual format, the absence of terminator implies 'spv.mlir.endmodule'}}
 "spv.module"() ({
-  %0 = spv.constant true
+  %0 = spv.Constant true
 }) {addressing_model = 0 : i32, memory_model = 1 : i32} : () -> ()
 
 // -----
@@ -527,11 +527,11 @@ func @module_end_not_in_module() -> () {
 //===----------------------------------------------------------------------===//
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc1 = false
-  spv.specConstant @sc2 = 42 : i64
-  spv.specConstant @sc3 = 1.5 : f32
+  spv.SpecConstant @sc1 = false
+  spv.SpecConstant @sc2 = 42 : i64
+  spv.SpecConstant @sc3 = 1.5 : f32
 
-  spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<(i1, i64, f32)>
+  spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<(i1, i64, f32)>
 
   // CHECK-LABEL: @reference
   spv.func @reference() -> i1 "None" {
@@ -561,7 +561,7 @@ spv.module Logical GLSL450 {
   spv.func @compute() -> f32 "None" {
     // CHECK: spv.mlir.referenceof @sc3 : f32
     %0 = spv.mlir.referenceof @sc3 : f32
-    %1 = spv.constant 6.0 : f32
+    %1 = spv.Constant 6.0 : f32
     %2 = spv.FAdd %0, %1 : f32
     spv.ReturnValue %2 : f32
   }
@@ -570,7 +570,7 @@ spv.module Logical GLSL450 {
 // -----
 
 // Allow taking reference of spec constant in other module-like ops
-spv.specConstant @sc = 5 : i32
+spv.SpecConstant @sc = 5 : i32
 func @reference_of() {
   // CHECK: spv.mlir.referenceof @sc
   %0 = spv.mlir.referenceof @sc : i32
@@ -579,8 +579,8 @@ func @reference_of() {
 
 // -----
 
-spv.specConstant @sc = 5 : i32
-spv.specConstantComposite @scc (@sc) : !spv.array<1 x i32>
+spv.SpecConstant @sc = 5 : i32
+spv.SpecConstantComposite @scc (@sc) : !spv.array<1 x i32>
 
 func @reference_of_composite() {
   // CHECK: spv.mlir.referenceof @scc : !spv.array<1 x i32>
@@ -593,7 +593,7 @@ func @reference_of_composite() {
 
 spv.module Logical GLSL450 {
   spv.func @foo() -> () "None" {
-    // expected-error @+1 {{expected spv.specConstant or spv.SpecConstantComposite symbol}}
+    // expected-error @+1 {{expected spv.SpecConstant or spv.SpecConstantComposite symbol}}
     %0 = spv.mlir.referenceof @sc : i32
     spv.Return
   }
@@ -602,7 +602,7 @@ spv.module Logical GLSL450 {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc = 42 : i32
+  spv.SpecConstant @sc = 42 : i32
   spv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced specialization constant's type}}
     %0 = spv.mlir.referenceof @sc : f32
@@ -613,8 +613,8 @@ spv.module Logical GLSL450 {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc = 42 : i32
-  spv.specConstantComposite @scc (@sc) : !spv.array<1 x i32>
+  spv.SpecConstant @sc = 42 : i32
+  spv.SpecConstantComposite @scc (@sc) : !spv.array<1 x i32>
   spv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced specialization constant's type}}
     %0 = spv.mlir.referenceof @scc : f32
@@ -625,172 +625,172 @@ spv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.specConstant
+// spv.SpecConstant
 //===----------------------------------------------------------------------===//
 
 spv.module Logical GLSL450 {
-  // CHECK: spv.specConstant @sc1 = false
-  spv.specConstant @sc1 = false
-  // CHECK: spv.specConstant @sc2 spec_id(5) = 42 : i64
-  spv.specConstant @sc2 spec_id(5) = 42 : i64
-  // CHECK: spv.specConstant @sc3 = 1.500000e+00 : f32
-  spv.specConstant @sc3 = 1.5 : f32
+  // CHECK: spv.SpecConstant @sc1 = false
+  spv.SpecConstant @sc1 = false
+  // CHECK: spv.SpecConstant @sc2 spec_id(5) = 42 : i64
+  spv.SpecConstant @sc2 spec_id(5) = 42 : i64
+  // CHECK: spv.SpecConstant @sc3 = 1.500000e+00 : f32
+  spv.SpecConstant @sc3 = 1.5 : f32
 }
 
 // -----
 
 spv.module Logical GLSL450 {
   // expected-error @+1 {{SpecId cannot be negative}}
-  spv.specConstant @sc2 spec_id(-5) = 42 : i64
+  spv.SpecConstant @sc2 spec_id(-5) = 42 : i64
 }
 
 // -----
 
 spv.module Logical GLSL450 {
   // expected-error @+1 {{default value bitwidth disallowed}}
-  spv.specConstant @sc = 15 : i4
+  spv.SpecConstant @sc = 15 : i4
 }
 
 // -----
 
 spv.module Logical GLSL450 {
   // expected-error @+1 {{default value can only be a bool, integer, or float scalar}}
-  spv.specConstant @sc = dense<[2, 3]> : vector<2xi32>
+  spv.SpecConstant @sc = dense<[2, 3]> : vector<2xi32>
 }
 
 // -----
 
 func @use_in_function() -> () {
   // expected-error @+1 {{op must appear in a module-like op's block}}
-  spv.specConstant @sc = false
+  spv.SpecConstant @sc = false
   return
 }
 
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.specConstantComposite
+// spv.SpecConstantComposite
 //===----------------------------------------------------------------------===//
 
 spv.module Logical GLSL450 {
   // expected-error @+1 {{result type must be a composite type}}
-  spv.specConstantComposite @scc2 (@sc1, @sc2, @sc3) : i32
+  spv.SpecConstantComposite @scc2 (@sc1, @sc2, @sc3) : i32
 }
 
 //===----------------------------------------------------------------------===//
-// spv.specConstantComposite (spv.array)
+// spv.SpecConstantComposite (spv.array)
 //===----------------------------------------------------------------------===//
 
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc1 = 1.5 : f32
-  spv.specConstant @sc2 = 2.5 : f32
-  spv.specConstant @sc3 = 3.5 : f32
-  // CHECK: spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.array<3 x f32>
-  spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.array<3 x f32>
+  spv.SpecConstant @sc1 = 1.5 : f32
+  spv.SpecConstant @sc2 = 2.5 : f32
+  spv.SpecConstant @sc3 = 3.5 : f32
+  // CHECK: spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.array<3 x f32>
+  spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.array<3 x f32>
 }
 
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc1 = false
-  spv.specConstant @sc2 spec_id(5) = 42 : i64
-  spv.specConstant @sc3 = 1.5 : f32
+  spv.SpecConstant @sc1 = false
+  spv.SpecConstant @sc2 spec_id(5) = 42 : i64
+  spv.SpecConstant @sc3 = 1.5 : f32
   // expected-error @+1 {{has incorrect number of operands: expected 4, but provided 3}}
-  spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.array<4 x f32>
+  spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.array<4 x f32>
 
 }
 
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc1 = 1   : i32
-  spv.specConstant @sc2 = 2.5 : f32
-  spv.specConstant @sc3 = 3.5 : f32
+  spv.SpecConstant @sc1 = 1   : i32
+  spv.SpecConstant @sc2 = 2.5 : f32
+  spv.SpecConstant @sc3 = 3.5 : f32
   // expected-error @+1 {{has incorrect types of operands: expected 'f32', but provided 'i32'}}
-  spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.array<3 x f32>
+  spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.array<3 x f32>
 }
 
 //===----------------------------------------------------------------------===//
-// spv.specConstantComposite (spv.struct)
+// spv.SpecConstantComposite (spv.struct)
 //===----------------------------------------------------------------------===//
 
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc1 = 1   : i32
-  spv.specConstant @sc2 = 2.5 : f32
-  spv.specConstant @sc3 = 3.5 : f32
-  // CHECK: spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<(i32, f32, f32)>
-  spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<(i32, f32, f32)>
+  spv.SpecConstant @sc1 = 1   : i32
+  spv.SpecConstant @sc2 = 2.5 : f32
+  spv.SpecConstant @sc3 = 3.5 : f32
+  // CHECK: spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<(i32, f32, f32)>
+  spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<(i32, f32, f32)>
 }
 
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc1 = 1   : i32
-  spv.specConstant @sc2 = 2.5 : f32
-  spv.specConstant @sc3 = 3.5 : f32
+  spv.SpecConstant @sc1 = 1   : i32
+  spv.SpecConstant @sc2 = 2.5 : f32
+  spv.SpecConstant @sc3 = 3.5 : f32
   // expected-error @+1 {{has incorrect number of operands: expected 2, but provided 3}}
-  spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<(i32, f32)>
+  spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<(i32, f32)>
 }
 
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc1 = 1.5 : f32
-  spv.specConstant @sc2 = 2.5 : f32
-  spv.specConstant @sc3 = 3.5 : f32
+  spv.SpecConstant @sc1 = 1.5 : f32
+  spv.SpecConstant @sc2 = 2.5 : f32
+  spv.SpecConstant @sc3 = 3.5 : f32
   // expected-error @+1 {{has incorrect types of operands: expected 'i32', but provided 'f32'}}
-  spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<(i32, f32, f32)>
+  spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<(i32, f32, f32)>
 }
 
 //===----------------------------------------------------------------------===//
-// spv.specConstantComposite (vector)
+// spv.SpecConstantComposite (vector)
 //===----------------------------------------------------------------------===//
 
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc1 = 1.5 : f32
-  spv.specConstant @sc2 = 2.5 : f32
-  spv.specConstant @sc3 = 3.5 : f32
-  // CHECK: spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : vector<3xf32>
-  spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : vector<3 x f32>
+  spv.SpecConstant @sc1 = 1.5 : f32
+  spv.SpecConstant @sc2 = 2.5 : f32
+  spv.SpecConstant @sc3 = 3.5 : f32
+  // CHECK: spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : vector<3xf32>
+  spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : vector<3 x f32>
 }
 
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc1 = false
-  spv.specConstant @sc2 spec_id(5) = 42 : i64
-  spv.specConstant @sc3 = 1.5 : f32
+  spv.SpecConstant @sc1 = false
+  spv.SpecConstant @sc2 spec_id(5) = 42 : i64
+  spv.SpecConstant @sc3 = 1.5 : f32
   // expected-error @+1 {{has incorrect number of operands: expected 4, but provided 3}}
-  spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : vector<4xf32>
+  spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : vector<4xf32>
 
 }
 
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc1 = 1   : i32
-  spv.specConstant @sc2 = 2.5 : f32
-  spv.specConstant @sc3 = 3.5 : f32
+  spv.SpecConstant @sc1 = 1   : i32
+  spv.SpecConstant @sc2 = 2.5 : f32
+  spv.SpecConstant @sc3 = 3.5 : f32
   // expected-error @+1 {{has incorrect types of operands: expected 'f32', but provided 'i32'}}
-  spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : vector<3xf32>
+  spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : vector<3xf32>
 }
 
 //===----------------------------------------------------------------------===//
-// spv.specConstantComposite (spv.coopmatrix)
+// spv.SpecConstantComposite (spv.coopmatrix)
 //===----------------------------------------------------------------------===//
 
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc1 = 1.5 : f32
+  spv.SpecConstant @sc1 = 1.5 : f32
   // expected-error @+1 {{unsupported composite type}}
-  spv.specConstantComposite @scc (@sc1) : !spv.coopmatrix<8x16xf32, Device>
+  spv.SpecConstantComposite @scc (@sc1) : !spv.coopmatrix<8x16xf32, Device>
 }
 
 //===----------------------------------------------------------------------===//
@@ -801,10 +801,10 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @foo() -> i32 "None" {
-    // CHECK: [[LHS:%.*]] = spv.constant
-    %0 = spv.constant 1: i32
-    // CHECK: [[RHS:%.*]] = spv.constant
-    %1 = spv.constant 1: i32
+    // CHECK: [[LHS:%.*]] = spv.Constant
+    %0 = spv.Constant 1: i32
+    // CHECK: [[RHS:%.*]] = spv.Constant
+    %1 = spv.Constant 1: i32
 
     // CHECK: spv.SpecConstantOperation wraps "spv.IAdd"([[LHS]], [[RHS]]) : (i32, i32) -> i32
     %2 = spv.SpecConstantOperation wraps "spv.IAdd"(%0, %1) : (i32, i32) -> i32
@@ -816,7 +816,7 @@ spv.module Logical GLSL450 {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.specConstant @sc = 42 : i32
+  spv.SpecConstant @sc = 42 : i32
 
   spv.func @foo() -> i32 "None" {
     // CHECK: [[SC:%.*]] = spv.mlir.referenceof @sc
@@ -831,7 +831,7 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @foo() -> i32 "None" {
-    %0 = spv.constant 1: i32
+    %0 = spv.Constant 1: i32
     // expected-error @+1 {{op expects parent op 'spv.SpecConstantOperation'}}
     spv.mlir.yield %0 : i32
   }

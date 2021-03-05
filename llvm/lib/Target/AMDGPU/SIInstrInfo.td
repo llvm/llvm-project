@@ -636,6 +636,11 @@ def add_ctpop : PatFrag <
   (add (ctpop $src0), $src1)
 >;
 
+def xnor : PatFrag <
+  (ops node:$src0, node:$src1),
+  (not (xor $src0, $src1))
+>;
+
 foreach I = 1-4 in {
 def shl#I#_add : PatFrag <
   (ops node:$src0, node:$src1),
@@ -1613,8 +1618,11 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
     !if (!eq(NumSrcArgs, 1),
       !if (HasModifiers,
         // VOP1 with modifiers
-        (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-             clampmod0:$clamp, omod0:$omod)
+        !if(HasOMod,
+          (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
+               clampmod0:$clamp, omod0:$omod),
+          (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
+               clampmod0:$clamp))
       /* else */,
         // VOP1 without modifiers
         !if (HasClamp,

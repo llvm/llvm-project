@@ -124,6 +124,7 @@ void InterfaceFile::addDocument(std::shared_ptr<InterfaceFile> &&Document) {
                                   const std::shared_ptr<InterfaceFile> &RHS) {
                                  return LHS->InstallName < RHS->InstallName;
                                });
+  Document->Parent = this;
   Documents.insert(Pos, Document);
 }
 

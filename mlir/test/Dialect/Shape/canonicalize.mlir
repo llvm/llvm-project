@@ -360,7 +360,7 @@ func @f(%arg0 : !shape.shape) {
   // CHECK-NEXT: shape.const_witness true
   // CHECK-NEXT: consume.witness
   // CHECK-NEXT: return
-  %0 = shape.cstr_eq %arg0, %arg0, %arg0
+  %0 = shape.cstr_eq %arg0, %arg0, %arg0 : !shape.shape, !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
@@ -375,7 +375,7 @@ func @f() {
   %cs0 = shape.const_shape [0, 1] : !shape.shape
   %cs1 = shape.const_shape [0, 1] : !shape.shape
   %cs2 = shape.const_shape [0, 1] : !shape.shape
-  %0 = shape.cstr_eq %cs0, %cs1, %cs2
+  %0 = shape.cstr_eq %cs0, %cs1, %cs2 : !shape.shape, !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
@@ -391,7 +391,7 @@ func @f() {
   // CHECK-NEXT: return
   %cs0 = shape.const_shape [0, 1] : !shape.shape
   %cs1 = shape.const_shape [3, 1] : !shape.shape
-  %0 = shape.cstr_eq %cs0, %cs1
+  %0 = shape.cstr_eq %cs0, %cs1 : !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
@@ -403,7 +403,7 @@ func @f(%arg0: !shape.shape, %arg1: !shape.shape) {
   // CHECK-NEXT: shape.cstr_eq
   // CHECK-NEXT: consume.witness
   // CHECK-NEXT: return
-  %0 = shape.cstr_eq %arg0, %arg1
+  %0 = shape.cstr_eq %arg0, %arg1 : !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
@@ -864,7 +864,8 @@ func @shape_eq_fold_1() -> i1 {
   // CHECK: return %[[RESULT]] : i1
   %a = shape.const_shape [1, 2, 3] : !shape.shape
   %b = shape.const_shape [1, 2, 3] : tensor<?xindex>
-  %result = shape.shape_eq %a, %b : !shape.shape, tensor<?xindex>
+  %c = shape.const_shape [1, 2, 3] : tensor<?xindex>
+  %result = shape.shape_eq %a, %b, %c : !shape.shape, tensor<?xindex>, tensor<?xindex>
   return %result : i1
 }
 
@@ -877,7 +878,8 @@ func @shape_eq_fold_0() -> i1 {
   // CHECK: return %[[RESULT]] : i1
   %a = shape.const_shape [1, 2, 3] : tensor<?xindex>
   %b = shape.const_shape [4, 5, 6] : tensor<?xindex>
-  %result = shape.shape_eq %a, %b : tensor<?xindex>, tensor<?xindex>
+  %c = shape.const_shape [4, 5, 6] : tensor<?xindex>
+  %result = shape.shape_eq %a, %b, %c : tensor<?xindex>, tensor<?xindex>, tensor<?xindex>
   return %result : i1
 }
 
@@ -905,19 +907,6 @@ func @shape_eq_do_not_fold(%a : !shape.shape) -> i1 {
   // CHECK: return %[[RESULT]] : i1
   %b = shape.const_shape [4, 5, 6] : !shape.shape
   %result = shape.shape_eq %a, %b : !shape.shape, !shape.shape
-  return %result : i1
-}
-
-
-// -----
-
-// Fold `shape_eq` for non-constant but same shapes.
-// CHECK-LABEL: @shape_eq_do_fold
-// CHECK-SAME: (%[[A:.*]]: !shape.shape) -> i1
-func @shape_eq_do_fold(%a : !shape.shape) -> i1 {
-  // CHECK: %[[RESULT:.*]] = constant true
-  // CHECK: return %[[RESULT]] : i1
-  %result = shape.shape_eq %a, %a : !shape.shape, !shape.shape
   return %result : i1
 }
 

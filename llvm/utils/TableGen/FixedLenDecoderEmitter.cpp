@@ -1210,14 +1210,9 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
     if (IsOr)
       o << "(";
 
-    bool First = true;
+    ListSeparator LS(IsOr ? " || " : " && ");
     for (auto *Arg : D->getArgs()) {
-      if (!First) {
-        if (IsOr)
-          o << " || ";
-        else
-          o << " && ";
-      }
+      o << LS;
       if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
         if (NotArg->getOperator()->getAsString() != "not" ||
             NotArg->getNumArgs() != 1)
@@ -1230,8 +1225,6 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
         PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
       o << "Bits[" << Emitter->PredicateNamespace << "::" << Arg->getAsString()
         << "]";
-
-      First = false;
     }
 
     if (IsOr)

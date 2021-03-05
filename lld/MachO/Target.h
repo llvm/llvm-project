@@ -52,6 +52,7 @@ enum class RelocAttrBits {
   UNSIGNED = 1 << 14,  // *_UNSIGNED relocs
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ (1 << 15) - 1),
 };
+// Note: SUBTRACTOR always pairs with UNSIGNED (a delta between two symbols).
 
 class TargetInfo {
 public:

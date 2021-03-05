@@ -18,7 +18,6 @@
 #include "llvm/MC/MCContext.h"
 using namespace llvm;
 
-const char *const WebAssembly::ClangCallTerminateFn = "__clang_call_terminate";
 const char *const WebAssembly::CxaBeginCatchFn = "__cxa_begin_catch";
 const char *const WebAssembly::CxaRethrowFn = "__cxa_rethrow";
 const char *const WebAssembly::StdTerminateFn = "_ZSt9terminatev";
@@ -73,7 +72,7 @@ bool WebAssembly::mayThrow(const MachineInstr &MI) {
     return false;
   // These functions never throw
   if (F->getName() == CxaBeginCatchFn || F->getName() == PersonalityWrapperFn ||
-      F->getName() == ClangCallTerminateFn || F->getName() == StdTerminateFn)
+      F->getName() == StdTerminateFn)
     return false;
 
   // TODO Can we exclude call instructions that are marked as 'nounwind' in the
@@ -98,11 +97,9 @@ const MachineOperand &WebAssembly::getCalleeOp(const MachineInstr &MI) {
   }
 }
 
-MCSymbolWasm *
-WebAssembly::getOrCreateFunctionTableSymbol(MCContext &Ctx,
-                                            const StringRef &Name) {
-  // FIXME: Duplicates functionality from
-  // MC/WasmObjectWriter::recordRelocation.
+MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
+    MCContext &Ctx, const WebAssemblySubtarget *Subtarget) {
+  StringRef Name = "__indirect_function_table";
   MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
   if (Sym) {
     if (!Sym->isFunctionTable())
@@ -113,6 +110,9 @@ WebAssembly::getOrCreateFunctionTableSymbol(MCContext &Ctx,
     // The default function table is synthesized by the linker.
     Sym->setUndefined();
   }
+  // MVP object files can't have symtab entries for tables.
+  if (!(Subtarget && Subtarget->hasReferenceTypes()))
+    Sym->setOmitFromLinkingSection();
   return Sym;
 }
 

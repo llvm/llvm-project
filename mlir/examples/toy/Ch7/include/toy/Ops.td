@@ -80,12 +80,12 @@ def ConstantOp : Toy_Op<"constant",
   // using `builder.create<ConstantOp>(...)`.
   let builders = [
     // Build a constant with a given constant tensor value.
-    OpBuilderDAG<(ins "DenseElementsAttr":$value), [{
+    OpBuilder<(ins "DenseElementsAttr":$value), [{
       build($_builder, $_state, value.getType(), value);
     }]>,
 
     // Build a constant with a given constant floating-point value.
-    OpBuilderDAG<(ins "double":$value)>
+    OpBuilder<(ins "double":$value)>
   ];
 
   // Invoke a static verify method to verify this constant operation.
@@ -112,7 +112,7 @@ def AddOp : Toy_Op<"add",
 
   // Allow building an AddOp with from the two input operands.
   let builders = [
-    OpBuilderDAG<(ins "Value":$lhs, "Value":$rhs)>
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs)>
   ];
 }
 
@@ -170,7 +170,7 @@ def GenericCallOp : Toy_Op<"generic_call",
 
   // Add custom build methods for the generic call operation.
   let builders = [
-    OpBuilderDAG<(ins "StringRef":$callee, "ArrayRef<Value>":$arguments)>
+    OpBuilder<(ins "StringRef":$callee, "ArrayRef<Value>":$arguments)>
   ];
 }
 
@@ -191,7 +191,7 @@ def MulOp : Toy_Op<"mul",
 
   // Allow building a MulOp with from the two input operands.
   let builders = [
-    OpBuilderDAG<(ins "Value":$lhs, "Value":$rhs)>
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs)>
   ];
 }
 
@@ -259,7 +259,7 @@ def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
 
   // Allow building a ReturnOp with no return operand.
   let builders = [
-    OpBuilderDAG<(ins), [{ build($_builder, $_state, llvm::None); }]>
+    OpBuilder<(ins), [{ build($_builder, $_state, llvm::None); }]>
   ];
 
   // Provide extra utility definitions on the c++ operation class definition.
@@ -286,7 +286,7 @@ def StructAccessOp : Toy_Op<"struct_access", [NoSideEffect]> {
 
   // Allow building a StructAccessOp with just a struct value and an index.
   let builders = [
-    OpBuilderDAG<(ins "Value":$input, "size_t":$index)>
+    OpBuilder<(ins "Value":$input, "size_t":$index)>
   ];
 
   let verifier = [{ return ::verify(*this); }];
@@ -334,7 +334,7 @@ def TransposeOp : Toy_Op<"transpose",
 
   // Allow building a TransposeOp with from the input operand.
   let builders = [
-    OpBuilderDAG<(ins "Value":$input)>
+    OpBuilder<(ins "Value":$input)>
   ];
 
   // Invoke a static verify method to verify this transpose operation.

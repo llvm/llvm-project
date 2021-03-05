@@ -71,16 +71,10 @@ enum {
 #include "TargetPropertiesEnum.inc"
 };
 
-class ThreadOptionValueProperties : public OptionValueProperties {
+class ThreadOptionValueProperties
+    : public Cloneable<ThreadOptionValueProperties, OptionValueProperties> {
 public:
-  ThreadOptionValueProperties(ConstString name)
-      : OptionValueProperties(name) {}
-
-  // This constructor is used when creating ThreadOptionValueProperties when it
-  // is part of a new lldb_private::Thread instance. It will copy all current
-  // global property values as needed
-  ThreadOptionValueProperties(ThreadProperties *global_properties)
-      : OptionValueProperties(*global_properties->GetValueProperties()) {}
+  ThreadOptionValueProperties(ConstString name) : Cloneable(name) {}
 
   const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
                                      bool will_modify,
@@ -108,8 +102,8 @@ ThreadProperties::ThreadProperties(bool is_global) : Properties() {
         std::make_shared<ThreadOptionValueProperties>(ConstString("thread"));
     m_collection_sp->Initialize(g_thread_properties);
   } else
-    m_collection_sp = std::make_shared<ThreadOptionValueProperties>(
-        Thread::GetGlobalProperties().get());
+    m_collection_sp =
+        OptionValueProperties::CreateLocalCopy(*Thread::GetGlobalProperties());
 }
 
 ThreadProperties::~ThreadProperties() = default;
@@ -1235,7 +1229,7 @@ Status Thread::UnwindInnermostExpression() {
   return error;
 }
 
-ThreadPlanSP Thread::QueueFundamentalPlan(bool abort_other_plans) {
+ThreadPlanSP Thread::QueueBasePlan(bool abort_other_plans) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanBase(*this));
   QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;

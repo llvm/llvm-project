@@ -368,12 +368,12 @@ UNDEF-USE-NEXT: UNDEFVAR: [[#UNDEFVAR1+UNDEFVAR2]]
 UNDEF-USE-MSG: numeric-expression.txt:[[#@LINE-1]]:17: error: {{U}}NDEF-USE-NEXT: expected string not found in input
 UNDEF-USE-MSG-NEXT:      {{U}}NDEF-USE-NEXT: UNDEFVAR: {{\[\[#UNDEFVAR1\+UNDEFVAR2\]\]}}
 UNDEF-USE-MSG-NEXT:     {{^}}                ^{{$}}
-UNDEF-USE-MSG-NEXT:      numeric-expression.txt:[[#@LINE-6]]:1: note: scanning from here
-UNDEF-USE-MSG-NEXT:      UNDEFVAR: 11
-UNDEF-USE-MSG-NEXT: {{^}}^{{$}}
-UNDEF-USE-MSG-NEXT:      numeric-expression.txt:[[#@LINE-9]]:1: note: uses undefined variable(s): "UNDEFVAR1" "UNDEFVAR2"
-UNDEF-USE-MSG-NEXT:      UNDEFVAR: 11
-UNDEF-USE-MSG-NEXT: {{^}}^{{$}}
+UNDEF-USE-MSG-NEXT:      numeric-expression.txt:[[#@LINE-7]]:14: note: scanning from here
+UNDEF-USE-MSG-NEXT:      UNDEF VAR USE
+UNDEF-USE-MSG-NEXT: {{^}}             ^{{$}}
+UNDEF-USE-MSG-NEXT:      numeric-expression.txt:[[#@LINE-10]]:14: note: uses undefined variable(s): "UNDEFVAR1" "UNDEFVAR2"
+UNDEF-USE-MSG-NEXT:      UNDEF VAR USE
+UNDEF-USE-MSG-NEXT: {{^}}             ^{{$}}
 
 ; Numeric expression with unsupported operator.
 RUN: %ProtectFileCheckOutput \

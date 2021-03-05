@@ -161,8 +161,7 @@ public:
   /// Convert the given set of types, filling 'results' as necessary. This
   /// returns failure if the conversion of any of the types fails, success
   /// otherwise.
-  LogicalResult convertTypes(ArrayRef<Type> types,
-                             SmallVectorImpl<Type> &results);
+  LogicalResult convertTypes(TypeRange types, SmallVectorImpl<Type> &results);
 
   /// Return true if the given type is legal for this type converter, i.e. the
   /// type converts to itself.
@@ -473,6 +472,12 @@ public:
   FailureOr<Block *> convertRegionTypes(
       Region *region, TypeConverter &converter,
       TypeConverter::SignatureConversion *entryConversion = nullptr);
+
+  /// Convert the types of block arguments within the given region except for
+  /// the entry region. This replaces each non-entry block with a new block
+  /// containing the updated signature.
+  LogicalResult convertNonEntryRegionTypes(Region *region,
+                                           TypeConverter &converter);
 
   /// Replace all the uses of the block argument `from` with value `to`.
   void replaceUsesOfBlockArgument(BlockArgument from, Value to);

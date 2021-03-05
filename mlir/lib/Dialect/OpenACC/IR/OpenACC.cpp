@@ -445,7 +445,7 @@ static void print(OpAsmPrinter &printer, ParallelOp &op) {
                       /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/true);
   printer.printOptionalAttrDictWithKeyword(
-      op.getAttrs(), ParallelOp::getOperandSegmentSizeAttr());
+      op->getAttrs(), ParallelOp::getOperandSegmentSizeAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -608,8 +608,8 @@ static void print(OpAsmPrinter &printer, LoopOp &op) {
                       /*printBlockTerminators=*/true);
 
   printer.printOptionalAttrDictWithKeyword(
-      op.getAttrs(), {LoopOp::getExecutionMappingAttrName(),
-                      LoopOp::getOperandSegmentSizeAttr()});
+      op->getAttrs(), {LoopOp::getExecutionMappingAttrName(),
+                       LoopOp::getOperandSegmentSizeAttr()});
 }
 
 static LogicalResult verifyLoopOp(acc::LoopOp loopOp) {

@@ -617,7 +617,7 @@ body: |
     ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load 16, align 32, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load 16 + 16, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load 16 from undef + 16, addrspace 4)
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
     %0:_(p4) = COPY $vgpr0_vgpr1
     %1:_(<8 x s32>) = G_LOAD %0 :: (load 32, addrspace 4)
@@ -642,7 +642,7 @@ body: |
   ; CHECK:   [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PHI]](p4) :: (load 16, align 32, addrspace 4)
   ; CHECK:   [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[PHI]], [[C]](s64)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load 16 + 16, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load 16 from undef + 16, addrspace 4)
   ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr(p4) = COPY [[COPY1]](p4)
   ; CHECK:   G_BR %bb.1
@@ -673,7 +673,7 @@ body: |
     ; CHECK: [[LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_LOAD [[COPY]](p4) :: (invariant load 8, align 4, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
     ; CHECK: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load 4 + 8, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load 4 from undef + 8, addrspace 4)
     ; CHECK: [[DEF:%[0-9]+]]:sgpr(<3 x s32>) = G_IMPLICIT_DEF
     ; CHECK: [[INSERT:%[0-9]+]]:sgpr(<3 x s32>) = G_INSERT [[DEF]], [[LOAD]](<2 x s32>), 0
     ; CHECK: [[INSERT1:%[0-9]+]]:sgpr(<3 x s32>) = G_INSERT [[INSERT]], [[LOAD1]](s32), 64
@@ -695,7 +695,7 @@ body: |
     ; CHECK: [[LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_LOAD [[COPY]](p4) :: (invariant load 8, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
     ; CHECK: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load 4 + 8, align 8, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load 4 from undef + 8, align 8, addrspace 4)
     ; CHECK: [[DEF:%[0-9]+]]:sgpr(<3 x s32>) = G_IMPLICIT_DEF
     ; CHECK: [[INSERT:%[0-9]+]]:sgpr(<3 x s32>) = G_INSERT [[DEF]], [[LOAD]](<2 x s32>), 0
     ; CHECK: [[INSERT1:%[0-9]+]]:sgpr(<3 x s32>) = G_INSERT [[INSERT]], [[LOAD1]](s32), 64
@@ -734,7 +734,7 @@ body: |
     ; CHECK: [[LOAD:%[0-9]+]]:sgpr(<4 x s16>) = G_LOAD [[COPY]](p4) :: (invariant load 8, align 4, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
     ; CHECK: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:sgpr(<2 x s16>) = G_LOAD [[PTR_ADD]](p4) :: (invariant load 4 + 8, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:sgpr(<2 x s16>) = G_LOAD [[PTR_ADD]](p4) :: (invariant load 4 from undef + 8, addrspace 4)
     ; CHECK: [[DEF:%[0-9]+]]:sgpr(<6 x s16>) = G_IMPLICIT_DEF
     ; CHECK: [[INSERT:%[0-9]+]]:sgpr(<6 x s16>) = G_INSERT [[DEF]], [[LOAD]](<4 x s16>), 0
     ; CHECK: [[INSERT1:%[0-9]+]]:sgpr(<6 x s16>) = G_INSERT [[INSERT]], [[LOAD1]](<2 x s16>), 64
@@ -756,7 +756,7 @@ body: |
     ; CHECK: [[LOAD:%[0-9]+]]:sgpr(<4 x s16>) = G_LOAD [[COPY]](p4) :: (invariant load 8, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
     ; CHECK: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:sgpr(<2 x s16>) = G_LOAD [[PTR_ADD]](p4) :: (invariant load 4 + 8, align 8, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:sgpr(<2 x s16>) = G_LOAD [[PTR_ADD]](p4) :: (invariant load 4 from undef + 8, align 8, addrspace 4)
     ; CHECK: [[DEF:%[0-9]+]]:sgpr(<6 x s16>) = G_IMPLICIT_DEF
     ; CHECK: [[INSERT:%[0-9]+]]:sgpr(<6 x s16>) = G_INSERT [[DEF]], [[LOAD]](<4 x s16>), 0
     ; CHECK: [[INSERT1:%[0-9]+]]:sgpr(<6 x s16>) = G_INSERT [[INSERT]], [[LOAD1]](<2 x s16>), 64
@@ -795,7 +795,7 @@ body: |
     ; CHECK: [[LOAD:%[0-9]+]]:sgpr(s64) = G_LOAD [[COPY]](p4) :: (invariant load 8, align 4, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
     ; CHECK: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load 4 + 8, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load 4 from undef + 8, addrspace 4)
     ; CHECK: [[DEF:%[0-9]+]]:sgpr(s96) = G_IMPLICIT_DEF
     ; CHECK: [[INSERT:%[0-9]+]]:sgpr(s96) = G_INSERT [[DEF]], [[LOAD]](s64), 0
     ; CHECK: [[INSERT1:%[0-9]+]]:sgpr(s96) = G_INSERT [[INSERT]], [[LOAD1]](s32), 64
@@ -817,7 +817,7 @@ body: |
     ; CHECK: [[LOAD:%[0-9]+]]:sgpr(s64) = G_LOAD [[COPY]](p4) :: (invariant load 8, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
     ; CHECK: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load 4 + 8, align 8, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load 4 from undef + 8, align 8, addrspace 4)
     ; CHECK: [[DEF:%[0-9]+]]:sgpr(s96) = G_IMPLICIT_DEF
     ; CHECK: [[INSERT:%[0-9]+]]:sgpr(s96) = G_INSERT [[DEF]], [[LOAD]](s64), 0
     ; CHECK: [[INSERT1:%[0-9]+]]:sgpr(s96) = G_INSERT [[INSERT]], [[LOAD1]](s32), 64

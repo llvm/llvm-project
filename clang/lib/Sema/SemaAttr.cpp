@@ -301,6 +301,14 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionA
     return;
   }
 
+  if (llvm::Error E =
+          Context.getTargetInfo().isValidSectionSpecifier(SecName)) {
+    Diag(PragmaLoc, diag::err_pragma_section_invalid_for_target)
+        << toString(std::move(E));
+    CSec->Valid = false;
+    return;
+  }
+
   if (UnifySection(SecName, SectionFlags, PragmaLoc))
     return;
 

@@ -679,9 +679,8 @@ unsigned LLVMCountParamTypes(LLVMTypeRef FunctionTy) {
 
 void LLVMGetParamTypes(LLVMTypeRef FunctionTy, LLVMTypeRef *Dest) {
   FunctionType *Ty = unwrap<FunctionType>(FunctionTy);
-  for (FunctionType::param_iterator I = Ty->param_begin(),
-                                    E = Ty->param_end(); I != E; ++I)
-    *Dest++ = wrap(*I);
+  for (Type *T : Ty->params())
+    *Dest++ = wrap(T);
 }
 
 /*--.. Operations on struct types ..........................................--*/
@@ -723,9 +722,8 @@ unsigned LLVMCountStructElementTypes(LLVMTypeRef StructTy) {
 
 void LLVMGetStructElementTypes(LLVMTypeRef StructTy, LLVMTypeRef *Dest) {
   StructType *Ty = unwrap<StructType>(StructTy);
-  for (StructType::element_iterator I = Ty->element_begin(),
-                                    E = Ty->element_end(); I != E; ++I)
-    *Dest++ = wrap(*I);
+  for (Type *T : Ty->elements())
+    *Dest++ = wrap(T);
 }
 
 LLVMTypeRef LLVMStructGetTypeAtIndex(LLVMTypeRef StructTy, unsigned i) {
@@ -2495,9 +2493,8 @@ unsigned LLVMCountParams(LLVMValueRef FnRef) {
 
 void LLVMGetParams(LLVMValueRef FnRef, LLVMValueRef *ParamRefs) {
   Function *Fn = unwrap<Function>(FnRef);
-  for (Function::arg_iterator I = Fn->arg_begin(),
-                              E = Fn->arg_end(); I != E; I++)
-    *ParamRefs++ = wrap(&*I);
+  for (Argument &A : Fn->args())
+    *ParamRefs++ = wrap(&A);
 }
 
 LLVMValueRef LLVMGetParam(LLVMValueRef FnRef, unsigned index) {
@@ -3283,9 +3280,8 @@ unsigned LLVMGetNumHandlers(LLVMValueRef CatchSwitch) {
 
 void LLVMGetHandlers(LLVMValueRef CatchSwitch, LLVMBasicBlockRef *Handlers) {
   CatchSwitchInst *CSI = unwrap<CatchSwitchInst>(CatchSwitch);
-  for (CatchSwitchInst::handler_iterator I = CSI->handler_begin(),
-                                         E = CSI->handler_end(); I != E; ++I)
-    *Handlers++ = wrap(*I);
+  for (const BasicBlock *H : CSI->handlers())
+    *Handlers++ = wrap(H);
 }
 
 LLVMValueRef LLVMGetParentCatchSwitch(LLVMValueRef CatchPad) {
@@ -3977,9 +3973,10 @@ LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B,LLVMAtomicRMWBinOp op,
                                LLVMAtomicOrdering ordering,
                                LLVMBool singleThread) {
   AtomicRMWInst::BinOp intop = mapFromLLVMRMWBinOp(op);
-  return wrap(unwrap(B)->CreateAtomicRMW(intop, unwrap(PTR), unwrap(Val),
-    mapFromLLVMOrdering(ordering), singleThread ? SyncScope::SingleThread
-                                                : SyncScope::System));
+  return wrap(unwrap(B)->CreateAtomicRMW(
+      intop, unwrap(PTR), unwrap(Val), MaybeAlign(),
+      mapFromLLVMOrdering(ordering),
+      singleThread ? SyncScope::SingleThread : SyncScope::System));
 }
 
 LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
@@ -3988,10 +3985,11 @@ LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
                                     LLVMAtomicOrdering FailureOrdering,
                                     LLVMBool singleThread) {
 
-  return wrap(unwrap(B)->CreateAtomicCmpXchg(unwrap(Ptr), unwrap(Cmp),
-                unwrap(New), mapFromLLVMOrdering(SuccessOrdering),
-                mapFromLLVMOrdering(FailureOrdering),
-                singleThread ? SyncScope::SingleThread : SyncScope::System));
+  return wrap(unwrap(B)->CreateAtomicCmpXchg(
+      unwrap(Ptr), unwrap(Cmp), unwrap(New), MaybeAlign(),
+      mapFromLLVMOrdering(SuccessOrdering),
+      mapFromLLVMOrdering(FailureOrdering),
+      singleThread ? SyncScope::SingleThread : SyncScope::System));
 }
 
 unsigned LLVMGetNumMaskElements(LLVMValueRef SVInst) {

@@ -14,13 +14,13 @@ body: |
     ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load 1, addrspace 6)
     ; CI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[MV]], [[C1]](s64)
-    ; CI: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (load 1 + 1, addrspace 6)
+    ; CI: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (load 1 from undef + 1, addrspace 6)
     ; CI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; CI: [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[MV]], [[C2]](s64)
-    ; CI: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p4) :: (load 1 + 2, addrspace 6)
+    ; CI: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p4) :: (load 1 from undef + 2, addrspace 6)
     ; CI: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
     ; CI: [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[MV]], [[C3]](s64)
-    ; CI: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p4) :: (load 1 + 3, addrspace 6)
+    ; CI: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p4) :: (load 1 from undef + 3, addrspace 6)
     ; CI: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; CI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; CI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C4]]

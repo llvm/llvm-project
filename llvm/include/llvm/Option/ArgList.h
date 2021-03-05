@@ -137,16 +137,6 @@ private:
   /// The first and last index of each different OptSpecifier ID.
   DenseMap<unsigned, OptRange> OptRanges;
 
-  /// The OptSpecifiers that were queried from this argument list.
-  mutable DenseSet<unsigned> QueriedOpts;
-
-  /// Record the queried OptSpecifiers.
-  template <typename... OptSpecifiers>
-  void recordQueriedOpts(OptSpecifiers... Ids) const {
-    SmallVector<unsigned, 4> OptsSpecifiers({toOptSpecifier(Ids).getID()...});
-    QueriedOpts.insert(OptsSpecifiers.begin(), OptsSpecifiers.end());
-  }
-
   /// Get the range of indexes in which options with the specified IDs might
   /// reside, or (0, 0) if there are no such options.
   OptRange getRange(std::initializer_list<OptSpecifier> Ids) const;
@@ -213,7 +203,6 @@ public:
   template<typename ...OptSpecifiers>
   iterator_range<filtered_iterator<sizeof...(OptSpecifiers)>>
   filtered(OptSpecifiers ...Ids) const {
-    recordQueriedOpts(Ids...);
     OptRange Range = getRange({toOptSpecifier(Ids)...});
     auto B = Args.begin() + Range.first;
     auto E = Args.begin() + Range.second;
@@ -225,7 +214,6 @@ public:
   template<typename ...OptSpecifiers>
   iterator_range<filtered_reverse_iterator<sizeof...(OptSpecifiers)>>
   filtered_reverse(OptSpecifiers ...Ids) const {
-    recordQueriedOpts(Ids...);
     OptRange Range = getRange({toOptSpecifier(Ids)...});
     auto B = Args.rend() - Range.second;
     auto E = Args.rend() - Range.first;
@@ -320,10 +308,6 @@ public:
       A->render(*this, Output);
   }
 
-  /// AddAllArgsExcept - Render all arguments not matching any of the excluded
-  /// ids.
-  void AddAllArgsExcept(ArgStringList &Output,
-                        const DenseSet<unsigned> &ExcludeIds) const;
   /// AddAllArgsExcept - Render all arguments matching any of the given ids
   /// and not matching any of the excluded ids.
   void AddAllArgsExcept(ArgStringList &Output, ArrayRef<OptSpecifier> Ids,
@@ -357,13 +341,6 @@ public:
   /// ClaimAllArgs - Claim all arguments.
   ///
   void ClaimAllArgs() const;
-
-  /// Return the OptSpecifiers queried from this argument list.
-  const DenseSet<unsigned> &getQueriedOpts() const { return QueriedOpts; }
-
-  /// Clear the set of queried OptSpecifiers.
-  void clearQueriedOpts() const { QueriedOpts.clear(); }
-
   /// @}
   /// @name Arg Synthesis
   /// @{

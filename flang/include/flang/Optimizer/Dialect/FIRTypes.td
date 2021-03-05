@@ -108,20 +108,27 @@ def fir_CharacterType : FIR_Type<"Character", "char"> {
     using KindTy = unsigned;
     using LenType = std::int64_t;
 
-    // Return unknown length CHARACTER type.
+    /// Return unknown length Character type. e.g., CHARACTER(LEN=n).
     static CharacterType getUnknownLen(mlir::MLIRContext *ctxt, KindTy kind) {
       return get(ctxt, kind, unknownLen());
     }
 
-    // Return length 1 CHARACTER type.
+    /// Return length 1 Character type. e.g., CHARACTER(LEN=1).
     static CharacterType getSingleton(mlir::MLIRContext *ctxt, KindTy kind) {
       return get(ctxt, kind, singleton());
     }
 
-    // CHARACTER is a singleton and has a LEN of 1.
+    /// Character is a singleton and has a LEN of 1.
     static constexpr LenType singleton() { return 1; }
-    // CHARACTER has an unknown LEN property.
+
+    /// Character has a LEN value which is not a compile-time known constant.
     static constexpr LenType unknownLen() { return -1; }
+
+    /// Character LEN is a runtime value.
+    bool hasDynamicLen() { return getLen() == unknownLen(); }
+
+    /// Character LEN is a compile-time cpnstant value.
+    bool hasConstantLen() { return !hasDynamicLen(); }
   }];
 }
 

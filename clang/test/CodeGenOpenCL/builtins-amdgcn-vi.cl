@@ -130,3 +130,10 @@ void test_ds_fminf(local float *out, float src) {
 void test_ds_fmaxf(local float *out, float src) {
   *out = __builtin_amdgcn_ds_fmaxf(out, src, 0, 0, false);
 }
+
+// CHECK-LABEL: @test_s_memtime
+// CHECK: call i64 @llvm.amdgcn.s.memtime()
+void test_s_memtime(global ulong* out)
+{
+  *out = __builtin_amdgcn_s_memtime();
+}

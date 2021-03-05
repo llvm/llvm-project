@@ -234,12 +234,13 @@ entry:
   ret void
 }
 
-define void @dontwrite2to9(i32* nocapture %p) {
-; CHECK-LABEL: @dontwrite2to9(
+define void @write2to10(i32* nocapture %p) {
+; CHECK-LABEL: @write2to10(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[P3:%.*]] = bitcast i32* [[ARRAYIDX0]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[P3]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[P3]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP0]], i8 0, i64 28, i1 false)
 ; CHECK-NEXT:    [[P4:%.*]] = bitcast i32* [[P]] to i16*
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i16, i16* [[P4]], i64 1
 ; CHECK-NEXT:    [[P5:%.*]] = bitcast i16* [[ARRAYIDX2]] to i64*
@@ -257,12 +258,13 @@ entry:
   ret void
 }
 
-define void @dontwrite2to9_atomic(i32* nocapture %p) {
-; CHECK-LABEL: @dontwrite2to9_atomic(
+define void @write2to10_atomic(i32* nocapture %p) {
+; CHECK-LABEL: @write2to10_atomic(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[P3:%.*]] = bitcast i32* [[ARRAYIDX0]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 4 [[P3]], i8 0, i64 32, i32 4)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[P3]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 4 [[TMP0]], i8 0, i64 28, i32 4)
 ; CHECK-NEXT:    [[P4:%.*]] = bitcast i32* [[P]] to i16*
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i16, i16* [[P4]], i64 1
 ; CHECK-NEXT:    [[P5:%.*]] = bitcast i16* [[ARRAYIDX2]] to i64*

@@ -218,11 +218,7 @@ config("compiler_defaults") {
 
   # On Windows, the linker is not invoked through the compiler driver.
   if (use_lld && host_os != "win") {
-    if (host_os == "mac") {
-      ldflags += [ "-fuse-ld=lld.darwinnew" ]
-    } else {
-      ldflags += [ "-fuse-ld=lld" ]
-    }
+    ldflags += [ "-fuse-ld=lld" ]
   }
 
   if (llvm_build_instrumented_coverage) {

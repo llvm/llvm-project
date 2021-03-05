@@ -43,7 +43,7 @@ public:
         spirv::PointerType::get(structType, ptrType.getStorageClass());
 
     // Save all named attributes except "type" attribute.
-    for (const auto &attr : op.getAttrs()) {
+    for (const auto &attr : op->getAttrs()) {
       if (attr.first == "type") {
         continue;
       }

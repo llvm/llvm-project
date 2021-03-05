@@ -140,6 +140,7 @@
     __cpp_lib_to_address                           201711L [C++20]
     __cpp_lib_to_array                             201907L [C++20]
     __cpp_lib_to_chars                             201611L [C++17]
+    __cpp_lib_to_underlying                        202102L [C++2b]
     __cpp_lib_transformation_trait_aliases         201304L [C++14]
     __cpp_lib_transparent_operators                201210L [C++14]
                                                    201510L [C++17]
@@ -640,6 +641,10 @@
 
 # ifdef __cpp_lib_to_chars
 #   error "__cpp_lib_to_chars should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_transformation_trait_aliases
@@ -1220,6 +1225,10 @@
 
 # ifdef __cpp_lib_to_chars
 #   error "__cpp_lib_to_chars should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_transformation_trait_aliases
@@ -2021,6 +2030,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should not be defined before c++2b"
+# endif
+
 # ifndef __cpp_lib_transformation_trait_aliases
 #   error "__cpp_lib_transformation_trait_aliases should be defined in c++17"
 # endif
@@ -2268,17 +2281,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_bind_front
-#     error "__cpp_lib_bind_front should be defined in c++20"
-#   endif
-#   if __cpp_lib_bind_front != 201907L
-#     error "__cpp_lib_bind_front should have the value 201907L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_bind_front
-#     error "__cpp_lib_bind_front should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_bind_front
+#   error "__cpp_lib_bind_front should be defined in c++20"
+# endif
+# if __cpp_lib_bind_front != 201907L
+#   error "__cpp_lib_bind_front should have the value 201907L in c++20"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -2883,7 +2890,7 @@
 #   error "__cpp_lib_map_try_emplace should have the value 201411L in c++20"
 # endif
 
-# if defined(__cpp_concepts) && __cpp_concepts >= 201811L
+# ifndef _LIBCPP_HAS_NO_CONCEPTS
 #   ifndef __cpp_lib_math_constants
 #     error "__cpp_lib_math_constants should be defined in c++20"
 #   endif
@@ -2892,9 +2899,9 @@
 #   endif
 # else
 #   ifdef __cpp_lib_math_constants
-#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201811L is not defined!"
+#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201907L is not defined!"
 #   endif
-# endif
+# endif // _LIBCPP_HAS_NO_CONCEPTS
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_math_special_functions
@@ -3231,6 +3238,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should not be defined before c++2b"
+# endif
+
 # ifndef __cpp_lib_transformation_trait_aliases
 #   error "__cpp_lib_transformation_trait_aliases should be defined in c++20"
 # endif
@@ -3481,17 +3492,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_bind_front
-#     error "__cpp_lib_bind_front should be defined in c++2b"
-#   endif
-#   if __cpp_lib_bind_front != 201907L
-#     error "__cpp_lib_bind_front should have the value 201907L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_bind_front
-#     error "__cpp_lib_bind_front should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_bind_front
+#   error "__cpp_lib_bind_front should be defined in c++2b"
+# endif
+# if __cpp_lib_bind_front != 201907L
+#   error "__cpp_lib_bind_front should have the value 201907L in c++2b"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -4099,7 +4104,7 @@
 #   error "__cpp_lib_map_try_emplace should have the value 201411L in c++2b"
 # endif
 
-# if defined(__cpp_concepts) && __cpp_concepts >= 201811L
+# if !_LIBCPP_HAS_NO_CONCEPTS
 #   ifndef __cpp_lib_math_constants
 #     error "__cpp_lib_math_constants should be defined in c++2b"
 #   endif
@@ -4108,9 +4113,9 @@
 #   endif
 # else
 #   ifdef __cpp_lib_math_constants
-#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201811L is not defined!"
+#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201907L is not defined!"
 #   endif
-# endif
+# endif // !_LIBCPP_HAS_NO_CONCEPTS
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_math_special_functions
@@ -4466,6 +4471,13 @@
 #   ifdef __cpp_lib_to_chars
 #     error "__cpp_lib_to_chars should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should be defined in c++2b"
+# endif
+# if __cpp_lib_to_underlying != 202102L
+#   error "__cpp_lib_to_underlying should have the value 202102L in c++2b"
 # endif
 
 # ifndef __cpp_lib_transformation_trait_aliases

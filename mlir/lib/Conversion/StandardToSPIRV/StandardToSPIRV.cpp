@@ -194,7 +194,7 @@ static bool isAllocationSupported(MemRefType t) {
   // shape and int or float or vector of int or float element type.
   if (!(t.hasStaticShape() &&
         SPIRVTypeConverter::getMemorySpaceForStorageClass(
-            spirv::StorageClass::Workgroup) == t.getMemorySpace()))
+            spirv::StorageClass::Workgroup) == t.getMemorySpaceAsInt()))
     return false;
   Type elementType = t.getElementType();
   if (auto vecType = elementType.dyn_cast<VectorType>())
@@ -207,7 +207,8 @@ static bool isAllocationSupported(MemRefType t) {
 /// type. Returns None on failure.
 static Optional<spirv::Scope> getAtomicOpScope(MemRefType t) {
   Optional<spirv::StorageClass> storageClass =
-      SPIRVTypeConverter::getStorageClassForMemorySpace(t.getMemorySpace());
+      SPIRVTypeConverter::getStorageClassForMemorySpace(
+          t.getMemorySpaceAsInt());
   if (!storageClass)
     return {};
   switch (*storageClass) {
@@ -249,7 +250,7 @@ public:
     // Get the SPIR-V type for the allocation.
     Type spirvType = getTypeConverter()->convertType(allocType);
 
-    // Insert spv.globalVariable for this allocation.
+    // Insert spv.GlobalVariable for this allocation.
     Operation *parent =
         SymbolTable::getNearestSymbolTable(operation->getParentOp());
     if (!parent)
@@ -355,7 +356,7 @@ public:
   }
 };
 
-/// Converts composite std.constant operation to spv.constant.
+/// Converts composite std.constant operation to spv.Constant.
 class ConstantCompositeOpPattern final
     : public OpConversionPattern<ConstantOp> {
 public:
@@ -366,7 +367,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts scalar std.constant operation to spv.constant.
+/// Converts scalar std.constant operation to spv.Constant.
 class ConstantScalarOpPattern final : public OpConversionPattern<ConstantOp> {
 public:
   using OpConversionPattern<ConstantOp>::OpConversionPattern;

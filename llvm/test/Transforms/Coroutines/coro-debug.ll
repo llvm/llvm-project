@@ -34,6 +34,7 @@ sw.bb:                                            ; preds = %entry
   call void @llvm.dbg.declare(metadata i32 %direct, metadata !25, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !12, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i8** %coro_hdl, metadata !15, metadata !13), !dbg !16
+  call void @llvm.dbg.declare(metadata i8* null, metadata !28, metadata !13), !dbg !16
   br label %sw.epilog, !dbg !18
 
 sw.bb1:                                           ; preds = %entry
@@ -136,6 +137,7 @@ attributes #7 = { noduplicate }
 !25 = !DILocalVariable(name: "direct_mem", scope: !6, file: !7, line: 55, type: !11)
 !26 = !DILocalVariable(name: "direct_const", scope: !6, file: !7, line: 55, type: !11)
 !27 = !DILocalVariable(name: "undefined", scope: !6, file: !7, line: 55, type: !11)
+!28 = !DILocalVariable(name: "null", scope: !6, file: !7, line: 55, type: !11)
 
 ; CHECK: define i8* @f(i32 %x) #0 !dbg ![[ORIG:[0-9]+]]
 ; CHECK: define internal fastcc void @f.resume(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[RESUME:[0-9]+]]

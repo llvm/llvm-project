@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGCUDARUNTIME_H
 #define LLVM_CLANG_LIB_CODEGEN_CGCUDARUNTIME_H
 
+#include "clang/AST/GlobalDecl.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 
@@ -93,6 +94,13 @@ public:
   /// Returns function or variable name on device side even if the current
   /// compilation is for host.
   virtual std::string getDeviceSideName(const NamedDecl *ND) = 0;
+
+  /// Get kernel handle by stub function.
+  virtual llvm::GlobalValue *getKernelHandle(llvm::Function *Stub,
+                                             GlobalDecl GD) = 0;
+
+  /// Get kernel stub by kernel handle.
+  virtual llvm::Function *getKernelStub(llvm::GlobalValue *Handle) = 0;
 
   /// Adjust linkage of shadow variables in host compilation.
   virtual void

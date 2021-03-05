@@ -11,7 +11,7 @@ pdl.pattern @operations : benefit(1) {
   %op0, %op0_result = pdl.operation {"attr" = %attribute} -> %type
 
   // Operation with input.
-  %input = pdl.input
+  %input = pdl.operand
   %root = pdl.operation(%op0_result, %input)
   pdl.rewrite %root with "rewriter"
 }
@@ -19,7 +19,7 @@ pdl.pattern @operations : benefit(1) {
 // -----
 
 pdl.pattern @rewrite_with_args : benefit(1) {
-  %input = pdl.input
+  %input = pdl.operand
   %root = pdl.operation(%input)
   pdl.rewrite %root with "rewriter"(%input : !pdl.value)
 }
@@ -34,7 +34,7 @@ pdl.pattern @rewrite_with_params : benefit(1) {
 // -----
 
 pdl.pattern @rewrite_with_args_and_params : benefit(1) {
-  %input = pdl.input
+  %input = pdl.operand
   %root = pdl.operation(%input)
   pdl.rewrite %root with "rewriter"["I am param"](%input : !pdl.value)
 }

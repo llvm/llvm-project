@@ -12,7 +12,6 @@
 ; CHECK-NEXT:     Module Verifier
 ; CHECK-EXT:      Good Bye World Pass
 ; CHECK-NOEXT-NOT:      Good Bye World Pass
-; CHECK-NEXT:     Instrument function entry/exit with calls to e.g. mcount() (pre inlining)
 ; CHECK-NEXT:     Simplify the CFG
 ; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT:     SROA

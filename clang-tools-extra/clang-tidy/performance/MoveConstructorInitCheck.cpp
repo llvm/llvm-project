@@ -74,8 +74,9 @@ void MoveConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
     // There's a move constructor candidate that the caller probably intended
     // to call instead.
     diag(Initializer->getSourceLocation(),
-         "move constructor initializes %0 by calling a copy constructor")
-        << (Initializer->isBaseInitializer() ? "base class" : "class member");
+         "move constructor initializes %select{class member|base class}0 by "
+         "calling a copy constructor")
+        << Initializer->isBaseInitializer();
     diag(CopyCtor->getLocation(), "copy constructor being called",
          DiagnosticIDs::Note);
     diag(Candidate->getLocation(), "candidate move constructor here",

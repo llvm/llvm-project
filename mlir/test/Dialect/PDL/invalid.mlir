@@ -63,12 +63,12 @@ pdl.pattern : benefit(1) {
 // -----
 
 //===----------------------------------------------------------------------===//
-// pdl::InputOp
+// pdl::OperandOp
 //===----------------------------------------------------------------------===//
 
 pdl.pattern : benefit(1) {
   // expected-error@below {{expected a bindable (i.e. `pdl.operation`) user when defined in the matcher body of a `pdl.pattern`}}
-  %unused = pdl.input
+  %unused = pdl.operand
 
   %op = pdl.operation "foo.op"
   pdl.rewrite %op with "rewriter"
@@ -246,7 +246,7 @@ pdl.pattern : benefit(1) {
 //===----------------------------------------------------------------------===//
 
 pdl.pattern : benefit(1) {
-  // expected-error@below {{expected a bindable (i.e. `pdl.attribute`, `pdl.input`, or `pdl.operation`) user when defined in the matcher body of a `pdl.pattern`}}
+  // expected-error@below {{expected a bindable (i.e. `pdl.attribute`, `pdl.operand`, or `pdl.operation`) user when defined in the matcher body of a `pdl.pattern`}}
   %unused = pdl.type
 
   %op = pdl.operation "foo.op"

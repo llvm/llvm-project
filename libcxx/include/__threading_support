@@ -15,6 +15,7 @@
 #include <chrono>
 #include <iosfwd>
 #include <errno.h>
+#include <limits>
 
 #ifdef __MVS__
 # include <__support/ibm/nanosleep.h>
@@ -149,6 +150,9 @@ typedef void* __libcpp_condvar_t;
 
 // Semaphore
 typedef void* __libcpp_semaphore_t;
+#if defined(_LIBCPP_HAS_THREAD_API_WIN32)
+# define _LIBCPP_SEMAPHORE_MAX (::std::numeric_limits<long>::max())
+#endif
 
 // Execute Once
 typedef void* __libcpp_exec_once_flag;

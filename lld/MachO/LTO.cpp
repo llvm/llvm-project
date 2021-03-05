@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputFiles.h"
+#include "Symbols.h"
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
@@ -50,16 +51,24 @@ void BitcodeCompiler::add(BitcodeFile &f) {
   resols.reserve(objSyms.size());
 
   // Provide a resolution to the LTO API for each symbol.
+  auto symIt = f.symbols.begin();
   for (const lto::InputFile::Symbol &objSym : objSyms) {
     resols.emplace_back();
     lto::SymbolResolution &r = resols.back();
+    Symbol *sym = *symIt++;
 
     // Ideally we shouldn't check for SF_Undefined but currently IRObjectFile
     // reports two symbols for module ASM defined. Without this check, lld
     // flags an undefined in IR with a definition in ASM as prevailing.
     // Once IRObjectFile is fixed to report only one symbol this hack can
     // be removed.
-    r.Prevailing = !objSym.isUndefined();
+    r.Prevailing = !objSym.isUndefined() && sym->getFile() == &f;
+
+    // Un-define the symbol so that we don't get duplicate symbol errors when we
+    // load the ObjFile emitted by LTO compilation.
+    if (r.Prevailing)
+      replaceSymbol<Undefined>(sym, sym->getName(), sym->getFile(),
+                               RefState::Strong);
 
     // TODO: set the other resolution configs properly
     r.VisibleToRegularObj = true;
@@ -98,7 +107,8 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
     if (!config->ltoObjPath.empty()) {
       filePath = config->ltoObjPath;
       path::append(filePath, Twine(i) + "." +
-                                 getArchitectureName(config->arch) + ".lto.o");
+                                 getArchitectureName(config->target.Arch) +
+                                 ".lto.o");
       saveBuffer(buf[i], filePath);
       modTime = getModTime(filePath);
     }

@@ -182,7 +182,7 @@ static void makeNextConditionalOn(Fortran::lower::FirOpBuilder &builder,
           : builder.create<fir::IfOp>(loc, ok, /*withOtherwise=*/false);
   if (!insertPt.isSet())
     insertPt = builder.saveInsertionPoint();
-  builder.setInsertionPointToStart(&whereOp.whereRegion().front());
+  builder.setInsertionPointToStart(&whereOp.thenRegion().front());
 }
 
 template <typename D>
@@ -414,10 +414,10 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   for (auto *op = builder.getBlock()->getParentOp(); isa<fir::IfOp>(op);
        op = op->getBlock()->getParentOp()) {
     auto whereOp = dyn_cast<fir::IfOp>(op);
-    auto *lastOp = &whereOp.whereRegion().front().back();
+    auto *lastOp = &whereOp.thenRegion().front().back();
     builder.setInsertionPointAfter(lastOp);
     builder.create<fir::ResultOp>(loc, lastOp->getResult(0)); // runtime result
-    builder.setInsertionPointToStart(&whereOp.otherRegion().front());
+    builder.setInsertionPointToStart(&whereOp.elseRegion().front());
     builder.create<fir::ResultOp>(loc, falseValue); // known false result
   }
   builder.restoreInsertionPoint(insertPt);

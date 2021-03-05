@@ -770,7 +770,7 @@ uses key paths, which are declared in two steps. First, a tablegen definition
 for the ``CompilerInvocation`` member is created by inheriting from
 ``KeyPathAndMacro``:
 
-.. code-block::
+.. code-block:: text
 
   // Options.td
 
@@ -861,7 +861,7 @@ information required for parsing or generating the command line argument.
 The key path defaults to ``false`` and is set to ``true`` when the flag is
 present on command line.
 
-.. code-block::
+.. code-block:: text
 
   def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Flags<[CC1Option]>,
     MarshallingInfoFlag<LangOpts<"IgnoreExceptions">>;
@@ -871,7 +871,7 @@ present on command line.
 The key path defaults to ``true`` and is set to ``false`` when the flag is
 present on command line.
 
-.. code-block::
+.. code-block:: text
 
   def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Flags<[CC1Option]>,
     MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
@@ -883,7 +883,7 @@ boolean value that's statically unknown in the tablegen file). Then, the key
 path is set to the value associated with the flag that appears last on command
 line.
 
-.. code-block::
+.. code-block:: text
 
   defm legacy_pass_manager : BoolOption<"f", "legacy-pass-manager",
     CodeGenOpts<"LegacyPassManager">, DefaultFalse,
@@ -911,7 +911,7 @@ the positive and negative flag and their common help text suffix.
 The key path defaults to the specified string, or an empty one, if omitted. When
 the option appears on the command line, the argument value is simply copied.
 
-.. code-block::
+.. code-block:: text
 
   def isysroot : JoinedOrSeparate<["-"], "isysroot">, Flags<[CC1Option]>,
     MarshallingInfoString<HeaderSearchOpts<"Sysroot">, [{"/"}]>;
@@ -922,7 +922,7 @@ The key path defaults to an empty ``std::vector<std::string>``. Values specified
 with each appearance of the option on the command line are appended to the
 vector.
 
-.. code-block::
+.. code-block:: text
 
   def frewrite_map_file : Separate<["-"], "frewrite-map-file">, Flags<[CC1Option]>,
     MarshallingInfoStringVector<CodeGenOpts<"RewriteMapFiles">>;
@@ -933,30 +933,29 @@ The key path defaults to the specified integer value, or ``0`` if omitted. When
 the option appears on the command line, its value gets parsed by ``llvm::APInt``
 and the result is assigned to the key path on success.
 
-.. code-block::
+.. code-block:: text
 
   def mstack_probe_size : Joined<["-"], "mstack-probe-size=">, Flags<[CC1Option]>,
-    MarshallingInfoStringInt<CodeGenOpts<"StackProbeSize">, "4096">;
+    MarshallingInfoInt<CodeGenOpts<"StackProbeSize">, "4096">;
 
 **Enumeration**
 
-The key path defaults to the value specified in ``MarshallingInfoString``
-prefixed by the contents of ``NormalizedValuesScope`` and ``::``. This ensures
-correct reference to an enum case is formed even if the enum resides in different
+The key path defaults to the value specified in ``MarshallingInfoEnum`` prefixed
+by the contents of ``NormalizedValuesScope`` and ``::``. This ensures correct
+reference to an enum case is formed even if the enum resides in different
 namespace or is an enum class. If the value present on command line does not
 match any of the comma-separated values from ``Values``, an error diagnostics is
 issued. Otherwise, the corresponding element from ``NormalizedValues`` at the
 same index is assigned to the key path (also correctly scoped). The number of
 comma-separated string values and elements of the array within
-``NormalizedValues`` must match. The ``AutoNormalizeEnum`` mix-in denotes the
-key path option should be treated as an enum and not as a string.
+``NormalizedValues`` must match.
 
-.. code-block::
+.. code-block:: text
 
   def mthread_model : Separate<["-"], "mthread-model">, Flags<[CC1Option]>,
     Values<"posix,single">, NormalizedValues<["POSIX", "Single"]>,
     NormalizedValuesScope<"LangOptions::ThreadModelKind">,
-    MarshallingInfoString<LangOpts<"ThreadModel">, "POSIX">, AutoNormalizeEnum;
+    MarshallingInfoEnum<LangOpts<"ThreadModel">, "POSIX">;
 
 ..
   Intentionally omitting MarshallingInfoBitfieldFlag. It's adding some
@@ -971,7 +970,7 @@ annotation. Then, if any of the elements of ``ImpliedByAnyOf`` evaluate to true,
 the key path value is changed to the specified value or ``true`` if missing.
 Finally, the command line is parsed according to the primary annotation.
 
-.. code-block::
+.. code-block:: text
 
   def fms_extensions : Flag<["-"], "fms-extensions">, Flags<[CC1Option]>,
     MarshallingInfoFlag<LangOpts<"MicrosoftExt">>,
@@ -982,7 +981,7 @@ Finally, the command line is parsed according to the primary annotation.
 The option is parsed only if the expression in ``ShouldParseIf`` evaluates to
 true.
 
-.. code-block::
+.. code-block:: text
 
   def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">, Flags<[CC1Option]>,
     MarshallingInfoFlag<LangOpts<"OpenMPIRBuilder">>,
@@ -1862,6 +1861,144 @@ either by redeclaration chains (if the members are ``Redeclarable``)
 or by simply a pointer to the canonical declaration (if the declarations
 are not ``Redeclarable`` -- in that case, a ``Mergeable`` base class is used
 instead).
+
+Error Handling
+--------------
+
+Clang produces an AST even when the code contains errors. Clang won't generate
+and optimize code for it, but it's used as parsing continues to detect further
+errors in the input. Clang-based tools also depend on such ASTs, and IDEs in
+particular benefit from a high-quality AST for broken code.
+
+In presence of errors, clang uses a few error-recovery strategies to present the
+broken code in the AST:
+
+- correcting errors: in cases where clang is confident about the fix, it
+  provides a FixIt attaching to the error diagnostic and emits a corrected AST
+  (reflecting the written code with FixIts applied). The advantage of that is to
+  provide more accurate subsequent diagnostics. Typo correction is a typical
+  example.
+- representing invalid node: the invalid node is preserved in the AST in some
+  form, e.g. when the "declaration" part of the declaration contains semantic
+  errors, the Decl node is marked as invalid.
+- dropping invalid node: this often happens for errors that we don’t have
+  graceful recovery. Prior to Recovery AST, a mismatched-argument function call
+  expression was dropped though a CallExpr was created for semantic analysis.
+
+With these strategies, clang surfaces better diagnostics, and provides AST
+consumers a rich AST reflecting the written source code as much as possible even
+for broken code.
+
+Recovery AST
+^^^^^^^^^^^^
+
+The idea of Recovery AST is to use recovery nodes which act as a placeholder to
+maintain the rough structure of the parsing tree, preserve locations and
+children but have no language semantics attached to them.
+
+For example, consider the following mismatched function call:
+
+.. code-block:: c++
+
+   int NoArg();
+   void test(int abc) {
+     NoArg(abc); // oops, mismatched function arguments.
+   }
+
+Without Recovery AST, the invalid function call expression (and its child
+expressions) would be dropped in the AST:
+
+::
+
+    |-FunctionDecl <line:1:1, col:11> NoArg 'int ()'
+    `-FunctionDecl <line:2:1, line:4:1> test 'void (int)'
+     |-ParmVarDecl <col:11, col:15> col:15 used abc 'int'
+     `-CompoundStmt <col:20, line:4:1>
+
+
+With Recovery AST, the AST looks like:
+
+::
+
+    |-FunctionDecl <line:1:1, col:11> NoArg 'int ()'
+    `-FunctionDecl <line:2:1, line:4:1> test 'void (int)'
+      |-ParmVarDecl <col:11, col:15> used abc 'int'
+      `-CompoundStmt <col:20, line:4:1>
+        `-RecoveryExpr <line:3:3, col:12> 'int' contains-errors
+          |-UnresolvedLookupExpr <col:3> '<overloaded function type>' lvalue (ADL) = 'NoArg'
+          `-DeclRefExpr <col:9> 'int' lvalue ParmVar 'abc' 'int'
+
+
+An alternative is to use existing Exprs, e.g. CallExpr for the above example.
+This would capture more call details (e.g. locations of parentheses) and allow
+it to be treated uniformly with valid CallExprs. However, jamming the data we
+have into CallExpr forces us to weaken its invariants, e.g. arg count may be
+wrong. This would introduce a huge burden on consumers of the AST to handle such
+"impossible" cases. So when we're representing (rather than correcting) errors,
+we use a distinct recovery node type with extremely weak invariants instead.
+
+``RecoveryExpr`` is the only recovery node so far. In practice, broken decls
+need more detailed semantics preserved (the current ``Invalid`` flag works
+fairly well), and completely broken statements with interesting internal
+structure are rare (so dropping the statements is OK).
+
+Types and dependence
+^^^^^^^^^^^^^^^^^^^^
+
+``RecoveryExpr`` is an ``Expr``, so it must have a type. In many cases the true
+type can't really be known until the code is corrected (e.g. a call to a
+function that doesn't exist). And it means that we can't properly perform type
+checks on some containing constructs, such as ``return 42 + unknownFunction()``.
+
+To model this, we generalize the concept of dependence from C++ templates to
+mean dependence on a template parameter or how an error is repaired. The
+``RecoveryExpr`` ``unknownFunction()`` has the totally unknown type
+``DependentTy``, and this suppresses type-based analysis in the same way it
+would inside a template.
+
+In cases where we are confident about the concrete type (e.g. the return type
+for a broken non-overloaded function call), the ``RecoveryExpr`` will have this
+type. This allows more code to be typechecked, and produces a better AST and
+more diagnostics. For example:
+
+.. code-block:: C++
+
+   unknownFunction().size() // .size() is a CXXDependentScopeMemberExpr
+   std::string(42).size() // .size() is a resolved MemberExpr
+
+Whether or not the ``RecoveryExpr`` has a dependent type, it is always
+considered value-dependent, because its value isn't well-defined until the error
+is resolved. Among other things, this means that clang doesn't emit more errors
+where a RecoveryExpr is used as a constant (e.g. array size), but also won't try
+to evaluate it.
+
+ContainsErrors bit
+^^^^^^^^^^^^^^^^^^
+
+Beyond the template dependence bits, we add a new “ContainsErrors” bit to
+express “Does this expression or anything within it contain errors” semantic,
+this bit is always set for RecoveryExpr, and propagated to other related nodes.
+This provides a fast way to query whether any (recursive) child of an expression
+had an error, which is often used to improve diagnostics.
+
+.. code-block:: C++
+
+   // C++
+   void recoveryExpr(int abc) {
+    unknownFunction(); // type-dependent, value-dependent, contains-errors
+
+    std::string(42).size(); // value-dependent, contains-errors,
+                            // not type-dependent, as we know the type is std::string
+   }
+
+
+.. code-block:: C
+
+   // C
+   void recoveryExpr(int abc) {
+     unknownVar + abc; // type-dependent, value-dependent, contains-errors
+   }
+
 
 The ASTImporter
 ---------------

@@ -1922,13 +1922,11 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *N,
   const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
   if (!TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, true)) {
-    int64_t RemainderOffset = COffsetVal;
-    int64_t ImmField = 0;
     const unsigned NumBits = AMDGPU::getNumFlatOffsetBits(*Subtarget, true);
     // Use signed division by a power of two to truncate towards 0.
     int64_t D = 1LL << (NumBits - 1);
-    RemainderOffset = (COffsetVal / D) * D;
-    ImmField = COffsetVal - RemainderOffset;
+    int64_t RemainderOffset = (COffsetVal / D) * D;
+    int64_t ImmField = COffsetVal - RemainderOffset;
 
     assert(TII->isLegalFLATOffset(ImmField, AMDGPUAS::PRIVATE_ADDRESS, true));
     assert(RemainderOffset + ImmField == COffsetVal);
@@ -2644,7 +2642,11 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
     Opcode = AMDGPU::SOFT_WQM;
     break;
   case Intrinsic::amdgcn_wwm:
-    Opcode = AMDGPU::WWM;
+  case Intrinsic::amdgcn_strict_wwm:
+    Opcode = AMDGPU::STRICT_WWM;
+    break;
+  case Intrinsic::amdgcn_strict_wqm:
+    Opcode = AMDGPU::STRICT_WQM;
     break;
   case Intrinsic::amdgcn_interp_p1_f16:
     SelectInterpP1F16(N);
