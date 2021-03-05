@@ -85,8 +85,8 @@ Xcode:
 After generating the project we are only interested in 2 targets: clang-tidy and clang-apply-replacements``
 
 ```
-cmake --build . -t clang-tidy
-cmake --build . -t clang-apply-replacements
+cmake --build . -t clang-tidy --config Release
+cmake --build . -t clang-apply-replacements --config Release
 ```
 
 Remeber you can set parallel build by adding ``-j number_of_workers`` to the ``cmake --build`` command
