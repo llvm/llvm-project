@@ -5166,12 +5166,6 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
     }
 
     if (IsMalloc) {
-      if (MaxHeapToStackSize == -1) {
-        if (UsesCheck(I) || FreeCheck(I)) {
-          MallocCalls.insert(&I);
-          return true;
-        }
-      }
       if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
         if (Size->getValue().ule(MaxHeapToStackSize))
           if (UsesCheck(I) || FreeCheck(I)) {
@@ -5179,12 +5173,6 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
             return true;
           }
     } else if (IsAlignedAllocLike && isa<ConstantInt>(I.getOperand(0))) {
-      if (MaxHeapToStackSize == -1) {
-        if (UsesCheck(I) || FreeCheck(I)) {
-          MallocCalls.insert(&I);
-          return true;
-        }
-      }
       // Only if the alignment and sizes are constant.
       if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
         if (Size->getValue().ule(MaxHeapToStackSize))
@@ -5193,12 +5181,6 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
             return true;
           }
     } else if (IsCalloc) {
-      if (MaxHeapToStackSize == -1) {
-        if (UsesCheck(I) || FreeCheck(I)) {
-          MallocCalls.insert(&I);
-          return true;
-        }
-      }
       bool Overflow = false;
       if (auto *Num = dyn_cast<ConstantInt>(I.getOperand(0)))
         if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
