@@ -383,8 +383,6 @@ public:
   ///                 preheader of the loop.
   /// \param NeedsBarrier Indicates whether a barrier must be insterted after
   ///                     the loop.
-  /// \param Chunk    The size of loop chunk considered as a unit when
-  ///                 scheduling. If \p nullptr, defaults to 1.
   ///
   /// \returns Updated CanonicalLoopInfo.
   CanonicalLoopInfo *createWorkshareLoop(const LocationDescription &Loc,
