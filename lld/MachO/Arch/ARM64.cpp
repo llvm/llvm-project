@@ -127,8 +127,14 @@ inline uint64_t encodePage21(uint64_t base, uint64_t va) {
 // |                   |         imm12         |                   |
 // +-------------------+-----------------------+-------------------+
 
-inline uint64_t encodePageOff12(uint64_t base, uint64_t va) {
-  int scale = ((base & 0x3b000000) == 0x39000000) ? base >> 30 : 0;
+inline uint64_t encodePageOff12(uint32_t base, uint64_t va) {
+  int scale = 0;
+  if ((base & 0x3b00'0000) == 0x3900'0000) { // load/store
+    scale = base >> 30;
+    if (scale == 0 && (base & 0x0480'0000) == 0x0480'0000) // vector op?
+      scale = 4;
+  }
+
   // TODO(gkm): extract embedded addend and warn if != 0
   // uint64_t addend = ((base & 0x003FFC00) >> 10);
   return (base | bitField(va, scale, 12 - scale, 10));
