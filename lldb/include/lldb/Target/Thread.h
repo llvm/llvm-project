@@ -615,7 +615,7 @@ public:
   /// \return
   ///     A shared pointer to the newly queued thread plan, or nullptr if the
   ///     plan could not be queued.
-  virtual lldb::ThreadPlanSP QueueFundamentalPlan(bool abort_other_plans);
+  lldb::ThreadPlanSP QueueBasePlan(bool abort_other_plans);
 
   /// Queues the plan used to step one instruction from the current PC of \a
   /// thread.
