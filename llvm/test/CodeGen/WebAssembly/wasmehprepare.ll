@@ -132,59 +132,6 @@ try.cont7:                                        ; preds = %try.cont, %catch4
   ret void
 }
 
-; A cleanuppad with a call to __clang_call_terminate().
-;
-; void foo();
-; void test2() {
-;   try {
-;     foo();
-;   } catch (...) {
-;     foo();
-;   }
-; }
-define void @test2() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
-; CHECK-LABEL: @test2
-entry:
-  invoke void @foo()
-          to label %try.cont unwind label %catch.dispatch
-
-catch.dispatch:                                   ; preds = %entry
-  %0 = catchswitch within none [label %catch.start] unwind to caller
-
-catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
-  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
-  invoke void @foo() [ "funclet"(token %1) ]
-          to label %invoke.cont1 unwind label %ehcleanup
-
-invoke.cont1:                                     ; preds = %catch.start
-  call void @__cxa_end_catch() [ "funclet"(token %1) ]
-  catchret from %1 to label %try.cont
-
-try.cont:                                         ; preds = %entry, %invoke.cont1
-  ret void
-
-ehcleanup:                                        ; preds = %catch.start
-  %5 = cleanuppad within %1 []
-  invoke void @__cxa_end_catch() [ "funclet"(token %5) ]
-          to label %invoke.cont2 unwind label %terminate
-
-invoke.cont2:                                     ; preds = %ehcleanup
-  cleanupret from %5 unwind to caller
-
-terminate:                                        ; preds = %ehcleanup
-  %6 = cleanuppad within %5 []
-  %7 = call i8* @llvm.wasm.get.exception(token %6)
-  call void @__clang_call_terminate(i8* %7) [ "funclet"(token %6) ]
-  unreachable
-; CHECK: terminate:
-; CHECK-NEXT: cleanuppad
-; CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.catch
-; CHECK-NEXT:   call void @__clang_call_terminate(i8* %[[EXN]])
-}
-
 ; PHI demotion test. Only the phi before catchswitch should be demoted; the phi
 ; before cleanuppad should NOT.
 ;
@@ -194,7 +141,7 @@ terminate:                                        ; preds = %ehcleanup
 ;   ~Temp() {}
 ; };
 ;
-; void test3() {
+; void test2() {
 ;   int num;
 ;   try {
 ;     Temp t;
@@ -214,8 +161,8 @@ terminate:                                        ; preds = %ehcleanup
 ;     bar(num);
 ;   }
 ; }
-define void @test3() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
-; CHECK-LABEL: @test3
+define void @test2() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+; CHECK-LABEL: @test2
 entry:
   %t = alloca %struct.Temp, align 1
   invoke void @foo()
@@ -279,8 +226,8 @@ try.cont10:                                       ; preds = %invoke.cont3, %catc
 ; Tests if instructions after a call to @llvm.wasm.throw are deleted and the
 ; BB's dead children are deleted.
 
-; CHECK-LABEL: @test4
-define i32 @test4(i1 %b, i8* %p) {
+; CHECK-LABEL: @test3
+define i32 @test3(i1 %b, i8* %p) {
 entry:
   br i1 %b, label %bb.true, label %bb.false
 
@@ -308,14 +255,22 @@ declare void @foo()
 declare void @bar(i32)
 declare %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* returned)
 declare i32 @__gxx_wasm_personality_v0(...)
-declare i8* @llvm.wasm.get.exception(token)
-declare i32 @llvm.wasm.get.ehselector(token)
-declare i32 @llvm.eh.typeid.for(i8*)
-declare void @llvm.wasm.throw(i32, i8*)
-declare void @llvm.wasm.rethrow()
+; Function Attrs: nounwind
+declare i8* @llvm.wasm.get.exception(token) #0
+; Function Attrs: nounwind
+declare i32 @llvm.wasm.get.ehselector(token) #0
+; Function Attrs: nounwind
+declare i32 @llvm.eh.typeid.for(i8*) #0
+; Function Attrs: noreturn
+declare void @llvm.wasm.throw(i32, i8*) #1
+; Function Attrs: noreturn
+declare void @llvm.wasm.rethrow() #1
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
-declare void @__clang_call_terminate(i8*)
+declare void @_ZSt9terminatev()
+
+attributes #0 = { nounwind }
+attributes #1 = { noreturn }
 
 ; CHECK-DAG: declare void @llvm.wasm.landingpad.index(token, i32 immarg)
 ; CHECK-DAG: declare i8* @llvm.wasm.lsda()
