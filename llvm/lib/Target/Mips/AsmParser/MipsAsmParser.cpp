@@ -127,7 +127,7 @@ const FeatureBitset MipsAssemblerOptions::AllArchRelatedMask = {
     Mips::FeatureMips64, Mips::FeatureMips64r2, Mips::FeatureMips64r3,
     Mips::FeatureMips64r5, Mips::FeatureMips64r6, Mips::FeatureCnMips,
     Mips::FeatureCnMipsP, Mips::FeatureFP64Bit, Mips::FeatureGP64Bit,
-    Mips::FeatureNaN2008
+    Mips::FeatureNaN2008, Mips::FeatureNanoMips
 };
 
 namespace {
@@ -668,6 +668,10 @@ public:
 
   bool hasMips64r6() const {
     return getSTI().getFeatureBits()[Mips::FeatureMips64r6];
+  }
+
+  bool hasNanoMips() const {
+    return getSTI().getFeatureBits()[Mips::FeatureNanoMips];
   }
 
   bool hasDSP() const {

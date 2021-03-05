@@ -63,7 +63,8 @@ private:
                                const APInt &Value) const override;
   bool matchesArch(Triple::ArchType Arch) const override {
     return Arch == Triple::mips || Arch == Triple::mipsel ||
-           Arch == Triple::mips64 || Arch == Triple::mips64el;
+           Arch == Triple::mips64 || Arch == Triple::mips64el ||
+           Arch == Triple::nanomips;
   }
 };
 } // end anonymous namespace

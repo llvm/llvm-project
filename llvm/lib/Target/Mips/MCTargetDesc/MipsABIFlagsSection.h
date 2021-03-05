@@ -107,7 +107,9 @@ public:
         ISARevision = 1;
     } else {
       ISARevision = 0;
-      if (P.hasMips5())
+      if(P.hasNanoMips())
+        ISALevel = 6;
+      else if (P.hasMips5())
         ISALevel = 5;
       else if (P.hasMips4())
         ISALevel = 4;

@@ -308,6 +308,7 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   case Triple::mipsel:
   case Triple::mips64:
   case Triple::mips64el:
+  case Triple::nanomips:
     // We cannot use DW_EH_PE_sdata8 for the large PositionIndependent case
     // since there is no R_MIPS_PC64 relocation (only a 32-bit version).
     if (PositionIndependent && !Large)

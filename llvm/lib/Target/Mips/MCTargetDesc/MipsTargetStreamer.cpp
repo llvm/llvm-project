@@ -819,7 +819,8 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
 
   ABI = MipsABIInfo(
       STI.getTargetTriple().getArch() == Triple::ArchType::mipsel ||
-              STI.getTargetTriple().getArch() == Triple::ArchType::mips
+              STI.getTargetTriple().getArch() == Triple::ArchType::mips ||
+              STI.getTargetTriple().getArch() == Triple::ArchType::nanomips
           ? MipsABIInfo::O32()
           : MipsABIInfo::N64());
 

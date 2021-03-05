@@ -26,6 +26,10 @@ Target &llvm::getTheMips64elTarget() {
   static Target TheMips64elTarget;
   return TheMips64elTarget;
 }
+Target &llvm::getTheNanoMipsTarget() {
+  static Target TheNanoMipsTarget;
+  return TheNanoMipsTarget;
+}
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTargetInfo() {
   RegisterTarget<Triple::mips,
@@ -43,5 +47,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTargetInfo() {
   RegisterTarget<Triple::mips64el,
                  /*HasJIT=*/true>
       B(getTheMips64elTarget(), "mips64el", "MIPS (64-bit little endian)",
+        "Mips");
+  RegisterTarget<Triple::nanomips,
+                 /*HasJIT=*/false>
+      C(getTheNanoMipsTarget(), "nanomips", "nanoMIPS (32-bit little endian)",
         "Mips");
 }

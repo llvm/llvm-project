@@ -42,7 +42,8 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   enum MipsArchEnum {
     MipsDefault,
     Mips1, Mips2, Mips32, Mips32r2, Mips32r3, Mips32r5, Mips32r6, Mips32Max,
-    Mips3, Mips4, Mips5, Mips64, Mips64r2, Mips64r3, Mips64r5, Mips64r6
+    Mips3, Mips4, Mips5, Mips64, Mips64r2, Mips64r3, Mips64r5, Mips64r6, Mips64Max,
+    NanoMips
   };
 
   enum class CPU { P5600 };
@@ -269,11 +270,12 @@ public:
     return (MipsArchVersion >= Mips32r6 && MipsArchVersion < Mips32Max) ||
            hasMips64r6();
   }
-  bool hasMips64() const { return MipsArchVersion >= Mips64; }
-  bool hasMips64r2() const { return MipsArchVersion >= Mips64r2; }
-  bool hasMips64r3() const { return MipsArchVersion >= Mips64r3; }
-  bool hasMips64r5() const { return MipsArchVersion >= Mips64r5; }
-  bool hasMips64r6() const { return MipsArchVersion >= Mips64r6; }
+  bool hasMips64() const { return MipsArchVersion >= Mips64 && MipsArchVersion < Mips64Max; }
+  bool hasMips64r2() const { return MipsArchVersion >= Mips64r2 && MipsArchVersion < Mips64Max; }
+  bool hasMips64r3() const { return MipsArchVersion >= Mips64r3 && MipsArchVersion < Mips64Max; }
+  bool hasMips64r5() const { return MipsArchVersion >= Mips64r5 && MipsArchVersion < Mips64Max; }
+  bool hasMips64r6() const { return MipsArchVersion >= Mips64r6 && MipsArchVersion < Mips64Max; }
+  bool hasNanoMips() const { return MipsArchVersion >= NanoMips; }
 
   bool hasCnMips() const { return HasCnMips; }
   bool hasCnMipsP() const { return HasCnMipsP; }

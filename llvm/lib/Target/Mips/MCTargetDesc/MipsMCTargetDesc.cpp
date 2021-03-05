@@ -167,8 +167,9 @@ static MCInstrAnalysis *createMipsMCInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTargetMC() {
-  for (Target *T : {&getTheMipsTarget(), &getTheMipselTarget(),
-                    &getTheMips64Target(), &getTheMips64elTarget()}) {
+  for (Target *T :
+       {&getTheMipsTarget(), &getTheMipselTarget(), &getTheMips64Target(),
+        &getTheMips64elTarget(), &getTheNanoMipsTarget()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createMipsMCAsmInfo);
 
