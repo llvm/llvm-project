@@ -44,7 +44,7 @@ def LLVM_FMFAttr : DialectAttr<
   let returnType = "::mlir::LLVM::FastmathFlags";
   let convertFromStorage = "$_self.getFlags()";
   let constBuilderCall =
-          "::mlir::LLVM::FMFAttr::get($0, $_builder.getContext())";
+          "::mlir::LLVM::FMFAttr::get($_builder.getContext(), $0)";
 }
 
 def LOptDisableUnroll : I32EnumAttrCase<"disable_unroll", 1>;
@@ -249,7 +249,7 @@ def LLVM_FCmpOp : LLVM_Op<"fcmp", [
     [{
       build($_builder, $_state, IntegerType::get(lhs.getType().getContext(), 1),
             $_builder.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs,
-            ::mlir::LLVM::FMFAttr::get(fmf, $_builder.getContext()));
+            ::mlir::LLVM::FMFAttr::get($_builder.getContext(), fmf));
     }]>];
   let parser = [{ return parseCmpOp<FCmpPredicate>(parser, result); }];
   let printer = [{ printFCmpOp(p, *this); }];

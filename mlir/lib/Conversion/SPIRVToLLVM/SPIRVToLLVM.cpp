@@ -829,7 +829,7 @@ public:
         operation, dstType,
         rewriter.getI64IntegerAttr(static_cast<int64_t>(predicate)),
         operation.operand1(), operation.operand2(),
-        LLVM::FMFAttr::get({}, operation.getContext()));
+        LLVM::FMFAttr::get(operation.getContext(), {}));
     return success();
   }
 };
