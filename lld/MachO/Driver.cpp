@@ -845,10 +845,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   config->saveTemps = args.hasArg(OPT_save_temps);
 
-  config->adhocCodesign =
-      args.hasFlag(OPT_adhoc_codesign, OPT_no_adhoc_codesign,
-                   config->target.Arch == AK_arm64 ||
-                   config->target.Arch == AK_arm64e);
+  config->adhocCodesign = args.hasFlag(
+      OPT_adhoc_codesign, OPT_no_adhoc_codesign,
+      config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e);
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());
