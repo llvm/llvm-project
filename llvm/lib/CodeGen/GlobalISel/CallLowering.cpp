@@ -627,7 +627,9 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       Register ArgReg = Args[i].Regs[Part];
       // There should be Regs.size() ArgLocs per argument.
       VA = ArgLocs[j + Part];
-      if (VA.isMemLoc()) {
+      const ISD::ArgFlagsTy Flags = Args[i].Flags[Part];
+
+      if (VA.isMemLoc() && !Flags.isByVal()) {
         // Individual pieces may have been spilled to the stack and others
         // passed in registers.
 
@@ -643,7 +645,22 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
         continue;
       }
 
-      assert(VA.isRegLoc() && "custom loc should have been handled already");
+      if (VA.isMemLoc() && Flags.isByVal()) {
+        // FIXME: We should be inserting a memcpy from the source pointer to the
+        // result for outgoing byval parameters.
+        if (!Handler.isIncomingArgumentHandler())
+          continue;
+
+        MachinePointerInfo MPO;
+        Register StackAddr = Handler.getStackAddress(Flags.getByValSize(),
+                                                     VA.getLocMemOffset(), MPO);
+        assert(Args[i].Regs.size() == 1 &&
+               "didn't expect split byval pointer");
+        MIRBuilder.buildCopy(Args[i].Regs[0], StackAddr);
+        continue;
+      }
+
+      assert(!VA.needsCustom() && "custom loc should have been handled already");
 
       if (i == 0 && ThisReturnReg.isValid() &&
           Handler.isIncomingArgumentHandler() &&
