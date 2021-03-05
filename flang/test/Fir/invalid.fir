@@ -1,8 +1,4 @@
-// FIR ops diagnotics test for the following ops:
-// fir.rebox
-// fir.array_coor
-// fir.array_load
-//
+// FIR ops diagnotic tests
 
 // RUN: fir-opt -split-input-file -verify-diagnostics %s
 
