@@ -40,7 +40,7 @@ body:	|
 # GCN-LABEL: name: vmem_vcc_hazard_ignore_bundle_instr
 # GCN:      S_LOAD_DWORDX2_IMM
 # GCN-NEXT: }
-# GCN-NEXT: S_NOP 3
+# GFX9-NEXT: S_NOP 3
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
 ---
 name: vmem_vcc_hazard_ignore_bundle_instr
@@ -60,7 +60,7 @@ body: |
 
 # GCN-LABEL: name: vmem_vcc_min_of_two_after_bundle
 # GCN:      bb.2:
-# GCN-NEXT: S_NOP 4
+# GFX9-NEXT: S_NOP 4
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name: vmem_vcc_min_of_two_after_bundle
