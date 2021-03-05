@@ -1017,11 +1017,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // Vector reductions
     for (MVT VT : { MVT::v4f16, MVT::v2f32,
                     MVT::v8f16, MVT::v4f32, MVT::v2f64 }) {
-      setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
+      if (VT.getVectorElementType() != MVT::f16 || Subtarget->hasFullFP16()) {
+        setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
+        setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
 
-      if (VT.getVectorElementType() != MVT::f16 || Subtarget->hasFullFP16())
         setOperationAction(ISD::VECREDUCE_FADD, VT, Legal);
+      }
     }
     for (MVT VT : { MVT::v8i8, MVT::v4i16, MVT::v2i32,
                     MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
