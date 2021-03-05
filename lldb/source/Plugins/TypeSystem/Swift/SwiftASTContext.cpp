@@ -3936,11 +3936,8 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
 
   ModuleSpec module_spec;
   module_spec.GetFileSpec().GetFilename().SetCString(library_fullname.c_str());
-  lldb_private::ModuleList matching_module_list;
 
-  process.GetTarget().GetImages().FindModules(module_spec,
-                                              matching_module_list);
-  if (!matching_module_list.IsEmpty()) {
+  if (process.GetTarget().GetImages().FindFirstModule(module_spec)) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "Skipping module %s as it is already loaded.",
                library_fullname.c_str());
     return true;
