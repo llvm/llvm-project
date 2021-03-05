@@ -18073,8 +18073,8 @@ to the object.
 Semantics:
 """"""""""
 
-If ``ptr`` is a stack-allocated object and its offset is zero, the object is
-initially marked as dead.
+If ``ptr`` is a stack-allocated object and it points to the first byte of
+the object, the object is initially marked as dead.
 After '``llvm.lifetime.start``', the stack object that ``ptr`` points is marked
 as alive and has an uninitialized value.
 The stack object is marked as dead when either
@@ -18086,9 +18086,9 @@ After :ref:`llvm.lifetime.end <int_lifeend>` is called,
 The second '``llvm.lifetime.start``' call marks the object as alive, but it
 does not change the address of the object.
 
-If ``ptr`` is a non-stack-allocated object, its offset is non-zero or it is
-a stack object that is already alive, it simply fills all bytes of the object
-with ``poison``.
+If ``ptr`` is a non-stack-allocated object, it does not point to the first
+byte of the object or it is a stack object that is already alive, it simply
+fills all bytes of the object with ``poison``.
 
 
 .. _int_lifeend:
@@ -18119,12 +18119,13 @@ to the object.
 Semantics:
 """"""""""
 
-If ``ptr`` is a stack-allocated object and its offset is zero, the object is
-dead.
+If ``ptr`` is a stack-allocated object and it points to the first byte of the
+object, the object is dead.
 Calling ``llvm.lifetime.end`` on an already dead alloca is no-op.
 
-If ``ptr`` is a non-stack-allocated object or its offset is non-zero,
-it is equivalent to simply filling all bytes of the object with ``poison``.
+If ``ptr`` is a non-stack-allocated object or it does not point to the first
+byte of the object, it is equivalent to simply filling all bytes of the object
+with ``poison``.
 
 
 '``llvm.invariant.start``' Intrinsic
