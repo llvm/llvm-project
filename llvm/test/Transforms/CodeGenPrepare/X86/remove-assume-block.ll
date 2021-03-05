@@ -1,9 +1,7 @@
-; RUN: opt -S -codegenprepare < %s | FileCheck %s
+; RUN: opt -S -codegenprepare -mtriple=x86_64-linux < %s | FileCheck %s
 ;
 ; Ensure that blocks that only contain @llvm.assume are removed completely
 ; during CodeGenPrepare.
-
-target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: @simple(
 ; CHECK-NEXT: end:
