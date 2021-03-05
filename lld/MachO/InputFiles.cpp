@@ -79,6 +79,12 @@ using namespace lld::macho;
 std::string lld::toString(const InputFile *f) {
   if (!f)
     return "<internal>";
+
+  // Multiple dylibs can be defined in one .tbd file.
+  if (auto dylibFile = dyn_cast<DylibFile>(f))
+    if (f->getName().endswith(".tbd"))
+      return (f->getName() + "(" + dylibFile->dylibName + ")").str();
+
   if (f->archiveName.empty())
     return std::string(f->getName());
   return (path::filename(f->archiveName) + "(" + path::filename(f->getName()) +
@@ -697,15 +703,16 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   if (umbrella == nullptr)
     umbrella = this;
 
+  dylibName = saver.save(interface.getInstallName());
+  compatibilityVersion = interface.getCompatibilityVersion().rawValue();
+  currentVersion = interface.getCurrentVersion().rawValue();
+
   if (!is_contained(interface.targets(), config->target)) {
     error(toString(this) + " is incompatible with " +
           std::string(config->target));
     return;
   }
 
-  dylibName = saver.save(interface.getInstallName());
-  compatibilityVersion = interface.getCompatibilityVersion().rawValue();
-  currentVersion = interface.getCurrentVersion().rawValue();
   DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   auto addSymbol = [&](const Twine &name) -> void {
     symbols.push_back(symtab->addDylib(saver.save(name), exportingFile,
