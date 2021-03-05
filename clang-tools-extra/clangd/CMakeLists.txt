@@ -62,6 +62,7 @@ add_clang_library(clangDaemon
   DraftStore.cpp
   DumpAST.cpp
   ExpectedTypes.cpp
+  FeatureModule.cpp
   FindSymbols.cpp
   FindTarget.cpp
   FileDistance.cpp
@@ -75,7 +76,6 @@ add_clang_library(clangDaemon
   Hover.cpp
   IncludeFixer.cpp
   JSONTransport.cpp
-  Module.cpp
   PathMapping.cpp
   Protocol.cpp
   Quality.cpp

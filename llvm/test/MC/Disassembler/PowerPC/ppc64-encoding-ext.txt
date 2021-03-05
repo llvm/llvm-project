@@ -2235,16 +2235,20 @@
 # CHECK: mfctr 2
 0x7c 0x49 0x02 0xa6
 
-# CHECK: mtuamr 2
+# MODERN: mtuamr 2
+# OLD: mtspr 13, 2
 0x7c 0x4d 0x03 0xa6
 
-# CHECK: mfuamr 2
+# MODERN: mfuamr 2
+# OLD: mfspr 2, 13
 0x7c 0x4d 0x02 0xa6
 
-# CHECK: mtppr 2
+# MODERN: mtppr 2
+# OLD: mtspr 896, 2
 0x7c 0x40 0xe3 0xa6
 
-# CHECK: mfppr 2
+# MODERN: mfppr 2
+# OLD: mfspr 2, 896
 0x7c 0x40 0xe2 0xa6
 
 # CHECK: nop

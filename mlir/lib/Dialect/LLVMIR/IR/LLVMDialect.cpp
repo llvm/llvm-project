@@ -404,6 +404,34 @@ SwitchOp::getMutableSuccessorOperands(unsigned index) {
 // Builder, printer and parser for for LLVM::LoadOp.
 //===----------------------------------------------------------------------===//
 
+static LogicalResult verifyAccessGroups(Operation *op) {
+  if (Attribute attribute =
+          op->getAttr(LLVMDialect::getAccessGroupsAttrName())) {
+    // The attribute is already verified to be a symbol ref array attribute via
+    // a constraint in the operation definition.
+    for (SymbolRefAttr accessGroupRef :
+         attribute.cast<ArrayAttr>().getAsRange<SymbolRefAttr>()) {
+      StringRef metadataName = accessGroupRef.getRootReference();
+      auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
+          op->getParentOp(), metadataName);
+      if (!metadataOp)
+        return op->emitOpError() << "expected '" << accessGroupRef
+                                 << "' to reference a metadata op";
+      StringRef accessGroupName = accessGroupRef.getLeafReference();
+      Operation *accessGroupOp =
+          SymbolTable::lookupNearestSymbolFrom(metadataOp, accessGroupName);
+      if (!accessGroupOp)
+        return op->emitOpError() << "expected '" << accessGroupRef
+                                 << "' to reference an access_group op";
+    }
+  }
+  return success();
+}
+
+static LogicalResult verify(LoadOp op) {
+  return verifyAccessGroups(op.getOperation());
+}
+
 void LoadOp::build(OpBuilder &builder, OperationState &result, Type t,
                    Value addr, unsigned alignment, bool isVolatile,
                    bool isNonTemporal) {
@@ -461,6 +489,10 @@ static ParseResult parseLoadOp(OpAsmParser &parser, OperationState &result) {
 //===----------------------------------------------------------------------===//
 // Builder, printer and parser for LLVM::StoreOp.
 //===----------------------------------------------------------------------===//
+
+static LogicalResult verify(StoreOp op) {
+  return verifyAccessGroups(op.getOperation());
+}
 
 void StoreOp::build(OpBuilder &builder, OperationState &result, Value value,
                     Value addr, unsigned alignment, bool isVolatile,

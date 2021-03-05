@@ -79,6 +79,12 @@ using namespace lld::macho;
 std::string lld::toString(const InputFile *f) {
   if (!f)
     return "<internal>";
+
+  // Multiple dylibs can be defined in one .tbd file.
+  if (auto dylibFile = dyn_cast<DylibFile>(f))
+    if (f->getName().endswith(".tbd"))
+      return (f->getName() + "(" + dylibFile->dylibName + ")").str();
+
   if (f->archiveName.empty())
     return std::string(f->getName());
   return (path::filename(f->archiveName) + "(" + path::filename(f->getName()) +
@@ -480,10 +486,10 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
 
   MachO::Architecture arch =
       MachO::getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
-  if (arch != config->arch) {
+  if (arch != config->target.Arch) {
     error(toString(this) + " has architecture " + getArchitectureName(arch) +
           " which is incompatible with target architecture " +
-          getArchitectureName(config->arch));
+          getArchitectureName(config->target.Arch));
     return;
   }
   // TODO: check platform too
@@ -576,9 +582,9 @@ findDylib(StringRef path, DylibFile *umbrella,
   if (currentTopLevelTapi) {
     for (InterfaceFile &child :
          make_pointee_range(currentTopLevelTapi->documents())) {
+      assert(child.documents().empty());
       if (path == child.getInstallName())
         return make<DylibFile>(child, umbrella);
-      assert(child.documents().empty());
     }
   }
 
@@ -669,7 +675,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
       const auto *c = reinterpret_cast<const dylib_command *>(cmd);
       StringRef reexportPath =
           reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
-      loadReexport(reexportPath, umbrella, nullptr);
+      loadReexport(reexportPath, exportingFile, nullptr);
     }
 
     // FIXME: What about LC_LOAD_UPWARD_DYLIB, LC_LAZY_LOAD_DYLIB,
@@ -697,15 +703,16 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   if (umbrella == nullptr)
     umbrella = this;
 
-  if (!interface.getArchitectures().has(config->arch)) {
-    error(toString(this) + " is incompatible with " +
-          getArchitectureName(config->arch));
-    return;
-  }
-
   dylibName = saver.save(interface.getInstallName());
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
+
+  if (!is_contained(interface.targets(), config->target)) {
+    error(toString(this) + " is incompatible with " +
+          std::string(config->target));
+    return;
+  }
+
   DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   auto addSymbol = [&](const Twine &name) -> void {
     symbols.push_back(symtab->addDylib(saver.save(name), exportingFile,
@@ -715,7 +722,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   // TODO(compnerd) filter out symbols based on the target platform
   // TODO: handle weak defs, thread locals
   for (const auto symbol : interface.symbols()) {
-    if (!symbol->getArchitectures().has(config->arch))
+    if (!symbol->getArchitectures().has(config->target.Arch))
       continue;
 
     switch (symbol->getKind()) {
@@ -740,8 +747,11 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   const InterfaceFile *topLevel =
       interface.getParent() == nullptr ? &interface : interface.getParent();
 
-  for (InterfaceFileRef intfRef : interface.reexportedLibraries())
-    loadReexport(intfRef.getInstallName(), umbrella, topLevel);
+  for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {
+    auto targets = intfRef.targets();
+    if (is_contained(targets, config->target))
+      loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
+  }
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)

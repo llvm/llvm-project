@@ -126,7 +126,6 @@ InProcessMemoryManager::allocate(const JITLinkDylib *JD,
     Blocks[KV.first] = std::move(SegMem);
   }
 
-  assert(SlabRemaining.allocatedSize() >= 0 && "Mapping exceeds allocation");
   return std::unique_ptr<InProcessMemoryManager::Allocation>(
       new IPMMAlloc(std::move(Blocks)));
 }

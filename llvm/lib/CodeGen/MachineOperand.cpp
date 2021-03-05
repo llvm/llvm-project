@@ -1160,6 +1160,11 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       break;
     }
     }
+  } else if (getOpaqueValue() == nullptr && getOffset() != 0) {
+    OS << ((isLoad() && isStore()) ? " on "
+           : isLoad()              ? " from "
+                                   : " into ")
+       << "undef";
   }
   MachineOperand::printOperandOffset(OS, getOffset());
   if (getAlign() != getSize())

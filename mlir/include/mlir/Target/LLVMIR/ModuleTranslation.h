@@ -128,6 +128,9 @@ public:
            "attempting to map loop options that was already mapped");
   }
 
+  // Sets LLVM metadata for memory operations that are in a parallel loop.
+  void setAccessGroupsMetadata(Operation *op, llvm::Instruction *inst);
+
   /// Converts the type from MLIR LLVM dialect to LLVM.
   llvm::Type *convertType(Type type);
 

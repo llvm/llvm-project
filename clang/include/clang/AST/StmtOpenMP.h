@@ -28,6 +28,238 @@ namespace clang {
 // AST classes for directives.
 //===----------------------------------------------------------------------===//
 
+/// Representation of an OpenMP canonical loop.
+///
+/// OpenMP 1.0 C/C++, section 2.4.1 for Construct; canonical-shape
+/// OpenMP 2.0 C/C++, section 2.4.1 for Construct; canonical-shape
+/// OpenMP 2.5, section 2.5.1 Loop Construct; canonical form
+/// OpenMP 3.1, section 2.5.1 Loop Construct; canonical form
+/// OpenMP 4.0, section 2.6 Canonical Loop Form
+/// OpenMP 4.5, section 2.6 Canonical Loop Form
+/// OpenMP 5.0, section 2.9.1 Canonical Loop Form
+/// OpenMP 5.1, section 2.11.1 Canonical Loop Nest Form
+///
+/// An OpenMP canonical loop is a for-statement or range-based for-statement
+/// with additional requirements that ensure that the number of iterations is
+/// known before entering the loop and allow skipping to an arbitrary iteration.
+/// The OMPCanonicalLoop AST node wraps a ForStmt or CXXForRangeStmt that is
+/// known to fulfill OpenMP's canonical loop requirements because of being
+/// associated to an OMPLoopBasedDirective. That is, the general structure is:
+///
+///  OMPLoopBasedDirective
+/// [`- CapturedStmt   ]
+/// [   `- CapturedDecl]
+///        ` OMPCanonicalLoop
+///          `- ForStmt/CXXForRangeStmt
+///             `- Stmt
+///
+/// One or multiple CapturedStmt/CapturedDecl pairs may be inserted by some
+/// directives such as OMPParallelForDirective, but others do not need them
+/// (such as OMPTileDirective). In  The OMPCanonicalLoop and
+/// ForStmt/CXXForRangeStmt pair is repeated for loop associated with the
+/// directive. A OMPCanonicalLoop must not appear in the AST unless associated
+/// with a OMPLoopBasedDirective. In an imperfectly nested loop nest, the
+/// OMPCanonicalLoop may also be wrapped in a CompoundStmt:
+///
+/// [...]
+///  ` OMPCanonicalLoop
+///    `- ForStmt/CXXForRangeStmt
+///       `- CompoundStmt
+///          |- Leading in-between code (if any)
+///          |- OMPCanonicalLoop
+///          |  `- ForStmt/CXXForRangeStmt
+///          |     `- ...
+///          `- Trailing in-between code (if any)
+///
+/// The leading/trailing in-between code must not itself be a OMPCanonicalLoop
+/// to avoid confusion which loop belongs to the nesting.
+///
+/// There are three different kinds of iteration variables for different
+/// purposes:
+/// * Loop user variable: The user-accessible variable with different value for
+///   each iteration.
+/// * Loop iteration variable: The variable used to identify a loop iteration;
+///   for range-based for-statement, this is the hidden iterator '__begin'. For
+///   other loops, it is identical to the loop user variable. Must be a
+///   random-access iterator, pointer or integer type.
+/// * Logical iteration counter: Normalized loop counter starting at 0 and
+///   incrementing by one at each iteration. Allows abstracting over the type
+///   of the loop iteration variable and is always an unsigned integer type
+///   appropriate to represent the range of the loop iteration variable. Its
+///   value corresponds to the logical iteration number in the OpenMP
+///   specification.
+///
+/// This AST node provides two captured statements:
+/// * The distance function which computes the number of iterations.
+/// * The loop user variable function that computes the loop user variable when
+///   given a logical iteration number.
+///
+/// These captured statements provide the link between C/C++ semantics and the
+/// logical iteration counters used by the OpenMPIRBuilder which is
+/// language-agnostic and therefore does not know e.g. how to advance a
+/// random-access iterator. The OpenMPIRBuilder will use this information to
+/// apply simd, workshare-loop, distribute, taskloop and loop directives to the
+/// loop. For compatibility with the non-OpenMPIRBuilder codegen path, an
+/// OMPCanonicalLoop can itself also be wrapped into the CapturedStmts of an
+/// OMPLoopDirective and skipped when searching for the associated syntactical
+/// loop.
+///
+/// Example:
+/// <code>
+///   std::vector<std::string> Container{1,2,3};
+///   for (std::string Str : Container)
+///      Body(Str);
+/// </code>
+/// which is syntactic sugar for approximately:
+/// <code>
+///   auto &&__range = Container;
+///   auto __begin = std::begin(__range);
+///   auto __end = std::end(__range);
+///   for (; __begin != __end; ++__begin) {
+///     std::String Str = *__begin;
+///     Body(Str);
+///   }
+/// </code>
+/// In this example, the loop user variable is `Str`, the loop iteration
+/// variable is `__begin` of type `std::vector<std::string>::iterator` and the
+/// logical iteration number type is `size_t` (unsigned version of
+/// `std::vector<std::string>::iterator::difference_type` aka `ptrdiff_t`).
+/// Therefore, the distance function will be
+/// <code>
+///   [&](size_t &Result) { Result = __end - __begin; }
+/// </code>
+/// and the loop variable function is
+/// <code>
+///   [&,__begin](std::vector<std::string>::iterator &Result, size_t Logical) {
+///     Result = __begin + Logical;
+///   }
+/// </code>
+/// The variable `__begin`, aka the loop iteration variable, is captured by
+/// value because it is modified in the loop body, but both functions require
+/// the initial value. The OpenMP specification explicitly leaves unspecified
+/// when the loop expressions are evaluated such that a capture by reference is
+/// sufficient.
+class OMPCanonicalLoop : public Stmt {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+
+  /// Children of this AST node.
+  enum {
+    LOOP_STMT,
+    DISTANCE_FUNC,
+    LOOPVAR_FUNC,
+    LOOPVAR_REF,
+    LastSubStmt = LOOPVAR_REF
+  };
+
+private:
+  /// This AST node's children.
+  Stmt *SubStmts[LastSubStmt + 1] = {};
+
+  OMPCanonicalLoop() : Stmt(StmtClass::OMPCanonicalLoopClass) {}
+
+public:
+  /// Create a new OMPCanonicalLoop.
+  static OMPCanonicalLoop *create(const ASTContext &Ctx, Stmt *LoopStmt,
+                                  CapturedStmt *DistanceFunc,
+                                  CapturedStmt *LoopVarFunc,
+                                  DeclRefExpr *LoopVarRef) {
+    OMPCanonicalLoop *S = new (Ctx) OMPCanonicalLoop();
+    S->setLoopStmt(LoopStmt);
+    S->setDistanceFunc(DistanceFunc);
+    S->setLoopVarFunc(LoopVarFunc);
+    S->setLoopVarRef(LoopVarRef);
+    return S;
+  }
+
+  /// Create an empty OMPCanonicalLoop for deserialization.
+  static OMPCanonicalLoop *createEmpty(const ASTContext &Ctx) {
+    return new (Ctx) OMPCanonicalLoop();
+  }
+
+  static bool classof(const Stmt *S) {
+    return S->getStmtClass() == StmtClass::OMPCanonicalLoopClass;
+  }
+
+  SourceLocation getBeginLoc() const { return getLoopStmt()->getBeginLoc(); }
+  SourceLocation getEndLoc() const { return getLoopStmt()->getEndLoc(); }
+
+  /// Return this AST node's children.
+  /// @{
+  child_range children() {
+    return child_range(&SubStmts[0], &SubStmts[0] + LastSubStmt + 1);
+  }
+  const_child_range children() const {
+    return const_child_range(&SubStmts[0], &SubStmts[0] + LastSubStmt + 1);
+  }
+  /// @}
+
+  /// The wrapped syntactic loop statement (ForStmt or CXXForRangeStmt).
+  /// @{
+  Stmt *getLoopStmt() { return SubStmts[LOOP_STMT]; }
+  const Stmt *getLoopStmt() const { return SubStmts[LOOP_STMT]; }
+  void setLoopStmt(Stmt *S) {
+    assert((isa<ForStmt>(S) || isa<CXXForRangeStmt>(S)) &&
+           "Canonical loop must be a for loop (range-based or otherwise)");
+    SubStmts[LOOP_STMT] = S;
+  }
+  /// @}
+
+  /// The function that computes the number of loop iterations. Can be evaluated
+  /// before entering the loop but after the syntactical loop's init
+  /// statement(s).
+  ///
+  /// Function signature: void(LogicalTy &Result)
+  /// Any values necessary to compute the distance are captures of the closure.
+  /// @{
+  CapturedStmt *getDistanceFunc() {
+    return cast<CapturedStmt>(SubStmts[DISTANCE_FUNC]);
+  }
+  const CapturedStmt *getDistanceFunc() const {
+    return cast<CapturedStmt>(SubStmts[DISTANCE_FUNC]);
+  }
+  void setDistanceFunc(CapturedStmt *S) {
+    assert(S && "Expected non-null captured statement");
+    SubStmts[DISTANCE_FUNC] = S;
+  }
+  /// @}
+
+  /// The function that computes the loop user variable from a logical iteration
+  /// counter. Can be evaluated as first statement in the loop.
+  ///
+  /// Function signature: void(LoopVarTy &Result, LogicalTy Number)
+  /// Any other values required to compute the loop user variable (such as start
+  /// value, step size) are captured by the closure. In particular, the initial
+  /// value of loop iteration variable is captured by value to be unaffected by
+  /// previous iterations.
+  /// @{
+  CapturedStmt *getLoopVarFunc() {
+    return cast<CapturedStmt>(SubStmts[LOOPVAR_FUNC]);
+  }
+  const CapturedStmt *getLoopVarFunc() const {
+    return cast<CapturedStmt>(SubStmts[LOOPVAR_FUNC]);
+  }
+  void setLoopVarFunc(CapturedStmt *S) {
+    assert(S && "Expected non-null captured statement");
+    SubStmts[LOOPVAR_FUNC] = S;
+  }
+  /// @}
+
+  /// Reference to the loop user variable as accessed in the loop body.
+  /// @{
+  DeclRefExpr *getLoopVarRef() {
+    return cast<DeclRefExpr>(SubStmts[LOOPVAR_REF]);
+  }
+  const DeclRefExpr *getLoopVarRef() const {
+    return cast<DeclRefExpr>(SubStmts[LOOPVAR_REF]);
+  }
+  void setLoopVarRef(DeclRefExpr *E) {
+    assert(E && "Expected non-null loop variable");
+    SubStmts[LOOPVAR_REF] = E;
+  }
+  /// @}
+};
+
 /// This is a basic class for representing single OpenMP executable
 /// directive.
 ///

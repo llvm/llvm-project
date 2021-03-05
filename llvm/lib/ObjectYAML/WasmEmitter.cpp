@@ -484,8 +484,23 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
                                      WasmYAML::ElemSection &Section) {
   encodeULEB128(Section.Segments.size(), OS);
   for (auto &Segment : Section.Segments) {
-    encodeULEB128(Segment.TableIndex, OS);
+    encodeULEB128(Segment.Flags, OS);
+    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER)
+      encodeULEB128(Segment.TableNumber, OS);
+
     writeInitExpr(OS, Segment.Offset);
+
+    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+      // We only support active function table initializers, for which the elem
+      // kind is specified to be written as 0x00 and interpreted to mean
+      // "funcref".
+      if (Segment.ElemKind != uint32_t(wasm::ValType::FUNCREF)) {
+        reportError("unexpected elemkind: " + Twine(Segment.ElemKind));
+        return;
+      }
+      const uint8_t ElemKind = 0;
+      writeUint8(OS, ElemKind);
+    }
 
     encodeULEB128(Segment.Functions.size(), OS);
     for (auto &Function : Segment.Functions)

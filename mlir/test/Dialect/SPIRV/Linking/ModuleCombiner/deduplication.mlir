@@ -4,7 +4,7 @@
 
 // CHECK:      module {
 // CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.globalVariable @foo
+// CHECK-NEXT:     spv.GlobalVariable @foo
 
 // CHECK-NEXT:     spv.func @use_foo
 // CHECK-NEXT:       spv.mlir.addressof @foo
@@ -23,7 +23,7 @@
 
 module {
 spv.module Logical GLSL450 {
-  spv.globalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
+  spv.GlobalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
 
   spv.func @use_foo() -> f32 "None" {
     %0 = spv.mlir.addressof @foo : !spv.ptr<f32, Input>
@@ -33,7 +33,7 @@ spv.module Logical GLSL450 {
 }
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @bar bind(1, 0) : !spv.ptr<f32, Input>
+  spv.GlobalVariable @bar bind(1, 0) : !spv.ptr<f32, Input>
 
   spv.func @use_bar() -> f32 "None" {
     %0 = spv.mlir.addressof @bar : !spv.ptr<f32, Input>
@@ -50,9 +50,9 @@ spv.module Logical GLSL450 {
 
 // CHECK:      module {
 // CHECK-NEXT: spv.module Logical GLSL450 {
-// CHECK-NEXT:   spv.globalVariable @foo bind(1, 0)
+// CHECK-NEXT:   spv.GlobalVariable @foo bind(1, 0)
 
-// CHECK-NEXT:   spv.globalVariable @bar bind(1, 0)
+// CHECK-NEXT:   spv.GlobalVariable @bar bind(1, 0)
 
 // CHECK-NEXT:   spv.func @use_bar
 // CHECK-NEXT:     spv.mlir.addressof @bar
@@ -64,11 +64,11 @@ spv.module Logical GLSL450 {
 
 module {
 spv.module Logical GLSL450 {
-  spv.globalVariable @foo bind(1, 0) : !spv.ptr<i32, Input>
+  spv.GlobalVariable @foo bind(1, 0) : !spv.ptr<i32, Input>
 }
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @bar bind(1, 0) : !spv.ptr<f32, Input>
+  spv.GlobalVariable @bar bind(1, 0) : !spv.ptr<f32, Input>
 
   spv.func @use_bar() -> f32 "None" {
     %0 = spv.mlir.addressof @bar : !spv.ptr<f32, Input>
@@ -84,7 +84,7 @@ spv.module Logical GLSL450 {
 
 // CHECK:      module {
 // CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.globalVariable @foo built_in("GlobalInvocationId")
+// CHECK-NEXT:     spv.GlobalVariable @foo built_in("GlobalInvocationId")
 // CHECK-NEXT:     spv.func @use_bar
 // CHECK-NEXT:       spv.mlir.addressof @foo
 // CHECK-NEXT:       spv.Load
@@ -95,11 +95,11 @@ spv.module Logical GLSL450 {
 
 module {
 spv.module Logical GLSL450 {
-  spv.globalVariable @foo built_in("GlobalInvocationId") : !spv.ptr<vector<3xi32>, Input>
+  spv.GlobalVariable @foo built_in("GlobalInvocationId") : !spv.ptr<vector<3xi32>, Input>
 }
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @bar built_in("GlobalInvocationId") : !spv.ptr<vector<3xi32>, Input>
+  spv.GlobalVariable @bar built_in("GlobalInvocationId") : !spv.ptr<vector<3xi32>, Input>
 
   spv.func @use_bar() -> vector<3xi32> "None" {
     %0 = spv.mlir.addressof @bar : !spv.ptr<vector<3xi32>, Input>
@@ -113,7 +113,7 @@ spv.module Logical GLSL450 {
 
 // CHECK:      module {
 // CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.specConstant @foo spec_id(5)
+// CHECK-NEXT:     spv.SpecConstant @foo spec_id(5)
 
 // CHECK-NEXT:     spv.func @use_foo()
 // CHECK-NEXT:       %0 = spv.mlir.referenceof @foo
@@ -130,7 +130,7 @@ spv.module Logical GLSL450 {
 
 module {
 spv.module Logical GLSL450 {
-  spv.specConstant @foo spec_id(5) = 1. : f32
+  spv.SpecConstant @foo spec_id(5) = 1. : f32
 
   spv.func @use_foo() -> (f32) "None" {
     %0 = spv.mlir.referenceof @foo : f32
@@ -139,7 +139,7 @@ spv.module Logical GLSL450 {
 }
 
 spv.module Logical GLSL450 {
-  spv.specConstant @bar spec_id(5) = 1. : f32
+  spv.SpecConstant @bar spec_id(5) = 1. : f32
 
   spv.func @use_bar() -> (f32) "None" {
     %0 = spv.mlir.referenceof @bar : f32
@@ -153,7 +153,7 @@ spv.module Logical GLSL450 {
 
 // CHECK:      module {
 // CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.specConstant @bar spec_id(5)
+// CHECK-NEXT:     spv.SpecConstant @bar spec_id(5)
 
 // CHECK-NEXT:     spv.func @foo(%arg0: f32)
 // CHECK-NEXT:       spv.ReturnValue
@@ -192,7 +192,7 @@ spv.module Logical GLSL450 {
 
 module {
 spv.module Logical GLSL450 {
-  spv.specConstant @bar spec_id(5) = 1. : f32
+  spv.SpecConstant @bar spec_id(5) = 1. : f32
 
   spv.func @foo(%arg0: f32) -> (f32) "None" {
     spv.ReturnValue %arg0 : f32

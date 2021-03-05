@@ -395,13 +395,6 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL, ElementCount VF) {
 ///       we always assume predicated blocks have a 50% chance of executing.
 static unsigned getReciprocalPredBlockProb() { return 2; }
 
-/// A helper function that adds a 'fast' flag to floating-point operations.
-static Value *addFastMathFlag(Value *V) {
-  if (isa<FPMathOperator>(V))
-    cast<Instruction>(V)->setFastMathFlags(FastMathFlags::getFast());
-  return V;
-}
-
 /// A helper function that returns an integer or floating-point constant with
 /// value C.
 static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
@@ -1115,6 +1108,12 @@ static Value *createStepForVF(IRBuilder<> &B, Constant *Step, ElementCount VF) {
 }
 
 namespace llvm {
+
+/// Return the runtime value for VF.
+Value *getRuntimeVF(IRBuilder<> &B, Type *Ty, ElementCount VF) {
+  Constant *EC = ConstantInt::get(Ty, VF.getKnownMinValue());
+  return VF.isScalable() ? B.CreateVScale(EC) : EC;
+}
 
 void reportVectorizationFailure(const StringRef DebugMsg,
     const StringRef OREMsg, const StringRef ORETag,
@@ -2247,7 +2246,7 @@ void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
   // floating-point arithmetic as appropriate.
   Value *ConstVF =
       getSignedIntOrFpConstant(Step->getType(), VF.getKnownMinValue());
-  Value *Mul = addFastMathFlag(Builder.CreateBinOp(MulOp, Step, ConstVF));
+  Value *Mul = Builder.CreateBinOp(MulOp, Step, ConstVF);
 
   // Create a vector splat to use in the induction update.
   //
@@ -2274,8 +2273,8 @@ void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
     recordVectorLoopValueForInductionCast(II, EntryVal, LastInduction, CastDef,
                                           State, Part);
 
-    LastInduction = cast<Instruction>(addFastMathFlag(
-        Builder.CreateBinOp(AddOp, LastInduction, SplatVF, "step.add")));
+    LastInduction = cast<Instruction>(
+        Builder.CreateBinOp(AddOp, LastInduction, SplatVF, "step.add"));
     LastInduction->setDebugLoc(EntryVal->getDebugLoc());
   }
 
@@ -2407,6 +2406,11 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, Value *Start,
     }
   };
 
+  // Fast-math-flags propagate from the original induction instruction.
+  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+  if (ID.getInductionBinOp() && isa<FPMathOperator>(ID.getInductionBinOp()))
+    Builder.setFastMathFlags(ID.getInductionBinOp()->getFastMathFlags());
+
   // Now do the actual transformations, and start with creating the step value.
   Value *Step = CreateStepValue(ID.getStep());
   if (VF.isZero() || VF.isScalar()) {
@@ -2486,23 +2490,11 @@ Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx, Value *Step,
     Indices.push_back(ConstantFP::get(STy, (double)(StartIdx + i)));
 
   // Add the consecutive indices to the vector value.
+  // Floating-point operations inherit FMF via the builder's flags.
   Constant *Cv = ConstantVector::get(Indices);
-
   Step = Builder.CreateVectorSplat(VLen, Step);
-
-  // Floating point operations had to be 'fast' to enable the induction.
-  FastMathFlags Flags;
-  Flags.setFast();
-
   Value *MulOp = Builder.CreateFMul(Cv, Step);
-  if (isa<Instruction>(MulOp))
-    // Have to check, MulOp may be a constant
-    cast<Instruction>(MulOp)->setFastMathFlags(Flags);
-
-  Value *BOp = Builder.CreateBinOp(BinOp, Val, MulOp, "induction");
-  if (isa<Instruction>(BOp))
-    cast<Instruction>(BOp)->setFastMathFlags(Flags);
-  return BOp;
+  return Builder.CreateBinOp(BinOp, Val, MulOp, "induction");
 }
 
 void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
@@ -2547,15 +2539,15 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
           createStepForVF(Builder, ConstantInt::get(IntStepTy, Part), VF);
       if (ScalarIVTy->isFloatingPointTy())
         StartIdx = Builder.CreateSIToFP(StartIdx, ScalarIVTy);
-      StartIdx = addFastMathFlag(Builder.CreateBinOp(
-          AddOp, StartIdx, getSignedIntOrFpConstant(ScalarIVTy, Lane)));
+      StartIdx = Builder.CreateBinOp(
+          AddOp, StartIdx, getSignedIntOrFpConstant(ScalarIVTy, Lane));
       // The step returned by `createStepForVF` is a runtime-evaluated value
       // when VF is scalable. Otherwise, it should be folded into a Constant.
       assert((VF.isScalable() || isa<Constant>(StartIdx)) &&
              "Expected StartIdx to be folded to a constant when VF is not "
              "scalable");
-      auto *Mul = addFastMathFlag(Builder.CreateBinOp(MulOp, StartIdx, Step));
-      auto *Add = addFastMathFlag(Builder.CreateBinOp(AddOp, ScalarIV, Mul));
+      auto *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
+      auto *Add = Builder.CreateBinOp(AddOp, ScalarIV, Mul);
       State.set(Def, Add, VPIteration(Part, Lane));
       recordVectorLoopValueForInductionCast(ID, EntryVal, Add, CastDef, State,
                                             Part, Lane);
@@ -2569,7 +2561,8 @@ void InnerLoopVectorizer::packScalarIntoVectorValue(VPValue *Def,
   Value *ScalarInst = State.get(Def, Instance);
   Value *VectorValue = State.get(Def, Instance.Part);
   VectorValue = Builder.CreateInsertElement(
-      VectorValue, ScalarInst, State.Builder.getInt32(Instance.Lane));
+      VectorValue, ScalarInst,
+      Instance.Lane.getAsRuntimeExpr(State.Builder, VF));
   State.set(Def, VectorValue, Instance.Part);
 }
 
@@ -2981,7 +2974,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPValue *Def,
     auto InputInstance = Instance;
     if (!Operand || !OrigLoop->contains(Operand) ||
         (Cost->isUniformAfterVectorization(Operand, State.VF)))
-      InputInstance.Lane = 0;
+      InputInstance.Lane = VPLane::getFirstLane();
     auto *NewOp = State.get(User.getOperand(op), InputInstance);
     Cloned->setOperand(op, NewOp);
   }
@@ -3325,6 +3318,7 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
       return LoopVectorBody->getTerminator();
     return &*B.GetInsertPoint();
   };
+
   switch (ID.getKind()) {
   case InductionDescriptor::IK_IntInduction: {
     assert(Index->getType() == StartValue->getType() &&
@@ -3352,22 +3346,9 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
            "Original bin op should be defined for FP induction");
 
     Value *StepValue = cast<SCEVUnknown>(Step)->getValue();
-
-    // Floating point operations had to be 'fast' to enable the induction.
-    FastMathFlags Flags;
-    Flags.setFast();
-
     Value *MulExp = B.CreateFMul(StepValue, Index);
-    if (isa<Instruction>(MulExp))
-      // We have to check, the MulExp may be a constant.
-      cast<Instruction>(MulExp)->setFastMathFlags(Flags);
-
-    Value *BOp = B.CreateBinOp(InductionBinOp->getOpcode(), StartValue, MulExp,
-                               "induction");
-    if (isa<Instruction>(BOp))
-      cast<Instruction>(BOp)->setFastMathFlags(Flags);
-
-    return BOp;
+    return B.CreateBinOp(InductionBinOp->getOpcode(), StartValue, MulExp,
+                         "induction");
   }
   case InductionDescriptor::IK_NoInduction:
     return nullptr;
@@ -3454,6 +3435,11 @@ void InnerLoopVectorizer::createInductionResumeValues(
       EndValue = VectorTripCount;
     } else {
       IRBuilder<> B(L->getLoopPreheader()->getTerminator());
+
+      // Fast-math-flags propagate from the original induction instruction.
+      if (II.getInductionBinOp() && isa<FPMathOperator>(II.getInductionBinOp()))
+        B.setFastMathFlags(II.getInductionBinOp()->getFastMathFlags());
+
       Type *StepType = II.getStep()->getType();
       Instruction::CastOps CastOp =
           CastInst::getCastOpcode(VectorTripCount, true, StepType, true);
@@ -3675,6 +3661,11 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
       assert(isa<PHINode>(UI) && "Expected LCSSA form");
 
       IRBuilder<> B(MiddleBlock->getTerminator());
+
+      // Fast-math-flags propagate from the original induction instruction.
+      if (II.getInductionBinOp() && isa<FPMathOperator>(II.getInductionBinOp()))
+        B.setFastMathFlags(II.getInductionBinOp()->getFastMathFlags());
+
       Value *CountMinusOne = B.CreateSub(
           CountRoundDown, ConstantInt::get(CountRoundDown->getType(), 1));
       Value *CMO =
@@ -4455,14 +4446,13 @@ void InnerLoopVectorizer::fixLCSSAPHIs(VPTransformState &State) {
 
     auto *IncomingValue = LCSSAPhi.getIncomingValue(0);
     // Non-instruction incoming values will have only one value.
-    unsigned LastLane = 0;
-    if (isa<Instruction>(IncomingValue))
-      LastLane = Cost->isUniformAfterVectorization(
-                     cast<Instruction>(IncomingValue), VF)
-                     ? 0
-                     : VF.getKnownMinValue() - 1;
-    assert((!VF.isScalable() || LastLane == 0) &&
-           "scalable vectors dont support non-uniform scalars yet");
+
+    VPLane Lane = VPLane::getFirstLane();
+    if (isa<Instruction>(IncomingValue) &&
+        !Cost->isUniformAfterVectorization(cast<Instruction>(IncomingValue),
+                                           VF))
+      Lane = VPLane::getLastLaneForVF(VF);
+
     // Can be a loop invariant incoming value or the last scalar value to be
     // extracted from the vectorized loop.
     Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());
@@ -4470,7 +4460,7 @@ void InnerLoopVectorizer::fixLCSSAPHIs(VPTransformState &State) {
         OrigLoop->isLoopInvariant(IncomingValue)
             ? IncomingValue
             : State.get(State.Plan->getVPValue(IncomingValue),
-                        VPIteration(UF - 1, LastLane));
+                        VPIteration(UF - 1, Lane));
     LCSSAPhi.addIncoming(lastIncomingValue, LoopMiddleBlock);
   }
 }
@@ -7889,9 +7879,9 @@ Value *InnerLoopUnroller::getStepVector(Value *Val, int StartIdx, Value *Step,
   if (Ty->isFloatingPointTy()) {
     Constant *C = ConstantFP::get(Ty, (double)StartIdx);
 
-    // Floating point operations had to be 'fast' to enable the unrolling.
-    Value *MulOp = addFastMathFlag(Builder.CreateFMul(C, Step));
-    return addFastMathFlag(Builder.CreateBinOp(BinOp, Val, MulOp));
+    // Floating-point operations inherit FMF via the builder's flags.
+    Value *MulOp = Builder.CreateFMul(C, Step);
+    return Builder.CreateBinOp(BinOp, Val, MulOp);
   }
   Constant *C = ConstantInt::get(Ty, StartIdx);
   return Builder.CreateAdd(Val, Builder.CreateMul(C, Step), "induction");
@@ -9148,7 +9138,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     // Insert scalar instance packing it into a vector.
     if (AlsoPack && State.VF.isVector()) {
       // If we're constructing lane 0, initialize to start from poison.
-      if (State.Instance->Lane == 0) {
+      if (State.Instance->Lane.isFirstLane()) {
         assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
         Value *Poison = PoisonValue::get(
             VectorType::get(getUnderlyingValue()->getType(), State.VF));
@@ -9176,7 +9166,7 @@ void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
   assert(State.Instance && "Branch on Mask works only on single instance.");
 
   unsigned Part = State.Instance->Part;
-  unsigned Lane = State.Instance->Lane;
+  unsigned Lane = State.Instance->Lane.getKnownLane();
 
   Value *ConditionBit = nullptr;
   VPValue *BlockInMask = getMask();

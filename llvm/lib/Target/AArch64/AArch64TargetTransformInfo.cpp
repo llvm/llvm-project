@@ -1279,6 +1279,10 @@ int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
       { TTI::SK_Reverse, MVT::nxv8bf16, 1 },
       { TTI::SK_Reverse, MVT::nxv4f32,  1 },
       { TTI::SK_Reverse, MVT::nxv2f64,  1 },
+      { TTI::SK_Reverse, MVT::nxv16i1,  1 },
+      { TTI::SK_Reverse, MVT::nxv8i1,   1 },
+      { TTI::SK_Reverse, MVT::nxv4i1,   1 },
+      { TTI::SK_Reverse, MVT::nxv2i1,   1 },
     };
     std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
     if (const auto *Entry = CostTableLookup(ShuffleTbl, Kind, LT.second))

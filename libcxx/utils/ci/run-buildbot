@@ -61,19 +61,22 @@ MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
 INSTALL_DIR="${BUILD_DIR}/install"
 
+# On macOS, fall back to using the Ninja provided with Xcode if no other Ninja can be found.
+if which ninja &>/dev/null; then
+    NINJA="$(which ninja)"
+else
+    NINJA="$(xcrun --find ninja)"
+fi
+
 function clean() {
     rm -rf "${BUILD_DIR}"
 }
 
 function generate-cmake() {
     echo "--- Generating CMake"
-    # On macOS, fall back to using the Ninja provided with Xcode if no other
-    # Ninja can be found.
-    if which ninja &>/dev/null; then ninja_path="$(which ninja)"; else ninja_path="$(xcrun --find ninja)"; fi
     cmake -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
-          -GNinja \
-          -DCMAKE_MAKE_PROGRAM="${ninja_path}" \
+          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="libcxx;libunwind;libcxxabi" \
@@ -84,29 +87,29 @@ function generate-cmake() {
 
 function check-cxx-cxxabi() {
     echo "+++ Running the libc++ tests"
-    ninja -C "${BUILD_DIR}" check-cxx
+    ${NINJA} -C "${BUILD_DIR}" check-cxx
 
     echo "+++ Running the libc++abi tests"
-    ninja -C "${BUILD_DIR}" check-cxxabi
+    ${NINJA} -C "${BUILD_DIR}" check-cxxabi
 
     echo "--- Installing libc++ and libc++abi to a fake location"
-    ninja -C "${BUILD_DIR}" install-cxx install-cxxabi
+    ${NINJA} -C "${BUILD_DIR}" install-cxx install-cxxabi
 }
 
 # TODO: The goal is to test this against all configurations. We should also move
 #       this to the Lit test suite instead of being a separate CMake target.
 function check-abi-list() {
     echo "+++ Running the libc++ ABI list test"
-    ninja -C "${BUILD_DIR}" check-cxx-abilist || (
+    ${NINJA} -C "${BUILD_DIR}" check-cxx-abilist || (
         echo "+++ Generating the libc++ ABI list after failed check"
-        ninja -C "${BUILD_DIR}" generate-cxx-abilist
+        ${NINJA} -C "${BUILD_DIR}" generate-cxx-abilist
         false
     )
 }
 
 function check-cxx-benchmarks() {
     echo "--- Running the benchmarks"
-    ninja -C "${BUILD_DIR}" check-cxx-benchmarks
+    ${NINJA} -C "${BUILD_DIR}" check-cxx-benchmarks
 }
 
 case "${BUILDER}" in
@@ -327,7 +330,7 @@ documentation)
     generate-cmake -DLLVM_ENABLE_SPHINX=ON
 
     echo "+++ Generating documentation"
-    ninja -C "${BUILD_DIR}" docs-libcxx-html
+    ${NINJA} -C "${BUILD_DIR}" docs-libcxx-html
 ;;
 unified-standalone)
     export CC=clang
@@ -338,7 +341,7 @@ unified-standalone)
     echo "--- Generating CMake"
     cmake -S "${MONOREPO_ROOT}/libcxx/utils/ci/runtimes" \
           -B "${BUILD_DIR}" \
-          -GNinja \
+          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi;libunwind"
@@ -354,7 +357,7 @@ legacy-standalone)
     echo "--- Generating CMake"
     cmake -S "${MONOREPO_ROOT}/libcxx" \
           -B "${BUILD_DIR}/libcxx" \
-          -GNinja \
+          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
@@ -364,7 +367,7 @@ legacy-standalone)
 
     cmake -S "${MONOREPO_ROOT}/libcxxabi" \
           -B "${BUILD_DIR}/libcxxabi" \
-          -GNinja \
+          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
@@ -373,16 +376,16 @@ legacy-standalone)
           -DLIBCXXABI_LIBCXX_LIBRARY_PATH="${BUILD_DIR}/libcxx/lib"
 
     echo "+++ Building libc++abi"
-    ninja -C "${BUILD_DIR}/libcxxabi" cxxabi
+    ${NINJA} -C "${BUILD_DIR}/libcxxabi" cxxabi
 
     echo "+++ Building libc++"
-    ninja -C "${BUILD_DIR}/libcxx" cxx
+    ${NINJA} -C "${BUILD_DIR}/libcxx" cxx
 
     echo "+++ Running the libc++ tests"
-    ninja -C "${BUILD_DIR}/libcxx" check-cxx
+    ${NINJA} -C "${BUILD_DIR}/libcxx" check-cxx
 
     echo "+++ Running the libc++abi tests"
-    ninja -C "${BUILD_DIR}/libcxxabi" check-cxxabi
+    ${NINJA} -C "${BUILD_DIR}/libcxxabi" check-cxxabi
 ;;
 aarch64)
     clean

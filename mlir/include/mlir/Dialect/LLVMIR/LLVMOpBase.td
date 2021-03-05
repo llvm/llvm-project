@@ -35,6 +35,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getLoopAttrName() { return "llvm.loop"; }
     static StringRef getParallelAccessAttrName() { return "parallel_access"; }
     static StringRef getLoopOptionsAttrName() { return "options"; }
+    static StringRef getAccessGroupsAttrName() { return "access_groups"; }
 
     /// Verifies if the given string is a well-formed data layout descriptor.
     /// Uses `reportError` to report errors.
@@ -247,7 +248,8 @@ def LLVM_IntrPatterns {
 // `llvm::Intrinsic` enum; one usually wants these to be related.
 class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
-                      list<OpTrait> traits, int numResults>
+                      list<OpTrait> traits, int numResults,
+                      bit requiresAccessGroup = 0>
     : LLVM_OpBase<dialect, opName, traits>,
       Results<!if(!gt(numResults, 0), (outs LLVM_Type:$res), (outs))> {
   string resultPattern = !if(!gt(numResults, 1),
@@ -264,19 +266,21 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                          overloadedOperands>.lst), ", ") # [{
         });
     auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-    }] # !if(!gt(numResults, 0), "$res = ", "")
-       # [{builder.CreateCall(fn, operands);
-  }];
+    }] # [{auto *inst = builder.CreateCall(fn, operands);
+    }] # !if(!gt(requiresAccessGroup, 0),
+      "moduleTranslation.setAccessGroupsMetadata(op, inst);",
+      "(void) inst;")
+    # !if(!gt(numResults, 0), "$res = inst;", "");
 }
 
 // Base class for LLVM intrinsic operations, should not be used directly. Places
 // the intrinsic into the LLVM dialect and prefixes its name with "intr.".
 class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> overloadedOperands, list<OpTrait> traits,
-                  int numResults>
+                  int numResults, bit requiresAccessGroup = 0>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
                       overloadedResults, overloadedOperands, traits,
-                      numResults>;
+                      numResults, requiresAccessGroup>;
 
 // Base class for LLVM intrinsic operations returning no results. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.".

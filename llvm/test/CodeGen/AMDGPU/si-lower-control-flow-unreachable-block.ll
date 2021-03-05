@@ -3,12 +3,13 @@
 ; GCN-LABEL: {{^}}lower_control_flow_unreachable_terminator:
 ; GCN: v_cmp_eq_u32
 ; GCN: s_and_saveexec_b64
+; GCN-NEXT: s_cbranch_execz BB0_{{[0-9]+}}
 
 ; GCN-NEXT: ; %bb.{{[0-9]+}}: ; %unreachable
 ; GCN: ds_write_b32
 ; GCN: ; divergent unreachable
 
-; GCN-NEXT: ; %bb.{{[0-9]+}}: ; %UnifiedReturnBlock
+; GCN-NEXT: BB0_{{[0-9]+}}: ; %UnifiedReturnBlock
 ; GCN: s_endpgm
 
 define amdgpu_kernel void @lower_control_flow_unreachable_terminator() #0 {
@@ -28,12 +29,13 @@ ret:
 ; GCN-LABEL: {{^}}lower_control_flow_unreachable_terminator_swap_block_order:
 ; GCN: v_cmp_ne_u32
 ; GCN: s_and_saveexec_b64
+; GCN-NEXT: s_cbranch_execz BB1_{{[0-9]+}}
 
 ; GCN-NEXT: ; %bb.{{[0-9]+}}: ; %unreachable
 ; GCN: ds_write_b32
 ; GCN: ; divergent unreachable
 
-; GCN: ; %bb.{{[0-9]+}}:
+; GCN: BB1_{{[0-9]+}}:
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @lower_control_flow_unreachable_terminator_swap_block_order() #0 {
 bb:

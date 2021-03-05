@@ -403,8 +403,7 @@ MLIRContext::MLIRContext(const DialectRegistry &registry)
   /// Unknown Location Attribute.
   impl->unknownLocAttr = AttributeUniquer::get<UnknownLoc>(this);
   /// The empty dictionary attribute.
-  impl->emptyDictionaryAttr =
-      AttributeUniquer::get<DictionaryAttr>(this, ArrayRef<NamedAttribute>());
+  impl->emptyDictionaryAttr = DictionaryAttr::getEmptyUnchecked(this);
 
   // Register the affine storage objects with the uniquer.
   impl->affineUniquer

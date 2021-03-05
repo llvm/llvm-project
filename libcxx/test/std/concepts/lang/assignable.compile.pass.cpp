@@ -125,7 +125,7 @@ template <typename T1, typename T2>
 constexpr bool CheckAssignableFromRvalues() {
   NeverAssignableFrom<T1, T2>();
 
-  constexpr auto Result = std::assignable_from<T1&, T2>;
+  constexpr bool Result = std::assignable_from<T1&, T2>;
   static_assert(std::assignable_from<T1&, T2&&> == Result);
 
   return Result;
@@ -135,7 +135,7 @@ template <typename T1, typename T2>
 constexpr bool CheckAssignableFromLvalues() {
   NeverAssignableFrom<T1, T2>();
 
-  constexpr auto Result = std::assignable_from<T1&, const T2&>;
+  constexpr bool Result = std::assignable_from<T1&, const T2&>;
   static_assert(std::assignable_from<T1&, T2&> == Result);
   static_assert(std::assignable_from<T1&, const T2&> == Result);
 
@@ -543,8 +543,8 @@ static_assert(!CheckAssignableFromLvaluesAndRvalues<
 
 static_assert(CheckAssignableFromLvaluesAndRvalues<std::vector<int>,
                                                    std::vector<int> >());
-static_assert(!CheckAssignableFromLvaluesAndRvalues<std::vector<int>,
-                                                    std::vector<const int> >());
+static_assert(!CheckAssignableFromLvaluesAndRvalues<std::deque<int>,
+                                                    std::deque<const int> >());
 static_assert(!CheckAssignableFromLvaluesAndRvalues<
               std::vector<int>, std::vector<int, A1<int> > >());
 static_assert(!CheckAssignableFromLvaluesAndRvalues<std::vector<int>,

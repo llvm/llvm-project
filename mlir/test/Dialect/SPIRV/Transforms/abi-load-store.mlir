@@ -7,21 +7,21 @@ module attributes {
 
 // CHECK-LABEL: spv.module
 spv.module Logical GLSL450 {
-  // CHECK-DAG: spv.globalVariable [[WORKGROUPSIZE:@.*]] built_in("WorkgroupSize")
-  spv.globalVariable @__builtin_var_WorkgroupSize__ built_in("WorkgroupSize") : !spv.ptr<vector<3xi32>, Input>
-  // CHECK-DAG: spv.globalVariable [[NUMWORKGROUPS:@.*]] built_in("NumWorkgroups")
-  spv.globalVariable @__builtin_var_NumWorkgroups__ built_in("NumWorkgroups") : !spv.ptr<vector<3xi32>, Input>
-  // CHECK-DAG: spv.globalVariable [[LOCALINVOCATIONID:@.*]] built_in("LocalInvocationId")
-  spv.globalVariable @__builtin_var_LocalInvocationId__ built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>
-  // CHECK-DAG: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
-  spv.globalVariable @__builtin_var_WorkgroupId__ built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
-  // CHECK-DAG: spv.globalVariable [[VAR0:@.*]] bind(0, 0) : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0])>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR1:@.*]] bind(0, 1) : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0])>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR2:@.*]] bind(0, 2) : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0])>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR3:@.*]] bind(0, 3) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR4:@.*]] bind(0, 4) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR5:@.*]] bind(0, 5) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR6:@.*]] bind(0, 6) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
+  // CHECK-DAG: spv.GlobalVariable [[WORKGROUPSIZE:@.*]] built_in("WorkgroupSize")
+  spv.GlobalVariable @__builtin_var_WorkgroupSize__ built_in("WorkgroupSize") : !spv.ptr<vector<3xi32>, Input>
+  // CHECK-DAG: spv.GlobalVariable [[NUMWORKGROUPS:@.*]] built_in("NumWorkgroups")
+  spv.GlobalVariable @__builtin_var_NumWorkgroups__ built_in("NumWorkgroups") : !spv.ptr<vector<3xi32>, Input>
+  // CHECK-DAG: spv.GlobalVariable [[LOCALINVOCATIONID:@.*]] built_in("LocalInvocationId")
+  spv.GlobalVariable @__builtin_var_LocalInvocationId__ built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>
+  // CHECK-DAG: spv.GlobalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
+  spv.GlobalVariable @__builtin_var_WorkgroupId__ built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
+  // CHECK-DAG: spv.GlobalVariable [[VAR0:@.*]] bind(0, 0) : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0])>, StorageBuffer>
+  // CHECK-DAG: spv.GlobalVariable [[VAR1:@.*]] bind(0, 1) : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0])>, StorageBuffer>
+  // CHECK-DAG: spv.GlobalVariable [[VAR2:@.*]] bind(0, 2) : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0])>, StorageBuffer>
+  // CHECK-DAG: spv.GlobalVariable [[VAR3:@.*]] bind(0, 3) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
+  // CHECK-DAG: spv.GlobalVariable [[VAR4:@.*]] bind(0, 4) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
+  // CHECK-DAG: spv.GlobalVariable [[VAR5:@.*]] bind(0, 5) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
+  // CHECK-DAG: spv.GlobalVariable [[VAR6:@.*]] bind(0, 6) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
   // CHECK: spv.func [[FN:@.*]]()
   spv.func @load_store_kernel(
     %arg0: !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32>>)>, StorageBuffer>
@@ -40,19 +40,19 @@ spv.module Logical GLSL450 {
     {spv.interface_var_abi = #spv.interface_var_abi<(0, 6), StorageBuffer>}) "None"
   attributes  {spv.entry_point_abi = {local_size = dense<[32, 1, 1]> : vector<3xi32>}} {
     // CHECK: [[ADDRESSARG6:%.*]] = spv.mlir.addressof [[VAR6]]
-    // CHECK: [[CONST6:%.*]] = spv.constant 0 : i32
+    // CHECK: [[CONST6:%.*]] = spv.Constant 0 : i32
     // CHECK: [[ARG6PTR:%.*]] = spv.AccessChain [[ADDRESSARG6]]{{\[}}[[CONST6]]
     // CHECK: {{%.*}} = spv.Load "StorageBuffer" [[ARG6PTR]]
     // CHECK: [[ADDRESSARG5:%.*]] = spv.mlir.addressof [[VAR5]]
-    // CHECK: [[CONST5:%.*]] = spv.constant 0 : i32
+    // CHECK: [[CONST5:%.*]] = spv.Constant 0 : i32
     // CHECK: [[ARG5PTR:%.*]] = spv.AccessChain [[ADDRESSARG5]]{{\[}}[[CONST5]]
     // CHECK: {{%.*}} = spv.Load "StorageBuffer" [[ARG5PTR]]
     // CHECK: [[ADDRESSARG4:%.*]] = spv.mlir.addressof [[VAR4]]
-    // CHECK: [[CONST4:%.*]] = spv.constant 0 : i32
+    // CHECK: [[CONST4:%.*]] = spv.Constant 0 : i32
     // CHECK: [[ARG4PTR:%.*]] = spv.AccessChain [[ADDRESSARG4]]{{\[}}[[CONST4]]
     // CHECK: [[ARG4:%.*]] = spv.Load "StorageBuffer" [[ARG4PTR]]
     // CHECK: [[ADDRESSARG3:%.*]] = spv.mlir.addressof [[VAR3]]
-    // CHECK: [[CONST3:%.*]] = spv.constant 0 : i32
+    // CHECK: [[CONST3:%.*]] = spv.Constant 0 : i32
     // CHECK: [[ARG3PTR:%.*]] = spv.AccessChain [[ADDRESSARG3]]{{\[}}[[CONST3]]
     // CHECK: [[ARG3:%.*]] = spv.Load "StorageBuffer" [[ARG3PTR]]
     // CHECK: [[ADDRESSARG2:%.*]] = spv.mlir.addressof [[VAR2]]
@@ -102,7 +102,7 @@ spv.module Logical GLSL450 {
     // CHECK: spv.IAdd [[ARG4]]
     %37 = spv.IAdd %arg4, %11 : i32
     // CHECK: spv.AccessChain [[ARG0]]
-    %c0 = spv.constant 0 : i32
+    %c0 = spv.Constant 0 : i32
     %38 = spv.AccessChain %arg0[%c0, %36, %37] : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32
     %39 = spv.Load "StorageBuffer" %38 : f32
     // CHECK: spv.AccessChain [[ARG1]]

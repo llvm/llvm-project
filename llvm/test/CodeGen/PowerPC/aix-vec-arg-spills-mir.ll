@@ -22,7 +22,7 @@ define double @caller() {
 ; MIR32:   renamable $v4 = LVSL $zero, renamable $r3
 ; MIR32:   renamable $v2 = VPERM renamable $v3, killed renamable $v2, renamable $v4
 ; MIR32:   renamable $r4 = LI 172
-; MIR32:   STXVW4X killed renamable $v2, $r1, killed renamable $r4 :: (store 16 + 16, align 4)
+; MIR32:   STXVW4X killed renamable $v2, $r1, killed renamable $r4 :: (store 16 into undef + 16, align 4)
 ; MIR32:   renamable $v2 = LVX $zero, killed renamable $r3
 ; MIR32:   renamable $v2 = VPERM killed renamable $v2, killed renamable $v3, killed renamable $v4
 ; MIR32:   renamable $r3 = LI 156
@@ -80,9 +80,9 @@ define double @caller() {
 ; MIR64: bb.0.entry:
 ; MIR64:   renamable $x3 = LDtoc @__const.caller.t, $x2 :: (load 8 from got)
 ; MIR64:   renamable $x4 = LI8 16
-; MIR64:   renamable $vsl0 = LXVD2X renamable $x3, killed renamable $x4 :: (load 16 + 16, align 8)
+; MIR64:   renamable $vsl0 = LXVD2X renamable $x3, killed renamable $x4 :: (load 16 from undef + 16, align 8)
 ; MIR64:   renamable $x4 = LI8 208
-; MIR64:   STXVD2X killed renamable $vsl0, $x1, killed renamable $x4 :: (store 16 + 16, align 4)
+; MIR64:   STXVD2X killed renamable $vsl0, $x1, killed renamable $x4 :: (store 16 into undef + 16, align 4)
 ; MIR64:   renamable $vsl0 = LXVD2X $zero8, killed renamable $x3 :: (load 16, align 8)
 ; MIR64:   renamable $x3 = LI8 192
 ; MIR64:   STXVD2X killed renamable $vsl0, $x1, killed renamable $x3 :: (store 16, align 4)

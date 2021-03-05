@@ -9,7 +9,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
-  // CHECK: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
+  // CHECK: spv.GlobalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
   gpu.module @kernels {
     gpu.func @builtin_workgroup_id_x() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
@@ -33,7 +33,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
-  // CHECK: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
+  // CHECK: spv.GlobalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
   gpu.module @kernels {
     gpu.func @builtin_workgroup_id_y() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
@@ -57,7 +57,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
-  // CHECK: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
+  // CHECK: spv.GlobalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
   gpu.module @kernels {
     gpu.func @builtin_workgroup_id_z() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
@@ -88,7 +88,7 @@ module attributes {gpu.container_module} {
       // Note that this ignores the workgroup size specification in gpu.launch.
       // We may want to define gpu.workgroup_size and convert it to the entry
       // point ABI we want here.
-      // CHECK: spv.constant 32 : i32
+      // CHECK: spv.Constant 32 : i32
       %0 = "gpu.block_dim"() {dimension = "x"} : () -> index
       gpu.return
     }
@@ -110,7 +110,7 @@ module attributes {gpu.container_module} {
     gpu.func @builtin_workgroup_size_y() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[32, 4, 1]>: vector<3xi32>}} {
       // The constant value is obtained from the spv.entry_point_abi.
-      // CHECK: spv.constant 4 : i32
+      // CHECK: spv.Constant 4 : i32
       %0 = "gpu.block_dim"() {dimension = "y"} : () -> index
       gpu.return
     }
@@ -132,7 +132,7 @@ module attributes {gpu.container_module} {
     gpu.func @builtin_workgroup_size_z() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[32, 4, 1]>: vector<3xi32>}} {
       // The constant value is obtained from the spv.entry_point_abi.
-      // CHECK: spv.constant 1 : i32
+      // CHECK: spv.Constant 1 : i32
       %0 = "gpu.block_dim"() {dimension = "z"} : () -> index
       gpu.return
     }
@@ -150,7 +150,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
-  // CHECK: spv.globalVariable [[LOCALINVOCATIONID:@.*]] built_in("LocalInvocationId")
+  // CHECK: spv.GlobalVariable [[LOCALINVOCATIONID:@.*]] built_in("LocalInvocationId")
   gpu.module @kernels {
     gpu.func @builtin_local_id_x() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
@@ -174,7 +174,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
-  // CHECK: spv.globalVariable [[NUMWORKGROUPS:@.*]] built_in("NumWorkgroups")
+  // CHECK: spv.GlobalVariable [[NUMWORKGROUPS:@.*]] built_in("NumWorkgroups")
   gpu.module @kernels {
     gpu.func @builtin_num_workgroups_x() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
@@ -191,7 +191,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
-  // CHECK: spv.globalVariable [[SUBGROUPID:@.*]] built_in("SubgroupId")
+  // CHECK: spv.GlobalVariable [[SUBGROUPID:@.*]] built_in("SubgroupId")
   gpu.module @kernels {
     gpu.func @builtin_subgroup_id() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
@@ -207,7 +207,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
-  // CHECK: spv.globalVariable [[NUMSUBGROUPS:@.*]] built_in("NumSubgroups")
+  // CHECK: spv.GlobalVariable [[NUMSUBGROUPS:@.*]] built_in("NumSubgroups")
   gpu.module @kernels {
     gpu.func @builtin_num_subgroups() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
@@ -223,7 +223,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
-  // CHECK: spv.globalVariable [[SUBGROUPSIZE:@.*]] built_in("SubgroupSize")
+  // CHECK: spv.GlobalVariable [[SUBGROUPSIZE:@.*]] built_in("SubgroupSize")
   gpu.module @kernels {
     gpu.func @builtin_subgroup_size() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {

@@ -73,8 +73,9 @@ def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
   let AdditionalArguments = [];
 }
 
-def AMDGPURegBankCombinerHelper : GICombinerHelper<
-  "AMDGPUGenRegBankCombinerHelper", [rm_uniform_wf]> {
+def AMDGPURegBankCombinerHelper
+    : GICombinerHelper<"AMDGPUGenRegBankCombinerHelper",
+                       [zext_trunc_fold, rm_uniform_wf]> {
   let DisableRuleOption = "amdgpuregbankcombiner-disable-rule";
   let StateClass = "AMDGPURegBankCombinerHelperState";
   let AdditionalArguments = [];

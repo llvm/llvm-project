@@ -2303,6 +2303,11 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 bool PPCAIXAsmPrinter::doFinalization(Module &M) {
+  // Do streamer related finalization for DWARF.
+  if (!MAI->usesDwarfFileAndLocDirectives() && MMI->hasDebugInfo())
+    OutStreamer->doFinalizationAtSectionEnd(
+        OutStreamer->getContext().getObjectFileInfo()->getTextSection());
+
   for (MCSymbol *Sym : ExtSymSDNodeSymbols)
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Extern);
   return PPCAsmPrinter::doFinalization(M);

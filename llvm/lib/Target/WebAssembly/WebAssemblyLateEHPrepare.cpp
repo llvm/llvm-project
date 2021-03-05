@@ -38,7 +38,6 @@ class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
   bool addCatchAlls(MachineFunction &MF);
   bool replaceFuncletReturns(MachineFunction &MF);
   bool removeUnnecessaryUnreachables(MachineFunction &MF);
-  bool ensureSingleBBTermPads(MachineFunction &MF);
   bool restoreStackPointer(MachineFunction &MF);
 
   MachineBasicBlock *getMatchingEHPad(MachineInstr *MI);
@@ -128,7 +127,6 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
     Changed |= hoistCatches(MF);
     Changed |= addCatchAlls(MF);
     Changed |= replaceFuncletReturns(MF);
-    Changed |= ensureSingleBBTermPads(MF);
   }
   Changed |= removeUnnecessaryUnreachables(MF);
   if (MF.getFunction().hasPersonalityFn())
@@ -285,80 +283,6 @@ bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
     }
   }
 
-  return Changed;
-}
-
-// Clang-generated terminate pads are an single-BB EH pad in the form of
-// termpad:
-//   %exn = catch $__cpp_exception
-//   call @__clang_call_terminate(%exn)
-//   unreachable
-// (There can be local.set and local.gets before the call if we didn't run
-// RegStackify)
-// But code transformations can change or add more control flow, so the call to
-// __clang_call_terminate() function may not be in the original EH pad anymore.
-// This ensures every terminate pad is a single BB in the form illustrated
-// above.
-//
-// This is preparation work for the HandleEHTerminatePads pass later, which
-// duplicates terminate pads both for 'catch' and 'catch_all'. Refer to
-// WebAssemblyHandleEHTerminatePads.cpp for details.
-bool WebAssemblyLateEHPrepare::ensureSingleBBTermPads(MachineFunction &MF) {
-  const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
-
-  // Find calls to __clang_call_terminate()
-  SmallVector<MachineInstr *, 8> ClangCallTerminateCalls;
-  SmallPtrSet<MachineBasicBlock *, 8> TermPads;
-  for (auto &MBB : MF) {
-    for (auto &MI : MBB) {
-      if (MI.isCall()) {
-        const MachineOperand &CalleeOp = MI.getOperand(0);
-        if (CalleeOp.isGlobal() && CalleeOp.getGlobal()->getName() ==
-                                       WebAssembly::ClangCallTerminateFn) {
-          MachineBasicBlock *EHPad = getMatchingEHPad(&MI);
-          assert(EHPad && "No matching EH pad for __clang_call_terminate");
-          // In case a __clang_call_terminate call is duplicated during code
-          // transformation so one terminate pad contains multiple
-          // __clang_call_terminate calls, we only count one of them
-          if (TermPads.insert(EHPad).second)
-            ClangCallTerminateCalls.push_back(&MI);
-        }
-      }
-    }
-  }
-
-  bool Changed = false;
-  for (auto *Call : ClangCallTerminateCalls) {
-    MachineBasicBlock *EHPad = getMatchingEHPad(Call);
-    assert(EHPad && "No matching EH pad for __clang_call_terminate");
-
-    // If it is already the form we want, skip it
-    if (Call->getParent() == EHPad &&
-        Call->getNextNode()->getOpcode() == WebAssembly::UNREACHABLE)
-      continue;
-
-    // In case the __clang_call_terminate() call is not in its matching EH pad,
-    // move the call to the end of EH pad and add an unreachable instruction
-    // after that. Delete all successors and their children if any, because here
-    // the program terminates.
-    Changed = true;
-    // This runs after hoistCatches(), so catch instruction should be at the top
-    MachineInstr *Catch = WebAssembly::findCatch(EHPad);
-    assert(Catch && "EH pad does not have a catch instruction");
-    // Takes the result register of the catch instruction as argument. There may
-    // have been some other local.set/local.gets in between, but at this point
-    // we don't care.
-    Call->getOperand(1).setReg(Catch->getOperand(0).getReg());
-    auto InsertPos = std::next(MachineBasicBlock::iterator(Catch));
-    EHPad->insert(InsertPos, Call->removeFromParent());
-    BuildMI(*EHPad, InsertPos, Call->getDebugLoc(),
-            TII.get(WebAssembly::UNREACHABLE));
-    EHPad->erase(InsertPos, EHPad->end());
-    SmallVector<MachineBasicBlock *, 8> Succs(EHPad->successors());
-    for (auto *Succ : Succs)
-      EHPad->removeSuccessor(Succ);
-    eraseDeadBBsAndChildren(Succs);
-  }
   return Changed;
 }
 

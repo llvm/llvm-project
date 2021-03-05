@@ -159,7 +159,9 @@ struct WasmDataSegment {
 };
 
 struct WasmElemSegment {
-  uint32_t TableIndex;
+  uint32_t Flags;
+  uint32_t TableNumber;
+  uint8_t ElemKind;
   WasmInitExpr Offset;
   std::vector<uint32_t> Functions;
 };
@@ -306,6 +308,13 @@ enum : unsigned {
   WASM_DATA_SEGMENT_IS_PASSIVE = 0x01,
   WASM_DATA_SEGMENT_HAS_MEMINDEX = 0x02,
 };
+
+enum : unsigned {
+  WASM_ELEM_SEGMENT_IS_PASSIVE = 0x01,
+  WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER = 0x02,
+  WASM_ELEM_SEGMENT_HAS_INIT_EXPRS = 0x04,
+};
+const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND = 0x3;
 
 // Feature policy prefixes used in the custom "target_features" section
 enum : uint8_t {

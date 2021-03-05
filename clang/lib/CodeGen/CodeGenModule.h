@@ -210,6 +210,9 @@ struct ObjCEntrypoints {
 
   /// void clang.arc.use(...);
   llvm::Function *clang_arc_use;
+
+  /// void clang.arc.noop.use(...);
+  llvm::Function *clang_arc_noop_use;
 };
 
 /// This class records statistics on instrumentation based profiling.
@@ -1370,6 +1373,10 @@ public:
   /// Create and attach type metadata to the given function.
   void CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
+
+  /// Whether this function's return type has no side effects, and thus may
+  /// be trivially discarded if it is unused.
+  bool MayDropFunctionReturn(const ASTContext &Context, QualType ReturnType);
 
   /// Returns whether this module needs the "all-vtables" type identifier.
   bool NeedAllVtablesTypeId() const;
