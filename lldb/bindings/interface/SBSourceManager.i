@@ -11,7 +11,7 @@ namespace lldb {
 %feature("docstring",
 "Represents a central authority for displaying source code.
 
-For example (from test/source-manager/TestSourceManager.py),
+For example (from test/source-manager/TestSourceManager.py), ::
 
         # Create the filespec for 'main.c'.
         filespec = lldb.SBFileSpec('main.c', False)

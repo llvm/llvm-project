@@ -11,7 +11,7 @@ namespace lldb {
 %feature("docstring",
 "Represents an entity which can broadcast events. A default broadcaster is
 associated with an SBCommandInterpreter, SBProcess, and SBTarget.  For
-example, use
+example, use ::
 
     broadcaster = process.GetBroadcaster()
 

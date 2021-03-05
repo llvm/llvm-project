@@ -9,7 +9,7 @@
 namespace lldb {
 
 %feature("docstring",
-"Represents a thread of execution. SBProcess contains SBThread(s).
+"Represents a thread of execution. :py:class:`SBProcess` contains SBThread(s).
 
 SBThreads can be referred to by their ID, which maps to the system specific thread
 identifier, or by IndexID.  The ID may or may not be unique depending on whether the
@@ -18,7 +18,7 @@ that will always uniquely reference a particular thread, and when that thread go
 away it will not be reused.
 
 SBThread supports frame iteration. For example (from test/python_api/
-lldbutil/iter/TestLLDBIterator.py),
+lldbutil/iter/TestLLDBIterator.py), ::
 
         from lldbutil import print_stacktrace
         stopped_due_to_breakpoint = False
@@ -35,7 +35,7 @@ lldbutil/iter/TestLLDBIterator.py),
 
         self.assertTrue(stopped_due_to_breakpoint)
 
-See also SBProcess and SBFrame."
+See also :py:class:`SBFrame` ."
 ) SBThread;
 class SBThread
 {

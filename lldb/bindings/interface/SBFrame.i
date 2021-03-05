@@ -10,7 +10,7 @@ namespace lldb {
 
 %feature("docstring",
 "Represents one of the stack frames associated with a thread.
-SBThread contains SBFrame(s). For example (from test/lldbutil.py),
+SBThread contains SBFrame(s). For example (from test/lldbutil.py), ::
 
 def print_stacktrace(thread, string_buffer = False):
     '''Prints a simple stack trace of this thread.'''
@@ -37,7 +37,7 @@ def print_stacktrace(thread, string_buffer = False):
 
     ...
 
-And,
+And, ::
 
     for frame in thread:
         print frame

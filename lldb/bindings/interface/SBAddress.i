@@ -17,8 +17,9 @@ libraries, bundles, frameworks) being loaded at different
 addresses than the addresses found in the object file that
 represents them on disk. There are currently two types of addresses
 for a section:
-    o file addresses
-    o load addresses
+
+* file addresses
+* load addresses
 
 File addresses represents the virtual addresses that are in the 'on
 disk' object files. These virtual addresses are converted to be
