@@ -125,14 +125,14 @@ struct cxx20_friend_eq_operator_with_deleted_ne {
 struct member_three_way_comparable_with_deleted_eq {
   auto operator<=>(member_three_way_comparable_with_deleted_eq const&) const =
       default;
-  auto
+  bool
   operator==(member_three_way_comparable_with_deleted_eq const&) const = delete;
 };
 
 struct member_three_way_comparable_with_deleted_ne {
   auto operator<=>(member_three_way_comparable_with_deleted_ne const&) const =
       default;
-  auto
+  bool
   operator!=(member_three_way_comparable_with_deleted_ne const&) const = delete;
 };
 
@@ -140,7 +140,7 @@ struct friend_three_way_comparable_with_deleted_eq {
   friend auto
   operator<=>(friend_three_way_comparable_with_deleted_eq const&,
               friend_three_way_comparable_with_deleted_eq const&) = default;
-  friend auto
+  friend bool
   operator==(friend_three_way_comparable_with_deleted_eq const&,
              friend_three_way_comparable_with_deleted_eq const&) = delete;
 };
@@ -149,7 +149,7 @@ struct friend_three_way_comparable_with_deleted_ne {
   friend auto
   operator<=>(friend_three_way_comparable_with_deleted_ne const&,
               friend_three_way_comparable_with_deleted_ne const&) = default;
-  friend auto
+  friend bool
   operator!=(friend_three_way_comparable_with_deleted_ne const&,
              friend_three_way_comparable_with_deleted_ne const&) = delete;
 };

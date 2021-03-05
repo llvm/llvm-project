@@ -243,6 +243,14 @@ template<class _Tp>
 concept move_constructible =
   constructible_from<_Tp, _Tp> && convertible_to<_Tp, _Tp>;
 
+// [concept.copyconstructible]
+template<class _Tp>
+concept copy_constructible =
+  move_constructible<_Tp> &&
+  constructible_from<_Tp, _Tp&> && convertible_to<_Tp&, _Tp> &&
+  constructible_from<_Tp, const _Tp&> && convertible_to<const _Tp&, _Tp> &&
+  constructible_from<_Tp, const _Tp> && convertible_to<const _Tp, _Tp>;
+
 // [concept.booleantestable]
 template<class _Tp>
 concept __boolean_testable_impl = convertible_to<_Tp, bool>;
@@ -274,14 +282,6 @@ concept equality_comparable_with =
       const remove_reference_t<_Tp>&,
       const remove_reference_t<_Up>&>> &&
   __weakly_equality_comparable_with<_Tp, _Up>;
-
-// [concept.copyconstructible]
-template<class _Tp>
-concept copy_constructible =
-  move_constructible<_Tp> &&
-  constructible_from<_Tp, _Tp&> && convertible_to<_Tp&, _Tp> &&
-  constructible_from<_Tp, const _Tp&> && convertible_to<const _Tp&, _Tp> &&
-  constructible_from<_Tp, const _Tp> && convertible_to<const _Tp, _Tp>;
 
 // [concept.invocable]
 template<class _Fn, class... _Args>
