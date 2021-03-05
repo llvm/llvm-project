@@ -981,12 +981,12 @@ public:
   }
 };
 
-/// Converts `spv.loop` to LLVM dialect. All blocks within selection should be
-/// reachable for conversion to succeed.
-/// The structure of the loop in LLVM dialect will be the following:
+/// Converts `spv.mlir.loop` to LLVM dialect. All blocks within selection should
+/// be reachable for conversion to succeed. The structure of the loop in LLVM
+/// dialect will be the following:
 ///
 ///      +------------------------------------+
-///      | <code before spv.loop>             |
+///      | <code before spv.mlir.loop>        |
 ///      | llvm.br ^header                    |
 ///      +------------------------------------+
 ///                           |
@@ -1026,7 +1026,7 @@ public:
 ///                        V
 ///      +------------------------------------+
 ///      | ^remaining:                        |
-///      |   <code after spv.loop>            |
+///      |   <code after spv.mlir.loop>       |
 ///      +------------------------------------+
 ///
 class LoopPattern : public SPIRVToLLVMConversion<spirv::LoopOp> {
@@ -1042,8 +1042,8 @@ public:
 
     Location loc = loopOp.getLoc();
 
-    // Split the current block after `spv.loop`. The remaining ops will be used
-    // in `endBlock`.
+    // Split the current block after `spv.mlir.loop`. The remaining ops will be
+    // used in `endBlock`.
     Block *currentBlock = rewriter.getBlock();
     auto position = Block::iterator(loopOp);
     Block *endBlock = rewriter.splitBlock(currentBlock, position);

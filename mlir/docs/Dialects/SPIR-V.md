@@ -525,7 +525,7 @@ control flow construct. With this approach, it's easier to discover all blocks
 belonging to a structured control flow construct. It is also more idiomatic to
 MLIR system.
 
-We introduce a `spv.selection` and `spv.loop` op for structured selections and
+We introduce a `spv.selection` and `spv.mlir.loop` op for structured selections and
 loops, respectively. The merge targets are the next ops following them. Inside
 their regions, a special terminator, `spv.mlir.merge` is introduced for branching to
 the merge target.
@@ -608,7 +608,7 @@ func @selection(%cond: i1) -> () {
 
 ### Loop
 
-`spv.loop` defines a loop construct. It contains one region. The region should
+`spv.mlir.loop` defines a loop construct. It contains one region. The region should
 contain at least four blocks: one entry block, one loop header block, one loop
 continue block, one merge block.
 
@@ -673,7 +673,7 @@ func @loop(%count : i32) -> () {
   %one = spv.Constant 1: i32
   %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
-  spv.loop {
+  spv.mlir.loop {
     spv.Branch ^header
 
   ^header:
@@ -969,7 +969,7 @@ the representational differences between SPIR-V dialect and binary format:
 *   Attributes on ops, if not part of the op's binary encoding, are emitted as
     `OpDecorate*` instructions in the SPIR-V binary module section for
     decorations.
-*   `spv.selection`s and `spv.loop`s are emitted as basic blocks with `Op*Merge`
+*   `spv.selection`s and `spv.mlir.loop`s are emitted as basic blocks with `Op*Merge`
     instructions in the header block as required by the binary format.
 *   Block arguments are materialized as `OpPhi` instructions at the beginning of
     the corresponding blocks.
@@ -991,7 +991,7 @@ Similarly, a few transformations are performed during deserialization:
     `spv.mlir.referenceof` op to turn the symbol of the corresponding
     `spv.SpecConstant` into an SSA value.
 *   `OpPhi` instructions are converted to block arguments.
-*   Structured control flow are placed inside `spv.selection` and `spv.loop`.
+*   Structured control flow are placed inside `spv.selection` and `spv.mlir.loop`.
 
 ## Conversions
 

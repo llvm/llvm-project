@@ -72,7 +72,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %one = spv.Constant 1: i32
     %ivar = spv.Variable init(%zero) : !spv.ptr<i32, Function>
     %jvar = spv.Variable init(%zero) : !spv.ptr<i32, Function>
-    spv.loop {
+    spv.mlir.loop {
       // CHECK: loc({{".*debug.mlir"}}:75:5)
       spv.Branch ^header
     ^header:
@@ -82,7 +82,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       spv.BranchConditional %icmp, ^body, ^merge
     ^body:
       spv.Store "Function" %jvar, %zero : i32
-      spv.loop {
+      spv.mlir.loop {
         // CHECK: loc({{".*debug.mlir"}}:85:7)
         spv.Branch ^header
       ^header:
