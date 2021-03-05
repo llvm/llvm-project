@@ -16007,7 +16007,7 @@ TEST_F(FormatTest, ParsesConfiguration) {
 
   Style.SortIncludes = FormatStyle::SI_Never;
   CHECK_PARSE("SortIncludes: true", SortIncludes,
-              FormatStyle::SI_CaseInsensitive);
+              FormatStyle::SI_CaseSensitive);
   CHECK_PARSE("SortIncludes: false", SortIncludes, FormatStyle::SI_Never);
   CHECK_PARSE("SortIncludes: CaseInsensitive", SortIncludes,
               FormatStyle::SI_CaseInsensitive);
@@ -18131,7 +18131,7 @@ TEST_F(ReplacementTest, SortIncludesAfterReplacement) {
                             "#include \"b.h\"\n")});
 
   format::FormatStyle Style = format::getLLVMStyle();
-  Style.SortIncludes = FormatStyle::SI_CaseInsensitive;
+  Style.SortIncludes = FormatStyle::SI_CaseSensitive;
   auto FormattedReplaces = formatReplacements(Code, Replaces, Style);
   EXPECT_TRUE(static_cast<bool>(FormattedReplaces))
       << llvm::toString(FormattedReplaces.takeError()) << "\n";
