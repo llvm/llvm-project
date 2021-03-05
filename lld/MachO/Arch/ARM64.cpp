@@ -131,7 +131,7 @@ inline uint64_t encodePageOff12(uint32_t base, uint64_t va) {
   int scale = 0;
   if ((base & 0x3b00'0000) == 0x3900'0000) { // load/store
     scale = base >> 30;
-    if (scale == 0 && (base & 0x0480'0000) == 0x0480'0000) // vector op?
+    if (scale == 0 && (base & 0x0480'0000) == 0x0480'0000) // 128-bit variant
       scale = 4;
   }
 
