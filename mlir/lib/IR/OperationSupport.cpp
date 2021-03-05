@@ -54,7 +54,7 @@ DictionaryAttr NamedAttrList::getDictionary(MLIRContext *context) const {
     dictionarySorted.setPointerAndInt(nullptr, true);
   }
   if (!dictionarySorted.getPointer())
-    dictionarySorted.setPointer(DictionaryAttr::getWithSorted(attrs, context));
+    dictionarySorted.setPointer(DictionaryAttr::getWithSorted(context, attrs));
   return dictionarySorted.getPointer().cast<DictionaryAttr>();
 }
 
