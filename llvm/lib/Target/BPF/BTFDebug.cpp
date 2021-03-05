@@ -371,6 +371,21 @@ void BTFKindDataSec::emitType(MCStreamer &OS) {
   }
 }
 
+BTFTypeFloat::BTFTypeFloat(uint32_t SizeInBits, StringRef TypeName)
+    : Name(TypeName) {
+  Kind = BTF::BTF_KIND_FLOAT;
+  BTFType.Info = Kind << 24;
+  BTFType.Size = roundupToBytes(SizeInBits);
+}
+
+void BTFTypeFloat::completeType(BTFDebug &BDebug) {
+  if (IsCompleted)
+    return;
+  IsCompleted = true;
+
+  BTFType.NameOff = BDebug.addString(Name);
+}
+
 uint32_t BTFStringTable::addString(StringRef S) {
   // Check whether the string already exists.
   for (auto &OffsetM : OffsetToIdMap) {
@@ -409,18 +424,28 @@ uint32_t BTFDebug::addType(std::unique_ptr<BTFTypeBase> TypeEntry) {
 }
 
 void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
-  // Only int types are supported in BTF.
+  // Only int and binary floating point types are supported in BTF.
   uint32_t Encoding = BTy->getEncoding();
-  if (Encoding != dwarf::DW_ATE_boolean && Encoding != dwarf::DW_ATE_signed &&
-      Encoding != dwarf::DW_ATE_signed_char &&
-      Encoding != dwarf::DW_ATE_unsigned &&
-      Encoding != dwarf::DW_ATE_unsigned_char)
+  std::unique_ptr<BTFTypeBase> TypeEntry;
+  switch (Encoding) {
+  case dwarf::DW_ATE_boolean:
+  case dwarf::DW_ATE_signed:
+  case dwarf::DW_ATE_signed_char:
+  case dwarf::DW_ATE_unsigned:
+  case dwarf::DW_ATE_unsigned_char:
+    // Create a BTF type instance for this DIBasicType and put it into
+    // DIToIdMap for cross-type reference check.
+    TypeEntry = std::make_unique<BTFTypeInt>(
+        Encoding, BTy->getSizeInBits(), BTy->getOffsetInBits(), BTy->getName());
+    break;
+  case dwarf::DW_ATE_float:
+    TypeEntry =
+        std::make_unique<BTFTypeFloat>(BTy->getSizeInBits(), BTy->getName());
+    break;
+  default:
     return;
+  }
 
-  // Create a BTF type instance for this DIBasicType and put it into
-  // DIToIdMap for cross-type reference check.
-  auto TypeEntry = std::make_unique<BTFTypeInt>(
-      Encoding, BTy->getSizeInBits(), BTy->getOffsetInBits(), BTy->getName());
   TypeId = addType(std::move(TypeEntry), BTy);
 }
 
