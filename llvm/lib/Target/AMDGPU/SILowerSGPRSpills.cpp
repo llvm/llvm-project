@@ -365,7 +365,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
           }
         }
 
-        if (!TII->isSGPRSpill(MI))
+        if (!TII->isSGPRSpill(MI) || !TRI->spillSGPRToVGPR())
           continue;
 
         int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
