@@ -562,7 +562,7 @@ def SPV_ReferenceOfOp : SPV_Op<"mlir.referenceof", [NoSideEffect]> {
 
 // -----
 
-def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
+def SPV_SpecConstantOp : SPV_Op<"SpecConstant", [InModuleScope, Symbol]> {
   let summary = "The op that declares a SPIR-V specialization constant";
 
   let description = [{
@@ -579,7 +579,7 @@ def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
     <!-- End of AutoGen section -->
 
     ```
-    spv-spec-constant-op ::= `spv.specConstant` symbol-ref-id
+    spv-spec-constant-op ::= `spv.SpecConstant` symbol-ref-id
                              `spec_id(` integer `)`
                              `=` attribute-value (`:` spirv-type)?
     ```
@@ -590,8 +590,8 @@ def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
     #### Example:
 
     ```mlir
-    spv.specConstant @spec_const1 = true
-    spv.specConstant @spec_const2 spec_id(5) = 42 : i32
+    spv.SpecConstant @spec_const1 = true
+    spv.SpecConstant @spec_const2 spec_id(5) = 42 : i32
     ```
   }];
 
@@ -609,23 +609,23 @@ def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
 
 // -----
 
-def SPV_SpecConstantCompositeOp : SPV_Op<"specConstantComposite", [
+def SPV_SpecConstantCompositeOp : SPV_Op<"SpecConstantComposite", [
     InModuleScope, Symbol]> {
   let summary = "Declare a new composite specialization constant.";
 
   let description = [{
     This op declares a SPIR-V composite specialization constant. This covers
     the `OpSpecConstantComposite` SPIR-V instruction. Scalar constants are
-    covered by `spv.specConstant`.
+    covered by `spv.SpecConstant`.
 
     A constituent of a spec constant composite can be:
     - A symbol referring of another spec constant.
     - The SSA ID of a non-specialization constant (i.e. defined through
-      `spv.specConstant`).
+      `spv.SpecConstant`).
     - The SSA ID of a `spv.undef`.
 
     ```
-    spv-spec-constant-composite-op ::= `spv.specConstantComposite` symbol-ref-id ` (`
+    spv-spec-constant-composite-op ::= `spv.SpecConstantComposite` symbol-ref-id ` (`
                                        symbol-ref-id (`, ` symbol-ref-id)*
                                        `) :` composite-type
     ```
@@ -636,10 +636,10 @@ def SPV_SpecConstantCompositeOp : SPV_Op<"specConstantComposite", [
      #### Example:
 
      ```mlir
-     spv.specConstant @sc1 = 1   : i32
-     spv.specConstant @sc2 = 2.5 : f32
-     spv.specConstant @sc3 = 3.5 : f32
-     spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<i32, f32, f32>
+     spv.SpecConstant @sc1 = 1   : i32
+     spv.SpecConstant @sc2 = 2.5 : f32
+     spv.SpecConstant @sc3 = 3.5 : f32
+     spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<i32, f32, f32>
      ```
 
     TODO Add support for constituents that are:

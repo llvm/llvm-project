@@ -180,7 +180,7 @@ instructions are represented in the SPIR-V dialect:
     generate SSA values. Instead they have symbols and should be referenced via
     symbols. To use global variables in a function block, `spv.mlir.addressof` is
     needed to turn the symbol into an SSA value.
-*   Specialization constants are defined with the `spv.specConstant` op. Similar
+*   Specialization constants are defined with the `spv.SpecConstant` op. Similar
     to global variables, they do not generate SSA values and have symbols for
     reference, too. `spv.mlir.referenceof` is needed to turn the symbol into an SSA
     value for use in a function block.
@@ -989,7 +989,7 @@ Similarly, a few transformations are performed during deserialization:
     `spv.globalVariable` into an SSA value.
 *   Every use of a `OpSpecConstant` instruction will materialize a
     `spv.mlir.referenceof` op to turn the symbol of the corresponding
-    `spv.specConstant` into an SSA value.
+    `spv.SpecConstant` into an SSA value.
 *   `OpPhi` instructions are converted to block arguments.
 *   Structured control flow are placed inside `spv.selection` and `spv.loop`.
 
