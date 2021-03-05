@@ -16,7 +16,7 @@
 
 template <class T, class U>
 constexpr bool CheckCommonWith() noexcept {
-  constexpr auto result = std::common_with<T, U>;
+  constexpr bool result = std::common_with<T, U>;
   static_assert(std::common_with<T, U&> == result);
   static_assert(std::common_with<T, const U&> == result);
   static_assert(std::common_with<T, volatile U&> == result);
