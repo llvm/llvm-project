@@ -87,7 +87,7 @@ if(COMPILER_RT_STANDALONE_BUILD)
   # introduce a rule to run to run all of them.
   get_property(LLVM_LIT_TESTSUITES GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
   get_property(LLVM_LIT_DEPENDS GLOBAL PROPERTY LLVM_LIT_DEPENDS)
-  add_lit_testsuite(check-compiler-rt
+  add_lit_target(check-compiler-rt
     "Running all regression tests"
     ${LLVM_LIT_TESTSUITES}
     DEPENDS ${LLVM_LIT_DEPENDS})
