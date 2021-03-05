@@ -622,7 +622,7 @@ def SPV_SpecConstantCompositeOp : SPV_Op<"SpecConstantComposite", [
     - A symbol referring of another spec constant.
     - The SSA ID of a non-specialization constant (i.e. defined through
       `spv.SpecConstant`).
-    - The SSA ID of a `spv.undef`.
+    - The SSA ID of a `spv.Undef`.
 
     ```
     spv-spec-constant-composite-op ::= `spv.SpecConstantComposite` symbol-ref-id ` (`

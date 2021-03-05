@@ -26,7 +26,7 @@ using namespace mlir;
 
 namespace mlir {
 struct ScfToSPIRVContextImpl {
-  // Map between the spirv region control flow operation (spv.loop or
+  // Map between the spirv region control flow operation (spv.mlir.loop or
   // spv.selection) to the VariableOp created to store the region results. The
   // order of the VariableOp matches the order of the results.
   DenseMap<Operation *, SmallVector<spirv::VariableOp, 8>> outputVars;
@@ -111,8 +111,8 @@ public:
 
 /// Helper function to replaces SCF op outputs with SPIR-V variable loads.
 /// We create VariableOp to handle the results value of the control flow region.
-/// spv.loop/spv.selection currently don't yield value. Right after the loop
-/// we load the value from the allocation and use it as the SCF op result.
+/// spv.mlir.loop/spv.selection currently don't yield value. Right after the
+/// loop we load the value from the allocation and use it as the SCF op result.
 template <typename ScfOp, typename OpTy>
 static void replaceSCFOutputValue(ScfOp scfOp, OpTy newOp,
                                   ConversionPatternRewriter &rewriter,

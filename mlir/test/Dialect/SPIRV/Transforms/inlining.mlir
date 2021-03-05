@@ -121,7 +121,7 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @callee(%cond : i1) -> () "None" {
-    spv.loop {
+    spv.mlir.loop {
       spv.Branch ^header
     ^header:
       spv.BranchConditional %cond, ^body, ^merge
@@ -148,7 +148,7 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @callee(%cond : i1) -> () "None" {
-    spv.loop {
+    spv.mlir.loop {
       spv.Branch ^header
     ^header:
       spv.BranchConditional %cond, ^body, ^merge
@@ -166,7 +166,7 @@ spv.module Logical GLSL450 {
   spv.func @calling_loop_no_ret_func() "None" {
     // CHECK-NEXT: %[[TRUE:.*]] = spv.Constant true
     %0 = spv.Constant true
-    // CHECK-NEXT: spv.loop
+    // CHECK-NEXT: spv.mlir.loop
     // CHECK-NEXT:   spv.Branch ^bb1
     // CHECK-NEXT: ^bb1:
     // CHECK-NEXT:   spv.BranchConditional %[[TRUE]], ^bb2, ^bb4

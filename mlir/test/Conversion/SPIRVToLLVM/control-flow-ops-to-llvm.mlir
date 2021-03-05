@@ -82,7 +82,7 @@ spv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.loop
+// spv.mlir.loop
 //===----------------------------------------------------------------------===//
 
 spv.module Logical GLSL450 {
@@ -100,7 +100,7 @@ spv.module Logical GLSL450 {
     // CHECK:   llvm.br ^[[BB5:.*]]
     // CHECK: ^[[BB5]]:
     // CHECK:   llvm.return
-    spv.loop {
+    spv.mlir.loop {
       spv.Branch ^header
     ^header:
       %cond = spv.Constant true

@@ -2297,7 +2297,7 @@ static LogicalResult verify(spirv::LoadOp loadOp) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.loop
+// spv.mlir.loop
 //===----------------------------------------------------------------------===//
 
 void spirv::LoopOp::build(OpBuilder &builder, OperationState &state) {
@@ -2463,12 +2463,12 @@ static LogicalResult verify(spirv::MergeOp mergeOp) {
   auto *parentOp = mergeOp->getParentOp();
   if (!parentOp || !isa<spirv::SelectionOp, spirv::LoopOp>(parentOp))
     return mergeOp.emitOpError(
-        "expected parent op to be 'spv.selection' or 'spv.loop'");
+        "expected parent op to be 'spv.selection' or 'spv.mlir.loop'");
 
   Block &parentLastBlock = mergeOp->getParentRegion()->back();
   if (mergeOp.getOperation() != parentLastBlock.getTerminator())
-    return mergeOp.emitOpError(
-        "can only be used in the last block of 'spv.selection' or 'spv.loop'");
+    return mergeOp.emitOpError("can only be used in the last block of "
+                               "'spv.selection' or 'spv.mlir.loop'");
   return success();
 }
 

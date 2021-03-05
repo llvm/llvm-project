@@ -3085,8 +3085,8 @@ the configuration (without a prefix: ``Auto``).
        #include "A/b.h"
        #include "B/a.h"
 
-  * ``SI_CaseInsensitive`` (in configuration: ``CaseInsensitive``)
-    Includes are sorted in an ASCIIbetical or case insensitive fashion.
+  * ``SI_CaseSensitive`` (in configuration: ``CaseSensitive``)
+    Includes are sorted in an ASCIIbetical or case sensitive fashion.
 
     .. code-block:: c++
 
@@ -3096,8 +3096,8 @@ the configuration (without a prefix: ``Auto``).
        #include "B/a.h"
        #include "a/b.h"
 
-  * ``SI_CaseSensitive`` (in configuration: ``CaseSensitive``)
-    Includes are sorted in an alphabetical or case sensitive fashion.
+  * ``SI_CaseInsensitive`` (in configuration: ``CaseInsensitive``)
+    Includes are sorted in an alphabetical or case insensitive fashion.
 
     .. code-block:: c++
 
