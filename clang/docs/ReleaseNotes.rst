@@ -206,6 +206,9 @@ clang-format
 - Option ``ShortNamespaceLines`` has been added to give better control
   over ``FixNamespaceComments`` when determining a namespace length.
 
+- Support for Whitesmiths has been improved, with fixes for ``namespace`` blocks
+  and ``case`` blocks and labels.
+
 libclang
 --------
 
