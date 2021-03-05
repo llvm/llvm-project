@@ -51,6 +51,15 @@ public:
   bool shouldExpandReduction(const IntrinsicInst *II) const;
   bool supportsScalableVectors() const { return ST->hasStdExtV(); }
   Optional<unsigned> getMaxVScale() const;
+
+  unsigned getRegisterBitWidth(bool Vector) const {
+    if (Vector) {
+      if (ST->hasStdExtV())
+        return ST->getMinRVVVectorSizeInBits();
+      return 0;
+    }
+    return ST->getXLen();
+  }
 };
 
 } // end namespace llvm
