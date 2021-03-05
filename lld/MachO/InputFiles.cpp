@@ -544,9 +544,10 @@ void ObjFile::parseDebugInfo() {
   // TODO: Since object files can contain a lot of DWARF info, we should verify
   // that we are parsing just the info we need
   const DWARFContext::compile_unit_range &units = ctx->compile_units();
+  // FIXME: There can be more than one compile unit per object file. See
+  // PR48637.
   auto it = units.begin();
   compileUnit = it->get();
-  assert(std::next(it) == units.end());
 }
 
 // The path can point to either a dylib or a .tbd file.
