@@ -61,6 +61,7 @@ struct Configuration {
   bool printWhyLoad = false;
   bool searchDylibsFirst = false;
   bool saveTemps = false;
+  bool adhocCodesign = false;
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;

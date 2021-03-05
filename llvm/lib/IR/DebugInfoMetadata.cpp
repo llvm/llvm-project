@@ -1059,6 +1059,7 @@ unsigned DIExpression::ExprOperand::getSize() const {
   case dwarf::DW_OP_plus_uconst:
   case dwarf::DW_OP_LLVM_tag_offset:
   case dwarf::DW_OP_LLVM_entry_value:
+  case dwarf::DW_OP_LLVM_arg:
   case dwarf::DW_OP_regx:
     return 2;
   default:
@@ -1115,6 +1116,7 @@ bool DIExpression::isValid() const {
     }
     case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:
+    case dwarf::DW_OP_LLVM_arg:
     case dwarf::DW_OP_LLVM_tag_offset:
     case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus_uconst:
@@ -1268,6 +1270,30 @@ DIExpression *DIExpression::prepend(const DIExpression *Expr, uint8_t Flags,
   bool EntryValue = Flags & DIExpression::EntryValue;
 
   return prependOpcodes(Expr, Ops, StackValue, EntryValue);
+}
+
+DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
+                                           ArrayRef<uint64_t> Ops,
+                                           unsigned ArgNo, bool StackValue) {
+  assert(Expr && "Can't add ops to this expression");
+
+  // Handle non-variadic intrinsics by prepending the opcodes.
+  if (!any_of(Expr->expr_ops(),
+              [](auto Op) { return Op.getOp() == dwarf::DW_OP_LLVM_arg; })) {
+    assert(ArgNo == 0 &&
+           "Location Index must be 0 for a non-variadic expression.");
+    SmallVector<uint64_t, 8> NewOps(Ops.begin(), Ops.end());
+    return DIExpression::prependOpcodes(Expr, NewOps, StackValue);
+  }
+
+  SmallVector<uint64_t, 8> NewOps;
+  for (auto Op : Expr->expr_ops()) {
+    Op.appendToVector(NewOps);
+    if (Op.getOp() == dwarf::DW_OP_LLVM_arg && Op.getArg(0) == ArgNo)
+      NewOps.insert(NewOps.end(), Ops.begin(), Ops.end());
+  }
+
+  return DIExpression::get(Expr->getContext(), NewOps);
 }
 
 DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,

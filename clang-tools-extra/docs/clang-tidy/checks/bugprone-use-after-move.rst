@@ -169,6 +169,10 @@ that a move always takes place:
 The check will assume that the last line causes a move, even though, in this
 particular case, it does not. Again, this is intentional.
 
+There is one special case: A call to ``std::move`` inside a ``try_emplace`` call
+is conservatively assumed not to move. This is to avoid spurious warnings, as
+the check has no way to reason about the ``bool`` returned by ``try_emplace``.
+
 When analyzing the order in which moves, uses and reinitializations happen (see
 section `Unsequenced moves, uses, and reinitializations`_), the move is assumed
 to occur in whichever function the result of the ``std::move`` is passed to.

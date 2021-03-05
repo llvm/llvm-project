@@ -451,8 +451,15 @@ MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
 /// for a MachineOperand.
 MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
-                            MachineOperand &MO, const MDNode *Variable,
+                            const MachineOperand &MO, const MDNode *Variable,
                             const MDNode *Expr);
+
+/// This version of the builder builds a DBG_VALUE or DBG_VALUE_LIST intrinsic
+/// for a MachineOperand.
+MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
+                            const MCInstrDesc &MCID, bool IsIndirect,
+                            ArrayRef<MachineOperand> MOs,
+                            const MDNode *Variable, const MDNode *Expr);
 
 /// This version of the builder builds a DBG_VALUE intrinsic
 /// for either a value in a register or a register-indirect
@@ -470,6 +477,14 @@ MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
                             const MCInstrDesc &MCID, bool IsIndirect,
                             MachineOperand &MO, const MDNode *Variable,
                             const MDNode *Expr);
+
+/// This version of the builder builds a DBG_VALUE or DBG_VALUE_LIST intrinsic
+/// for a machine operand and inserts it at position I.
+MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
+                            MachineBasicBlock::iterator I, const DebugLoc &DL,
+                            const MCInstrDesc &MCID, bool IsIndirect,
+                            ArrayRef<MachineOperand> MOs,
+                            const MDNode *Variable, const MDNode *Expr);
 
 /// Clone a DBG_VALUE whose value has been spilled to FrameIndex.
 MachineInstr *buildDbgValueForSpill(MachineBasicBlock &BB,
