@@ -2,6 +2,11 @@ add_mlir_interface(OpAsmInterface)
 add_mlir_interface(SymbolInterfaces)
 add_mlir_interface(RegionKindInterface)
 
+set(LLVM_TARGET_DEFINITIONS BuiltinAttributes.td)
+mlir_tablegen(BuiltinAttributes.h.inc -gen-attrdef-decls)
+mlir_tablegen(BuiltinAttributes.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIRBuiltinAttributesIncGen)
+
 set(LLVM_TARGET_DEFINITIONS BuiltinDialect.td)
 mlir_tablegen(BuiltinDialect.h.inc -gen-dialect-decls)
 add_public_tablegen_target(MLIRBuiltinDialectIncGen)
