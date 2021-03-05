@@ -5187,7 +5187,7 @@ static VarDecl *precomputeExpr(Sema &Actions,
 /// \param Rel       Comparison operator of the loop condition.
 /// \param StartExpr Value of the loop counter at the first iteration.
 /// \param StopExpr  Expression the loop counter is compared against in the loop
-/// condition. \param Step      Amount of increment after each iteration.
+/// condition. \param StepExpr      Amount of increment after each iteration.
 ///
 /// \return Closure (CapturedStmt) of the distance calculation.
 static CapturedStmt *buildDistanceFunc(Sema &Actions, QualType LogicalTy,
