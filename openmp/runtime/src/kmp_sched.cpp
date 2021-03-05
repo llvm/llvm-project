@@ -522,8 +522,8 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
         __kmp_static == kmp_sch_static_greedy ||
         __kmp_static ==
             kmp_sch_static_balanced); // Unknown static scheduling type.
-    // only masters of some teams get single iteration, other threads get
-    // nothing
+    // only primary threads of some teams get single iteration, other threads
+    // get nothing
     if (team_id < trip_count && tid == 0) {
       *pupper = *pupperDist = *plower = *plower + team_id * incr;
     } else {
