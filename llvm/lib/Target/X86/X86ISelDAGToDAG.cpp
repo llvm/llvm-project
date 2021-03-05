@@ -5554,11 +5554,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         if (auto *LoadN = dyn_cast<LoadSDNode>(N0.getOperand(0).getNode())) {
           if (!LoadN->isSimple()) {
             unsigned NumVolBits = LoadN->getValueType(0).getSizeInBits();
-            if (MOpc == X86::TEST8mi && NumVolBits != 8)
-              break;
-            else if (MOpc == X86::TEST16mi && NumVolBits != 16)
-              break;
-            else if (MOpc == X86::TEST32mi && NumVolBits != 32)
+            if ((MOpc == X86::TEST8mi && NumVolBits != 8) ||
+                (MOpc == X86::TEST16mi && NumVolBits != 16) ||
+                (MOpc == X86::TEST32mi && NumVolBits != 32))
               break;
           }
         }
