@@ -484,9 +484,10 @@ public:
   // Operation Walkers
   //===--------------------------------------------------------------------===//
 
-  /// Walk the operation in postorder, calling the callback for each nested
-  /// operation(including this one). The callback method can take any of the
-  /// following forms:
+  /// Walk the operation by calling the callback for each nested operation
+  /// (including this one). The walk order for regions, blocks and operations is
+  /// specified by 'Order' (post-order by default). The callback method can take
+  /// any of the following forms:
   ///   void(Operation*) : Walk all operations opaquely.
   ///     * op->walk([](Operation *nestedOp) { ...});
   ///   void(OpT) : Walk all operations of the given derived type.
@@ -499,9 +500,10 @@ public:
   ///           return WalkResult::interrupt();
   ///         return WalkResult::advance();
   ///       });
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   RetT walk(FnT &&callback) {
-    return detail::walk(this, std::forward<FnT>(callback));
+    return detail::walk<Order>(this, std::forward<FnT>(callback));
   }
 
   //===--------------------------------------------------------------------===//

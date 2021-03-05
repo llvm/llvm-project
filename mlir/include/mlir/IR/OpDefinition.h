@@ -165,12 +165,14 @@ public:
   /// handlers that may be listening.
   InFlightDiagnostic emitRemark(const Twine &message = {});
 
-  /// Walk the operation in postorder, calling the callback for each nested
-  /// operation(including this one).
+  /// Walk the operation by calling the callback for each nested
+  /// operation(including this one). The walk order for regions, blocks and
+  /// operations is specified by 'Order' (post-order by default).
   /// See Operation::walk for more details.
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   RetT walk(FnT &&callback) {
-    return state->walk(std::forward<FnT>(callback));
+    return state->walk<Order>(std::forward<FnT>(callback));
   }
 
   // These are default implementations of customization hooks.
