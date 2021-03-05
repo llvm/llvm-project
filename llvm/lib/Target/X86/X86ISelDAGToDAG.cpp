@@ -30,7 +30,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
-#include <stdint.h>
+#include <cstdint>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-isel"
