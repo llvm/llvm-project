@@ -73,3 +73,40 @@ class CommandRunInterpreterAPICase(TestBase):
         self.assertGreater(n_errors, 0)
         self.assertTrue(quit_requested)
         self.assertFalse(has_crashed)
+
+class SBCommandInterpreterRunOptionsCase(TestBase):
+
+    NO_DEBUG_INFO_TESTCASE = True
+    mydir = TestBase.compute_mydir(__file__)
+
+    def test_command_interpreter_run_options(self):
+        """Test SBCommandInterpreterRunOptions default values, getters & setters """
+
+        opts = lldb.SBCommandInterpreterRunOptions()
+
+        # Check getters with default values
+        self.assertEqual(opts.GetStopOnContinue(), False)
+        self.assertEqual(opts.GetStopOnError(), False)
+        self.assertEqual(opts.GetStopOnCrash(), False)
+        self.assertEqual(opts.GetEchoCommands(), True)
+        self.assertEqual(opts.GetPrintResults(), True)
+        self.assertEqual(opts.GetPrintErrors(), True)
+        self.assertEqual(opts.GetAddToHistory(), True)
+
+        # Invert values
+        opts.SetStopOnContinue(not opts.GetStopOnContinue())
+        opts.SetStopOnError(not opts.GetStopOnError())
+        opts.SetStopOnCrash(not opts.GetStopOnCrash())
+        opts.SetEchoCommands(not opts.GetEchoCommands())
+        opts.SetPrintResults(not opts.GetPrintResults())
+        opts.SetPrintErrors(not opts.GetPrintErrors())
+        opts.SetAddToHistory(not opts.GetAddToHistory())
+
+        # Check the value changed
+        self.assertEqual(opts.GetStopOnContinue(), True)
+        self.assertEqual(opts.GetStopOnError(), True)
+        self.assertEqual(opts.GetStopOnCrash(), True)
+        self.assertEqual(opts.GetEchoCommands(), False)
+        self.assertEqual(opts.GetPrintResults(), False)
+        self.assertEqual(opts.GetPrintErrors(), False)
+        self.assertEqual(opts.GetAddToHistory(), False)
