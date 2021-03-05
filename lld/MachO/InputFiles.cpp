@@ -407,7 +407,11 @@ void ObjFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
 
     const section_64 &sec = sectionHeaders[sym.n_sect - 1];
     SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
-    assert(!subsecMap.empty());
+
+    // parseSections() may have chosen not to parse this section.
+    if (subsecMap.empty())
+      continue;
+
     uint64_t offset = sym.n_value - sec.addr;
 
     // If the input file does not use subsections-via-symbols, all symbols can
