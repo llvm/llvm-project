@@ -64,6 +64,7 @@ CODEGENOPT(DisableLifetimeMarkers, 1, 0) ///< Don't emit any lifetime markers
 CODEGENOPT(DisableO0ImplyOptNone , 1, 0) ///< Don't annonate function with optnone at O0
 CODEGENOPT(ExperimentalStrictFloatingPoint, 1, 0) ///< Enables the new, experimental
                                                   ///< strict floating point.
+CODEGENOPT(EnableNoundefAttrs, 1, 0) ///< Enable emitting `noundef` attributes on IR call arguments and return values
 CODEGENOPT(LegacyPassManager, 1, 0) ///< Use the legacy pass manager.
 CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
                                    ///< pass manager.
