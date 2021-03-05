@@ -3239,11 +3239,12 @@ static void __kmp_stg_parse_proc_bind(char const *name, char const *value,
     for (;;) {
       enum kmp_proc_bind_t bind;
 
-      if ((num == (int)proc_bind_master) ||
-          __kmp_match_str("master", buf, &next)) {
+      if ((num == (int)proc_bind_primary) ||
+          __kmp_match_str("master", buf, &next) ||
+          __kmp_match_str("primary", buf, &next)) {
         buf = next;
         SKIP_WS(buf);
-        bind = proc_bind_master;
+        bind = proc_bind_primary;
       } else if ((num == (int)proc_bind_close) ||
                  __kmp_match_str("close", buf, &next)) {
         buf = next;
@@ -3311,8 +3312,8 @@ static void __kmp_stg_print_proc_bind(kmp_str_buf_t *buffer, char const *name,
         __kmp_str_buf_print(buffer, "true");
         break;
 
-      case proc_bind_master:
-        __kmp_str_buf_print(buffer, "master");
+      case proc_bind_primary:
+        __kmp_str_buf_print(buffer, "primary");
         break;
 
       case proc_bind_close:
