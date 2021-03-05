@@ -6307,11 +6307,6 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   const Align PtrAlign = IsPPC64 ? Align(8) : Align(4);
   const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
 
-  if (ValVT.isVector() && !State.getMachineFunction()
-                               .getTarget()
-                               .Options.EnableAIXExtendedAltivecABI)
-    report_fatal_error("the default Altivec AIX ABI is not yet supported");
-
   if (ValVT == MVT::f128)
     report_fatal_error("f128 is unimplemented on AIX.");
 
@@ -15326,6 +15321,15 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (!R.second && StringRef("{cc}").equals_lower(Constraint)) {
     R.first = PPC::CR0;
     R.second = &PPC::CRRCRegClass;
+  }
+  // FIXME: This warning should ideally be emitted in the front end.
+  const auto &TM = getTargetMachine();
+  if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI()) {
+    if (((R.first >= PPC::V20 && R.first <= PPC::V31) ||
+         (R.first >= PPC::VF20 && R.first <= PPC::VF31)) &&
+        (R.second == &PPC::VSRCRegClass || R.second == &PPC::VSFRCRegClass))
+      errs() << "warning: vector registers 20 to 32 are reserved in the "
+                "default AIX AltiVec ABI and cannot be used\n";
   }
 
   return R;

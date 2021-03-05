@@ -1107,6 +1107,12 @@ def DBG_VALUE : StandardPseudoInstruction {
   let AsmString = "DBG_VALUE";
   let hasSideEffects = false;
 }
+def DBG_VALUE_LIST : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins variable_ops);
+  let AsmString = "DBG_VALUE_LIST";
+  let hasSideEffects = 0;
+}
 def DBG_INSTR_REF : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);

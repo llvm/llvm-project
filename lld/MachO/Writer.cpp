@@ -725,8 +725,7 @@ void Writer::createOutputSections() {
   unwindInfoSection = make<UnwindInfoSection>(); // TODO(gkm): only when no -r
   symtabSection = make<SymtabSection>(*stringTableSection);
   indirectSymtabSection = make<IndirectSymtabSection>();
-  if (config->outputType == MH_EXECUTE &&
-      (config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e))
+  if (config->adhocCodesign)
     codeSignatureSection = make<CodeSignatureSection>();
 
   switch (config->outputType) {

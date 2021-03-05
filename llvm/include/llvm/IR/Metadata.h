@@ -299,6 +299,9 @@ public:
   /// Replace all uses of this with \c MD, which is allowed to be null.
   void replaceAllUsesWith(Metadata *MD);
 
+  /// Returns the list of all DIArgList users of this.
+  SmallVector<Metadata *, 4> getAllArgListUsers();
+
   /// Resolve all uses of this.
   ///
   /// Resolve all uses of this, turning off RAUW permanently.  If \c
@@ -377,6 +380,10 @@ public:
   Value *getValue() const { return V; }
   Type *getType() const { return V->getType(); }
   LLVMContext &getContext() const { return V->getContext(); }
+
+  SmallVector<Metadata *, 4> getAllArgListUsers() {
+    return ReplaceableMetadataImpl::getAllArgListUsers();
+  }
 
   static void handleDeletion(Value *V);
   static void handleRAUW(Value *From, Value *To);

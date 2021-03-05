@@ -250,6 +250,37 @@ func @reduction_d(%arga: tensor<1024xf32>, %argb: tensor<1024xf32>, %argx: tenso
   return %0 : tensor<f32>
 }
 
+//
+// CHECK-VEC1-LABEL: func @reduction_17
+// CHECK-VEC1-DAG:   %[[c0:.*]] = constant 0 : index
+// CHECK-VEC1-DAG:   %[[c16:.*]] = constant 16 : index
+// CHECK-VEC1-DAG:   %[[c17:.*]] = constant 17 : index
+// CHECK-VEC1-DAG:   %[[v0:.*]] = constant dense<0.000000e+00> : vector<16xf32>
+// CHECK-VEC1:       %[[red:.*]] = scf.for %[[i:.*]] = %[[c0]] to %[[c17]] step %[[c16]] iter_args(%[[red_in:.*]] = %[[v0]]) -> (vector<16xf32>) {
+// CHECK-VEC1:         %[[sub:.*]] = subi %[[c17]], %[[i]] : index
+// CHECK-VEC1:         %[[mask:.*]] = vector.create_mask %[[sub]] : vector<16xi1>
+// CHECK-VEC1:         %[[la:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<17xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC1:         %[[lb:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<17xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC1:         %[[m:.*]] = mulf %[[la]], %[[lb]] : vector<16xf32>
+// CHECK-VEC1:         %[[a:.*]] = addf %[[red_in]], %[[m]] : vector<16xf32>
+// CHECK-VEC1:         %[[s:.*]] = select %[[mask]], %[[a]], %[[red_in]] : vector<16xi1>, vector<16xf32>
+// CHECK-VEC1:         scf.yield %[[s]] : vector<16xf32>
+// CHECK-VEC1:       }
+// CHECK-VEC1:       %{{.*}} = vector.reduction "add", %[[red]], %{{.*}} : vector<16xf32> into f32
+// CHECK-VEC1:       return
+//
+func @reduction_17(%arga: tensor<17xf32>, %argb: tensor<17xf32>, %argx: tensor<f32>) -> tensor<f32> {
+  %0 = linalg.generic #trait_reduction_d
+    ins(%arga, %argb: tensor<17xf32>, tensor<17xf32>)
+    outs(%argx: tensor<f32>) {
+      ^bb(%a: f32, %b: f32, %x: f32):
+        %0 = mulf %a, %b : f32
+        %1 = addf %x, %0 : f32
+        linalg.yield %1 : f32
+  } -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
 #trait_mul_ds = {
   indexing_maps = [
     affine_map<(i,j) -> (i,j)>,  // a
