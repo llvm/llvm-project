@@ -225,7 +225,7 @@ DWARF:
 
 ## h) Test that yaml2obj emits an error if 'Descriptor' is missing.
 
-# RUN: not yaml2obj --docnum=8 %s -o %t8.o 2>&1 | FileCheck -DMSG=%errc_EINVAL %s --check-prefix=MISSING-KEY --ignore-case
+# RUN: not yaml2obj --docnum=8 %s -o %t8.o 2>&1 | FileCheck -DMSG=%errc_EINVAL %s --check-prefix=MISSING-KEY
 
 #      MISSING-KEY: YAML:{{.*}}:9: error: missing required key 'Descriptor'
 # MISSING-KEY-NEXT:       - DieOffset: 0x12345678
