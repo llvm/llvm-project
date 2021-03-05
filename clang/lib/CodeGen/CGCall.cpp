@@ -4449,7 +4449,8 @@ llvm::CallBase *CodeGenFunction::EmitCallOrInvoke(llvm::FunctionCallee Callee,
 
 void CodeGenFunction::deferPlaceholderReplacement(llvm::Instruction *Old,
                                                   llvm::Value *New) {
-  DeferredReplacements.push_back(std::make_pair(Old, New));
+  DeferredReplacements.push_back(
+      std::make_pair(llvm::WeakTrackingVH(Old), New));
 }
 
 namespace {
