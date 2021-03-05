@@ -67,6 +67,7 @@ static bool ContainsUnresolvedTypeAlias(swift::Demangle::NodePointer node) {
 swift::Demangle::NodePointer
 TypeSystemSwiftTypeRef::CanonicalizeSugar(swift::Demangle::Demangler &dem,
                                           swift::Demangle::NodePointer node) {
+  using namespace swift::Demangle;
   return TypeSystemSwiftTypeRef::Transform(dem, node, [&](NodePointer n) {
     if ((n->getKind() != Node::Kind::BoundGenericEnum &&
          n->getKind() != Node::Kind::BoundGenericStructure) ||
@@ -288,7 +289,7 @@ GetClangTypeNode(CompilerType clang_type, swift::Demangle::Demangler &dem,
 }
 
 /// \return the child of the \p Type node.
-static NodePointer GetType(swift::Demangle::NodePointer n) {
+static swift::Demangle::NodePointer GetType(swift::Demangle::NodePointer n) {
   using namespace swift::Demangle;
   if (!n || n->getKind() != Node::Kind::Global || !n->hasChildren())
     return nullptr;
@@ -305,8 +306,7 @@ static NodePointer GetType(swift::Demangle::NodePointer n) {
 /// Demangle a mangled type name and return the child of the \p Type node.
 static swift::Demangle::NodePointer
 GetDemangledType(swift::Demangle::Demangler &dem, StringRef name) {
-  NodePointer n = dem.demangleSymbol(name);
-  return GetType(n);
+  return GetType(dem.demangleSymbol(name));
 }
 
 /// Resolve a type alias node and return a demangle tree for the
@@ -321,6 +321,7 @@ ResolveTypeAlias(SwiftASTContext *module_holder,
                  swift::Demangle::Demangler &dem,
                  swift::Demangle::NodePointer node,
                  bool prefer_clang_types = false) {
+  using namespace swift::Demangle;
   // Try to look this up as a Swift type alias. For each *Swift*
   // type alias there is a debug info entry that has the mangled
   // name as name and the aliased type as a type.
@@ -576,9 +577,8 @@ GetCanonicalNode(SwiftASTContext *module_holder,
 swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetCanonicalDemangleTree(
     SwiftASTContext *module_holder, swift::Demangle::Demangler &dem,
     StringRef mangled_name) {
-  NodePointer node = dem.demangleSymbol(mangled_name);
-  NodePointer canonical = GetCanonicalNode(module_holder, dem, node);
-  return canonical;
+  auto *node = dem.demangleSymbol(mangled_name);
+  return GetCanonicalNode(module_holder, dem, node);
 }
 
 static clang::Decl *GetDeclForTypeAndKind(clang::QualType qual_type,
@@ -638,10 +638,10 @@ clang::api_notes::APINotesManager *TypeSystemSwiftTypeRef::GetAPINotesManager(
 }
 
 /// Desugar a sugared type.
-static swift::Demangle::NodePointer Desugar(swift::Demangle::Demangler &dem,
-                                            swift::Demangle::NodePointer node,
-                                            Node::Kind bound_kind,
-                                            Node::Kind kind, llvm::StringRef name) {
+static swift::Demangle::NodePointer
+Desugar(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
+        swift::Demangle::Node::Kind bound_kind,
+        swift::Demangle::Node::Kind kind, llvm::StringRef name) {
   using namespace swift::Demangle;
   NodePointer desugared = dem.createNode(bound_kind);
   NodePointer type = dem.createNode(Node::Kind::Type);
@@ -736,6 +736,7 @@ swift::Demangle::NodePointer
 TypeSystemSwiftTypeRef::GetSwiftified(swift::Demangle::Demangler &dem,
                                       swift::Demangle::NodePointer node,
                                       bool resolve_objc_module) {
+  using namespace swift::Demangle;
   StringRef ident = GetObjCTypeName(node);
   if (ident.empty())
     return node;
@@ -907,10 +908,8 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetNodeForPrintingImpl(
 swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetDemangleTreeForPrinting(
     swift::Demangle::Demangler &dem, const char *mangled_name,
      bool resolve_objc_module) {
-  NodePointer node = dem.demangleSymbol(mangled_name);
-  NodePointer canonical =
-      GetNodeForPrintingImpl(dem, node, resolve_objc_module);
-  return canonical;
+  auto *node = dem.demangleSymbol(mangled_name);
+  return GetNodeForPrintingImpl(dem, node, resolve_objc_module);
 }
 
 /// Determine wether this demangle tree contains an unresolved type alias.

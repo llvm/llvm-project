@@ -1483,7 +1483,8 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     if (!valobj)
       return {};
     bool found_start = false;
-    swift::Demangle::Demangler dem;
+    using namespace swift::Demangle;
+    Demangler dem;
     auto mangled = type.GetMangledTypeName().GetStringRef();
     NodePointer type_node = dem.demangleSymbol(mangled);
     llvm::StringRef type_name = GetBaseName(ts->CanonicalizeSugar(dem, type_node));
@@ -1494,7 +1495,7 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
         // even when querying base classes. Drop base classes until we
         // reach the requested type.
         if (auto *tr = sc.get_typeref()) {
-          swift::Demangle::NodePointer base_class = tr->getDemangling(dem);
+          NodePointer base_class = tr->getDemangling(dem);
           if (GetBaseName(base_class) != type_name)
             return false;
           found_start = true;
@@ -1948,6 +1949,8 @@ CompilerType
 SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
                                                     TypeSystemSwiftTypeRef &ts,
                                                     ConstString mangled_name) {
+  using namespace swift::Demangle;
+
   Status error;
   auto &target = m_process.GetTarget();
   auto scratch_ctx = target.GetScratchSwiftASTContext(error, stack_frame);
@@ -1959,10 +1962,10 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
     return ts.GetTypeFromMangledTypename(mangled_name);
   }
 
-  swift::Demangle::Demangler dem;
-  swift::Demangle::NodePointer canonical = TypeSystemSwiftTypeRef::Transform(
+  Demangler dem;
+  NodePointer canonical = TypeSystemSwiftTypeRef::Transform(
       dem, dem.demangleSymbol(mangled_name.GetStringRef()),
-      [](swift::Demangle::NodePointer node) {
+      [](NodePointer node) {
         if (node->getKind() != Node::Kind::DynamicSelf)
           return node;
         // Substitute the static type for dynamic self.
@@ -2004,8 +2007,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
 
   // Build a TypeRef from the demangle tree.
   auto type_ref_or_err =
-    swift::Demangle::decodeMangledType(reflection_ctx->getBuilder(),
-                                       canonical);
+      decodeMangledType(reflection_ctx->getBuilder(), canonical);
   if (type_ref_or_err.isError()) {
     LLDB_LOG(
       GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_TYPES),
@@ -2017,7 +2019,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
   // Apply the substitutions.
   const swift::reflection::TypeRef *bound_type_ref =
       type_ref->subst(reflection_ctx->getBuilder(), substitutions);
-  swift::Demangle::NodePointer node = bound_type_ref->getDemangling(dem);
+  NodePointer node = bound_type_ref->getDemangling(dem);
   CompilerType bound_type = ts.RemangleAsType(dem, node);
 
   // Import the type into the scratch context. Subsequent conversions
