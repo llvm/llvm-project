@@ -22,12 +22,12 @@
   (list
    ;; Attributes
    `(,(regexp-opt
-       '("alwaysinline" "argmemonly" "builtin" "cold" "convergent" "inaccessiblememonly"
-         "inaccessiblemem_or_argmemonly" "inlinehint" "jumptable" "minsize" "mustprogress" "naked" "nobuiltin"
-         "noduplicate" "nofree" "noimplicitfloat" "noinline" "nonlazybind" "noredzone" "noreturn"
-         "norecurse" "noundef" "nounwind" "optnone" "optsize" "readnone" "readonly" "returns_twice"
-         "speculatable" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
-         "sanitize_thread" "sanitize_memory" "strictfp" "uwtable" "willreturn" "writeonly" "immarg") 'symbols) . font-lock-constant-face)
+       '("alwaysinline" "argmemonly" "allocsize" "builtin" "cold" "convergent" "dereferenceable_or_null" "hot" "inaccessiblememonly"
+         "inaccessiblemem_or_argmemonly" "inalloca" "inlinehint" "jumptable" "minsize" "mustprogress" "naked" "nobuiltin"
+         "nocallback" "nocf_check" "noduplicate" "nofree" "noimplicitfloat" "noinline" "nomerge" "nonlazybind" "noprofile" "noredzone" "noreturn"
+         "norecurse" "nosync" "noundef" "nounwind" "null_pointer_is_valid" "optforfuzzing" "optnone" "optsize" "preallocated" "readnone" "readonly" "returns_twice"
+         "shadowcallstack" "speculatable" "speculative_load_hardening" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
+         "sanitize_thread" "sanitize_memory" "strictfp" "swifterror" "uwtable" "willreturn" "writeonly" "immarg") 'symbols) . font-lock-constant-face)
    ;; Variables
    '("%[-a-zA-Z$._][-a-zA-Z$._0-9]*" . font-lock-variable-name-face)
    ;; Labels

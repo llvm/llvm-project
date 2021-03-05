@@ -1239,8 +1239,9 @@ void SlotTracker::CreateFunctionSlot(const Value *V) {
 void SlotTracker::CreateMetadataSlot(const MDNode *N) {
   assert(N && "Can't insert a null Value into SlotTracker!");
 
-  // Don't make slots for DIExpressions. We just print them inline everywhere.
-  if (isa<DIExpression>(N))
+  // Don't make slots for DIExpressions or DIArgLists. We just print them inline
+  // everywhere.
+  if (isa<DIExpression>(N) || isa<DIArgList>(N))
     return;
 
   unsigned DestSlot = mdnNext;
@@ -2351,6 +2352,21 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
   Out << ")";
 }
 
+static void writeDIArgList(raw_ostream &Out, const DIArgList *N,
+                           TypePrinting *TypePrinter, SlotTracker *Machine,
+                           const Module *Context, bool FromValue = false) {
+  assert(FromValue &&
+         "Unexpected DIArgList metadata outside of value argument");
+  Out << "!DIArgList(";
+  FieldSeparator FS;
+  MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
+  for (Metadata *Arg : N->getArgs()) {
+    Out << FS;
+    WriteAsOperandInternal(Out, Arg, TypePrinter, Machine, Context, true);
+  }
+  Out << ")";
+}
+
 static void writeDIGlobalVariableExpression(raw_ostream &Out,
                                             const DIGlobalVariableExpression *N,
                                             TypePrinting *TypePrinter,
@@ -2496,10 +2512,14 @@ static void WriteAsOperandInternal(raw_ostream &Out, const Metadata *MD,
                                    TypePrinting *TypePrinter,
                                    SlotTracker *Machine, const Module *Context,
                                    bool FromValue) {
-  // Write DIExpressions inline when used as a value. Improves readability of
-  // debug info intrinsics.
+  // Write DIExpressions and DIArgLists inline when used as a value. Improves
+  // readability of debug info intrinsics.
   if (const DIExpression *Expr = dyn_cast<DIExpression>(MD)) {
     writeDIExpression(Out, Expr, TypePrinter, Machine, Context);
+    return;
+  }
+  if (const DIArgList *ArgList = dyn_cast<DIArgList>(MD)) {
+    writeDIArgList(Out, ArgList, TypePrinter, Machine, Context, FromValue);
     return;
   }
 
@@ -3427,6 +3447,8 @@ void AssemblyWriter::printNamedMDNode(const NamedMDNode *NMD) {
     // Write DIExpressions inline.
     // FIXME: Ban DIExpressions in NamedMDNodes, they will serve no purpose.
     MDNode *Op = NMD->getOperand(i);
+    assert(!isa<DIArgList>(Op) &&
+           "DIArgLists should not appear in NamedMDNodes");
     if (auto *Expr = dyn_cast<DIExpression>(Op)) {
       writeDIExpression(Out, Expr, nullptr, nullptr, nullptr);
       continue;
@@ -4697,7 +4719,7 @@ static void printMetadataImpl(raw_ostream &ROS, const Metadata &MD,
                          /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
-  if (OnlyAsOperand || !N || isa<DIExpression>(MD))
+  if (OnlyAsOperand || !N || isa<DIExpression>(MD) || isa<DIArgList>(MD))
     return;
 
   OS << " = ";

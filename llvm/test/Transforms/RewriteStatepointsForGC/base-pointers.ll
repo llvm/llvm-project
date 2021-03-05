@@ -152,4 +152,24 @@ next:                                             ; preds = %merge
   ret i64 addrspace(1)* %bdv
 }
 
+; We know from the deopt use that %bdv must be a base value, and as
+; result can avoid materializing the extra copy of the BDV phi node.
+; (Even without a general forward analysis)
+define i64 addrspace(1)* @test6(i1 %cnd, i64 addrspace(1)* %obj, i64 addrspace(1)* %obj2) gc "statepoint-example" {
+; CHECK-LABEL: @test6
+entry:
+  br label %merge
+
+merge:                                            ; preds = %merge, %entry
+; CHECK-LABEL: merge:
+; CHECK-NEXT: phi
+; CHECK-NEXT: br i1
+  %bdv = phi i64 addrspace(1)* [ %obj, %entry ], [ %obj2, %merge ]
+  br i1 %cnd, label %merge, label %next
+
+next:                                             ; preds = %merge
+  call void @foo() [ "deopt"(i64 addrspace(1)* %bdv) ]
+  ret i64 addrspace(1)* %bdv
+}
+
 declare void @foo()

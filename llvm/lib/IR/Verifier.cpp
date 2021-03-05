@@ -1301,6 +1301,13 @@ void Verifier::visitDIMacroFile(const DIMacroFile &N) {
   }
 }
 
+void Verifier::visitDIArgList(const DIArgList &N) {
+  AssertDI(!N.getNumOperands(),
+           "DIArgList should have no operands other than a list of "
+           "ValueAsMetadata",
+           &N);
+}
+
 void Verifier::visitDIModule(const DIModule &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_module, "invalid tag", &N);
   AssertDI(!N.getName().empty(), "anonymous module", &N);
@@ -5365,9 +5372,9 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
 
 void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
   auto *MD = cast<MetadataAsValue>(DII.getArgOperand(0))->getMetadata();
-  AssertDI(isa<ValueAsMetadata>(MD) ||
-             (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
-         "invalid llvm.dbg." + Kind + " intrinsic address/value", &DII, MD);
+  AssertDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
+               (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
+           "invalid llvm.dbg." + Kind + " intrinsic address/value", &DII, MD);
   AssertDI(isa<DILocalVariable>(DII.getRawVariable()),
          "invalid llvm.dbg." + Kind + " intrinsic variable", &DII,
          DII.getRawVariable());

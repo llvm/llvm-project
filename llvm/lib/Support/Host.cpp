@@ -420,11 +420,6 @@ StringRef sys::detail::getHostCPUNameForBPF() {
 #if defined(__i386__) || defined(_M_IX86) || \
     defined(__x86_64__) || defined(_M_X64)
 
-enum VendorSignatures {
-  SIG_INTEL = 0x756e6547 /* Genu */,
-  SIG_AMD = 0x68747541 /* Auth */
-};
-
 // The check below for i386 was copied from clang's cpuid.h (__get_cpuid_max).
 // Check motivated by bug reports for OpenSSL crashing on CPUs without CPUID
 // support. Consequently, for i386, the presence of CPUID is checked first
@@ -497,6 +492,42 @@ static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
   return true;
 #endif
 }
+
+namespace llvm {
+namespace sys {
+namespace detail {
+namespace x86 {
+
+VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
+  unsigned EAX = 0, EBX = 0, ECX = 0, EDX = 0;
+  if (MaxLeaf == nullptr)
+    MaxLeaf = &EAX;
+  else
+    *MaxLeaf = 0;
+
+  if (!isCpuIdSupported())
+    return VendorSignatures::UNKNOWN;
+
+  if (getX86CpuIDAndInfo(0, MaxLeaf, &EBX, &ECX, &EDX) || *MaxLeaf < 1)
+    return VendorSignatures::UNKNOWN;
+
+  // "Genu ineI ntel"
+  if (EBX == 0x756e6547 && ECX == 0x6c65746e && EDX == 0x49656e69)
+    return VendorSignatures::GENUINE_INTEL;
+
+  // "Auth enti cAMD"
+  if (EBX == 0x68747541 && ECX == 0x69746e65 && EDX == 0x444d4163)
+    return VendorSignatures::AUTHENTIC_AMD;
+
+  return VendorSignatures::UNKNOWN;
+}
+
+} // namespace x86
+} // namespace detail
+} // namespace sys
+} // namespace llvm
+
+using namespace llvm::sys::detail::x86;
 
 /// getX86CpuIDAndInfoEx - Execute the specified cpuid with subleaf and return
 /// the 4 values in the specified arguments.  If we can't run cpuid on the host,
@@ -1095,14 +1126,12 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
 }
 
 StringRef sys::getHostCPUName() {
+  unsigned MaxLeaf = 0;
+  const VendorSignatures Vendor = getVendorSignature(&MaxLeaf);
+  if (Vendor == VendorSignatures::UNKNOWN)
+    return "generic";
+
   unsigned EAX = 0, EBX = 0, ECX = 0, EDX = 0;
-  unsigned MaxLeaf, Vendor;
-
-  if (!isCpuIdSupported())
-    return "generic";
-
-  if (getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX) || MaxLeaf < 1)
-    return "generic";
   getX86CpuIDAndInfo(0x1, &EAX, &EBX, &ECX, &EDX);
 
   unsigned Family = 0, Model = 0;
@@ -1117,10 +1146,10 @@ StringRef sys::getHostCPUName() {
 
   StringRef CPU;
 
-  if (Vendor == SIG_INTEL) {
+  if (Vendor == VendorSignatures::GENUINE_INTEL) {
     CPU = getIntelProcessorTypeAndSubtype(Family, Model, Features, &Type,
                                           &Subtype);
-  } else if (Vendor == SIG_AMD) {
+  } else if (Vendor == VendorSignatures::AUTHENTIC_AMD) {
     CPU = getAMDProcessorTypeAndSubtype(Family, Model, Features, &Type,
                                         &Subtype);
   }
@@ -1254,6 +1283,19 @@ StringRef sys::getHostCPUName() {
 }
 #else
 StringRef sys::getHostCPUName() { return "generic"; }
+namespace llvm {
+namespace sys {
+namespace detail {
+namespace x86 {
+
+VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
+  return VendorSignatures::UNKNOWN;
+}
+
+} // namespace x86
+} // namespace detail
+} // namespace sys
+} // namespace llvm
 #endif
 
 #if defined(__linux__) && (defined(__i386__) || defined(__x86_64__))

@@ -1236,7 +1236,20 @@ static void findBasePointers(DominatorTree &DT, DefiningValueMapTy &DVCache,
                              CallBase *Call,
                              PartiallyConstructedSafepointRecord &result) {
   MapVector<Value *, Value *> PointerToBase;
-  findBasePointers(result.LiveSet, PointerToBase, &DT, DVCache);
+  StatepointLiveSetTy PotentiallyDerivedPointers = result.LiveSet;
+  // We assume that all pointers passed to deopt are base pointers; as an
+  // optimization, we can use this to avoid seperately materializing the base
+  // pointer graph.  This is only relevant since we're very conservative about
+  // generating new conflict nodes during base pointer insertion.  If we were
+  // smarter there, this would be irrelevant.
+  if (auto Opt = Call->getOperandBundle(LLVMContext::OB_deopt))
+    for (Value *V : Opt->Inputs) {
+      if (!PotentiallyDerivedPointers.count(V))
+        continue;
+      PotentiallyDerivedPointers.remove(V);
+      PointerToBase[V] = V;
+    }
+  findBasePointers(PotentiallyDerivedPointers, PointerToBase, &DT, DVCache);
 
   if (PrintBasePointers) {
     errs() << "Base Pairs (w/o Relocation):\n";

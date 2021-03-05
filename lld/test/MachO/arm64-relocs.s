@@ -15,6 +15,8 @@
 ## PAGE21 relocations are aligned to 4096 bytes
 # CHECK-NEXT:  adrp	x2, [[#]] ; 0x[[#BAZ+4096-128]]
 # CHECK-NEXT:  ldr	x2, [x2, #128]
+# CHECK-NEXT:  adrp     x3, 8 ; 0x8000
+# CHECK-NEXT:  ldr      q0, [x3, #144]
 # CHECK-NEXT:  ret
 
 # CHECK-LABEL: Contents of (__DATA_CONST,__const) section
@@ -22,7 +24,7 @@
 # CHECK:       [[#PTR_2]]	{{0*}}[[#BAZ+123]] 00000000 00000000 00000000
 
 .text
-.globl _foo, _bar, _baz
+.globl _foo, _bar, _baz, _quux
 .p2align 2
 _foo:
   ## Generates ARM64_RELOC_BRANCH26 and ARM64_RELOC_ADDEND
@@ -31,6 +33,11 @@ _foo:
   adrp x2, _baz@PAGE + 4097
   ## Generates ARM64_RELOC_PAGEOFF12
   ldr x2, [x2, _baz@PAGEOFF]
+
+  ## Generates ARM64_RELOC_PAGE21
+  adrp x3, _quux@PAGE
+  ## Generates ARM64_RELOC_PAGEOFF12 with internal slide 4
+  ldr q0, [x3, _quux@PAGEOFF]
   ret
 
 .p2align 2
@@ -41,6 +48,11 @@ _bar:
 .space 128
 _baz:
 .space 1
+
+.p2align 4
+_quux:
+.quad 0
+.quad 80
 
 .section __DATA_CONST,__const
 ## These generate ARM64_RELOC_UNSIGNED symbol relocations. llvm-mc seems to
