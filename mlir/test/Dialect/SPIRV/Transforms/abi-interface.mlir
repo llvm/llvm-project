@@ -18,7 +18,7 @@ spv.module Logical GLSL450 {
   attributes {spv.entry_point_abi = {local_size = dense<[32, 1, 1]> : vector<3xi32>}} {
     // CHECK: [[ARG1:%.*]] = spv.mlir.addressof [[VAR1]]
     // CHECK: [[ADDRESSARG0:%.*]] = spv.mlir.addressof [[VAR0]]
-    // CHECK: [[CONST0:%.*]] = spv.constant 0 : i32
+    // CHECK: [[CONST0:%.*]] = spv.Constant 0 : i32
     // CHECK: [[ARG0PTR:%.*]] = spv.AccessChain [[ADDRESSARG0]]{{\[}}[[CONST0]]
     // CHECK: [[ARG0:%.*]] = spv.Load "StorageBuffer" [[ARG0PTR]]
     // CHECK: spv.Return

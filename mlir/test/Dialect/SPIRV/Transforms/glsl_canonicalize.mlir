@@ -2,10 +2,10 @@
 
 // CHECK: func @clamp_fordlessthan(%[[INPUT:.*]]: f32)
 func @clamp_fordlessthan(%input: f32) -> f32 {
-  // CHECK: %[[MIN:.*]] = spv.constant
-  %min = spv.constant 0.5 : f32
-  // CHECK: %[[MAX:.*]] = spv.constant
-  %max = spv.constant 1.0 : f32
+  // CHECK: %[[MIN:.*]] = spv.Constant
+  %min = spv.Constant 0.5 : f32
+  // CHECK: %[[MAX:.*]] = spv.Constant
+  %max = spv.Constant 1.0 : f32
 
   // CHECK: [[RES:%.*]] = spv.GLSL.FClamp %[[INPUT]], %[[MIN]], %[[MAX]]
   %0 = spv.FOrdLessThan %min, %input : f32
@@ -21,10 +21,10 @@ func @clamp_fordlessthan(%input: f32) -> f32 {
 
 // CHECK: func @clamp_fordlessthanequal(%[[INPUT:.*]]: f32)
 func @clamp_fordlessthanequal(%input: f32) -> f32 {
-  // CHECK: %[[MIN:.*]] = spv.constant
-  %min = spv.constant 0.5 : f32
-  // CHECK: %[[MAX:.*]] = spv.constant
-  %max = spv.constant 1.0 : f32
+  // CHECK: %[[MIN:.*]] = spv.Constant
+  %min = spv.Constant 0.5 : f32
+  // CHECK: %[[MAX:.*]] = spv.Constant
+  %max = spv.Constant 1.0 : f32
 
   // CHECK: [[RES:%.*]] = spv.GLSL.FClamp %[[INPUT]], %[[MIN]], %[[MAX]]
   %0 = spv.FOrdLessThanEqual %min, %input : f32
@@ -40,10 +40,10 @@ func @clamp_fordlessthanequal(%input: f32) -> f32 {
 
 // CHECK: func @clamp_slessthan(%[[INPUT:.*]]: si32)
 func @clamp_slessthan(%input: si32) -> si32 {
-  // CHECK: %[[MIN:.*]] = spv.constant
-  %min = spv.constant 0 : si32
-  // CHECK: %[[MAX:.*]] = spv.constant
-  %max = spv.constant 10 : si32
+  // CHECK: %[[MIN:.*]] = spv.Constant
+  %min = spv.Constant 0 : si32
+  // CHECK: %[[MAX:.*]] = spv.Constant
+  %max = spv.Constant 10 : si32
 
   // CHECK: [[RES:%.*]] = spv.GLSL.SClamp %[[INPUT]], %[[MIN]], %[[MAX]]
   %0 = spv.SLessThan %min, %input : si32
@@ -59,10 +59,10 @@ func @clamp_slessthan(%input: si32) -> si32 {
 
 // CHECK: func @clamp_slessthanequal(%[[INPUT:.*]]: si32)
 func @clamp_slessthanequal(%input: si32) -> si32 {
-  // CHECK: %[[MIN:.*]] = spv.constant
-  %min = spv.constant 0 : si32
-  // CHECK: %[[MAX:.*]] = spv.constant
-  %max = spv.constant 10 : si32
+  // CHECK: %[[MIN:.*]] = spv.Constant
+  %min = spv.Constant 0 : si32
+  // CHECK: %[[MAX:.*]] = spv.Constant
+  %max = spv.Constant 10 : si32
 
   // CHECK: [[RES:%.*]] = spv.GLSL.SClamp %[[INPUT]], %[[MIN]], %[[MAX]]
   %0 = spv.SLessThanEqual %min, %input : si32
@@ -78,10 +78,10 @@ func @clamp_slessthanequal(%input: si32) -> si32 {
 
 // CHECK: func @clamp_ulessthan(%[[INPUT:.*]]: i32)
 func @clamp_ulessthan(%input: i32) -> i32 {
-  // CHECK: %[[MIN:.*]] = spv.constant
-  %min = spv.constant 0 : i32
-  // CHECK: %[[MAX:.*]] = spv.constant
-  %max = spv.constant 10 : i32
+  // CHECK: %[[MIN:.*]] = spv.Constant
+  %min = spv.Constant 0 : i32
+  // CHECK: %[[MAX:.*]] = spv.Constant
+  %max = spv.Constant 10 : i32
 
   // CHECK: [[RES:%.*]] = spv.GLSL.UClamp %[[INPUT]], %[[MIN]], %[[MAX]]
   %0 = spv.ULessThan %min, %input : i32
@@ -97,10 +97,10 @@ func @clamp_ulessthan(%input: i32) -> i32 {
 
 // CHECK: func @clamp_ulessthanequal(%[[INPUT:.*]]: i32)
 func @clamp_ulessthanequal(%input: i32) -> i32 {
-  // CHECK: %[[MIN:.*]] = spv.constant
-  %min = spv.constant 0 : i32
-  // CHECK: %[[MAX:.*]] = spv.constant
-  %max = spv.constant 10 : i32
+  // CHECK: %[[MIN:.*]] = spv.Constant
+  %min = spv.Constant 0 : i32
+  // CHECK: %[[MAX:.*]] = spv.Constant
+  %max = spv.Constant 10 : i32
 
   // CHECK: [[RES:%.*]] = spv.GLSL.UClamp %[[INPUT]], %[[MIN]], %[[MAX]]
   %0 = spv.ULessThanEqual %min, %input : i32

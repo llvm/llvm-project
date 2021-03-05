@@ -17,13 +17,13 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @callee() -> i32 "None" {
-    %0 = spv.constant 42 : i32
+    %0 = spv.Constant 42 : i32
     spv.ReturnValue %0 : i32
   }
 
   // CHECK-LABEL: @calling_single_block_retval_func
   spv.func @calling_single_block_retval_func() -> i32 "None" {
-    // CHECK-NEXT: %[[CST:.*]] = spv.constant 42
+    // CHECK-NEXT: %[[CST:.*]] = spv.Constant 42
     %0 = spv.FunctionCall @callee() : () -> (i32)
     // CHECK-NEXT: spv.ReturnValue %[[CST]]
     spv.ReturnValue %0 : i32
@@ -36,12 +36,12 @@ spv.module Logical GLSL450 {
   spv.globalVariable @data bind(0, 0) : !spv.ptr<!spv.struct<(!spv.rtarray<i32> [0])>, StorageBuffer>
   spv.func @callee() "None" {
     %0 = spv.mlir.addressof @data : !spv.ptr<!spv.struct<(!spv.rtarray<i32> [0])>, StorageBuffer>
-    %1 = spv.constant 0: i32
+    %1 = spv.Constant 0: i32
     %2 = spv.AccessChain %0[%1, %1] : !spv.ptr<!spv.struct<(!spv.rtarray<i32> [0])>, StorageBuffer>, i32, i32
     spv.Branch ^next
 
   ^next:
-    %3 = spv.constant 42: i32
+    %3 = spv.Constant 42: i32
     spv.Store "StorageBuffer" %2, %3 : i32
     spv.Return
   }
@@ -49,11 +49,11 @@ spv.module Logical GLSL450 {
   // CHECK-LABEL: @calling_multi_block_ret_func
   spv.func @calling_multi_block_ret_func() "None" {
     // CHECK-NEXT:   spv.mlir.addressof
-    // CHECK-NEXT:   spv.constant 0
+    // CHECK-NEXT:   spv.Constant 0
     // CHECK-NEXT:   spv.AccessChain
     // CHECK-NEXT:   spv.Branch ^bb1
     // CHECK-NEXT: ^bb1:
-    // CHECK-NEXT:   spv.constant
+    // CHECK-NEXT:   spv.Constant
     // CHECK-NEXT:   spv.Store
     // CHECK-NEXT:   spv.Branch ^bb2
     spv.FunctionCall @callee() : () -> ()
@@ -81,7 +81,7 @@ spv.module Logical GLSL450 {
 
   // CHECK-LABEL: @calling_selection_ret_func
   spv.func @calling_selection_ret_func() "None" {
-    %0 = spv.constant true
+    %0 = spv.Constant true
     // CHECK: spv.FunctionCall
     spv.FunctionCall @callee(%0) : (i1) -> ()
     spv.Return
@@ -104,8 +104,8 @@ spv.module Logical GLSL450 {
 
   // CHECK-LABEL: @calling_selection_no_ret_func
   spv.func @calling_selection_no_ret_func() "None" {
-    // CHECK-NEXT: %[[TRUE:.*]] = spv.constant true
-    %0 = spv.constant true
+    // CHECK-NEXT: %[[TRUE:.*]] = spv.Constant true
+    %0 = spv.Constant true
     // CHECK-NEXT: spv.selection
     // CHECK-NEXT:   spv.BranchConditional %[[TRUE]], ^bb1, ^bb2
     // CHECK-NEXT: ^bb1:
@@ -137,7 +137,7 @@ spv.module Logical GLSL450 {
 
   // CHECK-LABEL: @calling_loop_ret_func
   spv.func @calling_loop_ret_func() "None" {
-    %0 = spv.constant true
+    %0 = spv.Constant true
     // CHECK: spv.FunctionCall
     spv.FunctionCall @callee(%0) : (i1) -> ()
     spv.Return
@@ -164,8 +164,8 @@ spv.module Logical GLSL450 {
 
   // CHECK-LABEL: @calling_loop_no_ret_func
   spv.func @calling_loop_no_ret_func() "None" {
-    // CHECK-NEXT: %[[TRUE:.*]] = spv.constant true
-    %0 = spv.constant true
+    // CHECK-NEXT: %[[TRUE:.*]] = spv.Constant true
+    %0 = spv.Constant true
     // CHECK-NEXT: spv.loop
     // CHECK-NEXT:   spv.Branch ^bb1
     // CHECK-NEXT: ^bb1:
@@ -189,7 +189,7 @@ spv.module Logical GLSL450 {
 
   // CHECK: @inline_into_selection_region
   spv.func @inline_into_selection_region() "None" {
-    %1 = spv.constant 0 : i32
+    %1 = spv.Constant 0 : i32
     // CHECK-DAG: [[ADDRESS_ARG0:%.*]] = spv.mlir.addressof @arg_0
     // CHECK-DAG: [[ADDRESS_ARG1:%.*]] = spv.mlir.addressof @arg_1
     // CHECK-DAG: [[LOADPTR:%.*]] = spv.AccessChain [[ADDRESS_ARG0]]

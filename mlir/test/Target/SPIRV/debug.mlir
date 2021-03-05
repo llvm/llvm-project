@@ -44,7 +44,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   }
 
   spv.func @local_var() "None" {
-    %zero = spv.constant 0: i32
+    %zero = spv.Constant 0: i32
     // CHECK: loc({{".*debug.mlir"}}:49:12)
     %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
     spv.Return
@@ -68,8 +68,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   }
 
   spv.func @loop(%count : i32) -> () "None" {
-    %zero = spv.constant 0: i32
-    %one = spv.constant 1: i32
+    %zero = spv.Constant 0: i32
+    %one = spv.Constant 1: i32
     %ivar = spv.Variable init(%zero) : !spv.ptr<i32, Function>
     %jvar = spv.Variable init(%zero) : !spv.ptr<i32, Function>
     spv.loop {
@@ -121,9 +121,9 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   }
 
   spv.func @selection(%cond: i1) -> () "None" {
-    %zero = spv.constant 0: i32
-    %one = spv.constant 1: i32
-    %two = spv.constant 2: i32
+    %zero = spv.Constant 0: i32
+    %one = spv.Constant 1: i32
+    %two = spv.Constant 2: i32
     %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
     spv.selection {
       // CHECK: loc({{".*debug.mlir"}}:128:5)

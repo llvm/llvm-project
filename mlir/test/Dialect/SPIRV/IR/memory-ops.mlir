@@ -5,7 +5,7 @@
 //===----------------------------------------------------------------------===//
 
 func @access_chain_struct() -> () {
-  %0 = spv.constant 1: i32
+  %0 = spv.Constant 1: i32
   %1 = spv.Variable : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>
   // CHECK: spv.AccessChain {{.*}}[{{.*}}, {{.*}}] : !spv.ptr<!spv.struct<(f32, !spv.array<4 x f32>)>, Function>
   %2 = spv.AccessChain %1[%0, %0] : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>, i32, i32
@@ -46,7 +46,7 @@ func @access_chain_rtarray(%arg0 : i32) -> () {
 // -----
 
 func @access_chain_non_composite() -> () {
-  %0 = spv.constant 1: i32
+  %0 = spv.Constant 1: i32
   %1 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{cannot extract from non-composite type 'f32' with index 0}}
   %2 = spv.AccessChain %1[%0] : !spv.ptr<f32, Function>, i32
@@ -112,7 +112,7 @@ func @access_chain_invalid_index_1(%index0 : i32) -> () {
 
 func @access_chain_invalid_index_2(%index0 : i32) -> () {
   %0 = spv.Variable : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>
-  // expected-error @+1 {{index must be an integer spv.constant to access element of spv.struct}}
+  // expected-error @+1 {{index must be an integer spv.Constant to access element of spv.struct}}
   %1 = spv.AccessChain %0[%index0, %index0] : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>, i32, i32
   return
 }
@@ -122,7 +122,7 @@ func @access_chain_invalid_index_2(%index0 : i32) -> () {
 func @access_chain_invalid_constant_type_1() -> () {
   %0 = std.constant 1: i32
   %1 = spv.Variable : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>
-  // expected-error @+1 {{index must be an integer spv.constant to access element of spv.struct, but provided std.constant}}
+  // expected-error @+1 {{index must be an integer spv.Constant to access element of spv.struct, but provided std.constant}}
   %2 = spv.AccessChain %1[%0, %0] : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>, i32, i32
   return
 }
@@ -130,7 +130,7 @@ func @access_chain_invalid_constant_type_1() -> () {
 // -----
 
 func @access_chain_out_of_bounds() -> () {
-  %index0 = "spv.constant"() { value = 12: i32} : () -> i32
+  %index0 = "spv.Constant"() { value = 12: i32} : () -> i32
   %0 = spv.Variable : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>
   // expected-error @+1 {{'spv.AccessChain' op index 12 out of bounds for '!spv.struct<(f32, !spv.array<4 x f32>)>'}}
   %1 = spv.AccessChain %0[%index0, %index0] : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>, i32, i32
@@ -487,7 +487,7 @@ func @variable(%arg0: f32) -> () {
 // -----
 
 func @variable_init_normal_constant() -> () {
-  %0 = spv.constant 4.0 : f32
+  %0 = spv.Constant 4.0 : f32
   // CHECK: spv.Variable init(%0) : !spv.ptr<f32, Function>
   %1 = spv.Variable init(%0) : !spv.ptr<f32, Function>
   return
@@ -529,7 +529,7 @@ func @variable_bind() -> () {
 // -----
 
 func @variable_init_bind() -> () {
-  %0 = spv.constant 4.0 : f32
+  %0 = spv.Constant 4.0 : f32
   // expected-error @+1 {{cannot have 'binding' attribute (only allowed in spv.globalVariable)}}
   %1 = spv.Variable init(%0) {binding = 5 : i32} : !spv.ptr<f32, Function>
   return

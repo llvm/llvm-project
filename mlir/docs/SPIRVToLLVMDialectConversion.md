@@ -434,7 +434,7 @@ order to go through the pointer.
 
 ```mlir
 // Access the 1st element of the array
-%i   = spv.constant 1: i32
+%i   = spv.Constant 1: i32
 %var = spv.Variable : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Function>
 %el  = spv.AccessChain %var[%i, %i] : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Function>, i32, i32
 
@@ -529,7 +529,7 @@ also a function-level variable.
 `spv.Variable` is modelled as `llvm.alloca` op. If initialized, an additional
 store instruction is used. Note that there is no initialization for arrays and
 structs since constants of these types are not supported in LLVM dialect (TODO).
-Also, at the moment initialization is only possible via `spv.constant`.
+Also, at the moment initialization is only possible via `spv.Constant`.
 
 ```mlir
 // Conversion of VariableOp without initialization
@@ -538,7 +538,7 @@ Also, at the moment initialization is only possible via `spv.constant`.
 
 // Conversion of VariableOp with initialization
                                                                %c    = llvm.mlir.constant(0 : i64) : i64
-%c   = spv.constant 0 : i64                                    %size = llvm.mlir.constant(1 : i32) : i32
+%c   = spv.Constant 0 : i64                                    %size = llvm.mlir.constant(1 : i32) : i32
 %res = spv.Variable init(%c) : !spv.ptr<i64, Function>    =>   %res  = llvm.alloca %[[SIZE]] x i64 : (i32) -> !llvm.ptr<i64>
                                                                llvm.store %c, %res : !llvm.ptr<i64>
 ```
@@ -584,14 +584,14 @@ bitwidth. This leads to the following conversions:
 %res1 = spv.ShiftRightArithmetic %0, %1 : i32, i16  =>  %res1 = llvm.ashr %0, %ext: i32
 ```
 
-### `spv.constant`
+### `spv.Constant`
 
-At the moment `spv.constant` conversion supports scalar and vector constants
+At the moment `spv.Constant` conversion supports scalar and vector constants
 **only**.
 
 #### Mapping
 
-`spv.constant` is mapped to `llvm.mlir.constant`. This is a straightforward
+`spv.Constant` is mapped to `llvm.mlir.constant`. This is a straightforward
 conversion pattern with a special case when the argument is signed or unsigned.
 
 #### Special case
@@ -608,10 +608,10 @@ cover all possible corner cases.
 
 ```mlir
 // %0 = llvm.mlir.constant(0 : i8) : i8
-%0 = spv.constant  0 : i8
+%0 = spv.Constant  0 : i8
 
 // %1 = llvm.mlir.constant(dense<[2, 3, 4]> : vector<3xi32>) : vector<3xi32>
-%1 = spv.constant dense<[2, 3, 4]> : vector<3xui32>
+%1 = spv.Constant dense<[2, 3, 4]> : vector<3xui32>
 ```
 
 ### Not implemented ops
@@ -672,7 +672,7 @@ blocks being reachable. Moreover, selection and loop control attributes (such as
 
 ```mlir
 // Conversion of selection
-%cond = spv.constant true                               %cond = llvm.mlir.constant(true) : i1
+%cond = spv.Constant true                               %cond = llvm.mlir.constant(true) : i1
 spv.selection {
   spv.BranchConditional %cond, ^true, ^false            llvm.cond_br %cond, ^true, ^false
 
@@ -693,7 +693,7 @@ spv.selection {
 
 ```mlir
 // Conversion of loop
-%cond = spv.constant true                               %cond = llvm.mlir.constant(true) : i1
+%cond = spv.Constant true                               %cond = llvm.mlir.constant(true) : i1
 spv.loop {
   spv.Branch ^header                                    llvm.br ^header
 

@@ -941,7 +941,7 @@ static Type getElementPtrType(Type type, ValueRange indices, Location baseLoc) {
       Operation *op = indexSSA.getDefiningOp();
       if (!op) {
         emitError(baseLoc, "'spv.AccessChain' op index must be an "
-                           "integer spv.constant to access "
+                           "integer spv.Constant to access "
                            "element of spv.struct");
         return nullptr;
       }
@@ -950,7 +950,7 @@ static Type getElementPtrType(Type type, ValueRange indices, Location baseLoc) {
       // integer literals of other bitwidths.
       if (failed(extractValueFromConstOp(op, index))) {
         emitError(baseLoc,
-                  "'spv.AccessChain' index must be an integer spv.constant to "
+                  "'spv.AccessChain' index must be an integer spv.Constant to "
                   "access element of spv.struct, but provided ")
             << op->getName();
         return nullptr;
@@ -1483,7 +1483,7 @@ static void print(spirv::CompositeInsertOp compositeInsertOp,
 }
 
 //===----------------------------------------------------------------------===//
-// spv.constant
+// spv.Constant
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseConstantOp(OpAsmParser &parser, OperationState &state) {
