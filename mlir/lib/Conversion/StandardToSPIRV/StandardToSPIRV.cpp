@@ -250,7 +250,7 @@ public:
     // Get the SPIR-V type for the allocation.
     Type spirvType = getTypeConverter()->convertType(allocType);
 
-    // Insert spv.globalVariable for this allocation.
+    // Insert spv.GlobalVariable for this allocation.
     Operation *parent =
         SymbolTable::getNearestSymbolTable(operation->getParentOp());
     if (!parent)

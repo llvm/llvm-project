@@ -340,7 +340,7 @@ func @aligned_load_incorrect_attributes() -> () {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @var0 : !spv.ptr<f32, Input>
+  spv.GlobalVariable @var0 : !spv.ptr<f32, Input>
   // CHECK_LABEL: @simple_load
   spv.func @simple_load() -> () "None" {
     // CHECK: spv.Load "Input" {{%.*}} : f32
@@ -463,7 +463,7 @@ func @aligned_store_incorrect_attributes(%arg0 : f32) -> () {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @var0 : !spv.ptr<f32, Input>
+  spv.GlobalVariable @var0 : !spv.ptr<f32, Input>
   spv.func @simple_store(%arg0 : f32) -> () "None" {
     %0 = spv.mlir.addressof @var0 : !spv.ptr<f32, Input>
     // CHECK: spv.Store  "Input" {{%.*}}, {{%.*}} : f32
@@ -496,7 +496,7 @@ func @variable_init_normal_constant() -> () {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @global : !spv.ptr<f32, Workgroup>
+  spv.GlobalVariable @global : !spv.ptr<f32, Workgroup>
   spv.func @variable_init_global_variable() -> () "None" {
     %0 = spv.mlir.addressof @global : !spv.ptr<f32, Workgroup>
     // CHECK: spv.Variable init({{.*}}) : !spv.ptr<!spv.ptr<f32, Workgroup>, Function>
@@ -521,7 +521,7 @@ spv.module Logical GLSL450 {
 // -----
 
 func @variable_bind() -> () {
-  // expected-error @+1 {{cannot have 'descriptor_set' attribute (only allowed in spv.globalVariable)}}
+  // expected-error @+1 {{cannot have 'descriptor_set' attribute (only allowed in spv.GlobalVariable)}}
   %0 = spv.Variable bind(1, 2) : !spv.ptr<f32, Function>
   return
 }
@@ -530,7 +530,7 @@ func @variable_bind() -> () {
 
 func @variable_init_bind() -> () {
   %0 = spv.Constant 4.0 : f32
-  // expected-error @+1 {{cannot have 'binding' attribute (only allowed in spv.globalVariable)}}
+  // expected-error @+1 {{cannot have 'binding' attribute (only allowed in spv.GlobalVariable)}}
   %1 = spv.Variable init(%0) {binding = 5 : i32} : !spv.ptr<f32, Function>
   return
 }
@@ -538,7 +538,7 @@ func @variable_init_bind() -> () {
 // -----
 
 func @variable_builtin() -> () {
-  // expected-error @+1 {{cannot have 'built_in' attribute (only allowed in spv.globalVariable)}}
+  // expected-error @+1 {{cannot have 'built_in' attribute (only allowed in spv.GlobalVariable)}}
   %1 = spv.Variable built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Function>
   return
 }
@@ -554,7 +554,7 @@ func @expect_ptr_result_type(%arg0: f32) -> () {
 // -----
 
 func @variable_init(%arg0: f32) -> () {
-  // expected-error @+1 {{op initializer must be the result of a constant or spv.globalVariable op}}
+  // expected-error @+1 {{op initializer must be the result of a constant or spv.GlobalVariable op}}
   %0 = spv.Variable init(%arg0) : !spv.ptr<f32, Function>
   return
 }
@@ -562,7 +562,7 @@ func @variable_init(%arg0: f32) -> () {
 // -----
 
 func @cannot_be_generic_storage_class(%arg0: f32) -> () {
-  // expected-error @+1 {{op can only be used to model function-level variables. Use spv.globalVariable for module-level variables}}
+  // expected-error @+1 {{op can only be used to model function-level variables. Use spv.GlobalVariable for module-level variables}}
   %0 = spv.Variable : !spv.ptr<f32, Generic>
   return
 }
