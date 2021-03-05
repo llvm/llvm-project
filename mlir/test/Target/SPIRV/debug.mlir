@@ -2,7 +2,7 @@
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // CHECK: loc({{".*debug.mlir"}}:5:3)
-  spv.globalVariable @var0 bind(0, 1) : !spv.ptr<f32, Input>
+  spv.GlobalVariable @var0 bind(0, 1) : !spv.ptr<f32, Input>
   spv.func @arithmetic(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
     // CHECK: loc({{".*debug.mlir"}}:8:10)
     %0 = spv.FAdd %arg0, %arg1 : vector<4xf32>

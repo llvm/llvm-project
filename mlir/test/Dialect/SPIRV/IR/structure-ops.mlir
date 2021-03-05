@@ -5,7 +5,7 @@
 //===----------------------------------------------------------------------===//
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
+  spv.GlobalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
   spv.func @access_chain() -> () "None" {
     %0 = spv.Constant 1: i32
     // CHECK: [[VAR1:%.*]] = spv.mlir.addressof @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4 x f32>)>, Input>
@@ -19,7 +19,7 @@ spv.module Logical GLSL450 {
 // -----
 
 // Allow taking address of global variables in other module-like ops
-spv.globalVariable @var : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
+spv.GlobalVariable @var : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
 func @addressof() -> () {
   // CHECK: spv.mlir.addressof @var
   %1 = spv.mlir.addressof @var : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
@@ -29,9 +29,9 @@ func @addressof() -> () {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
+  spv.GlobalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
   spv.func @foo() -> () "None" {
-    // expected-error @+1 {{expected spv.globalVariable symbol}}
+    // expected-error @+1 {{expected spv.GlobalVariable symbol}}
     %0 = spv.mlir.addressof @var2 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
   }
 }
@@ -39,7 +39,7 @@ spv.module Logical GLSL450 {
 // -----
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
+  spv.GlobalVariable @var1 : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
   spv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced global variable's type}}
     %0 = spv.mlir.addressof @var1 : !spv.ptr<f32, Input>
@@ -144,8 +144,8 @@ spv.module Logical GLSL450 {
 }
 
 spv.module Logical GLSL450 {
-   spv.globalVariable @var2 : !spv.ptr<f32, Input>
-   spv.globalVariable @var3 : !spv.ptr<f32, Output>
+   spv.GlobalVariable @var2 : !spv.ptr<f32, Input>
+   spv.GlobalVariable @var3 : !spv.ptr<f32, Output>
    spv.func @do_something(%arg0 : !spv.ptr<f32, Input>, %arg1 : !spv.ptr<f32, Output>) -> () "None" {
      %1 = spv.Load "Input" %arg0 : f32
      spv.Store "Output" %arg1, %1 : f32
@@ -298,93 +298,93 @@ spv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.globalVariable
+// spv.GlobalVariable
 //===----------------------------------------------------------------------===//
 
 spv.module Logical GLSL450 {
-  // CHECK: spv.globalVariable @var0 : !spv.ptr<f32, Input>
-  spv.globalVariable @var0 : !spv.ptr<f32, Input>
+  // CHECK: spv.GlobalVariable @var0 : !spv.ptr<f32, Input>
+  spv.GlobalVariable @var0 : !spv.ptr<f32, Input>
 }
 
 // TODO: Fix test case after initialization with normal constant is addressed
 // spv.module Logical GLSL450 {
 //   %0 = spv.Constant 4.0 : f32
 //   // CHECK1: spv.Variable init(%0) : !spv.ptr<f32, Private>
-//   spv.globalVariable @var1 init(%0) : !spv.ptr<f32, Private>
+//   spv.GlobalVariable @var1 init(%0) : !spv.ptr<f32, Private>
 // }
 
 // -----
 
 spv.module Logical GLSL450 {
   spv.SpecConstant @sc = 4.0 : f32
-  // CHECK: spv.globalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
-  spv.globalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
+  // CHECK: spv.GlobalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
+  spv.GlobalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
 }
 
 // -----
 
 // Allow initializers coming from other module-like ops
 spv.SpecConstant @sc = 4.0 : f32
-// CHECK: spv.globalVariable @var initializer(@sc)
-spv.globalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
+// CHECK: spv.GlobalVariable @var initializer(@sc)
+spv.GlobalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
 
 // -----
 
 spv.module Logical GLSL450 {
-  // CHECK: spv.globalVariable @var0 bind(1, 2) : !spv.ptr<f32, Uniform>
-  spv.globalVariable @var0 bind(1, 2) : !spv.ptr<f32, Uniform>
+  // CHECK: spv.GlobalVariable @var0 bind(1, 2) : !spv.ptr<f32, Uniform>
+  spv.GlobalVariable @var0 bind(1, 2) : !spv.ptr<f32, Uniform>
 }
 
 // TODO: Fix test case after initialization with constant is addressed
 // spv.module Logical GLSL450 {
 //   %0 = spv.Constant 4.0 : f32
-//   // CHECK1: spv.globalVariable @var1 initializer(%0) {binding = 5 : i32} : !spv.ptr<f32, Private>
-//   spv.globalVariable @var1 initializer(%0) {binding = 5 : i32} : !spv.ptr<f32, Private>
+//   // CHECK1: spv.GlobalVariable @var1 initializer(%0) {binding = 5 : i32} : !spv.ptr<f32, Private>
+//   spv.GlobalVariable @var1 initializer(%0) {binding = 5 : i32} : !spv.ptr<f32, Private>
 // }
 
 // -----
 
 spv.module Logical GLSL450 {
-  // CHECK: spv.globalVariable @var1 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
-  spv.globalVariable @var1 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
-  // CHECK: spv.globalVariable @var2 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
-  spv.globalVariable @var2 {built_in = "GlobalInvocationID"} : !spv.ptr<vector<3xi32>, Input>
+  // CHECK: spv.GlobalVariable @var1 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
+  spv.GlobalVariable @var1 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
+  // CHECK: spv.GlobalVariable @var2 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
+  spv.GlobalVariable @var2 {built_in = "GlobalInvocationID"} : !spv.ptr<vector<3xi32>, Input>
 }
 
 // -----
 
 // Allow in other module-like ops
 module {
-  // CHECK: spv.globalVariable
-  spv.globalVariable @var0 : !spv.ptr<f32, Input>
+  // CHECK: spv.GlobalVariable
+  spv.GlobalVariable @var0 : !spv.ptr<f32, Input>
 }
 
 // -----
 
 spv.module Logical GLSL450 {
   // expected-error @+1 {{expected spv.ptr type}}
-  spv.globalVariable @var0 : f32
+  spv.GlobalVariable @var0 : f32
 }
 
 // -----
 
 spv.module Logical GLSL450 {
-  // expected-error @+1 {{op initializer must be result of a spv.SpecConstant or spv.globalVariable op}}
-  spv.globalVariable @var0 initializer(@var1) : !spv.ptr<f32, Private>
+  // expected-error @+1 {{op initializer must be result of a spv.SpecConstant or spv.GlobalVariable op}}
+  spv.GlobalVariable @var0 initializer(@var1) : !spv.ptr<f32, Private>
 }
 
 // -----
 
 spv.module Logical GLSL450 {
   // expected-error @+1 {{storage class cannot be 'Generic'}}
-  spv.globalVariable @var0 : !spv.ptr<f32, Generic>
+  spv.GlobalVariable @var0 : !spv.ptr<f32, Generic>
 }
 
 // -----
 
 spv.module Logical GLSL450 {
   // expected-error @+1 {{storage class cannot be 'Function'}}
-  spv.globalVariable @var0 : !spv.ptr<f32, Function>
+  spv.GlobalVariable @var0 : !spv.ptr<f32, Function>
 }
 
 // -----
@@ -392,7 +392,7 @@ spv.module Logical GLSL450 {
 spv.module Logical GLSL450 {
   spv.func @foo() "None" {
     // expected-error @+1 {{op must appear in a module-like op's block}}
-    spv.globalVariable @var0 : !spv.ptr<f32, Input>
+    spv.GlobalVariable @var0 : !spv.ptr<f32, Input>
     spv.Return
   }
 }

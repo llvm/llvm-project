@@ -7,8 +7,8 @@ module attributes {
 
 // CHECK-LABEL: spv.module
 spv.module Logical GLSL450 {
-  // CHECK-DAG:    spv.globalVariable [[VAR0:@.*]] bind(0, 0) : !spv.ptr<!spv.struct<(f32 [0])>, StorageBuffer>
-  // CHECK-DAG:    spv.globalVariable [[VAR1:@.*]] bind(0, 1) : !spv.ptr<!spv.struct<(!spv.array<12 x f32, stride=4> [0])>, StorageBuffer>
+  // CHECK-DAG:    spv.GlobalVariable [[VAR0:@.*]] bind(0, 0) : !spv.ptr<!spv.struct<(f32 [0])>, StorageBuffer>
+  // CHECK-DAG:    spv.GlobalVariable [[VAR1:@.*]] bind(0, 1) : !spv.ptr<!spv.struct<(!spv.array<12 x f32, stride=4> [0])>, StorageBuffer>
   // CHECK:    spv.func [[FN:@.*]]()
   spv.func @kernel(
     %arg0: f32

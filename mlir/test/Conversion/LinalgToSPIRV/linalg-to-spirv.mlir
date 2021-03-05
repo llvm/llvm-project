@@ -17,7 +17,7 @@ module attributes {
     #spv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>, {}>
 } {
 
-// CHECK:      spv.globalVariable
+// CHECK:      spv.GlobalVariable
 // CHECK-SAME: built_in("LocalInvocationId")
 
 // CHECK:      @single_workgroup_reduction

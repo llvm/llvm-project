@@ -159,8 +159,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 // Test nested loops with block arguments
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
-  spv.globalVariable @__builtin_var_NumWorkgroups__ built_in("NumWorkgroups") : !spv.ptr<vector<3xi32>, Input>
-  spv.globalVariable @__builtin_var_WorkgroupId__ built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
+  spv.GlobalVariable @__builtin_var_NumWorkgroups__ built_in("NumWorkgroups") : !spv.ptr<vector<3xi32>, Input>
+  spv.GlobalVariable @__builtin_var_WorkgroupId__ built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
   spv.func @fmul_kernel() "None" {
     %3 = spv.Constant 12 : i32
     %4 = spv.Constant 32 : i32

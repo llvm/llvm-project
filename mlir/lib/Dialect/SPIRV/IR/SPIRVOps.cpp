@@ -1064,7 +1064,7 @@ static LogicalResult verify(spirv::AddressOfOp addressOfOp) {
       SymbolTable::lookupNearestSymbolFrom(addressOfOp->getParentOp(),
                                            addressOfOp.variable()));
   if (!varOp) {
-    return addressOfOp.emitOpError("expected spv.globalVariable symbol");
+    return addressOfOp.emitOpError("expected spv.GlobalVariable symbol");
   }
   if (addressOfOp.pointer().getType() != varOp.type()) {
     return addressOfOp.emitOpError(
@@ -1959,7 +1959,7 @@ Operation::operand_range spirv::FunctionCallOp::getArgOperands() {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.globalVariable
+// spv.GlobalVariable
 //===----------------------------------------------------------------------===//
 
 void spirv::GlobalVariableOp::build(OpBuilder &builder, OperationState &state,
@@ -2067,7 +2067,7 @@ static LogicalResult verify(spirv::GlobalVariableOp varOp) {
     if (!initOp ||
         !isa<spirv::GlobalVariableOp, spirv::SpecConstantOp>(initOp)) {
       return varOp.emitOpError("initializer must be result of a "
-                               "spv.SpecConstant or spv.globalVariable op");
+                               "spv.SpecConstant or spv.GlobalVariable op");
     }
   }
 
@@ -2593,7 +2593,7 @@ static LogicalResult verify(spirv::ModuleOp moduleOp) {
           auto variableOp =
               table.lookup<spirv::GlobalVariableOp>(varSymRef.getValue());
           if (!variableOp) {
-            return entryPointOp.emitError("expected spv.globalVariable "
+            return entryPointOp.emitError("expected spv.GlobalVariable "
                                           "symbol reference instead of'")
                    << varSymRef << "'";
           }
@@ -3000,7 +3000,7 @@ static LogicalResult verify(spirv::VariableOp varOp) {
   if (varOp.storage_class() != spirv::StorageClass::Function) {
     return varOp.emitOpError(
         "can only be used to model function-level variables. Use "
-        "spv.globalVariable for module-level variables.");
+        "spv.GlobalVariable for module-level variables.");
   }
 
   auto pointerType = varOp.pointer().getType().cast<spirv::PointerType>();
@@ -3016,7 +3016,7 @@ static LogicalResult verify(spirv::VariableOp varOp) {
                         spirv::ReferenceOfOp, // for spec constant
                         spirv::AddressOfOp>(initOp))
       return varOp.emitOpError("initializer must be the result of a "
-                               "constant or spv.globalVariable op");
+                               "constant or spv.GlobalVariable op");
   }
 
   // TODO: generate these strings using ODS.
@@ -3031,7 +3031,7 @@ static LogicalResult verify(spirv::VariableOp varOp) {
   for (const auto &attr : {descriptorSetName, bindingName, builtInName}) {
     if (op->getAttr(attr))
       return varOp.emitOpError("cannot have '")
-             << attr << "' attribute (only allowed in spv.globalVariable)";
+             << attr << "' attribute (only allowed in spv.GlobalVariable)";
   }
 
   return success();

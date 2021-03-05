@@ -148,11 +148,11 @@ def SPV_EntryPointOp : SPV_Op<"EntryPoint", [InModuleScope]> {
     OpEntryPoint instructions with the same Execution Model and the same
     Name string.
 
-    Interface is a list of symbol references to `spv.globalVariable`
+    Interface is a list of symbol references to `spv.GlobalVariable`
     operations. These declare the set of global variables from a
     module that form the interface of this entry point. The set of
     Interface symbols must be equal to or a superset of the
-    `spv.globalVariable`s referenced by the entry point’s static call
+    `spv.GlobalVariable`s referenced by the entry point’s static call
     tree, within the interface’s storage classes.  Before version 1.4,
     the interface’s storage classes are limited to the Input and
     Output storage classes. Starting with version 1.4, the interface’s
@@ -325,7 +325,7 @@ def SPV_FuncOp : SPV_Op<"func", [
 
 // -----
 
-def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
+def SPV_GlobalVariableOp : SPV_Op<"GlobalVariable", [InModuleScope, Symbol]> {
   let summary = [{
     Allocate an object in memory at module scope. The object is
     referenced using a symbol name.
@@ -343,13 +343,13 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
     Initializer is optional.  If Initializer is present, it will be
     the initial value of the variable’s memory content. Initializer
     must be an symbol defined from a constant instruction or other
-    `spv.globalVariable` operation in module scope. Initializer must
+    `spv.GlobalVariable` operation in module scope. Initializer must
     have the same type as the type of the defined symbol.
 
     <!-- End of AutoGen section -->
 
     ```
-    variable-op ::= `spv.globalVariable` spirv-type symbol-ref-id
+    variable-op ::= `spv.GlobalVariable` spirv-type symbol-ref-id
                     (`initializer(` symbol-ref-id `)`)?
                     (`bind(` integer-literal, integer-literal `)`)?
                     (`built_in(` string-literal `)`)?
@@ -363,10 +363,10 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
     #### Example:
 
     ```mlir
-    spv.globalVariable @var0 : !spv.ptr<f32, Input> @var0
-    spv.globalVariable @var1 initializer(@var0) : !spv.ptr<f32, Output>
-    spv.globalVariable @var2 bind(1, 2) : !spv.ptr<f32, Uniform>
-    spv.globalVariable @var3 built_in("GlobalInvocationId") : !spv.ptr<vector<3xi32>, Input>
+    spv.GlobalVariable @var0 : !spv.ptr<f32, Input> @var0
+    spv.GlobalVariable @var1 initializer(@var0) : !spv.ptr<f32, Output>
+    spv.GlobalVariable @var2 bind(1, 2) : !spv.ptr<f32, Uniform>
+    spv.GlobalVariable @var3 built_in("GlobalInvocationId") : !spv.ptr<vector<3xi32>, Input>
     ```
   }];
 

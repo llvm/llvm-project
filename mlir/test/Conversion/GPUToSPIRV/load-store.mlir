@@ -24,9 +24,9 @@ module attributes {
 
   // CHECK-LABEL: spv.module @{{.*}} Logical GLSL450
   gpu.module @kernels {
-    // CHECK-DAG: spv.globalVariable @[[NUMWORKGROUPSVAR:.*]] built_in("NumWorkgroups") : !spv.ptr<vector<3xi32>, Input>
-    // CHECK-DAG: spv.globalVariable @[[$LOCALINVOCATIONIDVAR:.*]] built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>
-    // CHECK-DAG: spv.globalVariable @[[$WORKGROUPIDVAR:.*]] built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
+    // CHECK-DAG: spv.GlobalVariable @[[NUMWORKGROUPSVAR:.*]] built_in("NumWorkgroups") : !spv.ptr<vector<3xi32>, Input>
+    // CHECK-DAG: spv.GlobalVariable @[[$LOCALINVOCATIONIDVAR:.*]] built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>
+    // CHECK-DAG: spv.GlobalVariable @[[$WORKGROUPIDVAR:.*]] built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
     // CHECK-LABEL:    spv.func @load_store_kernel
     // CHECK-SAME: %[[ARG0:.*]]: !spv.ptr<!spv.struct<(!spv.array<48 x f32, stride=4> [0])>, StorageBuffer> {spv.interface_var_abi = #spv.interface_var_abi<(0, 0)>}
     // CHECK-SAME: %[[ARG1:.*]]: !spv.ptr<!spv.struct<(!spv.array<48 x f32, stride=4> [0])>, StorageBuffer> {spv.interface_var_abi = #spv.interface_var_abi<(0, 1)>}

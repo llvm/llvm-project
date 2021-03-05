@@ -1,7 +1,7 @@
 // RUN: mlir-translate -test-spirv-roundtrip %s | FileCheck %s
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
-  spv.globalVariable @var1 : !spv.ptr<!spv.array<4xf32>, Input>
+  spv.GlobalVariable @var1 : !spv.ptr<!spv.array<4xf32>, Input>
   spv.func @fmain() -> i32 "None" {
     %0 = spv.Constant 16 : i32
     %1 = spv.mlir.addressof @var1 : !spv.ptr<!spv.array<4xf32>, Input>

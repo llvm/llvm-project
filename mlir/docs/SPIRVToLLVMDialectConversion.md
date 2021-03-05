@@ -466,9 +466,9 @@ following cases, based on the value of the attribute:
     (`MakePointerAvailable`, `MakePointerVisible`, `NonPrivatePointer`) are not
     supported yet.
 
-#### `spv.globalVariable` and `spv.mlir.addressof`
+#### `spv.GlobalVariable` and `spv.mlir.addressof`
 
-`spv.globalVariable` is modelled with `llvm.mlir.global` op. However, there
+`spv.GlobalVariable` is modelled with `llvm.mlir.global` op. However, there
 is a difference that has to be pointed out.
 
 In SPIR-V dialect, the global variable returns a pointer, whereas in LLVM
@@ -479,7 +479,7 @@ are used to reference the global.
 ```mlir
 // Original SPIR-V module
 spv.module Logical GLSL450 {
-  spv.globalVariable @struct : !spv.ptr<!spv.struct<f32, !spv.array<10xf32>>, Private>
+  spv.GlobalVariable @struct : !spv.ptr<!spv.struct<f32, !spv.array<10xf32>>, Private>
   spv.func @func() -> () "None" {
     %0 = spv.mlir.addressof @struct : !spv.ptr<!spv.struct<f32, !spv.array<10xf32>>, Private>
     spv.Return
@@ -517,7 +517,7 @@ If the global variable's pointer has `Input` storage class, then a `constant`
 flag is added to LLVM op:
 
 ```mlir
-spv.globalVariable @var : !spv.ptr<f32, Input>    =>    llvm.mlir.global external constant @var() : f32
+spv.GlobalVariable @var : !spv.ptr<f32, Input>    =>    llvm.mlir.global external constant @var() : f32
 ```
 
 #### `spv.Variable`
@@ -873,7 +873,7 @@ Lowering `gpu` dialect to SPIR-V dialect results in
 
 ```mlir
 spv.module @__spv__foo /*VCE triple and other metadata here*/ {
-  spv.globalVariable @__spv__foo_arg bind(0,0) : ...
+  spv.GlobalVariable @__spv__foo_arg bind(0,0) : ...
   spv.func @bar() {
     // Kernel code.
   }
@@ -897,7 +897,7 @@ code.
 
 ```mlir
 spv.module @__spv__foo /*VCE triple and other metadata here*/ {
-  spv.globalVariable @__spv__foo_arg bind(0,0) : ...
+  spv.GlobalVariable @__spv__foo_arg bind(0,0) : ...
   spv.func @bar() {
     // Kernel code.
   }
