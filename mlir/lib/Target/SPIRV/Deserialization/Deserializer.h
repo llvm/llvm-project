@@ -45,7 +45,7 @@ namespace spirv {
 /// A struct for containing a header block's merge and continue targets.
 ///
 /// This struct is used to track original structured control flow info from
-/// SPIR-V blob. This info will be used to create spv.selection/spv.loop
+/// SPIR-V blob. This info will be used to create spv.selection/spv.mlir.loop
 /// later.
 struct BlockMergeInfo {
   Block *mergeBlock;
@@ -346,9 +346,9 @@ private:
 
   // In SPIR-V, structured control flow is explicitly declared using merge
   // instructions (OpSelectionMerge and OpLoopMerge). In the SPIR-V dialect,
-  // we use spv.selection and spv.loop to group structured control flow.
+  // we use spv.selection and spv.mlir.loop to group structured control flow.
   // The deserializer need to turn structured control flow marked with merge
-  // instructions into using spv.selection/spv.loop ops.
+  // instructions into using spv.selection/spv.mlir.loop ops.
   //
   // Because structured control flow can nest and the basic block order have
   // flexibility, we cannot isolate a structured selection/loop without
@@ -360,11 +360,12 @@ private:
   //    target blocks.
   // 2. For each selection/loop header block, recursively get all basic blocks
   //    reachable (except the merge block) and put them in a newly created
-  //    spv.selection/spv.loop's region. Structured control flow guarantees
+  //    spv.selection/spv.mlir.loop's region. Structured control flow guarantees
   //    that we enter and exit in structured ways and the construct is nestable.
-  // 3. Put the new spv.selection/spv.loop op at the beginning of the old merge
+  // 3. Put the new spv.selection/spv.mlir.loop op at the beginning of the old
+  // merge
   //    block and redirect all branches to the old header block to the old
-  //    merge block (which contains the spv.selection/spv.loop op now).
+  //    merge block (which contains the spv.selection/spv.mlir.loop op now).
 
   /// For OpPhi instructions, we use block arguments to represent them. OpPhi
   /// encodes a list of (value, predecessor) pairs. At the time of handling the
@@ -410,7 +411,7 @@ private:
   LogicalResult wireUpBlockArgument();
 
   /// Extracts blocks belonging to a structured selection/loop into a
-  /// spv.selection/spv.loop op. This method iterates until all blocks
+  /// spv.selection/spv.mlir.loop op. This method iterates until all blocks
   /// declared as selection/loop headers are handled.
   LogicalResult structurizeControlFlow();
 

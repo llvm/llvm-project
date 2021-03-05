@@ -42,8 +42,8 @@ static Block *getStructuredControlFlowOpMergeBlock(Operation *op) {
 /// that should be used as the parent block for SPIR-V OpPhi instructions
 /// corresponding to the block arguments.
 static Block *getPhiIncomingBlock(Block *block) {
-  // If the predecessor block in question is the entry block for a spv.loop,
-  // we jump to this spv.loop from its enclosing block.
+  // If the predecessor block in question is the entry block for a
+  // spv.mlir.loop, we jump to this spv.mlir.loop from its enclosing block.
   if (block->isEntryBlock()) {
     if (auto loopOp = dyn_cast<spirv::LoopOp>(block->getParentOp())) {
       // Then the incoming parent block for OpPhi should be the merge block of
@@ -966,8 +966,8 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
     // structure. It does not directly map to the incoming parent block for the
     // OpPhi instructions at SPIR-V binary level. This is because structured
     // control flow ops are serialized to multiple SPIR-V blocks. If there is a
-    // spv.selection/spv.loop op in the MLIR predecessor block, the branch op
-    // jumping to the OpPhi's block then resides in the previous structured
+    // spv.selection/spv.mlir.loop op in the MLIR predecessor block, the branch
+    // op jumping to the OpPhi's block then resides in the previous structured
     // control flow op's merge block.
     predecessor = getPhiIncomingBlock(predecessor);
     if (auto branchOp = dyn_cast<spirv::BranchOp>(terminator)) {

@@ -249,7 +249,7 @@ def SPV_FunctionCallOp : SPV_Op<"FunctionCall", [
 
 // -----
 
-def SPV_LoopOp : SPV_Op<"loop", [InFunctionScope]> {
+def SPV_LoopOp : SPV_Op<"mlir.loop", [InFunctionScope]> {
   let summary = "Define a structured loop.";
 
   let description = [{
@@ -263,12 +263,12 @@ def SPV_LoopOp : SPV_Op<"loop", [InFunctionScope]> {
     Instead of having a `spv.LoopMerge` op to directly model loop merge
     instruction for indicating the merge and continue target, we use regions
     to delimit the boundary of the loop: the merge target is the next op
-    following the `spv.loop` op and the continue target is the block that
-    has a back-edge pointing to the entry block inside the `spv.loop`'s region.
+    following the `spv.mlir.loop` op and the continue target is the block that
+    has a back-edge pointing to the entry block inside the `spv.mlir.loop`'s region.
     This way it's easier to discover all blocks belonging to a construct and
     it plays nicer with the MLIR system.
 
-    The `spv.loop` region should contain at least four blocks: one entry block,
+    The `spv.mlir.loop` region should contain at least four blocks: one entry block,
     one loop header block, one loop continue block, one loop merge block.
     The entry block should be the first block and it should jump to the loop
     header block, which is the second block. The loop merge block should be the
@@ -317,10 +317,10 @@ def SPV_MergeOp : SPV_Op<"mlir.merge", [NoSideEffect, Terminator]> {
   let summary = "A special terminator for merging a structured selection/loop.";
 
   let description = [{
-    We use `spv.selection`/`spv.loop` for modelling structured selection/loop.
+    We use `spv.selection`/`spv.mlir.loop` for modelling structured selection/loop.
     This op is a terminator used inside their regions to mean jumping to the
     merge point, which is the next op following the `spv.selection` or
-    `spv.loop` op. This op does not have a corresponding instruction in the
+    `spv.mlir.loop` op. This op does not have a corresponding instruction in the
     SPIR-V binary format; it's solely for structural purpose.
   }];
 
