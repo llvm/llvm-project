@@ -116,6 +116,12 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   if (!D->hasExternalFormalLinkage() && D->getOwningModuleForLinkage())
     return true;
 
+  // C functions with internal linkage have to be mangled with option
+  // -funique-internal-linkage-names.
+  if (!getASTContext().getLangOpts().CPlusPlus &&
+      isUniqueInternalLinkageDecl(D))
+    return true;
+
   // In C, functions with no attributes never need to be mangled. Fastpath them.
   if (!getASTContext().getLangOpts().CPlusPlus && !D->hasAttrs())
     return false;
