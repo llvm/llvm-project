@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_ANALYSIS_OBJCARCUTIL_H
-#define LLVM_LIB_ANALYSIS_OBJCARCUTIL_H
+#ifndef LLVM_IR_OBJCARCUTIL_H
+#define LLVM_IR_OBJCARCUTIL_H
 
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
@@ -20,18 +20,18 @@
 namespace llvm {
 namespace objcarc {
 
-static inline const char *getRVMarkerModuleFlagStr() {
+inline const char *getRVMarkerModuleFlagStr() {
   return "clang.arc.retainAutoreleasedReturnValueMarker";
 }
 
 enum AttachedCallOperandBundle : unsigned { RVOB_Retain, RVOB_Claim };
 
-static AttachedCallOperandBundle
+inline AttachedCallOperandBundle
 getAttachedCallOperandBundleEnum(bool IsRetain) {
   return IsRetain ? RVOB_Retain : RVOB_Claim;
 }
 
-static inline bool hasAttachedCallOpBundle(const CallBase *CB, bool IsRetain) {
+inline bool hasAttachedCallOpBundle(const CallBase *CB, bool IsRetain) {
   auto B = CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall);
   if (!B.hasValue())
     return false;
@@ -39,7 +39,7 @@ static inline bool hasAttachedCallOpBundle(const CallBase *CB, bool IsRetain) {
          getAttachedCallOperandBundleEnum(IsRetain);
 }
 
-static inline bool hasAttachedCallOpBundle(const CallBase *CB) {
+inline bool hasAttachedCallOpBundle(const CallBase *CB) {
   return CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall)
       .hasValue();
 }
