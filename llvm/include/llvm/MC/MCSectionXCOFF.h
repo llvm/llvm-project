@@ -35,6 +35,7 @@ class MCSectionXCOFF final : public MCSection {
   Optional<XCOFF::CsectProperties> CsectProp;
   MCSymbolXCOFF *const QualName;
   StringRef SymbolTableName;
+  Optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSubtypeFlags;
   bool MultiSymbolsAllowed;
   static constexpr unsigned DefaultAlignVal = 4;
 
@@ -44,12 +45,13 @@ class MCSectionXCOFF final : public MCSection {
                  bool MultiSymbolsAllowed)
       : MCSection(SV_XCOFF, Name, K, Begin),
         CsectProp(XCOFF::CsectProperties(SMC, ST)), QualName(QualName),
-        SymbolTableName(SymbolTableName),
+        SymbolTableName(SymbolTableName), DwarfSubtypeFlags(None),
         MultiSymbolsAllowed(MultiSymbolsAllowed) {
     assert(
         (ST == XCOFF::XTY_SD || ST == XCOFF::XTY_CM || ST == XCOFF::XTY_ER) &&
         "Invalid or unhandled type for csect.");
     assert(QualName != nullptr && "QualName is needed.");
+
     QualName->setRepresentedCsect(this);
     QualName->setStorageClass(XCOFF::C_HIDEXT);
     // A csect is 4 byte aligned by default, except for undefined symbol csects.
@@ -58,10 +60,11 @@ class MCSectionXCOFF final : public MCSection {
   }
 
   MCSectionXCOFF(StringRef Name, SectionKind K, MCSymbolXCOFF *QualName,
+                 XCOFF::DwarfSectionSubtypeFlags DwarfSubtypeFlags,
                  MCSymbol *Begin, StringRef SymbolTableName,
                  bool MultiSymbolsAllowed)
       : MCSection(SV_XCOFF, Name, K, Begin), QualName(QualName),
-        SymbolTableName(SymbolTableName),
+        SymbolTableName(SymbolTableName), DwarfSubtypeFlags(DwarfSubtypeFlags),
         MultiSymbolsAllowed(MultiSymbolsAllowed) {
     assert(QualName != nullptr && "QualName is needed.");
 
@@ -103,6 +106,10 @@ public:
   StringRef getSymbolTableName() const { return SymbolTableName; }
   bool isMultiSymbolsAllowed() const { return MultiSymbolsAllowed; }
   bool isCsect() const { return CsectProp.hasValue(); }
+  bool isDwarfSect() const { return DwarfSubtypeFlags.hasValue(); }
+  Optional<XCOFF::DwarfSectionSubtypeFlags> getDwarfSubtypeFlags() const {
+    return DwarfSubtypeFlags;
+  }
 };
 
 } // end namespace llvm
