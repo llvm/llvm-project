@@ -243,6 +243,38 @@ template<class _Tp>
 concept move_constructible =
   constructible_from<_Tp, _Tp> && convertible_to<_Tp, _Tp>;
 
+// [concept.booleantestable]
+template<class _Tp>
+concept __boolean_testable_impl = convertible_to<_Tp, bool>;
+
+template<class _Tp>
+concept __boolean_testable = __boolean_testable_impl<_Tp> && requires(_Tp&& __t) {
+  { !std::forward<_Tp>(__t) } -> __boolean_testable_impl;
+};
+
+// [concept.equalitycomparable]
+template<class _Tp, class _Up>
+concept __weakly_equality_comparable_with =
+  requires(const remove_reference_t<_Tp>& __t, const remove_reference_t<_Up>& __u) {
+    { __t == __u } -> __boolean_testable;
+    { __t != __u } -> __boolean_testable;
+    { __u == __t } -> __boolean_testable;
+    { __u != __t } -> __boolean_testable;
+  };
+
+template<class _Tp>
+concept equality_comparable = __weakly_equality_comparable_with<_Tp, _Tp>;
+
+template<class _Tp, class _Up>
+concept equality_comparable_with =
+  equality_comparable<_Tp> && equality_comparable<_Up> &&
+  common_reference_with<const remove_reference_t<_Tp>&, const remove_reference_t<_Up>&> &&
+  equality_comparable<
+    common_reference_t<
+      const remove_reference_t<_Tp>&,
+      const remove_reference_t<_Up>&>> &&
+  __weakly_equality_comparable_with<_Tp, _Up>;
+
 // [concept.copyconstructible]
 template<class _Tp>
 concept copy_constructible =
