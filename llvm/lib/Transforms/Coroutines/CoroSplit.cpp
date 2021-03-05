@@ -887,6 +887,10 @@ void CoroCloner::create() {
     if (OrigF.hasParamAttribute(ContextArgIndex, Attribute::SwiftAsync)) {
       addAsyncContextAttrs(NewAttrs, Context, ContextArgIndex);
     }
+
+    // Transfer the original function's attributes.
+    auto FnAttrs = OrigF.getAttributes().getFnAttributes();
+    NewAttrs = NewAttrs.addAttributes(Context, AttributeList::FunctionIndex, FnAttrs);
     break;
   }
   case coro::ABI::Retcon:
