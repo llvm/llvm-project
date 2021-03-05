@@ -4419,6 +4419,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               SDValue Operand, const SDNodeFlags Flags) {
+  assert(Operand.getOpcode() != ISD::DELETED_NODE &&
+         "Operand is DELETED_NODE!");
   // Constant fold unary operations with an integer constant operand. Even
   // opaque constant will be folded, because the folding of unary operations
   // doesn't create new constants with different values. Nevertheless, the
@@ -5254,6 +5256,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               SDValue N1, SDValue N2, const SDNodeFlags Flags) {
+  assert(N1.getOpcode() != ISD::DELETED_NODE &&
+         N2.getOpcode() != ISD::DELETED_NODE &&
+         "Operand is DELETED_NODE!");
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
   ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2);
   ConstantFPSDNode *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
@@ -5729,6 +5734,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               SDValue N1, SDValue N2, SDValue N3,
                               const SDNodeFlags Flags) {
+  assert(N1.getOpcode() != ISD::DELETED_NODE &&
+         N2.getOpcode() != ISD::DELETED_NODE &&
+         N3.getOpcode() != ISD::DELETED_NODE &&
+         "Operand is DELETED_NODE!");
   // Perform various simplifications.
   switch (Opcode) {
   case ISD::FMA: {
@@ -7613,6 +7622,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   default: break;
   }
 
+#ifndef NDEBUG
+  for (auto &Op : Ops)
+    assert(Op.getOpcode() != ISD::DELETED_NODE &&
+           "Operand is DELETED_NODE!");
+#endif
+
   switch (Opcode) {
   default: break;
   case ISD::BUILD_VECTOR:
@@ -7685,6 +7700,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
                               ArrayRef<SDValue> Ops, const SDNodeFlags Flags) {
   if (VTList.NumVTs == 1)
     return getNode(Opcode, DL, VTList.VTs[0], Ops);
+
+#ifndef NDEBUG
+  for (auto &Op : Ops)
+    assert(Op.getOpcode() != ISD::DELETED_NODE &&
+           "Operand is DELETED_NODE!");
+#endif
 
   switch (Opcode) {
   case ISD::STRICT_FP_EXTEND:
