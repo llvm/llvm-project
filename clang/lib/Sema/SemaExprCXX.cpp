@@ -2458,12 +2458,27 @@ static bool resolveAllocationOverload(
     }
 
     if (Diagnose) {
-      PartialDiagnosticAt PD(R.getNameLoc(), S.PDiag(diag::err_ovl_no_viable_function_in_call)
-          << R.getLookupName() << Range);
+      // If this is an allocation of the form 'new (p) X' for some object
+      // pointer p (or an expression that will decay to such a pointer),
+      // diagnose the missing inclusion of <new>.
+      if (!R.isClassLookup() && Args.size() == 2 &&
+          (Args[1]->getType()->isObjectPointerType() ||
+           Args[1]->getType()->isArrayType())) {
+        S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
+            << R.getLookupName() << Range;
+        // Listing the candidates is unlikely to be useful; skip it.
+        return true;
+      }
 
-      // If we have aligned candidates, only note the align_val_t candidates
-      // from AlignedCandidates and the non-align_val_t candidates from
-      // Candidates.
+      // Finish checking all candidates before we note any. This checking can
+      // produce additional diagnostics so can't be interleaved with our
+      // emission of notes.
+      //
+      // For an aligned allocation, separately check the aligned and unaligned
+      // candidates with their respective argument lists.
+      SmallVector<OverloadCandidate*, 32> Cands;
+      SmallVector<OverloadCandidate*, 32> AlignedCands;
+      llvm::SmallVector<Expr*, 4> AlignedArgs;
       if (AlignedCandidates) {
         auto IsAligned = [](OverloadCandidate &C) {
           return C.Function->getNumParams() > 1 &&
@@ -2471,17 +2486,26 @@ static bool resolveAllocationOverload(
         };
         auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
 
-        // This was an overaligned allocation, so list the aligned candidates
-        // first.
-        Args.insert(Args.begin() + 1, AlignArg);
-        AlignedCandidates->NoteCandidates(PD, S, OCD_AllCandidates, Args, "",
-                                          R.getNameLoc(), IsAligned);
-        Args.erase(Args.begin() + 1);
-        Candidates.NoteCandidates(PD, S, OCD_AllCandidates, Args, "", R.getNameLoc(),
-                                  IsUnaligned);
+        AlignedArgs.reserve(Args.size() + 1);
+        AlignedArgs.push_back(Args[0]);
+        AlignedArgs.push_back(AlignArg);
+        AlignedArgs.append(Args.begin() + 1, Args.end());
+        AlignedCands = AlignedCandidates->CompleteCandidates(
+            S, OCD_AllCandidates, AlignedArgs, R.getNameLoc(), IsAligned);
+
+        Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
+                                              R.getNameLoc(), IsUnaligned);
       } else {
-        Candidates.NoteCandidates(PD, S, OCD_AllCandidates, Args);
+        Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
+                                              R.getNameLoc());
       }
+
+      S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
+          << R.getLookupName() << Range;
+      if (AlignedCandidates)
+        AlignedCandidates->NoteCandidates(S, AlignedArgs, AlignedCands, "",
+                                          R.getNameLoc());
+      Candidates.NoteCandidates(S, Args, Cands, "", R.getNameLoc());
     }
     return true;
 
