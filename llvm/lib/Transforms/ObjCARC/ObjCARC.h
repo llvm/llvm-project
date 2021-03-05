@@ -25,7 +25,7 @@
 #include "ARCRuntimeEntryPoints.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
-#include "llvm/Analysis/ObjCARCUtil.h"
+#include "llvm/IR/ObjCARCUtil.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 namespace llvm {

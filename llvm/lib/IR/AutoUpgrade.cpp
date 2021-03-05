@@ -14,7 +14,7 @@
 
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Analysis/ObjCARCUtil.h"
+#include "llvm/IR/ObjCARCUtil.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"

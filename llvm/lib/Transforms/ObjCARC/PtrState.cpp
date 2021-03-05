@@ -11,7 +11,7 @@
 #include "ObjCARC.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
-#include "llvm/Analysis/ObjCARCUtil.h"
+#include "llvm/IR/ObjCARCUtil.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
