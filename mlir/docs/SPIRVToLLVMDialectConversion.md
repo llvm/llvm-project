@@ -640,7 +640,7 @@ As well as:
 *   spv.MemoryBarrier
 *   spv.mlir.referenceof
 *   spv.SMod
-*   spv.specConstant
+*   spv.SpecConstant
 *   spv.Unreachable
 *   spv.VectorExtractDynamic
 

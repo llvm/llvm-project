@@ -91,7 +91,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 // -----
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
-  spv.specConstant @condition_scalar = true
+  spv.SpecConstant @condition_scalar = true
   spv.func @select() -> () "None" {
     %0 = spv.constant 4.0 : f32
     %1 = spv.constant 5.0 : f32

@@ -113,7 +113,7 @@ spv.module Logical GLSL450 {
 
 // CHECK:      module {
 // CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.specConstant @foo spec_id(5)
+// CHECK-NEXT:     spv.SpecConstant @foo spec_id(5)
 
 // CHECK-NEXT:     spv.func @use_foo()
 // CHECK-NEXT:       %0 = spv.mlir.referenceof @foo
@@ -130,7 +130,7 @@ spv.module Logical GLSL450 {
 
 module {
 spv.module Logical GLSL450 {
-  spv.specConstant @foo spec_id(5) = 1. : f32
+  spv.SpecConstant @foo spec_id(5) = 1. : f32
 
   spv.func @use_foo() -> (f32) "None" {
     %0 = spv.mlir.referenceof @foo : f32
@@ -139,7 +139,7 @@ spv.module Logical GLSL450 {
 }
 
 spv.module Logical GLSL450 {
-  spv.specConstant @bar spec_id(5) = 1. : f32
+  spv.SpecConstant @bar spec_id(5) = 1. : f32
 
   spv.func @use_bar() -> (f32) "None" {
     %0 = spv.mlir.referenceof @bar : f32
@@ -153,7 +153,7 @@ spv.module Logical GLSL450 {
 
 // CHECK:      module {
 // CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.specConstant @bar spec_id(5)
+// CHECK-NEXT:     spv.SpecConstant @bar spec_id(5)
 
 // CHECK-NEXT:     spv.func @foo(%arg0: f32)
 // CHECK-NEXT:       spv.ReturnValue
@@ -192,7 +192,7 @@ spv.module Logical GLSL450 {
 
 module {
 spv.module Logical GLSL450 {
-  spv.specConstant @bar spec_id(5) = 1. : f32
+  spv.SpecConstant @bar spec_id(5) = 1. : f32
 
   spv.func @foo(%arg0: f32) -> (f32) "None" {
     spv.ReturnValue %arg0 : f32
