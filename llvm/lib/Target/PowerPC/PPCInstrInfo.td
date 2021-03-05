@@ -5156,21 +5156,13 @@ let Predicates = [IsISA3_0] in {
 // We prefix 'CP' to COPY due to name conflict in Target.td. We also prefix to
 // PASTE for naming consistency.
 let mayLoad = 1 in
-def CP_COPY   : X_L1_RA5_RB5<31, 774, "copy"  , gprc, IIC_LdStCOPY, []>;
-
-let mayStore = 1 in
-def CP_PASTE  : X_L1_RA5_RB5<31, 902, "paste" , gprc, IIC_LdStPASTE, []>;
+def CP_COPY   : X_RA5_RB5<31, 774, "copy"  , gprc, IIC_LdStCOPY, []>;
 
 let mayStore = 1, Defs = [CR0] in
 def CP_PASTE_rec : X_L1_RA5_RB5<31, 902, "paste.", gprc, IIC_LdStPASTE, []>, isRecordForm;
 
-def CP_COPYx  : PPCAsmPseudo<"copy $rA, $rB" , (ins gprc:$rA, gprc:$rB)>;
-def CP_PASTEx : PPCAsmPseudo<"paste $rA, $rB", (ins gprc:$rA, gprc:$rB)>;
-def CP_COPY_FIRST : PPCAsmPseudo<"copy_first $rA, $rB",
-                                  (ins gprc:$rA, gprc:$rB)>;
-def CP_PASTE_LAST : PPCAsmPseudo<"paste_last $rA, $rB",
-                                  (ins gprc:$rA, gprc:$rB)>;
-def CP_ABORT : XForm_0<31, 838, (outs), (ins), "cp_abort", IIC_SprABORT, []>;
+def : InstAlias<"paste. $RA, $RB", (CP_PASTE_rec gprc:$RA, gprc:$RB, 1)>;
+def CP_ABORT : XForm_0<31, 838, (outs), (ins), "cpabort", IIC_SprABORT, []>;
 
 // Message Synchronize
 def MSGSYNC : XForm_0<31, 886, (outs), (ins), "msgsync", IIC_SprMSGSYNC, []>;
