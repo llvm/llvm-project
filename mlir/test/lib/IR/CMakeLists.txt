@@ -9,6 +9,7 @@ add_mlir_library(MLIRTestIR
   TestSlicing.cpp
   TestSymbolUses.cpp
   TestTypes.cpp
+  TestVisitors.cpp
 
   EXCLUDE_FROM_LIBMLIR
 

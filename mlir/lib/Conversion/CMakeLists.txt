@@ -1,5 +1,4 @@
 add_subdirectory(AffineToStandard)
-add_subdirectory(ArmNeonToLLVM)
 add_subdirectory(AsyncToLLVM)
 add_subdirectory(AVX512ToLLVM)
 add_subdirectory(ComplexToLLVM)
