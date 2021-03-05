@@ -836,11 +836,11 @@ void kmp_stats_output_module::outputStats(const char *heading) {
     // Accumulate timers.
     for (timer_e s = timer_e(0); s < TIMER_LAST; s = timer_e(s + 1)) {
       // See if we should ignore this timer when aggregating
-      if ((timeStat::masterOnly(s) && (t != 0)) || // Timer only valid on master
-                                                   // and this thread is worker
+      if ((timeStat::masterOnly(s) && (t != 0)) || // Timer only valid on
+          // primary thread and this thread is worker
           (timeStat::workerOnly(s) && (t == 0)) // Timer only valid on worker
-          // and this thread is the master
-      ) {
+          // and this thread is the primary thread
+          ) {
         continue;
       }
 
