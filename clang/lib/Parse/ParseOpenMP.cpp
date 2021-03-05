@@ -2536,7 +2536,15 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
       // the captured region. Code elsewhere assumes that any FunctionScopeInfo
       // should have at least one compound statement scope within it.
       ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
-      AssociatedStmt = (Sema::CompoundScopeRAII(Actions), ParseStatement());
+      {
+        Sema::CompoundScopeRAII Scope(Actions);
+        AssociatedStmt = ParseStatement();
+
+        if (AssociatedStmt.isUsable() && isOpenMPLoopDirective(DKind) &&
+            getLangOpts().OpenMPIRBuilder)
+          AssociatedStmt =
+              Actions.ActOnOpenMPCanonicalLoop(AssociatedStmt.get());
+      }
       AssociatedStmt = Actions.ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
     } else if (DKind == OMPD_target_update || DKind == OMPD_target_enter_data ||
                DKind == OMPD_target_exit_data) {

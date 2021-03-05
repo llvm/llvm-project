@@ -92,6 +92,8 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
         for (Stmt *S : CS->body()) {
           if (!S)
             continue;
+          if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(S))
+            S = CanonLoop->getLoopStmt();
           if (isa<ForStmt>(S) || isa<CXXForRangeStmt>(S) ||
               (isa<OMPLoopBasedDirective>(S) && !isa<OMPLoopDirective>(S))) {
             // Only single loop construct is allowed.
@@ -127,6 +129,8 @@ bool OMPLoopBasedDirective::doForAllLoops(
   for (unsigned Cnt = 0; Cnt < NumLoops; ++Cnt) {
     if (auto *Dir = dyn_cast<OMPTileDirective>(CurStmt))
       CurStmt = Dir->getTransformedStmt();
+    if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(CurStmt))
+      CurStmt = CanonLoop->getLoopStmt();
     if (Callback(Cnt, CurStmt))
       return false;
     // Move on to the next nested for loop, or to the loop body.
@@ -161,6 +165,8 @@ void OMPLoopBasedDirective::doForAllLoopsBodies(
                  "Expected canonical for or range-based for loops.");
           Body = cast<CXXForRangeStmt>(Loop)->getBody();
         }
+        if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(Body))
+          Body = CanonLoop->getLoopStmt();
         Callback(Cnt, Loop, Body);
         return false;
       });
