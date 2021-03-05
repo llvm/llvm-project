@@ -249,34 +249,40 @@ public:
   // Operation Walkers
   //===--------------------------------------------------------------------===//
 
-  /// Walk the operations in this block in postorder, calling the callback for
-  /// each operation.
+  /// Walk the operations in this block, calling the callback for each
+  /// operation. The walk order for regions, blocks and operations is specified
+  /// by 'Order' (post-order by default).
   /// See Operation::walk for more details.
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   RetT walk(FnT &&callback) {
-    return walk(begin(), end(), std::forward<FnT>(callback));
+    return walk<Order>(begin(), end(), std::forward<FnT>(callback));
   }
 
-  /// Walk the operations in the specified [begin, end) range of this block in
-  /// postorder, calling the callback for each operation. This method is invoked
-  /// for void return callbacks.
+  /// Walk the operations in the specified [begin, end) range of this block,
+  /// calling the callback for each operation. The walk order for regions,
+  /// blocks and operations is specified by 'Order' (post-order by default).
+  /// This method is invoked for void return callbacks.
   /// See Operation::walk for more details.
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   typename std::enable_if<std::is_same<RetT, void>::value, RetT>::type
   walk(Block::iterator begin, Block::iterator end, FnT &&callback) {
     for (auto &op : llvm::make_early_inc_range(llvm::make_range(begin, end)))
-      detail::walk(&op, callback);
+      detail::walk<Order>(&op, callback);
   }
 
-  /// Walk the operations in the specified [begin, end) range of this block in
-  /// postorder, calling the callback for each operation. This method is invoked
-  /// for interruptible callbacks.
+  /// Walk the operations in the specified [begin, end) range of this block,
+  /// calling the callback for each operation. The walk order for regions,
+  /// blocks and operations is specified by 'Order' (post-order by default).
+  /// This method is invoked for interruptible callbacks.
   /// See Operation::walk for more details.
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   typename std::enable_if<std::is_same<RetT, WalkResult>::value, RetT>::type
   walk(Block::iterator begin, Block::iterator end, FnT &&callback) {
     for (auto &op : llvm::make_early_inc_range(llvm::make_range(begin, end)))
-      if (detail::walk(&op, callback).wasInterrupted())
+      if (detail::walk<Order>(&op, callback).wasInterrupted())
         return WalkResult::interrupt();
     return WalkResult::advance();
   }

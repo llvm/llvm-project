@@ -243,23 +243,29 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Walk the operations in this region in postorder, calling the callback for
-  /// each operation. This method is invoked for void-returning callbacks.
+  /// each operation. The walk order for regions, blocks and operations is
+  /// specified by 'Order' (post-order by default). This method is invoked for
+  /// void-returning callbacks.
   /// See Operation::walk for more details.
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   typename std::enable_if<std::is_same<RetT, void>::value, RetT>::type
   walk(FnT &&callback) {
     for (auto &block : *this)
-      block.walk(callback);
+      block.walk<Order>(callback);
   }
 
   /// Walk the operations in this region in postorder, calling the callback for
-  /// each operation. This method is invoked for interruptible callbacks.
+  /// each operation. The walk order for regions, blocks and operations is
+  /// specified by 'Order' (post-order by default). This method is invoked for
+  /// interruptible callbacks.
   /// See Operation::walk for more details.
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   typename std::enable_if<std::is_same<RetT, WalkResult>::value, RetT>::type
   walk(FnT &&callback) {
     for (auto &block : *this)
-      if (block.walk(callback).wasInterrupted())
+      if (block.walk<Order>(callback).wasInterrupted())
         return WalkResult::interrupt();
     return WalkResult::advance();
   }
