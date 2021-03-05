@@ -1,4 +1,7 @@
-// RUN: mlir-opt %s -pass-pipeline='func(canonicalize)' | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='func(canonicalize)' -split-input-file | FileCheck %s
+
+
+// -----
 
 func @single_iteration(%A: memref<?x?x?xi32>) {
   %c0 = constant 0 : index
@@ -143,6 +146,8 @@ func @for_yields_3(%lb : index, %ub : index, %step : index) -> (i32, i32, i32) {
 //  CHECK-NEXT:     }
 //  CHECK-NEXT:     return %[[a]], %[[r1]], %[[b]] : i32, i32, i32
 
+// -----
+
 // CHECK-LABEL: @replace_true_if
 func @replace_true_if() {
   %true = constant true
@@ -155,6 +160,8 @@ func @replace_true_if() {
   return
 }
 
+// -----
+
 // CHECK-LABEL: @remove_false_if
 func @remove_false_if() {
   %false = constant false
@@ -166,6 +173,8 @@ func @remove_false_if() {
   }
   return
 }
+
+// -----
 
 // CHECK-LABEL: @replace_true_if_with_values
 func @replace_true_if_with_values() {
@@ -184,6 +193,8 @@ func @replace_true_if_with_values() {
   return
 }
 
+// -----
+
 // CHECK-LABEL: @replace_false_if_with_values
 func @replace_false_if_with_values() {
   %false = constant false
@@ -201,6 +212,8 @@ func @replace_false_if_with_values() {
   return
 }
 
+// -----
+
 // CHECK-LABEL: @remove_zero_iteration_loop
 func @remove_zero_iteration_loop() {
   %c42 = constant 42 : index
@@ -217,6 +230,8 @@ func @remove_zero_iteration_loop() {
   return
 }
 
+// -----
+
 // CHECK-LABEL: @remove_zero_iteration_loop_vals
 func @remove_zero_iteration_loop_vals(%arg0: index) {
   %c2 = constant 2 : index
@@ -232,6 +247,8 @@ func @remove_zero_iteration_loop_vals(%arg0: index) {
   "test.consume"(%0) : (i32) -> ()
   return
 }
+
+// -----
 
 // CHECK-LABEL: @replace_single_iteration_loop_1
 func @replace_single_iteration_loop_1() {
@@ -252,6 +269,8 @@ func @replace_single_iteration_loop_1() {
   return
 }
 
+// -----
+
 // CHECK-LABEL: @replace_single_iteration_loop_2
 func @replace_single_iteration_loop_2() {
   // CHECK: %[[LB:.*]] = constant 5
@@ -271,6 +290,7 @@ func @replace_single_iteration_loop_2() {
   return
 }
 
+// -----
 
 // CHECK-LABEL: @replace_single_iteration_loop_non_unit_step
 func @replace_single_iteration_loop_non_unit_step() {
@@ -291,6 +311,8 @@ func @replace_single_iteration_loop_non_unit_step() {
   return
 }
 
+// -----
+
 // CHECK-LABEL: @remove_empty_parallel_loop
 func @remove_empty_parallel_loop(%lb: index, %ub: index, %s: index) {
   // CHECK: %[[INIT:.*]] = "test.init"
@@ -310,4 +332,53 @@ func @remove_empty_parallel_loop(%lb: index, %ub: index, %s: index) {
   // CHECK: "test.consume"(%[[INIT]])
   "test.consume"(%0) : (f32) -> ()
   return
+}
+
+// -----
+func private @process(%0 : memref<128x128xf32>)
+func private @process_tensor(%0 : tensor<128x128xf32>) -> memref<128x128xf32>
+
+// CHECK-LABEL: last_value
+//  CHECK-SAME:   %[[T0:[0-9a-z]*]]: tensor<128x128xf32>
+//  CHECK-SAME:   %[[T1:[0-9a-z]*]]: tensor<128x128xf32>
+//  CHECK-SAME:   %[[T2:[0-9a-z]*]]: tensor<128x128xf32>
+//  CHECK-SAME:   %[[M0:[0-9a-z]*]]: memref<128x128xf32>
+func @last_value(%t0: tensor<128x128xf32>, %t1: tensor<128x128xf32>,
+                 %t2: tensor<128x128xf32>, %m0: memref<128x128xf32>,
+                 %lb : index, %ub : index, %step : index)
+  -> (tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>)
+{
+  // CHECK-NEXT: %[[M1:.*]] = tensor_to_memref %[[T1]] : memref<128x128xf32>
+  // CHECK-NEXT: %[[FOR_RES:.*]] = scf.for {{.*}} iter_args(%[[BBARG_T2:.*]] = %[[T2]]) -> (tensor<128x128xf32>) {
+  %0:3 = scf.for %arg0 = %lb to %ub step %step iter_args(%arg1 = %t0, %arg2 = %t1, %arg3 = %t2)
+    -> (tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>)
+  {
+    %m1 = tensor_to_memref %arg2 : memref<128x128xf32>
+
+    // CHECK-NEXT:   call @process(%[[M0]]) : (memref<128x128xf32>) -> ()
+    call @process(%m0) : (memref<128x128xf32>) -> ()
+
+    // CHECK-NEXT:   call @process(%[[M1]]) : (memref<128x128xf32>) -> ()
+    call @process(%m1) : (memref<128x128xf32>) -> ()
+
+    // This does not hoist (fails the bbArg has at most a single check).
+    // CHECK-NEXT:   %[[T:.*]] = call @process_tensor(%[[BBARG_T2]]) : (tensor<128x128xf32>) -> memref<128x128xf32>
+    // CHECK-NEXT:   %[[YIELD_T:.*]] = tensor_load %[[T:.*]]
+    %m2 = call @process_tensor(%arg3): (tensor<128x128xf32>) -> memref<128x128xf32>
+    %3 = tensor_load %m2 : memref<128x128xf32>
+
+    // All this stuff goes away, incrementally
+    %1 = tensor_load %m0 : memref<128x128xf32>
+    %2 = tensor_load %m1 : memref<128x128xf32>
+
+    // CHECK-NEXT:   scf.yield %[[YIELD_T]] : tensor<128x128xf32>
+    scf.yield %1, %2, %3 : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
+
+  // CHECK-NEXT: }
+  }
+
+  // CHECK-NEXT: %[[R0:.*]] = tensor_load %[[M0]] : memref<128x128xf32>
+  // CHECK-NEXT: %[[R1:.*]] = tensor_load %[[M1]] : memref<128x128xf32>
+  // CHECK-NEXT: return %[[R0]], %[[R1]], %[[FOR_RES]] : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
+  return %0#0, %0#1, %0#2 : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
 }
