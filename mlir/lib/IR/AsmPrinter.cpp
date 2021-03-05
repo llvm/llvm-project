@@ -441,13 +441,18 @@ private:
   /// 'elidedAttrs'.
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
                              ArrayRef<StringRef> elidedAttrs = {}) override {
-    // Filter out any attributes that shouldn't be included.
-    SmallVector<NamedAttribute, 8> filteredAttrs(
-        llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
-          return !llvm::is_contained(elidedAttrs, attr.first.strref());
-        }));
-    for (const NamedAttribute &attr : filteredAttrs)
-      printAttribute(attr.second);
+    if (attrs.empty())
+      return;
+    if (elidedAttrs.empty()) {
+      for (const NamedAttribute &attr : attrs)
+        printAttribute(attr.second);
+      return;
+    }
+    llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedAttrs.begin(),
+                                                  elidedAttrs.end());
+    for (const NamedAttribute &attr : attrs)
+      if (!elidedAttrsSet.contains(attr.first.strref()))
+        printAttribute(attr.second);
   }
   void printOptionalAttrDictWithKeyword(
       ArrayRef<NamedAttribute> attrs,
@@ -1916,25 +1921,31 @@ void ModulePrinter::printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
   if (attrs.empty())
     return;
 
-  // Filter out any attributes that shouldn't be included.
-  SmallVector<NamedAttribute, 8> filteredAttrs(
-      llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
-        return !llvm::is_contained(elidedAttrs, attr.first.strref());
-      }));
+  // Functor used to print a filtered attribute list.
+  auto printFilteredAttributesFn = [&](auto filteredAttrs) {
+    // Print the 'attributes' keyword if necessary.
+    if (withKeyword)
+      os << " attributes";
 
-  // If there are no attributes left to print after filtering, then we're done.
-  if (filteredAttrs.empty())
-    return;
+    // Otherwise, print them all out in braces.
+    os << " {";
+    interleaveComma(filteredAttrs,
+                    [&](NamedAttribute attr) { printNamedAttribute(attr); });
+    os << '}';
+  };
 
-  // Print the 'attributes' keyword if necessary.
-  if (withKeyword)
-    os << " attributes";
+  // If no attributes are elided, we can directly print with no filtering.
+  if (elidedAttrs.empty())
+    return printFilteredAttributesFn(attrs);
 
-  // Otherwise, print them all out in braces.
-  os << " {";
-  interleaveComma(filteredAttrs,
-                  [&](NamedAttribute attr) { printNamedAttribute(attr); });
-  os << '}';
+  // Otherwise, filter out any attributes that shouldn't be included.
+  llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedAttrs.begin(),
+                                                elidedAttrs.end());
+  auto filteredAttrs = llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
+    return !elidedAttrsSet.contains(attr.first.strref());
+  });
+  if (!filteredAttrs.empty())
+    printFilteredAttributesFn(filteredAttrs);
 }
 
 void ModulePrinter::printNamedAttribute(NamedAttribute attr) {
