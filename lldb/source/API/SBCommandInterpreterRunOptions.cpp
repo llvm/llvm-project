@@ -131,6 +131,20 @@ void SBCommandInterpreterRunOptions::SetPrintResults(bool print_results) {
   m_opaque_up->SetPrintResults(print_results);
 }
 
+bool SBCommandInterpreterRunOptions::GetPrintErrors() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreterRunOptions,
+                                   GetPrintErrors);
+
+  return m_opaque_up->GetPrintErrors();
+}
+
+void SBCommandInterpreterRunOptions::SetPrintErrors(bool print_errors) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreterRunOptions, SetPrintErrors,
+                     (bool), print_errors);
+
+  m_opaque_up->SetPrintErrors(print_errors);
+}
+
 bool SBCommandInterpreterRunOptions::GetAddToHistory() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreterRunOptions,
                                    GetAddToHistory);
@@ -268,6 +282,10 @@ template <> void RegisterMethods<SBCommandInterpreterRunOptions>(Registry &R) {
   LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
                              GetPrintResults, ());
   LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions, SetPrintResults,
+                       (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
+                             GetPrintErrors, ());
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions, SetPrintErrors,
                        (bool));
   LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
                              GetAddToHistory, ());
