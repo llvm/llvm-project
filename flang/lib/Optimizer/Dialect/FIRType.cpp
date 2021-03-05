@@ -30,10 +30,8 @@ namespace {
 template <typename TYPE>
 TYPE parseIntSingleton(mlir::DialectAsmParser &parser) {
   int kind = 0;
-  if (parser.parseLess() || parser.parseInteger(kind) ||
-      parser.parseGreater()) {
+  if (parser.parseLess() || parser.parseInteger(kind) || parser.parseGreater())
     return {};
-  }
   return TYPE::get(parser.getBuilder().getContext(), kind);
 }
 
@@ -50,9 +48,8 @@ TYPE parseRankSingleton(mlir::DialectAsmParser &parser) {
 template <typename TYPE>
 TYPE parseTypeSingleton(mlir::DialectAsmParser &parser) {
   mlir::Type ty;
-  if (parser.parseLess() || parser.parseType(ty) || parser.parseGreater()) {
+  if (parser.parseLess() || parser.parseType(ty) || parser.parseGreater())
     return {};
-  }
   return TYPE::get(ty);
 }
 
@@ -538,10 +535,8 @@ mlir::Type fir::RecordType::parse(mlir::MLIRContext *context,
       if (parser.parseOptionalComma())
         break;
     }
-    if (parser.parseRParen()) {
-      parser.emitError(parser.getNameLoc(), "expected ')'");
+    if (parser.parseRParen())
       return {};
-    }
   }
 
   RecordType::TypeList typeList;
@@ -558,9 +553,8 @@ mlir::Type fir::RecordType::parse(mlir::MLIRContext *context,
       if (parser.parseOptionalComma())
         break;
     }
-    if (parser.parseRBrace()) {
+    if (parser.parseRBrace())
       return {};
-    }
   }
 
   if (parser.parseGreater())

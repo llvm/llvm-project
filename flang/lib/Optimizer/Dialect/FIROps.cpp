@@ -558,14 +558,10 @@ static mlir::LogicalResult verify(fir::EmboxOp op) {
       if (!fir::isa_integer(lp.getType()))
         return op.emitOpError("LEN parameters must be integral type");
   }
-  if (op.getShape()) {
-    if (!isArray)
-      return op.emitOpError("shape must not be provided for a scalar");
-  }
-  if (op.getSlice()) {
-    if (!isArray)
-      return op.emitOpError("slice must not be provided for a scalar");
-  }
+  if (op.getShape() && !isArray)
+    return op.emitOpError("shape must not be provided for a scalar");
+  if (op.getSlice() && !isArray)
+    return op.emitOpError("slice must not be provided for a scalar");
   return mlir::success();
 }
 
