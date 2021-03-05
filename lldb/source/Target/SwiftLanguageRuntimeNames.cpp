@@ -15,7 +15,6 @@
 
 #include "swift/ABI/Task.h"
 #include "swift/Demangling/Demangle.h"
-#include "swift/Demangling/Demangler.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/VariableList.h"
@@ -54,20 +53,21 @@ enum class ThunkAction {
 
 } // namespace
 
-static NodePointer
-childAtPath(NodePointer node,
+static swift::Demangle::NodePointer
+childAtPath(swift::Demangle::NodePointer node,
             llvm::ArrayRef<swift::Demangle::Node::Kind> path) {
   if (path.empty())
     return node;
 
   auto current_step = path.front();
-  for (NodePointer child : *node)
+  for (auto *child : *node)
     if (child->getKind() == current_step)
       return childAtPath(child, path.drop_front());
   return nullptr;
 }
 
-static bool hasChild(NodePointer node, swift::Demangle::Node::Kind kind) {
+static bool hasChild(swift::Demangle::NodePointer node,
+                     swift::Demangle::Node::Kind kind) {
   return childAtPath(node, {kind});
 }
 
