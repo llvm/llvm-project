@@ -531,8 +531,6 @@ void fir::DispatchTableOp::appendTableEntry(mlir::Operation *op) {
 
 static mlir::LogicalResult verify(fir::EmboxOp op) {
   auto eleTy = fir::dyn_cast_ptrEleTy(op.memref().getType());
-  if (!eleTy)
-    return op.emitOpError("must embox a memory reference type");
   bool isArray = false;
   if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>()) {
     eleTy = seqTy.getEleTy();
@@ -554,20 +552,10 @@ static mlir::LogicalResult verify(fir::EmboxOp op) {
       if (!fir::isa_integer(lp.getType()))
         return op.emitOpError("LEN parameters must be integral type");
   }
-  if (op.getShape()) {
-    auto shapeTy = op.getShape().getType();
-    if (!(shapeTy.isa<fir::ShapeType>() || shapeTy.isa<ShapeShiftType>()))
-      return op.emitOpError("must be shape or shapeshift type");
-    if (!isArray)
-      return op.emitOpError("shape must not be provided for a scalar");
-  }
-  if (op.getSlice()) {
-    auto sliceTy = op.getSlice().getType();
-    if (!sliceTy.isa<fir::SliceType>())
-      return op.emitOpError("must be a slice type");
-    if (!isArray)
-      return op.emitOpError("slice must not be provided for a scalar");
-  }
+  if (op.getShape() && !isArray)
+    return op.emitOpError("shape must not be provided for a scalar");
+  if (op.getSlice() && !isArray)
+    return op.emitOpError("slice must not be provided for a scalar");
   return mlir::success();
 }
 
@@ -841,9 +829,6 @@ static mlir::ParseResult parseIterWhileOp(mlir::OpAsmParser &parser,
                                 std::get<1>(operand_type), result.operands))
         return failure();
     if (prependCount) {
-      // This is an assert here, because these types are verified.
-      assert(regionTypes[0].isa<mlir::IndexType>() &&
-             regionTypes[1].isSignlessInteger(1));
       result.addTypes(regionTypes);
     } else {
       result.addTypes(i1Type);
