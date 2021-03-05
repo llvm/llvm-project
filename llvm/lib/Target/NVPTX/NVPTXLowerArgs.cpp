@@ -140,6 +140,7 @@ INITIALIZE_PASS(NVPTXLowerArgs, "nvptx-lower-args",
 
 // =============================================================================
 // If the function had a byval struct ptr arg, say foo(%struct.x* byval %d),
+// and we can't guarantee that the only accesses are loads,
 // then add the following instructions to the first basic block:
 //
 // %temp = alloca %struct.x, align 8
@@ -150,7 +151,57 @@ INITIALIZE_PASS(NVPTXLowerArgs, "nvptx-lower-args",
 // The above code allocates some space in the stack and copies the incoming
 // struct from param space to local space.
 // Then replace all occurrences of %d by %temp.
+//
+// In case we know that all users are GEPs or Loads, replace them with the same
+// ones in parameter AS, so we can access them using ld.param.
 // =============================================================================
+
+// Replaces the \p OldUser instruction with the same in parameter AS.
+// Only Load and GEP are supported.
+static void convertToParamAS(Value *OldUser, Value *Param) {
+  Instruction *I = dyn_cast<Instruction>(OldUser);
+  assert(I && "OldUser must be an instruction");
+  struct IP {
+    Instruction *OldInstruction;
+    Value *NewParam;
+  };
+  SmallVector<IP> ItemsToConvert = {{I, Param}};
+  SmallVector<GetElementPtrInst *> GEPsToDelete;
+  while (!ItemsToConvert.empty()) {
+    IP I = ItemsToConvert.pop_back_val();
+    if (auto *LI = dyn_cast<LoadInst>(I.OldInstruction))
+      LI->setOperand(0, I.NewParam);
+    else if (auto *GEP = dyn_cast<GetElementPtrInst>(I.OldInstruction)) {
+      SmallVector<Value *, 4> Indices(GEP->indices());
+      auto *NewGEP = GetElementPtrInst::Create(nullptr, I.NewParam, Indices,
+                                               GEP->getName(), GEP);
+      NewGEP->setIsInBounds(GEP->isInBounds());
+      llvm::for_each(GEP->users(), [NewGEP, &ItemsToConvert](Value *V) {
+        ItemsToConvert.push_back({cast<Instruction>(V), NewGEP});
+      });
+      GEPsToDelete.push_back(GEP);
+    } else
+      llvm_unreachable("Only Load and GEP can be converted to param AS.");
+  }
+  llvm::for_each(GEPsToDelete,
+                 [](GetElementPtrInst *GEP) { GEP->eraseFromParent(); });
+}
+
+static bool isALoadChain(Value *Start) {
+  SmallVector<Value *, 16> ValuesToCheck = {Start};
+  while (!ValuesToCheck.empty()) {
+    Value *V = ValuesToCheck.pop_back_val();
+    Instruction *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return false;
+    if (isa<GetElementPtrInst>(I))
+      ValuesToCheck.append(I->user_begin(), I->user_end());
+    else if (!isa<LoadInst>(I))
+      return false;
+  }
+  return true;
+};
+
 void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   Function *Func = Arg->getParent();
   Instruction *FirstInst = &(Func->getEntryBlock().front());
@@ -159,6 +210,21 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   assert(PType && "Expecting pointer type in handleByValParam");
 
   Type *StructType = PType->getElementType();
+
+  if (llvm::all_of(Arg->users(), isALoadChain)) {
+    // Replace all loads with the loads in param AS. This allows loading the Arg
+    // directly from parameter AS, without making a temporary copy.
+    SmallVector<User *, 16> UsersToUpdate(Arg->users());
+    Value *ArgInParamAS = new AddrSpaceCastInst(
+        Arg, PointerType::get(StructType, ADDRESS_SPACE_PARAM), Arg->getName(),
+        FirstInst);
+    llvm::for_each(UsersToUpdate, [ArgInParamAS](Value *V) {
+      convertToParamAS(V, ArgInParamAS);
+    });
+    return;
+  }
+
+  // Otherwise we have to create a temporary copy.
   const DataLayout &DL = Func->getParent()->getDataLayout();
   unsigned AS = DL.getAllocaAddrSpace();
   AllocaInst *AllocA = new AllocaInst(StructType, AS, Arg->getName(), FirstInst);
