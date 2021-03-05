@@ -4518,11 +4518,12 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Node->getOpcode() == ISD::STRICT_FSETCC ||
       Node->getOpcode() == ISD::STRICT_FSETCCS)
     OVT = Node->getOperand(1).getSimpleValueType();
-  if (Node->getOpcode() == ISD::BR_CC)
+  if (Node->getOpcode() == ISD::BR_CC ||
+      Node->getOpcode() == ISD::SELECT_CC)
     OVT = Node->getOperand(2).getSimpleValueType();
   MVT NVT = TLI.getTypeToPromoteTo(Node->getOpcode(), OVT);
   SDLoc dl(Node);
-  SDValue Tmp1, Tmp2, Tmp3;
+  SDValue Tmp1, Tmp2, Tmp3, Tmp4;
   switch (Node->getOpcode()) {
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
@@ -4714,6 +4715,45 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
+
+  case ISD::SELECT_CC: {
+    SDValue Cond = Node->getOperand(4);
+    ISD::CondCode CCCode = cast<CondCodeSDNode>(Cond)->get();
+    // Type of the comparison operands.
+    MVT CVT = Node->getSimpleValueType(0);
+    assert(CVT == OVT && "not handled");
+
+    unsigned ExtOp = ISD::FP_EXTEND;
+    if (NVT.isInteger()) {
+      ExtOp = isSignedIntSetCC(CCCode) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    }
+
+    // Promote the comparison operands, if needed.
+    if (TLI.isCondCodeLegal(CCCode, CVT)) {
+      Tmp1 = Node->getOperand(0);
+      Tmp2 = Node->getOperand(1);
+    } else {
+      Tmp1 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(0));
+      Tmp2 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(1));
+    }
+    // Cast the true/false operands.
+    Tmp3 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(2));
+    Tmp4 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(3));
+
+    Tmp1 = DAG.getNode(ISD::SELECT_CC, dl, NVT, {Tmp1, Tmp2, Tmp3, Tmp4, Cond},
+                       Node->getFlags());
+
+    // Cast the result back to the original type.
+    if (ExtOp != ISD::FP_EXTEND)
+      Tmp1 = DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1);
+    else
+      Tmp1 = DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp1,
+                         DAG.getIntPtrConstant(0, dl));
+
+    Results.push_back(Tmp1);
+    break;
+  }
+
   case ISD::SETCC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS: {
