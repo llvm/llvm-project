@@ -623,6 +623,7 @@ public:
     if (!EnableBackgroundIndex) {
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
+
     Frag = [=](const config::Params &, Config &C) {
       if (CDBSearch)
         C.CompileFlags.CDBSearch = *CDBSearch;
@@ -630,6 +631,8 @@ public:
         C.Index.External = *IndexSpec;
       if (BGPolicy)
         C.Index.Background = *BGPolicy;
+      if (AllScopesCompletion.getNumOccurrences())
+        C.Completion.AllScopes = AllScopesCompletion;
       return true;
     };
   }
@@ -827,7 +830,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.CodeComplete.IncludeIndicator.NoInsert.clear();
   }
   Opts.CodeComplete.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
-  Opts.CodeComplete.AllScopes = AllScopesCompletion;
   Opts.CodeComplete.RunParser = CodeCompletionParse;
   Opts.CodeComplete.RankingModel = RankingModel;
 
