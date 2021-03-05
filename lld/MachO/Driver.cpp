@@ -125,21 +125,6 @@ static Optional<std::string> findFramework(StringRef name) {
   return {};
 }
 
-static TargetInfo *createTargetInfo(opt::InputArgList &args) {
-  StringRef archName = args.getLastArgValue(OPT_arch);
-  if (archName.empty())
-    fatal("must specify -arch");
-  config->arch = MachO::getArchitectureFromName(archName);
-  switch (MachO::getCPUTypeFromArchitecture(config->arch).first) {
-  case MachO::CPU_TYPE_X86_64:
-    return createX86_64TargetInfo();
-  case MachO::CPU_TYPE_ARM64:
-    return createARM64TargetInfo();
-  default:
-    fatal("missing or unsupported -arch " + archName);
-  }
-}
-
 static bool warnIfNotDirectory(StringRef option, StringRef path) {
   if (!fs::exists(path)) {
     warn("directory not found for option -" + option + path);
@@ -558,12 +543,12 @@ static std::string lowerDash(StringRef s) {
                      map_iterator(s.end(), toLowerDash));
 }
 
-static PlatformInfo getPlatformVersion(const opt::ArgList &args) {
+// Has the side-effect of setting Config::platformInfo.
+static PlatformKind parsePlatformVersion(const opt::ArgList &args) {
   const opt::Arg *arg = args.getLastArg(OPT_platform_version);
-  PlatformInfo platform;
   if (!arg) {
     error("must specify -platform_version");
-    return platform;
+    return PlatformKind::unknown;
   }
 
   StringRef platformStr = arg->getValue(0);
@@ -571,7 +556,7 @@ static PlatformInfo getPlatformVersion(const opt::ArgList &args) {
   StringRef sdkVersionStr = arg->getValue(2);
 
   // TODO(compnerd) see if we can generate this case list via XMACROS
-  platform.kind =
+  PlatformKind platform =
       StringSwitch<PlatformKind>(lowerDash(platformStr))
           .Cases("macos", "1", PlatformKind::macOS)
           .Cases("ios", "2", PlatformKind::iOS)
@@ -584,17 +569,37 @@ static PlatformInfo getPlatformVersion(const opt::ArgList &args) {
           .Cases("watchos-simulator", "9", PlatformKind::watchOSSimulator)
           .Cases("driverkit", "10", PlatformKind::driverKit)
           .Default(PlatformKind::unknown);
-  if (platform.kind == PlatformKind::unknown)
+  if (platform == PlatformKind::unknown)
     error(Twine("malformed platform: ") + platformStr);
   // TODO: check validity of version strings, which varies by platform
   // NOTE: ld64 accepts version strings with 5 components
   // llvm::VersionTuple accepts no more than 4 components
   // Has Apple ever published version strings with 5 components?
-  if (platform.minimum.tryParse(minVersionStr))
+  if (config->platformInfo.minimum.tryParse(minVersionStr))
     error(Twine("malformed minimum version: ") + minVersionStr);
-  if (platform.sdk.tryParse(sdkVersionStr))
+  if (config->platformInfo.sdk.tryParse(sdkVersionStr))
     error(Twine("malformed sdk version: ") + sdkVersionStr);
   return platform;
+}
+
+// Has the side-effect of setting Config::target.
+static TargetInfo *createTargetInfo(opt::InputArgList &args) {
+  StringRef archName = args.getLastArgValue(OPT_arch);
+  if (archName.empty())
+    fatal("must specify -arch");
+  PlatformKind platform = parsePlatformVersion(args);
+
+  config->target =
+      MachO::Target(MachO::getArchitectureFromName(archName), platform);
+
+  switch (MachO::getCPUTypeFromArchitecture(config->target.Arch).first) {
+  case MachO::CPU_TYPE_X86_64:
+    return createX86_64TargetInfo();
+  case MachO::CPU_TYPE_ARM64:
+    return createARM64TargetInfo();
+  default:
+    fatal("missing or unsupported -arch " + archName);
+  }
 }
 
 static UndefinedSymbolTreatment
@@ -666,16 +671,16 @@ static const char *getReproduceOption(opt::InputArgList &args) {
 static bool isPie(opt::InputArgList &args) {
   if (config->outputType != MH_EXECUTE || args.hasArg(OPT_no_pie))
     return false;
-  if (config->arch == AK_arm64 || config->arch == AK_arm64e)
+  if (config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e)
     return true;
 
   // TODO: add logic here as we support more archs. E.g. i386 should default
   // to PIE from 10.7
-  assert(config->arch == AK_x86_64 || config->arch == AK_x86_64h);
+  assert(config->target.Arch == AK_x86_64 || config->target.Arch == AK_x86_64h);
 
-  PlatformKind kind = config->platform.kind;
+  PlatformKind kind = config->target.Platform;
   if (kind == PlatformKind::macOS &&
-      config->platform.minimum >= VersionTuple(10, 6))
+      config->platformInfo.minimum >= VersionTuple(10, 6))
     return true;
 
   if (kind == PlatformKind::iOSSimulator || kind == PlatformKind::driverKit)
@@ -759,7 +764,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config = make<Configuration>();
   symtab = make<SymbolTable>();
   target = createTargetInfo(args);
-  config->platform = getPlatformVersion(args);
 
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
                                        /*file=*/nullptr,

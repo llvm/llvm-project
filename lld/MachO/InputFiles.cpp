@@ -480,10 +480,10 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
 
   MachO::Architecture arch =
       MachO::getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
-  if (arch != config->arch) {
+  if (arch != config->target.Arch) {
     error(toString(this) + " has architecture " + getArchitectureName(arch) +
           " which is incompatible with target architecture " +
-          getArchitectureName(config->arch));
+          getArchitectureName(config->target.Arch));
     return;
   }
   // TODO: check platform too
@@ -697,9 +697,9 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   if (umbrella == nullptr)
     umbrella = this;
 
-  if (!interface.getArchitectures().has(config->arch)) {
+  if (!is_contained(interface.targets(), config->target)) {
     error(toString(this) + " is incompatible with " +
-          getArchitectureName(config->arch));
+          std::string(config->target));
     return;
   }
 
@@ -715,7 +715,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   // TODO(compnerd) filter out symbols based on the target platform
   // TODO: handle weak defs, thread locals
   for (const auto symbol : interface.symbols()) {
-    if (!symbol->getArchitectures().has(config->arch))
+    if (!symbol->getArchitectures().has(config->target.Arch))
       continue;
 
     switch (symbol->getKind()) {
@@ -740,8 +740,11 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   const InterfaceFile *topLevel =
       interface.getParent() == nullptr ? &interface : interface.getParent();
 
-  for (InterfaceFileRef intfRef : interface.reexportedLibraries())
-    loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
+  for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {
+    auto targets = intfRef.targets();
+    if (is_contained(targets, config->target))
+      loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
+  }
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)
