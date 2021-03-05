@@ -149,20 +149,6 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   return None;
 }
 
-const load_command *macho::findCommand(const mach_header_64 *hdr,
-                                       uint32_t type) {
-  const uint8_t *p =
-      reinterpret_cast<const uint8_t *>(hdr) + sizeof(mach_header_64);
-
-  for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
-    auto *cmd = reinterpret_cast<const load_command *>(p);
-    if (cmd->cmd == type)
-      return cmd;
-    p += cmd->cmdsize;
-  }
-  return nullptr;
-}
-
 void ObjFile::parseSections(ArrayRef<section_64> sections) {
   subsections.reserve(sections.size());
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
@@ -352,6 +338,33 @@ static macho::Symbol *createDefined(const structs::nlist_64 &sym,
                        /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
+// Checks if the version specified in `cmd` is compatible with target
+// version in `config`. IOW, check if cmd's version >= config's version.
+static bool hasCompatVersion(const InputFile *input,
+                             const build_version_command *cmd,
+                             const Configuration *config) {
+
+  if (config->target.Platform != static_cast<PlatformKind>(cmd->platform)) {
+    error(toString(input) + " has platform " +
+          getPlatformName(static_cast<PlatformKind>(cmd->platform)) +
+          Twine(", which is different from target platform ") +
+          getPlatformName(config->target.Platform));
+    return false;
+  }
+
+  unsigned major = cmd->minos >> 16;
+  unsigned minor = (cmd->minos >> 8) & 0xffu;
+  unsigned subMinor = cmd->minos & 0xffu;
+  VersionTuple version(major, minor, subMinor);
+  if (version >= config->platformInfo.minimum)
+    return true;
+
+  error(toString(input) + " has version " + version.getAsString() +
+        ", which is incompatible with target version of " +
+        config->platformInfo.minimum.getAsString());
+  return false;
+}
+
 // Absolute symbols are defined symbols that do not have an associated
 // InputSection. They cannot be weak.
 static macho::Symbol *createAbsolute(const structs::nlist_64 &sym,
@@ -496,7 +509,12 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
           getArchitectureName(config->target.Arch));
     return;
   }
-  // TODO: check platform too
+
+  if (const auto *cmd =
+          findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
+    if (!hasCompatVersion(this, cmd, config))
+      return;
+  }
 
   if (const load_command *cmd = findCommand(hdr, LC_LINKER_OPTION)) {
     auto *c = reinterpret_cast<const linker_option_command *>(cmd);
@@ -651,6 +669,12 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     // so it's OK.
     error("dylib " + toString(this) + " missing LC_ID_DYLIB load command");
     return;
+  }
+
+  if (const build_version_command *cmd =
+          findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
+    if (!hasCompatVersion(this, cmd, config))
+      return;
   }
 
   // Initialize symbols.
