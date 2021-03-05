@@ -262,7 +262,8 @@ hash_code IndexRecordHasher::hash(CanQualType CT) {
 }
 
 hash_code IndexRecordHasher::hash(DeclarationName Name) {
-  assert(!Name.isEmpty());
+  if (Name.isEmpty())
+    return INITIAL_HASH;
   // Measurements for using cache or not here, showed significant slowdown when
   // using the cache for all DeclarationNames when parsing Cocoa, and minor
   // improvement or no difference for a couple of C++ single translation unit
