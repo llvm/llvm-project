@@ -649,7 +649,7 @@ bool BreakpointOptions::BreakpointOptionsCallbackFunction(
       options.SetPrintErrors(true);
       options.SetAddToHistory(false);
 
-      debugger.GetCommandInterpreter().HandleCommands(commands, &exe_ctx,
+      debugger.GetCommandInterpreter().HandleCommands(commands, exe_ctx,
                                                       options, result);
       result.GetImmediateOutputStream()->Flush();
       result.GetImmediateErrorStream()->Flush();
