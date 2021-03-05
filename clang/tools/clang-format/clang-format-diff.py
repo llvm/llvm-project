@@ -103,11 +103,19 @@ def main():
     command.extend(lines)
     if args.style:
       command.extend(['-style', args.style])
-    p = subprocess.Popen(command,
-                         stdout=subprocess.PIPE,
-                         stderr=None,
-                         stdin=subprocess.PIPE,
-                         universal_newlines=True)
+
+    try:
+      p = subprocess.Popen(command,
+                           stdout=subprocess.PIPE,
+                           stderr=None,
+                           stdin=subprocess.PIPE,
+                           universal_newlines=True)
+    except OSError as e:
+      # Give the user more context when clang-format isn't
+      # found/isn't executable, etc.
+      raise RuntimeError(
+        'Failed to run "%s" - %s"' % (" ".join(command), e.strerror))
+
     stdout, stderr = p.communicate()
     if p.returncode != 0:
       sys.exit(p.returncode)
