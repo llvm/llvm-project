@@ -328,6 +328,8 @@ void SampleContextTracker::markContextSamplesInlined(
   InlinedSamples->getContext().setState(InlinedContext);
 }
 
+ContextTrieNode &SampleContextTracker::getRootContext() { return RootContext; }
+
 void SampleContextTracker::promoteMergeContextSamplesTree(
     const Instruction &Inst, StringRef CalleeName) {
   LLVM_DEBUG(dbgs() << "Promoting and merging context tree for instr: \n"
@@ -490,6 +492,7 @@ SampleContextTracker::getOrCreateContextPath(const SampleContext &Context,
 }
 
 ContextTrieNode *SampleContextTracker::getTopLevelContextNode(StringRef FName) {
+  assert(!FName.empty() && "Top level node query must provide valid name");
   return RootContext.getChildContext(LineLocation(0, 0), FName);
 }
 
