@@ -58,6 +58,12 @@
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+crypto -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRYPTO %s
 // CHECK-CRYPTO: __ARM_FEATURE_CRYPTO 1
 
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.5-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-8_5 %s
+// CHECK-8_5: __ARM_FEATURE_FRINT 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.4-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-8_4 %s
+// CHECK-8_4-NOT: __ARM_FEATURE_FRINT 1
+
 // RUN: %clang -target aarch64-none-linux-gnu -mcrc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
 // RUN: %clang -target arm64-none-linux-gnu -mcrc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+crc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s

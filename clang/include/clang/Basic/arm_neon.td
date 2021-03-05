@@ -1210,6 +1210,13 @@ def FRINTZ_S64 : SInst<"vrnd", "..", "dQd">;
 def FRINTI_S64 : SInst<"vrndi", "..", "dQd">;
 }
 
+let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__) && defined(__ARM_FEATURE_FRINT)" in {
+def FRINT32X_S32 : SInst<"vrnd32x", "..", "fQf">;
+def FRINT32Z_S32 : SInst<"vrnd32z", "..", "fQf">;
+def FRINT64X_S32 : SInst<"vrnd64x", "..", "fQf">;
+def FRINT64Z_S32 : SInst<"vrnd64z", "..", "fQf">;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // MaxNum/MinNum Floating Point
 
