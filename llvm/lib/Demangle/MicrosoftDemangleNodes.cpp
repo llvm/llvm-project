@@ -107,12 +107,6 @@ static void outputCallingConvention(OutputStream &OS, CallingConv CC) {
   case CallingConv::Clrcall:
     OS << "__clrcall";
     break;
-  case CallingConv::Swift:
-    OS << "__attribute__((__swiftcall__)) ";
-    break;
-  case CallingConv::SwiftAsync:
-    OS << "__attribute__((__swiftasynccall__)) ";
-    break;
   default:
     break;
   }

@@ -283,24 +283,14 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
   // For these, we know the files they read and cache their metadata so we can
   // cheaply validate whether they've changed, and hot-reload if they have.
   // (As a bonus, these are also VFS-clean)!
-  struct CDBFile {
-    CachedFile *File;
-    // Wrapper for {Fixed,JSON}CompilationDatabase::loadFromBuffer.
-    llvm::function_ref<std::unique_ptr<tooling::CompilationDatabase>(
-        PathRef,
-        /*Data*/ llvm::StringRef,
-        /*ErrorMsg*/ std::string &)>
-        Parser;
-  };
-  for (const auto &Entry : {CDBFile{&CompileCommandsJson, parseJSON},
-                            CDBFile{&BuildCompileCommandsJson, parseJSON},
-                            CDBFile{&CompileFlagsTxt, parseFixed}}) {
-    bool Active = ActiveCachedFile == Entry.File;
-    auto Loaded = Entry.File->load(FS, Active);
+  for (auto *EntryFile :
+       {&CompileCommandsJson, &BuildCompileCommandsJson, &CompileFlagsTxt}) {
+    bool Active = ActiveCachedFile == EntryFile;
+    auto Loaded = EntryFile->load(FS, Active);
     switch (Loaded.Result) {
     case CachedFile::LoadResult::FileNotFound:
       if (Active) {
-        log("Unloaded compilation database from {0}", Entry.File->Path);
+        log("Unloaded compilation database from {0}", EntryFile->Path);
         ActiveCachedFile = nullptr;
         CDB = nullptr;
       }
@@ -315,14 +305,15 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
       return true;
     case CachedFile::LoadResult::FoundNewData:
       // We have a new CDB!
-      CDB = Entry.Parser(Entry.File->Path, Loaded.Buffer->getBuffer(), Error);
+      CDB = (EntryFile == &CompileFlagsTxt ? parseFixed : parseJSON)(
+          EntryFile->Path, Loaded.Buffer->getBuffer(), Error);
       if (CDB)
         log("{0} compilation database from {1}", Active ? "Reloaded" : "Loaded",
-            Entry.File->Path);
+            EntryFile->Path);
       else
         elog("Failed to load compilation database from {0}: {1}",
-             Entry.File->Path, Error);
-      ActiveCachedFile = Entry.File;
+             EntryFile->Path, Error);
+      ActiveCachedFile = EntryFile;
       return true;
     }
   }

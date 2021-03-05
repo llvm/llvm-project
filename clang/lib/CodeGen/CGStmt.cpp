@@ -1145,6 +1145,24 @@ struct SaveRetExprRAII {
 };
 } // namespace
 
+/// If we have 'return f(...);', where both caller and callee are SwiftAsync,
+/// codegen it as 'tail call ...; ret void;'.
+static void makeTailCallIfSwiftAsync(const CallExpr *CE, CGBuilderTy &Builder,
+                                     const CGFunctionInfo *CurFnInfo) {
+  auto callee = CE->getDirectCallee();
+  if (!callee)
+    return;
+  auto calleeType = callee->getFunctionType();
+  if (calleeType->getCallConv() == CallingConv::CC_SwiftAsync
+      && (CurFnInfo->getASTCallingConvention() ==
+          CallingConv::CC_SwiftAsync)) {
+    auto CI = cast<llvm::CallInst>(&Builder.GetInsertBlock()->back());
+    CI->setTailCallKind(llvm::CallInst::TCK_Tail);
+    Builder.CreateRetVoid();
+    Builder.ClearInsertionPoint();
+  }
+}
+
 /// EmitReturnStmt - Note that due to GCC extensions, this can have an operand
 /// if the function returns void, or may be missing one if the function returns
 /// non-void.  Fun stuff :).
@@ -1203,8 +1221,11 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
   } else if (!ReturnValue.isValid() || (RV && RV->getType()->isVoidType())) {
     // Make sure not to return anything, but evaluate the expression
     // for side effects.
-    if (RV)
+    if (RV) {
       EmitAnyExpr(RV);
+      if (auto *CE = dyn_cast<CallExpr>(RV))
+        ::makeTailCallIfSwiftAsync(CE, Builder, CurFnInfo);
+    }
   } else if (!RV) {
     // Do nothing (return value is left uninitialized)
   } else if (FnRetTy->isReferenceType()) {

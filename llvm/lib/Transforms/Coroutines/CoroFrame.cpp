@@ -2170,9 +2170,18 @@ void coro::salvageDebugInfo(
       if (!Expr)
         return;
       Storage = GEPInst->getOperand(0);
-    } else if (auto *BCInst = dyn_cast<llvm::BitCastInst>(Storage))
+    } else if (auto *BCInst = dyn_cast<llvm::BitCastInst>(Storage)) {
       Storage = BCInst->getOperand(0);
-    else
+    } else if (auto *I2PInst = dyn_cast<llvm::IntToPtrInst>(Storage)) {
+      Storage = I2PInst->getOperand(0);
+    } else if (auto *P2IInst = dyn_cast<llvm::PtrToIntInst>(Storage)) {
+      Storage = P2IInst->getOperand(0);
+    } else if (auto *IInst = dyn_cast<llvm::IntrinsicInst>(Storage)) {
+      if (IInst->getIntrinsicID() == Intrinsic::ptrauth_auth)
+        Storage = IInst->getArgOperand(0);
+      else
+        break;
+    } else
       break;
   }
   if (!Storage)

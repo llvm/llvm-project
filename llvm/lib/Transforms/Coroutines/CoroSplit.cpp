@@ -646,10 +646,10 @@ void CoroCloner::replaceSwiftErrorOps() {
   ::replaceSwiftErrorOps(*NewF, Shape, &VMap);
 }
 
-void CoroCloner::salvageDebugInfo() {
+static void salvageCoroDebugInfo(llvm::Function &NewF) {
   SmallVector<DbgDeclareInst *, 8> Worklist;
   SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
-  for (auto &BB : *NewF)
+  for (auto &BB : NewF)
     for (auto &I : BB)
       if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
         Worklist.push_back(DDI);
@@ -659,7 +659,7 @@ void CoroCloner::salvageDebugInfo() {
   // Remove all salvaged dbg.declare intrinsics that became
   // either unreachable or stale due to the CoroSplit transformation.
   auto IsUnreachableBlock = [&](BasicBlock *BB) {
-    return BB->hasNPredecessors(0) && BB != &NewF->getEntryBlock();
+    return BB->hasNPredecessors(0) && BB != &NewF.getEntryBlock();
   };
   for (DbgDeclareInst *DDI : Worklist) {
     if (IsUnreachableBlock(DDI->getParent()))
@@ -975,7 +975,7 @@ void CoroCloner::create() {
   replaceCoroEnds();
 
   // Salvage debug info that points into the coroutine frame.
-  salvageDebugInfo();
+  salvageCoroDebugInfo(*NewF);
 
   // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
   // to suppress deallocation code.
@@ -1792,6 +1792,8 @@ static coro::Shape splitCoroutine(Function &F,
   // This invalidates SwiftErrorOps in the Shape.
   replaceSwiftErrorOps(F, Shape, nullptr);
 
+  // Salvage debug info that points into the coroutine frame.
+  salvageCoroDebugInfo(F);
   return Shape;
 }
 
