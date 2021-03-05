@@ -1,5 +1,6 @@
 executable("llvm-ifs") {
   deps = [
+    "//llvm/lib/InterfaceStub",
     "//llvm/lib/Object",
     "//llvm/lib/ObjectYAML",
     "//llvm/lib/Support",
