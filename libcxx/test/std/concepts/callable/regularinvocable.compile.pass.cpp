@@ -48,7 +48,7 @@ int main(int, char**) {
     NotRegularInvocable(&A::F);
 
     {
-      auto X = A{};
+      A X;
       ModelsRegularInvocable(&A::I, X);
       ModelsRegularInvocable(&A::F, X);
       ModelsRegularInvocable(&A::G, X, 0);
@@ -56,7 +56,7 @@ int main(int, char**) {
       NotRegularInvocable(&A::G, 0);
       NotRegularInvocable(&A::H);
 
-      auto const& Y = X;
+      A const& Y = X;
       ModelsRegularInvocable(&A::I, Y);
       ModelsRegularInvocable(&A::F, Y);
       NotRegularInvocable(&A::G, Y, 0);

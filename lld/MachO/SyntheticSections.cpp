@@ -63,8 +63,8 @@ static uint32_t cpuSubtype() {
 
   if (config->outputType == MachO::MH_EXECUTE && !config->staticLink &&
       target->cpuSubtype == MachO::CPU_SUBTYPE_X86_64_ALL &&
-      config->platform.kind == MachO::PlatformKind::macOS &&
-      config->platform.minimum >= VersionTuple(10, 5))
+      config->target.Platform == MachO::PlatformKind::macOS &&
+      config->platformInfo.minimum >= VersionTuple(10, 5))
     subtype |= MachO::CPU_SUBTYPE_LIB64;
 
   return subtype;

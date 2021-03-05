@@ -7,8 +7,6 @@
 // RUN: %run %t
 
 // XFAIL: ios && !iossim
-// longjmp from signal handler is unportable.
-// XFAIL: solaris
 
 #include <algorithm>
 #include <cassert>

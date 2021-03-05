@@ -598,8 +598,8 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
 
     case wasm::WASM_SYMBOL_TYPE_TABLE:
       Info.ElementIndex = readVaruint32(Ctx);
-      if (!isValidTableIndex(Info.ElementIndex) ||
-          IsDefined != isDefinedTableIndex(Info.ElementIndex))
+      if (!isValidTableNumber(Info.ElementIndex) ||
+          IsDefined != isDefinedTableNumber(Info.ElementIndex))
         return make_error<GenericBinaryError>("invalid table symbol index",
                                               object_error::parse_failed);
       if (!IsDefined && (Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
@@ -608,8 +608,8 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
                                               object_error::parse_failed);
       if (IsDefined) {
         Info.Name = readString(Ctx);
-        unsigned TableIndex = Info.ElementIndex - NumImportedTables;
-        wasm::WasmTable &Table = Tables[TableIndex];
+        unsigned TableNumber = Info.ElementIndex - NumImportedTables;
+        wasm::WasmTable &Table = Tables[TableNumber];
         TableType = &Table.Type;
         if (Table.SymbolName.empty())
           Table.SymbolName = Info.Name;
@@ -1220,7 +1220,7 @@ bool WasmObjectFile::isValidGlobalIndex(uint32_t Index) const {
   return Index < NumImportedGlobals + Globals.size();
 }
 
-bool WasmObjectFile::isValidTableIndex(uint32_t Index) const {
+bool WasmObjectFile::isValidTableNumber(uint32_t Index) const {
   return Index < NumImportedTables + Tables.size();
 }
 
@@ -1228,8 +1228,8 @@ bool WasmObjectFile::isDefinedGlobalIndex(uint32_t Index) const {
   return Index >= NumImportedGlobals && isValidGlobalIndex(Index);
 }
 
-bool WasmObjectFile::isDefinedTableIndex(uint32_t Index) const {
-  return Index >= NumImportedTables && isValidTableIndex(Index);
+bool WasmObjectFile::isDefinedTableNumber(uint32_t Index) const {
+  return Index >= NumImportedTables && isValidTableNumber(Index);
 }
 
 bool WasmObjectFile::isValidEventIndex(uint32_t Index) const {
@@ -1340,13 +1340,54 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
   ElemSegments.reserve(Count);
   while (Count--) {
     wasm::WasmElemSegment Segment;
-    Segment.TableIndex = readVaruint32(Ctx);
-    if (Segment.TableIndex != 0) {
-      return make_error<GenericBinaryError>("invalid TableIndex",
+    Segment.Flags = readVaruint32(Ctx);
+
+    uint32_t SupportedFlags = wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER |
+                              wasm::WASM_ELEM_SEGMENT_IS_PASSIVE |
+                              wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS;
+    if (Segment.Flags & ~SupportedFlags)
+      return make_error<GenericBinaryError>(
+          "Unsupported flags for element segment", object_error::parse_failed);
+
+    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER)
+      Segment.TableNumber = readVaruint32(Ctx);
+    else
+      Segment.TableNumber = 0;
+    if (!isValidTableNumber(Segment.TableNumber))
+      return make_error<GenericBinaryError>("invalid TableNumber",
                                             object_error::parse_failed);
+
+    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_PASSIVE) {
+      Segment.Offset.Opcode = wasm::WASM_OPCODE_I32_CONST;
+      Segment.Offset.Value.Int32 = 0;
+    } else {
+      if (Error Err = readInitExpr(Segment.Offset, Ctx))
+        return Err;
     }
-    if (Error Err = readInitExpr(Segment.Offset, Ctx))
-      return Err;
+
+    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+      Segment.ElemKind = readUint8(Ctx);
+      if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS) {
+        if (Segment.ElemKind != uint8_t(wasm::ValType::FUNCREF) &&
+            Segment.ElemKind != uint8_t(wasm::ValType::EXTERNREF)) {
+          return make_error<GenericBinaryError>("invalid reference type",
+                                                object_error::parse_failed);
+        }
+      } else {
+        if (Segment.ElemKind != 0)
+          return make_error<GenericBinaryError>("invalid elemtype",
+                                                object_error::parse_failed);
+        Segment.ElemKind = uint8_t(wasm::ValType::FUNCREF);
+      }
+    } else {
+      Segment.ElemKind = uint8_t(wasm::ValType::FUNCREF);
+    }
+
+    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS)
+      return make_error<GenericBinaryError>(
+          "elem segment init expressions not yet implemented",
+          object_error::parse_failed);
+
     uint32_t NumElems = readVaruint32(Ctx);
     while (NumElems--) {
       Segment.Functions.push_back(readVaruint32(Ctx));

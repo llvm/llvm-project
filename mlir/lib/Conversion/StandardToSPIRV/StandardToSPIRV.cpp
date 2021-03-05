@@ -250,7 +250,7 @@ public:
     // Get the SPIR-V type for the allocation.
     Type spirvType = getTypeConverter()->convertType(allocType);
 
-    // Insert spv.globalVariable for this allocation.
+    // Insert spv.GlobalVariable for this allocation.
     Operation *parent =
         SymbolTable::getNearestSymbolTable(operation->getParentOp());
     if (!parent)
@@ -356,7 +356,7 @@ public:
   }
 };
 
-/// Converts composite std.constant operation to spv.constant.
+/// Converts composite std.constant operation to spv.Constant.
 class ConstantCompositeOpPattern final
     : public OpConversionPattern<ConstantOp> {
 public:
@@ -367,7 +367,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts scalar std.constant operation to spv.constant.
+/// Converts scalar std.constant operation to spv.Constant.
 class ConstantScalarOpPattern final : public OpConversionPattern<ConstantOp> {
 public:
   using OpConversionPattern<ConstantOp>::OpConversionPattern;

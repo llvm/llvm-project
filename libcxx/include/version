@@ -150,6 +150,7 @@ __cpp_lib_three_way_comparison                          201907L <compare>
 __cpp_lib_to_address                                    201711L <memory>
 __cpp_lib_to_array                                      201907L <array>
 __cpp_lib_to_chars                                      201611L <utility>
+__cpp_lib_to_underlying                                 202102L <utility>
 __cpp_lib_transformation_trait_aliases                  201304L <type_traits>
 __cpp_lib_transparent_operators                         201510L <functional> <memory>
                                                         201210L // C++14
@@ -365,6 +366,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_stacktrace                           202011L
 // # define __cpp_lib_stdatomic_h                          202011L
 # define __cpp_lib_string_contains                      202011L
+# define __cpp_lib_to_underlying                        202102L
 #endif
 
 // clang-format on

@@ -3496,9 +3496,13 @@ void SubViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 }
 
 OpFoldResult SubViewOp::fold(ArrayRef<Attribute> operands) {
-  if (getResult().getType().cast<ShapedType>().getRank() == 0 &&
-      source().getType().cast<ShapedType>().getRank() == 0)
+  auto resultShapedType = getResult().getType().cast<ShapedType>();
+  auto sourceShapedType = source().getType().cast<ShapedType>();
+
+  if (resultShapedType.hasStaticShape() &&
+      resultShapedType == sourceShapedType) {
     return getViewSource();
+  }
 
   return {};
 }
@@ -3899,7 +3903,11 @@ void SubTensorInsertOp::getCanonicalizationPatterns(
 
 OpFoldResult TensorLoadOp::fold(ArrayRef<Attribute>) {
   if (auto tensorToMemref = memref().getDefiningOp<TensorToMemrefOp>())
-    return tensorToMemref.tensor();
+    // Approximate alias analysis by conservatively folding only when no there
+    // is no interleaved operation.
+    if (tensorToMemref->getBlock() == this->getOperation()->getBlock() &&
+        tensorToMemref->getNextNode() == this->getOperation())
+      return tensorToMemref.tensor();
   return {};
 }
 

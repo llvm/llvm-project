@@ -105,7 +105,7 @@ static inline uint64_t ScaleAddrDelta(MCContext &Context, uint64_t AddrDelta) {
 // and if there is information from the last .loc directive that has yet to have
 // a line entry made for it is made.
 //
-void MCDwarfLineEntry::Make(MCObjectStreamer *MCOS, MCSection *Section) {
+void MCDwarfLineEntry::make(MCStreamer *MCOS, MCSection *Section) {
   if (!MCOS->getContext().getDwarfLocSeen())
     return;
 
@@ -163,7 +163,7 @@ makeStartPlusIntExpr(MCContext &Ctx, const MCSymbol &Start, int IntVal) {
 // in the LineSection.
 //
 static inline void emitDwarfLineTable(
-    MCObjectStreamer *MCOS, MCSection *Section,
+    MCStreamer *MCOS, MCSection *Section,
     const MCLineSection::MCDwarfLineEntryCollection &LineEntries) {
   unsigned FileNum = 1;
   unsigned LastLine = 1;
@@ -226,27 +226,14 @@ static inline void emitDwarfLineTable(
     LastLabel = Label;
   }
 
-  // Emit a DW_LNE_end_sequence for the end of the section.
-  // Use the section end label to compute the address delta and use INT64_MAX
-  // as the line delta which is the signal that this is actually a
-  // DW_LNE_end_sequence.
-  MCSymbol *SectionEnd = MCOS->endSection(Section);
-
-  // Switch back the dwarf line section, in case endSection had to switch the
-  // section.
-  MCContext &Ctx = MCOS->getContext();
-  MCOS->SwitchSection(Ctx.getObjectFileInfo()->getDwarfLineSection());
-
-  const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
-  MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, SectionEnd,
-                                 AsmInfo->getCodePointerSize());
+  // Generate DWARF line end entry.
+  MCOS->emitDwarfLineEndEntry(Section, LastLabel);
 }
 
 //
 // This emits the Dwarf file and the line tables.
 //
-void MCDwarfLineTable::Emit(MCObjectStreamer *MCOS,
-                            MCDwarfLineTableParams Params) {
+void MCDwarfLineTable::emit(MCStreamer *MCOS, MCDwarfLineTableParams Params) {
   MCContext &context = MCOS->getContext();
 
   auto &LineTables = context.getMCDwarfLineTables();
@@ -266,7 +253,7 @@ void MCDwarfLineTable::Emit(MCObjectStreamer *MCOS,
 
   // Handle the rest of the Compile Units.
   for (const auto &CUIDTablePair : LineTables) {
-    CUIDTablePair.second.EmitCU(MCOS, Params, LineStr);
+    CUIDTablePair.second.emitCU(MCOS, Params, LineStr);
   }
 
   if (LineStr)
@@ -471,8 +458,9 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   MCSymbol *LineStartSym = Label;
   if (!LineStartSym)
     LineStartSym = context.createTempSymbol();
+
   // Set the value of the symbol, as we are at the start of the line table.
-  MCOS->emitLabel(LineStartSym);
+  MCOS->emitDwarfLineStartLabel(LineStartSym);
 
   unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(context.getDwarfFormat());
 
@@ -529,8 +517,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   return std::make_pair(LineStartSym, LineEndSym);
 }
 
-void MCDwarfLineTable::EmitCU(MCObjectStreamer *MCOS,
-                              MCDwarfLineTableParams Params,
+void MCDwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
                               Optional<MCDwarfLineStr> &LineStr) const {
   MCSymbol *LineEndSym = Header.Emit(MCOS, Params, LineStr).second;
 

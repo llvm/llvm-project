@@ -23,7 +23,7 @@ include "mlir/IR/OpBase.td"
 // DEF-NEXT: ::llvm::StringRef mnemonic, ::mlir::Type type) {
 // DEF: if (mnemonic == ::mlir::test::CompoundAAttr::getMnemonic()) return ::mlir::test::CompoundAAttr::parse(context, parser, type);
 // DEF-NEXT: if (mnemonic == ::mlir::test::IndexAttr::getMnemonic()) return ::mlir::test::IndexAttr::parse(context, parser, type);
-// DEF-NEXT: return ::mlir::Attribute();
+// DEF: return ::mlir::Attribute();
 
 def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect
@@ -49,7 +49,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
       "::mlir::test::SimpleTypeA": $exampleTdType,
       "SomeCppStruct": $exampleCppType,
       ArrayRefParameter<"int", "Matrix dimensions">:$dims,
-      "::mlir::Type":$inner
+      AttributeSelfTypeParameter<"">:$inner
   );
 
   let genVerifyDecl = 1;
@@ -66,6 +66,20 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // DECL: int getWidthOfSomething() const;
 // DECL: ::mlir::test::SimpleTypeA getExampleTdType() const;
 // DECL: SomeCppStruct getExampleCppType() const;
+
+// Check that AttributeSelfTypeParameter is handled properly.
+// DEF-LABEL: struct CompoundAAttrStorage
+// DEF: CompoundAAttrStorage (
+// DEF-NEXT: : ::mlir::AttributeStorage(inner),
+
+// DEF: bool operator==(const KeyTy &key) const {
+// DEF-NEXT: return key == KeyTy(widthOfSomething, exampleTdType, exampleCppType, dims, getType());
+
+// DEF: static CompoundAAttrStorage *construct
+// DEF: return new (allocator.allocate<CompoundAAttrStorage>())
+// DEF-NEXT: CompoundAAttrStorage(widthOfSomething, exampleTdType, exampleCppType, dims, inner);
+
+// DEF: ::mlir::Type CompoundAAttr::getInner() const { return getImpl()->getType(); }
 }
 
 def C_IndexAttr : TestAttr<"Index"> {
@@ -94,3 +108,14 @@ def D_SingleParameterAttr : TestAttr<"SingleParameter"> {
 // DECL-LABEL: class SingleParameterAttr
 // DECL-NEXT:                   detail::SingleParameterAttrStorage
 }
+
+// An attribute testing AttributeSelfTypeParameter.
+def E_AttrWithTypeBuilder : TestAttr<"AttrWithTypeBuilder"> {
+  let mnemonic = "attr_with_type_builder";
+  let parameters = (ins "::mlir::IntegerAttr":$attr);
+  let typeBuilder = "$_attr.getType()";
+}
+
+// DEF-LABEL: struct AttrWithTypeBuilderAttrStorage
+// DEF: AttrWithTypeBuilderAttrStorage (::mlir::IntegerAttr attr)
+// DEF-NEXT: : ::mlir::AttributeStorage(attr.getType()), attr(attr)

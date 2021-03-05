@@ -45,7 +45,6 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyFixFunctionBitcasts.cpp",
     "WebAssemblyFixIrreducibleControlFlow.cpp",
     "WebAssemblyFrameLowering.cpp",
-    "WebAssemblyHandleEHTerminatePads.cpp",
     "WebAssemblyISelDAGToDAG.cpp",
     "WebAssemblyISelLowering.cpp",
     "WebAssemblyInstrInfo.cpp",

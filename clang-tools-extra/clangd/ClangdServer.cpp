@@ -129,7 +129,7 @@ ClangdServer::Options::operator TUScheduler::Options() const {
 ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const ThreadsafeFS &TFS, const Options &Opts,
                            Callbacks *Callbacks)
-    : Modules(Opts.Modules), CDB(CDB), TFS(TFS),
+    : FeatureModules(Opts.FeatureModules), CDB(CDB), TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
       WorkspaceRoot(Opts.WorkspaceRoot) {
@@ -168,13 +168,13 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
   if (DynamicIdx)
     AddIndex(DynamicIdx.get());
 
-  if (Opts.Modules) {
-    Module::Facilities F{
+  if (Opts.FeatureModules) {
+    FeatureModule::Facilities F{
         *this->WorkScheduler,
         this->Index,
         this->TFS,
     };
-    for (auto &Mod : *Opts.Modules)
+    for (auto &Mod : *Opts.FeatureModules)
       Mod.initialize(F);
   }
 }
@@ -184,11 +184,11 @@ ClangdServer::~ClangdServer() {
   // otherwise access members concurrently.
   // (Nobody can be using TUScheduler because we're on the main thread).
   WorkScheduler.reset();
-  // Now requests have stopped, we can shut down modules.
-  if (Modules) {
-    for (auto &Mod : *Modules)
+  // Now requests have stopped, we can shut down feature modules.
+  if (FeatureModules) {
+    for (auto &Mod : *FeatureModules)
       Mod.stop();
-    for (auto &Mod : *Modules)
+    for (auto &Mod : *FeatureModules)
       Mod.blockUntilIdle(Deadline::infinity());
   }
 }
@@ -920,7 +920,7 @@ ClangdServer::blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds) {
       return false;
     if (BackgroundIdx && !BackgroundIdx->blockUntilIdleForTest(Timeout))
       return false;
-    if (Modules && llvm::any_of(*Modules, [&](Module &M) {
+    if (FeatureModules && llvm::any_of(*FeatureModules, [&](FeatureModule &M) {
           return !M.blockUntilIdle(timeoutSeconds(Timeout));
         }))
       return false;

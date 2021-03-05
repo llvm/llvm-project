@@ -846,6 +846,16 @@ void CoroCloner::create() {
 
   CloneFunctionInto(NewF, &OrigF, VMap,
                     CloneFunctionChangeType::LocalChangesOnly, Returns);
+  // For async functions / continuations, adjust the scope line of the
+  // clone to the line number of the suspend point. The scope line is
+  // associated with all pre-prologue instructions. This avoids a jump
+  // in the linetable from the function declaration to the suspend point.
+  if (DISubprogram *SP = NewF->getSubprogram()) {
+    assert(SP != OrigF.getSubprogram() && SP->isDistinct());
+    if (ActiveSuspend)
+      if (auto DL = ActiveSuspend->getDebugLoc())
+        SP->setScopeLine(DL->getLine());
+  }
 
   NewF->setLinkage(savedLinkage);
   NewF->setVisibility(savedVisibility);

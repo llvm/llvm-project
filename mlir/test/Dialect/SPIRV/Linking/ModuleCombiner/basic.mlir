@@ -2,8 +2,8 @@
 
 // CHECK:      module {
 // CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.specConstant @m1_sc
-// CHECK-NEXT:     spv.specConstant @m2_sc
+// CHECK-NEXT:     spv.SpecConstant @m1_sc
+// CHECK-NEXT:     spv.SpecConstant @m2_sc
 // CHECK-NEXT:     spv.func @variable_init_spec_constant
 // CHECK-NEXT:       spv.mlir.referenceof @m2_sc
 // CHECK-NEXT:       spv.Variable init
@@ -14,11 +14,11 @@
 
 module {
 spv.module Logical GLSL450 {
-  spv.specConstant @m1_sc = 42.42 : f32
+  spv.SpecConstant @m1_sc = 42.42 : f32
 }
 
 spv.module Logical GLSL450 {
-  spv.specConstant @m2_sc = 42 : i32
+  spv.SpecConstant @m2_sc = 42 : i32
   spv.func @variable_init_spec_constant() -> () "None" {
     %0 = spv.mlir.referenceof @m2_sc : i32
     %1 = spv.Variable init(%0) : !spv.ptr<i32, Function>

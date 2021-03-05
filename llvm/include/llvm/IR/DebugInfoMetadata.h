@@ -1951,6 +1951,7 @@ public:
   unsigned getVirtualIndex() const { return VirtualIndex; }
   int getThisAdjustment() const { return ThisAdjustment; }
   unsigned getScopeLine() const { return ScopeLine; }
+  void setScopeLine(unsigned L) { assert(isDistinct()); ScopeLine = L; }
   DIFlags getFlags() const { return Flags; }
   DISPFlags getSPFlags() const { return SPFlags; }
   bool isLocalToUnit() const { return getSPFlags() & SPFlagLocalToUnit; }
@@ -2175,11 +2176,6 @@ public:
                     (Scope, File, Discriminator))
 
   TempDILexicalBlockFile clone() const { return cloneImpl(); }
-
-  // TODO: Remove these once they're gone from DILexicalBlockBase.
-  unsigned getLine() const = delete;
-  unsigned getColumn() const = delete;
-
   unsigned getDiscriminator() const { return Discriminator; }
 
   static bool classof(const Metadata *MD) {
@@ -2775,6 +2771,14 @@ public:
   static DIExpression *appendToStack(const DIExpression *Expr,
                                      ArrayRef<uint64_t> Ops);
 
+  /// Create a copy of \p Expr by appending the given list of \p Ops to each
+  /// instance of the operand `DW_OP_LLVM_arg, \p ArgNo`. This is used to
+  /// modify a specific location used by \p Expr, such as when salvaging that
+  /// location.
+  static DIExpression *appendOpsToArg(const DIExpression *Expr,
+                                      ArrayRef<uint64_t> Ops, unsigned ArgNo,
+                                      bool StackValue = false);
+
   /// Create a DIExpression to describe one part of an aggregate variable that
   /// is fragmented across multiple Values. The DW_OP_LLVM_fragment operation
   /// will be appended to the elements of \c Expr. If \c Expr already contains
@@ -3232,12 +3236,6 @@ public:
     if (auto *F = getFile())
       return F->getDirectory();
     return "";
-  }
-
-  Optional<StringRef> getSource() const {
-    if (auto *F = getFile())
-      return F->getSource();
-    return None;
   }
 
   MDString *getRawName() const { return getOperandAs<MDString>(0); }

@@ -359,7 +359,7 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strcat(char *dest, const char *src,
                                                   dfsan_label src_label,
                                                   dfsan_label *ret_label) {
   size_t dest_len = strlen(dest);
-  char *ret = strcat(dest, src);
+  char *ret = strcat(dest, src);  // NOLINT
   dfsan_label *sdest = shadow_for(dest + dest_len);
   const dfsan_label *ssrc = shadow_for(src);
   internal_memcpy((void *)sdest, (const void *)ssrc,

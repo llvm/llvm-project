@@ -1368,13 +1368,19 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
     // If we don't have PhiInfo then just look at the operands of the phi itself
     // FIXME: Remove this once we can guarantee that we have PhiInfo always
     SmallPtrSet<Value *, 4> UniqueSrc;
+    Value *OnePhi = nullptr;
     for (Value *PV1 : PN->incoming_values()) {
-      if (isa<PHINode>(PV1))
-        // If any of the source itself is a PHI, return MayAlias conservatively
-        // to avoid compile time explosion. The worst possible case is if both
-        // sides are PHI nodes. In which case, this is O(m x n) time where 'm'
-        // and 'n' are the number of PHI sources.
-        return MayAlias;
+      if (isa<PHINode>(PV1)) {
+        if (OnePhi && OnePhi != PV1) {
+          // To control potential compile time explosion, we choose to be
+          // conserviate when we have more than one Phi input.  It is important
+          // that we handle the single phi case as that lets us handle LCSSA
+          // phi nodes and (combined with the recursive phi handling) simple
+          // pointer induction variable patterns.
+          return MayAlias;
+        }
+        OnePhi = PV1;
+      }
 
       if (CheckForRecPhi(PV1))
         continue;
@@ -1382,6 +1388,11 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
       if (UniqueSrc.insert(PV1).second)
         V1Srcs.push_back(PV1);
     }
+
+    if (OnePhi && UniqueSrc.size() > 1)
+      // Out of an abundance of caution, allow only the trivial lcssa and
+      // recursive phi cases.
+      return MayAlias;
   }
 
   // If V1Srcs is empty then that means that the phi has no underlying non-phi

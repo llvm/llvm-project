@@ -14,6 +14,12 @@
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
 # RUN: llvm-objdump -d --no-show-raw-insn --mcpu=future %t | FileCheck %s
 
+# RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t.o
+# RUN: ld.lld -T %t.script %t.o -o %t --no-power10-stubs
+# RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
+# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=future %t \
+# RUN: | FileCheck %s
+
 # The point of this test is to make sure that when a function with TOC access
 # a local function with st_other=1, a TOC save stub is inserted.
 

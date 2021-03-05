@@ -120,7 +120,7 @@ body:             |
     ; CHECK: G_STORE [[CONCAT_VECTORS]](<4 x s32>), [[COPY5]](p0) :: (store 16, align 32)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY5]], [[C]](s64)
-    ; CHECK: G_STORE [[CONCAT_VECTORS1]](<4 x s32>), [[PTR_ADD]](p0) :: (store 16 + 16)
+    ; CHECK: G_STORE [[CONCAT_VECTORS1]](<4 x s32>), [[PTR_ADD]](p0) :: (store 16 into undef + 16)
     ; CHECK: RET_ReallyLR
     %2:_(<2 x s64>) = COPY $q0
     %3:_(<2 x s64>) = COPY $q1

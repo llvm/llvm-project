@@ -412,6 +412,7 @@ errc __win_err_to_errc(int err) {
       {ERROR_ACCESS_DENIED, errc::permission_denied},
       {ERROR_ALREADY_EXISTS, errc::file_exists},
       {ERROR_BAD_NETPATH, errc::no_such_file_or_directory},
+      {ERROR_BAD_PATHNAME, errc::no_such_file_or_directory},
       {ERROR_BAD_UNIT, errc::no_such_device},
       {ERROR_BROKEN_PIPE, errc::broken_pipe},
       {ERROR_BUFFER_OVERFLOW, errc::filename_too_long},
@@ -1019,6 +1020,8 @@ bool __create_directories(const path& p, error_code* ec) {
     if (not status_known(parent_st))
       return err.report(m_ec);
     if (not exists(parent_st)) {
+      if (parent == p)
+        return err.report(errc::invalid_argument);
       __create_directories(parent, ec);
       if (ec && *ec) {
         return false;

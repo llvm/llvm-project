@@ -65,7 +65,9 @@ OwnedBlob compilePtxToCubin(const std::string ptx, Location loc,
                             StringRef name) {
   char jitErrorBuffer[4096] = {0};
 
-  RETURN_ON_CUDA_ERROR(cuInit(0));
+  // Initialize CUDA once in a thread-safe manner.
+  static CUresult cuInitResult = [] { return cuInit(/*flags=*/0); }();
+  RETURN_ON_CUDA_ERROR(cuInitResult);
 
   // Linking requires a device context.
   CUdevice device;
