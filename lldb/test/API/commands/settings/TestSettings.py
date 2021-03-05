@@ -25,6 +25,42 @@ class SettingsCommandTestCase(TestBase):
                              "environment variables",
                              "executable's environment"])
 
+    def test_set_interpreter_repeat_prev_command(self):
+        """Test the `interpreter.repeat-previous-command` setting."""
+        self.build()
+
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        setting = "interpreter.repeat-previous-command"
+
+        def cleanup(setting):
+            self.runCmd(
+                "settings clear %s" %
+                setting, check=False)
+
+        # Execute the cleanup function during test case tear down.
+        self.addTearDownHook(cleanup(setting))
+
+        # First, check for the setting default value.
+        self.expect("setting show %s" % setting,
+                    substrs=["interpreter.repeat-previous-command (boolean) = true"])
+
+        # Then, invert the setting, and check that was set correctly
+        self.runCmd("setting set %s false" % setting)
+        self.expect("setting show %s" % setting,
+                    substrs=["interpreter.repeat-previous-command (boolean) = false"])
+
+
+        ci  = self.dbg.GetCommandInterpreter()
+        self.assertTrue(ci.IsValid(), "Invalid command interpreter.")
+        # Now, test the functionnality
+        res = lldb.SBCommandReturnObject()
+        ci.HandleCommand('breakpoint set -n main', res)
+        self.assertTrue(res.Succeeded(), "Command failed.")
+        ci.HandleCommand('', res)
+        self.assertTrue(res.Succeeded(), "Empty command failed.")
+        self.assertEqual(self.dbg.GetSelectedTarget().GetNumBreakpoints(), 1)
+
     def test_append_target_env_vars(self):
         """Test that 'append target.run-args' works."""
         # Append the env-vars.
