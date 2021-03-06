@@ -221,7 +221,12 @@ static void emitTypeDefDoc(TypeDef td, raw_ostream &os) {
 static void emitDialectDoc(const Dialect &dialect, ArrayRef<Operator> ops,
                            ArrayRef<Type> types, ArrayRef<TypeDef> typeDefs,
                            raw_ostream &os) {
-  os << "# '" << dialect.getName() << "' Dialect\n\n";
+  os << "# ";
+  if (dialect.getName().empty())
+    os << "Builtin";
+  else
+    os << "'" << dialect.getName() << "'";
+  os << " Dialect\n\n";
   emitIfNotEmpty(dialect.getSummary(), os);
   emitIfNotEmpty(dialect.getDescription(), os);
 
