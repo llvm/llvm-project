@@ -69,7 +69,7 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @callee(%cond : i1) -> () "None" {
-    spv.selection {
+    spv.mlir.selection {
       spv.BranchConditional %cond, ^then, ^merge
     ^then:
       spv.Return
@@ -92,7 +92,7 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @callee(%cond : i1) -> () "None" {
-    spv.selection {
+    spv.mlir.selection {
       spv.BranchConditional %cond, ^then, ^merge
     ^then:
       spv.Branch ^merge
@@ -106,7 +106,7 @@ spv.module Logical GLSL450 {
   spv.func @calling_selection_no_ret_func() "None" {
     // CHECK-NEXT: %[[TRUE:.*]] = spv.Constant true
     %0 = spv.Constant true
-    // CHECK-NEXT: spv.selection
+    // CHECK-NEXT: spv.mlir.selection
     // CHECK-NEXT:   spv.BranchConditional %[[TRUE]], ^bb1, ^bb2
     // CHECK-NEXT: ^bb1:
     // CHECK-NEXT:   spv.Branch ^bb2
@@ -199,8 +199,8 @@ spv.module Logical GLSL450 {
     %4 = spv.AccessChain %2[%1] : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>, i32
     %5 = spv.Load "StorageBuffer" %4 : i32
     %6 = spv.SGreaterThan %5, %1 : i32
-    // CHECK: spv.selection
-    spv.selection {
+    // CHECK: spv.mlir.selection
+    spv.mlir.selection {
       spv.BranchConditional %6, ^bb1, ^bb2
     ^bb1: // pred: ^bb0
       // CHECK: [[STOREPTR:%.*]] = spv.AccessChain [[ADDRESS_ARG1]]

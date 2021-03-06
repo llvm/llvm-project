@@ -34,7 +34,7 @@ module attributes {
 // CHECK:        %[[OUTPTR:.+]] = spv.AccessChain %[[OUTPUT]][%[[ZERO]], %[[ZERO]]]
 // CHECK:        %[[ELECT:.+]] = spv.GroupNonUniformElect Subgroup : i1
 
-// CHECK:        spv.selection {
+// CHECK:        spv.mlir.selection {
 // CHECK:          spv.BranchConditional %[[ELECT]], ^bb1, ^bb2
 // CHECK:        ^bb1:
 // CHECK:          spv.AtomicIAdd "Device" "AcquireRelease" %[[OUTPTR]], %[[ADD]]

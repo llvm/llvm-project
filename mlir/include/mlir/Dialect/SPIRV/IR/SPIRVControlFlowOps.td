@@ -317,9 +317,9 @@ def SPV_MergeOp : SPV_Op<"mlir.merge", [NoSideEffect, Terminator]> {
   let summary = "A special terminator for merging a structured selection/loop.";
 
   let description = [{
-    We use `spv.selection`/`spv.mlir.loop` for modelling structured selection/loop.
+    We use `spv.mlir.selection`/`spv.mlir.loop` for modelling structured selection/loop.
     This op is a terminator used inside their regions to mean jumping to the
-    merge point, which is the next op following the `spv.selection` or
+    merge point, which is the next op following the `spv.mlir.selection` or
     `spv.mlir.loop` op. This op does not have a corresponding instruction in the
     SPIR-V binary format; it's solely for structural purpose.
   }];
@@ -415,7 +415,7 @@ def SPV_ReturnValueOp : SPV_Op<"ReturnValue", [InFunctionScope, NoSideEffect,
   let assemblyFormat = "$value attr-dict `:` type($value)";
 }
 
-def SPV_SelectionOp : SPV_Op<"selection", [InFunctionScope]> {
+def SPV_SelectionOp : SPV_Op<"mlir.selection", [InFunctionScope]> {
   let summary = "Define a structured selection.";
 
   let description = [{
@@ -429,10 +429,10 @@ def SPV_SelectionOp : SPV_Op<"selection", [InFunctionScope]> {
     Instead of having a `spv.SelectionMerge` op to directly model selection
     merge instruction for indicating the merge target, we use regions to delimit
     the boundary of the selection: the merge target is the next op following the
-    `spv.selection` op. This way it's easier to discover all blocks belonging to
+    `spv.mlir.selection` op. This way it's easier to discover all blocks belonging to
     the selection and it plays nicer with the MLIR system.
 
-    The `spv.selection` region should contain at least two blocks: one selection
+    The `spv.mlir.selection` region should contain at least two blocks: one selection
     header block, and one selection merge. The selection header block should be
     the first block. The selection merge block should be the last block.
     The merge block should only contain a `spv.mlir.merge` op.
@@ -456,9 +456,9 @@ def SPV_SelectionOp : SPV_Op<"selection", [InFunctionScope]> {
     /// Adds a selection merge block containing one spv.mlir.merge op.
     void addMergeBlock();
 
-    /// Creates a spv.selection op for `if (<condition>) then { <thenBody> }`
+    /// Creates a spv.mlir.selection op for `if (<condition>) then { <thenBody> }`
     /// with `builder`. `builder`'s insertion point will remain at after the
-    /// newly inserted spv.selection op afterwards.
+    /// newly inserted spv.mlir.selection op afterwards.
     static SelectionOp createIfThen(
         Location loc, Value condition,
         function_ref<void(OpBuilder &builder)> thenBody,

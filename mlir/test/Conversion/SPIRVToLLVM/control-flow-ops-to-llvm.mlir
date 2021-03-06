@@ -121,13 +121,13 @@ spv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.selection
+// spv.mlir.selection
 //===----------------------------------------------------------------------===//
 
 spv.module Logical GLSL450 {
   spv.func @selection_empty() -> () "None" {
     // CHECK: llvm.return
-    spv.selection {
+    spv.mlir.selection {
     }
     spv.Return
   }
@@ -135,7 +135,7 @@ spv.module Logical GLSL450 {
   spv.func @selection_with_merge_block_only() -> () "None" {
     %cond = spv.Constant true
     // CHECK: llvm.return
-    spv.selection {
+    spv.mlir.selection {
       spv.BranchConditional %cond, ^merge, ^merge
     ^merge:
       spv.mlir.merge
@@ -147,7 +147,7 @@ spv.module Logical GLSL450 {
     // CHECK: %[[COND:.*]] = llvm.mlir.constant(true) : i1
     %cond = spv.Constant true
     // CHECK: llvm.cond_br %[[COND]], ^bb1, ^bb2
-    spv.selection {
+    spv.mlir.selection {
       spv.BranchConditional %cond, ^true, ^merge
     // CHECK: ^bb1:
     ^true:
@@ -167,7 +167,7 @@ spv.module Logical GLSL450 {
     // CHECK: %[[COND:.*]] = llvm.mlir.constant(true) : i1
     %cond = spv.Constant true
     // CHECK: llvm.cond_br %[[COND]], ^bb1, ^bb2
-    spv.selection {
+    spv.mlir.selection {
       spv.BranchConditional %cond, ^true, ^false
     // CHECK: ^bb1:
     ^true:
@@ -191,7 +191,7 @@ spv.module Logical GLSL450 {
     // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
     %0 = spv.Constant 0 : i32
     // CHECK: llvm.cond_br %{{.*}}, ^bb1(%[[ZERO]] : i32), ^bb2
-    spv.selection {
+    spv.mlir.selection {
       spv.BranchConditional %arg0, ^true(%0 : i32), ^merge
     // CHECK: ^bb1(%[[ARG:.*]]: i32):
     ^true(%arg1: i32):
