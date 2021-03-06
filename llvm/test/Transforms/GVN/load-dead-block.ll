@@ -13,8 +13,7 @@ define i64 @test(i64** noalias %p, i64* noalias %q) {
 ; CHECK-NEXT:    store i64 1, i64* [[Q]], align 4
 ; CHECK-NEXT:    [[Q3:%.*]] = getelementptr i64, i64* [[Q]], i64 1
 ; CHECK-NEXT:    store i64 2, i64* [[Q3]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = load i64, i64* [[Q]], align 4
-; CHECK-NEXT:    ret i64 [[V2]]
+; CHECK-NEXT:    ret i64 1
 ;
 entry:
   store i64* %q, i64** %p
