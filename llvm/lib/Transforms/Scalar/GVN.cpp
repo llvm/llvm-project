@@ -855,6 +855,9 @@ static Value *ConstructSSAForLoadSet(LoadInst *LI,
   for (const AvailableValueInBlock &AV : ValuesPerBlock) {
     BasicBlock *BB = AV.BB;
 
+    if (AV.AV.isUndefValue())
+      continue;
+
     if (SSAUpdate.HasValueForBlock(BB))
       continue;
 
@@ -915,9 +918,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *LI,
                       << *Res << '\n'
                       << "\n\n\n");
   } else {
-    assert(isUndefValue() && "Should be UndefVal");
-    LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL Undef:\n";);
-    return UndefValue::get(LoadTy);
+    llvm_unreachable("Should not materialize value from dead block");
   }
   assert(Res && "failed to materialize?");
   return Res;
