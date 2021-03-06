@@ -39,7 +39,7 @@ class ArmNeon_IntrOp<string mnemonic, list<int> overloadedResults,
                      list<int> overloadedOperands, int numResults,
                      list<OpTrait> traits = [], bit requiresAccessGroup = 0>
     : LLVM_IntrOpBase</*dialect=*/ArmNeon_Dialect,
-                      /*opName=*/mnemonic,
+                      /*opName=*/"intr." # mnemonic,
                       /*enumName=*/"aarch64_neon_" # !subst(".", "_", mnemonic),
                       /*overloadedResults=*/overloadedResults,
                       /*overloadedOperands=*/overloadedOperands,
@@ -52,6 +52,13 @@ class ArmNeon_IntrOp<string mnemonic, list<int> overloadedResults,
 class ArmNeon_OverloadedOneResultIntrOp<string mnemonic,
                                         list<OpTrait> traits = []>
   : ArmNeon_IntrOp<mnemonic, [0], [], 1, traits>;
+
+// ArmNeon dialect op that corresponds to an LLVM IR intrinsic with one
+// overloaded result and overloaded operands list.
+class ArmNeon_OverloadedOperandsWithOneResultIntrOp<string mnemonic,
+                                                    list<int> overloadedOperands,
+                                                    list<OpTrait> traits = []>
+  : ArmNeon_IntrOp<mnemonic, [0], overloadedOperands, 1, traits>;
 
 def SMullOp : ArmNeon_OverloadedOneResultIntrOp<"smull", [
        NoSideEffect,
@@ -82,5 +89,32 @@ def SMullOp : ArmNeon_OverloadedOneResultIntrOp<"smull", [
     "$a `,` $b attr-dict `:` type($a) `to` type($res)";
 }
 
+def SdotOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"sdot",[1], [
+      NoSideEffect,
+      AllTypesMatch<["b", "c"]>,
+      AllTypesMatch<["a", "res"]>,
+      TypesMatchWith<"res has the same number of elements as operand b",
+                     "b", "res",
+                     "VectorType::get({$_self.cast<VectorType>().getShape()[0] / 4},"
+                     "IntegerType::get($_self.getContext(), 32))">]> {
+  let summary = "sdot op";
+  let description = [{
+    Signed integer addition of dot product (vector). This instruction performs
+    the following operation on signed integer vectors: res = dot(b, c) + a,
+    where vector operands are partitioned into groups of four elements.
+
+    Source:
+    https://developer.arm.com/architectures/instruction-sets/simd-isas/neon/intrinsics
+  }];
+  // Supports either:
+  //   (vector<2xi32>, vector<8xi8>, vector<8xi8>) -> vector<2xi32>
+  //   (vector<4xi32>, vector<16xi8>, vector<16xi8>) -> vector<16xi32>
+  let arguments = (ins VectorOfLengthAndType<[4, 2], [I32]>:$a,
+                       VectorOfLengthAndType<[16, 8], [I8]>:$b,
+                       VectorOfLengthAndType<[16, 8], [I8]>:$c);
+  let results = (outs VectorOfLengthAndType<[4, 2], [I32]>:$res);
+  let assemblyFormat =
+    "$a `,` $b `,` $c attr-dict `:` type($b) `,` type($c) `to` type($res)";
+  }
 
 #endif // ARMNEON_OPS
