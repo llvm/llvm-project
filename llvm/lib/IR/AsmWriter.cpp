@@ -4413,20 +4413,18 @@ void AssemblyWriter::writeAttribute(const Attribute &Attr, bool InAttrGroup) {
     return;
   }
 
-  assert((Attr.hasAttribute(Attribute::ByVal) ||
-          Attr.hasAttribute(Attribute::StructRet) ||
-          Attr.hasAttribute(Attribute::ByRef) ||
-          Attr.hasAttribute(Attribute::Preallocated)) &&
-         "unexpected type attr");
-
   if (Attr.hasAttribute(Attribute::ByVal)) {
     Out << "byval";
   } else if (Attr.hasAttribute(Attribute::StructRet)) {
     Out << "sret";
   } else if (Attr.hasAttribute(Attribute::ByRef)) {
     Out << "byref";
-  } else {
+  } else if (Attr.hasAttribute(Attribute::Preallocated)) {
     Out << "preallocated";
+  } else if (Attr.hasAttribute(Attribute::InAlloca)) {
+    Out << "inalloca";
+  } else {
+    llvm_unreachable("unexpected type attr");
   }
 
   if (Type *Ty = Attr.getValueAsType()) {

@@ -195,6 +195,10 @@ Attribute Attribute::getWithPreallocatedType(LLVMContext &Context, Type *Ty) {
   return get(Context, Preallocated, Ty);
 }
 
+Attribute Attribute::getWithInAllocaType(LLVMContext &Context, Type *Ty) {
+  return get(Context, InAlloca, Ty);
+}
+
 Attribute
 Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
                                 const Optional<unsigned> &NumElemsArg) {
@@ -377,8 +381,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "inaccessiblememonly";
   if (hasAttribute(Attribute::InaccessibleMemOrArgMemOnly))
     return "inaccessiblemem_or_argmemonly";
-  if (hasAttribute(Attribute::InAlloca))
-    return "inalloca";
   if (hasAttribute(Attribute::InlineHint))
     return "inlinehint";
   if (hasAttribute(Attribute::InReg))
@@ -484,24 +486,30 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   if (hasAttribute(Attribute::MustProgress))
     return "mustprogress";
 
-  const bool IsByVal = hasAttribute(Attribute::ByVal);
-  if (IsByVal || hasAttribute(Attribute::StructRet)) {
+  if (isTypeAttribute()) {
     std::string Result;
-    Result += IsByVal ? "byval" : "sret";
-    if (Type *Ty = getValueAsType()) {
-      raw_string_ostream OS(Result);
-      Result += '(';
-      Ty->print(OS, false, true);
-      OS.flush();
-      Result += ')';
-    }
-    return Result;
-  }
-
-  const bool IsByRef = hasAttribute(Attribute::ByRef);
-  if (IsByRef || hasAttribute(Attribute::Preallocated)) {
-    std::string Result = IsByRef ? "byref" : "preallocated";
     raw_string_ostream OS(Result);
+
+    switch (getKindAsEnum()) {
+    case Attribute::ByVal:
+      Result += "byval";
+      break;
+    case Attribute::StructRet:
+      Result += "sret";
+      break;
+    case Attribute::ByRef:
+      Result += "byref";
+      break;
+    case Attribute::Preallocated:
+      Result += "preallocated";
+      break;
+    case Attribute::InAlloca:
+      Result += "inalloca";
+      break;
+    default:
+      llvm_unreachable("unhandled type attribute");
+    }
+
     Result += '(';
     getValueAsType()->print(OS, false, true);
     OS.flush();
@@ -809,6 +817,10 @@ Type *AttributeSet::getPreallocatedType() const {
   return SetNode ? SetNode->getPreallocatedType() : nullptr;
 }
 
+Type *AttributeSet::getInAllocaType() const {
+  return SetNode ? SetNode->getInAllocaType() : nullptr;
+}
+
 std::pair<unsigned, Optional<unsigned>> AttributeSet::getAllocSizeArgs() const {
   return SetNode ? SetNode->getAllocSizeArgs()
                  : std::pair<unsigned, Optional<unsigned>>(0, 0);
@@ -915,6 +927,9 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C, const AttrBuilder &B) {
     case Attribute::Preallocated:
       Attr = Attribute::getWithPreallocatedType(C, B.getPreallocatedType());
       break;
+    case Attribute::InAlloca:
+      Attr = Attribute::getWithInAllocaType(C, B.getInAllocaType());
+      break;
     case Attribute::Alignment:
       assert(B.getAlignment() && "Alignment must be set");
       Attr = Attribute::getWithAlignment(C, *B.getAlignment());
@@ -1017,6 +1032,12 @@ Type *AttributeSetNode::getByRefType() const {
 
 Type *AttributeSetNode::getPreallocatedType() const {
   if (auto A = findEnumAttribute(Attribute::Preallocated))
+    return A->getValueAsType();
+  return nullptr;
+}
+
+Type *AttributeSetNode::getInAllocaType() const {
+  if (auto A = findEnumAttribute(Attribute::InAlloca))
     return A->getValueAsType();
   return nullptr;
 }
@@ -1578,6 +1599,10 @@ Type *AttributeList::getParamPreallocatedType(unsigned Index) const {
   return getAttributes(Index + FirstArgIndex).getPreallocatedType();
 }
 
+Type *AttributeList::getParamInAllocaType(unsigned Index) const {
+  return getAttributes(Index + FirstArgIndex).getInAllocaType();
+}
+
 MaybeAlign AttributeList::getStackAlignment(unsigned Index) const {
   return getAttributes(Index).getStackAlignment();
 }
@@ -1699,6 +1724,9 @@ AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
     AllocSizeArgs = Attr.getValueAsInt();
   else if (Kind == Attribute::VScaleRange)
     VScaleRangeArgs = Attr.getValueAsInt();
+  else if (Kind == Attribute::InAlloca)
+    InAllocaType = Attr.getValueAsType();
+
   return *this;
 }
 
@@ -1723,6 +1751,8 @@ AttrBuilder &AttrBuilder::removeAttribute(Attribute::AttrKind Val) {
     ByRefType = nullptr;
   else if (Val == Attribute::Preallocated)
     PreallocatedType = nullptr;
+  else if (Val == Attribute::InAlloca)
+    InAllocaType = nullptr;
   else if (Val == Attribute::Dereferenceable)
     DerefBytes = 0;
   else if (Val == Attribute::DereferenceableOrNull)
@@ -1852,6 +1882,12 @@ AttrBuilder &AttrBuilder::addPreallocatedAttr(Type *Ty) {
   return *this;
 }
 
+AttrBuilder &AttrBuilder::addInAllocaAttr(Type *Ty) {
+  Attrs[Attribute::InAlloca] = true;
+  InAllocaType = Ty;
+  return *this;
+}
+
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   // FIXME: What if both have alignments, but they don't match?!
   if (!Alignment)
@@ -1880,6 +1916,9 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
 
   if (!PreallocatedType)
     PreallocatedType = B.PreallocatedType;
+
+  if (!InAllocaType)
+    InAllocaType = B.InAllocaType;
 
   if (!VScaleRangeArgs)
     VScaleRangeArgs = B.VScaleRangeArgs;
@@ -1920,6 +1959,9 @@ AttrBuilder &AttrBuilder::remove(const AttrBuilder &B) {
 
   if (B.PreallocatedType)
     PreallocatedType = nullptr;
+
+  if (B.InAllocaType)
+    InAllocaType = nullptr;
 
   if (B.VScaleRangeArgs)
     VScaleRangeArgs = 0;
@@ -1985,6 +2027,7 @@ bool AttrBuilder::operator==(const AttrBuilder &B) const {
          DerefBytes == B.DerefBytes && ByValType == B.ByValType &&
          StructRetType == B.StructRetType && ByRefType == B.ByRefType &&
          PreallocatedType == B.PreallocatedType &&
+         InAllocaType == B.InAllocaType &&
          VScaleRangeArgs == B.VScaleRangeArgs;
 }
 
@@ -2014,6 +2057,7 @@ AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
         .addAttribute(Attribute::ReadOnly)
         .addAttribute(Attribute::InAlloca)
         .addPreallocatedAttr(Ty)
+        .addInAllocaAttr(Ty)
         .addByValAttr(Ty)
         .addStructRetAttr(Ty)
         .addByRefAttr(Ty);
