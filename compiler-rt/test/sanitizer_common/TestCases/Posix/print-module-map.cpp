@@ -8,9 +8,9 @@
 
 // RUN: %clangxx -DUSING_%tool_name %s -o %t -w
 
-// RUN: %env_tool_opts="print_module_map=0:abort_on_error=1" not --crash %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-MM0
-// RUN: %env_tool_opts="print_module_map=1:abort_on_error=1" not --crash %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-MM1
-// RUN: %env_tool_opts="print_module_map=2:abort_on_error=1" not --crash %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-MM2
+// RUN: %env_tool_opts="print_module_map=0:halt_on_error=1" not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-MM0
+// RUN: %env_tool_opts="print_module_map=1:halt_on_error=1" not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-MM1
+// RUN: %env_tool_opts="print_module_map=2:halt_on_error=1" not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-MM2
 
 // tsan support pending rdar://67747473
 // XFAIL: tsan
@@ -35,11 +35,13 @@ int main() {
   return 0;
 }
 
+// CHECK-NOT: {{Process .*map}}
 // CHECK: SUMMARY:
 // CHECK-MM0-NOT: {{Process .*map}}
+
+// CHECK-MM1: {{Process (module|memory) map}}
 // CHECK-MM1-NOT: {{Process .*map}}
+
 // CHECK-MM2: {{Process (module|memory) map}}
-// CHECK: ABORTING
-// CHECK-MM0-NOT: {{Process .*map}}
-// CHECK-MM1-NEXT: {{Process (module|memory) map}}
-// CHECK-MM2-NEXT: {{Process (module|memory) map}}
+// CHECK-MM2: {{Process (module|memory) map}}
+// CHECK-MM2-NOT: {{Process .*map}}
