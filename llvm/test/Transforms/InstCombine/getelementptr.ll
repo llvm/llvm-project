@@ -1028,9 +1028,8 @@ define i16 @test41([3 x i32] addrspace(1)* %array) {
 define i8* @test42i(i8* %c1, i8* %c2) {
 ; CHECK-LABEL: @test42i(
 ; CHECK-NEXT:    [[PTRTOINT:%.*]] = ptrtoint i8* [[C1:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i8* [[C2:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[PTRTOINT]]
-; CHECK-NEXT:    [[GEP:%.*]] = inttoptr i64 [[TMP2]] to i8*
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[PTRTOINT]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[C2:%.*]], i64 [[SUB]]
 ; CHECK-NEXT:    ret i8* [[GEP]]
 ;
   %ptrtoint = ptrtoint i8* %c1 to i64
@@ -1043,9 +1042,8 @@ define i8* @test42i(i8* %c1, i8* %c2) {
 define i8* @test42(i8* %c1, i8* %c2) {
 ; CHECK-LABEL: @test42(
 ; CHECK-NEXT:    [[PTRTOINT:%.*]] = ptrtoint i8* [[C1:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i8* [[C2:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[PTRTOINT]]
-; CHECK-NEXT:    [[GEP:%.*]] = inttoptr i64 [[TMP2]] to i8*
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[PTRTOINT]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[C2:%.*]], i64 [[SUB]]
 ; CHECK-NEXT:    ret i8* [[GEP]]
 ;
   %ptrtoint = ptrtoint i8* %c1 to i64
@@ -1058,9 +1056,9 @@ define i8* @test42(i8* %c1, i8* %c2) {
 define i16* @test43i(i16* %c1, i16* %c2) {
 ; CHECK-LABEL: @test43i(
 ; CHECK-NEXT:    [[PTRTOINT:%.*]] = ptrtoint i16* [[C1:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i16* [[C2:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[PTRTOINT]]
-; CHECK-NEXT:    [[GEP:%.*]] = inttoptr i64 [[TMP2]] to i16*
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[PTRTOINT]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i64 [[SUB]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, i16* [[C2:%.*]], i64 [[SHR]]
 ; CHECK-NEXT:    ret i16* [[GEP]]
 ;
   %ptrtoint = ptrtoint i16* %c1 to i64
@@ -1074,9 +1072,9 @@ define i16* @test43i(i16* %c1, i16* %c2) {
 define %struct.C* @test44i(%struct.C* %c1, %struct.C* %c2) {
 ; CHECK-LABEL: @test44i(
 ; CHECK-NEXT:    [[PTRTOINT:%.*]] = ptrtoint %struct.C* [[C1:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint %struct.C* [[C2:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[PTRTOINT]]
-; CHECK-NEXT:    [[GEP:%.*]] = inttoptr i64 [[TMP2]] to %struct.C*
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[PTRTOINT]]
+; CHECK-NEXT:    [[SHR:%.*]] = sdiv i64 [[SUB]], 7
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_C:%.*]], %struct.C* [[C2:%.*]], i64 [[SHR]]
 ; CHECK-NEXT:    ret %struct.C* [[GEP]]
 ;
   %ptrtoint = ptrtoint %struct.C* %c1 to i64
