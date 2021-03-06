@@ -495,12 +495,15 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
     if (!AreEquivalentAddressValues(StorePtr, Ptr))
       return nullptr;
 
+    if (IsLoadCSE)
+      *IsLoadCSE = false;
+
     Value *Val = SI->getValueOperand();
-    if (CastInst::isBitOrNoopPointerCastable(Val->getType(), AccessTy, DL)) {
-      if (IsLoadCSE)
-        *IsLoadCSE = false;
+    if (CastInst::isBitOrNoopPointerCastable(Val->getType(), AccessTy, DL))
       return Val;
-    }
+
+    if (auto *C = dyn_cast<Constant>(Val))
+      return ConstantFoldLoadThroughBitcast(C, AccessTy, DL);
   }
 
   return nullptr;
