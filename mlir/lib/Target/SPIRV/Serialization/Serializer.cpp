@@ -966,9 +966,9 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
     // structure. It does not directly map to the incoming parent block for the
     // OpPhi instructions at SPIR-V binary level. This is because structured
     // control flow ops are serialized to multiple SPIR-V blocks. If there is a
-    // spv.selection/spv.mlir.loop op in the MLIR predecessor block, the branch
-    // op jumping to the OpPhi's block then resides in the previous structured
-    // control flow op's merge block.
+    // spv.mlir.selection/spv.mlir.loop op in the MLIR predecessor block, the
+    // branch op jumping to the OpPhi's block then resides in the previous
+    // structured control flow op's merge block.
     predecessor = getPhiIncomingBlock(predecessor);
     if (auto branchOp = dyn_cast<spirv::BranchOp>(terminator)) {
       predecessors.emplace_back(predecessor, branchOp.operand_begin());

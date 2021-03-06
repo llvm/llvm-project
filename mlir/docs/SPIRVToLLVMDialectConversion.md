@@ -663,9 +663,9 @@ the conditional branch.
 spv.FunctionCall @bar(%0) : (i32) -> ()     =>    llvm.call @bar(%0) : (f32) -> ()
 ```
 
-### `spv.selection` and `spv.mlir.loop`
+### `spv.mlir.selection` and `spv.mlir.loop`
 
-Control flow within `spv.selection` and `spv.mlir.loop` is lowered directly to LLVM
+Control flow within `spv.mlir.selection` and `spv.mlir.loop` is lowered directly to LLVM
 via branch ops. The conversion can only be applied to selection or loop with all
 blocks being reachable. Moreover, selection and loop control attributes (such as
 `Flatten` or `Unroll`) are not supported at the moment.
@@ -673,7 +673,7 @@ blocks being reachable. Moreover, selection and loop control attributes (such as
 ```mlir
 // Conversion of selection
 %cond = spv.Constant true                               %cond = llvm.mlir.constant(true) : i1
-spv.selection {
+spv.mlir.selection {
   spv.BranchConditional %cond, ^true, ^false            llvm.cond_br %cond, ^true, ^false
 
 ^true:                                                                                              ^true:
