@@ -211,12 +211,6 @@ function(llvm_ExternalProject_Add name source_dir)
     list(APPEND compiler_args -DCMAKE_STRIP=${ARG_STRIP_TOOL})
   endif()
 
-  if (ARG_TARGET_TRIPLE)
-    list(APPEND compiler_args -DCMAKE_C_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
-    list(APPEND compiler_args -DCMAKE_CXX_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
-    list(APPEND compiler_args -DCMAKE_ASM_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
-  endif()
-
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp
     DEPENDS ${ARG_DEPENDS}
@@ -238,7 +232,8 @@ function(llvm_ExternalProject_Add name source_dir)
   endif()
 
   if(CMAKE_CROSSCOMPILING)
-    set(compiler_args -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    set(compiler_args -DCMAKE_ASM_COMPILER=${CMAKE_ASM_COMPILER}
+                      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                       -DCMAKE_LINKER=${CMAKE_LINKER}
                       -DCMAKE_AR=${CMAKE_AR}
@@ -277,6 +272,12 @@ function(llvm_ExternalProject_Add name source_dir)
   else()
     set(llvm_config_path "$<TARGET_FILE:llvm-config>")
     set(cmake_args ${ARG_CMAKE_ARGS})
+  endif()
+
+  if(ARG_TARGET_TRIPLE)
+    list(APPEND compiler_args -DCMAKE_C_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
+    list(APPEND compiler_args -DCMAKE_CXX_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
+    list(APPEND compiler_args -DCMAKE_ASM_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
   endif()
 
   ExternalProject_Add(${name}

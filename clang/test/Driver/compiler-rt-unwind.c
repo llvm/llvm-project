@@ -69,5 +69,9 @@
 // RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s
+// RUN: %clangxx -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s
 // MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins-x86_64.a"
 // MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}lunwind"
