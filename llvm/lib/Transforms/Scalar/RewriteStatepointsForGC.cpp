@@ -676,16 +676,20 @@ namespace {
 /// the base of this BDV.
 class BDVState {
 public:
-  enum Status { Unknown, Base, Conflict };
+  enum Status {
+     // Starting state of lattice
+     Unknown,
+     // Some specific base value
+     Base,
+     // Need to insert a node to represent a merge.
+     Conflict
+  };
 
-  BDVState() : BaseValue(nullptr) {}
-
+  BDVState() {}
   explicit BDVState(Status Status, Value *BaseValue = nullptr)
       : Status(Status), BaseValue(BaseValue) {
     assert(Status != Base || BaseValue);
   }
-
-  explicit BDVState(Value *BaseValue) : Status(Base), BaseValue(BaseValue) {}
 
   Status getStatus() const { return Status; }
   Value *getBaseValue() const { return BaseValue; }
@@ -724,7 +728,7 @@ public:
 
 private:
   Status Status = Unknown;
-  AssertingVH<Value> BaseValue; // Non-null only if Status == Base.
+  AssertingVH<Value> BaseValue = nullptr; // Non-null only if Status == Base.
 };
 
 } // end anonymous namespace
@@ -874,7 +878,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
   // base state for known bases and expect to find a cached state otherwise.
   auto GetStateForBDV = [&](Value *BaseValue, Value *Input) {
     if (isKnownBaseResult(BaseValue) && areBothVectorOrScalar(BaseValue, Input))
-      return BDVState(BaseValue);
+      return BDVState(BDVState::Base, BaseValue);
     auto I = States.find(BaseValue);
     assert(I != States.end() && "lookup failed!");
     return I->second;
