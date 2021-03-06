@@ -13,7 +13,9 @@
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "SwiftLanguageRuntimeImpl.h"
 
+#include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
@@ -81,6 +83,10 @@ static bool IsModuleSwiftRuntime(lldb_private::Process &process,
                                  lldb_private::Module &module) {
   return module.GetFileSpec().GetFilename() == GetStandardLibraryName(process);
 }
+
+static UnwindPlanSP
+GetFollowAsyncContextUnwindPlan(RegisterContext *regctx, ArchSpec &arch,
+                                bool &behaves_like_zeroth_frame);
 
 AppleObjCRuntimeV2 *
 SwiftLanguageRuntime::GetObjCRuntime(lldb_private::Process &process) {
@@ -2284,5 +2290,145 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression(
 }
 
 bool SwiftLanguageRuntime::IsABIStable() { FORWARD(IsABIStable); }
+
+// Examine the register state and detect the transition from a real
+// stack frame to an AsyncContext frame, or a frame in the middle of
+// the AsyncContext chain, and return an UnwindPlan for these situations.
+UnwindPlanSP
+SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
+                                           RegisterContext *regctx,
+                                           bool &behaves_like_zeroth_frame) {
+
+  ArchSpec arch = process_sp->GetTarget().GetArchitecture();
+  uint32_t async_context_regnum;
+  uint32_t fp_regnum;
+  uint32_t pc_regnum;
+  if (arch.GetMachine() == llvm::Triple::x86_64) {
+    async_context_regnum = dwarf_r14_x86_64;
+    fp_regnum = dwarf_rbp_x86_64;
+    pc_regnum = dwarf_rip_x86_64;
+  } else if (arch.GetMachine() == llvm::Triple::aarch64) {
+    async_context_regnum = arm64_dwarf::x22;
+    fp_regnum = arm64_dwarf::fp;
+    pc_regnum = arm64_dwarf::pc;
+  } else {
+    return UnwindPlanSP();
+  }
+
+  // If we can't fetch the fp reg, and we *can* fetch the async
+  // context register, then we're in the middle of the AsyncContext
+  // chain, return an UnwindPlan for that.
+  addr_t fp = regctx->GetFP(LLDB_INVALID_ADDRESS);
+  if (fp == LLDB_INVALID_ADDRESS) {
+    const RegisterInfo *reg_info =
+        regctx->GetRegisterInfo(eRegisterKindDWARF, async_context_regnum);
+    if (reg_info) {
+      RegisterValue val;
+      if (regctx->ReadRegister(reg_info, val)) {
+        addr_t async_context_addr = val.GetAsUInt64(LLDB_INVALID_ADDRESS);
+        if (async_context_addr != LLDB_INVALID_ADDRESS) {
+          return GetFollowAsyncContextUnwindPlan(regctx, arch,
+                                                 behaves_like_zeroth_frame);
+        }
+      }
+    }
+    return UnwindPlanSP();
+  }
+
+  addr_t saved_fp = LLDB_INVALID_ADDRESS;
+  Status error;
+  if (!process_sp->ReadMemory(fp, &saved_fp, 8, error))
+    return UnwindPlanSP();
+
+  // Get the high nibble of the dreferenced fp; if the 60th bit is set,
+  // this is the transition to a swift async AsyncContext chain.
+  if ((saved_fp & (0xfULL << 60)) >> 60 != 1)
+    return UnwindPlanSP();
+
+  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  const int32_t ptr_size = 8;
+  row->SetOffset(0);
+
+  // A DWARF Expression to set the CFA.
+  //      pushes the frame pointer register - 8
+  //      dereference
+
+  // Row::RegisterLocation::RestoreType doesn't have a
+  // deref(reg-value + offset) yet, shortcut around it with
+  // a dwarf expression for now.
+  static const uint8_t g_cfa_dwarf_expression_x86_64[] = {
+      0x76,      // DW_OP_breg6, register 6 == rbp
+      0x78,      //    sleb128 -8 (ptrsize)
+      0x94, 0x8, // DW_OP_deref_size(8)
+  };
+  static const uint8_t g_cfa_dwarf_expression_arm64[] = {
+      0x8d,      // DW_OP_breg29, register 29 == fp
+      0x78,      //    sleb128 -8 (ptrsize)
+      0x94, 0x8, // DW_OP_deref_size(8)
+  };
+
+  if (arch.GetMachine() == llvm::Triple::x86_64) {
+    row->GetCFAValue().SetIsDWARFExpression(
+        g_cfa_dwarf_expression_x86_64, sizeof(g_cfa_dwarf_expression_x86_64));
+  } else if (arch.GetMachine() == llvm::Triple::aarch64) {
+    row->GetCFAValue().SetIsDWARFExpression(
+        g_cfa_dwarf_expression_arm64, sizeof(g_cfa_dwarf_expression_arm64));
+  }
+
+  row->SetRegisterLocationToAtCFAPlusOffset(async_context_regnum, 0, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(pc_regnum, ptr_size, false);
+
+  row->SetUnspecifiedRegistersAreUndefined(true);
+
+  UnwindPlanSP plan = std::make_shared<UnwindPlan>(lldb::eRegisterKindDWARF);
+  plan->AppendRow(row);
+  plan->SetSourceName("Swift Transition-to-AsyncContext-Chain");
+  plan->SetSourcedFromCompiler(eLazyBoolNo);
+  plan->SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
+  plan->SetUnwindPlanForSignalTrap(eLazyBoolYes);
+  behaves_like_zeroth_frame = true;
+  return plan;
+}
+
+// Creates an UnwindPlan for following the AsyncContext chain
+// up the stack, from a current AsyncContext frame.
+static UnwindPlanSP
+GetFollowAsyncContextUnwindPlan(RegisterContext *regctx, ArchSpec &arch,
+                                bool &behaves_like_zeroth_frame) {
+
+  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  const int32_t ptr_size = 8;
+  row->SetOffset(0);
+
+  uint32_t async_context_regnum;
+  uint32_t fp_regnum;
+  uint32_t pc_regnum;
+  if (arch.GetMachine() == llvm::Triple::x86_64) {
+    async_context_regnum = dwarf_r14_x86_64;
+    fp_regnum = dwarf_rbp_x86_64;
+    pc_regnum = dwarf_rip_x86_64;
+  } else if (arch.GetMachine() == llvm::Triple::aarch64) {
+    async_context_regnum = arm64_dwarf::x22;
+    fp_regnum = arm64_dwarf::fp;
+    pc_regnum = arm64_dwarf::pc;
+  } else {
+    return UnwindPlanSP();
+  }
+
+  row->GetCFAValue().SetIsRegisterPlusOffset(async_context_regnum, 0);
+  row->SetRegisterLocationToAtCFAPlusOffset(async_context_regnum, 0, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(pc_regnum, ptr_size, false);
+
+  row->SetUnspecifiedRegistersAreUndefined(true);
+
+  UnwindPlanSP plan = std::make_shared<UnwindPlan>(lldb::eRegisterKindDWARF);
+  plan->AppendRow(row);
+  plan->SetSourceName("Swift Following-AsyncContext-Chain");
+  plan->SetSourcedFromCompiler(eLazyBoolNo);
+  plan->SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
+  plan->SetUnwindPlanForSignalTrap(eLazyBoolYes);
+  behaves_like_zeroth_frame = true;
+  return plan;
+}
 
 } // namespace lldb_private

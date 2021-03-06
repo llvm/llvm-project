@@ -387,6 +387,11 @@ public:
 
   static AppleObjCRuntimeV2 *GetObjCRuntime(lldb_private::Process &process);
 protected:
+  lldb::UnwindPlanSP
+  GetRuntimeUnwindPlan(lldb::ProcessSP process_sp,
+                       lldb_private::RegisterContext *regctx,
+                       bool &behaves_like_zeroth_frame) override;
+
   bool GetTargetOfPartialApply(SymbolContext &curr_sc, ConstString &apply_name,
                                SymbolContext &sc);
   AppleObjCRuntimeV2 *GetObjCRuntime();
