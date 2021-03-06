@@ -1811,10 +1811,10 @@ define void @void_func_byval_i8_align32_i16_align64(i8 addrspace(5)* byval(i8) %
   ; CHECK: frameInfo:
   ; CHECK: maxAlignment:    64
   ; CHECK: fixedStack:
-  ; CHECK: - { id: 0, type: default, offset: 64, size: 4, alignment: 16, stack-id: default,
-  ; CHECK-NEXT:    isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
-  ; CHECK: - { id: 1, type: default, offset: 0, size: 4, alignment: 16, stack-id: default,
-  ; CHECK-NEXT:  isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+  ; CHECK: - { id: 0, type: default, offset: 64, size: 2, alignment: 16, stack-id: default,
+  ; CHECK-NEXT:    isImmutable: false, isAliased: false, callee-saved-register: '',
+  ; CHECK: - { id: 1, type: default, offset: 0, size: 1, alignment: 16, stack-id: default,
+  ; CHECK-NEXT:  isImmutable: false, isAliased: false, callee-saved-register: '',
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr30_sgpr31
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
@@ -1843,10 +1843,10 @@ define void @byval_a3i32_align128_byval_i16_align64([3 x i32] addrspace(5)* byva
   ; CHECK: frameInfo:
   ; CHECK: maxAlignment:    128
   ; CHECK: fixedStack:
-  ; CHECK-NEXT: - { id: 0, type: default, offset: 64, size: 4, alignment: 16, stack-id: default,
-  ; CHECK-NEXT:  isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
-  ; CHECK: - { id: 1, type: default, offset: 0, size: 4, alignment: 16, stack-id: default,
-  ; CHECK-NEXT: isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+  ; CHECK-NEXT: - { id: 0, type: default, offset: 64, size: 2, alignment: 16, stack-id: default,
+  ; CHECK-NEXT:  isImmutable: false, isAliased: false, callee-saved-register: '',
+  ; CHECK: - { id: 1, type: default, offset: 0, size: 12, alignment: 16, stack-id: default,
+  ; CHECK-NEXT: isImmutable: false, isAliased: false, callee-saved-register: '',
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr30_sgpr31
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
@@ -1887,10 +1887,10 @@ define void @void_func_v32i32_i32_byval_i8(<32 x i32> %arg0, i32 %arg1, i8 addrs
   ; CHECK: frameInfo:
   ; CHECK: maxAlignment:    8
   ; CHECK: fixedStack:
-  ; CHECK:     - { id: 0, type: default, offset: 8, size: 4, alignment: 8, stack-id: default,
-  ; CHECK-NEXT:  isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+  ; CHECK:     - { id: 0, type: default, offset: 8, size: 1, alignment: 8, stack-id: default,
+  ; CHECK-NEXT:  isImmutable: false, isAliased: false, callee-saved-register: '',
   ; CHECK: - { id: 1, type: default, offset: 0, size: 4, alignment: 16, stack-id: default,
-  ; CHECK-NEXT:  isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+  ; CHECK-NEXT:  isImmutable: true, isAliased: false, callee-saved-register: '',
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -1951,9 +1951,9 @@ define void @void_func_v32i32_byval_i8_i32(<32 x i32> %arg0, i8 addrspace(5)* by
   ; CHECK: maxAlignment:    4
   ; CHECK: fixedStack:
   ; CHECK-NEXT: - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
-  ; CHECK-NEXT:  isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
-  ; CHECK: - { id: 1, type: default, offset: 0, size: 4, alignment: 16, stack-id: default,
-  ; CHECK-NEXT: isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+  ; CHECK-NEXT:  isImmutable: true, isAliased: false, callee-saved-register: '',
+  ; CHECK: - { id: 1, type: default, offset: 0, size: 1, alignment: 16, stack-id: default,
+  ; CHECK-NEXT: isImmutable: false, isAliased: false, callee-saved-register: '',
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0

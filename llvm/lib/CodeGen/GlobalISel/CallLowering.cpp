@@ -639,7 +639,8 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
                                               : LocVT.getStoreSize();
         unsigned Offset = VA.getLocMemOffset();
         MachinePointerInfo MPO;
-        Register StackAddr = Handler.getStackAddress(MemSize, Offset, MPO);
+        Register StackAddr =
+            Handler.getStackAddress(MemSize, Offset, MPO, Flags);
         Handler.assignValueToAddress(Args[i], Part, StackAddr, MemSize, MPO,
                                      VA);
         continue;
@@ -652,8 +653,8 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
           continue;
 
         MachinePointerInfo MPO;
-        Register StackAddr = Handler.getStackAddress(Flags.getByValSize(),
-                                                     VA.getLocMemOffset(), MPO);
+        Register StackAddr = Handler.getStackAddress(
+            Flags.getByValSize(), VA.getLocMemOffset(), MPO, Flags);
         assert(Args[i].Regs.size() == 1 &&
                "didn't expect split byval pointer");
         MIRBuilder.buildCopy(Args[i].Regs[0], StackAddr);
