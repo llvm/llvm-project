@@ -2,7 +2,4 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# Expose the corresponding C-Extension module with a well-known name at this
-# level.
-from .._cext_loader import _load_extension
-_cextConversions = _load_extension("_mlirConversions")
+from ._shape_ops_gen import *

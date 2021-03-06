@@ -1,6 +1,6 @@
-# RUN: %PYTHON -m mlir.tools.linalg_opdsl.dump_oplib --file %s | FileCheck %s
+# RUN: %PYTHON -m mlir.dialects.linalg.opdsl.dump_oplib --file %s | FileCheck %s
 
-from mlir.tools.linalg_opdsl.lang import *
+from mlir.dialects.linalg.opdsl.lang import *
 
 
 # Verify that simple case with iteration order defined lexically and reduction
