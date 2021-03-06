@@ -1259,7 +1259,7 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     Alias->setVisibility(Symbol.getVisibility());
     Alias->setOther(Symbol.getOther());
 
-    if (!Symbol.isUndefined() && !Rest.startswith("@@@"))
+    if (!Symbol.isUndefined() && S.KeepOriginalSym)
       continue;
 
     if (Symbol.isUndefined() && Rest.startswith("@@") &&

@@ -141,8 +141,8 @@ public:
 
   void changeSection(MCSection *Section, const MCExpr *Subsection) override;
 
-  void emitELFSymverDirective(StringRef AliasName,
-                              const MCSymbol *Aliasee) override;
+  void emitELFSymverDirective(const MCSymbol *OriginalSym, StringRef Name,
+                              bool KeepOriginalSym) override;
 
   void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override;
 
@@ -490,11 +490,14 @@ void MCAsmStreamer::changeSection(MCSection *Section,
   }
 }
 
-void MCAsmStreamer::emitELFSymverDirective(StringRef AliasName,
-                                           const MCSymbol *Aliasee) {
+void MCAsmStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
+                                           StringRef Name,
+                                           bool KeepOriginalSym) {
   OS << ".symver ";
-  Aliasee->print(OS, MAI);
-  OS << ", " << AliasName;
+  OriginalSym->print(OS, MAI);
+  OS << ", " << Name;
+  if (!KeepOriginalSym && !Name.contains("@@@"))
+    OS << ", remove";
   EmitEOL();
 }
 

@@ -611,10 +611,8 @@ public:
   ///
   /// This corresponds to an assembler statement such as:
   ///  .symver _start, foo@@SOME_VERSION
-  /// \param AliasName - The versioned alias (i.e. "foo@@SOME_VERSION")
-  /// \param Aliasee - The aliased symbol (i.e. "_start")
-  virtual void emitELFSymverDirective(StringRef AliasName,
-                                      const MCSymbol *Aliasee);
+  virtual void emitELFSymverDirective(const MCSymbol *OriginalSym,
+                                      StringRef Name, bool KeepOriginalSym);
 
   /// Emit a Linker Optimization Hint (LOH) directive.
   /// \param Args - Arguments of the LOH.
