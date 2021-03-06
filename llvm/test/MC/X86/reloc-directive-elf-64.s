@@ -9,7 +9,7 @@
 # PRINT-NEXT: .reloc 0, R_X86_64_64, .data+2
 # PRINT-NEXT: .reloc 0, R_X86_64_GOTPCRELX, foo+3
 # PRINT-NEXT: .reloc 0, R_X86_64_REX_GOTPCRELX, 5
-# PRINT-NEXT: .reloc 0, BFD_RELOC_NONE, 9
+# PRINT:      .reloc 0, BFD_RELOC_NONE, 9
 # PRINT-NEXT: .reloc 0, BFD_RELOC_8, 9
 # PRINT-NEXT: .reloc 0, BFD_RELOC_16, 9
 # PRINT-NEXT: .reloc 0, BFD_RELOC_32, 9
