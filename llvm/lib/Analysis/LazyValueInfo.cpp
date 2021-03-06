@@ -875,48 +875,6 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueSelect(
   FalseVal = intersect(FalseVal,
                        getValueFromCondition(SI->getFalseValue(), Cond, false));
 
-  // Handle clamp idioms such as:
-  //   %24 = constantrange<0, 17>
-  //   %39 = icmp eq i32 %24, 0
-  //   %40 = add i32 %24, -1
-  //   %siv.next = select i1 %39, i32 16, i32 %40
-  //   %siv.next = constantrange<0, 17> not <-1, 17>
-  // In general, this can handle any clamp idiom which tests the edge
-  // condition via an equality or inequality.
-  if (auto *ICI = dyn_cast<ICmpInst>(Cond)) {
-    ICmpInst::Predicate Pred = ICI->getPredicate();
-    Value *A = ICI->getOperand(0);
-    if (ConstantInt *CIBase = dyn_cast<ConstantInt>(ICI->getOperand(1))) {
-      auto addConstants = [](ConstantInt *A, ConstantInt *B) {
-        assert(A->getType() == B->getType());
-        return ConstantInt::get(A->getType(), A->getValue() + B->getValue());
-      };
-      // See if either input is A + C2, subject to the constraint from the
-      // condition that A != C when that input is used.  We can assume that
-      // that input doesn't include C + C2.
-      ConstantInt *CIAdded;
-      switch (Pred) {
-      default: break;
-      case ICmpInst::ICMP_EQ:
-        if (match(SI->getFalseValue(), m_Add(m_Specific(A),
-                                             m_ConstantInt(CIAdded)))) {
-          auto ResNot = addConstants(CIBase, CIAdded);
-          FalseVal = intersect(FalseVal,
-                               ValueLatticeElement::getNot(ResNot));
-        }
-        break;
-      case ICmpInst::ICMP_NE:
-        if (match(SI->getTrueValue(), m_Add(m_Specific(A),
-                                            m_ConstantInt(CIAdded)))) {
-          auto ResNot = addConstants(CIBase, CIAdded);
-          TrueVal = intersect(TrueVal,
-                              ValueLatticeElement::getNot(ResNot));
-        }
-        break;
-      };
-    }
-  }
-
   ValueLatticeElement Result = TrueVal;
   Result.mergeIn(FalseVal);
   return Result;
@@ -1086,6 +1044,13 @@ static bool matchICmpOperand(APInt &Offset, Value *LHS, Value *Val,
   const APInt *C;
   if (match(LHS, m_Add(m_Specific(Val), m_APInt(C)))) {
     Offset = *C;
+    return true;
+  }
+
+  // Handle the symmetric case. This appears in saturation patterns like
+  // (x == 16) ? 16 : (x + 1).
+  if (match(Val, m_Add(m_Specific(LHS), m_APInt(C)))) {
+    Offset = -*C;
     return true;
   }
 
