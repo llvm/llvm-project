@@ -90,8 +90,7 @@ define void @test_03(i64* %p1, i64* %p2, i1 %maybe_exit) {
 ; CHECK-NEXT:    %num = load i64, i64* %p1, align 4
 ; CHECK-NEXT:    [[DIV:%[^ ]+]] = udiv i64 %num, 13
 ; CHECK-NEXT:    [[DIV_MINUS_1:%[^ ]+]] = add nsw i64 [[DIV]], -1
-; CHECK-NEXT:    [[COMP1:%[^ ]+]] = icmp sgt i64 [[DIV_MINUS_1]], 0
-; CHECK-NEXT:    %exit.mainloop.at = select i1 [[COMP1]], i64 [[DIV_MINUS_1]], i64 0
+; CHECK-NEXT:    %exit.mainloop.at = call i64 @llvm.smax.i64(i64 [[DIV_MINUS_1]], i64 0)
 ; CHECK-NEXT:    [[COMP2:%[^ ]+]] = icmp slt i64 0, %exit.mainloop.at
 ; CHECK-NEXT:    br i1 [[COMP2]], label %loop.preheader, label %main.pseudo.exit
 ; CHECK-NOT:     preloop

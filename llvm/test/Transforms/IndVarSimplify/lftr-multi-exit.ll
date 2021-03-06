@@ -128,8 +128,7 @@ exit:
 define void @compound_early_exit(i32 %n, i32 %m) {
 ; CHECK-LABEL: @compound_early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[M:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP0]], i32 [[M]], i32 [[N]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[M:%.*]], i32 [[N:%.*]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
