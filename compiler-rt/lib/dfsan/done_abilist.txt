@@ -30,8 +30,6 @@ fun:dfsan_flush=uninstrumented
 fun:dfsan_flush=discard
 fun:dfsan_print_origin_trace=uninstrumented
 fun:dfsan_print_origin_trace=discard
-fun:dfsan_get_origin=uninstrumented
-fun:dfsan_get_origin=custom
 fun:dfsan_get_init_origin=uninstrumented
 fun:dfsan_get_init_origin=discard
 
