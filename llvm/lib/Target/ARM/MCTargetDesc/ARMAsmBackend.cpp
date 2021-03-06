@@ -55,6 +55,10 @@ Optional<MCFixupKind> ARMAsmBackend::getFixupKind(StringRef Name) const {
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/ARM.def"
 #undef ELF_RELOC
+                      .Case("BFD_RELOC_NONE", ELF::R_ARM_NONE)
+                      .Case("BFD_RELOC_8", ELF::R_ARM_ABS8)
+                      .Case("BFD_RELOC_16", ELF::R_ARM_ABS16)
+                      .Case("BFD_RELOC_32", ELF::R_ARM_ABS32)
                       .Default(-1u);
   if (Type == -1u)
     return None;
