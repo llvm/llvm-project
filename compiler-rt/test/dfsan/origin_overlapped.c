@@ -1,4 +1,4 @@
-// RUN: %clang_debug_dfsan -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN: %clang_dfsan -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK < %t.out
 
@@ -16,8 +16,5 @@ int main(int argc, char *argv[]) {
 
 // CHECK: Taint value 0x8 {{.*}} origin tracking (bar)
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK: #0 {{.*}} in main {{.*}}origin_overlapped.c:[[@LINE-7]]
 
 // CHECK: Origin value: {{.*}}, Taint value was created at
-
-// CHECK: #0 {{.*}} in main {{.*}}origin_overlapped.c:[[@LINE-12]]
