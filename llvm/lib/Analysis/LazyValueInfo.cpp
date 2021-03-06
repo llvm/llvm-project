@@ -1076,15 +1076,18 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueExtractValue(
   return ValueLatticeElement::getOverdefined();
 }
 
-static bool matchICmpOperand(const APInt *&Offset, Value *LHS, Value *Val,
+static bool matchICmpOperand(APInt &Offset, Value *LHS, Value *Val,
                              ICmpInst::Predicate Pred) {
   if (LHS == Val)
     return true;
 
   // Handle range checking idiom produced by InstCombine. We will subtract the
   // offset from the allowed range for RHS in this case.
-  if (match(LHS, m_Add(m_Specific(Val), m_APInt(Offset))))
+  const APInt *C;
+  if (match(LHS, m_Add(m_Specific(Val), m_APInt(C)))) {
+    Offset = *C;
     return true;
+  }
 
   // If (x | y) < C, then (x < C) && (y < C).
   if (match(LHS, m_c_Or(m_Specific(Val), m_Value())) &&
@@ -1101,7 +1104,7 @@ static bool matchICmpOperand(const APInt *&Offset, Value *LHS, Value *Val,
 
 /// Get value range for a "(Val + Offset) Pred RHS" condition.
 static ValueLatticeElement getValueFromSimpleICmpCondition(
-    CmpInst::Predicate Pred, Value *RHS, const APInt *Offset) {
+    CmpInst::Predicate Pred, Value *RHS, const APInt &Offset) {
   ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
                          /*isFullSet=*/true);
   if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
@@ -1112,11 +1115,7 @@ static ValueLatticeElement getValueFromSimpleICmpCondition(
 
   ConstantRange TrueValues =
       ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
-
-  if (Offset)
-    TrueValues = TrueValues.subtract(*Offset);
-
-  return ValueLatticeElement::getRange(std::move(TrueValues));
+  return ValueLatticeElement::getRange(TrueValues.subtract(Offset));
 }
 
 static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
@@ -1137,10 +1136,11 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
     }
   }
 
-  if (!Val->getType()->isIntegerTy())
+  Type *Ty = Val->getType();
+  if (!Ty->isIntegerTy())
     return ValueLatticeElement::getOverdefined();
 
-  const APInt *Offset = nullptr;
+  APInt Offset(Ty->getScalarSizeInBits(), 0);
   if (matchICmpOperand(Offset, LHS, Val, EdgePred))
     return getValueFromSimpleICmpCondition(EdgePred, RHS, Offset);
 
