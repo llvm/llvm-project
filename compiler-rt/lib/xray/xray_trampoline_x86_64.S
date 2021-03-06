@@ -15,12 +15,37 @@
 #include "../builtins/assembly.h"
 #include "../sanitizer_common/sanitizer_asm.h"
 
+// XRay trampolines which are not produced by intrinsics are not System V AMD64
+// ABI compliant because they are called with a stack that is always misaligned
+// by 8 bytes with respect to a 16 bytes alignment. This is because they are
+// called immediately after the call to, or immediately before returning from,
+// the function being instrumented. This saves space in the patch point, but
+// misaligns the stack by 8 bytes.
 
+.macro ALIGN_STACK_16B
+#if defined(__APPLE__)
+	subq	$$8, %rsp
+#else
+	subq	$8, %rsp
+#endif
+	CFI_ADJUST_CFA_OFFSET(8)
+.endm
 
+.macro RESTORE_STACK_ALIGNMENT
+#if defined(__APPLE__)
+	addq	$$8, %rsp
+#else
+	addq	$8, %rsp
+#endif
+	CFI_ADJUST_CFA_OFFSET(-8)
+.endm
+
+// This macro should keep the stack aligned to 16 bytes.
 .macro SAVE_REGISTERS
 	pushfq
+	CFI_ADJUST_CFA_OFFSET(8)
 	subq $240, %rsp
-	CFI_DEF_CFA_OFFSET(248)
+	CFI_ADJUST_CFA_OFFSET(240)
 	movq %rbp, 232(%rsp)
 	movupd	%xmm0, 216(%rsp)
 	movupd	%xmm1, 200(%rsp)
@@ -45,6 +70,7 @@
 	movq  %r15, 0(%rsp)
 .endm
 
+// This macro should keep the stack aligned to 16 bytes.
 .macro RESTORE_REGISTERS
 	movq  232(%rsp), %rbp
 	movupd	216(%rsp), %xmm0
@@ -69,22 +95,9 @@
 	movq  8(%rsp), %r14
 	movq  0(%rsp), %r15
 	addq	$240, %rsp
+	CFI_ADJUST_CFA_OFFSET(-240)
 	popfq
-	CFI_DEF_CFA_OFFSET(8)
-.endm
-
-.macro ALIGNED_CALL_RAX
-	// Call the logging handler, after aligning the stack to a 16-byte boundary.
-	// The approach we're taking here uses additional stack space to stash the
-	// stack pointer twice before aligning the pointer to 16-bytes. If the stack
-	// was 8-byte aligned, it will become 16-byte aligned -- when restoring the
-	// pointer, we can always look -8 bytes from the current position to get
-	// either of the values we've stashed in the first place.
-	pushq %rsp
-	pushq (%rsp)
-	andq $-0x10, %rsp
-  callq *%rax
-	movq 8(%rsp), %rsp
+	CFI_ADJUST_CFA_OFFSET(-8)
 .endm
 
 	.text
@@ -104,6 +117,7 @@
 # LLVM-MCA-BEGIN __xray_FunctionEntry
 ASM_SYMBOL(__xray_FunctionEntry):
 	CFI_STARTPROC
+	ALIGN_STACK_16B
 	SAVE_REGISTERS
 
 	// This load has to be atomic, it's concurrent with __xray_patch().
@@ -115,10 +129,11 @@ ASM_SYMBOL(__xray_FunctionEntry):
 	// The patched function prologue puts its xray_instr_map index into %r10d.
 	movl	%r10d, %edi
 	xor	%esi,%esi
-	ALIGNED_CALL_RAX
+	callq	*%rax
 
 .Ltmp0:
 	RESTORE_REGISTERS
+	RESTORE_STACK_ALIGNMENT
 	retq
 # LLVM-MCA-END
 	ASM_SIZE(__xray_FunctionEntry)
@@ -133,11 +148,13 @@ ASM_SYMBOL(__xray_FunctionEntry):
 # LLVM-MCA-BEGIN __xray_FunctionExit
 ASM_SYMBOL(__xray_FunctionExit):
 	CFI_STARTPROC
+	ALIGN_STACK_16B
+
 	// Save the important registers first. Since we're assuming that this
 	// function is only jumped into, we only preserve the registers for
 	// returning.
-	subq	$56, %rsp
-	CFI_DEF_CFA_OFFSET(64)
+	subq	$64, %rsp
+	CFI_ADJUST_CFA_OFFSET(64)
 	movq  %rbp, 48(%rsp)
 	movupd	%xmm0, 32(%rsp)
 	movupd	%xmm1, 16(%rsp)
@@ -149,7 +166,7 @@ ASM_SYMBOL(__xray_FunctionExit):
 
 	movl	%r10d, %edi
 	movl	$1, %esi
-  ALIGNED_CALL_RAX
+	callq	*%rax
 
 .Ltmp2:
 	// Restore the important registers.
@@ -158,8 +175,10 @@ ASM_SYMBOL(__xray_FunctionExit):
 	movupd	16(%rsp), %xmm1
 	movq	8(%rsp), %rax
 	movq	0(%rsp), %rdx
-	addq	$56, %rsp
-	CFI_DEF_CFA_OFFSET(8)
+	addq	$64, %rsp
+	CFI_ADJUST_CFA_OFFSET(-64)
+
+	RESTORE_STACK_ALIGNMENT
 	retq
 # LLVM-MCA-END
 	ASM_SIZE(__xray_FunctionExit)
@@ -174,6 +193,7 @@ ASM_SYMBOL(__xray_FunctionExit):
 # LLVM-MCA-BEGIN __xray_FunctionTailExit
 ASM_SYMBOL(__xray_FunctionTailExit):
 	CFI_STARTPROC
+	ALIGN_STACK_16B
 	SAVE_REGISTERS
 
 	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
@@ -182,11 +202,11 @@ ASM_SYMBOL(__xray_FunctionTailExit):
 
 	movl	%r10d, %edi
 	movl	$2, %esi
-
-  ALIGNED_CALL_RAX
+	callq	*%rax
 
 .Ltmp4:
 	RESTORE_REGISTERS
+	RESTORE_STACK_ALIGNMENT
 	retq
 # LLVM-MCA-END
 	ASM_SIZE(__xray_FunctionTailExit)
@@ -201,6 +221,7 @@ ASM_SYMBOL(__xray_FunctionTailExit):
 # LLVM-MCA-BEGIN __xray_ArgLoggerEntry
 ASM_SYMBOL(__xray_ArgLoggerEntry):
 	CFI_STARTPROC
+	ALIGN_STACK_16B
 	SAVE_REGISTERS
 
 	// Again, these function pointer loads must be atomic; MOV is fine.
@@ -223,10 +244,12 @@ ASM_SYMBOL(__xray_ArgLoggerEntry):
 
 	// 32-bit function ID becomes the first
 	movl	%r10d, %edi
-	ALIGNED_CALL_RAX
+
+	callq	*%rax
 
 .Larg1entryFail:
 	RESTORE_REGISTERS
+	RESTORE_STACK_ALIGNMENT
 	retq
 # LLVM-MCA-END
 	ASM_SIZE(__xray_ArgLoggerEntry)
@@ -249,7 +272,7 @@ ASM_SYMBOL(__xray_CustomEvent):
 	testq %rax,%rax
 	je .LcustomEventCleanup
 
-	ALIGNED_CALL_RAX
+	callq	*%rax
 
 .LcustomEventCleanup:
 	RESTORE_REGISTERS
@@ -275,7 +298,7 @@ ASM_SYMBOL(__xray_TypedEvent):
 	testq %rax,%rax
 	je .LtypedEventCleanup
 
-	ALIGNED_CALL_RAX
+	callq	*%rax
 
 .LtypedEventCleanup:
 	RESTORE_REGISTERS

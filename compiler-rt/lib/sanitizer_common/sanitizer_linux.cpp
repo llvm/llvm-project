@@ -500,11 +500,13 @@ u64 NanoTime() {
   internal_syscall(SYSCALL(gettimeofday), &tv, 0);
   return (u64)tv.tv_sec * 1000*1000*1000 + tv.tv_usec * 1000;
 }
+#endif  // !SANITIZER_SOLARIS && !SANITIZER_NETBSD
 
+#if SANITIZER_GLIBC
 uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void *tp) {
   return internal_syscall(SYSCALL(clock_gettime), clk_id, tp);
 }
-#endif  // !SANITIZER_SOLARIS && !SANITIZER_NETBSD
+#endif  // SANITIZER_GLIBC
 
 // Like getenv, but reads env directly from /proc (on Linux) or parses the
 // 'environ' array (on some others) and does not use libc. This function

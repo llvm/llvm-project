@@ -803,20 +803,13 @@ void LogMessageOnPrintf(const char *str) {
 
 #endif  // SANITIZER_LINUX
 
-#if SANITIZER_LINUX && !SANITIZER_GO
+#if SANITIZER_GLIBC && !SANITIZER_GO
 // glibc crashes when using clock_gettime from a preinit_array function as the
 // vDSO function pointers haven't been initialized yet. __progname is
 // initialized after the vDSO function pointers, so if it exists, is not null
 // and is not empty, we can use clock_gettime.
 extern "C" SANITIZER_WEAK_ATTRIBUTE char *__progname;
-inline bool CanUseVDSO() {
-  // Bionic is safe, it checks for the vDSO function pointers to be initialized.
-  if (SANITIZER_ANDROID)
-    return true;
-  if (&__progname && __progname && *__progname)
-    return true;
-  return false;
-}
+inline bool CanUseVDSO() { return &__progname && __progname && *__progname; }
 
 // MonotonicNanoTime is a timing function that can leverage the vDSO by calling
 // clock_gettime. real_clock_gettime only exists if clock_gettime is
@@ -836,10 +829,10 @@ u64 MonotonicNanoTime() {
   return (u64)ts.tv_sec * (1000ULL * 1000 * 1000) + ts.tv_nsec;
 }
 #else
-// Non-Linux & Go always use the syscall.
+// Non-Linux & Go always use the regular function.
 u64 MonotonicNanoTime() {
   timespec ts;
-  internal_clock_gettime(CLOCK_MONOTONIC, &ts);
+  clock_gettime(CLOCK_MONOTONIC, &ts);
   return (u64)ts.tv_sec * (1000ULL * 1000 * 1000) + ts.tv_nsec;
 }
 #endif  // SANITIZER_LINUX && !SANITIZER_GO
