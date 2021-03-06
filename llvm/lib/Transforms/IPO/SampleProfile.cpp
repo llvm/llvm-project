@@ -520,10 +520,12 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   if (isa<BranchInst>(Inst) || isa<IntrinsicInst>(Inst) || isa<PHINode>(Inst))
     return std::error_code();
 
-  // If a direct call/invoke instruction is inlined in profile
-  // (findCalleeFunctionSamples returns non-empty result), but not inlined here,
-  // it means that the inlined callsite has no sample, thus the call
-  // instruction should have 0 count.
+  // For non-CS profile, if a direct call/invoke instruction is inlined in
+  // profile (findCalleeFunctionSamples returns non-empty result), but not
+  // inlined here, it means that the inlined callsite has no sample, thus the
+  // call instruction should have 0 count.
+  // For CS profile, the callsite count of previously inlined callees is
+  // populated with the entry count of the callees.
   if (!ProfileIsCS)
     if (const auto *CB = dyn_cast<CallBase>(&Inst))
       if (!CB->isIndirectCall() && findCalleeFunctionSamples(*CB))
@@ -548,13 +550,16 @@ ErrorOr<uint64_t> SampleProfileLoader::getProbeWeight(const Instruction &Inst) {
   if (!FS)
     return std::error_code();
 
-  // If a direct call/invoke instruction is inlined in profile
-  // (findCalleeFunctionSamples returns non-empty result), but not inlined here,
-  // it means that the inlined callsite has no sample, thus the call
-  // instruction should have 0 count.
-  if (const auto *CB = dyn_cast<CallBase>(&Inst))
-    if (!CB->isIndirectCall() && findCalleeFunctionSamples(*CB))
-      return 0;
+  // For non-CS profile, If a direct call/invoke instruction is inlined in
+  // profile (findCalleeFunctionSamples returns non-empty result), but not
+  // inlined here, it means that the inlined callsite has no sample, thus the
+  // call instruction should have 0 count.
+  // For CS profile, the callsite count of previously inlined callees is
+  // populated with the entry count of the callees.
+  if (!ProfileIsCS)
+    if (const auto *CB = dyn_cast<CallBase>(&Inst))
+      if (!CB->isIndirectCall() && findCalleeFunctionSamples(*CB))
+        return 0;
 
   const ErrorOr<uint64_t> &R = FS->findSamplesAt(Probe->Id, 0);
   if (R) {
