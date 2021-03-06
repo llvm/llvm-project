@@ -1,4 +1,4 @@
-// RUN: %clang_dfsan -mllvm -dfsan-fast-16-labels=true -mllvm -dfsan-track-origins=1 %s -o %t && \
+// RUN: %clang_dfsan -gmlt -mllvm -dfsan-fast-16-labels=true -mllvm -dfsan-track-origins=1 %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK < %t.out
 

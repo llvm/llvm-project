@@ -1,4 +1,24 @@
-// RUN: %clang_dfsan -DTEST64 -DALIGN=8 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN: %clang_dfsan -gmlt -DTEST64 -DALIGN=8 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN:     %run %t >%t.out 2>&1
+// RUN: FileCheck %s --check-prefix=CHECK < %t.out
+//
+// RUN: %clang_dfsan -gmlt -DTEST32 -DALIGN=4 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN:     %run %t >%t.out 2>&1
+// RUN: FileCheck %s --check-prefix=CHECK < %t.out
+//
+// RUN: %clang_dfsan -gmlt -DALIGN=2 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN:     %run %t >%t.out 2>&1
+// RUN: FileCheck %s --check-prefix=CHECK < %t.out
+//
+// rUN: %clang_dfsan -DTEST64 -DALIGN=5 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// rUN:     %run %t >%t.out 2>&1
+// rUN: FileCheck %s --check-prefix=CHECK < %t.out
+//
+// rUN: %clang_dfsan -DTEST32 -DALIGN=3 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// rUN:     %run %t >%t.out 2>&1
+// rUN: FileCheck %s --check-prefix=CHECK < %t.out
+//
+// RUN: %clang_dfsan -gmlt -DALIGN=1 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK < %t.out
 //
@@ -37,15 +57,21 @@ int main(int argc, char *argv[]) {
 
 // CHECK: Taint value 0x8 {{.*}} origin tracking ()
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
+// CHECK: #0 {{.*}} in main {{.*}}origin_ldst.c:[[@LINE-13]]
 
 // CHECK: Origin value: {{.*}}, Taint value was created at
+// CHECK: #0 {{.*}} in main {{.*}}origin_ldst.c:[[@LINE-17]]
 
 // CHECK: Taint value 0x4 {{.*}} origin tracking ()
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
+// CHECK: #0 {{.*}} in main {{.*}}origin_ldst.c:[[@LINE-14]]
 
 // CHECK: Origin value: {{.*}}, Taint value was created at
+// CHECK: #0 {{.*}} in main {{.*}}origin_ldst.c:[[@LINE-18]]
 
 // CHECK: Taint value 0x4 {{.*}} origin tracking ()
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
+// CHECK: #0 {{.*}} in main {{.*}}origin_ldst.c:[[@LINE-21]]
 
 // CHECK: Origin value: {{.*}}, Taint value was created at
+// CHECK: #0 {{.*}} in main {{.*}}origin_ldst.c:[[@LINE-25]]
