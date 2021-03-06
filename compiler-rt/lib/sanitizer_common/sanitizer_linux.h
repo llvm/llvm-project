@@ -49,7 +49,9 @@ uptr internal_getdents(fd_t fd, struct linux_dirent *dirp, unsigned int count);
 uptr internal_sigaltstack(const void* ss, void* oss);
 uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
     __sanitizer_sigset_t *oldset);
+#if SANITIZER_GLIBC
 uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void *tp);
+#endif
 
 // Linux-only syscalls.
 #if SANITIZER_LINUX
