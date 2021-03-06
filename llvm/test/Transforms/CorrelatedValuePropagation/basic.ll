@@ -587,8 +587,7 @@ define i1 @clamp_low3(i32 %a) {
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp sgt i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], -1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 [[ADD]], i32 5
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 4
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -615,8 +614,7 @@ define i1 @clamp_low4(i32 %a) {
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp sle i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], -1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 5, i32 [[ADD]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 4
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -697,8 +695,7 @@ define i1 @clamp_high3(i32 %a) {
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp slt i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 [[ADD]], i32 5
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 6
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -725,8 +722,7 @@ define i1 @clamp_high4(i32 %a) {
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp sge i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 5, i32 [[ADD]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 6
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 false
 ;
