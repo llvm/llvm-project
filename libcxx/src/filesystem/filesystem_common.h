@@ -42,8 +42,10 @@
 
 #if defined(_LIBCPP_WIN32API)
 #define PS(x) (L##x)
+#define PATH_CSTR_FMT "\"%ls\""
 #else
 #define PS(x) (x)
+#define PATH_CSTR_FMT "\"%s\""
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
@@ -57,68 +59,47 @@ errc __win_err_to_errc(int err);
 
 namespace {
 
-static string format_string_imp(const char* msg, ...) {
-  // we might need a second shot at this, so pre-emptivly make a copy
-  struct GuardVAList {
-    va_list& target;
-    bool active = true;
-    GuardVAList(va_list& tgt) : target(tgt), active(true) {}
-    void clear() {
-      if (active)
-        va_end(target);
-      active = false;
-    }
-    ~GuardVAList() {
-      if (active)
-        va_end(target);
-    }
-  };
-  va_list args;
-  va_start(args, msg);
-  GuardVAList args_guard(args);
+static _LIBCPP_FORMAT_PRINTF(1, 0) string
+format_string_impl(const char* msg, va_list ap) {
+  array<char, 256> buf;
 
-  va_list args_cp;
-  va_copy(args_cp, args);
-  GuardVAList args_copy_guard(args_cp);
+  va_list apcopy;
+  va_copy(apcopy, ap);
+  int ret = ::vsnprintf(buf.data(), buf.size(), msg, apcopy);
+  va_end(apcopy);
 
-  std::string result;
-
-  array<char, 256> local_buff;
-  size_t size_with_null = local_buff.size();
-  auto ret = ::vsnprintf(local_buff.data(), size_with_null, msg, args_cp);
-
-  args_copy_guard.clear();
-
-  // handle empty expansion
-  if (ret == 0)
-    return result;
-  if (static_cast<size_t>(ret) < size_with_null) {
-    result.assign(local_buff.data(), static_cast<size_t>(ret));
-    return result;
+  string result;
+  if (static_cast<size_t>(ret) < buf.size()) {
+    result.assign(buf.data(), static_cast<size_t>(ret));
+  } else {
+    // we did not provide a long enough buffer on our first attempt. The
+    // return value is the number of bytes (excluding the null byte) that are
+    // needed for formatting.
+    size_t size_with_null = static_cast<size_t>(ret) + 1;
+    result.__resize_default_init(size_with_null - 1);
+    ret = ::vsnprintf(&result[0], size_with_null, msg, ap);
+    _LIBCPP_ASSERT(static_cast<size_t>(ret) == (size_with_null - 1), "TODO");
   }
-
-  // we did not provide a long enough buffer on our first attempt. The
-  // return value is the number of bytes (excluding the null byte) that are
-  // needed for formatting.
-  size_with_null = static_cast<size_t>(ret) + 1;
-  result.__resize_default_init(size_with_null - 1);
-  ret = ::vsnprintf(&result[0], size_with_null, msg, args);
-  _LIBCPP_ASSERT(static_cast<size_t>(ret) == (size_with_null - 1), "TODO");
-
   return result;
 }
 
-const path::value_type* unwrap(path::string_type const& s) { return s.c_str(); }
-const path::value_type* unwrap(path const& p) { return p.native().c_str(); }
-template <class Arg>
-Arg const& unwrap(Arg const& a) {
-  static_assert(!is_class<Arg>::value, "cannot pass class here");
-  return a;
-}
-
-template <class... Args>
-string format_string(const char* fmt, Args const&... args) {
-  return format_string_imp(fmt, unwrap(args)...);
+static _LIBCPP_FORMAT_PRINTF(1, 2) string
+format_string(const char* msg, ...) {
+  string ret;
+  va_list ap;
+  va_start(ap, msg);
+#ifndef _LIBCPP_NO_EXCEPTIONS
+  try {
+#endif  // _LIBCPP_NO_EXCEPTIONS
+    ret = format_string_impl(msg, ap);
+#ifndef _LIBCPP_NO_EXCEPTIONS
+  } catch (...) {
+    va_end(ap);
+    throw;
+  }
+#endif  // _LIBCPP_NO_EXCEPTIONS
+  va_end(ap);
+  return ret;
 }
 
 error_code capture_errno() {
@@ -190,14 +171,14 @@ struct ErrorHandler {
     _LIBCPP_UNREACHABLE();
   }
 
-  template <class... Args>
-  T report(const error_code& ec, const char* msg, Args const&... args) const {
+  _LIBCPP_FORMAT_PRINTF(3, 0)
+  void report_impl(const error_code& ec, const char* msg, va_list ap) const {
     if (ec_) {
       *ec_ = ec;
-      return error_value<T>();
+      return;
     }
     string what =
-        string("in ") + func_name_ + ": " + format_string(msg, args...);
+        string("in ") + func_name_ + ": " + format_string_impl(msg, ap);
     switch (bool(p1_) + bool(p2_)) {
     case 0:
       __throw_filesystem_error(what, ec);
@@ -209,11 +190,44 @@ struct ErrorHandler {
     _LIBCPP_UNREACHABLE();
   }
 
-  T report(errc const& err) const { return report(make_error_code(err)); }
+  _LIBCPP_FORMAT_PRINTF(3, 4)
+  T report(const error_code& ec, const char* msg, ...) const {
+    va_list ap;
+    va_start(ap, msg);
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    try {
+#endif  // _LIBCPP_NO_EXCEPTIONS
+      report_impl(ec, msg, ap);
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    } catch (...) {
+      va_end(ap);
+      throw;
+    }
+#endif  // _LIBCPP_NO_EXCEPTIONS
+    va_end(ap);
+    return error_value<T>();
+  }
 
-  template <class... Args>
-  T report(errc const& err, const char* msg, Args const&... args) const {
-    return report(make_error_code(err), msg, args...);
+  T report(errc const& err) const {
+    return report(make_error_code(err));
+  }
+
+  _LIBCPP_FORMAT_PRINTF(3, 4)
+  T report(errc const& err, const char* msg, ...) const {
+    va_list ap;
+    va_start(ap, msg);
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    try {
+#endif  // _LIBCPP_NO_EXCEPTIONS
+      report_impl(make_error_code(err), msg, ap);
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    } catch (...) {
+      va_end(ap);
+      throw;
+    }
+#endif  // _LIBCPP_NO_EXCEPTIONS
+    va_end(ap);
+    return error_value<T>();
   }
 
 private:
