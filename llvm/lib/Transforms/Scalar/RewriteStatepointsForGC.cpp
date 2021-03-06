@@ -834,11 +834,13 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
   // below.  This is important for deterministic compilation.
   MapVector<Value *, BDVState> States;
 
+#ifndef NDEBUG
   auto VerifyStates = [&]() {
     for (auto &Entry : States) {
       assert(Entry.first == Entry.second.getOriginalValue());
     }
   };
+#endif
 
   // Recursively fill in all base defining values reachable from the initial
   // one for which we don't already know a definite base value for

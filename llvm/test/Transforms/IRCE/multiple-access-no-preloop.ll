@@ -38,12 +38,9 @@ define void @multiple_access_no_preloop(
 ; CHECK-LABEL: @multiple_access_no_preloop(
 
 ; CHECK: loop.preheader:
-; CHECK: [[smax_len_cond:[^ ]+]] = icmp slt i32 %len.b, %len.a
-; CHECK: [[smax_len:[^ ]+]] = select i1 [[smax_len_cond]], i32 %len.b, i32 %len.a
-; CHECK: [[upper_limit_cond_loclamp:[^ ]+]] = icmp slt i32 [[smax_len]], %n
-; CHECK: [[upper_limit_loclamp:[^ ]+]] = select i1 [[upper_limit_cond_loclamp]], i32 [[smax_len]], i32 %n
-; CHECK: [[upper_limit_cmp:[^ ]+]] = icmp sgt i32 [[upper_limit_loclamp]], 0
-; CHECK: [[upper_limit:[^ ]+]] = select i1 [[upper_limit_cmp]], i32 [[upper_limit_loclamp]], i32 0
+; CHECK: [[smax_len:[^ ]+]] = call i32 @llvm.smin.i32(i32 %len.b, i32 %len.a)
+; CHECK: [[upper_limit_loclamp:[^ ]+]] = call i32 @llvm.smin.i32(i32 [[smax_len]], i32 %n)
+; CHECK: [[upper_limit:[^ ]+]] = call i32 @llvm.smax.i32(i32 [[upper_limit_loclamp]], i32 0)
 
 ; CHECK: loop:
 ; CHECK: br i1 true, label %in.bounds.a, label %out.of.bounds

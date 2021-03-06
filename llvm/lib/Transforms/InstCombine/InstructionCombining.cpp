@@ -2173,16 +2173,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       }
 
       if (Matched) {
-        // Canonicalize (gep i8* X, -(ptrtoint Y))
-        // to (inttoptr (sub (ptrtoint X), (ptrtoint Y)))
-        // The GEP pattern is emitted by the SCEV expander for certain kinds of
-        // pointer arithmetic.
-        if (match(V, m_Neg(m_PtrToInt(m_Value())))) {
-          Operator *Index = cast<Operator>(V);
-          Value *PtrToInt = Builder.CreatePtrToInt(PtrOp, Index->getType());
-          Value *NewSub = Builder.CreateSub(PtrToInt, Index->getOperand(1));
-          return CastInst::Create(Instruction::IntToPtr, NewSub, GEPType);
-        }
         // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X))
         // to (bitcast Y)
         Value *Y;
