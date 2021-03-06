@@ -8,12 +8,9 @@
 
 // RUN: %clangxx -DUSING_%tool_name %s -o %t -w
 
-// RUN: %env_tool_opts="print_module_map=0:halt_on_error=0" not %run %t 2>&1 \
-// RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-MM0
-// RUN: %env_tool_opts="print_module_map=1:halt_on_error=0" not %run %t 2>&1 \
-// RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-MM1
-// RUN: %env_tool_opts="print_module_map=2:halt_on_error=0" not %run %t 2>&1 \
-// RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-MM2
+// RUN: %env_tool_opts="print_module_map=0:abort_on_error=1" not --crash %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-MM0
+// RUN: %env_tool_opts="print_module_map=1:abort_on_error=1" not --crash %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-MM1
+// RUN: %env_tool_opts="print_module_map=2:abort_on_error=1" not --crash %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-MM2
 
 // tsan support pending rdar://67747473
 // XFAIL: tsan
