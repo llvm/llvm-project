@@ -10,39 +10,36 @@ define i32 @test_01(i32 %A, i64 %Len, i32 *%array) {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[LEN]], 0
-; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP2]], i64 [[LEN]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[LEN]], [[SMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[UMIN]], 1
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP5]], i64 [[UMIN]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 1, [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[LOOP_PREHEADER2:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[LEN]], i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[LEN]], [[SMIN]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 [[TMP1]])
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 1, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP_PREHEADER2:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preheader2:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[LATCH:%.*]] ], [ 1, [[LOOP_PREHEADER2]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[INDVAR]], [[LEN]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[INDVAR]], [[LEN]]
 ; CHECK-NEXT:    br i1 true, label [[GUARDED:%.*]], label [[DEOPT_LOOPEXIT3:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[INDVAR]]
-; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[ADDR]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[ZERO_LOOPEXIT_LOOPEXIT4:%.*]], label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add nuw nsw i64 [[INDVAR]], 2
 ; CHECK-NEXT:    [[RES2:%.*]] = mul i32 [[RES]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[A]] to i64
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i64 [[INDVAR_NEXT]], [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[INDVAR_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP9]], true
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MAIN_EXIT_SELECTOR:%.*]], label [[LOOP]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[A]] to i64
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i64 [[INDVAR_NEXT]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[INDVAR_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MAIN_EXIT_SELECTOR:%.*]], label [[LOOP]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[INDVAR_NEXT_LCSSA:%.*]] = phi i64 [ [[INDVAR_NEXT]], [[LATCH]] ]
 ; CHECK-NEXT:    [[RES2_LCSSA1:%.*]] = phi i32 [ [[RES2]], [[LATCH]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i64 [[INDVAR_NEXT_LCSSA]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MAIN_PSEUDO_EXIT]], label [[LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i64 [[INDVAR_NEXT_LCSSA]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MAIN_PSEUDO_EXIT]], label [[LOOPEXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[INDVAR_COPY:%.*]] = phi i64 [ 1, [[LOOP_PREHEADER]] ], [ [[INDVAR_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i64 [ 1, [[LOOP_PREHEADER]] ], [ [[INDVAR_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
@@ -71,19 +68,19 @@ define i32 @test_01(i32 %A, i64 %Len, i32 *%array) {
 ; CHECK-NEXT:    br label [[LOOP_POSTLOOP:%.*]]
 ; CHECK:       loop.postloop:
 ; CHECK-NEXT:    [[INDVAR_POSTLOOP:%.*]] = phi i64 [ [[INDVAR_NEXT_POSTLOOP:%.*]], [[LATCH_POSTLOOP]] ], [ [[INDVAR_COPY]], [[POSTLOOP]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[INDVAR_POSTLOOP]], [[LEN]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[GUARDED_POSTLOOP:%.*]], label [[DEOPT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[INDVAR_POSTLOOP]], [[LEN]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[GUARDED_POSTLOOP:%.*]], label [[DEOPT_LOOPEXIT:%.*]]
 ; CHECK:       guarded.postloop:
 ; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr inbounds i32, i32* [[ARRAY]], i64 [[INDVAR_POSTLOOP]]
-; CHECK-NEXT:    [[RES_POSTLOOP:%.*]] = load i32, i32* [[ADDR_POSTLOOP]]
+; CHECK-NEXT:    [[RES_POSTLOOP:%.*]] = load i32, i32* [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp eq i32 [[RES_POSTLOOP]], 0
 ; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[ZERO_LOOPEXIT_LOOPEXIT:%.*]], label [[LATCH_POSTLOOP]]
 ; CHECK:       latch.postloop:
 ; CHECK-NEXT:    [[INDVAR_NEXT_POSTLOOP]] = add nuw nsw i64 [[INDVAR_POSTLOOP]], 2
 ; CHECK-NEXT:    [[RES2_POSTLOOP]] = mul i32 [[RES_POSTLOOP]], 3
-; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[A]] to i64
-; CHECK-NEXT:    [[CMP2_POSTLOOP:%.*]] = icmp ugt i64 [[INDVAR_NEXT_POSTLOOP]], [[TMP13]]
-; CHECK-NEXT:    br i1 [[CMP2_POSTLOOP]], label [[LOOPEXIT_LOOPEXIT]], label [[LOOP_POSTLOOP]], !llvm.loop !0, !irce.loop.clone !5
+; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[A]] to i64
+; CHECK-NEXT:    [[CMP2_POSTLOOP:%.*]] = icmp ugt i64 [[INDVAR_NEXT_POSTLOOP]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[CMP2_POSTLOOP]], label [[LOOPEXIT_LOOPEXIT]], label [[LOOP_POSTLOOP]], [[LOOP0:!llvm.loop !.*]], !irce.loop.clone !5
 ;
 preheader:
   %tripcheck = icmp sgt i64 %Len, 2
