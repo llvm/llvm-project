@@ -64,6 +64,12 @@ void dfsan_add_label(dfsan_label label, void *addr, size_t size);
 /// value.
 dfsan_label dfsan_get_label(long data);
 
+/// Retrieves the immediate origin associated with the given data. The returned
+/// origin may point to another origin.
+///
+/// The type of 'data' is arbitrary.
+dfsan_origin dfsan_get_origin(long data);
+
 /// Retrieves the label associated with the data at the given address.
 dfsan_label dfsan_read_label(const void *addr, size_t size);
 
@@ -111,6 +117,15 @@ void dfsan_weak_hook_memcmp(void *caller_pc, const void *s1, const void *s2,
 void dfsan_weak_hook_strncmp(void *caller_pc, const char *s1, const char *s2,
                              size_t n, dfsan_label s1_label,
                              dfsan_label s2_label, dfsan_label n_label);
+
+/// Prints the origin trace of the label at the address addr to stderr. It also
+/// prints description at the beginning of the trace. If origin tracking is not
+/// on, or the address is not labeled, it prints nothing.
+void dfsan_print_origin_trace(const void *addr, const char *description);
+
+/// Retrieves the very first origin associated with the data at the given
+/// address.
+dfsan_origin dfsan_get_init_origin(const void *addr);
 #ifdef __cplusplus
 }  // extern "C"
 

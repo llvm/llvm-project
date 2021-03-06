@@ -131,3 +131,82 @@ merge2:
   %ret = sub i64 %phi4, %phi3
   ret i64 %ret
 }
+
+define i64 @test5(i1 %c, i64 %a) {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[TAKEN:%.*]], label [[UNTAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    [[ASSUMPTION:%.*]] = icmp eq i64 [[A:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUMPTION]])
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       untaken:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[A]], [[TAKEN]] ], [ 0, [[UNTAKEN]] ]
+; CHECK-NEXT:    ret i64 [[PHI]]
+;
+  br i1 %c, label %taken, label %untaken
+taken:
+  %assumption = icmp eq i64 %a, 0
+  call void @llvm.assume(i1 %assumption)
+  br label %merge
+untaken:
+  br label %merge
+merge:
+  %phi = phi i64 [%a, %taken], [0, %untaken]
+  ret i64 %phi
+}
+
+define i64 @test6(i1 %c, i64 %a) {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[TAKEN:%.*]], label [[UNTAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    [[ASSUMPTION:%.*]] = icmp eq i64 [[A:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUMPTION]])
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       untaken:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[A]], [[TAKEN]] ], [ 0, [[UNTAKEN]] ]
+; CHECK-NEXT:    ret i64 [[PHI]]
+;
+  br i1 %c, label %taken, label %untaken
+taken:
+  %assumption = icmp eq i64 %a, 0
+  call void @llvm.assume(i1 %assumption)
+  br label %next
+next:
+  br label %merge
+untaken:
+  br label %merge
+merge:
+  %phi = phi i64 [%a, %next], [0, %untaken]
+  ret i64 %phi
+}
+
+; negative test, phi use is NOT dominated by assume
+define i64 @test7(i1 %c, i64 %a) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[TAKEN:%.*]], label [[UNTAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    [[ASSUMPTION:%.*]] = icmp eq i64 [[A:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUMPTION]])
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       untaken:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    ret i64 [[A]]
+;
+  br i1 %c, label %taken, label %untaken
+taken:
+  %assumption = icmp eq i64 %a, 0
+  call void @llvm.assume(i1 %assumption)
+  br label %merge
+untaken:
+  br label %merge
+merge:
+  br label %next
+next:
+  %phi = phi i64 [%a, %merge]
+  ret i64 %phi
+}

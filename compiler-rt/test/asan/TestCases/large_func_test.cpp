@@ -25,8 +25,9 @@ static void LargeFunction(int *x, int zero) {
   // atos incorrectly extracts the symbol name for the static functions on
   // Darwin.
   // CHECK-Linux:  {{#0 0x.* in LargeFunction.*large_func_test.cpp:}}[[@LINE-3]]
-  // CHECK-Windows:{{#0 0x.* in LargeFunction.*large_func_test.cpp:}}[[@LINE-4]]
-  // CHECK-Darwin: {{#0 0x.* in .*LargeFunction.*large_func_test.cpp}}:[[@LINE-5]]
+  // CHECK-SunOS:  {{#0 0x.* in LargeFunction.*large_func_test.cpp:}}[[@LINE-4]]
+  // CHECK-Windows:{{#0 0x.* in LargeFunction.*large_func_test.cpp:}}[[@LINE-5]]
+  // CHECK-Darwin: {{#0 0x.* in .*LargeFunction.*large_func_test.cpp}}:[[@LINE-6]]
 
   x[10]++;
   x[11]++;
@@ -47,8 +48,9 @@ int main(int argc, char **argv) {
   // CHECK: {{0x.* is located 12 bytes to the right of 400-byte region}}
   // CHECK: {{allocated by thread T0 here:}}
   // CHECK-Linux:  {{    #0 0x.* in operator new}}
+  // CHECK-SunOS:  {{    #0 0x.* in operator new}}
   // CHECK-Windows:{{    #0 0x.* in operator new}}
   // CHECK-Darwin: {{    #0 0x.* in .*_Zna}}
-  // CHECK: {{    #1 0x.* in main .*large_func_test.cpp:}}[[@LINE-8]]
+  // CHECK: {{    #1 0x.* in main .*large_func_test.cpp:}}[[@LINE-9]]
   delete[] x;
 }
