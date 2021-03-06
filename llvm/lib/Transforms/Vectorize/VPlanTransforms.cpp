@@ -71,6 +71,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(
               GEP, Plan->mapToVPValues(GEP->operands()), OrigLoop);
+        } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
+          NewRecipe = new VPWidenCallRecipe(
+              *CI, Plan->mapToVPValues(CI->arg_operands()));
         } else {
           NewRecipe =
               new VPWidenRecipe(*Inst, Plan->mapToVPValues(Inst->operands()));
