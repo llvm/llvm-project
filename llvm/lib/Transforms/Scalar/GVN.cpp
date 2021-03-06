@@ -2372,6 +2372,12 @@ bool GVN::processBlock(BasicBlock *BB) {
   ReplaceOperandsWithMap.clear();
   bool ChangedFunction = false;
 
+  // Since we may not have visited the input blocks of the phis, we can't
+  // use our normal hash approach for phis.  Instead, simply look for
+  // obvious duplicates.  The first pass of GVN will tend to create
+  // identical phis, and the second or later passes can eliminate them.
+  ChangedFunction |= EliminateDuplicatePHINodes(BB);
+
   for (BasicBlock::iterator BI = BB->begin(), BE = BB->end();
        BI != BE;) {
     if (!ReplaceOperandsWithMap.empty())
