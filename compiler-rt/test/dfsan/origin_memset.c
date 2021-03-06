@@ -1,8 +1,8 @@
-// RUN: %clang_debug_dfsan -DOFFSET=0 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN: %clang_dfsan -DOFFSET=0 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK0 < %t.out
 
-// RUN: %clang_debug_dfsan -DOFFSET=10 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN: %clang_dfsan -DOFFSET=10 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK10 < %t.out
 
@@ -38,9 +38,5 @@ int main(int argc, char *argv[]) {
 // CHECK0: Taint value 0x8 {{.*}} origin tracking ()
 // CHECK0: Origin value: {{.*}}, Taint value was created at
 
-// CHECK0: #0 {{.*}} in main {{.*}}origin_memset.c:[[@LINE-10]]
-
 // CHECK10: Taint value 0x10 {{.*}} origin tracking ()
 // CHECK10: Origin value: {{.*}}, Taint value was created at
-
-// CHECK10: #0 {{.*}} in main {{.*}}origin_memset.c:[[@LINE-14]]
