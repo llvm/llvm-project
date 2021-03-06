@@ -56,6 +56,34 @@ struct MaskRndScaleOp512Conversion : public ConvertToLLVMPattern {
   }
 };
 
+struct MaskCompressOpConversion
+    : public ConvertOpToLLVMPattern<MaskCompressOp> {
+  using ConvertOpToLLVMPattern<MaskCompressOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(MaskCompressOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    MaskCompressOp::Adaptor adaptor(operands);
+    auto opType = adaptor.a().getType();
+
+    Value src;
+    if (op.src()) {
+      src = adaptor.src();
+    } else if (op.constant_src()) {
+      src = rewriter.create<ConstantOp>(op.getLoc(), opType,
+                                        op.constant_srcAttr());
+    } else {
+      Attribute zeroAttr = rewriter.getZeroAttr(opType);
+      src = rewriter.create<ConstantOp>(op->getLoc(), opType, zeroAttr);
+    }
+
+    rewriter.replaceOpWithNewOp<LLVM::x86_avx512_mask_compress>(
+        op, opType, adaptor.a(), src, adaptor.k());
+
+    return success();
+  }
+};
+
 struct ScaleFOp512Conversion : public ConvertToLLVMPattern {
   explicit ScaleFOp512Conversion(MLIRContext *context,
                                  LLVMTypeConverter &typeConverter)
@@ -110,5 +138,6 @@ void mlir::populateAVX512ToLLVMConversionPatterns(
                   ScaleFOp512Conversion,
                   Vp2IntersectOp512Conversion>(&converter.getContext(),
                                                converter);
+  patterns.insert<MaskCompressOpConversion>(converter);
   // clang-format on
 }
