@@ -36,8 +36,13 @@ int main(int, char**) {
       {"a", "/", ""},
       {"//net", "a", ""},
       {"a", "//net", ""},
+#ifdef _WIN32
+      {"//net/", "//net", ""},
+      {"//net", "//net/", ""},
+#else
       {"//net/", "//net", "."},
       {"//net", "//net/", "."},
+#endif
       {"//base", "a", ""},
       {"a", "a", "."},
       {"a/b", "a/b", "."},
@@ -59,6 +64,8 @@ int main(int, char**) {
     ++ID;
     const fs::path p(TC.input);
     const fs::path output = p.lexically_relative(TC.base);
+    fs::path expect(TC.expect);
+    expect.make_preferred();
     auto ReportErr = [&](const char* Testing, fs::path const& Output,
                                               fs::path const& Expected) {
       Failed = true;
@@ -71,8 +78,8 @@ int main(int, char**) {
         ID, Testing, TC.input.c_str(), TC.base.c_str(),
         Expected.string().c_str(), Output.string().c_str());
     };
-    if (!PathEq(output, TC.expect))
-      ReportErr("path::lexically_relative", output, TC.expect);
+    if (!PathEq(output, expect))
+      ReportErr("path::lexically_relative", output, expect);
     const fs::path proximate_output = p.lexically_proximate(TC.base);
     // [path.gen] lexically_proximate
     // Returns: If the value of lexically_relative(base) is not an empty path,
