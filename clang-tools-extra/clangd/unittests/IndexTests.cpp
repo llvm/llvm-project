@@ -229,7 +229,7 @@ TEST(MemIndexTest, IndexedFiles) {
   RefSlab Refs;
   auto Size = Symbols.bytes() + Refs.bytes();
   auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
-  llvm::StringSet<> Files = {testPath("foo.cc"), testPath("bar.cc")};
+  llvm::StringSet<> Files = {"unittest:///foo.cc", "unittest:///bar.cc"};
   MemIndex I(std::move(Data.first), std::move(Data.second), RelationSlab(),
              std::move(Files), IndexContents::All, std::move(Data), Size);
   auto ContainsFile = I.indexedFiles();
@@ -506,7 +506,7 @@ TEST(MergeIndexTest, IndexedFiles) {
   RefSlab DynRefs;
   auto DynSize = DynSymbols.bytes() + DynRefs.bytes();
   auto DynData = std::make_pair(std::move(DynSymbols), std::move(DynRefs));
-  llvm::StringSet<> DynFiles = {testPath("foo.cc")};
+  llvm::StringSet<> DynFiles = {"unittest:///foo.cc"};
   MemIndex DynIndex(std::move(DynData.first), std::move(DynData.second),
                     RelationSlab(), std::move(DynFiles), IndexContents::Symbols,
                     std::move(DynData), DynSize);
@@ -514,7 +514,7 @@ TEST(MergeIndexTest, IndexedFiles) {
   RefSlab StaticRefs;
   auto StaticData =
       std::make_pair(std::move(StaticSymbols), std::move(StaticRefs));
-  llvm::StringSet<> StaticFiles = {testPath("foo.cc"), testPath("bar.cc")};
+  llvm::StringSet<> StaticFiles = {"unittest:///foo.cc", "unittest:///bar.cc"};
   MemIndex StaticIndex(
       std::move(StaticData.first), std::move(StaticData.second), RelationSlab(),
       std::move(StaticFiles), IndexContents::References, std::move(StaticData),
