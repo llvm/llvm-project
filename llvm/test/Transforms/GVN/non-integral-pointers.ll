@@ -430,20 +430,27 @@ entry:
 
 declare void @use.v2(<2 x i64 addrspace(4)*>)
 declare void @use.v4(<4 x i64 addrspace(4)*>)
- define i8 addrspace(5)* @multini(i1 %alwaysFalse, i8 addrspace(4)* %val, i8 addrspace(4)** %loc) {
- ; CHECK-LABEL: @multini(
- ; CHECK-NOT: inttoptr
- ; CHECK-NOT: ptrtoint
- ; CHECK-NOT: addrspacecast
-  entry:
-   store i8 addrspace(4)* %val, i8 addrspace(4)** %loc
-   br i1 %alwaysFalse, label %neverTaken, label %alwaysTaken
+define i8 addrspace(5)* @multini(i1 %alwaysFalse, i8 addrspace(4)* %val, i8 addrspace(4)** %loc) {
+; CHECK-LABEL: @multini(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i8 addrspace(4)* [[VAL:%.*]], i8 addrspace(4)** [[LOC:%.*]], align 8
+; CHECK-NEXT:    br i1 [[ALWAYSFALSE:%.*]], label [[NEVERTAKEN:%.*]], label [[ALWAYSTAKEN:%.*]]
+; CHECK:       neverTaken:
+; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i8 addrspace(4)** [[LOC]] to i8 addrspace(5)**
+; CHECK-NEXT:    [[DIFFERENTAS:%.*]] = load i8 addrspace(5)*, i8 addrspace(5)** [[LOC_BC]], align 8
+; CHECK-NEXT:    ret i8 addrspace(5)* [[DIFFERENTAS]]
+; CHECK:       alwaysTaken:
+; CHECK-NEXT:    ret i8 addrspace(5)* null
+;
+entry:
+  store i8 addrspace(4)* %val, i8 addrspace(4)** %loc
+  br i1 %alwaysFalse, label %neverTaken, label %alwaysTaken
 
-  neverTaken:
-   %loc.bc = bitcast i8 addrspace(4)** %loc to i8 addrspace(5)**
-   %differentas = load i8 addrspace(5)*, i8 addrspace(5)** %loc.bc
-   ret i8 addrspace(5)* %differentas
+neverTaken:
+  %loc.bc = bitcast i8 addrspace(4)** %loc to i8 addrspace(5)**
+  %differentas = load i8 addrspace(5)*, i8 addrspace(5)** %loc.bc
+  ret i8 addrspace(5)* %differentas
 
-  alwaysTaken:
-   ret i8 addrspace(5)* null
- }
+alwaysTaken:
+  ret i8 addrspace(5)* null
+}
