@@ -1480,13 +1480,13 @@ module {
     ^bb3(%1: i32):
       %2 = llvm.icmp "slt" %1, %arg1 : i32
       // CHECK: br i1 {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-      llvm.cond_br %2, ^bb4, ^bb5 {llvm.loop = {parallel_access = [@metadata::@group1, @metadata::@group2], options = [#llvm.loopopt<disable_unroll = true>, #llvm.loopopt<disable_licm = true>, #llvm.loopopt<interleave_count = 1>]}}
+      llvm.cond_br %2, ^bb4, ^bb5 {llvm.loop = {parallel_access = [@metadata::@group1, @metadata::@group2], options = #llvm.loopopts<disable_licm = true, disable_unroll = true, interleave_count = 1>}}
     ^bb4:
       %3 = llvm.add %1, %arg2  : i32
       // CHECK: = load i32, i32* %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE:[0-9]+]]
       %5 = llvm.load %4 { access_groups = [@metadata::@group1, @metadata::@group2] } : !llvm.ptr<i32>
       // CHECK: br label {{.*}} !llvm.loop ![[LOOP_NODE]]
-      llvm.br ^bb3(%3 : i32) {llvm.loop = {parallel_access = [@metadata::@group1, @metadata::@group2], options = [#llvm.loopopt<disable_unroll = true>, #llvm.loopopt<disable_licm = true>, #llvm.loopopt<interleave_count = 1>]}}
+      llvm.br ^bb3(%3 : i32) {llvm.loop = {parallel_access = [@metadata::@group1, @metadata::@group2], options = #llvm.loopopts<disable_unroll = true, disable_licm = true, interleave_count = 1>}}
     ^bb5:
       llvm.return
   }
