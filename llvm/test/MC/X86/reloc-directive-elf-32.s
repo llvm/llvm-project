@@ -10,7 +10,7 @@
 # PRINT-NEXT: .reloc 0, R_386_32, .data+2
 # PRINT-NEXT: .reloc 0, R_386_IRELATIVE, foo+3
 # PRINT-NEXT: .reloc 0, R_386_GOT32X, 5
-# PRINT-NEXT: .reloc 0, BFD_RELOC_NONE, 9
+# PRINT:      .reloc 0, BFD_RELOC_NONE, 9
 # PRINT-NEXT: .reloc 0, BFD_RELOC_8, 9
 # PRINT-NEXT: .reloc 0, BFD_RELOC_16, 9
 # PRINT-NEXT: .reloc 0, BFD_RELOC_32, 9
