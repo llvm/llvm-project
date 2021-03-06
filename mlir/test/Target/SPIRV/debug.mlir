@@ -125,7 +125,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %one = spv.Constant 1: i32
     %two = spv.Constant 2: i32
     %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
-    spv.selection {
+    spv.mlir.selection {
       // CHECK: loc({{".*debug.mlir"}}:128:5)
       spv.BranchConditional %cond [5, 10], ^then, ^else
     ^then:

@@ -525,14 +525,14 @@ control flow construct. With this approach, it's easier to discover all blocks
 belonging to a structured control flow construct. It is also more idiomatic to
 MLIR system.
 
-We introduce a `spv.selection` and `spv.mlir.loop` op for structured selections and
+We introduce a `spv.mlir.selection` and `spv.mlir.loop` op for structured selections and
 loops, respectively. The merge targets are the next ops following them. Inside
 their regions, a special terminator, `spv.mlir.merge` is introduced for branching to
 the merge target.
 
 ### Selection
 
-`spv.selection` defines a selection construct. It contains one region. The
+`spv.mlir.selection` defines a selection construct. It contains one region. The
 region should contain at least two blocks: one selection header block and one
 merge block.
 
@@ -586,7 +586,7 @@ func @selection(%cond: i1) -> () {
   %two = spv.Constant 2: i32
   %x = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
-  spv.selection {
+  spv.mlir.selection {
     spv.BranchConditional %cond, ^then, ^else
 
   ^then:
@@ -731,7 +731,7 @@ It will be represented as:
 func @foo() -> () {
   %var = spv.Variable : !spv.ptr<i32, Function>
 
-  spv.selection {
+  spv.mlir.selection {
     %true = spv.Constant true
     spv.BranchConditional %true, ^true, ^false
 
@@ -969,7 +969,7 @@ the representational differences between SPIR-V dialect and binary format:
 *   Attributes on ops, if not part of the op's binary encoding, are emitted as
     `OpDecorate*` instructions in the SPIR-V binary module section for
     decorations.
-*   `spv.selection`s and `spv.mlir.loop`s are emitted as basic blocks with `Op*Merge`
+*   `spv.mlir.selection`s and `spv.mlir.loop`s are emitted as basic blocks with `Op*Merge`
     instructions in the header block as required by the binary format.
 *   Block arguments are materialized as `OpPhi` instructions at the beginning of
     the corresponding blocks.
@@ -991,7 +991,7 @@ Similarly, a few transformations are performed during deserialization:
     `spv.mlir.referenceof` op to turn the symbol of the corresponding
     `spv.SpecConstant` into an SSA value.
 *   `OpPhi` instructions are converted to block arguments.
-*   Structured control flow are placed inside `spv.selection` and `spv.mlir.loop`.
+*   Structured control flow are placed inside `spv.mlir.selection` and `spv.mlir.loop`.
 
 ## Conversions
 
