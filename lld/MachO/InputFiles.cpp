@@ -339,10 +339,9 @@ static macho::Symbol *createDefined(const structs::nlist_64 &sym,
 }
 
 // Checks if the version specified in `cmd` is compatible with target
-// version in `config`. IOW, check if cmd's version >= config's version.
+// version. IOW, check if cmd's version >= config's version.
 static bool hasCompatVersion(const InputFile *input,
-                             const build_version_command *cmd,
-                             const Configuration *config) {
+                             const build_version_command *cmd) {
 
   if (config->target.Platform != static_cast<PlatformKind>(cmd->platform)) {
     error(toString(input) + " has platform " +
@@ -512,7 +511,7 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
 
   if (const auto *cmd =
           findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
-    if (!hasCompatVersion(this, cmd, config))
+    if (!hasCompatVersion(this, cmd))
       return;
   }
 
@@ -673,7 +672,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
 
   if (const build_version_command *cmd =
           findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
-    if (!hasCompatVersion(this, cmd, config))
+    if (!hasCompatVersion(this, cmd))
       return;
   }
 
