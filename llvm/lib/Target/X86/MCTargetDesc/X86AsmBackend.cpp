@@ -680,12 +680,21 @@ Optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
 #undef ELF_RELOC
+                 .Case("BFD_RELOC_NONE", ELF::R_X86_64_NONE)
+                 .Case("BFD_RELOC_8", ELF::R_X86_64_8)
+                 .Case("BFD_RELOC_16", ELF::R_X86_64_16)
+                 .Case("BFD_RELOC_32", ELF::R_X86_64_32)
+                 .Case("BFD_RELOC_64", ELF::R_X86_64_64)
                  .Default(-1u);
     } else {
       Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/i386.def"
 #undef ELF_RELOC
+                 .Case("BFD_RELOC_NONE", ELF::R_386_NONE)
+                 .Case("BFD_RELOC_8", ELF::R_386_8)
+                 .Case("BFD_RELOC_16", ELF::R_386_16)
+                 .Case("BFD_RELOC_32", ELF::R_386_32)
                  .Default(-1u);
     }
     if (Type == -1u)
