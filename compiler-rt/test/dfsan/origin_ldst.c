@@ -1,30 +1,6 @@
-// RUN: %clang_debug_dfsan -DTEST64 -DALIGN=8 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN: %clang_dfsan -DTEST64 -DALIGN=8 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefixes=CHECK,CHECK_DEBUG_INFO < %t.out
-//
-// RUN: %clang_debug_dfsan -DTEST32 -DALIGN=4 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
-// RUN:     %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefixes=CHECK,CHECK_DEBUG_INFO < %t.out
-//
-// RUN: %clang_debug_dfsan -DALIGN=2 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
-// RUN:     %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefixes=CHECK,CHECK_DEBUG_INFO < %t.out
-//
-// rUN: %clang_dfsan -DTEST64 -DALIGN=5 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
-// rUN:     %run %t >%t.out 2>&1
-// rUN: FileCheck %s --check-prefixes=CHECK,CHECK_NO_DEBUG_INFO < %t.out
-//
-// rUN: %clang_dfsan -DTEST32 -DALIGN=3 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
-// rUN:     %run %t >%t.out 2>&1
-// rUN: FileCheck %s --check-prefixes=CHECK,CHECK_NO_DEBUG_INFO < %t.out
-//
-// RUN: %clang_debug_dfsan -DALIGN=1 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
-// RUN:     %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefixes=CHECK,CHECK_DEBUG_INFO < %t.out
-//
-// RUN: %clang_dfsan -DALIGN=1 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
-// RUN:     %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefixes=CHECK,CHECK_NO_DEBUG_INFO < %t.out
+// RUN: FileCheck %s --check-prefix=CHECK < %t.out
 //
 // Test origin tracking is accurate in terms of partial store/load, and
 // different aligments. Do not test alignments that are not power of 2.
@@ -61,27 +37,15 @@ int main(int argc, char *argv[]) {
 
 // CHECK: Taint value 0x8 {{.*}} origin tracking ()
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK_DEBUG_INFO: #0 {{.*}} in main {{.*}}origin_ldst.c:[[@LINE-13]]
-// CHECK_NO_DEBUG_INFO: #0 {{.*}} in main {{.*}}origin_ldst.c{{.*}}
 
 // CHECK: Origin value: {{.*}}, Taint value was created at
-// CHECK_DEBUG_INFO: #0 {{.*}} in main {{.*}}origin_ldst.c:[[@LINE-18]]
-// CHECK_NO_DEBUG_INFO: #0 {{.*}} in main {{.*}}origin_ldst.c{{.*}}
 
 // CHECK: Taint value 0x4 {{.*}} origin tracking ()
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK_DEBUG_INFO: #0 {{.*}} in main {{.*}}origin_ldst.c:[[@LINE-16]]
-// CHECK_NO_DEBUG_INFO: #0 {{.*}} in main {{.*}}origin_ldst.c{{.*}}
 
 // CHECK: Origin value: {{.*}}, Taint value was created at
-// CHECK_DEBUG_INFO: #0 {{.*}} in main {{.*}}origin_ldst.c:[[@LINE-21]]
-// CHECK_NO_DEBUG_INFO: #0 {{.*}} in main {{.*}}origin_ldst.c{{.*}}
 
 // CHECK: Taint value 0x4 {{.*}} origin tracking ()
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK_DEBUG_INFO: #0 {{.*}} in main {{.*}}origin_ldst.c:[[@LINE-25]]
-// CHECK_NO_DEBUG_INFO: #0 {{.*}} in main {{.*}}origin_ldst.c{{.*}}
 
 // CHECK: Origin value: {{.*}}, Taint value was created at
-// CHECK_DBEUG_INFO: #0 {{.*}} in main {{.*}}origin_ldst.c:[[@LINE-30]]
-// CHECK_NO_DEBUG_INFO: #0 {{.*}} in main {{.*}}origin_ldst.c{{.*}}
