@@ -3483,9 +3483,12 @@ void VarArgsLoweringHelper::createVarArgAreaAndStoreRegisters(
       Register AL = TheMachineFunction.addLiveIn(X86::AL, &X86::GR8RegClass);
       ALVal = DAG.getCopyFromReg(Chain, DL, AL, MVT::i8);
       for (MCPhysReg Reg : AvailableXmms) {
-        Register XMMReg = TheMachineFunction.addLiveIn(Reg, &X86::VR128RegClass);
-        LiveXMMRegs.push_back(
-            DAG.getCopyFromReg(Chain, DL, XMMReg, MVT::v4f32));
+        // FastRegisterAllocator spills virtual registers at basic
+        // block boundary. That leads to usages of xmm registers
+        // outside of check for %al. Pass physical registers to
+        // VASTART_SAVE_XMM_REGS to avoid unneccessary spilling.
+        TheMachineFunction.getRegInfo().addLiveIn(Reg);
+        LiveXMMRegs.push_back(DAG.getRegister(Reg, MVT::v4f32));
       }
     }
 
@@ -32035,81 +32038,6 @@ X86TargetLowering::EmitVAARGWithCustomInserter(MachineInstr &MI,
   return endMBB;
 }
 
-MachineBasicBlock *X86TargetLowering::EmitVAStartSaveXMMRegsWithCustomInserter(
-    MachineInstr &MI, MachineBasicBlock *MBB) const {
-  // Emit code to save XMM registers to the stack. The ABI says that the
-  // number of registers to save is given in %al, so it's theoretically
-  // possible to do an indirect jump trick to avoid saving all of them,
-  // however this code takes a simpler approach and just executes all
-  // of the stores if %al is non-zero. It's less code, and it's probably
-  // easier on the hardware branch predictor, and stores aren't all that
-  // expensive anyway.
-
-  // Create the new basic blocks. One block contains all the XMM stores,
-  // and one block is the final destination regardless of whether any
-  // stores were performed.
-  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
-  MachineFunction *F = MBB->getParent();
-  MachineFunction::iterator MBBIter = ++MBB->getIterator();
-  MachineBasicBlock *XMMSaveMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *EndMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  F->insert(MBBIter, XMMSaveMBB);
-  F->insert(MBBIter, EndMBB);
-
-  // Transfer the remainder of MBB and its successor edges to EndMBB.
-  EndMBB->splice(EndMBB->begin(), MBB,
-                 std::next(MachineBasicBlock::iterator(MI)), MBB->end());
-  EndMBB->transferSuccessorsAndUpdatePHIs(MBB);
-
-  // The original block will now fall through to the XMM save block.
-  MBB->addSuccessor(XMMSaveMBB);
-  // The XMMSaveMBB will fall through to the end block.
-  XMMSaveMBB->addSuccessor(EndMBB);
-
-  // Now add the instructions.
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  const DebugLoc &DL = MI.getDebugLoc();
-
-  Register CountReg = MI.getOperand(0).getReg();
-  int RegSaveFrameIndex = MI.getOperand(1).getImm();
-  int64_t VarArgsFPOffset = MI.getOperand(2).getImm();
-
-  if (!Subtarget.isCallingConvWin64(F->getFunction().getCallingConv())) {
-    // If %al is 0, branch around the XMM save block.
-    BuildMI(MBB, DL, TII->get(X86::TEST8rr)).addReg(CountReg).addReg(CountReg);
-    BuildMI(MBB, DL, TII->get(X86::JCC_1)).addMBB(EndMBB).addImm(X86::COND_E);
-    MBB->addSuccessor(EndMBB);
-  }
-
-  // Make sure the last operand is EFLAGS, which gets clobbered by the branch
-  // that was just emitted, but clearly shouldn't be "saved".
-  assert((MI.getNumOperands() <= 3 ||
-          !MI.getOperand(MI.getNumOperands() - 1).isReg() ||
-          MI.getOperand(MI.getNumOperands() - 1).getReg() == X86::EFLAGS) &&
-         "Expected last argument to be EFLAGS");
-  unsigned MOVOpc = Subtarget.hasAVX() ? X86::VMOVAPSmr : X86::MOVAPSmr;
-  // In the XMM save block, save all the XMM argument registers.
-  for (int i = 3, e = MI.getNumOperands() - 1; i != e; ++i) {
-    int64_t Offset = (i - 3) * 16 + VarArgsFPOffset;
-    MachineMemOperand *MMO = F->getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(*F, RegSaveFrameIndex, Offset),
-        MachineMemOperand::MOStore,
-        /*Size=*/16, Align(16));
-    BuildMI(XMMSaveMBB, DL, TII->get(MOVOpc))
-        .addFrameIndex(RegSaveFrameIndex)
-        .addImm(/*Scale=*/1)
-        .addReg(/*IndexReg=*/0)
-        .addImm(/*Disp=*/Offset)
-        .addReg(/*Segment=*/0)
-        .addReg(MI.getOperand(i).getReg())
-        .addMemOperand(MMO);
-  }
-
-  MI.eraseFromParent(); // The pseudo instruction is gone now.
-
-  return EndMBB;
-}
-
 // The EFLAGS operand of SelectItr might be missing a kill marker
 // because there were multiple uses of EFLAGS, and ISel didn't know
 // which to mark. Figure out whether SelectItr should have had a
@@ -33942,9 +33870,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   // xbegin
   case X86::XBEGIN:
     return emitXBegin(MI, BB, Subtarget.getInstrInfo());
-
-  case X86::VASTART_SAVE_XMM_REGS:
-    return EmitVAStartSaveXMMRegsWithCustomInserter(MI, BB);
 
   case X86::VAARG_64:
   case X86::VAARG_X32:

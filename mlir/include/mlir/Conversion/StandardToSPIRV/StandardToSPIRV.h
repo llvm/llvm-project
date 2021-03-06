@@ -25,6 +25,23 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
                                      SPIRVTypeConverter &typeConverter,
                                      OwningRewritePatternList &patterns);
 
+/// Appends to a pattern list additional patterns for translating tensor ops
+/// to SPIR-V ops.
+///
+/// Note: Normally tensors will be stored in buffers before converting to
+/// SPIR-V, given that is how a large amount of data is sent to the GPU.
+/// However, SPIR-V supports converting from tensors directly too. This is
+/// for the cases where the tensor just contains a small amount of elements
+/// and it makes sense to directly inline them as a small data array in the
+/// shader. To handle this, internally the conversion might create new local
+/// variables. SPIR-V consumers in GPU drivers may or may not optimize that
+/// away. So this has implications over register pressure. Therefore, a
+/// threshold is used to control when the patterns should kick in.
+void populateTensorToSPIRVPatterns(MLIRContext *context,
+                                   SPIRVTypeConverter &typeConverter,
+                                   int64_t byteCountThreshold,
+                                   OwningRewritePatternList &patterns);
+
 /// Appends to a pattern list patterns to legalize ops that are not directly
 /// lowered to SPIR-V.
 void populateStdLegalizationPatternsForSPIRVLowering(
