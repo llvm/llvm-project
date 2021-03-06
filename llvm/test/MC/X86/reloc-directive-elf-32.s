@@ -10,6 +10,10 @@
 # PRINT-NEXT: .reloc 0, R_386_32, .data+2
 # PRINT-NEXT: .reloc 0, R_386_IRELATIVE, foo+3
 # PRINT-NEXT: .reloc 0, R_386_GOT32X, 5
+# PRINT-NEXT: .reloc 0, BFD_RELOC_NONE, 9
+# PRINT-NEXT: .reloc 0, BFD_RELOC_8, 9
+# PRINT-NEXT: .reloc 0, BFD_RELOC_16, 9
+# PRINT-NEXT: .reloc 0, BFD_RELOC_32, 9
 
 # X86 relocations use the Elf32_Rel format. Addends are neither stored in the
 # relocation entries nor applied in the referenced locations.
@@ -19,6 +23,10 @@
 # CHECK-NEXT: 0x0 R_386_32 .data
 # CHECK-NEXT: 0x0 R_386_IRELATIVE foo
 # CHECK-NEXT: 0x0 R_386_GOT32X -
+# CHECK-NEXT: 0x0 R_386_NONE -
+# CHECK-NEXT: 0x0 R_386_8 -
+# CHECK-NEXT: 0x0 R_386_16 -
+# CHECK-NEXT: 0x0 R_386_32 -
 
 # HEX: 0x00000000 00000000 00000000
 
@@ -32,6 +40,11 @@
   .reloc 0, R_386_32, .data+2
   .reloc 0, R_386_IRELATIVE, foo+3
   .reloc 0, R_386_GOT32X, 5
+
+  .reloc 0, BFD_RELOC_NONE, 9
+  .reloc 0, BFD_RELOC_8, 9
+  .reloc 0, BFD_RELOC_16, 9
+  .reloc 0, BFD_RELOC_32, 9
 
 .data
 .globl foo
