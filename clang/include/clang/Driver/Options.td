@@ -3700,7 +3700,8 @@ def weak__framework : Separate<["-"], "weak_framework">, Flags<[LinkerInput]>;
 def weak__library : Separate<["-"], "weak_library">, Flags<[LinkerInput]>;
 def weak__reference__mismatches : Separate<["-"], "weak_reference_mismatches">;
 def whatsloaded : Flag<["-"], "whatsloaded">;
-def whyload : Flag<["-"], "whyload">;
+def why_load : Flag<["-"], "why_load">;
+def whyload : Flag<["-"], "whyload">, Alias<why_load>;
 def w : Flag<["-"], "w">, HelpText<"Suppress all warnings">, Flags<[CC1Option]>,
   MarshallingInfoFlag<DiagnosticOpts<"IgnoreWarnings">>;
 def x : JoinedOrSeparate<["-"], "x">, Flags<[NoXarchOption,CC1Option]>,
