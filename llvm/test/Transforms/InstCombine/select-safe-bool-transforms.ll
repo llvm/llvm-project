@@ -262,7 +262,7 @@ define i1 @land_land_right1(i1 %A, i1 %B) {
 }
 define i1 @land_land_right2(i1 %A, i1 %B) {
 ; CHECK-LABEL: @land_land_right2(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %c = select i1 %B, i1 %A, i1 false
@@ -426,7 +426,7 @@ define i1 @lor_lor_right1(i1 %A, i1 %B) {
 }
 define i1 @lor_lor_right2(i1 %A, i1 %B) {
 ; CHECK-LABEL: @lor_lor_right2(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %c = select i1 %B, i1 true, i1 %A
