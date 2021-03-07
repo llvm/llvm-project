@@ -3789,23 +3789,32 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case RISCVISD::SELECT_CC: {
     // Transform
-    // (select_cc (xor X, 1), 0, setne, trueV, falseV) ->
-    // (select_cc X, 0, seteq, trueV, falseV) if we can prove X is 0/1.
-    // This can occur when legalizing some floating point comparisons.
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
     auto CCVal = static_cast<ISD::CondCode>(N->getConstantOperandVal(2));
+    if (!ISD::isIntEqualitySetCC(CCVal))
+      break;
+    // Fold (select_cc (xor X, Y), 0, eq/ne, trueV, falseV) ->
+    //      (select_cc X, Y, eq/ne, trueV, falseV)
+    if (LHS.getOpcode() == ISD::XOR && isNullConstant(RHS))
+      return DAG.getNode(RISCVISD::SELECT_CC, SDLoc(N), N->getValueType(0),
+                         {LHS.getOperand(0), LHS.getOperand(1),
+                          N->getOperand(2), N->getOperand(3),
+                          N->getOperand(4)});
+    // (select_cc X, 1, setne, trueV, falseV) ->
+    // (select_cc X, 0, seteq, trueV, falseV) if we can prove X is 0/1.
+    // This can occur when legalizing some floating point comparisons.
     APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
-    if (ISD::isIntEqualitySetCC(CCVal) && isNullConstant(RHS) &&
-        LHS.getOpcode() == ISD::XOR && isOneConstant(LHS.getOperand(1)) &&
-        DAG.MaskedValueIsZero(LHS.getOperand(0), Mask)) {
+    if (isOneConstant(RHS) && DAG.MaskedValueIsZero(LHS, Mask)) {
       SDLoc DL(N);
       CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
       SDValue TargetCC = DAG.getConstant(CCVal, DL, Subtarget.getXLenVT());
-      return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
-                         {LHS.getOperand(0), RHS, TargetCC, N->getOperand(3),
-                          N->getOperand(4)});
+      RHS = DAG.getConstant(0, DL, LHS.getValueType());
+      return DAG.getNode(
+          RISCVISD::SELECT_CC, DL, N->getValueType(0),
+          {LHS, RHS, TargetCC, N->getOperand(3), N->getOperand(4)});
     }
+
     break;
   }
   case ISD::SETCC: {

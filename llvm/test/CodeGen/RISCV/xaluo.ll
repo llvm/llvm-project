@@ -694,8 +694,7 @@ define i32 @saddo.select.i32(i32 %v1, i32 %v2) {
 ; RV32-NEXT:    add a2, a0, a1
 ; RV32-NEXT:    slt a2, a2, a0
 ; RV32-NEXT:    slti a3, a1, 0
-; RV32-NEXT:    xor a2, a3, a2
-; RV32-NEXT:    bnez a2, .LBB22_2
+; RV32-NEXT:    bne a3, a2, .LBB22_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB22_2: # %entry
@@ -768,8 +767,7 @@ define i64 @saddo.select.i64(i64 %v1, i64 %v2) {
 ; RV64-NEXT:    add a2, a0, a1
 ; RV64-NEXT:    slt a2, a2, a0
 ; RV64-NEXT:    slti a3, a1, 0
-; RV64-NEXT:    xor a2, a3, a2
-; RV64-NEXT:    bnez a2, .LBB24_2
+; RV64-NEXT:    bne a3, a2, .LBB24_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB24_2: # %entry
@@ -939,8 +937,7 @@ define i32 @ssubo.select.i32(i32 %v1, i32 %v2) {
 ; RV32-NEXT:    sgtz a2, a1
 ; RV32-NEXT:    sub a3, a0, a1
 ; RV32-NEXT:    slt a3, a3, a0
-; RV32-NEXT:    xor a2, a2, a3
-; RV32-NEXT:    bnez a2, .LBB30_2
+; RV32-NEXT:    bne a2, a3, .LBB30_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB30_2: # %entry
@@ -1011,8 +1008,7 @@ define i64 @ssubo.select.i64(i64 %v1, i64 %v2) {
 ; RV64-NEXT:    sgtz a2, a1
 ; RV64-NEXT:    sub a3, a0, a1
 ; RV64-NEXT:    slt a3, a3, a0
-; RV64-NEXT:    xor a2, a2, a3
-; RV64-NEXT:    bnez a2, .LBB32_2
+; RV64-NEXT:    bne a2, a3, .LBB32_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB32_2: # %entry
