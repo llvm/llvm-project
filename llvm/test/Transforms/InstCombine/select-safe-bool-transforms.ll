@@ -86,8 +86,7 @@ define i1 @merge_logical_and_and3(i1 %X, i1 %Y) {
 define i1 @merge_two_logical_ands3(i1 %X, i1 %Y) {
 ; CHECK-LABEL: @merge_two_logical_ands3(
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[X:%.*]], i1 [[Y:%.*]], i1 false
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C]], i1 [[X]], i1 false
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c = select i1 %X, i1 %Y, i1 false
   %res = select i1 %c, i1 %X, i1 false
@@ -223,8 +222,7 @@ define i1 @merge_logical_or_or3(i1 %X, i1 %Y) {
 define i1 @merge_two_logical_ors3(i1 %X, i1 %Y) {
 ; CHECK-LABEL: @merge_two_logical_ors3(
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C]], i1 true, i1 [[X]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c = select i1 %X, i1 true, i1 %Y
   %res = select i1 %c, i1 true, i1 %X
