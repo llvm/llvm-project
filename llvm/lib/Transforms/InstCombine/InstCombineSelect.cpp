@@ -2890,11 +2890,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // shortening paths for the values (this helps getUnderlyingObjects() for
       // example).
       if (TrueSI->getFalseValue() == FalseVal && TrueSI->hasOneUse()) {
-        // Simply merging into and i1 isn't poison-safe. Do it only when
-        // EnableUnsafeSelectTransform is set.
-        Value *And = EnableUnsafeSelectTransform ?
-            Builder.CreateAnd(CondVal, TrueSI->getCondition()) :
-            Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition());
+        Value *And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition());
         replaceOperand(SI, 0, And);
         replaceOperand(SI, 1, TrueSI->getTrueValue());
         return &SI;
@@ -2911,11 +2907,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       }
       // select(C0, a, select(C1, a, b)) -> select(C0|C1, a, b)
       if (FalseSI->getTrueValue() == TrueVal && FalseSI->hasOneUse()) {
-        // Simply merging into or i1 isn't poison-safe. Do it only when
-        // EnableUnsafeSelectTransform is set.
-        Value *Or = EnableUnsafeSelectTransform ?
-            Builder.CreateOr(CondVal, FalseSI->getCondition()) :
-            Builder.CreateLogicalOr(CondVal, FalseSI->getCondition());
+        Value *Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition());
         replaceOperand(SI, 0, Or);
         replaceOperand(SI, 2, FalseSI->getFalseValue());
         return &SI;
