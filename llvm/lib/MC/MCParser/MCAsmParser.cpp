@@ -44,6 +44,13 @@ bool MCAsmParser::parseTokenLoc(SMLoc &Loc) {
   return false;
 }
 
+bool MCAsmParser::parseEOL() {
+  if (getTok().getKind() != AsmToken::EndOfStatement)
+    return Error(getTok().getLoc(), "expected newline");
+  Lex();
+  return false;
+}
+
 bool MCAsmParser::parseEOL(const Twine &Msg) {
   if (getTok().getKind() != AsmToken::EndOfStatement)
     return Error(getTok().getLoc(), Msg);
