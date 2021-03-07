@@ -16,7 +16,7 @@
 // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-64 %s
@@ -36,7 +36,7 @@
 // CHECK-LD-64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-X32 %s
@@ -113,7 +113,7 @@
 // CHECK-LD-RT-ANDROID: libclang_rt.builtins-arm-android.a"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GCC %s
@@ -133,7 +133,7 @@
 // CHECK-LD-GCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     -static-libgcc \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -154,7 +154,7 @@
 // CHECK-LD-64-STATIC-LIBGCC: "-lgcc" "-lgcc_eh"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-NO-LIBGCC %s
@@ -164,7 +164,7 @@
 // CHECK-CLANG-NO-LIBGCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANGXX-NO-LIBGCC %s
@@ -174,7 +174,7 @@
 // CHECK-CLANGXX-NO-LIBGCC: "-lgcc_s" "-lgcc"
 //
 // RUN: %clang -static -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-NO-LIBGCC-STATIC %s
@@ -182,7 +182,7 @@
 // CHECK-CLANG-NO-LIBGCC-STATIC: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
 // RUN: %clang -static-pie -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE %s
@@ -197,7 +197,7 @@
 // CHECK-CLANG-LD-STATIC-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
 // RUN: %clang -static-pie -pie -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE-PIE %s
@@ -212,7 +212,7 @@
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
 // RUN: %clang -static-pie -static -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE-STATIC %s
@@ -234,7 +234,7 @@
 // CHECK-CLANG-LD-STATIC-PIE-NOPIE: error: cannot specify 'nopie' along with 'static-pie'
 //
 // RUN: %clang -dynamic -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-NO-LIBGCC-DYNAMIC %s
@@ -244,7 +244,7 @@
 // CHECK-CLANG-NO-LIBGCC-DYNAMIC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
 // RUN: %clang -static-libgcc -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-STATIC-LIBGCC %s
@@ -254,7 +254,7 @@
 // CHECK-CLANG-STATIC-LIBGCC: "-lgcc" "-lgcc_eh"
 //
 // RUN: %clang -static-libgcc -dynamic -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-STATIC-LIBGCC-DYNAMIC %s
@@ -264,7 +264,7 @@
 // CHECK-CLANG-STATIC-LIBGCC-DYNAMIC: "-lgcc" "-lgcc_eh"
 //
 // RUN: %clang -shared-libgcc -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-SHARED-LIBGCC %s
@@ -274,7 +274,7 @@
 // CHECK-CLANG-SHARED-LIBGCC: "-lgcc_s" "-lgcc"
 //
 // RUN: %clang -shared-libgcc -dynamic -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-SHARED-LIBGCC-DYNAMIC %s
@@ -283,7 +283,7 @@
 // CHECK-CLANG-SHARED-LIBGCC-DYNAMIC: "-lgcc_s" "-lgcc"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-linux-android -rtlib=platform \
+// RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-ANDROID-NONE %s
@@ -291,7 +291,7 @@
 // CHECK-CLANG-ANDROID-NONE: "-lgcc" "-ldl" "-lc"
 //
 // RUN: %clang -shared -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-linux-android -rtlib=platform \
+// RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-ANDROID-SHARED %s
@@ -299,7 +299,7 @@
 // CHECK-CLANG-ANDROID-SHARED: "-lgcc" "-ldl" "-lc"
 //
 // RUN: %clang -static -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-linux-android -rtlib=platform \
+// RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-ANDROID-STATIC %s
@@ -307,7 +307,7 @@
 // CHECK-CLANG-ANDROID-STATIC: "--start-group" "-lgcc" "-lc" "--end-group"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1      \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     -static \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -1308,42 +1308,42 @@
 //
 // Test linker invocation on Android.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-androideabi -rtlib=platform \
+// RUN:     --target=arm-linux-androideabi -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-android -rtlib=platform \
+// RUN:     --target=arm-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-linux-android -rtlib=platform \
+// RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm64-linux-android -rtlib=platform \
+// RUN:     --target=arm64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mipsel-linux-android -rtlib=platform \
+// RUN:     --target=mipsel-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-android -rtlib=platform \
+// RUN:     --target=mips64el-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i686-linux-android -rtlib=platform \
+// RUN:     --target=i686-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-linux-android -rtlib=platform \
+// RUN:     --target=x86_64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
@@ -1359,48 +1359,48 @@
 // CHECK-ANDROID-NOT: "gcc_s"
 // CHECK-ANDROID: "{{.*}}{{/|\\\\}}crtend_android.o"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-androideabi -rtlib=platform \
+// RUN:     --target=arm-linux-androideabi -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-android -rtlib=platform \
+// RUN:     --target=arm-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-linux-android -rtlib=platform \
+// RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm64-linux-android -rtlib=platform \
+// RUN:     --target=arm64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mipsel-linux-android -rtlib=platform \
+// RUN:     --target=mipsel-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-android -rtlib=platform \
+// RUN:     --target=mips64el-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i686-linux-android -rtlib=platform \
+// RUN:     --target=i686-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-linux-android -rtlib=platform \
+// RUN:     --target=x86_64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
@@ -1415,47 +1415,47 @@
 // CHECK-ANDROID-SO-NOT: "gcc_s"
 // CHECK-ANDROID-SO: "{{.*}}{{/|\\\\}}crtend_so.o"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-androideabi -rtlib=platform \
+// RUN:     --target=arm-linux-androideabi -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-android -rtlib=platform \
+// RUN:     --target=arm-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-linux-android -rtlib=platform \
+// RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm64-linux-android -rtlib=platform \
+// RUN:     --target=arm64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mipsel-linux-android -rtlib=platform \
+// RUN:     --target=mipsel-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-android -rtlib=platform \
+// RUN:     --target=mips64el-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i686-linux-android -rtlib=platform \
+// RUN:     --target=i686-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-linux-android -rtlib=platform \
+// RUN:     --target=x86_64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
@@ -1469,49 +1469,49 @@
 // CHECK-ANDROID-STATIC-NOT: "gcc_s"
 // CHECK-ANDROID-STATIC: "{{.*}}{{/|\\\\}}crtend_android.o"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-androideabi -rtlib=platform \
+// RUN:     --target=arm-linux-androideabi -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot  \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-android -rtlib=platform \
+// RUN:     --target=arm-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-linux-android -rtlib=platform \
+// RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot  \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm64-linux-android -rtlib=platform \
+// RUN:     --target=arm64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot  \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mipsel-linux-android -rtlib=platform \
+// RUN:     --target=mipsel-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-android -rtlib=platform \
+// RUN:     --target=mips64el-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i686-linux-android -rtlib=platform \
+// RUN:     --target=i686-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-linux-android -rtlib=platform \
+// RUN:     --target=x86_64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -pie \
@@ -2038,7 +2038,7 @@
 
 // Check whether multilib gcc install works fine on Gentoo with gcc-config
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux-gnu -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux-gnu -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GENTOO %s
@@ -2072,7 +2072,7 @@
 // CHECK-LD-GENTOO-32: "-lc"
 // CHECK-LD-GENTOO-32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GENTOO-X32 %s
@@ -2101,7 +2101,7 @@
 
 // Check whether gcc7 install works fine on Amazon Linux AMI
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-amazon-linux -rtlib=libgcc \
+// RUN:     --target=x86_64-amazon-linux -rtlib=libgcc --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ami_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-AMI %s
@@ -2122,7 +2122,7 @@
 
 // Check whether the OpenEmbedded ARM libs are added correctly.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-oe-linux-gnueabi -rtlib=libgcc \
+// RUN:     --target=arm-oe-linux-gnueabi -rtlib=libgcc --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/openembedded_arm_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OE-ARM %s
@@ -2142,7 +2142,7 @@
 
 // Check whether the OpenEmbedded AArch64 libs are added correctly.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-oe-linux -rtlib=libgcc \
+// RUN:     --target=aarch64-oe-linux -rtlib=libgcc --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/openembedded_aarch64_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OE-AARCH64 %s

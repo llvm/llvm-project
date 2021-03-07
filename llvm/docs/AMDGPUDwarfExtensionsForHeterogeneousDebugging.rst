@@ -727,7 +727,7 @@ and encoding of the literal value.
 
 There is a distinguished base type termed the generic type, which is an integral
 type that has the size of an address in the target architecture default address
-space and unspecified signedness.
+space, a target architecture defined endianity, and unspecified signedness.
 
 *The generic type is the same as the unspecified type used for stack operations
 defined in DWARF Version 4 and before.*

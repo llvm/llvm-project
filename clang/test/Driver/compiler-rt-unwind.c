@@ -2,7 +2,7 @@
 // --unwindlib=XXX properly.
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=libgcc \
+// RUN:     --target=x86_64-unknown-linux -rtlib=libgcc --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=RTLIB-GCC %s
 // RTLIB-GCC: "{{.*}}lgcc"
