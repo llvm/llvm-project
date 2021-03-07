@@ -149,13 +149,13 @@
 	.p2alignl 0 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.p2alignl 0 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:8: error: unexpected token in '.line' directive
+	// CHECK: [[#@LINE+1]]:8: error: expected newline
 	.line $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.line // EOL COMMENT
-	// CHECK: [[@LINE+1]]:10: error: unexpected token in '.line' directive
+	// CHECK: [[#@LINE+1]]:10: error: expected newline
 	.line 0 $
-	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
+	// CHECK-NOT: [[#@LINE+1]]:{{[0-9]+}}: error:
 	.line 0 // EOL COMMENT
 
 	.file 1 "hello"
@@ -175,9 +175,9 @@
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.cv_loc 1 1 // EOL COMMENT
 	
-	// CHECK: [[@LINE+1]]:28: error: unexpected token after '.bundle_lock' directive option
+	// CHECK: [[#@LINE+1]]:28: error: expected newline
 	.bundle_lock align_to_end $
-	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
+	// CHECK-NOT: [[#@LINE+1]]:{{[0-9]+}}: error:
 	.bundle_lock align_to_end // EOL COMMENT	
 	
 	// CHECK: [[@LINE+1]]:11: error: invalid token in expression in directive
@@ -237,9 +237,9 @@
 	.warning  $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.warning  // EOL COMMENT
-	// CHECK: [[@LINE+1]]:21: error: expected end of statement in '.warning' directive
+	// CHECK: [[#@LINE+1]]:21: error: expected newline
 	.warning "warning" $
-	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
+	// CHECK-NOT: [[#@LINE+1]]:{{[0-9]+}}: error:
 	.warning "warning" // EOL COMMENT
 
 
