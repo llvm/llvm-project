@@ -35,7 +35,7 @@ negative:
 trailer:
 	.rep 0 trailer
 
-# CHECK: error: unexpected token in '.rep' directive
+# CHECK: :[[#@LINE-2]]:9: error: expected newline
 # CHECK: 	.rep 0 trailer
 # CHECK:               ^
 

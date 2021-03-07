@@ -132,7 +132,7 @@ macro returns a nonzero value based on the year and month in which the attribute
 was voted into the working draft. See `WG21 SD-6
 <https://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations>`_
 for the list of values returned for standards-based attributes. If the attribute
-is not supported by the current compliation target, this macro evaluates to 0.
+is not supported by the current compilation target, this macro evaluates to 0.
 It can be used like this:
 
 .. code-block:: c++
@@ -1784,7 +1784,7 @@ Extension Specification, section 1.2
 
 This is not conformant behavior and it can only be used portably when the
 functions with variadic prototypes do not get generated in binary e.g. the
-variadic prototype is used to spesify a function type with any number of
+variadic prototype is used to specify a function type with any number of
 arguments in metaprogramming algorithms in C++ for OpenCL.
 
 This extensions can also be used when the kernel code is intended for targets
@@ -2495,7 +2495,7 @@ guarantees not to call any external functions. See LLVM IR `llvm.memcpy.inline
 <https://llvm.org/docs/LangRef.html#llvm-memcpy-inline-intrinsic>`_ intrinsic 
 for more information.
 
-This is useful to implement a custom version of ``memcpy``, implemement a
+This is useful to implement a custom version of ``memcpy``, implement a
 ``libc`` memcpy or work around the absence of a ``libc``.
 
 Note that the `size` argument must be a compile time constant.
