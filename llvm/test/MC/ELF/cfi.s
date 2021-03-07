@@ -1,5 +1,11 @@
+// RUN: llvm-mc -triple x86_64 %s | FileCheck %s --check-prefix=ASM
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S --sr --sd - | FileCheck %s
 // RUN: not llvm-mc -triple=x86_64 -o - -defsym=ERR=1 %s 2>&1 | FileCheck %s --check-prefix=ERR
+
+// ASM:      .cfi_lsda 3, bar
+// ASM-NEXT: nop
+// ASM:      .cfi_personality 0, foo
+// ASM-NEXT: .cfi_lsda 3, bar
 
 f1:
         .cfi_startproc
