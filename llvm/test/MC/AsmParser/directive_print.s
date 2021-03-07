@@ -1,5 +1,5 @@
-# RUN: not llvm-mc -triple i386-linux-gnu %s 2> %t.err | FileCheck %s
-# RUN: FileCheck < %t.err %s --check-prefix=CHECK-ERR
+# RUN: llvm-mc -triple i386 %s | FileCheck %s
+# RUN: not llvm-mc -triple i386 --defsym ERR=1 %s 2>&1 | FileCheck %s --check-prefix=ERR
 
 T1:
 # CHECK: e
@@ -7,12 +7,12 @@ T1:
 .print "e"
 .print "2.718281828459045235"
 
-T2:
-# CHECK-ERR: expected double quoted string after .print
+.ifdef ERR
+# CHECK-ERR: :[[#@LINE+2]]:8: expected double quoted string after .print
 .altmacro
 .print <pi>
 .noaltmacro
 
-T3:
-# CHECK-ERR: expected end of statement
+# ERR: :[[#@LINE+1]]:12: error: expected newline
 .print "a" "misplaced-string"
+.endif
