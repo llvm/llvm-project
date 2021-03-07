@@ -1,15 +1,15 @@
 // RUN: not llvm-mc -triple aarch64-none-eabi %s 2>&1 | FileCheck %s
 // RUN: not llvm-mc -triple aarch64-none-eabi %s 2>&1 | grep "error:" | count 60
 
-	// CHECK: [[@LINE+1]]:19: error: unexpected token in '.equ' directive
+	// CHECK: [[#@LINE+1]]:19: error: expected newline
 	.equ   ident1, 0 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.equ   ident1, 0 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:19: error: unexpected token in '.equiv' directive
+	// CHECK: [[#@LINE+1]]:19: error: expected newline
 	.equiv ident2, 0 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.equiv ident2, 0 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:19: error: unexpected token in '.set' directive
+	// CHECK: [[#@LINE+1]]:19: error: expected newline
 	.set   ident3, 0 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.set   ident3, 0 // EOL COMMENT
@@ -105,47 +105,47 @@
 	.dc.d 0 $		
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.dc.d 0 // EOL COMMENT		
-	// CHECK: [[@LINE+1]]:13: error: unexpected token in '.fill' directive
+	// CHECK: [[#@LINE+1]]:13: error: expected newline
 	.fill 1, 1 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.fill 1, 1 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:17: error: unexpected token in '.fill' directive
+	// CHECK: [[#@LINE+1]]:17: error: expected newline
 	.fill 1, 1, 10 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.fill 1, 1, 10 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:16: error: unexpected token in '.org' directive
+	// CHECK: [[#@LINE+1]]:16: error: expected newline
         .org 1 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
         .org 1 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:11: error: unexpected token in directive	
+	// CHECK: [[#@LINE+1]]:11: error: expected newline
 	.align 0 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.align 0 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:13: error: unexpected token in directive
+	// CHECK: [[#@LINE+1]]:13: error: expected newline
 	.align32 0 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.align32 0 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:12: error: unexpected token in directive
+	// CHECK: [[#@LINE+1]]:12: error: expected newline
 	.balign 0 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.balign 0 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:13: error: unexpected token in directive
+	// CHECK: [[#@LINE+1]]:13: error: expected newline
 	.balignw 0 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.balignw 0 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:13: error: unexpected token in directive
+	// CHECK: [[#@LINE+1]]:13: error: expected newline
 	.balignl 0 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.balignl 0 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:13: error: unexpected token in directive
+	// CHECK: [[#@LINE+1]]:13: error: expected newline
 	.p2align 0 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.p2align 0 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:14: error: unexpected token in directive
+	// CHECK: [[#@LINE+1]]:14: error: expected newline
 	.p2alignw 0 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.p2alignw 0 // EOL COMMENT
-	// CHECK: [[@LINE+1]]:14: error: unexpected token in directive
+	// CHECK: [[#@LINE+1]]:14: error: expected newline
 	.p2alignl 0 $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.p2alignl 0 // EOL COMMENT
@@ -248,7 +248,7 @@
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.cfi_startproc // EOL COMMENT
 	.cfi_endproc
-	// CHECK: [[@LINE+1]]:24: error: unexpected token in '.cfi_startproc' directive
+	// CHECK: [[#@LINE+1]]:24: error: expected newline
 	.cfi_startproc simple $
 	// CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.cfi_startproc simple // EOL COMMENT
