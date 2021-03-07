@@ -34,13 +34,21 @@ const RemoveFilenameTestcase TestCases[] =
     , {"/", "/"}
     , {"//", "//"}
     , {"///", "///"}
+#ifdef _WIN32
+    , {"\\", "\\"}
+#else
     , {"\\", ""}
+#endif
     , {".", ""}
     , {"..", ""}
     , {"/foo", "/"}
     , {"foo/bar", "foo/"}
     , {"foo/", "foo/"}
+#ifdef _WIN32
+    , {"//foo", "//foo"}
+#else
     , {"//foo", "//"}
+#endif
     , {"//foo/", "//foo/"}
     , {"//foo///", "//foo///"}
     , {"///foo", "///"}
@@ -49,7 +57,11 @@ const RemoveFilenameTestcase TestCases[] =
     , {"/foo/.", "/foo/"}
     , {"/foo/..", "/foo/"}
     , {"/foo/////", "/foo/////"}
+#ifdef _WIN32
+    , {"/foo\\\\", "/foo\\\\"}
+#else
     , {"/foo\\\\", "/"}
+#endif
     , {"/foo//\\/", "/foo//\\/"}
     , {"///foo", "///"}
     , {"file.txt", ""}
