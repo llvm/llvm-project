@@ -1005,6 +1005,8 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
       EnumerateType(I.getParamByValType());
     else if (I.hasAttribute(Attribute::StructRet))
       EnumerateType(I.getParamStructRetType());
+    else if (I.hasAttribute(Attribute::ByRef))
+      EnumerateType(I.getParamByRefType());
   }
   FirstFuncConstantID = Values.size();
 
