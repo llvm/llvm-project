@@ -138,7 +138,6 @@ define <8 x i8> @combine_trunc_v8i16_v8i8(<8 x i8> %a0, <8 x i16> %a1) {
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
 ; SSE2-NEXT:    psubusw %xmm1, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -146,21 +145,21 @@ define <8 x i8> @combine_trunc_v8i16_v8i8(<8 x i8> %a0, <8 x i16> %a1) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE41-NEXT:    psubusw %xmm1, %xmm0
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SSE41-NEXT:    packuswb %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: combine_trunc_v8i16_v8i8:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE42-NEXT:    psubusw %xmm1, %xmm0
-; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SSE42-NEXT:    packuswb %xmm0, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: combine_trunc_v8i16_v8i8:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = zext <8 x i8> %a0 to <8 x i16>
   %2 = call <8 x i16> @llvm.usub.sat.v8i16(<8 x i16> %1, <8 x i16> %a1)
