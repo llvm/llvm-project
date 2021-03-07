@@ -711,8 +711,8 @@ DWARF Expression Value
 ++++++++++++++++++++++
 
 A value has a type and a literal value. It can represent a literal value of any
-supported base type of the target architecture. The base type specifies the size
-and encoding of the literal value.
+supported base type of the target architecture. The base type specifies the
+size, encoding, and endianity of the literal value.
 
 .. note::
 
@@ -1271,24 +1271,9 @@ This section describes the operations that push values on the stack.
 
 Each value stack entry has a type and a literal value and can represent a
 literal value of any supported base type of the target architecture. The base
-type specifies the size and encoding of the literal value.
+type specifies the size, encoding, and endianity of the literal value.
 
-Instead of a base type, value stack entries can have a distinguished generic
-type, which is an integral type that has the size of an address in the target
-architecture default address space and unspecified signedness.
-
-*The generic type is the same as the unspecified type used for stack operations
-defined in DWARF Version 4 and before.*
-
-An integral type is a base type that has an encoding of ``DW_ATE_signed``,
-``DW_ATE_signed_char``, ``DW_ATE_unsigned``, ``DW_ATE_unsigned_char``,
-``DW_ATE_boolean``, or any target architecture defined integral encoding in the
-inclusive range ``DW_ATE_lo_user`` to ``DW_ATE_hi_user``.
-
-.. note::
-
-  Unclear if ``DW_ATE_address`` is an integral type. GDB does not seem to
-  consider it as integral.
+The base type of value stack entries can be the distinguished generic type.
 
 .. _amdgpu-dwarf-literal-operations:
 
@@ -2107,8 +2092,8 @@ implicit storage value starting at the bit offset.
 
     ``DW_OP_stack_value`` pops one stack entry that must be a value V.
 
-    An implicit location storage LS is created with the literal value V and a
-    size equal to V's base type size.
+    An implicit location storage LS is created with the literal value V using
+    the size, encoding, and enianity specified by V's base type.
 
     It pushes a location description L with one implicit location description SL
     on the stack. SL specifies LS with a bit offset of 0.
