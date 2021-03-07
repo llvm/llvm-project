@@ -84,10 +84,9 @@ int main(int, char**) {
     // [path.gen] lexically_proximate
     // Returns: If the value of lexically_relative(base) is not an empty path,
     // return it. Otherwise return *this.
-    const fs::path proximate_expected = output.native().empty() ? p
-        : output;
-    if (!PathEq(proximate_expected, proximate_output))
-      ReportErr("path::lexically_proximate", proximate_output, proximate_expected);
+    const fs::path proximate_expect = expect.empty() ? p : expect;
+    if (!PathEq(proximate_output, proximate_expect))
+      ReportErr("path::lexically_proximate", proximate_output, proximate_expect);
   }
   return Failed;
 }
