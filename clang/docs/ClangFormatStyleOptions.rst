@@ -37,7 +37,7 @@ The configuration file can consist of several sections each having different
 ``Language:`` parameter denoting the programming language this section of the
 configuration is targeted at. See the description of the **Language** option
 below for the list of supported languages. The first section may have no
-language set, it will set the default style options for all lanugages.
+language set, it will set the default style options for all languages.
 Configuration sections for specific language will override options set in the
 default section.
 
@@ -3713,7 +3713,7 @@ The result is:
           break;
       }
       if (condition)
-          do_somthing_completely_different();
+          do_something_completely_different();
 
       if (x == y)
       {
