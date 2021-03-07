@@ -694,8 +694,7 @@ define i32 @saddo.select.i32(i32 %v1, i32 %v2) {
 ; RV32-NEXT:    add a2, a0, a1
 ; RV32-NEXT:    slt a2, a2, a0
 ; RV32-NEXT:    slti a3, a1, 0
-; RV32-NEXT:    xor a2, a3, a2
-; RV32-NEXT:    bnez a2, .LBB22_2
+; RV32-NEXT:    bne a3, a2, .LBB22_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB22_2: # %entry
@@ -768,8 +767,7 @@ define i64 @saddo.select.i64(i64 %v1, i64 %v2) {
 ; RV64-NEXT:    add a2, a0, a1
 ; RV64-NEXT:    slt a2, a2, a0
 ; RV64-NEXT:    slti a3, a1, 0
-; RV64-NEXT:    xor a2, a3, a2
-; RV64-NEXT:    bnez a2, .LBB24_2
+; RV64-NEXT:    bne a3, a2, .LBB24_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB24_2: # %entry
@@ -815,8 +813,7 @@ define i32 @uaddo.select.i32(i32 %v1, i32 %v2) {
 ; RV32-LABEL: uaddo.select.i32:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    add a2, a0, a1
-; RV32-NEXT:    sltu a2, a2, a0
-; RV32-NEXT:    bnez a2, .LBB26_2
+; RV32-NEXT:    bltu a2, a0, .LBB26_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB26_2: # %entry
@@ -893,8 +890,7 @@ define i64 @uaddo.select.i64(i64 %v1, i64 %v2) {
 ; RV64-LABEL: uaddo.select.i64:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    add a2, a0, a1
-; RV64-NEXT:    sltu a2, a2, a0
-; RV64-NEXT:    bnez a2, .LBB28_2
+; RV64-NEXT:    bltu a2, a0, .LBB28_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB28_2: # %entry
@@ -939,8 +935,7 @@ define i32 @ssubo.select.i32(i32 %v1, i32 %v2) {
 ; RV32-NEXT:    sgtz a2, a1
 ; RV32-NEXT:    sub a3, a0, a1
 ; RV32-NEXT:    slt a3, a3, a0
-; RV32-NEXT:    xor a2, a2, a3
-; RV32-NEXT:    bnez a2, .LBB30_2
+; RV32-NEXT:    bne a2, a3, .LBB30_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB30_2: # %entry
@@ -1011,8 +1006,7 @@ define i64 @ssubo.select.i64(i64 %v1, i64 %v2) {
 ; RV64-NEXT:    sgtz a2, a1
 ; RV64-NEXT:    sub a3, a0, a1
 ; RV64-NEXT:    slt a3, a3, a0
-; RV64-NEXT:    xor a2, a2, a3
-; RV64-NEXT:    bnez a2, .LBB32_2
+; RV64-NEXT:    bne a2, a3, .LBB32_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB32_2: # %entry
@@ -1056,8 +1050,7 @@ define i32 @usubo.select.i32(i32 %v1, i32 %v2) {
 ; RV32-LABEL: usubo.select.i32:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    sub a2, a0, a1
-; RV32-NEXT:    sltu a2, a0, a2
-; RV32-NEXT:    bnez a2, .LBB34_2
+; RV32-NEXT:    bltu a0, a2, .LBB34_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB34_2: # %entry
@@ -1135,8 +1128,7 @@ define i64 @usubo.select.i64(i64 %v1, i64 %v2) {
 ; RV64-LABEL: usubo.select.i64:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    sub a2, a0, a1
-; RV64-NEXT:    sltu a2, a0, a2
-; RV64-NEXT:    bnez a2, .LBB36_2
+; RV64-NEXT:    bltu a0, a2, .LBB36_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB36_2: # %entry
@@ -1184,9 +1176,7 @@ define i32 @smulo.select.i32(i32 %v1, i32 %v2) {
 ; RV32-NEXT:    mulh a2, a0, a1
 ; RV32-NEXT:    mul a3, a0, a1
 ; RV32-NEXT:    srai a3, a3, 31
-; RV32-NEXT:    xor a2, a2, a3
-; RV32-NEXT:    snez a2, a2
-; RV32-NEXT:    bnez a2, .LBB38_2
+; RV32-NEXT:    bne a2, a3, .LBB38_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB38_2: # %entry
@@ -1279,9 +1269,7 @@ define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
 ; RV64-NEXT:    mulh a2, a0, a1
 ; RV64-NEXT:    mul a3, a0, a1
 ; RV64-NEXT:    srai a3, a3, 63
-; RV64-NEXT:    xor a2, a2, a3
-; RV64-NEXT:    snez a2, a2
-; RV64-NEXT:    bnez a2, .LBB40_2
+; RV64-NEXT:    bne a2, a3, .LBB40_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB40_2: # %entry
@@ -1328,7 +1316,6 @@ define i32 @umulo.select.i32(i32 %v1, i32 %v2) {
 ; RV32-LABEL: umulo.select.i32:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    mulhu a2, a0, a1
-; RV32-NEXT:    snez a2, a2
 ; RV32-NEXT:    bnez a2, .LBB42_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a1
@@ -1408,7 +1395,6 @@ define i64 @umulo.select.i64(i64 %v1, i64 %v2) {
 ; RV64-LABEL: umulo.select.i64:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    mulhu a2, a0, a1
-; RV64-NEXT:    snez a2, a2
 ; RV64-NEXT:    bnez a2, .LBB44_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
