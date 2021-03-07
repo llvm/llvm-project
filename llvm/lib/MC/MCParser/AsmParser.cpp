@@ -5782,14 +5782,16 @@ bool AsmParser::parseDirectivePrint(SMLoc DirectiveLoc) {
 }
 
 bool AsmParser::parseDirectiveAddrsig() {
+  if (parseToken(AsmToken::EndOfStatement))
+    return true;
   getStreamer().emitAddrsig();
   return false;
 }
 
 bool AsmParser::parseDirectiveAddrsigSym() {
   StringRef Name;
-  if (check(parseIdentifier(Name),
-            "expected identifier in '.addrsig_sym' directive"))
+  if (check(parseIdentifier(Name), "expected identifier") ||
+      parseToken(AsmToken::EndOfStatement))
     return true;
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
   getStreamer().emitAddrsigSym(Sym);
