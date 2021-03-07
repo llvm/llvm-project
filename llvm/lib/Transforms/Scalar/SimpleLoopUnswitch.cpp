@@ -38,6 +38,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
@@ -63,6 +64,7 @@
 #define DEBUG_TYPE "simple-loop-unswitch"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 STATISTIC(NumBranches, "Number of branches unswitched");
 STATISTIC(NumSwitches, "Number of switches unswitched");
@@ -116,6 +118,9 @@ collectHomogenousInstGraphLoopInvariants(Loop &L, Instruction &Root,
          "Only need to walk the graph if root itself is not invariant.");
   TinyPtrVector<Value *> Invariants;
 
+  bool IsRootAnd = match(&Root, m_LogicalAnd());
+  bool IsRootOr  = match(&Root, m_LogicalOr());
+
   // Build a worklist and recurse through operators collecting invariants.
   SmallVector<Instruction *, 4> Worklist;
   SmallPtrSet<Instruction *, 8> Visited;
@@ -136,12 +141,13 @@ collectHomogenousInstGraphLoopInvariants(Loop &L, Instruction &Root,
 
       // If not an instruction with the same opcode, nothing we can do.
       Instruction *OpI = dyn_cast<Instruction>(OpV);
-      if (!OpI || OpI->getOpcode() != Root.getOpcode())
-        continue;
 
-      // Visit this operand.
-      if (Visited.insert(OpI).second)
-        Worklist.push_back(OpI);
+      if (OpI && ((IsRootAnd && match(OpI, m_LogicalAnd())) ||
+                  (IsRootOr  && match(OpI, m_LogicalOr())))) {
+        // Visit this operand.
+        if (Visited.insert(OpI).second)
+          Worklist.push_back(OpI);
+      }
     }
   } while (!Worklist.empty());
 
@@ -416,10 +422,10 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // and the condition is a graph of `and` operations.
   if (!FullUnswitch) {
     if (ExitDirection) {
-      if (cast<Instruction>(BI.getCondition())->getOpcode() != Instruction::Or)
+      if (!match(BI.getCondition(), m_LogicalOr()))
         return false;
     } else {
-      if (cast<Instruction>(BI.getCondition())->getOpcode() != Instruction::And)
+      if (!match(BI.getCondition(), m_LogicalAnd()))
         return false;
     }
   }
@@ -497,13 +503,13 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     // Only unswitching a subset of inputs to the condition, so we will need to
     // build a new branch that merges the invariant inputs.
     if (ExitDirection)
-      assert(cast<Instruction>(BI.getCondition())->getOpcode() ==
-                 Instruction::Or &&
-             "Must have an `or` of `i1`s for the condition!");
+      assert(match(BI.getCondition(), m_LogicalOr()) &&
+             "Must have an `or` of `i1`s or `select i1 X, true, Y`s for the "
+             "condition!");
     else
-      assert(cast<Instruction>(BI.getCondition())->getOpcode() ==
-                 Instruction::And &&
-             "Must have an `and` of `i1`s for the condition!");
+      assert(match(BI.getCondition(), m_LogicalAnd()) &&
+             "Must have an `and` of `i1`s or `select i1 X, Y, false`s for the"
+             " condition!");
     buildPartialUnswitchConditionalBranch(*OldPH, Invariants, ExitDirection,
                                           *UnswitchedBB, *NewPH);
   }
@@ -1989,11 +1995,10 @@ static void unswitchNontrivialInvariants(
   bool Direction = true;
   int ClonedSucc = 0;
   if (!FullUnswitch) {
-    if (cast<Instruction>(BI->getCondition())->getOpcode() != Instruction::Or) {
-      assert(cast<Instruction>(BI->getCondition())->getOpcode() ==
-                 Instruction::And &&
-             "Only `or` and `and` instructions can combine invariants being "
-             "unswitched.");
+    if (!match(BI->getCondition(), m_LogicalOr())) {
+      assert(match(BI->getCondition(), m_LogicalAnd()) &&
+             "Only `or`, `and`, an `select` instructions can combine "
+             "invariants being unswitched.");
       Direction = false;
       ClonedSucc = 1;
     }
@@ -2646,8 +2651,7 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
     }
 
     Instruction &CondI = *cast<Instruction>(BI->getCondition());
-    if (CondI.getOpcode() != Instruction::And &&
-      CondI.getOpcode() != Instruction::Or)
+    if (!match(&CondI, m_CombineOr(m_LogicalAnd(), m_LogicalOr())))
       continue;
 
     TinyPtrVector<Value *> Invariants =
@@ -2759,18 +2763,16 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
         continue;
 
       // If this is a partial unswitch candidate, then it must be a conditional
-      // branch with a condition of either `or` or `and`. In that case, one of
-      // the successors is necessarily duplicated, so don't even try to remove
-      // its cost.
+      // branch with a condition of either `or`, `and`, or their corresponding
+      // select forms. In that case, one of the successors is necessarily
+      // duplicated, so don't even try to remove its cost.
       if (!FullUnswitch) {
         auto &BI = cast<BranchInst>(TI);
-        if (cast<Instruction>(BI.getCondition())->getOpcode() ==
-            Instruction::And) {
+        if (match(BI.getCondition(), m_LogicalAnd())) {
           if (SuccBB == BI.getSuccessor(1))
             continue;
         } else {
-          assert(cast<Instruction>(BI.getCondition())->getOpcode() ==
-                     Instruction::Or &&
+          assert(match(BI.getCondition(), m_LogicalOr()) &&
                  "Only `and` and `or` conditions can result in a partial "
                  "unswitch!");
           if (SuccBB == BI.getSuccessor(0))
