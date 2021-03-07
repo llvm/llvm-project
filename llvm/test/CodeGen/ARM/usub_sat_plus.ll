@@ -110,7 +110,6 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y, i16 zeroext %z) nounw
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:    movs r0, #0
 ; CHECK-T1-NEXT:  .LBB2_2:
-; CHECK-T1-NEXT:    uxth r0, r0
 ; CHECK-T1-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: func16:
@@ -120,7 +119,6 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y, i16 zeroext %z) nounw
 ; CHECK-T2-NEXT:    subs r0, r0, r1
 ; CHECK-T2-NEXT:    it lo
 ; CHECK-T2-NEXT:    movlo r0, #0
-; CHECK-T2-NEXT:    uxth r0, r0
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func16:
@@ -129,7 +127,6 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y, i16 zeroext %z) nounw
 ; CHECK-ARM-NEXT:    uxth r1, r1
 ; CHECK-ARM-NEXT:    subs r0, r0, r1
 ; CHECK-ARM-NEXT:    movlo r0, #0
-; CHECK-ARM-NEXT:    uxth r0, r0
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i16 %y, %z
   %tmp = call i16 @llvm.usub.sat.i16(i16 %x, i16 %a)
@@ -146,7 +143,6 @@ define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y, i8 zeroext %z) nounwind {
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:    movs r0, #0
 ; CHECK-T1-NEXT:  .LBB3_2:
-; CHECK-T1-NEXT:    uxtb r0, r0
 ; CHECK-T1-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: func8:
@@ -156,7 +152,6 @@ define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y, i8 zeroext %z) nounwind {
 ; CHECK-T2-NEXT:    subs r0, r0, r1
 ; CHECK-T2-NEXT:    it lo
 ; CHECK-T2-NEXT:    movlo r0, #0
-; CHECK-T2-NEXT:    uxtb r0, r0
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func8:
@@ -165,7 +160,6 @@ define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y, i8 zeroext %z) nounwind {
 ; CHECK-ARM-NEXT:    uxtb r1, r1
 ; CHECK-ARM-NEXT:    subs r0, r0, r1
 ; CHECK-ARM-NEXT:    movlo r0, #0
-; CHECK-ARM-NEXT:    uxtb r0, r0
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i8 %y, %z
   %tmp = call i8 @llvm.usub.sat.i8(i8 %x, i8 %a)
@@ -177,13 +171,12 @@ define zeroext i4 @func4(i4 zeroext %x, i4 zeroext %y, i4 zeroext %z) nounwind {
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    muls r1, r2, r1
 ; CHECK-T1-NEXT:    movs r2, #15
-; CHECK-T1-NEXT:    ands r1, r2
-; CHECK-T1-NEXT:    subs r0, r0, r1
+; CHECK-T1-NEXT:    ands r2, r1
+; CHECK-T1-NEXT:    subs r0, r0, r2
 ; CHECK-T1-NEXT:    bhs .LBB4_2
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:    movs r0, #0
 ; CHECK-T1-NEXT:  .LBB4_2:
-; CHECK-T1-NEXT:    ands r0, r2
 ; CHECK-T1-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: func4:
@@ -193,7 +186,6 @@ define zeroext i4 @func4(i4 zeroext %x, i4 zeroext %y, i4 zeroext %z) nounwind {
 ; CHECK-T2-NEXT:    subs r0, r0, r1
 ; CHECK-T2-NEXT:    it lo
 ; CHECK-T2-NEXT:    movlo r0, #0
-; CHECK-T2-NEXT:    and r0, r0, #15
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func4:
@@ -202,7 +194,6 @@ define zeroext i4 @func4(i4 zeroext %x, i4 zeroext %y, i4 zeroext %z) nounwind {
 ; CHECK-ARM-NEXT:    and r1, r1, #15
 ; CHECK-ARM-NEXT:    subs r0, r0, r1
 ; CHECK-ARM-NEXT:    movlo r0, #0
-; CHECK-ARM-NEXT:    and r0, r0, #15
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i4 %y, %z
   %tmp = call i4 @llvm.usub.sat.i4(i4 %x, i4 %a)
