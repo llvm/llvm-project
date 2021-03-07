@@ -36819,12 +36819,15 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
   EVT ShuffleVT = N.getValueType();
 
   auto IsMergeableWithShuffle = [](SDValue Op) {
-    // AllZeros/AllOnes constants are freely shuffled.
+    // AllZeros/AllOnes constants are freely shuffled and will peek through bitcasts.
+    // Other constant build vectors do not peek through bitcasts.
     return ISD::isBuildVectorAllOnes(Op.getNode()) ||
-           ISD::isBuildVectorAllZeros(Op.getNode());
+           ISD::isBuildVectorAllZeros(Op.getNode()) ||
+           ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
+           ISD::isBuildVectorOfConstantFPSDNodes(Op.getNode());
   };
   auto IsSafeToMoveShuffle = [ShuffleVT](SDValue Op, unsigned BinOp) {
-    // Ensure we only shuffle whole vector src elements, unless its logical
+    // Ensure we only shuffle whole vector src elements, unless its a logical
     // binops where we can more aggressively move shuffles from dst to src.
     return BinOp == ISD::AND || BinOp == ISD::OR || BinOp == ISD::XOR ||
            (Op.getScalarValueSizeInBits() <= ShuffleVT.getScalarSizeInBits());
@@ -36840,8 +36843,8 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
       SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(0));
       unsigned SrcOpcode = N0.getOpcode();
       if (TLI.isBinOp(SrcOpcode) && IsSafeToMoveShuffle(N0, SrcOpcode)) {
-        SDValue Op00 = N0.getOperand(0);
-        SDValue Op01 = N0.getOperand(1);
+        SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
+        SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
         if (IsMergeableWithShuffle(Op00) || IsMergeableWithShuffle(Op01)) {
           SDValue LHS, RHS;
           Op00 = DAG.getBitcast(ShuffleVT, Op00);
