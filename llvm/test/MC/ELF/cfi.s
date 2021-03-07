@@ -453,9 +453,9 @@ f37:
 
 // ERR: [[#@LINE+1]]:16: error: unexpected token in '.cfi_startproc' directive
 .cfi_startproc $
-// ERR: [[#@LINE+1]]:23: error: unexpected token in '.cfi_startproc' directive
+// ERR: [[#@LINE+1]]:23: error: expected newline in '.cfi_startproc' directive
 .cfi_startproc simple $
 
-// ERR: [[#@LINE+1]]:14: error: unexpected token in '.cfi_endproc' directive
+// ERR: [[#@LINE+1]]:14: error: expected newline in '.cfi_endproc' directive
 .cfi_endproc $
 .endif
