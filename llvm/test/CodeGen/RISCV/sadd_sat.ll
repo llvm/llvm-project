@@ -22,8 +22,7 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32I-NEXT:  .LBB0_2:
 ; RV32I-NEXT:    slt a2, a3, a2
 ; RV32I-NEXT:    slti a1, a1, 0
-; RV32I-NEXT:    xor a1, a1, a2
-; RV32I-NEXT:    bnez a1, .LBB0_4
+; RV32I-NEXT:    bne a1, a2, .LBB0_4
 ; RV32I-NEXT:  # %bb.3:
 ; RV32I-NEXT:    mv a0, a3
 ; RV32I-NEXT:  .LBB0_4:
@@ -57,8 +56,7 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32IZbb-NEXT:  .LBB0_2:
 ; RV32IZbb-NEXT:    slt a2, a3, a2
 ; RV32IZbb-NEXT:    slti a1, a1, 0
-; RV32IZbb-NEXT:    xor a1, a1, a2
-; RV32IZbb-NEXT:    bnez a1, .LBB0_4
+; RV32IZbb-NEXT:    bne a1, a2, .LBB0_4
 ; RV32IZbb-NEXT:  # %bb.3:
 ; RV32IZbb-NEXT:    mv a0, a3
 ; RV32IZbb-NEXT:  .LBB0_4:
@@ -114,8 +112,7 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV64I-NEXT:  .LBB1_2:
 ; RV64I-NEXT:    slt a2, a3, a2
 ; RV64I-NEXT:    slti a1, a1, 0
-; RV64I-NEXT:    xor a1, a1, a2
-; RV64I-NEXT:    bnez a1, .LBB1_4
+; RV64I-NEXT:    bne a1, a2, .LBB1_4
 ; RV64I-NEXT:  # %bb.3:
 ; RV64I-NEXT:    mv a0, a3
 ; RV64I-NEXT:  .LBB1_4:
@@ -157,8 +154,7 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV64IZbb-NEXT:  .LBB1_2:
 ; RV64IZbb-NEXT:    slt a2, a3, a2
 ; RV64IZbb-NEXT:    slti a1, a1, 0
-; RV64IZbb-NEXT:    xor a1, a1, a2
-; RV64IZbb-NEXT:    bnez a1, .LBB1_4
+; RV64IZbb-NEXT:    bne a1, a2, .LBB1_4
 ; RV64IZbb-NEXT:  # %bb.3:
 ; RV64IZbb-NEXT:    mv a0, a3
 ; RV64IZbb-NEXT:  .LBB1_4:
