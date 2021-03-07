@@ -2600,34 +2600,50 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return BinaryOperator::CreateAnd(CondVal, TrueVal);
     }
 
+    auto *One = ConstantInt::getTrue(SelType);
+    auto *Zero = ConstantInt::getFalse(SelType);
+
     // select a, false, b -> select !a, b, false
     if (match(TrueVal, m_Zero())) {
       Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
-      return SelectInst::Create(NotCond, FalseVal,
-                                ConstantInt::getFalse(SelType));
+      return SelectInst::Create(NotCond, FalseVal, Zero);
     }
     // select a, b, true -> select !a, true, b
     if (match(FalseVal, m_One())) {
       Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
-      return SelectInst::Create(NotCond, ConstantInt::getTrue(SelType),
-                                TrueVal);
+      return SelectInst::Create(NotCond, One, TrueVal);
     }
 
     // select a, a, b -> select a, true, b
     if (CondVal == TrueVal)
-      return replaceOperand(SI, 1, ConstantInt::getTrue(SelType));
+      return replaceOperand(SI, 1, One);
     // select a, b, a -> select a, b, false
     if (CondVal == FalseVal)
-      return replaceOperand(SI, 2, ConstantInt::getFalse(SelType));
+      return replaceOperand(SI, 2, Zero);
 
     // select a, !a, b -> select !a, b, false
     if (match(TrueVal, m_Not(m_Specific(CondVal))))
-      return SelectInst::Create(TrueVal, FalseVal,
-                                ConstantInt::getFalse(SelType));
+      return SelectInst::Create(TrueVal, FalseVal, Zero);
     // select a, b, !a -> select !a, true, b
     if (match(FalseVal, m_Not(m_Specific(CondVal))))
-      return SelectInst::Create(FalseVal, ConstantInt::getTrue(SelType),
-                                TrueVal);
+      return SelectInst::Create(FalseVal, One, TrueVal);
+
+    Value *A, *B;
+    // select (select a, true, b), true, b -> select a, true, b
+    if (match(CondVal, m_Select(m_Value(A), m_One(), m_Value(B))) &&
+        match(TrueVal, m_One()) && match(FalseVal, m_Specific(B)))
+      return replaceOperand(SI, 0, A);
+    // select (select a, b, false), b, false -> select a, b, false
+    if (match(CondVal, m_Select(m_Value(A), m_Value(B), m_Zero())) &&
+        match(TrueVal, m_Specific(B)) && match(FalseVal, m_Zero()))
+      return replaceOperand(SI, 0, A);
+
+    if (Value *S = SimplifyWithOpReplaced(TrueVal, CondVal, One, SQ,
+                                          /* AllowRefinement */ true))
+      return replaceOperand(SI, 1, S);
+    if (Value *S = SimplifyWithOpReplaced(FalseVal, CondVal, Zero, SQ,
+                                          /* AllowRefinement */ true))
+      return replaceOperand(SI, 2, S);
   }
 
   // Selecting between two integer or vector splat integer constants?
