@@ -3794,6 +3794,30 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     auto CCVal = static_cast<ISD::CondCode>(N->getConstantOperandVal(2));
     if (!ISD::isIntEqualitySetCC(CCVal))
       break;
+
+    // Fold (select_cc (setlt X, Y), 0, ne, trueV, falseV) ->
+    //      (select_cc X, Y, lt, trueV, falseV)
+    // Sometimes the setcc is introduced after select_cc has been formed.
+    if (LHS.getOpcode() == ISD::SETCC && isNullConstant(RHS) &&
+        LHS.getOperand(0).getValueType() == Subtarget.getXLenVT()) {
+      // If we're looking for eq 0 instead of ne 0, we need to invert the
+      // condition.
+      bool Invert = CCVal == ISD::SETEQ;
+      CCVal = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+      if (Invert)
+        CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
+
+      RHS = LHS.getOperand(1);
+      LHS = LHS.getOperand(0);
+      normaliseSetCC(LHS, RHS, CCVal);
+
+      SDLoc DL(N);
+      SDValue TargetCC = DAG.getConstant(CCVal, DL, Subtarget.getXLenVT());
+      return DAG.getNode(
+          RISCVISD::SELECT_CC, DL, N->getValueType(0),
+          {LHS, RHS, TargetCC, N->getOperand(3), N->getOperand(4)});
+    }
+
     // Fold (select_cc (xor X, Y), 0, eq/ne, trueV, falseV) ->
     //      (select_cc X, Y, eq/ne, trueV, falseV)
     if (LHS.getOpcode() == ISD::XOR && isNullConstant(RHS))
