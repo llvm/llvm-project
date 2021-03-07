@@ -1854,7 +1854,7 @@ Because the same entity can be defined multiple times in different modules,
 it is also possible for there to be multiple definitions of (for instance)
 a ``CXXRecordDecl``, all of which describe a definition of the same class.
 In such a case, only one of those "definitions" is considered by Clang to be
-the definiition of the class, and the others are treated as non-defining
+the definition of the class, and the others are treated as non-defining
 declarations that happen to also contain member declarations. Corresponding
 members in each definition of such multiply-defined classes are identified
 either by redeclaration chains (if the members are ``Redeclarable``)
