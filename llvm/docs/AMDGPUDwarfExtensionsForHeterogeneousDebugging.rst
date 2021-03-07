@@ -2390,13 +2390,13 @@ compatible with the definitions in DWARF Version 5.*
     .. note::
 
       Since these extensions allow location descriptions to be entries on the
-      stack, a simpler operation to create composite location descriptions. For
-      example, just one operation that specifies how many parts, and pops pairs
-      of stack entries for the part size and location description. Not only
-      would this be a simpler operation and avoid the complexities of incomplete
-      composite location descriptions, but it may also have a smaller encoding
-      in practice. However, the desire for compatibility with DWARF Version 5 is
-      likely a stronger consideration.
+      stack, a simpler operation to create composite location descriptions could
+      be defined. For example, just one operation that specifies how many parts,
+      and pops pairs of stack entries for the part size and location
+      description. Not only would this be a simpler operation and avoid the
+      complexities of incomplete composite location descriptions, but it may
+      also have a smaller encoding in practice. However, the desire for
+      compatibility with DWARF Version 5 is likely a stronger consideration.
 
 2.  ``DW_OP_bit_piece``
 
