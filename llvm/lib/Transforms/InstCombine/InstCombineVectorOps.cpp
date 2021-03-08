@@ -2287,7 +2287,6 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (isa<ScalableVectorType>(LHS->getType()))
     return nullptr;
 
-  // shuffle x, x, mask --> shuffle x, undef, mask'
   unsigned VWidth = cast<FixedVectorType>(SVI.getType())->getNumElements();
   unsigned LHSWidth = cast<FixedVectorType>(LHS->getType())->getNumElements();
   ArrayRef<int> Mask = SVI.getShuffleMask();
@@ -2323,6 +2322,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     }
   }
 
+  // shuffle x, x, mask --> shuffle x, undef, mask'
   if (LHS == RHS) {
     assert(!isa<UndefValue>(RHS) && "Shuffle with 2 undef ops not simplified?");
     // Remap any references to RHS to use LHS.
