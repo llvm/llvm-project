@@ -120,6 +120,10 @@ enum NodeType : unsigned {
   // and the fifth the VL.
   VSLIDEUP_VL,
   VSLIDEDOWN_VL,
+  // Matches the semantics of vslide1up. The first operand is the source
+  // vector, the second is the XLenVT scalar value. The third and fourth
+  // operands are the mask and VL operands.
+  VSLIDE1UP_VL,
   // Matches the semantics of the vid.v instruction, with a mask and VL
   // operand.
   VID_VL,
