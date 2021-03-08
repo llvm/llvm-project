@@ -160,6 +160,8 @@ def m_hexagon_Features_Group : OptionGroup<"<hexagon features group>">,
 // These are explicitly handled.
 def m_hexagon_Features_HVX_Group : OptionGroup<"<hexagon features group>">,
                                    Group<m_Group>, DocName<"Hexagon">;
+def m_m68k_Features_Group: OptionGroup<"<m68k features group>">,
+                           Group<m_Group>, DocName<"M68k">;
 def m_mips_Features_Group : OptionGroup<"<mips features group>">,
                             Group<m_Group>, DocName<"MIPS">;
 def m_ppc_Features_Group : OptionGroup<"<ppc features group>">,
@@ -3895,6 +3897,13 @@ def mnvs : Flag<["-"], "mnvs">, Group<m_hexagon_Features_Group>,
 def mno_nvs : Flag<["-"], "mno-nvs">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Disable generation of new-value stores">;
 
+// M68k features flags
+def m68000 : Flag<["-"], "m68000">, Group<m_m68k_Features_Group>;
+def m68010 : Flag<["-"], "m68010">, Group<m_m68k_Features_Group>;
+def m68020 : Flag<["-"], "m68020">, Group<m_m68k_Features_Group>;
+def m68030 : Flag<["-"], "m68030">, Group<m_m68k_Features_Group>;
+def m68040 : Flag<["-"], "m68040">, Group<m_m68k_Features_Group>;
+def m68060 : Flag<["-"], "m68060">, Group<m_m68k_Features_Group>;
 
 // X86 feature flags
 def mx87 : Flag<["-"], "mx87">, Group<m_x86_Features_Group>;
