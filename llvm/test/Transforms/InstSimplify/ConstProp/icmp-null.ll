@@ -110,7 +110,7 @@ define i1 @global_gep_ugt_null() {
 
 define i1 @global_gep_sgt_null() {
 ; CHECK-LABEL: @global_gep_sgt_null(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp sgt ([2 x i32]* getelementptr inbounds ([2 x i32], [2 x i32]* @g, i64 1), [2 x i32]* null)
 ;
   %gep = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 1
   %cmp = icmp sgt [2 x i32]* %gep, null
@@ -137,7 +137,7 @@ define i1 @null_gep_ugt_null() {
 
 define i1 @null_gep_sgt_null() {
 ; CHECK-LABEL: @null_gep_sgt_null(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp sgt (i8* getelementptr (i8, i8* null, i64 ptrtoint (i32* @g2 to i64)), i8* null)
 ;
   %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2 to i64)
   %cmp = icmp sgt i8* %gep, null
@@ -164,7 +164,7 @@ define i1 @null_gep_ult_global() {
 
 define i1 @null_gep_slt_global() {
 ; CHECK-LABEL: @null_gep_slt_global(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp slt ([2 x i32]* getelementptr ([2 x i32], [2 x i32]* null, i64 ptrtoint (i32* @g2 to i64)), [2 x i32]* @g)
 ;
   %gep = getelementptr [2 x i32], [2 x i32]* null, i64 ptrtoint (i32* @g2 to i64)
   %cmp = icmp slt [2 x i32]* %gep, @g
@@ -191,7 +191,7 @@ define i1 @global_gep_ugt_global() {
 
 define i1 @global_gep_sgt_global() {
 ; CHECK-LABEL: @global_gep_sgt_global(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp sgt ([2 x i32]* getelementptr inbounds ([2 x i32], [2 x i32]* @g, i64 1), [2 x i32]* @g)
 ;
   %gep = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 1
   %cmp = icmp sgt [2 x i32]* %gep, @g
@@ -209,7 +209,7 @@ define i1 @global_gep_ugt_global_neg_offset() {
 
 define i1 @global_gep_sgt_global_neg_offset() {
 ; CHECK-LABEL: @global_gep_sgt_global_neg_offset(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp sgt ([2 x i32]* getelementptr ([2 x i32], [2 x i32]* @g, i64 -1), [2 x i32]* @g)
 ;
   %gep = getelementptr [2 x i32], [2 x i32]* @g, i64 -1
   %cmp = icmp sgt [2 x i32]* %gep, @g
