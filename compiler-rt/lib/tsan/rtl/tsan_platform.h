@@ -23,9 +23,21 @@
 
 namespace __tsan {
 
+#if defined(__x86_64__)
+#define HAS_48_BIT_ADDRESS_SPACE 1
+#elif SANITIZER_IOSSIM // arm64 iOS simulators (order of #if matters)
+#define HAS_48_BIT_ADDRESS_SPACE 1
+#elif SANITIZER_IOS // arm64 iOS devices (order of #if matters)
+#define HAS_48_BIT_ADDRESS_SPACE 0
+#elif SANITIZER_MAC // arm64 macOS (order of #if matters)
+#define HAS_48_BIT_ADDRESS_SPACE 1
+#else
+#define HAS_48_BIT_ADDRESS_SPACE 0
+#endif
+
 #if !SANITIZER_GO
 
-#if defined(__x86_64__)
+#if HAS_48_BIT_ADDRESS_SPACE
 /*
 C/C++ on linux/x86_64 and freebsd/x86_64
 0000 0000 1000 - 0080 0000 0000: main binary and/or MAP_32BIT mappings (512GB)
@@ -146,7 +158,7 @@ struct Mapping {
   static const uptr kVdsoBeg       = 0x7000000000000000ull;
 };
 
-#elif defined(__aarch64__)
+#elif defined(__aarch64__) && !defined(__APPLE__)
 // AArch64 supports multiple VMA which leads to multiple address transformation
 // functions.  To support these multiple VMAS transformations and mappings TSAN
 // runtime for AArch64 uses an external memory read (vmaSize) to select which
@@ -354,7 +366,7 @@ struct Mapping47 {
 #define TSAN_RUNTIME_VMA 1
 #endif
 
-#elif SANITIZER_GO && !SANITIZER_WINDOWS && defined(__x86_64__)
+#elif SANITIZER_GO && !SANITIZER_WINDOWS && HAS_48_BIT_ADDRESS_SPACE
 
 /* Go on linux, darwin and freebsd on x86_64
 0000 0000 1000 - 0000 1000 0000: executable
