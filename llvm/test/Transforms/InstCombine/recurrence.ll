@@ -89,9 +89,8 @@ define i64 @test_and(i64 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[A:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = and i64 [[IV]], 15
-; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT]])
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[A:%.*]], 15
+; CHECK-NEXT:    tail call void @use(i64 [[TMP0]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -110,9 +109,8 @@ define i64 @test_and2(i64 %a, i64 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[A:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = and i64 [[IV]], [[B:%.*]]
-; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT]])
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    tail call void @use(i64 [[TMP0]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -130,9 +128,8 @@ define i64 @test_and3(i64 %a, i64 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[A:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = and i64 [[IV]], [[B:%.*]]
-; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT]])
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    tail call void @use(i64 [[TMP0]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
