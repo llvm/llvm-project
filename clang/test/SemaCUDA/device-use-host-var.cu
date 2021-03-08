@@ -5,37 +5,96 @@
 
 #include "Inputs/cuda.h"
 
-int global_host_var;
+struct A {
+  int x;
+  static int host_var;
+};
+
+int A::host_var;
+
+namespace X {
+  int host_var;
+}
+
+static int static_host_var;
+
 __device__ int global_dev_var;
 __constant__ int global_constant_var;
 __shared__ int global_shared_var;
-constexpr int global_constexpr_var = 1;
+
+int global_host_var;
 const int global_const_var = 1;
+constexpr int global_constexpr_var = 1;
+
+int global_host_array[2] = {1, 2};
+const int global_const_array[2] = {1, 2};
+constexpr int global_constexpr_array[2] = {1, 2};
+
+A global_host_struct_var{1};
+const A global_const_struct_var{1};
+constexpr A global_constexpr_struct_var{1};
 
 template<typename F>
 __global__ void kernel(F f) { f(); } // dev-note2 {{called by 'kernel<(lambda}}
 
 __device__ void dev_fun(int *out) {
-  int &ref_host_var = global_host_var; // dev-error {{reference to __host__ variable 'global_host_var' in __device__ function}}
+  // Check access device variables are allowed.
   int &ref_dev_var = global_dev_var;
   int &ref_constant_var = global_constant_var;
   int &ref_shared_var = global_shared_var;
-  const int &ref_constexpr_var = global_constexpr_var;
-  const int &ref_const_var = global_const_var;
-
-  *out = global_host_var; // dev-error {{reference to __host__ variable 'global_host_var' in __device__ function}}
-  *out = global_dev_var;
-  *out = global_constant_var;
-  *out = global_shared_var;
-  *out = global_constexpr_var;
-  *out = global_const_var;
-
-  *out = ref_host_var;
   *out = ref_dev_var;
   *out = ref_constant_var;
   *out = ref_shared_var;
+  *out = global_dev_var;
+  *out = global_constant_var;
+  *out = global_shared_var;
+
+  // Check access of non-const host variables are not allowed.
+  *out = global_host_var; // dev-error {{reference to __host__ variable 'global_host_var' in __device__ function}}
+  *out = global_const_var;
+  *out = global_constexpr_var;
+  global_host_var = 1; // dev-error {{reference to __host__ variable 'global_host_var' in __device__ function}}
+
+  // Check reference of non-constexpr host variables are not allowed.
+  int &ref_host_var = global_host_var; // dev-error {{reference to __host__ variable 'global_host_var' in __device__ function}}
+  const int &ref_const_var = global_const_var; // dev-error {{reference to __host__ variable 'global_const_var' in __device__ function}}
+  const int &ref_constexpr_var = global_constexpr_var;
+  *out = ref_host_var;
   *out = ref_constexpr_var;
   *out = ref_const_var;
+
+  // Check access member of non-constexpr struct type host variable is not allowed.
+  *out = global_host_struct_var.x; // dev-error {{reference to __host__ variable 'global_host_struct_var' in __device__ function}}
+  *out = global_const_struct_var.x; // dev-error {{reference to __host__ variable 'global_const_struct_var' in __device__ function}}
+  *out = global_constexpr_struct_var.x;
+  global_host_struct_var.x = 1; // dev-error {{reference to __host__ variable 'global_host_struct_var' in __device__ function}}
+
+  // Check address taking of non-constexpr host variables is not allowed.
+  int *p = &global_host_var; // dev-error {{reference to __host__ variable 'global_host_var' in __device__ function}}
+  const int *cp = &global_const_var; // dev-error {{reference to __host__ variable 'global_const_var' in __device__ function}}
+  const int *cp2 = &global_constexpr_var;
+
+  // Check access elements of non-constexpr host array is not allowed.
+  *out = global_host_array[1]; // dev-error {{reference to __host__ variable 'global_host_array' in __device__ function}}
+  *out = global_const_array[1]; // dev-error {{reference to __host__ variable 'global_const_array' in __device__ function}}
+  *out = global_constexpr_array[1];
+
+  // Check ODR-use of host variables in namespace is not allowed.
+  *out = X::host_var; // dev-error {{reference to __host__ variable 'host_var' in __device__ function}}
+
+  // Check ODR-use of static host varables in class or file scope is not allowed.
+  *out = A::host_var; // dev-error {{reference to __host__ variable 'host_var' in __device__ function}}
+  *out = static_host_var; // dev-error {{reference to __host__ variable 'static_host_var' in __device__ function}}
+
+  // Check function-scope static variable is allowed.
+  static int static_var;
+  *out = static_var;
+
+  // Check non-ODR use of host varirables are allowed.
+  *out = sizeof(global_host_var);
+  *out = sizeof(global_host_struct_var.x);
+  decltype(global_host_var) var1;
+  decltype(global_host_struct_var.x) var2;
 }
 
 __global__ void global_fun(int *out) {
@@ -44,7 +103,7 @@ __global__ void global_fun(int *out) {
   int &ref_constant_var = global_constant_var;
   int &ref_shared_var = global_shared_var;
   const int &ref_constexpr_var = global_constexpr_var;
-  const int &ref_const_var = global_const_var;
+  const int &ref_const_var = global_const_var; // dev-error {{reference to __host__ variable 'global_const_var' in __global__ function}}
 
   *out = global_host_var; // dev-error {{reference to __host__ variable 'global_host_var' in __global__ function}}
   *out = global_dev_var;
@@ -67,7 +126,7 @@ __host__ __device__ void host_dev_fun(int *out) {
   int &ref_constant_var = global_constant_var;
   int &ref_shared_var = global_shared_var;
   const int &ref_constexpr_var = global_constexpr_var;
-  const int &ref_const_var = global_const_var;
+  const int &ref_const_var = global_const_var; // dev-error {{reference to __host__ variable 'global_const_var' in __host__ __device__ function}}
 
   *out = global_host_var; // dev-error {{reference to __host__ variable 'global_host_var' in __host__ __device__ function}}
   *out = global_dev_var;
@@ -114,7 +173,7 @@ void dev_lambda_capture_by_ref(int *out) {
   int &ref_constant_var = global_constant_var;
   int &ref_shared_var = global_shared_var;
   const int &ref_constexpr_var = global_constexpr_var;
-  const int &ref_const_var = global_const_var;
+  const int &ref_const_var = global_const_var; // dev-error {{reference to __host__ variable 'global_const_var' in __host__ __device__ function}}
 
   *out = global_host_var; // dev-error {{reference to __host__ variable 'global_host_var' in __host__ __device__ function}}
                           // dev-error@-1 {{capture host variable 'out' by reference in device or host device lambda function}}
@@ -140,7 +199,7 @@ void dev_lambda_capture_by_copy(int *out) {
   int &ref_constant_var = global_constant_var;
   int &ref_shared_var = global_shared_var;
   const int &ref_constexpr_var = global_constexpr_var;
-  const int &ref_const_var = global_const_var;
+  const int &ref_const_var = global_const_var; // dev-error {{reference to __host__ variable 'global_const_var' in __host__ __device__ function}}
 
   *out = global_host_var; // dev-error {{reference to __host__ variable 'global_host_var' in __host__ __device__ function}}
   *out = global_dev_var;
@@ -166,7 +225,7 @@ void dev_lambda_capture_by_copy(int *out) {
 template <class, int = 1, int = 1>
 struct __attribute__((device_builtin_texture_type)) texture {
   static texture<int> ref;
-  __device__ int c() {
+  __device__ void c() {
     auto &x = ref;
   }
 };
@@ -174,7 +233,40 @@ struct __attribute__((device_builtin_texture_type)) texture {
 template <class, int = 1, int = 1>
 struct  not_a_texture {
   static not_a_texture<int> ref;
-  __device__ int c() {
+  __device__ void c() {
     auto &x = ref; // dev-error {{reference to __host__ variable 'ref' in __device__ function}}
   }
 };
+
+template<>
+not_a_texture<int> not_a_texture<int>::ref;
+
+__device__ void test_not_a_texture() {
+  not_a_texture<int> inst;
+  inst.c(); // dev-note {{in instantiation of member function 'not_a_texture<int, 1, 1>::c' requested here}}
+}
+
+// Test static variable in host function used by device function.
+void test_static_var_host() {
+  for (int i = 0; i < 10; i++) {
+    static int x;
+    struct A {
+      __device__ int f() {
+        return x; // dev-error{{reference to __host__ variable 'x' in __device__ function}}
+      }
+    };
+  }
+}
+
+// Test static variable in device function used by device function.
+__device__ void test_static_var_device() {
+  for (int i = 0; i < 10; i++) {
+    static int x;
+    int y = x;
+    struct A {
+      __device__ int f() {
+        return x;
+      }
+    };
+  }
+}
