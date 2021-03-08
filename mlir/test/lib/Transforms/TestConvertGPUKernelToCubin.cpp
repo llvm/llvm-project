@@ -52,4 +52,4 @@ void registerTestConvertGPUKernelToCubinPass() {
 }
 } // namespace test
 } // namespace mlir
-#endif
+#endif // MLIR_CUDA_CONVERSIONS_ENABLED
