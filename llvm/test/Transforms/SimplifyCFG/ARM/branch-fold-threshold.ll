@@ -9,7 +9,7 @@ define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d, i32* %input) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[D:%.*]], 3
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[C:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[ADD]], [[B:%.*]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[CMP1]], i1 false
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP1]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[COND_FALSE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[INPUT:%.*]], align 4
@@ -42,7 +42,7 @@ define i32 @foo_minsize(i32 %a, i32 %b, i32 %c, i32 %d, i32* %input) #0 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[D:%.*]], 3
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[C:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[ADD]], [[B:%.*]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[CMP1]], i1 false
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP1]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[COND_FALSE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[INPUT:%.*]], align 4
@@ -75,7 +75,7 @@ define i32 @foo_minsize_i64(i64 %a, i64 %b, i64 %c, i64 %d, i32* %input) #0 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[D:%.*]], 3
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[C:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[ADD]], [[B:%.*]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[CMP1]], i1 false
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP1]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[COND_FALSE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[INPUT:%.*]], align 4
@@ -108,7 +108,7 @@ define i32 @or_predicate(i32 %a, i32 %b, i32 %c, i32 %d, i32* %input) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[D:%.*]], 3
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[C:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[ADD]], [[B:%.*]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 true, i1 [[CMP1]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[INPUT:%.*]], align 4
@@ -141,7 +141,7 @@ define i32 @or_invert_predicate(i32 %a, i32 %b, i32 %c, i32 %d, i32* %input) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[D:%.*]], 3
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[C:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[ADD]], [[B:%.*]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 true, i1 [[CMP1]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[INPUT:%.*]], align 4
@@ -189,7 +189,7 @@ define i32 @or_predicate_minsize(i32 %a, i32 %b, i32 %c, i32 %d, i32* %input) #0
 ; ARM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[D:%.*]], 3
 ; ARM-NEXT:    [[ADD:%.*]] = add nsw i32 [[C:%.*]], [[A:%.*]]
 ; ARM-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[ADD]], [[B:%.*]]
-; ARM-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 true, i1 [[CMP1]]
+; ARM-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
 ; ARM-NEXT:    br i1 [[OR_COND]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; ARM:       cond.false:
 ; ARM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[INPUT:%.*]], align 4
@@ -237,7 +237,7 @@ define i32 @or_invert_predicate_minsize(i32 %a, i32 %b, i32 %c, i32 %d, i32* %in
 ; ARM-NEXT:    [[CMP:%.*]] = icmp sle i32 [[D:%.*]], 3
 ; ARM-NEXT:    [[ADD:%.*]] = add nsw i32 [[C:%.*]], [[A:%.*]]
 ; ARM-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[ADD]], [[B:%.*]]
-; ARM-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 true, i1 [[CMP1]]
+; ARM-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
 ; ARM-NEXT:    br i1 [[OR_COND]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; ARM:       cond.false:
 ; ARM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[INPUT:%.*]], align 4
@@ -270,7 +270,7 @@ define i32 @or_xor_predicate(i32 %a, i32 %b, i32 %c, i32 %d, i32* %input, i1 %cm
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = xor i1 [[CMP:%.*]], true
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[C:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[ADD]], [[B:%.*]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP_NOT]], i1 true, i1 [[CMP1]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP_NOT]], [[CMP1]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[INPUT:%.*]], align 4
@@ -316,7 +316,7 @@ define i32 @or_xor_predicate_minsize(i32 %a, i32 %b, i32 %c, i32 %d, i32* %input
 ; ARM-NEXT:    [[CMP_NOT:%.*]] = xor i1 [[CMP:%.*]], true
 ; ARM-NEXT:    [[ADD:%.*]] = add nsw i32 [[C:%.*]], [[A:%.*]]
 ; ARM-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[ADD]], [[B:%.*]]
-; ARM-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP_NOT]], i1 true, i1 [[CMP1]]
+; ARM-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP_NOT]], [[CMP1]]
 ; ARM-NEXT:    br i1 [[OR_COND]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; ARM:       cond.false:
 ; ARM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[INPUT:%.*]], align 4
@@ -348,7 +348,7 @@ define i32 @and_xor(i32 %a, i32 %b, i32 %c, i32 %d, i32* %input, i1 %cmp) {
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = xor i1 [[CMP:%.*]], true
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[C:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[ADD]], [[B:%.*]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP_NOT]], i1 [[CMP1]], i1 false
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP_NOT]], [[CMP1]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[COND_FALSE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[INPUT:%.*]], align 4
@@ -394,7 +394,7 @@ define i32 @and_xor_minsize(i32 %a, i32 %b, i32 %c, i32 %d, i32* %input, i1 %cmp
 ; ARM-NEXT:    [[CMP_NOT:%.*]] = xor i1 [[CMP:%.*]], true
 ; ARM-NEXT:    [[ADD:%.*]] = add nsw i32 [[C:%.*]], [[A:%.*]]
 ; ARM-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[ADD]], [[B:%.*]]
-; ARM-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP_NOT]], i1 [[CMP1]], i1 false
+; ARM-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP_NOT]], [[CMP1]]
 ; ARM-NEXT:    br i1 [[OR_COND]], label [[COND_FALSE:%.*]], label [[COND_END:%.*]]
 ; ARM:       cond.false:
 ; ARM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[INPUT:%.*]], align 4
