@@ -331,9 +331,14 @@ void AsyncDialect::printType(Type type, DialectAsmPrinter &os) const {
 
 /// Parse a type registered to this dialect.
 Type AsyncDialect::parseType(DialectAsmParser &parser) const {
-  StringRef mnemonic;
-  if (parser.parseKeyword(&mnemonic))
+  StringRef typeTag;
+  if (parser.parseKeyword(&typeTag))
     return Type();
-
-  return generatedTypeParser(getContext(), parser, mnemonic);
+  Type genType;
+  auto parseResult = generatedTypeParser(parser.getBuilder().getContext(),
+                                         parser, typeTag, genType);
+  if (parseResult.hasValue())
+    return genType;
+  parser.emitError(parser.getNameLoc(), "unknown async type: ") << typeTag;
+  return {};
 }

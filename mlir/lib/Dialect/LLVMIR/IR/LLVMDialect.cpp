@@ -2533,11 +2533,14 @@ Attribute LLVMDialect::parseAttribute(DialectAsmParser &parser,
   StringRef attrKind;
   if (parser.parseKeyword(&attrKind))
     return {};
-  if (auto attr =
-          generatedAttributeParser(getContext(), parser, attrKind, type))
-    return attr;
-
-  parser.emitError(parser.getNameLoc(), "Unknown attribute type: ") << attrKind;
+  {
+    Attribute attr;
+    auto parseResult =
+        generatedAttributeParser(getContext(), parser, attrKind, type, attr);
+    if (parseResult.hasValue())
+      return attr;
+  }
+  parser.emitError(parser.getNameLoc(), "unknown attribute type: ") << attrKind;
   return {};
 }
 
