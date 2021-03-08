@@ -166,27 +166,27 @@ struct logical_not : unary_function<T, bool>
 };
 
 template <class T> // <class T=void> in C++14
-struct bit_and : unary_function<T, bool>
+struct bit_and : binary_function<T, T, T>
 {
-    bool operator()(const T& x, const T& y) const;
+    T operator()(const T& x, const T& y) const;
 };
 
 template <class T> // <class T=void> in C++14
-struct bit_or : unary_function<T, bool>
+struct bit_or : binary_function<T, T, T>
 {
-    bool operator()(const T& x, const T& y) const;
+    T operator()(const T& x, const T& y) const;
 };
 
 template <class T> // <class T=void> in C++14
-struct bit_xor : unary_function<T, bool>
+struct bit_xor : binary_function<T, T, T>
 {
-    bool operator()(const T& x, const T& y) const;
+    T operator()(const T& x, const T& y) const;
 };
 
 template <class T=void> // C++14
-struct bit_xor : unary_function<T, bool>
+struct bit_not : unary_function<T, T>
 {
-    bool operator()(const T& x) const;
+    T operator()(const T& x) const;
 };
 
 template <class Predicate>
