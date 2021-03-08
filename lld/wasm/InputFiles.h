@@ -119,7 +119,8 @@ public:
   void dumpInfo() const;
 
   uint32_t calcNewIndex(const WasmRelocation &reloc) const;
-  uint64_t calcNewValue(const WasmRelocation &reloc, uint64_t tombstone) const;
+  uint64_t calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
+                        const InputChunk *chunk) const;
   uint64_t calcNewAddend(const WasmRelocation &reloc) const;
   uint64_t calcExpectedValue(const WasmRelocation &reloc) const;
   Symbol *getSymbol(const WasmRelocation &reloc) const {

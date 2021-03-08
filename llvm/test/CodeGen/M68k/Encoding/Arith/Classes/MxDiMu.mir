@@ -1,0 +1,48 @@
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=SDIVD32D16,UDIVD32D16,SMULD32D16,UMULD32D16
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=SDIVD32I16,UDIVD32I16,SMULD32I16,UMULD32I16
+
+#------------------------------------------------------------------------------
+# MxDiMu is used for sign/unsigned division/multiply of word size data
+#------------------------------------------------------------------------------
+
+
+#                  ---------------------------------------------------------------
+#                   F   E   D   C | B   A   9 | 8   7   6 | 5   4   3 | 2   1   0
+#                  ---------------------------------------------------------------
+#                   x   x   x   x |    REG    |   OPMODE  |    MODE   |    REG
+#                  ---------------------------------------------------------------
+# SDIVD32D16:       1   0   0   0   0   0   0   1 . 1   1   0   0   0   0   0   1
+#                  ---------------------------------------------------------------
+# UDIVD32D16-SAME:  1   0   0   0   0   0   0   0 . 1   1   0   0   0   0   0   1
+#                  ---------------------------------------------------------------
+# SDIVD32I16:       1   0   0   0   0   0   0   1 . 1   1   1   1   1   1   0   0
+# SDIVD32I16-SAME:  0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#                  ---------------------------------------------------------------
+# UDIVD32I16-SAME:  1   0   0   0   0   0   0   0 . 1   1   1   1   1   1   0   0
+# UDIVD32I16-SAME:  1   1   1   1   1   1   1   1 . 1   1   1   1   1   1   1   1
+#                  ---------------------------------------------------------------
+# SMULD32D16-SAME:  1   1   0   0   0   0   0   1 . 1   1   0   0   0   0   0   1
+#                  ---------------------------------------------------------------
+# UMULD32D16-SAME:  1   1   0   0   0   0   0   0 . 1   1   0   0   0   0   0   1
+#                  ---------------------------------------------------------------
+# SMULD32I16-SAME:  1   1   0   0   0   0   0   1 . 1   1   1   1   1   1   0   0
+# SMULD32I16-SAME:  0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#                  ---------------------------------------------------------------
+# UMULD32I16-SAME:  1   1   0   0   0   0   0   0 . 1   1   1   1   1   1   0   0
+# UMULD32I16-SAME:  1   1   1   1   1   1   1   1 . 1   1   1   1   1   1   1   1
+#                  ---------------------------------------------------------------
+name: MxDiMu
+body: |
+  bb.0:
+    $d0 = SDIVd32d16 $d0, $wd1, implicit-def $ccr
+    $d0 = UDIVd32d16 $d0, $wd1, implicit-def $ccr
+    $d0 = SDIVd32i16 $d0,    0, implicit-def $ccr
+    $d0 = UDIVd32i16 $d0,   -1, implicit-def $ccr
+    $d0 = SMULd32d16 $d0, $wd1, implicit-def $ccr
+    $d0 = UMULd32d16 $d0, $wd1, implicit-def $ccr
+    $d0 = SMULd32i16 $d0,    0, implicit-def $ccr
+    $d0 = UMULd32i16 $d0,   -1, implicit-def $ccr

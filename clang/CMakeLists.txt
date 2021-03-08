@@ -262,8 +262,6 @@ set(CLANG_DEFAULT_UNWINDLIB "" CACHE STRING
 if (CLANG_DEFAULT_UNWINDLIB STREQUAL "")
   if (CLANG_DEFAULT_RTLIB STREQUAL "libgcc")
     set (CLANG_DEFAULT_UNWINDLIB "libgcc" CACHE STRING "" FORCE)
-  elseif (CLANG_DEFAULT_RTLIB STREQUAL "compiler-rt")
-    set (CLANG_DEFAULT_UNWINDLIB "none" CACHE STRING "" FORCE)
   endif()
 endif()
 
@@ -273,7 +271,7 @@ if (NOT(CLANG_DEFAULT_UNWINDLIB STREQUAL "" OR
         CLANG_DEFAULT_UNWINDLIB STREQUAL "libunwind"))
   message(WARNING "Resetting default unwindlib to use platform default")
   set(CLANG_DEFAULT_UNWINDLIB "" CACHE STRING
-    "Default unwind library to use (\"none\" \"libgcc\" or \"libunwind\", empty for none)" FORCE)
+    "Default unwind library to use (\"none\" \"libgcc\" or \"libunwind\", empty to match runtime library.)" FORCE)
 endif()
 
 set(CLANG_DEFAULT_OBJCOPY "objcopy" CACHE STRING

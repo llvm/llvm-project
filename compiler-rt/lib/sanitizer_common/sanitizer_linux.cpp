@@ -1338,17 +1338,41 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                     int *parent_tidptr, void *newtls, int *child_tidptr) {
   if (!fn || !child_stack)
     return -EINVAL;
-  CHECK_EQ(0, (uptr)child_stack % 16);
-  child_stack = (char *)child_stack - 2 * sizeof(unsigned long long);
-  ((unsigned long long *)child_stack)[0] = (uptr)fn;
-  ((unsigned long long *)child_stack)[1] = (uptr)arg;
 
-  int tid = internal_syscall(SYSCALL(clone), (unsigned long)flags, child_stack,
-                             parent_tidptr, newtls, child_tidptr);
-  if (tid != 0)
-    return tid;
-  fn(arg);
-  internal_syscall(SYSCALL(exit), 0);
+  CHECK_EQ(0, (uptr)child_stack % 16);
+
+  register int res __asm__("a0");
+  register int __flags __asm__("a0") = flags;
+  register void *__stack __asm__("a1") = child_stack;
+  register int *__ptid __asm__("a2") = parent_tidptr;
+  register void *__tls __asm__("a3") = newtls;
+  register int *__ctid __asm__("a4") = child_tidptr;
+  register int (*__fn)(void *) __asm__("a5") = fn;
+  register void *__arg __asm__("a6") = arg;
+  register int nr_clone __asm__("a7") = __NR_clone;
+
+  __asm__ __volatile__(
+      "ecall\n"
+
+      /* if (a0 != 0)
+       *   return a0;
+       */
+      "bnez a0, 1f\n"
+
+      // In the child, now. Call "fn(arg)".
+      "mv a0, a6\n"
+      "jalr a5\n"
+
+      // Call _exit(a0).
+      "addi a7, zero, %9\n"
+      "ecall\n"
+      "1:\n"
+
+      : "=r"(res)
+      : "0"(__flags), "r"(__stack), "r"(__ptid), "r"(__tls), "r"(__ctid),
+        "r"(__fn), "r"(__arg), "r"(nr_clone), "i"(__NR_exit)
+      : "memory");
+  return res;
 }
 #elif defined(__aarch64__)
 uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,

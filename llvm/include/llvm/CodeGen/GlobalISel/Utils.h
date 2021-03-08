@@ -260,6 +260,31 @@ LLT getLCMType(LLT OrigTy, LLT TargetTy);
 LLVM_READNONE
 LLT getGCDType(LLT OrigTy, LLT TargetTy);
 
+/// Represents a value which can be a Register or a constant.
+///
+/// This is useful in situations where an instruction may have an interesting
+/// register operand or interesting constant operand. For a concrete example,
+/// \see getVectorSplat.
+class RegOrConstant {
+  int64_t Cst;
+  Register Reg;
+  bool IsReg;
+
+public:
+  explicit RegOrConstant(Register Reg) : Reg(Reg), IsReg(true) {}
+  explicit RegOrConstant(int64_t Cst) : Cst(Cst), IsReg(false) {}
+  bool isReg() const { return IsReg; }
+  bool isCst() const { return !IsReg; }
+  Register getReg() const {
+    assert(isReg() && "Expected a register!");
+    return Reg;
+  }
+  int64_t getCst() const {
+    assert(isCst() && "Expected a constant!");
+    return Cst;
+  }
+};
+
 /// \returns The splat index of a G_SHUFFLE_VECTOR \p MI when \p MI is a splat.
 /// If \p MI is not a splat, returns None.
 Optional<int> getSplatIndex(MachineInstr &MI);
@@ -277,6 +302,28 @@ bool isBuildVectorAllZeros(const MachineInstr &MI,
 /// G_BUILD_VECTOR_TRUNC where all of the elements are ~0 or undef.
 bool isBuildVectorAllOnes(const MachineInstr &MI,
                           const MachineRegisterInfo &MRI);
+
+/// \returns a value when \p MI is a vector splat. The splat can be either a
+/// Register or a constant.
+///
+/// Examples:
+///
+/// \code
+///   %reg = COPY $physreg
+///   %reg_splat = G_BUILD_VECTOR %reg, %reg, ..., %reg
+/// \endcode
+///
+/// If called on the G_BUILD_VECTOR above, this will return a RegOrConstant
+/// containing %reg.
+///
+/// \code
+///   %cst = G_CONSTANT iN 4
+///   %constant_splat = G_BUILD_VECTOR %cst, %cst, ..., %cst
+/// \endcode
+///
+/// In the above case, this will return a RegOrConstant containing 4.
+Optional<RegOrConstant> getVectorSplat(const MachineInstr &MI,
+                                       const MachineRegisterInfo &MRI);
 
 /// Returns true if given the TargetLowering's boolean contents information,
 /// the value \p Val contains a true value.

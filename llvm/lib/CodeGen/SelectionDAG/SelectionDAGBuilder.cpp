@@ -1157,6 +1157,8 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
   for (auto &DDI : DDIV) {
     const DbgValueInst *DI = DDI.getDI();
     assert(DI && "Ill-formed DanglingDebugInfo");
+    assert(!DDI.getDI()->hasArgList() &&
+           "Variadic dbg.values should not yet be left dangling.");
     DebugLoc dl = DDI.getdl();
     unsigned ValSDNodeOrder = Val.getNode()->getIROrder();
     unsigned DbgSDNodeOrder = DDI.getSDNodeOrder();
@@ -1191,7 +1193,7 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
                           << "in EmitFuncArgumentDbgValue\n");
     } else {
       LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
-      auto Undef = UndefValue::get(DDI.getDI()->getValue()->getType());
+      auto Undef = UndefValue::get(DDI.getDI()->getValue(0)->getType());
       auto SDV =
           DAG.getConstantDbgValue(Variable, Expr, Undef, dl, DbgSDNodeOrder);
       DAG.AddDbgValue(SDV, nullptr, false);
@@ -1201,7 +1203,9 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
 }
 
 void SelectionDAGBuilder::salvageUnresolvedDbgValue(DanglingDebugInfo &DDI) {
-  Value *V = DDI.getDI()->getValue();
+  assert(!DDI.getDI()->hasArgList() &&
+         "Variadic dbg.values should not yet be left dangling.");
+  Value *V = DDI.getDI()->getValue(0);
   DILocalVariable *Var = DDI.getDI()->getVariable();
   DIExpression *Expr = DDI.getDI()->getExpression();
   DebugLoc DL = DDI.getdl();
@@ -1245,7 +1249,7 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(DanglingDebugInfo &DDI) {
   // This was the final opportunity to salvage this debug information, and it
   // couldn't be done. Place an undef DBG_VALUE at this location to terminate
   // any earlier variable location.
-  auto Undef = UndefValue::get(DDI.getDI()->getValue()->getType());
+  auto Undef = UndefValue::get(DDI.getDI()->getValue(0)->getType());
   auto SDV = DAG.getConstantDbgValue(Var, Expr, Undef, DL, SDNodeOrder);
   DAG.AddDbgValue(SDV, nullptr, false);
 
@@ -5977,7 +5981,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
-    const Value *V = DI.getValue();
+    const Value *V = DI.getValue(0);
     if (!V)
       return;
 

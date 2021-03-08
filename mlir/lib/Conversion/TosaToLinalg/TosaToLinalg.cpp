@@ -269,15 +269,15 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
   SmallVector<Type> opResultTypes;
   SmallVector<Value> initTensors;
   for (auto result : results) {
-    auto resultType = result.getType().template cast<ShapedType>();
-    if (!resultType.hasStaticShape())
+    auto resultTy = result.getType().template cast<ShapedType>();
+    if (!resultTy.hasStaticShape())
       return rewriter.notifyMatchFailure(
           operation,
           "tosa to linalg conversion expects statically shaped tensors");
 
     initTensors.push_back(rewriter.create<linalg::InitTensorOp>(
-        loc, ArrayRef<Value>({}), resultType.getShape(),
-        resultType.getElementType()));
+        loc, ArrayRef<Value>({}), resultTy.getShape(),
+        resultTy.getElementType()));
     opResultTypes.push_back(result.getType());
   }
 
@@ -327,6 +327,152 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
     return failure();
 
   rewriter.replaceOp(operation, linalgOp->getResults());
+  return success();
+}
+
+// Returns the constant initial value for a given reduction operation. The
+// attribute type varies depending on the element type required.
+static Attribute createInitialValueForReduceOp(Operation *op, Type elementTy,
+                                               PatternRewriter &rewriter) {
+  if (isa<tosa::ReduceSumOp>(op) && elementTy.isa<FloatType>())
+    return rewriter.getFloatAttr(elementTy, 0.0);
+
+  if (isa<tosa::ReduceSumOp>(op) && elementTy.isa<IntegerType>())
+    return rewriter.getIntegerAttr(elementTy, 0);
+
+  if (isa<tosa::ReduceProdOp>(op) && elementTy.isa<FloatType>())
+    return rewriter.getFloatAttr(elementTy, 1.0);
+
+  if (isa<tosa::ReduceProdOp>(op) && elementTy.isa<IntegerType>())
+    return rewriter.getIntegerAttr(elementTy, 1);
+
+  if (isa<tosa::ReduceMinOp>(op) && elementTy.isa<FloatType>())
+    return rewriter.getFloatAttr(
+        elementTy, APFloat::getLargest(
+                       elementTy.cast<FloatType>().getFloatSemantics(), false));
+
+  if (isa<tosa::ReduceMinOp>(op) && elementTy.isa<IntegerType>())
+    return rewriter.getIntegerAttr(
+        elementTy, APInt::getSignedMaxValue(elementTy.getIntOrFloatBitWidth()));
+
+  if (isa<tosa::ReduceMaxOp>(op) && elementTy.isa<FloatType>())
+    return rewriter.getFloatAttr(
+        elementTy, APFloat::getLargest(
+                       elementTy.cast<FloatType>().getFloatSemantics(), true));
+
+  if (isa<tosa::ReduceMaxOp>(op) && elementTy.isa<IntegerType>())
+    return rewriter.getIntegerAttr(
+        elementTy, APInt::getSignedMinValue(elementTy.getIntOrFloatBitWidth()));
+
+  return {};
+}
+
+// Creates the body calculation for a reduction. The operations vary depending
+// on the input type.
+static Value createLinalgBodyCalculationForReduceOp(Operation *op,
+                                                    ValueRange args,
+                                                    Type elementTy,
+                                                    PatternRewriter &rewriter) {
+  Location loc = op->getLoc();
+  if (isa<tosa::ReduceSumOp>(op) && elementTy.isa<FloatType>()) {
+    return rewriter.create<AddFOp>(loc, args);
+  }
+
+  if (isa<tosa::ReduceSumOp>(op) && elementTy.isa<IntegerType>()) {
+    return rewriter.create<AddIOp>(loc, args);
+  }
+
+  if (isa<tosa::ReduceProdOp>(op) && elementTy.isa<FloatType>()) {
+    return rewriter.create<MulFOp>(loc, args);
+  }
+
+  if (isa<tosa::ReduceProdOp>(op) && elementTy.isa<IntegerType>()) {
+    return rewriter.create<MulIOp>(loc, args);
+  }
+
+  if (isa<tosa::ReduceMinOp>(op) && elementTy.isa<FloatType>()) {
+    auto predicate = rewriter.create<mlir::CmpFOp>(loc, CmpFPredicate::OLT,
+                                                   args[0], args[1]);
+    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+  }
+
+  if (isa<tosa::ReduceMinOp>(op) && elementTy.isa<IntegerType>()) {
+    auto predicate = rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt,
+                                                   args[0], args[1]);
+    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+  }
+
+  if (isa<tosa::ReduceMaxOp>(op) && elementTy.isa<FloatType>()) {
+    auto predicate = rewriter.create<mlir::CmpFOp>(loc, CmpFPredicate::OGT,
+                                                   args[0], args[1]);
+    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+  }
+
+  if (isa<tosa::ReduceMaxOp>(op) && elementTy.isa<IntegerType>()) {
+    auto predicate = rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sgt,
+                                                   args[0], args[1]);
+    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+  }
+
+  return {};
+}
+
+// Performs the match and rewrite for reduction operations. This includes
+// declaring a correctly sized initial value, and the linalg.generic operation
+// that reduces across the specified axis.
+static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
+                                                 PatternRewriter &rewriter) {
+  auto loc = op->getLoc();
+  auto inputTy = op->getOperand(0).getType().template cast<ShapedType>();
+  auto resultTy = op->getResult(0).getType().template cast<ShapedType>();
+  auto elementTy = resultTy.getElementType();
+  Value input = op->getOperand(0);
+
+  // First fill the output buffer with the init value.
+  auto initTensor = rewriter
+                        .create<linalg::InitTensorOp>(loc, ArrayRef<Value>({}),
+                                                      resultTy.getShape(),
+                                                      resultTy.getElementType())
+                        .result();
+
+  auto fillValueAttr = createInitialValueForReduceOp(op, elementTy, rewriter);
+  if (!fillValueAttr)
+    return rewriter.notifyMatchFailure(
+        op, "No initial value found for reduction operation");
+
+  auto fillValue = rewriter.create<ConstantOp>(loc, fillValueAttr);
+  auto filledTensor =
+      rewriter.create<linalg::FillOp>(loc, initTensor, fillValue).result();
+
+  SmallVector<AffineExpr, 2> srcExprs;
+  SmallVector<AffineExpr, 2> dstExprs;
+  SmallVector<StringRef, 4> iteratorTypes;
+  for (unsigned int i = 0, rank = inputTy.getRank(); i != rank; ++i) {
+    srcExprs.push_back(mlir::getAffineDimExpr(i, rewriter.getContext()));
+
+    iteratorTypes.push_back(axis == i ? getReductionIteratorTypeName()
+                                      : getParallelIteratorTypeName());
+    if (axis != i)
+      dstExprs.push_back(mlir::getAffineDimExpr(i, rewriter.getContext()));
+  }
+
+  bool didEncounterError = false;
+  auto maps = AffineMap::inferFromExprList({srcExprs, dstExprs});
+  auto linalgOp = rewriter.create<linalg::GenericOp>(
+      loc, resultTy, input, filledTensor, maps, iteratorTypes,
+      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange blockArgs) {
+        auto result = createLinalgBodyCalculationForReduceOp(
+            op, blockArgs, elementTy, rewriter);
+        if (result)
+          didEncounterError = true;
+
+        nestedBuilder.create<linalg::YieldOp>(loc, result);
+      });
+
+  if (!didEncounterError)
+    return failure();
+
+  rewriter.replaceOp(op, linalgOp.getOperation()->getResults());
   return success();
 }
 
@@ -500,6 +646,17 @@ public:
   }
 };
 
+template <typename SrcOp>
+class ReduceConverter : public OpRewritePattern<SrcOp> {
+public:
+  using OpRewritePattern<SrcOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SrcOp reduceOp,
+                                PatternRewriter &rewriter) const final {
+    return reduceMatchAndRewriteHelper(reduceOp, reduceOp.axis(), rewriter);
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
@@ -521,6 +678,8 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PointwiseConverter<tosa::CeilOp>, PointwiseConverter<tosa::FloorOp>,
       PointwiseConverter<tosa::ClampOp>, PointwiseConverter<tosa::ReluNOp>,
       IdentityNConverter<tosa::IdentityOp>,
-      IdentityNConverter<tosa::IdentityNOp>,
-      ReshapeOpConverter, TransposeConverter>(context);
+      IdentityNConverter<tosa::IdentityNOp>, ReduceConverter<tosa::ReduceMinOp>,
+      ReduceConverter<tosa::ReduceMaxOp>, ReduceConverter<tosa::ReduceSumOp>,
+      ReduceConverter<tosa::ReduceProdOp>, ReshapeOpConverter,
+      TransposeConverter>(context);
 }
