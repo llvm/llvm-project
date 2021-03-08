@@ -415,10 +415,6 @@ public:
 
   CodeGenOptions();
 
-  /// Is this a libc/libm function that is no longer recognized as a
-  /// builtin because a -fno-builtin-* option has been specified?
-  bool isNoBuiltinFunc(const char *Name) const;
-
   const std::vector<std::string> &getNoBuiltinFuncs() const {
     return NoBuiltinFuncs;
   }
