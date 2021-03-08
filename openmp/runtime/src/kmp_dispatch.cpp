@@ -392,8 +392,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d switching to "
                      "kmp_sch_dynamic_chunked\n",
                      gtid));
-      if (pr->u.p.parm1 <= 0)
-        pr->u.p.parm1 = KMP_DEFAULT_CHUNK;
+      goto dynamic_init;
       break;
     } // if
   } // case
@@ -490,6 +489,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       if ((2L * chunk + 1) * nproc >= tc) {
         /* chunk size too large, switch to dynamic */
         schedule = kmp_sch_dynamic_chunked;
+        goto dynamic_init;
       } else {
         // when remaining iters become less than parm2 - switch to dynamic
         pr->u.p.parm2 = guided_int_param * nproc * (chunk + 1);
@@ -519,6 +519,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       if ((2L * chunk + 1) * nproc >= tc) {
         /* chunk size too large, switch to dynamic */
         schedule = kmp_sch_dynamic_chunked;
+        goto dynamic_init;
       } else {
         /* commonly used term: (2 nproc - 1)/(2 nproc) */
         DBL x;
@@ -643,10 +644,14 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     break;
   case kmp_sch_static_chunked:
   case kmp_sch_dynamic_chunked:
+  dynamic_init:
     if (pr->u.p.parm1 <= 0)
       pr->u.p.parm1 = KMP_DEFAULT_CHUNK;
     else if (pr->u.p.parm1 > tc)
       pr->u.p.parm1 = tc;
+    // Store the total number of chunks to prevent integer overflow during
+    // bounds calculations in the get next chunk routine.
+    pr->u.p.parm2 = (tc / pr->u.p.parm1) + (tc % pr->u.p.parm1 ? 1 : 0);
     KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d "
                    "kmp_sch_static_chunked/kmp_sch_dynamic_chunked cases\n",
                    gtid));
@@ -1487,28 +1492,32 @@ int __kmp_dispatch_next_algorithm(int gtid,
   break;
 
   case kmp_sch_dynamic_chunked: {
-    T chunk = pr->u.p.parm1;
+    UT chunk_number;
+    UT chunk_size = pr->u.p.parm1;
+    UT nchunks = pr->u.p.parm2;
 
     KD_TRACE(
         100,
         ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_dynamic_chunked case\n",
          gtid));
 
-    init = chunk * test_then_inc_acq<ST>((volatile ST *)&sh->u.s.iteration);
-    trip = pr->u.p.tc - 1;
-
-    if ((status = (init <= trip)) == 0) {
+    chunk_number = test_then_inc_acq<ST>((volatile ST *)&sh->u.s.iteration);
+    status = (chunk_number < nchunks);
+    if (!status) {
       *p_lb = 0;
       *p_ub = 0;
       if (p_st != NULL)
         *p_st = 0;
     } else {
+      init = chunk_size * chunk_number;
+      trip = pr->u.p.tc - 1;
       start = pr->u.p.lb;
-      limit = chunk + init - 1;
       incr = pr->u.p.st;
 
-      if ((last = (limit >= trip)) != 0)
+      if ((last = (trip - init < (UT)chunk_size)))
         limit = trip;
+      else
+        limit = chunk_size + init - 1;
 
       if (p_st != NULL)
         *p_st = incr;
