@@ -34491,7 +34491,8 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
             // of the shuffle result.
             Known.resetAll();
             break;
-          } else if (M == SM_SentinelZero) {
+          }
+          if (M == SM_SentinelZero) {
             Known.One.clearAllBits();
             continue;
           }
