@@ -318,10 +318,21 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_FP_ROUND(SDNode *N) {
-  EVT NewVT = N->getValueType(0).getVectorElementType();
-  SDValue Op = GetScalarizedVector(N->getOperand(0));
-  return DAG.getNode(ISD::FP_ROUND, SDLoc(N),
-                     NewVT, Op, N->getOperand(1));
+  SDLoc DL(N);
+  SDValue Op = N->getOperand(0);
+  EVT OpVT = Op.getValueType();
+  // The result needs scalarizing, but it's not a given that the source does.
+  // See similar logic in ScalarizeVecRes_UnaryOp.
+  if (getTypeAction(OpVT) == TargetLowering::TypeScalarizeVector) {
+    Op = GetScalarizedVector(Op);
+  } else {
+    EVT VT = OpVT.getVectorElementType();
+    Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Op,
+                     DAG.getVectorIdxConstant(0, DL));
+  }
+  return DAG.getNode(ISD::FP_ROUND, DL,
+                     N->getValueType(0).getVectorElementType(), Op,
+                     N->getOperand(1));
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_FPOWI(SDNode *N) {
