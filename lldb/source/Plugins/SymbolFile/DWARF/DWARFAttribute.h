@@ -30,9 +30,6 @@ public:
     form = m_form;
     val = m_value;
   }
-  bool operator==(const DWARFAttribute &rhs) const {
-    return m_attr == rhs.m_attr && m_form == rhs.m_form;
-  }
   typedef std::vector<DWARFAttribute> collection;
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
