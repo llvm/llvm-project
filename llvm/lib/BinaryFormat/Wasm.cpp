@@ -52,6 +52,7 @@ bool llvm::wasm::relocTypeHasAddend(uint32_t Type) {
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64:
   case R_WASM_SECTION_OFFSET_I32:
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
     return true;
   default:
     return false;

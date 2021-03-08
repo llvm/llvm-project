@@ -126,6 +126,7 @@ uint64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   case R_WASM_MEMORY_ADDR_TLS_SLEB:
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64:
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
     return reloc.Addend;
   case R_WASM_SECTION_OFFSET_I32:
     return getSectionSymbol(reloc.Index)->section->getOffset(reloc.Addend);
@@ -158,7 +159,8 @@ uint64_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
   case R_WASM_MEMORY_ADDR_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_I64:
-  case R_WASM_MEMORY_ADDR_TLS_SLEB: {
+  case R_WASM_MEMORY_ADDR_TLS_SLEB:
+  case R_WASM_MEMORY_ADDR_LOCREL_I32: {
     const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
     if (sym.isUndefined())
       return 0;
@@ -199,7 +201,8 @@ uint64_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
 }
 
 // Translate from the relocation's index into the final linked output value.
-uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone) const {
+uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
+                               const InputChunk *chunk) const {
   const Symbol* sym = nullptr;
   if (reloc.Type != R_WASM_TYPE_INDEX_LEB) {
     sym = symbols[reloc.Index];
@@ -234,7 +237,8 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone) 
   case R_WASM_MEMORY_ADDR_REL_SLEB:
   case R_WASM_MEMORY_ADDR_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_I32:
-  case R_WASM_MEMORY_ADDR_I64: {
+  case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_MEMORY_ADDR_LOCREL_I32: {
     if (isa<UndefinedData>(sym) || sym->isUndefWeak())
       return 0;
     auto D = cast<DefinedData>(sym);
@@ -245,7 +249,15 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone) 
     // backward compat with old object files built with `-fPIC`.
     if (D->segment && D->segment->outputSeg->name == ".tdata")
       return D->getOutputSegmentOffset() + reloc.Addend;
-    return D->getVA(reloc.Addend);
+
+    uint64_t value = D->getVA(reloc.Addend);
+    if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32) {
+      const auto *segment = cast<InputSegment>(chunk);
+      uint64_t p = segment->outputSeg->startVA + segment->outputSegmentOffset +
+                   reloc.Offset - segment->getInputSectionOffset();
+      value -= p;
+    }
+    return value;
   }
   case R_WASM_MEMORY_ADDR_TLS_SLEB:
     if (isa<UndefinedData>(sym) || sym->isUndefWeak())
