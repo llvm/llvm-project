@@ -11,7 +11,126 @@
 ///
 //===----------------------------------------------------------------------===//
 
-/// This is just a placeholder to make current
-/// commit buildable. Body of this function will
-/// be filled in later commits
-extern "C" void LLVMInitializeM68kTargetMC() {}
+#include "M68kMCTargetDesc.h"
+
+#include "M68kMCAsmInfo.h"
+
+#include "M68kInstPrinter.h"
+
+#include "llvm/MC/MCELFStreamer.h"
+#include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MachineLocation.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/TargetRegistry.h"
+
+using namespace llvm;
+
+#define GET_INSTRINFO_MC_DESC
+#include "M68kGenInstrInfo.inc"
+
+#define GET_SUBTARGETINFO_MC_DESC
+#include "M68kGenSubtargetInfo.inc"
+
+#define GET_REGINFO_MC_DESC
+#include "M68kGenRegisterInfo.inc"
+
+// TODO Implement feature set parsing logics
+static std::string ParseM68kTriple(const Triple &TT, StringRef CPU) {
+  return "";
+}
+
+static MCInstrInfo *createM68kMCInstrInfo() {
+  MCInstrInfo *X = new MCInstrInfo();
+  InitM68kMCInstrInfo(X); // defined in M68kGenInstrInfo.inc
+  return X;
+}
+
+static MCRegisterInfo *createM68kMCRegisterInfo(const Triple &TT) {
+  MCRegisterInfo *X = new MCRegisterInfo();
+  InitM68kMCRegisterInfo(X, llvm::M68k::A0, 0, 0, llvm::M68k::PC);
+  return X;
+}
+
+static MCSubtargetInfo *createM68kMCSubtargetInfo(const Triple &TT,
+                                                  StringRef CPU, StringRef FS) {
+  std::string ArchFS = ParseM68kTriple(TT, CPU);
+  if (!FS.empty()) {
+    if (!ArchFS.empty()) {
+      ArchFS = (ArchFS + "," + FS).str();
+    } else {
+      ArchFS = FS.str();
+    }
+  }
+  return createM68kMCSubtargetInfoImpl(TT, CPU, /*TuneCPU=*/CPU, ArchFS);
+}
+
+static MCAsmInfo *createM68kMCAsmInfo(const MCRegisterInfo &MRI,
+                                      const Triple &TT,
+                                      const MCTargetOptions &TO) {
+  MCAsmInfo *MAI = new M68kELFMCAsmInfo(TT);
+
+  // Initialize initial frame state.
+  // Calculate amount of bytes used for return address storing
+  int StackGrowth = -4;
+
+  // Initial state of the frame pointer is SP+StackGrowth.
+  // TODO: Add tests for `cfi_*` directives
+  MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(
+      nullptr, MRI.getDwarfRegNum(llvm::M68k::SP, true), -StackGrowth);
+  MAI->addInitialFrameState(Inst);
+
+  // Add return address to move list
+  Inst = MCCFIInstruction::createOffset(
+      nullptr, MRI.getDwarfRegNum(M68k::PC, true), StackGrowth);
+  MAI->addInitialFrameState(Inst);
+
+  return MAI;
+}
+
+static MCRelocationInfo *createM68kMCRelocationInfo(const Triple &TheTriple,
+                                                    MCContext &Ctx) {
+  // Default to the stock relocation info.
+  return llvm::createMCRelocationInfo(TheTriple, Ctx);
+}
+
+static MCInstPrinter *createM68kMCInstPrinter(const Triple &T,
+                                              unsigned SyntaxVariant,
+                                              const MCAsmInfo &MAI,
+                                              const MCInstrInfo &MII,
+                                              const MCRegisterInfo &MRI) {
+  return new M68kInstPrinter(MAI, MII, MRI);
+}
+
+extern "C" void LLVMInitializeM68kTargetMC() {
+  Target &T = TheM68kTarget;
+
+  // Register the MC asm info.
+  RegisterMCAsmInfoFn X(T, createM68kMCAsmInfo);
+
+  // Register the MC instruction info.
+  TargetRegistry::RegisterMCInstrInfo(T, createM68kMCInstrInfo);
+
+  // Register the MC register info.
+  TargetRegistry::RegisterMCRegInfo(T, createM68kMCRegisterInfo);
+
+  // Register the MC subtarget info.
+  TargetRegistry::RegisterMCSubtargetInfo(T, createM68kMCSubtargetInfo);
+
+  // Register the code emitter.
+  TargetRegistry::RegisterMCCodeEmitter(T, createM68kMCCodeEmitter);
+
+  // Register the MCInstPrinter.
+  TargetRegistry::RegisterMCInstPrinter(T, createM68kMCInstPrinter);
+
+  // Register the MC relocation info.
+  TargetRegistry::RegisterMCRelocationInfo(T, createM68kMCRelocationInfo);
+
+  // Register the asm backend.
+  TargetRegistry::RegisterMCAsmBackend(T, createM68kAsmBackend);
+}
