@@ -13,7 +13,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 
 namespace fir {
-inline void registerOptPasses() {
+inline void registerOptimizerPasses() {
   registerOptCodeGenPasses();
   registerOptTransformPasses();
 }
