@@ -175,7 +175,7 @@ void Serializer::processDebugInfo() {
   if (!emitDebugInfo)
     return;
   auto fileLoc = module.getLoc().dyn_cast<FileLineColLoc>();
-  auto fileName = fileLoc ? fileLoc.getFilename() : "<unknown>";
+  auto fileName = fileLoc ? fileLoc.getFilename().strref() : "<unknown>";
   fileID = getNextID();
   SmallVector<uint32_t, 16> operands;
   operands.push_back(fileID);
