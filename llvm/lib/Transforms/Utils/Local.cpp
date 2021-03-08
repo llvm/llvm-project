@@ -2683,11 +2683,10 @@ unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
 unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
                                         DominatorTree &DT,
                                         const BasicBlock *BB) {
-  auto ProperlyDominates = [&DT](const BasicBlock *BB, const Use &U) {
-    auto *I = cast<Instruction>(U.getUser())->getParent();
-    return DT.properlyDominates(BB, I);
+  auto Dominates = [&DT](const BasicBlock *BB, const Use &U) {
+    return DT.dominates(BB, U);
   };
-  return ::replaceDominatedUsesWith(From, To, BB, ProperlyDominates);
+  return ::replaceDominatedUsesWith(From, To, BB, Dominates);
 }
 
 bool llvm::callsGCLeafFunction(const CallBase *Call,
