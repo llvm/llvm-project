@@ -29,7 +29,7 @@ using namespace llvm;
 namespace {
 
 // Length of the suffix "massv", which is specific to IBM MASSV library entries.
-const unsigned MASSVSuffixLength = 5;
+const unsigned MASSVSuffixLength = 2;
 
 static StringRef MASSVFuncs[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS_NAMES
@@ -101,7 +101,7 @@ PPCLowerMASSVEntries::createMASSVFuncName(Function &Func,
 /// intrinsics when the exponent is 0.25 or 0.75.
 bool PPCLowerMASSVEntries::handlePowSpecialCases(CallInst *CI, Function &Func,
                                                  Module &M) {
-  if (Func.getName() != "__powf4_massv" && Func.getName() != "__powd2_massv")
+  if (Func.getName() != "__powf4_P8" && Func.getName() != "__powd2_P8")
     return false;
 
   if (Constant *Exp = dyn_cast<Constant>(CI->getArgOperand(1)))

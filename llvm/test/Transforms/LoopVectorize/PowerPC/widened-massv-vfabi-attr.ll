@@ -14,7 +14,7 @@ define dso_local double @test(float* %Arr) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[TMP1]] to <2 x float>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[WIDE_LOAD]] to <2 x double>
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast <2 x double> @__sind2_massv(<2 x double> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast <2 x double> @__sind2_P8(<2 x double> [[TMP3]])
 ; CHECK-NEXT:    [[TMP5]] = fadd fast <2 x double> [[VEC_PHI]], [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
@@ -53,6 +53,6 @@ for.end:
 }
 
 declare double @llvm.sin.f64(double) #0
-declare <2 x double> @__sind2_massv(<2 x double>) #0
+declare <2 x double> @__sind2_P8(<2 x double>) #0
 attributes #0 = { nounwind readnone speculatable willreturn }
-attributes #1 = { "vector-function-abi-variant"="_ZGV_LLVM_N2v_llvm.sin.f64(__sind2_massv)" }
+attributes #1 = { "vector-function-abi-variant"="_ZGV_LLVM_N2v_llvm.sin.f64(__sind2_P8)" }
