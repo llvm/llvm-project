@@ -311,8 +311,6 @@ private:
 
 } // namespace
 
-/// Convert FIR's structured control flow ops to CFG ops.  This conversion
-/// enables the `createLowerToCFGPass` to transform these to CFG form.
 std::unique_ptr<mlir::Pass> fir::createFirCodeGenRewritePass() {
   return std::make_unique<CodeGenRewrite>();
 }
