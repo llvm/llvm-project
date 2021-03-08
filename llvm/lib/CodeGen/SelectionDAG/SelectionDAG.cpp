@@ -8449,7 +8449,8 @@ SDDbgValue *SelectionDAG::getDbgValue(DIVariable *Var, DIExpression *Expr,
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
-      SDDbgValue(Var, Expr, N, R, IsIndirect, DL, O);
+      SDDbgValue(Var, Expr, SDDbgOperand::fromNode(N, R), N, IsIndirect, DL, O,
+                 /*IsVariadic=*/false);
 }
 
 /// Constant
@@ -8459,7 +8460,9 @@ SDDbgValue *SelectionDAG::getConstantDbgValue(DIVariable *Var,
                                               const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, C, DL, O);
+  return new (DbgInfo->getAlloc()) SDDbgValue(
+      Var, Expr, SDDbgOperand::fromConst(C), {}, /*IsIndirect=*/false, DL, O,
+      /*IsVariadic=*/false);
 }
 
 /// FrameIndex
@@ -8471,7 +8474,8 @@ SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
-      SDDbgValue(Var, Expr, FI, IsIndirect, DL, O, SDDbgValue::FRAMEIX);
+      SDDbgValue(Var, Expr, SDDbgOperand::fromFrameIdx(FI), {}, IsIndirect, DL,
+                 O, /*IsVariadic=*/false);
 }
 
 /// VReg
@@ -8482,7 +8486,8 @@ SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var,
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
-      SDDbgValue(Var, Expr, VReg, IsIndirect, DL, O, SDDbgValue::VREG);
+      SDDbgValue(Var, Expr, SDDbgOperand::fromVReg(VReg), {}, IsIndirect, DL, O,
+                 /*IsVariadic=*/false);
 }
 
 void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
@@ -8503,13 +8508,14 @@ void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
 
   SmallVector<SDDbgValue *, 2> ClonedDVs;
   for (SDDbgValue *Dbg : GetDbgValues(FromNode)) {
-    if (Dbg->getKind() != SDDbgValue::SDNODE || Dbg->isInvalidated())
+    SDDbgOperand DbgOperand = Dbg->getLocationOps()[0];
+    if (DbgOperand.getKind() != SDDbgOperand::SDNODE || Dbg->isInvalidated())
       continue;
 
     // TODO: assert(!Dbg->isInvalidated() && "Transfer of invalid dbg value");
 
     // Just transfer the dbg value attached to From.
-    if (Dbg->getResNo() != From.getResNo())
+    if (DbgOperand.getResNo() != From.getResNo())
       continue;
 
     DIVariable *Var = Dbg->getVariable();
@@ -8583,7 +8589,7 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
   }
 
   for (SDDbgValue *Dbg : ClonedDVs)
-    AddDbgValue(Dbg, Dbg->getSDNode(), false);
+    AddDbgValue(Dbg, Dbg->getLocationOps()[0].getSDNode(), false);
 }
 
 /// Creates a SDDbgLabel node.
