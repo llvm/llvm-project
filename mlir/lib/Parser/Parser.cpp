@@ -2088,8 +2088,8 @@ LogicalResult mlir::parseSourceFile(const llvm::SourceMgr &sourceMgr,
                                     LocationAttr *sourceFileLoc) {
   const auto *sourceBuf = sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID());
 
-  Location parserLoc = FileLineColLoc::get(sourceBuf->getBufferIdentifier(),
-                                           /*line=*/0, /*column=*/0, context);
+  Location parserLoc = FileLineColLoc::get(
+      context, sourceBuf->getBufferIdentifier(), /*line=*/0, /*column=*/0);
   if (sourceFileLoc)
     *sourceFileLoc = parserLoc;
 

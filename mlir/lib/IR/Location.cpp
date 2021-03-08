@@ -7,11 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Location.h"
-#include "LocationDetail.h"
+#include "mlir/IR/Identifier.h"
 #include "llvm/ADT/SetVector.h"
 
 using namespace mlir;
 using namespace mlir::detail;
+
+//===----------------------------------------------------------------------===//
+/// Tablegen Attribute Definitions
+//===----------------------------------------------------------------------===//
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/IR/BuiltinLocationAttributes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // LocationAttr
@@ -27,40 +34,13 @@ bool LocationAttr::classof(Attribute attr) {
 // CallSiteLoc
 //===----------------------------------------------------------------------===//
 
-Location CallSiteLoc::get(Location callee, Location caller) {
-  return Base::get(callee->getContext(), callee, caller);
-}
-
-Location CallSiteLoc::get(Location name, ArrayRef<Location> frames) {
+CallSiteLoc CallSiteLoc::get(Location name, ArrayRef<Location> frames) {
   assert(!frames.empty() && "required at least 1 call frame");
   Location caller = frames.back();
   for (auto frame : llvm::reverse(frames.drop_back()))
     caller = CallSiteLoc::get(frame, caller);
   return CallSiteLoc::get(name, caller);
 }
-
-Location CallSiteLoc::getCallee() const { return getImpl()->callee; }
-
-Location CallSiteLoc::getCaller() const { return getImpl()->caller; }
-
-//===----------------------------------------------------------------------===//
-// FileLineColLoc
-//===----------------------------------------------------------------------===//
-
-Location FileLineColLoc::get(Identifier filename, unsigned line,
-                             unsigned column) {
-  return Base::get(filename.getContext(), filename, line, column);
-}
-
-Location FileLineColLoc::get(StringRef filename, unsigned line, unsigned column,
-                             MLIRContext *context) {
-  return get(Identifier::get(filename.empty() ? "-" : filename, context), line,
-             column);
-}
-
-StringRef FileLineColLoc::getFilename() const { return getImpl()->filename; }
-unsigned FileLineColLoc::getLine() const { return getImpl()->line; }
-unsigned FileLineColLoc::getColumn() const { return getImpl()->column; }
 
 //===----------------------------------------------------------------------===//
 // FusedLoc
@@ -94,50 +74,4 @@ Location FusedLoc::get(ArrayRef<Location> locs, Attribute metadata,
   if (locs.size() == 1)
     return locs.front();
   return Base::get(context, locs, metadata);
-}
-
-ArrayRef<Location> FusedLoc::getLocations() const {
-  return getImpl()->getLocations();
-}
-
-Attribute FusedLoc::getMetadata() const { return getImpl()->metadata; }
-
-//===----------------------------------------------------------------------===//
-// NameLoc
-//===----------------------------------------------------------------------===//
-
-Location NameLoc::get(Identifier name, Location child) {
-  assert(!child.isa<NameLoc>() &&
-         "a NameLoc cannot be used as a child of another NameLoc");
-  return Base::get(child->getContext(), name, child);
-}
-
-Location NameLoc::get(Identifier name) {
-  return get(name, UnknownLoc::get(name.getContext()));
-}
-
-/// Return the name identifier.
-Identifier NameLoc::getName() const { return getImpl()->name; }
-
-/// Return the child location.
-Location NameLoc::getChildLoc() const { return getImpl()->child; }
-
-//===----------------------------------------------------------------------===//
-// OpaqueLoc
-//===----------------------------------------------------------------------===//
-
-Location OpaqueLoc::get(uintptr_t underlyingLocation, TypeID typeID,
-                        Location fallbackLocation) {
-  return Base::get(fallbackLocation->getContext(), underlyingLocation, typeID,
-                   fallbackLocation);
-}
-
-uintptr_t OpaqueLoc::getUnderlyingLocation() const {
-  return Base::getImpl()->underlyingLocation;
-}
-
-TypeID OpaqueLoc::getUnderlyingTypeID() const { return getImpl()->typeID; }
-
-Location OpaqueLoc::getFallbackLocation() const {
-  return Base::getImpl()->fallbackLocation;
 }

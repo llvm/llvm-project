@@ -212,7 +212,7 @@ class Importer {
 public:
   Importer(MLIRContext *context, ModuleOp module)
       : b(context), context(context), module(module),
-        unknownLoc(FileLineColLoc::get("imported-bitcode", 0, 0, context)),
+        unknownLoc(FileLineColLoc::get(context, "imported-bitcode", 0, 0)),
         typeTranslator(*context) {
     b.setInsertionPointToStart(module.getBody());
   }
@@ -303,13 +303,13 @@ Location Importer::processDebugLoc(const llvm::DebugLoc &loc,
     llvm::raw_string_ostream os(s);
     os << "llvm-imported-inst-%";
     inst->printAsOperand(os, /*PrintType=*/false);
-    return FileLineColLoc::get(os.str(), 0, 0, context);
+    return FileLineColLoc::get(context, os.str(), 0, 0);
   } else if (!loc) {
     return unknownLoc;
   }
   // FIXME: Obtain the filename from DILocationInfo.
-  return FileLineColLoc::get("imported-bitcode", loc.getLine(), loc.getCol(),
-                             context);
+  return FileLineColLoc::get(context, "imported-bitcode", loc.getLine(),
+                             loc.getCol());
 }
 
 Type Importer::processType(llvm::Type *type) {
@@ -996,7 +996,7 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                               MLIRContext *context) {
   context->loadDialect<LLVMDialect>();
   OwningModuleRef module(ModuleOp::create(
-      FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
+      FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
 
   Importer deserializer(context, module.get());
   for (llvm::GlobalVariable &gv : llvmModule->globals()) {
