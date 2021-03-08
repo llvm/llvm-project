@@ -53,7 +53,6 @@ public:
   extract(const lldb_private::DWARFDataExtractor &data,
           lldb::offset_t *offset_ptr);
   bool IsValid();
-  bool operator==(const DWARFAbbreviationDeclaration &rhs) const;
 
 protected:
   dw_uleb128_t m_code;
