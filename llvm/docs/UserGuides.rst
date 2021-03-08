@@ -33,7 +33,6 @@ intermediate LLVM representation.
    GoldPlugin
    HowToBuildOnARM
    HowToBuildWithPGO
-   HowToBuildWindowsItaniumPrograms
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
    HowToUpdateDebugInfo
@@ -198,9 +197,6 @@ Additional Topics
 :doc:`AddingConstrainedIntrinsics`
    Gives the steps necessary when adding a new constrained math intrinsic
    to LLVM.
-
-:doc:`HowToBuildWindowsItaniumPrograms`
-   Notes on assembling a Windows Itanium enviroment.
 
 :doc:`HowToCrossCompileBuiltinsOnArm`
    Notes on cross-building and testing the compiler-rt builtins for Arm.
