@@ -756,6 +756,11 @@ enum {
 #include "ELFRelocs/BPF.def"
 };
 
+// ELF Relocation types for M68k
+enum {
+#include "ELFRelocs/M68k.def"
+};
+
 // MSP430 specific e_flags
 enum : unsigned {
   EF_MSP430_MACH_MSP430x11 = 11,

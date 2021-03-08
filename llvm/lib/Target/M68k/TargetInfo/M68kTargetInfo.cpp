@@ -10,8 +10,14 @@
 /// This file contains M68k target initializer.
 ///
 //===----------------------------------------------------------------------===//
+#include "MCTargetDesc/M68kMCTargetDesc.h"
+#include "llvm/Support/TargetRegistry.h"
 
-/// This is just a placeholder to make current
-/// commit buildable. Body of this function will
-/// be filled in later commits
-extern "C" void LLVMInitializeM68kTargetInfo() {}
+using namespace llvm;
+
+Target llvm::TheM68kTarget;
+
+extern "C" void LLVMInitializeM68kTargetInfo() {
+  RegisterTarget<Triple::m68k, /*HasJIT=*/true> X(
+      TheM68kTarget, "m68k", "Motorola 68000 family", "M68k");
+}
