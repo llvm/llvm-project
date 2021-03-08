@@ -1221,8 +1221,7 @@ template <typename ConcrentType>
 struct MemRefsNormalizable
     : public TraitBase<ConcrentType, MemRefsNormalizable> {};
 
-/// This trait tags element-wise ops that operate on scalars, vectors, or
-/// tensors.
+/// This trait tags element-wise ops on vectors or tensors.
 ///
 /// NOTE: Not all ops that are "elementwise" in some abstract sense satisfy this
 /// trait. In particular, broadcasting behavior is not allowed.
@@ -1264,12 +1263,12 @@ struct Elementwise : public TraitBase<ConcreteType, Elementwise> {
 /// This trait tags `Elementwise` operatons that can be systematically
 /// scalarized. All vector/tensor operands and results are then replaced by
 /// scalars of the respective element type. Semantically, this is the operation
-/// on a single element per vector/tensor.
+/// on a single element of the vector/tensor.
 ///
 /// Rationale:
 /// Allow to define the vector/tensor semantics of elementwise operations based
-/// on scalars. This provides a constructive procedure for IR transformations
-/// to, e.g., create scalar loop bodies from tensor ops.
+/// on the same op's behavior on scalars. This provides a constructive procedure
+/// for IR transformations to, e.g., create scalar loop bodies from tensor ops.
 ///
 /// Example:
 /// ```
@@ -1296,13 +1295,13 @@ struct Scalarizable : public TraitBase<ConcreteType, Scalarizable> {
 /// This trait tags `Elementwise` operatons that can be systematically
 /// vectorized. All scalar operands and results are then replaced by vectors
 /// with the respective element type. Semantically, this is the operation on
-/// multiple arguments simultaneously.
+/// multiple elements simultaneously. See also `Tensorizable`.
 ///
 /// Rationale:
 /// Provide the reverse to `Scalarizable` which, when chained together, allows
 /// reasoning about the relationship between the tensor and vector case.
 /// Additionally, it permits reasoning about promoting scalars to vectors via
-/// broadcasting in cases like `%select_scalar_pred` above.
+/// broadcasting in cases like `%select_scalar_pred` below.
 template <typename ConcreteType>
 struct Vectorizable : public TraitBase<ConcreteType, Vectorizable> {
   static LogicalResult verifyTrait(Operation *op) {
@@ -1316,13 +1315,13 @@ struct Vectorizable : public TraitBase<ConcreteType, Vectorizable> {
 /// This trait tags `Elementwise` operatons that can be systematically
 /// tensorized. All scalar operands and results are then replaced by tensors
 /// with the respective element type. Semantically, this is the operation on
-/// multiple arguments simultaneously.
+/// multiple elements simultaneously. See also `Vectorizable`.
 ///
 /// Rationale:
 /// Provide the reverse to `Scalarizable` which, when chained together, allows
 /// reasoning about the relationship between the tensor and vector case.
 /// Additionally, it permits reasoning about promoting scalars to tensors via
-/// broadcasting in cases like `%select_scalar_pred` above.
+/// broadcasting in cases like `%select_scalar_pred` below.
 ///
 /// Examples:
 /// ```
@@ -1331,7 +1330,7 @@ struct Vectorizable : public TraitBase<ConcreteType, Vectorizable> {
 /// can be tensorized to
 /// ```
 /// %tensor = "std.addf"(%a, %b) : (tensor<?xf32>, tensor<?xf32>)
-///               -> tensor<?xf32>)
+///               -> tensor<?xf32>
 /// ```
 ///
 /// ```
