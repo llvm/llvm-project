@@ -22,10 +22,6 @@ public:
                  DWARFFormValue::ValueType value)
       : m_attr(attr), m_form(form), m_value(value) {}
 
-  void set(dw_attr_t attr, dw_form_t form) {
-    m_attr = attr;
-    m_form = form;
-  }
   dw_attr_t get_attr() const { return m_attr; }
   dw_form_t get_form() const { return m_form; }
   void get(dw_attr_t &attr, dw_form_t &form,
