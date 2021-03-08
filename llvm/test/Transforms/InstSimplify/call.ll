@@ -1360,4 +1360,29 @@ define i1 @ctpop_bool(i1 %x) {
   ret i1 %r
 }
 
+declare i32 @llvm.cttz.i32(i32, i1)
+declare <3 x i33> @llvm.cttz.v3i33(<3 x i33>, i1)
+
+define i32 @cttz_shl1(i32 %x) {
+; CHECK-LABEL: @cttz_shl1(
+; CHECK-NEXT:    [[S:%.*]] = shl i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.cttz.i32(i32 [[S]], i1 true)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = shl i32 1, %x
+  %r = call i32 @llvm.cttz.i32(i32 %s, i1 true)
+  ret i32 %r
+}
+
+define <3 x i33> @cttz_shl1_vec(<3 x i33> %x) {
+; CHECK-LABEL: @cttz_shl1_vec(
+; CHECK-NEXT:    [[S:%.*]] = shl <3 x i33> <i33 1, i33 1, i33 undef>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i33> @llvm.cttz.v3i33(<3 x i33> [[S]], i1 false)
+; CHECK-NEXT:    ret <3 x i33> [[R]]
+;
+  %s = shl <3 x i33> <i33 1, i33 1, i33 undef>, %x
+  %r = call <3 x i33> @llvm.cttz.v3i33(<3 x i33> %s, i1 false)
+  ret <3 x i33> %r
+}
+
 attributes #0 = { nobuiltin readnone }
