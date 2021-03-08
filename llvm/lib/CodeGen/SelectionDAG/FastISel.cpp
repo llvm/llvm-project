@@ -2413,6 +2413,12 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   if (LI->isVolatile())
     return false;
 
+  // Swifterror loads are not actually loads.
+  if (auto AI = dyn_cast<AllocaInst>(LI->getPointerOperand())) {
+    if (AI->isSwiftError())
+      return false;
+  }
+
   // Figure out which vreg this is going into.  If there is no assigned vreg yet
   // then there actually was no reference to it.  Perhaps the load is referenced
   // by a dead instruction.
