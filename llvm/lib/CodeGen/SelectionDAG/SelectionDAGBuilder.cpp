@@ -1193,8 +1193,7 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
                           << "in EmitFuncArgumentDbgValue\n");
     } else {
       LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
-      auto Undef =
-          UndefValue::get(DDI.getDI()->getVariableLocation()->getType());
+      auto Undef = UndefValue::get(DDI.getDI()->getValue()->getType());
       auto SDV =
           DAG.getConstantDbgValue(Variable, Expr, Undef, dl, DbgSDNodeOrder);
       DAG.AddDbgValue(SDV, nullptr, false);
@@ -1248,7 +1247,7 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(DanglingDebugInfo &DDI) {
   // This was the final opportunity to salvage this debug information, and it
   // couldn't be done. Place an undef DBG_VALUE at this location to terminate
   // any earlier variable location.
-  auto Undef = UndefValue::get(DDI.getDI()->getVariableLocation()->getType());
+  auto Undef = UndefValue::get(DDI.getDI()->getValue()->getType());
   auto SDV = DAG.getConstantDbgValue(Var, Expr, Undef, DL, SDNodeOrder);
   DAG.AddDbgValue(SDV, nullptr, false);
 
@@ -5901,7 +5900,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     LLVM_DEBUG(dbgs() << "SelectionDAG visiting debug intrinsic: " << DI
                       << "\n");
     // Check if address has undef value.
-    const Value *Address = DI.getVariableLocation();
+    const Value *Address = DI.getVariableLocationOp(0);
     if (!Address || isa<UndefValue>(Address) ||
         (Address->use_empty() && !isa<Argument>(Address))) {
       LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI

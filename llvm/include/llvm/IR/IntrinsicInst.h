@@ -24,6 +24,7 @@
 #define LLVM_IR_INTRINSICINST_H
 
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
@@ -146,15 +147,101 @@ public:
 /// This is the common base class for debug info intrinsics for variables.
 class DbgVariableIntrinsic : public DbgInfoIntrinsic {
 public:
-  /// Get the location corresponding to the variable referenced by the debug
+  // Iterator for ValueAsMetadata that internally uses direct pointer iteration
+  // over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
+  // ValueAsMetadata .
+  class location_op_iterator
+      : public iterator_facade_base<location_op_iterator,
+                                    std::bidirectional_iterator_tag, Value *> {
+    PointerUnion<ValueAsMetadata *, ValueAsMetadata **> I;
+
+  public:
+    location_op_iterator(ValueAsMetadata *SingleIter) : I(SingleIter) {}
+    location_op_iterator(ValueAsMetadata **MultiIter) : I(MultiIter) {}
+
+    location_op_iterator(const location_op_iterator &R) : I(R.I) {}
+    location_op_iterator &operator=(const location_op_iterator &R) {
+      I = R.I;
+      return *this;
+    }
+    bool operator==(const location_op_iterator &RHS) const {
+      return I == RHS.I;
+    }
+    const Value *operator*() const {
+      ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
+                                 ? I.get<ValueAsMetadata *>()
+                                 : *I.get<ValueAsMetadata **>();
+      return VAM->getValue();
+    };
+    Value *operator*() {
+      ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
+                                 ? I.get<ValueAsMetadata *>()
+                                 : *I.get<ValueAsMetadata **>();
+      return VAM->getValue();
+    }
+    location_op_iterator &operator++() {
+      if (I.is<ValueAsMetadata *>())
+        I = I.get<ValueAsMetadata *>() + 1;
+      else
+        I = I.get<ValueAsMetadata **>() + 1;
+      return *this;
+    }
+    location_op_iterator &operator--() {
+      if (I.is<ValueAsMetadata *>())
+        I = I.get<ValueAsMetadata *>() - 1;
+      else
+        I = I.get<ValueAsMetadata **>() - 1;
+      return *this;
+    }
+  };
+
+  /// Get the locations corresponding to the variable referenced by the debug
   /// info intrinsic.  Depending on the intrinsic, this could be the
   /// variable's value or its address.
-  Value *getVariableLocation(bool AllowNullOp = true) const;
+  iterator_range<location_op_iterator> location_ops() const;
+
+  Value *getVariableLocationOp(unsigned OpIdx) const;
+
+  void replaceVariableLocationOp(Value *OldValue, Value *NewValue);
+
+  void setVariable(DILocalVariable *NewVar) {
+    setArgOperand(1, MetadataAsValue::get(NewVar->getContext(), NewVar));
+  }
+
+  void setExpression(DIExpression *NewExpr) {
+    setArgOperand(2, MetadataAsValue::get(NewExpr->getContext(), NewExpr));
+  }
+
+  unsigned getNumVariableLocationOps() const {
+    if (hasArgList())
+      return cast<DIArgList>(getRawLocation())->getArgs().size();
+    return 1;
+  }
+
+  bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
 
   /// Does this describe the address of a local variable. True for dbg.addr
   /// and dbg.declare, but not dbg.value, which describes its value.
   bool isAddressOfVariable() const {
     return getIntrinsicID() != Intrinsic::dbg_value;
+  }
+
+  void setUndef() {
+    // TODO: When/if we remove duplicate values from DIArgLists, we don't need
+    // this set anymore.
+    SmallPtrSet<Value *, 4> RemovedValues;
+    for (Value *OldValue : location_ops()) {
+      if (!RemovedValues.insert(OldValue).second)
+        continue;
+      Value *Undef = UndefValue::get(OldValue->getType());
+      replaceVariableLocationOp(OldValue, Undef);
+    }
+  }
+
+  bool isUndef() const {
+    return (getNumVariableLocationOps() == 0 &&
+            !getExpression()->isComplex()) ||
+           any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
   }
 
   DILocalVariable *getVariable() const {
@@ -163,6 +250,10 @@ public:
 
   DIExpression *getExpression() const {
     return cast<DIExpression>(getRawExpression());
+  }
+
+  Metadata *getRawLocation() const {
+    return cast<MetadataAsValue>(getArgOperand(0))->getMetadata();
   }
 
   Metadata *getRawVariable() const {
@@ -193,12 +284,21 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
   /// @}
+private:
+  void setArgOperand(unsigned i, Value *v) {
+    DbgInfoIntrinsic::setArgOperand(i, v);
+  }
+  void setOperand(unsigned i, Value *v) { DbgInfoIntrinsic::setOperand(i, v); }
 };
 
 /// This represents the llvm.dbg.declare instruction.
 class DbgDeclareInst : public DbgVariableIntrinsic {
 public:
-  Value *getAddress() const { return getVariableLocation(); }
+  Value *getAddress() const {
+    assert(getNumVariableLocationOps() == 1 &&
+           "dbg.declare must have exactly 1 location operand.");
+    return getVariableLocationOp(0);
+  }
 
   /// \name Casting methods
   /// @{
@@ -214,7 +314,11 @@ public:
 /// This represents the llvm.dbg.addr instruction.
 class DbgAddrIntrinsic : public DbgVariableIntrinsic {
 public:
-  Value *getAddress() const { return getVariableLocation(); }
+  Value *getAddress() const {
+    assert(getNumVariableLocationOps() == 1 &&
+           "dbg.addr must have exactly 1 location operand.");
+    return getVariableLocationOp(0);
+  }
 
   /// \name Casting methods
   /// @{
@@ -229,8 +333,13 @@ public:
 /// This represents the llvm.dbg.value instruction.
 class DbgValueInst : public DbgVariableIntrinsic {
 public:
-  Value *getValue() const {
-    return getVariableLocation(/* AllowNullOp = */ false);
+  // The default argument should only be used in ISel, and the default option
+  // should be removed once ISel support for multiple location ops is complete.
+  Value *getValue(unsigned OpIdx = 0) const {
+    return getVariableLocationOp(OpIdx);
+  }
+  iterator_range<location_op_iterator> getValues() const {
+    return location_ops();
   }
 
   /// \name Casting methods

@@ -566,8 +566,7 @@ bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
   findDbgUsers(DbgUsers, I);
   for (auto *DII : DbgUsers) {
     Value *Undef = UndefValue::get(I->getType());
-    DII->setOperand(0, MetadataAsValue::get(DII->getContext(),
-                                            ValueAsMetadata::get(Undef)));
+    DII->replaceVariableLocationOp(I, Undef);
   }
   return !DbgUsers.empty();
 }
@@ -1389,7 +1388,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
   // VLA). Try to use the size of the alloca that the dbg intrinsic describes
   // intead.
   if (DII->isAddressOfVariable())
-    if (auto *AI = dyn_cast_or_null<AllocaInst>(DII->getVariableLocation()))
+    if (auto *AI = dyn_cast_or_null<AllocaInst>(DII->getVariableLocationOp(0)))
       if (Optional<TypeSize> FragmentSize = AI->getAllocationSizeInBits(DL)) {
         assert(ValueSize.isScalable() == FragmentSize->isScalable() &&
                "Both sizes should agree on the scalable flag.");
@@ -1597,7 +1596,8 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
   ValueToValueMapTy DbgValueMap;
   for (auto &I : *BB) {
     if (auto DbgII = dyn_cast<DbgVariableIntrinsic>(&I)) {
-      if (auto *Loc = dyn_cast_or_null<PHINode>(DbgII->getVariableLocation()))
+      if (auto *Loc =
+              dyn_cast_or_null<PHINode>(DbgII->getVariableLocationOp(0)))
         DbgValueMap.insert({Loc, DbgII});
     }
   }
@@ -1607,19 +1607,18 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
   // Then iterate through the new PHIs and look to see if they use one of the
   // previously mapped PHIs. If so, insert a new dbg.value intrinsic that will
   // propagate the info through the new PHI.
-  LLVMContext &C = BB->getContext();
   for (auto PHI : InsertedPHIs) {
     BasicBlock *Parent = PHI->getParent();
     // Avoid inserting an intrinsic into an EH block.
     if (Parent->getFirstNonPHI()->isEHPad())
       continue;
-    auto PhiMAV = MetadataAsValue::get(C, ValueAsMetadata::get(PHI));
     for (auto VI : PHI->operand_values()) {
       auto V = DbgValueMap.find(VI);
       if (V != DbgValueMap.end()) {
         auto *DbgII = cast<DbgVariableIntrinsic>(V->second);
-        Instruction *NewDbgII = DbgII->clone();
-        NewDbgII->setOperand(0, PhiMAV);
+        DbgVariableIntrinsic *NewDbgII =
+            cast<DbgVariableIntrinsic>(DbgII->clone());
+        NewDbgII->replaceVariableLocationOp(VI, PHI);
         auto InsertionPt = Parent->getFirstInsertionPt();
         assert(InsertionPt != Parent->end() && "Ill-formed basic block");
         NewDbgII->insertBefore(&*InsertionPt);
@@ -1736,11 +1735,6 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
           replaceOneDbgValueForAlloca(DVI, NewAllocaAddress, Builder, Offset);
 }
 
-/// Wrap \p V in a ValueAsMetadata instance.
-static MetadataAsValue *wrapValueInMetadata(LLVMContext &C, Value *V) {
-  return MetadataAsValue::get(C, ValueAsMetadata::get(V));
-}
-
 /// Where possible to salvage debug information for \p I do so
 /// and return True. If not possible mark undef and return False.
 void llvm::salvageDebugInfo(Instruction &I) {
@@ -1751,9 +1745,7 @@ void llvm::salvageDebugInfo(Instruction &I) {
 
 void llvm::salvageDebugInfoForDbgValues(
     Instruction &I, ArrayRef<DbgVariableIntrinsic *> DbgUsers) {
-  auto &Ctx = I.getContext();
   bool Salvaged = false;
-  auto wrapMD = [&](Value *V) { return wrapValueInMetadata(Ctx, V); };
 
   for (auto *DII : DbgUsers) {
     // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
@@ -1769,8 +1761,8 @@ void llvm::salvageDebugInfoForDbgValues(
     if (!DIExpr)
       break;
 
-    DII->setOperand(0, wrapMD(I.getOperand(0)));
-    DII->setOperand(2, MetadataAsValue::get(Ctx, DIExpr));
+    DII->replaceVariableLocationOp(&I, I.getOperand(0));
+    DII->setExpression(DIExpr);
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
     Salvaged = true;
   }
@@ -1780,8 +1772,7 @@ void llvm::salvageDebugInfoForDbgValues(
 
   for (auto *DII : DbgUsers) {
     Value *Undef = UndefValue::get(I.getType());
-    DII->setOperand(0, MetadataAsValue::get(DII->getContext(),
-                                            ValueAsMetadata::get(Undef)));
+    DII->replaceVariableLocationOp(&I, Undef);
   }
 }
 
@@ -1925,13 +1916,12 @@ static bool rewriteDebugUsers(
     if (UndefOrSalvage.count(DII))
       continue;
 
-    LLVMContext &Ctx = DII->getContext();
     DbgValReplacement DVR = RewriteExpr(*DII);
     if (!DVR)
       continue;
 
-    DII->setOperand(0, wrapValueInMetadata(Ctx, &To));
-    DII->setOperand(2, MetadataAsValue::get(Ctx, *DVR));
+    DII->replaceVariableLocationOp(&From, &To);
+    DII->setExpression(*DVR);
     LLVM_DEBUG(dbgs() << "REWRITE:  " << *DII << '\n');
     Changed = true;
   }
