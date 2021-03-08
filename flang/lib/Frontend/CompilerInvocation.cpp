@@ -143,6 +143,9 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
     case clang::driver::options::OPT_fdebug_pre_fir_tree:
       opts.programAction_ = DebugPreFIRTree;
       break;
+    case clang::driver::options::OPT_fget_symbols_sources:
+      opts.programAction_ = GetSymbolsSources;
+      break;
 
       // TODO:
       // case calng::driver::options::OPT_emit_llvm:
