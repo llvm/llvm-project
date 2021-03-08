@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   fir::support::registerMLIRPassesForFortranTools();
   fir::registerOptimizerPasses();
   DialectRegistry registry;
-  registerAllDialects(registry);
+  fir::support::registerDialects(registry);
   registry.insert<fir::FIROpsDialect>();
   return failed(MlirOptMain(argc, argv, "FIR modular optimizer driver\n",
       registry, /*preloadDialectsInContext=*/false));
