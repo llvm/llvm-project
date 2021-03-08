@@ -3,7 +3,7 @@
 
 define i1 @ule_null_constexpr(i8* %x) {
 ; CHECK-LABEL: @ule_null_constexpr(
-; CHECK-NEXT:    ret i1 icmp uge (i8 (...)* bitcast (i1 (i8*)* @ule_null_constexpr to i8 (...)*), i8 (...)* null)
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp ule i8 (...)* null, bitcast (i1 (i8*)* @ule_null_constexpr to i8 (...)*)
   ret i1 %cmp
@@ -11,7 +11,7 @@ define i1 @ule_null_constexpr(i8* %x) {
 
 define i1 @ugt_null_constexpr(i8* %x) {
 ; CHECK-LABEL: @ugt_null_constexpr(
-; CHECK-NEXT:    ret i1 icmp ult (i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), i8 (...)* null)
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp ugt i8 (...)* null, bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*)
   ret i1 %cmp
@@ -19,7 +19,7 @@ define i1 @ugt_null_constexpr(i8* %x) {
 
 define i1 @uge_constexpr_null(i8* %x) {
 ; CHECK-LABEL: @uge_constexpr_null(
-; CHECK-NEXT:    ret i1 icmp uge (i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), i8 (...)* null)
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp uge i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), null
   ret i1 %cmp
@@ -27,11 +27,13 @@ define i1 @uge_constexpr_null(i8* %x) {
 
 define i1 @ult_constexpr_null(i8* %x) {
 ; CHECK-LABEL: @ult_constexpr_null(
-; CHECK-NEXT:    ret i1 icmp ult (i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), i8 (...)* null)
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp ult i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), null
   ret i1 %cmp
 }
+
+; Negative test - we don't know if the constexpr is null.
 
 define i1 @ule_constexpr_null(i8* %x) {
 ; CHECK-LABEL: @ule_constexpr_null(
@@ -41,6 +43,8 @@ define i1 @ule_constexpr_null(i8* %x) {
   ret i1 %cmp
 }
 
+; Negative test - we don't know if the constexpr is *signed* less-than null.
+
 define i1 @slt_constexpr_null(i8* %x) {
 ; CHECK-LABEL: @slt_constexpr_null(
 ; CHECK-NEXT:    ret i1 icmp slt (i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), i8 (...)* null)
@@ -48,6 +52,8 @@ define i1 @slt_constexpr_null(i8* %x) {
   %cmp = icmp slt i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), null
   ret i1 %cmp
 }
+
+; Negative test - we don't try to evaluate this comparison of constant expressions.
 
 define i1 @ult_constexpr_constexpr_one(i8* %x) {
 ; CHECK-LABEL: @ult_constexpr_constexpr_one(
