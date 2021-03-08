@@ -508,19 +508,19 @@ def VSOXEI16_V : VIndexedStore<MOPSTIndexedOrder, LSWidth16, "vsoxei16.v">;
 def VSOXEI32_V : VIndexedStore<MOPSTIndexedOrder, LSWidth32, "vsoxei32.v">;
 def VSOXEI64_V : VIndexedStore<MOPSTIndexedOrder, LSWidth64, "vsoxei64.v">;
 
-defm VL1R : VWholeLoad<1, "vl1r", VR>;
-defm VL2R : VWholeLoad<2, "vl2r", VRM2>;
-defm VL4R : VWholeLoad<4, "vl4r", VRM4>;
-defm VL8R : VWholeLoad<8, "vl8r", VRM8>;
+defm VL1R : VWholeLoad<0, "vl1r", VR>;
+defm VL2R : VWholeLoad<1, "vl2r", VRM2>;
+defm VL4R : VWholeLoad<3, "vl4r", VRM4>;
+defm VL8R : VWholeLoad<7, "vl8r", VRM8>;
 def : InstAlias<"vl1r.v $vd, (${rs1})", (VL1RE8_V VR:$vd, GPR:$rs1)>;
 def : InstAlias<"vl2r.v $vd, (${rs1})", (VL2RE8_V VRM2:$vd, GPR:$rs1)>;
 def : InstAlias<"vl4r.v $vd, (${rs1})", (VL4RE8_V VRM4:$vd, GPR:$rs1)>;
 def : InstAlias<"vl8r.v $vd, (${rs1})", (VL8RE8_V VRM8:$vd, GPR:$rs1)>;
 
-def VS1R_V : VWholeStore<1, "vs1r.v", VR>;
-def VS2R_V : VWholeStore<2, "vs2r.v", VRM2>;
-def VS4R_V : VWholeStore<4, "vs4r.v", VRM4>;
-def VS8R_V : VWholeStore<8, "vs8r.v", VRM8>;
+def VS1R_V : VWholeStore<0, "vs1r.v", VR>;
+def VS2R_V : VWholeStore<1, "vs2r.v", VRM2>;
+def VS4R_V : VWholeStore<3, "vs4r.v", VRM4>;
+def VS8R_V : VWholeStore<7, "vs8r.v", VRM8>;
 
 // Vector Single-Width Integer Add and Subtract
 defm VADD_V : VALU_IV_V_X_I<"vadd", 0b000000>;

@@ -208,24 +208,24 @@ vsoxei64.v v24, (a0), v4
 
 vs1r.v v24, (a0)
 # CHECK-INST: vs1r.v v24, (a0)
+# CHECK-ENCODING: [0x27,0x0c,0x85,0x02]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 0c 85 02 <unknown>
+
+vs2r.v v24, (a0)
+# CHECK-INST: vs2r.v v24, (a0)
 # CHECK-ENCODING: [0x27,0x0c,0x85,0x22]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 0c 85 22 <unknown>
 
-vs2r.v v24, (a0)
-# CHECK-INST: vs2r.v v24, (a0)
-# CHECK-ENCODING: [0x27,0x0c,0x85,0x42]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 27 0c 85 42 <unknown>
-
 vs4r.v v24, (a0)
 # CHECK-INST: vs4r.v v24, (a0)
-# CHECK-ENCODING: [0x27,0x0c,0x85,0x82]
+# CHECK-ENCODING: [0x27,0x0c,0x85,0x62]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 27 0c 85 82 <unknown>
+# CHECK-UNKNOWN: 27 0c 85 62 <unknown>
 
 vs8r.v v24, (a0)
 # CHECK-INST: vs8r.v v24, (a0)
-# CHECK-ENCODING: [0x27,0x0c,0x85,0x02]
+# CHECK-ENCODING: [0x27,0x0c,0x85,0xe2]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 27 0c 85 02 <unknown>
+# CHECK-UNKNOWN: 27 0c 85 e2 <unknown>
