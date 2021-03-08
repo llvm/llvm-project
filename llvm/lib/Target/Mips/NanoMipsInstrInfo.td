@@ -35,5 +35,11 @@ let isCodeGenOnly = 1 in {
 
 def ADDu_NM : ArithLogicRNM<"addu", GPR32Opnd, add>, ISA_NANOMIPS;
 
+let hasDelaySlot = 0 in
+  def JRC_NM : IndirectBranch<"jrc", GPR32Opnd>, ISA_NANOMIPS;
+
+let hasDelaySlot = 0 in
+  def PseudoReturnNM : PseudoReturnBase<GPR32Opnd>, ISA_NANOMIPS;
+
 }
 

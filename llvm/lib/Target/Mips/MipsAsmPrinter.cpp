@@ -133,7 +133,9 @@ void MipsAsmPrinter::emitPseudoIndirectBranch(MCStreamer &OutStreamer,
   } else if (Subtarget->inMicroMipsMode())
     // microMIPS should use (JR_MM $rs)
     TmpInst0.setOpcode(Mips::JR_MM);
-  else {
+  else if (Subtarget->hasNanoMips()) {
+    TmpInst0.setOpcode(Mips::JRC_NM);
+  } else {
     // Everything else should use (JR $rs)
     TmpInst0.setOpcode(Mips::JR);
   }
@@ -263,6 +265,7 @@ void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     if (I->getOpcode() == Mips::PseudoReturn ||
         I->getOpcode() == Mips::PseudoReturn64 ||
+        I->getOpcode() == Mips::PseudoReturnNM ||
         I->getOpcode() == Mips::PseudoIndirectBranch ||
         I->getOpcode() == Mips::PseudoIndirectBranch64 ||
         I->getOpcode() == Mips::TAILCALLREG ||

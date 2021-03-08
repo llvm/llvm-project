@@ -1563,8 +1563,8 @@ class UncondBranch<Instruction BEQInst, DAGOperand opnd> :
 let isTerminator=1, isBarrier=1, hasDelaySlot = 1, isCTI = 1 in
 class JumpFR<string opstr, RegisterOperand RO,
              SDPatternOperator operator = null_frag>:
-  InstSE<(outs), (ins RO:$rs), "jr\t$rs", [(operator RO:$rs)], II_JR,
-         FrmR, opstr>;
+  InstSE<(outs), (ins RO:$rs), !strconcat(opstr, "\t$rs"), [(operator RO:$rs)],
+         II_JR, FrmR, opstr>;
 
 // Indirect branch
 class IndirectBranch<string opstr, RegisterOperand RO> : JumpFR<opstr, RO> {
@@ -2299,9 +2299,9 @@ let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
                              ISA_MIPS1_NOT_32R6_64R6;
 
 // Return instructions are matched as a RetRA instruction, then are expanded
-// into PseudoReturn/PseudoReturn64 after register allocation. Finally,
-// MipsAsmPrinter expands this into JR, JR64, JALR, or JALR64 depending on the
-// ISA.
+// into PseudoReturn/PseudoReturn64/PseudoReturnNM after register allocation.
+// Finally, MipsAsmPrinter expands this into JR, JR64, JALR, JALR64 or JRC_NM
+// depending on the ISA.
 class PseudoReturnBase<RegisterOperand RO> : MipsPseudo<(outs), (ins RO:$rs),
                                                         [], II_ReturnPseudo> {
   let isTerminator = 1;

@@ -433,6 +433,13 @@ def : InstRW<[GenericWriteJump], (instrs JR_HB64_R6, TAILCALL64R6REG,
                                   TAILCALLHB64R6REG, PseudoIndirectBranch64R6,
                                   PseudoIndrectHazardBranch64R6)>;
 
+// nanoMIPS
+// ========
+
+def : InstRW<[GenericWriteJump], (instrs JRC_NM)>;
+
+def : InstRW<[GenericWriteJump], (instrs PseudoReturnNM)>;
+
 // COP0 Pipeline
 // =============
 
