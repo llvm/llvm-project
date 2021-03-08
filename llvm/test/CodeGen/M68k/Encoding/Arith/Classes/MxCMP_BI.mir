@@ -1,0 +1,44 @@
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=CMP8BI,CMP32BI
+
+#------------------------------------------------------------------------------
+# MxCMP_BI class used for compare operations and operates on absolute memory
+# locations and immediate data. It uses MxArithImmEncoding encoding class.
+# NOTE: CMP is calculated by subtracting LHS(Imm) from RHS(ABS)
+#------------------------------------------------------------------------------
+
+
+#               -------------------------------+-------+-----------+-----------
+#                F   E   D   C   B   A   9   8 | 7   6 | 5   4   3 | 2   1   0
+#               -------------------------------+-------+-----------+-----------
+#       OPWORD   0   0   0   0   1   1   0   0 |  SIZE |    MODE   |    REG
+#               -------------------------------+-------+-----------+-----------
+# CMP8BI:        0   0   0   0   1   1   0   0 . 0   0   1   1   1   0   0   1
+# CMP8BI-SAME:   0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+# CMP8BI-SAME:   1   1   1   1   1   1   1   1 . 1   1   1   1   1   1   1   1
+# CMP8BI-SAME:   1   1   1   1   1   1   1   1 . 1   1   1   1   1   1   1   1
+#               -------------------------------+-------+-----------+-----------
+# CMP8BI-SAME:   0   0   0   0   1   1   0   0 . 0   0   1   1   1   0   0   1
+# CMP8BI-SAME:   0   0   0   0   0   0   0   0 . 1   1   1   1   1   1   1   1
+# CMP8BI-SAME:   0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+# CMP8BI-SAME:   0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               -------------------------------+-------+-----------+-----------
+# CMP32BI-SAME:  0   0   0   0   1   1   0   0 . 1   0   1   1   1   0   0   1
+# CMP32BI-SAME:  1   1   1   1   1   1   1   1 . 1   1   1   1   1   1   1   1
+# CMP32BI-SAME:  1   1   1   1   1   1   1   1 . 1   1   1   1   1   1   1   1
+# CMP32BI-SAME:  0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+# CMP32BI-SAME:  0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               -------------------------------+-------+-----------+-----------
+# CMP32BI-SAME:  0   0   0   0   1   1   0   0 . 1   0   1   1   1   0   0   1
+# CMP32BI-SAME:  0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+# CMP32BI-SAME:  0   0   0   0   0   0   0   0 . 0   0   1   0   1   0   1   0
+# CMP32BI-SAME:  1   1   1   1   1   1   1   1 . 1   1   1   1   1   1   1   1
+# CMP32BI-SAME:  1   1   1   1   1   1   1   1 . 1   1   1   1   1   1   1   1
+name: MxCMP_BI
+body: |
+  bb.0:
+    CMP8bi   0, -1, implicit-def $ccr
+    CMP8bi  -1,  0, implicit-def $ccr
+    CMP32bi -1,  0, implicit-def $ccr
+    CMP32bi 42, -1, implicit-def $ccr
