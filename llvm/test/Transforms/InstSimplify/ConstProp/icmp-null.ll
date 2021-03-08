@@ -32,3 +32,27 @@ define i1 @ult_constexpr_null(i8* %x) {
   %cmp = icmp ult i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), null
   ret i1 %cmp
 }
+
+define i1 @ule_constexpr_null(i8* %x) {
+; CHECK-LABEL: @ule_constexpr_null(
+; CHECK-NEXT:    ret i1 icmp ule (i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), i8 (...)* null)
+;
+  %cmp = icmp ule i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), null
+  ret i1 %cmp
+}
+
+define i1 @slt_constexpr_null(i8* %x) {
+; CHECK-LABEL: @slt_constexpr_null(
+; CHECK-NEXT:    ret i1 icmp slt (i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), i8 (...)* null)
+;
+  %cmp = icmp slt i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), null
+  ret i1 %cmp
+}
+
+define i1 @ult_constexpr_constexpr_one(i8* %x) {
+; CHECK-LABEL: @ult_constexpr_constexpr_one(
+; CHECK-NEXT:    ret i1 icmp ult (i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), i8 (...)* inttoptr (i32 1 to i8 (...)*))
+;
+  %cmp = icmp ult i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), inttoptr (i32 1 to i8 (...)*)
+  ret i1 %cmp
+}
