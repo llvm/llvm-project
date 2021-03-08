@@ -3582,10 +3582,6 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
     if (!isa<DbgDeclareInst>(DII))
       return false;
 
-    if (isa<CastInst>(I))
-      DII->setOperand(
-          0, MetadataAsValue::get(I->getContext(),
-                                  ValueAsMetadata::get(I->getOperand(0))));
     return true;
   };
 
