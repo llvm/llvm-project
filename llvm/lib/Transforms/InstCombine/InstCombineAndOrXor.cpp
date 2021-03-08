@@ -1987,6 +1987,12 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (sinkNotIntoOtherHandOfAndOrOr(I))
     return &I;
 
+  // An and recurrence w/loop invariant step is equivelent to (and start, step)
+  PHINode *PN = nullptr;
+  Value *Start = nullptr, *Step = nullptr;
+  if (matchSimpleRecurrence(&I, PN, Start, Step) && DT.dominates(Step, PN))
+    return replaceInstUsesWith(I, Builder.CreateAnd(Start, Step));
+
   return nullptr;
 }
 
@@ -2836,6 +2842,12 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // (~x) | y  -->  ~(x & (~y))  iff that gets rid of inversions
   if (sinkNotIntoOtherHandOfAndOrOr(I))
     return &I;
+
+  // An or recurrence w/loop invariant step is equivelent to (or start, step)
+  PHINode *PN = nullptr;
+  Value *Start = nullptr, *Step = nullptr;
+  if (matchSimpleRecurrence(&I, PN, Start, Step) && DT.dominates(Step, PN))
+    return replaceInstUsesWith(I, Builder.CreateOr(Start, Step));
 
   return nullptr;
 }

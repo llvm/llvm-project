@@ -764,6 +764,16 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   bool matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
                              Value *&Start, Value *&Step);
 
+  /// Analogous to the above, but starting from the binary operator
+  inline bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
+                                    Value *&Start, Value *&Step) {
+    BinaryOperator *BO = nullptr;
+    P = dyn_cast<PHINode>(I->getOperand(0));
+    if (!P)
+      P = dyn_cast<PHINode>(I->getOperand(1));
+    return P && matchSimpleRecurrence(P, BO, Start, Step) && BO == I;
+  }
+
   /// Return true if RHS is known to be implied true by LHS.  Return false if
   /// RHS is known to be implied false by LHS.  Otherwise, return None if no
   /// implication can be made.

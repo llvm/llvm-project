@@ -37,10 +37,8 @@ define i64 @test2(i1 %c, i64 %a, i64 %b) {
 ; CHECK:       untaken:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ [[A]], [[TAKEN]] ], [ [[B:%.*]], [[UNTAKEN]] ]
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i64 [ 0, [[TAKEN]] ], [ [[B]], [[UNTAKEN]] ]
-; CHECK-NEXT:    [[RET:%.*]] = sub i64 [[PHI1]], [[PHI2]]
-; CHECK-NEXT:    ret i64 [[RET]]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ 0, [[TAKEN]] ], [ [[B:%.*]], [[UNTAKEN]] ]
+; CHECK-NEXT:    ret i64 0
 ;
   br i1 %c, label %taken, label %untaken
 taken:
@@ -134,8 +132,7 @@ define i64 @test5(i1 %c, i64 %a) {
 ; CHECK:       untaken:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[A]], [[TAKEN]] ], [ 0, [[UNTAKEN]] ]
-; CHECK-NEXT:    ret i64 [[PHI]]
+; CHECK-NEXT:    ret i64 0
 ;
   br i1 %c, label %taken, label %untaken
 taken:
@@ -159,8 +156,7 @@ define i64 @test6(i1 %c, i64 %a) {
 ; CHECK:       untaken:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[A]], [[TAKEN]] ], [ 0, [[UNTAKEN]] ]
-; CHECK-NEXT:    ret i64 [[PHI]]
+; CHECK-NEXT:    ret i64 0
 ;
   br i1 %c, label %taken, label %untaken
 taken:
