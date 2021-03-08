@@ -176,6 +176,9 @@ if (target_os == "win") {
 if (target_os == "solaris") {
   cxx_sources += [ "support/solaris/xlocale.cpp" ]
 }
+if (target_os == "zos") {
+  cxx_sources += [ "support/ibm/xlocale_zos.cpp" ]
+}
 if (libcxx_enable_debug_mode) {
   cxx_sources += [ "debug.cpp" ]
 }
