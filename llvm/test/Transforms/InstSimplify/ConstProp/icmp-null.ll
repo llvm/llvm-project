@@ -37,7 +37,7 @@ define i1 @ult_constexpr_null(i8* %x) {
 
 define i1 @ule_constexpr_null(i8* %x) {
 ; CHECK-LABEL: @ule_constexpr_null(
-; CHECK-NEXT:    ret i1 icmp ule (i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), i8 (...)* null)
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp ule i8 (...)* bitcast (i1 (i8*)* @ugt_null_constexpr to i8 (...)*), null
   ret i1 %cmp
@@ -76,7 +76,7 @@ define i1 @global_ne_null() {
 
 define i1 @global_ugt_null() {
 ; CHECK-LABEL: @global_ugt_null(
-; CHECK-NEXT:    ret i1 icmp ugt ([2 x i32]* @g, [2 x i32]* null)
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp ugt [2 x i32]* @g, null
   ret i1 %cmp
