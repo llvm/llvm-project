@@ -30,7 +30,7 @@ main:
 	.byte	0x1	# DW_UT_compile
 	.byte	0x8	# Pointer Size (in bytes)
 	.long	.Ldebug_abbrev0	# Offset Into Abbrev. Section
-	.uleb128 0x1	# (DIE (0xc) DW_TAG_compile_unit)
+	.uleb128 0x1	# (DIE DW_TAG_compile_unit)
 	.long	.LASF2	# DW_AT_producer: "GNU C17 11.0.0 20210210 (Red Hat 11.0.0-0) -mtune=generic -march=x86-64 -gdwarf-5 -gno-as-loc-support"
 	.byte	0x1d	# DW_AT_language
 	.long	.LASF0	# DW_AT_name: "main.c"
@@ -38,14 +38,14 @@ main:
 	.quad	.Ltext0	# DW_AT_low_pc
 	.quad	.Letext0-.Ltext0	# DW_AT_high_pc
 	.long	.Ldebug_line0	# DW_AT_stmt_list
-	.uleb128 0x2	# (DIE (0x2e) DW_TAG_subprogram)
+	.uleb128 0x2	# (DIE DW_TAG_subprogram)
 			# DW_AT_external
 	.long	.LASF3	# DW_AT_name: "main"
 	.byte	0x1	# DW_AT_decl_file (main.c)
 	.byte	0x1	# DW_AT_decl_line
 	.quad	.LFB0	# DW_AT_low_pc
 	.quad	.LFE0-.LFB0	# DW_AT_high_pc
-	.byte	0	# end of children of DIE 0xc
+	.byte	0	# end of children of DIE DW_TAG_compile_unit
 .Ldebug_info0_end:
 	.section	.debug_abbrev,"",@progbits
 .Ldebug_abbrev0:
@@ -83,17 +83,6 @@ main:
 	.uleb128 0x1	# (DW_FORM_addr)
 	.uleb128 0x12	# (DW_AT_high_pc)
 	.uleb128 0x7	# (DW_FORM_data8)
-	.byte	0
-	.byte	0
-	.uleb128 0x3	# (abbrev code)
-	.uleb128 0x24	# (TAG: DW_TAG_base_type)
-	.byte	0	# DW_children_no
-	.uleb128 0xb	# (DW_AT_byte_size)
-	.uleb128 0xb	# (DW_FORM_data1)
-	.uleb128 0x3e	# (DW_AT_encoding)
-	.uleb128 0xb	# (DW_FORM_data1)
-	.uleb128 0x3	# (DW_AT_name)
-	.uleb128 0x8	# (DW_FORM_string)
 	.byte	0
 	.byte	0
 	.byte	0
