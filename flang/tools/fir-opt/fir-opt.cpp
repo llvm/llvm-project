@@ -19,7 +19,7 @@ using namespace mlir;
 
 int main(int argc, char **argv) {
   fir::support::registerMLIRPassesForFortranTools();
-  fir::registerOptPasses();
+  fir::registerOptimizerPasses();
   DialectRegistry registry;
   registerAllDialects(registry);
   registry.insert<fir::FIROpsDialect>();
