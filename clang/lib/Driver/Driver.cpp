@@ -1049,6 +1049,69 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     }
   }
 
+  [&]() {
+    if (ContainsError)
+      return;
+
+    llvm::SmallVector<const char *, 16> WarningsToDisable = {
+        "-Wno-elaborated-enum-base",
+    };
+
+    llvm::SmallVector<const char *, 32> ExtraArgs = {
+        // Add other command-line arguments here.
+    };
+
+    // Append WarningsToDisable to ExtraArgs, although do not disable warnings
+    // the command-line has explicitly turned on.
+    //
+    // TODO: Consider handling warning groups specially.
+    if (!WarningsToDisable.empty()) {
+      // Map the warnings explicitly turned on by the command-line.
+      llvm::StringSet<> WarningsToKeep;
+      for (auto *Arg : Args) {
+        if (!Arg->getOption().matches(options::OPT_W_Joined))
+          continue;
+        StringRef Value = Arg->getValue();
+        if (Value.empty())
+          continue; // Skip past "-W"
+
+        // Handle "-Wflag", "-Werror=flag", and "-Wno-flag".  Ignore
+        // "-Wno-error=flag" since it doesn't turn the warning on or off.
+        if (Value.consume_front("no-")) {
+          WarningsToKeep.erase(Value);
+          continue;
+        }
+        (void)Value.consume_front("error=");
+        WarningsToKeep.insert(Value);
+      }
+
+      // Disable any warnings not explicitly turned on.
+      for (const char *Warning : WarningsToDisable) {
+        StringRef S(Warning);
+        bool Consumed = S.consume_front("-Wno-");
+        (void)Consumed;
+        assert(Consumed && "Warning flag should be in '-Wno-' form");
+        if (!WarningsToKeep.count(S))
+          ExtraArgs.push_back(Warning);
+      }
+    }
+
+    if (ExtraArgs.empty())
+      return; // Nothing to do...
+
+    // Process the extra arguments, adding them to the main Args list.
+    InputArgList ExtraOptions =
+        ParseArgStrings(ExtraArgs, /*IsClCompatMode=*/false, ContainsError);
+    if (ContainsError)
+      return;
+    for (auto *Opt : ExtraOptions) {
+      // Always claim these implicit arguments to avoid strange warnings
+      // in -v output.
+      Opt->claim();
+      appendOneArg(Opt, nullptr);
+    }
+  }();
+
   // Check for working directory option before accessing any files
   if (Arg *WD = Args.getLastArg(options::OPT_working_directory))
     if (VFS->setCurrentWorkingDirectory(WD->getValue()))
