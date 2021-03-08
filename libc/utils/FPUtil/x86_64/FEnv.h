@@ -12,6 +12,8 @@
 #include <fenv.h>
 #include <stdint.h>
 
+#include "src/__support/sanitizer_annotations.h"
+
 namespace __llvm_libc {
 namespace fputil {
 
@@ -95,6 +97,7 @@ static_assert(
 static inline uint16_t getX87ControlWord() {
   uint16_t w;
   __asm__ __volatile__("fnstcw %0" : "=m"(w)::);
+  SANITIZER_MEMORY_INITIALIZED(&w, sizeof(w));
   return w;
 }
 
@@ -105,6 +108,7 @@ static inline void writeX87ControlWord(uint16_t w) {
 static inline uint16_t getX87StatusWord() {
   uint16_t w;
   __asm__ __volatile__("fnstsw %0" : "=m"(w)::);
+  SANITIZER_MEMORY_INITIALIZED(&w, sizeof(w));
   return w;
 }
 
@@ -115,6 +119,7 @@ static inline void clearX87Exceptions() {
 static inline uint32_t getMXCSR() {
   uint32_t w;
   __asm__ __volatile__("stmxcsr %0" : "=m"(w)::);
+  SANITIZER_MEMORY_INITIALIZED(&w, sizeof(w));
   return w;
 }
 
@@ -124,6 +129,7 @@ static inline void writeMXCSR(uint32_t w) {
 
 static inline void getX87StateDescriptor(X87StateDescriptor &s) {
   __asm__ __volatile__("fnstenv %0" : "=m"(s));
+  SANITIZER_MEMORY_INITIALIZED(&s, sizeof(s));
 }
 
 static inline void writeX87StateDescriptor(const X87StateDescriptor &s) {
