@@ -1157,7 +1157,7 @@ static void makeTailCallIfSwiftAsync(const CallExpr *CE, CGBuilderTy &Builder,
       && (CurFnInfo->getASTCallingConvention() ==
           CallingConv::CC_SwiftAsync)) {
     auto CI = cast<llvm::CallInst>(&Builder.GetInsertBlock()->back());
-    CI->setTailCallKind(llvm::CallInst::TCK_Tail);
+    CI->setTailCallKind(llvm::CallInst::TCK_MustTail);
     Builder.CreateRetVoid();
     Builder.ClearInsertionPoint();
   }

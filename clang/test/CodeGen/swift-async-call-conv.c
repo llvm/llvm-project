@@ -34,9 +34,9 @@ SWIFTASYNCCALL void async_leaf2(char * ASYNC_CONTEXT ctx) {
 #endif
 
 // CHECK-LABEL: swifttailcc void {{.*}}async_branch{{.*}}i8* swiftasync
-// CHECK: tail call swifttailcc void @{{.*}}async_leaf1
+// CHECK: musttail call swifttailcc void @{{.*}}async_leaf1
 // CHECK-NEXT: ret void
-// CHECK: tail call swifttailcc void @{{.*}}async_leaf2
+// CHECK: musttail call swifttailcc void @{{.*}}async_leaf2
 // CHECK-NEXT: ret void
 SWIFTASYNCCALL void async_branch(MYBOOL b, char * ASYNC_CONTEXT ctx) {
   if (b) {
@@ -47,10 +47,10 @@ SWIFTASYNCCALL void async_branch(MYBOOL b, char * ASYNC_CONTEXT ctx) {
 }
 
 // CHECK-LABEL: swifttailcc void {{.*}}async_not_all_tail
-// CHECK-NOT:  tail call swifttailcc void @{{.*}}async_leaf1
+// CHECK-NOT:  musttail call swifttailcc void @{{.*}}async_leaf1
 // CHECK:      call swifttailcc void @{{.*}}async_leaf1
 // CHECK-NOT:  ret void
-// CHECK:      tail call swifttailcc void @{{.*}}async_leaf2
+// CHECK:      musttail call swifttailcc void @{{.*}}async_leaf2
 // CHECK-NEXT: ret void
 SWIFTASYNCCALL void async_not_all_tail(char * ASYNC_CONTEXT ctx) {
   async_leaf1(ctx);
@@ -58,11 +58,11 @@ SWIFTASYNCCALL void async_not_all_tail(char * ASYNC_CONTEXT ctx) {
 }
 
 // CHECK-LABEL: swifttailcc void {{.*}}async_loop
-// CHECK: tail call swifttailcc void @{{.*}}async_leaf1
+// CHECK: musttail call swifttailcc void @{{.*}}async_leaf1
 // CHECK-NEXT: ret void
-// CHECK: tail call swifttailcc void @{{.*}}async_leaf2
+// CHECK: musttail call swifttailcc void @{{.*}}async_leaf2
 // CHECK-NEXT: ret void
-// CHECK: tail call swifttailcc void @{{.*}}async_loop
+// CHECK: musttail call swifttailcc void @{{.*}}async_loop
 // CHECK-NEXT: ret void
 SWIFTASYNCCALL void async_loop(unsigned u, char * ASYNC_CONTEXT ctx) {
   if (u == 0) {
@@ -78,9 +78,9 @@ SWIFTASYNCCALL void async_loop(unsigned u, char * ASYNC_CONTEXT ctx) {
 SWIFTASYNCCALL void async_mutual_loop2(unsigned u, char * ASYNC_CONTEXT ctx);
 
 // CHECK-LABEL: swifttailcc void {{.*}}async_mutual_loop1
-// CHECK: tail call swifttailcc void @{{.*}}async_leaf1
+// CHECK: musttail call swifttailcc void @{{.*}}async_leaf1
 // CHECK-NEXT: ret void
-// CHECK: tail call swifttailcc void @{{.*}}async_leaf2
+// CHECK: musttail call swifttailcc void @{{.*}}async_leaf2
 // CHECK-NEXT: ret void
 // There is some bugginess around FileCheck's greediness/matching,
 // so skipping the check for async_mutual_loop2 here.
@@ -94,11 +94,11 @@ SWIFTASYNCCALL void async_mutual_loop1(unsigned u, char * ASYNC_CONTEXT ctx) {
 }
 
 // CHECK-LABEL: swifttailcc void {{.*}}async_mutual_loop2
-// CHECK: tail call swifttailcc void @{{.*}}async_leaf1
+// CHECK: musttail call swifttailcc void @{{.*}}async_leaf1
 // CHECK-NEXT: ret void
-// CHECK: tail call swifttailcc void @{{.*}}async_leaf2
+// CHECK: musttail call swifttailcc void @{{.*}}async_leaf2
 // CHECK-NEXT: ret void
-// CHECK: tail call swifttailcc void @{{.*}}async_mutual_loop1
+// CHECK: musttail call swifttailcc void @{{.*}}async_mutual_loop1
 // CHECK-NEXT: ret void
 SWIFTASYNCCALL void async_mutual_loop2(unsigned u, char * ASYNC_CONTEXT ctx) {
   if (u == 0) {
