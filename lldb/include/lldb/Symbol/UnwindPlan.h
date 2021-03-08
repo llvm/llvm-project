@@ -360,6 +360,9 @@ public:
 
     bool SetRegisterLocationToSame(uint32_t reg_num, bool must_replace);
 
+    bool SetRegisterLocationToIsDWARFExpression(uint32_t reg_num,
+                                                const uint8_t *opcodes,
+                                                uint32_t len, bool can_replace);
     // When this UnspecifiedRegistersAreUndefined mode is
     // set, any register that is not specified by this Row will
     // be described as Undefined.

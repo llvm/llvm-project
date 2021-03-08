@@ -4,6 +4,7 @@ func fibonacci(_ n: Int) async -> Int {
     }
     let n_1 = await fibonacci(n - 1)
     let n_2 = await fibonacci(n - 2)
+    print(n, n_1, n_2)
     return n_1 + n_2
 }
 
