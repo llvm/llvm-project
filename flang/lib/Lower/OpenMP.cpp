@@ -60,7 +60,7 @@ static void createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
   // uses of the induction variable should use this mlir value.
   if (arg) {
     firOpBuilder.createBlock(&op.getRegion(), {}, {converter.genType(*arg)});
-    converter.setSymbolAddress(*arg, op.getRegion().front().getArgument(0));
+    converter.bindSymbol(*arg, op.getRegion().front().getArgument(0));
   } else {
     firOpBuilder.createBlock(&op.getRegion());
   }
@@ -349,9 +349,9 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
   const auto &loopControl =
       std::get<std::optional<Fortran::parser::LoopControl>>(doStmt->t);
-  const Fortran::parser::LoopControl::Bounds *bounds{
-      std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u)};
-  Fortran::semantics::Symbol *iv{nullptr};
+  const Fortran::parser::LoopControl::Bounds *bounds =
+      std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u);
+  Fortran::semantics::Symbol *iv = nullptr;
   if (bounds) {
     Fortran::lower::StatementContext stmtCtx;
     lowerBound.push_back(fir::getBase(converter.genExprValue(
