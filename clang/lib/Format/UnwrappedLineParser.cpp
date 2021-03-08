@@ -580,11 +580,17 @@ size_t UnwrappedLineParser::computePPHash() const {
 }
 
 void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, unsigned AddLevels,
-                                     bool MunchSemi) {
+                                     bool MunchSemi,
+                                     bool UnindentWhitesmithsBraces) {
   assert(FormatTok->isOneOf(tok::l_brace, TT_MacroBlockBegin) &&
          "'{' or macro block token expected");
   const bool MacroBlock = FormatTok->is(TT_MacroBlockBegin);
   FormatTok->setBlockKind(BK_Block);
+
+  // For Whitesmiths mode, jump to the next level prior to skipping over the
+  // braces.
+  if (AddLevels > 0 && Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths)
+    ++Line->Level;
 
   size_t PPStartHash = computePPHash();
 
@@ -602,9 +608,16 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, unsigned AddLevels,
           ? (UnwrappedLine::kInvalidIndex)
           : (CurrentLines->size() - 1 - NbPreprocessorDirectives);
 
+  // Whitesmiths is weird here. The brace needs to be indented for the namespace
+  // block, but the block itself may not be indented depending on the style
+  // settings. This allows the format to back up one level in those cases.
+  if (UnindentWhitesmithsBraces)
+    --Line->Level;
+
   ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
                                           MustBeDeclaration);
-  Line->Level += AddLevels;
+  if (AddLevels > 0u && Style.BreakBeforeBraces != FormatStyle::BS_Whitesmiths)
+    Line->Level += AddLevels;
   parseLevel(/*HasOpeningBrace=*/true);
 
   if (eof())
@@ -636,6 +649,7 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, unsigned AddLevels,
     nextToken();
 
   Line->Level = InitialLevel;
+  FormatTok->setBlockKind(BK_Block);
 
   if (PPStartHash == PPEndHash) {
     Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
@@ -2133,12 +2147,28 @@ void UnwrappedLineParser::parseNamespace() {
                  DeclarationScopeStack.size() > 1)
             ? 1u
             : 0u;
-    parseBlock(/*MustBeDeclaration=*/true, AddLevels);
+    bool ManageWhitesmithsBraces =
+        AddLevels == 0u &&
+        Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths;
+
+    // If we're in Whitesmiths mode, indent the brace if we're not indenting
+    // the whole block.
+    if (ManageWhitesmithsBraces)
+      ++Line->Level;
+
+    parseBlock(/*MustBeDeclaration=*/true, AddLevels,
+               /*MunchSemi=*/true,
+               /*UnindentWhitesmithsBraces=*/ManageWhitesmithsBraces);
+
     // Munch the semicolon after a namespace. This is more common than one would
     // think. Putting the semicolon into its own line is very ugly.
     if (FormatTok->Tok.is(tok::semi))
       nextToken();
-    addUnwrappedLine();
+
+    addUnwrappedLine(AddLevels > 0 ? LineLevel::Remove : LineLevel::Keep);
+
+    if (ManageWhitesmithsBraces)
+      --Line->Level;
   }
   // FIXME: Add error handling.
 }
@@ -2224,6 +2254,11 @@ void UnwrappedLineParser::parseDoWhile() {
     return;
   }
 
+  // If in Whitesmiths mode, the line with the while() needs to be indented
+  // to the same level as the block.
+  if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths)
+    ++Line->Level;
+
   nextToken();
   parseStructuralElement();
 }
@@ -2236,25 +2271,19 @@ void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
   if (LeftAlignLabel)
     Line->Level = 0;
 
-  bool RemoveWhitesmithsCaseIndent =
-      (!Style.IndentCaseBlocks &&
-       Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths);
-
-  if (RemoveWhitesmithsCaseIndent)
-    --Line->Level;
-
   if (!Style.IndentCaseBlocks && CommentsBeforeNextToken.empty() &&
       FormatTok->Tok.is(tok::l_brace)) {
 
-    CompoundStatementIndenter Indenter(
-        this, Line->Level, Style.BraceWrapping.AfterCaseLabel,
-        Style.BraceWrapping.IndentBraces || RemoveWhitesmithsCaseIndent);
+    CompoundStatementIndenter Indenter(this, Line->Level,
+                                       Style.BraceWrapping.AfterCaseLabel,
+                                       Style.BraceWrapping.IndentBraces);
     parseBlock(/*MustBeDeclaration=*/false);
     if (FormatTok->Tok.is(tok::kw_break)) {
       if (Style.BraceWrapping.AfterControlStatement ==
           FormatStyle::BWACS_Always) {
         addUnwrappedLine();
-        if (RemoveWhitesmithsCaseIndent) {
+        if (!Style.IndentCaseBlocks &&
+            Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
           Line->Level++;
         }
       }
@@ -2922,17 +2951,29 @@ LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line,
   llvm::dbgs() << "\n";
 }
 
-void UnwrappedLineParser::addUnwrappedLine() {
+void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
   if (Line->Tokens.empty())
     return;
   LLVM_DEBUG({
     if (CurrentLines == &Lines)
       printDebugInfo(*Line);
   });
+
+  // If this line closes a block when in Whitesmiths mode, remember that
+  // information so that the level can be decreased after the line is added.
+  // This has to happen after the addition of the line since the line itself
+  // needs to be indented.
+  bool ClosesWhitesmithsBlock =
+      Line->MatchingOpeningBlockLineIndex != UnwrappedLine::kInvalidIndex &&
+      Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths;
+
   CurrentLines->push_back(std::move(*Line));
   Line->Tokens.clear();
   Line->MatchingOpeningBlockLineIndex = UnwrappedLine::kInvalidIndex;
   Line->FirstStartColumn = 0;
+
+  if (ClosesWhitesmithsBlock && AdjustLevel == LineLevel::Remove)
+    --Line->Level;
   if (CurrentLines == &Lines && !PreprocessorDirectives.empty()) {
     CurrentLines->append(
         std::make_move_iterator(PreprocessorDirectives.begin()),

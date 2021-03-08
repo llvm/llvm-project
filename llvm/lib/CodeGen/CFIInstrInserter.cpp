@@ -157,7 +157,7 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
 
   // Initialize MBBMap.
   for (MachineBasicBlock &MBB : MF) {
-    MBBCFAInfo MBBInfo;
+    MBBCFAInfo &MBBInfo = MBBVector[MBB.getNumber()];
     MBBInfo.MBB = &MBB;
     MBBInfo.IncomingCFAOffset = InitialOffset;
     MBBInfo.OutgoingCFAOffset = InitialOffset;
@@ -165,7 +165,6 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
     MBBInfo.OutgoingCFARegister = InitialRegister;
     MBBInfo.IncomingCSRSaved.resize(NumRegs);
     MBBInfo.OutgoingCSRSaved.resize(NumRegs);
-    MBBVector[MBB.getNumber()] = MBBInfo;
   }
   CSRLocMap.clear();
 

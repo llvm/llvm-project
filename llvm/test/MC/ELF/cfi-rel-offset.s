@@ -1,4 +1,10 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S --sr --sd - | FileCheck %s
+# RUN: llvm-mc -triple x86_64 %s | FileCheck %s --check-prefix=ASM
+# RUN: llvm-mc -filetype=obj -triple x86_64 %s | llvm-readobj -S --sr --sd - | FileCheck %s
+
+# ASM:      .cfi_rel_offset %rbp, 16{{$}}
+# ASM-NEXT: nop
+# ASM:      .cfi_rel_offset %rbp, 0{{$}}
+# ASM-NEXT: .cfi_endproc
 
 f:
 	.cfi_startproc

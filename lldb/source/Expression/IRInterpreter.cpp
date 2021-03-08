@@ -1241,7 +1241,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       if (!write_error.Success()) {
         LLDB_LOGF(log, "Couldn't write to a region on behalf of a LoadInst");
         error.SetErrorToGenericError();
-        error.SetErrorString(memory_read_error);
+        error.SetErrorString(memory_write_error);
         return false;
       }
 

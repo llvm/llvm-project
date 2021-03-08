@@ -1,0 +1,5 @@
+# NOTE: The trailing whitespace is added on purpose to verify that these
+# whitespaces are trimmed before paring.
+HIP_VERSION_MAJOR=4 
+HIP_VERSION_MINOR=0
+HIP_VERSION_PATCH=20214-a2917cd

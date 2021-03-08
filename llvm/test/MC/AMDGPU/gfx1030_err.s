@@ -21,9 +21,6 @@ v_dot8c_i32_i4 v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
 s_get_waveid_in_workgroup s0
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-s_memtime s[0:1]
-// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
 s_getreg_b32 s2, hwreg(HW_REG_XNACK_MASK)
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
 

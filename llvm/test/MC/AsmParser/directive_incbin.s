@@ -28,13 +28,11 @@
 
 .data
 .incbin "incbin\137abcd" 1
-
-# CHECK-ERROR: error: unexpected token in '.incbin' directive
+# CHECK-ERROR: :[[#@LINE-1]]:26: error: expected newline
 
 .data
 .incbin "incbin\137abcd", 1 2
-
-# CHECK-ERROR: error: unexpected token in '.incbin' directive
+# CHECK-ERROR: :[[#@LINE-1]]:29: error: expected newline
 
 .data
 .incbin "incbin\137abcd", -1

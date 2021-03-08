@@ -945,9 +945,8 @@ RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
 
 // Return the largest legal scalable vector type that matches VT's element type.
 MVT RISCVTargetLowering::getContainerForFixedLengthVector(
-    SelectionDAG &DAG, MVT VT, const RISCVSubtarget &Subtarget) {
-  assert(VT.isFixedLengthVector() &&
-         DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+    const TargetLowering &TLI, MVT VT, const RISCVSubtarget &Subtarget) {
+  assert(VT.isFixedLengthVector() && TLI.isTypeLegal(VT) &&
          "Expected legal fixed length vector!");
 
   unsigned LMul = Subtarget.getLMULForFixedLengthVector(VT);
@@ -974,6 +973,16 @@ MVT RISCVTargetLowering::getContainerForFixedLengthVector(
     return MVT::getScalableVectorVT(EltVT, LMul * EltsPerBlock);
   }
   }
+}
+
+MVT RISCVTargetLowering::getContainerForFixedLengthVector(
+    SelectionDAG &DAG, MVT VT, const RISCVSubtarget &Subtarget) {
+  return getContainerForFixedLengthVector(DAG.getTargetLoweringInfo(), VT,
+                                          Subtarget);
+}
+
+MVT RISCVTargetLowering::getContainerForFixedLengthVector(MVT VT) const {
+  return getContainerForFixedLengthVector(*this, VT, getSubtarget());
 }
 
 // Grow V to consume an entire RVV register.
@@ -1250,8 +1259,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
 
     MVT ContainerVT = SrcVT;
     if (SrcVT.isFixedLengthVector()) {
-      ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-          DAG, SrcVT, Subtarget);
+      ContainerVT = getContainerForFixedLengthVector(SrcVT);
       Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
     }
 
@@ -1313,8 +1321,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // Prepare any fixed-length vector operands.
     MVT ContainerVT = VT;
     if (SrcVT.isFixedLengthVector()) {
-      ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-          DAG, VT, Subtarget);
+      ContainerVT = getContainerForFixedLengthVector(VT);
       MVT SrcContainerVT =
           ContainerVT.changeVectorElementType(SrcVT.getVectorElementType());
       Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
@@ -1354,9 +1361,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // Prepare any fixed-length vector operands.
     MVT ContainerVT = VT;
     if (VT.isFixedLengthVector()) {
-      MVT SrcContainerVT =
-          RISCVTargetLowering::getContainerForFixedLengthVector(DAG, SrcVT,
-                                                                Subtarget);
+      MVT SrcContainerVT = getContainerForFixedLengthVector(SrcVT);
       ContainerVT =
           SrcContainerVT.changeVectorElementType(VT.getVectorElementType());
       Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
@@ -1474,13 +1479,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     MVT ContainerVT, SrcContainerVT;
     // Derive the reference container type from the larger vector type.
     if (SrcEltSize > EltSize) {
-      SrcContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-          DAG, SrcVT, Subtarget);
+      SrcContainerVT = getContainerForFixedLengthVector(SrcVT);
       ContainerVT =
           SrcContainerVT.changeVectorElementType(VT.getVectorElementType());
     } else {
-      ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-          DAG, VT, Subtarget);
+      ContainerVT = getContainerForFixedLengthVector(VT);
       SrcContainerVT = ContainerVT.changeVectorElementType(SrcEltVT);
     }
 
@@ -2097,8 +2100,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ISD::VSELECT, DL, VecVT, Src, SplatTrueVal, SplatZero);
   }
 
-  MVT ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-      DAG, VecVT, Subtarget);
+  MVT ContainerVT = getContainerForFixedLengthVector(VecVT);
   MVT I1ContainerVT =
       MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
 
@@ -2126,8 +2128,7 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorExtendToRVV(
   // Grab the canonical container type for the extended type. Infer the smaller
   // type from that to ensure the same number of vector elements, as we know
   // the LMUL will be sufficient to hold the smaller type.
-  MVT ContainerExtVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-      DAG, ExtVT, Subtarget);
+  MVT ContainerExtVT = getContainerForFixedLengthVector(ExtVT);
   // Get the extended container type manually to ensure the same number of
   // vector elements between source and dest.
   MVT ContainerVT = MVT::getVectorVT(VT.getVectorElementType(),
@@ -2161,7 +2162,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskTrunc(SDValue Op,
   // If this is a fixed vector, we need to convert it to a scalable vector.
   MVT ContainerVT = VecVT;
   if (VecVT.isFixedLengthVector()) {
-    ContainerVT = getContainerForFixedLengthVector(DAG, VecVT, Subtarget);
+    ContainerVT = getContainerForFixedLengthVector(VecVT);
     Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
   }
 
@@ -2198,7 +2199,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   MVT ContainerVT = VecVT;
   // If the operand is a fixed-length vector, convert to a scalable one.
   if (VecVT.isFixedLengthVector()) {
-    ContainerVT = getContainerForFixedLengthVector(DAG, VecVT, Subtarget);
+    ContainerVT = getContainerForFixedLengthVector(VecVT);
     Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
   }
 
@@ -2265,7 +2266,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   // If this is a fixed vector, we need to convert it to a scalable vector.
   MVT ContainerVT = VecVT;
   if (VecVT.isFixedLengthVector()) {
-    ContainerVT = getContainerForFixedLengthVector(DAG, VecVT, Subtarget);
+    ContainerVT = getContainerForFixedLengthVector(VecVT);
     Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
   }
 
@@ -2387,27 +2388,26 @@ static MVT getLMUL1VT(MVT VT) {
       RISCV::RVVBitsPerBlock / VT.getVectorElementType().getSizeInBits());
 }
 
-static std::pair<unsigned, uint64_t>
-getRVVReductionOpAndIdentityVal(unsigned ISDOpcode, unsigned EltSizeBits) {
+static unsigned getRVVReductionOp(unsigned ISDOpcode) {
   switch (ISDOpcode) {
   default:
     llvm_unreachable("Unhandled reduction");
   case ISD::VECREDUCE_ADD:
-    return {RISCVISD::VECREDUCE_ADD, 0};
+    return RISCVISD::VECREDUCE_ADD;
   case ISD::VECREDUCE_UMAX:
-    return {RISCVISD::VECREDUCE_UMAX, 0};
+    return RISCVISD::VECREDUCE_UMAX;
   case ISD::VECREDUCE_SMAX:
-    return {RISCVISD::VECREDUCE_SMAX, minIntN(EltSizeBits)};
+    return RISCVISD::VECREDUCE_SMAX;
   case ISD::VECREDUCE_UMIN:
-    return {RISCVISD::VECREDUCE_UMIN, maxUIntN(EltSizeBits)};
+    return RISCVISD::VECREDUCE_UMIN;
   case ISD::VECREDUCE_SMIN:
-    return {RISCVISD::VECREDUCE_SMIN, maxIntN(EltSizeBits)};
+    return RISCVISD::VECREDUCE_SMIN;
   case ISD::VECREDUCE_AND:
-    return {RISCVISD::VECREDUCE_AND, -1};
+    return RISCVISD::VECREDUCE_AND;
   case ISD::VECREDUCE_OR:
-    return {RISCVISD::VECREDUCE_OR, 0};
+    return RISCVISD::VECREDUCE_OR;
   case ISD::VECREDUCE_XOR:
-    return {RISCVISD::VECREDUCE_XOR, 0};
+    return RISCVISD::VECREDUCE_XOR;
   }
 }
 
@@ -2422,13 +2422,11 @@ SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
          "Unexpected vector-reduce lowering");
   MVT VecVT = Op.getOperand(0).getSimpleValueType();
   MVT VecEltVT = VecVT.getVectorElementType();
-  unsigned RVVOpcode;
-  uint64_t IdentityVal;
-  std::tie(RVVOpcode, IdentityVal) =
-      getRVVReductionOpAndIdentityVal(Op.getOpcode(), VecEltVT.getSizeInBits());
+  unsigned RVVOpcode = getRVVReductionOp(Op.getOpcode());
   MVT M1VT = getLMUL1VT(VecVT);
-  SDValue IdentitySplat =
-      DAG.getSplatVector(M1VT, DL, DAG.getConstant(IdentityVal, DL, VecEltVT));
+  SDValue NeutralElem = DAG.getNeutralElement(
+      ISD::getVecReduceBaseOpcode(Op.getOpcode()), DL, VecEltVT, SDNodeFlags());
+  SDValue IdentitySplat = DAG.getSplatVector(M1VT, DL, NeutralElem);
   SDValue Reduction =
       DAG.getNode(RVVOpcode, DL, M1VT, Op.getOperand(0), IdentitySplat);
   SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VecEltVT, Reduction,
@@ -2530,8 +2528,7 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       return Op;
     MVT ContainerVT = VecVT;
     if (VecVT.isFixedLengthVector()) {
-      ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-          DAG, VecVT, Subtarget);
+      ContainerVT = getContainerForFixedLengthVector(VecVT);
       Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
     }
     SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
@@ -2682,8 +2679,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
       return Op;
     MVT ContainerVT = VecVT;
     if (VecVT.isFixedLengthVector()) {
-      ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-          DAG, VecVT, Subtarget);
+      ContainerVT = getContainerForFixedLengthVector(VecVT);
       Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
     }
     SDValue Mask =
@@ -2753,8 +2749,7 @@ RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
 
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
-  MVT ContainerVT =
-      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
   SDValue VL =
       DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
@@ -2779,8 +2774,7 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
   // FIXME: We probably need to zero any extra bits in a byte for mask stores.
   // This is tricky to do.
 
-  MVT ContainerVT =
-      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
   SDValue VL =
       DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
@@ -2797,8 +2791,7 @@ SDValue
 RISCVTargetLowering::lowerFixedLengthVectorSetccToRVV(SDValue Op,
                                                       SelectionDAG &DAG) const {
   MVT InVT = Op.getOperand(0).getSimpleValueType();
-  MVT ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-      DAG, InVT, Subtarget);
+  MVT ContainerVT = getContainerForFixedLengthVector(InVT);
 
   MVT VT = Op.getSimpleValueType();
 
@@ -2911,8 +2904,7 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorLogicOpToRVV(
 SDValue RISCVTargetLowering::lowerFixedLengthVectorSelectToRVV(
     SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
-  MVT ContainerVT =
-      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
   MVT I1ContainerVT =
       MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
@@ -2940,8 +2932,7 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   assert(useRVVForFixedLengthVectorVT(VT) &&
          "Only expected to lower fixed length vector operation!");
-  MVT ContainerVT =
-      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
   // Create list of operands by converting existing ones to scalable types.
   SmallVector<SDValue, 6> Ops;
@@ -3242,7 +3233,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // If this is a fixed vector, we need to convert it to a scalable vector.
     MVT ContainerVT = VecVT;
     if (VecVT.isFixedLengthVector()) {
-      ContainerVT = getContainerForFixedLengthVector(DAG, VecVT, Subtarget);
+      ContainerVT = getContainerForFixedLengthVector(VecVT);
       Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
     }
 
@@ -3789,23 +3780,56 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case RISCVISD::SELECT_CC: {
     // Transform
-    // (select_cc (xor X, 1), 0, setne, trueV, falseV) ->
-    // (select_cc X, 0, seteq, trueV, falseV) if we can prove X is 0/1.
-    // This can occur when legalizing some floating point comparisons.
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
     auto CCVal = static_cast<ISD::CondCode>(N->getConstantOperandVal(2));
+    if (!ISD::isIntEqualitySetCC(CCVal))
+      break;
+
+    // Fold (select_cc (setlt X, Y), 0, ne, trueV, falseV) ->
+    //      (select_cc X, Y, lt, trueV, falseV)
+    // Sometimes the setcc is introduced after select_cc has been formed.
+    if (LHS.getOpcode() == ISD::SETCC && isNullConstant(RHS) &&
+        LHS.getOperand(0).getValueType() == Subtarget.getXLenVT()) {
+      // If we're looking for eq 0 instead of ne 0, we need to invert the
+      // condition.
+      bool Invert = CCVal == ISD::SETEQ;
+      CCVal = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+      if (Invert)
+        CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
+
+      RHS = LHS.getOperand(1);
+      LHS = LHS.getOperand(0);
+      normaliseSetCC(LHS, RHS, CCVal);
+
+      SDLoc DL(N);
+      SDValue TargetCC = DAG.getConstant(CCVal, DL, Subtarget.getXLenVT());
+      return DAG.getNode(
+          RISCVISD::SELECT_CC, DL, N->getValueType(0),
+          {LHS, RHS, TargetCC, N->getOperand(3), N->getOperand(4)});
+    }
+
+    // Fold (select_cc (xor X, Y), 0, eq/ne, trueV, falseV) ->
+    //      (select_cc X, Y, eq/ne, trueV, falseV)
+    if (LHS.getOpcode() == ISD::XOR && isNullConstant(RHS))
+      return DAG.getNode(RISCVISD::SELECT_CC, SDLoc(N), N->getValueType(0),
+                         {LHS.getOperand(0), LHS.getOperand(1),
+                          N->getOperand(2), N->getOperand(3),
+                          N->getOperand(4)});
+    // (select_cc X, 1, setne, trueV, falseV) ->
+    // (select_cc X, 0, seteq, trueV, falseV) if we can prove X is 0/1.
+    // This can occur when legalizing some floating point comparisons.
     APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
-    if (ISD::isIntEqualitySetCC(CCVal) && isNullConstant(RHS) &&
-        LHS.getOpcode() == ISD::XOR && isOneConstant(LHS.getOperand(1)) &&
-        DAG.MaskedValueIsZero(LHS.getOperand(0), Mask)) {
+    if (isOneConstant(RHS) && DAG.MaskedValueIsZero(LHS, Mask)) {
       SDLoc DL(N);
       CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
       SDValue TargetCC = DAG.getConstant(CCVal, DL, Subtarget.getXLenVT());
-      return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
-                         {LHS.getOperand(0), RHS, TargetCC, N->getOperand(3),
-                          N->getOperand(4)});
+      RHS = DAG.getConstant(0, DL, LHS.getValueType());
+      return DAG.getNode(
+          RISCVISD::SELECT_CC, DL, N->getValueType(0),
+          {LHS, RHS, TargetCC, N->getOperand(3), N->getOperand(4)});
     }
+
     break;
   }
   case ISD::SETCC: {

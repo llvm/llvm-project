@@ -94,6 +94,7 @@ void InputChunk::verifyRelocTargets() const {
     case R_WASM_FUNCTION_OFFSET_I32:
     case R_WASM_SECTION_OFFSET_I32:
     case R_WASM_GLOBAL_INDEX_I32:
+    case R_WASM_MEMORY_ADDR_LOCREL_I32:
       existingValue = read32le(loc);
       break;
     case R_WASM_TABLE_INDEX_I64:
@@ -139,7 +140,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
 
   for (const WasmRelocation &rel : relocations) {
     uint8_t *loc = buf + rel.Offset + off;
-    auto value = file->calcNewValue(rel, tombstone);
+    auto value = file->calcNewValue(rel, tombstone, this);
     LLVM_DEBUG(dbgs() << "apply reloc: type=" << relocTypeToString(rel.Type));
     if (rel.Type != R_WASM_TYPE_INDEX_LEB)
       LLVM_DEBUG(dbgs() << " sym=" << file->getSymbols()[rel.Index]->getName());
@@ -176,6 +177,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
     case R_WASM_FUNCTION_OFFSET_I32:
     case R_WASM_SECTION_OFFSET_I32:
     case R_WASM_GLOBAL_INDEX_I32:
+    case R_WASM_MEMORY_ADDR_LOCREL_I32:
       write32le(loc, value);
       break;
     case R_WASM_TABLE_INDEX_I64:
@@ -302,7 +304,8 @@ void InputFunction::calculateSize() {
   for (const WasmRelocation &rel : relocations) {
     LLVM_DEBUG(dbgs() << "  region: " << (rel.Offset - lastRelocEnd) << "\n");
     compressedFuncSize += rel.Offset - lastRelocEnd;
-    compressedFuncSize += getRelocWidth(rel, file->calcNewValue(rel, tombstone));
+    compressedFuncSize +=
+        getRelocWidth(rel, file->calcNewValue(rel, tombstone, this));
     lastRelocEnd = rel.Offset + getRelocWidthPadded(rel);
   }
   LLVM_DEBUG(dbgs() << "  final region: " << (end - lastRelocEnd) << "\n");
@@ -343,7 +346,8 @@ void InputFunction::writeTo(uint8_t *buf) const {
     LLVM_DEBUG(dbgs() << "  write chunk: " << chunkSize << "\n");
     memcpy(buf, lastRelocEnd, chunkSize);
     buf += chunkSize;
-    buf += writeCompressedReloc(buf, rel, file->calcNewValue(rel, tombstone));
+    buf += writeCompressedReloc(buf, rel,
+                                file->calcNewValue(rel, tombstone, this));
     lastRelocEnd = secStart + rel.Offset + getRelocWidthPadded(rel);
   }
 
@@ -416,7 +420,7 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, baseSymbol->getGlobalIndex(), "base");
       writeU8(os, opcode_reloc_const, "CONST");
-      writeSleb128(os, file->calcNewValue(rel, tombstone), "offset");
+      writeSleb128(os, file->calcNewValue(rel, tombstone, this), "offset");
       writeU8(os, opcode_reloc_add, "ADD");
     }
 

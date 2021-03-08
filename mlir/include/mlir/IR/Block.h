@@ -249,34 +249,57 @@ public:
   // Operation Walkers
   //===--------------------------------------------------------------------===//
 
-  /// Walk the operations in this block in postorder, calling the callback for
-  /// each operation.
+  /// Walk the operations in this block. The callback method is called for each
+  /// nested region, block or operation, depending on the callback provided.
+  /// Regions, blocks and operations at the same nesting level are visited in
+  /// lexicographical order. The walk order for enclosing regions, blocks and
+  /// operations with respect to their nested ones is specified by 'Order'
+  /// (post-order by default). A callback on a block or operation is allowed to
+  /// erase that block or operation if either:
+  ///   * the walk is in post-order, or
+  ///   * the walk is in pre-order and the walk is skipped after the erasure.
   /// See Operation::walk for more details.
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   RetT walk(FnT &&callback) {
-    return walk(begin(), end(), std::forward<FnT>(callback));
+    return walk<Order>(begin(), end(), std::forward<FnT>(callback));
   }
 
-  /// Walk the operations in the specified [begin, end) range of this block in
-  /// postorder, calling the callback for each operation. This method is invoked
-  /// for void return callbacks.
+  /// Walk the operations in the specified [begin, end) range of this block. The
+  /// callback method is called for each nested region, block or operation,
+  /// depending on the callback provided. Regions, blocks and operations at the
+  /// same nesting level are visited in lexicographical order. The walk order
+  /// for enclosing regions, blocks and operations with respect to their nested
+  /// ones is specified by 'Order' (post-order by default). This method is
+  /// invoked for void-returning callbacks. A callback on a block or operation
+  /// is allowed to erase that block or operation only if the walk is in
+  /// post-order. See non-void method for pre-order erasure.
   /// See Operation::walk for more details.
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   typename std::enable_if<std::is_same<RetT, void>::value, RetT>::type
   walk(Block::iterator begin, Block::iterator end, FnT &&callback) {
     for (auto &op : llvm::make_early_inc_range(llvm::make_range(begin, end)))
-      detail::walk(&op, callback);
+      detail::walk<Order>(&op, callback);
   }
 
-  /// Walk the operations in the specified [begin, end) range of this block in
-  /// postorder, calling the callback for each operation. This method is invoked
-  /// for interruptible callbacks.
+  /// Walk the operations in the specified [begin, end) range of this block. The
+  /// callback method is called for each nested region, block or operation,
+  /// depending on the callback provided. Regions, blocks and operations at the
+  /// same nesting level are visited in lexicographical order. The walk order
+  /// for enclosing regions, blocks and operations with respect to their nested
+  /// ones is specified by 'Order' (post-order by default). This method is
+  /// invoked for skippable or interruptible callbacks. A callback on a block or
+  /// operation is allowed to erase that block or operation if either:
+  ///   * the walk is in post-order, or
+  ///   * the walk is in pre-order and the walk is skipped after the erasure.
   /// See Operation::walk for more details.
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   typename std::enable_if<std::is_same<RetT, WalkResult>::value, RetT>::type
   walk(Block::iterator begin, Block::iterator end, FnT &&callback) {
     for (auto &op : llvm::make_early_inc_range(llvm::make_range(begin, end)))
-      if (detail::walk(&op, callback).wasInterrupted())
+      if (detail::walk<Order>(&op, callback).wasInterrupted())
         return WalkResult::interrupt();
     return WalkResult::advance();
   }

@@ -2764,8 +2764,8 @@ public:
                                 PatternRewriter &rewriter) const override {
     switch (get1DMaskFormat(load.mask())) {
     case MaskFormat::AllTrue:
-      rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-          load, load.getType(), load.base(), load.indices(), false);
+      rewriter.replaceOpWithNewOp<vector::LoadOp>(load, load.getType(),
+                                                  load.base(), load.indices());
       return success();
     case MaskFormat::AllFalse:
       rewriter.replaceOp(load, load.pass_thru());
@@ -2809,8 +2809,8 @@ public:
                                 PatternRewriter &rewriter) const override {
     switch (get1DMaskFormat(store.mask())) {
     case MaskFormat::AllTrue:
-      rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-          store, store.valueToStore(), store.base(), store.indices(), false);
+      rewriter.replaceOpWithNewOp<vector::StoreOp>(
+          store, store.valueToStore(), store.base(), store.indices());
       return success();
     case MaskFormat::AllFalse:
       rewriter.eraseOp(store);
@@ -2951,8 +2951,8 @@ public:
                                 PatternRewriter &rewriter) const override {
     switch (get1DMaskFormat(expand.mask())) {
     case MaskFormat::AllTrue:
-      rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-          expand, expand.getType(), expand.base(), expand.indices(), false);
+      rewriter.replaceOpWithNewOp<vector::LoadOp>(
+          expand, expand.getType(), expand.base(), expand.indices());
       return success();
     case MaskFormat::AllFalse:
       rewriter.replaceOp(expand, expand.pass_thru());
@@ -2996,9 +2996,9 @@ public:
                                 PatternRewriter &rewriter) const override {
     switch (get1DMaskFormat(compress.mask())) {
     case MaskFormat::AllTrue:
-      rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
+      rewriter.replaceOpWithNewOp<vector::StoreOp>(
           compress, compress.valueToStore(), compress.base(),
-          compress.indices(), false);
+          compress.indices());
       return success();
     case MaskFormat::AllFalse:
       rewriter.eraseOp(compress);

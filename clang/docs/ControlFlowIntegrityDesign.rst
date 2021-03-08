@@ -718,7 +718,7 @@ General case
 ------------
 For functions called multiple times a *return jump table* is constructed
 in the same manner as jump tables for indirect function calls (see above).
-The correct jump table entry (or it's index) is passed by `CALL` to `f()`
+The correct jump table entry (or its index) is passed by `CALL` to `f()`
 (as an extra argument) and then spilled to stack.
 The `RET` instruction is replaced with a load of the jump table entry,
 jump table range check, and `JMP` to the jump table entry.

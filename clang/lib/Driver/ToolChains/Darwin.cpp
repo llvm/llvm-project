@@ -417,7 +417,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddAllArgs(CmdArgs, options::OPT_sectalign);
   Args.AddAllArgs(CmdArgs, options::OPT_sectobjectsymbols);
   Args.AddAllArgs(CmdArgs, options::OPT_segcreate);
-  Args.AddLastArg(CmdArgs, options::OPT_whyload);
+  Args.AddLastArg(CmdArgs, options::OPT_why_load);
   Args.AddLastArg(CmdArgs, options::OPT_whatsloaded);
   Args.AddAllArgs(CmdArgs, options::OPT_dylinker__install__name);
   Args.AddLastArg(CmdArgs, options::OPT_dylinker);

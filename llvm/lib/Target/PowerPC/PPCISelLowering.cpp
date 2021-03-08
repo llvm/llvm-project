@@ -1572,6 +1572,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::ADDI_TLSGD_L:    return "PPCISD::ADDI_TLSGD_L";
   case PPCISD::GET_TLS_ADDR:    return "PPCISD::GET_TLS_ADDR";
   case PPCISD::ADDI_TLSGD_L_ADDR: return "PPCISD::ADDI_TLSGD_L_ADDR";
+  case PPCISD::TLSGD_AIX:       return "PPCISD::TLSGD_AIX";
   case PPCISD::ADDIS_TLSLD_HA:  return "PPCISD::ADDIS_TLSLD_HA";
   case PPCISD::ADDI_TLSLD_L:    return "PPCISD::ADDI_TLSLD_L";
   case PPCISD::GET_TLSLD_ADDR:  return "PPCISD::GET_TLSLD_ADDR";
@@ -3118,7 +3119,42 @@ SDValue PPCTargetLowering::LowerBlockAddress(SDValue Op,
 SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
                                               SelectionDAG &DAG) const {
   if (Subtarget.isAIXABI())
-    report_fatal_error("TLS is not yet supported on AIX.");
+    return LowerGlobalTLSAddressAIX(Op, DAG);
+
+  return LowerGlobalTLSAddressLinux(Op, DAG);
+}
+
+SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
+
+  if (DAG.getTarget().useEmulatedTLS())
+    report_fatal_error("Emulated TLS is not yet supported on AIX");
+
+  if (Subtarget.isPPC64())
+    report_fatal_error("TLS is not yet supported on AIX PPC64");
+
+  SDLoc dl(GA);
+  const GlobalValue *GV = GA->getGlobal();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+
+  // The general-dynamic model is the only access model supported for now, so
+  // all the GlobalTLSAddress nodes are lowered with this model.
+  // We need to generate two TOC entries, one for the variable offset, one for
+  // the region handle. The global address for the TOC entry of the region
+  // handle is created with the MO_TLSGD_FLAG flag so we can easily identify
+  // this entry and add the right relocation.
+  SDValue VariableOffsetTGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, 0);
+  SDValue RegionHandleTGA =
+      DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSGD_FLAG);
+  SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
+  SDValue RegionHandle = getTOCEntry(DAG, dl, RegionHandleTGA);
+  return DAG.getNode(PPCISD::TLSGD_AIX, dl, PtrVT, VariableOffset,
+                     RegionHandle);
+}
+
+SDValue PPCTargetLowering::LowerGlobalTLSAddressLinux(SDValue Op,
+                                                      SelectionDAG &DAG) const {
   // FIXME: TLS addresses currently use medium model code sequences,
   // which is the most useful form.  Eventually support for small and
   // large models could be added if users need it, at the cost of
@@ -7076,6 +7112,52 @@ SDValue PPCTargetLowering::LowerCall_AIX(
 
     if (VA.isRegLoc() && !VA.needsCustom()) {
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+      continue;
+    }
+
+    // Vector arguments passed to VarArg functions need custom handling when
+    // they are passed (at least partially) in GPRs.
+    if (VA.isMemLoc() && VA.needsCustom() && ValVT.isVector()) {
+      assert(CFlags.IsVarArg && "Custom MemLocs only used for Vector args.");
+      // Store value to its stack slot.
+      SDValue PtrOff =
+          DAG.getConstant(VA.getLocMemOffset(), dl, StackPtr.getValueType());
+      PtrOff = DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr, PtrOff);
+      SDValue Store =
+          DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo());
+      MemOpChains.push_back(Store);
+      const unsigned OriginalValNo = VA.getValNo();
+      // Then load the GPRs from the stack
+      unsigned LoadOffset = 0;
+      auto HandleCustomVecRegLoc = [&]() {
+        assert(I != E && "Unexpected end of CCvalAssigns.");
+        assert(ArgLocs[I].isRegLoc() && ArgLocs[I].needsCustom() &&
+               "Expected custom RegLoc.");
+        CCValAssign RegVA = ArgLocs[I++];
+        assert(RegVA.getValNo() == OriginalValNo &&
+               "Custom MemLoc ValNo and custom RegLoc ValNo must match.");
+        SDValue Add = DAG.getNode(ISD::ADD, dl, PtrVT, PtrOff,
+                                  DAG.getConstant(LoadOffset, dl, PtrVT));
+        SDValue Load = DAG.getLoad(PtrVT, dl, Store, Add, MachinePointerInfo());
+        MemOpChains.push_back(Load.getValue(1));
+        RegsToPass.push_back(std::make_pair(RegVA.getLocReg(), Load));
+        LoadOffset += PtrByteSize;
+      };
+
+      // In 64-bit there will be exactly 2 custom RegLocs that follow, and in
+      // in 32-bit there will be 2 custom RegLocs if we are passing in R9 and
+      // R10.
+      HandleCustomVecRegLoc();
+      HandleCustomVecRegLoc();
+
+      if (I != E && ArgLocs[I].isRegLoc() && ArgLocs[I].needsCustom() &&
+          ArgLocs[I].getValNo() == OriginalValNo) {
+        assert(!IsPPC64 &&
+               "Only 2 custom RegLocs expected for 64-bit codegen.");
+        HandleCustomVecRegLoc();
+        HandleCustomVecRegLoc();
+      }
+
       continue;
     }
 

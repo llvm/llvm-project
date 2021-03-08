@@ -1345,7 +1345,7 @@ or transferring them.
 
 Similar transfers of responsibility occur for ``__weak`` fields, but
 since both sides must use native ``__weak`` support to ensure
-calling convention compatibililty, this transfer is always handled
+calling convention compatibility, this transfer is always handled
 automatically by the compiler.
 
 .. admonition:: Rationale

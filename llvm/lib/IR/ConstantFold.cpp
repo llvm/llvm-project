@@ -1764,7 +1764,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
       if (!GV->hasExternalWeakLinkage() && !isa<GlobalAlias>(GV) &&
           !NullPointerIsDefined(nullptr /* F */,
                                 GV->getType()->getAddressSpace()))
-        return ICmpInst::ICMP_NE;
+        return ICmpInst::ICMP_UGT;
     }
   } else if (const BlockAddress *BA = dyn_cast<BlockAddress>(V1)) {
     if (isa<ConstantExpr>(V2)) {  // Swap as necessary.
@@ -1838,35 +1838,27 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
         // If we are comparing a GEP to a null pointer, check to see if the base
         // of the GEP equals the null pointer.
         if (const GlobalValue *GV = dyn_cast<GlobalValue>(CE1Op0)) {
-          if (GV->hasExternalWeakLinkage())
-            // Weak linkage GVals could be zero or not. We're comparing that
-            // to null pointer so its greater-or-equal
-            return isSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-          else
-            // If its not weak linkage, the GVal must have a non-zero address
-            // so the result is greater-than
-            return isSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+          // If its not weak linkage, the GVal must have a non-zero address
+          // so the result is greater-than
+          if (!GV->hasExternalWeakLinkage())
+            return ICmpInst::ICMP_UGT;
         } else if (isa<ConstantPointerNull>(CE1Op0)) {
           // If we are indexing from a null pointer, check to see if we have any
           // non-zero indices.
           for (unsigned i = 1, e = CE1->getNumOperands(); i != e; ++i)
             if (!CE1->getOperand(i)->isNullValue())
               // Offsetting from null, must not be equal.
-              return isSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+              return ICmpInst::ICMP_UGT;
           // Only zero indexes from null, must still be zero.
           return ICmpInst::ICMP_EQ;
         }
         // Otherwise, we can't really say if the first operand is null or not.
       } else if (const GlobalValue *GV2 = dyn_cast<GlobalValue>(V2)) {
         if (isa<ConstantPointerNull>(CE1Op0)) {
-          if (GV2->hasExternalWeakLinkage())
-            // Weak linkage GVals could be zero or not. We're comparing it to
-            // a null pointer, so its less-or-equal
-            return isSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
-          else
-            // If its not weak linkage, the GVal must have a non-zero address
-            // so the result is less-than
-            return isSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+          // If its not weak linkage, the GVal must have a non-zero address
+          // so the result is less-than
+          if (!GV2->hasExternalWeakLinkage())
+            return ICmpInst::ICMP_ULT;
         } else if (const GlobalValue *GV = dyn_cast<GlobalValue>(CE1Op0)) {
           if (GV == GV2) {
             // If this is a getelementptr of the same global, then it must be
@@ -1876,7 +1868,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
             assert(CE1->getNumOperands() == 2 &&
                    !CE1->getOperand(1)->isNullValue() &&
                    "Surprising getelementptr!");
-            return isSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+            return ICmpInst::ICMP_UGT;
           } else {
             if (CE1GEP->hasAllZeroIndices())
               return areGlobalsPotentiallyEqual(GV, GV2);
@@ -2011,7 +2003,7 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
       }
   // icmp eq/ne(GV,null) -> false/true
   } else if (C2->isNullValue()) {
-    if (const GlobalValue *GV = dyn_cast<GlobalValue>(C1))
+    if (const GlobalValue *GV = dyn_cast<GlobalValue>(C1)) {
       // Don't try to evaluate aliases.  External weak GV can be null.
       if (!isa<GlobalAlias>(GV) && !GV->hasExternalWeakLinkage() &&
           !NullPointerIsDefined(nullptr /* F */,
@@ -2021,6 +2013,16 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
         else if (pred == ICmpInst::ICMP_NE)
           return ConstantInt::getTrue(C1->getContext());
       }
+    }
+
+    // The caller is expected to commute the operands if the constant expression
+    // is C2.
+    // C1 >= 0 --> true
+    if (pred == ICmpInst::ICMP_UGE)
+      return Constant::getAllOnesValue(ResultTy);
+    // C1 < 0 --> false
+    if (pred == ICmpInst::ICMP_ULT)
+      return Constant::getNullValue(ResultTy);
   }
 
   // If the comparison is a comparison between two i1's, simplify it.

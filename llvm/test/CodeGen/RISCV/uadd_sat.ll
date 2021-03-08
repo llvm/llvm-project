@@ -13,10 +13,10 @@ declare i64 @llvm.uadd.sat.i64(i64, i64)
 define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32I-LABEL: func:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    add a1, a0, a1
-; RV32I-NEXT:    sltu a2, a1, a0
 ; RV32I-NEXT:    addi a0, zero, -1
-; RV32I-NEXT:    bnez a2, .LBB0_2
+; RV32I-NEXT:    bltu a1, a2, .LBB0_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:  .LBB0_2:
@@ -85,10 +85,10 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ;
 ; RV64I-LABEL: func2:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    add a1, a0, a1
-; RV64I-NEXT:    sltu a2, a1, a0
 ; RV64I-NEXT:    addi a0, zero, -1
-; RV64I-NEXT:    bnez a2, .LBB1_2
+; RV64I-NEXT:    bltu a1, a2, .LBB1_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:  .LBB1_2:

@@ -86,8 +86,6 @@ STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
 
-static cl::opt<bool> DontAddNoWrapFlags("cvp-dont-add-nowrap-flags", cl::init(false));
-
 namespace {
 
   class CorrelatedValuePropagation : public FunctionPass {
@@ -842,9 +840,6 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
 
 static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   using OBO = OverflowingBinaryOperator;
-
-  if (DontAddNoWrapFlags)
-    return false;
 
   if (BinOp->getType()->isVectorTy())
     return false;

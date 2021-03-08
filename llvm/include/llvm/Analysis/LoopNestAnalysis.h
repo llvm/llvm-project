@@ -66,6 +66,18 @@ public:
   static const BasicBlock &skipEmptyBlockUntil(const BasicBlock *From,
                                                const BasicBlock *End);
 
+  /// Determine whether the loops structure violates basic requirements for
+  /// perfect nesting:
+  ///  - the inner loop should be the outer loop's only child
+  ///  - the outer loop header should 'flow' into the inner loop preheader
+  ///    or jump around the inner loop to the outer loop latch
+  ///  - if the inner loop latch exits the inner loop, it should 'flow' into
+  ///    the outer loop latch.
+  /// Returns true if the loop structure satisfies the basic requirements and
+  /// false otherwise.
+  static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
+                                  ScalarEvolution &SE);
+
   /// Return the outermost loop in the loop nest.
   Loop &getOutermostLoop() const { return *Loops.front(); }
 

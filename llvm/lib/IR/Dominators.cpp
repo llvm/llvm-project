@@ -112,6 +112,16 @@ bool DominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
            PAC.preservedSet<CFGAnalyses>());
 }
 
+bool DominatorTree::dominates(const BasicBlock *BB, const Use &U) const {
+  Instruction *UserInst = cast<Instruction>(U.getUser());
+  if (auto *PN = dyn_cast<PHINode>(UserInst))
+    // A phi use using a value from a block is dominated by the end of that
+    // block.  Note that the phi's parent block may not be.
+    return dominates(BB, PN->getIncomingBlock(U));
+  else
+    return properlyDominates(BB, UserInst->getParent());
+}
+
 // dominates - Return true if Def dominates a use in User. This performs
 // the special checks necessary if Def and User are in the same basic block.
 // Note that Def doesn't dominate a use in Def itself!

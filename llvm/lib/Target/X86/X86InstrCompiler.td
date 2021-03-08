@@ -69,7 +69,7 @@ def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
 let SchedRW = [WriteSystem] in {
 
 // x86-64 va_start lowering magic.
-let usesCustomInserter = 1, Defs = [EFLAGS] in {
+let hasSideEffects = 1, Defs = [EFLAGS] in {
 def VASTART_SAVE_XMM_REGS : I<0, Pseudo,
                               (outs),
                               (ins GR8:$al,
@@ -80,7 +80,9 @@ def VASTART_SAVE_XMM_REGS : I<0, Pseudo,
                                                          timm:$regsavefi,
                                                          timm:$offset),
                                (implicit EFLAGS)]>;
+}
 
+let usesCustomInserter = 1, Defs = [EFLAGS] in {
 // The VAARG_64 and VAARG_X32 pseudo-instructions take the address of the
 // va_list, and place the address of the next argument into a register.
 let Defs = [EFLAGS] in {

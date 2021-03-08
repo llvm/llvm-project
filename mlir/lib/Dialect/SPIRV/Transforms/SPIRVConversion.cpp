@@ -607,6 +607,31 @@ Value mlir::spirv::getBuiltinVariableValue(Operation *op,
 // Index calculation
 //===----------------------------------------------------------------------===//
 
+Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
+                                  int64_t offset, Location loc,
+                                  OpBuilder &builder) {
+  assert(indices.size() == strides.size() &&
+         "must provide indices for all dimensions");
+
+  auto indexType = SPIRVTypeConverter::getIndexType(builder.getContext());
+
+  // TODO: Consider moving to use affine.apply and patterns converting
+  // affine.apply to standard ops. This needs converting to SPIR-V passes to be
+  // broken down into progressive small steps so we can have intermediate steps
+  // using other dialects. At the moment SPIR-V is the final sink.
+
+  Value linearizedIndex = builder.create<spirv::ConstantOp>(
+      loc, indexType, IntegerAttr::get(indexType, offset));
+  for (auto index : llvm::enumerate(indices)) {
+    Value strideVal = builder.create<spirv::ConstantOp>(
+        loc, indexType, IntegerAttr::get(indexType, strides[index.index()]));
+    Value update = builder.create<spirv::IMulOp>(loc, strideVal, index.value());
+    linearizedIndex =
+        builder.create<spirv::IAddOp>(loc, linearizedIndex, update);
+  }
+  return linearizedIndex;
+}
+
 spirv::AccessChainOp mlir::spirv::getElementPtr(
     SPIRVTypeConverter &typeConverter, MemRefType baseType, Value basePtr,
     ValueRange indices, Location loc, OpBuilder &builder) {
@@ -623,28 +648,16 @@ spirv::AccessChainOp mlir::spirv::getElementPtr(
   auto indexType = typeConverter.getIndexType(builder.getContext());
 
   SmallVector<Value, 2> linearizedIndices;
-  // Add a '0' at the start to index into the struct.
   auto zero = spirv::ConstantOp::getZero(indexType, loc, builder);
+
+  // Add a '0' at the start to index into the struct.
   linearizedIndices.push_back(zero);
 
   if (baseType.getRank() == 0) {
     linearizedIndices.push_back(zero);
   } else {
-    // TODO: Instead of this logic, use affine.apply and add patterns for
-    // lowering affine.apply to standard ops. These will get lowered to SPIR-V
-    // ops by the DialectConversion framework.
-    Value ptrLoc = builder.create<spirv::ConstantOp>(
-        loc, indexType, IntegerAttr::get(indexType, offset));
-    assert(indices.size() == strides.size() &&
-           "must provide indices for all dimensions");
-    for (auto index : llvm::enumerate(indices)) {
-      Value strideVal = builder.create<spirv::ConstantOp>(
-          loc, indexType, IntegerAttr::get(indexType, strides[index.index()]));
-      Value update =
-          builder.create<spirv::IMulOp>(loc, strideVal, index.value());
-      ptrLoc = builder.create<spirv::IAddOp>(loc, ptrLoc, update);
-    }
-    linearizedIndices.push_back(ptrLoc);
+    linearizedIndices.push_back(
+        linearizeIndex(indices, strides, offset, loc, builder));
   }
   return builder.create<spirv::AccessChainOp>(loc, basePtr, linearizedIndices);
 }

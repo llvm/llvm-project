@@ -28,6 +28,7 @@ struct CustomMoveAssign {
 
 struct DeletedMoveCtor {
   DeletedMoveCtor(DeletedMoveCtor&&) = delete;
+  DeletedMoveCtor& operator=(DeletedMoveCtor&&) = default;
 };
 
 struct ImplicitlyDeletedMoveCtor {
@@ -35,7 +36,7 @@ struct ImplicitlyDeletedMoveCtor {
 };
 
 struct DeletedMoveAssign {
-  DeletedMoveAssign& operator=(DeletedMoveAssign&&) = default;
+  DeletedMoveAssign& operator=(DeletedMoveAssign&&) = delete;
 };
 
 struct ImplicitlyDeletedMoveAssign {
@@ -56,6 +57,18 @@ public:
 
 private:
   int&& X;
+};
+
+struct NonMovable {
+  NonMovable() = default;
+  NonMovable(NonMovable&&) = delete;
+  NonMovable& operator=(NonMovable&&) = delete;
+};
+
+struct DerivedFromNonMovable : NonMovable {};
+
+struct HasANonMovable {
+  NonMovable X;
 };
 
 #endif // TEST_STD_CONCEPTS_LAND_MOVECONSTRUCTIBLE_H

@@ -25,5 +25,21 @@ void avx512::AVX512Dialect::initialize() {
       >();
 }
 
+static LogicalResult verify(avx512::MaskCompressOp op) {
+  if (op.src() && op.constant_src())
+    return emitError(op.getLoc(), "cannot use both src and constant_src");
+
+  if (op.src() && (op.src().getType() != op.dst().getType()))
+    return emitError(op.getLoc(),
+                     "failed to verify that src and dst have same type");
+
+  if (op.constant_src() && (op.constant_src()->getType() != op.dst().getType()))
+    return emitError(
+        op.getLoc(),
+        "failed to verify that constant_src and dst have same type");
+
+  return success();
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AVX512/AVX512.cpp.inc"

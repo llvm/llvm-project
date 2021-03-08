@@ -104,6 +104,11 @@ private:
 Value getBuiltinVariableValue(Operation *op, BuiltIn builtin,
                               OpBuilder &builder);
 
+/// Generates IR to perform index linearization with the given `indices` and
+/// their corresponding `strides`, adding an initial `offset`.
+Value linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
+                     int64_t offset, Location loc, OpBuilder &builder);
+
 /// Performs the index computation to get to the element at `indices` of the
 /// memory pointed to by `basePtr`, using the layout map of `baseType`.
 

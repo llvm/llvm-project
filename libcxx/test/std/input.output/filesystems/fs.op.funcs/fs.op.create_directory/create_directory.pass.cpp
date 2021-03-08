@@ -32,7 +32,7 @@
 using namespace fs;
 
 fs::perms read_umask() {
-    mode_t old_mask = umask(0);
+    auto old_mask = umask(0); // int on Windows, mode_t on POSIX.
     umask(old_mask); // reset the mask to the old value.
     return static_cast<fs::perms>(old_mask);
 }

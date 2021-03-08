@@ -102,16 +102,16 @@ define zeroext i4 @func3(i4 zeroext %x, i4 zeroext %y) nounwind {
 ; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    cmovbl %ecx, %eax
-; X86-NEXT:    andl $15, %eax
+; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func3:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    subb %sil, %dil
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    cmovbl %ecx, %eax
-; X64-NEXT:    andl $15, %eax
+; X64-NEXT:    movzbl %dil, %ecx
+; X64-NEXT:    cmovbl %eax, %ecx
+; X64-NEXT:    movzbl %cl, %eax
 ; X64-NEXT:    retq
   %tmp = call i4 @llvm.usub.sat.i4(i4 %x, i4 %y)
   ret i4 %tmp

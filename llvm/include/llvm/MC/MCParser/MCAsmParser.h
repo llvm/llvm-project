@@ -258,6 +258,7 @@ public:
   /// success.
   bool parseOptionalToken(AsmToken::TokenKind T);
 
+  bool parseEOL();
   bool parseEOL(const Twine &ErrMsg);
 
   bool parseMany(function_ref<bool()> parseOne, bool hasComma = true);

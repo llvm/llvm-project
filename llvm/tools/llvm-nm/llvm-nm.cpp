@@ -117,6 +117,9 @@ cl::alias PrintFileNameA("A", cl::desc("Alias for --print-file-name"),
 cl::alias PrintFileNameo("o", cl::desc("Alias for --print-file-name"),
                          cl::aliasopt(PrintFileName), cl::Grouping);
 
+cl::opt<bool> Quiet("quiet", cl::desc("Suppress 'no symbols' diagnostic"),
+                    cl::cat(NMCat));
+
 cl::opt<bool> DebugSyms("debug-syms",
                         cl::desc("Show all symbols, even debugger only"),
                         cl::cat(NMCat));
@@ -1861,7 +1864,7 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
 
   CurrentFilename = Obj.getFileName();
 
-  if (Symbols.empty() && SymbolList.empty()) {
+  if (Symbols.empty() && SymbolList.empty() && !Quiet) {
     writeFileName(errs(), ArchiveName, ArchitectureName);
     errs() << "no symbols\n";
   }

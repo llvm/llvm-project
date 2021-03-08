@@ -175,7 +175,7 @@ class Configuration(object):
         # Gather various compiler parameters.
         cxx = self.get_lit_conf('cxx_under_test')
         self.cxx_is_clang_cl = cxx is not None and \
-                               os.path.basename(cxx) == 'clang-cl.exe'
+                               os.path.basename(cxx).startswith('clang-cl')
         # If no specific cxx_under_test was given, attempt to infer it as
         # clang++.
         if cxx is None or self.cxx_is_clang_cl:

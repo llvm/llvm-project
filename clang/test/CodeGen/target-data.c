@@ -140,27 +140,27 @@
 
 // RUN: %clang_cc1 -triple powerpc64-linux -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=PPC64-LINUX
-// PPC64-LINUX: target datalayout = "E-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
+// PPC64-LINUX: target datalayout = "E-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 
 // RUN: %clang_cc1 -triple powerpc64-linux -o - -emit-llvm -target-cpu future %s | \
 // RUN: FileCheck %s -check-prefix=PPC64-FUTURE
-// PPC64-FUTURE: target datalayout = "E-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
+// PPC64-FUTURE: target datalayout = "E-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 
 // RUN: %clang_cc1 -triple powerpc64-linux -o - -emit-llvm -target-cpu pwr10 %s | \
 // RUN: FileCheck %s -check-prefix=PPC64-P10
-// PPC64-P10: target datalayout = "E-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
+// PPC64-P10: target datalayout = "E-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 
 // RUN: %clang_cc1 -triple powerpc64le-linux -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=PPC64LE-LINUX
-// PPC64LE-LINUX: target datalayout = "e-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
+// PPC64LE-LINUX: target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 
 // RUN: %clang_cc1 -triple powerpc64le-linux -o - -emit-llvm -target-cpu future %s | \
 // RUN: FileCheck %s -check-prefix=PPC64LE-FUTURE
-// PPC64LE-FUTURE: target datalayout = "e-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
+// PPC64LE-FUTURE: target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 
 // RUN: %clang_cc1 -triple powerpc64le-linux -o - -emit-llvm -target-cpu pwr10 %s | \
 // RUN: FileCheck %s -check-prefix=PPC64LE-P10
-// PPC64LE-P10: target datalayout = "e-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
+// PPC64LE-P10: target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 
 // RUN: %clang_cc1 -triple nvptx-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=NVPTX

@@ -550,8 +550,7 @@ class MetadataLoader::MetadataLoaderImpl {
               SmallVector<uint64_t, 8> Ops;
               Ops.append(std::next(DIExpr->elements_begin()),
                          DIExpr->elements_end());
-              auto *E = DIExpression::get(Context, Ops);
-              DDI->setOperand(2, MetadataAsValue::get(Context, E));
+              DDI->setExpression(DIExpression::get(Context, Ops));
             }
   }
 

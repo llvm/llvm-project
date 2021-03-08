@@ -17,15 +17,17 @@ int main() {
 
   // CHECK: {{freed by thread T0 here:}}
   // CHECK-Linux:  {{    #0 0x.* in operator delete\[\]}}
+  // CHECK-SunOS:  {{    #0 0x.* in operator delete\[\]}}
   // CHECK-Windows:{{    #0 0x.* in operator delete\[\]}}
   // CHECK-Darwin: {{    #0 0x.* in .*_Zda}}
-  // CHECK: {{    #1 0x.* in main .*use-after-delete.cpp:}}[[@LINE-12]]
+  // CHECK: {{    #1 0x.* in main .*use-after-delete.cpp:}}[[@LINE-13]]
 
   // CHECK: {{previously allocated by thread T0 here:}}
   // CHECK-Linux:  {{    #0 0x.* in operator new\[\]}}
+  // CHECK-SunOS:  {{    #0 0x.* in operator new\[\]}}
   // CHECK-Windows:{{    #0 0x.* in operator new\[\]}}
   // CHECK-Darwin: {{    #0 0x.* in .*_Zna}}
-  // CHECK:        {{    #1 0x.* in main .*use-after-delete.cpp:}}[[@LINE-19]]
+  // CHECK:        {{    #1 0x.* in main .*use-after-delete.cpp:}}[[@LINE-21]]
 
 
   // CHECK: Shadow byte legend (one shadow byte represents {{[0-9]+}} application bytes):

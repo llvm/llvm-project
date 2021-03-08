@@ -4,8 +4,7 @@
 // CHECK-SAME:                      %[[A0:.*]]: memref<?xf32>,
 // CHECK-SAME:                      %[[A1:.*]]: vector<16xf32>) -> vector<16xf32> {
 // CHECK-DAG:       %[[C:.*]] = constant 0 : index
-// CHECK-DAG:       %[[D:.*]] = constant 0.000000e+00 : f32
-// CHECK-NEXT:      %[[T:.*]] = vector.transfer_read %[[A0]][%[[C]]], %[[D]] {masked = [false]} : memref<?xf32>, vector<16xf32>
+// CHECK-NEXT:      %[[T:.*]] = vector.load %[[A0]][%[[C]]] : memref<?xf32>, vector<16xf32>
 // CHECK-NEXT:      return %[[T]] : vector<16xf32>
 func @maskedload0(%base: memref<?xf32>, %pass_thru: vector<16xf32>) -> vector<16xf32> {
   %c0 = constant 0 : index
@@ -19,8 +18,7 @@ func @maskedload0(%base: memref<?xf32>, %pass_thru: vector<16xf32>) -> vector<16
 // CHECK-SAME:                      %[[A0:.*]]: memref<16xf32>,
 // CHECK-SAME:                      %[[A1:.*]]: vector<16xf32>) -> vector<16xf32> {
 // CHECK-DAG:       %[[C:.*]] = constant 0 : index
-// CHECK-DAG:       %[[D:.*]] = constant 0.000000e+00 : f32
-// CHECK-NEXT:      %[[T:.*]] = vector.transfer_read %[[A0]][%[[C]]], %[[D]] {masked = [false]} : memref<16xf32>, vector<16xf32>
+// CHECK-NEXT:      %[[T:.*]] = vector.load %[[A0]][%[[C]]] : memref<16xf32>, vector<16xf32>
 // CHECK-NEXT:      return %[[T]] : vector<16xf32>
 func @maskedload1(%base: memref<16xf32>, %pass_thru: vector<16xf32>) -> vector<16xf32> {
   %c0 = constant 0 : index
@@ -46,8 +44,7 @@ func @maskedload2(%base: memref<16xf32>, %pass_thru: vector<16xf32>) -> vector<1
 // CHECK-SAME:                      %[[A0:.*]]: memref<?xf32>,
 // CHECK-SAME:                      %[[A1:.*]]: vector<16xf32>) -> vector<16xf32> {
 // CHECK-DAG:       %[[C:.*]] = constant 8 : index
-// CHECK-DAG:       %[[D:.*]] = constant 0.000000e+00 : f32
-// CHECK-NEXT:      %[[T:.*]] = vector.transfer_read %[[A0]][%[[C]]], %[[D]] {masked = [false]} : memref<?xf32>, vector<16xf32>
+// CHECK-NEXT:      %[[T:.*]] = vector.load %[[A0]][%[[C]]] : memref<?xf32>, vector<16xf32>
 // CHECK-NEXT:      return %[[T]] : vector<16xf32>
 func @maskedload3(%base: memref<?xf32>, %pass_thru: vector<16xf32>) -> vector<16xf32> {
   %c8 = constant 8 : index
@@ -61,7 +58,7 @@ func @maskedload3(%base: memref<?xf32>, %pass_thru: vector<16xf32>) -> vector<16
 // CHECK-SAME:                       %[[A0:.*]]: memref<16xf32>,
 // CHECK-SAME:                       %[[A1:.*]]: vector<16xf32>) {
 // CHECK-NEXT:      %[[C:.*]] = constant 0 : index
-// CHECK-NEXT:      vector.transfer_write %[[A1]], %[[A0]][%[[C]]] {masked = [false]} : vector<16xf32>, memref<16xf32>
+// CHECK-NEXT:      vector.store %[[A1]], %[[A0]][%[[C]]] : memref<16xf32>, vector<16xf32>
 // CHECK-NEXT:      return
 func @maskedstore1(%base: memref<16xf32>, %value: vector<16xf32>) {
   %c0 = constant 0 : index
@@ -144,8 +141,7 @@ func @scatter2(%base: memref<16xf32>, %indices: vector<16xi32>, %value: vector<1
 // CHECK-SAME:                  %[[A0:.*]]: memref<16xf32>,
 // CHECK-SAME:                  %[[A1:.*]]: vector<16xf32>) -> vector<16xf32> {
 // CHECK-DAG:       %[[C:.*]] = constant 0 : index
-// CHECK-DAG:       %[[D:.*]] = constant 0.000000e+00 : f32
-// CHECK-NEXT:      %[[T:.*]] = vector.transfer_read %[[A0]][%[[C]]], %[[D]] {masked = [false]} : memref<16xf32>, vector<16xf32>
+// CHECK-NEXT:      %[[T:.*]] = vector.load %[[A0]][%[[C]]] : memref<16xf32>, vector<16xf32>
 // CHECK-NEXT:      return %[[T]] : vector<16xf32>
 func @expand1(%base: memref<16xf32>, %pass_thru: vector<16xf32>) -> vector<16xf32> {
   %c0 = constant 0 : index
@@ -171,7 +167,7 @@ func @expand2(%base: memref<16xf32>, %pass_thru: vector<16xf32>) -> vector<16xf3
 // CHECK-SAME:                    %[[A0:.*]]: memref<16xf32>,
 // CHECK-SAME:                    %[[A1:.*]]: vector<16xf32>) {
 // CHECK-NEXT:      %[[C:.*]] = constant 0 : index
-// CHECK-NEXT:      vector.transfer_write %[[A1]], %[[A0]][%[[C]]] {masked = [false]} : vector<16xf32>, memref<16xf32>
+// CHECK-NEXT:      vector.store %[[A1]], %[[A0]][%[[C]]] : memref<16xf32>, vector<16xf32>
 // CHECK-NEXT:      return
 func @compress1(%base: memref<16xf32>, %value: vector<16xf32>) {
   %c0 = constant 0 : index

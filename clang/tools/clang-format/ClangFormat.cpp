@@ -404,7 +404,7 @@ static bool format(StringRef FileName) {
 
   if (SortIncludes.getNumOccurrences() != 0) {
     if (SortIncludes)
-      FormatStyle->SortIncludes = FormatStyle::SI_CaseInsensitive;
+      FormatStyle->SortIncludes = FormatStyle::SI_CaseSensitive;
     else
       FormatStyle->SortIncludes = FormatStyle::SI_Never;
   }

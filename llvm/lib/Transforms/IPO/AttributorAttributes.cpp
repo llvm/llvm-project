@@ -5004,21 +5004,20 @@ struct AAHeapToStackImpl : public AAHeapToStack {
                         << "\n");
 
       Align Alignment;
-      Constant *Size;
+      Value *Size;
       if (isCallocLikeFn(MallocCall, TLI)) {
-        auto *Num = cast<ConstantInt>(MallocCall->getOperand(0));
-        auto *SizeT = cast<ConstantInt>(MallocCall->getOperand(1));
-        APInt TotalSize = SizeT->getValue() * Num->getValue();
-        Size =
-            ConstantInt::get(MallocCall->getOperand(0)->getType(), TotalSize);
+        auto *Num = MallocCall->getOperand(0);
+        auto *SizeT = MallocCall->getOperand(1);
+        IRBuilder<> B(MallocCall);
+        Size = B.CreateMul(Num, SizeT, "h2s.calloc.size");
       } else if (isAlignedAllocLikeFn(MallocCall, TLI)) {
-        Size = cast<ConstantInt>(MallocCall->getOperand(1));
+        Size = MallocCall->getOperand(1);
         Alignment = MaybeAlign(cast<ConstantInt>(MallocCall->getOperand(0))
                                    ->getValue()
                                    .getZExtValue())
                         .valueOrOne();
       } else {
-        Size = cast<ConstantInt>(MallocCall->getOperand(0));
+        Size = MallocCall->getOperand(0);
       }
 
       unsigned AS = cast<PointerType>(MallocCall->getType())->getAddressSpace();
@@ -5166,6 +5165,12 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
     }
 
     if (IsMalloc) {
+      if (MaxHeapToStackSize == -1) {
+        if (UsesCheck(I) || FreeCheck(I)) {
+          MallocCalls.insert(&I);
+          return true;
+        }
+      }
       if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
         if (Size->getValue().ule(MaxHeapToStackSize))
           if (UsesCheck(I) || FreeCheck(I)) {
@@ -5173,6 +5178,12 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
             return true;
           }
     } else if (IsAlignedAllocLike && isa<ConstantInt>(I.getOperand(0))) {
+      if (MaxHeapToStackSize == -1) {
+        if (UsesCheck(I) || FreeCheck(I)) {
+          MallocCalls.insert(&I);
+          return true;
+        }
+      }
       // Only if the alignment and sizes are constant.
       if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
         if (Size->getValue().ule(MaxHeapToStackSize))
@@ -5181,6 +5192,12 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
             return true;
           }
     } else if (IsCalloc) {
+      if (MaxHeapToStackSize == -1) {
+        if (UsesCheck(I) || FreeCheck(I)) {
+          MallocCalls.insert(&I);
+          return true;
+        }
+      }
       bool Overflow = false;
       if (auto *Num = dyn_cast<ConstantInt>(I.getOperand(0)))
         if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))

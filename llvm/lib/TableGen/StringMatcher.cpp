@@ -110,14 +110,14 @@ bool StringMatcher::EmitStringMatcherForChar(
   OS << Indent << "switch (" << StrVariableName << "[" << CharNo << "]) {\n";
   OS << Indent << "default: break;\n";
 
-  for (std::map<char, std::vector<const StringPair*>>::iterator LI =
-       MatchesByLetter.begin(), E = MatchesByLetter.end(); LI != E; ++LI) {
+  for (const auto &LI : MatchesByLetter) {
     // TODO: escape hard stuff (like \n) if we ever care about it.
-    OS << Indent << "case '" << LI->first << "':\t // "
-       << LI->second.size() << " string";
-    if (LI->second.size() != 1) OS << 's';
+    OS << Indent << "case '" << LI.first << "':\t // " << LI.second.size()
+       << " string";
+    if (LI.second.size() != 1)
+      OS << 's';
     OS << " to match.\n";
-    if (EmitStringMatcherForChar(LI->second, CharNo + 1, IndentCount + 1,
+    if (EmitStringMatcherForChar(LI.second, CharNo + 1, IndentCount + 1,
                                  IgnoreDuplicates))
       OS << Indent << "  break;\n";
   }
@@ -143,12 +143,11 @@ void StringMatcher::Emit(unsigned Indent, bool IgnoreDuplicates) const {
   OS.indent(Indent*2+2) << "switch (" << StrVariableName << ".size()) {\n";
   OS.indent(Indent*2+2) << "default: break;\n";
 
-  for (std::map<unsigned, std::vector<const StringPair*>>::iterator LI =
-       MatchesByLength.begin(), E = MatchesByLength.end(); LI != E; ++LI) {
-    OS.indent(Indent*2+2) << "case " << LI->first << ":\t // "
-       << LI->second.size()
-       << " string" << (LI->second.size() == 1 ? "" : "s") << " to match.\n";
-    if (EmitStringMatcherForChar(LI->second, 0, Indent, IgnoreDuplicates))
+  for (const auto &LI : MatchesByLength) {
+    OS.indent(Indent * 2 + 2)
+        << "case " << LI.first << ":\t // " << LI.second.size() << " string"
+        << (LI.second.size() == 1 ? "" : "s") << " to match.\n";
+    if (EmitStringMatcherForChar(LI.second, 0, Indent, IgnoreDuplicates))
       OS.indent(Indent*2+4) << "break;\n";
   }
 

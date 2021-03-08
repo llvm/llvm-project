@@ -480,7 +480,7 @@ func @convert_logical_or_true_false_vector(%arg: vector<3xi1>) -> (vector<3xi1>,
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.selection
+// spv.mlir.selection
 //===----------------------------------------------------------------------===//
 
 func @canonicalize_selection_op_scalar_type(%cond: i1) -> () {
@@ -495,7 +495,7 @@ func @canonicalize_selection_op_scalar_type(%cond: i1) -> () {
   // CHECK: %[[SRC_VALUE:.*]] = spv.Select {{%.*}}, %[[TRUE_VALUE]], %[[FALSE_VALUE]] : i1, i32
   // CHECK-NEXT: spv.Store "Function" %[[DST_VAR]], %[[SRC_VALUE]] ["Aligned", 4] : i32
   // CHECK-NEXT: spv.Return
-  spv.selection {
+  spv.mlir.selection {
     spv.BranchConditional %cond, ^then, ^else
 
   ^else:
@@ -526,7 +526,7 @@ func @canonicalize_selection_op_vector_type(%cond: i1) -> () {
   // CHECK: %[[SRC_VALUE:.*]] = spv.Select {{%.*}}, %[[TRUE_VALUE]], %[[FALSE_VALUE]] : i1, vector<3xi32>
   // CHECK-NEXT: spv.Store "Function" %[[DST_VAR]], %[[SRC_VALUE]] ["Aligned", 8] : vector<3xi32>
   // CHECK-NEXT: spv.Return
-  spv.selection {
+  spv.mlir.selection {
     spv.BranchConditional %cond, ^then, ^else
 
   ^then:
@@ -557,8 +557,8 @@ func @cannot_canonicalize_selection_op_0(%cond: i1) -> () {
   // CHECK: %[[DST_VAR_1:.*]] = spv.Variable init({{%.*}}) : !spv.ptr<vector<3xi32>, Function>
   %4 = spv.Variable init(%0) : !spv.ptr<vector<3xi32>, Function>
 
-  // CHECK: spv.selection {
-  spv.selection {
+  // CHECK: spv.mlir.selection {
+  spv.mlir.selection {
     // CHECK: spv.BranchConditional
     // CHECK-SAME: ^bb1(%[[DST_VAR_0]], %[[SRC_VALUE_0]]
     // CHECK-SAME: ^bb1(%[[DST_VAR_1]], %[[SRC_VALUE_1]]
@@ -594,8 +594,8 @@ func @cannot_canonicalize_selection_op_1(%cond: i1) -> () {
   // CHECK: %[[DST_VAR_1:.*]] = spv.Variable init({{%.*}}) : !spv.ptr<vector<3xi32>, Function>
   %4 = spv.Variable init(%0) : !spv.ptr<vector<3xi32>, Function>
 
-  // CHECK: spv.selection {
-  spv.selection {
+  // CHECK: spv.mlir.selection {
+  spv.mlir.selection {
     spv.BranchConditional %cond, ^then, ^else
 
   ^then:
@@ -628,8 +628,8 @@ func @cannot_canonicalize_selection_op_2(%cond: i1) -> () {
   // CHECK: %[[DST_VAR:.*]] = spv.Variable init({{%.*}}) : !spv.ptr<vector<3xi32>, Function>
   %3 = spv.Variable init(%0) : !spv.ptr<vector<3xi32>, Function>
 
-  // CHECK: spv.selection {
-  spv.selection {
+  // CHECK: spv.mlir.selection {
+  spv.mlir.selection {
     spv.BranchConditional %cond, ^then, ^else
 
   ^then:
@@ -660,8 +660,8 @@ func @cannot_canonicalize_selection_op_3(%cond: i1) -> () {
   // CHECK: %[[DST_VAR:.*]] = spv.Variable init({{%.*}}) : !spv.ptr<vector<3xi32>, Function>
   %3 = spv.Variable init(%0) : !spv.ptr<vector<3xi32>, Function>
 
-  // CHECK: spv.selection {
-  spv.selection {
+  // CHECK: spv.mlir.selection {
+  spv.mlir.selection {
     spv.BranchConditional %cond, ^then, ^else
 
   ^then:
@@ -692,8 +692,8 @@ func @cannot_canonicalize_selection_op_4(%cond: i1) -> () {
   // CHECK: %[[DST_VAR:.*]] = spv.Variable init({{%.*}}) : !spv.ptr<vector<3xi32>, Function>
   %3 = spv.Variable init(%0) : !spv.ptr<vector<3xi32>, Function>
 
-  // CHECK: spv.selection {
-  spv.selection {
+  // CHECK: spv.mlir.selection {
+  spv.mlir.selection {
     spv.BranchConditional %cond, ^then, ^else
 
   ^then:

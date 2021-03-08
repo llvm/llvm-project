@@ -26,7 +26,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @f_loop_with_function_call(%count : i32) -> () "None" {
     %zero = spv.Constant 0: i32
     %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
-    spv.loop {
+    spv.mlir.loop {
       spv.Branch ^header
     ^header:
       %val0 = spv.Load "Function" %var : i32

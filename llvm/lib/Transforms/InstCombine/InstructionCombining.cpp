@@ -2173,16 +2173,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       }
 
       if (Matched) {
-        // Canonicalize (gep i8* X, -(ptrtoint Y))
-        // to (inttoptr (sub (ptrtoint X), (ptrtoint Y)))
-        // The GEP pattern is emitted by the SCEV expander for certain kinds of
-        // pointer arithmetic.
-        if (match(V, m_Neg(m_PtrToInt(m_Value())))) {
-          Operator *Index = cast<Operator>(V);
-          Value *PtrToInt = Builder.CreatePtrToInt(PtrOp, Index->getType());
-          Value *NewSub = Builder.CreateSub(PtrToInt, Index->getOperand(1));
-          return CastInst::Create(Instruction::IntToPtr, NewSub, GEPType);
-        }
         // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X))
         // to (bitcast Y)
         Value *Y;
@@ -3588,14 +3578,10 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
 
   // Update the arguments of a dbg.declare instruction, so that it
   // does not point into a sunk instruction.
-  auto updateDbgDeclare = [&I](DbgVariableIntrinsic *DII) {
+  auto updateDbgDeclare = [](DbgVariableIntrinsic *DII) {
     if (!isa<DbgDeclareInst>(DII))
       return false;
 
-    if (isa<CastInst>(I))
-      DII->setOperand(
-          0, MetadataAsValue::get(I->getContext(),
-                                  ValueAsMetadata::get(I->getOperand(0))));
     return true;
   };
 

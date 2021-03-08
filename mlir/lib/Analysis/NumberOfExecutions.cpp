@@ -115,7 +115,7 @@ static void computeRegionBlockNumberOfExecutions(
 /// Creates a new NumberOfExecutions analysis that computes how many times a
 /// block within a region is executed for all associated regions.
 NumberOfExecutions::NumberOfExecutions(Operation *op) : operation(op) {
-  operation->walk([&](Region *region) {
+  operation->walk<WalkOrder::PreOrder>([&](Region *region) {
     computeRegionBlockNumberOfExecutions(*region, blockNumbersOfExecution);
   });
 }
@@ -191,7 +191,7 @@ void NumberOfExecutions::printBlockExecutions(
     raw_ostream &os, Region *perEntryOfThisRegion) const {
   unsigned blockId = 0;
 
-  operation->walk([&](Block *block) {
+  operation->walk<WalkOrder::PreOrder>([&](Block *block) {
     llvm::errs() << "Block: " << blockId++ << "\n";
     llvm::errs() << "Number of executions: ";
     if (auto n = getNumberOfExecutions(block, perEntryOfThisRegion))
@@ -203,7 +203,7 @@ void NumberOfExecutions::printBlockExecutions(
 
 void NumberOfExecutions::printOperationExecutions(
     raw_ostream &os, Region *perEntryOfThisRegion) const {
-  operation->walk([&](Block *block) {
+  operation->walk<WalkOrder::PreOrder>([&](Block *block) {
     block->walk([&](Operation *operation) {
       // Skip the operation that was used to build the analysis.
       if (operation == this->operation)

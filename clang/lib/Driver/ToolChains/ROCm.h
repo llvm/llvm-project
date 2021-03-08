@@ -42,9 +42,16 @@ private:
   struct Candidate {
     llvm::SmallString<0> Path;
     bool StrictChecking;
+    // Release string for ROCm packages built with SPACK if not empty. The
+    // installation directories of ROCm packages built with SPACK follow the
+    // convention <package_name>-<rocm_release_string>-<hash>.
+    std::string SPACKReleaseStr;
 
-    Candidate(std::string Path, bool StrictChecking = false)
-        : Path(Path), StrictChecking(StrictChecking) {}
+    bool isSPACK() const { return !SPACKReleaseStr.empty(); }
+    Candidate(std::string Path, bool StrictChecking = false,
+              StringRef SPACKReleaseStr = {})
+        : Path(Path), StrictChecking(StrictChecking),
+          SPACKReleaseStr(SPACKReleaseStr.str()) {}
   };
 
   const Driver &D;
@@ -67,6 +74,8 @@ private:
   StringRef RocmPathArg;
   // ROCm device library paths specified by --rocm-device-lib-path.
   std::vector<std::string> RocmDeviceLibPathArg;
+  // HIP runtime path specified by --hip-path.
+  StringRef HIPPathArg;
   // HIP version specified by --hip-version.
   StringRef HIPVersionArg;
   // Wheter -nogpulib is specified.
@@ -98,6 +107,10 @@ private:
   ConditionalLibrary DenormalsAreZero;
   ConditionalLibrary CorrectlyRoundedSqrt;
 
+  // Cache ROCm installation search paths.
+  SmallVector<Candidate, 4> ROCmSearchDirs;
+  bool PrintROCmSearchDirs;
+
   bool allGenericLibsValid() const {
     return !OCML.empty() && !OCKL.empty() && !OpenCL.empty() && !HIP.empty() &&
            WavefrontSize64.isValid() && FiniteOnly.isValid() &&
@@ -107,7 +120,14 @@ private:
 
   void scanLibDevicePath(llvm::StringRef Path);
   bool parseHIPVersionFile(llvm::StringRef V);
-  SmallVector<Candidate, 4> getInstallationPathCandidates();
+  const SmallVectorImpl<Candidate> &getInstallationPathCandidates();
+
+  /// Find the path to a SPACK package under the ROCm candidate installation
+  /// directory if the candidate is a SPACK ROCm candidate. \returns empty
+  /// string if the candidate is not SPACK ROCm candidate or the requested
+  /// package is not found.
+  llvm::SmallString<0> findSPACKPackage(const Candidate &Cand,
+                                        StringRef PackageName);
 
 public:
   RocmInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,

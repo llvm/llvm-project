@@ -10528,7 +10528,11 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
 
   if (LHS.get()->getType()->isConstantMatrixType() ||
       RHS.get()->getType()->isConstantMatrixType()) {
-    return CheckMatrixElementwiseOperands(LHS, RHS, Loc, CompLHSTy);
+    QualType compType =
+        CheckMatrixElementwiseOperands(LHS, RHS, Loc, CompLHSTy);
+    if (CompLHSTy)
+      *CompLHSTy = compType;
+    return compType;
   }
 
   QualType compType = UsualArithmeticConversions(
@@ -10628,7 +10632,11 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
 
   if (LHS.get()->getType()->isConstantMatrixType() ||
       RHS.get()->getType()->isConstantMatrixType()) {
-    return CheckMatrixElementwiseOperands(LHS, RHS, Loc, CompLHSTy);
+    QualType compType =
+        CheckMatrixElementwiseOperands(LHS, RHS, Loc, CompLHSTy);
+    if (CompLHSTy)
+      *CompLHSTy = compType;
+    return compType;
   }
 
   QualType compType = UsualArithmeticConversions(

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/SetVector.h"
@@ -512,6 +513,65 @@ public:
   }
 };
 
+/// Converts tensor.extract into loading using access chains from SPIR-V local
+/// variables.
+class TensorExtractPattern final
+    : public OpConversionPattern<tensor::ExtractOp> {
+public:
+  TensorExtractPattern(TypeConverter &typeConverter, MLIRContext *context,
+                       int64_t threshold, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit),
+        byteCountThreshold(threshold) {}
+
+  LogicalResult
+  matchAndRewrite(tensor::ExtractOp extractOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    TensorType tensorType = extractOp.tensor().getType().cast<TensorType>();
+
+    if (!tensorType.hasStaticShape())
+      return rewriter.notifyMatchFailure(extractOp, "non-static tensor");
+
+    if (tensorType.getNumElements() * tensorType.getElementTypeBitWidth() >
+        byteCountThreshold * 8)
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "exceeding byte count threshold");
+
+    Location loc = extractOp.getLoc();
+    tensor::ExtractOp::Adaptor adaptor(operands);
+
+    int64_t rank = tensorType.getRank();
+    SmallVector<int64_t, 4> strides(rank, 1);
+    for (int i = rank - 2; i >= 0; --i) {
+      strides[i] = strides[i + 1] * tensorType.getDimSize(i + 1);
+    }
+
+    Type varType = spirv::PointerType::get(adaptor.tensor().getType(),
+                                           spirv::StorageClass::Function);
+
+    spirv::VariableOp varOp;
+    if (adaptor.tensor().getDefiningOp<spirv::ConstantOp>()) {
+      varOp = rewriter.create<spirv::VariableOp>(
+          loc, varType, spirv::StorageClass::Function,
+          /*initializer=*/adaptor.tensor());
+    } else {
+      // Need to store the value to the local variable. It's questionable
+      // whether we want to support such case though.
+      return failure();
+    }
+
+    Value index = spirv::linearizeIndex(adaptor.indices(), strides,
+                                        /*offset=*/0, loc, rewriter);
+    auto acOp = rewriter.create<spirv::AccessChainOp>(loc, varOp, index);
+
+    rewriter.replaceOpWithNewOp<spirv::LoadOp>(extractOp, acOp);
+
+    return success();
+  }
+
+private:
+  int64_t byteCountThreshold;
+};
+
 /// Converts std.trunci to spv.Select if the type of result is i1 or vector of
 /// i1.
 class TruncI1Pattern final : public OpConversionPattern<TruncateIOp> {
@@ -622,6 +682,9 @@ LogicalResult SignedRemIOpPattern::matchAndRewrite(
 // ConstantOp with composite type.
 //===----------------------------------------------------------------------===//
 
+// TODO: This probably should be split into the vector case and tensor case,
+// so that the tensor case can be moved to TensorToSPIRV conversion. But,
+// std.constant is for the standard dialect though.
 LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
     ConstantOp constOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
@@ -1170,6 +1233,7 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       UnaryAndBinaryOpPattern<math::SinOp, spirv::GLSLSinOp>,
       UnaryAndBinaryOpPattern<math::SqrtOp, spirv::GLSLSqrtOp>,
       UnaryAndBinaryOpPattern<math::TanhOp, spirv::GLSLTanhOp>,
+
       // Unary and binary patterns
       BitwiseOpPattern<AndOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
       BitwiseOpPattern<OrOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
@@ -1224,4 +1288,13 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
   patterns.insert<CmpFOpNanKernelPattern>(typeConverter, context,
                                           /*benefit=*/2);
 }
+
+void populateTensorToSPIRVPatterns(MLIRContext *context,
+                                   SPIRVTypeConverter &typeConverter,
+                                   int64_t byteCountThreshold,
+                                   OwningRewritePatternList &patterns) {
+  patterns.insert<TensorExtractPattern>(typeConverter, context,
+                                        byteCountThreshold);
+}
+
 } // namespace mlir

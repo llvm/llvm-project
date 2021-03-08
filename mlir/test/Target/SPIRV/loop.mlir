@@ -11,8 +11,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 // CHECK:        spv.Branch ^bb1
 // CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   spv.loop
-    spv.loop {
+// CHECK-NEXT:   spv.mlir.loop
+    spv.mlir.loop {
 // CHECK-NEXT:     spv.Branch ^bb1
       spv.Branch ^header
 
@@ -73,8 +73,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %8 = spv.Constant 2 : i32
 // CHECK:        spv.Branch ^bb1(%{{.*}} : i32)
 // CHECK-NEXT: ^bb1(%[[OUTARG:.*]]: i32):
-// CHECK-NEXT:   spv.loop {
-    spv.loop {
+// CHECK-NEXT:   spv.mlir.loop {
+    spv.mlir.loop {
 // CHECK-NEXT:     spv.Branch ^bb1(%[[OUTARG]] : i32)
       spv.Branch ^header(%6 : i32)
 // CHECK-NEXT:   ^bb1(%[[HEADARG:.*]]: i32):
@@ -119,8 +119,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 // CHECK:        spv.Branch ^bb1
 // CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   spv.loop control(Unroll)
-    spv.loop control(Unroll) {
+// CHECK-NEXT:   spv.mlir.loop control(Unroll)
+    spv.mlir.loop control(Unroll) {
 // CHECK-NEXT:     spv.Branch ^bb1
       spv.Branch ^header
 
@@ -140,8 +140,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       spv.Store "Function" %jvar, %zero : i32
 // CHECK-NEXT:     spv.Branch ^bb3
 // CHECK-NEXT:   ^bb3:
-// CHECK-NEXT:     spv.loop control(DontUnroll)
-      spv.loop control(DontUnroll) {
+// CHECK-NEXT:     spv.mlir.loop control(DontUnroll)
+      spv.mlir.loop control(DontUnroll) {
 // CHECK-NEXT:       spv.Branch ^bb1
         spv.Branch ^header
 

@@ -30,6 +30,16 @@ llvm.func @LLVM_x86_avx512_mask_pd_512(%a: vector<8xf64>,
   llvm.return %1: vector<8xf64>
 }
 
+// CHECK-LABEL: define <16 x float> @LLVM_x86_mask_compress
+llvm.func @LLVM_x86_mask_compress(%k: vector<16xi1>, %a: vector<16xf32>)
+  -> vector<16xf32>
+{
+  // CHECK: call <16 x float> @llvm.x86.avx512.mask.compress.v16f32(
+  %0 = "llvm_avx512.mask.compress"(%a, %a, %k) :
+    (vector<16xf32>, vector<16xf32>, vector<16xi1>) -> vector<16xf32>
+  llvm.return %0 : vector<16xf32>
+}
+
 // CHECK-LABEL: define { <16 x i1>, <16 x i1> } @LLVM_x86_vp2intersect_d_512
 llvm.func @LLVM_x86_vp2intersect_d_512(%a: vector<16xi32>, %b: vector<16xi32>)
   -> !llvm.struct<(vector<16 x i1>, vector<16 x i1>)>

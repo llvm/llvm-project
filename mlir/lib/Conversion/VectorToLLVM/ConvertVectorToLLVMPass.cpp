@@ -11,7 +11,6 @@
 #include "../PassDetail.h"
 
 #include "mlir/Conversion/AVX512ToLLVM/ConvertAVX512ToLLVM.h"
-#include "mlir/Conversion/ArmNeonToLLVM/ArmNeonToLLVM.h"
 #include "mlir/Conversion/ArmSVEToLLVM/ArmSVEToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
@@ -19,7 +18,6 @@
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAVX512Dialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMArmNeonDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMArmSVEDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -43,7 +41,7 @@ struct LowerVectorToLLVMPass
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect>();
     if (enableArmNeon)
-      registry.insert<LLVM::LLVMArmNeonDialect>();
+      registry.insert<arm_neon::ArmNeonDialect>();
     if (enableArmSVE)
       registry.insert<LLVM::LLVMArmSVEDialect>();
     if (enableAVX512)
@@ -78,9 +76,10 @@ void LowerVectorToLLVMPass::runOnOperation() {
   target.addLegalDialect<StandardOpsDialect>();
   target.addLegalOp<UnrealizedConversionCastOp>();
   if (enableArmNeon) {
-    target.addLegalDialect<LLVM::LLVMArmNeonDialect>();
-    target.addIllegalDialect<arm_neon::ArmNeonDialect>();
-    populateArmNeonToLLVMConversionPatterns(converter, patterns);
+    // TODO: we may or may not want to include in-dialect lowering to
+    // LLVM-compatible operations here. So far, all operations in the dialect
+    // can be translated to LLVM IR so there is no conversion necessary.
+    target.addLegalDialect<arm_neon::ArmNeonDialect>();
   }
   if (enableArmSVE) {
     target.addLegalDialect<LLVM::LLVMArmSVEDialect>();

@@ -701,11 +701,12 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
     if (auto *InstrRef = EmitDbgInstrRef(SD, VRBaseMap))
       return InstrRef;
 
-  if (SD->getKind() == SDDbgValue::FRAMEIX) {
+  SDDbgOperand SDOperand = SD->getLocationOps()[0];
+  if (SDOperand.getKind() == SDDbgOperand::FRAMEIX) {
     // Stack address; this needs to be lowered in target-dependent fashion.
     // EmitTargetCodeForFrameDebugValue is responsible for allocation.
     auto FrameMI = BuildMI(*MF, DL, TII->get(TargetOpcode::DBG_VALUE))
-                       .addFrameIndex(SD->getFrameIx());
+                       .addFrameIndex(SDOperand.getFrameIx());
     if (SD->isIndirect())
       // Push [fi + 0] onto the DIExpression stack.
       FrameMI.addImm(0);
@@ -717,9 +718,9 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
   // Otherwise, we're going to create an instruction here.
   const MCInstrDesc &II = TII->get(TargetOpcode::DBG_VALUE);
   MachineInstrBuilder MIB = BuildMI(*MF, DL, II);
-  if (SD->getKind() == SDDbgValue::SDNODE) {
-    SDNode *Node = SD->getSDNode();
-    SDValue Op = SDValue(Node, SD->getResNo());
+  if (SDOperand.getKind() == SDDbgOperand::SDNODE) {
+    SDNode *Node = SDOperand.getSDNode();
+    SDValue Op = SDValue(Node, SDOperand.getResNo());
     // It's possible we replaced this SDNode with other(s) and therefore
     // didn't generate code for it.  It's better to catch these cases where
     // they happen and transfer the debug info, but trying to guarantee that
@@ -731,10 +732,10 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
     else
       AddOperand(MIB, Op, (*MIB).getNumOperands(), &II, VRBaseMap,
                  /*IsDebug=*/true, /*IsClone=*/false, /*IsCloned=*/false);
-  } else if (SD->getKind() == SDDbgValue::VREG) {
-    MIB.addReg(SD->getVReg(), RegState::Debug);
-  } else if (SD->getKind() == SDDbgValue::CONST) {
-    const Value *V = SD->getConst();
+  } else if (SDOperand.getKind() == SDDbgOperand::VREG) {
+    MIB.addReg(SDOperand.getVReg(), RegState::Debug);
+  } else if (SDOperand.getKind() == SDDbgOperand::CONST) {
+    const Value *V = SDOperand.getConst();
     if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
       if (CI->getBitWidth() > 64)
         MIB.addCImm(CI);
@@ -770,14 +771,18 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
 MachineInstr *
 InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
                               DenseMap<SDValue, Register> &VRBaseMap) {
+  // No support for instruction references for variadic values yet.
+  if (SD->isVariadic())
+    return nullptr;
+  SDDbgOperand DbgOperand = SD->getLocationOps()[0];
   // Instruction referencing is still in a prototype state: for now we're only
   // going to support SDNodes within a block. Copies are not supported, they
   // don't actually define a value.
-  if (SD->getKind() != SDDbgValue::SDNODE)
+  if (DbgOperand.getKind() != SDDbgOperand::SDNODE)
     return nullptr;
 
-  SDNode *Node = SD->getSDNode();
-  SDValue Op = SDValue(Node, SD->getResNo());
+  SDNode *Node = DbgOperand.getSDNode();
+  SDValue Op = SDValue(Node, DbgOperand.getResNo());
   DenseMap<SDValue, Register>::iterator I = VRBaseMap.find(Op);
   if (I==VRBaseMap.end())
     return nullptr; // undef value: let EmitDbgValue produce a DBG_VALUE $noreg.

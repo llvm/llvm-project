@@ -84,9 +84,9 @@ static cl::opt<::CFLAAType>
                         clEnumValN(::CFLAAType::Both, "both",
                                    "Enable both variants of CFL-AA")));
 
-static cl::opt<bool> EnableLoopInterchange(
+cl::opt<bool> EnableLoopInterchange(
     "enable-loopinterchange", cl::init(false), cl::Hidden,
-    cl::desc("Enable the new, experimental LoopInterchange Pass"));
+    cl::desc("Enable the experimental LoopInterchange Pass"));
 
 cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam", cl::init(false),
                                  cl::Hidden,

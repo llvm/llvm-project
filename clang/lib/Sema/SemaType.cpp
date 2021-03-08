@@ -1269,11 +1269,10 @@ static QualType ConvertConstrainedAutoDeclSpecToType(Sema &S, DeclSpec &DS,
   llvm::SmallVector<TemplateArgument, 8> TemplateArgs;
   for (auto &ArgLoc : TemplateArgsInfo.arguments())
     TemplateArgs.push_back(ArgLoc.getArgument());
-  return S.Context.getAutoType(QualType(), AutoTypeKeyword::Auto, false,
-                               /*IsPack=*/false,
-                               cast<ConceptDecl>(TemplateId->Template.get()
-                                                 .getAsTemplateDecl()),
-                               TemplateArgs);
+  return S.Context.getAutoType(
+      QualType(), AutoKW, false, /*IsPack=*/false,
+      cast<ConceptDecl>(TemplateId->Template.get().getAsTemplateDecl()),
+      TemplateArgs);
 }
 
 /// Convert the specified declspec to the appropriate type

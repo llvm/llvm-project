@@ -1,4 +1,4 @@
-add_subdirectory(LLVMArmNeon)
+add_subdirectory(ArmNeon)
 add_subdirectory(LLVMArmSVE)
 add_subdirectory(LLVMAVX512)
 add_subdirectory(LLVMIR)

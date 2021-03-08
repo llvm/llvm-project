@@ -23,6 +23,7 @@ config.llvm_bindings = "@LLVM_BINDINGS@".split(' ')
 config.host_os = "@HOST_OS@"
 config.host_cc = "@HOST_CC@"
 config.host_cxx = "@HOST_CXX@"
+config.enable_libcxx = "@LLVM_ENABLE_LIBCXX@"
 config.host_cmake = "@CMAKE_COMMAND@"
 # Note: ldflags can contain double-quoted paths, so must use single quotes here.
 config.host_ldflags = '@HOST_LDFLAGS@'

@@ -563,6 +563,12 @@ def FeatureSMemTimeInst : SubtargetFeature<"s-memtime-inst",
   "Has s_memtime instruction"
 >;
 
+def FeatureShaderCyclesRegister : SubtargetFeature<"shader-cycles-register",
+  "HasShaderCyclesRegister",
+  "true",
+  "Has SHADER_CYCLES hardware register"
+>;
+
 def FeatureMadMacF32Insts : SubtargetFeature<"mad-mac-f32-insts",
   "HasMadMacF32Insts",
   "true",
@@ -777,7 +783,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureNoSdstCMPX, FeatureVscnt, FeatureRegisterBanking,
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
-   FeatureGFX10A16, FeatureFastDenormalF32, FeatureG16,
+   FeatureGFX10A16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess
   ]
 >;
@@ -988,7 +994,6 @@ def FeatureISAVersion10_1_0 : FeatureSet<
      FeatureScalarAtomics,
      FeatureScalarFlatScratchInsts,
      FeatureGetWaveIdInst,
-     FeatureSMemTimeInst,
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
@@ -1009,7 +1014,6 @@ def FeatureISAVersion10_1_1 : FeatureSet<
      FeatureScalarAtomics,
      FeatureScalarFlatScratchInsts,
      FeatureGetWaveIdInst,
-     FeatureSMemTimeInst,
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
@@ -1030,7 +1034,6 @@ def FeatureISAVersion10_1_2 : FeatureSet<
      FeatureScalarAtomics,
      FeatureScalarFlatScratchInsts,
      FeatureGetWaveIdInst,
-     FeatureSMemTimeInst,
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
@@ -1047,7 +1050,8 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureDot5Insts,
    FeatureDot6Insts,
    FeatureNSAEncoding,
-   FeatureWavefrontSize32]>;
+   FeatureWavefrontSize32,
+   FeatureShaderCyclesRegister]>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1377,7 +1381,8 @@ def HasSMemRealTime : Predicate<"Subtarget->hasSMemRealTime()">,
 def HasSMemTimeInst : Predicate<"Subtarget->hasSMemTimeInst()">,
   AssemblerPredicate<(all_of FeatureSMemTimeInst)>;
 
-def HasNoSMemTimeInst : Predicate<"!Subtarget->hasSMemTimeInst()">;
+def HasShaderCyclesRegister : Predicate<"Subtarget->hasShaderCyclesRegister()">,
+  AssemblerPredicate<(all_of FeatureShaderCyclesRegister)>;
 
 def HasPkFmacF16Inst : Predicate<"Subtarget->hasPkFmacF16Inst()">,
   AssemblerPredicate<(all_of FeaturePkFmacF16Inst)>;

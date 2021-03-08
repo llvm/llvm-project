@@ -22,13 +22,13 @@ declare void @may_throw()
 
 define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; BASIC-LABEL: define {{[^@]+}}@test
-; BASIC-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i32* [[P2:%.*]], i32* [[P3:%.*]])
+; BASIC-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i32* [[P2:%.*]], i32* [[P3:%.*]]) {
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P]]), "dereferenceable"(i32* [[P]], i64 16) ]
 ; BASIC-NEXT:    call void @func(i32* nonnull dereferenceable(16) [[P]], i32* null)
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 12) ]
 ; BASIC-NEXT:    call void @func(i32* dereferenceable(12) [[P1]], i32* nonnull [[P]])
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "cold"() ]
-; BASIC-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) #6
+; BASIC-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) [[ATTR6:#.*]]
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "cold"() ]
 ; BASIC-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]])
 ; BASIC-NEXT:    call void @func(i32* [[P1]], i32* [[P]])
@@ -44,13 +44,13 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; BASIC-NEXT:    ret void
 ;
 ; ALL-LABEL: define {{[^@]+}}@test
-; ALL-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i32* [[P2:%.*]], i32* [[P3:%.*]])
+; ALL-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i32* [[P2:%.*]], i32* [[P3:%.*]]) {
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P]]), "dereferenceable"(i32* [[P]], i64 16) ]
 ; ALL-NEXT:    call void @func(i32* nonnull dereferenceable(16) [[P]], i32* null)
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 12) ]
 ; ALL-NEXT:    call void @func(i32* dereferenceable(12) [[P1]], i32* nonnull [[P]])
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "nounwind"(), "willreturn"() ]
-; ALL-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) #6
+; ALL-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) [[ATTR6:#.*]]
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "nounwind"(), "willreturn"() ]
 ; ALL-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]])
 ; ALL-NEXT:    call void @func(i32* [[P1]], i32* [[P]])
@@ -66,13 +66,13 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; ALL-NEXT:    ret void
 ;
 ; WITH-AC-LABEL: define {{[^@]+}}@test
-; WITH-AC-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i32* [[P2:%.*]], i32* [[P3:%.*]])
+; WITH-AC-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i32* [[P2:%.*]], i32* [[P3:%.*]]) {
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P]]), "dereferenceable"(i32* [[P]], i64 16) ]
 ; WITH-AC-NEXT:    call void @func(i32* nonnull dereferenceable(16) [[P]], i32* null)
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 12) ]
 ; WITH-AC-NEXT:    call void @func(i32* dereferenceable(12) [[P1]], i32* nonnull [[P]])
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "cold"() ]
-; WITH-AC-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) #6
+; WITH-AC-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) [[ATTR6:#.*]]
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "cold"() ]
 ; WITH-AC-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]])
 ; WITH-AC-NEXT:    call void @func(i32* [[P1]], i32* [[P]])
@@ -88,13 +88,13 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; WITH-AC-NEXT:    ret void
 ;
 ; CROSS-BLOCK-LABEL: define {{[^@]+}}@test
-; CROSS-BLOCK-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i32* [[P2:%.*]], i32* [[P3:%.*]])
+; CROSS-BLOCK-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i32* [[P2:%.*]], i32* [[P3:%.*]]) {
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P]]), "dereferenceable"(i32* [[P]], i64 16) ]
 ; CROSS-BLOCK-NEXT:    call void @func(i32* nonnull dereferenceable(16) [[P]], i32* null)
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 12) ]
 ; CROSS-BLOCK-NEXT:    call void @func(i32* dereferenceable(12) [[P1]], i32* nonnull [[P]])
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "cold"() ]
-; CROSS-BLOCK-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) #6
+; CROSS-BLOCK-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) [[ATTR6:#.*]]
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "cold"() ]
 ; CROSS-BLOCK-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]])
 ; CROSS-BLOCK-NEXT:    call void @func(i32* [[P1]], i32* [[P]])
@@ -110,12 +110,12 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; CROSS-BLOCK-NEXT:    ret void
 ;
 ; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test
-; FULL-SIMPLIFY-SAME: (i32* nonnull dereferenceable(16) [[P:%.*]], i32* [[P1:%.*]], i32* [[P2:%.*]], i32* [[P3:%.*]])
+; FULL-SIMPLIFY-SAME: (i32* nonnull dereferenceable(16) [[P:%.*]], i32* [[P1:%.*]], i32* [[P2:%.*]], i32* [[P3:%.*]]) {
 ; FULL-SIMPLIFY-NEXT:    call void @func(i32* nonnull dereferenceable(16) [[P]], i32* null)
 ; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 12) ]
 ; FULL-SIMPLIFY-NEXT:    call void @func(i32* dereferenceable(12) [[P1]], i32* nonnull [[P]])
 ; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "cold"() ]
-; FULL-SIMPLIFY-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) #6
+; FULL-SIMPLIFY-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) [[ATTR6:#.*]]
 ; FULL-SIMPLIFY-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]])
 ; FULL-SIMPLIFY-NEXT:    call void @func(i32* [[P1]], i32* [[P]])
 ; FULL-SIMPLIFY-NEXT:    call void @func_strbool(i32* [[P1]])
@@ -145,7 +145,7 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 
 define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; BASIC-LABEL: define {{[^@]+}}@test2
-; BASIC-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]])
+; BASIC-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) {
 ; BASIC-NEXT:    [[TMP4:%.*]] = alloca %struct.S*, align 8
 ; BASIC-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; BASIC-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
@@ -181,7 +181,7 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; BASIC-NEXT:    ret i32 [[TMP28]]
 ;
 ; ALL-LABEL: define {{[^@]+}}@test2
-; ALL-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]])
+; ALL-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) {
 ; ALL-NEXT:    [[TMP4:%.*]] = alloca %struct.S*, align 8
 ; ALL-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; ALL-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
@@ -217,7 +217,7 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; ALL-NEXT:    ret i32 [[TMP28]]
 ;
 ; WITH-AC-LABEL: define {{[^@]+}}@test2
-; WITH-AC-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]])
+; WITH-AC-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) {
 ; WITH-AC-NEXT:    [[TMP4:%.*]] = alloca %struct.S*, align 8
 ; WITH-AC-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; WITH-AC-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
@@ -253,7 +253,7 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; WITH-AC-NEXT:    ret i32 [[TMP28]]
 ;
 ; CROSS-BLOCK-LABEL: define {{[^@]+}}@test2
-; CROSS-BLOCK-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]])
+; CROSS-BLOCK-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) {
 ; CROSS-BLOCK-NEXT:    [[TMP4:%.*]] = alloca %struct.S*, align 8
 ; CROSS-BLOCK-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; CROSS-BLOCK-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
@@ -289,7 +289,7 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; CROSS-BLOCK-NEXT:    ret i32 [[TMP28]]
 ;
 ; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test2
-; FULL-SIMPLIFY-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]])
+; FULL-SIMPLIFY-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) {
 ; FULL-SIMPLIFY-NEXT:    [[TMP4:%.*]] = alloca %struct.S*, align 8
 ; FULL-SIMPLIFY-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; FULL-SIMPLIFY-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
@@ -356,7 +356,7 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 
 define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true" {
 ; BASIC-LABEL: define {{[^@]+}}@test3
-; BASIC-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) #4
+; BASIC-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) [[ATTR4:#.*]] {
 ; BASIC-NEXT:    [[TMP4:%.*]] = alloca %struct.S*, align 8
 ; BASIC-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; BASIC-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
@@ -393,7 +393,7 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; BASIC-NEXT:    ret i32 [[TMP28]]
 ;
 ; ALL-LABEL: define {{[^@]+}}@test3
-; ALL-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) #4
+; ALL-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) [[ATTR4:#.*]] {
 ; ALL-NEXT:    [[TMP4:%.*]] = alloca %struct.S*, align 8
 ; ALL-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; ALL-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
@@ -430,7 +430,7 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; ALL-NEXT:    ret i32 [[TMP28]]
 ;
 ; WITH-AC-LABEL: define {{[^@]+}}@test3
-; WITH-AC-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) #4
+; WITH-AC-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) [[ATTR4:#.*]] {
 ; WITH-AC-NEXT:    [[TMP4:%.*]] = alloca %struct.S*, align 8
 ; WITH-AC-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; WITH-AC-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
@@ -467,7 +467,7 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; WITH-AC-NEXT:    ret i32 [[TMP28]]
 ;
 ; CROSS-BLOCK-LABEL: define {{[^@]+}}@test3
-; CROSS-BLOCK-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) #4
+; CROSS-BLOCK-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) [[ATTR4:#.*]] {
 ; CROSS-BLOCK-NEXT:    [[TMP4:%.*]] = alloca %struct.S*, align 8
 ; CROSS-BLOCK-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; CROSS-BLOCK-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
@@ -504,7 +504,7 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; CROSS-BLOCK-NEXT:    ret i32 [[TMP28]]
 ;
 ; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test3
-; FULL-SIMPLIFY-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) #4
+; FULL-SIMPLIFY-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) [[ATTR4:#.*]] {
 ; FULL-SIMPLIFY-NEXT:    [[TMP4:%.*]] = alloca %struct.S*, align 8
 ; FULL-SIMPLIFY-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; FULL-SIMPLIFY-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
@@ -573,7 +573,7 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 
 define dso_local i32 @_Z6squarePi(i32* %P, i32* %P1, i1 %cond) {
 ; BASIC-LABEL: define {{[^@]+}}@_Z6squarePi
-; BASIC-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i1 [[COND:%.*]])
+; BASIC-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i1 [[COND:%.*]]) {
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; BASIC-NEXT:    store i32 0, i32* [[P]], align 4
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
@@ -598,7 +598,7 @@ define dso_local i32 @_Z6squarePi(i32* %P, i32* %P1, i1 %cond) {
 ; BASIC-NEXT:    ret i32 0
 ;
 ; ALL-LABEL: define {{[^@]+}}@_Z6squarePi
-; ALL-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i1 [[COND:%.*]])
+; ALL-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i1 [[COND:%.*]]) {
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; ALL-NEXT:    store i32 0, i32* [[P]], align 4
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
@@ -623,7 +623,7 @@ define dso_local i32 @_Z6squarePi(i32* %P, i32* %P1, i1 %cond) {
 ; ALL-NEXT:    ret i32 0
 ;
 ; WITH-AC-LABEL: define {{[^@]+}}@_Z6squarePi
-; WITH-AC-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i1 [[COND:%.*]])
+; WITH-AC-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i1 [[COND:%.*]]) {
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; WITH-AC-NEXT:    store i32 0, i32* [[P]], align 4
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
@@ -648,7 +648,7 @@ define dso_local i32 @_Z6squarePi(i32* %P, i32* %P1, i1 %cond) {
 ; WITH-AC-NEXT:    ret i32 0
 ;
 ; CROSS-BLOCK-OLDPM-LABEL: define {{[^@]+}}@_Z6squarePi
-; CROSS-BLOCK-OLDPM-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i1 [[COND:%.*]])
+; CROSS-BLOCK-OLDPM-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i1 [[COND:%.*]]) {
 ; CROSS-BLOCK-OLDPM-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; CROSS-BLOCK-OLDPM-NEXT:    store i32 0, i32* [[P]], align 4
 ; CROSS-BLOCK-OLDPM-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
@@ -673,7 +673,7 @@ define dso_local i32 @_Z6squarePi(i32* %P, i32* %P1, i1 %cond) {
 ; CROSS-BLOCK-OLDPM-NEXT:    ret i32 0
 ;
 ; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@_Z6squarePi
-; FULL-SIMPLIFY-SAME: (i32* nonnull align 4 dereferenceable(4) [[P:%.*]], i32* nonnull align 8 dereferenceable(4) [[P1:%.*]], i1 [[COND:%.*]])
+; FULL-SIMPLIFY-SAME: (i32* nonnull align 4 dereferenceable(4) [[P:%.*]], i32* nonnull align 8 dereferenceable(4) [[P1:%.*]], i1 [[COND:%.*]]) {
 ; FULL-SIMPLIFY-NEXT:    store i32 0, i32* [[P]], align 4
 ; FULL-SIMPLIFY-NEXT:    store i32 0, i32* [[P1]], align 8
 ; FULL-SIMPLIFY-NEXT:    br i1 [[COND]], label [[A:%.*]], label [[B:%.*]]
@@ -694,7 +694,7 @@ define dso_local i32 @_Z6squarePi(i32* %P, i32* %P1, i1 %cond) {
 ; FULL-SIMPLIFY-NEXT:    ret i32 0
 ;
 ; CROSS-BLOCK-NEWMP-LABEL: define {{[^@]+}}@_Z6squarePi
-; CROSS-BLOCK-NEWMP-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i1 [[COND:%.*]])
+; CROSS-BLOCK-NEWMP-SAME: (i32* [[P:%.*]], i32* [[P1:%.*]], i1 [[COND:%.*]]) {
 ; CROSS-BLOCK-NEWMP-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; CROSS-BLOCK-NEWMP-NEXT:    store i32 0, i32* [[P]], align 4
 ; CROSS-BLOCK-NEWMP-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
@@ -735,7 +735,7 @@ C:
 
 define dso_local i32 @test4A(i32* %0, i32* %1, i32 %2, i32 %3) {
 ; BASIC-LABEL: define {{[^@]+}}@test4A
-; BASIC-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]])
+; BASIC-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]]) {
 ; BASIC-NEXT:    [[TMP5:%.*]] = icmp ne i32* [[TMP1]], null
 ; BASIC-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP12:%.*]]
 ; BASIC:       6:
@@ -755,7 +755,7 @@ define dso_local i32 @test4A(i32* %0, i32* %1, i32 %2, i32 %3) {
 ; BASIC-NEXT:    ret i32 0
 ;
 ; ALL-LABEL: define {{[^@]+}}@test4A
-; ALL-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]])
+; ALL-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]]) {
 ; ALL-NEXT:    [[TMP5:%.*]] = icmp ne i32* [[TMP1]], null
 ; ALL-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP12:%.*]]
 ; ALL:       6:
@@ -775,7 +775,7 @@ define dso_local i32 @test4A(i32* %0, i32* %1, i32 %2, i32 %3) {
 ; ALL-NEXT:    ret i32 0
 ;
 ; WITH-AC-LABEL: define {{[^@]+}}@test4A
-; WITH-AC-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]])
+; WITH-AC-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]]) {
 ; WITH-AC-NEXT:    [[TMP5:%.*]] = icmp ne i32* [[TMP1]], null
 ; WITH-AC-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP12:%.*]]
 ; WITH-AC:       6:
@@ -795,7 +795,7 @@ define dso_local i32 @test4A(i32* %0, i32* %1, i32 %2, i32 %3) {
 ; WITH-AC-NEXT:    ret i32 0
 ;
 ; CROSS-BLOCK-LABEL: define {{[^@]+}}@test4A
-; CROSS-BLOCK-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]])
+; CROSS-BLOCK-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]]) {
 ; CROSS-BLOCK-NEXT:    [[TMP5:%.*]] = icmp ne i32* [[TMP1]], null
 ; CROSS-BLOCK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP12:%.*]]
 ; CROSS-BLOCK:       6:
@@ -815,7 +815,7 @@ define dso_local i32 @test4A(i32* %0, i32* %1, i32 %2, i32 %3) {
 ; CROSS-BLOCK-NEXT:    ret i32 0
 ;
 ; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test4A
-; FULL-SIMPLIFY-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]])
+; FULL-SIMPLIFY-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]]) {
 ; FULL-SIMPLIFY-NEXT:    [[TMP5:%.*]] = icmp ne i32* [[TMP1]], null
 ; FULL-SIMPLIFY-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP12:%.*]]
 ; FULL-SIMPLIFY:       6:
@@ -856,7 +856,7 @@ declare void @may_throwv2(i32* %P)
 
 define dso_local i32 @terminator(i32* %P) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; BASIC-LABEL: define {{[^@]+}}@terminator
-; BASIC-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; BASIC-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; BASIC-NEXT:    invoke void @may_throwv2(i32* nonnull [[P]])
 ; BASIC-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
 ; BASIC:       Catch:
@@ -868,7 +868,7 @@ define dso_local i32 @terminator(i32* %P) personality i8* bitcast (i32 (...)* @_
 ; BASIC-NEXT:    ret i32 [[DOT0]]
 ;
 ; ALL-LABEL: define {{[^@]+}}@terminator
-; ALL-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; ALL-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; ALL-NEXT:    invoke void @may_throwv2(i32* nonnull [[P]])
 ; ALL-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
 ; ALL:       Catch:
@@ -880,7 +880,7 @@ define dso_local i32 @terminator(i32* %P) personality i8* bitcast (i32 (...)* @_
 ; ALL-NEXT:    ret i32 [[DOT0]]
 ;
 ; WITH-AC-LABEL: define {{[^@]+}}@terminator
-; WITH-AC-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; WITH-AC-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; WITH-AC-NEXT:    invoke void @may_throwv2(i32* nonnull [[P]])
 ; WITH-AC-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
 ; WITH-AC:       Catch:
@@ -892,7 +892,7 @@ define dso_local i32 @terminator(i32* %P) personality i8* bitcast (i32 (...)* @_
 ; WITH-AC-NEXT:    ret i32 [[DOT0]]
 ;
 ; CROSS-BLOCK-LABEL: define {{[^@]+}}@terminator
-; CROSS-BLOCK-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; CROSS-BLOCK-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CROSS-BLOCK-NEXT:    invoke void @may_throwv2(i32* nonnull [[P]])
 ; CROSS-BLOCK-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
 ; CROSS-BLOCK:       Catch:
@@ -904,7 +904,7 @@ define dso_local i32 @terminator(i32* %P) personality i8* bitcast (i32 (...)* @_
 ; CROSS-BLOCK-NEXT:    ret i32 [[DOT0]]
 ;
 ; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@terminator
-; FULL-SIMPLIFY-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; FULL-SIMPLIFY-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; FULL-SIMPLIFY-NEXT:    invoke void @may_throwv2(i32* nonnull [[P]])
 ; FULL-SIMPLIFY-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
 ; FULL-SIMPLIFY:       Catch:
@@ -932,7 +932,7 @@ declare dso_local i32 @__gxx_personality_v0(...)
 
 define dso_local i32 @test5(i8* %0, i32 %1) {
 ; BASIC-LABEL: define {{[^@]+}}@test5
-; BASIC-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; BASIC-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; BASIC-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP0]] to i64*
 ; BASIC-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP0]] to i16*
 ; BASIC-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP1]] to i64
@@ -949,7 +949,7 @@ define dso_local i32 @test5(i8* %0, i32 %1) {
 ; BASIC-NEXT:    ret i32 [[TMP11]]
 ;
 ; ALL-LABEL: define {{[^@]+}}@test5
-; ALL-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; ALL-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP0]] to i64*
 ; ALL-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP0]] to i16*
 ; ALL-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP1]] to i64
@@ -966,7 +966,7 @@ define dso_local i32 @test5(i8* %0, i32 %1) {
 ; ALL-NEXT:    ret i32 [[TMP11]]
 ;
 ; WITH-AC-LABEL: define {{[^@]+}}@test5
-; WITH-AC-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; WITH-AC-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; WITH-AC-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP0]] to i64*
 ; WITH-AC-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP0]] to i16*
 ; WITH-AC-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP1]] to i64
@@ -983,7 +983,7 @@ define dso_local i32 @test5(i8* %0, i32 %1) {
 ; WITH-AC-NEXT:    ret i32 [[TMP11]]
 ;
 ; CROSS-BLOCK-LABEL: define {{[^@]+}}@test5
-; CROSS-BLOCK-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CROSS-BLOCK-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; CROSS-BLOCK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP0]] to i64*
 ; CROSS-BLOCK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP0]] to i16*
 ; CROSS-BLOCK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP1]] to i64
@@ -1000,7 +1000,7 @@ define dso_local i32 @test5(i8* %0, i32 %1) {
 ; CROSS-BLOCK-NEXT:    ret i32 [[TMP11]]
 ;
 ; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test5
-; FULL-SIMPLIFY-SAME: (i8* nonnull align 8 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; FULL-SIMPLIFY-SAME: (i8* nonnull align 8 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; FULL-SIMPLIFY-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP0]] to i64*
 ; FULL-SIMPLIFY-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP0]] to i16*
 ; FULL-SIMPLIFY-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP1]] to i64
@@ -1031,7 +1031,7 @@ define dso_local i32 @test5(i8* %0, i32 %1) {
 
 define i32 @test6(i32* %0, i32 %1, i32* %2) {
 ; BASIC-LABEL: define {{[^@]+}}@test6
-; BASIC-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* [[TMP2:%.*]])
+; BASIC-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* [[TMP2:%.*]]) {
 ; BASIC-NEXT:    br label [[TMP4:%.*]]
 ; BASIC:       4:
 ; BASIC-NEXT:    [[DOT0:%.*]] = phi i32 [ 0, [[TMP3:%.*]] ], [ [[TMP16:%.*]], [[TMP6:%.*]] ]
@@ -1060,7 +1060,7 @@ define i32 @test6(i32* %0, i32 %1, i32* %2) {
 ; BASIC-NEXT:    ret i32 [[TMP20]]
 ;
 ; ALL-LABEL: define {{[^@]+}}@test6
-; ALL-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* [[TMP2:%.*]])
+; ALL-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* [[TMP2:%.*]]) {
 ; ALL-NEXT:    br label [[TMP4:%.*]]
 ; ALL:       4:
 ; ALL-NEXT:    [[DOT0:%.*]] = phi i32 [ 0, [[TMP3:%.*]] ], [ [[TMP16:%.*]], [[TMP6:%.*]] ]
@@ -1089,7 +1089,7 @@ define i32 @test6(i32* %0, i32 %1, i32* %2) {
 ; ALL-NEXT:    ret i32 [[TMP20]]
 ;
 ; WITH-AC-LABEL: define {{[^@]+}}@test6
-; WITH-AC-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* [[TMP2:%.*]])
+; WITH-AC-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* [[TMP2:%.*]]) {
 ; WITH-AC-NEXT:    br label [[TMP4:%.*]]
 ; WITH-AC:       4:
 ; WITH-AC-NEXT:    [[DOT0:%.*]] = phi i32 [ 0, [[TMP3:%.*]] ], [ [[TMP16:%.*]], [[TMP6:%.*]] ]
@@ -1118,7 +1118,7 @@ define i32 @test6(i32* %0, i32 %1, i32* %2) {
 ; WITH-AC-NEXT:    ret i32 [[TMP20]]
 ;
 ; CROSS-BLOCK-LABEL: define {{[^@]+}}@test6
-; CROSS-BLOCK-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* [[TMP2:%.*]])
+; CROSS-BLOCK-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* [[TMP2:%.*]]) {
 ; CROSS-BLOCK-NEXT:    br label [[TMP4:%.*]]
 ; CROSS-BLOCK:       4:
 ; CROSS-BLOCK-NEXT:    [[DOT0:%.*]] = phi i32 [ 0, [[TMP3:%.*]] ], [ [[TMP16:%.*]], [[TMP6:%.*]] ]
@@ -1147,7 +1147,7 @@ define i32 @test6(i32* %0, i32 %1, i32* %2) {
 ; CROSS-BLOCK-NEXT:    ret i32 [[TMP20]]
 ;
 ; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test6
-; FULL-SIMPLIFY-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* [[TMP2:%.*]])
+; FULL-SIMPLIFY-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* [[TMP2:%.*]]) {
 ; FULL-SIMPLIFY-NEXT:    br label [[TMP4:%.*]]
 ; FULL-SIMPLIFY:       4:
 ; FULL-SIMPLIFY-NEXT:    [[DOT0:%.*]] = phi i32 [ 0, [[TMP3:%.*]] ], [ [[TMP16:%.*]], [[TMP6:%.*]] ]
@@ -1207,7 +1207,7 @@ define i32 @test6(i32* %0, i32 %1, i32* %2) {
 
 define i32 @test7(%struct.A* nonnull %0, i32 %1) {
 ; BASIC-LABEL: define {{[^@]+}}@test7
-; BASIC-SAME: (%struct.A* nonnull [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; BASIC-SAME: (%struct.A* nonnull [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; BASIC-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP1]] to i64
 ; BASIC-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], %struct.A* [[TMP0]], i64 0, i32 3
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.A* [[TMP0]], i64 280), "align"(%struct.A* [[TMP0]], i64 16) ]
@@ -1226,7 +1226,7 @@ define i32 @test7(%struct.A* nonnull %0, i32 %1) {
 ; BASIC-NEXT:    ret i32 [[TMP13]]
 ;
 ; ALL-LABEL: define {{[^@]+}}@test7
-; ALL-SAME: (%struct.A* nonnull [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; ALL-SAME: (%struct.A* nonnull [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; ALL-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP1]] to i64
 ; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], %struct.A* [[TMP0]], i64 0, i32 3
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.A* [[TMP0]], i64 280), "align"(%struct.A* [[TMP0]], i64 16) ]
@@ -1245,7 +1245,7 @@ define i32 @test7(%struct.A* nonnull %0, i32 %1) {
 ; ALL-NEXT:    ret i32 [[TMP13]]
 ;
 ; WITH-AC-LABEL: define {{[^@]+}}@test7
-; WITH-AC-SAME: (%struct.A* nonnull [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; WITH-AC-SAME: (%struct.A* nonnull [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; WITH-AC-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP1]] to i64
 ; WITH-AC-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], %struct.A* [[TMP0]], i64 0, i32 3
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.A* [[TMP0]], i64 280), "align"(%struct.A* [[TMP0]], i64 16) ]
@@ -1264,7 +1264,7 @@ define i32 @test7(%struct.A* nonnull %0, i32 %1) {
 ; WITH-AC-NEXT:    ret i32 [[TMP13]]
 ;
 ; CROSS-BLOCK-LABEL: define {{[^@]+}}@test7
-; CROSS-BLOCK-SAME: (%struct.A* nonnull [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CROSS-BLOCK-SAME: (%struct.A* nonnull [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; CROSS-BLOCK-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP1]] to i64
 ; CROSS-BLOCK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], %struct.A* [[TMP0]], i64 0, i32 3
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.A* [[TMP0]], i64 280), "align"(%struct.A* [[TMP0]], i64 16) ]
@@ -1283,7 +1283,7 @@ define i32 @test7(%struct.A* nonnull %0, i32 %1) {
 ; CROSS-BLOCK-NEXT:    ret i32 [[TMP13]]
 ;
 ; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test7
-; FULL-SIMPLIFY-SAME: (%struct.A* nonnull align 16 dereferenceable(280) [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; FULL-SIMPLIFY-SAME: (%struct.A* nonnull align 16 dereferenceable(280) [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; FULL-SIMPLIFY-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP1]] to i64
 ; FULL-SIMPLIFY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], %struct.A* [[TMP0]], i64 0, i32 3
 ; FULL-SIMPLIFY-NEXT:    [[TMP5:%.*]] = load i64, i64* [[TMP4]], align 8

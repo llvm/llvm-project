@@ -5836,7 +5836,7 @@ static void DbgGatherEqualValues(Loop *L, ScalarEvolution &SE,
       auto DVI = dyn_cast<DbgValueInst>(&I);
       if (!DVI)
         continue;
-      auto V = DVI->getVariableLocation();
+      auto V = DVI->getVariableLocationOp(0);
       if (!V || !SE.isSCEVable(V->getType()))
         continue;
       auto DbgValueSCEV = SE.getSCEV(V);
@@ -5862,7 +5862,7 @@ static void DbgApplyEqualValues(EqualValuesMap &DbgValueToEqualSet) {
   for (auto A : DbgValueToEqualSet) {
     auto DVI = A.first;
     // Only update those that are now undef.
-    if (!isa_and_nonnull<UndefValue>(DVI->getVariableLocation()))
+    if (!isa_and_nonnull<UndefValue>(DVI->getVariableLocationOp(0)))
       continue;
     for (auto EV : A.second) {
       auto V = std::get<WeakVH>(EV);
@@ -5870,14 +5870,13 @@ static void DbgApplyEqualValues(EqualValuesMap &DbgValueToEqualSet) {
         continue;
       auto DbgDIExpr = std::get<DIExpression *>(EV);
       auto Offset = std::get<int64_t>(EV);
-      auto &Ctx = DVI->getContext();
-      DVI->setOperand(0, MetadataAsValue::get(Ctx, ValueAsMetadata::get(V)));
+      DVI->replaceVariableLocationOp(DVI->getVariableLocationOp(0), V);
       if (Offset) {
         SmallVector<uint64_t, 8> Ops;
         DIExpression::appendOffset(Ops, Offset);
         DbgDIExpr = DIExpression::prependOpcodes(DbgDIExpr, Ops, true);
       }
-      DVI->setOperand(2, MetadataAsValue::get(Ctx, DbgDIExpr));
+      DVI->setExpression(DbgDIExpr);
       break;
     }
   }

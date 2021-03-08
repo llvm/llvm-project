@@ -119,7 +119,7 @@ define zeroext i4 @func4(i4 zeroext %x, i4 zeroext %y, i4 zeroext %z) nounwind {
 ; X86-NEXT:    subb %al, %cl
 ; X86-NEXT:    movzbl %cl, %eax
 ; X86-NEXT:    cmovbl %edx, %eax
-; X86-NEXT:    andl $15, %eax
+; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func4:
@@ -132,7 +132,7 @@ define zeroext i4 @func4(i4 zeroext %x, i4 zeroext %y, i4 zeroext %z) nounwind {
 ; X64-NEXT:    subb %al, %dil
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    cmovbl %ecx, %eax
-; X64-NEXT:    andl $15, %eax
+; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
   %a = mul i4 %y, %z
   %tmp = call i4 @llvm.usub.sat.i4(i4 %x, i4 %a)

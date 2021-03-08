@@ -370,10 +370,11 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// that the returned value has pointer type if the specified value does. If
   /// the MaxLookup value is non-zero, it limits the number of instructions to
   /// be stripped off.
-  Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6);
-  inline const Value *getUnderlyingObject(const Value *V,
-                                          unsigned MaxLookup = 6) {
-    return getUnderlyingObject(const_cast<Value *>(V), MaxLookup);
+  const Value *getUnderlyingObject(const Value *V, unsigned MaxLookup = 6);
+  inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
+    // Force const to avoid infinite recursion.
+    const Value *VConst = V;
+    return const_cast<Value *>(getUnderlyingObject(VConst, MaxLookup));
   }
 
   /// This method is similar to getUnderlyingObject except that it can
@@ -763,6 +764,16 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// non-trivial loop conditons, see ScalarEvolution instead.
   bool matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
                              Value *&Start, Value *&Step);
+
+  /// Analogous to the above, but starting from the binary operator
+  inline bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
+                                    Value *&Start, Value *&Step) {
+    BinaryOperator *BO = nullptr;
+    P = dyn_cast<PHINode>(I->getOperand(0));
+    if (!P)
+      P = dyn_cast<PHINode>(I->getOperand(1));
+    return P && matchSimpleRecurrence(P, BO, Start, Step) && BO == I;
+  }
 
   /// Return true if RHS is known to be implied true by LHS.  Return false if
   /// RHS is known to be implied false by LHS.  Otherwise, return None if no

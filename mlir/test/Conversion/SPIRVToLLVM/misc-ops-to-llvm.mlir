@@ -113,13 +113,13 @@ spv.module Logical OpenCL {
 // CHECK-LABEL: @undef_scalar
 spv.func @undef_scalar() "None" {
   // CHECK: llvm.mlir.undef : f32
-  %0 = spv.undef : f32
+  %0 = spv.Undef : f32
   spv.Return
 }
 
 // CHECK-LABEL: @undef_vector
 spv.func @undef_vector() "None" {
   // CHECK: llvm.mlir.undef : vector<2xi32>
-  %0 = spv.undef : vector<2xi32>
+  %0 = spv.Undef : vector<2xi32>
   spv.Return
 }
