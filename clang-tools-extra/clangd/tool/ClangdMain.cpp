@@ -537,7 +537,7 @@ const char TestScheme::TestDir[] = "/clangd-test";
 
 std::unique_ptr<SymbolIndex>
 loadExternalIndex(const Config::ExternalIndexSpec &External,
-                  AsyncTaskRunner &Tasks) {
+                  AsyncTaskRunner *Tasks) {
   switch (External.Kind) {
   case Config::ExternalIndexSpec::Server:
     log("Associating {0} with remote index at {1}.", External.MountPoint,
@@ -552,13 +552,11 @@ loadExternalIndex(const Config::ExternalIndexSpec &External,
       if (auto Idx = loadIndex(File, /*UseDex=*/true))
         PlaceHolder->reset(std::move(Idx));
     };
-    // FIXME: The signature should contain a null-able TaskRunner istead, and
-    // the task should be scheduled accordingly.
-    if (Sync) {
-      IndexLoadTask();
+    if (Tasks) {
+      Tasks->runAsync("Load-index:" + External.Location,
+                      std::move(IndexLoadTask));
     } else {
-      Tasks.runAsync("Load-index:" + External.Location,
-                     std::move(IndexLoadTask));
+      IndexLoadTask();
     }
     return std::move(NewIndex);
   }
@@ -806,7 +804,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
 #endif
   Opts.BackgroundIndex = EnableBackgroundIndex;
-  auto PAI = createProjectAwareIndex(loadExternalIndex);
+  auto PAI = createProjectAwareIndex(loadExternalIndex, Sync);
   if (StaticIdx) {
     IdxStack.emplace_back(std::move(StaticIdx));
     IdxStack.emplace_back(
