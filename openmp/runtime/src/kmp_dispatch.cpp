@@ -919,7 +919,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
     }
     // Report loop metadata
     if (itt_need_metadata_reporting) {
-      // Only report metadata by master of active team at level 1
+      // Only report metadata by primary thread of active team at level 1
       kmp_uint64 schedtype = 0;
       switch (schedule) {
       case kmp_sch_static_chunked:

@@ -37,6 +37,8 @@ void ConvertStandardToSPIRVPass::runOnOperation() {
   SPIRVTypeConverter typeConverter(targetAttr);
   OwningRewritePatternList patterns;
   populateStandardToSPIRVPatterns(context, typeConverter, patterns);
+  populateTensorToSPIRVPatterns(context, typeConverter,
+                                /*byteCountThreshold=*/64, patterns);
   populateBuiltinFuncToSPIRVPatterns(context, typeConverter, patterns);
 
   if (failed(applyPartialConversion(module, *target, std::move(patterns))))

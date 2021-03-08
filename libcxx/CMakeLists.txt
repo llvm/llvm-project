@@ -572,7 +572,14 @@ endfunction()
 # Warning flags ===============================================================
 function(cxx_add_warning_flags target)
   target_compile_definitions(${target} PUBLIC -D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-  target_add_compile_flags_if_supported(${target} PRIVATE -Wall -Wextra -W -Wwrite-strings
+  if (MSVC)
+    # -W4 is the cl.exe/clang-cl equivalent of -Wall. (In cl.exe and clang-cl,
+    # -Wall is equivalent to -Weverything in GCC style compiler drivers.)
+    target_add_compile_flags_if_supported(${target} PRIVATE -W4)
+  else()
+    target_add_compile_flags_if_supported(${target} PRIVATE -Wall)
+  endif()
+  target_add_compile_flags_if_supported(${target} PRIVATE -Wextra -W -Wwrite-strings
                                                           -Wno-unused-parameter -Wno-long-long
                                                           -Werror=return-type -Wextra-semi)
   if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")

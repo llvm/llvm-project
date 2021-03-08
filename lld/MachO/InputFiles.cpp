@@ -149,20 +149,6 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   return None;
 }
 
-const load_command *macho::findCommand(const mach_header_64 *hdr,
-                                       uint32_t type) {
-  const uint8_t *p =
-      reinterpret_cast<const uint8_t *>(hdr) + sizeof(mach_header_64);
-
-  for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
-    auto *cmd = reinterpret_cast<const load_command *>(p);
-    if (cmd->cmd == type)
-      return cmd;
-    p += cmd->cmdsize;
-  }
-  return nullptr;
-}
-
 void ObjFile::parseSections(ArrayRef<section_64> sections) {
   subsections.reserve(sections.size());
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
@@ -352,6 +338,32 @@ static macho::Symbol *createDefined(const structs::nlist_64 &sym,
                        /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
+// Checks if the version specified in `cmd` is compatible with target
+// version. IOW, check if cmd's version >= config's version.
+static bool hasCompatVersion(const InputFile *input,
+                             const build_version_command *cmd) {
+
+  if (config->target.Platform != static_cast<PlatformKind>(cmd->platform)) {
+    error(toString(input) + " has platform " +
+          getPlatformName(static_cast<PlatformKind>(cmd->platform)) +
+          Twine(", which is different from target platform ") +
+          getPlatformName(config->target.Platform));
+    return false;
+  }
+
+  unsigned major = cmd->minos >> 16;
+  unsigned minor = (cmd->minos >> 8) & 0xffu;
+  unsigned subMinor = cmd->minos & 0xffu;
+  VersionTuple version(major, minor, subMinor);
+  if (version >= config->platformInfo.minimum)
+    return true;
+
+  error(toString(input) + " has version " + version.getAsString() +
+        ", which is incompatible with target version of " +
+        config->platformInfo.minimum.getAsString());
+  return false;
+}
+
 // Absolute symbols are defined symbols that do not have an associated
 // InputSection. They cannot be weak.
 static macho::Symbol *createAbsolute(const structs::nlist_64 &sym,
@@ -407,7 +419,11 @@ void ObjFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
 
     const section_64 &sec = sectionHeaders[sym.n_sect - 1];
     SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
-    assert(!subsecMap.empty());
+
+    // parseSections() may have chosen not to parse this section.
+    if (subsecMap.empty())
+      continue;
+
     uint64_t offset = sym.n_value - sec.addr;
 
     // If the input file does not use subsections-via-symbols, all symbols can
@@ -492,7 +508,12 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
           getArchitectureName(config->target.Arch));
     return;
   }
-  // TODO: check platform too
+
+  if (const auto *cmd =
+          findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
+    if (!hasCompatVersion(this, cmd))
+      return;
+  }
 
   if (const load_command *cmd = findCommand(hdr, LC_LINKER_OPTION)) {
     auto *c = reinterpret_cast<const linker_option_command *>(cmd);
@@ -544,9 +565,10 @@ void ObjFile::parseDebugInfo() {
   // TODO: Since object files can contain a lot of DWARF info, we should verify
   // that we are parsing just the info we need
   const DWARFContext::compile_unit_range &units = ctx->compile_units();
+  // FIXME: There can be more than one compile unit per object file. See
+  // PR48637.
   auto it = units.begin();
   compileUnit = it->get();
-  assert(std::next(it) == units.end());
 }
 
 // The path can point to either a dylib or a .tbd file.
@@ -646,6 +668,12 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     // so it's OK.
     error("dylib " + toString(this) + " missing LC_ID_DYLIB load command");
     return;
+  }
+
+  if (const build_version_command *cmd =
+          findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
+    if (!hasCompatVersion(this, cmd))
+      return;
   }
 
   // Initialize symbols.

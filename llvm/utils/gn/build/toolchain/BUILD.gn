@@ -25,8 +25,8 @@ template("unix_toolchain") {
     cxx = "c++"
 
     if (clang_base_path != "") {
-      cc = "$clang_base_path/bin/clang"
-      cxx = "$clang_base_path/bin/clang++"
+      cc = rebase_path(clang_base_path, root_build_dir) + "/bin/clang"
+      cxx = rebase_path(clang_base_path, root_build_dir) + "/bin/clang++"
     }
 
     ld = cxx  # Don't use goma wrapper for linking.
@@ -185,7 +185,7 @@ template("stage2_unix_toolchain") {
     toolchain_args = {
       forward_variables_from(invoker.toolchain_args, "*")
 
-      clang_base_path = "."
+      clang_base_path = root_build_dir
       use_goma = false
     }
 
@@ -244,9 +244,9 @@ toolchain("win") {
   link = "link"
 
   if (clang_base_path != "") {
-    cl = "$clang_base_path/bin/clang-cl"
+    cl = rebase_path(clang_base_path, root_build_dir) + "/bin/clang-cl"
     if (use_lld) {
-      link = "$clang_base_path/bin/lld-link"
+      link = rebase_path(clang_base_path, root_build_dir) + "/bin/lld-link"
     }
   }
 

@@ -4201,3 +4201,159 @@ exit:
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 }
+
+; Non-trivial partial loop unswitching of multiple invariant inputs to an `and`
+; chain (select version).
+define i32 @test32(i1* %ptr1, i1* %ptr2, i1* %ptr3, i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @test32(
+entry:
+  br label %loop_begin
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %[[INV_AND:.*]] = and i1 %cond2, %cond1
+; CHECK-NEXT:    br i1 %[[INV_AND]], label %entry.split, label %entry.split.us
+
+loop_begin:
+  %v1 = load i1, i1* %ptr1
+  %v2 = load i1, i1* %ptr2
+  %cond_and1 = select i1 %v1, i1 %cond1, i1 false
+  %cond_and2 = select i1 %cond_and1, i1 %cond2, i1 false
+  br i1 %cond_and2, label %loop_a, label %loop_b
+; The 'loop_b' unswitched loop.
+;
+; CHECK:       entry.split.us:
+; CHECK-NEXT:    br label %loop_begin.us
+;
+; CHECK:       loop_begin.us:
+; CHECK-NEXT:    %[[V2_US]] = load i1, i1* %ptr2, align 1
+; CHECK-NEXT:    br label %loop_b.us
+;
+; CHECK:       loop_b.us:
+; CHECK-NEXT:    call i32 @b()
+; CHECK-NEXT:    br label %latch.us
+;
+; CHECK:       latch.us:
+; CHECK-NEXT:    %[[V3_US:.*]] = load i1, i1* %ptr3, align 1
+; CHECK-NEXT:    br i1 %[[V3_US]], label %loop_begin.us, label %loop_exit.split.us
+;
+; CHECK:       loop_exit.split.us:
+; CHECK-NEXT:    br label %loop_exit
+
+; The original loop.
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %loop_begin
+;
+; CHECK:       loop_begin:
+; CHECK-NEXT:    %[[V1:.*]] = load i1, i1* %ptr1
+; CHECK-NEXT:    %[[V2:.*]] = load i1, i1* %ptr2
+; CHECK-NEXT:    %[[AND1:.*]] = select i1 %[[V1]], i1 true, i1 false
+; CHECK-NEXT:    %[[AND2:.*]] = select i1 %[[AND1]], i1 true, i1 false
+; CHECK-NEXT:    br i1 %[[AND2]], label %loop_a, label %loop_b
+
+loop_a:
+  call i32 @a()
+  br label %latch
+; CHECK:       loop_a:
+; CHECK-NEXT:    call i32 @a()
+; CHECK-NEXT:    br label %latch
+
+loop_b:
+  call i32 @b()
+  br label %latch
+; CHECK:       loop_b:
+; CHECK-NEXT:    call i32 @b()
+; CHECK-NEXT:    br label %latch
+
+latch:
+  %v3 = load i1, i1* %ptr3
+  br i1 %v3, label %loop_begin, label %loop_exit
+; CHECK:       latch:
+; CHECK-NEXT:    %[[V3:.*]] = load i1, i1* %ptr3, align 1
+; CHECK-NEXT:    br i1 %[[V3]], label %loop_begin, label %loop_exit.split
+
+loop_exit:
+  ret i32 0
+; CHECK:       loop_exit.split:
+; CHECK-NEXT:    br label %loop_exit
+;
+; CHECK:       loop_exit:
+; CHECK-NEXT:    ret
+}
+
+; Non-trivial partial loop unswitching of multiple invariant inputs to an `or`
+; chain (select version).
+define i32 @test33(i1* %ptr1, i1* %ptr2, i1* %ptr3, i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @test33(
+entry:
+  br label %loop_begin
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %[[INV_OR:.*]] = or i1 %cond2, %cond1
+; CHECK-NEXT:    br i1 %[[INV_OR]], label %entry.split.us, label %entry.split
+
+loop_begin:
+  %v1 = load i1, i1* %ptr1
+  %v2 = load i1, i1* %ptr2
+  %cond_and1 = select i1 %v1, i1 true, i1 %cond1
+  %cond_and2 = select i1 %cond_and1, i1 true, i1 %cond2
+  br i1 %cond_and2, label %loop_b, label %loop_a
+; The 'loop_b' unswitched loop.
+;
+; CHECK:       entry.split.us:
+; CHECK-NEXT:    br label %loop_begin.us
+;
+; CHECK:       loop_begin.us:
+; CHECK-NEXT:    %[[V2_US]] = load i1, i1* %ptr2, align 1
+; CHECK-NEXT:    br label %loop_b.us
+;
+; CHECK:       loop_b.us:
+; CHECK-NEXT:    call i32 @b()
+; CHECK-NEXT:    br label %latch.us
+;
+; CHECK:       latch.us:
+; CHECK-NEXT:    %[[V3_US:.*]] = load i1, i1* %ptr3, align 1
+; CHECK-NEXT:    br i1 %[[V3_US]], label %loop_begin.us, label %loop_exit.split.us
+;
+; CHECK:       loop_exit.split.us:
+; CHECK-NEXT:    br label %loop_exit
+
+; The original loop.
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %loop_begin
+;
+; CHECK:       loop_begin:
+; CHECK-NEXT:    %[[V1:.*]] = load i1, i1* %ptr1
+; CHECK-NEXT:    %[[V2:.*]] = load i1, i1* %ptr2
+; CHECK-NEXT:    %[[AND1:.*]] = select i1 %[[V1]], i1 true, i1 false
+; CHECK-NEXT:    %[[AND2:.*]] = select i1 %[[AND1]], i1 true, i1 false
+; CHECK-NEXT:    br i1 %[[AND2]], label %loop_b, label %loop_a
+
+loop_a:
+  call i32 @a()
+  br label %latch
+; CHECK:       loop_a:
+; CHECK-NEXT:    call i32 @a()
+; CHECK-NEXT:    br label %latch
+
+loop_b:
+  call i32 @b()
+  br label %latch
+; CHECK:       loop_b:
+; CHECK-NEXT:    call i32 @b()
+; CHECK-NEXT:    br label %latch
+
+latch:
+  %v3 = load i1, i1* %ptr3
+  br i1 %v3, label %loop_begin, label %loop_exit
+; CHECK:       latch:
+; CHECK-NEXT:    %[[V3:.*]] = load i1, i1* %ptr3, align 1
+; CHECK-NEXT:    br i1 %[[V3]], label %loop_begin, label %loop_exit.split
+
+loop_exit:
+  ret i32 0
+; CHECK:       loop_exit.split:
+; CHECK-NEXT:    br label %loop_exit
+;
+; CHECK:       loop_exit:
+; CHECK-NEXT:    ret
+}

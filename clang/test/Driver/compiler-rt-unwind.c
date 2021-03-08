@@ -2,7 +2,7 @@
 // --unwindlib=XXX properly.
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=libgcc \
+// RUN:     --target=x86_64-unknown-linux -rtlib=libgcc --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=RTLIB-GCC %s
 // RTLIB-GCC: "{{.*}}lgcc"
@@ -66,6 +66,10 @@
 // MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT: "{{.*}}l:libunwind.a"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s
+// RUN: %clangxx -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s

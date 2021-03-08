@@ -209,7 +209,7 @@ Type *Argument::getParamStructRetType() const {
 }
 
 Type *Argument::getParamByRefType() const {
-  assert(getType()->isPointerTy() && "Only pointers have byval types");
+  assert(getType()->isPointerTy() && "Only pointers have byref types");
   return getParent()->getParamByRefType(getArgNo());
 }
 

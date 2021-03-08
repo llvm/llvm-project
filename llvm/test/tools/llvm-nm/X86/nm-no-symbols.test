@@ -9,3 +9,5 @@ FileHeader:
   Machine:         EM_X86_64
 
 # CHECK: [[FILE]]: no symbols{{$}}
+
+# RUN: llvm-nm --quiet %t.o 2>&1 | count 0

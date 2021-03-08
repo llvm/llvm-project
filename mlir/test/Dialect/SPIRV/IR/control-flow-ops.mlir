@@ -263,7 +263,7 @@ spv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.loop
+// spv.mlir.loop
 //===----------------------------------------------------------------------===//
 
 // for (int i = 0; i < count; ++i) {}
@@ -272,8 +272,8 @@ func @loop(%count : i32) -> () {
   %one = spv.Constant 1: i32
   %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
-  // CHECK: spv.loop {
-  spv.loop {
+  // CHECK: spv.mlir.loop {
+  spv.mlir.loop {
     // CHECK-NEXT: spv.Branch ^bb1
     spv.Branch ^header
 
@@ -309,8 +309,8 @@ func @loop(%count : i32) -> () {
 
 // CHECK-LABEL: @empty_region
 func @empty_region() -> () {
-  // CHECK: spv.loop
-  spv.loop {
+  // CHECK: spv.mlir.loop
+  spv.mlir.loop {
   }
   return
 }
@@ -319,8 +319,8 @@ func @empty_region() -> () {
 
 // CHECK-LABEL: @loop_with_control
 func @loop_with_control() -> () {
-  // CHECK: spv.loop control(Unroll)
-  spv.loop control(Unroll) {
+  // CHECK: spv.mlir.loop control(Unroll)
+  spv.mlir.loop control(Unroll) {
   }
   return
 }
@@ -329,7 +329,7 @@ func @loop_with_control() -> () {
 
 func @wrong_merge_block() -> () {
   // expected-error @+1 {{last block must be the merge block with only one 'spv.mlir.merge' op}}
-  spv.loop {
+  spv.mlir.loop {
     spv.Return
   }
   return
@@ -339,7 +339,7 @@ func @wrong_merge_block() -> () {
 
 func @missing_entry_block() -> () {
   // expected-error @+1 {{must have an entry block branching to the loop header block}}
-  spv.loop {
+  spv.mlir.loop {
     spv.mlir.merge
   }
   return
@@ -349,7 +349,7 @@ func @missing_entry_block() -> () {
 
 func @missing_header_block() -> () {
   // expected-error @+1 {{must have a loop header block branched from the entry block}}
-  spv.loop {
+  spv.mlir.loop {
   ^entry:
     spv.Branch ^merge
   ^merge:
@@ -362,7 +362,7 @@ func @missing_header_block() -> () {
 
 func @entry_should_branch_to_header() -> () {
   // expected-error @+1 {{entry block must only have one 'spv.Branch' op to the second block}}
-  spv.loop {
+  spv.mlir.loop {
   ^entry:
     spv.Branch ^merge
   ^header:
@@ -377,7 +377,7 @@ func @entry_should_branch_to_header() -> () {
 
 func @missing_continue_block() -> () {
   // expected-error @+1 {{requires a loop continue block branching to the loop header block}}
-  spv.loop {
+  spv.mlir.loop {
   ^entry:
     spv.Branch ^header
   ^header:
@@ -392,7 +392,7 @@ func @missing_continue_block() -> () {
 
 func @continue_should_branch_to_header() -> () {
   // expected-error @+1 {{second to last block must be the loop continue block that branches to the loop header block}}
-  spv.loop {
+  spv.mlir.loop {
   ^entry:
     spv.Branch ^header
   ^header:
@@ -409,7 +409,7 @@ func @continue_should_branch_to_header() -> () {
 
 func @only_entry_and_continue_branch_to_header() -> () {
   // expected-error @+1 {{can only have the entry and loop continue block branching to the loop header block}}
-  spv.loop {
+  spv.mlir.loop {
   ^entry:
     spv.Branch ^header
   ^header:
@@ -431,7 +431,7 @@ func @only_entry_and_continue_branch_to_header() -> () {
 //===----------------------------------------------------------------------===//
 
 func @merge() -> () {
-  // expected-error @+1 {{expected parent op to be 'spv.selection' or 'spv.loop'}}
+  // expected-error @+1 {{expected parent op to be 'spv.mlir.selection' or 'spv.mlir.loop'}}
   spv.mlir.merge
 }
 
@@ -442,12 +442,12 @@ func @only_allowed_in_last_block(%cond : i1) -> () {
   %one = spv.Constant 1: i32
   %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
-  spv.selection {
+  spv.mlir.selection {
     spv.BranchConditional %cond, ^then, ^merge
 
   ^then:
     spv.Store "Function" %var, %one : i32
-    // expected-error @+1 {{can only be used in the last block of 'spv.selection' or 'spv.loop'}}
+    // expected-error @+1 {{can only be used in the last block of 'spv.mlir.selection' or 'spv.mlir.loop'}}
     spv.mlir.merge
 
   ^merge:
@@ -461,12 +461,12 @@ func @only_allowed_in_last_block(%cond : i1) -> () {
 
 func @only_allowed_in_last_block() -> () {
   %true = spv.Constant true
-  spv.loop {
+  spv.mlir.loop {
     spv.Branch ^header
   ^header:
     spv.BranchConditional %true, ^body, ^merge
   ^body:
-    // expected-error @+1 {{can only be used in the last block of 'spv.selection' or 'spv.loop'}}
+    // expected-error @+1 {{can only be used in the last block of 'spv.mlir.selection' or 'spv.mlir.loop'}}
     spv.mlir.merge
   ^continue:
     spv.Branch ^header
@@ -484,7 +484,7 @@ func @only_allowed_in_last_block() -> () {
 
 // CHECK-LABEL: func @in_selection
 func @in_selection(%cond : i1) -> () {
-  spv.selection {
+  spv.mlir.selection {
     spv.BranchConditional %cond, ^then, ^merge
   ^then:
     // CHECK: spv.Return
@@ -497,7 +497,7 @@ func @in_selection(%cond : i1) -> () {
 
 // CHECK-LABEL: func @in_loop
 func @in_loop(%cond : i1) -> () {
-  spv.loop {
+  spv.mlir.loop {
     spv.Branch ^header
   ^header:
     spv.BranchConditional %cond, ^body, ^merge
@@ -539,7 +539,7 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @in_nested_region(%cond: i1) -> (i32) "None" {
-    spv.selection {
+    spv.mlir.selection {
       spv.BranchConditional %cond, ^then, ^merge
     ^then:
       // expected-error @+1 {{cannot be used in functions returning value}}
@@ -567,7 +567,7 @@ func @ret_val() -> (i32) {
 
 // CHECK-LABEL: func @in_selection
 func @in_selection(%cond : i1) -> (i32) {
-  spv.selection {
+  spv.mlir.selection {
     spv.BranchConditional %cond, ^then, ^merge
   ^then:
     %zero = spv.Constant 0 : i32
@@ -582,7 +582,7 @@ func @in_selection(%cond : i1) -> (i32) {
 
 // CHECK-LABEL: func @in_loop
 func @in_loop(%cond : i1) -> (i32) {
-  spv.loop {
+  spv.mlir.loop {
     spv.Branch ^header
   ^header:
     spv.BranchConditional %cond, ^body, ^merge
@@ -637,7 +637,7 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @in_nested_region(%cond: i1) -> () "None" {
-    spv.selection {
+    spv.mlir.selection {
       spv.BranchConditional %cond, ^then, ^merge
     ^then:
       %cst = spv.Constant 0: i32
@@ -654,7 +654,7 @@ spv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.selection
+// spv.mlir.selection
 //===----------------------------------------------------------------------===//
 
 func @selection(%cond: i1) -> () {
@@ -662,8 +662,8 @@ func @selection(%cond: i1) -> () {
   %one = spv.Constant 1: i32
   %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
-  // CHECK: spv.selection {
-  spv.selection {
+  // CHECK: spv.mlir.selection {
+  spv.mlir.selection {
     // CHECK-NEXT: spv.BranchConditional %{{.*}}, ^bb1, ^bb2
     spv.BranchConditional %cond, ^then, ^merge
 
@@ -690,8 +690,8 @@ func @selection(%cond: i1) -> () {
   %two = spv.Constant 2: i32
   %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
-  // CHECK: spv.selection {
-  spv.selection {
+  // CHECK: spv.mlir.selection {
+  spv.mlir.selection {
     // CHECK-NEXT: spv.BranchConditional %{{.*}}, ^bb1, ^bb2
     spv.BranchConditional %cond, ^then, ^else
 
@@ -720,8 +720,8 @@ func @selection(%cond: i1) -> () {
 
 // CHECK-LABEL: @empty_region
 func @empty_region() -> () {
-  // CHECK: spv.selection
-  spv.selection {
+  // CHECK: spv.mlir.selection
+  spv.mlir.selection {
   }
   return
 }
@@ -730,8 +730,8 @@ func @empty_region() -> () {
 
 // CHECK-LABEL: @selection_with_control
 func @selection_with_control() -> () {
-  // CHECK: spv.selection control(Flatten)
-  spv.selection control(Flatten) {
+  // CHECK: spv.mlir.selection control(Flatten)
+  spv.mlir.selection control(Flatten) {
   }
   return
 }
@@ -740,7 +740,7 @@ func @selection_with_control() -> () {
 
 func @wrong_merge_block() -> () {
   // expected-error @+1 {{last block must be the merge block with only one 'spv.mlir.merge' op}}
-  spv.selection {
+  spv.mlir.selection {
     spv.Return
   }
   return
@@ -750,7 +750,7 @@ func @wrong_merge_block() -> () {
 
 func @missing_entry_block() -> () {
   // expected-error @+1 {{must have a selection header block}}
-  spv.selection {
+  spv.mlir.selection {
     spv.mlir.merge
   }
   return

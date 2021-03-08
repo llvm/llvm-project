@@ -400,9 +400,9 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
   // For structured selection, we cannot have blocks in the selection construct
   // branching to the selection header block. Entering the selection (and
   // reaching the selection header) must be from the block containing the
-  // spv.selection op. If there are ops ahead of the spv.selection op in the
-  // block, we can "merge" them into the selection header. So here we don't need
-  // to emit a separate block; just continue with the existing block.
+  // spv.mlir.selection op. If there are ops ahead of the spv.mlir.selection op
+  // in the block, we can "merge" them into the selection header. So here we
+  // don't need to emit a separate block; just continue with the existing block.
   if (failed(processBlock(headerBlock, /*omitLabel=*/true, emitSelectionMerge)))
     return failure();
 

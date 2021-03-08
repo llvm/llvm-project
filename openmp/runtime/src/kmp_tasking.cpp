@@ -2839,7 +2839,7 @@ static kmp_task_t *__kmp_steal_task(kmp_info_t *victim_thr, kmp_int32 gtid,
   if (*thread_finished) {
     // We need to un-mark this victim as a finished victim.  This must be done
     // before releasing the lock, or else other threads (starting with the
-    // master victim) might be prematurely released from the barrier!!!
+    // primary thread victim) might be prematurely released from the barrier!!!
     kmp_int32 count;
 
     count = KMP_ATOMIC_INC(unfinished_threads);
@@ -3051,7 +3051,7 @@ static inline int __kmp_execute_tasks_template(
       }
 
       // It is now unsafe to reference thread->th.th_team !!!
-      // Decrementing task_team->tt.tt_unfinished_threads can allow the master
+      // Decrementing task_team->tt.tt_unfinished_threads can allow the primary
       // thread to pass through the barrier, where it might reset each thread's
       // th.th_team field for the next parallel region. If we can steal more
       // work, we know that this has not happened yet.
@@ -3064,8 +3064,8 @@ static inline int __kmp_execute_tasks_template(
       }
     }
 
-    // If this thread's task team is NULL, master has recognized that there are
-    // no more tasks; bail out
+    // If this thread's task team is NULL, primary thread has recognized that
+    // there are no more tasks; bail out
     if (thread->th.th_task_team == NULL) {
       KA_TRACE(15,
                ("__kmp_execute_tasks_template: T#%d no more tasks\n", gtid));
@@ -3205,7 +3205,7 @@ static void __kmp_enable_tasking(kmp_task_team_t *task_team,
  * After a child * thread checks into a barrier and calls __kmp_release() from
  * the particular variant of __kmp_<barrier_kind>_barrier_gather(), it can no
  * longer assume that the kmp_team_t structure is intact (at any moment, the
- * master thread may exit the barrier code and free the team data structure,
+ * primary thread may exit the barrier code and free the team data structure,
  * and return the threads to the thread pool).
  *
  * This does not work with the tasking code, as the thread is still
@@ -3214,11 +3214,11 @@ static void __kmp_enable_tasking(kmp_task_team_t *task_team,
  * to each thread in the team, so that it can steal work from it.
  *
  * Enter the existence of the kmp_task_team_t struct.  It employs a reference
- * counting mechanism, and is allocated by the master thread before calling
+ * counting mechanism, and is allocated by the primary thread before calling
  * __kmp_<barrier_kind>_release, and then is release by the last thread to
  * exit __kmp_<barrier_kind>_release at the next barrier.  I.e. the lifetimes
  * of the kmp_task_team_t structs for consecutive barriers can overlap
- * (and will, unless the master thread is the last thread to exit the barrier
+ * (and will, unless the primary thread is the last thread to exit the barrier
  * release phase, which is not typical). The existence of such a struct is
  * useful outside the context of tasking.
  *
@@ -3590,8 +3590,8 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team, int always) {
       (always || team->t.t_nproc > 1)) {
     team->t.t_task_team[this_thr->th.th_task_state] =
         __kmp_allocate_task_team(this_thr, team);
-    KA_TRACE(20, ("__kmp_task_team_setup: Master T#%d created new task_team %p "
-                  "for team %d at parity=%d\n",
+    KA_TRACE(20, ("__kmp_task_team_setup: Primary T#%d created new task_team %p"
+                  " for team %d at parity=%d\n",
                   __kmp_gtid_from_thread(this_thr),
                   team->t.t_task_team[this_thr->th.th_task_state],
                   ((team != NULL) ? team->t.t_id : -1),
@@ -3603,14 +3603,14 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team, int always) {
   // threads spin in the barrier release phase, they will continue to use the
   // previous task_team struct(above), until they receive the signal to stop
   // checking for tasks (they can't safely reference the kmp_team_t struct,
-  // which could be reallocated by the master thread). No task teams are formed
+  // which could be reallocated by the primary thread). No task teams are formed
   // for serialized teams.
   if (team->t.t_nproc > 1) {
     int other_team = 1 - this_thr->th.th_task_state;
     if (team->t.t_task_team[other_team] == NULL) { // setup other team as well
       team->t.t_task_team[other_team] =
           __kmp_allocate_task_team(this_thr, team);
-      KA_TRACE(20, ("__kmp_task_team_setup: Master T#%d created second new "
+      KA_TRACE(20, ("__kmp_task_team_setup: Primary T#%d created second new "
                     "task_team %p for team %d at parity=%d\n",
                     __kmp_gtid_from_thread(this_thr),
                     team->t.t_task_team[other_team],
@@ -3629,7 +3629,7 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team, int always) {
       }
       // if team size has changed, the first thread to enable tasking will
       // realloc threads_data if necessary
-      KA_TRACE(20, ("__kmp_task_team_setup: Master T#%d reset next task_team "
+      KA_TRACE(20, ("__kmp_task_team_setup: Primary T#%d reset next task_team "
                     "%p for team %d at parity=%d\n",
                     __kmp_gtid_from_thread(this_thr),
                     team->t.t_task_team[other_team],
@@ -3679,12 +3679,12 @@ void __kmp_task_team_sync(kmp_info_t *this_thr, kmp_team_t *team) {
             ((team != NULL) ? team->t.t_id : -1), this_thr->th.th_task_state));
 }
 
-// __kmp_task_team_wait: Master thread waits for outstanding tasks after the
-// barrier gather phase. Only called by master thread if #threads in team > 1 or
-// if proxy tasks were created.
+// __kmp_task_team_wait: Primary thread waits for outstanding tasks after the
+// barrier gather phase. Only called by primary thread if #threads in team > 1
+// or if proxy tasks were created.
 //
 // wait is a flag that defaults to 1 (see kmp.h), but waiting can be turned off
-// by passing in 0 optionally as the last argument. When wait is zero, master
+// by passing in 0 optionally as the last argument. When wait is zero, primary
 // thread does not wait for unfinished_threads to reach 0.
 void __kmp_task_team_wait(
     kmp_info_t *this_thr,
@@ -3696,12 +3696,12 @@ void __kmp_task_team_wait(
 
   if ((task_team != NULL) && KMP_TASKING_ENABLED(task_team)) {
     if (wait) {
-      KA_TRACE(20, ("__kmp_task_team_wait: Master T#%d waiting for all tasks "
+      KA_TRACE(20, ("__kmp_task_team_wait: Primary T#%d waiting for all tasks "
                     "(for unfinished_threads to reach 0) on task_team = %p\n",
                     __kmp_gtid_from_thread(this_thr), task_team));
       // Worker threads may have dropped through to release phase, but could
       // still be executing tasks. Wait here for tasks to complete. To avoid
-      // memory contention, only master thread checks termination condition.
+      // memory contention, only primary thread checks termination condition.
       kmp_flag_32<false, false> flag(
           RCAST(std::atomic<kmp_uint32> *,
                 &task_team->tt.tt_unfinished_threads),
@@ -3712,7 +3712,7 @@ void __kmp_task_team_wait(
     // referencing it while spinning.
     KA_TRACE(
         20,
-        ("__kmp_task_team_wait: Master T#%d deactivating task_team %p: "
+        ("__kmp_task_team_wait: Primary T#%d deactivating task_team %p: "
          "setting active to false, setting local and team's pointer to NULL\n",
          __kmp_gtid_from_thread(this_thr), task_team));
     KMP_DEBUG_ASSERT(task_team->tt.tt_nproc > 1 ||

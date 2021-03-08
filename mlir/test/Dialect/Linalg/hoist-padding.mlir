@@ -49,10 +49,10 @@ func @matmul_tensors(
   //      CHECK:       : tensor<?x?xf32> to tensor<2x4xf32>
   //      CHECK:     subtensor_insert %{{.*}} into %{{.*}}[%[[IDXpad0_K]], 0, 0]
   // CHECK-SAME:       [1, 2, 4] [1, 1, 1] : tensor<2x4xf32> into tensor<?x2x4xf32>
-  // Second padded tensor is KxNx2x4
-  //      CHECK:   %[[SZpad1_K:[0-9]+]] = affine.apply #[[$DIVS4]]()[%[[dK]]]
+  // Second tensor is KxN but loop order is (M, N, K) so padded tensor is NxKx4x3
   //      CHECK:   %[[SZpad1_N:[0-9]+]] = affine.apply #[[$DIVS3]]()[%[[dN]]]
-  //      CHECK:   linalg.init_tensor [%[[SZpad1_K]], %[[SZpad1_N]], 4, 3] : tensor<?x?x4x3xf32>
+  //      CHECK:   %[[SZpad1_K:[0-9]+]] = affine.apply #[[$DIVS4]]()[%[[dK]]]
+  //      CHECK:   linalg.init_tensor [%[[SZpad1_N]], %[[SZpad1_K]], 4, 3] : tensor<?x?x4x3xf32>
   // 2-D loop
   //      CHECK:   %[[B:.*]] = scf.for %[[K2:[0-9a-z]+]] =
   // Iteration count along K2
@@ -72,11 +72,11 @@ func @matmul_tensors(
   //      CHECK:       %[[IDXpad0_K:[0-9]+]] = affine.apply #[[$DIV4]](%[[K]])
   //      CHECK:       %[[stA:.*]] = subtensor %[[A]][%[[IDXpad0_K]], 0, 0] [1, 2, 4] [1, 1, 1] :
   // CHECK-SAME:         tensor<?x2x4xf32> to tensor<2x4xf32>
-  // Iteration count along K
-  //      CHECK:       %[[IDXpad1_K:[0-9]+]] = affine.apply #[[$DIV4]](%[[K]])
   // Iteration count along J
   //      CHECK:       %[[IDXpad1_N:[0-9]+]] = affine.apply #[[$DIV3]](%[[J]])
-  //      CHECK:       %[[stB:.*]] = subtensor %[[B]][%[[IDXpad1_K]], %[[IDXpad1_N]], 0, 0] [1, 1, 4, 3] [1, 1, 1, 1] :
+  // Iteration count along K
+  //      CHECK:       %[[IDXpad1_K:[0-9]+]] = affine.apply #[[$DIV4]](%[[K]])
+  //      CHECK:       %[[stB:.*]] = subtensor %[[B]][%[[IDXpad1_N]], %[[IDXpad1_K]], 0, 0] [1, 1, 4, 3] [1, 1, 1, 1] :
   // CHECK-SAME:         tensor<?x?x4x3xf32> to tensor<4x3xf32>
   //      CHECK:       %[[stC:.*]] = linalg.pad_tensor %{{.*}}
   //      CHECK:         : tensor<?x?xf32> to tensor<2x3xf32>

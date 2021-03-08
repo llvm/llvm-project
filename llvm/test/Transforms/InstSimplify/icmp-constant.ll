@@ -799,7 +799,7 @@ define i1 @eq_shl_by_constant_produces_poison(i8 %x) {
 
 define i1 @eq_shl_by_variable_produces_poison(i8 %x) {
 ; CHECK-LABEL: @eq_shl_by_variable_produces_poison(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 poison
 ;
   %clear_high_bit = and i8 %x, 127                 ; 0x7f
   %set_next_high_bits = or i8 %clear_high_bit, 112 ; 0x70

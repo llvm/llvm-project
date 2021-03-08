@@ -86,7 +86,11 @@ void checkBeginEndBasic() {
   }
   {
     path p("//root_name//first_dir////second_dir");
+#ifdef _WIN32
+    const path expect[] = {"//root_name", "/", "first_dir", "second_dir"};
+#else
     const path expect[] = {"/", "root_name", "first_dir", "second_dir"};
+#endif
     assert(checkCollectionsEqual(p.begin(), p.end(), std::begin(expect), std::end(expect)));
     assert(checkCollectionsEqualBackwards(p.begin(), p.end(), std::begin(expect), std::end(expect)));
 

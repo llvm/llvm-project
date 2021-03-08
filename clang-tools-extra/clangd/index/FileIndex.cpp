@@ -463,7 +463,8 @@ void FileIndex::updatePreamble(PathRef Path, llvm::StringRef Version,
 void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
   auto Contents = indexMainDecls(AST);
   MainFileSymbols.update(
-      Path, std::make_unique<SymbolSlab>(std::move(std::get<0>(Contents))),
+      URI::create(Path).toString(),
+      std::make_unique<SymbolSlab>(std::move(std::get<0>(Contents))),
       std::make_unique<RefSlab>(std::move(std::get<1>(Contents))),
       std::make_unique<RelationSlab>(std::move(std::get<2>(Contents))),
       /*CountReferences=*/true);

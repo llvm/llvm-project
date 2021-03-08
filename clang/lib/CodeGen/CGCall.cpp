@@ -2150,6 +2150,16 @@ void CodeGenModule::ConstructAttributeList(
     }
   }
 
+  // Add "sample-profile-suffix-elision-policy" attribute for internal linkage
+  // functions with -funique-internal-linkage-names.
+  if (TargetDecl && CodeGenOpts.UniqueInternalLinkageNames) {
+    if (auto *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
+      if (this->getFunctionLinkage(Fn) == llvm::GlobalValue::InternalLinkage)
+        FuncAttrs.addAttribute("sample-profile-suffix-elision-policy",
+                               "selected");
+    }
+  }
+
   // Collect non-call-site function IR attributes from declaration-specific
   // information.
   if (!AttrOnCallSite) {

@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm="enable-avx512" -convert-std-to-llvm  | \
-// RUN: mlir-translate  --avx512-mlir-to-llvmir | \
+// RUN: mlir-translate  --mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="avx512bw,avx512vp2intersect" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 

@@ -204,6 +204,10 @@ OPTIONS
 
  Show symbol size as well as address (not applicable for Mach-O).
 
+.. option:: --quiet
+
+ Suppress 'no symbols' diagnostic.
+
 .. option:: --radix=<RADIX>, -t
 
  Specify the radix of the symbol address(es). Values accepted are *d* (decimal),

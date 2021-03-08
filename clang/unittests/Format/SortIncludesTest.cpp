@@ -599,9 +599,9 @@ TEST_F(SortIncludesTest, MainHeaderIsSeparatedWhenRegroupping) {
 }
 
 TEST_F(SortIncludesTest, SupportOptionalCaseSensitiveSorting) {
-  EXPECT_FALSE(FmtStyle.SortIncludes == FormatStyle::SI_CaseSensitive);
+  EXPECT_FALSE(FmtStyle.SortIncludes == FormatStyle::SI_CaseInsensitive);
 
-  FmtStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
+  FmtStyle.SortIncludes = FormatStyle::SI_CaseInsensitive;
 
   EXPECT_EQ("#include \"A/B.h\"\n"
             "#include \"A/b.h\"\n"

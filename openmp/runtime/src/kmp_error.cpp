@@ -35,7 +35,8 @@ static char const *cons_text_c[] = {
     "\"ordered\"", /* in PDO */
     "\"master\"",
     "\"reduce\"",
-    "\"barrier\""};
+    "\"barrier\"",
+    "\"masked\""};
 
 #define get_src(ident) ((ident) == NULL ? NULL : (ident)->psource)
 
@@ -316,7 +317,7 @@ __kmp_check_sync( int gtid, enum cons_type ct, ident_t const * ident, kmp_user_l
       /* we are in CRITICAL which is inside a CRITICAL construct of same name */
       __kmp_error_construct2(kmp_i18n_msg_CnsNestingSameName, ct, ident, &cons);
     }
-  } else if (ct == ct_master || ct == ct_reduce) {
+  } else if (ct == ct_master || ct == ct_masked || ct == ct_reduce) {
     if (p->w_top > p->p_top) {
       /* inside a WORKSHARING construct for this PARALLEL region */
       __kmp_error_construct2(kmp_i18n_msg_CnsInvalidNesting, ct, ident,

@@ -28,7 +28,6 @@ define <4 x i64> @PR45808(<4 x i64> %0, <4 x i64> %1) {
 ; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,3],xmm8[1,3]
 ; SSE2-NEXT:    orps %xmm4, %xmm5
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[2,1,3,3]
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm5
 ; SSE2-NEXT:    psllq $63, %xmm4
 ; SSE2-NEXT:    psrad $31, %xmm4
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
@@ -36,6 +35,7 @@ define <4 x i64> @PR45808(<4 x i64> %0, <4 x i64> %1) {
 ; SSE2-NEXT:    pandn %xmm3, %xmm4
 ; SSE2-NEXT:    por %xmm4, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm5[0,1,1,3]
+; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm3
 ; SSE2-NEXT:    psllq $63, %xmm3
 ; SSE2-NEXT:    psrad $31, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]

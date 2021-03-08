@@ -5,8 +5,7 @@
 ; CHECK-SOFT-NOT: call i32 @llvm.start.loop.iterations
 
 ; CHECK: entry:
-; CHECK-FP: [[CMP:%[^ ]+]] = icmp ugt i32 %n, 1
-; CHECK-FP: [[COUNT:%[^ ]+]] = select i1 [[CMP]], i32 %n, i32 1
+; CHECK-FP: [[COUNT:%[^ ]+]] = call i32 @llvm.umax.i32(i32 %n, i32 1)
 
 ; CHECK: while.body.lr.ph:
 ; CHECK-FP: [[START:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 [[COUNT]])
@@ -56,8 +55,7 @@ cleanup:
 
 ; CHECK-LABEL: test_fptoui
 ; CHECK: entry:
-; CHECK-FP: [[CMP:%[^ ]+]] = icmp ugt i32 %n, 1
-; CHECK-FP: [[COUNT:%[^ ]+]] = select i1 [[CMP]], i32 %n, i32 1
+; CHECK-FP: [[COUNT:%[^ ]+]] = call i32 @llvm.umax.i32(i32 %n, i32 1)
 ; CHECK-FP: while.body.lr.ph:
 ; CHECK-FP: [[START:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK-FP-NEXT: br label %while.body
@@ -108,8 +106,7 @@ cleanup:
 
 ; CHECK-LABEL: load_store_float
 ; CHECK: entry:
-; CHECK:   [[CMP:%[^ ]+]] = icmp ugt i32 %n, 1
-; CHECK:   [[COUNT:%[^ ]+]] = select i1 [[CMP]], i32 %n, i32 1
+; CHECK:   [[COUNT:%[^ ]+]] = call i32 @llvm.umax.i32(i32 %n, i32 1)
 ; CHECK: while.body.lr.ph:
 ; CHECK:   [[START:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK-NEXT: br label %while.body
@@ -158,8 +155,7 @@ cleanup:
 ; CHECK-LABEL: fp_add
 ; CHECK-SOFT-NOT: call i32 @llvm.start.loop.iterations
 ; CHECK: entry:
-; CHECK-FP: [[CMP:%[^ ]+]] = icmp ugt i32 %n, 1
-; CHECK-FP: [[COUNT:%[^ ]+]] = select i1 [[CMP]], i32 %n, i32 1
+; CHECK-FP: [[COUNT:%[^ ]+]] = call i32 @llvm.umax.i32(i32 %n, i32 1)
 ; CHECK: while.body.lr.ph:
 ; CHECK-FP: [[START:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK: br label %while.body

@@ -2076,6 +2076,16 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return Err;
     break;
   }
+  case bitc::METADATA_ARG_LIST: {
+    SmallVector<ValueAsMetadata *, 4> Elts;
+    Elts.reserve(Record.size());
+    for (uint64_t Elt : Record)
+      Elts.push_back(dyn_cast_or_null<ValueAsMetadata>(getMDOrNull(Elt)));
+
+    MetadataList.assignValue(DIArgList::get(Context, Elts), NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
   }
   return Error::success();
 #undef GET_OR_DISTINCT

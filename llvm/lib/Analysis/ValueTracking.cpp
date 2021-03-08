@@ -4852,6 +4852,10 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison,
         return directlyImpliesPoison(ValAssumedPoison, Op, Depth + 1);
       });
 
+    // 'select ValAssumedPoison, _, _' is poison.
+    if (const auto *SI = dyn_cast<SelectInst>(I))
+      return directlyImpliesPoison(ValAssumedPoison, SI->getCondition(),
+                                   Depth + 1);
     // V  = extractvalue V0, idx
     // V2 = extractvalue V0, idx2
     // V0's elements are all poison or not. (e.g., add_with_overflow)

@@ -54,10 +54,17 @@ int main(int, char**) {
       {"/a/b/./", "/a/b/"},
       {"/a/b/c/../d", "/a/b/d"},
       {"/a/b/c/../d/", "/a/b/d/"},
+#ifdef _WIN32
+      {"//a/", "//a/"},
+      {"//a/b/", "//a/b/"},
+      {"//a/b/.", "//a/b/"},
+      {"//a/..", "//a/"},
+#else
       {"//a/", "/a/"},
       {"//a/b/", "/a/b/"},
       {"//a/b/.", "/a/b/"},
       {"//a/..", "/"},
+#endif
       ///===---------------------------------------------------------------===//
       /// Tests specifically for the clauses under [fs.path.generic]p6
       ///===---------------------------------------------------------------===//
@@ -125,13 +132,15 @@ int main(int, char**) {
     ++ID;
     fs::path p(TC.input);
     const fs::path output = p.lexically_normal();
-    if (!PathEq(output, TC.expect)) {
+    fs::path expect(TC.expect);
+    expect.make_preferred();
+    if (!PathEq(output, expect)) {
       Failed = true;
       std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
                   "  Input: '%s'\n"
                   "  Expected: '%s'\n"
                   "  Output: '%s'\n",
-        ID, TC.input.c_str(), TC.expect.c_str(), output.string().c_str());
+        ID, TC.input.c_str(), expect.string().c_str(), output.string().c_str());
     }
   }
   return Failed;

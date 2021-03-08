@@ -156,10 +156,6 @@ PPCRegisterInfo::getPointerRegClass(const MachineFunction &MF, unsigned Kind)
 const MCPhysReg*
 PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
-  if (Subtarget.isAIXABI() &&
-      (Subtarget.hasAltivec() && !TM.getAIXExtendedAltivecABI()))
-    report_fatal_error("the default AIX Altivec ABI is not yet "
-                       "supported.");
   if (MF->getFunction().getCallingConv() == CallingConv::AnyReg) {
     if (!TM.isPPC64() && Subtarget.isAIXABI())
       report_fatal_error("AnyReg unimplemented on 32-bit AIX.");
@@ -200,15 +196,18 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
   // Standard calling convention CSRs.
   if (TM.isPPC64()) {
-    if (Subtarget.hasAltivec())
+    if (Subtarget.hasAltivec() &&
+        (!Subtarget.isAIXABI() || TM.getAIXExtendedAltivecABI())) {
       return SaveR2 ? CSR_PPC64_R2_Altivec_SaveList
                     : CSR_PPC64_Altivec_SaveList;
+    }
     return SaveR2 ? CSR_PPC64_R2_SaveList : CSR_PPC64_SaveList;
   }
   // 32-bit targets.
   if (Subtarget.isAIXABI()) {
     if (Subtarget.hasAltivec())
-      return CSR_AIX32_Altivec_SaveList;
+      return TM.getAIXExtendedAltivecABI() ? CSR_AIX32_Altivec_SaveList
+                                           : CSR_AIX32_SaveList;
     return CSR_AIX32_SaveList;
   }
   if (Subtarget.hasAltivec())
@@ -231,10 +230,13 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   }
 
   if (Subtarget.isAIXABI()) {
-    return TM.isPPC64() ? (Subtarget.hasAltivec() ? CSR_PPC64_Altivec_RegMask
-                                                  : CSR_PPC64_RegMask)
-                        : (Subtarget.hasAltivec() ? CSR_AIX32_Altivec_RegMask
-                                                  : CSR_AIX32_RegMask);
+    return TM.isPPC64()
+               ? ((Subtarget.hasAltivec() && TM.getAIXExtendedAltivecABI())
+                      ? CSR_PPC64_Altivec_RegMask
+                      : CSR_PPC64_RegMask)
+               : ((Subtarget.hasAltivec() && TM.getAIXExtendedAltivecABI())
+                      ? CSR_AIX32_Altivec_RegMask
+                      : CSR_AIX32_RegMask);
   }
 
   if (CC == CallingConv::Cold) {
@@ -335,6 +337,17 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
          IE = PPC::VRRCRegClass.end(); I != IE; ++I)
       markSuperRegs(Reserved, *I);
 
+  if (Subtarget.isAIXABI() && Subtarget.hasAltivec() &&
+      !TM.getAIXExtendedAltivecABI()) {
+    //  In the AIX default Altivec ABI, vector registers VR20-VR31 are reserved
+    //  and cannot be used.
+    for (auto Reg : CSR_Altivec_SaveList) {
+      if (Reg == 0)
+        break;
+      markSuperRegs(Reserved, Reg);
+    }
+  }
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
@@ -426,15 +439,28 @@ unsigned PPCRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
     unsigned FP = TFI->hasFP(MF) ? 1 : 0;
     return 32 - FP - DefaultSafety;
   }
-  case PPC::F8RCRegClassID:
   case PPC::F4RCRegClassID:
-  case PPC::VRRCRegClassID:
-  case PPC::VFRCRegClassID:
+  case PPC::F8RCRegClassID:
   case PPC::VSLRCRegClassID:
     return 32 - DefaultSafety;
-  case PPC::VSRCRegClassID:
+  case PPC::VFRCRegClassID:
+  case PPC::VRRCRegClassID: {
+    const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+    // Vector registers VR20-VR31 are reserved and cannot be used in the default
+    // Altivec ABI on AIX.
+    if (!TM.getAIXExtendedAltivecABI() && Subtarget.isAIXABI())
+      return 20 - DefaultSafety;
+  }
+    return 32 - DefaultSafety;
   case PPC::VSFRCRegClassID:
   case PPC::VSSRCRegClassID:
+  case PPC::VSRCRegClassID: {
+    const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+    if (!TM.getAIXExtendedAltivecABI() && Subtarget.isAIXABI())
+      // Vector registers VR20-VR31 are reserved and cannot be used in the
+      // default Altivec ABI on AIX.
+      return 52 - DefaultSafety;
+  }
     return 64 - DefaultSafety;
   case PPC::CRRCRegClassID:
     return 8 - DefaultSafety;

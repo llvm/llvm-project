@@ -737,7 +737,7 @@ TEST(DexIndex, IndexedFiles) {
   RefSlab Refs;
   auto Size = Symbols.bytes() + Refs.bytes();
   auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
-  llvm::StringSet<> Files = {testPath("foo.cc"), testPath("bar.cc")};
+  llvm::StringSet<> Files = {"unittest:///foo.cc", "unittest:///bar.cc"};
   Dex I(std::move(Data.first), std::move(Data.second), RelationSlab(),
         std::move(Files), IndexContents::All, std::move(Data), Size);
   auto ContainsFile = I.indexedFiles();

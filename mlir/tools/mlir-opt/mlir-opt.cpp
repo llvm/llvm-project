@@ -72,6 +72,7 @@ void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
 void registerTestExpandTanhPass();
 void registerTestGpuParallelLoopMappingPass();
+void registerTestIRVisitorsPass();
 void registerTestInterfaces();
 void registerTestLinalgCodegenStrategy();
 void registerTestLinalgFusionTransforms();
@@ -146,6 +147,7 @@ void registerTestPasses() {
   test::registerTestDynamicPipelinePass();
   test::registerTestExpandTanhPass();
   test::registerTestGpuParallelLoopMappingPass();
+  test::registerTestIRVisitorsPass();
   test::registerTestInterfaces();
   test::registerTestLinalgCodegenStrategy();
   test::registerTestLinalgFusionTransforms();

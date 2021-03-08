@@ -169,7 +169,7 @@ void __kmp_common_destroy(void) {
       struct shared_common *d_tn;
 
       /* C++ destructors need to be called once per thread before exiting.
-         Don't call destructors for master thread though unless we used copy
+         Don't call destructors for primary thread though unless we used copy
          constructor */
 
       for (d_tn = __kmp_threadprivate_d_table.data[q]; d_tn;
@@ -451,15 +451,16 @@ struct private_common *kmp_threadprivate_insert(int gtid, void *pc_addr,
     return tn;
 
   /* if C++ object with copy constructor, use it;
-   * else if C++ object with constructor, use it for the non-master copies only;
+   * else if C++ object with constructor, use it for the non-primary thread
+     copies only;
    * else use pod_init and memcpy
    *
-   * C++ constructors need to be called once for each non-master thread on
+   * C++ constructors need to be called once for each non-primary thread on
    * allocate
    * C++ copy constructors need to be called once for each thread on allocate */
 
   /* C++ object with constructors/destructors; don't call constructors for
-     master thread though */
+     primary thread though */
   if (d_tn->is_vec) {
     if (d_tn->ct.ctorv != 0) {
       (void)(*d_tn->ct.ctorv)(tn->par_addr, d_tn->vec_len);

@@ -12,7 +12,7 @@ func @loop_kernel(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>) {
   %ub = constant 42 : index
   // CHECK: %[[STEP:.*]] = spv.Constant 2 : i32
   %step = constant 2 : index
-  // CHECK:      spv.loop {
+  // CHECK:      spv.mlir.loop {
   // CHECK-NEXT:   spv.Branch ^[[HEADER:.*]](%[[LB]] : i32)
   // CHECK:      ^[[HEADER]](%[[INDVAR:.*]]: i32):
   // CHECK:        %[[CMP:.*]] = spv.SLessThan %[[INDVAR]], %[[UB]] : i32
@@ -56,7 +56,7 @@ func @loop_yield(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>) {
   %s1 = constant 1.0 : f32
   // CHECK: %[[VAR1:.*]] = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: %[[VAR2:.*]] = spv.Variable : !spv.ptr<f32, Function>
-  // CHECK: spv.loop {
+  // CHECK: spv.mlir.loop {
   // CHECK:   spv.Branch ^[[HEADER:.*]](%[[LB]], %[[INITVAR1]], %[[INITVAR2]] : i32, f32, f32)
   // CHECK: ^[[HEADER]](%[[INDVAR:.*]]: i32, %[[CARRIED1:.*]]: f32, %[[CARRIED2:.*]]: f32):
   // CHECK:   %[[CMP:.*]] = spv.SLessThan %[[INDVAR]], %[[UB]] : i32

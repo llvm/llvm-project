@@ -166,6 +166,7 @@ protected:
   bool HasVscnt;
   bool HasGetWaveIdInst;
   bool HasSMemTimeInst;
+  bool HasShaderCyclesRegister;
   bool HasRegisterBanking;
   bool HasVOP3Literal;
   bool HasNoDataDepHazard;
@@ -725,6 +726,10 @@ public:
 
   bool hasSMemTimeInst() const {
     return HasSMemTimeInst;
+  }
+
+  bool hasShaderCyclesRegister() const {
+    return HasShaderCyclesRegister;
   }
 
   bool hasRegisterBanking() const {

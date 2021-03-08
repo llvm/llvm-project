@@ -187,6 +187,31 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS) {
     MinTrailingZeros = std::min(MinTrailingZeros, BitWidth);
   }
 
+  // If the maximum shift is in range, then find the common bits from all
+  // possible shifts.
+  APInt MaxShiftAmount = RHS.getMaxValue();
+  if (MaxShiftAmount.ult(BitWidth) && !LHS.isUnknown()) {
+    uint64_t ShiftAmtZeroMask = (~RHS.Zero).getZExtValue();
+    uint64_t ShiftAmtOneMask = RHS.One.getZExtValue();
+    assert(MinShiftAmount.ult(MaxShiftAmount) && "Illegal shift range");
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    for (uint64_t ShiftAmt = MinShiftAmount.getZExtValue(),
+                  MaxShiftAmt = MaxShiftAmount.getZExtValue();
+         ShiftAmt <= MaxShiftAmt; ++ShiftAmt) {
+      // Skip if the shift amount is impossible.
+      if ((ShiftAmtZeroMask & ShiftAmt) != ShiftAmt ||
+          (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
+        continue;
+      KnownBits SpecificShift;
+      SpecificShift.Zero = LHS.Zero << ShiftAmt;
+      SpecificShift.One = LHS.One << ShiftAmt;
+      Known = KnownBits::commonBits(Known, SpecificShift);
+      if (Known.isUnknown())
+        break;
+    }
+  }
+
   Known.Zero.setLowBits(MinTrailingZeros);
   return Known;
 }
@@ -213,6 +238,31 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS) {
   if (MinShiftAmount.ult(BitWidth)) {
     MinLeadingZeros += MinShiftAmount.getZExtValue();
     MinLeadingZeros = std::min(MinLeadingZeros, BitWidth);
+  }
+
+  // If the maximum shift is in range, then find the common bits from all
+  // possible shifts.
+  APInt MaxShiftAmount = RHS.getMaxValue();
+  if (MaxShiftAmount.ult(BitWidth) && !LHS.isUnknown()) {
+    uint64_t ShiftAmtZeroMask = (~RHS.Zero).getZExtValue();
+    uint64_t ShiftAmtOneMask = RHS.One.getZExtValue();
+    assert(MinShiftAmount.ult(MaxShiftAmount) && "Illegal shift range");
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    for (uint64_t ShiftAmt = MinShiftAmount.getZExtValue(),
+                  MaxShiftAmt = MaxShiftAmount.getZExtValue();
+         ShiftAmt <= MaxShiftAmt; ++ShiftAmt) {
+      // Skip if the shift amount is impossible.
+      if ((ShiftAmtZeroMask & ShiftAmt) != ShiftAmt ||
+          (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
+        continue;
+      KnownBits SpecificShift = LHS;
+      SpecificShift.Zero.lshrInPlace(ShiftAmt);
+      SpecificShift.One.lshrInPlace(ShiftAmt);
+      Known = KnownBits::commonBits(Known, SpecificShift);
+      if (Known.isUnknown())
+        break;
+    }
   }
 
   Known.Zero.setHighBits(MinLeadingZeros);
@@ -245,6 +295,31 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
     if (MinLeadingOnes) {
       MinLeadingOnes += MinShiftAmount.getZExtValue();
       MinLeadingOnes = std::min(MinLeadingOnes, BitWidth);
+    }
+  }
+
+  // If the maximum shift is in range, then find the common bits from all
+  // possible shifts.
+  APInt MaxShiftAmount = RHS.getMaxValue();
+  if (MaxShiftAmount.ult(BitWidth) && !LHS.isUnknown()) {
+    uint64_t ShiftAmtZeroMask = (~RHS.Zero).getZExtValue();
+    uint64_t ShiftAmtOneMask = RHS.One.getZExtValue();
+    assert(MinShiftAmount.ult(MaxShiftAmount) && "Illegal shift range");
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    for (uint64_t ShiftAmt = MinShiftAmount.getZExtValue(),
+                  MaxShiftAmt = MaxShiftAmount.getZExtValue();
+         ShiftAmt <= MaxShiftAmt; ++ShiftAmt) {
+      // Skip if the shift amount is impossible.
+      if ((ShiftAmtZeroMask & ShiftAmt) != ShiftAmt ||
+          (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
+        continue;
+      KnownBits SpecificShift = LHS;
+      SpecificShift.Zero.ashrInPlace(ShiftAmt);
+      SpecificShift.One.ashrInPlace(ShiftAmt);
+      Known = KnownBits::commonBits(Known, SpecificShift);
+      if (Known.isUnknown())
+        break;
     }
   }
 

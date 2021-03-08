@@ -283,7 +283,7 @@ for CFI. For example, this is necessary when a function's address
 is taken by assembly code and then called by CFI-checking C code. The
 ``__attribute__((cfi_canonical_jump_table))`` attribute may be used to make
 the jump table entry of a specific function canonical so that the external
-code will end up taking a address for the function that will pass CFI checks.
+code will end up taking an address for the function that will pass CFI checks.
 
 ``-fsanitize=cfi-icall`` and ``-fsanitize=function``
 ----------------------------------------------------

@@ -93,6 +93,34 @@ void test1() {
 // CHECK: fadd <2 x double>
 // CHECK-LE: fadd <2 x double>
 
+  res_i = vec_all_nle(vf, vf);
+// CHECK: @llvm.ppc.vsx.xvcmpgesp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgesp.p
+
+  res_i = vec_all_nle(vd, vd);
+// CHECK: @llvm.ppc.vsx.xvcmpgedp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgedp.p
+
+  res_i = vec_all_nlt(vf, vf);
+// CHECK: @llvm.ppc.vsx.xvcmpgtsp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgtsp.p
+
+  res_i = vec_all_nlt(vd, vd);
+// CHECK: @llvm.ppc.vsx.xvcmpgtdp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgtdp.p
+
+  res_i = vec_all_numeric(vf);
+// CHECK: @llvm.ppc.vsx.xvcmpeqsp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpeqsp.p
+
+  res_i = vec_all_numeric(vd);
+// CHECK: @llvm.ppc.vsx.xvcmpeqdp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpeqdp.p
+
+  dummy();
+// CHECK: call void @dummy()
+// CHECK-LE: call void @dummy()
+
   res_vd = vec_and(vbll, vd);
 // CHECK: and <2 x i64>
 // CHECK: bitcast <2 x i64> %{{[0-9]*}} to <2 x double>
