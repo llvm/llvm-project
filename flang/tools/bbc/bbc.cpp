@@ -321,7 +321,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 }
 
 int main(int argc, char **argv) {
-  fir::support::registerFIRPasses();
+  fir::support::registerMLIRPassesForFortranTools();
   fir::registerOptPasses();
   [[maybe_unused]] llvm::InitLLVM y(argc, argv);
 
