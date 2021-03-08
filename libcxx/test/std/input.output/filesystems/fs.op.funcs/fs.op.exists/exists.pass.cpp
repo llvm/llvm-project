@@ -73,16 +73,24 @@ TEST_CASE(test_exist_not_found)
 
 TEST_CASE(test_exists_fails)
 {
+#ifdef _WIN32
+    // Windows doesn't support setting perms::none to trigger failures
+    // reading directories; test using a special inaccessible directory
+    // instead.
+    const path p = GetWindowsInaccessibleDir();
+    TEST_REQUIRE(!p.empty());
+#else
     scoped_test_env env;
     const path dir = env.create_dir("dir");
-    const path file = env.create_file("dir/file", 42);
+    const path p = env.create_file("dir/file", 42);
     permissions(dir, perms::none);
+#endif
 
     std::error_code ec;
-    TEST_CHECK(exists(file, ec) == false);
+    TEST_CHECK(exists(p, ec) == false);
     TEST_CHECK(ec);
 
-    TEST_CHECK_THROW(filesystem_error, exists(file));
+    TEST_CHECK_THROW(filesystem_error, exists(p));
 }
 
 #ifndef _WIN32
