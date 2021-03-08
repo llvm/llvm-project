@@ -14,7 +14,19 @@ tablegen(LLVM M68kGenAsmWriter.inc        -gen-asm-writer)
 add_public_tablegen_target(M68kCommonTableGen)
 
 add_llvm_target(M68kCodeGen
+  M68kAsmPrinter.cpp
+  M68kCollapseMOVEMPass.cpp
+  M68kExpandPseudo.cpp
+  M68kFrameLowering.cpp
+  M68kInstrInfo.cpp
+  M68kISelLowering.cpp
+  M68kISelDAGToDAG.cpp
+  M68kMachineFunction.cpp
+  M68kMCInstLower.cpp
+  M68kRegisterInfo.cpp
+  M68kSubtarget.cpp
   M68kTargetMachine.cpp
+  M68kTargetObjectFile.cpp
 
   LINK_COMPONENTS
   Analysis
