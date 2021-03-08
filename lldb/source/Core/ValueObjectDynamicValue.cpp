@@ -443,7 +443,10 @@ bool ValueObjectDynamicValue::DynamicValueTypeInfoNeedsUpdate() {
   auto *cached_ctx = m_value.GetCompilerType().GetTypeSystem();
   llvm::Optional<SwiftASTContextReader> scratch_ctx =
       GetScratchSwiftASTContext();
-  return scratch_ctx ? (cached_ctx == scratch_ctx->get()) : !cached_ctx;
+
+  if (!scratch_ctx || !cached_ctx)
+    return true;
+  return cached_ctx != scratch_ctx->get();
 #else // !LLDB_ENABLE_SWIFT
   return false;
 #endif // LLDB_ENABLE_SWIFT
