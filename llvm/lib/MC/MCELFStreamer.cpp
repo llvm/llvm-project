@@ -509,8 +509,8 @@ void MCELFStreamer::emitInstToFragment(const MCInst &Inst,
   this->MCObjectStreamer::emitInstToFragment(Inst, STI);
   MCRelaxableFragment &F = *cast<MCRelaxableFragment>(getCurrentFragment());
 
-  for (unsigned i = 0, e = F.getFixups().size(); i != e; ++i)
-    fixSymbolsInTLSFixups(F.getFixups()[i].getValue());
+  for (auto &Fixup : F.getFixups())
+    fixSymbolsInTLSFixups(Fixup.getValue());
 }
 
 // A fragment can only have one Subtarget, and when bundling is enabled we
@@ -530,8 +530,8 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   raw_svector_ostream VecOS(Code);
   Assembler.getEmitter().encodeInstruction(Inst, VecOS, Fixups, STI);
 
-  for (unsigned i = 0, e = Fixups.size(); i != e; ++i)
-    fixSymbolsInTLSFixups(Fixups[i].getValue());
+  for (auto &Fixup : Fixups)
+    fixSymbolsInTLSFixups(Fixup.getValue());
 
   // There are several possibilities here:
   //
@@ -598,10 +598,11 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   }
 
   // Add the fixups and data.
-  for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
-    Fixups[i].setOffset(Fixups[i].getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixups[i]);
+  for (auto &Fixup : Fixups) {
+    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
+    DF->getFixups().push_back(Fixup);
   }
+
   DF->setHasInstructions(STI);
   DF->getContents().append(Code.begin(), Code.end());
 
