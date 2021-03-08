@@ -1,0 +1,30 @@
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=ADD16DD,ADD32RR
+
+#------------------------------------------------------------------------------
+# MxBiArOp_RFRR_xEA class used for binary arithmetic operations and operates on
+# both data and address registers only. It uses MxArithEncoding encoding class
+# and either MxOpModeNdEA or MxOpmodeNrEA opmode classes.
+#------------------------------------------------------------------------------
+
+
+#               ---------------+-----------+-----------+-----------+-----------
+#                F   E   D   C | B   A   9 | 8   7   6 | 5   4   3 | 2   1   0
+#               ---------------+-----------+-----------+-----------+-----------
+#                x   x   x   x |    REG    |   OPMODE  |    MODE   |    REG
+# ADD16DD:       1   1   0   1   0   0   0   0 . 0   1   0   0   0   0   0   1
+# ADD16DD-SAME:  1   1   0   1   0   1   1   0 . 0   1   0   0   0   0   1   0
+# ADD32RR-SAME:  1   1   0   1   0   0   0   0 . 1   0   0   0   0   0   0   1
+# ADD32RR-SAME:  1   1   0   1   0   0   0   0 . 1   0   0   0   1   0   0   1
+# ADD32RR-SAME:  1   1   0   1   1   1   1   0 . 1   0   0   0   1   0   0   1
+# ADD32RR-SAME:  1   1   0   1   0   0   0   1 . 1   1   0   0   0   0   0   1
+name: MxBiArOp_RFRR_xEA
+body: |
+  bb.0:
+    $wd0 = ADD16dd $wd0, $wd1, implicit-def $ccr
+    $wd3 = ADD16dd $wd3, $wd2, implicit-def $ccr
+    $d0  = ADD32rr  $d0,  $d1, implicit-def $ccr
+    $d0  = ADD32rr  $d0,  $a1, implicit-def $ccr
+    $d7  = ADD32rr  $d7,  $a1, implicit-def $ccr
+    $a0  = ADD32rr  $a0,  $d1, implicit-def $ccr
