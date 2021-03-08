@@ -69,8 +69,8 @@ public:
   /// Get the mlir instance of a symbol.
   virtual mlir::Value getSymbolAddress(SymbolRef sym) = 0;
 
-  /// Set the mlir instance corresponding to a symbol.
-  virtual void setSymbolAddress(const SymbolRef sym, mlir::Value val) = 0;
+  /// Bind the symbol to an mlir value.
+  virtual void bindSymbol(const SymbolRef sym, mlir::Value val) = 0;
 
   /// Get the label set associated with a symbol.
   virtual bool lookupLabelSet(SymbolRef sym, pft::LabelSet &labelSet) = 0;
