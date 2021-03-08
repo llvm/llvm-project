@@ -45,7 +45,7 @@ inline void loadDialects(mlir::MLIRContext &context) {
 
 /// Register the standard passes we use. This comes from registerAllPasses(),
 /// but is a smaller set since we aren't using many of the passes found there.
-inline void registerFIRPasses() {
+inline void registerMLIRPassesForFortranTools() {
   mlir::registerCanonicalizerPass();
   mlir::registerCSEPass();
   mlir::registerAffineLoopFusionPass();

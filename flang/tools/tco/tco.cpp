@@ -148,7 +148,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
 }
 
 int main(int argc, char **argv) {
-  fir::support::registerFIRPasses();
+  fir::support::registerMLIRPassesForFortranTools();
   fir::registerOptPasses();
 
   [[maybe_unused]] InitLLVM y(argc, argv);
