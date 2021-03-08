@@ -864,8 +864,10 @@ protected:
   lldb_private::Process *m_process = nullptr;
   Module *m_module = nullptr;
   std::string m_platform_sdk_path;
-  /// All previously failed library loads in LoadLibraryUsingPaths.
-  std::unordered_set<detail::SwiftLibraryLookupRequest> failed_library_loads;
+  /// All previously library loads in LoadLibraryUsingPaths with their
+  /// respective result (true = loaded, false = failed to load).
+  std::unordered_map<detail::SwiftLibraryLookupRequest, bool>
+      library_load_cache;
 
   typedef std::map<Module *, std::vector<lldb::DataBufferSP>> ASTFileDataMap;
   ASTFileDataMap m_ast_file_data_map;

@@ -3969,14 +3969,18 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
   library_request.check_rpath = check_rpath;
   library_request.process_uid = process.GetUniqueID();
 
-  // If this library failed to load before, don't try to load it again.
-  // This is partly done for performance reasons, but also trying to load a
-  // library might change the process state. This in turn could then invalidate
-  // ValueObjects which then in turn try to resolve types their types again
-  // which would bring us back here trying to load the required library. This
-  // cache prevents this recursion. See also rdar://74454500
-  if (failed_library_loads.count(library_request) != 0)
-    return false;
+  // If this library was requested to load before, don't try to load it again.
+  // This is mostly done for performance reasons in case the loaded image
+  // check above didn't correctly detect whether a library was loaded before.
+  // See also rdar://74454500 for more details.
+  auto library_load_iter = library_load_cache.find(library_request);
+  if (library_load_iter != library_load_cache.end())
+    return library_load_iter->second;
+  // Pretend for now we loaded the library successfully. There are multiple
+  // early-returns in the following code for successful loads and this should
+  // cover all of them. The single failure code branch at the end changes the
+  // value to false if all load attempts have failed.
+  library_load_cache[library_request] = true;
 
   FileSpec library_spec(library_fullname);
   FileSpec found_library;
@@ -4013,7 +4017,8 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
                                load_image_error.AsCString());
   }
 
-  failed_library_loads.insert(library_request);
+  // Remember that this failed library failed to load so we don't try again.
+  library_load_cache[library_request] = false;
   return false;
 }
 
