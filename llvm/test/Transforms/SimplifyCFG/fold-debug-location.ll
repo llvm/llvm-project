@@ -33,7 +33,7 @@ define void @dbg_all_equal(i32 %k, i32 %c1, i32 %c2) !dbg !17 {
 ; CHECK-NEXT:    [[C1:%[a-z0-9]+]] = icmp eq i32 [[A1]], 0, !dbg [[DBG]]
 ; CHECK-NEXT:    [[A2:%[a-z0-9]+]] = and i32 %c2, %k, !dbg [[DBG]]
 ; CHECK-NEXT:    [[C2:%[a-z0-9]+]] = icmp eq i32 [[A2]], 0, !dbg [[DBG]]
-; CHECK-NEXT:    [[OR:%[.a-z0-9]+]] = select i1 [[C1]], i1 true, i1 [[C2]], !dbg [[DBG]]
+; CHECK-NEXT:    [[OR:%[.a-z0-9]+]] = or i1 [[C1]], [[C2]], !dbg [[DBG]]
 ; CHECK-NEXT:    br i1 [[OR]], label {{.+}}, label {{.+}}, !dbg [[DBG]]
 ;
   %1 = and i32 %c1, %k, !dbg !18

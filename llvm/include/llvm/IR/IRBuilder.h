@@ -1534,18 +1534,6 @@ public:
     return Insert(BinOp, Name);
   }
 
-  Value *CreateLogicalAnd(Value *Cond1, Value *Cond2, const Twine &Name = "") {
-    assert(Cond2->getType()->isIntOrIntVectorTy(1));
-    return CreateSelect(Cond1, Cond2,
-                        ConstantInt::getNullValue(Cond2->getType()), Name);
-  }
-
-  Value *CreateLogicalOr(Value *Cond1, Value *Cond2, const Twine &Name = "") {
-    assert(Cond2->getType()->isIntOrIntVectorTy(1));
-    return CreateSelect(Cond1, ConstantInt::getAllOnesValue(Cond2->getType()),
-                        Cond2, Name);
-  }
-
   CallInst *CreateConstrainedFPBinOp(
       Intrinsic::ID ID, Value *L, Value *R, Instruction *FMFSource = nullptr,
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
