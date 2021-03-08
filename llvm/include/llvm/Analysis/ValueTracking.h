@@ -370,10 +370,11 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// that the returned value has pointer type if the specified value does. If
   /// the MaxLookup value is non-zero, it limits the number of instructions to
   /// be stripped off.
-  Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6);
-  inline const Value *getUnderlyingObject(const Value *V,
-                                          unsigned MaxLookup = 6) {
-    return getUnderlyingObject(const_cast<Value *>(V), MaxLookup);
+  const Value *getUnderlyingObject(const Value *V, unsigned MaxLookup = 6);
+  inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
+    // Force const to avoid infinite recursion.
+    const Value *VConst = V;
+    return const_cast<Value *>(getUnderlyingObject(VConst, MaxLookup));
   }
 
   /// This method is similar to getUnderlyingObject except that it can
