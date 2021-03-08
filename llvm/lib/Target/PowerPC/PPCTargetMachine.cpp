@@ -157,9 +157,8 @@ static std::string getDataLayoutString(const Triple &T) {
   // Specify the vector alignment explicitly. For v256i1 and v512i1, the
   // calculated alignment would be 256*alignment(i1) and 512*alignment(i1),
   // which is 256 and 512 bytes - way over aligned.
-  if ((T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppc64) &&
-      (T.isOSAIX() || T.isOSLinux()))
-    Ret += "-v256:256:256-v512:512:512";
+  if (is64Bit && (T.isOSAIX() || T.isOSLinux()))
+    Ret += "-S128-v256:256:256-v512:512:512";
 
   return Ret;
 }
