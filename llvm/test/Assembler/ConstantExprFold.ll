@@ -19,18 +19,17 @@
 %Ty = type { i32, i32 }
 @B = external global %Ty 
 
-@9 = global i1 icmp slt (i64* @A, i64* getelementptr (i64, i64* @A, i64 1))        ; true
-@10 = global i1 icmp ult (i64* @A, i64* getelementptr (i64, i64* @A, i64 1))        ; true
-@11 = global i1 icmp slt (i64* @A, i64* getelementptr (i64, i64* @A, i64 0))        ; false
-@12 = global i1 icmp slt (i32* getelementptr (%Ty, %Ty* @B, i64 0, i32 0), 
+@9 = global i1 icmp ult (i64* @A, i64* getelementptr (i64, i64* @A, i64 1))        ; true
+@10 = global i1 icmp slt (i64* @A, i64* getelementptr (i64, i64* @A, i64 0))        ; false
+@11 = global i1 icmp slt (i32* getelementptr (%Ty, %Ty* @B, i64 0, i32 0),
                    i32* getelementptr (%Ty, %Ty* @B, i64 0, i32 1))            ; true
 ;global i1 icmp ne (i64* @A, i64* bitcast (%Ty* @B to i64*))                 ; true
 
 ; PR2206
 @cons = weak global i32 0, align 8              ; <i32*> [#uses=1]
-@13 = global i64 and (i64 ptrtoint (i32* @cons to i64), i64 7)
+@12 = global i64 and (i64 ptrtoint (i32* @cons to i64), i64 7)
 
-@14 = global <2 x i8*> getelementptr(i8, <2 x i8*> undef, <2 x i64> <i64 1, i64 1>)
-@15 = global <2 x i8*> getelementptr({ i8 }, <2 x { i8 }*> undef, <2 x i64> <i64 1, i64 1>, <2 x i32> <i32 0, i32 0>)
-@16 = global <2 x i8*> getelementptr(i8, <2 x i8*> zeroinitializer, <2 x i64> <i64 0, i64 0>)
-@17 = global <2 x i8*> getelementptr({ i8 }, <2 x { i8 }*> zeroinitializer, <2 x i64> <i64 0, i64 0>, <2 x i32> <i32 0, i32 0>)
+@13 = global <2 x i8*> getelementptr(i8, <2 x i8*> undef, <2 x i64> <i64 1, i64 1>)
+@14 = global <2 x i8*> getelementptr({ i8 }, <2 x { i8 }*> undef, <2 x i64> <i64 1, i64 1>, <2 x i32> <i32 0, i32 0>)
+@15 = global <2 x i8*> getelementptr(i8, <2 x i8*> zeroinitializer, <2 x i64> <i64 0, i64 0>)
+@16 = global <2 x i8*> getelementptr({ i8 }, <2 x { i8 }*> zeroinitializer, <2 x i64> <i64 0, i64 0>, <2 x i32> <i32 0, i32 0>)
