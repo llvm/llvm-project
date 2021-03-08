@@ -100,9 +100,9 @@ public:
       std::function<bool(llvm::StringRef, llvm::StringRef)> handler) override;
 
 private:
-  void
-  ReportModuleExportsHelper(std::set<ClangModulesDeclVendor::ModuleID> &exports,
-                            clang::Module *module);
+  typedef llvm::DenseSet<ModuleID> ExportedModuleSet;
+  void ReportModuleExportsHelper(ExportedModuleSet &exports,
+                                 clang::Module *module);
 
   void ReportModuleExports(ModuleVector &exports, clang::Module *module);
 
@@ -120,7 +120,7 @@ private:
 
   typedef std::vector<ConstString> ImportedModule;
   typedef std::map<ImportedModule, clang::Module *> ImportedModuleMap;
-  typedef std::set<ModuleID> ImportedModuleSet;
+  typedef llvm::DenseSet<ModuleID> ImportedModuleSet;
   ImportedModuleMap m_imported_modules;
   ImportedModuleSet m_user_imported_modules;
   // We assume that every ASTContext has an TypeSystemClang, so we also store
@@ -195,8 +195,7 @@ ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
 }
 
 void ClangModulesDeclVendorImpl::ReportModuleExportsHelper(
-    std::set<ClangModulesDeclVendor::ModuleID> &exports,
-    clang::Module *module) {
+    ExportedModuleSet &exports, clang::Module *module) {
   if (exports.count(reinterpret_cast<ClangModulesDeclVendor::ModuleID>(module)))
     return;
 
@@ -213,7 +212,7 @@ void ClangModulesDeclVendorImpl::ReportModuleExportsHelper(
 
 void ClangModulesDeclVendorImpl::ReportModuleExports(
     ClangModulesDeclVendor::ModuleVector &exports, clang::Module *module) {
-  std::set<ClangModulesDeclVendor::ModuleID> exports_set;
+  ExportedModuleSet exports_set;
 
   ReportModuleExportsHelper(exports_set, module);
 
