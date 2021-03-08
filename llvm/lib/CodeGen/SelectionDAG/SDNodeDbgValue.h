@@ -93,8 +93,6 @@ public:
       return getVReg() == Other.getVReg();
     case FRAMEIX:
       return getFrameIx() == Other.getFrameIx();
-    default:
-      llvm_unreachable("unknown kind");
     }
   }
 
