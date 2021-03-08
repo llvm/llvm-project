@@ -39,6 +39,9 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
     "fir::FIROpsDialect", "fir::FIRCodeGenDialect", "mlir::BuiltinDialect",
     "mlir::LLVM::LLVMDialect", "mlir::omp::OpenMPDialect"
   ];
+  let statistics = [
+    Statistic<"numDCE", "num-dce'd", "Number of operations eliminated">
+  ];
 }
 
 def TargetRewrite : Pass<"target-rewrite", "mlir::ModuleOp"> {

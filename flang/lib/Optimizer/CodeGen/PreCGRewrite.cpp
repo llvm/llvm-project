@@ -241,52 +241,35 @@ public:
           simplifyRegion(reg);
         maybeEraseOp(&op);
       }
+    doDCE();
+  }
 
-    for (auto *op : opsToErase)
-      op->erase();
-    opsToErase.clear();
+  /// Run a simple DCE cleanup to remove any dead code after the rewrites.
+  void doDCE() {
+    std::vector<mlir::Operation *> workList;
+    workList.swap(opsToErase);
+    while (!workList.empty()) {
+      for (auto *op : workList) {
+        std::vector<mlir::Value> opOperands(op->operand_begin(),
+                                            op->operand_end());
+        LLVM_DEBUG(llvm::dbgs() << "DCE on " << *op << '\n');
+        ++numDCE;
+        op->erase();
+        for (auto opnd : opOperands)
+          maybeEraseOp(opnd.getDefiningOp());
+      }
+      workList.clear();
+      workList.swap(opsToErase);
+    }
   }
 
   void maybeEraseOp(mlir::Operation *op) {
     if (!op)
       return;
-
-    // Erase any embox that was replaced.
-    if (auto embox = dyn_cast<EmboxOp>(op))
-      if (embox.getShape()) {
-        assert(op->use_empty());
-        opsToErase.push_back(op);
-      }
-
-    // Erase all fir.array_coor.
-    if (isa<ArrayCoorOp>(op)) {
-      assert(op->use_empty());
+    if (op->hasTrait<mlir::OpTrait::IsTerminator>())
+      return;
+    if (mlir::isOpTriviallyDead(op))
       opsToErase.push_back(op);
-    }
-
-    // Erase all fir.rebox.
-    if (isa<ReboxOp>(op)) {
-      assert(op->use_empty());
-      opsToErase.push_back(op);
-    }
-
-    // Erase all fir.shape, fir.shape_shift, fir.shift, and fir.slice ops.
-    if (isa<ShapeOp>(op)) {
-      assert(op->use_empty());
-      opsToErase.push_back(op);
-    }
-    if (isa<ShapeShiftOp>(op)) {
-      assert(op->use_empty());
-      opsToErase.push_back(op);
-    }
-    if (isa<ShiftOp>(op)) {
-      assert(op->use_empty());
-      opsToErase.push_back(op);
-    }
-    if (isa<SliceOp>(op)) {
-      assert(op->use_empty());
-      opsToErase.push_back(op);
-    }
   }
 
 private:
