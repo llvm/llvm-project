@@ -439,18 +439,19 @@ static void diagnoseUnsatisfiedRequirement(Sema &S,
     case concepts::ExprRequirement::SS_ConstraintsNotSatisfied: {
       ConceptSpecializationExpr *ConstraintExpr =
           Req->getReturnTypeRequirementSubstitutedConstraintExpr();
-      if (ConstraintExpr->getTemplateArgsAsWritten()->NumTemplateArgs == 1)
+      if (ConstraintExpr->getTemplateArgsAsWritten()->NumTemplateArgs == 1) {
         // A simple case - expr type is the type being constrained and the concept
         // was not provided arguments.
-        S.Diag(ConstraintExpr->getBeginLoc(),
+        Expr *e = Req->getExpr();
+        S.Diag(e->getBeginLoc(),
                diag::note_expr_requirement_constraints_not_satisfied_simple)
-            << (int)First << S.BuildDecltypeType(Req->getExpr(),
-                                                 Req->getExpr()->getBeginLoc())
+            << (int)First << S.getDecltypeForParenthesizedExpr(e)
             << ConstraintExpr->getNamedConcept();
-      else
+      } else {
         S.Diag(ConstraintExpr->getBeginLoc(),
                diag::note_expr_requirement_constraints_not_satisfied)
             << (int)First << ConstraintExpr;
+      }
       S.DiagnoseUnsatisfiedConstraint(ConstraintExpr->getSatisfaction());
       break;
     }
