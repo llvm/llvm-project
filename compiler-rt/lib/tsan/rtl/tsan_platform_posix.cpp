@@ -99,7 +99,7 @@ void CheckAndProtect() {
     Die();
   }
 
-#if defined(__aarch64__) && !HAS_48_BIT_ADDRESS_SPACE
+#if defined(__aarch64__) && defined(__APPLE__)
   ProtectRange(HeapMemEnd(), ShadowBeg());
   ProtectRange(ShadowEnd(), MetaShadowBeg());
   ProtectRange(MetaShadowEnd(), TraceMemBeg());
