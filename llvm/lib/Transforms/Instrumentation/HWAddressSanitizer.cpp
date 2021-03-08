@@ -1153,9 +1153,10 @@ bool HWAddressSanitizer::instrumentStack(
       // to put it at the beginning of the expression.
       SmallVector<uint64_t, 8> NewOps = {dwarf::DW_OP_LLVM_tag_offset,
                                          RetagMask(N)};
-      DDI->setArgOperand(
-          2, MetadataAsValue::get(*C, DIExpression::prependOpcodes(
-                                          DDI->getExpression(), NewOps)));
+      auto Locations = DDI->location_ops();
+      unsigned LocNo = std::distance(Locations.begin(), find(Locations, AI));
+      DDI->setExpression(
+          DIExpression::appendOpsToArg(DDI->getExpression(), NewOps, LocNo));
     }
 
     size_t Size = getAllocaSizeInBytes(*AI);
@@ -1219,7 +1220,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
 
       if (auto *DDI = dyn_cast<DbgVariableIntrinsic>(&Inst))
         if (auto *Alloca =
-                dyn_cast_or_null<AllocaInst>(DDI->getVariableLocation()))
+                dyn_cast_or_null<AllocaInst>(DDI->getVariableLocationOp(0)))
           AllocaDbgMap[Alloca].push_back(DDI);
 
       if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
@@ -1300,10 +1301,9 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
       for (auto &Inst : BB)
         if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst))
           if (auto *AI =
-                  dyn_cast_or_null<AllocaInst>(DVI->getVariableLocation()))
+                  dyn_cast_or_null<AllocaInst>(DVI->getVariableLocationOp(0)))
             if (auto *NewAI = AllocaToPaddedAllocaMap.lookup(AI))
-              DVI->setArgOperand(
-                  0, MetadataAsValue::get(*C, LocalAsMetadata::get(NewAI)));
+              DVI->replaceVariableLocationOp(AI, NewAI);
     for (auto &P : AllocaToPaddedAllocaMap)
       P.first->eraseFromParent();
   }

@@ -284,6 +284,7 @@ public:
 class AArch64StackTagging : public FunctionPass {
   struct AllocaInfo {
     AllocaInst *AI;
+    TrackingVH<Instruction> OldAI; // Track through RAUW to replace debug uses.
     SmallVector<IntrinsicInst *, 2> LifetimeStart;
     SmallVector<IntrinsicInst *, 2> LifetimeEnd;
     SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
@@ -557,12 +558,13 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       Instruction *I = &*IT;
       if (auto *AI = dyn_cast<AllocaInst>(I)) {
         Allocas[AI].AI = AI;
+        Allocas[AI].OldAI = AI;
         continue;
       }
 
       if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(I)) {
         if (auto *AI =
-                dyn_cast_or_null<AllocaInst>(DVI->getVariableLocation())) {
+                dyn_cast_or_null<AllocaInst>(DVI->getVariableLocationOp(0))) {
           Allocas[AI].DbgVariableIntrinsics.push_back(DVI);
         }
         continue;
@@ -705,9 +707,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
 
     // Fixup debug intrinsics to point to the new alloca.
     for (auto DVI : Info.DbgVariableIntrinsics)
-      DVI->setArgOperand(
-          0,
-          MetadataAsValue::get(F->getContext(), LocalAsMetadata::get(Info.AI)));
+      DVI->replaceVariableLocationOp(Info.OldAI, Info.AI);
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime
