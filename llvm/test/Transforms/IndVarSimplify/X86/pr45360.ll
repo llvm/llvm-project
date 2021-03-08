@@ -23,17 +23,16 @@ define dso_local i32 @main() {
 ; CHECK-NEXT:    [[I6:%.*]] = load i32, i32* @a, align 4
 ; CHECK-NEXT:    [[I24:%.*]] = load i32, i32* @b, align 4
 ; CHECK-NEXT:    [[D_PROMOTED9:%.*]] = load i32, i32* @d, align 4
-; CHECK-NEXT:    br label [[BB13_PREHEADER:%.*]]
-; CHECK:       bb13.preheader:
-; CHECK-NEXT:    [[I8_LCSSA10:%.*]] = phi i32 [ [[D_PROMOTED9]], [[BB:%.*]] ], [ [[I8:%.*]], [[BB19_PREHEADER:%.*]] ]
-; CHECK-NEXT:    [[I8]] = and i32 [[I8_LCSSA10]], [[I6]]
-; CHECK-NEXT:    [[I21:%.*]] = icmp eq i32 [[I8]], 0
-; CHECK-NEXT:    br i1 [[I21]], label [[BB13_PREHEADER_BB27_THREAD_SPLIT_CRIT_EDGE:%.*]], label [[BB19_PREHEADER]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[D_PROMOTED9]], [[I6]]
+; CHECK-NEXT:    [[I21:%.*]] = icmp eq i32 [[TMP0]], 0
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br i1 [[I21]], label [[BB13_PREHEADER_BB27_THREAD_SPLIT_CRIT_EDGE:%.*]], label [[BB19_PREHEADER:%.*]]
 ; CHECK:       bb19.preheader:
-; CHECK-NEXT:    [[I26:%.*]] = urem i32 [[I24]], [[I8]]
+; CHECK-NEXT:    [[I26:%.*]] = urem i32 [[I24]], [[TMP0]]
 ; CHECK-NEXT:    store i32 [[I26]], i32* @e, align 4
 ; CHECK-NEXT:    [[I30_NOT:%.*]] = icmp eq i32 [[I26]], 0
-; CHECK-NEXT:    br i1 [[I30_NOT]], label [[BB32_LOOPEXIT:%.*]], label [[BB13_PREHEADER]]
+; CHECK-NEXT:    br i1 [[I30_NOT]], label [[BB32_LOOPEXIT:%.*]], label [[BB1]]
 ; CHECK:       bb13.preheader.bb27.thread.split_crit_edge:
 ; CHECK-NEXT:    store i32 -1, i32* @f, align 4
 ; CHECK-NEXT:    store i32 0, i32* @d, align 4
@@ -41,7 +40,7 @@ define dso_local i32 @main() {
 ; CHECK-NEXT:    br label [[BB32:%.*]]
 ; CHECK:       bb32.loopexit:
 ; CHECK-NEXT:    store i32 -1, i32* @f, align 4
-; CHECK-NEXT:    store i32 [[I8]], i32* @d, align 4
+; CHECK-NEXT:    store i32 [[TMP0]], i32* @d, align 4
 ; CHECK-NEXT:    br label [[BB32]]
 ; CHECK:       bb32:
 ; CHECK-NEXT:    [[C_SINK:%.*]] = phi i32* [ @c, [[BB32_LOOPEXIT]] ], [ @e, [[BB13_PREHEADER_BB27_THREAD_SPLIT_CRIT_EDGE]] ]
