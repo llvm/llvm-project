@@ -137,8 +137,62 @@ exit:
 ;
 ; as "true", causing jump threading to a wrong destination.
 
-define void @foo3(i8* %arg1, i8* %arg2) {
-; CHECK-LABEL: @foo3(
+define void @icmp_ult_null_constexpr(i8* %arg1, i8* %arg2) {
+; CHECK-LABEL: @icmp_ult_null_constexpr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8* [[ARG1:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BB_BAR1:%.*]], label [[BB_END:%.*]]
+; CHECK:       bb_bar1:
+; CHECK-NEXT:    call void @bar(i32 1)
+; CHECK-NEXT:    br label [[BB_END]]
+; CHECK:       bb_end:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8* [[ARG2:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP2]], label [[BB_CONT:%.*]], label [[BB_BAR2:%.*]]
+; CHECK:       bb_bar2:
+; CHECK-NEXT:    call void @bar(i32 2)
+; CHECK-NEXT:    br label [[BB_EXIT:%.*]]
+; CHECK:       bb_cont:
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i8* [[ARG1]], inttoptr (i64 4 to i8*)
+; CHECK-NEXT:    br i1 [[CMP3]], label [[BB_EXIT]], label [[BB_BAR3:%.*]]
+; CHECK:       bb_bar3:
+; CHECK-NEXT:    call void @bar(i32 3)
+; CHECK-NEXT:    br label [[BB_EXIT]]
+; CHECK:       bb_exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp1 = icmp eq i8* %arg1, null
+  br i1 %cmp1, label %bb_bar1, label %bb_end
+
+bb_bar1:
+  call void @bar(i32 1)
+  br label %bb_end
+
+bb_end:
+  %cmp2 = icmp ne i8* %arg2, null
+  br i1 %cmp2, label %bb_cont, label %bb_bar2
+
+bb_bar2:
+  call void @bar(i32 2)
+  br label %bb_exit
+
+bb_cont:
+  %cmp3 = icmp ult i8* %arg1, inttoptr (i64 4 to i8*)
+  br i1 %cmp3, label %bb_exit, label %bb_bar3
+
+bb_bar3:
+  call void @bar(i32 3)
+  br label %bb_exit
+
+bb_exit:
+  ret void
+}
+
+; TODO: This is a special-case of the above pattern:
+; Null is guaranteed to be unsigned <= all values.
+
+define void @icmp_ule_null_constexpr(i8* %arg1, i8* %arg2) {
+; CHECK-LABEL: @icmp_ule_null_constexpr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8* [[ARG1:%.*]], null
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BB_BAR1:%.*]], label [[BB_END:%.*]]
