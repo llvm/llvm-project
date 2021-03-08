@@ -51,6 +51,9 @@ class MCSectionXCOFF final : public MCSection {
         (ST == XCOFF::XTY_SD || ST == XCOFF::XTY_CM || ST == XCOFF::XTY_ER) &&
         "Invalid or unhandled type for csect.");
     assert(QualName != nullptr && "QualName is needed.");
+    if (SMC == XCOFF::XMC_UL)
+      assert((ST == XCOFF::XTY_CM || ST == XCOFF::XTY_ER) &&
+             "Invalid csect type for storage mapping class XCOFF::XMC_UL");
 
     QualName->setRepresentedCsect(this);
     QualName->setStorageClass(XCOFF::C_HIDEXT);
