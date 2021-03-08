@@ -36,7 +36,8 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
   }];
   let constructor = "fir::createFirCodeGenRewritePass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "fir::FIRCodeGenDialect"
+    "fir::FIROpsDialect", "fir::FIRCodeGenDialect", "mlir::BuiltinDialect",
+    "mlir::LLVM::LLVMDialect", "mlir::omp::OpenMPDialect"
   ];
 }
 
@@ -48,7 +49,8 @@ def TargetRewrite : Pass<"target-rewrite", "mlir::ModuleOp"> {
   }];
   let constructor = "fir::createFirTargetRewritePass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "fir::FIRCodeGenDialect"
+    "fir::FIROpsDialect", "fir::FIRCodeGenDialect", "mlir::BuiltinDialect",
+    "mlir::omp::OpenMPDialect"
   ];
   let options = [
     Option<"noCharacterConversion", "no-character-conversion",

@@ -197,7 +197,6 @@ public:
   }
 };
 
-/// Convert FIR structured control flow ops to CFG ops.
 class CodeGenRewrite : public CodeGenRewriteBase<CodeGenRewrite> {
 public:
   void runOn(mlir::Operation *op, mlir::Region &region) {
@@ -238,9 +237,8 @@ public:
   void simplifyRegion(mlir::Region &region) {
     for (auto &block : region.getBlocks())
       for (auto &op : block.getOperations()) {
-        if (op.getNumRegions() != 0)
-          for (auto &reg : op.getRegions())
-            simplifyRegion(reg);
+        for (auto &reg : op.getRegions())
+          simplifyRegion(reg);
         maybeEraseOp(&op);
       }
 
