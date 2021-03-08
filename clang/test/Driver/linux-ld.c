@@ -328,7 +328,7 @@
 //
 // Check that flags can be combined. The -static dominates.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     -static-libgcc -static \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -2055,7 +2055,7 @@
 // CHECK-LD-GENTOO: "-lc"
 // CHECK-LD-GENTOO: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i686-unknown-linux-gnu -rtlib=platform \
+// RUN:     --target=i686-unknown-linux-gnu -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GENTOO-32 %s
