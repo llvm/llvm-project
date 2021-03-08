@@ -89,7 +89,7 @@ public:
                                          mlir::PatternRewriter &rewriter,
                                          SequenceType seqTy) const {
     auto loc = embox.getLoc();
-    llvm::SmallVector<mlir::Value, 8> shapeOpers;
+    llvm::SmallVector<mlir::Value> shapeOpers;
     auto idxTy = rewriter.getIndexType();
     for (auto ext : seqTy.getShape()) {
       auto iAttr = rewriter.getIndexAttr(ext);
@@ -109,8 +109,8 @@ public:
                                           mlir::Value shapeVal) const {
     auto loc = embox.getLoc();
     auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp());
-    llvm::SmallVector<mlir::Value, 8> shapeOpers;
-    llvm::SmallVector<mlir::Value, 8> shiftOpers;
+    llvm::SmallVector<mlir::Value> shapeOpers;
+    llvm::SmallVector<mlir::Value> shiftOpers;
     if (shapeOp) {
       populateShape(shapeOpers, shapeOp);
     } else {
@@ -118,8 +118,8 @@ public:
       assert(shiftOp && "shape is neither fir.shape nor fir.shape_shift");
       populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
     }
-    llvm::SmallVector<mlir::Value, 8> sliceOpers;
-    llvm::SmallVector<mlir::Value, 8> subcompOpers;
+    llvm::SmallVector<mlir::Value> sliceOpers;
+    llvm::SmallVector<mlir::Value> subcompOpers;
     if (auto s = embox.getSlice())
       if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp())) {
         sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
@@ -152,8 +152,8 @@ public:
   matchAndRewrite(ReboxOp rebox,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = rebox.getLoc();
-    llvm::SmallVector<mlir::Value, 8> shapeOpers;
-    llvm::SmallVector<mlir::Value, 8> shiftOpers;
+    llvm::SmallVector<mlir::Value> shapeOpers;
+    llvm::SmallVector<mlir::Value> shiftOpers;
     if (auto shapeVal = rebox.shape()) {
       if (auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp()))
         populateShape(shapeOpers, shapeOp);
@@ -164,8 +164,8 @@ public:
       else
         return mlir::failure();
     }
-    llvm::SmallVector<mlir::Value, 8> sliceOpers;
-    llvm::SmallVector<mlir::Value, 8> subcompOpers;
+    llvm::SmallVector<mlir::Value> sliceOpers;
+    llvm::SmallVector<mlir::Value> subcompOpers;
     if (auto s = rebox.slice())
       if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp())) {
         sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
@@ -200,8 +200,8 @@ public:
   matchAndRewrite(ArrayCoorOp arrCoor,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = arrCoor.getLoc();
-    llvm::SmallVector<mlir::Value, 8> shapeOpers;
-    llvm::SmallVector<mlir::Value, 8> shiftOpers;
+    llvm::SmallVector<mlir::Value> shapeOpers;
+    llvm::SmallVector<mlir::Value> shiftOpers;
     if (auto shapeVal = arrCoor.shape()) {
       if (auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp()))
         populateShape(shapeOpers, shapeOp);
@@ -212,8 +212,8 @@ public:
       else
         return mlir::failure();
     }
-    llvm::SmallVector<mlir::Value, 8> sliceOpers;
-    llvm::SmallVector<mlir::Value, 8> subcompOpers;
+    llvm::SmallVector<mlir::Value> sliceOpers;
+    llvm::SmallVector<mlir::Value> subcompOpers;
     if (auto s = arrCoor.slice())
       if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp())) {
         sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
