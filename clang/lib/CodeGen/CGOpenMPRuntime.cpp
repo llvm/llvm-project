@@ -687,7 +687,13 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
     SrcBegin = SrcAddr.getPointer();
   llvm::Value *DestBegin = DestAddr.getPointer();
   // Cast from pointer to array type to pointer to single element.
-  llvm::Value *DestEnd = CGF.Builder.CreateGEP(DestBegin, NumElements);
+  llvm::Value *DestEnd;
+  if (CGF.getTarget().getTriple().isAMDGCN())
+    // addrspace resolution in InstructionSimplify does not work
+    // correctly when using normal GEP during the simplification of icmp
+    DestEnd = CGF.Builder.CreateInBoundsGEP(DestBegin, NumElements);
+  else
+    DestEnd = CGF.Builder.CreateGEP(DestBegin, NumElements);
   // The basic structure here is a while-do loop.
   llvm::BasicBlock *BodyBB = CGF.createBasicBlock("omp.arrayinit.body");
   llvm::BasicBlock *DoneBB = CGF.createBasicBlock("omp.arrayinit.done");
