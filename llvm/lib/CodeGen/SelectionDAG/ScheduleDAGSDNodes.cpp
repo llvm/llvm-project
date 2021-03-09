@@ -739,6 +739,17 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
   if (!N->getHasDebugValue())
     return;
 
+  /// Returns true if \p DV has any VReg operand locations which don't exist in
+  /// VRBaseMap.
+  auto HasUnknownVReg = [&VRBaseMap](SDDbgValue *DV) {
+    for (SDDbgOperand L : DV->getLocationOps()) {
+      if (L.getKind() == SDDbgOperand::SDNODE &&
+          VRBaseMap.count({L.getSDNode(), L.getResNo()}) == 0)
+        return true;
+    }
+    return false;
+  };
+
   // Opportunistically insert immediate dbg_value uses, i.e. those with the same
   // source order number as N.
   MachineBasicBlock *BB = Emitter.getBlock();
@@ -747,13 +758,20 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
     if (DV->isEmitted())
       continue;
     unsigned DVOrder = DV->getOrder();
-    if (!Order || DVOrder == Order) {
-      MachineInstr *DbgMI = Emitter.EmitDbgValue(DV, VRBaseMap);
-      if (DbgMI) {
-        Orders.push_back({DVOrder, DbgMI});
-        BB->insert(InsertPos, DbgMI);
-      }
-    }
+    if (Order != 0 && DVOrder != Order)
+      continue;
+    // If DV has any VReg location operands which haven't been mapped then
+    // either that node is no longer available or we just haven't visited the
+    // node yet. In the former case we should emit an undef dbg_value, but we
+    // can do it later. And for the latter we'll want to wait until all
+    // dependent nodes have been visited.
+    if (HasUnknownVReg(DV))
+      continue;
+    MachineInstr *DbgMI = Emitter.EmitDbgValue(DV, VRBaseMap);
+    if (!DbgMI)
+      continue;
+    Orders.push_back({DVOrder, DbgMI});
+    BB->insert(InsertPos, DbgMI);
   }
 }
 
