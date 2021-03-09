@@ -632,15 +632,8 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
         OS << '\n';
 
         // Dump all data in the DIE for the attributes.
-        for (const DWARFAttribute &AttrValue : attributes()) {
-          if (AttrValue.Value.getForm() == DW_FORM_implicit_const) {
-            // We are dumping .debug_info section ,
-            // implicit_const attribute values are not really stored here,
-            // but in .debug_abbrev section. So we just skip such attrs.
-            continue;
-          }
+        for (const DWARFAttribute &AttrValue : attributes())
           dumpAttribute(OS, *this, AttrValue, Indent, DumpOpts);
-        }
 
         DWARFDie child = getFirstChild();
         if (DumpOpts.ShowChildren && DumpOpts.ChildRecurseDepth > 0 && child) {
@@ -723,10 +716,16 @@ void DWARFDie::attribute_iterator::updateForIndex(
     // Add the previous byte size of any previous attribute value.
     AttrValue.Offset += AttrValue.ByteSize;
     uint64_t ParseOffset = AttrValue.Offset;
-    auto U = Die.getDwarfUnit();
-    assert(U && "Die must have valid DWARF unit");
-    AttrValue.Value = DWARFFormValue::createFromUnit(
-        AbbrDecl.getFormByIndex(Index), U, &ParseOffset);
+    if (AbbrDecl.getAttrIsImplicitConstByIndex(Index))
+      AttrValue.Value = DWARFFormValue::createFromSValue(
+          AbbrDecl.getFormByIndex(Index),
+          AbbrDecl.getAttrImplicitConstValueByIndex(Index));
+    else {
+      auto U = Die.getDwarfUnit();
+      assert(U && "Die must have valid DWARF unit");
+      AttrValue.Value = DWARFFormValue::createFromUnit(
+          AbbrDecl.getFormByIndex(Index), U, &ParseOffset);
+    }
     AttrValue.ByteSize = ParseOffset - AttrValue.Offset;
   } else {
     assert(Index == NumAttrs && "Indexes should be [0, NumAttrs) only");
