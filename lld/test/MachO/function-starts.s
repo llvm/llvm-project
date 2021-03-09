@@ -1,4 +1,5 @@
-# REQUIRES: x86
+# REQUIRES: x86, shell
+# UNSUPPORTED: system-windows
 
 # RUN: split-file %s %t
 
