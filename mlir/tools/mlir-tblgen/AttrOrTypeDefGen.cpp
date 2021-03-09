@@ -412,9 +412,10 @@ void DefGenerator::emitTypeDefList(ArrayRef<AttrOrTypeDef> defs) {
 /// {0}: The name of the base value type, e.g. Attribute or Type.
 /// {1}: Additional parser parameters.
 static const char *const defParserDispatchStartStr = R"(
-static ::mlir::{0} generated{0}Parser(::mlir::MLIRContext *context,
+static OptionalParseResult generated{0}Parser(::mlir::MLIRContext *context,
                                       ::mlir::DialectAsmParser &parser,
-                                      ::llvm::StringRef mnemonic{1}) {{
+                                      ::llvm::StringRef mnemonic{1},
+                                      ::mlir::{0} &value) {{
 )";
 
 /// The code block used to start the auto-generated printer function.
@@ -805,22 +806,22 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
                       isAttrGenerator ? ", ::mlir::Type type" : "");
   for (const AttrOrTypeDef &def : defs) {
     if (def.getMnemonic()) {
-      os << formatv(
-          "  if (mnemonic == {0}::{1}::getMnemonic()) return {0}::{1}::",
-          def.getDialect().getCppNamespace(), def.getCppClassName());
+      os << formatv("  if (mnemonic == {0}::{1}::getMnemonic()) { \n"
+                    "    value = {0}::{1}::",
+                    def.getDialect().getCppNamespace(), def.getCppClassName());
 
       // If the def has no parameters and no parser code, just invoke a normal
       // `get`.
       if (def.getNumParameters() == 0 && !def.getParserCode()) {
-        os << "get(context);\n";
+        os << "get(context);\n    return success(!!value);\n  }\n";
         continue;
       }
 
       os << "parse(context, parser" << (isAttrGenerator ? ", type" : "")
-         << ");\n";
+         << ");\n    return success(!!value);\n  }\n";
     }
   }
-  os << "  return ::mlir::" << valueType << "();\n";
+  os << "  return {};\n";
   os << "}\n\n";
 
   // The printer dispatch uses llvm::TypeSwitch to find and call the correct

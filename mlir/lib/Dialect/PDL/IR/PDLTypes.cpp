@@ -27,19 +27,23 @@ using namespace mlir::pdl;
 //===----------------------------------------------------------------------===//
 
 static Type parsePDLType(DialectAsmParser &parser) {
-  StringRef keyword;
-  if (parser.parseKeyword(&keyword))
+  StringRef typeTag;
+  if (parser.parseKeyword(&typeTag))
     return Type();
-  if (Type type = generatedTypeParser(parser.getBuilder().getContext(), parser,
-                                      keyword))
-    return type;
+  {
+    Type genType;
+    auto parseResult = generatedTypeParser(parser.getBuilder().getContext(),
+                                           parser, typeTag, genType);
+    if (parseResult.hasValue())
+      return genType;
+  }
 
   // FIXME: This ends up with a double error being emitted if `RangeType` also
   // emits an error. We should rework the `generatedTypeParser` to better
   // support when the keyword is valid but the individual type parser itself
   // emits an error.
   parser.emitError(parser.getNameLoc(), "invalid 'pdl' type: `")
-      << keyword << "'";
+      << typeTag << "'";
   return Type();
 }
 

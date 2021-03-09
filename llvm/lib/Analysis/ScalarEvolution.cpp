@@ -5848,24 +5848,31 @@ ScalarEvolution::getRangeRef(const SCEV *S,
     KnownBits Known = computeKnownBits(U->getValue(), DL, 0, &AC, nullptr, &DT);
     if (Known.getBitWidth() != BitWidth)
       Known = Known.zextOrTrunc(BitWidth);
-    // If Known does not result in full-set, intersect with it.
-    if (Known.getMinValue() != Known.getMaxValue() + 1)
-      ConservativeResult = ConservativeResult.intersectWith(
-          ConstantRange(Known.getMinValue(), Known.getMaxValue() + 1),
-          RangeType);
 
     // ValueTracking may be able to compute a tighter result for the number of
     // sign bits than for the value of those sign bits.
     unsigned NS = ComputeNumSignBits(U->getValue(), DL, 0, &AC, nullptr, &DT);
-    // If the pointer size is larger than the index size type, this can cause
-    // NS to be larger than BitWidth. So compensate for this.
     if (U->getType()->isPointerTy()) {
+      // If the pointer size is larger than the index size type, this can cause
+      // NS to be larger than BitWidth. So compensate for this.
       unsigned ptrSize = DL.getPointerTypeSizeInBits(U->getType());
       int ptrIdxDiff = ptrSize - BitWidth;
       if (ptrIdxDiff > 0 && ptrSize > BitWidth && NS > (unsigned)ptrIdxDiff)
         NS -= ptrIdxDiff;
     }
 
+    if (NS > 1) {
+      // If we know any of the sign bits, we know all of the sign bits.
+      if (!Known.Zero.getHiBits(NS).isNullValue())
+        Known.Zero.setHighBits(NS);
+      if (!Known.One.getHiBits(NS).isNullValue())
+        Known.One.setHighBits(NS);
+    }
+
+    if (Known.getMinValue() != Known.getMaxValue() + 1)
+      ConservativeResult = ConservativeResult.intersectWith(
+          ConstantRange(Known.getMinValue(), Known.getMaxValue() + 1),
+          RangeType);
     if (NS > 1)
       ConservativeResult = ConservativeResult.intersectWith(
           ConstantRange(APInt::getSignedMinValue(BitWidth).ashr(NS - 1),

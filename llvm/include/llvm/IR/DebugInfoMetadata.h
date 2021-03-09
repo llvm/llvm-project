@@ -2779,6 +2779,15 @@ public:
                                       ArrayRef<uint64_t> Ops, unsigned ArgNo,
                                       bool StackValue = false);
 
+  /// Create a copy of \p Expr with each instance of
+  /// `DW_OP_LLVM_arg, \p OldArg` replaced with `DW_OP_LLVM_arg, \p NewArg`,
+  /// and each instance of `DW_OP_LLVM_arg, Arg` with `DW_OP_LLVM_arg, Arg - 1`
+  /// for all Arg > \p OldArg.
+  /// This is used when replacing one of the operands of a debug value list
+  /// with another operand in the same list and deleting the old operand.
+  static DIExpression *replaceArg(const DIExpression *Expr, uint64_t OldArg,
+                                  uint64_t NewArg);
+
   /// Create a DIExpression to describe one part of an aggregate variable that
   /// is fragmented across multiple Values. The DW_OP_LLVM_fragment operation
   /// will be appended to the elements of \c Expr. If \c Expr already contains

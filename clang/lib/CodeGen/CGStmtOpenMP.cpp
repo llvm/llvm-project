@@ -1913,7 +1913,7 @@ static llvm::CallInst *
 emitCapturedStmtCall(CodeGenFunction &ParentCGF, EmittedClosureTy Cap,
                      llvm::ArrayRef<llvm::Value *> Args) {
   // Append the closure context to the argument.
-  SmallVector<llvm::Value *> EffectiveArgs;
+  llvm::SmallVector<llvm::Value *> EffectiveArgs;
   EffectiveArgs.reserve(Args.size() + 1);
   llvm::append_range(EffectiveArgs, Args);
   EffectiveArgs.push_back(Cap.second);

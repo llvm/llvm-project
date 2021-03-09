@@ -105,9 +105,13 @@ Attribute TestDialect::parseAttribute(DialectAsmParser &parser,
   StringRef attrTag;
   if (failed(parser.parseKeyword(&attrTag)))
     return Attribute();
-  if (auto attr = generatedAttributeParser(getContext(), parser, attrTag, type))
-    return attr;
-
+  {
+    Attribute attr;
+    auto parseResult =
+        generatedAttributeParser(getContext(), parser, attrTag, type, attr);
+    if (parseResult.hasValue())
+      return attr;
+  }
   parser.emitError(parser.getNameLoc(), "unknown test attribute");
   return Attribute();
 }

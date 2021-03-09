@@ -73,9 +73,9 @@ typedef void (*iterate_callback)(uintptr_t base, size_t size, void *arg);
 // pointer.
 void __scudo_get_error_info(struct scudo_error_info *error_info,
                             uintptr_t fault_addr, const char *stack_depot,
-                            const char *region_info, const char *memory,
-                            const char *memory_tags, uintptr_t memory_addr,
-                            size_t memory_size);
+                            const char *region_info, const char *ring_buffer,
+                            const char *memory, const char *memory_tags,
+                            uintptr_t memory_addr, size_t memory_size);
 
 enum scudo_error_type {
   UNKNOWN,
@@ -106,6 +106,9 @@ size_t __scudo_get_stack_depot_size();
 
 const char *__scudo_get_region_info_addr();
 size_t __scudo_get_region_info_size();
+
+const char *__scudo_get_ring_buffer_addr();
+size_t __scudo_get_ring_buffer_size();
 
 #ifndef M_DECAY_TIME
 #define M_DECAY_TIME -100

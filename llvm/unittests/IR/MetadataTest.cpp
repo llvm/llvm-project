@@ -2866,6 +2866,34 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
 #undef EXPECT_INVALID_FRAGMENT
 }
 
+TEST_F(DIExpressionTest, replaceArg) {
+#define EXPECT_REPLACE_ARG_EQ(Expr, OldArg, NewArg, ...)                       \
+  do {                                                                         \
+    uint64_t Elements[] = {__VA_ARGS__};                                       \
+    ArrayRef<uint64_t> Expected = Elements;                                    \
+    DIExpression *Expression = DIExpression::replaceArg(Expr, OldArg, NewArg); \
+    EXPECT_EQ(Expression->getElements(), Expected);                            \
+  } while (false)
+
+  auto N = DIExpression::get(
+      Context, {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg, 1,
+                dwarf::DW_OP_plus, dwarf::DW_OP_LLVM_arg, 2, dwarf::DW_OP_mul});
+  EXPECT_REPLACE_ARG_EQ(N, 0, 1, dwarf::DW_OP_LLVM_arg, 0,
+                        dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus,
+                        dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul);
+  EXPECT_REPLACE_ARG_EQ(N, 0, 2, dwarf::DW_OP_LLVM_arg, 1,
+                        dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus,
+                        dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul);
+  EXPECT_REPLACE_ARG_EQ(N, 2, 0, dwarf::DW_OP_LLVM_arg, 0,
+                        dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_plus,
+                        dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_mul);
+  EXPECT_REPLACE_ARG_EQ(N, 2, 1, dwarf::DW_OP_LLVM_arg, 0,
+                        dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_plus,
+                        dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul);
+
+#undef EXPECT_REPLACE_ARG_EQ
+}
+
 typedef MetadataTest DIObjCPropertyTest;
 
 TEST_F(DIObjCPropertyTest, get) {

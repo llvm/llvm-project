@@ -300,6 +300,15 @@ inline void *untagPointer(void *Ptr) {
   return reinterpret_cast<void *>(untagPointer(reinterpret_cast<uptr>(Ptr)));
 }
 
+inline void *loadTag(void *Ptr) {
+  return reinterpret_cast<void *>(loadTag(reinterpret_cast<uptr>(Ptr)));
+}
+
+inline void *addFixedTag(void *Ptr, uptr Tag) {
+  return reinterpret_cast<void *>(
+      addFixedTag(reinterpret_cast<uptr>(Ptr), Tag));
+}
+
 template <typename Config>
 inline constexpr bool allocatorSupportsMemoryTagging() {
   return archSupportsMemoryTagging() && Config::MaySupportMemoryTagging;

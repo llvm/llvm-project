@@ -142,6 +142,24 @@ def riscv_vrgather_vx_vl : SDNode<"RISCVISD::VRGATHER_VX_VL",
                                                        SDTCVecEltisVT<3, i1>,
                                                        SDTCisSameNumEltsAs<0, 3>,
                                                        SDTCisVT<4, XLenVT>]>>;
+def riscv_vrgather_vv_vl : SDNode<"RISCVISD::VRGATHER_VV_VL",
+                                  SDTypeProfile<1, 4, [SDTCisVec<0>,
+                                                       SDTCisSameAs<0, 1>,
+                                                       SDTCisInt<2>,
+                                                       SDTCisSameNumEltsAs<0, 2>,
+                                                       SDTCisSameSizeAs<0, 2>,
+                                                       SDTCVecEltisVT<3, i1>,
+                                                       SDTCisSameNumEltsAs<0, 3>,
+                                                       SDTCisVT<4, XLenVT>]>>;
+def riscv_vrgatherei16_vv_vl : SDNode<"RISCVISD::VRGATHEREI16_VV_VL",
+                                      SDTypeProfile<1, 4, [SDTCisVec<0>,
+                                                           SDTCisSameAs<0, 1>,
+                                                           SDTCisInt<2>,
+                                                           SDTCVecEltisVT<2, i16>,
+                                                           SDTCisSameNumEltsAs<0, 2>,
+                                                           SDTCVecEltisVT<3, i1>,
+                                                           SDTCisSameNumEltsAs<0, 3>,
+                                                           SDTCisVT<4, XLenVT>]>>;
 
 def riscv_vselect_vl : SDNode<"RISCVISD::VSELECT_VL",
                               SDTypeProfile<1, 4, [SDTCisVec<0>,
@@ -184,6 +202,15 @@ def riscv_trunc_vector_vl : SDNode<"RISCVISD::TRUNCATE_VECTOR_VL",
                                                         SDTCisSameNumEltsAs<0, 2>,
                                                         SDTCVecEltisVT<2, i1>,
                                                         SDTCisVT<3, XLenVT>]>>;
+
+def SDTRVVVecReduce : SDTypeProfile<1, 4, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<0, 2>, SDTCVecEltisVT<3, i1>,
+  SDTCisSameNumEltsAs<1, 3>, SDTCisVT<4, XLenVT>
+]>;
+
+foreach kind = ["ADD", "UMAX", "SMAX", "UMIN", "SMIN", "AND", "OR", "XOR",
+                "FADD", "SEQ_FADD"] in
+  def rvv_vecreduce_#kind#_vl : SDNode<"RISCVISD::VECREDUCE_"#kind#"_VL", SDTRVVVecReduce>;
 
 // Ignore the vl operand.
 def SplatFPOp : PatFrag<(ops node:$op),
@@ -479,6 +506,20 @@ multiclass VPatNConvertI2FPSDNode_V_VL<SDNode vop, string instruction_name> {
   }
 }
 
+multiclass VPatReductionVL<SDNode vop, string instruction_name, bit is_float> {
+  foreach vti = !if(is_float, AllFloatVectors, AllIntegerVectors) in {
+    defvar vti_m1 = !cast<VTypeInfo>(!if(is_float, "VF", "VI") # vti.SEW # "M1");
+    def: Pat<(vti_m1.Vector (vop (vti.Vector vti.RegClass:$rs1), VR:$rs2,
+                                 (vti.Mask true_mask),
+                                 (XLenVT (VLOp GPR:$vl)))),
+        (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX)
+            (vti_m1.Vector (IMPLICIT_DEF)),
+            (vti.Vector vti.RegClass:$rs1),
+            (vti_m1.Vector VR:$rs2),
+            GPR:$vl, vti.SEW)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -644,6 +685,24 @@ foreach vti = AllIntegerVectors in {
 }
 
 } // Predicates = [HasStdExtV]
+
+// 15.1. Vector Single-Width Integer Reduction Instructions
+let Predicates = [HasStdExtV] in {
+defm "" : VPatReductionVL<rvv_vecreduce_ADD_vl,  "PseudoVREDSUM", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_UMAX_vl, "PseudoVREDMAXU", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_SMAX_vl, "PseudoVREDMAX", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_UMIN_vl, "PseudoVREDMINU", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_SMIN_vl, "PseudoVREDMIN", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_AND_vl,  "PseudoVREDAND", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_OR_vl,   "PseudoVREDOR", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_XOR_vl,  "PseudoVREDXOR", /*is_float*/0>;
+} // Predicates = [HasStdExtV]
+
+// 15.3. Vector Single-Width Floating-Point Reduction Instructions
+let Predicates = [HasStdExtV, HasStdExtF] in {
+defm "" : VPatReductionVL<rvv_vecreduce_SEQ_FADD_vl, "PseudoVFREDOSUM", /*is_float*/1>;
+defm "" : VPatReductionVL<rvv_vecreduce_FADD_vl,     "PseudoVFREDSUM", /*is_float*/1>;
+} // Predicates = [HasStdExtV, HasStdExtF]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
 
@@ -954,6 +1013,12 @@ foreach vti = AllIntegerVectors in {
             (!cast<Instruction>("PseudoVMV_S_X_"#vti.LMul.MX)
                 vti.RegClass:$merge,
                 (vti.Scalar vti.ScalarRegClass:$rs1), GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_vrgather_vv_vl vti.RegClass:$rs2,
+                                              (vti.Vector vti.RegClass:$rs1),
+                                              (vti.Mask true_mask),
+                                              (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs2, vti.RegClass:$rs1, GPR:$vl, vti.SEW)>;
   def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, GPR:$rs1,
                                               (vti.Mask true_mask),
                                               (XLenVT (VLOp GPR:$vl)))),
@@ -964,6 +1029,22 @@ foreach vti = AllIntegerVectors in {
                                               (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX)
                  vti.RegClass:$rs2, uimm5:$imm, GPR:$vl, vti.SEW)>;
+
+  // emul = lmul * 16 / sew
+  defvar vlmul = vti.LMul;
+  defvar octuple_lmul = octuple_from_str<vlmul.MX>.ret;
+  defvar octuple_emul = !srl(!mul(octuple_lmul, 16), shift_amount<vti.SEW>.val);
+  if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
+    defvar emul_str = octuple_to_str<octuple_emul>.ret;
+    defvar ivti = !cast<VTypeInfo>("VI16" # emul_str);
+    defvar inst = "PseudoVRGATHEREI16_VV_" # vti.LMul.MX # "_" # emul_str;
+    def : Pat<(vti.Vector (riscv_vrgatherei16_vv_vl vti.RegClass:$rs2,
+                                                    (ivti.Vector ivti.RegClass:$rs1),
+                                                    (vti.Mask true_mask),
+                                                    (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>(inst)
+                   vti.RegClass:$rs2, ivti.RegClass:$rs1, GPR:$vl, vti.SEW)>;
+  }
 }
 
 } // Predicates = [HasStdExtV]
@@ -978,6 +1059,13 @@ foreach vti = AllFloatVectors in {
             (!cast<Instruction>("PseudoVFMV_S_"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                 vti.RegClass:$merge,
                 (vti.Scalar vti.ScalarRegClass:$rs1), GPR:$vl, vti.SEW)>;
+  defvar ivti = GetIntVTypeInfo<vti>.Vti;
+  def : Pat<(vti.Vector (riscv_vrgather_vv_vl vti.RegClass:$rs2,
+                                              (ivti.Vector vti.RegClass:$rs1),
+                                              (vti.Mask true_mask),
+                                              (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs2, vti.RegClass:$rs1, GPR:$vl, vti.SEW)>;
   def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, GPR:$rs1,
                                               (vti.Mask true_mask),
                                               (XLenVT (VLOp GPR:$vl)))),
@@ -988,6 +1076,21 @@ foreach vti = AllFloatVectors in {
                                               (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX)
                  vti.RegClass:$rs2, uimm5:$imm, GPR:$vl, vti.SEW)>;
+
+  defvar vlmul = vti.LMul;
+  defvar octuple_lmul = octuple_from_str<vlmul.MX>.ret;
+  defvar octuple_emul = !srl(!mul(octuple_lmul, 16), shift_amount<vti.SEW>.val);
+  if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
+    defvar emul_str = octuple_to_str<octuple_emul>.ret;
+    defvar ivti = !cast<VTypeInfo>("VI16" # emul_str);
+    defvar inst = "PseudoVRGATHEREI16_VV_" # vti.LMul.MX # "_" # emul_str;
+    def : Pat<(vti.Vector (riscv_vrgatherei16_vv_vl vti.RegClass:$rs2,
+                                                    (ivti.Vector ivti.RegClass:$rs1),
+                                                    (vti.Mask true_mask),
+                                                    (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>(inst)
+                   vti.RegClass:$rs2, ivti.RegClass:$rs1, GPR:$vl, vti.SEW)>;
+  }
 }
 
 } // Predicates = [HasStdExtV, HasStdExtF]

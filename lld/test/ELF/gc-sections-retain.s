@@ -8,11 +8,6 @@
 # RUN: ld.lld -r -e _start --gc-sections --print-gc-sections %t.o -o %t.ro | count 0
 # RUN: llvm-readobj -hS %t.ro | FileCheck %s
 
-## SHF_GNU_RETAIN has no significance in executables/shared objects. Multiple
-## OSABI values can benefit from this flag. Test that we don't change EI_OSABI,
-## even for relocatable output.
-# CHECK:       OS/ABI: SystemV (0x0)
-
 # CHECK:      Name: .retain
 # CHECK-NEXT: Type: SHT_PROGBITS
 # CHECK-NEXT: Flags [
