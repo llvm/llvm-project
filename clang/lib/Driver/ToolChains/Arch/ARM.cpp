@@ -166,6 +166,132 @@ arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args) {
   return ReadTPMode::Soft;
 }
 
+void arm::setArchNameInTriple(const Driver &D, const ArgList &Args,
+                              types::ID InputType, llvm::Triple &Triple) {
+  StringRef MCPU, MArch;
+  if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
+    MCPU = A->getValue();
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
+    MArch = A->getValue();
+
+  std::string CPU = Triple.isOSBinFormatMachO()
+                        ? tools::arm::getARMCPUForMArch(MArch, Triple).str()
+                        : tools::arm::getARMTargetCPU(MCPU, MArch, Triple);
+  StringRef Suffix = tools::arm::getLLVMArchSuffixForARM(CPU, MArch, Triple);
+
+  bool IsBigEndian = Triple.getArch() == llvm::Triple::armeb ||
+                     Triple.getArch() == llvm::Triple::thumbeb;
+  // Handle pseudo-target flags '-mlittle-endian'/'-EL' and
+  // '-mbig-endian'/'-EB'.
+  if (Arg *A = Args.getLastArg(options::OPT_mlittle_endian,
+                               options::OPT_mbig_endian)) {
+    IsBigEndian = !A->getOption().matches(options::OPT_mlittle_endian);
+  }
+  std::string ArchName = IsBigEndian ? "armeb" : "arm";
+
+  // FIXME: Thumb should just be another -target-feaure, not in the triple.
+  bool IsMProfile =
+      llvm::ARM::parseArchProfile(Suffix) == llvm::ARM::ProfileKind::M;
+  bool ThumbDefault = IsMProfile ||
+                      // Thumb2 is the default for V7 on Darwin.
+                      (llvm::ARM::parseArchVersion(Suffix) == 7 &&
+                       Triple.isOSBinFormatMachO()) ||
+                      // FIXME: this is invalid for WindowsCE
+                      Triple.isOSWindows();
+
+  // Check if ARM ISA was explicitly selected (using -mno-thumb or -marm) for
+  // M-Class CPUs/architecture variants, which is not supported.
+  bool ARMModeRequested =
+      !Args.hasFlag(options::OPT_mthumb, options::OPT_mno_thumb, ThumbDefault);
+  if (IsMProfile && ARMModeRequested) {
+    if (MCPU.size())
+      D.Diag(diag::err_cpu_unsupported_isa) << CPU << "ARM";
+    else
+      D.Diag(diag::err_arch_unsupported_isa)
+          << tools::arm::getARMArch(MArch, Triple) << "ARM";
+  }
+
+  // Check to see if an explicit choice to use thumb has been made via
+  // -mthumb. For assembler files we must check for -mthumb in the options
+  // passed to the assembler via -Wa or -Xassembler.
+  bool IsThumb = false;
+  if (InputType != types::TY_PP_Asm)
+    IsThumb =
+        Args.hasFlag(options::OPT_mthumb, options::OPT_mno_thumb, ThumbDefault);
+  else {
+    // Ideally we would check for these flags in
+    // CollectArgsForIntegratedAssembler but we can't change the ArchName at
+    // that point.
+    llvm::StringRef WaMArch, WaMCPU;
+    for (const auto *A :
+         Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler)) {
+      for (StringRef Value : A->getValues()) {
+        // There is no assembler equivalent of -mno-thumb, -marm, or -mno-arm.
+        if (Value == "-mthumb")
+          IsThumb = true;
+        else if (Value.startswith("-march="))
+          WaMArch = Value.substr(7);
+        else if (Value.startswith("-mcpu="))
+          WaMCPU = Value.substr(6);
+      }
+    }
+
+    if (WaMCPU.size() || WaMArch.size()) {
+      // The way this works means that we prefer -Wa,-mcpu's architecture
+      // over -Wa,-march. Which matches the compiler behaviour.
+      Suffix = tools::arm::getLLVMArchSuffixForARM(WaMCPU, WaMArch, Triple);
+    }
+  }
+
+  // Assembly files should start in ARM mode, unless arch is M-profile, or
+  // -mthumb has been passed explicitly to the assembler. Windows is always
+  // thumb.
+  if (IsThumb || IsMProfile || Triple.isOSWindows()) {
+    if (IsBigEndian)
+      ArchName = "thumbeb";
+    else
+      ArchName = "thumb";
+  }
+  Triple.setArchName(ArchName + Suffix.str());
+}
+
+void arm::setFloatABIInTriple(const Driver &D, const ArgList &Args,
+                              llvm::Triple &Triple) {
+  bool isHardFloat =
+      (arm::getARMFloatABI(D, Triple, Args) == arm::FloatABI::Hard);
+
+  switch (Triple.getEnvironment()) {
+  case llvm::Triple::GNUEABI:
+  case llvm::Triple::GNUEABIHF:
+    Triple.setEnvironment(isHardFloat ? llvm::Triple::GNUEABIHF
+                                      : llvm::Triple::GNUEABI);
+    break;
+  case llvm::Triple::EABI:
+  case llvm::Triple::EABIHF:
+    Triple.setEnvironment(isHardFloat ? llvm::Triple::EABIHF
+                                      : llvm::Triple::EABI);
+    break;
+  case llvm::Triple::MuslEABI:
+  case llvm::Triple::MuslEABIHF:
+    Triple.setEnvironment(isHardFloat ? llvm::Triple::MuslEABIHF
+                                      : llvm::Triple::MuslEABI);
+    break;
+  default: {
+    arm::FloatABI DefaultABI = arm::getDefaultFloatABI(Triple);
+    if (DefaultABI != arm::FloatABI::Invalid &&
+        isHardFloat != (DefaultABI == arm::FloatABI::Hard)) {
+      Arg *ABIArg =
+          Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float,
+                          options::OPT_mfloat_abi_EQ);
+      assert(ABIArg && "Non-default float abi expected to be from arg");
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << ABIArg->getAsString(Args) << Triple.getTriple();
+    }
+    break;
+  }
+  }
+}
+
 arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
   return arm::getARMFloatABI(TC.getDriver(), TC.getEffectiveTriple(), Args);
 }
