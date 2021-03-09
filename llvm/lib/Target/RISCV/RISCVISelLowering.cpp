@@ -472,6 +472,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
+
+      setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
     }
 
     // Expand various CCs to best match the RVV ISA, which natively supports UNE
@@ -509,6 +511,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
+
+      setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
     };
 
     if (Subtarget.hasStdExtZfh())
@@ -1528,6 +1532,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerINSERT_SUBVECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
     return lowerEXTRACT_SUBVECTOR(Op, DAG);
+  case ISD::VECTOR_REVERSE:
+    return lowerVECTOR_REVERSE(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG, Subtarget);
   case ISD::VECTOR_SHUFFLE:
@@ -2791,6 +2797,84 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   // We might have bitcast from a mask type: cast back to the original type if
   // required.
   return DAG.getBitcast(Op.getSimpleValueType(), Slidedown);
+}
+
+// Implement vector_reverse using vrgather.vv with indices determined by
+// subtracting the id of each element from (VLMAX-1). This will convert
+// the indices like so:
+// (0, 1,..., VLMAX-2, VLMAX-1) -> (VLMAX-1, VLMAX-2,..., 1, 0).
+// TODO: This code assumes VLMAX <= 65536 for LMUL=8 SEW=16.
+SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VecVT = Op.getSimpleValueType();
+  unsigned EltSize = VecVT.getScalarSizeInBits();
+  unsigned MinSize = VecVT.getSizeInBits().getKnownMinValue();
+
+  unsigned MaxVLMAX = 0;
+  unsigned VectorBitsMax = Subtarget.getMaxRVVVectorSizeInBits();
+  if (VectorBitsMax != 0)
+    MaxVLMAX = ((VectorBitsMax / EltSize) * MinSize) / RISCV::RVVBitsPerBlock;
+
+  unsigned GatherOpc = RISCVISD::VRGATHER_VV_VL;
+  MVT IntVT = VecVT.changeVectorElementTypeToInteger();
+
+  // If this is SEW=8 and VLMAX is unknown or more than 256, we need
+  // to use vrgatherei16.vv.
+  // TODO: It's also possible to use vrgatherei16.vv for other types to
+  // decrease register width for the index calculation.
+  if ((MaxVLMAX == 0 || MaxVLMAX > 256) && EltSize == 8) {
+    // If this is LMUL=8, we have to split before can use vrgatherei16.vv.
+    // Reverse each half, then reassemble them in reverse order.
+    // NOTE: It's also possible that after splitting that VLMAX no longer
+    // requires vrgatherei16.vv.
+    if (MinSize == (8 * RISCV::RVVBitsPerBlock)) {
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = DAG.SplitVectorOperand(Op.getNode(), 0);
+      EVT LoVT, HiVT;
+      std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VecVT);
+      Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, LoVT, Lo);
+      Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, HiVT, Hi);
+      // Reassemble the low and high pieces reversed.
+      // FIXME: This is a CONCAT_VECTORS.
+      SDValue Res =
+          DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecVT, DAG.getUNDEF(VecVT), Hi,
+                      DAG.getIntPtrConstant(0, DL));
+      return DAG.getNode(
+          ISD::INSERT_SUBVECTOR, DL, VecVT, Res, Lo,
+          DAG.getIntPtrConstant(LoVT.getVectorMinNumElements(), DL));
+    }
+
+    // Just promote the int type to i16 which will double the LMUL.
+    IntVT = MVT::getVectorVT(MVT::i16, VecVT.getVectorElementCount());
+    GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
+  }
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue Mask, VL;
+  std::tie(Mask, VL) = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+
+  // Calculate VLMAX-1 for the desired SEW.
+  unsigned MinElts = VecVT.getVectorMinNumElements();
+  SDValue VLMax = DAG.getNode(ISD::VSCALE, DL, XLenVT,
+                              DAG.getConstant(MinElts, DL, XLenVT));
+  SDValue VLMinus1 =
+      DAG.getNode(ISD::SUB, DL, XLenVT, VLMax, DAG.getConstant(1, DL, XLenVT));
+
+  // Splat VLMAX-1 taking care to handle SEW==64 on RV32.
+  bool IsRV32E64 =
+      !Subtarget.is64Bit() && IntVT.getVectorElementType() == MVT::i64;
+  SDValue SplatVL;
+  if (!IsRV32E64)
+    SplatVL = DAG.getSplatVector(IntVT, DL, VLMinus1);
+  else
+    SplatVL = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, IntVT, VLMinus1);
+
+  SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, IntVT, Mask, VL);
+  SDValue Indices =
+      DAG.getNode(RISCVISD::SUB_VL, DL, IntVT, SplatVL, VID, Mask, VL);
+
+  return DAG.getNode(GatherOpc, DL, VecVT, Op.getOperand(0), Indices, Mask, VL);
 }
 
 SDValue
@@ -5907,6 +5991,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VMCLR_VL)
   NODE_NAME_CASE(VMSET_VL)
   NODE_NAME_CASE(VRGATHER_VX_VL)
+  NODE_NAME_CASE(VRGATHER_VV_VL)
+  NODE_NAME_CASE(VRGATHEREI16_VV_VL)
   NODE_NAME_CASE(VSEXT_VL)
   NODE_NAME_CASE(VZEXT_VL)
   NODE_NAME_CASE(VLE_VL)
