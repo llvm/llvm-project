@@ -138,16 +138,17 @@ enum NodeType : unsigned {
   //   nxv2i32 = vecreduce_add nxv8i32, nxv2i32
   // The different in types does introduce extra vsetvli instructions but
   // similarly it reduces the number of registers consumed per reduction.
-  VECREDUCE_ADD,
-  VECREDUCE_UMAX,
-  VECREDUCE_SMAX,
-  VECREDUCE_UMIN,
-  VECREDUCE_SMIN,
-  VECREDUCE_AND,
-  VECREDUCE_OR,
-  VECREDUCE_XOR,
-  VECREDUCE_FADD,
-  VECREDUCE_SEQ_FADD,
+  // Also has a mask and VL operand.
+  VECREDUCE_ADD_VL,
+  VECREDUCE_UMAX_VL,
+  VECREDUCE_SMAX_VL,
+  VECREDUCE_UMIN_VL,
+  VECREDUCE_SMIN_VL,
+  VECREDUCE_AND_VL,
+  VECREDUCE_OR_VL,
+  VECREDUCE_XOR_VL,
+  VECREDUCE_FADD_VL,
+  VECREDUCE_SEQ_FADD_VL,
 
   // Vector binary and unary ops with a mask as a third operand, and VL as a
   // fourth operand.
