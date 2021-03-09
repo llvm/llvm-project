@@ -1,4 +1,4 @@
-//===- LLVMIR.h - MLIR to LLVM IR conversion --------------------*- C++ -*-===//
+//===- Import.h - LLVM IR To MLIR translation -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the entry point for the MLIR to LLVM IR conversion.
+// This file declares the entry point for the LLVM IR to MLIR conversion.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TARGET_LLVMIR_H
-#define MLIR_TARGET_LLVMIR_H
+#ifndef MLIR_TARGET_LLVMIR_IMPORT_H
+#define MLIR_TARGET_LLVMIR_IMPORT_H
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
@@ -38,4 +38,4 @@ translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
 
 } // namespace mlir
 
-#endif // MLIR_TARGET_LLVMIR_H
+#endif // MLIR_TARGET_LLVMIR_IMPORT_H

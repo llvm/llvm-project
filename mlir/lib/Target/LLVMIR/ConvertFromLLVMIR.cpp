@@ -15,7 +15,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Translation.h"
 
 #include "llvm/ADT/TypeSwitch.h"
