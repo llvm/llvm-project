@@ -49,16 +49,6 @@ bool ThreadPlanStepOverBreakpoint::ValidatePlan(Stream *error) { return true; }
 bool ThreadPlanStepOverBreakpoint::DoPlanExplainsStop(Event *event_ptr) {
   StopInfoSP stop_info_sp = GetPrivateStopInfo();
   if (stop_info_sp) {
-    // It's a little surprising that we stop here for a breakpoint hit.
-    // However, when you single step ONTO a breakpoint we still want to call
-    // that a breakpoint hit, and trigger the actions, etc.  Otherwise you
-    // would see the
-    // PC at the breakpoint without having triggered the actions, then you'd
-    // continue, the PC wouldn't change,
-    // and you'd see the breakpoint hit, which would be odd. So the lower
-    // levels fake "step onto breakpoint address" and return that as a
-    // breakpoint.  So our trace step COULD appear as a breakpoint hit if the
-    // next instruction also contained a breakpoint.
     StopReason reason = stop_info_sp->GetStopReason();
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
