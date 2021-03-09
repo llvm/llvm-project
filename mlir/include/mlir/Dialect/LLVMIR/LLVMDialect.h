@@ -30,6 +30,8 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.h.inc"
 #include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.h.inc"
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc"
 
 namespace llvm {
 class Type;
@@ -47,23 +49,8 @@ class LLVMDialect;
 namespace detail {
 struct LLVMTypeStorage;
 struct LLVMDialectImpl;
-struct BitmaskEnumStorage;
 struct LoopOptionAttrStorage;
 } // namespace detail
-
-/// An attribute that specifies LLVM instruction fastmath flags.
-class FMFAttr : public Attribute::AttrBase<FMFAttr, Attribute,
-                                           detail::BitmaskEnumStorage> {
-public:
-  using Base::Base;
-
-  static FMFAttr get(FastmathFlags flags, MLIRContext *context);
-
-  FastmathFlags getFlags() const;
-
-  void print(DialectAsmPrinter &p) const;
-  static Attribute parse(DialectAsmParser &parser);
-};
 
 /// An attribute that specifies LLVM loop codegen options.
 class LoopOptionAttr
