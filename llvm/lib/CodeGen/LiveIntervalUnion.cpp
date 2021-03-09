@@ -112,7 +112,7 @@ LiveInterval *LiveIntervalUnion::getOneVReg() const {
 // Scan the vector of interfering virtual registers in this union. Assume it's
 // quite small.
 bool LiveIntervalUnion::Query::isSeenInterference(LiveInterval *VirtReg) const {
-  return is_contained(InterferingVRegs, VirtReg);
+  return is_contained(*InterferingVRegs, VirtReg);
 }
 
 // Collect virtual registers in this union that interfere with this
@@ -126,9 +126,12 @@ bool LiveIntervalUnion::Query::isSeenInterference(LiveInterval *VirtReg) const {
 //
 unsigned LiveIntervalUnion::Query::
 collectInterferingVRegs(unsigned MaxInterferingRegs) {
+  if (!InterferingVRegs)
+    InterferingVRegs.emplace();
+
   // Fast path return if we already have the desired information.
-  if (SeenAllInterferences || InterferingVRegs.size() >= MaxInterferingRegs)
-    return InterferingVRegs.size();
+  if (SeenAllInterferences || InterferingVRegs->size() >= MaxInterferingRegs)
+    return InterferingVRegs->size();
 
   // Set up iterators on the first call.
   if (!CheckedFirstInterference) {
@@ -157,14 +160,14 @@ collectInterferingVRegs(unsigned MaxInterferingRegs) {
       LiveInterval *VReg = LiveUnionI.value();
       if (VReg != RecentReg && !isSeenInterference(VReg)) {
         RecentReg = VReg;
-        InterferingVRegs.push_back(VReg);
-        if (InterferingVRegs.size() >= MaxInterferingRegs)
-          return InterferingVRegs.size();
+        InterferingVRegs->push_back(VReg);
+        if (InterferingVRegs->size() >= MaxInterferingRegs)
+          return InterferingVRegs->size();
       }
       // This LiveUnion segment is no longer interesting.
       if (!(++LiveUnionI).valid()) {
         SeenAllInterferences = true;
-        return InterferingVRegs.size();
+        return InterferingVRegs->size();
       }
     }
 
@@ -185,7 +188,7 @@ collectInterferingVRegs(unsigned MaxInterferingRegs) {
     LiveUnionI.advanceTo(LRI->start);
   }
   SeenAllInterferences = true;
-  return InterferingVRegs.size();
+  return InterferingVRegs->size();
 }
 
 void LiveIntervalUnion::Array::init(LiveIntervalUnion::Allocator &Alloc,
