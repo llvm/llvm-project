@@ -15,8 +15,8 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 tracksRegLiveness: true
-liveins:         
-frameInfo:       
+liveins:
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -34,13 +34,13 @@ frameInfo:
   localFrameSize:  0
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0:
     successors: %bb.1(0x80000000)
-  
+
     %27:vgpr_32 = nnan arcp contract reassoc V_MAD_F32_e64 0, undef %28:vgpr_32, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $mode
     %30:vgpr_32 = V_MIN_F32_e32 1065353216, killed %27, implicit $exec, implicit $mode
     %31:sreg_64_xexec = V_CMP_NEQ_F32_e64 0, 1065353216, 0, killed %30, 0, implicit $exec, implicit $mode
@@ -52,10 +52,10 @@ body:             |
     %107:sreg_64 = COPY killed %23
     %108:vreg_128 = IMPLICIT_DEF
     %109:vreg_128 = IMPLICIT_DEF
-  
+
   bb.1:
     successors: %bb.2(0x40000000), %bb.4(0x40000000)
-  
+
     %85:vreg_128 = COPY killed %109
     %2:vreg_128 = COPY killed %108
     %1:sreg_64 = COPY killed %107
@@ -63,18 +63,18 @@ body:             |
     %4:sreg_64 = COPY $exec, implicit-def $exec
     %112:sreg_64 = S_AND_B64 %4, %35, implicit-def dead $scc
     $exec = S_MOV_B64_term killed %112
-    SI_MASK_BRANCH %bb.4, implicit $exec
+    S_CBRANCH_EXECZ %bb.4, implicit $exec
     S_BRANCH %bb.2
-  
+
   bb.2:
     successors: %bb.3(0x40000000), %bb.5(0x40000000)
-  
+
     S_CBRANCH_SCC1 %bb.5, implicit undef $scc
     S_BRANCH %bb.3
-  
+
   bb.3:
     successors: %bb.5(0x80000000)
-  
+
     undef %39.sub0:sgpr_256 = COPY %38
     %39.sub1:sgpr_256 = COPY %38
     %39.sub2:sgpr_256 = COPY %38
@@ -85,17 +85,17 @@ body:             |
     %39.sub7:sgpr_256 = COPY %38
     dead %40:vgpr_32 = IMAGE_SAMPLE_LZ_V1_V4 undef %41:vreg_128, killed %39, undef %42:sgpr_128, 1, 0, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load 4 from constant-pool, addrspace 4)
     S_BRANCH %bb.5
-  
+
   bb.4:
     successors: %bb.6(0x80000000)
-  
+
     $exec = S_OR_B64 $exec, killed %4, implicit-def $scc
     %89:vreg_128 = COPY killed %110
     S_BRANCH %bb.6
-  
+
   bb.5:
     successors: %bb.4(0x80000000)
-  
+
     %51:vgpr_32 = COPY killed %2.sub1
     %53:vgpr_32 = COPY killed %51
     %53:vgpr_32 = V_MAC_F32_e32 target-flags(amdgpu-gotprel32-lo) 0, undef %100.sub1:vreg_128, %53, implicit $exec, implicit $mode
@@ -103,10 +103,10 @@ body:             |
     %88.sub1:vreg_128 = COPY killed %53
     %110:vreg_128 = COPY killed %88
     S_BRANCH %bb.4
-  
+
   bb.6:
     successors: %bb.7(0x04000000), %bb.1(0x7c000000)
-  
+
     %95:vgpr_32 = V_ADD_CO_U32_e32 1, %89.sub3, implicit-def dead $vcc, implicit $exec
     %91:vreg_128 = COPY killed %89
     %91.sub3:vreg_128 = COPY %95
@@ -125,28 +125,28 @@ body:             |
     $exec = S_ANDN2_B64_term $exec, %14, implicit-def dead $scc
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
     S_BRANCH %bb.7
-  
+
   bb.7:
     successors: %bb.8(0x40000000), %bb.9(0x40000000)
-  
+
     $exec = S_OR_B64 $exec, killed %14, implicit-def $scc
     %64:sreg_64 = V_CMP_NE_U32_e64 0, killed %13, implicit $exec
     %111:vreg_128 = COPY %91
     %16:sreg_64 = COPY $exec, implicit-def $exec
     %113:sreg_64 = S_AND_B64 %16, %64, implicit-def dead $scc
     $exec = S_MOV_B64_term killed %113
-    SI_MASK_BRANCH %bb.9, implicit $exec
+    S_CBRANCH_EXECZ %bb.9, implicit $exec
     S_BRANCH %bb.8
-  
+
   bb.8:
     successors: %bb.9(0x80000000)
-  
+
     %65:vgpr_32 = COPY killed %11.sub1
     %67:vgpr_32 = V_MAD_F32_e64 0, target-flags(amdgpu-gotprel32-hi) 0, 0, killed %91.sub2, 0, killed %65, 0, 0, implicit $exec, implicit $mode
     undef %102.sub1:vreg_128 = COPY killed %67
     %93:vreg_128 = COPY killed %102
     %111:vreg_128 = COPY killed %93
-  
+
   bb.9:
     $exec = S_OR_B64 $exec, killed %16, implicit-def $scc
     %92:vreg_128 = COPY killed %111
