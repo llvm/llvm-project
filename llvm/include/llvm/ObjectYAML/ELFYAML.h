@@ -161,7 +161,7 @@ struct BBAddrMapEntry {
     llvm::yaml::Hex64 Metadata;
   };
   llvm::yaml::Hex64 Address;
-  Optional<uint32_t> NumBlocks;
+  Optional<uint64_t> NumBlocks;
   Optional<std::vector<BBEntry>> BBEntries;
 };
 
