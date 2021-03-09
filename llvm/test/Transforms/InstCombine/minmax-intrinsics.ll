@@ -457,10 +457,12 @@ define i8 @umin_of_nots_uses(i8 %x, i8 %y) {
   ret i8 %m
 }
 
+; Canonicalize 'not' after min/max.
+
 define i8 @smax_of_not_and_const(i8 %x) {
 ; CHECK-LABEL: @smax_of_not_and_const(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[NOTX]], i8 42)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X:%.*]], i8 -43)
+; CHECK-NEXT:    [[M:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %notx = xor i8 %x, -1
@@ -468,10 +470,12 @@ define i8 @smax_of_not_and_const(i8 %x) {
   ret i8 %m
 }
 
+; Vectors are ok (including undef lanes of not ops and min/max constant operand)
+
 define <3 x i8> @smin_of_not_and_const(<3 x i8> %x) {
 ; CHECK-LABEL: @smin_of_not_and_const(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor <3 x i8> [[X:%.*]], <i8 -1, i8 -1, i8 undef>
-; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[NOTX]], <3 x i8> <i8 42, i8 undef, i8 43>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[X:%.*]], <3 x i8> <i8 -43, i8 undef, i8 -44>)
+; CHECK-NEXT:    [[M:%.*]] = xor <3 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
   %notx = xor <3 x i8> %x, <i8 -1, i8 -1, i8 undef>
@@ -481,8 +485,8 @@ define <3 x i8> @smin_of_not_and_const(<3 x i8> %x) {
 
 define i8 @umax_of_not_and_const(i8 %x) {
 ; CHECK-LABEL: @umax_of_not_and_const(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[NOTX]], i8 44)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 -45)
+; CHECK-NEXT:    [[M:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %notx = xor i8 %x, -1
@@ -492,14 +496,16 @@ define i8 @umax_of_not_and_const(i8 %x) {
 
 define i8 @umin_of_not_and_const(i8 %x) {
 ; CHECK-LABEL: @umin_of_not_and_const(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NOTX]], i8 -45)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 44)
+; CHECK-NEXT:    [[M:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %notx = xor i8 %x, -1
   %m = call i8 @llvm.umin.i8(i8 -45, i8 %notx)
   ret i8 %m
 }
+
+; Negative test - too many uses
 
 define i8 @umin_of_not_and_const_uses(i8 %x) {
 ; CHECK-LABEL: @umin_of_not_and_const_uses(
