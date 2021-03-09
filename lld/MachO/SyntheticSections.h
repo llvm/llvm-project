@@ -38,7 +38,6 @@ constexpr const char binding[] = "__binding";
 constexpr const char weakBinding[] = "__weak_binding";
 constexpr const char lazyBinding[] = "__lazy_binding";
 constexpr const char export_[] = "__export";
-constexpr const char functionStarts_[] = "__functionStarts";
 constexpr const char symbolTable[] = "__symbol_table";
 constexpr const char indirectSymbolTable[] = "__ind_sym_tab";
 constexpr const char stringTable[] = "__string_table";
@@ -398,17 +397,6 @@ private:
   size_t size = 0;
 };
 
-class FunctionStartsSection : public LinkEditSection {
-public:
-  FunctionStartsSection();
-  void finalizeContents();
-  uint64_t getRawSize() const override { return contents.size(); }
-  void writeTo(uint8_t *buf) const override;
-
-private:
-  SmallVector<char, 128> contents;
-};
-
 // Stores the strings referenced by the symbol table.
 class StringTableSection : public LinkEditSection {
 public:
@@ -529,7 +517,6 @@ struct InStruct {
   WeakBindingSection *weakBinding = nullptr;
   LazyBindingSection *lazyBinding = nullptr;
   ExportSection *exports = nullptr;
-  FunctionStartsSection *functionStarts = nullptr;
   GotSection *got = nullptr;
   TlvPointerSection *tlvPointers = nullptr;
   LazyPointerSection *lazyPointers = nullptr;
