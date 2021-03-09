@@ -294,8 +294,7 @@ void InconsistentDeclarationParameterNameCheck::storeOptions(
 
 void InconsistentDeclarationParameterNameCheck::registerMatchers(
     MatchFinder *Finder) {
-  Finder->addMatcher(functionDecl(unless(isImplicit()), hasOtherDeclarations())
-                         .bind("functionDecl"),
+  Finder->addMatcher(functionDecl(hasOtherDeclarations()).bind("functionDecl"),
                      this);
 }
 
