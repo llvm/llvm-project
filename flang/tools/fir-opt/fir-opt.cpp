@@ -22,7 +22,6 @@ int main(int argc, char **argv) {
   fir::registerOptimizerPasses();
   DialectRegistry registry;
   fir::support::registerDialects(registry);
-  registry.insert<fir::FIROpsDialect>();
   return failed(MlirOptMain(argc, argv, "FIR modular optimizer driver\n",
       registry, /*preloadDialectsInContext=*/false));
 }
