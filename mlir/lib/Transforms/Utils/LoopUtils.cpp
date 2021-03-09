@@ -2152,17 +2152,28 @@ void mlir::mapLoopToProcessorIds(scf::ForOp forOp, ArrayRef<Value> processorId,
 
   OpBuilder b(forOp);
   Location loc(forOp.getLoc());
-  Value mul = processorId.front();
-  for (unsigned i = 1, e = processorId.size(); i < e; ++i)
-    mul = b.create<AddIOp>(loc, b.create<MulIOp>(loc, mul, numProcessors[i]),
-                           processorId[i]);
-  Value lb = b.create<AddIOp>(loc, forOp.lowerBound(),
-                              b.create<MulIOp>(loc, forOp.step(), mul));
+  AffineExpr lhs, rhs;
+  bindSymbols(forOp.getContext(), lhs, rhs);
+  auto mulMap = AffineMap::get(0, 2, lhs * rhs);
+  auto addMap = AffineMap::get(0, 2, lhs + rhs);
+
+  Value linearIndex = processorId.front();
+  for (unsigned i = 1, e = processorId.size(); i < e; ++i) {
+    auto mulApplyOp = b.create<AffineApplyOp>(
+        loc, mulMap, ValueRange{linearIndex, numProcessors[i]});
+    linearIndex = b.create<AffineApplyOp>(
+        loc, addMap, ValueRange{mulApplyOp, processorId[i]});
+  }
+
+  auto mulApplyOp = b.create<AffineApplyOp>(
+      loc, mulMap, ValueRange{linearIndex, forOp.step()});
+  Value lb = b.create<AffineApplyOp>(
+      loc, addMap, ValueRange{mulApplyOp, forOp.lowerBound()});
   forOp.setLowerBound(lb);
 
   Value step = forOp.step();
   for (auto numProcs : numProcessors)
-    step = b.create<MulIOp>(loc, step, numProcs);
+    step = b.create<AffineApplyOp>(loc, mulMap, ValueRange{numProcs, step});
   forOp.setStep(step);
 }
 

@@ -11557,9 +11557,9 @@ public:
   QualType CXXCheckConditionalOperands( // C++ 5.16
     ExprResult &cond, ExprResult &lhs, ExprResult &rhs,
     ExprValueKind &VK, ExprObjectKind &OK, SourceLocation questionLoc);
-  QualType CheckGNUVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
-                                          ExprResult &RHS,
-                                          SourceLocation QuestionLoc);
+  QualType CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
+                                       ExprResult &RHS,
+                                       SourceLocation QuestionLoc);
   QualType FindCompositePointerType(SourceLocation Loc, Expr *&E1, Expr *&E2,
                                     bool ConvertArgs = true);
   QualType FindCompositePointerType(SourceLocation Loc,

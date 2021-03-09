@@ -13,6 +13,7 @@
 #include "support/Path.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
 #include <string>
 #include <vector>
@@ -27,7 +28,7 @@ namespace clangd {
 class DraftStore {
 public:
   struct Draft {
-    std::string Contents;
+    std::shared_ptr<const std::string> Contents;
     std::string Version;
   };
 
@@ -47,9 +48,15 @@ public:
   /// Remove the draft from the store.
   void removeDraft(PathRef File);
 
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> asVFS() const;
+
 private:
+  struct DraftAndTime {
+    Draft Draft;
+    std::time_t MTime;
+  };
   mutable std::mutex Mutex;
-  llvm::StringMap<Draft> Drafts;
+  llvm::StringMap<DraftAndTime> Drafts;
 };
 
 } // namespace clangd
