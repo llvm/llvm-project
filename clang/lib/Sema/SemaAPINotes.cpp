@@ -357,7 +357,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
           auto *VD = lookupResult.getAsSingle<VarDecl>();
 
           if (!VD) {
-            S.Diag(D->getLocation(), diag::warn_nserrordomain_invalid_decl) << 0;
+            S.Diag(D->getLocation(), diag::err_nserrordomain_invalid_decl) << 0;
             return nullptr;
           }
 
