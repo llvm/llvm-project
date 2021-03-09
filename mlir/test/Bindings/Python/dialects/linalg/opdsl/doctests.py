@@ -9,5 +9,5 @@ def test_module(module_name):
   doctest.testmod(m, verbose=True, raise_on_error=True, report=True)
 
 
-test_module("mlir.tools.linalg_opdsl.lang.affine")
-test_module("mlir.tools.linalg_opdsl.lang.types")
+test_module("mlir.dialects.linalg.opdsl.lang.affine")
+test_module("mlir.dialects.linalg.opdsl.lang.types")
