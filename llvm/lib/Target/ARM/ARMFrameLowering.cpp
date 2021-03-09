@@ -9,6 +9,102 @@
 // This file contains the ARM implementation of TargetFrameLowering class.
 //
 //===----------------------------------------------------------------------===//
+//
+// This file contains the ARM implementation of TargetFrameLowering class.
+//
+// On ARM, stack frames are structured as follows:
+//
+// The stack grows downward.
+//
+// All of the individual frame areas on the frame below are optional, i.e. it's
+// possible to create a function so that the particular area isn't present
+// in the frame.
+//
+// At function entry, the "frame" looks as follows:
+//
+// |                                   | Higher address
+// |-----------------------------------|
+// |                                   |
+// | arguments passed on the stack     |
+// |                                   |
+// |-----------------------------------| <- sp
+// |                                   | Lower address
+//
+//
+// After the prologue has run, the frame has the following general structure.
+// Technically the last frame area (VLAs) doesn't get created until in the
+// main function body, after the prologue is run. However, it's depicted here
+// for completeness.
+//
+// |                                   | Higher address
+// |-----------------------------------|
+// |                                   |
+// | arguments passed on the stack     |
+// |                                   |
+// |-----------------------------------| <- (sp at function entry)
+// |                                   |
+// | varargs from registers            |
+// |                                   |
+// |-----------------------------------|
+// |                                   |
+// | prev_fp, prev_lr                  |
+// | (a.k.a. "frame record")           |
+// |                                   |
+// |- - - - - - - - - - - - - - - - - -| <- fp (r7 or r11)
+// |                                   |
+// | callee-saved gpr registers        |
+// |                                   |
+// |-----------------------------------|
+// |                                   |
+// | callee-saved fp/simd regs         |
+// |                                   |
+// |-----------------------------------|
+// |.empty.space.to.make.part.below....|
+// |.aligned.in.case.it.needs.more.than| (size of this area is unknown at
+// |.the.standard.8-byte.alignment.....|  compile time; if present)
+// |-----------------------------------|
+// |                                   |
+// | local variables of fixed size     |
+// | including spill slots             |
+// |-----------------------------------| <- base pointer (not defined by ABI,
+// |.variable-sized.local.variables....|       LLVM chooses r6)
+// |.(VLAs)............................| (size of this area is unknown at
+// |...................................|  compile time)
+// |-----------------------------------| <- sp
+// |                                   | Lower address
+//
+//
+// To access the data in a frame, at-compile time, a constant offset must be
+// computable from one of the pointers (fp, bp, sp) to access it. The size
+// of the areas with a dotted background cannot be computed at compile-time
+// if they are present, making it required to have all three of fp, bp and
+// sp to be set up to be able to access all contents in the frame areas,
+// assuming all of the frame areas are non-empty.
+//
+// For most functions, some of the frame areas are empty. For those functions,
+// it may not be necessary to set up fp or bp:
+// * A base pointer is definitely needed when there are both VLAs and local
+//   variables with more-than-default alignment requirements.
+// * A frame pointer is definitely needed when there are local variables with
+//   more-than-default alignment requirements.
+//
+// In some cases when a base pointer is not strictly needed, it is generated
+// anyway when offsets from the frame pointer to access local variables become
+// so large that the offset can't be encoded in the immediate fields of loads
+// or stores.
+//
+// The frame pointer might be chosen to be r7 or r11, depending on the target
+// architecture and operating system. See ARMSubtarget::useR7AsFramePointer for
+// details.
+//
+// Outgoing function arguments must be at the bottom of the stack frame when
+// calling another function. If we do not have variable-sized stack objects, we
+// can allocate a "reserved call frame" area at the bottom of the local
+// variable area, large enough for all outgoing calls. If we do have VLAs, then
+// the stack pointer must be decremented and incremented around each call to
+// make space for the arguments below the VLAs.
+//
+//===----------------------------------------------------------------------===//
 
 #include "ARMFrameLowering.h"
 #include "ARMBaseInstrInfo.h"
