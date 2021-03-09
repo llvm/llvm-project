@@ -42,15 +42,16 @@ TEST_CASE(basic_test)
     } TestCases [] = {
         {"", cwd / ""},
         {"foo", cwd / "foo"},
-        {"foo/", cwd / "foo" / ""},
-        {"/already_absolute", cwd.root_path() / "already_absolute"}
+        {"foo/", cwd / "foo/"},
+        {"/already_absolute", cwd.root_name() / "/already_absolute"}
     };
     for (auto& TC : TestCases) {
         std::error_code ec = GetTestEC();
         const path ret = absolute(TC.input, ec);
         TEST_CHECK(!ec);
         TEST_CHECK(ret.is_absolute());
-        TEST_CHECK(PathEq(ret, TC.expect));
+        TEST_CHECK(PathEqIgnoreSep(ret, TC.expect));
+        LIBCPP_ONLY(TEST_CHECK(PathEq(ret, TC.expect)));
     }
 }
 

@@ -15,6 +15,7 @@
 
 #include "RISCVRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "RISCVGenInstrInfo.inc"

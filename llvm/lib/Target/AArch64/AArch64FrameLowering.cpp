@@ -107,8 +107,14 @@
 // so large that the offset can't be encoded in the immediate fields of loads
 // or stores.
 //
+// Outgoing function arguments must be at the bottom of the stack frame when
+// calling another function. If we do not have variable-sized stack objects, we
+// can allocate a "reserved call frame" area at the bottom of the local
+// variable area, large enough for all outgoing calls. If we do have VLAs, then
+// the stack pointer must be decremented and incremented around each call to
+// make space for the arguments below the VLAs.
+//
 // FIXME: also explain the redzone concept.
-// FIXME: also explain the concept of reserved call frames.
 //
 //===----------------------------------------------------------------------===//
 

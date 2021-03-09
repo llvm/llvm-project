@@ -2494,6 +2494,12 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
     if (!CD || (!FTD && CD->isFunctionTemplateSpecialization()))
       continue;
 
+    // Cannot make a deduction guide when unparsed arguments are present.
+    if (std::any_of(CD->param_begin(), CD->param_end(), [](ParmVarDecl *P) {
+          return !P || P->hasUnparsedDefaultArg();
+        }))
+      continue;
+
     Transform.transformConstructor(FTD, CD);
     AddedAny = true;
   }
