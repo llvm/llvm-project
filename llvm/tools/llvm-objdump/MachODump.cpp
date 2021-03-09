@@ -129,6 +129,12 @@ cl::opt<bool> objdump::DataInCode(
     cl::cat(MachOCat));
 
 cl::opt<bool>
+    objdump::FunctionStarts("function-starts",
+                            cl::desc("Print the function starts table for "
+                                     "Mach-O objects (requires --macho)"),
+                            cl::cat(MachOCat));
+
+cl::opt<bool>
     objdump::LinkOptHints("link-opt-hints",
                           cl::desc("Print the linker optimization hints for "
                                    "Mach-O objects (requires --macho)"),
@@ -1103,6 +1109,43 @@ static void PrintRelocations(const MachOObjectFile *O, const bool verbose) {
   }
 }
 
+static void PrintFunctionStarts(MachOObjectFile *O) {
+  uint64_t BaseSegmentAddress = 0;
+  for (const MachOObjectFile::LoadCommandInfo &Command : O->load_commands()) {
+    if (Command.C.cmd == MachO::LC_SEGMENT) {
+      MachO::segment_command SLC = O->getSegmentLoadCommand(Command);
+      if (StringRef(SLC.segname) == "__TEXT") {
+        BaseSegmentAddress = SLC.vmaddr;
+        break;
+      }
+    } else if (Command.C.cmd == MachO::LC_SEGMENT_64) {
+      MachO::segment_command_64 SLC = O->getSegment64LoadCommand(Command);
+      if (StringRef(SLC.segname) == "__TEXT") {
+        BaseSegmentAddress = SLC.vmaddr;
+        break;
+      }
+    }
+  }
+
+  SmallVector<uint64_t, 8> FunctionStarts;
+  for (const MachOObjectFile::LoadCommandInfo &LC : O->load_commands()) {
+    if (LC.C.cmd == MachO::LC_FUNCTION_STARTS) {
+      MachO::linkedit_data_command FunctionStartsLC =
+          O->getLinkeditDataLoadCommand(LC);
+      O->ReadULEB128s(FunctionStartsLC.dataoff, FunctionStarts);
+      break;
+    }
+  }
+
+  for (uint64_t S : FunctionStarts) {
+    uint64_t Addr = BaseSegmentAddress + S;
+    if (O->is64Bit())
+      outs() << format("%016" PRIx64, Addr) << "\n";
+    else
+      outs() << format("%08" PRIx32, static_cast<uint32_t>(Addr)) << "\n";
+  }
+}
+
 static void PrintDataInCodeTable(MachOObjectFile *O, bool verbose) {
   MachO::linkedit_data_command DIC = O->getDataInCodeLoadCommand();
   uint32_t nentries = DIC.datasize / sizeof(struct MachO::data_in_code_entry);
@@ -1910,8 +1953,8 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   // UniversalHeaders or ArchiveHeaders.
   if (Disassemble || Relocations || PrivateHeaders || ExportsTrie || Rebase ||
       Bind || SymbolTable || LazyBind || WeakBind || IndirectSymbols ||
-      DataInCode || LinkOptHints || DylibsUsed || DylibId || ObjcMetaData ||
-      (!FilterSections.empty())) {
+      DataInCode || FunctionStarts || LinkOptHints || DylibsUsed || DylibId ||
+      ObjcMetaData || (!FilterSections.empty())) {
     if (!NoLeadingHeaders) {
       outs() << Name;
       if (!ArchiveMemberName.empty())
@@ -1966,6 +2009,8 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
     PrintIndirectSymbols(MachOOF, !NonVerbose);
   if (DataInCode)
     PrintDataInCodeTable(MachOOF, !NonVerbose);
+  if (FunctionStarts)
+    PrintFunctionStarts(MachOOF);
   if (LinkOptHints)
     PrintLinkOptHints(MachOOF);
   if (Relocations)
