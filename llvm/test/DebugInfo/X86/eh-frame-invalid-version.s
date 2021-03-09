@@ -1,9 +1,9 @@
 ## Check we do not support .eh_frame sections of versions greater than 1.
 
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t
-# RUN: not llvm-dwarfdump -debug-frame %t 2>&1 | FileCheck %s
+# RUN: llvm-dwarfdump -debug-frame %t 2>&1 | FileCheck %s
 
-# CHECK: unsupported CIE version: 2
+# CHECK: unsupported CIE version
 
 .section .eh_frame,"a",@unwind
  .long .Lend - .LCIEptr ## Length

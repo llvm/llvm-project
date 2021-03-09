@@ -3578,14 +3578,10 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
 
   // Update the arguments of a dbg.declare instruction, so that it
   // does not point into a sunk instruction.
-  auto updateDbgDeclare = [&I](DbgVariableIntrinsic *DII) {
+  auto updateDbgDeclare = [](DbgVariableIntrinsic *DII) {
     if (!isa<DbgDeclareInst>(DII))
       return false;
 
-    if (isa<CastInst>(I))
-      DII->setOperand(
-          0, MetadataAsValue::get(I->getContext(),
-                                  ValueAsMetadata::get(I->getOperand(0))));
     return true;
   };
 

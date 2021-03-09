@@ -42,9 +42,9 @@
 using namespace lldb_private;
 
 namespace {
-// Any Clang compiler requires a consumer for diagnostics.  This one stores
-// them as strings so we can provide them to the user in case a module failed
-// to load.
+/// Any Clang compiler requires a consumer for diagnostics.  This one stores
+/// them as strings so we can provide them to the user in case a module failed
+/// to load.
 class StoringDiagnosticConsumer : public clang::DiagnosticConsumer {
 public:
   StoringDiagnosticConsumer();
@@ -74,8 +74,8 @@ private:
   Log *m_log;
 };
 
-// The private implementation of our ClangModulesDeclVendor.  Contains all the
-// Clang state required to load modules.
+/// The private implementation of our ClangModulesDeclVendor.  Contains all the
+/// Clang state required to load modules.
 class ClangModulesDeclVendorImpl : public ClangModulesDeclVendor {
 public:
   ClangModulesDeclVendorImpl(
@@ -205,9 +205,8 @@ void ClangModulesDeclVendorImpl::ReportModuleExportsHelper(
 
   module->getExportedModules(sub_exports);
 
-  for (clang::Module *module : sub_exports) {
+  for (clang::Module *module : sub_exports)
     ReportModuleExportsHelper(exports, module);
-  }
 }
 
 void ClangModulesDeclVendorImpl::ReportModuleExports(
@@ -216,9 +215,8 @@ void ClangModulesDeclVendorImpl::ReportModuleExports(
 
   ReportModuleExportsHelper(exports_set, module);
 
-  for (ModuleID module : exports_set) {
+  for (ModuleID module : exports_set)
     exports.push_back(module);
-  }
 }
 
 bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
@@ -236,17 +234,15 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
 
   std::vector<ConstString> imported_module;
 
-  for (ConstString path_component : module.path) {
+  for (ConstString path_component : module.path)
     imported_module.push_back(path_component);
-  }
 
   {
     ImportedModuleMap::iterator mi = m_imported_modules.find(imported_module);
 
     if (mi != m_imported_modules.end()) {
-      if (exported_modules) {
+      if (exported_modules)
         ReportModuleExports(*exported_modules, mi->second);
-      }
       return true;
     }
   }
@@ -337,9 +333,8 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
   clang::Module *requested_module = DoGetModule(clang_path, true);
 
   if (requested_module != nullptr) {
-    if (exported_modules) {
+    if (exported_modules)
       ReportModuleExports(*exported_modules, requested_module);
-    }
 
     m_imported_modules[imported_module] = requested_module;
 
@@ -387,9 +382,8 @@ uint32_t
 ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
                                       uint32_t max_matches,
                                       std::vector<CompilerDecl> &decls) {
-  if (!m_enabled) {
+  if (!m_enabled)
     return 0;
-  }
 
   if (!append)
     decls.clear();
@@ -422,18 +416,16 @@ ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
 void ClangModulesDeclVendorImpl::ForEachMacro(
     const ClangModulesDeclVendor::ModuleVector &modules,
     std::function<bool(llvm::StringRef, llvm::StringRef)> handler) {
-  if (!m_enabled) {
+  if (!m_enabled)
     return;
-  }
 
   typedef std::map<ModuleID, ssize_t> ModulePriorityMap;
   ModulePriorityMap module_priorities;
 
   ssize_t priority = 0;
 
-  for (ModuleID module : modules) {
+  for (ModuleID module : modules)
     module_priorities[module] = priority++;
-  }
 
   if (m_compiler_instance->getPreprocessor().getExternalSource()) {
     m_compiler_instance->getPreprocessor()
@@ -454,9 +446,8 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
                   .getExternalIdentifierLookup()) {
         lookup->get(mi->first->getName());
       }
-      if (!ii) {
+      if (!ii)
         ii = mi->first;
-      }
     }
 
     ssize_t found_priority = -1;
@@ -503,24 +494,21 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
           for (auto pi = macro_info->param_begin(),
                     pe = macro_info->param_end();
                pi != pe; ++pi) {
-            if (!first_arg) {
+            if (!first_arg)
               macro_expansion.append(", ");
-            } else {
+            else
               first_arg = false;
-            }
 
             macro_expansion.append((*pi)->getName().str());
           }
 
           if (macro_info->isC99Varargs()) {
-            if (first_arg) {
+            if (first_arg)
               macro_expansion.append("...");
-            } else {
+            else
               macro_expansion.append(", ...");
-            }
-          } else if (macro_info->isGNUVarargs()) {
+          } else if (macro_info->isGNUVarargs())
             macro_expansion.append("...");
-          }
 
           macro_expansion.append(")");
         }
@@ -532,11 +520,10 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
         for (clang::MacroInfo::tokens_iterator ti = macro_info->tokens_begin(),
                                                te = macro_info->tokens_end();
              ti != te; ++ti) {
-          if (!first_token) {
+          if (!first_token)
             macro_expansion.append(" ");
-          } else {
+          else
             first_token = false;
-          }
 
           if (ti->isLiteral()) {
             if (const char *literal_data = ti->getLiteralData()) {

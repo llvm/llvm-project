@@ -19,7 +19,7 @@ vector.body:
   %wide.load = load <2 x double>, <2 x double>* %0, align 8
   %1 = bitcast double* %next.gep31 to <2 x double>*
   %wide.load33 = load <2 x double>, <2 x double>* %1, align 8
-  %2 = call ninf afn nsz <2 x double> @__powd2_massv(<2 x double> %wide.load, <2 x double> %wide.load33)
+  %2 = call ninf afn nsz <2 x double> @__powd2_P8(<2 x double> %wide.load, <2 x double> %wide.load33)
   %3 = bitcast double* %next.gep to <2 x double>*
   store <2 x double> %2, <2 x double>* %3, align 8
   %index.next = add i64 %index, 2
@@ -45,7 +45,7 @@ vector.body:
   %next.gep19 = getelementptr double, double* %x, i64 %index
   %0 = bitcast double* %next.gep19 to <2 x double>*
   %wide.load = load <2 x double>, <2 x double>* %0, align 8
-  %1 = call ninf afn nsz <2 x double> @__powd2_massv(<2 x double> %wide.load, <2 x double> <double 7.600000e-01, double 7.600000e-01>)
+  %1 = call ninf afn nsz <2 x double> @__powd2_P8(<2 x double> %wide.load, <2 x double> <double 7.600000e-01, double 7.600000e-01>)
   %2 = bitcast double* %next.gep to <2 x double>*
   store <2 x double> %1, <2 x double>* %2, align 8
   %index.next = add i64 %index, 2
@@ -71,7 +71,7 @@ vector.body:
   %next.gep19 = getelementptr double, double* %x, i64 %index
   %0 = bitcast double* %next.gep19 to <2 x double>*
   %wide.load = load <2 x double>, <2 x double>* %0, align 8
-  %1 = call ninf afn nsz <2 x double> @__powd2_massv(<2 x double> %wide.load, <2 x double> <double 7.700000e-01, double 7.600000e-01>)
+  %1 = call ninf afn nsz <2 x double> @__powd2_P8(<2 x double> %wide.load, <2 x double> <double 7.700000e-01, double 7.600000e-01>)
   %2 = bitcast double* %next.gep to <2 x double>*
   store <2 x double> %1, <2 x double>* %2, align 8
   %index.next = add i64 %index, 2
@@ -97,7 +97,7 @@ vector.body:
   %next.gep19 = getelementptr double, double* %x, i64 %index
   %0 = bitcast double* %next.gep19 to <2 x double>*
   %wide.load = load <2 x double>, <2 x double>* %0, align 8
-  %1 = call ninf afn nsz <2 x double> @__powd2_massv(<2 x double> %wide.load, <2 x double> <double 7.700000e-01, double 7.500000e-01>)
+  %1 = call ninf afn nsz <2 x double> @__powd2_P8(<2 x double> %wide.load, <2 x double> <double 7.700000e-01, double 7.500000e-01>)
   %2 = bitcast double* %next.gep to <2 x double>*
   store <2 x double> %1, <2 x double>* %2, align 8
   %index.next = add i64 %index, 2
@@ -123,7 +123,7 @@ vector.body:
   %next.gep19 = getelementptr double, double* %x, i64 %index
   %0 = bitcast double* %next.gep19 to <2 x double>*
   %wide.load = load <2 x double>, <2 x double>* %0, align 8
-  %1 = call ninf afn nsz <2 x double> @__powd2_massv(<2 x double> %wide.load, <2 x double> <double 7.700000e-01, double 2.500000e-01>)
+  %1 = call ninf afn nsz <2 x double> @__powd2_P8(<2 x double> %wide.load, <2 x double> <double 7.700000e-01, double 2.500000e-01>)
   %2 = bitcast double* %next.gep to <2 x double>*
   store <2 x double> %1, <2 x double>* %2, align 8
   %index.next = add i64 %index, 2
@@ -149,7 +149,7 @@ vector.body:
   %next.gep19 = getelementptr double, double* %x, i64 %index
   %0 = bitcast double* %next.gep19 to <2 x double>*
   %wide.load = load <2 x double>, <2 x double>* %0, align 8
-  %1 = call ninf afn <2 x double> @__powd2_massv(<2 x double> %wide.load, <2 x double> <double 7.500000e-01, double 7.500000e-01>)
+  %1 = call ninf afn <2 x double> @__powd2_P8(<2 x double> %wide.load, <2 x double> <double 7.500000e-01, double 7.500000e-01>)
   %2 = bitcast double* %next.gep to <2 x double>*
   store <2 x double> %1, <2 x double>* %2, align 8
   %index.next = add i64 %index, 2
@@ -175,7 +175,7 @@ vector.body:
   %next.gep19 = getelementptr double, double* %x, i64 %index
   %0 = bitcast double* %next.gep19 to <2 x double>*
   %wide.load = load <2 x double>, <2 x double>* %0, align 8
-  %1 = call ninf afn nsz <2 x double> @__powd2_massv(<2 x double> %wide.load, <2 x double> <double 2.500000e-01, double 2.500000e-01>)
+  %1 = call ninf afn nsz <2 x double> @__powd2_P8(<2 x double> %wide.load, <2 x double> <double 2.500000e-01, double 2.500000e-01>)
   %2 = bitcast double* %next.gep to <2 x double>*
   store <2 x double> %1, <2 x double>* %2, align 8
   %index.next = add i64 %index, 2
@@ -202,7 +202,7 @@ vector.body:
   %next.gep19 = getelementptr double, double* %x, i64 %index
   %0 = bitcast double* %next.gep19 to <2 x double>*
   %wide.load = load <2 x double>, <2 x double>* %0, align 8
-  %1 = call <2 x double> @__powd2_massv(<2 x double> %wide.load, <2 x double> <double 7.500000e-01, double 7.500000e-01>)
+  %1 = call <2 x double> @__powd2_P8(<2 x double> %wide.load, <2 x double> <double 7.500000e-01, double 7.500000e-01>)
   %2 = bitcast double* %next.gep to <2 x double>*
   store <2 x double> %1, <2 x double>* %2, align 8
   %index.next = add i64 %index, 2
@@ -229,7 +229,7 @@ vector.body:
   %next.gep19 = getelementptr double, double* %x, i64 %index
   %0 = bitcast double* %next.gep19 to <2 x double>*
   %wide.load = load <2 x double>, <2 x double>* %0, align 8
-  %1 = call <2 x double> @__powd2_massv(<2 x double> %wide.load, <2 x double> <double 2.500000e-01, double 2.500000e-01>)
+  %1 = call <2 x double> @__powd2_P8(<2 x double> %wide.load, <2 x double> <double 2.500000e-01, double 2.500000e-01>)
   %2 = bitcast double* %next.gep to <2 x double>*
   store <2 x double> %1, <2 x double>* %2, align 8
   %index.next = add i64 %index, 2
@@ -241,4 +241,4 @@ for.end:
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare <2 x double> @__powd2_massv(<2 x double>, <2 x double>) #1
+declare <2 x double> @__powd2_P8(<2 x double>, <2 x double>) #1

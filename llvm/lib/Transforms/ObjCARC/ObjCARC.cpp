@@ -14,7 +14,7 @@
 
 #include "ObjCARC.h"
 #include "llvm-c/Initialization.h"
-#include "llvm/IR/ObjCARCUtil.h"
+#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"

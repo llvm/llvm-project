@@ -1332,7 +1332,7 @@ getIVIncrement(const PHINode *PN, const LoopInfo *LI) {
 
 static bool isIVIncrement(const BinaryOperator *BO, const LoopInfo *LI) {
   auto *PN = dyn_cast<PHINode>(BO->getOperand(0));
-  if (!PN)
+  if (!PN || LI->getLoopFor(BO->getParent()) != LI->getLoopFor(PN->getParent()))
     return false;
   if (auto IVInc = getIVIncrement(PN, LI))
     return IVInc->first == BO;
@@ -1347,6 +1347,7 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     if (!isIVIncrement(BO, LI))
       return false;
     const Loop *L = LI->getLoopFor(BO->getParent());
+    assert(L && "L should not be null after isIVIncrement()");
     // IV increment may have other users than the IV. We do not want to make
     // dominance queries to analyze the legality of moving it towards the cmp,
     // so just check that there is no other users.
@@ -2883,11 +2884,8 @@ class TypePromotionTransaction {
       // including the debug uses. Since we are undoing the replacements,
       // the original debug uses must also be reinstated to maintain the
       // correctness and utility of debug value instructions.
-      for (auto *DVI: DbgValues) {
-        LLVMContext &Ctx = Inst->getType()->getContext();
-        auto *MV = MetadataAsValue::get(Ctx, ValueAsMetadata::get(Inst));
-        DVI->setOperand(0, MV);
-      }
+      for (auto *DVI : DbgValues)
+        DVI->replaceVariableLocationOp(DVI->getVariableLocationOp(0), Inst);
     }
   };
 
@@ -7878,7 +7876,7 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
   DbgValueInst &DVI = *cast<DbgValueInst>(I);
 
   // Does this dbg.value refer to a sunk address calculation?
-  Value *Location = DVI.getVariableLocation();
+  Value *Location = DVI.getVariableLocationOp(0);
   WeakTrackingVH SunkAddrVH = SunkAddrs[Location];
   Value *SunkAddr = SunkAddrVH.pointsToAliveValue() ? SunkAddrVH : nullptr;
   if (SunkAddr) {
@@ -7886,8 +7884,7 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
     // opportunity to be accurately lowered. This update may change the type of
     // pointer being referred to; however this makes no difference to debugging
     // information, and we can't generate bitcasts that may affect codegen.
-    DVI.setOperand(0, MetadataAsValue::get(DVI.getContext(),
-                                           ValueAsMetadata::get(SunkAddr)));
+    DVI.replaceVariableLocationOp(Location, SunkAddr);
     return true;
   }
   return false;

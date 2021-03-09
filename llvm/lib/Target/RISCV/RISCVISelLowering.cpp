@@ -2388,27 +2388,26 @@ static MVT getLMUL1VT(MVT VT) {
       RISCV::RVVBitsPerBlock / VT.getVectorElementType().getSizeInBits());
 }
 
-static std::pair<unsigned, uint64_t>
-getRVVReductionOpAndIdentityVal(unsigned ISDOpcode, unsigned EltSizeBits) {
+static unsigned getRVVReductionOp(unsigned ISDOpcode) {
   switch (ISDOpcode) {
   default:
     llvm_unreachable("Unhandled reduction");
   case ISD::VECREDUCE_ADD:
-    return {RISCVISD::VECREDUCE_ADD, 0};
+    return RISCVISD::VECREDUCE_ADD;
   case ISD::VECREDUCE_UMAX:
-    return {RISCVISD::VECREDUCE_UMAX, 0};
+    return RISCVISD::VECREDUCE_UMAX;
   case ISD::VECREDUCE_SMAX:
-    return {RISCVISD::VECREDUCE_SMAX, minIntN(EltSizeBits)};
+    return RISCVISD::VECREDUCE_SMAX;
   case ISD::VECREDUCE_UMIN:
-    return {RISCVISD::VECREDUCE_UMIN, maxUIntN(EltSizeBits)};
+    return RISCVISD::VECREDUCE_UMIN;
   case ISD::VECREDUCE_SMIN:
-    return {RISCVISD::VECREDUCE_SMIN, maxIntN(EltSizeBits)};
+    return RISCVISD::VECREDUCE_SMIN;
   case ISD::VECREDUCE_AND:
-    return {RISCVISD::VECREDUCE_AND, -1};
+    return RISCVISD::VECREDUCE_AND;
   case ISD::VECREDUCE_OR:
-    return {RISCVISD::VECREDUCE_OR, 0};
+    return RISCVISD::VECREDUCE_OR;
   case ISD::VECREDUCE_XOR:
-    return {RISCVISD::VECREDUCE_XOR, 0};
+    return RISCVISD::VECREDUCE_XOR;
   }
 }
 
@@ -2423,13 +2422,11 @@ SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
          "Unexpected vector-reduce lowering");
   MVT VecVT = Op.getOperand(0).getSimpleValueType();
   MVT VecEltVT = VecVT.getVectorElementType();
-  unsigned RVVOpcode;
-  uint64_t IdentityVal;
-  std::tie(RVVOpcode, IdentityVal) =
-      getRVVReductionOpAndIdentityVal(Op.getOpcode(), VecEltVT.getSizeInBits());
+  unsigned RVVOpcode = getRVVReductionOp(Op.getOpcode());
   MVT M1VT = getLMUL1VT(VecVT);
-  SDValue IdentitySplat =
-      DAG.getSplatVector(M1VT, DL, DAG.getConstant(IdentityVal, DL, VecEltVT));
+  SDValue NeutralElem = DAG.getNeutralElement(
+      ISD::getVecReduceBaseOpcode(Op.getOpcode()), DL, VecEltVT, SDNodeFlags());
+  SDValue IdentitySplat = DAG.getSplatVector(M1VT, DL, NeutralElem);
   SDValue Reduction =
       DAG.getNode(RVVOpcode, DL, M1VT, Op.getOperand(0), IdentitySplat);
   SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VecEltVT, Reduction,

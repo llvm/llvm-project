@@ -478,7 +478,9 @@ private:
     sourceLabels_.clear();
     targetLabels_.clear();
   };
+
   bool HasSymbolInEnclosingScope(const Symbol &, Scope &);
+  std::int64_t ordCollapseLevel{0};
 };
 
 template <typename T>
@@ -1084,6 +1086,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
     }
   }
   PrivatizeAssociatedLoopIndexAndCheckLoopLevel(x);
+  ordCollapseLevel = GetAssociatedLoopLevelFromClauses(clauseList) + 1;
   return true;
 }
 
@@ -1126,6 +1129,17 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
           ResolveSeqLoopIndexInParallelOrTaskConstruct(iv);
         } else {
           // TODO: conflict checks with explicitly determined DSA
+        }
+        ordCollapseLevel--;
+        if (ordCollapseLevel) {
+          if (const auto *details{iv.symbol->detailsIf<HostAssocDetails>()}) {
+            const Symbol *tpSymbol = &details->symbol();
+            if (tpSymbol->test(Symbol::Flag::OmpThreadprivate)) {
+              context_.Say(iv.source,
+                  "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
+                  iv.ToString());
+            }
+          }
         }
       }
     }

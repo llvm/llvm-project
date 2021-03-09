@@ -179,9 +179,7 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
         NewVal = SSA.GetValueInMiddleOfBlock(UserBB);
       else
         NewVal = UndefValue::get(OrigHeaderVal->getType());
-      DbgValue->setOperand(0,
-                           MetadataAsValue::get(OrigHeaderVal->getContext(),
-                                                ValueAsMetadata::get(NewVal)));
+      DbgValue->replaceVariableLocationOp(OrigHeaderVal, NewVal);
     }
   }
 }
@@ -390,7 +388,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     using DbgIntrinsicHash =
       std::pair<std::pair<Value *, DILocalVariable *>, DIExpression *>;
     auto makeHash = [](DbgVariableIntrinsic *D) -> DbgIntrinsicHash {
-      return {{D->getVariableLocation(), D->getVariable()}, D->getExpression()};
+      return {{D->getVariableLocationOp(0), D->getVariable()},
+              D->getExpression()};
     };
     SmallDenseSet<DbgIntrinsicHash, 8> DbgIntrinsics;
     for (auto I = std::next(OrigPreheader->rbegin()), E = OrigPreheader->rend();

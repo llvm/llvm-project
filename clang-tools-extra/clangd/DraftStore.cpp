@@ -11,6 +11,8 @@
 #include "support/Logger.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include <memory>
 
 namespace clang {
 namespace clangd {
@@ -22,7 +24,7 @@ llvm::Optional<DraftStore::Draft> DraftStore::getDraft(PathRef File) const {
   if (It == Drafts.end())
     return None;
 
-  return It->second;
+  return It->second.Draft;
 }
 
 std::vector<Path> DraftStore::getActiveFiles() const {
@@ -75,10 +77,11 @@ std::string DraftStore::addDraft(PathRef File, llvm::StringRef Version,
                                  llvm::StringRef Contents) {
   std::lock_guard<std::mutex> Lock(Mutex);
 
-  Draft &D = Drafts[File];
-  updateVersion(D, Version);
-  D.Contents = Contents.str();
-  return D.Version;
+  auto &D = Drafts[File];
+  updateVersion(D.Draft, Version);
+  std::time(&D.MTime);
+  D.Draft.Contents = std::make_shared<std::string>(Contents);
+  return D.Draft.Version;
 }
 
 void DraftStore::removeDraft(PathRef File) {
@@ -87,5 +90,39 @@ void DraftStore::removeDraft(PathRef File) {
   Drafts.erase(File);
 }
 
+namespace {
+
+/// A read only MemoryBuffer shares ownership of a ref counted string. The
+/// shared string object must not be modified while an owned by this buffer.
+class SharedStringBuffer : public llvm::MemoryBuffer {
+  const std::shared_ptr<const std::string> BufferContents;
+  const std::string Name;
+
+public:
+  BufferKind getBufferKind() const override {
+    return MemoryBuffer::MemoryBuffer_Malloc;
+  }
+
+  StringRef getBufferIdentifier() const override { return Name; }
+
+  SharedStringBuffer(std::shared_ptr<const std::string> Data, StringRef Name)
+      : BufferContents(std::move(Data)), Name(Name) {
+    assert(BufferContents && "Can't create from empty shared_ptr");
+    MemoryBuffer::init(BufferContents->c_str(),
+                       BufferContents->c_str() + BufferContents->size(),
+                       /*RequiresNullTerminator=*/true);
+  }
+};
+} // namespace
+
+llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> DraftStore::asVFS() const {
+  auto MemFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  std::lock_guard<std::mutex> Guard(Mutex);
+  for (const auto &Draft : Drafts)
+    MemFS->addFile(Draft.getKey(), Draft.getValue().MTime,
+                   std::make_unique<SharedStringBuffer>(
+                       Draft.getValue().Draft.Contents, Draft.getKey()));
+  return MemFS;
+}
 } // namespace clangd
 } // namespace clang

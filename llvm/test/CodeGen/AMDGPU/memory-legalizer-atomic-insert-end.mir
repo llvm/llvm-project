@@ -86,7 +86,7 @@ body:             |
     V_CMP_NE_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
     $sgpr2_sgpr3 = S_AND_SAVEEXEC_B64 killed $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
     $sgpr2_sgpr3 = S_XOR_B64 $exec, killed $sgpr2_sgpr3, implicit-def dead $scc
-    SI_MASK_BRANCH %bb.2.exit, implicit $exec
+    S_CBRANCH_EXECZ %bb.2.exit, implicit $exec
 
   bb.1.atomic:
     successors: %bb.2.exit(0x80000000)

@@ -114,6 +114,25 @@ public:
   ExportSection *exportSection;
 };
 
+class LCFunctionStarts : public LoadCommand {
+public:
+  explicit LCFunctionStarts(FunctionStartsSection *functionStarts)
+      : functionStarts(functionStarts) {}
+
+  uint32_t getSize() const override { return sizeof(linkedit_data_command); }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<linkedit_data_command *>(buf);
+    c->cmd = LC_FUNCTION_STARTS;
+    c->cmdsize = getSize();
+    c->dataoff = functionStarts->fileOff;
+    c->datasize = functionStarts->getFileSize();
+  }
+
+private:
+  FunctionStartsSection *functionStarts;
+};
+
 class LCDysymtab : public LoadCommand {
 public:
   LCDysymtab(SymtabSection *symtabSection,
@@ -503,6 +522,7 @@ void Writer::createLoadCommands() {
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
   in.header->addLoadCommand(
       make<LCDysymtab>(symtabSection, indirectSymtabSection));
+  in.header->addLoadCommand(make<LCFunctionStarts>(in.functionStarts));
   for (StringRef path : config->runtimePaths)
     in.header->addLoadCommand(make<LCRPath>(path));
 
@@ -858,6 +878,7 @@ void Writer::run() {
   in.weakBinding->finalizeContents();
   in.lazyBinding->finalizeContents();
   in.exports->finalizeContents();
+  in.functionStarts->finalizeContents();
   symtabSection->finalizeContents();
   indirectSymtabSection->finalizeContents();
 
@@ -886,6 +907,7 @@ void macho::createSyntheticSections() {
   in.weakBinding = make<WeakBindingSection>();
   in.lazyBinding = make<LazyBindingSection>();
   in.exports = make<ExportSection>();
+  in.functionStarts = make<FunctionStartsSection>();
   in.got = make<GotSection>();
   in.tlvPointers = make<TlvPointerSection>();
   in.lazyPointers = make<LazyPointerSection>();

@@ -572,7 +572,9 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   // Insert DBG_VALUE instructions for function arguments to the entry block.
   for (unsigned i = 0, e = FuncInfo->ArgDbgValues.size(); i != e; ++i) {
-    MachineInstr *MI = FuncInfo->ArgDbgValues[e-i-1];
+    MachineInstr *MI = FuncInfo->ArgDbgValues[e - i - 1];
+    assert(MI->getOpcode() != TargetOpcode::DBG_VALUE_LIST &&
+           "Function parameters should not be described by DBG_VALUE_LIST.");
     bool hasFI = MI->getOperand(0).isFI();
     Register Reg =
         hasFI ? TRI.getFrameRegister(*MF) : MI->getOperand(0).getReg();
@@ -605,6 +607,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
                "DBG_VALUE with nonzero offset");
       assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
              "Expected inlined-at fields to agree");
+      assert(MI->getOpcode() != TargetOpcode::DBG_VALUE_LIST &&
+             "Didn't expect to see a DBG_VALUE_LIST here");
       // Def is never a terminator here, so it is ok to increment InsertPos.
       BuildMI(*EntryMBB, ++InsertPos, DL, TII->get(TargetOpcode::DBG_VALUE),
               IsIndirect, LDI->second, Variable, Expr);

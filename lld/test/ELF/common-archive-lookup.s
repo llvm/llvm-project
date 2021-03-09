@@ -162,13 +162,13 @@ _start:
 
 
 #--- blockdata.ll
-target datalayout = "e-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
+target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 target triple = "powerpc64le-unknown-linux-gnu"
 
 @block = dso_local local_unnamed_addr global [5 x i32] [i32 5, i32 0, i32 0, i32 0, i32 0], align 4
 
 #--- commonblock.ll
-target datalayout = "e-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
+target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 target triple = "powerpc64le-unknown-linux-gnu"
 
 @block =  common dso_local local_unnamed_addr global [5 x i32] zeroinitializer, align 4

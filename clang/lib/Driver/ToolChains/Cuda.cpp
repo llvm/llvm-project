@@ -711,7 +711,6 @@ void CudaToolChain::addClangTargetOptions(
   CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
 
   clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
-  std::string CudaVersionStr;
 
   // New CUDA versions often introduce new instructions that are only supported
   // by new PTX version, so we need to raise PTX level to enable them in NVPTX
@@ -720,7 +719,6 @@ void CudaToolChain::addClangTargetOptions(
   switch (CudaInstallationVersion) {
 #define CASE_CUDA_VERSION(CUDA_VER, PTX_VER)                                   \
   case CudaVersion::CUDA_##CUDA_VER:                                           \
-    CudaVersionStr = #CUDA_VER;                                                \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
     CASE_CUDA_VERSION(112, 72);
@@ -734,9 +732,6 @@ void CudaToolChain::addClangTargetOptions(
     CASE_CUDA_VERSION(90, 60);
 #undef CASE_CUDA_VERSION
   default:
-    // If unknown CUDA version, we take it as CUDA 8.0. Same assumption is also
-    // made in libomptarget/deviceRTLs.
-    CudaVersionStr = "80";
     PtxFeature = "+ptx42";
   }
   CC1Args.append({"-target-feature", PtxFeature});
@@ -757,8 +752,7 @@ void CudaToolChain::addClangTargetOptions(
       return;
     }
 
-    std::string BitcodeSuffix =
-        "nvptx-cuda_" + CudaVersionStr + "-" + GpuArch.str();
+    std::string BitcodeSuffix = "nvptx-" + GpuArch.str();
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
                        getTriple());
   }

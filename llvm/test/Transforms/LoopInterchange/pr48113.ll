@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -S -passes='loop-interchange' -debug-only=loop-interchange < %s 2>&1 > /dev/null | FileCheck %s
 
 ; Test case of PR48113.
