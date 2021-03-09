@@ -1348,13 +1348,14 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
       return false;
     const Loop *L = LI->getLoopFor(BO->getParent());
     assert(L && "L should not be null after isIVIncrement()");
+    // Do not risk on moving increment into a child loop.
+    if (LI->getLoopFor(Cmp->getParent()) != L)
+      return false;
+
     // IV increment may have other users than the IV. We do not want to make
     // dominance queries to analyze the legality of moving it towards the cmp,
     // so just check that there is no other users.
     if (!BO->hasOneUse())
-      return false;
-    // Do not risk on moving increment into a child loop.
-    if (LI->getLoopFor(Cmp->getParent()) != L)
       return false;
     // Ultimately, the insertion point must dominate latch. This should be a
     // cheap check because no CFG changes & dom tree recomputation happens
