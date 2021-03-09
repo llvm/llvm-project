@@ -1651,7 +1651,7 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   StringRef OldDelimiter = *getRawStringDelimiter(Current.TokenText);
   StringRef NewDelimiter =
       getCanonicalRawStringDelimiter(Style, RawStringStyle.Language);
-  if (NewDelimiter.empty() || OldDelimiter.empty())
+  if (NewDelimiter.empty())
     NewDelimiter = OldDelimiter;
   // The text of a raw string is between the leading 'R"delimiter(' and the
   // trailing 'delimiter)"'.
