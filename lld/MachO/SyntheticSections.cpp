@@ -612,34 +612,6 @@ void ExportSection::finalizeContents() {
 
 void ExportSection::writeTo(uint8_t *buf) const { trieBuilder.writeTo(buf); }
 
-FunctionStartsSection::FunctionStartsSection()
-    : LinkEditSection(segment_names::linkEdit, section_names::functionStarts_) {
-}
-
-void FunctionStartsSection::finalizeContents() {
-  raw_svector_ostream os{contents};
-  uint64_t addr = in.header->addr;
-  for (const Symbol *sym : symtab->getSymbols()) {
-    if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (!defined->isec || !isCodeSection(defined->isec))
-        continue;
-      // TODO: Add support for thumbs, in that case
-      // the lowest bit of nextAddr needs to be set to 1.
-      uint64_t nextAddr = defined->getVA();
-      uint64_t delta = nextAddr - addr;
-      if (delta == 0)
-        continue;
-      encodeULEB128(delta, os);
-      addr = nextAddr;
-    }
-  }
-  os << '\0';
-}
-
-void FunctionStartsSection::writeTo(uint8_t *buf) const {
-  memcpy(buf, contents.data(), contents.size());
-}
-
 SymtabSection::SymtabSection(StringTableSection &stringTableSection)
     : LinkEditSection(segment_names::linkEdit, section_names::symbolTable),
       stringTableSection(stringTableSection) {}
