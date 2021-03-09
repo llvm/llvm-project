@@ -52,7 +52,7 @@ public:
 
 private:
   struct DraftAndTime {
-    Draft Draft;
+    Draft D;
     std::time_t MTime;
   };
   mutable std::mutex Mutex;
