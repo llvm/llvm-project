@@ -492,7 +492,17 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
     FunctionSamples &FunctionProfile =
         getFunctionProfileForLeafProbe(ContextStrStack, Probe, Binary);
 
-    FunctionProfile.addBodySamples(Probe->Index, 0, Count);
+    // Use InvalidProbeCount(UINT64_MAX) to mark sample count for a dangling
+    // probe. Dangling probes are the probes associated to an empty block. With
+    // this place holder, sample count on dangling probe will not be trusted by
+    // the compiler and it will rely on the counts inference algorithm to get
+    // the probe a reasonable count.
+    if (Probe->isDangling()) {
+      FunctionProfile.addBodySamplesForProbe(
+          Probe->Index, FunctionSamples::InvalidProbeCount);
+      continue;
+    }
+    FunctionProfile.addBodySamplesForProbe(Probe->Index, Count);
     FunctionProfile.addTotalSamples(Count);
     if (Probe->isEntry()) {
       FunctionProfile.addHeadSamples(Count);
