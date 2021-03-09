@@ -1301,6 +1301,18 @@ let Defs = [X0,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7] in
 def GETtlsldADDR : GETtlsldADDRPseudo <"#GETtlsldADDR">;
 let Defs = [X0,X2,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7] in
 def GETtlsldADDRPCREL : GETtlsldADDRPseudo <"#GETtlsldADDRPCREL">;
+
+// On AIX, the call to __tls_get_addr needs two inputs in X3/X4 for the
+// offset and region handle respectively. The call is not followed by a nop
+// so we don't need to mark it with a size of 8 bytes. Finally, the assembly
+// manual mentions this exact set of registers as the clobbered set, others
+// are guaranteed not to be clobbered.
+let Defs = [X0,X4,X5,X11,LR8,CR0] in
+def GETtlsADDR64AIX :
+  PPCEmitTimePseudo<(outs g8rc:$rD),(ins g8rc:$offset, g8rc:$handle),
+                    "GETtlsADDR64AIX",
+                    [(set i64:$rD,
+                      (PPCgetTlsAddr i64:$offset, i64:$handle))]>, isPPC64;
 }
 
 // Combined op for ADDItlsgdL and GETtlsADDR, late expanded.  X3 and LR8
@@ -1326,6 +1338,13 @@ def ADDItlsldL : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm6
                        [(set i64:$rD,
                          (PPCaddiTlsldL i64:$reg, tglobaltlsaddr:$disp))]>,
                  isPPC64;
+// This pseudo is expanded to two copies to put the variable offset in R4 and
+// the region handle in R3 and GETtlsADDR64AIX.
+def TLSGDAIX8 :
+  PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$offset, g8rc:$handle),
+                     "#TLSGDAIX8",
+                     [(set i64:$rD,
+                       (PPCTlsgdAIX i64:$offset, i64:$handle))]>;
 // Combined op for ADDItlsldL and GETtlsADDR, late expanded.  X3 and LR8
 // are true defines, while the rest of the Defs are clobbers.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
@@ -1593,6 +1612,10 @@ def : Pat<(add i64:$in, (PPChi tjumptable:$g, 0)),
           (ADDIS8 $in, tjumptable:$g)>;
 def : Pat<(add i64:$in, (PPChi tblockaddress:$g, 0)),
           (ADDIS8 $in, tblockaddress:$g)>;
+
+// AIX 64-bit small code model TLS access.
+def : Pat<(i64 (PPCtoc_entry tglobaltlsaddr:$disp, i64:$reg)),
+          (i64 (LDtoc tglobaltlsaddr:$disp, i64:$reg))>;
 
 // Patterns to match r+r indexed loads and stores for
 // addresses without at least 4-byte alignment.

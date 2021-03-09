@@ -13715,6 +13715,15 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         if (Op == OO_Equal)
           DiagnoseSelfMove(Args[0], Args[1], OpLoc);
 
+        if (ImplicitThis) {
+          QualType ThisType = Context.getPointerType(ImplicitThis->getType());
+          QualType ThisTypeFromDecl = Context.getPointerType(
+              cast<CXXMethodDecl>(FnDecl)->getThisObjectType());
+
+          CheckArgAlignment(OpLoc, FnDecl, "'this'", ThisType,
+                            ThisTypeFromDecl);
+        }
+
         checkCall(FnDecl, nullptr, ImplicitThis, ArgsArray,
                   isa<CXXMethodDecl>(FnDecl), OpLoc, TheCall->getSourceRange(),
                   VariadicDoesNotApply);

@@ -532,7 +532,7 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
 // system. The only priority is that keeps/copies overrule removes.
 static Error handleArgs(const CopyConfig &Config, Object &Obj,
                         const Reader &Reader, ElfType OutputElfType) {
-  if (Config.StripSwiftSymbols)
+  if (Config.StripSwiftSymbols || Config.KeepUndefined)
     return createStringError(llvm::errc::invalid_argument,
                              "option not supported by llvm-objcopy for ELF");
   if (!Config.SplitDWO.empty())

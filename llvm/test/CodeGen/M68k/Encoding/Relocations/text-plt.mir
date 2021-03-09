@@ -1,0 +1,23 @@
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj \
+# RUN:  -code-model=small -relocation-model=pic -o - \
+# RUN:   | llvm-readobj -relocations -elf-output-style=GNU - \
+# RUN:   | FileCheck %s
+
+#------------------------------------------------------------------------------
+# Test PLT relocation
+#------------------------------------------------------------------------------
+
+--- |
+
+  declare void @TARGET()
+  define void @TEXT()   { entry: ret void }
+...
+--- # TEXT
+#        Offset    Info           Type            Sym. Value  Sym     S  Addend
+# CHECK: 00000002  {{[0-9a-f]+}}  R_68K_PLT16  {{[0-9]*}}  TARGET  +  0
+name: TEXT
+body: |
+  bb.0:
+    CALLq target-flags(m68k-plt) @TARGET
+
+...

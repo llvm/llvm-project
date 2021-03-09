@@ -1,0 +1,31 @@
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj \
+# RUN:  -code-model=small -relocation-model=pic -o - \
+# RUN:   | extract-section .text -h \
+# RUN:   | FileCheck %s
+
+#------------------------------------------------------------------------------
+# This test checks whether branches have correct offset
+#------------------------------------------------------------------------------
+
+--- # TEXT
+#  0  CHECK:      6702
+#  2  CHECK-SAME: 6008
+#  4  CHECK-SAME: d0bc 0000 0000
+#  A  CHECK-SAME: 4e75
+#  C  CHECK-SAME: d0bc 0000 0001
+# 12  CHECK-SAME: 4e75
+name: TEXT
+body: |
+  bb.0:
+      successors: %bb.2,%bb.1
+
+      Beq8 %bb.1, implicit $ccr
+      BRA8 %bb.2
+  bb.1:
+      $d0 = ADD32ri $d0, 0, implicit-def $ccr
+      RET 0, $d0
+  bb.2:
+      $d0 = ADD32ri $d0, 1, implicit-def $ccr
+      RET 0, $d0
+
+...

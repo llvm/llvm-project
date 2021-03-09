@@ -30,7 +30,7 @@ body:             |
   ; GCN:   [[COPY2:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; GCN:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY2]], [[V_CMP_LT_U32_e64_]], implicit-def dead $scc
   ; GCN:   $exec = S_MOV_B64_term [[S_AND_B64_]]
-  ; GCN:   SI_MASK_BRANCH %bb.4, implicit $exec
+  ; GCN:   S_CBRANCH_EXECZ %bb.4, implicit $exec
   ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.1:
   ; GCN:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
@@ -47,7 +47,7 @@ body:             |
   ; GCN:   [[COPY4:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY4]], [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
   ; GCN:   $exec = S_MOV_B64_term [[S_AND_B64_1]]
-  ; GCN:   SI_MASK_BRANCH %bb.3, implicit $exec
+  ; GCN:   S_CBRANCH_EXECZ %bb.3, implicit $exec
   ; GCN:   S_BRANCH %bb.2
   ; GCN: bb.2:
   ; GCN:   successors: %bb.3(0x80000000)
@@ -77,7 +77,7 @@ body:             |
     %3:sreg_64 = COPY $exec, implicit-def $exec
     %4:sreg_64 = S_AND_B64 %3, %2, implicit-def dead $scc
     $exec = S_MOV_B64_term %4
-    SI_MASK_BRANCH %bb.4, implicit $exec
+    S_CBRANCH_EXECZ %bb.4, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -96,7 +96,7 @@ body:             |
     %12:sreg_64 = COPY $exec, implicit-def $exec
     %13:sreg_64 = S_AND_B64 %12, %11, implicit-def dead $scc
     $exec = S_MOV_B64_term %13
-    SI_MASK_BRANCH %bb.3, implicit $exec
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:

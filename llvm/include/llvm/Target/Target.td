@@ -639,6 +639,14 @@ class Instruction : InstructionEncoding {
   /// by TableGen.
   bit UseNamedOperandTable = false;
 
+  /// Should generate helper functions that help you to map a logical operand's
+  /// index to the underlying MIOperand's index.
+  /// In most architectures logical operand indicies are equal to
+  /// MIOperand indicies, but for some CISC architectures, a logical operand
+  /// might be consist of multiple MIOperand (e.g. a logical operand that
+  /// uses complex address mode).
+  bit UseLogicalOperandMappings = false;
+
   /// Should FastISel ignore this instruction. For certain ISAs, they have
   /// instructions which map to the same ISD Opcode, value type operands and
   /// instruction selection predicates. FastISel cannot handle such cases, but

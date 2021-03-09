@@ -2981,7 +2981,7 @@ struct CmpFOpLowering : public ConvertOpToLLVMPattern<CmpFOp> {
                   ConversionPatternRewriter &rewriter) const override {
     CmpFOpAdaptor transformed(operands);
 
-    auto fmf = LLVM::FMFAttr::get({}, cmpfOp.getContext());
+    auto fmf = LLVM::FMFAttr::get(cmpfOp.getContext(), {});
     rewriter.replaceOpWithNewOp<LLVM::FCmpOp>(
         cmpfOp, typeConverter->convertType(cmpfOp.getResult().getType()),
         rewriter.getI64IntegerAttr(static_cast<int64_t>(

@@ -263,12 +263,8 @@ Optional<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
                                    OperationFolder *folder = nullptr);
 
 /// Emit a suitable vector form for a Linalg op with fully static shape.
-struct VectorizedLinalgOp {
-  SmallVector<Value> tensorResults;
-  VectorizedLinalgOp &operator=(const VectorizedLinalgOp &) = default;
-};
-Optional<VectorizedLinalgOp> vectorizeLinalgOp(OpBuilder &builder,
-                                               Operation *op);
+LogicalResult vectorizeLinalgOp(OpBuilder &builder, Operation *op,
+                                SmallVectorImpl<Value> &newResults);
 
 /// Emits a loop nest of `LoopTy` with the proper body for `op`.
 template <typename LoopTy>

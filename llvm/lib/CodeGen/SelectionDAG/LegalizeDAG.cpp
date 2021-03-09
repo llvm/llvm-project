@@ -3208,6 +3208,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
+  case ISD::VECTOR_SPLICE: {
+    Results.push_back(TLI.expandVectorSplice(Node, DAG));
+    break;
+  }
   case ISD::EXTRACT_ELEMENT: {
     EVT OpTy = Node->getOperand(0).getValueType();
     if (cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue()) {
@@ -4715,7 +4719,14 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
-
+  case ISD::VECTOR_SPLICE: {
+    Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(1));
+    Tmp3 = DAG.getNode(ISD::VECTOR_SPLICE, dl, NVT, Tmp1, Tmp2,
+                       Node->getOperand(2));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp3));
+    break;
+  }
   case ISD::SELECT_CC: {
     SDValue Cond = Node->getOperand(4);
     ISD::CondCode CCCode = cast<CondCodeSDNode>(Cond)->get();
@@ -4753,7 +4764,6 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
-
   case ISD::SETCC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS: {

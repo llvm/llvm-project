@@ -1,0 +1,58 @@
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=SHL8DI,SHL32DI,LSR8DI,LSR32DI,ASR8DI,ASR32DI
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=ROL8DI,ROL32DI,ROR8DI,ROR32DI
+
+#------------------------------------------------------------------------------
+# MxSR_DI encodes shift or rotate instructions; shift count is encoded into
+# the instruction
+#------------------------------------------------------------------------------
+
+#               ---------------+-----------+---+-------+---+-------+-----------
+#                F   E   D   C | B   A   9 | 8 | 7   6 | 5 | 4   3 | 2   1   0
+#               ---------------+-----------+---+-------+---+-------+-----------
+#                1   1   1   0 |     Dx    | D |  SIZE | 0 |  OP   |    Dy
+#               ---------------+-----------+---+-------+---+-------+-----------
+# SHL8DI:        1   1   1   0   0   0   1   1 . 0   0   0   0   1   0   0   1
+# SHL32DI-SAME:  1   1   1   0   0   0   1   1 . 1   0   0   0   1   0   0   1
+#               ---------------+-----------+---+-------+---+-------+-----------
+# LSR8DI-SAME:   1   1   1   0   0   0   1   0 . 0   0   0   0   1   0   0   1
+# LSR32DI-SAME:  1   1   1   0   0   0   1   0 . 1   0   0   0   1   0   0   1
+#               ---------------+-----------+---+-------+---+-------+-----------
+# ASR8DI-SAME:   1   1   1   0   0   0   1   0 . 0   0   0   0   0   0   0   1
+# ASR32DI-SAME:  1   1   1   0   0   0   1   0 . 1   0   0   0   0   0   0   1
+#               ---------------+-----------+---+-------+---+-------+-----------
+# ROL8DI:        1   1   1   0   0   0   1   1 . 0   0   0   1   1   0   0   1
+# ROL32DI-SAME:  1   1   1   0   0   0   1   1 . 1   0   0   1   1   0   0   1
+#               ---------------+-----------+---+-------+---+-------+-----------
+# ROR8DI-SAME:   1   1   1   0   0   0   1   0 . 0   0   0   1   1   0   0   1
+# ROR32DI-SAME:  1   1   1   0   0   0   1   0 . 1   0   0   1   1   0   0   1
+# ROR32DI-SAME:  1   1   1   0   0   1   0   0 . 1   0   0   1   1   0   0   1
+# ROR32DI-SAME:  1   1   1   0   0   1   1   0 . 1   0   0   1   1   0   0   1
+# ROR32DI-SAME:  1   1   1   0   1   0   0   0 . 1   0   0   1   1   0   0   1
+# ROR32DI-SAME:  1   1   1   0   1   0   1   0 . 1   0   0   1   1   0   0   1
+# ROR32DI-SAME:  1   1   1   0   1   1   0   0 . 1   0   0   1   1   0   0   1
+# ROR32DI-SAME:  1   1   1   0   1   1   1   0 . 1   0   0   1   1   0   0   1
+# ROR32DI-SAME:  1   1   1   0   0   0   0   0 . 1   0   0   1   1   0   0   1
+name: MxSR_DI
+body: |
+  bb.0:
+     $bd1 = SHL8di  $bd1, 1, implicit-def $ccr
+     $d1  = SHL32di  $d1, 1, implicit-def $ccr
+     $bd1 = LSR8di  $bd1, 1, implicit-def $ccr
+     $d1  = LSR32di  $d1, 1, implicit-def $ccr
+     $bd1 = ASR8di  $bd1, 1, implicit-def $ccr
+     $d1  = ASR32di  $d1, 1, implicit-def $ccr
+     $bd1 = ROL8di  $bd1, 1, implicit-def $ccr
+     $d1  = ROL32di  $d1, 1, implicit-def $ccr
+     $bd1 = ROR8di  $bd1, 1, implicit-def $ccr
+     $d1  = ROR32di  $d1, 1, implicit-def $ccr
+     $d1  = ROR32di  $d1, 2, implicit-def $ccr
+     $d1  = ROR32di  $d1, 3, implicit-def $ccr
+     $d1  = ROR32di  $d1, 4, implicit-def $ccr
+     $d1  = ROR32di  $d1, 5, implicit-def $ccr
+     $d1  = ROR32di  $d1, 6, implicit-def $ccr
+     $d1  = ROR32di  $d1, 7, implicit-def $ccr
+     $d1  = ROR32di  $d1, 8, implicit-def $ccr

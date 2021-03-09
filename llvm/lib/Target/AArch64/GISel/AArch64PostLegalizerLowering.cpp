@@ -471,7 +471,7 @@ static bool isVShiftRImm(Register Reg, MachineRegisterInfo &MRI, LLT Ty,
                          int64_t &Cnt) {
   assert(Ty.isVector() && "vector shift count is not a vector type");
   MachineInstr *MI = MRI.getVRegDef(Reg);
-  auto Cst = getBuildVectorConstantSplat(*MI, MRI);
+  auto Cst = getAArch64VectorSplatScalar(*MI, MRI);
   if (!Cst)
     return false;
   Cnt = *Cst;
@@ -692,6 +692,29 @@ bool applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   auto Lane = B.buildConstant(LLT::scalar(64), MatchInfo.second);
   B.buildInstr(MatchInfo.first, {MI.getOperand(0).getReg()},
                {MI.getOperand(1).getReg(), Lane});
+  MI.eraseFromParent();
+  return true;
+}
+
+static bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  auto Splat = getAArch64VectorSplat(MI, MRI);
+  if (!Splat)
+    return false;
+  if (Splat->isReg())
+    return true;
+  // Later, during selection, we'll try to match imported patterns using
+  // immAllOnesV and immAllZerosV. These require G_BUILD_VECTOR. Don't lower
+  // G_BUILD_VECTORs which could match those patterns.
+  int64_t Cst = Splat->getCst();
+  return (Cst != 0 && Cst != -1);
+}
+
+static bool applyBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                  MachineIRBuilder &B) {
+  B.setInstrAndDebugLoc(MI);
+  B.buildInstr(AArch64::G_DUP, {MI.getOperand(0).getReg()},
+               {MI.getOperand(1).getReg()});
   MI.eraseFromParent();
   return true;
 }

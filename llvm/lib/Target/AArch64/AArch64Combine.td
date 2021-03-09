@@ -135,13 +135,22 @@ def mul_const : GICombineRule<
   (apply [{ applyAArch64MulConstCombine(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def build_vector_to_dup : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_BUILD_VECTOR):$root,
+          [{ return matchBuildVectorToDup(*${root}, MRI); }]),
+  (apply [{ return applyBuildVectorToDup(*${root}, MRI, B); }])
+>;
+
+def build_vector_lowering : GICombineGroup<[build_vector_to_dup]>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
 def AArch64PostLegalizerLoweringHelper
     : GICombinerHelper<"AArch64GenPostLegalizerLoweringHelper",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
-                        icmp_lowering]> {
+                        icmp_lowering, build_vector_lowering]> {
   let DisableRuleOption = "aarch64postlegalizerlowering-disable-rule";
 }
 
