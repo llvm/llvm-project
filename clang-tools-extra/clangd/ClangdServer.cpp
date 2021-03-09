@@ -106,6 +106,23 @@ private:
   ClangdServer::Callbacks *ServerCallbacks;
 };
 
+class DraftStoreFS : public ThreadsafeFS {
+public:
+  DraftStoreFS(const ThreadsafeFS &Base, const DraftStore &Drafts)
+      : Base(Base), DirtyFiles(Drafts) {}
+
+private:
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override {
+    auto OFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+        Base.view(llvm::None));
+    OFS->pushOverlay(DirtyFiles.asVFS());
+    return OFS;
+  }
+
+  const ThreadsafeFS &Base;
+  const DraftStore &DirtyFiles;
+};
+
 } // namespace
 
 ClangdServer::Options ClangdServer::optsForTest() {
@@ -132,7 +149,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     : FeatureModules(Opts.FeatureModules), CDB(CDB), TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
-      WorkspaceRoot(Opts.WorkspaceRoot) {
+      WorkspaceRoot(Opts.WorkspaceRoot),
+      DirtyFS(std::make_unique<DraftStoreFS>(TFS, DraftMgr)) {
   // Pass a callback into `WorkScheduler` to extract symbols from a newly
   // parsed file and rebuild the file index synchronously each time an AST
   // is parsed.
@@ -220,14 +238,14 @@ void ClangdServer::reparseOpenFilesIfNeeded(
   for (const Path &FilePath : DraftMgr.getActiveFiles())
     if (Filter(FilePath))
       if (auto Draft = DraftMgr.getDraft(FilePath)) // else disappeared in race?
-        addDocument(FilePath, std::move(Draft->Contents), Draft->Version,
+        addDocument(FilePath, *Draft->Contents, Draft->Version,
                     WantDiagnostics::Auto);
 }
 
-llvm::Optional<std::string> ClangdServer::getDraft(PathRef File) const {
+std::shared_ptr<const std::string> ClangdServer::getDraft(PathRef File) const {
   auto Draft = DraftMgr.getDraft(File);
   if (!Draft)
-    return llvm::None;
+    return nullptr;
   return std::move(Draft->Contents);
 }
 
