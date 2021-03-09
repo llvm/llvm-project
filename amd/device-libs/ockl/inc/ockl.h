@@ -451,6 +451,7 @@ extern __attribute__((const)) __local void * OCKL_MANGLE_T(to,local)(void *);
 extern __attribute__((const)) __private void * OCKL_MANGLE_T(to,private)(void *);
 
 extern void OCKL_MANGLE_T(rtcwait,u32)(uint);
+extern void __ockl_sanitizer_report(ulong, ulong, ulong, ulong, ulong, ulong, ulong, ulong);
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 

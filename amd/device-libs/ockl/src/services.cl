@@ -14,6 +14,8 @@ typedef enum {
     SERVICE_FUNCTION_CALL = 1,
     SERVICE_PRINTF = 2,
     SERVICE_FPRINTF = SERVICE_PRINTF,
+    SERVICE_DEVMEM = 3,
+    SERVICE_SANITIZER = 4
 } service_id_t;
 
 extern long2
@@ -381,4 +383,15 @@ __ockl_printf_append_string_n(ulong msg_desc, const char *data, ulong length,
                               uint is_last)
 {
     return __ockl_fprintf_append_string_n(msg_desc, data, length, is_last);
+}
+
+
+/*---------------- SANITIZER SERVICE ---------------------------------*/
+
+void __ockl_sanitizer_report(ulong addr, ulong pc, ulong wgidx, ulong wgidy,
+                        ulong wgidz, ulong wave_id, ulong is_read, ulong access_size)
+{
+   long2 value =  __ockl_hostcall_preview(SERVICE_SANITIZER, addr, pc,
+                                   wgidx, wgidy, wgidz, wave_id, is_read, access_size);
+   (void)value;
 }
