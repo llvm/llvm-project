@@ -50,6 +50,8 @@ public:
   void setTargetMemoryRange(SectionRange Range) override;
   void dump(raw_ostream &OS, StringRef Name) override;
 
+  Error validateInBounds(StringRef Buffer, const char *Name) const;
+
 private:
   typename ELFT::Shdr *Header;
 
@@ -65,15 +67,6 @@ void ELFDebugObjectSection<ELFT>::setTargetMemoryRange(SectionRange Range) {
 }
 
 template <typename ELFT>
-void ELFDebugObjectSection<ELFT>::dump(raw_ostream &OS, StringRef Name) {
-  if (auto Addr = static_cast<JITTargetAddress>(Header->sh_addr)) {
-    OS << formatv("  {0:x16} {1}\n", Addr, Name);
-  } else {
-    OS << formatv("                     {0}\n", Name);
-  }
-}
-
-template <typename ELFT>
 bool ELFDebugObjectSection<ELFT>::isTextOrDataSection() const {
   switch (Header->sh_type) {
   case ELF::SHT_PROGBITS:
@@ -81,6 +74,37 @@ bool ELFDebugObjectSection<ELFT>::isTextOrDataSection() const {
     return Header->sh_flags & (ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
   }
   return false;
+}
+
+template <typename ELFT>
+Error ELFDebugObjectSection<ELFT>::validateInBounds(StringRef Buffer,
+                                                    const char *Name) const {
+  const uint8_t *Start = Buffer.bytes_begin();
+  const uint8_t *End = Buffer.bytes_end();
+  const uint8_t *HeaderPtr = reinterpret_cast<uint8_t *>(Header);
+  if (HeaderPtr < Start || HeaderPtr + sizeof(typename ELFT::Shdr) > End)
+    return make_error<StringError>(
+        formatv("{0} section header at {1:x16} not within bounds of the "
+                "given debug object buffer [{2:x16} - {3:x16}]",
+                Name, &Header->sh_addr, Start, End),
+        inconvertibleErrorCode());
+  if (Header->sh_offset + Header->sh_size > Buffer.size())
+    return make_error<StringError>(
+        formatv("{0} section data [{1:x16} - {2:x16}] not within bounds of "
+                "the given debug object buffer [{3:x16} - {4:x16}]",
+                Name, Start + Header->sh_offset,
+                Start + Header->sh_offset + Header->sh_size, Start, End),
+        inconvertibleErrorCode());
+  return Error::success();
+}
+
+template <typename ELFT>
+void ELFDebugObjectSection<ELFT>::dump(raw_ostream &OS, StringRef Name) {
+  if (auto Addr = static_cast<JITTargetAddress>(Header->sh_addr)) {
+    OS << formatv("  {0:x16} {1}\n", Addr, Name);
+  } else {
+    OS << formatv("                     {0}\n", Name);
+  }
 }
 
 static constexpr sys::Memory::ProtectionFlags ReadOnly =
@@ -162,8 +186,9 @@ protected:
   Expected<std::unique_ptr<Allocation>>
   finalizeWorkingMemory(JITLinkContext &Ctx) override;
 
+  template <typename ELFT>
   Error recordSection(StringRef Name,
-                      std::unique_ptr<DebugObjectSection> Section);
+                      std::unique_ptr<ELFDebugObjectSection<ELFT>> Section);
   DebugObjectSection *getSection(StringRef Name);
 
 private:
@@ -319,8 +344,11 @@ void ELFDebugObject::reportSectionTargetMemoryRange(StringRef Name,
     DebugObjSection->setTargetMemoryRange(TargetMem);
 }
 
+template <typename ELFT>
 Error ELFDebugObject::recordSection(
-    StringRef Name, std::unique_ptr<DebugObjectSection> Section) {
+    StringRef Name, std::unique_ptr<ELFDebugObjectSection<ELFT>> Section) {
+  if (Error Err = Section->validateInBounds(this->getBuffer(), Name.data()))
+    return Err;
   auto ItInserted = Sections.try_emplace(Name, std::move(Section));
   if (!ItInserted.second)
     return make_error<StringError>("Duplicate section",
