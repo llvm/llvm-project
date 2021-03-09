@@ -5551,7 +5551,7 @@ static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   auto *DRE = dyn_cast<DeclRefExpr>(AL.getArgAsExpr(0));
   if (!DRE) {
-    S.Diag(Loc, diag::warn_nserrordomain_invalid_decl) << 0;
+    S.Diag(Loc, diag::err_nserrordomain_invalid_decl) << 0;
     return;
   }
 

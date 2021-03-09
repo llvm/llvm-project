@@ -74,7 +74,7 @@ typedef NS_ERROR_ENUM(unsigned char, MyErrorEnumInvalid, InvalidDomain) {
 };
 
 typedef NS_ERROR_ENUM(unsigned char, MyErrorEnumInvalid, "domain-string");
-  // expected-warning@-1{{domain argument does not refer to global constant}}
+  // expected-error@-1{{domain argument does not refer to global constant}}
 
 void foo() {}
 typedef NS_ERROR_ENUM(unsigned char, MyErrorEnumInvalidFunction, foo);
