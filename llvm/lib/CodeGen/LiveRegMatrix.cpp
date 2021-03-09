@@ -216,7 +216,21 @@ bool LiveRegMatrix::checkInterference(SlotIndex Start, SlotIndex End,
 
   // Check for interference with that segment
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    if (query(LR, *Units).checkInterference())
+    // LR is stack-allocated. LiveRegMatrix caches queries by a key that
+    // includes the address of the live range. If (for the same reg unit) this
+    // checkInterference overload is called twice, without any other query()
+    // calls in between (on heap-allocated LiveRanges)  - which would invalidate
+    // the cached query - the LR address seen the second time may well be the
+    // same as that seen the first time, while the Start/End/valno may not - yet
+    // the same cached result would be fetched. To avoid that, we don't cache
+    // this query.
+    //
+    // FIXME: the usability of the Query API needs to be improved to avoid
+    // subtle bugs due to query identity. Avoiding caching, for example, would
+    // greatly simplify things.
+    LiveIntervalUnion::Query Q;
+    Q.reset(UserTag, LR, Matrix[*Units]);
+    if (Q.checkInterference())
       return true;
   }
   return false;
