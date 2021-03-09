@@ -849,6 +849,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::VECREDUCE_FMIN, VT, Expand);
     setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Expand);
     setOperationAction(ISD::VECREDUCE_SEQ_FMUL, VT, Expand);
+
+    // Named vector shuffles default to expand.
+    setOperationAction(ISD::VECTOR_SPLICE, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
