@@ -1,95 +1,172 @@
-{"app_name":"a.out","timestamp":"2020-11-11 16:12:18.00 -0800","app_version":"","slice_uuid":"9b76648c-9b4e-33a9-a97e-10856e911631","build_version":"","platform":1,"share_with_app_devs":1,"is_first_party":1,"bug_type":"309","os_version":"macOS 11.0.1","incident_id":"598C4706-28B0-4D96-A2F9-AE6973BEC635","name":"a.out"}
+{"app_name":"json.test.tmp.out","timestamp":"2021-03-08 13:57:06.00 -0800","app_version":"","slice_uuid":"8f528c10-3e80-3dd6-b0be-5d558f64f7ab","build_version":"","platform":1,"share_with_app_devs":1,"is_first_party":1,"etl_key":"3","bug_type":"309","os_version":"macOS 11.3","incident_id":"FA21DF23-3344-4E45-BF27-4B8E63B7012B","name":"json.test.tmp.out"}
 {
-  "uptime" : 180,
-  "procLaunch" : "2020-11-11 16:12:12.4375 -0800",
+  "uptime" : 320000,
+  "procLaunch" : "2021-03-08 13:56:51.7232 -0800",
   "procRole" : "Unspecified",
+  "version" : 2,
   "exception" : {
     "type" : "EXC_BAD_ACCESS",
     "signal" : "SIGSEGV",
-    "subtype" : "KERN_INVALID_ADDRESS at 0x00000000"
+    "subtype" : "KERN_INVALID_ADDRESS at 0x0000000000000000"
   },
   "userID" : 501,
   "modelCode" : "iMacPro1,1",
-  "coalitionID" : 471,
+  "coalitionID" : 6086,
   "osVersion" : {
-    "train" : "macOS 11.0.1",
+    "train" : "macOS 11.3",
     "build" : "",
     "releaseType" : ""
   },
-  "captureTime" : "2020-11-11 16:12:12.6267 -0800",
-  "incident" : "598C4706-28B0-4D96-A2F9-AE6973BEC635",
-  "pid" : 2187,
+  "captureTime" : "2021-03-08 13:56:51.8610 -0800",
+  "incident" : "FA21DF23-3344-4E45-BF27-4B8E63B7012B",
+  "pid" : 72932,
   "cpuType" : "X86-64",
-  "procName" : "a.out",
-  "procPath" : "\/private\/tmp\/a.out",
+  "procName" : "json.test.tmp.out",
+  "procPath" : "\/Users\/USER\/*\/json.test.tmp.out",
   "parentProc" : "fish",
-  "parentPid" : 1651,
+  "parentPid" : 67002,
   "coalitionName" : "io.alacritty",
   "crashReporterKey" : "DCEF35CB-68D5-F524-FF13-060901F52EA8",
-  "responsiblePid" : 428,
+  "responsiblePid" : 65465,
   "responsibleProc" : "alacritty",
-  "bridgeVersion" : {"build":"","train":""},
+  "bridgeVersion" : {"build":"18P4544","train":"5.3"},
   "sip" : "enabled",
-  "is_corpse" : 1,
-  "termination" : {"reason":"Namespace SIGNAL, Code 0xb","signal":"Segmentation fault: 11","byProc":"exc handler","code":11,"namespace":"SIGNAL","byPid":2187,"flags":0},
-  "asi" : ["dyld2 mode"],
-  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":0,"task_for_pid":2067},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
-  "threads" : [{"triggered":true,"id":22172,"queue":"com.apple.main-thread","frames":[[0,@foo@],[0,@bar@],[0,@main@],[1,87601]]}],
-  "threadState" : {
-  "r13" : 0,
-  "rax" : 0,
-  "rflags" : 66054,
-  "cpu" : 6,
-  "rsi" : 140732908048520,
-  "r14" : 0,
-  "trap_description" : "(no mapping for user data write)",
-  "r8" : 0,
-  "cr2" : 0,
-  "rdx" : 140732908048536,
-  "r10" : 0,
-  "r9" : 0,
-  "r15" : 0,
-  "rbx" : 0,
-  "trap" : 14,
-  "err" : 6,
-  "r11" : 0,
-  "rip" : 4307689328,
-  "rbp" : 140732908048432,
-  "rsp" : 140732908048432,
-  "r12" : 0,
-  "rcx" : 140732908048880,
-  "flavor" : "x86_THREAD_STATE",
-  "rdi" : 1
-},
+  "isCorpse" : 1,
+  "termination" : {"flags":0,"code":11,"namespace":"SIGNAL","indicator":"Segmentation fault: 11","byProc":"exc handler","byPid":72932},
+  "asi" : {"dyld":["dyld2 mode"]},
+  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":125361,"task_for_pid":9935},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
+  "faultingThread" : 0,
+  "threads" : [
+  {
+    "triggered": true,
+    "id": 6152004,
+    "threadState": {
+      "r13": {
+        "value": 0
+      },
+      "rax": {
+        "value": 0
+      },
+      "rflags": {
+        "value": 66054
+      },
+      "cpu": {
+        "value": 4
+      },
+      "r14": {
+        "value": 0
+      },
+      "rsi": {
+        "value": 140732860114304
+      },
+      "r8": {
+        "value": 0
+      },
+      "cr2": {
+        "value": 0
+      },
+      "rdx": {
+        "value": 140732860114320
+      },
+      "r10": {
+        "value": 0
+      },
+      "r9": {
+        "value": 0
+      },
+      "r15": {
+        "value": 0
+      },
+      "rbx": {
+        "value": 0
+      },
+      "trap": {
+        "value": 14,
+        "description": "(no mapping for user data write)"
+      },
+      "err": {
+        "value": 6
+      },
+      "r11": {
+        "value": 0
+      },
+      "rip": {
+        "value": 4355624816
+      },
+      "rbp": {
+        "value": 140732860114224
+      },
+      "rsp": {
+        "value": 140732860114224
+      },
+      "r12": {
+        "value": 0
+      },
+      "rcx": {
+        "value": 140732860114656
+      },
+      "flavor": "x86_THREAD_STATE",
+      "rdi": {
+        "value": 1
+      }
+    },
+    "queue": "com.apple.main-thread",
+    "frames": [
+      {
+        "imageOffset": @foo@,
+        "sourceLine": 3,
+        "sourceFile": "test.c",
+        "symbol": "foo",
+        "imageIndex": 0,
+        "symbolLocation": 16
+      },
+      {
+        "imageOffset": @bar@,
+        "sourceLine": 6,
+        "sourceFile": "test.c",
+        "symbol": "bar",
+        "imageIndex": 0,
+        "symbolLocation": 9
+      },
+      {
+        "imageOffset": @main@,
+        "sourceLine": 8,
+        "sourceFile": "test.c",
+        "symbol": "main",
+        "imageIndex": 0,
+        "symbolLocation": 20
+      },
+      {
+        "imageOffset": 89917,
+        "symbol": "start",
+        "symbolLocation": 1,
+        "imageIndex": 1
+      }
+    ]
+  }
+],
   "usedImages" : [
-  [
-    "@UUID@",
-    4294967296,
-    "P"
-  ],
-  [
-    "6a1f593e-3705-314d-bb40-e7f9d502bf81",
-    140733737017344,
-    "P"
-  ]
+  {
+    "source" : "P",
+    "arch" : "x86_64",
+    "base" : 4355608576,
+    "size" : 16384,
+    "uuid" : "@UUID@",
+    "path" : "@EXEC@",
+    "name" : "@NAME@"
+  },
+  {
+    "source" : "P",
+    "arch" : "x86_64",
+    "base" : 140733734899712,
+    "size" : 245760,
+    "uuid" : "c5caf30b-0617-3b07-88c7-6319cd06f30a",
+    "path" : "\/usr\/lib\/system\/libdyld.dylib",
+    "name" : "libdyld.dylib"
+  }
 ],
   "legacyInfo" : {
-  "imageExtraInfo" : [
-    {
-      "size" : 16384,
-      "arch" : "x86_64",
-      "path" : "@EXEC@",
-      "name" : "@NAME@"
-    },
-    {
-      "size" : 241664,
-      "arch" : "x86_64",
-      "path" : "\/usr\/lib\/system\/libdyld.dylib",
-      "name" : "libdyld.dylib"
-    }
-  ],
   "threadTriggered" : {
-    "index" : 0,
     "queue" : "com.apple.main-thread"
   }
 }
