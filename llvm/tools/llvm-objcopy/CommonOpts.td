@@ -84,6 +84,9 @@ def K : JoinedOrSeparate<["-"], "K">,
 def keep_file_symbols : Flag<["--"], "keep-file-symbols">,
                         HelpText<"Do not remove file symbols">;
 
+def keep_undefined : Flag<["--"], "keep-undefined">,
+                        HelpText<"Do not remove undefined symbols">;
+
 def only_keep_debug
     : Flag<["--"], "only-keep-debug">,
       HelpText<

@@ -470,6 +470,13 @@ them.
 
  Mark all defined global symbols as weak in the output.
 
+MACH-O-SPECIFIC OPTIONS
+--------------------
+
+.. option:: --keep-undefined
+
+ Keep undefined symbols, even if they would otherwise be stripped.
+
 SUPPORTED FORMATS
 -----------------
 
