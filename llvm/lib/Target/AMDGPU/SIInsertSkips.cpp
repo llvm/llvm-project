@@ -70,13 +70,6 @@ INITIALIZE_PASS_END(SIInsertSkips, DEBUG_TYPE,
 
 char &llvm::SIInsertSkipsPassID = SIInsertSkips::ID;
 
-static bool opcodeEmitsNoInsts(const MachineInstr &MI) {
-  if (MI.isMetaInstruction())
-    return true;
-
-  return false;
-}
-
 static void generateEndPgm(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator I, DebugLoc DL,
                            const SIInstrInfo *TII, bool IsPS) {
