@@ -243,6 +243,13 @@ public:
     return lookupSymbol(sym).getAddr();
   }
 
+  // TODO: Consider returning a vlue when the FIXME below is fixed.
+  void bindSymbol(Fortran::lower::SymbolRef sym,
+                  mlir::Value val) override final {
+    // FIXME: removed forced when symbol lookup stop following host association.
+    addSymbol(sym, val, /*forced=*/true);
+  }
+
   bool lookupLabelSet(Fortran::lower::SymbolRef sym,
                       Fortran::lower::pft::LabelSet &labelSet) override final {
     auto &owningProc = *getEval().getOwningProcedure();
@@ -1140,9 +1147,18 @@ private:
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
     auto insertPt = builder->saveInsertionPoint();
+    localSymbols.pushScope();
     genOpenMPConstruct(*this, getEval(), omp);
-    for (auto &e : getEval().getNestedEvaluations())
+    // If loop is part of an OpenMP Construct then the OpenMP dialect
+    // workshare loop operation has already been created. Only the
+    // body needs to be created here and the do_loop can be skipped.
+    Fortran::lower::pft::Evaluation *curEval =
+        std::get_if<Fortran::parser::OpenMPLoopConstruct>(&omp.u)
+            ? &getEval().getFirstNestedEvaluation()
+            : &getEval();
+    for (auto &e : curEval->getNestedEvaluations())
       genFIR(e);
+    localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
   }
 

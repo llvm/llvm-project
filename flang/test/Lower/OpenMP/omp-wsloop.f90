@@ -10,7 +10,6 @@
 program wsloop
         integer :: i
 !FIRDialect: func @_QQmain()
-!FIRDialect: %[[I:.*]] = fir.alloca i32 {name = "_QEi"}
 !LLVMIRDialect: func @_QQmain()
 
 !LLVMIR: define void @_QQmain()
@@ -48,63 +47,45 @@ program wsloop
 !LLVMIR:    %omp_loop.iv = phi i32 [ 0, %omp_loop.preheader ], [ %omp_loop.next, %omp_loop.inc ]
 
 do i=1, 9
-!FIRDialect:    fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} -> index {
+!FIRDialect:    ^bb0(%[[I:.*]]: i32):  // no predecessors
 print*, i
 !FIRDialect:    %[[RTBEGIN:.*]] = fir.call @_FortranAioBeginExternalListOutput
-!FIRDialect:    %[[LD_I:.*]] = fir.load %[[I]] : !fir.ref<i32>
-!FIRDialect:    %[[CONVERTED:.*]] = fir.convert %[[LD_I]] : (i32) -> i64
+!FIRDialect:    %[[CONVERTED:.*]] = fir.convert %[[I]] : (i32) -> i64
 !FIRDialect:    fir.call @_FortranAioOutputInteger64(%[[RTBEGIN]], %[[CONVERTED]]) : (!fir.ref<i8>, i64) -> i1
 !FIRDialect:    fir.call @_FortranAioEndIoStatement(%[[RTBEGIN]]) : (!fir.ref<i8>) -> i32
-!FIRDialect:  }
 
-!LLVMIRDialect:  ^bb0(%arg0: i64):  // no predecessors
-!LLVMIRDialect:    llvm.br ^bb1(%{{.*}}, %{{.*}} : i64, i64)
-!LLVMIRDialect:  ^bb1(%{{.*}}: i64, %{{.*}}: i64):  // 2 preds: ^bb0, ^bb2
-!LLVMIRDialect:    llvm.cond_br %{{.*}}, ^bb2, ^bb3
-!LLVMIRDialect:  ^bb2:  // pred: ^bb1
+
+!LLVMIRDialect:  ^bb0(%arg0: i32):  // no predecessors
 !LLVMIRDialect:     llvm.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !llvm.ptr<i8>, i32) -> !llvm.ptr<i8>
+!LLVMIRDialect:     %{{.*}} = llvm.sext %arg0 : i32 to i64
 !LLVMIRDialect:     llvm.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) : (!llvm.ptr<i8>, i64) -> i1
 !LLVMIRDialect:     llvm.call @_FortranAioEndIoStatement(%{{.*}}) : (!llvm.ptr<i8>) -> i32
-!LLVMIRDialect:    llvm.br ^bb1(%{{.*}}, %{{.*}} : i64, i64)
-!LLVMIRDialect:  ^bb3:  // pred: ^bb1
 
-!LLVMIR:  omp_loop.cond:                                    ; preds = %omp_loop.header
-!LLVMIR:    br i1 %omp_loop.cmp, label %omp_loop.body, label %omp_loop.exit
-!LLVMIR:  omp_loop.exit:                                    ; preds = %omp_loop.cond
-!LLVMIR:    @__kmpc_for_static_fini
-!LLVMIR:    br label %omp_loop.after
-!LLVMIR:  omp_loop.after:                                   ; preds = %omp_loop.exit
-!LLVMIR:    br label %omp.par.pre_finalize
-!LLVMIR:  omp.par.pre_finalize:                             ; preds = %omp_loop.after
-!LLVMIR:    br label %omp.par.outlined.exit.exitStub
-!LLVMIR:  omp_loop.body:                                    ; preds = %omp_loop.cond
-!LLVMIR:    br label %omp.wsloop.region
-!LLVMIR:  omp.wsloop.region:                                ; preds = %omp_loop.body
-!LLVMIR:    br label %omp.wsloop.region2
-!LLVMIR:  omp.wsloop.region2:                               ; preds = %omp.wsloop.region3, %omp.wsloop.region
-!LLVMIR:    %9 = phi i64 [ %19, %omp.wsloop.region3 ], [ 1, %omp.wsloop.region ]
-!LLVMIR:    %10 = phi i64 [ %20, %omp.wsloop.region3 ], [ 9, %omp.wsloop.region ]
-!LLVMIR:    br i1 %11, label %omp.wsloop.region3, label %omp.wsloop.region4
-!LLVMIR:  omp.wsloop.region4:                               ; preds = %omp.wsloop.region2
-!LLVMIR:    br label %omp.wsloop.exit
-!LLVMIR:  omp.wsloop.exit:                                  ; preds = %omp.wsloop.region4
-!LLVMIR:    br label %omp_loop.inc
-!LLVMIR:   %omp_loop.next = add nuw i32 %omp_loop.iv, 1
-!LLVMIR:    br label %omp_loop.header
-!LLVMIR:  omp.wsloop.region3:                               ; preds = %omp.wsloop.region2
-!LLVMIR:    @_FortranAioBeginExternalListOutput
-!LLVMIR:    @_FortranAioOutputInteger64
-!LLVMIR:    @_FortranAioEndIoStatement
-!LLVMIR:    br label %omp.wsloop.region2
-!LLVMIR:  }
+!LLVMIR:   br label %omp_loop.cond
+!LLVMIR: omp_loop.cond:                                    ; preds = %omp_loop.header
+!LLVMIR:   %omp_loop.cmp = icmp ult i32 %{{.*}}, %{{.*}}
+!LLVMIR:   br i1 %omp_loop.cmp, label %omp_loop.body, label %omp_loop.exit
+!LLVMIR: omp_loop.exit:                                    ; preds = %omp_loop.cond
+!LLVMIR:   call void @__kmpc_for_static_fini(%struct.ident_t* @{{.*}}, i32 %omp_global_thread_num2)
+!LLVMIR: omp_loop.body:                                    ; preds = %omp_loop.cond
+!LLVMIR:   %{{.*}} = add i32 %{{.*}}, %{{.*}}
+!LLVMIR:   %{{.*}} = mul i32 %{{.*}}, 1
+!LLVMIR:   %{{.*}} = add i32 %{{.*}}, 1
+!LLVMIR:   br label %omp.wsloop.region
+!LLVMIR: omp.wsloop.region:                                ; preds = %omp_loop.body
+!LLVMIR:   %{{.*}} = call i8* @_FortranAioBeginExternalListOutput
+!LLVMIR:   %{{.*}} = sext i32 %{{.*}} to i64
+!LLVMIR:   %{{.*}} = call i1 @_FortranAioOutputInteger64
+!LLVMIR:   %{{.*}} = call i32 @_FortranAioEndIoStatement
+
 end do
 !FIRDialect:       omp.yield
 !FIRDialect:         }) {inclusive, nowait, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>, schedule_val = "Static"} : (i32, i32, i32) -> ()
-!FIRDialect:        omp.terminator
-!FIRDialect:  }
+!FIRDialect:       omp.terminator
+!FIRDialect:     }
 
 !LLVMIRDialect:    omp.yield
-!LLVMIRDialect:         }) {inclusive, nowait, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>, schedule_val = "Static"} : (i32, i32, i32) -> ()
+!LLVMIRDialect:      }) {inclusive, nowait, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>, schedule_val = "Static"} : (i32, i32, i32) -> ()
 !LLVMIRDialect:    omp.terminator
 !LLVMIRDialect:  }
 !LLVMIRDialect:  llvm.return
