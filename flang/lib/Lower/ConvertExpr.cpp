@@ -163,7 +163,7 @@ componentToExtendedValue(Fortran::lower::FirOpBuilder &builder,
     if (recordTy.getNumLenParams() != 0)
       TODO(loc,
            "lower component ref that is a derived type with length parameter");
-  if (extents.empty())
+  if (!extents.empty())
     return fir::ArrayBoxValue{component, extents};
   return component;
 }
