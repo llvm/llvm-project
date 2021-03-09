@@ -105,7 +105,7 @@ fe00 0000 00 - ff00 0000 00: heap                                        (4 GB)
 ff00 0000 00 - ff80 0000 00: -                                           (2 GB)
 ff80 0000 00 - ffff ffff ff: modules and main thread stack              (<2 GB)
 */
-struct Mapping {
+struct Mapping40 {
   static const uptr kMetaShadowBeg = 0x4000000000ull;
   static const uptr kMetaShadowEnd = 0x5000000000ull;
   static const uptr kTraceMemBeg   = 0xb000000000ull;
@@ -126,6 +126,7 @@ struct Mapping {
 };
 
 #define TSAN_MID_APP_RANGE 1
+#define TSAN_RUNTIME_VMA 1
 #elif defined(__aarch64__) && defined(__APPLE__)
 /*
 C/C++ on Darwin/iOS/ARM64 (36-bit VMA, 64 GB VM)
@@ -514,7 +515,7 @@ Go on linux/mips64 (47-bit VMA)
 6000 0000 0000 - 6200 0000 0000: traces
 6200 0000 0000 - 8000 0000 0000: -
 */
-struct Mapping {
+struct Mapping47 {
   static const uptr kMetaShadowBeg = 0x300000000000ull;
   static const uptr kMetaShadowEnd = 0x400000000000ull;
   static const uptr kTraceMemBeg = 0x600000000000ull;
@@ -524,6 +525,9 @@ struct Mapping {
   static const uptr kAppMemBeg = 0x000000001000ull;
   static const uptr kAppMemEnd = 0x00e000000000ull;
 };
+
+#define TSAN_RUNTIME_VMA 1
+
 #else
 # error "Unknown platform"
 #endif
@@ -601,6 +605,16 @@ uptr MappingArchImpl(void) {
 #endif
     case 46: return MappingImpl<Mapping46, Type>();
     case 47: return MappingImpl<Mapping47, Type>();
+  }
+  DCHECK(0);
+  return 0;
+#elif defined(__mips64)
+  switch (vmaSize) {
+#if !SANITIZER_GO
+    case 40: return MappingImpl<Mapping40, Type>();
+#else
+    case 47: return MappingImpl<Mapping47, Type>();
+#endif
   }
   DCHECK(0);
   return 0;
@@ -761,6 +775,16 @@ bool IsAppMem(uptr mem) {
   }
   DCHECK(0);
   return false;
+#elif defined(__mips64)
+  switch (vmaSize) {
+#if !SANITIZER_GO
+    case 40: return IsAppMemImpl<Mapping40>(mem);
+#else
+    case 47: return IsAppMemImpl<Mapping47>(mem);
+#endif
+  }
+  DCHECK(0);
+  return false;
 #else
   return IsAppMemImpl<Mapping>(mem);
 #endif
@@ -792,6 +816,16 @@ bool IsShadowMem(uptr mem) {
   }
   DCHECK(0);
   return false;
+#elif defined(__mips64)
+  switch (vmaSize) {
+#if !SANITIZER_GO
+    case 40: return IsShadowMemImpl<Mapping40>(mem);
+#else
+    case 47: return IsShadowMemImpl<Mapping47>(mem);
+#endif
+  }
+  DCHECK(0);
+  return false;
 #else
   return IsShadowMemImpl<Mapping>(mem);
 #endif
@@ -820,6 +854,16 @@ bool IsMetaMem(uptr mem) {
 #endif
     case 46: return IsMetaMemImpl<Mapping46>(mem);
     case 47: return IsMetaMemImpl<Mapping47>(mem);
+  }
+  DCHECK(0);
+  return false;
+#elif defined(__mips64)
+  switch (vmaSize) {
+#if !SANITIZER_GO
+    case 40: return IsMetaMemImpl<Mapping40>(mem);
+#else
+    case 47: return IsMetaMemImpl<Mapping47>(mem);
+#endif
   }
   DCHECK(0);
   return false;
@@ -864,6 +908,16 @@ uptr MemToShadow(uptr x) {
   }
   DCHECK(0);
   return 0;
+#elif defined(__mips64)
+  switch (vmaSize) {
+#if !SANITIZER_GO
+    case 40: return MemToShadowImpl<Mapping40>(x);
+#else
+    case 47: return MemToShadowImpl<Mapping47>(x);
+#endif
+  }
+  DCHECK(0);
+  return 0;
 #else
   return MemToShadowImpl<Mapping>(x);
 #endif
@@ -904,6 +958,16 @@ u32 *MemToMeta(uptr x) {
 #endif
     case 46: return MemToMetaImpl<Mapping46>(x);
     case 47: return MemToMetaImpl<Mapping47>(x);
+  }
+  DCHECK(0);
+  return 0;
+#elif defined(__mips64)
+  switch (vmaSize) {
+#if !SANITIZER_GO
+    case 40: return MemToMetaImpl<Mapping40>(x);
+#else
+    case 47: return MemToMetaImpl<Mapping47>(x);
+#endif
   }
   DCHECK(0);
   return 0;
@@ -963,6 +1027,16 @@ uptr ShadowToMem(uptr s) {
   }
   DCHECK(0);
   return 0;
+#elif defined(__mips64)
+  switch (vmaSize) {
+#if !SANITIZER_GO
+    case 40: return ShadowToMemImpl<Mapping40>(s);
+#else
+    case 47: return ShadowToMemImpl<Mapping47>(s);
+#endif
+  }
+  DCHECK(0);
+  return 0;
 #else
   return ShadowToMemImpl<Mapping>(s);
 #endif
@@ -1002,6 +1076,16 @@ uptr GetThreadTrace(int tid) {
   }
   DCHECK(0);
   return 0;
+#elif defined(__mips64)
+  switch (vmaSize) {
+#if !SANITIZER_GO
+    case 40: return GetThreadTraceImpl<Mapping40>(tid);
+#else
+    case 47: return GetThreadTraceImpl<Mapping47>(tid);
+#endif
+  }
+  DCHECK(0);
+  return 0;
 #else
   return GetThreadTraceImpl<Mapping>(tid);
 #endif
@@ -1033,6 +1117,16 @@ uptr GetThreadTraceHeader(int tid) {
 #endif
     case 46: return GetThreadTraceHeaderImpl<Mapping46>(tid);
     case 47: return GetThreadTraceHeaderImpl<Mapping47>(tid);
+  }
+  DCHECK(0);
+  return 0;
+#elif defined(__mips64)
+  switch (vmaSize) {
+#if !SANITIZER_GO
+    case 40: return GetThreadTraceHeaderImpl<Mapping40>(tid);
+#else
+    case 47: return GetThreadTraceHeaderImpl<Mapping47>(tid);
+#endif
   }
   DCHECK(0);
   return 0;
