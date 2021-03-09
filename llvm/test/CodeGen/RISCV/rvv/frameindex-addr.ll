@@ -17,7 +17,7 @@ define i64 @test(<vscale x 1 x i64> %0) nounwind {
   ; CHECK:   [[COPY:%[0-9]+]]:vr = COPY $v8
   ; CHECK:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
   ; CHECK:   dead %3:gpr = PseudoVSETIVLI 1, 88, implicit-def $vl, implicit-def $vtype
-  ; CHECK:   PseudoVSE64_V_M1 [[COPY]], %stack.0.a, $noreg, -1, implicit $vl, implicit $vtype
+  ; CHECK:   PseudoVSE64_V_M1 [[COPY]], %stack.0.a, $noreg, 64, implicit $vl, implicit $vtype
   ; CHECK:   [[LD:%[0-9]+]]:gpr = LD %stack.0.a, 0 :: (dereferenceable load 8 from %ir.a)
   ; CHECK:   $x10 = COPY [[LD]]
   ; CHECK:   PseudoRET implicit $x10
