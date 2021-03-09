@@ -11,7 +11,6 @@
 #include "AffineMapDetail.h"
 #include "AttributeDetail.h"
 #include "IntegerSetDetail.h"
-#include "LocationDetail.h"
 #include "TypeDetail.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -920,7 +919,7 @@ UnitAttr UnitAttr::get(MLIRContext *context) {
   return context->getImpl().unitAttr;
 }
 
-Location UnknownLoc::get(MLIRContext *context) {
+UnknownLoc UnknownLoc::get(MLIRContext *context) {
   return context->getImpl().unknownLocAttr;
 }
 

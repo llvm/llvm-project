@@ -62,7 +62,8 @@ protected:
             MI.getOpcode() != PPC::ADDItlsldLADDR &&
             MI.getOpcode() != PPC::ADDItlsgdLADDR32 &&
             MI.getOpcode() != PPC::ADDItlsldLADDR32 &&
-            MI.getOpcode() != PPC::TLSGDAIX && !IsPCREL) {
+            MI.getOpcode() != PPC::TLSGDAIX &&
+            MI.getOpcode() != PPC::TLSGDAIX8 && !IsPCREL) {
           // Although we create ADJCALLSTACKDOWN and ADJCALLSTACKUP
           // as scheduling fences, we skip creating fences if we already
           // have existing ADJCALLSTACKDOWN/UP to avoid nesting,
@@ -109,6 +110,11 @@ protected:
           Opc1 = PPC::ADDItlsldL32;
           Opc2 = PPC::GETtlsldADDR32;
           break;
+        case PPC::TLSGDAIX8:
+          // TLSGDAIX8 is expanded to two copies and GET_TLS_ADDR, so we only
+          // set Opc2 here.
+          Opc2 = PPC::GETtlsADDR64AIX;
+          break;
         case PPC::TLSGDAIX:
           // TLSGDAIX is expanded to two copies and GET_TLS_ADDR, so we only
           // set Opc2 here.
@@ -140,7 +146,7 @@ protected:
 
         if (IsAIX) {
           // The variable offset and region handle are copied in r4 and r3. The
-          // copies are followed by the GETtlsADDR32AIX instruction.
+          // copies are followed by GETtlsADDR32AIX/GETtlsADDR64AIX.
           BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR4)
               .addReg(MI.getOperand(1).getReg());
           BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)

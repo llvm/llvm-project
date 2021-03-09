@@ -28,7 +28,8 @@ namespace LargeBlock {
 struct Header {
   LargeBlock::Header *Prev;
   LargeBlock::Header *Next;
-  uptr BlockEnd;
+  uptr CommitBase;
+  uptr CommitSize;
   uptr MapBase;
   uptr MapSize;
   [[no_unique_address]] MapPlatformData Data;
@@ -38,29 +39,42 @@ constexpr uptr getHeaderSize() {
   return roundUpTo(sizeof(Header), 1U << SCUDO_MIN_ALIGNMENT_LOG);
 }
 
-static Header *getHeader(uptr Ptr) {
-  return reinterpret_cast<Header *>(Ptr - getHeaderSize());
+template <typename Config> static uptr addHeaderTag(uptr Ptr) {
+  if (allocatorSupportsMemoryTagging<Config>())
+    return addFixedTag(Ptr, 1);
+  return Ptr;
 }
 
-static Header *getHeader(const void *Ptr) {
-  return getHeader(reinterpret_cast<uptr>(Ptr));
+template <typename Config> static Header *getHeader(uptr Ptr) {
+  return reinterpret_cast<Header *>(addHeaderTag<Config>(Ptr) -
+                                    getHeaderSize());
+}
+
+template <typename Config> static Header *getHeader(const void *Ptr) {
+  return getHeader<Config>(reinterpret_cast<uptr>(Ptr));
 }
 
 } // namespace LargeBlock
+
+static void unmap(LargeBlock::Header *H) {
+  MapPlatformData Data = H->Data;
+  unmap(reinterpret_cast<void *>(H->MapBase), H->MapSize, UNMAP_ALL, &Data);
+}
 
 class MapAllocatorNoCache {
 public:
   void initLinkerInitialized(UNUSED s32 ReleaseToOsInterval) {}
   void init(UNUSED s32 ReleaseToOsInterval) {}
-  bool retrieve(UNUSED uptr Size, UNUSED LargeBlock::Header **H,
-                UNUSED bool *Zeroed) {
+  bool retrieve(UNUSED Options Options, UNUSED uptr Size, UNUSED uptr Alignment,
+                UNUSED LargeBlock::Header **H, UNUSED bool *Zeroed) {
     return false;
   }
-  bool store(UNUSED LargeBlock::Header *H) { return false; }
+  void store(UNUSED Options Options, UNUSED LargeBlock::Header *H) { unmap(H); }
   bool canCache(UNUSED uptr Size) { return false; }
   void disable() {}
   void enable() {}
   void releaseToOS() {}
+  void disableMemoryTagging() {}
   bool setOption(Option O, UNUSED sptr Value) {
     if (O == Option::ReleaseInterval || O == Option::MaxCacheEntriesCount ||
         O == Option::MaxCacheEntrySize)
@@ -69,6 +83,8 @@ public:
     return true;
   }
 };
+
+static const uptr MaxUnusedCachePages = 4U;
 
 template <typename Config> class MapAllocatorCache {
 public:
@@ -89,67 +105,147 @@ public:
     initLinkerInitialized(ReleaseToOsInterval);
   }
 
-  bool store(LargeBlock::Header *H) {
+  void store(Options Options, LargeBlock::Header *H) {
+    if (!canCache(H->CommitSize))
+      return unmap(H);
+
     bool EntryCached = false;
     bool EmptyCache = false;
+    const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
     const u64 Time = getMonotonicTime();
     const u32 MaxCount = atomic_load_relaxed(&MaxEntriesCount);
-    {
+    CachedBlock Entry;
+    Entry.CommitBase = H->CommitBase;
+    Entry.CommitSize = H->CommitSize;
+    Entry.MapBase = H->MapBase;
+    Entry.MapSize = H->MapSize;
+    Entry.BlockBegin = reinterpret_cast<uptr>(H + 1);
+    Entry.Data = H->Data;
+    Entry.Time = Time;
+    if (useMemoryTagging<Config>(Options)) {
+      if (Interval == 0 && !SCUDO_FUCHSIA) {
+        // Release the memory and make it inaccessible at the same time by
+        // creating a new MAP_NOACCESS mapping on top of the existing mapping.
+        // Fuchsia does not support replacing mappings by creating a new mapping
+        // on top so we just do the two syscalls there.
+        Entry.Time = 0;
+        map(reinterpret_cast<void *>(Entry.CommitBase), Entry.CommitSize,
+            "scudo:secondary", MAP_RESIZABLE | MAP_NOACCESS | MAP_MEMTAG,
+            &Entry.Data);
+      } else {
+        setMemoryPermission(Entry.CommitBase, Entry.CommitSize, MAP_NOACCESS,
+                            &Entry.Data);
+      }
+    } else if (Interval == 0) {
+      releasePagesToOS(Entry.CommitBase, 0, Entry.CommitSize, &Entry.Data);
+      Entry.Time = 0;
+    }
+    do {
       ScopedLock L(Mutex);
+      if (useMemoryTagging<Config>(Options) && QuarantinePos == -1U) {
+        // If we get here then memory tagging was disabled in between when we
+        // read Options and when we locked Mutex. We can't insert our entry into
+        // the quarantine or the cache because the permissions would be wrong so
+        // just unmap it.
+        break;
+      }
+      if (Config::SecondaryCacheQuarantineSize &&
+          useMemoryTagging<Config>(Options)) {
+        QuarantinePos =
+            (QuarantinePos + 1) % Config::SecondaryCacheQuarantineSize;
+        if (!Quarantine[QuarantinePos].CommitBase) {
+          Quarantine[QuarantinePos] = Entry;
+          return;
+        }
+        CachedBlock PrevEntry = Quarantine[QuarantinePos];
+        Quarantine[QuarantinePos] = Entry;
+        if (OldestTime == 0)
+          OldestTime = Entry.Time;
+        Entry = PrevEntry;
+      }
       if (EntriesCount >= MaxCount) {
         if (IsFullEvents++ == 4U)
           EmptyCache = true;
       } else {
         for (u32 I = 0; I < MaxCount; I++) {
-          if (Entries[I].Block)
+          if (Entries[I].CommitBase)
             continue;
           if (I != 0)
             Entries[I] = Entries[0];
-          Entries[0].Block = reinterpret_cast<uptr>(H);
-          Entries[0].BlockEnd = H->BlockEnd;
-          Entries[0].MapBase = H->MapBase;
-          Entries[0].MapSize = H->MapSize;
-          Entries[0].Data = H->Data;
-          Entries[0].Time = Time;
+          Entries[0] = Entry;
           EntriesCount++;
+          if (OldestTime == 0)
+            OldestTime = Entry.Time;
           EntryCached = true;
           break;
         }
       }
-    }
-    s32 Interval;
+    } while (0);
     if (EmptyCache)
       empty();
-    else if ((Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs)) >= 0)
+    else if (Interval >= 0)
       releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
-    return EntryCached;
+    if (!EntryCached)
+      unmap(reinterpret_cast<void *>(Entry.MapBase), Entry.MapSize, UNMAP_ALL,
+            &Entry.Data);
   }
 
-  bool retrieve(uptr Size, LargeBlock::Header **H, bool *Zeroed) {
+  bool retrieve(Options Options, uptr Size, uptr Alignment,
+                LargeBlock::Header **H, bool *Zeroed) {
     const uptr PageSize = getPageSizeCached();
     const u32 MaxCount = atomic_load_relaxed(&MaxEntriesCount);
-    ScopedLock L(Mutex);
-    if (EntriesCount == 0)
-      return false;
-    for (u32 I = 0; I < MaxCount; I++) {
-      if (!Entries[I].Block)
-        continue;
-      const uptr BlockSize = Entries[I].BlockEnd - Entries[I].Block;
-      if (Size > BlockSize)
-        continue;
-      if (Size < BlockSize - PageSize * 4U)
-        continue;
-      *H = reinterpret_cast<LargeBlock::Header *>(Entries[I].Block);
-      *Zeroed = Entries[I].Time == 0;
-      Entries[I].Block = 0;
-      (*H)->BlockEnd = Entries[I].BlockEnd;
-      (*H)->MapBase = Entries[I].MapBase;
-      (*H)->MapSize = Entries[I].MapSize;
-      (*H)->Data = Entries[I].Data;
-      EntriesCount--;
-      return true;
+    bool Found = false;
+    CachedBlock Entry;
+    uptr HeaderPos;
+    {
+      ScopedLock L(Mutex);
+      if (EntriesCount == 0)
+        return false;
+      for (u32 I = 0; I < MaxCount; I++) {
+        const uptr CommitBase = Entries[I].CommitBase;
+        if (!CommitBase)
+          continue;
+        const uptr CommitSize = Entries[I].CommitSize;
+        const uptr AllocPos =
+            roundDownTo(CommitBase + CommitSize - Size, Alignment);
+        HeaderPos =
+            AllocPos - Chunk::getHeaderSize() - LargeBlock::getHeaderSize();
+        if (HeaderPos > CommitBase + CommitSize)
+          continue;
+        if (HeaderPos < CommitBase ||
+            AllocPos > CommitBase + PageSize * MaxUnusedCachePages)
+          continue;
+        Found = true;
+        Entry = Entries[I];
+        Entries[I].CommitBase = 0;
+        break;
+      }
     }
-    return false;
+    if (Found) {
+      *H = reinterpret_cast<LargeBlock::Header *>(
+          LargeBlock::addHeaderTag<Config>(HeaderPos));
+      *Zeroed = Entry.Time == 0;
+      if (useMemoryTagging<Config>(Options))
+        setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0, &Entry.Data);
+      uptr NewBlockBegin = reinterpret_cast<uptr>(*H + 1);
+      if (useMemoryTagging<Config>(Options)) {
+        if (*Zeroed)
+          storeTags(LargeBlock::addHeaderTag<Config>(Entry.CommitBase),
+                    NewBlockBegin);
+        else if (Entry.BlockBegin < NewBlockBegin)
+          storeTags(Entry.BlockBegin, NewBlockBegin);
+        else
+          storeTags(untagPointer(NewBlockBegin),
+                    untagPointer(Entry.BlockBegin));
+      }
+      (*H)->CommitBase = Entry.CommitBase;
+      (*H)->CommitSize = Entry.CommitSize;
+      (*H)->MapBase = Entry.MapBase;
+      (*H)->MapSize = Entry.MapSize;
+      (*H)->Data = Entry.Data;
+      EntriesCount--;
+    }
+    return Found;
   }
 
   bool canCache(uptr Size) {
@@ -181,6 +277,23 @@ public:
 
   void releaseToOS() { releaseOlderThan(UINT64_MAX); }
 
+  void disableMemoryTagging() {
+    ScopedLock L(Mutex);
+    for (u32 I = 0; I != Config::SecondaryCacheQuarantineSize; ++I) {
+      if (Quarantine[I].CommitBase) {
+        unmap(reinterpret_cast<void *>(Quarantine[I].MapBase),
+              Quarantine[I].MapSize, UNMAP_ALL, &Quarantine[I].Data);
+        Quarantine[I].CommitBase = 0;
+      }
+    }
+    const u32 MaxCount = atomic_load_relaxed(&MaxEntriesCount);
+    for (u32 I = 0; I < MaxCount; I++)
+      if (Entries[I].CommitBase)
+        setMemoryPermission(Entries[I].CommitBase, Entries[I].CommitSize, 0,
+                            &Entries[I].Data);
+    QuarantinePos = -1U;
+  }
+
   void disable() { Mutex.lock(); }
 
   void enable() { Mutex.unlock(); }
@@ -196,12 +309,12 @@ private:
     {
       ScopedLock L(Mutex);
       for (uptr I = 0; I < Config::SecondaryCacheEntriesArraySize; I++) {
-        if (!Entries[I].Block)
+        if (!Entries[I].CommitBase)
           continue;
         MapInfo[N].MapBase = reinterpret_cast<void *>(Entries[I].MapBase);
         MapInfo[N].MapSize = Entries[I].MapSize;
         MapInfo[N].Data = Entries[I].Data;
-        Entries[I].Block = 0;
+        Entries[I].CommitBase = 0;
         N++;
       }
       EntriesCount = 0;
@@ -212,37 +325,50 @@ private:
             &MapInfo[I].Data);
   }
 
-  void releaseOlderThan(u64 Time) {
-    ScopedLock L(Mutex);
-    if (!EntriesCount)
-      return;
-    for (uptr I = 0; I < Config::SecondaryCacheEntriesArraySize; I++) {
-      if (!Entries[I].Block || !Entries[I].Time || Entries[I].Time > Time)
-        continue;
-      releasePagesToOS(Entries[I].Block, 0,
-                       Entries[I].BlockEnd - Entries[I].Block,
-                       &Entries[I].Data);
-      Entries[I].Time = 0;
-    }
-  }
-
   struct CachedBlock {
-    uptr Block;
-    uptr BlockEnd;
+    uptr CommitBase;
+    uptr CommitSize;
     uptr MapBase;
     uptr MapSize;
+    uptr BlockBegin;
     [[no_unique_address]] MapPlatformData Data;
     u64 Time;
   };
 
+  void releaseIfOlderThan(CachedBlock &Entry, u64 Time) {
+    if (!Entry.CommitBase || !Entry.Time)
+      return;
+    if (Entry.Time > Time) {
+      if (OldestTime == 0 || Entry.Time < OldestTime)
+        OldestTime = Entry.Time;
+      return;
+    }
+    releasePagesToOS(Entry.CommitBase, 0, Entry.CommitSize, &Entry.Data);
+    Entry.Time = 0;
+  }
+
+  void releaseOlderThan(u64 Time) {
+    ScopedLock L(Mutex);
+    if (!EntriesCount || OldestTime == 0 || OldestTime > Time)
+      return;
+    OldestTime = 0;
+    for (uptr I = 0; I < Config::SecondaryCacheQuarantineSize; I++)
+      releaseIfOlderThan(Quarantine[I], Time);
+    for (uptr I = 0; I < Config::SecondaryCacheEntriesArraySize; I++)
+      releaseIfOlderThan(Entries[I], Time);
+  }
+
   HybridMutex Mutex;
-  CachedBlock Entries[Config::SecondaryCacheEntriesArraySize];
   u32 EntriesCount;
+  u32 QuarantinePos;
   atomic_u32 MaxEntriesCount;
   atomic_uptr MaxEntrySize;
-  uptr LargestSize;
+  u64 OldestTime;
   u32 IsFullEvents;
   atomic_s32 ReleaseToOsIntervalMs;
+
+  CachedBlock Entries[Config::SecondaryCacheEntriesArraySize];
+  CachedBlock Quarantine[Config::SecondaryCacheQuarantineSize];
 };
 
 template <typename Config> class MapAllocator {
@@ -258,13 +384,15 @@ public:
     initLinkerInitialized(S, ReleaseToOsInterval);
   }
 
-  void *allocate(uptr Size, uptr AlignmentHint = 0, uptr *BlockEnd = nullptr,
+  void *allocate(Options Options, uptr Size, uptr AlignmentHint = 0,
+                 uptr *BlockEnd = nullptr,
                  FillContentsMode FillContents = NoFill);
 
-  void deallocate(void *Ptr);
+  void deallocate(Options Options, void *Ptr);
 
   static uptr getBlockEnd(void *Ptr) {
-    return LargeBlock::getHeader(Ptr)->BlockEnd;
+    auto *B = LargeBlock::getHeader<Config>(Ptr);
+    return B->CommitBase + B->CommitSize;
   }
 
   static uptr getBlockSize(void *Ptr) {
@@ -284,8 +412,12 @@ public:
   }
 
   template <typename F> void iterateOverBlocks(F Callback) const {
-    for (const auto &H : InUseBlocks)
-      Callback(reinterpret_cast<uptr>(&H) + LargeBlock::getHeaderSize());
+    for (const auto &H : InUseBlocks) {
+      uptr Ptr = reinterpret_cast<uptr>(&H) + LargeBlock::getHeaderSize();
+      if (allocatorSupportsMemoryTagging<Config>())
+        Ptr = untagPointer(Ptr);
+      Callback(Ptr);
+    }
   }
 
   uptr canCache(uptr Size) { return Cache.canCache(Size); }
@@ -293,6 +425,8 @@ public:
   bool setOption(Option O, sptr Value) { return Cache.setOption(O, Value); }
 
   void releaseToOS() { Cache.releaseToOS(); }
+
+  void disableMemoryTagging() { Cache.disableMemoryTagging(); }
 
 private:
   typename Config::SecondaryCache Cache;
@@ -319,26 +453,36 @@ private:
 // the committed memory will amount to something close to Size - AlignmentHint
 // (pending rounding and headers).
 template <typename Config>
-void *MapAllocator<Config>::allocate(uptr Size, uptr AlignmentHint,
-                                     uptr *BlockEnd,
+void *MapAllocator<Config>::allocate(Options Options, uptr Size, uptr Alignment,
+                                     uptr *BlockEndPtr,
                                      FillContentsMode FillContents) {
-  DCHECK_GE(Size, AlignmentHint);
+  if (Options.get(OptionBit::AddLargeAllocationSlack))
+    Size += 1UL << SCUDO_MIN_ALIGNMENT_LOG;
+  Alignment = Max(Alignment, 1UL << SCUDO_MIN_ALIGNMENT_LOG);
   const uptr PageSize = getPageSizeCached();
-  const uptr RoundedSize =
-      roundUpTo(Size + LargeBlock::getHeaderSize(), PageSize);
+  uptr RoundedSize =
+      roundUpTo(roundUpTo(Size, Alignment) + LargeBlock::getHeaderSize() +
+                    Chunk::getHeaderSize(),
+                PageSize);
+  if (Alignment > PageSize)
+    RoundedSize += Alignment - PageSize;
 
-  if (AlignmentHint < PageSize && Cache.canCache(RoundedSize)) {
+  if (Alignment < PageSize && Cache.canCache(RoundedSize)) {
     LargeBlock::Header *H;
     bool Zeroed;
-    if (Cache.retrieve(RoundedSize, &H, &Zeroed)) {
-      if (BlockEnd)
-        *BlockEnd = H->BlockEnd;
-      void *Ptr = reinterpret_cast<void *>(reinterpret_cast<uptr>(H) +
-                                           LargeBlock::getHeaderSize());
+    if (Cache.retrieve(Options, Size, Alignment, &H, &Zeroed)) {
+      const uptr BlockEnd = H->CommitBase + H->CommitSize;
+      if (BlockEndPtr)
+        *BlockEndPtr = BlockEnd;
+      uptr HInt = reinterpret_cast<uptr>(H);
+      if (allocatorSupportsMemoryTagging<Config>())
+        HInt = untagPointer(HInt);
+      const uptr PtrInt = HInt + LargeBlock::getHeaderSize();
+      void *Ptr = reinterpret_cast<void *>(PtrInt);
       if (FillContents && !Zeroed)
         memset(Ptr, FillContents == ZeroFill ? 0 : PatternFillByte,
-               H->BlockEnd - reinterpret_cast<uptr>(Ptr));
-      const uptr BlockSize = H->BlockEnd - reinterpret_cast<uptr>(H);
+               BlockEnd - PtrInt);
+      const uptr BlockSize = BlockEnd - HInt;
       {
         ScopedLock L(Mutex);
         InUseBlocks.push_back(H);
@@ -353,9 +497,8 @@ void *MapAllocator<Config>::allocate(uptr Size, uptr AlignmentHint,
 
   MapPlatformData Data = {};
   const uptr MapSize = RoundedSize + 2 * PageSize;
-  uptr MapBase =
-      reinterpret_cast<uptr>(map(nullptr, MapSize, "scudo:secondary",
-                                 MAP_NOACCESS | MAP_ALLOWNOMEM, &Data));
+  uptr MapBase = reinterpret_cast<uptr>(
+      map(nullptr, MapSize, nullptr, MAP_NOACCESS | MAP_ALLOWNOMEM, &Data));
   if (UNLIKELY(!MapBase))
     return nullptr;
   uptr CommitBase = MapBase + PageSize;
@@ -363,11 +506,11 @@ void *MapAllocator<Config>::allocate(uptr Size, uptr AlignmentHint,
 
   // In the unlikely event of alignments larger than a page, adjust the amount
   // of memory we want to commit, and trim the extra memory.
-  if (UNLIKELY(AlignmentHint >= PageSize)) {
+  if (UNLIKELY(Alignment >= PageSize)) {
     // For alignments greater than or equal to a page, the user pointer (eg: the
     // pointer that is returned by the C or C++ allocation APIs) ends up on a
     // page boundary , and our headers will live in the preceding page.
-    CommitBase = roundUpTo(MapBase + PageSize + 1, AlignmentHint) - PageSize;
+    CommitBase = roundUpTo(MapBase + PageSize + 1, Alignment) - PageSize;
     const uptr NewMapBase = CommitBase - PageSize;
     DCHECK_GE(NewMapBase, MapBase);
     // We only trim the extra memory on 32-bit platforms: 64-bit platforms
@@ -376,9 +519,8 @@ void *MapAllocator<Config>::allocate(uptr Size, uptr AlignmentHint,
       unmap(reinterpret_cast<void *>(MapBase), NewMapBase - MapBase, 0, &Data);
       MapBase = NewMapBase;
     }
-    const uptr NewMapEnd = CommitBase + PageSize +
-                           roundUpTo((Size - AlignmentHint), PageSize) +
-                           PageSize;
+    const uptr NewMapEnd =
+        CommitBase + PageSize + roundUpTo(Size, PageSize) + PageSize;
     DCHECK_LE(NewMapEnd, MapEnd);
     if (SCUDO_WORDSIZE == 32U && NewMapEnd != MapEnd) {
       unmap(reinterpret_cast<void *>(NewMapEnd), MapEnd - NewMapEnd, 0, &Data);
@@ -387,16 +529,34 @@ void *MapAllocator<Config>::allocate(uptr Size, uptr AlignmentHint,
   }
 
   const uptr CommitSize = MapEnd - PageSize - CommitBase;
-  const uptr Ptr = reinterpret_cast<uptr>(
-      map(reinterpret_cast<void *>(CommitBase), CommitSize, "scudo:secondary",
-          MAP_RESIZABLE, &Data));
-  LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(Ptr);
+  const uptr AllocPos = roundDownTo(CommitBase + CommitSize - Size, Alignment);
+  const uptr MaxUnusedCacheBytes = MaxUnusedCachePages * getPageSizeCached();
+  if (useMemoryTagging<Config>(Options) && CommitSize > MaxUnusedCacheBytes) {
+    const uptr UntaggedPos = Max(AllocPos, CommitBase + MaxUnusedCacheBytes);
+    map(reinterpret_cast<void *>(CommitBase), UntaggedPos - CommitBase,
+        "scudo:secondary", MAP_RESIZABLE | MAP_MEMTAG, &Data);
+    map(reinterpret_cast<void *>(UntaggedPos),
+        CommitBase + CommitSize - UntaggedPos, "scudo:secondary", MAP_RESIZABLE,
+        &Data);
+  } else {
+    map(reinterpret_cast<void *>(CommitBase), CommitSize, "scudo:secondary",
+        MAP_RESIZABLE | (useMemoryTagging<Config>(Options) ? MAP_MEMTAG : 0),
+        &Data);
+  }
+  const uptr HeaderPos =
+      AllocPos - Chunk::getHeaderSize() - LargeBlock::getHeaderSize();
+  LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(
+      LargeBlock::addHeaderTag<Config>(HeaderPos));
+  if (useMemoryTagging<Config>(Options))
+    storeTags(LargeBlock::addHeaderTag<Config>(CommitBase),
+              reinterpret_cast<uptr>(H + 1));
   H->MapBase = MapBase;
   H->MapSize = MapEnd - MapBase;
-  H->BlockEnd = CommitBase + CommitSize;
+  H->CommitBase = CommitBase;
+  H->CommitSize = CommitSize;
   H->Data = Data;
-  if (BlockEnd)
-    *BlockEnd = CommitBase + CommitSize;
+  if (BlockEndPtr)
+    *BlockEndPtr = CommitBase + CommitSize;
   {
     ScopedLock L(Mutex);
     InUseBlocks.push_back(H);
@@ -407,13 +567,13 @@ void *MapAllocator<Config>::allocate(uptr Size, uptr AlignmentHint,
     Stats.add(StatAllocated, CommitSize);
     Stats.add(StatMapped, H->MapSize);
   }
-  return reinterpret_cast<void *>(Ptr + LargeBlock::getHeaderSize());
+  return reinterpret_cast<void *>(HeaderPos + LargeBlock::getHeaderSize());
 }
 
-template <typename Config> void MapAllocator<Config>::deallocate(void *Ptr) {
-  LargeBlock::Header *H = LargeBlock::getHeader(Ptr);
-  const uptr Block = reinterpret_cast<uptr>(H);
-  const uptr CommitSize = H->BlockEnd - Block;
+template <typename Config>
+void MapAllocator<Config>::deallocate(Options Options, void *Ptr) {
+  LargeBlock::Header *H = LargeBlock::getHeader<Config>(Ptr);
+  const uptr CommitSize = H->CommitSize;
   {
     ScopedLock L(Mutex);
     InUseBlocks.remove(H);
@@ -422,12 +582,7 @@ template <typename Config> void MapAllocator<Config>::deallocate(void *Ptr) {
     Stats.sub(StatAllocated, CommitSize);
     Stats.sub(StatMapped, H->MapSize);
   }
-  if (Cache.canCache(CommitSize) && Cache.store(H))
-    return;
-  void *Addr = reinterpret_cast<void *>(H->MapBase);
-  const uptr Size = H->MapSize;
-  MapPlatformData Data = H->Data;
-  unmap(Addr, Size, UNMAP_ALL, &Data);
+  Cache.store(Options, H);
 }
 
 template <typename Config>

@@ -46,8 +46,3 @@ add_flang_nongtest_unittest(list-input
   RuntimeTesting
   FortranRuntime
 )
-
-add_flang_nongtest_unittest(character
-  RuntimeTesting
-  FortranRuntime
-)

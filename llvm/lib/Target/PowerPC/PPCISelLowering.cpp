@@ -3131,9 +3131,6 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   if (DAG.getTarget().useEmulatedTLS())
     report_fatal_error("Emulated TLS is not yet supported on AIX");
 
-  if (Subtarget.isPPC64())
-    report_fatal_error("TLS is not yet supported on AIX PPC64");
-
   SDLoc dl(GA);
   const GlobalValue *GV = GA->getGlobal();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());

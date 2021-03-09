@@ -29,3 +29,21 @@ Nullify(prp)
 Nullify(maxvalue)
 
 End Program
+
+! Make sure that the compiler doesn't crash when NULLIFY is used in a context
+! that has reported errors
+module badNullify
+  interface
+    module function ptrFun()
+      integer, pointer :: ptrFun
+    end function
+  end interface
+contains
+  !ERROR: 'ptrfun' was not declared a separate module procedure
+  module function ptrFun()
+    integer, pointer :: ptrFun
+    real :: realVar
+    nullify(ptrFun)
+    nullify(realVar)
+  end function
+end module

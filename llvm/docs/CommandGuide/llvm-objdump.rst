@@ -304,6 +304,10 @@ MACH-O ONLY OPTIONS AND COMMANDS
 
   Display exported symbols.
 
+.. option:: --function-starts
+
+  Print the function starts table for Mach-O objects.
+
 .. option:: -g
 
   Print line information from debug info if available.

@@ -1,44 +1,18 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass si-insert-skips -amdgpu-skip-threshold-legacy=2 %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass si-remove-short-exec-branches -amdgpu-skip-threshold=3 %s -o - | FileCheck %s
 
 ---
 
-# CHECK-LABEL: name: no_count_mask_branch_pseudo
-# CHECK: $vgpr1 = V_MOV_B32_e32 7, implicit $exec
-# CHECK-NEXT: SI_MASK_BRANCH
-# CHECK-NOT: S_CBRANCH_EXECZ
-name: no_count_mask_branch_pseudo
-body: |
-  bb.0:
-    successors: %bb.1
-
-    $vgpr1 = V_MOV_B32_e32 7, implicit $exec
-    SI_MASK_BRANCH %bb.2, implicit $exec
-
-  bb.1:
-    successors: %bb.2
-    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    SI_MASK_BRANCH %bb.3, implicit $exec
-
-  bb.2:
-    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
-
-  bb.3:
-    S_ENDPGM 0
-...
-
----
-
+# FIXME: RemoveShortExecBranches should not count dbg_value instructions.
 # CHECK-LABEL: name: no_count_dbg_value
 # CHECK: $vgpr1 = V_MOV_B32_e32 7, implicit $exec
-# CHECK-NEXT: SI_MASK_BRANCH
 # CHECK-NOT: S_CBRANCH_EXECZ
 name: no_count_dbg_value
 body: |
   bb.0:
-    successors: %bb.1
+    successors: %bb.1, %bb.2
 
     $vgpr1 = V_MOV_B32_e32 7, implicit $exec
-    SI_MASK_BRANCH %bb.2, implicit $exec
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
 
   bb.1:
     successors: %bb.2

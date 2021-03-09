@@ -35,9 +35,9 @@ MATCHER_P(DiagMessage, M, "") {
   return false;
 }
 
-class LSPTest : public ::testing::Test, private clangd::Logger {
+class LSPTest : public ::testing::Test {
 protected:
-  LSPTest() : LogSession(*this) {
+  LSPTest() : LogSession(L) {
     ClangdServer::Options &Base = Opts;
     Base = ClangdServer::optsForTest();
     // This is needed to we can test index-based operations like call hierarchy.
@@ -73,26 +73,29 @@ protected:
   FeatureModuleSet FeatureModules;
 
 private:
-  // Color logs so we can distinguish them from test output.
-  void log(Level L, const char *Fmt,
-           const llvm::formatv_object_base &Message) override {
-    raw_ostream::Colors Color;
-    switch (L) {
-    case Level::Verbose:
-      Color = raw_ostream::BLUE;
-      break;
-    case Level::Error:
-      Color = raw_ostream::RED;
-      break;
-    default:
-      Color = raw_ostream::YELLOW;
-      break;
+  class Logger : public clang::clangd::Logger {
+    // Color logs so we can distinguish them from test output.
+    void log(Level L, const char *Fmt,
+             const llvm::formatv_object_base &Message) override {
+      raw_ostream::Colors Color;
+      switch (L) {
+      case Level::Verbose:
+        Color = raw_ostream::BLUE;
+        break;
+      case Level::Error:
+        Color = raw_ostream::RED;
+        break;
+      default:
+        Color = raw_ostream::YELLOW;
+        break;
+      }
+      std::lock_guard<std::mutex> Lock(LogMu);
+      (llvm::outs().changeColor(Color) << Message << "\n").resetColor();
     }
-    std::lock_guard<std::mutex> Lock(LogMu);
-    (llvm::outs().changeColor(Color) << Message << "\n").resetColor();
-  }
-  std::mutex LogMu;
+    std::mutex LogMu;
+  };
 
+  Logger L;
   LoggingSession LogSession;
   llvm::Optional<ClangdLSPServer> Server;
   llvm::Optional<std::thread> ServerThread;

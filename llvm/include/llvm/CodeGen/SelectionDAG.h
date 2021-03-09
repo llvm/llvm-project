@@ -74,6 +74,7 @@ class MCSymbol;
 class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
 class SDDbgValue;
+class SDDbgOperand;
 class SDDbgLabel;
 class SelectionDAG;
 class SelectionDAGTargetInfo;
@@ -159,17 +160,9 @@ public:
   SDDbgInfo(const SDDbgInfo &) = delete;
   SDDbgInfo &operator=(const SDDbgInfo &) = delete;
 
-  void add(SDDbgValue *V, const SDNode *Node, bool isParameter) {
-    if (isParameter) {
-      ByvalParmDbgValues.push_back(V);
-    } else     DbgValues.push_back(V);
-    if (Node)
-      DbgValMap[Node].push_back(V);
-  }
+  void add(SDDbgValue *V, bool isParameter);
 
-  void add(SDDbgLabel *L) {
-    DbgLabels.push_back(L);
-  }
+  void add(SDDbgLabel *L) { DbgLabels.push_back(L); }
 
   /// Invalidate all DbgValues attached to the node and remove
   /// it from the Node-to-DbgValues map.
@@ -1534,10 +1527,23 @@ public:
                                     unsigned FI, bool IsIndirect,
                                     const DebugLoc &DL, unsigned O);
 
+  /// Creates a FrameIndex SDDbgValue node.
+  SDDbgValue *getFrameIndexDbgValue(DIVariable *Var, DIExpression *Expr,
+                                    unsigned FI,
+                                    ArrayRef<SDNode *> Dependencies,
+                                    bool IsIndirect, const DebugLoc &DL,
+                                    unsigned O);
+
   /// Creates a VReg SDDbgValue node.
   SDDbgValue *getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
                               unsigned VReg, bool IsIndirect,
                               const DebugLoc &DL, unsigned O);
+
+  /// Creates a SDDbgValue node from a list of locations.
+  SDDbgValue *getDbgValueList(DIVariable *Var, DIExpression *Expr,
+                              ArrayRef<SDDbgOperand> Locs,
+                              ArrayRef<SDNode *> Dependencies, bool IsIndirect,
+                              const DebugLoc &DL, unsigned O, bool IsVariadic);
 
   /// Creates a SDDbgLabel node.
   SDDbgLabel *getDbgLabel(DILabel *Label, const DebugLoc &DL, unsigned O);
@@ -1629,7 +1635,7 @@ public:
 
   /// Add a dbg_value SDNode. If SD is non-null that means the
   /// value is produced by SD.
-  void AddDbgValue(SDDbgValue *DB, SDNode *SD, bool isParameter);
+  void AddDbgValue(SDDbgValue *DB, bool isParameter);
 
   /// Add a dbg_label SDNode.
   void AddDbgLabel(SDDbgLabel *DB);

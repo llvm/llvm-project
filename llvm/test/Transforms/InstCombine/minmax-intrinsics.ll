@@ -377,3 +377,76 @@ define i8 @umin_zext_constanti_uses(i5 %x) {
   %m = call i8 @llvm.umin.i8(i8 %e, i8 7)
   ret i8 %m
 }
+
+define i8 @smax_of_nots(i8 %x, i8 %y) {
+; CHECK-LABEL: @smax_of_nots(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[NOTX]], i8 [[NOTY]])
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %notx = xor i8 %x, -1
+  %noty = xor i8 %y, -1
+  %m = call i8 @llvm.smax.i8(i8 %notx, i8 %noty)
+  ret i8 %m
+}
+
+define <3 x i8> @smin_of_nots(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @smin_of_nots(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor <3 x i8> [[X:%.*]], <i8 -1, i8 undef, i8 -1>
+; CHECK-NEXT:    [[NOTY:%.*]] = xor <3 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 undef>
+; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[NOTX]], <3 x i8> [[NOTY]])
+; CHECK-NEXT:    ret <3 x i8> [[M]]
+;
+  %notx = xor <3 x i8> %x, <i8 -1, i8 undef, i8 -1>
+  %noty = xor <3 x i8> %y, <i8 -1, i8 -1, i8 undef>
+  %m = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %notx, <3 x i8> %noty)
+  ret <3 x i8> %m
+}
+
+define i8 @umax_of_nots(i8 %x, i8 %y) {
+; CHECK-LABEL: @umax_of_nots(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTX]])
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[NOTX]], i8 [[NOTY]])
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %notx = xor i8 %x, -1
+  call void @use(i8 %notx)
+  %noty = xor i8 %y, -1
+  %m = call i8 @llvm.umax.i8(i8 %notx, i8 %noty)
+  ret i8 %m
+}
+
+define i8 @umin_of_nots(i8 %x, i8 %y) {
+; CHECK-LABEL: @umin_of_nots(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTY]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NOTX]], i8 [[NOTY]])
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %notx = xor i8 %x, -1
+  %noty = xor i8 %y, -1
+  call void @use(i8 %noty)
+  %m = call i8 @llvm.umin.i8(i8 %notx, i8 %noty)
+  ret i8 %m
+}
+
+define i8 @umin_of_nots_uses(i8 %x, i8 %y) {
+; CHECK-LABEL: @umin_of_nots_uses(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTX]])
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTY]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NOTX]], i8 [[NOTY]])
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %notx = xor i8 %x, -1
+  call void @use(i8 %notx)
+  %noty = xor i8 %y, -1
+  call void @use(i8 %noty)
+  %m = call i8 @llvm.umin.i8(i8 %notx, i8 %noty)
+  ret i8 %m
+}

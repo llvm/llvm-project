@@ -54,17 +54,17 @@ vmset.m v0
 # ALIAS:    vmnot.m v0, v1                  # encoding: [0x57,0xa0,0x10,0x76]
 # NO-ALIAS: vmnand.mm       v0, v1, v1      # encoding: [0x57,0xa0,0x10,0x76]
 vmnot.m v0, v1
-# ALIAS:    vl1r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x22]
-# NO-ALIAS: vl1re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x22]
+# ALIAS:    vl1r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x02]
+# NO-ALIAS: vl1re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x02]
 vl1r.v v0, (a0) 
-# ALIAS:    vl2r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x42]
-# NO-ALIAS: vl2re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x42]
+# ALIAS:    vl2r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x22]
+# NO-ALIAS: vl2re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x22]
 vl2r.v v0, (a0) 
-# ALIAS:    vl4r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x82]
-# NO-ALIAS: vl4re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x82]
+# ALIAS:    vl4r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x62]
+# NO-ALIAS: vl4re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x62]
 vl4r.v v0, (a0) 
-# ALIAS:    vl8r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x02]
-# NO-ALIAS: vl8re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x02]
+# ALIAS:    vl8r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0xe2]
+# NO-ALIAS: vl8re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0xe2]
 vl8r.v v0, (a0) 
 # ALIAS:    vneg.v          v2, v1, v0.t    # encoding: [0x57,0x41,0x10,0x0c]
 # NO-ALIAS: vrsub.vx        v2, v1, zero, v0.t # encoding: [0x57,0x41,0x10,0x0c]
