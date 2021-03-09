@@ -684,6 +684,28 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
 
   SD->setIsEmitted();
 
+  ArrayRef<SDDbgOperand> LocationOps = SD->getLocationOps();
+  assert(!LocationOps.empty() && "dbg_value with no location operands?");
+
+  // Emit variadic dbg_value nodes as DBG_VALUE_LIST.
+  if (SD->isVariadic()) {
+    // DBG_VALUE_LIST := "DBG_VALUE_LIST" var, expression, loc (, loc)*
+    const MCInstrDesc &DbgValDesc = TII->get(TargetOpcode::DBG_VALUE_LIST);
+    // Build the DBG_VALUE_LIST instruction base.
+    auto MIB = BuildMI(*MF, DL, DbgValDesc);
+    MIB.addMetadata(Var);
+    MIB.addMetadata(Expr);
+    if (SD->isInvalidated()) {
+      // At least one node is no longer computed so we are unable to emit the
+      // location. Simply mark all of the operands as undef.
+      for (size_t i = 0; i < LocationOps.size(); ++i)
+        MIB.addReg(0U, RegState::Debug);
+    } else {
+      AddDbgValueLocationOps(MIB, DbgValDesc, LocationOps, VRBaseMap);
+    }
+    return &*MIB;
+  }
+
   if (SD->isInvalidated()) {
     // An invalidated SDNode must generate an undef DBG_VALUE: although the
     // original value is no longer computed, earlier DBG_VALUEs live ranges
@@ -697,75 +719,77 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
   }
 
   // Attempt to produce a DBG_INSTR_REF if we've been asked to.
+  // We currently exclude the possibility of instruction references for
+  // variadic nodes; if at some point we enable them, this should be moved
+  // above the variadic block.
   if (EmitDebugInstrRefs)
     if (auto *InstrRef = EmitDbgInstrRef(SD, VRBaseMap))
       return InstrRef;
 
-  SDDbgOperand SDOperand = SD->getLocationOps()[0];
-  if (SDOperand.getKind() == SDDbgOperand::FRAMEIX) {
-    // Stack address; this needs to be lowered in target-dependent fashion.
-    // EmitTargetCodeForFrameDebugValue is responsible for allocation.
-    auto FrameMI = BuildMI(*MF, DL, TII->get(TargetOpcode::DBG_VALUE))
-                       .addFrameIndex(SDOperand.getFrameIx());
-    if (SD->isIndirect())
-      // Push [fi + 0] onto the DIExpression stack.
-      FrameMI.addImm(0);
-    else
-      // Push fi onto the DIExpression stack.
-      FrameMI.addReg(0);
-    return FrameMI.addMetadata(Var).addMetadata(Expr);
-  }
-  // Otherwise, we're going to create an instruction here.
-  const MCInstrDesc &II = TII->get(TargetOpcode::DBG_VALUE);
-  MachineInstrBuilder MIB = BuildMI(*MF, DL, II);
-  if (SDOperand.getKind() == SDDbgOperand::SDNODE) {
-    SDNode *Node = SDOperand.getSDNode();
-    SDValue Op = SDValue(Node, SDOperand.getResNo());
-    // It's possible we replaced this SDNode with other(s) and therefore
-    // didn't generate code for it.  It's better to catch these cases where
-    // they happen and transfer the debug info, but trying to guarantee that
-    // in all cases would be very fragile; this is a safeguard for any
-    // that were missed.
-    DenseMap<SDValue, Register>::iterator I = VRBaseMap.find(Op);
-    if (I==VRBaseMap.end())
-      MIB.addReg(0U);       // undef
-    else
-      AddOperand(MIB, Op, (*MIB).getNumOperands(), &II, VRBaseMap,
-                 /*IsDebug=*/true, /*IsClone=*/false, /*IsCloned=*/false);
-  } else if (SDOperand.getKind() == SDDbgOperand::VREG) {
-    MIB.addReg(SDOperand.getVReg(), RegState::Debug);
-  } else if (SDOperand.getKind() == SDDbgOperand::CONST) {
-    const Value *V = SDOperand.getConst();
-    if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-      if (CI->getBitWidth() > 64)
-        MIB.addCImm(CI);
-      else
-        MIB.addImm(CI->getSExtValue());
-    } else if (const ConstantFP *CF = dyn_cast<ConstantFP>(V)) {
-      MIB.addFPImm(CF);
-    } else if (isa<ConstantPointerNull>(V)) {
-      // Note: This assumes that all nullptr constants are zero-valued.
-      MIB.addImm(0);
-    } else {
-      // Could be an Undef.  In any case insert an Undef so we can see what we
-      // dropped.
-      MIB.addReg(0U);
-    }
-  } else {
-    // Insert an Undef so we can see what we dropped.
-    MIB.addReg(0U);
-  }
-
-  // Indirect addressing is indicated by an Imm as the second parameter.
+  // Emit non-variadic dbg_value nodes as DBG_VALUE.
+  // DBG_VALUE := "DBG_VALUE" loc, isIndirect, var, expr
+  const MCInstrDesc &DbgValDesc = TII->get(TargetOpcode::DBG_VALUE);
+  // Build the DBG_VALUE instruction base.
+  auto MIB = BuildMI(*MF, DL, DbgValDesc);
+  // Add the single location componenet 'loc'.
+  assert(LocationOps.size() == 1 &&
+         "Non variadic dbg_value should have only one location op");
+  AddDbgValueLocationOps(MIB, DbgValDesc, LocationOps, VRBaseMap);
+  // Add 'isIndirect'.
   if (SD->isIndirect())
     MIB.addImm(0U);
   else
     MIB.addReg(0U, RegState::Debug);
-
   MIB.addMetadata(Var);
   MIB.addMetadata(Expr);
-
   return &*MIB;
+}
+
+void InstrEmitter::AddDbgValueLocationOps(
+    MachineInstrBuilder &MIB, const MCInstrDesc &DbgValDesc,
+    ArrayRef<SDDbgOperand> LocationOps,
+    DenseMap<SDValue, Register> &VRBaseMap) {
+  for (const SDDbgOperand &Op : LocationOps) {
+    switch (Op.getKind()) {
+    case SDDbgOperand::FRAMEIX:
+      MIB.addFrameIndex(Op.getFrameIx());
+      break;
+    case SDDbgOperand::VREG:
+      MIB.addReg(Op.getVReg(), RegState::Debug);
+      break;
+    case SDDbgOperand::SDNODE: {
+      SDValue V = SDValue(Op.getSDNode(), Op.getResNo());
+      // It's possible we replaced this SDNode with other(s) and therefore
+      // didn't generate code for it. It's better to catch these cases where
+      // they happen and transfer the debug info, but trying to guarantee that
+      // in all cases would be very fragile; this is a safeguard for any
+      // that were missed.
+      if (VRBaseMap.count(V) == 0)
+        MIB.addReg(0U); // undef
+      else
+        AddOperand(MIB, V, (*MIB).getNumOperands(), &DbgValDesc, VRBaseMap,
+                   /*IsDebug=*/true, /*IsClone=*/false, /*IsCloned=*/false);
+    } break;
+    case SDDbgOperand::CONST: {
+      const Value *V = Op.getConst();
+      if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
+        if (CI->getBitWidth() > 64)
+          MIB.addCImm(CI);
+        else
+          MIB.addImm(CI->getSExtValue());
+      } else if (const ConstantFP *CF = dyn_cast<ConstantFP>(V)) {
+        MIB.addFPImm(CF);
+      } else if (isa<ConstantPointerNull>(V)) {
+        // Note: This assumes that all nullptr constants are zero-valued.
+        MIB.addImm(0);
+      } else {
+        // Could be an Undef. In any case insert an Undef so we can see what we
+        // dropped.
+        MIB.addReg(0U);
+      }
+    } break;
+    }
+  }
 }
 
 MachineInstr *
