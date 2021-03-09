@@ -1,3 +1,5 @@
-﻿!mod$ v1 sum:563b9a1f049282d2
+﻿!mod$ v1 sum:6c4101164527e745
 module basictestmoduletwo
+type::t2
+end type
 end
