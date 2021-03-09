@@ -1218,10 +1218,10 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
           isa<CleanupReturnInst>(Inst))
         RetVec.push_back(&Inst);
 
-      if (auto *DDI = dyn_cast<DbgVariableIntrinsic>(&Inst))
-        if (auto *Alloca =
-                dyn_cast_or_null<AllocaInst>(DDI->getVariableLocationOp(0)))
-          AllocaDbgMap[Alloca].push_back(DDI);
+      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst))
+        for (Value *V : DVI->location_ops())
+          if (auto *Alloca = dyn_cast_or_null<AllocaInst>(V))
+            AllocaDbgMap[Alloca].push_back(DVI);
 
       if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
         LandingPadVec.push_back(&Inst);
@@ -1297,13 +1297,18 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
   }
 
   if (!AllocaToPaddedAllocaMap.empty()) {
-    for (auto &BB : F)
-      for (auto &Inst : BB)
-        if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst))
-          if (auto *AI =
-                  dyn_cast_or_null<AllocaInst>(DVI->getVariableLocationOp(0)))
-            if (auto *NewAI = AllocaToPaddedAllocaMap.lookup(AI))
-              DVI->replaceVariableLocationOp(AI, NewAI);
+    for (auto &BB : F) {
+      for (auto &Inst : BB) {
+        if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
+          for (Value *V : DVI->location_ops()) {
+            if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+              if (auto *NewAI = AllocaToPaddedAllocaMap.lookup(AI))
+                DVI->replaceVariableLocationOp(V, NewAI);
+            }
+          }
+        }
+      }
+    }
     for (auto &P : AllocaToPaddedAllocaMap)
       P.first->eraseFromParent();
   }

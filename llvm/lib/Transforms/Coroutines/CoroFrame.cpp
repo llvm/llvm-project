@@ -2173,7 +2173,7 @@ void coro::salvageDebugInfo(
       Storage = StInst->getOperand(0);
     } else if (auto *GEPInst = dyn_cast<GetElementPtrInst>(Storage)) {
       Expr = llvm::salvageDebugInfoImpl(*GEPInst, Expr,
-                                        /*WithStackValue=*/false);
+                                        /*WithStackValue=*/false, 0);
       if (!Expr)
         return;
       Storage = GEPInst->getOperand(0);
