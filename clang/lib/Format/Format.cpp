@@ -1137,7 +1137,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
               "ParseTestProto",
               "ParsePartialTestProto",
           },
-          /*CanonicalDelimiter=*/"",
+          /*CanonicalDelimiter=*/"pb",
           /*BasedOnStyle=*/"google",
       },
   };

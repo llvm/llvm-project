@@ -6653,6 +6653,9 @@ def warn_pointer_indirection_from_incompatible_type : Warning<
 def warn_taking_address_of_packed_member : Warning<
   "taking address of packed member %0 of class or structure %q1 may result in an unaligned pointer value">,
   InGroup<DiagGroup<"address-of-packed-member">>;
+def warn_param_mismatched_alignment : Warning<
+  "passing %0-byte aligned argument to %1-byte aligned parameter %2 of %3 may result in an unaligned pointer access">,
+  InGroup<DiagGroup<"align-mismatch">>;
 
 def err_objc_object_assignment : Error<
   "cannot assign to class object (%0 invalid)">;

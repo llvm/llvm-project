@@ -215,6 +215,7 @@ struct CopyConfig {
   bool ExtractDWO = false;
   bool ExtractMainPartition = false;
   bool KeepFileSymbols = false;
+  bool KeepUndefined = false;
   bool LocalizeHidden = false;
   bool OnlyKeepDebug = false;
   bool PreserveDates = false;

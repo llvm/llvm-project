@@ -1,6 +1,6 @@
-# RUN: %PYTHON -m mlir.tools.linalg_opdsl.dump_oplib --file %s | FileCheck %s
+# RUN: %PYTHON -m mlir.dialects.linalg.opdsl.dump_oplib --file %s | FileCheck %s
 
-from mlir.tools.linalg_opdsl.lang import *
+from mlir.dialects.linalg.opdsl.lang import *
 
 # CHECK: ---
 # CHECK-LABEL: matmul

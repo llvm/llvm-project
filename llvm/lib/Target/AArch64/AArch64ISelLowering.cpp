@@ -1108,6 +1108,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MUL, VT, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
       setOperationAction(ISD::SELECT, VT, Custom);
+      setOperationAction(ISD::SETCC, VT, Custom);
       setOperationAction(ISD::SDIV, VT, Custom);
       setOperationAction(ISD::UDIV, VT, Custom);
       setOperationAction(ISD::SMIN, VT, Custom);
@@ -1276,6 +1277,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       for (auto VT : {MVT::v4f16, MVT::v8f16, MVT::v4f32})
         setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
     }
+
+    setOperationPromotedToType(ISD::VECTOR_SPLICE, MVT::nxv2i1, MVT::nxv2i64);
+    setOperationPromotedToType(ISD::VECTOR_SPLICE, MVT::nxv4i1, MVT::nxv4i32);
+    setOperationPromotedToType(ISD::VECTOR_SPLICE, MVT::nxv8i1, MVT::nxv8i16);
+    setOperationPromotedToType(ISD::VECTOR_SPLICE, MVT::nxv16i1, MVT::nxv16i8);
   }
 
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();

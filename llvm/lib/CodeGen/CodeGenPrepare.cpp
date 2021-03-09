@@ -1332,7 +1332,7 @@ getIVIncrement(const PHINode *PN, const LoopInfo *LI) {
 
 static bool isIVIncrement(const BinaryOperator *BO, const LoopInfo *LI) {
   auto *PN = dyn_cast<PHINode>(BO->getOperand(0));
-  if (!PN)
+  if (!PN || LI->getLoopFor(BO->getParent()) != LI->getLoopFor(PN->getParent()))
     return false;
   if (auto IVInc = getIVIncrement(PN, LI))
     return IVInc->first == BO;
@@ -1347,6 +1347,7 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     if (!isIVIncrement(BO, LI))
       return false;
     const Loop *L = LI->getLoopFor(BO->getParent());
+    assert(L && "L should not be null after isIVIncrement()");
     // IV increment may have other users than the IV. We do not want to make
     // dominance queries to analyze the legality of moving it towards the cmp,
     // so just check that there is no other users.
