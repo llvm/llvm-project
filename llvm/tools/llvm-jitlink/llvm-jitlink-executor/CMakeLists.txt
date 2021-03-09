@@ -11,4 +11,8 @@ add_llvm_utility(llvm-jitlink-executor
   intrinsics_gen
 )
 
+if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+  target_link_libraries(llvm-jitlink-executor PRIVATE socket)
+endif()
+
 export_executable_symbols(llvm-jitlink-executor)
