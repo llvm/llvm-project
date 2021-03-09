@@ -1487,10 +1487,13 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
 }
 
 LinkageInfo LinkageComputer::getDeclLinkageAndVisibility(const NamedDecl *D) {
-  return getLVForDecl(D,
-                      LVComputationKind(usesTypeVisibility(D)
-                                            ? NamedDecl::VisibilityForType
-                                            : NamedDecl::VisibilityForValue));
+  NamedDecl::ExplicitVisibilityKind EK = usesTypeVisibility(D)
+                                             ? NamedDecl::VisibilityForType
+                                             : NamedDecl::VisibilityForValue;
+  LVComputationKind CK(EK);
+  return getLVForDecl(D, D->getASTContext().getLangOpts().IgnoreXCOFFVisibility
+                             ? CK.forLinkageOnly()
+                             : CK);
 }
 
 Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
