@@ -25,6 +25,15 @@ class ArithLogicRNM<string opstr, RegisterOperand RO,
   let EncodingPredicates = [HasNanoMips];
 }
 
+// Arithmetic and logical instructions with 2 register operands.
+class ArithLogicINM<string opstr, Operand Od, RegisterOperand RO,
+                    SDPatternOperator imm_type = null_frag,
+                    SDPatternOperator OpNode = null_frag> :
+  ArithLogicI<opstr, Od, RO, NoItinerary, imm_type, OpNode> {
+  let DecoderNamespace = "NanoMips";
+  let EncodingPredicates = [HasNanoMips];
+}
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -34,6 +43,8 @@ class ArithLogicRNM<string opstr, RegisterOperand RO,
 let isCodeGenOnly = 1 in {
 
 def ADDu_NM : ArithLogicRNM<"addu", GPR32Opnd, add>, ISA_NANOMIPS;
+def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32Opnd,
+                             imm32SExt16, add>, ISA_NANOMIPS;
 
 let hasDelaySlot = 0 in
   def JRC_NM : IndirectBranch<"jrc", GPR32Opnd>, ISA_NANOMIPS;
