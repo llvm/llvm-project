@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <filesystem>
 
 // class directory_iterator
@@ -94,7 +92,8 @@ TEST_CASE(access_denied_test_case)
     // reading directories; test using a special inaccessible directory
     // instead.
     const path testDir = GetWindowsInaccessibleDir();
-    TEST_REQUIRE(!testDir.empty());
+    if (testDir.empty())
+        TEST_UNSUPPORTED();
 #else
     scoped_test_env env;
     path const testDir = env.make_env_path("dir1");
