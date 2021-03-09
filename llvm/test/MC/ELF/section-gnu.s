@@ -1,3 +1,4 @@
+# REQUIRES: aarch64-registered-target
 # RUN: llvm-mc -triple=x86_64 %s | FileCheck %s --check-prefix=ASM
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s | llvm-readobj -hS - | FileCheck %s --check-prefixes=GNU,OBJ
 # RUN: llvm-mc -filetype=obj -triple=aarch64-freebsd %s | llvm-readobj -hS - | FileCheck %s --check-prefixes=FREEBSD,OBJ
