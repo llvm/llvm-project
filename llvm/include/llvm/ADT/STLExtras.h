@@ -1332,8 +1332,15 @@ template <class Iterator, class RNG>
 void shuffle(Iterator first, Iterator last, RNG &&g) {
   // It would be better to use a std::uniform_int_distribution,
   // but that would be stdlib dependent.
-  for (auto size = last - first; size > 1; ++first, (void)--size)
-    std::iter_swap(first, first + g() % size);
+  typedef
+      typename std::iterator_traits<Iterator>::difference_type difference_type;
+  for (auto size = last - first; size > 1; ++first, (void)--size) {
+    difference_type offset = g() % size;
+    // Avoid self-assignment due to incorrect assertions in libstdc++
+    // containers (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85828).
+    if (offset != difference_type(0))
+      std::iter_swap(first, first + offset);
+  }
 }
 
 /// Find the length of an array.
@@ -1373,7 +1380,7 @@ inline unsigned presortShuffleEntropy() {
 template <class IteratorTy>
 inline void presortShuffle(IteratorTy Start, IteratorTy End) {
   std::mt19937 Generator(presortShuffleEntropy());
-  std::shuffle(Start, End, Generator);
+  llvm::shuffle(Start, End, Generator);
 }
 
 } // end namespace detail

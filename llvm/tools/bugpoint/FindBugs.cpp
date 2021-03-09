@@ -41,7 +41,7 @@ BugDriver::runManyPasses(const std::vector<std::string> &AllPasses) {
     //
     // Step 1: Randomize the order of the optimizer passes.
     //
-    std::shuffle(PassesToRun.begin(), PassesToRun.end(), randomness);
+    llvm::shuffle(PassesToRun.begin(), PassesToRun.end(), randomness);
 
     //
     // Step 2: Run optimizer passes on the program and check for success.
