@@ -111,6 +111,16 @@ public:
     return AttributeSpecs[idx].Attr;
   }
 
+  bool getAttrIsImplicitConstByIndex(uint32_t idx) const {
+    assert(idx < AttributeSpecs.size());
+    return AttributeSpecs[idx].isImplicitConst();
+  }
+
+  int64_t getAttrImplicitConstValueByIndex(uint32_t idx) const {
+    assert(idx < AttributeSpecs.size());
+    return AttributeSpecs[idx].getImplicitConstValue();
+  }
+
   /// Get the index of the specified attribute.
   ///
   /// Searches the this abbreviation declaration for the index of the specified
