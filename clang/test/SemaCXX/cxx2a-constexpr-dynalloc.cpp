@@ -17,7 +17,7 @@ namespace std {
       return (T*)NEW(sizeof(T) * N); // expected-note 3{{heap allocation}} expected-note {{not deallocated}}
     }
     constexpr void deallocate(void *p) {
-      DELETE(p); // expected-note 2{{'std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}}
+      DELETE(p); // #dealloc expected-note 2{{'std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}}
     }
   };
 }
@@ -83,6 +83,11 @@ static_assert(mismatched(2, 2));
 constexpr int *escape = std::allocator<int>().allocate(3); // expected-error {{constant expression}} expected-note {{pointer to subobject of heap-allocated}}
 constexpr int leak = (std::allocator<int>().allocate(3), 0); // expected-error {{constant expression}}
 constexpr int no_lifetime_start = (*std::allocator<int>().allocate(1) = 1); // expected-error {{constant expression}} expected-note {{assignment to object outside its lifetime}}
+constexpr int no_deallocate_nullptr = (std::allocator<int>().deallocate(nullptr), 1); // expected-error {{constant expression}} expected-note {{in call}}
+// expected-note@#dealloc {{'std::allocator<...>::deallocate' used to delete a null pointer}}
+constexpr int no_deallocate_nonalloc = (std::allocator<int>().deallocate((int*)&no_deallocate_nonalloc), 1); // expected-error {{constant expression}} expected-note {{in call}}
+// expected-note@#dealloc {{delete of pointer '&no_deallocate_nonalloc' that does not point to a heap-allocated object}}
+// expected-note@-2 {{declared here}}
 
 void *operator new(std::size_t, void *p) { return p; }
 constexpr bool no_placement_new_in_user_code() { // expected-error {{never produces a constant expression}}
