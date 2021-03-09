@@ -86,6 +86,9 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (config->outputType == MachO::MH_DYLIB && !config->hasReexports)
     hdr->flags |= MachO::MH_NO_REEXPORTED_DYLIBS;
 
+  if (config->markDeadStrippableDylib)
+    hdr->flags |= MachO::MH_DEAD_STRIPPABLE_DYLIB;
+
   if (config->outputType == MachO::MH_EXECUTE && config->isPic)
     hdr->flags |= MachO::MH_PIE;
 

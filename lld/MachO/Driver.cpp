@@ -850,6 +850,13 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->demangle = args.hasArg(OPT_demangle);
   config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
 
+  if (args.hasArg(OPT_mark_dead_strippable_dylib)) {
+    if (config->outputType != MH_DYLIB)
+      warn("-mark_dead_strippable_dylib: ignored, only has effect with -dylib");
+    else
+      config->markDeadStrippableDylib = true;
+  }
+
   if (const Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
     config->staticLink = (arg->getOption().getID() == OPT_static);
 
