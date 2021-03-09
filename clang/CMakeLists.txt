@@ -640,6 +640,11 @@ if (CLANG_ENABLE_BOOTSTRAP)
   set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-bins/)
 
   if(BOOTSTRAP_LLVM_ENABLE_LLD)
+    # adding lld to clang-bootstrap-deps without having it enabled in
+    # LLVM_ENABLE_PROJECTS just generates a cryptic error message.
+    if (NOT "lld" IN_LIST LLVM_ENABLE_PROJECTS)
+      message(FATAL_ERROR "LLD is enabled in the boostrap build, but lld is not in LLVM_ENABLE_PROJECTS")
+    endif()
     add_dependencies(clang-bootstrap-deps lld)
   endif()
 
