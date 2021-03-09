@@ -692,7 +692,6 @@ bool applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   Register Src1Reg = MI.getOperand(1).getReg();
   const LLT SrcTy = MRI.getType(Src1Reg);
-  const LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
 
   B.setInstrAndDebugLoc(MI);
   auto Lane = B.buildConstant(LLT::scalar(64), MatchInfo.second);
@@ -701,7 +700,8 @@ bool applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   // For types like <2 x s32>, we can use G_DUPLANE32, with a <4 x s32> source.
   // To do this, we can use a G_CONCAT_VECTORS to do the widening.
   if (SrcTy == LLT::vector(2, LLT::scalar(32))) {
-    assert(DstTy.getNumElements() == 2 && "Unexpected dest elements");
+    assert(MRI.getType(MI.getOperand(0).getReg()).getNumElements() == 2 &&
+           "Unexpected dest elements");
     auto Undef = B.buildUndef(SrcTy);
     DupSrc = B.buildConcatVectors(SrcTy.changeNumElements(4),
                                   {Src1Reg, Undef.getReg(0)})
