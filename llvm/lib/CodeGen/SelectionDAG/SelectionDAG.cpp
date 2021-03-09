@@ -879,6 +879,17 @@ void SelectionDAG::DeleteNodeNotInCSEMaps(SDNode *N) {
   DeallocateNode(N);
 }
 
+void SDDbgInfo::add(SDDbgValue *V, bool isParameter) {
+  assert(!(V->isVariadic() && isParameter));
+  if (isParameter)
+    ByvalParmDbgValues.push_back(V);
+  else
+    DbgValues.push_back(V);
+  for (const SDNode *Node : V->getSDNodes())
+    if (Node)
+      DbgValMap[Node].push_back(V);
+}
+
 void SDDbgInfo::erase(const SDNode *Node) {
   DbgValMapType::iterator I = DbgValMap.find(Node);
   if (I == DbgValMap.end())
@@ -8473,14 +8484,26 @@ SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
                                                 unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
+  return getFrameIndexDbgValue(Var, Expr, FI, {}, IsIndirect, DL, O);
+}
+
+/// FrameIndex with dependencies
+SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
+                                                DIExpression *Expr, unsigned FI,
+                                                ArrayRef<SDNode *> Dependencies,
+                                                bool IsIndirect,
+                                                const DebugLoc &DL,
+                                                unsigned O) {
+  assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
-      SDDbgValue(Var, Expr, SDDbgOperand::fromFrameIdx(FI), {}, IsIndirect, DL,
-                 O, /*IsVariadic=*/false);
+      SDDbgValue(Var, Expr, SDDbgOperand::fromFrameIdx(FI), Dependencies,
+                 IsIndirect, DL, O,
+                 /*IsVariadic=*/false);
 }
 
 /// VReg
-SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var,
-                                          DIExpression *Expr,
+SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
                                           unsigned VReg, bool IsIndirect,
                                           const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
@@ -8488,6 +8511,17 @@ SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var,
   return new (DbgInfo->getAlloc())
       SDDbgValue(Var, Expr, SDDbgOperand::fromVReg(VReg), {}, IsIndirect, DL, O,
                  /*IsVariadic=*/false);
+}
+
+SDDbgValue *SelectionDAG::getDbgValueList(DIVariable *Var, DIExpression *Expr,
+                                          ArrayRef<SDDbgOperand> Locs,
+                                          ArrayRef<SDNode *> Dependencies,
+                                          bool IsIndirect, const DebugLoc &DL,
+                                          unsigned O, bool IsVariadic) {
+  assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
+  return new (DbgInfo->getAlloc())
+      SDDbgValue(Var, Expr, Locs, Dependencies, IsIndirect, DL, O, IsVariadic);
 }
 
 void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
@@ -8506,16 +8540,31 @@ void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
   if (!FromNode->getHasDebugValue())
     return;
 
+  SDDbgOperand FromLocOp =
+      SDDbgOperand::fromNode(From.getNode(), From.getResNo());
+  SDDbgOperand ToLocOp = SDDbgOperand::fromNode(To.getNode(), To.getResNo());
+
   SmallVector<SDDbgValue *, 2> ClonedDVs;
   for (SDDbgValue *Dbg : GetDbgValues(FromNode)) {
-    SDDbgOperand DbgOperand = Dbg->getLocationOps()[0];
-    if (DbgOperand.getKind() != SDDbgOperand::SDNODE || Dbg->isInvalidated())
+    if (Dbg->isInvalidated())
       continue;
 
     // TODO: assert(!Dbg->isInvalidated() && "Transfer of invalid dbg value");
 
-    // Just transfer the dbg value attached to From.
-    if (DbgOperand.getResNo() != From.getResNo())
+    // Create a new location ops vector that is equal to the old vector, but
+    // with each instance of FromLocOp replaced with ToLocOp.
+    bool Changed = false;
+    auto NewLocOps = Dbg->copyLocationOps();
+    std::replace_if(
+        NewLocOps.begin(), NewLocOps.end(),
+        [&Changed, FromLocOp](const SDDbgOperand &Op) {
+          bool Match = Op == FromLocOp;
+          Changed |= Match;
+          return Match;
+        },
+        ToLocOp);
+    // Ignore this SDDbgValue if we didn't find a matching location.
+    if (!Changed)
       continue;
 
     DIVariable *Var = Dbg->getVariable();
@@ -8534,10 +8583,15 @@ void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
         continue;
       Expr = *Fragment;
     }
+
+    auto NewDependencies = Dbg->copySDNodes();
+    std::replace(NewDependencies.begin(), NewDependencies.end(), FromNode,
+                 ToNode);
     // Clone the SDDbgValue and move it to To.
-    SDDbgValue *Clone = getDbgValue(
-        Var, Expr, ToNode, To.getResNo(), Dbg->isIndirect(), Dbg->getDebugLoc(),
-        std::max(ToNode->getIROrder(), Dbg->getOrder()));
+    SDDbgValue *Clone = getDbgValueList(
+        Var, Expr, NewLocOps, NewDependencies, Dbg->isIndirect(),
+        Dbg->getDebugLoc(), std::max(ToNode->getIROrder(), Dbg->getOrder()),
+        Dbg->isVariadic());
     ClonedDVs.push_back(Clone);
 
     if (InvalidateDbg) {
@@ -8547,8 +8601,11 @@ void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
     }
   }
 
-  for (SDDbgValue *Dbg : ClonedDVs)
-    AddDbgValue(Dbg, ToNode, false);
+  for (SDDbgValue *Dbg : ClonedDVs) {
+    assert(is_contained(Dbg->getSDNodes(), ToNode) &&
+           "Transferred DbgValues should depend on the new SDNode");
+    AddDbgValue(Dbg, false);
+  }
 }
 
 void SelectionDAG::salvageDebugInfo(SDNode &N) {
@@ -8568,16 +8625,37 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
       if (!isConstantIntBuildVectorOrConstantInt(N0) &&
           isConstantIntBuildVectorOrConstantInt(N1)) {
         uint64_t Offset = N.getConstantOperandVal(1);
+
         // Rewrite an ADD constant node into a DIExpression. Since we are
         // performing arithmetic to compute the variable's *value* in the
         // DIExpression, we need to mark the expression with a
         // DW_OP_stack_value.
         auto *DIExpr = DV->getExpression();
-        DIExpr =
-            DIExpression::prepend(DIExpr, DIExpression::StackValue, Offset);
-        SDDbgValue *Clone =
-            getDbgValue(DV->getVariable(), DIExpr, N0.getNode(), N0.getResNo(),
-                        DV->isIndirect(), DV->getDebugLoc(), DV->getOrder());
+        auto NewLocOps = DV->copyLocationOps();
+        bool Changed = false;
+        for (size_t i = 0; i < NewLocOps.size(); ++i) {
+          // We're not given a ResNo to compare against because the whole
+          // node is going away. We know that any ISD::ADD only has one
+          // result, so we can assume any node match is using the result.
+          if (NewLocOps[i].getKind() != SDDbgOperand::SDNODE ||
+              NewLocOps[i].getSDNode() != &N)
+            continue;
+          NewLocOps[i] = SDDbgOperand::fromNode(N0.getNode(), N0.getResNo());
+          SmallVector<uint64_t, 3> ExprOps;
+          DIExpression::appendOffset(ExprOps, Offset);
+          DIExpr = DIExpression::appendOpsToArg(DIExpr, ExprOps, i, true);
+          Changed = true;
+        }
+        (void)Changed;
+        assert(Changed && "Salvage target doesn't use N");
+
+        auto NewDependencies = DV->copySDNodes();
+        std::replace(NewDependencies.begin(), NewDependencies.end(), &N,
+                     N0.getNode());
+        SDDbgValue *Clone = getDbgValueList(DV->getVariable(), DIExpr,
+                                            NewLocOps, NewDependencies,
+                                            DV->isIndirect(), DV->getDebugLoc(),
+                                            DV->getOrder(), DV->isVariadic());
         ClonedDVs.push_back(Clone);
         DV->setIsInvalidated();
         DV->setIsEmitted();
@@ -8588,8 +8666,11 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
     }
   }
 
-  for (SDDbgValue *Dbg : ClonedDVs)
-    AddDbgValue(Dbg, Dbg->getLocationOps()[0].getSDNode(), false);
+  for (SDDbgValue *Dbg : ClonedDVs) {
+    assert(!Dbg->getSDNodes().empty() &&
+           "Salvaged DbgValue should depend on a new SDNode");
+    AddDbgValue(Dbg, false);
+  }
 }
 
 /// Creates a SDDbgLabel node.
@@ -9070,17 +9151,17 @@ unsigned SelectionDAG::AssignTopologicalOrder() {
 
 /// AddDbgValue - Add a dbg_value SDNode. If SD is non-null that means the
 /// value is produced by SD.
-void SelectionDAG::AddDbgValue(SDDbgValue *DB, SDNode *SD, bool isParameter) {
-  if (SD) {
+void SelectionDAG::AddDbgValue(SDDbgValue *DB, bool isParameter) {
+  for (SDNode *SD : DB->getSDNodes()) {
+    if (!SD)
+      continue;
     assert(DbgInfo->getSDDbgValues(SD).empty() || SD->getHasDebugValue());
     SD->setHasDebugValue(true);
   }
-  DbgInfo->add(DB, SD, isParameter);
+  DbgInfo->add(DB, isParameter);
 }
 
-void SelectionDAG::AddDbgLabel(SDDbgLabel *DB) {
-  DbgInfo->add(DB);
-}
+void SelectionDAG::AddDbgLabel(SDDbgLabel *DB) { DbgInfo->add(DB); }
 
 SDValue SelectionDAG::makeEquivalentMemoryOrdering(SDValue OldChain,
                                                    SDValue NewMemOpChain) {
