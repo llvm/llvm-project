@@ -737,6 +737,8 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// For example, signed minimum is the inverse of signed maximum.
   SelectPatternFlavor getInverseMinMaxFlavor(SelectPatternFlavor SPF);
 
+  Intrinsic::ID getInverseMinMaxIntrinsic(Intrinsic::ID MinMaxID);
+
   /// Return the canonical inverse comparison predicate for the specified
   /// minimum/maximum flavor.
   CmpInst::Predicate getInverseMinMaxPred(SelectPatternFlavor SPF);
