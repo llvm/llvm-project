@@ -1,10 +1,12 @@
 # RUN: llvm-mc -triple=x86_64 %s | FileCheck %s --check-prefix=ASM
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %s | llvm-readobj -hS - | FileCheck %s --check-prefix=OBJ
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s | llvm-readobj -hS - | FileCheck %s --check-prefixes=GNU,OBJ
+# RUN: llvm-mc -filetype=obj -triple=aarch64-freebsd %s | llvm-readobj -hS - | FileCheck %s --check-prefixes=FREEBSD,OBJ
 
 # ASM: .section retain,"aR",@progbits
 
-## Note: GNU as sets OSABI to GNU.
-# OBJ:      OS/ABI: SystemV (0x0)
+## ELFOSABI_NONE is changed to ELFOSABI_GNU. Other OSABI values are unchanged.
+# GNU:      OS/ABI: GNU/Linux
+# FREEBSD:  OS/ABI: FreeBSD
 
 # OBJ:      Name: retain
 # OBJ-NEXT: Type: SHT_PROGBITS
