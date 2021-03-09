@@ -156,6 +156,8 @@ void MCELFStreamer::changeSection(MCSection *Section,
   const MCSymbol *Grp = SectionELF->getGroup();
   if (Grp)
     Asm.registerSymbol(*Grp);
+  if (SectionELF->getFlags() & ELF::SHF_GNU_RETAIN)
+    Asm.getWriter().markGnuAbi();
 
   changeSectionImpl(Section, Subsection);
   Asm.registerSymbol(*Section->getBeginSymbol());
