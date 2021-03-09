@@ -431,6 +431,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UMIN, VT, Legal);
       setOperationAction(ISD::UMAX, VT, Legal);
 
+      if (!Subtarget.is64Bit() && VT.getVectorElementType() == MVT::i64)
+        setOperationAction(ISD::ABS, VT, Custom);
+
       setOperationAction(ISD::ROTL, VT, Expand);
       setOperationAction(ISD::ROTR, VT, Expand);
 
@@ -575,6 +578,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::SMAX, VT, Custom);
         setOperationAction(ISD::UMIN, VT, Custom);
         setOperationAction(ISD::UMAX, VT, Custom);
+        setOperationAction(ISD::ABS,  VT, Custom);
 
         setOperationAction(ISD::MULHS, VT, Custom);
         setOperationAction(ISD::MULHU, VT, Custom);
@@ -1591,6 +1595,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG, RISCVISD::UMIN_VL);
   case ISD::UMAX:
     return lowerToScalableOp(Op, DAG, RISCVISD::UMAX_VL);
+  case ISD::ABS:
+    return lowerABS(Op, DAG);
   case ISD::VSELECT:
     return lowerFixedLengthVectorSelectToRVV(Op, DAG);
   }
@@ -2899,6 +2905,43 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorLogicOpToRVV(
     return lowerToScalableOp(Op, DAG, MaskOpc, /*HasMask*/ false);
 
   return lowerToScalableOp(Op, DAG, VecOpc, /*HasMask*/ true);
+}
+
+// Lower vector ABS to smax(X, sub(0, X)).
+SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDValue X = Op.getOperand(0);
+
+  // For scalable vectors we just need to deal with i64 on RV32 since the
+  // default expansion crashes in getConstant.
+  if (VT.isScalableVector()) {
+    assert(!Subtarget.is64Bit() && VT.getVectorElementType() == MVT::i64 &&
+           "Unexpected custom lowering!");
+    SDValue SplatZero = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VT,
+                                    DAG.getConstant(0, DL, MVT::i32));
+    SDValue NegX = DAG.getNode(ISD::SUB, DL, VT, SplatZero, X);
+    return DAG.getNode(ISD::SMAX, DL, VT, X, NegX);
+  }
+
+  assert(VT.isFixedLengthVector() && "Unexpected type");
+
+  MVT ContainerVT =
+      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  X = convertToScalableVector(ContainerVT, X, DAG, Subtarget);
+
+  SDValue Mask, VL;
+  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+  SDValue SplatZero =
+      DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
+                  DAG.getConstant(0, DL, Subtarget.getXLenVT()));
+  SDValue NegX =
+      DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, SplatZero, X, Mask, VL);
+  SDValue Max =
+      DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX, Mask, VL);
+
+  return convertFromScalableVector(VT, Max, DAG, Subtarget);
 }
 
 SDValue RISCVTargetLowering::lowerFixedLengthVectorSelectToRVV(
