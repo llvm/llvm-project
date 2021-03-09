@@ -156,6 +156,8 @@ public:
   void reportSectionTargetMemoryRange(StringRef Name,
                                       SectionRange TargetMem) override;
 
+  StringRef getBuffer() const { return Buffer->getMemBufferRef().getBuffer(); }
+
 protected:
   Expected<std::unique_ptr<Allocation>>
   finalizeWorkingMemory(JITLinkContext &Ctx) override;
@@ -169,8 +171,8 @@ private:
   static Expected<std::unique_ptr<ELFDebugObject>>
   CreateArchType(MemoryBufferRef Buffer, JITLinkContext &Ctx);
 
-  static Expected<std::unique_ptr<WritableMemoryBuffer>>
-  CopyBuffer(MemoryBufferRef Buffer);
+  static std::unique_ptr<WritableMemoryBuffer>
+  CopyBuffer(MemoryBufferRef Buffer, Error &Err);
 
   ELFDebugObject(std::unique_ptr<WritableMemoryBuffer> Buffer,
                  JITLinkContext &Ctx)
@@ -193,16 +195,18 @@ static bool isDwarfSection(StringRef SectionName) {
   return DwarfSectionNames.count(SectionName) == 1;
 }
 
-Expected<std::unique_ptr<WritableMemoryBuffer>>
-ELFDebugObject::CopyBuffer(MemoryBufferRef Buffer) {
+std::unique_ptr<WritableMemoryBuffer>
+ELFDebugObject::CopyBuffer(MemoryBufferRef Buffer, Error &Err) {
+  ErrorAsOutParameter _(&Err);
   size_t Size = Buffer.getBufferSize();
   StringRef Name = Buffer.getBufferIdentifier();
-  auto Copy = WritableMemoryBuffer::getNewUninitMemBuffer(Size, Name);
-  if (!Copy)
-    return errorCodeToError(make_error_code(errc::not_enough_memory));
+  if (auto Copy = WritableMemoryBuffer::getNewUninitMemBuffer(Size, Name)) {
+    memcpy(Copy->getBufferStart(), Buffer.getBufferStart(), Size);
+    return Copy;
+  }
 
-  memcpy(Copy->getBufferStart(), Buffer.getBufferStart(), Size);
-  return std::move(Copy);
+  Err = errorCodeToError(make_error_code(errc::not_enough_memory));
+  return nullptr;
 }
 
 template <typename ELFT>
@@ -210,7 +214,13 @@ Expected<std::unique_ptr<ELFDebugObject>>
 ELFDebugObject::CreateArchType(MemoryBufferRef Buffer, JITLinkContext &Ctx) {
   using SectionHeader = typename ELFT::Shdr;
 
-  Expected<ELFFile<ELFT>> ObjRef = ELFFile<ELFT>::create(Buffer.getBuffer());
+  Error Err = Error::success();
+  std::unique_ptr<ELFDebugObject> DebugObj(
+      new ELFDebugObject(CopyBuffer(Buffer, Err), Ctx));
+  if (Err)
+    return std::move(Err);
+
+  Expected<ELFFile<ELFT>> ObjRef = ELFFile<ELFT>::create(DebugObj->getBuffer());
   if (!ObjRef)
     return ObjRef.takeError();
 
@@ -222,13 +232,6 @@ ELFDebugObject::CreateArchType(MemoryBufferRef Buffer, JITLinkContext &Ctx) {
   Expected<ArrayRef<SectionHeader>> Sections = ObjRef->sections();
   if (!Sections)
     return Sections.takeError();
-
-  Expected<std::unique_ptr<WritableMemoryBuffer>> Copy = CopyBuffer(Buffer);
-  if (!Copy)
-    return Copy.takeError();
-
-  std::unique_ptr<ELFDebugObject> DebugObj(
-      new ELFDebugObject(std::move(*Copy), Ctx));
 
   bool HasDwarfSection = false;
   for (const SectionHeader &Header : *Sections) {
