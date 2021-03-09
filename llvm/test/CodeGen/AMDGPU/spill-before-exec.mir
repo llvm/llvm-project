@@ -49,7 +49,7 @@ body:             |
 
     %0:sreg_64 = S_OR_SAVEEXEC_B64 $sgpr96_sgpr97, implicit-def $exec, implicit-def $scc, implicit $exec
     $exec = S_XOR_B64_term $exec, %0, implicit-def $scc
-    SI_MASK_BRANCH %bb.3, implicit $exec
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
@@ -57,7 +57,7 @@ body:             |
 
     %0:sreg_64 = S_OR_SAVEEXEC_B64 $sgpr98_sgpr99, implicit-def $exec, implicit-def $scc, implicit $exec
     $exec = S_XOR_B64_term $exec, %0, implicit-def $scc
-    SI_MASK_BRANCH %bb.3, implicit $exec
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
     S_BRANCH %bb.4
 
   bb.3:
