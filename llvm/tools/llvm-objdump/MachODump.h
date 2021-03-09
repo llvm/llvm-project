@@ -34,6 +34,7 @@ extern cl::opt<bool> DylibsUsed;
 extern cl::opt<bool> DylibId;
 extern cl::opt<bool> ExportsTrie;
 extern cl::opt<bool> FirstPrivateHeader;
+extern cl::opt<bool> FunctionStarts;
 extern cl::opt<bool> IndirectSymbols;
 extern cl::opt<bool> InfoPlist;
 extern cl::opt<bool> LazyBind;

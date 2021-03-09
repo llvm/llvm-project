@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This pass inserts branches on the 0 exec mask over divergent branches
-/// branches when it's expected that jumping over the untaken control flow will
-/// be cheaper than having every workitem no-op through it.
+/// This pass mainly lowers early terminate pseudo instructions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,31 +22,20 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-skips"
 
-static cl::opt<unsigned> SkipThresholdFlag(
-  "amdgpu-skip-threshold-legacy",
-  cl::desc("Number of instructions before jumping over divergent control flow"),
-  cl::init(12), cl::Hidden);
-
 namespace {
 
 class SIInsertSkips : public MachineFunctionPass {
 private:
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
-  unsigned SkipThreshold = 0;
   MachineDominatorTree *MDT = nullptr;
 
   MachineBasicBlock *EarlyExitBlock = nullptr;
   bool EarlyExitClearsExec = false;
 
-  bool shouldSkip(const MachineBasicBlock &From,
-                  const MachineBasicBlock &To) const;
-
   void ensureEarlyExitBlock(MachineBasicBlock &MBB, bool ClearExec);
 
   void earlyTerm(MachineInstr &MI);
-
-  bool skipMaskBranch(MachineInstr &MI, MachineBasicBlock &MBB);
 
 public:
   static char ID;
@@ -86,53 +73,6 @@ char &llvm::SIInsertSkipsPassID = SIInsertSkips::ID;
 static bool opcodeEmitsNoInsts(const MachineInstr &MI) {
   if (MI.isMetaInstruction())
     return true;
-
-  // Handle target specific opcodes.
-  switch (MI.getOpcode()) {
-  case AMDGPU::SI_MASK_BRANCH:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool SIInsertSkips::shouldSkip(const MachineBasicBlock &From,
-                               const MachineBasicBlock &To) const {
-  unsigned NumInstr = 0;
-  const MachineFunction *MF = From.getParent();
-
-  for (MachineFunction::const_iterator MBBI(&From), ToI(&To), End = MF->end();
-       MBBI != End && MBBI != ToI; ++MBBI) {
-    const MachineBasicBlock &MBB = *MBBI;
-
-    for (MachineBasicBlock::const_iterator I = MBB.begin(), E = MBB.end();
-         NumInstr < SkipThreshold && I != E; ++I) {
-      if (opcodeEmitsNoInsts(*I))
-        continue;
-
-      // FIXME: Since this is required for correctness, this should be inserted
-      // during SILowerControlFlow.
-
-      // When a uniform loop is inside non-uniform control flow, the branch
-      // leaving the loop might be an S_CBRANCH_VCCNZ, which is never taken
-      // when EXEC = 0. We should skip the loop lest it becomes infinite.
-      if (I->getOpcode() == AMDGPU::S_CBRANCH_VCCNZ ||
-          I->getOpcode() == AMDGPU::S_CBRANCH_VCCZ)
-        return true;
-
-      if (TII->hasUnwantedEffectsWhenEXECEmpty(*I))
-        return true;
-
-      // These instructions are potentially expensive even if EXEC = 0.
-      if (TII->isSMRD(*I) || TII->isVMEM(*I) || TII->isFLAT(*I) ||
-          I->getOpcode() == AMDGPU::S_WAITCNT)
-        return true;
-
-      ++NumInstr;
-      if (NumInstr >= SkipThreshold)
-        return true;
-    }
-  }
 
   return false;
 }
@@ -209,29 +149,11 @@ void SIInsertSkips::earlyTerm(MachineInstr &MI) {
   MDT->getBase().insertEdge(&MBB, EarlyExitBlock);
 }
 
-// Returns true if a branch over the block was inserted.
-bool SIInsertSkips::skipMaskBranch(MachineInstr &MI,
-                                   MachineBasicBlock &SrcMBB) {
-  MachineBasicBlock *DestBB = MI.getOperand(0).getMBB();
-
-  if (!shouldSkip(**SrcMBB.succ_begin(), *DestBB))
-    return false;
-
-  const DebugLoc &DL = MI.getDebugLoc();
-  MachineBasicBlock::iterator InsPt = std::next(MI.getIterator());
-
-  BuildMI(SrcMBB, InsPt, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
-    .addMBB(DestBB);
-
-  return true;
-}
-
 bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
   MDT = &getAnalysis<MachineDominatorTree>();
-  SkipThreshold = SkipThresholdFlag;
 
   MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
   ExecReg = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
@@ -246,10 +168,6 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
       MachineInstr &MI = *I;
 
       switch (MI.getOpcode()) {
-      case AMDGPU::SI_MASK_BRANCH:
-        MadeChange |= skipMaskBranch(MI, MBB);
-        break;
-
       case AMDGPU::S_BRANCH:
         // Optimize out branches to the next block.
         // FIXME: Shouldn't this be handled by BranchFolding?
