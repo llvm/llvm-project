@@ -348,7 +348,9 @@ public:
   /// FIXME: those metrics might be useful too, we should add them.
   llvm::StringMap<TUScheduler::FileStats> fileStats() const;
 
-  llvm::Optional<std::string> getDraft(PathRef File) const;
+  /// Gets the contents of a currently tracked file. Returns nullptr if the file
+  /// isn't being tracked.
+  std::shared_ptr<const std::string> getDraft(PathRef File) const;
 
   // Blocks the main thread until the server is idle. Only for use in tests.
   // Returns false if the timeout expires.
@@ -394,6 +396,8 @@ private:
   // Only written from the main thread (despite being threadsafe).
   // FIXME: TUScheduler also keeps these, unify?
   DraftStore DraftMgr;
+
+  std::unique_ptr<ThreadsafeFS> DirtyFS;
 };
 
 } // namespace clangd

@@ -24,20 +24,20 @@ TEST(DraftStore, Versions) {
 
   EXPECT_EQ("25", DS.addDraft(File, "25", ""));
   EXPECT_EQ("25", DS.getDraft(File)->Version);
-  EXPECT_EQ("", DS.getDraft(File)->Contents);
+  EXPECT_EQ("", *DS.getDraft(File)->Contents);
 
   EXPECT_EQ("26", DS.addDraft(File, "", "x"));
   EXPECT_EQ("26", DS.getDraft(File)->Version);
-  EXPECT_EQ("x", DS.getDraft(File)->Contents);
+  EXPECT_EQ("x", *DS.getDraft(File)->Contents);
 
   EXPECT_EQ("27", DS.addDraft(File, "", "x")) << "no-op change";
   EXPECT_EQ("27", DS.getDraft(File)->Version);
-  EXPECT_EQ("x", DS.getDraft(File)->Contents);
+  EXPECT_EQ("x", *DS.getDraft(File)->Contents);
 
   // We allow versions to go backwards.
   EXPECT_EQ("7", DS.addDraft(File, "7", "y"));
   EXPECT_EQ("7", DS.getDraft(File)->Version);
-  EXPECT_EQ("y", DS.getDraft(File)->Contents);
+  EXPECT_EQ("y", *DS.getDraft(File)->Contents);
 }
 
 } // namespace
