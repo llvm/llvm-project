@@ -13,6 +13,8 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 
 namespace fir {
+/// Register the passes in the flang/Optimizer directory.
+/// TODO: Consider merging the registration of all passes in 1 function.
 inline void registerOptimizerPasses() {
   registerOptCodeGenPasses();
   registerOptTransformPasses();
