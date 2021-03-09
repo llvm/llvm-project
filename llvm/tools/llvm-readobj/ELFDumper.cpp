@@ -550,6 +550,7 @@ public:
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printHashHistograms() override;
   void printCGProfile() override;
+  void printBBAddrMaps() override;
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
@@ -660,6 +661,7 @@ public:
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printHashHistograms() override;
   void printCGProfile() override;
+  void printBBAddrMaps() override;
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
@@ -4617,6 +4619,10 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
   OS << "GNUStyle::printCGProfile not implemented\n";
 }
 
+template <class ELFT> void GNUELFDumper<ELFT>::printBBAddrMaps() {
+  OS << "GNUStyle::printBBAddrMaps not implemented\n";
+}
+
 static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
   std::vector<uint64_t> Ret;
   const uint8_t *Cur = Data.begin();
@@ -6517,6 +6523,34 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
     W.printNumber("To", this->getStaticSymbolName(CGPE.cgp_to),
                   CGPE.cgp_to);
     W.printNumber("Weight", CGPE.cgp_weight);
+  }
+}
+
+template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
+  for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
+    if (Sec.sh_type != SHT_LLVM_BB_ADDR_MAP)
+      continue;
+    ListScope L(W, "BBAddrMap");
+    Expected<std::vector<Elf_BBAddrMap>> BBAddrMapOrErr =
+        this->Obj.decodeBBAddrMap(Sec);
+    if (!BBAddrMapOrErr) {
+      this->reportUniqueWarning("unable to dump " + this->describe(Sec) + ": " +
+                                toString(BBAddrMapOrErr.takeError()));
+      continue;
+    }
+    for (const Elf_BBAddrMap &AM : *BBAddrMapOrErr) {
+      DictScope D(W, "Function");
+      W.printHex("At", AM.Addr);
+      ListScope L(W, "BB entries");
+      for (const typename Elf_BBAddrMap::BBEntry &BBE : AM.BBEntries) {
+        DictScope L(W);
+        W.printHex("Offset", BBE.Offset);
+        W.printHex("Size", BBE.Size);
+        W.printBoolean("HasReturn", BBE.HasReturn);
+        W.printBoolean("HasTailCall", BBE.HasTailCall);
+        W.printBoolean("IsEHPad", BBE.IsEHPad);
+      }
+    }
   }
 }
 

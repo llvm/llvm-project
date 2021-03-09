@@ -612,6 +612,58 @@ ELFFile<ELFT>::toMappedAddr(uint64_t VAddr, WarningHandler WarnHandler) const {
   return base() + Offset;
 }
 
+template <class ELFT>
+Expected<std::vector<typename ELFT::BBAddrMap>>
+ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec) const {
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = getSectionContents(Sec);
+  if (!ContentsOrErr)
+    return ContentsOrErr.takeError();
+  ArrayRef<uint8_t> Content = *ContentsOrErr;
+  DataExtractor Data(Content, isLE(), ELFT::Is64Bits ? 8 : 4);
+  std::vector<Elf_BBAddrMap> FunctionEntries;
+
+  DataExtractor::Cursor Cur(0);
+  Error ULEBSizeErr = Error::success();
+
+  // Helper to extract and decode the next ULEB128 value as uint32_t.
+  // Returns zero and sets ULEBSizeErr if the ULEB128 value exceeds the uint32_t
+  // limit.
+  // Also returns zero if ULEBSizeErr is already in an error state.
+  auto ReadULEB128AsUInt32 = [&Data, &Cur, &ULEBSizeErr]() -> uint32_t {
+    // Bail out and do not extract data if ULEBSizeErr is already set.
+    if (ULEBSizeErr)
+      return 0;
+    uint64_t Offset = Cur.tell();
+    uint64_t Value = Data.getULEB128(Cur);
+    if (Value > UINT32_MAX) {
+      ULEBSizeErr = createError(
+          "ULEB128 value at offset 0x" + Twine::utohexstr(Offset) +
+          " exceeds UINT32_MAX (0x" + Twine::utohexstr(Value) + ")");
+      return 0;
+    }
+    return static_cast<uint32_t>(Value);
+  };
+
+  while (!ULEBSizeErr && Cur && Cur.tell() < Content.size()) {
+    uintX_t Address = static_cast<uintX_t>(Data.getAddress(Cur));
+    uint32_t NumBlocks = ReadULEB128AsUInt32();
+    std::vector<typename Elf_BBAddrMap::BBEntry> BBEntries;
+    for (uint32_t BlockID = 0; !ULEBSizeErr && Cur && (BlockID < NumBlocks);
+         ++BlockID) {
+      uint32_t Offset = ReadULEB128AsUInt32();
+      uint32_t Size = ReadULEB128AsUInt32();
+      uint32_t Metadata = ReadULEB128AsUInt32();
+      BBEntries.push_back({Offset, Size, Metadata});
+    }
+    FunctionEntries.push_back({Address, BBEntries});
+  }
+  // Either Cur is in the error state, or ULEBSizeError is set (not both), but
+  // we join the two errors here to be safe.
+  if (!Cur || ULEBSizeErr)
+    return joinErrors(Cur.takeError(), std::move(ULEBSizeErr));
+  return FunctionEntries;
+}
+
 template class llvm::object::ELFFile<ELF32LE>;
 template class llvm::object::ELFFile<ELF32BE>;
 template class llvm::object::ELFFile<ELF64LE>;
