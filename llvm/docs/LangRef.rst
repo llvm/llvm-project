@@ -9369,6 +9369,12 @@ the memory is reclaimed. Allocating zero bytes is legal, but the returned
 pointer may not be unique. The order in which memory is allocated (ie.,
 which way the stack grows) is not specified.
 
+If the returned pointer is used by :ref:`llvm.lifetime.start <int_lifestart>`,
+the returned object is initially dead.
+See :ref:`llvm.lifetime.start <int_lifestart>` and
+:ref:`llvm.lifetime.end <int_lifeend>` for the precise semantics of
+lifetime-manipulating intrinsics.
+
 Example:
 """"""""
 
@@ -18099,6 +18105,10 @@ Semantics:
 
 If ``ptr`` is a stack-allocated object and it points to the first byte of
 the object, the object is initially marked as dead.
+``ptr`` is conservatively considered as a non-stack-allocated object if
+the stack coloring algorithm that is used in the optimization pipeline cannot
+conclude that ``ptr`` is a stack-allocated object.
+
 After '``llvm.lifetime.start``', the stack object that ``ptr`` points is marked
 as alive and has an uninitialized value.
 The stack object is marked as dead when either
@@ -18145,6 +18155,10 @@ Semantics:
 
 If ``ptr`` is a stack-allocated object and it points to the first byte of the
 object, the object is dead.
+``ptr`` is conservatively considered as a non-stack-allocated object if
+the stack coloring algorithm that is used in the optimization pipeline cannot
+conclude that ``ptr`` is a stack-allocated object.
+
 Calling ``llvm.lifetime.end`` on an already dead alloca is no-op.
 
 If ``ptr`` is a non-stack-allocated object or it does not point to the first
