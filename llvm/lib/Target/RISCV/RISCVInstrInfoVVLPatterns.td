@@ -142,6 +142,24 @@ def riscv_vrgather_vx_vl : SDNode<"RISCVISD::VRGATHER_VX_VL",
                                                        SDTCVecEltisVT<3, i1>,
                                                        SDTCisSameNumEltsAs<0, 3>,
                                                        SDTCisVT<4, XLenVT>]>>;
+def riscv_vrgather_vv_vl : SDNode<"RISCVISD::VRGATHER_VV_VL",
+                                  SDTypeProfile<1, 4, [SDTCisVec<0>,
+                                                       SDTCisSameAs<0, 1>,
+                                                       SDTCisInt<2>,
+                                                       SDTCisSameNumEltsAs<0, 2>,
+                                                       SDTCisSameSizeAs<0, 2>,
+                                                       SDTCVecEltisVT<3, i1>,
+                                                       SDTCisSameNumEltsAs<0, 3>,
+                                                       SDTCisVT<4, XLenVT>]>>;
+def riscv_vrgatherei16_vv_vl : SDNode<"RISCVISD::VRGATHEREI16_VV_VL",
+                                      SDTypeProfile<1, 4, [SDTCisVec<0>,
+                                                           SDTCisSameAs<0, 1>,
+                                                           SDTCisInt<2>,
+                                                           SDTCVecEltisVT<2, i16>,
+                                                           SDTCisSameNumEltsAs<0, 2>,
+                                                           SDTCVecEltisVT<3, i1>,
+                                                           SDTCisSameNumEltsAs<0, 3>,
+                                                           SDTCisVT<4, XLenVT>]>>;
 
 def riscv_vselect_vl : SDNode<"RISCVISD::VSELECT_VL",
                               SDTypeProfile<1, 4, [SDTCisVec<0>,
@@ -995,6 +1013,12 @@ foreach vti = AllIntegerVectors in {
             (!cast<Instruction>("PseudoVMV_S_X_"#vti.LMul.MX)
                 vti.RegClass:$merge,
                 (vti.Scalar vti.ScalarRegClass:$rs1), GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_vrgather_vv_vl vti.RegClass:$rs2,
+                                              (vti.Vector vti.RegClass:$rs1),
+                                              (vti.Mask true_mask),
+                                              (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs2, vti.RegClass:$rs1, GPR:$vl, vti.SEW)>;
   def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, GPR:$rs1,
                                               (vti.Mask true_mask),
                                               (XLenVT (VLOp GPR:$vl)))),
@@ -1005,6 +1029,22 @@ foreach vti = AllIntegerVectors in {
                                               (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX)
                  vti.RegClass:$rs2, uimm5:$imm, GPR:$vl, vti.SEW)>;
+
+  // emul = lmul * 16 / sew
+  defvar vlmul = vti.LMul;
+  defvar octuple_lmul = octuple_from_str<vlmul.MX>.ret;
+  defvar octuple_emul = !srl(!mul(octuple_lmul, 16), shift_amount<vti.SEW>.val);
+  if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
+    defvar emul_str = octuple_to_str<octuple_emul>.ret;
+    defvar ivti = !cast<VTypeInfo>("VI16" # emul_str);
+    defvar inst = "PseudoVRGATHEREI16_VV_" # vti.LMul.MX # "_" # emul_str;
+    def : Pat<(vti.Vector (riscv_vrgatherei16_vv_vl vti.RegClass:$rs2,
+                                                    (ivti.Vector ivti.RegClass:$rs1),
+                                                    (vti.Mask true_mask),
+                                                    (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>(inst)
+                   vti.RegClass:$rs2, ivti.RegClass:$rs1, GPR:$vl, vti.SEW)>;
+  }
 }
 
 } // Predicates = [HasStdExtV]
@@ -1019,6 +1059,13 @@ foreach vti = AllFloatVectors in {
             (!cast<Instruction>("PseudoVFMV_S_"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                 vti.RegClass:$merge,
                 (vti.Scalar vti.ScalarRegClass:$rs1), GPR:$vl, vti.SEW)>;
+  defvar ivti = GetIntVTypeInfo<vti>.Vti;
+  def : Pat<(vti.Vector (riscv_vrgather_vv_vl vti.RegClass:$rs2,
+                                              (ivti.Vector vti.RegClass:$rs1),
+                                              (vti.Mask true_mask),
+                                              (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs2, vti.RegClass:$rs1, GPR:$vl, vti.SEW)>;
   def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, GPR:$rs1,
                                               (vti.Mask true_mask),
                                               (XLenVT (VLOp GPR:$vl)))),
@@ -1029,6 +1076,21 @@ foreach vti = AllFloatVectors in {
                                               (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX)
                  vti.RegClass:$rs2, uimm5:$imm, GPR:$vl, vti.SEW)>;
+
+  defvar vlmul = vti.LMul;
+  defvar octuple_lmul = octuple_from_str<vlmul.MX>.ret;
+  defvar octuple_emul = !srl(!mul(octuple_lmul, 16), shift_amount<vti.SEW>.val);
+  if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
+    defvar emul_str = octuple_to_str<octuple_emul>.ret;
+    defvar ivti = !cast<VTypeInfo>("VI16" # emul_str);
+    defvar inst = "PseudoVRGATHEREI16_VV_" # vti.LMul.MX # "_" # emul_str;
+    def : Pat<(vti.Vector (riscv_vrgatherei16_vv_vl vti.RegClass:$rs2,
+                                                    (ivti.Vector ivti.RegClass:$rs1),
+                                                    (vti.Mask true_mask),
+                                                    (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>(inst)
+                   vti.RegClass:$rs2, ivti.RegClass:$rs1, GPR:$vl, vti.SEW)>;
+  }
 }
 
 } // Predicates = [HasStdExtV, HasStdExtF]

@@ -203,8 +203,11 @@ enum NodeType : unsigned {
   VMCLR_VL,
   VMSET_VL,
 
-  // Matches the semantics of vrgather.vx with an extra operand for VL.
+  // Matches the semantics of vrgather.vx and vrgather.vv with an extra operand
+  // for VL.
   VRGATHER_VX_VL,
+  VRGATHER_VV_VL,
+  VRGATHEREI16_VV_VL,
 
   // Vector sign/zero extend with additional mask & VL operands.
   VSEXT_VL,
@@ -446,6 +449,7 @@ private:
   SDValue lowerFPVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECTOR_REVERSE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerABS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorStoreToRVV(SDValue Op, SelectionDAG &DAG) const;
