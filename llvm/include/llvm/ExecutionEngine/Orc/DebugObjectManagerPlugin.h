@@ -20,7 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/TPCDebugObjectRegistrar.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
 
 #include <functional>
 #include <map>
