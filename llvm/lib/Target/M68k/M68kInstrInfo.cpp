@@ -92,9 +92,7 @@ bool M68kInstrInfo::AnalyzeBranchImpl(MachineBasicBlock &MBB,
   std::vector<std::reference_wrapper<llvm::MachineInstr>> EraseList;
   auto FinalizeOnReturn = llvm::make_scope_exit([&EraseList] {
     std::for_each(EraseList.begin(), EraseList.end(),
-                  [](decltype(EraseList)::value_type &ref) {
-                    ref.get().eraseFromParent();
-                  });
+                  [](auto &ref) { ref.get().eraseFromParent(); });
   });
 
   // Start from the bottom of the block and work up, examining the
