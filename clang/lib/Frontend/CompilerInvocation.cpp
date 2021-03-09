@@ -4355,6 +4355,11 @@ bool CompilerInvocation::CreateFromArgsImpl(
   Res.getCodeGenOpts().Argv0 = Argv0;
   Res.getCodeGenOpts().CommandLineArgs = CommandLineArgs;
 
+  if ((T.isOSBinFormatELF() || T.isOSBinFormatMachO()) &&
+      (Res.getLangOpts()->Exceptions || Res.getCodeGenOpts().UnwindTables ||
+       Res.getCodeGenOpts().getDebugInfo() != codegenoptions::NoDebugInfo))
+    Res.getPreprocessorOpts().addMacroDef("__GCC_HAVE_DWARF2_CFI_ASM=1");
+
   Success &= FixupInvocation(Res, Diags, Args, DashX);
 
   return Success;
