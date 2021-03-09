@@ -185,6 +185,15 @@ def riscv_trunc_vector_vl : SDNode<"RISCVISD::TRUNCATE_VECTOR_VL",
                                                         SDTCVecEltisVT<2, i1>,
                                                         SDTCisVT<3, XLenVT>]>>;
 
+def SDTRVVVecReduce : SDTypeProfile<1, 4, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<0, 2>, SDTCVecEltisVT<3, i1>,
+  SDTCisSameNumEltsAs<1, 3>, SDTCisVT<4, XLenVT>
+]>;
+
+foreach kind = ["ADD", "UMAX", "SMAX", "UMIN", "SMIN", "AND", "OR", "XOR",
+                "FADD", "SEQ_FADD"] in
+  def rvv_vecreduce_#kind#_vl : SDNode<"RISCVISD::VECREDUCE_"#kind#"_VL", SDTRVVVecReduce>;
+
 // Ignore the vl operand.
 def SplatFPOp : PatFrag<(ops node:$op),
                         (riscv_vfmv_v_f_vl node:$op, srcvalue)>;
@@ -479,6 +488,20 @@ multiclass VPatNConvertI2FPSDNode_V_VL<SDNode vop, string instruction_name> {
   }
 }
 
+multiclass VPatReductionVL<SDNode vop, string instruction_name, bit is_float> {
+  foreach vti = !if(is_float, AllFloatVectors, AllIntegerVectors) in {
+    defvar vti_m1 = !cast<VTypeInfo>(!if(is_float, "VF", "VI") # vti.SEW # "M1");
+    def: Pat<(vti_m1.Vector (vop (vti.Vector vti.RegClass:$rs1), VR:$rs2,
+                                 (vti.Mask true_mask),
+                                 (XLenVT (VLOp GPR:$vl)))),
+        (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX)
+            (vti_m1.Vector (IMPLICIT_DEF)),
+            (vti.Vector vti.RegClass:$rs1),
+            (vti_m1.Vector VR:$rs2),
+            GPR:$vl, vti.SEW)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -644,6 +667,24 @@ foreach vti = AllIntegerVectors in {
 }
 
 } // Predicates = [HasStdExtV]
+
+// 15.1. Vector Single-Width Integer Reduction Instructions
+let Predicates = [HasStdExtV] in {
+defm "" : VPatReductionVL<rvv_vecreduce_ADD_vl,  "PseudoVREDSUM", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_UMAX_vl, "PseudoVREDMAXU", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_SMAX_vl, "PseudoVREDMAX", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_UMIN_vl, "PseudoVREDMINU", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_SMIN_vl, "PseudoVREDMIN", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_AND_vl,  "PseudoVREDAND", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_OR_vl,   "PseudoVREDOR", /*is_float*/0>;
+defm "" : VPatReductionVL<rvv_vecreduce_XOR_vl,  "PseudoVREDXOR", /*is_float*/0>;
+} // Predicates = [HasStdExtV]
+
+// 15.3. Vector Single-Width Floating-Point Reduction Instructions
+let Predicates = [HasStdExtV, HasStdExtF] in {
+defm "" : VPatReductionVL<rvv_vecreduce_SEQ_FADD_vl, "PseudoVFREDOSUM", /*is_float*/1>;
+defm "" : VPatReductionVL<rvv_vecreduce_FADD_vl,     "PseudoVFREDSUM", /*is_float*/1>;
+} // Predicates = [HasStdExtV, HasStdExtF]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
 
