@@ -199,6 +199,33 @@ define <2 x float> @test_vcvt_f32_f64(<2 x double> %v) nounwind readnone ssp {
   ret <2 x float> %vcvt1.i
 }
 
+define half @test_vcvt_f16_f32(<1 x float> %x) {
+; GENERIC-LABEL: test_vcvt_f16_f32:
+; GENERIC:       // %bb.0:
+; GENERIC-NEXT:    // kill: def $d0 killed $d0 def $q0
+; GENERIC-NEXT:    fcvt h0, s0
+; GENERIC-NEXT:    ret
+;
+; FAST-LABEL: test_vcvt_f16_f32:
+; FAST:       // %bb.0:
+; FAST-NEXT:    mov.16b v1, v0
+; FAST-NEXT:    // implicit-def: $q0
+; FAST-NEXT:    mov.16b v0, v1
+; FAST-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; FAST-NEXT:    fcvt h0, s0
+; FAST-NEXT:    ret
+;
+; GISEL-LABEL: test_vcvt_f16_f32:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fmov x8, d0
+; GISEL-NEXT:    fmov s0, w8
+; GISEL-NEXT:    fcvt h0, s0
+; GISEL-NEXT:    ret
+  %tmp = fptrunc <1 x float> %x to <1 x half>
+  %elt = extractelement <1 x half> %tmp, i32 0
+  ret half %elt
+}
+
 ; FALLBACK-NOT: remark{{.*}}G_FPEXT{{.*}}(in function: test_vcvt_high_f32_f64)
 ; FALLBACK-NOT: remark{{.*}}fpext{{.*}}(in function: test_vcvt_high_f32_f64)
 define <4 x float> @test_vcvt_high_f32_f64(<2 x float> %x, <2 x double> %v) nounwind readnone ssp {
