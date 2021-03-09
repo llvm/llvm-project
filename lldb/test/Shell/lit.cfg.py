@@ -45,6 +45,7 @@ llvm_config.with_system_environment([
     'LLDB_CAPTURE_REPRODUCER',
     'TEMP',
     'TMP',
+    'XDG_CACHE_HOME',
 ])
 
 # Support running the test suite under the lldb-repro wrapper. This makes it

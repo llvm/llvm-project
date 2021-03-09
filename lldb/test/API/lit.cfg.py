@@ -129,11 +129,6 @@ if is_configured('shared_libs'):
     lit_config.warning("unable to inject shared library path on '{}'".format(
         platform.system()))
 
-# Propagate LLDB_CAPTURE_REPRODUCER
-if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
-  config.environment['LLDB_CAPTURE_REPRODUCER'] = os.environ[
-      'LLDB_CAPTURE_REPRODUCER']
-
 # Support running the test suite under the lldb-repro wrapper. This makes it
 # possible to capture a test suite run and then rerun all the test from the
 # just captured reproducer.
@@ -256,3 +251,12 @@ config.test_format = lldbtest.LLDBTest(dotest_cmd)
 if 'FREEBSD_LEGACY_PLUGIN' in os.environ:
   config.environment['FREEBSD_LEGACY_PLUGIN'] = os.environ[
       'FREEBSD_LEGACY_PLUGIN']
+
+# Propagate LLDB_CAPTURE_REPRODUCER
+if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
+  config.environment['LLDB_CAPTURE_REPRODUCER'] = os.environ[
+      'LLDB_CAPTURE_REPRODUCER']
+
+# Propagate XDG_CACHE_HOME
+if 'XDG_CACHE_HOME' in os.environ:
+  config.environment['XDG_CACHE_HOME'] = os.environ['XDG_CACHE_HOME']

@@ -28,6 +28,7 @@ llvm_config.with_system_environment([
     'PATH',
     'TEMP',
     'TMP',
+    'XDG_CACHE_HOME',
 ])
 llvm_config.with_environment('PATH',
                              os.path.dirname(sys.executable),
