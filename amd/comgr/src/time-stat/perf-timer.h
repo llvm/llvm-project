@@ -13,7 +13,7 @@ public:
   PerfTimerImpl() : CounterStart(0), PCFreq(0.0){};
   virtual ~PerfTimerImpl() = default;
   virtual bool Init() = 0;
-  virtual double getTimer() = 0;
+  virtual double getCurrentTime() = 0;
 };
 
 // Timer client interface class
@@ -22,7 +22,7 @@ class PerfTimer {
 
 public:
   bool Init();
-  double getTimer() { return pImpl->getTimer(); }
+  double getCurrentTime() { return pImpl->getCurrentTime(); }
 };
 }; // namespace TimeStatistics
 

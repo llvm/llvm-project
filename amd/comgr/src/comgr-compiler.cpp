@@ -76,12 +76,15 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetRegistry.h"
 
+#include "time-stat/ts-interface.h"
+
 using namespace llvm;
 using namespace llvm::opt;
 using namespace llvm::sys;
 using namespace clang;
 using namespace clang::driver;
 using namespace clang::driver::options;
+using namespace TimeStatistics;
 
 namespace COMGR {
 
@@ -534,6 +537,7 @@ static SmallString<128> getFilePath(DataObject *Object, StringRef Dir) {
 }
 
 static amd_comgr_status_t inputFromFile(DataObject *Object, StringRef Path) {
+  ProfilePoint Point("FileIO");
   auto BufOrError = MemoryBuffer::getFile(Path);
   if (std::error_code EC = BufOrError.getError()) {
     return AMD_COMGR_STATUS_ERROR;
@@ -545,10 +549,14 @@ static amd_comgr_status_t inputFromFile(DataObject *Object, StringRef Path) {
 static amd_comgr_status_t outputToFile(StringRef Data, StringRef Path) {
   SmallString<128> DirPath = Path;
   path::remove_filename(DirPath);
-  if (fs::create_directories(DirPath)) {
-    return AMD_COMGR_STATUS_ERROR;
+  {
+    ProfilePoint Point("CreateDir");
+    if (fs::create_directories(DirPath)) {
+      return AMD_COMGR_STATUS_ERROR;
+    }
   }
   std::error_code EC;
+  ProfilePoint Point("FileIO");
   raw_fd_ostream OS(Path, EC, fs::F_None);
   if (EC) {
     return AMD_COMGR_STATUS_ERROR;
@@ -717,6 +725,7 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
 }
 
 amd_comgr_status_t AMDGPUCompiler::createTmpDirs() {
+  ProfilePoint Point("CreateDir");
   if (fs::createUniqueDirectory("comgr", TmpDir)) {
     return AMD_COMGR_STATUS_ERROR;
   }
@@ -746,6 +755,7 @@ amd_comgr_status_t AMDGPUCompiler::removeTmpDirs() {
   if (TmpDir.empty()) {
     return AMD_COMGR_STATUS_SUCCESS;
   }
+  ProfilePoint Point("RemoveDir");
   if (fs::remove_directories(TmpDir)) {
     return AMD_COMGR_STATUS_ERROR;
   }

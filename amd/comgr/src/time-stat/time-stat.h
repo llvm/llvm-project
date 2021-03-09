@@ -2,36 +2,38 @@
 #define AMD_COMGR_TIME_STAT_H
 
 #include "perf-timer.h"
+#include "llvm/ADT/StringMap.h"
 
 #include "amd_comgr.h"
-
-StringRef getActionKindName(amd_comgr_action_kind_t ActionKind);
+#include <iostream>
 
 namespace TimeStatistics {
 
-typedef struct ActionStat {
-  uint16_t ExecCounter = 0;
-  double OverallTime = 0.0;
-} ActionStat_t;
+struct ProfileData {
+  double TimeTaken;
+  int Counter;
+};
 
 class PerfStats {
-  ActionStat_t Stats[AMD_COMGR_ACTION_LAST + 1];
-  std::unique_ptr<raw_fd_ostream, std::function<void(raw_fd_ostream *)>> pLog;
+  std::unique_ptr<llvm::raw_fd_ostream,
+                  std::function<void(llvm::raw_fd_ostream *)>>
+      pLog;
   PerfTimer PT;
-  amd_comgr_action_kind_t CurrAction;
-  double CurrCounter;
-  bool IsValid = false;
+
+  llvm::StringMap<ProfileData> ProfileDataMap;
 
 public:
   PerfStats() {}
   bool Init(std::string LogFile) {
     std::error_code EC;
-    std::unique_ptr<raw_fd_ostream, std::function<void(raw_fd_ostream *)>> LogF(
-        new (std::nothrow) raw_fd_ostream(LogFile, EC, sys::fs::OF_Text),
-        [](raw_fd_ostream *fp) {
-          *fp << "Closing log...\n";
-          fp->close();
-        });
+    std::unique_ptr<llvm::raw_fd_ostream,
+                    std::function<void(llvm::raw_fd_ostream *)>>
+        LogF(new (std::nothrow)
+                 llvm::raw_fd_ostream(LogFile, EC, llvm::sys::fs::OF_Text),
+             [](llvm::raw_fd_ostream *fp) {
+               *fp << "Closing log...\n";
+               fp->close();
+             });
     if (EC) {
       std::cerr << "Failed to open log file " << LogFile << "for perf stats "
                 << EC.message() << "\n ";
@@ -44,29 +46,24 @@ public:
     if (!PT.Init())
       return false;
 
-    IsValid = true;
-    return IsValid;
+    return true;
   }
-  void StartAction(amd_comgr_action_kind_t ActionKind) {
-    if (!IsValid)
-      return;
-    CurrAction = ActionKind;
-    CurrCounter = PT.getTimer();
+
+  double getCurrentTime() { return PT.getCurrentTime(); }
+
+  void AddToStats(llvm::StringRef Name, double TimeTaken) {
+    ProfileDataMap[Name].TimeTaken += TimeTaken;
+    ProfileDataMap[Name].Counter++;
   }
-  void WriteActionTime() {
-    if (!IsValid)
-      return;
-    Stats[CurrAction].OverallTime += PT.getTimer() - CurrCounter;
-    Stats[CurrAction].ExecCounter++;
-  }
+
   void dumpPerfStats() {
-    for (uint16_t i = 0; i < AMD_COMGR_ACTION_LAST; i++) {
-      if (Stats[i].ExecCounter) {
-        *pLog << "Action " << getActionKindName((amd_comgr_action_kind_t)i)
-              << " was invoked " << Stats[i].ExecCounter << " times and took "
-              << format_decimal(Stats[i].OverallTime, 10)
-              << " milliseconds overall\n";
-      }
+    for (const auto &Item : ProfileDataMap) {
+      *pLog << "Profile Point "
+            << llvm::format("%-50s", Item.getKey().str().c_str())
+            << " was invoked " << llvm::format("%6d", Item.getValue().Counter)
+            << " times and took "
+            << llvm::format("%10.4f", Item.getValue().TimeTaken)
+            << " milliseconds overall\n";
     }
   }
 };

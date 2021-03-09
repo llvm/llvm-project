@@ -1201,9 +1201,7 @@ amd_comgr_status_t AMD_COMGR_API
     }
   }
 
-  if (env::needTimeStatistics()) {
-    InitTimeStatistics(PerfLog);
-  }
+  InitTimeStatistics(PerfLog);
 
   if (env::shouldEmitVerboseLogs()) {
     *LogP << "amd_comgr_do_action:\n"
@@ -1222,6 +1220,8 @@ amd_comgr_status_t AMD_COMGR_API
   }
 
   amd_comgr_status_t ActionStatus;
+
+  ProfilePoint ProfileAction(getActionKindName(ActionKind));
   switch (ActionKind) {
   case AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE:
   case AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE:
@@ -1239,21 +1239,18 @@ amd_comgr_status_t AMD_COMGR_API
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE:
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN:
   case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
-    StartAction(ActionKind);
     ActionStatus = dispatchCompilerAction(ActionKind, ActionInfoP, InputSetP,
                                           ResultSetP, *LogP);
-    EndAction();
     break;
   case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
   case AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES:
-    StartAction(ActionKind);
     ActionStatus =
         dispatchAddAction(ActionKind, ActionInfoP, InputSetP, ResultSetP);
-    EndAction();
     break;
   default:
     ActionStatus = AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
+  ProfileAction.finish();
 
   // Restore signal handlers.
   if (auto Status = signal::restoreHandlers()) {

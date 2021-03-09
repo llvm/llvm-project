@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <system_error>
 
+#include "comgr-env.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
@@ -17,6 +18,7 @@
 #endif
 
 using namespace llvm;
+using namespace COMGR;
 
 #include "time-stat.h"
 #include "ts-interface.h"
@@ -26,8 +28,24 @@ namespace TimeStatistics {
 static std::unique_ptr<PerfStats> PS = nullptr;
 static void dump() { PS->dumpPerfStats(); }
 
+void GetLogFile(std::string &PerfLog) {
+  if (Optional<StringRef> RedirectLogs = env::getRedirectLogs()) {
+    PerfLog = (*RedirectLogs).str();
+    return;
+  }
+  PerfLog = "PerfStatsLog.txt";
+}
+
 bool InitTimeStatistics(std::string LogFile) {
   if (!PS) {
+    if (!env::needTimeStatistics()) {
+      return false;
+    }
+
+    if (LogFile == "") {
+      GetLogFile(LogFile);
+    }
+
     PS = std::make_unique<PerfStats>();
     if (!PS || !PS->Init(LogFile)) {
       std::cerr << "TimeStatistics failed to initialize\n";
@@ -38,15 +56,25 @@ bool InitTimeStatistics(std::string LogFile) {
   return true;
 }
 
-void StartAction(amd_comgr_action_kind_t ActionKind) {
+void ProfilePoint::finish() {
   if (PS) {
-    PS->StartAction(ActionKind);
+    double End = PS->getCurrentTime();
+    PS->AddToStats(Name, End - StartTime);
+  }
+
+  isFinished = true;
+}
+
+ProfilePoint::ProfilePoint(StringRef Tag) : Name(Tag) {
+  InitTimeStatistics("");
+  if (PS) {
+    StartTime = PS->getCurrentTime();
   }
 }
 
-void EndAction() {
-  if (PS) {
-    PS->WriteActionTime();
+ProfilePoint::~ProfilePoint() {
+  if (!isFinished) {
+    finish();
   }
 }
 
@@ -75,10 +103,11 @@ public:
     PCFreq = li.QuadPart / 1e3;
     return true;
   }
-  virtual double getTimer() override {
+
+  virtual double getCurrentTime() override {
     LARGE_INTEGER li;
     if (QueryPerformanceCounter(&li))
-      return double(li.QuadPart - CounterStart) / PCFreq;
+      return double(li.QuadPart) / PCFreq;
     else {
       std::cerr << "Failed to get performance counter\n";
       return 0.0;
@@ -109,10 +138,11 @@ public:
     PCFreq = (Res.tv_sec * 1e9 + Res.tv_nsec) * 1e6;
     return true;
   }
-  virtual double getTimer() override {
+
+  virtual double getCurrentTime() override {
     struct timespec EndTime;
     if (!clock_gettime(CLOCK_MONOTONIC_RAW, &EndTime)) {
-      return ((EndTime.tv_sec * 1e9 + EndTime.tv_nsec) - CounterStart) / PCFreq;
+      return (EndTime.tv_sec * 1e9 + EndTime.tv_nsec) / PCFreq;
     }
     std::cerr << "Failed to get performance counter\n";
     return 0.0;

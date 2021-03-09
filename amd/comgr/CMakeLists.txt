@@ -89,6 +89,10 @@ else()
   endif()
 endif()
 
+target_include_directories(amd_comgr
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
 message("")
 message("------------LLVM_DIR: ${LLVM_DIR}")
 message("---LLVM_INCLUDE_DIRS: ${LLVM_INCLUDE_DIRS}")
