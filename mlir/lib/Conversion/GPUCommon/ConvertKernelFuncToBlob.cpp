@@ -52,8 +52,15 @@ public:
                       StringRef targetChip, StringRef features,
                       StringRef gpuBinaryAnnotation)
       : loweringCallback(loweringCallback), blobGenerator(blobGenerator),
-        triple(triple), targetChip(targetChip), features(features),
-        blobAnnotation(gpuBinaryAnnotation) {}
+        triple(triple), targetChip(targetChip), features(features) {
+    if (!gpuBinaryAnnotation.empty())
+      this->gpuBinaryAnnotation = gpuBinaryAnnotation.str();
+  }
+
+  GpuKernelToBlobPass(const GpuKernelToBlobPass &other)
+      : loweringCallback(other.loweringCallback),
+        blobGenerator(other.blobGenerator), triple(other.triple),
+        targetChip(other.targetChip), features(other.features) {}
 
   void runOnOperation() override {
     gpu::GPUModuleOp module = getOperation();
@@ -70,7 +77,7 @@ public:
     // attribute to the module.
     if (auto blobAttr = translateGPUModuleToBinaryAnnotation(
             *llvmModule, module.getLoc(), module.getName()))
-      module->setAttr(blobAnnotation, blobAttr);
+      module->setAttr(gpuBinaryAnnotation, blobAttr);
     else
       signalPassFailure();
   }
@@ -92,13 +99,20 @@ private:
 
   LoweringCallback loweringCallback;
   BlobGenerator blobGenerator;
+
   llvm::Triple triple;
   std::string targetChip;
   std::string features;
-  std::string blobAnnotation;
+
+  Option<std::string> gpuBinaryAnnotation{
+      *this, "gpu-binary-annotation",
+      llvm::cl::desc("Annotation attribute string for GPU binary"),
+      llvm::cl::init(gpu::getDefaultGpuBinaryAnnotation())};
 };
 
 } // anonymous namespace
+
+std::string gpu::getDefaultGpuBinaryAnnotation() { return "gpu.binary"; }
 
 std::string
 GpuKernelToBlobPass::translateModuleToISA(llvm::Module &module,

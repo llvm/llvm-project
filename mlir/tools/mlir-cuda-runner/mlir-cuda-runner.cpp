@@ -114,7 +114,8 @@ struct GpuToCubinPipelineOptions
     : public mlir::PassPipelineOptions<GpuToCubinPipelineOptions> {
   Option<std::string> gpuBinaryAnnotation{
       *this, "gpu-binary-annotation",
-      llvm::cl::desc("Annotation attribute string for GPU binary")};
+      llvm::cl::desc("Annotation attribute string for GPU binary"),
+      llvm::cl::init(gpu::getDefaultGpuBinaryAnnotation())};
 };
 
 // Register cuda-runner specific passes.
