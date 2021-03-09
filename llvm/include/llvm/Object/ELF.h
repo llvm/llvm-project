@@ -392,6 +392,8 @@ public:
   Expected<ArrayRef<T>> getSectionContentsAsArray(const Elf_Shdr &Sec) const;
   Expected<ArrayRef<uint8_t>> getSectionContents(const Elf_Shdr &Sec) const;
   Expected<ArrayRef<uint8_t>> getSegmentContents(const Elf_Phdr &Phdr) const;
+  Expected<std::vector<Elf_BBAddrMap>>
+  decodeBBAddrMap(const Elf_Shdr &Sec) const;
 };
 
 using ELF32LEFile = ELFFile<ELF32LE>;
