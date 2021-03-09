@@ -1,4 +1,6 @@
-; RUN: lli --jit-kind=orc-lazy --per-module-lazy \
+; In-memory debug-object contains some basic DWARF
+;
+; RUN: lli --jit-kind=orc-lazy --per-module-lazy --jit-linker=rtdyld \
 ; RUN:     --generate=__dump_jit_debug_objects %s | llvm-dwarfdump --diff - | FileCheck %s
 ;
 ; RUN: lli --jit-kind=orc-lazy --per-module-lazy --jit-linker=jitlink \
@@ -29,6 +31,18 @@
 ; CHECK:                 DW_AT_encoding	(DW_ATE_signed)
 ; CHECK:                 DW_AT_byte_size	(0x04)
 ; CHECK:   NULL
+
+; Text section of the in-memory debug-object has a non-null load-address
+;
+; RUN: lli --jit-kind=orc-lazy --per-module-lazy --jit-linker=rtdyld \
+; RUN:     --generate=__dump_jit_debug_objects %s | llvm-objdump --section-headers - | \
+; RUN:     FileCheck --check-prefix=CHECK_LOAD_ADDR %s
+;
+; RUN: lli --jit-kind=orc-lazy --per-module-lazy --jit-linker=jitlink \
+; RUN:     --generate=__dump_jit_debug_objects %s | llvm-objdump --section-headers - | \
+; RUN:     FileCheck --check-prefix=CHECK_LOAD_ADDR %s
+;
+; CHECK_LOAD_ADDR-NOT: {{[0-9]*}} .text {{.*}} 0000000000000000 TEXT
 
 target triple = "x86_64-unknown-unknown-elf"
 
