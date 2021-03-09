@@ -456,3 +456,60 @@ define i8 @umin_of_nots_uses(i8 %x, i8 %y) {
   %m = call i8 @llvm.umin.i8(i8 %notx, i8 %noty)
   ret i8 %m
 }
+
+define i8 @smax_of_not_and_const(i8 %x) {
+; CHECK-LABEL: @smax_of_not_and_const(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[NOTX]], i8 42)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %notx = xor i8 %x, -1
+  %m = call i8 @llvm.smax.i8(i8 %notx, i8 42)
+  ret i8 %m
+}
+
+define <3 x i8> @smin_of_not_and_const(<3 x i8> %x) {
+; CHECK-LABEL: @smin_of_not_and_const(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor <3 x i8> [[X:%.*]], <i8 -1, i8 -1, i8 undef>
+; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[NOTX]], <3 x i8> <i8 42, i8 undef, i8 43>)
+; CHECK-NEXT:    ret <3 x i8> [[M]]
+;
+  %notx = xor <3 x i8> %x, <i8 -1, i8 -1, i8 undef>
+  %m = call <3 x i8> @llvm.smin.v3i8(<3 x i8> <i8 42, i8 undef, i8 43>, <3 x i8> %notx)
+  ret <3 x i8> %m
+}
+
+define i8 @umax_of_not_and_const(i8 %x) {
+; CHECK-LABEL: @umax_of_not_and_const(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[NOTX]], i8 44)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %notx = xor i8 %x, -1
+  %m = call i8 @llvm.umax.i8(i8 %notx, i8 44)
+  ret i8 %m
+}
+
+define i8 @umin_of_not_and_const(i8 %x) {
+; CHECK-LABEL: @umin_of_not_and_const(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NOTX]], i8 -45)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %notx = xor i8 %x, -1
+  %m = call i8 @llvm.umin.i8(i8 -45, i8 %notx)
+  ret i8 %m
+}
+
+define i8 @umin_of_not_and_const_uses(i8 %x) {
+; CHECK-LABEL: @umin_of_not_and_const_uses(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTX]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NOTX]], i8 -45)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %notx = xor i8 %x, -1
+  call void @use(i8 %notx)
+  %m = call i8 @llvm.umin.i8(i8 -45, i8 %notx)
+  ret i8 %m
+}
