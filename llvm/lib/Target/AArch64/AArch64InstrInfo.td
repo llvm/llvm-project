@@ -607,7 +607,9 @@ def AArch64stp : SDNode<"AArch64ISD::STP", SDT_AArch64stp, [SDNPHasChain, SDNPMa
 def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
-
+def AArch64mrs : SDNode<"AArch64ISD::MRS",
+                        SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, i32>]>,
+                        [SDNPHasChain, SDNPOutGlue]>;
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -1265,6 +1267,9 @@ def MRS    : MRSI;
 def MSR    : MSRI;
 def MSRpstateImm1 : MSRpstateImm0_1;
 def MSRpstateImm4 : MSRpstateImm0_15;
+
+def : Pat<(AArch64mrs imm:$id),
+          (MRS imm:$id)>;
 
 // The thread pointer (on Linux, at least, where this has been implemented) is
 // TPIDR_EL0.

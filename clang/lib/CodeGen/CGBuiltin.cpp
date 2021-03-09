@@ -9255,6 +9255,23 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     }
   }
 
+  if (BuiltinID == AArch64::BI__builtin_arm_rndr ||
+      BuiltinID == AArch64::BI__builtin_arm_rndrrs) {
+
+    auto Intr = (BuiltinID == AArch64::BI__builtin_arm_rndr
+                     ? Intrinsic::aarch64_rndr
+                     : Intrinsic::aarch64_rndrrs);
+    Function *F = CGM.getIntrinsic(Intr);
+    llvm::Value *Val = Builder.CreateCall(F);
+    Value *RandomValue = Builder.CreateExtractValue(Val, 0);
+    Value *Status = Builder.CreateExtractValue(Val, 1);
+
+    Address MemAddress = EmitPointerWithAlignment(E->getArg(0));
+    Builder.CreateStore(RandomValue, MemAddress);
+    Status = Builder.CreateZExt(Status, Int32Ty);
+    return Status;
+  }
+
   if (BuiltinID == AArch64::BI__clear_cache) {
     assert(E->getNumArgs() == 2 && "__clear_cache takes 2 arguments");
     const FunctionDecl *FD = E->getDirectCallee();
