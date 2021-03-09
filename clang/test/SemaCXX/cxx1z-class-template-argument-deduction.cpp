@@ -416,6 +416,17 @@ B b(0, {});
 
 }
 
+namespace no_crash_on_default_arg {
+class A {
+  template <typename T> class B {
+    B(int c = 1);
+  };
+  // This used to crash due to unparsed default arg above. The diagnostic could
+  // be improved, but the point of this test is to simply check we do not crash.
+  B(); // expected-error {{deduction guide declaration without trailing return type}}
+};
+} // namespace no_crash_on_default_arg
+
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Wctad-maybe-unsupported"
 namespace test_implicit_ctad_warning {
