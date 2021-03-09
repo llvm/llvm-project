@@ -14,7 +14,6 @@
 
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/IR/ObjCARCUtil.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
@@ -4039,7 +4038,7 @@ bool llvm::UpgradeDebugInfo(Module &M) {
 /// returns true if module is modified.
 static bool UpgradeRetainReleaseMarker(Module &M) {
   bool Changed = false;
-  const char *MarkerKey = objcarc::getRVMarkerModuleFlagStr();
+  const char *MarkerKey = "clang.arc.retainAutoreleasedReturnValueMarker";
   NamedMDNode *ModRetainReleaseMarker = M.getNamedMetadata(MarkerKey);
   if (ModRetainReleaseMarker) {
     MDNode *Op = ModRetainReleaseMarker->getOperand(0);

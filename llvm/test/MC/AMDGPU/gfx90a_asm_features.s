@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefixes=NOT-GFX908,NOT-GFX90A --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=NOT-GFX1010,NOT-GFX90A --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefixes=GFX908,NOT-GFX90A --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=GFX1010,NOT-GFX90A --implicit-check-not=error: %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx90a -show-encoding %s | FileCheck --check-prefix=GFX90A %s
 
 // NOT-GFX90A: error: instruction not supported on this GPU
@@ -87,8 +87,7 @@ v_pk_mul_f32 v[4:5], s[2:3], v[16:17]
 v_pk_mul_f32 v[4:5], s[100:101], v[16:17]
 
 // GFX90A: v_pk_mul_f32 v[4:5], flat_scratch, v[16:17] ; encoding: [0x04,0x40,0xb1,0xd3,0x66,0x20,0x02,0x18]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: instruction not supported on this GPU
+// NOT-GFX90A: error: instruction not supported on this GPU
 v_pk_mul_f32 v[4:5], flat_scratch, v[16:17]
 
 // NOT-GFX90A: error: instruction not supported on this GPU
@@ -112,8 +111,7 @@ v_pk_mul_f32 v[4:5], v[8:9], s[2:3]
 v_pk_mul_f32 v[4:5], v[8:9], s[100:101]
 
 // GFX90A: v_pk_mul_f32 v[4:5], v[8:9], flat_scratch ; encoding: [0x04,0x40,0xb1,0xd3,0x08,0xcd,0x00,0x18]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: instruction not supported on this GPU
+// NOT-GFX90A: error: instruction not supported on this GPU
 v_pk_mul_f32 v[4:5], v[8:9], flat_scratch
 
 // NOT-GFX90A: error: instruction not supported on this GPU
@@ -201,8 +199,7 @@ v_pk_add_f32 v[4:5], s[2:3], v[16:17]
 v_pk_add_f32 v[4:5], s[100:101], v[16:17]
 
 // GFX90A: v_pk_add_f32 v[4:5], flat_scratch, v[16:17] ; encoding: [0x04,0x40,0xb2,0xd3,0x66,0x20,0x02,0x18]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: instruction not supported on this GPU
+// NOT-GFX90A: error: instruction not supported on this GPU
 v_pk_add_f32 v[4:5], flat_scratch, v[16:17]
 
 // NOT-GFX90A: error: instruction not supported on this GPU
@@ -226,8 +223,7 @@ v_pk_add_f32 v[4:5], v[8:9], s[2:3]
 v_pk_add_f32 v[4:5], v[8:9], s[100:101]
 
 // GFX90A: v_pk_add_f32 v[4:5], v[8:9], flat_scratch ; encoding: [0x04,0x40,0xb2,0xd3,0x08,0xcd,0x00,0x18]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: instruction not supported on this GPU
+// NOT-GFX90A: error: instruction not supported on this GPU
 v_pk_add_f32 v[4:5], v[8:9], flat_scratch
 
 // NOT-GFX90A: error: instruction not supported on this GPU
@@ -303,8 +299,7 @@ v_pk_add_f32 v[4:5], v[8:9], v[16:17] clamp
 v_pk_mov_b32 v[0:1], v[2:3], v[4:5]
 
 // GFX90A: v_pk_mov_b32 v[0:1], flat_scratch, v[4:5] ; encoding: [0x00,0x40,0xb3,0xd3,0x66,0x08,0x02,0x18]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: instruction not supported on this GPU
+// NOT-GFX90A: error: instruction not supported on this GPU
 v_pk_mov_b32 v[0:1], flat_scratch, v[4:5]
 
 // NOT-GFX90A: error: instruction not supported on this GPU
@@ -328,13 +323,13 @@ v_pk_mov_b32 v[0:1], v[2:3], v[4:5] op_sel:[1,0]
 v_pk_mov_b32 v[0:1], v[2:3], v[4:5] op_sel:[1,1]
 
 // GFX90A: tbuffer_load_format_xyzw v[4:7], off, s[0:3], 0 scc ; encoding: [0x00,0x80,0x09,0xe8,0x00,0x04,0x20,0x80]
-// NOT-GFX1010: error: not a valid operand.
-// NOT-GFX908: error: failed parsing operand.
+// GFX1010: error: not a valid operand.
+// GFX908: error: failed parsing operand.
 tbuffer_load_format_xyzw v[4:7], off, s[0:3], dfmt:1, nfmt:0, 0 scc
 
 // GFX90A: tbuffer_load_format_xyzw v[4:7], off, s[0:3], 0 glc scc ; encoding: [0x00,0xc0,0x09,0xe8,0x00,0x04,0x20,0x80]
-// NOT-GFX1010: error: not a valid operand.
-// NOT-GFX908: error: failed parsing operand.
+// GFX1010: error: not a valid operand.
+// GFX908: error: failed parsing operand.
 tbuffer_load_format_xyzw v[4:7], off, s[0:3], dfmt:1, nfmt:0, 0 glc scc
 
 // NOT-GFX90A: error: failed parsing operand
@@ -706,8 +701,8 @@ v_fmac_f64_e32 v[254:255], v[2:3], v[4:5]
 v_fmac_f64_e32 v[4:5], v[254:255], v[4:5]
 
 // GFX90A: v_fmac_f64_e32 v[4:5], flat_scratch, v[4:5] ; encoding: [0x66,0x08,0x08,0x08]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: instruction not supported on this GPU
+// GFX1010: error: instruction not supported on this GPU
+// GFX908: error: instruction not supported on this GPU
 v_fmac_f64_e32 v[4:5], flat_scratch, v[4:5]
 
 // NOT-GFX90A: error: instruction not supported on this GPU
@@ -759,8 +754,8 @@ v_fmac_f64_e64 v[254:255], v[2:3], v[8:9]
 v_fmac_f64_e64 v[4:5], v[254:255], v[8:9]
 
 // GFX90A: v_fmac_f64_e64 v[4:5], flat_scratch, v[8:9] ; encoding: [0x04,0x00,0x04,0xd1,0x66,0x10,0x02,0x00]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: instruction not supported on this GPU
+// GFX1010: error: instruction not supported on this GPU
+// GFX908: error: instruction not supported on this GPU
 v_fmac_f64_e64 v[4:5], flat_scratch, v[8:9]
 
 // NOT-GFX90A: error: instruction not supported on this GPU
@@ -792,8 +787,8 @@ v_fmac_f64_e64 v[4:5], -4.0, v[8:9]
 v_fmac_f64_e64 v[4:5], v[2:3], v[254:255]
 
 // GFX90A: v_fmac_f64_e64 v[4:5], v[2:3], flat_scratch ; encoding: [0x04,0x00,0x04,0xd1,0x02,0xcd,0x00,0x00]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: instruction not supported on this GPU
+// GFX1010: error: instruction not supported on this GPU
+// GFX908: error: instruction not supported on this GPU
 v_fmac_f64_e64 v[4:5], v[2:3], flat_scratch
 
 // NOT-GFX90A: error: instruction not supported on this GPU
@@ -981,28 +976,28 @@ v_xor_b32 v6, v29, v27 row_newbcast:7
 v_xor_b32 v6, v29, v27 row_newbcast:15
 
 // GFX90A: buffer_atomic_add_f32 v0, v2, s[4:7], 0 idxen glc ; encoding: [0x00,0x60,0x34,0xe1,0x02,0x00,0x01,0x80]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: operands are not valid for this GPU or mode
+// GFX1010: error: instruction not supported on this GPU
+// GFX908: error: operands are not valid for this GPU or mode
 buffer_atomic_add_f32 v0, v2, s[4:7], 0 idxen glc
 
 // GFX90A: buffer_atomic_add_f32 v0, v2, s[4:7], 0 idxen glc ; encoding: [0x00,0x60,0x34,0xe1,0x02,0x00,0x01,0x80]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: operands are not valid for this GPU or mode
+// GFX1010: error: instruction not supported on this GPU
+// GFX908: error: operands are not valid for this GPU or mode
 buffer_atomic_add_f32 v0, v2, s[4:7], 0 idxen glc
 
 // GFX90A: buffer_atomic_pk_add_f16 v0, v2, s[4:7], 0 idxen glc ; encoding: [0x00,0x60,0x38,0xe1,0x02,0x00,0x01,0x80]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: operands are not valid for this GPU or mode
+// GFX1010: error: instruction not supported on this GPU
+// GFX908: error: operands are not valid for this GPU or mode
 buffer_atomic_pk_add_f16 v0, v2, s[4:7], 0 idxen glc
 
 // GFX90A: global_atomic_add_f32 v0, v[0:1], v2, off glc ; encoding: [0x00,0x80,0x35,0xdd,0x00,0x02,0x7f,0x00]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: operands are not valid for this GPU or mode
+// GFX1010: error: instruction not supported on this GPU
+// GFX908: error: operands are not valid for this GPU or mode
 global_atomic_add_f32 v0, v[0:1], v2, off glc
 
 // GFX90A: global_atomic_pk_add_f16 v0, v[0:1], v2, off glc ; encoding: [0x00,0x80,0x39,0xdd,0x00,0x02,0x7f,0x00]
-// NOT-GFX1010: error: instruction not supported on this GPU
-// NOT-GFX908: error: operands are not valid for this GPU or mode
+// GFX1010: error: instruction not supported on this GPU
+// GFX908: error: operands are not valid for this GPU or mode
 global_atomic_pk_add_f16 v0, v[0:1], v2, off glc
 
 // GFX90A: global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off glc ; encoding: [0x00,0x80,0x3d,0xdd,0x00,0x02,0x7f,0x00]
