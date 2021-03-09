@@ -7439,6 +7439,7 @@ private:
     //   S1 s;
     //   double *p;
     //   struct S2 *ps;
+    //   int &ref;
     // }
     // S2 s;
     // S2 *ps;
@@ -7477,6 +7478,14 @@ private:
     // &s, &(s.p), sizeof(double*), MEMBER_OF(1) (**)
     // &(s.p), &(s.p[0]), 22*sizeof(double),
     //   MEMBER_OF(1) | PTR_AND_OBJ | TO (***)
+    // (*) alloc space for struct members, only this is a target parameter
+    // (**) map the pointer (nothing to be mapped in this example) (the compiler
+    //      optimizes this entry out, same in the examples below)
+    // (***) map the pointee (map: to)
+    //
+    // map(to: s.ref)
+    // &s, &(s.ref), sizeof(int*), TARGET_PARAM (*)
+    // &s, &(s.ref), sizeof(int), MEMBER_OF(1) | PTR_AND_OBJ | TO (***)
     // (*) alloc space for struct members, only this is a target parameter
     // (**) map the pointer (nothing to be mapped in this example) (the compiler
     //      optimizes this entry out, same in the examples below)
@@ -7679,6 +7688,7 @@ private:
     uint64_t DimSize = 1;
 
     bool IsNonContiguous = CombinedInfo.NonContigInfo.IsNonContiguous;
+    bool IsPrevMemberReference = false;
 
     for (; I != CE; ++I) {
       // If the current component is member of a struct (parent struct) mark it.
@@ -7736,12 +7746,16 @@ private:
                        .getCanonicalType()
                        ->isAnyPointerType()) ||
           I->getAssociatedExpression()->getType()->isAnyPointerType();
+      bool IsMemberReference = isa<MemberExpr>(I->getAssociatedExpression()) &&
+                               MapDecl &&
+                               MapDecl->getType()->isLValueReferenceType();
       bool IsNonDerefPointer = IsPointer && !UO && !BO && !IsNonContiguous;
 
       if (OASE)
         ++DimSize;
 
-      if (Next == CE || IsNonDerefPointer || IsFinalArraySection) {
+      if (Next == CE || IsMemberReference || IsNonDerefPointer ||
+          IsFinalArraySection) {
         // If this is not the last component, we expect the pointer to be
         // associated with an array expression or member expression.
         assert((Next == CE ||
@@ -7754,22 +7768,53 @@ private:
                "Unexpected expression");
 
         Address LB = Address::invalid();
+        Address LowestElem = Address::invalid();
+        auto &&EmitMemberExprBase = [](CodeGenFunction &CGF,
+                                       const MemberExpr *E) {
+          const Expr *BaseExpr = E->getBase();
+          // If this is s.x, emit s as an lvalue.  If it is s->x, emit s as a
+          // scalar.
+          LValue BaseLV;
+          if (E->isArrow()) {
+            LValueBaseInfo BaseInfo;
+            TBAAAccessInfo TBAAInfo;
+            Address Addr =
+                CGF.EmitPointerWithAlignment(BaseExpr, &BaseInfo, &TBAAInfo);
+            QualType PtrTy = BaseExpr->getType()->getPointeeType();
+            BaseLV = CGF.MakeAddrLValue(Addr, PtrTy, BaseInfo, TBAAInfo);
+          } else {
+            BaseLV = CGF.EmitOMPSharedLValue(BaseExpr);
+          }
+          return BaseLV;
+        };
         if (OAShE) {
-          LB = Address(CGF.EmitScalarExpr(OAShE->getBase()),
-                       CGF.getContext().getTypeAlignInChars(
-                           OAShE->getBase()->getType()));
-        } else {
-          LB = CGF.EmitOMPSharedLValue(I->getAssociatedExpression())
+          LowestElem = LB = Address(CGF.EmitScalarExpr(OAShE->getBase()),
+                                    CGF.getContext().getTypeAlignInChars(
+                                        OAShE->getBase()->getType()));
+        } else if (IsMemberReference) {
+          const auto *ME = cast<MemberExpr>(I->getAssociatedExpression());
+          LValue BaseLVal = EmitMemberExprBase(CGF, ME);
+          LowestElem = CGF.EmitLValueForFieldInitialization(
+                              BaseLVal, cast<FieldDecl>(MapDecl))
+                           .getAddress(CGF);
+          LB = CGF.EmitLoadOfReferenceLValue(LowestElem, MapDecl->getType())
                    .getAddress(CGF);
+        } else {
+          LowestElem = LB =
+              CGF.EmitOMPSharedLValue(I->getAssociatedExpression())
+                  .getAddress(CGF);
         }
 
         // If this component is a pointer inside the base struct then we don't
         // need to create any entry for it - it will be combined with the object
         // it is pointing to into a single PTR_AND_OBJ entry.
         bool IsMemberPointerOrAddr =
-            (IsPointer || ForDeviceAddr) && EncounteredME &&
-            (dyn_cast<MemberExpr>(I->getAssociatedExpression()) ==
-             EncounteredME);
+            EncounteredME &&
+            (((IsPointer || ForDeviceAddr) &&
+              I->getAssociatedExpression() == EncounteredME) ||
+             (IsPrevMemberReference && !IsPointer) ||
+             (IsMemberReference && Next != CE &&
+              !Next->getAssociatedExpression()->getType()->isPointerType()));
         if (!OverlappedElements.empty() && Next == CE) {
           // Handle base element with the info for overlapped elements.
           assert(!PartialStruct.Base.isValid() && "The base element is set.");
@@ -7777,11 +7822,11 @@ private:
                  "Unexpected base element with the pointer type.");
           // Mark the whole struct as the struct that requires allocation on the
           // device.
-          PartialStruct.LowestElem = {0, LB};
+          PartialStruct.LowestElem = {0, LowestElem};
           CharUnits TypeSize = CGF.getContext().getTypeSizeInChars(
               I->getAssociatedExpression()->getType());
           Address HB = CGF.Builder.CreateConstGEP(
-              CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(LB,
+              CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(LowestElem,
                                                               CGF.VoidPtrTy),
               TypeSize.getQuantity() - 1);
           PartialStruct.HighestElem = {
@@ -7807,10 +7852,20 @@ private:
             Address ComponentLB = Address::invalid();
             for (const OMPClauseMappableExprCommon::MappableComponent &MC :
                  Component) {
-              if (MC.getAssociatedDeclaration()) {
-                ComponentLB =
-                    CGF.EmitOMPSharedLValue(MC.getAssociatedExpression())
-                        .getAddress(CGF);
+              if (const ValueDecl *VD = MC.getAssociatedDeclaration()) {
+                const auto *FD = dyn_cast<FieldDecl>(VD);
+                if (FD && FD->getType()->isLValueReferenceType()) {
+                  const auto *ME =
+                      cast<MemberExpr>(MC.getAssociatedExpression());
+                  LValue BaseLVal = EmitMemberExprBase(CGF, ME);
+                  ComponentLB =
+                      CGF.EmitLValueForFieldInitialization(BaseLVal, FD)
+                          .getAddress(CGF);
+                } else {
+                  ComponentLB =
+                      CGF.EmitOMPSharedLValue(MC.getAssociatedExpression())
+                          .getAddress(CGF);
+                }
                 Size = CGF.Builder.CreatePtrDiff(
                     CGF.EmitCastToVoidPtr(ComponentLB.getPointer()),
                     CGF.EmitCastToVoidPtr(LB.getPointer()));
@@ -7833,8 +7888,7 @@ private:
           CombinedInfo.BasePointers.push_back(BP.getPointer());
           CombinedInfo.Pointers.push_back(LB.getPointer());
           Size = CGF.Builder.CreatePtrDiff(
-              CGF.EmitCastToVoidPtr(
-                  CGF.Builder.CreateConstGEP(HB, 1).getPointer()),
+              CGF.Builder.CreateConstGEP(HB, 1).getPointer(),
               CGF.EmitCastToVoidPtr(LB.getPointer()));
           CombinedInfo.Sizes.push_back(
               CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
@@ -7866,13 +7920,13 @@ private:
           OpenMPOffloadMappingFlags Flags = getMapTypeBits(
               MapType, MapModifiers, MotionModifiers, IsImplicit,
               !IsExpressionFirstInfo || RequiresReference ||
-                  FirstPointerInComplexData,
+                  FirstPointerInComplexData || IsMemberReference,
               IsCaptureFirstInfo && !RequiresReference, IsNonContiguous);
 
-          if (!IsExpressionFirstInfo) {
+          if (!IsExpressionFirstInfo || IsMemberReference) {
             // If we have a PTR_AND_OBJ pair where the OBJ is a pointer as well,
             // then we reset the TO/FROM/ALWAYS/DELETE/CLOSE flags.
-            if (IsPointer)
+            if (IsPointer || (IsMemberReference && Next != CE))
               Flags &= ~(OMP_MAP_TO | OMP_MAP_FROM | OMP_MAP_ALWAYS |
                          OMP_MAP_DELETE | OMP_MAP_CLOSE);
 
@@ -7898,21 +7952,21 @@ private:
 
           // Update info about the lowest and highest elements for this struct
           if (!PartialStruct.Base.isValid()) {
-            PartialStruct.LowestElem = {FieldIndex, LB};
+            PartialStruct.LowestElem = {FieldIndex, LowestElem};
             if (IsFinalArraySection) {
               Address HB =
                   CGF.EmitOMPArraySectionExpr(OASE, /*IsLowerBound=*/false)
                       .getAddress(CGF);
               PartialStruct.HighestElem = {FieldIndex, HB};
             } else {
-              PartialStruct.HighestElem = {FieldIndex, LB};
+              PartialStruct.HighestElem = {FieldIndex, LowestElem};
             }
             PartialStruct.Base = BP;
             PartialStruct.LB = BP;
           } else if (FieldIndex < PartialStruct.LowestElem.first) {
-            PartialStruct.LowestElem = {FieldIndex, LB};
+            PartialStruct.LowestElem = {FieldIndex, LowestElem};
           } else if (FieldIndex > PartialStruct.HighestElem.first) {
-            PartialStruct.HighestElem = {FieldIndex, LB};
+            PartialStruct.HighestElem = {FieldIndex, LowestElem};
           }
         }
 
@@ -7926,11 +7980,12 @@ private:
 
         // The pointer becomes the base for the next element.
         if (Next != CE)
-          BP = LB;
+          BP = IsMemberReference ? LowestElem : LB;
 
         IsExpressionFirstInfo = false;
         IsCaptureFirstInfo = false;
         FirstPointerInComplexData = false;
+        IsPrevMemberReference = IsMemberReference;
       } else if (FirstPointerInComplexData) {
         QualType Ty = Components.rbegin()
                           ->getAssociatedDeclaration()
@@ -8914,7 +8969,6 @@ public:
               std::prev(It)
                   ->getAssociatedExpression()
                   ->getType()
-                  .getNonReferenceType()
                   ->isPointerType())
             continue;
           const MapData &BaseData = CI == CE ? L : L1;
