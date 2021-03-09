@@ -4462,7 +4462,6 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
                                      /*MaskAgnostic*/ false));
 
   // Remove (now) redundant operands from pseudo
-  MI.getOperand(SEWIndex).setImm(-1);
   if (VLIndex >= 0) {
     MI.getOperand(VLIndex).setReg(RISCV::NoRegister);
     MI.getOperand(VLIndex).setIsKill(false);
