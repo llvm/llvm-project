@@ -5038,11 +5038,6 @@ def ehcontguard : Flag<["-"], "ehcontguard">,
 def fdenormal_fp_math_f32_EQ : Joined<["-"], "fdenormal-fp-math-f32=">,
    Group<f_Group>;
 
-let Flags = [CoreOption] in {
-def famd_opt : Flag<["-"], "famd-opt">, Group<f_Group>,
-  HelpText<"Enable \"All\" [AMD] proprietary Optimizations">;
-def fno_amd_opt : Flag<["-"], "fno-amd-opt">, Group<f_Group>;
-}
 
 //===----------------------------------------------------------------------===//
 // Dependency Output Options
@@ -6229,3 +6224,109 @@ def _SLASH_Ze : CLFlag<"Ze">;
 def _SLASH_Zg : CLFlag<"Zg">;
 def _SLASH_ZI : CLFlag<"ZI">;
 def _SLASH_ZW : CLJoined<"ZW">;
+
+
+
+//===----------------------------------------------------------------------===//
+// AOCC Optimization Options
+//===----------------------------------------------------------------------===//
+
+let Flags = [CoreOption] in {
+def famd_opt : Flag<["-"], "famd-opt">, Group<f_Group>,
+  HelpText<"Enable \"All\" [AMD] proprietary Optimizations">;
+def fno_amd_opt : Flag<["-"], "fno-amd-opt">, Group<f_Group>;
+def floop_unswitch_aggressive : Flag<["-"], "floop-unswitch-aggressive">, Group<f_Group>,
+  HelpText<"Aggressively unswitch loops.">;
+def fno_loop_unswitch_aggressive: Flag<["-"], "fno-loop-unswitch-aggressive">, Group<f_Group>;
+def fsimplify_pow : Flag<["-"], "fsimplify-pow">, Group<f_Group>,
+  HelpText<"Enable SimplifyPowLibCalls pass">;
+def fno_simplify_pow : Flag<["-"], "fno-simplify-pow">, Group<f_Group>;
+
+def fitodcalls : Flag<["-"], "fitodcalls">, Group<f_Group>,
+  HelpText<"Enable indirect to direct call promotion">;
+def fno_itodcalls : Flag<["-"], "fno-itodcalls">, Group<f_Group>;
+def fitodcallsbyclone : Flag<["-"], "fitodcallsbyclone">, Group<f_Group>,
+  HelpText<"Enable indirect to direct call promotion by funnction cloning">;
+def fno_itodcallsbyclone : Flag<["-"], "fno-itodcallsbyclone">, Group<f_Group>;
+
+def fproactive_loop_fusion : Flag<["-"], "fproactive-loop-fusion">, Group<f_Group>,
+  HelpText<"Enable the loop fusion passes">;
+def fno_proactive_loop_fusion : Flag<["-"], "fno-proactive-loop-fusion">, Group<f_Group>;
+def fproactive_loop_fusion_analysis : Flag<["-"], "fproactive-loop-fusion-analysis">, Group<f_Group>,
+  HelpText<"Enable the loop fusion analysis passes">;
+def fno_proactive_loop_fusion_analysis : Flag<["-"], "fno-proactive-loop-fusion analysis">, Group<f_Group>;
+
+def finline_aggressive : Flag<["-"], "finline-aggressive">, Group<f_Group>,
+  HelpText<"Enable aggresive Inlining during LTO">;
+def fno_inline_aggressive : Flag<["-"], "fno-inline-aggressive">, Group<f_Group>;
+
+def floop_splitting : Flag<["-"], "floop-splitting">, Group<f_Group>,
+  HelpText<"Enable the inter procedural loop splitting pass">;
+def fno_loop_splitting : Flag<["-"], "fno-loop-splitting">, Group<f_Group>;
+
+def fremove_unused_array_ops : Flag<["-"], "fremove-unused-array-ops">, Group<f_Group>,
+  HelpText<"Enable the Dead Array op elimination passes">;
+def fnoremove_unused_array_ops : Flag<["-"], "fno-remove-unused-array-ops">, Group<f_Group>;
+
+def finline_recursion_EQ : Joined<["-"], "finline-recursion=">, Group<f_Group>,
+  HelpText<"Enable the Inline Recursive Pass">;
+
+def fno_branch_combine : Flag<["-"], "fno-branch-combine">, Group<f_Group>,
+  HelpText<"Disable Branch Combine pass">;
+
+def flv_function_specialization : Flag<["-"], "flv-function-specialization">, Group<f_Group>,
+  HelpText<"Enable Function Specialization For Vectorization">;
+def fno_lv_function_specialization : Flag<["-"], "fno-lv-function-specialization">, Group<f_Group>;
+
+def farray_remap : Flag<["-"], "fremap-arrays">, Group<f_Group>,
+  HelpText<"Enable the Array Remapping passes">;
+def fno_array_remap : Flag<["-"], "fno-remap-arrays">, Group<f_Group>;
+
+def fstruct_layout_EQ : Joined<["-"], "fstruct-layout=">, Group<f_Group>,
+  HelpText<"Enable the Structure Peeling passes">;
+
+def fstruct_peel_ptr_size_EQ : Joined<["-"], "fstruct-peel-ptr-size=">, Group<f_Group>,
+  Flags<[HelpHidden]>,
+  HelpText<"Enable aggresive self referential pointer compression during structure-peeling">;
+
+def fstruct_peel_mem_block_size_EQ : Joined<["-"], "fstruct-peel-mem-block-size=">, Group<f_Group>,
+  Flags<[HelpHidden]>,
+  HelpText<"Enable to change unit memory block size used by structure peeling">;
+
+def fnt_store_EQ : Joined<["-"], "fnt-store=">, Flags<[CoreOption, CC1Option]>, Group<f_Group>,
+  HelpText<"Enable Nontemporal store instruction generation. Options: never, auto, aggressive.">, Values<"never,auto,aggressive">;
+
+def fnt_store : Flag<["-"], "fnt-store">, Group<f_Group>, Flags<[CoreOption, CC1Option]>,
+  Alias<fnt_store_EQ>, AliasArgs<["auto"]>,
+  HelpText<"Enable Nontemporal store instruction generation">;
+
+}
+
+
+def inline_aggressive : Flag<["-"], "inline-aggressive">,
+  HelpText<"Enable aggresive Inlining during LTO">;
+def array_remap : Flag<["-"], "remap-arrays">,
+  HelpText<"Run the Array Remapping passes">;
+def struct_layout_EQ : Joined<["-"], "struct-layout=">,
+  HelpText<"Run the Structure Peeling passes">;
+def struct_peel_ptr_size_EQ : Joined<["-"], "struct-peel-ptr-size=">,
+  HelpText<"Enable aggresive self referential pointer compression during structure-peeling">;
+def struct_peel_mem_block_size_EQ : Joined<["-"], "struct-peel-mem-block-size=">,
+  HelpText<"Enable to change unit memory block size used by structure peeling">;
+def remove_unused_array_ops : Flag<["-"], "remove-unused-array-ops">,
+  HelpText<"Enable the Dead Array op elimination passes">;
+def inline_recursion_EQ : Joined<["-"], "inline-recursion=">,
+  HelpText<"Run the Inline Recursion Pass">;
+def lv_function_specialization : Flag<["-"], "lv-function-specialization">,
+  HelpText<"Enable Function Specialization For Vectorization">;
+def simplify_pow : Flag<["-"], "simplify-pow">,
+  HelpText<"Enable SimplifyPowLibCalls pass">;
+def itodcalls : Flag<["-"], "itodcalls">,
+  HelpText<"Enable indirect to direct call promotion">;
+def no_itodcalls : Flag<["-"], "disable-itodcalls">,
+  HelpText<"Disable indirect to direct call promotion">;
+def itodcallsbyclone : Flag<["-"], "itodcallsbyclone">,
+  HelpText<"Enable indirect to direct call promotion by function cloning">;
+def no_itodcallsbyclone : Flag<["-"], "disable-itodcallsbyclone">,
+  HelpText<"Disable indirect to direct call promotion by function cloning">;
+// AOCC END

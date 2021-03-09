@@ -2775,9 +2775,14 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
           << Args.MakeArgString("-ffp-exception-behavior=" + FPExceptionBehavior)
           << Args.MakeArgString("-ffp-exception-behavior=" + Val);
       TrappingMath = TrappingMathPresent = false;
-      if (Val.equals("ignore") || Val.equals("maytrap"))
+      if (Val.equals("ignore") || Val.equals("maytrap")) {
         FPExceptionBehavior = Val;
-      else if (Val.equals("strict")) {
+        // AOCC Begin
+        if (Val.equals("maytrap")) {
+	  ;
+        }
+        // AOCC End
+      } else if (Val.equals("strict")) {
         FPExceptionBehavior = Val;
         TrappingMath = TrappingMathPresent = true;
       } else
@@ -6221,7 +6226,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-vectorize-slp");
 
   bool ProprietaryToolChainNeeded =
-    checkForAMDProprietaryOptOptions(TC, D, Args, CmdArgs);
+    checkForAMDProprietaryOptOptions(TC, D, Args, CmdArgs, false /*isLLD*/);
   ParseMPreferVectorWidth(D, Args, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fshow_overloads_EQ);

@@ -39,6 +39,7 @@ add_clang_library(clangDriver
   ToolChains/Ananas.cpp
   ToolChains/AMDGPU.cpp
   ToolChains/AMDGPUOpenMP.cpp
+  ToolChains/AmdOptArgs.cpp
   ToolChains/AVR.cpp
   ToolChains/BareMetal.cpp
   ToolChains/Clang.cpp

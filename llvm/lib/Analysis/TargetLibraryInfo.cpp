@@ -29,7 +29,12 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                clEnumValN(TargetLibraryInfoImpl::MASSV, "MASSV",
                           "IBM MASS vector library"),
                clEnumValN(TargetLibraryInfoImpl::SVML, "SVML",
-                          "Intel SVML library")));
+                          "Intel SVML library"),
+               // begin AOCC
+               clEnumValN(TargetLibraryInfoImpl::AMDLIBM, "AMDLIBM",
+                          "AMD vector math library")));
+               //end AOCC
+
 
 StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
     {

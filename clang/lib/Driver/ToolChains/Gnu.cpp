@@ -563,13 +563,14 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  bool ProprietaryToolChain =
-	  checkForAMDProprietaryOptOptions(ToolChain, D, Args, CmdArgs);
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
     addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
                   D.getLTOMode() == LTOK_Thin);
   }
+  bool ProprietaryToolChain =
+    checkForAMDProprietaryOptOptions(ToolChain, D, Args, CmdArgs,
+	                             true /*isLLD*/);
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");

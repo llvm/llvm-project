@@ -15,6 +15,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/Support/CodeGen.h"
+#include "AmdOptArgs.h"
 
 namespace clang {
 namespace driver {
@@ -188,10 +189,6 @@ void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
 void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         StringRef BitcodeSuffix, const llvm::Triple &Triple);
-
-bool checkForAMDProprietaryOptOptions(const ToolChain &TC, const Driver &D,
-                                      const llvm::opt::ArgList &Args,
-                                      llvm::opt::ArgStringList &CmdArgs);
 
 } // end namespace tools
 } // end namespace driver

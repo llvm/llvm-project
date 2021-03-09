@@ -90,7 +90,10 @@ public:
     Accelerate, // Use Accelerate framework.
     LIBMVEC_X86,// GLIBC Vector Math library.
     MASSV,      // IBM MASS vector library.
-    SVML        // Intel short vector math library.
+    SVML,       // Intel short vector math library.
+// begin AOCC
+    AMDLIBM,    // AMD Math Vector library.
+// end AOCC
   };
 
   TargetLibraryInfoImpl();
