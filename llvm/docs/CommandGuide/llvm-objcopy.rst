@@ -471,7 +471,7 @@ them.
  Mark all defined global symbols as weak in the output.
 
 MACH-O-SPECIFIC OPTIONS
---------------------
+-----------------------
 
 .. option:: --keep-undefined
 
