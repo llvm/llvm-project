@@ -1155,7 +1155,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Into: BL8_NOP_TLS __tls_get_addr(sym at tlsgd)
   case PPC::GETtlsADDRPCREL:
   case PPC::GETtlsADDR32AIX:
-    // Transform: %r3 = GETtlsADDR32AIX %r3, %r4
+  case PPC::GETtlsADDR64AIX:
+    // Transform: %r3 = GETtlsADDRNNAIX %r3, %r4 (for NN == 32/64).
     // Into: BLA .__tls_get_addr()
     // Unlike on Linux, there is no symbol or relocation needed for this call.
   case PPC::GETtlsADDR32: {
@@ -2312,6 +2313,7 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
   default:
     break;
+  case PPC::GETtlsADDR64AIX:
   case PPC::GETtlsADDR32AIX: {
     // The reference to .__tls_get_addr is unknown to the assembler
     // so we need to emit an external symbol reference.
