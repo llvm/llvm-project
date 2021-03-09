@@ -94,6 +94,8 @@ static void updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
   auto RemovePred = [Config, &Obj](const std::unique_ptr<SymbolEntry> &N) {
     if (N->Referenced)
       return false;
+    if (Config.KeepUndefined && N->isUndefinedSymbol())
+      return false;
     if (Config.StripAll)
       return true;
     if (Config.DiscardMode == DiscardType::All && !(N->n_type & MachO::N_EXT))
