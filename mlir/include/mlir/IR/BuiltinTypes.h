@@ -22,21 +22,7 @@ class FloatType;
 class Identifier;
 class IndexType;
 class IntegerType;
-class Location;
-class MLIRContext;
 class TypeRange;
-
-namespace detail {
-
-struct BaseMemRefTypeStorage;
-struct MemRefTypeStorage;
-struct RankedTensorTypeStorage;
-struct ShapedTypeStorage;
-struct UnrankedMemRefTypeStorage;
-struct UnrankedTensorTypeStorage;
-struct VectorTypeStorage;
-
-} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // FloatType
@@ -78,7 +64,6 @@ public:
 /// from ShapedType.
 class ShapedType : public Type {
 public:
-  using ImplType = detail::ShapedTypeStorage;
   using Type::Type;
 
   // TODO: merge these two special values in a single one used everywhere.
@@ -158,46 +143,6 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// VectorType
-//===----------------------------------------------------------------------===//
-
-/// Vector types represent multi-dimensional SIMD vectors, and have a fixed
-/// known constant shape with one or more dimension.
-class VectorType
-    : public Type::TypeBase<VectorType, ShapedType, detail::VectorTypeStorage> {
-public:
-  using Base::Base;
-  using Base::getChecked;
-
-  /// Get or create a new VectorType of the provided shape and element type.
-  /// Assumes the arguments define a well-formed VectorType.
-  static VectorType get(ArrayRef<int64_t> shape, Type elementType);
-
-  /// Get or create a new VectorType of the provided shape and element type. If
-  /// the VectorType defined by the arguments would be ill-formed, an error is
-  /// emitted to `emitError` and a null type is returned.
-  static VectorType getChecked(function_ref<InFlightDiagnostic()> emitError,
-                               ArrayRef<int64_t> shape, Type elementType);
-
-  /// Verify the construction of a vector type.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              ArrayRef<int64_t> shape, Type elementType);
-
-  /// Returns true of the given type can be used as an element of a vector type.
-  /// In particular, vectors can consist of integer or float primitives.
-  static bool isValidElementType(Type t) {
-    return t.isa<IntegerType, FloatType>();
-  }
-
-  ArrayRef<int64_t> getShape() const;
-
-  /// Get or create a new VectorType with the same shape as `this` and an
-  /// element type of bitwidth scaled by `scale`.
-  /// Return null if the scaled element type cannot be represented.
-  VectorType scaleElementBitwidth(unsigned scale);
-};
-
-//===----------------------------------------------------------------------===//
 // TensorType
 //===----------------------------------------------------------------------===//
 
@@ -215,75 +160,12 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// RankedTensorType
-
-/// Ranked tensor types represent multi-dimensional arrays that have a shape
-/// with a fixed number of dimensions. Each shape element can be a non-negative
-/// integer or unknown (represented by -1).
-class RankedTensorType
-    : public Type::TypeBase<RankedTensorType, TensorType,
-                            detail::RankedTensorTypeStorage> {
-public:
-  using Base::Base;
-  using Base::getChecked;
-
-  /// Get or create a new RankedTensorType of the provided shape and element
-  /// type. Assumes the arguments define a well-formed type.
-  static RankedTensorType get(ArrayRef<int64_t> shape, Type elementType);
-
-  /// Get or create a new RankedTensorType of the provided shape and element
-  /// type. If the RankedTensorType defined by the arguments would be
-  /// ill-formed, an error is emitted to `emitError` and a null type is
-  /// returned.
-  static RankedTensorType
-  getChecked(function_ref<InFlightDiagnostic()> emitError,
-             ArrayRef<int64_t> shape, Type elementType);
-
-  /// Verify the construction of a ranked tensor type.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              ArrayRef<int64_t> shape, Type elementType);
-
-  ArrayRef<int64_t> getShape() const;
-};
-
-//===----------------------------------------------------------------------===//
-// UnrankedTensorType
-
-/// Unranked tensor types represent multi-dimensional arrays that have an
-/// unknown shape.
-class UnrankedTensorType
-    : public Type::TypeBase<UnrankedTensorType, TensorType,
-                            detail::UnrankedTensorTypeStorage> {
-public:
-  using Base::Base;
-  using Base::getChecked;
-
-  /// Get or create a new UnrankedTensorType of the provided shape and element
-  /// type. Assumes the arguments define a well-formed type.
-  static UnrankedTensorType get(Type elementType);
-
-  /// Get or create a new UnrankedTensorType of the provided shape and element
-  /// type. If the RankedTensorType defined by the arguments would be
-  /// ill-formed, an error is emitted to `emitError` and a null type is
-  /// returned.
-  static UnrankedTensorType
-  getChecked(function_ref<InFlightDiagnostic()> emitError, Type elementType);
-
-  /// Verify the construction of a unranked tensor type.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              Type elementType);
-
-  ArrayRef<int64_t> getShape() const { return llvm::None; }
-};
-
-//===----------------------------------------------------------------------===//
 // BaseMemRefType
 //===----------------------------------------------------------------------===//
 
 /// Base MemRef for Ranked and Unranked variants
 class BaseMemRefType : public ShapedType {
 public:
-  using ImplType = detail::BaseMemRefTypeStorage;
   using ShapedType::ShapedType;
 
   /// Return true if the specified element type is ok in a memref.
@@ -296,135 +178,6 @@ public:
   unsigned getMemorySpaceAsInt() const;
 };
 
-//===----------------------------------------------------------------------===//
-// MemRefType
-
-/// MemRef types represent a region of memory that have a shape with a fixed
-/// number of dimensions. Each shape element can be a non-negative integer or
-/// unknown (represented by -1). MemRef types also have an affine map
-/// composition, represented as an array AffineMap pointers.
-class MemRefType : public Type::TypeBase<MemRefType, BaseMemRefType,
-                                         detail::MemRefTypeStorage> {
-public:
-  /// This is a builder type that keeps local references to arguments. Arguments
-  /// that are passed into the builder must out-live the builder.
-  class Builder {
-  public:
-    // Build from another MemRefType.
-    explicit Builder(MemRefType other)
-        : shape(other.getShape()), elementType(other.getElementType()),
-          affineMaps(other.getAffineMaps()),
-          memorySpace(other.getMemorySpaceAsInt()) {}
-
-    // Build from scratch.
-    Builder(ArrayRef<int64_t> shape, Type elementType)
-        : shape(shape), elementType(elementType), affineMaps(), memorySpace(0) {
-    }
-
-    Builder &setShape(ArrayRef<int64_t> newShape) {
-      shape = newShape;
-      return *this;
-    }
-
-    Builder &setElementType(Type newElementType) {
-      elementType = newElementType;
-      return *this;
-    }
-
-    Builder &setAffineMaps(ArrayRef<AffineMap> newAffineMaps) {
-      affineMaps = newAffineMaps;
-      return *this;
-    }
-
-    Builder &setMemorySpace(unsigned newMemorySpace) {
-      memorySpace = newMemorySpace;
-      return *this;
-    }
-
-    operator MemRefType() {
-      return MemRefType::get(shape, elementType, affineMaps, memorySpace);
-    }
-
-  private:
-    ArrayRef<int64_t> shape;
-    Type elementType;
-    ArrayRef<AffineMap> affineMaps;
-    unsigned memorySpace;
-  };
-
-  using Base::Base;
-  using Base::getChecked;
-
-  /// Get or create a new MemRefType based on shape, element type, affine
-  /// map composition, and memory space.  Assumes the arguments define a
-  /// well-formed MemRef type.  Use getChecked to gracefully handle MemRefType
-  /// construction failures.
-  static MemRefType get(ArrayRef<int64_t> shape, Type elementType,
-                        ArrayRef<AffineMap> affineMapComposition = {},
-                        unsigned memorySpace = 0);
-
-  /// Get or create a new MemRefType based on shape, element type, affine
-  /// map composition, and memory space. If the MemRefType defined by the
-  /// arguments would be ill-formed, an error is emitted to `emitError` and a
-  /// null type is returned.
-  static MemRefType getChecked(function_ref<InFlightDiagnostic()> emitError,
-                               ArrayRef<int64_t> shape, Type elementType,
-                               ArrayRef<AffineMap> affineMapComposition,
-                               unsigned memorySpace);
-
-  ArrayRef<int64_t> getShape() const;
-
-  /// Returns an array of affine map pointers representing the memref affine
-  /// map composition.
-  ArrayRef<AffineMap> getAffineMaps() const;
-
-  // TODO: merge these two special values in a single one used everywhere.
-  // Unfortunately, uses of `-1` have crept deep into the codebase now and are
-  // hard to track.
-  static int64_t getDynamicStrideOrOffset() {
-    return ShapedType::kDynamicStrideOrOffset;
-  }
-
-private:
-  /// Get or create a new MemRefType defined by the arguments.  If the resulting
-  /// type would be ill-formed, return nullptr.
-  static MemRefType getImpl(ArrayRef<int64_t> shape, Type elementType,
-                            ArrayRef<AffineMap> affineMapComposition,
-                            unsigned memorySpace,
-                            function_ref<InFlightDiagnostic()> emitError);
-  using Base::getImpl;
-};
-
-//===----------------------------------------------------------------------===//
-// UnrankedMemRefType
-
-/// Unranked MemRef type represent multi-dimensional MemRefs that
-/// have an unknown rank.
-class UnrankedMemRefType
-    : public Type::TypeBase<UnrankedMemRefType, BaseMemRefType,
-                            detail::UnrankedMemRefTypeStorage> {
-public:
-  using Base::Base;
-  using Base::getChecked;
-
-  /// Get or create a new UnrankedMemRefType of the provided element
-  /// type and memory space
-  static UnrankedMemRefType get(Type elementType, unsigned memorySpace);
-
-  /// Get or create a new UnrankedMemRefType of the provided element
-  /// type and memory space. If the UnrankedMemRefType defined by the arguments
-  /// would be ill-formed, an error is emitted to `emitError` and a null type is
-  /// returned.
-  static UnrankedMemRefType
-  getChecked(function_ref<InFlightDiagnostic()> emitError, Type elementType,
-             unsigned memorySpace);
-
-  /// Verify the construction of a unranked memref type.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              Type elementType, unsigned memorySpace);
-
-  ArrayRef<int64_t> getShape() const { return llvm::None; }
-};
 } // end namespace mlir
 
 //===----------------------------------------------------------------------===//
@@ -434,11 +187,60 @@ public:
 #define GET_TYPEDEF_CLASSES
 #include "mlir/IR/BuiltinTypes.h.inc"
 
+namespace mlir {
+//===----------------------------------------------------------------------===//
+// MemRefType
+//===----------------------------------------------------------------------===//
+
+/// This is a builder type that keeps local references to arguments. Arguments
+/// that are passed into the builder must out-live the builder.
+class MemRefType::Builder {
+public:
+  // Build from another MemRefType.
+  explicit Builder(MemRefType other)
+      : shape(other.getShape()), elementType(other.getElementType()),
+        affineMaps(other.getAffineMaps()),
+        memorySpace(other.getMemorySpaceAsInt()) {}
+
+  // Build from scratch.
+  Builder(ArrayRef<int64_t> shape, Type elementType)
+      : shape(shape), elementType(elementType), affineMaps(), memorySpace(0) {}
+
+  Builder &setShape(ArrayRef<int64_t> newShape) {
+    shape = newShape;
+    return *this;
+  }
+
+  Builder &setElementType(Type newElementType) {
+    elementType = newElementType;
+    return *this;
+  }
+
+  Builder &setAffineMaps(ArrayRef<AffineMap> newAffineMaps) {
+    affineMaps = newAffineMaps;
+    return *this;
+  }
+
+  Builder &setMemorySpace(unsigned newMemorySpace) {
+    memorySpace = newMemorySpace;
+    return *this;
+  }
+
+  operator MemRefType() {
+    return MemRefType::get(shape, elementType, affineMaps, memorySpace);
+  }
+
+private:
+  ArrayRef<int64_t> shape;
+  Type elementType;
+  ArrayRef<AffineMap> affineMaps;
+  unsigned memorySpace;
+};
+
 //===----------------------------------------------------------------------===//
 // Deferred Method Definitions
 //===----------------------------------------------------------------------===//
 
-namespace mlir {
 inline bool BaseMemRefType::classof(Type type) {
   return type.isa<MemRefType, UnrankedMemRefType>();
 }
