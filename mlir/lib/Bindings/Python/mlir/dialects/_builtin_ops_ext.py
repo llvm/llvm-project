@@ -1,15 +1,15 @@
 #  Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-from mlir.ir import *
+from ..ir import *
 
 
 class ModuleOp:
   """Specialization for the module op class."""
 
   def __init__(self, *, loc=None, ip=None):
-    super().__init__(
-        self.build_generic(results=[], operands=[], loc=loc, ip=ip))
+    super().__init__(self.build_generic(results=[], operands=[], loc=loc,
+                                        ip=ip))
     body = self.regions[0].blocks.append()
     with InsertionPoint(body):
       Operation.create("module_terminator")
@@ -84,10 +84,11 @@ class FuncOp:
     return self.regions[0].blocks[0]
 
   def add_entry_block(self):
-    '''
-    Add an entry block to the function body using the function signature to infer block arguments
+    """
+    Add an entry block to the function body using the function signature to
+    infer block arguments.
     Returns the newly created block
-    '''
+    """
     if not self.is_external:
       raise IndexError('The function already has an entry block!')
     self.body.blocks.append(*self.type.inputs)

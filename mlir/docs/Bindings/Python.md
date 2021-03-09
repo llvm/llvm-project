@@ -122,18 +122,21 @@ pass registration, etc.
 LLVM/MLIR is a non-trivial python-native project that is likely to co-exist with
 other non-trivial native extensions. As such, the native extension (i.e. the
 `.so`/`.pyd`/`.dylib`) is exported as a notionally private top-level symbol
-(`_mlir`), while a small set of Python code is provided in `mlir/__init__.py`
-and siblings which loads and re-exports it. This split provides a place to stage
-code that needs to prepare the environment *before* the shared library is loaded
-into the Python runtime, and also provides a place that one-time initialization
-code can be invoked apart from module constructors.
+(`_mlir`), while a small set of Python code is provided in
+`mlir/_cext_loader.py` and siblings which loads and re-exports it. This
+split provides a place to stage code that needs to prepare the environment
+*before* the shared library is loaded into the Python runtime, and also
+provides a place that one-time initialization code can be invoked apart from
+module constructors.
 
-To start with the `mlir/__init__.py` loader shim can be very simple and scale to
-future need:
+It is recommended to avoid using `__init__.py` files to the extent possible,
+until reaching a leaf package that represents a discrete component. The rule
+to keep in mind is that the presence of an `__init__.py` file prevents the
+ability to split anything at that level or below in the namespace into
+different directories, deployment packages, wheels, etc.
 
-```python
-from _mlir import *
-```
+See the documentation for more information and advice:
+https://packaging.python.org/guides/packaging-namespace-packages/
 
 ### Use the C-API
 
@@ -361,13 +364,16 @@ are multiple parts to this integration, outlined below. Most details have
 been elided: refer to the build rules and python sources under `mlir.dialects`
 for the canonical way to use this facility.
 
-### Generating `{DIALECT_NAMESPACE}.py` wrapper modules
+Users are responsible for providing a `{DIALECT_NAMESPACE}.py` (or an
+equivalent directory with `__init__.py` file) as the entrypoint.
+
+### Generating `_{DIALECT_NAMESPACE}_ops_gen.py` wrapper modules
 
 Each dialect with a mapping to python requires that an appropriate
-`{DIALECT_NAMESPACE}.py` wrapper module is created. This is done by invoking
-`mlir-tblgen` on a python-bindings specific tablegen wrapper that includes
-the boilerplate and actual dialect specific `td` file. An example, for the
-`StandardOps` (which is assigned the namespace `std` as a special case):
+`_{DIALECT_NAMESPACE}_ops_gen.py` wrapper module is created. This is done by
+invoking `mlir-tblgen` on a python-bindings specific tablegen wrapper that
+includes the boilerplate and actual dialect specific `td` file. An example, for
+the `StandardOps` (which is assigned the namespace `std` as a special case):
 
 ```tablegen
 #ifndef PYTHON_BINDINGS_STANDARD_OPS
@@ -385,6 +391,13 @@ In the main repository, building the wrapper is done via the CMake function
 ```
 mlir-tblgen -gen-python-op-bindings -bind-dialect={DIALECT_NAMESPACE} \
     {PYTHON_BINDING_TD_FILE}
+```
+
+The generates op classes must be included in the `{DIALECT_NAMESPACE}.py` file
+in a similar way that generated headers are included for C++ generated code:
+
+```python
+from ._my_dialect_ops_gen import *
 ```
 
 ### Extending the search path for wrapper modules

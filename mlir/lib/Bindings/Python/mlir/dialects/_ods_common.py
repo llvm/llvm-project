@@ -3,7 +3,7 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 # Re-export the parent _cext so that every level of the API can get it locally.
-from .. import _cext
+from .._cext_loader import _cext
 
 __all__ = [
     "equally_sized_accessor",

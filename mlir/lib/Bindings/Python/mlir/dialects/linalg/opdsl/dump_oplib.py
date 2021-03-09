@@ -64,7 +64,8 @@ def main(args):
   modules = []
   for module_name in args.modules:
     modules.append(
-        importlib.import_module(module_name, package="mlir.tools.linalg_opdsl"))
+        importlib.import_module(module_name,
+                                package="mlir.dialects.linalg.opdsl"))
   for i, file_path in enumerate(args.file or []):
     modules.append(load_module_from_file(f"_mlir_eval_oplib{i}", file_path))
   for m in modules:
