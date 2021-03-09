@@ -17,6 +17,10 @@
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #endif
 
+#if __OPENCL_C_VERSION__ <= CL_VERSION_1_2
+#pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
+#endif
+
 // First, test that Clang gracefully handles missing types.
 #ifdef NO_HEADER
 void test_without_header() {
@@ -169,13 +173,20 @@ kernel void basic_image_readwrite(read_write image3d_t image_read_write_image3d)
 }
 #endif // __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
-kernel void basic_image_writeonly(write_only image1d_buffer_t image_write_only_image1d_buffer) {
+kernel void basic_image_writeonly(write_only image1d_buffer_t image_write_only_image1d_buffer, write_only image3d_t image3dwo) {
   half4 h4;
   float4 f4;
   int i;
 
   write_imagef(image_write_only_image1d_buffer, i, f4);
   write_imageh(image_write_only_image1d_buffer, i, h4);
+
+  int4 i4;
+  write_imagef(image3dwo, i4, i, f4);
+#if __OPENCL_C_VERSION__ <= CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-2{{no matching function for call to 'write_imagef'}}
+  // expected-note@-3 + {{candidate function not viable}}
+#endif
 }
 
 kernel void basic_subgroup(global uint *out) {
