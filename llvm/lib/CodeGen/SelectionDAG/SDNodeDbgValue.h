@@ -94,6 +94,7 @@ public:
     case FRAMEIX:
       return getFrameIx() == Other.getFrameIx();
     }
+    return false;
   }
 
 private:
