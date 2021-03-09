@@ -69,7 +69,7 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
   }
 }
 
-static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
+static void dumpLocation(raw_ostream &OS, const DWARFFormValue &FormValue,
                          DWARFUnit *U, unsigned Indent,
                          DIDumpOptions DumpOpts) {
   DWARFContext &Ctx = U->getContext();
@@ -230,21 +230,22 @@ static void dumpTypeName(raw_ostream &OS, const DWARFDie &D) {
 }
 
 static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
-                          uint64_t *OffsetPtr, dwarf::Attribute Attr,
-                          dwarf::Form Form, unsigned Indent,
+                          const DWARFAttribute &AttrValue, unsigned Indent,
                           DIDumpOptions DumpOpts) {
   if (!Die.isValid())
     return;
   const char BaseIndent[] = "            ";
   OS << BaseIndent;
   OS.indent(Indent + 2);
+  dwarf::Attribute Attr = AttrValue.Attr;
   WithColor(OS, HighlightColor::Attribute) << formatv("{0}", Attr);
 
+  dwarf::Form Form = AttrValue.Value.getForm();
   if (DumpOpts.Verbose || DumpOpts.ShowForm)
     OS << formatv(" [{0}]", Form);
 
   DWARFUnit *U = Die.getDwarfUnit();
-  DWARFFormValue FormValue = DWARFFormValue::createFromUnit(Form, U, OffsetPtr);
+  const DWARFFormValue &FormValue = AttrValue.Value;
 
   OS << "\t(";
 
@@ -631,15 +632,14 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
         OS << '\n';
 
         // Dump all data in the DIE for the attributes.
-        for (const auto &AttrSpec : AbbrevDecl->attributes()) {
-          if (AttrSpec.Form == DW_FORM_implicit_const) {
+        for (const DWARFAttribute &AttrValue : attributes()) {
+          if (AttrValue.Value.getForm() == DW_FORM_implicit_const) {
             // We are dumping .debug_info section ,
             // implicit_const attribute values are not really stored here,
             // but in .debug_abbrev section. So we just skip such attrs.
             continue;
           }
-          dumpAttribute(OS, *this, &offset, AttrSpec.Attr, AttrSpec.Form,
-                        Indent, DumpOpts);
+          dumpAttribute(OS, *this, AttrValue, Indent, DumpOpts);
         }
 
         DWARFDie child = getFirstChild();
