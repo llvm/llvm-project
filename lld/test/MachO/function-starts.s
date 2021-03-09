@@ -7,9 +7,9 @@
 # RUN: llvm-objdump --syms --macho --function-starts %t.basic | FileCheck %s --check-prefix=BASIC
 
 # BASIC:      [[#%,MAIN:]]
-# BASIC: [[#%,F1:]]
-# BASIC: [[#%,F2:]]
-# BASIC: SYMBOL TABLE:
+# BASIC-NEXT: [[#%,F1:]]
+# BASIC-NEXT: [[#%,F2:]]
+# BASIC-NEXT: SYMBOL TABLE:
 # BASIC: [[#MAIN]] {{.*}} _main
 # BASIC: [[#F1]] {{.*}} _f1
 # BASIC: [[#F2]] {{.*}} _f2
@@ -19,8 +19,8 @@
 # RUN: llvm-objdump --syms --macho --function-starts %t.alias | FileCheck %s --check-prefix=ALIAS
 
 # ALIAS:      [[#%,MAIN:]]
-# ALIAS: [[#%,F1:]]
-# ALIAS: SYMBOL TABLE:
+# ALIAS-NEXT: [[#%,F1:]]
+# ALIAS-NEXT: SYMBOL TABLE:
 # ALIAS: [[#MAIN]] {{.*}} _main
 # ALIAS: [[#F1]] {{.*}} _f1
 
