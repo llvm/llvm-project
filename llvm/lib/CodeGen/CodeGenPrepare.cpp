@@ -1352,16 +1352,17 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     if (LI->getLoopFor(Cmp->getParent()) != L)
       return false;
 
-    // IV increment may have other users than the IV. We do not want to make
-    // dominance queries to analyze the legality of moving it towards the cmp,
-    // so just check that there is no other users.
-    if (!BO->hasOneUse())
-      return false;
-    // Ultimately, the insertion point must dominate latch. This should be a
-    // cheap check because no CFG changes & dom tree recomputation happens
-    // during the transform.
-    Function *F = BO->getParent()->getParent();
-    return getDT(*F).dominates(Cmp->getParent(), L->getLoopLatch());
+    // Finally, we need to ensure that the insert point will dominate all
+    // existing uses of the increment.
+
+    auto &DT = getDT(*BO->getParent()->getParent());
+    if (DT.dominates(Cmp->getParent(), BO->getParent()))
+      // If we're moving up the dom tree, all uses are trivially dominated.
+      // (This is the common case for code produced by LSR.)
+      return true;
+
+    // Otherwise, special case the single use in the phi recurrence.
+    return BO->hasOneUse() && DT.dominates(Cmp->getParent(), L->getLoopLatch());
   };
   if (BO->getParent() != Cmp->getParent() && !IsReplacableIVIncrement(BO)) {
     // We used to use a dominator tree here to allow multi-block optimization.
