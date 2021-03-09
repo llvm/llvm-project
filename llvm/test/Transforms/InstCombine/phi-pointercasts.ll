@@ -4,16 +4,15 @@
 define void @test_bitcast_1(i1 %c, i32* %ptr) {
 ; CHECK-LABEL: @test_bitcast_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CAST_0:%.*]] = bitcast i32* [[PTR:%.*]] to i8*
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
 ; CHECK:       b0:
+; CHECK-NEXT:    [[CAST_0:%.*]] = bitcast i32* [[PTR:%.*]] to i8*
 ; CHECK-NEXT:    call void @use(i8* [[CAST_0]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       b1:
-; CHECK-NEXT:    [[CAST_1:%.*]] = bitcast i32* [[PTR]] to i8*
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[CAST_0]], [[B0]] ], [ [[CAST_1]], [[B1]] ]
+; CHECK-NEXT:    [[P:%.*]] = bitcast i32* [[PTR]] to i8*
 ; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -40,14 +39,13 @@ define void @test_bitcast_2(i1 %c, i32* %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
 ; CHECK:       b0:
-; CHECK-NEXT:    [[CAST_0:%.*]] = bitcast i32* [[PTR:%.*]] to i8*
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       b1:
-; CHECK-NEXT:    [[CAST_1:%.*]] = bitcast i32* [[PTR]] to i8*
+; CHECK-NEXT:    [[CAST_1:%.*]] = bitcast i32* [[PTR:%.*]] to i8*
 ; CHECK-NEXT:    call void @use(i8* [[CAST_1]])
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[CAST_0]], [[B0]] ], [ [[CAST_1]], [[B1]] ]
+; CHECK-NEXT:    [[P:%.*]] = bitcast i32* [[PTR]] to i8*
 ; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -76,14 +74,13 @@ define void @test_bitcast_3(i1 %c, i32** %ptr) {
 ; CHECK-NEXT:    [[LOAD_PTR:%.*]] = load i32*, i32** [[PTR:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
 ; CHECK:       b0:
-; CHECK-NEXT:    [[CAST_0:%.*]] = bitcast i32* [[LOAD_PTR]] to i8*
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       b1:
 ; CHECK-NEXT:    [[CAST_1:%.*]] = bitcast i32* [[LOAD_PTR]] to i8*
 ; CHECK-NEXT:    call void @use(i8* [[CAST_1]])
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[CAST_0]], [[B0]] ], [ [[CAST_1]], [[B1]] ]
+; CHECK-NEXT:    [[P:%.*]] = bitcast i32* [[LOAD_PTR]] to i8*
 ; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -218,10 +215,9 @@ define void @test_bitcast_with_extra_use(i1 %c, i32* %ptr) {
 ; CHECK-NEXT:    call void @use(i8* [[CAST_0]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       b1:
-; CHECK-NEXT:    [[CAST_1:%.*]] = bitcast i32* [[PTR]] to i8*
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[CAST_0]], [[B0]] ], [ [[CAST_1]], [[B1]] ]
+; CHECK-NEXT:    [[P:%.*]] = bitcast i32* [[PTR]] to i8*
 ; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -287,10 +283,9 @@ define void @test_bitcast_gep_chains(i1 %c, i32* %ptr) {
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       b1:
 ; CHECK-NEXT:    call void @use.i32(i32* [[PTR]])
-; CHECK-NEXT:    [[CAST_3:%.*]] = bitcast i32* [[PTR]] to i8*
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[CAST_0]], [[B0]] ], [ [[CAST_3]], [[B1]] ]
+; CHECK-NEXT:    [[P:%.*]] = bitcast i32* [[PTR]] to i8*
 ; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -509,18 +504,17 @@ end.2:
 define void @test_addrspacecast_1(i1 %c, i32* %ptr) {
 ; CHECK-LABEL: @test_addrspacecast_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[PTR:%.*]] to i8*
-; CHECK-NEXT:    [[CAST_1:%.*]] = addrspacecast i8* [[TMP0]] to i8 addrspace(1)*
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
 ; CHECK:       b0:
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[PTR]] to i8*
-; CHECK-NEXT:    [[CAST_0:%.*]] = addrspacecast i8* [[TMP1]] to i8 addrspace(1)*
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       b1:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[PTR:%.*]] to i8*
+; CHECK-NEXT:    [[CAST_1:%.*]] = addrspacecast i8* [[TMP0]] to i8 addrspace(1)*
 ; CHECK-NEXT:    call void @use.i8.addrspace1(i8 addrspace(1)* [[CAST_1]])
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i8 addrspace(1)* [ [[CAST_0]], [[B0]] ], [ [[CAST_1]], [[B1]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[PTR]] to i8*
+; CHECK-NEXT:    [[P:%.*]] = addrspacecast i8* [[TMP1]] to i8 addrspace(1)*
 ; CHECK-NEXT:    store i8 0, i8 addrspace(1)* [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
