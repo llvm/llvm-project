@@ -261,12 +261,16 @@ bool FastISel::hasTrivialKill(const Value *V) {
     if (GEP->hasAllZeroIndices() && !hasTrivialKill(GEP->getOperand(0)))
       return false;
 
+  // Casts and extractvalues may be trivially coalesced by fast-isel.
+  if (I->getOpcode() == Instruction::BitCast ||
+      I->getOpcode() == Instruction::PtrToInt ||
+      I->getOpcode() == Instruction::IntToPtr ||
+      I->getOpcode() == Instruction::ExtractValue)
+    return false;
+
   // Only instructions with a single use in the same basic block are considered
   // to have trivial kills.
   return I->hasOneUse() &&
-         !(I->getOpcode() == Instruction::BitCast ||
-           I->getOpcode() == Instruction::PtrToInt ||
-           I->getOpcode() == Instruction::IntToPtr) &&
          cast<Instruction>(*I->user_begin())->getParent() == I->getParent();
 }
 
