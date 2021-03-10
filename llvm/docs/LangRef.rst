@@ -12137,7 +12137,7 @@ other aggressive transformations, so the value returned may not be that
 of the obvious source-language caller.
 
 '``llvm.swift.async.context.addr``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
