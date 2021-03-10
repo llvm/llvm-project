@@ -4,7 +4,6 @@
 define void @memset_equal_size_values(i8* %ptr, i64 %len) {
 ; CHECK-LABEL: @memset_equal_size_values(
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[PTR:%.*]], i8 0, i64 [[LEN:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[PTR]], i8 0, i64 [[LEN]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0i8.i64(i8* align 1 %ptr, i8 0, i64 %len, i1 false)
@@ -45,10 +44,35 @@ define void @memset_different_size_values_3(i8* %ptr, i64 %len) {
   ret void
 }
 
+define void @memset_and_store_1(i8* %ptr, i64 %len) {
+; CHECK-LABEL: @memset_and_store_1(
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[PTR:%.*]] to i64*
+; CHECK-NEXT:    store i64 123, i64* [[BC]], align 4
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[PTR]], i8 0, i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  %bc = bitcast i8* %ptr to i64*
+  store i64 123, i64* %bc
+  call void @llvm.memset.p0i8.i64(i8* align 1 %ptr, i8 0, i64 %len, i1 false)
+  ret void
+}
+
+define void @memset_and_store_2(i8* %ptr, i64 %len) {
+; CHECK-LABEL: @memset_and_store_2(
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[PTR:%.*]] to i64*
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[PTR]], i8 0, i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    store i64 123, i64* [[BC]], align 4
+; CHECK-NEXT:    ret void
+;
+  %bc = bitcast i8* %ptr to i64*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %ptr, i8 0, i64 %len, i1 false)
+  store i64 123, i64* %bc
+  ret void
+}
+
 define void @memcpy_equal_size_values(i8* noalias %src, i8* noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memcpy_equal_size_values(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST]], i8* [[SRC]], i64 [[LEN]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %len, i1 false)
@@ -91,8 +115,7 @@ define void @memcpy_different_size_values_3(i8* noalias %src, i8* noalias %dst, 
 
 define void @memset_and_memcpy_equal_size_values(i8* noalias %src, i8* noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memset_and_memcpy_equal_size_values(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[DST:%.*]], i8 0, i64 [[LEN:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST]], i8* [[SRC:%.*]], i64 [[LEN]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0i8.i64(i8* align 1 %dst, i8 0, i64 %len, i1 false)
@@ -135,8 +158,7 @@ define void @memset_and_memcpy_different_size_values_3(i8* noalias %src, i8* noa
 
 define void @memcpy_and_memset_equal_size_values(i8* noalias %src, i8* noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memcpy_and_memset_equal_size_values(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[DST]], i8 0, i64 [[LEN]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[DST:%.*]], i8 0, i64 [[LEN:%.*]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %len, i1 false)
