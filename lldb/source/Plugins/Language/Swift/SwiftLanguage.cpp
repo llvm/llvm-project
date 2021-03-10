@@ -890,34 +890,34 @@ std::vector<ConstString> SwiftLanguage::GetPossibleFormattersMatches(
   const bool check_cpp = false;
   const bool check_objc = false;
   bool canBeSwiftDynamic =
-      compiler_type.IsPossibleDynamicType(nullptr, check_cpp, check_objc);
-  // Foundation (but really any library) may create new
-  // Objective-C classes at runtime and LLDB's ObjC runtime
-  // implementation doesn't yet get notified about this. As a
-  // workaround we try to interpret ObjC id pointers as Swift
-  // classes to make them available.
-  bool canBeObjCSwiftType = (compiler_type.GetCanonicalType().GetTypeClass() ==
-                             eTypeClassObjCObjectPointer);
+      compiler_type.IsPossibleDynamicType(nullptr, check_cpp, check_objc) ||
+      // Foundation (but really any library) may create new
+      // Objective-C classes at runtime and LLDB's ObjC runtime
+      // implementation doesn't yet get notified about this. As a
+      // workaround we try to interpret ObjC id pointers as Swift
+      // classes to make them available.
+      (compiler_type.GetCanonicalType().GetTypeClass() ==
+       eTypeClassObjCObjectPointer);
 
-  if (!canBeSwiftDynamic && !canBeObjCSwiftType)
-    return result;
-  lldb::ProcessSP process_sp = valobj.GetProcessSP();
-  if (!process_sp)
-    return result;
-  auto *runtime = SwiftLanguageRuntime::Get(process_sp);
-  if (!runtime)
-    return result;
-  // If this condition fires, we're most likely in pure Objective-C program.
-  if (canBeObjCSwiftType && !runtime->IsSwiftRuntimeInitialized())
-    return result;
-  TypeAndOrName type_and_or_name;
-  Address address;
-  Value::ValueType value_type;
-  if (!runtime->GetDynamicTypeAndAddress(valobj, use_dynamic, type_and_or_name,
-                                         address, value_type))
-    return result;
-  if (ConstString name = type_and_or_name.GetName())
-    result.push_back(name);
+  if (canBeSwiftDynamic) {
+    do {
+      lldb::ProcessSP process_sp = valobj.GetProcessSP();
+      if (!process_sp)
+        break;
+      auto *runtime = SwiftLanguageRuntime::Get(process_sp);
+      if (runtime == nullptr)
+        break;
+      TypeAndOrName type_and_or_name;
+      Address address;
+      Value::ValueType value_type;
+      if (!runtime->GetDynamicTypeAndAddress(
+              valobj, use_dynamic, type_and_or_name, address, value_type))
+        break;
+      if (ConstString name = type_and_or_name.GetName())
+        result.push_back(name);
+    } while (false);
+  }
+
   return result;
 }
 
