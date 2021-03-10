@@ -3148,6 +3148,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   }
   case G_SELECT:
     return lowerSelect(MI);
+  case G_SDIVREM:
+  case G_UDIVREM:
+    return lowerDIVREM(MI);
   }
 }
 
@@ -6338,6 +6341,22 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
   auto NewOp1 = MIRBuilder.buildAnd(MaskTy, Op1Reg, MaskReg);
   auto NewOp2 = MIRBuilder.buildAnd(MaskTy, Op2Reg, NotMask);
   MIRBuilder.buildOr(DstReg, NewOp1, NewOp2);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerDIVREM(MachineInstr &MI) {
+  // Split DIVREM into individual instructions.
+  unsigned Opcode = MI.getOpcode();
+
+  MIRBuilder.buildInstr(
+      Opcode == TargetOpcode::G_SDIVREM ? TargetOpcode::G_SDIV
+                                        : TargetOpcode::G_UDIV,
+      {MI.getOperand(0).getReg()}, {MI.getOperand(2), MI.getOperand(3)});
+  MIRBuilder.buildInstr(
+      Opcode == TargetOpcode::G_SDIVREM ? TargetOpcode::G_SREM
+                                        : TargetOpcode::G_UREM,
+      {MI.getOperand(1).getReg()}, {MI.getOperand(2), MI.getOperand(3)});
   MI.eraseFromParent();
   return Legalized;
 }
