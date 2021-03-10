@@ -233,7 +233,6 @@ public:
   /// builtins (int <-> Swift.Int) as Clang types.
   CompilerType GetAsClangTypeOrNull(lldb::opaque_compiler_type_t type);
   CompilerType GetErrorType() override;
-  CompilerType GetObjCObjectType() override;
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override;
   TypeAllocationStrategy
