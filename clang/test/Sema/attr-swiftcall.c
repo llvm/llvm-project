@@ -19,11 +19,13 @@ void multiple_ccs_async(int x) SWIFTASYNCCALL __attribute__((vectorcall)); // ex
 void (*functionPointer)(void) SWIFTCALL;
 void (*asyncFunctionPointer)(void) SWIFTASYNCCALL;
 
-void indirect_result_nonswift(INDIRECT_RESULT void *out); // expected-error {{'swift_indirect_result' parameter can only be used with swiftcall calling convention}}
+void indirect_result_nonswift(INDIRECT_RESULT void *out); // expected-error {{'swift_indirect_result' parameter can only be used with swiftcall or swiftasynccall calling convention}}
 void indirect_result_bad_position(int first, INDIRECT_RESULT void *out) SWIFTCALL; // expected-error {{'swift_indirect_result' parameters must be first parameters of function}}
 void indirect_result_bad_type(INDIRECT_RESULT int out) SWIFTCALL; // expected-error {{'swift_indirect_result' parameter must have pointer type; type here is 'int'}}
 void indirect_result_single(INDIRECT_RESULT void *out) SWIFTCALL;
 void indirect_result_multiple(INDIRECT_RESULT void *out1, INDIRECT_RESULT void *out2) SWIFTCALL;
+void indirect_result_single_async(INDIRECT_RESULT void *out) SWIFTASYNCCALL;
+void indirect_result_multiple_async(INDIRECT_RESULT void *out1, INDIRECT_RESULT void *out2) SWIFTASYNCCALL;
 
 void error_result_nonswift(ERROR_RESULT void **error); // expected-error {{'swift_error_result' parameter can only be used with swiftcall calling convention}} expected-error{{'swift_error_result' parameter must follow 'swift_context' parameter}}
 void error_result_bad_position2(int first, ERROR_RESULT void **error) SWIFTCALL; // expected-error {{'swift_error_result' parameter must follow 'swift_context' parameter}}
@@ -32,10 +34,12 @@ void error_result_bad_type2(CONTEXT void *context, ERROR_RESULT int *error) SWIF
 void error_result_okay(int a, int b, CONTEXT void *context, ERROR_RESULT void **error) SWIFTCALL;
 void error_result_okay2(CONTEXT void *context, ERROR_RESULT void **error, void *selfType, char **selfWitnessTable) SWIFTCALL;
 
-void context_nonswift(CONTEXT void *context); // expected-error {{'swift_context' parameter can only be used with swiftcall calling convention}}
+void context_nonswift(CONTEXT void *context); // expected-error {{'swift_context' parameter can only be used with swiftcall or swiftasynccall calling convention}}
 void context_bad_type(CONTEXT int context) SWIFTCALL; // expected-error {{'swift_context' parameter must have pointer type; type here is 'int'}}
 void context_okay(CONTEXT void *context) SWIFTCALL;
 void context_okay2(CONTEXT void *context, void *selfType, char **selfWitnessTable) SWIFTCALL;
+void context_okay_async(CONTEXT void *context) SWIFTASYNCCALL;
+void context_okay2_async(CONTEXT void *context, void *selfType, char **selfWitnessTable) SWIFTASYNCCALL;
 
 void async_context_nonswift(ASYNC_CONTEXT void *context); // OK
 void async_context_bad_type(ASYNC_CONTEXT int context) SWIFTASYNCCALL; // expected-error {{'swift_async_context' parameter must have pointer type; type here is 'int'}}
