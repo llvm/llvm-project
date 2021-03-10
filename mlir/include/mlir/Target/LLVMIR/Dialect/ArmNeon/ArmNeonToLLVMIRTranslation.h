@@ -18,11 +18,11 @@ namespace mlir {
 class DialectRegistry;
 class MLIRContext;
 
-/// Register the LLVMArmNeon dialect and the translation from it to the LLVM IR
+/// Register the ArmNeon dialect and the translation from it to the LLVM IR
 /// in the given registry;
 void registerArmNeonDialectTranslation(DialectRegistry &registry);
 
-/// Register the LLVMArmNeon dialect and the translation from it in the registry
+/// Register the ArmNeon dialect and the translation from it in the registry
 /// associated with the given context.
 void registerArmNeonDialectTranslation(MLIRContext &context);
 
