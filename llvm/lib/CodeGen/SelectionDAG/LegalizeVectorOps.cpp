@@ -529,7 +529,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   return RecursivelyLegalizeResults(Op, ResultVals);
 }
 
-// FIME: This is very similar to the X86 override of
+// FIXME: This is very similar to the X86 override of
 // TargetLowering::LowerOperationWrapper. Can we merge them somehow?
 bool VectorLegalizer::LowerOperationWrapper(SDNode *Node,
                                             SmallVectorImpl<SDValue> &Results) {
