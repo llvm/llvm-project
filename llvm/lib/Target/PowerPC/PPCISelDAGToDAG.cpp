@@ -5896,7 +5896,13 @@ bool PPCDAGToDAGISel::AllUsersSelectZero(SDNode *N) {
         User->getMachineOpcode() != PPC::SELECT_I8)
       return false;
 
+    SDNode *Op1 = User->getOperand(1).getNode();
     SDNode *Op2 = User->getOperand(2).getNode();
+    // If we have a degenerate select with two equal operands, swapping will
+    // not do anything, and we may run into an infinite loop.
+    if (Op1 == Op2)
+      return false;
+
     if (!Op2->isMachineOpcode())
       return false;
 
