@@ -132,6 +132,23 @@ contains
   end subroutine
 end module m1
 
+module t2
+  type parent
+    real realField
+  contains
+    !ERROR: Procedure binding 'proc' with no dummy arguments must have NOPASS attribute
+    procedure proc
+  end type parent
+  type,extends(parent) :: child
+  contains
+    !ERROR: Procedure binding 'proc' with no dummy arguments must have NOPASS attribute
+    procedure proc
+  end type child
+contains
+  subroutine proc 
+  end subroutine
+end module t2
+
 program test
   use m1
   type,extends(t) :: t2

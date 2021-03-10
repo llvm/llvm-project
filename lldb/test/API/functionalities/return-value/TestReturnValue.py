@@ -19,7 +19,8 @@ class ReturnValueTestCase(TestBase):
             "aarch64" and self.getPlatform() == "linux")
 
     def affected_by_pr44132(self):
-        return ((self.getArchitecture() == "aarch64" or self.getArchitecture() == 'arm') and self.getPlatform() == "linux")
+        return (self.getArchitecture() in ["aarch64", "arm"] and
+                self.getPlatform() in ["freebsd", "linux"])
 
     # ABIMacOSX_arm can't fetch simple values inside a structure
     def affected_by_radar_34562999(self):

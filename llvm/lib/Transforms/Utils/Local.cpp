@@ -1836,6 +1836,75 @@ void llvm::salvageDebugInfoForDbgValues(
   }
 }
 
+bool getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
+                         SmallVectorImpl<uint64_t> &Opcodes) {
+  unsigned BitWidth = DL.getIndexSizeInBits(GEP->getPointerAddressSpace());
+  // Rewrite a constant GEP into a DIExpression.
+  APInt ConstantOffset(BitWidth, 0);
+  if (!GEP->accumulateConstantOffset(DL, ConstantOffset))
+    return false;
+  DIExpression::appendOffset(Opcodes, ConstantOffset.getSExtValue());
+  return true;
+}
+
+uint64_t getDwarfOpForBinOp(Instruction::BinaryOps Opcode) {
+  switch (Opcode) {
+  case Instruction::Add:
+    return dwarf::DW_OP_plus;
+  case Instruction::Sub:
+    return dwarf::DW_OP_minus;
+  case Instruction::Mul:
+    return dwarf::DW_OP_mul;
+  case Instruction::SDiv:
+    return dwarf::DW_OP_div;
+  case Instruction::SRem:
+    return dwarf::DW_OP_mod;
+  case Instruction::Or:
+    return dwarf::DW_OP_or;
+  case Instruction::And:
+    return dwarf::DW_OP_and;
+  case Instruction::Xor:
+    return dwarf::DW_OP_xor;
+  case Instruction::Shl:
+    return dwarf::DW_OP_shl;
+  case Instruction::LShr:
+    return dwarf::DW_OP_shr;
+  case Instruction::AShr:
+    return dwarf::DW_OP_shra;
+  default:
+    // TODO: Salvage from each kind of binop we know about.
+    return 0;
+  }
+}
+
+bool getSalvageOpsForBinOp(BinaryOperator *BI,
+                           SmallVectorImpl<uint64_t> &Opcodes) {
+  // Rewrite binary operations with constant integer operands.
+  auto *ConstInt = dyn_cast<ConstantInt>(BI->getOperand(1));
+  if (!ConstInt || ConstInt->getBitWidth() > 64)
+    return false;
+  uint64_t Val = ConstInt->getSExtValue();
+  Instruction::BinaryOps BinOpcode = BI->getOpcode();
+  // Add or Sub Instructions with a constant operand can potentially be
+  // simplified.
+  if (BinOpcode == Instruction::Add || BinOpcode == Instruction::Sub) {
+    uint64_t Offset = BinOpcode == Instruction::Add ? Val : -int64_t(Val);
+    DIExpression::appendOffset(Opcodes, Offset);
+    return true;
+  }
+  // Add constant int operand to expression stack.
+  Opcodes.append({dwarf::DW_OP_constu, Val});
+
+  // Add salvaged binary operator to expression stack, if it has a valid
+  // representation in a DIExpression.
+  uint64_t DwarfBinOp = getDwarfOpForBinOp(BinOpcode);
+  if (!DwarfBinOp)
+    return false;
+  Opcodes.push_back(DwarfBinOp);
+
+  return true;
+}
+
 DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
                                          DIExpression *SrcDIExpr,
                                          bool WithStackValue, unsigned LocNo) {
@@ -1849,13 +1918,6 @@ DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
       DIExpr = DIExpression::appendOpsToArg(DIExpr, Ops, LocNo, WithStackValue);
     }
     return DIExpr;
-  };
-
-  // Apply the given offset to the source DIExpression.
-  auto applyOffset = [&](uint64_t Offset) -> DIExpression * {
-    SmallVector<uint64_t, 8> Ops;
-    DIExpression::appendOffset(Ops, Offset);
-    return doSalvage(Ops);
   };
 
   // initializer-list helper for applying operators to the source DIExpression.
@@ -1883,54 +1945,17 @@ DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
                                             isa<SExtInst>(&I)));
   }
 
+  SmallVector<uint64_t, 8> Ops;
   if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-    unsigned BitWidth =
-        M.getDataLayout().getIndexSizeInBits(GEP->getPointerAddressSpace());
-    // Rewrite a constant GEP into a DIExpression.
-    APInt Offset(BitWidth, 0);
-    if (GEP->accumulateConstantOffset(M.getDataLayout(), Offset)) {
-      return applyOffset(Offset.getSExtValue());
-    } else {
-      return nullptr;
-    }
+    if (getSalvageOpsForGEP(GEP, DL, Ops))
+      return doSalvage(Ops);
   } else if (auto *BI = dyn_cast<BinaryOperator>(&I)) {
-    // Rewrite binary operations with constant integer operands.
-    auto *ConstInt = dyn_cast<ConstantInt>(I.getOperand(1));
-    if (!ConstInt || ConstInt->getBitWidth() > 64)
-      return nullptr;
-
-    uint64_t Val = ConstInt->getSExtValue();
-    switch (BI->getOpcode()) {
-    case Instruction::Add:
-      return applyOffset(Val);
-    case Instruction::Sub:
-      return applyOffset(-int64_t(Val));
-    case Instruction::Mul:
-      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_mul});
-    case Instruction::SDiv:
-      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_div});
-    case Instruction::SRem:
-      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_mod});
-    case Instruction::Or:
-      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
-    case Instruction::And:
-      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_and});
-    case Instruction::Xor:
-      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_xor});
-    case Instruction::Shl:
-      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_shl});
-    case Instruction::LShr:
-      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_shr});
-    case Instruction::AShr:
-      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_shra});
-    default:
-      // TODO: Salvage constants from each kind of binop we know about.
-      return nullptr;
-    }
+    if (getSalvageOpsForBinOp(BI, Ops))
+      return doSalvage(Ops);
+  }
     // *Not* to do: we should not attempt to salvage load instructions,
     // because the validity and lifetime of a dbg.value containing
     // DW_OP_deref becomes difficult to analyze. See PR40628 for examples.
-  }
   return nullptr;
 }
 
