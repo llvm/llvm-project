@@ -39,7 +39,7 @@
 
 #ifdef CK1
 
-// HCK_NO_TGT-NOT: @__kmpc_push_target_tripcount
+// HCK_NO_TGT-NOT: @__kmpc_push_target_tripcount_mapper
 
 // HCK1: define{{.*}} i32 @{{.+}}target_teams_fun{{.*}}(
 int target_teams_fun(int *g){
@@ -60,7 +60,7 @@ int target_teams_fun(int *g){
   // HCK1: [[N_PAR:%.+]] = load{{.+}}, {{.+}} [[N_CAST]],
   // HCK1: [[TE_PAR:%.+]] = load{{.+}}, {{.+}} [[TE_CAST]],
   // HCK1: [[TH_PAR:%.+]] = load{{.+}}, {{.+}} [[TH_CAST]],
-  // HCK1: call void @__kmpc_push_target_tripcount(%struct.ident_t* @{{.+}}, i64 -1, i64 %{{.+}})
+  // HCK1: call void @__kmpc_push_target_tripcount_mapper(%struct.ident_t* @{{.+}}, i64 -1, i64 %{{.+}})
   // HCK1: call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 4, i8** %{{[^,]+}}, i8** %{{[^,]+}},
 
   // HCK1: call void @[[OFFL1:.+]](i{{32|64}} [[N_PAR]], {{.+}}, i{{32|64}} [[TE_PAR]], i{{32|64}} [[TH_PAR]])

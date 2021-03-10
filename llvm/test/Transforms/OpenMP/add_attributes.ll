@@ -627,7 +627,7 @@ declare i8* @__kmpc_init_allocator(i32, i8*, i32, i8*)
 
 declare void @__kmpc_destroy_allocator(i32, i8*)
 
-declare void @__kmpc_push_target_tripcount(%struct.ident_t*, i64, i64)
+declare void @__kmpc_push_target_tripcount_mapper(%struct.ident_t*, i64, i64)
 
 declare i32 @__kmpc_warp_active_thread_mask()
 
@@ -1144,7 +1144,7 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; CHECK-NEXT: declare void @__kmpc_destroy_allocator(i32, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_push_target_tripcount(%struct.ident_t*, i64, i64)
+; CHECK-NEXT: declare void @__kmpc_push_target_tripcount_mapper(%struct.ident_t*, i64, i64)
 
 ; CHECK: ; Function Attrs: convergent nounwind
 ; CHECK-NEXT: declare i32 @__kmpc_warp_active_thread_mask()
@@ -1669,7 +1669,7 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_destroy_allocator(i32, i8*)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn writeonly
-; OPTIMISTIC-NEXT: declare void @__kmpc_push_target_tripcount(%struct.ident_t*, i64, i64)
+; OPTIMISTIC-NEXT: declare void @__kmpc_push_target_tripcount_mapper(%struct.ident_t*, i64, i64)
 
 ; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_warp_active_thread_mask()

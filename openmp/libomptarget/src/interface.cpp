@@ -514,8 +514,13 @@ EXTERN void __tgt_push_mapper_component(void *rt_mapper_handle, void *base,
       MapComponentInfoTy(base, begin, size, type, name));
 }
 
-EXTERN void __kmpc_push_target_tripcount(ident_t *loc, int64_t device_id,
+EXTERN void __kmpc_push_target_tripcount(int64_t device_id,
                                          uint64_t loop_tripcount) {
+  __kmpc_push_target_tripcount_mapper(nullptr, device_id, loop_tripcount);
+}
+
+EXTERN void __kmpc_push_target_tripcount_mapper(ident_t *loc, int64_t device_id,
+                                                uint64_t loop_tripcount) {
   TIMESCOPE_WITH_IDENT(loc);
   if (IsOffloadDisabled())
     return;

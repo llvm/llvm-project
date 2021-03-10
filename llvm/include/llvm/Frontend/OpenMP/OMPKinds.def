@@ -375,7 +375,7 @@ __OMP_RTL(__kmpc_init_allocator, false, /* omp_allocator_handle_t */ VoidPtr,
 __OMP_RTL(__kmpc_destroy_allocator, false, Void, /* Int */ Int32,
           /* omp_allocator_handle_t */ VoidPtr)
 
-__OMP_RTL(__kmpc_push_target_tripcount, false, Void, IdentPtr, Int64, Int64)
+__OMP_RTL(__kmpc_push_target_tripcount_mapper, false, Void, IdentPtr, Int64, Int64)
 __OMP_RTL(__tgt_target_mapper, false, Int32, IdentPtr, Int64, VoidPtr, Int32, VoidPtrPtr,
           VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
 __OMP_RTL(__tgt_target_nowait_mapper, false, Int32, IdentPtr, Int64, VoidPtr, Int32,
@@ -844,7 +844,7 @@ __OMP_RTL_ATTRS(__kmpc_free, AllocAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(__kmpc_init_allocator, DefaultAttrs, ReturnPtrAttrs, {})
 __OMP_RTL_ATTRS(__kmpc_destroy_allocator, AllocAttrs, AttributeSet(), {})
 
-__OMP_RTL_ATTRS(__kmpc_push_target_tripcount, SetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_push_target_tripcount_mapper, SetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(__tgt_target_mapper, ForkAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(__tgt_target_nowait_mapper, ForkAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(__tgt_target_teams_mapper, ForkAttrs, AttributeSet(), {})
