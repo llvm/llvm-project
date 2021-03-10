@@ -367,47 +367,89 @@ void SectionChunk::writeTo(uint8_t *buf) const {
       continue;
     }
 
-    uint8_t *off = buf + rel.VirtualAddress;
+    applyRelocation(buf + rel.VirtualAddress, rel);
+  }
+}
 
-    auto *sym =
-        dyn_cast_or_null<Defined>(file->getSymbol(rel.SymbolTableIndex));
+void SectionChunk::applyRelocation(uint8_t *off,
+                                   const coff_relocation &rel) const {
+  auto *sym = dyn_cast_or_null<Defined>(file->getSymbol(rel.SymbolTableIndex));
 
-    // Get the output section of the symbol for this relocation.  The output
-    // section is needed to compute SECREL and SECTION relocations used in debug
-    // info.
-    Chunk *c = sym ? sym->getChunk() : nullptr;
-    OutputSection *os = c ? c->getOutputSection() : nullptr;
+  // Get the output section of the symbol for this relocation.  The output
+  // section is needed to compute SECREL and SECTION relocations used in debug
+  // info.
+  Chunk *c = sym ? sym->getChunk() : nullptr;
+  OutputSection *os = c ? c->getOutputSection() : nullptr;
 
-    // Skip the relocation if it refers to a discarded section, and diagnose it
-    // as an error if appropriate. If a symbol was discarded early, it may be
-    // null. If it was discarded late, the output section will be null, unless
-    // it was an absolute or synthetic symbol.
-    if (!sym ||
-        (!os && !isa<DefinedAbsolute>(sym) && !isa<DefinedSynthetic>(sym))) {
-      maybeReportRelocationToDiscarded(this, sym, rel);
+  // Skip the relocation if it refers to a discarded section, and diagnose it
+  // as an error if appropriate. If a symbol was discarded early, it may be
+  // null. If it was discarded late, the output section will be null, unless
+  // it was an absolute or synthetic symbol.
+  if (!sym ||
+      (!os && !isa<DefinedAbsolute>(sym) && !isa<DefinedSynthetic>(sym))) {
+    maybeReportRelocationToDiscarded(this, sym, rel);
+    return;
+  }
+
+  uint64_t s = sym->getRVA();
+
+  // Compute the RVA of the relocation for relative relocations.
+  uint64_t p = rva + rel.VirtualAddress;
+  switch (config->machine) {
+  case AMD64:
+    applyRelX64(off, rel.Type, os, s, p);
+    break;
+  case I386:
+    applyRelX86(off, rel.Type, os, s, p);
+    break;
+  case ARMNT:
+    applyRelARM(off, rel.Type, os, s, p);
+    break;
+  case ARM64:
+    applyRelARM64(off, rel.Type, os, s, p);
+    break;
+  default:
+    llvm_unreachable("unknown machine type");
+  }
+}
+
+// Defend against unsorted relocations. This may be overly conservative.
+void SectionChunk::sortRelocations() {
+  auto cmpByVa = [](const coff_relocation &l, const coff_relocation &r) {
+    return l.VirtualAddress < r.VirtualAddress;
+  };
+  if (llvm::is_sorted(getRelocs(), cmpByVa))
+    return;
+  warn("some relocations in " + file->getName() + " are not sorted");
+  MutableArrayRef<coff_relocation> newRelocs(
+      bAlloc.Allocate<coff_relocation>(relocsSize), relocsSize);
+  memcpy(newRelocs.data(), relocsData, relocsSize * sizeof(coff_relocation));
+  llvm::sort(newRelocs, cmpByVa);
+  setRelocs(newRelocs);
+}
+
+// Similar to writeTo, but suitable for relocating a subsection of the overall
+// section.
+void SectionChunk::writeAndRelocateSubsection(ArrayRef<uint8_t> sec,
+                                              ArrayRef<uint8_t> subsec,
+                                              uint32_t &nextRelocIndex,
+                                              uint8_t *buf) const {
+  assert(!subsec.empty() && !sec.empty());
+  assert(sec.begin() <= subsec.begin() && subsec.end() <= sec.end() &&
+         "subsection is not part of this section");
+  size_t vaBegin = std::distance(sec.begin(), subsec.begin());
+  size_t vaEnd = std::distance(sec.begin(), subsec.end());
+  memcpy(buf, subsec.data(), subsec.size());
+  for (; nextRelocIndex < relocsSize; ++nextRelocIndex) {
+    const coff_relocation &rel = relocsData[nextRelocIndex];
+    // Only apply relocations that apply to this subsection. These checks
+    // assume that all subsections completely contain their relocations.
+    // Relocations must not straddle the beginning or end of a subsection.
+    if (rel.VirtualAddress < vaBegin)
       continue;
-    }
-
-    uint64_t s = sym->getRVA();
-
-    // Compute the RVA of the relocation for relative relocations.
-    uint64_t p = rva + rel.VirtualAddress;
-    switch (config->machine) {
-    case AMD64:
-      applyRelX64(off, rel.Type, os, s, p);
+    if (rel.VirtualAddress + 1 >= vaEnd)
       break;
-    case I386:
-      applyRelX86(off, rel.Type, os, s, p);
-      break;
-    case ARMNT:
-      applyRelARM(off, rel.Type, os, s, p);
-      break;
-    case ARM64:
-      applyRelARM64(off, rel.Type, os, s, p);
-      break;
-    default:
-      llvm_unreachable("unknown machine type");
-    }
+    applyRelocation(&buf[rel.VirtualAddress - vaBegin], rel);
   }
 }
 
