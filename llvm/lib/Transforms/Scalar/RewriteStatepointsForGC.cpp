@@ -842,6 +842,27 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
   };
 #endif
 
+  auto visitBDVOperands = [](Value *BDV, std::function<void (Value*)> F) {
+    if (PHINode *PN = dyn_cast<PHINode>(BDV)) {
+      for (Value *InVal : PN->incoming_values())
+        F(InVal);
+    } else if (SelectInst *SI = dyn_cast<SelectInst>(BDV)) {
+      F(SI->getTrueValue());
+      F(SI->getFalseValue());
+    } else if (auto *EE = dyn_cast<ExtractElementInst>(BDV)) {
+      F(EE->getVectorOperand());
+    } else if (auto *IE = dyn_cast<InsertElementInst>(BDV)) {
+      F(IE->getOperand(0));
+      F(IE->getOperand(1));
+    } else if (auto *SV = dyn_cast<ShuffleVectorInst>(BDV)) {
+      F(SV->getOperand(0));
+      F(SV->getOperand(1));
+    } else {
+      llvm_unreachable("unexpected BDV type");
+    }
+  };
+
+
   // Recursively fill in all base defining values reachable from the initial
   // one for which we don't already know a definite base value for
   /* scope */ {
@@ -866,24 +887,8 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
         if (States.insert(std::make_pair(Base, BDVState(Base))).second)
           Worklist.push_back(Base);
       };
-      if (PHINode *PN = dyn_cast<PHINode>(Current)) {
-        for (Value *InVal : PN->incoming_values())
-          visitIncomingValue(InVal);
-      } else if (SelectInst *SI = dyn_cast<SelectInst>(Current)) {
-        visitIncomingValue(SI->getTrueValue());
-        visitIncomingValue(SI->getFalseValue());
-      } else if (auto *EE = dyn_cast<ExtractElementInst>(Current)) {
-        visitIncomingValue(EE->getVectorOperand());
-      } else if (auto *IE = dyn_cast<InsertElementInst>(Current)) {
-        visitIncomingValue(IE->getOperand(0)); // vector operand
-        visitIncomingValue(IE->getOperand(1)); // scalar operand
-      } else if (auto *SV = dyn_cast<ShuffleVectorInst>(Current)) {
-        visitIncomingValue(SV->getOperand(0));
-        visitIncomingValue(SV->getOperand(1));
-      }
-      else {
-        llvm_unreachable("Unimplemented instruction case");
-      }
+
+      visitBDVOperands(Current, visitIncomingValue);
     }
   }
 
@@ -924,38 +929,12 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
              !areBothVectorOrScalar(BDV, Pair.second.getBaseValue())) &&
                  "why did it get added?");
 
-      // Given an input value for the current instruction, return a BDVState
-      // instance which represents the BDV of that value.
-      auto getStateForInput = [&](Value *V) mutable {
-        Value *BDV = findBaseOrBDV(V, Cache);
-        return GetStateForBDV(BDV, V);
-      };
-
       BDVState NewState(BDV);
-      if (SelectInst *SI = dyn_cast<SelectInst>(BDV)) {
-        NewState = meetBDVState(NewState, getStateForInput(SI->getTrueValue()));
-        NewState =
-            meetBDVState(NewState, getStateForInput(SI->getFalseValue()));
-      } else if (PHINode *PN = dyn_cast<PHINode>(BDV)) {
-        for (Value *Val : PN->incoming_values())
-          NewState = meetBDVState(NewState, getStateForInput(Val));
-      } else if (auto *EE = dyn_cast<ExtractElementInst>(BDV)) {
-        // The 'meet' for an extractelement is slightly trivial, but it's still
-        // useful in that it drives us to conflict if our input is.
-        NewState =
-            meetBDVState(NewState, getStateForInput(EE->getVectorOperand()));
-      } else if (auto *IE = dyn_cast<InsertElementInst>(BDV)){
-        // Given there's a inherent type mismatch between the operands, will
-        // *always* produce Conflict.
-        NewState = meetBDVState(NewState, getStateForInput(IE->getOperand(0)));
-        NewState = meetBDVState(NewState, getStateForInput(IE->getOperand(1)));
-      } else {
-        // The only instance this does not return a Conflict is when both the
-        // vector operands are the same vector.
-        auto *SV = cast<ShuffleVectorInst>(BDV);
-        NewState = meetBDVState(NewState, getStateForInput(SV->getOperand(0)));
-        NewState = meetBDVState(NewState, getStateForInput(SV->getOperand(1)));
-      }
+      visitBDVOperands(BDV, [&] (Value *Op) {
+        Value *BDV = findBaseOrBDV(Op, Cache);
+        auto OpState = GetStateForBDV(BDV, Op);
+        NewState = meetBDVState(NewState, OpState);
+      });
 
       BDVState OldState = States[BDV];
       if (OldState != NewState) {

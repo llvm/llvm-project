@@ -28,6 +28,10 @@
 #include "llvm/Support/TrailingObjects.h"
 #include <memory>
 
+namespace llvm {
+class BitVector;
+} // end namespace llvm
+
 namespace mlir {
 class Dialect;
 class DictionaryAttr;
@@ -494,6 +498,10 @@ public:
 
   /// Erase the operands held by the storage within the given range.
   void eraseOperands(unsigned start, unsigned length);
+
+  /// Erase the operands held by the storage that have their corresponding bit
+  /// set in `eraseIndices`.
+  void eraseOperands(const llvm::BitVector &eraseIndices);
 
   /// Get the operation operands held by the storage.
   MutableArrayRef<OpOperand> getOperands() {

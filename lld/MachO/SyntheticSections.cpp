@@ -372,11 +372,11 @@ void WeakBindingSection::finalizeContents() {
                return a.target.getVA() < b.target.getVA();
              });
   for (const WeakBindingEntry &b : bindings) {
-    if (auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
+    if (const auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
       encodeBinding(b.symbol, isec->parent, isec->outSecOff + b.target.offset,
                     b.addend, /*isWeakBinding=*/true, lastBinding, os);
     } else {
-      auto *osec = b.target.section.get<const OutputSection *>();
+      const auto *osec = b.target.section.get<const OutputSection *>();
       encodeBinding(b.symbol, osec, b.target.offset, b.addend,
                     /*isWeakBinding=*/true, lastBinding, os);
     }
@@ -601,8 +601,14 @@ void ExportSection::finalizeContents() {
   trieBuilder.setImageBase(in.header->addr);
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (defined->privateExtern)
-        continue;
+      if (config->exportedSymbols.empty()) {
+        if (defined->privateExtern ||
+            config->unexportedSymbols.match(defined->getName()))
+          continue;
+      } else {
+        if (!config->exportedSymbols.match(defined->getName()))
+          continue;
+      }
       trieBuilder.addSymbol(*defined);
       hasWeakSymbol = hasWeakSymbol || sym->isWeakDef();
     }

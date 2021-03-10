@@ -18,7 +18,8 @@ define i1 @land_land_left1(i1 %A, i1 %B) {
 }
 define i1 @land_land_left2(i1 %A, i1 %B) {
 ; CHECK-LABEL: @land_land_left2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C]], i1 [[A]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c = select i1 %B, i1 %A, i1 false
@@ -180,7 +181,8 @@ define i1 @lor_lor_left1(i1 %A, i1 %B) {
 }
 define i1 @lor_lor_left2(i1 %A, i1 %B) {
 ; CHECK-LABEL: @lor_lor_left2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C]], i1 true, i1 [[A]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c = select i1 %B, i1 true, i1 %A
@@ -260,8 +262,8 @@ define i1 @land_land_right1(i1 %A, i1 %B) {
 }
 define i1 @land_land_right2(i1 %A, i1 %B) {
 ; CHECK-LABEL: @land_land_right2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %c = select i1 %B, i1 %A, i1 false
   %res = select i1 %A, i1 %c, i1 false
@@ -299,7 +301,9 @@ define i1 @land_lor_right1(i1 %A, i1 %B) {
 }
 define i1 @land_lor_right2(i1 %A, i1 %B) {
 ; CHECK-LABEL: @land_lor_right2(
-; CHECK-NEXT:    ret i1 [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[C]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c = select i1 %B, i1 %A, i1 false
   %res = select i1 %A, i1 true, i1 %c
@@ -329,7 +333,8 @@ define i1 @land_bor_right2(i1 %A, i1 %B) {
 ; A land (A band B)
 define i1 @band_land_right1(i1 %A, i1 %B) {
 ; CHECK-LABEL: @band_land_right1(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[C:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[C]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c = and i1 %A, %B
@@ -338,7 +343,8 @@ define i1 @band_land_right1(i1 %A, i1 %B) {
 }
 define i1 @band_land_right2(i1 %A, i1 %B) {
 ; CHECK-LABEL: @band_land_right2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[C:%.*]] = and i1 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[C]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c = and i1 %B, %A
@@ -349,7 +355,9 @@ define i1 @band_land_right2(i1 %A, i1 %B) {
 ; A lor (A band B)
 define i1 @band_lor_right1(i1 %A, i1 %B) {
 ; CHECK-LABEL: @band_lor_right1(
-; CHECK-NEXT:    ret i1 [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[C]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c = and i1 %A, %B
   %res = select i1 %A, i1 true, i1 %c
@@ -357,7 +365,9 @@ define i1 @band_lor_right1(i1 %A, i1 %B) {
 }
 define i1 @band_lor_right2(i1 %A, i1 %B) {
 ; CHECK-LABEL: @band_lor_right2(
-; CHECK-NEXT:    ret i1 [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = and i1 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[C]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c = and i1 %B, %A
   %res = select i1 %A, i1 true, i1 %c
@@ -375,7 +385,9 @@ define i1 @lor_land_right1(i1 %A, i1 %B) {
 }
 define i1 @lor_land_right2(i1 %A, i1 %B) {
 ; CHECK-LABEL: @lor_land_right2(
-; CHECK-NEXT:    ret i1 [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[C]], i1 false
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c = select i1 %B, i1 true, i1 %A
   %res = select i1 %A, i1 %c, i1 false
@@ -414,8 +426,8 @@ define i1 @lor_lor_right1(i1 %A, i1 %B) {
 }
 define i1 @lor_lor_right2(i1 %A, i1 %B) {
 ; CHECK-LABEL: @lor_lor_right2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %c = select i1 %B, i1 true, i1 %A
   %res = select i1 %A, i1 true, i1 %c
@@ -445,7 +457,9 @@ define i1 @lor_bor_right2(i1 %A, i1 %B) {
 ; A land (A bor B)
 define i1 @bor_land_right1(i1 %A, i1 %B) {
 ; CHECK-LABEL: @bor_land_right1(
-; CHECK-NEXT:    ret i1 [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[C]], i1 false
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c = or i1 %A, %B
   %res = select i1 %A, i1 %c, i1 false
@@ -453,7 +467,9 @@ define i1 @bor_land_right1(i1 %A, i1 %B) {
 }
 define i1 @bor_land_right2(i1 %A, i1 %B) {
 ; CHECK-LABEL: @bor_land_right2(
-; CHECK-NEXT:    ret i1 [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[C]], i1 false
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c = or i1 %B, %A
   %res = select i1 %A, i1 %c, i1 false
@@ -463,7 +479,8 @@ define i1 @bor_land_right2(i1 %A, i1 %B) {
 ; A lor (A bor B)
 define i1 @bor_lor_right1(i1 %A, i1 %B) {
 ; CHECK-LABEL: @bor_lor_right1(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[C]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c = or i1 %A, %B
@@ -472,7 +489,8 @@ define i1 @bor_lor_right1(i1 %A, i1 %B) {
 }
 define i1 @bor_lor_right2(i1 %A, i1 %B) {
 ; CHECK-LABEL: @bor_lor_right2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[C]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c = or i1 %B, %A

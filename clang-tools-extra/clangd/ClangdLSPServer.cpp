@@ -666,8 +666,9 @@ void ClangdLSPServer::onDocumentDidChange(
     log("Trying to incrementally change non-added document: {0}", File);
     return;
   }
+  std::string NewCode(*Code);
   for (const auto &Change : Params.contentChanges) {
-    if (auto Err = applyChange(*Code, Change)) {
+    if (auto Err = applyChange(NewCode, Change)) {
       // If this fails, we are most likely going to be not in sync anymore with
       // the client.  It is better to remove the draft and let further
       // operations fail rather than giving wrong results.
@@ -676,7 +677,7 @@ void ClangdLSPServer::onDocumentDidChange(
       return;
     }
   }
-  Server->addDocument(File, *Code, encodeVersion(Params.textDocument.version),
+  Server->addDocument(File, NewCode, encodeVersion(Params.textDocument.version),
                       WantDiags, Params.forceRebuild);
 }
 

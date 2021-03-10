@@ -43,9 +43,13 @@ void arm_sve::ArmSVEDialect::initialize() {
 
 Type arm_sve::ArmSVEDialect::parseType(DialectAsmParser &parser) const {
   llvm::SMLoc typeLoc = parser.getCurrentLocation();
-  auto genType = generatedTypeParser(getContext(), parser, "vector");
-  if (genType != Type())
-    return genType;
+  {
+    Type genType;
+    auto parseResult = generatedTypeParser(parser.getBuilder().getContext(),
+                                           parser, "vector", genType);
+    if (parseResult.hasValue())
+      return genType;
+  }
   parser.emitError(typeLoc, "unknown type in ArmSVE dialect");
   return Type();
 }

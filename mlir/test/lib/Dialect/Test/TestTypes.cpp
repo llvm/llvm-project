@@ -138,10 +138,12 @@ static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,
   if (failed(parser.parseKeyword(&typeTag)))
     return Type();
 
-  auto genType = generatedTypeParser(ctxt, parser, typeTag);
-  if (genType != Type())
-    return genType;
-
+  {
+    Type genType;
+    auto parseResult = generatedTypeParser(ctxt, parser, typeTag, genType);
+    if (parseResult.hasValue())
+      return genType;
+  }
   if (typeTag == "test_type")
     return TestType::get(parser.getBuilder().getContext());
 

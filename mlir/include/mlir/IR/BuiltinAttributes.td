@@ -197,6 +197,13 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
     static Optional<NamedAttribute>
     findDuplicate(SmallVectorImpl<NamedAttribute> &array, bool isSorted);
 
+    /// Return the specified attribute if present and is an instance of
+    /// `AttrClass`, null otherwise.
+    template<typename AttrClass>
+    AttrClass getAs(StringRef name) {
+      return get(name).dyn_cast_or_null<AttrClass>();
+    }
+
   private:
     /// Return empty dictionary.
     static DictionaryAttr getEmpty(MLIRContext *context);

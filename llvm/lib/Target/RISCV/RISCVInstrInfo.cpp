@@ -1196,8 +1196,10 @@ Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
     BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), VN)
         .addReg(RISCV::X0)
         .addImm(NumOfVReg);
-    assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtM() &&
-           "M-extension must be enabled to calculate the vscaled size/offset.");
+    if (!MF.getSubtarget<RISCVSubtarget>().hasStdExtM())
+      MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
+          MF.getFunction(),
+          "M-extension must be enabled to calculate the vscaled size/offset."});
     BuildMI(MBB, II, DL, TII->get(RISCV::MUL), FactorRegister)
         .addReg(SizeOfVector, RegState::Kill)
         .addReg(VN, RegState::Kill);

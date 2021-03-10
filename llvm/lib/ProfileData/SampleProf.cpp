@@ -40,7 +40,8 @@ namespace sampleprof {
 SampleProfileFormat FunctionSamples::Format;
 bool FunctionSamples::ProfileIsProbeBased = false;
 bool FunctionSamples::ProfileIsCS = false;
-bool FunctionSamples::UseMD5;
+bool FunctionSamples::UseMD5 = false;
+bool FunctionSamples::HasUniqSuffix = true;
 } // namespace sampleprof
 } // namespace llvm
 
@@ -262,6 +263,8 @@ void FunctionSamples::findAllNames(DenseSet<StringRef> &NameSet) const {
 const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     const LineLocation &Loc, StringRef CalleeName,
     SampleProfileReaderItaniumRemapper *Remapper) const {
+  CalleeName = getCanonicalFnName(CalleeName);
+
   std::string CalleeGUID;
   CalleeName = getRepInFormat(CalleeName, UseMD5, CalleeGUID);
 

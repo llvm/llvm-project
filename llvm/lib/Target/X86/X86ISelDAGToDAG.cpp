@@ -4622,45 +4622,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, CNode);
       return;
     }
-
-    case Intrinsic::x86_tdpbssd_internal:
-    case Intrinsic::x86_tdpbsud_internal:
-    case Intrinsic::x86_tdpbusd_internal:
-    case Intrinsic::x86_tdpbuud_internal: {
-      if (!Subtarget->hasAMXINT8())
-        break;
-      SDValue Chain = Node->getOperand(0);
-      unsigned Opc;
-      switch (IntNo) {
-      case Intrinsic::x86_tdpbssd_internal: Opc = X86::PTDPBSSDV; break;
-      case Intrinsic::x86_tdpbsud_internal: Opc = X86::PTDPBSUDV; break;
-      case Intrinsic::x86_tdpbusd_internal: Opc = X86::PTDPBUSDV; break;
-      case Intrinsic::x86_tdpbuud_internal: Opc = X86::PTDPBUUDV; break;
-      default: llvm_unreachable("Impossible intrinsic");
-      }
-      SDValue Ops[] = {Node->getOperand(2),
-                       Node->getOperand(3),
-                       Node->getOperand(4),
-                       Node->getOperand(5),
-                       Node->getOperand(6),
-                       Node->getOperand(7),
-                       Chain};
-      MachineSDNode *CNode =
-          CurDAG->getMachineNode(Opc, dl, {MVT::x86amx, MVT::Other}, Ops);
-      ReplaceNode(Node, CNode);
-      return;
-    }
-    case Intrinsic::x86_tilezero_internal: {
-      if (!Subtarget->hasAMXTILE())
-        break;
-      unsigned Opc = X86::PTILEZEROV;
-      SDValue Chain = Node->getOperand(0);
-      SDValue Ops[] = {Node->getOperand(2), Node->getOperand(3), Chain};
-      MachineSDNode *CNode =
-          CurDAG->getMachineNode(Opc, dl, {MVT::x86amx, MVT::Other}, Ops);
-      ReplaceNode(Node, CNode);
-      return;
-    }
     }
     break;
   }

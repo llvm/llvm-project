@@ -1348,19 +1348,21 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
       return false;
     const Loop *L = LI->getLoopFor(BO->getParent());
     assert(L && "L should not be null after isIVIncrement()");
-    // IV increment may have other users than the IV. We do not want to make
-    // dominance queries to analyze the legality of moving it towards the cmp,
-    // so just check that there is no other users.
-    if (!BO->hasOneUse())
-      return false;
     // Do not risk on moving increment into a child loop.
     if (LI->getLoopFor(Cmp->getParent()) != L)
       return false;
-    // Ultimately, the insertion point must dominate latch. This should be a
-    // cheap check because no CFG changes & dom tree recomputation happens
-    // during the transform.
-    Function *F = BO->getParent()->getParent();
-    return getDT(*F).dominates(Cmp->getParent(), L->getLoopLatch());
+
+    // Finally, we need to ensure that the insert point will dominate all
+    // existing uses of the increment.
+
+    auto &DT = getDT(*BO->getParent()->getParent());
+    if (DT.dominates(Cmp->getParent(), BO->getParent()))
+      // If we're moving up the dom tree, all uses are trivially dominated.
+      // (This is the common case for code produced by LSR.)
+      return true;
+
+    // Otherwise, special case the single use in the phi recurrence.
+    return BO->hasOneUse() && DT.dominates(Cmp->getParent(), L->getLoopLatch());
   };
   if (BO->getParent() != Cmp->getParent() && !IsReplacableIVIncrement(BO)) {
     // We used to use a dominator tree here to allow multi-block optimization.
@@ -2855,11 +2857,16 @@ class TypePromotionTransaction {
     /// Keep track of the debug users.
     SmallVector<DbgValueInst *, 1> DbgValues;
 
+    /// Keep track of the new value so that we can undo it by replacing
+    /// instances of the new value with the original value.
+    Value *New;
+
     using use_iterator = SmallVectorImpl<InstructionAndIdx>::iterator;
 
   public:
     /// Replace all the use of \p Inst by \p New.
-    UsesReplacer(Instruction *Inst, Value *New) : TypePromotionAction(Inst) {
+    UsesReplacer(Instruction *Inst, Value *New)
+        : TypePromotionAction(Inst), New(New) {
       LLVM_DEBUG(dbgs() << "Do: UsersReplacer: " << *Inst << " with " << *New
                         << "\n");
       // Record the original uses.
@@ -2885,7 +2892,7 @@ class TypePromotionTransaction {
       // the original debug uses must also be reinstated to maintain the
       // correctness and utility of debug value instructions.
       for (auto *DVI : DbgValues)
-        DVI->replaceVariableLocationOp(DVI->getVariableLocationOp(0), Inst);
+        DVI->replaceVariableLocationOp(New, Inst);
     }
   };
 
@@ -7876,18 +7883,21 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
   DbgValueInst &DVI = *cast<DbgValueInst>(I);
 
   // Does this dbg.value refer to a sunk address calculation?
-  Value *Location = DVI.getVariableLocationOp(0);
-  WeakTrackingVH SunkAddrVH = SunkAddrs[Location];
-  Value *SunkAddr = SunkAddrVH.pointsToAliveValue() ? SunkAddrVH : nullptr;
-  if (SunkAddr) {
-    // Point dbg.value at locally computed address, which should give the best
-    // opportunity to be accurately lowered. This update may change the type of
-    // pointer being referred to; however this makes no difference to debugging
-    // information, and we can't generate bitcasts that may affect codegen.
-    DVI.replaceVariableLocationOp(Location, SunkAddr);
-    return true;
+  bool AnyChange = false;
+  for (Value *Location : DVI.getValues()) {
+    WeakTrackingVH SunkAddrVH = SunkAddrs[Location];
+    Value *SunkAddr = SunkAddrVH.pointsToAliveValue() ? SunkAddrVH : nullptr;
+    if (SunkAddr) {
+      // Point dbg.value at locally computed address, which should give the best
+      // opportunity to be accurately lowered. This update may change the type
+      // of pointer being referred to; however this makes no difference to
+      // debugging information, and we can't generate bitcasts that may affect
+      // codegen.
+      DVI.replaceVariableLocationOp(Location, SunkAddr);
+      AnyChange = true;
+    }
   }
-  return false;
+  return AnyChange;
 }
 
 // A llvm.dbg.value may be using a value before its definition, due to
@@ -7906,30 +7916,51 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
       if (!DVI)
         continue;
 
-      Instruction *VI = dyn_cast_or_null<Instruction>(DVI->getValue());
+      SmallVector<Instruction *, 4> VIs;
+      for (Value *V : DVI->getValues())
+        if (Instruction *VI = dyn_cast_or_null<Instruction>(V))
+          VIs.push_back(VI);
 
-      if (!VI || VI->isTerminator())
-        continue;
+      // This DVI may depend on multiple instructions, complicating any
+      // potential sink. This block takes the defensive approach, opting to
+      // "undef" the DVI if it has more than one instruction and any of them do
+      // not dominate DVI.
+      for (Instruction *VI : VIs) {
+        if (VI->isTerminator())
+          continue;
 
-      // If VI is a phi in a block with an EHPad terminator, we can't insert
-      // after it.
-      if (isa<PHINode>(VI) && VI->getParent()->getTerminator()->isEHPad())
-        continue;
+        // If VI is a phi in a block with an EHPad terminator, we can't insert
+        // after it.
+        if (isa<PHINode>(VI) && VI->getParent()->getTerminator()->isEHPad())
+          continue;
 
-      // If the defining instruction dominates the dbg.value, we do not need
-      // to move the dbg.value.
-      if (DT.dominates(VI, DVI))
-        continue;
+        // If the defining instruction dominates the dbg.value, we do not need
+        // to move the dbg.value.
+        if (DT.dominates(VI, DVI))
+          continue;
 
-      LLVM_DEBUG(dbgs() << "Moving Debug Value before :\n"
-                        << *DVI << ' ' << *VI);
-      DVI->removeFromParent();
-      if (isa<PHINode>(VI))
-        DVI->insertBefore(&*VI->getParent()->getFirstInsertionPt());
-      else
-        DVI->insertAfter(VI);
-      MadeChange = true;
-      ++NumDbgValueMoved;
+        // If we depend on multiple instructions and any of them doesn't
+        // dominate this DVI, we probably can't salvage it: moving it to
+        // after any of the instructions could cause us to lose the others.
+        if (VIs.size() > 1) {
+          LLVM_DEBUG(
+              dbgs()
+              << "Unable to find valid location for Debug Value, undefing:\n"
+              << *DVI);
+          DVI->setUndef();
+          break;
+        }
+
+        LLVM_DEBUG(dbgs() << "Moving Debug Value before :\n"
+                          << *DVI << ' ' << *VI);
+        DVI->removeFromParent();
+        if (isa<PHINode>(VI))
+          DVI->insertBefore(&*VI->getParent()->getFirstInsertionPt());
+        else
+          DVI->insertAfter(VI);
+        MadeChange = true;
+        ++NumDbgValueMoved;
+      }
     }
   }
   return MadeChange;

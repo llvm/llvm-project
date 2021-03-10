@@ -68,8 +68,6 @@ static Value *SimplifyCastInst(unsigned, Value *, Type *,
                                const SimplifyQuery &, unsigned);
 static Value *SimplifyGEPInst(Type *, ArrayRef<Value *>, const SimplifyQuery &,
                               unsigned);
-static Value *SimplifySelectInst(Value *, Value *, Value *,
-                                 const SimplifyQuery &, unsigned);
 
 static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
                                      Value *FalseVal) {
@@ -3991,17 +3989,6 @@ static Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                 [&](Value *V) { return V == Op ? RepOp : V; });
       return PreventSelfSimplify(SimplifyGEPInst(GEP->getSourceElementType(),
                                                  NewOps, Q, MaxRecurse - 1));
-    }
-  }
-
-  // Same for Selects.
-  if (auto *SI = dyn_cast<SelectInst>(I)) {
-    if (MaxRecurse) {
-      SmallVector<Value *, 3> NewOps(3);
-      transform(SI->operands(), NewOps.begin(),
-                [&](Value *V) { return V == Op ? RepOp : V; });
-      return PreventSelfSimplify(SimplifySelectInst(
-          NewOps[0], NewOps[1], NewOps[2], Q, MaxRecurse - 1));
     }
   }
 

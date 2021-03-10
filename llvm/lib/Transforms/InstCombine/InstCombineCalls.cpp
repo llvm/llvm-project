@@ -872,6 +872,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *NarrowMaxMin = Builder.CreateBinaryIntrinsic(IID, X, Y);
       return CastInst::Create(Instruction::SExt, NarrowMaxMin, II->getType());
     }
+
     Constant *C;
     if (match(I0, m_SExt(m_Value(X))) && match(I1, m_Constant(C)) &&
         I0->hasOneUse()) {
@@ -881,6 +882,23 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return CastInst::Create(Instruction::SExt, NarrowMaxMin, II->getType());
       }
     }
+
+    if (match(I0, m_Not(m_Value(X)))) {
+      // max (not X), (not Y) --> not (min X, Y)
+      Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
+      if (match(I1, m_Not(m_Value(Y))) &&
+          (I0->hasOneUse() || I1->hasOneUse())) {
+        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, Y);
+        return BinaryOperator::CreateNot(InvMaxMin);
+      }
+      // max (not X), C --> not(min X, ~C)
+      if (match(I1, m_Constant(C)) && I0->hasOneUse()) {
+        Constant *NotC = ConstantExpr::getNot(C);
+        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, NotC);
+        return BinaryOperator::CreateNot(InvMaxMin);
+      }
+    }
+
     break;
   }
   case Intrinsic::bswap: {

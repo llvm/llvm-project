@@ -151,24 +151,6 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc,
   (void)NewOpc;
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
-  case X86::VPDPBUSDSZ256m:
-  case X86::VPDPBUSDSZ256r:
-  case X86::VPDPBUSDSZ128m:
-  case X86::VPDPBUSDSZ128r:
-  case X86::VPDPBUSDZ256m:
-  case X86::VPDPBUSDZ256r:
-  case X86::VPDPBUSDZ128m:
-  case X86::VPDPBUSDZ128r:
-  case X86::VPDPWSSDSZ256m:
-  case X86::VPDPWSSDSZ256r:
-  case X86::VPDPWSSDSZ128m:
-  case X86::VPDPWSSDSZ128r:
-  case X86::VPDPWSSDZ256m:
-  case X86::VPDPWSSDZ256r:
-  case X86::VPDPWSSDZ128m:
-  case X86::VPDPWSSDZ128r:
-    // These can only VEX convert if AVXVNNI is enabled.
-    return ST->hasAVXVNNI();
   case X86::VALIGNDZ128rri:
   case X86::VALIGNDZ128rmi:
   case X86::VALIGNQZ128rri:
@@ -278,6 +260,9 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
   unsigned NewOpc = I->VexOpcode;
 
   if (usesExtendedRegister(MI))
+    return false;
+
+  if (!CheckVEXInstPredicate(MI, ST))
     return false;
 
   if (!performCustomAdjustments(MI, NewOpc, ST))
