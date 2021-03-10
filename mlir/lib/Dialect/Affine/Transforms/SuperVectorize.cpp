@@ -254,10 +254,11 @@ using namespace vector;
 ///         * Uniform operands (only operands defined outside of the loop nest,
 ///           for now) are broadcasted to a vector.
 ///           TODO: Support more uniform cases.
+///         * Affine for operations with 'iter_args' are vectorized by
+///           vectorizing their 'iter_args' operands and results.
+///           TODO: Support more complex loops with divergent lbs and/or ubs.
 ///         * The remaining operations in the loop nest are vectorized by
 ///           widening their scalar types to vector types.
-///         * TODO: Add vectorization support for loops with 'iter_args' and
-///           more complex loops with divergent lbs and/or ubs.
 ///    b. if everything under the root AffineForOp in the current pattern
 ///       is vectorized properly, we commit that loop to the IR and remove the
 ///       scalar loop. Otherwise, we discard the vectorized loop and keep the
@@ -620,6 +621,14 @@ struct VectorizationState {
   ///   * 'replacement': %0 = vector.broadcast %1 : f32 to vector<128xf32>
   void registerValueVectorReplacement(Value replaced, Operation *replacement);
 
+  /// Registers the vector replacement of a block argument (e.g., iter_args).
+  ///
+  /// Example:
+  ///   * 'replaced': 'iter_arg' block argument.
+  ///   * 'replacement': vectorized 'iter_arg' block argument.
+  void registerBlockArgVectorReplacement(BlockArgument replaced,
+                                         BlockArgument replacement);
+
   /// Registers the scalar replacement of a scalar value. 'replacement' must be
   /// scalar. Both values must be block arguments. Operation results should be
   /// replaced using the 'registerOp*' utilitites.
@@ -685,15 +694,15 @@ void VectorizationState::registerOpVectorReplacement(Operation *replaced,
   LLVM_DEBUG(dbgs() << "into\n");
   LLVM_DEBUG(dbgs() << *replacement << "\n");
 
-  assert(replaced->getNumResults() <= 1 && "Unsupported multi-result op");
   assert(replaced->getNumResults() == replacement->getNumResults() &&
          "Unexpected replaced and replacement results");
   assert(opVectorReplacement.count(replaced) == 0 && "already registered");
   opVectorReplacement[replaced] = replacement;
 
-  if (replaced->getNumResults() > 0)
-    registerValueVectorReplacementImpl(replaced->getResult(0),
-                                       replacement->getResult(0));
+  for (auto resultTuple :
+       llvm::zip(replaced->getResults(), replacement->getResults()))
+    registerValueVectorReplacementImpl(std::get<0>(resultTuple),
+                                       std::get<1>(resultTuple));
 }
 
 /// Registers the vector replacement of a scalar value. The replacement
@@ -714,6 +723,16 @@ void VectorizationState::registerValueVectorReplacement(
     registerOpVectorReplacement(defOp, replacement);
   else
     registerValueVectorReplacementImpl(replaced, replacement->getResult(0));
+}
+
+/// Registers the vector replacement of a block argument (e.g., iter_args).
+///
+/// Example:
+///   * 'replaced': 'iter_arg' block argument.
+///   * 'replacement': vectorized 'iter_arg' block argument.
+void VectorizationState::registerBlockArgVectorReplacement(
+    BlockArgument replaced, BlockArgument replacement) {
+  registerValueVectorReplacementImpl(replaced, replacement);
 }
 
 void VectorizationState::registerValueVectorReplacementImpl(Value replaced,
@@ -1013,16 +1032,20 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
 // vectorized at this point.
 static Operation *vectorizeAffineForOp(AffineForOp forOp,
                                        VectorizationState &state) {
-  // 'iter_args' not supported yet.
-  if (forOp.getNumIterOperands() > 0)
+  const VectorizationStrategy &strategy = *state.strategy;
+  auto loopToVecDimIt = strategy.loopToVectorDim.find(forOp);
+  bool isLoopVecDim = loopToVecDimIt != strategy.loopToVectorDim.end();
+
+  // We only support 'iter_args' when the loop is not one of the vector
+  // dimensions.
+  // TODO: Support vector dimension loops. They require special handling:
+  // generate horizontal reduction, last-value extraction, etc.
+  if (forOp.getNumIterOperands() > 0 && isLoopVecDim)
     return nullptr;
 
   // If we are vectorizing a vector dimension, compute a new step for the new
   // vectorized loop using the vectorization factor for the vector dimension.
   // Otherwise, propagate the step of the scalar loop.
-  const VectorizationStrategy &strategy = *state.strategy;
-  auto loopToVecDimIt = strategy.loopToVectorDim.find(forOp);
-  bool isLoopVecDim = loopToVecDimIt != strategy.loopToVectorDim.end();
   unsigned newStep;
   if (isLoopVecDim) {
     unsigned vectorDim = loopToVecDimIt->second;
@@ -1033,10 +1056,15 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
     newStep = forOp.getStep();
   }
 
+  // Vectorize 'iter_args'.
+  SmallVector<Value, 8> vecIterOperands;
+  for (auto operand : forOp.getIterOperands())
+    vecIterOperands.push_back(vectorizeOperand(operand, state));
+
   auto vecForOp = state.builder.create<AffineForOp>(
       forOp.getLoc(), forOp.getLowerBoundOperands(), forOp.getLowerBoundMap(),
       forOp.getUpperBoundOperands(), forOp.getUpperBoundMap(), newStep,
-      forOp.getIterOperands(),
+      vecIterOperands,
       /*bodyBuilder=*/[](OpBuilder &, Location, Value, ValueRange) {
         // Make sure we don't create a default terminator in the loop body as
         // the proper terminator will be added during vectorization.
@@ -1051,11 +1079,16 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
   //      since a scalar copy of the iv will prevail in the vectorized loop.
   //      TODO: A vector replacement will also be added in the future when
   //      vectorization of linear ops is supported.
-  //   3) TODO: Support 'iter_args' along non-vector dimensions.
+  //   3) The new 'iter_args' region arguments are registered as vector
+  //      replacements since they have been vectorized.
   state.registerOpVectorReplacement(forOp, vecForOp);
   state.registerValueScalarReplacement(forOp.getInductionVar(),
                                        vecForOp.getInductionVar());
-  // Map the new vectorized loop to its vector dimension.
+  for (auto iterTuple :
+       llvm ::zip(forOp.getRegionIterArgs(), vecForOp.getRegionIterArgs()))
+    state.registerBlockArgVectorReplacement(std::get<0>(iterTuple),
+                                            std::get<1>(iterTuple));
+
   if (isLoopVecDim)
     state.vecLoopToVecDim[vecForOp] = loopToVecDimIt->second;
 
@@ -1102,12 +1135,6 @@ static Operation *widenOp(Operation *op, VectorizationState &state) {
 /// operations after the parent op.
 static Operation *vectorizeAffineYieldOp(AffineYieldOp yieldOp,
                                          VectorizationState &state) {
-  // 'iter_args' not supported yet.
-  if (yieldOp.getNumOperands() > 0)
-    return nullptr;
-
-  // Vectorize the yield op and change the insertion point right after the new
-  // parent op.
   Operation *newYieldOp = widenOp(yieldOp, state);
   Operation *newParentOp = state.builder.getInsertionBlock()->getParentOp();
   state.builder.setInsertionPointAfter(newParentOp);
