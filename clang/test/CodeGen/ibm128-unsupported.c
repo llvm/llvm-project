@@ -9,7 +9,7 @@ void foo(__ibm128 x); // expected-note {{'foo' defined here}}
 void loop(int n, __ibm128 *arr) {
 #pragma omp target parallel
   for (int i = 0; i < n; ++i) {
-    // expected-error@+1 {{'foo' requires 128 bit size '__ibm128' type support, but device 'x86_64' does not support it}}
+    // expected-error@+1 {{'foo' requires 128 bit size '__ibm128' type support, but target 'x86_64' does not support it}}
     foo(arr[i]);
   }
 }
