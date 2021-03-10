@@ -79,7 +79,7 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name);
 
-  auto refState = isWeakRef ? RefState::Weak : RefState::Strong;
+  RefState refState = isWeakRef ? RefState::Weak : RefState::Strong;
 
   if (wasInserted)
     replaceSymbol<Undefined>(s, name, file, refState);
@@ -119,7 +119,7 @@ Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name);
 
-  auto refState = RefState::Unreferenced;
+  RefState refState = RefState::Unreferenced;
   if (!wasInserted) {
     if (auto *defined = dyn_cast<Defined>(s)) {
       if (isWeakDef && !defined->isWeakDef())

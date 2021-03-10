@@ -280,7 +280,7 @@ void UnwindInfoSection::finalize() {
 
   // Count frequencies of the folded encodings
   EncodingMap encodingFrequencies;
-  for (auto cuPtrEntry : cuPtrVector)
+  for (const CompactUnwindEntry64 *cuPtrEntry : cuPtrVector)
     encodingFrequencies[cuPtrEntry->encoding]++;
 
   // Make a vector of encodings, sorted by descending frequency
@@ -316,7 +316,7 @@ void UnwindInfoSection::finalize() {
   // If more entries fit in the regular format, we use that.
   for (size_t i = 0; i < cuPtrVector.size();) {
     secondLevelPages.emplace_back();
-    auto &page = secondLevelPages.back();
+    UnwindInfoSection::SecondLevelPage &page = secondLevelPages.back();
     page.entryIndex = i;
     uintptr_t functionAddressMax =
         cuPtrVector[i]->functionAddress + COMPRESSED_ENTRY_FUNC_OFFSET_MASK;
@@ -326,7 +326,7 @@ void UnwindInfoSection::finalize() {
         sizeof(unwind_info_compressed_second_level_page_header) /
             sizeof(uint32_t);
     while (wordsRemaining >= 1 && i < cuPtrVector.size()) {
-      const auto *cuPtr = cuPtrVector[i];
+      const CompactUnwindEntry64 *cuPtr = cuPtrVector[i];
       if (cuPtr->functionAddress >= functionAddressMax) {
         break;
       } else if (commonEncodingIndexes.count(cuPtr->encoding) ||
