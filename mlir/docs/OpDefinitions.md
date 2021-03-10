@@ -1400,7 +1400,7 @@ def IntegerType : Test_Type<"TestInteger"> {
 
   // The parser is defined here also.
   let parser = [{
-    if (parser.parseLess())
+    if ($_parser.parseLess())
       return Type();
     int width;
     if ($_parser.parseInteger(width))
