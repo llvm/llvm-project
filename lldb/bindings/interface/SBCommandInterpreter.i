@@ -9,9 +9,11 @@
 namespace lldb {
 
 %feature("docstring",
-"SBCommandInterpreter handles/interprets commands for lldb.  You get the
-command interpreter from the SBDebugger instance. For example (from test/
-python_api/interpreter/TestCommandInterpreterAPI.py),
+"SBCommandInterpreter handles/interprets commands for lldb.
+
+You get the command interpreter from the :py:class:`SBDebugger` instance.
+
+For example (from test/ python_api/interpreter/TestCommandInterpreterAPI.py),::
 
     def command_interpreter_api(self):
         '''Test the SBCommandInterpreter APIs.'''

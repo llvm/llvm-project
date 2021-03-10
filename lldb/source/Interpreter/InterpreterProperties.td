@@ -29,4 +29,8 @@ let Definition = "interpreter" in {
     Global,
     DefaultTrue,
     Desc<"If true, commands will be echoed even if they are pure comment lines.">;
+  def RepeatPreviousCommand: Property<"repeat-previous-command", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"If true, LLDB will repeat the previous command if no command was passed to the interpreter. If false, LLDB won't repeat the previous command but only return a new prompt.">;
 }

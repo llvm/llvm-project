@@ -11,7 +11,7 @@ namespace lldb {
 %feature("docstring",
 "Represents a generic function, which can be inlined or not.
 
-For example (from test/lldbutil.py, but slightly modified for doc purpose),
+For example (from test/lldbutil.py, but slightly modified for doc purpose),::
 
         ...
 

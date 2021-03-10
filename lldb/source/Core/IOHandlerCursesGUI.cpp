@@ -1390,8 +1390,6 @@ public:
                 ConstString broadcaster_class(
                     broadcaster->GetBroadcasterClass());
                 if (broadcaster_class == broadcaster_class_process) {
-                  debugger.GetCommandInterpreter().UpdateExecutionContext(
-                      nullptr);
                   m_update_screen = true;
                   continue; // Don't get any key, just update our view
                 }
@@ -1403,7 +1401,6 @@ public:
         HandleCharResult key_result = m_window_sp->HandleChar(ch);
         switch (key_result) {
         case eKeyHandled:
-          debugger.GetCommandInterpreter().UpdateExecutionContext(nullptr);
           m_update_screen = true;
           break;
         case eKeyNotHandled:

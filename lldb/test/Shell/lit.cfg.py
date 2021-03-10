@@ -45,10 +45,15 @@ config.test_exec_root = os.path.join(config.lldb_obj_root, 'test')
 config.environment['ASAN_OPTIONS'] = 'detect_container_overflow=0'
 # End Swift mod.
 
-# Propagate reproducer environment vars.
-if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
-  config.environment['LLDB_CAPTURE_REPRODUCER'] = os.environ[
-      'LLDB_CAPTURE_REPRODUCER']
+# Propagate environment vars.
+llvm_config.with_system_environment([
+    'FREEBSD_LEGACY_PLUGIN',
+    'HOME',
+    'LLDB_CAPTURE_REPRODUCER',
+    'TEMP',
+    'TMP',
+    'XDG_CACHE_HOME',
+])
 
 # Support running the test suite under the lldb-repro wrapper. This makes it
 # possible to capture a test suite run and then rerun all the test from the
@@ -146,6 +151,3 @@ if platform.system() == 'NetBSD' and os.geteuid() != 0:
         can_set_dbregs = False
 if can_set_dbregs:
     config.available_features.add('dbregs-set')
-
-# pass control variable through
-llvm_config.with_system_environment('FREEBSD_LEGACY_PLUGIN')

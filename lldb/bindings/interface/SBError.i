@@ -11,7 +11,7 @@ namespace lldb {
 %feature("docstring",
 "Represents a container for holding any error code.
 
-For example (from test/python_api/hello_world/TestHelloWorld.py),
+For example (from test/python_api/hello_world/TestHelloWorld.py), ::
 
     def hello_world_attach_with_id_api(self):
         '''Create target, spawn a process, and attach to it by id.'''
@@ -45,7 +45,7 @@ For example (from test/python_api/hello_world/TestHelloWorld.py),
 checks that after the attach, there is no error condition by asserting
 that error.Success() is True and we get back a valid process object.
 
-And (from test/python_api/event/TestEvent.py),
+And (from test/python_api/event/TestEvent.py), ::
 
         # Now launch the process, and do not stop at entry point.
         error = lldb.SBError()

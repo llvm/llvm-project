@@ -469,14 +469,13 @@ protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     FileSpec file(m_options.m_filename);
     FileSystem::Instance().Resolve(file);
-    ExecutionContext clean_ctx;
     CommandInterpreterRunOptions options;
     options.SetAddToHistory(false);
     options.SetEchoCommands(false);
     options.SetPrintResults(true);
     options.SetPrintErrors(true);
     options.SetStopOnError(false);
-    m_interpreter.HandleCommandsFromFile(file, &clean_ctx, options, result);
+    m_interpreter.HandleCommandsFromFile(file, options, result);
     return result.Succeeded();
   }
 
