@@ -2196,9 +2196,9 @@ MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
 
 /// Compute the new DIExpression to use with a DBG_VALUE for a spill slot.
 /// This prepends DW_OP_deref when spilling an indirect DBG_VALUE.
-static const DIExpression *computeExprForSpill(const MachineInstr &MI,
-                                               Register SpillReg) {
-  assert(MI.hasDebugOperandForReg(SpillReg) && "Spill Reg is not used in MI.");
+static const DIExpression *
+computeExprForSpill(const MachineInstr &MI,
+                    SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
   assert(MI.getDebugVariable()->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
          "Expected inlined-at fields to agree");
 
@@ -2211,19 +2211,26 @@ static const DIExpression *computeExprForSpill(const MachineInstr &MI,
     // We will replace the spilled register with a frame index, so
     // immediately deref all references to the spilled register.
     std::array<uint64_t, 1> Ops{{dwarf::DW_OP_deref}};
-    for (const MachineOperand &Op : MI.getDebugOperandsForReg(SpillReg)) {
-      unsigned OpIdx = MI.getDebugOperandIndex(&Op);
+    for (const MachineOperand *Op : SpilledOperands) {
+      unsigned OpIdx = MI.getDebugOperandIndex(Op);
       Expr = DIExpression::appendOpsToArg(Expr, Ops, OpIdx);
     }
   }
   return Expr;
 }
+static const DIExpression *computeExprForSpill(const MachineInstr &MI,
+                                               Register SpillReg) {
+  assert(MI.hasDebugOperandForReg(SpillReg) && "Spill Reg is not used in MI.");
+  SmallVector<const MachineOperand *> SpillOperands;
+  for (const MachineOperand &Op : MI.getDebugOperandsForReg(SpillReg))
+    SpillOperands.push_back(&Op);
+  return computeExprForSpill(MI, SpillOperands);
+}
 
 MachineInstr *llvm::buildDbgValueForSpill(MachineBasicBlock &BB,
                                           MachineBasicBlock::iterator I,
                                           const MachineInstr &Orig,
-                                          int FrameIndex) {
-  Register SpillReg = Orig.getDebugOperand(0).getReg();
+                                          int FrameIndex, Register SpillReg) {
   const DIExpression *Expr = computeExprForSpill(Orig, SpillReg);
   MachineInstrBuilder NewMI =
       BuildMI(BB, I, Orig.getDebugLoc(), Orig.getDesc());
@@ -2241,13 +2248,34 @@ MachineInstr *llvm::buildDbgValueForSpill(MachineBasicBlock &BB,
   }
   return NewMI;
 }
+MachineInstr *llvm::buildDbgValueForSpill(
+    MachineBasicBlock &BB, MachineBasicBlock::iterator I,
+    const MachineInstr &Orig, int FrameIndex,
+    SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
+  const DIExpression *Expr = computeExprForSpill(Orig, SpilledOperands);
+  MachineInstrBuilder NewMI =
+      BuildMI(BB, I, Orig.getDebugLoc(), Orig.getDesc());
+  // Non-Variadic Operands: Location, Offset, Variable, Expression
+  // Variadic Operands:     Variable, Expression, Locations...
+  if (Orig.isNonListDebugValue())
+    NewMI.addFrameIndex(FrameIndex).addImm(0U);
+  NewMI.addMetadata(Orig.getDebugVariable()).addMetadata(Expr);
+  if (Orig.isDebugValueList()) {
+    for (const MachineOperand &Op : Orig.debug_operands())
+      if (is_contained(SpilledOperands, &Op))
+        NewMI.addFrameIndex(FrameIndex);
+      else
+        NewMI.add(MachineOperand(Op));
+  }
+  return NewMI;
+}
 
-void llvm::updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex) {
-  Register SpillReg = Orig.getDebugOperand(0).getReg();
-  const DIExpression *Expr = computeExprForSpill(Orig, SpillReg);
+void llvm::updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex,
+                                  Register Reg) {
+  const DIExpression *Expr = computeExprForSpill(Orig, Reg);
   if (Orig.isNonListDebugValue())
     Orig.getDebugOffset().ChangeToImmediate(0U);
-  for (MachineOperand &Op : Orig.getDebugOperandsForReg(SpillReg))
+  for (MachineOperand &Op : Orig.getDebugOperandsForReg(Reg))
     Op.ChangeToFrameIndex(FrameIndex);
   Orig.getDebugExpressionOp().setMetadata(Expr);
 }
