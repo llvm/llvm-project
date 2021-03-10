@@ -596,8 +596,8 @@ private:
         }
 
         if (SymRef.isDefined() &&
-            (Type == ELF::STT_FUNC || Type == ELF::STT_OBJECT ||
-             Type == ELF::STT_SECTION)) {
+            (Type == ELF::STT_NOTYPE || Type == ELF::STT_FUNC ||
+             Type == ELF::STT_OBJECT || Type == ELF::STT_SECTION)) {
 
           auto DefinedSection = Obj.getSection(SymRef.st_shndx);
           if (!DefinedSection)
