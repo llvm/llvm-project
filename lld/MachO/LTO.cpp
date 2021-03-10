@@ -40,7 +40,7 @@ static lto::Config createConfig() {
 }
 
 BitcodeCompiler::BitcodeCompiler() {
-  auto backend =
+  lto::ThinBackend backend =
       lto::createInProcessThinBackend(heavyweight_hardware_concurrency());
   ltoObj = std::make_unique<lto::LTO>(createConfig(), backend);
 }

@@ -47,6 +47,8 @@ public:
       return;
 
     StringRef MacroName = MacroNameTok.getIdentifierInfo()->getName();
+    if (MacroName == "__GCC_HAVE_DWARF2_CFI_ASM")
+      return;
     if (!CheckCapsOnly && !RegExp.match(MacroName))
       Check->warnMacro(MD, MacroName);
 

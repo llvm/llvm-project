@@ -1036,6 +1036,20 @@ void suppression_3(int cond, void (^callback)(void) CALLED_ONCE) {
   }
 }
 
+- (void)test:(int)cond fooWithReplyTo:(void (^)(void))handler {
+  if (cond) {
+    // expected-warning@-1{{completion handler is never called when taking false branch}}
+    handler();
+  }
+}
+
+- (void)test:(int)cond with:(void (^)(void))fooWithCompletionBlock {
+  if (cond) {
+    // expected-warning@-1{{completion handler is never called when taking false branch}}
+    fooWithCompletionBlock();
+  }
+}
+
 - (void)completion_handler_wrong_type:(int (^)(void))completionHandler {
   // We don't want to consider completion handlers with non-void return types.
   if ([self condition]) {

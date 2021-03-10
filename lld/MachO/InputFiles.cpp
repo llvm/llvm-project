@@ -99,8 +99,8 @@ int InputFile::idCount = 0;
 // Open a given file path and return it as a memory-mapped file.
 Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   // Open a file.
-  auto mbOrErr = MemoryBuffer::getFile(path);
-  if (auto ec = mbOrErr.getError()) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr = MemoryBuffer::getFile(path);
+  if (std::error_code ec = mbOrErr.getError()) {
     error("cannot open " + path + ": " + ec.message());
     return None;
   }
@@ -749,7 +749,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   };
   // TODO(compnerd) filter out symbols based on the target platform
   // TODO: handle weak defs, thread locals
-  for (const auto symbol : interface.symbols()) {
+  for (const auto *symbol : interface.symbols()) {
     if (!symbol->getArchitectures().has(config->target.Arch))
       continue;
 
@@ -776,7 +776,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
       interface.getParent() == nullptr ? &interface : interface.getParent();
 
   for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {
-    auto targets = intfRef.targets();
+    InterfaceFile::const_target_range targets = intfRef.targets();
     if (is_contained(targets, config->target))
       loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
   }

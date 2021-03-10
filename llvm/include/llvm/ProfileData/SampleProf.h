@@ -177,7 +177,10 @@ enum class SecNameTableFlags : uint32_t {
   SecFlagMD5Name = (1 << 0),
   // Store MD5 in fixed length instead of ULEB128 so NameTable can be
   // accessed like an array.
-  SecFlagFixedLengthMD5 = (1 << 1)
+  SecFlagFixedLengthMD5 = (1 << 1),
+  // Profile contains ".__uniq." suffix name. Compiler shouldn't strip
+  // the suffix when doing profile matching when seeing the flag.
+  SecFlagUniqSuffix = (1 << 2)
 };
 enum class SecProfSummaryFlags : uint32_t {
   SecFlagInValid = 0,
@@ -728,13 +731,14 @@ public:
   /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
   /// to \p S.
   void findInlinedFunctions(DenseSet<GlobalValue::GUID> &S, const Module *M,
+                            const StringMap<Function *> &SymbolMap,
                             uint64_t Threshold) const {
     if (TotalSamples <= Threshold)
       return;
     auto isDeclaration = [](const Function *F) {
       return !F || F->isDeclaration();
     };
-    if (isDeclaration(M->getFunction(getFuncName()))) {
+    if (isDeclaration(SymbolMap.lookup(getFuncName()))) {
       // Add to the import list only when it's defined out of module.
       S.insert(getGUID(Name));
     }
@@ -743,13 +747,13 @@ public:
     for (const auto &BS : BodySamples)
       for (const auto &TS : BS.second.getCallTargets())
         if (TS.getValue() > Threshold) {
-          const Function *Callee = M->getFunction(getFuncName(TS.getKey()));
+          const Function *Callee = SymbolMap.lookup(getFuncName(TS.getKey()));
           if (isDeclaration(Callee))
             S.insert(getGUID(TS.getKey()));
         }
     for (const auto &CS : CallsiteSamples)
       for (const auto &NameFS : CS.second)
-        NameFS.second.findInlinedFunctions(S, M, Threshold);
+        NameFS.second.findInlinedFunctions(S, M, SymbolMap, Threshold);
   }
 
   /// Set the name of the function.
@@ -780,17 +784,31 @@ public:
     return getCanonicalFnName(F.getName(), Attr);
   }
 
-  static StringRef getCanonicalFnName(StringRef FnName, StringRef Attr = "") {
-    static const char *knownSuffixes[] = { ".llvm.", ".part." };
+  /// Name suffixes which canonicalization should handle to avoid
+  /// profile mismatch.
+  static constexpr const char *LLVMSuffix = ".llvm.";
+  static constexpr const char *PartSuffix = ".part.";
+  static constexpr const char *UniqSuffix = ".__uniq.";
+
+  static StringRef getCanonicalFnName(StringRef FnName,
+                                      StringRef Attr = "selected") {
+    // Note the sequence of the suffixes in the knownSuffixes array matters.
+    // If suffix "A" is appended after the suffix "B", "A" should be in front
+    // of "B" in knownSuffixes.
+    const char *knownSuffixes[] = {LLVMSuffix, PartSuffix, UniqSuffix};
     if (Attr == "" || Attr == "all") {
       return FnName.split('.').first;
     } else if (Attr == "selected") {
       StringRef Cand(FnName);
       for (const auto &Suf : knownSuffixes) {
         StringRef Suffix(Suf);
+        // If the profile contains ".__uniq." suffix, don't strip the
+        // suffix for names in the IR.
+        if (Suffix == UniqSuffix && FunctionSamples::HasUniqSuffix)
+          continue;
         auto It = Cand.rfind(Suffix);
         if (It == StringRef::npos)
-          return Cand;
+          continue;
         auto Dit = Cand.rfind('.');
         if (Dit == It + Suffix.size() - 1)
           Cand = Cand.substr(0, It);
@@ -860,6 +878,9 @@ public:
 
   /// Whether the profile uses MD5 to represent string.
   static bool UseMD5;
+
+  /// Whether the profile contains any ".__uniq." suffix in a name.
+  static bool HasUniqSuffix;
 
   /// GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
   /// all the function symbols defined or declared in current module.
