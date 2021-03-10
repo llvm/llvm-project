@@ -19,6 +19,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -1395,11 +1397,22 @@ private:
     return EquivalenceClass::merge(getBasicVals(), F, State, LHS, RHS);
   }
 
-  LLVM_NODISCARD inline ProgramStateRef setConstraint(ProgramStateRef State,
-                                                      EquivalenceClass Class,
-                                                      RangeSet Constraint) {
+  LLVM_NODISCARD LLVM_ATTRIBUTE_UNUSED static bool
+  areFeasible(ConstraintRangeTy Constraints) {
+    return llvm::none_of(
+        Constraints,
+        [](const std::pair<EquivalenceClass, RangeSet> &ClassConstraint) {
+          return ClassConstraint.second.isEmpty();
+        });
+  }
+
+  LLVM_NODISCARD ProgramStateRef setConstraint(ProgramStateRef State,
+                                               EquivalenceClass Class,
+                                               RangeSet Constraint) {
     ConstraintRangeTy Constraints = State->get<ConstraintRange>();
     ConstraintRangeTy::Factory &CF = State->get_context<ConstraintRange>();
+
+    assert(!Constraint.isEmpty() && "New constraint should not be empty");
 
     // Add new constraint.
     Constraints = CF.add(Constraints, Class, Constraint);
@@ -1413,8 +1426,17 @@ private:
       for (EquivalenceClass DisequalClass : Class.getDisequalClasses(State)) {
         RangeSet UpdatedConstraint =
             getRange(State, DisequalClass).Delete(getBasicVals(), F, *Point);
+
+        // If we end up with at least one of the disequal classes to be
+        // constrainted with an empty range-set, the state is infeasible.
+        if (UpdatedConstraint.isEmpty())
+          return nullptr;
+
         Constraints = CF.add(Constraints, DisequalClass, UpdatedConstraint);
       }
+
+    assert(areFeasible(Constraints) && "Constraint manager shouldn't produce "
+                                       "a state with infeasible constraints");
 
     return State->set<ConstraintRange>(Constraints);
   }
