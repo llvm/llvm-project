@@ -4065,7 +4065,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       return;
     }
 
-    case Intrinsic::swift_async_context_addr:
+    case Intrinsic::swift_async_context_addr: {
       SDLoc DL(Node);
       CurDAG->SelectNodeTo(Node, AArch64::SUBXri, MVT::i64,
                            CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
@@ -4076,6 +4076,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       MF.getFrameInfo().setFrameAddressIsTaken(true);
       MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
       return;
+    }
     }
     break;
   }

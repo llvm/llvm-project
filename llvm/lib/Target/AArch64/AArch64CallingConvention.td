@@ -420,8 +420,8 @@ def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
                                                  X19, X20, X21, X22, X23, X24,
                                                  X25, X26, X27, X28, LR, FP)>;
 
-def CSR_AArch64_AAPCS_SwiftAsync
-    : CalleeSavedRegs<(sub CSR_AArch64_AAPCS, X22)>;
+def CSR_AArch64_AAPCS_SwiftTail
+    : CalleeSavedRegs<(sub CSR_AArch64_AAPCS, X20, X22)>;
 
 // Constructors and destructors return 'this' in the iOS 64-bit C++ ABI; since
 // 'this' and the pointer return value are both passed in X0 in these cases,
@@ -475,8 +475,8 @@ def CSR_Darwin_AArch64_AAPCS_ThisReturn
 def CSR_Darwin_AArch64_AAPCS_SwiftError
     : CalleeSavedRegs<(sub CSR_Darwin_AArch64_AAPCS, X21)>;
 
-def CSR_Darwin_AArch64_AAPCS_SwiftAsync
-    : CalleeSavedRegs<(sub CSR_Darwin_AArch64_AAPCS, X22)>;
+def CSR_Darwin_AArch64_AAPCS_SwiftTail
+    : CalleeSavedRegs<(sub CSR_Darwin_AArch64_AAPCS, X20, X22)>;
 
 // The function used by Darwin to obtain the address of a thread-local variable
 // guarantees more than a normal AAPCS function. x16 and x17 are used on the

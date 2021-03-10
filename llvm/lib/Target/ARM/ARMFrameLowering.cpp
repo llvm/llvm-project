@@ -158,7 +158,7 @@ static int getArgumentStackToRestore(MachineFunction &MF,
   }
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
 
-  unsigned ArgumentPopSize = 0;
+  int ArgumentPopSize = 0;
   if (IsTailCallReturn) {
     MachineOperand &StackAdjust = MBBI->getOperand(1);
 

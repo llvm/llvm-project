@@ -45,3 +45,19 @@ define dso_local swifttailcc i32 @noret() nounwind {
   tail call swifttailcc void @does_not_return()
   unreachable
 }
+
+define dso_local swifttailcc void @void_test(i32, i32, i32, i32) {
+; CHECK-LABEL: void_test:
+; CHECK:    jmp void_test
+  entry:
+   musttail call swifttailcc void @void_test( i32 %0, i32 %1, i32 %2, i32 %3)
+   ret void
+}
+
+define dso_local swifttailcc i1 @i1test(i32, i32, i32, i32) {
+; CHECK-LABEL: i1test:
+; CHECK:    jmp i1test
+  entry:
+  %4 = musttail call swifttailcc i1 @i1test( i32 %0, i32 %1, i32 %2, i32 %3)
+  ret i1 %4
+}

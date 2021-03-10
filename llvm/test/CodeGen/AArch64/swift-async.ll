@@ -5,7 +5,7 @@
 ; Important details in prologue:
 ;   * x22 is stored just below x29
 ;   * Enough stack space is allocated for everything
-define void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
+define swifttailcc void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: simple:
 ; CHECK: orr x29, x29, #0x100000000000000
 ; CHECK: sub sp, sp, #32
@@ -32,7 +32,7 @@ define void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
   ret void
 }
 
-define void @more_csrs(i8* swiftasync %ctx) "frame-pointer"="all" {
+define swifttailcc void @more_csrs(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: more_csrs:
 ; CHECK: orr x29, x29, #0x100000000000000
 ; CHECK: str x23, [sp, #-32]!
@@ -60,7 +60,7 @@ define void @more_csrs(i8* swiftasync %ctx) "frame-pointer"="all" {
   ret void
 }
 
-define void @locals(i8* swiftasync %ctx) "frame-pointer"="all" {
+define swifttailcc void @locals(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: locals:
 ; CHECK: orr x29, x29, #0x100000000000000
 ; CHECK: sub sp, sp, #64
@@ -91,7 +91,7 @@ define void @locals(i8* swiftasync %ctx) "frame-pointer"="all" {
   ret void
 }
 
-define void @use_input_context(i8* swiftasync %ctx, i8** %ptr) "frame-pointer"="all" {
+define swifttailcc void @use_input_context(i8* swiftasync %ctx, i8** %ptr) "frame-pointer"="all" {
 ; CHECK-LABEL: use_input_context:
 
 ; CHECK-NOAUTH: str x22, [sp
@@ -104,7 +104,7 @@ define void @use_input_context(i8* swiftasync %ctx, i8** %ptr) "frame-pointer"="
   ret void
 }
 
-define i8** @context_in_func() "frame-pointer"="non-leaf" {
+define swifttailcc i8** @context_in_func() "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: context_in_func:
 
 ; CHECK-NOAUTH: str xzr, [sp, #8]
@@ -118,7 +118,7 @@ define i8** @context_in_func() "frame-pointer"="non-leaf" {
   ret i8** %ptr
 }
 
-define void @write_frame_context(i8* swiftasync %ctx, i8* %newctx) "frame-pointer"="non-leaf" {
+define swifttailcc void @write_frame_context(i8* swiftasync %ctx, i8* %newctx) "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: write_frame_context:
 ; CHECK: sub x[[ADDR:[0-9]+]], x29, #8
 ; CHECK: str x0, [x[[ADDR]]]
@@ -127,14 +127,14 @@ define void @write_frame_context(i8* swiftasync %ctx, i8* %newctx) "frame-pointe
   ret void
 }
 
-define void @simple_fp_elim(i8* swiftasync %ctx) "frame-pointer"="non-leaf" {
+define swifttailcc void @simple_fp_elim(i8* swiftasync %ctx) "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: simple_fp_elim:
 ; CHECK-NOT: orr x29, x29, #0x100000000000000
 
   ret void
 }
 
-define void @large_frame(i8* swiftasync %ctx) "frame-pointer"="all" {
+define swifttailcc void @large_frame(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: large_frame:
 ; CHECK: str x28, [sp, #-32]!
 ; CHECK: stp x29, x30, [sp, #16]
@@ -170,5 +170,6 @@ define void @two_unpaired_csrs(i8* swiftasync) "frame-pointer"="all" {
   call void @bar(i32* undef)
   ret void
 }
-declare void @bar(i32*)
+
+declare swifttailcc void @bar(i32*)
 declare i8** @llvm.swift.async.context.addr()
