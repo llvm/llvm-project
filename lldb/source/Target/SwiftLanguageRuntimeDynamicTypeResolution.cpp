@@ -2503,8 +2503,7 @@ static bool CouldHaveDynamicValue(ValueObject &in_value) {
     // disable it.
     return !in_value.IsBaseClass();
   }
-  bool check_objc = true;
-  return var_type.IsPossibleDynamicType(nullptr, false, check_objc);
+  return var_type.IsPossibleDynamicType(nullptr, false, false);
 }
 
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
@@ -2515,6 +2514,10 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
   if (use_dynamic == lldb::eNoDynamicValues)
     return false;
 
+  // Try to import a Clang type into Swift.
+  if (in_value.GetObjectRuntimeLanguage() == eLanguageTypeObjC)
+    return GetDynamicTypeAndAddress_ClangType(
+        in_value, use_dynamic, class_type_or_name, address, value_type);
 
   if (!CouldHaveDynamicValue(in_value))
     return false;
@@ -2523,33 +2526,11 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
   // use the scratch context where such operations are legal and safe.
   assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
          "Swift scratch context not locked ahead of dynamic type resolution");
-  CompilerType val_type(in_value.GetCompilerType());
-
   llvm::Optional<SwiftASTContextReader> maybe_scratch_ctx =
       in_value.GetScratchSwiftASTContext();
-
-  // Try to import a Clang type into Swift.
-  if (in_value.GetObjectRuntimeLanguage() == eLanguageTypeObjC) {
-    if (GetDynamicTypeAndAddress_ClangType(
-            in_value, use_dynamic, class_type_or_name, address, value_type))
-      return true;
-    // If the type couldn't be resolved by the Clang runtime:
-    // Foundation, for example, generates new Objective-C classes on
-    // the fly (such as instances of _DictionaryStorage<T1, T2>) and
-    // LLDB's ObjC runtime implementation isn't set up to recognize
-    // these. As a workaround, try to resolve them as Swift types.
-    if (val_type.GetCanonicalType().GetTypeClass() ==
-        eTypeClassObjCObjectPointer)
-      if (maybe_scratch_ctx)
-        if (auto *scratch_ctx = maybe_scratch_ctx->get())
-          val_type = scratch_ctx->GetObjCObjectType();
-  }
-
   if (!maybe_scratch_ctx)
     return false;
   SwiftASTContextForExpressions *scratch_ctx = maybe_scratch_ctx->get();
-  if (!scratch_ctx)
-    return false;
 
   auto retry_once = [&]() {
     // Retry exactly once using the per-module fallback scratch context.
@@ -2572,6 +2553,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
 
   // Import the type into the scratch context. Any form of dynamic
   // type resolution may trigger a cross-module import.
+  CompilerType val_type(in_value.GetCompilerType());
   Flags type_info(val_type.GetTypeInfo());
   if (!type_info.AnySet(eTypeIsSwift))
     return false;

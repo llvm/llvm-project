@@ -2756,23 +2756,6 @@ CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
   VALIDATE_AND_RETURN_STATIC(impl, GetErrorType);
 }
 
-CompilerType TypeSystemSwiftTypeRef::GetObjCObjectType() {
-  auto impl = [&]() {
-    using namespace swift::Demangle;
-    Demangler dem;
-    auto *obj_type = dem.createNode(Node::Kind::Type);
-    NodePointer s = dem.createNode(Node::Kind::Structure);
-    NodePointer m =
-        dem.createNode(Node::Kind::Module, swift::MANGLING_MODULE_OBJC);
-    NodePointer ident = dem.createNode(Node::Kind::Identifier, "NSObject");
-    s->addChild(m, dem);
-    s->addChild(ident, dem);
-    obj_type->addChild(s, dem);
-    return RemangleAsType(dem, obj_type);
-  };
-  VALIDATE_AND_RETURN_STATIC(impl, GetObjCObjectType);
-}
-
 CompilerType
 TypeSystemSwiftTypeRef::GetReferentType(opaque_compiler_type_t type) {
   auto impl = [&]() -> CompilerType {
