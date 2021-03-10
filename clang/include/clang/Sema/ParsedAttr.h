@@ -573,6 +573,16 @@ public:
     return MacroExpansionLoc;
   }
 
+  /// Check if the attribute has exactly as many args as Num. May output an
+  /// error. Returns false if a diagnostic is produced.
+  bool checkExactlyNumArgs(class Sema &S, unsigned Num) const;
+  /// Check if the attribute has at least as many args as Num. May output an
+  /// error. Returns false if a diagnostic is produced.
+  bool checkAtLeastNumArgs(class Sema &S, unsigned Num) const;
+  /// Check if the attribute has at most as many args as Num. May output an
+  /// error. Returns false if a diagnostic is produced.
+  bool checkAtMostNumArgs(class Sema &S, unsigned Num) const;
+
   bool isTargetSpecificAttr() const;
   bool isTypeAttr() const;
   bool isStmtAttr() const;

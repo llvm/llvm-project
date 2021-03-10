@@ -23,8 +23,16 @@ config.test_exec_root = config.test_source_root
 # it needs to be able to find it at runtime.  This is fine if Python is on your
 # system PATH, but if it's not, then this unit test executable will fail to run.
 # We can solve this by forcing the Python directory onto the system path here.
-llvm_config.with_system_environment('PATH')
-llvm_config.with_environment('PATH', os.path.dirname(sys.executable), append_path=True)
+llvm_config.with_system_environment([
+    'HOME',
+    'PATH',
+    'TEMP',
+    'TMP',
+    'XDG_CACHE_HOME',
+])
+llvm_config.with_environment('PATH',
+                             os.path.dirname(sys.executable),
+                             append_path=True)
 
 # testFormat: The test format to use to interpret tests.
 config.test_format = lit.formats.GoogleTest(config.llvm_build_mode, 'Tests')

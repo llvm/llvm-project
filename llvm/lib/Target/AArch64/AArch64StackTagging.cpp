@@ -563,10 +563,9 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       }
 
       if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(I)) {
-        if (auto *AI =
-                dyn_cast_or_null<AllocaInst>(DVI->getVariableLocationOp(0))) {
-          Allocas[AI].DbgVariableIntrinsics.push_back(DVI);
-        }
+        for (Value *V : DVI->location_ops())
+          if (auto *AI = dyn_cast_or_null<AllocaInst>(V))
+            Allocas[AI].DbgVariableIntrinsics.push_back(DVI);
         continue;
       }
 

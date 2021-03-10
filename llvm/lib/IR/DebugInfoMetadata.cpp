@@ -1296,6 +1296,28 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
   return DIExpression::get(Expr->getContext(), NewOps);
 }
 
+DIExpression *DIExpression::replaceArg(const DIExpression *Expr,
+                                       uint64_t OldArg, uint64_t NewArg) {
+  assert(Expr && "Can't replace args in this expression");
+
+  SmallVector<uint64_t, 8> NewOps;
+
+  for (auto Op : Expr->expr_ops()) {
+    if (Op.getOp() != dwarf::DW_OP_LLVM_arg || Op.getArg(0) < OldArg) {
+      Op.appendToVector(NewOps);
+      continue;
+    }
+    NewOps.push_back(dwarf::DW_OP_LLVM_arg);
+    uint64_t Arg = Op.getArg(0) == OldArg ? NewArg : Op.getArg(0);
+    // OldArg has been deleted from the Op list, so decrement all indices
+    // greater than it.
+    if (Arg > OldArg)
+      --Arg;
+    NewOps.push_back(Arg);
+  }
+  return DIExpression::get(Expr->getContext(), NewOps);
+}
+
 DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
                                            SmallVectorImpl<uint64_t> &Ops,
                                            bool StackValue,

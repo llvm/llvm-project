@@ -601,8 +601,14 @@ void ExportSection::finalizeContents() {
   trieBuilder.setImageBase(in.header->addr);
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (defined->privateExtern)
-        continue;
+      if (config->exportedSymbols.empty()) {
+        if (defined->privateExtern ||
+            config->unexportedSymbols.match(defined->getName()))
+          continue;
+      } else {
+        if (!config->exportedSymbols.match(defined->getName()))
+          continue;
+      }
       trieBuilder.addSymbol(*defined);
       hasWeakSymbol = hasWeakSymbol || sym->isWeakDef();
     }

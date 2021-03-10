@@ -596,8 +596,8 @@ public:
   bool operator==(const Symbol &that) const { return this == &that; }
   bool operator!=(const Symbol &that) const { return !(*this == that); }
   bool operator<(const Symbol &that) const {
-    // For maps of symbols: collate them by source location
-    return name_.begin() < that.name_.begin();
+    // Used to collate symbols by creation order
+    return sortIndex_ < that.sortIndex_;
   }
 
   int Rank() const {
@@ -654,6 +654,7 @@ public:
 private:
   const Scope *owner_;
   SourceName name_;
+  std::size_t sortIndex_; // to implement "operator<" platform independently
   Attrs attrs_;
   Flags flags_;
   Scope *scope_{nullptr};
@@ -688,6 +689,7 @@ public:
     Symbol &symbol = Get();
     symbol.owner_ = &owner;
     symbol.name_ = name;
+    symbol.sortIndex_ = ++symbolCount_;
     symbol.attrs_ = attrs;
     symbol.details_ = std::move(details);
     return symbol;
@@ -698,6 +700,7 @@ private:
   std::list<blockType *> blocks_;
   std::size_t nextIndex_{0};
   blockType *currBlock_{nullptr};
+  std::size_t symbolCount_ = 0;
 
   Symbol &Get() {
     if (nextIndex_ == 0) {

@@ -6682,7 +6682,7 @@ class HorizontalReduction {
                             bool IsRedOp) {
     if (IsRedOp && isCmpSel(Kind)) {
       auto *Cmp = cast<Instruction>(cast<SelectInst>(I)->getCondition());
-      return I->getParent() == BB && Cmp && Cmp->getParent() == BB;
+      return I->getParent() == BB && Cmp->getParent() == BB;
     }
     return I->getParent() == BB;
   }

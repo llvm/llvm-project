@@ -349,6 +349,8 @@ def note_constexpr_new_delete_mismatch : Note<
   "used to delete pointer to "
   "%select{array object of type %2|non-array object of type %2|"
   "object allocated with 'new'}0}1">;
+def note_constexpr_deallocate_null : Note<
+  "'std::allocator<...>::deallocate' used to delete a null pointer">;
 def note_constexpr_delete_subobject : Note<
   "delete of pointer%select{ to subobject|}1 '%0' "
   "%select{|that does not point to complete object}1">;

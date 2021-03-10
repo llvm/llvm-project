@@ -24,7 +24,7 @@ llvm::Optional<DraftStore::Draft> DraftStore::getDraft(PathRef File) const {
   if (It == Drafts.end())
     return None;
 
-  return It->second.Draft;
+  return It->second.D;
 }
 
 std::vector<Path> DraftStore::getActiveFiles() const {
@@ -78,10 +78,10 @@ std::string DraftStore::addDraft(PathRef File, llvm::StringRef Version,
   std::lock_guard<std::mutex> Lock(Mutex);
 
   auto &D = Drafts[File];
-  updateVersion(D.Draft, Version);
+  updateVersion(D.D, Version);
   std::time(&D.MTime);
-  D.Draft.Contents = std::make_shared<std::string>(Contents);
-  return D.Draft.Version;
+  D.D.Contents = std::make_shared<std::string>(Contents);
+  return D.D.Version;
 }
 
 void DraftStore::removeDraft(PathRef File) {
@@ -121,7 +121,7 @@ llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> DraftStore::asVFS() const {
   for (const auto &Draft : Drafts)
     MemFS->addFile(Draft.getKey(), Draft.getValue().MTime,
                    std::make_unique<SharedStringBuffer>(
-                       Draft.getValue().Draft.Contents, Draft.getKey()));
+                       Draft.getValue().D.Contents, Draft.getKey()));
   return MemFS;
 }
 } // namespace clangd

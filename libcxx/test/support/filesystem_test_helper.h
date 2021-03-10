@@ -591,6 +591,12 @@ inline bool PathEq(fs::path const& LHS, fs::path const& RHS) {
   return LHS.native() == RHS.native();
 }
 
+inline bool PathEqIgnoreSep(fs::path LHS, fs::path RHS) {
+  LHS.make_preferred();
+  RHS.make_preferred();
+  return LHS.native() == RHS.native();
+}
+
 struct ExceptionChecker {
   std::errc expected_err;
   fs::path expected_path1;
