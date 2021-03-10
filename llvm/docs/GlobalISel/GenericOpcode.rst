@@ -245,6 +245,15 @@ These each perform their respective integer arithmetic on a scalar.
 
   %2:_(s32) = G_ADD %0:_(s32), %1:_(s32)
 
+G_SDIVREM, G_UDIVREM
+^^^^^^^^^^^^^^^^^^^^
+
+Perform integer division and remainder thereby producing two results.
+
+.. code-block:: none
+
+  %div:_(s32), %rem:_(s32) = G_SDIVREM %0:_(s32), %1:_(s32)
+
 G_SADDSAT, G_UADDSAT, G_SSUBSAT, G_USUBSAT, G_SSHLSAT, G_USHLSAT
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

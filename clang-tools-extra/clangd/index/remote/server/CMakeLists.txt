@@ -17,6 +17,4 @@ target_link_libraries(clangd-index-server
   RemoteIndexProto
   RemoteIndexServiceProto
   clangdRemoteMarshalling
-
-  grpc++_reflection
   )

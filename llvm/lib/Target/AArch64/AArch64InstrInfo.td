@@ -3805,10 +3805,10 @@ defm FSQRT  : SingleOperandFPData<0b0011, "fsqrt", fsqrt>;
 }
 
 let Predicates = [HasFRInt3264] in {
-  defm FRINT32Z : FRIntNNT<0b00, "frint32z">;
-  defm FRINT64Z : FRIntNNT<0b10, "frint64z">;
-  defm FRINT32X : FRIntNNT<0b01, "frint32x">;
-  defm FRINT64X : FRIntNNT<0b11, "frint64x">;
+  defm FRINT32Z : FRIntNNT<0b00, "frint32z", int_aarch64_frint32z>;
+  defm FRINT64Z : FRIntNNT<0b10, "frint64z", int_aarch64_frint64z>;
+  defm FRINT32X : FRIntNNT<0b01, "frint32x", int_aarch64_frint32x>;
+  defm FRINT64X : FRIntNNT<0b11, "frint64x", int_aarch64_frint64x>;
 } // HasFRInt3264
 
 let Predicates = [HasFullFP16] in {

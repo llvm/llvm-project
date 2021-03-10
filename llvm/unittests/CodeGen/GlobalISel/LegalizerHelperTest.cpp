@@ -3105,6 +3105,68 @@ TEST_F(AArch64GISelMITest, LowerBSWAP) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+// Test lowering of G_SDIVREM into G_SDIV and G_SREM
+TEST_F(AArch64GISelMITest, LowerSDIVREM) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_SDIVREM).lowerFor({s64}); });
+
+  LLT S64{LLT::scalar(64)};
+
+  // Build Instr
+  auto SDivrem =
+      B.buildInstr(TargetOpcode::G_SDIVREM, {S64, S64}, {Copies[0], Copies[1]});
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  // Perform Legalization
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*SDivrem, 0, S64));
+
+  const auto *CheckStr = R"(
+  CHECK: [[DIV:%[0-9]+]]:_(s64) = G_SDIV %0:_, %1:_
+  CHECK: [[REM:%[0-9]+]]:_(s64) = G_SREM %0:_, %1:_
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+// Test lowering of G_UDIVREM into G_UDIV and G_UREM
+TEST_F(AArch64GISelMITest, LowerUDIVREM) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_UDIVREM).lowerFor({s64}); });
+
+  LLT S64{LLT::scalar(64)};
+
+  // Build Instr
+  auto UDivrem =
+      B.buildInstr(TargetOpcode::G_UDIVREM, {S64, S64}, {Copies[0], Copies[1]});
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  // Perform Legalization
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*UDivrem, 0, S64));
+
+  const auto *CheckStr = R"(
+  CHECK: [[DIV:%[0-9]+]]:_(s64) = G_UDIV %0:_, %1:_
+  CHECK: [[REM:%[0-9]+]]:_(s64) = G_UREM %0:_, %1:_
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 // Test widening of G_UNMERGE_VALUES
 TEST_F(AArch64GISelMITest, WidenUnmerge) {
   setUp();
