@@ -60,11 +60,8 @@ mlir::Type Fortran::lower::FirOpBuilder::getVarLenSeqTy(mlir::Type eleTy) {
 mlir::Value
 Fortran::lower::FirOpBuilder::createNullConstant(mlir::Location loc,
                                                  mlir::Type ptrType) {
-  auto indexType = getIndexType();
-  auto zero = createIntegerConstant(loc, indexType, 0);
-  if (!ptrType)
-    ptrType = getRefType(getNoneType());
-  return createConvert(loc, ptrType, zero);
+  auto ty = ptrType ? ptrType : getRefType(getNoneType());
+  return create<fir::ZeroOp>(loc, ty);
 }
 
 mlir::Value Fortran::lower::FirOpBuilder::createIntegerConstant(

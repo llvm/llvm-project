@@ -33,40 +33,40 @@ subroutine test_globals()
 end subroutine
 
 ! CHECK-LABEL: fir.global linkonce @_QMmod_allocatablesEc : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>> {
-  ! CHECK-DAG: %[[modcNullAddr:.*]] = fir.convert %c0{{.*}} : (index) -> !fir.heap<!fir.array<?x!fir.char<1,10>>>
+  ! CHECK-DAG: %[[modcNullAddr:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1,10>>>
   ! CHECK-DAG: %[[modcShape:.*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
   ! CHECK: %[[modcInitBox:.*]] = fir.embox %[[modcNullAddr]](%[[modcShape]]) : (!fir.heap<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>
   ! CHECK: fir.has_value %[[modcInitBox]] : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>
 
 ! CHECK-LABEL: fir.global internal @_QFtest_globalsEgc1 : !fir.box<!fir.heap<!fir.char<1,?>>>
-  ! CHECK-DAG: %[[gc1NullAddr:.*]] = fir.convert %c0{{.*}} : (index) -> !fir.heap<!fir.char<1,?>>
+  ! CHECK-DAG: %[[gc1NullAddr:.*]] = fir.zero_bits !fir.heap<!fir.char<1,?>>
   ! CHECK: %[[gc1InitBox:.*]] = fir.embox %[[gc1NullAddr]] typeparams %c0{{.*}} : (!fir.heap<!fir.char<1,?>>, index) -> !fir.box<!fir.heap<!fir.char<1,?>>>
   ! CHECK: fir.has_value %[[gc1InitBox]] : !fir.box<!fir.heap<!fir.char<1,?>>>
 
 ! CHECK-LABEL: fir.global internal @_QFtest_globalsEgc2 : !fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,?>>>>
-  ! CHECK-DAG: %[[gc2NullAddr:.*]] = fir.convert %c0{{.*}} : (index) -> !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
+  ! CHECK-DAG: %[[gc2NullAddr:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
   ! CHECK-DAG: %[[gc2NullShape:.*]] = fir.shape %c0{{.*}}, %c0{{.*}} : (index, index) -> !fir.shape<2>
   ! CHECK: %[[gc2InitBox:.*]] = fir.embox %[[gc2NullAddr]](%[[gc2NullShape]]) typeparams %c0{{.*}} : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index) -> !fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,?>>>>
   ! CHECK: fir.has_value %[[gc2InitBox]] : !fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,?>>>>
 
 ! CHECK-LABEL: fir.global internal @_QFtest_globalsEgc3 : !fir.box<!fir.heap<!fir.char<1,10>>>
-  ! CHECK-DAG: %[[gc3NullAddr:.*]] = fir.convert %c0{{.*}} : (index) -> !fir.heap<!fir.char<1,10>>
+  ! CHECK-DAG: %[[gc3NullAddr:.*]] = fir.zero_bits !fir.heap<!fir.char<1,10>>
   ! CHECK: %[[gc3InitBox:.*]] = fir.embox %[[gc3NullAddr]] : (!fir.heap<!fir.char<1,10>>) -> !fir.box<!fir.heap<!fir.char<1,10>>>
   ! CHECK: fir.has_value %[[gc3InitBox]] : !fir.box<!fir.heap<!fir.char<1,10>>>
 
 ! CHECK-LABEL: fir.global internal @_QFtest_globalsEgc4 : !fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,10>>>>
-  ! CHECK-DAG: %[[gc4NullAddr:.*]] = fir.convert %c0{{.*}} : (index) -> !fir.heap<!fir.array<?x?x!fir.char<1,10>>>
+  ! CHECK-DAG: %[[gc4NullAddr:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?x!fir.char<1,10>>>
   ! CHECK-DAG: %[[gc4NullShape:.*]] = fir.shape %c0{{.*}}, %c0{{.*}} : (index, index) -> !fir.shape<2>
   ! CHECK: %[[gc4InitBox:.*]] = fir.embox %[[gc4NullAddr]](%[[gc4NullShape]]) : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,10>>>>
   ! CHECK: fir.has_value %[[gc4InitBox]] : !fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,10>>>>
 
 ! CHECK-LABEL: fir.global internal @_QFtest_globalsEgx : !fir.box<!fir.heap<i32>>
-  ! CHECK: %[[gxNullAddr:.*]] = fir.convert %c0{{.*}} : (index) -> !fir.heap<i32>
+  ! CHECK: %[[gxNullAddr:.*]] = fir.zero_bits !fir.heap<i32>
   ! CHECK: %[[gxInitBox:.*]] = fir.embox %0 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
   ! CHECK: fir.has_value %[[gxInitBox]] : !fir.box<!fir.heap<i32>>
 
 ! CHECK-LABEL: fir.global internal @_QFtest_globalsEgy : !fir.box<!fir.heap<!fir.array<?x?xi32>>> {
-  ! CHECK-DAG: %[[gyNullAddr:.*]] = fir.convert %c0{{.*}} : (index) -> !fir.heap<!fir.array<?x?xi32>>
+  ! CHECK-DAG: %[[gyNullAddr:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?xi32>>
   ! CHECK-DAG: %[[gyShape:.*]] = fir.shape %c0{{.*}}, %c0{{.*}} : (index, index) -> !fir.shape<2>
   ! CHECK: %[[gyInitBox:.*]] = fir.embox %[[gyNullAddr]](%[[gyShape]]) : (!fir.heap<!fir.array<?x?xi32>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?xi32>>>
   ! CHECK: fir.has_value %[[gyInitBox]] : !fir.box<!fir.heap<!fir.array<?x?xi32>>>
