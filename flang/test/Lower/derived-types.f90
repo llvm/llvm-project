@@ -116,6 +116,23 @@ subroutine char_array_elt_comp_ref()
   call char_bar(some_c_array(5)%ch)
 end subroutine
 
+! -----------------------------------------------------------------------------
+!            Test loading derived type components
+! -----------------------------------------------------------------------------
+
+! Most of the other tests only require lowering code to compute the address of
+! components. This one requires loading a component which tests other code paths
+! in lowering.
+
+! CHECK-LABEL: @_QMdPscalar_numeric_load
+! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.type<_QMdTr{x:f32}>>
+real function scalar_numeric_load(some_r)
+  type(r) :: some_r
+  ! CHECK: %[[field:.*]] = fir.field_index x, !fir.type<_QMdTr{x:f32}>
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[arg0]], %[[field]] : (!fir.ref<!fir.type<_QMdTr{x:f32}>>, !fir.field) -> !fir.ref<f32>
+  ! CHECK: fir.load %[[coor]]
+  scalar_numeric_load = some_r%x
+end function
 
 ! -----------------------------------------------------------------------------
 !            Test returned derived types (no length parameters)
