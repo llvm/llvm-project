@@ -174,12 +174,12 @@ static void checkTextSegment(InputSection *isec) {
 // is no source address to make a relative location meaningful.
 static void relocateCompactUnwind(MergedOutputSection *compactUnwindSection,
                                   std::vector<CompactUnwindEntry64> &cuVector) {
-  for (InputSection *isec : compactUnwindSection->inputs) {
+  for (const InputSection *isec : compactUnwindSection->inputs) {
     uint8_t *buf =
         reinterpret_cast<uint8_t *>(cuVector.data()) + isec->outSecFileOff;
     memcpy(buf, isec->data.data(), isec->data.size());
 
-    for (Reloc &r : isec->relocs) {
+    for (const Reloc &r : isec->relocs) {
       uint64_t referentVA = 0;
       if (auto *referentSym = r.referent.dyn_cast<macho::Symbol *>()) {
         if (!isa<Undefined>(referentSym)) {

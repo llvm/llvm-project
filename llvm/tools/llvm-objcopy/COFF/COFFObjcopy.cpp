@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "COFFObjcopy.h"
-#include "Buffer.h"
 #include "CopyConfig.h"
 #include "Object.h"
 #include "Reader.h"
@@ -270,7 +269,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 }
 
 Error executeObjcopyOnBinary(const CopyConfig &Config, COFFObjectFile &In,
-                             Buffer &Out) {
+                             raw_ostream &Out) {
   COFFReader Reader(In);
   Expected<std::unique_ptr<Object>> ObjOrErr = Reader.create();
   if (!ObjOrErr)
