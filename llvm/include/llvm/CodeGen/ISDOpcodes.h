@@ -583,6 +583,15 @@ enum NodeType {
   /// implicitly truncated to it.
   SPLAT_VECTOR,
 
+  /// SPLAT_VECTOR_PARTS(SCALAR1, SCALAR2, ...) - Returns a vector with the
+  /// scalar values joined together and then duplicated in all lanes. This
+  /// represents a SPLAT_VECTOR that has had its scalar operand expanded. This
+  /// allows representing a 64-bit splat on a target with 32-bit integers. The
+  /// total width of the scalars must cover the element width. SCALAR1 contains
+  /// the least significant bits of the value regardless of endianness and all
+  /// scalars should have the same type.
+  SPLAT_VECTOR_PARTS,
+
   /// MULHU/MULHS - Multiply high - Multiply two integers of type iN,
   /// producing an unsigned/signed value of type i[2*N], then return the top
   /// part.
