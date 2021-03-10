@@ -345,7 +345,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (auto &KV : EHInfo.UnwindDestToSrcs) {
       const auto *Dest = KV.first.get<const BasicBlock *>();
       UnwindDestToSrcs[MBBMap[Dest]] = SmallPtrSet<BBOrMBB, 4>();
-      for (const auto &P : KV.second)
+      for (const auto P : KV.second)
         UnwindDestToSrcs[MBBMap[Dest]].insert(
             MBBMap[P.get<const BasicBlock *>()]);
     }
