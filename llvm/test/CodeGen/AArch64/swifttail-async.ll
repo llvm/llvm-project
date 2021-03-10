@@ -27,3 +27,10 @@ define void @calls_swiftasync() {
   tail call void @has_swiftasync(i8* swiftasync null)
   ret void
 }
+
+define swifttailcc void @no_preserve_swiftself() {
+; CHECK-LABEL: no_preserve_swiftself:
+; CHECK-NOT: ld{{.*}}x20
+  call void asm "","~{x20}"()
+  ret void
+}

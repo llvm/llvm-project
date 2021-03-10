@@ -349,6 +349,8 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (!HasSSE)
       return CSR_Win64_NoSSE_SaveList;
     return CSR_Win64_SaveList;
+  case CallingConv::SwiftTail:
+    return IsWin64 ? CSR_Win64_SwiftTail_SaveList : CSR_64_SwiftTail_SaveList;
   case CallingConv::X86_64_SysV:
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
@@ -384,8 +386,8 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
     if (F.getAttributes().hasAttrSomewhere(Attribute::SwiftAsync) ||
         F.getCallingConv() == CallingConv::SwiftTail)
-      return IsWin64 ? CSR_Win64_SwiftError_SaveList
-                     : CSR_64_SwiftAsync_SaveList;
+      return IsWin64 ? CSR_Win64_SwiftTail_SaveList
+                     : CSR_64_SwiftTail_SaveList;
 
     if (IsWin64)
       return HasSSE ? CSR_Win64_SaveList : CSR_Win64_NoSSE_SaveList;
@@ -470,6 +472,8 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     break;
   case CallingConv::Win64:
     return CSR_Win64_RegMask;
+  case CallingConv::SwiftTail:
+    return IsWin64 ? CSR_Win64_SwiftTail_RegMask : CSR_64_SwiftTail_RegMask;
   case CallingConv::X86_64_SysV:
     return CSR_64_RegMask;
   case CallingConv::X86_INTR:
@@ -503,9 +507,8 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     if (IsSwiftCC)
       return IsWin64 ? CSR_Win64_SwiftError_RegMask : CSR_64_SwiftError_RegMask;
 
-    if (F.getAttributes().hasAttrSomewhere(Attribute::SwiftAsync) ||
-        F.getCallingConv() == CallingConv::SwiftTail)
-      return IsWin64 ? CSR_Win64_SwiftAsync_RegMask : CSR_64_SwiftAsync_RegMask;
+    if (F.getAttributes().hasAttrSomewhere(Attribute::SwiftAsync))
+      return IsWin64 ? CSR_Win64_SwiftTail_RegMask : CSR_64_SwiftTail_RegMask;
 
     return IsWin64 ? CSR_Win64_RegMask : CSR_64_RegMask;
   }
