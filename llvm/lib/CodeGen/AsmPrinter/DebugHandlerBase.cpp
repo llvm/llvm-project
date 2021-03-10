@@ -35,8 +35,7 @@ Optional<DbgVariableLocation>
 DbgVariableLocation::extractFromMachineInstruction(
     const MachineInstr &Instruction) {
   DbgVariableLocation Location;
-  // Variables calculated from multiple locations can't be represented here.
-  if (Instruction.getNumDebugOperands() != 1)
+  if (!Instruction.isDebugValue())
     return None;
   if (!Instruction.getDebugOperand(0).isReg())
     return None;
@@ -47,15 +46,6 @@ DbgVariableLocation::extractFromMachineInstruction(
   int64_t Offset = 0;
   const DIExpression *DIExpr = Instruction.getDebugExpression();
   auto Op = DIExpr->expr_op_begin();
-  // We can handle a DBG_VALUE_LIST iff it has exactly one location operand that
-  // appears exactly once at the start of the expression.
-  if (Instruction.isDebugValueList()) {
-    if (Instruction.getNumDebugOperands() == 1 &&
-        Op->getOp() == dwarf::DW_OP_LLVM_arg)
-      ++Op;
-    else
-      return None;
-  }
   while (Op != DIExpr->expr_op_end()) {
     switch (Op->getOp()) {
     case dwarf::DW_OP_constu: {
@@ -271,8 +261,7 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
       continue;
 
     auto IsDescribedByReg = [](const MachineInstr *MI) {
-      return any_of(MI->debug_operands(),
-                    [](auto &MO) { return MO.isReg() && MO.getReg(); });
+      return MI->getDebugOperand(0).isReg() && MI->getDebugOperand(0).getReg();
     };
 
     // The first mention of a function argument gets the CurrentFnBegin label,
