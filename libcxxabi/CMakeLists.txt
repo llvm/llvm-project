@@ -156,9 +156,23 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_PATH}/include" CACHE PATH
+# TODO: This is a workaround for the fact that Standalone builds can't use
+# targets from the other runtimes (so the cxx-headers target doesn't exist).
+set(LIBCXXABI_LIBCXX_INCLUDES "" CACHE PATH
     "Specify path to libc++ includes.")
-message(STATUS "Libc++abi will be using libc++ includes from ${LIBCXXABI_LIBCXX_INCLUDES}")
+if (LIBCXXABI_STANDALONE_BUILD)
+  if (NOT IS_DIRECTORY ${LIBCXXABI_LIBCXX_INCLUDES})
+    message(FATAL_ERROR
+      "LIBCXXABI_LIBCXX_INCLUDES=${LIBCXXABI_LIBCXX_INCLUDES} is not a valid directory. "
+      "Please provide the path to where the libc++ headers have been installed.")
+  endif()
+  add_library(cxx-headers INTERFACE)
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+    target_compile_options(cxx-headers INTERFACE /I "${LIBCXXABI_LIBCXX_INCLUDES}")
+  else()
+    target_compile_options(cxx-headers INTERFACE -I "${LIBCXXABI_LIBCXX_INCLUDES}")
+  endif()
+endif()
 
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." OFF)
@@ -180,6 +194,7 @@ set(CMAKE_MODULE_PATH
   )
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+  set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
   if(LIBCXX_LIBDIR_SUBDIR)
@@ -187,9 +202,11 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
     string(APPEND LIBCXXABI_INSTALL_LIBRARY_DIR /${LIBCXXABI_LIBDIR_SUBDIR})
   endif()
 elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
+  set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX})
 else()
+  set(LIBCXXABI_HEADER_DIR ${CMAKE_BINARY_DIR})
   set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX})
 endif()
