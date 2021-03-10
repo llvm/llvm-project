@@ -2299,7 +2299,8 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
                                            RegisterContext *regctx,
                                            bool &behaves_like_zeroth_frame) {
 
-  ArchSpec arch = process_sp->GetTarget().GetArchitecture();
+  Target &target(process_sp->GetTarget());
+  ArchSpec arch = target.GetArchitecture();
   uint32_t async_context_regnum;
   uint32_t fp_regnum;
   uint32_t pc_regnum;
@@ -2333,6 +2334,35 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
       }
     }
     return UnwindPlanSP();
+  }
+
+  // If we're in the prologue of a function, don't provide a Swift async
+  // unwind plan.  We can be tricked by unmodified caller-registers that
+  // make this look like an async frame when this is a standard ABI function
+  // call, and the parent is the async frame.
+  // This assumes that the frame pointer register will be modified in the
+  // prologue.
+  Address pc;
+  pc.SetLoadAddress(regctx->GetPC(), &target);
+  SymbolContext sc;
+  if (pc.IsValid()) {
+    pc.CalculateSymbolContext(&sc,
+                              eSymbolContextFunction | eSymbolContextSymbol);
+    if (sc.function) {
+      Address func_start_addr = sc.function->GetAddressRange().GetBaseAddress();
+      AddressRange prologue_range(func_start_addr,
+                                  sc.function->GetPrologueByteSize());
+      if (prologue_range.ContainsLoadAddress(pc, &target)) {
+        return UnwindPlanSP();
+      }
+    } else if (sc.symbol) {
+      Address func_start_addr = sc.symbol->GetAddress();
+      AddressRange prologue_range(func_start_addr,
+                                  sc.symbol->GetPrologueByteSize());
+      if (prologue_range.ContainsLoadAddress(pc, &target)) {
+        return UnwindPlanSP();
+      }
+    }
   }
 
   addr_t saved_fp = LLDB_INVALID_ADDRESS;
