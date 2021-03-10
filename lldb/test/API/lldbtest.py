@@ -112,7 +112,7 @@ class LLDBTest(TestFormat):
             'recursive_mutex lock failed' in err and
             exitCode != 0
         ):
-            return lit.Test.PASS, output
+            return lit.Test.FLAKYPASS, output
 
         if exitCode:
             if 'XPASS:' in out or 'XPASS:' in err:
