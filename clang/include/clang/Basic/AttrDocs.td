@@ -4538,7 +4538,8 @@ def SwiftContextDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
 The ``swift_context`` attribute marks a parameter of a ``swiftcall``
-function as having the special context-parameter ABI treatment.
+or ``swiftasynccall`` function as having the special context-parameter
+ABI treatment.
 
 This treatment generally passes the context value in a special register
 which is normally callee-preserved.
@@ -4560,9 +4561,10 @@ provided it declares the right formal arguments.
 
 In most respects, this is similar to the ``swiftcall`` attribute, except for
 the following:
-- A parameter may be marked ``swift_async_context``, but the parameter
-  attributes ``swift_context``, ``swift_error_result`` and
-  ``swift_indirect_result`` are not permitted.
+- A parameter may be marked ``swift_async_context``, ``swift_context``
+  or ``swift_indirect_result`` (with the same restrictions on parameter
+  ordering as ``swiftcall``) but the parameter attribute
+  ``swift_error_result`` is not permitted.
 - A ``swiftasynccall`` function must have return type ``void``.
 - Within a ``swiftasynccall`` function, a call to a ``swiftasynccall``
   function that is the immediate operand of a ``return`` statement is
@@ -4627,7 +4629,8 @@ def SwiftIndirectResultDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
 The ``swift_indirect_result`` attribute marks a parameter of a ``swiftcall``
-function as having the special indirect-result ABI treatment.
+or ``swiftasynccall`` function as having the special indirect-result ABI
+treatment.
 
 This treatment gives the parameter the target's normal indirect-result
 ABI treatment, which may involve passing it differently from an ordinary
