@@ -6712,9 +6712,12 @@ bool HandleOperatorDeleteCall(EvalInfo &Info, const CallExpr *E) {
   if (Pointer.Designator.Invalid)
     return false;
 
-  // Deleting a null pointer has no effect.
-  if (Pointer.isNullPointer())
+  // Deleting a null pointer would have no effect, but it's not permitted by
+  // std::allocator<T>::deallocate's contract.
+  if (Pointer.isNullPointer()) {
+    Info.CCEDiag(E->getExprLoc(), diag::note_constexpr_deallocate_null);
     return true;
+  }
 
   if (!CheckDeleteKind(Info, E, Pointer, DynAlloc::StdAllocator))
     return false;

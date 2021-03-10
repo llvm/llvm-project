@@ -2492,9 +2492,8 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
     PrimitiveShadow = DFSF.collapseToPrimitiveShadow(Shadow, &SI);
   }
   Value *Origin = nullptr;
-  if (ShouldTrackOrigins) {
+  if (ShouldTrackOrigins)
     Origin = DFSF.combineOrigins(Shadows, Origins, &SI);
-  }
   DFSF.storePrimitiveShadowOrigin(SI.getPointerOperand(), Size, SI.getAlign(),
                                   PrimitiveShadow, Origin, &SI);
   if (ClEventCallbacks) {
@@ -2693,6 +2692,17 @@ void DFSanVisitor::visitMemSetInst(MemSetInst &I) {
 
 void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   IRBuilder<> IRB(&I);
+
+  // CopyOrMoveOrigin transfers origins by refering to their shadows. So we
+  // need to move origins before moving shadows.
+  if (DFSF.DFS.shouldTrackOrigins()) {
+    IRB.CreateCall(
+        DFSF.DFS.DFSanMemOriginTransferFn,
+        {IRB.CreatePointerCast(I.getArgOperand(0), IRB.getInt8PtrTy()),
+         IRB.CreatePointerCast(I.getArgOperand(1), IRB.getInt8PtrTy()),
+         IRB.CreateIntCast(I.getArgOperand(2), DFSF.DFS.IntptrTy, false)});
+  }
+
   Value *RawDestShadow = DFSF.DFS.getShadowAddress(I.getDest(), &I);
   Value *SrcShadow = DFSF.DFS.getShadowAddress(I.getSource(), &I);
   Value *LenShadow =

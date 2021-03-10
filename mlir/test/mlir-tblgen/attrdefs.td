@@ -18,17 +18,17 @@ include "mlir/IR/OpBase.td"
 // DEF: ::mlir::test::IndexAttr,
 // DEF: ::mlir::test::SingleParameterAttr
 
-// DEF-LABEL: OptionalParseResult generatedAttributeParser(::mlir::MLIRContext *context,
+// DEF-LABEL: ::mlir::OptionalParseResult generatedAttributeParser(::mlir::MLIRContext *context,
 // DEF-NEXT: ::mlir::DialectAsmParser &parser,
 // DEF-NEXT: ::llvm::StringRef mnemonic, ::mlir::Type type,
 // DEF-NEXT: ::mlir::Attribute &value) {
 // DEF: if (mnemonic == ::mlir::test::CompoundAAttr::getMnemonic()) {
 // DEF-NEXT: value = ::mlir::test::CompoundAAttr::parse(context, parser, type);
-// DEF-NEXT: return success(!!value);
+// DEF-NEXT: return ::mlir::success(!!value);
 // DEF-NEXT: }
 // DEF-NEXT: if (mnemonic == ::mlir::test::IndexAttr::getMnemonic()) {
 // DEF-NEXT:   value = ::mlir::test::IndexAttr::parse(context, parser, type);
-// DEF-NEXT:   return success(!!value);
+// DEF-NEXT:   return ::mlir::success(!!value);
 // DEF: return {};
 
 def Test_Dialect: Dialect {

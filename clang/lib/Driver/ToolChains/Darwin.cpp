@@ -1628,6 +1628,15 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
   return None;
 }
 
+/// Returns the SDK name without the optional prefix that ends with a '.' or an
+/// empty string otherwise.
+static StringRef dropSDKNamePrefix(StringRef SDKName) {
+  size_t PrefixPos = SDKName.find('.');
+  if (PrefixPos == StringRef::npos)
+    return "";
+  return SDKName.substr(PrefixPos + 1);
+}
+
 /// Tries to infer the deployment target from the SDK specified by -isysroot
 /// (or SDKROOT). Uses the version specified in the SDKSettings.json file if
 /// it's available.
@@ -1657,22 +1666,29 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
   if (Version.empty())
     return None;
 
-  if (SDK.startswith("iPhoneOS") || SDK.startswith("iPhoneSimulator"))
-    return DarwinPlatform::createFromSDK(
-        Darwin::IPhoneOS, Version,
-        /*IsSimulator=*/SDK.startswith("iPhoneSimulator"));
-  else if (SDK.startswith("MacOSX"))
-    return DarwinPlatform::createFromSDK(Darwin::MacOS,
-                                         getSystemOrSDKMacOSVersion(Version));
-  else if (SDK.startswith("WatchOS") || SDK.startswith("WatchSimulator"))
-    return DarwinPlatform::createFromSDK(
-        Darwin::WatchOS, Version,
-        /*IsSimulator=*/SDK.startswith("WatchSimulator"));
-  else if (SDK.startswith("AppleTVOS") || SDK.startswith("AppleTVSimulator"))
-    return DarwinPlatform::createFromSDK(
-        Darwin::TvOS, Version,
-        /*IsSimulator=*/SDK.startswith("AppleTVSimulator"));
-  return None;
+  auto CreatePlatformFromSDKName =
+      [&](StringRef SDK) -> Optional<DarwinPlatform> {
+    if (SDK.startswith("iPhoneOS") || SDK.startswith("iPhoneSimulator"))
+      return DarwinPlatform::createFromSDK(
+          Darwin::IPhoneOS, Version,
+          /*IsSimulator=*/SDK.startswith("iPhoneSimulator"));
+    else if (SDK.startswith("MacOSX"))
+      return DarwinPlatform::createFromSDK(Darwin::MacOS,
+                                           getSystemOrSDKMacOSVersion(Version));
+    else if (SDK.startswith("WatchOS") || SDK.startswith("WatchSimulator"))
+      return DarwinPlatform::createFromSDK(
+          Darwin::WatchOS, Version,
+          /*IsSimulator=*/SDK.startswith("WatchSimulator"));
+    else if (SDK.startswith("AppleTVOS") || SDK.startswith("AppleTVSimulator"))
+      return DarwinPlatform::createFromSDK(
+          Darwin::TvOS, Version,
+          /*IsSimulator=*/SDK.startswith("AppleTVSimulator"));
+    return None;
+  };
+  if (auto Result = CreatePlatformFromSDKName(SDK))
+    return Result;
+  // The SDK can be an SDK variant with a name like `<prefix>.<platform>`.
+  return CreatePlatformFromSDKName(dropSDKNamePrefix(SDK));
 }
 
 std::string getOSVersion(llvm::Triple::OSType OS, const llvm::Triple &Triple,
@@ -1928,7 +1944,8 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     if (SDK.size() > 0) {
       size_t StartVer = SDK.find_first_of("0123456789");
       StringRef SDKName = SDK.slice(0, StartVer);
-      if (!SDKName.startswith(getPlatformFamily()))
+      if (!SDKName.startswith(getPlatformFamily()) &&
+          !dropSDKNamePrefix(SDKName).startswith(getPlatformFamily()))
         getDriver().Diag(diag::warn_incompatible_sysroot)
             << SDKName << getPlatformFamily();
     }
