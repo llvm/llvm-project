@@ -8,4 +8,5 @@ add_mlir_dialect_library(MLIRAVX512Transforms
   MLIRAVX512
   MLIRIR
   MLIRLLVMIR
+  MLIRStandardToLLVM
   )
