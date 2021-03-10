@@ -3,27 +3,27 @@
 ! REQUIRES: new-flang-driver
 
 !--------------------------
-! FLANG DRIVER (flang-new)
+! FLANG DRIVER (flang)
 !--------------------------
 ! Input type is implicit
-! RUN: cat %s | flang-new -E - | FileCheck %s --check-prefix=PP-NOT-DEFINED
-! RUN: cat %s | flang-new -DNEW -E - | FileCheck %s --check-prefix=PP-DEFINED
+! RUN: cat %s | %flang -E - | FileCheck %s --check-prefix=PP-NOT-DEFINED
+! RUN: cat %s | %flang -DNEW -E - | FileCheck %s --check-prefix=PP-DEFINED
 
 ! Input type is explicit
-! RUN: cat %s | flang-new -E -x f95-cpp-input - | FileCheck %s --check-prefix=PP-NOT-DEFINED
-! RUN: cat %s | flang-new -DNEW -E -x f95-cpp-input - | FileCheck %s --check-prefix=PP-DEFINED
+! RUN: cat %s | %flang -E -x f95-cpp-input - | FileCheck %s --check-prefix=PP-NOT-DEFINED
+! RUN: cat %s | %flang -DNEW -E -x f95-cpp-input - | FileCheck %s --check-prefix=PP-DEFINED
 
 !---------------------------------------
-! FLANG FRONTEND DRIVER (flang-new -fc1)
+! FLANG FRONTEND DRIVER (flang -fc1)
 !---------------------------------------
 ! Test `-E`: for the corresponding frontend actions the driver relies on the prescanner API to handle file I/O
-! RUN: cat %s | flang-new -fc1 -E | FileCheck %s --check-prefix=PP-NOT-DEFINED
-! RUN: cat %s | flang-new -fc1 -DNEW -E | FileCheck %s --check-prefix=PP-DEFINED
+! RUN: cat %s | %flang -fc1 -E | FileCheck %s --check-prefix=PP-NOT-DEFINED
+! RUN: cat %s | %flang -fc1 -DNEW -E | FileCheck %s --check-prefix=PP-DEFINED
 
 ! Test `-test-io`: for the corresponding frontend action (`InputOutputTestAction`) the driver handles the file I/O on its own
 ! the corresponding action (`PrintPreprocessedAction`)
-! RUN: cat %s | flang-new -fc1 -test-io | FileCheck %s --check-prefix=IO --match-full-lines
-! RUN: cat %s | flang-new -fc1 -DNEW -test-io | FileCheck %s --check-prefix=IO --match-full-lines
+! RUN: cat %s | %flang -fc1 -test-io | FileCheck %s --check-prefix=IO --match-full-lines
+! RUN: cat %s | %flang -fc1 -DNEW -test-io | FileCheck %s --check-prefix=IO --match-full-lines
 
 !-------------------------
 ! EXPECTED OUTPUT for `-E`

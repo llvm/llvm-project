@@ -24,7 +24,7 @@ using namespace mlir::LLVM;
 
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
-/// to the LLVMArmNeon dialect to LLVM IR.
+/// to the ArmNeon dialect to LLVM IR.
 class ArmNeonDialectLLVMIRTranslationInterface
     : public LLVMTranslationDialectInterface {
 public:

@@ -36,8 +36,8 @@ func @memrefs(memref<2x4xi8, >) // expected-error {{expected list element}}
 func @memrefs(memref<2x4xi8, #map7>) // expected-error {{undefined symbol alias id 'map7'}}
 
 // -----
-// Test non affine map in memref type.
-func @memrefs(memref<2x4xi8, i8>) // expected-error {{expected affine map in memref type}}
+// Test unsupported memory space.
+func @memrefs(memref<2x4xi8, i8>) // expected-error {{unsupported memory space Attribute}}
 
 // -----
 // Test non-existent map in map composition of memref type.

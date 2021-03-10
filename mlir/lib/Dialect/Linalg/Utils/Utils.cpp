@@ -98,23 +98,6 @@ static void unpackRanges(ArrayRef<Range> ranges, SmallVectorImpl<Value> &lbs,
 namespace mlir {
 namespace linalg {
 
-SmallVector<int64_t, 8> getStaticShape(LinalgOp linalgOp) {
-  SmallVector<int64_t, 8> res;
-  for (Value v : linalgOp.getShapedOperands()) {
-    auto shape = v.getType().cast<ShapedType>().getShape();
-    res.append(shape.begin(), shape.end());
-  }
-  return res;
-}
-
-Optional<SmallVector<int64_t, 4>> getStaticLoopRanges(LinalgOp linalgOp) {
-  SmallVector<int64_t, 8> viewSizes = getStaticShape(linalgOp);
-  AffineMap invertedMap = linalgOp.getShapesToLoopsMap();
-  if (!invertedMap)
-    return {};
-  return invertedMap.compose(viewSizes);
-}
-
 /// If `size` comes from an AffineMinOp and one of the values of AffineMinOp
 /// is a constant then return a new value set to the smallest such constant.
 /// Otherwise returngetSmallestBoundingIndex nullptr.

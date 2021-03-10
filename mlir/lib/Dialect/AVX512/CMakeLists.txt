@@ -1,13 +1,2 @@
-add_mlir_dialect_library(MLIRAVX512
-  IR/AVX512Dialect.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/AVX512
-
-  DEPENDS
-  MLIRAVX512IncGen
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRSideEffectInterfaces
-  )
+add_subdirectory(IR)
+add_subdirectory(Transforms)

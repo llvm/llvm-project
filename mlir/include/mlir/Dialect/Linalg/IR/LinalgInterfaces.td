@@ -1101,6 +1101,44 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
             getNumInputs() + resultIdx, dim);
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Like `getShape`, but only returns statically-known information, without
+        generating any new IR. For each shape dimension, returns >=0 if that
+        dimension is statically known, or ShapeType::kDynamicSize otherwise.
+      }],
+      /*retTy=*/"SmallVector<int64_t, 8>",
+      /*methodName=*/"getStaticShape",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        SmallVector<int64_t, 8> res;
+        for (Value v : getShapedOperands()) {
+          auto shape = v.getType().cast<ShapedType>().getShape();
+          res.append(shape.begin(), shape.end());
+        }
+        return res;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the statically-known loop ranges. Composes
+        `getShapesToLoopsMap()` with the result of `getStaticShape`.
+        Returns None if `getShapesToLoopsMap()` fails. Returns
+        ShapeType::kDynamicSize for non-statically-known loop ranges.
+      }],
+      /*retTy=*/"Optional<SmallVector<int64_t, 4>>",
+      /*methodName=*/"getStaticLoopRanges",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        SmallVector<int64_t, 8> viewSizes = getStaticShape();
+        AffineMap invertedMap = getShapesToLoopsMap();
+        if (!invertedMap)
+          return {};
+        return invertedMap.compose(viewSizes);
+      }]
+    >,
 
     //===------------------------------------------------------------------===//
     // Other static interface methods.

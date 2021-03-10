@@ -1,4 +1,4 @@
-//===- LLVMAVX512ToLLVMIRTranslation.cpp - Translate LLVMAVX512 to LLVM IR-===//
+//===- AVX512ToLLVMIRTranslation.cpp - Translate AVX512 to LLVM IR---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a translation between the MLIR LLVMAVX512 dialect and
+// This file implements a translation between the MLIR AVX512 dialect and
 // LLVM IR.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Target/LLVMIR/Dialect/LLVMAVX512/LLVMAVX512ToLLVMIRTranslation.h"
-#include "mlir/Dialect/LLVMIR/LLVMAVX512Dialect.h"
+#include "mlir/Target/LLVMIR/Dialect/AVX512/AVX512ToLLVMIRTranslation.h"
+#include "mlir/Dialect/AVX512/AVX512Dialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -24,8 +24,8 @@ using namespace mlir::LLVM;
 
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
-/// to the LLVMAVX512 dialect to LLVM IR.
-class LLVMAVX512DialectLLVMIRTranslationInterface
+/// to the AVX512 dialect to LLVM IR.
+class AVX512DialectLLVMIRTranslationInterface
     : public LLVMTranslationDialectInterface {
 public:
   using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
@@ -36,21 +36,21 @@ public:
   convertOperation(Operation *op, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) const final {
     Operation &opInst = *op;
-#include "mlir/Dialect/LLVMIR/LLVMAVX512Conversions.inc"
+#include "mlir/Dialect/AVX512/AVX512Conversions.inc"
 
     return failure();
   }
 };
 } // end namespace
 
-void mlir::registerLLVMAVX512DialectTranslation(DialectRegistry &registry) {
-  registry.insert<LLVM::LLVMAVX512Dialect>();
-  registry.addDialectInterface<LLVM::LLVMAVX512Dialect,
-                               LLVMAVX512DialectLLVMIRTranslationInterface>();
+void mlir::registerAVX512DialectTranslation(DialectRegistry &registry) {
+  registry.insert<avx512::AVX512Dialect>();
+  registry.addDialectInterface<avx512::AVX512Dialect,
+                               AVX512DialectLLVMIRTranslationInterface>();
 }
 
-void mlir::registerLLVMAVX512DialectTranslation(MLIRContext &context) {
+void mlir::registerAVX512DialectTranslation(MLIRContext &context) {
   DialectRegistry registry;
-  registerLLVMAVX512DialectTranslation(registry);
+  registerAVX512DialectTranslation(registry);
   context.appendDialectRegistry(registry);
 }

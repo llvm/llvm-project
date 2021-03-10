@@ -52,6 +52,9 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
   case DebugDumpProvenance:
     return std::make_unique<DebugDumpProvenanceAction>();
     break;
+  case DebugDumpParsingLog:
+    return std::make_unique<DebugDumpParsingLogAction>();
+    break;
   case DebugMeasureParseTree:
     return std::make_unique<DebugMeasureParseTreeAction>();
     break;

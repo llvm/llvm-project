@@ -1210,7 +1210,40 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
     setValue(&Relocate, Relocation);
     return;
   }
-  
+
+  if (Record.type == RecordType::Spill) {
+    unsigned Index = Record.payload.FI;
+    SDValue SpillSlot = DAG.getTargetFrameIndex(Index, getFrameIndexTy());
+
+    // All the reloads are independent and are reading memory only modified by
+    // statepoints (i.e. no other aliasing stores); informing SelectionDAG of
+    // this this let's CSE kick in for free and allows reordering of
+    // instructions if possible.  The lowering for statepoint sets the root,
+    // so this is ordering all reloads with the either
+    // a) the statepoint node itself, or
+    // b) the entry of the current block for an invoke statepoint.
+    const SDValue Chain = DAG.getRoot(); // != Builder.getRoot()
+
+    auto &MF = DAG.getMachineFunction();
+    auto &MFI = MF.getFrameInfo();
+    auto PtrInfo = MachinePointerInfo::getFixedStack(MF, Index);
+    auto *LoadMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
+                                            MFI.getObjectSize(Index),
+                                            MFI.getObjectAlign(Index));
+
+    auto LoadVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
+                                                           Relocate.getType());
+
+    SDValue SpillLoad =
+        DAG.getLoad(LoadVT, getCurSDLoc(), Chain, SpillSlot, LoadMMO);
+    PendingLoads.push_back(SpillLoad.getValue(1));
+
+    assert(SpillLoad.getNode());
+    setValue(&Relocate, SpillLoad);
+    return;
+  }
+
+  assert(Record.type == RecordType::NoRelocate);
   SDValue SD = getValue(DerivedPtr);
 
   if (SD.isUndef() && SD.getValueType().getSizeInBits() <= 64) {
@@ -1220,43 +1253,9 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
     return;
   }
 
-
   // We didn't need to spill these special cases (constants and allocas).
   // See the handling in spillIncomingValueForStatepoint for detail.
-  if (Record.type == RecordType::NoRelocate) {
-    setValue(&Relocate, SD);
-    return;
-  }
-
-  assert(Record.type == RecordType::Spill);
-
-  unsigned Index = Record.payload.FI;;
-  SDValue SpillSlot = DAG.getTargetFrameIndex(Index, getFrameIndexTy());
-
-  // All the reloads are independent and are reading memory only modified by
-  // statepoints (i.e. no other aliasing stores); informing SelectionDAG of
-  // this this let's CSE kick in for free and allows reordering of instructions
-  // if possible.  The lowering for statepoint sets the root, so this is
-  // ordering all reloads with the either a) the statepoint node itself, or b)
-  // the entry of the current block for an invoke statepoint.
-  const SDValue Chain = DAG.getRoot(); // != Builder.getRoot()
-
-  auto &MF = DAG.getMachineFunction();
-  auto &MFI = MF.getFrameInfo();
-  auto PtrInfo = MachinePointerInfo::getFixedStack(MF, Index);
-  auto *LoadMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
-                                          MFI.getObjectSize(Index),
-                                          MFI.getObjectAlign(Index));
-
-  auto LoadVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
-                                                         Relocate.getType());
-
-  SDValue SpillLoad = DAG.getLoad(LoadVT, getCurSDLoc(), Chain,
-                                  SpillSlot, LoadMMO);
-  PendingLoads.push_back(SpillLoad.getValue(1));
-
-  assert(SpillLoad.getNode());
-  setValue(&Relocate, SpillLoad);
+  setValue(&Relocate, SD);
 }
 
 void SelectionDAGBuilder::LowerDeoptimizeCall(const CallInst *CI) {

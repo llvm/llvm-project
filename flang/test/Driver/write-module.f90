@@ -1,17 +1,28 @@
-! RUN: rm -rf %t && mkdir -p %t/mod-dir && cd %t && %f18 -fparse-only %s
-! RUN: ls %t/testmodule.mod && not ls %t/mod-dir/testmodule.mod
+! Checks that the module file:
+!   * is _saved_
+!   * is saved in the _directory specified by the user_
+! We use `-fsyntax-only` as it stops after the semantic checks (the module file is generated when sema checks are run)
 
-! RUN: rm -rf %t && mkdir -p %t/mod-dir && cd %t && %f18 -fparse-only -module mod-dir %s
-! RUN: ls %t/mod-dir/testmodule.mod && not ls %t/testmodule.mod
+!--------------------------
+! -module-dir
+!--------------------------
+! RUN: rm -rf %t && mkdir -p %t/dir-flang
+! RUN: cd %t && %flang -fsyntax-only -module-dir %t/dir-flang %s
+! RUN: ls %t/dir-flang/testmodule.mod && not ls %t/testmodule.mod
 
-! RUN: rm -rf %t && mkdir -p %t/mod-dir && cd %t && %f18 -fparse-only -module-dir mod-dir %s
-! RUN: ls %t/mod-dir/testmodule.mod && not ls %t/testmodule.mod
+!---------------------------
+! -J <dir> (i.e. with space)
+!---------------------------
+! RUN: rm -rf %t && mkdir -p %t/dir-flang
+! RUN: cd %t && %flang -fsyntax-only -J %t/dir-flang %s
+! RUN: ls %t/dir-flang/testmodule.mod && not ls %t/testmodule.mod
 
-! RUN: rm -rf %t && mkdir -p %t/mod-dir && cd %t && %f18 -fparse-only -J mod-dir %s
-! RUN: ls %t/mod-dir/testmodule.mod && not ls %t/testmodule.mod
-
-! RUN: rm -rf %t && mkdir -p %t/mod-dir && cd %t && %f18 -fparse-only -Jmod-dir %s
-! RUN: ls %t/mod-dir/testmodule.mod && not ls %t/testmodule.mod
+!------------------------------
+! -J<dir> (i.e. without space)
+!------------------------------
+! RUN: rm -rf %t && mkdir -p %t/dir-flang
+! RUN: cd %t && %flang -fsyntax-only -J%t/dir-flang %s
+! RUN: ls %t/dir-flang/testmodule.mod && not ls %t/testmodule.mod
 
 module testmodule
   type::t2
