@@ -11747,31 +11747,46 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
 
 // Turn a v8i8/v16i8 extended vecreduce into a udot/sdot and vecreduce
 //   vecreduce.add(ext(A)) to vecreduce.add(DOT(zero, A, one))
+//   vecreduce.add(mul(ext(A), ext(B))) to vecreduce.add(DOT(zero, A, B))
 static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
                                           const AArch64Subtarget *ST) {
   SDValue Op0 = N->getOperand(0);
-  if (!ST->hasDotProd() || N->getValueType(0) != MVT::i32)
-    return SDValue();
-
-  if (Op0.getValueType().getVectorElementType() != MVT::i32)
+  if (!ST->hasDotProd() || N->getValueType(0) != MVT::i32 ||
+      Op0.getValueType().getVectorElementType() != MVT::i32)
     return SDValue();
 
   unsigned ExtOpcode = Op0.getOpcode();
+  SDValue A = Op0;
+  SDValue B;
+  if (ExtOpcode == ISD::MUL) {
+    A = Op0.getOperand(0);
+    B = Op0.getOperand(1);
+    if (A.getOpcode() != B.getOpcode() ||
+        A.getOperand(0).getValueType() != B.getOperand(0).getValueType())
+      return SDValue();
+    ExtOpcode = A.getOpcode();
+  }
   if (ExtOpcode != ISD::ZERO_EXTEND && ExtOpcode != ISD::SIGN_EXTEND)
     return SDValue();
 
-  EVT Op0VT = Op0.getOperand(0).getValueType();
+  EVT Op0VT = A.getOperand(0).getValueType();
   if (Op0VT != MVT::v8i8 && Op0VT != MVT::v16i8)
     return SDValue();
 
   SDLoc DL(Op0);
-  SDValue Ones = DAG.getConstant(1, DL, Op0VT);
+  // For non-mla reductions B can be set to 1. For MLA we take the operand of
+  // the extend B.
+  if (!B)
+    B = DAG.getConstant(1, DL, Op0VT);
+  else
+    B = B.getOperand(0);
+
   SDValue Zeros =
       DAG.getConstant(0, DL, Op0VT == MVT::v8i8 ? MVT::v2i32 : MVT::v4i32);
   auto DotOpcode =
       (ExtOpcode == ISD::ZERO_EXTEND) ? AArch64ISD::UDOT : AArch64ISD::SDOT;
   SDValue Dot = DAG.getNode(DotOpcode, DL, Zeros.getValueType(), Zeros,
-                            Ones, Op0.getOperand(0));
+                            A.getOperand(0), B);
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, N->getValueType(0), Dot);
 }
 
