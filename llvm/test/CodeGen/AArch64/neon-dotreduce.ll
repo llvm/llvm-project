@@ -31,10 +31,10 @@ define i32 @test_udot_v8i8_nomla(i8* nocapture readonly %a1) {
 ; CHECK-LABEL: test_udot_v8i8_nomla:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.4s, v0.4h, #0
-; CHECK-NEXT:    uaddw2 v0.4s, v1.4s, v0.8h
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v2.8b, #1
+; CHECK-NEXT:    udot v1.2s, v2.8b, v0.8b
+; CHECK-NEXT:    addp v0.2s, v1.2s, v1.2s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -72,10 +72,10 @@ define i32 @test_sdot_v8i8_nomla(i8* nocapture readonly %a1) {
 ; CHECK-LABEL: test_sdot_v8i8_nomla:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll v1.4s, v0.4h, #0
-; CHECK-NEXT:    saddw2 v0.4s, v1.4s, v0.8h
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v2.8b, #1
+; CHECK-NEXT:    sdot v1.2s, v2.8b, v0.8b
+; CHECK-NEXT:    addp v0.2s, v1.2s, v1.2s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -207,14 +207,11 @@ entry:
 define i32 @test_udot_v8i8_double_nomla(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; CHECK-LABEL: test_udot_v8i8_double_nomla:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.8h, v2.8b, #0
-; CHECK-NEXT:    ushll v2.4s, v0.4h, #0
-; CHECK-NEXT:    ushll v3.4s, v1.4h, #0
-; CHECK-NEXT:    uaddw2 v0.4s, v2.4s, v0.8h
-; CHECK-NEXT:    uaddw2 v1.4s, v3.4s, v1.8h
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v3.8b, #1
+; CHECK-NEXT:    udot v1.2s, v3.8b, v2.8b
+; CHECK-NEXT:    udot v1.2s, v3.8b, v0.8b
+; CHECK-NEXT:    addp v0.2s, v1.2s, v1.2s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -322,14 +319,11 @@ entry:
 define i32 @test_sdot_v8i8_double_nomla(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; CHECK-LABEL: test_sdot_v8i8_double_nomla:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll v1.8h, v2.8b, #0
-; CHECK-NEXT:    sshll v2.4s, v0.4h, #0
-; CHECK-NEXT:    sshll v3.4s, v1.4h, #0
-; CHECK-NEXT:    saddw2 v0.4s, v2.4s, v0.8h
-; CHECK-NEXT:    saddw2 v1.4s, v3.4s, v1.8h
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v3.8b, #1
+; CHECK-NEXT:    sdot v1.2s, v3.8b, v2.8b
+; CHECK-NEXT:    sdot v1.2s, v3.8b, v0.8b
+; CHECK-NEXT:    addp v0.2s, v1.2s, v1.2s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
