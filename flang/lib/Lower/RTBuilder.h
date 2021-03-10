@@ -220,6 +220,10 @@ constexpr TypeBuilderFunc getModel<Fortran::runtime::Descriptor &>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc getModel<const Fortran::runtime::Descriptor *>() {
+  return getModel<const Fortran::runtime::Descriptor &>();
+}
+template <>
 constexpr TypeBuilderFunc getModel<Fortran::runtime::Descriptor *>() {
   return getModel<Fortran::runtime::Descriptor &>();
 }
