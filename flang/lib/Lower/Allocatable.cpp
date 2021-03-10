@@ -60,14 +60,13 @@ struct ErrorManager {
     statAddr = statExpr
                    ? fir::getBase(converter.genExprAddr(statExpr, stmtCtx, loc))
                    : mlir::Value{};
-    if (statExpr && errMsgExpr) {
-      auto errMsgDesc = builder.createBox(
-          loc, converter.genExprAddr(errMsgExpr, stmtCtx, loc));
-      errMsgAddr = builder.createTemporary(loc, errMsgDesc.getType());
-      builder.create<fir::StoreOp>(loc, errMsgDesc, errMsgAddr);
-    } else {
-      errMsgAddr = builder.createNullConstant(loc);
-    }
+    errMsgAddr =
+        statExpr && errMsgExpr
+            ? builder.createBox(loc,
+                                converter.genExprAddr(errMsgExpr, stmtCtx, loc))
+            : builder.create<fir::AbsentOp>(
+                  loc,
+                  fir::BoxType::get(mlir::NoneType::get(builder.getContext())));
     sourceFile = Fortran::lower::locationToFilename(builder, loc);
     sourceLine = Fortran::lower::locationToLineNo(builder, loc,
                                                   builder.getIntegerType(32));
@@ -103,8 +102,8 @@ struct ErrorManager {
   mlir::Value sourceLine;
 
 private:
-  mlir::Value statAddr;    // STAT variable address
-  mlir::Value statValue{}; // current runtime STAT value
+  mlir::Value statAddr;  // STAT variable address
+  mlir::Value statValue; // current runtime STAT value
 };
 
 //===----------------------------------------------------------------------===//
