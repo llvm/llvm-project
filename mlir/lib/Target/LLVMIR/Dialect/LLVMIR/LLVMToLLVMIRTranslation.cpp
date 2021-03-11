@@ -171,26 +171,27 @@ static llvm::FastMathFlags getFastmathFlags(FastmathFlagsInterface &op) {
 /// Returns an LLVM metadata node corresponding to a loop option. This metadata
 /// is attached to an llvm.loop node.
 static llvm::MDNode *getLoopOptionMetadata(llvm::LLVMContext &ctx,
-                                           LoopOptionAttr option) {
+                                           LoopOptionCase option,
+                                           int64_t value) {
   StringRef name;
-  llvm::Constant *value = nullptr;
-  switch (option.getCase()) {
+  llvm::Constant *cstValue = nullptr;
+  switch (option) {
   case LoopOptionCase::disable_licm:
     name = "llvm.licm.disable";
-    value = llvm::ConstantInt::getBool(ctx, option.getBool());
+    cstValue = llvm::ConstantInt::getBool(ctx, value);
     break;
   case LoopOptionCase::disable_unroll:
     name = "llvm.loop.unroll.disable";
-    value = llvm::ConstantInt::getBool(ctx, option.getBool());
+    cstValue = llvm::ConstantInt::getBool(ctx, value);
     break;
   case LoopOptionCase::interleave_count:
     name = "llvm.loop.interleave.count";
-    value = llvm::ConstantInt::get(llvm::IntegerType::get(ctx, /*NumBits=*/32),
-                                   option.getInt());
+    cstValue = llvm::ConstantInt::get(
+        llvm::IntegerType::get(ctx, /*NumBits=*/32), value);
     break;
   }
   return llvm::MDNode::get(ctx, {llvm::MDString::get(ctx, name),
-                                 llvm::ConstantAsMetadata::get(value)});
+                                 llvm::ConstantAsMetadata::get(cstValue)});
 }
 
 static void setLoopMetadata(Operation &opInst, llvm::Instruction &llvmInst,
@@ -222,13 +223,11 @@ static void setLoopMetadata(Operation &opInst, llvm::Instruction &llvmInst,
         loopOptions.push_back(llvm::MDNode::get(ctx, parallelAccess));
       }
 
-      auto loopOptionsAttr =
-          loopAttr.getNamed(LLVMDialect::getLoopOptionsAttrName());
-      if (loopOptionsAttr.hasValue()) {
-        for (LoopOptionAttr loopOption :
-             loopOptionsAttr->second.cast<ArrayAttr>()
-                 .getAsRange<LoopOptionAttr>())
-          loopOptions.push_back(getLoopOptionMetadata(ctx, loopOption));
+      if (auto loopOptionsAttr = loopAttr.getAs<LoopOptionsAttr>(
+              LLVMDialect::getLoopOptionsAttrName())) {
+        for (auto option : loopOptionsAttr.getOptions())
+          loopOptions.push_back(
+              getLoopOptionMetadata(ctx, option.first, option.second));
       }
 
       // Create loop options and set the first operand to itself.

@@ -779,7 +779,7 @@ module {
 
 module {
   llvm.func @loopOptions() {
-      // expected-error@below {{expected 'options' to be an array attribute}}
+      // expected-error@below {{expected 'options' to be a `loopopts` attribute}}
       llvm.br ^bb4 {llvm.loop = {options = "name"}}
     ^bb4:
       llvm.return
@@ -790,8 +790,21 @@ module {
 
 module {
   llvm.func @loopOptions() {
-      // expected-error@below {{invalid loop options list}}
-      llvm.br ^bb4 {llvm.loop = {options = ["name"]}}
+      // expected-error@+2 {{unknown loop option: name}}
+      // expected-error@below {{Unknown attribute type: loopopts}}
+      llvm.br ^bb4 {llvm.loop = {options = #llvm.loopopts<name>}}
+    ^bb4:
+      llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @loopOptions() {
+      // expected-error@+2 {{loop option present twice}}
+      // expected-error@below {{Unknown attribute type: loopopts}}
+      llvm.br ^bb4 {llvm.loop = {options = #llvm.loopopts<disable_licm = true, disable_licm = true>}}
     ^bb4:
       llvm.return
   }

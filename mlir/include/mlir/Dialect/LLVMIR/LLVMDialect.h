@@ -30,8 +30,6 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.h.inc"
 #include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.h.inc"
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc"
 
 namespace llvm {
 class Type;
@@ -45,47 +43,17 @@ class SmartMutex;
 namespace mlir {
 namespace LLVM {
 class LLVMDialect;
+class LoopOptionsAttrBuilder;
 
 namespace detail {
 struct LLVMTypeStorage;
 struct LLVMDialectImpl;
-struct LoopOptionAttrStorage;
 } // namespace detail
-
-/// An attribute that specifies LLVM loop codegen options.
-class LoopOptionAttr
-    : public Attribute::AttrBase<LoopOptionAttr, Attribute,
-                                 detail::LoopOptionAttrStorage> {
-public:
-  using Base::Base;
-
-  /// Specifies the llvm.loop.unroll.disable metadata.
-  static LoopOptionAttr getDisableUnroll(MLIRContext *context,
-                                         bool disable = true);
-
-  /// Specifies the llvm.licm.disable metadata.
-  static LoopOptionAttr getDisableLICM(MLIRContext *context,
-                                       bool disable = true);
-
-  /// Specifies the llvm.loop.interleave.count metadata.
-  static LoopOptionAttr getInterleaveCount(MLIRContext *context, int32_t count);
-
-  /// Returns the loop option, e.g. parallel_access.
-  LoopOptionCase getCase() const;
-
-  /// Returns if the loop option is activated. Only valid for boolean options.
-  bool getBool() const;
-
-  /// Returns the integer value associated with a loop option. Only valid for
-  /// integer options.
-  int32_t getInt() const;
-
-  void print(DialectAsmPrinter &p) const;
-  static Attribute parse(DialectAsmParser &parser);
-};
-
 } // namespace LLVM
 } // namespace mlir
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc"
 
 ///// Ops /////
 #define GET_OP_CLASSES
@@ -105,6 +73,41 @@ Value createGlobalString(Location loc, OpBuilder &builder, StringRef name,
 /// LLVM requires some operations to be inside of a Module operation. This
 /// function confirms that the Operation has the desired properties.
 bool satisfiesLLVMModule(Operation *op);
+
+/// Builder class for LoopOptionsAttr. This helper class allows to progressively
+/// build a LoopOptionsAttr one option at a time, and pay the price of attribute
+/// creation once all the options are in place.
+class LoopOptionsAttrBuilder {
+public:
+  /// Construct a builder with an initial list of options from an existing
+  /// LoopOptionsAttr.
+  LoopOptionsAttrBuilder(LoopOptionsAttr attr);
+
+  /// Set the `disable_licm` option to the provided value. If no value
+  /// is provided the option is deleted.
+  LoopOptionsAttrBuilder &setDisableLICM(Optional<bool> value) {
+    return setOption(LoopOptionCase::disable_licm, value);
+  }
+
+  /// Set the `interleave_count` option to the provided value. If no value
+  /// is provided the option is deleted.
+  LoopOptionsAttrBuilder &setInterleaveCount(Optional<uint64_t> count) {
+    return setOption(LoopOptionCase::interleave_count, count);
+  }
+
+  /// Set the `disable_unroll` option to the provided value. If no value
+  /// is provided the option is deleted.
+  LoopOptionsAttrBuilder &setDisableUnroll(Optional<bool> value) {
+    return setOption(LoopOptionCase::disable_unroll, value);
+  }
+
+private:
+  template <typename T>
+  LoopOptionsAttrBuilder &setOption(LoopOptionCase tag, Optional<T> value);
+
+  friend class LoopOptionsAttr;
+  SmallVector<LoopOptionsAttr::OptionValuePair> options;
+};
 
 } // end namespace LLVM
 } // end namespace mlir
