@@ -328,20 +328,14 @@ def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastImm">,
 def gi_IMMPopCount : GICustomOperandRenderer<"renderPopcntImm">,
   GISDNodeXFormEquiv<IMMPopCount>;
 
-def gi_extract_glc : GICustomOperandRenderer<"renderExtractGLC">,
-  GISDNodeXFormEquiv<extract_glc>;
-
-def gi_extract_slc : GICustomOperandRenderer<"renderExtractSLC">,
-  GISDNodeXFormEquiv<extract_slc>;
-
-def gi_extract_dlc : GICustomOperandRenderer<"renderExtractDLC">,
-  GISDNodeXFormEquiv<extract_dlc>;
+def gi_extract_cpol : GICustomOperandRenderer<"renderExtractCPol">,
+  GISDNodeXFormEquiv<extract_cpol>;
 
 def gi_extract_swz : GICustomOperandRenderer<"renderExtractSWZ">,
   GISDNodeXFormEquiv<extract_swz>;
 
-def gi_extract_sccb : GICustomOperandRenderer<"renderExtractSCCB">,
-  GISDNodeXFormEquiv<extract_sccb>;
+def gi_set_glc : GICustomOperandRenderer<"renderSetGLC">,
+  GISDNodeXFormEquiv<set_glc>;
 
 def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameIndex">,
   GISDNodeXFormEquiv<frameindex_to_targetframeindex>;

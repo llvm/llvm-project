@@ -83,14 +83,14 @@ body:             |
     successors: %bb.1(0x40000000), %bb.4(0x40000000)
     liveins: $sgpr4_sgpr5
 
-    renamable $sgpr6_sgpr7 = S_LOAD_DWORDX2_IMM renamable $sgpr4_sgpr5, 0, 0, 0 :: (dereferenceable invariant load 8 from %ir.arg.kernarg.offset.cast, align 16, addrspace 4)
-    renamable $sgpr4 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 8, 0, 0 :: (dereferenceable invariant load 4 from %ir.arg1.kernarg.offset.cast, align 8, addrspace 4)
+    renamable $sgpr6_sgpr7 = S_LOAD_DWORDX2_IMM renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load 8 from %ir.arg.kernarg.offset.cast, align 16, addrspace 4)
+    renamable $sgpr4 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 8, 0 :: (dereferenceable invariant load 4 from %ir.arg1.kernarg.offset.cast, align 8, addrspace 4)
     S_WAITCNT 49279
     renamable $vgpr0 = nofpexcept V_MUL_F32_e64 0, killed $sgpr4, 0, $sgpr4, 0, 0, implicit $mode, implicit $exec
     DBG_VALUE renamable $sgpr6_sgpr7, $noreg, !11, !DIExpression(DW_OP_plus_uconst, 12, DW_OP_stack_value), debug-location !12
     $vgpr1 = V_MOV_B32_e32 $sgpr6, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $sgpr6_sgpr7
     $vgpr2 = V_MOV_B32_e32 $sgpr7, implicit $exec, implicit killed $sgpr6_sgpr7, implicit $exec
-    GLOBAL_STORE_DWORD killed renamable $vgpr1_vgpr2, renamable $vgpr0, 12, 0, 0, 0, 0, implicit $exec, debug-location !12 :: (store 4 into %ir.tmp2, addrspace 1)
+    GLOBAL_STORE_DWORD killed renamable $vgpr1_vgpr2, renamable $vgpr0, 12, 0, implicit $exec, debug-location !12 :: (store 4 into %ir.tmp2, addrspace 1)
     renamable $sgpr4 = S_MOV_B32 8388608
     renamable $sgpr4_sgpr5 = nofpexcept V_CMP_GT_F32_e64 0, killed $sgpr4, 0, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vcc = S_AND_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
@@ -102,7 +102,7 @@ body:             |
     renamable $sgpr4_sgpr5 = IMPLICIT_DEF
     $vgpr0 = V_MOV_B32_e32 $sgpr4, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr4_sgpr5
     $vgpr1 = V_MOV_B32_e32 $sgpr5, implicit $exec, implicit killed $sgpr4_sgpr5, implicit $exec
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4 from `float addrspace(1)* undef`, addrspace 1)
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (volatile load 4 from `float addrspace(1)* undef`, addrspace 1)
     renamable $sgpr4 = S_MOV_B32 2139095040
     S_WAITCNT 3952
     renamable $sgpr4_sgpr5 = nofpexcept V_CMP_NEQ_F32_e64 0, killed $sgpr4, 0, killed $vgpr0, 0, implicit $mode, implicit $exec

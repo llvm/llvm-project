@@ -38,10 +38,10 @@ flat_atomic_cmpswap v[1:2], v[3:4] slc
 // GFX10: encoding: [0x00,0x00,0xc6,0xdc,0x01,0x03,0x7d,0x00]
 
 flat_atomic_cmpswap v[1:2], v[3:4] offset:2047 glc
-// GFX10-ERR: error: invalid operand for instruction
+// GFX10-ERR: error: instruction must not use glc
 
 flat_atomic_cmpswap v[1:2], v[3:4] glc
-// GFX10-ERR: error: invalid operand for instruction
+// GFX10-ERR: error: instruction must not use glc
 
 flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:2047 glc
 // GFX10: encoding: [0xff,0x07,0xc5,0xdc,0x01,0x03,0x7d,0x00]

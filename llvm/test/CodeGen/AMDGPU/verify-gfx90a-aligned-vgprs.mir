@@ -44,8 +44,8 @@ body:            |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vreg_128_align2 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORDX2 %0, %1.sub0_sub1, 0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX2 %0, %1.sub2_sub3, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %1.sub0_sub1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %1.sub2_sub3, 0, 0, implicit $exec
 ...
 
 ---
@@ -64,42 +64,42 @@ body:            |
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    GLOBAL_STORE_DWORDX2 %0, %1, 0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX3 %0, %2, 0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 %0, %3, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX3 %0, %2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %3, 0, 0, implicit $exec
 
     ; Check virtual registers with subregisters
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    GLOBAL_STORE_DWORDX2 %0, %3.sub0_sub1, 0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX2 %0, %3.sub2_sub3, 0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX2 %0, %3.sub1_sub2, 0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX2 %0, %5.sub1_sub2, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %3.sub0_sub1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %3.sub2_sub3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %3.sub1_sub2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %5.sub1_sub2, 0, 0, implicit $exec
 
     ; Check physical register uses
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    GLOBAL_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr3_vgpr4, 0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX3 $vgpr0_vgpr1, $vgpr3_vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORDX4 $vgpr0_vgpr1, $vgpr3_vgpr4_vgpr5_vgpr6, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr3_vgpr4, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX3 $vgpr0_vgpr1, $vgpr3_vgpr4_vgpr5, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 $vgpr0_vgpr1, $vgpr3_vgpr4_vgpr5_vgpr6, 0, 0, implicit $exec
 
     ; Check virtual register defs
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    %6:vreg_64 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, 0, 0, 0, implicit $exec
-    %7:vreg_96 = GLOBAL_LOAD_DWORDX3 %0, 0, 0, 0, 0, 0, implicit $exec
-    %8:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, 0, 0, implicit $exec
+    %6:vreg_64 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec
+    %7:vreg_96 = GLOBAL_LOAD_DWORDX3 %0, 0, 0, implicit $exec
+    %8:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
 
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    $vgpr1_vgpr2 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX3 %0, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr1_vgpr2_vgpr3_vgpr4 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1_vgpr2 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec
+    $vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX3 %0, 0, 0, implicit $exec
+    $vgpr1_vgpr2_vgpr3_vgpr4 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
 
     ; Check AGPRs
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***

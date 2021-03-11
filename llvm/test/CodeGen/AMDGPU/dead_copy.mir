@@ -23,5 +23,5 @@ body:    |
     $vgpr10 = COPY killed $sgpr14, implicit $exec
     $vgpr11 = COPY killed $sgpr15, implicit $exec
 
-    FLAT_STORE_DWORDX4 $vgpr10_vgpr11, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX4 $vgpr10_vgpr11, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec, implicit $flat_scr
 ...

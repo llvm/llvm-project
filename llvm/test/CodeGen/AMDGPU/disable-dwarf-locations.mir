@@ -99,13 +99,13 @@ body:             |
 
     S_WAITCNT 0
     $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def $scc, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into %stack.2, addrspace 5)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, 0, implicit $exec :: (store 4 into %stack.2, addrspace 5)
     $exec = S_MOV_B64 killed $sgpr4_sgpr5
     $vgpr40 = V_WRITELANE_B32 $sgpr33, 2, undef $vgpr40
     $sgpr33 = S_MOV_B32 $sgpr32
     $vgpr40 = V_WRITELANE_B32 killed $sgpr30, 0, undef $vgpr40
     $vgpr40 = V_WRITELANE_B32 killed $sgpr31, 1, killed $vgpr40
-    BUFFER_STORE_DWORD_OFFSET killed renamable $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.x.addr, addrspace 5)
+    BUFFER_STORE_DWORD_OFFSET killed renamable $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.x.addr, addrspace 5)
     $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 1024, implicit-def $scc
     renamable $sgpr4 = S_GETREG_B32 30735,
     $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
@@ -120,7 +120,7 @@ body:             |
       $sgpr5 = S_ADDC_U32 internal $sgpr5, target-flags(amdgpu-rel32-hi) @ex + 4, implicit-def $scc, implicit internal $scc,
     }
     dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @ex, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit killed $vgpr1,
-    renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, 0, 0, 0, implicit $exec,
+    renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, implicit $exec,
     S_WAITCNT 3952,
     renamable $vgpr1 = V_AND_B32_e32 1, $vgpr0, implicit $exec,
     V_CMP_EQ_U32_e32 0, killed $vgpr1, implicit-def $vcc, implicit $exec,
@@ -144,7 +144,7 @@ body:             |
     $sgpr32 = frame-destroy S_SUB_U32 $sgpr32, 1024, implicit-def $scc
     $sgpr33 = V_READLANE_B32 killed $vgpr40, 2
     $sgpr6_sgpr7 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def $scc, implicit $exec
-    $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 4 from %stack.2, addrspace 5)
+    $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, 0, implicit $exec :: (load 4 from %stack.2, addrspace 5)
     $exec = S_MOV_B64 killed $sgpr6_sgpr7
     S_WAITCNT 3952,
     S_SETPC_B64_return killed renamable $sgpr4_sgpr5, implicit killed $vgpr0,

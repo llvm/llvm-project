@@ -203,7 +203,7 @@ body:             |
     liveins: $sgpr4_sgpr5
 
     %4 = COPY $sgpr4_sgpr5
-    %9 = S_LOAD_DWORDX2_IMM %4, 0, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %9 = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %8 = S_MOV_B64 0
     %7 = COPY %9
     %30 = V_MOV_B32_e32 1, implicit $exec
@@ -221,26 +221,26 @@ body:             |
     %15 = S_ADDC_U32 %7.sub1, %0.sub1, implicit-def dead $scc, implicit $scc
     %16 = REG_SEQUENCE %14, %subreg.sub0, %15, %subreg.sub1
     %18 = COPY %16
-    %17 = FLAT_LOAD_DWORD %18, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.uglygep45)
+    %17 = FLAT_LOAD_DWORD %18, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.uglygep45)
     %60 = V_BFE_U32_e64 %17, 8, 8, implicit $exec
     %61 = V_LSHLREV_B32_e32 2, killed %60, implicit $exec
     %70 = V_ADD_CO_U32_e32 %7.sub0, %61, implicit-def $vcc, implicit $exec
     %66 = COPY %13
     %65 = V_ADDC_U32_e32 0, %66, implicit-def $vcc, implicit $vcc, implicit $exec
     %67 = REG_SEQUENCE %70, %subreg.sub0, killed %65, %subreg.sub1
-    FLAT_STORE_DWORD %67, %30, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.tmp9)
+    FLAT_STORE_DWORD %67, %30, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.tmp9)
     %37 = S_ADD_U32 %14, 4, implicit-def $scc
     %38 = S_ADDC_U32 %15, 0, implicit-def dead $scc, implicit $scc
     %71 = COPY killed %37
     %72 = COPY killed %38
     %41 = REG_SEQUENCE killed %71, %subreg.sub0, killed %72, %subreg.sub1
-    %40 = FLAT_LOAD_DWORD killed %41, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.scevgep)
+    %40 = FLAT_LOAD_DWORD killed %41, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.scevgep)
     %73 = V_BFE_U32_e64 %40, 8, 8, implicit $exec
     %74 = V_LSHLREV_B32_e32 2, killed %73, implicit $exec
     %83 = V_ADD_CO_U32_e32 %7.sub0, %74, implicit-def $vcc, implicit $exec
     %78 = V_ADDC_U32_e32 0, %66, implicit-def $vcc, implicit $vcc, implicit $exec
     %80 = REG_SEQUENCE %83, %subreg.sub0, killed %78, %subreg.sub1
-    FLAT_STORE_DWORD %80, %30, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.tmp17)
+    FLAT_STORE_DWORD %80, %30, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.tmp17)
     %55 = S_ADD_U32 %0.sub0, 8, implicit-def $scc
     %56 = S_ADDC_U32 %0.sub1, 0, implicit-def dead $scc, implicit $scc
     %57 = REG_SEQUENCE %55, %subreg.sub0, killed %56, %subreg.sub1
@@ -365,7 +365,7 @@ body:             |
     liveins: $sgpr4_sgpr5
 
     %4 = COPY $sgpr4_sgpr5
-    %9 = S_LOAD_DWORDX2_IMM %4, 0, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %9 = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %8 = S_MOV_B64 0
     %7 = COPY %9
     %30 = V_MOV_B32_e32 1, implicit $exec
@@ -384,26 +384,26 @@ body:             |
     %15 = S_ADDC_U32 %7.sub1, %0.sub1, implicit-def dead $scc, implicit $scc
     %16 = REG_SEQUENCE %14, %subreg.sub0, %15, %subreg.sub1
     %18 = COPY %16
-    %17 = FLAT_LOAD_DWORD %18, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.uglygep45)
+    %17 = FLAT_LOAD_DWORD %18, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.uglygep45)
     %60 = V_BFE_U32_e64 %17, 8, 8, implicit $exec
     %61 = V_LSHLREV_B32_e32 %84, killed %60, implicit $exec
     %70 = V_ADD_CO_U32_e32 %7.sub0, %61, implicit-def $vcc, implicit $exec
     %66 = COPY %13
     %65 = V_ADDC_U32_e32 0, %66, implicit-def $vcc, implicit $vcc, implicit $exec
     %67 = REG_SEQUENCE %70, %subreg.sub0, killed %65, %subreg.sub1
-    FLAT_STORE_DWORD %67, %30, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.tmp9)
+    FLAT_STORE_DWORD %67, %30, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.tmp9)
     %37 = S_ADD_U32 %14, 4, implicit-def $scc
     %38 = S_ADDC_U32 %15, 0, implicit-def dead $scc, implicit $scc
     %71 = COPY killed %37
     %72 = COPY killed %38
     %41 = REG_SEQUENCE killed %71, %subreg.sub0, killed %72, %subreg.sub1
-    %40 = FLAT_LOAD_DWORD killed %41, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.scevgep)
+    %40 = FLAT_LOAD_DWORD killed %41, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.scevgep)
     %73 = V_BFE_U32_e64 %40, 8, 8, implicit $exec
     %74 = V_LSHLREV_B32_e32 %84, killed %73, implicit $exec
     %83 = V_ADD_CO_U32_e32 %7.sub0, %74, implicit-def $vcc, implicit $exec
     %78 = V_ADDC_U32_e32 0, %66, implicit-def $vcc, implicit $vcc, implicit $exec
     %80 = REG_SEQUENCE %83, %subreg.sub0, killed %78, %subreg.sub1
-    FLAT_STORE_DWORD %80, %30, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.tmp17)
+    FLAT_STORE_DWORD %80, %30, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.tmp17)
     %55 = S_ADD_U32 %0.sub0, 8, implicit-def $scc
     %56 = S_ADDC_U32 %0.sub1, 0, implicit-def dead $scc, implicit $scc
     %57 = REG_SEQUENCE %55, %subreg.sub0, killed %56, %subreg.sub1
