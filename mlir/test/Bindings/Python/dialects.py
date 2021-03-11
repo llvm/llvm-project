@@ -77,7 +77,7 @@ def testCustomOpView():
     ctx.allow_unregistered_dialects = True
     m = Module.create()
 
-    with InsertionPoint.at_block_terminator(m.body):
+    with InsertionPoint(m.body):
       f32 = F32Type.get()
       # Create via dialects context collection.
       input1 = createInput()

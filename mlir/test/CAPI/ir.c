@@ -293,7 +293,7 @@ int collectStats(MlirOperation operation) {
   fprintf(stderr, "Number of op results: %u\n", stats.numOpResults);
   // clang-format off
   // CHECK-LABEL: @stats
-  // CHECK: Number of operations: 13
+  // CHECK: Number of operations: 12
   // CHECK: Number of attributes: 4
   // CHECK: Number of blocks: 3
   // CHECK: Number of regions: 3

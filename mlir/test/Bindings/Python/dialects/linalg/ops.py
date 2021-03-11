@@ -17,7 +17,7 @@ def testStructuredOpOnTensors():
     module = Module.create()
     f32 = F32Type.get()
     tensor_type = RankedTensorType.get((2, 3, 4), f32)
-    with InsertionPoint.at_block_terminator(module.body):
+    with InsertionPoint(module.body):
       func = builtin.FuncOp(name="matmul_test",
                             type=FunctionType.get(
                                 inputs=[tensor_type, tensor_type],
@@ -40,7 +40,7 @@ def testStructuredOpOnBuffers():
     module = Module.create()
     f32 = F32Type.get()
     memref_type = MemRefType.get((2, 3, 4), f32)
-    with InsertionPoint.at_block_terminator(module.body):
+    with InsertionPoint(module.body):
       func = builtin.FuncOp(name="matmul_test",
                             type=FunctionType.get(
                                 inputs=[memref_type, memref_type, memref_type],

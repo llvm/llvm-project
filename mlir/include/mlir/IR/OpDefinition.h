@@ -654,6 +654,11 @@ class VariadicResults
 //===----------------------------------------------------------------------===//
 // Terminator Traits
 
+/// This class indicates that the regions associated with this op don't have
+/// terminators.
+template <typename ConcreteType>
+class NoTerminator : public TraitBase<ConcreteType, NoTerminator> {};
+
 /// This class provides the API for ops that are known to be terminators.
 template <typename ConcreteType>
 class IsTerminator : public TraitBase<ConcreteType, IsTerminator> {
@@ -758,6 +763,87 @@ class VariadicSuccessors
 };
 
 //===----------------------------------------------------------------------===//
+// SingleBlock
+
+/// This class provides APIs and verifiers for ops with regions having a single
+/// block.
+template <typename ConcreteType>
+struct SingleBlock : public TraitBase<ConcreteType, SingleBlock> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i) {
+      Region &region = op->getRegion(i);
+
+      // Empty regions are fine.
+      if (region.empty())
+        continue;
+
+      // Non-empty regions must contain a single basic block.
+      if (!llvm::hasSingleElement(region))
+        return op->emitOpError("expects region #")
+               << i << " to have 0 or 1 blocks";
+
+      if (!ConcreteType::template hasTrait<NoTerminator>()) {
+        Block &block = region.front();
+        if (block.empty())
+          return op->emitOpError() << "expects a non-empty block";
+      }
+    }
+    return success();
+  }
+
+  Block *getBody(unsigned idx = 0) {
+    Region &region = this->getOperation()->getRegion(idx);
+    assert(!region.empty() && "unexpected empty region");
+    return &region.front();
+  }
+  Region &getBodyRegion(unsigned idx = 0) {
+    return this->getOperation()->getRegion(idx);
+  }
+
+  //===------------------------------------------------------------------===//
+  // Single Region Utilities
+  //===------------------------------------------------------------------===//
+
+  /// The following are a set of methods only enabled when the parent
+  /// operation has a single region. Each of these methods take an additional
+  /// template parameter that represents the concrete operation so that we
+  /// can use SFINAE to disable the methods for non-single region operations.
+  template <typename OpT, typename T = void>
+  using enable_if_single_region =
+      typename std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
+
+  template <typename OpT = ConcreteType>
+  enable_if_single_region<OpT, Block::iterator> begin() {
+    return getBody()->begin();
+  }
+  template <typename OpT = ConcreteType>
+  enable_if_single_region<OpT, Block::iterator> end() {
+    return getBody()->end();
+  }
+  template <typename OpT = ConcreteType>
+  enable_if_single_region<OpT, Operation &> front() {
+    return *begin();
+  }
+
+  /// Insert the operation into the back of the body.
+  template <typename OpT = ConcreteType>
+  enable_if_single_region<OpT> push_back(Operation *op) {
+    insert(Block::iterator(getBody()->end()), op);
+  }
+
+  /// Insert the operation at the given insertion point.
+  template <typename OpT = ConcreteType>
+  enable_if_single_region<OpT> insert(Operation *insertPt, Operation *op) {
+    insert(Block::iterator(insertPt), op);
+  }
+  template <typename OpT = ConcreteType>
+  enable_if_single_region<OpT> insert(Block::iterator insertPt, Operation *op) {
+    getBody()->getOperations().insert(insertPt, op);
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // SingleBlockImplicitTerminator
 
 /// This class provides APIs and verifiers for ops with regions having a single
@@ -765,8 +851,9 @@ class VariadicSuccessors
 template <typename TerminatorOpType>
 struct SingleBlockImplicitTerminator {
   template <typename ConcreteType>
-  class Impl : public TraitBase<ConcreteType, Impl> {
+  class Impl : public SingleBlock<ConcreteType> {
   private:
+    using Base = SingleBlock<ConcreteType>;
     /// Builds a terminator operation without relying on OpBuilder APIs to avoid
     /// cyclic header inclusion.
     static Operation *buildTerminator(OpBuilder &builder, Location loc) {
@@ -780,22 +867,14 @@ struct SingleBlockImplicitTerminator {
     using ImplicitTerminatorOpT = TerminatorOpType;
 
     static LogicalResult verifyTrait(Operation *op) {
+      if (failed(Base::verifyTrait(op)))
+        return failure();
       for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i) {
         Region &region = op->getRegion(i);
-
         // Empty regions are fine.
         if (region.empty())
           continue;
-
-        // Non-empty regions must contain a single basic block.
-        if (std::next(region.begin()) != region.end())
-          return op->emitOpError("expects region #")
-                 << i << " to have 0 or 1 blocks";
-
-        Block &block = region.front();
-        if (block.empty())
-          return op->emitOpError() << "expects a non-empty block";
-        Operation &terminator = block.back();
+        Operation &terminator = region.front().back();
         if (isa<TerminatorOpType>(terminator))
           continue;
 
@@ -828,39 +907,14 @@ struct SingleBlockImplicitTerminator {
                                            buildTerminator);
     }
 
-    Block *getBody(unsigned idx = 0) {
-      Region &region = this->getOperation()->getRegion(idx);
-      assert(!region.empty() && "unexpected empty region");
-      return &region.front();
-    }
-    Region &getBodyRegion(unsigned idx = 0) {
-      return this->getOperation()->getRegion(idx);
-    }
-
     //===------------------------------------------------------------------===//
     // Single Region Utilities
     //===------------------------------------------------------------------===//
+    using Base::getBody;
 
-    /// The following are a set of methods only enabled when the parent
-    /// operation has a single region. Each of these methods take an additional
-    /// template parameter that represents the concrete operation so that we
-    /// can use SFINAE to disable the methods for non-single region operations.
     template <typename OpT, typename T = void>
     using enable_if_single_region =
         typename std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
-
-    template <typename OpT = ConcreteType>
-    enable_if_single_region<OpT, Block::iterator> begin() {
-      return getBody()->begin();
-    }
-    template <typename OpT = ConcreteType>
-    enable_if_single_region<OpT, Block::iterator> end() {
-      return getBody()->end();
-    }
-    template <typename OpT = ConcreteType>
-    enable_if_single_region<OpT, Operation &> front() {
-      return *begin();
-    }
 
     /// Insert the operation into the back of the body, before the terminator.
     template <typename OpT = ConcreteType>
@@ -884,6 +938,27 @@ struct SingleBlockImplicitTerminator {
       body->getOperations().insert(insertPt, op);
     }
   };
+};
+
+/// Check is an op defines the `ImplicitTerminatorOpT` member. This is intended
+/// to be used with `llvm::is_detected`.
+template <class T>
+using has_implicit_terminator_t = typename T::ImplicitTerminatorOpT;
+
+/// Support to check if an operation has the SingleBlockImplicitTerminator
+/// trait. We can't just use `hasTrait` because this class is templated on a
+/// specific terminator op.
+template <class Op, bool hasTerminator =
+                        llvm::is_detected<has_implicit_terminator_t, Op>::value>
+struct hasSingleBlockImplicitTerminator {
+  static constexpr bool value = std::is_base_of<
+      typename OpTrait::SingleBlockImplicitTerminator<
+          typename Op::ImplicitTerminatorOpT>::template Impl<Op>,
+      Op>::value;
+};
+template <class Op>
+struct hasSingleBlockImplicitTerminator<Op, false> {
+  static constexpr bool value = false;
 };
 
 //===----------------------------------------------------------------------===//

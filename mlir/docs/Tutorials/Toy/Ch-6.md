@@ -63,7 +63,7 @@ everything to the LLVM dialect.
 ```c++
   mlir::ConversionTarget target(getContext());
   target.addLegalDialect<mlir::LLVMDialect>();
-  target.addLegalOp<mlir::ModuleOp, mlir::ModuleTerminatorOp>();
+  target.addLegalOp<mlir::ModuleOp>();
 ```
 
 ### Type Converter
