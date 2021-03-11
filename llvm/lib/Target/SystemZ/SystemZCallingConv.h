@@ -15,11 +15,11 @@
 
 namespace llvm {
 namespace SystemZ {
-  const unsigned NumArgGPRs = 5;
-  extern const MCPhysReg ArgGPRs[NumArgGPRs];
+  const unsigned ELFNumArgGPRs = 5;
+  extern const MCPhysReg ELFArgGPRs[ELFNumArgGPRs];
 
-  const unsigned NumArgFPRs = 4;
-  extern const MCPhysReg ArgFPRs[NumArgFPRs];
+  const unsigned ELFNumArgFPRs = 4;
+  extern const MCPhysReg ELFArgFPRs[ELFNumArgFPRs];
 } // end namespace SystemZ
 
 class SystemZCCState : public CCState {
@@ -107,7 +107,7 @@ inline bool CC_SystemZ_I128Indirect(unsigned &ValNo, MVT &ValVT,
   // OK, we've collected all parts in the pending list.  Allocate
   // the location (register or stack slot) for the indirect pointer.
   // (This duplicates the usual i64 calling convention rules.)
-  unsigned Reg = State.AllocateReg(SystemZ::ArgGPRs);
+  unsigned Reg = State.AllocateReg(SystemZ::ELFArgGPRs);
   unsigned Offset = Reg ? 0 : State.AllocateStack(8, Align(8));
 
   // Use that same location for all the pending parts.

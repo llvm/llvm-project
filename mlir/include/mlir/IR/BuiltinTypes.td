@@ -268,7 +268,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "BaseMemRefType"> {
     strided-layout ::= `offset:` dimension `,` `strides: ` stride-list
     semi-affine-map-composition ::= (semi-affine-map `,` )* semi-affine-map
     layout-specification ::= semi-affine-map-composition | strided-layout
-    memory-space ::= integer-literal /* | TODO: address-space-id */
+    memory-space ::= attribute-value
     ```
 
     A `memref` type is a reference to a region of memory (similar to a buffer
@@ -335,14 +335,9 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "BaseMemRefType"> {
     intuitive to read. For the moment, a `memref` supports parsing a strided
     form which is converted to a semi-affine map automatically.
 
-    The memory space of a memref is specified by a target-specific integer
-    index. If no memory space is specified, then the default memory space (0)
-    is used. The default space is target specific but always at index 0.
-
-    TODO: MLIR will eventually have target-dialects which allow symbolic use of
-    memory hierarchy names (e.g. L3, L2, L1, ...) but we have not spec'd the
-    details of that mechanism yet. Until then, this document pretends that it
-    is valid to refer to these memories by `bare-id`.
+    The memory space of a memref is specified by a target-specific attribute.
+    It might be an integer value, string, dictionary or custom dialect attribute.
+    The empty memory space (attribute is None) is target specific.
 
     The notionally dynamic value of a memref value includes the address of the
     buffer allocated, as well as the symbols referred to by the shape, layout
@@ -527,28 +522,44 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "BaseMemRefType"> {
     ArrayRefParameter<"int64_t">:$shape,
     "Type":$elementType,
     ArrayRefParameter<"AffineMap">:$affineMaps,
-    "unsigned":$memorySpaceAsInt
+    "Attribute":$memorySpace
   );
-
   let builders = [
     TypeBuilderWithInferredContext<(ins
       "ArrayRef<int64_t>":$shape, "Type":$elementType,
       CArg<"ArrayRef<AffineMap>", "{}">:$affineMaps,
-      CArg<"unsigned", "0">:$memorySpace
+      CArg<"Attribute", "{}">:$memorySpace
     ), [{
       // Drop identity maps from the composition. This may lead to the
       // composition becoming empty, which is interpreted as an implicit
       // identity.
       auto nonIdentityMaps = llvm::make_filter_range(affineMaps,
         [](AffineMap map) { return !map.isIdentity(); });
+      // Drop default memory space value and replace it with empty attribute.
+      Attribute nonDefaultMemorySpace = skipDefaultMemorySpace(memorySpace);
       return $_get(elementType.getContext(), shape, elementType,
-                   llvm::to_vector<4>(nonIdentityMaps), memorySpace);
+                   llvm::to_vector<4>(nonIdentityMaps), nonDefaultMemorySpace);
+    }]>,
+    /// [deprecated] `Attribute`-based form should be used instead.
+    TypeBuilderWithInferredContext<(ins
+      "ArrayRef<int64_t>":$shape, "Type":$elementType,
+      "ArrayRef<AffineMap>":$affineMaps,
+      "unsigned":$memorySpace
+    ), [{
+      // Convert deprecated integer-like memory space to Attribute.
+      Attribute memorySpaceAttr =
+          wrapIntegerMemorySpace(memorySpace, elementType.getContext());
+      return MemRefType::get(shape, elementType, affineMaps, memorySpaceAttr);
     }]>
   ];
   let extraClassDeclaration = [{
     /// This is a builder type that keeps local references to arguments.
     /// Arguments that are passed into the builder must out-live the builder.
     class Builder;
+
+    /// [deprecated] Returns the memory space in old raw integer representation.
+    /// New `Attribute getMemorySpace()` method should be used instead.
+    unsigned getMemorySpaceAsInt() const;
 
     // TODO: merge these two special values in a single one used everywhere.
     // Unfortunately, uses of `-1` have crept deep into the codebase now and are
@@ -767,7 +778,7 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", "BaseMemRefType"> {
 
     ```
     unranked-memref-type ::= `memref` `<*x` type (`,` memory-space)? `>`
-    memory-space ::= integer-literal /* | TODO: address-space-id */
+    memory-space ::= attribute-value
     ```
 
     A `memref` type with an unknown rank (e.g. `memref<*xf32>`). The purpose of
@@ -787,16 +798,30 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", "BaseMemRefType"> {
     memref<*f32, 10>
     ```
   }];
-  let parameters = (ins "Type":$elementType, "unsigned":$memorySpaceAsInt);
+  let parameters = (ins "Type":$elementType, "Attribute":$memorySpace);
 
   let builders = [
     TypeBuilderWithInferredContext<(ins "Type":$elementType,
+                                        "Attribute":$memorySpace), [{
+      // Drop default memory space value and replace it with empty attribute.
+      Attribute nonDefaultMemorySpace = skipDefaultMemorySpace(memorySpace);
+      return $_get(elementType.getContext(), elementType, nonDefaultMemorySpace);
+    }]>,
+    /// [deprecated] `Attribute`-based form should be used instead.
+    TypeBuilderWithInferredContext<(ins "Type":$elementType,
                                         "unsigned":$memorySpace), [{
-      return $_get(elementType.getContext(), elementType, memorySpace);
+      // Convert deprecated integer-like memory space to Attribute.
+      Attribute memorySpaceAttr =
+          wrapIntegerMemorySpace(memorySpace, elementType.getContext());
+      return UnrankedMemRefType::get(elementType, memorySpaceAttr);
     }]>
   ];
   let extraClassDeclaration = [{
     ArrayRef<int64_t> getShape() const { return llvm::None; }
+
+    /// [deprecated] Returns the memory space in old raw integer representation.
+    /// New `Attribute getMemorySpace()` method should be used instead.
+    unsigned getMemorySpaceAsInt() const;
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;

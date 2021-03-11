@@ -295,6 +295,8 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("AArch64")
+    @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
+                        bugnumber="llvm.org/pr49415")
     def test_aarch64_regs(self):
         # check 64 bit ARM core files
         target = self.dbg.CreateTarget(None)
@@ -351,6 +353,8 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("AArch64")
+    @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
+                        bugnumber="llvm.org/pr49415")
     def test_aarch64_sve_regs_fpsimd(self):
         # check 64 bit ARM core files
         target = self.dbg.CreateTarget(None)

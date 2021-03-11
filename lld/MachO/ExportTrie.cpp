@@ -108,7 +108,7 @@ bool TrieNode::updateOffset(size_t &nextOffset) {
   }
   // Compute size of all child edges.
   ++nodeSize; // Byte for number of children.
-  for (Edge &edge : edges) {
+  for (const Edge &edge : edges) {
     nodeSize += edge.substring.size() + 1             // String length.
                 + getULEB128Size(edge.child->offset); // Offset len.
   }

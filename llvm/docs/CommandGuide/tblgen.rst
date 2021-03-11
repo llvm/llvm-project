@@ -541,6 +541,22 @@ clang-tblgen Options
 
   Generate list of valid ARM CDE builtin aliases for Clang.
 
+.. option:: -gen-riscv-vector-header
+
+  Generate ``riscv_vector.h`` for Clang.
+
+.. option:: -gen-riscv-vector-generic-header
+
+  Generate ``riscv_vector_generic.h`` for Clang.
+
+.. option:: -gen-riscv-vector-builtins
+
+  Generate ``riscv_vector_builtins.inc`` for Clang.
+
+.. option:: -gen-riscv-vector-builtin-codegen
+
+  Generate ``riscv_vector_builtin_cg.inc`` for Clang.
+
 .. option:: -gen-attr-docs
 
   Generate attribute documentation.

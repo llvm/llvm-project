@@ -1003,14 +1003,9 @@ sugar is supported to make certain layout specifications more intuitive to read.
 For the moment, a `memref` supports parsing a strided form which is converted to
 a semi-affine map automatically.
 
-The memory space of a memref is specified by a target-specific integer index. If
-no memory space is specified, then the default memory space (0) is used. The
-default space is target specific but always at index 0.
-
-TODO: MLIR will eventually have target-dialects which allow symbolic use of
-memory hierarchy names (e.g. L3, L2, L1, ...) but we have not spec'd the details
-of that mechanism yet. Until then, this document pretends that it is valid to
-refer to these memories by `bare-id`.
+The memory space of a memref is specified by a target-specific attribute.
+It might be an integer value, string, dictionary or custom dialect attribute.
+The empty memory space (attribute is None) is target specific.
 
 The notionally dynamic value of a memref value includes the address of the
 buffer allocated, as well as the symbols referred to by the shape, layout map,

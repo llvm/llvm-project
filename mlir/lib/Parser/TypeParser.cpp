@@ -224,27 +224,14 @@ Type Parser::parseMemRefType() {
 
   // Parse semi-affine-map-composition.
   SmallVector<AffineMap, 2> affineMapComposition;
-  Optional<unsigned> memorySpace;
+  Attribute memorySpace;
   unsigned numDims = dimensions.size();
 
   auto parseElt = [&]() -> ParseResult {
-    // Check for the memory space.
-    if (getToken().is(Token::integer)) {
-      if (memorySpace)
-        return emitError("multiple memory spaces specified in memref type");
-      memorySpace = getToken().getUnsignedIntegerValue();
-      if (!memorySpace.hasValue())
-        return emitError("invalid memory space in memref type");
-      consumeToken(Token::integer);
-      return success();
-    }
-    if (isUnranked)
-      return emitError("cannot have affine map for unranked memref type");
-    if (memorySpace)
-      return emitError("expected memory space to be last in memref type");
-
     AffineMap map;
     llvm::SMLoc mapLoc = getToken().getLoc();
+
+    // Check for AffineMap as offset/strides.
     if (getToken().is(Token::kw_offset)) {
       int64_t offset;
       SmallVector<int64_t, 4> strides;
@@ -253,15 +240,25 @@ Type Parser::parseMemRefType() {
       // Construct strided affine map.
       map = makeStridedLinearLayoutMap(strides, offset, state.context);
     } else {
-      // Parse an affine map attribute.
-      auto affineMap = parseAttribute();
-      if (!affineMap)
+      // Either it is AffineMapAttr or memory space attribute.
+      Attribute attr = parseAttribute();
+      if (!attr)
         return failure();
-      auto affineMapAttr = affineMap.dyn_cast<AffineMapAttr>();
-      if (!affineMapAttr)
-        return emitError("expected affine map in memref type");
-      map = affineMapAttr.getValue();
+
+      if (AffineMapAttr affineMapAttr = attr.dyn_cast<AffineMapAttr>()) {
+        map = affineMapAttr.getValue();
+      } else if (memorySpace) {
+        return emitError("multiple memory spaces specified in memref type");
+      } else {
+        memorySpace = attr;
+        return success();
+      }
     }
+
+    if (isUnranked)
+      return emitError("cannot have affine map for unranked memref type");
+    if (memorySpace)
+      return emitError("expected memory space to be last in memref type");
 
     if (map.getNumDims() != numDims) {
       size_t i = affineMapComposition.size();
@@ -285,11 +282,15 @@ Type Parser::parseMemRefType() {
     }
   }
 
-  if (isUnranked)
-    return UnrankedMemRefType::get(elementType, memorySpace.getValueOr(0));
+  if (isUnranked) {
+    return UnrankedMemRefType::getChecked(
+        [&]() -> InFlightDiagnostic { return emitError(); }, elementType,
+        memorySpace);
+  }
 
-  return MemRefType::get(dimensions, elementType, affineMapComposition,
-                         memorySpace.getValueOr(0));
+  return MemRefType::getChecked(
+      [&]() -> InFlightDiagnostic { return emitError(); }, dimensions,
+      elementType, affineMapComposition, memorySpace);
 }
 
 /// Parse any type except the function type.

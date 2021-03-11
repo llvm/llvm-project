@@ -1887,16 +1887,20 @@ void ModulePrinter::printType(Type type) {
           printAttribute(AffineMapAttr::get(map));
         }
         // Only print the memory space if it is the non-default one.
-        if (memrefTy.getMemorySpaceAsInt())
-          os << ", " << memrefTy.getMemorySpaceAsInt();
+        if (memrefTy.getMemorySpace()) {
+          os << ", ";
+          printAttribute(memrefTy.getMemorySpace(), AttrTypeElision::May);
+        }
         os << '>';
       })
       .Case<UnrankedMemRefType>([&](UnrankedMemRefType memrefTy) {
         os << "memref<*x";
         printType(memrefTy.getElementType());
         // Only print the memory space if it is the non-default one.
-        if (memrefTy.getMemorySpaceAsInt())
-          os << ", " << memrefTy.getMemorySpaceAsInt();
+        if (memrefTy.getMemorySpace()) {
+          os << ", ";
+          printAttribute(memrefTy.getMemorySpace(), AttrTypeElision::May);
+        }
         os << '>';
       })
       .Case<ComplexType>([&](ComplexType complexTy) {

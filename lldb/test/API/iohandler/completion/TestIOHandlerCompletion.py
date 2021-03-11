@@ -17,6 +17,7 @@ class IOHandlerCompletionTest(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfEditlineSupportMissing
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr49408')
     def test_completion(self):
         self.launch(dimensions=(100,500))
 

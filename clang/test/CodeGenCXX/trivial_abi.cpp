@@ -262,3 +262,21 @@ void calleeExceptionLarge(Large, Large);
 void testExceptionLarge() {
   calleeExceptionLarge(Large(), Large());
 }
+
+// PR42961
+
+// CHECK: define{{.*}} @"_ZN3$_08__invokeEv"()
+// CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_SMALL]], align 8
+// CHECK: %[[COERCE:.*]] = alloca %[[STRUCT_SMALL]], align 8
+// CHECK: %[[CALL:.*]] = call{{.*}} @"_ZNK3$_0clEv"
+// CHECK: %[[COERCEDIVE:.*]] = getelementptr{{.*}} %[[COERCE]]
+// CHECK: %[[COERCEVALIP:.*]] = inttoptr{{.*}} %[[CALL]]
+// CHECK: %[[RETVALP:.*]] = bitcast %[[STRUCT_SMALL]]* %[[RETVAL]]
+// CHECK: %[[COERCEP:.*]] = bitcast %[[STRUCT_SMALL]]* %[[COERCE]]
+// CHECK: call {{.*}}memcpy{{.*}} %[[RETVALP]]{{.*}} %[[COERCEP]]
+// CHECK: %[[COERCEDIVE1:.*]] = getelementptr{{.*}} %[[RETVAL]]
+// CHECK: %[[TMP:.*]] = load{{.*}} %[[COERCEDIVE1]]
+// CHECK: %[[COERCEVALPI:.*]] = ptrtoint{{.*}} %[[TMP]]
+// CHECK: ret{{.*}} %[[COERCEVALPI]]
+
+Small (*fp)() = []() -> Small { return Small(); };

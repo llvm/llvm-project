@@ -235,9 +235,6 @@ public:
   /// if requested with WantDiags::Auto or WantDiags::Yes.
   void remove(PathRef File);
 
-  /// Returns a snapshot of all file buffer contents, per last update().
-  llvm::StringMap<std::string> getAllFileContents() const;
-
   /// Schedule an async task with no dependencies.
   /// Path may be empty (it is used only to set the Context).
   void run(llvm::StringRef Name, llvm::StringRef Path,

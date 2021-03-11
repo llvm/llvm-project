@@ -489,11 +489,16 @@ MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
 /// Clone a DBG_VALUE whose value has been spilled to FrameIndex.
 MachineInstr *buildDbgValueForSpill(MachineBasicBlock &BB,
                                     MachineBasicBlock::iterator I,
-                                    const MachineInstr &Orig, int FrameIndex);
+                                    const MachineInstr &Orig, int FrameIndex,
+                                    Register SpillReg);
+MachineInstr *
+buildDbgValueForSpill(MachineBasicBlock &BB, MachineBasicBlock::iterator I,
+                      const MachineInstr &Orig, int FrameIndex,
+                      SmallVectorImpl<const MachineOperand *> &SpilledOperands);
 
 /// Update a DBG_VALUE whose value has been spilled to FrameIndex. Useful when
 /// modifying an instruction in place while iterating over a basic block.
-void updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex);
+void updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex, Register Reg);
 
 inline unsigned getDefRegState(bool B) {
   return B ? RegState::Define : 0;

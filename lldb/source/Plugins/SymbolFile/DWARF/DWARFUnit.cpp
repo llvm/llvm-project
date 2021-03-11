@@ -292,8 +292,7 @@ uint64_t DWARFUnit::GetDWOId() {
 
 // m_die_array_mutex must be already held as read/write.
 void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
-  llvm::Optional<uint64_t> addr_base, gnu_addr_base, ranges_base,
-      gnu_ranges_base;
+  llvm::Optional<uint64_t> addr_base, gnu_addr_base, gnu_ranges_base;
 
   DWARFAttributes attributes;
   size_t num_attributes = cu_die.GetAttributes(this, attributes);
@@ -320,8 +319,7 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
       SetLoclistsBase(form_value.Unsigned());
       break;
     case DW_AT_rnglists_base:
-      ranges_base = form_value.Unsigned();
-      SetRangesBase(*ranges_base);
+      SetRangesBase(form_value.Unsigned());
       break;
     case DW_AT_str_offsets_base:
       SetStrOffsetsBase(form_value.Unsigned());

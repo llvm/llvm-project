@@ -371,6 +371,17 @@ isOverwrite(const Instruction *LaterI, const Instruction *EarlierI,
   // FIXME: Vet that this works for size upper-bounds. Seems unlikely that we'll
   // get imprecise values here, though (except for unknown sizes).
   if (!Later.Size.isPrecise() || !Earlier.Size.isPrecise()) {
+    // In case no constant size is known, try to an IR values for the number
+    // of bytes written and check if they match.
+    const auto *LaterMemI = dyn_cast<MemIntrinsic>(LaterI);
+    const auto *EarlierMemI = dyn_cast<MemIntrinsic>(EarlierI);
+    if (LaterMemI && EarlierMemI) {
+      const Value *LaterV = LaterMemI->getLength();
+      const Value *EarlierV = EarlierMemI->getLength();
+      if (LaterV == EarlierV && AA.isMustAlias(Earlier, Later))
+        return OW_Complete;
+    }
+
     // Masked stores have imprecise locations, but we can reason about them
     // to some extent.
     return isMaskedStoreOverwrite(LaterI, EarlierI, AA);
@@ -379,20 +390,29 @@ isOverwrite(const Instruction *LaterI, const Instruction *EarlierI,
   const uint64_t LaterSize = Later.Size.getValue();
   const uint64_t EarlierSize = Earlier.Size.getValue();
 
-  const Value *P1 = Earlier.Ptr->stripPointerCasts();
-  const Value *P2 = Later.Ptr->stripPointerCasts();
+  // Query the alias information
+  AliasResult AAR = AA.alias(Later, Earlier);
 
   // If the start pointers are the same, we just have to compare sizes to see if
   // the later store was larger than the earlier store.
-  if (P1 == P2 || AA.isMustAlias(P1, P2)) {
+  if (AAR == AliasResult::MustAlias) {
     // Make sure that the Later size is >= the Earlier size.
     if (LaterSize >= EarlierSize)
+      return OW_Complete;
+  }
+
+  // If we hit a partial alias we may have a full overwrite
+  if (AAR == AliasResult::PartialAlias) {
+    int64_t Off = AA.getClobberOffset(Later, Earlier).getValueOr(0);
+    if (Off > 0 && (uint64_t)Off + EarlierSize <= LaterSize)
       return OW_Complete;
   }
 
   // Check to see if the later store is to the entire object (either a global,
   // an alloca, or a byval/inalloca argument).  If so, then it clearly
   // overwrites any other store to the same object.
+  const Value *P1 = Earlier.Ptr->stripPointerCasts();
+  const Value *P2 = Later.Ptr->stripPointerCasts();
   const Value *UO1 = getUnderlyingObject(P1), *UO2 = getUnderlyingObject(P2);
 
   // If we can't resolve the same pointers to the same object, then we can't
@@ -976,8 +996,8 @@ struct DSEState {
 
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI)
-      : F(F), AA(AA), BatchAA(AA), MSSA(MSSA), DT(DT), PDT(PDT), TLI(TLI),
-        DL(F.getParent()->getDataLayout()) {}
+      : F(F), AA(AA), BatchAA(AA, /*CacheOffsets =*/true), MSSA(MSSA), DT(DT),
+        PDT(PDT), TLI(TLI), DL(F.getParent()->getDataLayout()) {}
 
   static DSEState get(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                       DominatorTree &DT, PostDominatorTree &PDT,

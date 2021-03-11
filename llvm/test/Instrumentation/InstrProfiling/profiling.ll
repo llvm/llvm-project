@@ -54,11 +54,12 @@ define void @baz() {
 
 declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 
-; ELF:   @llvm.compiler.used = appending global {{.*}} @__llvm_profile_runtime_user {{.*}} @__profd_foo {{.*}} @__profd_bar {{.*}} @__profd_baz
-; MACHO: @llvm.used = appending global {{.*}} @__llvm_profile_runtime_user {{.*}} @__profd_foo {{.*}} @__profd_bar {{.*}} @__profd_baz
-; WIN:   @llvm.used = appending global {{.*}} @__llvm_profile_runtime_user {{.*}} @__profd_foo {{.*}} @__profd_bar {{.*}} @__profd_baz
+; ELF:   @llvm.compiler.used = appending global {{.*}} @__llvm_profile_runtime {{.*}} @__profd_foo {{.*}} @__profd_bar {{.*}} @__profd_baz
+; MACHO: @llvm.used = appending global {{.*}} @__llvm_profile_runtime {{.*}} @__profd_foo {{.*}} @__profd_bar {{.*}} @__profd_baz
+; WIN:   @llvm.used = appending global {{.*}} @__llvm_profile_runtime {{.*}} @__profd_foo {{.*}} @__profd_bar {{.*}} @__profd_baz
 
 ; ELF_GENERIC:      define internal void @__llvm_profile_register_functions() unnamed_addr {
+; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast (i32* @__llvm_profile_runtime to i8*))
 ; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i8*))
 ; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_bar to i8*))
 ; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_baz to i8*))

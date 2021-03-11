@@ -17,7 +17,7 @@ define void @caller() {
   ; 32BIT:   STXVW4X killed [[LXVW4X]], $r1, killed [[LI]] :: (store 16)
   ; 32BIT:   [[LIS:%[0-9]+]]:gprc = LIS 38314
   ; 32BIT:   [[ORI:%[0-9]+]]:gprc = ORI killed [[LIS]], 63376
-  ; 32BIT:   STW killed [[ORI]], 84, $r1 :: (store 4 into undef + 4, basealign 8)
+  ; 32BIT:   STW killed [[ORI]], 84, $r1 :: (store 4 into unknown-address + 4, basealign 8)
   ; 32BIT:   [[LIS1:%[0-9]+]]:gprc = LIS 16389
   ; 32BIT:   [[ORI1:%[0-9]+]]:gprc = ORI killed [[LIS1]], 48905
   ; 32BIT:   STW killed [[ORI1]], 80, $r1 :: (store 4, align 8)

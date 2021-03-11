@@ -9,6 +9,7 @@
 #include "Writer.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -54,12 +55,16 @@ size_t Writer::finalize() {
 }
 
 Error Writer::write() {
-  size_t FileSize = finalize();
-  if (Error E = Buf.allocate(FileSize))
-    return E;
+  size_t TotalSize = finalize();
+  std::unique_ptr<WritableMemoryBuffer> Buf =
+      WritableMemoryBuffer::getNewMemBuffer(TotalSize);
+  if (!Buf)
+    return createStringError(errc::not_enough_memory,
+                             "failed to allocate memory buffer of " +
+                                 Twine::utohexstr(TotalSize) + " bytes");
 
   // Write the header.
-  uint8_t *Ptr = Buf.getBufferStart();
+  uint8_t *Ptr = reinterpret_cast<uint8_t *>(Buf->getBufferStart());
   Ptr = std::copy(Obj.Header.Magic.begin(), Obj.Header.Magic.end(), Ptr);
   support::endian::write32le(Ptr, Obj.Header.Version);
   Ptr += sizeof(Obj.Header.Version);
@@ -70,7 +75,11 @@ Error Writer::write() {
     ArrayRef<uint8_t> Contents = Obj.Sections[I].Contents;
     Ptr = std::copy(Contents.begin(), Contents.end(), Ptr);
   }
-  return Buf.commit();
+
+  // TODO: Implement direct writing to the output stream (without intermediate
+  // memory buffer Buf).
+  Out.write(Buf->getBufferStart(), Buf->getBufferSize());
+  return Error::success();
 }
 
 } // end namespace wasm

@@ -601,10 +601,6 @@ flat_atomic_add_f64 v[0:1], v[2:3] offset:7
 flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] offset:4095 glc
 
 // NOT-GFX90A: error: instruction not supported on this GPU
-// GFX90A: flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] offset:4095 glc scc ; encoding: [0xff,0x0f,0x3d,0xdf,0x00,0x02,0x00,0x00]
-flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] offset:4095 glc scc
-
-// NOT-GFX90A: error: instruction not supported on this GPU
 // GFX90A: flat_atomic_add_f64 v[0:1], v[2:3] offset:4095 slc ; encoding: [0xff,0x0f,0x3e,0xdd,0x00,0x02,0x00,0x00]
 flat_atomic_add_f64 v[0:1], v[2:3] offset:4095 slc
 
@@ -1023,3 +1019,30 @@ flat_atomic_max_f64 v[0:1], v[0:1], v[2:3] glc
 // GFX90A: flat_atomic_min_f64 v[0:1], v[0:1], v[2:3] glc ; encoding: [0x00,0x00,0x41,0xdd,0x00,0x02,0x00,0x00]
 // NOT-GFX90A: error: instruction not supported on this GPU
 flat_atomic_min_f64 v[0:1], v[0:1], v[2:3] glc
+
+// GFX90A: global_atomic_add  v[2:3], v5, off scc  ; encoding: [0x00,0x80,0x08,0xdf,0x02,0x05,0x7f,0x00]
+// NOT-GFX90A: error: failed parsing operand.
+global_atomic_add v[2:3], v5, off scc
+
+// GFX90A: global_atomic_add_f32  v0, v[0:1], v2, off glc ; encoding: [0x00,0x80,0x35,0xdd,0x00,0x02,0x7f,0x00]
+// GFX908: error: operands are not valid for this GPU or mode
+// GFX1010: error: instruction not supported on this GPU
+global_atomic_add_f32 v0, v[0:1], v2, off glc
+
+// GFX90A: global_atomic_add_f32  v[0:1], v2, off  ; encoding: [0x00,0x80,0x34,0xdd,0x00,0x02,0x7f,0x00]
+// GFX1010: error: instruction not supported on this GPU
+global_atomic_add_f32 v[0:1], v2, off
+
+// GFX90A: global_atomic_add_f32  v0, v2, s[0:1]   ; encoding: [0x00,0x80,0x34,0xdd,0x00,0x02,0x00,0x00]
+// GFX1010: error: instruction not supported on this GPU
+global_atomic_add_f32 v0, v2, s[0:1]
+
+// GFX90A: global_atomic_add_f32  v1, v0, v2, s[0:1] glc
+// GFX908: error: operands are not valid for this GPU or mode
+// GFX1010: error: instruction not supported on this GPU
+global_atomic_add_f32 v1, v0, v2, s[0:1] glc ; encoding: [0x00,0x80,0x35,0xdd,0x00,0x02,0x00,0x01]
+
+// GFX908: error: operands are not valid for this GPU or mode
+// GFX1010: error: instruction not supported on this GPU
+// GFX90A: global_atomic_pk_add_f16  v0, v[0:1], v2, off glc ; encoding: [0x00,0x80,0x39,0xdd,0x00,0x02,0x7f,0x00]
+global_atomic_pk_add_f16 v0, v[0:1], v2, off glc

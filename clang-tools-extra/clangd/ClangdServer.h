@@ -394,7 +394,6 @@ private:
 
   // Store of the current versions of the open documents.
   // Only written from the main thread (despite being threadsafe).
-  // FIXME: TUScheduler also keeps these, unify?
   DraftStore DraftMgr;
 
   std::unique_ptr<ThreadsafeFS> DirtyFS;

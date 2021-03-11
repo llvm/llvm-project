@@ -431,8 +431,9 @@ ChangeStatus clampStateAndIndicateChange(StateType &S, const StateType &R) {
 /// Clamp the information known for all returned values of a function
 /// (identified by \p QueryingAA) into \p S.
 template <typename AAType, typename StateType = typename AAType::StateType>
-static void clampReturnedValueStates(Attributor &A, const AAType &QueryingAA,
-                                     StateType &S) {
+static void clampReturnedValueStates(
+    Attributor &A, const AAType &QueryingAA, StateType &S,
+    const IRPosition::CallBaseContext *CBContext = nullptr) {
   LLVM_DEBUG(dbgs() << "[Attributor] Clamp return value states for "
                     << QueryingAA << " into " << S << "\n");
 
@@ -449,7 +450,7 @@ static void clampReturnedValueStates(Attributor &A, const AAType &QueryingAA,
 
   // Callback for each possibly returned value.
   auto CheckReturnValue = [&](Value &RV) -> bool {
-    const IRPosition &RVPos = IRPosition::value(RV);
+    const IRPosition &RVPos = IRPosition::value(RV, CBContext);
     const AAType &AA =
         A.getAAFor<AAType>(QueryingAA, RVPos, DepClassTy::REQUIRED);
     LLVM_DEBUG(dbgs() << "[Attributor] RV: " << RV << " AA: " << AA.getAsStr()
@@ -472,7 +473,8 @@ static void clampReturnedValueStates(Attributor &A, const AAType &QueryingAA,
 
 /// Helper class for generic deduction: return value -> returned position.
 template <typename AAType, typename BaseType,
-          typename StateType = typename BaseType::StateType>
+          typename StateType = typename BaseType::StateType,
+          bool PropagateCallBaseContext = false>
 struct AAReturnedFromReturnedValues : public BaseType {
   AAReturnedFromReturnedValues(const IRPosition &IRP, Attributor &A)
       : BaseType(IRP, A) {}
@@ -480,7 +482,9 @@ struct AAReturnedFromReturnedValues : public BaseType {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     StateType S(StateType::getBestState(this->getState()));
-    clampReturnedValueStates<AAType, StateType>(A, *this, S);
+    clampReturnedValueStates<AAType, StateType>(
+        A, *this, S,
+        PropagateCallBaseContext ? this->getCallBaseContext() : nullptr);
     // TODO: If we know we visited all returned values, thus no are assumed
     // dead, we can take the known information from the state T.
     return clampStateAndIndicateChange<StateType>(this->getState(), S);
@@ -535,17 +539,58 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
     S ^= *T;
 }
 
-/// Helper class for generic deduction: call site argument -> argument position.
+/// This function is the bridge between argument position and the call base
+/// context.
 template <typename AAType, typename BaseType,
           typename StateType = typename AAType::StateType>
+bool getArgumentStateFromCallBaseContext(Attributor &A,
+                                         BaseType &QueryingAttribute,
+                                         IRPosition &Pos, StateType &State) {
+  assert((Pos.getPositionKind() == IRPosition::IRP_ARGUMENT) &&
+         "Expected an 'argument' position !");
+  const CallBase *CBContext = Pos.getCallBaseContext();
+  if (!CBContext)
+    return false;
+
+  int ArgNo = Pos.getCallSiteArgNo();
+  assert(ArgNo >= 0 && "Invalid Arg No!");
+
+  const auto &AA = A.getAAFor<AAType>(
+      QueryingAttribute, IRPosition::callsite_argument(*CBContext, ArgNo),
+      DepClassTy::REQUIRED);
+  const StateType &CBArgumentState =
+      static_cast<const StateType &>(AA.getState());
+
+  LLVM_DEBUG(dbgs() << "[Attributor] Briding Call site context to argument"
+                    << "Position:" << Pos << "CB Arg state:" << CBArgumentState
+                    << "\n");
+
+  // NOTE: If we want to do call site grouping it should happen here.
+  State ^= CBArgumentState;
+  return true;
+}
+
+/// Helper class for generic deduction: call site argument -> argument position.
+template <typename AAType, typename BaseType,
+          typename StateType = typename AAType::StateType,
+          bool BridgeCallBaseContext = false>
 struct AAArgumentFromCallSiteArguments : public BaseType {
   AAArgumentFromCallSiteArguments(const IRPosition &IRP, Attributor &A)
       : BaseType(IRP, A) {}
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    StateType S(StateType::getBestState(this->getState()));
+    StateType S = StateType::getBestState(this->getState());
+
+    if (BridgeCallBaseContext) {
+      bool Success =
+          getArgumentStateFromCallBaseContext<AAType, BaseType, StateType>(
+              A, *this, this->getIRPosition(), S);
+      if (Success)
+        return clampStateAndIndicateChange<StateType>(this->getState(), S);
+    }
     clampCallSiteArgumentStates<AAType, StateType>(A, *this, S);
+
     // TODO: If we know we visited all incoming values, thus no are assumed
     // dead, we can take the known information from the state T.
     return clampStateAndIndicateChange<StateType>(this->getState(), S);
@@ -554,7 +599,8 @@ struct AAArgumentFromCallSiteArguments : public BaseType {
 
 /// Helper class for generic replication: function returned -> cs returned.
 template <typename AAType, typename BaseType,
-          typename StateType = typename BaseType::StateType>
+          typename StateType = typename BaseType::StateType,
+          bool IntroduceCallBaseContext = false>
 struct AACallSiteReturnedFromReturned : public BaseType {
   AACallSiteReturnedFromReturned(const IRPosition &IRP, Attributor &A)
       : BaseType(IRP, A) {}
@@ -572,7 +618,13 @@ struct AACallSiteReturnedFromReturned : public BaseType {
     if (!AssociatedFunction)
       return S.indicatePessimisticFixpoint();
 
-    IRPosition FnPos = IRPosition::returned(*AssociatedFunction);
+    CallBase &CBContext = static_cast<CallBase &>(this->getAnchorValue());
+    if (IntroduceCallBaseContext)
+      LLVM_DEBUG(dbgs() << "[Attributor] Introducing call base context:"
+                        << CBContext << "\n");
+
+    IRPosition FnPos = IRPosition::returned(
+        *AssociatedFunction, IntroduceCallBaseContext ? &CBContext : nullptr);
     const AAType &AA = A.getAAFor<AAType>(*this, FnPos, DepClassTy::REQUIRED);
     return clampStateAndIndicateChange(S, AA.getState());
   }
@@ -7126,9 +7178,11 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
 
 struct AAValueConstantRangeArgument final
     : AAArgumentFromCallSiteArguments<
-          AAValueConstantRange, AAValueConstantRangeImpl, IntegerRangeState> {
+          AAValueConstantRange, AAValueConstantRangeImpl, IntegerRangeState,
+          true /* BridgeCallBaseContext */> {
   using Base = AAArgumentFromCallSiteArguments<
-      AAValueConstantRange, AAValueConstantRangeImpl, IntegerRangeState>;
+      AAValueConstantRange, AAValueConstantRangeImpl, IntegerRangeState,
+      true /* BridgeCallBaseContext */>;
   AAValueConstantRangeArgument(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
@@ -7149,9 +7203,14 @@ struct AAValueConstantRangeArgument final
 
 struct AAValueConstantRangeReturned
     : AAReturnedFromReturnedValues<AAValueConstantRange,
-                                   AAValueConstantRangeImpl> {
-  using Base = AAReturnedFromReturnedValues<AAValueConstantRange,
-                                            AAValueConstantRangeImpl>;
+                                   AAValueConstantRangeImpl,
+                                   AAValueConstantRangeImpl::StateType,
+                                   /* PropogateCallBaseContext */ true> {
+  using Base =
+      AAReturnedFromReturnedValues<AAValueConstantRange,
+                                   AAValueConstantRangeImpl,
+                                   AAValueConstantRangeImpl::StateType,
+                                   /* PropogateCallBaseContext */ true>;
   AAValueConstantRangeReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
@@ -7221,12 +7280,14 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
       return false;
 
     auto &LHSAA = A.getAAFor<AAValueConstantRange>(
-        *this, IRPosition::value(*LHS), DepClassTy::REQUIRED);
+        *this, IRPosition::value(*LHS, getCallBaseContext()),
+        DepClassTy::REQUIRED);
     QuerriedAAs.push_back(&LHSAA);
     auto LHSAARange = LHSAA.getAssumedConstantRange(A, CtxI);
 
     auto &RHSAA = A.getAAFor<AAValueConstantRange>(
-        *this, IRPosition::value(*RHS), DepClassTy::REQUIRED);
+        *this, IRPosition::value(*RHS, getCallBaseContext()),
+        DepClassTy::REQUIRED);
     QuerriedAAs.push_back(&RHSAA);
     auto RHSAARange = RHSAA.getAssumedConstantRange(A, CtxI);
 
@@ -7249,8 +7310,9 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     if (!OpV.getType()->isIntegerTy())
       return false;
 
-    auto &OpAA = A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(OpV),
-                                                  DepClassTy::REQUIRED);
+    auto &OpAA = A.getAAFor<AAValueConstantRange>(
+        *this, IRPosition::value(OpV, getCallBaseContext()),
+        DepClassTy::REQUIRED);
     QuerriedAAs.push_back(&OpAA);
     T.unionAssumed(
         OpAA.getAssumed().castOp(CastI->getOpcode(), getState().getBitWidth()));
@@ -7268,12 +7330,12 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
       return false;
 
     auto &LHSAA = A.getAAFor<AAValueConstantRange>(
-        *this, IRPosition::value(*LHS), DepClassTy::REQUIRED);
+        *this, IRPosition::value(*LHS, getCallBaseContext()),
+        DepClassTy::REQUIRED);
     QuerriedAAs.push_back(&LHSAA);
     auto &RHSAA = A.getAAFor<AAValueConstantRange>(
-        *this, IRPosition::value(*RHS), DepClassTy::REQUIRED);
-    QuerriedAAs.push_back(&RHSAA);
-
+        *this, IRPosition::value(*RHS, getCallBaseContext()),
+        DepClassTy::REQUIRED);
     auto LHSAARange = LHSAA.getAssumedConstantRange(A, CtxI);
     auto RHSAARange = RHSAA.getAssumedConstantRange(A, CtxI);
 
@@ -7402,10 +7464,16 @@ struct AAValueConstantRangeCallSite : AAValueConstantRangeFunction {
 
 struct AAValueConstantRangeCallSiteReturned
     : AACallSiteReturnedFromReturned<AAValueConstantRange,
-                                     AAValueConstantRangeImpl> {
+                                     AAValueConstantRangeImpl,
+                                     AAValueConstantRangeImpl::StateType,
+                                     /* IntroduceCallBaseContext */ true> {
   AAValueConstantRangeCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AACallSiteReturnedFromReturned<AAValueConstantRange,
-                                       AAValueConstantRangeImpl>(IRP, A) {}
+                                       AAValueConstantRangeImpl,
+                                       AAValueConstantRangeImpl::StateType,
+                                       /* IntroduceCallBaseContext */ true>(IRP,
+                                                                            A) {
+  }
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {

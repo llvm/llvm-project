@@ -54,6 +54,10 @@ class DebugDumpProvenanceAction : public PrescanAction {
   void ExecuteAction() override;
 };
 
+class DebugDumpParsingLogAction : public PrescanAction {
+  void ExecuteAction() override;
+};
+
 class DebugMeasureParseTreeAction : public PrescanAction {
   void ExecuteAction() override;
 };

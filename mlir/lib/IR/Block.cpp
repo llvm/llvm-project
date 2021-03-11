@@ -188,23 +188,32 @@ void Block::eraseArguments(ArrayRef<unsigned> argIndices) {
   eraseArguments(eraseIndices);
 }
 
-void Block::eraseArguments(llvm::BitVector eraseIndices) {
-  // We do this in reverse so that we erase later indices before earlier
-  // indices, to avoid shifting the later indices.
-  unsigned originalNumArgs = getNumArguments();
-  int64_t firstErased = originalNumArgs;
-  for (unsigned i = 0; i < originalNumArgs; ++i) {
-    int64_t currentPos = originalNumArgs - i - 1;
-    if (eraseIndices.test(currentPos)) {
-      arguments[currentPos].destroy();
-      arguments.erase(arguments.begin() + currentPos);
-      firstErased = currentPos;
+void Block::eraseArguments(const llvm::BitVector &eraseIndices) {
+  eraseArguments(
+      [&](BlockArgument arg) { return eraseIndices.test(arg.getArgNumber()); });
+}
+
+void Block::eraseArguments(function_ref<bool(BlockArgument)> shouldEraseFn) {
+  auto firstDead = llvm::find_if(arguments, shouldEraseFn);
+  if (firstDead == arguments.end())
+    return;
+
+  // Destroy the first dead argument, this avoids reapplying the predicate to
+  // it.
+  unsigned index = firstDead->getArgNumber();
+  firstDead->destroy();
+
+  // Iterate the remaining arguments to remove any that are now dead.
+  for (auto it = std::next(firstDead), e = arguments.end(); it != e; ++it) {
+    // Destroy dead arguments, and shift those that are still live.
+    if (shouldEraseFn(*it)) {
+      it->destroy();
+    } else {
+      it->setArgNumber(index++);
+      *firstDead++ = *it;
     }
   }
-  // Update the cached position for the arguments after the first erased one.
-  int64_t index = firstErased;
-  for (BlockArgument arg : llvm::drop_begin(arguments, index))
-    arg.setArgNumber(index++);
+  arguments.erase(firstDead, arguments.end());
 }
 
 //===----------------------------------------------------------------------===//

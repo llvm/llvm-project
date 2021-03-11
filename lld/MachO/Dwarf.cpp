@@ -25,7 +25,7 @@ std::unique_ptr<DwarfObject> DwarfObject::create(ObjFile *obj) {
   // The debugger will locate the debug info via the object file paths that we
   // emit in our STABS symbols, so we don't need to process & emit them
   // ourselves.
-  for (InputSection *isec : obj->debugSections) {
+  for (const InputSection *isec : obj->debugSections) {
     if (StringRef *s = StringSwitch<StringRef *>(isec->name)
                            .Case("__debug_info", &dObj->infoSection.Data)
                            .Case("__debug_abbrev", &dObj->abbrevSection)

@@ -118,17 +118,6 @@ Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
 Optional<SmallVector<Value, 1>> fuseTensorOps(PatternRewriter &rewriter,
                                               OpOperand &consumerOpOperand);
 
-/// Like `getShape`, but only returns statically-known information, without
-/// generating any new IR. For each shape dimension, returns >=0 if that
-/// dimension is statically known, or -1 otherwise.
-SmallVector<int64_t, 8> getStaticShape(LinalgOp linalgOp);
-
-/// Returns the statically-known loop ranges of the `linalgOp`. Composes
-/// `linalgOp.getShapesToLoopsMap()` with the result of `getStaticShape`.
-/// Returns None if `linalgOp.getShapesToLoopsMap()` fails. Returns -1
-/// for non-statically-known loop ranges.
-Optional<SmallVector<int64_t, 4>> getStaticLoopRanges(LinalgOp linalgOp);
-
 /// Apply the permutation defined by `permutation` to `inVec`.
 /// Element `i` in `inVec` is mapped to location `j = permutation[i]`.
 /// E.g.: for an input vector `inVec = ['a', 'b', 'c']` and a permutation vector
