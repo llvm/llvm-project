@@ -779,6 +779,44 @@ static LogicalResult verify(IsBroadcastableOp op) {
   return success();
 }
 
+namespace {
+struct IsBroadcastableCanonicalizationPattern
+    : public OpRewritePattern<IsBroadcastableOp> {
+  using OpRewritePattern<IsBroadcastableOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IsBroadcastableOp op,
+                                PatternRewriter &rewriter) const override {
+    // Find unique operands.
+    SmallVector<Value, 2> unique;
+    for (Value v : op.getOperands()) {
+      if (!llvm::is_contained(unique, v))
+        unique.push_back(v);
+    }
+
+    // Can always broadcast fewer than two shapes.
+    if (unique.size() < 2) {
+      rewriter.replaceOpWithNewOp<mlir::ConstantOp>(op,
+                                                    rewriter.getBoolAttr(true));
+      return success();
+    }
+
+    // Reduce op to equivalent with unique operands.
+    if (unique.size() < op.getNumOperands()) {
+      rewriter.replaceOpWithNewOp<IsBroadcastableOp>(op, rewriter.getI1Type(),
+                                                     unique);
+      return success();
+    }
+
+    return failure();
+  }
+};
+} // namespace
+
+void IsBroadcastableOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<IsBroadcastableCanonicalizationPattern>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // RankOp
 //===----------------------------------------------------------------------===//

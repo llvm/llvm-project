@@ -552,11 +552,12 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 
   AllocaInst *PrivTIDAddr =
       Builder.CreateAlloca(Int32, nullptr, "tid.addr.local");
-  Instruction *PrivTID = Builder.CreateLoad(PrivTIDAddr, "tid");
+  Instruction *PrivTID = Builder.CreateLoad(Int32, PrivTIDAddr, "tid");
 
   // Add some fake uses for OpenMP provided arguments.
-  ToBeDeleted.push_back(Builder.CreateLoad(TIDAddr, "tid.addr.use"));
-  Instruction *ZeroAddrUse = Builder.CreateLoad(ZeroAddr, "zero.addr.use");
+  ToBeDeleted.push_back(Builder.CreateLoad(Int32, TIDAddr, "tid.addr.use"));
+  Instruction *ZeroAddrUse = Builder.CreateLoad(Int32, ZeroAddr,
+                                                "zero.addr.use");
   ToBeDeleted.push_back(ZeroAddrUse);
 
   // ThenBB
@@ -637,7 +638,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     // Initialize the local TID stack location with the argument value.
     Builder.SetInsertPoint(PrivTID);
     Function::arg_iterator OutlinedAI = OutlinedFn.arg_begin();
-    Builder.CreateStore(Builder.CreateLoad(OutlinedAI), PrivTIDAddr);
+    Builder.CreateStore(Builder.CreateLoad(Int32, OutlinedAI), PrivTIDAddr);
 
     // If no "if" clause was present we do not need the call created during
     // outlining, otherwise we reuse it in the serialized parallel region.
@@ -755,7 +756,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 
       // Load back next to allocations in the to-be-outlined region.
       Builder.restoreIP(InnerAllocaIP);
-      Inner = Builder.CreateLoad(Ptr);
+      Inner = Builder.CreateLoad(V.getType(), Ptr);
     }
 
     Value *ReplacementValue = nullptr;
@@ -1141,8 +1142,8 @@ CanonicalLoopInfo *OpenMPIRBuilder::createStaticWorkshareLoop(
   Builder.CreateCall(StaticInit,
                      {SrcLoc, ThreadNum, SchedulingType, PLastIter, PLowerBound,
                       PUpperBound, PStride, One, Chunk});
-  Value *LowerBound = Builder.CreateLoad(PLowerBound);
-  Value *InclusiveUpperBound = Builder.CreateLoad(PUpperBound);
+  Value *LowerBound = Builder.CreateLoad(IVTy, PLowerBound);
+  Value *InclusiveUpperBound = Builder.CreateLoad(IVTy, PUpperBound);
   Value *TripCountMinusOne = Builder.CreateSub(InclusiveUpperBound, LowerBound);
   Value *TripCount = Builder.CreateAdd(TripCountMinusOne, One);
   setCanonicalLoopTripCount(CLI, TripCount);
@@ -1561,7 +1562,7 @@ OpenMPIRBuilder::createCopyPrivate(const LocationDescription &Loc,
   Value *Ident = getOrCreateIdent(SrcLocStr);
   Value *ThreadId = getOrCreateThreadID(Ident);
 
-  llvm::Value *DidItLD = Builder.CreateLoad(DidIt);
+  llvm::Value *DidItLD = Builder.CreateLoad(Builder.getInt32Ty(), DidIt);
 
   Value *Args[] = {Ident, ThreadId, BufSize, CpyBuf, CpyFn, DidItLD};
 

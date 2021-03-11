@@ -84,7 +84,8 @@ bool collectDebugInfoMetadata(Module &M,
 bool checkDebugInfoMetadata(Module &M,
                             iterator_range<Module::iterator> Functions,
                             DebugInfoPerPassMap &DIPreservationMap,
-                            StringRef Banner, StringRef NameOfWrappedPass);
+                            StringRef Banner, StringRef NameOfWrappedPass,
+                            StringRef OrigDIVerifyBugsReportFilePath);
 } // namespace llvm
 
 /// Used to check whether we track synthetic or original debug info.
@@ -136,13 +137,15 @@ llvm::ModulePass *createCheckDebugifyModulePass(
     bool Strip = false, llvm::StringRef NameOfWrappedPass = "",
     DebugifyStatsMap *StatsMap = nullptr,
     enum DebugifyMode Mode = DebugifyMode::SyntheticDebugInfo,
-    DebugInfoPerPassMap *DIPreservationMap = nullptr);
+    DebugInfoPerPassMap *DIPreservationMap = nullptr,
+    llvm::StringRef OrigDIVerifyBugsReportFilePath = "");
 
 llvm::FunctionPass *createCheckDebugifyFunctionPass(
     bool Strip = false, llvm::StringRef NameOfWrappedPass = "",
     DebugifyStatsMap *StatsMap = nullptr,
     enum DebugifyMode Mode = DebugifyMode::SyntheticDebugInfo,
-    DebugInfoPerPassMap *DIPreservationMap = nullptr);
+    DebugInfoPerPassMap *DIPreservationMap = nullptr,
+    llvm::StringRef OrigDIVerifyBugsReportFilePath = "");
 
 struct NewPMCheckDebugifyPass
     : public llvm::PassInfoMixin<NewPMCheckDebugifyPass> {
@@ -163,6 +166,7 @@ struct DebugifyEachInstrumentation {
 /// NOTE: We support legacy custom pass manager only.
 /// TODO: Add New PM support for custom pass manager.
 class DebugifyCustomPassManager : public legacy::PassManager {
+  StringRef OrigDIVerifyBugsReportFilePath;
   DebugifyStatsMap *DIStatsMap = nullptr;
   DebugInfoPerPassMap *DIPreservationMap = nullptr;
   enum DebugifyMode Mode = DebugifyMode::NoDebugify;
@@ -173,10 +177,9 @@ public:
   void add(Pass *P) override {
     // Wrap each pass with (-check)-debugify passes if requested, making
     // exceptions for passes which shouldn't see -debugify instrumentation.
-    bool WrapWithDebugify =
-        Mode != DebugifyMode::NoDebugify &&
-        !P->getAsImmutablePass() && !isIRPrintingPass(P) &&
-        !isBitcodeWriterPass(P);
+    bool WrapWithDebugify = Mode != DebugifyMode::NoDebugify &&
+                            !P->getAsImmutablePass() && !isIRPrintingPass(P) &&
+                            !isBitcodeWriterPass(P);
     if (!WrapWithDebugify) {
       super::add(P);
       return;
@@ -194,13 +197,15 @@ public:
       super::add(createDebugifyFunctionPass(Mode, Name, DIPreservationMap));
       super::add(P);
       super::add(createCheckDebugifyFunctionPass(
-          isSyntheticDebugInfo(), Name, DIStatsMap, Mode, DIPreservationMap));
+          isSyntheticDebugInfo(), Name, DIStatsMap, Mode, DIPreservationMap,
+          OrigDIVerifyBugsReportFilePath));
       break;
     case PT_Module:
       super::add(createDebugifyModulePass(Mode, Name, DIPreservationMap));
       super::add(P);
       super::add(createCheckDebugifyModulePass(
-          isSyntheticDebugInfo(), Name, DIStatsMap, Mode, DIPreservationMap));
+          isSyntheticDebugInfo(), Name, DIStatsMap, Mode, DIPreservationMap,
+          OrigDIVerifyBugsReportFilePath));
       break;
     default:
       super::add(P);
@@ -214,6 +219,13 @@ public:
   void setDIPreservationMap(DebugInfoPerPassMap &PerPassMap) {
     DIPreservationMap = &PerPassMap;
   }
+  void setOrigDIVerifyBugsReportFilePath(StringRef BugsReportFilePath) {
+    OrigDIVerifyBugsReportFilePath = BugsReportFilePath;
+  }
+  StringRef getOrigDIVerifyBugsReportFilePath() const {
+    return OrigDIVerifyBugsReportFilePath;
+  }
+
   void setDebugifyMode(enum DebugifyMode M) { Mode = M; }
 
   bool isSyntheticDebugInfo() const {

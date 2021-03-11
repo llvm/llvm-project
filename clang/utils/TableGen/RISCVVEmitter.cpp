@@ -244,8 +244,8 @@ LMULType::LMULType(int NewLog2LMUL) {
 
 std::string LMULType::str() const {
   if (Log2LMUL < 0)
-    return "mf" + utostr(1 << (-Log2LMUL));
-  return "m" + utostr(1 << Log2LMUL);
+    return "mf" + utostr(1ULL << (-Log2LMUL));
+  return "m" + utostr(1ULL << Log2LMUL);
 }
 
 VScaleVal LMULType::getScale(unsigned ElementBitwidth) const {

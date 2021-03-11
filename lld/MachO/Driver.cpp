@@ -41,6 +41,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/TextAPI/MachO/PackedVersion.h"
 
 #include <algorithm>
@@ -935,114 +936,137 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                  : ""));
   }
 
-  initLLVM(); // must be run before any call to addFile()
+  config->progName = argsArr[0];
 
-  // This loop should be reserved for options whose exact ordering matters.
-  // Other options should be handled via filtered() and/or getLastArg().
-  for (const Arg *arg : args) {
-    const Option &opt = arg->getOption();
-    warnIfDeprecatedOption(opt);
-    warnIfUnimplementedOption(opt);
+  config->timeTraceEnabled = args.hasArg(OPT_time_trace);
 
-    switch (opt.getID()) {
-    case OPT_INPUT:
-      addFile(arg->getValue(), false);
-      break;
-    case OPT_weak_library:
-      if (auto *dylibFile =
-              dyn_cast_or_null<DylibFile>(addFile(arg->getValue(), false)))
-        dylibFile->forceWeakImport = true;
-      break;
-    case OPT_filelist:
-      addFileList(arg->getValue());
-      break;
-    case OPT_force_load:
-      addFile(arg->getValue(), true);
-      break;
-    case OPT_l:
-    case OPT_weak_l:
-      addLibrary(arg->getValue(), opt.getID() == OPT_weak_l);
-      break;
-    case OPT_framework:
-    case OPT_weak_framework:
-      addFramework(arg->getValue(), opt.getID() == OPT_weak_framework);
-      break;
-    default:
-      break;
-    }
-  }
+  // Initialize time trace profiler.
+  if (config->timeTraceEnabled)
+    timeTraceProfilerInitialize(config->timeTraceGranularity, config->progName);
 
-  config->isPic = config->outputType == MH_DYLIB ||
-                  config->outputType == MH_BUNDLE || isPie(args);
+  {
+    llvm::TimeTraceScope timeScope("Link", StringRef("ExecuteLinker"));
 
-  // Now that all dylibs have been loaded, search for those that should be
-  // re-exported.
-  for (const Arg *arg : args.filtered(OPT_sub_library, OPT_sub_umbrella)) {
-    config->hasReexports = true;
-    StringRef searchName = arg->getValue();
-    std::vector<StringRef> extensions;
-    if (arg->getOption().getID() == OPT_sub_library)
-      extensions = {".dylib", ".tbd"};
-    else
-      extensions = {".tbd"};
-    if (!markReexport(searchName, extensions))
-      error(arg->getSpelling() + " " + searchName +
-            " does not match a supplied dylib");
-  }
+    initLLVM(); // must be run before any call to addFile()
 
-  // Parse LTO options.
-  if (const Arg *arg = args.getLastArg(OPT_mcpu))
-    parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
-                     arg->getSpelling());
+    // This loop should be reserved for options whose exact ordering matters.
+    // Other options should be handled via filtered() and/or getLastArg().
+    for (const Arg *arg : args) {
+      const Option &opt = arg->getOption();
+      warnIfDeprecatedOption(opt);
+      warnIfUnimplementedOption(opt);
 
-  for (const Arg *arg : args.filtered(OPT_mllvm))
-    parseClangOption(arg->getValue(), arg->getSpelling());
-
-  compileBitcodeFiles();
-  replaceCommonSymbols();
-
-  StringRef orderFile = args.getLastArgValue(OPT_order_file);
-  if (!orderFile.empty())
-    parseOrderFile(orderFile);
-
-  if (config->outputType == MH_EXECUTE && isa<Undefined>(config->entry)) {
-    error("undefined symbol: " + toString(*config->entry));
-    return false;
-  }
-  // FIXME: This prints symbols that are undefined both in input files and
-  // via -u flag twice.
-  for (const Symbol *undefined : config->explicitUndefineds) {
-    if (isa<Undefined>(undefined)) {
-      error("undefined symbol: " + toString(*undefined) +
-            "\n>>> referenced by flag -u " + toString(*undefined));
-      return false;
-    }
-  }
-
-  createSyntheticSections();
-  symtab->addDSOHandle(in.header);
-
-  for (const Arg *arg : args.filtered(OPT_sectcreate)) {
-    StringRef segName = arg->getValue(0);
-    StringRef sectName = arg->getValue(1);
-    StringRef fileName = arg->getValue(2);
-    Optional<MemoryBufferRef> buffer = readFile(fileName);
-    if (buffer)
-      inputFiles.insert(make<OpaqueFile>(*buffer, segName, sectName));
-  }
-
-  // Initialize InputSections.
-  for (const InputFile *file : inputFiles) {
-    for (const SubsectionMap &map : file->subsections) {
-      for (const auto &p : map) {
-        InputSection *isec = p.second;
-        inputSections.push_back(isec);
+      switch (opt.getID()) {
+      case OPT_INPUT:
+        addFile(arg->getValue(), false);
+        break;
+      case OPT_weak_library:
+        if (auto *dylibFile =
+                dyn_cast_or_null<DylibFile>(addFile(arg->getValue(), false)))
+          dylibFile->forceWeakImport = true;
+        break;
+      case OPT_filelist:
+        addFileList(arg->getValue());
+        break;
+      case OPT_force_load:
+        addFile(arg->getValue(), true);
+        break;
+      case OPT_l:
+      case OPT_weak_l:
+        addLibrary(arg->getValue(), opt.getID() == OPT_weak_l);
+        break;
+      case OPT_framework:
+      case OPT_weak_framework:
+        addFramework(arg->getValue(), opt.getID() == OPT_weak_framework);
+        break;
+      default:
+        break;
       }
     }
+
+    config->isPic = config->outputType == MH_DYLIB ||
+                    config->outputType == MH_BUNDLE || isPie(args);
+
+    // Now that all dylibs have been loaded, search for those that should be
+    // re-exported.
+    for (const Arg *arg : args.filtered(OPT_sub_library, OPT_sub_umbrella)) {
+      config->hasReexports = true;
+      StringRef searchName = arg->getValue();
+      std::vector<StringRef> extensions;
+      if (arg->getOption().getID() == OPT_sub_library)
+        extensions = {".dylib", ".tbd"};
+      else
+        extensions = {".tbd"};
+      if (!markReexport(searchName, extensions))
+        error(arg->getSpelling() + " " + searchName +
+              " does not match a supplied dylib");
+    }
+
+    // Parse LTO options.
+    if (const Arg *arg = args.getLastArg(OPT_mcpu))
+      parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
+                       arg->getSpelling());
+
+    for (const Arg *arg : args.filtered(OPT_mllvm))
+      parseClangOption(arg->getValue(), arg->getSpelling());
+
+    compileBitcodeFiles();
+    replaceCommonSymbols();
+
+    StringRef orderFile = args.getLastArgValue(OPT_order_file);
+    if (!orderFile.empty())
+      parseOrderFile(orderFile);
+
+    if (config->outputType == MH_EXECUTE && isa<Undefined>(config->entry)) {
+      error("undefined symbol: " + toString(*config->entry));
+      return false;
+    }
+    // FIXME: This prints symbols that are undefined both in input files and
+    // via -u flag twice.
+    for (const Symbol *undefined : config->explicitUndefineds) {
+      if (isa<Undefined>(undefined)) {
+        error("undefined symbol: " + toString(*undefined) +
+              "\n>>> referenced by flag -u " + toString(*undefined));
+        return false;
+      }
+    }
+
+    createSyntheticSections();
+    symtab->addDSOHandle(in.header);
+
+    for (const Arg *arg : args.filtered(OPT_sectcreate)) {
+      StringRef segName = arg->getValue(0);
+      StringRef sectName = arg->getValue(1);
+      StringRef fileName = arg->getValue(2);
+      Optional<MemoryBufferRef> buffer = readFile(fileName);
+      if (buffer)
+        inputFiles.insert(make<OpaqueFile>(*buffer, segName, sectName));
+    }
+
+    // Initialize InputSections.
+    for (const InputFile *file : inputFiles) {
+      for (const SubsectionMap &map : file->subsections) {
+        for (const auto &p : map) {
+          InputSection *isec = p.second;
+          inputSections.push_back(isec);
+        }
+      }
+    }
+
+    // Write to an output file.
+    writeResult();
   }
 
-  // Write to an output file.
-  writeResult();
+  if (config->timeTraceEnabled) {
+    if (auto E = timeTraceProfilerWrite(
+            args.getLastArgValue(OPT_time_trace_file_eq).str(),
+            config->outputFile)) {
+      handleAllErrors(std::move(E),
+                      [&](const StringError &SE) { error(SE.getMessage()); });
+    }
+
+    timeTraceProfilerCleanup();
+  }
 
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);

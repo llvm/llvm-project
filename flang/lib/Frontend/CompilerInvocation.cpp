@@ -306,9 +306,10 @@ static void parsePreprocessorArgs(
 
 /// Parses all semantic related arguments and populates the variables
 /// options accordingly.
-static void parseSemaArgs(std::string &moduleDir, llvm::opt::ArgList &args,
+static void parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     clang::DiagnosticsEngine &diags) {
 
+  // -J/module-dir option
   auto moduleDirList =
       args.getAllArgValues(clang::driver::options::OPT_module_dir);
   // User can only specify -J/-module-dir once
@@ -320,7 +321,12 @@ static void parseSemaArgs(std::string &moduleDir, llvm::opt::ArgList &args,
     diags.Report(diagID);
   }
   if (moduleDirList.size() == 1)
-    moduleDir = moduleDirList[0];
+    res.SetModuleDir(moduleDirList[0]);
+
+  // -fdebug-module-writer option
+  if (args.hasArg(clang::driver::options::OPT_fdebug_module_writer)) {
+    res.SetDebugModuleDir(true);
+  }
 }
 
 /// Parses all Dialect related arguments and populates the variables
@@ -395,7 +401,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
   // Parse the preprocessor args
   parsePreprocessorArgs(res.preprocessorOpts(), args);
   // Parse semantic args
-  parseSemaArgs(res.moduleDir(), args, diags);
+  parseSemaArgs(res, args, diags);
   // Parse dialect arguments
   parseDialectArgs(res, args, diags);
 
@@ -511,7 +517,6 @@ void CompilerInvocation::setSemanticsOpts(
   semanticsContext_ = std::make_unique<semantics::SemanticsContext>(
       defaultKinds(), fortranOptions.features, allCookedSources);
 
-  auto &moduleDirJ = moduleDir();
-  semanticsContext_->set_moduleDirectory(moduleDirJ)
+  semanticsContext_->set_moduleDirectory(moduleDir())
       .set_searchDirectories(fortranOptions.searchDirectories);
 }

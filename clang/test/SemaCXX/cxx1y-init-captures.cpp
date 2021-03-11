@@ -21,10 +21,10 @@ namespace variadic_expansion {
                     return a;
                   }() ...);
                 };                 
-    auto N2 = [x = y,                     //expected-note3{{begins here}}
+    auto N2 = [x = y, //expected-note3{{begins here}} expected-note 6 {{default capture by}}
                 &z = y, n = f(t...), 
-                o = f([&a(t)](T& ... t)->decltype(auto) { return a; }(t...)...)](T& ... s) { 
-                  fv([&a(t)]()->decltype(auto) { //expected-error 3{{captured}}
+                o = f([&a(t)](T& ... t)->decltype(auto) { return a; }(t...)...)](T& ... s) { // expected-note 6 {{capture 't' by}}
+                fv([&a(t)]()->decltype(auto) { //expected-error 3{{captured}}
                     return a;
                   }() ...);
                 };                 
@@ -57,8 +57,8 @@ int test() {
   }
   {
     const int x = 10;
-    auto L = [k = x](char a) { //expected-note {{declared}}
-      return [](int b) { //expected-note {{begins}}
+    auto L = [k = x](char a) {  //expected-note {{declared}}
+      return [](int b) {        //expected-note {{begins}} expected-note 2 {{capture 'k' by}} expected-note 2 {{default capture by}}
         return [j = k](int c) { //expected-error {{cannot be implicitly captured}}
           return c;
         };
@@ -117,13 +117,12 @@ int test(T t = T{}) {
   }
   { // will need to capture x in outer lambda
     const T x = 10; //expected-note {{declared}}
-    auto L = [z = x](char a) { //expected-note {{begins}}
+    auto L = [z = x](char a) { //expected-note {{begins}} expected-note 2 {{capture 'x' by}} expected-note 2 {{default capture by}}
       auto M = [&y = x](T b) { //expected-error {{cannot be implicitly captured}}
         return y;
       };
       return M;
     };
-        
   }
   { // will need to capture x in outer lambda
     const T x = 10; 
@@ -146,7 +145,7 @@ int test(T t = T{}) {
   }
   { // will need to capture x in outer lambda
     const int x = 10; //expected-note {{declared}}
-    auto L = [z = x](char a) { //expected-note {{begins}}
+    auto L = [z = x](char a) { //expected-note {{begins}} expected-note 2 {{capture 'x' by}} expected-note 2 {{default capture by}}
       auto M = [&y = x](T b) { //expected-error {{cannot be implicitly captured}}
         return y;
       };

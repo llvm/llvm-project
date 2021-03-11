@@ -53,15 +53,18 @@ public:
 
   void runOnOperation() final;
 
+protected:
+  void getDependentDialects(DialectRegistry &registry) const override;
+
 private:
-  // Creates the LLVM target machine to generate the ISA.
+  /// Creates the LLVM target machine to generate the ISA.
   std::unique_ptr<llvm::TargetMachine> createTargetMachine();
 
-  // Translates the 'getOperation()' result to an LLVM module.
+  /// Translates the 'getOperation()' result to an LLVM module.
   virtual std::unique_ptr<llvm::Module>
-  translateToLLVMIR(llvm::LLVMContext &llvmContext) = 0;
+  translateToLLVMIR(llvm::LLVMContext &llvmContext);
 
-  // Serializes the target ISA to binary form.
+  /// Serializes the target ISA to binary form.
   virtual std::unique_ptr<std::vector<char>>
   serializeISA(const std::string &isa) = 0;
 
@@ -82,6 +85,10 @@ protected:
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
+
+/// Register pass to serialize GPU kernel functions to a CUBIN binary
+/// annotation.
+void registerGpuSerializeToCubinPass();
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
