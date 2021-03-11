@@ -1172,7 +1172,7 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << ((isLoad() && isStore()) ? " on "
            : isLoad()              ? " from "
                                    : " into ")
-       << "undef";
+       << "unknown-address";
   }
   MachineOperand::printOperandOffset(OS, getOffset());
   if (getAlign() != getSize())

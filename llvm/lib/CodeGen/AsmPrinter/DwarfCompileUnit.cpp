@@ -786,10 +786,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     DIExpressionCursor Cursor(Expr);
     const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
 
-    // Declare the TargetMachine locally so we don't need to capture `this` in
-    // the lambda.
-    TargetMachine &TM = Asm->TM;
-    auto AddEntry = [&DwarfExpr, &TRI, &TM](const DbgValueLocEntry &Entry,
+    auto AddEntry = [&](const DbgValueLocEntry &Entry,
                                             DIExpressionCursor &Cursor) {
       if (Entry.isLocation()) {
         if (!DwarfExpr.addMachineRegExpression(TRI, Cursor,
@@ -808,7 +805,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
         TargetIndexLocation Loc = Entry.getTargetIndexLocation();
         // TODO TargetIndexLocation is a target-independent. Currently only the
         // WebAssembly-specific encoding is supported.
-        assert(TM.getTargetTriple().isWasm());
+        assert(Asm->TM.getTargetTriple().isWasm());
         DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
       } else {
         llvm_unreachable("Unsupported Entry type.");
@@ -818,7 +815,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
 
     DwarfExpr.addExpression(
         std::move(Cursor),
-        [&AddEntry, &DVal](unsigned Idx, DIExpressionCursor &Cursor) -> bool {
+        [&](unsigned Idx, DIExpressionCursor &Cursor) -> bool {
           return AddEntry(DVal->getLocEntries()[Idx], Cursor);
         });
 

@@ -7132,7 +7132,8 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
 };
 
 void AMDGPUAsmParser::onBeginOfFile() {
-  if (getSTI().getTargetTriple().getArch() == Triple::r600)
+  if (!getParser().getStreamer().getTargetStreamer() ||
+      getSTI().getTargetTriple().getArch() == Triple::r600)
     return;
 
   if (!getTargetStreamer().getTargetID())

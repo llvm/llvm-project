@@ -829,13 +829,13 @@ u64 MonotonicNanoTime() {
   return (u64)ts.tv_sec * (1000ULL * 1000 * 1000) + ts.tv_nsec;
 }
 #else
-// Non-Linux & Go always use the regular function.
+// Non-glibc & Go always use the regular function.
 u64 MonotonicNanoTime() {
   timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (u64)ts.tv_sec * (1000ULL * 1000 * 1000) + ts.tv_nsec;
 }
-#endif  // SANITIZER_LINUX && !SANITIZER_GO
+#endif  // SANITIZER_GLIBC && !SANITIZER_GO
 
 void ReExec() {
   const char *pathname = "/proc/self/exe";

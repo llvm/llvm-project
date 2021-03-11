@@ -489,24 +489,24 @@ int TgKill(pid_t pid, tid_t tid, int sig) {
 }
 #endif
 
-#if !SANITIZER_SOLARIS && !SANITIZER_NETBSD
+#if SANITIZER_GLIBC
 u64 NanoTime() {
-#if SANITIZER_FREEBSD
-  timeval tv;
-#else
   kernel_timeval tv;
-#endif
   internal_memset(&tv, 0, sizeof(tv));
   internal_syscall(SYSCALL(gettimeofday), &tv, 0);
-  return (u64)tv.tv_sec * 1000*1000*1000 + tv.tv_usec * 1000;
+  return (u64)tv.tv_sec * 1000 * 1000 * 1000 + tv.tv_usec * 1000;
 }
-#endif  // !SANITIZER_SOLARIS && !SANITIZER_NETBSD
-
-#if SANITIZER_GLIBC
+// Used by real_clock_gettime.
 uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void *tp) {
   return internal_syscall(SYSCALL(clock_gettime), clk_id, tp);
 }
-#endif  // SANITIZER_GLIBC
+#elif !SANITIZER_SOLARIS && !SANITIZER_NETBSD
+u64 NanoTime() {
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  return (u64)ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec;
+}
+#endif
 
 // Like getenv, but reads env directly from /proc (on Linux) or parses the
 // 'environ' array (on some others) and does not use libc. This function

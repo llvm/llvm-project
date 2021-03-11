@@ -1343,7 +1343,8 @@ namespace {
         CGF.EmitBlock(RethrowBB);
         if (SavedExnVar) {
           CGF.EmitRuntimeCallOrInvoke(RethrowFn,
-            CGF.Builder.CreateAlignedLoad(SavedExnVar, CGF.getPointerAlign()));
+            CGF.Builder.CreateAlignedLoad(CGF.Int8PtrTy, SavedExnVar,
+                                          CGF.getPointerAlign()));
         } else {
           CGF.EmitRuntimeCallOrInvoke(RethrowFn);
         }
@@ -1879,8 +1880,24 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
     setAddrOfLocalVar(VD, Recovered);
 
     if (isa<ImplicitParamDecl>(VD)) {
-      CXXThisValue = Builder.CreateLoad(Recovered, "this");
-      CXXABIThisValue = CXXThisValue;
+      CXXABIThisAlignment = ParentCGF.CXXABIThisAlignment;
+      CXXThisAlignment = ParentCGF.CXXThisAlignment;
+      CXXABIThisValue = Builder.CreateLoad(Recovered, "this");
+      if (ParentCGF.LambdaThisCaptureField) {
+        LambdaThisCaptureField = ParentCGF.LambdaThisCaptureField;
+        // We are in a lambda function where "this" is captured so the
+        // CXXThisValue need to be loaded from the lambda capture
+        LValue ThisFieldLValue =
+            EmitLValueForLambdaField(LambdaThisCaptureField);
+        if (!LambdaThisCaptureField->getType()->isPointerType()) {
+          CXXThisValue = ThisFieldLValue.getAddress(*this).getPointer();
+        } else {
+          CXXThisValue = EmitLoadOfLValue(ThisFieldLValue, SourceLocation())
+                             .getScalarVal();
+        }
+      } else {
+        CXXThisValue = CXXABIThisValue;
+      }
     }
   }
 
@@ -1949,6 +1966,7 @@ void CodeGenFunction::startOutlinedSEHHelper(CodeGenFunction &ParentCGF,
   StartFunction(GlobalDecl(), RetTy, Fn, FnInfo, Args,
                 OutlinedStmt->getBeginLoc(), OutlinedStmt->getBeginLoc());
   CurSEHParent = ParentCGF.CurSEHParent;
+  CurCodeDecl = ParentCGF.CurCodeDecl;
 
   CGM.SetInternalFunctionAttributes(GlobalDecl(), CurFn, FnInfo);
   EmitCapturedLocals(ParentCGF, OutlinedStmt, IsFilter);
@@ -2021,8 +2039,8 @@ void CodeGenFunction::EmitSEHExceptionCodeSave(CodeGenFunction &ParentCGF,
   llvm::Type *PtrsTy = llvm::StructType::get(RecordTy, CGM.VoidPtrTy);
   llvm::Value *Ptrs = Builder.CreateBitCast(SEHInfo, PtrsTy->getPointerTo());
   llvm::Value *Rec = Builder.CreateStructGEP(PtrsTy, Ptrs, 0);
-  Rec = Builder.CreateAlignedLoad(Rec, getPointerAlign());
-  llvm::Value *Code = Builder.CreateAlignedLoad(Rec, getIntAlign());
+  Rec = Builder.CreateAlignedLoad(RecordTy, Rec, getPointerAlign());
+  llvm::Value *Code = Builder.CreateAlignedLoad(Int32Ty, Rec, getIntAlign());
   assert(!SEHCodeSlotStack.empty() && "emitting EH code outside of __except");
   Builder.CreateStore(Code, SEHCodeSlotStack.back());
 }

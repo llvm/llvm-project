@@ -512,11 +512,11 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
     return VendorSignatures::UNKNOWN;
 
   // "Genu ineI ntel"
-  if (EBX == 0x756e6547 && ECX == 0x6c65746e && EDX == 0x49656e69)
+  if (EBX == 0x756e6547 && EDX == 0x49656e69 && ECX == 0x6c65746e)
     return VendorSignatures::GENUINE_INTEL;
 
   // "Auth enti cAMD"
-  if (EBX == 0x68747541 && ECX == 0x69746e65 && EDX == 0x444d4163)
+  if (EBX == 0x68747541 && EDX == 0x69746e65 && ECX == 0x444d4163)
     return VendorSignatures::AUTHENTIC_AMD;
 
   return VendorSignatures::UNKNOWN;

@@ -2812,7 +2812,7 @@ static bool parseIRValue(const MIToken &Token, PerFunctionMIParsingState &PFS,
     V = C;
     break;
   }
-  case MIToken::kw_undef:
+  case MIToken::kw_unknown_address:
     V = nullptr;
     return false;
   default:
@@ -2975,7 +2975,8 @@ bool MIParser::parseMachinePointerInfo(MachinePointerInfo &Dest) {
   if (Token.isNot(MIToken::NamedIRValue) && Token.isNot(MIToken::IRValue) &&
       Token.isNot(MIToken::GlobalValue) &&
       Token.isNot(MIToken::NamedGlobalValue) &&
-      Token.isNot(MIToken::QuotedIRValue) && Token.isNot(MIToken::kw_undef))
+      Token.isNot(MIToken::QuotedIRValue) &&
+      Token.isNot(MIToken::kw_unknown_address))
     return error("expected an IR value reference");
   const Value *V = nullptr;
   if (parseIRValue(V))

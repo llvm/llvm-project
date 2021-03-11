@@ -81,11 +81,3 @@ define available_externally void @foo_extern() {
 }
 
 declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
-
-; MACHO: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
-; MACHO:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime
-; MACHO:   ret i32 %[[REG]]
-; MACHO: }
-; COFF: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} comdat {
-; ELF-NOT: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
-; ELF-NOT:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime

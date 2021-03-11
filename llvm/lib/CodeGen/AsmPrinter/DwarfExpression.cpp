@@ -473,7 +473,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
 
 void DwarfExpression::addExpression(
     DIExpressionCursor &&ExprCursor,
-    std::function<bool(unsigned, DIExpressionCursor &)> InsertArg) {
+    llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg) {
   // Entry values can currently only cover the initial register location,
   // and not any other parts of the following DWARF expression.
   assert(!IsEmittingEntryValue && "Can't emit entry value around expression");
