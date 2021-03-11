@@ -2876,7 +2876,7 @@ void Darwin::addStartObjectFileArgs(const ArgList &Args,
 
 void Darwin::CheckObjCARC() const {
   if (isTargetIOSBased() || isTargetWatchOSBased() ||
-      (isTargetMacOS() && !isMacosxVersionLT(10, 6)))
+      isTargetMacABI() || (isTargetMacOS() && !isMacosxVersionLT(10, 6)))
     return;
   getDriver().Diag(diag::err_arc_unsupported_on_toolchain);
 }
