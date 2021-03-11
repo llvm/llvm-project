@@ -1842,10 +1842,11 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   // Note: using IRBuilder to create the constants for efficiency.
   SmallVector<Value *, 4> IndexC(GEP.indices());
   bool IsInBounds = GEP.isInBounds();
-  Value *NewTrueC = IsInBounds ? Builder.CreateInBoundsGEP(TrueC, IndexC)
-                               : Builder.CreateGEP(TrueC, IndexC);
-  Value *NewFalseC = IsInBounds ? Builder.CreateInBoundsGEP(FalseC, IndexC)
-                                : Builder.CreateGEP(FalseC, IndexC);
+  Type *Ty = GEP.getSourceElementType();
+  Value *NewTrueC = IsInBounds ? Builder.CreateInBoundsGEP(Ty, TrueC, IndexC)
+                               : Builder.CreateGEP(Ty, TrueC, IndexC);
+  Value *NewFalseC = IsInBounds ? Builder.CreateInBoundsGEP(Ty, FalseC, IndexC)
+                                : Builder.CreateGEP(Ty, FalseC, IndexC);
   return SelectInst::Create(Cond, NewTrueC, NewFalseC, "", nullptr, Sel);
 }
 

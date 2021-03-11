@@ -368,7 +368,7 @@ template <class Derived> struct GenFuncBase {
         CGF.Builder.CreateNUWMul(BaseEltSizeVal, NumElts);
     Address BC = CGF.Builder.CreateBitCast(DstAddr, CGF.CGM.Int8PtrTy);
     llvm::Value *DstArrayEnd =
-        CGF.Builder.CreateInBoundsGEP(BC.getPointer(), SizeInBytes);
+        CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, BC.getPointer(), SizeInBytes);
     DstArrayEnd = CGF.Builder.CreateBitCast(DstArrayEnd, CGF.CGM.Int8PtrPtrTy,
                                             "dstarray.end");
     llvm::BasicBlock *PreheaderBB = CGF.Builder.GetInsertBlock();
