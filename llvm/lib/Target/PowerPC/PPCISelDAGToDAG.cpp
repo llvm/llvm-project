@@ -1040,6 +1040,21 @@ static SDNode *selectI64ImmDirect(SelectionDAG *CurDAG, const SDLoc &dl,
 // were selected.
 static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
                                         uint64_t Imm, unsigned &InstCnt) {
+  unsigned TZ = countTrailingZeros<uint64_t>(Imm);
+  unsigned LZ = countLeadingZeros<uint64_t>(Imm);
+  unsigned TO = countTrailingOnes<uint64_t>(Imm);
+  unsigned FO = countLeadingOnes<uint64_t>(Imm << LZ);
+  unsigned Hi32 = Hi_32(Imm);
+  unsigned Lo32 = Lo_32(Imm);
+
+  auto getI32Imm = [CurDAG, dl](unsigned Imm) {
+    return CurDAG->getTargetConstant(Imm, dl, MVT::i32);
+  };
+
+  auto getI64Imm = [CurDAG, dl](uint64_t Imm) {
+    return CurDAG->getTargetConstant(Imm, dl, MVT::i64);
+  };
+
   // Following patterns use 1 instruction to materialize Imm.
   InstCnt = 1;
 
@@ -1048,8 +1063,98 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
   if (isInt<34>(Imm))
     return cast<ConstantSDNode>(CurDAG->getConstant(Imm, dl, MVT::i64));
 
-  InstCnt = 0;
-  return nullptr;
+  // Require at least two instructions.
+  InstCnt = 2;
+  SDNode *Result = nullptr;
+  // Patterns : {zeros}{ones}{33-bit value}{zeros}
+  //            {zeros}{33-bit value}{zeros}
+  //            {zeros}{ones}{33-bit value}
+  //            {ones}{33-bit value}{zeros}
+  // We can take advantage of PLI's sign-extension semantics to generate leading
+  // ones, and then use RLDIC to mask off the ones on both sides after rotation.
+  if ((LZ + FO + TZ) > 30) {
+    APInt SignedInt34 = APInt(34, (Imm >> TZ) & 0x3ffffffff);
+    APInt Extended = SignedInt34.sext(64);
+    Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
+                                    getI64Imm(*Extended.getRawData()));
+    return CurDAG->getMachineNode(PPC::RLDIC, dl, MVT::i64, SDValue(Result, 0),
+                                  getI32Imm(TZ), getI32Imm(LZ));
+  }
+  // Pattern : {zeros}{33-bit value}{ones}
+  // Shift right the Imm by (30 - LZ) bits to construct a negative 34 bit value,
+  // therefore we can take advantage of PLI's sign-extension semantics, and then
+  // mask them off after rotation.
+  //
+  // +--LZ--||-33-bit-||--TO--+     +-------------|--34-bit--+
+  // |00000001bbbbbbbbb1111111| ->  |00000000000001bbbbbbbbb1|
+  // +------------------------+     +------------------------+
+  // 63                      0      63                      0
+  //
+  // +----sext-----|--34-bit--+     +clear-|-----------------+
+  // |11111111111111bbbbbbbbb1| ->  |00000001bbbbbbbbb1111111|
+  // +------------------------+     +------------------------+
+  // 63                      0      63                      0
+  if ((LZ + TO) > 30) {
+    APInt SignedInt34 = APInt(34, (Imm >> (30 - LZ)) & 0x3ffffffff);
+    APInt Extended = SignedInt34.sext(64);
+    Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
+                                    getI64Imm(*Extended.getRawData()));
+    return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
+                                  getI32Imm(30 - LZ), getI32Imm(LZ));
+  }
+  // Patterns : {zeros}{ones}{33-bit value}{ones}
+  //            {ones}{33-bit value}{ones}
+  // Similar to LI we can take advantage of PLI's sign-extension semantics to
+  // generate leading ones, and then use RLDICL to mask off the ones in left
+  // sides (if required) after rotation.
+  if ((LZ + FO + TO) > 30) {
+    APInt SignedInt34 = APInt(34, (Imm >> TO) & 0x3ffffffff);
+    APInt Extended = SignedInt34.sext(64);
+    Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
+                                    getI64Imm(*Extended.getRawData()));
+    return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
+                                  getI32Imm(TO), getI32Imm(LZ));
+  }
+  // Patterns : {******}{31 zeros}{******}
+  //          : {******}{31 ones}{******}
+  // If Imm contains 31 consecutive zeros/ones then the remaining bit count
+  // is 33. Rotate right the Imm to construct a int<33> value, we can use PLI
+  // for the int<33> value and then use RLDICL without a mask to rotate it back.
+  //
+  // +------|--ones--|------+     +---ones--||---33 bit--+
+  // |bbbbbb1111111111aaaaaa| ->  |1111111111aaaaaabbbbbb|
+  // +----------------------+     +----------------------+
+  // 63                    0      63                    0
+  for (unsigned Shift = 0; Shift < 63; ++Shift) {
+    uint64_t RotImm = (Imm >> Shift) | (Imm << (64 - Shift));
+    if (isInt<34>(RotImm)) {
+      Result =
+          CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64, getI64Imm(RotImm));
+      return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64,
+                                    SDValue(Result, 0), getI32Imm(Shift),
+                                    getI32Imm(0));
+    }
+  }
+
+  // Patterns : High word == Low word
+  // This is basically a splat of a 32 bit immediate.
+  if (Hi32 == Lo32) {
+    Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64, getI64Imm(Hi32));
+    SDValue Ops[] = {SDValue(Result, 0), SDValue(Result, 0), getI32Imm(32),
+                     getI32Imm(0)};
+    return CurDAG->getMachineNode(PPC::RLDIMI, dl, MVT::i64, Ops);
+  }
+
+  InstCnt = 3;
+  // Catch-all
+  // This pattern can form any 64 bit immediate in 3 instructions.
+  SDNode *ResultHi =
+      CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64, getI64Imm(Hi32));
+  SDNode *ResultLo =
+      CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64, getI64Imm(Lo32));
+  SDValue Ops[] = {SDValue(ResultLo, 0), SDValue(ResultHi, 0), getI32Imm(32),
+                   getI32Imm(0)};
+  return CurDAG->getMachineNode(PPC::RLDIMI, dl, MVT::i64, Ops);
 }
 
 static SDNode *selectI64Imm(SelectionDAG *CurDAG, const SDLoc &dl, uint64_t Imm,
