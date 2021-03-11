@@ -15,7 +15,7 @@ Overview
 
 In November 2020, the C++ standard committee adopted the first changes to the next version of the C++ standard, known here as "C++2b" (probably to be C++23).
 
-.. This page shows the status of libc++; the status of clang's support of the language features is `here <https://clang.llvm.org/cxx_status.html#cxx2b>`__.
+This page shows the status of libc++; the status of clang's support of the language features is `here <https://clang.llvm.org/cxx_status.html#cxx23>`__.
 
 .. attention:: Features in unreleased drafts of the standard are subject to change.
 
