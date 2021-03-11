@@ -671,4 +671,29 @@ struct ExceptionChecker {
 
 };
 
+inline fs::path GetWindowsInaccessibleDir() {
+  // Only makes sense on windows, but the code can be compiled for
+  // any platform.
+  const fs::path dir("C:\\System Volume Information");
+  std::error_code ec;
+  const fs::path root("C:\\");
+  fs::directory_iterator it(root, ec);
+  if (ec)
+    return fs::path();
+  const fs::directory_iterator endIt{};
+  while (it != endIt) {
+    const fs::directory_entry &ent = *it;
+    if (ent == dir) {
+      // Basic sanity checks on the directory_entry
+      if (!ent.exists())
+        return fs::path();
+      if (!ent.is_directory())
+        return fs::path();
+      return ent;
+    }
+    ++it;
+  }
+  return fs::path();
+}
+
 #endif /* FILESYSTEM_TEST_HELPER_HPP */

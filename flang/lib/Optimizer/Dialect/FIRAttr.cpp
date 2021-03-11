@@ -243,3 +243,12 @@ void fir::printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
     os << "<(unknown attribute)>";
   }
 }
+
+//===----------------------------------------------------------------------===//
+// FIROpsDialect
+//===----------------------------------------------------------------------===//
+
+void FIROpsDialect::registerAttributes() {
+  addAttributes<ClosedIntervalAttr, ExactTypeAttr, LowerBoundAttr,
+                PointIntervalAttr, RealAttr, SubclassAttr, UpperBoundAttr>();
+}
