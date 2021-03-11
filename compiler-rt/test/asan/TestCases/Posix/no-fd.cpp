@@ -10,6 +10,9 @@
 // lld - see https://bugs.llvm.org/show_bug.cgi?id=45076.
 // UNSUPPORTED: android, powerpc
 
+// Deflake this test before reinabling for darwin (rdar://74992832)
+// UNSUPPORTED: darwin
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
