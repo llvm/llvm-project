@@ -10200,14 +10200,19 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
                                            bool IsCompAssign, bool IsDiv) {
   checkArithmeticNull(*this, LHS, RHS, Loc, /*IsCompare=*/false);
 
-  if (LHS.get()->getType()->isVectorType() ||
-      RHS.get()->getType()->isVectorType())
+  QualType LHSTy = LHS.get()->getType();
+  QualType RHSTy = RHS.get()->getType();
+  if (LHSTy->isVectorType() || RHSTy->isVectorType())
     return CheckVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                /*AllowBothBool*/getLangOpts().AltiVec,
                                /*AllowBoolConversions*/false);
-  if (!IsDiv && (LHS.get()->getType()->isConstantMatrixType() ||
-                 RHS.get()->getType()->isConstantMatrixType()))
+  if (!IsDiv &&
+      (LHSTy->isConstantMatrixType() || RHSTy->isConstantMatrixType()))
     return CheckMatrixMultiplyOperands(LHS, RHS, Loc, IsCompAssign);
+  // For division, only matrix-by-scalar is supported. Other combinations with
+  // matrix types are invalid.
+  if (IsDiv && LHSTy->isConstantMatrixType() && RHSTy->isArithmeticType())
+    return CheckMatrixElementwiseOperands(LHS, RHS, Loc, IsCompAssign);
 
   QualType compType = UsualArithmeticConversions(
       LHS, RHS, Loc, IsCompAssign ? ACK_CompAssign : ACK_Arithmetic);

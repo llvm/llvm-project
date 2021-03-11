@@ -3157,6 +3157,20 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
     }
   }
 
+  if (Ops.Ty->isConstantMatrixType()) {
+    llvm::MatrixBuilder<CGBuilderTy> MB(Builder);
+    // We need to check the types of the operands of the operator to get the
+    // correct matrix dimensions.
+    auto *BO = cast<BinaryOperator>(Ops.E);
+    assert(
+        isa<ConstantMatrixType>(BO->getLHS()->getType().getCanonicalType()) &&
+        "first operand must be a matrix");
+    assert(BO->getRHS()->getType().getCanonicalType()->isArithmeticType() &&
+           "second operand must be an arithmetic type");
+    return MB.CreateScalarDiv(Ops.LHS, Ops.RHS,
+                              Ops.Ty->hasUnsignedIntegerRepresentation());
+  }
+
   if (Ops.LHS->getType()->isFPOrFPVectorTy()) {
     llvm::Value *Val;
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Ops.FPFeatures);
