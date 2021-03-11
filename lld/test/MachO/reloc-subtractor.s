@@ -21,7 +21,7 @@
 # CHECK-NEXT:  segment  section            address     type
 # CHECK-EMPTY:
 
-.globl _main, _subtrahend_1, _subtrahend_2, _minued1, _minued2
+.globl _main, _subtrahend_1, _subtrahend_2, _minuend1, _minuend2
 
 .data
 _subtrahend_1:
