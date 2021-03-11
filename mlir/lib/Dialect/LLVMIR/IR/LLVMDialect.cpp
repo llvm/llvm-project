@@ -41,33 +41,6 @@ static constexpr const char kNonTemporalAttrName[] = "nontemporal";
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
 
-namespace mlir {
-namespace LLVM {
-namespace detail {
-
-struct LoopOptionAttrStorage : public AttributeStorage {
-  using KeyTy = std::pair<uint64_t, int32_t>;
-
-  explicit LoopOptionAttrStorage(uint64_t option, int32_t value)
-      : option(option), value(value) {}
-
-  bool operator==(const KeyTy &key) const {
-    return key == KeyTy(option, value);
-  }
-
-  static LoopOptionAttrStorage *
-  construct(mlir::AttributeStorageAllocator &allocator, const KeyTy &key) {
-    return new (allocator.allocate<LoopOptionAttrStorage>())
-        LoopOptionAttrStorage(key.first, key.second);
-  }
-
-  uint64_t option;
-  int32_t value;
-};
-} // namespace detail
-} // namespace LLVM
-} // namespace mlir
-
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
       llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
@@ -2198,7 +2171,7 @@ static LogicalResult verify(FenceOp &op) {
 //===----------------------------------------------------------------------===//
 
 void LLVMDialect::initialize() {
-  addAttributes<FMFAttr, LoopOptionAttr>();
+  addAttributes<FMFAttr, LoopOptionsAttr>();
 
   // clang-format off
   addTypes<LLVMVoidType,
@@ -2291,17 +2264,10 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
 
     Optional<NamedAttribute> loopOptions =
         loopAttr.getNamed(LLVMDialect::getLoopOptionsAttrName());
-    if (loopOptions.hasValue()) {
-      auto options = loopOptions->second.dyn_cast<ArrayAttr>();
-      if (!options)
-        return op->emitOpError()
-               << "expected '" << LLVMDialect::getLoopOptionsAttrName()
-               << "' to be an array attribute";
-      if (!llvm::all_of(options, [](Attribute option) {
-            return option.isa<LoopOptionAttr>();
-          }))
-        return op->emitOpError() << "invalid loop options list " << options;
-    }
+    if (loopOptions.hasValue() && !loopOptions->second.isa<LoopOptionsAttr>())
+      return op->emitOpError()
+             << "expected '" << LLVMDialect::getLoopOptionsAttrName()
+             << "' to be a `loopopts` attribute";
   }
 
   // If the data layout attribute is present, it must use the LLVM data layout
@@ -2427,107 +2393,135 @@ Attribute FMFAttr::parse(MLIRContext *context, DialectAsmParser &parser,
   return FMFAttr::get(parser.getBuilder().getContext(), flags);
 }
 
-LoopOptionAttr LoopOptionAttr::getDisableUnroll(MLIRContext *context,
-                                                bool disable) {
-  auto option = LoopOptionCase::disable_unroll;
-  return Base::get(context, static_cast<uint64_t>(option),
-                   static_cast<int32_t>(disable));
-}
+LoopOptionsAttrBuilder::LoopOptionsAttrBuilder(LoopOptionsAttr attr)
+    : options(attr.getOptions().begin(), attr.getOptions().end()) {}
 
-LoopOptionAttr LoopOptionAttr::getDisableLICM(MLIRContext *context,
-                                              bool disable) {
-  auto option = LoopOptionCase::disable_licm;
-  return Base::get(context, static_cast<uint64_t>(option),
-                   static_cast<int32_t>(disable));
-}
-
-LoopOptionAttr LoopOptionAttr::getInterleaveCount(MLIRContext *context,
-                                                  int32_t count) {
-  auto option = LoopOptionCase::interleave_count;
-  return Base::get(context, static_cast<uint64_t>(option),
-                   static_cast<int32_t>(count));
-}
-
-LoopOptionCase LoopOptionAttr::getCase() const {
-  return static_cast<LoopOptionCase>(getImpl()->option);
-}
-
-bool LoopOptionAttr::getBool() const {
-  LoopOptionCase option = getCase();
-  (void)option;
-  assert(option == LoopOptionCase::disable_licm ||
-         option == LoopOptionCase::disable_unroll &&
-             "expected a boolean loop option");
-  return static_cast<bool>(getImpl()->value);
-}
-
-int32_t LoopOptionAttr::getInt() const {
-  LoopOptionCase option = getCase();
-  (void)option;
-  assert(option == LoopOptionCase::interleave_count &&
-         "expected an integer loop option");
-  return getImpl()->value;
-}
-
-void LoopOptionAttr::print(DialectAsmPrinter &printer) const {
-  printer << "loopopt<" << stringifyEnum(getCase()) << " = ";
-  switch (getCase()) {
-  case LoopOptionCase::disable_licm:
-  case LoopOptionCase::disable_unroll:
-    printer << (getBool() ? "true" : "false");
-    break;
-  case LoopOptionCase::interleave_count:
-    printer << getInt();
-    break;
+template <typename T>
+LoopOptionsAttrBuilder &LoopOptionsAttrBuilder::setOption(LoopOptionCase tag,
+                                                          Optional<T> value) {
+  auto option = llvm::find_if(
+      options, [tag](auto option) { return option.first == tag; });
+  if (option != options.end()) {
+    if (value.hasValue())
+      option->second = *value;
+    else
+      options.erase(option);
+  } else {
+    options.push_back(LoopOptionsAttr::OptionValuePair(tag, *value));
   }
+  return *this;
+}
+
+template <typename T>
+static Optional<T>
+getOption(ArrayRef<std::pair<LoopOptionCase, int64_t>> options,
+          LoopOptionCase option) {
+  auto it =
+      lower_bound(options, option, [](auto optionPair, LoopOptionCase option) {
+        return optionPair.first < option;
+      });
+  if (it == options.end())
+    return {};
+  return static_cast<T>(it->second);
+}
+
+Optional<bool> LoopOptionsAttr::disableUnroll() {
+  return getOption<bool>(getOptions(), LoopOptionCase::disable_unroll);
+}
+
+Optional<bool> LoopOptionsAttr::disableLICM() {
+  return getOption<bool>(getOptions(), LoopOptionCase::disable_licm);
+}
+
+Optional<int64_t> LoopOptionsAttr::interleaveCount() {
+  return getOption<int64_t>(getOptions(), LoopOptionCase::interleave_count);
+}
+
+/// Build the LoopOptions Attribute from a sorted array of individual options.
+LoopOptionsAttr LoopOptionsAttr::get(
+    MLIRContext *context,
+    ArrayRef<std::pair<LoopOptionCase, int64_t>> sortedOptions) {
+  assert(llvm::is_sorted(sortedOptions, llvm::less_first()) &&
+         "LoopOptionsAttr ctor expects a sorted options array");
+  return Base::get(context, sortedOptions);
+}
+
+/// Build the LoopOptions Attribute from a sorted array of individual options.
+LoopOptionsAttr LoopOptionsAttr::get(MLIRContext *context,
+                                     LoopOptionsAttrBuilder &optionBuilders) {
+  llvm::sort(optionBuilders.options, llvm::less_first());
+  return Base::get(context, optionBuilders.options);
+}
+
+void LoopOptionsAttr::print(DialectAsmPrinter &printer) const {
+  printer << getMnemonic() << "<";
+  llvm::interleaveComma(getOptions(), printer, [&](auto option) {
+    switch (option.first) {
+    case LoopOptionCase::disable_licm:
+    case LoopOptionCase::disable_unroll:
+      printer << (option.second ? "true" : "false");
+      break;
+    case LoopOptionCase::interleave_count:
+      printer << option.second;
+      break;
+    }
+  });
   printer << ">";
 }
 
-Attribute LoopOptionAttr::parse(DialectAsmParser &parser) {
+Attribute LoopOptionsAttr::parse(MLIRContext *context, DialectAsmParser &parser,
+                                 Type type) {
   if (failed(parser.parseLess()))
     return {};
 
-  StringRef optionName;
-  if (failed(parser.parseKeyword(&optionName)))
-    return {};
+  SmallVector<std::pair<LoopOptionCase, int64_t>> options;
+  llvm::SmallDenseSet<LoopOptionCase> seenOptions;
+  do {
+    StringRef optionName;
+    if (parser.parseKeyword(&optionName))
+      return {};
 
-  auto option = symbolizeLoopOptionCase(optionName);
-  if (!option) {
-    parser.emitError(parser.getNameLoc(), "unknown loop option: ")
-        << optionName;
-    return {};
-  }
-
-  if (failed(parser.parseEqual()))
-    return {};
-
-  int32_t value;
-  switch (*option) {
-  case LoopOptionCase::disable_licm:
-  case LoopOptionCase::disable_unroll:
-    if (succeeded(parser.parseOptionalKeyword("true")))
-      value = 1;
-    else if (succeeded(parser.parseOptionalKeyword("false")))
-      value = 0;
-    else {
-      parser.emitError(parser.getNameLoc(),
-                       "expected boolean value 'true' or 'false'");
+    auto option = symbolizeLoopOptionCase(optionName);
+    if (!option) {
+      parser.emitError(parser.getNameLoc(), "unknown loop option: ")
+          << optionName;
       return {};
     }
-    break;
-  case LoopOptionCase::interleave_count:
-    if (failed(parser.parseInteger(value))) {
-      parser.emitError(parser.getNameLoc(), "expected integer value");
+    if (!seenOptions.insert(*option).second) {
+      parser.emitError(parser.getNameLoc(), "loop option present twice");
       return {};
     }
-    break;
-  }
+    if (failed(parser.parseEqual()))
+      return {};
 
+    int64_t value;
+    switch (*option) {
+    case LoopOptionCase::disable_licm:
+    case LoopOptionCase::disable_unroll:
+      if (succeeded(parser.parseOptionalKeyword("true")))
+        value = 1;
+      else if (succeeded(parser.parseOptionalKeyword("false")))
+        value = 0;
+      else {
+        parser.emitError(parser.getNameLoc(),
+                         "expected boolean value 'true' or 'false'");
+        return {};
+      }
+      break;
+    case LoopOptionCase::interleave_count:
+      if (failed(parser.parseInteger(value))) {
+        parser.emitError(parser.getNameLoc(), "expected integer value");
+        return {};
+      }
+      break;
+    }
+    options.push_back(std::make_pair(*option, value));
+  } while (succeeded(parser.parseOptionalComma()));
   if (failed(parser.parseGreater()))
     return {};
 
-  return Base::get(parser.getBuilder().getContext(),
-                   static_cast<uint64_t>(*option), value);
+  llvm::sort(options, llvm::less_first());
+  return get(parser.getBuilder().getContext(), options);
 }
 
 Attribute LLVMDialect::parseAttribute(DialectAsmParser &parser,
@@ -2543,9 +2537,6 @@ Attribute LLVMDialect::parseAttribute(DialectAsmParser &parser,
           generatedAttributeParser(getContext(), parser, attrKind, type))
     return attr;
 
-  if (attrKind == "loopopt")
-    return LoopOptionAttr::parse(parser);
-
   parser.emitError(parser.getNameLoc(), "Unknown attribute type: ") << attrKind;
   return {};
 }
@@ -2553,8 +2544,5 @@ Attribute LLVMDialect::parseAttribute(DialectAsmParser &parser,
 void LLVMDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
   if (succeeded(generatedAttributePrinter(attr, os)))
     return;
-  if (auto lopt = attr.dyn_cast<LoopOptionAttr>())
-    lopt.print(os);
-  else
-    llvm_unreachable("Unknown attribute type");
+  llvm_unreachable("Unknown attribute type");
 }
