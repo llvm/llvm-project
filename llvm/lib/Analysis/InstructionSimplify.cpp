@@ -2491,7 +2491,6 @@ computePointerICmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
   const DataLayout &DL = Q.DL;
   const TargetLibraryInfo *TLI = Q.TLI;
   const DominatorTree *DT = Q.DT;
-  AssumptionCache *AC = Q.AC;
   const Instruction *CxtI = Q.CxtI;
   const InstrInfoQuery &IIQ = Q.IIQ;
 

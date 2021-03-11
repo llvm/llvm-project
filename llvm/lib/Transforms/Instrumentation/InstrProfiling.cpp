@@ -1073,23 +1073,8 @@ bool InstrProfiling::emitRuntimeHook() {
       new GlobalVariable(*M, Int32Ty, false, GlobalValue::ExternalLinkage,
                          nullptr, getInstrProfRuntimeHookVarName());
 
-  // Make a function that uses it.
-  auto *User = Function::Create(FunctionType::get(Int32Ty, false),
-                                GlobalValue::LinkOnceODRLinkage,
-                                getInstrProfRuntimeHookVarUseFuncName(), M);
-  User->addFnAttr(Attribute::NoInline);
-  if (Options.NoRedZone)
-    User->addFnAttr(Attribute::NoRedZone);
-  User->setVisibility(GlobalValue::HiddenVisibility);
-  if (TT.supportsCOMDAT())
-    User->setComdat(M->getOrInsertComdat(User->getName()));
-
-  IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", User));
-  auto *Load = IRB.CreateLoad(Int32Ty, Var);
-  IRB.CreateRet(Load);
-
   // Mark the user variable as used so that it isn't stripped out.
-  CompilerUsedVars.push_back(User);
+  CompilerUsedVars.push_back(Var);
   return true;
 }
 

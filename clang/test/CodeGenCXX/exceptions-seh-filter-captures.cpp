@@ -123,3 +123,25 @@ void test_lambda() {
 // CHECK: %[[l1_ref:[^ ]*]] = load i32*, i32** %[[l1_ref_ptr]]
 // CHECK: %[[l1:[^ ]*]] = load i32, i32* %[[l1_ref]]
 // CHECK: call i32 (i32, ...) @basic_filter(i32 %[[l1]], i32 %[[l2]])
+
+struct U {
+  void this_in_lambda();
+};
+
+void U::this_in_lambda() {
+  auto lambda = [=]() {
+    __try {
+      might_crash();
+    } __except (basic_filter(0, this)) {
+    }
+  };
+  lambda();
+}
+
+// CHECK-LABEL: define internal i32 @"?filt$0@0@?R<lambda_1>@?0??this_in_lambda@U@@QEAAXXZ@"(i8* %exception_pointers, i8* %frame_pointer)
+// CHECK: %[[this_i8:[^ ]*]] = call i8* @llvm.localrecover(i8* bitcast (void (%class.anon.0*)* @"??R<lambda_1>@?0??this_in_lambda@U@@QEAAXXZ@QEBA@XZ" to i8*), i8* %[[fp:[^ ]*]], i32 0)
+// CHECK: %[[this_ptr:[^ ]*]] = bitcast i8* %[[this_i8]] to %class.anon.0**
+// CHECK: %[[this:[^ ]*]] = load %class.anon.0*, %class.anon.0** %[[this_ptr]], align 8
+// CHECK: %[[actual_this_ptr:[^ ]*]] = getelementptr inbounds %class.anon.0, %class.anon.0* %[[this]], i32 0, i32 0
+// CHECK: %[[actual_this:[^ ]*]] = load %struct.U*, %struct.U** %[[actual_this_ptr]], align 8
+// CHECK: call i32 (i32, ...) @basic_filter(i32 0, %struct.U* %[[actual_this]])

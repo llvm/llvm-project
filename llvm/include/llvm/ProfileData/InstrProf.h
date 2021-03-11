@@ -149,12 +149,6 @@ inline StringRef getInstrProfRuntimeHookVarName() {
   return INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_RUNTIME_VAR);
 }
 
-/// Return the name of the compiler generated function that references the
-/// runtime hook variable. The function is a weak global.
-inline StringRef getInstrProfRuntimeHookVarUseFuncName() {
-  return "__llvm_profile_runtime_user";
-}
-
 inline StringRef getInstrProfCounterBiasVarName() {
   return "__llvm_profile_counter_bias";
 }

@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <numeric>
 
@@ -536,7 +537,7 @@ void RVVType::applyBasicType() {
     ScalarType = ScalarTypeKind::Float;
     break;
   default:
-    llvm_unreachable("Unhandled type code!");
+    PrintFatalError("Unhandled type code!");
   }
   assert(ElementBitwidth != 0 && "Bad element bitwidth!");
 }
@@ -587,7 +588,7 @@ void RVVType::applyModifier(StringRef Transformer) {
     Scale = 0;
     break;
   default:
-    llvm_unreachable("Illegal primitive type transformers!");
+    PrintFatalError("Illegal primitive type transformers!");
   }
   Transformer = Transformer.drop_back();
 
@@ -595,9 +596,15 @@ void RVVType::applyModifier(StringRef Transformer) {
   for (char I : Transformer) {
     switch (I) {
     case 'P':
+      if (IsConstant)
+        PrintFatalError("'P' transformer cannot be used after 'C'");
+      if (IsPointer)
+        PrintFatalError("'P' transformer cannot be used twice");
       IsPointer = true;
       break;
     case 'C':
+      if (IsConstant)
+        PrintFatalError("'C' transformer cannot be used twice");
       IsConstant = true;
       break;
     case 'K':
@@ -614,11 +621,11 @@ void RVVType::applyModifier(StringRef Transformer) {
       break;
     case 'S':
       LMUL = LMULType(0);
-      // Update ElementBitwidth need ot update Scale too.
+      // Update ElementBitwidth need to update Scale too.
       Scale = LMUL.getScale(ElementBitwidth);
       break;
     default:
-      llvm_unreachable("Illegal non-primitive type transformer!");
+      PrintFatalError("Illegal non-primitive type transformer!");
     }
   }
 }

@@ -349,7 +349,7 @@ public:
                      unsigned FragmentOffsetInBits = 0);
   void
   addExpression(DIExpressionCursor &&Expr,
-                std::function<bool(unsigned, DIExpressionCursor &)> InsertArg);
+                llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg);
 
   /// If applicable, emit an empty DW_OP_piece / DW_OP_bit_piece to advance to
   /// the fragment described by \c Expr.
