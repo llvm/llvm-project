@@ -4877,6 +4877,18 @@ def fexperimental_debug_variable_locations : Flag<["-"],
     "fexperimental-debug-variable-locations">,
     HelpText<"Use experimental new value-tracking variable locations">,
     MarshallingInfoFlag<CodeGenOpts<"ValueTrackingVariableLocations">>;
+def fverify_debuginfo_preserve
+    : Flag<["-"], "fverify-debuginfo-preserve">,
+      HelpText<"Enable Debug Info Metadata preservation testing in "
+               "optimizations.">,
+      MarshallingInfoFlag<CodeGenOpts<"EnableDIPreservationVerify">>;
+def fverify_debuginfo_preserve_export
+    : Joined<["-"], "fverify-debuginfo-preserve-export=">,
+      MetaVarName<"<file>">,
+      HelpText<"Export debug info (by testing original Debug Info) failures "
+               "into specified (JSON) file (should be abs path as we use "
+               "append mode to insert new JSON objects).">,
+      MarshallingInfoString<CodeGenOpts<"DIBugsReportFilePath">>;
 // The driver option takes the key as a parameter to the -msign-return-address=
 // and -mbranch-protection= options, but CC1 has a separate option so we
 // don't have to parse the parameter twice.

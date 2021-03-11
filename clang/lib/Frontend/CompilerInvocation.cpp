@@ -1648,6 +1648,12 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       llvm::is_contained(DebugEntryValueArchs, T.getArch()))
     Opts.EmitCallSiteInfo = true;
 
+  if (!Opts.EnableDIPreservationVerify && Opts.DIBugsReportFilePath.size()) {
+    Diags.Report(diag::warn_ignoring_verify_debuginfo_preserve_export)
+        << Opts.DIBugsReportFilePath;
+    Opts.DIBugsReportFilePath = "";
+  }
+
   Opts.NewStructPathTBAA = !Args.hasArg(OPT_no_struct_path_tbaa) &&
                            Args.hasArg(OPT_new_struct_path_tbaa);
   Opts.OptimizeSize = getOptimizationLevelSize(Args);
