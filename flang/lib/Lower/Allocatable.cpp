@@ -954,9 +954,9 @@ Fortran::lower::createTempMutableBox(Fortran::lower::FirOpBuilder &builder,
 // MutableBoxValue reading interface implementation
 //===----------------------------------------------------------------------===//
 
-/// Helper to decide if a MutableBoxValue must be read to an IrBoxValue or
+/// Helper to decide if a MutableBoxValue must be read to an BoxValue or
 /// can be read to a reified box value.
-static bool readToIrBoxValue(const fir::MutableBoxValue &box) {
+static bool readToBoxValue(const fir::MutableBoxValue &box) {
   // If this is described by a set of local variables, the value
   // should not be tracked as a fir.box.
   if (box.isDescribedByVariables())
@@ -984,11 +984,11 @@ Fortran::lower::genMutableBoxRead(Fortran::lower::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value, 2> lbounds;
   llvm::SmallVector<mlir::Value, 2> extents;
   llvm::SmallVector<mlir::Value, 2> lengths;
-  if (readToIrBoxValue(box)) {
+  if (readToBoxValue(box)) {
     auto reader = MutablePropertyReader(builder, loc, box);
     reader.getLowerBounds(lbounds);
-    return fir::IrBoxValue{reader.getIrBox(), lbounds,
-                           box.nonDeferredLenParams()};
+    return fir::BoxValue{reader.getIrBox(), lbounds,
+                         box.nonDeferredLenParams()};
   }
   // Contiguous intrinsic type entity: all the data can be extracted from the
   // fir.box.
@@ -1046,11 +1046,6 @@ void Fortran::lower::associateMutableBoxWithShift(
                                 arr.getExtents(), {arr.getLen()});
       },
       [&](const fir::BoxValue &arr) {
-        writer.updateMutableBox(arr.getAddr(),
-                                lbounds.empty() ? arr.getLBounds() : lbounds,
-                                arr.getExtents(), arr.getLenTypeParams());
-      },
-      [&](const fir::IrBoxValue &arr) {
         // Rebox array fir.box to the pointer type and apply potential new lower
         // bounds.
         mlir::Value shift;
@@ -1129,10 +1124,6 @@ void Fortran::lower::associateMutableBoxWithRemap(
                                 {arr.getLen()});
       },
       [&](const fir::BoxValue &arr) {
-        writer.updateMutableBox(cast(arr.getAddr()), lbounds, extents,
-                                arr.getLenTypeParams());
-      },
-      [&](const fir::IrBoxValue &arr) {
         // Rebox right-hand side fir.box with a new shape and type.
         auto shapeType =
             fir::ShapeShiftType::get(builder.getContext(), extents.size());

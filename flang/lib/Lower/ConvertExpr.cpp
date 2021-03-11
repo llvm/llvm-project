@@ -182,16 +182,13 @@ arrayElementToExtendedValue(Fortran::lower::FirOpBuilder &builder,
       [&](const fir::CharArrayBoxValue &bv) -> fir::ExtendedValue {
         return bv.cloneElement(element);
       },
-      [&](const fir::BoxValue &bv) -> fir::ExtendedValue {
-        return bv.cloneElement(element);
-      },
-      [&](const fir::IrBoxValue &box) -> fir::ExtendedValue {
+      [&](const fir::BoxValue &box) -> fir::ExtendedValue {
         if (box.isCharacter()) {
           auto len = Fortran::lower::readCharLen(builder, loc, box);
           return fir::CharBoxValue{element, len};
         }
         if (box.isDerived())
-          TODO(loc, "get length parameters from IrBox");
+          TODO(loc, "get length parameters from derived type BoxValue");
         return element;
       },
       [&](const auto &) -> fir::ExtendedValue { return element; });
@@ -1188,16 +1185,12 @@ public:
             delta = one;
           return fir::CharBoxValue(genFullDim(arr, delta), arr.getLen());
         },
-        [&](const Fortran::lower::SymbolBox::Derived &arr)
-            -> fir::ExtendedValue {
-          TODO(loc, "array ref of derived type with length parameters");
-        },
-        [&](const Fortran::lower::SymbolBox::IrBox &arr) -> fir::ExtendedValue {
-          // CoordinateOp for IrBoxValue is not generated here. The dimensions
+        [&](const Fortran::lower::SymbolBox::Box &arr) -> fir::ExtendedValue {
+          // CoordinateOp for BoxValue is not generated here. The dimensions
           // must be kept in the fir.coordinate_op so that potential fir.box
           // strides can be applied by codegen.
           fir::emitFatalError(
-              loc, "internal: IrBoxValue in dim-collapsed fir.coordinate_of");
+              loc, "internal: BoxValue in dim-collapsed fir.coordinate_of");
         },
         [&](const auto &) -> fir::ExtendedValue {
           fir::emitFatalError(loc, "internal: array lowering failed");
@@ -1235,10 +1228,6 @@ public:
           lengthParams.emplace_back(arr.getLen());
         },
         [&](const fir::BoxValue &arr) {
-          auto lengths = arr.getLenTypeParams();
-          lengthParams.append(lengths.begin(), lengths.end());
-        },
-        [&](const fir::IrBoxValue &arr) {
           auto lengths = arr.getExplicitParameters();
           lengthParams.append(lengths.begin(), lengths.end());
         },
@@ -2468,7 +2457,7 @@ public:
         TODO(loc, "use fir.rebox for array section of fir.box");
       mlir::Value embox = builder.create<fir::EmboxOp>(
           loc, boxTy, memref, shape, slice, /*lenParams=*/llvm::None);
-      return [=](IterSpace) -> ExtValue { return fir::IrBoxValue(embox); };
+      return [=](IterSpace) -> ExtValue { return fir::BoxValue(embox); };
     }
     mlir::Value arrLd = builder.create<fir::ArrayLoadOp>(
         loc, arrTy, memref, shape, slice, /*lenParams=*/llvm::None);

@@ -28,7 +28,7 @@
 namespace fir {
 class AbstractArrayBox;
 class ExtendedValue;
-class IrBoxValue;
+class BoxValue;
 } // namespace fir
 
 namespace Fortran::lower {
@@ -278,8 +278,8 @@ mlir::Value readLowerBound(FirOpBuilder &, mlir::Location,
                            const fir::ExtendedValue &, unsigned dim,
                            mlir::Value defaultValue);
 
-/// Read extents from an IrBoxValue into \p result.
-void readExtents(FirOpBuilder &, mlir::Location, const fir::IrBoxValue &,
+/// Read extents from an BoxValue into \p result.
+void readExtents(FirOpBuilder &, mlir::Location, const fir::BoxValue &,
                  llvm::SmallVectorImpl<mlir::Value> &result);
 
 //===--------------------------------------------------------------------===//

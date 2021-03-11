@@ -681,13 +681,13 @@ static void instantiateCommon(Fortran::lower::AbstractConverter &converter,
 // Lower Variables specification expressions and attributes
 //===--------------------------------------------------------------===//
 
-/// Helper to decide if a dummy argument must be tracked in an IrBox.
-static bool lowerToIrBox(const Fortran::semantics::Symbol &sym,
-                         mlir::Value dummyArg) {
-  // Only dummy arguments coming as fir.box can be tracked in an IrBox.
+/// Helper to decide if a dummy argument must be tracked in an BoxValue.
+static bool lowerToBoxValue(const Fortran::semantics::Symbol &sym,
+                            mlir::Value dummyArg) {
+  // Only dummy arguments coming as fir.box can be tracked in an BoxValue.
   if (!dummyArg || !dummyArg.getType().isa<fir::BoxType>())
     return false;
-  // Non contiguous arrays must be tracked in an IrBox.
+  // Non contiguous arrays must be tracked in an BoxValue.
   if (sym.Rank() > 0 && !sym.attrs().test(Fortran::semantics::Attr::CONTIGUOUS))
     return true;
   // Assumed rank and optional fir.box cannot yet be read while lowering the
@@ -855,7 +855,7 @@ void Fortran::lower::mapSymbolAttributes(
 
   if (isDummy) {
     auto dummyArg = symMap.lookupSymbol(sym).getAddr();
-    if (lowerToIrBox(sym, dummyArg)) {
+    if (lowerToBoxValue(sym, dummyArg)) {
       llvm::SmallVector<mlir::Value, 4> lbounds;
       llvm::SmallVector<mlir::Value, 4> extents;
       llvm::SmallVector<mlir::Value, 2> explicitParams;
@@ -869,8 +869,8 @@ void Fortran::lower::mapSymbolAttributes(
       lowerExplicitLowerBounds(converter, loc, sba, lbounds, symMap, stmtCtx);
       lowerExplicitExtents(converter, loc, sba, lbounds, extents, symMap,
                            stmtCtx);
-      symMap.addIrBoxSymbol(sym, dummyArg, lbounds, explicitParams, extents,
-                            replace);
+      symMap.addBoxSymbol(sym, dummyArg, lbounds, explicitParams, extents,
+                          replace);
       return;
     }
   }
