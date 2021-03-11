@@ -43,7 +43,21 @@ clang_tablegen("arm_cde") {
   output_name = "arm_cde.h"
 }
 
-copy("arm_headers") {
+# Generate riscv_vector.h
+clang_tablegen("riscv_vector") {
+  args = [ "-gen-riscv-vector-header" ]
+  td_file = "//clang/include/clang/Basic/riscv_vector.td"
+  output_name = "riscv_vector.h"
+}
+
+# Generate riscv_vector_generic.h
+clang_tablegen("riscv_vector_generic") {
+  args = [ "-gen-riscv-vector-generic-header" ]
+  td_file = "//clang/include/clang/Basic/riscv_vector.td"
+  output_name = "riscv_vector_generic.h"
+}
+
+copy("tablegen_headers") {
   visibility = [ ":Headers" ]
   deps = [
     ":arm_bf16",
@@ -52,6 +66,8 @@ copy("arm_headers") {
     ":arm_mve",
     ":arm_neon",
     ":arm_sve",
+    ":riscv_vector",
+    ":riscv_vector_generic",
   ]
   sources = []
   foreach(dep, deps) {
@@ -61,7 +77,7 @@ copy("arm_headers") {
 }
 
 copy("Headers") {
-  deps = [ ":arm_headers" ]
+  deps = [ ":tablegen_headers" ]
 
   sources = [
     "__clang_cuda_builtin_vars.h",
