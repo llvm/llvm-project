@@ -1001,6 +1001,61 @@ SymbolTable &SymbolTableCollection::getSymbolTable(Operation *op) {
 }
 
 //===----------------------------------------------------------------------===//
+// SymbolUserMap
+//===----------------------------------------------------------------------===//
+
+SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
+                             Operation *symbolTableOp)
+    : symbolTable(symbolTable) {
+  // Walk each of the symbol tables looking for discardable callgraph nodes.
+  SmallVector<Operation *> symbols;
+  auto walkFn = [&](Operation *symbolTableOp, bool allUsesVisible) {
+    for (Operation &nestedOp : symbolTableOp->getRegion(0).getOps()) {
+      auto symbolUses = SymbolTable::getSymbolUses(&nestedOp);
+      assert(symbolUses && "expected uses to be valid");
+
+      for (const SymbolTable::SymbolUse &use : *symbolUses) {
+        symbols.clear();
+        (void)symbolTable.lookupSymbolIn(symbolTableOp, use.getSymbolRef(),
+                                         symbols);
+        for (Operation *symbolOp : symbols)
+          symbolToUsers[symbolOp].insert(use.getUser());
+      }
+    }
+  };
+  // We just set `allSymUsesVisible` to false here because it isn't necessary
+  // for building the user map.
+  SymbolTable::walkSymbolTables(symbolTableOp, /*allSymUsesVisible=*/false,
+                                walkFn);
+}
+
+void SymbolUserMap::replaceAllUsesWith(Operation *symbol,
+                                       StringRef newSymbolName) {
+  auto it = symbolToUsers.find(symbol);
+  if (it == symbolToUsers.end())
+    return;
+  llvm::SetVector<Operation *> &users = it->second;
+
+  // Replace the uses within the users of `symbol`.
+  for (Operation *user : users)
+    (void)SymbolTable::replaceAllSymbolUses(symbol, newSymbolName, user);
+
+  // Move the current users of `symbol` to the new symbol if it is in the
+  // symbol table.
+  Operation *newSymbol =
+      symbolTable.lookupSymbolIn(symbol->getParentOp(), newSymbolName);
+  if (newSymbol != symbol) {
+    // Transfer over the users to the new symbol.
+    auto newIt = symbolToUsers.find(newSymbol);
+    if (newIt == symbolToUsers.end())
+      symbolToUsers.try_emplace(newSymbol, std::move(users));
+    else
+      newIt->second.set_union(users);
+    symbolToUsers.erase(symbol);
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Visibility parsing implementation.
 //===----------------------------------------------------------------------===//
 
