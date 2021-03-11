@@ -544,6 +544,7 @@ private:
     using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
 
     bool isOptional = false;
+    bool isValueAttr = false;
     [[maybe_unused]] auto loc = interface.converter.genLocation();
     llvm::SmallVector<mlir::NamedAttribute> attrs;
     auto addMLIRAttr = [&](llvm::StringRef attr) {
@@ -559,7 +560,7 @@ private:
     if (obj.attrs.test(Attrs::Contiguous))
       addMLIRAttr(fir::getContiguousAttrName());
     if (obj.attrs.test(Attrs::Value))
-      TODO(loc, "Value in procedure interface");
+      isValueAttr = true; // TODO: do we want an mlir::Attribute as well?
     if (obj.attrs.test(Attrs::Volatile))
       TODO(loc, "Volatile in procedure interface");
     if (obj.attrs.test(Attrs::Target))
@@ -609,7 +610,9 @@ private:
       auto refType = fir::ReferenceType::get(type);
       addFirInput(refType, nextPassedArgPosition(), Property::BaseAddress,
                   attrs);
-      addPassedArg(PassEntityBy::BaseAddress, entity, isOptional);
+      addPassedArg(isValueAttr ? PassEntityBy::ValueAttribute
+                               : PassEntityBy::BaseAddress,
+                   entity, isOptional);
     }
   }
 

@@ -107,7 +107,7 @@ mlir::Value Fortran::lower::FirOpBuilder::allocateLocal(
     mlir::Location loc, mlir::Type ty, llvm::StringRef nm,
     llvm::ArrayRef<mlir::Value> shape, llvm::ArrayRef<mlir::Value> lenParams,
     bool asTarget) {
-  llvm::SmallVector<mlir::Value, 8> indices;
+  llvm::SmallVector<mlir::Value> indices;
   auto idxTy = getIndexType();
   // FIXME: AllocaOp has a lenParams argument, but it is ignored, so add lengths
   // into the index so far (for characters, that works OK).
@@ -117,7 +117,7 @@ mlir::Value Fortran::lower::FirOpBuilder::allocateLocal(
   llvm::for_each(shape, [&](mlir::Value sh) {
     indices.push_back(createConvert(loc, idxTy, sh));
   });
-  llvm::SmallVector<mlir::NamedAttribute, 2> attrs;
+  llvm::SmallVector<mlir::NamedAttribute> attrs;
   if (asTarget)
     attrs.emplace_back(
         mlir::Identifier::get(fir::getTargetAttrName(), getContext()),
@@ -129,14 +129,15 @@ mlir::Value Fortran::lower::FirOpBuilder::allocateLocal(
 /// `name` value.
 mlir::Value Fortran::lower::FirOpBuilder::createTemporary(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
-    llvm::ArrayRef<mlir::Value> shape) {
+    mlir::ValueRange shape, mlir::ValueRange lenParams,
+    llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   auto insPt = saveInsertionPoint();
   if (shape.empty())
     setInsertionPointToStart(getEntryBlock());
   else
     setInsertionPointAfter(shape.back().getDefiningOp());
   assert(!type.isa<fir::ReferenceType>() && "cannot be a reference");
-  auto ae = create<fir::AllocaOp>(loc, type, name, llvm::None, shape);
+  auto ae = create<fir::AllocaOp>(loc, type, name, lenParams, shape, attrs);
   restoreInsertionPoint(insPt);
   return ae;
 }

@@ -62,6 +62,51 @@ static llvm::cl::opt<bool> generateArrayCoordinate(
     llvm::cl::desc("in lowering create ArrayCoorOp instead of CoordinateOp"),
     llvm::cl::init(false));
 
+/// The various semantics of a program constituent (or a part thereof) as it may
+/// appear in an expression.
+///
+/// Given the following Fortran declarations.
+/// ```fortran
+///   REAL :: v1, v2, v3
+///   REAL, POINTER :: vp1
+///   REAL :: a1(c), a2(c)
+///   REAL ELEMENTAL FUNCTION f1(arg) ! array -> array
+///   FUNCTION f2(arg)                ! array -> array
+///   vp1 => v3       ! 1
+///   v1 = v2 * vp1   ! 2
+///   a1 = a1 + a2    ! 3
+///   a1 = f1(a2)     ! 4
+///   a1 = f2(a2)     ! 5
+/// ```
+///
+/// In line 1, `vp1` is a BoxAddr to copy a box value into. The box value is
+/// constructed from the DataAddr of `v3`.
+/// In line 2, `v1` is a DataAddr to copy a value into. The value is constructed
+/// from the DataValue of `v2` and `vp1`. DataValue is implicitly a double
+/// dereference in the `vp1` case.
+/// In line 3, `a1` and `a2` on the rhs are RefTransparent. The `a1` on the lhs
+/// is CopyInCopyOut as `a1` is replaced elementally by the additions.
+/// In line 4, `a2` can be RefTransparent, ByValueArg, RefOpaque, or BoxAddr if
+/// `arg` is declared as C-like pass-by-value, VALUE, INTENT(?), or ALLOCATABLE/
+/// POINTER, respectively. `a1` on the lhs is CopyInCopyOut.
+///  In line 5, `a2` may be DataAddr or BoxAddr assuming f2 is transformational.
+///  `a1` on the lhs is again CopyInCopyOut.
+enum class ConstituentSemantics {
+  // Scalars : let `v` be the location in memory of a variable with value `x`
+  DataValue, // refers to the value `x`
+  DataAddr,  // refers to the address `v`
+  BoxValue,  // refers to a box value containing `v`
+  BoxAddr,   // refers to the address of a box value containing `v`
+
+  // Arrays : let `a` be the location in memory of a sequence of value `[xs]`
+  RefTransparent, // refers to the value `[xs]`
+  ByValueArg, // refers to an ephemeral address `t` containing a value `x` which
+              // is the i-th value in `[xs]` (15.5.2.3.p7 note 2)
+  CopyInCopyOut, // refers to the merge of `[xs]` with another value `[ys]`,
+                 // which is written into `a`.
+  RefOpaque      // refers to the address `a+i`, the i-th element of `a`
+};
+
 /// Convert parser's INTEGER relational operators to MLIR.  TODO: using
 /// unordered, but we may want to cons ordered in certain situation.
 static mlir::CmpIPredicate
@@ -1796,6 +1841,11 @@ private:
 };
 } // namespace
 
+// Helper for changing the semantics in a given context. Preserves the current
+// semantics which is resumed when the "push" goes out of scope.
+#define PushSemantics(PushVal)                                                 \
+  [[maybe_unused]] PushSemant pushSemanticsLocalVariable97201(PushVal, semant);
+
 namespace {
 class ArrayExprLowering {
   struct IterationSpace {
@@ -1833,15 +1883,19 @@ public:
   using PC =
       std::function<IterationSpace(IterSpace)>; // projection continuation
 
+  /// Entry point for when an array expression appears on the lhs of an
+  /// assignment. In the default case, the rhs is fully evaluated prior to any
+  /// of the results being written back to the lhs. (CopyInCopyOut semantics.)
   static fir::ArrayLoadOp lowerArraySubspace(
       Fortran::lower::AbstractConverter &converter,
       Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
       const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr) {
-    ArrayExprLowering ael{converter, stmtCtx, symMap, /*inProjection=*/true};
-    return ael.lowerArrayProjection(expr);
+    ArrayExprLowering ael{converter, stmtCtx, symMap,
+                          ConstituentSemantics::CopyInCopyOut};
+    return ael.lowerArraySubspace(expr);
   }
 
-  fir::ArrayLoadOp lowerArrayProjection(
+  fir::ArrayLoadOp lowerArraySubspace(
       const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &exp) {
     return std::visit(
         [&](const auto &e) {
@@ -1850,12 +1904,38 @@ public:
           if (auto *defOp = fir::getBase(exv).getDefiningOp())
             if (auto arrLd = mlir::dyn_cast<fir::ArrayLoadOp>(defOp))
               return arrLd;
-          llvm::report_fatal_error("array must be loaded");
+          fir::emitFatalError(getLoc(), "array must be loaded");
         },
         exp.u);
   }
 
-  /// This is the entry-point into lowering an expression with rank.
+  /// Entry point for when an array expression appears in a context where the
+  /// result must be boxed. (BoxValue semantics.)
+  static ExtValue lowerArrayExpressionBoxed(
+      Fortran::lower::AbstractConverter &converter,
+      Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr) {
+    ArrayExprLowering ael{converter, stmtCtx, symMap,
+                          ConstituentSemantics::BoxValue};
+    return ael.lowerArrayExprBoxed(expr);
+  }
+
+  ExtValue lowerArrayExprBoxed(
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &exp) {
+    return std::visit(
+        [&](const auto &e) {
+          auto f = genarr(e);
+          auto exv = f(IterationSpace{});
+          if (auto *defOp = fir::getBase(exv).getDefiningOp();
+              mlir::isa<fir::EmboxOp>(defOp))
+            return exv;
+          fir::emitFatalError(getLoc(), "array must be emboxed");
+        },
+        exp.u);
+  }
+
+  /// Entry point into lowering an expression with rank. This entry point is for
+  /// lowering a rhs expression, for example. (RefTransparent semantics.)
   static ExtValue lowerArrayExpression(
       Fortran::lower::AbstractConverter &converter,
       Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
@@ -1863,16 +1943,7 @@ public:
       const std::optional<Fortran::evaluate::Shape> &shape,
       const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr) {
     ArrayExprLowering ael{converter, stmtCtx, symMap, dst, shape};
-    return ael.lowerArrayExpr(expr);
-  }
-
-  static ExtValue lowerAndBoxArrayExpression(
-      Fortran::lower::AbstractConverter &converter,
-      Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
-      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr) {
-    ArrayExprLowering ael{converter, stmtCtx, symMap};
-    ael.setUseEmbox();
-    return ael.boxArrayExpr(expr);
+    return ael.lowerArrayExpression(expr);
   }
 
   /// For an elemental array expression.
@@ -1880,7 +1951,7 @@ public:
   /// 2. Create the iteration space.
   /// 3. Create the element-by-element computation in the loop.
   /// 4. Return the resulting array value.
-  ExtValue lowerArrayExpr(
+  ExtValue lowerArrayExpression(
       const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &exp) {
     return std::visit(
         [&](const auto &e) {
@@ -1897,20 +1968,6 @@ public:
           builder.create<fir::ResultOp>(loc, upd.getResult());
           builder.restoreInsertionPoint(insPt);
           return fir::substBase(exv, iterSpace.outerResult());
-        },
-        exp.u);
-  }
-
-  ExtValue boxArrayExpr(
-      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &exp) {
-    return std::visit(
-        [&](const auto &e) {
-          auto f = genarr(e);
-          auto exv = f(IterationSpace{});
-          if (auto *defOp = fir::getBase(exv).getDefiningOp())
-            if (auto arrLd = mlir::dyn_cast<fir::EmboxOp>(defOp))
-              return exv;
-          llvm::report_fatal_error("array must be emboxed");
         },
         exp.u);
   }
@@ -1997,23 +2054,173 @@ public:
     return x.Rank() != 0;
   }
 
-  // Generate an error message, but no code.
-  CC errorCC(llvm::StringRef msg) {
-    mlir::emitError(getLoc(), msg);
-    return [](IterSpace) { return mlir::Value{}; };
+  // Attribute for an alloca that is a trivial adaptor for converting a value to
+  // pass-by-ref semantics for a VALUE parameter. The optimizer may be able to
+  // eliminate these.
+  mlir::NamedAttribute getAdaptToByRefAttr() {
+    return {mlir::Identifier::get("adapt.valuebyref", builder.getContext()),
+            builder.getUnitAttr()};
   }
 
+  // A procedure reference to a Fortran elemental intrinsic procedure.
+  CC genIntrinsicProcRef(
+      const Fortran::evaluate::ProcedureRef &procRef,
+      llvm::Optional<mlir::Type> retTy,
+      const Fortran::evaluate::SpecificIntrinsic &intrinsic) {
+    llvm::SmallVector<CC> operands;
+    llvm::StringRef name = intrinsic.name;
+    const auto *argLowering =
+        Fortran::lower::getIntrinsicArgumentLowering(name);
+    auto loc = getLoc();
+    for (const auto &[arg, dummy] :
+         llvm::zip(procRef.arguments(),
+                   intrinsic.characteristics.value().dummyArguments)) {
+      auto *expr = Fortran::evaluate::UnwrapExpr<
+          Fortran::evaluate::Expr<Fortran::evaluate::SomeType>>(arg);
+      if (!expr) {
+        // Absent optional.
+        operands.emplace_back([=](IterSpace) { return mlir::Value{}; });
+      } else if (!argLowering) {
+        // No argument lowering instruction, lower by value.
+        PushSemantics(ConstituentSemantics::RefTransparent);
+        auto lambda = genarr(*expr);
+        operands.emplace_back([=](IterSpace iters) { return lambda(iters); });
+      } else {
+        // Ad-hoc argument lowering handling.
+        switch (Fortran::lower::lowerIntrinsicArgumentAs(getLoc(), *argLowering,
+                                                         dummy.name)) {
+        case Fortran::lower::LowerIntrinsicArgAs::Value: {
+          PushSemantics(ConstituentSemantics::RefTransparent);
+          auto lambda = genarr(*expr);
+          operands.emplace_back([=](IterSpace iters) { return lambda(iters); });
+        } break;
+        case Fortran::lower::LowerIntrinsicArgAs::Addr: {
+          // Note: assume does not have Fortran VALUE attribute semantics.
+          PushSemantics(ConstituentSemantics::RefOpaque);
+          auto lambda = genarr(*expr);
+          operands.emplace_back([=](IterSpace iters) { return lambda(iters); });
+        } break;
+        case Fortran::lower::LowerIntrinsicArgAs::Inquired:
+          TODO(loc, "intrinsic function with inquired argument");
+          break;
+        }
+      }
+    }
+
+    // Let the intrinsic library lower the intrinsic procedure call
+    return [=](IterSpace iters) {
+      llvm::SmallVector<fir::ExtendedValue> args;
+      for (const auto &cc : operands)
+        args.push_back(cc(iters));
+      return Fortran::lower::genIntrinsicCall(builder, loc, name, retTy, args,
+                                              stmtCtx);
+    };
+  }
+
+  // A procedure reference to a user-defined elemental procedure.
+  CC genUDProcRef(const Fortran::evaluate::ProcedureRef &procRef,
+                  llvm::Optional<mlir::Type> retTy) {
+    using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
+
+    Fortran::lower::CallerInterface caller(procRef, converter);
+    llvm::SmallVector<CC> operands(caller.getNumFIRArguments());
+    auto loc = getLoc();
+    auto callSiteType = caller.genFunctionType();
+    for (const auto &arg : caller.getPassedArguments()) {
+      const auto *actual = arg.entity;
+      auto argTy = callSiteType.getInput(arg.firArgument);
+      if (!actual) {
+        // Optional dummy argument for which there is no actual argument.
+        auto absent = builder.create<fir::AbsentOp>(loc, argTy);
+        operands[arg.firArgument] = [=](IterSpace) { return absent; };
+        continue;
+      }
+      const auto *expr = actual->UnwrapExpr();
+      if (!expr)
+        TODO(loc, "assumed type actual argument lowering");
+
+      LLVM_DEBUG(expr->AsFortran(llvm::dbgs()
+                                 << "argument: " << arg.firArgument << " = [")
+                 << "]\n");
+      switch (arg.passBy) {
+      case PassBy::Value: {
+        // True pass-by-value semantics.
+        PushSemantics(ConstituentSemantics::RefTransparent);
+        auto lambda = genarr(*expr);
+        operands[arg.firArgument] = [=](IterSpace iters) {
+          return lambda(iters);
+        };
+      } break;
+      case PassBy::ValueAttribute: {
+        // VALUE attribute or pass-by-reference to a copy semantics. (byval*)
+        PushSemantics(ConstituentSemantics::ByValueArg);
+        auto lambda = genarr(*expr);
+        operands[arg.firArgument] = [=](IterSpace iters) {
+          return lambda(iters);
+        };
+      } break;
+      case PassBy::BaseAddress: {
+        PushSemantics(ConstituentSemantics::RefOpaque);
+        auto lambda = genarr(*expr);
+        operands[arg.firArgument] = [=](IterSpace iters) {
+          return lambda(iters);
+        };
+      } break;
+      case PassBy::BoxChar:
+        TODO(loc, "character");
+        break;
+      case PassBy::AddressAndLength:
+        TODO(loc, "address and length argument");
+        break;
+      case PassBy::Box:
+      case PassBy::MutableBox:
+        // See C15100 and C15101
+        fir::emitFatalError(loc, "cannot be POINTER, ALLOCATABLE");
+      default:
+        llvm_unreachable("pass by value not handled here");
+        break;
+      }
+    }
+
+    if (caller.getIfIndirectCallSymbol())
+      TODO(loc, "indirect call");
+    auto funcSym = builder.getSymbolRefAttr(caller.getMangledName());
+    auto resTys = caller.getFuncOp().getType().getResults();
+    if (caller.getFuncOp().getType().getResults() !=
+        caller.genFunctionType().getResults())
+      TODO(loc, "type adaption");
+    return [=](IterSpace iters) -> ExtValue {
+      llvm::SmallVector<mlir::Value> args;
+      for (const auto &cc : operands)
+        args.push_back(fir::getBase(cc(iters)));
+      auto call = builder.create<fir::CallOp>(loc, resTys, funcSym, args);
+      return call.getResult(0);
+    };
+  }
+
+  // A procedure reference.
   CC genProcRef(const Fortran::evaluate::ProcedureRef &procRef,
                 llvm::Optional<mlir::Type> retTy) {
     auto loc = getLoc();
     if (procRef.IsElemental()) {
       if (const auto *intrin = procRef.proc().GetSpecificIntrinsic()) {
-        (void)intrin; // NB: LLVM_ATTRIBUTE_UNUSED doesn't suppress warning
-        TODO(loc, "elemental intrinsic");
+        // Elemental intrinsic call.
+        // The intrinsic procedure is called once per element of the array.
+        return genIntrinsicProcRef(procRef, retTy, *intrin);
       }
       if (ScalarExprLowering::isStatementFunctionCall(procRef))
-        TODO(loc, "elemental statement function");
-      TODO(loc, "elemental procedure ref");
+        fir::emitFatalError(loc, "statement function cannot be elemental");
+
+      // Elemental call.
+      // The procedure is called once per element of the array argument(s).
+      return genUDProcRef(procRef, retTy);
+    }
+
+    // Transformational call.
+    // The procedure is called once and produces a value of rank > 0.
+    if (const auto *intrin = procRef.proc().GetSpecificIntrinsic()) {
+      (void)intrin;
+      TODO(loc, "non-elemental intrinsic ref");
     }
     TODO(loc, "non-elemental procedure ref");
   }
@@ -2023,7 +2230,8 @@ public:
   }
   CC genarr(const Fortran::evaluate::ProcedureRef &x) {
     if (x.hasAlternateReturns())
-      return errorCC("array procedure reference with alt-return");
+      fir::emitFatalError(getLoc(),
+                          "array procedure reference with alt-return");
     return genProcRef(x, llvm::None);
   }
   template <typename A, typename = std::enable_if_t<Fortran::common::HasMember<
@@ -2046,9 +2254,9 @@ public:
                                              TC2> &x) {
     assert(isArray(x));
     auto loc = getLoc();
-    auto lf = genarr(x.left());
+    auto lambda = genarr(x.left());
     return [=](IterSpace iters) -> ExtValue {
-      auto val = fir::getBase(lf(iters));
+      auto val = fir::getBase(lambda(iters));
       auto ty = converter.genType(TC1, KIND);
       return builder.createConvert(loc, ty, val);
     };
@@ -2056,10 +2264,10 @@ public:
   template <int KIND>
   CC genarr(const Fortran::evaluate::ComplexComponent<KIND> &x) {
     auto loc = getLoc();
-    auto lf = genarr(x.left());
+    auto lambda = genarr(x.left());
     auto isImagPart = x.isImaginaryPart;
     return [=](IterSpace iters) -> ExtValue {
-      auto lhs = fir::getBase(lf(iters));
+      auto lhs = fir::getBase(lambda(iters));
       return Fortran::lower::ComplexExprHelper{builder, loc}.extractComplexPart(
           lhs, isImagPart);
     };
@@ -2116,10 +2324,10 @@ public:
   template <typename OP, typename A>
   CC createBinaryOp(const A &evEx) {
     auto loc = getLoc();
-    auto lf = genarr(evEx.left());
+    auto lambda = genarr(evEx.left());
     auto rf = genarr(evEx.right());
     return [=](IterSpace iters) -> ExtValue {
-      auto left = fir::getBase(lf(iters));
+      auto left = fir::getBase(lambda(iters));
       auto right = fir::getBase(rf(iters));
       return builder.create<OP>(loc, left, right);
     };
@@ -2229,9 +2437,9 @@ public:
     };
   }
 
-  // A vector subscript expression may be wrapped with a cast to INTEGER*8. Get
-  // rid of it here so the vector can be loaded. Add it back when generating the
-  // elemental evaluation (inside the loop nest).
+  // A vector subscript expression may be wrapped with a cast to INTEGER*8.
+  // Get rid of it here so the vector can be loaded. Add it back when
+  // generating the elemental evaluation (inside the loop nest).
   static Fortran::evaluate::Expr<Fortran::evaluate::SomeType>
   ignoreEvConvert(const Fortran::evaluate::Expr<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Integer, 8>> &x) {
@@ -2250,8 +2458,8 @@ public:
     return toEvExpr(x);
   }
 
-  // Get the `Se::Symbol*` for the subscript expression, `x`. This symbol can be
-  // used to determine the lbound, ubound of the vector.
+  // Get the `Se::Symbol*` for the subscript expression, `x`. This symbol can
+  // be used to determine the lbound, ubound of the vector.
   template <typename A>
   static const Fortran::semantics::Symbol *
   extractSubscriptSymbol(const Fortran::evaluate::Expr<A> &x) {
@@ -2273,9 +2481,9 @@ public:
   ///
   /// There are two "slicing" primitives that may be applied on a dimension by
   /// dimension basis: (1) triple notation and (2) vector addressing. Since
-  /// dimensions can be selectively sliced, some dimensions may contain regular
-  /// scalar expressions and those dimensions do not participate in the array
-  /// expression evaluation.
+  /// dimensions can be selectively sliced, some dimensions may contain
+  /// regular scalar expressions and those dimensions do not participate in
+  /// the array expression evaluation.
   CC genarr(const Fortran::evaluate::ArrayRef &x) {
     llvm::SmallVector<mlir::Value> trips;
     auto loc = getLoc();
@@ -2363,12 +2571,12 @@ public:
                   }
                 } else {
                   // A regular scalar index, which does not yield an array
-                  // section. Use a degenerate slice operation `(e:undef:undef)`
-                  // in this dimension as a placeholder. This does not
-                  // necessarily change the rank of the original array, so the
-                  // iteration space must also be extended to include this
-                  // expression in this dimension to adjust to the array's
-                  // declared rank.
+                  // section. Use a degenerate slice operation
+                  // `(e:undef:undef)` in this dimension as a placeholder.
+                  // This does not necessarily change the rank of the original
+                  // array, so the iteration space must also be extended to
+                  // include this expression in this dimension to adjust to
+                  // the array's declared rank.
                   auto base = x.base();
                   ScalarExprLowering sel{loc, converter, symMap, stmtCtx};
                   auto exv = base.IsSymbol() ? sel.gen(base.GetFirstSymbol())
@@ -2397,8 +2605,8 @@ public:
               }},
           sub.value().u);
     }
-    auto lf = genSlice(x.base(), trips);
-    return [=](IterSpace iters) { return lf(pc(iters)); };
+    auto lambda = genSlice(x.base(), trips);
+    return [=](IterSpace iters) { return lambda(pc(iters)); };
   }
   CC genarr(const Fortran::evaluate::NamedEntity &entity) {
     if (entity.IsSymbol())
@@ -2451,7 +2659,7 @@ public:
                    << eleTy << ", " << arrTy << '\n');
       }
     }
-    if (useEmbox) {
+    if (isBoxValue()) {
       auto boxTy = fir::BoxType::get(reduceRank(arrTy, slice));
       if (memref.getType().isa<fir::BoxType>())
         TODO(loc, "use fir.rebox for array section of fir.box");
@@ -2459,11 +2667,33 @@ public:
           loc, boxTy, memref, shape, slice, /*lenParams=*/llvm::None);
       return [=](IterSpace) -> ExtValue { return fir::BoxValue(embox); };
     }
+    auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+    if (isReferentiallyOpaque()) {
+      auto refEleTy = builder.getRefType(eleTy);
+      return [=](IterSpace iters) -> ExtValue {
+        mlir::Value coor = builder.create<fir::ArrayCoorOp>(
+            loc, refEleTy, memref, shape, slice, iters.iterVec(),
+            /*lenParams=*/llvm::None);
+        return coor;
+      };
+    }
     mlir::Value arrLd = builder.create<fir::ArrayLoadOp>(
         loc, arrTy, memref, shape, slice, /*lenParams=*/llvm::None);
-    if (inProjection)
+    if (isCopyInCopyOut())
       return [=](IterSpace) -> ExtValue { return arrLd; };
-    auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+    if (isValueAttribute())
+      return [=](IterSpace iters) -> ExtValue {
+        auto arrFetch = builder.create<fir::ArrayFetchOp>(loc, eleTy, arrLd,
+                                                          iters.iterVec());
+        auto exv =
+            arrayElementToExtendedValue(builder, loc, extMemref, arrFetch);
+        auto base = fir::getBase(exv);
+        auto temp = builder.createTemporary(
+            loc, base.getType(),
+            llvm::ArrayRef<mlir::NamedAttribute>{getAdaptToByRefAttr()});
+        builder.create<fir::StoreOp>(loc, base, temp);
+        return temp;
+      };
     return [=](IterSpace iters) -> ExtValue {
       auto arrFetch =
           builder.create<fir::ArrayFetchOp>(loc, eleTy, arrLd, iters.iterVec());
@@ -2496,13 +2726,14 @@ public:
     const auto &sym = x.GetFirstSymbol();
     auto recTy = converter.genType(sym);
     buildComponentsPath(components, recTy, x.base());
-    auto lf = genPathSlice(sym, components);
-    return [=](IterSpace iters) { return lf(iters); };
+    auto lambda = genPathSlice(sym, components);
+    return [=](IterSpace iters) { return lambda(iters); };
   }
 
-  /// The `Ev::Component` structure is tailmost down to head, so the expression
-  /// <code>a%b%c</code> will be presented as <code>(component (dataref
-  /// (component (dataref (symbol 'a)) (symbol 'b))) (symbol 'c))</code>.
+  /// The `Ev::Component` structure is tailmost down to head, so the
+  /// expression <code>a%b%c</code> will be presented as <code>(component
+  /// (dataref (component (dataref (symbol 'a)) (symbol 'b))) (symbol
+  /// 'c))</code>.
   void buildComponentsPath(llvm::SmallVectorImpl<mlir::Value> &components,
                            mlir::Type &recTy,
                            const Fortran::evaluate::DataRef &dr) {
@@ -2537,8 +2768,8 @@ public:
     auto offset = builder.createIntegerConstant(
         loc, i32Ty,
         x.part() == Fortran::evaluate::ComplexPart::Part::RE ? 0 : 1);
-    auto lf = genPathSlice(x.complex(), {offset});
-    return [=](IterSpace iters) { return lf(iters); };
+    auto lambda = genPathSlice(x.complex(), {offset});
+    return [=](IterSpace iters) { return lambda(iters); };
   }
 
   template <typename A>
@@ -2610,10 +2841,10 @@ public:
   CC genarr(const Fortran::evaluate::Not<KIND> &x) {
     auto loc = getLoc();
     auto i1Ty = builder.getI1Type();
-    auto lf = genarr(x.left());
+    auto lambda = genarr(x.left());
     auto truth = builder.createBool(loc, true);
     return [=](IterSpace iters) -> ExtValue {
-      auto logical = fir::getBase(lf(iters));
+      auto logical = fir::getBase(lambda(iters));
       auto val = builder.createConvert(loc, i1Ty, logical);
       return builder.create<mlir::XOrOp>(loc, val, truth);
     };
@@ -2727,6 +2958,17 @@ public:
   }
 
 private:
+  struct PushSemant {
+    PushSemant(ConstituentSemantics newVal, ConstituentSemantics &oldVal)
+        : ref{oldVal} {
+      saved = oldVal;
+      oldVal = newVal;
+    }
+    ~PushSemant() { ref = saved; }
+    ConstituentSemantics saved;
+    ConstituentSemantics &ref;
+  };
+
   explicit ArrayExprLowering(Fortran::lower::AbstractConverter &converter,
                              Fortran::lower::StatementContext &stmtCtx,
                              Fortran::lower::SymMap &symMap,
@@ -2744,14 +2986,32 @@ private:
 
   explicit ArrayExprLowering(Fortran::lower::AbstractConverter &converter,
                              Fortran::lower::StatementContext &stmtCtx,
-                             Fortran::lower::SymMap &symMap, bool projection,
+                             Fortran::lower::SymMap &symMap,
+                             ConstituentSemantics sem,
                              fir::ArrayLoadOp dst = {})
       : converter{converter}, builder{converter.getFirOpBuilder()},
-        stmtCtx{stmtCtx}, symMap{symMap}, destination{dst}, inProjection{
-                                                                projection} {}
+        stmtCtx{stmtCtx}, symMap{symMap}, destination{dst}, semant{sem} {}
 
   mlir::Location getLoc() { return converter.getCurrentLocation(); }
-  void setUseEmbox(bool embox = true) { useEmbox = embox; }
+
+  /// Array appears in a lhs context such that it is assigned after the rhs is
+  /// fully evaluated.
+  bool isCopyInCopyOut() {
+    return semant == ConstituentSemantics::CopyInCopyOut;
+  }
+
+  /// Array appears in a context where it must be boxed.
+  bool isBoxValue() { return semant == ConstituentSemantics::BoxValue; }
+
+  /// Array appears in a context where differences in the memory reference can
+  /// be observable in the computational results. For example, an array
+  /// element is passed to an impure procedure.
+  bool isReferentiallyOpaque() {
+    return semant == ConstituentSemantics::RefOpaque;
+  }
+
+  /// Array appears in a context where it is passed as a VALUE argument.
+  bool isValueAttribute() { return semant == ConstituentSemantics::ByValueArg; }
 
   Fortran::lower::AbstractConverter &converter;
   Fortran::lower::FirOpBuilder &builder;
@@ -2761,9 +3021,8 @@ private:
   std::optional<Fortran::evaluate::Shape> destShape;
   llvm::SmallVector<mlir::Value> sliceTriple;
   llvm::SmallVector<mlir::Value> slicePath;
-  bool useEmbox{false};
+  ConstituentSemantics semant{ConstituentSemantics::RefTransparent};
   bool inSlice{false};
-  bool inProjection{false};
 };
 } // namespace
 
@@ -2865,8 +3124,8 @@ fir::ExtendedValue Fortran::lower::createSomeArrayBox(
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
   LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "box designator: ") << '\n');
-  return ArrayExprLowering::lowerAndBoxArrayExpression(converter, symMap,
-                                                       stmtCtx, expr);
+  return ArrayExprLowering::lowerArrayExpressionBoxed(converter, symMap,
+                                                      stmtCtx, expr);
 }
 
 fir::MutableBoxValue Fortran::lower::createSomeMutableBox(
@@ -2876,7 +3135,8 @@ fir::MutableBoxValue Fortran::lower::createSomeMutableBox(
   // MutableBox lowering StatementContext does not need to be propagated
   // to the caller because the result value is a variable, not a temporary
   // expression. The StatementContext clean-up can occur before using the
-  // resulting MutableBoxValue.
+  // resulting MutableBoxValue. Variables of all other types are handled in the
+  // bridge.
   Fortran::lower::StatementContext dummyStmtCtx;
   return ScalarExprLowering{loc, converter, symMap, dummyStmtCtx}
       .genMutableBoxValue(expr);
