@@ -1806,6 +1806,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VST3LN_UPD:    return "ARMISD::VST3LN_UPD";
   case ARMISD::VST4LN_UPD:    return "ARMISD::VST4LN_UPD";
   case ARMISD::WLS:           return "ARMISD::WLS";
+  case ARMISD::WLSSETUP:      return "ARMISD::WLSSETUP";
   case ARMISD::LE:            return "ARMISD::LE";
   case ARMISD::LOOP_DEC:      return "ARMISD::LOOP_DEC";
   case ARMISD::CSINV:         return "ARMISD::CSINV";
@@ -16193,7 +16194,7 @@ static SDValue SearchLoopIntrinsic(SDValue N, ISD::CondCode &CC, int &Imm,
   }
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntOp = cast<ConstantSDNode>(N.getOperand(1))->getZExtValue();
-    if (IntOp != Intrinsic::test_set_loop_iterations &&
+    if (IntOp != Intrinsic::test_start_loop_iterations &&
         IntOp != Intrinsic::loop_decrement_reg)
       return SDValue();
     return N;
@@ -16208,7 +16209,7 @@ static SDValue PerformHWLoopCombine(SDNode *N,
 
   // The hwloop intrinsics that we're interested are used for control-flow,
   // either for entering or exiting the loop:
-  // - test.set.loop.iterations will test whether its operand is zero. If it
+  // - test.start.loop.iterations will test whether its operand is zero. If it
   //   is zero, the proceeding branch should not enter the loop.
   // - loop.decrement.reg also tests whether its operand is zero. If it is
   //   zero, the proceeding branch should not branch back to the beginning of
@@ -16283,21 +16284,25 @@ static SDValue PerformHWLoopCombine(SDNode *N,
     DAG.ReplaceAllUsesOfValueWith(SDValue(Br, 0), NewBr);
   };
 
-  if (IntOp == Intrinsic::test_set_loop_iterations) {
+  if (IntOp == Intrinsic::test_start_loop_iterations) {
     SDValue Res;
+    SDValue Setup = DAG.getNode(ARMISD::WLSSETUP, dl, MVT::i32, Elements);
     // We expect this 'instruction' to branch when the counter is zero.
     if (IsTrueIfZero(CC, Imm)) {
-      SDValue Ops[] = { Chain, Elements, Dest };
+      SDValue Ops[] = {Chain, Setup, Dest};
       Res = DAG.getNode(ARMISD::WLS, dl, MVT::Other, Ops);
     } else {
       // The logic is the reverse of what we need for WLS, so find the other
       // basic block target: the target of the proceeding br.
       UpdateUncondBr(Br, Dest, DAG);
 
-      SDValue Ops[] = { Chain, Elements, OtherTarget };
+      SDValue Ops[] = {Chain, Setup, OtherTarget};
       Res = DAG.getNode(ARMISD::WLS, dl, MVT::Other, Ops);
     }
-    DAG.ReplaceAllUsesOfValueWith(Int.getValue(1), Int.getOperand(0));
+    // Update LR count to the new value
+    DAG.ReplaceAllUsesOfValueWith(Int.getValue(0), Setup);
+    // Update chain
+    DAG.ReplaceAllUsesOfValueWith(Int.getValue(2), Int.getOperand(0));
     return Res;
   } else {
     SDValue Size = DAG.getTargetConstant(

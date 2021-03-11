@@ -402,17 +402,18 @@ for.cond.cleanup:
 }
 
 ; CHECK-MID: check_negated_xor_wls
-; CHECK-MID:   t2WhileLoopStart $r2, %bb.3
+; CHECK-MID:   $lr = t2WhileLoopStartLR killed renamable $r2
 ; CHECK-MID:   tB %bb.1
-; CHECK-MID: bb.1.while.body.preheader:
-; CHECK-MID:   $lr = t2LoopDec killed renamable $lr, 1
-; CHECK-MID:   t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
-; CHECk-MID:   tB %bb.3
-; CHECK-MID: bb.3.while.end:
+; CHECK-MID: bb.1.while.body:
+; CHECK-MID:   renamable $lr = t2LoopEndDec killed renamable $lr, %bb.1
+; CHECk-MID:   tB %bb.2
+; CHECK-MID: bb.2.while.end:
 define void @check_negated_xor_wls(i16* nocapture %a, i16* nocapture readonly %b, i32 %N) {
 entry:
-  %wls = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
-  %xor = xor i1 %wls, 1
+  %wls = call {i32, i1} @llvm.test.start.loop.iterations.i32(i32 %N)
+  %wls0 = extractvalue {i32, i1} %wls, 0
+  %wls1 = extractvalue {i32, i1} %wls, 1
+  %xor = xor i1 %wls1, 1
   br i1 %xor, label %while.end, label %while.body.preheader
 
 while.body.preheader:
@@ -421,7 +422,7 @@ while.body.preheader:
 while.body:
   %a.addr.06 = phi i16* [ %incdec.ptr1, %while.body ], [ %a, %while.body.preheader ]
   %b.addr.05 = phi i16* [ %incdec.ptr, %while.body ], [ %b, %while.body.preheader ]
-  %count = phi i32 [ %N, %while.body.preheader ], [ %count.next, %while.body ]
+  %count = phi i32 [ %wls0, %while.body.preheader ], [ %count.next, %while.body ]
   %incdec.ptr = getelementptr inbounds i16, i16* %b.addr.05, i32 1
   %ld.b = load i16, i16* %b.addr.05, align 2
   %incdec.ptr1 = getelementptr inbounds i16, i16* %a.addr.06, i32 1
@@ -435,17 +436,18 @@ while.end:
 }
 
 ; CHECK-MID: check_negated_cmp_wls
-; CHECK-MID:   t2WhileLoopStart $r2, %bb.3
+; CHECK-MID:   $lr = t2WhileLoopStartLR killed renamable $r2
 ; CHECK-MID:   tB %bb.1
-; CHECK-MID: bb.1.while.body.preheader:
-; CHECK-MID:   $lr = t2LoopDec killed renamable $lr, 1
-; CHECK-MID:   t2LoopEnd renamable $lr, %bb.2
-; CHECk-MID:   tB %bb.3
-; CHECK-MID: bb.3.while.end:
+; CHECK-MID: bb.1.while.body:
+; CHECK-MID:   renamable $lr = t2LoopEndDec killed renamable $lr, %bb.1
+; CHECk-MID:   tB %bb.2
+; CHECK-MID: bb.2.while.end:
 define void @check_negated_cmp_wls(i16* nocapture %a, i16* nocapture readonly %b, i32 %N) {
 entry:
-  %wls = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
-  %cmp = icmp ne i1 %wls, 1
+  %wls = call {i32, i1} @llvm.test.start.loop.iterations.i32(i32 %N)
+  %wls0 = extractvalue {i32, i1} %wls, 0
+  %wls1 = extractvalue {i32, i1} %wls, 1
+  %cmp = icmp ne i1 %wls1, 1
   br i1 %cmp, label %while.end, label %while.body.preheader
 
 while.body.preheader:
@@ -454,7 +456,7 @@ while.body.preheader:
 while.body:
   %a.addr.06 = phi i16* [ %incdec.ptr1, %while.body ], [ %a, %while.body.preheader ]
   %b.addr.05 = phi i16* [ %incdec.ptr, %while.body ], [ %b, %while.body.preheader ]
-  %count = phi i32 [ %N, %while.body.preheader ], [ %count.next, %while.body ]
+  %count = phi i32 [ %wls0, %while.body.preheader ], [ %count.next, %while.body ]
   %incdec.ptr = getelementptr inbounds i16, i16* %b.addr.05, i32 1
   %ld.b = load i16, i16* %b.addr.05, align 2
   %incdec.ptr1 = getelementptr inbounds i16, i16* %a.addr.06, i32 1
@@ -468,11 +470,10 @@ while.end:
 }
 
 ; CHECK-MID: check_negated_reordered_wls
-; CHECK-MID:   t2WhileLoopStart killed $r2, %bb.2
+; CHECK-MID:   $lr = t2WhileLoopStartLR killed renamable $r2
 ; CHECK-MID:   tB %bb.1
 ; CHECK-MID: bb.1.while.body:
-; CHECK-MID:   $lr = t2LoopDec killed renamable $lr, 1
-; CHECK-MID:   t2LoopEnd renamable $lr, %bb.1
+; CHECK-MID:   renamable $lr = t2LoopEndDec killed renamable $lr, %bb.1
 ; CHECk-MID:   tB %bb.2
 ; CHECK-MID: bb.2.while.end:
 define void @check_negated_reordered_wls(i16* nocapture %a, i16* nocapture readonly %b, i32 %N) {
@@ -485,7 +486,7 @@ while.body.preheader:
 while.body:
   %a.addr.06 = phi i16* [ %incdec.ptr1, %while.body ], [ %a, %while.body.preheader ]
   %b.addr.05 = phi i16* [ %incdec.ptr, %while.body ], [ %b, %while.body.preheader ]
-  %count = phi i32 [ %N, %while.body.preheader ], [ %count.next, %while.body ]
+  %count = phi i32 [ %wls0, %while.body.preheader ], [ %count.next, %while.body ]
   %incdec.ptr = getelementptr inbounds i16, i16* %b.addr.05, i32 1
   %ld.b = load i16, i16* %b.addr.05, align 2
   %incdec.ptr1 = getelementptr inbounds i16, i16* %a.addr.06, i32 1
@@ -495,8 +496,10 @@ while.body:
   br i1 %cmp, label %while.body, label %while.end
 
 while:
-  %wls = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
-  %xor = xor i1 %wls, 1
+  %wls = call {i32, i1} @llvm.test.start.loop.iterations.i32(i32 %N)
+  %wls0 = extractvalue {i32, i1} %wls, 0
+  %wls1 = extractvalue {i32, i1} %wls, 1
+  %xor = xor i1 %wls1, 1
   br i1 %xor, label %while.end, label %while.body.preheader
 
 while.end:
@@ -504,5 +507,5 @@ while.end:
 }
 
 declare i32 @llvm.start.loop.iterations.i32(i32)
-declare i1 @llvm.test.set.loop.iterations.i32(i32)
+declare {i32, i1} @llvm.test.start.loop.iterations.i32(i32)
 declare i32 @llvm.loop.decrement.reg.i32(i32, i32)

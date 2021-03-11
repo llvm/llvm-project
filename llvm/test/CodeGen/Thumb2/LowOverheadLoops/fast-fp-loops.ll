@@ -25,7 +25,7 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    beq .LBB0_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
 ; CHECK-NEXT:    subs r5, r3, #1
-; CHECK-NEXT:    and lr, r3, #3
+; CHECK-NEXT:    and r12, r3, #3
 ; CHECK-NEXT:    cmp r5, #3
 ; CHECK-NEXT:    bhs .LBB0_6
 ; CHECK-NEXT:  @ %bb.3:
@@ -44,7 +44,7 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    letp lr, .LBB0_5
 ; CHECK-NEXT:    b .LBB0_11
 ; CHECK-NEXT:  .LBB0_6: @ %for.body.preheader.new
-; CHECK-NEXT:    sub.w r12, r3, lr
+; CHECK-NEXT:    sub.w lr, r3, r12
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:  .LBB0_7: @ %for.body
@@ -56,7 +56,7 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    vldr s0, [r5]
 ; CHECK-NEXT:    adds r4, #16
 ; CHECK-NEXT:    vldr s2, [r6]
-; CHECK-NEXT:    cmp r12, r3
+; CHECK-NEXT:    cmp lr, r3
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r7]
 ; CHECK-NEXT:    vldr s0, [r5, #4]
@@ -73,7 +73,7 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    vstr s0, [r7, #12]
 ; CHECK-NEXT:    bne .LBB0_7
 ; CHECK-NEXT:  .LBB0_8: @ %for.cond.cleanup.loopexit.unr-lcssa
-; CHECK-NEXT:    wls lr, lr, .LBB0_11
+; CHECK-NEXT:    wls lr, r12, .LBB0_11
 ; CHECK-NEXT:  @ %bb.9: @ %for.body.epil.preheader
 ; CHECK-NEXT:    add.w r1, r1, r3, lsl #2
 ; CHECK-NEXT:    add.w r2, r2, r3, lsl #2

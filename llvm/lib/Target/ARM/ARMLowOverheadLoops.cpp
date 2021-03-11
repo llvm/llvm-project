@@ -31,7 +31,7 @@
 /// during the transform and pseudo instructions are replaced by real ones. In
 /// some cases, when we have to revert to a 'normal' loop, we have to introduce
 /// multiple instructions for a single pseudo (see RevertWhile and
-/// RevertLoopEnd). To handle this situation, t2WhileLoopStart and t2LoopEnd
+/// RevertLoopEnd). To handle this situation, t2WhileLoopStartLR and t2LoopEnd
 /// are defined to be as large as this maximum sequence of replacement
 /// instructions.
 ///
@@ -102,7 +102,7 @@ static bool shouldInspect(MachineInstr &MI) {
 }
 
 static bool isDo(MachineInstr *MI) {
-  return MI->getOpcode() != ARM::t2WhileLoopStart;
+  return MI->getOpcode() != ARM::t2WhileLoopStartLR;
 }
 
 namespace {
@@ -442,7 +442,7 @@ namespace {
     MachineOperand &getLoopStartOperand() {
       if (IsTailPredicationLegal())
         return TPNumElements;
-      return isDo(Start) ? Start->getOperand(1) : Start->getOperand(0);
+      return Start->getOperand(1);
     }
 
     unsigned getStartOpcode() const {
@@ -1064,53 +1064,20 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
       return false;
     }
 
-    if (Start->getOpcode() == ARM::t2WhileLoopStart &&
+    if (Start->getOpcode() == ARM::t2WhileLoopStartLR &&
         (BBUtils->getOffsetOf(Start) >
-         BBUtils->getOffsetOf(Start->getOperand(1).getMBB()) ||
-         !BBUtils->isBBInRange(Start, Start->getOperand(1).getMBB(), 4094))) {
+             BBUtils->getOffsetOf(Start->getOperand(2).getMBB()) ||
+         !BBUtils->isBBInRange(Start, Start->getOperand(2).getMBB(), 4094))) {
       LLVM_DEBUG(dbgs() << "ARM Loops: WLS offset is out-of-range!\n");
       return false;
     }
     return true;
   };
 
-  // Find a suitable position to insert the loop start instruction. It needs to
-  // be able to safely define LR.
-  auto FindStartInsertionPoint = [](MachineInstr *Start, MachineInstr *Dec,
-                                    MachineBasicBlock::iterator &InsertPt,
-                                    MachineBasicBlock *&InsertBB,
-                                    ReachingDefAnalysis &RDA,
-                                    InstSet &ToRemove) {
-    // For a t2DoLoopStart it is always valid to use the start insertion point.
-    // For WLS we can define LR if LR already contains the same value.
-    if (isDo(Start) || Start->getOperand(0).getReg() == ARM::LR) {
-      InsertPt = MachineBasicBlock::iterator(Start);
-      InsertBB = Start->getParent();
-      return true;
-    }
-
-    // We've found no suitable LR def and Start doesn't use LR directly. Can we
-    // just define LR anyway?
-    if (!RDA.isSafeToDefRegAt(Start, MCRegister::from(ARM::LR)))
-      return false;
-
-    InsertPt = MachineBasicBlock::iterator(Start);
-    InsertBB = Start->getParent();
-    return true;
-  };
-
-  if (!FindStartInsertionPoint(Start, Dec, StartInsertPt, StartInsertBB, RDA,
-                               ToRemove)) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Unable to find safe insertion point.\n");
-    Revert = true;
-    return;
-  }
-  LLVM_DEBUG(if (StartInsertPt == StartInsertBB->end())
-               dbgs() << "ARM Loops: Will insert LoopStart at end of block\n";
-             else
-               dbgs() << "ARM Loops: Will insert LoopStart at "
-                      << *StartInsertPt
-            );
+  StartInsertPt = MachineBasicBlock::iterator(Start);
+  StartInsertBB = Start->getParent();
+  LLVM_DEBUG(dbgs() << "ARM Loops: Will insert LoopStart at "
+                    << *StartInsertPt);
 
   Revert = !ValidateRanges(Start, End, BBUtils, ML);
   CannotTailPredicate = !ValidateTailPredicate();
@@ -1317,6 +1284,9 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     return false;
   }
 
+  assert(LoLoop.Start->getOpcode() != ARM::t2WhileLoopStart &&
+         "Expected t2WhileLoopStart to be removed before regalloc!");
+
   // Check that the only instruction using LoopDec is LoopEnd. This can only
   // happen when the Dec and End are separate, not a single t2LoopEndDec.
   // TODO: Check for copy chains that really have no effect.
@@ -1339,11 +1309,11 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
 // another low register.
 void ARMLowOverheadLoops::RevertWhile(MachineInstr *MI) const {
   LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to cmp: " << *MI);
-  MachineBasicBlock *DestBB = MI->getOperand(1).getMBB();
+  MachineBasicBlock *DestBB = MI->getOperand(2).getMBB();
   unsigned BrOpc = BBUtils->isBBInRange(MI, DestBB, 254) ?
     ARM::tBcc : ARM::t2Bcc;
 
-  RevertWhileLoopStart(MI, TII, BrOpc);
+  RevertWhileLoopStartLR(MI, TII, BrOpc);
 }
 
 void ARMLowOverheadLoops::RevertDo(MachineInstr *MI) const {
@@ -1478,7 +1448,7 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
     MIB.addDef(ARM::LR);
     MIB.add(Count);
     if (!isDo(Start))
-      MIB.add(Start->getOperand(1));
+      MIB.add(Start->getOperand(2));
 
     LLVM_DEBUG(dbgs() << "ARM Loops: Inserted start: " << *MIB);
     NewStart = &*MIB;
@@ -1657,7 +1627,7 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
   };
 
   if (LoLoop.Revert) {
-    if (LoLoop.Start->getOpcode() == ARM::t2WhileLoopStart)
+    if (LoLoop.Start->getOpcode() == ARM::t2WhileLoopStartLR)
       RevertWhile(LoLoop.Start);
     else
       RevertDo(LoLoop.Start);
@@ -1728,7 +1698,7 @@ bool ARMLowOverheadLoops::RevertNonLoops() {
     Changed = true;
 
     for (auto *Start : Starts) {
-      if (Start->getOpcode() == ARM::t2WhileLoopStart)
+      if (Start->getOpcode() == ARM::t2WhileLoopStartLR)
         RevertWhile(Start);
       else
         RevertDo(Start);
