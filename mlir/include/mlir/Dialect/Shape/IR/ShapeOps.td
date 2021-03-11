@@ -277,9 +277,10 @@ def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable",
     };
   }];
 
+  let hasCanonicalizer = 1;
+
   let assemblyFormat = "$shapes attr-dict `:` type($shapes)";
   let verifier = [{ return ::verify(*this); }];
-
 }
 
 def Shape_RankOp : Shape_Op<"rank", [NoSideEffect]> {
