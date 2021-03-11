@@ -7,21 +7,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/MyCFG/MyCFG.h"
+#include "TopoSorter.cpp"
 
 using namespace llvm;
+
+TopoSorter topo;
 
 PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
   outs() << "===============================================\n";
   outs() << "Function: " << F.getName() << "\n";
-  outs() << "Function instruction count: " << F.getInstructionCount() << "\n";
-  
-  for (const auto &bb : F) {
-    outs() << "Processing Node " << static_cast<const void*>(&bb) << "\n";
+  outs() << "Instruction count: " << F.getInstructionCount() << "\n";
 
-    for (auto it = GraphTraits<const BasicBlock *>::child_begin(&bb), end = GraphTraits<const BasicBlock *>::child_end(&bb); it != end; it++) {
-      outs() << static_cast<const void*>(&bb) << " to " << static_cast<const void*>(&it) <<  "\n";
+  for (auto &bb : F) {
+    for (auto &ii: bb) {
+      outs() << "Instruction: " << ii << "\n";
+    }
+    auto *ti = bb.getTerminator();
+    outs() << "Terminating instruction: " << *ti << "\n";
+    for (unsigned I = 0, NSucc = ti->getNumSuccessors(); I < NSucc; ++I) {
+      BasicBlock *Succ = ti->getSuccessor(I);
+      for (auto &ii: *Succ) {
+        outs() << "Instruction in successor: " << ii << "\n";
+      }
     }
   }
+
+  outs() << "+++++++++++++++++++++++++++++++++++++++\n";
+  topo.runToposort(F);
 
   return PreservedAnalyses::all();
 }
