@@ -444,7 +444,7 @@ public:
 
 static void prepareSymbolRelocation(lld::macho::Symbol *sym,
                                     const InputSection *isec, const Reloc &r) {
-  const TargetInfo::RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
+  const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
     prepareBranchTarget(sym);
@@ -484,8 +484,7 @@ void Writer::scanRelocations() {
         if (auto *undefined = dyn_cast<Undefined>(sym))
           treatUndefinedSymbol(*undefined);
         // treatUndefinedSymbol() can replace sym with a DylibSymbol; re-check.
-        if (!isa<Undefined>(sym) &&
-            target->validateSymbolRelocation(sym, isec, r))
+        if (!isa<Undefined>(sym) && validateSymbolRelocation(sym, isec, r))
           prepareSymbolRelocation(sym, isec, r);
       } else {
         assert(r.referent.is<InputSection *>());
