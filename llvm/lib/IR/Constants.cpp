@@ -1914,6 +1914,12 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
   getContext().pImpl->DSOLocalEquivalents.erase(getGlobalValue());
   NewEquiv = this;
   setOperand(0, Func);
+
+  if (Func->getType() != getType()) {
+    // It is ok to mutate the type here because this constant should always
+    // reflect the type of the function it's holding.
+    mutateType(Func->getType());
+  }
   return nullptr;
 }
 
