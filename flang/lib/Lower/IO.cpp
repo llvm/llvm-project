@@ -227,7 +227,7 @@ static mlir::FuncOp getOutputFunc(mlir::Location loc,
     return getIORuntimeFunc<mkIOKey(OutputDescriptor)>(loc, builder);
   // Any unaccounted for types are to be handled here.
   mlir::emitError(loc, "output for entity type ") << type << " not implemented";
-  return {};
+  TODO(loc, "derived type IO");
 }
 
 /// Generate a sequence of output data transfer calls.
@@ -249,11 +249,8 @@ genOutputItemList(Fortran::lower::AbstractConverter &converter,
     makeNextConditionalOn(builder, loc, checkResult, ok, inLoop);
 
     const auto *expr = Fortran::semantics::GetExpr(pExpr);
-    if (!expr) {
-      mlir::emitError(loc,
-                      "Lowering internal error: could not get evaluate::Expr");
-      break;
-    }
+    if (!expr)
+      fir::emitFatalError(loc, "internal error: could not get evaluate::Expr");
     auto itemTy = converter.genType(*expr);
     auto outputFunc = getOutputFunc(loc, builder, itemTy, isFormatted);
     auto argType = outputFunc.getType().getInput(1);
@@ -271,7 +268,7 @@ genOutputItemList(Fortran::lower::AbstractConverter &converter,
       // genExprAddr will lower them as CharBoxValue or BoxValue.
       if (!exv.getCharBox())
         llvm::report_fatal_error(
-            "internal IO lowering: scalar character not in CharBox");
+            "internal error: scalar character not in CharBox");
       outputFuncArgs.push_back(builder.createConvert(
           loc, outputFunc.getType().getInput(1), fir::getBase(exv)));
       outputFuncArgs.push_back(builder.createConvert(
@@ -323,7 +320,7 @@ static mlir::FuncOp getInputFunc(mlir::Location loc,
     return getIORuntimeFunc<mkIOKey(InputDescriptor)>(loc, builder);
   // Any unaccounted for types are to be handled here.
   mlir::emitError(loc, "input for entity type ") << type << " not implemented";
-  return {};
+  TODO(loc, "derived type IO");
 }
 
 /// Generate a sequence of input data transfer calls.
@@ -348,11 +345,8 @@ static void genInputItemList(Fortran::lower::AbstractConverter &converter,
         converter.genExprAddr(Fortran::semantics::GetExpr(pVar), stmtCtx, loc);
     auto itemAddr = fir::getBase(itemBox);
     auto itemTy = fir::dyn_cast_ptrEleTy(itemAddr.getType());
-    if (!itemTy) {
-      mlir::emitError(loc, "internal: unhandled input item type ")
-          << itemAddr.getType();
-      return;
-    }
+    if (!itemTy)
+      fir::emitFatalError(loc, "internal error: unhandled input item type");
     auto inputFunc = getInputFunc(loc, builder, itemTy, isFormatted);
     auto argType = inputFunc.getType().getInput(1);
     if (argType.isa<fir::BoxType>())
@@ -522,7 +516,7 @@ genBuffer(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
       },
       [&](const auto &) -> ValuePair {
         llvm::report_fatal_error(
-            "lowering internal error: IO buffer is not a character");
+            "internal error: IO buffer is not a character");
       });
   buff = builder.createConvert(loc, strTy, buff);
   len = builder.createConvert(loc, lenTy, len);
@@ -539,7 +533,7 @@ lowerStringLit(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
   auto &builder = converter.getFirOpBuilder();
   auto *expr = Fortran::semantics::GetExpr(syntax);
   if (!expr)
-    mlir::emitError(loc, "internal: null semantic expr in IO lowering");
+    fir::emitFatalError(loc, "internal error: null semantic expr in IO");
   Fortran::lower::StatementContext stmtCtx;
   auto [buff, len] = genBuffer(converter, loc, *expr, strTy, lenTy, stmtCtx);
   mlir::Value kind;
@@ -1664,8 +1658,8 @@ mlir::Value genInquireSpec<Fortran::parser::InquireSpec::IntVar>(
   auto addr = fir::getBase(converter.genExprAddr(varExpr, stmtCtx, loc));
   auto eleTy = fir::dyn_cast_ptrEleTy(addr.getType());
   if (!eleTy)
-    mlir::emitError(loc, "internal: expected a memory reference type ")
-        << addr.getType();
+    fir::emitFatalError(loc,
+                        "internal error: expected a memory reference type");
   auto bitWidth = eleTy.cast<mlir::IntegerType>().getWidth();
   auto idxTy = builder.getIndexType();
   auto kind = builder.createIntegerConstant(loc, idxTy, bitWidth / 8);
