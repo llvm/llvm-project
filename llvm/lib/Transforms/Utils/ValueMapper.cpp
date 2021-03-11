@@ -432,6 +432,20 @@ Value *Mapper::mapValue(const Value *V) {
   if (BlockAddress *BA = dyn_cast<BlockAddress>(C))
     return mapBlockAddress(*BA);
 
+  if (const auto *E = dyn_cast<DSOLocalEquivalent>(C)) {
+    auto *Val = mapValue(E->getGlobalValue());
+    GlobalValue *GV = dyn_cast<GlobalValue>(Val);
+    if (GV)
+      return getVM()[E] = DSOLocalEquivalent::get(GV);
+
+    auto *Func = cast<Function>(Val->stripPointerCastsAndAliases());
+    Type *NewTy = E->getType();
+    if (TypeMapper)
+      NewTy = TypeMapper->remapType(NewTy);
+    return getVM()[E] = llvm::ConstantExpr::getBitCast(
+               DSOLocalEquivalent::get(Func), NewTy);
+  }
+
   auto mapValueOrNull = [this](Value *V) {
     auto Mapped = mapValue(V);
     assert((Mapped || (Flags & RF_NullMapMissingGlobalValues)) &&
