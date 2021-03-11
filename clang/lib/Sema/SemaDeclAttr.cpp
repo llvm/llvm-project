@@ -154,7 +154,8 @@ static bool isInstanceMethod(const Decl *D) {
   return false;
 }
 
-static inline bool isNSStringType(QualType T, ASTContext &Ctx) {
+static inline bool isNSStringType(QualType T, ASTContext &Ctx,
+                                  bool AllowNSAttributedString = false) {
   const auto *PT = T->getAs<ObjCObjectPointerType>();
   if (!PT)
     return false;
@@ -165,6 +166,9 @@ static inline bool isNSStringType(QualType T, ASTContext &Ctx) {
 
   IdentifierInfo* ClsName = Cls->getIdentifier();
 
+  if (AllowNSAttributedString &&
+      ClsName == &Ctx.Idents.get("NSAttributedString"))
+    return true;
   // FIXME: Should we walk the chain of classes?
   return ClsName == &Ctx.Idents.get("NSString") ||
          ClsName == &Ctx.Idents.get("NSMutableString");
@@ -3286,7 +3290,7 @@ static void handleFormatArgAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
   Ty = getFunctionOrMethodResultType(D);
-  if (!isNSStringType(Ty, S.Context) &&
+  if (!isNSStringType(Ty, S.Context, /*AllowNSAttributedString=*/true) &&
       !isCFStringType(Ty, S.Context) &&
       (!Ty->isPointerType() ||
        !Ty->castAs<PointerType>()->getPointeeType()->isCharType())) {
