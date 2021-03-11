@@ -9,6 +9,7 @@ add_mlir_library(MLIRTestTransforms
   TestConvertCallOp.cpp
   TestConvertGPUKernelToCubin.cpp
   TestConvertGPUKernelToHsaco.cpp
+  TestDataLayoutQuery.cpp
   TestDominance.cpp
   TestDynamicPipeline.cpp
   TestLoopFusion.cpp
