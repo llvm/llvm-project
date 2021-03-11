@@ -15,9 +15,9 @@ list(APPEND SCUDO_CFLAGS
 # Remove -stdlib= which is unused when passing -nostdinc++.
 string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
-append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding SCUDO_CFLAGS)
-
 append_list_if(COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG -fvisibility=hidden SCUDO_CFLAGS)
+
+append_list_if(COMPILER_RT_HAS_FNO_EXCEPTIONS_FLAG -fno-exceptions SCUDO_CFLAGS)
 
 append_list_if(COMPILER_RT_HAS_WNO_PEDANTIC -Wno-pedantic SCUDO_CFLAGS)
 
@@ -41,7 +41,10 @@ set(SCUDO_LINK_FLAGS)
 
 list(APPEND SCUDO_LINK_FLAGS -Wl,-z,defs,-z,now,-z,relro)
 
-append_list_if(COMPILER_RT_HAS_NODEFAULTLIBS_FLAG -nodefaultlibs SCUDO_LINK_FLAGS)
+list(APPEND SCUDO_LINK_FLAGS -ffunction-sections -fdata-sections -Wl,--gc-sections)
+
+# We don't use the C++ standard library, so avoid including it by mistake.
+append_list_if(COMPILER_RT_HAS_NOSTDLIBXX_FLAG -nostdlib++ SCUDO_LINK_FLAGS)
 
 if(ANDROID)
   list(APPEND SCUDO_CFLAGS -fno-emulated-tls)
@@ -126,6 +129,12 @@ if (COMPILER_RT_HAS_GWP_ASAN)
   list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS)
 endif()
 
+set(SCUDO_LINK_LIBS)
+
+append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread SCUDO_LINK_FLAGS)
+
+append_list_if(FUCHSIA zircon SCUDO_LINK_LIBS)
+
 if(COMPILER_RT_HAS_SCUDO_STANDALONE)
   add_compiler_rt_object_libraries(RTScudoStandalone
     ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
@@ -158,6 +167,17 @@ if(COMPILER_RT_HAS_SCUDO_STANDALONE)
     ADDITIONAL_HEADERS ${SCUDO_HEADERS}
     CFLAGS ${SCUDO_CFLAGS}
     OBJECT_LIBS ${SCUDO_OBJECT_LIBS}
+    PARENT_TARGET scudo_standalone)
+
+  add_compiler_rt_runtime(clang_rt.scudo_standalone
+    SHARED
+    ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
+    SOURCES ${SCUDO_SOURCES} ${SCUDO_SOURCES_C_WRAPPERS} ${SCUDO_SOURCES_CXX_WRAPPERS}
+    ADDITIONAL_HEADERS ${SCUDO_HEADERS}
+    CFLAGS ${SCUDO_CFLAGS}
+    OBJECT_LIBS ${SCUDO_OBJECT_LIBS}
+    LINK_FLAGS ${SCUDO_LINK_FLAGS}
+    LINK_LIBS ${SCUDO_LINK_LIBS}
     PARENT_TARGET scudo_standalone)
 
   add_subdirectory(benchmarks)
