@@ -1397,6 +1397,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::CTLZ, VT, Custom);
   setOperationAction(ISD::CTPOP, VT, Custom);
   setOperationAction(ISD::CTTZ, VT, Custom);
+  setOperationAction(ISD::FABS, VT, Custom);
   setOperationAction(ISD::FADD, VT, Custom);
   setOperationAction(ISD::FCEIL, VT, Custom);
   setOperationAction(ISD::FDIV, VT, Custom);
