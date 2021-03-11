@@ -113,6 +113,8 @@ def apply;
 class GIApplyKind;
 class GIApplyKindWithArgs;
 
+def register_matchinfo: GIDefMatchData<"Register">;
+
 def copy_prop : GICombineRule<
   (defs root:$d),
   (match (COPY $d, $s):$mi,
@@ -338,18 +340,16 @@ def constant_fp_op: GICombineRule <
 >;
 
 // Fold int2ptr(ptr2int(x)) -> x
-def p2i_to_i2p_matchinfo: GIDefMatchData<"Register">;
 def p2i_to_i2p: GICombineRule<
-  (defs root:$root, p2i_to_i2p_matchinfo:$info),
+  (defs root:$root, register_matchinfo:$info),
   (match (wip_match_opcode G_INTTOPTR):$root,
     [{ return Helper.matchCombineI2PToP2I(*${root}, ${info}); }]),
   (apply [{ return Helper.applyCombineI2PToP2I(*${root}, ${info}); }])
 >;
 
 // Fold ptr2int(int2ptr(x)) -> x
-def i2p_to_p2i_matchinfo: GIDefMatchData<"Register">;
 def i2p_to_p2i: GICombineRule<
-  (defs root:$root, i2p_to_p2i_matchinfo:$info),
+  (defs root:$root, register_matchinfo:$info),
   (match (wip_match_opcode G_PTRTOINT):$root,
     [{ return Helper.matchCombineP2IToI2P(*${root}, ${info}); }]),
   (apply [{ return Helper.applyCombineP2IToI2P(*${root}, ${info}); }])
@@ -390,18 +390,16 @@ def shl_ashr_to_sext_inreg : GICombineRule<
   (apply [{ return Helper.applyAshShlToSextInreg(*${root}, ${info});}])
 >;
 // Fold (x & y) -> x or (x & y) -> y when (x & y) is known to equal x or equal y.
-def redundant_and_matchinfo : GIDefMatchData<"Register">;
 def redundant_and: GICombineRule <
-  (defs root:$root, redundant_and_matchinfo:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_AND):$root,
          [{ return Helper.matchRedundantAnd(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
 // Fold (x | y) -> x or (x | y) -> y when (x | y) is known to equal x or equal y.
-def redundant_or_matchinfo : GIDefMatchData<"Register">;
 def redundant_or: GICombineRule <
-  (defs root:$root, redundant_or_matchinfo:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_OR):$root,
          [{ return Helper.matchRedundantOr(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
@@ -419,9 +417,8 @@ def redundant_sext_inreg: GICombineRule <
 
 // Fold (anyext (trunc x)) -> x if the source type is same as
 // the destination type.
-def anyext_trunc_fold_matchinfo : GIDefMatchData<"Register">;
 def anyext_trunc_fold: GICombineRule <
-  (defs root:$root, anyext_trunc_fold_matchinfo:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_ANYEXT):$root,
          [{ return Helper.matchCombineAnyExtTrunc(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
@@ -455,9 +452,8 @@ def not_cmp_fold : GICombineRule<
 >;
 
 // Fold (fneg (fneg x)) -> x.
-def fneg_fneg_fold_matchinfo : GIDefMatchData<"Register">;
 def fneg_fneg_fold: GICombineRule <
-  (defs root:$root, fneg_fneg_fold_matchinfo:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_FNEG):$root,
          [{ return Helper.matchCombineFNegOfFNeg(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
@@ -473,9 +469,8 @@ def unmerge_merge : GICombineRule<
 >;
 
 // Fold (fabs (fabs x)) -> (fabs x).
-def fabs_fabs_fold_matchinfo : GIDefMatchData<"Register">;
 def fabs_fabs_fold: GICombineRule<
-  (defs root:$root, fabs_fabs_fold_matchinfo:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_FABS):$root,
          [{ return Helper.matchCombineFAbsOfFAbs(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
@@ -575,6 +570,14 @@ def extend_through_phis : GICombineRule<
 def insert_vec_elt_combines : GICombineGroup<
                             [combine_insert_vec_elts_build_vector]>;
 
+def extract_vec_elt_build_vec : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_EXTRACT_VECTOR_ELT):$root,
+    [{ return Helper.matchExtractVecEltBuildVec(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyExtractVecEltBuildVec(*${root}, ${matchinfo}); }])>;
+
+def extract_vec_elt_combines : GICombineGroup<[extract_vec_elt_build_vec]>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -606,9 +609,9 @@ def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
                                        mul_by_neg_one]>;
 
 def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
-    ptr_add_immed_chain, combines_for_extload, combine_indexed_load_store,
-    undef_combines, identity_combines, phi_combines, simplify_add_to_sub,
-    hoist_logic_op_with_same_opcode_hands,
+    extract_vec_elt_combines, ptr_add_immed_chain, combines_for_extload,
+    combine_indexed_load_store, undef_combines, identity_combines, phi_combines,
+    simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
     known_bits_simplifications, ext_ext_fold,

@@ -641,6 +641,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .minScalarSameAs(1, 0);
 
+  getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC).lower();
+
   getActionDefinitionsBuilder(G_CTLZ)
       .legalForCartesianProduct(
           {s32, s64, v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})

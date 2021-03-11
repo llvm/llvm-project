@@ -97,8 +97,8 @@
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_BUILD_VECTOR_TRUNC (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_CONCAT_VECTORS (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
 # DEBUG-NEXT: .. the first uncovered type index: 2, OK
