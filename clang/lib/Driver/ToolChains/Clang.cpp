@@ -4869,6 +4869,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_ffine_grained_bitfield_accesses,
                   options::OPT_fno_fine_grained_bitfield_accesses);
 
+  Args.AddLastArg(CmdArgs, options::OPT_fexperimental_relative_cxx_abi_vtables,
+                  options::OPT_fno_experimental_relative_cxx_abi_vtables);
+
   // Handle segmented stacks.
   if (Args.hasArg(options::OPT_fsplit_stack))
     CmdArgs.push_back("-split-stacks");
