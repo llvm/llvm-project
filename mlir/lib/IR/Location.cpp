@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Location.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Identifier.h"
 #include "llvm/ADT/SetVector.h"
 
@@ -19,6 +20,17 @@ using namespace mlir::detail;
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/IR/BuiltinLocationAttributes.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// BuiltinDialect
+//===----------------------------------------------------------------------===//
+
+void BuiltinDialect::registerLocationAttributes() {
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/IR/BuiltinLocationAttributes.cpp.inc"
+      >();
+}
 
 //===----------------------------------------------------------------------===//
 // LocationAttr

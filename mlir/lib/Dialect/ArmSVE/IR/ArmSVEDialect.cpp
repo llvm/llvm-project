@@ -20,6 +20,12 @@
 
 using namespace mlir;
 
+#define GET_OP_CLASSES
+#include "mlir/Dialect/ArmSVE/ArmSVE.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/ArmSVE/ArmSVETypes.cpp.inc"
+
 void arm_sve::ArmSVEDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
@@ -30,12 +36,6 @@ void arm_sve::ArmSVEDialect::initialize() {
 #include "mlir/Dialect/ArmSVE/ArmSVETypes.cpp.inc"
       >();
 }
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/ArmSVE/ArmSVE.cpp.inc"
-
-#define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/ArmSVE/ArmSVETypes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // ScalableVectorType

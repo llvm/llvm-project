@@ -866,3 +866,15 @@ mlir::LogicalResult fir::VectorType::verify(
 bool fir::VectorType::isValidElementType(mlir::Type t) {
   return isa_real(t) || isa_integer(t);
 }
+
+//===----------------------------------------------------------------------===//
+// FIROpsDialect
+//===----------------------------------------------------------------------===//
+
+void FIROpsDialect::registerTypes() {
+  addTypes<BoxType, BoxCharType, BoxProcType, CharacterType, fir::ComplexType,
+           FieldType, HeapType, fir::IntegerType, LenType, LogicalType,
+           PointerType, RealType, RecordType, ReferenceType, SequenceType,
+           ShapeType, ShapeShiftType, ShiftType, SliceType, TypeDescType,
+           fir::VectorType>();
+}

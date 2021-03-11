@@ -32,6 +32,9 @@ def Test_Dialect : Dialect {
   let dependentDialects = ["::mlir::DLTIDialect"];
 
   let extraClassDeclaration = [{
+    void registerAttributes();
+    void registerTypes();
+
     Attribute parseAttribute(DialectAsmParser &parser,
                              Type type) const override;
     void printAttribute(Attribute attr,
