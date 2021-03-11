@@ -17,8 +17,8 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
-Symbol *SymbolTable::find(StringRef name) {
-  auto it = symMap.find(CachedHashStringRef(name));
+Symbol *SymbolTable::find(CachedHashStringRef cachedName) {
+  auto it = symMap.find(cachedName);
   if (it == symMap.end())
     return nullptr;
   return symVector[it->second];
