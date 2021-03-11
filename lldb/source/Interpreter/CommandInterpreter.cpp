@@ -2848,7 +2848,9 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
   StartHandlingCommand();
 
   OverrideExecutionContext(m_debugger.GetSelectedExecutionContext());
-  llvm::make_scope_exit([this]() { RestoreExecutionContext(); });
+  auto finalize = llvm::make_scope_exit([this]() {
+    RestoreExecutionContext();
+  });
 
   lldb_private::CommandReturnObject result(m_debugger.GetUseColor());
   HandleCommand(line.c_str(), eLazyBoolCalculate, result);
