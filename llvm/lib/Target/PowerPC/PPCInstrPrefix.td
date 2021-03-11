@@ -2563,6 +2563,11 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, IsLittleEndian] in {
             (STXVRDX $src, xoaddr:$dst)>;
   def : Pat<(store (f64 (extractelt v2f64:$src, 0)), xoaddr:$dst),
             (STXVRDX $src, xoaddr:$dst)>;
+  // Load element 0 of a VSX register to memory
+  def : Pat<(v8i16 (scalar_to_vector (i32 (extloadi16 xoaddr:$src)))),
+            (v8i16 (COPY_TO_REGCLASS (LXVRHX xoaddr:$src), VSRC))>;
+  def : Pat<(v16i8 (scalar_to_vector (i32 (extloadi8 xoaddr:$src)))),
+            (v16i8 (COPY_TO_REGCLASS (LXVRBX xoaddr:$src), VSRC))>;
  }
 
 // FIXME: The swap is overkill when the shift amount is a constant.
