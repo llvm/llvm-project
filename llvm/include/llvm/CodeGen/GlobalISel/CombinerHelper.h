@@ -495,6 +495,13 @@ public:
   bool matchExtractVecEltBuildVec(MachineInstr &MI, Register &Reg);
   void applyExtractVecEltBuildVec(MachineInstr &MI, Register &Reg);
 
+  bool matchExtractAllEltsFromBuildVector(
+      MachineInstr &MI,
+      SmallVectorImpl<std::pair<Register, MachineInstr *>> &MatchInfo);
+  void applyExtractAllEltsFromBuildVector(
+      MachineInstr &MI,
+      SmallVectorImpl<std::pair<Register, MachineInstr *>> &MatchInfo);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);

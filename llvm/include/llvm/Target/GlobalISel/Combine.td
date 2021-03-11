@@ -576,7 +576,18 @@ def extract_vec_elt_build_vec : GICombineRule<
     [{ return Helper.matchExtractVecEltBuildVec(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyExtractVecEltBuildVec(*${root}, ${matchinfo}); }])>;
 
-def extract_vec_elt_combines : GICombineGroup<[extract_vec_elt_build_vec]>;
+// Fold away full elt extracts from a build_vector.
+def extract_all_elts_from_build_vector_matchinfo :
+  GIDefMatchData<"SmallVector<std::pair<Register, MachineInstr*>>">;
+def extract_all_elts_from_build_vector : GICombineRule<
+  (defs root:$root, extract_all_elts_from_build_vector_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_BUILD_VECTOR):$root,
+    [{ return Helper.matchExtractAllEltsFromBuildVector(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyExtractAllEltsFromBuildVector(*${root}, ${matchinfo}); }])>;
+
+def extract_vec_elt_combines : GICombineGroup<[
+  extract_vec_elt_build_vec,
+  extract_all_elts_from_build_vector]>;
 
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
