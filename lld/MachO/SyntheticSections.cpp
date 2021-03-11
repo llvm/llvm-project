@@ -86,6 +86,9 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (config->outputType == MachO::MH_DYLIB && !config->hasReexports)
     hdr->flags |= MachO::MH_NO_REEXPORTED_DYLIBS;
 
+  if (config->markDeadStrippableDylib)
+    hdr->flags |= MachO::MH_DEAD_STRIPPABLE_DYLIB;
+
   if (config->outputType == MachO::MH_EXECUTE && config->isPic)
     hdr->flags |= MachO::MH_PIE;
 
@@ -95,8 +98,8 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (in.exports->hasWeakSymbol || in.weakBinding->hasEntry())
     hdr->flags |= MachO::MH_BINDS_TO_WEAK;
 
-  for (OutputSegment *seg : outputSegments) {
-    for (OutputSection *osec : seg->getSections()) {
+  for (const OutputSegment *seg : outputSegments) {
+    for (const OutputSection *osec : seg->getSections()) {
       if (isThreadLocalVariables(osec->flags)) {
         hdr->flags |= MachO::MH_HAS_TLV_DESCRIPTORS;
         break;
@@ -105,7 +108,7 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   }
 
   uint8_t *p = reinterpret_cast<uint8_t *>(hdr + 1);
-  for (LoadCommand *lc : loadCommands) {
+  for (const LoadCommand *lc : loadCommands) {
     lc->writeTo(p);
     p += lc->getSize();
   }
@@ -764,7 +767,7 @@ void SymtabSection::finalizeContents() {
 
   // Local symbols aren't in the SymbolTable, so we walk the list of object
   // files to gather them.
-  for (InputFile *file : inputFiles) {
+  for (const InputFile *file : inputFiles) {
     if (auto *objFile = dyn_cast<ObjFile>(file)) {
       for (Symbol *sym : objFile->symbols) {
         if (sym == nullptr)

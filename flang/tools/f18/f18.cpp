@@ -537,7 +537,8 @@ int main(int argc, char *const argv[]) {
       driver.debugModuleWriter = true;
     } else if (arg == "-fdebug-measure-parse-tree") {
       driver.measureTree = true;
-    } else if (arg == "-fdebug-instrumented-parse") {
+    } else if (arg == "-fdebug-instrumented-parse" ||
+        arg == "-fdebug-dump-parsing-log") {
       options.instrumentedParse = true;
     } else if (arg == "-fdebug-no-semantics") {
       driver.debugNoSemantics = true;

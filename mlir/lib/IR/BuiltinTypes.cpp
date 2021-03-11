@@ -10,6 +10,8 @@
 #include "TypeDetail.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "llvm/ADT/APFloat.h"
@@ -207,7 +209,7 @@ ShapedType ShapedType::clone(ArrayRef<int64_t> shape, Type elementType) {
 
   if (auto other = dyn_cast<UnrankedMemRefType>()) {
     MemRefType::Builder b(shape, elementType);
-    b.setMemorySpace(other.getMemorySpaceAsInt());
+    b.setMemorySpace(other.getMemorySpace());
     return b;
   }
 
@@ -230,7 +232,7 @@ ShapedType ShapedType::clone(ArrayRef<int64_t> shape) {
   if (auto other = dyn_cast<UnrankedMemRefType>()) {
     MemRefType::Builder b(shape, other.getElementType());
     b.setShape(shape);
-    b.setMemorySpace(other.getMemorySpaceAsInt());
+    b.setMemorySpace(other.getMemorySpace());
     return b;
   }
 
@@ -251,7 +253,7 @@ ShapedType ShapedType::clone(Type elementType) {
   }
 
   if (auto other = dyn_cast<UnrankedMemRefType>()) {
-    return UnrankedMemRefType::get(elementType, other.getMemorySpaceAsInt());
+    return UnrankedMemRefType::get(elementType, other.getMemorySpace());
   }
 
   if (isa<TensorType>()) {
@@ -436,6 +438,12 @@ UnrankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
 // BaseMemRefType
 //===----------------------------------------------------------------------===//
 
+Attribute BaseMemRefType::getMemorySpace() const {
+  if (auto rankedMemRefTy = dyn_cast<MemRefType>())
+    return rankedMemRefTy.getMemorySpace();
+  return cast<UnrankedMemRefType>().getMemorySpace();
+}
+
 unsigned BaseMemRefType::getMemorySpaceAsInt() const {
   if (auto rankedMemRefTy = dyn_cast<MemRefType>())
     return rankedMemRefTy.getMemorySpaceAsInt();
@@ -446,10 +454,63 @@ unsigned BaseMemRefType::getMemorySpaceAsInt() const {
 // MemRefType
 //===----------------------------------------------------------------------===//
 
+bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
+  // Empty attribute is allowed as default memory space.
+  if (!memorySpace)
+    return true;
+
+  // Supported built-in attributes.
+  if (memorySpace.isa<IntegerAttr, StringAttr, DictionaryAttr>())
+    return true;
+
+  // Allow custom dialect attributes.
+  if (!::mlir::isa<BuiltinDialect>(memorySpace.getDialect()))
+    return true;
+
+  return false;
+}
+
+Attribute mlir::detail::wrapIntegerMemorySpace(unsigned memorySpace,
+                                               MLIRContext *ctx) {
+  if (memorySpace == 0)
+    return nullptr;
+
+  return IntegerAttr::get(IntegerType::get(ctx, 64), memorySpace);
+}
+
+Attribute mlir::detail::skipDefaultMemorySpace(Attribute memorySpace) {
+  IntegerAttr intMemorySpace = memorySpace.dyn_cast_or_null<IntegerAttr>();
+  if (intMemorySpace && intMemorySpace.getValue() == 0)
+    return nullptr;
+
+  return memorySpace;
+}
+
+unsigned mlir::detail::getMemorySpaceAsInt(Attribute memorySpace) {
+  if (!memorySpace)
+    return 0;
+
+  assert(memorySpace.isa<IntegerAttr>() &&
+         "Using `getMemorySpaceInteger` with non-Integer attribute");
+
+  return static_cast<unsigned>(memorySpace.cast<IntegerAttr>().getInt());
+}
+
+MemRefType::Builder &
+MemRefType::Builder::setMemorySpace(unsigned newMemorySpace) {
+  memorySpace =
+      wrapIntegerMemorySpace(newMemorySpace, elementType.getContext());
+  return *this;
+}
+
+unsigned MemRefType::getMemorySpaceAsInt() const {
+  return detail::getMemorySpaceAsInt(getMemorySpace());
+}
+
 LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
                                  ArrayRef<int64_t> shape, Type elementType,
                                  ArrayRef<AffineMap> affineMapComposition,
-                                 unsigned memorySpace) {
+                                 Attribute memorySpace) {
   if (!BaseMemRefType::isValidElementType(elementType))
     return emitError() << "invalid memref element type";
 
@@ -474,6 +535,11 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
                        << " and affine map" << it.index() + 1 << ": " << dim
                        << " != " << map.getNumDims();
   }
+
+  if (!isSupportedMemorySpace(memorySpace)) {
+    return emitError() << "unsupported memory space Attribute";
+  }
+
   return success();
 }
 
@@ -481,11 +547,19 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
 // UnrankedMemRefType
 //===----------------------------------------------------------------------===//
 
+unsigned UnrankedMemRefType::getMemorySpaceAsInt() const {
+  return detail::getMemorySpaceAsInt(getMemorySpace());
+}
+
 LogicalResult
 UnrankedMemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
-                           Type elementType, unsigned memorySpace) {
+                           Type elementType, Attribute memorySpace) {
   if (!BaseMemRefType::isValidElementType(elementType))
     return emitError() << "invalid memref element type";
+
+  if (!isSupportedMemorySpace(memorySpace))
+    return emitError() << "unsupported memory space Attribute";
+
   return success();
 }
 

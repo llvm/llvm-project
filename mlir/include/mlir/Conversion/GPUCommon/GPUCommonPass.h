@@ -9,8 +9,13 @@
 #define MLIR_CONVERSION_GPUCOMMON_GPUCOMMONPASS_H_
 
 #include "mlir/Support/LLVM.h"
-#include "llvm/IR/Module.h"
+#include "llvm/ADT/StringRef.h"
 #include <vector>
+
+namespace llvm {
+class LLVMContext;
+class Module;
+} // namespace llvm
 
 namespace mlir {
 
@@ -26,9 +31,6 @@ class OperationPass;
 
 namespace gpu {
 class GPUModuleOp;
-
-/// Returns the default annotation name for GPU binary blobs.
-std::string getDefaultGpuBinaryAnnotation();
 } // namespace gpu
 
 namespace LLVM {

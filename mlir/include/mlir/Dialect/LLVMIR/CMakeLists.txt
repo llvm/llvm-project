@@ -35,12 +35,6 @@ set(LLVM_TARGET_DEFINITIONS ROCDLOps.td)
 mlir_tablegen(ROCDLConversions.inc -gen-llvmir-conversions)
 add_public_tablegen_target(MLIRROCDLConversionsIncGen)
 
-add_mlir_dialect(LLVMAVX512 llvm_avx512 LLVMAVX512)
-add_mlir_doc(LLVMAVX512 -gen-dialect-doc LLVMAVX512 Dialects/)
-set(LLVM_TARGET_DEFINITIONS LLVMAVX512.td)
-mlir_tablegen(LLVMAVX512Conversions.inc -gen-llvmir-conversions)
-add_public_tablegen_target(MLIRLLVMAVX512ConversionsIncGen)
-
 add_mlir_dialect(LLVMArmSVE llvm_arm_sve LLVMArmSVE)
 add_mlir_doc(LLVMArmSVE -gen-dialect-doc LLVMArmSve Dialects/)
 set(LLVM_TARGET_DEFINITIONS LLVMArmSVE.td)

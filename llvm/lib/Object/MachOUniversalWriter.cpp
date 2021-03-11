@@ -263,8 +263,8 @@ buildFatArchList(ArrayRef<Slice> Slices) {
   return FatArchList;
 }
 
-static Error writeUniversalBinaryToStream(ArrayRef<Slice> Slices,
-                                          raw_ostream &Out) {
+Error object::writeUniversalBinaryToStream(ArrayRef<Slice> Slices,
+                                           raw_ostream &Out) {
   MachO::fat_header FatHeader;
   FatHeader.magic = MachO::FAT_MAGIC;
   FatHeader.nfat_arch = Slices.size();
@@ -323,15 +323,4 @@ Error object::writeUniversalBinary(ArrayRef<Slice> Slices,
     return E;
   }
   return Temp->keep(OutputFileName);
-}
-
-Expected<std::unique_ptr<MemoryBuffer>>
-object::writeUniversalBinaryToBuffer(ArrayRef<Slice> Slices) {
-  SmallVector<char, 0> Buffer;
-  raw_svector_ostream Out(Buffer);
-
-  if (Error E = writeUniversalBinaryToStream(Slices, Out))
-    return std::move(E);
-
-  return std::make_unique<SmallVectorMemoryBuffer>(std::move(Buffer));
 }

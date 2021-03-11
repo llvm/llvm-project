@@ -50,6 +50,9 @@ enum ActionKind {
   /// Dump provenance
   DebugDumpProvenance,
 
+  /// Parse then output the parsing log
+  DebugDumpParsingLog,
+
   /// Parse then output the number of objects in the parse tree and the overall
   /// size
   DebugMeasureParseTree,
@@ -171,6 +174,9 @@ public:
 
   /// Show the -version text.
   unsigned showVersion_ : 1;
+
+  /// Instrument the parse to get a more verbose log
+  unsigned instrumentedParse_ : 1;
 
   /// The input files and their types.
   std::vector<FrontendInputFile> inputs_;

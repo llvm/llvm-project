@@ -10,14 +10,13 @@
 
 #include "../PassDetail.h"
 
-#include "mlir/Conversion/AVX512ToLLVM/ConvertAVX512ToLLVM.h"
 #include "mlir/Conversion/ArmSVEToLLVM/ArmSVEToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/AVX512/AVX512Dialect.h"
+#include "mlir/Dialect/AVX512/Transforms.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMAVX512Dialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMArmSVEDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -45,7 +44,7 @@ struct LowerVectorToLLVMPass
     if (enableArmSVE)
       registry.insert<LLVM::LLVMArmSVEDialect>();
     if (enableAVX512)
-      registry.insert<LLVM::LLVMAVX512Dialect>();
+      registry.insert<avx512::AVX512Dialect>();
   }
   void runOnOperation() override;
 };
@@ -104,9 +103,8 @@ void LowerVectorToLLVMPass::runOnOperation() {
     populateArmSVEToLLVMConversionPatterns(converter, patterns);
   }
   if (enableAVX512) {
-    target.addLegalDialect<LLVM::LLVMAVX512Dialect>();
-    target.addIllegalDialect<avx512::AVX512Dialect>();
-    populateAVX512ToLLVMConversionPatterns(converter, patterns);
+    configureAVX512LegalizeForExportTarget(target);
+    populateAVX512LegalizeForLLVMExportPatterns(converter, patterns);
   }
 
   if (failed(

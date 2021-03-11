@@ -59,15 +59,29 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32(float addrspace(1)* %ptr) 
 ; GFX90A-LABEL: global_atomic_fadd_ret_f32:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX90A-NEXT:    s_mov_b64 s[2:3], 0
+; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-NEXT:  BB0_1: ; %atomicrmw.start
+; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX90A-NEXT:    v_mov_b32_e32 v1, v0
+; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
+; GFX90A-NEXT:    v_add_f32_e32 v0, 4.0, v1
 ; GFX90A-NEXT:    buffer_wbl2
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    global_atomic_add_f32 v0, v0, v1, s[0:1] glc scc
+; GFX90A-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc scc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
+; GFX90A-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX90A-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX90A-NEXT:    s_cbranch_execnz BB0_1
+; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX90A-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX90A-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX90A-NEXT:    s_endpgm
   %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 seq_cst
@@ -156,7 +170,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(float addrspace(1)* %
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX90A-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX90A-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 seq_cst
+  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
   store float %result, float addrspace(1)* undef
   ret void
 }
@@ -202,15 +216,12 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32(float addrspace(1)* %ptr
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 4.0
-; GFX90A-NEXT:    buffer_wbl2
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    global_atomic_add_f32 v0, v1, s[0:1] scc
-; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    buffer_invl2
+; GFX90A-NEXT:    global_atomic_add_f32 v0, v1, s[0:1]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 seq_cst
+  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
   ret void
 }
 
@@ -289,7 +300,162 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_ieee(float addrspace(1)*
 ; GFX90A-NEXT:    s_cbranch_execnz BB3_1
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX90A-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 seq_cst
+  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
+  ret void
+}
+
+define amdgpu_kernel void @global_atomic_fadd_ret_f32_agent(float addrspace(1)* %ptr) #0 {
+; GFX900-LABEL: global_atomic_fadd_ret_f32_agent:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX900-NEXT:    s_mov_b64 s[2:3], 0
+; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-NEXT:    v_mov_b32_e32 v0, s4
+; GFX900-NEXT:  BB4_1: ; %atomicrmw.start
+; GFX900-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX900-NEXT:    v_mov_b32_e32 v1, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0
+; GFX900-NEXT:    v_add_f32_e32 v0, 4.0, v1
+; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    buffer_wbinvl1_vol
+; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX900-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX900-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX900-NEXT:    s_cbranch_execnz BB4_1
+; GFX900-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX900-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX900-NEXT:    global_store_dword v[0:1], v0, off
+; GFX900-NEXT:    s_endpgm
+;
+; GFX908-LABEL: global_atomic_fadd_ret_f32_agent:
+; GFX908:       ; %bb.0:
+; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX908-NEXT:    s_mov_b64 s[2:3], 0
+; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX908-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX908-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-NEXT:  BB4_1: ; %atomicrmw.start
+; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX908-NEXT:    v_mov_b32_e32 v1, v0
+; GFX908-NEXT:    v_mov_b32_e32 v2, 0
+; GFX908-NEXT:    v_add_f32_e32 v0, 4.0, v1
+; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX908-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX908-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-NEXT:    buffer_wbinvl1_vol
+; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX908-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX908-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX908-NEXT:    s_cbranch_execnz BB4_1
+; GFX908-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX908-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX908-NEXT:    global_store_dword v[0:1], v0, off
+; GFX908-NEXT:    s_endpgm
+;
+; GFX90A-LABEL: global_atomic_fadd_ret_f32_agent:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90A-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    global_atomic_add_f32 v0, v0, v1, s[0:1] glc
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    buffer_wbinvl1_vol
+; GFX90A-NEXT:    global_store_dword v[0:1], v0, off
+; GFX90A-NEXT:    s_endpgm
+  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
+  store float %result, float addrspace(1)* undef
+  ret void
+}
+
+define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(float addrspace(1)* %ptr) #0 {
+; GFX900-LABEL: global_atomic_fadd_ret_f32_system:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX900-NEXT:    s_mov_b64 s[2:3], 0
+; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-NEXT:    v_mov_b32_e32 v0, s4
+; GFX900-NEXT:  BB5_1: ; %atomicrmw.start
+; GFX900-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX900-NEXT:    v_mov_b32_e32 v1, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0
+; GFX900-NEXT:    v_add_f32_e32 v0, 4.0, v1
+; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    buffer_wbinvl1_vol
+; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX900-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX900-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX900-NEXT:    s_cbranch_execnz BB5_1
+; GFX900-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX900-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX900-NEXT:    global_store_dword v[0:1], v0, off
+; GFX900-NEXT:    s_endpgm
+;
+; GFX908-LABEL: global_atomic_fadd_ret_f32_system:
+; GFX908:       ; %bb.0:
+; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX908-NEXT:    s_mov_b64 s[2:3], 0
+; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX908-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX908-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-NEXT:  BB5_1: ; %atomicrmw.start
+; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX908-NEXT:    v_mov_b32_e32 v1, v0
+; GFX908-NEXT:    v_mov_b32_e32 v2, 0
+; GFX908-NEXT:    v_add_f32_e32 v0, 4.0, v1
+; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX908-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX908-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-NEXT:    buffer_wbinvl1_vol
+; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX908-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX908-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX908-NEXT:    s_cbranch_execnz BB5_1
+; GFX908-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX908-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX908-NEXT:    global_store_dword v[0:1], v0, off
+; GFX908-NEXT:    s_endpgm
+;
+; GFX90A-LABEL: global_atomic_fadd_ret_f32_system:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX90A-NEXT:    s_mov_b64 s[2:3], 0
+; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-NEXT:  BB5_1: ; %atomicrmw.start
+; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX90A-NEXT:    v_mov_b32_e32 v1, v0
+; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
+; GFX90A-NEXT:    v_add_f32_e32 v0, 4.0, v1
+; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc scc
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    buffer_invl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    buffer_wbinvl1_vol
+; GFX90A-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX90A-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX90A-NEXT:    s_cbranch_execnz BB5_1
+; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX90A-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX90A-NEXT:    global_store_dword v[0:1], v0, off
+; GFX90A-NEXT:    s_endpgm
+  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("one-as") seq_cst
+  store float %result, float addrspace(1)* undef
   ret void
 }
 
@@ -302,7 +468,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(float addr
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:  BB4_1: ; %atomicrmw.start
+; GCN-NEXT:  BB6_1: ; %atomicrmw.start
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
@@ -314,12 +480,12 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(float addr
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GCN-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
 ; GCN-NEXT:    s_andn2_b64 exec, exec, s[2:3]
-; GCN-NEXT:    s_cbranch_execnz BB4_1
+; GCN-NEXT:    s_cbranch_execnz BB6_1
 ; GCN-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 seq_cst
+  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
   store float %result, float addrspace(1)* undef
   ret void
 }
@@ -335,7 +501,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(float ad
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 seq_cst
+  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
   ret void
 }
 

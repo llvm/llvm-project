@@ -130,6 +130,19 @@ struct TupleTypeStorage final
   unsigned numElements;
 };
 
+/// Checks if the memorySpace has supported Attribute type.
+bool isSupportedMemorySpace(Attribute memorySpace);
+
+/// Wraps deprecated integer memory space to the new Attribute form.
+Attribute wrapIntegerMemorySpace(unsigned memorySpace, MLIRContext *ctx);
+
+/// Replaces default memorySpace (integer == `0`) with empty Attribute.
+Attribute skipDefaultMemorySpace(Attribute memorySpace);
+
+/// [deprecated] Returns the memory space in old raw integer representation.
+/// New `Attribute getMemorySpace()` method should be used instead.
+unsigned getMemorySpaceAsInt(Attribute memorySpace);
+
 } // namespace detail
 } // namespace mlir
 

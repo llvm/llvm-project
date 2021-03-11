@@ -146,12 +146,15 @@ end
 
 ! CHECK: ModuleLike
 module test
-  type :: a_type
-    integer :: x
-  end type
-  type, extends(a_type) :: b_type
-    integer :: y
-  end type
+  !! When derived type processing is implemented, remove all instances of:
+  !!  - !![disable]
+  !!  -  COM: 
+  !![disable]type :: a_type
+  !![disable]  integer :: x
+  !![disable]end type
+  !![disable]type, extends(a_type) :: b_type
+  !![disable]  integer :: y
+  !![disable]end type
 contains
   ! CHECK: Function foo
   function foo(x)
@@ -191,12 +194,12 @@ contains
       type is (integer)
         ! CHECK: AssignmentStmt
         bar = 0
-      ! CHECK: TypeGuardStmt
-      class is (a_type)
-        ! CHECK: AssignmentStmt
-        bar = 1
-        ! CHECK: ReturnStmt
-        return
+      !![disable]! COM: CHECK: TypeGuardStmt
+      !![disable]class is (a_type)
+      !![disable]  ! COM: CHECK: AssignmentStmt
+      !![disable]  bar = 1
+      !![disable]  ! COM: CHECK: ReturnStmt
+      !![disable]  return
       ! CHECK: TypeGuardStmt
       class default
         ! CHECK: AssignmentStmt
@@ -329,6 +332,5 @@ end subroutine
 subroutine sub4()
   integer :: i
   print*, "test"
-  ! CHECK: DataStmt
   data i /1/
 end subroutine

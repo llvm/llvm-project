@@ -23,7 +23,7 @@ using namespace llvm;
 
 namespace {
 // The ABI-defined register save slots, relative to the CFA (i.e.
-// incoming stack pointer + SystemZMC::CallFrameSize).
+// incoming stack pointer + SystemZMC::ELFCallFrameSize).
 static const TargetFrameLowering::SpillSlot SpillOffsetTable[] = {
   { SystemZ::R2D,  0x10 },
   { SystemZ::R3D,  0x18 },
@@ -75,7 +75,7 @@ assignCalleeSavedSpillSlots(MachineFunction &MF,
 
   unsigned LowGPR = 0;
   unsigned HighGPR = SystemZ::R15D;
-  int StartSPOffset = SystemZMC::CallFrameSize;
+  int StartSPOffset = SystemZMC::ELFCallFrameSize;
   for (auto &CS : CSI) {
     unsigned Reg = CS.getReg();
     int Offset = getRegSpillOffset(MF, Reg);
@@ -84,7 +84,7 @@ assignCalleeSavedSpillSlots(MachineFunction &MF,
         LowGPR = Reg;
         StartSPOffset = Offset;
       }
-      Offset -= SystemZMC::CallFrameSize;
+      Offset -= SystemZMC::ELFCallFrameSize;
       int FrameIdx = MFFrame.CreateFixedSpillStackObject(8, Offset);
       CS.setFrameIdx(FrameIdx);
     } else
@@ -99,8 +99,8 @@ assignCalleeSavedSpillSlots(MachineFunction &MF,
     // already be included, but we also need to handle the call-clobbered
     // argument registers.
     unsigned FirstGPR = ZFI->getVarArgsFirstGPR();
-    if (FirstGPR < SystemZ::NumArgGPRs) {
-      unsigned Reg = SystemZ::ArgGPRs[FirstGPR];
+    if (FirstGPR < SystemZ::ELFNumArgGPRs) {
+      unsigned Reg = SystemZ::ELFArgGPRs[FirstGPR];
       int Offset = getRegSpillOffset(MF, Reg);
       if (StartSPOffset > Offset) {
         LowGPR = Reg; StartSPOffset = Offset;
@@ -110,7 +110,7 @@ assignCalleeSavedSpillSlots(MachineFunction &MF,
   ZFI->setSpillGPRRegs(LowGPR, HighGPR, StartSPOffset);
 
   // Create fixed stack objects for the remaining registers.
-  int CurrOffset = -SystemZMC::CallFrameSize;
+  int CurrOffset = -SystemZMC::ELFCallFrameSize;
   if (usePackedStack(MF))
     CurrOffset += StartSPOffset;
 
@@ -146,8 +146,8 @@ void SystemZFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Record these pending uses, which typically include the call-saved
   // argument register R6D.
   if (IsVarArg)
-    for (unsigned I = MFI->getVarArgsFirstGPR(); I < SystemZ::NumArgGPRs; ++I)
-      SavedRegs.set(SystemZ::ArgGPRs[I]);
+    for (unsigned I = MFI->getVarArgsFirstGPR(); I < SystemZ::ELFNumArgGPRs; ++I)
+      SavedRegs.set(SystemZ::ELFArgGPRs[I]);
 
   // If there are any landing pads, entering them will modify r6/r7.
   if (!MF.getLandingPads().empty()) {
@@ -234,8 +234,8 @@ bool SystemZFrameLowering::spillCalleeSavedRegisters(
 
     // ...likewise GPR varargs.
     if (IsVarArg)
-      for (unsigned I = ZFI->getVarArgsFirstGPR(); I < SystemZ::NumArgGPRs; ++I)
-        addSavedGPR(MBB, MIB, SystemZ::ArgGPRs[I], true);
+      for (unsigned I = ZFI->getVarArgsFirstGPR(); I < SystemZ::ELFNumArgGPRs; ++I)
+        addSavedGPR(MBB, MIB, SystemZ::ELFArgGPRs[I], true);
   }
 
   // Save FPRs/VRs in the normal TargetInstrInfo way.
@@ -326,7 +326,7 @@ processFunctionBeforeFrameFinalized(MachineFunction &MF,
 
   // Get the size of our stack frame to be allocated ...
   uint64_t StackSize = (MFFrame.estimateStackSize(MF) +
-                        SystemZMC::CallFrameSize);
+                        SystemZMC::ELFCallFrameSize);
   // ... and the maximum offset we may need to reach into the
   // caller's frame to access the save area or stack arguments.
   int64_t MaxArgOffset = 0;
@@ -437,7 +437,7 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
       report_fatal_error(
           "In GHC calling convention a frame pointer is not supported");
     }
-    MFFrame.setStackSize(MFFrame.getStackSize() + SystemZMC::CallFrameSize);
+    MFFrame.setStackSize(MFFrame.getStackSize() + SystemZMC::ELFCallFrameSize);
     return;
   }
 
@@ -446,7 +446,7 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL;
 
   // The current offset of the stack pointer from the CFA.
-  int64_t SPOffsetFromCFA = -SystemZMC::CFAOffsetFromInitialSP;
+  int64_t SPOffsetFromCFA = -SystemZMC::ELFCFAOffsetFromInitialSP;
 
   if (ZFI->getSpillGPRRegs().LowGPR) {
     // Skip over the GPR saves.
@@ -480,10 +480,10 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
       break;
     }
   if (HasStackObject || MFFrame.hasCalls())
-    StackSize += SystemZMC::CallFrameSize;
+    StackSize += SystemZMC::ELFCallFrameSize;
   // Don't allocate the incoming reg save area.
-  StackSize = StackSize > SystemZMC::CallFrameSize
-                  ? StackSize - SystemZMC::CallFrameSize
+  StackSize = StackSize > SystemZMC::ELFCallFrameSize
+                  ? StackSize - SystemZMC::ELFCallFrameSize
                   : 0;
   MFFrame.setStackSize(StackSize);
 
@@ -638,7 +638,7 @@ void SystemZFrameLowering::inlineStackProbe(MachineFunction &MF,
   const unsigned ProbeSize = TLI.getStackProbeSize(MF);
   uint64_t NumFullBlocks = StackSize / ProbeSize;
   uint64_t Residual = StackSize % ProbeSize;
-  int64_t SPOffsetFromCFA = -SystemZMC::CFAOffsetFromInitialSP;
+  int64_t SPOffsetFromCFA = -SystemZMC::ELFCFAOffsetFromInitialSP;
   MachineBasicBlock *MBB = &PrologMBB;
   MachineBasicBlock::iterator MBBI = StackAllocMI;
   const DebugLoc DL = StackAllocMI->getDebugLoc();
@@ -682,7 +682,7 @@ void SystemZFrameLowering::inlineStackProbe(MachineFunction &MF,
       .addReg(SystemZ::R15D);
     buildDefCFAReg(*MBB, MBBI, DL, SystemZ::R0D, ZII);
     emitIncrement(*MBB, MBBI, DL, SystemZ::R0D, -int64_t(LoopAlloc), ZII);
-    buildCFAOffs(*MBB, MBBI, DL, -int64_t(SystemZMC::CallFrameSize + LoopAlloc),
+    buildCFAOffs(*MBB, MBBI, DL, -int64_t(SystemZMC::ELFCallFrameSize + LoopAlloc),
                  ZII);
 
     DoneMBB = SystemZ::splitBlockBefore(MBBI, MBB);
@@ -737,11 +737,11 @@ SystemZFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
 StackOffset
 SystemZFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
                                              Register &FrameReg) const {
-  // Our incoming SP is actually SystemZMC::CallFrameSize below the CFA, so
+  // Our incoming SP is actually SystemZMC::ELFCallFrameSize below the CFA, so
   // add that difference here.
   StackOffset Offset =
       TargetFrameLowering::getFrameIndexReference(MF, FI, FrameReg);
-  return Offset + StackOffset::getFixed(SystemZMC::CallFrameSize);
+  return Offset + StackOffset::getFixed(SystemZMC::ELFCallFrameSize);
 }
 
 MachineBasicBlock::iterator SystemZFrameLowering::
@@ -784,7 +784,7 @@ getOrCreateFramePointerSaveIndex(MachineFunction &MF) const {
   int FI = ZFI->getFramePointerSaveIndex();
   if (!FI) {
     MachineFrameInfo &MFFrame = MF.getFrameInfo();
-    int Offset = getBackchainOffset(MF) - SystemZMC::CallFrameSize;
+    int Offset = getBackchainOffset(MF) - SystemZMC::ELFCallFrameSize;
     FI = MFFrame.CreateFixedObject(8, Offset, false);
     ZFI->setFramePointerSaveIndex(FI);
   }

@@ -1203,8 +1203,8 @@ void OmpStructureChecker::CheckPrivateSymbolsInOuterCxt(
   }
 }
 
-void OmpStructureChecker::CheckWorkshareBlockStmts(
-    const parser::Block &block, parser::CharBlock source) {
+void OmpStructureChecker::CheckWorkshareBlockStmts(const parser::Block &block,
+                                                   parser::CharBlock source) {
   OmpWorkshareBlockChecker ompWorkshareBlockChecker{context_, source};
 
   for (auto it{block.begin()}; it != block.end(); ++it) {

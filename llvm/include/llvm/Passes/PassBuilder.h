@@ -128,9 +128,6 @@ public:
   /// Tuning option to enable/disable function merging. Its default value is
   /// false.
   bool MergeFunctions;
-
-  /// Uniquefy function linkage name. Its default value is false.
-  bool UniqueLinkageNames;
 };
 
 /// This class provides access to building LLVM's passes.

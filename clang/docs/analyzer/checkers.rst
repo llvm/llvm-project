@@ -1476,6 +1476,9 @@ Reports similar pieces of code.
    return y;
  }
 
+alpha.core
+^^^^^^^^^^
+
 .. _alpha-core-BoolAssignment:
 
 alpha.core.BoolAssignment (ObjC)
@@ -1487,9 +1490,6 @@ Warn about assigning non-{0,1} values to boolean variables.
  void test() {
    BOOL b = -1; // warn
  }
-
-alpha.core
-^^^^^^^^^^
 
 .. _alpha-core-C11Lock:
 
