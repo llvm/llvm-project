@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 
 // REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
 // REPORT-NEXT: ---
-// REPORT-NEXT: _Z4funcii                        77       9  88.31%        68       10  85.29%        80      32  60.00%
+// REPORT-NEXT: _Z4funcii                        77       9  88.31%        68       3  95.59%        80      32  60.00%
 // REPORT-NEXT: main                              1       0 100.00%         5       0 100.00%         0       0   0.00%
 // REPORT-NEXT: ---
-// REPORT-NEXT: TOTAL                            78       9  88.46%        73       10  86.30%        80      32  60.00%
+// REPORT-NEXT: TOTAL                            78       9  88.46%        73       3  95.89%        80      32  60.00%
