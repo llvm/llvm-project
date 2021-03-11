@@ -411,6 +411,8 @@ private:
       assert(MI.isDebugValue() && "not a DBG_VALUE");
       assert((MI.isDebugValueList() || MI.getNumOperands() == 4) &&
              "malformed DBG_VALUE");
+      if (Expr && Expr->isEntryValue())
+        EVKind = EntryValueLocKind::EntryValueKind;
       for (const MachineOperand &Op : MI.debug_operands()) {
         MachineLoc ML = GetLocForOp(Op);
         auto It = find(Locs, ML);
@@ -428,18 +430,13 @@ private:
 
       // We create the debug entry values from the factory functions rather
       // than from this ctor.
-      assert(EVKind != EntryValueLocKind::EntryValueKind &&
-             !isEntryBackupLoc());
+      assert(!isEntryBackupLoc());
     }
 
     static MachineLoc GetLocForOp(const MachineOperand &Op) {
       MachineLocKind Kind;
       MachineLocValue Loc;
-      if (Expr && Expr->isEntryValue()) {
-        Kind = EntryValueKind;
-        if (int RegNo = isDbgValueDescribedByReg(MI))
-          Loc.RegNo = RegNo;
-      } else if (Op.isReg()) {
+      if (Op.isReg()) {
         Kind = MachineLocKind::RegisterKind;
         Loc.RegNo = Op.getReg();
       } else if (Op.isImm()) {
@@ -2055,14 +2052,21 @@ static bool isSwiftAsyncContext(const MachineInstr &MI) {
   const llvm::Function &F = MF->getFunction();
   if (F.arg_size() != 3 || !F.hasParamAttribute(2, Attribute::SwiftAsync))
     return false;
-  unsigned Reg = isDbgValueDescribedByReg(MI);
-  if (!Reg)
-    return false;
-  auto &EntryMBB = MF->front();
-  for (auto R : EntryMBB.liveins())
-    if (R.PhysReg == Reg)
-      return true;
-  return false;
+  for (const MachineOperand &Op : MI.debug_operands()) {
+    if (!Op.isReg())
+      return false;
+    bool found = false;
+    unsigned Reg = Op.getReg();
+    auto &EntryMBB = MF->front();
+    for (auto R : EntryMBB.liveins())
+      if (R.PhysReg == Reg) {
+        found = true;
+        break;
+      }
+    if (!found)
+      return false;
+  }
+  return true;
 }
 
 /// Calculate the liveness information for the given machine function and
