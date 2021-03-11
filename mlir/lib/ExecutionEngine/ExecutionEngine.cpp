@@ -180,10 +180,11 @@ static void packFunctionArguments(Module *module) {
       llvm::Value *argIndex = llvm::Constant::getIntegerValue(
           builder.getInt64Ty(), APInt(64, indexedArg.index()));
       llvm::Value *argPtrPtr = builder.CreateGEP(argList, argIndex);
-      llvm::Value *argPtr = builder.CreateLoad(argPtrPtr);
-      argPtr = builder.CreateBitCast(
-          argPtr, indexedArg.value().getType()->getPointerTo());
-      llvm::Value *arg = builder.CreateLoad(argPtr);
+      llvm::Value *argPtr = builder.CreateLoad(builder.getInt8PtrTy(),
+                                               argPtrPtr);
+      llvm::Type *argTy = indexedArg.value().getType();
+      argPtr = builder.CreateBitCast(argPtr, argTy->getPointerTo());
+      llvm::Value *arg = builder.CreateLoad(argTy, argPtr);
       args.push_back(arg);
     }
 
@@ -195,7 +196,8 @@ static void packFunctionArguments(Module *module) {
       llvm::Value *retIndex = llvm::Constant::getIntegerValue(
           builder.getInt64Ty(), APInt(64, llvm::size(func.args())));
       llvm::Value *retPtrPtr = builder.CreateGEP(argList, retIndex);
-      llvm::Value *retPtr = builder.CreateLoad(retPtrPtr);
+      llvm::Value *retPtr = builder.CreateLoad(builder.getInt8PtrTy(),
+                                               retPtrPtr);
       retPtr = builder.CreateBitCast(retPtr, result->getType()->getPointerTo());
       builder.CreateStore(result, retPtr);
     }

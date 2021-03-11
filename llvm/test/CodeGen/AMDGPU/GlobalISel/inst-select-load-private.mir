@@ -782,7 +782,6 @@ body: |
 ...
 
 ---
-
 name: load_private_s32_from_1_fi_offset_4095
 legalized:       true
 regBankSelected: true
@@ -807,6 +806,36 @@ body: |
     %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
+
+...
+
+# Have to hack around the copy of the constant to VGPR
+---
+name: load_private_s32_from_1_fi_offset_sgpr_4095
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  stackPtrOffsetReg: $sgpr32
+stack:
+  - { id: 0, size: 4096, alignment: 4 }
+
+body: |
+  bb.0:
+
+    ; GFX6-LABEL: name: load_private_s32_from_1_fi_offset_sgpr_4095
+    ; GFX6: [[BUFFER_LOAD_UBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4095, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 1, addrspace 5)
+    ; GFX6: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
+    ; GFX9-LABEL: name: load_private_s32_from_1_fi_offset_sgpr_4095
+    ; GFX9: [[BUFFER_LOAD_UBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4095, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 1, addrspace 5)
+    ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
+    %0:vgpr(p5) = G_FRAME_INDEX %stack.0
+    %1:sgpr(s32) = G_CONSTANT i32 4095
+    %2:vgpr(s32) = COPY %1
+    %3:vgpr(p5) = G_PTR_ADD %0, %2
+    %4:vgpr(s32) = G_LOAD %3 :: (load 1, align 1, addrspace 5)
+    $vgpr0 = COPY %4
 
 ...
 

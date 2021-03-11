@@ -174,6 +174,7 @@ enum NodeType : unsigned {
   FABS_VL,
   FSQRT_VL,
   FMA_VL,
+  FCOPYSIGN_VL,
   SMIN_VL,
   SMAX_VL,
   UMIN_VL,
@@ -451,6 +452,8 @@ private:
   SDValue lowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_REVERSE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerABS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFixedLengthVectorFCOPYSIGNToRVV(SDValue Op,
+                                               SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorStoreToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorSetccToRVV(SDValue Op, SelectionDAG &DAG) const;

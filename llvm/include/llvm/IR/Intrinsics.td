@@ -1601,6 +1601,12 @@ def int_start_loop_iterations :
 def int_test_set_loop_iterations :
   DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_anyint_ty], [IntrNoDuplicate]>;
 
+// Same as the above, but produces an extra value (the same as the input
+// operand) to be fed into the loop.
+def int_test_start_loop_iterations :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty, llvm_i1_ty], [LLVMMatchType<0>],
+                        [IntrNoDuplicate]>;
+
 // Decrement loop counter by the given argument. Return false if the loop
 // should exit.
 def int_loop_decrement :

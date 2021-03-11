@@ -6126,8 +6126,8 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
   // Be conservative with ARMv8.1 MVE instructions.
   if (Opc == ARM::t2BF_LabelPseudo || Opc == ARM::t2DoLoopStart ||
       Opc == ARM::t2DoLoopStartTP || Opc == ARM::t2WhileLoopStart ||
-      Opc == ARM::t2LoopDec || Opc == ARM::t2LoopEnd ||
-      Opc == ARM::t2LoopEndDec)
+      Opc == ARM::t2WhileLoopStartLR || Opc == ARM::t2LoopDec ||
+      Opc == ARM::t2LoopEnd || Opc == ARM::t2LoopEndDec)
     return outliner::InstrType::Illegal;
 
   const MCInstrDesc &MCID = MI.getDesc();

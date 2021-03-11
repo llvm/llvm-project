@@ -145,10 +145,8 @@ for.end6:
 
 ; MEMOP_OPT: [[SWITCH_BW]] = !{!"branch_weights", i32 457, i32 99}
 ; Should be 457 total left (original total count 556, minus 99 from specialized
-; value 1, which is removed from VP array. Also, we only end up with 5 total
-; values, since the default max number of promotions is 5 and therefore
-; the rest of the values are ignored when extracting the VP metadata.
-; MEMOP_OPT: [[NEWVP]] = !{!"VP", i32 1, i64 457, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66}
+; value 0, which is removed from VP array. This should preserve all unpromoted values.
+; MEMOP_OPT: [[NEWVP]] = !{!"VP", i32 1, i64 457, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66, i64 5, i64 55, i64 6, i64 44, i64 7, i64 33, i64 8, i64 22}
 
 !llvm.module.flags = !{!0}
 

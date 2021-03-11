@@ -1093,6 +1093,7 @@ bool SampleProfileLoader::tryInlineCandidate(
     return false;
 
   InlineFunctionInfo IFI(nullptr, GetAC);
+  IFI.UpdateProfile = false;
   if (InlineFunction(CB, IFI).isSuccess()) {
     // The call to InlineFunction erases I, so we can't pass it here.
     emitInlinedInto(*ORE, DLoc, BB, *CalledFunction, *BB->getParent(), Cost,

@@ -50,11 +50,14 @@ def LLVM_FMFAttr : DialectAttr<
 def LOptDisableUnroll : I32EnumAttrCase<"disable_unroll", 1>;
 def LOptDisableLICM : I32EnumAttrCase<"disable_licm", 2>;
 def LOptInterleaveCount : I32EnumAttrCase<"interleave_count", 3>;
+def LOptDisablePipeline : I32EnumAttrCase<"disable_pipeline", 4>;
+def LOptPipelineInitiationInterval : I32EnumAttrCase<"pipeline_initiation_interval", 5>;
 
 def LoopOptionCase : I32EnumAttr<
     "LoopOptionCase",
     "LLVM loop option",
-    [LOptDisableUnroll, LOptDisableLICM, LOptInterleaveCount
+    [LOptDisableUnroll, LOptDisableLICM, LOptInterleaveCount,
+     LOptDisablePipeline, LOptPipelineInitiationInterval
     ]> {
   let cppNamespace = "::mlir::LLVM";
 }
@@ -335,7 +338,8 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
                    UnitAttr:$nontemporal);
   let results = (outs LLVM_Type:$res);
   string llvmBuilder = [{
-    auto *inst = builder.CreateLoad($addr, $volatile_);
+    auto *inst = builder.CreateLoad(
+      $addr->getType()->getPointerElementType(), $addr, $volatile_);
   }] # setAlignmentCode # setNonTemporalMetadataCode # setAccessGroupsMetadataCode # [{
     $res = inst;
   }];
