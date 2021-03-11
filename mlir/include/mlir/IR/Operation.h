@@ -243,6 +243,12 @@ public:
     getOperandStorage().eraseOperands(idx, length);
   }
 
+  /// Erases the operands that have their corresponding bit set in
+  /// `eraseIndices` and removes them from the operand list.
+  void eraseOperands(const llvm::BitVector &eraseIndices) {
+    getOperandStorage().eraseOperands(eraseIndices);
+  }
+
   // Support operand iteration.
   using operand_range = OperandRange;
   using operand_iterator = operand_range::iterator;

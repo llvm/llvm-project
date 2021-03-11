@@ -9,6 +9,7 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "llvm/ADT/BitVector.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -144,6 +145,37 @@ TEST(OperandStorageTest, MutableRange) {
   mutableOperands.clear();
   EXPECT_EQ(mutableOperands.size(), 0u);
   EXPECT_EQ(user->getNumOperands(), 0u);
+
+  // Destroy the operations.
+  user->destroy();
+  useOp->destroy();
+}
+
+TEST(OperandStorageTest, RangeErase) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  Type type = builder.getNoneType();
+  Operation *useOp = createOp(&context, /*operands=*/llvm::None, {type, type});
+  Value operand1 = useOp->getResult(0);
+  Value operand2 = useOp->getResult(1);
+
+  // Create an operation with operands to erase.
+  Operation *user =
+      createOp(&context, {operand2, operand1, operand2, operand1});
+  llvm::BitVector eraseIndices(user->getNumOperands());
+
+  // Check erasing no operands.
+  user->eraseOperands(eraseIndices);
+  EXPECT_EQ(user->getNumOperands(), 4u);
+
+  // Check erasing disjoint operands.
+  eraseIndices.set(0);
+  eraseIndices.set(3);
+  user->eraseOperands(eraseIndices);
+  EXPECT_EQ(user->getNumOperands(), 2u);
+  EXPECT_EQ(user->getOperand(0), operand1);
+  EXPECT_EQ(user->getOperand(1), operand2);
 
   // Destroy the operations.
   user->destroy();
