@@ -502,6 +502,11 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         GlobalFlags |= StateStrictWQM;
         LowerToMovInstrs.push_back(&MI);
         continue;
+      } else if (Opcode == AMDGPU::LDS_PARAM_LOAD ||
+                 Opcode == AMDGPU::LDS_DIRECT_LOAD) {
+        markInstruction(MI, StateStrictWQM, Worklist);
+        GlobalFlags |= StateStrictWQM;
+        continue;
       } else if (Opcode == AMDGPU::V_SET_INACTIVE_B32 ||
                  Opcode == AMDGPU::V_SET_INACTIVE_B64) {
         III.Disabled = StateStrict;
