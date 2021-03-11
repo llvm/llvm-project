@@ -26,6 +26,9 @@ class OperationPass;
 
 namespace gpu {
 class GPUModuleOp;
+
+/// Returns the default annotation name for GPU binary blobs.
+std::string getDefaultGpuBinaryAnnotation();
 } // namespace gpu
 
 namespace LLVM {
@@ -44,13 +47,17 @@ using LoweringCallback = std::function<std::unique_ptr<llvm::Module>(
 /// This pass does not generate code to call GPU runtime APIs directly but
 /// instead uses a small wrapper library that exports a stable and conveniently
 /// typed ABI on top of GPU runtimes such as CUDA or ROCm (HIP).
+///
+/// A non-empty gpuBinaryAnnotation overrides the pass' command line option.
 std::unique_ptr<OperationPass<ModuleOp>>
-createGpuToLLVMConversionPass(StringRef gpuBinaryAnnotation = "");
+createGpuToLLVMConversionPass(StringRef gpuBinaryAnnotation = {});
 
 /// Collect a set of patterns to convert from the GPU dialect to LLVM.
+///
+/// A non-empty gpuBinaryAnnotation overrides the pass' command line option.
 void populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                          OwningRewritePatternList &patterns,
-                                         StringRef gpuBinaryAnnotation);
+                                         StringRef gpuBinaryAnnotation = {});
 
 /// Creates a pass to convert kernel functions into GPU target object blobs.
 ///
@@ -74,11 +81,13 @@ void populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
 ///
 /// After the transformation, the body of the kernel function is removed (i.e.,
 /// it is turned into a declaration).
+///
+/// A non-empty gpuBinaryAnnotation overrides the pass' command line option.
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
 createConvertGPUKernelToBlobPass(LoweringCallback loweringCallback,
                                  BlobGenerator blobGenerator, StringRef triple,
                                  StringRef targetChip, StringRef features,
-                                 StringRef gpuBinaryAnnotation);
+                                 StringRef gpuBinaryAnnotation = {});
 
 } // namespace mlir
 

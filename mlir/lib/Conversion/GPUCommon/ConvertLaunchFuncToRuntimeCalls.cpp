@@ -48,8 +48,17 @@ public:
       this->gpuBinaryAnnotation = gpuBinaryAnnotation.str();
   }
 
+  GpuToLLVMConversionPass(const GpuToLLVMConversionPass &other)
+      : GpuToLLVMConversionPassBase(other) {}
+
   // Run the dialect converter on the module.
   void runOnOperation() override;
+
+private:
+  Option<std::string> gpuBinaryAnnotation{
+      *this, "gpu-binary-annotation",
+      llvm::cl::desc("Annotation attribute string for GPU binary"),
+      llvm::cl::init(gpu::getDefaultGpuBinaryAnnotation())};
 };
 
 struct FunctionCallBuilder {
