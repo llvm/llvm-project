@@ -183,6 +183,7 @@ class DS_0A1D_RET_GDS<string opName, RegisterClass rc = VGPR_32, RegisterClass s
   let has_gds = 0;
   let gdsValue = 1;
   let AsmMatchConverter = "cvtDSGds";
+  let hasSideEffects = 1;
 }
 
 class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32,
@@ -1059,6 +1060,34 @@ def : DSAtomicRetPat<DS_ADD_RTN_F64, f64, atomic_load_fadd_local_64>;
 def : Pat <
   (SIds_ordered_count i32:$value, i16:$offset),
   (DS_ORDERED_COUNT $value, (as_i16imm $offset))
+>;
+
+def : GCNPat <
+  (i64 (int_amdgcn_ds_add_gs_reg_rtn i32:$src, timm:$offset32)),
+  (DS_ADD_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32))
+>;
+
+def : GCNPat <
+  (i32 (int_amdgcn_ds_add_gs_reg_rtn i32:$src, timm:$offset32)),
+  (EXTRACT_SUBREG
+    (i64 (COPY_TO_REGCLASS
+      (DS_ADD_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32)),
+      VReg_64)),
+    sub0)
+>;
+
+def : GCNPat <
+  (i64 (int_amdgcn_ds_sub_gs_reg_rtn i32:$src, timm:$offset32)),
+  (DS_SUB_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32))
+>;
+
+def : GCNPat <
+  (i32 (int_amdgcn_ds_sub_gs_reg_rtn i32:$src, timm:$offset32)),
+  (EXTRACT_SUBREG
+    (i64 (COPY_TO_REGCLASS
+      (DS_SUB_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32)),
+      VReg_64)),
+    sub0)
 >;
 
 //===----------------------------------------------------------------------===//
