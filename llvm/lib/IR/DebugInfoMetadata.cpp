@@ -1236,17 +1236,6 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
   return false;
 }
 
-bool DIExpression::hasAllLocationOps(unsigned N) const {
-  SmallDenseSet<uint64_t, 4> SeenOps;
-  for (auto ExprOp : expr_ops())
-    if (ExprOp.getOp() == dwarf::DW_OP_LLVM_arg)
-      SeenOps.insert(ExprOp.getArg(0));
-  for (uint64_t Idx = 0; Idx < N; ++Idx)
-    if (!is_contained(SeenOps, Idx))
-      return false;
-  return true;
-}
-
 const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
                                                       unsigned &AddrClass) {
   // FIXME: This seems fragile. Nothing that verifies that these elements
@@ -1459,16 +1448,6 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
   Ops.push_back(OffsetInBits);
   Ops.push_back(SizeInBits);
   return DIExpression::get(Expr->getContext(), Ops);
-}
-
-uint64_t DIExpression::getNumLocationOperands() const {
-  uint64_t Result = 0;
-  for (auto ExprOp : expr_ops())
-    if (ExprOp.getOp() == dwarf::DW_OP_LLVM_arg)
-      Result = std::max(Result, ExprOp.getArg(0) + 1);
-  assert(hasAllLocationOps(Result) &&
-         "Expression is missing one or more location operands.");
-  return Result;
 }
 
 bool DIExpression::isConstant() const {
