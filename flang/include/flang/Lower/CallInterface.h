@@ -106,7 +106,9 @@ public:
     AddressAndLength,
     /// Value means passed by value at the mlir level, it is not necessarily
     /// implied by Fortran Value attribute.
-    Value
+    Value,
+    /// ValueAttribute means dummy has the the Fortran VALUE attribute.
+    ValueAttribute
   };
   /// Different properties of an entity that can be passed/returned.
   /// One-to-One mapping with PassEntityBy but for
