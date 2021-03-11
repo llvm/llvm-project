@@ -38,11 +38,11 @@ def MxROOP_RO  : MxBead2Bits<0b11>;
 ///  1  1  1  0 | REG/IMM | D | SIZE |R/I|  OP  |   REG
 /// ------------+---------+---+------+---+------+---------
 class MxSREncoding_R<MxBead1Bit DIRECTION, MxBead2Bits ROOP, MxEncSize SIZE>
-    : MxEncoding<MxBeadReg<0>, ROOP, MxBead1Bit<1>, SIZE, DIRECTION,
-                 MxBeadReg<2>, MxBead4Bits<0b1110>>;
+    : MxEncoding<MxBeadDReg<0>, ROOP, MxBead1Bit<1>, SIZE, DIRECTION,
+                 MxBeadDReg<2>, MxBead4Bits<0b1110>>;
 
 class MxSREncoding_I<MxBead1Bit DIRECTION, MxBead2Bits ROOP, MxEncSize SIZE>
-    : MxEncoding<MxBeadReg<0>, ROOP, MxBead1Bit<0>, SIZE, DIRECTION,
+    : MxEncoding<MxBeadDReg<0>, ROOP, MxBead1Bit<0>, SIZE, DIRECTION,
                  MxBead3Imm<2, 1>, MxBead4Bits<0b1110>>;
 
 // $reg <- $reg op $reg

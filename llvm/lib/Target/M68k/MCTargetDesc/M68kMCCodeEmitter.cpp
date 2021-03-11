@@ -121,6 +121,7 @@ unsigned M68kMCCodeEmitter::encodeReg(unsigned ThisByte, uint8_t Bead,
     Reg = false;
     DA = true;
     break;
+  case M68kBeads::DReg:
   case M68kBeads::Reg:
     Reg = true;
     DA = false;
@@ -351,6 +352,7 @@ void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
       break;
     case M68kBeads::DAReg:
     case M68kBeads::DA:
+    case M68kBeads::DReg:
     case M68kBeads::Reg:
       Offset +=
           encodeReg(ThisByte, Bead, MI, Desc, Buffer, Offset, Fixups, STI);
