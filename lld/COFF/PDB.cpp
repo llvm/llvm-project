@@ -374,22 +374,27 @@ static void translateIdSymbols(MutableArrayRef<uint8_t> &recordData,
     // Note that LF_FUNC_ID and LF_MFUNC_ID have the same record layout, and
     // in both cases we just need the second type index.
     if (!ti->isSimple() && !ti->isNoneType()) {
+      TypeIndex newType = TypeIndex(SimpleTypeKind::NotTranslated);
       if (config->debugGHashes) {
         auto idToType = tMerger.funcIdToType.find(*ti);
-        if (idToType == tMerger.funcIdToType.end()) {
-          warn(formatv("S_[GL]PROC32_ID record in {0} refers to PDB item "
-                       "index {1:X} which is not a LF_[M]FUNC_ID record",
-                       source->file->getName(), ti->getIndex()));
-          *ti = TypeIndex(SimpleTypeKind::NotTranslated);
-        } else {
-          *ti = idToType->second;
-        }
+        if (idToType != tMerger.funcIdToType.end())
+          newType = idToType->second;
       } else {
-        CVType funcIdData = tMerger.getIDTable().getType(*ti);
-        ArrayRef<uint8_t> tiBuf = funcIdData.data().slice(8, 4);
-        assert(tiBuf.size() == 4 && "corrupt LF_[M]FUNC_ID record");
-        *ti = *reinterpret_cast<const TypeIndex *>(tiBuf.data());
+        if (tMerger.getIDTable().contains(*ti)) {
+          CVType funcIdData = tMerger.getIDTable().getType(*ti);
+          if (funcIdData.length() >= 8 && (funcIdData.kind() == LF_FUNC_ID ||
+                                           funcIdData.kind() == LF_MFUNC_ID)) {
+            newType = *reinterpret_cast<const TypeIndex *>(&funcIdData.data()[8]);
+          }
+        }
       }
+      if (newType == TypeIndex(SimpleTypeKind::NotTranslated)) {
+        warn(formatv("procedure symbol record for `{0}` in {1} refers to PDB "
+                     "item index {2:X} which is not a valid function ID record",
+                     getSymbolName(CVSymbol(recordData)),
+                     source->file->getName(), ti->getIndex()));
+      }
+      *ti = newType;
     }
 
     kind = (kind == SymbolKind::S_GPROC32_ID) ? SymbolKind::S_GPROC32
