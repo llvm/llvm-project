@@ -8939,8 +8939,9 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   }
 
   SmallPtrSet<Instruction *, 1> DeadInstructions;
-  VPlanTransforms::VPInstructionsToVPRecipes(
-      OrigLoop, Plan, Legal->getInductionVars(), DeadInstructions);
+  VPlanTransforms::VPInstructionsToVPRecipes(OrigLoop, Plan,
+                                             Legal->getInductionVars(),
+                                             DeadInstructions, *PSE.getSE());
   return Plan;
 }
 
