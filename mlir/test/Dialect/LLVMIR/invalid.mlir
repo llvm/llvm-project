@@ -790,8 +790,7 @@ module {
 
 module {
   llvm.func @loopOptions() {
-      // expected-error@+2 {{unknown loop option: name}}
-      // expected-error@below {{Unknown attribute type: loopopts}}
+      // expected-error@below {{unknown loop option: name}}
       llvm.br ^bb4 {llvm.loop = {options = #llvm.loopopts<name>}}
     ^bb4:
       llvm.return
@@ -802,8 +801,7 @@ module {
 
 module {
   llvm.func @loopOptions() {
-      // expected-error@+2 {{loop option present twice}}
-      // expected-error@below {{Unknown attribute type: loopopts}}
+      // expected-error@below {{loop option present twice}}
       llvm.br ^bb4 {llvm.loop = {options = #llvm.loopopts<disable_licm = true, disable_licm = true>}}
     ^bb4:
       llvm.return
