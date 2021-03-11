@@ -412,7 +412,7 @@ void DefGenerator::emitTypeDefList(ArrayRef<AttrOrTypeDef> defs) {
 /// {0}: The name of the base value type, e.g. Attribute or Type.
 /// {1}: Additional parser parameters.
 static const char *const defParserDispatchStartStr = R"(
-static OptionalParseResult generated{0}Parser(::mlir::MLIRContext *context,
+static ::mlir::OptionalParseResult generated{0}Parser(::mlir::MLIRContext *context,
                                       ::mlir::DialectAsmParser &parser,
                                       ::llvm::StringRef mnemonic{1},
                                       ::mlir::{0} &value) {{
@@ -813,12 +813,12 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
       // If the def has no parameters and no parser code, just invoke a normal
       // `get`.
       if (def.getNumParameters() == 0 && !def.getParserCode()) {
-        os << "get(context);\n    return success(!!value);\n  }\n";
+        os << "get(context);\n    return ::mlir::success(!!value);\n  }\n";
         continue;
       }
 
       os << "parse(context, parser" << (isAttrGenerator ? ", type" : "")
-         << ");\n    return success(!!value);\n  }\n";
+         << ");\n    return ::mlir::success(!!value);\n  }\n";
     }
   }
   os << "  return {};\n";
