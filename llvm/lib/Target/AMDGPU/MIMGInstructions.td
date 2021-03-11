@@ -1133,6 +1133,26 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, int num_addrs, bit A16> 
   }
 }
 
+multiclass MIMG_MSAA_Load <mimgopc op, string asm> {
+  def "" : MIMGBaseOpcode {
+    let HasD16 = 1;
+    let Gather4 = 1; /* for appropriate dmask handling */
+    let MSAA = 1;
+  }
+
+  let BaseOpcode = !cast<MIMGBaseOpcode>(NAME),
+    Gather4 = 1, hasPostISelHook = 0, mayLoad = 1 in {
+    let VDataDwords = 2 in
+    defm _V2 : MIMG_NoSampler_Src_Helper<op, asm, VReg_64, 0>; /* packed D16 */
+    let VDataDwords = 3 in
+    defm _V3 : MIMG_NoSampler_Src_Helper<op, asm, VReg_96, 0>; /* packed D16 + tfe */
+    let VDataDwords = 4 in
+    defm _V4 : MIMG_NoSampler_Src_Helper<op, asm, VReg_128, 1>;
+    let VDataDwords = 5 in
+    defm _V5 : MIMG_NoSampler_Src_Helper<op, asm, VReg_160, 0>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // MIMG Instructions
 //===----------------------------------------------------------------------===//
@@ -1256,9 +1276,11 @@ defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, 0xef>, AMDGPUS
 //def IMAGE_RSRC256 : MIMG_NoPattern_RSRC256 <"image_rsrc256", mimgopc<0x7e>>;
 //def IMAGE_SAMPLER : MIMG_NoPattern_ <"image_sampler", mimgopc<0x7f>>;
 
-// GFX11 TODO: handle change in DMASK -- this should be MIMG_Gather?
-let SubtargetPredicate = HasGFX10_BEncoding in
-defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<0x18, 0x80>, "image_msaa_load", 1, 0, 0, 1>;
+let SubtargetPredicate = isGFX10Only, OtherPredicates = [HasGFX10_BEncoding] in
+defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, 0x80>, "image_msaa_load", 1, 0, 0, 1>;
+
+let SubtargetPredicate = isGFX11Plus in
+defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x18, MIMG.NOP>, "image_msaa_load">;
 
 // GFX11 TODO: implement
 defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0xe6>, "image_bvh_intersect_ray", 11, 0>;

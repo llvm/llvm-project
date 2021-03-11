@@ -113,3 +113,12 @@ image_atomic_fmin v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
 
 image_atomic_fmax v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
 // NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+image_msaa_load v[1:4], v[5:7], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid image_gather dmask: only one bit must be set
+
+image_msaa_load v5, v[1:3], s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA d16
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+image_msaa_load v14, [v204,v11,v14,v19], s[40:47] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
