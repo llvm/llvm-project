@@ -2557,9 +2557,6 @@ static unsigned getRVVReductionOp(unsigned ISDOpcode) {
   }
 }
 
-// Take a (supported) standard ISD reduction opcode and transform it to a RISCV
-// reduction opcode. Note that this returns a vector type, which must be
-// further processed to access the scalar result in element 0.
 SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
                                             SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -3634,9 +3631,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_SMIN:
   case ISD::VECREDUCE_UMIN:
-    // The custom-lowering for these nodes returns a vector whose first element
-    // is the result of the reduction. Extract its first element and let the
-    // legalization for EXTRACT_VECTOR_ELT do the rest of the job.
     if (SDValue V = lowerVECREDUCE(SDValue(N, 0), DAG))
       Results.push_back(V);
     break;
