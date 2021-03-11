@@ -2412,6 +2412,25 @@ LoopOptionsAttrBuilder &LoopOptionsAttrBuilder::setOption(LoopOptionCase tag,
   return *this;
 }
 
+LoopOptionsAttrBuilder &
+LoopOptionsAttrBuilder::setDisableLICM(Optional<bool> value) {
+  return setOption(LoopOptionCase::disable_licm, value);
+}
+
+/// Set the `interleave_count` option to the provided value. If no value
+/// is provided the option is deleted.
+LoopOptionsAttrBuilder &
+LoopOptionsAttrBuilder::setInterleaveCount(Optional<uint64_t> count) {
+  return setOption(LoopOptionCase::interleave_count, count);
+}
+
+/// Set the `disable_unroll` option to the provided value. If no value
+/// is provided the option is deleted.
+LoopOptionsAttrBuilder &
+LoopOptionsAttrBuilder::setDisableUnroll(Optional<bool> value) {
+  return setOption(LoopOptionCase::disable_unroll, value);
+}
+
 template <typename T>
 static Optional<T>
 getOption(ArrayRef<std::pair<LoopOptionCase, int64_t>> options,
