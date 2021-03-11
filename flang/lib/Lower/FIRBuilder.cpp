@@ -248,8 +248,7 @@ Fortran::lower::FirOpBuilder::createShape(mlir::Location loc,
   return exv.match(
       [&](const fir::ArrayBoxValue &box) { return consShape(loc, box); },
       [&](const fir::CharArrayBoxValue &box) { return consShape(loc, box); },
-      [&](const fir::BoxValue &box) { return consShape(loc, box); },
-      [&](const fir::IrBoxValue &box) -> mlir::Value {
+      [&](const fir::BoxValue &box) -> mlir::Value {
         if (!box.getLBounds().empty()) {
           auto shiftType =
               fir::ShiftType::get(getContext(), box.getLBounds().size());
@@ -295,9 +294,6 @@ mlir::Value Fortran::lower::FirOpBuilder::createSlice(
           return fullShape(box.getLBounds(), box.getExtents());
         },
         [&](const fir::BoxValue &box) {
-          return fullShape(box.getLBounds(), box.getExtents());
-        },
-        [&](const fir::IrBoxValue &box) {
           llvm::SmallVector<mlir::Value, 4> extents;
           Fortran::lower::readExtents(*this, loc, box, extents);
           return fullShape(box.getLBounds(), extents);
@@ -335,10 +331,6 @@ Fortran::lower::FirOpBuilder::createBox(mlir::Location loc,
         return create<fir::EmboxOp>(loc, boxTy, itemAddr, s, emptySlice,
                                     lenParams);
       },
-      [&](const fir::BoxValue &box) -> mlir::Value {
-        auto s = createShape(loc, exv);
-        return create<fir::EmboxOp>(loc, boxTy, itemAddr, s);
-      },
       [&](const fir::CharBoxValue &box) -> mlir::Value {
         if (Fortran::lower::CharacterExprHelper::hasConstantLengthInType(exv))
           return create<fir::EmboxOp>(loc, boxTy, itemAddr);
@@ -364,7 +356,7 @@ mlir::Value Fortran::lower::readCharLen(Fortran::lower::FirOpBuilder &builder,
       [&](const fir::CharArrayBoxValue &x) -> mlir::Value {
         return x.getLen();
       },
-      [&](const fir::IrBoxValue &x) -> mlir::Value {
+      [&](const fir::BoxValue &x) -> mlir::Value {
         assert(x.isCharacter());
         if (!x.getExplicitParameters().empty())
           return x.getExplicitParameters()[0];
@@ -390,9 +382,6 @@ mlir::Value Fortran::lower::readExtent(Fortran::lower::FirOpBuilder &builder,
         return x.getExtents()[dim];
       },
       [&](const fir::BoxValue &x) -> mlir::Value {
-        return x.getExtents()[dim];
-      },
-      [&](const fir::IrBoxValue &x) -> mlir::Value {
         if (!x.getExplicitExtents().empty())
           return x.getExplicitExtents()[dim];
         auto idxTy = builder.getIndexType();
@@ -423,9 +412,6 @@ mlir::Value Fortran::lower::readLowerBound(Fortran::lower::FirOpBuilder &,
       [&](const fir::BoxValue &x) -> mlir::Value {
         return x.getLBounds().empty() ? mlir::Value{} : x.getLBounds()[dim];
       },
-      [&](const fir::IrBoxValue &x) -> mlir::Value {
-        return x.getLBounds().empty() ? mlir::Value{} : x.getLBounds()[dim];
-      },
       [&](const auto &) -> mlir::Value {
         fir::emitFatalError(loc, "lower bound inquiry on scalar");
       });
@@ -435,7 +421,7 @@ mlir::Value Fortran::lower::readLowerBound(Fortran::lower::FirOpBuilder &,
 }
 
 void Fortran::lower::readExtents(Fortran::lower::FirOpBuilder &builder,
-                                 mlir::Location loc, const fir::IrBoxValue &box,
+                                 mlir::Location loc, const fir::BoxValue &box,
                                  llvm::SmallVectorImpl<mlir::Value> &result) {
   assert(result.empty());
   auto explicitExtents = box.getExplicitExtents();

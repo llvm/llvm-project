@@ -64,9 +64,6 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
   // CHARACTER array variable using bounds notation
   using CharFullDim = fir::CharArrayBoxValue;
 
-  // Generalized derived type variable
-  using Derived = fir::BoxValue;
-
   // Pointer or allocatable variable
   using PointerOrAllocatable = fir::MutableBoxValue;
 
@@ -75,10 +72,10 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
   // type, or polymorphic, or because the fir.box is describing an optional
   // value and cannot be read into one of the other category when lowering the
   // symbol).
-  using IrBox = fir::IrBoxValue;
+  using Box = fir::BoxValue;
 
-  using VT = std::variant<Intrinsic, FullDim, Char, CharFullDim, Derived,
-                          PointerOrAllocatable, IrBox, None>;
+  using VT = std::variant<Intrinsic, FullDim, Char, CharFullDim,
+                          PointerOrAllocatable, Box, None>;
 
   //===--------------------------------------------------------------------===//
   // Constructors
@@ -126,7 +123,7 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
                  [](const PointerOrAllocatable &x) {
                    return !x.isDerived() && !x.isUnlimitedPolymorphic();
                  },
-                 [](const IrBox &x) {
+                 [](const Box &x) {
                    return !x.isDerived() && !x.isUnlimitedPolymorphic();
                  },
                  [](const auto &x) { return false; });
@@ -138,7 +135,7 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
                  [](const Char &) { return false; },
                  [](const None &) { return false; },
                  [](const PointerOrAllocatable &x) { return x.hasRank(); },
-                 [](const IrBox &x) { return x.hasRank(); },
+                 [](const Box &x) { return x.hasRank(); },
                  [](const auto &x) { return x.getExtents().size() > 0; });
   }
 
@@ -147,10 +144,7 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
     return match(
         [](const FullDim &arr) { return arr.getLBounds().empty(); },
         [](const CharFullDim &arr) { return arr.getLBounds().empty(); },
-        [](const Derived &arr) {
-          return (arr.getExtents().size() > 0) && arr.getLBounds().empty();
-        },
-        [](const IrBox &arr) { return arr.getLBounds().empty(); },
+        [](const Box &arr) { return arr.getLBounds().empty(); },
         [](const auto &) { return false; });
   }
 
@@ -166,8 +160,7 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
   mlir::Value getLBound(unsigned dim) const {
     return match([&](const FullDim &box) { return box.getLBounds()[dim]; },
                  [&](const CharFullDim &box) { return box.getLBounds()[dim]; },
-                 [&](const Derived &box) { return box.getLBounds()[dim]; },
-                 [&](const IrBox &box) { return box.getLBounds()[dim]; },
+                 [&](const Box &box) { return box.getLBounds()[dim]; },
                  [](const auto &) { return mlir::Value{}; });
   }
 
@@ -259,28 +252,18 @@ public:
     makeSym(sym, SymbolBox::CharFullDim(value, len, extents, lbounds), force);
   }
 
-  /// Generalized derived type mapping.
-  void addDerivedSymbol(semantics::SymbolRef sym, mlir::Value value,
-                        mlir::Value size, llvm::ArrayRef<mlir::Value> extents,
-                        llvm::ArrayRef<mlir::Value> lbounds,
-                        llvm::ArrayRef<mlir::Value> params,
-                        bool force = false) {
-    makeSym(sym, SymbolBox::Derived(value, size, params, extents, lbounds),
-            force);
-  }
-
   void addAllocatableOrPointer(semantics::SymbolRef sym,
                                fir::MutableBoxValue box, bool force = false) {
     makeSym(sym, box, force);
   }
 
-  void addIrBoxSymbol(semantics::SymbolRef sym, mlir::Value irBox,
-                      llvm::ArrayRef<mlir::Value> lbounds,
-                      llvm::ArrayRef<mlir::Value> explicitParams,
-                      llvm::ArrayRef<mlir::Value> explicitExtents,
-                      bool force = false) {
+  void addBoxSymbol(semantics::SymbolRef sym, mlir::Value irBox,
+                    llvm::ArrayRef<mlir::Value> lbounds,
+                    llvm::ArrayRef<mlir::Value> explicitParams,
+                    llvm::ArrayRef<mlir::Value> explicitExtents,
+                    bool force = false) {
     makeSym(sym,
-            SymbolBox::IrBox(irBox, lbounds, explicitParams, explicitExtents),
+            SymbolBox::Box(irBox, lbounds, explicitParams, explicitExtents),
             force);
   }
 

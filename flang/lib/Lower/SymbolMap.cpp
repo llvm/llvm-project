@@ -21,10 +21,9 @@ mlir::Value fir::getBase(const fir::ExtendedValue &exv) {
 mlir::Value fir::getLen(const fir::ExtendedValue &exv) {
   return exv.match([](const fir::CharBoxValue &x) { return x.getLen(); },
                    [](const fir::CharArrayBoxValue &x) { return x.getLen(); },
-                   [](const fir::BoxValue &x) { return x.getLen(); },
-                   [](const fir::IrBoxValue &x) -> mlir::Value {
+                   [](const fir::BoxValue &x) -> mlir::Value {
                      llvm::report_fatal_error(
-                         "Need to read len from IrBoxValue Exv");
+                         "Need to read len from BoxValue Exv");
                    },
                    [](const auto &) { return mlir::Value{}; });
 }
@@ -33,19 +32,17 @@ fir::ExtendedValue fir::substBase(const fir::ExtendedValue &exv,
                                   mlir::Value base) {
   return exv.match(
       [=](const fir::UnboxedValue &x) { return fir::ExtendedValue(base); },
-      [=](const fir::IrBoxValue &) -> fir::ExtendedValue {
-        llvm::report_fatal_error("TODO: substbase of IrBox");
+      [=](const fir::BoxValue &) -> fir::ExtendedValue {
+        llvm::report_fatal_error("TODO: substbase of BoxValue");
       },
       [=](const auto &x) { return fir::ExtendedValue(x.clone(base)); });
 }
 
 bool fir::isArray(const fir::ExtendedValue &exv) {
-  return exv.match(
-      [](const fir::ArrayBoxValue &) { return true; },
-      [](const fir::CharArrayBoxValue &) { return true; },
-      [](const fir::BoxValue &box) { return box.getExtents().size() > 0; },
-      [](const fir::IrBoxValue &box) { return box.hasRank(); },
-      [](auto) { return false; });
+  return exv.match([](const fir::ArrayBoxValue &) { return true; },
+                   [](const fir::CharArrayBoxValue &) { return true; },
+                   [](const fir::BoxValue &box) { return box.hasRank(); },
+                   [](auto) { return false; });
 }
 
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
@@ -85,37 +82,14 @@ llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
 }
 
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
-                                   const fir::BoxValue &box) {
-  os << "box { addr: " << box.getAddr();
-  if (box.getLen())
-    os << ", size: " << box.getLen();
-  if (box.params.size()) {
-    os << ", type params: [";
-    llvm::interleaveComma(box.params, os);
-    os << "]";
-  }
-  if (box.getLBounds().size()) {
-    os << ", lbounds: [";
-    llvm::interleaveComma(box.getLBounds(), os);
-    os << "]";
-  }
-  if (box.getExtents().size()) {
-    os << ", shape: [";
-    llvm::interleaveComma(box.getExtents(), os);
-    os << "]";
-  }
-  return os << "}";
-}
-
-llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
                                    const fir::ProcBoxValue &box) {
   return os << "boxproc: { procedure: " << box.getAddr()
             << ", context: " << box.hostContext << "}";
 }
 
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
-                                   const fir::IrBoxValue &box) {
-  os << "irbox: { box: " << box.getAddr();
+                                   const fir::BoxValue &box) {
+  os << "box: { value: " << box.getAddr();
   if (box.lbounds.size()) {
     os << ", lbounds: [";
     llvm::interleaveComma(box.lbounds, os);
@@ -126,9 +100,9 @@ llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
     llvm::interleaveComma(box.explicitParams, os);
     os << "]";
   }
-  if (!box.explicitExtents.empty()) {
+  if (!box.extents.empty()) {
     os << ", explicit extents: [";
-    llvm::interleaveComma(box.explicitExtents, os);
+    llvm::interleaveComma(box.extents, os);
     os << "]";
   }
   return os << "}";
@@ -136,7 +110,7 @@ llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
 
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
                                    const fir::MutableBoxValue &box) {
-  os << "mutablebox: { box: " << box.getAddr();
+  os << "mutablebox: { addr: " << box.getAddr();
   if (!box.lenParams.empty()) {
     os << ", non deferred type params: [";
     llvm::interleaveComma(box.lenParams, os);
@@ -178,7 +152,6 @@ void Fortran::lower::SymMap::addSymbol(Fortran::semantics::SymbolRef sym,
             [&](const fir::CharBoxValue &v) { makeSym(sym, v, force); },
             [&](const fir::ArrayBoxValue &v) { makeSym(sym, v, force); },
             [&](const fir::CharArrayBoxValue &v) { makeSym(sym, v, force); },
-            [&](const fir::BoxValue &v) { makeSym(sym, v, force); },
             [](auto) {
               llvm::report_fatal_error(
                   "box value should not be added to symbol table");
@@ -254,9 +227,9 @@ bool fir::MutableBoxValue::verify() const {
   return true;
 }
 
-/// Debug verifier for IrBoxValue ctor. There is no guarantee this will
+/// Debug verifier for BoxValue ctor. There is no guarantee this will
 /// always be called.
-bool fir::IrBoxValue::verify() const {
+bool fir::BoxValue::verify() const {
   if (!addr.getType().isa<fir::BoxType>())
     return false;
   if (!lbounds.empty() && lbounds.size() != rank())
@@ -264,9 +237,9 @@ bool fir::IrBoxValue::verify() const {
   // Explicit extents are here to cover cases where an explicit-shape dummy
   // argument comes as a fir.box. This can only happen with derived types and
   // unlimited polymorphic.
-  if (!explicitExtents.empty() && !(isDerived() && isUnlimitedPolymorphic()))
+  if (!extents.empty() && !(isDerived() || isUnlimitedPolymorphic()))
     return false;
-  if (!explicitExtents.empty() && explicitExtents.size() != rank())
+  if (!extents.empty() && extents.size() != rank())
     return false;
   if (isCharacter() && explicitParams.size() > 1)
     return false;
