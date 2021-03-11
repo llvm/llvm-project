@@ -150,6 +150,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
       WorkspaceRoot(Opts.WorkspaceRoot),
+      Transient(Opts.ImplicitCancellation ? TUScheduler::InvalidateOnUpdate
+                                          : TUScheduler::NoInvalidation),
       DirtyFS(std::make_unique<DraftStoreFS>(TFS, DraftMgr)) {
   // Pass a callback into `WorkScheduler` to extract symbols from a newly
   // parsed file and rebuild the file index synchronously each time an AST
@@ -593,7 +595,7 @@ void ClangdServer::enumerateTweaks(
   };
 
   WorkScheduler->runWithAST("EnumerateTweaks", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+                            Transient);
 }
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
@@ -683,8 +685,7 @@ void ClangdServer::findDocumentHighlights(
         CB(clangd::findDocumentHighlights(InpAST->AST, Pos));
       };
 
-  WorkScheduler->runWithAST("Highlights", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+  WorkScheduler->runWithAST("Highlights", File, std::move(Action), Transient);
 }
 
 void ClangdServer::findHover(PathRef File, Position Pos,
@@ -698,8 +699,7 @@ void ClangdServer::findHover(PathRef File, Position Pos,
     CB(clangd::getHover(InpAST->AST, Pos, std::move(Style), Index));
   };
 
-  WorkScheduler->runWithAST("Hover", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+  WorkScheduler->runWithAST("Hover", File, std::move(Action), Transient);
 }
 
 void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
@@ -771,7 +771,7 @@ void ClangdServer::documentSymbols(llvm::StringRef File,
         CB(clangd::getDocumentSymbols(InpAST->AST));
       };
   WorkScheduler->runWithAST("DocumentSymbols", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+                            Transient);
 }
 
 void ClangdServer::foldingRanges(llvm::StringRef File,
@@ -783,7 +783,7 @@ void ClangdServer::foldingRanges(llvm::StringRef File,
         CB(clangd::getFoldingRanges(InpAST->AST));
       };
   WorkScheduler->runWithAST("FoldingRanges", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+                            Transient);
 }
 
 void ClangdServer::findImplementations(
@@ -850,7 +850,7 @@ void ClangdServer::documentLinks(PathRef File,
         CB(clangd::getDocumentLinks(InpAST->AST));
       };
   WorkScheduler->runWithAST("DocumentLinks", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+                            Transient);
 }
 
 void ClangdServer::semanticHighlights(
@@ -862,7 +862,7 @@ void ClangdServer::semanticHighlights(
         CB(clangd::getSemanticHighlightings(InpAST->AST));
       };
   WorkScheduler->runWithAST("SemanticHighlights", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+                            Transient);
 }
 
 void ClangdServer::getAST(PathRef File, Range R,
