@@ -11386,14 +11386,6 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return EmitLowered__chkstk(MI, BB);
   case ARM::WIN__DBZCHK:
     return EmitLowered__dbzchk(MI, BB);
-  case ARM::t2DoLoopStart:
-    // We are just here to set a register allocation hint, prefering lr for the
-    // input register to make it more likely to be movable and removable, later
-    // in the pipeline.
-    Register R = MI.getOperand(1).getReg();
-    MachineFunction *MF = MI.getParent()->getParent();
-    MF->getRegInfo().setRegAllocationHint(R, ARMRI::RegLR, 0);
-    return BB;
   }
 }
 

@@ -5459,7 +5459,6 @@ let Predicates = [IsThumb2, HasV8_1MMainline, HasLOB] in {
 
 // t2DoLoopStart a pseudo for DLS hardware loops. Lowered into a DLS in
 // ARMLowOverheadLoops if possible, or reverted to a Mov if not.
-let usesCustomInserter = 1 in
 def t2DoLoopStart :
   t2PseudoInst<(outs GPRlr:$X), (ins rGPR:$elts), 4, IIC_Br,
   [(set GPRlr:$X, (int_start_loop_iterations rGPR:$elts))]>;

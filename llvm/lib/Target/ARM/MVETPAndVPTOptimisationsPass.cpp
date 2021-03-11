@@ -75,6 +75,7 @@ private:
   bool ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB);
   bool ReplaceConstByVPNOTs(MachineBasicBlock &MBB, MachineDominatorTree *DT);
   bool ConvertVPSEL(MachineBasicBlock &MBB);
+  bool HintDoLoopStartReg(MachineBasicBlock &MBB);
 };
 
 char MVETPAndVPTOptimisations::ID = 0;
@@ -946,6 +947,21 @@ bool MVETPAndVPTOptimisations::ConvertVPSEL(MachineBasicBlock &MBB) {
   return !DeadInstructions.empty();
 }
 
+// Add a registry allocation hint for t2DoLoopStart to hint it towards LR, as
+// the instruction may be removable as a noop.
+bool MVETPAndVPTOptimisations::HintDoLoopStartReg(MachineBasicBlock &MBB) {
+  bool Changed = false;
+  for (MachineInstr &MI : MBB.instrs()) {
+    if (MI.getOpcode() != ARM::t2DoLoopStart)
+      continue;
+    Register R = MI.getOperand(1).getReg();
+    MachineFunction *MF = MI.getParent()->getParent();
+    MF->getRegInfo().setRegAllocationHint(R, ARMRI::RegLR, 0);
+    Changed = true;
+  }
+  return Changed;
+}
+
 bool MVETPAndVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
   const ARMSubtarget &STI =
       static_cast<const ARMSubtarget &>(Fn.getSubtarget());
@@ -969,6 +985,7 @@ bool MVETPAndVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
   }
 
   for (MachineBasicBlock &MBB : Fn) {
+    Modified |= HintDoLoopStartReg(MBB);
     Modified |= ReplaceConstByVPNOTs(MBB, DT);
     Modified |= ReplaceVCMPsByVPNOTs(MBB);
     Modified |= ReduceOldVCCRValueUses(MBB);

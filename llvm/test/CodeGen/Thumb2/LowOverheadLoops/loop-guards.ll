@@ -152,7 +152,7 @@ if.end:                                           ; preds = %while.body, %while.
 ; CHECK: be_ne
 ; CHECK: body:
 ; CHECK: bb.0.entry:
-; CHECK:   $lr = t2DLS killed renamable $r12
+; CHECK:   $lr =
 ; CHECK: bb.2.do.body:
 ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
 define void @be_ne(i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
