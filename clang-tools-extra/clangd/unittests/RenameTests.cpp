@@ -1240,6 +1240,21 @@ TEST(RenameTest, PrepareRename) {
               testing::HasSubstr("keyword"));
   EXPECT_THAT(Tracer.takeMetric("rename_name_invalid", "Keywords"),
               ElementsAre(1));
+
+  for (std::string BadIdent : {"foo!bar", "123foo", "😀@"}) {
+    Results = runPrepareRename(Server, FooCCPath, FooCC.point(),
+                               /*NewName=*/BadIdent, {});
+    EXPECT_FALSE(Results);
+    EXPECT_THAT(llvm::toString(Results.takeError()),
+                testing::HasSubstr("identifier"));
+    EXPECT_THAT(Tracer.takeMetric("rename_name_invalid", "BadIdentifier"),
+                ElementsAre(1));
+  }
+  for (std::string GoodIdent : {"fooBar", "__foo$", "😀"}) {
+    Results = runPrepareRename(Server, FooCCPath, FooCC.point(),
+                               /*NewName=*/GoodIdent, {});
+    EXPECT_TRUE(bool(Results));
+  }
 }
 
 TEST(CrossFileRenameTests, DirtyBuffer) {
