@@ -1831,6 +1831,18 @@ public:
                                 DstMMO, SrcMMO);
   }
 
+  /// Build and insert \p Dst = G_SBFX \p Src, \p LSB, \p Width.
+  MachineInstrBuilder buildSbfx(const DstOp &Dst, const SrcOp &Src,
+                                const SrcOp &LSB, const SrcOp &Width) {
+    return buildInstr(TargetOpcode::G_SBFX, {Dst}, {Src, LSB, Width});
+  }
+
+  /// Build and insert \p Dst = G_UBFX \p Src, \p LSB, \p Width.
+  MachineInstrBuilder buildUbfx(const DstOp &Dst, const SrcOp &Src,
+                                const SrcOp &LSB, const SrcOp &Width) {
+    return buildInstr(TargetOpcode::G_UBFX, {Dst}, {Src, LSB, Width});
+  }
+
   virtual MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                          ArrayRef<SrcOp> SrcOps,
                                          Optional<unsigned> Flags = None);

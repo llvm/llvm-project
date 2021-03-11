@@ -398,3 +398,25 @@ TEST_F(AArch64GISelMITest, BuildAddoSubo) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(AArch64GISelMITest, BuildBitfieldExtract) {
+  setUp();
+  if (!TM)
+    return;
+  LLT S64 = LLT::scalar(64);
+  SmallVector<Register, 4> Copies;
+  collectCopies(Copies, MF);
+
+  auto Ubfx = B.buildUbfx(S64, Copies[0], Copies[1], Copies[2]);
+  B.buildSbfx(S64, Ubfx, Copies[0], Copies[2]);
+
+  const auto *CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+  ; CHECK: [[UBFX:%[0-9]+]]:_(s64) = G_UBFX [[COPY0]]:_, [[COPY1]]:_, [[COPY2]]:_
+  ; CHECK: [[SBFX:%[0-9]+]]:_(s64) = G_SBFX [[UBFX]]:_, [[COPY0]]:_, [[COPY2]]:_
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}

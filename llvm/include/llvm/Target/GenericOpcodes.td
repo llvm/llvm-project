@@ -1355,6 +1355,24 @@ def G_MEMSET : GenericInstruction {
 }
 
 //------------------------------------------------------------------------------
+// Bitfield extraction.
+//------------------------------------------------------------------------------
+
+// Generic signed bitfield extraction.
+def G_SBFX : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, type0:$lsb, type0:$width);
+  let hasSideEffects = false;
+}
+
+// Generic unsigned bitfield extraction.
+def G_UBFX : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, type0:$lsb, type0:$width);
+  let hasSideEffects = false;
+}
+
+//------------------------------------------------------------------------------
 // Optimization hints
 //------------------------------------------------------------------------------
 

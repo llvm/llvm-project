@@ -233,6 +233,39 @@ Reverse the order of the bits in a scalar.
 
   %1:_(s32) = G_BITREVERSE %0:_(s32)
 
+G_SBFX, G_UBFX
+^^^^^^^^^^^^^^
+
+Extract a range of bits from a register.
+
+The source operands are registers as follows:
+
+- Source
+- The least-significant bit for the extraction
+- The width of the extraction
+
+G_SBFX sign-extends the result, while G_UBFX zero-extends the result.
+
+.. code-block:: none
+
+  ; Extract 5 bits starting at bit 1 from %x and store them in %a.
+  ; Sign-extend the result.
+  ;
+  ; Example:
+  ; %x = 0...0000[10110]1 ---> %a = 1...111111[10110]
+  %lsb_one = G_CONSTANT i32 1
+  %width_five = G_CONSTANT i32 5
+  %a:_(s32) = G_SBFX %x, %lsb_one, %width_five
+
+  ; Extract 3 bits starting at bit 2 from %x and store them in %b. Zero-extend
+  ; the result.
+  ;
+  ; Example:
+  ; %x = 1...11111[100]11 ---> %b = 0...00000[100]
+  %lsb_two = G_CONSTANT i32 2
+  %width_three = G_CONSTANT i32 3
+  %b:_(s32) = G_UBFX %x, %lsb_two, %width_three
+
 Integer Operations
 -------------------
 
