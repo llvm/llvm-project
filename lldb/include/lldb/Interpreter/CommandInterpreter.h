@@ -504,6 +504,8 @@ public:
   bool GetEchoCommentCommands() const;
   void SetEchoCommentCommands(bool enable);
 
+  bool GetRepeatPreviousCommand() const;
+
   const CommandObject::CommandMap &GetUserCommands() const {
     return m_user_dict;
   }

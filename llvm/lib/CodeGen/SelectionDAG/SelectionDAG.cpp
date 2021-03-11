@@ -879,6 +879,17 @@ void SelectionDAG::DeleteNodeNotInCSEMaps(SDNode *N) {
   DeallocateNode(N);
 }
 
+void SDDbgInfo::add(SDDbgValue *V, bool isParameter) {
+  assert(!(V->isVariadic() && isParameter));
+  if (isParameter)
+    ByvalParmDbgValues.push_back(V);
+  else
+    DbgValues.push_back(V);
+  for (const SDNode *Node : V->getSDNodes())
+    if (Node)
+      DbgValMap[Node].push_back(V);
+}
+
 void SDDbgInfo::erase(const SDNode *Node) {
   DbgValMapType::iterator I = DbgValMap.find(Node);
   if (I == DbgValMap.end())
@@ -1372,6 +1383,22 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
     const APInt &NewVal = Elt->getValue();
     EVT ViaEltVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
     unsigned ViaEltSizeInBits = ViaEltVT.getSizeInBits();
+
+    // For scalable vectors, try to use a SPLAT_VECTOR_PARTS node.
+    if (VT.isScalableVector()) {
+      assert(EltVT.getSizeInBits() % ViaEltSizeInBits == 0 &&
+             "Can only handle an even split!");
+      unsigned Parts = EltVT.getSizeInBits() / ViaEltSizeInBits;
+
+      SmallVector<SDValue, 2> ScalarParts;
+      for (unsigned i = 0; i != Parts; ++i)
+        ScalarParts.push_back(getConstant(
+            NewVal.lshr(i * ViaEltSizeInBits).trunc(ViaEltSizeInBits), DL,
+            ViaEltVT, isT, isO));
+
+      return getNode(ISD::SPLAT_VECTOR_PARTS, DL, VT, ScalarParts);
+    }
+
     unsigned ViaVecNumElts = VT.getSizeInBits() / ViaEltSizeInBits;
     EVT ViaVecVT = EVT::getVectorVT(*getContext(), ViaEltVT, ViaVecNumElts);
 
@@ -3375,6 +3402,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = Known2.abs();
     break;
   }
+  case ISD::USUBSAT: {
+    // The result of usubsat will never be larger than the LHS.
+    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known.Zero.setHighBits(Known2.countMinLeadingZeros());
+    break;
+  }
   case ISD::UMIN: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
@@ -4419,6 +4452,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               SDValue Operand, const SDNodeFlags Flags) {
+  assert(Operand.getOpcode() != ISD::DELETED_NODE &&
+         "Operand is DELETED_NODE!");
   // Constant fold unary operations with an integer constant operand. Even
   // opaque constant will be folded, because the folding of unary operations
   // doesn't create new constants with different values. Nevertheless, the
@@ -5254,6 +5289,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               SDValue N1, SDValue N2, const SDNodeFlags Flags) {
+  assert(N1.getOpcode() != ISD::DELETED_NODE &&
+         N2.getOpcode() != ISD::DELETED_NODE &&
+         "Operand is DELETED_NODE!");
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
   ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2);
   ConstantFPSDNode *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
@@ -5729,6 +5767,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               SDValue N1, SDValue N2, SDValue N3,
                               const SDNodeFlags Flags) {
+  assert(N1.getOpcode() != ISD::DELETED_NODE &&
+         N2.getOpcode() != ISD::DELETED_NODE &&
+         N3.getOpcode() != ISD::DELETED_NODE &&
+         "Operand is DELETED_NODE!");
   // Perform various simplifications.
   switch (Opcode) {
   case ISD::FMA: {
@@ -7613,6 +7655,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   default: break;
   }
 
+#ifndef NDEBUG
+  for (auto &Op : Ops)
+    assert(Op.getOpcode() != ISD::DELETED_NODE &&
+           "Operand is DELETED_NODE!");
+#endif
+
   switch (Opcode) {
   default: break;
   case ISD::BUILD_VECTOR:
@@ -7685,6 +7733,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
                               ArrayRef<SDValue> Ops, const SDNodeFlags Flags) {
   if (VTList.NumVTs == 1)
     return getNode(Opcode, DL, VTList.VTs[0], Ops);
+
+#ifndef NDEBUG
+  for (auto &Op : Ops)
+    assert(Op.getOpcode() != ISD::DELETED_NODE &&
+           "Operand is DELETED_NODE!");
+#endif
 
   switch (Opcode) {
   case ISD::STRICT_FP_EXTEND:
@@ -8422,7 +8476,8 @@ SDDbgValue *SelectionDAG::getDbgValue(DIVariable *Var, DIExpression *Expr,
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
-      SDDbgValue(Var, Expr, N, R, IsIndirect, DL, O);
+      SDDbgValue(Var, Expr, SDDbgOperand::fromNode(N, R), N, IsIndirect, DL, O,
+                 /*IsVariadic=*/false);
 }
 
 /// Constant
@@ -8432,7 +8487,9 @@ SDDbgValue *SelectionDAG::getConstantDbgValue(DIVariable *Var,
                                               const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, C, DL, O);
+  return new (DbgInfo->getAlloc()) SDDbgValue(
+      Var, Expr, SDDbgOperand::fromConst(C), {}, /*IsIndirect=*/false, DL, O,
+      /*IsVariadic=*/false);
 }
 
 /// FrameIndex
@@ -8443,19 +8500,44 @@ SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
                                                 unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
+  return getFrameIndexDbgValue(Var, Expr, FI, {}, IsIndirect, DL, O);
+}
+
+/// FrameIndex with dependencies
+SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
+                                                DIExpression *Expr, unsigned FI,
+                                                ArrayRef<SDNode *> Dependencies,
+                                                bool IsIndirect,
+                                                const DebugLoc &DL,
+                                                unsigned O) {
+  assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
-      SDDbgValue(Var, Expr, FI, IsIndirect, DL, O, SDDbgValue::FRAMEIX);
+      SDDbgValue(Var, Expr, SDDbgOperand::fromFrameIdx(FI), Dependencies,
+                 IsIndirect, DL, O,
+                 /*IsVariadic=*/false);
 }
 
 /// VReg
-SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var,
-                                          DIExpression *Expr,
+SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
                                           unsigned VReg, bool IsIndirect,
                                           const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
-      SDDbgValue(Var, Expr, VReg, IsIndirect, DL, O, SDDbgValue::VREG);
+      SDDbgValue(Var, Expr, SDDbgOperand::fromVReg(VReg), {}, IsIndirect, DL, O,
+                 /*IsVariadic=*/false);
+}
+
+SDDbgValue *SelectionDAG::getDbgValueList(DIVariable *Var, DIExpression *Expr,
+                                          ArrayRef<SDDbgOperand> Locs,
+                                          ArrayRef<SDNode *> Dependencies,
+                                          bool IsIndirect, const DebugLoc &DL,
+                                          unsigned O, bool IsVariadic) {
+  assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
+  return new (DbgInfo->getAlloc())
+      SDDbgValue(Var, Expr, Locs, Dependencies, IsIndirect, DL, O, IsVariadic);
 }
 
 void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
@@ -8474,15 +8556,31 @@ void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
   if (!FromNode->getHasDebugValue())
     return;
 
+  SDDbgOperand FromLocOp =
+      SDDbgOperand::fromNode(From.getNode(), From.getResNo());
+  SDDbgOperand ToLocOp = SDDbgOperand::fromNode(To.getNode(), To.getResNo());
+
   SmallVector<SDDbgValue *, 2> ClonedDVs;
   for (SDDbgValue *Dbg : GetDbgValues(FromNode)) {
-    if (Dbg->getKind() != SDDbgValue::SDNODE || Dbg->isInvalidated())
+    if (Dbg->isInvalidated())
       continue;
 
     // TODO: assert(!Dbg->isInvalidated() && "Transfer of invalid dbg value");
 
-    // Just transfer the dbg value attached to From.
-    if (Dbg->getResNo() != From.getResNo())
+    // Create a new location ops vector that is equal to the old vector, but
+    // with each instance of FromLocOp replaced with ToLocOp.
+    bool Changed = false;
+    auto NewLocOps = Dbg->copyLocationOps();
+    std::replace_if(
+        NewLocOps.begin(), NewLocOps.end(),
+        [&Changed, FromLocOp](const SDDbgOperand &Op) {
+          bool Match = Op == FromLocOp;
+          Changed |= Match;
+          return Match;
+        },
+        ToLocOp);
+    // Ignore this SDDbgValue if we didn't find a matching location.
+    if (!Changed)
       continue;
 
     DIVariable *Var = Dbg->getVariable();
@@ -8501,10 +8599,15 @@ void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
         continue;
       Expr = *Fragment;
     }
+
+    auto NewDependencies = Dbg->copySDNodes();
+    std::replace(NewDependencies.begin(), NewDependencies.end(), FromNode,
+                 ToNode);
     // Clone the SDDbgValue and move it to To.
-    SDDbgValue *Clone = getDbgValue(
-        Var, Expr, ToNode, To.getResNo(), Dbg->isIndirect(), Dbg->getDebugLoc(),
-        std::max(ToNode->getIROrder(), Dbg->getOrder()));
+    SDDbgValue *Clone = getDbgValueList(
+        Var, Expr, NewLocOps, NewDependencies, Dbg->isIndirect(),
+        Dbg->getDebugLoc(), std::max(ToNode->getIROrder(), Dbg->getOrder()),
+        Dbg->isVariadic());
     ClonedDVs.push_back(Clone);
 
     if (InvalidateDbg) {
@@ -8514,8 +8617,11 @@ void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
     }
   }
 
-  for (SDDbgValue *Dbg : ClonedDVs)
-    AddDbgValue(Dbg, ToNode, false);
+  for (SDDbgValue *Dbg : ClonedDVs) {
+    assert(is_contained(Dbg->getSDNodes(), ToNode) &&
+           "Transferred DbgValues should depend on the new SDNode");
+    AddDbgValue(Dbg, false);
+  }
 }
 
 void SelectionDAG::salvageDebugInfo(SDNode &N) {
@@ -8535,16 +8641,37 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
       if (!isConstantIntBuildVectorOrConstantInt(N0) &&
           isConstantIntBuildVectorOrConstantInt(N1)) {
         uint64_t Offset = N.getConstantOperandVal(1);
+
         // Rewrite an ADD constant node into a DIExpression. Since we are
         // performing arithmetic to compute the variable's *value* in the
         // DIExpression, we need to mark the expression with a
         // DW_OP_stack_value.
         auto *DIExpr = DV->getExpression();
-        DIExpr =
-            DIExpression::prepend(DIExpr, DIExpression::StackValue, Offset);
-        SDDbgValue *Clone =
-            getDbgValue(DV->getVariable(), DIExpr, N0.getNode(), N0.getResNo(),
-                        DV->isIndirect(), DV->getDebugLoc(), DV->getOrder());
+        auto NewLocOps = DV->copyLocationOps();
+        bool Changed = false;
+        for (size_t i = 0; i < NewLocOps.size(); ++i) {
+          // We're not given a ResNo to compare against because the whole
+          // node is going away. We know that any ISD::ADD only has one
+          // result, so we can assume any node match is using the result.
+          if (NewLocOps[i].getKind() != SDDbgOperand::SDNODE ||
+              NewLocOps[i].getSDNode() != &N)
+            continue;
+          NewLocOps[i] = SDDbgOperand::fromNode(N0.getNode(), N0.getResNo());
+          SmallVector<uint64_t, 3> ExprOps;
+          DIExpression::appendOffset(ExprOps, Offset);
+          DIExpr = DIExpression::appendOpsToArg(DIExpr, ExprOps, i, true);
+          Changed = true;
+        }
+        (void)Changed;
+        assert(Changed && "Salvage target doesn't use N");
+
+        auto NewDependencies = DV->copySDNodes();
+        std::replace(NewDependencies.begin(), NewDependencies.end(), &N,
+                     N0.getNode());
+        SDDbgValue *Clone = getDbgValueList(DV->getVariable(), DIExpr,
+                                            NewLocOps, NewDependencies,
+                                            DV->isIndirect(), DV->getDebugLoc(),
+                                            DV->getOrder(), DV->isVariadic());
         ClonedDVs.push_back(Clone);
         DV->setIsInvalidated();
         DV->setIsEmitted();
@@ -8555,8 +8682,11 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
     }
   }
 
-  for (SDDbgValue *Dbg : ClonedDVs)
-    AddDbgValue(Dbg, Dbg->getSDNode(), false);
+  for (SDDbgValue *Dbg : ClonedDVs) {
+    assert(!Dbg->getSDNodes().empty() &&
+           "Salvaged DbgValue should depend on a new SDNode");
+    AddDbgValue(Dbg, false);
+  }
 }
 
 /// Creates a SDDbgLabel node.
@@ -9037,17 +9167,17 @@ unsigned SelectionDAG::AssignTopologicalOrder() {
 
 /// AddDbgValue - Add a dbg_value SDNode. If SD is non-null that means the
 /// value is produced by SD.
-void SelectionDAG::AddDbgValue(SDDbgValue *DB, SDNode *SD, bool isParameter) {
-  if (SD) {
+void SelectionDAG::AddDbgValue(SDDbgValue *DB, bool isParameter) {
+  for (SDNode *SD : DB->getSDNodes()) {
+    if (!SD)
+      continue;
     assert(DbgInfo->getSDDbgValues(SD).empty() || SD->getHasDebugValue());
     SD->setHasDebugValue(true);
   }
-  DbgInfo->add(DB, SD, isParameter);
+  DbgInfo->add(DB, isParameter);
 }
 
-void SelectionDAG::AddDbgLabel(SDDbgLabel *DB) {
-  DbgInfo->add(DB);
-}
+void SelectionDAG::AddDbgLabel(SDDbgLabel *DB) { DbgInfo->add(DB); }
 
 SDValue SelectionDAG::makeEquivalentMemoryOrdering(SDValue OldChain,
                                                    SDValue NewMemOpChain) {

@@ -794,7 +794,8 @@ private:
       BranchInst::Create(AfterBB, AfterIP.getBlock());
 
       // Perform the actual outlining.
-      OMPInfoCache.OMPBuilder.finalize(/* AllowExtractorSinking */ true);
+      OMPInfoCache.OMPBuilder.finalize(OriginalFn,
+                                       /* AllowExtractorSinking */ true);
 
       Function *OutlinedFn = MergableCIs.front()->getCaller();
 

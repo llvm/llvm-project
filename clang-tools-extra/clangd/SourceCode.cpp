@@ -1091,15 +1091,8 @@ llvm::Error applyChange(std::string &Contents,
                  "computed range length ({1}).",
                  *Change.rangeLength, ComputedRangeLength);
 
-  std::string NewContents;
-  NewContents.reserve(*StartIndex + Change.text.length() +
-                      (Contents.length() - *EndIndex));
+  Contents.replace(*StartIndex, *EndIndex - *StartIndex, Change.text);
 
-  NewContents = Contents.substr(0, *StartIndex);
-  NewContents += Change.text;
-  NewContents += Contents.substr(*EndIndex);
-
-  std::swap(Contents, NewContents);
   return llvm::Error::success();
 }
 

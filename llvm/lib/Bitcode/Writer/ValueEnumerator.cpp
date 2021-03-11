@@ -449,7 +449,8 @@ ValueEnumerator::ValueEnumerator(const Module &M,
           }
 
           // Local metadata is enumerated during function-incorporation.
-          if (isa<LocalAsMetadata>(MD->getMetadata()))
+          if (isa<LocalAsMetadata>(MD->getMetadata()) ||
+              isa<DIArgList>(MD->getMetadata()))
             continue;
 
           EnumerateMetadata(&F, MD->getMetadata());
@@ -1004,6 +1005,8 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
       EnumerateType(I.getParamByValType());
     else if (I.hasAttribute(Attribute::StructRet))
       EnumerateType(I.getParamStructRetType());
+    else if (I.hasAttribute(Attribute::ByRef))
+      EnumerateType(I.getParamByRefType());
   }
   FirstFuncConstantID = Values.size();
 
@@ -1031,14 +1034,26 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
   FirstInstID = Values.size();
 
   SmallVector<LocalAsMetadata *, 8> FnLocalMDVector;
+  SmallVector<DIArgList *, 8> ArgListMDVector;
   // Add all of the instructions.
   for (const BasicBlock &BB : F) {
     for (const Instruction &I : BB) {
       for (const Use &OI : I.operands()) {
-        if (auto *MD = dyn_cast<MetadataAsValue>(&OI))
-          if (auto *Local = dyn_cast<LocalAsMetadata>(MD->getMetadata()))
+        if (auto *MD = dyn_cast<MetadataAsValue>(&OI)) {
+          if (auto *Local = dyn_cast<LocalAsMetadata>(MD->getMetadata())) {
             // Enumerate metadata after the instructions they might refer to.
             FnLocalMDVector.push_back(Local);
+          } else if (auto *ArgList = dyn_cast<DIArgList>(MD->getMetadata())) {
+            ArgListMDVector.push_back(ArgList);
+            for (ValueAsMetadata *VMD : ArgList->getArgs()) {
+              if (auto *Local = dyn_cast<LocalAsMetadata>(VMD)) {
+                // Enumerate metadata after the instructions they might refer
+                // to.
+                FnLocalMDVector.push_back(Local);
+              }
+            }
+          }
+        }
       }
 
       if (!I.getType()->isVoidTy())
@@ -1054,6 +1069,10 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
            "Missing value for metadata operand");
     EnumerateFunctionLocalMetadata(F, FnLocalMDVector[i]);
   }
+  // DIArgList entries must come after function-local metadata, as it is not
+  // possible to forward-reference them.
+  for (const DIArgList *ArgList : ArgListMDVector)
+    EnumerateMetadata(&F, ArgList);
 }
 
 void ValueEnumerator::purgeFunction() {

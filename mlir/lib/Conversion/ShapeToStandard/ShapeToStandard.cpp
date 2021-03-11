@@ -591,6 +591,47 @@ LogicalResult ShapeOfOpConversion::matchAndRewrite(
 }
 
 namespace {
+class SplitAtOpConversion : public OpConversionPattern<SplitAtOp> {
+public:
+  using OpConversionPattern<SplitAtOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SplitAtOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+} // namespace
+
+LogicalResult SplitAtOpConversion::matchAndRewrite(
+    SplitAtOp op, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  // Error conditions are not implemented, only lower if all operands and
+  // results are extent tensors.
+  if (llvm::any_of(ValueRange{op.operand(), op.head(), op.tail()},
+                   [](Value v) { return v.getType().isa<ShapeType>(); }))
+    return failure();
+
+  SplitAtOp::Adaptor transformed(op);
+  ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+  Value zero = b.create<ConstantIndexOp>(0);
+  Value rank = b.create<DimOp>(transformed.operand(), zero);
+
+  // index < 0 ? index + rank : index
+  Value originalIndex = transformed.index();
+  Value add = b.create<AddIOp>(originalIndex, rank);
+  Value indexIsNegative =
+      b.create<CmpIOp>(CmpIPredicate::slt, originalIndex, zero);
+  Value index = b.create<SelectOp>(indexIsNegative, add, originalIndex);
+
+  Value one = b.create<ConstantIndexOp>(1);
+  Value head = b.create<SubTensorOp>(transformed.operand(), zero, index, one);
+  Value tailSize = b.create<SubIOp>(rank, index);
+  Value tail =
+      b.create<SubTensorOp>(transformed.operand(), index, tailSize, one);
+  rewriter.replaceOp(op, {head, tail});
+  return success();
+}
+
+namespace {
 class ToExtentTensorOpConversion
     : public OpConversionPattern<ToExtentTensorOp> {
 public:
@@ -660,6 +701,7 @@ void mlir::populateShapeToStandardConversionPatterns(
       ReduceOpConverter,
       ShapeEqOpConverter,
       ShapeOfOpConversion,
+      SplitAtOpConversion,
       ToExtentTensorOpConversion>(ctx);
   // clang-format on
 }

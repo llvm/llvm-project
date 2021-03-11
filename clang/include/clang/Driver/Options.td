@@ -160,6 +160,8 @@ def m_hexagon_Features_Group : OptionGroup<"<hexagon features group>">,
 // These are explicitly handled.
 def m_hexagon_Features_HVX_Group : OptionGroup<"<hexagon features group>">,
                                    Group<m_Group>, DocName<"Hexagon">;
+def m_m68k_Features_Group: OptionGroup<"<m68k features group>">,
+                           Group<m_Group>, DocName<"M68k">;
 def m_mips_Features_Group : OptionGroup<"<mips features group>">,
                             Group<m_Group>, DocName<"MIPS">;
 def m_ppc_Features_Group : OptionGroup<"<ppc features group>">,
@@ -904,6 +906,8 @@ defm cuda_short_ptr : BoolFOption<"cuda-short-ptr",
   NegFlag<SetFalse>>;
 def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<i_Group>,
   HelpText<"ROCm installation path, used for finding and automatically linking required bitcode libraries.">;
+def hip_path_EQ : Joined<["--"], "hip-path=">, Group<i_Group>,
+  HelpText<"HIP runtime installation path, used for finding HIP version and adding HIP include path.">;
 def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Group<Link_Group>,
   HelpText<"ROCm device library path. Alternative to rocm-path.">;
 def : Joined<["--"], "hip-device-lib-path=">, Alias<rocm_device_lib_path_EQ>;
@@ -3561,6 +3565,8 @@ def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">;
 def print_targets : Flag<["-", "--"], "print-targets">,
   HelpText<"Print the registered targets">;
+def print_rocm_search_dirs : Flag<["-", "--"], "print-rocm-search-dirs">,
+  HelpText<"Print the paths used for finding ROCm installation">;
 def private__bundle : Flag<["-"], "private_bundle">;
 def pthreads : Flag<["-"], "pthreads">;
 defm pthread : BoolOption<"", "pthread",
@@ -3696,7 +3702,8 @@ def weak__framework : Separate<["-"], "weak_framework">, Flags<[LinkerInput]>;
 def weak__library : Separate<["-"], "weak_library">, Flags<[LinkerInput]>;
 def weak__reference__mismatches : Separate<["-"], "weak_reference_mismatches">;
 def whatsloaded : Flag<["-"], "whatsloaded">;
-def whyload : Flag<["-"], "whyload">;
+def why_load : Flag<["-"], "why_load">;
+def whyload : Flag<["-"], "whyload">, Alias<why_load>;
 def w : Flag<["-"], "w">, HelpText<"Suppress all warnings">, Flags<[CC1Option]>,
   MarshallingInfoFlag<DiagnosticOpts<"IgnoreWarnings">>;
 def x : JoinedOrSeparate<["-"], "x">, Flags<[NoXarchOption,CC1Option]>,
@@ -3890,6 +3897,13 @@ def mnvs : Flag<["-"], "mnvs">, Group<m_hexagon_Features_Group>,
 def mno_nvs : Flag<["-"], "mno-nvs">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Disable generation of new-value stores">;
 
+// M68k features flags
+def m68000 : Flag<["-"], "m68000">, Group<m_m68k_Features_Group>;
+def m68010 : Flag<["-"], "m68010">, Group<m_m68k_Features_Group>;
+def m68020 : Flag<["-"], "m68020">, Group<m_m68k_Features_Group>;
+def m68030 : Flag<["-"], "m68030">, Group<m_m68k_Features_Group>;
+def m68040 : Flag<["-"], "m68040">, Group<m_m68k_Features_Group>;
+def m68060 : Flag<["-"], "m68060">, Group<m_m68k_Features_Group>;
 
 // X86 feature flags
 def mx87 : Flag<["-"], "mx87">, Group<m_x86_Features_Group>;
@@ -4347,6 +4361,8 @@ def fdebug_dump_parse_tree : Flag<["-"], "fdebug-dump-parse-tree">, Group<Action
   HelpText<"Dump the parse tree">;
 def fdebug_dump_provenance : Flag<["-"], "fdebug-dump-provenance">, Group<Action_Group>,
   HelpText<"Dump provenance">;
+def fdebug_dump_parsing_log : Flag<["-"], "fdebug-dump-parsing-log">, Group<Action_Group>,
+  HelpText<"Run instrumented parse and dump the parsing log">;
 def fdebug_measure_parse_tree : Flag<["-"], "fdebug-measure-parse-tree">, Group<Action_Group>,
   HelpText<"Measure the parse tree">;
 def fdebug_pre_fir_tree : Flag<["-"], "fdebug-pre-fir-tree">, Group<Action_Group>,
@@ -4994,6 +5010,9 @@ def code_completion_with_fixits : Flag<["-"], "code-completion-with-fixits">,
 def disable_free : Flag<["-"], "disable-free">,
   HelpText<"Disable freeing of memory on exit">,
   MarshallingInfoFlag<FrontendOpts<"DisableFree">>;
+def enable_noundef_analysis : Flag<["-"], "enable-noundef-analysis">, Group<f_Group>,
+  HelpText<"Enable analyzing function argument and return types for mandatory definedness">,
+  MarshallingInfoFlag<CodeGenOpts<"EnableNoundefAttrs">>;
 def discard_value_names : Flag<["-"], "discard-value-names">,
   HelpText<"Discard value names in LLVM IR">,
   MarshallingInfoFlag<CodeGenOpts<"DiscardValueNames">>;
@@ -5318,7 +5337,9 @@ def stack_protector_buffer_size : Separate<["-"], "stack-protector-buffer-size">
   MarshallingInfoInt<CodeGenOpts<"SSPBufferSize">, "8">;
 def fvisibility : Separate<["-"], "fvisibility">,
   HelpText<"Default type and symbol visibility">,
-  MarshallingInfoVisibility<LangOpts<"ValueVisibilityMode">, "DefaultVisibility">;
+  MarshallingInfoVisibility<LangOpts<"ValueVisibilityMode">, "DefaultVisibility">,
+  // Always emitting because of the relation to `-mignore-xcoff-visibility`.
+  AlwaysEmit;
 def ftype_visibility : Separate<["-"], "ftype-visibility">,
   HelpText<"Default type visibility">,
   MarshallingInfoVisibility<LangOpts<"TypeVisibilityMode">, fvisibility.KeyPath>;

@@ -13,9 +13,6 @@ using namespace llvm;
 MCSectionXCOFF *MCSymbolXCOFF::getRepresentedCsect() const {
   assert(RepresentedCsect &&
          "Trying to get csect representation of this symbol but none was set.");
-  assert(!getName().equals(getUnqualifiedName()) &&
-         "Symbol does not represent a csect; MCSectionXCOFF that represents "
-         "the symbol should not be (but is) set.");
   assert(getSymbolTableName().equals(RepresentedCsect->getSymbolTableName()) &&
          "SymbolTableNames need to be the same for this symbol and its csect "
          "representation.");
@@ -27,9 +24,6 @@ void MCSymbolXCOFF::setRepresentedCsect(MCSectionXCOFF *C) {
   assert((!RepresentedCsect || RepresentedCsect == C) &&
          "Trying to set a csect that doesn't match the one that this symbol is "
          "already mapped to.");
-  assert(!getName().equals(getUnqualifiedName()) &&
-         "Symbol does not represent a csect; can only set a MCSectionXCOFF "
-         "representation for a csect.");
   assert(getSymbolTableName().equals(C->getSymbolTableName()) &&
          "SymbolTableNames need to be the same for this symbol and its csect "
          "representation.");

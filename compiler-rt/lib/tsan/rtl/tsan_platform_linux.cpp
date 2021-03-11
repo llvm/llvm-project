@@ -250,6 +250,20 @@ void InitializePlatformEarly() {
     Die();
   }
 # endif
+#elif defined(__mips64)
+# if !SANITIZER_GO
+  if (vmaSize != 40) {
+    Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
+    Printf("FATAL: Found %zd - Supported 40\n", vmaSize);
+    Die();
+  }
+# else
+  if (vmaSize != 47) {
+    Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
+    Printf("FATAL: Found %zd - Supported 47\n", vmaSize);
+    Die();
+  }
+# endif
 #endif
 #endif
 }

@@ -9,6 +9,7 @@
 #include "CommonArgs.h"
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
+#include "Arch/M68k.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/SystemZ.h"
@@ -371,6 +372,9 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
     if (const Arg *A = Args.getLastArg(options::OPT_mmcu_EQ))
       return A->getValue();
     return "";
+
+  case llvm::Triple::m68k:
+    return m68k::getM68kTargetCPU(Args);
 
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
@@ -1382,7 +1386,9 @@ static LibGccType getLibGccType(const ToolChain &TC, const Driver &D,
   // The Android NDK only provides libunwind.a, not libunwind.so.
   if (TC.getTriple().isAndroid())
     return LibGccType::StaticLibGcc;
-  if (D.CCCIsCXX())
+  // For MinGW, don't imply a shared libgcc here, we only want to return
+  // SharedLibGcc if that was explicitly requested.
+  if (D.CCCIsCXX() && !TC.getTriple().isOSCygMing())
     return LibGccType::SharedLibGcc;
   return LibGccType::UnspecifiedLibGcc;
 }

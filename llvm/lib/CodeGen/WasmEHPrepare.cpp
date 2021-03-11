@@ -297,8 +297,8 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
     }
   }
 
-  // Cleanup pads w/o __clang_call_terminate call do not have any of
-  // wasm.get.exception() or wasm.get.ehselector() calls. We need to do nothing.
+  // Cleanup pads do not have any of wasm.get.exception() or
+  // wasm.get.ehselector() calls. We need to do nothing.
   if (!GetExnCI) {
     assert(!GetSelectorCI &&
            "wasm.get.ehselector() cannot exist w/o wasm.get.exception()");

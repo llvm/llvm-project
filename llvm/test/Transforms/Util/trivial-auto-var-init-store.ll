@@ -77,6 +77,7 @@ define void @atomic_store(i32* %dst) {
 define void @store_alloca() {
 ; CHECK-NEXT: Store inserted by -ftrivial-auto-var-init.
 ; CHECK-NEXT: Store size: 4 bytes.
+; CHECK-NEXT: Variables: dst (4 bytes).
 ; YAML-LABEL: --- !Missed
 ; YAML-NEXT: Pass:            annotation-remarks
 ; YAML-NEXT: Name:            AutoInitStore
@@ -86,11 +87,17 @@ define void @store_alloca() {
 ; YAML-NEXT:   - String:          "Store inserted by -ftrivial-auto-var-init.\nStore size: "
 ; YAML-NEXT:   - StoreSize:       '4'
 ; YAML-NEXT:   - String:          ' bytes.'
+; YAML-NEXT:   - String:          "\nVariables: "
+; YAML-NEXT:   - VarName:         dst
+; YAML-NEXT:   - String:          ' ('
+; YAML-NEXT:   - VarSize:         '4'
+; YAML-NEXT:   - String:          ' bytes)'
+; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
-; YAML-NEXT:   - StoreVolatile:       'false'
+; YAML-NEXT:   - StoreVolatile:    'false'
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Atomic: '
-; YAML-NEXT:   - StoreAtomic:       'false'
+; YAML-NEXT:   - StoreAtomic:     'false'
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT: ...
   %dst = alloca i32
@@ -102,6 +109,7 @@ define void @store_alloca() {
 define void @store_alloca_gep() {
 ; CHECK-NEXT: Store inserted by -ftrivial-auto-var-init.
 ; CHECK-NEXT: Store size: 4 bytes.
+; CHECK-NEXT: Variables: dst (4 bytes).
   %dst = alloca i32
   %gep = getelementptr i32, i32* %dst, i32 0
   store i32 0, i32* %gep, !annotation !0, !dbg !DILocation(scope: !4)
@@ -112,6 +120,7 @@ define void @store_alloca_gep() {
 define void @store_alloca_gep_array() {
 ; CHECK-NEXT: Store inserted by -ftrivial-auto-var-init.
 ; CHECK-NEXT: Store size: 4 bytes.
+; CHECK-NEXT: Variables: dst (8 bytes).
   %dst = alloca [2 x i32]
   %gep = getelementptr [2 x i32], [2 x i32]* %dst, i64 0, i64 0
   store i32 0, i32* %gep, !annotation !0, !dbg !DILocation(scope: !4)
@@ -122,6 +131,7 @@ define void @store_alloca_gep_array() {
 define void @store_alloca_bitcast() {
 ; CHECK-NEXT: Store inserted by -ftrivial-auto-var-init.
 ; CHECK-NEXT: Store size: 4 bytes.
+; CHECK-NEXT: Variables: dst (4 bytes).
   %dst = alloca [2 x i16]
   %bc = bitcast [2 x i16]* %dst to i32*
   store i32 0, i32* %bc, !annotation !0, !dbg !DILocation(scope: !4)
@@ -133,6 +143,7 @@ define void @store_alloca_bitcast() {
 define void @store_alloca_di() {
 ; CHECK-NEXT: Store inserted by -ftrivial-auto-var-init.
 ; CHECK-NEXT: Store size: 4 bytes.
+; CHECK-NEXT: Variables: destination (4 bytes).
   %dst = alloca i32
   store i32 0, i32* %dst, !annotation !0, !dbg !DILocation(scope: !4)
   call void @llvm.dbg.declare(metadata i32* %dst, metadata !6, metadata !DIExpression()), !dbg !DILocation(scope: !4)
@@ -144,6 +155,7 @@ define void @store_alloca_di() {
 define void @store_alloca_di_multiple() {
 ; CHECK-NEXT: Store inserted by -ftrivial-auto-var-init.
 ; CHECK-NEXT: Store size: 4 bytes.
+; CHECK-NEXT: Variables: destination2 (4 bytes), destination (4 bytes).
   %dst = alloca i32
   store i32 0, i32* %dst, !annotation !0, !dbg !DILocation(scope: !4)
   call void @llvm.dbg.declare(metadata i32* %dst, metadata !6, metadata !DIExpression()), !dbg !DILocation(scope: !4)
@@ -156,6 +168,7 @@ define void @store_alloca_di_multiple() {
 define void @store_alloca_phi() {
 ; CHECK-NEXT: Store inserted by -ftrivial-auto-var-init.
 ; CHECK-NEXT: Store size: 4 bytes.
+; CHECK-NEXT: Variables: dst2 (4 bytes), dst (4 bytes).
 entry:
   %dst = alloca i32
   %dst2 = alloca i32
@@ -176,6 +189,7 @@ l2:
 define void @store_alloca_phi_di_multiple() {
 ; CHECK-NEXT: Store inserted by -ftrivial-auto-var-init.
 ; CHECK-NEXT: Store size: 4 bytes.
+; CHECK-NEXT: Variables: dst2 (4 bytes), destination2 (4 bytes), destination (4 bytes).
 entry:
   %dst = alloca i32
   %dst2 = alloca i32

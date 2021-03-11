@@ -9,9 +9,9 @@
 #ifndef LLVM_TOOLS_OBJCOPY_COFF_WRITER_H
 #define LLVM_TOOLS_OBJCOPY_COFF_WRITER_H
 
-#include "Buffer.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <cstddef>
 #include <utility>
 
@@ -23,7 +23,8 @@ struct Object;
 
 class COFFWriter {
   Object &Obj;
-  Buffer &Buf;
+  std::unique_ptr<WritableMemoryBuffer> Buf;
+  raw_ostream &Out;
 
   size_t FileSize;
   size_t FileAlignment;
@@ -51,8 +52,8 @@ public:
   virtual ~COFFWriter() {}
   Error write();
 
-  COFFWriter(Object &Obj, Buffer &Buf)
-      : Obj(Obj), Buf(Buf), StrTabBuilder(StringTableBuilder::WinCOFF) {}
+  COFFWriter(Object &Obj, raw_ostream &Out)
+      : Obj(Obj), Out(Out), StrTabBuilder(StringTableBuilder::WinCOFF) {}
 };
 
 } // end namespace coff

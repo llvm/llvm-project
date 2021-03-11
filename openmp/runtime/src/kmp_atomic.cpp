@@ -779,7 +779,7 @@ static inline kmp_cmplx128_a16_t operator/(kmp_cmplx128_a16_t &lhs,
 #if KMP_MIC
 #define KMP_DO_PAUSE _mm_delay_32(1)
 #else
-#define KMP_DO_PAUSE KMP_CPU_PAUSE()
+#define KMP_DO_PAUSE
 #endif /* KMP_MIC */
 
 // ------------------------------------------------------------------------
@@ -1132,7 +1132,6 @@ ATOMIC_CMPX_L(fixed8, orl, kmp_int64, 64, ||, 8i, 7,
                (kmp_int##BITS *)lhs,                                           \
                *VOLATILE_CAST(kmp_int##BITS *) & old_value,                    \
                *VOLATILE_CAST(kmp_int##BITS *) & rhs)) {                       \
-      KMP_CPU_PAUSE();                                                         \
       temp_val = *lhs;                                                         \
       old_value = temp_val;                                                    \
     }                                                                          \
@@ -2087,8 +2086,6 @@ ATOMIC_CRITICAL_READ(cmplx16, a16_rd, kmp_cmplx128_a16_t, +, 32c,
     while (!KMP_COMPARE_AND_STORE_ACQ##BITS(                                   \
         (kmp_int##BITS *)lhs, *VOLATILE_CAST(kmp_int##BITS *) & old_value,     \
         *VOLATILE_CAST(kmp_int##BITS *) & new_value)) {                        \
-      KMP_CPU_PAUSE();                                                         \
-                                                                               \
       temp_val = *lhs;                                                         \
       old_value = temp_val;                                                    \
       new_value = rhs;                                                         \
@@ -2237,8 +2234,6 @@ ATOMIC_CRITICAL_WR(cmplx16, a16_wr, kmp_cmplx128_a16_t, =, 32c,
     while (!KMP_COMPARE_AND_STORE_ACQ##BITS(                                   \
         (kmp_int##BITS *)lhs, *VOLATILE_CAST(kmp_int##BITS *) & old_value,     \
         *VOLATILE_CAST(kmp_int##BITS *) & new_value)) {                        \
-      KMP_CPU_PAUSE();                                                         \
-                                                                               \
       temp_val = *lhs;                                                         \
       old_value = temp_val;                                                    \
       new_value = (TYPE)(old_value OP rhs);                                    \
@@ -2633,7 +2628,6 @@ ATOMIC_CMPX_L_CPT(fixed8, orl_cpt, kmp_int64, 64, ||,
                (kmp_int##BITS *)lhs,                                           \
                *VOLATILE_CAST(kmp_int##BITS *) & old_value,                    \
                *VOLATILE_CAST(kmp_int##BITS *) & rhs)) {                       \
-      KMP_CPU_PAUSE();                                                         \
       temp_val = *lhs;                                                         \
       old_value = temp_val;                                                    \
     }                                                                          \
@@ -2930,8 +2924,6 @@ ATOMIC_CRITICAL_CPT(cmplx16, div_a16_cpt, kmp_cmplx128_a16_t, /, 32c,
     while (!KMP_COMPARE_AND_STORE_ACQ##BITS(                                   \
         (kmp_int##BITS *)lhs, *VOLATILE_CAST(kmp_int##BITS *) & old_value,     \
         *VOLATILE_CAST(kmp_int##BITS *) & new_value)) {                        \
-      KMP_CPU_PAUSE();                                                         \
-                                                                               \
       temp_val = *lhs;                                                         \
       old_value = temp_val;                                                    \
       new_value = (TYPE)(rhs OP old_value);                                    \
@@ -3254,8 +3246,6 @@ ATOMIC_CRITICAL_CPT_REV_MIX(float10, long double, div_cpt_rev, /, fp, _Quad,
     while (!KMP_COMPARE_AND_STORE_ACQ##BITS(                                   \
         (kmp_int##BITS *)lhs, *VOLATILE_CAST(kmp_int##BITS *) & old_value,     \
         *VOLATILE_CAST(kmp_int##BITS *) & new_value)) {                        \
-      KMP_CPU_PAUSE();                                                         \
-                                                                               \
       temp_val = *lhs;                                                         \
       old_value = temp_val;                                                    \
       new_value = rhs;                                                         \

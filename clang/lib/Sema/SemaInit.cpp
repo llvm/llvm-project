@@ -6319,7 +6319,8 @@ static ExprResult CopyObject(Sema &S,
   // Determine the arguments required to actually perform the
   // constructor call (we might have derived-to-base conversions, or
   // the copy constructor may have default arguments).
-  if (S.CompleteConstructorCall(Constructor, CurInitExpr, Loc, ConstructorArgs))
+  if (S.CompleteConstructorCall(Constructor, T, CurInitExpr, Loc,
+                                ConstructorArgs))
     return ExprError();
 
   // C++0x [class.copy]p32:
@@ -6516,12 +6517,10 @@ PerformConstructorInitialization(Sema &S,
 
   // Determine the arguments required to actually perform the constructor
   // call.
-  if (S.CompleteConstructorCall(Constructor, Args,
-                                Loc, ConstructorArgs,
-                                AllowExplicitConv,
+  if (S.CompleteConstructorCall(Constructor, Step.Type, Args, Loc,
+                                ConstructorArgs, AllowExplicitConv,
                                 IsListInitialization))
     return ExprError();
-
 
   if (isExplicitTemporary(Entity, Kind, NumArgs)) {
     // An explicitly-constructed temporary, e.g., X(1, 2).
@@ -8299,9 +8298,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
         // Determine the arguments required to actually perform the constructor
         // call.
         Expr *Arg = CurInit.get();
-        if (S.CompleteConstructorCall(Constructor,
-                                      MultiExprArg(&Arg, 1),
-                                      Loc, ConstructorArgs))
+        if (S.CompleteConstructorCall(Constructor, Step->Type,
+                                      MultiExprArg(&Arg, 1), Loc,
+                                      ConstructorArgs))
           return ExprError();
 
         // Build an expression that constructs a temporary.

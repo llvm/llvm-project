@@ -57,7 +57,7 @@ static OwningModuleRef deserializeModule(const llvm::MemoryBuffer *input,
     return {};
 
   OwningModuleRef module(ModuleOp::create(FileLineColLoc::get(
-      input->getBufferIdentifier(), /*line=*/0, /*column=*/0, context)));
+      context, input->getBufferIdentifier(), /*line=*/0, /*column=*/0)));
   module->getBody()->push_front(spirvModule.release());
 
   return module;
@@ -146,8 +146,9 @@ static LogicalResult roundTripModule(ModuleOp srcModule, bool emitDebugInfo,
     return failure();
 
   // Wrap around in a new MLIR module.
-  OwningModuleRef dstModule(ModuleOp::create(FileLineColLoc::get(
-      /*filename=*/"", /*line=*/0, /*column=*/0, &deserializationContext)));
+  OwningModuleRef dstModule(ModuleOp::create(
+      FileLineColLoc::get(&deserializationContext,
+                          /*filename=*/"", /*line=*/0, /*column=*/0)));
   dstModule->getBody()->push_front(spirvModule.release());
   dstModule->print(output);
 

@@ -527,6 +527,8 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   case TargetOpcode::G_UITOFP:
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
   case TargetOpcode::G_INSERT_VECTOR_ELT:
+  case TargetOpcode::G_BUILD_VECTOR:
+  case TargetOpcode::G_BUILD_VECTOR_TRUNC:
     return true;
   default:
     break;
@@ -880,7 +882,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         }))
       break;
     if (isPreISelGenericFloatingPointOpcode(DefOpc) ||
-        SrcTy.getSizeInBits() < 32) {
+        SrcTy.getSizeInBits() < 32 ||
+        getRegBank(VReg, MRI, TRI) == &AArch64::FPRRegBank) {
       // Have a floating point op.
       // Make sure every operand gets mapped to a FPR register class.
       unsigned NumOperands = MI.getNumOperands();

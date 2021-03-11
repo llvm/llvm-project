@@ -17,7 +17,8 @@
 namespace clang {
 
 /// A module file extension used for testing purposes.
-class TestModuleFileExtension : public ModuleFileExtension {
+class TestModuleFileExtension
+    : public llvm::RTTIExtends<TestModuleFileExtension, ModuleFileExtension> {
   std::string BlockName;
   unsigned MajorVersion;
   unsigned MinorVersion;
@@ -43,15 +44,13 @@ class TestModuleFileExtension : public ModuleFileExtension {
   };
 
 public:
-  TestModuleFileExtension(StringRef BlockName,
-                          unsigned MajorVersion,
-                          unsigned MinorVersion,
-                          bool Hashed,
+  static char ID;
+
+  TestModuleFileExtension(StringRef BlockName, unsigned MajorVersion,
+                          unsigned MinorVersion, bool Hashed,
                           StringRef UserInfo)
-    : ModuleFileExtension(ModuleFileExtensionKind::MFEK_Test),
-      BlockName(BlockName),
-      MajorVersion(MajorVersion), MinorVersion(MinorVersion),
-      Hashed(Hashed), UserInfo(UserInfo) { }
+      : BlockName(BlockName), MajorVersion(MajorVersion),
+        MinorVersion(MinorVersion), Hashed(Hashed), UserInfo(UserInfo) {}
   ~TestModuleFileExtension() override;
 
   ModuleFileExtensionMetadata getExtensionMetadata() const override;
@@ -65,10 +64,6 @@ public:
   createExtensionReader(const ModuleFileExtensionMetadata &Metadata,
                         ASTReader &Reader, serialization::ModuleFile &Mod,
                         const llvm::BitstreamCursor &Stream) override;
-
-  static bool classof(const ModuleFileExtension *E) {
-    return E->getKind() == MFEK_Test;
-  }
 
   std::string str() const;
 };

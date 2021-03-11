@@ -67,7 +67,7 @@ def SPV_AddressOfOp : SPV_Op<"mlir.addressof", [InFunctionScope, NoSideEffect]> 
 
 // -----
 
-def SPV_ConstantOp : SPV_Op<"constant", [ConstantLike, NoSideEffect]> {
+def SPV_ConstantOp : SPV_Op<"Constant", [ConstantLike, NoSideEffect]> {
   let summary = "The op that declares a SPIR-V normal constant";
 
   let description = [{
@@ -81,7 +81,7 @@ def SPV_ConstantOp : SPV_Op<"constant", [ConstantLike, NoSideEffect]> {
     * ...
 
     Having such a plethora of constant instructions renders IR transformations
-    more tedious. Therefore, we use a single `spv.constant` op to represent
+    more tedious. Therefore, we use a single `spv.Constant` op to represent
     them all. Note that conversion between those SPIR-V constant instructions
     and this op is purely mechanical; so it can be scoped to the binary
     (de)serialization process.
@@ -89,16 +89,16 @@ def SPV_ConstantOp : SPV_Op<"constant", [ConstantLike, NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    spv-constant-op ::= ssa-id `=` `spv.constant` attribute-value
+    spv.Constant-op ::= ssa-id `=` `spv.Constant` attribute-value
                         (`:` spirv-type)?
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.constant true
-    %1 = spv.constant dense<[2, 3]> : vector<2xf32>
-    %2 = spv.constant [dense<3.0> : vector<2xf32>] : !spv.array<1xvector<2xf32>>
+    %0 = spv.Constant true
+    %1 = spv.Constant dense<[2, 3]> : vector<2xf32>
+    %2 = spv.Constant [dense<3.0> : vector<2xf32>] : !spv.array<1xvector<2xf32>>
     ```
 
     TODO: support constant structs
@@ -148,11 +148,11 @@ def SPV_EntryPointOp : SPV_Op<"EntryPoint", [InModuleScope]> {
     OpEntryPoint instructions with the same Execution Model and the same
     Name string.
 
-    Interface is a list of symbol references to `spv.globalVariable`
+    Interface is a list of symbol references to `spv.GlobalVariable`
     operations. These declare the set of global variables from a
     module that form the interface of this entry point. The set of
     Interface symbols must be equal to or a superset of the
-    `spv.globalVariable`s referenced by the entry point’s static call
+    `spv.GlobalVariable`s referenced by the entry point’s static call
     tree, within the interface’s storage classes.  Before version 1.4,
     the interface’s storage classes are limited to the Input and
     Output storage classes. Starting with version 1.4, the interface’s
@@ -325,7 +325,7 @@ def SPV_FuncOp : SPV_Op<"func", [
 
 // -----
 
-def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
+def SPV_GlobalVariableOp : SPV_Op<"GlobalVariable", [InModuleScope, Symbol]> {
   let summary = [{
     Allocate an object in memory at module scope. The object is
     referenced using a symbol name.
@@ -343,13 +343,13 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
     Initializer is optional.  If Initializer is present, it will be
     the initial value of the variable’s memory content. Initializer
     must be an symbol defined from a constant instruction or other
-    `spv.globalVariable` operation in module scope. Initializer must
+    `spv.GlobalVariable` operation in module scope. Initializer must
     have the same type as the type of the defined symbol.
 
     <!-- End of AutoGen section -->
 
     ```
-    variable-op ::= `spv.globalVariable` spirv-type symbol-ref-id
+    variable-op ::= `spv.GlobalVariable` spirv-type symbol-ref-id
                     (`initializer(` symbol-ref-id `)`)?
                     (`bind(` integer-literal, integer-literal `)`)?
                     (`built_in(` string-literal `)`)?
@@ -363,10 +363,10 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
     #### Example:
 
     ```mlir
-    spv.globalVariable @var0 : !spv.ptr<f32, Input> @var0
-    spv.globalVariable @var1 initializer(@var0) : !spv.ptr<f32, Output>
-    spv.globalVariable @var2 bind(1, 2) : !spv.ptr<f32, Uniform>
-    spv.globalVariable @var3 built_in("GlobalInvocationId") : !spv.ptr<vector<3xi32>, Input>
+    spv.GlobalVariable @var0 : !spv.ptr<f32, Input> @var0
+    spv.GlobalVariable @var1 initializer(@var0) : !spv.ptr<f32, Output>
+    spv.GlobalVariable @var2 bind(1, 2) : !spv.ptr<f32, Uniform>
+    spv.GlobalVariable @var3 built_in("GlobalInvocationId") : !spv.ptr<vector<3xi32>, Input>
     ```
   }];
 
@@ -562,7 +562,7 @@ def SPV_ReferenceOfOp : SPV_Op<"mlir.referenceof", [NoSideEffect]> {
 
 // -----
 
-def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
+def SPV_SpecConstantOp : SPV_Op<"SpecConstant", [InModuleScope, Symbol]> {
   let summary = "The op that declares a SPIR-V specialization constant";
 
   let description = [{
@@ -572,14 +572,14 @@ def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
     * `OpSpecConstantTrue` and `OpSpecConstantFalse` for boolean constants
     * `OpSpecConstant` for scalar constants
 
-    Similar as `spv.constant`, this op represents all of the above cases.
+    Similar as `spv.Constant`, this op represents all of the above cases.
     `OpSpecConstantComposite` and `OpSpecConstantOp` are modelled with
     separate ops.
 
     <!-- End of AutoGen section -->
 
     ```
-    spv-spec-constant-op ::= `spv.specConstant` symbol-ref-id
+    spv-spec-constant-op ::= `spv.SpecConstant` symbol-ref-id
                              `spec_id(` integer `)`
                              `=` attribute-value (`:` spirv-type)?
     ```
@@ -590,8 +590,8 @@ def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
     #### Example:
 
     ```mlir
-    spv.specConstant @spec_const1 = true
-    spv.specConstant @spec_const2 spec_id(5) = 42 : i32
+    spv.SpecConstant @spec_const1 = true
+    spv.SpecConstant @spec_const2 spec_id(5) = 42 : i32
     ```
   }];
 
@@ -609,23 +609,23 @@ def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
 
 // -----
 
-def SPV_SpecConstantCompositeOp : SPV_Op<"specConstantComposite", [
+def SPV_SpecConstantCompositeOp : SPV_Op<"SpecConstantComposite", [
     InModuleScope, Symbol]> {
   let summary = "Declare a new composite specialization constant.";
 
   let description = [{
     This op declares a SPIR-V composite specialization constant. This covers
     the `OpSpecConstantComposite` SPIR-V instruction. Scalar constants are
-    covered by `spv.specConstant`.
+    covered by `spv.SpecConstant`.
 
     A constituent of a spec constant composite can be:
     - A symbol referring of another spec constant.
     - The SSA ID of a non-specialization constant (i.e. defined through
-      `spv.specConstant`).
-    - The SSA ID of a `spv.undef`.
+      `spv.SpecConstant`).
+    - The SSA ID of a `spv.Undef`.
 
     ```
-    spv-spec-constant-composite-op ::= `spv.specConstantComposite` symbol-ref-id ` (`
+    spv-spec-constant-composite-op ::= `spv.SpecConstantComposite` symbol-ref-id ` (`
                                        symbol-ref-id (`, ` symbol-ref-id)*
                                        `) :` composite-type
     ```
@@ -636,10 +636,10 @@ def SPV_SpecConstantCompositeOp : SPV_Op<"specConstantComposite", [
      #### Example:
 
      ```mlir
-     spv.specConstant @sc1 = 1   : i32
-     spv.specConstant @sc2 = 2.5 : f32
-     spv.specConstant @sc3 = 3.5 : f32
-     spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<i32, f32, f32>
+     spv.SpecConstant @sc1 = 1   : i32
+     spv.SpecConstant @sc2 = 2.5 : f32
+     spv.SpecConstant @sc3 = 3.5 : f32
+     spv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<i32, f32, f32>
      ```
 
     TODO Add support for constituents that are:
@@ -731,8 +731,8 @@ def SPV_SpecConstantOperationOp : SPV_Op<"SpecConstantOperation", [
 
     #### Example:
     ```mlir
-    %0 = spv.constant 1: i32
-    %1 = spv.constant 1: i32
+    %0 = spv.Constant 1: i32
+    %1 = spv.Constant 1: i32
 
     %2 = spv.SpecConstantOperation wraps "spv.IAdd"(%0, %1) : (i32, i32) -> i32
     ```

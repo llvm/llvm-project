@@ -44,11 +44,12 @@ syn keyword llvmKeyword
       \ alias
       \ align
       \ alignstack
+      \ allocsize
       \ alwaysinline
       \ appending
       \ argmemonly
-      \ arm_aapcscc
       \ arm_aapcs_vfpcc
+      \ arm_aapcscc
       \ arm_apcscc
       \ asm
       \ atomic
@@ -58,51 +59,58 @@ syn keyword llvmKeyword
       \ byref
       \ byval
       \ c
-      \ catch
       \ caller
+      \ catch
       \ cc
       \ ccc
       \ cleanup
+      \ cold
       \ coldcc
       \ comdat
       \ common
       \ constant
+      \ convergent
       \ datalayout
       \ declare
       \ default
       \ define
       \ deplibs
       \ dereferenceable
+      \ dereferenceable_or_null
       \ distinct
       \ dllexport
       \ dllimport
       \ dso_local
       \ dso_preemptable
       \ except
+      \ extern_weak
       \ external
       \ externally_initialized
-      \ extern_weak
       \ fastcc
-      \ tailcc
       \ filter
       \ from
       \ gc
       \ global
-      \ hhvmcc
       \ hhvm_ccc
+      \ hhvmcc
       \ hidden
+      \ hot
       \ immarg
+      \ inaccessiblemem_or_argmemonly
+      \ inaccessiblememonly
+      \ inalloca
       \ initialexec
       \ inlinehint
       \ inreg
-      \ inteldialect
       \ intel_ocl_bicc
+      \ inteldialect
       \ internal
+      \ jumptable
       \ linkonce
       \ linkonce_odr
+      \ local_unnamed_addr
       \ localdynamic
       \ localexec
-      \ local_unnamed_addr
       \ minsize
       \ module
       \ monotonic
@@ -113,19 +121,29 @@ syn keyword llvmKeyword
       \ nest
       \ noalias
       \ nobuiltin
+      \ nocallback
       \ nocapture
+      \ nocf_check
+      \ noduplicate
+      \ nofree
       \ noimplicitfloat
       \ noinline
+      \ nomerge
       \ nonlazybind
       \ nonnull
+      \ noprofile
       \ norecurse
       \ noredzone
       \ noreturn
+      \ nosync
       \ noundef
       \ nounwind
+      \ null_pointer_is_valid
+      \ optforfuzzing
       \ optnone
       \ optsize
       \ personality
+      \ preallocated
       \ private
       \ protected
       \ ptx_device
@@ -135,16 +153,20 @@ syn keyword llvmKeyword
       \ release
       \ returned
       \ returns_twice
+      \ safestack
       \ sanitize_address
+      \ sanitize_hwaddress
       \ sanitize_memory
+      \ sanitize_memtag
       \ sanitize_thread
       \ section
       \ seq_cst
+      \ shadowcallstack
       \ sideeffect
       \ signext
-      \ syncscope
       \ source_filename
       \ speculatable
+      \ speculative_load_hardening
       \ spir_func
       \ spir_kernel
       \ sret
@@ -153,8 +175,11 @@ syn keyword llvmKeyword
       \ sspstrong
       \ strictfp
       \ swiftcc
+      \ swifterror
       \ swiftself
+      \ syncscope
       \ tail
+      \ tailcc
       \ target
       \ thread_local
       \ to
@@ -167,10 +192,11 @@ syn keyword llvmKeyword
       \ volatile
       \ weak
       \ weak_odr
+      \ willreturn
+      \ win64cc
       \ within
       \ writeonly
       \ x86_64_sysvcc
-      \ win64cc
       \ x86_fastcallcc
       \ x86_stdcallcc
       \ x86_thiscallcc

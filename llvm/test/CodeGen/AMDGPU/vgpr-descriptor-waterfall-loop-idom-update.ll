@@ -26,7 +26,6 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(<4 x i32>* %arg) #0 {
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s4, s[10:11], v[2:3]
 ; GCN-NEXT:    s_and_b32 s4, vcc_lo, s4
 ; GCN-NEXT:    s_and_saveexec_b32 s4, s4
-; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    buffer_store_dword v0, v0, s[8:11], 0 offen
 ; GCN-NEXT:    s_waitcnt_depctr 0xffe3
 ; GCN-NEXT:    s_xor_b32 exec_lo, exec_lo, s4

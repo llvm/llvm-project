@@ -721,6 +721,12 @@ static bool removeDeadUsersOfConstant(const Constant *C) {
       return false; // Constant wasn't dead
   }
 
+  // If C is only used by metadata, it should not be preserved but should have
+  // its uses replaced.
+  if (C->isUsedByMetadata()) {
+    const_cast<Constant *>(C)->replaceAllUsesWith(
+        UndefValue::get(C->getType()));
+  }
   const_cast<Constant*>(C)->destroyConstant();
   return true;
 }
@@ -1908,6 +1914,12 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
   getContext().pImpl->DSOLocalEquivalents.erase(getGlobalValue());
   NewEquiv = this;
   setOperand(0, Func);
+
+  if (Func->getType() != getType()) {
+    // It is ok to mutate the type here because this constant should always
+    // reflect the type of the function it's holding.
+    mutateType(Func->getType());
+  }
   return nullptr;
 }
 

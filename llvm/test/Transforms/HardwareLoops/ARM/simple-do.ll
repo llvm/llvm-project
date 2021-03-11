@@ -146,8 +146,7 @@ while.end:
 
 ; CHECK: entry:
 ; CHECK: [[ROUND:%[^ ]+]] = add i32 %n, 1
-; CHECK: [[CMP:%[^ ]+]] = icmp slt i32 %n, 2
-; CHECK: [[SMIN:%[^ ]+]] = select i1 [[CMP]], i32 %n, i32 2
+; CHECK: [[SMIN:%[^ ]+]] = call i32 @llvm.smin.i32(i32 %n, i32 2)
 ; CHECK: [[SUB:%[^ ]+]] = sub i32 [[ROUND]], [[SMIN]]
 ; CHECK: [[HALVE:%[^ ]+]] = lshr i32 [[SUB]], 1
 ; CHECK: [[COUNT:%[^ ]+]] = add nuw i32 [[HALVE]], 1

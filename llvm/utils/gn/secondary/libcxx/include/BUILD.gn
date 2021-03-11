@@ -69,6 +69,7 @@ copy("include") {
   sources = [
     "__availability",
     "__bit_reference",
+    "__bits",
     "__bsd_locale_defaults.h",
     "__bsd_locale_fallbacks.h",
     "__debug",
@@ -95,6 +96,7 @@ copy("include") {
     "__support/ibm/gettod_zos.h",
     "__support/ibm/limits.h",
     "__support/ibm/locale_mgmt_aix.h",
+    "__support/ibm/locale_mgmt_zos.h",
     "__support/ibm/nanosleep.h",
     "__support/ibm/support.h",
     "__support/ibm/xlocale.h",

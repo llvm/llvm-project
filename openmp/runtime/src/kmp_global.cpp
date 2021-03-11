@@ -438,7 +438,7 @@ kmp_uint32 __kmp_yield_next = KMP_NEXT_WAIT;
 
 /* ------------------------------------------------------ */
 /* STATE mostly syncronized with global lock */
-/* data written to rarely by masters, read often by workers */
+/* data written to rarely by primary threads, read often by workers */
 /* TODO: None of this global padding stuff works consistently because the order
    of declaration is not necessarily correlated to storage order. To fix this,
    all the important globals must be put in a big structure instead. */
@@ -446,7 +446,7 @@ KMP_ALIGN_CACHE
 kmp_info_t **__kmp_threads = NULL;
 kmp_root_t **__kmp_root = NULL;
 
-/* data read/written to often by masters */
+/* data read/written to often by primary threads */
 KMP_ALIGN_CACHE
 volatile int __kmp_nth = 0;
 volatile int __kmp_all_nth = 0;

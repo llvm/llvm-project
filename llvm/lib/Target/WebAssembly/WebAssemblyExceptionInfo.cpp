@@ -120,7 +120,8 @@ void WebAssemblyExceptionInfo::recalculate(
   // and A's unwind destination is B and B's is C. When we visit B before A, we
   // end up extracting C only out of B but not out of A.
   const auto *EHInfo = MF.getWasmEHFuncInfo();
-  DenseMap<WebAssemblyException *, WebAssemblyException *> UnwindWEMap;
+  SmallVector<std::pair<WebAssemblyException *, WebAssemblyException *>>
+      UnwindWEVec;
   for (auto *DomNode : depth_first(&MDT)) {
     MachineBasicBlock *EHPad = DomNode->getBlock();
     if (!EHPad->isEHPad())
@@ -128,28 +129,18 @@ void WebAssemblyExceptionInfo::recalculate(
     if (!EHInfo->hasUnwindDest(EHPad))
       continue;
     auto *UnwindDest = EHInfo->getUnwindDest(EHPad);
-    auto *WE = getExceptionFor(EHPad);
-    auto *UnwindWE = getExceptionFor(UnwindDest);
-    if (WE->contains(UnwindWE)) {
-      UnwindWEMap[WE] = UnwindWE;
-      LLVM_DEBUG(dbgs() << "ExceptionInfo fix: " << WE->getEHPad()->getNumber()
-                        << "." << WE->getEHPad()->getName()
+    auto *SrcWE = getExceptionFor(EHPad);
+    auto *DstWE = getExceptionFor(UnwindDest);
+    if (SrcWE->contains(DstWE)) {
+      UnwindWEVec.push_back(std::make_pair(SrcWE, DstWE));
+      LLVM_DEBUG(dbgs() << "Unwind destination ExceptionInfo fix:\n  "
+                        << DstWE->getEHPad()->getNumber() << "."
+                        << DstWE->getEHPad()->getName()
                         << "'s exception is taken out of "
-                        << UnwindWE->getEHPad()->getNumber() << "."
-                        << UnwindWE->getEHPad()->getName() << "'s exception\n");
-      if (WE->getParentException())
-        UnwindWE->setParentException(WE->getParentException());
-      else
-        UnwindWE->setParentException(nullptr);
+                        << SrcWE->getEHPad()->getNumber() << "."
+                        << SrcWE->getEHPad()->getName() << "'s exception\n");
+      DstWE->setParentException(SrcWE->getParentException());
     }
-  }
-
-  // Add BBs to exceptions' block set first
-  for (auto *DomNode : post_order(&MDT)) {
-    MachineBasicBlock *MBB = DomNode->getBlock();
-    WebAssemblyException *WE = getExceptionFor(MBB);
-    for (; WE; WE = WE->getParentException())
-      WE->addToBlocksSet(MBB);
   }
 
   // After fixing subexception relationship between unwind destinations above,
@@ -161,31 +152,72 @@ void WebAssemblyExceptionInfo::recalculate(
   // subexception of Exception A, and we fix it by taking Exception B out of
   // Exception A above. But there can still be remaining BBs within Exception A
   // that are reachable from Exception B. These BBs semantically don't belong
-  // to Exception A and were not a part of 'catch' clause or cleanup code in the
-  // original code, but they just happened to be grouped within Exception A
-  // because they were dominated by EHPad A. We fix this case by taking those
+  // to Exception A and were not a part of this 'catch' clause or cleanup code
+  // in the original code, but they just happened to be grouped within Exception
+  // A because they were dominated by EHPad A. We fix this case by taking those
   // BBs out of the incorrect exception and all its subexceptions that it
   // belongs to.
-  for (auto &KV : UnwindWEMap) {
-    WebAssemblyException *WE = KV.first;
-    WebAssemblyException *UnwindWE = KV.second;
+  //
+  // 1. First, we take out remaining incorrect subexceptions. This part is
+  // easier, because we haven't added BBs to exceptions yet, we only need to
+  // change parent exception pointer.
+  for (auto *DomNode : depth_first(&MDT)) {
+    MachineBasicBlock *EHPad = DomNode->getBlock();
+    if (!EHPad->isEHPad())
+      continue;
+    auto *WE = getExceptionFor(EHPad);
 
-    for (auto *MBB : WE->getBlocksSet()) {
+    // For each source EHPad -> unwind destination EHPad
+    for (auto &P : UnwindWEVec) {
+      auto *SrcWE = P.first;
+      auto *DstWE = P.second;
+      // If WE (the current EH pad's exception) is still contained in SrcWE but
+      // reachable from DstWE that was taken out of SrcWE above, we have to take
+      // out WE out of SrcWE too.
+      if (WE != SrcWE && SrcWE->contains(WE) && !DstWE->contains(WE) &&
+          isReachableAmongDominated(DstWE->getEHPad(), EHPad, SrcWE->getEHPad(),
+                                    MDT)) {
+        LLVM_DEBUG(dbgs() << "Remaining reachable ExceptionInfo fix:\n  "
+                          << WE->getEHPad()->getNumber() << "."
+                          << WE->getEHPad()->getName()
+                          << "'s exception is taken out of "
+                          << SrcWE->getEHPad()->getNumber() << "."
+                          << SrcWE->getEHPad()->getName() << "'s exception\n");
+        WE->setParentException(SrcWE->getParentException());
+      }
+    }
+  }
+
+  // Add BBs to exceptions' block set. This is a preparation to take out
+  // remaining incorect BBs from exceptions, because we need to iterate over BBs
+  // for each exception.
+  for (auto *DomNode : post_order(&MDT)) {
+    MachineBasicBlock *MBB = DomNode->getBlock();
+    WebAssemblyException *WE = getExceptionFor(MBB);
+    for (; WE; WE = WE->getParentException())
+      WE->addToBlocksSet(MBB);
+  }
+
+  // 2. We take out remaining individual BBs out. Now we have added BBs to each
+  // exceptions' BlockSet, when we take a BB out of an exception, we need to fix
+  // those sets too.
+  for (auto &P : UnwindWEVec) {
+    auto *SrcWE = P.first;
+    auto *DstWE = P.second;
+
+    for (auto *MBB : SrcWE->getBlocksSet()) {
       if (MBB->isEHPad()) {
-        // If this assertion is triggered, it would be a violation of scoping
-        // rules in ll files, because this means an instruction in an outer
-        // scope tries to unwind to an EH pad in an inner scope.
-        assert(!isReachableAmongDominated(UnwindWE->getEHPad(), MBB,
-                                          WE->getEHPad(), MDT) &&
-               "Outer scope unwinds to inner scope. Bug in scope rules?");
+        assert(!isReachableAmongDominated(DstWE->getEHPad(), MBB,
+                                          SrcWE->getEHPad(), MDT) &&
+               "We already handled EH pads above");
         continue;
       }
-      if (isReachableAmongDominated(UnwindWE->getEHPad(), MBB, WE->getEHPad(),
+      if (isReachableAmongDominated(DstWE->getEHPad(), MBB, SrcWE->getEHPad(),
                                     MDT)) {
         LLVM_DEBUG(dbgs() << "Remainder BB: " << MBB->getNumber() << "."
-                          << MBB->getName() << " is ");
+                          << MBB->getName() << " is\n");
         WebAssemblyException *InnerWE = getExceptionFor(MBB);
-        while (InnerWE != WE) {
+        while (InnerWE != SrcWE) {
           LLVM_DEBUG(dbgs()
                      << "  removed from " << InnerWE->getEHPad()->getNumber()
                      << "." << InnerWE->getEHPad()->getName()
@@ -193,13 +225,13 @@ void WebAssemblyExceptionInfo::recalculate(
           InnerWE->removeFromBlocksSet(MBB);
           InnerWE = InnerWE->getParentException();
         }
-        WE->removeFromBlocksSet(MBB);
-        LLVM_DEBUG(dbgs() << "  removed from " << WE->getEHPad()->getNumber()
-                          << "." << WE->getEHPad()->getName()
+        SrcWE->removeFromBlocksSet(MBB);
+        LLVM_DEBUG(dbgs() << "  removed from " << SrcWE->getEHPad()->getNumber()
+                          << "." << SrcWE->getEHPad()->getName()
                           << "'s exception\n");
-        changeExceptionFor(MBB, WE->getParentException());
-        if (WE->getParentException())
-          WE->getParentException()->addToBlocksSet(MBB);
+        changeExceptionFor(MBB, SrcWE->getParentException());
+        if (SrcWE->getParentException())
+          SrcWE->getParentException()->addToBlocksSet(MBB);
       }
     }
   }

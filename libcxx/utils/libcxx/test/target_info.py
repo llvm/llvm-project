@@ -25,13 +25,13 @@ class DefaultTargetInfo(object):
         return sys.platform.lower().strip()
 
     def is_windows(self):
-        return self.platform() == 'win32'
+        return False
 
     def is_mingw(self):
         return False
 
     def is_darwin(self):
-        return self.platform() == 'darwin'
+        return False
 
     def add_cxx_flags(self, flags): pass
     def add_cxx_compile_flags(self, flags): pass
@@ -52,6 +52,9 @@ class DefaultTargetInfo(object):
 class DarwinLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(DarwinLocalTI, self).__init__(full_config)
+
+    def is_darwin(self):
+        return True
 
     def is_host_macosx(self):
         name = lit.util.to_string(subprocess.check_output(['sw_vers', '-productName'])).strip()
@@ -186,6 +189,9 @@ class LinuxRemoteTI(LinuxLocalTI):
 class WindowsLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(WindowsLocalTI, self).__init__(full_config)
+
+    def is_windows(self):
+        return True
 
 class MingwLocalTI(WindowsLocalTI):
     def __init__(self, full_config):

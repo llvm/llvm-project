@@ -515,6 +515,12 @@ set(aarch64_SOURCES
 set(OA_HELPERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/outline_atomic_helpers.dir")
 file(MAKE_DIRECTORY "${OA_HELPERS_DIR}")
 
+if(CMAKE_HOST_UNIX)
+  set(COMPILER_RT_LINK_OR_COPY create_symlink)
+else()
+  set(COMPILER_RT_LINK_OR_COPY copy)
+endif()
+
 foreach(pat cas swp ldadd ldclr ldeor ldset)
   foreach(size 1 2 4 8 16)
     foreach(model 1 2 3 4)
@@ -522,7 +528,7 @@ foreach(pat cas swp ldadd ldclr ldeor ldset)
         set(helper_asm "${OA_HELPERS_DIR}/outline_atomic_${pat}${size}_${model}.S")
         add_custom_command(
           OUTPUT ${helper_asm}
-          COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/aarch64/lse.S" "${helper_asm}"
+          COMMAND ${CMAKE_COMMAND} -E ${COMPILER_RT_LINK_OR_COPY} "${CMAKE_CURRENT_SOURCE_DIR}/aarch64/lse.S" "${helper_asm}"
         )
         set_source_files_properties("${helper_asm}"
           PROPERTIES

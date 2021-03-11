@@ -7,3 +7,4 @@ current-version:  0001.001.1
 exports:
   - archs:        [ 'x86_64', 'arm64' ]
     symbols:      [ ]
+...

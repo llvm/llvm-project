@@ -38,7 +38,7 @@ static inline spirv::Opcode extractOpcode(uint32_t word) {
 
 Value spirv::Deserializer::getValue(uint32_t id) {
   if (auto constInfo = getConstant(id)) {
-    // Materialize a `spv.constant` op at every use site.
+    // Materialize a `spv.Constant` op at every use site.
     return opBuilder.create<spirv::ConstantOp>(unknownLoc, constInfo->second,
                                                constInfo->first);
   }

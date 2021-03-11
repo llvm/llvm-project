@@ -845,7 +845,7 @@ extern char *__kmp_cpuinfo_file;
 typedef enum kmp_proc_bind_t {
   proc_bind_false = 0,
   proc_bind_true,
-  proc_bind_master,
+  proc_bind_primary,
   proc_bind_close,
   proc_bind_spread,
   proc_bind_intel, // use KMP_AFFINITY interface
@@ -1458,7 +1458,8 @@ enum cons_type {
   ct_ordered_in_pdo,
   ct_master,
   ct_reduce,
-  ct_barrier
+  ct_barrier,
+  ct_masked
 };
 
 #define IS_CONS_TYPE_ORDERED(ct) ((ct) == ct_pdo_ordered)
@@ -1606,7 +1607,7 @@ struct private_common {
   struct private_common *next;
   struct private_common *link;
   void *gbl_addr;
-  void *par_addr; /* par_addr == gbl_addr for MASTER thread */
+  void *par_addr; /* par_addr == gbl_addr for PRIMARY thread */
   size_t cmn_size;
 };
 
@@ -2004,9 +2005,9 @@ union KMP_ALIGN_CACHE kmp_barrier_team_union {
     kmp_uint64 b_arrived; /* STATE => task reached synch point. */
 #if USE_DEBUGGER
     // The following two fields are indended for the debugger solely. Only
-    // master of the team accesses these fields: the first one is increased by
-    // 1 when master arrives to a barrier, the second one is increased by one
-    // when all the threads arrived.
+    // primary thread of the team accesses these fields: the first one is
+    // increased by 1 when the primary thread arrives to a barrier, the second
+    // one is increased by one when all the threads arrived.
     kmp_uint b_master_arrived;
     kmp_uint b_team_arrived;
 #endif
@@ -2536,7 +2537,7 @@ typedef struct kmp_teams_size {
 
 // This struct stores a thread that acts as a "root" for a contention
 // group. Contention groups are rooted at kmp_root threads, but also at
-// each master thread of each team created in the teams construct.
+// each primary thread of each team created in the teams construct.
 // This struct therefore also stores a thread_limit associated with
 // that contention group, and a counter to track the number of threads
 // active in that contention group. Each thread has a list of these: CG
@@ -2548,7 +2549,7 @@ typedef struct kmp_teams_size {
 typedef struct kmp_cg_root {
   kmp_info_p *cg_root; // "root" thread for a contention group
   // The CG root's limit comes from OMP_THREAD_LIMIT for root threads, or
-  // thread_limit clause for teams masters
+  // thread_limit clause for teams primary threads
   kmp_int32 cg_thread_limit;
   kmp_int32 cg_nthreads; // Count of active threads in CG rooted at cg_root
   struct kmp_cg_root *up; // pointer to higher level CG root in list
@@ -2558,8 +2559,9 @@ typedef struct kmp_cg_root {
 
 typedef struct KMP_ALIGN_CACHE kmp_base_info {
   /* Start with the readonly data which is cache aligned and padded. This is
-     written before the thread starts working by the master. Uber masters may
-     update themselves later. Usage does not consider serialized regions.  */
+     written before the thread starts working by the primary thread. Uber
+     masters may update themselves later. Usage does not consider serialized
+     regions.  */
   kmp_desc_t th_info;
   kmp_team_p *th_team; /* team we belong to */
   kmp_root_p *th_root; /* pointer to root of task hierarchy */
@@ -2570,7 +2572,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   /* The following are cached from the team info structure */
   /* TODO use these in more places as determined to be needed via profiling */
   int th_team_nproc; /* number of threads in a team */
-  kmp_info_p *th_team_master; /* the team's master thread */
+  kmp_info_p *th_team_master; /* the team's primary thread */
   int th_team_serialized; /* team is serialized */
   microtask_t th_teams_microtask; /* save entry address for teams construct */
   int th_teams_level; /* save initial level of teams construct */
@@ -2591,7 +2593,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   kmp_affin_mask_t *th_affin_mask; /* thread's current affinity mask */
 #endif
   omp_allocator_handle_t th_def_allocator; /* default allocator */
-  /* The data set by the master at reinit, then R/W by the worker */
+  /* The data set by the primary thread at reinit, then R/W by the worker */
   KMP_ALIGN_CACHE int
       th_set_nproc; /* if > 0, then only use this request for the next fork */
 #if KMP_NESTED_HOT_TEAMS
@@ -2627,7 +2629,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   ompt_thread_info_t ompt_thread_info;
 #endif
 
-  /* The following are also read by the master during reinit */
+  /* The following are also read by the primary thread during reinit */
   struct common_table *th_pri_common;
 
   volatile kmp_uint32 th_spin_here; /* thread-local location for spinning */
@@ -2727,7 +2729,7 @@ typedef int (*launch_t)(int gtid);
 
 // Set up how many argv pointers will fit in cache lines containing
 // t_inline_argv. Historically, we have supported at least 96 bytes. Using a
-// larger value for more space between the master write/worker read section and
+// larger value for more space between the primary write/worker read section and
 // read/write by all section seems to buy more performance on EPCC PARALLEL.
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
 #define KMP_INLINE_ARGV_BYTES                                                  \
@@ -2753,11 +2755,11 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   std::atomic<void *> t_tg_reduce_data[2]; // to support task modifier
   std::atomic<int> t_tg_fini_counter[2]; // sync end of task reductions
 
-  // Master only
+  // Primary thread only
   // ---------------------------------------------------------------------------
-  KMP_ALIGN_CACHE int t_master_tid; // tid of master in parent team
-  int t_master_this_cons; // "this_construct" single counter of master in parent
-  // team
+  KMP_ALIGN_CACHE int t_master_tid; // tid of primary thread in parent team
+  int t_master_this_cons; // "this_construct" single counter of primary thread
+  // in parent team
   ident_t *t_ident; // if volatile, have to change too much other crud to
   // volatile too
   kmp_team_p *t_parent; // parent team
@@ -2769,7 +2771,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   kmp_uint64 t_region_time; // region begin timestamp
 #endif /* USE_ITT_BUILD */
 
-  // Master write, workers read
+  // Primary thread write, workers read
   // --------------------------------------------------------------------------
   KMP_ALIGN_CACHE void **t_argv;
   int t_argc;
@@ -2805,7 +2807,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   kmp_r_sched_t t_sched; // run-time schedule for the team
 #if KMP_AFFINITY_SUPPORTED
   int t_first_place; // first & last place in parent thread's partition.
-  int t_last_place; // Restore these values to master after par region.
+  int t_last_place; // Restore these values to primary thread after par region.
 #endif // KMP_AFFINITY_SUPPORTED
   int t_display_affinity;
   int t_size_changed; // team size was changed?: 0: no, 1: yes, -1: changed via
@@ -3742,6 +3744,9 @@ KMP_EXPORT void __kmpc_flush(ident_t *);
 KMP_EXPORT void __kmpc_barrier(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT kmp_int32 __kmpc_master(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_end_master(ident_t *, kmp_int32 global_tid);
+KMP_EXPORT kmp_int32 __kmpc_masked(ident_t *, kmp_int32 global_tid,
+                                   kmp_int32 filter);
+KMP_EXPORT void __kmpc_end_masked(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_ordered(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_end_ordered(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_critical(ident_t *, kmp_int32 global_tid,

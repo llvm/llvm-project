@@ -6,10 +6,8 @@ define void @f_0(i32 *%arr, i32 *%a_len_ptr, i32 %n, i1* %cond_buf) {
 
 ; CHECK: loop.preheader:
 ; CHECK: [[len_sub:[^ ]+]] = add nsw i32 %len, -4
-; CHECK: [[exit_main_loop_at_hiclamp_cmp:[^ ]+]] = icmp slt i32 %n, [[len_sub]]
-; CHECK: [[exit_main_loop_at_hiclamp:[^ ]+]] = select i1 [[exit_main_loop_at_hiclamp_cmp]], i32 %n, i32 [[len_sub]]
-; CHECK: [[exit_main_loop_at_loclamp_cmp:[^ ]+]] = icmp sgt i32 [[exit_main_loop_at_hiclamp]], 0
-; CHECK: [[exit_main_loop_at_loclamp:[^ ]+]] = select i1 [[exit_main_loop_at_loclamp_cmp]], i32 [[exit_main_loop_at_hiclamp]], i32 0
+; CHECK: [[exit_main_loop_at_hiclamp:[^ ]+]] = call i32 @llvm.smin.i32(i32 %n, i32 [[len_sub]])
+; CHECK: [[exit_main_loop_at_loclamp:[^ ]+]] = call i32 @llvm.smax.i32(i32 [[exit_main_loop_at_hiclamp]], i32 0)
 ; CHECK: [[enter_main_loop:[^ ]+]] = icmp slt i32 0, [[exit_main_loop_at_loclamp]]
 ; CHECK: br i1 [[enter_main_loop]], label %[[loop_preheader2:[^ ,]+]], label %main.pseudo.exit
 
@@ -56,12 +54,9 @@ define void @f_1(
 ; CHECK-LABEL: @f_1(
 
 ; CHECK: loop.preheader:
-; CHECK: [[smax_len_cond:[^ ]+]] = icmp slt i32 %len.b, %len.a
-; CHECK: [[smax_len:[^ ]+]] = select i1 [[smax_len_cond]], i32 %len.b, i32 %len.a
-; CHECK: [[upper_limit_cond_loclamp:[^ ]+]] = icmp slt i32 [[smax_len]], %n 
-; CHECK: [[upper_limit_loclamp:[^ ]+]] = select i1 [[upper_limit_cond_loclamp]], i32 [[smax_len]], i32 %n
-; CHECK: [[upper_limit_cmp:[^ ]+]] = icmp sgt i32 [[upper_limit_loclamp]], 0
-; CHECK: [[upper_limit:[^ ]+]] = select i1 [[upper_limit_cmp]], i32 [[upper_limit_loclamp]], i32 0
+; CHECK: [[smax_len:[^ ]+]] = call i32 @llvm.smin.i32(i32 %len.b, i32 %len.a)
+; CHECK: [[upper_limit_loclamp:[^ ]+]] = call i32 @llvm.smin.i32(i32 [[smax_len]], i32 %n)
+; CHECK: [[upper_limit:[^ ]+]] = call i32 @llvm.smax.i32(i32 [[upper_limit_loclamp]], i32 0)
 
  entry:
   %len.a = load i32, i32* %a_len_ptr, !range !0

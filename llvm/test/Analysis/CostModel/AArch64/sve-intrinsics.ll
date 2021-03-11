@@ -133,6 +133,11 @@ define void @vector_reverse() #0 {
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv4f64 = call <vscale x 4 x double> @llvm.experimental.vector.reverse.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv8bf16 = call <vscale x 8 x bfloat> @llvm.experimental.vector.reverse.nxv8bf16(<vscale x 8 x bfloat> undef)
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv16bf16 = call <vscale x 16 x bfloat> @llvm.experimental.vector.reverse.nxv16bf16(<vscale x 16 x bfloat> undef)
+; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %reverse_nxv16i1 = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> undef)
+; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %reverse_nxv8i1 = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> undef)
+; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %reverse_nxv4i1 = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> undef)
+; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %reverse_nxv2i1 = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> undef)
+
   %reverse_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vector.reverse.nxv16i8(<vscale x 16 x i8> undef)
   %reverse_nxv32i8 = call <vscale x 32 x i8> @llvm.experimental.vector.reverse.nxv32i8(<vscale x 32 x i8> undef)
   %reverse_nxv8i16 = call <vscale x 8 x i16> @llvm.experimental.vector.reverse.nxv8i16(<vscale x 8 x i16> undef)
@@ -149,6 +154,10 @@ define void @vector_reverse() #0 {
   %reverse_nxv4f64 = call <vscale x 4 x double> @llvm.experimental.vector.reverse.nxv4f64(<vscale x 4 x double> undef)
   %reverse_nxv8bf16 = call <vscale x 8 x bfloat> @llvm.experimental.vector.reverse.nxv8bf16(<vscale x 8 x bfloat> undef)
   %reverse_nxv16bf16 = call <vscale x 16 x bfloat> @llvm.experimental.vector.reverse.nxv16bf16(<vscale x 16 x bfloat> undef)
+  %reverse_nxv16i1 = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> undef)
+  %reverse_nxv8i1 =  call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> undef)
+  %reverse_nxv4i1 = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> undef)
+  %reverse_nxv2i1 = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> undef)
   ret void
 }
 declare <vscale x 16 x i8> @llvm.experimental.vector.reverse.nxv16i8(<vscale x 16 x i8>)
@@ -167,5 +176,9 @@ declare <vscale x 2 x double> @llvm.experimental.vector.reverse.nxv2f64(<vscale 
 declare <vscale x 4 x double> @llvm.experimental.vector.reverse.nxv4f64(<vscale x 4 x double>)
 declare <vscale x 8 x bfloat> @llvm.experimental.vector.reverse.nxv8bf16(<vscale x 8 x bfloat>)
 declare <vscale x 16 x bfloat> @llvm.experimental.vector.reverse.nxv16bf16(<vscale x 16 x bfloat>)
+declare <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1>)
+declare <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1>)
+declare <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1>)
+declare <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1>)
 
 attributes #0 = { "target-features"="+sve,+bf16" }

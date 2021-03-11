@@ -445,6 +445,17 @@ def verbose: F<"verbose">, HelpText<"Verbose mode">;
 
 def version: F<"version">, HelpText<"Display the version number and exit">;
 
+def power10_stubs: F<"power10-stubs">, HelpText<"Alias for --power10-stubs=auto">;
+
+def no_power10_stubs: F<"no-power10-stubs">, HelpText<"Alias for --power10-stubs=no">;
+
+def power10_stubs_eq:
+  J<"power10-stubs=">, HelpText<
+                     "Enables Power10 instructions in all stubs without options, "
+                     "options override previous flags."
+                     "auto: Allow Power10 instructions in stubs if applicable."
+                     "no:   No Power10 instructions in stubs.">;
+
 defm version_script: Eq<"version-script", "Read a version script">;
 
 defm warn_backrefs: BB<"warn-backrefs",

@@ -393,6 +393,10 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
       CheckFactories->createChecks(&Context);
 
+  llvm::erase_if(Checks, [&](std::unique_ptr<ClangTidyCheck> &Check) {
+    return !Check->isLanguageVersionSupported(Context.getLangOpts());
+  });
+
   ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
 
   std::unique_ptr<ClangTidyProfiling> Profiling;
@@ -416,8 +420,6 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   }
 
   for (auto &Check : Checks) {
-    if (!Check->isLanguageVersionSupported(Context.getLangOpts()))
-      continue;
     Check->registerMatchers(&*Finder);
     Check->registerPPCallbacks(*SM, PP, ModuleExpanderPP);
   }

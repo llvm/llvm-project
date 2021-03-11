@@ -58,6 +58,19 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const VPValue &V) {
   return OS;
 }
 
+Value *VPLane::getAsRuntimeExpr(IRBuilder<> &Builder,
+                                const ElementCount &VF) const {
+  switch (LaneKind) {
+  case VPLane::Kind::ScalableLast:
+    // Lane = RuntimeVF - VF.getKnownMinValue() + Lane
+    return Builder.CreateSub(getRuntimeVF(Builder, Builder.getInt32Ty(), VF),
+                             Builder.getInt32(VF.getKnownMinValue() - Lane));
+  case VPLane::Kind::First:
+    return Builder.getInt32(Lane);
+  }
+  llvm_unreachable("Unknown lane kind");
+}
+
 VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
     : SubclassID(SC), UnderlyingVal(UV), Def(Def) {
   if (Def)
@@ -244,18 +257,20 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
   if (!Def->getDef())
     return Def->getLiveInIRValue();
 
-  if (hasScalarValue(Def, Instance))
-    return Data.PerPartScalars[Def][Instance.Part][Instance.Lane];
+  if (hasScalarValue(Def, Instance)) {
+    return Data
+        .PerPartScalars[Def][Instance.Part][Instance.Lane.mapToCacheIndex(VF)];
+  }
 
   assert(hasVectorValue(Def, Instance.Part));
   auto *VecPart = Data.PerPartOutput[Def][Instance.Part];
   if (!VecPart->getType()->isVectorTy()) {
-    assert(Instance.Lane == 0 && "cannot get lane > 0 for scalar");
+    assert(Instance.Lane.isFirstLane() && "cannot get lane > 0 for scalar");
     return VecPart;
   }
   // TODO: Cache created scalar values.
-  auto *Extract =
-      Builder.CreateExtractElement(VecPart, Builder.getInt32(Instance.Lane));
+  Value *Lane = Instance.Lane.getAsRuntimeExpr(Builder, VF);
+  auto *Extract = Builder.CreateExtractElement(VecPart, Lane);
   // set(Def, Extract, Instance);
   return Extract;
 }
@@ -427,7 +442,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
     assert(!State->VF.isScalable() && "VF is assumed to be non scalable.");
     for (unsigned Lane = 0, VF = State->VF.getKnownMinValue(); Lane < VF;
          ++Lane) {
-      State->Instance->Lane = Lane;
+      State->Instance->Lane = VPLane(Lane, VPLane::Kind::First);
       // Visit the VPBlocks connected to \p this, starting from it.
       for (VPBlockBase *Block : RPOT) {
         LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');

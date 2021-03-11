@@ -70,16 +70,16 @@
 // CHECK-NEXT:   Sym:  (1)
 // CHECK-NEXT: ]
 
-// ASM: .addrsig
+// ASM:      .addrsig
+// ASM-NEXT: .addrsig_sym g1
 .addrsig
-// ASM: .addrsig_sym g1
 .addrsig_sym g1
 .globl g2
-// ASM: .addrsig_sym g3
+// ASM:      .addrsig_sym g3
+// ASM-NEXT: .addrsig_sym local
+// ASM-NEXT: .addrsig_sym .Llocal
 .addrsig_sym g3
-// ASM: .addrsig_sym local
 .addrsig_sym local
-// ASM: .addrsig_sym .Llocal
 .addrsig_sym .Llocal
 
 local:

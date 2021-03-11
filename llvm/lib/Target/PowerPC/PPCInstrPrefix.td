@@ -1691,6 +1691,10 @@ let Predicates = [PairedVectorMemops] in {
 // be removed.
 let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
   // Load i32
+  def : Pat<(i32 (zextloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZpc $ga, 0)>;
+  def : Pat<(i32 (extloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZpc $ga, 0)>;
   def : Pat<(i32 (zextloadi8  (PPCmatpcreladdr pcreladdr:$ga))),
             (PLBZpc $ga, 0)>;
   def : Pat<(i32 (extloadi8   (PPCmatpcreladdr pcreladdr:$ga))),
@@ -1712,6 +1716,10 @@ let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
             (PSTWpc $RS, $ga, 0)>;
 
   // Load i64
+  def : Pat<(i64 (zextloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZ8pc $ga, 0)>;
+  def : Pat<(i64 (extloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZ8pc $ga, 0)>;
   def : Pat<(i64 (zextloadi8  (PPCmatpcreladdr pcreladdr:$ga))),
             (PLBZ8pc $ga, 0)>;
   def : Pat<(i64 (extloadi8   (PPCmatpcreladdr pcreladdr:$ga))),
@@ -2563,6 +2571,11 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, IsLittleEndian] in {
             (STXVRDX $src, xoaddr:$dst)>;
   def : Pat<(store (f64 (extractelt v2f64:$src, 0)), xoaddr:$dst),
             (STXVRDX $src, xoaddr:$dst)>;
+  // Load element 0 of a VSX register to memory
+  def : Pat<(v8i16 (scalar_to_vector (i32 (extloadi16 xoaddr:$src)))),
+            (v8i16 (COPY_TO_REGCLASS (LXVRHX xoaddr:$src), VSRC))>;
+  def : Pat<(v16i8 (scalar_to_vector (i32 (extloadi8 xoaddr:$src)))),
+            (v16i8 (COPY_TO_REGCLASS (LXVRBX xoaddr:$src), VSRC))>;
  }
 
 // FIXME: The swap is overkill when the shift amount is a constant.

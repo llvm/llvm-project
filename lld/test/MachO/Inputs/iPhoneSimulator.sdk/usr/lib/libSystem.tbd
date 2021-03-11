@@ -6,7 +6,7 @@ install-name:     '/usr/lib/libSystem.dylib'
 current-version:  1281
 exports:
   - archs:      [ i386, x86_64 ]
-    re-exports: [ '/usr/lib/system/libcache.dylib', ]
+    re-exports: [ '/usr/lib/system/libcache.dylib' ]
     symbols:    [ __crashreporter_info__, _cache_create ]
 --- !tapi-tbd-v3
 archs:            [ i386, x86_64 ]

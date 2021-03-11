@@ -649,13 +649,14 @@ for.end:
 define i32 @sink_into_replication_region(i32 %y) {
 ; CHECK-LABEL: @sink_into_replication_region(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i32 [[Y]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN]]
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[TMP1]], 3
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
-; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add nsw i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -741,13 +742,14 @@ bb:
 define i32 @sink_into_replication_region_multiple(i32 *%x, i32 %y) {
 ; CHECK-LABEL: @sink_into_replication_region_multiple(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i32 [[Y]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN]]
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[TMP1]], 3
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
-; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add nsw i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

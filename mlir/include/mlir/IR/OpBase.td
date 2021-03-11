@@ -2639,6 +2639,14 @@ class AttrDef<Dialect dialect, string name,
   // The name of the C++ Attribute class.
   string cppClassName = name # "Attr";
 
+  // A code block used to build the value 'Type' of an Attribute when
+  // initializing its storage instance. This field is optional, and if not
+  // present the attribute will have its value type set to `NoneType`. This code
+  // block may reference any of the attributes parameters via
+  // `$_<parameter-name`. If one of the parameters of the attribute is of type
+  // `AttributeSelfTypeParameter`, this field is ignored.
+  code typeBuilder = ?;
+
   // The predicate for when this def is used as a constraint.
   let predicate = CPred<"$_self.isa<" # dialect.cppNamespace #
                                  "::" # cppClassName # ">()">;
@@ -2676,13 +2684,13 @@ class AttrParameter<string type, string desc> : AttrOrTypeParameter<type, desc>;
 class TypeParameter<string type, string desc> : AttrOrTypeParameter<type, desc>;
 
 // For StringRefs, which require allocation.
-class StringRefParameter<string desc> :
+class StringRefParameter<string desc = ""> :
     AttrOrTypeParameter<"::llvm::StringRef", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
 }
 
 // For standard ArrayRefs, which require allocation.
-class ArrayRefParameter<string arrayOf, string desc> :
+class ArrayRefParameter<string arrayOf, string desc = ""> :
     AttrOrTypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
 }
@@ -2703,5 +2711,11 @@ class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
     $_dst = $_allocator.copyInto(ArrayRef<}] # arrayOf # [{>(tmpFields));
   }];
 }
+
+// This is a special parameter used for AttrDefs that represents a `mlir::Type`
+// that is also used as the value `Type` of the attribute. Only one parameter
+// of the attribute may be of this type.
+class AttributeSelfTypeParameter<string desc> :
+    AttrOrTypeParameter<"::mlir::Type", desc> {}
 
 #endif // OP_BASE

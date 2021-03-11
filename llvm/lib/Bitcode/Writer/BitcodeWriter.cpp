@@ -335,6 +335,8 @@ private:
                     unsigned Abbrev);
   void writeDIMacroFile(const DIMacroFile *N, SmallVectorImpl<uint64_t> &Record,
                         unsigned Abbrev);
+  void writeDIArgList(const DIArgList *N, SmallVectorImpl<uint64_t> &Record,
+                      unsigned Abbrev);
   void writeDIModule(const DIModule *N, SmallVectorImpl<uint64_t> &Record,
                      unsigned Abbrev);
   void writeDITemplateTypeParameter(const DITemplateTypeParameter *N,
@@ -1864,6 +1866,17 @@ void ModuleBitcodeWriter::writeDIMacroFile(const DIMacroFile *N,
   Record.push_back(VE.getMetadataOrNullID(N->getElements().get()));
 
   Stream.EmitRecord(bitc::METADATA_MACRO_FILE, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDIArgList(const DIArgList *N,
+                                         SmallVectorImpl<uint64_t> &Record,
+                                         unsigned Abbrev) {
+  Record.reserve(N->getArgs().size());
+  for (ValueAsMetadata *MD : N->getArgs())
+    Record.push_back(VE.getMetadataOrNullID(MD));
+
+  Stream.EmitRecord(bitc::METADATA_ARG_LIST, Record, Abbrev);
   Record.clear();
 }
 

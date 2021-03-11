@@ -55,7 +55,7 @@ entry:
 }
 
 
-define swiftcc void @my_async_function(i8* %async.ctxt, %async.task* %task, %async.actor* %actor)  {
+define swiftcc void @my_async_function(i8* %async.ctxt, %async.task* %task, %async.actor* %actor) !dbg !1 {
 entry:
   %tmp = alloca { i64, i64 }, align 8
   %proj.1 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %tmp, i64 0, i32 0
@@ -93,7 +93,7 @@ entry:
                                                   i8* %resume.func_ptr,
                                                   i8* %resume_proj_fun,
                                                   void (i8*, i8*, %async.task*, %async.actor*)* @my_async_function.my_other_async_function_fp.apply,
-                                                  i8* %callee, i8* %callee_context, %async.task* %task, %async.actor *%actor)
+                                                  i8* %callee, i8* %callee_context, %async.task* %task, %async.actor *%actor), !dbg !5
 
   call void @llvm.coro.async.context.dealloc(i8* %callee_context)
   %continuation_task_arg = extractvalue {i8*, i8*, i8*} %res, 1
@@ -119,7 +119,8 @@ define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %
 ; CHECK: @my_async_function_pa_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
 ; CHECK: @my_async_function2_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
 
-; CHECK-LABEL: define swiftcc void @my_async_function(i8* %async.ctxt, %async.task* %task, %async.actor* %actor) {
+; CHECK-LABEL: define swiftcc void @my_async_function(i8* %async.ctxt, %async.task* %task, %async.actor* %actor)
+; CHECK-SAME: !dbg ![[SP1:[0-9]+]] {
 ; CHECK: entry:
 ; CHECK:   [[FRAMEPTR:%.*]] = getelementptr inbounds i8, i8* %async.ctxt, i64 128
 ; CHECK:   [[ACTOR_SPILL_ADDR:%.*]] = getelementptr inbounds i8, i8* %async.ctxt, i64 152
@@ -148,7 +149,8 @@ define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function.resume.0(i8* nocapture readonly %0, i8* %1, i8* nocapture readnone %2) {
+; CHECK-LABEL: define internal swiftcc void @my_async_function.resume.0(i8* nocapture readonly %0, i8* %1, i8* nocapture readnone %2)
+; CHECK-SAME: !dbg ![[SP2:[0-9]+]] {
 ; CHECK: entryresume.0:
 ; CHECK:   [[CALLER_CONTEXT_ADDR:%.*]] = bitcast i8* %0 to i8**
 ; CHECK:   [[CALLER_CONTEXT:%.*]] = load i8*, i8** [[CALLER_CONTEXT_ADDR]]
@@ -185,7 +187,7 @@ define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %
      i32 128    ; Initial async context size without space for frame
   }>
 
-define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt)  {
+define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt) "frame-pointer"="all" {
 entry:
 
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 2, i8* bitcast (<{i32, i32}>* @my_async_function2_fp to i8*))
@@ -237,7 +239,8 @@ entry:
   unreachable
 }
 
-; CHECK-LABEL: define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt) {
+; CHECK-LABEL: define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt)
+; CHECK-SAME: #[[FRAMEPOINTER:[0-9]+]]
 ; CHECK: store i8* %async.ctxt,
 ; CHECK: store %async.actor* %actor,
 ; CHECK: store %async.task* %task,
@@ -248,7 +251,8 @@ entry:
 ; CHECK: tail call swiftcc void @asyncSuspend(i8* [[CALLEE_CTXT]], %async.task* %task, %async.actor* %actor)
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(i8* %0, i8* nocapture readnone %1, i8* nocapture readonly %2) {
+; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(i8* %0, i8* nocapture readnone %1, i8* nocapture readonly %2)
+; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK: [[CALLEE_CTXT_ADDR:%.*]] = bitcast i8* %2 to i8**
 ; CHECK: [[CALLEE_CTXT:%.*]] = load i8*, i8** [[CALLEE_CTXT_ADDR]]
 ; CHECK: [[CALLEE_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds i8, i8* [[CALLEE_CTXT]], i64 152
@@ -258,7 +262,8 @@ entry:
 ; CHECK: tail call swiftcc void @asyncSuspend(i8* [[CALLEE_CTXT_RELOAD]]
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(i8* nocapture readonly %0, i8* %1, i8* nocapture readnone %2) {
+; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(i8* nocapture readonly %0, i8* %1, i8* nocapture readnone %2)
+; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK: bitcast i8* %0 to i8**
 ; CHECK: [[ACTOR_ARG:%.*]] = bitcast i8* %1
 ; CHECK: tail call swiftcc void @asyncReturn({{.*}}[[ACTOR_ARG]])
@@ -529,3 +534,23 @@ declare swiftcc void @asyncReturn(i8*, %async.task*, %async.actor*)
 declare swiftcc void @asyncSuspend(i8*, %async.task*, %async.actor*)
 declare i8* @llvm.coro.async.resume()
 declare void @llvm.coro.async.size.replace(i8*, i8*)
+
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+; CHECK: ![[SP1]] = distinct !DISubprogram(name: "my_async_function",
+; CHECK-SAME:                              linkageName: "my_async_function",
+; CHECK-SAME:                              scopeLine: 1
+!1 = distinct !DISubprogram(name: "my_async_function",
+                            linkageName: "my_async_function",
+                            scope: !2, file: !3, line: 1, type: !4,
+                            scopeLine: 1, spFlags: DISPFlagDefinition, unit: !2)
+; CHECK: ![[SP2]] = distinct !DISubprogram(name: "my_async_function",
+; CHECK-SAME:                              linkageName: "my_async_function",
+; CHECK-SAME:                              scopeLine: 2
+!2 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !3, emissionKind: FullDebug)
+!3 = !DIFile(filename: "/tmp/1.swift", directory: "/")
+!4 = !DISubroutineType(types: !{})
+!5 = !DILocation(line: 2, column: 0, scope: !1)
+

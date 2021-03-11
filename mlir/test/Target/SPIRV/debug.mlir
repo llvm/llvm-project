@@ -2,7 +2,7 @@
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // CHECK: loc({{".*debug.mlir"}}:5:3)
-  spv.globalVariable @var0 bind(0, 1) : !spv.ptr<f32, Input>
+  spv.GlobalVariable @var0 bind(0, 1) : !spv.ptr<f32, Input>
   spv.func @arithmetic(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
     // CHECK: loc({{".*debug.mlir"}}:8:10)
     %0 = spv.FAdd %arg0, %arg1 : vector<4xf32>
@@ -44,7 +44,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   }
 
   spv.func @local_var() "None" {
-    %zero = spv.constant 0: i32
+    %zero = spv.Constant 0: i32
     // CHECK: loc({{".*debug.mlir"}}:49:12)
     %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
     spv.Return
@@ -68,11 +68,11 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   }
 
   spv.func @loop(%count : i32) -> () "None" {
-    %zero = spv.constant 0: i32
-    %one = spv.constant 1: i32
+    %zero = spv.Constant 0: i32
+    %one = spv.Constant 1: i32
     %ivar = spv.Variable init(%zero) : !spv.ptr<i32, Function>
     %jvar = spv.Variable init(%zero) : !spv.ptr<i32, Function>
-    spv.loop {
+    spv.mlir.loop {
       // CHECK: loc({{".*debug.mlir"}}:75:5)
       spv.Branch ^header
     ^header:
@@ -82,7 +82,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       spv.BranchConditional %icmp, ^body, ^merge
     ^body:
       spv.Store "Function" %jvar, %zero : i32
-      spv.loop {
+      spv.mlir.loop {
         // CHECK: loc({{".*debug.mlir"}}:85:7)
         spv.Branch ^header
       ^header:
@@ -121,11 +121,11 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   }
 
   spv.func @selection(%cond: i1) -> () "None" {
-    %zero = spv.constant 0: i32
-    %one = spv.constant 1: i32
-    %two = spv.constant 2: i32
+    %zero = spv.Constant 0: i32
+    %one = spv.Constant 1: i32
+    %two = spv.Constant 2: i32
     %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
-    spv.selection {
+    spv.mlir.selection {
       // CHECK: loc({{".*debug.mlir"}}:128:5)
       spv.BranchConditional %cond [5, 10], ^then, ^else
     ^then:

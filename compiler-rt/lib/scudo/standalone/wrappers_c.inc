@@ -260,4 +260,12 @@ SCUDO_PREFIX(malloc_set_pattern_fill_contents)(int pattern_fill_contents) {
       pattern_fill_contents ? scudo::PatternOrZeroFill : scudo::NoFill);
 }
 
+// Sets whether scudo adds a small amount of slack at the end of large
+// allocations, before the guard page. This can be enabled to work around buggy
+// applications that read a few bytes past the end of their allocation.
+INTERFACE WEAK void
+SCUDO_PREFIX(malloc_set_add_large_allocation_slack)(int add_slack) {
+  SCUDO_ALLOCATOR.setAddLargeAllocationSlack(add_slack);
+}
+
 } // extern "C"

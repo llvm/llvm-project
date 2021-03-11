@@ -218,7 +218,11 @@ static cl::opt<std::string> ProfileInlineReplayFile(
         "by inlining from sample profile loader."),
     cl::Hidden);
 
-extern cl::opt<unsigned> MaxNumPromotions;
+static cl::opt<unsigned>
+    MaxNumPromotions("sample-profile-icp-max-prom", cl::init(3), cl::Hidden,
+                     cl::ZeroOrMore,
+                     cl::desc("Max number of promotions for a single indirect "
+                              "call callsite in sample profile loader"));
 
 namespace {
 
@@ -364,8 +368,7 @@ protected:
   // Attempt to promote indirect call and also inline the promoted call
   bool tryPromoteAndInlineCandidate(
       Function &F, InlineCandidate &Candidate, uint64_t SumOrigin,
-      uint64_t &Sum, DenseSet<Instruction *> &PromotedInsns,
-      SmallVector<CallBase *, 8> *InlinedCallSites = nullptr);
+      uint64_t &Sum, SmallVector<CallBase *, 8> *InlinedCallSites = nullptr);
   bool inlineHotFunctions(Function &F,
                           DenseSet<GlobalValue::GUID> &InlinedGUIDs);
   InlineCost shouldInlineCandidate(InlineCandidate &Candidate);
@@ -517,10 +520,12 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   if (isa<BranchInst>(Inst) || isa<IntrinsicInst>(Inst) || isa<PHINode>(Inst))
     return std::error_code();
 
-  // If a direct call/invoke instruction is inlined in profile
-  // (findCalleeFunctionSamples returns non-empty result), but not inlined here,
-  // it means that the inlined callsite has no sample, thus the call
-  // instruction should have 0 count.
+  // For non-CS profile, if a direct call/invoke instruction is inlined in
+  // profile (findCalleeFunctionSamples returns non-empty result), but not
+  // inlined here, it means that the inlined callsite has no sample, thus the
+  // call instruction should have 0 count.
+  // For CS profile, the callsite count of previously inlined callees is
+  // populated with the entry count of the callees.
   if (!ProfileIsCS)
     if (const auto *CB = dyn_cast<CallBase>(&Inst))
       if (!CB->isIndirectCall() && findCalleeFunctionSamples(*CB))
@@ -545,13 +550,16 @@ ErrorOr<uint64_t> SampleProfileLoader::getProbeWeight(const Instruction &Inst) {
   if (!FS)
     return std::error_code();
 
-  // If a direct call/invoke instruction is inlined in profile
-  // (findCalleeFunctionSamples returns non-empty result), but not inlined here,
-  // it means that the inlined callsite has no sample, thus the call
-  // instruction should have 0 count.
-  if (const auto *CB = dyn_cast<CallBase>(&Inst))
-    if (!CB->isIndirectCall() && findCalleeFunctionSamples(*CB))
-      return 0;
+  // For non-CS profile, If a direct call/invoke instruction is inlined in
+  // profile (findCalleeFunctionSamples returns non-empty result), but not
+  // inlined here, it means that the inlined callsite has no sample, thus the
+  // call instruction should have 0 count.
+  // For CS profile, the callsite count of previously inlined callees is
+  // populated with the entry count of the callees.
+  if (!ProfileIsCS)
+    if (const auto *CB = dyn_cast<CallBase>(&Inst))
+      if (!CB->isIndirectCall() && findCalleeFunctionSamples(*CB))
+        return 0;
 
   const ErrorOr<uint64_t> &R = FS->findSamplesAt(Probe->Id, 0);
   if (R) {
@@ -600,7 +608,7 @@ SampleProfileLoader::findCalleeFunctionSamples(const CallBase &Inst) const {
 
   StringRef CalleeName;
   if (Function *Callee = Inst.getCalledFunction())
-    CalleeName = FunctionSamples::getCanonicalFnName(*Callee);
+    CalleeName = Callee->getName();
 
   if (ProfileIsCS)
     return ContextTracker->getCalleeContextSamplesFor(Inst, CalleeName);
@@ -696,9 +704,14 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   return it.first->second;
 }
 
-/// If the profile count for the promotion candidate \p Candidate is 0,
-/// it means \p Candidate has already been promoted for \p Inst.
-static bool isPromotedBefore(const Instruction &Inst, StringRef Candidate) {
+/// Check whether the indirect call promotion history of \p Inst allows
+/// the promotion for \p Candidate.
+/// If the profile count for the promotion candidate \p Candidate is
+/// NOMORE_ICP_MAGICNUM, it means \p Candidate has already been promoted
+/// for \p Inst. If we already have at least MaxNumPromotions
+/// NOMORE_ICP_MAGICNUM count values in the value profile of \p Inst, we
+/// cannot promote for \p Inst anymore.
+static bool doesHistoryAllowICP(const Instruction &Inst, StringRef Candidate) {
   uint32_t NumVals = 0;
   uint64_t TotalCount = 0;
   std::unique_ptr<InstrProfValueData[]> ValueData =
@@ -706,33 +719,55 @@ static bool isPromotedBefore(const Instruction &Inst, StringRef Candidate) {
   bool Valid =
       getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
                                ValueData.get(), NumVals, TotalCount, true);
-  if (Valid) {
-    for (uint32_t I = 0; I < NumVals; I++) {
-      // If the promotion candidate has 0 count in the metadata, it
-      // means the candidate has been promoted for this indirect call.
-      if (ValueData[I].Value == Function::getGUID(Candidate))
-        return ValueData[I].Count == 0;
-    }
+  // No valid value profile so no promoted targets have been recorded
+  // before. Ok to do ICP.
+  if (!Valid)
+    return true;
+
+  unsigned NumPromoted = 0;
+  for (uint32_t I = 0; I < NumVals; I++) {
+    if (ValueData[I].Count != NOMORE_ICP_MAGICNUM)
+      continue;
+
+    // If the promotion candidate has NOMORE_ICP_MAGICNUM count in the
+    // metadata, it means the candidate has been promoted for this
+    // indirect call.
+    if (ValueData[I].Value == Function::getGUID(Candidate))
+      return false;
+    NumPromoted++;
+    // If already have MaxNumPromotions promotion, don't do it anymore.
+    if (NumPromoted == MaxNumPromotions)
+      return false;
   }
-  return false;
+  return true;
 }
 
-/// Update indirect call target profile metadata for \p Inst. If \p Total
-/// is given, set TotalCount of call targets counts to \p Total, otherwise
-/// keep the original value in metadata.
+/// Update indirect call target profile metadata for \p Inst.
+/// Usually \p Sum is the sum of counts of all the targets for \p Inst.
+/// If it is 0, it means updateIDTMetaData is used to mark a
+/// certain target to be promoted already. If it is not zero,
+/// we expect to use it to update the total count in the value profile.
 static void
 updateIDTMetaData(Instruction &Inst,
                   const SmallVectorImpl<InstrProfValueData> &CallTargets,
-                  uint64_t Total = 0) {
-  DenseMap<uint64_t, uint64_t> ValueCountMap;
+                  uint64_t Sum) {
+  assert((Sum != 0 || (CallTargets.size() == 1 &&
+                       CallTargets[0].Count == NOMORE_ICP_MAGICNUM)) &&
+         "If sum is 0, assume only one element in CallTargets with count "
+         "being NOMORE_ICP_MAGICNUM");
 
   uint32_t NumVals = 0;
-  uint64_t TotalCount = 0;
+  // OldSum is the existing total count in the value profile data.
+  // It will be replaced by Sum if Sum is not 0.
+  uint64_t OldSum = 0;
   std::unique_ptr<InstrProfValueData[]> ValueData =
       std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
   bool Valid =
       getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
-                               ValueData.get(), NumVals, TotalCount, true);
+                               ValueData.get(), NumVals, OldSum, true);
+
+  DenseMap<uint64_t, uint64_t> ValueCountMap;
+  // Initialize ValueCountMap with existing value profile data.
   if (Valid) {
     for (uint32_t I = 0; I < NumVals; I++)
       ValueCountMap[ValueData[I].Value] = ValueData[I].Count;
@@ -742,13 +777,24 @@ updateIDTMetaData(Instruction &Inst,
     auto Pair = ValueCountMap.try_emplace(Data.Value, Data.Count);
     if (Pair.second)
       continue;
-    // Update existing profile count of the call target if it is not 0.
-    // If it is 0, the call target has been promoted so keep it as 0.
-    if (Pair.first->second != 0)
+    // Whenever the count is NOMORE_ICP_MAGICNUM for a value, keep it
+    // in the ValueCountMap. If both the count in CallTargets and the
+    // count in ValueCountMap is not NOMORE_ICP_MAGICNUM, keep the
+    // count in CallTargets.
+    if (Pair.first->second != NOMORE_ICP_MAGICNUM &&
+        Data.Count == NOMORE_ICP_MAGICNUM) {
+      OldSum -= Pair.first->second;
+      Pair.first->second = NOMORE_ICP_MAGICNUM;
+    } else if (Pair.first->second == NOMORE_ICP_MAGICNUM &&
+               Data.Count != NOMORE_ICP_MAGICNUM) {
+      assert(Sum >= Data.Count && "Sum should never be less than Data.Count");
+      Sum -= Data.Count;
+    } else if (Pair.first->second != NOMORE_ICP_MAGICNUM &&
+               Data.Count != NOMORE_ICP_MAGICNUM) {
+      // Sum will be used in this case. Although the existing count
+      // for the current value in value profile will be overriden,
+      // no need to update OldSum.
       Pair.first->second = Data.Count;
-    else {
-      assert(Total >= Data.Count && "Total should be >= Data.Count");
-      Total -= Data.Count;
     }
   }
 
@@ -757,15 +803,19 @@ updateIDTMetaData(Instruction &Inst,
     NewCallTargets.emplace_back(
         InstrProfValueData{ValueCount.first, ValueCount.second});
   }
+
   llvm::sort(NewCallTargets,
              [](const InstrProfValueData &L, const InstrProfValueData &R) {
                if (L.Count != R.Count)
                  return L.Count > R.Count;
                return L.Value > R.Value;
              });
+
+  uint32_t MaxMDCount =
+      std::min(NewCallTargets.size(), static_cast<size_t>(MaxNumPromotions));
   annotateValueSite(*Inst.getParent()->getParent()->getParent(), Inst,
-                    NewCallTargets, Total ? Total : TotalCount,
-                    IPVK_IndirectCallTarget, NewCallTargets.size());
+                    NewCallTargets, Sum ? Sum : OldSum, IPVK_IndirectCallTarget,
+                    MaxMDCount);
 }
 
 /// Attempt to promote indirect call and also inline the promoted call.
@@ -773,12 +823,10 @@ updateIDTMetaData(Instruction &Inst,
 /// \param F  Caller function.
 /// \param Candidate  ICP and inline candidate.
 /// \param Sum  Sum of target counts for indirect call.
-/// \param PromotedInsns  Map to keep track of indirect call already processed.
 /// \param InlinedCallSite  Output vector for new call sites exposed after
 /// inlining.
 bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     Function &F, InlineCandidate &Candidate, uint64_t SumOrigin, uint64_t &Sum,
-    DenseSet<Instruction *> &PromotedInsns,
     SmallVector<CallBase *, 8> *InlinedCallSite) {
   auto CalleeFunctionName = Candidate.CalleeSamples->getFuncName();
   auto R = SymbolMap.find(CalleeFunctionName);
@@ -786,7 +834,7 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     return false;
 
   auto &CI = *Candidate.CallInstr;
-  if (isPromotedBefore(CI, R->getValue()->getName()))
+  if (!doesHistoryAllowICP(CI, R->getValue()->getName()))
     return false;
 
   const char *Reason = "Callee function not available";
@@ -799,11 +847,11 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
   if (!R->getValue()->isDeclaration() && R->getValue()->getSubprogram() &&
       R->getValue()->hasFnAttribute("use-sample-profile") &&
       R->getValue() != &F && isLegalToPromote(CI, R->getValue(), &Reason)) {
-    // For promoted target, save 0 count in the value profile metadata so
-    // the target won't be promoted again.
-    SmallVector<InstrProfValueData, 1> SortedCallTargets = {
-        InstrProfValueData{Function::getGUID(R->getValue()->getName()), 0}};
-    updateIDTMetaData(CI, SortedCallTargets);
+    // For promoted target, set its value with NOMORE_ICP_MAGICNUM count
+    // in the value profile metadata so the target won't be promoted again.
+    SmallVector<InstrProfValueData, 1> SortedCallTargets = {InstrProfValueData{
+        Function::getGUID(R->getValue()->getName()), NOMORE_ICP_MAGICNUM}};
+    updateIDTMetaData(CI, SortedCallTargets, 0);
 
     auto *DI = &pgo::promoteIndirectCall(
         CI, R->getValue(), Candidate.CallsiteCount, Sum, false, ORE);
@@ -817,7 +865,6 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
       // be prorated so that the it will reflect the real callsite counts.
       setProbeDistributionFactor(CI, Candidate.CallsiteDistribution * Sum /
                                          SumOrigin);
-      PromotedInsns.insert(Candidate.CallInstr);
       Candidate.CallInstr = DI;
       if (isa<CallInst>(DI) || isa<InvokeInst>(DI)) {
         bool Inlined = tryInlineCandidate(Candidate, InlinedCallSite);
@@ -890,8 +937,6 @@ void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
 /// \returns True if there is any inline happened.
 bool SampleProfileLoader::inlineHotFunctions(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
-  DenseSet<Instruction *> PromotedInsns;
-
   // ProfAccForSymsInList is used in callsiteIsHot. The assertion makes sure
   // Profile symbol list is ignored when profile-sample-accurate is on.
   assert((!ProfAccForSymsInList ||
@@ -945,13 +990,11 @@ bool SampleProfileLoader::inlineHotFunctions(
       if (CalledFunction == &F)
         continue;
       if (I->isIndirectCall()) {
-        if (PromotedInsns.count(I))
-          continue;
         uint64_t Sum;
         for (const auto *FS : findIndirectCallFunctionSamples(*I, Sum)) {
           uint64_t SumOrigin = Sum;
           if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
-            FS->findInlinedFunctions(InlinedGUIDs, F.getParent(),
+            FS->findInlinedFunctions(InlinedGUIDs, F.getParent(), SymbolMap,
                                      PSI->getOrCompHotCountThreshold());
             continue;
           }
@@ -959,8 +1002,7 @@ bool SampleProfileLoader::inlineHotFunctions(
             continue;
 
           Candidate = {I, FS, FS->getEntrySamples(), 1.0};
-          if (tryPromoteAndInlineCandidate(F, Candidate, SumOrigin, Sum,
-                                           PromotedInsns)) {
+          if (tryPromoteAndInlineCandidate(F, Candidate, SumOrigin, Sum)) {
             LocalNotInlinedCallSites.erase(I);
             LocalChanged = true;
           }
@@ -973,7 +1015,8 @@ bool SampleProfileLoader::inlineHotFunctions(
         }
       } else if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
         findCalleeFunctionSamples(*I)->findInlinedFunctions(
-            InlinedGUIDs, F.getParent(), PSI->getOrCompHotCountThreshold());
+            InlinedGUIDs, F.getParent(), SymbolMap,
+            PSI->getOrCompHotCountThreshold());
       }
     }
     Changed |= LocalChanged;
@@ -1169,7 +1212,6 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
 
 bool SampleProfileLoader::inlineHotFunctionsWithPriority(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
-  DenseSet<Instruction *> PromotedInsns;
   assert(ProfileIsCS && "Prioritiy based inliner only works with CSSPGO now");
 
   // ProfAccForSymsInList is used in callsiteIsHot. The assertion makes sure
@@ -1218,8 +1260,6 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
     if (CalledFunction == &F)
       continue;
     if (I->isIndirectCall()) {
-      if (PromotedInsns.count(I))
-        continue;
       uint64_t Sum;
       auto CalleeSamples = findIndirectCallFunctionSamples(*I, Sum);
       uint64_t SumOrigin = Sum;
@@ -1227,7 +1267,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
       for (const auto *FS : CalleeSamples) {
         // TODO: Consider disable pre-lTO ICP for MonoLTO as well
         if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
-          FS->findInlinedFunctions(InlinedGUIDs, F.getParent(),
+          FS->findInlinedFunctions(InlinedGUIDs, F.getParent(), SymbolMap,
                                    PSI->getOrCompHotCountThreshold());
           continue;
         }
@@ -1254,7 +1294,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         Candidate = {I, FS, EntryCountDistributed,
                      Candidate.CallsiteDistribution};
         if (tryPromoteAndInlineCandidate(F, Candidate, SumOrigin, Sum,
-                                         PromotedInsns, &InlinedCallSites)) {
+                                         &InlinedCallSites)) {
           for (auto *CB : InlinedCallSites) {
             if (getInlineCandidate(&NewCandidate, CB))
               CQueue.emplace(NewCandidate);
@@ -1274,7 +1314,8 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
       }
     } else if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
       findCalleeFunctionSamples(*I)->findInlinedFunctions(
-          InlinedGUIDs, F.getParent(), PSI->getOrCompHotCountThreshold());
+          InlinedGUIDs, F.getParent(), SymbolMap,
+          PSI->getOrCompHotCountThreshold());
     }
   }
 
@@ -1351,6 +1392,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
                 Sum += NameFS.second.getEntrySamples();
             }
           }
+          if (!Sum)
+            continue;
           updateIDTMetaData(I, SortedCallTargets, Sum);
         } else if (!isa<IntrinsicInst>(&I)) {
           I.setMetadata(LLVMContext::MD_prof,
@@ -1638,7 +1681,9 @@ bool SampleProfileLoader::doInitialization(Module &M,
   }
   Reader = std::move(ReaderOrErr.get());
   Reader->setSkipFlatProf(LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink);
-  Reader->collectFuncsFrom(M);
+  // set module before reading the profile so reader may be able to only
+  // read the function profiles which are used by the current module.
+  Reader->setModule(&M);
   if (std::error_code EC = Reader->read()) {
     std::string Msg = "profile reading failed: " + EC.message();
     Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));
@@ -1722,12 +1767,11 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   for (const auto &N_F : M.getValueSymbolTable()) {
     StringRef OrigName = N_F.getKey();
     Function *F = dyn_cast<Function>(N_F.getValue());
-    if (F == nullptr)
+    if (F == nullptr || OrigName.empty())
       continue;
     SymbolMap[OrigName] = F;
-    auto pos = OrigName.find('.');
-    if (pos != StringRef::npos) {
-      StringRef NewName = OrigName.substr(0, pos);
+    StringRef NewName = FunctionSamples::getCanonicalFnName(*F);
+    if (OrigName != NewName && !NewName.empty()) {
       auto r = SymbolMap.insert(std::make_pair(NewName, F));
       // Failiing to insert means there is already an entry in SymbolMap,
       // thus there are multiple functions that are mapped to the same
@@ -1740,12 +1784,13 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
     // Insert the remapped names into SymbolMap.
     if (Remapper) {
       if (auto MapName = Remapper->lookUpNameInProfile(OrigName)) {
-        if (*MapName == OrigName)
-          continue;
-        SymbolMap.insert(std::make_pair(*MapName, F));
+        if (*MapName != OrigName && !MapName->empty())
+          SymbolMap.insert(std::make_pair(*MapName, F));
       }
     }
   }
+  assert(SymbolMap.count(StringRef()) == 0 &&
+         "No empty StringRef should be added in SymbolMap");
 
   bool retval = false;
   for (auto F : buildFunctionOrder(M, CG)) {

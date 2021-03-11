@@ -530,11 +530,11 @@ bool MachineRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
 /// specified register as undefined which causes the DBG_VALUE to be
 /// deleted during LiveDebugVariables analysis.
 void MachineRegisterInfo::markUsesInDebugValueAsUndef(Register Reg) const {
-  // Mark any DBG_VALUE that uses Reg as undef (but don't delete it.)
+  // Mark any DBG_VALUE* that uses Reg as undef (but don't delete it.)
   // We use make_early_inc_range because setReg invalidates the iterator.
   for (MachineInstr &UseMI : llvm::make_early_inc_range(use_instructions(Reg))) {
-    if (UseMI.isDebugValue())
-      UseMI.getDebugOperandForReg(Reg)->setReg(0U);
+    if (UseMI.isDebugValue() && UseMI.hasDebugOperandForReg(Reg))
+      UseMI.setDebugValueUndef();
   }
 }
 

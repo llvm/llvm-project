@@ -243,6 +243,12 @@ public:
     getOperandStorage().eraseOperands(idx, length);
   }
 
+  /// Erases the operands that have their corresponding bit set in
+  /// `eraseIndices` and removes them from the operand list.
+  void eraseOperands(const llvm::BitVector &eraseIndices) {
+    getOperandStorage().eraseOperands(eraseIndices);
+  }
+
   // Support operand iteration.
   using operand_range = OperandRange;
   using operand_iterator = operand_range::iterator;
@@ -484,24 +490,36 @@ public:
   // Operation Walkers
   //===--------------------------------------------------------------------===//
 
-  /// Walk the operation in postorder, calling the callback for each nested
-  /// operation(including this one). The callback method can take any of the
-  /// following forms:
+  /// Walk the operation by calling the callback for each nested operation
+  /// (including this one), block or region, depending on the callback provided.
+  /// Regions, blocks and operations at the same nesting level are visited in
+  /// lexicographical order. The walk order for enclosing regions, blocks and
+  /// operations with respect to their nested ones is specified by 'Order'
+  /// (post-order by default). A callback on a block or operation is allowed to
+  /// erase that block or operation if either:
+  ///   * the walk is in post-order, or
+  ///   * the walk is in pre-order and the walk is skipped after the erasure.
+  ///
+  /// The callback method can take any of the following forms:
   ///   void(Operation*) : Walk all operations opaquely.
   ///     * op->walk([](Operation *nestedOp) { ...});
   ///   void(OpT) : Walk all operations of the given derived type.
   ///     * op->walk([](ReturnOp returnOp) { ...});
   ///   WalkResult(Operation*|OpT) : Walk operations, but allow for
-  ///                                interruption/cancellation.
+  ///                                interruption/skipping.
   ///     * op->walk([](... op) {
-  ///         // Interrupt, i.e cancel, the walk based on some invariant.
+  ///         // Skip the walk of this op based on some invariant.
   ///         if (some_invariant)
+  ///           return WalkResult::skip();
+  ///         // Interrupt, i.e cancel, the walk based on some invariant.
+  ///         if (another_invariant)
   ///           return WalkResult::interrupt();
   ///         return WalkResult::advance();
   ///       });
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   RetT walk(FnT &&callback) {
-    return detail::walk(this, std::forward<FnT>(callback));
+    return detail::walk<Order>(this, std::forward<FnT>(callback));
   }
 
   //===--------------------------------------------------------------------===//

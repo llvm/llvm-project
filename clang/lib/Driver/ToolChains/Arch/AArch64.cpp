@@ -50,8 +50,8 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
 
   if (Triple.isTargetMachineMac() &&
       Triple.getArch() == llvm::Triple::aarch64) {
-    // Apple Silicon macs default to A12 CPUs.
-    return "apple-a12";
+    // Apple Silicon macs default to A13 CPUs.
+    return "apple-a13";
   }
 
   // Make sure we pick the appropriate Apple CPU if -arch is used or when

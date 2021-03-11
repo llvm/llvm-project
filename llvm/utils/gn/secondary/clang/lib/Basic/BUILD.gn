@@ -29,6 +29,7 @@ static_library("Basic") {
     "//clang/include/clang/Basic:arm_sve_builtins",
     "//clang/include/clang/Basic:arm_sve_typeflags",
     "//clang/include/clang/Basic:diags_tablegen",
+    "//clang/include/clang/Basic:riscv_vector_builtins",
     "//clang/include/clang/Basic:version",
   ]
   deps = [
@@ -83,6 +84,7 @@ static_library("Basic") {
     "Targets/Hexagon.cpp",
     "Targets/Lanai.cpp",
     "Targets/Le64.cpp",
+    "Targets/M68k.cpp",
     "Targets/MSP430.cpp",
     "Targets/Mips.cpp",
     "Targets/NVPTX.cpp",

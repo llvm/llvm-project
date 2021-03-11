@@ -47,7 +47,7 @@ define <4 x float> @exp_f32(<4 x float> %in) {
 ;
 ; MASSV-LABEL: define {{[^@]+}}@exp_f32
 ; MASSV-SAME: (<4 x float> [[IN:%.*]]) {
-; MASSV-NEXT:    [[TMP1:%.*]] = call <4 x float> @__expf4_massv(<4 x float> [[IN]])
+; MASSV-NEXT:    [[TMP1:%.*]] = call <4 x float> @__expf4_P8(<4 x float> [[IN]])
 ; MASSV-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; ACCELERATE-LABEL: define {{[^@]+}}@exp_f32

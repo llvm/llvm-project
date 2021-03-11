@@ -3392,10 +3392,10 @@ public:
   SourceFileWindowDelegate(Debugger &debugger)
       : WindowDelegate(), m_debugger(debugger), m_sc(), m_file_sp(),
         m_disassembly_scope(nullptr), m_disassembly_sp(), m_disassembly_range(),
-        m_title(), m_line_width(4), m_selected_line(0), m_pc_line(0),
-        m_stop_id(0), m_frame_idx(UINT32_MAX), m_first_visible_line(0),
-        m_first_visible_column(0), m_min_x(0), m_min_y(0), m_max_x(0),
-        m_max_y(0) {}
+        m_title(), m_tid(LLDB_INVALID_THREAD_ID), m_line_width(4),
+        m_selected_line(0), m_pc_line(0), m_stop_id(0), m_frame_idx(UINT32_MAX),
+        m_first_visible_line(0), m_first_visible_column(0), m_min_x(0),
+        m_min_y(0), m_max_x(0), m_max_y(0) {}
 
   ~SourceFileWindowDelegate() override = default;
 

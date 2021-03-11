@@ -140,6 +140,7 @@
     __cpp_lib_to_address                           201711L [C++20]
     __cpp_lib_to_array                             201907L [C++20]
     __cpp_lib_to_chars                             201611L [C++17]
+    __cpp_lib_to_underlying                        202102L [C++2b]
     __cpp_lib_transformation_trait_aliases         201304L [C++14]
     __cpp_lib_transparent_operators                201210L [C++14]
                                                    201510L [C++17]
@@ -640,6 +641,10 @@
 
 # ifdef __cpp_lib_to_chars
 #   error "__cpp_lib_to_chars should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_transformation_trait_aliases
@@ -1220,6 +1225,10 @@
 
 # ifdef __cpp_lib_to_chars
 #   error "__cpp_lib_to_chars should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_transformation_trait_aliases
@@ -2019,6 +2028,10 @@
 #   ifdef __cpp_lib_to_chars
 #     error "__cpp_lib_to_chars should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_transformation_trait_aliases
@@ -3223,6 +3236,10 @@
 #   ifdef __cpp_lib_to_chars
 #     error "__cpp_lib_to_chars should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_transformation_trait_aliases
@@ -4454,6 +4471,13 @@
 #   ifdef __cpp_lib_to_chars
 #     error "__cpp_lib_to_chars should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should be defined in c++2b"
+# endif
+# if __cpp_lib_to_underlying != 202102L
+#   error "__cpp_lib_to_underlying should have the value 202102L in c++2b"
 # endif
 
 # ifndef __cpp_lib_transformation_trait_aliases

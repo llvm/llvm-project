@@ -307,6 +307,13 @@ void DebugPreFIRTreeAction::ExecuteAction() {
   }
 }
 
+void DebugDumpParsingLogAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+
+  ci.parsing().Parse(llvm::errs());
+  ci.parsing().DumpParsingLog(llvm::outs());
+}
+
 void EmitObjAction::ExecuteAction() {
   CompilerInstance &ci = this->instance();
   unsigned DiagID = ci.diagnostics().getCustomDiagID(

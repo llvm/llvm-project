@@ -205,24 +205,119 @@ static int InitLibrary(DeviceTy &Device) {
   return OFFLOAD_SUCCESS;
 }
 
-// Check whether a device has been initialized, global ctors have been
-// executed and global data has been mapped; do so if not already done.
-int CheckDeviceAndCtors(int64_t device_id) {
+void handleTargetOutcome(bool Success, ident_t *Loc) {
+  switch (PM->TargetOffloadPolicy) {
+  case tgt_disabled:
+    if (Success) {
+      FATAL_MESSAGE0(1, "expected no offloading while offloading is disabled");
+    }
+    break;
+  case tgt_default:
+    FATAL_MESSAGE0(1, "default offloading policy must be switched to "
+                      "mandatory or disabled");
+    break;
+  case tgt_mandatory:
+    if (!Success) {
+      if (getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE)
+        for (auto &Device : PM->Devices)
+          dumpTargetPointerMappings(Loc, Device);
+      else
+        FAILURE_MESSAGE("Run with LIBOMPTARGET_DEBUG=%d to dump host-target "
+                        "pointer mappings.\n",
+                        OMP_INFOTYPE_DUMP_TABLE);
+
+      SourceInfo info(Loc);
+      if (info.isAvailible())
+        fprintf(stderr, "%s:%d:%d: ", info.getFilename(), info.getLine(),
+                info.getColumn());
+      else
+        FAILURE_MESSAGE("Source location information not present. Compile with "
+                        "-g or -gline-tables-only.\n");
+      FATAL_MESSAGE0(
+          1, "failure of target construct while offloading is mandatory");
+    } else {
+      if (getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE)
+        for (auto &Device : PM->Devices)
+          dumpTargetPointerMappings(Loc, Device);
+    }
+    break;
+  }
+}
+
+static void handleDefaultTargetOffload() {
+  PM->TargetOffloadMtx.lock();
+  if (PM->TargetOffloadPolicy == tgt_default) {
+    if (omp_get_num_devices() > 0) {
+      DP("Default TARGET OFFLOAD policy is now mandatory "
+         "(devices were found)\n");
+      PM->TargetOffloadPolicy = tgt_mandatory;
+    } else {
+      DP("Default TARGET OFFLOAD policy is now disabled "
+         "(no devices were found)\n");
+      PM->TargetOffloadPolicy = tgt_disabled;
+    }
+  }
+  PM->TargetOffloadMtx.unlock();
+}
+
+static bool isOffloadDisabled() {
+  if (PM->TargetOffloadPolicy == tgt_default)
+    handleDefaultTargetOffload();
+  return PM->TargetOffloadPolicy == tgt_disabled;
+}
+
+// If offload is enabled, ensure that device DeviceID has been initialized,
+// global ctors have been executed, and global data has been mapped.
+//
+// There are three possible results:
+// - Return OFFLOAD_SUCCESS if the device is ready for offload.
+// - Return OFFLOAD_FAIL without reporting a runtime error if offload is
+//   disabled, perhaps because the initial device was specified.
+// - Report a runtime error and return OFFLOAD_FAIL.
+//
+// If DeviceID == OFFLOAD_DEVICE_DEFAULT, set DeviceID to the default device.
+// This step might be skipped if offload is disabled.
+int checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
+  if (isOffloadDisabled()) {
+    DP("Offload is disabled\n");
+    return OFFLOAD_FAIL;
+  }
+
+  if (DeviceID == OFFLOAD_DEVICE_DEFAULT) {
+    DeviceID = omp_get_default_device();
+    DP("Use default device id %" PRId64 "\n", DeviceID);
+  }
+
+  // Proposed behavior for OpenMP 5.2 in OpenMP spec github issue 2669.
+  if (omp_get_num_devices() == 0) {
+    DP("omp_get_num_devices() == 0 but offload is manadatory\n");
+    handleTargetOutcome(false, Loc);
+    return OFFLOAD_FAIL;
+  }
+
+  if (DeviceID == omp_get_initial_device()) {
+    DP("Device is host (%" PRId64 "), returning as if offload is disabled\n",
+       DeviceID);
+    return OFFLOAD_FAIL;
+  }
+
   // Is device ready?
-  if (!device_is_ready(device_id)) {
-    REPORT("Device %" PRId64 " is not ready.\n", device_id);
+  if (!device_is_ready(DeviceID)) {
+    REPORT("Device %" PRId64 " is not ready.\n", DeviceID);
+    handleTargetOutcome(false, Loc);
     return OFFLOAD_FAIL;
   }
 
   // Get device info.
-  DeviceTy &Device = PM->Devices[device_id];
+  DeviceTy &Device = PM->Devices[DeviceID];
 
   // Check whether global data has been mapped for this device
   Device.PendingGlobalsMtx.lock();
   bool hasPendingGlobals = Device.HasPendingGlobals;
   Device.PendingGlobalsMtx.unlock();
   if (hasPendingGlobals && InitLibrary(Device) != OFFLOAD_SUCCESS) {
-    REPORT("Failed to init globals on device %" PRId64 "\n", device_id);
+    REPORT("Failed to init globals on device %" PRId64 "\n", DeviceID);
+    handleTargetOutcome(false, Loc);
     return OFFLOAD_FAIL;
   }
 

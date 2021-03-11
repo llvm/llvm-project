@@ -5987,6 +5987,11 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
 
+  // Because getNegatedExpression can delete nodes we need a handle to keep
+  // temporary nodes alive in case the recursion manages to create an identical
+  // node.
+  std::list<HandleSDNode> Handles;
+
   switch (Opcode) {
   case ISD::ConstantFP: {
     // Don't invert constant FP values after legalization unless the target says
@@ -6055,10 +6060,17 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     NegatibleCost CostX = NegatibleCost::Expensive;
     SDValue NegX =
         getNegatedExpression(X, DAG, LegalOps, OptForSize, CostX, Depth);
+    // Prevent this node from being deleted by the next call.
+    if (NegX)
+      Handles.emplace_back(NegX);
+
     // fold (fneg (fadd X, Y)) -> (fsub (fneg Y), X)
     NegatibleCost CostY = NegatibleCost::Expensive;
     SDValue NegY =
         getNegatedExpression(Y, DAG, LegalOps, OptForSize, CostY, Depth);
+
+    // We're done with the handles.
+    Handles.clear();
 
     // Negate the X if its cost is less or equal than Y.
     if (NegX && (CostX <= CostY)) {
@@ -6104,10 +6116,17 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     NegatibleCost CostX = NegatibleCost::Expensive;
     SDValue NegX =
         getNegatedExpression(X, DAG, LegalOps, OptForSize, CostX, Depth);
+    // Prevent this node from being deleted by the next call.
+    if (NegX)
+      Handles.emplace_back(NegX);
+
     // fold (fneg (fmul X, Y)) -> (fmul X, (fneg Y))
     NegatibleCost CostY = NegatibleCost::Expensive;
     SDValue NegY =
         getNegatedExpression(Y, DAG, LegalOps, OptForSize, CostY, Depth);
+
+    // We're done with the handles.
+    Handles.clear();
 
     // Negate the X if its cost is less or equal than Y.
     if (NegX && (CostX <= CostY)) {
@@ -6146,14 +6165,24 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     if (!NegZ)
       break;
 
+    // Prevent this node from being deleted by the next two calls.
+    Handles.emplace_back(NegZ);
+
     // fold (fneg (fma X, Y, Z)) -> (fma (fneg X), Y, (fneg Z))
     NegatibleCost CostX = NegatibleCost::Expensive;
     SDValue NegX =
         getNegatedExpression(X, DAG, LegalOps, OptForSize, CostX, Depth);
+    // Prevent this node from being deleted by the next call.
+    if (NegX)
+      Handles.emplace_back(NegX);
+
     // fold (fneg (fma X, Y, Z)) -> (fma X, (fneg Y), (fneg Z))
     NegatibleCost CostY = NegatibleCost::Expensive;
     SDValue NegY =
         getNegatedExpression(Y, DAG, LegalOps, OptForSize, CostY, Depth);
+
+    // We're done with the handles.
+    Handles.clear();
 
     // Negate the X if its cost is less or equal than Y.
     if (NegX && (CostX <= CostY)) {
@@ -8595,4 +8624,77 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
   // Otherwise, select 0 if Src is NaN.
   SDValue ZeroInt = DAG.getConstant(0, dl, DstVT);
   return DAG.getSelectCC(dl, Src, Src, ZeroInt, Select, ISD::CondCode::SETUO);
+}
+
+SDValue TargetLowering::expandVectorSplice(SDNode *Node,
+                                           SelectionDAG &DAG) const {
+  assert(Node->getOpcode() == ISD::VECTOR_SPLICE && "Unexpected opcode!");
+  assert(Node->getValueType(0).isScalableVector() &&
+         "Fixed length vector types expected to use SHUFFLE_VECTOR!");
+
+  EVT VT = Node->getValueType(0);
+  SDValue V1 = Node->getOperand(0);
+  SDValue V2 = Node->getOperand(1);
+  int64_t Imm = cast<ConstantSDNode>(Node->getOperand(2))->getSExtValue();
+  SDLoc DL(Node);
+
+  // Expand through memory thusly:
+  //  Alloca CONCAT_VECTORS_TYPES(V1, V2) Ptr
+  //  Store V1, Ptr
+  //  Store V2, Ptr + sizeof(V1)
+  //  If (Imm < 0)
+  //    TrailingElts = -Imm
+  //    Ptr = Ptr + sizeof(V1) - (TrailingElts * sizeof(VT.Elt))
+  //  else
+  //    Ptr = Ptr + (Imm * sizeof(VT.Elt))
+  //  Res = Load Ptr
+
+  Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
+
+  EVT MemVT = EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
+                               VT.getVectorElementCount() * 2);
+  SDValue StackPtr = DAG.CreateStackTemporary(MemVT.getStoreSize(), Alignment);
+  EVT PtrVT = StackPtr.getValueType();
+  auto &MF = DAG.getMachineFunction();
+  auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
+
+  // Store the lo part of CONCAT_VECTORS(V1, V2)
+  SDValue StoreV1 = DAG.getStore(DAG.getEntryNode(), DL, V1, StackPtr, PtrInfo);
+  // Store the hi part of CONCAT_VECTORS(V1, V2)
+  SDValue OffsetToV2 = DAG.getVScale(
+      DL, PtrVT,
+      APInt(PtrVT.getFixedSizeInBits(), VT.getStoreSize().getKnownMinSize()));
+  SDValue StackPtr2 = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, OffsetToV2);
+  SDValue StoreV2 = DAG.getStore(StoreV1, DL, V2, StackPtr2, PtrInfo);
+
+  if (Imm >= 0) {
+    // Load back the required element. getVectorElementPointer takes care of
+    // clamping the index if it's out-of-bounds.
+    StackPtr = getVectorElementPointer(DAG, StackPtr, VT, Node->getOperand(2));
+    // Load the spliced result
+    return DAG.getLoad(VT, DL, StoreV2, StackPtr,
+                       MachinePointerInfo::getUnknownStack(MF));
+  }
+
+  uint64_t TrailingElts = -Imm;
+
+  // NOTE: TrailingElts must be clamped so as not to read outside of V1:V2.
+  TypeSize EltByteSize = VT.getVectorElementType().getStoreSize();
+  SDValue TrailingBytes =
+      DAG.getConstant(TrailingElts * EltByteSize, DL, PtrVT);
+
+  if (TrailingElts > VT.getVectorMinNumElements()) {
+    SDValue VLBytes = DAG.getVScale(
+        DL, PtrVT,
+        APInt(PtrVT.getFixedSizeInBits(), VT.getStoreSize().getKnownMinSize()));
+    TrailingBytes = DAG.getNode(ISD::UMIN, DL, PtrVT, TrailingBytes, VLBytes);
+  }
+
+  // Calculate the start address of the spliced result.
+  StackPtr2 = DAG.getNode(ISD::SUB, DL, PtrVT, StackPtr2, TrailingBytes);
+
+  // Load the spliced result
+  return DAG.getLoad(VT, DL, StoreV2, StackPtr2,
+                     MachinePointerInfo::getUnknownStack(MF));
 }

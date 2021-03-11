@@ -779,7 +779,7 @@ module {
 
 module {
   llvm.func @loopOptions() {
-      // expected-error@below {{expected 'options' to be an array attribute}}
+      // expected-error@below {{expected 'options' to be a `loopopts` attribute}}
       llvm.br ^bb4 {llvm.loop = {options = "name"}}
     ^bb4:
       llvm.return
@@ -790,9 +790,56 @@ module {
 
 module {
   llvm.func @loopOptions() {
-      // expected-error@below {{invalid loop options list}}
-      llvm.br ^bb4 {llvm.loop = {options = ["name"]}}
+      // expected-error@below {{unknown loop option: name}}
+      llvm.br ^bb4 {llvm.loop = {options = #llvm.loopopts<name>}}
     ^bb4:
       llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @loopOptions() {
+      // expected-error@below {{loop option present twice}}
+      llvm.br ^bb4 {llvm.loop = {options = #llvm.loopopts<disable_licm = true, disable_licm = true>}}
+    ^bb4:
+      llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+      // expected-error@below {{attribute 'access_groups' failed to satisfy constraint: symbol ref array attribute}}
+      %0 = llvm.load %arg0 { "access_groups" = "test" } : !llvm.ptr<i32>
+      llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+      // expected-error@below {{expected '@func1' to reference a metadata op}}
+      %0 = llvm.load %arg0 { "access_groups" = [@func1] } : !llvm.ptr<i32>
+      llvm.return
+  }
+  llvm.func @func1() {
+    llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+      // expected-error@below {{expected '@metadata' to reference an access_group op}}
+      %0 = llvm.load %arg0 { "access_groups" = [@metadata] } : !llvm.ptr<i32>
+      llvm.return
+  }
+  llvm.metadata @metadata {
+    llvm.return
   }
 }

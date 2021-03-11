@@ -102,6 +102,12 @@ std::string Linux::getMultiarchTriple(const Driver &D,
     if (D.getVFS().exists(SysRoot + "/lib/aarch64_be-linux-gnu"))
       return "aarch64_be-linux-gnu";
     break;
+
+  case llvm::Triple::m68k:
+    if (D.getVFS().exists(SysRoot + "/lib/m68k-linux-gnu"))
+      return "m68k-linux-gnu";
+    break;
+
   case llvm::Triple::mips: {
     std::string MT = IsMipsR6 ? "mipsisa32r6-linux-gnu" : "mips-linux-gnu";
     if (D.getVFS().exists(SysRoot + "/lib/" + MT))
@@ -357,6 +363,12 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   addPathIfExists(D, SysRoot + "/usr/lib", Paths);
 }
 
+ToolChain::RuntimeLibType Linux::GetDefaultRuntimeLibType() const {
+  if (getTriple().isAndroid())
+    return ToolChain::RLT_CompilerRT;
+  return Generic_ELF::GetDefaultRuntimeLibType();
+}
+
 ToolChain::CXXStdlibType Linux::GetDefaultCXXStdlibType() const {
   if (getTriple().isAndroid())
     return ToolChain::CST_Libcxx;
@@ -476,6 +488,10 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     Loader = HF ? "ld-linux-armhf.so.3" : "ld-linux.so.3";
     break;
   }
+  case llvm::Triple::m68k:
+    LibDir = "lib";
+    Loader = "ld.so.1";
+    break;
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
@@ -624,6 +640,7 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
       "/usr/include/armeb-linux-gnueabi"};
   const StringRef ARMEBHFMultiarchIncludeDirs[] = {
       "/usr/include/armeb-linux-gnueabihf"};
+  const StringRef M68kMultiarchIncludeDirs[] = {"/usr/include/m68k-linux-gnu"};
   const StringRef MIPSMultiarchIncludeDirs[] = {"/usr/include/mips-linux-gnu"};
   const StringRef MIPSELMultiarchIncludeDirs[] = {
       "/usr/include/mipsel-linux-gnu"};
@@ -687,6 +704,9 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
       MultiarchIncludeDirs = ARMEBHFMultiarchIncludeDirs;
     else
       MultiarchIncludeDirs = ARMEBMultiarchIncludeDirs;
+    break;
+  case llvm::Triple::m68k:
+    MultiarchIncludeDirs = M68kMultiarchIncludeDirs;
     break;
   case llvm::Triple::mips:
     if (getTriple().getSubArch() == llvm::Triple::MipsSubArch_r6)

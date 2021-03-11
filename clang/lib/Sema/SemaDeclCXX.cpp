@@ -15213,13 +15213,12 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
 /// to form a proper call to this constructor.
 ///
 /// \returns true if an error occurred, false otherwise.
-bool
-Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
-                              MultiExprArg ArgsPtr,
-                              SourceLocation Loc,
-                              SmallVectorImpl<Expr*> &ConvertedArgs,
-                              bool AllowExplicit,
-                              bool IsListInitialization) {
+bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
+                                   QualType DeclInitType, MultiExprArg ArgsPtr,
+                                   SourceLocation Loc,
+                                   SmallVectorImpl<Expr *> &ConvertedArgs,
+                                   bool AllowExplicit,
+                                   bool IsListInitialization) {
   // FIXME: This duplicates a lot of code from Sema::ConvertArgumentsForCall.
   unsigned NumArgs = ArgsPtr.size();
   Expr **Args = ArgsPtr.data();
@@ -15246,7 +15245,7 @@ Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
 
   DiagnoseSentinelCalls(Constructor, Loc, AllArgs);
 
-  CheckConstructorCall(Constructor,
+  CheckConstructorCall(Constructor, DeclInitType,
                        llvm::makeArrayRef(AllArgs.data(), AllArgs.size()),
                        Proto, Loc);
 

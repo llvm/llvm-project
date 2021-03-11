@@ -223,6 +223,12 @@ bool CommandInterpreter::GetSpaceReplPrompts() const {
       nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
+bool CommandInterpreter::GetRepeatPreviousCommand() const {
+  const uint32_t idx = ePropertyRepeatPreviousCommand;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+}
+
 void CommandInterpreter::Initialize() {
   LLDB_SCOPED_TIMER();
 
@@ -1695,6 +1701,11 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   }
 
   if (empty_command) {
+    if (!GetRepeatPreviousCommand()) {
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      return true;
+    }
+
     if (m_command_history.IsEmpty()) {
       result.AppendError("empty command");
       result.SetStatus(eReturnStatusFailed);

@@ -232,7 +232,6 @@
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
-#include "llvm/Transforms/Utils/UniqueInternalLinkageNames.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
@@ -290,7 +289,6 @@ PipelineTuningOptions::PipelineTuningOptions() {
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
   CallGraphProfile = true;
   MergeFunctions = false;
-  UniqueLinkageNames = false;
 }
 extern cl::opt<bool> ExtraVectorizerPasses;
 
@@ -301,6 +299,7 @@ extern cl::opt<bool> EnableHotColdSplit;
 extern cl::opt<bool> EnableIROutliner;
 extern cl::opt<bool> EnableOrderFileInstrumentation;
 extern cl::opt<bool> EnableCHR;
+extern cl::opt<bool> EnableLoopInterchange;
 extern cl::opt<bool> EnableUnrollAndJam;
 extern cl::opt<bool> EnableLoopFlatten;
 extern cl::opt<bool> RunNewGVN;
@@ -582,6 +581,10 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
     C(LPM2, Level);
 
   LPM2.addPass(LoopDeletionPass());
+
+  if (EnableLoopInterchange)
+    LPM2.addPass(LoopInterchangePass());
+
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
   // inaccurate. The normal unroller doesn't pay attention to forced full unroll
@@ -748,6 +751,10 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
     C(LPM2, Level);
 
   LPM2.addPass(LoopDeletionPass());
+
+  if (EnableLoopInterchange)
+    LPM2.addPass(LoopInterchangePass());
+
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
   // inaccurate. The normal unroller doesn't pay attention to forced full unroll
@@ -1009,11 +1016,6 @@ ModulePassManager
 PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                                                ThinOrFullLTOPhase Phase) {
   ModulePassManager MPM(DebugLogging);
-
-  // Add UniqueInternalLinkageNames Pass which renames internal linkage
-  // symbols with unique names.
-  if (PTO.UniqueLinkageNames)
-    MPM.addPass(UniqueInternalLinkageNamesPass());
 
   // Place pseudo probe instrumentation as the first pass of the pipeline to
   // minimize the impact of optimization changes.
@@ -1868,11 +1870,6 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
          "buildO0DefaultPipeline should only be used with O0");
 
   ModulePassManager MPM(DebugLogging);
-
-  // Add UniqueInternalLinkageNames Pass which renames internal linkage
-  // symbols with unique names.
-  if (PTO.UniqueLinkageNames)
-    MPM.addPass(UniqueInternalLinkageNamesPass());
 
   if (PGOOpt && (PGOOpt->Action == PGOOptions::IRInstr ||
                  PGOOpt->Action == PGOOptions::IRUse))

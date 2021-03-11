@@ -374,6 +374,14 @@ void MappingTraits<WasmYAML::Limits>::mapping(IO &IO,
 
 void MappingTraits<WasmYAML::ElemSegment>::mapping(
     IO &IO, WasmYAML::ElemSegment &Segment) {
+  if (!IO.outputting() || Segment.Flags)
+    IO.mapOptional("Flags", Segment.Flags);
+  if (!IO.outputting() ||
+      Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER)
+    IO.mapOptional("TableNumber", Segment.TableNumber);
+  if (!IO.outputting() ||
+      Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND)
+    IO.mapOptional("ElemKind", Segment.ElemKind);
   IO.mapRequired("Offset", Segment.Offset);
   IO.mapRequired("Functions", Segment.Functions);
 }

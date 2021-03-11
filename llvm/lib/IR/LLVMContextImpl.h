@@ -1220,6 +1220,19 @@ template <> struct MDNodeKeyImpl<DIMacroFile> {
   }
 };
 
+template <> struct MDNodeKeyImpl<DIArgList> {
+  ArrayRef<ValueAsMetadata *> Args;
+
+  MDNodeKeyImpl(ArrayRef<ValueAsMetadata *> Args) : Args(Args) {}
+  MDNodeKeyImpl(const DIArgList *N) : Args(N->getArgs()) {}
+
+  bool isKeyOf(const DIArgList *RHS) const { return Args == RHS->getArgs(); }
+
+  unsigned getHashValue() const {
+    return hash_combine_range(Args.begin(), Args.end());
+  }
+};
+
 /// DenseMapInfo for MDNode subclasses.
 template <class NodeTy> struct MDNodeInfo {
   using KeyTy = MDNodeKeyImpl<NodeTy>;

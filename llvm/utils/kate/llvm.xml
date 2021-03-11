@@ -77,25 +77,59 @@
     </list>
     <list name="function-attributes">
       <item> alignstack </item>
+      <item> allocsize </item>
       <item> alwaysinline </item>
       <item> argmemonly </item>
+      <item> arm_aapcscc </item>
+      <item> catch </item>
+      <item> cold </item>
       <item> convergent </item>
+      <item> dereferenceable_or_null </item>
+      <item> extern_weak </item>
+      <item> hhvmcc </item>
+      <item> hot </item>
+      <item> inaccessiblemem_or_argmemonly </item>
+      <item> inaccessiblememonly </item>
+      <item> inalloca </item>
       <item> inlinehint </item>
+      <item> inteldialect </item>
+      <item> jumptable </item>
+      <item> local_unnamed_addr </item>
       <item> mustprogress </item>
       <item> naked </item>
       <item> nobuiltin </item>
+      <item> nocallback </item>
+      <item> nocf_check </item>
+      <item> noduplicate </item>
+      <item> nofree </item>
       <item> noimplicitfloat </item>
       <item> noinline </item>
+      <item> nomerge </item>
+      <item> noprofile </item>
       <item> noredzone </item>
       <item> noreturn </item>
+      <item> nosync </item>
       <item> nounwind </item>
+      <item> null_pointer_is_valid </item>
+      <item> optforfuzzing </item>
       <item> optnone </item>
       <item> optsize </item>
+      <item> preallocated </item>
       <item> readnone </item>
       <item> readonly </item>
+      <item> safestack </item>
+      <item> sanitize_hwaddress </item>
+      <item> sanitize_memtag </item>
+      <item> shadowcallstack </item>
+      <item> speculative_load_hardening </item>
       <item> ssp </item>
       <item> sspreq </item>
       <item> sspstrong </item>
+      <item> swifterror </item>
+      <item> syncscope </item>
+      <item> tailcc </item>
+      <item> willreturn </item>
+      <item> willreturn </item>
     </list>
     <list name="types">
       <item> addrspace </item>

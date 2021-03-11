@@ -9,12 +9,14 @@
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
@@ -228,7 +230,7 @@ void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
-  MCDwarfLineEntry::Make(this, getCurrentSectionOnly());
+  MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
   // Avoid fixups when possible.
   int64_t AbsValue;
@@ -385,7 +387,7 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
 
   // Now that a machine instruction has been assembled into this section, make
   // a line entry for any .loc directive that has been seen.
-  MCDwarfLineEntry::Make(this, getCurrentSectionOnly());
+  MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
   // If this instruction doesn't need relaxation, just emit it as data.
   MCAssembler &Assembler = getAssembler();
@@ -455,7 +457,7 @@ void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                              StringRef FileName) {
   // In case we see two .loc directives in a row, make sure the
   // first one gets a line entry.
-  MCDwarfLineEntry::Make(this, getCurrentSectionOnly());
+  MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
   this->MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
                                           Discriminator, FileName);
@@ -503,6 +505,24 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
     return;
   }
   insert(new MCDwarfLineAddrFragment(LineDelta, *AddrDelta));
+}
+
+void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
+                                             MCSymbol *LastLabel) {
+  // Emit a DW_LNE_end_sequence for the end of the section.
+  // Use the section end label to compute the address delta and use INT64_MAX
+  // as the line delta which is the signal that this is actually a
+  // DW_LNE_end_sequence.
+  MCSymbol *SectionEnd = endSection(Section);
+
+  // Switch back the dwarf line section, in case endSection had to switch the
+  // section.
+  MCContext &Ctx = getContext();
+  SwitchSection(Ctx.getObjectFileInfo()->getDwarfLineSection());
+
+  const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
+  emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, SectionEnd,
+                           AsmInfo->getCodePointerSize());
 }
 
 void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
@@ -573,7 +593,7 @@ void MCObjectStreamer::emitCVFileChecksumOffsetDirective(unsigned FileNo) {
 }
 
 void MCObjectStreamer::emitBytes(StringRef Data) {
-  MCDwarfLineEntry::Make(this, getCurrentSectionOnly());
+  MCDwarfLineEntry::make(this, getCurrentSectionOnly());
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
   DF->getContents().append(Data.begin(), Data.end());
@@ -850,7 +870,7 @@ void MCObjectStreamer::finishImpl() {
     MCGenDwarfInfo::Emit(this);
 
   // Dump out the dwarf file & directory tables and line tables.
-  MCDwarfLineTable::Emit(this, getAssembler().getDWARFLinetableParams());
+  MCDwarfLineTable::emit(this, getAssembler().getDWARFLinetableParams());
 
   // Emit pseudo probes for the current module.
   MCPseudoProbeTable::emit(this);

@@ -13,9 +13,9 @@
 #include "CodeComplete.h"
 #include "ConfigProvider.h"
 #include "DraftStore.h"
+#include "FeatureModule.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
-#include "Module.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "TUScheduler.h"
@@ -153,7 +153,7 @@ public:
     /// Enable preview of FoldingRanges feature.
     bool FoldingRanges = false;
 
-    ModuleSet *Modules = nullptr;
+    FeatureModuleSet *FeatureModules = nullptr;
 
     explicit operator TUScheduler::Options() const;
   };
@@ -172,13 +172,13 @@ public:
                const Options &Opts, Callbacks *Callbacks = nullptr);
   ~ClangdServer();
 
-  /// Gets the installed module of a given type, if any.
-  /// This exposes access the public interface of modules that have one.
-  template <typename Mod> Mod *getModule() {
-    return Modules ? Modules->get<Mod>() : nullptr;
+  /// Gets the installed feature module of a given type, if any.
+  /// This exposes access the public interface of feature modules that have one.
+  template <typename Mod> Mod *featureModule() {
+    return FeatureModules ? FeatureModules->get<Mod>() : nullptr;
   }
-  template <typename Mod> const Mod *getModule() const {
-    return Modules ? Modules->get<Mod>() : nullptr;
+  template <typename Mod> const Mod *featureModule() const {
+    return FeatureModules ? FeatureModules->get<Mod>() : nullptr;
   }
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
@@ -348,7 +348,9 @@ public:
   /// FIXME: those metrics might be useful too, we should add them.
   llvm::StringMap<TUScheduler::FileStats> fileStats() const;
 
-  llvm::Optional<std::string> getDraft(PathRef File) const;
+  /// Gets the contents of a currently tracked file. Returns nullptr if the file
+  /// isn't being tracked.
+  std::shared_ptr<const std::string> getDraft(PathRef File) const;
 
   // Blocks the main thread until the server is idle. Only for use in tests.
   // Returns false if the timeout expires.
@@ -361,7 +363,7 @@ public:
   void profile(MemoryTree &MT) const;
 
 private:
-  ModuleSet *Modules;
+  FeatureModuleSet *FeatureModules;
   const GlobalCompilationDatabase &CDB;
   const ThreadsafeFS &TFS;
 
@@ -392,8 +394,9 @@ private:
 
   // Store of the current versions of the open documents.
   // Only written from the main thread (despite being threadsafe).
-  // FIXME: TUScheduler also keeps these, unify?
   DraftStore DraftMgr;
+
+  std::unique_ptr<ThreadsafeFS> DirtyFS;
 };
 
 } // namespace clangd

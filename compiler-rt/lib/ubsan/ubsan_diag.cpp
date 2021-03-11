@@ -388,6 +388,10 @@ ScopedReport::ScopedReport(ReportOptions Opts, Location SummaryLoc,
 ScopedReport::~ScopedReport() {
   MaybePrintStackTrace(Opts.pc, Opts.bp);
   MaybeReportErrorSummary(SummaryLoc, Type);
+
+  if (common_flags()->print_module_map >= 2)
+    DumpProcessMap();
+
   if (flags()->halt_on_error)
     Die();
 }

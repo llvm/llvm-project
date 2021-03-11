@@ -567,7 +567,7 @@ hoistPaddingOnTensorsPrerequisites(linalg::PadTensorOp padTensorOp, int nLevels,
   // These are the dimensions of reuse that we can exploit to reduce the amount
   // of work / memory.
   // TODO: would this optimization compose better as a canonicalization?
-  for (LoopLikeOpInterface loop : reverseEnclosingLoops) {
+  for (LoopLikeOpInterface loop : llvm::reverse(reverseEnclosingLoops)) {
     auto forOp = dyn_cast<scf::ForOp>(loop.getOperation());
     if (!forOp)
       continue;

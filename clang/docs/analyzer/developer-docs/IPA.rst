@@ -128,7 +128,7 @@ If the conditions are right for inlining, a CallEnter node is created and added
 to the analysis work list. The CallEnter node marks the change to a new
 LocationContext representing the called function, and its state includes the
 contents of the new stack frame. When the CallEnter node is actually processed,
-its single successor will be a edge to the first CFG block in the function.
+its single successor will be an edge to the first CFG block in the function.
 
 Exiting an inlined function is a bit more work, fortunately broken up into
 reasonable steps:

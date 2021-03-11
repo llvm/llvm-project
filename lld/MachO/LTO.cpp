@@ -40,7 +40,7 @@ static lto::Config createConfig() {
 }
 
 BitcodeCompiler::BitcodeCompiler() {
-  auto backend =
+  lto::ThinBackend backend =
       lto::createInProcessThinBackend(heavyweight_hardware_concurrency());
   ltoObj = std::make_unique<lto::LTO>(createConfig(), backend);
 }
@@ -107,7 +107,8 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
     if (!config->ltoObjPath.empty()) {
       filePath = config->ltoObjPath;
       path::append(filePath, Twine(i) + "." +
-                                 getArchitectureName(config->arch) + ".lto.o");
+                                 getArchitectureName(config->target.Arch) +
+                                 ".lto.o");
       saveBuffer(buf[i], filePath);
       modTime = getModTime(filePath);
     }

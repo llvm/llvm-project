@@ -192,6 +192,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["gfx10-insts"] = true;
       Features["gfx10-3-insts"] = true;
       Features["s-memrealtime"] = true;
+      Features["s-memtime-inst"] = true;
       break;
     case GK_GFX1012:
     case GK_GFX1011:

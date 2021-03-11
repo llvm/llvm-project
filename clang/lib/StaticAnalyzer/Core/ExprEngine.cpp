@@ -1238,6 +1238,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::SEHExceptStmtClass:
     case Stmt::SEHLeaveStmtClass:
     case Stmt::SEHFinallyStmtClass:
+    case Stmt::OMPCanonicalLoopClass:
     case Stmt::OMPParallelDirectiveClass:
     case Stmt::OMPSimdDirectiveClass:
     case Stmt::OMPForDirectiveClass:

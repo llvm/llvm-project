@@ -28,6 +28,7 @@
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -72,7 +73,6 @@ class VarDecl;
 class LangOptions;
 class CodeGenOptions;
 class HeaderSearchOptions;
-class PreprocessorOptions;
 class DiagnosticsEngine;
 class AnnotateAttr;
 class CXXDestructorDecl;
@@ -210,6 +210,9 @@ struct ObjCEntrypoints {
 
   /// void clang.arc.use(...);
   llvm::Function *clang_arc_use;
+
+  /// void clang.arc.noop.use(...);
+  llvm::Function *clang_arc_noop_use;
 };
 
 /// This class records statistics on instrumentation based profiling.
@@ -308,6 +311,7 @@ private:
   const TargetInfo &Target;
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
+  std::string ModuleNameHash = "";
 
   std::unique_ptr<CodeGenTBAA> TBAA;
 
@@ -582,6 +586,8 @@ public:
 
   /// Return true iff an Objective-C runtime has been configured.
   bool hasObjCRuntime() { return !!ObjCRuntime; }
+
+  const std::string &getModuleNameHash() const { return ModuleNameHash; }
 
   /// Return a reference to the configured OpenCL runtime.
   CGOpenCLRuntime &getOpenCLRuntime() {
@@ -1370,6 +1376,10 @@ public:
   /// Create and attach type metadata to the given function.
   void CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
+
+  /// Whether this function's return type has no side effects, and thus may
+  /// be trivially discarded if it is unused.
+  bool MayDropFunctionReturn(const ASTContext &Context, QualType ReturnType);
 
   /// Returns whether this module needs the "all-vtables" type identifier.
   bool NeedAllVtablesTypeId() const;

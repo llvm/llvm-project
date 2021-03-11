@@ -147,24 +147,20 @@ define void @test6() gc "statepoint-example" {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[TMP_BASE:%.*]] = phi i8 addrspace(1)* [ [[TMP6_BASE:%.*]], [[LATCH:%.*]] ], [ null, [[BB:%.*]] ], !is_base_value !0
-; CHECK-NEXT:    [[TMP:%.*]] = phi i8 addrspace(1)* [ [[TMP6:%.*]], [[LATCH]] ], [ undef, [[BB]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = phi i8 addrspace(1)* [ [[TMP6:%.*]], [[LATCH:%.*]] ], [ undef, [[BB:%.*]] ]
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @spam, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* [[TMP]]), "gc-live"(i8 addrspace(1)* [[TMP]], i8 addrspace(1)* [[TMP_BASE]]) ]
-; CHECK-NEXT:    [[TMP_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
-; CHECK-NEXT:    [[TMP_BASE_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @spam, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* [[TMP]]), "gc-live"(i8 addrspace(1)* [[TMP]]) ]
+; CHECK-NEXT:    [[TMP_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    br label [[BB25:%.*]]
 ; CHECK:       bb25:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN1:%.*]] = call token (i64, i32, <2 x i8 addrspace(1)*> ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_v2p1i8f(i64 2882400000, i32 0, <2 x i8 addrspace(1)*> ()* @baz, i32 0, i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP262:%.*]] = call <2 x i8 addrspace(1)*> @llvm.experimental.gc.result.v2p1i8(token [[STATEPOINT_TOKEN1]])
-; CHECK-NEXT:    [[BASE_EE:%.*]] = extractelement <2 x i8 addrspace(1)*> [[TMP262]], i32 0, !is_base_value !0
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <2 x i8 addrspace(1)*> [[TMP262]], i32 0
 ; CHECK-NEXT:    br i1 undef, label [[BB7:%.*]], label [[LATCH]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[TMP6_BASE]] = phi i8 addrspace(1)* [ [[BASE_EE]], [[BB25]] ], [ [[BASE_EE]], [[BB7]] ], !is_base_value !0
 ; CHECK-NEXT:    [[TMP6]] = phi i8 addrspace(1)* [ [[TMP27]], [[BB25]] ], [ [[TMP27]], [[BB7]] ]
 ; CHECK-NEXT:    br label [[HEADER]]
 ;

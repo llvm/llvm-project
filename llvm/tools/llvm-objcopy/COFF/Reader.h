@@ -9,7 +9,6 @@
 #ifndef LLVM_TOOLS_OBJCOPY_COFF_READER_H
 #define LLVM_TOOLS_OBJCOPY_COFF_READER_H
 
-#include "Buffer.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Error.h"

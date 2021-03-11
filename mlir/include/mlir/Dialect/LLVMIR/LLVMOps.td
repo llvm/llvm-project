@@ -44,7 +44,7 @@ def LLVM_FMFAttr : DialectAttr<
   let returnType = "::mlir::LLVM::FastmathFlags";
   let convertFromStorage = "$_self.getFlags()";
   let constBuilderCall =
-          "::mlir::LLVM::FMFAttr::get($0, $_builder.getContext())";
+          "::mlir::LLVM::FMFAttr::get($_builder.getContext(), $0)";
 }
 
 def LOptDisableUnroll : I32EnumAttrCase<"disable_unroll", 1>;
@@ -249,7 +249,7 @@ def LLVM_FCmpOp : LLVM_Op<"fcmp", [
     [{
       build($_builder, $_state, IntegerType::get(lhs.getType().getContext(), 1),
             $_builder.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs,
-            ::mlir::LLVM::FMFAttr::get(fmf, $_builder.getContext()));
+            ::mlir::LLVM::FMFAttr::get($_builder.getContext(), fmf));
     }]>];
   let parser = [{ return parseCmpOp<FCmpPredicate>(parser, result); }];
   let printer = [{ printFCmpOp(p, *this); }];
@@ -286,6 +286,10 @@ class MemoryOpWithAlignmentAndAttributes : MemoryOpWithAlignmentBase {
               builder.getInt32(1)));
       inst->setMetadata(module->getMDKindID("nontemporal"), metadata);
     }
+  }];
+
+  code setAccessGroupsMetadataCode = [{
+    moduleTranslation.setAccessGroupsMetadata(op, inst);
   }];
 }
 
@@ -326,12 +330,13 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]>,
 
 def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
   let arguments = (ins LLVM_PointerTo<LLVM_LoadableType>:$addr,
+                   OptionalAttr<SymbolRefArrayAttr>:$access_groups,
                    OptionalAttr<I64Attr>:$alignment, UnitAttr:$volatile_,
                    UnitAttr:$nontemporal);
   let results = (outs LLVM_Type:$res);
   string llvmBuilder = [{
     auto *inst = builder.CreateLoad($addr, $volatile_);
-  }] # setAlignmentCode # setNonTemporalMetadataCode # [{
+  }] # setAlignmentCode # setNonTemporalMetadataCode # setAccessGroupsMetadataCode # [{
     $res = inst;
   }];
   let builders = [
@@ -346,16 +351,18 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
       CArg<"bool", "false">:$isNonTemporal)>];
   let parser = [{ return parseLoadOp(parser, result); }];
   let printer = [{ printLoadOp(p, *this); }];
+  let verifier = [{ return ::verify(*this);  }];
 }
 
 def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpWithAlignmentAndAttributes {
   let arguments = (ins LLVM_LoadableType:$value,
                    LLVM_PointerTo<LLVM_LoadableType>:$addr,
+                   OptionalAttr<SymbolRefArrayAttr>:$access_groups,
                    OptionalAttr<I64Attr>:$alignment, UnitAttr:$volatile_,
                    UnitAttr:$nontemporal);
   string llvmBuilder = [{
     auto *inst = builder.CreateStore($value, $addr, $volatile_);
-  }] # setAlignmentCode # setNonTemporalMetadataCode;
+  }] # setAlignmentCode # setNonTemporalMetadataCode # setAccessGroupsMetadataCode;
   let builders = [
     OpBuilder<(ins "Value":$value, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
@@ -363,6 +370,7 @@ def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpWithAlignmentAndAttributes {
     ];
   let parser = [{ return parseStoreOp(parser, result); }];
   let printer = [{ printStoreOp(p, *this); }];
+  let verifier = [{ return ::verify(*this);  }];
 }
 
 // Casts.

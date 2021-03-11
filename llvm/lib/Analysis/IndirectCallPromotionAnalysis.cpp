@@ -45,7 +45,7 @@ static cl::opt<unsigned>
 
 // Set the maximum number of targets to promote for a single indirect-call
 // callsite.
-cl::opt<unsigned>
+static cl::opt<unsigned>
     MaxNumPromotions("icp-max-prom", cl::init(3), cl::Hidden, cl::ZeroOrMore,
                      cl::desc("Max number of promotions for a single indirect "
                               "call callsite"));

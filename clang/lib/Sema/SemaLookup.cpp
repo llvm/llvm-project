@@ -755,7 +755,8 @@ static void GetOpenCLBuiltinFctOverloads(
     ASTContext &Context, unsigned GenTypeMaxCnt,
     std::vector<QualType> &FunctionList, SmallVector<QualType, 1> &RetTypes,
     SmallVector<SmallVector<QualType, 1>, 5> &ArgTypes) {
-  FunctionProtoType::ExtProtoInfo PI;
+  FunctionProtoType::ExtProtoInfo PI(
+      Context.getDefaultCallingConvention(false, false, true));
   PI.Variadic = false;
 
   // Create FunctionTypes for each (gen)type.
@@ -815,9 +816,20 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
     // Ignore this builtin function if it carries an extension macro that is
     // not defined. This indicates that the extension is not supported by the
     // target, so the builtin function should not be available.
-    StringRef Ext = FunctionExtensionTable[OpenCLBuiltin.Extension];
-    if (!Ext.empty() && !S.getPreprocessor().isMacroDefined(Ext))
-      continue;
+    StringRef Extensions = FunctionExtensionTable[OpenCLBuiltin.Extension];
+    if (!Extensions.empty()) {
+      SmallVector<StringRef, 2> ExtVec;
+      Extensions.split(ExtVec, " ");
+      bool AllExtensionsDefined = true;
+      for (StringRef Ext : ExtVec) {
+        if (!S.getPreprocessor().isMacroDefined(Ext)) {
+          AllExtensionsDefined = false;
+          break;
+        }
+      }
+      if (!AllExtensionsDefined)
+        continue;
+    }
 
     SmallVector<QualType, 1> RetTypes;
     SmallVector<SmallVector<QualType, 1>, 5> ArgTypes;

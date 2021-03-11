@@ -718,7 +718,7 @@ static void IntroduceControlFlow(Function *F, Random &R) {
       BoolInst.push_back(&Instr);
   }
 
-  std::shuffle(BoolInst.begin(), BoolInst.end(), R);
+  llvm::shuffle(BoolInst.begin(), BoolInst.end(), R);
 
   for (auto *Instr : BoolInst) {
     BasicBlock *Curr = Instr->getParent();

@@ -508,6 +508,7 @@ class StdLibraryFunctionsChecker
   mutable FunctionSummaryMapType FunctionSummaryMap;
 
   mutable std::unique_ptr<BugType> BT_InvalidArg;
+  mutable bool SummariesInitialized = false;
 
   static SVal getArgSVal(const CallEvent &Call, ArgNo ArgN) {
     return ArgN == Ret ? Call.getReturnValue() : Call.getArgSVal(ArgN);
@@ -823,7 +824,7 @@ StdLibraryFunctionsChecker::findFunctionSummary(const CallEvent &Call,
 
 void StdLibraryFunctionsChecker::initFunctionSummaries(
     CheckerContext &C) const {
-  if (!FunctionSummaryMap.empty())
+  if (SummariesInitialized)
     return;
 
   SValBuilder &SVB = C.getSValBuilder();
@@ -2485,6 +2486,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{VoidPtrRestrictTy}, RetType{VoidTy}),
         Summary(EvalCallAsPure));
   }
+
+  SummariesInitialized = true;
 }
 
 void ento::registerStdCLibraryFunctionsChecker(CheckerManager &mgr) {

@@ -41,4 +41,17 @@ def CompoundAttrA : Test_Attr<"CompoundA"> {
   );
 }
 
+// An attribute testing AttributeSelfTypeParameter.
+def AttrWithSelfTypeParam : Test_Attr<"AttrWithSelfTypeParam"> {
+  let mnemonic = "attr_with_self_type_param";
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+}
+
+// An attribute testing AttributeSelfTypeParameter.
+def AttrWithTypeBuilder : Test_Attr<"AttrWithTypeBuilder"> {
+  let mnemonic = "attr_with_type_builder";
+  let parameters = (ins "::mlir::IntegerAttr":$attr);
+  let typeBuilder = "$_attr.getType()";
+}
+
 #endif // TEST_ATTRDEFS

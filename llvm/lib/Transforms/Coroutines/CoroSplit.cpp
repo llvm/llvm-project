@@ -846,6 +846,16 @@ void CoroCloner::create() {
 
   CloneFunctionInto(NewF, &OrigF, VMap,
                     CloneFunctionChangeType::LocalChangesOnly, Returns);
+  // For async functions / continuations, adjust the scope line of the
+  // clone to the line number of the suspend point. The scope line is
+  // associated with all pre-prologue instructions. This avoids a jump
+  // in the linetable from the function declaration to the suspend point.
+  if (DISubprogram *SP = NewF->getSubprogram()) {
+    assert(SP != OrigF.getSubprogram() && SP->isDistinct());
+    if (ActiveSuspend)
+      if (auto DL = ActiveSuspend->getDebugLoc())
+        SP->setScopeLine(DL->getLine());
+  }
 
   NewF->setLinkage(savedLinkage);
   NewF->setVisibility(savedVisibility);
@@ -868,8 +878,13 @@ void CoroCloner::create() {
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.FrameSize, Shape.FrameAlign);
     break;
-  case coro::ABI::Async:
+  case coro::ABI::Async: {
+    // Transfer the original function's attributes.
+    auto FnAttrs = OrigF.getAttributes().getFnAttributes();
+    NewAttrs =
+        NewAttrs.addAttributes(Context, AttributeList::FunctionIndex, FnAttrs);
     break;
+  }
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
     // If we have a continuation prototype, just use its attributes,
@@ -1262,6 +1277,7 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
     } else {
       CoroBegin->replaceAllUsesWith(CoroBegin->getMem());
     }
+
     break;
   }
   case coro::ABI::Async:

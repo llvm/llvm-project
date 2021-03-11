@@ -63,8 +63,8 @@ static uint32_t cpuSubtype() {
 
   if (config->outputType == MachO::MH_EXECUTE && !config->staticLink &&
       target->cpuSubtype == MachO::CPU_SUBTYPE_X86_64_ALL &&
-      config->platform.kind == MachO::PlatformKind::macOS &&
-      config->platform.minimum >= VersionTuple(10, 5))
+      config->target.Platform == MachO::PlatformKind::macOS &&
+      config->platformInfo.minimum >= VersionTuple(10, 5))
     subtype |= MachO::CPU_SUBTYPE_LIB64;
 
   return subtype;
@@ -86,6 +86,9 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (config->outputType == MachO::MH_DYLIB && !config->hasReexports)
     hdr->flags |= MachO::MH_NO_REEXPORTED_DYLIBS;
 
+  if (config->markDeadStrippableDylib)
+    hdr->flags |= MachO::MH_DEAD_STRIPPABLE_DYLIB;
+
   if (config->outputType == MachO::MH_EXECUTE && config->isPic)
     hdr->flags |= MachO::MH_PIE;
 
@@ -95,8 +98,8 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (in.exports->hasWeakSymbol || in.weakBinding->hasEntry())
     hdr->flags |= MachO::MH_BINDS_TO_WEAK;
 
-  for (OutputSegment *seg : outputSegments) {
-    for (OutputSection *osec : seg->getSections()) {
+  for (const OutputSegment *seg : outputSegments) {
+    for (const OutputSection *osec : seg->getSections()) {
       if (isThreadLocalVariables(osec->flags)) {
         hdr->flags |= MachO::MH_HAS_TLV_DESCRIPTORS;
         break;
@@ -105,7 +108,7 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   }
 
   uint8_t *p = reinterpret_cast<uint8_t *>(hdr + 1);
-  for (LoadCommand *lc : loadCommands) {
+  for (const LoadCommand *lc : loadCommands) {
     lc->writeTo(p);
     p += lc->getSize();
   }
@@ -372,11 +375,11 @@ void WeakBindingSection::finalizeContents() {
                return a.target.getVA() < b.target.getVA();
              });
   for (const WeakBindingEntry &b : bindings) {
-    if (auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
+    if (const auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
       encodeBinding(b.symbol, isec->parent, isec->outSecOff + b.target.offset,
                     b.addend, /*isWeakBinding=*/true, lastBinding, os);
     } else {
-      auto *osec = b.target.section.get<const OutputSection *>();
+      const auto *osec = b.target.section.get<const OutputSection *>();
       encodeBinding(b.symbol, osec, b.target.offset, b.addend,
                     /*isWeakBinding=*/true, lastBinding, os);
     }
@@ -601,8 +604,14 @@ void ExportSection::finalizeContents() {
   trieBuilder.setImageBase(in.header->addr);
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (defined->privateExtern)
-        continue;
+      if (config->exportedSymbols.empty()) {
+        if (defined->privateExtern ||
+            config->unexportedSymbols.match(defined->getName()))
+          continue;
+      } else {
+        if (!config->exportedSymbols.match(defined->getName()))
+          continue;
+      }
       trieBuilder.addSymbol(*defined);
       hasWeakSymbol = hasWeakSymbol || sym->isWeakDef();
     }
@@ -611,6 +620,34 @@ void ExportSection::finalizeContents() {
 }
 
 void ExportSection::writeTo(uint8_t *buf) const { trieBuilder.writeTo(buf); }
+
+FunctionStartsSection::FunctionStartsSection()
+    : LinkEditSection(segment_names::linkEdit, section_names::functionStarts_) {
+}
+
+void FunctionStartsSection::finalizeContents() {
+  raw_svector_ostream os{contents};
+  uint64_t addr = in.header->addr;
+  for (const Symbol *sym : symtab->getSymbols()) {
+    if (const auto *defined = dyn_cast<Defined>(sym)) {
+      if (!defined->isec || !isCodeSection(defined->isec))
+        continue;
+      // TODO: Add support for thumbs, in that case
+      // the lowest bit of nextAddr needs to be set to 1.
+      uint64_t nextAddr = defined->getVA();
+      uint64_t delta = nextAddr - addr;
+      if (delta == 0)
+        continue;
+      encodeULEB128(delta, os);
+      addr = nextAddr;
+    }
+  }
+  os << '\0';
+}
+
+void FunctionStartsSection::writeTo(uint8_t *buf) const {
+  memcpy(buf, contents.data(), contents.size());
+}
 
 SymtabSection::SymtabSection(StringTableSection &stringTableSection)
     : LinkEditSection(segment_names::linkEdit, section_names::symbolTable),
@@ -730,9 +767,11 @@ void SymtabSection::finalizeContents() {
 
   // Local symbols aren't in the SymbolTable, so we walk the list of object
   // files to gather them.
-  for (InputFile *file : inputFiles) {
+  for (const InputFile *file : inputFiles) {
     if (auto *objFile = dyn_cast<ObjFile>(file)) {
       for (Symbol *sym : objFile->symbols) {
+        if (sym == nullptr)
+          continue;
         // TODO: when we implement -dead_strip, we should filter out symbols
         // that belong to dead sections.
         if (auto *defined = dyn_cast<Defined>(sym)) {

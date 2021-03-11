@@ -706,7 +706,7 @@ public:
   }
 };
 
-/// Converts `spv.globalVariable` to `llvm.mlir.global`. Note that SPIR-V global
+/// Converts `spv.GlobalVariable` to `llvm.mlir.global`. Note that SPIR-V global
 /// returns a pointer, whereas in LLVM dialect the global holds an actual value.
 /// This difference is handled by `spv.mlir.addressof` and
 /// `llvm.mlir.addressof`ops that both return a pointer.
@@ -829,7 +829,7 @@ public:
         operation, dstType,
         rewriter.getI64IntegerAttr(static_cast<int64_t>(predicate)),
         operation.operand1(), operation.operand2(),
-        LLVM::FMFAttr::get({}, operation.getContext()));
+        LLVM::FMFAttr::get(operation.getContext(), {}));
     return success();
   }
 };
@@ -981,12 +981,12 @@ public:
   }
 };
 
-/// Converts `spv.loop` to LLVM dialect. All blocks within selection should be
-/// reachable for conversion to succeed.
-/// The structure of the loop in LLVM dialect will be the following:
+/// Converts `spv.mlir.loop` to LLVM dialect. All blocks within selection should
+/// be reachable for conversion to succeed. The structure of the loop in LLVM
+/// dialect will be the following:
 ///
 ///      +------------------------------------+
-///      | <code before spv.loop>             |
+///      | <code before spv.mlir.loop>        |
 ///      | llvm.br ^header                    |
 ///      +------------------------------------+
 ///                           |
@@ -1026,7 +1026,7 @@ public:
 ///                        V
 ///      +------------------------------------+
 ///      | ^remaining:                        |
-///      |   <code after spv.loop>            |
+///      |   <code after spv.mlir.loop>       |
 ///      +------------------------------------+
 ///
 class LoopPattern : public SPIRVToLLVMConversion<spirv::LoopOp> {
@@ -1042,8 +1042,8 @@ public:
 
     Location loc = loopOp.getLoc();
 
-    // Split the current block after `spv.loop`. The remaining ops will be used
-    // in `endBlock`.
+    // Split the current block after `spv.mlir.loop`. The remaining ops will be
+    // used in `endBlock`.
     Block *currentBlock = rewriter.getBlock();
     auto position = Block::iterator(loopOp);
     Block *endBlock = rewriter.splitBlock(currentBlock, position);
@@ -1073,8 +1073,9 @@ public:
   }
 };
 
-/// Converts `spv.selection` with `spv.BranchConditional` in its header block.
-/// All blocks within selection should be reachable for conversion to succeed.
+/// Converts `spv.mlir.selection` with `spv.BranchConditional` in its header
+/// block. All blocks within selection should be reachable for conversion to
+/// succeed.
 class SelectionPattern : public SPIRVToLLVMConversion<spirv::SelectionOp> {
 public:
   using SPIRVToLLVMConversion<spirv::SelectionOp>::SPIRVToLLVMConversion;
@@ -1088,9 +1089,9 @@ public:
     if (op.selection_control() != spirv::SelectionControl::None)
       return failure();
 
-    // `spv.selection` should have at least two blocks: one selection header
-    // block and one merge block. If no blocks are present, or control flow
-    // branches straight to merge block (two blocks are present), the op is
+    // `spv.mlir.selection` should have at least two blocks: one selection
+    // header block and one merge block. If no blocks are present, or control
+    // flow branches straight to merge block (two blocks are present), the op is
     // redundant and it is erased.
     if (op.body().getBlocks().size() <= 2) {
       rewriter.eraseOp(op);
@@ -1099,8 +1100,8 @@ public:
 
     Location loc = op.getLoc();
 
-    // Split the current block after `spv.selection`. The remaining ops will be
-    // used in `continueBlock`.
+    // Split the current block after `spv.mlir.selection`. The remaining ops
+    // will be used in `continueBlock`.
     auto *currentBlock = rewriter.getInsertionBlock();
     rewriter.setInsertionPointAfter(op);
     auto position = rewriter.getInsertionPoint();

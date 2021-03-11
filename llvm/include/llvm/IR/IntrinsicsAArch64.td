@@ -44,6 +44,19 @@ def int_aarch64_fjcvtzs : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty],
 def int_aarch64_cls: DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_aarch64_cls64: DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
 
+def int_aarch64_frint32z
+    : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
+                            [ IntrNoMem ]>;
+def int_aarch64_frint64z
+    : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
+                            [ IntrNoMem ]>;
+def int_aarch64_frint32x
+    : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
+                            [ IntrNoMem ]>;
+def int_aarch64_frint64x
+    : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
+                            [ IntrNoMem ]>;
+
 //===----------------------------------------------------------------------===//
 // HINT
 
@@ -462,6 +475,12 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   // intrinsic.
   def int_aarch64_neon_frintn : AdvSIMD_1FloatArg_Intrinsic;
 
+  // v8.5-A Vector FP Rounding
+  def int_aarch64_neon_frint32x : AdvSIMD_1FloatArg_Intrinsic;
+  def int_aarch64_neon_frint32z : AdvSIMD_1FloatArg_Intrinsic;
+  def int_aarch64_neon_frint64x : AdvSIMD_1FloatArg_Intrinsic;
+  def int_aarch64_neon_frint64z : AdvSIMD_1FloatArg_Intrinsic;
+
   // Scalar FP->Int conversions
 
   // Vector FP Inexact Narrowing
@@ -475,7 +494,7 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_udot : AdvSIMD_Dot_Intrinsic;
   def int_aarch64_neon_sdot : AdvSIMD_Dot_Intrinsic;
 
-// v8.6-A Matrix Multiply Intrinsics
+  // v8.6-A Matrix Multiply Intrinsics
   def int_aarch64_neon_ummla : AdvSIMD_MatMul_Intrinsic;
   def int_aarch64_neon_smmla : AdvSIMD_MatMul_Intrinsic;
   def int_aarch64_neon_usmmla : AdvSIMD_MatMul_Intrinsic;

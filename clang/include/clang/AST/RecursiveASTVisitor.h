@@ -2787,6 +2787,14 @@ bool RecursiveASTVisitor<Derived>::TraverseOMPExecutableDirective(
   return true;
 }
 
+DEF_TRAVERSE_STMT(OMPCanonicalLoop, {
+  if (!getDerived().shouldVisitImplicitCode()) {
+    // Visit only the syntactical loop.
+    TRY_TO(TraverseStmt(S->getLoopStmt()));
+    ShouldVisitChildren = false;
+  }
+})
+
 template <typename Derived>
 bool
 RecursiveASTVisitor<Derived>::TraverseOMPLoopDirective(OMPLoopDirective *S) {

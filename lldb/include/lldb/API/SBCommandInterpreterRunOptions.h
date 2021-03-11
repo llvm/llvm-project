@@ -56,6 +56,10 @@ public:
 
   void SetPrintResults(bool);
 
+  bool GetPrintErrors() const;
+
+  void SetPrintErrors(bool);
+
   bool GetAddToHistory() const;
 
   void SetAddToHistory(bool);

@@ -8050,6 +8050,43 @@ MIPSTargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 }
 
 //===----------------------------------------------------------------------===//
+// M68k ABI Implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+class M68kTargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  M68kTargetCodeGenInfo(CodeGenTypes &CGT)
+      : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &M) const override;
+};
+
+} // namespace
+
+void M68kTargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
+    if (const auto *attr = FD->getAttr<M68kInterruptAttr>()) {
+      // Handle 'interrupt' attribute:
+      llvm::Function *F = cast<llvm::Function>(GV);
+
+      // Step 1: Set ISR calling convention.
+      F->setCallingConv(llvm::CallingConv::M68k_INTR);
+
+      // Step 2: Add attributes goodness.
+      F->addFnAttr(llvm::Attribute::NoInline);
+
+      // Step 3: Emit ISR vector alias.
+      unsigned Num = attr->getNumber() / 2;
+      llvm::GlobalAlias::create(llvm::Function::ExternalLinkage,
+                                "__isr_" + Twine(Num), F);
+    }
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // AVR ABI Implementation.
 //===----------------------------------------------------------------------===//
 
@@ -10876,6 +10913,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
 
   case llvm::Triple::le32:
     return SetCGInfo(new PNaClTargetCodeGenInfo(Types));
+  case llvm::Triple::m68k:
+    return SetCGInfo(new M68kTargetCodeGenInfo(Types));
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
     if (Triple.getOS() == llvm::Triple::NaCl)

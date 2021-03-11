@@ -31,6 +31,7 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
 using namespace __dfsan;
@@ -699,6 +700,22 @@ __dfsw_dfsan_get_label(long data, dfsan_label data_label,
   return data_label;
 }
 
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label __dfso_dfsan_get_label(
+    long data, dfsan_label data_label, dfsan_label *ret_label,
+    dfsan_origin data_origin, dfsan_origin *ret_origin) {
+  *ret_label = 0;
+  *ret_origin = 0;
+  return data_label;
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin __dfso_dfsan_get_origin(
+    long data, dfsan_label data_label, dfsan_label *ret_label,
+    dfsan_origin data_origin, dfsan_origin *ret_origin) {
+  *ret_label = 0;
+  *ret_origin = 0;
+  return data_origin;
+}
+
 SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
 dfsan_read_label(const void *addr, uptr size) {
   if (size == 0)
@@ -762,6 +779,77 @@ dfsan_dump_labels(int fd) {
     }
     WriteToFile(fd, "\n", 1);
   }
+}
+
+class Decorator : public __sanitizer::SanitizerCommonDecorator {
+ public:
+  Decorator() : SanitizerCommonDecorator() {}
+  const char *Origin() const { return Magenta(); }
+};
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_print_origin_trace(
+    const void *addr, const char *description) {
+  Decorator d;
+
+  if (!__dfsan_get_track_origins()) {
+    Printf(
+        "  %sDFSan: origin tracking is not enabled. Did you specify the "
+        "-dfsan-track-origins=1 option?%s\n",
+        d.Warning(), d.Default());
+    return;
+  }
+
+  const dfsan_label label = *__dfsan::shadow_for(addr);
+  if (!label) {
+    Printf("  %sDFSan: no tainted value at %x%s\n", d.Warning(), addr,
+           d.Default());
+    return;
+  }
+
+  const dfsan_origin origin = *__dfsan::origin_for(addr);
+
+  Printf("  %sTaint value 0x%x (at %p) origin tracking (%s)%s\n", d.Origin(),
+         label, addr, description ? description : "", d.Default());
+  Origin o = Origin::FromRawId(origin);
+  bool found = false;
+  while (o.isChainedOrigin()) {
+    StackTrace stack;
+    dfsan_origin origin_id = o.raw_id();
+    o = o.getNextChainedOrigin(&stack);
+    if (o.isChainedOrigin())
+      Printf("  %sOrigin value: 0x%x, Taint value was stored to memory at%s\n",
+             d.Origin(), origin_id, d.Default());
+    else
+      Printf("  %sOrigin value: 0x%x, Taint value was created at%s\n",
+             d.Origin(), origin_id, d.Default());
+    stack.Print();
+    found = true;
+  }
+  if (!found)
+    Printf(
+        "  %sTaint value 0x%x (at %p) has invalid origin tracking. This can "
+        "be a DFSan bug.%s\n",
+        d.Warning(), label, addr, d.Default());
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin
+dfsan_get_init_origin(const void *addr) {
+  if (!__dfsan_get_track_origins())
+    return 0;
+
+  const dfsan_label label = *__dfsan::shadow_for(addr);
+  if (!label)
+    return 0;
+
+  const dfsan_origin origin = *__dfsan::origin_for(addr);
+
+  Origin o = Origin::FromRawId(origin);
+  dfsan_origin origin_id = o.raw_id();
+  while (o.isChainedOrigin()) {
+    StackTrace stack;
+    o = o.getNextChainedOrigin(&stack);
+  }
+  return origin_id;
 }
 
 #define GET_FATAL_STACK_TRACE_PC_BP(pc, bp) \

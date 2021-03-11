@@ -31,6 +31,7 @@ class Value;
 namespace objcarc {
 
 class ARCMDKindCache;
+class BundledRetainClaimRVs;
 class ProvenanceAnalysis;
 
 /// \enum Sequence
@@ -201,7 +202,8 @@ struct TopDownPtrState : PtrState {
                           ProvenanceAnalysis &PA, ARCInstKind Class);
 
   bool HandlePotentialAlterRefCount(Instruction *Inst, const Value *Ptr,
-                                    ProvenanceAnalysis &PA, ARCInstKind Class);
+                                    ProvenanceAnalysis &PA, ARCInstKind Class,
+                                    const BundledRetainClaimRVs &BundledRVs);
 };
 
 } // end namespace objcarc

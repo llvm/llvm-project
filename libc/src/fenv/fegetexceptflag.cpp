@@ -15,11 +15,8 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, fegetexceptflag, (fexcept_t * flagp, int excepts)) {
-  // Since the return type of fetestexcept is int, we ensure that fexcept_t
-  // matches in size.
-  static_assert(sizeof(int) == sizeof(fexcept_t),
-                "sizeof(fexcept_t) != sizeof(int)");
-  *reinterpret_cast<int *>(flagp) = fputil::testExcept(FE_ALL_EXCEPT) & excepts;
+  // TODO: Add a compile time check to see if the excepts actually fit in flagp.
+  *flagp = static_cast<fexcept_t>(fputil::testExcept(FE_ALL_EXCEPT) & excepts);
   return 0;
 }
 

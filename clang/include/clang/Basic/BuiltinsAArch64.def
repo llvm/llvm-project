@@ -99,6 +99,16 @@ BUILTIN(__builtin_arm_tcommit, "v", "n")
 BUILTIN(__builtin_arm_tcancel, "vWUIi", "n")
 BUILTIN(__builtin_arm_ttest, "WUi", "nc")
 
+// Armv8.5-A FP rounding intrinsics
+BUILTIN(__builtin_arm_frint32zf, "ff", "")
+BUILTIN(__builtin_arm_frint32z, "dd", "")
+BUILTIN(__builtin_arm_frint64zf, "ff", "")
+BUILTIN(__builtin_arm_frint64z, "dd", "")
+BUILTIN(__builtin_arm_frint32xf, "ff", "")
+BUILTIN(__builtin_arm_frint32x, "dd", "")
+BUILTIN(__builtin_arm_frint64xf, "ff", "")
+BUILTIN(__builtin_arm_frint64x, "dd", "")
+
 // Armv8.7-A load/store 64-byte intrinsics
 BUILTIN(__builtin_arm_ld64b, "vvC*WUi*", "n")
 BUILTIN(__builtin_arm_st64b, "vv*WUiC*", "n")

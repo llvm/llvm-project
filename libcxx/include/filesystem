@@ -276,6 +276,8 @@ struct _LIBCPP_TYPE_VIS space_info {
   uintmax_t available;
 };
 
+// On Windows, the library never identifies files as  block, character, fifo
+// or socket.
 enum class _LIBCPP_ENUM_VIS file_type : signed char {
   none = 0,
   not_found = -1,
@@ -289,6 +291,10 @@ enum class _LIBCPP_ENUM_VIS file_type : signed char {
   unknown = 8
 };
 
+// On Windows, these permission bits map to one single readonly flag per
+// file, and the executable bit is always returned as set. When setting
+// permissions, as long as the write bit is set for either owner, group or
+// others, the readonly flag is cleared.
 enum class _LIBCPP_ENUM_VIS perms : unsigned {
   none = 0,
 

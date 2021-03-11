@@ -100,7 +100,7 @@ bool SIRemoveShortExecBranches::mustRetainExeczBranch(
 
       // These instructions are potentially expensive even if EXEC = 0.
       if (TII->isSMRD(*I) || TII->isVMEM(*I) || TII->isFLAT(*I) ||
-          I->getOpcode() == AMDGPU::S_WAITCNT)
+          TII->isDS(*I) || I->getOpcode() == AMDGPU::S_WAITCNT)
         return true;
 
       ++NumInstr;

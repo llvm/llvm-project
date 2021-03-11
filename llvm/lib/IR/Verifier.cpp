@@ -1301,6 +1301,13 @@ void Verifier::visitDIMacroFile(const DIMacroFile &N) {
   }
 }
 
+void Verifier::visitDIArgList(const DIArgList &N) {
+  AssertDI(!N.getNumOperands(),
+           "DIArgList should have no operands other than a list of "
+           "ValueAsMetadata",
+           &N);
+}
+
 void Verifier::visitDIModule(const DIModule &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_module, "invalid tag", &N);
   AssertDI(!N.getName().empty(), "anonymous module", &N);
@@ -3187,7 +3194,8 @@ void Verifier::visitCallBase(CallBase &Call) {
   // and at most one "preallocated" operand bundle.
   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
-       FoundPreallocatedBundle = false, FoundGCLiveBundle = false;;
+       FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
+       FoundAttachedCallBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -3228,8 +3236,18 @@ void Verifier::visitCallBase(CallBase &Call) {
       Assert(!FoundGCLiveBundle, "Multiple gc-live operand bundles",
              Call);
       FoundGCLiveBundle = true;
+    } else if (Tag == LLVMContext::OB_clang_arc_attachedcall) {
+      Assert(!FoundAttachedCallBundle,
+             "Multiple \"clang.arc.attachedcall\" operand bundles", Call);
+      FoundAttachedCallBundle = true;
     }
   }
+
+  if (FoundAttachedCallBundle)
+    Assert(FTy->getReturnType()->isPointerTy(),
+           "a call with operand bundle \"clang.arc.attachedcall\" must call a "
+           "function returning a pointer",
+           Call);
 
   // Verify that each inlinable callsite of a debug-info-bearing function in a
   // debug-info-bearing function has a debug location attached to it. Failure to
@@ -5353,10 +5371,10 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
 }
 
 void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
-  auto *MD = cast<MetadataAsValue>(DII.getArgOperand(0))->getMetadata();
-  AssertDI(isa<ValueAsMetadata>(MD) ||
-             (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
-         "invalid llvm.dbg." + Kind + " intrinsic address/value", &DII, MD);
+  auto *MD = DII.getRawLocation();
+  AssertDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
+               (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
+           "invalid llvm.dbg." + Kind + " intrinsic address/value", &DII, MD);
   AssertDI(isa<DILocalVariable>(DII.getRawVariable()),
          "invalid llvm.dbg." + Kind + " intrinsic variable", &DII,
          DII.getRawVariable());

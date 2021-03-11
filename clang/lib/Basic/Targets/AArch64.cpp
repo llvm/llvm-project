@@ -182,6 +182,7 @@ void AArch64TargetInfo::getTargetDefinesARMV84A(const LangOptions &Opts,
 
 void AArch64TargetInfo::getTargetDefinesARMV85A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
+  Builder.defineMacro("__ARM_FEATURE_FRINT", "1");
   // Also include the Armv8.4 defines
   getTargetDefinesARMV84A(Opts, Builder);
 }

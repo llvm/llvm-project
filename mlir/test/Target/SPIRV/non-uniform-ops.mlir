@@ -10,7 +10,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
   // CHECK-LABEL: @group_non_uniform_broadcast
   spv.func @group_non_uniform_broadcast(%value: f32) -> f32 "None" {
-    %one = spv.constant 1 : i32
+    %one = spv.Constant 1 : i32
     // CHECK: spv.GroupNonUniformBroadcast Subgroup %{{.*}}, %{{.*}} : f32, i32
     %0 = spv.GroupNonUniformBroadcast Subgroup %value, %one : f32, i32
     spv.ReturnValue %0: f32
@@ -60,7 +60,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
   // CHECK-LABEL: @group_non_uniform_iadd_clustered_reduce
   spv.func @group_non_uniform_iadd_clustered_reduce(%val: vector<2xi32>) -> vector<2xi32> "None" {
-    %four = spv.constant 4 : i32
+    %four = spv.Constant 4 : i32
     // CHECK: %{{.+}} = spv.GroupNonUniformIAdd "Workgroup" "ClusteredReduce" %{{.+}} cluster_size(%{{.+}}) : vector<2xi32>
     %0 = spv.GroupNonUniformIAdd "Workgroup" "ClusteredReduce" %val cluster_size(%four) : vector<2xi32>
     spv.ReturnValue %0: vector<2xi32>

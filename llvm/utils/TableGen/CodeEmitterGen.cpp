@@ -481,8 +481,8 @@ void CodeEmitterGen::run(raw_ostream &o) {
       << "    Inst = Inst.zext(" << BitWidth << ");\n"
       << "  if (Scratch.getBitWidth() != " << BitWidth << ")\n"
       << "    Scratch = Scratch.zext(" << BitWidth << ");\n"
-      << "  LoadIntFromMemory(Inst, (uint8_t *)&InstBits[opcode * " << NumWords
-      << "], " << NumBytes << ");\n"
+      << "  LoadIntFromMemory(Inst, (const uint8_t *)&InstBits[opcode * "
+      << NumWords << "], " << NumBytes << ");\n"
       << "  APInt &Value = Inst;\n"
       << "  APInt &op = Scratch;\n"
       << "  switch (opcode) {\n";

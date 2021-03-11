@@ -44,7 +44,8 @@ extern int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
                   void **ArgMappers, int32_t TeamNum, int32_t ThreadLimit,
                   int IsTeamConstruct, AsyncInfoTy &AsyncInfo);
 
-extern int CheckDeviceAndCtors(int64_t device_id);
+extern void handleTargetOutcome(bool Success, ident_t *Loc);
+extern int checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc);
 
 // This structure stores information of a mapped memory region.
 struct MapComponentInfoTy {

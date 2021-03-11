@@ -352,14 +352,14 @@ TEST(FileIndexTest, Refs) {
   Test.Code = std::string(MainCode.code());
   Test.Filename = "test.cc";
   auto AST = Test.build();
-  Index.updateMain(Test.Filename, AST);
+  Index.updateMain(testPath(Test.Filename), AST);
   // Add test2.cc
   TestTU Test2;
   Test2.HeaderCode = HeaderCode;
   Test2.Code = std::string(MainCode.code());
   Test2.Filename = "test2.cc";
   AST = Test2.build();
-  Index.updateMain(Test2.Filename, AST);
+  Index.updateMain(testPath(Test2.Filename), AST);
 
   EXPECT_THAT(getRefs(Index, Foo.ID),
               RefsAre({AllOf(RefRange(MainCode.range("foo")),
@@ -387,7 +387,7 @@ TEST(FileIndexTest, MacroRefs) {
   Test.Code = std::string(MainCode.code());
   Test.Filename = "test.cc";
   auto AST = Test.build();
-  Index.updateMain(Test.Filename, AST);
+  Index.updateMain(testPath(Test.Filename), AST);
 
   auto HeaderMacro = findSymbol(Test.headerSymbols(), "HEADER_MACRO");
   EXPECT_THAT(getRefs(Index, HeaderMacro.ID),

@@ -27,7 +27,7 @@ define void @ptriv(i8* %base, i32 %n) nounwind {
 ; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint i8* [[BASE]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[SUB_PTR_SUB]] to i8
-; CHECK-NEXT:    store i8 [[CONV]], i8* [[P_02]]
+; CHECK-NEXT:    store i8 [[CONV]], i8* [[P_02]], align 1
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, i8* [[P_02]], i32 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[INCDEC_PTR]], [[ADD_PTR]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
@@ -142,10 +142,10 @@ define void @guardedloop([0 x double]* %matrix, [0 x double]* %vector,
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], [[INDVARS_IV2]]
 ; CHECK-NEXT:    [[MATRIXP:%.*]] = getelementptr inbounds [0 x double], [0 x double]* [[MATRIX:%.*]], i32 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[V1:%.*]] = load double, double* [[MATRIXP]]
+; CHECK-NEXT:    [[V1:%.*]] = load double, double* [[MATRIXP]], align 8
 ; CHECK-NEXT:    call void @use(double [[V1]])
 ; CHECK-NEXT:    [[VECTORP:%.*]] = getelementptr inbounds [0 x double], [0 x double]* [[VECTOR:%.*]], i32 0, i64 [[INDVARS_IV2]]
-; CHECK-NEXT:    [[V2:%.*]] = load double, double* [[VECTORP]]
+; CHECK-NEXT:    [[V2:%.*]] = load double, double* [[VECTORP]], align 8
 ; CHECK-NEXT:    call void @use(double [[V2]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
@@ -187,8 +187,7 @@ define void @unguardedloop([0 x double]* %matrix, [0 x double]* %vector,
 ;
 ; CHECK-LABEL: @unguardedloop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[IROW:%.*]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[IROW]], i32 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[IROW:%.*]], i32 1)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -244,7 +243,7 @@ define void @geplftr(i8* %base, i32 %x, i32 %y, i32 %n) nounwind {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INC:%.*]], [[LOOP]] ], [ [[X]], [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[APTR:%.*]] = phi i8* [ [[INCDEC_PTR:%.*]], [[LOOP]] ], [ [[ADD_PTR10]], [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, i8* [[APTR]], i32 1
-; CHECK-NEXT:    store i8 3, i8* [[APTR]]
+; CHECK-NEXT:    store i8 3, i8* [[APTR]], align 1
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], [[LIM]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
@@ -311,7 +310,7 @@ define void @aryptriv([256 x i8]* %base, i32 %n) nounwind {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[APTR:%.*]] = phi i8* [ [[INCDEC_PTR:%.*]], [[LOOP]] ], [ [[IVSTART]], [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, i8* [[APTR]], i32 1
-; CHECK-NEXT:    store i8 3, i8* [[APTR]]
+; CHECK-NEXT:    store i8 3, i8* [[APTR]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[INCDEC_PTR]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:

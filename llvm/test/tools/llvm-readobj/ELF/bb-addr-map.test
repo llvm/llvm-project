@@ -1,0 +1,119 @@
+## This test checks how we handle the --bb-addr-map option.
+
+## Check 64-bit:
+# RUN: yaml2obj %s -DBITS=64 -DADDR=0xFFFFFFFF1 -o %t1.x64.o
+# RUN: llvm-readobj %t1.x64.o --bb-addr-map | FileCheck %s -DADDR=0xFFFFFFFF1 --check-prefix=LLVM
+# RUN: llvm-readelf %t1.x64.o --bb-addr-map | FileCheck %s --check-prefix=GNU
+
+## Check 32-bit:
+# RUN: yaml2obj %s -DBITS=32 -o %t1.x32.o
+# RUN: llvm-readobj %t1.x32.o --bb-addr-map | FileCheck -DADDR=0x11111 %s --check-prefix=LLVM
+# RUN: llvm-readelf %t1.x32.o --bb-addr-map | FileCheck %s --check-prefix=GNU
+
+## Check that a malformed section can be handled.
+# RUN: yaml2obj %s -DBITS=32 -DSIZE=4 -o %t2.o
+# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck %s -DOFFSET=0x00000004 -DFILE=%t2.o --check-prefix=TRUNCATED
+
+# LLVM:      BBAddrMap [
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     At: [[ADDR]]
+# LLVM-NEXT:     BB entries [
+# LLVM-NEXT:       {
+# LLVM-NEXT:         Offset: 0x0
+# LLVM-NEXT:         Size: 0x1
+# LLVM-NEXT:         HasReturn: No
+# LLVM-NEXT:         HasTailCall: Yes
+# LLVM-NEXT:         IsEHPad: No
+# LLVM-NEXT:       }
+# LLVM-NEXT:       {
+# LLVM-NEXT:         Offset: 0x3
+# LLVM-NEXT:         Size: 0x4
+# LLVM-NEXT:         HasReturn: Yes
+# LLVM-NEXT:         HasTailCall: No
+# LLVM-NEXT:         IsEHPad: Yes
+# LLVM-NEXT:       }
+# LLVM-NEXT:     ]
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     At: 0x22222
+# LLVM-NEXT:     BB entries [
+# LLVM-NEXT:       {
+# LLVM-NEXT:         Offset: 0x6
+# LLVM-NEXT:         Size: 0x7
+# LLVM-NEXT:         HasReturn: No
+# LLVM-NEXT:         HasTailCall: No
+# LLVM-NEXT:         IsEHPad: No
+# LLVM-NEXT:       }
+# LLVM-NEXT:     ]
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+# LLVM-NEXT: BBAddrMap [
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     At: 0x33333
+# LLVM-NEXT:     BB entries [
+# LLVM-NEXT:       {
+# LLVM-NEXT:         Offset: 0x9
+# LLVM-NEXT:         Size: 0xA
+# LLVM-NEXT:         HasReturn: Yes
+# LLVM-NEXT:         HasTailCall: Yes
+# LLVM-NEXT:         IsEHPad: No
+# LLVM-NEXT:       }
+# LLVM-NEXT:     ]
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+
+# GNU: GNUStyle::printBBAddrMaps not implemented
+
+# TRUNCATED:      BBAddrMap [
+# TRUNCATED-NEXT:   warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 1: unable to decode LEB128 at offset [[OFFSET]]: malformed uleb128, extends past end
+# TRUNCATED-NEXT: ]
+## Check that the other valid section is properly dumped.
+# TRUNCATED-NEXT: BBAddrMap [
+# TRUNCATED-NEXT:   Function {
+# TRUNCATED-NEXT:          At: 0x33333
+# TRUNCATED-NEXT:          BB entries [
+# TRUNCATED-NEXT:            {
+# TRUNCATED-NEXT:         Offset: 0x9
+# TRUNCATED-NEXT:         Size: 0xA
+# TRUNCATED-NEXT:         HasReturn: Yes
+# TRUNCATED-NEXT:         HasTailCall: Yes
+# TRUNCATED-NEXT:         IsEHPad: No
+# TRUNCATED-NEXT:       }
+# TRUNCATED-NEXT:     ]
+# TRUNCATED-NEXT:   }
+# TRUNCATED-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   bb_addr_map_1
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    ShSize: [[SIZE=<none>]]
+    Entries:
+      - Address: [[ADDR=0x11111]]
+        BBEntries:
+          - AddressOffset: 0x0
+            Size:          0x1
+            Metadata:      0xF0000002
+          - AddressOffset: 0x3
+            Size:          0x4
+            Metadata:      0x5
+      - Address: 0x22222
+        BBEntries:
+          - AddressOffset: 0x6
+            Size:          0x7
+            Metadata:      0x8
+  - Name:   dummy_section
+    Type:   SHT_PROGBITS
+    Size:   16
+  - Name:   bb_addr_map_2
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Address: 0x33333
+        BBEntries:
+          - AddressOffset: 0x9
+            Size:          0xa
+            Metadata:      0xb

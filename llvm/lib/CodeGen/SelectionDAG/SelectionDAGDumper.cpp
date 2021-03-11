@@ -288,7 +288,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::EXTRACT_SUBVECTOR:          return "extract_subvector";
   case ISD::SCALAR_TO_VECTOR:           return "scalar_to_vector";
   case ISD::VECTOR_SHUFFLE:             return "vector_shuffle";
+  case ISD::VECTOR_SPLICE:              return "vector_splice";
   case ISD::SPLAT_VECTOR:               return "splat_vector";
+  case ISD::SPLAT_VECTOR_PARTS:         return "splat_vector_parts";
   case ISD::VECTOR_REVERSE:             return "vector_reverse";
   case ISD::CARRY_FALSE:                return "carry_false";
   case ISD::ADDC:                       return "addc";
@@ -832,26 +834,38 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
 
 LLVM_DUMP_METHOD void SDDbgValue::print(raw_ostream &OS) const {
   OS << " DbgVal(Order=" << getOrder() << ')';
-  if (isInvalidated()) OS << "(Invalidated)";
-  if (isEmitted()) OS << "(Emitted)";
-  switch (getKind()) {
-  case SDNODE:
-    if (getSDNode())
-      OS << "(SDNODE=" << PrintNodeId(*getSDNode()) << ':' <<  getResNo() << ')';
-    else
-      OS << "(SDNODE)";
-    break;
-  case CONST:
-    OS << "(CONST)";
-    break;
-  case FRAMEIX:
-    OS << "(FRAMEIX=" << getFrameIx() << ')';
-    break;
-  case VREG:
-    OS << "(VREG=" << getVReg() << ')';
-    break;
+  if (isInvalidated())
+    OS << "(Invalidated)";
+  if (isEmitted())
+    OS << "(Emitted)";
+  OS << "(";
+  bool Comma = false;
+  for (const SDDbgOperand &Op : getLocationOps()) {
+    if (Comma)
+      OS << ", ";
+    switch (Op.getKind()) {
+    case SDDbgOperand::SDNODE:
+      if (Op.getSDNode())
+        OS << "SDNODE=" << PrintNodeId(*Op.getSDNode()) << ':' << Op.getResNo();
+      else
+        OS << "SDNODE";
+      break;
+    case SDDbgOperand::CONST:
+      OS << "CONST";
+      break;
+    case SDDbgOperand::FRAMEIX:
+      OS << "FRAMEIX=" << Op.getFrameIx();
+      break;
+    case SDDbgOperand::VREG:
+      OS << "VREG=" << Op.getVReg();
+      break;
+    }
+    Comma = true;
   }
+  OS << ")";
   if (isIndirect()) OS << "(Indirect)";
+  if (isVariadic())
+    OS << "(Variadic)";
   OS << ":\"" << Var->getName() << '"';
 #ifndef NDEBUG
   if (Expr->getNumElements())

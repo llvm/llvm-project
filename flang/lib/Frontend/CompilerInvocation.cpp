@@ -85,6 +85,15 @@ bool Fortran::frontend::ParseDiagnosticArgs(clang::DiagnosticOptions &opts,
   return true;
 }
 
+// Tweak the frontend configuration based on the frontend action
+static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
+  assert(opts.programAction_ != Fortran::frontend::InvalidAction &&
+      "Fortran frontend action not set!");
+
+  if (opts.programAction_ == DebugDumpParsingLog)
+    opts.instrumentedParse_ = true;
+}
+
 static InputKind ParseFrontendArgs(FrontendOptions &opts,
     llvm::opt::ArgList &args, clang::DiagnosticsEngine &diags) {
 
@@ -124,6 +133,9 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
       break;
     case clang::driver::options::OPT_fdebug_dump_provenance:
       opts.programAction_ = DebugDumpProvenance;
+      break;
+    case clang::driver::options::OPT_fdebug_dump_parsing_log:
+      opts.programAction_ = DebugDumpParsingLog;
       break;
     case clang::driver::options::OPT_fdebug_measure_parse_tree:
       opts.programAction_ = DebugMeasureParseTree;
@@ -264,6 +276,9 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
           << arg->getAsString(args) << argValue;
     }
   }
+
+  setUpFrontendBasedOnAction(opts);
+
   return dashX;
 }
 
@@ -484,6 +499,9 @@ void CompilerInvocation::setFortranOpts() {
   // directories
   if (moduleDirJ.compare(".") != 0)
     fortranOptions.searchDirectories.emplace_back(moduleDirJ);
+
+  if (frontendOptions.instrumentedParse_)
+    fortranOptions.instrumentedParse = true;
 }
 
 void CompilerInvocation::setSemanticsOpts(

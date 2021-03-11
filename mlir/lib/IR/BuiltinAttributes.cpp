@@ -22,29 +22,11 @@ using namespace mlir;
 using namespace mlir::detail;
 
 //===----------------------------------------------------------------------===//
-// AffineMapAttr
+/// Tablegen Attribute Definitions
 //===----------------------------------------------------------------------===//
 
-AffineMapAttr AffineMapAttr::get(AffineMap value) {
-  return Base::get(value.getContext(), value);
-}
-
-AffineMap AffineMapAttr::getValue() const { return getImpl()->value; }
-
-//===----------------------------------------------------------------------===//
-// ArrayAttr
-//===----------------------------------------------------------------------===//
-
-ArrayAttr ArrayAttr::get(MLIRContext *context, ArrayRef<Attribute> value) {
-  return Base::get(context, value);
-}
-
-ArrayRef<Attribute> ArrayAttr::getValue() const { return getImpl()->value; }
-
-Attribute ArrayAttr::operator[](unsigned idx) const {
-  assert(idx < size() && "index out of bounds");
-  return getValue()[idx];
-}
+#define GET_ATTRDEF_CLASSES
+#include "mlir/IR/BuiltinAttributes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // DictionaryAttr
@@ -152,8 +134,8 @@ DictionaryAttr DictionaryAttr::get(MLIRContext *context,
 }
 /// Construct a dictionary with an array of values that is known to already be
 /// sorted by name and uniqued.
-DictionaryAttr DictionaryAttr::getWithSorted(ArrayRef<NamedAttribute> value,
-                                             MLIRContext *context) {
+DictionaryAttr DictionaryAttr::getWithSorted(MLIRContext *context,
+                                             ArrayRef<NamedAttribute> value) {
   if (value.empty())
     return DictionaryAttr::getEmpty(context);
   // Ensure that the attribute elements are unique and sorted.
@@ -165,10 +147,6 @@ DictionaryAttr DictionaryAttr::getWithSorted(ArrayRef<NamedAttribute> value,
   assert(!findDuplicateElement(value) &&
          "DictionaryAttr element names must be unique");
   return Base::get(context, value);
-}
-
-ArrayRef<NamedAttribute> DictionaryAttr::getValue() const {
-  return getImpl()->getElements();
 }
 
 /// Return the specified attribute if present, null otherwise.
@@ -202,6 +180,10 @@ DictionaryAttr::iterator DictionaryAttr::end() const {
   return getValue().end();
 }
 size_t DictionaryAttr::size() const { return getValue().size(); }
+
+DictionaryAttr DictionaryAttr::getEmptyUnchecked(MLIRContext *context) {
+  return Base::get(context, ArrayRef<NamedAttribute>());
+}
 
 //===----------------------------------------------------------------------===//
 // FloatAttr
@@ -272,23 +254,12 @@ LogicalResult FloatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 FlatSymbolRefAttr SymbolRefAttr::get(MLIRContext *ctx, StringRef value) {
-  return Base::get(ctx, value, llvm::None).cast<FlatSymbolRefAttr>();
+  return get(ctx, value, llvm::None).cast<FlatSymbolRefAttr>();
 }
-
-SymbolRefAttr SymbolRefAttr::get(MLIRContext *ctx, StringRef value,
-                                 ArrayRef<FlatSymbolRefAttr> nestedReferences) {
-  return Base::get(ctx, value, nestedReferences);
-}
-
-StringRef SymbolRefAttr::getRootReference() const { return getImpl()->value; }
 
 StringRef SymbolRefAttr::getLeafReference() const {
   ArrayRef<FlatSymbolRefAttr> nestedRefs = getNestedReferences();
   return nestedRefs.empty() ? getRootReference() : nestedRefs.back().getValue();
-}
-
-ArrayRef<FlatSymbolRefAttr> SymbolRefAttr::getNestedReferences() const {
-  return getImpl()->getNestedRefs();
 }
 
 //===----------------------------------------------------------------------===//
@@ -369,39 +340,9 @@ bool BoolAttr::classof(Attribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
-// IntegerSetAttr
-//===----------------------------------------------------------------------===//
-
-IntegerSetAttr IntegerSetAttr::get(IntegerSet value) {
-  return Base::get(value.getConstraint(0).getContext(), value);
-}
-
-IntegerSet IntegerSetAttr::getValue() const { return getImpl()->value; }
-
-//===----------------------------------------------------------------------===//
 // OpaqueAttr
 //===----------------------------------------------------------------------===//
 
-OpaqueAttr OpaqueAttr::get(Identifier dialect, StringRef attrData, Type type) {
-  return Base::get(dialect.getContext(), dialect, attrData, type);
-}
-
-OpaqueAttr OpaqueAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
-                                  Identifier dialect, StringRef attrData,
-                                  Type type) {
-  return Base::getChecked(emitError, dialect.getContext(), dialect, attrData,
-                          type);
-}
-
-/// Returns the dialect namespace of the opaque attribute.
-Identifier OpaqueAttr::getDialectNamespace() const {
-  return getImpl()->dialectNamespace;
-}
-
-/// Returns the raw attribute data of the opaque attribute.
-StringRef OpaqueAttr::getAttrData() const { return getImpl()->attrData; }
-
-/// Verify the construction of an opaque attribute.
 LogicalResult OpaqueAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                                  Identifier dialect, StringRef attrData,
                                  Type type) {
@@ -409,31 +350,6 @@ LogicalResult OpaqueAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "invalid dialect namespace '" << dialect << "'";
   return success();
 }
-
-//===----------------------------------------------------------------------===//
-// StringAttr
-//===----------------------------------------------------------------------===//
-
-StringAttr StringAttr::get(MLIRContext *context, StringRef bytes) {
-  return get(bytes, NoneType::get(context));
-}
-
-/// Get an instance of a StringAttr with the given string and Type.
-StringAttr StringAttr::get(StringRef bytes, Type type) {
-  return Base::get(type.getContext(), bytes, type);
-}
-
-StringRef StringAttr::getValue() const { return getImpl()->value; }
-
-//===----------------------------------------------------------------------===//
-// TypeAttr
-//===----------------------------------------------------------------------===//
-
-TypeAttr TypeAttr::get(Type value) {
-  return Base::get(value.getContext(), value);
-}
-
-Type TypeAttr::getValue() const { return getImpl()->value; }
 
 //===----------------------------------------------------------------------===//
 // ElementsAttr

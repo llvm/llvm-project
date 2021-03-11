@@ -181,6 +181,10 @@ Ldebug_info_end0:
 .subsections_via_symbols
 .section  __DWARF,__debug_line,regular,debug
 
+.section  __DWARF,__debug_aranges,regular,debug
+ltmp1:
+  .byte 0
+
 #--- no-debug.s
 ## This file has no debug info.
 .text

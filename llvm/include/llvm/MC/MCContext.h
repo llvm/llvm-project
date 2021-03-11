@@ -279,16 +279,35 @@ namespace llvm {
     };
 
     struct XCOFFSectionKey {
+      // Section name.
       std::string SectionName;
-      XCOFF::StorageMappingClass MappingClass;
+      // Section property.
+      // For csect section, it is storage mapping class.
+      // For debug section, it is section type flags.
+      union {
+        XCOFF::StorageMappingClass MappingClass;
+        XCOFF::DwarfSectionSubtypeFlags DwarfSubtypeFlags;
+      };
+      bool IsCsect;
 
       XCOFFSectionKey(StringRef SectionName,
                       XCOFF::StorageMappingClass MappingClass)
-          : SectionName(SectionName), MappingClass(MappingClass) {}
+          : SectionName(SectionName), MappingClass(MappingClass),
+            IsCsect(true) {}
+
+      XCOFFSectionKey(StringRef SectionName,
+                      XCOFF::DwarfSectionSubtypeFlags DwarfSubtypeFlags)
+          : SectionName(SectionName), DwarfSubtypeFlags(DwarfSubtypeFlags),
+            IsCsect(false) {}
 
       bool operator<(const XCOFFSectionKey &Other) const {
-        return std::tie(SectionName, MappingClass) <
-               std::tie(Other.SectionName, Other.MappingClass);
+        if (IsCsect && Other.IsCsect)
+          return std::tie(SectionName, MappingClass) <
+                 std::tie(Other.SectionName, Other.MappingClass);
+        if (IsCsect != Other.IsCsect)
+          return IsCsect;
+        return std::tie(SectionName, DwarfSubtypeFlags) <
+               std::tie(Other.SectionName, Other.DwarfSubtypeFlags);
       }
     };
 
@@ -599,11 +618,11 @@ namespace llvm {
                                   const MCSymbolWasm *Group, unsigned UniqueID,
                                   const char *BeginSymName);
 
-    MCSectionXCOFF *
-    getXCOFFSection(StringRef Section, SectionKind K,
-                    Optional<XCOFF::CsectProperties> CsectProp = None,
-                    bool MultiSymbolsAllowed = false,
-                    const char *BeginSymName = nullptr);
+    MCSectionXCOFF *getXCOFFSection(
+        StringRef Section, SectionKind K,
+        Optional<XCOFF::CsectProperties> CsectProp = None,
+        bool MultiSymbolsAllowed = false, const char *BeginSymName = nullptr,
+        Optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSubtypeFlags = None);
 
     // Create and save a copy of STI and return a reference to the copy.
     MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);

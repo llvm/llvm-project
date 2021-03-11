@@ -154,6 +154,18 @@ bool AttrOrTypeDef::operator<(const AttrOrTypeDef &other) const {
 }
 
 //===----------------------------------------------------------------------===//
+// AttrDef
+//===----------------------------------------------------------------------===//
+
+Optional<StringRef> AttrDef::getTypeBuilder() const {
+  return def->getValueAsOptionalString("typeBuilder");
+}
+
+bool AttrDef::classof(const AttrOrTypeDef *def) {
+  return def->getDef()->isSubClassOf("AttrDef");
+}
+
+//===----------------------------------------------------------------------===//
 // AttrOrTypeParameter
 //===----------------------------------------------------------------------===//
 
@@ -218,4 +230,19 @@ StringRef AttrOrTypeParameter::getSyntax() const {
   }
   llvm::PrintFatalError("Parameters DAG arguments must be either strings or "
                         "defs which inherit from AttrOrTypeParameter");
+}
+
+const llvm::Init *AttrOrTypeParameter::getDef() const {
+  return def->getArg(index);
+}
+
+//===----------------------------------------------------------------------===//
+// AttributeSelfTypeParameter
+//===----------------------------------------------------------------------===//
+
+bool AttributeSelfTypeParameter::classof(const AttrOrTypeParameter *param) {
+  const llvm::Init *paramDef = param->getDef();
+  if (auto *paramDefInit = dyn_cast<llvm::DefInit>(paramDef))
+    return paramDefInit->getDef()->isSubClassOf("AttributeSelfTypeParameter");
+  return false;
 }

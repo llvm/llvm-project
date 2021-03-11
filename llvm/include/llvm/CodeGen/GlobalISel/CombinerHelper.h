@@ -156,6 +156,11 @@ public:
   bool matchSextInRegOfLoad(MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo);
   bool applySextInRegOfLoad(MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo);
 
+  /// Try to combine G_[SU]DIV and G_[SU]REM into a single G_[SU]DIVREM
+  /// when their source operands are identical.
+  bool matchCombineDivRem(MachineInstr &MI, MachineInstr *&OtherMI);
+  void applyCombineDivRem(MachineInstr &MI, MachineInstr *&OtherMI);
+
   /// If a brcond's true block is not the fallthrough, make it so by inverting
   /// the condition and swapping operands.
   bool matchOptBrCondByInvertingCond(MachineInstr &MI);
@@ -315,6 +320,9 @@ public:
   /// Transform anyext(trunc(x)) to x.
   bool matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
   bool applyCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
+
+  /// Transform zext(trunc(x)) to x.
+  bool matchCombineZextTrunc(MachineInstr &MI, Register &Reg);
 
   /// Transform [asz]ext([asz]ext(x)) to [asz]ext x.
   bool matchCombineExtOfExt(MachineInstr &MI,
@@ -488,6 +496,16 @@ public:
 
   bool matchExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);
   bool applyExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);
+
+  bool matchExtractVecEltBuildVec(MachineInstr &MI, Register &Reg);
+  void applyExtractVecEltBuildVec(MachineInstr &MI, Register &Reg);
+
+  bool matchExtractAllEltsFromBuildVector(
+      MachineInstr &MI,
+      SmallVectorImpl<std::pair<Register, MachineInstr *>> &MatchInfo);
+  void applyExtractAllEltsFromBuildVector(
+      MachineInstr &MI,
+      SmallVectorImpl<std::pair<Register, MachineInstr *>> &MatchInfo);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

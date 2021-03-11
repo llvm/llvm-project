@@ -157,12 +157,6 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (SIInstrInfo::isSMRD(*MI) && checkSMRDHazards(MI) > 0)
     return HazardType;
 
-  // FIXME: Should flat be considered vmem?
-  if ((SIInstrInfo::isVMEM(*MI) ||
-       SIInstrInfo::isFLAT(*MI))
-      && checkVMEMHazards(MI) > 0)
-    return HazardType;
-
   if (ST.hasNSAtoVMEMBug() && checkNSAtoVMEMHazard(MI) > 0)
     return HazardType;
 
@@ -171,6 +165,12 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
 
   if (ST.hasNoDataDepHazard())
     return NoHazard;
+
+  // FIXME: Should flat be considered vmem?
+  if ((SIInstrInfo::isVMEM(*MI) ||
+       SIInstrInfo::isFLAT(*MI))
+      && checkVMEMHazards(MI) > 0)
+    return HazardType;
 
   if (SIInstrInfo::isVALU(*MI) && checkVALUHazards(MI) > 0)
     return HazardType;
@@ -275,9 +275,6 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
   if (SIInstrInfo::isSMRD(*MI))
     return std::max(WaitStates, checkSMRDHazards(MI));
 
-  if (SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isFLAT(*MI))
-    WaitStates = std::max(WaitStates, checkVMEMHazards(MI));
-
   if (ST.hasNSAtoVMEMBug())
     WaitStates = std::max(WaitStates, checkNSAtoVMEMHazard(MI));
 
@@ -285,6 +282,9 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
 
   if (ST.hasNoDataDepHazard())
     return WaitStates;
+
+  if (SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isFLAT(*MI))
+    WaitStates = std::max(WaitStates, checkVMEMHazards(MI));
 
   if (SIInstrInfo::isVALU(*MI))
     WaitStates = std::max(WaitStates, checkVALUHazards(MI));

@@ -639,6 +639,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::MSDependentExistsStmtClass:
     K = CXCursor_UnexposedStmt;
     break;
+  case Stmt::OMPCanonicalLoopClass:
+    K = CXCursor_OMPCanonicalLoop;
+    break;
   case Stmt::OMPParallelDirectiveClass:
     K = CXCursor_OMPParallelDirective;
     break;

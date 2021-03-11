@@ -82,7 +82,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyExceptionInfoPass(PR);
   initializeWebAssemblyCFGSortPass(PR);
   initializeWebAssemblyCFGStackifyPass(PR);
-  initializeWebAssemblyHandleEHTerminatePadsPass(PR);
   initializeWebAssemblyExplicitLocalsPass(PR);
   initializeWebAssemblyLowerBrUnlessPass(PR);
   initializeWebAssemblyRegNumberingPass(PR);
@@ -485,10 +484,6 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 
   // Insert BLOCK and LOOP markers.
   addPass(createWebAssemblyCFGStackify());
-
-  // Handle terminate pads for cleanups
-  if (TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    addPass(createWebAssemblyHandleEHTerminatePads());
 
   // Insert explicit local.get and local.set operators.
   if (!WasmDisableExplicitLocals)

@@ -686,15 +686,20 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
   return Result;
 }
 
-MCSectionXCOFF *
-MCContext::getXCOFFSection(StringRef Section, SectionKind Kind,
-                           Optional<XCOFF::CsectProperties> CsectProp,
-                           bool MultiSymbolsAllowed, const char *BeginSymName) {
+MCSectionXCOFF *MCContext::getXCOFFSection(
+    StringRef Section, SectionKind Kind,
+    Optional<XCOFF::CsectProperties> CsectProp, bool MultiSymbolsAllowed,
+    const char *BeginSymName,
+    Optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSectionSubtypeFlags) {
+  bool IsDwarfSec = DwarfSectionSubtypeFlags.hasValue();
+  assert((IsDwarfSec != CsectProp.hasValue()) && "Invalid XCOFF section!");
+
   // Do the lookup. If we have a hit, return it.
-  // FIXME: handle the case for non-csect sections. Non-csect section has None
-  // CsectProp.
   auto IterBool = XCOFFUniquingMap.insert(std::make_pair(
-      XCOFFSectionKey{Section.str(), CsectProp->MappingClass}, nullptr));
+      IsDwarfSec
+          ? XCOFFSectionKey(Section.str(), DwarfSectionSubtypeFlags.getValue())
+          : XCOFFSectionKey(Section.str(), CsectProp->MappingClass),
+      nullptr));
   auto &Entry = *IterBool.first;
   if (!IterBool.second) {
     MCSectionXCOFF *ExistedEntry = Entry.second;
@@ -706,9 +711,14 @@ MCContext::getXCOFFSection(StringRef Section, SectionKind Kind,
 
   // Otherwise, return a new section.
   StringRef CachedName = Entry.first.SectionName;
-  MCSymbolXCOFF *QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(
-      CachedName + "[" + XCOFF::getMappingClassString(CsectProp->MappingClass) +
-      "]"));
+  MCSymbolXCOFF *QualName = nullptr;
+  // Debug section don't have storage class attribute.
+  if (IsDwarfSec)
+    QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(CachedName));
+  else
+    QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(
+        CachedName + "[" +
+        XCOFF::getMappingClassString(CsectProp->MappingClass) + "]"));
 
   MCSymbol *Begin = nullptr;
   if (BeginSymName)
@@ -716,9 +726,18 @@ MCContext::getXCOFFSection(StringRef Section, SectionKind Kind,
 
   // QualName->getUnqualifiedName() and CachedName are the same except when
   // CachedName contains invalid character(s) such as '$' for an XCOFF symbol.
-  MCSectionXCOFF *Result = new (XCOFFAllocator.Allocate()) MCSectionXCOFF(
-      QualName->getUnqualifiedName(), CsectProp->MappingClass, CsectProp->Type,
-      Kind, QualName, Begin, CachedName, MultiSymbolsAllowed);
+  MCSectionXCOFF *Result = nullptr;
+  if (IsDwarfSec)
+    Result = new (XCOFFAllocator.Allocate())
+        MCSectionXCOFF(QualName->getUnqualifiedName(), Kind, QualName,
+                       DwarfSectionSubtypeFlags.getValue(), Begin, CachedName,
+                       MultiSymbolsAllowed);
+  else
+    Result = new (XCOFFAllocator.Allocate())
+        MCSectionXCOFF(QualName->getUnqualifiedName(), CsectProp->MappingClass,
+                       CsectProp->Type, Kind, QualName, Begin, CachedName,
+                       MultiSymbolsAllowed);
+
   Entry.second = Result;
 
   auto *F = new MCDataFragment();

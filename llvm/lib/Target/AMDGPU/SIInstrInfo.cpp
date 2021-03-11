@@ -116,8 +116,11 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case AMDGPU::V_MOV_B64_PSEUDO:
   case AMDGPU::V_ACCVGPR_READ_B32_e64:
   case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
-    // No implicit operands.
-    return MI.getNumOperands() == MI.getDesc().getNumOperands();
+    // No non-standard implicit operands.
+    assert(MI.getDesc().getNumOperands() == 2);
+    assert(MI.getDesc().getNumImplicitDefs() == 0);
+    assert(MI.getDesc().getNumImplicitUses() == 1);
+    return MI.getNumOperands() == 3;
   default:
     return false;
   }
@@ -2370,10 +2373,8 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
 
   // Skip over the instructions that are artificially terminators for special
   // exec management.
-  while (I != E && !I->isBranch() && !I->isReturn() &&
-         I->getOpcode() != AMDGPU::SI_MASK_BRANCH) {
+  while (I != E && !I->isBranch() && !I->isReturn()) {
     switch (I->getOpcode()) {
-    case AMDGPU::SI_MASK_BRANCH:
     case AMDGPU::S_MOV_B64_term:
     case AMDGPU::S_XOR_B64_term:
     case AMDGPU::S_OR_B64_term:
@@ -2401,34 +2402,7 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
   if (I == E)
     return false;
 
-  if (I->getOpcode() != AMDGPU::SI_MASK_BRANCH)
-    return analyzeBranchImpl(MBB, I, TBB, FBB, Cond, AllowModify);
-
-  ++I;
-
-  // TODO: Should be able to treat as fallthrough?
-  if (I == MBB.end())
-    return true;
-
-  if (analyzeBranchImpl(MBB, I, TBB, FBB, Cond, AllowModify))
-    return true;
-
-  MachineBasicBlock *MaskBrDest = I->getOperand(0).getMBB();
-
-  // Specifically handle the case where the conditional branch is to the same
-  // destination as the mask branch. e.g.
-  //
-  // si_mask_branch BB8
-  // s_cbranch_execz BB8
-  // s_cbranch BB9
-  //
-  // This is required to understand divergent loops which may need the branches
-  // to be relaxed.
-  if (TBB != MaskBrDest || Cond.empty())
-    return true;
-
-  auto Pred = Cond[0].getImm();
-  return (Pred != EXECZ && Pred != EXECNZ);
+  return analyzeBranchImpl(MBB, I, TBB, FBB, Cond, AllowModify);
 }
 
 unsigned SIInstrInfo::removeBranch(MachineBasicBlock &MBB,
@@ -2439,11 +2413,6 @@ unsigned SIInstrInfo::removeBranch(MachineBasicBlock &MBB,
   unsigned RemovedSize = 0;
   while (I != MBB.end()) {
     MachineBasicBlock::iterator Next = std::next(I);
-    if (I->getOpcode() == AMDGPU::SI_MASK_BRANCH) {
-      I = Next;
-      continue;
-    }
-
     RemovedSize += getInstSizeInBytes(*I);
     I->eraseFromParent();
     ++Count;

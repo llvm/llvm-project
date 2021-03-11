@@ -1586,10 +1586,6 @@ namespace llvm {
     EmitVAARGWithCustomInserter(MachineInstr &MI, MachineBasicBlock *MBB) const;
 
     /// Utility function to emit the xmm reg save portion of va_start.
-    MachineBasicBlock *
-    EmitVAStartSaveXMMRegsWithCustomInserter(MachineInstr &BInstr,
-                                             MachineBasicBlock *BB) const;
-
     MachineBasicBlock *EmitLoweredCascadedSelect(MachineInstr &MI1,
                                                  MachineInstr &MI2,
                                                  MachineBasicBlock *BB) const;

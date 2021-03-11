@@ -524,7 +524,7 @@ Attribute Parser::parseExtendedAttr(Type type) {
 
         // Otherwise, form a new opaque attribute.
         return OpaqueAttr::getChecked(
-            getEncodedSourceLocation(loc),
+            [&] { return emitError(loc); },
             Identifier::get(dialectName, state.context), symbolData,
             attrType ? attrType : NoneType::get(state.context));
       });
@@ -563,7 +563,7 @@ Type Parser::parseExtendedType() {
 
         // Otherwise, form a new opaque type.
         return OpaqueType::getChecked(
-            getEncodedSourceLocation(loc),
+            [&] { return emitError(loc); },
             Identifier::get(dialectName, state.context), symbolData);
       });
 }

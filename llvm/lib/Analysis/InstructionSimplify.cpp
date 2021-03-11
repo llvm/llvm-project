@@ -2486,10 +2486,14 @@ static Value *ExtractEquivalentCondition(Value *V, CmpInst::Predicate Pred,
 // area, it may be possible to update LLVM's semantics accordingly and reinstate
 // this optimization.
 static Constant *
-computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
-                   const DominatorTree *DT, CmpInst::Predicate Pred,
-                   AssumptionCache *AC, const Instruction *CxtI,
-                   const InstrInfoQuery &IIQ, Value *LHS, Value *RHS) {
+computePointerICmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
+                   const SimplifyQuery &Q) {
+  const DataLayout &DL = Q.DL;
+  const TargetLibraryInfo *TLI = Q.TLI;
+  const DominatorTree *DT = Q.DT;
+  const Instruction *CxtI = Q.CxtI;
+  const InstrInfoQuery &IIQ = Q.IIQ;
+
   // First, skip past any trivial no-ops.
   LHS = LHS->stripPointerCasts();
   RHS = RHS->stripPointerCasts();
@@ -3651,8 +3655,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   // Simplify comparisons of related pointers using a powerful, recursive
   // GEP-walk when we have target data available..
   if (LHS->getType()->isPointerTy())
-    if (auto *C = computePointerICmp(Q.DL, Q.TLI, Q.DT, Pred, Q.AC, Q.CxtI,
-                                     Q.IIQ, LHS, RHS))
+    if (auto *C = computePointerICmp(Pred, LHS, RHS, Q))
       return C;
   if (auto *CLHS = dyn_cast<PtrToIntOperator>(LHS))
     if (auto *CRHS = dyn_cast<PtrToIntOperator>(RHS))
@@ -3660,9 +3663,8 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
               Q.DL.getTypeSizeInBits(CLHS->getType()) &&
           Q.DL.getTypeSizeInBits(CRHS->getPointerOperandType()) ==
               Q.DL.getTypeSizeInBits(CRHS->getType()))
-        if (auto *C = computePointerICmp(Q.DL, Q.TLI, Q.DT, Pred, Q.AC, Q.CxtI,
-                                         Q.IIQ, CLHS->getPointerOperand(),
-                                         CRHS->getPointerOperand()))
+        if (auto *C = computePointerICmp(Pred, CLHS->getPointerOperand(),
+                                         CRHS->getPointerOperand(), Q))
           return C;
 
   if (GetElementPtrInst *GLHS = dyn_cast<GetElementPtrInst>(LHS)) {
@@ -5403,16 +5405,6 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   return nullptr;
 }
 
-static Intrinsic::ID getMaxMinOpposite(Intrinsic::ID IID) {
-  switch (IID) {
-  case Intrinsic::smax: return Intrinsic::smin;
-  case Intrinsic::smin: return Intrinsic::smax;
-  case Intrinsic::umax: return Intrinsic::umin;
-  case Intrinsic::umin: return Intrinsic::umax;
-  default: llvm_unreachable("Unexpected intrinsic");
-  }
-}
-
 static APInt getMaxMinLimit(Intrinsic::ID IID, unsigned BitWidth) {
   switch (IID) {
   case Intrinsic::smax: return APInt::getSignedMaxValue(BitWidth);
@@ -5452,7 +5444,7 @@ static Value *foldMinMaxSharedOp(Intrinsic::ID IID, Value *Op0, Value *Op1) {
     if (IID0 == IID)
       return MM0;
     // max (min X, Y), X --> X
-    if (IID0 == getMaxMinOpposite(IID))
+    if (IID0 == getInverseMinMaxIntrinsic(IID))
       return Op1;
   }
   return nullptr;
@@ -5472,6 +5464,12 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
       return Op0;
     break;
 
+  case Intrinsic::cttz: {
+    Value *X;
+    if (match(Op0, m_Shl(m_One(), m_Value(X))))
+      return X;
+    break;
+  }
   case Intrinsic::smax:
   case Intrinsic::smin:
   case Intrinsic::umax:
@@ -5498,7 +5496,7 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
       // If the constant op is the opposite of the limit value, the other must
       // be larger/smaller or equal. For example:
       // umin(i8 %x, i8 255) --> %x
-      if (*C == getMaxMinLimit(getMaxMinOpposite(IID), BitWidth))
+      if (*C == getMaxMinLimit(getInverseMinMaxIntrinsic(IID), BitWidth))
         return Op0;
 
       // Remove nested call if constant operands allow it. Example:

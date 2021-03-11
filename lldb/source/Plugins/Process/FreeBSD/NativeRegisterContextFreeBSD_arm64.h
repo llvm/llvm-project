@@ -13,20 +13,28 @@
 
 // clang-format off
 #include <sys/types.h>
+#include <sys/param.h>
 #include <machine/reg.h>
 // clang-format on
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
+#include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
 #include <array>
+
+#if __FreeBSD_version >= 1300139
+#  define LLDB_HAS_FREEBSD_WATCHPOINT 1
+#endif
 
 namespace lldb_private {
 namespace process_freebsd {
 
 class NativeProcessFreeBSD;
 
-class NativeRegisterContextFreeBSD_arm64 : public NativeRegisterContextFreeBSD {
+class NativeRegisterContextFreeBSD_arm64
+    : public NativeRegisterContextFreeBSD,
+      public NativeRegisterContextDBReg_arm64 {
 public:
   NativeRegisterContextFreeBSD_arm64(const ArchSpec &target_arch,
                                      NativeThreadProtocol &native_thread);
@@ -56,9 +64,16 @@ private:
   // and sizes, so we do not have to worry about these (and we have
   // a unittest to assert that).
   std::array<uint8_t, sizeof(reg) + sizeof(fpreg)> m_reg_data;
+#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
+  dbreg m_dbreg;
+  bool m_read_dbreg;
+#endif
 
   Status ReadRegisterSet(uint32_t set);
   Status WriteRegisterSet(uint32_t set);
+
+  llvm::Error ReadHardwareDebugInfo() override;
+  llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
 
   RegisterInfoPOSIX_arm64 &GetRegisterInfo() const;
 };

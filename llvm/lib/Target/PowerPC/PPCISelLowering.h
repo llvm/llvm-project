@@ -355,6 +355,15 @@ namespace llvm {
     /// register assignment.
     ADDI_TLSGD_L_ADDR,
 
+    /// GPRC = TLSGD_AIX, TOC_ENTRY, TOC_ENTRY
+    /// G8RC = TLSGD_AIX, TOC_ENTRY, TOC_ENTRY
+    /// Op that combines two register copies of TOC entries
+    /// (region handle into R3 and variable offset into R4) followed by a
+    /// GET_TLS_ADDR node which will be expanded to a call to __get_tls_addr.
+    /// This node is used in 64-bit mode as well (in which case the result is
+    /// G8RC and inputs are X3/X4).
+    TLSGD_AIX,
+
     /// G8RC = ADDIS_TLSLD_HA %x2, Symbol - For the local-dynamic TLS
     /// model, produces an ADDIS8 instruction that adds the GOT base
     /// register to sym\@got\@tlsld\@ha.
@@ -1123,6 +1132,8 @@ namespace llvm {
     SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGlobalTLSAddressAIX(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGlobalTLSAddressLinux(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;

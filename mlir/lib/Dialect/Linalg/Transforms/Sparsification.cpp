@@ -635,8 +635,8 @@ static Value genVectorMask(CodeGen &codegen, PatternRewriter &rewriter,
       matchPattern(hi, m_Constant(&hiInt)) &&
       matchPattern(step, m_Constant(&stepInt))) {
     if (((hiInt.getInt() - loInt.getInt()) % stepInt.getInt()) == 0)
-      return rewriter.create<vector::ConstantMaskOp>(
-          loc, mtp, rewriter.getI64ArrayAttr(codegen.curVecLength));
+      return rewriter.create<vector::BroadcastOp>(
+          loc, mtp, rewriter.create<ConstantIntOp>(loc, 1, 1));
   }
   // Otherwise, generate a vector mask that avoids overrunning the upperbound
   // during vector execution. Here we rely on subsequent loop optimizations to
@@ -723,9 +723,13 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen,
 static void genTensorStore(Merger &merger, CodeGen &codegen,
                            PatternRewriter &rewriter, linalg::GenericOp op,
                            unsigned tensor, Value rhs) {
+  Location loc = op.getLoc();
   // Test if this is a scalarized reduction.
   unsigned lhs = op.getNumShapedOperands() - 1;
   if (lhs == tensor && codegen.redVal) {
+    if (codegen.curVecLength > 1)
+      rhs = rewriter.create<SelectOp>(loc, codegen.curVecMask, rhs,
+                                      codegen.redVal);
     codegen.redVal = rhs;
     return;
   }
@@ -736,7 +740,6 @@ static void genTensorStore(Merger &merger, CodeGen &codegen,
     unsigned idx = map.getDimPosition(i);
     args.push_back(codegen.loops[idx]); // universal dense index
   }
-  Location loc = op.getLoc();
   Value ptr = codegen.buffers[tensor];
   if (codegen.curVecLength > 1)
     genVectorStore(codegen, rewriter, rhs, ptr, args);
@@ -798,7 +801,7 @@ static void genReductionEnd(Merger &merger, CodeGen &codegen,
     return;
   codegen.redVal = merger.exp(codegen.redExp).val = Value(); // end chain
   unsigned lhs = op.getNumShapedOperands() - 1;
-  if (codegen.curVecLength > 1) {
+  if (red.getType().isa<VectorType>()) {
     // TODO: assumes + reductions for now
     codegen.curVecLength = 1;
     Value ld = genTensorLoad(merger, codegen, rewriter, op, codegen.redExp);

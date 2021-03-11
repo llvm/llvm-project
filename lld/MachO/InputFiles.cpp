@@ -79,6 +79,12 @@ using namespace lld::macho;
 std::string lld::toString(const InputFile *f) {
   if (!f)
     return "<internal>";
+
+  // Multiple dylibs can be defined in one .tbd file.
+  if (auto dylibFile = dyn_cast<DylibFile>(f))
+    if (f->getName().endswith(".tbd"))
+      return (f->getName() + "(" + dylibFile->dylibName + ")").str();
+
   if (f->archiveName.empty())
     return std::string(f->getName());
   return (path::filename(f->archiveName) + "(" + path::filename(f->getName()) +
@@ -93,8 +99,8 @@ int InputFile::idCount = 0;
 // Open a given file path and return it as a memory-mapped file.
 Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   // Open a file.
-  auto mbOrErr = MemoryBuffer::getFile(path);
-  if (auto ec = mbOrErr.getError()) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr = MemoryBuffer::getFile(path);
+  if (std::error_code ec = mbOrErr.getError()) {
     error("cannot open " + path + ": " + ec.message());
     return None;
   }
@@ -141,20 +147,6 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
 
   error("unable to find matching architecture in " + path);
   return None;
-}
-
-const load_command *macho::findCommand(const mach_header_64 *hdr,
-                                       uint32_t type) {
-  const uint8_t *p =
-      reinterpret_cast<const uint8_t *>(hdr) + sizeof(mach_header_64);
-
-  for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
-    auto *cmd = reinterpret_cast<const load_command *>(p);
-    if (cmd->cmd == type)
-      return cmd;
-    p += cmd->cmdsize;
-  }
-  return nullptr;
 }
 
 void ObjFile::parseSections(ArrayRef<section_64> sections) {
@@ -346,6 +338,32 @@ static macho::Symbol *createDefined(const structs::nlist_64 &sym,
                        /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
+// Checks if the version specified in `cmd` is compatible with target
+// version. IOW, check if cmd's version >= config's version.
+static bool hasCompatVersion(const InputFile *input,
+                             const build_version_command *cmd) {
+
+  if (config->target.Platform != static_cast<PlatformKind>(cmd->platform)) {
+    error(toString(input) + " has platform " +
+          getPlatformName(static_cast<PlatformKind>(cmd->platform)) +
+          Twine(", which is different from target platform ") +
+          getPlatformName(config->target.Platform));
+    return false;
+  }
+
+  unsigned major = cmd->minos >> 16;
+  unsigned minor = (cmd->minos >> 8) & 0xffu;
+  unsigned subMinor = cmd->minos & 0xffu;
+  VersionTuple version(major, minor, subMinor);
+  if (version >= config->platformInfo.minimum)
+    return true;
+
+  error(toString(input) + " has version " + version.getAsString() +
+        ", which is incompatible with target version of " +
+        config->platformInfo.minimum.getAsString());
+  return false;
+}
+
 // Absolute symbols are defined symbols that do not have an associated
 // InputSection. They cannot be weak.
 static macho::Symbol *createAbsolute(const structs::nlist_64 &sym,
@@ -401,7 +419,11 @@ void ObjFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
 
     const section_64 &sec = sectionHeaders[sym.n_sect - 1];
     SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
-    assert(!subsecMap.empty());
+
+    // parseSections() may have chosen not to parse this section.
+    if (subsecMap.empty())
+      continue;
+
     uint64_t offset = sym.n_value - sec.addr;
 
     // If the input file does not use subsections-via-symbols, all symbols can
@@ -480,13 +502,18 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
 
   MachO::Architecture arch =
       MachO::getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
-  if (arch != config->arch) {
+  if (arch != config->target.Arch) {
     error(toString(this) + " has architecture " + getArchitectureName(arch) +
           " which is incompatible with target architecture " +
-          getArchitectureName(config->arch));
+          getArchitectureName(config->target.Arch));
     return;
   }
-  // TODO: check platform too
+
+  if (const auto *cmd =
+          findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
+    if (!hasCompatVersion(this, cmd))
+      return;
+  }
 
   if (const load_command *cmd = findCommand(hdr, LC_LINKER_OPTION)) {
     auto *c = reinterpret_cast<const linker_option_command *>(cmd);
@@ -538,9 +565,10 @@ void ObjFile::parseDebugInfo() {
   // TODO: Since object files can contain a lot of DWARF info, we should verify
   // that we are parsing just the info we need
   const DWARFContext::compile_unit_range &units = ctx->compile_units();
+  // FIXME: There can be more than one compile unit per object file. See
+  // PR48637.
   auto it = units.begin();
   compileUnit = it->get();
-  assert(std::next(it) == units.end());
 }
 
 // The path can point to either a dylib or a .tbd file.
@@ -576,9 +604,9 @@ findDylib(StringRef path, DylibFile *umbrella,
   if (currentTopLevelTapi) {
     for (InterfaceFile &child :
          make_pointee_range(currentTopLevelTapi->documents())) {
+      assert(child.documents().empty());
       if (path == child.getInstallName())
         return make<DylibFile>(child, umbrella);
-      assert(child.documents().empty());
     }
   }
 
@@ -642,6 +670,12 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     return;
   }
 
+  if (const build_version_command *cmd =
+          findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
+    if (!hasCompatVersion(this, cmd))
+      return;
+  }
+
   // Initialize symbols.
   DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   if (const load_command *cmd = findCommand(hdr, LC_DYLD_INFO_ONLY)) {
@@ -669,7 +703,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
       const auto *c = reinterpret_cast<const dylib_command *>(cmd);
       StringRef reexportPath =
           reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
-      loadReexport(reexportPath, umbrella, nullptr);
+      loadReexport(reexportPath, exportingFile, nullptr);
     }
 
     // FIXME: What about LC_LOAD_UPWARD_DYLIB, LC_LAZY_LOAD_DYLIB,
@@ -697,15 +731,16 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   if (umbrella == nullptr)
     umbrella = this;
 
-  if (!interface.getArchitectures().has(config->arch)) {
-    error(toString(this) + " is incompatible with " +
-          getArchitectureName(config->arch));
-    return;
-  }
-
   dylibName = saver.save(interface.getInstallName());
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
+
+  if (!is_contained(interface.targets(), config->target)) {
+    error(toString(this) + " is incompatible with " +
+          std::string(config->target));
+    return;
+  }
+
   DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   auto addSymbol = [&](const Twine &name) -> void {
     symbols.push_back(symtab->addDylib(saver.save(name), exportingFile,
@@ -714,8 +749,8 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   };
   // TODO(compnerd) filter out symbols based on the target platform
   // TODO: handle weak defs, thread locals
-  for (const auto symbol : interface.symbols()) {
-    if (!symbol->getArchitectures().has(config->arch))
+  for (const auto *symbol : interface.symbols()) {
+    if (!symbol->getArchitectures().has(config->target.Arch))
       continue;
 
     switch (symbol->getKind()) {
@@ -740,8 +775,11 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   const InterfaceFile *topLevel =
       interface.getParent() == nullptr ? &interface : interface.getParent();
 
-  for (InterfaceFileRef intfRef : interface.reexportedLibraries())
-    loadReexport(intfRef.getInstallName(), umbrella, topLevel);
+  for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {
+    InterfaceFile::const_target_range targets = intfRef.targets();
+    if (is_contained(targets, config->target))
+      loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
+  }
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)

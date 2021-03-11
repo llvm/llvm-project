@@ -126,15 +126,23 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
 
 void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 
-void OpenMPIRBuilder::finalize(bool AllowExtractorSinking) {
+void OpenMPIRBuilder::finalize(Function *Fn, bool AllowExtractorSinking) {
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
+  SmallVector<OutlineInfo, 16> DeferredOutlines;
   for (OutlineInfo &OI : OutlineInfos) {
+    // Skip functions that have not finalized yet; may happen with nested
+    // function generation.
+    if (Fn && OI.getFunction() != Fn) {
+      DeferredOutlines.push_back(OI);
+      continue;
+    }
+
     ParallelRegionBlockSet.clear();
     Blocks.clear();
     OI.collectBlocks(ParallelRegionBlockSet, Blocks);
 
-    Function *OuterFn = OI.EntryBB->getParent();
+    Function *OuterFn = OI.getFunction();
     CodeExtractorAnalysisCache CEAC(*OuterFn);
     CodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
                             /* AggregateArgs */ false,
@@ -199,8 +207,12 @@ void OpenMPIRBuilder::finalize(bool AllowExtractorSinking) {
       OI.PostOutlineCB(*OutlinedFn);
   }
 
-  // Allow finalize to be called multiple times.
-  OutlineInfos.clear();
+  // Remove work items that have been completed.
+  OutlineInfos = std::move(DeferredOutlines);
+}
+
+OpenMPIRBuilder::~OpenMPIRBuilder() {
+  assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
 }
 
 Value *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
@@ -1162,6 +1174,13 @@ CanonicalLoopInfo *OpenMPIRBuilder::createStaticWorkshareLoop(
 
   CLI->assertOK();
   return CLI;
+}
+
+CanonicalLoopInfo *OpenMPIRBuilder::createWorkshareLoop(
+    const LocationDescription &Loc, CanonicalLoopInfo *CLI,
+    InsertPointTy AllocaIP, bool NeedsBarrier) {
+  // Currently only supports static schedules.
+  return createStaticWorkshareLoop(Loc, CLI, AllocaIP, NeedsBarrier);
 }
 
 /// Make \p Source branch to \p Target.

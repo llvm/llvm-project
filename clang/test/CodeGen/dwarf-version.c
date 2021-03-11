@@ -32,6 +32,17 @@
 //     Explicitly request both.
 // RUN: %clang -target i686-pc-windows-msvc -gdwarf -gcodeview -S -emit-llvm -o - %s \
 // RUN:     | FileCheck %s --check-prefixes=VER4,CODEVIEW
+// RUN: %clang -target powerpc-ibm-aix-xcoff -g -S -emit-llvm -o - %s | \
+// RUN:   FileCheck %s --check-prefix=VER3
+// RUN: %clang -target powerpc-ibm-aix-xcoff -gdwarf-2 -S -emit-llvm -o - %s | \
+// RUN:   FileCheck %s --check-prefix=VER2
+// RUN: %clang -target powerpc-ibm-aix-xcoff -gdwarf-3 -S -emit-llvm -o - %s | \
+// RUN:   FileCheck %s --check-prefix=VER3
+// RUN: %clang -target powerpc-ibm-aix-xcoff -gdwarf-4 -S -emit-llvm -o - %s | \
+// RUN:   FileCheck %s --check-prefix=VER4
+// RUN: %clang -target powerpc-ibm-aix-xcoff -gdwarf-5 -S -emit-llvm -o - %s | \
+// RUN:   FileCheck %s --check-prefix=VER5
+
 int main (void) {
   return 0;
 }

@@ -35,14 +35,14 @@ MATCHER_P(DiagMessage, M, "") {
   return false;
 }
 
-class LSPTest : public ::testing::Test, private clangd::Logger {
+class LSPTest : public ::testing::Test {
 protected:
-  LSPTest() : LogSession(*this) {
+  LSPTest() : LogSession(L) {
     ClangdServer::Options &Base = Opts;
     Base = ClangdServer::optsForTest();
     // This is needed to we can test index-based operations like call hierarchy.
     Base.BuildDynamicSymbolIndex = true;
-    Base.Modules = &Modules;
+    Base.FeatureModules = &FeatureModules;
   }
 
   LSPClient &start() {
@@ -70,29 +70,32 @@ protected:
 
   MockFS FS;
   ClangdLSPServer::Options Opts;
-  ModuleSet Modules;
+  FeatureModuleSet FeatureModules;
 
 private:
-  // Color logs so we can distinguish them from test output.
-  void log(Level L, const char *Fmt,
-           const llvm::formatv_object_base &Message) override {
-    raw_ostream::Colors Color;
-    switch (L) {
-    case Level::Verbose:
-      Color = raw_ostream::BLUE;
-      break;
-    case Level::Error:
-      Color = raw_ostream::RED;
-      break;
-    default:
-      Color = raw_ostream::YELLOW;
-      break;
+  class Logger : public clang::clangd::Logger {
+    // Color logs so we can distinguish them from test output.
+    void log(Level L, const char *Fmt,
+             const llvm::formatv_object_base &Message) override {
+      raw_ostream::Colors Color;
+      switch (L) {
+      case Level::Verbose:
+        Color = raw_ostream::BLUE;
+        break;
+      case Level::Error:
+        Color = raw_ostream::RED;
+        break;
+      default:
+        Color = raw_ostream::YELLOW;
+        break;
+      }
+      std::lock_guard<std::mutex> Lock(LogMu);
+      (llvm::outs().changeColor(Color) << Message << "\n").resetColor();
     }
-    std::lock_guard<std::mutex> Lock(LogMu);
-    (llvm::outs().changeColor(Color) << Message << "\n").resetColor();
-  }
-  std::mutex LogMu;
+    std::mutex LogMu;
+  };
 
+  Logger L;
   LoggingSession LogSession;
   llvm::Optional<ClangdLSPServer> Server;
   llvm::Optional<std::thread> ServerThread;
@@ -227,7 +230,7 @@ CompileFlags:
 }
 
 TEST_F(LSPTest, ModulesTest) {
-  class MathModule final : public Module {
+  class MathModule final : public FeatureModule {
     OutgoingNotification<int> Changed;
     void initializeLSP(LSPBinder &Bind, const llvm::json::Object &ClientCaps,
                        llvm::json::Object &ServerCaps) override {
@@ -248,7 +251,7 @@ TEST_F(LSPTest, ModulesTest) {
           [Reply(std::move(Reply)), Value(Value)]() mutable { Reply(Value); });
     }
   };
-  Modules.add(std::make_unique<MathModule>());
+  FeatureModules.add(std::make_unique<MathModule>());
 
   auto &Client = start();
   Client.notify("add", 2);
@@ -266,10 +269,10 @@ capture(llvm::Optional<llvm::Expected<T>> &Out) {
   return [&Out](llvm::Expected<T> V) { Out.emplace(std::move(V)); };
 }
 
-TEST_F(LSPTest, ModulesThreadingTest) {
-  // A module that does its work on a background thread, and so exercises the
-  // block/shutdown protocol.
-  class AsyncCounter final : public Module {
+TEST_F(LSPTest, FeatureModulesThreadingTest) {
+  // A feature module that does its work on a background thread, and so
+  // exercises the block/shutdown protocol.
+  class AsyncCounter final : public FeatureModule {
     bool ShouldStop = false;
     int State = 0;
     std::deque<Callback<int>> Queue; // null = increment, non-null = read.
@@ -347,19 +350,19 @@ TEST_F(LSPTest, ModulesThreadingTest) {
     }
   };
 
-  Modules.add(std::make_unique<AsyncCounter>());
+  FeatureModules.add(std::make_unique<AsyncCounter>());
   auto &Client = start();
 
   Client.notify("increment", nullptr);
   Client.notify("increment", nullptr);
   Client.notify("increment", nullptr);
   EXPECT_THAT_EXPECTED(Client.call("sync", nullptr).take(), Succeeded());
-  EXPECT_EQ(3, Modules.get<AsyncCounter>()->getSync());
+  EXPECT_EQ(3, FeatureModules.get<AsyncCounter>()->getSync());
   // Throw some work on the queue to make sure shutdown blocks on it.
   Client.notify("increment", nullptr);
   Client.notify("increment", nullptr);
   Client.notify("increment", nullptr);
-  // And immediately shut down. Module destructor verifies that we blocked.
+  // And immediately shut down. FeatureModule destructor verifies we blocked.
 }
 
 } // namespace

@@ -27,9 +27,9 @@ subroutine foo()
   !$acc end parallel
   ! CHECK-NEXT: <<End OpenACCConstruct>>
   ! CHECK-NEXT: <<End OpenACCConstruct>>
-  ! CHECK-NEXT: ContinueStmt
+  ! CHECK-NEXT: EndSubroutineStmt
 end subroutine
-! CHECK-NEXT: EndSubroutine foo
+! CHECK-NEXT: End Subroutine foo
 
 ! CHECK: Subroutine foo
 subroutine foo2()
@@ -43,7 +43,7 @@ subroutine foo2()
   end do
   !$acc end parallel loop
   ! CHECK-NEXT: <<End OpenACCConstruct>>
-  ! CHECK-NEXT: ContinueStmt
+  ! CHECK-NEXT: EndSubroutineStmt
 end subroutine
-! CHECK-NEXT: EndSubroutine foo2
+! CHECK-NEXT: End Subroutine foo2
 

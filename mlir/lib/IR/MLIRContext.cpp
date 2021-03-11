@@ -11,7 +11,6 @@
 #include "AffineMapDetail.h"
 #include "AttributeDetail.h"
 #include "IntegerSetDetail.h"
-#include "LocationDetail.h"
 #include "TypeDetail.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -403,8 +402,7 @@ MLIRContext::MLIRContext(const DialectRegistry &registry)
   /// Unknown Location Attribute.
   impl->unknownLocAttr = AttributeUniquer::get<UnknownLoc>(this);
   /// The empty dictionary attribute.
-  impl->emptyDictionaryAttr =
-      AttributeUniquer::get<DictionaryAttr>(this, ArrayRef<NamedAttribute>());
+  impl->emptyDictionaryAttr = DictionaryAttr::getEmptyUnchecked(this);
 
   // Register the affine storage objects with the uniquer.
   impl->affineUniquer
@@ -921,7 +919,7 @@ UnitAttr UnitAttr::get(MLIRContext *context) {
   return context->getImpl().unitAttr;
 }
 
-Location UnknownLoc::get(MLIRContext *context) {
+UnknownLoc UnknownLoc::get(MLIRContext *context) {
   return context->getImpl().unknownLocAttr;
 }
 

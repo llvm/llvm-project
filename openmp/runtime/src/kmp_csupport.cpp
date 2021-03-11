@@ -88,7 +88,7 @@ If the runtime has ony been entered at the outermost level from a
 single (necessarily non-OpenMP<sup>*</sup>) thread, then the thread number is
 that which would be returned by omp_get_thread_num() in the outermost
 active parallel construct. (Or zero if there is no active parallel
-construct, since the master thread is necessarily thread zero).
+construct, since the primary thread is necessarily thread zero).
 
 If multiple non-OpenMP threads all enter an OpenMP construct then this
 will be a unique thread identifier among all the threads created by
@@ -844,6 +844,92 @@ void __kmpc_end_master(ident_t *loc, kmp_int32 global_tid) {
   if (__kmp_env_consistency_check) {
     if (KMP_MASTER_GTID(global_tid))
       __kmp_pop_sync(global_tid, ct_master, loc);
+  }
+}
+
+/*!
+@ingroup WORK_SHARING
+@param loc  source location information.
+@param global_tid  global thread number.
+@param filter result of evaluating filter clause on thread global_tid, or zero
+if no filter clause present
+@return 1 if this thread should execute the <tt>masked</tt> block, 0 otherwise.
+*/
+kmp_int32 __kmpc_masked(ident_t *loc, kmp_int32 global_tid, kmp_int32 filter) {
+  int status = 0;
+  int tid;
+  KC_TRACE(10, ("__kmpc_masked: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
+
+  if (!TCR_4(__kmp_init_parallel))
+    __kmp_parallel_initialize();
+
+  __kmp_resume_if_soft_paused();
+
+  tid = __kmp_tid_from_gtid(global_tid);
+  if (tid == filter) {
+    KMP_COUNT_BLOCK(OMP_MASKED);
+    KMP_PUSH_PARTITIONED_TIMER(OMP_masked);
+    status = 1;
+  }
+
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  if (status) {
+    if (ompt_enabled.ompt_callback_masked) {
+      kmp_info_t *this_thr = __kmp_threads[global_tid];
+      kmp_team_t *team = this_thr->th.th_team;
+      ompt_callbacks.ompt_callback(ompt_callback_masked)(
+          ompt_scope_begin, &(team->t.ompt_team_info.parallel_data),
+          &(team->t.t_implicit_task_taskdata[tid].ompt_task_info.task_data),
+          OMPT_GET_RETURN_ADDRESS(0));
+    }
+  }
+#endif
+
+  if (__kmp_env_consistency_check) {
+#if KMP_USE_DYNAMIC_LOCK
+    if (status)
+      __kmp_push_sync(global_tid, ct_masked, loc, NULL, 0);
+    else
+      __kmp_check_sync(global_tid, ct_masked, loc, NULL, 0);
+#else
+    if (status)
+      __kmp_push_sync(global_tid, ct_masked, loc, NULL);
+    else
+      __kmp_check_sync(global_tid, ct_masked, loc, NULL);
+#endif
+  }
+
+  return status;
+}
+
+/*!
+@ingroup WORK_SHARING
+@param loc  source location information.
+@param global_tid  global thread number .
+
+Mark the end of a <tt>masked</tt> region. This should only be called by the
+thread that executes the <tt>masked</tt> region.
+*/
+void __kmpc_end_masked(ident_t *loc, kmp_int32 global_tid) {
+  KC_TRACE(10, ("__kmpc_end_masked: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
+  KMP_POP_PARTITIONED_TIMER();
+
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  kmp_info_t *this_thr = __kmp_threads[global_tid];
+  kmp_team_t *team = this_thr->th.th_team;
+  if (ompt_enabled.ompt_callback_masked) {
+    int tid = __kmp_tid_from_gtid(global_tid);
+    ompt_callbacks.ompt_callback(ompt_callback_masked)(
+        ompt_scope_end, &(team->t.ompt_team_info.parallel_data),
+        &(team->t.t_implicit_task_taskdata[tid].ompt_task_info.task_data),
+        OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif
+
+  if (__kmp_env_consistency_check) {
+    __kmp_pop_sync(global_tid, ct_masked, loc);
   }
 }
 
@@ -3375,7 +3461,7 @@ __kmp_restore_swapped_teams(kmp_info_t *th, kmp_team_t *team, int task_state) {
 @param reduce_func callback function providing reduction operation on two
 operands and returning result of reduction in lhs_data
 @param lck pointer to the unique lock data structure
-@result 1 for the master thread, 0 for all other team threads, 2 for all team
+@result 1 for the primary thread, 0 for all other team threads, 2 for all team
 threads if atomic reduction needed
 
 The nowait version is used for a reduce clause with the nowait argument.
@@ -3471,11 +3557,11 @@ __kmpc_reduce_nowait(ident_t *loc, kmp_int32 global_tid, kmp_int32 num_vars,
                                    tree_reduce_block)) {
 
 // AT: performance issue: a real barrier here
-// AT:     (if master goes slow, other threads are blocked here waiting for the
-// master to come and release them)
-// AT:     (it's not what a customer might expect specifying NOWAIT clause)
-// AT:     (specifying NOWAIT won't result in improvement of performance, it'll
-// be confusing to a customer)
+// AT: (if primary thread is slow, other threads are blocked here waiting for
+//      the primary thread to come and release them)
+// AT: (it's not what a customer might expect specifying NOWAIT clause)
+// AT: (specifying NOWAIT won't result in improvement of performance, it'll
+//      be confusing to a customer)
 // AT: another implementation of *barrier_gather*nowait() (or some other design)
 // might go faster and be more in line with sense of NOWAIT
 // AT: TO DO: do epcc test and compare times
@@ -3509,7 +3595,7 @@ __kmpc_reduce_nowait(ident_t *loc, kmp_int32 global_tid, kmp_int32 num_vars,
     }
 #endif
 
-    // all other workers except master should do this pop here
+    // all other workers except primary thread should do this pop here
     //     ( none of other workers will get to __kmpc_end_reduce_nowait() )
     if (__kmp_env_consistency_check) {
       if (retval == 0) {
@@ -3567,7 +3653,7 @@ void __kmpc_end_reduce_nowait(ident_t *loc, kmp_int32 global_tid,
 
   } else if (packed_reduction_method == atomic_reduce_block) {
 
-    // neither master nor other workers should get here
+    // neither primary thread nor other workers should get here
     //     (code gen does not generate this call in case 2: atomic reduce block)
     // actually it's better to remove this elseif at all;
     // after removal this value will checked by the 'else' and will assert
@@ -3575,7 +3661,7 @@ void __kmpc_end_reduce_nowait(ident_t *loc, kmp_int32 global_tid,
   } else if (TEST_REDUCTION_METHOD(packed_reduction_method,
                                    tree_reduce_block)) {
 
-    // only master gets here
+    // only primary thread gets here
     // OMPT: tree reduction is annotated in the barrier code
 
   } else {
@@ -3605,7 +3691,7 @@ void __kmpc_end_reduce_nowait(ident_t *loc, kmp_int32 global_tid,
 @param reduce_func callback function providing reduction operation on two
 operands and returning result of reduction in lhs_data
 @param lck pointer to the unique lock data structure
-@result 1 for the master thread, 0 for all other team threads, 2 for all team
+@result 1 for the primary thread, 0 for all other team threads, 2 for all team
 threads if atomic reduction needed
 
 A blocking reduce that includes an implicit barrier.
@@ -3699,10 +3785,10 @@ kmp_int32 __kmpc_reduce(ident_t *loc, kmp_int32 global_tid, kmp_int32 num_vars,
     }
 #endif
 
-    // all other workers except master should do this pop here
-    // ( none of other workers except master will enter __kmpc_end_reduce() )
+    // all other workers except primary thread should do this pop here
+    // (none of other workers except primary will enter __kmpc_end_reduce())
     if (__kmp_env_consistency_check) {
-      if (retval == 0) { // 0: all other workers; 1: master
+      if (retval == 0) { // 0: all other workers; 1: primary thread
         __kmp_pop_sync(global_tid, ct_reduce, loc);
       }
     }
@@ -3828,7 +3914,7 @@ void __kmpc_end_reduce(ident_t *loc, kmp_int32 global_tid,
   } else if (TEST_REDUCTION_METHOD(packed_reduction_method,
                                    tree_reduce_block)) {
 
-    // only master executes here (master releases all other workers)
+    // only primary thread executes here (primary releases all other workers)
     __kmp_end_split_barrier(UNPACK_REDUCTION_BARRIER(packed_reduction_method),
                             global_tid);
 

@@ -3,7 +3,7 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 # Simply a wrapper around the extension module of the same name.
-from . import _cext
+from ._cext_loader import _cext
 import ctypes
 
 class ExecutionEngine(_cext.execution_engine.ExecutionEngine):

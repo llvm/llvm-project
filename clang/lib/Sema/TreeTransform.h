@@ -1546,6 +1546,14 @@ public:
     return getSema().BuildObjCAtThrowStmt(AtLoc, Operand);
   }
 
+  /// Build a new OpenMP Canonical loop.
+  ///
+  /// Ensures that the outermost loop in @p LoopStmt is wrapped by a
+  /// OMPCanonicalLoop.
+  StmtResult RebuildOMPCanonicalLoop(Stmt *LoopStmt) {
+    return getSema().ActOnOpenMPCanonicalLoop(LoopStmt);
+  }
+
   /// Build a new OpenMP executable directive.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -3128,8 +3136,9 @@ public:
     if (Constructor->isInheritingConstructor())
       FoundCtor = Constructor->getInheritedConstructor().getConstructor();
 
-    SmallVector<Expr*, 8> ConvertedArgs;
-    if (getSema().CompleteConstructorCall(FoundCtor, Args, Loc, ConvertedArgs))
+    SmallVector<Expr *, 8> ConvertedArgs;
+    if (getSema().CompleteConstructorCall(FoundCtor, T, Args, Loc,
+                                          ConvertedArgs))
       return ExprError();
 
     return getSema().BuildCXXConstructExpr(Loc, T, Constructor,
@@ -8321,6 +8330,16 @@ TreeTransform<Derived>::TransformSEHLeaveStmt(SEHLeaveStmt *S) {
 //===----------------------------------------------------------------------===//
 // OpenMP directive transformation
 //===----------------------------------------------------------------------===//
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOMPCanonicalLoop(OMPCanonicalLoop *L) {
+  // OMPCanonicalLoops are eliminated during transformation, since they will be
+  // recomputed by semantic analysis of the associated OMPLoopBasedDirective
+  // after transformation.
+  return getDerived().TransformStmt(L->getLoopStmt());
+}
+
 template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
     OMPExecutableDirective *D) {
@@ -8357,6 +8376,9 @@ StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
       else
         CS = D->getRawStmt();
       Body = getDerived().TransformStmt(CS);
+      if (Body.isUsable() && isOpenMPLoopDirective(D->getDirectiveKind()) &&
+          getSema().getLangOpts().OpenMPIRBuilder)
+        Body = getDerived().RebuildOMPCanonicalLoop(Body.get());
     }
     AssociatedStmt =
         getDerived().getSema().ActOnOpenMPRegionEnd(Body, TClauses);

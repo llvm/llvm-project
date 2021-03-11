@@ -24,8 +24,6 @@ add_mlir_conversion_library(MLIRGPUToGPURuntimeTransforms
   intrinsics_gen
 
   LINK_COMPONENTS
-  Core
-  MC
   ${AMDGPU_LIBS}
   ${NVPTX_LIBS}
 

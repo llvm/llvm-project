@@ -499,7 +499,7 @@ LogicalResult ExpansionInfo::compute(LinalgOp linalgOp,
   AffineMap fusedIndexMap = linalgOp.getIndexingMap(fusedTensorIndex);
 
   Optional<SmallVector<int64_t, 4>> originalLoopRange =
-      getStaticLoopRanges(linalgOp);
+      linalgOp.getStaticLoopRanges();
   if (!originalLoopRange)
     return linalgOp.emitError("unable to find loop range for operation");
 

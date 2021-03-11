@@ -12,8 +12,11 @@
 
 #include "llvm/Transforms/Utils/AutoInitRemark.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 using namespace llvm::ore;
@@ -35,6 +38,12 @@ static void volatileOrAtomicWithExtraArgs(bool Volatile, bool Atomic,
     R << " Atomic: " << NV("StoreAtomic", false) << ".";
 }
 
+static Optional<uint64_t> getSizeInBytes(Optional<uint64_t> SizeInBits) {
+  if (!SizeInBits || *SizeInBits % 8 != 0)
+    return None;
+  return *SizeInBits / 8;
+}
+
 void AutoInitRemark::inspectStore(StoreInst &SI) {
   bool Volatile = SI.isVolatile();
   bool Atomic = SI.isAtomic();
@@ -43,6 +52,7 @@ void AutoInitRemark::inspectStore(StoreInst &SI) {
   OptimizationRemarkMissed R(RemarkPass.data(), "AutoInitStore", &SI);
   R << "Store inserted by -ftrivial-auto-var-init.\nStore size: "
     << NV("StoreSize", Size) << " bytes.";
+  inspectDst(SI.getOperand(1), R);
   volatileOrAtomicWithExtraArgs(Volatile, Atomic, R);
   ORE.emit(R);
 }
@@ -89,6 +99,7 @@ void AutoInitRemark::inspectIntrinsicCall(IntrinsicInst &II) {
   auto *CIVolatile = dyn_cast<ConstantInt>(II.getOperand(3));
   // No such thing as a memory intrinsic that is both atomic and volatile.
   bool Volatile = !Atomic && CIVolatile && CIVolatile->getZExtValue();
+  inspectDst(II.getOperand(0), R);
   volatileOrAtomicWithExtraArgs(Volatile, Atomic, R);
   ORE.emit(R);
 }
@@ -122,6 +133,7 @@ void AutoInitRemark::inspectKnownLibCall(CallInst &CI, LibFunc LF,
     return;
   case LibFunc_bzero:
     inspectSizeOperand(CI.getOperand(1), R);
+    inspectDst(CI.getOperand(0), R);
     break;
   }
 }
@@ -131,4 +143,69 @@ void AutoInitRemark::inspectSizeOperand(Value *V, OptimizationRemarkMissed &R) {
     uint64_t Size = Len->getZExtValue();
     R << " Memory operation size: " << NV("StoreSize", Size) << " bytes.";
   }
+}
+
+void AutoInitRemark::inspectVariable(const Value *V,
+                                     SmallVectorImpl<VariableInfo> &Result) {
+  // If we find some information in the debug info, take that.
+  bool FoundDI = false;
+  // Try to get an llvm.dbg.declare, which has a DILocalVariable giving us the
+  // real debug info name and size of the variable.
+  for (const DbgVariableIntrinsic *DVI :
+       FindDbgAddrUses(const_cast<Value *>(V))) {
+    if (DILocalVariable *DILV = DVI->getVariable()) {
+      Optional<uint64_t> DISize = getSizeInBytes(DILV->getSizeInBits());
+      VariableInfo Var{DILV->getName(), DISize};
+      if (!Var.isEmpty()) {
+        Result.push_back(std::move(Var));
+        FoundDI = true;
+      }
+    }
+  }
+  if (FoundDI) {
+    assert(!Result.empty());
+    return;
+  }
+
+  const auto *AI = dyn_cast<AllocaInst>(V);
+  if (!AI)
+    return;
+
+  // If not, get it from the alloca.
+  Optional<StringRef> Name = AI->hasName()
+                                 ? Optional<StringRef>(AI->getName())
+                                 : Optional<StringRef>(None);
+  Optional<TypeSize> TySize = AI->getAllocationSizeInBits(DL);
+  Optional<uint64_t> Size =
+      TySize ? getSizeInBytes(TySize->getFixedSize()) : None;
+  VariableInfo Var{Name, Size};
+  if (!Var.isEmpty())
+    Result.push_back(std::move(Var));
+}
+
+void AutoInitRemark::inspectDst(Value *Dst, OptimizationRemarkMissed &R) {
+  // Find if Dst is a known variable we can give more information on.
+  SmallVector<const Value *, 2> Objects;
+  getUnderlyingObjects(Dst, Objects);
+  SmallVector<VariableInfo, 2> VIs;
+  for (const Value *V : Objects)
+    inspectVariable(V, VIs);
+
+  if (VIs.empty())
+    return;
+
+  R << "\nVariables: ";
+  for (unsigned i = 0; i < VIs.size(); ++i) {
+    const VariableInfo &VI = VIs[i];
+    assert(!VI.isEmpty() && "No extra content to display.");
+    if (i != 0)
+      R << ", ";
+    if (VI.Name)
+      R << NV("VarName", *VI.Name);
+    else
+      R << NV("VarName", "<unknown>");
+    if (VI.Size)
+      R << " (" << NV("VarSize", *VI.Size) << " bytes)";
+  }
+  R << ".";
 }

@@ -118,3 +118,10 @@
 # ALIGN:      Name: .data
 # ALIGN:      AddressAlignment:
 # ALIGN-SAME:                   8{{$}}
+
+## Show that a filename with non-ASCII characters can be handled appropriately.
+## The exact encoding of the non-ASCII character will determine what characters
+## are used, so don't check for them specifically.
+# RUN: cp %t.x-txt %t€.x-txt
+# RUN: llvm-objcopy -I binary -O elf64-x86-64 %t€.x-txt %t3.o
+# RUN: llvm-readobj --sections --symbols %t3.o | FileCheck %s

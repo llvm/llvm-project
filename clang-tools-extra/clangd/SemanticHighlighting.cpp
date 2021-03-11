@@ -61,6 +61,7 @@ bool canHighlightName(DeclarationName Name) {
   case DeclarationName::CXXUsingDirective:
     return false;
   }
+  llvm_unreachable("invalid name kind");
 }
 
 llvm::Optional<HighlightingKind> kindForType(const Type *TP);

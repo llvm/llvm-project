@@ -296,9 +296,9 @@ exit:
 ; CHECK: NoAlias:	i8* %a, i8* %p.base
 ; CHECK: NoAlias:	i8* %a, i8* %p.outer
 ; CHECK: NoAlias:	i8* %a, i8* %p.outer.next
-; CHECK: MayAlias:	i8* %a, i8* %p.inner
+; NO-PHI-VALUES: NoAlias:	i8* %a, i8* %p.inner
+; PHI-VALUES: MayAlias:	i8* %a, i8* %p.inner
 ; CHECK: NoAlias:	i8* %a, i8* %p.inner.next
-; TODO: %p.inner does not alias %a
 define void @nested_loop3(i1 %c, i1 %c2, i8* noalias %p.base) {
 entry:
   %a = alloca i8
@@ -351,9 +351,9 @@ exit:
 ; CHECK: NoAlias:	i8* %a, i8* %p.base
 ; CHECK: NoAlias:	i8* %a, i8* %p1
 ; CHECK: NoAlias:	i8* %a, i8* %p1.next
-; CHECK: MayAlias:	i8* %a, i8* %p2
+; NO-PHI-VALUES: NoAlias:	i8* %a, i8* %p2
+; PHI-VALUES: MayAlias:	i8* %a, i8* %p2
 ; CHECK: NoAlias:	i8* %a, i8* %p2.next
-; TODO: %p2 does not alias %a
 define void @sibling_loop2(i1 %c, i1 %c2, i8* noalias %p.base) {
 entry:
   %a = alloca i8

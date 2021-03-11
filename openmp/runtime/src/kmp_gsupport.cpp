@@ -1877,7 +1877,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_DOACROSS_ULL_WAIT)(
   va_end(args);
 }
 
-// fn: the function each master thread of new team will call
+// fn: the function each primary thread of new team will call
 // data: argument to fn
 // num_teams, thread_limit: max bounds on respective ICV
 // flags: unused

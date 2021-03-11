@@ -17,10 +17,15 @@ namespace readability {
 
 /// Checks function Cognitive Complexity metric.
 ///
-/// There is only one configuration option:
+/// There are the following configuration option:
 ///
 ///   * `Threshold` - flag functions with Cognitive Complexity exceeding
 ///     this number. The default is `25`.
+///   * `DescribeBasicIncrements`- if set to `true`, then for each function
+///     exceeding the complexity threshold the check will issue additional
+///     diagnostics on every piece of code (loop, `if` statement, etc.) which
+///     contributes to that complexity.
+//      Default is `true`
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability-function-cognitive-complexity.html
@@ -37,6 +42,7 @@ public:
 
 private:
   const unsigned Threshold;
+  const bool DescribeBasicIncrements;
 };
 
 } // namespace readability

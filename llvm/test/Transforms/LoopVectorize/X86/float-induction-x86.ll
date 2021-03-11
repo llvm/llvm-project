@@ -291,22 +291,21 @@ for.end:                                          ; preds = %for.end.loopexit, %
 define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-LABEL: @external_use_with_fast_math(
 ; AUTO_VEC-NEXT:  entry:
-; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
-; AUTO_VEC-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
+; AUTO_VEC-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
 ; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 16
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; AUTO_VEC:       vector.ph:
 ; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775792
 ; AUTO_VEC-NEXT:    [[CAST_CRD:%.*]] = sitofp i64 [[N_VEC]] to double
-; AUTO_VEC-NEXT:    [[TMP1:%.*]] = fmul fast double [[CAST_CRD]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[TMP2:%.*]] = add nsw i64 [[N_VEC]], -16
-; AUTO_VEC-NEXT:    [[TMP3:%.*]] = lshr exact i64 [[TMP2]], 4
-; AUTO_VEC-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
-; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP4]], 3
-; AUTO_VEC-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP2]], 48
-; AUTO_VEC-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
+; AUTO_VEC-NEXT:    [[TMP0:%.*]] = fmul fast double [[CAST_CRD]], 3.000000e+00
+; AUTO_VEC-NEXT:    [[TMP1:%.*]] = add nsw i64 [[N_VEC]], -16
+; AUTO_VEC-NEXT:    [[TMP2:%.*]] = lshr exact i64 [[TMP1]], 4
+; AUTO_VEC-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP3]], 3
+; AUTO_VEC-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP1]], 48
+; AUTO_VEC-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
 ; AUTO_VEC:       vector.ph.new:
-; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP4]], 2305843009213693948
+; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP3]], 2305843009213693948
 ; AUTO_VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AUTO_VEC:       vector.body:
 ; AUTO_VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH_NEW]] ], [ [[INDEX_NEXT_3:%.*]], [[VECTOR_BODY]] ]
@@ -315,69 +314,69 @@ define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[STEP_ADD:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 1.200000e+01, double 1.200000e+01, double 1.200000e+01, double 1.200000e+01>
 ; AUTO_VEC-NEXT:    [[STEP_ADD2:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 2.400000e+01, double 2.400000e+01, double 2.400000e+01, double 2.400000e+01>
 ; AUTO_VEC-NEXT:    [[STEP_ADD3:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 3.600000e+01, double 3.600000e+01, double 3.600000e+01, double 3.600000e+01>
-; AUTO_VEC-NEXT:    [[TMP6:%.*]] = getelementptr double, double* [[A:%.*]], i64 [[INDEX]]
-; AUTO_VEC-NEXT:    [[TMP7:%.*]] = bitcast double* [[TMP6]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[VEC_IND]], <4 x double>* [[TMP7]], align 8
-; AUTO_VEC-NEXT:    [[TMP8:%.*]] = getelementptr double, double* [[TMP6]], i64 4
-; AUTO_VEC-NEXT:    [[TMP9:%.*]] = bitcast double* [[TMP8]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD]], <4 x double>* [[TMP9]], align 8
-; AUTO_VEC-NEXT:    [[TMP10:%.*]] = getelementptr double, double* [[TMP6]], i64 8
-; AUTO_VEC-NEXT:    [[TMP11:%.*]] = bitcast double* [[TMP10]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD2]], <4 x double>* [[TMP11]], align 8
-; AUTO_VEC-NEXT:    [[TMP12:%.*]] = getelementptr double, double* [[TMP6]], i64 12
-; AUTO_VEC-NEXT:    [[TMP13:%.*]] = bitcast double* [[TMP12]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD3]], <4 x double>* [[TMP13]], align 8
+; AUTO_VEC-NEXT:    [[TMP5:%.*]] = getelementptr double, double* [[A:%.*]], i64 [[INDEX]]
+; AUTO_VEC-NEXT:    [[TMP6:%.*]] = bitcast double* [[TMP5]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[VEC_IND]], <4 x double>* [[TMP6]], align 8
+; AUTO_VEC-NEXT:    [[TMP7:%.*]] = getelementptr double, double* [[TMP5]], i64 4
+; AUTO_VEC-NEXT:    [[TMP8:%.*]] = bitcast double* [[TMP7]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD]], <4 x double>* [[TMP8]], align 8
+; AUTO_VEC-NEXT:    [[TMP9:%.*]] = getelementptr double, double* [[TMP5]], i64 8
+; AUTO_VEC-NEXT:    [[TMP10:%.*]] = bitcast double* [[TMP9]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD2]], <4 x double>* [[TMP10]], align 8
+; AUTO_VEC-NEXT:    [[TMP11:%.*]] = getelementptr double, double* [[TMP5]], i64 12
+; AUTO_VEC-NEXT:    [[TMP12:%.*]] = bitcast double* [[TMP11]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD3]], <4 x double>* [[TMP12]], align 8
 ; AUTO_VEC-NEXT:    [[INDEX_NEXT:%.*]] = or i64 [[INDEX]], 16
 ; AUTO_VEC-NEXT:    [[VEC_IND_NEXT:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 4.800000e+01, double 4.800000e+01, double 4.800000e+01, double 4.800000e+01>
 ; AUTO_VEC-NEXT:    [[STEP_ADD_1:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 6.000000e+01, double 6.000000e+01, double 6.000000e+01, double 6.000000e+01>
 ; AUTO_VEC-NEXT:    [[STEP_ADD2_1:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 7.200000e+01, double 7.200000e+01, double 7.200000e+01, double 7.200000e+01>
 ; AUTO_VEC-NEXT:    [[STEP_ADD3_1:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 8.400000e+01, double 8.400000e+01, double 8.400000e+01, double 8.400000e+01>
-; AUTO_VEC-NEXT:    [[TMP14:%.*]] = getelementptr double, double* [[A]], i64 [[INDEX_NEXT]]
-; AUTO_VEC-NEXT:    [[TMP15:%.*]] = bitcast double* [[TMP14]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[VEC_IND_NEXT]], <4 x double>* [[TMP15]], align 8
-; AUTO_VEC-NEXT:    [[TMP16:%.*]] = getelementptr double, double* [[TMP14]], i64 4
-; AUTO_VEC-NEXT:    [[TMP17:%.*]] = bitcast double* [[TMP16]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD_1]], <4 x double>* [[TMP17]], align 8
-; AUTO_VEC-NEXT:    [[TMP18:%.*]] = getelementptr double, double* [[TMP14]], i64 8
-; AUTO_VEC-NEXT:    [[TMP19:%.*]] = bitcast double* [[TMP18]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD2_1]], <4 x double>* [[TMP19]], align 8
-; AUTO_VEC-NEXT:    [[TMP20:%.*]] = getelementptr double, double* [[TMP14]], i64 12
-; AUTO_VEC-NEXT:    [[TMP21:%.*]] = bitcast double* [[TMP20]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD3_1]], <4 x double>* [[TMP21]], align 8
+; AUTO_VEC-NEXT:    [[TMP13:%.*]] = getelementptr double, double* [[A]], i64 [[INDEX_NEXT]]
+; AUTO_VEC-NEXT:    [[TMP14:%.*]] = bitcast double* [[TMP13]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[VEC_IND_NEXT]], <4 x double>* [[TMP14]], align 8
+; AUTO_VEC-NEXT:    [[TMP15:%.*]] = getelementptr double, double* [[TMP13]], i64 4
+; AUTO_VEC-NEXT:    [[TMP16:%.*]] = bitcast double* [[TMP15]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD_1]], <4 x double>* [[TMP16]], align 8
+; AUTO_VEC-NEXT:    [[TMP17:%.*]] = getelementptr double, double* [[TMP13]], i64 8
+; AUTO_VEC-NEXT:    [[TMP18:%.*]] = bitcast double* [[TMP17]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD2_1]], <4 x double>* [[TMP18]], align 8
+; AUTO_VEC-NEXT:    [[TMP19:%.*]] = getelementptr double, double* [[TMP13]], i64 12
+; AUTO_VEC-NEXT:    [[TMP20:%.*]] = bitcast double* [[TMP19]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD3_1]], <4 x double>* [[TMP20]], align 8
 ; AUTO_VEC-NEXT:    [[INDEX_NEXT_1:%.*]] = or i64 [[INDEX]], 32
 ; AUTO_VEC-NEXT:    [[VEC_IND_NEXT_1:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 9.600000e+01, double 9.600000e+01, double 9.600000e+01, double 9.600000e+01>
 ; AUTO_VEC-NEXT:    [[STEP_ADD_2:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 1.080000e+02, double 1.080000e+02, double 1.080000e+02, double 1.080000e+02>
 ; AUTO_VEC-NEXT:    [[STEP_ADD2_2:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 1.200000e+02, double 1.200000e+02, double 1.200000e+02, double 1.200000e+02>
 ; AUTO_VEC-NEXT:    [[STEP_ADD3_2:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 1.320000e+02, double 1.320000e+02, double 1.320000e+02, double 1.320000e+02>
-; AUTO_VEC-NEXT:    [[TMP22:%.*]] = getelementptr double, double* [[A]], i64 [[INDEX_NEXT_1]]
-; AUTO_VEC-NEXT:    [[TMP23:%.*]] = bitcast double* [[TMP22]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[VEC_IND_NEXT_1]], <4 x double>* [[TMP23]], align 8
-; AUTO_VEC-NEXT:    [[TMP24:%.*]] = getelementptr double, double* [[TMP22]], i64 4
-; AUTO_VEC-NEXT:    [[TMP25:%.*]] = bitcast double* [[TMP24]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD_2]], <4 x double>* [[TMP25]], align 8
-; AUTO_VEC-NEXT:    [[TMP26:%.*]] = getelementptr double, double* [[TMP22]], i64 8
-; AUTO_VEC-NEXT:    [[TMP27:%.*]] = bitcast double* [[TMP26]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD2_2]], <4 x double>* [[TMP27]], align 8
-; AUTO_VEC-NEXT:    [[TMP28:%.*]] = getelementptr double, double* [[TMP22]], i64 12
-; AUTO_VEC-NEXT:    [[TMP29:%.*]] = bitcast double* [[TMP28]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD3_2]], <4 x double>* [[TMP29]], align 8
+; AUTO_VEC-NEXT:    [[TMP21:%.*]] = getelementptr double, double* [[A]], i64 [[INDEX_NEXT_1]]
+; AUTO_VEC-NEXT:    [[TMP22:%.*]] = bitcast double* [[TMP21]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[VEC_IND_NEXT_1]], <4 x double>* [[TMP22]], align 8
+; AUTO_VEC-NEXT:    [[TMP23:%.*]] = getelementptr double, double* [[TMP21]], i64 4
+; AUTO_VEC-NEXT:    [[TMP24:%.*]] = bitcast double* [[TMP23]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD_2]], <4 x double>* [[TMP24]], align 8
+; AUTO_VEC-NEXT:    [[TMP25:%.*]] = getelementptr double, double* [[TMP21]], i64 8
+; AUTO_VEC-NEXT:    [[TMP26:%.*]] = bitcast double* [[TMP25]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD2_2]], <4 x double>* [[TMP26]], align 8
+; AUTO_VEC-NEXT:    [[TMP27:%.*]] = getelementptr double, double* [[TMP21]], i64 12
+; AUTO_VEC-NEXT:    [[TMP28:%.*]] = bitcast double* [[TMP27]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD3_2]], <4 x double>* [[TMP28]], align 8
 ; AUTO_VEC-NEXT:    [[INDEX_NEXT_2:%.*]] = or i64 [[INDEX]], 48
 ; AUTO_VEC-NEXT:    [[VEC_IND_NEXT_2:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 1.440000e+02, double 1.440000e+02, double 1.440000e+02, double 1.440000e+02>
 ; AUTO_VEC-NEXT:    [[STEP_ADD_3:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 1.560000e+02, double 1.560000e+02, double 1.560000e+02, double 1.560000e+02>
 ; AUTO_VEC-NEXT:    [[STEP_ADD2_3:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 1.680000e+02, double 1.680000e+02, double 1.680000e+02, double 1.680000e+02>
 ; AUTO_VEC-NEXT:    [[STEP_ADD3_3:%.*]] = fadd fast <4 x double> [[VEC_IND]], <double 1.800000e+02, double 1.800000e+02, double 1.800000e+02, double 1.800000e+02>
-; AUTO_VEC-NEXT:    [[TMP30:%.*]] = getelementptr double, double* [[A]], i64 [[INDEX_NEXT_2]]
-; AUTO_VEC-NEXT:    [[TMP31:%.*]] = bitcast double* [[TMP30]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[VEC_IND_NEXT_2]], <4 x double>* [[TMP31]], align 8
-; AUTO_VEC-NEXT:    [[TMP32:%.*]] = getelementptr double, double* [[TMP30]], i64 4
-; AUTO_VEC-NEXT:    [[TMP33:%.*]] = bitcast double* [[TMP32]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD_3]], <4 x double>* [[TMP33]], align 8
-; AUTO_VEC-NEXT:    [[TMP34:%.*]] = getelementptr double, double* [[TMP30]], i64 8
-; AUTO_VEC-NEXT:    [[TMP35:%.*]] = bitcast double* [[TMP34]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD2_3]], <4 x double>* [[TMP35]], align 8
-; AUTO_VEC-NEXT:    [[TMP36:%.*]] = getelementptr double, double* [[TMP30]], i64 12
-; AUTO_VEC-NEXT:    [[TMP37:%.*]] = bitcast double* [[TMP36]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD3_3]], <4 x double>* [[TMP37]], align 8
+; AUTO_VEC-NEXT:    [[TMP29:%.*]] = getelementptr double, double* [[A]], i64 [[INDEX_NEXT_2]]
+; AUTO_VEC-NEXT:    [[TMP30:%.*]] = bitcast double* [[TMP29]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[VEC_IND_NEXT_2]], <4 x double>* [[TMP30]], align 8
+; AUTO_VEC-NEXT:    [[TMP31:%.*]] = getelementptr double, double* [[TMP29]], i64 4
+; AUTO_VEC-NEXT:    [[TMP32:%.*]] = bitcast double* [[TMP31]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD_3]], <4 x double>* [[TMP32]], align 8
+; AUTO_VEC-NEXT:    [[TMP33:%.*]] = getelementptr double, double* [[TMP29]], i64 8
+; AUTO_VEC-NEXT:    [[TMP34:%.*]] = bitcast double* [[TMP33]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD2_3]], <4 x double>* [[TMP34]], align 8
+; AUTO_VEC-NEXT:    [[TMP35:%.*]] = getelementptr double, double* [[TMP29]], i64 12
+; AUTO_VEC-NEXT:    [[TMP36:%.*]] = bitcast double* [[TMP35]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD3_3]], <4 x double>* [[TMP36]], align 8
 ; AUTO_VEC-NEXT:    [[INDEX_NEXT_3]] = add i64 [[INDEX]], 64
 ; AUTO_VEC-NEXT:    [[VEC_IND_NEXT_3]] = fadd fast <4 x double> [[VEC_IND]], <double 1.920000e+02, double 1.920000e+02, double 1.920000e+02, double 1.920000e+02>
 ; AUTO_VEC-NEXT:    [[NITER_NSUB_3]] = add i64 [[NITER]], -4
@@ -395,18 +394,18 @@ define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[STEP_ADD_EPIL:%.*]] = fadd fast <4 x double> [[VEC_IND_EPIL]], <double 1.200000e+01, double 1.200000e+01, double 1.200000e+01, double 1.200000e+01>
 ; AUTO_VEC-NEXT:    [[STEP_ADD2_EPIL:%.*]] = fadd fast <4 x double> [[VEC_IND_EPIL]], <double 2.400000e+01, double 2.400000e+01, double 2.400000e+01, double 2.400000e+01>
 ; AUTO_VEC-NEXT:    [[STEP_ADD3_EPIL:%.*]] = fadd fast <4 x double> [[VEC_IND_EPIL]], <double 3.600000e+01, double 3.600000e+01, double 3.600000e+01, double 3.600000e+01>
-; AUTO_VEC-NEXT:    [[TMP38:%.*]] = getelementptr double, double* [[A]], i64 [[INDEX_EPIL]]
-; AUTO_VEC-NEXT:    [[TMP39:%.*]] = bitcast double* [[TMP38]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[VEC_IND_EPIL]], <4 x double>* [[TMP39]], align 8
-; AUTO_VEC-NEXT:    [[TMP40:%.*]] = getelementptr double, double* [[TMP38]], i64 4
-; AUTO_VEC-NEXT:    [[TMP41:%.*]] = bitcast double* [[TMP40]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD_EPIL]], <4 x double>* [[TMP41]], align 8
-; AUTO_VEC-NEXT:    [[TMP42:%.*]] = getelementptr double, double* [[TMP38]], i64 8
-; AUTO_VEC-NEXT:    [[TMP43:%.*]] = bitcast double* [[TMP42]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD2_EPIL]], <4 x double>* [[TMP43]], align 8
-; AUTO_VEC-NEXT:    [[TMP44:%.*]] = getelementptr double, double* [[TMP38]], i64 12
-; AUTO_VEC-NEXT:    [[TMP45:%.*]] = bitcast double* [[TMP44]] to <4 x double>*
-; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD3_EPIL]], <4 x double>* [[TMP45]], align 8
+; AUTO_VEC-NEXT:    [[TMP37:%.*]] = getelementptr double, double* [[A]], i64 [[INDEX_EPIL]]
+; AUTO_VEC-NEXT:    [[TMP38:%.*]] = bitcast double* [[TMP37]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[VEC_IND_EPIL]], <4 x double>* [[TMP38]], align 8
+; AUTO_VEC-NEXT:    [[TMP39:%.*]] = getelementptr double, double* [[TMP37]], i64 4
+; AUTO_VEC-NEXT:    [[TMP40:%.*]] = bitcast double* [[TMP39]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD_EPIL]], <4 x double>* [[TMP40]], align 8
+; AUTO_VEC-NEXT:    [[TMP41:%.*]] = getelementptr double, double* [[TMP37]], i64 8
+; AUTO_VEC-NEXT:    [[TMP42:%.*]] = bitcast double* [[TMP41]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD2_EPIL]], <4 x double>* [[TMP42]], align 8
+; AUTO_VEC-NEXT:    [[TMP43:%.*]] = getelementptr double, double* [[TMP37]], i64 12
+; AUTO_VEC-NEXT:    [[TMP44:%.*]] = bitcast double* [[TMP43]] to <4 x double>*
+; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD3_EPIL]], <4 x double>* [[TMP44]], align 8
 ; AUTO_VEC-NEXT:    [[INDEX_NEXT_EPIL]] = add i64 [[INDEX_EPIL]], 16
 ; AUTO_VEC-NEXT:    [[VEC_IND_NEXT_EPIL]] = fadd fast <4 x double> [[VEC_IND_EPIL]], <double 4.800000e+01, double 4.800000e+01, double 4.800000e+01, double 4.800000e+01>
 ; AUTO_VEC-NEXT:    [[EPIL_ITER_SUB]] = add i64 [[EPIL_ITER]], -1
@@ -414,13 +413,13 @@ define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    br i1 [[EPIL_ITER_CMP_NOT]], label [[MIDDLE_BLOCK]], label [[VECTOR_BODY_EPIL]], [[LOOP8:!llvm.loop !.*]]
 ; AUTO_VEC:       middle.block:
 ; AUTO_VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]
-; AUTO_VEC-NEXT:    [[TMP46:%.*]] = add nsw i64 [[N_VEC]], -1
-; AUTO_VEC-NEXT:    [[CAST_CMO:%.*]] = sitofp i64 [[TMP46]] to double
-; AUTO_VEC-NEXT:    [[TMP47:%.*]] = fmul fast double [[CAST_CMO]], 3.000000e+00
+; AUTO_VEC-NEXT:    [[TMP45:%.*]] = add nsw i64 [[N_VEC]], -1
+; AUTO_VEC-NEXT:    [[CAST_CMO:%.*]] = sitofp i64 [[TMP45]] to double
+; AUTO_VEC-NEXT:    [[TMP46:%.*]] = fmul fast double [[CAST_CMO]], 3.000000e+00
 ; AUTO_VEC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; AUTO_VEC:       for.body:
 ; AUTO_VEC-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ]
-; AUTO_VEC-NEXT:    [[J:%.*]] = phi double [ [[J_NEXT:%.*]], [[FOR_BODY]] ], [ 0.000000e+00, [[ENTRY]] ], [ [[TMP1]], [[MIDDLE_BLOCK]] ]
+; AUTO_VEC-NEXT:    [[J:%.*]] = phi double [ [[J_NEXT:%.*]], [[FOR_BODY]] ], [ 0.000000e+00, [[ENTRY]] ], [ [[TMP0]], [[MIDDLE_BLOCK]] ]
 ; AUTO_VEC-NEXT:    [[T0:%.*]] = getelementptr double, double* [[A]], i64 [[I]]
 ; AUTO_VEC-NEXT:    store double [[J]], double* [[T0]], align 8
 ; AUTO_VEC-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -428,7 +427,7 @@ define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[I_NEXT]], [[SMAX]]
 ; AUTO_VEC-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP9:!llvm.loop !.*]]
 ; AUTO_VEC:       for.end:
-; AUTO_VEC-NEXT:    [[J_LCSSA:%.*]] = phi double [ [[TMP47]], [[MIDDLE_BLOCK]] ], [ [[J]], [[FOR_BODY]] ]
+; AUTO_VEC-NEXT:    [[J_LCSSA:%.*]] = phi double [ [[TMP46]], [[MIDDLE_BLOCK]] ], [ [[J]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    ret double [[J_LCSSA]]
 ;
 entry:
@@ -452,12 +451,11 @@ for.end:
 define double @external_use_without_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-LABEL: @external_use_without_fast_math(
 ; AUTO_VEC-NEXT:  entry:
-; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
-; AUTO_VEC-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
-; AUTO_VEC-NEXT:    [[TMP1:%.*]] = add nsw i64 [[SMAX]], -1
+; AUTO_VEC-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
+; AUTO_VEC-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[SMAX]], 7
-; AUTO_VEC-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 7
-; AUTO_VEC-NEXT:    br i1 [[TMP2]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; AUTO_VEC-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
+; AUTO_VEC-NEXT:    br i1 [[TMP1]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
 ; AUTO_VEC:       entry.new:
 ; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[SMAX]], 9223372036854775800
 ; AUTO_VEC-NEXT:    br label [[FOR_BODY:%.*]]

@@ -55,9 +55,9 @@ using namespace lld::macho;
 
 Configuration *lld::macho::config;
 
-static HeaderFileType getOutputType(const opt::InputArgList &args) {
+static HeaderFileType getOutputType(const InputArgList &args) {
   // TODO: -r, -dylinker, -preload...
-  opt::Arg *outputArg = args.getLastArg(OPT_bundle, OPT_dylib, OPT_execute);
+  Arg *outputArg = args.getLastArg(OPT_bundle, OPT_dylib, OPT_execute);
   if (outputArg == nullptr)
     return MH_EXECUTE;
 
@@ -125,21 +125,6 @@ static Optional<std::string> findFramework(StringRef name) {
   return {};
 }
 
-static TargetInfo *createTargetInfo(opt::InputArgList &args) {
-  StringRef archName = args.getLastArgValue(OPT_arch);
-  if (archName.empty())
-    fatal("must specify -arch");
-  config->arch = MachO::getArchitectureFromName(archName);
-  switch (MachO::getCPUTypeFromArchitecture(config->arch).first) {
-  case MachO::CPU_TYPE_X86_64:
-    return createX86_64TargetInfo();
-  case MachO::CPU_TYPE_ARM64:
-    return createARM64TargetInfo();
-  default:
-    fatal("missing or unsupported -arch " + archName);
-  }
-}
-
 static bool warnIfNotDirectory(StringRef option, StringRef path) {
   if (!fs::exists(path)) {
     warn("directory not found for option -" + option + path);
@@ -152,7 +137,7 @@ static bool warnIfNotDirectory(StringRef option, StringRef path) {
 }
 
 static std::vector<StringRef>
-getSearchPaths(unsigned optionCode, opt::InputArgList &args,
+getSearchPaths(unsigned optionCode, InputArgList &args,
                const std::vector<StringRef> &roots,
                const SmallVector<StringRef, 2> &systemPaths) {
   std::vector<StringRef> paths;
@@ -179,8 +164,8 @@ getSearchPaths(unsigned optionCode, opt::InputArgList &args,
   if (args.hasArg(OPT_Z))
     return paths;
 
-  for (auto const &path : systemPaths) {
-    for (auto root : roots) {
+  for (const StringRef &path : systemPaths) {
+    for (const StringRef &root : roots) {
       SmallString<261> buffer(root);
       path::append(buffer, path);
       if (fs::is_directory(buffer))
@@ -190,7 +175,7 @@ getSearchPaths(unsigned optionCode, opt::InputArgList &args,
   return paths;
 }
 
-static std::vector<StringRef> getSystemLibraryRoots(opt::InputArgList &args) {
+static std::vector<StringRef> getSystemLibraryRoots(InputArgList &args) {
   std::vector<StringRef> roots;
   for (const Arg *arg : args.filtered(OPT_syslibroot))
     roots.push_back(arg->getValue());
@@ -205,13 +190,12 @@ static std::vector<StringRef> getSystemLibraryRoots(opt::InputArgList &args) {
 }
 
 static std::vector<StringRef>
-getLibrarySearchPaths(opt::InputArgList &args,
-                      const std::vector<StringRef> &roots) {
+getLibrarySearchPaths(InputArgList &args, const std::vector<StringRef> &roots) {
   return getSearchPaths(OPT_L, args, roots, {"/usr/lib", "/usr/local/lib"});
 }
 
 static std::vector<StringRef>
-getFrameworkSearchPaths(opt::InputArgList &args,
+getFrameworkSearchPaths(InputArgList &args,
                         const std::vector<StringRef> &roots) {
   return getSearchPaths(OPT_F, args, roots,
                         {"/Library/Frameworks", "/System/Library/Frameworks"});
@@ -267,7 +251,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
   MemoryBufferRef mbref = *buffer;
   InputFile *newFile = nullptr;
 
-  auto magic = identify_magic(mbref.getBuffer());
+  file_magic magic = identify_magic(mbref.getBuffer());
   switch (magic) {
   case file_magic::archive: {
     std::unique_ptr<object::Archive> file = CHECK(
@@ -380,13 +364,13 @@ void macho::parseLCLinkerOption(InputFile* f, unsigned argc, StringRef data) {
 
   MachOOptTable table;
   unsigned missingIndex, missingCount;
-  opt::InputArgList args = table.ParseArgs(argv, missingIndex, missingCount);
+  InputArgList args = table.ParseArgs(argv, missingIndex, missingCount);
   if (missingCount)
     fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
-  for (auto *arg : args.filtered(OPT_UNKNOWN))
+  for (const Arg *arg : args.filtered(OPT_UNKNOWN))
     error("unknown argument: " + arg->getAsString(args));
 
-  for (auto *arg : args) {
+  for (const Arg *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_l:
       addLibrary(arg->getValue(), false);
@@ -508,7 +492,7 @@ static void initLLVM() {
 }
 
 static void compileBitcodeFiles() {
-  auto lto = make<BitcodeCompiler>();
+  auto *lto = make<BitcodeCompiler>();
   for (InputFile *file : inputFiles)
     if (auto *bitcodeFile = dyn_cast<BitcodeFile>(file))
       lto->add(*bitcodeFile);
@@ -558,12 +542,12 @@ static std::string lowerDash(StringRef s) {
                      map_iterator(s.end(), toLowerDash));
 }
 
-static PlatformInfo getPlatformVersion(const opt::ArgList &args) {
-  const opt::Arg *arg = args.getLastArg(OPT_platform_version);
-  PlatformInfo platform;
+// Has the side-effect of setting Config::platformInfo.
+static PlatformKind parsePlatformVersion(const ArgList &args) {
+  const Arg *arg = args.getLastArg(OPT_platform_version);
   if (!arg) {
     error("must specify -platform_version");
-    return platform;
+    return PlatformKind::unknown;
   }
 
   StringRef platformStr = arg->getValue(0);
@@ -571,7 +555,7 @@ static PlatformInfo getPlatformVersion(const opt::ArgList &args) {
   StringRef sdkVersionStr = arg->getValue(2);
 
   // TODO(compnerd) see if we can generate this case list via XMACROS
-  platform.kind =
+  PlatformKind platform =
       StringSwitch<PlatformKind>(lowerDash(platformStr))
           .Cases("macos", "1", PlatformKind::macOS)
           .Cases("ios", "2", PlatformKind::iOS)
@@ -584,21 +568,41 @@ static PlatformInfo getPlatformVersion(const opt::ArgList &args) {
           .Cases("watchos-simulator", "9", PlatformKind::watchOSSimulator)
           .Cases("driverkit", "10", PlatformKind::driverKit)
           .Default(PlatformKind::unknown);
-  if (platform.kind == PlatformKind::unknown)
+  if (platform == PlatformKind::unknown)
     error(Twine("malformed platform: ") + platformStr);
   // TODO: check validity of version strings, which varies by platform
   // NOTE: ld64 accepts version strings with 5 components
   // llvm::VersionTuple accepts no more than 4 components
   // Has Apple ever published version strings with 5 components?
-  if (platform.minimum.tryParse(minVersionStr))
+  if (config->platformInfo.minimum.tryParse(minVersionStr))
     error(Twine("malformed minimum version: ") + minVersionStr);
-  if (platform.sdk.tryParse(sdkVersionStr))
+  if (config->platformInfo.sdk.tryParse(sdkVersionStr))
     error(Twine("malformed sdk version: ") + sdkVersionStr);
   return platform;
 }
 
+// Has the side-effect of setting Config::target.
+static TargetInfo *createTargetInfo(InputArgList &args) {
+  StringRef archName = args.getLastArgValue(OPT_arch);
+  if (archName.empty())
+    fatal("must specify -arch");
+  PlatformKind platform = parsePlatformVersion(args);
+
+  config->target =
+      MachO::Target(MachO::getArchitectureFromName(archName), platform);
+
+  switch (MachO::getCPUTypeFromArchitecture(config->target.Arch).first) {
+  case MachO::CPU_TYPE_X86_64:
+    return createX86_64TargetInfo();
+  case MachO::CPU_TYPE_ARM64:
+    return createARM64TargetInfo();
+  default:
+    fatal("missing or unsupported -arch " + archName);
+  }
+}
+
 static UndefinedSymbolTreatment
-getUndefinedSymbolTreatment(const opt::ArgList &args) {
+getUndefinedSymbolTreatment(const ArgList &args) {
   StringRef treatmentStr = args.getLastArgValue(OPT_undefined);
   auto treatment =
       StringSwitch<UndefinedSymbolTreatment>(treatmentStr)
@@ -623,7 +627,7 @@ getUndefinedSymbolTreatment(const opt::ArgList &args) {
   return treatment;
 }
 
-static void warnIfDeprecatedOption(const opt::Option &opt) {
+static void warnIfDeprecatedOption(const Option &opt) {
   if (!opt.getGroup().isValid())
     return;
   if (opt.getGroup().getID() == OPT_grp_deprecated) {
@@ -632,7 +636,7 @@ static void warnIfDeprecatedOption(const opt::Option &opt) {
   }
 }
 
-static void warnIfUnimplementedOption(const opt::Option &opt) {
+static void warnIfUnimplementedOption(const Option &opt) {
   if (!opt.getGroup().isValid() || !opt.hasFlag(DriverFlag::HelpHidden))
     return;
   switch (opt.getGroup().getID()) {
@@ -657,25 +661,25 @@ static void warnIfUnimplementedOption(const opt::Option &opt) {
   }
 }
 
-static const char *getReproduceOption(opt::InputArgList &args) {
-  if (auto *arg = args.getLastArg(OPT_reproduce))
+static const char *getReproduceOption(InputArgList &args) {
+  if (const Arg *arg = args.getLastArg(OPT_reproduce))
     return arg->getValue();
   return getenv("LLD_REPRODUCE");
 }
 
-static bool isPie(opt::InputArgList &args) {
+static bool isPie(InputArgList &args) {
   if (config->outputType != MH_EXECUTE || args.hasArg(OPT_no_pie))
     return false;
-  if (config->arch == AK_arm64 || config->arch == AK_arm64e)
+  if (config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e)
     return true;
 
   // TODO: add logic here as we support more archs. E.g. i386 should default
   // to PIE from 10.7
-  assert(config->arch == AK_x86_64 || config->arch == AK_x86_64h);
+  assert(config->target.Arch == AK_x86_64 || config->target.Arch == AK_x86_64h);
 
-  PlatformKind kind = config->platform.kind;
+  PlatformKind kind = config->target.Platform;
   if (kind == PlatformKind::macOS &&
-      config->platform.minimum >= VersionTuple(10, 6))
+      config->platformInfo.minimum >= VersionTuple(10, 6))
     return true;
 
   if (kind == PlatformKind::iOSSimulator || kind == PlatformKind::driverKit)
@@ -695,8 +699,8 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   error(msg + ": " + StringRef(err).trim());
 }
 
-static uint32_t parseDylibVersion(const opt::ArgList& args, unsigned id) {
-  const opt::Arg *arg = args.getLastArg(id);
+static uint32_t parseDylibVersion(const ArgList &args, unsigned id) {
+  const Arg *arg = args.getLastArg(id);
   if (!arg)
     return 0;
 
@@ -714,6 +718,57 @@ static uint32_t parseDylibVersion(const opt::ArgList& args, unsigned id) {
   return version.rawValue();
 }
 
+void SymbolPatterns::clear() {
+  literals.clear();
+  globs.clear();
+}
+
+void SymbolPatterns::insert(StringRef symbolName) {
+  if (symbolName.find_first_of("*?[]") == StringRef::npos)
+    literals.insert(CachedHashStringRef(symbolName));
+  else if (Expected<GlobPattern> pattern = GlobPattern::create(symbolName))
+    globs.emplace_back(*pattern);
+  else
+    error("invalid symbol-name pattern: " + symbolName);
+}
+
+bool SymbolPatterns::matchLiteral(StringRef symbolName) const {
+  return literals.contains(CachedHashStringRef(symbolName));
+}
+
+bool SymbolPatterns::matchGlob(StringRef symbolName) const {
+  for (const llvm::GlobPattern &glob : globs)
+    if (glob.match(symbolName))
+      return true;
+  return false;
+}
+
+bool SymbolPatterns::match(StringRef symbolName) const {
+  return matchLiteral(symbolName) || matchGlob(symbolName);
+}
+
+static void handleSymbolPatterns(InputArgList &args,
+                                 SymbolPatterns &symbolPatterns,
+                                 unsigned singleOptionCode,
+                                 unsigned listFileOptionCode) {
+  for (const Arg *arg : args.filtered(singleOptionCode))
+    symbolPatterns.insert(arg->getValue());
+  for (const Arg *arg : args.filtered(listFileOptionCode)) {
+    StringRef path = arg->getValue();
+    Optional<MemoryBufferRef> buffer = readFile(path);
+    if (!buffer) {
+      error("Could not read symbol file: " + path);
+      continue;
+    }
+    MemoryBufferRef mbref = *buffer;
+    for (StringRef line : args::getLines(mbref)) {
+      line = line.take_until([](char c) { return c == '#'; }).trim();
+      if (!line.empty())
+        symbolPatterns.insert(line);
+    }
+  }
+}
+
 bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -727,7 +782,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
 
   MachOOptTable parser;
-  opt::InputArgList args = parser.parse(argsArr.slice(1));
+  InputArgList args = parser.parse(argsArr.slice(1));
 
   if (args.hasArg(OPT_help_hidden)) {
     parser.printHelp(argsArr[0], /*showHidden=*/true);
@@ -759,29 +814,26 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config = make<Configuration>();
   symtab = make<SymbolTable>();
   target = createTargetInfo(args);
-  config->platform = getPlatformVersion(args);
 
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
                                        /*file=*/nullptr,
                                        /*isWeakRef=*/false);
-  for (auto *arg : args.filtered(OPT_u)) {
+  for (const Arg *arg : args.filtered(OPT_u)) {
     config->explicitUndefineds.push_back(symtab->addUndefined(
         arg->getValue(), /*file=*/nullptr, /*isWeakRef=*/false));
   }
 
-  for (auto *arg : args.filtered(OPT_U))
+  for (const Arg *arg : args.filtered(OPT_U))
     symtab->addDynamicLookup(arg->getValue());
 
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
-  config->installName =
-      args.getLastArgValue(OPT_install_name, config->outputFile);
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
       args.hasArg(OPT_headerpad_max_install_names);
   config->printEachFile = args.hasArg(OPT_t);
   config->printWhyLoad = args.hasArg(OPT_why_load);
   config->outputType = getOutputType(args);
-  if (const opt::Arg *arg = args.getLastArg(OPT_bundle_loader)) {
+  if (const Arg *arg = args.getLastArg(OPT_bundle_loader)) {
     if (config->outputType != MH_BUNDLE)
       error("-bundle_loader can only be used with MachO bundle output");
     addFile(arg->getValue(), false, true);
@@ -796,10 +848,26 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->demangle = args.hasArg(OPT_demangle);
   config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
 
-  if (const opt::Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
+  if (const Arg *arg = args.getLastArg(OPT_install_name)) {
+    if (config->outputType != MH_DYLIB)
+      warn(arg->getAsString(args) + ": ignored, only has effect with -dylib");
+    else
+      config->installName = arg->getValue();
+  } else if (config->outputType == MH_DYLIB) {
+    config->installName = config->outputFile;
+  }
+
+  if (args.hasArg(OPT_mark_dead_strippable_dylib)) {
+    if (config->outputType != MH_DYLIB)
+      warn("-mark_dead_strippable_dylib: ignored, only has effect with -dylib");
+    else
+      config->markDeadStrippableDylib = true;
+  }
+
+  if (const Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
     config->staticLink = (arg->getOption().getID() == OPT_static);
 
-  if (const opt::Arg *arg =
+  if (const Arg *arg =
           args.getLastArg(OPT_flat_namespace, OPT_twolevel_namespace))
     config->namespaceKind = arg->getOption().getID() == OPT_twolevel_namespace
                                 ? NamespaceKind::twolevel
@@ -812,7 +880,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       getLibrarySearchPaths(args, config->systemLibraryRoots);
   config->frameworkSearchPaths =
       getFrameworkSearchPaths(args, config->systemLibraryRoots);
-  if (const opt::Arg *arg =
+  if (const Arg *arg =
           args.getLastArg(OPT_search_paths_first, OPT_search_dylibs_first))
     config->searchDylibsFirst =
         arg->getOption().getID() == OPT_search_dylibs_first;
@@ -829,17 +897,31 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       error("invalid name for segment or section: " + s);
     return s;
   };
-  for (opt::Arg *arg : args.filtered(OPT_rename_section)) {
+  for (const Arg *arg : args.filtered(OPT_rename_section)) {
     config->sectionRenameMap[{validName(arg->getValue(0)),
                               validName(arg->getValue(1))}] = {
         validName(arg->getValue(2)), validName(arg->getValue(3))};
   }
-  for (opt::Arg *arg : args.filtered(OPT_rename_segment)) {
+  for (const Arg *arg : args.filtered(OPT_rename_segment)) {
     config->segmentRenameMap[validName(arg->getValue(0))] =
         validName(arg->getValue(1));
   }
 
+  handleSymbolPatterns(args, config->exportedSymbols, OPT_exported_symbol,
+                       OPT_exported_symbols_list);
+  handleSymbolPatterns(args, config->unexportedSymbols, OPT_unexported_symbol,
+                       OPT_unexported_symbols_list);
+  if (!config->exportedSymbols.empty() && !config->unexportedSymbols.empty()) {
+    error("cannot use both -exported_symbol* and -unexported_symbol* options\n"
+          ">>> ignoring unexports");
+    config->unexportedSymbols.clear();
+  }
+
   config->saveTemps = args.hasArg(OPT_save_temps);
+
+  config->adhocCodesign = args.hasFlag(
+      OPT_adhoc_codesign, OPT_no_adhoc_codesign,
+      config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e);
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());
@@ -857,8 +939,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
-  for (const auto &arg : args) {
-    const auto &opt = arg->getOption();
+  for (const Arg *arg : args) {
+    const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
     warnIfUnimplementedOption(opt);
 
@@ -895,7 +977,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   // Now that all dylibs have been loaded, search for those that should be
   // re-exported.
-  for (opt::Arg *arg : args.filtered(OPT_sub_library, OPT_sub_umbrella)) {
+  for (const Arg *arg : args.filtered(OPT_sub_library, OPT_sub_umbrella)) {
     config->hasReexports = true;
     StringRef searchName = arg->getValue();
     std::vector<StringRef> extensions;
@@ -909,11 +991,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   // Parse LTO options.
-  if (auto *arg = args.getLastArg(OPT_mcpu))
+  if (const Arg *arg = args.getLastArg(OPT_mcpu))
     parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
                      arg->getSpelling());
 
-  for (auto *arg : args.filtered(OPT_mllvm))
+  for (const Arg *arg : args.filtered(OPT_mllvm))
     parseClangOption(arg->getValue(), arg->getSpelling());
 
   compileBitcodeFiles();
@@ -929,7 +1011,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   }
   // FIXME: This prints symbols that are undefined both in input files and
   // via -u flag twice.
-  for (const auto *undefined : config->explicitUndefineds) {
+  for (const Symbol *undefined : config->explicitUndefineds) {
     if (isa<Undefined>(undefined)) {
       error("undefined symbol: " + toString(*undefined) +
             "\n>>> referenced by flag -u " + toString(*undefined));
@@ -940,7 +1022,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   createSyntheticSections();
   symtab->addDSOHandle(in.header);
 
-  for (opt::Arg *arg : args.filtered(OPT_sectcreate)) {
+  for (const Arg *arg : args.filtered(OPT_sectcreate)) {
     StringRef segName = arg->getValue(0);
     StringRef sectName = arg->getValue(1);
     StringRef fileName = arg->getValue(2);
@@ -950,9 +1032,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   // Initialize InputSections.
-  for (InputFile *file : inputFiles) {
-    for (SubsectionMap &map : file->subsections) {
-      for (auto &p : map) {
+  for (const InputFile *file : inputFiles) {
+    for (const SubsectionMap &map : file->subsections) {
+      for (const auto &p : map) {
         InputSection *isec = p.second;
         inputSections.push_back(isec);
       }

@@ -62,6 +62,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
@@ -289,8 +290,17 @@ GVN::Expression GVN::ValueTable::createExpr(Instruction *I) {
   Expression e;
   e.type = I->getType();
   e.opcode = I->getOpcode();
-  for (Use &Op : I->operands())
-    e.varargs.push_back(lookupOrAdd(Op));
+  if (const GCRelocateInst *GCR = dyn_cast<GCRelocateInst>(I)) {
+    // gc.relocate is 'special' call: its second and third operands are
+    // not real values, but indices into statepoint's argument list.
+    // Use the refered to values for purposes of identity.
+    e.varargs.push_back(lookupOrAdd(GCR->getOperand(0)));
+    e.varargs.push_back(lookupOrAdd(GCR->getBasePtr()));
+    e.varargs.push_back(lookupOrAdd(GCR->getDerivedPtr()));
+  } else {
+    for (Use &Op : I->operands())
+      e.varargs.push_back(lookupOrAdd(Op));
+  }
   if (I->isCommutative()) {
     // Ensure that commutative instructions that only differ by a permutation
     // of their operands get the same value number by sorting the operand value
@@ -845,6 +855,9 @@ static Value *ConstructSSAForLoadSet(LoadInst *LI,
   for (const AvailableValueInBlock &AV : ValuesPerBlock) {
     BasicBlock *BB = AV.BB;
 
+    if (AV.AV.isUndefValue())
+      continue;
+
     if (SSAUpdate.HasValueForBlock(BB))
       continue;
 
@@ -905,9 +918,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *LI,
                       << *Res << '\n'
                       << "\n\n\n");
   } else {
-    assert(isUndefValue() && "Should be UndefVal");
-    LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL Undef:\n";);
-    return UndefValue::get(LoadTy);
+    llvm_unreachable("Should not materialize value from dead block");
   }
   assert(Res && "failed to materialize?");
   return Res;
@@ -2361,6 +2372,12 @@ bool GVN::processBlock(BasicBlock *BB) {
   // Clearing map before every BB because it can be used only for single BB.
   ReplaceOperandsWithMap.clear();
   bool ChangedFunction = false;
+
+  // Since we may not have visited the input blocks of the phis, we can't
+  // use our normal hash approach for phis.  Instead, simply look for
+  // obvious duplicates.  The first pass of GVN will tend to create
+  // identical phis, and the second or later passes can eliminate them.
+  ChangedFunction |= EliminateDuplicatePHINodes(BB);
 
   for (BasicBlock::iterator BI = BB->begin(), BE = BB->end();
        BI != BE;) {

@@ -421,6 +421,14 @@ func @fastmathFlags(%arg0: f32, %arg1: f32, %arg2: i32) {
 }
 
 module {
+  // CHECK-LABEL: @loopOptions
+  llvm.func @loopOptions() {
+    // CHECK: llvm.br
+    // CHECK-SAME: llvm.loop = {options = #llvm.loopopts<disable_unroll = true, disable_licm = true, interleave_count = 1>}, parallel_access = [@metadata::@group1]}
+    llvm.br ^bb1 {llvm.loop = {options = #llvm.loopopts<disable_unroll = true, disable_licm = true, interleave_count = 1>}, parallel_access = [@metadata::@group1]}
+  ^bb1:
+    llvm.return
+  }
   // CHECK: llvm.metadata @metadata attributes {test_attribute} {
   llvm.metadata @metadata attributes {test_attribute} {
     // CHECK: llvm.access_group @group1

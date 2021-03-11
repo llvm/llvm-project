@@ -232,7 +232,8 @@ define void @test6() {
 
 ; CHECK-LABEL: header.prol:
 ; CHECK-NEXT:    %indvars.iv.prol = phi i64 [ undef, %header.prol.preheader ], [ %indvars.iv.next.prol, %latch.prol ]
-; CHECK-NEXT:    %prol.iter = phi i64 [ 1, %header.prol.preheader ], [ %prol.iter.sub, %latch.prol ]
+; CHECK-NEXT:    %prol.iter = phi i64 [ %xtraiter, %header.prol.preheader ], [ %prol.iter.sub, %latch.prol ]
+
 ; CHECK-NEXT:    br i1 false, label %latch.prol, label %otherexit.loopexit1
 
 ; CHECK-LABEL: header.prol.loopexit.unr-lcssa:
@@ -241,7 +242,8 @@ define void @test6() {
 
 ; CHECK-LABEL: header.prol.loopexit:
 ; CHECK-NEXT:    %indvars.iv.unr = phi i64 [ undef, %entry ], [ %indvars.iv.unr.ph, %header.prol.loopexit.unr-lcssa ]
-; CHECK-NEXT:    br i1 true, label %latchexit, label %entry.new
+; CHECK-NEXT:    %5 = icmp ult i64 %2, 3
+; CHECK-NEXT:    br i1 %5, label %latchexit, label %entry.new
 
 ; CHECK-LABEL: entry.new:
 ; CHECK-NEXT:    br label %header

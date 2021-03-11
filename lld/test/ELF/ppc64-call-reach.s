@@ -67,7 +67,7 @@ test:
 
 # THUNK-LABEL: <test>:
 # THUNK: 10010014:       bl 0x10010030
-# THUNK: 10010024:       b 0x10010040
+# THUNK: 10010024:       b 0x10010050
 
 # .branch_lt[0]
 # THUNK-LABEL: <__long_branch_callee>:
@@ -78,7 +78,7 @@ test:
 
 # .branch_lt[1]
 # THUNK-LABEL: <__long_branch_tail_callee>:
-# THUNK-NEXT: 10010040:       addis 12, 2, 1
+# THUNK-NEXT: 10010050:       addis 12, 2, 1
 # THUNK-NEXT:                 ld 12, -32752(12)
 # THUNK-NEXT:                 mtctr 12
 # THUNK-NEXT:                 bctr

@@ -3805,10 +3805,10 @@ defm FSQRT  : SingleOperandFPData<0b0011, "fsqrt", fsqrt>;
 }
 
 let Predicates = [HasFRInt3264] in {
-  defm FRINT32Z : FRIntNNT<0b00, "frint32z">;
-  defm FRINT64Z : FRIntNNT<0b10, "frint64z">;
-  defm FRINT32X : FRIntNNT<0b01, "frint32x">;
-  defm FRINT64X : FRIntNNT<0b11, "frint64x">;
+  defm FRINT32Z : FRIntNNT<0b00, "frint32z", int_aarch64_frint32z>;
+  defm FRINT64Z : FRIntNNT<0b10, "frint64z", int_aarch64_frint64z>;
+  defm FRINT32X : FRIntNNT<0b01, "frint32x", int_aarch64_frint32x>;
+  defm FRINT64X : FRIntNNT<0b11, "frint64x", int_aarch64_frint64x>;
 } // HasFRInt3264
 
 let Predicates = [HasFullFP16] in {
@@ -4091,10 +4091,10 @@ defm FRINTX : SIMDTwoVectorFP<1, 0, 0b11001, "frintx", frint>;
 defm FRINTZ : SIMDTwoVectorFP<0, 1, 0b11001, "frintz", ftrunc>;
 
 let Predicates = [HasFRInt3264] in {
-  defm FRINT32Z : FRIntNNTVector<0, 0, "frint32z">;
-  defm FRINT64Z : FRIntNNTVector<0, 1, "frint64z">;
-  defm FRINT32X : FRIntNNTVector<1, 0, "frint32x">;
-  defm FRINT64X : FRIntNNTVector<1, 1, "frint64x">;
+  defm FRINT32Z : FRIntNNTVector<0, 0, "frint32z", int_aarch64_neon_frint32z>;
+  defm FRINT64Z : FRIntNNTVector<0, 1, "frint64z", int_aarch64_neon_frint64z>;
+  defm FRINT32X : FRIntNNTVector<1, 0, "frint32x", int_aarch64_neon_frint32x>;
+  defm FRINT64X : FRIntNNTVector<1, 1, "frint64x", int_aarch64_neon_frint64x>;
 } // HasFRInt3264
 
 defm FRSQRTE: SIMDTwoVectorFP<1, 1, 0b11101, "frsqrte", int_aarch64_neon_frsqrte>;

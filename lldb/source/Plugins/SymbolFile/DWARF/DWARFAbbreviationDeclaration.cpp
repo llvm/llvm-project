@@ -58,7 +58,7 @@ DWARFAbbreviationDeclaration::extract(const DWARFDataExtractor &data,
     DWARFFormValue::ValueType val;
 
     if (form == DW_FORM_implicit_const)
-      val.value.sval = data.GetULEB128(offset_ptr);
+      val.value.sval = data.GetSLEB128(offset_ptr);
 
     m_attributes.push_back(DWARFAttribute(attr, form, val));
   }
@@ -81,10 +81,4 @@ DWARFAbbreviationDeclaration::FindAttributeIndex(dw_attr_t attr) const {
       return i;
   }
   return DW_INVALID_INDEX;
-}
-
-bool DWARFAbbreviationDeclaration::
-operator==(const DWARFAbbreviationDeclaration &rhs) const {
-  return Tag() == rhs.Tag() && HasChildren() == rhs.HasChildren() &&
-         m_attributes == rhs.m_attributes;
 }

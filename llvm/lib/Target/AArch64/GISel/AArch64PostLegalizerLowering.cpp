@@ -471,7 +471,7 @@ static bool isVShiftRImm(Register Reg, MachineRegisterInfo &MRI, LLT Ty,
                          int64_t &Cnt) {
   assert(Ty.isVector() && "vector shift count is not a vector type");
   MachineInstr *MI = MRI.getVRegDef(Reg);
-  auto Cst = getBuildVectorConstantSplat(*MI, MRI);
+  auto Cst = getAArch64VectorSplatScalar(*MI, MRI);
   if (!Cst)
     return false;
   Cnt = *Cst;
@@ -661,6 +661,8 @@ bool matchDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   case 2:
     if (ScalarSize == 64)
       Opc = AArch64::G_DUPLANE64;
+    else if (ScalarSize == 32)
+      Opc = AArch64::G_DUPLANE32;
     break;
   case 4:
     if (ScalarSize == 32)
@@ -688,10 +690,47 @@ bool matchDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
 bool applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
                   MachineIRBuilder &B, std::pair<unsigned, int> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
+  Register Src1Reg = MI.getOperand(1).getReg();
+  const LLT SrcTy = MRI.getType(Src1Reg);
+
   B.setInstrAndDebugLoc(MI);
   auto Lane = B.buildConstant(LLT::scalar(64), MatchInfo.second);
-  B.buildInstr(MatchInfo.first, {MI.getOperand(0).getReg()},
-               {MI.getOperand(1).getReg(), Lane});
+
+  Register DupSrc = MI.getOperand(1).getReg();
+  // For types like <2 x s32>, we can use G_DUPLANE32, with a <4 x s32> source.
+  // To do this, we can use a G_CONCAT_VECTORS to do the widening.
+  if (SrcTy == LLT::vector(2, LLT::scalar(32))) {
+    assert(MRI.getType(MI.getOperand(0).getReg()).getNumElements() == 2 &&
+           "Unexpected dest elements");
+    auto Undef = B.buildUndef(SrcTy);
+    DupSrc = B.buildConcatVectors(SrcTy.changeNumElements(4),
+                                  {Src1Reg, Undef.getReg(0)})
+                 .getReg(0);
+  }
+  B.buildInstr(MatchInfo.first, {MI.getOperand(0).getReg()}, {DupSrc, Lane});
+  MI.eraseFromParent();
+  return true;
+}
+
+static bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  auto Splat = getAArch64VectorSplat(MI, MRI);
+  if (!Splat)
+    return false;
+  if (Splat->isReg())
+    return true;
+  // Later, during selection, we'll try to match imported patterns using
+  // immAllOnesV and immAllZerosV. These require G_BUILD_VECTOR. Don't lower
+  // G_BUILD_VECTORs which could match those patterns.
+  int64_t Cst = Splat->getCst();
+  return (Cst != 0 && Cst != -1);
+}
+
+static bool applyBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                  MachineIRBuilder &B) {
+  B.setInstrAndDebugLoc(MI);
+  B.buildInstr(AArch64::G_DUP, {MI.getOperand(0).getReg()},
+               {MI.getOperand(1).getReg()});
   MI.eraseFromParent();
   return true;
 }

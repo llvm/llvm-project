@@ -428,7 +428,7 @@ public:
     }
 
     if (Triple.isOSAIX() || Triple.isOSLinux())
-      DataLayout += "-v256:256:256-v512:512:512";
+      DataLayout += "-S128-v256:256:256-v512:512:512";
     resetDataLayout(DataLayout);
 
     // PPC64 supports atomics up to 8 bytes.

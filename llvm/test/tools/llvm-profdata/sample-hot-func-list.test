@@ -11,3 +11,12 @@
 ; CHECK-NEXT: 7711 (2.17%)           610               610             _Z3fooi
 ; CHECK-NEXT: 6948 (1.95%)           3507              470             Func5
 ; CHECK-NEXT: 1523 (0.43%)           563               169             Func1
+
+
+; RUN: llvm-profdata show --sample --hot-func-list %S/Inputs/cs-sample.proftext | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=CS
+
+;      CS:2 out of 8 functions with profile (25.00%) are considered hot functions (max sample >= 23324).
+; CS-NEXT:1968152 out of 1968919 profile counts (99.96%) are from hot functions.
+; CS-NEXT: Total sample (%)       Max sample        Entry sample    Function name
+; CS-NEXT: 1467299 (74.52%)       287884            11              main:3 @ _Z5funcAi:1 @ _Z8funcLeafi
+; CS-NEXT: 500853 (25.44%)        74946             20              main:3.1 @ _Z5funcBi:1 @ _Z8funcLeafi

@@ -89,6 +89,7 @@ option(LIBCXXABI_ENABLE_STATIC_UNWINDER "Statically link the LLVM unwinder." OFF
 option(LIBCXXABI_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 option(LIBCXXABI_ENABLE_THREADS "Build with threads enabled" ON)
 option(LIBCXXABI_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
+option(LIBCXXABI_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32 thread API" OFF)
 option(LIBCXXABI_HAS_EXTERNAL_THREAD_API
   "Build libc++abi with an externalized threading API.
   This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON." OFF)
@@ -374,6 +375,11 @@ if (NOT LIBCXXABI_ENABLE_THREADS)
                         " be set to ON when LIBCXXABI_ENABLE_THREADS"
                         " is also set to ON.")
   endif()
+  if (LIBCXXABI_HAS_WIN32_THREAD_API)
+    message(FATAL_ERROR "LIBCXXABI_HAS_WIN32_THREAD_API can only"
+                        " be set to ON when LIBCXXABI_ENABLE_THREADS"
+                        " is also set to ON.")
+  endif()
   if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)
     message(FATAL_ERROR "LIBCXXABI_HAS_EXTERNAL_THREAD_API can only"
                         " be set to ON when LIBCXXABI_ENABLE_THREADS"
@@ -394,10 +400,23 @@ if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)
                         " and LIBCXXABI_HAS_PTHREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
+  if (LIBCXXABI_HAS_WIN32_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXXABI_HAS_EXTERNAL_THREAD_API"
+                        " and LIBCXXABI_HAS_WIN32_THREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
   if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
     message(FATAL_ERROR "The options LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY"
                         " and LIBCXXABI_HAS_EXTERNAL_THREAD_API cannot be both"
                         " set to ON at the same time.")
+  endif()
+endif()
+
+if (LIBCXXABI_HAS_PTHREAD_API)
+  if (LIBCXXABI_HAS_WIN32_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXXABI_HAS_PTHREAD_API"
+            "and LIBCXXABI_HAS_WIN32_THREAD_API cannot be both"
+            "set to ON at the same time.")
   endif()
 endif()
 
@@ -426,6 +445,10 @@ endif()
 
 if (LIBCXXABI_HAS_PTHREAD_API)
   add_definitions(-D_LIBCPP_HAS_THREAD_API_PTHREAD)
+endif()
+
+if (LIBCXXABI_HAS_WIN32_THREAD_API)
+  add_definitions(-D_LIBCPP_HAS_THREAD_API_WIN32)
 endif()
 
 if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)

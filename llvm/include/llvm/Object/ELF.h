@@ -87,6 +87,9 @@ static inline Error createError(const Twine &Err) {
 
 enum PPCInstrMasks : uint64_t {
   PADDI_R12_NO_DISP = 0x0610000039800000,
+  ADDIS_R12_TO_R2_NO_DISP = 0x3D820000,
+  ADDI_R12_TO_R2_NO_DISP = 0x39820000,
+  ADDI_R12_TO_R12_NO_DISP = 0x398C0000,
   PLD_R12_NO_DISP = 0x04100000E5800000,
   MTCTR_R12 = 0x7D8903A6,
   BCTR = 0x4E800420,
@@ -389,6 +392,8 @@ public:
   Expected<ArrayRef<T>> getSectionContentsAsArray(const Elf_Shdr &Sec) const;
   Expected<ArrayRef<uint8_t>> getSectionContents(const Elf_Shdr &Sec) const;
   Expected<ArrayRef<uint8_t>> getSegmentContents(const Elf_Phdr &Phdr) const;
+  Expected<std::vector<Elf_BBAddrMap>>
+  decodeBBAddrMap(const Elf_Shdr &Sec) const;
 };
 
 using ELF32LEFile = ELFFile<ELF32LE>;

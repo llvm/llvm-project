@@ -208,3 +208,39 @@ void t17b (char **x, int offset) {
   // Unknown value
   std::free(x[offset]); // no-warning
 }
+
+struct S {
+  const char* p;
+};
+
+void t18_C_style_C_style_free (S s) {
+  free((void*)(unsigned long long)s.p); // no warning
+}
+
+void t18_C_style_C_style_std_free (S s) {
+  std::free((void*)(unsigned long long)s.p); // no warning
+}
+
+void t18_C_style_reinterpret_free (S s) {
+  free((void*)reinterpret_cast<unsigned long long>(s.p)); // no warning
+}
+
+void t18_C_style_reinterpret_std_free (S s) {
+  std::free((void*)reinterpret_cast<unsigned long long>(s.p)); // no warning
+}
+
+void t18_reinterpret_C_style_free (S s) {
+  free(reinterpret_cast<void*>((unsigned long long)(s.p))); // no warning
+}
+
+void t18_reinterpret_C_style_std_free (S s) {
+  std::free(reinterpret_cast<void*>((unsigned long long)(s.p))); // no warning
+}
+
+void t18_reinterpret_reinterpret_free (S s) {
+  free(reinterpret_cast<void*>(reinterpret_cast<unsigned long long>(s.p))); // no warning
+}
+
+void t18_reinterpret_reinterpret_std_free (S s) {
+  std::free(reinterpret_cast<void*>(reinterpret_cast<unsigned long long>(s.p))); // no warning
+}

@@ -49,7 +49,7 @@ int main(int, char**) {
     NotInvocable(&A::F);
 
     {
-      auto X = A{};
+      A X;
       ModelsInvocable(&A::I, X);
       ModelsInvocable(&A::F, X);
       ModelsInvocable(&A::G, X, 0);
@@ -57,7 +57,7 @@ int main(int, char**) {
       NotInvocable(&A::G, 0);
       NotInvocable(&A::H);
 
-      auto const& Y = X;
+      A const& Y = X;
       ModelsInvocable(&A::I, Y);
       ModelsInvocable(&A::F, Y);
       NotInvocable(&A::G, Y, 0);

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
@@ -14,6 +15,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -22,6 +24,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -941,6 +944,93 @@ void CombinerHelper::applyCombineIndexedLoadStore(
   AddrDef.eraseFromParent();
 
   LLVM_DEBUG(dbgs() << "    Combinined to indexed operation");
+}
+
+bool CombinerHelper::matchCombineDivRem(MachineInstr &MI,
+                                        MachineInstr *&OtherMI) {
+  unsigned Opcode = MI.getOpcode();
+  bool IsDiv, IsSigned;
+
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Unexpected opcode!");
+  case TargetOpcode::G_SDIV:
+  case TargetOpcode::G_UDIV: {
+    IsDiv = true;
+    IsSigned = Opcode == TargetOpcode::G_SDIV;
+    break;
+  }
+  case TargetOpcode::G_SREM:
+  case TargetOpcode::G_UREM: {
+    IsDiv = false;
+    IsSigned = Opcode == TargetOpcode::G_SREM;
+    break;
+  }
+  }
+
+  Register Src1 = MI.getOperand(1).getReg();
+  unsigned DivOpcode, RemOpcode, DivremOpcode;
+  if (IsSigned) {
+    DivOpcode = TargetOpcode::G_SDIV;
+    RemOpcode = TargetOpcode::G_SREM;
+    DivremOpcode = TargetOpcode::G_SDIVREM;
+  } else {
+    DivOpcode = TargetOpcode::G_UDIV;
+    RemOpcode = TargetOpcode::G_UREM;
+    DivremOpcode = TargetOpcode::G_UDIVREM;
+  }
+
+  if (!isLegalOrBeforeLegalizer({DivremOpcode, {MRI.getType(Src1)}}))
+    return false;
+
+  // Combine:
+  //   %div:_ = G_[SU]DIV %src1:_, %src2:_
+  //   %rem:_ = G_[SU]REM %src1:_, %src2:_
+  // into:
+  //  %div:_, %rem:_ = G_[SU]DIVREM %src1:_, %src2:_
+
+  // Combine:
+  //   %rem:_ = G_[SU]REM %src1:_, %src2:_
+  //   %div:_ = G_[SU]DIV %src1:_, %src2:_
+  // into:
+  //  %div:_, %rem:_ = G_[SU]DIVREM %src1:_, %src2:_
+
+  for (auto &UseMI : MRI.use_nodbg_instructions(Src1)) {
+    if (MI.getParent() == UseMI.getParent() &&
+        ((IsDiv && UseMI.getOpcode() == RemOpcode) ||
+         (!IsDiv && UseMI.getOpcode() == DivOpcode)) &&
+        matchEqualDefs(MI.getOperand(2), UseMI.getOperand(2))) {
+      OtherMI = &UseMI;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void CombinerHelper::applyCombineDivRem(MachineInstr &MI,
+                                        MachineInstr *&OtherMI) {
+  unsigned Opcode = MI.getOpcode();
+  assert(OtherMI && "OtherMI shouldn't be empty.");
+
+  Register DestDivReg, DestRemReg;
+  if (Opcode == TargetOpcode::G_SDIV || Opcode == TargetOpcode::G_UDIV) {
+    DestDivReg = MI.getOperand(0).getReg();
+    DestRemReg = OtherMI->getOperand(0).getReg();
+  } else {
+    DestDivReg = OtherMI->getOperand(0).getReg();
+    DestRemReg = MI.getOperand(0).getReg();
+  }
+
+  bool IsSigned =
+      Opcode == TargetOpcode::G_SDIV || Opcode == TargetOpcode::G_SREM;
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildInstr(IsSigned ? TargetOpcode::G_SDIVREM
+                              : TargetOpcode::G_UDIVREM,
+                     {DestDivReg, DestRemReg},
+                     {MI.getOperand(1).getReg(), MI.getOperand(2).getReg()});
+  MI.eraseFromParent();
+  OtherMI->eraseFromParent();
 }
 
 bool CombinerHelper::matchOptBrCondByInvertingCond(MachineInstr &MI) {
@@ -2295,6 +2385,20 @@ bool CombinerHelper::matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) {
                   m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy))));
 }
 
+bool CombinerHelper::matchCombineZextTrunc(MachineInstr &MI, Register &Reg) {
+  assert(MI.getOpcode() == TargetOpcode::G_ZEXT && "Expected a G_ZEXT");
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  if (mi_match(SrcReg, MRI,
+               m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy))))) {
+    unsigned DstSize = DstTy.getScalarSizeInBits();
+    unsigned SrcSize = MRI.getType(SrcReg).getScalarSizeInBits();
+    return KB->getKnownBits(Reg).countMinLeadingZeros() >= DstSize - SrcSize;
+  }
+  return false;
+}
+
 bool CombinerHelper::matchCombineExtOfExt(
     MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo) {
   assert((MI.getOpcode() == TargetOpcode::G_ANYEXT ||
@@ -3646,6 +3750,116 @@ bool CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
   Builder.insertInstr(NewPhi);
   ExtMI->eraseFromParent();
   return true;
+}
+
+bool CombinerHelper::matchExtractVecEltBuildVec(MachineInstr &MI,
+                                                Register &Reg) {
+  assert(MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT);
+  // If we have a constant index, look for a G_BUILD_VECTOR source
+  // and find the source register that the index maps to.
+  Register SrcVec = MI.getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(SrcVec);
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_BUILD_VECTOR, {SrcTy, SrcTy.getElementType()}}))
+    return false;
+
+  auto Cst = getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+  if (!Cst || Cst->Value.getZExtValue() >= SrcTy.getNumElements())
+    return false;
+
+  unsigned VecIdx = Cst->Value.getZExtValue();
+  MachineInstr *BuildVecMI =
+      getOpcodeDef(TargetOpcode::G_BUILD_VECTOR, SrcVec, MRI);
+  if (!BuildVecMI) {
+    BuildVecMI = getOpcodeDef(TargetOpcode::G_BUILD_VECTOR_TRUNC, SrcVec, MRI);
+    if (!BuildVecMI)
+      return false;
+    LLT ScalarTy = MRI.getType(BuildVecMI->getOperand(1).getReg());
+    if (!isLegalOrBeforeLegalizer(
+            {TargetOpcode::G_BUILD_VECTOR_TRUNC, {SrcTy, ScalarTy}}))
+      return false;
+  }
+
+  EVT Ty(getMVTForLLT(SrcTy));
+  if (!MRI.hasOneNonDBGUse(SrcVec) &&
+      !getTargetLowering().aggressivelyPreferBuildVectorSources(Ty))
+    return false;
+
+  Reg = BuildVecMI->getOperand(VecIdx + 1).getReg();
+  return true;
+}
+
+void CombinerHelper::applyExtractVecEltBuildVec(MachineInstr &MI,
+                                                Register &Reg) {
+  // Check the type of the register, since it may have come from a
+  // G_BUILD_VECTOR_TRUNC.
+  LLT ScalarTy = MRI.getType(Reg);
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  Builder.setInstrAndDebugLoc(MI);
+  if (ScalarTy != DstTy) {
+    assert(ScalarTy.getSizeInBits() > DstTy.getSizeInBits());
+    Builder.buildTrunc(DstReg, Reg);
+    MI.eraseFromParent();
+    return;
+  }
+  replaceSingleDefInstWithReg(MI, Reg);
+}
+
+bool CombinerHelper::matchExtractAllEltsFromBuildVector(
+    MachineInstr &MI,
+    SmallVectorImpl<std::pair<Register, MachineInstr *>> &SrcDstPairs) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  // This combine tries to find build_vector's which have every source element
+  // extracted using G_EXTRACT_VECTOR_ELT. This can happen when transforms like
+  // the masked load scalarization is run late in the pipeline. There's already
+  // a combine for a similar pattern starting from the extract, but that
+  // doesn't attempt to do it if there are multiple uses of the build_vector,
+  // which in this case is true. Starting the combine from the build_vector
+  // feels more natural than trying to find sibling nodes of extracts.
+  // E.g.
+  //  %vec(<4 x s32>) = G_BUILD_VECTOR %s1(s32), %s2, %s3, %s4
+  //  %ext1 = G_EXTRACT_VECTOR_ELT %vec, 0
+  //  %ext2 = G_EXTRACT_VECTOR_ELT %vec, 1
+  //  %ext3 = G_EXTRACT_VECTOR_ELT %vec, 2
+  //  %ext4 = G_EXTRACT_VECTOR_ELT %vec, 3
+  // ==>
+  // replace ext{1,2,3,4} with %s{1,2,3,4}
+
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  unsigned NumElts = DstTy.getNumElements();
+
+  SmallBitVector ExtractedElts(NumElts);
+  for (auto &II : make_range(MRI.use_instr_nodbg_begin(DstReg),
+                             MRI.use_instr_nodbg_end())) {
+    if (II.getOpcode() != TargetOpcode::G_EXTRACT_VECTOR_ELT)
+      return false;
+    auto Cst = getConstantVRegVal(II.getOperand(2).getReg(), MRI);
+    if (!Cst)
+      return false;
+    unsigned Idx = Cst.getValue().getZExtValue();
+    if (Idx >= NumElts)
+      return false; // Out of range.
+    ExtractedElts.set(Idx);
+    SrcDstPairs.emplace_back(
+        std::make_pair(MI.getOperand(Idx + 1).getReg(), &II));
+  }
+  // Match if every element was extracted.
+  return ExtractedElts.all();
+}
+
+void CombinerHelper::applyExtractAllEltsFromBuildVector(
+    MachineInstr &MI,
+    SmallVectorImpl<std::pair<Register, MachineInstr *>> &SrcDstPairs) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  for (auto &Pair : SrcDstPairs) {
+    auto *ExtMI = Pair.second;
+    replaceRegWith(MRI, ExtMI->getOperand(0).getReg(), Pair.first);
+    ExtMI->eraseFromParent();
+  }
+  MI.eraseFromParent();
 }
 
 bool CombinerHelper::applyLoadOrCombine(

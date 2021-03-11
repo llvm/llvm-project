@@ -88,7 +88,7 @@ The SPIR-V dialect adopts the following conventions for IR:
 *   Ops with `snake_case` names are those that have different representation
     from corresponding instructions (or concepts) in the specification. These
     ops are mostly for defining the SPIR-V structure. For example, `spv.module`
-    and `spv.constant`. They may correspond to one or more instructions during
+    and `spv.Constant`. They may correspond to one or more instructions during
     (de)serialization.
 *   Ops with `mlir.snake_case` names are those that have no corresponding
     instructions (or concepts) in the binary format. They are introduced to
@@ -166,7 +166,7 @@ instructions are represented in the SPIR-V dialect:
 #### Unify and localize constants
 
 *   Various normal constant instructions are represented by the same
-    `spv.constant` op. Those instructions are just for constants of different
+    `spv.Constant` op. Those instructions are just for constants of different
     types; using one op to represent them reduces IR verbosity and makes
     transformations less tedious.
 *   Normal constants are not placed in `spv.module`'s region; they are localized
@@ -176,11 +176,11 @@ instructions are represented in the SPIR-V dialect:
 
 #### Adopt symbol-based global variables and specialization constant
 
-*   Global variables are defined with the `spv.globalVariable` op. They do not
+*   Global variables are defined with the `spv.GlobalVariable` op. They do not
     generate SSA values. Instead they have symbols and should be referenced via
     symbols. To use global variables in a function block, `spv.mlir.addressof` is
     needed to turn the symbol into an SSA value.
-*   Specialization constants are defined with the `spv.specConstant` op. Similar
+*   Specialization constants are defined with the `spv.SpecConstant` op. Similar
     to global variables, they do not generate SSA values and have symbols for
     reference, too. `spv.mlir.referenceof` is needed to turn the symbol into an SSA
     value for use in a function block.
@@ -475,7 +475,7 @@ For example,
 can be represented in the dialect as
 
 ```mlir
-%0 = "spv.constant"() { value = 42 : i32 } : () -> i32
+%0 = "spv.Constant"() { value = 42 : i32 } : () -> i32
 %1 = "spv.Variable"(%0) { storage_class = "Function" } : (i32) -> !spv.ptr<i32, Function>
 %2 = "spv.IAdd"(%0, %0) : (i32, i32) -> i32
 ```
@@ -525,14 +525,14 @@ control flow construct. With this approach, it's easier to discover all blocks
 belonging to a structured control flow construct. It is also more idiomatic to
 MLIR system.
 
-We introduce a `spv.selection` and `spv.loop` op for structured selections and
+We introduce a `spv.mlir.selection` and `spv.mlir.loop` op for structured selections and
 loops, respectively. The merge targets are the next ops following them. Inside
 their regions, a special terminator, `spv.mlir.merge` is introduced for branching to
 the merge target.
 
 ### Selection
 
-`spv.selection` defines a selection construct. It contains one region. The
+`spv.mlir.selection` defines a selection construct. It contains one region. The
 region should contain at least two blocks: one selection header block and one
 merge block.
 
@@ -581,12 +581,12 @@ It will be represented as
 
 ```mlir
 func @selection(%cond: i1) -> () {
-  %zero = spv.constant 0: i32
-  %one = spv.constant 1: i32
-  %two = spv.constant 2: i32
+  %zero = spv.Constant 0: i32
+  %one = spv.Constant 1: i32
+  %two = spv.Constant 2: i32
   %x = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
-  spv.selection {
+  spv.mlir.selection {
     spv.BranchConditional %cond, ^then, ^else
 
   ^then:
@@ -608,7 +608,7 @@ func @selection(%cond: i1) -> () {
 
 ### Loop
 
-`spv.loop` defines a loop construct. It contains one region. The region should
+`spv.mlir.loop` defines a loop construct. It contains one region. The region should
 contain at least four blocks: one entry block, one loop header block, one loop
 continue block, one merge block.
 
@@ -669,11 +669,11 @@ It will be represented as
 
 ```mlir
 func @loop(%count : i32) -> () {
-  %zero = spv.constant 0: i32
-  %one = spv.constant 1: i32
+  %zero = spv.Constant 0: i32
+  %one = spv.Constant 1: i32
   %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
-  spv.loop {
+  spv.mlir.loop {
     spv.Branch ^header
 
   ^header:
@@ -731,16 +731,16 @@ It will be represented as:
 func @foo() -> () {
   %var = spv.Variable : !spv.ptr<i32, Function>
 
-  spv.selection {
-    %true = spv.constant true
+  spv.mlir.selection {
+    %true = spv.Constant true
     spv.BranchConditional %true, ^true, ^false
 
   ^true:
-    %zero = spv.constant 0 : i32
+    %zero = spv.Constant 0 : i32
     spv.Branch ^phi(%zero: i32)
 
   ^false:
-    %one = spv.constant 1 : i32
+    %one = spv.Constant 1 : i32
     spv.Branch ^phi(%one: i32)
 
   ^phi(%arg: i32):
@@ -964,12 +964,12 @@ the representational differences between SPIR-V dialect and binary format:
     instructions.
 *   Types are serialized into `OpType*` instructions in the SPIR-V binary module
     section for types, constants, and global variables.
-*   `spv.constant`s are unified and placed in the SPIR-V binary module section
+*   `spv.Constant`s are unified and placed in the SPIR-V binary module section
     for types, constants, and global variables.
 *   Attributes on ops, if not part of the op's binary encoding, are emitted as
     `OpDecorate*` instructions in the SPIR-V binary module section for
     decorations.
-*   `spv.selection`s and `spv.loop`s are emitted as basic blocks with `Op*Merge`
+*   `spv.mlir.selection`s and `spv.mlir.loop`s are emitted as basic blocks with `Op*Merge`
     instructions in the header block as required by the binary format.
 *   Block arguments are materialized as `OpPhi` instructions at the beginning of
     the corresponding blocks.
@@ -980,18 +980,18 @@ Similarly, a few transformations are performed during deserialization:
     capabilities, extended instruction sets, etc.) will be placed as attributes
     on `spv.module`.
 *   `OpType*` instructions will be converted into proper `mlir::Type`s.
-*   `OpConstant*` instructions are materialized as `spv.constant` at each use
+*   `OpConstant*` instructions are materialized as `spv.Constant` at each use
     site.
-*   `OpVariable` instructions will be converted to `spv.globalVariable` ops if
+*   `OpVariable` instructions will be converted to `spv.GlobalVariable` ops if
     in module-level; otherwise they will be converted into `spv.Variable` ops.
 *   Every use of a module-level `OpVariable` instruction will materialize a
     `spv.mlir.addressof` op to turn the symbol of the corresponding
-    `spv.globalVariable` into an SSA value.
+    `spv.GlobalVariable` into an SSA value.
 *   Every use of a `OpSpecConstant` instruction will materialize a
     `spv.mlir.referenceof` op to turn the symbol of the corresponding
-    `spv.specConstant` into an SSA value.
+    `spv.SpecConstant` into an SSA value.
 *   `OpPhi` instructions are converted to block arguments.
-*   Structured control flow are placed inside `spv.selection` and `spv.loop`.
+*   Structured control flow are placed inside `spv.mlir.selection` and `spv.mlir.loop`.
 
 ## Conversions
 
@@ -1069,7 +1069,7 @@ point function within the `spv.module` on lowering. A later pass
 point function and its ABI consistent with the Vulkan validation
 rules. Specifically,
 
-*   Creates `spv.globalVariable`s for the arguments, and replaces all uses of
+*   Creates `spv.GlobalVariable`s for the arguments, and replaces all uses of
     the argument with this variable. The SSA value used for replacement is
     obtained using the `spv.mlir.addressof` operation.
 *   Adds the `spv.EntryPoint` and `spv.ExecutionMode` operations into the
@@ -1078,15 +1078,15 @@ rules. Specifically,
 #### Setting layout for shader interface variables
 
 SPIR-V validation rules for shaders require composite objects to be explicitly
-laid out. If a `spv.globalVariable` is not explicitly laid out, the utility
+laid out. If a `spv.GlobalVariable` is not explicitly laid out, the utility
 method `mlir::spirv::decorateType` implements a layout consistent with
 the [Vulkan shader requirements][VulkanShaderInterface].
 
 #### Creating builtin variables
 
-In SPIR-V dialect, builtins are represented using `spv.globalVariable`s, with
+In SPIR-V dialect, builtins are represented using `spv.GlobalVariable`s, with
 `spv.mlir.addressof` used to get a handle to the builtin as an SSA value.  The
-method `mlir::spirv::getBuiltinVariableValue` creates a `spv.globalVariable` for
+method `mlir::spirv::getBuiltinVariableValue` creates a `spv.GlobalVariable` for
 the builtin in the current `spv.module` if it does not exist already, and
 returns an SSA value generated from an `spv.mlir.addressof` operation.
 

@@ -18,7 +18,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
 // -----
 
-def SPV_UndefOp : SPV_Op<"undef", []> {
+def SPV_UndefOp : SPV_Op<"Undef", []> {
   let summary = "Make an intermediate object whose value is undefined.";
 
   let description = [{
@@ -31,14 +31,14 @@ def SPV_UndefOp : SPV_Op<"undef", []> {
     <!-- End of AutoGen section -->
 
     ```
-    undef-op ::= `spv.undef` `:` spirv-type
+    undef-op ::= `spv.Undef` `:` spirv-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.undef : f32
-    %1 = spv.undef : !spv.struct<!spv.array<4 x vector<4xi32>>>
+    %0 = spv.Undef : f32
+    %1 = spv.Undef : !spv.struct<!spv.array<4 x vector<4xi32>>>
     ```
   }];
 

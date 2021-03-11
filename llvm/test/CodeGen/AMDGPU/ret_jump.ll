@@ -65,6 +65,7 @@ ret.bb:                                          ; preds = %else, %main_body
 
 ; GCN: BB{{[0-9]+_[0-9]+}}: ; %else
 ; GCN: s_and_saveexec_b64 [[SAVE_EXEC:s\[[0-9]+:[0-9]+\]]], vcc
+; GCN-NEXT: s_cbranch_execz BB1_{{[0-9]+}}
 
 ; GCN-NEXT:  ; %unreachable.bb
 ; GCN: ds_write_b32

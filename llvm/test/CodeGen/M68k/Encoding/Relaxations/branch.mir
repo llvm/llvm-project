@@ -1,0 +1,114 @@
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj \
+# RUN:  -code-model=small -relocation-model=pic -o - \
+# RUN:   | extract-section .text -h \
+# RUN:   | FileCheck %s
+
+#------------------------------------------------------------------------------
+# Test branch relaxation. By default codegen choses smallest branch instruction,
+# during object code generation it might get clear that offset does not fit and
+# bigger instruction is required.
+#------------------------------------------------------------------------------
+
+
+--- # TIGHT
+# The offset for the small branch is from the PC value, which points to the
+# next instruction, because there is no extension word here.
+# 000  CHECK:      6078
+# 002  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 00C  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 016  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 020  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 02A  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 034  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 03E  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 048  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 052  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 05C  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 066  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 070  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 07A  CHECK-SAME: d0bc 0000 0000
+# 080  CHECK-SAME: 4e75
+name: TIGHT
+body: |
+  bb.0:
+      successors: %bb.2
+
+      BRA8 %bb.2
+  bb.1:
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+  bb.2:
+      $d0 = ADD32ri $d0, 0, implicit-def $ccr
+      RET 0, $d0
+
+...
+--- # RELAXED
+# 084  CHECK-SAME  6000 0084
+# 088  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 092  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 09C  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 0A6  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 0B0  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 0BA  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 0C4  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 0CE  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 0D8  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 0E2  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 0EC  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 0F6  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 100  CHECK-SAME: 23f9 0000 0000 0000 0000
+# 10A  CHECK-SAME: d0bc 0000 0000
+# 110  CHECK-SAME: 4e75
+name: RELAXED
+body: |
+  bb.0:
+      successors: %bb.2
+
+      BRA8 %bb.2
+  bb.1:
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+      MOV32bb 0, 0, implicit-def $ccr
+  bb.2:
+      $d0 = ADD32ri $d0, 0, implicit-def $ccr
+      RET 0, $d0
+
+...
+--- # ZERO
+# Because of the way M68k encodes branches it is not possible to encode 0
+# offset with the smallest insruction(0 in the offset field means exension word
+# is used) thus we switch to the wider instruction.
+# 114  CHECK-SAME: 6000 0002
+# 118  CHECK-SAME: d0bc 0000 0000
+# 11E  CHECK-SAME: 4e75
+name: ZERO
+body: |
+  bb.0:
+      successors: %bb.1
+
+      BRA8 %bb.1
+  bb.1:
+      $d0 = ADD32ri $d0, 0, implicit-def $ccr
+      RET 0, $d0
+
+...

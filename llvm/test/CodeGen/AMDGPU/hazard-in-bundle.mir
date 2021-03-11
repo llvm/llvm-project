@@ -67,7 +67,7 @@ body: |
 
 # GCN-LABEL: name: vmem_vcc_hazard_in_bundle
 # GCN:      S_LOAD_DWORDX2_IMM
-# GCN-NEXT: S_NOP 3
+# GFX9-NEXT: S_NOP 3
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
 ---
 name: vmem_vcc_hazard_in_bundle

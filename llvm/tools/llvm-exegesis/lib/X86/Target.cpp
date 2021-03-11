@@ -22,6 +22,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Host.h"
 
 #include <memory>
 #include <string>
@@ -742,13 +743,25 @@ private:
 
 #if defined(__linux__) && defined(HAVE_LIBPFM) &&                              \
     defined(LIBPFM_HAS_FIELD_CYCLES)
-    // If the kernel supports it, the hardware still may not have it.
-    return X86LbrCounter::checkLbrSupport();
+      // FIXME: Fix this.
+      // https://bugs.llvm.org/show_bug.cgi?id=48918
+      // For now, only do the check if we see an Intel machine because
+      // the counter uses some intel-specific magic and it could
+      // be confuse and think an AMD machine actually has LBR support.
+#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||            \
+    defined(_M_X64)
+    using namespace sys::detail::x86;
+
+    if (getVendorSignature() == VendorSignatures::GENUINE_INTEL)
+      // If the kernel supports it, the hardware still may not have it.
+      return X86LbrCounter::checkLbrSupport();
 #else
+    llvm_unreachable("Running X86 exegesis on non-X86 target");
+#endif
+#endif
     return llvm::make_error<llvm::StringError>(
         "LBR not supported on this kernel and/or platform",
         llvm::errc::not_supported);
-#endif
   }
 
   std::unique_ptr<SavedState> withSavedState() const override {

@@ -2890,7 +2890,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // shortening paths for the values (this helps getUnderlyingObjects() for
       // example).
       if (TrueSI->getFalseValue() == FalseVal && TrueSI->hasOneUse()) {
-        Value *And = Builder.CreateAnd(CondVal, TrueSI->getCondition());
+        Value *And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition());
         replaceOperand(SI, 0, And);
         replaceOperand(SI, 1, TrueSI->getTrueValue());
         return &SI;
@@ -2907,7 +2907,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       }
       // select(C0, a, select(C1, a, b)) -> select(C0|C1, a, b)
       if (FalseSI->getTrueValue() == TrueVal && FalseSI->hasOneUse()) {
-        Value *Or = Builder.CreateOr(CondVal, FalseSI->getCondition());
+        Value *Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition());
         replaceOperand(SI, 0, Or);
         replaceOperand(SI, 2, FalseSI->getFalseValue());
         return &SI;

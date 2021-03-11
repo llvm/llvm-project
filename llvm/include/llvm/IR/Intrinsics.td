@@ -450,6 +450,9 @@ def int_objc_storeWeak                      : Intrinsic<[llvm_ptr_ty],
                                                          llvm_ptr_ty]>;
 def int_objc_clang_arc_use                  : Intrinsic<[],
                                                         [llvm_vararg_ty]>;
+def int_objc_clang_arc_noop_use : DefaultAttrsIntrinsic<[],
+                                                        [llvm_vararg_ty],
+                                                        [IntrInaccessibleMemOnly]>;
 def int_objc_unsafeClaimAutoreleasedReturnValue : Intrinsic<[llvm_ptr_ty],
                                                             [llvm_ptr_ty]>;
 def int_objc_retainedObject                 : Intrinsic<[llvm_ptr_ty],
@@ -1179,11 +1182,11 @@ def int_experimental_gc_statepoint : Intrinsic<[llvm_token_ty],
                                 ImmArg<ArgIndex<4>>]>;
 
 def int_experimental_gc_result   : Intrinsic<[llvm_any_ty], [llvm_token_ty],
-                                             [IntrReadMem]>;
+                                             [IntrNoMem]>;
 def int_experimental_gc_relocate : Intrinsic<[llvm_any_ty],
                                              [llvm_token_ty, llvm_i32_ty,
                                               llvm_i32_ty],
-                                             [IntrReadMem, ImmArg<ArgIndex<1>>,
+                                             [IntrNoMem, ImmArg<ArgIndex<1>>,
                                               ImmArg<ArgIndex<2>>]>;
 
 //===------------------------ Coroutine Intrinsics ---------------===//
@@ -1655,6 +1658,13 @@ def int_experimental_vector_insert : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
 def int_experimental_vector_extract : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                                             [llvm_anyvector_ty, llvm_i64_ty],
                                                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+//===---------- Named shufflevector intrinsics ------===//
+def int_experimental_vector_splice : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                           [LLVMMatchType<0>,
+                                                            LLVMMatchType<0>,
+                                                            llvm_i32_ty],
+                                                           [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 //===----------------------------------------------------------------------===//
 

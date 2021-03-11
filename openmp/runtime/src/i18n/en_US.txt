@@ -138,7 +138,7 @@ SysErr                       "OMP: System error #%1$d: %2$s\n"
 Hint                         "OMP: Hint %1$s\n"
 
 Pragma                       "%1$s pragma (at %2$s:%3$s():%4$s)"
-    # %1 is pragma name (like "parallel" or "master",
+    # %1 is pragma name (like "parallel" or "masked",
     # %2 is file name,
     # %3 is function (routine) name,
     # %4 is the line number (as string, so "s" type specifier should be used).

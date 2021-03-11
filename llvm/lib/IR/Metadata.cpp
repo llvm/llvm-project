@@ -195,6 +195,19 @@ bool MetadataTracking::isReplaceable(const Metadata &MD) {
   return ReplaceableMetadataImpl::isReplaceable(MD);
 }
 
+SmallVector<Metadata *, 4> ReplaceableMetadataImpl::getAllArgListUsers() {
+  SmallVector<Metadata *, 4> MDUsers;
+  for (auto Pair : UseMap) {
+    OwnerTy Owner = Pair.second.first;
+    if (!Owner.is<Metadata *>())
+      continue;
+    Metadata *OwnerMD = Owner.get<Metadata *>();
+    if (OwnerMD->getMetadataID() == Metadata::DIArgListKind)
+      MDUsers.push_back(OwnerMD);
+  }
+  return MDUsers;
+}
+
 void ReplaceableMetadataImpl::addRef(void *Ref, OwnerTy Owner) {
   bool WasInserted =
       UseMap.insert(std::make_pair(Ref, std::make_pair(Owner, NextIndex)))

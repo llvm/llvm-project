@@ -714,6 +714,15 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
   return Changed;
 }
 
+namespace {
+struct TypeSizeComparator {
+  bool operator()(const TypeSize &LHS, const TypeSize &RHS) const {
+    return std::make_tuple(LHS.isScalable(), LHS.getKnownMinValue()) <
+           std::make_tuple(RHS.isScalable(), RHS.getKnownMinValue());
+  }
+};
+} // end anonymous namespace
+
 /// 1. Ensure that for each type T in A, there exists a type U in B,
 ///    such that T and U have equal size in bits.
 /// 2. Ensure that for each type U in B, there exists a type T in A
@@ -728,14 +737,16 @@ bool TypeInfer::EnforceSameSize(TypeSetByHwMode &A, TypeSetByHwMode &B) {
   if (B.empty())
     Changed |= EnforceAny(B);
 
-  auto NoSize = [](const SmallSet<TypeSize, 2> &Sizes, MVT T) -> bool {
+  typedef SmallSet<TypeSize, 2, TypeSizeComparator> TypeSizeSet;
+
+  auto NoSize = [](const TypeSizeSet &Sizes, MVT T) -> bool {
     return !Sizes.count(T.getSizeInBits());
   };
 
   for (unsigned M : union_modes(A, B)) {
     TypeSetByHwMode::SetType &AS = A.get(M);
     TypeSetByHwMode::SetType &BS = B.get(M);
-    SmallSet<TypeSize, 2> AN, BN;
+    TypeSizeSet AN, BN;
 
     for (MVT T : AS)
       AN.insert(T.getSizeInBits());

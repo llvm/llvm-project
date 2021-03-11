@@ -84,7 +84,6 @@
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
-#include "llvm/Transforms/Utils/UniqueInternalLinkageNames.h"
 #include <memory>
 using namespace clang;
 using namespace llvm;
@@ -550,7 +549,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.EnableMachineFunctionSplitter = CodeGenOpts.SplitMachineFunctions;
   Options.FunctionSections = CodeGenOpts.FunctionSections;
   Options.DataSections = CodeGenOpts.DataSections;
-  Options.IgnoreXCOFFVisibility = CodeGenOpts.IgnoreXCOFFVisibility;
+  Options.IgnoreXCOFFVisibility = LangOpts.IgnoreXCOFFVisibility;
   Options.UniqueSectionNames = CodeGenOpts.UniqueSectionNames;
   Options.UniqueBasicBlockSectionNames =
       CodeGenOpts.UniqueBasicBlockSectionNames;
@@ -816,12 +815,6 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
   // Set up the per-module pass manager.
   if (!CodeGenOpts.RewriteMapFiles.empty())
     addSymbolRewriterPass(CodeGenOpts, &MPM);
-
-  // Add UniqueInternalLinkageNames Pass which renames internal linkage symbols
-  // with unique names.
-  if (CodeGenOpts.UniqueInternalLinkageNames) {
-    MPM.add(createUniqueInternalLinkageNamesPass());
-  }
 
   if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts, LangOpts)) {
     MPM.add(createGCOVProfilerPass(*Options));
@@ -1256,7 +1249,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   // non-integrated assemblers don't recognize .cgprofile section.
   PTO.CallGraphProfile = !CodeGenOpts.DisableIntegratedAS;
   PTO.Coroutines = LangOpts.Coroutines;
-  PTO.UniqueLinkageNames = CodeGenOpts.UniqueInternalLinkageNames;
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(CodeGenOpts.DebugPassManager);

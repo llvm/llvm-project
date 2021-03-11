@@ -38,88 +38,74 @@
 struct AppendOperatorTestcase {
   MultiStringType lhs;
   MultiStringType rhs;
-  MultiStringType expect;
+  MultiStringType expect_posix;
+  MultiStringType expect_windows;
+
+  MultiStringType const& expected_result() const {
+#ifdef _WIN32
+    return expect_windows;
+#else
+    return expect_posix;
+#endif
+  }
 };
 
 #define S(Str) MKSTR(Str)
 const AppendOperatorTestcase Cases[] =
     {
-        {S(""),     S(""),      S("")}
-      , {S("p1"),   S("p2"),    S("p1/p2")}
-      , {S("p1/"),  S("p2"),    S("p1/p2")}
-      , {S("p1"),   S("/p2"),   S("/p2")}
-      , {S("p1/"),  S("/p2"),   S("/p2")}
-      , {S("p1"),   S("\\p2"),  S("p1/\\p2")}
-      , {S("p1\\"), S("p2"),  S("p1\\/p2")}
-      , {S("p1\\"), S("\\p2"),  S("p1\\/\\p2")}
-      , {S(""),     S("p2"),    S("p2")}
-      , {S("/p1"),  S("p2"),    S("/p1/p2")}
-      , {S("/p1"),  S("/p2"),    S("/p2")}
-      , {S("/p1/p3"),  S("p2"),    S("/p1/p3/p2")}
-      , {S("/p1/p3/"),  S("p2"),    S("/p1/p3/p2")}
-      , {S("/p1/"),  S("p2"),    S("/p1/p2")}
-      , {S("/p1/p3/"),  S("/p2/p4"),    S("/p2/p4")}
-      , {S("/"),    S(""),      S("/")}
-      , {S("/p1"), S("/p2/"), S("/p2/")}
-      , {S("p1"),   S(""),      S("p1/")}
-      , {S("p1/"),  S(""),      S("p1/")}
+        {S(""),        S(""),         S(""),              S("")}
+      , {S("p1"),      S("p2"),       S("p1/p2"),         S("p1\\p2")}
+      , {S("p1/"),     S("p2"),       S("p1/p2"),         S("p1/p2")}
+      , {S("p1"),      S("/p2"),      S("/p2"),           S("/p2")}
+      , {S("p1/"),     S("/p2"),      S("/p2"),           S("/p2")}
+      , {S("p1"),      S("\\p2"),     S("p1/\\p2"),       S("\\p2")}
+      , {S("p1\\"),    S("p2"),       S("p1\\/p2"),       S("p1\\p2")}
+      , {S("p1\\"),    S("\\p2"),     S("p1\\/\\p2"),     S("\\p2")}
+      , {S(""),        S("p2"),       S("p2"),            S("p2")}
+      , {S("/p1"),     S("p2"),       S("/p1/p2"),        S("/p1\\p2")}
+      , {S("/p1"),     S("/p2"),      S("/p2"),           S("/p2")}
+      , {S("/p1/p3"),  S("p2"),       S("/p1/p3/p2"),     S("/p1/p3\\p2")}
+      , {S("/p1/p3/"), S("p2"),       S("/p1/p3/p2"),     S("/p1/p3/p2")}
+      , {S("/p1/"),    S("p2"),       S("/p1/p2"),        S("/p1/p2")}
+      , {S("/p1/p3/"), S("/p2/p4"),   S("/p2/p4"),        S("/p2/p4")}
+      , {S("/"),       S(""),         S("/"),             S("/")}
+      , {S("/p1"),     S("/p2/"),     S("/p2/"),          S("/p2/")}
+      , {S("p1"),      S(""),         S("p1/"),           S("p1\\")}
+      , {S("p1/"),     S(""),         S("p1/"),           S("p1/")}
 
-      , {S("//host"),  S("foo"),      S("//host/foo")}
-      , {S("//host/"), S("foo"),      S("//host/foo")}
-      , {S("//host"),  S(""),         S("//host/")}
+      , {S("//host"),  S("foo"),      S("//host/foo"),    S("//host\\foo")}
+      , {S("//host/"), S("foo"),      S("//host/foo"),    S("//host/foo")}
+      , {S("//host"),  S(""),         S("//host/"),       S("//host\\")}
 
-#ifdef _WIN32
-      , {S("foo"),     S("C:/bar"),   S("C:/bar")}
-      , {S("foo"),     S("C:"),       S("C:")}
+      , {S("foo"),     S("C:/bar"),   S("foo/C:/bar"),    S("C:/bar")}
+      , {S("foo"),     S("C:"),       S("foo/C:"),        S("C:")}
 
-      , {S("C:"),      S(""),         S("C:")}
-      , {S("C:foo"),   S("/bar"),     S("C:/bar")}
-      , {S("C:foo"),   S("bar"),      S("C:foo/bar")}
-      , {S("C:/foo"),  S("bar"),      S("C:/foo/bar")}
-      , {S("C:/foo"),  S("/bar"),     S("C:/bar")}
+      , {S("C:"),      S(""),         S("C:/"),           S("C:")}
+      , {S("C:foo"),   S("/bar"),     S("/bar"),          S("C:/bar")}
+      , {S("C:foo"),   S("bar"),      S("C:foo/bar"),     S("C:foo\\bar")}
+      , {S("C:/foo"),  S("bar"),      S("C:/foo/bar"),    S("C:/foo\\bar")}
+      , {S("C:/foo"),  S("/bar"),     S("/bar"),          S("C:/bar")}
 
-      , {S("C:foo"),   S("C:/bar"),   S("C:/bar")}
-      , {S("C:foo"),   S("C:bar"),    S("C:foo/bar")}
-      , {S("C:/foo"),  S("C:/bar"),   S("C:/bar")}
-      , {S("C:/foo"),  S("C:bar"),    S("C:/foo/bar")}
+      , {S("C:foo"),   S("C:/bar"),   S("C:foo/C:/bar"),  S("C:/bar")}
+      , {S("C:foo"),   S("C:bar"),    S("C:foo/C:bar"),   S("C:foo\\bar")}
+      , {S("C:/foo"),  S("C:/bar"),   S("C:/foo/C:/bar"), S("C:/bar")}
+      , {S("C:/foo"),  S("C:bar"),    S("C:/foo/C:bar"),  S("C:/foo\\bar")}
 
-      , {S("C:foo"),   S("c:/bar"),   S("c:/bar")}
-      , {S("C:foo"),   S("c:bar"),    S("c:bar")}
-      , {S("C:/foo"),  S("c:/bar"),   S("c:/bar")}
-      , {S("C:/foo"),  S("c:bar"),    S("c:bar")}
+      , {S("C:foo"),   S("c:/bar"),   S("C:foo/c:/bar"),  S("c:/bar")}
+      , {S("C:foo"),   S("c:bar"),    S("C:foo/c:bar"),   S("c:bar")}
+      , {S("C:/foo"),  S("c:/bar"),   S("C:/foo/c:/bar"), S("c:/bar")}
+      , {S("C:/foo"),  S("c:bar"),    S("C:/foo/c:bar"),  S("c:bar")}
 
-      , {S("C:/foo"),  S("D:bar"),    S("D:bar")}
-#else
-      , {S("foo"),     S("C:/bar"),   S("foo/C:/bar")}
-      , {S("foo"),     S("C:"),       S("foo/C:")}
-
-      , {S("C:"),      S(""),         S("C:/")}
-      , {S("C:foo"),   S("/bar"),     S("/bar")}
-      , {S("C:foo"),   S("bar"),      S("C:foo/bar")}
-      , {S("C:/foo"),  S("bar"),      S("C:/foo/bar")}
-      , {S("C:/foo"),  S("/bar"),     S("/bar")}
-
-      , {S("C:foo"),   S("C:/bar"),   S("C:foo/C:/bar")}
-      , {S("C:foo"),   S("C:bar"),    S("C:foo/C:bar")}
-      , {S("C:/foo"),  S("C:/bar"),   S("C:/foo/C:/bar")}
-      , {S("C:/foo"),  S("C:bar"),    S("C:/foo/C:bar")}
-
-      , {S("C:foo"),   S("c:/bar"),   S("C:foo/c:/bar")}
-      , {S("C:foo"),   S("c:bar"),    S("C:foo/c:bar")}
-      , {S("C:/foo"),  S("c:/bar"),   S("C:/foo/c:/bar")}
-      , {S("C:/foo"),  S("c:bar"),    S("C:/foo/c:bar")}
-
-      , {S("C:/foo"),  S("D:bar"),    S("C:/foo/D:bar")}
-#endif
+      , {S("C:/foo"),  S("D:bar"),    S("C:/foo/D:bar"),  S("D:bar")}
     };
 
 
 const AppendOperatorTestcase LongLHSCases[] =
     {
-        {S("p1"),   S("p2"),    S("p1/p2")}
-      , {S("p1/"),  S("p2"),    S("p1/p2")}
-      , {S("p1"),   S("/p2"),   S("/p2")}
-      , {S("/p1"),  S("p2"),    S("/p1/p2")}
+        {S("p1"),   S("p2"),    S("p1/p2"),  S("p1\\p2")}
+      , {S("p1/"),  S("p2"),    S("p1/p2"),  S("p1/p2")}
+      , {S("p1"),   S("/p2"),   S("/p2"),    S("/p2")}
+      , {S("/p1"),  S("p2"),    S("/p1/p2"), S("/p1\\p2")}
     };
 #undef S
 
@@ -142,7 +128,7 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
 
   const Ptr L = TC.lhs;
   Str RShort = (Ptr)TC.rhs;
-  Str EShort = (Ptr)TC.expect;
+  Str EShort = (Ptr)TC.expected_result();
   assert(RShort.size() >= 2);
   CharT c = RShort.back();
   RShort.append(100, c);
@@ -228,7 +214,7 @@ void doAppendSourceTest(AppendOperatorTestcase const& TC)
   using InputIter = input_iterator<Ptr>;
   const Ptr L = TC.lhs;
   const Ptr R = TC.rhs;
-  const Ptr E = TC.expect;
+  const Ptr E = TC.expected_result();
   // basic_string
   {
     path Result(L);
@@ -369,7 +355,7 @@ int main(int, char**)
       path LHS(LHS_In);
       path RHS(RHS_In);
       path& Res = (LHS /= RHS);
-      assert(PathEq(Res, (const char*)TC.expect));
+      assert(PathEq(Res, (const char*)TC.expected_result()));
       assert(&Res == &LHS);
     }
     doAppendSourceTest<char>    (TC);

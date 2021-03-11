@@ -130,7 +130,10 @@ public:
   // Returns whether the AttrOrTypeDef is defined.
   operator bool() const { return def != nullptr; }
 
-private:
+  // Return the underlying def.
+  const llvm::Record *getDef() const { return def; }
+
+protected:
   const llvm::Record *def;
 
   // The builders of this type definition.
@@ -145,6 +148,12 @@ private:
 class AttrDef : public AttrOrTypeDef {
 public:
   using AttrOrTypeDef::AttrOrTypeDef;
+
+  // Returns the attributes value type builder code block, or None if it doesn't
+  // have one.
+  Optional<StringRef> getTypeBuilder() const;
+
+  static bool classof(const AttrOrTypeDef *def);
 };
 
 //===----------------------------------------------------------------------===//
@@ -183,11 +192,25 @@ public:
   // Get the assembly syntax documentation.
   StringRef getSyntax() const;
 
+  // Return the underlying def of this parameter.
+  const llvm::Init *getDef() const;
+
 private:
   /// The underlying tablegen parameter list this parameter is a part of.
   const llvm::DagInit *def;
   /// The index of the parameter within the parameter list (`def`).
   unsigned index;
+};
+
+//===----------------------------------------------------------------------===//
+// AttributeSelfTypeParameter
+//===----------------------------------------------------------------------===//
+
+// A wrapper class for the AttributeSelfTypeParameter tblgen class. This
+// represents a parameter of mlir::Type that is the value type of an AttrDef.
+class AttributeSelfTypeParameter : public AttrOrTypeParameter {
+public:
+  static bool classof(const AttrOrTypeParameter *param);
 };
 
 } // end namespace tblgen

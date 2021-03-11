@@ -290,6 +290,7 @@ define void @known_call_atomic(i8* %src, i8* %dst, i64 %size) {
 ; an alloca.
 define void @known_call_with_size_alloca(i8* %src) {
 ; CHECK-NEXT: Call to memset inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (1 bytes).
 ; YAML-LABEL: --- !Missed
 ; YAML-NEXT: Pass:            annotation-remarks
 ; YAML-NEXT: Name:            AutoInitIntrinsic
@@ -302,6 +303,12 @@ define void @known_call_with_size_alloca(i8* %src) {
 ; YAML-NEXT:   - String:          ' Memory operation size: '
 ; YAML-NEXT:   - StoreSize:       '1'
 ; YAML-NEXT:   - String:          ' bytes.'
+; YAML-NEXT:   - String:          "\nVariables: "
+; YAML-NEXT:   - VarName:         dst
+; YAML-NEXT:   - String:          ' ('
+; YAML-NEXT:   - VarSize:         '1'
+; YAML-NEXT:   - String:          ' bytes)'
+; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
 ; YAML-NEXT:   - String:          .
@@ -312,6 +319,7 @@ define void @known_call_with_size_alloca(i8* %src) {
   %dst = alloca i8
   call void @llvm.memset.p0i8.i64(i8* %dst, i8 0, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memcpy inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (1 bytes).
 ; YAML-LABEL: --- !Missed
 ; YAML-NEXT: Pass:            annotation-remarks
 ; YAML-NEXT: Name:            AutoInitIntrinsic
@@ -324,6 +332,12 @@ define void @known_call_with_size_alloca(i8* %src) {
 ; YAML-NEXT:   - String:          ' Memory operation size: '
 ; YAML-NEXT:   - StoreSize:       '1'
 ; YAML-NEXT:   - String:          ' bytes.'
+; YAML-NEXT:   - String:          "\nVariables: "
+; YAML-NEXT:   - VarName:         dst
+; YAML-NEXT:   - String:          ' ('
+; YAML-NEXT:   - VarSize:         '1'
+; YAML-NEXT:   - String:          ' bytes)'
+; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
 ; YAML-NEXT:   - String:          .
@@ -333,6 +347,7 @@ define void @known_call_with_size_alloca(i8* %src) {
 ; YAML-NEXT: ...
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memmove inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (1 bytes).
 ; YAML-LABEL: --- !Missed
 ; YAML-NEXT: Pass:            annotation-remarks
 ; YAML-NEXT: Name:            AutoInitIntrinsic
@@ -345,6 +360,12 @@ define void @known_call_with_size_alloca(i8* %src) {
 ; YAML-NEXT:   - String:          ' Memory operation size: '
 ; YAML-NEXT:   - StoreSize:       '1'
 ; YAML-NEXT:   - String:          ' bytes.'
+; YAML-NEXT:   - String:          "\nVariables: "
+; YAML-NEXT:   - VarName:         dst
+; YAML-NEXT:   - String:          ' ('
+; YAML-NEXT:   - VarSize:         '1'
+; YAML-NEXT:   - String:          ' bytes)'
+; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
 ; YAML-NEXT:   - String:          .
@@ -354,6 +375,7 @@ define void @known_call_with_size_alloca(i8* %src) {
 ; YAML-NEXT: ...
   call void @llvm.memmove.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to bzero inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (1 bytes).
 ; YAML-LABEL: --- !Missed
 ; YAML-NEXT: Pass:            annotation-remarks
 ; YAML-NEXT: Name:            AutoInitCall
@@ -366,6 +388,12 @@ define void @known_call_with_size_alloca(i8* %src) {
 ; YAML-NEXT:   - String:          ' Memory operation size: '
 ; YAML-NEXT:   - StoreSize:       '1'
 ; YAML-NEXT:   - String:          ' bytes.'
+; YAML-NEXT:   - String:          "\nVariables: "
+; YAML-NEXT:   - VarName:         dst
+; YAML-NEXT:   - String:          ' ('
+; YAML-NEXT:   - VarSize:         '1'
+; YAML-NEXT:   - String:          ' bytes)'
+; YAML-NEXT:   - String:          .
 ; YAML-NEXT: ...
   call void @bzero(i8* %dst, i64 1), !annotation !0, !dbg !DILocation(scope: !4)
 
@@ -376,14 +404,18 @@ define void @known_call_with_size_alloca(i8* %src) {
 ; an alloca through a GEP.
 define void @known_call_with_size_alloca_gep(i8* %src) {
 ; CHECK-NEXT: Call to memset inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (1 bytes).
   %dst = alloca i8
   %gep = getelementptr i8, i8* %dst, i32 0
   call void @llvm.memset.p0i8.i64(i8* %gep, i8 0, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memcpy inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (1 bytes).
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %gep, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memmove inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (1 bytes).
   call void @llvm.memmove.p0i8.p0i8.i64(i8* %gep, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to bzero inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (1 bytes).
   call void @bzero(i8* %gep, i64 1), !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
@@ -392,14 +424,18 @@ define void @known_call_with_size_alloca_gep(i8* %src) {
 ; an alloca through a GEP in an array.
 define void @known_call_with_size_alloca_gep_array(i8* %src) {
 ; CHECK-NEXT: Call to memset inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (2 bytes).
   %dst = alloca [2 x i8]
   %gep = getelementptr [2 x i8], [2 x i8]* %dst, i64 0, i64 0
   call void @llvm.memset.p0i8.i64(i8* %gep, i8 0, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memcpy inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (2 bytes).
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %gep, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memmove inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (2 bytes).
   call void @llvm.memmove.p0i8.p0i8.i64(i8* %gep, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to bzero inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (2 bytes).
   call void @bzero(i8* %gep, i64 1), !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
@@ -408,14 +444,18 @@ define void @known_call_with_size_alloca_gep_array(i8* %src) {
 ; an alloca through a bitcast.
 define void @known_call_with_size_alloca_bitcast(i8* %src) {
 ; CHECK-NEXT: Call to memset inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (2 bytes).
   %dst = alloca [2 x i8]
   %bc = bitcast [2 x i8]* %dst to i8*
   call void @llvm.memset.p0i8.i64(i8* %bc, i8 0, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memcpy inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (2 bytes).
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %bc, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memmove inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (2 bytes).
   call void @llvm.memmove.p0i8.p0i8.i64(i8* %bc, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to bzero inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst (2 bytes).
   call void @bzero(i8* %bc, i64 1), !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
@@ -423,14 +463,18 @@ define void @known_call_with_size_alloca_bitcast(i8* %src) {
 ; Emit remarks for memcpy, memmove, memset, bzero with known constant sizes to an alloca that has a DILocalVariable attached.
 define void @known_call_with_size_alloca_di(i8* %src) {
 ; CHECK-NEXT: Call to memset inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: destination (1 bytes).
   %dst = alloca i8
   call void @llvm.dbg.declare(metadata i8* %dst, metadata !6, metadata !DIExpression()), !dbg !DILocation(scope: !4)
   call void @llvm.memset.p0i8.i64(i8* %dst, i8 0, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memcpy inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: destination (1 bytes).
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memmove inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: destination (1 bytes).
   call void @llvm.memmove.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to bzero inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: destination (1 bytes).
   call void @bzero(i8* %dst, i64 1), !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
@@ -439,14 +483,18 @@ define void @known_call_with_size_alloca_di(i8* %src) {
 ; an alloca that has more than one DILocalVariable attached.
 define void @known_call_with_size_alloca_di_multiple(i8* %src) {
 ; CHECK-NEXT: Call to memset inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: destination (1 bytes).
   %dst = alloca i8
   call void @llvm.dbg.declare(metadata i8* %dst, metadata !6, metadata !DIExpression()), !dbg !DILocation(scope: !4)
   call void @llvm.memset.p0i8.i64(i8* %dst, i8 0, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memcpy inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: destination (1 bytes).
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memmove inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: destination (1 bytes).
   call void @llvm.memmove.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to bzero inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: destination (1 bytes).
   call void @bzero(i8* %dst, i64 1), !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
@@ -455,6 +503,7 @@ define void @known_call_with_size_alloca_di_multiple(i8* %src) {
 ; a PHI node that can be two different allocas.
 define void @known_call_with_size_alloca_phi(i8* %src) {
 ; CHECK-NEXT: Call to memset inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst2 (1 bytes), dst (1 bytes).
 entry:
   %dst = alloca i8
   %dst2 = alloca i8
@@ -468,10 +517,13 @@ l2:
   %phidst = phi i8* [ %dst, %l0 ], [ %dst2, %l1 ]
   call void @llvm.memset.p0i8.i64(i8* %phidst, i8 0, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memcpy inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst2 (1 bytes), dst (1 bytes).
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %phidst, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memmove inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst2 (1 bytes), dst (1 bytes).
   call void @llvm.memmove.p0i8.p0i8.i64(i8* %phidst, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to bzero inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst2 (1 bytes), dst (1 bytes).
   call void @bzero(i8* %phidst, i64 1), !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }
@@ -481,6 +533,7 @@ l2:
 ; DILocalVariable.
 define void @known_call_with_size_alloca_phi_di_multiple(i8* %src) {
 ; CHECK-NEXT: Call to memset inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst2 (1 bytes), destination2 (1 bytes), destination (1 bytes).
 entry:
   %dst = alloca i8
   %dst2 = alloca i8
@@ -496,10 +549,13 @@ l2:
   %phidst = phi i8* [ %dst, %l0 ], [ %dst2, %l1 ]
   call void @llvm.memset.p0i8.i64(i8* %phidst, i8 0, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memcpy inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst2 (1 bytes), destination2 (1 bytes), destination (1 bytes).
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %phidst, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to memmove inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst2 (1 bytes), destination2 (1 bytes), destination (1 bytes).
   call void @llvm.memmove.p0i8.p0i8.i64(i8* %phidst, i8* %src, i64 1, i1 false), !annotation !0, !dbg !DILocation(scope: !4)
 ; CHECK-NEXT: Call to bzero inserted by -ftrivial-auto-var-init. Memory operation size: 1 bytes.
+; CHECK-NEXT: Variables: dst2 (1 bytes), destination2 (1 bytes), destination (1 bytes).
   call void @bzero(i8* %phidst, i64 1), !annotation !0, !dbg !DILocation(scope: !4)
   ret void
 }

@@ -656,6 +656,27 @@ LogicalResult ModuleTranslation::createAccessGroupMetadata() {
   return success();
 }
 
+void ModuleTranslation::setAccessGroupsMetadata(Operation *op,
+                                                llvm::Instruction *inst) {
+  auto accessGroups =
+      op->getAttrOfType<ArrayAttr>(LLVMDialect::getAccessGroupsAttrName());
+  if (accessGroups && !accessGroups.empty()) {
+    llvm::Module *module = inst->getModule();
+    SmallVector<llvm::Metadata *> metadatas;
+    for (SymbolRefAttr accessGroupRef :
+         accessGroups.getAsRange<SymbolRefAttr>())
+      metadatas.push_back(getAccessGroup(*op, accessGroupRef));
+
+    llvm::MDNode *unionMD = nullptr;
+    if (metadatas.size() == 1)
+      unionMD = llvm::cast<llvm::MDNode>(metadatas.front());
+    else if (metadatas.size() >= 2)
+      unionMD = llvm::MDNode::get(module->getContext(), metadatas);
+
+    inst->setMetadata(module->getMDKindID("llvm.access.group"), unionMD);
+  }
+}
+
 llvm::Type *ModuleTranslation::convertType(Type type) {
   return typeTranslator.translateType(type);
 }

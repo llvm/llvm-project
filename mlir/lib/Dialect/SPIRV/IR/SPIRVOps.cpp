@@ -941,7 +941,7 @@ static Type getElementPtrType(Type type, ValueRange indices, Location baseLoc) {
       Operation *op = indexSSA.getDefiningOp();
       if (!op) {
         emitError(baseLoc, "'spv.AccessChain' op index must be an "
-                           "integer spv.constant to access "
+                           "integer spv.Constant to access "
                            "element of spv.struct");
         return nullptr;
       }
@@ -950,7 +950,7 @@ static Type getElementPtrType(Type type, ValueRange indices, Location baseLoc) {
       // integer literals of other bitwidths.
       if (failed(extractValueFromConstOp(op, index))) {
         emitError(baseLoc,
-                  "'spv.AccessChain' index must be an integer spv.constant to "
+                  "'spv.AccessChain' index must be an integer spv.Constant to "
                   "access element of spv.struct, but provided ")
             << op->getName();
         return nullptr;
@@ -1064,7 +1064,7 @@ static LogicalResult verify(spirv::AddressOfOp addressOfOp) {
       SymbolTable::lookupNearestSymbolFrom(addressOfOp->getParentOp(),
                                            addressOfOp.variable()));
   if (!varOp) {
-    return addressOfOp.emitOpError("expected spv.globalVariable symbol");
+    return addressOfOp.emitOpError("expected spv.GlobalVariable symbol");
   }
   if (addressOfOp.pointer().getType() != varOp.type()) {
     return addressOfOp.emitOpError(
@@ -1483,7 +1483,7 @@ static void print(spirv::CompositeInsertOp compositeInsertOp,
 }
 
 //===----------------------------------------------------------------------===//
-// spv.constant
+// spv.Constant
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseConstantOp(OpAsmParser &parser, OperationState &state) {
@@ -1959,7 +1959,7 @@ Operation::operand_range spirv::FunctionCallOp::getArgOperands() {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.globalVariable
+// spv.GlobalVariable
 //===----------------------------------------------------------------------===//
 
 void spirv::GlobalVariableOp::build(OpBuilder &builder, OperationState &state,
@@ -2067,7 +2067,7 @@ static LogicalResult verify(spirv::GlobalVariableOp varOp) {
     if (!initOp ||
         !isa<spirv::GlobalVariableOp, spirv::SpecConstantOp>(initOp)) {
       return varOp.emitOpError("initializer must be result of a "
-                               "spv.specConstant or spv.globalVariable op");
+                               "spv.SpecConstant or spv.GlobalVariable op");
     }
   }
 
@@ -2297,7 +2297,7 @@ static LogicalResult verify(spirv::LoadOp loadOp) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.loop
+// spv.mlir.loop
 //===----------------------------------------------------------------------===//
 
 void spirv::LoopOp::build(OpBuilder &builder, OperationState &state) {
@@ -2463,12 +2463,12 @@ static LogicalResult verify(spirv::MergeOp mergeOp) {
   auto *parentOp = mergeOp->getParentOp();
   if (!parentOp || !isa<spirv::SelectionOp, spirv::LoopOp>(parentOp))
     return mergeOp.emitOpError(
-        "expected parent op to be 'spv.selection' or 'spv.loop'");
+        "expected parent op to be 'spv.mlir.selection' or 'spv.mlir.loop'");
 
   Block &parentLastBlock = mergeOp->getParentRegion()->back();
   if (mergeOp.getOperation() != parentLastBlock.getTerminator())
-    return mergeOp.emitOpError(
-        "can only be used in the last block of 'spv.selection' or 'spv.loop'");
+    return mergeOp.emitOpError("can only be used in the last block of "
+                               "'spv.mlir.selection' or 'spv.mlir.loop'");
   return success();
 }
 
@@ -2593,7 +2593,7 @@ static LogicalResult verify(spirv::ModuleOp moduleOp) {
           auto variableOp =
               table.lookup<spirv::GlobalVariableOp>(varSymRef.getValue());
           if (!variableOp) {
-            return entryPointOp.emitError("expected spv.globalVariable "
+            return entryPointOp.emitError("expected spv.GlobalVariable "
                                           "symbol reference instead of'")
                    << varSymRef << "'";
           }
@@ -2644,7 +2644,7 @@ static LogicalResult verify(spirv::ReferenceOfOp referenceOfOp) {
 
   if (!specConstOp && !specConstCompositeOp)
     return referenceOfOp.emitOpError(
-        "expected spv.specConstant or spv.SpecConstantComposite symbol");
+        "expected spv.SpecConstant or spv.SpecConstantComposite symbol");
 
   if (referenceOfOp.reference().getType() != constType)
     return referenceOfOp.emitOpError("result type mismatch with the referenced "
@@ -2696,7 +2696,7 @@ static LogicalResult verify(spirv::SelectOp op) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.selection
+// spv.mlir.selection
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseSelectionOp(OpAsmParser &parser,
@@ -2814,7 +2814,7 @@ spirv::SelectionOp spirv::SelectionOp::createIfThen(
 }
 
 //===----------------------------------------------------------------------===//
-// spv.specConstant
+// spv.SpecConstant
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseSpecConstantOp(OpAsmParser &parser,
@@ -3000,7 +3000,7 @@ static LogicalResult verify(spirv::VariableOp varOp) {
   if (varOp.storage_class() != spirv::StorageClass::Function) {
     return varOp.emitOpError(
         "can only be used to model function-level variables. Use "
-        "spv.globalVariable for module-level variables.");
+        "spv.GlobalVariable for module-level variables.");
   }
 
   auto pointerType = varOp.pointer().getType().cast<spirv::PointerType>();
@@ -3016,7 +3016,7 @@ static LogicalResult verify(spirv::VariableOp varOp) {
                         spirv::ReferenceOfOp, // for spec constant
                         spirv::AddressOfOp>(initOp))
       return varOp.emitOpError("initializer must be the result of a "
-                               "constant or spv.globalVariable op");
+                               "constant or spv.GlobalVariable op");
   }
 
   // TODO: generate these strings using ODS.
@@ -3031,7 +3031,7 @@ static LogicalResult verify(spirv::VariableOp varOp) {
   for (const auto &attr : {descriptorSetName, bindingName, builtInName}) {
     if (op->getAttr(attr))
       return varOp.emitOpError("cannot have '")
-             << attr << "' attribute (only allowed in spv.globalVariable)";
+             << attr << "' attribute (only allowed in spv.GlobalVariable)";
   }
 
   return success();
@@ -3390,7 +3390,7 @@ static LogicalResult verifyMatrixTimesMatrix(spirv::MatrixTimesMatrixOp op) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.specConstantComposite
+// spv.SpecConstantComposite
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseSpecConstantCompositeOp(OpAsmParser &parser,

@@ -230,7 +230,8 @@ void TableSection::addTable(InputTable *table) {
         if (isa<UndefinedTable>(culprit)) {
           error("object file not built with 'reference-types' feature "
                 "conflicts with import of table " +
-                culprit->getName() + "by file " + toString(culprit->getFile()));
+                culprit->getName() + " by file " +
+                toString(culprit->getFile()));
           return;
         }
       }
@@ -429,8 +430,16 @@ void ElemSection::addEntry(FunctionSymbol *sym) {
 void ElemSection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
+  assert(WasmSym::indirectFunctionTable);
   writeUleb128(os, 1, "segment count");
-  writeUleb128(os, 0, "table index");
+  uint32_t tableNumber = WasmSym::indirectFunctionTable->getTableNumber();
+  uint32_t flags = 0;
+  if (tableNumber)
+    flags |= WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER;
+  writeUleb128(os, flags, "elem segment flags");
+  if (flags & WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER)
+    writeUleb128(os, tableNumber, "table number");
+
   WasmInitExpr initExpr;
   if (config->isPic) {
     initExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
@@ -440,8 +449,15 @@ void ElemSection::writeBody() {
     initExpr.Value.Int32 = config->tableBase;
   }
   writeInitExpr(os, initExpr);
-  writeUleb128(os, indirectFunctions.size(), "elem count");
 
+  if (flags & WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+    // We only write active function table initializers, for which the elem kind
+    // is specified to be written as 0x00 and interpreted to mean "funcref".
+    const uint8_t elemKind = 0;
+    writeU8(os, elemKind, "elem kind");
+  }
+
+  writeUleb128(os, indirectFunctions.size(), "elem count");
   uint32_t tableIndex = config->tableBase;
   for (const FunctionSymbol *sym : indirectFunctions) {
     assert(sym->getTableIndex() == tableIndex);

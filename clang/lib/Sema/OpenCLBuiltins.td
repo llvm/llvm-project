@@ -651,11 +651,17 @@ foreach name = ["step"] in {
 }
 
 // --- 3 arguments ---
-foreach name = ["clamp", "mix"] in {
+foreach name = ["clamp"] in {
   def : Builtin<name, [FGenTypeN, FGenTypeN, FGenTypeN, FGenTypeN], Attr.Const>;
   def : Builtin<name, [GenTypeFloatVecNoScalar, GenTypeFloatVecNoScalar, Float, Float], Attr.Const>;
   def : Builtin<name, [GenTypeDoubleVecNoScalar, GenTypeDoubleVecNoScalar, Double, Double], Attr.Const>;
   def : Builtin<name, [GenTypeHalfVecNoScalar, GenTypeHalfVecNoScalar, Half, Half], Attr.Const>;
+}
+foreach name = ["mix"] in {
+  def : Builtin<name, [FGenTypeN, FGenTypeN, FGenTypeN, FGenTypeN], Attr.Const>;
+  def : Builtin<name, [GenTypeFloatVecNoScalar, GenTypeFloatVecNoScalar, GenTypeFloatVecNoScalar, Float], Attr.Const>;
+  def : Builtin<name, [GenTypeDoubleVecNoScalar, GenTypeDoubleVecNoScalar, GenTypeDoubleVecNoScalar, Double], Attr.Const>;
+  def : Builtin<name, [GenTypeHalfVecNoScalar, GenTypeHalfVecNoScalar, GenTypeHalfVecNoScalar, Half], Attr.Const>;
 }
 foreach name = ["smoothstep"] in {
   def : Builtin<name, [FGenTypeN, FGenTypeN, FGenTypeN, FGenTypeN], Attr.Const>;

@@ -5,18 +5,9 @@ add_custom_target(MLIRBindingsPythonExtension)
 # Copy python source tree.
 ################################################################################
 
-set(PY_SRC_FILES
-  mlir/__init__.py
-  mlir/_dlloader.py
-  mlir/conversions/__init__.py
-  mlir/dialects/__init__.py
-  mlir/dialects/_linalg.py
-  mlir/dialects/_builtin.py
-  mlir/ir.py
-  mlir/execution_engine.py
-  mlir/passmanager.py
-  mlir/transforms/__init__.py
-)
+file(GLOB_RECURSE PY_SRC_FILES
+  RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/mlir/*.py")
 
 add_custom_target(MLIRBindingsPythonSources ALL
   DEPENDS ${PY_SRC_FILES}
@@ -25,11 +16,13 @@ add_dependencies(MLIRBindingsPythonExtension MLIRBindingsPythonSources)
 
 foreach(PY_SRC_FILE ${PY_SRC_FILES})
   set(PY_DEST_FILE "${PROJECT_BINARY_DIR}/python/${PY_SRC_FILE}")
+  get_filename_component(PY_DEST_DIR "${PY_DEST_FILE}" DIRECTORY)
+  file(MAKE_DIRECTORY "${PY_DEST_DIR}")
   add_custom_command(
     TARGET MLIRBindingsPythonSources PRE_BUILD
     COMMENT "Copying python source ${PY_SRC_FILE} -> ${PY_DEST_FILE}"
     DEPENDS "${PY_SRC_FILE}"
-    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+    COMMAND "${CMAKE_COMMAND}" -E create_symlink
         "${CMAKE_CURRENT_SOURCE_DIR}/${PY_SRC_FILE}" "${PY_DEST_FILE}"
   )
 endforeach()

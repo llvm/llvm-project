@@ -138,11 +138,11 @@ OpFoldResult spirv::CompositeExtractOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.constant
+// spv.Constant
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::ConstantOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.empty() && "spv.constant has no operands");
+  assert(operands.empty() && "spv.Constant has no operands");
   return value();
 }
 
@@ -257,12 +257,12 @@ OpFoldResult spirv::LogicalOrOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.selection
+// spv.mlir.selection
 //===----------------------------------------------------------------------===//
 
 namespace {
-// Blocks from the given `spv.selection` operation must satisfy the following
-// layout:
+// Blocks from the given `spv.mlir.selection` operation must satisfy the
+// following layout:
 //
 //       +-----------------------------------------------+
 //       | header block                                  |
@@ -294,7 +294,7 @@ struct ConvertSelectionOpToSelect
                                 PatternRewriter &rewriter) const override {
     auto *op = selectionOp.getOperation();
     auto &body = op->getRegion(0);
-    // Verifier allows an empty region for `spv.selection`.
+    // Verifier allows an empty region for `spv.mlir.selection`.
     if (body.empty()) {
       return failure();
     }
@@ -332,7 +332,7 @@ struct ConvertSelectionOpToSelect
     rewriter.create<spirv::StoreOp>(selectOp.getLoc(), ptrValue,
                                     selectOp.getResult(), storeOpAttributes);
 
-    // `spv.selection` is not needed anymore.
+    // `spv.mlir.selection` is not needed anymore.
     rewriter.eraseOp(op);
     return success();
   }

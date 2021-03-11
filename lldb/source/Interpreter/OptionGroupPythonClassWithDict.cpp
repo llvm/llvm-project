@@ -13,12 +13,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
-    (const char *class_use,
-     bool is_class,
-     int class_option,
-     int key_option, 
-     int value_option) : m_is_class(is_class) {
+OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict(
+    const char *class_use, bool is_class, int class_option, int key_option,
+    int value_option, uint16_t required_options)
+    : m_is_class(is_class), m_required_options(required_options) {
   m_key_usage_text.assign("The key for a key/value pair passed to the "
                           "implementation of a ");
   m_key_usage_text.append(class_use);
@@ -36,7 +34,7 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
   m_class_usage_text.append(".");
   
   m_option_definition[0].usage_mask = LLDB_OPT_SET_1;
-  m_option_definition[0].required = true;
+  m_option_definition[0].required = m_required_options.Test(eScriptClass);
   m_option_definition[0].long_option = "script-class";
   m_option_definition[0].short_option = class_option;
   m_option_definition[0].validator = nullptr;
@@ -47,7 +45,7 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
   m_option_definition[0].usage_text = m_class_usage_text.data();
 
   m_option_definition[1].usage_mask = LLDB_OPT_SET_2;
-  m_option_definition[1].required = false;
+  m_option_definition[1].required = m_required_options.Test(eDictKey);
   m_option_definition[1].long_option = "structured-data-key";
   m_option_definition[1].short_option = key_option;
   m_option_definition[1].validator = nullptr;
@@ -58,7 +56,7 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
   m_option_definition[1].usage_text = m_key_usage_text.data();
 
   m_option_definition[2].usage_mask = LLDB_OPT_SET_2;
-  m_option_definition[2].required = false;
+  m_option_definition[2].required = m_required_options.Test(eDictValue);
   m_option_definition[2].long_option = "structured-data-value";
   m_option_definition[2].short_option = value_option;
   m_option_definition[2].validator = nullptr;
@@ -69,7 +67,7 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
   m_option_definition[2].usage_text = m_value_usage_text.data();
   
   m_option_definition[3].usage_mask = LLDB_OPT_SET_3;
-  m_option_definition[3].required = true;
+  m_option_definition[3].required = m_required_options.Test(ePythonFunction);
   m_option_definition[3].long_option = "python-function";
   m_option_definition[3].short_option = class_option;
   m_option_definition[3].validator = nullptr;
@@ -78,7 +76,6 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
   m_option_definition[3].completion_type = 0;
   m_option_definition[3].argument_type = eArgTypePythonFunction;
   m_option_definition[3].usage_text = m_class_usage_text.data();
-
 }
 
 Status OptionGroupPythonClassWithDict::SetOptionValue(

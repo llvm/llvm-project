@@ -113,6 +113,8 @@ InProcessMemoryManager::allocate(const JITLinkDylib *JD,
 
     uint64_t SegmentSize = alignTo(Seg.getContentSize() + Seg.getZeroFillSize(),
                                    sys::Process::getPageSizeEstimate());
+    assert(SlabRemaining.allocatedSize() >= SegmentSize &&
+           "Mapping exceeds allocation");
 
     sys::MemoryBlock SegMem(SlabRemaining.base(), SegmentSize);
     SlabRemaining = sys::MemoryBlock((char *)SlabRemaining.base() + SegmentSize,
@@ -126,7 +128,6 @@ InProcessMemoryManager::allocate(const JITLinkDylib *JD,
     Blocks[KV.first] = std::move(SegMem);
   }
 
-  assert(SlabRemaining.allocatedSize() >= 0 && "Mapping exceeds allocation");
   return std::unique_ptr<InProcessMemoryManager::Allocation>(
       new IPMMAlloc(std::move(Blocks)));
 }

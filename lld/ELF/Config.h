@@ -253,6 +253,7 @@ struct Configuration {
   UnresolvedPolicy unresolvedSymbols;
   UnresolvedPolicy unresolvedSymbolsInShlib;
   Target2Policy target2;
+  bool Power10Stub;
   ARMVFPArgKind armVFPArgs = ARMVFPArgKind::Default;
   BuildIdKind buildId = BuildIdKind::None;
   SeparateSegmentKind zSeparate;

@@ -48,9 +48,9 @@
  */
 enum stats_flags_e {
   noTotal = 1 << 0, //!< do not show a TOTAL_aggregation for this statistic
-  onlyInMaster = 1 << 1, //!< statistic is valid only for master
+  onlyInMaster = 1 << 1, //!< statistic is valid only for primary thread
   noUnits = 1 << 2, //!< statistic doesn't need units printed next to it
-  notInMaster = 1 << 3, //!< statistic is valid only for non-master threads
+  notInMaster = 1 << 3, //!< statistic is valid only for non-primary threads
   logEvent = 1 << 4 //!< statistic can be logged on the event timeline when
   //! KMP_STATS_EVENTS is on (valid only for timers)
 };
@@ -103,6 +103,7 @@ enum stats_state_e {
   macro(OMP_CRITICAL, 0, arg)                                                  \
   macro(OMP_SINGLE, 0, arg)                                                    \
   macro(OMP_MASTER, 0, arg)                                                    \
+  macro(OMP_MASKED, 0, arg)                                                    \
   macro(OMP_TEAMS, 0, arg)                                                     \
   macro(OMP_set_lock, 0, arg)                                                  \
   macro(OMP_test_lock, 0, arg)                                                 \
@@ -150,6 +151,7 @@ enum stats_state_e {
   macro (OMP_critical_wait, 0, arg)                                            \
   macro (OMP_single, 0, arg)                                                   \
   macro (OMP_master, 0, arg)                                                   \
+  macro (OMP_masked, 0, arg)                                                   \
   macro (OMP_task_immediate, 0, arg)                                           \
   macro (OMP_task_taskwait, 0, arg)                                            \
   macro (OMP_task_taskyield, 0, arg)                                           \
@@ -180,8 +182,8 @@ enum stats_state_e {
 // clang-format on
 
 // OMP_worker_thread_life -- Time from thread becoming an OpenMP thread (either
-//                           initializing OpenMP or being created by a master)
-//                           until the thread is destroyed
+//                           initializing OpenMP or being created by a primary
+//                           thread) until the thread is destroyed
 // OMP_parallel           -- Time thread spends executing work directly
 //                           within a #pragma omp parallel
 // OMP_parallel_overhead  -- Time thread spends setting up a parallel region
@@ -198,6 +200,7 @@ enum stats_state_e {
 //                           a critical section
 // OMP_single             -- Time spent executing a "single" region
 // OMP_master             -- Time spent executing a "master" region
+// OMP_masked             -- Time spent executing a "masked" region
 // OMP_task_immediate     -- Time spent executing non-deferred tasks
 // OMP_task_taskwait      -- Time spent executing tasks inside a taskwait
 //                           construct
@@ -710,7 +713,7 @@ public:
     to the bar width in the timeline graph.
 
     Every thread will have a thread local pointer to its node in
-    the list.  The sentinel node is used by the master thread to
+    the list.  The sentinel node is used by the primary thread to
     store "dummy" statistics before __kmp_create_worker() is called.
 **************************************************************** */
 class kmp_stats_list {

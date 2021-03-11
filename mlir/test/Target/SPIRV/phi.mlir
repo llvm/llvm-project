@@ -4,8 +4,8 @@
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @foo() -> () "None" {
-// CHECK:        %[[CST:.*]] = spv.constant 0
-    %zero = spv.constant 0 : i32
+// CHECK:        %[[CST:.*]] = spv.Constant 0
+    %zero = spv.Constant 0 : i32
 // CHECK-NEXT:   spv.Branch ^bb1(%[[CST]] : i32)
     spv.Branch ^bb1(%zero : i32)
 // CHECK-NEXT: ^bb1(%{{.*}}: i32):
@@ -25,10 +25,10 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @foo() -> () "None" {
-// CHECK:        %[[ZERO:.*]] = spv.constant 0
-    %zero = spv.constant 0 : i32
-// CHECK-NEXT:   %[[ONE:.*]] = spv.constant 1
-    %one = spv.constant 1.0 : f32
+// CHECK:        %[[ZERO:.*]] = spv.Constant 0
+    %zero = spv.Constant 0 : i32
+// CHECK-NEXT:   %[[ONE:.*]] = spv.Constant 1
+    %one = spv.Constant 1.0 : f32
 // CHECK-NEXT:   spv.Branch ^bb1(%[[ZERO]], %[[ONE]] : i32, f32)
     spv.Branch ^bb1(%zero, %one : i32, f32)
 
@@ -49,8 +49,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @foo() -> () "None" {
-// CHECK:        %[[CST0:.*]] = spv.constant 0
-    %zero = spv.constant 0 : i32
+// CHECK:        %[[CST0:.*]] = spv.Constant 0
+    %zero = spv.Constant 0 : i32
 // CHECK-NEXT:   spv.Branch ^bb1(%[[CST0]] : i32)
     spv.Branch ^bb1(%zero : i32)
 
@@ -58,7 +58,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   ^bb1(%arg0: i32):
 // CHECK-NEXT:   %[[ADD:.*]] = spv.IAdd %[[ARG]], %[[ARG]] : i32
     %0 = spv.IAdd %arg0, %arg0 : i32
-// CHECK-NEXT:   %[[CST1:.*]] = spv.constant 0
+// CHECK-NEXT:   %[[CST1:.*]] = spv.Constant 0
 // CHECK-NEXT:   spv.Branch ^bb2(%[[CST1]], %[[ADD]] : i32, i32)
     spv.Branch ^bb2(%zero, %0 : i32, i32)
 
@@ -83,8 +83,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     spv.Branch ^bb1
 
 // CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   %[[ZERO:.*]] = spv.constant 0
-// CHECK-NEXT:   %[[ONE:.*]] = spv.constant 1
+// CHECK-NEXT:   %[[ZERO:.*]] = spv.Constant 0
+// CHECK-NEXT:   %[[ONE:.*]] = spv.Constant 1
 // CHECK-NEXT:   spv.Branch ^bb2(%[[ZERO]], %[[ONE]] : i32, f32)
 
 // CHECK-NEXT: ^bb2(%{{.*}}: i32, %{{.*}}: f32):
@@ -94,8 +94,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
   // This block is reordered to follow domination order.
   ^bb1:
-    %zero = spv.constant 0 : i32
-    %one = spv.constant 1.0 : f32
+    %zero = spv.Constant 0 : i32
+    %one = spv.Constant 1.0 : f32
     spv.Branch ^bb2(%zero, %one : i32, f32)
   }
 
@@ -113,23 +113,23 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @foo() -> () "None" {
     %var = spv.Variable : !spv.ptr<i32, Function>
 
-// CHECK:      spv.selection
-    spv.selection {
-      %true = spv.constant true
+// CHECK:      spv.mlir.selection
+    spv.mlir.selection {
+      %true = spv.Constant true
 // CHECK:        spv.BranchConditional %{{.*}}, ^bb1, ^bb2
       spv.BranchConditional %true, ^true, ^false
 
 // CHECK-NEXT: ^bb1:
     ^true:
-// CHECK-NEXT:   %[[ZERO:.*]] = spv.constant 0
-      %zero = spv.constant 0 : i32
+// CHECK-NEXT:   %[[ZERO:.*]] = spv.Constant 0
+      %zero = spv.Constant 0 : i32
 // CHECK-NEXT:   spv.Branch ^bb3(%[[ZERO]] : i32)
       spv.Branch ^phi(%zero: i32)
 
 // CHECK-NEXT: ^bb2:
     ^false:
-// CHECK-NEXT:   %[[ONE:.*]] = spv.constant 1
-      %one = spv.constant 1 : i32
+// CHECK-NEXT:   %[[ONE:.*]] = spv.Constant 1
+      %one = spv.Constant 1 : i32
 // CHECK-NEXT:   spv.Branch ^bb3(%[[ONE]] : i32)
       spv.Branch ^phi(%one: i32)
 
@@ -159,12 +159,12 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 // Test nested loops with block arguments
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
-  spv.globalVariable @__builtin_var_NumWorkgroups__ built_in("NumWorkgroups") : !spv.ptr<vector<3xi32>, Input>
-  spv.globalVariable @__builtin_var_WorkgroupId__ built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
+  spv.GlobalVariable @__builtin_var_NumWorkgroups__ built_in("NumWorkgroups") : !spv.ptr<vector<3xi32>, Input>
+  spv.GlobalVariable @__builtin_var_WorkgroupId__ built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
   spv.func @fmul_kernel() "None" {
-    %3 = spv.constant 12 : i32
-    %4 = spv.constant 32 : i32
-    %5 = spv.constant 4 : i32
+    %3 = spv.Constant 12 : i32
+    %4 = spv.Constant 32 : i32
+    %5 = spv.Constant 4 : i32
     %6 = spv.mlir.addressof @__builtin_var_WorkgroupId__ : !spv.ptr<vector<3xi32>, Input>
     %7 = spv.Load "Input" %6 : vector<3xi32>
     %8 = spv.CompositeExtract %7[0 : i32] : vector<3xi32>
@@ -182,8 +182,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 // CHECK:   spv.Branch ^[[FN_BB:.*]](%{{.*}} : i32)
 // CHECK: ^[[FN_BB]](%[[FN_BB_ARG:.*]]: i32):
-// CHECK:   spv.loop {
-    spv.loop {
+// CHECK:   spv.mlir.loop {
+    spv.mlir.loop {
 // CHECK:     spv.Branch ^bb1(%[[FN_BB_ARG]] : i32)
       spv.Branch ^bb1(%30 : i32)
 // CHECK:   ^[[LP1_HDR:.*]](%[[LP1_HDR_ARG:.*]]: i32):
@@ -200,8 +200,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       %35 = spv.IMul %20, %5 : i32
 // CHECK:     spv.Branch ^[[LP1_CNT:.*]](%[[MUL]] : i32)
 // CHECK:   ^[[LP1_CNT]](%[[LP1_CNT_ARG:.*]]: i32):
-// CHECK:     spv.loop {
-      spv.loop {
+// CHECK:     spv.mlir.loop {
+      spv.mlir.loop {
 // CHECK:       spv.Branch ^[[LP2_HDR:.*]](%[[LP1_CNT_ARG]] : i32)
         spv.Branch ^bb1(%34 : i32)
 // CHECK:     ^[[LP2_HDR]](%[[LP2_HDR_ARG:.*]]: i32):
@@ -243,16 +243,16 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @fmul_kernel() "None" {
-    %cst4 = spv.constant 4 : i32
+    %cst4 = spv.Constant 4 : i32
 
-    %val1 = spv.constant 43 : i32
-    %val2 = spv.constant 44 : i32
+    %val1 = spv.Constant 43 : i32
+    %val2 = spv.Constant 44 : i32
 
-// CHECK:        spv.constant 43
+// CHECK:        spv.Constant 43
 // CHECK-NEXT:   spv.Branch ^[[BB1:.+]](%{{.+}} : i32)
 // CHECK-NEXT: ^[[BB1]](%{{.+}}: i32):
-// CHECK-NEXT:   spv.loop
-    spv.loop { // loop 1
+// CHECK-NEXT:   spv.mlir.loop
+    spv.mlir.loop { // loop 1
       spv.Branch ^bb1(%val1 : i32)
     ^bb1(%loop1_bb_arg: i32):
       %loop1_lt = spv.SLessThan %loop1_bb_arg, %cst4 : i32
@@ -264,11 +264,11 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       spv.mlir.merge
     }
 
-// CHECK:        spv.constant 44
+// CHECK:        spv.Constant 44
 // CHECK-NEXT:   spv.Branch ^[[BB2:.+]](%{{.+}} : i32)
 // CHECK-NEXT: ^[[BB2]](%{{.+}}: i32):
-// CHECK-NEXT:   spv.loop
-    spv.loop { // loop 2
+// CHECK-NEXT:   spv.mlir.loop
+    spv.mlir.loop { // loop 2
       spv.Branch ^bb1(%val2 : i32)
     ^bb1(%loop2_bb_arg: i32):
       %loop2_lt = spv.SLessThan %loop2_bb_arg, %cst4 : i32

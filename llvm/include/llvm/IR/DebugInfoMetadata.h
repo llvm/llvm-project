@@ -1951,6 +1951,7 @@ public:
   unsigned getVirtualIndex() const { return VirtualIndex; }
   int getThisAdjustment() const { return ThisAdjustment; }
   unsigned getScopeLine() const { return ScopeLine; }
+  void setScopeLine(unsigned L) { assert(isDistinct()); ScopeLine = L; }
   DIFlags getFlags() const { return Flags; }
   DISPFlags getSPFlags() const { return SPFlags; }
   bool isLocalToUnit() const { return getSPFlags() & SPFlagLocalToUnit; }
@@ -2175,11 +2176,6 @@ public:
                     (Scope, File, Discriminator))
 
   TempDILexicalBlockFile clone() const { return cloneImpl(); }
-
-  // TODO: Remove these once they're gone from DILexicalBlockBase.
-  unsigned getLine() const = delete;
-  unsigned getColumn() const = delete;
-
   unsigned getDiscriminator() const { return Discriminator; }
 
   static bool classof(const Metadata *MD) {
@@ -2775,6 +2771,23 @@ public:
   static DIExpression *appendToStack(const DIExpression *Expr,
                                      ArrayRef<uint64_t> Ops);
 
+  /// Create a copy of \p Expr by appending the given list of \p Ops to each
+  /// instance of the operand `DW_OP_LLVM_arg, \p ArgNo`. This is used to
+  /// modify a specific location used by \p Expr, such as when salvaging that
+  /// location.
+  static DIExpression *appendOpsToArg(const DIExpression *Expr,
+                                      ArrayRef<uint64_t> Ops, unsigned ArgNo,
+                                      bool StackValue = false);
+
+  /// Create a copy of \p Expr with each instance of
+  /// `DW_OP_LLVM_arg, \p OldArg` replaced with `DW_OP_LLVM_arg, \p NewArg`,
+  /// and each instance of `DW_OP_LLVM_arg, Arg` with `DW_OP_LLVM_arg, Arg - 1`
+  /// for all Arg > \p OldArg.
+  /// This is used when replacing one of the operands of a debug value list
+  /// with another operand in the same list and deleting the old operand.
+  static DIExpression *replaceArg(const DIExpression *Expr, uint64_t OldArg,
+                                  uint64_t NewArg);
+
   /// Create a DIExpression to describe one part of an aggregate variable that
   /// is fragmented across multiple Values. The DW_OP_LLVM_fragment operation
   /// will be appended to the elements of \c Expr. If \c Expr already contains
@@ -3234,12 +3247,6 @@ public:
     return "";
   }
 
-  Optional<StringRef> getSource() const {
-    if (auto *F = getFile())
-      return F->getSource();
-    return None;
-  }
-
   MDString *getRawName() const { return getOperandAs<MDString>(0); }
   Metadata *getRawFile() const { return getOperand(1); }
   MDString *getRawGetterName() const { return getOperandAs<MDString>(2); }
@@ -3510,6 +3517,52 @@ public:
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIMacroFileKind;
   }
+};
+
+/// List of ValueAsMetadata, to be used as an argument to a dbg.value
+/// intrinsic.
+class DIArgList : public MDNode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+  using iterator = SmallVectorImpl<ValueAsMetadata *>::iterator;
+
+  SmallVector<ValueAsMetadata *, 4> Args;
+
+  DIArgList(LLVMContext &C, StorageType Storage,
+            ArrayRef<ValueAsMetadata *> Args)
+      : MDNode(C, DIArgListKind, Storage, None),
+        Args(Args.begin(), Args.end()) {
+    track();
+  }
+  ~DIArgList() { untrack(); }
+
+  static DIArgList *getImpl(LLVMContext &Context,
+                            ArrayRef<ValueAsMetadata *> Args,
+                            StorageType Storage, bool ShouldCreate = true);
+
+  TempDIArgList cloneImpl() const {
+    return getTemporary(getContext(), getArgs());
+  }
+
+  void track();
+  void untrack();
+  void dropAllReferences();
+
+public:
+  DEFINE_MDNODE_GET(DIArgList, (ArrayRef<ValueAsMetadata *> Args), (Args))
+
+  TempDIArgList clone() const { return cloneImpl(); }
+
+  ArrayRef<ValueAsMetadata *> getArgs() const { return Args; }
+
+  iterator args_begin() { return Args.begin(); }
+  iterator args_end() { return Args.end(); }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIArgListKind;
+  }
+
+  void handleChangedOperand(void *Ref, Metadata *New);
 };
 
 /// Identifies a unique instance of a variable.

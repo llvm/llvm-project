@@ -1,4 +1,4 @@
-//===-- OptionGroupPythonClassWithDict.h -------------------------------------*- C++ -*-===//
+//===-- OptionGroupPythonClassWithDict.h ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,9 +9,10 @@
 #ifndef LLDB_INTERPRETER_OPTIONGROUPPYTHONCLASSWITHDICT_H
 #define LLDB_INTERPRETER_OPTIONGROUPPYTHONCLASSWITHDICT_H
 
-#include "lldb/lldb-types.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Utility/Flags.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb_private {
 
@@ -23,12 +24,20 @@ namespace lldb_private {
 // StructuredData::Dictionary is constructed with those pairs.
 class OptionGroupPythonClassWithDict : public OptionGroup {
 public:
-  OptionGroupPythonClassWithDict(const char *class_use,
-                                 bool is_class = true,
-                                 int class_option = 'C',
-                                 int key_option = 'k', 
-                                 int value_option = 'v');
-                      
+  enum OptionKind {
+    eScriptClass    = 1 << 0,
+    eDictKey        = 1 << 1,
+    eDictValue      = 1 << 2,
+    ePythonFunction = 1 << 3,
+    eAllOptions     = (eScriptClass | eDictKey | eDictValue | ePythonFunction)
+  };
+
+  OptionGroupPythonClassWithDict(const char *class_use, bool is_class = true,
+                                 int class_option = 'C', int key_option = 'k',
+                                 int value_option = 'v',
+                                 uint16_t required_options = eScriptClass |
+                                                             ePythonFunction);
+
   ~OptionGroupPythonClassWithDict() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -55,6 +64,7 @@ protected:
   std::string m_class_usage_text, m_key_usage_text, m_value_usage_text;
   bool m_is_class;
   OptionDefinition m_option_definition[4];
+  Flags m_required_options;
 };
 
 } // namespace lldb_private

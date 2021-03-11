@@ -23,6 +23,43 @@
 using namespace mlir;
 using namespace mlir::test;
 
+//===----------------------------------------------------------------------===//
+// AttrWithSelfTypeParamAttr
+//===----------------------------------------------------------------------===//
+
+Attribute AttrWithSelfTypeParamAttr::parse(MLIRContext *context,
+                                           DialectAsmParser &parser,
+                                           Type type) {
+  Type selfType;
+  if (parser.parseType(selfType))
+    return Attribute();
+  return get(context, selfType);
+}
+
+void AttrWithSelfTypeParamAttr::print(DialectAsmPrinter &printer) const {
+  printer << "attr_with_self_type_param " << getType();
+}
+
+//===----------------------------------------------------------------------===//
+// AttrWithTypeBuilderAttr
+//===----------------------------------------------------------------------===//
+
+Attribute AttrWithTypeBuilderAttr::parse(MLIRContext *context,
+                                         DialectAsmParser &parser, Type type) {
+  IntegerAttr element;
+  if (parser.parseAttribute(element))
+    return Attribute();
+  return get(context, element);
+}
+
+void AttrWithTypeBuilderAttr::print(DialectAsmPrinter &printer) const {
+  printer << "attr_with_type_builder " << getAttr();
+}
+
+//===----------------------------------------------------------------------===//
+// CompoundAAttr
+//===----------------------------------------------------------------------===//
+
 Attribute CompoundAAttr::parse(MLIRContext *context, DialectAsmParser &parser,
                                Type type) {
   int widthOfSomething;
@@ -68,9 +105,13 @@ Attribute TestDialect::parseAttribute(DialectAsmParser &parser,
   StringRef attrTag;
   if (failed(parser.parseKeyword(&attrTag)))
     return Attribute();
-  if (auto attr = generatedAttributeParser(getContext(), parser, attrTag, type))
-    return attr;
-
+  {
+    Attribute attr;
+    auto parseResult =
+        generatedAttributeParser(getContext(), parser, attrTag, type, attr);
+    if (parseResult.hasValue())
+      return attr;
+  }
   parser.emitError(parser.getNameLoc(), "unknown test attribute");
   return Attribute();
 }

@@ -178,7 +178,7 @@ static ParseResult dispatchParse(DialectAsmParser &parser, Type &type);
 /// Parses an LLVM dialect function type.
 ///   llvm-type :: = `func<` llvm-type `(` llvm-type-list `...`? `)>`
 static LLVMFunctionType parseFunctionType(DialectAsmParser &parser) {
-  Location loc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
+  llvm::SMLoc loc = parser.getCurrentLocation();
   Type returnType;
   if (parser.parseLess() || dispatchParse(parser, returnType) ||
       parser.parseLParen())
@@ -187,8 +187,8 @@ static LLVMFunctionType parseFunctionType(DialectAsmParser &parser) {
   // Function type without arguments.
   if (succeeded(parser.parseOptionalRParen())) {
     if (succeeded(parser.parseGreater()))
-      return LLVMFunctionType::getChecked(loc, returnType, llvm::None,
-                                          /*isVarArg=*/false);
+      return parser.getChecked<LLVMFunctionType>(loc, returnType, llvm::None,
+                                                 /*isVarArg=*/false);
     return LLVMFunctionType();
   }
 
@@ -198,8 +198,8 @@ static LLVMFunctionType parseFunctionType(DialectAsmParser &parser) {
     if (succeeded(parser.parseOptionalEllipsis())) {
       if (parser.parseOptionalRParen() || parser.parseOptionalGreater())
         return LLVMFunctionType();
-      return LLVMFunctionType::getChecked(loc, returnType, argTypes,
-                                          /*isVarArg=*/true);
+      return parser.getChecked<LLVMFunctionType>(loc, returnType, argTypes,
+                                                 /*isVarArg=*/true);
     }
 
     Type arg;
@@ -210,14 +210,14 @@ static LLVMFunctionType parseFunctionType(DialectAsmParser &parser) {
 
   if (parser.parseOptionalRParen() || parser.parseOptionalGreater())
     return LLVMFunctionType();
-  return LLVMFunctionType::getChecked(loc, returnType, argTypes,
-                                      /*isVarArg=*/false);
+  return parser.getChecked<LLVMFunctionType>(loc, returnType, argTypes,
+                                             /*isVarArg=*/false);
 }
 
 /// Parses an LLVM dialect pointer type.
 ///   llvm-type ::= `ptr<` llvm-type (`,` integer)? `>`
 static LLVMPointerType parsePointerType(DialectAsmParser &parser) {
-  Location loc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
+  llvm::SMLoc loc = parser.getCurrentLocation();
   Type elementType;
   if (parser.parseLess() || dispatchParse(parser, elementType))
     return LLVMPointerType();
@@ -228,7 +228,7 @@ static LLVMPointerType parsePointerType(DialectAsmParser &parser) {
     return LLVMPointerType();
   if (failed(parser.parseGreater()))
     return LLVMPointerType();
-  return LLVMPointerType::getChecked(loc, elementType, addressSpace);
+  return parser.getChecked<LLVMPointerType>(loc, elementType, addressSpace);
 }
 
 /// Parses an LLVM dialect vector type.
@@ -238,7 +238,7 @@ static Type parseVectorType(DialectAsmParser &parser) {
   SmallVector<int64_t, 2> dims;
   llvm::SMLoc dimPos, typePos;
   Type elementType;
-  Location loc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
+  llvm::SMLoc loc = parser.getCurrentLocation();
   if (parser.parseLess() || parser.getCurrentLocation(&dimPos) ||
       parser.parseDimensionList(dims, /*allowDynamic=*/true) ||
       parser.getCurrentLocation(&typePos) ||
@@ -259,13 +259,13 @@ static Type parseVectorType(DialectAsmParser &parser) {
 
   bool isScalable = dims.size() == 2;
   if (isScalable)
-    return LLVMScalableVectorType::getChecked(loc, elementType, dims[1]);
+    return parser.getChecked<LLVMScalableVectorType>(loc, elementType, dims[1]);
   if (elementType.isSignlessIntOrFloat()) {
     parser.emitError(typePos)
         << "cannot use !llvm.vec for built-in primitives, use 'vector' instead";
     return Type();
   }
-  return LLVMFixedVectorType::getChecked(loc, elementType, dims[0]);
+  return parser.getChecked<LLVMFixedVectorType>(loc, elementType, dims[0]);
 }
 
 /// Parses an LLVM dialect array type.
@@ -274,7 +274,7 @@ static LLVMArrayType parseArrayType(DialectAsmParser &parser) {
   SmallVector<int64_t, 1> dims;
   llvm::SMLoc sizePos;
   Type elementType;
-  Location loc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
+  llvm::SMLoc loc = parser.getCurrentLocation();
   if (parser.parseLess() || parser.getCurrentLocation(&sizePos) ||
       parser.parseDimensionList(dims, /*allowDynamic=*/false) ||
       dispatchParse(parser, elementType) || parser.parseGreater())
@@ -285,7 +285,7 @@ static LLVMArrayType parseArrayType(DialectAsmParser &parser) {
     return LLVMArrayType();
   }
 
-  return LLVMArrayType::getChecked(loc, elementType, dims[0]);
+  return parser.getChecked<LLVMArrayType>(loc, elementType, dims[0]);
 }
 
 /// Attempts to set the body of an identified structure type. Reports a parsing

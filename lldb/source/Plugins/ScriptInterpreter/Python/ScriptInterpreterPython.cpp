@@ -421,8 +421,9 @@ void ScriptInterpreterPython::SharedLibraryDirectoryHelper(
   if (this_file.GetFileNameExtension() == ConstString(".pyd")) {
     this_file.RemoveLastPathComponent(); // _lldb.pyd or _lldb_d.pyd
     this_file.RemoveLastPathComponent(); // lldb
-    for (auto it = llvm::sys::path::begin(LLDB_PYTHON_RELATIVE_LIBDIR),
-              end = llvm::sys::path::end(LLDB_PYTHON_RELATIVE_LIBDIR);
+    llvm::StringRef libdir = LLDB_PYTHON_RELATIVE_LIBDIR;
+    for (auto it = llvm::sys::path::begin(libdir),
+              end = llvm::sys::path::end(libdir);
          it != end; ++it)
       this_file.RemoveLastPathComponent();
     this_file.AppendPathComponent("bin");

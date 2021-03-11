@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstddef>
 #include <cstdint>
@@ -240,7 +241,7 @@ Error COFFWriter::finalize(bool IsBigObj) {
 }
 
 void COFFWriter::writeHeaders(bool IsBigObj) {
-  uint8_t *Ptr = Buf.getBufferStart();
+  uint8_t *Ptr = reinterpret_cast<uint8_t *>(Buf->getBufferStart());
   if (Obj.IsPE) {
     memcpy(Ptr, &Obj.DosHeader, sizeof(Obj.DosHeader));
     Ptr += sizeof(Obj.DosHeader);
@@ -302,7 +303,8 @@ void COFFWriter::writeHeaders(bool IsBigObj) {
 
 void COFFWriter::writeSections() {
   for (const auto &S : Obj.getSections()) {
-    uint8_t *Ptr = Buf.getBufferStart() + S.Header.PointerToRawData;
+    uint8_t *Ptr = reinterpret_cast<uint8_t *>(Buf->getBufferStart()) +
+                   S.Header.PointerToRawData;
     ArrayRef<uint8_t> Contents = S.getContents();
     std::copy(Contents.begin(), Contents.end(), Ptr);
 
@@ -331,7 +333,8 @@ void COFFWriter::writeSections() {
 }
 
 template <class SymbolTy> void COFFWriter::writeSymbolStringTables() {
-  uint8_t *Ptr = Buf.getBufferStart() + Obj.CoffFileHeader.PointerToSymbolTable;
+  uint8_t *Ptr = reinterpret_cast<uint8_t *>(Buf->getBufferStart()) +
+                 Obj.CoffFileHeader.PointerToSymbolTable;
   for (const auto &S : Obj.getSymbols()) {
     // Convert symbols back to the right size, from coff_symbol32.
     copySymbol<SymbolTy, coff_symbol32>(*reinterpret_cast<SymbolTy *>(Ptr),
@@ -366,8 +369,11 @@ Error COFFWriter::write(bool IsBigObj) {
   if (Error E = finalize(IsBigObj))
     return E;
 
-  if (Error E = Buf.allocate(FileSize))
-    return E;
+  Buf = WritableMemoryBuffer::getNewMemBuffer(FileSize);
+  if (!Buf)
+    return createStringError(llvm::errc::not_enough_memory,
+                             "failed to allocate memory buffer of " +
+                                 Twine::utohexstr(FileSize) + " bytes.");
 
   writeHeaders(IsBigObj);
   writeSections();
@@ -380,7 +386,10 @@ Error COFFWriter::write(bool IsBigObj) {
     if (Error E = patchDebugDirectory())
       return E;
 
-  return Buf.commit();
+  // TODO: Implement direct writing to the output stream (without intermediate
+  // memory buffer Buf).
+  Out.write(Buf->getBufferStart(), Buf->getBufferSize());
+  return Error::success();
 }
 
 Expected<uint32_t> COFFWriter::virtualAddressToFileAddress(uint32_t RVA) {
@@ -412,7 +421,8 @@ Error COFFWriter::patchDebugDirectory() {
                                  "debug directory extends past end of section");
 
       size_t Offset = Dir->RelativeVirtualAddress - S.Header.VirtualAddress;
-      uint8_t *Ptr = Buf.getBufferStart() + S.Header.PointerToRawData + Offset;
+      uint8_t *Ptr = reinterpret_cast<uint8_t *>(Buf->getBufferStart()) +
+                     S.Header.PointerToRawData + Offset;
       uint8_t *End = Ptr + Dir->Size;
       while (Ptr < End) {
         debug_directory *Debug = reinterpret_cast<debug_directory *>(Ptr);

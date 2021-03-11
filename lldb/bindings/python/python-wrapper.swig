@@ -39,6 +39,17 @@ private:
 // This function is called by lldb_private::ScriptInterpreterPython::BreakpointCallbackFunction(...)
 // and is used when a script command is attached to a breakpoint for execution.
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
+
+// Disable warning C4190: 'LLDBSwigPythonBreakpointCallbackFunction' has
+// C-linkage specified, but returns UDT 'llvm::Expected<bool>' which is
+// incompatible with C
+#if _MSC_VER
+#pragma warning (push)
+#pragma warning (disable : 4190)
+#endif
+
 SWIGEXPORT llvm::Expected<bool>
 LLDBSwigPythonBreakpointCallbackFunction
 (
@@ -84,6 +95,12 @@ LLDBSwigPythonBreakpointCallbackFunction
     // Only False counts as false!
     return result.get().get() != Py_False;
 }
+
+#if _MSC_VER
+#pragma warning (pop)
+#endif
+
+#pragma clang diagnostic pop
 
 // This function is called by lldb_private::ScriptInterpreterPython::WatchpointCallbackFunction(...)
 // and is used when a script command is attached to a watchpoint for execution.

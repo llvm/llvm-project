@@ -4,6 +4,7 @@ import platform
 import re
 import subprocess
 import sys
+import errno
 
 import lit.util
 from lit.llvm.subst import FindTool
@@ -346,21 +347,19 @@ class LLVMConfig(object):
         return True
 
     def add_err_msg_substitutions(self):
-        if (sys.platform == 'zos'):
-            self.config.substitutions.append(('%errc_ENOENT', '\'EDC5129I No such file or directory.\''))
-            self.config.substitutions.append(('%errc_EISDIR', '\'EDC5123I Is a directory.\''))
-            self.config.substitutions.append(('%errc_EINVAL', '\'EDC5121I Invalid argument.\''))
-            self.config.substitutions.append(('%errc_EACCES', '\'EDC5111I Permission denied.\''))
-        elif (sys.platform == 'win32'):
+        host_cxx = getattr(self.config, 'host_cxx', '')
+        # On Windows, python's os.strerror() does not emit the same spelling as the C++ std::error_code.
+        # As a workaround, hardcode the Windows error message.
+        if (sys.platform == 'win32' and 'MSYS' not in host_cxx):
             self.config.substitutions.append(('%errc_ENOENT', '\'no such file or directory\''))
             self.config.substitutions.append(('%errc_EISDIR', '\'is a directory\''))
             self.config.substitutions.append(('%errc_EINVAL', '\'invalid argument\''))
             self.config.substitutions.append(('%errc_EACCES', '\'permission denied\''))
         else:
-            self.config.substitutions.append(('%errc_ENOENT', '\'No such file or directory\''))
-            self.config.substitutions.append(('%errc_EISDIR', '\'Is a directory\''))
-            self.config.substitutions.append(('%errc_EINVAL', '\'Invalid argument\''))
-            self.config.substitutions.append(('%errc_EACCES', '\'Permission denied\''))
+            self.config.substitutions.append(('%errc_ENOENT', '\'' + os.strerror(errno.ENOENT) + '\''))
+            self.config.substitutions.append(('%errc_EISDIR', '\'' + os.strerror(errno.EISDIR) + '\''))
+            self.config.substitutions.append(('%errc_EINVAL', '\'' + os.strerror(errno.EINVAL) + '\''))
+            self.config.substitutions.append(('%errc_EACCES', '\'' + os.strerror(errno.EACCES) + '\''))
 
     def use_default_substitutions(self):
         tool_patterns = [

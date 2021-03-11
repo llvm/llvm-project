@@ -92,7 +92,7 @@ template <typename ElTy> struct ListReducer {
       // distribution (improving the speed of convergence).
       if (ShufflingEnabled && NumOfIterationsWithoutProgress > MaxIterations) {
         std::vector<ElTy> ShuffledList(TheList);
-        std::shuffle(ShuffledList.begin(), ShuffledList.end(), randomness);
+        llvm::shuffle(ShuffledList.begin(), ShuffledList.end(), randomness);
         errs() << "\n\n*** Testing shuffled set...\n\n";
         // Check that random shuffle doesn't lose the bug
         Expected<TestResult> Result = doTest(ShuffledList, empty);

@@ -24,9 +24,9 @@ module attributes {
 
   // CHECK-LABEL: spv.module @{{.*}} Logical GLSL450
   gpu.module @kernels {
-    // CHECK-DAG: spv.globalVariable @[[NUMWORKGROUPSVAR:.*]] built_in("NumWorkgroups") : !spv.ptr<vector<3xi32>, Input>
-    // CHECK-DAG: spv.globalVariable @[[$LOCALINVOCATIONIDVAR:.*]] built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>
-    // CHECK-DAG: spv.globalVariable @[[$WORKGROUPIDVAR:.*]] built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
+    // CHECK-DAG: spv.GlobalVariable @[[NUMWORKGROUPSVAR:.*]] built_in("NumWorkgroups") : !spv.ptr<vector<3xi32>, Input>
+    // CHECK-DAG: spv.GlobalVariable @[[$LOCALINVOCATIONIDVAR:.*]] built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>
+    // CHECK-DAG: spv.GlobalVariable @[[$WORKGROUPIDVAR:.*]] built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
     // CHECK-LABEL:    spv.func @load_store_kernel
     // CHECK-SAME: %[[ARG0:.*]]: !spv.ptr<!spv.struct<(!spv.array<48 x f32, stride=4> [0])>, StorageBuffer> {spv.interface_var_abi = #spv.interface_var_abi<(0, 0)>}
     // CHECK-SAME: %[[ARG1:.*]]: !spv.ptr<!spv.struct<(!spv.array<48 x f32, stride=4> [0])>, StorageBuffer> {spv.interface_var_abi = #spv.interface_var_abi<(0, 1)>}
@@ -59,12 +59,12 @@ module attributes {
       %12 = addi %arg3, %0 : index
       // CHECK: %[[INDEX2:.*]] = spv.IAdd %[[ARG4]], %[[LOCALINVOCATIONIDX]]
       %13 = addi %arg4, %3 : index
-      // CHECK: %[[ZERO:.*]] = spv.constant 0 : i32
-      // CHECK: %[[OFFSET1_0:.*]] = spv.constant 0 : i32
-      // CHECK: %[[STRIDE1_1:.*]] = spv.constant 4 : i32
+      // CHECK: %[[ZERO:.*]] = spv.Constant 0 : i32
+      // CHECK: %[[OFFSET1_0:.*]] = spv.Constant 0 : i32
+      // CHECK: %[[STRIDE1_1:.*]] = spv.Constant 4 : i32
       // CHECK: %[[UPDATE1_1:.*]] = spv.IMul %[[STRIDE1_1]], %[[INDEX1]] : i32
       // CHECK: %[[OFFSET1_1:.*]] = spv.IAdd %[[OFFSET1_0]], %[[UPDATE1_1]] : i32
-      // CHECK: %[[STRIDE1_2:.*]] = spv.constant 1 : i32
+      // CHECK: %[[STRIDE1_2:.*]] = spv.Constant 1 : i32
       // CHECK: %[[UPDATE1_2:.*]] = spv.IMul %[[STRIDE1_2]], %[[INDEX2]] : i32
       // CHECK: %[[OFFSET1_2:.*]] = spv.IAdd %[[OFFSET1_1]], %[[UPDATE1_2]] : i32
       // CHECK: %[[PTR1:.*]] = spv.AccessChain %[[ARG0]]{{\[}}%[[ZERO]], %[[OFFSET1_2]]{{\]}}

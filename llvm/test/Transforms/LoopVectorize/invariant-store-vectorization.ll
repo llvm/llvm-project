@@ -166,15 +166,13 @@ for.end:                                          ; preds = %for.body
 ; CHECK-LABEL: inv_val_store_to_inv_address_conditional_diff_values_ic
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NTRUNC:%.*]] = trunc i64 [[N:%.*]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[A4:%.*]] = bitcast i32* [[A:%.*]] to i8*
 ; CHECK-NEXT:    [[B1:%.*]] = bitcast i32* [[B:%.*]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[N]], 1
-; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[TMP1]], i64 [[N]], i64 1
+; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[B]], i64 [[SMAX2]]
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[A4]], i64 1
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt i8* [[UGLYGEP]], [[B1]]
@@ -272,15 +270,13 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NTRUNC:%.*]] = trunc i64 [[N:%.*]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[NTRUNC]], [[K:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[A4:%.*]] = bitcast i32* [[A:%.*]] to i8*
 ; CHECK-NEXT:    [[B1:%.*]] = bitcast i32* [[B:%.*]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[N]], 1
-; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[TMP1]], i64 [[N]], i64 1
+; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[B]], i64 [[SMAX2]]
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[A4]], i64 1
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt i8* [[UGLYGEP]], [[B1]]
@@ -367,16 +363,14 @@ for.end:                                          ; preds = %for.body
 define i32 @variant_val_store_to_inv_address(i32* %a, i64 %n, i32* %b, i32 %k) {
 ; CHECK-LABEL: @variant_val_store_to_inv_address(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[B2:%.*]] = bitcast i32* [[B:%.*]] to i8*
 ; CHECK-NEXT:    [[A1:%.*]] = bitcast i32* [[A:%.*]] to i8*
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[A1]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[N]], 1
-; CHECK-NEXT:    [[SMAX3:%.*]] = select i1 [[TMP1]], i64 [[N]], i64 1
+; CHECK-NEXT:    [[SMAX3:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[B]], i64 [[SMAX3]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt i32* [[SCEVGEP]], [[A]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt i8* [[UGLYGEP]], [[B2]]

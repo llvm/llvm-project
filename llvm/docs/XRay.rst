@@ -47,7 +47,7 @@ You can use XRay in a couple of ways:
 - Instrumenting your C/C++/Objective-C/Objective-C++ application.
 - Generating LLVM IR with the correct function attributes.
 
-The rest of this section covers these main ways and later on how to customise
+The rest of this section covers these main ways and later on how to customize
 what XRay does in an XRay-instrumented binary.
 
 Instrumenting your C/C++/Objective-C Application

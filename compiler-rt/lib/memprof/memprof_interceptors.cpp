@@ -59,6 +59,8 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 #define COMMON_INTERCEPT_FUNCTION(name) MEMPROF_INTERCEPT_FUNC(name)
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                               \
   MEMPROF_INTERCEPT_FUNC_VER(name, ver)
+#define COMMON_INTERCEPT_FUNCTION_VER_UNVERSIONED_FALLBACK(name, ver)          \
+  MEMPROF_INTERCEPT_FUNC_VER_UNVERSIONED_FALLBACK(name, ver)
 #define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size)                         \
   MEMPROF_WRITE_RANGE(ptr, size)
 #define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size)                          \

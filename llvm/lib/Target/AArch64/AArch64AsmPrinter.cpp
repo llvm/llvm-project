@@ -793,11 +793,15 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
   OS << MI->getDebugVariable()->getName();
   OS << " <- ";
   // Frame address.  Currently handles register +- offset only.
-  assert(MI->getDebugOperand(0).isReg() && MI->isDebugOffsetImm());
+  assert(MI->isIndirectDebugValue());
   OS << '[';
-  printOperand(MI, 0, OS);
-  OS << '+';
-  printOperand(MI, 1, OS);
+  for (unsigned I = 0, E = std::distance(MI->debug_operands().begin(),
+                                         MI->debug_operands().end());
+       I < E; ++I) {
+    if (I != 0)
+      OS << ", ";
+    printOperand(MI, I, OS);
+  }
   OS << ']';
   OS << "+";
   printOperand(MI, NOps - 2, OS);
@@ -1210,7 +1214,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
     break;
 
-  case AArch64::DBG_VALUE: {
+  case AArch64::DBG_VALUE:
+  case AArch64::DBG_VALUE_LIST: {
     if (isVerbose() && OutStreamer->hasRawTextSupport()) {
       SmallString<128> TmpStr;
       raw_svector_ostream OS(TmpStr);
@@ -1231,7 +1236,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       OutStreamer->emitCFIBKeyFrame();
       return;
     }
-  }
+    }
 
   // Tail calls use pseudo instructions so they have the proper code-gen
   // attributes (isCall, isReturn, etc.). We lower them to the real

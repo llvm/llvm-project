@@ -9,6 +9,8 @@
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -68,7 +70,7 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
 
   // Common csect type (uninitialized storage) does not have to print csect
   // directive for section switching.
-  if (getCSectType() == XCOFF::XTY_CM) {
+  if (isCsect() && getCSectType() == XCOFF::XTY_CM) {
     assert((getMappingClass() == XCOFF::XMC_RW ||
             getMappingClass() == XCOFF::XMC_BS ||
             getMappingClass() == XCOFF::XMC_UL) &&
@@ -92,6 +94,14 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   // be put into common csect.
   if (getKind().isThreadBSS()) {
     printCsectDirective(OS);
+    return;
+  }
+
+  // XCOFF debug sections.
+  if (getKind().isMetadata() && isDwarfSect()) {
+    OS << "\n\t.dwsect "
+       << format("0x%" PRIx32, getDwarfSubtypeFlags().getValue()) << '\n';
+    OS << MAI.getPrivateLabelPrefix() << getName() << ':' << '\n';
     return;
   }
 

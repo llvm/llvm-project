@@ -31,30 +31,22 @@ define void @single_access_with_preloop(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 
 
 ; CHECK-LABEL: @single_access_with_preloop(
 ; CHECK: loop.preheader:
-; CHECK: [[check_min_sint_offset:[^ ]+]] = icmp sgt i32 %offset, -2147483647
-; CHECK: [[safe_offset_preloop:[^ ]+]] = select i1 [[check_min_sint_offset]], i32 %offset, i32 -2147483647
+; CHECK: [[safe_offset_preloop:[^ ]+]] = call i32 @llvm.smax.i32(i32 %offset, i32 -2147483647)
 ; If Offset was a SINT_MIN, we could have an overflow here. That is why we calculated its safe version.
 ; CHECK: [[safe_start:[^ ]+]] = sub i32 0, [[safe_offset_preloop]]
-; CHECK: [[exit_preloop_at_cond_loclamp:[^ ]+]] = icmp slt i32 %n, [[safe_start]]
-; CHECK: [[exit_preloop_at_loclamp:[^ ]+]] = select i1 [[exit_preloop_at_cond_loclamp]], i32 %n, i32 [[safe_start]]
-; CHECK: [[exit_preloop_at_cond:[^ ]+]] = icmp sgt i32 [[exit_preloop_at_loclamp]], 0
-; CHECK: [[exit_preloop_at:[^ ]+]] = select i1 [[exit_preloop_at_cond]], i32 [[exit_preloop_at_loclamp]], i32 0
+; CHECK: [[exit_preloop_at_loclamp:[^ ]+]] = call i32 @llvm.smin.i32(i32 %n, i32 [[safe_start]])
+; CHECK: [[exit_preloop_at:[^ ]+]] = call i32 @llvm.smax.i32(i32 [[exit_preloop_at_loclamp]], i32 0)
 
 
 ; CHECK: [[len_minus_sint_max:[^ ]+]] = add nuw nsw i32 %len, -2147483647
-; CHECK: [[check_len_min_sint_offset:[^ ]+]] = icmp sgt i32 %offset, [[len_minus_sint_max]]
-; CHECK: [[safe_offset_mainloop:[^ ]+]] = select i1 [[check_len_min_sint_offset]], i32 %offset, i32 [[len_minus_sint_max]]
+; CHECK: [[safe_offset_mainloop:[^ ]+]] = call i32 @llvm.smax.i32(i32 %offset, i32 [[len_minus_sint_max]])
 ; If Offset was a SINT_MIN, we could have an overflow here. That is why we calculated its safe version.
 ; CHECK: [[safe_upper_end:[^ ]+]] = sub i32 %len, [[safe_offset_mainloop]]
-; CHECK: [[exit_mainloop_at_cond_loclamp:[^ ]+]] = icmp slt i32 %n, [[safe_upper_end]]
-; CHECK: [[exit_mainloop_at_loclamp:[^ ]+]] = select i1 [[exit_mainloop_at_cond_loclamp]], i32 %n, i32 [[safe_upper_end]]
-; CHECK: [[check_offset_mainloop_2:[^ ]+]] = icmp sgt i32 %offset, 0
-; CHECK: [[safe_offset_mainloop_2:[^ ]+]] = select i1 [[check_offset_mainloop_2]], i32 %offset, i32 0
+; CHECK: [[exit_mainloop_at_loclamp:[^ ]+]] = call i32 @llvm.smin.i32(i32 %n, i32 [[safe_upper_end]])
+; CHECK: [[safe_offset_mainloop_2:[^ ]+]] = call i32 @llvm.smax.i32(i32 %offset, i32 0)
 ; CHECK: [[safe_lower_end:[^ ]+]] = sub i32 2147483647, [[safe_offset_mainloop_2]]
-; CHECK: [[exit_mainloop_at_cond_hiclamp:[^ ]+]] = icmp slt i32 [[exit_mainloop_at_loclamp]], [[safe_lower_end]]
-; CHECK: [[exit_mainloop_at_hiclamp:[^ ]+]] = select i1 [[exit_mainloop_at_cond_hiclamp]], i32 [[exit_mainloop_at_loclamp]], i32 [[safe_lower_end]]
-; CHECK: [[exit_mainloop_at_cmp:[^ ]+]] = icmp sgt i32 [[exit_mainloop_at_hiclamp]], 0
-; CHECK: [[exit_mainloop_at:[^ ]+]] = select i1 [[exit_mainloop_at_cmp]], i32 [[exit_mainloop_at_hiclamp]], i32 0
+; CHECK: [[exit_mainloop_at_hiclamp:[^ ]+]] = call i32 @llvm.smin.i32(i32 [[exit_mainloop_at_loclamp]], i32 [[safe_lower_end]])
+; CHECK: [[exit_mainloop_at:[^ ]+]] = call i32 @llvm.smax.i32(i32 [[exit_mainloop_at_hiclamp]], i32 0)
 
 ; CHECK: mainloop:
 ; CHECK: br label %loop

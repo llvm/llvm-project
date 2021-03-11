@@ -186,7 +186,7 @@ namespace constrained {
   static_assert(is_same_v<decltype(f9(i, c)), void>);
   // expected-error@-1{{no matching}}
   static_assert(is_same_v<decltype(f9(i, i, ci)), void>);
-  void f10(C decltype(auto) x);
+  void f10(C decltype(auto) x); // expected-error{{decltype(auto)' not allowed in function prototype}}
   auto f11 = [] (C auto x) { };
   // expected-note@-1{{candidate template ignored}} expected-note@-1{{because}}
   static_assert(is_same_v<decltype(f11(1)), void>);
@@ -238,7 +238,7 @@ namespace constrained {
   static_assert(is_same_v<decltype(f20(i, c)), void>);
   // expected-error@-1{{no matching}}
   static_assert(is_same_v<decltype(f20(c, c, cc)), void>);
-  void f21(C2<char> decltype(auto) x);
+  void f21(C2<char> decltype(auto) x); // expected-error{{decltype(auto)' not allowed in function prototype}}
   auto f22 = [] (C2<char> auto x) { };
   // expected-note@-1{{candidate template ignored}} expected-note@-1{{because}}
   static_assert(is_same_v<decltype(f22(1)), void>);

@@ -2260,14 +2260,14 @@ programs using the same instrumentation method as ``-fprofile-generate``.
 
   The resulted ``cs_code.prodata`` combines ``code.profdata`` and the profile
   generated from binary ``cs_code``. Profile ``cs_code.profata`` can be used by
-  ``-fprofile-use`` compilaton.
+  ``-fprofile-use`` compilation.
 
   .. code-block:: console
 
     $ clang++ -O2 -fprofile-use=cs_code.profdata
 
   The above command will read both profiles to the compiler at the identical
-  point of instrumenations.
+  point of instrumentations.
 
 .. option:: -fprofile-use[=<pathname>]
 

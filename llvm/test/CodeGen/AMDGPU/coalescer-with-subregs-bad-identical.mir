@@ -74,7 +74,7 @@ body: |
     %23:sreg_64 = COPY $exec, implicit-def $exec
     %24:sreg_64 = S_AND_B64 %23, %22, implicit-def dead $scc
     $exec = S_MOV_B64_term killed %24
-    SI_MASK_BRANCH %bb.7, implicit $exec
+    S_CBRANCH_EXECZ %bb.7, implicit $exec
     S_BRANCH %bb.5
 
   bb.5:
@@ -153,7 +153,7 @@ body: |
     %50:sreg_64 = COPY $exec, implicit-def $exec
     %51:sreg_64 = S_AND_B64 %50, %49, implicit-def dead $scc
     $exec = S_MOV_B64_term killed %51
-    SI_MASK_BRANCH %bb.16, implicit $exec
+    S_CBRANCH_EXECZ %bb.16, implicit $exec
     S_BRANCH %bb.15
 
   bb.15:
