@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/Operation.h"
+#include "llvm/ADT/BitVector.h"
+
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
@@ -298,6 +298,26 @@ void detail::OperandStorage::eraseOperands(unsigned start, unsigned length) {
   }
   for (unsigned i = 0; i != length; ++i)
     operands[storage.numOperands + i].~OpOperand();
+}
+
+void detail::OperandStorage::eraseOperands(
+    const llvm::BitVector &eraseIndices) {
+  TrailingOperandStorage &storage = getStorage();
+  MutableArrayRef<OpOperand> operands = storage.getOperands();
+  assert(eraseIndices.size() == operands.size());
+
+  // Check that at least one operand is erased.
+  int firstErasedIndice = eraseIndices.find_first();
+  if (firstErasedIndice == -1)
+    return;
+
+  // Shift all of the removed operands to the end, and destroy them.
+  storage.numOperands = firstErasedIndice;
+  for (unsigned i = firstErasedIndice + 1, e = operands.size(); i < e; ++i)
+    if (!eraseIndices.test(i))
+      operands[storage.numOperands++] = std::move(operands[i]);
+  for (OpOperand &operand : operands.drop_front(storage.numOperands))
+    operand.~OpOperand();
 }
 
 /// Resize the storage to the given size. Returns the array containing the new
