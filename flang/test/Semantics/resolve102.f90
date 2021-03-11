@@ -9,7 +9,7 @@ subroutine sub(p2)
 end subroutine
 
 subroutine circular
-  !ERROR: Procedure 'p' is recursively defined.  Procedures in the cycle: 'p', 'sub', 'p2'
+  !ERROR: Procedure 'p' is recursively defined.  Procedures in the cycle: 'sub', 'p', 'p2'
   procedure(sub) :: p
 
   call p(sub)
@@ -21,7 +21,7 @@ subroutine circular
 end subroutine circular
 
 program iface
-  !ERROR: Procedure 'p' is recursively defined.  Procedures in the cycle: 'p', 'sub', 'p2'
+  !ERROR: Procedure 'p' is recursively defined.  Procedures in the cycle: 'sub', 'p', 'p2'
   procedure(sub) :: p
   interface
     subroutine sub(p2)
@@ -38,7 +38,7 @@ Program mutual
   Call p(sub)
 
   contains
-    !ERROR: Procedure 'sub1' is recursively defined.  Procedures in the cycle: 'p', 'sub1', 'arg'
+    !ERROR: Procedure 'sub1' is recursively defined.  Procedures in the cycle: 'sub1', 'p', 'arg'
     Subroutine sub1(arg)
       procedure(sub1) :: arg
     End Subroutine
@@ -54,7 +54,7 @@ Program mutual1
   Call p(sub)
 
   contains
-    !ERROR: Procedure 'sub1' is recursively defined.  Procedures in the cycle: 'p', 'sub1', 'arg', 'sub', 'p2'
+    !ERROR: Procedure 'sub1' is recursively defined.  Procedures in the cycle: 'sub1', 'sub', 'p', 'arg', 'p2'
     Subroutine sub1(arg)
       procedure(sub) :: arg
     End Subroutine
