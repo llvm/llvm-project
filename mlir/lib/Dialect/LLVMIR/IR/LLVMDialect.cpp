@@ -2475,6 +2475,7 @@ LoopOptionsAttr LoopOptionsAttr::get(MLIRContext *context,
 void LoopOptionsAttr::print(DialectAsmPrinter &printer) const {
   printer << getMnemonic() << "<";
   llvm::interleaveComma(getOptions(), printer, [&](auto option) {
+    printer << stringifyEnum(option.first) << " = ";
     switch (option.first) {
     case LoopOptionCase::disable_licm:
     case LoopOptionCase::disable_unroll:
