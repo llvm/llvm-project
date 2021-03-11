@@ -79,27 +79,27 @@ bool satisfiesLLVMModule(Operation *op);
 /// creation once all the options are in place.
 class LoopOptionsAttrBuilder {
 public:
+  /// Construct a empty builder.
+  LoopOptionsAttrBuilder() = default;
+
   /// Construct a builder with an initial list of options from an existing
   /// LoopOptionsAttr.
   LoopOptionsAttrBuilder(LoopOptionsAttr attr);
 
   /// Set the `disable_licm` option to the provided value. If no value
   /// is provided the option is deleted.
-  LoopOptionsAttrBuilder &setDisableLICM(Optional<bool> value) {
-    return setOption(LoopOptionCase::disable_licm, value);
-  }
+  LoopOptionsAttrBuilder &setDisableLICM(Optional<bool> value);
 
   /// Set the `interleave_count` option to the provided value. If no value
   /// is provided the option is deleted.
-  LoopOptionsAttrBuilder &setInterleaveCount(Optional<uint64_t> count) {
-    return setOption(LoopOptionCase::interleave_count, count);
-  }
+  LoopOptionsAttrBuilder &setInterleaveCount(Optional<uint64_t> count);
 
   /// Set the `disable_unroll` option to the provided value. If no value
   /// is provided the option is deleted.
-  LoopOptionsAttrBuilder &setDisableUnroll(Optional<bool> value) {
-    return setOption(LoopOptionCase::disable_unroll, value);
-  }
+  LoopOptionsAttrBuilder &setDisableUnroll(Optional<bool> value);
+
+  /// Returns true if any option has been set.
+  bool empty() { return options.empty(); }
 
 private:
   template <typename T>
