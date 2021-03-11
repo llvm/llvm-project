@@ -98,6 +98,15 @@ public:
   /// is provided the option is deleted.
   LoopOptionsAttrBuilder &setDisableUnroll(Optional<bool> value);
 
+  /// Set the `disable_pipeline` option to the provided value. If no value
+  /// is provided the option is deleted.
+  LoopOptionsAttrBuilder &setDisablePipeline(Optional<bool> value);
+
+  /// Set the `pipeline_initiation_interval` option to the provided value.
+  /// If no value is provided the option is deleted.
+  LoopOptionsAttrBuilder &
+  setPipelineInitiationInterval(Optional<uint64_t> count);
+
   /// Returns true if any option has been set.
   bool empty() { return options.empty(); }
 

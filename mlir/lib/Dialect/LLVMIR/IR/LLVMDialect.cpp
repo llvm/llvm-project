@@ -2431,6 +2431,20 @@ LoopOptionsAttrBuilder::setDisableUnroll(Optional<bool> value) {
   return setOption(LoopOptionCase::disable_unroll, value);
 }
 
+/// Set the `disable_pipeline` option to the provided value. If no value
+/// is provided the option is deleted.
+LoopOptionsAttrBuilder &
+LoopOptionsAttrBuilder::setDisablePipeline(Optional<bool> value) {
+  return setOption(LoopOptionCase::disable_pipeline, value);
+}
+
+/// Set the `pipeline_initiation_interval` option to the provided value.
+/// If no value is provided the option is deleted.
+LoopOptionsAttrBuilder &LoopOptionsAttrBuilder::setPipelineInitiationInterval(
+    Optional<uint64_t> count) {
+  return setOption(LoopOptionCase::pipeline_initiation_interval, count);
+}
+
 template <typename T>
 static Optional<T>
 getOption(ArrayRef<std::pair<LoopOptionCase, int64_t>> options,
@@ -2479,9 +2493,11 @@ void LoopOptionsAttr::print(DialectAsmPrinter &printer) const {
     switch (option.first) {
     case LoopOptionCase::disable_licm:
     case LoopOptionCase::disable_unroll:
+    case LoopOptionCase::disable_pipeline:
       printer << (option.second ? "true" : "false");
       break;
     case LoopOptionCase::interleave_count:
+    case LoopOptionCase::pipeline_initiation_interval:
       printer << option.second;
       break;
     }
@@ -2518,6 +2534,7 @@ Attribute LoopOptionsAttr::parse(MLIRContext *context, DialectAsmParser &parser,
     switch (*option) {
     case LoopOptionCase::disable_licm:
     case LoopOptionCase::disable_unroll:
+    case LoopOptionCase::disable_pipeline:
       if (succeeded(parser.parseOptionalKeyword("true")))
         value = 1;
       else if (succeeded(parser.parseOptionalKeyword("false")))
@@ -2529,6 +2546,7 @@ Attribute LoopOptionsAttr::parse(MLIRContext *context, DialectAsmParser &parser,
       }
       break;
     case LoopOptionCase::interleave_count:
+    case LoopOptionCase::pipeline_initiation_interval:
       if (failed(parser.parseInteger(value))) {
         parser.emitError(parser.getNameLoc(), "expected integer value");
         return {};
