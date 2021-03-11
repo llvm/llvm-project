@@ -160,9 +160,6 @@ static void CheckArrayDesignatorSyntax(Parser &P, SourceLocation Loc,
 /// \p CodeCompleteCB is called with Designation parsed so far.
 ExprResult Parser::ParseInitializerWithPotentialDesignator(
     DesignatorCompletionInfo DesignatorCompletion) {
-  if (!getPreprocessor().isCodeCompletionEnabled())
-    DesignatorCompletion.PreferredBaseType = QualType(); // skip field lookup
-
   // If this is the old-style GNU extension:
   //   designation ::= identifier ':'
   // Handle it as a field designator.  Otherwise, this must be the start of a
