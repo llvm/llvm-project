@@ -768,6 +768,7 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
     Config.PrePrunePasses.push_back(EHFrameSplitter(".eh_frame"));
     Config.PrePrunePasses.push_back(EHFrameEdgeFixer(
         ".eh_frame", G->getPointerSize(), Delta64, Delta32, NegDelta32));
+    Config.PrePrunePasses.push_back(EHFrameNullTerminator(".eh_frame"));
 
     // Construct a JITLinker and run the link function.
     // Add a mark-live pass.

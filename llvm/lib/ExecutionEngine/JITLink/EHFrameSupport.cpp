@@ -730,6 +730,29 @@ Expected<Symbol &> EHFrameEdgeFixer::getOrCreateSymbol(ParseContext &PC,
   return PC.G.addAnonymousSymbol(*B, Addr - B->getAddress(), 0, false, false);
 }
 
+char EHFrameNullTerminator::NullTerminatorBlockContent[] = {0, 0, 0, 0};
+
+EHFrameNullTerminator::EHFrameNullTerminator(StringRef EHFrameSectionName)
+    : EHFrameSectionName(EHFrameSectionName) {}
+
+Error EHFrameNullTerminator::operator()(LinkGraph &G) {
+  auto *EHFrame = G.findSectionByName(EHFrameSectionName);
+
+  if (!EHFrame)
+    return Error::success();
+
+  LLVM_DEBUG({
+    dbgs() << "EHFrameNullTerminator adding null terminator to "
+           << EHFrameSectionName << "\n";
+  });
+
+  auto &NullTerminatorBlock =
+      G.createContentBlock(*EHFrame, StringRef(NullTerminatorBlockContent, 4),
+                           0xfffffffffffffffc, 1, 0);
+  G.addAnonymousSymbol(NullTerminatorBlock, 0, 4, false, true);
+  return Error::success();
+}
+
 EHFrameRegistrar::~EHFrameRegistrar() {}
 
 Error InProcessEHFrameRegistrar::registerEHFrames(
