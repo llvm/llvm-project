@@ -54,14 +54,14 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [NoSideEffect,
   remaining elements from `src`.
   }];
   let verifier = [{ return ::verify(*this); }];
-  let arguments = (ins VectorOfLengthAndType<[16, 16, 8, 8],
-                                             [I1, I1, I1, I1]>:$k,
-                   VectorOfLengthAndType<[16, 16, 8, 8],
+  let arguments = (ins VectorOfLengthAndType<[16, 8],
+                                             [I1]>:$k,
+                   VectorOfLengthAndType<[16, 8],
                                          [F32, I32, F64, I64]>:$a,
-                   Optional<VectorOfLengthAndType<[16, 16, 8, 8],
+                   Optional<VectorOfLengthAndType<[16, 8],
                                                   [F32, I32, F64, I64]>>:$src,
                    OptionalAttr<ElementsAttr>:$constant_src);
-  let results = (outs VectorOfLengthAndType<[16, 16, 8, 8],
+  let results = (outs VectorOfLengthAndType<[16, 8],
                                             [F32, I32, F64, I64]>:$dst);
   let assemblyFormat = "$k `,` $a (`,` $src^)? attr-dict"
                        " `:` type($dst) (`,` type($src)^)?";
@@ -162,8 +162,8 @@ def Vp2IntersectOp : AVX512_Op<"vp2intersect", [NoSideEffect,
   let arguments = (ins VectorOfLengthAndType<[16, 8], [I32, I64]>:$a,
                    VectorOfLengthAndType<[16, 8], [I32, I64]>:$b
                    );
-  let results = (outs VectorOfLengthAndType<[16, 8], [I1, I1]>:$k1,
-                 VectorOfLengthAndType<[16, 8], [I1, I1]>:$k2
+  let results = (outs VectorOfLengthAndType<[16, 8], [I1]>:$k1,
+                 VectorOfLengthAndType<[16, 8], [I1]>:$k2
                  );
   let assemblyFormat =
     "$a `,` $b attr-dict `:` type($a)";
