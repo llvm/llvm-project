@@ -332,13 +332,6 @@ macro(construct_compiler_rt_default_triple)
   if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "^i.86$")
     # Android uses i686, but that's remapped at a later stage.
     set(COMPILER_RT_DEFAULT_TARGET_ARCH "i386")
-  elseif ("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "^arm" AND
-          NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "^arm64")
-    if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*hf$")
-      set(COMPILER_RT_DEFAULT_TARGET_ARCH "armhf")
-    else()
-      set(COMPILER_RT_DEFAULT_TARGET_ARCH "arm")
-    endif()
   endif()
 
   # Determine if test target triple is specified explicitly, and doesn't match the
