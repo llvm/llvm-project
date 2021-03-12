@@ -16,9 +16,8 @@ define i8* @test1() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 1
-; CHECK-NEXT:    [[LSR_IV_NEXT1:%.*]] = inttoptr i64 [[LSR_IV_NEXT]] to i8*
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i8* [ [[SCEVGEP:%.*]], [[LOOP]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, i8* [[LSR_IV]], i64 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    br i1 false, label [[BBA:%.*]], label [[BBB:%.*]]
@@ -37,7 +36,7 @@ define i8* @test1() {
 ; CHECK:       bbB.bb89_crit_edge:
 ; CHECK-NEXT:    br label [[BB89]]
 ; CHECK:       bb89:
-; CHECK-NEXT:    [[TMP75PHI:%.*]] = phi i8* [ [[LSR_IV_NEXT1]], [[BBA_BB89_CRIT_EDGE]] ], [ [[LSR_IV_NEXT1]], [[BBB_BB89_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[TMP75PHI:%.*]] = phi i8* [ [[SCEVGEP]], [[BBA_BB89_CRIT_EDGE]] ], [ [[SCEVGEP]], [[BBB_BB89_CRIT_EDGE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8* [[TMP75PHI]]
@@ -81,9 +80,8 @@ define i8* @test2() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 1
-; CHECK-NEXT:    [[LSR_IV_NEXT1:%.*]] = inttoptr i64 [[LSR_IV_NEXT]] to i8*
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i8* [ [[SCEVGEP:%.*]], [[LOOP]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, i8* [[LSR_IV]], i64 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    br i1 false, label [[BBA:%.*]], label [[BBB:%.*]]
@@ -100,10 +98,10 @@ define i8* @test2() {
 ; CHECK:       bbB.exit_crit_edge:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       bb89:
-; CHECK-NEXT:    [[TMP75PHI:%.*]] = phi i8* [ [[LSR_IV_NEXT1]], [[BBA]] ], [ [[LSR_IV_NEXT1]], [[BBA]] ], [ [[LSR_IV_NEXT1]], [[BBA]] ]
+; CHECK-NEXT:    [[TMP75PHI:%.*]] = phi i8* [ [[SCEVGEP]], [[BBA]] ], [ [[SCEVGEP]], [[BBA]] ], [ [[SCEVGEP]], [[BBA]] ]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi i8* [ [[TMP75PHI]], [[BB89]] ], [ [[LSR_IV_NEXT1]], [[BBB_EXIT_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i8* [ [[TMP75PHI]], [[BB89]] ], [ [[SCEVGEP]], [[BBB_EXIT_CRIT_EDGE]] ]
 ; CHECK-NEXT:    ret i8* [[RESULT]]
 ;
 entry:
