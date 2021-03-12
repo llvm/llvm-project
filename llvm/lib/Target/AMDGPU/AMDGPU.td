@@ -1219,6 +1219,10 @@ def isGFX90AOnly :
   Predicate<"Subtarget->hasGFX90AInsts()">,
   AssemblerPredicate<(all_of FeatureGFX90AInsts)>;
 
+def isGFX908orGFX90A :
+  Predicate<"Subtarget->hasMAIInsts()">,
+  AssemblerPredicate<(all_of FeatureMAIInsts)>;
+
 def isGFX8GFX9 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,

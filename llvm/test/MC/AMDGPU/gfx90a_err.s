@@ -194,3 +194,39 @@ image_sample_cd v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
 
 image_sample_b v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
 // GFX90A: error: instruction not supported on this GPU
+
+global_atomic_add_f32 v0, v[0:1], v2, off glc scc
+// GFX90A: error: invalid operand for instruction
+
+global_atomic_add_f32 v[0:1], v2, off scc
+// GFX90A: error: invalid operand for instruction
+
+global_atomic_add_f32 v0, v2, s[0:1] scc
+// GFX90A: error: invalid operand for instruction
+
+global_atomic_add_f32 v1, v0, v2, s[0:1] glc scc
+// GFX90A: error: invalid operand for instruction
+
+global_atomic_pk_add_f16 v0, v[0:1], v2, off glc scc
+// GFX90A: error: invalid operand for instruction
+
+flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] glc scc
+// GFX90A: error: invalid operand for instruction
+
+flat_atomic_add_f64 v[0:1], v[2:3] scc
+// GFX90A: error: invalid operand for instruction
+
+flat_atomic_min_f64 v[0:1], v[2:3] scc
+// GFX90A: error: invalid operand for instruction
+
+flat_atomic_max_f64 v[0:1], v[2:3] scc
+// GFX90A: error: invalid operand for instruction
+
+global_atomic_add_f64 v[0:1], v[2:3], off scc
+// GFX90A: error: invalid operand for instruction
+
+global_atomic_min_f64 v[0:1], v[2:3], off scc
+// GFX90A: error: invalid operand for instruction
+
+global_atomic_max_f64 v[0:1], v[2:3], off scc
+// GFX90A: error: invalid operand for instruction
