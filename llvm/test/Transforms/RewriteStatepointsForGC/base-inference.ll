@@ -239,6 +239,65 @@ define <4 x i8 addrspace(1)*> @test_shuffle_concat(<2 x i8 addrspace(1)*> %a1, <
 }
 
 
+; Show a case where only a portion of the sub-graph propagates base pointers.
+define i8 @test_subgraph(i1 %c, i8 addrspace(1)* %a1, i8 addrspace(1)* %a2) gc "statepoint-example" {
+; CHECK-LABEL: @test_subgraph(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SEL_BASE:%.*]] = select i1 [[C:%.*]], i8 addrspace(1)* [[A1:%.*]], i8 addrspace(1)* [[A2:%.*]], !is_base_value !0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i8 addrspace(1)* [[A1]], i8 addrspace(1)* [[A2]]
+; CHECK-NEXT:    br i1 [[C]], label [[TAKEN:%.*]], label [[MERGE:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8 addrspace(1)* [[SEL]], i64 8
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[PHI_BASE:%.*]] = phi i8 addrspace(1)* [ [[SEL_BASE]], [[TAKEN]] ], [ [[SEL_BASE]], [[ENTRY:%.*]] ], !is_base_value !0
+; CHECK-NEXT:    [[PHI:%.*]] = phi i8 addrspace(1)* [ [[GEP]], [[TAKEN]] ], [ [[SEL]], [[ENTRY]] ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i8 addrspace(1)* [[PHI]], i8 addrspace(1)* [[PHI_BASE]]) ]
+; CHECK-NEXT:    [[PHI_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[PHI_BASE_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[RES:%.*]] = load i8, i8 addrspace(1)* [[PHI_RELOCATED]], align 1
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+entry:
+  %sel = select i1 %c, i8 addrspace(1)* %a1, i8 addrspace(1)* %a2
+  br i1 %c, label %taken, label %merge
+taken:
+  %gep = getelementptr i8, i8 addrspace(1)* %sel, i64 8
+  br label %merge
+merge:
+  %phi = phi i8 addrspace(1)* [%gep, %taken], [%sel, %entry]
+  call void @foo()
+  %res = load i8, i8 addrspace(1)* %phi
+  ret i8 %res
+}
+
+; An example of a non-trivial subgraph computing base pointers.
+define i8 @test_subgraph2(i1 %c, i8 addrspace(1)* %a1, i8 addrspace(1)* %a2) gc "statepoint-example" {
+; CHECK-LABEL: @test_subgraph2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SEL_BASE:%.*]] = select i1 [[C:%.*]], i8 addrspace(1)* [[A1:%.*]], i8 addrspace(1)* [[A2:%.*]], !is_base_value !0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i8 addrspace(1)* [[A1]], i8 addrspace(1)* [[A2]]
+; CHECK-NEXT:    [[IE_BASE:%.*]] = insertelement <2 x i8 addrspace(1)*> zeroinitializer, i8 addrspace(1)* [[SEL_BASE]], i64 0, !is_base_value !0
+; CHECK-NEXT:    [[IE:%.*]] = insertelement <2 x i8 addrspace(1)*> zeroinitializer, i8 addrspace(1)* [[SEL]], i64 0
+; CHECK-NEXT:    [[BROADCAST_BASE:%.*]] = shufflevector <2 x i8 addrspace(1)*> [[IE_BASE]], <2 x i8 addrspace(1)*> zeroinitializer, <2 x i32> zeroinitializer, !is_base_value !0
+; CHECK-NEXT:    [[BROADCAST:%.*]] = shufflevector <2 x i8 addrspace(1)*> [[IE]], <2 x i8 addrspace(1)*> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[EE_BASE:%.*]] = extractelement <2 x i8 addrspace(1)*> [[BROADCAST_BASE]], i32 1, !is_base_value !0
+; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x i8 addrspace(1)*> [[BROADCAST]], i32 1
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i8 addrspace(1)* [[EE]], i8 addrspace(1)* [[EE_BASE]]) ]
+; CHECK-NEXT:    [[EE_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[EE_BASE_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[RES:%.*]] = load i8, i8 addrspace(1)* [[EE_RELOCATED]], align 1
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+entry:
+  %sel = select i1 %c, i8 addrspace(1)* %a1, i8 addrspace(1)* %a2
+  %ie = insertelement <2 x i8 addrspace(1)*> zeroinitializer, i8 addrspace(1)* %sel, i64 0
+  %broadcast = shufflevector <2 x i8 addrspace(1)*> %ie, <2 x i8 addrspace(1)*> undef, <2 x i32> zeroinitializer
+  %ee = extractelement <2 x i8 addrspace(1)*> %broadcast, i32 1
+  call void @foo()
+  %res = load i8, i8 addrspace(1)* %ee
+  ret i8 %res
+}
 
 
 
