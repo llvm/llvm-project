@@ -1069,3 +1069,28 @@ func @fold_tensor.cast_of_const_shape_returned_dynamic(%arg: i1) -> tensor<?xind
   %1 = tensor.cast %0 : tensor<1xindex> to tensor<?xindex>
   return %1 : tensor<?xindex>
 }
+
+// -----
+
+// CHECK-LABEL: @is_broadcastable_on_same_shape
+func @is_broadcastable_on_same_shape(%shape : !shape.shape) -> i1 {
+  // CHECK-NOT: is_broadcastable
+  // CHECK: %[[RES:.*]] = constant true
+  // CHECK: return %[[RES]]
+  %0 = shape.is_broadcastable %shape, %shape, %shape
+      : !shape.shape, !shape.shape, !shape.shape
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @is_broadcastable_on_duplicate_shapes
+// CHECK-SAME: (%[[A:.*]]: !shape.shape, %[[B:.*]]: !shape.shape)
+func @is_broadcastable_on_duplicate_shapes(%a : !shape.shape, %b : !shape.shape)
+    -> i1 {
+  // CHECK: %[[RES:.*]] = shape.is_broadcastable %[[A]], %[[B]]
+  // CHECK: return %[[RES]]
+  %0 = shape.is_broadcastable %a, %b, %a, %a, %a, %b : !shape.shape,
+      !shape.shape, !shape.shape, !shape.shape, !shape.shape, !shape.shape
+  return %0 : i1
+}
