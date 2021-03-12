@@ -51,6 +51,7 @@ inline void registerAllPasses() {
   registerAffinePasses();
   registerAsyncPasses();
   registerGPUPasses();
+  registerGpuSerializeToCubinPass();
   registerLinalgPasses();
   LLVM::registerLLVMPasses();
   quant::registerQuantPasses();
