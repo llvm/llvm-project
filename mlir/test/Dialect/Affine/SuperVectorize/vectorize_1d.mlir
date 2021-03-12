@@ -1,16 +1,8 @@
-// RUN: mlir-opt %s -affine-super-vectorize="virtual-vector-size=128 test-fastest-varying=0" | FileCheck %s
+// RUN: mlir-opt %s -affine-super-vectorize="virtual-vector-size=128 test-fastest-varying=0" -split-input-file | FileCheck %s
 
-// Permutation maps used in vectorization.
-// CHECK-DAG: #[[$map_proj_d0d1_0:map[0-9]+]] = affine_map<(d0, d1) -> (0)>
 // CHECK-DAG: #[[$map_id1:map[0-9]+]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$map_proj_d0d1_0:map[0-9]+]] = affine_map<(d0, d1) -> (0)>
 
-#map0 = affine_map<(d0) -> (d0)>
-#mapadd1 = affine_map<(d0) -> (d0 + 1)>
-#mapadd2 = affine_map<(d0) -> (d0 + 2)>
-#mapadd3 = affine_map<(d0) -> (d0 + 3)>
-#set0 = affine_set<(i) : (i >= 0)>
-
-// Maps introduced to vectorize fastest varying memory index.
 // CHECK-LABEL: func @vec1d_1
 func @vec1d_1(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-DAG: %[[C0:.*]] = constant 0 : index
@@ -37,6 +29,8 @@ func @vec1d_1(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    return
 }
 
+// -----
+
 // CHECK-LABEL: func @vec1d_2
 func @vec1d_2(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-DAG: %[[C0:.*]] = constant 0 : index
@@ -60,6 +54,8 @@ func @vec1d_2(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    }
    return
 }
+
+// -----
 
 // CHECK-LABEL: func @vec1d_3
 func @vec1d_3(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
@@ -89,6 +85,8 @@ func @vec1d_3(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    }
    return
 }
+
+// -----
 
 // CHECK-LABEL: func @vector_add_2d
 func @vector_add_2d(%M : index, %N : index) -> f32 {
@@ -142,6 +140,8 @@ func @vector_add_2d(%M : index, %N : index) -> f32 {
   return %res : f32
 }
 
+// -----
+
 // CHECK-LABEL: func @vec_rejected_1
 func @vec_rejected_1(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-DAG: %[[C0:.*]] = constant 0 : index
@@ -164,6 +164,8 @@ func @vec_rejected_1(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    return
 }
 
+// -----
+
 // CHECK-LABEL: func @vec_rejected_2
 func @vec_rejected_2(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-DAG: %[[C0:.*]] = constant 0 : index
@@ -185,6 +187,8 @@ func @vec_rejected_2(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    }
    return
 }
+
+// -----
 
 // CHECK-LABEL: func @vec_rejected_3
 func @vec_rejected_3(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
@@ -213,6 +217,8 @@ func @vec_rejected_3(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    return
 }
 
+// -----
+
 // CHECK-LABEL: func @vec_rejected_4
 func @vec_rejected_4(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-DAG: %[[C0:.*]] = constant 0 : index
@@ -237,6 +243,8 @@ func @vec_rejected_4(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    }
    return
 }
+
+// -----
 
 // CHECK-LABEL: func @vec_rejected_5
 func @vec_rejected_5(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
@@ -263,6 +271,8 @@ func @vec_rejected_5(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    }
    return
 }
+
+// -----
 
 // CHECK-LABEL: func @vec_rejected_6
 func @vec_rejected_6(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
@@ -292,6 +302,8 @@ func @vec_rejected_6(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    return
 }
 
+// -----
+
 // CHECK-LABEL: func @vec_rejected_7
 func @vec_rejected_7(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-DAG: %[[C0:.*]] = constant 0 : index
@@ -314,6 +326,11 @@ func @vec_rejected_7(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    }
    return
 }
+
+// -----
+
+// CHECK-DAG: #[[$map_id1:map[0-9]+]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$map_proj_d0d1_0:map[0-9]+]] = affine_map<(d0, d1) -> (0)>
 
 // CHECK-LABEL: func @vec_rejected_8
 func @vec_rejected_8(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
@@ -344,6 +361,11 @@ func @vec_rejected_8(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    return
 }
 
+// -----
+
+// CHECK-DAG: #[[$map_id1:map[0-9]+]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$map_proj_d0d1_0:map[0-9]+]] = affine_map<(d0, d1) -> (0)>
+
 // CHECK-LABEL: func @vec_rejected_9
 func @vec_rejected_9(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-DAG: %[[C0:.*]] = constant 0 : index
@@ -373,6 +395,10 @@ func @vec_rejected_9(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    return
 }
 
+// -----
+
+#set0 = affine_set<(i) : (i >= 0)>
+
 // CHECK-LABEL: func @vec_rejected_10
 func @vec_rejected_10(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-DAG: %[[C0:.*]] = constant 0 : index
@@ -396,6 +422,8 @@ func @vec_rejected_10(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    }
    return
 }
+
+// -----
 
 // CHECK-LABEL: func @vec_rejected_11
 func @vec_rejected_11(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
@@ -424,7 +452,9 @@ func @vec_rejected_11(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
   return
 }
 
-// This should not vectorize due to the sequential dependence in the scf.
+// -----
+
+// This should not vectorize due to the sequential dependence in the loop.
 // CHECK-LABEL: @vec_rejected_sequential
 func @vec_rejected_sequential(%A : memref<?xf32>) {
   %c0 = constant 0 : index
@@ -436,4 +466,67 @@ func @vec_rejected_sequential(%A : memref<?xf32>) {
     affine.store %a, %A[%i + 1] : memref<?xf32>
   }
   return
+}
+
+// -----
+
+// CHECK-LABEL: @vec_no_load_store_ops
+func @vec_no_load_store_ops(%a: f32, %b: f32) {
+ %cst = constant 0.000000e+00 : f32
+ affine.for %i = 0 to 128 {
+   %add = addf %a, %b : f32
+ }
+ // CHECK-DAG:  %[[bc1:.*]] = vector.broadcast
+ // CHECK-DAG:  %[[bc0:.*]] = vector.broadcast
+ // CHECK:      affine.for %{{.*}} = 0 to 128 step
+ // CHECK-NEXT:   [[add:.*]] addf %[[bc0]], %[[bc1]]
+
+ return
+}
+
+// -----
+
+// This should not be vectorized due to the unsupported block argument (%i).
+// Support for operands with linear evolution is needed.
+// CHECK-LABEL: @vec_rejected_unsupported_block_arg
+func @vec_rejected_unsupported_block_arg(%A : memref<512xi32>) {
+  affine.for %i = 0 to 512 {
+    // CHECK-NOT: vector
+    %idx = std.index_cast %i : index to i32
+    affine.store %idx, %A[%i] : memref<512xi32>
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @vec_rejected_unsupported_reduction
+func @vec_rejected_unsupported_reduction(%in: memref<128x256xf32>, %out: memref<256xf32>) {
+ %cst = constant 0.000000e+00 : f32
+ affine.for %i = 0 to 256 {
+   // CHECK-NOT: vector
+   %final_red = affine.for %j = 0 to 128 iter_args(%red_iter = %cst) -> (f32) {
+     %ld = affine.load %in[%j, %i] : memref<128x256xf32>
+     %add = addf %red_iter, %ld : f32
+     affine.yield %add : f32
+   }
+   affine.store %final_red, %out[%i] : memref<256xf32>
+ }
+ return
+}
+
+// -----
+
+// CHECK-LABEL: @vec_rejected_unsupported_last_value
+func @vec_rejected_unsupported_last_value(%in: memref<128x256xf32>, %out: memref<256xf32>) {
+ %cst = constant 0.000000e+00 : f32
+ affine.for %i = 0 to 256 {
+   // CHECK-NOT: vector
+   %last_val = affine.for %j = 0 to 128 iter_args(%last_iter = %cst) -> (f32) {
+     %ld = affine.load %in[%j, %i] : memref<128x256xf32>
+     affine.yield %ld : f32
+   }
+   affine.store %last_val, %out[%i] : memref<256xf32>
+ }
+ return
 }
