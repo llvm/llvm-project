@@ -2861,16 +2861,20 @@ public:
     c.def_static(
          "get",
          [](std::vector<int64_t> shape, PyType &elementType,
-            std::vector<PyAffineMap> layout, unsigned memorySpace,
+            std::vector<PyAffineMap> layout, PyAttribute *memorySpace,
             DefaultingPyLocation loc) {
            SmallVector<MlirAffineMap> maps;
            maps.reserve(layout.size());
            for (PyAffineMap &map : layout)
              maps.push_back(map);
 
+           MlirAttribute memSpaceAttr = {};
+           if (memorySpace)
+             memSpaceAttr = *memorySpace;
+
            MlirType t = mlirMemRefTypeGetChecked(loc, elementType, shape.size(),
                                                  shape.data(), maps.size(),
-                                                 maps.data(), memorySpace);
+                                                 maps.data(), memSpaceAttr);
            // TODO: Rework error reporting once diagnostic engine is exposed
            // in C API.
            if (mlirTypeIsNull(t)) {
@@ -2885,14 +2889,15 @@ public:
            return PyMemRefType(elementType.getContext(), t);
          },
          py::arg("shape"), py::arg("element_type"),
-         py::arg("layout") = py::list(), py::arg("memory_space") = 0,
+         py::arg("layout") = py::list(), py::arg("memory_space") = py::none(),
          py::arg("loc") = py::none(), "Create a memref type")
         .def_property_readonly("layout", &PyMemRefType::getLayout,
                                "The list of layout maps of the MemRef type.")
         .def_property_readonly(
             "memory_space",
-            [](PyMemRefType &self) -> unsigned {
-              return mlirMemRefTypeGetMemorySpace(self);
+            [](PyMemRefType &self) -> PyAttribute {
+              MlirAttribute a = mlirMemRefTypeGetMemorySpace(self);
+              return PyAttribute(self.getContext(), a);
             },
             "Returns the memory space of the given MemRef type.");
   }
@@ -2944,10 +2949,14 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
          "get",
-         [](PyType &elementType, unsigned memorySpace,
+         [](PyType &elementType, PyAttribute *memorySpace,
             DefaultingPyLocation loc) {
+           MlirAttribute memSpaceAttr = {};
+           if (memorySpace)
+             memSpaceAttr = *memorySpace;
+
            MlirType t =
-               mlirUnrankedMemRefTypeGetChecked(loc, elementType, memorySpace);
+               mlirUnrankedMemRefTypeGetChecked(loc, elementType, memSpaceAttr);
            // TODO: Rework error reporting once diagnostic engine is exposed
            // in C API.
            if (mlirTypeIsNull(t)) {
@@ -2965,8 +2974,9 @@ public:
          py::arg("loc") = py::none(), "Create a unranked memref type")
         .def_property_readonly(
             "memory_space",
-            [](PyUnrankedMemRefType &self) -> unsigned {
-              return mlirUnrankedMemrefGetMemorySpace(self);
+            [](PyUnrankedMemRefType &self) -> PyAttribute {
+              MlirAttribute a = mlirMemRefTypeGetMemorySpace(self);
+              return PyAttribute(self.getContext(), a);
             },
             "Returns the memory space of the given Unranked MemRef type.");
   }
