@@ -508,12 +508,14 @@ class arglistconcat<list<list<AMDGPUArg>> arglists, int shift = 0> {
 
 // Represent texture/image types / dimensionality.
 class AMDGPUDimProps<bits<3> enc, string name, string asmsuffix,
-                     list<string> coord_names, list<string> slice_names> {
+                     list<string> coord_names, list<string> slice_names,
+                     bit msaa = 0> {
   AMDGPUDimProps Dim = !cast<AMDGPUDimProps>(NAME);
   string Name = name; // e.g. "2darraymsaa"
   string AsmSuffix = asmsuffix; // e.g. 2D_MSAA_ARRAY (used in assembly strings)
   bits<3> Encoding = enc;
   bit DA = 0; // DA bit in MIMG encoding
+  bit MSAA = msaa;
 
   list<AMDGPUArg> CoordSliceArgs =
     makeArgList<!listconcat(coord_names, slice_names), llvm_anyfloat_ty>.ret;
@@ -536,9 +538,9 @@ let DA = 1 in {
   def AMDGPUDim1DArray : AMDGPUDimProps<0x4, "1darray", "1D_ARRAY", ["s"], ["slice"]>;
   def AMDGPUDim2DArray : AMDGPUDimProps<0x5, "2darray", "2D_ARRAY", ["s", "t"], ["slice"]>;
 }
-def AMDGPUDim2DMsaa : AMDGPUDimProps<0x6, "2dmsaa", "2D_MSAA", ["s", "t"], ["fragid"]>;
+def AMDGPUDim2DMsaa : AMDGPUDimProps<0x6, "2dmsaa", "2D_MSAA", ["s", "t"], ["fragid"], 1>;
 let DA = 1 in {
-  def AMDGPUDim2DArrayMsaa : AMDGPUDimProps<0x7, "2darraymsaa", "2D_MSAA_ARRAY", ["s", "t"], ["slice", "fragid"]>;
+  def AMDGPUDim2DArrayMsaa : AMDGPUDimProps<0x7, "2darraymsaa", "2D_MSAA_ARRAY", ["s", "t"], ["slice", "fragid"], 1>;
 }
 
 def AMDGPUDims {
@@ -798,10 +800,15 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimIntrinsics = {
               "STORE_MIP", [], [AMDGPUArg<llvm_anyfloat_ty, "vdata">],
               [IntrWriteMem, IntrWillReturn], [SDNPMemOperand], 1>;
 
-  defm int_amdgcn_image_msaa_load_x
-    : AMDGPUImageDimIntrinsicsAll<"MSAA_LOAD_X", [llvm_any_ty], [], [IntrReadMem],
-                                  [SDNPMemOperand]>,
-      AMDGPUImageDMaskIntrinsic;
+  //////////////////////////////////////////////////////////////////////////
+  // MSAA intrinsics
+  //////////////////////////////////////////////////////////////////////////
+  foreach dim = AMDGPUDims.Msaa in {
+    def int_amdgcn_image_msaa_load_x # _ # dim.Name:
+        AMDGPUImageDimIntrinsic<
+            AMDGPUDimNoSampleProfile<"MSAA_LOAD_X", dim, [llvm_any_ty], []>,
+            [IntrReadMem], [SDNPMemOperand]>;
+  }
 
   //////////////////////////////////////////////////////////////////////////
   // sample and getlod intrinsics

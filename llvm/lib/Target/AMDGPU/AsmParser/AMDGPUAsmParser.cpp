@@ -1545,6 +1545,7 @@ private:
   bool validateMIMGAddrSize(const MCInst &Inst);
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGDim(const MCInst &Inst);
+  bool validateMIMGMSAA(const MCInst &Inst);
   bool validateLdsDirect(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
   bool validateVccOperand(unsigned Reg) const;
@@ -3492,6 +3493,29 @@ bool AMDGPUAsmParser::validateMIMGGatherDMask(const MCInst &Inst) {
   return DMask == 0x1 || DMask == 0x2 || DMask == 0x4 || DMask == 0x8;
 }
 
+bool AMDGPUAsmParser::validateMIMGMSAA(const MCInst &Inst) {
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  if ((Desc.TSFlags & SIInstrFlags::MIMG) == 0)
+    return true;
+
+  const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Opc);
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
+      AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+
+  if (!BaseOpcode->MSAA)
+    return true;
+
+  int DimIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dim);
+  assert(DimIdx != -1);
+
+  unsigned Dim = Inst.getOperand(DimIdx).getImm();
+  const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
+
+  return DimInfo->MSAA;
+}
+
 static bool IsMovrelsSDWAOpcode(const unsigned Opcode)
 {
   switch (Opcode) {
@@ -4126,6 +4150,11 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   }
   if (!validateMIMGDim(Inst)) {
     Error(IDLoc, "dim modifier is required on this GPU");
+    return false;
+  }
+  if (!validateMIMGMSAA(Inst)) {
+    Error(getImmLoc(AMDGPUOperand::ImmTyDim, Operands),
+          "invalid dim; must be MSAA type");
     return false;
   }
   if (!validateMIMGDataSize(Inst)) {
