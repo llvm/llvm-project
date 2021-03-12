@@ -589,13 +589,12 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
     fatal("must specify -arch");
   PlatformKind platform = parsePlatformVersion(args);
 
-  config->target =
-      MachO::Target(MachO::getArchitectureFromName(archName), platform);
+  config->target = Target(getArchitectureFromName(archName), platform);
 
-  switch (MachO::getCPUTypeFromArchitecture(config->target.Arch).first) {
-  case MachO::CPU_TYPE_X86_64:
+  switch (getCPUTypeFromArchitecture(config->target.Arch).first) {
+  case CPU_TYPE_X86_64:
     return createX86_64TargetInfo();
-  case MachO::CPU_TYPE_ARM64:
+  case CPU_TYPE_ARM64:
     return createARM64TargetInfo();
   default:
     fatal("missing or unsupported -arch " + archName);
