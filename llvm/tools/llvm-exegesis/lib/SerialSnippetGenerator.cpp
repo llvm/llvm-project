@@ -42,7 +42,7 @@ computeAliasingInstructions(const LLVMState &State, const Instruction *Instr,
   std::vector<unsigned> Opcodes;
   Opcodes.resize(State.getInstrInfo().getNumOpcodes());
   std::iota(Opcodes.begin(), Opcodes.end(), 0U);
-  std::shuffle(Opcodes.begin(), Opcodes.end(), randomGenerator());
+  llvm::shuffle(Opcodes.begin(), Opcodes.end(), randomGenerator());
 
   std::vector<const Instruction *> AliasingInstructions;
   for (const unsigned OtherOpcode : Opcodes) {
