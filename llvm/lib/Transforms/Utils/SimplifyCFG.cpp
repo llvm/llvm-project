@@ -1631,6 +1631,11 @@ static bool canSinkInstructions(
         I->getType()->isTokenTy())
       return false;
 
+    // Do not try to sink an instruction in an infinite loop - it can cause
+    // this algorithm to infinite loop.
+    if (I->getParent()->getSingleSuccessor() == I->getParent())
+      return false;
+
     // Conservatively return false if I is an inline-asm instruction. Sinking
     // and merging inline-asm instructions can potentially create arguments
     // that cannot satisfy the inline-asm constraints.
@@ -1717,13 +1722,13 @@ static bool canSinkInstructions(
   return true;
 }
 
-// Assuming canSinkLastInstruction(Blocks) has returned true, sink the last
+// Assuming canSinkInstructions(Blocks) has returned true, sink the last
 // instruction of every block in Blocks to their common successor, commoning
 // into one instruction.
 static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   auto *BBEnd = Blocks[0]->getTerminator()->getSuccessor(0);
 
-  // canSinkLastInstruction returning true guarantees that every block has at
+  // canSinkInstructions returning true guarantees that every block has at
   // least one non-terminator instruction.
   SmallVector<Instruction*,4> Insts;
   for (auto *BB : Blocks) {
@@ -1736,9 +1741,9 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   }
 
   // The only checking we need to do now is that all users of all instructions
-  // are the same PHI node. canSinkLastInstruction should have checked this but
-  // it is slightly over-aggressive - it gets confused by commutative instructions
-  // so double-check it here.
+  // are the same PHI node. canSinkInstructions should have checked this but
+  // it is slightly over-aggressive - it gets confused by commutative
+  // instructions so double-check it here.
   Instruction *I0 = Insts.front();
   if (!I0->user_empty()) {
     auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
@@ -1749,11 +1754,11 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       return false;
   }
 
-  // We don't need to do any more checking here; canSinkLastInstruction should
+  // We don't need to do any more checking here; canSinkInstructions should
   // have done it all for us.
   SmallVector<Value*, 4> NewOperands;
   for (unsigned O = 0, E = I0->getNumOperands(); O != E; ++O) {
-    // This check is different to that in canSinkLastInstruction. There, we
+    // This check is different to that in canSinkInstructions. There, we
     // cared about the global view once simplifycfg (and instcombine) have
     // completed - it takes into account PHIs that become trivially
     // simplifiable.  However here we need a more local view; if an operand
