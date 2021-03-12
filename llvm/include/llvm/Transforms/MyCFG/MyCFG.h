@@ -29,7 +29,7 @@ template <typename GraphType> class GraphHelper {
 
 public:
   GraphHelper(raw_ostream &o, const GraphType &g) : O(o), G(g) {
-    DTraits = DOTTraits(true);
+    DTraits = DOTTraits(false);
   }
 
   static void wg(raw_ostream &o, const GraphType &G) {

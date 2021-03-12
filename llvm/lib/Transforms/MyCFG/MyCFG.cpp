@@ -34,11 +34,18 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
     }
   }
 
+  outs() << "\n\n";
+  outs() << "===============================================\n";
   outs() << "Trying GrapTraits #######################\n";
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
 
   DOTFuncInfo CFGInfo(&F, BFI, BPI, getMaxFreq(F, BFI));
+  WriteGraph(outs(), &CFGInfo);
+
+  outs() << "\n\n";
+  outs() << "===============================================\n";
+  outs() << "Trying to be customized GrapTraits #######################\n";
   GraphHelper<DOTFuncInfo*>::wg(outs(), &CFGInfo);
 
   return PreservedAnalyses::all();
