@@ -83,9 +83,9 @@ bool ARMBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
       continue;
 
     for (auto &Terminator : Preheader->terminators()) {
-      if (Terminator.getOpcode() != ARM::t2WhileLoopStart)
+      if (Terminator.getOpcode() != ARM::t2WhileLoopStartLR)
         continue;
-      MachineBasicBlock *LoopExit = Terminator.getOperand(1).getMBB();
+      MachineBasicBlock *LoopExit = Terminator.getOperand(2).getMBB();
       // We don't want to move the function's entry block.
       if (!LoopExit->getPrevNode())
         continue;
@@ -99,7 +99,7 @@ bool ARMBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
       // that were previously not backwards to become backwards
       bool CanMove = true;
       for (auto &LoopExitTerminator : LoopExit->terminators()) {
-        if (LoopExitTerminator.getOpcode() != ARM::t2WhileLoopStart)
+        if (LoopExitTerminator.getOpcode() != ARM::t2WhileLoopStartLR)
           continue;
         // An example loop structure where the LoopExit can't be moved, since
         // bb1's WLS will become backwards once it's moved after bb3 bb1: -
@@ -111,7 +111,7 @@ bool ARMBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
         //      WLS bb1
         // bb4:          - Header
         MachineBasicBlock *LoopExit2 =
-            LoopExitTerminator.getOperand(1).getMBB();
+            LoopExitTerminator.getOperand(2).getMBB();
         // If the WLS from LoopExit to LoopExit2 is already backwards then
         // moving LoopExit won't affect it, so it can be moved. If LoopExit2 is
         // after the Preheader then moving will keep it as a forward branch, so

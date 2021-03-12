@@ -1163,14 +1163,14 @@ define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cf
 ; CHECK-NEXT:    bne .LBB7_6
 ; CHECK-NEXT:    b .LBB7_2
 ; CHECK-NEXT:  .LBB7_9:
-; CHECK-NEXT:    adr r0, .LCPI7_0
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    vadd.i32 q1, q1, r0
-; CHECK-NEXT:    vldrw.u32 q2, [q1, #64]!
+; CHECK-NEXT:    adr r1, .LCPI7_0
 ; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    lsr.w lr, r0, #3
-; CHECK-NEXT:    wls lr, lr, .LBB7_12
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    vadd.i32 q1, q1, r1
+; CHECK-NEXT:    lsrs r0, r0, #3
+; CHECK-NEXT:    vldrw.u32 q2, [q1, #64]!
+; CHECK-NEXT:    wls lr, r0, .LBB7_12
 ; CHECK-NEXT:  @ %bb.10:
 ; CHECK-NEXT:    vldr s0, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    vmov r0, s0
