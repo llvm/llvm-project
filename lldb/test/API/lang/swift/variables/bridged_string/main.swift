@@ -20,6 +20,7 @@ func main()
 	let s5 = "abc" as NSString
 	let s6 = String(s5)
 	print(s1) // Set breakpoint here
+        withExtendedLifetime((s2, s3, s4, s5, s6)) {}
 }
 
 main()

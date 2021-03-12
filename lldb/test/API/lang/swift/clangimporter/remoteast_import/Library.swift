@@ -8,5 +8,6 @@ public final class Foo : NSObject {
     // dynamic type.  This must *not* trigger an import of the "main"
     // module in the Library module context.
     print("break here")
+    withExtendedLifetime(input) {}
   }
 }
