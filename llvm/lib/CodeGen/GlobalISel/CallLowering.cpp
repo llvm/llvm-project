@@ -647,17 +647,43 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       }
 
       if (VA.isMemLoc() && Flags.isByVal()) {
-        // FIXME: We should be inserting a memcpy from the source pointer to the
-        // result for outgoing byval parameters.
-        if (!Handler.isIncomingArgumentHandler())
-          continue;
-
-        MachinePointerInfo MPO;
-        Register StackAddr = Handler.getStackAddress(
-            Flags.getByValSize(), VA.getLocMemOffset(), MPO, Flags);
         assert(Args[i].Regs.size() == 1 &&
                "didn't expect split byval pointer");
-        MIRBuilder.buildCopy(Args[i].Regs[0], StackAddr);
+
+        if (Handler.isIncomingArgumentHandler()) {
+          // We just need to copy the frame index value to the pointer.
+          MachinePointerInfo MPO;
+          Register StackAddr = Handler.getStackAddress(
+              Flags.getByValSize(), VA.getLocMemOffset(), MPO, Flags);
+          MIRBuilder.buildCopy(Args[i].Regs[0], StackAddr);
+        } else {
+          // For outgoing byval arguments, insert the implicit copy byval
+          // implies, such that writes in the callee do not modify the caller's
+          // value.
+          uint64_t MemSize = Flags.getByValSize();
+          int64_t Offset = VA.getLocMemOffset();
+
+          MachinePointerInfo DstMPO;
+          Register StackAddr =
+              Handler.getStackAddress(MemSize, Offset, DstMPO, Flags);
+
+          const LLT PtrTy = MRI.getType(StackAddr);
+
+          // FIXME: We do not have access to the original IR value here to
+          // preserve the aliasing information.
+          MachinePointerInfo SrcMPO(PtrTy.getAddressSpace());
+
+          Align DstAlign = std::max(Flags.getNonZeroByValAlign(),
+                                    inferAlignFromPtrInfo(MF, DstMPO));
+
+          // TODO: Theoretically the source value could have a higher alignment,
+          // but we don't have that here
+          Align SrcAlign = Flags.getNonZeroByValAlign();
+
+          Handler.copyArgumentMemory(Args[i], StackAddr, Args[i].Regs[0],
+                                     DstMPO, DstAlign, SrcMPO, SrcAlign,
+                                     MemSize, VA);
+        }
         continue;
       }
 
@@ -961,6 +987,29 @@ bool CallLowering::resultsCompatible(CallLoweringInfo &Info,
   }
 
   return true;
+}
+
+void CallLowering::ValueHandler::copyArgumentMemory(
+    const ArgInfo &Arg, Register DstPtr, Register SrcPtr,
+    const MachinePointerInfo &DstPtrInfo, Align DstAlign,
+    const MachinePointerInfo &SrcPtrInfo, Align SrcAlign, uint64_t MemSize,
+    CCValAssign &VA) const {
+  MachineFunction &MF = MIRBuilder.getMF();
+  MachineMemOperand *SrcMMO = MF.getMachineMemOperand(
+      SrcPtrInfo,
+      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable, MemSize,
+      SrcAlign);
+
+  MachineMemOperand *DstMMO = MF.getMachineMemOperand(
+      DstPtrInfo,
+      MachineMemOperand::MOStore | MachineMemOperand::MODereferenceable,
+      MemSize, DstAlign);
+
+  const LLT PtrTy = MRI.getType(DstPtr);
+  const LLT SizeTy = LLT::scalar(PtrTy.getSizeInBits());
+
+  auto SizeConst = MIRBuilder.buildConstant(SizeTy, MemSize);
+  MIRBuilder.buildMemCpy(DstPtr, SrcPtr, SizeConst, *DstMMO, *SrcMMO);
 }
 
 Register CallLowering::ValueHandler::extendRegister(Register ValReg,
