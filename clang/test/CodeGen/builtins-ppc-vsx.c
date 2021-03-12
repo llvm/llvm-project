@@ -93,6 +93,74 @@ void test1() {
 // CHECK: fadd <2 x double>
 // CHECK-LE: fadd <2 x double>
 
+  res_i = vec_any_ne(vf, vf);
+// CHECK: @llvm.ppc.vsx.xvcmpeqsp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpeqsp.p
+
+  res_i = vec_any_ne(vd, vd);
+// CHECK: @llvm.ppc.vsx.xvcmpeqdp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpeqdp.p
+
+  res_i = vec_any_nle(vf, vf);
+// CHECK: @llvm.ppc.vsx.xvcmpgesp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgesp.p
+
+  res_i = vec_any_nle(vd, vd);
+// CHECK: @llvm.ppc.vsx.xvcmpgedp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgedp.p
+
+  res_i = vec_any_nlt(vf, vf);
+// CHECK: @llvm.ppc.vsx.xvcmpgtsp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgtsp.p
+
+  res_i = vec_any_nlt(vd, vd);
+// CHECK: @llvm.ppc.vsx.xvcmpgtdp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgtdp.p
+
+  res_i = vec_any_nge(vf, vf);
+// CHECK: @llvm.ppc.vsx.xvcmpgesp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgesp.p
+
+  res_i = vec_any_nge(vd, vd);
+// CHECK: @llvm.ppc.vsx.xvcmpgedp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgedp.p
+
+  res_i = vec_any_ngt(vf, vf);
+// CHECK: @llvm.ppc.vsx.xvcmpgtsp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgtsp.p
+
+  res_i = vec_any_ngt(vd, vd);
+// CHECK: @llvm.ppc.vsx.xvcmpgtdp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgtdp.p
+
+  res_i = vec_any_nan(vf);
+// CHECK: @llvm.ppc.vsx.xvcmpeqsp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpeqsp.p
+
+  res_i = vec_any_nan(vd);
+// CHECK: @llvm.ppc.vsx.xvcmpeqdp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpeqdp.p
+
+  res_i = vec_any_numeric(vf);
+// CHECK: @llvm.ppc.vsx.xvcmpeqsp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpeqsp.p
+
+  res_i = vec_any_numeric(vd);
+// CHECK: @llvm.ppc.vsx.xvcmpeqdp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpeqdp.p
+
+  dummy();
+// CHECK: call void @dummy()
+// CHECK-LE: call void @dummy()
+
+  res_i = vec_all_ne(vf, vf);
+// CHECK: @llvm.ppc.vsx.xvcmpeqsp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpeqsp.p
+
+  res_i = vec_all_ne(vd, vd);
+// CHECK: @llvm.ppc.vsx.xvcmpeqdp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpeqdp.p
+
   res_i = vec_all_nle(vf, vf);
 // CHECK: @llvm.ppc.vsx.xvcmpgesp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpgesp.p
@@ -108,6 +176,30 @@ void test1() {
   res_i = vec_all_nlt(vd, vd);
 // CHECK: @llvm.ppc.vsx.xvcmpgtdp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpgtdp.p
+
+  res_i = vec_all_nge(vf, vf);
+// CHECK: @llvm.ppc.vsx.xvcmpgesp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgesp.p
+
+  res_i = vec_all_nge(vd, vd);
+// CHECK: @llvm.ppc.vsx.xvcmpgedp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgedp.p
+
+  res_i = vec_all_ngt(vf, vf);
+// CHECK: @llvm.ppc.vsx.xvcmpgtsp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgtsp.p
+
+  res_i = vec_all_ngt(vd, vd);
+// CHECK: @llvm.ppc.vsx.xvcmpgtdp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpgtdp.p
+
+  res_i = vec_all_nan(vf);
+// CHECK: @llvm.ppc.vsx.xvcmpeqsp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpeqsp.p
+
+  res_i = vec_all_nan(vd);
+// CHECK: @llvm.ppc.vsx.xvcmpeqdp.p
+// CHECK-LE: @llvm.ppc.vsx.xvcmpeqdp.p
 
   res_i = vec_all_numeric(vf);
 // CHECK: @llvm.ppc.vsx.xvcmpeqsp.p
