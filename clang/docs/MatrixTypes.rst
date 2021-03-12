@@ -128,6 +128,7 @@ You can test for the availability of this feature with
 ``__has_extension(matrix_types_scalar_division)``.
 
 For the expression ``M1 BIN_OP M2`` where
+
 * ``BIN_OP`` is one of ``+`` or ``-``, one of ``M1`` and ``M2`` is of matrix
   type, and the other is of matrix type or real type; or
 * ``BIN_OP`` is ``*``, one of ``M1`` and ``M2`` is of matrix type, and the
