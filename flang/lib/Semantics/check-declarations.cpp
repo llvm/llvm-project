@@ -1356,6 +1356,7 @@ void CheckHelper::CheckPassArg(
               : "Procedure binding '%s' with no dummy arguments"
                 " must have NOPASS attribute"_err_en_US,
           name);
+      context_.SetError(*interface);
       return;
     }
     passName = dummyArgs[0]->name();
@@ -1480,7 +1481,7 @@ void CheckHelper::CheckProcBinding(
               SayWithDeclaration(*overridden,
                   "A type-bound procedure and its override must have compatible interfaces"_err_en_US);
             }
-          } else {
+          } else if (!context_.HasError(binding.symbol())) {
             int passIndex{bindingChars->FindPassIndex(binding.passName())};
             int overriddenPassIndex{
                 overriddenChars->FindPassIndex(overriddenBinding->passName())};
