@@ -888,9 +888,9 @@ void SampleProfileLoaderBaseImpl<BT>::emitCoverageRemarks(FunctionT &F) {
 /// \returns the line number where \p F is defined. If it returns 0,
 ///          it means that there is no debug information available for \p F.
 template <typename BT>
-unsigned SampleProfileLoaderBaseImpl<BT>::getFunctionLoc(FunctionT &Func) {
-  const Function &F = getFunction(Func);
-  if (DISubprogram *S = F.getSubprogram())
+unsigned SampleProfileLoaderBaseImpl<BT>::getFunctionLoc(FunctionT &F) {
+  const Function &Func = getFunction(F);
+  if (DISubprogram *S = Func.getSubprogram())
     return S->getLine();
 
   if (NoWarnSampleUnused)
@@ -898,8 +898,8 @@ unsigned SampleProfileLoaderBaseImpl<BT>::getFunctionLoc(FunctionT &Func) {
 
   // If the start of \p F is missing, emit a diagnostic to inform the user
   // about the missed opportunity.
-  F.getContext().diagnose(DiagnosticInfoSampleProfile(
-      "No debug information found in function " + F.getName() +
+  Func.getContext().diagnose(DiagnosticInfoSampleProfile(
+      "No debug information found in function " + Func.getName() +
           ": Function profile not used",
       DS_Warning));
   return 0;

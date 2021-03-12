@@ -55,8 +55,8 @@ int main(void) {
   printf("omp_is_initial_device() = %d\n", omp_is_initial_device());
   CHECK_DATA();
 
-  // Check that __kmpc_push_target_tripcount doesn't fail.  I'm not sure how to
-  // check that it actually pushes to the initial device.
+  // Check that __kmpc_push_target_tripcount_mapper doesn't fail. I'm not sure
+  // how to check that it actually pushes to the initial device.
   #pragma omp target teams device(DevInit) num_teams(1)
   #pragma omp distribute
   for (int i = 0; i < 2; ++i)
@@ -112,8 +112,8 @@ int main(void) {
   printf("omp_is_initial_device() = %d\n", omp_is_initial_device());
   CHECK_DATA();
 
-  // Check that __kmpc_push_target_tripcount doesn't fail.  I'm not sure how to
-  // check that it actually pushes to the initial device.
+  // Check that __kmpc_push_target_tripcount_mapper doesn't fail. I'm not sure
+  // how to check that it actually pushes to the initial device.
   #pragma omp target teams num_teams(1)
   #pragma omp distribute
   for (int i = 0; i < 2; ++i)

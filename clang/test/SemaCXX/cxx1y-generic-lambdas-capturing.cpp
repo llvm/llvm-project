@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -emit-llvm-only %s
-// RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -fblocks -emit-llvm-only %s
+// RUN: %clang_cc1 -std=c++2a -verify -verify=expected-cxx2a -fsyntax-only -fblocks -emit-llvm-only %s
 // RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -emit-llvm-only -triple i386-windows-pc %s
-// RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -fblocks -emit-llvm-only -triple i386-windows-pc %s
+// RUN: %clang_cc1 -std=c++2a -verify -verify=expected-cxx2a -fsyntax-only -fblocks -emit-llvm-only -triple i386-windows-pc %s
 // DONTRUNYET: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -DDELAYED_TEMPLATE_PARSING
 // DONTRUNYET: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -fms-extensions %s -DMS_EXTENSIONS
 // DONTRUNYET: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -fdelayed-template-parsing -fms-extensions %s -DMS_EXTENSIONS -DDELAYED_TEMPLATE_PARSING
@@ -77,13 +77,14 @@ void doit() {
   {
     int a; //expected-note{{declared here}}
     auto B = []() { return ^{ return a; }; }; //expected-error{{cannot be implicitly capture}}\
-                                              //expected-note{{begins here}}
+                                              //expected-note{{begins here}}\
+                                              //expected-note 2 {{capture 'a' by}}\
+                                              //expected-note 2 {{default capture by}}
   //[](){ return ({int b = 5; return 'c'; 'x';}); };
 
   //auto X = ^{ return a; };
   
   //auto Y = []() -> auto { return 3; return 'c'; };
-
   }  
 }  
 }
@@ -102,7 +103,7 @@ void doit() {
   }
   {
     // should not capture 'x' - even though certain instantiations require
-    auto L = [](auto a) { //expected-note{{begins here}}
+    auto L = [](auto a) { //expected-note{{begins here}} expected-note 2 {{capture 'x' by}} expected-note 2 {{default capture by}}
       DEFINE_SELECTOR(a);
       F_CALL(x, a); //expected-error{{'x' cannot be implicitly captured}}
     };
@@ -137,7 +138,7 @@ void doit() {
   }
   {
     int j = 0; //expected-note{{declared}}
-    auto L = [](auto a) {  //expected-note{{begins here}}
+    auto L = [](auto a) { //expected-note{{begins here}} expected-note 2 {{capture 'j' by}} expected-note 2 {{default capture by}}
       return j + 1; //expected-error{{cannot be implicitly captured}}
     };
   }
@@ -366,10 +367,10 @@ template<class T> struct Y {
        T t2{t};       
        return [](auto b) {
         const int y = 0; //expected-note{{declared here}}
-        return [](auto c) { //expected-note 2{{lambda expression begins here}}
+        return [](auto c) { //expected-note 2{{lambda expression begins here}} expected-note 2 {{capture 'x' by}}  expected-note 2 {{capture 'y' by}} expected-note 4 {{default capture by}}
           f(x, c);  //expected-error{{variable 'x'}}
           f(y, c);  //expected-error{{variable 'y'}}
-          return 0; 
+          return 0;
         };
       };
     };
@@ -530,7 +531,7 @@ struct X {
       L(3.13);
     }
     {
-      auto L = [](auto a) {
+      auto L = [](auto a) { // expected-note {{explicitly capture 'this'}}
         f(a); //expected-error{{this}}
       };
       L(3.13);
@@ -561,8 +562,8 @@ struct X {
   static void f(double) { }
   
   int g() {
-    auto L = [=](auto a) { 
-      return [](int i) {
+    auto L = [=](auto a) {
+      return [](int i) { // expected-note {{explicitly capture 'this'}}
         return [=](auto b) {
           f(decltype(a){}); //expected-error{{this}}
           int x = i;
@@ -585,8 +586,8 @@ struct X {
   static void f(double) { }
   
   int g() {
-    auto L = [=](auto a) { 
-      return [](auto b) {
+    auto L = [=](auto a) {
+      return [](auto b) { // expected-note {{explicitly capture 'this'}}
         return [=](int i) {
           f(b); 
           f(decltype(a){}); //expected-error{{this}}
@@ -609,8 +610,8 @@ struct X {
   static void f(double) { }
   
   int g() {
-    auto L = [=](auto a) { 
-      return [](auto b) {
+    auto L = [=](auto a) {
+      return [](auto b) { // expected-note {{explicitly capture 'this'}}
         return [=](int i) {
           f(b); //expected-error{{this}}
           f(decltype(a){}); 
@@ -632,9 +633,9 @@ struct X {
   static void f(double) { }
   
   int g() {
-    auto L = [=](auto a) { 
+    auto L = [=](auto a) {
       return [](int i) {
-        return [=](auto b) {
+        return [=](auto b) { // expected-cxx2a-note {{explicitly capture 'this'}}
           f(b); //expected-error{{'this' cannot}}
           int x = i;
         };
@@ -655,8 +656,8 @@ int foo()
 
   { // This variable is used and must be caught early, do not need instantiation
     const int x = 0; //expected-note{{declared}}
-    auto L = [](auto a) { //expected-note{{begins}}
-      const int &r = x; //expected-error{{variable}}      
+    auto L = [](auto a) { //expected-note{{begins}} expected-note 2 {{capture 'x' by}} expected-note 2 {{default capture by}}
+      const int &r = x;   //expected-error{{variable}}
     };
   }
   { // This variable is not used 
@@ -670,7 +671,7 @@ int foo()
     const int x = 0; //expected-note{{declared}}
     auto L = [=](auto a) { // <-- #A
       const int y = 0;
-      return [](auto b) { //expected-note{{begins}}
+      return [](auto b) { //expected-note{{begins}} expected-note 2 {{capture 'x' by}} expected-note 2 {{default capture by}}
         int c[sizeof(b)];
         f(x, c);
         f(y, c);
@@ -716,7 +717,7 @@ int foo() {
     int x;
     auto L = [](auto a) { //expected-note {{declared here}}
       int y = 10; //expected-note {{declared here}}
-      return [](int b) { //expected-note 2{{expression begins here}}
+      return [](int b) { //expected-note 2{{expression begins here}} expected-note 2 {{capture 'a' by}}  expected-note 2 {{capture 'y' by}} expected-note 4 {{default capture by}}
         return [=] (auto c) {
           return a + y; //expected-error 2{{cannot be implicitly captured}}
         };
@@ -908,7 +909,7 @@ struct X {
     return 0;
   }
   int g2() {
-    auto lam = [](auto a) { f(a); }; // expected-error{{'this'}}
+    auto lam = [](auto a) { f(a); }; // expected-error{{'this'}} expected-note {{explicitly capture 'this'}}
     lam(0); // expected-note{{in instantiation of}}
     lam(0.0); // ok.
     return 0;
@@ -941,9 +942,10 @@ template<class T> struct YUnresolvable {
 template<class T> struct YUnresolvable2 {
   void f(int) { }
   static void f(double) { }
-  
+
   T t = [](auto a) { f(a); return a; }; //expected-error{{'this'}} \
-                                        //expected-note{{in instantiation of}}
+                                        //expected-note{{in instantiation of}}\
+                                        //expected-note {{explicitly capture 'this'}}
   T t2 = [=](auto b) { f(b); return b; };
 };
 
@@ -961,8 +963,8 @@ template<class T> struct YOnlyStatic {
 YOnlyStatic<FunctorDouble> yos;
 template<class T> struct YOnlyNonStatic {
   void f(int) { }
-  
-  T t = [](auto a) { f(a); return a; }; //expected-error{{'this'}}
+
+  T t = [](auto a) { f(a); return a; }; //expected-error{{'this'}} expected-note {{explicitly capture 'this'}}
 };
 
 
@@ -980,8 +982,8 @@ struct FunctorInt {
 
 template<class T> struct YThisCapture {
   const int x = 10;
-  static double d; 
-  T t = [](auto a) { return x; }; //expected-error{{'this'}}
+  static double d;
+  T t = [](auto a) { return x; }; //expected-error{{'this'}} expected-note {{explicitly capture 'this'}}
   T t2 = [](auto b) {  return d; };
   T t3 = [this](auto a) {
           return [=](auto b) {
@@ -993,10 +995,10 @@ template<class T> struct YThisCapture {
             return x;
          };
   };
-  T t5 = [](auto a) {
-          return [=](auto b) {
-            return x;  //expected-error{{'this'}}
-         };
+  T t5 = [](auto a) { // expected-note {{explicitly capture 'this'}}
+    return [=](auto b) {
+      return x; //expected-error{{'this'}}
+    };
   };
 };
 
@@ -1020,8 +1022,8 @@ template void foo(int); //expected-note{{in instantiation of}}
 #else
 
 template<class T> void foo(T t) { //expected-note{{declared here}}
-  auto L = []()  //expected-note{{begins here}}
-    { return t; }; //expected-error{{cannot be implicitly captured}}
+  auto L = []()                   //expected-note{{begins here}} expected-note 2 {{capture 't' by}} expected-note 2 {{default capture by}}
+  { return t; };                  //expected-error{{cannot be implicitly captured}}
 }
 
 #endif
@@ -1049,9 +1051,9 @@ struct X {
   void f(double) { }
   
   int g() {
-    auto L = [=](auto a) { f(a); }; 
-    L(0); 
-    auto L2 = [](auto a) { f(a); }; //expected-error {{cannot be implicitly captured}}
+    auto L = [=](auto a) { f(a); };
+    L(0);
+    auto L2 = [](auto a) { f(a); }; //expected-error {{cannot be implicitly captured}} expected-note {{explicitly capture 'this'}}
     return 0;
   }
 };
@@ -1080,7 +1082,7 @@ struct X {
   static void f(double) { }
   template<class T>
   int g(T t) {
-    auto L = [](auto a) { f(a); }; //expected-error{{'this'}} 
+    auto L = [](auto a) { f(a); }; //expected-error{{'this'}} expected-note {{explicitly capture 'this'}}
     L(t); // expected-note{{in instantiation of}}
     return 0;
   }
@@ -1099,7 +1101,7 @@ struct X {
   void f(int) { }
   template<class T>
   int g(T t) {
-    auto L = [](auto a) { f(a); }; //expected-error{{'this'}} 
+    auto L = [](auto a) { f(a); }; //expected-error{{'this'}} expected-note {{explicitly capture 'this'}}
     L(t); 
     return 0;
   }
@@ -1209,9 +1211,9 @@ struct X {
   static void f(double) { }
   
   int g() {
-    auto L = [=](auto a) { 
+    auto L = [=](auto a) {
       return [](int i) {
-        return [=](auto b) {
+        return [=](auto b) { // expected-cxx2a-note {{explicitly capture 'this'}}
           f(b); //expected-error {{'this' cannot}}
           int x = i;
         };
@@ -1235,9 +1237,9 @@ struct X {
   static void f(double) { }
   
   int g() {
-    auto L = [](auto a) { 
+    auto L = [](auto a) {
       return [=](auto i) {
-        return [=](auto b) {
+        return [=](auto b) { // expected-cxx2a-note {{explicitly capture 'this'}}
           f(b); //expected-error {{'this' cannot}}
           int x = i;
         };

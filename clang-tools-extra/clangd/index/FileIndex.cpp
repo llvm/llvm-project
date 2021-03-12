@@ -77,9 +77,9 @@ SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 
   SymbolCollector Collector(std::move(CollectorOpts));
   Collector.setPreprocessor(PP);
+  index::indexTopLevelDecls(AST, *PP, DeclsToIndex, Collector, IndexOpts);
   if (MacroRefsToIndex)
     Collector.handleMacros(*MacroRefsToIndex);
-  index::indexTopLevelDecls(AST, *PP, DeclsToIndex, Collector, IndexOpts);
 
   const auto &SM = AST.getSourceManager();
   const auto *MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());

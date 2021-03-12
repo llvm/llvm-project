@@ -189,7 +189,7 @@ body:             |
     successors: %bb.2(0x40000000), %bb.1(0x40000000)
   
     $r0 = tLDRspi $sp, 7, 14, $noreg :: (load 4 from %stack.0)
-    t2WhileLoopStart killed renamable $r0, %bb.1, implicit-def dead $cpsr
+    $lr = t2WhileLoopStartLR killed renamable $r0, %bb.1, implicit-def dead $cpsr
     tB %bb.2, 14, $noreg
 
 ...

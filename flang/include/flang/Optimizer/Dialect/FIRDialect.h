@@ -32,6 +32,12 @@ public:
                                  mlir::Type type) const override;
   void printAttribute(mlir::Attribute attr,
                       mlir::DialectAsmPrinter &p) const override;
+
+private:
+  // Register the Attributes of this dialect.
+  void registerAttributes();
+  // Register the Types of this dialect.
+  void registerTypes();
 };
 
 } // namespace fir

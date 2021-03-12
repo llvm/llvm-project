@@ -163,7 +163,7 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
     // For ByVal, alignment should be passed from FE.  BE will guess if
     // this info is not there but there are cases it cannot get right.
     Align FrameAlign;
-    if (auto ParamAlign = FuncInfo.getParamAlign(OpIdx - 2))
+    if (auto ParamAlign = FuncInfo.getParamAlign(OpIdx - 1))
       FrameAlign = *ParamAlign;
     else
       FrameAlign = Align(getTLI()->getByValTypeAlignment(ElementTy, DL));

@@ -22,6 +22,8 @@
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK < %t.out
 //
+// REQUIRES: x86_64-target-arch
+//
 // Test origin tracking is accurate in terms of partial store/load, and
 // different aligments. Do not test alignments that are not power of 2.
 // Compilers do not always allow this.

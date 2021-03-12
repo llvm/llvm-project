@@ -102,7 +102,7 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   t2CMPri $r3, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   dead $lr = t2SUBri $r3, 0, 14 /* CC::al */, $noreg, def $cpsr
   ; CHECK:   t2Bcc %bb.3, 0 /* CC::eq */, killed $cpsr
   ; CHECK:   tB %bb.1, 14 /* CC::al */, $noreg
   ; CHECK: bb.1.do.body.preheader:
@@ -130,7 +130,7 @@ body:             |
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4
     frame-setup CFI_INSTRUCTION offset $r7, -8
-    t2WhileLoopStart $r3, %bb.3, implicit-def dead $cpsr
+    $lr = t2WhileLoopStartLR $r3, %bb.3, implicit-def dead $cpsr
     tB %bb.1, 14, $noreg
 
   bb.1.do.body.preheader:

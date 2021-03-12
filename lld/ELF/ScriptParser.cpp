@@ -1234,6 +1234,13 @@ static void checkIfExists(OutputSection *cmd, StringRef location) {
     error(location + ": undefined section " + cmd->name);
 }
 
+static bool isValidSymbolName(StringRef s) {
+  auto valid = [](char c) {
+    return isAlnum(c) || c == '$' || c == '.' || c == '_';
+  };
+  return !s.empty() && !isDigit(s[0]) && llvm::all_of(s, valid);
+}
+
 Expr ScriptParser::readPrimary() {
   if (peek() == "(")
     return readParenExpr();
@@ -1408,7 +1415,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return *val; };
 
   // Tok is a symbol name.
-  if (!isValidCIdentifier(tok))
+  if (!isValidSymbolName(tok))
     setError("malformed number: " + tok);
   script->referencedSymbols.push_back(tok);
   return [=] { return script->getSymbolValue(tok, location); };

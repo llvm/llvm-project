@@ -133,6 +133,13 @@ func @failedSameOperandAndResultShape_operand_result_mismatch(%t10x10 : tensor<1
 
 // -----
 
+func @failedSameOperandAndResultShape_operand_result_mismatch(%t10 : tensor<10xf32>, %t1: tensor<?xf32>) {
+  // expected-error@+1 {{requires the same shape for all operands and results}}
+  "test.same_operand_and_result_shape"(%t1, %t10) : (tensor<?xf32>, tensor<10xf32>) -> tensor<3xf32>
+}
+
+// -----
+
 func @failedSameOperandAndResultShape_no_operands() {
   // expected-error@+1 {{expected 1 or more operands}}
   "test.same_operand_and_result_shape"() : () -> (tensor<1xf32>)
@@ -347,7 +354,7 @@ func @failedSingleBlockImplicitTerminator_missing_terminator() {
   func private @foo()
   "test.finish" () : () -> ()
 }) : () -> ()
-func private @foo() 
+func private @foo()
 
 // -----
 

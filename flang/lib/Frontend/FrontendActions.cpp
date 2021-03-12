@@ -126,7 +126,7 @@ bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
   // Prepare semantics
   setSemantics(std::make_unique<Fortran::semantics::Semantics>(
       ci.invocation().semanticsContext(), parseTree,
-      ci.parsing().cooked().AsCharBlock()));
+      ci.parsing().cooked().AsCharBlock(), ci.invocation().debugModuleDir()));
   auto &semantics = this->semantics();
 
   // Run semantic checks

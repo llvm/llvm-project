@@ -192,6 +192,7 @@ struct FragmentCompiler {
     compile(std::move(F.CompileFlags));
     compile(std::move(F.Index));
     compile(std::move(F.Diagnostics));
+    compile(std::move(F.Completion));
   }
 
   void compile(Fragment::IfBlock &&F) {
@@ -459,6 +460,15 @@ struct FragmentCompiler {
             for (auto &StringPair : CheckOptions)
               C.Diagnostics.ClangTidy.CheckOptions.insert_or_assign(
                   StringPair.first, StringPair.second);
+          });
+    }
+  }
+
+  void compile(Fragment::CompletionBlock &&F) {
+    if (F.AllScopes) {
+      Out.Apply.push_back(
+          [AllScopes(**F.AllScopes)](const Params &, Config &C) {
+            C.Completion.AllScopes = AllScopes;
           });
     }
   }

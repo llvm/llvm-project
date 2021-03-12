@@ -1154,3 +1154,12 @@ void MatrixType::getCapabilities(
   // Add any capabilities associated with the underlying vectors (i.e., columns)
   getColumnType().cast<SPIRVType>().getCapabilities(capabilities, storage);
 }
+
+//===----------------------------------------------------------------------===//
+// SPIR-V Dialect
+//===----------------------------------------------------------------------===//
+
+void SPIRVDialect::registerTypes() {
+  addTypes<ArrayType, CooperativeMatrixNVType, ImageType, MatrixType,
+           PointerType, RuntimeArrayType, SampledImageType, StructType>();
+}

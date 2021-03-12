@@ -419,6 +419,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::TRUNCATE, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
+
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
     }
 
     for (MVT VT : IntVecVTs) {
@@ -541,6 +543,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
         setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
 
+        setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+
         setOperationAction(ISD::LOAD, VT, Custom);
         setOperationAction(ISD::STORE, VT, Custom);
 
@@ -558,7 +562,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
         setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
-        setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
         setOperationAction(ISD::ADD, VT, Custom);
         setOperationAction(ISD::MUL, VT, Custom);
@@ -637,6 +640,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::FDIV, VT, Custom);
         setOperationAction(ISD::FNEG, VT, Custom);
         setOperationAction(ISD::FABS, VT, Custom);
+        setOperationAction(ISD::FCOPYSIGN, VT, Custom);
         setOperationAction(ISD::FSQRT, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
 
@@ -1615,6 +1619,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerABS(Op, DAG);
   case ISD::VSELECT:
     return lowerFixedLengthVectorSelectToRVV(Op, DAG);
+  case ISD::FCOPYSIGN:
+    return lowerFixedLengthVectorFCOPYSIGNToRVV(Op, DAG);
   }
 }
 
@@ -2278,6 +2284,14 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   EVT EltVT = Op.getValueType();
   MVT VecVT = Vec.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
+
+  if (VecVT.getVectorElementType() == MVT::i1) {
+    // FIXME: For now we just promote to an i8 vector and extract from that,
+    // but this is probably not optimal.
+    MVT WideVT = MVT::getVectorVT(MVT::i8, VecVT.getVectorElementCount());
+    Vec = DAG.getNode(ISD::ZERO_EXTEND, DL, WideVT, Vec);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec, Idx);
+  }
 
   // If this is a fixed vector, we need to convert it to a scalable vector.
   MVT ContainerVT = VecVT;
@@ -3155,8 +3169,7 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
 
   assert(VT.isFixedLengthVector() && "Unexpected type");
 
-  MVT ContainerVT =
-      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
   X = convertToScalableVector(ContainerVT, X, DAG, Subtarget);
 
   SDValue Mask, VL;
@@ -3171,6 +3184,28 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
       DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX, Mask, VL);
 
   return convertFromScalableVector(VT, Max, DAG, Subtarget);
+}
+
+SDValue RISCVTargetLowering::lowerFixedLengthVectorFCOPYSIGNToRVV(
+    SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDValue Mag = Op.getOperand(0);
+  SDValue Sign = Op.getOperand(1);
+  assert(Mag.getValueType() == Sign.getValueType() &&
+         "Can only handle COPYSIGN with matching types.");
+
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
+  Mag = convertToScalableVector(ContainerVT, Mag, DAG, Subtarget);
+  Sign = convertToScalableVector(ContainerVT, Sign, DAG, Subtarget);
+
+  SDValue Mask, VL;
+  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+  SDValue CopySign =
+      DAG.getNode(RISCVISD::FCOPYSIGN_VL, DL, ContainerVT, Mag, Sign, Mask, VL);
+
+  return convertFromScalableVector(VT, CopySign, DAG, Subtarget);
 }
 
 SDValue RISCVTargetLowering::lowerFixedLengthVectorSelectToRVV(
@@ -3546,12 +3581,38 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
           "Don't know how to custom type legalize this intrinsic!");
     case Intrinsic::riscv_vmv_x_s: {
       EVT VT = N->getValueType(0);
-      assert((VT == MVT::i8 || VT == MVT::i16 ||
-              (Subtarget.is64Bit() && VT == MVT::i32)) &&
-             "Unexpected custom legalisation!");
-      SDValue Extract = DAG.getNode(RISCVISD::VMV_X_S, DL,
-                                    Subtarget.getXLenVT(), N->getOperand(1));
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Extract));
+      MVT XLenVT = Subtarget.getXLenVT();
+      if (VT.bitsLT(XLenVT)) {
+        // Simple case just extract using vmv.x.s and truncate.
+        SDValue Extract = DAG.getNode(RISCVISD::VMV_X_S, DL,
+                                      Subtarget.getXLenVT(), N->getOperand(1));
+        Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Extract));
+        return;
+      }
+
+      assert(VT == MVT::i64 && !Subtarget.is64Bit() &&
+             "Unexpected custom legalization");
+
+      // We need to do the move in two steps.
+      SDValue Vec = N->getOperand(1);
+      MVT VecVT = Vec.getSimpleValueType();
+
+      // First extract the lower XLEN bits of the element.
+      SDValue EltLo = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, Vec);
+
+      // To extract the upper XLEN bits of the vector element, shift the first
+      // element right by 32 bits and re-extract the lower XLEN bits.
+      SDValue VL = DAG.getConstant(1, DL, XLenVT);
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, VecVT.getVectorElementCount());
+      SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
+      SDValue ThirtyTwoV = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT,
+                                       DAG.getConstant(32, DL, XLenVT), VL);
+      SDValue LShr32 =
+          DAG.getNode(RISCVISD::SRL_VL, DL, VecVT, Vec, ThirtyTwoV, Mask, VL);
+      SDValue EltHi = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, LShr32);
+
+      Results.push_back(
+          DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, EltLo, EltHi));
       break;
     }
     }
@@ -6071,6 +6132,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FABS_VL)
   NODE_NAME_CASE(FSQRT_VL)
   NODE_NAME_CASE(FMA_VL)
+  NODE_NAME_CASE(FCOPYSIGN_VL)
   NODE_NAME_CASE(SMIN_VL)
   NODE_NAME_CASE(SMAX_VL)
   NODE_NAME_CASE(UMIN_VL)

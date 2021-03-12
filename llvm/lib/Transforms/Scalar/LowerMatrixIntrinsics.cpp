@@ -797,15 +797,16 @@ public:
   /// vectors.
   MatrixTy loadMatrix(Type *Ty, Value *Ptr, MaybeAlign MAlign, Value *Stride,
                       bool IsVolatile, ShapeInfo Shape, IRBuilder<> &Builder) {
-    auto VType = cast<VectorType>(Ty);
-    Value *EltPtr = createElementPtr(Ptr, VType->getElementType(), Builder);
+    auto *VType = cast<VectorType>(Ty);
+    Type *EltTy = VType->getElementType();
+    Type *VecTy = FixedVectorType::get(EltTy, Shape.getStride());
+    Value *EltPtr = createElementPtr(Ptr, EltTy, Builder);
     MatrixTy Result;
     for (unsigned I = 0, E = Shape.getNumVectors(); I < E; ++I) {
       Value *GEP = computeVectorAddr(EltPtr, Builder.getInt64(I), Stride,
-                                     Shape.getStride(), VType->getElementType(),
-                                     Builder);
+                                     Shape.getStride(), EltTy, Builder);
       Value *Vector = Builder.CreateAlignedLoad(
-          GEP, getAlignForIndex(I, Stride, VType->getElementType(), MAlign),
+          VecTy, GEP, getAlignForIndex(I, Stride, EltTy, MAlign),
           IsVolatile, "col.load");
 
       Result.addVector(Vector);
