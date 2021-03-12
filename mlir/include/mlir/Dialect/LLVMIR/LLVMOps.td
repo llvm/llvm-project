@@ -338,7 +338,8 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
                    UnitAttr:$nontemporal);
   let results = (outs LLVM_Type:$res);
   string llvmBuilder = [{
-    auto *inst = builder.CreateLoad($addr, $volatile_);
+    auto *inst = builder.CreateLoad(
+      $addr->getType()->getPointerElementType(), $addr, $volatile_);
   }] # setAlignmentCode # setNonTemporalMetadataCode # setAccessGroupsMetadataCode # [{
     $res = inst;
   }];
