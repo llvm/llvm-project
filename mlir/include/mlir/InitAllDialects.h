@@ -20,6 +20,7 @@
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMArmSVEDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -53,6 +54,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   async::AsyncDialect,
                   avx512::AVX512Dialect,
                   complex::ComplexDialect,
+                  DLTIDialect,
                   gpu::GPUDialect,
                   LLVM::LLVMDialect,
                   LLVM::LLVMArmSVEDialect,

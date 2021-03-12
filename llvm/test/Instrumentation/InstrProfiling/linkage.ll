@@ -10,7 +10,6 @@
 ; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -passes=instrprof -S | FileCheck %s --check-prefixes=COFF
 
 ; MACHO: @__llvm_profile_runtime = external global i32
-; ELF-NOT: @__llvm_profile_runtime = external global i32
 
 ; ELF: $__profd_foo = comdat noduplicates
 ; ELF: $__profd_foo_weak = comdat noduplicates

@@ -46,6 +46,7 @@ class MIMGBaseOpcode : PredicateControl {
   bit LodOrClampOrMip = 0;
   bit HasD16 = 0;
   bit IsAtomicRet = 0;
+  bit MSAA = 0;
 }
 
 def MIMGBaseOpcode : GenericEnum {
@@ -57,7 +58,7 @@ def MIMGBaseOpcodesTable : GenericTable {
   let CppTypeName = "MIMGBaseOpcodeInfo";
   let Fields = ["BaseOpcode", "Store", "Atomic", "AtomicX2", "Sampler",
                 "Gather4", "NumExtraArgs", "Gradients", "G16", "Coordinates",
-                "LodOrClampOrMip", "HasD16"];
+                "LodOrClampOrMip", "HasD16", "MSAA"];
   string TypeOf_BaseOpcode = "MIMGBaseOpcode";
 
   let PrimaryKey = ["BaseOpcode"];
@@ -71,7 +72,7 @@ def MIMGDim : GenericEnum {
 def MIMGDimInfoTable : GenericTable {
   let FilterClass = "AMDGPUDimProps";
   let CppTypeName = "MIMGDimInfo";
-  let Fields = ["Dim", "NumCoords", "NumGradients", "DA", "Encoding", "AsmSuffix"];
+  let Fields = ["Dim", "NumCoords", "NumGradients", "MSAA", "DA", "Encoding", "AsmSuffix"];
   string TypeOf_Dim = "MIMGDim";
 
   let PrimaryKey = ["Dim"];
@@ -441,6 +442,7 @@ multiclass MIMG_NoSampler <mimgopc op, string asm, bit has_d16, bit mip = 0,
     let Coordinates = !not(isResInfo);
     let LodOrClampOrMip = mip;
     let HasD16 = has_d16;
+    let MSAA = msaa;
   }
 
   let BaseOpcode = !cast<MIMGBaseOpcode>(NAME),

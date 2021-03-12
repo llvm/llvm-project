@@ -19,7 +19,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/TextAPI/MachO/InterfaceFile.h"
 #include "llvm/TextAPI/MachO/TextAPIReader.h"
 
 #include <map>
@@ -29,6 +28,9 @@ namespace llvm {
 namespace lto {
 class InputFile;
 } // namespace lto
+namespace MachO {
+class InterfaceFile;
+} // namespace MachO
 class TarWriter;
 } // namespace llvm
 
@@ -78,8 +80,7 @@ protected:
   InputFile(Kind kind, MemoryBufferRef mb)
       : mb(mb), id(idCount++), fileKind(kind), name(mb.getBufferIdentifier()) {}
 
-  InputFile(Kind kind, const llvm::MachO::InterfaceFile &interface)
-      : id(idCount++), fileKind(kind), name(saver.save(interface.getPath())) {}
+  InputFile(Kind, const llvm::MachO::InterfaceFile &);
 
 private:
   const Kind fileKind;

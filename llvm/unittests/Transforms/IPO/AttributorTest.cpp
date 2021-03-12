@@ -32,7 +32,8 @@ TEST_F(AttributorTestBase, IRPPositionCallBaseContext) {
   parseModule(ModuleString);
 
   Function *F = M->getFunction("foo");
-  IRPosition Pos = IRPosition::function(*F, (const llvm::CallBase *)0xDEADBEEF);
+  IRPosition Pos =
+      IRPosition::function(*F, (const llvm::CallBase *)(uintptr_t)0xDEADBEEF);
   EXPECT_TRUE(Pos.hasCallBaseContext());
   EXPECT_FALSE(Pos.stripCallBaseContext().hasCallBaseContext());
 }

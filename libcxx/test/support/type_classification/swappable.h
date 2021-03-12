@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef TEST_STD_CONCEPTS_LANG_SWAPPABLE_H
-#define TEST_STD_CONCEPTS_LANG_SWAPPABLE_H
+#ifndef TEST_SUPPORT_TYPE_CLASSIFICATION_SWAPPABLE_H
+#define TEST_SUPPORT_TYPE_CLASSIFICATION_SWAPPABLE_H
 
 #include <concepts>
 
@@ -263,4 +263,4 @@ private:
   throwable_adl_swappable* this_ = this;
 };
 
-#endif // TEST_STD_CONCEPTS_LANG_SWAPPABLE_H
+#endif // TEST_SUPPORT_TYPE_CLASSIFICATION_SWAPPABLE_H

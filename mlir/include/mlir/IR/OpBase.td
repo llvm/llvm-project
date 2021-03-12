@@ -240,7 +240,7 @@ class Dialect {
   string description = ?;
 
   // A list of dialects this dialect will load on construction as dependencies.
-  // These are dialects that this dialect may involved in canonicalization
+  // These are dialects that this dialect may involve in canonicalization
   // pattern or interfaces.
   list<string> dependentDialects = [];
 

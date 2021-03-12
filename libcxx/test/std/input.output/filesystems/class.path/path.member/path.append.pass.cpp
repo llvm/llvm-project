@@ -175,6 +175,15 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
     }
     assert(PathEq(LHS, E));
   }
+  {
+    path LHS(L); PathReserve(LHS, ReserveSize);
+    path RHS(R);
+    {
+      DisableAllocationGuard g;
+      LHS /= RHS;
+    }
+    assert(PathEq(LHS, E));
+  }
   // input iterator - For non-native char types, appends needs to copy the
   // iterator range into a contiguous block of memory before it can perform the
   // code_cvt conversions.

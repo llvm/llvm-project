@@ -89,6 +89,7 @@ def riscv_fdiv_vl  : SDNode<"RISCVISD::FDIV_VL",  SDT_RISCVFPBinOp_VL>;
 def riscv_fneg_vl  : SDNode<"RISCVISD::FNEG_VL",  SDT_RISCVFPUnOp_VL>;
 def riscv_fabs_vl  : SDNode<"RISCVISD::FABS_VL",  SDT_RISCVFPUnOp_VL>;
 def riscv_fsqrt_vl : SDNode<"RISCVISD::FSQRT_VL", SDT_RISCVFPUnOp_VL>;
+def riscv_fcopysign_vl : SDNode<"RISCVISD::FCOPYSIGN_VL",  SDT_RISCVFPBinOp_VL>;
 
 def SDT_RISCVVecFMA_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                               SDTCisSameAs<0, 2>,
@@ -854,6 +855,27 @@ foreach vti = AllFloatVectors in {
                            (XLenVT (VLOp GPR:$vl))),
             (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
                  vti.RegClass:$rs, vti.RegClass:$rs, GPR:$vl, vti.SEW)>;
+  def : Pat<(riscv_fcopysign_vl (vti.Vector vti.RegClass:$rs1),
+                                (vti.Vector vti.RegClass:$rs2),
+                                (vti.Mask true_mask),
+                                (XLenVT (VLOp GPR:$vl))),
+            (!cast<Instruction>("PseudoVFSGNJ_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.RegClass:$rs2, GPR:$vl, vti.SEW)>;
+  def : Pat<(riscv_fcopysign_vl (vti.Vector vti.RegClass:$rs1),
+                                (riscv_fneg_vl vti.RegClass:$rs2,
+                                               (vti.Mask true_mask),
+                                               (XLenVT (VLOp GPR:$vl))),
+                                (vti.Mask true_mask),
+                                (XLenVT (VLOp GPR:$vl))),
+            (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.RegClass:$rs2, GPR:$vl, vti.SEW)>;
+
+  def : Pat<(riscv_fcopysign_vl (vti.Vector vti.RegClass:$rs1),
+                                (SplatFPOp vti.ScalarRegClass:$rs2),
+                                (vti.Mask true_mask),
+                                (XLenVT (VLOp GPR:$vl))),
+            (!cast<Instruction>("PseudoVFSGNJ_V"#vti.ScalarSuffix#"_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, GPR:$vl, vti.SEW)>;
 }
 
 foreach fvti = AllFloatVectors in {

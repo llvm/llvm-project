@@ -341,7 +341,7 @@ int main(int, char**)
     }
     {
       path LHS((const char*)TC.lhs);
-      std::string_view RHS((const char*)TC.rhs);
+      std::basic_string_view<path::value_type> RHS((const path::value_type*)TC.rhs);
       path& Ref = (LHS += RHS);
       assert(LHS == (const char*)TC.expect);
       assert(&Ref == &LHS);
@@ -367,7 +367,7 @@ int main(int, char**)
     }
     {
       path LHS((const char*)TC.lhs);
-      std::string_view RHS((const char*)TC.rhs);
+      std::basic_string_view<path::value_type> RHS((const path::value_type*)TC.rhs);
       const char* E = TC.expect;
       PathReserve(LHS, StrLen(E) + 5);
       {

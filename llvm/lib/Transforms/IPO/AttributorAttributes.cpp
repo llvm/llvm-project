@@ -190,58 +190,55 @@ static const Value *getPointerOperand(const Instruction *I,
 ///
 /// TODO: This could probably live somewhere more prominantly if it doesn't
 ///       already exist.
-static Value *constructPointer(Type *ResTy, Value *Ptr, int64_t Offset,
-                               IRBuilder<NoFolder> &IRB, const DataLayout &DL) {
+static Value *constructPointer(Type *ResTy, Type *PtrElemTy, Value *Ptr,
+                               int64_t Offset, IRBuilder<NoFolder> &IRB,
+                               const DataLayout &DL) {
   assert(Offset >= 0 && "Negative offset not supported yet!");
   LLVM_DEBUG(dbgs() << "Construct pointer: " << *Ptr << " + " << Offset
                     << "-bytes as " << *ResTy << "\n");
 
-  // The initial type we are trying to traverse to get nice GEPs.
-  Type *Ty = Ptr->getType();
+  if (Offset) {
+    SmallVector<Value *, 4> Indices;
+    std::string GEPName = Ptr->getName().str() + ".0";
 
-  SmallVector<Value *, 4> Indices;
-  std::string GEPName = Ptr->getName().str();
-  while (Offset) {
-    uint64_t Idx, Rem;
+    // Add 0 index to look through the pointer.
+    assert((uint64_t)Offset < DL.getTypeAllocSize(PtrElemTy) &&
+           "Offset out of bounds");
+    Indices.push_back(Constant::getNullValue(IRB.getInt32Ty()));
 
-    if (auto *STy = dyn_cast<StructType>(Ty)) {
+    Type *Ty = PtrElemTy;
+    do {
+      auto *STy = dyn_cast<StructType>(Ty);
+      if (!STy)
+        // Non-aggregate type, we cast and make byte-wise progress now.
+        break;
+
       const StructLayout *SL = DL.getStructLayout(STy);
       if (int64_t(SL->getSizeInBytes()) < Offset)
         break;
-      Idx = SL->getElementContainingOffset(Offset);
+
+      uint64_t Idx = SL->getElementContainingOffset(Offset);
       assert(Idx < STy->getNumElements() && "Offset calculation error!");
-      Rem = Offset - SL->getElementOffset(Idx);
+      uint64_t Rem = Offset - SL->getElementOffset(Idx);
       Ty = STy->getElementType(Idx);
-    } else if (auto *PTy = dyn_cast<PointerType>(Ty)) {
-      Ty = PTy->getElementType();
-      if (!Ty->isSized())
-        break;
-      uint64_t ElementSize = DL.getTypeAllocSize(Ty);
-      assert(ElementSize && "Expected type with size!");
-      Idx = Offset / ElementSize;
-      Rem = Offset % ElementSize;
-    } else {
-      // Non-aggregate type, we cast and make byte-wise progress now.
-      break;
+
+      LLVM_DEBUG(errs() << "Ty: " << *Ty << " Offset: " << Offset
+                        << " Idx: " << Idx << " Rem: " << Rem << "\n");
+
+      GEPName += "." + std::to_string(Idx);
+      Indices.push_back(ConstantInt::get(IRB.getInt32Ty(), Idx));
+      Offset = Rem;
+    } while (Offset);
+
+    // Create a GEP for the indices collected above.
+    Ptr = IRB.CreateGEP(PtrElemTy, Ptr, Indices, GEPName);
+
+    // If an offset is left we use byte-wise adjustment.
+    if (Offset) {
+      Ptr = IRB.CreateBitCast(Ptr, IRB.getInt8PtrTy());
+      Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt32(Offset),
+                          GEPName + ".b" + Twine(Offset));
     }
-
-    LLVM_DEBUG(errs() << "Ty: " << *Ty << " Offset: " << Offset
-                      << " Idx: " << Idx << " Rem: " << Rem << "\n");
-
-    GEPName += "." + std::to_string(Idx);
-    Indices.push_back(ConstantInt::get(IRB.getInt32Ty(), Idx));
-    Offset = Rem;
-  }
-
-  // Create a GEP if we collected indices above.
-  if (Indices.size())
-    Ptr = IRB.CreateGEP(Ptr, Indices, GEPName);
-
-  // If an offset is left we use byte-wise adjustment.
-  if (Offset) {
-    Ptr = IRB.CreateBitCast(Ptr, IRB.getInt8PtrTy());
-    Ptr = IRB.CreateGEP(Ptr, IRB.getInt32(Offset),
-                        GEPName + ".b" + Twine(Offset));
   }
 
   // Ensure the result has the requested type.
@@ -5607,7 +5604,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
         Type *PointeeTy = PrivStructType->getElementType(u)->getPointerTo();
         Value *Ptr = constructPointer(
-            PointeeTy, &Base, PrivStructLayout->getElementOffset(u), IRB, DL);
+            PointeeTy, PrivType, &Base, PrivStructLayout->getElementOffset(u),
+            IRB, DL);
         new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
       }
     } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
@@ -5615,8 +5613,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       Type *PointeePtrTy = PointeeTy->getPointerTo();
       uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
-        Value *Ptr =
-            constructPointer(PointeePtrTy, &Base, u * PointeeTySize, IRB, DL);
+        Value *Ptr = constructPointer(
+            PointeePtrTy, PrivType, &Base, u * PointeeTySize, IRB, DL);
         new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
       }
     } else {
@@ -5646,7 +5644,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
         Type *PointeeTy = PrivStructType->getElementType(u);
         Value *Ptr =
-            constructPointer(PointeeTy->getPointerTo(), Base,
+            constructPointer(PointeeTy->getPointerTo(), PrivType, Base,
                              PrivStructLayout->getElementOffset(u), IRB, DL);
         LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
         L->setAlignment(Alignment);
@@ -5657,8 +5655,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
       Type *PointeePtrTy = PointeeTy->getPointerTo();
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
-        Value *Ptr =
-            constructPointer(PointeePtrTy, Base, u * PointeeTySize, IRB, DL);
+        Value *Ptr = constructPointer(
+            PointeePtrTy, PrivType, Base, u * PointeeTySize, IRB, DL);
         LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
         L->setAlignment(Alignment);
         ReplacementValues.push_back(L);

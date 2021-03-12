@@ -22,11 +22,9 @@ define internal void @loadFP(double* %d) #0 {
 ; CHECK-NEXT:    paddi r3, 0, .L.str@PCREL, 1
 ; CHECK-NEXT:    bl printf@notoc
 ; CHECK-NEXT:    ld r4, 104(r1)
-; CHECK-NEXT:    lis r3, 8201
-; CHECK-NEXT:    ori r3, r3, 64225
-; CHECK-NEXT:    rldic r3, r3, 33, 1
-; CHECK-NEXT:    oris r3, r3, 36700
-; CHECK-NEXT:    ori r3, r3, 10486
+; CHECK-NEXT:    pli r5, 1075049922
+; CHECK-NEXT:    pli r3, 2405181686
+; CHECK-NEXT:    rldimi r3, r5, 32, 0
 ; CHECK-NEXT:    std r3, 0(r4)
 ; CHECK-NEXT:    addi r1, r1, 112
 ; CHECK-NEXT:    ld r0, 16(r1)

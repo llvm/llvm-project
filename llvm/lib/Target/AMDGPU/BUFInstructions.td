@@ -225,17 +225,11 @@ multiclass MTBUF_Pseudo_Loads<string opName, RegisterClass vdataClass,
                               int elems, ValueType load_vt = i32,
                               SDPatternOperator ld = null_frag> {
 
-  def _OFFSET : MTBUF_Load_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems,
-    [(set load_vt:$vdata,
-     (ld (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset, i8:$format,
-                      i1:$glc, i1:$slc, i1:$tfe, i1:$dlc, i1:$swz)))]>,
-    MTBUFAddr64Table<0, NAME>;
+  def _OFFSET : MTBUF_Load_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems>,
+                MTBUFAddr64Table<0, NAME>;
 
-  def _ADDR64 : MTBUF_Load_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, elems,
-    [(set load_vt:$vdata,
-     (ld (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset,
-                      i8:$format, i1:$glc, i1:$slc, i1:$tfe, i1:$dlc, i1:$swz)))]>,
-    MTBUFAddr64Table<1, NAME>;
+  def _ADDR64 : MTBUF_Load_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, elems>,
+                MTBUFAddr64Table<1, NAME>;
 
   def _OFFEN  : MTBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, vdataClass, elems>;
   def _IDXEN  : MTBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass, elems>;
@@ -273,16 +267,10 @@ multiclass MTBUF_Pseudo_Stores<string opName, RegisterClass vdataClass,
                                int elems, ValueType store_vt = i32,
                                SDPatternOperator st = null_frag> {
 
-  def _OFFSET : MTBUF_Store_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems,
-    [(st store_vt:$vdata, (MUBUFOffset v4i32:$srsrc, i32:$soffset,
-                                       i16:$offset, i8:$format, i1:$glc,
-                                       i1:$slc, i1:$tfe, i1:$dlc, i1:$swz))]>,
+  def _OFFSET : MTBUF_Store_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems>,
     MTBUFAddr64Table<0, NAME>;
 
-  def _ADDR64 : MTBUF_Store_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, elems,
-    [(st store_vt:$vdata, (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset,
-                                       i16:$offset, i8:$format, i1:$glc,
-                                       i1:$slc, i1:$tfe, i1:$dlc, i1:$swz))]>,
+  def _ADDR64 : MTBUF_Store_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, elems>,
     MTBUFAddr64Table<1, NAME>;
 
   def _OFFEN  : MTBUF_Store_Pseudo <opName, BUFAddrKind.OffEn, vdataClass, elems>;

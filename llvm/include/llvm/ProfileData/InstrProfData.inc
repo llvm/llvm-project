@@ -813,6 +813,7 @@ typedef struct InstrProfValueData {
  * range and used to store in the runtime profile data records and the VP
  * metadata. For example, it's 2 for [2, 2] and 64 for [65, 127].
  */
+#define INSTR_PROF_NUM_BUCKETS 22
 
 /*
  * Clz and Popcount. This code was copied from

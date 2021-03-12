@@ -55,4 +55,33 @@ entry:
   ret i64 %sum
 }
 
+; Ensure that vec-ops with multiple uses aren't simplified.
+define signext i16 @vecop_uses(i16* %addr) {
+; CHECK-LABEL: vecop_uses:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 4, 16
+; CHECK-NEXT:    lxvd2x 1, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 3, 4
+; CHECK-NEXT:    xxswapd 35, 1
+; CHECK-NEXT:    xxswapd 34, 0
+; CHECK-NEXT:    vminsh 2, 3, 2
+; CHECK-NEXT:    xxswapd 35, 34
+; CHECK-NEXT:    vminsh 2, 2, 3
+; CHECK-NEXT:    xxspltw 35, 34, 2
+; CHECK-NEXT:    vminsh 2, 2, 3
+; CHECK-NEXT:    vsplth 3, 2, 6
+; CHECK-NEXT:    vminsh 2, 2, 3
+; CHECK-NEXT:    xxswapd 0, 34
+; CHECK-NEXT:    mffprd 3, 0
+; CHECK-NEXT:    clrldi 3, 3, 48
+; CHECK-NEXT:    extsh 3, 3
+; CHECK-NEXT:    blr
+entry:
+  %0 = bitcast i16* %addr to <16 x i16>*
+  %1 = load <16 x i16>, <16 x i16>* %0, align 2
+  %2 = call i16 @llvm.vector.reduce.smin.v16i16(<16 x i16> %1)
+  ret i16 %2
+}
+
 declare <16 x i8> @llvm.ppc.altivec.vavgsb(<16 x i8>, <16 x i8>)
+declare i16 @llvm.vector.reduce.smin.v16i16(<16 x i16>)

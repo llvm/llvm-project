@@ -1127,11 +1127,11 @@ struct Attributor {
                    DepClassTy DepClass, bool ForceUpdate = false) {
 #ifdef EXPENSIVE_CHECKS
     // Don't allow callbase information to leak.
-    if (auto CBContext = IRP.getCallBaseContext()) {
+    if (auto *CBContext = IRP.getCallBaseContext()) {
       assert(
           ((CBContext->getCalledFunction() == IRP.getAnchorScope() ||
-            QueryingAA ||
-            !QueryingAA.getIRPosition().isAnyCallSitePosition())) &&
+            !QueryingAA ||
+            !QueryingAA->getIRPosition().isAnyCallSitePosition())) &&
           "non callsite positions are not allowed to propagate CallBaseContext "
           "across functions");
     }

@@ -434,25 +434,32 @@ Value* HardwareLoop::InsertIterationSetup(Value *LoopCountInit) {
   IRBuilder<> Builder(BeginBB->getTerminator());
   Type *Ty = LoopCountInit->getType();
   bool UsePhi = UsePHICounter || ForceHardwareLoopPHI;
-  Intrinsic::ID ID = UseLoopGuard ? Intrinsic::test_set_loop_iterations
-                                  : (UsePhi ? Intrinsic::start_loop_iterations
-                                           : Intrinsic::set_loop_iterations);
+  Intrinsic::ID ID = UseLoopGuard
+                         ? (UsePhi ? Intrinsic::test_start_loop_iterations
+                                   : Intrinsic::test_set_loop_iterations)
+                         : (UsePhi ? Intrinsic::start_loop_iterations
+                                   : Intrinsic::set_loop_iterations);
   Function *LoopIter = Intrinsic::getDeclaration(M, ID, Ty);
-  Value *SetCount = Builder.CreateCall(LoopIter, LoopCountInit);
+  Value *LoopSetup = Builder.CreateCall(LoopIter, LoopCountInit);
 
   // Use the return value of the intrinsic to control the entry of the loop.
   if (UseLoopGuard) {
     assert((isa<BranchInst>(BeginBB->getTerminator()) &&
             cast<BranchInst>(BeginBB->getTerminator())->isConditional()) &&
            "Expected conditional branch");
+
+    Value *SetCount =
+        UsePhi ? Builder.CreateExtractValue(LoopSetup, 1) : LoopSetup;
     auto *LoopGuard = cast<BranchInst>(BeginBB->getTerminator());
     LoopGuard->setCondition(SetCount);
     if (LoopGuard->getSuccessor(0) != L->getLoopPreheader())
       LoopGuard->swapSuccessors();
   }
-  LLVM_DEBUG(dbgs() << "HWLoops: Inserted loop counter: "
-             << *SetCount << "\n");
-  return UseLoopGuard ? LoopCountInit : SetCount;
+  LLVM_DEBUG(dbgs() << "HWLoops: Inserted loop counter: " << *LoopSetup
+                    << "\n");
+  if (UsePhi && UseLoopGuard)
+    LoopSetup = Builder.CreateExtractValue(LoopSetup, 0);
+  return !UsePhi ? LoopCountInit : LoopSetup;
 }
 
 void HardwareLoop::InsertLoopDec() {

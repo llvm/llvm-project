@@ -19,6 +19,7 @@ add_lld_library(lldMachO2
   ObjC.cpp
   OutputSection.cpp
   OutputSegment.cpp
+  Relocations.cpp
   SymbolTable.cpp
   Symbols.cpp
   SyntheticSections.cpp

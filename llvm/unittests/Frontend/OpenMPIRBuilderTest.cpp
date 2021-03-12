@@ -437,7 +437,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
     Builder.CreateStore(F->arg_begin(), PrivAI);
 
     Builder.restoreIP(CodeGenIP);
-    Value *PrivLoad = Builder.CreateLoad(PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI,
+                                         "local.use");
     Value *Cmp = Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
     Instruction *ThenTerm, *ElseTerm;
     SplitBlockAndInsertIfThenElse(Cmp, CodeGenIP.getBlock()->getTerminator(),
@@ -742,7 +743,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
     Builder.CreateStore(F->arg_begin(), PrivAI);
 
     Builder.restoreIP(CodeGenIP);
-    Value *PrivLoad = Builder.CreateLoad(PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI,
+                                         "local.use");
     Value *Cmp = Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
     Instruction *ThenTerm, *ElseTerm;
     SplitBlockAndInsertIfThenElse(Cmp, CodeGenIP.getBlock()->getTerminator(),
@@ -1742,7 +1744,8 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
     EntryBB = ThenBB->getUniquePredecessor();
 
     // simple instructions for body
-    Value *PrivLoad = Builder.CreateLoad(PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI,
+                                         "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -1812,7 +1815,8 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
     // body begin
     Builder.restoreIP(CodeGenIP);
     Builder.CreateStore(F->arg_begin(), PrivAI);
-    Value *PrivLoad = Builder.CreateLoad(PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI,
+                                         "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -1935,7 +1939,8 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
     EntryBB = ThenBB->getUniquePredecessor();
 
     // simple instructions for body
-    Value *PrivLoad = Builder.CreateLoad(PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI,
+                                         "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 

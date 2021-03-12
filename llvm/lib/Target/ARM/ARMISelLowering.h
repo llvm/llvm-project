@@ -130,7 +130,8 @@ class VectorType;
       WIN__CHKSTK,  // Windows' __chkstk call to do stack probing.
       WIN__DBZCHK,  // Windows' divide by zero check
 
-      WLS,          // Low-overhead loops, While Loop Start
+      WLS,          // Low-overhead loops, While Loop Start branch. See t2WhileLoopStart
+      WLSSETUP,     // Setup for the iteration count of a WLS. See t2WhileLoopSetup.
       LOOP_DEC,     // Really a part of LE, performs the sub
       LE,           // Low-overhead loops, Loop End
 

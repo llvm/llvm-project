@@ -52,7 +52,7 @@ public:
 
   explicit operator bool() { return matchedOperation != nullptr; }
 
-  Operation *getMatchedOperation() { return matchedOperation; }
+  Operation *getMatchedOperation() const { return matchedOperation; }
   ArrayRef<NestedMatch> getMatchedChildren() { return matchedChildren; }
 
 private:

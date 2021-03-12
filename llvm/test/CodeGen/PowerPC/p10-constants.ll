@@ -196,8 +196,7 @@ entry:
 
 define  i64 @t_34Bits() {
 ; CHECK-LABEL: t_34Bits:
-; CHECK:	lis r3, 25158
-; CHECK-NEXT:	ori r3, r3, 35535
+; CHECK:	pli r3, 1648790223
 ; CHECK-NEXT:	rldic r3, r3, 3, 30
 ; CHECK-NEXT:	blr
 ; CHECK32-LABEL: t_34Bits:
@@ -211,8 +210,7 @@ entry:
 
 define  i64 @t_35Bits() {
 ; CHECK-LABEL: t_35Bits:
-; CHECK:	lis r3, -442
-; CHECK-NEXT:	ori r3, r3, 35535
+; CHECK:	pli r3, 4266035919
 ; CHECK-NEXT:	rldic r3, r3, 3, 29
 ; CHECK-NEXT:	blr
 ; CHECK32-LABEL: t_35Bits:
@@ -222,6 +220,87 @@ define  i64 @t_35Bits() {
 
 entry:
   ret i64 34128287352
+}
+
+; (Value >> Shift) can be expressed in 34 bits
+define  i64 @t_Shift() {
+; CHECK-LABEL: t_Shift:
+; CHECK:         pli r3, 8522759166
+; CHECK-NEXT:    rotldi r3, r3, 48
+; CHECK-NEXT:    blr
+
+entry:
+  ; 0xFBFE00000001FBFE
+  ret i64 18157950747604548606
+}
+
+; Leading Zeros + Following Ones + Trailing Zeros > 30
+define  i64 @t_LZFOTZ() {
+; CHECK-LABEL: t_LZFOTZ:
+; CHECK:         pli r3, -349233
+; CHECK-NEXT:    rldic r3, r3, 4, 12
+; CHECK-NEXT:    blr
+
+entry:
+  ; 0x000FFFFFFFAABCF0
+  ret i64 4503599621782768
+}
+
+; Leading Zeros + Trailing Ones > 30
+define  i64 @t_LZTO() {
+; CHECK-LABEL: t_LZTO:
+; CHECK:         pli r3, -2684406441
+; CHECK-NEXT:    rldicl r3, r3, 11, 19
+; CHECK-NEXT:    blr
+entry:
+  ; 0x00001AFFF9AABFFF
+  ret i64 29686707699711
+}
+
+; Leading Zeros + Trailing Ones + Following Zeros > 30
+define  i64 @t_LZTOFO() {
+; CHECK-LABEL: t_LZTOFO:
+; CHECK:         pli r3, -5720033968
+; CHECK-NEXT:    rldicl r3, r3, 11, 12
+; CHECK-NEXT:    blr
+entry:
+  ; 0x000FF55879AA87FF
+  ret i64 4491884997806079
+}
+
+; Requires full expansion
+define  i64 @t_Full64Bits1() {
+; CHECK-LABEL: t_Full64Bits1:
+; CHECK:         pli r4, 2146500607
+; CHECK-NEXT:    pli r3, 4043305214
+; CHECK-NEXT:    rldimi r3, r4, 32, 0
+; CHECK-NEXT:    blr
+entry:
+  ; 0x7FF0FFFFF0FFF0FE
+  ret i64 9219149911952453886
+}
+
+; Requires full expansion
+define  i64 @t_Ful64Bits2() {
+; CHECK-LABEL: t_Ful64Bits2:
+; CHECK:         pli r4, 4042326015
+; CHECK-NEXT:    pli r3, 4043305214
+; CHECK-NEXT:    rldimi r3, r4, 32, 0
+; CHECK-NEXT:    blr
+entry:
+  ; 0xF0F0FFFFF0FFF0FE
+  ret i64 17361658038238310654
+}
+
+; A splat of 32 bits: 32 Bits Low == 32 Bits High
+define  i64 @t_Splat32Bits() {
+; CHECK-LABEL: t_Splat32Bits:
+; CHECK:         pli r3, 262916796
+; CHECK-NEXT:    rldimi r3, r3, 32, 0
+; CHECK-NEXT:    blr
+entry:
+  ; 0x0FABCABC0FABCABC
+  ret i64 1129219040652020412
 }
 
 ; The load immediates resulting from phi-nodes are needed to test whether

@@ -4807,7 +4807,8 @@ inline llvm::Value *DominatingLLVMValue::restore(CodeGenFunction &CGF,
 
   // Otherwise, it should be an alloca instruction, as set up in save().
   auto alloca = cast<llvm::AllocaInst>(value.getPointer());
-  return CGF.Builder.CreateAlignedLoad(alloca, alloca->getAlign());
+  return CGF.Builder.CreateAlignedLoad(alloca->getAllocatedType(), alloca,
+                                       alloca->getAlign());
 }
 
 }  // end namespace CodeGen

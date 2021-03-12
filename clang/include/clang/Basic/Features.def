@@ -257,6 +257,7 @@ EXTENSION(statement_attributes_with_gnu_syntax, true)
 EXTENSION(gnu_asm, LangOpts.GNUAsm)
 EXTENSION(gnu_asm_goto_with_outputs, LangOpts.GNUAsm)
 EXTENSION(matrix_types, LangOpts.MatrixTypes)
+EXTENSION(matrix_types_scalar_division, true)
 
 FEATURE(cxx_abi_relative_vtable, LangOpts.CPlusPlus && LangOpts.RelativeCXXABIVTables)
 

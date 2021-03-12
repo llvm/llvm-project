@@ -443,6 +443,22 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   ASSERT_FALSE(Conf.Index.External);
 #endif
 }
+
+TEST_F(ConfigCompileTests, AllScopes) {
+  // Defaults to true.
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_TRUE(Conf.Completion.AllScopes);
+
+  Frag = {};
+  Frag.Completion.AllScopes = false;
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_FALSE(Conf.Completion.AllScopes);
+
+  Frag = {};
+  Frag.Completion.AllScopes = true;
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_TRUE(Conf.Completion.AllScopes);
+}
 } // namespace
 } // namespace config
 } // namespace clangd

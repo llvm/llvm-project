@@ -123,6 +123,7 @@ protected:
       : context_{context}, directiveClausesMap_(directiveClausesMap) {}
   virtual ~DirectiveStructureChecker() {}
 
+  using ClauseMapTy = std::multimap<C, const PC *>;
   struct DirectiveContext {
     DirectiveContext(parser::CharBlock source, D d)
         : directiveSource{source}, directive{d} {}
@@ -136,7 +137,7 @@ protected:
     common::EnumSet<C, ClauseEnumSize> requiredClauses{};
 
     const PC *clause{nullptr};
-    std::multimap<C, const PC *> clauseInfo;
+    ClauseMapTy clauseInfo;
     std::list<C> actualClauses;
     Symbol *loopIV{nullptr};
   };
@@ -203,6 +204,12 @@ protected:
       return it->second;
     }
     return nullptr;
+  }
+
+  std::pair<typename ClauseMapTy::iterator, typename ClauseMapTy::iterator>
+  FindClauses(C type) {
+    auto it{GetContext().clauseInfo.equal_range(type)};
+    return it;
   }
 
   void PushContext(const parser::CharBlock &source, D dir) {
