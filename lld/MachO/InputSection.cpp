@@ -36,7 +36,7 @@ uint64_t InputSection::getVA() const { return parent->addr + outSecOff; }
 
 static uint64_t resolveSymbolVA(uint8_t *loc, const lld::macho::Symbol &sym,
                                 uint8_t type) {
-  const TargetInfo::RelocAttrs &relocAttrs = target->getRelocAttrs(type);
+  const RelocAttrs &relocAttrs = target->getRelocAttrs(type);
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
     if (sym.isInStubs())
       return in.stubs->addr + sym.stubsIndex * target->stubSize;

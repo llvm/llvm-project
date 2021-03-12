@@ -203,7 +203,7 @@ static InputSection *findContainingSubsection(SubsectionMap &map,
 
 static bool validateRelocationInfo(InputFile *file, const section_64 &sec,
                                    relocation_info rel) {
-  const TargetInfo::RelocAttrs &relocAttrs = target->getRelocAttrs(rel.r_type);
+  const RelocAttrs &relocAttrs = target->getRelocAttrs(rel.r_type);
   bool valid = true;
   auto message = [relocAttrs, file, sec, rel, &valid](const Twine &diagnostic) {
     valid = false;
