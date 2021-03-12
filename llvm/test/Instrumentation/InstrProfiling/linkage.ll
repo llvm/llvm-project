@@ -10,6 +10,7 @@
 ; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -passes=instrprof -S | FileCheck %s --check-prefixes=COFF
 
 ; MACHO: @__llvm_profile_runtime = external global i32
+; ELF-NOT: @__llvm_profile_runtime = external global i32
 
 ; ELF: $__profd_foo = comdat noduplicates
 ; ELF: $__profd_foo_weak = comdat noduplicates
@@ -80,3 +81,11 @@ define available_externally void @foo_extern() {
 }
 
 declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
+
+; MACHO: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
+; MACHO:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime
+; MACHO:   ret i32 %[[REG]]
+; MACHO: }
+; COFF: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} comdat {
+; ELF-NOT: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
+; ELF-NOT:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime

@@ -144,14 +144,14 @@ public:
   /// AsmPrinter to add their own handlers.
   struct HandlerInfo {
     std::unique_ptr<AsmPrinterHandler> Handler;
-    const char *TimerName;
-    const char *TimerDescription;
-    const char *TimerGroupName;
-    const char *TimerGroupDescription;
+    StringRef TimerName;
+    StringRef TimerDescription;
+    StringRef TimerGroupName;
+    StringRef TimerGroupDescription;
 
-    HandlerInfo(std::unique_ptr<AsmPrinterHandler> Handler,
-                const char *TimerName, const char *TimerDescription,
-                const char *TimerGroupName, const char *TimerGroupDescription)
+    HandlerInfo(std::unique_ptr<AsmPrinterHandler> Handler, StringRef TimerName,
+                StringRef TimerDescription, StringRef TimerGroupName,
+                StringRef TimerGroupDescription)
         : Handler(std::move(Handler)), TimerName(TimerName),
           TimerDescription(TimerDescription), TimerGroupName(TimerGroupName),
           TimerGroupDescription(TimerGroupDescription) {}

@@ -149,7 +149,8 @@ public:
     /// should be initialized to an appropriate description of the
     /// address created.
     virtual Register getStackAddress(uint64_t Size, int64_t Offset,
-                                     MachinePointerInfo &MPO) = 0;
+                                     MachinePointerInfo &MPO,
+                                     ISD::ArgFlagsTy Flags) = 0;
 
     /// The specified value has been assigned to a physical register,
     /// handle the appropriate COPY (either to or from) and mark any
