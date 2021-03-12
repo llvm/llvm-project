@@ -251,7 +251,7 @@ __tgt_target_table *RemoteOffloadClient::loadBinary(int32_t DeviceId,
 }
 
 int64_t RemoteOffloadClient::synchronize(int32_t DeviceId,
-                                         __tgt_async_info *AsyncInfoPtr) {
+                                         __tgt_async_info *AsyncInfo) {
   return remoteCall(
       /* Preprocess */
       [&](auto &RPCStatus, auto &Context) {
@@ -260,7 +260,7 @@ int64_t RemoteOffloadClient::synchronize(int32_t DeviceId,
             protobuf::Arena::CreateMessage<SynchronizeDevice>(Arena.get());
 
         Info->set_device_id(DeviceId);
-        Info->set_queue_ptr((uint64_t)AsyncInfoPtr);
+        Info->set_queue_ptr((uint64_t)AsyncInfo);
 
         CLIENT_DBG("Synchronizing device %d", DeviceId);
         RPCStatus = Stub->Synchronize(&Context, *Info, Reply);
@@ -339,7 +339,7 @@ void *RemoteOffloadClient::dataAlloc(int32_t DeviceId, int64_t Size,
 
 int32_t RemoteOffloadClient::dataSubmitAsync(int32_t DeviceId, void *TgtPtr,
                                              void *HstPtr, int64_t Size,
-                                             __tgt_async_info *AsyncInfoPtr) {
+                                             __tgt_async_info *AsyncInfo) {
 
   return remoteCall(
       /* Preprocess */
@@ -360,7 +360,7 @@ int32_t RemoteOffloadClient::dataSubmitAsync(int32_t DeviceId, void *TgtPtr,
             Request->set_tgt_ptr((uint64_t)TgtPtr);
             Request->set_start(Start);
             Request->set_size(Size);
-            Request->set_queue_ptr((uint64_t)AsyncInfoPtr);
+            Request->set_queue_ptr((uint64_t)AsyncInfo);
 
             CLIENT_DBG("Submitting %ld-%ld/%ld bytes async on device %d at %p",
                        Start, End, Size, DeviceId, TgtPtr)
@@ -418,7 +418,7 @@ int32_t RemoteOffloadClient::dataSubmitAsync(int32_t DeviceId, void *TgtPtr,
 
 int32_t RemoteOffloadClient::dataRetrieveAsync(int32_t DeviceId, void *HstPtr,
                                                void *TgtPtr, int64_t Size,
-                                               __tgt_async_info *AsyncInfoPtr) {
+                                               __tgt_async_info *AsyncInfo) {
   return remoteCall(
       /* Preprocess */
       [&](auto &RPCStatus, auto &Context) {
@@ -429,7 +429,7 @@ int32_t RemoteOffloadClient::dataRetrieveAsync(int32_t DeviceId, void *HstPtr,
         Request->set_size(Size);
         Request->set_hst_ptr((int64_t)HstPtr);
         Request->set_tgt_ptr((int64_t)TgtPtr);
-        Request->set_queue_ptr((uint64_t)AsyncInfoPtr);
+        Request->set_queue_ptr((uint64_t)AsyncInfo);
 
         auto *Reply = protobuf::Arena::CreateMessage<Data>(Arena.get());
         std::unique_ptr<ClientReader<Data>> Reader(
@@ -481,7 +481,7 @@ int32_t RemoteOffloadClient::dataRetrieveAsync(int32_t DeviceId, void *HstPtr,
 int32_t RemoteOffloadClient::dataExchangeAsync(int32_t SrcDevId, void *SrcPtr,
                                                int32_t DstDevId, void *DstPtr,
                                                int64_t Size,
-                                               __tgt_async_info *AsyncInfoPtr) {
+                                               __tgt_async_info *AsyncInfo) {
   return remoteCall(
       /* Preprocess */
       [&](auto &RPCStatus, auto &Context) {
@@ -494,7 +494,7 @@ int32_t RemoteOffloadClient::dataExchangeAsync(int32_t SrcDevId, void *SrcPtr,
         Request->set_dst_dev_id(DstDevId);
         Request->set_dst_ptr((uint64_t)DstPtr);
         Request->set_size(Size);
-        Request->set_queue_ptr((uint64_t)AsyncInfoPtr);
+        Request->set_queue_ptr((uint64_t)AsyncInfo);
 
         CLIENT_DBG(
             "Exchanging %ld bytes on device %d at %p for %p on device %d", Size,
@@ -547,7 +547,7 @@ int32_t RemoteOffloadClient::dataDelete(int32_t DeviceId, void *TgtPtr) {
 
 int32_t RemoteOffloadClient::runTargetRegionAsync(
     int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs, ptrdiff_t *TgtOffsets,
-    int32_t ArgNum, __tgt_async_info *AsyncInfoPtr) {
+    int32_t ArgNum, __tgt_async_info *AsyncInfo) {
   return remoteCall(
       /* Preprocess */
       [&](auto &RPCStatus, auto &Context) {
@@ -556,7 +556,7 @@ int32_t RemoteOffloadClient::runTargetRegionAsync(
             protobuf::Arena::CreateMessage<TargetRegionAsync>(Arena.get());
 
         Request->set_device_id(DeviceId);
-        Request->set_queue_ptr((uint64_t)AsyncInfoPtr);
+        Request->set_queue_ptr((uint64_t)AsyncInfo);
 
         Request->set_tgt_entry_ptr(
             (uint64_t)RemoteEntries[DeviceId][TgtEntryPtr]);
@@ -592,7 +592,7 @@ int32_t RemoteOffloadClient::runTargetRegionAsync(
 int32_t RemoteOffloadClient::runTargetTeamRegionAsync(
     int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs, ptrdiff_t *TgtOffsets,
     int32_t ArgNum, int32_t TeamNum, int32_t ThreadLimit,
-    uint64_t LoopTripcount, __tgt_async_info *AsyncInfoPtr) {
+    uint64_t LoopTripcount, __tgt_async_info *AsyncInfo) {
   return remoteCall(
       /* Preprocess */
       [&](auto &RPCStatus, auto &Context) {
@@ -601,7 +601,7 @@ int32_t RemoteOffloadClient::runTargetTeamRegionAsync(
             protobuf::Arena::CreateMessage<TargetTeamRegionAsync>(Arena.get());
 
         Request->set_device_id(DeviceId);
-        Request->set_queue_ptr((uint64_t)AsyncInfoPtr);
+        Request->set_queue_ptr((uint64_t)AsyncInfo);
 
         Request->set_tgt_entry_ptr(
             (uint64_t)RemoteEntries[DeviceId][TgtEntryPtr]);
@@ -712,10 +712,10 @@ __tgt_target_table *RemoteClientManager::loadBinary(int32_t DeviceId,
 }
 
 int64_t RemoteClientManager::synchronize(int32_t DeviceId,
-                                         __tgt_async_info *AsyncInfoPtr) {
+                                         __tgt_async_info *AsyncInfo) {
   int32_t ClientIdx, DeviceIdx;
   std::tie(ClientIdx, DeviceIdx) = mapDeviceId(DeviceId);
-  return Clients[ClientIdx].synchronize(DeviceIdx, AsyncInfoPtr);
+  return Clients[ClientIdx].synchronize(DeviceIdx, AsyncInfo);
 }
 
 int32_t RemoteClientManager::isDataExchangeable(int32_t SrcDevId,
@@ -741,49 +741,49 @@ int32_t RemoteClientManager::dataDelete(int32_t DeviceId, void *TgtPtr) {
 
 int32_t RemoteClientManager::dataSubmitAsync(int32_t DeviceId, void *TgtPtr,
                                              void *HstPtr, int64_t Size,
-                                             __tgt_async_info *AsyncInfoPtr) {
+                                             __tgt_async_info *AsyncInfo) {
   int32_t ClientIdx, DeviceIdx;
   std::tie(ClientIdx, DeviceIdx) = mapDeviceId(DeviceId);
   return Clients[ClientIdx].dataSubmitAsync(DeviceIdx, TgtPtr, HstPtr, Size,
-                                            AsyncInfoPtr);
+                                            AsyncInfo);
 }
 
 int32_t RemoteClientManager::dataRetrieveAsync(int32_t DeviceId, void *HstPtr,
                                                void *TgtPtr, int64_t Size,
-                                               __tgt_async_info *AsyncInfoPtr) {
+                                               __tgt_async_info *AsyncInfo) {
   int32_t ClientIdx, DeviceIdx;
   std::tie(ClientIdx, DeviceIdx) = mapDeviceId(DeviceId);
   return Clients[ClientIdx].dataRetrieveAsync(DeviceIdx, HstPtr, TgtPtr, Size,
-                                              AsyncInfoPtr);
+                                              AsyncInfo);
 }
 
 int32_t RemoteClientManager::dataExchangeAsync(int32_t SrcDevId, void *SrcPtr,
                                                int32_t DstDevId, void *DstPtr,
                                                int64_t Size,
-                                               __tgt_async_info *AsyncInfoPtr) {
+                                               __tgt_async_info *AsyncInfo) {
   int32_t SrcClientIdx, SrcDeviceIdx, DstClientIdx, DstDeviceIdx;
   std::tie(SrcClientIdx, SrcDeviceIdx) = mapDeviceId(SrcDevId);
   std::tie(DstClientIdx, DstDeviceIdx) = mapDeviceId(DstDevId);
   return Clients[SrcClientIdx].dataExchangeAsync(
-      SrcDeviceIdx, SrcPtr, DstDeviceIdx, DstPtr, Size, AsyncInfoPtr);
+      SrcDeviceIdx, SrcPtr, DstDeviceIdx, DstPtr, Size, AsyncInfo);
 }
 
 int32_t RemoteClientManager::runTargetRegionAsync(
     int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs, ptrdiff_t *TgtOffsets,
-    int32_t ArgNum, __tgt_async_info *AsyncInfoPtr) {
+    int32_t ArgNum, __tgt_async_info *AsyncInfo) {
   int32_t ClientIdx, DeviceIdx;
   std::tie(ClientIdx, DeviceIdx) = mapDeviceId(DeviceId);
   return Clients[ClientIdx].runTargetRegionAsync(
-      DeviceIdx, TgtEntryPtr, TgtArgs, TgtOffsets, ArgNum, AsyncInfoPtr);
+      DeviceIdx, TgtEntryPtr, TgtArgs, TgtOffsets, ArgNum, AsyncInfo);
 }
 
 int32_t RemoteClientManager::runTargetTeamRegionAsync(
     int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs, ptrdiff_t *TgtOffsets,
     int32_t ArgNum, int32_t TeamNum, int32_t ThreadLimit,
-    uint64_t LoopTripCount, __tgt_async_info *AsyncInfoPtr) {
+    uint64_t LoopTripCount, __tgt_async_info *AsyncInfo) {
   int32_t ClientIdx, DeviceIdx;
   std::tie(ClientIdx, DeviceIdx) = mapDeviceId(DeviceId);
   return Clients[ClientIdx].runTargetTeamRegionAsync(
       DeviceIdx, TgtEntryPtr, TgtArgs, TgtOffsets, ArgNum, TeamNum, ThreadLimit,
-      LoopTripCount, AsyncInfoPtr);
+      LoopTripCount, AsyncInfo);
 }
