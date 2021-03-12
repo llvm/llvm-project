@@ -288,7 +288,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-ANDROID-NONE %s
 // CHECK-CLANG-ANDROID-NONE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-ANDROID-NONE: "-lgcc" "-ldl" "-lc"
+// CHECK-CLANG-ANDROID-NONE: "-l:libunwind.a" "-ldl" "-lc"
 //
 // RUN: %clang -shared -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
@@ -296,7 +296,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-ANDROID-SHARED %s
 // CHECK-CLANG-ANDROID-SHARED: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-ANDROID-SHARED: "-lgcc" "-ldl" "-lc"
+// CHECK-CLANG-ANDROID-SHARED: "-l:libunwind.a" "-ldl" "-lc"
 //
 // RUN: %clang -static -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
@@ -304,7 +304,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-ANDROID-STATIC %s
 // CHECK-CLANG-ANDROID-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-ANDROID-STATIC: "--start-group" "-lgcc" "-lc" "--end-group"
+// CHECK-CLANG-ANDROID-STATIC: "--start-group" "{{[^"]*}}{{/|\\\\}}libclang_rt.builtins-aarch64-android.a" "-l:libunwind.a" "-lc" "--end-group"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1      \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
@@ -1353,10 +1353,12 @@
 // CHECK-ANDROID: "--enable-new-dtags"
 // CHECK-ANDROID: "{{.*}}{{/|\\\\}}crtbegin_dynamic.o"
 // CHECK-ANDROID: "-L[[SYSROOT]]/usr/lib"
-// CHECK-ANDROID-NOT: "gcc_s"
-// CHECK-ANDROID: "-lgcc"
+// CHECK-ANDROID-NOT: "-lgcc_s"
+// CHECK-ANDROID-NOT: "-lgcc"
+// CHECK-ANDROID: "-l:libunwind.a"
 // CHECK-ANDROID: "-ldl"
-// CHECK-ANDROID-NOT: "gcc_s"
+// CHECK-ANDROID-NOT: "-lgcc_s"
+// CHECK-ANDROID-NOT: "-lgcc"
 // CHECK-ANDROID: "{{.*}}{{/|\\\\}}crtend_android.o"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-linux-androideabi -rtlib=platform --unwindlib=platform \
@@ -1409,10 +1411,12 @@
 // CHECK-ANDROID-SO-NOT: "-Bsymbolic"
 // CHECK-ANDROID-SO: "{{.*}}{{/|\\\\}}crtbegin_so.o"
 // CHECK-ANDROID-SO: "-L[[SYSROOT]]/usr/lib"
-// CHECK-ANDROID-SO-NOT: "gcc_s"
-// CHECK-ANDROID-SO: "-lgcc"
+// CHECK-ANDROID-SO-NOT: "-lgcc_s"
+// CHECK-ANDROID-SO-NOT: "-lgcc"
+// CHECK-ANDROID-SO: "-l:libunwind.a"
 // CHECK-ANDROID-SO: "-ldl"
-// CHECK-ANDROID-SO-NOT: "gcc_s"
+// CHECK-ANDROID-SO-NOT: "-lgcc_s"
+// CHECK-ANDROID-SO-NOT: "-lgcc"
 // CHECK-ANDROID-SO: "{{.*}}{{/|\\\\}}crtend_so.o"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-linux-androideabi -rtlib=platform --unwindlib=platform \
@@ -1463,10 +1467,12 @@
 // CHECK-ANDROID-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-ANDROID-STATIC: "{{.*}}{{/|\\\\}}crtbegin_static.o"
 // CHECK-ANDROID-STATIC: "-L[[SYSROOT]]/usr/lib"
-// CHECK-ANDROID-STATIC-NOT: "gcc_s"
-// CHECK-ANDROID-STATIC: "-lgcc"
+// CHECK-ANDROID-STATIC-NOT: "-lgcc_eh"
+// CHECK-ANDROID-STATIC-NOT: "-lgcc"
+// CHECK-ANDROID-STATIC: "-l:libunwind.a"
 // CHECK-ANDROID-STATIC-NOT: "-ldl"
-// CHECK-ANDROID-STATIC-NOT: "gcc_s"
+// CHECK-ANDROID-STATIC-NOT: "-lgcc_eh"
+// CHECK-ANDROID-STATIC-NOT: "-lgcc"
 // CHECK-ANDROID-STATIC: "{{.*}}{{/|\\\\}}crtend_android.o"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-linux-androideabi -rtlib=platform --unwindlib=platform \
@@ -1519,9 +1525,11 @@
 // CHECK-ANDROID-PIE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-ANDROID-PIE: "{{.*}}{{/|\\\\}}crtbegin_dynamic.o"
 // CHECK-ANDROID-PIE: "-L[[SYSROOT]]/usr/lib"
-// CHECK-ANDROID-PIE-NOT: "gcc_s"
-// CHECK-ANDROID-PIE: "-lgcc"
-// CHECK-ANDROID-PIE-NOT: "gcc_s"
+// CHECK-ANDROID-PIE-NOT: "-lgcc_s"
+// CHECK-ANDROID-PIE-NOT: "-lgcc"
+// CHECK-ANDROID-PIE: "-l:libunwind.a"
+// CHECK-ANDROID-PIE-NOT: "-lgcc_s"
+// CHECK-ANDROID-PIE-NOT: "-lgcc"
 // CHECK-ANDROID-PIE: "{{.*}}{{/|\\\\}}crtend_android.o"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-linux-androideabi \
