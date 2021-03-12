@@ -543,8 +543,10 @@ bool InstrProfiling::run(
   UsedVars.clear();
   TT = Triple(M.getTargetTriple());
 
-  // Emit the runtime hook even if no counters are present.
-  bool MadeChange = emitRuntimeHook();
+  bool MadeChange = false;
+  // Emit the runtime hook even if no counters are present in Mach-O.
+  if (TT.isOSBinFormatMachO())
+    MadeChange = emitRuntimeHook();
 
   // Improve compile time by avoiding linear scans when there is no work.
   GlobalVariable *CoverageNamesVar =
@@ -584,6 +586,8 @@ bool InstrProfiling::run(
   emitVNodes();
   emitNameData();
   emitRegistration();
+  if (!TT.isOSBinFormatMachO())
+    emitRuntimeHook();
   emitUses();
   emitInitialization();
   return true;
@@ -1058,11 +1062,6 @@ void InstrProfiling::emitRegistration() {
 }
 
 bool InstrProfiling::emitRuntimeHook() {
-  // We expect the linker to be invoked with -u<hook_var> flag for Linux or
-  // Fuchsia, in which case there is no need to emit the user function.
-  if (TT.isOSLinux() || TT.isOSFuchsia())
-    return false;
-
   // If the module's provided its own runtime, we don't need to do anything.
   if (M->getGlobalVariable(getInstrProfRuntimeHookVarName()))
     return false;
