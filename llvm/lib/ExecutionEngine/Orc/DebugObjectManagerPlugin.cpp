@@ -123,6 +123,7 @@ enum class Requirement {
 class DebugObject {
 public:
   DebugObject(JITLinkContext &Ctx) : Ctx(Ctx) {}
+  virtual ~DebugObject() = default;
 
   void set(Requirement Req) { Reqs.insert(Req); }
   bool has(Requirement Req) const { return Reqs.count(Req) > 0; }
@@ -130,9 +131,14 @@ public:
   using FinalizeContinuation = std::function<void(Expected<sys::MemoryBlock>)>;
   void finalizeAsync(FinalizeContinuation OnFinalize);
 
+  Error deallocate() {
+    if (Alloc)
+      return Alloc->deallocate();
+    return Error::success();
+  }
+
   virtual void reportSectionTargetMemoryRange(StringRef Name,
                                               SectionRange TargetMem) {}
-  virtual ~DebugObject() {}
 
 protected:
   using Allocation = JITLinkMemoryManager::Allocation;
@@ -392,7 +398,18 @@ DebugObjectManagerPlugin::DebugObjectManagerPlugin(
     ExecutionSession &ES, std::unique_ptr<DebugObjectRegistrar> Target)
     : ES(ES), Target(std::move(Target)) {}
 
-DebugObjectManagerPlugin::~DebugObjectManagerPlugin() {}
+DebugObjectManagerPlugin::~DebugObjectManagerPlugin() {
+  for (auto &KV : PendingObjs) {
+    std::unique_ptr<DebugObject> &DebugObj = KV.second;
+    if (Error Err = DebugObj->deallocate())
+      ES.reportError(std::move(Err));
+  }
+  for (auto &KV : RegisteredObjs) {
+    for (std::unique_ptr<DebugObject> &DebugObj : KV.second)
+      if (Error Err = DebugObj->deallocate())
+        ES.reportError(std::move(Err));
+  }
+}
 
 void DebugObjectManagerPlugin::notifyMaterializing(
     MaterializationResponsibility &MR, LinkGraph &G, JITLinkContext &Ctx,
