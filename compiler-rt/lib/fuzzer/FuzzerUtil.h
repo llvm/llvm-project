@@ -90,7 +90,9 @@ std::string SearchRegexCmd(const std::string &Regex);
 
 size_t SimpleFastHash(const uint8_t *Data, size_t Size);
 
-inline uint32_t Log(uint32_t X) { return 32 - Clz(X) - 1; }
+inline size_t Log(size_t X) {
+  return static_cast<size_t>((sizeof(unsigned long long) * 8) - Clzll(X) - 1);
+}
 
 inline size_t PageSize() { return 4096; }
 inline uint8_t *RoundUpByPage(uint8_t *P) {
