@@ -12,7 +12,6 @@ define void @test_copy_uninit([1000 x [1000 x i32]]* %arg) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[CURRENT:%.*]] = phi [1000 x i32]* [ [[BEGIN]], [[START:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CURRENT_I8:%.*]] = bitcast [1000 x i32]* [[CURRENT]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(4000) [[CURRENT_I8]], i8* nonnull align 4 dereferenceable(4000) [[ALLOCA_I8]], i64 4000, i1 false)
 ; CHECK-NEXT:    [[NEXT]] = getelementptr inbounds [1000 x i32], [1000 x i32]* [[CURRENT]], i64 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq [1000 x i32]* [[NEXT]], [[END]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[LOOP]]
@@ -50,7 +49,7 @@ define void @test_copy_zero([1000 x [1000 x i32]]* %arg) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[CURRENT:%.*]] = phi [1000 x i32]* [ [[BEGIN]], [[START:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CURRENT_I8:%.*]] = bitcast [1000 x i32]* [[CURRENT]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(4000) [[CURRENT_I8]], i8* nonnull align 4 dereferenceable(4000) [[ALLOCA_I8]], i64 4000, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[CURRENT_I8]], i8 0, i64 4000, i1 false)
 ; CHECK-NEXT:    [[NEXT]] = getelementptr inbounds [1000 x i32], [1000 x i32]* [[CURRENT]], i64 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq [1000 x i32]* [[NEXT]], [[END]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[LOOP]]
