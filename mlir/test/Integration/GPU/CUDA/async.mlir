@@ -1,8 +1,9 @@
-// RUN: mlir-cuda-runner %s \
-// RUN:   -gpu-to-cubin="gpu-binary-annotation=nvvm.cubin" \
-// RUN:   -gpu-async-region -async-ref-counting \
-// RUN:   -gpu-to-llvm="gpu-binary-annotation=nvvm.cubin" \
+// RUN: mlir-opt %s \
+// RUN:   -gpu-kernel-outlining \
+// RUN:   -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm,gpu-to-cubin)' \
+// RUN:   -gpu-async-region -async-ref-counting -gpu-to-llvm \
 // RUN:   -async-to-async-runtime -convert-async-to-llvm -convert-std-to-llvm \
+// RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
