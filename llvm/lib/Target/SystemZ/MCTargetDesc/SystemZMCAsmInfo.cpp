@@ -21,8 +21,7 @@ SystemZMCAsmInfo::SystemZMCAsmInfo(const Triple &TT) {
 
   MaxInstLength = 6;
 
-  CommentString = AssemblerDialect == AD_HLASM ? "*" : "#";
-  RestrictCommentStringToStartOfStatement = (AssemblerDialect == AD_HLASM);
+  CommentString = "#";
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = "\t.quad\t";
   UsesELFSectionDirectiveForBSS = true;
