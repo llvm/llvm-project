@@ -94,7 +94,7 @@ exit:                                             ; preds = %loop.latch
 }
 
 define void @blend_chain_iv(i1 %c) {
-; CHECK-LABEL: @crash3(
+; CHECK-LABEL: @blend_chain_iv(
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[MASK0:%.*]] = insertelement <4 x i1> poison, i1 %c, i32 0
 ; CHECK-NEXT:    [[MASK1:%.*]] = shufflevector <4 x i1> [[MASK0]], <4 x i1> poison, <4 x i32> zeroinitializer
