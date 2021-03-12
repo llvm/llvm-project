@@ -116,8 +116,11 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case AMDGPU::V_MOV_B64_PSEUDO:
   case AMDGPU::V_ACCVGPR_READ_B32_e64:
   case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
-    // No implicit operands.
-    return MI.getNumOperands() == MI.getDesc().getNumOperands();
+    // No non-standard implicit operands.
+    assert(MI.getDesc().getNumOperands() == 2);
+    assert(MI.getDesc().getNumImplicitDefs() == 0);
+    assert(MI.getDesc().getNumImplicitUses() == 1);
+    return MI.getNumOperands() == 3;
   default:
     return false;
   }
