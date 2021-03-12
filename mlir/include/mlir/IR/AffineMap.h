@@ -104,6 +104,15 @@ public:
   /// affine map (d0, ..., dn) -> (dp, ..., dn) on the most minor dimensions.
   bool isMinorIdentity() const;
 
+  /// Returns true if this affine map is a minor identity up to broadcasted
+  /// dimensions which are indicated by value 0 in the result. If
+  /// `broadcastedDims` is not null, it will be populated with the indices of
+  /// the broadcasted dimensions in the result array.
+  /// Example: affine_map<(d0, d1, d2, d3, d4) -> (0, d2, 0, d4)>
+  ///          (`broadcastedDims` will contain [0, 2])
+  bool isMinorIdentityWithBroadcasting(
+      SmallVectorImpl<unsigned> *broadcastedDims = nullptr) const;
+
   /// Returns true if this affine map is an empty map, i.e., () -> ().
   bool isEmpty() const;
 
