@@ -875,8 +875,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (RC->hasSuperClassEq(&AMDGPU::VReg_64RegClass) &&
-      !RI.hasAGPRs(RI.getPhysRegClass(SrcReg))) {
+  const TargetRegisterClass *SrcRC = RI.getPhysRegClass(SrcReg);
+  if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
     if (ST.hasPackedFP32Ops()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestReg)
         .addImm(SISrcMods::OP_SEL_1)
@@ -895,7 +895,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   const bool Forward = RI.getHWRegIndex(DestReg) <= RI.getHWRegIndex(SrcReg);
   if (RI.isSGPRClass(RC)) {
-    if (!RI.isSGPRClass(RI.getPhysRegClass(SrcReg))) {
+    if (!RI.isSGPRClass(SrcRC)) {
       reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
       return;
     }
@@ -906,12 +906,13 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned EltSize = 4;
   unsigned Opcode = AMDGPU::V_MOV_B32_e32;
   if (RI.hasAGPRs(RC)) {
-    Opcode = (RI.hasVGPRs(RI.getPhysRegClass(SrcReg))) ?
+    Opcode = (RI.hasVGPRs(SrcRC)) ?
       AMDGPU::V_ACCVGPR_WRITE_B32_e64 : AMDGPU::INSTRUCTION_LIST_END;
-  } else if (RI.hasVGPRs(RC) && RI.hasAGPRs(RI.getPhysRegClass(SrcReg))) {
+  } else if (RI.hasVGPRs(RC) && RI.hasAGPRs(SrcRC)) {
     Opcode = AMDGPU::V_ACCVGPR_READ_B32_e64;
   } else if ((Size % 64 == 0) && RI.hasVGPRs(RC) &&
-             !RI.hasAGPRs(RI.getPhysRegClass(SrcReg))) {
+             (RI.isProperlyAlignedRC(*RC) &&
+              (SrcRC == RC || RI.isSGPRClass(SrcRC)))) {
     // TODO: In 96-bit case, could do a 64-bit mov and then a 32-bit mov.
     if (ST.hasPackedFP32Ops()) {
       Opcode = AMDGPU::V_PK_MOV_B32;
@@ -3831,10 +3832,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
 
       // Check that this is the aligned version of the class.
-      if (!RC || ((IsVGPR && !RC->hasSuperClassEq(RI.getVGPRClassForBitWidth(
-                                 RI.getRegSizeInBits(*RC)))) ||
-                  (IsAGPR && !RC->hasSuperClassEq(RI.getAGPRClassForBitWidth(
-                                 RI.getRegSizeInBits(*RC)))))) {
+      if (!RC || !RI.isProperlyAlignedRC(*RC)) {
         ErrInfo = "Subtarget requires even aligned vector registers";
         return false;
       }
