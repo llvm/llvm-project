@@ -5747,6 +5747,36 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
       return V;
     return nullptr;
   }
+  case Intrinsic::smul_fix:
+  case Intrinsic::smul_fix_sat: {
+    Value *Op0 = Call->getArgOperand(0);
+    Value *Op1 = Call->getArgOperand(1);
+    Value *Op2 = Call->getArgOperand(2);
+    Type *ReturnType = F->getReturnType();
+
+    // Canonicalize constant operand as Op1 (ConstantFolding handles the case
+    // when both Op0 and Op1 are constant so we do not care about that special
+    // case here).
+    if (isa<Constant>(Op0))
+      std::swap(Op0, Op1);
+
+    // X * 0 -> 0
+    if (match(Op1, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+
+    // X * undef -> 0
+    if (Q.isUndefValue(Op1))
+      return Constant::getNullValue(ReturnType);
+
+    // X * (1 << Scale) -> X
+    APInt ScaledOne =
+        APInt::getOneBitSet(ReturnType->getScalarSizeInBits(),
+                            cast<ConstantInt>(Op2)->getZExtValue());
+    if (ScaledOne.isNonNegative() && match(Op1, m_SpecificInt(ScaledOne)))
+      return Op0;
+
+    return nullptr;
+  }
   default:
     return nullptr;
   }
