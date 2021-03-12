@@ -71,6 +71,8 @@ class SIAnnotateControlFlow : public FunctionPass {
 
   bool isElse(PHINode *Phi);
 
+  bool hasKill(const BasicBlock *BB);
+
   void eraseIfUnused(PHINode *Phi);
 
   void openIf(BranchInst *Term);
@@ -179,6 +181,15 @@ bool SIAnnotateControlFlow::isElse(PHINode *Phi) {
     }
   }
   return true;
+}
+
+bool SIAnnotateControlFlow::hasKill(const BasicBlock *BB) {
+  for (const Instruction &I : *BB) {
+    if (const CallInst *CI = dyn_cast<CallInst>(&I))
+      if (CI->getIntrinsicID() == Intrinsic::amdgcn_kill)
+        return true;
+  }
+  return false;
 }
 
 // Erase "Phi" if it is not used any more
@@ -339,7 +350,7 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
 
     if (isTopOfStack(BB)) {
       PHINode *Phi = dyn_cast<PHINode>(Term->getCondition());
-      if (Phi && Phi->getParent() == BB && isElse(Phi)) {
+      if (Phi && Phi->getParent() == BB && isElse(Phi) && !hasKill(BB)) {
         insertElse(Term);
         eraseIfUnused(Phi);
         continue;
