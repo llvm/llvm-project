@@ -335,8 +335,7 @@ def dylinker_install_name : Separate<["-"], "dylinker_install_name">,
      Flags<[HelpHidden]>,
      Group<grp_dylib>;
 def mark_dead_strippable_dylib : Flag<["-"], "mark_dead_strippable_dylib">,
-     HelpText<"Clients can discard this dylib if it is unreferenced">,
-     Flags<[HelpHidden]>,
+     HelpText<"Mark output dylib as dead-strippable: When a client links against it but does not use any of its symbols, the dylib will not be added to the client's list of needed dylibs">,
      Group<grp_dylib>;
 def compatibility_version : Separate<["-"], "compatibility_version">,
      MetaVarName<"<version>">,
