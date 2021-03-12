@@ -390,6 +390,16 @@ void OmpStructureChecker::Enter(const parser::OmpEndSectionsDirective &x) {
   }
 }
 
+// TODO: Verify the popping of dirContext requirement after nowait
+// implementation, as there is an implicit barrier at the end of the worksharing
+// constructs unless a nowait clause is specified. Only OMPD_end_sections is
+// popped becuase it is pushed while entering the EndSectionsDirective.
+void OmpStructureChecker::Leave(const parser::OmpEndSectionsDirective &x) {
+  if (GetContext().directive == llvm::omp::Directive::OMPD_end_sections) {
+    dirContext_.pop_back();
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareSimdConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_declare_simd);
@@ -509,6 +519,18 @@ void OmpStructureChecker::Enter(const parser::OmpEndBlockDirective &x) {
   default:
     // no clauses are allowed
     break;
+  }
+}
+
+// TODO: Verify the popping of dirContext requirement after nowait
+// implementation, as there is an implicit barrier at the end of the worksharing
+// constructs unless a nowait clause is specified. Only OMPD_end_single and
+// end_workshareare popped as they are pushed while entering the
+// EndBlockDirective.
+void OmpStructureChecker::Leave(const parser::OmpEndBlockDirective &x) {
+  if ((GetContext().directive == llvm::omp::Directive::OMPD_end_single) ||
+      (GetContext().directive == llvm::omp::Directive::OMPD_end_workshare)) {
+    dirContext_.pop_back();
   }
 }
 
@@ -677,7 +699,6 @@ CHECK_SIMPLE_CLAUSE(Nogroup, OMPC_nogroup)
 CHECK_SIMPLE_CLAUSE(Notinbranch, OMPC_notinbranch)
 CHECK_SIMPLE_CLAUSE(Nowait, OMPC_nowait)
 CHECK_SIMPLE_CLAUSE(ProcBind, OMPC_proc_bind)
-CHECK_SIMPLE_CLAUSE(Reduction, OMPC_reduction)
 CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
 CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
 CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
@@ -710,6 +731,171 @@ CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Simdlen, OMPC_simdlen)
 
 // Restrictions specific to each clause are implemented apart from the
 // generalized restrictions.
+void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_reduction);
+  if (CheckReductionOperators(x)) {
+    CheckReductionTypeList(x);
+  }
+}
+bool OmpStructureChecker::CheckReductionOperators(
+    const parser::OmpClause::Reduction &x) {
+
+  const auto &definedOp{std::get<0>(x.v.t)};
+  bool ok = false;
+  std::visit(
+      common::visitors{
+          [&](const parser::DefinedOperator &dOpr) {
+            const auto &intrinsicOp{
+                std::get<parser::DefinedOperator::IntrinsicOperator>(dOpr.u)};
+            ok = CheckIntrinsicOperator(intrinsicOp);
+          },
+          [&](const parser::ProcedureDesignator &procD) {
+            const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
+            if (name) {
+              if (name->source == "max" || name->source == "min" ||
+                  name->source == "iand" || name->source == "ior" ||
+                  name->source == "ieor") {
+                ok = true;
+              } else {
+                context_.Say(GetContext().clauseSource,
+                    "Invalid reduction identifier in REDUCTION clause."_err_en_US,
+                    ContextDirectiveAsFortran());
+              }
+            }
+          },
+      },
+      definedOp.u);
+
+  return ok;
+}
+bool OmpStructureChecker::CheckIntrinsicOperator(
+    const parser::DefinedOperator::IntrinsicOperator &op) {
+
+  switch (op) {
+  case parser::DefinedOperator::IntrinsicOperator::Add:
+  case parser::DefinedOperator::IntrinsicOperator::Subtract:
+  case parser::DefinedOperator::IntrinsicOperator::Multiply:
+  case parser::DefinedOperator::IntrinsicOperator::AND:
+  case parser::DefinedOperator::IntrinsicOperator::OR:
+  case parser::DefinedOperator::IntrinsicOperator::EQV:
+  case parser::DefinedOperator::IntrinsicOperator::NEQV:
+    return true;
+  default:
+    context_.Say(GetContext().clauseSource,
+        "Invalid reduction operator in REDUCTION clause."_err_en_US,
+        ContextDirectiveAsFortran());
+  }
+  return false;
+}
+
+void OmpStructureChecker::CheckReductionTypeList(
+    const parser::OmpClause::Reduction &x) {
+  const auto &ompObjectList{std::get<parser::OmpObjectList>(x.v.t)};
+  CheckIntentInPointerAndDefinable(
+      ompObjectList, llvm::omp::Clause::OMPC_reduction);
+  CheckReductionArraySection(ompObjectList);
+  CheckMultipleAppearanceAcrossContext(ompObjectList);
+}
+
+void OmpStructureChecker::CheckIntentInPointerAndDefinable(
+    const parser::OmpObjectList &objectList, const llvm::omp::Clause clause) {
+  for (const auto &ompObject : objectList.v) {
+    if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+      if (const auto *symbol{name->symbol}) {
+        if (IsPointer(symbol->GetUltimate()) &&
+            IsIntentIn(symbol->GetUltimate())) {
+          context_.Say(GetContext().clauseSource,
+              "Pointer '%s' with the INTENT(IN) attribute may not appear "
+              "in a %s clause"_err_en_US,
+              symbol->name(),
+              parser::ToUpperCaseLetters(getClauseName(clause).str()));
+        }
+        if (auto msg{
+                WhyNotModifiable(*symbol, context_.FindScope(name->source))}) {
+          context_.Say(GetContext().clauseSource,
+              "Variable '%s' on the %s clause is not definable"_err_en_US,
+              symbol->name(),
+              parser::ToUpperCaseLetters(getClauseName(clause).str()));
+        }
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::CheckReductionArraySection(
+    const parser::OmpObjectList &ompObjectList) {
+  for (const auto &ompObject : ompObjectList.v) {
+    if (const auto *dataRef{parser::Unwrap<parser::DataRef>(ompObject)}) {
+      if (const auto *arrayElement{
+              parser::Unwrap<parser::ArrayElement>(ompObject)}) {
+        if (arrayElement) {
+          CheckArraySection(*arrayElement, GetLastName(*dataRef),
+              llvm::omp::Clause::OMPC_reduction);
+        }
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::CheckMultipleAppearanceAcrossContext(
+    const parser::OmpObjectList &redObjectList) {
+  const parser::OmpObjectList *objList{nullptr};
+  //  TODO: Verify the assumption here that the immediately enclosing region is
+  //  the parallel region to which the worksharing construct having reduction
+  //  binds to.
+  if (auto *enclosingContext{GetEnclosingDirContext()}) {
+    for (auto it : enclosingContext->clauseInfo) {
+      llvmOmpClause type = it.first;
+      const auto *clause = it.second;
+      if (type == llvm::omp::Clause::OMPC_private) {
+        const auto &pClause{std::get<parser::OmpClause::Private>(clause->u)};
+        objList = &pClause.v;
+      } else if (type == llvm::omp::Clause::OMPC_firstprivate) {
+        const auto &fpClause{
+            std::get<parser::OmpClause::Firstprivate>(clause->u)};
+        objList = &fpClause.v;
+      } else if (type == llvm::omp::Clause::OMPC_lastprivate) {
+        const auto &lpClause{
+            std::get<parser::OmpClause::Lastprivate>(clause->u)};
+        objList = &lpClause.v;
+      } else if (type == llvm::omp::Clause::OMPC_reduction) {
+        const auto &rClause{std::get<parser::OmpClause::Reduction>(clause->u)};
+        const auto &olist{std::get<1>(rClause.v.t)};
+        objList = &olist;
+      }
+      if (objList) {
+        for (const auto &ompObject : objList->v) {
+          if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+            if (const auto *symbol{name->symbol}) {
+              for (const auto &redOmpObject : redObjectList.v) {
+                if (const auto *rname{
+                        parser::Unwrap<parser::Name>(redOmpObject)}) {
+                  if (const auto *rsymbol{rname->symbol}) {
+                    if (rsymbol->name() == symbol->name()) {
+                      context_.Say(GetContext().clauseSource,
+                          "%s variable '%s' is %s in outer context must"
+                          " be shared in the parallel regions to which any"
+                          " of the worksharing regions arising from the "
+                          "worksharing"
+                          " construct bind."_err_en_US,
+                          parser::ToUpperCaseLetters(
+                              getClauseName(llvm::omp::Clause::OMPC_reduction)
+                                  .str()),
+                          symbol->name(),
+                          parser::ToUpperCaseLetters(
+                              getClauseName(type).str()));
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_ordered);
   // the parameter of ordered clause is optional
@@ -738,22 +924,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
 void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
     const parser::OmpObjectList &objList) {
   for (const auto &ompObject : objList.v) {
-    std::visit(
-        common::visitors{
-            [&](const parser::Designator &designator) {
-              if (std::get_if<parser::DataRef>(&designator.u)) {
-                if ((parser::Unwrap<parser::StructureComponent>(ompObject)) ||
-                    (parser::Unwrap<parser::ArrayElement>(ompObject))) {
-                  context_.Say(GetContext().clauseSource,
-                      "A variable that is part of another variable (as an "
-                      "array or structure element)"
-                      " cannot appear in a PRIVATE or SHARED clause."_err_en_US);
-                }
-              }
-            },
-            [&](const parser::Name &name) {},
-        },
-        ompObject.u);
+    if ((parser::Unwrap<parser::StructureComponent>(ompObject)) ||
+        (parser::Unwrap<parser::ArrayElement>(ompObject))) {
+      context_.Say(GetContext().clauseSource,
+          "A variable that is part of another variable (as an "
+          "array or structure element)"
+          " cannot appear in a PRIVATE or SHARED clause."_err_en_US);
+    }
   }
 }
 void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
@@ -1016,7 +1193,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
         if (const auto *arr{
                 std::get_if<common::Indirection<parser::ArrayElement>>(
                     &dataRef->u)}) {
-          CheckDependArraySection(*arr, GetLastName(*dataRef));
+          CheckArraySection(arr->value(), GetLastName(*dataRef),
+              llvm::omp::Clause::OMPC_depend);
         }
       }
     }
@@ -1080,27 +1258,47 @@ void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
       d.u);
 }
 
-void OmpStructureChecker::CheckDependArraySection(
-    const common::Indirection<parser::ArrayElement> &arr,
-    const parser::Name &name) {
-  for (const auto &subscript : arr.value().subscripts) {
-    if (const auto *triplet{
-            std::get_if<parser::SubscriptTriplet>(&subscript.u)}) {
-      if (std::get<2>(triplet->t)) {
-        context_.Say(GetContext().clauseSource,
-            "Stride should not be specified for array section in DEPEND "
-            "clause"_err_en_US);
-      }
-      const auto &lower{std::get<0>(triplet->t)};
-      const auto &upper{std::get<1>(triplet->t)};
-      if (lower && upper) {
-        const auto lval{GetIntValue(lower)};
-        const auto uval{GetIntValue(upper)};
-        if (lval && uval && *uval < *lval) {
-          context_.Say(GetContext().clauseSource,
-              "'%s' in DEPEND clause is a zero size array section"_err_en_US,
-              name.ToString());
-          break;
+// Called from both Reduction and Depend clause.
+void OmpStructureChecker::CheckArraySection(
+    const parser::ArrayElement &arrayElement, const parser::Name &name,
+    const llvm::omp::Clause clause) {
+  if (!arrayElement.subscripts.empty()) {
+    for (const auto &subscript : arrayElement.subscripts) {
+      if (const auto *triplet{
+              std::get_if<parser::SubscriptTriplet>(&subscript.u)}) {
+        if (std::get<0>(triplet->t) && std::get<1>(triplet->t)) {
+          const auto &lower{std::get<0>(triplet->t)};
+          const auto &upper{std::get<1>(triplet->t)};
+          if (lower && upper) {
+            const auto lval{GetIntValue(lower)};
+            const auto uval{GetIntValue(upper)};
+            if (lval && uval && *uval < *lval) {
+              context_.Say(GetContext().clauseSource,
+                  "'%s' in %s clause"
+                  " is a zero size array section"_err_en_US,
+                  name.ToString(),
+                  parser::ToUpperCaseLetters(getClauseName(clause).str()));
+              break;
+            } else if (std::get<2>(triplet->t)) {
+              const auto &strideExpr{std::get<2>(triplet->t)};
+              if (strideExpr) {
+                if (clause == llvm::omp::Clause::OMPC_depend) {
+                  context_.Say(GetContext().clauseSource,
+                      "Stride should not be specified for array section in "
+                      "DEPEND "
+                      "clause"_err_en_US);
+                }
+                const auto stride{GetIntValue(strideExpr)};
+                if ((stride && stride != 1)) {
+                  context_.Say(GetContext().clauseSource,
+                      "A list item that appears in a REDUCTION clause"
+                      " should have a contiguous storage array section."_err_en_US,
+                      ContextDirectiveAsFortran());
+                  break;
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -1220,8 +1418,8 @@ void OmpStructureChecker::CheckPrivateSymbolsInOuterCxt(
   }
 }
 
-void OmpStructureChecker::CheckWorkshareBlockStmts(const parser::Block &block,
-                                                   parser::CharBlock source) {
+void OmpStructureChecker::CheckWorkshareBlockStmts(
+    const parser::Block &block, parser::CharBlock source) {
   OmpWorkshareBlockChecker ompWorkshareBlockChecker{context_, source};
 
   for (auto it{block.begin()}; it != block.end(); ++it) {
