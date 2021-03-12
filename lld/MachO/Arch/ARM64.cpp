@@ -79,7 +79,8 @@ const RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
 
 uint64_t ARM64::getEmbeddedAddend(MemoryBufferRef mb, const section_64 &sec,
                                   const relocation_info rel) const {
-  if (rel.r_type != ARM64_RELOC_UNSIGNED) {
+  if (rel.r_type != ARM64_RELOC_UNSIGNED &&
+      rel.r_type != ARM64_RELOC_SUBTRACTOR) {
     // All other reloc types should use the ADDEND relocation to store their
     // addends.
     // TODO(gkm): extract embedded addend just so we can assert that it is 0
@@ -159,6 +160,7 @@ void ARM64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
   case ARM64_RELOC_BRANCH26:
     value = encodeBranch26(base, value - pc);
     break;
+  case ARM64_RELOC_SUBTRACTOR:
   case ARM64_RELOC_UNSIGNED:
     break;
   case ARM64_RELOC_POINTER_TO_GOT:
