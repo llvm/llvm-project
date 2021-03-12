@@ -7,5 +7,6 @@ public class Foo : NSObject {
     // When evaluating "input" here, RemoteAST will try to get its
     // dynamic type.
     print("break here")
+    withExtendedLifetime(input) {}
   }
 }
