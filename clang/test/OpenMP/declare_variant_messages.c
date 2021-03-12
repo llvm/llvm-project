@@ -170,14 +170,6 @@ void caller() {
 int conflicting_nested_score(void);
 #pragma omp end declare variant
 
-#pragma omp begin declare variant match(implementation = {vendor(score(1) \
-                                                                 : llvm),extension(disable_selector_propagation)})
-#pragma omp declare variant(foo) match(implementation = {vendor(score(2) \
-                                                                : llvm)})
-int conflicting_nested_score_no_prop(void);
-#pragma omp end declare variant
-
-
 // FIXME: We should build the conjuction of different conditions, see also the score fixme above.
 #pragma omp begin declare variant match(user = {condition(1)})
 #pragma omp declare variant(foo) match(user = {condition(1)}) // expected-error {{nested user conditions in OpenMP context selector not supported (yet)}}
