@@ -124,7 +124,8 @@ public:
       ec = detail::make_windows_error(GetLastError());
       const bool ignore_permission_denied =
           bool(opts & directory_options::skip_permission_denied);
-      if (ignore_permission_denied && ec.value() == ERROR_ACCESS_DENIED)
+      if (ignore_permission_denied &&
+          ec.value() == static_cast<int>(errc::permission_denied))
         ec.clear();
       return;
     }
