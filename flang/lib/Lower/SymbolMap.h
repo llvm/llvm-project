@@ -219,12 +219,20 @@ public:
                      mlir::Value len, bool force = false) {
     makeSym(sym, SymbolBox::Char(value, len), force);
   }
+  void addCharSymbol(semantics::SymbolRef sym, const SymbolBox::Char &value,
+                     bool force = false) {
+    makeSym(sym, value, force);
+  }
 
   /// Add an array mapping with (address, shape).
   void addSymbolWithShape(semantics::SymbolRef sym, mlir::Value value,
                           llvm::ArrayRef<mlir::Value> shape,
                           bool force = false) {
     makeSym(sym, SymbolBox::FullDim(value, shape), force);
+  }
+  void addSymbolWithShape(semantics::SymbolRef sym,
+                          const SymbolBox::FullDim &value, bool force = false) {
+    makeSym(sym, value, force);
   }
 
   /// Add an array of CHARACTER mapping.
@@ -234,6 +242,11 @@ public:
                               bool force = false) {
     makeSym(sym, SymbolBox::CharFullDim(value, len, shape), force);
   }
+  void addCharSymbolWithShape(semantics::SymbolRef sym,
+                              const SymbolBox::CharFullDim &value,
+                              bool force = false) {
+    makeSym(sym, value, force);
+  }
 
   /// Add an array mapping with bounds notation.
   void addSymbolWithBounds(semantics::SymbolRef sym, mlir::Value value,
@@ -241,6 +254,11 @@ public:
                            llvm::ArrayRef<mlir::Value> lbounds,
                            bool force = false) {
     makeSym(sym, SymbolBox::FullDim(value, extents, lbounds), force);
+  }
+  void addSymbolWithBounds(semantics::SymbolRef sym,
+                           const SymbolBox::FullDim &value,
+                           bool force = false) {
+    makeSym(sym, value, force);
   }
 
   /// Add an array of CHARACTER with bounds notation.
@@ -250,6 +268,11 @@ public:
                                llvm::ArrayRef<mlir::Value> lbounds,
                                bool force = false) {
     makeSym(sym, SymbolBox::CharFullDim(value, len, extents, lbounds), force);
+  }
+  void addCharSymbolWithBounds(semantics::SymbolRef sym,
+                               const SymbolBox::CharFullDim &value,
+                               bool force = false) {
+    makeSym(sym, value, force);
   }
 
   void addAllocatableOrPointer(semantics::SymbolRef sym,
@@ -265,6 +288,10 @@ public:
     makeSym(sym,
             SymbolBox::Box(irBox, lbounds, explicitParams, explicitExtents),
             force);
+  }
+  void addBoxSymbol(semantics::SymbolRef sym, const SymbolBox::Box &value,
+                    bool force = false) {
+    makeSym(sym, value, force);
   }
 
   /// Find `symbol` and return its value if it appears in the current mappings.

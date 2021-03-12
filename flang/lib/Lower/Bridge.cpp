@@ -1283,6 +1283,15 @@ private:
            "select case list mismatch");
   }
 
+  fir::ExtendedValue
+  genAssociateSelector(const Fortran::semantics::SomeExpr &selector,
+                       Fortran::lower::StatementContext &stmtCtx) {
+    return selector.Rank() > 0 && isArraySectionWithoutVectorSubscript(selector)
+               ? Fortran::lower::createSomeArrayBox(*this, selector,
+                                                    localSymbols, stmtCtx)
+               : genExprAddr(selector, stmtCtx);
+  }
+
   void genFIR(const Fortran::parser::AssociateConstruct &) {
     Fortran::lower::StatementContext stmtCtx;
     for (auto &e : getEval().getNestedEvaluations()) {
@@ -1293,50 +1302,7 @@ private:
           auto &sym = *std::get<Fortran::parser::Name>(assoc.t).symbol;
           const auto &selector =
               *sym.get<Fortran::semantics::AssocEntityDetails>().expr();
-          if (Fortran::evaluate::IsVariable(selector) && selector.Rank() &&
-              !Fortran::evaluate::UnwrapWholeSymbolDataRef(selector) &&
-              !Fortran::evaluate::HasVectorSubscript(selector)) {
-            TODO(toLocation(), "array section association selector");
-            continue;
-          }
-          genExprAddr(selector, stmtCtx)
-              .match(
-                  [&](const fir::UnboxedValue value) {
-                    localSymbols.addSymbol(sym, value);
-                  },
-                  [&](const fir::CharBoxValue &value) {
-                    localSymbols.addCharSymbol(sym, value.getAddr(),
-                                               value.getLen());
-                  },
-                  [&](const fir::ArrayBoxValue &value) {
-                    if (value.getLBounds().empty())
-                      localSymbols.addSymbolWithShape(sym, value.getAddr(),
-                                                      value.getExtents());
-                    else
-                      localSymbols.addSymbolWithBounds(sym, value.getAddr(),
-                                                       value.getExtents(),
-                                                       value.getLBounds());
-                  },
-                  [&](const fir::CharArrayBoxValue &value) {
-                    if (value.getLBounds().empty())
-                      localSymbols.addCharSymbolWithShape(sym, value.getAddr(),
-                                                          value.getLen(),
-                                                          value.getExtents());
-                    else
-                      localSymbols.addCharSymbolWithBounds(
-                          sym, value.getAddr(), value.getLen(),
-                          value.getExtents(), value.getLBounds());
-                  },
-                  [&](const fir::BoxValue &value) {
-                    localSymbols.addBoxSymbol(sym, value.getAddr(),
-                                              value.getLBounds(),
-                                              value.getExplicitParameters(),
-                                              value.getExplicitExtents());
-                  },
-                  [&](const auto &) {
-                    mlir::emitError(toLocation(),
-                                    "unexpected association selector");
-                  });
+          localSymbols.addSymbol(sym, genAssociateSelector(selector, stmtCtx));
         }
       } else if (e.getIf<Fortran::parser::EndAssociateStmt>()) {
         stmtCtx.finalize();
