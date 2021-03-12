@@ -3585,8 +3585,12 @@ void RegisterCoalescer::buildVRegToDbgValueMap(MachineFunction &MF)
   // After collecting a block of DBG_VALUEs into ToInsert, enter them into the
   // vreg => DbgValueLoc map.
   auto CloseNewDVRange = [this, &ToInsert](SlotIndex Slot) {
-    for (auto *X : ToInsert)
-      DbgVRegToValues[X->getDebugOperand(0).getReg()].push_back({Slot, X});
+    for (auto *X : ToInsert) {
+      for (auto Op : X->debug_operands()) {
+        if (Op.isReg() && Op.getReg().isVirtual())
+          DbgVRegToValues[Op.getReg()].push_back({Slot, X});
+      }
+    }
 
     ToInsert.clear();
   };
@@ -3598,9 +3602,11 @@ void RegisterCoalescer::buildVRegToDbgValueMap(MachineFunction &MF)
     SlotIndex CurrentSlot = Slots.getMBBStartIdx(&MBB);
 
     for (auto &MI : MBB) {
-      if (MI.isDebugValue() && MI.getDebugOperand(0).isReg() &&
-          MI.getDebugOperand(0).getReg().isVirtual()) {
-        ToInsert.push_back(&MI);
+      if (MI.isDebugValue()) {
+        if (any_of(MI.debug_operands(), [](const MachineOperand &MO) {
+              return MO.isReg() && MO.getReg().isVirtual();
+            }))
+          ToInsert.push_back(&MI);
       } else if (!MI.isDebugInstr()) {
         CurrentSlot = Slots.getInstructionIndex(MI);
         CloseNewDVRange(CurrentSlot);
@@ -3697,12 +3703,14 @@ void RegisterCoalescer::checkMergingChangesDbgValuesImpl(Register Reg,
     if (DbgValueSetIt->first < SegmentIt->end) {
       // "Other" is live and there is a DBG_VALUE of Reg: test if we should
       // set it undef.
-      if (DbgValueSetIt->first >= SegmentIt->start &&
-          DbgValueSetIt->second->getDebugOperand(0).getReg() != 0 &&
-          ShouldUndef(DbgValueSetIt->first)) {
-        // Mark undef, erase record of this DBG_VALUE to avoid revisiting.
-        DbgValueSetIt->second->setDebugValueUndef();
-        continue;
+      if (DbgValueSetIt->first >= SegmentIt->start) {
+        bool HasReg = DbgValueSetIt->second->hasDebugOperandForReg(Reg);
+        bool ShouldUndefReg = ShouldUndef(DbgValueSetIt->first);
+        if (HasReg && ShouldUndefReg) {
+          // Mark undef, erase record of this DBG_VALUE to avoid revisiting.
+          DbgValueSetIt->second->setDebugValueUndef();
+          continue;
+        }
       }
       ++DbgValueSetIt;
     } else {
