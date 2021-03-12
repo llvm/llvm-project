@@ -36,14 +36,14 @@ struct X86_64 : TargetInfo {
                             uint64_t entryAddr) const override;
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
-  const TargetInfo::RelocAttrs &getRelocAttrs(uint8_t type) const override;
+  const RelocAttrs &getRelocAttrs(uint8_t type) const override;
   uint64_t getPageSize() const override { return 4 * 1024; }
 };
 
 } // namespace
 
-const TargetInfo::RelocAttrs &X86_64::getRelocAttrs(uint8_t type) const {
-  static const std::array<TargetInfo::RelocAttrs, 10> relocAttrsArray{{
+const RelocAttrs &X86_64::getRelocAttrs(uint8_t type) const {
+  static const std::array<RelocAttrs, 10> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
       {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) |
                        B(DYSYM8) | B(BYTE4) | B(BYTE8)},
@@ -60,7 +60,7 @@ const TargetInfo::RelocAttrs &X86_64::getRelocAttrs(uint8_t type) const {
   }};
   assert(type < relocAttrsArray.size() && "invalid relocation type");
   if (type >= relocAttrsArray.size())
-    return TargetInfo::invalidRelocAttrs;
+    return invalidRelocAttrs;
   return relocAttrsArray[type];
 }
 

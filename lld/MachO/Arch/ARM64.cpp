@@ -39,7 +39,7 @@ struct ARM64 : TargetInfo {
                             uint64_t entryAddr) const override;
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
-  const TargetInfo::RelocAttrs &getRelocAttrs(uint8_t type) const override;
+  const RelocAttrs &getRelocAttrs(uint8_t type) const override;
   uint64_t getPageSize() const override { return 16 * 1024; }
 };
 
@@ -52,8 +52,8 @@ struct ARM64 : TargetInfo {
 // are weird -- it results in the value of the GOT slot being written, instead
 // of the address. Let's not support it unless we find a real-world use case.
 
-const TargetInfo::RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
-  static const std::array<TargetInfo::RelocAttrs, 11> relocAttrsArray{{
+const RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
+  static const std::array<RelocAttrs, 11> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
       {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) |
                        B(DYSYM8) | B(BYTE4) | B(BYTE8)},
@@ -73,7 +73,7 @@ const TargetInfo::RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
   }};
   assert(type < relocAttrsArray.size() && "invalid relocation type");
   if (type >= relocAttrsArray.size())
-    return TargetInfo::invalidRelocAttrs;
+    return invalidRelocAttrs;
   return relocAttrsArray[type];
 }
 
