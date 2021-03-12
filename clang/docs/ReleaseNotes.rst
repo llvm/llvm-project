@@ -139,6 +139,15 @@ Modified Compiler Flags
   This behavior matches newer GCC.
   (`D91760 <https://reviews.llvm.org/D91760>`_)
   (`D92054 <https://reviews.llvm.org/D92054>`_)
+- Support has been added for the following processors (command-line identifiers
+  in parentheses):
+  - Arm Cortex-A78C (cortex-a78c).
+  - Arm Cortex-R82 (cortex-r82).
+  - Arm Neoverse V1 (neoverse-v1).
+  - Arm Neoverse N2 (neoverse-n2).
+  - Fujitsu A64FX (a64fx).
+  For example, to select architecture support and tuning for Neoverse-V1 based
+  systems, use ``-mcpu=neoverse-v1``.
 
 Removed Compiler Flags
 -------------------------
