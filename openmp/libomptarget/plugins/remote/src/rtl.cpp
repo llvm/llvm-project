@@ -76,9 +76,8 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
   return Manager->loadBinary(DeviceId, (__tgt_device_image *)Image);
 }
 
-int32_t __tgt_rtl_synchronize(int32_t DeviceId,
-                              __tgt_async_info *AsyncInfoPtr) {
-  return Manager->synchronize(DeviceId, AsyncInfoPtr);
+int32_t __tgt_rtl_synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfo) {
+  return Manager->synchronize(DeviceId, AsyncInfo);
 }
 
 int32_t __tgt_rtl_is_data_exchangable(int32_t SrcDevId, int32_t DstDevId) {
@@ -96,8 +95,8 @@ int32_t __tgt_rtl_data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
 
 int32_t __tgt_rtl_data_submit_async(int32_t DeviceId, void *TgtPtr,
                                     void *HstPtr, int64_t Size,
-                                    __tgt_async_info *AsyncInfoPtr) {
-  return Manager->dataSubmitAsync(DeviceId, TgtPtr, HstPtr, Size, AsyncInfoPtr);
+                                    __tgt_async_info *AsyncInfo) {
+  return Manager->dataSubmitAsync(DeviceId, TgtPtr, HstPtr, Size, AsyncInfo);
 }
 
 int32_t __tgt_rtl_data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
@@ -107,9 +106,8 @@ int32_t __tgt_rtl_data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
 
 int32_t __tgt_rtl_data_retrieve_async(int32_t DeviceId, void *HstPtr,
                                       void *TgtPtr, int64_t Size,
-                                      __tgt_async_info *AsyncInfoPtr) {
-  return Manager->dataRetrieveAsync(DeviceId, HstPtr, TgtPtr, Size,
-                                    AsyncInfoPtr);
+                                      __tgt_async_info *AsyncInfo) {
+  return Manager->dataRetrieveAsync(DeviceId, HstPtr, TgtPtr, Size, AsyncInfo);
 }
 
 int32_t __tgt_rtl_data_delete(int32_t DeviceId, void *TgtPtr) {
@@ -125,9 +123,9 @@ int32_t __tgt_rtl_data_exchange(int32_t SrcDevId, void *SrcPtr,
 int32_t __tgt_rtl_data_exchange_async(int32_t SrcDevId, void *SrcPtr,
                                       int32_t DstDevId, void *DstPtr,
                                       int64_t Size,
-                                      __tgt_async_info *AsyncInfoPtr) {
+                                      __tgt_async_info *AsyncInfo) {
   return Manager->dataExchangeAsync(SrcDevId, SrcPtr, DstDevId, DstPtr, Size,
-                                    AsyncInfoPtr);
+                                    AsyncInfo);
 }
 
 int32_t __tgt_rtl_run_target_region(int32_t DeviceId, void *TgtEntryPtr,
@@ -140,9 +138,9 @@ int32_t __tgt_rtl_run_target_region(int32_t DeviceId, void *TgtEntryPtr,
 int32_t __tgt_rtl_run_target_region_async(int32_t DeviceId, void *TgtEntryPtr,
                                           void **TgtArgs, ptrdiff_t *TgtOffsets,
                                           int32_t ArgNum,
-                                          __tgt_async_info *AsyncInfoPtr) {
+                                          __tgt_async_info *AsyncInfo) {
   return Manager->runTargetRegionAsync(DeviceId, TgtEntryPtr, TgtArgs,
-                                       TgtOffsets, ArgNum, AsyncInfoPtr);
+                                       TgtOffsets, ArgNum, AsyncInfo);
 }
 
 int32_t __tgt_rtl_run_target_team_region(int32_t DeviceId, void *TgtEntryPtr,
@@ -158,10 +156,10 @@ int32_t __tgt_rtl_run_target_team_region(int32_t DeviceId, void *TgtEntryPtr,
 int32_t __tgt_rtl_run_target_team_region_async(
     int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs, ptrdiff_t *TgtOffsets,
     int32_t ArgNum, int32_t TeamNum, int32_t ThreadLimit,
-    uint64_t LoopTripCount, __tgt_async_info *AsyncInfoPtr) {
+    uint64_t LoopTripCount, __tgt_async_info *AsyncInfo) {
   return Manager->runTargetTeamRegionAsync(
       DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets, ArgNum, TeamNum, ThreadLimit,
-      LoopTripCount, AsyncInfoPtr);
+      LoopTripCount, AsyncInfo);
 }
 
 // Exposed library API function

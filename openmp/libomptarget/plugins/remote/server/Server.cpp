@@ -160,11 +160,11 @@ Status RemoteOffloadImpl::Synchronize(ServerContext *Context,
   SERVER_DBG("Synchronizing device %d (probably won't work)",
              Info->device_id());
 
-  void *AsyncInfoPtr = (void *)Info->queue_ptr();
+  void *AsyncInfo = (void *)Info->queue_ptr();
   Reply->set_number(0);
   if (PM->Devices[Info->device_id()].RTL->synchronize)
     Reply->set_number(PM->Devices[Info->device_id()].synchronize(
-        (__tgt_async_info *)AsyncInfoPtr));
+        (__tgt_async_info *)AsyncInfo));
 
   SERVER_DBG("Synchronized device %d", Info->device_id());
   return Status::OK;
