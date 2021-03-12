@@ -2751,19 +2751,21 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
                     llvm::function_ref<SourceLocation(unsigned)> getParamLoc) {
   assert(EPI.ExtParameterInfos && "shouldn't get here without param infos");
 
-  bool hasCheckedSwiftCall = false;
-  auto reportWrongABI = [&](unsigned paramIndex) {
+  bool emittedError = false;
+  auto actualCC = EPI.ExtInfo.getCC();
+  enum class RequiredCC { OnlySwift, SwiftOrSwiftAsync };
+  auto checkCompatible = [&](unsigned paramIndex, RequiredCC required) {
+    bool isCompatible =
+        (required == RequiredCC::OnlySwift)
+            ? (actualCC == CC_Swift)
+            : (actualCC == CC_Swift || actualCC == CC_SwiftAsync);
+    if (isCompatible || emittedError)
+      return;
     S.Diag(getParamLoc(paramIndex), diag::err_swift_param_attr_not_swiftcall)
-        << getParameterABISpelling(EPI.ExtParameterInfos[paramIndex].getABI());
+        << getParameterABISpelling(EPI.ExtParameterInfos[paramIndex].getABI())
+        << (required == RequiredCC::OnlySwift);
+    emittedError = true;
   };
-  auto checkForSwiftCC = [&](unsigned paramIndex) {
-    // Only do this once.
-    if (hasCheckedSwiftCall) return;
-    hasCheckedSwiftCall = true;
-    if (EPI.ExtInfo.getCC() == CC_Swift) return;
-    reportWrongABI(paramIndex);
-  };
-
   for (size_t paramIndex = 0, numParams = paramTypes.size();
           paramIndex != numParams; ++paramIndex) {
     switch (EPI.ExtParameterInfos[paramIndex].getABI()) {
@@ -2774,7 +2776,7 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
     // swift_indirect_result parameters must be a prefix of the function
     // arguments.
     case ParameterABI::SwiftIndirectResult:
-      checkForSwiftCC(paramIndex);
+      checkCompatible(paramIndex, RequiredCC::SwiftOrSwiftAsync);
       if (paramIndex != 0 &&
           EPI.ExtParameterInfos[paramIndex - 1].getABI()
             != ParameterABI::SwiftIndirectResult) {
@@ -2784,7 +2786,7 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
       continue;
 
     case ParameterABI::SwiftContext:
-      checkForSwiftCC(paramIndex);
+      checkCompatible(paramIndex, RequiredCC::SwiftOrSwiftAsync);
       continue;
 
     // SwiftAsyncContext is not limited to swiftasynccall functions.
@@ -2793,7 +2795,7 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
 
     // swift_error parameters must be preceded by a swift_context parameter.
     case ParameterABI::SwiftErrorResult:
-      checkForSwiftCC(paramIndex);
+      checkCompatible(paramIndex, RequiredCC::OnlySwift);
       if (paramIndex == 0 ||
           EPI.ExtParameterInfos[paramIndex - 1].getABI() !=
               ParameterABI::SwiftContext) {
