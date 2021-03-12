@@ -33,11 +33,11 @@ std::unique_ptr<SymbolIndex> createIndex() {
 }
 
 TEST(ProjectAware, Test) {
-  IndexFactory Gen = [](const Config::ExternalIndexSpec &, AsyncTaskRunner &) {
+  IndexFactory Gen = [](const Config::ExternalIndexSpec &, AsyncTaskRunner *) {
     return createIndex();
   };
 
-  auto Idx = createProjectAwareIndex(std::move(Gen));
+  auto Idx = createProjectAwareIndex(std::move(Gen), true);
   FuzzyFindRequest Req;
   Req.Query = "1";
   Req.AnyScope = true;
@@ -54,12 +54,12 @@ TEST(ProjectAware, Test) {
 
 TEST(ProjectAware, CreatedOnce) {
   unsigned InvocationCount = 0;
-  IndexFactory Gen = [&](const Config::ExternalIndexSpec &, AsyncTaskRunner &) {
+  IndexFactory Gen = [&](const Config::ExternalIndexSpec &, AsyncTaskRunner *) {
     ++InvocationCount;
     return createIndex();
   };
 
-  auto Idx = createProjectAwareIndex(std::move(Gen));
+  auto Idx = createProjectAwareIndex(std::move(Gen), true);
   // No invocation at start.
   EXPECT_EQ(InvocationCount, 0U);
   FuzzyFindRequest Req;
