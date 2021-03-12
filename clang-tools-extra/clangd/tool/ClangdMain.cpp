@@ -609,6 +609,7 @@ public:
       Spec.Location = IndexFile;
       IndexSpec = std::move(Spec);
     }
+#if CLANGD_ENABLE_REMOTE
     if (!RemoteIndexAddress.empty()) {
       assert(!ProjectRoot.empty() && IndexFile.empty());
       Config::ExternalIndexSpec Spec;
@@ -618,6 +619,7 @@ public:
       IndexSpec = std::move(Spec);
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
+#endif
     if (!EnableBackgroundIndex) {
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
