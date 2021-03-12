@@ -5526,12 +5526,14 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
 
     IRBuilder<> Builder(MemoryInst);
 
+    Type *SourceTy = GEP->getSourceElementType();
     Type *ScalarIndexTy = DL->getIndexType(Ops[0]->getType()->getScalarType());
 
     // If the final index isn't a vector, emit a scalar GEP containing all ops
     // and a vector GEP with all zeroes final index.
     if (!Ops[FinalIndex]->getType()->isVectorTy()) {
-      NewAddr = Builder.CreateGEP(Ops[0], makeArrayRef(Ops).drop_front());
+      NewAddr = Builder.CreateGEP(SourceTy, Ops[0],
+                                  makeArrayRef(Ops).drop_front());
       auto *IndexTy = VectorType::get(ScalarIndexTy, NumElts);
       NewAddr = Builder.CreateGEP(NewAddr, Constant::getNullValue(IndexTy));
     } else {
@@ -5542,7 +5544,8 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
       if (Ops.size() != 2) {
         // Replace the last index with 0.
         Ops[FinalIndex] = Constant::getNullValue(ScalarIndexTy);
-        Base = Builder.CreateGEP(Base, makeArrayRef(Ops).drop_front());
+        Base = Builder.CreateGEP(SourceTy, Base,
+                                 makeArrayRef(Ops).drop_front());
       }
 
       // Now create the GEP with scalar pointer and vector index.
