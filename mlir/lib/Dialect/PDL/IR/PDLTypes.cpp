@@ -26,6 +26,13 @@ using namespace mlir::pdl;
 // PDLDialect
 //===----------------------------------------------------------------------===//
 
+void PDLDialect::registerTypes() {
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/PDL/IR/PDLOpsTypes.cpp.inc"
+      >();
+}
+
 static Type parsePDLType(DialectAsmParser &parser) {
   StringRef typeTag;
   if (parser.parseKeyword(&typeTag))

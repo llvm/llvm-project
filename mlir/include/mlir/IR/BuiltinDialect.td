@@ -22,6 +22,17 @@ def Builtin_Dialect : Dialect {
 
   let name = "";
   let cppNamespace = "::mlir";
+  let extraClassDeclaration = [{
+  private:
+    // Register the builtin Attributes.
+    void registerAttributes();
+    // Register the builtin Location Attributes.
+    void registerLocationAttributes();
+    // Register the builtin Types.
+    void registerTypes();
+
+  public:
+  }];
 }
 
 #endif // BUILTIN_BASE

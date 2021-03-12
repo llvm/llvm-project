@@ -115,10 +115,8 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void SPIRVDialect::initialize() {
-  addTypes<ArrayType, CooperativeMatrixNVType, ImageType, MatrixType,
-           PointerType, RuntimeArrayType, SampledImageType, StructType>();
-
-  addAttributes<InterfaceVarABIAttr, TargetEnvAttr, VerCapExtAttr>();
+  registerAttributes();
+  registerTypes();
 
   // Add SPIR-V ops.
   addOperations<

@@ -64,6 +64,9 @@ def PDL_Dialect : Dialect {
 
   let name = "pdl";
   let cppNamespace = "::mlir::pdl";
+  let extraClassDeclaration = [{
+    void registerTypes();
+  }];
 }
 
 #endif // MLIR_DIALECT_PDL_IR_PDLDIALECT

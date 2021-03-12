@@ -319,7 +319,9 @@ public:
 
 Once the dialect types have been defined, they must then be registered with a
 `Dialect`. This is done via a similar mechanism to
-[operations](LangRef.md#operations), with the `addTypes` method.
+[operations](LangRef.md#operations), with the `addTypes` method. The one
+distinct difference with operations, is that when a type is registered the
+definition of its storage class must be visible.
 
 ```c++
 struct MyDialect : public Dialect {

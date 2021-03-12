@@ -100,6 +100,13 @@ void CompoundAAttr::print(DialectAsmPrinter &printer) const {
 // TestDialect
 //===----------------------------------------------------------------------===//
 
+void TestDialect::registerAttributes() {
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "TestAttrDefs.cpp.inc"
+      >();
+}
+
 Attribute TestDialect::parseAttribute(DialectAsmParser &parser,
                                       Type type) const {
   StringRef attrTag;

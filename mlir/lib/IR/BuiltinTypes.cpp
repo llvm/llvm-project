@@ -31,6 +31,17 @@ using namespace mlir::detail;
 #include "mlir/IR/BuiltinTypes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
+// BuiltinDialect
+//===----------------------------------------------------------------------===//
+
+void BuiltinDialect::registerTypes() {
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/IR/BuiltinTypes.cpp.inc"
+      >();
+}
+
+//===----------------------------------------------------------------------===//
 /// ComplexType
 //===----------------------------------------------------------------------===//
 
@@ -514,7 +525,7 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
   if (!BaseMemRefType::isValidElementType(elementType))
     return emitError() << "invalid memref element type";
 
-    // Negative sizes are not allowed except for `-1` that means dynamic size.
+  // Negative sizes are not allowed except for `-1` that means dynamic size.
   for (int64_t s : shape)
     if (s < -1)
       return emitError() << "invalid memref size";
