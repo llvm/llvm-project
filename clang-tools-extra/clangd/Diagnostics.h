@@ -22,7 +22,10 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/SourceMgr.h"
 #include <cassert>
+#include <functional>
+#include <memory>
 #include <string>
+#include <utility>
 
 namespace clang {
 namespace tidy {
@@ -136,18 +139,24 @@ public:
                                                    const clang::Diagnostic &)>;
   using LevelAdjuster = std::function<DiagnosticsEngine::Level(
       DiagnosticsEngine::Level, const clang::Diagnostic &)>;
+  using DiagCallback =
+      std::function<void(const clang::Diagnostic &, clangd::Diag &)>;
   /// If set, possibly adds fixes for diagnostics using \p Fixer.
   void contributeFixes(DiagFixer Fixer) { this->Fixer = Fixer; }
   /// If set, this allows the client of this class to adjust the level of
   /// diagnostics, such as promoting warnings to errors, or ignoring
   /// diagnostics.
   void setLevelAdjuster(LevelAdjuster Adjuster) { this->Adjuster = Adjuster; }
+  /// Invokes a callback every time a diagnostics is completely formed. Handler
+  /// of the callback can also mutate the diagnostic.
+  void setDiagCallback(DiagCallback CB) { DiagCB = std::move(CB); }
 
 private:
   void flushLastDiag();
 
   DiagFixer Fixer = nullptr;
   LevelAdjuster Adjuster = nullptr;
+  DiagCallback DiagCB = nullptr;
   std::vector<Diag> Output;
   llvm::Optional<LangOptions> LangOpts;
   llvm::Optional<Diag> LastDiag;

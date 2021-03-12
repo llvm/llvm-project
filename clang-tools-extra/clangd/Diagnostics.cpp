@@ -744,6 +744,8 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
       LastDiag->Fixes.insert(LastDiag->Fixes.end(), ExtraFixes.begin(),
                              ExtraFixes.end());
     }
+    if (DiagCB)
+      DiagCB(Info, *LastDiag);
   } else {
     // Handle a note to an existing diagnostic.
 

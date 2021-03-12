@@ -9,6 +9,7 @@
 #include "Annotations.h"
 #include "Config.h"
 #include "Diagnostics.h"
+#include "FeatureModule.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
@@ -26,6 +27,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <algorithm>
+#include <memory>
 
 namespace clang {
 namespace clangd {
@@ -1346,6 +1348,31 @@ TEST(ToLSPDiag, RangeIsInMain) {
              });
 }
 
+TEST(ParsedASTTest, ModuleSawDiag) {
+  static constexpr const llvm::StringLiteral KDiagMsg = "StampedDiag";
+  struct DiagModifierModule final : public FeatureModule {
+    struct Listener : public FeatureModule::ASTListener {
+      void sawDiagnostic(const clang::Diagnostic &Info,
+                         clangd::Diag &Diag) override {
+        Diag.Message = KDiagMsg.str();
+      }
+    };
+    std::unique_ptr<ASTListener> astListeners() override {
+      return std::make_unique<Listener>();
+    };
+  };
+  FeatureModuleSet FMS;
+  FMS.add(std::make_unique<DiagModifierModule>());
+
+  Annotations Code("[[test]]; /* error-ok */");
+  TestTU TU;
+  TU.Code = Code.code().str();
+  TU.FeatureModules = &FMS;
+
+  auto AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(),
+              testing::Contains(Diag(Code.range(), KDiagMsg.str())));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

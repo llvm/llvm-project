@@ -14,6 +14,7 @@
 #include "Compiler.h"
 #include "Config.h"
 #include "Diagnostics.h"
+#include "FeatureModule.h"
 #include "Headers.h"
 #include "IncludeFixer.h"
 #include "Preamble.h"
@@ -25,6 +26,7 @@
 #include "support/Trace.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -261,7 +263,19 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // breaks many features. Disable it for the main-file (not preamble).
   CI->getLangOpts()->DelayedTemplateParsing = false;
 
+  std::vector<std::unique_ptr<FeatureModule::ASTListener>> ASTListeners;
+  if (Inputs.FeatureModules) {
+    for (auto &M : *Inputs.FeatureModules) {
+      if (auto Listener = M.astListeners())
+        ASTListeners.emplace_back(std::move(Listener));
+    }
+  }
   StoreDiags ASTDiags;
+  ASTDiags.setDiagCallback(
+      [&ASTListeners](const clang::Diagnostic &D, clangd::Diag &Diag) {
+        llvm::for_each(ASTListeners,
+                       [&](const auto &L) { L->sawDiagnostic(D, Diag); });
+      });
 
   llvm::Optional<PreamblePatch> Patch;
   bool PreserveDiags = true;
@@ -318,7 +332,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
       Check->registerMatchers(&CTFinder);
     }
 
-    const Config& Cfg = Config::current();
+    const Config &Cfg = Config::current();
     ASTDiags.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
       if (Cfg.Diagnostics.SuppressAll ||
