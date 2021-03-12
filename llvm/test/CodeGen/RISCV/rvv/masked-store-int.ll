@@ -243,3 +243,27 @@ define void @masked_store_nxv64i8(<vscale x 64 x i8> %val, <vscale x 64 x i8>* %
   ret void
 }
 declare void @llvm.masked.store.v64i8.p0v64i8(<vscale x 64 x i8>, <vscale x 64 x i8>*, i32, <vscale x 64 x i1>)
+
+define void @masked_store_zero_mask(<vscale x 2 x i8> %val, <vscale x 2 x i8>* %a) nounwind {
+; CHECK-LABEL: masked_store_zero_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8,mf4,ta,mu
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    vse8.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  call void @llvm.masked.store.v2i8.p0v2i8(<vscale x 2 x i8> %val, <vscale x 2 x i8>* %a, i32 1, <vscale x 2 x i1> zeroinitializer)
+  ret void
+}
+
+define void @masked_store_allones_mask(<vscale x 2 x i8> %val, <vscale x 2 x i8>* %a) nounwind {
+; CHECK-LABEL: masked_store_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8,mf4,ta,mu
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    vse8.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %insert = insertelement <vscale x 2 x i1> undef, i1 1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %insert, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
+  call void @llvm.masked.store.v2i8.p0v2i8(<vscale x 2 x i8> %val, <vscale x 2 x i8>* %a, i32 1, <vscale x 2 x i1> %mask)
+  ret void
+}
