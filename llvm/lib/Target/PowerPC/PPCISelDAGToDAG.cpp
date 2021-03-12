@@ -1043,7 +1043,7 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
   unsigned TZ = countTrailingZeros<uint64_t>(Imm);
   unsigned LZ = countLeadingZeros<uint64_t>(Imm);
   unsigned TO = countTrailingOnes<uint64_t>(Imm);
-  unsigned FO = countLeadingOnes<uint64_t>(Imm << LZ);
+  unsigned FO = countLeadingOnes<uint64_t>(LZ == 64 ? 0 : (Imm << LZ));
   unsigned Hi32 = Hi_32(Imm);
   unsigned Lo32 = Lo_32(Imm);
 
