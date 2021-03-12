@@ -58,9 +58,15 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
       : IncomingValueHandler(MIRBuilder, MRI, AssignFn), StackUsed(0) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
-                           MachinePointerInfo &MPO) override {
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
-    int FI = MFI.CreateFixedObject(Size, Offset, true);
+
+    // Byval is assumed to be writable memory, but other stack passed arguments
+    // are not.
+    const bool IsImmutable = !Flags.isByVal();
+
+    int FI = MFI.CreateFixedObject(Size, Offset, IsImmutable);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
     auto AddrReg = MIRBuilder.buildFrameIndex(LLT::pointer(0, 64), FI);
     StackUsed = std::max(StackUsed, Size + Offset);
@@ -165,12 +171,15 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
         StackSize(0), SPReg(0) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
-                           MachinePointerInfo &MPO) override {
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
     MachineFunction &MF = MIRBuilder.getMF();
     LLT p0 = LLT::pointer(0, 64);
     LLT s64 = LLT::scalar(64);
 
     if (IsTailCall) {
+      assert(!Flags.isByVal() && "byval unhandled with tail calls");
+
       Offset += FPDiff;
       int FI = MF.getFrameInfo().CreateFixedObject(Size, Offset, true);
       auto FIReg = MIRBuilder.buildFrameIndex(p0, FI);
