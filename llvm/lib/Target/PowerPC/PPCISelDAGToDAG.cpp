@@ -6803,7 +6803,7 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
   };
 
   SDValue VecOp = SkipRCCopy(N->getOperand(0));
-  if (!isLaneInsensitive(VecOp))
+  if (!isLaneInsensitive(VecOp) || !VecOp.hasOneUse())
     return;
 
   SDValue LHS = SkipRCCopy(VecOp.getOperand(0)),
