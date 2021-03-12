@@ -4201,8 +4201,12 @@ void SwiftASTContext::CacheDemangledTypeFailure(ConstString name) {
 /// specializations.
 static swift::Type ConvertSILFunctionTypesToASTFunctionTypes(swift::Type t) {
   return t.transform([](swift::Type t) -> swift::Type {
-    if (auto *silFn = t->getAs<swift::SILFunctionType>())
-      return swift::FunctionType::get({}, t->getASTContext().TheEmptyTupleType);
+    if (auto *silFn = t->getAs<swift::SILFunctionType>()) {
+      // FIXME: Verify ExtInfo state is correct, not working by accident.
+      swift::FunctionType::ExtInfo info;
+      return swift::FunctionType::get({}, t->getASTContext().TheEmptyTupleType,
+                                      info);
+    }
     return t;
   });
 }
@@ -4353,8 +4357,10 @@ CompilerType SwiftASTContext::GetVoidFunctionType() {
   if (!m_void_function_type) {
     swift::ASTContext *ast = GetASTContext();
     swift::Type empty_tuple_type(swift::TupleType::getEmpty(*ast));
+    // FIXME: Verify ExtInfo state is correct, not working by accident.
+    swift::FunctionType::ExtInfo info;
     m_void_function_type =
-        ToCompilerType({swift::FunctionType::get({}, empty_tuple_type)});
+        ToCompilerType({swift::FunctionType::get({}, empty_tuple_type, info)});
   }
   return m_void_function_type;
 }
