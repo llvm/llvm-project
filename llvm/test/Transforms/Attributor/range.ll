@@ -2496,12 +2496,12 @@ declare void @barney(i32 signext, i32 signext)
 ; IS__CGSCC_OPM: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR3]] = { readonly willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR4]] = { nounwind readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR5]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR5]] = { readnone willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR2]] = { readonly willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR3]] = { willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR3]] = { readnone willreturn }
 ;.
 ; IS__TUNIT_OPM: [[RNG0]] = !{i32 0, i32 10}
 ; IS__TUNIT_OPM: [[RNG1]] = !{i32 10, i32 100}

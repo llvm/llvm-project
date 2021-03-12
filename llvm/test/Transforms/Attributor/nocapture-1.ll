@@ -623,7 +623,7 @@ define void @nocaptureLaunder(i8* %p) {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@nocaptureLaunder
 ; IS__CGSCC____-SAME: (i8* nocapture nofree [[P:%.*]]) #[[ATTR10:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[B:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* nofree [[P]]) #[[ATTR18]]
+; IS__CGSCC____-NEXT:    [[B:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* nofree [[P]]) #[[ATTR20:[0-9]+]]
 ; IS__CGSCC____-NEXT:    store i8 42, i8* [[B]], align 1
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -645,7 +645,7 @@ define void @captureLaunder(i8* %p) {
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@captureLaunder
 ; IS__CGSCC____-SAME: (i8* nofree [[P:%.*]]) #[[ATTR10]] {
-; IS__CGSCC____-NEXT:    [[B:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* nofree [[P]]) #[[ATTR18]]
+; IS__CGSCC____-NEXT:    [[B:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* nofree [[P]]) #[[ATTR20]]
 ; IS__CGSCC____-NEXT:    store i8* [[B]], i8** @g2, align 8
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -659,7 +659,7 @@ define void @nocaptureStrip(i8* %p) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@nocaptureStrip
 ; IS__TUNIT____-SAME: (i8* nocapture nofree writeonly [[P:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[B:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* noalias nofree readnone [[P]]) #[[ATTR17]]
+; IS__TUNIT____-NEXT:    [[B:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* noalias nofree readnone [[P]]) #[[ATTR18:[0-9]+]]
 ; IS__TUNIT____-NEXT:    store i8 42, i8* [[B]], align 1
 ; IS__TUNIT____-NEXT:    ret void
 ;
@@ -682,7 +682,7 @@ define void @captureStrip(i8* %p) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@captureStrip
 ; IS__TUNIT____-SAME: (i8* nofree writeonly [[P:%.*]]) #[[ATTR1]] {
-; IS__TUNIT____-NEXT:    [[B:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* noalias nofree readnone [[P]]) #[[ATTR17]]
+; IS__TUNIT____-NEXT:    [[B:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* noalias nofree readnone [[P]]) #[[ATTR18]]
 ; IS__TUNIT____-NEXT:    store i8* [[B]], i8** @g3, align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
@@ -892,6 +892,7 @@ declare i8* @llvm.strip.invariant.group.p0i8(i8*)
 ; IS__TUNIT____: attributes #[[ATTR15]] = { nofree nounwind readnone willreturn }
 ; IS__TUNIT____: attributes #[[ATTR16]] = { nounwind }
 ; IS__TUNIT____: attributes #[[ATTR17]] = { willreturn }
+; IS__TUNIT____: attributes #[[ATTR18]] = { readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn writeonly }
@@ -911,6 +912,7 @@ declare i8* @llvm.strip.invariant.group.p0i8(i8*)
 ; IS__CGSCC____: attributes #[[ATTR15:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind speculatable willreturn }
 ; IS__CGSCC____: attributes #[[ATTR16:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
 ; IS__CGSCC____: attributes #[[ATTR17]] = { nounwind willreturn writeonly }
-; IS__CGSCC____: attributes #[[ATTR18]] = { willreturn }
+; IS__CGSCC____: attributes #[[ATTR18]] = { readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR19]] = { nounwind }
+; IS__CGSCC____: attributes #[[ATTR20]] = { willreturn }
 ;.

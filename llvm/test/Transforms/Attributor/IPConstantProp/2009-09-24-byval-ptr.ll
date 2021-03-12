@@ -265,5 +265,5 @@ entry:
 ; IS__CGSCC____: attributes #[[ATTR0:[0-9]+]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readonly willreturn }
 ; IS__CGSCC____: attributes #[[ATTR2]] = { nounwind readonly willreturn }
-; IS__CGSCC____: attributes #[[ATTR3:[0-9]+]] = { nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR3:[0-9]+]] = { nounwind readnone willreturn }
 ;.
