@@ -121,12 +121,17 @@ Expected<ExpressionValue>
 ExpressionFormat::valueFromStringRepr(StringRef StrVal,
                                       const SourceMgr &SM) const {
   bool ValueIsSigned = Value == Kind::Signed;
-  StringRef OverflowErrorStr = "unable to represent numeric value";
+  // Both the FileCheck utility and library only call this method with a valid
+  // value in StrVal. This is guaranteed by the regex returned by
+  // getWildcardRegex() above. Only underflow and overflow errors can thus
+  // occur. However new uses of this method could be added in the future so
+  // the error message does not make assumptions about StrVal.
+  StringRef IntegerParseErrorStr = "unable to represent numeric value";
   if (ValueIsSigned) {
     int64_t SignedValue;
 
     if (StrVal.getAsInteger(10, SignedValue))
-      return ErrorDiagnostic::get(SM, StrVal, OverflowErrorStr);
+      return ErrorDiagnostic::get(SM, StrVal, IntegerParseErrorStr);
 
     return ExpressionValue(SignedValue);
   }
@@ -134,7 +139,7 @@ ExpressionFormat::valueFromStringRepr(StringRef StrVal,
   bool Hex = Value == Kind::HexUpper || Value == Kind::HexLower;
   uint64_t UnsignedValue;
   if (StrVal.getAsInteger(Hex ? 16 : 10, UnsignedValue))
-    return ErrorDiagnostic::get(SM, StrVal, OverflowErrorStr);
+    return ErrorDiagnostic::get(SM, StrVal, IntegerParseErrorStr);
 
   return ExpressionValue(UnsignedValue);
 }
