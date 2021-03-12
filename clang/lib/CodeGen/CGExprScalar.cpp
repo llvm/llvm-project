@@ -3162,6 +3162,7 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
     // We need to check the types of the operands of the operator to get the
     // correct matrix dimensions.
     auto *BO = cast<BinaryOperator>(Ops.E);
+    (void)BO;
     assert(
         isa<ConstantMatrixType>(BO->getLHS()->getType().getCanonicalType()) &&
         "first operand must be a matrix");
