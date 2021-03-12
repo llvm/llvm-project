@@ -700,7 +700,7 @@ private:
   std::list<blockType *> blocks_;
   std::size_t nextIndex_{0};
   blockType *currBlock_{nullptr};
-  std::size_t symbolCount_ = 0;
+  static inline std::size_t symbolCount_ = 0;
 
   Symbol &Get() {
     if (nextIndex_ == 0) {
