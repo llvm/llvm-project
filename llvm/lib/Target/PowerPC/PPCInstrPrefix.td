@@ -1691,6 +1691,10 @@ let Predicates = [PairedVectorMemops] in {
 // be removed.
 let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
   // Load i32
+  def : Pat<(i32 (zextloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZpc $ga, 0)>;
+  def : Pat<(i32 (extloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZpc $ga, 0)>;
   def : Pat<(i32 (zextloadi8  (PPCmatpcreladdr pcreladdr:$ga))),
             (PLBZpc $ga, 0)>;
   def : Pat<(i32 (extloadi8   (PPCmatpcreladdr pcreladdr:$ga))),
@@ -1712,6 +1716,10 @@ let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
             (PSTWpc $RS, $ga, 0)>;
 
   // Load i64
+  def : Pat<(i64 (zextloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZ8pc $ga, 0)>;
+  def : Pat<(i64 (extloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZ8pc $ga, 0)>;
   def : Pat<(i64 (zextloadi8  (PPCmatpcreladdr pcreladdr:$ga))),
             (PLBZ8pc $ga, 0)>;
   def : Pat<(i64 (extloadi8   (PPCmatpcreladdr pcreladdr:$ga))),
