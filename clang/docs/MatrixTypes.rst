@@ -118,15 +118,21 @@ more explicit.
 Matrix Type Binary Operators
 ----------------------------
 
-Each matrix type supports the following binary operators: ``+``, ``-`` and ``*``. The ``*``
-operator provides matrix multiplication, while ``+`` and ``-`` are performed
-element-wise. There are also scalar versions of the operators, which take a
-matrix type and the matrix element type. The operation is applied to all
-elements of the matrix using the scalar value.
+Given two matrixes, the ``+`` and ``-`` operators perform element-wise addition
+and subtraction, while the ``*`` operator performs matrix multiplication.
+``+``, ``-``, ``*``, and ``/`` can also be used with a matrix and a scalar
+value, applying the operation to each element of the matrix.
 
-For ``BIN_OP`` in ``+``, ``-``, ``*`` given the expression ``M1 BIN_OP M2`` where
-at least one of ``M1`` or ``M2`` is of matrix type and, for `*`, the other is of
-a real type:
+Earlier versions of this extension did not support division by a scalar.
+You can test for the availability of this feature with
+``__has_extension(matrix_types_scalar_division)``.
+
+For the expression ``M1 BIN_OP M2`` where
+* ``BIN_OP`` is one of ``+`` or ``-``, one of ``M1`` and ``M2`` is of matrix
+  type, and the other is of matrix type or real type; or
+* ``BIN_OP`` is ``*``, one of ``M1`` and ``M2`` is of matrix type, and the
+   other is of a real type; or
+* ``BIN_OP`` is ``/``, ``M1`` is of matrix type, and ``M2`` is of a real type:
 
 * The usual arithmetic conversions are applied to ``M1`` and ``M2``. [ Note: if ``M1`` or
   ``M2`` are of a real type, they are broadcast to matrices here. — end note ]
