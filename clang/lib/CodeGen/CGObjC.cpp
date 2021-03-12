@@ -1819,9 +1819,10 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   llvm::Value *StateMutationsPtr
     = Builder.CreateLoad(StateMutationsPtrPtr, "mutationsptr");
 
+  llvm::Type *UnsignedLongTy = ConvertType(getContext().UnsignedLongTy);
   llvm::Value *initialMutations =
-    Builder.CreateAlignedLoad(StateMutationsPtr, getPointerAlign(),
-                              "forcoll.initial-mutations");
+    Builder.CreateAlignedLoad(UnsignedLongTy, StateMutationsPtr,
+                              getPointerAlign(), "forcoll.initial-mutations");
 
   // Start looping.  This is the point we return to whenever we have a
   // fresh, non-empty batch of objects.
@@ -1843,8 +1844,8 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   // refreshes.
   StateMutationsPtr = Builder.CreateLoad(StateMutationsPtrPtr, "mutationsptr");
   llvm::Value *currentMutations
-    = Builder.CreateAlignedLoad(StateMutationsPtr, getPointerAlign(),
-                                "statemutations");
+    = Builder.CreateAlignedLoad(UnsignedLongTy, StateMutationsPtr,
+                                getPointerAlign(), "statemutations");
 
   llvm::BasicBlock *WasMutatedBB = createBasicBlock("forcoll.mutated");
   llvm::BasicBlock *WasNotMutatedBB = createBasicBlock("forcoll.notmutated");
@@ -1854,9 +1855,9 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
 
   // If so, call the enumeration-mutation function.
   EmitBlock(WasMutatedBB);
+  llvm::Type *ObjCIdType = ConvertType(getContext().getObjCIdType());
   llvm::Value *V =
-    Builder.CreateBitCast(Collection,
-                          ConvertType(getContext().getObjCIdType()));
+    Builder.CreateBitCast(Collection, ObjCIdType);
   CallArgList Args2;
   Args2.add(RValue::get(V), getContext().getObjCIdType());
   // FIXME: We shouldn't need to get the function info here, the runtime already
@@ -1905,7 +1906,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   llvm::Value *CurrentItemPtr =
     Builder.CreateGEP(EnumStateItems, index, "currentitem.ptr");
   llvm::Value *CurrentItem =
-    Builder.CreateAlignedLoad(CurrentItemPtr, getPointerAlign());
+    Builder.CreateAlignedLoad(ObjCIdType, CurrentItemPtr, getPointerAlign());
 
   if (SanOpts.has(SanitizerKind::ObjCCast)) {
     // Before using an item from the collection, check that the implicit cast
