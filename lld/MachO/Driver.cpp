@@ -1032,8 +1032,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   // Initialize InputSections.
-  for (InputFile *file : inputFiles) {
-    for (SubsectionMap &map : file->subsections) {
+  for (const InputFile *file : inputFiles) {
+    for (const SubsectionMap &map : file->subsections) {
       for (const auto &p : map) {
         InputSection *isec = p.second;
         inputSections.push_back(isec);
