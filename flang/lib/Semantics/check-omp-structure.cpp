@@ -606,7 +606,24 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
         }
       }
     }
-    // TODO: A list-item cannot appear in more than one aligned clause
+    // A list-item cannot appear in more than one aligned clause
+    semantics::SymbolSet alignedVars;
+    auto clauseAll = FindClauses(llvm::omp::Clause::OMPC_aligned);
+    for (auto itr = clauseAll.first; itr != clauseAll.second; ++itr) {
+      const auto &alignedClause{
+          std::get<parser::OmpClause::Aligned>(itr->second->u)};
+      const auto &alignedNameList{
+          std::get<std::list<parser::Name>>(alignedClause.v.t)};
+      for (auto const &var : alignedNameList) {
+        if (alignedVars.count(*(var.symbol)) == 1) {
+          context_.Say(itr->second->source,
+              "List item '%s' present at multiple ALIGNED clauses"_err_en_US,
+              var.ToString());
+          break;
+        }
+        alignedVars.insert(*(var.symbol));
+      }
+    }
   } // SIMD
 
   // 2.7.3 Single Construct Restriction
