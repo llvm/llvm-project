@@ -25,8 +25,8 @@
 #include <vector>
 
 #include "test_macros.h"
-#include "moveconstructible.h"
-#include "swappable.h"
+#include "type_classification/moveconstructible.h"
+#include "type_classification/swappable.h"
 
 template <class T>
 struct expected {

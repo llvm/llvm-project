@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef TEST_STD_CONCEPTS_LAND_MOVECONSTRUCTIBLE_H
-#define TEST_STD_CONCEPTS_LAND_MOVECONSTRUCTIBLE_H
+#ifndef TEST_SUPPORT_TYPE_CLASSIFICATION_MOVECONSTRUCTIBLE_H
+#define TEST_SUPPORT_TYPE_CLASSIFICATION_MOVECONSTRUCTIBLE_H
 
 struct HasDefaultOps {};
 
@@ -71,4 +71,4 @@ struct HasANonMovable {
   NonMovable X;
 };
 
-#endif // TEST_STD_CONCEPTS_LAND_MOVECONSTRUCTIBLE_H
+#endif // TEST_SUPPORT_TYPE_CLASSIFICATION_MOVECONSTRUCTIBLE_H
