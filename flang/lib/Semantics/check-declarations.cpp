@@ -1359,6 +1359,13 @@ void CheckHelper::CheckPassArg(
       context_.SetError(*interface);
       return;
     }
+    Symbol *argSym{dummyArgs[0]};
+    if (!argSym) {
+      messages_.Say(interface->name(),
+          "Cannot use an alternate return as the passed-object dummy "
+          "argument"_err_en_US);
+      return;
+    }
     passName = dummyArgs[0]->name();
   }
   std::optional<int> passArgIndex{};
