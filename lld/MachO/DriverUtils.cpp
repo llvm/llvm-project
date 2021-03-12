@@ -52,8 +52,9 @@ MachOOptTable::MachOOptTable() : OptTable(optInfo) {}
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
 static void handleColorDiagnostics(opt::InputArgList &args) {
-  auto *arg = args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
-                              OPT_no_color_diagnostics);
+  const Arg *arg =
+      args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
+                      OPT_no_color_diagnostics);
   if (!arg)
     return;
   if (arg->getOption().getID() == OPT_color_diagnostics) {
@@ -121,7 +122,7 @@ std::string macho::createResponseFile(const opt::InputArgList &args) {
   raw_svector_ostream os(data);
 
   // Copy the command line to the output while rewriting paths.
-  for (auto *arg : args) {
+  for (const Arg *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_reproduce:
       break;
