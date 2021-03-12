@@ -589,7 +589,7 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
     fatal("must specify -arch");
   PlatformKind platform = parsePlatformVersion(args);
 
-  config->target = Target(getArchitectureFromName(archName), platform);
+  config->target = MachO::Target(getArchitectureFromName(archName), platform);
 
   switch (getCPUTypeFromArchitecture(config->target.Arch).first) {
   case CPU_TYPE_X86_64:
