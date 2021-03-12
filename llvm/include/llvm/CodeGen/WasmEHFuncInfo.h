@@ -44,7 +44,7 @@ struct WasmEHFuncInfo {
     assert(hasUnwindSrcs(BB));
     const auto &Set = UnwindDestToSrcs.lookup(BB);
     SmallPtrSet<const BasicBlock *, 4> Ret;
-    for (const auto &P : Set)
+    for (const auto P : Set)
       Ret.insert(P.get<const BasicBlock *>());
     return Ret;
   }
@@ -70,7 +70,7 @@ struct WasmEHFuncInfo {
     assert(hasUnwindSrcs(MBB));
     const auto &Set = UnwindDestToSrcs.lookup(MBB);
     SmallPtrSet<MachineBasicBlock *, 4> Ret;
-    for (const auto &P : Set)
+    for (const auto P : Set)
       Ret.insert(P.get<MachineBasicBlock *>());
     return Ret;
   }
