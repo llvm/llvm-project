@@ -219,8 +219,9 @@ define arm_aapcs_vfpcc float @fast_float_mac(float* nocapture readonly %b, float
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    add.w lr, r12, r3, lsr #2
+; CHECK-NEXT:    add.w r12, r12, r3, lsr #2
 ; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    dls lr, r12
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2

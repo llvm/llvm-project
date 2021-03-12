@@ -11,8 +11,8 @@ define void @arm_min_helium_f32(float* %pSrc, i32 %blockSize, float* nocapture %
 ; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    vidup.u32 q2, r6, #1
 ; CHECK-NEXT:    adr r4, .LCPI0_0
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vldrw.u32 q1, [r4]
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vmov.i32 q3, #0x4
 ; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:  .LBB0_1: @ %do.body
