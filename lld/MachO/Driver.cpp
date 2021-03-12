@@ -719,6 +719,57 @@ static uint32_t parseDylibVersion(const opt::ArgList& args, unsigned id) {
   return version.rawValue();
 }
 
+void SymbolPatterns::clear() {
+  literals.clear();
+  globs.clear();
+}
+
+void SymbolPatterns::insert(StringRef symbolName) {
+  if (symbolName.find_first_of("*?[]") == StringRef::npos)
+    literals.insert(CachedHashStringRef(symbolName));
+  else if (Expected<GlobPattern> pattern = GlobPattern::create(symbolName))
+    globs.emplace_back(*pattern);
+  else
+    error("invalid symbol-name pattern: " + symbolName);
+}
+
+bool SymbolPatterns::matchLiteral(StringRef symbolName) const {
+  return literals.contains(CachedHashStringRef(symbolName));
+}
+
+bool SymbolPatterns::matchGlob(StringRef symbolName) const {
+  for (const llvm::GlobPattern &glob : globs)
+    if (glob.match(symbolName))
+      return true;
+  return false;
+}
+
+bool SymbolPatterns::match(StringRef symbolName) const {
+  return matchLiteral(symbolName) || matchGlob(symbolName);
+}
+
+static void handleSymbolPatterns(opt::InputArgList &args,
+                                 SymbolPatterns &symbolPatterns,
+                                 unsigned singleOptionCode,
+                                 unsigned listFileOptionCode) {
+  for (opt::Arg *arg : args.filtered(singleOptionCode))
+    symbolPatterns.insert(arg->getValue());
+  for (opt::Arg *arg : args.filtered(listFileOptionCode)) {
+    StringRef path = arg->getValue();
+    Optional<MemoryBufferRef> buffer = readFile(path);
+    if (!buffer) {
+      error("Could not read symbol file: " + path);
+      continue;
+    }
+    MemoryBufferRef mbref = *buffer;
+    for (StringRef line : args::getLines(mbref)) {
+      line = line.take_until([](char c) { return c == '#'; }).trim();
+      if (!line.empty())
+        symbolPatterns.insert(line);
+    }
+  }
+}
+
 bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -841,6 +892,16 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   for (opt::Arg *arg : args.filtered(OPT_rename_segment)) {
     config->segmentRenameMap[validName(arg->getValue(0))] =
         validName(arg->getValue(1));
+  }
+
+  handleSymbolPatterns(args, config->exportedSymbols, OPT_exported_symbol,
+                       OPT_exported_symbols_list);
+  handleSymbolPatterns(args, config->unexportedSymbols, OPT_unexported_symbol,
+                       OPT_unexported_symbols_list);
+  if (!config->exportedSymbols.empty() && !config->unexportedSymbols.empty()) {
+    error("cannot use both -exported_symbol* and -unexported_symbol* options\n"
+          ">>> ignoring unexports");
+    config->unexportedSymbols.clear();
   }
 
   config->saveTemps = args.hasArg(OPT_save_temps);
