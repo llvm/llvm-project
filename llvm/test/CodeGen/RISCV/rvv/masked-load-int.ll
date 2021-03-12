@@ -243,3 +243,28 @@ define <vscale x 64 x i8> @masked_load_nxv64i8(<vscale x 64 x i8>* %a, <vscale x
   ret <vscale x 64 x i8> %load
 }
 declare <vscale x 64 x i8> @llvm.masked.load.nxv64i8(<vscale x 64 x i8>*, i32, <vscale x 64 x i1>, <vscale x 64 x i8>)
+
+define <vscale x 2 x i8> @masked_load_zero_mask(<vscale x 2 x i8>* %a) nounwind {
+; CHECK-LABEL: masked_load_zero_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8,mf4,ta,mu
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    vle8.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(<vscale x 2 x i8>* %a, i32 1, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x i8> undef)
+  ret <vscale x 2 x i8> %load
+}
+
+define <vscale x 2 x i8> @masked_load_allones_mask(<vscale x 2 x i8>* %a, <vscale x 2 x i8> %maskedoff) nounwind {
+; CHECK-LABEL: masked_load_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8,mf4,ta,mu
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    vsetvli a1, zero, e8,mf4,tu,mu
+; CHECK-NEXT:    vle8.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %insert = insertelement <vscale x 2 x i1> undef, i1 1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %insert, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
+  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(<vscale x 2 x i8>* %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> %maskedoff)
+  ret <vscale x 2 x i8> %load
+}
