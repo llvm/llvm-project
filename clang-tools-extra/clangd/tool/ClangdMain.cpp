@@ -8,6 +8,8 @@
 
 #include "ClangdLSPServer.h"
 #include "CodeComplete.h"
+#include "Config.h"
+#include "ConfigProvider.h"
 #include "Features.inc"
 #include "PathMapping.h"
 #include "Protocol.h"
@@ -43,6 +45,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #ifndef _WIN32
@@ -544,15 +547,91 @@ loadExternalIndex(const Config::ExternalIndexSpec &External,
     log("Associating {0} with monolithic index at {1}.", External.MountPoint,
         External.Location);
     auto NewIndex = std::make_unique<SwapIndex>(std::make_unique<MemIndex>());
-    Tasks.runAsync("Load-index:" + External.Location,
-                   [File = External.Location, PlaceHolder = NewIndex.get()] {
-                     if (auto Idx = loadIndex(File, /*UseDex=*/true))
-                       PlaceHolder->reset(std::move(Idx));
-                   });
+    auto IndexLoadTask = [File = External.Location,
+                          PlaceHolder = NewIndex.get()] {
+      if (auto Idx = loadIndex(File, /*UseDex=*/true))
+        PlaceHolder->reset(std::move(Idx));
+    };
+    // FIXME: The signature should contain a null-able TaskRunner istead, and
+    // the task should be scheduled accordingly.
+    if (Sync) {
+      IndexLoadTask();
+    } else {
+      Tasks.runAsync("Load-index:" + External.Location,
+                     std::move(IndexLoadTask));
+    }
     return std::move(NewIndex);
   }
   llvm_unreachable("Invalid ExternalIndexKind.");
 }
+
+class FlagsConfigProvider : public config::Provider {
+private:
+  config::CompiledFragment Frag;
+
+  std::vector<config::CompiledFragment>
+  getFragments(const config::Params &,
+               config::DiagnosticCallback) const override {
+    return {Frag};
+  }
+
+public:
+  FlagsConfigProvider() {
+    llvm::Optional<Config::CDBSearchSpec> CDBSearch;
+    llvm::Optional<Config::ExternalIndexSpec> IndexSpec;
+    llvm::Optional<Config::BackgroundPolicy> BGPolicy;
+
+    // If --compile-commands-dir arg was invoked, check value and override
+    // default path.
+    if (!CompileCommandsDir.empty()) {
+      if (llvm::sys::fs::exists(CompileCommandsDir)) {
+        // We support passing both relative and absolute paths to the
+        // --compile-commands-dir argument, but we assume the path is absolute
+        // in the rest of clangd so we make sure the path is absolute before
+        // continuing.
+        llvm::SmallString<128> Path(CompileCommandsDir);
+        if (std::error_code EC = llvm::sys::fs::make_absolute(Path)) {
+          elog("Error while converting the relative path specified by "
+               "--compile-commands-dir to an absolute path: {0}. The argument "
+               "will be ignored.",
+               EC.message());
+        } else {
+          CDBSearch = {Config::CDBSearchSpec::FixedDir, Path.str().str()};
+        }
+      } else {
+        elog("Path specified by --compile-commands-dir does not exist. The "
+             "argument will be ignored.");
+      }
+    }
+    if (!IndexFile.empty()) {
+      Config::ExternalIndexSpec Spec;
+      Spec.Kind = Spec.File;
+      Spec.Location = IndexFile;
+      IndexSpec = std::move(Spec);
+    }
+    if (!RemoteIndexAddress.empty()) {
+      assert(!ProjectRoot.empty() && IndexFile.empty());
+      Config::ExternalIndexSpec Spec;
+      Spec.Kind = Spec.Server;
+      Spec.Location = RemoteIndexAddress;
+      Spec.MountPoint = ProjectRoot;
+      IndexSpec = std::move(Spec);
+      BGPolicy = Config::BackgroundPolicy::Skip;
+    }
+    if (!EnableBackgroundIndex) {
+      BGPolicy = Config::BackgroundPolicy::Skip;
+    }
+    Frag = [=](const config::Params &, Config &C) {
+      if (CDBSearch)
+        C.CompileFlags.CDBSearch = *CDBSearch;
+      if (IndexSpec)
+        C.Index.External = *IndexSpec;
+      if (BGPolicy)
+        C.Index.Background = *BGPolicy;
+      return true;
+    };
+  }
+};
 } // namespace
 } // namespace clangd
 } // namespace clang
@@ -693,29 +772,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   ClangdLSPServer::Options Opts;
   Opts.UseDirBasedCDB = (CompileArgsFrom == FilesystemCompileArgs);
 
-  // If --compile-commands-dir arg was invoked, check value and override default
-  // path.
-  if (!CompileCommandsDir.empty()) {
-    if (llvm::sys::fs::exists(CompileCommandsDir)) {
-      // We support passing both relative and absolute paths to the
-      // --compile-commands-dir argument, but we assume the path is absolute in
-      // the rest of clangd so we make sure the path is absolute before
-      // continuing.
-      llvm::SmallString<128> Path(CompileCommandsDir);
-      if (std::error_code EC = llvm::sys::fs::make_absolute(Path)) {
-        elog("Error while converting the relative path specified by "
-             "--compile-commands-dir to an absolute path: {0}. The argument "
-             "will be ignored.",
-             EC.message());
-      } else {
-        Opts.CompileCommandsDir = std::string(Path.str());
-      }
-    } else {
-      elog("Path specified by --compile-commands-dir does not exist. The "
-           "argument will be ignored.");
-    }
-  }
-
   switch (PCHStorage) {
   case PCHStorageFlag::Memory:
     Opts.StorePreamblesInMemory = true;
@@ -729,18 +785,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.BuildDynamicSymbolIndex = true;
   std::vector<std::unique_ptr<SymbolIndex>> IdxStack;
   std::unique_ptr<SymbolIndex> StaticIdx;
-  std::future<void> AsyncIndexLoad; // Block exit while loading the index.
-  if (!IndexFile.empty()) {
-    // Load the index asynchronously. Meanwhile SwapIndex returns no results.
-    SwapIndex *Placeholder;
-    StaticIdx.reset(Placeholder = new SwapIndex(std::make_unique<MemIndex>()));
-    AsyncIndexLoad = runAsync<void>([Placeholder] {
-      if (auto Idx = loadIndex(IndexFile, /*UseDex=*/true))
-        Placeholder->reset(std::move(Idx));
-    });
-    if (Sync)
-      AsyncIndexLoad.wait();
-  }
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
     llvm::errs() << "remote-index-address and project-path have to be "
@@ -750,8 +794,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   if (!RemoteIndexAddress.empty()) {
     if (IndexFile.empty()) {
       log("Connecting to remote index at {0}", RemoteIndexAddress);
-      StaticIdx = remote::getClient(RemoteIndexAddress, ProjectRoot);
-      EnableBackgroundIndex = false;
     } else {
       elog("When enabling remote index, IndexFile should not be specified. "
            "Only one can be used at time. Remote index will ignored.");
@@ -802,12 +844,13 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     } else {
       elog("Couldn't determine user config file, not loading");
     }
-    std::vector<const config::Provider *> ProviderPointers;
-    for (const auto &P : ProviderStack)
-      ProviderPointers.push_back(P.get());
-    Config = config::Provider::combine(std::move(ProviderPointers));
-    Opts.ConfigProvider = Config.get();
   }
+  ProviderStack.push_back(std::make_unique<FlagsConfigProvider>());
+  std::vector<const config::Provider *> ProviderPointers;
+  for (const auto &P : ProviderStack)
+    ProviderPointers.push_back(P.get());
+  Config = config::Provider::combine(std::move(ProviderPointers));
+  Opts.ConfigProvider = Config.get();
 
   // Create an empty clang-tidy option.
   TidyProvider ClangTidyOptProvider;
