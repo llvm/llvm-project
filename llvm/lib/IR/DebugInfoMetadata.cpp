@@ -1528,6 +1528,55 @@ DIExpression *DIExpression::appendExt(const DIExpression *Expr,
   return appendToStack(Expr, getExtOps(FromSize, ToSize, Signed));
 }
 
+StringRef DIOp::getAsmName(const Variant &V) {
+  return visit(makeVisitor([](auto &&Op) { return Op.getAsmName(); }), V);
+}
+
+unsigned DIOp::getBitcodeID(const Variant &V) {
+  return visit(makeVisitor([](auto &&Op) { return Op.getBitcodeID(); }), V);
+}
+
+DIExpr::Builder::Builder(LLVMContext &C) : C(C) {}
+DIExpr::Builder::Builder(LLVMContext &C,
+                         std::initializer_list<DIOp::Variant> IL)
+    : C(C), Elements(IL) {}
+DIExpr::Builder::Builder(const DIExpr &E)
+    : C(E.getContext()), Elements(E.Elements) {}
+
+DIExpr::Builder &DIExpr::Builder::append(DIOp::Variant O) {
+  Elements.push_back(O);
+  return *this;
+}
+
+DIExpr::Builder::Iterator DIExpr::Builder::insert(Iterator I, DIOp::Variant O) {
+  return Elements.insert(I.Op, O);
+}
+
+DIExpr::Builder::Iterator DIExpr::Builder::erase(Iterator I) {
+  return Elements.erase(I.Op);
+}
+
+DIExpr::Builder::Iterator DIExpr::Builder::erase(Iterator From, Iterator To) {
+  return Elements.erase(From.Op, To.Op);
+}
+
+DIExpr *DIExpr::Builder::intoExpr(bool IsDistinct) {
+#ifndef NDEBUG
+  assert(!StateIsUnspecified);
+  StateIsUnspecified = true;
+#endif
+  return IsDistinct ? DIExpr::getDistinct(C, std::move(Elements))
+                    : DIExpr::get(C, std::move(Elements));
+}
+
+DIExpr *DIExpr::getImpl(LLVMContext &Context,
+                        SmallVector<DIOp::Variant> &&Elements,
+                        StorageType Storage, bool ShouldCreate) {
+  assert(Storage != Distinct && "DIExpr cannot be distinct");
+  DEFINE_GETIMPL_LOOKUP(DIExpr, (Elements));
+  DEFINE_GETIMPL_STORE_NO_OPS(DIExpr, (std::move(Elements)));
+}
+
 DIGlobalVariableExpression *
 DIGlobalVariableExpression::getImpl(LLVMContext &Context, Metadata *Variable,
                                     Metadata *Expression, StorageType Storage,

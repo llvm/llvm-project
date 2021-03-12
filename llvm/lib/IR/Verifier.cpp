@@ -1432,6 +1432,10 @@ void Verifier::visitDIExpression(const DIExpression &N) {
   AssertDI(N.isValid(), "invalid expression", &N);
 }
 
+void Verifier::visitDIExpr(const DIExpr &N) {
+  // TODO
+}
+
 void Verifier::visitDIGlobalVariableExpression(
     const DIGlobalVariableExpression &GVE) {
   AssertDI(GVE.getVariable(), "missing variable");

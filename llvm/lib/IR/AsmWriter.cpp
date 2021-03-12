@@ -2368,6 +2368,60 @@ static void writeDIArgList(raw_ostream &Out, const DIArgList *N,
   Out << ")";
 }
 
+static void writeDIExpr(raw_ostream &Out, const DIExpr *N,
+                        TypePrinting *TypePrinter, SlotTracker *Machine,
+                        const Module *Context) {
+  FieldSeparator FS;
+  Out << "!DIExpr(";
+  for (auto &&Op : N->builder()) {
+    Out << FS << DIOp::getAsmName(Op) << '(';
+    visit(makeVisitor(
+#define HANDLE_OP0(NAME) [](DIOp::NAME) {},
+#include "llvm/IR/DIExprOps.def"
+#undef HANDLE_OP0
+              [&](DIOp::Referrer Referrer) {
+                TypePrinter->print(Referrer.getResultType(), Out);
+              },
+              [&](DIOp::Arg Arg) {
+                Out << Arg.getIndex() << ", ";
+                TypePrinter->print(Arg.getResultType(), Out);
+              },
+              [&](DIOp::TypeObject TypeObject) {
+                TypePrinter->print(TypeObject.getResultType(), Out);
+              },
+              [&](DIOp::Constant Constant) {
+                TypePrinter->print(Constant.getLiteralValue()->getType(), Out);
+                Out << ' ';
+                WriteConstantInternal(Out, Constant.getLiteralValue(),
+                                      *TypePrinter, Machine, Context);
+              },
+              [&](DIOp::Convert Convert) {
+                TypePrinter->print(Convert.getResultType(), Out);
+              },
+              [&](DIOp::Reinterpret Reinterpret) {
+                TypePrinter->print(Reinterpret.getResultType(), Out);
+              },
+              [&](DIOp::BitOffset BitOffset) {
+                TypePrinter->print(BitOffset.getResultType(), Out);
+              },
+              [&](DIOp::ByteOffset ByteOffset) {
+                TypePrinter->print(ByteOffset.getResultType(), Out);
+              },
+              [&](DIOp::Composite Composite) {
+                Out << Composite.getCount() << ", ";
+                TypePrinter->print(Composite.getResultType(), Out);
+              },
+              [&](DIOp::Extend Extend) { Out << Extend.getCount(); },
+              [&](DIOp::AddrOf AddrOf) { Out << AddrOf.getAddressSpace(); },
+              [&](DIOp::PushLane PushLane) {
+                TypePrinter->print(PushLane.getResultType(), Out);
+              }),
+          Op);
+    Out << ')';
+  }
+  Out << ')';
+}
+
 static void writeDIGlobalVariableExpression(raw_ostream &Out,
                                             const DIGlobalVariableExpression *N,
                                             TypePrinting *TypePrinter,

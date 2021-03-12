@@ -401,6 +401,7 @@ namespace llvm {
       Loc = Lex.getLoc();
       return parseType(Result, AllowVoid);
     }
+    bool parseFirstClassType(Type *&Result);
     bool parseAnonStructType(Type *&Result, bool Packed);
     bool parseStructBody(SmallVectorImpl<Type *> &Body);
     bool parseStructDefinition(SMLoc TypeLoc, StringRef Name,
