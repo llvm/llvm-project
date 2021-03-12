@@ -9948,7 +9948,7 @@ void CGOpenMPRuntime::emitTargetNumIterationsCall(
       llvm::Value *Args[] = {RTLoc, DeviceID, NumIterations};
       CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_push_target_tripcount),
+              CGM.getModule(), OMPRTL___kmpc_push_target_tripcount_mapper),
           Args);
     }
   };

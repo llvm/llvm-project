@@ -1023,8 +1023,8 @@ TableMap *getTableMap(void *HostPtr) {
 
 /// Get loop trip count
 /// FIXME: This function will not work right if calling
-/// __kmpc_push_target_tripcount in one thread but doing offloading in another
-/// thread, which might occur when we call task yield.
+/// __kmpc_push_target_tripcount_mapper in one thread but doing offloading in
+/// another thread, which might occur when we call task yield.
 uint64_t getLoopTripCount(int64_t DeviceId) {
   DeviceTy &Device = PM->Devices[DeviceId];
   uint64_t LoopTripCount = 0;
