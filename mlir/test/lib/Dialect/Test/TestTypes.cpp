@@ -164,6 +164,13 @@ unsigned TestTypeWithLayout::extractKind(DataLayoutEntryListRef params,
 // TestDialect
 //===----------------------------------------------------------------------===//
 
+void TestDialect::registerTypes() {
+  addTypes<TestType, TestTypeWithLayout, TestRecursiveType,
+#define GET_TYPEDEF_LIST
+#include "TestTypeDefs.cpp.inc"
+           >();
+}
+
 static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,
                           llvm::SetVector<Type> &stack) {
   StringRef typeTag;

@@ -60,17 +60,9 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
 } // end anonymous namespace.
 
 void BuiltinDialect::initialize() {
-  addTypes<ComplexType, BFloat16Type, Float16Type, Float32Type, Float64Type,
-           Float80Type, Float128Type, FunctionType, IndexType, IntegerType,
-           MemRefType, UnrankedMemRefType, NoneType, OpaqueType,
-           RankedTensorType, TupleType, UnrankedTensorType, VectorType>();
-  addAttributes<AffineMapAttr, ArrayAttr, DenseIntOrFPElementsAttr,
-                DenseStringElementsAttr, DictionaryAttr, FloatAttr,
-                SymbolRefAttr, IntegerAttr, IntegerSetAttr, OpaqueAttr,
-                OpaqueElementsAttr, SparseElementsAttr, StringAttr, TypeAttr,
-                UnitAttr>();
-  addAttributes<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
-                UnknownLoc>();
+  registerTypes();
+  registerAttributes();
+  registerLocationAttributes();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/IR/BuiltinOps.cpp.inc"

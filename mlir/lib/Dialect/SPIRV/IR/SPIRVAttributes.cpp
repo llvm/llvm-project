@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
 
@@ -349,4 +350,12 @@ spirv::TargetEnvAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "expected spirv::ResourceLimitsAttr for limits";
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SPIR-V Dialect
+//===----------------------------------------------------------------------===//
+
+void spirv::SPIRVDialect::registerAttributes() {
+  addAttributes<InterfaceVarABIAttr, TargetEnvAttr, VerCapExtAttr>();
 }
