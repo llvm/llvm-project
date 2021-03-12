@@ -749,9 +749,13 @@ public:
     return getArch() == Triple::mips64 || getArch() == Triple::mips64el;
   }
 
+  bool isNanoMips() const {
+    return getArch() == Triple::nanomips;
+  }
+
   /// Tests whether the target is MIPS (little and big endian, 32- or 64-bit).
   bool isMIPS() const {
-    return isMIPS32() || isMIPS64() || getArch() == Triple::nanomips;
+    return isMIPS32() || isMIPS64() || isNanoMips();
   }
 
   /// Tests whether the target is PowerPC (32- or 64-bit LE or BE).

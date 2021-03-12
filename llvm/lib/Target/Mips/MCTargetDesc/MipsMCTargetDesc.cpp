@@ -53,7 +53,9 @@ StringRef MIPS_MC::selectMipsCPU(const Triple &TT, StringRef CPU) {
       else
         CPU = "mips64r6";
     } else {
-      if (TT.isMIPS32())
+      if (TT.isNanoMips())
+        CPU = "nanomips";
+      else if (TT.isMIPS32())
         CPU = "mips32";
       else
         CPU = "mips64";
