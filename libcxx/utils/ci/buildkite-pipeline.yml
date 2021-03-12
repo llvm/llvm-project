@@ -355,3 +355,51 @@ steps:
       automatic:
         - exit_status: -1  # Agent was lost
           limit: 2
+
+  - label: "Armv8"
+    command: "libcxx/utils/ci/run-buildbot armv8"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "armv8l"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Armv8 -fno-exceptions"
+    command: "libcxx/utils/ci/run-buildbot armv8-noexceptions"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "armv8l"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Armv7"
+    command: "libcxx/utils/ci/run-buildbot armv7"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "armv8l" # Compiling for v7, running on v8 hardware
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Armv7 -fno-exceptions"
+    command: "libcxx/utils/ci/run-buildbot armv7-noexceptions"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "armv8l" # Compiling for v7, running on v8 hardware
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
