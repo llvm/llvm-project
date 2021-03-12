@@ -326,7 +326,7 @@ def testMemRefType():
     f32 = F32Type.get()
     shape = [2, 3]
     loc = Location.unknown()
-    memref = MemRefType.get(shape, f32, memory_space=2)
+    memref = MemRefType.get(shape, f32, memory_space=Attribute.parse("2"))
     # CHECK: memref type: memref<2x3xf32, 2>
     print("memref type:", memref)
     # CHECK: number of affine layout maps: 0
@@ -341,7 +341,7 @@ def testMemRefType():
     assert len(memref_layout.layout) == 1
     # CHECK: memref layout: (d0, d1) -> (d1, d0)
     print("memref layout:", memref_layout.layout[0])
-    # CHECK: memory space: 0
+    # CHECK: memory space: <<NULL ATTRIBUTE>>
     print("memory space:", memref_layout.memory_space)
 
     none = NoneType.get()
@@ -361,7 +361,7 @@ def testUnrankedMemRefType():
   with Context(), Location.unknown():
     f32 = F32Type.get()
     loc = Location.unknown()
-    unranked_memref = UnrankedMemRefType.get(f32, 2)
+    unranked_memref = UnrankedMemRefType.get(f32, Attribute.parse("2"))
     # CHECK: unranked memref type: memref<*xf32, 2>
     print("unranked memref type:", unranked_memref)
     try:
@@ -388,7 +388,7 @@ def testUnrankedMemRefType():
 
     none = NoneType.get()
     try:
-      memref_invalid = UnrankedMemRefType.get(none, 2)
+      memref_invalid = UnrankedMemRefType.get(none, Attribute.parse("2"))
     except ValueError as e:
       # CHECK: invalid 'Type(none)' and expected floating point, integer, vector
       # CHECK: or complex type.

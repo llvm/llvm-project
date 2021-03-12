@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectInterface.h"
@@ -23,7 +24,7 @@ TEST(ShapedTypeTest, CloneMemref) {
 
   Type i32 = IntegerType::get(&context, 32);
   Type f32 = FloatType::getF32(&context);
-  int memSpace = 7;
+  Attribute memSpace = IntegerAttr::get(IntegerType::get(&context, 64), 7);
   Type memrefOriginalType = i32;
   llvm::SmallVector<int64_t> memrefOriginalShape({10, 20});
   AffineMap map = makeStridedLinearLayoutMap({2, 3}, 5, &context);
