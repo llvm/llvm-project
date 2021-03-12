@@ -1037,4 +1037,13 @@ TEST_F(TokenBufferTest, ExpandedBySpelled) {
               IsEmpty());
 }
 
+TEST_F(TokenCollectorTest, Pragmas) {
+  // Tokens coming from concatenations.
+  recordTokens(R"cpp(
+    void foo() {
+      #pragma unroll 4
+      for(int i=0;i<4;++i);
+    }
+  )cpp");
+}
 } // namespace
