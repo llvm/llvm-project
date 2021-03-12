@@ -21,6 +21,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 
 namespace mlir {
 namespace test {
@@ -105,6 +106,62 @@ public:
 
   /// Name/key getter.
   StringRef getName() { return getImpl()->name; }
+};
+
+struct TestTypeWithLayoutStorage : public TypeStorage {
+  using KeyTy = unsigned;
+
+  explicit TestTypeWithLayoutStorage(unsigned key) : key(key) {}
+  bool operator==(const KeyTy &other) const { return other == key; }
+
+  static TestTypeWithLayoutStorage *construct(TypeStorageAllocator &allocator,
+                                              const KeyTy &key) {
+    return new (allocator.allocate<TestTypeWithLayoutStorage>())
+        TestTypeWithLayoutStorage(key);
+  }
+
+  unsigned key;
+};
+
+class TestTypeWithLayout
+    : public Type::TypeBase<TestTypeWithLayout, Type, TestTypeWithLayoutStorage,
+                            DataLayoutTypeInterface::Trait> {
+public:
+  using Base::Base;
+
+  static TestTypeWithLayout get(MLIRContext *ctx, unsigned key) {
+    return Base::get(ctx, key);
+  }
+
+  unsigned getKey() { return getImpl()->key; }
+
+  unsigned getTypeSize(const DataLayout &dataLayout,
+                       DataLayoutEntryListRef params) const {
+    return extractKind(params, "size");
+  }
+
+  unsigned getABIAlignment(const DataLayout &dataLayout,
+                           DataLayoutEntryListRef params) const {
+    return extractKind(params, "alignment");
+  }
+
+  unsigned getPreferredAlignment(const DataLayout &dataLayout,
+                                 DataLayoutEntryListRef params) const {
+    return extractKind(params, "preferred");
+  }
+
+  bool areCompatible(DataLayoutEntryListRef oldLayout,
+                     DataLayoutEntryListRef newLayout) const {
+    unsigned old = extractKind(oldLayout, "alignment");
+    return old == 1 || extractKind(newLayout, "alignment") <= old;
+  }
+
+  LogicalResult verifyEntries(DataLayoutEntryListRef params,
+                              Location loc) const;
+
+private:
+  unsigned extractKind(DataLayoutEntryListRef params,
+                       StringRef expectedKind) const;
 };
 
 } // namespace test

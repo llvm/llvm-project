@@ -9,6 +9,7 @@
 #ifndef TEST_OPS
 #define TEST_OPS
 
+include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
@@ -16,6 +17,7 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "TestInterfaces.td"
@@ -27,6 +29,7 @@ def Test_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
+  let dependentDialects = ["::mlir::DLTIDialect"];
 
   let extraClassDeclaration = [{
     Attribute parseAttribute(DialectAsmParser &parser,
@@ -2006,6 +2009,28 @@ def MakeTupleOp: TEST_Op<"make_tuple"> {
     Variadic<AnyType>:$inputs
   );
   let results = (outs TupleOf<[AnyType]>);
+}
+
+//===----------------------------------------------------------------------===//
+// Test Target DataLayout
+//===----------------------------------------------------------------------===//
+
+def OpWithDataLayoutOp : TEST_Op<"op_with_data_layout",
+                                 [HasDefaultDLTIDataLayout, DataLayoutOpInterface]> {
+  let summary =
+      "An op that uses DataLayout implementation from the Target dialect";
+  let regions = (region VariadicRegion<AnyRegion>:$regions);
+}
+
+def DataLayoutQueryOp : TEST_Op<"data_layout_query"> {
+  let summary = "A token op recognized by data layout query test pass";
+  let description = [{
+    The data layout query pass pattern-matches this op and attaches to it an
+    array attribute containing the result of data layout query of the result
+    type of this op.
+  }];
+
+  let results = (outs AnyType:$res);
 }
 
 #endif // TEST_OPS
