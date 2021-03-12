@@ -272,6 +272,10 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
     if (MD->isStatic())
       DelKeyword(tok::kw_static, {FD->getBeginLoc(), FD->getLocation()});
   }
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
+    if (CD->isExplicit())
+      DelKeyword(tok::kw_explicit, {FD->getBeginLoc(), FD->getLocation()});
+  }
 
   if (Errors)
     return std::move(Errors);

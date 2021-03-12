@@ -90,6 +90,8 @@ enum NodeType : unsigned {
   FMA_PRED,
   FMAXNM_PRED,
   FMINNM_PRED,
+  FMAX_PRED,
+  FMIN_PRED,
   FMUL_PRED,
   FSUB_PRED,
   MUL_PRED,

@@ -467,11 +467,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (Server)
     return Reply(llvm::make_error<LSPError>("server already initialized",
                                             ErrorCode::InvalidRequest));
-  if (const auto &Dir = Params.initializationOptions.compilationDatabasePath)
-    Opts.CompileCommandsDir = Dir;
   if (Opts.UseDirBasedCDB) {
     DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
-    CDBOpts.CompileCommandsDir = Opts.CompileCommandsDir;
+    if (const auto &Dir = Params.initializationOptions.compilationDatabasePath)
+      CDBOpts.CompileCommandsDir = Dir;
     CDBOpts.ContextProvider = Opts.ContextProvider;
     BaseCDB =
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);

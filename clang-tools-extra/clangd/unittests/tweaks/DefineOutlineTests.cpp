@@ -267,6 +267,28 @@ TEST_F(DefineOutlineTest, ApplyTest) {
             };)cpp",
           "  void A::foo() {}\n",
       },
+      {
+          R"cpp(
+            struct Foo {
+              explicit Fo^o(int) {}
+            };)cpp",
+          R"cpp(
+            struct Foo {
+              explicit Foo(int) ;
+            };)cpp",
+          " Foo::Foo(int) {}\n",
+      },
+      {
+          R"cpp(
+            struct Foo {
+              explicit explicit Fo^o(int) {}
+            };)cpp",
+          R"cpp(
+            struct Foo {
+              explicit explicit Foo(int) ;
+            };)cpp",
+          "  Foo::Foo(int) {}\n",
+      },
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Test);
