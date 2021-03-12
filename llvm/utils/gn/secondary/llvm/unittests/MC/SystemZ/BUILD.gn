@@ -1,0 +1,10 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("SystemZAsmLexer") {
+  deps = [
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/SystemZ",
+  ]
+  sources = [ "SystemZAsmLexerTest.cpp" ]
+}
