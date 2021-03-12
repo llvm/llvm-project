@@ -1332,7 +1332,7 @@ getIVIncrement(const PHINode *PN, const LoopInfo *LI) {
 
 static bool isIVIncrement(const BinaryOperator *BO, const LoopInfo *LI) {
   auto *PN = dyn_cast<PHINode>(BO->getOperand(0));
-  if (!PN || LI->getLoopFor(BO->getParent()) != LI->getLoopFor(PN->getParent()))
+  if (!PN)
     return false;
   if (auto IVInc = getIVIncrement(PN, LI))
     return IVInc->first == BO;
@@ -1347,7 +1347,6 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     if (!isIVIncrement(BO, LI))
       return false;
     const Loop *L = LI->getLoopFor(BO->getParent());
-    assert(L && "L should not be null after isIVIncrement()");
     // Do not risk on moving increment into a child loop.
     if (LI->getLoopFor(Cmp->getParent()) != L)
       return false;
