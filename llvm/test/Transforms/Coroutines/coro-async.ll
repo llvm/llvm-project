@@ -187,7 +187,7 @@ define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %
      i32 128    ; Initial async context size without space for frame
   }>
 
-define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt)  {
+define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt) "frame-pointer"="all" {
 entry:
 
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 2, i8* bitcast (<{i32, i32}>* @my_async_function2_fp to i8*))
@@ -239,7 +239,8 @@ entry:
   unreachable
 }
 
-; CHECK-LABEL: define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt) {
+; CHECK-LABEL: define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt)
+; CHECK-SAME: #[[FRAMEPOINTER:[0-9]+]]
 ; CHECK: store i8* %async.ctxt,
 ; CHECK: store %async.actor* %actor,
 ; CHECK: store %async.task* %task,
@@ -250,7 +251,8 @@ entry:
 ; CHECK: tail call swiftcc void @asyncSuspend(i8* [[CALLEE_CTXT]], %async.task* %task, %async.actor* %actor)
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(i8* %0, i8* nocapture readnone %1, i8* nocapture readonly %2) {
+; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(i8* %0, i8* nocapture readnone %1, i8* nocapture readonly %2)
+; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK: [[CALLEE_CTXT_ADDR:%.*]] = bitcast i8* %2 to i8**
 ; CHECK: [[CALLEE_CTXT:%.*]] = load i8*, i8** [[CALLEE_CTXT_ADDR]]
 ; CHECK: [[CALLEE_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds i8, i8* [[CALLEE_CTXT]], i64 152
@@ -260,7 +262,8 @@ entry:
 ; CHECK: tail call swiftcc void @asyncSuspend(i8* [[CALLEE_CTXT_RELOAD]]
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(i8* nocapture readonly %0, i8* %1, i8* nocapture readnone %2) {
+; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(i8* nocapture readonly %0, i8* %1, i8* nocapture readnone %2)
+; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK: bitcast i8* %0 to i8**
 ; CHECK: [[ACTOR_ARG:%.*]] = bitcast i8* %1
 ; CHECK: tail call swiftcc void @asyncReturn({{.*}}[[ACTOR_ARG]])

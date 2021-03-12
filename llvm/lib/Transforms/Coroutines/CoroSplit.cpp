@@ -885,12 +885,17 @@ void CoroCloner::create() {
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.FrameSize, Shape.FrameAlign);
     break;
-  case coro::ABI::Async:
+  case coro::ABI::Async: {
     if (OrigF.hasParamAttribute(Shape.AsyncLowering.ContextArgNo,
                                 Attribute::SwiftAsync)) {
       addAsyncContextAttrs(NewAttrs, Context, Shape.AsyncLowering.ContextArgNo);
     }
+    // Transfer the original function's attributes.
+    auto FnAttrs = OrigF.getAttributes().getFnAttributes();
+    NewAttrs =
+        NewAttrs.addAttributes(Context, AttributeList::FunctionIndex, FnAttrs);
     break;
+  }
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
     // If we have a continuation prototype, just use its attributes,
@@ -1283,6 +1288,7 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
     } else {
       CoroBegin->replaceAllUsesWith(CoroBegin->getMem());
     }
+
     break;
   }
   case coro::ABI::Async:
