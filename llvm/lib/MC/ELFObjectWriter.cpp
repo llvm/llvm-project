@@ -418,7 +418,7 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
   // e_ident[EI_OSABI]
   uint8_t OSABI = OWriter.TargetObjectWriter->getOSABI();
   W.OS << char(OSABI == ELF::ELFOSABI_NONE && OWriter.seenGnuAbi()
-                   ? ELF::ELFOSABI_GNU
+                   ? int(ELF::ELFOSABI_GNU)
                    : OSABI);
   // e_ident[EI_ABIVERSION]
   W.OS << char(OWriter.TargetObjectWriter->getABIVersion());
