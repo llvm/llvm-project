@@ -6590,16 +6590,18 @@ class HorizontalReduction {
     if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
       return RecurKind::FMin;
 
-    if (match(I, m_SMax(m_Value(), m_Value())))
-      return RecurKind::SMax;
-    if (match(I, m_SMin(m_Value(), m_Value())))
-      return RecurKind::SMin;
-    if (match(I, m_UMax(m_Value(), m_Value())))
-      return RecurKind::UMax;
-    if (match(I, m_UMin(m_Value(), m_Value())))
-      return RecurKind::UMin;
 
     if (auto *Select = dyn_cast<SelectInst>(I)) {
+      // These would also match llvm.{u,s}{min,max} intrinsic call
+      // if were not guarded by the SelectInst check above.
+      if (match(I, m_SMax(m_Value(), m_Value())))
+        return RecurKind::SMax;
+      if (match(I, m_SMin(m_Value(), m_Value())))
+        return RecurKind::SMin;
+      if (match(I, m_UMax(m_Value(), m_Value())))
+        return RecurKind::UMax;
+      if (match(I, m_UMin(m_Value(), m_Value())))
+        return RecurKind::UMin;
       // Try harder: look for min/max pattern based on instructions producing
       // same values such as: select ((cmp Inst1, Inst2), Inst1, Inst2).
       // During the intermediate stages of SLP, it's very common to have
