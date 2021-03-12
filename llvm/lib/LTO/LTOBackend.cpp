@@ -184,10 +184,10 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   for (const std::string &A : Conf.MAttrs)
     Features.AddFeature(A);
 
-  Reloc::Model RelocModel;
+  Optional<Reloc::Model> RelocModel = None;
   if (Conf.RelocModel)
     RelocModel = *Conf.RelocModel;
-  else
+  else if (M.getModuleFlag("PIC Level"))
     RelocModel =
         M.getPICLevel() == PICLevel::NotPIC ? Reloc::Static : Reloc::PIC_;
 
