@@ -106,8 +106,18 @@ test_rex_gotpcrelx:
 
         .size   test_rex_gotpcrelx, .-test_rex_gotpcrelx
 
-        .type   named_data,@object
+# Test that relocations to anonymous constant pool entries work.
+        .globl  test_anchor_LCPI
+        .p2align        4, 0x90
+        .type   test_anchor_LCPI,@function
+test_anchor_LCPI:
+        movq    .LCPI0_0(%rip), %rax
+
+        .size   test_anchor_LCPI, .-test_anchor_LCPI
+
         .data
+
+        .type   named_data,@object
         .p2align        3
 named_data:
         .quad   42
@@ -123,6 +133,12 @@ named_data:
 bss_variable:
 	.long	0
 	.size	bss_variable, 4
+
+# Constant pool entry with type STT_NOTYPE.
+        .section        .rodata.cst8,"aM",@progbits,8
+        .p2align        3
+.LCPI0_0:
+        .quad   0x400921fb54442d18
 
         .ident  "clang version 10.0.0-4ubuntu1 "
         .section        ".note.GNU-stack","",@progbits
