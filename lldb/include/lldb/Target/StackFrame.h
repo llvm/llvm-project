@@ -422,22 +422,6 @@ public:
   GetValueObjectForFrameVariable(const lldb::VariableSP &variable_sp,
                                  lldb::DynamicValueType use_dynamic);
 
-  /// Add an arbitrary Variable object (e.g. one that specifics a global or
-  /// static) to a StackFrame's list of ValueObjects.
-  ///
-  /// \params [in] variable_sp
-  ///   The Variable to base this ValueObject on
-  ///
-  /// \params [in] use_dynamic
-  ///     Whether the correct dynamic type of the variable should be
-  ///     determined before creating the ValueObject, or if the static type
-  ///     is sufficient.  One of the DynamicValueType enumerated values.
-  ///
-  /// \return
-  ///     A ValueObject for this variable.
-  lldb::ValueObjectSP TrackGlobalVariable(const lldb::VariableSP &variable_sp,
-                                          lldb::DynamicValueType use_dynamic);
-
   /// Query this frame to determine what the default language should be when
   /// parsing expressions given the execution context.
   ///
