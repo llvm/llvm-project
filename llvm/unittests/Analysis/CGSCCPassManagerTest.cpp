@@ -1942,30 +1942,5 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewNonTrivialCallEdge) {
   ASSERT_TRUE(Ran);
 }
 
-TEST_F(CGSCCPassManagerTest, TestFunctionPassesAreQueriedForInvalidation) {
-  std::unique_ptr<Module> M = parseIR("define void @f() { ret void }");
-  CGSCCPassManager CGPM;
-  bool SCCCalled = false;
-  FunctionPassManager FPM;
-  int ImmRuns = 0;
-  FAM.registerPass([&] { return TestImmutableFunctionAnalysis(ImmRuns); });
-  FPM.addPass(RequireAnalysisPass<TestImmutableFunctionAnalysis, Function>());
-  CGPM.addPass(
-      LambdaSCCPass([&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR) {
-        SCCCalled = true;
-        return PreservedAnalyses::none();
-      }));
-  CGPM.addPass(createCGSCCToFunctionPassAdaptor(
-      RequireAnalysisPass<TestImmutableFunctionAnalysis, Function>()));
-  ModulePassManager MPM;
-
-  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
-  MPM.run(*M, MAM);
-  ASSERT_EQ(ImmRuns, 1);
-  ASSERT_TRUE(SCCCalled);
-}
-
 #endif
 } // namespace
