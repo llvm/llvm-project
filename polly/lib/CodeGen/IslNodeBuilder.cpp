@@ -1139,22 +1139,22 @@ static Value *buildFADOutermostDimensionLoad(Value *GlobalDescriptor,
                       Builder.getInt64(0), Builder.getInt32(2)};
   Value *endPtr = Builder.CreateInBoundsGEP(GlobalDescriptor, endIdx,
                                             ArrayName + "_end_ptr");
-  Value *end = Builder.CreateLoad(endPtr, ArrayName + "_end");
+  Type *type = cast<GEPOperator>(endPtr)->getResultElementType();
+  assert(isa<IntegerType>(type) && "expected type of end to be integral");
+
+  Value *end = Builder.CreateLoad(type, endPtr, ArrayName + "_end");
 
   Value *beginIdx[4] = {Builder.getInt64(0), Builder.getInt32(3),
                         Builder.getInt64(0), Builder.getInt32(1)};
   Value *beginPtr = Builder.CreateInBoundsGEP(GlobalDescriptor, beginIdx,
                                               ArrayName + "_begin_ptr");
-  Value *begin = Builder.CreateLoad(beginPtr, ArrayName + "_begin");
+  Value *begin = Builder.CreateLoad(type, beginPtr, ArrayName + "_begin");
 
   Value *size =
       Builder.CreateNSWSub(end, begin, ArrayName + "_end_begin_delta");
-  Type *endType = dyn_cast<IntegerType>(end->getType());
-  assert(endType && "expected type of end to be integral");
 
-  size = Builder.CreateNSWAdd(end,
-                              ConstantInt::get(endType, 1, /* signed = */ true),
-                              ArrayName + "_size");
+  size = Builder.CreateNSWAdd(
+      end, ConstantInt::get(type, 1, /* signed = */ true), ArrayName + "_size");
 
   return size;
 }
@@ -1211,7 +1211,7 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
   auto Name = Ptr->getName();
   auto AS = Ptr->getType()->getPointerAddressSpace();
   Ptr = Builder.CreatePointerCast(Ptr, Ty->getPointerTo(AS), Name + ".cast");
-  PreloadVal = Builder.CreateLoad(Ptr, Name + ".load");
+  PreloadVal = Builder.CreateLoad(Ty, Ptr, Name + ".load");
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
     PreloadInst->setAlignment(cast<LoadInst>(AccInst)->getAlign());
 
