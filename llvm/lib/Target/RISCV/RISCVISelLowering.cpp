@@ -640,6 +640,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::FDIV, VT, Custom);
         setOperationAction(ISD::FNEG, VT, Custom);
         setOperationAction(ISD::FABS, VT, Custom);
+        setOperationAction(ISD::FCOPYSIGN, VT, Custom);
         setOperationAction(ISD::FSQRT, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
 
@@ -1618,6 +1619,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerABS(Op, DAG);
   case ISD::VSELECT:
     return lowerFixedLengthVectorSelectToRVV(Op, DAG);
+  case ISD::FCOPYSIGN:
+    return lowerFixedLengthVectorFCOPYSIGNToRVV(Op, DAG);
   }
 }
 
@@ -3166,8 +3169,7 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
 
   assert(VT.isFixedLengthVector() && "Unexpected type");
 
-  MVT ContainerVT =
-      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
   X = convertToScalableVector(ContainerVT, X, DAG, Subtarget);
 
   SDValue Mask, VL;
@@ -3182,6 +3184,28 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
       DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX, Mask, VL);
 
   return convertFromScalableVector(VT, Max, DAG, Subtarget);
+}
+
+SDValue RISCVTargetLowering::lowerFixedLengthVectorFCOPYSIGNToRVV(
+    SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDValue Mag = Op.getOperand(0);
+  SDValue Sign = Op.getOperand(1);
+  assert(Mag.getValueType() == Sign.getValueType() &&
+         "Can only handle COPYSIGN with matching types.");
+
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
+  Mag = convertToScalableVector(ContainerVT, Mag, DAG, Subtarget);
+  Sign = convertToScalableVector(ContainerVT, Sign, DAG, Subtarget);
+
+  SDValue Mask, VL;
+  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+  SDValue CopySign =
+      DAG.getNode(RISCVISD::FCOPYSIGN_VL, DL, ContainerVT, Mag, Sign, Mask, VL);
+
+  return convertFromScalableVector(VT, CopySign, DAG, Subtarget);
 }
 
 SDValue RISCVTargetLowering::lowerFixedLengthVectorSelectToRVV(
@@ -6108,6 +6132,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FABS_VL)
   NODE_NAME_CASE(FSQRT_VL)
   NODE_NAME_CASE(FMA_VL)
+  NODE_NAME_CASE(FCOPYSIGN_VL)
   NODE_NAME_CASE(SMIN_VL)
   NODE_NAME_CASE(SMAX_VL)
   NODE_NAME_CASE(UMIN_VL)
