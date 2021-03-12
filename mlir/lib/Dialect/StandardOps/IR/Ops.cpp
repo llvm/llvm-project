@@ -1205,10 +1205,9 @@ static LogicalResult verify(ConstantOp &op) {
     return op.emitOpError() << "requires attribute's type (" << value.getType()
                             << ") to match op's return type (" << type << ")";
 
-  if (type.isa<IndexType>() || value.isa<BoolAttr>())
-    return success();
-
   if (auto intAttr = value.dyn_cast<IntegerAttr>()) {
+    if (type.isa<IndexType>() || value.isa<BoolAttr>())
+      return success();
     IntegerType intType = type.cast<IntegerType>();
     if (!intType.isSignless())
       return op.emitOpError("requires integer result types to be signless");
