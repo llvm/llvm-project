@@ -1,16 +1,20 @@
 --- !tapi-tbd-v3
-archs:            [ i386, x86_64 ]
-uuids:            [ 'i386: 00000000-0000-0000-0000-000000000000', 'x86_64: 00000000-0000-0000-0000-000000000001' ]
+archs:            [ i386, x86_64, arm64 ]
+uuids:            [ 'i386: 00000000-0000-0000-0000-000000000000',
+                    'x86_64: 00000000-0000-0000-0000-000000000001',
+                    'arm64: 00000000-0000-0000-0000-000000000002' ]
 platform:         ios
 install-name:     '/usr/lib/libSystem.dylib'
 current-version:  1281
 exports:
-  - archs:      [ i386, x86_64 ]
+  - archs:      [ i386, x86_64, arm64 ]
     re-exports: [ '/usr/lib/system/libcache.dylib' ]
     symbols:    [ __crashreporter_info__, _cache_create ]
 --- !tapi-tbd-v3
-archs:            [ i386, x86_64 ]
-uuids:            [ 'i386: 00000000-0000-0000-0000-000000000002', 'x86_64: 00000000-0000-0000-0000-000000000003' ]
+archs:            [ i386, x86_64, arm64 ]
+uuids:            [ 'i386: 00000000-0000-0000-0000-000000000003',
+                    'x86_64: 00000000-0000-0000-0000-000000000004',
+                    'arm64: 00000000-0000-0000-0000-000000000005' ]
 platform:         ios
 install-name:     '/usr/lib/system/libcache.dylib'
 current-version:  83
@@ -24,11 +28,13 @@ exports:
 # The following TAPI document is not re-exported by any other document in this
 # TBD file, and should therefore be inaccessible.
 --- !tapi-tbd-v3
-archs:            [ i386, x86_64 ]
-uuids:            [ 'i386: 00000000-0000-0000-0000-000000000003', 'x86_64: 00000000-0000-0000-0000-000000000004' ]
+archs:            [ i386, x86_64, arm64 ]
+uuids:            [ 'i386: 00000000-0000-0000-0000-000000000006',
+                    'x86_64: 00000000-0000-0000-0000-000000000007',
+                    'arm64: 00000000-0000-0000-0000-000000000008' ]
 platform:         ios
 install-name:     '/usr/lib/libnotreexported.dylib'
 exports:
-  - archs:      [ i386, x86_64 ]
+  - archs:      [ i386, x86_64, arm64 ]
     symbols:    [ _from_non_reexported_tapi_dylib ]
 ...
