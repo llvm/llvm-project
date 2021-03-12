@@ -55,9 +55,9 @@ using namespace lld::macho;
 
 Configuration *lld::macho::config;
 
-static HeaderFileType getOutputType(const opt::InputArgList &args) {
+static HeaderFileType getOutputType(const InputArgList &args) {
   // TODO: -r, -dylinker, -preload...
-  opt::Arg *outputArg = args.getLastArg(OPT_bundle, OPT_dylib, OPT_execute);
+  Arg *outputArg = args.getLastArg(OPT_bundle, OPT_dylib, OPT_execute);
   if (outputArg == nullptr)
     return MH_EXECUTE;
 
@@ -137,7 +137,7 @@ static bool warnIfNotDirectory(StringRef option, StringRef path) {
 }
 
 static std::vector<StringRef>
-getSearchPaths(unsigned optionCode, opt::InputArgList &args,
+getSearchPaths(unsigned optionCode, InputArgList &args,
                const std::vector<StringRef> &roots,
                const SmallVector<StringRef, 2> &systemPaths) {
   std::vector<StringRef> paths;
@@ -175,7 +175,7 @@ getSearchPaths(unsigned optionCode, opt::InputArgList &args,
   return paths;
 }
 
-static std::vector<StringRef> getSystemLibraryRoots(opt::InputArgList &args) {
+static std::vector<StringRef> getSystemLibraryRoots(InputArgList &args) {
   std::vector<StringRef> roots;
   for (const Arg *arg : args.filtered(OPT_syslibroot))
     roots.push_back(arg->getValue());
@@ -190,13 +190,12 @@ static std::vector<StringRef> getSystemLibraryRoots(opt::InputArgList &args) {
 }
 
 static std::vector<StringRef>
-getLibrarySearchPaths(opt::InputArgList &args,
-                      const std::vector<StringRef> &roots) {
+getLibrarySearchPaths(InputArgList &args, const std::vector<StringRef> &roots) {
   return getSearchPaths(OPT_L, args, roots, {"/usr/lib", "/usr/local/lib"});
 }
 
 static std::vector<StringRef>
-getFrameworkSearchPaths(opt::InputArgList &args,
+getFrameworkSearchPaths(InputArgList &args,
                         const std::vector<StringRef> &roots) {
   return getSearchPaths(OPT_F, args, roots,
                         {"/Library/Frameworks", "/System/Library/Frameworks"});
@@ -365,7 +364,7 @@ void macho::parseLCLinkerOption(InputFile* f, unsigned argc, StringRef data) {
 
   MachOOptTable table;
   unsigned missingIndex, missingCount;
-  opt::InputArgList args = table.ParseArgs(argv, missingIndex, missingCount);
+  InputArgList args = table.ParseArgs(argv, missingIndex, missingCount);
   if (missingCount)
     fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
   for (const Arg *arg : args.filtered(OPT_UNKNOWN))
@@ -544,8 +543,8 @@ static std::string lowerDash(StringRef s) {
 }
 
 // Has the side-effect of setting Config::platformInfo.
-static PlatformKind parsePlatformVersion(const opt::ArgList &args) {
-  const opt::Arg *arg = args.getLastArg(OPT_platform_version);
+static PlatformKind parsePlatformVersion(const ArgList &args) {
+  const Arg *arg = args.getLastArg(OPT_platform_version);
   if (!arg) {
     error("must specify -platform_version");
     return PlatformKind::unknown;
@@ -583,7 +582,7 @@ static PlatformKind parsePlatformVersion(const opt::ArgList &args) {
 }
 
 // Has the side-effect of setting Config::target.
-static TargetInfo *createTargetInfo(opt::InputArgList &args) {
+static TargetInfo *createTargetInfo(InputArgList &args) {
   StringRef archName = args.getLastArgValue(OPT_arch);
   if (archName.empty())
     fatal("must specify -arch");
@@ -603,7 +602,7 @@ static TargetInfo *createTargetInfo(opt::InputArgList &args) {
 }
 
 static UndefinedSymbolTreatment
-getUndefinedSymbolTreatment(const opt::ArgList &args) {
+getUndefinedSymbolTreatment(const ArgList &args) {
   StringRef treatmentStr = args.getLastArgValue(OPT_undefined);
   auto treatment =
       StringSwitch<UndefinedSymbolTreatment>(treatmentStr)
@@ -628,7 +627,7 @@ getUndefinedSymbolTreatment(const opt::ArgList &args) {
   return treatment;
 }
 
-static void warnIfDeprecatedOption(const opt::Option &opt) {
+static void warnIfDeprecatedOption(const Option &opt) {
   if (!opt.getGroup().isValid())
     return;
   if (opt.getGroup().getID() == OPT_grp_deprecated) {
@@ -637,7 +636,7 @@ static void warnIfDeprecatedOption(const opt::Option &opt) {
   }
 }
 
-static void warnIfUnimplementedOption(const opt::Option &opt) {
+static void warnIfUnimplementedOption(const Option &opt) {
   if (!opt.getGroup().isValid() || !opt.hasFlag(DriverFlag::HelpHidden))
     return;
   switch (opt.getGroup().getID()) {
@@ -662,13 +661,13 @@ static void warnIfUnimplementedOption(const opt::Option &opt) {
   }
 }
 
-static const char *getReproduceOption(opt::InputArgList &args) {
+static const char *getReproduceOption(InputArgList &args) {
   if (const Arg *arg = args.getLastArg(OPT_reproduce))
     return arg->getValue();
   return getenv("LLD_REPRODUCE");
 }
 
-static bool isPie(opt::InputArgList &args) {
+static bool isPie(InputArgList &args) {
   if (config->outputType != MH_EXECUTE || args.hasArg(OPT_no_pie))
     return false;
   if (config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e)
@@ -700,8 +699,8 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   error(msg + ": " + StringRef(err).trim());
 }
 
-static uint32_t parseDylibVersion(const opt::ArgList& args, unsigned id) {
-  const opt::Arg *arg = args.getLastArg(id);
+static uint32_t parseDylibVersion(const ArgList &args, unsigned id) {
+  const Arg *arg = args.getLastArg(id);
   if (!arg)
     return 0;
 
@@ -748,7 +747,7 @@ bool SymbolPatterns::match(StringRef symbolName) const {
   return matchLiteral(symbolName) || matchGlob(symbolName);
 }
 
-static void handleSymbolPatterns(opt::InputArgList &args,
+static void handleSymbolPatterns(InputArgList &args,
                                  SymbolPatterns &symbolPatterns,
                                  unsigned singleOptionCode,
                                  unsigned listFileOptionCode) {
@@ -783,7 +782,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
 
   MachOOptTable parser;
-  opt::InputArgList args = parser.parse(argsArr.slice(1));
+  InputArgList args = parser.parse(argsArr.slice(1));
 
   if (args.hasArg(OPT_help_hidden)) {
     parser.printHelp(argsArr[0], /*showHidden=*/true);
@@ -836,7 +835,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->printEachFile = args.hasArg(OPT_t);
   config->printWhyLoad = args.hasArg(OPT_why_load);
   config->outputType = getOutputType(args);
-  if (const opt::Arg *arg = args.getLastArg(OPT_bundle_loader)) {
+  if (const Arg *arg = args.getLastArg(OPT_bundle_loader)) {
     if (config->outputType != MH_BUNDLE)
       error("-bundle_loader can only be used with MachO bundle output");
     addFile(arg->getValue(), false, true);
@@ -851,10 +850,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->demangle = args.hasArg(OPT_demangle);
   config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
 
-  if (const opt::Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
+  if (const Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
     config->staticLink = (arg->getOption().getID() == OPT_static);
 
-  if (const opt::Arg *arg =
+  if (const Arg *arg =
           args.getLastArg(OPT_flat_namespace, OPT_twolevel_namespace))
     config->namespaceKind = arg->getOption().getID() == OPT_twolevel_namespace
                                 ? NamespaceKind::twolevel
@@ -867,7 +866,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       getLibrarySearchPaths(args, config->systemLibraryRoots);
   config->frameworkSearchPaths =
       getFrameworkSearchPaths(args, config->systemLibraryRoots);
-  if (const opt::Arg *arg =
+  if (const Arg *arg =
           args.getLastArg(OPT_search_paths_first, OPT_search_dylibs_first))
     config->searchDylibsFirst =
         arg->getOption().getID() == OPT_search_dylibs_first;
