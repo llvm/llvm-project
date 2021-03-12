@@ -236,7 +236,7 @@ protected:
     return nullptr;
   }
 
-  bool CurrentDirectiveIsNested() { return dirContext_.size() > 0; };
+  bool CurrentDirectiveIsNested() { return dirContext_.size() > 1; };
 
   void SetClauseSets(D dir) {
     dirContext_.back().allowedClauses = directiveClausesMap_[dir].allowed;
