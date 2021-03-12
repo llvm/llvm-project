@@ -171,7 +171,7 @@ if (auto Derived = llvm::dyn_cast<clang::{0}>(Object)) {{
     if (const auto *N = Node.get<{0}>())
       return GetLocations(const_cast<{0} *>(N));""".format(CladeName)
 
-        self.implementationContent += '\nreturn {}; }'
+        self.implementationContent += 'return {}; }'
 
     def GenerateEpilogue(self):
 
