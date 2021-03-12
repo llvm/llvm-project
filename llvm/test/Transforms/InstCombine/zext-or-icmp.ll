@@ -100,3 +100,23 @@ block2:
   %conv2 = zext i1 %cmp1 to i32
   ret i32 %conv2
 }
+
+; FIXME: This should not end with more instructions than it started from.
+
+define i32 @PR49475(i32 %x, i16 %y) {
+; CHECK-LABEL: @PR49475(
+; CHECK-NEXT:    [[M:%.*]] = and i16 [[Y:%.*]], 1
+; CHECK-NEXT:    [[B1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[B11:%.*]] = zext i1 [[B1]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[M]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    [[Z3:%.*]] = or i32 [[B11]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[Z3]]
+;
+  %m = and i16 %y, 1
+  %b1 = icmp eq i32 %x, 0
+  %b2 = icmp eq i16 %m, 0
+  %t1 = or i1 %b1, %b2
+  %z = zext i1 %t1 to i32
+  ret i32 %z
+}
