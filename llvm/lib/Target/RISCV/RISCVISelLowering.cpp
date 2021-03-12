@@ -3557,12 +3557,38 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
           "Don't know how to custom type legalize this intrinsic!");
     case Intrinsic::riscv_vmv_x_s: {
       EVT VT = N->getValueType(0);
-      assert((VT == MVT::i8 || VT == MVT::i16 ||
-              (Subtarget.is64Bit() && VT == MVT::i32)) &&
-             "Unexpected custom legalisation!");
-      SDValue Extract = DAG.getNode(RISCVISD::VMV_X_S, DL,
-                                    Subtarget.getXLenVT(), N->getOperand(1));
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Extract));
+      MVT XLenVT = Subtarget.getXLenVT();
+      if (VT.bitsLT(XLenVT)) {
+        // Simple case just extract using vmv.x.s and truncate.
+        SDValue Extract = DAG.getNode(RISCVISD::VMV_X_S, DL,
+                                      Subtarget.getXLenVT(), N->getOperand(1));
+        Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Extract));
+        return;
+      }
+
+      assert(VT == MVT::i64 && !Subtarget.is64Bit() &&
+             "Unexpected custom legalization");
+
+      // We need to do the move in two steps.
+      SDValue Vec = N->getOperand(1);
+      MVT VecVT = Vec.getSimpleValueType();
+
+      // First extract the lower XLEN bits of the element.
+      SDValue EltLo = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, Vec);
+
+      // To extract the upper XLEN bits of the vector element, shift the first
+      // element right by 32 bits and re-extract the lower XLEN bits.
+      SDValue VL = DAG.getConstant(1, DL, XLenVT);
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, VecVT.getVectorElementCount());
+      SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
+      SDValue ThirtyTwoV = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT,
+                                       DAG.getConstant(32, DL, XLenVT), VL);
+      SDValue LShr32 =
+          DAG.getNode(RISCVISD::SRL_VL, DL, VecVT, Vec, ThirtyTwoV, Mask, VL);
+      SDValue EltHi = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, LShr32);
+
+      Results.push_back(
+          DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, EltLo, EltHi));
       break;
     }
     }
