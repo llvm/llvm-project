@@ -459,6 +459,46 @@ func @nested_region_control_flow_div_nested(
 
 // -----
 
+// Test Case: deeply nested region control flow with a nested buffer allocation
+// that has dependency within a nested region should not be moved outside of
+// this region.
+
+// CHECK-LABEL: func @nested_region_control_flow_div_nested_dependencies
+func @nested_region_control_flow_div_nested_dependencies(
+  %arg0: i32,
+  %arg1: i1,
+  %arg2: index) -> memref<?x?xf32> {
+  %0 = scf.if %arg1 -> (memref<?x?xf32>) {
+    %1 = constant 1 : i32
+    %2 = addi %arg0, %1 : i32
+    %3 = index_cast %2 : i32 to index
+    %4 = alloc(%arg2, %3) : memref<?x?xf32>
+    scf.yield %4 : memref<?x?xf32>
+  } else {
+    %1 = constant 2 : i32
+    %2 = addi %arg0, %1 : i32
+    %3 = index_cast %2 : i32 to index
+    %4 = alloc(%arg2, %3) : memref<?x?xf32>
+    scf.yield %4 : memref<?x?xf32>
+  }
+  return %0 : memref<?x?xf32>
+}
+
+//      CHECK: (%[[ARG0:.*]]: {{.*}}
+// CHECK-NEXT: %{{.*}} = scf.if
+// CHECK-NEXT: %{{.*}} = constant
+// CHECK-NEXT: %{{.*}} = addi
+// CHECK-NEXT: %[[FUNC:.*]] = index_cast
+// CHECK-NEXT: alloc(%arg2, %[[FUNC]])
+// CHECK-NEXT: scf.yield
+// CHECK-NEXT: } else {
+// CHECK-NEXT: %{{.*}} = constant
+// CHECK-NEXT: %{{.*}} = addi
+// CHECK-NEXT: %[[FUNC:.*]] = index_cast
+// CHECK-NEXT: alloc(%arg2, %[[FUNC]])
+
+// -----
+
 // Test Case: nested region control flow within a region interface.
 // The alloc positions of %0 does not need to be changed.
 
