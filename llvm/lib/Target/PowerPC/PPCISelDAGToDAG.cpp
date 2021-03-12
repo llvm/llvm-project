@@ -6717,6 +6717,102 @@ void PPCDAGToDAGISel::PeepholePPC64ZExt() {
     CurDAG->RemoveDeadNodes();
 }
 
+static bool isVSXSwap(SDValue N) {
+  if (!N->isMachineOpcode())
+    return false;
+  unsigned Opc = N->getMachineOpcode();
+
+  // Single-operand XXPERMDI or the regular XXPERMDI/XXSLDWI where the immediate
+  // operand is 2.
+  if (Opc == PPC::XXPERMDIs) {
+    return isa<ConstantSDNode>(N->getOperand(1)) &&
+           N->getConstantOperandVal(1) == 2;
+  } else if (Opc == PPC::XXPERMDI || Opc == PPC::XXSLDWI) {
+    return N->getOperand(0) == N->getOperand(1) &&
+           isa<ConstantSDNode>(N->getOperand(2)) &&
+           N->getConstantOperandVal(2) == 2;
+  }
+
+  return false;
+}
+
+// TODO: Make this complete and replace with a table-gen bit.
+static bool isLaneInsensitive(SDValue N) {
+  if (!N->isMachineOpcode())
+    return false;
+  unsigned Opc = N->getMachineOpcode();
+
+  switch (Opc) {
+  default:
+    return false;
+  case PPC::VAVGSB:
+  case PPC::VAVGUB:
+  case PPC::VAVGSH:
+  case PPC::VAVGUH:
+  case PPC::VAVGSW:
+  case PPC::VAVGUW:
+  case PPC::VMAXFP:
+  case PPC::VMAXSB:
+  case PPC::VMAXUB:
+  case PPC::VMAXSH:
+  case PPC::VMAXUH:
+  case PPC::VMAXSW:
+  case PPC::VMAXUW:
+  case PPC::VMINFP:
+  case PPC::VMINSB:
+  case PPC::VMINUB:
+  case PPC::VMINSH:
+  case PPC::VMINUH:
+  case PPC::VMINSW:
+  case PPC::VMINUW:
+  case PPC::VADDFP:
+  case PPC::VADDUBM:
+  case PPC::VADDUHM:
+  case PPC::VADDUWM:
+  case PPC::VSUBFP:
+  case PPC::VSUBUBM:
+  case PPC::VSUBUHM:
+  case PPC::VSUBUWM:
+  case PPC::VAND:
+  case PPC::VANDC:
+  case PPC::VOR:
+  case PPC::VORC:
+  case PPC::VXOR:
+  case PPC::VNOR:
+  case PPC::VMULUWM:
+    return true;
+  }
+}
+
+// Try to simplify (xxswap (vec-op (xxswap) (xxswap))) where vec-op is
+// lane-insensitive.
+static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
+  // Our desired xxswap might be source of COPY_TO_REGCLASS.
+  // TODO: Can we put this a common method for DAG?
+  auto SkipRCCopy = [](SDValue V) {
+    while (V->isMachineOpcode() &&
+           V->getMachineOpcode() == TargetOpcode::COPY_TO_REGCLASS)
+      V = V->getOperand(0);
+    return V;
+  };
+
+  SDValue VecOp = SkipRCCopy(N->getOperand(0));
+  if (!isLaneInsensitive(VecOp))
+    return;
+
+  SDValue LHS = SkipRCCopy(VecOp.getOperand(0)),
+          RHS = SkipRCCopy(VecOp.getOperand(1));
+  if (!LHS.hasOneUse() || !RHS.hasOneUse() || !isVSXSwap(LHS) ||
+      !isVSXSwap(RHS))
+    return;
+
+  // These swaps may still have chain-uses here, count on dead code elimination
+  // in following passes to remove them.
+  DAG->ReplaceAllUsesOfValueWith(LHS, LHS.getOperand(0));
+  DAG->ReplaceAllUsesOfValueWith(RHS, RHS.getOperand(0));
+  DAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), N->getOperand(0));
+}
+
 void PPCDAGToDAGISel::PeepholePPC64() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
@@ -6725,6 +6821,9 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     // Skip dead nodes and any non-machine opcodes.
     if (N->use_empty() || !N->isMachineOpcode())
       continue;
+
+    if (isVSXSwap(SDValue(N, 0)))
+      reduceVSXSwap(N, CurDAG);
 
     unsigned FirstOp;
     unsigned StorageOpcode = N->getMachineOpcode();
