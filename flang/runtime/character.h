@@ -116,6 +116,16 @@ void RTNAME(Index)(Descriptor &result, const Descriptor &string,
     const Descriptor &substring, const Descriptor *back /*can be null*/,
     int kind, const char *sourceFile = nullptr, int sourceLine = 0);
 
+std::size_t RTNAME(Index1)(const char *, std::size_t, const char *substring,
+    std::size_t, bool back = false);
+std::size_t RTNAME(Index2)(const char16_t *, std::size_t,
+    const char16_t *substring, std::size_t, bool back = false);
+std::size_t RTNAME(Index4)(const char32_t *, std::size_t,
+    const char32_t *substring, std::size_t, bool back = false);
+void RTNAME(Index)(Descriptor &result, const Descriptor &string,
+    const Descriptor &substring, const Descriptor *back /*can be null*/,
+    int kind, const char *sourceFile = nullptr, int sourceLine = 0);
+
 std::size_t RTNAME(Scan1)(
     const char *, std::size_t, const char *set, std::size_t, bool back = false);
 std::size_t RTNAME(Scan2)(const char16_t *, std::size_t, const char16_t *set,
