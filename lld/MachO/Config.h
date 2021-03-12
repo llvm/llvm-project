@@ -81,9 +81,12 @@ struct Configuration {
   bool searchDylibsFirst = false;
   bool saveTemps = false;
   bool adhocCodesign = false;
+  bool timeTraceEnabled = false;
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;
+  uint32_t timeTraceGranularity;
+  std::string progName;
   llvm::StringRef installName;
   llvm::StringRef outputFile;
   llvm::StringRef ltoObjPath;
