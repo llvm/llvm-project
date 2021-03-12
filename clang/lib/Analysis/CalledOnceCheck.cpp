@@ -48,9 +48,12 @@ static constexpr unsigned EXPECTED_NUMBER_OF_BASIC_BLOCKS = 8;
 template <class T>
 using CFGSizedVector = llvm::SmallVector<T, EXPECTED_NUMBER_OF_BASIC_BLOCKS>;
 constexpr llvm::StringLiteral CONVENTIONAL_NAMES[] = {
-    "completionHandler", "completion", "withCompletionHandler"};
+    "completionHandler", "completion",      "withCompletionHandler",
+    "withCompletion",    "completionBlock", "withCompletionBlock",
+    "replyTo",           "reply",           "withReplyTo"};
 constexpr llvm::StringLiteral CONVENTIONAL_SUFFIXES[] = {
-    "WithCompletionHandler", "WithCompletion"};
+    "WithCompletionHandler", "WithCompletion", "WithCompletionBlock",
+    "WithReplyTo", "WithReply"};
 constexpr llvm::StringLiteral CONVENTIONAL_CONDITIONS[] = {
     "error", "cancel", "shouldCall", "done", "OK", "success"};
 
@@ -994,13 +997,15 @@ private:
       return hasConventionalSuffix(MethodSelector.getNameForSlot(0));
     }
 
-    return isConventional(MethodSelector.getNameForSlot(PieceIndex));
+    llvm::StringRef PieceName = MethodSelector.getNameForSlot(PieceIndex);
+    return isConventional(PieceName) || hasConventionalSuffix(PieceName);
   }
 
   bool shouldBeCalledOnce(const ParmVarDecl *Parameter) const {
     return isExplicitlyMarked(Parameter) ||
            (CheckConventionalParameters &&
-            isConventional(Parameter->getName()) &&
+            (isConventional(Parameter->getName()) ||
+             hasConventionalSuffix(Parameter->getName())) &&
             isConventional(Parameter->getType()));
   }
 
