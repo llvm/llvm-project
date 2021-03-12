@@ -12,7 +12,7 @@
 ; RUN: %clang -target x86_64-grtev4-linux-gnu \
 ; RUN:   -O2 -fexperimental-new-pass-manager -Xclang -fdebug-pass-manager \
 ; RUN:   -c -fthinlto-index=%t.o.thinlto.bc \
-; RUN:   -o %t.native.o -x ir %t.o 2>&1 | FileCheck -check-prefix=CHECK-O %s --dump-input=fail
+; RUN:   -o %t.native.o -x ir %t.o 2>&1 | FileCheck -check-prefixes=CHECK-O,CHECK-O2 %s --dump-input=fail
 
 ; RUN: %clang -target x86_64-grtev4-linux-gnu \
 ; RUN:   -O3 -fexperimental-new-pass-manager -Xclang -fdebug-pass-manager \
@@ -70,19 +70,24 @@
 ; CHECK-O: Starting CGSCC pass manager run.
 ; CHECK-O: Running pass: InlinerPass on (main)
 ; CHECK-O: Running pass: PostOrderFunctionAttrsPass on (main)
-; CHECK-O: Invalidating analysis: DominatorTreeAnalysis on main
-; CHECK-O: Invalidating analysis: BasicAA on main
-; CHECK-O: Invalidating analysis: AAManager on main
+; CHECK-O: Clearing all analysis results for: main
 ; CHECK-O3: Running pass: ArgumentPromotionPass on (main)
+; CHECK-O3: Running analysis: TargetIRAnalysis on main
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: SROA on main
 ; These next two can appear in any order since they are accessed as parameters
 ; on the same call to SROA::runImpl
 ; CHECK-O-DAG: Running analysis: DominatorTreeAnalysis on main
+; CHECK-O-DAG: Running analysis: AssumptionAnalysis on main
 ; CHECK-O: Running pass: EarlyCSEPass on main
+; CHECK-O: Running analysis: TargetLibraryAnalysis on main
+; CHECK-O2: Running analysis: TargetIRAnalysis on main
 ; CHECK-O: Running analysis: MemorySSAAnalysis on main
 ; CHECK-O: Running analysis: AAManager on main
 ; CHECK-O: Running analysis: BasicAA on main
+; CHECK-O: Running analysis: ScopedNoAliasAA on main
+; CHECK-O: Running analysis: TypeBasedAA on main
+; CHECK-O: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O: Running pass: SpeculativeExecutionPass on main
 ; CHECK-O: Running pass: JumpThreadingPass on main
 ; CHECK-O: Running analysis: LazyValueAnalysis on main
@@ -91,6 +96,7 @@
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O3: Running pass: AggressiveInstCombinePass on main
 ; CHECK-O: Running pass: InstCombinePass on main
+; CHECK-O: Running analysis: OptimizationRemarkEmitterAnalysis on main
 ; CHECK-O: Running pass: LibCallsShrinkWrapPass on main
 ; CHECK-O: Running pass: TailCallElimPass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
