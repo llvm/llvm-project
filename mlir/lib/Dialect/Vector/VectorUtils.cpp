@@ -211,29 +211,29 @@ static AffineMap makePermutationMap(
 /// TODO: could also be implemented as a collect parents followed by a
 /// filter and made available outside this file.
 template <typename T>
-static SetVector<Operation *> getParentsOfType(Block *block) {
+static SetVector<Operation *> getParentsOfType(Operation *op) {
   SetVector<Operation *> res;
-  auto *current = block->getParentOp();
-  while (current) {
-    if (auto typedParent = dyn_cast<T>(current)) {
-      assert(res.count(current) == 0 && "Already inserted");
-      res.insert(current);
+  auto *current = op;
+  while (auto *parent = current->getParentOp()) {
+    if (auto typedParent = dyn_cast<T>(parent)) {
+      assert(res.count(parent) == 0 && "Already inserted");
+      res.insert(parent);
     }
-    current = current->getParentOp();
+    current = parent;
   }
   return res;
 }
 
 /// Returns the enclosing AffineForOp, from closest to farthest.
-static SetVector<Operation *> getEnclosingforOps(Block *block) {
-  return getParentsOfType<AffineForOp>(block);
+static SetVector<Operation *> getEnclosingforOps(Operation *op) {
+  return getParentsOfType<AffineForOp>(op);
 }
 
 AffineMap mlir::makePermutationMap(
-    Block *insertPoint, ArrayRef<Value> indices,
+    Operation *op, ArrayRef<Value> indices,
     const DenseMap<Operation *, unsigned> &loopToVectorDim) {
   DenseMap<Operation *, unsigned> enclosingLoopToVectorDim;
-  auto enclosingLoops = getEnclosingforOps(insertPoint);
+  auto enclosingLoops = getEnclosingforOps(op);
   for (auto *forInst : enclosingLoops) {
     auto it = loopToVectorDim.find(forInst);
     if (it != loopToVectorDim.end()) {
@@ -241,12 +241,6 @@ AffineMap mlir::makePermutationMap(
     }
   }
   return ::makePermutationMap(indices, enclosingLoopToVectorDim);
-}
-
-AffineMap mlir::makePermutationMap(
-    Operation *op, ArrayRef<Value> indices,
-    const DenseMap<Operation *, unsigned> &loopToVectorDim) {
-  return makePermutationMap(op->getBlock(), indices, loopToVectorDim);
 }
 
 AffineMap mlir::getTransferMinorIdentityMap(ShapedType shapedType,
