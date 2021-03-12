@@ -399,7 +399,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (!Subtarget.is64Bit()) {
       // We must custom-lower certain vXi64 operations on RV32 due to the vector
       // element type being illegal.
-      setOperationAction(ISD::SPLAT_VECTOR, MVT::i64, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::i64, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::i64, Custom);
 
@@ -424,14 +423,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     for (MVT VT : IntVecVTs) {
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+      setOperationAction(ISD::SPLAT_VECTOR_PARTS, VT, Custom);
 
       setOperationAction(ISD::SMIN, VT, Legal);
       setOperationAction(ISD::SMAX, VT, Legal);
       setOperationAction(ISD::UMIN, VT, Legal);
       setOperationAction(ISD::UMAX, VT, Legal);
-
-      if (!Subtarget.is64Bit() && VT.getVectorElementType() == MVT::i64)
-        setOperationAction(ISD::ABS, VT, Custom);
 
       setOperationAction(ISD::ROTL, VT, Expand);
       setOperationAction(ISD::ROTR, VT, Expand);
@@ -1313,8 +1310,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         Op.getOperand(0).getValueType().getVectorElementType() == MVT::i1)
       return lowerVectorMaskExt(Op, DAG, /*ExtVal*/ -1);
     return lowerFixedLengthVectorExtendToRVV(Op, DAG, RISCVISD::VSEXT_VL);
-  case ISD::SPLAT_VECTOR:
-    return lowerSPLATVECTOR(Op, DAG);
+  case ISD::SPLAT_VECTOR_PARTS:
+    return lowerSPLAT_VECTOR_PARTS(Op, DAG);
   case ISD::INSERT_VECTOR_ELT:
     return lowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT:
@@ -2035,30 +2032,28 @@ SDValue RISCVTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
   return DAG.getMergeValues(Parts, DL);
 }
 
-// Custom-lower a SPLAT_VECTOR where XLEN<SEW, as the SEW element type is
+// Custom-lower a SPLAT_VECTOR_PARTS where XLEN<SEW, as the SEW element type is
 // illegal (currently only vXi64 RV32).
 // FIXME: We could also catch non-constant sign-extended i32 values and lower
 // them to SPLAT_VECTOR_I64
-SDValue RISCVTargetLowering::lowerSPLATVECTOR(SDValue Op,
-                                              SelectionDAG &DAG) const {
+SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
+                                                     SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT VecVT = Op.getValueType();
   assert(!Subtarget.is64Bit() && VecVT.getVectorElementType() == MVT::i64 &&
-         "Unexpected SPLAT_VECTOR lowering");
-  SDValue SplatVal = Op.getOperand(0);
+         "Unexpected SPLAT_VECTOR_PARTS lowering");
 
-  // If we can prove that the value is a sign-extended 32-bit value, lower this
-  // as a custom node in order to try and match RVV vector/scalar instructions.
-  if (auto *CVal = dyn_cast<ConstantSDNode>(SplatVal)) {
-    if (isInt<32>(CVal->getSExtValue()))
-      return DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT,
-                         DAG.getConstant(CVal->getSExtValue(), DL, MVT::i32));
-  }
+  assert(Op.getNumOperands() == 2 && "Unexpected number of operands!");
+  SDValue Lo = Op.getOperand(0);
+  SDValue Hi = Op.getOperand(1);
 
-  if (SplatVal.getOpcode() == ISD::SIGN_EXTEND &&
-      SplatVal.getOperand(0).getValueType() == MVT::i32) {
-    return DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT,
-                       SplatVal.getOperand(0));
+  if (isa<ConstantSDNode>(Lo) && isa<ConstantSDNode>(Hi)) {
+    int32_t LoC = cast<ConstantSDNode>(Lo)->getSExtValue();
+    int32_t HiC = cast<ConstantSDNode>(Hi)->getSExtValue();
+    // If Hi constant is all the same sign bit as Lo, lower this as a custom
+    // node in order to try and match RVV vector/scalar instructions.
+    if ((LoC >> 31) == HiC)
+      return DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Lo);
   }
 
   // Else, on RV32 we lower an i64-element SPLAT_VECTOR thus, being careful not
@@ -2069,11 +2064,7 @@ SDValue RISCVTargetLowering::lowerSPLATVECTOR(SDValue Op,
   // vsll.vx vY, vY, /*32*/
   // vsrl.vx vY, vY, /*32*/
   // vor.vv vX, vX, vY
-  SDValue One = DAG.getConstant(1, DL, MVT::i32);
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
   SDValue ThirtyTwoV = DAG.getConstant(32, DL, VecVT);
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, SplatVal, Zero);
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, SplatVal, One);
 
   Lo = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Lo);
   Lo = DAG.getNode(ISD::SHL, DL, VecVT, Lo, ThirtyTwoV);
@@ -3161,17 +3152,6 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   SDValue X = Op.getOperand(0);
-
-  // For scalable vectors we just need to deal with i64 on RV32 since the
-  // default expansion crashes in getConstant.
-  if (VT.isScalableVector()) {
-    assert(!Subtarget.is64Bit() && VT.getVectorElementType() == MVT::i64 &&
-           "Unexpected custom lowering!");
-    SDValue SplatZero = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VT,
-                                    DAG.getConstant(0, DL, MVT::i32));
-    SDValue NegX = DAG.getNode(ISD::SUB, DL, VT, SplatZero, X);
-    return DAG.getNode(ISD::SMAX, DL, VT, X, NegX);
-  }
 
   assert(VT.isFixedLengthVector() && "Unexpected type");
 
