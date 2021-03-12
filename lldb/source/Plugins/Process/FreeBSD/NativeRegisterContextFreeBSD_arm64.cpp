@@ -15,6 +15,7 @@
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
 // clang-format off
@@ -36,9 +37,16 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
 NativeRegisterContextFreeBSD_arm64::NativeRegisterContextFreeBSD_arm64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_arm64(target_arch)) {
+          native_thread, new RegisterInfoPOSIX_arm64(target_arch))
+#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
+      ,
+      m_read_dbreg(false)
+#endif
+{
   GetRegisterInfo().ConfigureVectorRegisterInfos(
       RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64);
+  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
+  ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
 }
 
 RegisterInfoPOSIX_arm64 &
@@ -203,7 +211,78 @@ Status NativeRegisterContextFreeBSD_arm64::WriteAllRegisterValues(
 
 llvm::Error NativeRegisterContextFreeBSD_arm64::CopyHardwareWatchpointsFrom(
     NativeRegisterContextFreeBSD &source) {
+#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
+  auto &r_source = static_cast<NativeRegisterContextFreeBSD_arm64 &>(source);
+  llvm::Error error = r_source.ReadHardwareDebugInfo();
+  if (error)
+    return error;
+
+  m_dbreg = r_source.m_dbreg;
+  m_hbp_regs = r_source.m_hbp_regs;
+  m_hwp_regs = r_source.m_hwp_regs;
+  m_max_hbp_supported = r_source.m_max_hbp_supported;
+  m_max_hwp_supported = r_source.m_max_hwp_supported;
+  m_read_dbreg = true;
+
+  // on FreeBSD this writes both breakpoints and watchpoints
+  return WriteHardwareDebugRegs(eDREGTypeWATCH);
+#else
   return llvm::Error::success();
+#endif
+}
+
+llvm::Error NativeRegisterContextFreeBSD_arm64::ReadHardwareDebugInfo() {
+#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_REGISTERS));
+
+  // we're fully stateful, so no need to reread control registers ever
+  if (m_read_dbreg)
+    return llvm::Error::success();
+
+  Status res = NativeProcessFreeBSD::PtraceWrapper(PT_GETDBREGS,
+                                                   m_thread.GetID(), &m_dbreg);
+  if (res.Fail())
+    return res.ToError();
+
+  LLDB_LOG(log, "m_dbreg read: debug_ver={0}, nbkpts={1}, nwtpts={2}",
+           m_dbreg.db_debug_ver, m_dbreg.db_nbkpts, m_dbreg.db_nwtpts);
+  m_max_hbp_supported = m_dbreg.db_nbkpts;
+  m_max_hwp_supported = m_dbreg.db_nwtpts;
+  assert(m_max_hbp_supported <= m_hbp_regs.size());
+  assert(m_max_hwp_supported <= m_hwp_regs.size());
+
+  m_read_dbreg = true;
+  return llvm::Error::success();
+#else
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "Hardware breakpoints/watchpoints require FreeBSD 14.0");
+#endif
+}
+
+llvm::Error
+NativeRegisterContextFreeBSD_arm64::WriteHardwareDebugRegs(DREGType) {
+#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
+  assert(m_read_dbreg && "dbregs must be read before writing them back");
+
+  // copy data from m_*_regs to m_dbreg before writing it back
+  for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
+    m_dbreg.db_breakregs[i].dbr_addr = m_hbp_regs[i].address;
+    m_dbreg.db_breakregs[i].dbr_ctrl = m_hbp_regs[i].control;
+  }
+  for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
+    m_dbreg.db_watchregs[i].dbw_addr = m_hwp_regs[i].address;
+    m_dbreg.db_watchregs[i].dbw_ctrl = m_hwp_regs[i].control;
+  }
+
+  return NativeProcessFreeBSD::PtraceWrapper(PT_SETDBREGS, m_thread.GetID(),
+                                             &m_dbreg)
+      .ToError();
+#else
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "Hardware breakpoints/watchpoints require FreeBSD 14.0");
+#endif
 }
 
 #endif // defined (__aarch64__)
