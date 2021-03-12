@@ -17,6 +17,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/SourceMgr.h"
@@ -28,12 +29,23 @@ namespace llvm {
 /// given loop entry block.
 class VPlanTestBase : public testing::Test {
 protected:
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI;
+  DataLayout DL;
+
   std::unique_ptr<LLVMContext> Ctx;
   std::unique_ptr<Module> M;
   std::unique_ptr<LoopInfo> LI;
   std::unique_ptr<DominatorTree> DT;
+  std::unique_ptr<AssumptionCache> AC;
+  std::unique_ptr<ScalarEvolution> SE;
 
-  VPlanTestBase() : Ctx(new LLVMContext) {}
+  VPlanTestBase()
+      : TLII(), TLI(TLII),
+        DL("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-"
+           "f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:"
+           "16:32:64-S128"),
+        Ctx(new LLVMContext) {}
 
   Module &parseModule(const char *ModuleString) {
     SMDiagnostic Err;
@@ -45,6 +57,8 @@ protected:
   void doAnalysis(Function &F) {
     DT.reset(new DominatorTree(F));
     LI.reset(new LoopInfo(*DT));
+    AC.reset(new AssumptionCache(F));
+    SE.reset(new ScalarEvolution(F, TLI, *AC, *DT, *LI));
   }
 
   VPlanPtr buildHCFG(BasicBlock *LoopHeader) {
