@@ -68,8 +68,8 @@ public:
   InOrderIssueStage(RetireControlUnit &RCU, RegisterFile &PRF,
                     const MCSchedModel &SM, const MCSubtargetInfo &STI)
       : SM(SM), STI(STI), RCU(RCU), PRF(PRF),
-        RM(std::make_unique<ResourceManager>(SM)), StallCyclesLeft(0),
-        Bandwidth(0) {}
+        RM(std::make_unique<ResourceManager>(SM)), NumIssued(0),
+        StallCyclesLeft(0), Bandwidth(0) {}
 
   bool isAvailable(const InstRef &) const override;
   bool hasWorkToComplete() const override;
