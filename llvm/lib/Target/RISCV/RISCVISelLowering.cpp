@@ -2443,16 +2443,29 @@ static unsigned getRVVReductionOp(unsigned ISDOpcode) {
 SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
                                             SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  MVT VecVT = Op.getOperand(0).getSimpleValueType();
-  MVT VecEltVT = VecVT.getVectorElementType();
+  SDValue Vec = Op.getOperand(0);
+  EVT VecEVT = Vec.getValueType();
 
-  // Avoid creating vectors with illegal type.
-  if (!isTypeLegal(VecVT))
+  unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Op.getOpcode());
+
+  // Due to ordering in legalize types we may have a vector type that needs to
+  // be split. Do that manually so we can get down to a legal type.
+  while (getTypeAction(*DAG.getContext(), VecEVT) ==
+         TargetLowering::TypeSplitVector) {
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitVector(Vec, DL);
+    VecEVT = Lo.getValueType();
+    Vec = DAG.getNode(BaseOpc, DL, VecEVT, Lo, Hi);
+  }
+
+  // TODO: The type may need to be widened rather than split. Or widened before
+  // it can be split.
+  if (!isTypeLegal(VecEVT))
     return SDValue();
 
+  MVT VecVT = VecEVT.getSimpleVT();
+  MVT VecEltVT = VecVT.getVectorElementType();
   unsigned RVVOpcode = getRVVReductionOp(Op.getOpcode());
-
-  SDValue Vec = Op.getOperand(0);
 
   MVT ContainerVT = VecVT;
   if (VecVT.isFixedLengthVector()) {
@@ -2467,8 +2480,8 @@ SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
 
   // FIXME: This is a VLMAX splat which might be too large and can prevent
   // vsetvli removal.
-  SDValue NeutralElem = DAG.getNeutralElement(
-      ISD::getVecReduceBaseOpcode(Op.getOpcode()), DL, VecEltVT, SDNodeFlags());
+  SDValue NeutralElem =
+      DAG.getNeutralElement(BaseOpc, DL, VecEltVT, SDNodeFlags());
   SDValue IdentitySplat = DAG.getSplatVector(M1VT, DL, NeutralElem);
   SDValue Reduction =
       DAG.getNode(RVVOpcode, DL, M1VT, Vec, IdentitySplat, Mask, VL);
