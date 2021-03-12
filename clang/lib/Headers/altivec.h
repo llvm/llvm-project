@@ -16364,10 +16364,18 @@ static __inline__ int __ATTRS_o_ai vec_any_lt(vector unsigned __int128 __a,
 
 /* vec_any_nan */
 
-static __inline__ int __attribute__((__always_inline__))
-vec_any_nan(vector float __a) {
+static __inline__ int __ATTRS_o_ai vec_any_nan(vector float __a) {
+#ifdef __VSX__
+  return __builtin_vsx_xvcmpeqsp_p(__CR6_LT_REV, __a, __a);
+#else
   return __builtin_altivec_vcmpeqfp_p(__CR6_LT_REV, __a, __a);
+#endif
 }
+#ifdef __VSX__
+static __inline__ int __ATTRS_o_ai vec_any_nan(vector double __a) {
+  return __builtin_vsx_xvcmpeqdp_p(__CR6_LT_REV, __a, __a);
+}
+#endif
 
 /* vec_any_ne */
 
@@ -16571,38 +16579,91 @@ static __inline__ int __ATTRS_o_ai vec_any_ne(vector unsigned __int128 __a,
 
 /* vec_any_nge */
 
-static __inline__ int __attribute__((__always_inline__))
-vec_any_nge(vector float __a, vector float __b) {
+static __inline__ int __ATTRS_o_ai vec_any_nge(vector float __a,
+                                               vector float __b) {
+#ifdef __VSX__
+  return __builtin_vsx_xvcmpgesp_p(__CR6_LT_REV, __a, __b);
+#else
   return __builtin_altivec_vcmpgefp_p(__CR6_LT_REV, __a, __b);
+#endif
 }
+
+#ifdef __VSX__
+static __inline__ int __ATTRS_o_ai vec_any_nge(vector double __a,
+                                               vector double __b) {
+  return __builtin_vsx_xvcmpgedp_p(__CR6_LT_REV, __a, __b);
+}
+#endif
 
 /* vec_any_ngt */
 
-static __inline__ int __attribute__((__always_inline__))
-vec_any_ngt(vector float __a, vector float __b) {
+static __inline__ int __ATTRS_o_ai vec_any_ngt(vector float __a,
+                                               vector float __b) {
+#ifdef __VSX__
+  return __builtin_vsx_xvcmpgtsp_p(__CR6_LT_REV, __a, __b);
+#else
   return __builtin_altivec_vcmpgtfp_p(__CR6_LT_REV, __a, __b);
+#endif
 }
+
+#ifdef __VSX__
+static __inline__ int __ATTRS_o_ai vec_any_ngt(vector double __a,
+                                               vector double __b) {
+  return __builtin_vsx_xvcmpgtdp_p(__CR6_LT_REV, __a, __b);
+}
+#endif
 
 /* vec_any_nle */
 
-static __inline__ int __attribute__((__always_inline__))
-vec_any_nle(vector float __a, vector float __b) {
+static __inline__ int __ATTRS_o_ai vec_any_nle(vector float __a,
+                                               vector float __b) {
+#ifdef __VSX__
+  return __builtin_vsx_xvcmpgesp_p(__CR6_LT_REV, __b, __a);
+#else
   return __builtin_altivec_vcmpgefp_p(__CR6_LT_REV, __b, __a);
+#endif
 }
+
+#ifdef __VSX__
+static __inline__ int __ATTRS_o_ai vec_any_nle(vector double __a,
+                                               vector double __b) {
+  return __builtin_vsx_xvcmpgedp_p(__CR6_LT_REV, __b, __a);
+}
+#endif
 
 /* vec_any_nlt */
 
-static __inline__ int __attribute__((__always_inline__))
-vec_any_nlt(vector float __a, vector float __b) {
+static __inline__ int __ATTRS_o_ai vec_any_nlt(vector float __a,
+                                               vector float __b) {
+#ifdef __VSX__
+  return __builtin_vsx_xvcmpgtsp_p(__CR6_LT_REV, __b, __a);
+#else
   return __builtin_altivec_vcmpgtfp_p(__CR6_LT_REV, __b, __a);
+#endif
 }
+
+#ifdef __VSX__
+static __inline__ int __ATTRS_o_ai vec_any_nlt(vector double __a,
+                                               vector double __b) {
+  return __builtin_vsx_xvcmpgtdp_p(__CR6_LT_REV, __b, __a);
+}
+#endif
 
 /* vec_any_numeric */
 
-static __inline__ int __attribute__((__always_inline__))
-vec_any_numeric(vector float __a) {
+static __inline__ int __ATTRS_o_ai vec_any_numeric(vector float __a) {
+#ifdef __VSX__
+  return __builtin_vsx_xvcmpeqsp_p(__CR6_EQ_REV, __a, __a);
+#else
   return __builtin_altivec_vcmpeqfp_p(__CR6_EQ_REV, __a, __a);
+#endif
 }
+
+#ifdef __VSX__
+static __inline__ int __ATTRS_o_ai vec_any_numeric(vector double __a) {
+  return __builtin_vsx_xvcmpeqdp_p(__CR6_EQ_REV, __a, __a);
+}
+#endif
 
 /* vec_any_out */
 
