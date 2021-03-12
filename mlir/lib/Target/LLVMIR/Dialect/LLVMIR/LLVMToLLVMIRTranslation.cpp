@@ -189,6 +189,15 @@ static llvm::MDNode *getLoopOptionMetadata(llvm::LLVMContext &ctx,
     cstValue = llvm::ConstantInt::get(
         llvm::IntegerType::get(ctx, /*NumBits=*/32), value);
     break;
+  case LoopOptionCase::disable_pipeline:
+    name = "llvm.loop.pipeline.disable";
+    cstValue = llvm::ConstantInt::getBool(ctx, value);
+    break;
+  case LoopOptionCase::pipeline_initiation_interval:
+    name = "llvm.loop.pipeline.initiationinterval";
+    cstValue = llvm::ConstantInt::get(
+        llvm::IntegerType::get(ctx, /*NumBits=*/32), value);
+    break;
   }
   return llvm::MDNode::get(ctx, {llvm::MDString::get(ctx, name),
                                  llvm::ConstantAsMetadata::get(cstValue)});
