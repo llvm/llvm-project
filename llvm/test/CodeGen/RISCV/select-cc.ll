@@ -58,14 +58,12 @@ define i32 @foo(i32 %a, i32 *%b) nounwind {
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_20:
 ; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    addi a3, zero, 1
-; RV32I-NEXT:    blt a2, a3, .LBB0_22
+; RV32I-NEXT:    blez a2, .LBB0_22
 ; RV32I-NEXT:  # %bb.21:
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_22:
 ; RV32I-NEXT:    lw a1, 0(a1)
-; RV32I-NEXT:    addi a3, zero, -1
-; RV32I-NEXT:    blt a3, a2, .LBB0_24
+; RV32I-NEXT:    bgez a2, .LBB0_24
 ; RV32I-NEXT:  # %bb.23:
 ; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:  .LBB0_24:
