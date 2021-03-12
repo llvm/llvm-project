@@ -314,7 +314,8 @@ void salvageDebugInfoForDbgValues(Instruction &I,
 /// appended to the expression. \p LocNo: the index of the location operand to
 /// which \p I applies, should be 0 for debug info without a DIArgList.
 DIExpression *salvageDebugInfoImpl(Instruction &I, DIExpression *DIExpr,
-                                   bool StackVal, unsigned LocNo);
+                                   bool StackVal, unsigned LocNo,
+                                   SmallVectorImpl<Value *> &AdditionalValues);
 
 /// Point debug users of \p From to \p To or salvage them. Use this function
 /// only when replacing all uses of \p From with \p To, with a guarantee that
