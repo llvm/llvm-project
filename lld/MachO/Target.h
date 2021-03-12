@@ -43,7 +43,7 @@ public:
   getEmbeddedAddend(llvm::MemoryBufferRef, const llvm::MachO::section_64 &,
                     const llvm::MachO::relocation_info) const = 0;
   virtual void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
-                           uint64_t pc) const = 0;
+                           uint64_t relocVA) const = 0;
 
   // Write code for lazy binding. See the comments on StubsSection for more
   // details.

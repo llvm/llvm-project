@@ -28,7 +28,7 @@ struct X86_64 : TargetInfo {
   uint64_t getEmbeddedAddend(MemoryBufferRef, const section_64 &,
                              const relocation_info) const override;
   void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
-                   uint64_t pc) const override;
+                   uint64_t relocVA) const override;
 
   void writeStub(uint8_t *buf, const macho::Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
@@ -64,6 +64,19 @@ const RelocAttrs &X86_64::getRelocAttrs(uint8_t type) const {
   return relocAttrsArray[type];
 }
 
+static int pcrelOffset(uint8_t type) {
+  switch (type) {
+  case X86_64_RELOC_SIGNED_1:
+    return 1;
+  case X86_64_RELOC_SIGNED_2:
+    return 2;
+  case X86_64_RELOC_SIGNED_4:
+    return 4;
+  default:
+    return 0;
+  }
+}
+
 uint64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, const section_64 &sec,
                                    relocation_info rel) const {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
@@ -71,19 +84,22 @@ uint64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, const section_64 &sec,
 
   switch (rel.r_length) {
   case 2:
-    return read32le(loc);
+    return read32le(loc) + pcrelOffset(rel.r_type);
   case 3:
-    return read64le(loc);
+    return read64le(loc) + pcrelOffset(rel.r_type);
   default:
     llvm_unreachable("invalid r_length");
   }
 }
 
 void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
-                         uint64_t pc) const {
+                         uint64_t relocVA) const {
   value += r.addend;
-  if (r.pcrel)
-    value -= (pc + 4);
+  if (r.pcrel) {
+    uint64_t pc = relocVA + 4 + pcrelOffset(r.type);
+    value -= pc;
+  }
+
   switch (r.length) {
   case 2:
     write32le(loc, value);
