@@ -22,7 +22,7 @@ void baz() {
 // PLAIN: distinct !DISubprogram(name: "foo"{{.*}})
 // PLAIN-NOT: linkageName:
 //
-// UNIQUE: @_ZL4glob.[[MODHASH:__uniq.[0-9]+]] = internal global i32
-// UNIQUE: define internal i32 @_ZL3foov.[[MODHASH]]()
-// UNIQUE: distinct !DIGlobalVariable(name: "glob", linkageName: "_ZL4glob.[[MODHASH]]"{{.*}})
+// UNIQUE: @glob = internal global i32
+// UNIQUE: define internal i32 @_ZL3foov.[[MODHASH:__uniq.[0-9]+]]()
+// UNIQUE: distinct !DIGlobalVariable(name: "glob"{{.*}})
 // UNIQUE: distinct !DISubprogram(name: "foo", linkageName: "_ZL3foov.[[MODHASH]]"{{.*}})
