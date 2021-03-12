@@ -44,6 +44,19 @@ def int_aarch64_fjcvtzs : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty],
 def int_aarch64_cls: DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_aarch64_cls64: DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
 
+def int_aarch64_frint32z
+    : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
+                            [ IntrNoMem ]>;
+def int_aarch64_frint64z
+    : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
+                            [ IntrNoMem ]>;
+def int_aarch64_frint32x
+    : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
+                            [ IntrNoMem ]>;
+def int_aarch64_frint64x
+    : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
+                            [ IntrNoMem ]>;
+
 //===----------------------------------------------------------------------===//
 // HINT
 
