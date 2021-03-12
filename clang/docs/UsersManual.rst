@@ -2301,14 +2301,6 @@ In these cases, you can use the flag ``-fno-profile-instr-generate`` (or
 Note that these flags should appear after the corresponding profile
 flags to have an effect.
 
-.. note::
-
-  When none of the translation units inside a binary is instrumented, in the
-  case of ELF and COFF binary format the profile runtime will not be linked
-  into the binary and no profile will be produced, while in the case of Mach-O
-  the profile runtime will be linked and profile will be produced but there
-  will not be any counters.
-
 Instrumenting only selected files or functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
