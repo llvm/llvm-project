@@ -259,7 +259,7 @@ template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
   }
 
   template <unsigned I>
-  static unsigned getHashValueImpl(const Tuple &values, std::true_type) {
+  static unsigned getHashValueImpl(const Tuple &, std::true_type) {
     return 0;
   }
 
@@ -277,7 +277,7 @@ template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
   }
 
   template <unsigned I>
-  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs, std::true_type) {
+  static bool isEqualImpl(const Tuple &, const Tuple &, std::true_type) {
     return true;
   }
 
