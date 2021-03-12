@@ -518,7 +518,13 @@ struct DFSanFunction {
   DenseMap<AllocaInst *, AllocaInst *> AllocaShadowMap;
   DenseMap<AllocaInst *, AllocaInst *> AllocaOriginMap;
 
-  std::vector<std::pair<PHINode *, PHINode *>> PHIFixups;
+  struct PHIFixupElement {
+    PHINode *Phi;
+    PHINode *ShadowPhi;
+    PHINode *OriginPhi;
+  };
+  std::vector<PHIFixupElement> PHIFixups;
+
   DenseSet<Instruction *> SkipInsts;
   std::vector<Value *> NonZeroChecks;
   bool AvoidNewBlocks;
@@ -1563,12 +1569,14 @@ bool DataFlowSanitizer::runImpl(Module &M) {
     // until we have visited every block.  Therefore, the code that handles phi
     // nodes adds them to the PHIFixups list so that they can be properly
     // handled here.
-    for (auto PHIFixup : DFSF.PHIFixups) {
-      PHINode *PN, *ShadowPN;
-      std::tie(PN, ShadowPN) = PHIFixup;
-      for (unsigned Val = 0, N = PN->getNumIncomingValues(); Val < N; ++Val) {
-        ShadowPN->setIncomingValue(Val,
-                                   DFSF.getShadow(PN->getIncomingValue(Val)));
+    for (DFSanFunction::PHIFixupElement &P : DFSF.PHIFixups) {
+      for (unsigned Val = 0, N = P.Phi->getNumIncomingValues(); Val != N;
+           ++Val) {
+        P.ShadowPhi->setIncomingValue(
+            Val, DFSF.getShadow(P.Phi->getIncomingValue(Val)));
+        if (P.OriginPhi)
+          P.OriginPhi->setIncomingValue(
+              Val, DFSF.getOrigin(P.Phi->getIncomingValue(Val)));
       }
     }
 
@@ -3123,8 +3131,19 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
   for (BasicBlock *BB : PN.blocks())
     ShadowPN->addIncoming(UndefShadow, BB);
 
-  DFSF.PHIFixups.push_back(std::make_pair(&PN, ShadowPN));
   DFSF.setShadow(&PN, ShadowPN);
+
+  PHINode *OriginPN = nullptr;
+  if (DFSF.DFS.shouldTrackOrigins()) {
+    OriginPN =
+        PHINode::Create(DFSF.DFS.OriginTy, PN.getNumIncomingValues(), "", &PN);
+    Value *UndefOrigin = UndefValue::get(DFSF.DFS.OriginTy);
+    for (BasicBlock *BB : PN.blocks())
+      OriginPN->addIncoming(UndefOrigin, BB);
+    DFSF.setOrigin(&PN, OriginPN);
+  }
+
+  DFSF.PHIFixups.push_back({&PN, ShadowPN, OriginPN});
 }
 
 namespace {
