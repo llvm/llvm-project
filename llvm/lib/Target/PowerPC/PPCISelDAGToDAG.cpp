@@ -941,7 +941,7 @@ static SDNode *selectI64ImmDirect(SelectionDAG *CurDAG, const SDLoc &dl,
   // 63                    0      63                    0
   if ((Shift = findContiguousZerosAtLeast(Imm, 49)) ||
       (Shift = findContiguousZerosAtLeast(~Imm, 49))) {
-    uint64_t RotImm = (Imm >> Shift) | (Imm << (64 - Shift));
+    uint64_t RotImm = APInt(64, Imm).rotr(Shift).getZExtValue();
     Result = CurDAG->getMachineNode(PPC::LI8, dl, MVT::i64,
                                     getI32Imm(RotImm & 0xffff));
     return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
@@ -1019,7 +1019,7 @@ static SDNode *selectI64ImmDirect(SelectionDAG *CurDAG, const SDLoc &dl,
   // This is similar to Pattern 2-6, please refer to the diagram there.
   if ((Shift = findContiguousZerosAtLeast(Imm, 33)) ||
       (Shift = findContiguousZerosAtLeast(~Imm, 33))) {
-    uint64_t RotImm = (Imm >> Shift) | (Imm << (64 - Shift));
+    uint64_t RotImm = APInt(64, Imm).rotr(Shift).getZExtValue();
     uint64_t ImmHi16 = (RotImm >> 16) & 0xffff;
     unsigned Opcode = ImmHi16 ? PPC::LIS8 : PPC::LI8;
     Result = CurDAG->getMachineNode(Opcode, dl, MVT::i64, getI32Imm(ImmHi16));
@@ -1126,7 +1126,7 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
   // +----------------------+     +----------------------+
   // 63                    0      63                    0
   for (unsigned Shift = 0; Shift < 63; ++Shift) {
-    uint64_t RotImm = (Imm >> Shift) | (Imm << (64 - Shift));
+    uint64_t RotImm = APInt(64, Imm).rotr(Shift).getZExtValue();
     if (isInt<34>(RotImm)) {
       Result =
           CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64, getI64Imm(RotImm));
