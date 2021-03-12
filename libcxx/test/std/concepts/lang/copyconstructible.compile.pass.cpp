@@ -15,7 +15,7 @@
 #include <concepts>
 #include <type_traits>
 
-#include "moveconstructible.h"
+#include "type_classification/moveconstructible.h"
 
 // Tests in this namespace are shared with moveconstructible.pass.cpp
 // There are some interesting differences, so it's best if they're tested here

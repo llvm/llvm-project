@@ -476,10 +476,9 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
     MCOS->emitInt8(0); // Segment selector; same as EmitGenDwarfAranges.
   }
 
-  MCSymbol *ProStartSym = context.createTempSymbol();
-
-  // Create a symbol for the end of the prologue (to be set when we get there).
-  MCSymbol *ProEndSym = context.createTempSymbol(); // Lprologue_end
+  // Create symbols for the start/end of the prologue.
+  MCSymbol *ProStartSym = context.createTempSymbol("prologue_start");
+  MCSymbol *ProEndSym = context.createTempSymbol("prologue_end");
 
   // Length of the prologue, is the next 4 bytes (8 bytes for DWARF64). This is
   // actually the length from after the length word, to the end of the prologue.

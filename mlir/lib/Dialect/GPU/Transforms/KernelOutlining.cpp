@@ -283,10 +283,8 @@ private:
     // and then this needs to use the OpBuilder.
     auto context = getOperation().getContext();
     OpBuilder builder(context);
-    OperationState state(kernelFunc.getLoc(),
-                         gpu::GPUModuleOp::getOperationName());
-    gpu::GPUModuleOp::build(builder, state, kernelFunc.getName());
-    auto kernelModule = cast<gpu::GPUModuleOp>(Operation::create(state));
+    auto kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
+                                                         kernelFunc.getName());
     SymbolTable symbolTable(kernelModule);
     symbolTable.insert(kernelFunc);
 

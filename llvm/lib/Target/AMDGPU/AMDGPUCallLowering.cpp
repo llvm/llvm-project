@@ -49,7 +49,8 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   MachineInstrBuilder MIB;
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
-                           MachinePointerInfo &MPO) override {
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
     llvm_unreachable("not implemented");
   }
 
@@ -95,9 +96,14 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
       : IncomingValueHandler(B, MRI, AssignFn) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
-                           MachinePointerInfo &MPO) override {
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
-    int FI = MFI.CreateFixedObject(Size, Offset, true);
+
+    // Byval is assumed to be writable memory, but other stack passed arguments
+    // are not.
+    const bool IsImmutable = !Flags.isByVal();
+    int FI = MFI.CreateFixedObject(Size, Offset, IsImmutable);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
     auto AddrReg = MIRBuilder.buildFrameIndex(
         LLT::pointer(AMDGPUAS::PRIVATE_ADDRESS, 32), FI);
@@ -189,7 +195,8 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
   }
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
-                           MachinePointerInfo &MPO) override {
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
     MachineFunction &MF = MIRBuilder.getMF();
     const LLT PtrTy = LLT::pointer(AMDGPUAS::PRIVATE_ADDRESS, 32);
     const LLT S32 = LLT::scalar(32);
@@ -944,6 +951,10 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   for (auto &OrigArg : Info.OrigArgs)
     splitToValueTypes(OrigArg, OutArgs, DL, Info.CallConv);
 
+  SmallVector<ArgInfo, 8> InArgs;
+  if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy())
+    splitToValueTypes(Info.OrigRet, InArgs, DL, Info.CallConv);
+
   // If we can lower as a tail call, do that instead.
   bool CanTailCallOpt = false;
 
@@ -1031,26 +1042,8 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         1));
   }
 
-  auto OrigInsertPt = MIRBuilder.getInsertPt();
-
   // Now we can add the actual call instruction to the correct position.
   MIRBuilder.insertInstr(MIB);
-
-  // Insert this now to give us an anchor point for managing the insert point.
-  MachineInstrBuilder CallSeqEnd =
-    MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKDOWN);
-
-  SmallVector<ArgInfo, 8> InArgs;
-  if (!Info.CanLowerReturn) {
-    insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
-                    Info.DemoteRegister, Info.DemoteStackIndex);
-  } else if (!Info.OrigRet.Ty->isVoidTy()) {
-    splitToValueTypes(Info.OrigRet, InArgs, DL, Info.CallConv);
-  }
-
-  // Make sure the raw argument copies are inserted before the marshalling to
-  // the original types.
-  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), CallSeqEnd);
 
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arguments, the physical register must be an
@@ -1065,10 +1058,15 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   uint64_t CalleePopBytes = NumBytes;
-  CallSeqEnd.addImm(0)
+
+  MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKDOWN)
+            .addImm(0)
             .addImm(CalleePopBytes);
 
-  // Restore the insert point to after the call sequence.
-  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), OrigInsertPt);
+  if (!Info.CanLowerReturn) {
+    insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
+                    Info.DemoteRegister, Info.DemoteStackIndex);
+  }
+
   return true;
 }

@@ -111,7 +111,7 @@ bool ParseOneDictionaryEntry(const std::string &Str, Unit *U) {
         char Hex[] = "0xAA";
         Hex[2] = Str[Pos + 2];
         Hex[3] = Str[Pos + 3];
-        U->push_back(strtol(Hex, nullptr, 16));
+        U->push_back(static_cast<uint8_t>(strtol(Hex, nullptr, 16)));
         Pos += 3;
         continue;
       }

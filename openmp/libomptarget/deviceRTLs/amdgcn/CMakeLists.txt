@@ -87,6 +87,7 @@ set(hip_sources
   ${devicertl_base_directory}/common/src/parallel.cu
   ${devicertl_base_directory}/common/src/reduction.cu
   ${devicertl_base_directory}/common/src/support.cu
+  ${devicertl_base_directory}/common/src/shuffle.cpp
   ${devicertl_base_directory}/common/src/sync.cu
   ${devicertl_base_directory}/common/src/task.cu
   ${devicertl_base_directory}/common/src/ompd-specific.cu)
@@ -174,6 +175,7 @@ macro(add_cuda_bc_library)
     -O${optimization_level}
     ${CUDA_DEBUG}
     -I${CMAKE_CURRENT_SOURCE_DIR}/src
+    -I${devicertl_base_directory}/common/include
     -I${devicertl_base_directory})
 
   set(bc1_files)

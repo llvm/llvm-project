@@ -10,18 +10,13 @@ define void @insertelt_v4i64(<4 x i64>* %x, i64 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a3, 4, e64,m2,ta,mu
 ; RV32-NEXT:    vle64.v v26, (a0)
-; RV32-NEXT:    vsetvli a3, zero, e64,m2,ta,mu
-; RV32-NEXT:    vmv.v.x v28, a2
-; RV32-NEXT:    addi a2, zero, 32
-; RV32-NEXT:    vsll.vx v28, v28, a2
-; RV32-NEXT:    vmv.v.x v30, a1
-; RV32-NEXT:    vsll.vx v30, v30, a2
-; RV32-NEXT:    vsrl.vx v30, v30, a2
-; RV32-NEXT:    vor.vv v28, v30, v28
+; RV32-NEXT:    vsetivli a3, 2, e32,m2,ta,mu
+; RV32-NEXT:    vmv.v.i v28, 0
+; RV32-NEXT:    vslide1up.vx v30, v28, a2
+; RV32-NEXT:    vslide1up.vx v28, v30, a1
+; RV32-NEXT:    vsetivli a1, 4, e64,m2,tu,mu
+; RV32-NEXT:    vslideup.vi v26, v28, 3
 ; RV32-NEXT:    vsetivli a1, 4, e64,m2,ta,mu
-; RV32-NEXT:    vid.v v30
-; RV32-NEXT:    vmseq.vi v0, v30, 3
-; RV32-NEXT:    vmerge.vvm v26, v26, v28, v0
 ; RV32-NEXT:    vse64.v v26, (a0)
 ; RV32-NEXT:    ret
 ;
@@ -29,7 +24,6 @@ define void @insertelt_v4i64(<4 x i64>* %x, i64 %y) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a2, 4, e64,m2,ta,mu
 ; RV64-NEXT:    vle64.v v26, (a0)
-; RV64-NEXT:    vslidedown.vi v28, v26, 3
 ; RV64-NEXT:    vmv.s.x v28, a1
 ; RV64-NEXT:    vsetivli a1, 4, e64,m2,tu,mu
 ; RV64-NEXT:    vslideup.vi v26, v28, 3
@@ -65,20 +59,14 @@ define void @insertelt_v3i64(<3 x i64>* %x, i64 %y) {
 ; RV32-NEXT:    vle32.v v26, (sp)
 ; RV32-NEXT:    vsetivli a3, 4, e64,m2,tu,mu
 ; RV32-NEXT:    vslideup.vi v28, v26, 2
-; RV32-NEXT:    vsetvli a3, zero, e64,m2,ta,mu
-; RV32-NEXT:    vmv.v.x v26, a2
-; RV32-NEXT:    addi a3, zero, 32
-; RV32-NEXT:    vsll.vx v26, v26, a3
-; RV32-NEXT:    vmv.v.x v30, a1
-; RV32-NEXT:    vsll.vx v30, v30, a3
-; RV32-NEXT:    vsrl.vx v30, v30, a3
-; RV32-NEXT:    vor.vv v26, v30, v26
-; RV32-NEXT:    vsetivli a3, 4, e64,m2,ta,mu
-; RV32-NEXT:    vid.v v30
-; RV32-NEXT:    vmseq.vi v0, v30, 2
-; RV32-NEXT:    vmerge.vvm v26, v28, v26, v0
+; RV32-NEXT:    vsetivli a3, 2, e32,m2,ta,mu
+; RV32-NEXT:    vmv.v.i v26, 0
+; RV32-NEXT:    vslide1up.vx v30, v26, a2
+; RV32-NEXT:    vslide1up.vx v26, v30, a1
+; RV32-NEXT:    vsetivli a3, 3, e64,m2,tu,mu
+; RV32-NEXT:    vslideup.vi v28, v26, 2
 ; RV32-NEXT:    vsetivli a3, 2, e64,m1,ta,mu
-; RV32-NEXT:    vse64.v v26, (a0)
+; RV32-NEXT:    vse64.v v28, (a0)
 ; RV32-NEXT:    sw a1, 16(a0)
 ; RV32-NEXT:    sw a2, 20(a0)
 ; RV32-NEXT:    addi sp, sp, 16
@@ -99,9 +87,8 @@ define void @insertelt_v16i8(<16 x i8>* %x, i8 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; RV32-NEXT:    vle8.v v25, (a0)
-; RV32-NEXT:    vslidedown.vi v26, v25, 14
 ; RV32-NEXT:    vmv.s.x v26, a1
-; RV32-NEXT:    vsetivli a1, 16, e8,m1,tu,mu
+; RV32-NEXT:    vsetivli a1, 15, e8,m1,tu,mu
 ; RV32-NEXT:    vslideup.vi v25, v26, 14
 ; RV32-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; RV32-NEXT:    vse8.v v25, (a0)
@@ -111,9 +98,8 @@ define void @insertelt_v16i8(<16 x i8>* %x, i8 %y) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; RV64-NEXT:    vle8.v v25, (a0)
-; RV64-NEXT:    vslidedown.vi v26, v25, 14
 ; RV64-NEXT:    vmv.s.x v26, a1
-; RV64-NEXT:    vsetivli a1, 16, e8,m1,tu,mu
+; RV64-NEXT:    vsetivli a1, 15, e8,m1,tu,mu
 ; RV64-NEXT:    vslideup.vi v25, v26, 14
 ; RV64-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; RV64-NEXT:    vse8.v v25, (a0)
@@ -130,9 +116,9 @@ define void @insertelt_v32i16(<32 x i16>* %x, i16 %y, i32 %idx) {
 ; RV32-NEXT:    addi a3, zero, 32
 ; RV32-NEXT:    vsetvli a4, a3, e16,m4,ta,mu
 ; RV32-NEXT:    vle16.v v28, (a0)
-; RV32-NEXT:    vslidedown.vx v8, v28, a2
 ; RV32-NEXT:    vmv.s.x v8, a1
-; RV32-NEXT:    vsetvli a1, a3, e16,m4,tu,mu
+; RV32-NEXT:    addi a1, a2, 1
+; RV32-NEXT:    vsetvli a1, a1, e16,m4,tu,mu
 ; RV32-NEXT:    vslideup.vx v28, v8, a2
 ; RV32-NEXT:    vsetvli a1, a3, e16,m4,ta,mu
 ; RV32-NEXT:    vse16.v v28, (a0)
@@ -143,11 +129,11 @@ define void @insertelt_v32i16(<32 x i16>* %x, i16 %y, i32 %idx) {
 ; RV64-NEXT:    addi a3, zero, 32
 ; RV64-NEXT:    vsetvli a4, a3, e16,m4,ta,mu
 ; RV64-NEXT:    vle16.v v28, (a0)
-; RV64-NEXT:    sext.w a2, a2
-; RV64-NEXT:    vslidedown.vx v8, v28, a2
 ; RV64-NEXT:    vmv.s.x v8, a1
-; RV64-NEXT:    vsetvli a1, a3, e16,m4,tu,mu
-; RV64-NEXT:    vslideup.vx v28, v8, a2
+; RV64-NEXT:    sext.w a1, a2
+; RV64-NEXT:    addi a2, a1, 1
+; RV64-NEXT:    vsetvli a2, a2, e16,m4,tu,mu
+; RV64-NEXT:    vslideup.vx v28, v8, a1
 ; RV64-NEXT:    vsetvli a1, a3, e16,m4,ta,mu
 ; RV64-NEXT:    vse16.v v28, (a0)
 ; RV64-NEXT:    ret
@@ -162,9 +148,9 @@ define void @insertelt_v8f32(<8 x float>* %x, float %y, i32 %idx) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a2, 8, e32,m2,ta,mu
 ; RV32-NEXT:    vle32.v v26, (a0)
-; RV32-NEXT:    vslidedown.vx v28, v26, a1
 ; RV32-NEXT:    vfmv.s.f v28, fa0
-; RV32-NEXT:    vsetivli a2, 8, e32,m2,tu,mu
+; RV32-NEXT:    addi a2, a1, 1
+; RV32-NEXT:    vsetvli a2, a2, e32,m2,tu,mu
 ; RV32-NEXT:    vslideup.vx v26, v28, a1
 ; RV32-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
 ; RV32-NEXT:    vse32.v v26, (a0)
@@ -174,10 +160,10 @@ define void @insertelt_v8f32(<8 x float>* %x, float %y, i32 %idx) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a2, 8, e32,m2,ta,mu
 ; RV64-NEXT:    vle32.v v26, (a0)
-; RV64-NEXT:    sext.w a1, a1
-; RV64-NEXT:    vslidedown.vx v28, v26, a1
 ; RV64-NEXT:    vfmv.s.f v28, fa0
-; RV64-NEXT:    vsetivli a2, 8, e32,m2,tu,mu
+; RV64-NEXT:    sext.w a1, a1
+; RV64-NEXT:    addi a2, a1, 1
+; RV64-NEXT:    vsetvli a2, a2, e32,m2,tu,mu
 ; RV64-NEXT:    vslideup.vx v26, v28, a1
 ; RV64-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
 ; RV64-NEXT:    vse32.v v26, (a0)
@@ -185,5 +171,119 @@ define void @insertelt_v8f32(<8 x float>* %x, float %y, i32 %idx) {
   %a = load <8 x float>, <8 x float>* %x
   %b = insertelement <8 x float> %a, float %y, i32 %idx
   store <8 x float> %b, <8 x float>* %x
+  ret void
+}
+
+define void @insertelt_v8i64_0(<8 x i64>* %x) {
+; RV32-LABEL: insertelt_v8i64_0:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli a1, 8, e64,m4,ta,mu
+; RV32-NEXT:    vle64.v v28, (a0)
+; RV32-NEXT:    addi a1, zero, -1
+; RV32-NEXT:    vmv.s.x v28, a1
+; RV32-NEXT:    vs4r.v v28, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insertelt_v8i64_0:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli a1, 8, e64,m4,ta,mu
+; RV64-NEXT:    vle64.v v28, (a0)
+; RV64-NEXT:    addi a1, zero, -1
+; RV64-NEXT:    vmv.s.x v28, a1
+; RV64-NEXT:    vse64.v v28, (a0)
+; RV64-NEXT:    ret
+  %a = load <8 x i64>, <8 x i64>* %x
+  %b = insertelement <8 x i64> %a, i64 -1, i32 0
+  store <8 x i64> %b, <8 x i64>* %x
+  ret void
+}
+
+define void @insertelt_v8i64(<8 x i64>* %x, i32 %idx) {
+; RV32-LABEL: insertelt_v8i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli a2, 8, e64,m4,ta,mu
+; RV32-NEXT:    vle64.v v28, (a0)
+; RV32-NEXT:    addi a2, zero, -1
+; RV32-NEXT:    vmv.s.x v8, a2
+; RV32-NEXT:    addi a2, a1, 1
+; RV32-NEXT:    vsetvli a2, a2, e64,m4,tu,mu
+; RV32-NEXT:    vslideup.vx v28, v8, a1
+; RV32-NEXT:    vsetivli a1, 8, e64,m4,ta,mu
+; RV32-NEXT:    vse64.v v28, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insertelt_v8i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli a2, 8, e64,m4,ta,mu
+; RV64-NEXT:    vle64.v v28, (a0)
+; RV64-NEXT:    addi a2, zero, -1
+; RV64-NEXT:    vmv.s.x v8, a2
+; RV64-NEXT:    sext.w a1, a1
+; RV64-NEXT:    addi a2, a1, 1
+; RV64-NEXT:    vsetvli a2, a2, e64,m4,tu,mu
+; RV64-NEXT:    vslideup.vx v28, v8, a1
+; RV64-NEXT:    vsetivli a1, 8, e64,m4,ta,mu
+; RV64-NEXT:    vse64.v v28, (a0)
+; RV64-NEXT:    ret
+  %a = load <8 x i64>, <8 x i64>* %x
+  %b = insertelement <8 x i64> %a, i64 -1, i32 %idx
+  store <8 x i64> %b, <8 x i64>* %x
+  ret void
+}
+
+define void @insertelt_c6_v8i64_0(<8 x i64>* %x) {
+; RV32-LABEL: insertelt_c6_v8i64_0:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli a1, 8, e64,m4,ta,mu
+; RV32-NEXT:    vle64.v v28, (a0)
+; RV32-NEXT:    addi a1, zero, 6
+; RV32-NEXT:    vmv.s.x v28, a1
+; RV32-NEXT:    vs4r.v v28, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insertelt_c6_v8i64_0:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli a1, 8, e64,m4,ta,mu
+; RV64-NEXT:    vle64.v v28, (a0)
+; RV64-NEXT:    addi a1, zero, 6
+; RV64-NEXT:    vmv.s.x v28, a1
+; RV64-NEXT:    vse64.v v28, (a0)
+; RV64-NEXT:    ret
+  %a = load <8 x i64>, <8 x i64>* %x
+  %b = insertelement <8 x i64> %a, i64 6, i32 0
+  store <8 x i64> %b, <8 x i64>* %x
+  ret void
+}
+
+define void @insertelt_c6_v8i64(<8 x i64>* %x, i32 %idx) {
+; RV32-LABEL: insertelt_c6_v8i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli a2, 8, e64,m4,ta,mu
+; RV32-NEXT:    vle64.v v28, (a0)
+; RV32-NEXT:    addi a2, zero, 6
+; RV32-NEXT:    vmv.s.x v8, a2
+; RV32-NEXT:    addi a2, a1, 1
+; RV32-NEXT:    vsetvli a2, a2, e64,m4,tu,mu
+; RV32-NEXT:    vslideup.vx v28, v8, a1
+; RV32-NEXT:    vsetivli a1, 8, e64,m4,ta,mu
+; RV32-NEXT:    vse64.v v28, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insertelt_c6_v8i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli a2, 8, e64,m4,ta,mu
+; RV64-NEXT:    vle64.v v28, (a0)
+; RV64-NEXT:    addi a2, zero, 6
+; RV64-NEXT:    vmv.s.x v8, a2
+; RV64-NEXT:    sext.w a1, a1
+; RV64-NEXT:    addi a2, a1, 1
+; RV64-NEXT:    vsetvli a2, a2, e64,m4,tu,mu
+; RV64-NEXT:    vslideup.vx v28, v8, a1
+; RV64-NEXT:    vsetivli a1, 8, e64,m4,ta,mu
+; RV64-NEXT:    vse64.v v28, (a0)
+; RV64-NEXT:    ret
+  %a = load <8 x i64>, <8 x i64>* %x
+  %b = insertelement <8 x i64> %a, i64 6, i32 %idx
+  store <8 x i64> %b, <8 x i64>* %x
   ret void
 }

@@ -37,6 +37,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2729,6 +2730,116 @@ struct TransferWriteInsertPattern
   }
 };
 
+/// Progressive lowering of transfer_read. This pattern supports lowering of
+/// `vector.transfer_read` to a combination of `vector.load` and
+/// `vector.broadcast` if all of the following hold:
+/// - The op reads from a memref with the default layout.
+/// - Masking is not required.
+/// - If the memref's element type is a vector type then it coincides with the
+///   result type.
+/// - The permutation map doesn't perform permutation (broadcasting is allowed).
+struct TransferReadToVectorLoadLowering
+    : public OpRewritePattern<vector::TransferReadOp> {
+  TransferReadToVectorLoadLowering(MLIRContext *context)
+      : OpRewritePattern<vector::TransferReadOp>(context) {}
+  LogicalResult matchAndRewrite(vector::TransferReadOp read,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<unsigned, 4> broadcastedDims;
+    // TODO: Support permutations.
+    if (!read.permutation_map().isMinorIdentityWithBroadcasting(
+            &broadcastedDims))
+      return failure();
+    auto memRefType = read.getShapedType().dyn_cast<MemRefType>();
+    if (!memRefType)
+      return failure();
+
+    // If there is broadcasting involved then we first load the unbroadcasted
+    // vector, and then broadcast it with `vector.broadcast`.
+    ArrayRef<int64_t> vectorShape = read.getVectorType().getShape();
+    SmallVector<int64_t, 4> unbroadcastedVectorShape(vectorShape.begin(),
+                                                     vectorShape.end());
+    for (unsigned i : broadcastedDims)
+      unbroadcastedVectorShape[i] = 1;
+    VectorType unbroadcastedVectorType = VectorType::get(
+        unbroadcastedVectorShape, read.getVectorType().getElementType());
+
+    // `vector.load` supports vector types as memref's elements only when the
+    // resulting vector type is the same as the element type.
+    if (memRefType.getElementType().isa<VectorType>() &&
+        memRefType.getElementType() != unbroadcastedVectorType)
+      return failure();
+    // Only the default layout is supported by `vector.load`.
+    // TODO: Support non-default layouts.
+    if (!memRefType.getAffineMaps().empty())
+      return failure();
+    // TODO: When masking is required, we can create a MaskedLoadOp
+    if (read.hasMaskedDim())
+      return failure();
+
+    Operation *loadOp;
+    if (!broadcastedDims.empty() &&
+        unbroadcastedVectorType.getNumElements() == 1) {
+      // If broadcasting is required and the number of loaded elements is 1 then
+      // we can create `std.load` instead of `vector.load`.
+      loadOp = rewriter.create<mlir::LoadOp>(read.getLoc(), read.source(),
+                                             read.indices());
+    } else {
+      // Otherwise create `vector.load`.
+      loadOp = rewriter.create<vector::LoadOp>(read.getLoc(),
+                                               unbroadcastedVectorType,
+                                               read.source(), read.indices());
+    }
+
+    // Insert a broadcasting op if required.
+    if (!broadcastedDims.empty()) {
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+          read, read.getVectorType(), loadOp->getResult(0));
+    } else {
+      rewriter.replaceOp(read, loadOp->getResult(0));
+    }
+
+    return success();
+  }
+};
+
+/// Progressive lowering of transfer_write. This pattern supports lowering of
+/// `vector.transfer_write` to `vector.store` if all of the following hold:
+/// - The op writes to a memref with the default layout.
+/// - Masking is not required.
+/// - If the memref's element type is a vector type then it coincides with the
+///   type of the written value.
+/// - The permutation map is the minor identity map (neither permutation nor
+///   broadcasting is allowed).
+struct TransferWriteToVectorStoreLowering
+    : public OpRewritePattern<vector::TransferWriteOp> {
+  TransferWriteToVectorStoreLowering(MLIRContext *context)
+      : OpRewritePattern<vector::TransferWriteOp>(context) {}
+  LogicalResult matchAndRewrite(vector::TransferWriteOp write,
+                                PatternRewriter &rewriter) const override {
+    // TODO: Support non-minor-identity maps
+    if (!write.permutation_map().isMinorIdentity())
+      return failure();
+    auto memRefType = write.getShapedType().dyn_cast<MemRefType>();
+    if (!memRefType)
+      return failure();
+    // `vector.store` supports vector types as memref's elements only when the
+    // type of the vector value being written is the same as the element type.
+    if (memRefType.getElementType().isa<VectorType>() &&
+        memRefType.getElementType() != write.getVectorType())
+      return failure();
+    // Only the default layout is supported by `vector.store`.
+    // TODO: Support non-default layouts.
+    if (!memRefType.getAffineMaps().empty())
+      return failure();
+    // TODO: When masking is required, we can create a MaskedStoreOp
+    if (write.hasMaskedDim())
+      return failure();
+    rewriter.replaceOpWithNewOp<vector::StoreOp>(
+        write, write.vector(), write.source(), write.indices());
+    return success();
+  }
+};
+
 // Trims leading one dimensions from `oldType` and returns the result type.
 // Returns `vector<1xT>` if `oldType` only has one element.
 static VectorType trimLeadingOneDims(VectorType oldType) {
@@ -3200,4 +3311,10 @@ void mlir::vector::populateVectorContractLoweringPatterns(
                   ContractionOpToMatmulOpLowering,
                   ContractionOpToOuterProductOpLowering>(parameters, context);
   // clang-format on
+}
+
+void mlir::vector::populateVectorTransferLoweringPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<TransferReadToVectorLoadLowering,
+                  TransferWriteToVectorStoreLowering>(context);
 }

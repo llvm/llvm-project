@@ -14,6 +14,7 @@
 #pragma omp declare target
 
 #include "common/omptarget.h"
+#include "target/shuffle.h"
 #include "target_impl.h"
 #ifdef OMPD_SUPPORT
   #include "common/ompd-specific.h"

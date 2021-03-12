@@ -361,6 +361,15 @@ struct TestVectorTransferOpt
   void runOnFunction() override { transferOpflowOpt(getFunction()); }
 };
 
+struct TestVectorTransferLoweringPatterns
+    : public PassWrapper<TestVectorTransferLoweringPatterns, FunctionPass> {
+  void runOnFunction() override {
+    OwningRewritePatternList patterns;
+    populateVectorTransferLoweringPatterns(patterns, &getContext());
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
+};
+
 } // end anonymous namespace
 
 namespace mlir {
@@ -390,16 +399,23 @@ void registerTestVectorConversions() {
       vectorTransformFullPartialPass("test-vector-transfer-full-partial-split",
                                      "Test conversion patterns to split "
                                      "transfer ops via scf.if + linalg ops");
+
   PassRegistration<TestVectorDistributePatterns> distributePass(
       "test-vector-distribute-patterns",
       "Test conversion patterns to distribute vector ops in the vector "
       "dialect");
+
   PassRegistration<TestVectorToLoopPatterns> vectorToForLoop(
       "test-vector-to-forloop",
       "Test conversion patterns to break up a vector op into a for loop");
+
   PassRegistration<TestVectorTransferOpt> transferOpOpt(
       "test-vector-transferop-opt",
       "Test optimization transformations for transfer ops");
+
+  PassRegistration<TestVectorTransferLoweringPatterns> transferOpLoweringPass(
+      "test-vector-transfer-lowering-patterns",
+      "Test conversion patterns to lower transfer ops to other vector ops");
 }
 } // namespace test
 } // namespace mlir

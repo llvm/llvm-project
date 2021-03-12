@@ -142,7 +142,9 @@ struct GlobalEnv {
         CollectDFT(SF);
       }
       auto Time2 = std::chrono::system_clock::now();
-      Job->DftTimeInSeconds = duration_cast<seconds>(Time2 - Time1).count();
+      auto DftTimeInSeconds = duration_cast<seconds>(Time2 - Time1).count();
+      assert(DftTimeInSeconds < std::numeric_limits<int>::max());
+      Job->DftTimeInSeconds = static_cast<int>(DftTimeInSeconds);
     }
     if (!Seeds.empty()) {
       Job->SeedListPath =

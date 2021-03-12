@@ -247,3 +247,11 @@ func @non_signless_constant() {
   %0 = constant 0 : si32
   return
 }
+
+// -----
+
+func @unsupported_attribute() {
+  // expected-error @+1 {{unsupported 'value' attribute: "" : index}}
+  %0 = constant "" : index
+  return
+}

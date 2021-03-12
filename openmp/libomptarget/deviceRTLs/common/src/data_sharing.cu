@@ -12,6 +12,7 @@
 #pragma omp declare target
 
 #include "common/omptarget.h"
+#include "target/shuffle.h"
 #include "target_impl.h"
 
 // Return true if this is the master thread.

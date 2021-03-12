@@ -9,9 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_ABS_UTILS_H
 #define LLVM_LIBC_SRC_STDLIB_ABS_UTILS_H
 
+#include "utils/CPP/TypeTraits.h"
+
 namespace __llvm_libc {
 
-template <typename T> static inline T integer_abs(T n) {
+template <typename T>
+static inline cpp::EnableIfType<cpp::IsIntegral<T>::Value, T> integerAbs(T n) {
   if (n < 0)
     return -n;
   return n;

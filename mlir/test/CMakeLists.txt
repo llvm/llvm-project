@@ -88,12 +88,6 @@ if(LLVM_BUILD_EXAMPLES)
     )
 endif()
 
-if(MLIR_CUDA_RUNNER_ENABLED)
-  list(APPEND MLIR_TEST_DEPENDS
-    mlir-cuda-runner
-  )
-endif()
-
 if(MLIR_ROCM_RUNNER_ENABLED)
   list(APPEND MLIR_TEST_DEPENDS
     mlir-rocm-runner
