@@ -361,6 +361,15 @@ struct TestVectorTransferOpt
   void runOnFunction() override { transferOpflowOpt(getFunction()); }
 };
 
+struct TestVectorTransferLoweringPatterns
+    : public PassWrapper<TestVectorTransferLoweringPatterns, FunctionPass> {
+  void runOnFunction() override {
+    OwningRewritePatternList patterns;
+    populateVectorTransferLoweringPatterns(patterns, &getContext());
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
+};
+
 } // end anonymous namespace
 
 namespace mlir {
@@ -403,6 +412,10 @@ void registerTestVectorConversions() {
   PassRegistration<TestVectorTransferOpt> transferOpOpt(
       "test-vector-transferop-opt",
       "Test optimization transformations for transfer ops");
+
+  PassRegistration<TestVectorTransferLoweringPatterns> transferOpLoweringPass(
+      "test-vector-transfer-lowering-patterns",
+      "Test conversion patterns to lower transfer ops to other vector ops");
 }
 } // namespace test
 } // namespace mlir
