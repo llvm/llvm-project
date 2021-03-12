@@ -309,7 +309,7 @@ define void @test_byval(i8* byval(i8) %ptr) {
   ; DARWIN-LABEL: name: test_byval
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; DARWIN:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.0, align 16)
+  ; DARWIN:   [[COPY:%[0-9]+]]:_(p0) = COPY [[FRAME_INDEX]](p0)
   ; DARWIN:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; DARWIN:   BL @simple_fn, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
   ; DARWIN:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
@@ -317,7 +317,7 @@ define void @test_byval(i8* byval(i8) %ptr) {
   ; WINDOWS-LABEL: name: test_byval
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; WINDOWS:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.0, align 16)
+  ; WINDOWS:   [[COPY:%[0-9]+]]:_(p0) = COPY [[FRAME_INDEX]](p0)
   ; WINDOWS:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; WINDOWS:   BL @simple_fn, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
   ; WINDOWS:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp

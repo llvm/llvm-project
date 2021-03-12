@@ -1727,19 +1727,19 @@ define void @void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval({ i8,
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr30_sgpr31
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.0, align 16, addrspace 5)
-  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX]](p5)
+  ; CHECK:   [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p5) :: (dereferenceable load 1 from %ir.arg0, align 4, addrspace 5)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (dereferenceable load 1 from %ir.arg0, align 4, addrspace 5)
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[LOAD]], [[C]](s32)
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (dereferenceable load 4 from %ir.arg0 + 4, addrspace 5)
-  ; CHECK:   G_STORE [[LOAD1]](s8), [[DEF]](p1) :: (store 1 into `{ i8, i32 } addrspace(1)* undef`, align 4, addrspace 1)
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (dereferenceable load 4 from %ir.arg0 + 4, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD]](s8), [[DEF]](p1) :: (store 1 into `{ i8, i32 } addrspace(1)* undef`, align 4, addrspace 1)
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C1]](s64)
-  ; CHECK:   G_STORE [[LOAD2]](s32), [[PTR_ADD1]](p1) :: (store 4 into `{ i8, i32 } addrspace(1)* undef` + 4, addrspace 1)
-  ; CHECK:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
-  ; CHECK:   S_SETPC_B64_return [[COPY1]]
+  ; CHECK:   G_STORE [[LOAD1]](s32), [[PTR_ADD1]](p1) :: (store 4 into `{ i8, i32 } addrspace(1)* undef` + 4, addrspace 1)
+  ; CHECK:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
+  ; CHECK:   S_SETPC_B64_return [[COPY2]]
   %arg0.load = load { i8, i32 }, { i8, i32 } addrspace(5)* %arg0
   store { i8, i32 } %arg0.load, { i8, i32 } addrspace(1)* undef
   ret void
@@ -1750,30 +1750,30 @@ define void @void_func_byval_struct_i8_i32_x2({ i8, i32 } addrspace(5)* byval({ 
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $vgpr0, $sgpr30_sgpr31
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.1, align 16, addrspace 5)
+  ; CHECK:   [[COPY:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX]](p5)
   ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.0, align 8, addrspace 5)
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK:   [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[DEF1:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p5) :: (volatile dereferenceable load 1 from %ir.arg0, align 4, addrspace 5)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (volatile dereferenceable load 1 from %ir.arg0, align 4, addrspace 5)
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[LOAD]], [[C]](s32)
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (volatile dereferenceable load 4 from %ir.arg0 + 4, addrspace 5)
-  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s8) = G_LOAD [[LOAD1]](p5) :: (volatile dereferenceable load 1 from %ir.arg1, align 4, addrspace 5)
-  ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[LOAD1]], [[C]](s32)
-  ; CHECK:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (volatile dereferenceable load 4 from %ir.arg1 + 4, addrspace 5)
-  ; CHECK:   G_STORE [[LOAD2]](s8), [[DEF]](p1) :: (volatile store 1 into `{ i8, i32 } addrspace(1)* undef`, align 4, addrspace 1)
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (volatile dereferenceable load 4 from %ir.arg0 + 4, addrspace 5)
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY1]](p5) :: (volatile dereferenceable load 1 from %ir.arg1, align 4, addrspace 5)
+  ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (volatile dereferenceable load 4 from %ir.arg1 + 4, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD]](s8), [[DEF]](p1) :: (volatile store 1 into `{ i8, i32 } addrspace(1)* undef`, align 4, addrspace 1)
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C1]](s64)
-  ; CHECK:   G_STORE [[LOAD3]](s32), [[PTR_ADD2]](p1) :: (volatile store 4 into `{ i8, i32 } addrspace(1)* undef` + 4, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD4]](s8), [[DEF]](p1) :: (volatile store 1 into `{ i8, i32 } addrspace(1)* undef`, align 4, addrspace 1)
+  ; CHECK:   G_STORE [[LOAD1]](s32), [[PTR_ADD2]](p1) :: (volatile store 4 into `{ i8, i32 } addrspace(1)* undef` + 4, addrspace 1)
+  ; CHECK:   G_STORE [[LOAD2]](s8), [[DEF]](p1) :: (volatile store 1 into `{ i8, i32 } addrspace(1)* undef`, align 4, addrspace 1)
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C1]](s64)
-  ; CHECK:   G_STORE [[LOAD5]](s32), [[PTR_ADD3]](p1) :: (volatile store 4 into `{ i8, i32 } addrspace(1)* undef` + 4, addrspace 1)
-  ; CHECK:   G_STORE [[COPY]](s32), [[DEF1]](p3) :: (volatile store 4 into `i32 addrspace(3)* undef`, addrspace 3)
-  ; CHECK:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
-  ; CHECK:   S_SETPC_B64_return [[COPY2]]
+  ; CHECK:   G_STORE [[LOAD3]](s32), [[PTR_ADD3]](p1) :: (volatile store 4 into `{ i8, i32 } addrspace(1)* undef` + 4, addrspace 1)
+  ; CHECK:   G_STORE [[COPY2]](s32), [[DEF1]](p3) :: (volatile store 4 into `i32 addrspace(3)* undef`, addrspace 3)
+  ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
+  ; CHECK:   S_SETPC_B64_return [[COPY4]]
   %arg0.load = load volatile { i8, i32 }, { i8, i32 } addrspace(5)* %arg0
   %arg1.load = load volatile { i8, i32 }, { i8, i32 } addrspace(5)* %arg1
   store volatile { i8, i32 } %arg0.load, { i8, i32 } addrspace(1)* undef
@@ -1787,18 +1787,18 @@ define void @void_func_byval_i32_byval_i64(i32 addrspace(5)* byval(i32) %arg0, i
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr30_sgpr31
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.1, align 16, addrspace 5)
+  ; CHECK:   [[COPY:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX]](p5)
   ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.0, align 8, addrspace 5)
-  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
+  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p5) :: (dereferenceable load 4 from %ir.arg0, addrspace 5)
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[LOAD1]](p5) :: (dereferenceable load 8 from %ir.arg1, addrspace 5)
-  ; CHECK:   G_STORE [[LOAD2]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD3]](s64), [[COPY1]](p1) :: (store 8 into `i64 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
-  ; CHECK:   S_SETPC_B64_return [[COPY2]]
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (dereferenceable load 4 from %ir.arg0, addrspace 5)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[COPY1]](p5) :: (dereferenceable load 8 from %ir.arg1, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[LOAD1]](s64), [[COPY3]](p1) :: (store 8 into `i64 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
+  ; CHECK:   S_SETPC_B64_return [[COPY4]]
   %arg0.load = load i32, i32 addrspace(5)* %arg0
   %arg1.load = load i64, i64 addrspace(5)* %arg1
   store i32 %arg0.load, i32 addrspace(1)* undef
@@ -1818,18 +1818,18 @@ define void @void_func_byval_i8_align32_i16_align64(i8 addrspace(5)* byval(i8) %
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr30_sgpr31
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.1, align 16, addrspace 5)
+  ; CHECK:   [[COPY:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX]](p5)
   ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.0, align 16, addrspace 5)
-  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
+  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[C]](p1)
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p5) :: (dereferenceable load 1 from %ir.arg0, addrspace 5)
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[LOAD1]](p5) :: (dereferenceable load 2 from %ir.arg1, addrspace 5)
-  ; CHECK:   G_STORE [[LOAD2]](s8), [[C]](p1) :: (store 1 into `i8 addrspace(1)* null`, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD3]](s16), [[COPY1]](p1) :: (store 2 into `i16 addrspace(1)* null`, addrspace 1)
-  ; CHECK:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
-  ; CHECK:   S_SETPC_B64_return [[COPY2]]
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(p1) = COPY [[C]](p1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (dereferenceable load 1 from %ir.arg0, addrspace 5)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (dereferenceable load 2 from %ir.arg1, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD]](s8), [[C]](p1) :: (store 1 into `i8 addrspace(1)* null`, addrspace 1)
+  ; CHECK:   G_STORE [[LOAD1]](s16), [[COPY3]](p1) :: (store 2 into `i16 addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
+  ; CHECK:   S_SETPC_B64_return [[COPY4]]
   %arg0.load = load i8, i8 addrspace(5)* %arg0
   %arg1.load = load i16, i16 addrspace(5)* %arg1
   store i8 %arg0.load, i8 addrspace(1)* null
@@ -1850,30 +1850,30 @@ define void @byval_a3i32_align128_byval_i16_align64([3 x i32] addrspace(5)* byva
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr30_sgpr31
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.1, align 16, addrspace 5)
+  ; CHECK:   [[COPY:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX]](p5)
   ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.0, align 16, addrspace 5)
-  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
+  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[C]](p1)
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p5) :: (dereferenceable load 4 from %ir.arg0, addrspace 5)
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(p1) = COPY [[C]](p1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (dereferenceable load 4 from %ir.arg0, addrspace 5)
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[LOAD]], [[C1]](s32)
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (dereferenceable load 4 from %ir.arg0 + 4, addrspace 5)
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C1]](s32)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (dereferenceable load 4 from %ir.arg0 + 4, addrspace 5)
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[LOAD]], [[C2]](s32)
-  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (dereferenceable load 4 from %ir.arg0 + 8, addrspace 5)
-  ; CHECK:   [[LOAD5:%[0-9]+]]:_(s16) = G_LOAD [[LOAD1]](p5) :: (dereferenceable load 2 from %ir.arg1, addrspace 5)
-  ; CHECK:   G_STORE [[LOAD2]](s32), [[C]](p1) :: (store 4 into `[3 x i32] addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C2]](s32)
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (dereferenceable load 4 from %ir.arg0 + 8, addrspace 5)
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (dereferenceable load 2 from %ir.arg1, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD]](s32), [[C]](p1) :: (store 4 into `[3 x i32] addrspace(1)* null`, addrspace 1)
   ; CHECK:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[C]], [[C3]](s64)
-  ; CHECK:   G_STORE [[LOAD3]](s32), [[PTR_ADD2]](p1) :: (store 4 into `[3 x i32] addrspace(1)* null` + 4, addrspace 1)
+  ; CHECK:   G_STORE [[LOAD1]](s32), [[PTR_ADD2]](p1) :: (store 4 into `[3 x i32] addrspace(1)* null` + 4, addrspace 1)
   ; CHECK:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p1) = G_PTR_ADD [[C]], [[C4]](s64)
-  ; CHECK:   G_STORE [[LOAD4]](s32), [[PTR_ADD3]](p1) :: (store 4 into `[3 x i32] addrspace(1)* null` + 8, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD5]](s16), [[COPY1]](p1) :: (store 2 into `i16 addrspace(1)* null`, addrspace 1)
-  ; CHECK:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
-  ; CHECK:   S_SETPC_B64_return [[COPY2]]
+  ; CHECK:   G_STORE [[LOAD2]](s32), [[PTR_ADD3]](p1) :: (store 4 into `[3 x i32] addrspace(1)* null` + 8, addrspace 1)
+  ; CHECK:   G_STORE [[LOAD3]](s16), [[COPY3]](p1) :: (store 2 into `i16 addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
+  ; CHECK:   S_SETPC_B64_return [[COPY4]]
   %arg0.load = load [3 x i32], [3 x i32] addrspace(5)* %arg0
   %arg1.load = load i16, i16 addrspace(5)* %arg1
   store [3 x i32] %arg0.load, [3 x i32] addrspace(1)* null
@@ -1929,15 +1929,15 @@ define void @void_func_v32i32_i32_byval_i8(<32 x i32> %arg0, i32 %arg1, i8 addrs
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.1, align 16, addrspace 5)
   ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.0, align 8, addrspace 5)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[COPY32:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
+  ; CHECK:   [[COPY33:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[C]](p1)
+  ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[C]](p1)
   ; CHECK:   G_STORE [[LOAD]](s32), [[C]](p1) :: (store 4 into `i32 addrspace(1)* null`, addrspace 1)
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[LOAD1]](p5) :: (dereferenceable load 1 from %ir.arg2, addrspace 5)
-  ; CHECK:   G_STORE [[LOAD2]](s8), [[COPY33]](p1) :: (store 1 into `i8 addrspace(1)* null`, addrspace 1)
-  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY34]]
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[COPY32]](p5) :: (dereferenceable load 1 from %ir.arg2, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD1]](s8), [[COPY34]](p1) :: (store 1 into `i8 addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[COPY35:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY33]]
+  ; CHECK:   S_SETPC_B64_return [[COPY35]]
   store i32 %arg1, i32 addrspace(1)* null
   %arg2.load = load i8, i8 addrspace(5)* %arg2
   store i8 %arg2.load, i8 addrspace(1)* null
@@ -1990,17 +1990,17 @@ define void @void_func_v32i32_byval_i8_i32(<32 x i32> %arg0, i8 addrspace(5)* by
   ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.1, align 16, addrspace 5)
+  ; CHECK:   [[COPY32:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX]](p5)
   ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.0, addrspace 5)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.0, addrspace 5)
+  ; CHECK:   [[COPY33:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[C]](p1)
-  ; CHECK:   G_STORE [[LOAD1]](s32), [[C]](p1) :: (store 4 into `i32 addrspace(1)* null`, addrspace 1)
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p5) :: (dereferenceable load 1 from %ir.arg1, addrspace 5)
-  ; CHECK:   G_STORE [[LOAD2]](s8), [[COPY33]](p1) :: (store 1 into `i8 addrspace(1)* null`, addrspace 1)
-  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY34]]
+  ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[C]](p1)
+  ; CHECK:   G_STORE [[LOAD]](s32), [[C]](p1) :: (store 4 into `i32 addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[COPY32]](p5) :: (dereferenceable load 1 from %ir.arg1, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD1]](s8), [[COPY34]](p1) :: (store 1 into `i8 addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[COPY35:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY33]]
+  ; CHECK:   S_SETPC_B64_return [[COPY35]]
   store i32 %arg2, i32 addrspace(1)* null
   %arg1.load = load i8, i8 addrspace(5)* %arg1
   store i8 %arg1.load, i8 addrspace(1)* null
