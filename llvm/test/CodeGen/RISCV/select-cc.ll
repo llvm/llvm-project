@@ -52,11 +52,23 @@ define i32 @foo(i32 %a, i32 *%b) nounwind {
 ; RV32I-NEXT:  # %bb.17:
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_18:
-; RV32I-NEXT:    lw a1, 0(a1)
-; RV32I-NEXT:    bge a1, a0, .LBB0_20
+; RV32I-NEXT:    lw a2, 0(a1)
+; RV32I-NEXT:    bge a2, a0, .LBB0_20
 ; RV32I-NEXT:  # %bb.19:
-; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_20:
+; RV32I-NEXT:    lw a2, 0(a1)
+; RV32I-NEXT:    addi a3, zero, 1
+; RV32I-NEXT:    blt a2, a3, .LBB0_22
+; RV32I-NEXT:  # %bb.21:
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:  .LBB0_22:
+; RV32I-NEXT:    lw a1, 0(a1)
+; RV32I-NEXT:    addi a3, zero, -1
+; RV32I-NEXT:    blt a3, a2, .LBB0_24
+; RV32I-NEXT:  # %bb.23:
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:  .LBB0_24:
 ; RV32I-NEXT:    ret
 ;
 ; RV32IBT-LABEL: foo:
@@ -85,12 +97,19 @@ define i32 @foo(i32 %a, i32 *%b) nounwind {
 ; RV32IBT-NEXT:    cmov a0, a4, a0, a2
 ; RV32IBT-NEXT:    lw a2, 0(a1)
 ; RV32IBT-NEXT:    slt a4, a0, a3
-; RV32IBT-NEXT:    lw a1, 0(a1)
 ; RV32IBT-NEXT:    cmov a0, a4, a3, a0
-; RV32IBT-NEXT:    slt a3, a0, a2
-; RV32IBT-NEXT:    cmov a0, a3, a0, a2
-; RV32IBT-NEXT:    slt a2, a1, a0
-; RV32IBT-NEXT:    cmov a0, a2, a1, a0
+; RV32IBT-NEXT:    lw a3, 0(a1)
+; RV32IBT-NEXT:    slt a4, a0, a2
+; RV32IBT-NEXT:    lw a5, 0(a1)
+; RV32IBT-NEXT:    cmov a0, a4, a0, a2
+; RV32IBT-NEXT:    slt a2, a3, a0
+; RV32IBT-NEXT:    cmov a0, a2, a3, a0
+; RV32IBT-NEXT:    slti a2, a5, 1
+; RV32IBT-NEXT:    lw a1, 0(a1)
+; RV32IBT-NEXT:    cmov a0, a2, a0, a5
+; RV32IBT-NEXT:    addi a2, zero, -1
+; RV32IBT-NEXT:    slt a2, a2, a5
+; RV32IBT-NEXT:    cmov a0, a2, a0, a1
 ; RV32IBT-NEXT:    ret
   %val1 = load volatile i32, i32* %b
   %tst1 = icmp eq i32 %a, %val1
@@ -132,5 +151,13 @@ define i32 @foo(i32 %a, i32 *%b) nounwind {
   %tst10 = icmp sle i32 %val18, %val19
   %val20 = select i1 %tst10, i32 %val18, i32 %val19
 
-  ret i32 %val20
+  %val21 = load volatile i32, i32* %b
+  %tst11 = icmp slt i32 %val21, 1
+  %val22 = select i1 %tst11, i32 %val20, i32 %val21
+
+  %val23 = load volatile i32, i32* %b
+  %tst12 = icmp sgt i32 %val21, -1
+  %val24 = select i1 %tst12, i32 %val22, i32 %val23
+
+  ret i32 %val24
 }
