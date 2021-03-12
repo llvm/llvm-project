@@ -949,6 +949,10 @@ static bool checkExtensionProperty(Parser &P, SourceLocation Loc,
     return true;
 
   if (TIProperty.Kind ==
+      TraitProperty::implementation_extension_disable_selector_propagation)
+    return true;
+
+  if (TIProperty.Kind ==
       TraitProperty::implementation_extension_allow_templates)
     return true;
 
@@ -1460,7 +1464,11 @@ bool Parser::parseOMPDeclareVariantMatchClause(SourceLocation Loc,
     return false;
 
   // Merge the parent/outer trait info into the one we just parsed and diagnose
-  // problems.
+  // problems. Can be disabled by the disable_selector_propagation extension.
+  if (ParentTI->isExtensionActive(
+          llvm::omp::TraitProperty::
+              implementation_extension_disable_selector_propagation))
+    return false;
   // TODO: Keep some source location in the TI to provide better diagnostics.
   // TODO: Perform some kind of equivalence check on the condition and score
   //       expressions.
