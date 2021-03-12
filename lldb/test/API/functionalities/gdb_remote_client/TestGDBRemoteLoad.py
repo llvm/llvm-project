@@ -6,6 +6,8 @@ from gdbclientutils import *
 
 class TestGDBRemoteLoad(GDBRemoteTestBase):
 
+    @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
+                        bugnumber="llvm.org/pr49414")
     def test_module_load_address(self):
         """Test that setting the load address of a module uses virtual addresses"""
         target = self.createTarget("a.yaml")
@@ -18,6 +20,8 @@ class TestGDBRemoteLoad(GDBRemoteTestBase):
         self.assertEqual(".data", address.GetSection().GetName())
 
     @skipIfReproducer # Packet log is not populated during replay.
+    @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
+                        bugnumber="llvm.org/pr49414")
     def test_ram_load(self):
         """Test loading an object file to a target's ram"""
         target = self.createTarget("a.yaml")
@@ -30,6 +34,8 @@ class TestGDBRemoteLoad(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfReproducer # Packet log is not populated during replay.
+    @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
+                        bugnumber="llvm.org/pr49414")
     def test_flash_load(self):
         """Test loading an object file to a target's flash memory"""
 

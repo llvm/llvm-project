@@ -78,6 +78,7 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr49418")
     def test_compile_units(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
