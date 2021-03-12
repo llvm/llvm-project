@@ -248,6 +248,12 @@ HANDLE_TARGET_OPCODE(G_SREM)
 // Generic unsigned remainder instruction.
 HANDLE_TARGET_OPCODE(G_UREM)
 
+// Generic signed divrem instruction.
+HANDLE_TARGET_OPCODE(G_SDIVREM)
+
+// Generic unsigned divrem instruction.
+HANDLE_TARGET_OPCODE(G_UDIVREM)
+
 /// Generic bitwise and instruction.
 HANDLE_TARGET_OPCODE(G_AND)
 

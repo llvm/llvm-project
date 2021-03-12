@@ -306,6 +306,15 @@ def urem_pow2_to_mask : GICombineRule<
   (apply [{ return Helper.applySimplifyURemByPow2(*${root}); }])
 >;
 
+// Transform d = [su]div(x, y) and r = [su]rem(x, y) - > d, r = [su]divrem(x, y)
+def div_rem_to_divrem_matchdata : GIDefMatchData<"MachineInstr *">;
+def div_rem_to_divrem : GICombineRule<
+  (defs root:$root, div_rem_to_divrem_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SDIV, G_UDIV, G_SREM, G_UREM):$root,
+    [{ return Helper.matchCombineDivRem(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineDivRem(*${root}, ${matchinfo}); }])
+>;
+
 // Fold (x op 0) - > 0
 def binop_right_to_zero: GICombineRule<
   (defs root:$root),
@@ -630,4 +639,5 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
     unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
-    shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine]>;
+    shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
+    div_rem_to_divrem]>;
