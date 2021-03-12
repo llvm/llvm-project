@@ -64,6 +64,7 @@ public:
   }
 
 private:
+  bool LowerWhileLoopStart(MachineLoop *ML);
   bool MergeLoopEnd(MachineLoop *ML);
   bool ConvertTailPredLoop(MachineLoop *ML, MachineDominatorTree *DT);
   MachineInstr &ReplaceRegisterUseWithVPNOT(MachineBasicBlock &MBB,
@@ -164,12 +165,90 @@ static bool findLoopComponents(MachineLoop *ML, MachineRegisterInfo *MRI,
                           ? LoopPhi->getOperand(3).getReg()
                           : LoopPhi->getOperand(1).getReg();
   LoopStart = LookThroughCOPY(MRI->getVRegDef(StartReg), MRI);
-  if (!LoopStart || LoopStart->getOpcode() != ARM::t2DoLoopStart) {
+  if (!LoopStart || (LoopStart->getOpcode() != ARM::t2DoLoopStart &&
+                     LoopStart->getOpcode() != ARM::t2WhileLoopSetup &&
+                     LoopStart->getOpcode() != ARM::t2WhileLoopStartLR)) {
     LLVM_DEBUG(dbgs() << "  didn't find Start where we expected!\n");
     return false;
   }
   LLVM_DEBUG(dbgs() << "  found loop start: " << *LoopStart);
 
+  return true;
+}
+
+static void RevertWhileLoopSetup(MachineInstr *MI, const TargetInstrInfo *TII) {
+  MachineBasicBlock *MBB = MI->getParent();
+  assert(MI->getOpcode() == ARM::t2WhileLoopSetup &&
+         "Only expected a t2WhileLoopSetup in RevertWhileLoopStart!");
+
+  // Subs
+  MachineInstrBuilder MIB =
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::t2SUBri));
+  MIB.add(MI->getOperand(0));
+  MIB.add(MI->getOperand(1));
+  MIB.addImm(0);
+  MIB.addImm(ARMCC::AL);
+  MIB.addReg(ARM::NoRegister);
+  MIB.addReg(ARM::CPSR, RegState::Define);
+
+  // Attempt to find a t2WhileLoopStart and revert to a t2Bcc.
+  for (MachineInstr &I : MBB->terminators()) {
+    if (I.getOpcode() == ARM::t2WhileLoopStart) {
+      MachineInstrBuilder MIB =
+          BuildMI(*MBB, &I, I.getDebugLoc(), TII->get(ARM::t2Bcc));
+      MIB.add(MI->getOperand(1)); // branch target
+      MIB.addImm(ARMCC::EQ);
+      MIB.addReg(ARM::CPSR);
+      I.eraseFromParent();
+      break;
+    }
+  }
+
+  MI->eraseFromParent();
+}
+
+// The Hardware Loop insertion and ISel Lowering produce the pseudos for the
+// start of a while loop:
+//   %a:gprlr = t2WhileLoopSetup %Cnt
+//   t2WhileLoopStart %a, %BB
+// We want to convert those to a single instruction which, like t2LoopEndDec and
+// t2DoLoopStartTP is both a terminator and produces a value:
+//   %a:grplr: t2WhileLoopStartLR %Cnt, %BB
+//
+// Otherwise if we can't, we revert the loop. t2WhileLoopSetup and
+// t2WhileLoopStart are not valid past regalloc.
+bool MVETPAndVPTOptimisations::LowerWhileLoopStart(MachineLoop *ML) {
+  LLVM_DEBUG(dbgs() << "LowerWhileLoopStart on loop "
+                    << ML->getHeader()->getName() << "\n");
+
+  MachineInstr *LoopEnd, *LoopPhi, *LoopStart, *LoopDec;
+  if (!findLoopComponents(ML, MRI, LoopStart, LoopPhi, LoopDec, LoopEnd))
+    return false;
+
+  if (LoopStart->getOpcode() != ARM::t2WhileLoopSetup)
+    return false;
+
+  Register LR = LoopStart->getOperand(0).getReg();
+  auto WLSIt = find_if(MRI->use_nodbg_instructions(LR), [](auto &MI) {
+    return MI.getOpcode() == ARM::t2WhileLoopStart;
+  });
+  if (!MergeEndDec || WLSIt == MRI->use_instr_nodbg_end()) {
+    RevertWhileLoopSetup(LoopStart, TII);
+    RevertLoopDec(LoopStart, TII);
+    RevertLoopEnd(LoopStart, TII);
+    return true;
+  }
+
+  MachineInstrBuilder MI =
+      BuildMI(*WLSIt->getParent(), *WLSIt, WLSIt->getDebugLoc(),
+              TII->get(ARM::t2WhileLoopStartLR), LR)
+          .add(LoopStart->getOperand(1))
+          .add(WLSIt->getOperand(1));
+  (void)MI;
+  LLVM_DEBUG(dbgs() << "Lowered WhileLoopStart into: " << *MI.getInstr());
+
+  WLSIt->eraseFromParent();
+  LoopStart->eraseFromParent();
   return true;
 }
 
@@ -192,12 +271,19 @@ bool MVETPAndVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
     return false;
 
   // Check if there is an illegal instruction (a call) in the low overhead loop
-  // and if so revert it now before we get any further.
-  for (MachineBasicBlock *MBB : ML->blocks()) {
+  // and if so revert it now before we get any further. While loops also need to
+  // check the preheaders.
+  SmallPtrSet<MachineBasicBlock *, 4> MBBs(ML->block_begin(), ML->block_end());
+  if (LoopStart->getOpcode() == ARM::t2WhileLoopStartLR)
+    MBBs.insert(ML->getHeader()->pred_begin(), ML->getHeader()->pred_end());
+  for (MachineBasicBlock *MBB : MBBs) {
     for (MachineInstr &MI : *MBB) {
       if (MI.isCall()) {
         LLVM_DEBUG(dbgs() << "Found call in loop, reverting: " << MI);
-        RevertDoLoopStart(LoopStart, TII);
+        if (LoopStart->getOpcode() == ARM::t2DoLoopStart)
+          RevertDoLoopStart(LoopStart, TII);
+        else
+          RevertWhileLoopStartLR(LoopStart, TII);
         RevertLoopDec(LoopDec, TII);
         RevertLoopEnd(LoopEnd, TII);
         return true;
@@ -236,8 +322,16 @@ bool MVETPAndVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
   };
   if (!CheckUsers(PhiReg, {LoopDec}, MRI) ||
       !CheckUsers(DecReg, {LoopPhi, LoopEnd}, MRI) ||
-      !CheckUsers(StartReg, {LoopPhi}, MRI))
+      !CheckUsers(StartReg, {LoopPhi}, MRI)) {
+    // Don't leave a t2WhileLoopStartLR without the LoopDecEnd.
+    if (LoopStart->getOpcode() == ARM::t2WhileLoopStartLR) {
+      RevertWhileLoopStartLR(LoopStart, TII);
+      RevertLoopDec(LoopDec, TII);
+      RevertLoopEnd(LoopEnd, TII);
+      return true;
+    }
     return false;
+  }
 
   MRI->constrainRegClass(StartReg, &ARM::GPRlrRegClass);
   MRI->constrainRegClass(PhiReg, &ARM::GPRlrRegClass);
@@ -281,7 +375,7 @@ bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
   MachineInstr *LoopEnd, *LoopPhi, *LoopStart, *LoopDec;
   if (!findLoopComponents(ML, MRI, LoopStart, LoopPhi, LoopDec, LoopEnd))
     return false;
-  if (LoopDec != LoopEnd)
+  if (LoopDec != LoopEnd || LoopStart->getOpcode() != ARM::t2DoLoopStart)
     return false;
 
   SmallVector<MachineInstr *, 4> VCTPs;
@@ -869,6 +963,7 @@ bool MVETPAndVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
 
   bool Modified = false;
   for (MachineLoop *ML : MLI->getBase().getLoopsInPreorder()) {
+    Modified |= LowerWhileLoopStart(ML);
     Modified |= MergeLoopEnd(ML);
     Modified |= ConvertTailPredLoop(ML, DT);
   }

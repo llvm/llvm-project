@@ -179,13 +179,11 @@ if.end:                                           ; preds = %do.body, %entry
   ret void
 }
 
-; TODO: Remove the tMOVr in the preheader!
 ; CHECK: ne_trip_count
 ; CHECK: body:
 ; CHECK: bb.0.entry:
-; CHECK:   $lr = t2WLS $r3, %bb.3
+; CHECK:   $lr = t2WLS killed renamable $r3, %bb.3
 ; CHECK: bb.1.do.body.preheader:
-; CHECK:   $lr = tMOVr
 ; CHECK: bb.2.do.body:
 ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
 define void @ne_trip_count(i1 zeroext %t1, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {

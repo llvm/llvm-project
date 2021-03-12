@@ -197,8 +197,8 @@ define void @loop_absmax32(float* nocapture readonly %0, i32 %1, float* nocaptur
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    lsr.w lr, r1, #3
-; CHECK-NEXT:    wls lr, lr, .LBB16_3
+; CHECK-NEXT:    lsrs r1, r1, #3
+; CHECK-NEXT:    wls lr, r1, .LBB16_3
 ; CHECK-NEXT:  @ %bb.1: @ %.preheader
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB16_2: @ =>This Inner Loop Header: Depth=1
@@ -247,8 +247,8 @@ define void @loop_absmax32_c(float* nocapture readonly %0, i32 %1, float* nocapt
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    lsr.w lr, r1, #3
-; CHECK-NEXT:    wls lr, lr, .LBB17_3
+; CHECK-NEXT:    lsrs r1, r1, #3
+; CHECK-NEXT:    wls lr, r1, .LBB17_3
 ; CHECK-NEXT:  @ %bb.1: @ %.preheader
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB17_2: @ =>This Inner Loop Header: Depth=1
@@ -389,8 +389,8 @@ define void @loop_absmax16(half* nocapture readonly %0, i32 %1, half* nocapture 
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    lsr.w lr, r1, #3
-; CHECK-NEXT:    wls lr, lr, .LBB20_3
+; CHECK-NEXT:    lsrs r1, r1, #3
+; CHECK-NEXT:    wls lr, r1, .LBB20_3
 ; CHECK-NEXT:  @ %bb.1: @ %.preheader
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB20_2: @ =>This Inner Loop Header: Depth=1
@@ -439,8 +439,8 @@ define void @loop_absmax16_c(half* nocapture readonly %0, i32 %1, half* nocaptur
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    lsr.w lr, r1, #3
-; CHECK-NEXT:    wls lr, lr, .LBB21_3
+; CHECK-NEXT:    lsrs r1, r1, #3
+; CHECK-NEXT:    wls lr, r1, .LBB21_3
 ; CHECK-NEXT:  @ %bb.1: @ %.preheader
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB21_2: @ =>This Inner Loop Header: Depth=1

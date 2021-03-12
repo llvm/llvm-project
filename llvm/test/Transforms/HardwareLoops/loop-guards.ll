@@ -153,7 +153,9 @@ if.end:                                           ; preds = %while.body, %entry
 ; CHECK: entry:
 ; CHECK:   br i1 %brmerge.demorgan, label %while.preheader
 ; CHECK: while.preheader:
-; CHECK:   [[TEST:%[^ ]+]] = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
+; CHECK-EXIT:   [[TEST:%[^ ]+]] = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
+; CHECK-LATCH:   [[TEST1:%[^ ]+]] = call { i32, i1 } @llvm.test.start.loop.iterations.i32(i32 %N)
+; CHECK-LATCH:  [[TEST:%[^ ]+]] = extractvalue { i32, i1 } [[TEST1]], 1
 ; CHECK:   br i1 [[TEST]], label %while.body.preheader, label %if.end
 ; CHECK: while.body.preheader:
 ; CHECK:   br label %while.body
@@ -186,7 +188,9 @@ if.end:                                           ; preds = %while.body, %while.
 ; CHECK: entry:
 ; CHECK:   br i1 %brmerge.demorgan, label %while.preheader
 ; CHECK: while.preheader:
-; CHECK:   [[TEST:%[^ ]+]] = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
+; CHECK-EXIT:   [[TEST:%[^ ]+]] = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
+; CHECK-LATCH:   [[TEST1:%[^ ]+]] = call { i32, i1 } @llvm.test.start.loop.iterations.i32(i32 %N)
+; CHECK-LATCH:  [[TEST:%[^ ]+]] = extractvalue { i32, i1 } [[TEST1]], 1
 ; CHECK:   br i1 [[TEST]], label %while.body.preheader, label %if.end
 ; CHECK: while.body.preheader:
 ; CHECK:   br label %while.body
@@ -315,7 +319,9 @@ if.end:                                           ; preds = %do.body, %entry
 ; CHECK: entry:
 ; CHECK:   br label %do.body.preheader
 ; CHECK: do.body.preheader:
-; CHECK:   [[TEST:%[^ ]+]] = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
+; CHECK-EXIT:   [[TEST:%[^ ]+]] = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
+; CHECK-LATCH:  [[TEST1:%[^ ]+]] = call { i32, i1 } @llvm.test.start.loop.iterations.i32(i32 %N)
+; CHECK-LATCH:  [[TEST:%[^ ]+]] = extractvalue { i32, i1 } [[TEST1]], 1
 ; CHECK:   br i1 [[TEST]], label %do.body.preheader1, label %if.end
 ; CHECK: do.body.preheader1:
 ; CHECK:   br label %do.body
