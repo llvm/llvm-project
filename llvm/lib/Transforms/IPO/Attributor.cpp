@@ -142,6 +142,11 @@ static cl::opt<bool> PrintDependencies("attributor-print-dep", cl::Hidden,
                                        cl::desc("Print attribute dependencies"),
                                        cl::init(false));
 
+static cl::opt<bool> EnableCallSiteSpecific(
+    "attributor-enable-call-site-specific-deduction", cl::Hidden,
+    cl::desc("Allow the Attributor to do call site specific analysis"),
+    cl::init(false));
+
 /// Logic operators for the change status enum class.
 ///
 ///{
@@ -476,6 +481,8 @@ void IRPosition::verify() {
 #ifdef EXPENSIVE_CHECKS
   switch (getPositionKind()) {
   case IRP_INVALID:
+    assert((CBContext == nullptr) &&
+           "Invalid position must not have CallBaseContext!");
     assert(!Enc.getOpaqueValue() &&
            "Expected a nullptr for an invalid position!");
     return;
@@ -491,12 +498,16 @@ void IRPosition::verify() {
            "Associated value mismatch!");
     return;
   case IRP_CALL_SITE_RETURNED:
+    assert((CBContext == nullptr) &&
+           "'call site returned' position must not have CallBaseContext!");
     assert((isa<CallBase>(getAsValuePtr())) &&
            "Expected call base for 'call site returned' position!");
     assert(getAsValuePtr() == &getAssociatedValue() &&
            "Associated value mismatch!");
     return;
   case IRP_CALL_SITE:
+    assert((CBContext == nullptr) &&
+           "'call site function' position must not have CallBaseContext!");
     assert((isa<CallBase>(getAsValuePtr())) &&
            "Expected call base for 'call site function' position!");
     assert(getAsValuePtr() == &getAssociatedValue() &&
@@ -515,6 +526,8 @@ void IRPosition::verify() {
            "Associated value mismatch!");
     return;
   case IRP_CALL_SITE_ARGUMENT: {
+    assert((CBContext == nullptr) &&
+           "'call site argument' position must not have CallBaseContext!");
     Use *U = getAsUsePtr();
     assert(U && "Expected use for a 'call site argument' position!");
     assert(isa<CallBase>(U->getUser()) &&
@@ -849,6 +862,13 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
   return true;
 }
 
+bool Attributor::shouldPropagateCallBaseContext(const IRPosition &IRP) {
+  // TODO: Maintain a cache of Values that are
+  // on the pathway from a Argument to a Instruction that would effect the
+  // liveness/return state etc.
+  return EnableCallSiteSpecific;
+}
+
 bool Attributor::checkForAllReturnedValuesAndReturnInsts(
     function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred,
     const AbstractAttribute &QueryingAA) {
@@ -1125,6 +1145,9 @@ ChangeStatus Attributor::manifestAttributes() {
     if (!State.isAtFixpoint())
       State.indicateOptimisticFixpoint();
 
+    // We must not manifest Attributes that use Callbase info.
+    if (AA->hasCallBaseContext())
+      continue;
     // If the state is invalid, we do not try to manifest it.
     if (!State.isValidState())
       continue;
@@ -2221,9 +2244,12 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, IRPosition::Kind AP) {
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const IRPosition &Pos) {
   const Value &AV = Pos.getAssociatedValue();
-  return OS << "{" << Pos.getPositionKind() << ":" << AV.getName() << " ["
-            << Pos.getAnchorValue().getName() << "@" << Pos.getCallSiteArgNo()
-            << "]}";
+  OS << "{" << Pos.getPositionKind() << ":" << AV.getName() << " ["
+     << Pos.getAnchorValue().getName() << "@" << Pos.getCallSiteArgNo() << "]";
+
+  if (Pos.hasCallBaseContext())
+    OS << "[cb_context:" << *Pos.getCallBaseContext() << "]";
+  return OS << "}";
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const IntegerRangeState &S) {
