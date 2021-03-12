@@ -7,5 +7,4 @@ target_link_libraries(MLIRInterfacesTests
   MLIRDataLayoutInterfaces
   MLIRDLTI
   MLIRParser
-  LLVMSupport
 )
