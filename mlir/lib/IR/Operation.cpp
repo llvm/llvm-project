@@ -834,11 +834,9 @@ LogicalResult OpTrait::impl::verifySameOperandsShape(Operation *op) {
   if (failed(verifyAtLeastNOperands(op, 1)))
     return failure();
 
-  auto type = op->getOperand(0).getType();
-  for (auto opType : llvm::drop_begin(op->getOperandTypes(), 1)) {
-    if (failed(verifyCompatibleShape(opType, type)))
-      return op->emitOpError() << "requires the same shape for all operands";
-  }
+  if (failed(verifyCompatibleShapes(op->getOperandTypes())))
+    return op->emitOpError() << "requires the same shape for all operands";
+
   return success();
 }
 
@@ -847,17 +845,13 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultShape(Operation *op) {
       failed(verifyAtLeastNResults(op, 1)))
     return failure();
 
-  auto type = op->getOperand(0).getType();
-  for (auto resultType : op->getResultTypes()) {
-    if (failed(verifyCompatibleShape(resultType, type)))
-      return op->emitOpError()
-             << "requires the same shape for all operands and results";
-  }
-  for (auto opType : llvm::drop_begin(op->getOperandTypes(), 1)) {
-    if (failed(verifyCompatibleShape(opType, type)))
-      return op->emitOpError()
-             << "requires the same shape for all operands and results";
-  }
+  SmallVector<Type, 8> types(op->getOperandTypes());
+  types.append(llvm::to_vector<4>(op->getResultTypes()));
+
+  if (failed(verifyCompatibleShapes(types)))
+    return op->emitOpError()
+           << "requires the same shape for all operands and results";
+
   return success();
 }
 
