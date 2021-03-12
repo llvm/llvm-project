@@ -139,9 +139,23 @@ namespace {
 class LiveMap {
 public:
   /// Value methods.
-  bool wasProvenLive(Value value) { return liveValues.count(value); }
+  bool wasProvenLive(Value value) {
+    // TODO: For results that are removable, e.g. for region based control flow,
+    // we could allow for these values to be tracked independently.
+    if (OpResult result = value.dyn_cast<OpResult>())
+      return wasProvenLive(result.getOwner());
+    return wasProvenLive(value.cast<BlockArgument>());
+  }
+  bool wasProvenLive(BlockArgument arg) { return liveValues.count(arg); }
   void setProvedLive(Value value) {
-    changed |= liveValues.insert(value).second;
+    // TODO: For results that are removable, e.g. for region based control flow,
+    // we could allow for these values to be tracked independently.
+    if (OpResult result = value.dyn_cast<OpResult>())
+      return setProvedLive(result.getOwner());
+    setProvedLive(value.cast<BlockArgument>());
+  }
+  void setProvedLive(BlockArgument arg) {
+    changed |= liveValues.insert(arg).second;
   }
 
   /// Operation methods.
@@ -192,15 +206,6 @@ static void processValue(Value value, LiveMap &liveMap) {
     liveMap.setProvedLive(value);
 }
 
-static bool isOpIntrinsicallyLive(Operation *op) {
-  // This pass doesn't modify the CFG, so terminators are never deleted.
-  if (op->mightHaveTrait<OpTrait::IsTerminator>())
-    return true;
-  // If the op has a side effect, we treat it as live.
-  // TODO: Properly handle region side effects.
-  return !MemoryEffectOpInterface::hasNoEffect(op) || op->getNumRegions() != 0;
-}
-
 static void propagateLiveness(Region &region, LiveMap &liveMap);
 
 static void propagateTerminatorLiveness(Operation *op, LiveMap &liveMap) {
@@ -226,9 +231,6 @@ static void propagateTerminatorLiveness(Operation *op, LiveMap &liveMap) {
 }
 
 static void propagateLiveness(Operation *op, LiveMap &liveMap) {
-  // All Value's are either a block argument or an op result.
-  // We call processValue on those cases.
-
   // Recurse on any regions the op has.
   for (Region &region : op->getRegions())
     propagateLiveness(region, liveMap);
@@ -237,18 +239,17 @@ static void propagateLiveness(Operation *op, LiveMap &liveMap) {
   if (op->hasTrait<OpTrait::IsTerminator>())
     return propagateTerminatorLiveness(op, liveMap);
 
-  // Process the op itself.
-  if (isOpIntrinsicallyLive(op)) {
-    liveMap.setProvedLive(op);
+  // Don't reprocess live operations.
+  if (liveMap.wasProvenLive(op))
     return;
-  }
+
+  // Process the op itself.
+  if (!wouldOpBeTriviallyDead(op))
+    return liveMap.setProvedLive(op);
+
+  // If the op isn't intrinsically alive, check it's results.
   for (Value value : op->getResults())
     processValue(value, liveMap);
-  bool provedLive = llvm::any_of(op->getResults(), [&](Value value) {
-    return liveMap.wasProvenLive(value);
-  });
-  if (provedLive)
-    liveMap.setProvedLive(op);
 }
 
 static void propagateLiveness(Region &region, LiveMap &liveMap) {
@@ -260,8 +261,18 @@ static void propagateLiveness(Region &region, LiveMap &liveMap) {
     // faster convergence to a fixed point (we try to visit uses before defs).
     for (Operation &op : llvm::reverse(block->getOperations()))
       propagateLiveness(&op, liveMap);
-    for (Value value : block->getArguments())
-      processValue(value, liveMap);
+
+    // We currently do not remove entry block arguments, so there is no need to
+    // track their liveness.
+    // TODO: We could track these and enable removing dead operands/arguments
+    // from region control flow operations.
+    if (block->isEntryBlock())
+      continue;
+
+    for (Value value : block->getArguments()) {
+      if (!liveMap.wasProvenLive(value))
+        processValue(value, liveMap);
+    }
   }
 }
 
@@ -314,11 +325,12 @@ static LogicalResult deleteDeadness(MutableArrayRef<Region> regions,
       eraseTerminatorSuccessorOperands(block->getTerminator(), liveMap);
       for (Operation &childOp :
            llvm::make_early_inc_range(llvm::reverse(block->getOperations()))) {
-        erasedAnything |=
-            succeeded(deleteDeadness(childOp.getRegions(), liveMap));
         if (!liveMap.wasProvenLive(&childOp)) {
           erasedAnything = true;
           childOp.erase();
+        } else {
+          erasedAnything |=
+              succeeded(deleteDeadness(childOp.getRegions(), liveMap));
         }
       }
     }
@@ -326,13 +338,8 @@ static LogicalResult deleteDeadness(MutableArrayRef<Region> regions,
     // The entry block has an unknown contract with their enclosing block, so
     // skip it.
     for (Block &block : llvm::drop_begin(region.getBlocks(), 1)) {
-      // Iterate in reverse to avoid shifting later arguments when deleting
-      // earlier arguments.
-      for (unsigned i = 0, e = block.getNumArguments(); i < e; i++)
-        if (!liveMap.wasProvenLive(block.getArgument(e - i - 1))) {
-          block.eraseArgument(e - i - 1);
-          erasedAnything = true;
-        }
+      block.eraseArguments(
+          [&](BlockArgument arg) { return !liveMap.wasProvenLive(arg); });
     }
   }
   return success(erasedAnything);
