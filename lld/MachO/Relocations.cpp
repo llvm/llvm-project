@@ -39,4 +39,24 @@ bool macho::validateSymbolRelocation(const Symbol *sym,
   return valid;
 }
 
+void macho::reportRangeError(const Reloc &r, const Twine &v, uint8_t bits,
+                             int64_t min, uint64_t max) {
+  std::string hint;
+  if (auto *sym = r.referent.dyn_cast<Symbol *>())
+    hint = "; references " + toString(*sym);
+  // TODO: get location of reloc using something like LLD-ELF's getErrorPlace()
+  error("relocation " + target->getRelocAttrs(r.type).name +
+        " is out of range: " + v + " is not in [" + Twine(min) + ", " +
+        Twine(max) + "]" + hint);
+}
+
+void macho::reportRangeError(SymbolDiagnostic d, const Twine &v, uint8_t bits,
+                             int64_t min, uint64_t max) {
+  std::string hint;
+  if (d.symbol)
+    hint = "; references " + toString(*d.symbol);
+  error(d.reason + " is out of range: " + v + " is not in [" + Twine(min) +
+        ", " + Twine(max) + "]" + hint);
+}
+
 const RelocAttrs macho::invalidRelocAttrs{"INVALID", RelocAttrBits::_0};
