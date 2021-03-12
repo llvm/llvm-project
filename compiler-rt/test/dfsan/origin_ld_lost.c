@@ -2,6 +2,8 @@
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK < %t.out
 //
+// REQUIRES: x86_64-target-arch
+//
 // Test origin tracking can lost origins at 2-byte load with addr % 4 == 3.
 
 #include <sanitizer/dfsan_interface.h>
