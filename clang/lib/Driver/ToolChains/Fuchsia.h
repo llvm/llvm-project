@@ -71,6 +71,9 @@ public:
   SanitizerMask getSupportedSanitizers() const override;
   SanitizerMask getDefaultSanitizers() const override;
 
+  void addProfileRTLibs(const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs) const override;
+
   RuntimeLibType
   GetRuntimeLibType(const llvm::opt::ArgList &Args) const override;
   CXXStdlibType
