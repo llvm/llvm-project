@@ -264,7 +264,7 @@ void ObjFile::parseRelocations(const section_64 &sec,
     // and insert them. Storing addends in the instruction stream is
     // possible, but inconvenient and more costly at link time.
 
-    uint64_t pairedAddend = 0;
+    int64_t pairedAddend = 0;
     relocation_info relInfo = relInfos[i];
     if (target->hasAttr(relInfo.r_type, RelocAttrBits::ADDEND)) {
       pairedAddend = SignExtend64<24>(relInfo.r_symbolnum);
@@ -276,9 +276,9 @@ void ObjFile::parseRelocations(const section_64 &sec,
     if (relInfo.r_address & R_SCATTERED)
       fatal("TODO: Scattered relocations not supported");
 
-    uint64_t embeddedAddend = target->getEmbeddedAddend(mb, sec, relInfo);
+    int64_t embeddedAddend = target->getEmbeddedAddend(mb, sec, relInfo);
     assert(!(embeddedAddend && pairedAddend));
-    uint64_t totalAddend = pairedAddend + embeddedAddend;
+    int64_t totalAddend = pairedAddend + embeddedAddend;
     Reloc r;
     r.type = relInfo.r_type;
     r.pcrel = relInfo.r_pcrel;
