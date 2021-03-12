@@ -580,8 +580,8 @@ static bool LooseMemeq(const uint8_t *A, const uint8_t *B, size_t Size) {
 
 // This method is not inlined because it would cause a test to fail where it
 // is part of the stack unwinding. See D97975 for details.
-void __attribute__((noinline))
-Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
+ATTRIBUTE_NOINLINE void Fuzzer::ExecuteCallback(const uint8_t *Data,
+                                                size_t Size) {
   TPC.RecordInitialStack();
   TotalNumberOfRuns++;
   assert(InFuzzingThread());
