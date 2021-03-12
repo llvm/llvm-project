@@ -343,6 +343,14 @@ OperationParser::~OperationParser() {
     fwd.first.dropAllUses();
     fwd.first.getDefiningOp()->destroy();
   }
+  for (const auto &scope : forwardRef) {
+    for (const auto &fwd : scope) {
+      // Delete all blocks that were created as forward references but never
+      // included into a region.
+      fwd.first->dropAllUses();
+      delete fwd.first;
+    }
+  }
 }
 
 /// After parsing is finished, this function must be called to see if there are
