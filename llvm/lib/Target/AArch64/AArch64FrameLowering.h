@@ -61,6 +61,10 @@ public:
                               MutableArrayRef<CalleeSavedInfo> CSI,
                               const TargetRegisterInfo *TRI) const override;
 
+  void insertAuthLR(MachineBasicBlock &MBB,
+                    int64_t ArgumentStackToRestore,
+                    DebugLoc DL) const;
+
   /// Can this function use the red zone for local allocations.
   bool canUseRedZone(const MachineFunction &MF) const;
 
