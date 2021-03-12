@@ -18854,7 +18854,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   // a blend shuffle with a rematerializable vector than a costly integer
   // insertion.
   if ((IsZeroElt || IsAllOnesElt) && Subtarget.hasSSE41() &&
-      16 <= EltSizeInBits) {
+      (16 <= EltSizeInBits || (IsZeroElt && !VT.is128BitVector()))) {
     SmallVector<int, 8> BlendMask;
     for (unsigned i = 0; i != NumElts; ++i)
       BlendMask.push_back(i == IdxVal ? i + NumElts : i);
