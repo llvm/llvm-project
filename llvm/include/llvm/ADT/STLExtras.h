@@ -1114,9 +1114,9 @@ public:
 
   iterator begin() const { return iterator(base, 0); }
   iterator end() const { return iterator(base, count); }
-  ReferenceT operator[](unsigned index) const {
-    assert(index < size() && "invalid index for value range");
-    return DerivedT::dereference_iterator(base, index);
+  ReferenceT operator[](size_t Index) const {
+    assert(Index < size() && "invalid index for value range");
+    return DerivedT::dereference_iterator(base, static_cast<ptrdiff_t>(Index));
   }
   ReferenceT front() const {
     assert(!empty() && "expected non-empty range");
