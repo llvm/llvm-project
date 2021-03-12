@@ -23,12 +23,14 @@ template <size_t kMaxSizeT> class FixedWord {
 public:
   static const size_t kMaxSize = kMaxSizeT;
   FixedWord() {}
-  FixedWord(const uint8_t *B, uint8_t S) { Set(B, S); }
+  FixedWord(const uint8_t *B, size_t S) { Set(B, S); }
 
-  void Set(const uint8_t *B, uint8_t S) {
+  void Set(const uint8_t *B, size_t S) {
+    static_assert(kMaxSizeT <= std::numeric_limits<uint8_t>::max(),
+                  "FixedWord::kMaxSizeT cannot fit in a uint8_t.");
     assert(S <= kMaxSize);
     memcpy(Data, B, S);
-    Size = S;
+    Size = static_cast<uint8_t>(S);
   }
 
   bool operator==(const FixedWord<kMaxSize> &w) const {
