@@ -1,6 +1,6 @@
 // Should not crash with '-analyzer-opt-analyze-headers' option during CTU analysis.
 //
-// RUN: rm -r %t && mkdir -p %t/ctudir
+// RUN: rm -rf %t && mkdir -p %t/ctudir
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-pc-linux-gnu \
 // RUN:   -emit-pch -o %t/ctudir/ctu-inherited-default-ctor-other.cpp.ast \
 // RUN:    %S/Inputs/ctu-inherited-default-ctor-other.cpp
