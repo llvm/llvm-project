@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/memmove.h"
+
 #include "src/__support/common.h"
-#include "src/stdlib/abs_utils.h"
+#include "src/__support/integer_operations.h"
 #include "src/string/memcpy.h"
 #include <stddef.h> // size_t, ptrdiff_t
 
@@ -32,14 +33,14 @@ LLVM_LIBC_FUNCTION(void *, memmove,
   const char *src_c = reinterpret_cast<const char *>(src);
 
   // If the distance between src_c and dest_c is equal to or greater
-  // than count (integer_abs(src_c - dest_c) >= count), they would not overlap.
+  // than count (integerAbs(src_c - dest_c) >= count), they would not overlap.
   // e.g.   greater     equal       overlapping
   //        [12345678]  [12345678]  [12345678]
   // src_c: [_ab_____]  [_ab_____]  [_ab_____]
   // dest_c:[_____yz_]  [___yz___]  [__yz____]
 
   // Use memcpy if src_c and dest_c do not overlap.
-  if (__llvm_libc::integer_abs(src_c - dest_c) >= static_cast<ptrdiff_t>(count))
+  if (__llvm_libc::integerAbs(src_c - dest_c) >= static_cast<ptrdiff_t>(count))
     return __llvm_libc::memcpy(dest_c, src_c, count);
 
   // Overlap cases.
