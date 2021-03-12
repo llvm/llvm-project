@@ -399,15 +399,15 @@ define i32* @complicated_args_preallocated() {
 ; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@complicated_args_preallocated
 ; IS__CGSCC_OPM-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR5]]
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 536870912 null) #[[ATTR6:[0-9]+]] [ "preallocated"(token [[C]]) ]
+; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR6:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 536870912 null) #[[ATTR7:[0-9]+]] [ "preallocated"(token [[C]]) ]
 ; IS__CGSCC_OPM-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@complicated_args_preallocated
 ; IS__CGSCC_NPM-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR4]]
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 536870912 null) #[[ATTR5:[0-9]+]] [ "preallocated"(token [[C]]) ]
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR5:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 536870912 null) #[[ATTR6:[0-9]+]] [ "preallocated"(token [[C]]) ]
 ; IS__CGSCC_NPM-NEXT:    ret i32* [[CALL]]
 ;
   %c = call token @llvm.call.preallocated.setup(i32 1)
@@ -564,13 +564,13 @@ define i8* @complicated_args_byval2() {
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@complicated_args_byval2
 ; IS__CGSCC_OPM-SAME: () #[[ATTR3]] {
-; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call i8* @test_byval2() #[[ATTR7:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call i8* @test_byval2() #[[ATTR8:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret i8* [[C]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@complicated_args_byval2
 ; IS__CGSCC_NPM-SAME: () #[[ATTR3]] {
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i8* @test_byval2() #[[ATTR6:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i8* @test_byval2() #[[ATTR7:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i8* [[C]]
 ;
   %c = call i8* @test_byval2(%struct.X* @S)
@@ -827,15 +827,17 @@ define i1 @icmp() {
 ; IS__CGSCC_OPM: attributes #[[ATTR2]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC_OPM: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind readonly willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR4]] = { argmemonly nofree norecurse nosync nounwind writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR5]] = { willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR6]] = { nounwind readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR7]] = { readonly willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR5]] = { readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR6]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR7]] = { nounwind readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR8]] = { readonly willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR2]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind readonly willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR4]] = { willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR5]] = { nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR6]] = { readonly willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR4]] = { readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR5]] = { willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR6]] = { nounwind readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR7]] = { readonly willreturn }
 ;.

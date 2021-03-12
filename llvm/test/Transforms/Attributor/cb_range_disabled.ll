@@ -134,7 +134,7 @@ define i32 @test2_ncheck(i32 %unknown) {
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { willreturn }
+; IS__CGSCC____: attributes #[[ATTR1]] = { readnone willreturn }
 ;.
 ; NOT_CGSCC_NPM: [[META0:![0-9]+]] = !{i32 0, i32 101}
 ;.

@@ -923,10 +923,10 @@ define i1 @potential_test16(i1 %c0, i1 %c1) {
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR2]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR2]] = { readnone willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR1]] = { willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR1]] = { readnone willreturn }
 ;.
 ; IS__TUNIT_OPM: [[RNG0]] = !{i32 1, i32 4}
 ; IS__TUNIT_OPM: [[RNG1]] = !{i32 3, i32 5}

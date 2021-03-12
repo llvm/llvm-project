@@ -164,9 +164,9 @@ entry:
 ; IS__TUNIT____: attributes #[[ATTR0:[0-9]+]] = { nofree nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR1]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR1]] = { readnone willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR2]] = { willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR2]] = { readnone willreturn }
 ;.

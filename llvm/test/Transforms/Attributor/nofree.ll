@@ -383,13 +383,13 @@ define void @nonnull_assume_pos(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
 ;
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; IS__TUNIT____-SAME: (i8* nofree [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* nofree [[ARG3:%.*]], i8* [[ARG4:%.*]]) {
-; IS__TUNIT____-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11]] [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
+; IS__TUNIT____-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12:[0-9]+]] [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
 ; IS__TUNIT____-NEXT:    call void @unknown(i8* nofree [[ARG1]], i8* [[ARG2]], i8* nofree [[ARG3]], i8* [[ARG4]])
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; IS__CGSCC____-SAME: (i8* nofree [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* nofree [[ARG3:%.*]], i8* [[ARG4:%.*]]) {
-; IS__CGSCC____-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]] [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
+; IS__CGSCC____-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13:[0-9]+]] [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
 ; IS__CGSCC____-NEXT:    call void @unknown(i8* nofree [[ARG1]], i8* [[ARG2]], i8* nofree [[ARG3]], i8* [[ARG4]])
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -480,7 +480,8 @@ attributes #2 = { nobuiltin nounwind }
 ; IS__TUNIT____: attributes #[[ATTR8:[0-9]+]] = { nobuiltin nofree nounwind }
 ; IS__TUNIT____: attributes #[[ATTR9:[0-9]+]] = { nofree nosync nounwind willreturn }
 ; IS__TUNIT____: attributes #[[ATTR10:[0-9]+]] = { nounwind willreturn }
-; IS__TUNIT____: attributes #[[ATTR11]] = { willreturn }
+; IS__TUNIT____: attributes #[[ATTR11]] = { readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR12]] = { willreturn }
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR1]] = { noinline nounwind uwtable }
@@ -494,7 +495,8 @@ attributes #2 = { nobuiltin nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR9:[0-9]+]] = { nobuiltin nofree nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR10:[0-9]+]] = { nofree nosync nounwind willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR11:[0-9]+]] = { nounwind willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR12]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR12]] = { readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR13]] = { willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nounwind }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { noinline nounwind uwtable }
@@ -508,5 +510,6 @@ attributes #2 = { nobuiltin nounwind }
 ; IS__CGSCC_NPM: attributes #[[ATTR9:[0-9]+]] = { nobuiltin nofree nounwind }
 ; IS__CGSCC_NPM: attributes #[[ATTR10:[0-9]+]] = { nofree nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR11:[0-9]+]] = { nounwind willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR12]] = { willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR12]] = { readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR13]] = { willreturn }
 ;.

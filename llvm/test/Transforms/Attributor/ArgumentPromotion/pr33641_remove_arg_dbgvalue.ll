@@ -65,12 +65,12 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ; IS__TUNIT____: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__TUNIT____: attributes #[[ATTR2]] = { willreturn }
+; IS__TUNIT____: attributes #[[ATTR2]] = { readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR2:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__CGSCC____: attributes #[[ATTR3]] = { willreturn }
+; IS__CGSCC____: attributes #[[ATTR3]] = { readnone willreturn }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 ; CHECK: [[META1:![0-9]+]] = !DIFile(filename: "test.c", directory: "")

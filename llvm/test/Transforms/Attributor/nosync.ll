@@ -508,13 +508,13 @@ define float @cos_test2(float %x) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@cos_test2
 ; IS__TUNIT____-SAME: (float [[X:%.*]]) #[[ATTR15]] {
-; IS__TUNIT____-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR17]]
+; IS__TUNIT____-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR19:[0-9]+]]
 ; IS__TUNIT____-NEXT:    ret float [[C]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@cos_test2
 ; IS__CGSCC____-SAME: (float [[X:%.*]]) #[[ATTR16:[0-9]+]] {
-; IS__CGSCC____-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR18]]
+; IS__CGSCC____-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR20:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret float [[C]]
 ;
   %c = call float @llvm.cos(float %x)
@@ -540,6 +540,7 @@ define float @cos_test2(float %x) {
 ; IS__TUNIT____: attributes #[[ATTR16:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
 ; IS__TUNIT____: attributes #[[ATTR17]] = { willreturn }
 ; IS__TUNIT____: attributes #[[ATTR18]] = { willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR19]] = { readnone willreturn }
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind optsize readnone ssp uwtable willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind uwtable willreturn }
@@ -561,6 +562,7 @@ define float @cos_test2(float %x) {
 ; IS__CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR18]] = { willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR19]] = { willreturn writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR20]] = { readnone willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind optsize readnone ssp uwtable willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind uwtable willreturn }
@@ -582,4 +584,5 @@ define float @cos_test2(float %x) {
 ; IS__CGSCC_NPM: attributes #[[ATTR17:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR18]] = { willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR19]] = { willreturn writeonly }
+; IS__CGSCC_NPM: attributes #[[ATTR20]] = { readnone willreturn }
 ;.
