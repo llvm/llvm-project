@@ -14,9 +14,21 @@ bool OpenCLOptions::isKnown(llvm::StringRef Ext) const {
   return OptMap.find(Ext) != OptMap.end();
 }
 
+bool OpenCLOptions::isAvailableOption(llvm::StringRef Ext,
+                                      const LangOptions &LO) const {
+  if (!isKnown(Ext))
+    return false;
+
+  auto &OptInfo = OptMap.find(Ext)->getValue();
+  if (OptInfo.isCoreIn(LO) || OptInfo.isOptionalCoreIn(LO))
+    return isSupported(Ext, LO);
+
+  return isEnabled(Ext);
+}
+
 bool OpenCLOptions::isEnabled(llvm::StringRef Ext) const {
-  auto E = OptMap.find(Ext);
-  return E != OptMap.end() && E->second.Enabled;
+  auto I = OptMap.find(Ext);
+  return I != OptMap.end() && I->getValue().Enabled;
 }
 
 bool OpenCLOptions::isWithPragma(llvm::StringRef Ext) const {
@@ -26,32 +38,23 @@ bool OpenCLOptions::isWithPragma(llvm::StringRef Ext) const {
 
 bool OpenCLOptions::isSupported(llvm::StringRef Ext,
                                 const LangOptions &LO) const {
-  auto E = OptMap.find(Ext);
-  if (E == OptMap.end()) {
-    return false;
-  }
-  auto I = OptMap.find(Ext)->getValue();
-  return I.Supported && I.isAvailableIn(LO);
+  auto I = OptMap.find(Ext);
+  return I != OptMap.end() && I->getValue().Supported &&
+         I->getValue().isAvailableIn(LO);
 }
 
 bool OpenCLOptions::isSupportedCore(llvm::StringRef Ext,
                                     const LangOptions &LO) const {
-  auto E = OptMap.find(Ext);
-  if (E == OptMap.end()) {
-    return false;
-  }
-  auto I = OptMap.find(Ext)->getValue();
-  return I.Supported && I.isCoreIn(LO);
+  auto I = OptMap.find(Ext);
+  return I != OptMap.end() && I->getValue().Supported &&
+         I->getValue().isCoreIn(LO);
 }
 
 bool OpenCLOptions::isSupportedOptionalCore(llvm::StringRef Ext,
                                             const LangOptions &LO) const {
-  auto E = OptMap.find(Ext);
-  if (E == OptMap.end()) {
-    return false;
-  }
-  auto I = OptMap.find(Ext)->getValue();
-  return I.Supported && I.isOptionalCoreIn(LO);
+  auto I = OptMap.find(Ext);
+  return I != OptMap.end() && I->getValue().Supported &&
+         I->getValue().isOptionalCoreIn(LO);
 }
 
 bool OpenCLOptions::isSupportedCoreOrOptionalCore(llvm::StringRef Ext,
@@ -61,12 +64,9 @@ bool OpenCLOptions::isSupportedCoreOrOptionalCore(llvm::StringRef Ext,
 
 bool OpenCLOptions::isSupportedExtension(llvm::StringRef Ext,
                                          const LangOptions &LO) const {
-  auto E = OptMap.find(Ext);
-  if (E == OptMap.end()) {
-    return false;
-  }
-  auto I = OptMap.find(Ext)->getValue();
-  return I.Supported && I.isAvailableIn(LO) &&
+  auto I = OptMap.find(Ext);
+  return I != OptMap.end() && I->getValue().Supported &&
+         I->getValue().isAvailableIn(LO) &&
          !isSupportedCoreOrOptionalCore(Ext, LO);
 }
 
@@ -103,12 +103,6 @@ void OpenCLOptions::addSupport(const llvm::StringMap<bool> &FeaturesMap,
 void OpenCLOptions::disableAll() {
   for (auto &Opt : OptMap)
     Opt.getValue().Enabled = false;
-}
-
-void OpenCLOptions::enableSupportedCore(const LangOptions &LO) {
-  for (auto &Opt : OptMap)
-    if (isSupportedCoreOrOptionalCore(Opt.getKey(), LO))
-      Opt.getValue().Enabled = true;
 }
 
 } // end namespace clang
