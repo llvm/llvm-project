@@ -137,10 +137,6 @@ static cl::opt<bool> DebugInfoForProfiling(
 static cl::opt<bool> PseudoProbeForProfiling(
     "new-pm-pseudo-probe-for-profiling", cl::init(false), cl::Hidden,
     cl::desc("Emit pseudo probes to enable PGO profile generation."));
-static cl::opt<bool> UniqueInternalLinkageNames(
-    "new-pm-unique-internal-linkage-names", cl::init(false), cl::Hidden,
-    cl::desc("Uniqueify Internal Linkage Symbol Names by appending the MD5 "
-             "hash of the module path."));
 /// @}}
 
 template <typename PassManagerT>
@@ -292,7 +288,6 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   // option has been enabled.
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.Coroutines = Coroutines;
-  PTO.UniqueLinkageNames = UniqueInternalLinkageNames;
   PassBuilder PB(DebugPM, TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
