@@ -120,7 +120,7 @@ void SystemZInstrInfo::splitAdjDynAlloc(MachineBasicBlock::iterator MI) const {
   MachineOperand &OffsetMO = MI->getOperand(2);
 
   uint64_t Offset = (MFFrame.getMaxCallFrameSize() +
-                     SystemZMC::CallFrameSize +
+                     SystemZMC::ELFCallFrameSize +
                      OffsetMO.getImm());
   unsigned NewOpcode = getOpcodeForOffset(SystemZ::LA, Offset);
   assert(NewOpcode && "No support for huge argument lists yet");

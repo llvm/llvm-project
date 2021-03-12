@@ -1482,20 +1482,20 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
     // ...and a similar frame index for the caller-allocated save area
     // that will be used to store the incoming registers.
     int64_t RegSaveOffset =
-      -SystemZMC::CallFrameSize + TFL->getRegSpillOffset(MF, SystemZ::R2D) - 16;
+      -SystemZMC::ELFCallFrameSize + TFL->getRegSpillOffset(MF, SystemZ::R2D) - 16;
     unsigned RegSaveIndex = MFI.CreateFixedObject(1, RegSaveOffset, true);
     FuncInfo->setRegSaveFrameIndex(RegSaveIndex);
 
     // Store the FPR varargs in the reserved frame slots.  (We store the
     // GPRs as part of the prologue.)
-    if (NumFixedFPRs < SystemZ::NumArgFPRs && !useSoftFloat()) {
-      SDValue MemOps[SystemZ::NumArgFPRs];
-      for (unsigned I = NumFixedFPRs; I < SystemZ::NumArgFPRs; ++I) {
-        unsigned Offset = TFL->getRegSpillOffset(MF, SystemZ::ArgFPRs[I]);
+    if (NumFixedFPRs < SystemZ::ELFNumArgFPRs && !useSoftFloat()) {
+      SDValue MemOps[SystemZ::ELFNumArgFPRs];
+      for (unsigned I = NumFixedFPRs; I < SystemZ::ELFNumArgFPRs; ++I) {
+        unsigned Offset = TFL->getRegSpillOffset(MF, SystemZ::ELFArgFPRs[I]);
         int FI =
-          MFI.CreateFixedObject(8, -SystemZMC::CallFrameSize + Offset, true);
+          MFI.CreateFixedObject(8, -SystemZMC::ELFCallFrameSize + Offset, true);
         SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
-        unsigned VReg = MF.addLiveIn(SystemZ::ArgFPRs[I],
+        unsigned VReg = MF.addLiveIn(SystemZ::ELFArgFPRs[I],
                                      &SystemZ::FP64BitRegClass);
         SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, VReg, MVT::f64);
         MemOps[I] = DAG.getStore(ArgValue.getValue(1), DL, ArgValue, FIN,
@@ -1504,7 +1504,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       // Join the stores, which are independent of one another.
       Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
                           makeArrayRef(&MemOps[NumFixedFPRs],
-                                       SystemZ::NumArgFPRs-NumFixedFPRs));
+                                       SystemZ::ELFNumArgFPRs-NumFixedFPRs));
     }
   }
 
@@ -1628,7 +1628,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
       // floats are passed as right-justified 8-byte values.
       if (!StackPtr.getNode())
         StackPtr = DAG.getCopyFromReg(Chain, DL, SystemZ::R15D, PtrVT);
-      unsigned Offset = SystemZMC::CallFrameSize + VA.getLocMemOffset();
+      unsigned Offset = SystemZMC::ELFCallFrameSize + VA.getLocMemOffset();
       if (VA.getLocVT() == MVT::i32 || VA.getLocVT() == MVT::f32)
         Offset += 4;
       SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr,

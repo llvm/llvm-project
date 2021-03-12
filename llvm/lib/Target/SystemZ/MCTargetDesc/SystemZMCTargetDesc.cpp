@@ -152,7 +152,7 @@ static MCAsmInfo *createSystemZMCAsmInfo(const MCRegisterInfo &MRI,
   MCAsmInfo *MAI = new SystemZMCAsmInfo(TT);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(
       nullptr, MRI.getDwarfRegNum(SystemZ::R15D, true),
-      SystemZMC::CFAOffsetFromInitialSP);
+      SystemZMC::ELFCFAOffsetFromInitialSP);
   MAI->addInitialFrameState(Inst);
   return MAI;
 }
