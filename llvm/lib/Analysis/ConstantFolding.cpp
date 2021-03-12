@@ -2770,41 +2770,42 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
     }
   }
 
-  if (const auto *Op1 = dyn_cast<ConstantInt>(Operands[0])) {
-    if (const auto *Op2 = dyn_cast<ConstantInt>(Operands[1])) {
-      if (const auto *Op3 = dyn_cast<ConstantInt>(Operands[2])) {
-        switch (IntrinsicID) {
-        default: break;
-        case Intrinsic::smul_fix:
-        case Intrinsic::smul_fix_sat: {
-          // This code performs rounding towards negative infinity in case the
-          // result cannot be represented exactly for the given scale. Targets
-          // that do care about rounding should use a target hook for specifying
-          // how rounding should be done, and provide their own folding to be
-          // consistent with rounding. This is the same approach as used by
-          // DAGTypeLegalizer::ExpandIntRes_MULFIX.
-          const APInt &Lhs = Op1->getValue();
-          const APInt &Rhs = Op2->getValue();
-          unsigned Scale = Op3->getValue().getZExtValue();
-          unsigned Width = Lhs.getBitWidth();
-          assert(Scale < Width && "Illegal scale.");
-          unsigned ExtendedWidth = Width * 2;
-          APInt Product = (Lhs.sextOrSelf(ExtendedWidth) *
-                           Rhs.sextOrSelf(ExtendedWidth)).ashr(Scale);
-          if (IntrinsicID == Intrinsic::smul_fix_sat) {
-            APInt MaxValue =
-              APInt::getSignedMaxValue(Width).sextOrSelf(ExtendedWidth);
-            APInt MinValue =
-              APInt::getSignedMinValue(Width).sextOrSelf(ExtendedWidth);
-            Product = APIntOps::smin(Product, MaxValue);
-            Product = APIntOps::smax(Product, MinValue);
-          }
-          return ConstantInt::get(Ty->getContext(),
-                                  Product.sextOrTrunc(Width));
-        }
-        }
-      }
+  if (IntrinsicID == Intrinsic::smul_fix ||
+      IntrinsicID == Intrinsic::smul_fix_sat) {
+    // poison * C -> poison
+    // C * poison -> poison
+    if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
+      return PoisonValue::get(Ty);
+
+    const APInt *C0, *C1;
+    if (!getConstIntOrUndef(Operands[0], C0) ||
+        !getConstIntOrUndef(Operands[1], C1))
+      return nullptr;
+
+    // undef * C -> 0
+    // C * undef -> 0
+    if (!C0 || !C1)
+      return Constant::getNullValue(Ty);
+
+    // This code performs rounding towards negative infinity in case the result
+    // cannot be represented exactly for the given scale. Targets that do care
+    // about rounding should use a target hook for specifying how rounding
+    // should be done, and provide their own folding to be consistent with
+    // rounding. This is the same approach as used by
+    // DAGTypeLegalizer::ExpandIntRes_MULFIX.
+    unsigned Scale = cast<ConstantInt>(Operands[2])->getZExtValue();
+    unsigned Width = C0->getBitWidth();
+    assert(Scale < Width && "Illegal scale.");
+    unsigned ExtendedWidth = Width * 2;
+    APInt Product = (C0->sextOrSelf(ExtendedWidth) *
+                     C1->sextOrSelf(ExtendedWidth)).ashr(Scale);
+    if (IntrinsicID == Intrinsic::smul_fix_sat) {
+      APInt Max = APInt::getSignedMaxValue(Width).sextOrSelf(ExtendedWidth);
+      APInt Min = APInt::getSignedMinValue(Width).sextOrSelf(ExtendedWidth);
+      Product = APIntOps::smin(Product, Max);
+      Product = APIntOps::smax(Product, Min);
     }
+    return ConstantInt::get(Ty->getContext(), Product.sextOrTrunc(Width));
   }
 
   if (IntrinsicID == Intrinsic::fshl || IntrinsicID == Intrinsic::fshr) {
