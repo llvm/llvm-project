@@ -884,8 +884,8 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
 #ifndef NDEBUG
     ValidCopy = KnownValid || isValidCopy(I, DstRegBank, MRI, TRI, RBI);
     assert(ValidCopy && "Invalid copy.");
-    (void)KnownValid;
 #endif
+    (void)KnownValid;
     return ValidCopy;
   };
 
