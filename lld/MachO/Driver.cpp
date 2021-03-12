@@ -1031,7 +1031,14 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     }
 
     createSyntheticSections();
-    symtab->addDSOHandle(in.header);
+
+    // The Itanium C++ ABI requires dylibs to pass a pointer to __cxa_atexit
+    // which does e.g. cleanup of static global variables. The ABI document says
+    // that the pointer can point to any address in one of the dylib's segments,
+    // but in practice ld64 seems to set it to point to the header, so that's
+    // what's implemented here.
+    symtab->addSynthetic("___dso_handle", in.header->isec, 0,
+                         /*privateExtern=*/true, /*linkerInternal=*/true);
 
     for (const Arg *arg : args.filtered(OPT_sectcreate)) {
       StringRef segName = arg->getValue(0);
