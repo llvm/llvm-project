@@ -728,95 +728,36 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
 
   // Check if variable has a single location description.
   if (auto *DVal = DV.getValueLoc()) {
-    if (!DVal->isVariadic()) {
-      const DbgValueLocEntry *Entry = DVal->getLocEntries().begin();
-      if (Entry->isLocation()) {
-        addVariableAddress(DV, *VariableDie, Entry->getLoc());
-      } else if (Entry->isInt()) {
-        auto *Expr = DV.getSingleExpression();
-        if (Expr && Expr->getNumElements()) {
-          DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-          DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-          // If there is an expression, emit raw unsigned bytes.
-          DwarfExpr.addFragmentOffset(Expr);
-          DwarfExpr.addUnsignedConstant(Entry->getInt());
-          DwarfExpr.addExpression(Expr);
-          addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
-          if (DwarfExpr.TagOffset)
-            addUInt(*VariableDie, dwarf::DW_AT_LLVM_tag_offset,
-                    dwarf::DW_FORM_data1, *DwarfExpr.TagOffset);
-        } else
-          addConstantValue(*VariableDie, Entry->getInt(), DV.getType());
-      } else if (Entry->isConstantFP()) {
-        addConstantFPValue(*VariableDie, Entry->getConstantFP());
-      } else if (Entry->isConstantInt()) {
-        addConstantValue(*VariableDie, Entry->getConstantInt(), DV.getType());
-      } else if (Entry->isTargetIndexLocation()) {
+    if (DVal->isLocation())
+      addVariableAddress(DV, *VariableDie, DVal->getLoc());
+    else if (DVal->isInt()) {
+      auto *Expr = DV.getSingleExpression();
+      if (Expr && Expr->getNumElements()) {
         DIELoc *Loc = new (DIEValueAllocator) DIELoc;
         DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-        const DIBasicType *BT = dyn_cast<DIBasicType>(
-            static_cast<const Metadata *>(DV.getVariable()->getType()));
-        DwarfDebug::emitDebugLocValue(*Asm, BT, *DVal, DwarfExpr);
-        addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
-      }
-      return VariableDie;
-    }
-    // If any of the location entries are registers with the value 0, then the
-    // location is undefined.
-    if (any_of(DVal->getLocEntries(), [](const DbgValueLocEntry &Entry) {
-          return Entry.isLocation() && !Entry.getLoc().getReg();
-        }))
-      return VariableDie;
-    const DIExpression *Expr = DV.getSingleExpression();
-    assert(Expr && "Variadic Debug Value must have an Expression.");
-    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-    DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-    DwarfExpr.addFragmentOffset(Expr);
-    DIExpressionCursor Cursor(Expr);
-    const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
-
-    // Declare the TargetMachine locally so we don't need to capture `this` in
-    // the lambda.
-    TargetMachine &TM = Asm->TM;
-    auto AddEntry = [&DwarfExpr, &TRI, &TM](const DbgValueLocEntry &Entry,
-                                            DIExpressionCursor &Cursor) {
-      if (Entry.isLocation()) {
-        if (!DwarfExpr.addMachineRegExpression(TRI, Cursor,
-                                               Entry.getLoc().getReg()))
-          return false;
-      } else if (Entry.isInt()) {
         // If there is an expression, emit raw unsigned bytes.
-        DwarfExpr.addUnsignedConstant(Entry.getInt());
-      } else if (Entry.isConstantFP()) {
-        APInt RawBytes = Entry.getConstantFP()->getValueAPF().bitcastToAPInt();
-        DwarfExpr.addUnsignedConstant(RawBytes);
-      } else if (Entry.isConstantInt()) {
-        APInt RawBytes = Entry.getConstantInt()->getValue();
-        DwarfExpr.addUnsignedConstant(RawBytes);
-      } else if (Entry.isTargetIndexLocation()) {
-        TargetIndexLocation Loc = Entry.getTargetIndexLocation();
-        // TODO TargetIndexLocation is a target-independent. Currently only the
-        // WebAssembly-specific encoding is supported.
-        assert(TM.getTargetTriple().isWasm());
-        DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
-      } else {
-        llvm_unreachable("Unsupported Entry type.");
-      }
-      return true;
-    };
+        DwarfExpr.addFragmentOffset(Expr);
+        DwarfExpr.addUnsignedConstant(DVal->getInt());
+        DwarfExpr.addExpression(Expr);
+        addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+        if (DwarfExpr.TagOffset)
+          addUInt(*VariableDie, dwarf::DW_AT_LLVM_tag_offset,
+                  dwarf::DW_FORM_data1, *DwarfExpr.TagOffset);
 
-    DwarfExpr.addExpression(
-        std::move(Cursor),
-        [&AddEntry, &DVal](unsigned Idx, DIExpressionCursor &Cursor) -> bool {
-          return AddEntry(DVal->getLocEntries()[Idx], Cursor);
-        });
-
-    // Now attach the location information to the DIE.
-    addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
-    if (DwarfExpr.TagOffset)
-      addUInt(*VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
-              *DwarfExpr.TagOffset);
-
+      } else
+        addConstantValue(*VariableDie, DVal->getInt(), DV.getType());
+    } else if (DVal->isConstantFP()) {
+      addConstantFPValue(*VariableDie, DVal->getConstantFP());
+    } else if (DVal->isConstantInt()) {
+      addConstantValue(*VariableDie, DVal->getConstantInt(), DV.getType());
+    } else if (DVal->isTargetIndexLocation()) {
+      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+      DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+      const DIBasicType *BT = dyn_cast<DIBasicType>(
+          static_cast<const Metadata *>(DV.getVariable()->getType()));
+      DwarfDebug::emitDebugLocValue(*Asm, BT, *DVal, DwarfExpr);
+      addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+    }
     return VariableDie;
   }
 
