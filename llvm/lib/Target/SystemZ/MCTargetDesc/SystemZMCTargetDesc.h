@@ -32,10 +32,10 @@ class raw_ostream;
 namespace SystemZMC {
 // How many bytes are in the ABI-defined, caller-allocated part of
 // a stack frame.
-const int64_t CallFrameSize = 160;
+const int64_t ELFCallFrameSize = 160;
 
 // The offset of the DWARF CFA from the incoming stack pointer.
-const int64_t CFAOffsetFromInitialSP = CallFrameSize;
+const int64_t ELFCFAOffsetFromInitialSP = ELFCallFrameSize;
 
 // Maps of asm register numbers to LLVM register numbers, with 0 indicating
 // an invalid register.  In principle we could use 32-bit and 64-bit register
