@@ -728,16 +728,16 @@ define i8* @signext(i8* %input_row, i8* %input_col, i16 zeroext %output_ch, i16 
 ; CHECK-NEXT:    bge .LBB5_3
 ; CHECK-NEXT:  @ %bb.6: @ %for.body24.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB5_5 Depth=1
-; CHECK-NEXT:    ldr r2, [sp, #92]
+; CHECK-NEXT:    ldr.w lr, [sp, #92]
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    mov r6, r10
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    mov r12, r10
-; CHECK-NEXT:    mla r3, r9, r2, r0
+; CHECK-NEXT:    mla r3, r9, lr, r0
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r7, r0, [sp] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r8, r10
-; CHECK-NEXT:    dlstp.16 lr, r2
+; CHECK-NEXT:    dlstp.16 lr, lr
 ; CHECK-NEXT:  .LBB5_7: @ %for.body24
 ; CHECK-NEXT:    @ Parent Loop BB5_5 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -901,16 +901,16 @@ define i8* @signext_optsize(i8* %input_row, i8* %input_col, i16 zeroext %output_
 ; CHECK-NEXT:    bge .LBB6_6
 ; CHECK-NEXT:  @ %bb.4: @ %for.body24.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB6_3 Depth=1
-; CHECK-NEXT:    ldr r2, [sp, #92]
+; CHECK-NEXT:    ldr.w lr, [sp, #92]
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    mov r6, r10
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    mov r12, r10
-; CHECK-NEXT:    mla r3, r9, r2, r0
+; CHECK-NEXT:    mla r3, r9, lr, r0
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r7, r0, [sp] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r8, r10
-; CHECK-NEXT:    dlstp.16 lr, r2
+; CHECK-NEXT:    dlstp.16 lr, lr
 ; CHECK-NEXT:  .LBB6_5: @ %for.body24
 ; CHECK-NEXT:    @ Parent Loop BB6_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
