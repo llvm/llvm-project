@@ -143,7 +143,7 @@ body: |
     ; GFX8: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 1, addrspace 1)
     ; GFX8: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; GFX8: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX8: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 1 from undef + 1, addrspace 1)
+    ; GFX8: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 1 from unknown-address + 1, addrspace 1)
     ; GFX8: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
     ; GFX8: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
     ; GFX8: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
@@ -159,7 +159,7 @@ body: |
     ; GFX6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 1, addrspace 1)
     ; GFX6: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; GFX6: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX6: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 1 from undef + 1, addrspace 1)
+    ; GFX6: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 1 from unknown-address + 1, addrspace 1)
     ; GFX6: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
     ; GFX6: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
     ; GFX6: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
@@ -188,7 +188,7 @@ body: |
     ; GFX8: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 1, addrspace 1)
     ; GFX8: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; GFX8: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX8: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 1 from undef + 1, addrspace 1)
+    ; GFX8: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 1 from unknown-address + 1, addrspace 1)
     ; GFX8: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
     ; GFX8: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
     ; GFX8: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
@@ -204,7 +204,7 @@ body: |
     ; GFX6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 1, addrspace 1)
     ; GFX6: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; GFX6: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX6: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 1 from undef + 1, addrspace 1)
+    ; GFX6: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 1 from unknown-address + 1, addrspace 1)
     ; GFX6: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
     ; GFX6: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
     ; GFX6: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]

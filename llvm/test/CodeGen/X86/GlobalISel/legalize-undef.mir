@@ -34,7 +34,7 @@ body: |
     ; X32: G_STORE [[DEF3]](s32), [[DEF]](p0) :: (store 4, align 8)
     ; X32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; X32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[C1]](s32)
-    ; X32: G_STORE [[DEF3]](s32), [[PTR_ADD]](p0) :: (store 4 into undef + 4)
+    ; X32: G_STORE [[DEF3]](s32), [[PTR_ADD]](p0) :: (store 4 into unknown-address + 4)
     %5:_(p0) = G_IMPLICIT_DEF
     %0:_(s1) = G_IMPLICIT_DEF
     G_STORE %0, %5 ::(store 1)

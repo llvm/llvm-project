@@ -76,7 +76,7 @@ TEST_F(AArch64GISelMITest, BasicLegalizerTest) {
     CHECK-NEXT: [[LOAD_0:%[0-9]+]]:_(s16) = G_LOAD %vptr:_(p0) :: (load 1)
     CHECK-NEXT: [[OFFSET_1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     CHECK-NEXT: [[VPTR_1:%[0-9]+]]:_(p0) = G_PTR_ADD %vptr:_, [[OFFSET_1]]:_(s64)
-    CHECK-NEXT: [[LOAD_1:%[0-9]+]]:_(s16) = G_LOAD [[VPTR_1]]:_(p0) :: (load 1 from undef + 1)
+    CHECK-NEXT: [[LOAD_1:%[0-9]+]]:_(s16) = G_LOAD [[VPTR_1]]:_(p0) :: (load 1 from unknown-address + 1)
     CHECK-NEXT: [[V0:%[0-9]+]]:_(s16) = COPY [[LOAD_0]]:_(s16)
     CHECK-NEXT: [[V1:%[0-9]+]]:_(s16) = COPY [[LOAD_1]]:_(s16)
     CHECK-NEXT: %v:_(<2 x s8>) = G_BUILD_VECTOR_TRUNC [[V0]]:_(s16), [[V1]]:_(s16)
@@ -209,7 +209,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
     CHECK-NEXT: [[LOAD_0:%[0-9]+]]:_(s16) = G_LOAD %vptr:_(p0) :: (load 1)
     CHECK-NEXT: [[OFFSET_1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     CHECK-NEXT: [[VPTR_1:%[0-9]+]]:_(p0) = G_PTR_ADD %vptr:_, [[OFFSET_1]]:_(s64)
-    CHECK-NEXT: [[LOAD_1:%[0-9]+]]:_(s16) = G_LOAD [[VPTR_1]]:_(p0) :: (load 1 from undef + 1)
+    CHECK-NEXT: [[LOAD_1:%[0-9]+]]:_(s16) = G_LOAD [[VPTR_1]]:_(p0) :: (load 1 from unknown-address + 1)
     CHECK-NEXT: [[FF_MASK:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     CHECK-NEXT: [[V0_EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD_0]]:_(s16)
     CHECK-NEXT: %v0_zext:_(s32) = G_AND [[V0_EXT]]:_, [[FF_MASK]]:_
