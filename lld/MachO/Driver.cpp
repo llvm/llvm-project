@@ -921,7 +921,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   config->adhocCodesign = args.hasFlag(
       OPT_adhoc_codesign, OPT_no_adhoc_codesign,
-      config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e);
+      (config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e) &&
+          config->target.Platform == PlatformKind::macOS);
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());
