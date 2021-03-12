@@ -1597,6 +1597,132 @@ static bool isFuncletReturnInstr(const MachineInstr &MI) {
   }
 }
 
+// Check if *II is a register update that can be merged into STGloop that ends
+// at (Reg + Size). RemainingOffset is the required adjustment to Reg after the
+// end of the loop.
+static bool canMergeRegUpdate(MachineBasicBlock::iterator II, unsigned Reg,
+                       int64_t Size, int64_t *TotalOffset) {
+  MachineInstr &MI = *II;
+  if ((MI.getOpcode() == AArch64::ADDXri ||
+       MI.getOpcode() == AArch64::SUBXri) &&
+      MI.getOperand(0).getReg() == Reg && MI.getOperand(1).getReg() == Reg) {
+    unsigned Shift = AArch64_AM::getShiftValue(MI.getOperand(3).getImm());
+    int64_t Offset = MI.getOperand(2).getImm() << Shift;
+    if (MI.getOpcode() == AArch64::SUBXri)
+      Offset = -Offset;
+    int64_t AbsPostOffset = std::abs(Offset - Size);
+    const int64_t kMaxOffset =
+        0xFFF; // Max encoding for unshifted ADDXri / SUBXri
+    if (AbsPostOffset <= kMaxOffset && AbsPostOffset % 16 == 0) {
+      *TotalOffset = Offset;
+      return true;
+    }
+  }
+  return false;
+}
+
+// If we're restoring LR, authenticate it before returning.
+void AArch64FrameLowering::insertAuthLR(MachineBasicBlock &MBB,
+                                        int64_t ArgumentStackToRestore,
+                                        DebugLoc DL) const {
+  MachineFunction &MF = *MBB.getParent();
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  if (!shouldAuthenticateLR(MF))
+    return;
+
+  bool IsLRVulnerable = false;
+  for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
+    if (Info.getReg() != AArch64::LR)
+      continue;
+    IsLRVulnerable = true;
+    break;
+  }
+
+  if(!IsLRVulnerable)
+    return;
+
+  if (LLVM_UNLIKELY(!Subtarget.hasPA()))
+    report_fatal_error("arm64e LR authentication requires ptrauth");
+
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  MachineBasicBlock::iterator TI = MBB.getFirstTerminator();
+  if (TI != MBB.end() && TI->getOpcode() == AArch64::RET_ReallyLR &&
+      ArgumentStackToRestore == 0) {
+    // If there is a terminator and it's a RET, we can fold AUTH into it.
+    // Be careful to keep the implicitly returned registers.
+    // By now, we don't need the ReallyLR pseudo, since it's only there
+    // to make it possible for LR to be used for non-RET purposes, and
+    // that happens in RA and PEI.
+    BuildMI(MBB, TI, DL, TII->get(AArch64::RETAB))
+        .copyImplicitOps(*TI)
+        .setMIFlag(MachineInstr::FrameDestroy);
+    MBB.erase(TI);
+    return;
+  }
+
+  // Otherwise, we could be in a shrink-wrapped or tail-calling block.
+  if (ArgumentStackToRestore >= 0) {
+    // We can safely move sp to where it was on entry, execute autibsp to
+    // authenticate LR, and deallocate the extra incoming argument stack.
+    int64_t Offset = 0;
+    MachineBasicBlock::iterator FrameI =
+        TI == MBB.end() ? MBB.end() : std::prev(TI);
+    if (FrameI != MBB.end() &&
+        canMergeRegUpdate(FrameI, AArch64::SP, ArgumentStackToRestore,
+                          &Offset)) {
+      Offset -= ArgumentStackToRestore;
+      if (Offset == 0)
+        MBB.erase(FrameI);
+      else {
+        FrameI->setDesc(
+            TII->get(Offset >= 0 ? AArch64::ADDXri : AArch64::SUBXri));
+        FrameI->getOperand(2).setImm(std::abs(Offset));
+        FrameI->getOperand(3).setImm(0);
+      }
+    } else {
+      emitFrameOffset(MBB, TI, DL, AArch64::SP, AArch64::SP,
+                      StackOffset::getFixed(-ArgumentStackToRestore), TII,
+                      MachineInstr::FrameDestroy);
+    }
+    BuildMI(MBB, TI, DL, TII->get(AArch64::AUTIBSP))
+        .setMIFlag(MachineInstr::FrameDestroy);
+    emitFrameOffset(MBB, TI, DL, AArch64::SP, AArch64::SP,
+                    StackOffset::getFixed(ArgumentStackToRestore), TII,
+                    MachineInstr::FrameDestroy);
+    return;
+  }
+
+  // SP is going to be below where it was on entry, so trying to use AUTIBSP
+  // risks leaving live arguments outside the redzone. We need to find a spare
+  // register for the discriminator and execute an AUTIB instead.
+  RegScavenger RS;
+  RS.enterBasicBlockEnd(MBB);
+  RS.backward(TI);
+
+  // Prefer x16 or x17 since if we get interrupted they have better protection
+  // in the kernel.
+  Register TmpReg;
+  if (!RS.isRegUsed(AArch64::X16))
+    TmpReg = AArch64::X16;
+  else if (!RS.isRegUsed(AArch64::X17))
+    TmpReg = AArch64::X17;
+  else
+    TmpReg = RS.scavengeRegisterBackwards(AArch64::GPR64commonRegClass, TI,
+                                          false, 0, false);
+  if (TmpReg == AArch64::NoRegister)
+    report_fatal_error("unable to claim register to authenticate LR");
+
+  emitFrameOffset(MBB, TI, DL, TmpReg, AArch64::SP,
+                  StackOffset::getFixed(-ArgumentStackToRestore), TII,
+                  MachineInstr::FrameDestroy);
+  BuildMI(MBB, TI, DL, TII->get(AArch64::AUTIB), AArch64::LR)
+    .addUse(AArch64::LR)
+    .addUse(TmpReg)
+    .setMIFlag(MachineInstr::FrameDestroy);
+}
+
 void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
@@ -1623,35 +1749,12 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
-  // If we're restoring LR, authenticate it before returning.
-  // Use scope_exit to ensure we do that last on all return paths.
-  auto InsertAuthLROnExit = make_scope_exit([&]() {
-    if (shouldAuthenticateLR(MF)) {
-      if (LLVM_UNLIKELY(!Subtarget.hasPA()))
-        report_fatal_error("arm64e LR authentication requires ptrauth");
-      for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
-        if (Info.getReg() != AArch64::LR)
-          continue;
-        MachineBasicBlock::iterator TI = MBB.getFirstTerminator();
-        if (TI != MBB.end() && TI->getOpcode() == AArch64::RET_ReallyLR) {
-          // If there is a terminator and it's a RET, we can fold AUTH into it.
-          // Be careful to keep the implicitly returned registers.
-          // By now, we don't need the ReallyLR pseudo, since it's only there
-          // to make it possible for LR to be used for non-RET purposes, and
-          // that happens in RA and PEI.
-          BuildMI(MBB, TI, DL, TII->get(AArch64::RETAB)).copyImplicitOps(*TI);
-          MBB.erase(TI);
-        } else {
-          // Otherwise, we could be in a shrink-wrapped or tail-calling block.
-          BuildMI(MBB, TI, DL, TII->get(AArch64::AUTIBSP));
-        }
-      }
-    }
-  });
-
   // How much of the stack used by incoming arguments this function is expected
   // to restore in this particular epilogue.
-  int64_t ArgumentStackToRestore = getArgumentStackToRestore(MF, MBB);
+  const int64_t ArgumentStackToRestore = getArgumentStackToRestore(MF, MBB);
+
+  auto InsertAuthLROnExit =
+      make_scope_exit([&]() { insertAuthLR(MBB, ArgumentStackToRestore, DL); });
 
   // The stack frame should be like below,
   //
@@ -3182,30 +3285,6 @@ void TagStoreEdit::emitLoop(MachineBasicBlock::iterator InsertI) {
         .addImm(0)
         .setMIFlags(FrameRegUpdateFlags);
   }
-}
-
-// Check if *II is a register update that can be merged into STGloop that ends
-// at (Reg + Size). RemainingOffset is the required adjustment to Reg after the
-// end of the loop.
-bool canMergeRegUpdate(MachineBasicBlock::iterator II, unsigned Reg,
-                       int64_t Size, int64_t *TotalOffset) {
-  MachineInstr &MI = *II;
-  if ((MI.getOpcode() == AArch64::ADDXri ||
-       MI.getOpcode() == AArch64::SUBXri) &&
-      MI.getOperand(0).getReg() == Reg && MI.getOperand(1).getReg() == Reg) {
-    unsigned Shift = AArch64_AM::getShiftValue(MI.getOperand(3).getImm());
-    int64_t Offset = MI.getOperand(2).getImm() << Shift;
-    if (MI.getOpcode() == AArch64::SUBXri)
-      Offset = -Offset;
-    int64_t AbsPostOffset = std::abs(Offset - Size);
-    const int64_t kMaxOffset =
-        0xFFF; // Max encoding for unshifted ADDXri / SUBXri
-    if (AbsPostOffset <= kMaxOffset && AbsPostOffset % 16 == 0) {
-      *TotalOffset = Offset;
-      return true;
-    }
-  }
-  return false;
 }
 
 void mergeMemRefs(const SmallVectorImpl<TagStoreInstr> &TSE,
