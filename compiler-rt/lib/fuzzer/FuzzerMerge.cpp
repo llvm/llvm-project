@@ -82,9 +82,9 @@ bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
   while (std::getline(IS, Line, '\n')) {
     std::istringstream ISS1(Line);
     std::string Marker;
-    size_t N;
-    ISS1 >> Marker;
-    ISS1 >> N;
+    uint32_t N;
+    if (!(ISS1 >> Marker) || !(ISS1 >> N))
+      return false;
     if (Marker == "STARTED") {
       // STARTED FILE_ID FILE_SIZE
       if (ExpectedStartMarker != N)
