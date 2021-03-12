@@ -54,6 +54,8 @@ struct ExpressionFormat {
 private:
   Kind Value;
   unsigned Precision = 0;
+  /// printf-like "alternate form" selected.
+  bool AlternateForm = false;
 
 public:
   /// Evaluates a format to true if it can be used in a match.
@@ -63,7 +65,7 @@ public:
   /// their kinds and precision are the same.
   bool operator==(const ExpressionFormat &Other) const {
     return Value != Kind::NoFormat && Value == Other.Value &&
-           Precision == Other.Precision;
+           Precision == Other.Precision && AlternateForm == Other.AlternateForm;
   }
 
   bool operator!=(const ExpressionFormat &Other) const {
@@ -81,6 +83,8 @@ public:
   explicit ExpressionFormat(Kind Value) : Value(Value), Precision(0){};
   explicit ExpressionFormat(Kind Value, unsigned Precision)
       : Value(Value), Precision(Precision){};
+  explicit ExpressionFormat(Kind Value, unsigned Precision, bool AlternateForm)
+      : Value(Value), Precision(Precision), AlternateForm(AlternateForm){};
 
   /// \returns a wildcard regular expression string that matches any value in
   /// the format represented by this instance and no other value, or an error

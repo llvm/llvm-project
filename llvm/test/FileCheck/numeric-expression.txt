@@ -49,6 +49,37 @@ INVALID-FMT-SPEC-MSG2: numeric-expression.txt:[[#@LINE-4]]:37: error: invalid fo
 INVALID-FMT-SPEC-MSG2-NEXT: {{I}}NVALID-FMT-SPEC2-NEXT: INVVAR2={{\[\[#%hhd,INVVAR2:\]\]}}
 INVALID-FMT-SPEC-MSG2-NEXT:    {{^}}                                    ^{{$}}
 
+; Numeric variable definition of hex value with 0x prefix.
+DEF ALT FORM  // CHECK-LABEL: DEF ALT FORM
+0xf  // CHECK-NEXT: {{^}}[[#%#x,PREFIXED_LHEX:]]
+0xE  // CHECK-NEXT: {{^}}[[#%#X,PREFIXED_UHEX:]]
+
+; Invalid numeric variable definition of non-hex value with 0x prefix.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefixes INVALID-ALT-FORM,INVALID-ALT-FORM1 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix INVALID-ALT-FORM-MSG1 --strict-whitespace %s
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefixes INVALID-ALT-FORM,INVALID-ALT-FORM2 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix INVALID-ALT-FORM-MSG2 --strict-whitespace %s
+DEF INVALID ALT FORM
+PREFIXED_DEC=0x3
+INVALID-ALT-FORM-LABEL: DEF INVALID ALT FORM
+INVALID-ALT-FORM1-NEXT: PREFIXED_DEC=[[#%#u,PREFIXED_UNSI:]]
+INVALID-ALT-FORM2-NEXT: PREFIXED_DEC=[[#%#d,PREFIXED_SIGN:]]
+INVALID-ALT-FORM-MSG1: numeric-expression.txt:[[#@LINE-2]]:42: error: alternate form only supported for hex values
+INVALID-ALT-FORM-MSG1-NEXT: {{I}}NVALID-ALT-FORM1-NEXT: PREFIXED_DEC={{\[\[#%#u,PREFIXED_UNSI:\]\]}}
+INVALID-ALT-FORM-MSG1-NEXT:    {{^}}                                         ^{{$}}
+INVALID-ALT-FORM-MSG2: numeric-expression.txt:[[#@LINE-4]]:42: error: alternate form only supported for hex values
+INVALID-ALT-FORM-MSG2-NEXT: {{I}}NVALID-ALT-FORM2-NEXT: PREFIXED_DEC={{\[\[#%#d,PREFIXED_SIGN:\]\]}}
+INVALID-ALT-FORM-MSG2-NEXT:    {{^}}                                         ^{{$}}
+
+; Numeric variable definition of hex value with missing 0x prefix.
+RUN: FileCheck --check-prefix INVALID-HEX-PREFIX-DEF --input-file %s %s
+
+FAIL DEF ALT FORM  // INVALID-HEX-PREFIX-DEF-LABEL: FAIL DEF ALT FORM
+INVALID_PREFIXED_LHEX: xf   // INVALID-HEX-PREFIX-DEF-NOT: {{^}}INVALID_PREFIXED_LHEX: [[#%#x,INVALID_PREFIXED_LHEX:]]
+INVALID_PREFIXED_UHEX: 0E   // INVALID-HEX-PREFIX-DEF-NOT: {{^}}INVALID_PREFIXED_UHEX: [[#%#X,INVALID_PREFIXED_UHEX:]]
+
 ; Numeric variable definition with precision specifier.
 DEF PREC FMT  // CHECK-LABEL: DEF PREC FMT
 00000022    // CHECK-NEXT: {{^}}[[#%.8,PADDED_UNSI:]]
@@ -144,17 +175,21 @@ USE EXPL FMT IMPL MATCH SPC  // CHECK-LABEL: USE EXPL FMT IMPL MATCH SPC
 13  // CHECK-NEXT: {{^}}[[# %u , add (UNSI,2)]]
 104 // CHECK-NEXT: {{^}}[[# %u , UNSI + sub( add (100 , UNSI+ 1 ), 20) +1 ]]
 
-; Numeric expressions with explicit matching format, precision, and default
-; matching rule using variables defined on other lines without spaces.
+; Numeric expressions with explicit matching format, precision, form and
+; default matching rule using variables defined on other lines without spaces.
 USE EXPL FMT WITH PREC IMPL MATCH  // CHECK-LABEL: USE EXPL FMT WITH PREC IMPL MATCH
-11         // CHECK-NEXT: {{^}}[[#%.1u,UNSI]]
-00000011   // CHECK-NEXT: {{^}}[[#%.8u,UNSI]]
-1c         // CHECK-NEXT: {{^}}[[#%.1x,LHEX+16]]
-0000000c   // CHECK-NEXT: {{^}}[[#%.8x,LHEX]]
-1D         // CHECK-NEXT: {{^}}[[#%.1X,UHEX+16]]
-0000000D   // CHECK-NEXT: {{^}}[[#%.8X,UHEX]]
--30        // CHECK-NEXT: {{^}}[[#%.1d,SIGN]]
--00000030  // CHECK-NEXT: {{^}}[[#%.8d,SIGN]]
+11          // CHECK-NEXT: {{^}}[[#%.1u,UNSI]]
+00000011    // CHECK-NEXT: {{^}}[[#%.8u,UNSI]]
+1c          // CHECK-NEXT: {{^}}[[#%.1x,LHEX+16]]
+0x1c        // CHECK-NEXT: {{^}}[[#%#.1x,LHEX+16]]
+0000000c    // CHECK-NEXT: {{^}}[[#%.8x,LHEX]]
+0x0000000c  // CHECK-NEXT: {{^}}[[#%#.8x,LHEX]]
+1D          // CHECK-NEXT: {{^}}[[#%.1X,UHEX+16]]
+0x1D        // CHECK-NEXT: {{^}}[[#%#.1X,UHEX+16]]
+0000000D    // CHECK-NEXT: {{^}}[[#%.8X,UHEX]]
+0x0000000D  // CHECK-NEXT: {{^}}[[#%#.8X,UHEX]]
+-30         // CHECK-NEXT: {{^}}[[#%.1d,SIGN]]
+-00000030   // CHECK-NEXT: {{^}}[[#%.8d,SIGN]]
 
 ; Numeric expressions with explicit matching format, precision and wrong
 ; padding, and default matching rule using variables defined on other lines
