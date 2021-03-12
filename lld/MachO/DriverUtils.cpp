@@ -39,9 +39,9 @@ using namespace lld::macho;
 #undef PREFIX
 
 // Create table mapping all options defined in Options.td
-static const opt::OptTable::Info optInfo[] = {
+static const OptTable::Info optInfo[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
+  {X1, X2, X10,         X11,         OPT_##ID, Option::KIND##Class,            \
    X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
 #include "Options.inc"
 #undef OPTION
@@ -51,7 +51,7 @@ MachOOptTable::MachOOptTable() : OptTable(optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
-static void handleColorDiagnostics(opt::InputArgList &args) {
+static void handleColorDiagnostics(InputArgList &args) {
   const Arg *arg =
       args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
                       OPT_no_color_diagnostics);
@@ -72,7 +72,7 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
   }
 }
 
-opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
+InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   // Make InputArgList from string vectors.
   unsigned missingIndex;
   unsigned missingCount;
@@ -81,7 +81,7 @@ opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   // Expand response files (arguments in the form of @<filename>)
   // and then parse the argument again.
   cl::ExpandResponseFiles(saver, cl::TokenizeGNUCommandLine, vec);
-  opt::InputArgList args = ParseArgs(vec, missingIndex, missingCount);
+  InputArgList args = ParseArgs(vec, missingIndex, missingCount);
 
   // Handle -fatal_warnings early since it converts missing argument warnings
   // to errors.
@@ -92,7 +92,7 @@ opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
 
   handleColorDiagnostics(args);
 
-  for (opt::Arg *arg : args.filtered(OPT_UNKNOWN)) {
+  for (const Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
     if (findNearest(arg->getAsString(args), nearest) > 1)
       error("unknown argument '" + arg->getAsString(args) + "'");
@@ -117,7 +117,7 @@ static std::string rewritePath(StringRef s) {
 
 // Reconstructs command line arguments so that so that you can re-run
 // the same command with the same inputs. This is for --reproduce.
-std::string macho::createResponseFile(const opt::InputArgList &args) {
+std::string macho::createResponseFile(const InputArgList &args) {
   SmallString<0> data;
   raw_svector_ostream os(data);
 
