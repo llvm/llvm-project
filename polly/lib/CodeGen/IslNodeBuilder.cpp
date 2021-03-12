@@ -952,7 +952,7 @@ void IslNodeBuilder::generateCopyStmt(
   auto *LoadValue = ExprBuilder.create(AccessExpr);
   AccessExpr =
       isl_id_to_ast_expr_get(NewAccesses, (*WriteAccess)->getId().release());
-  auto *StoreAddr = ExprBuilder.createAccessAddress(AccessExpr);
+  auto *StoreAddr = ExprBuilder.createAccessAddress(AccessExpr).first;
   Builder.CreateStore(LoadValue, StoreAddr);
 }
 

@@ -687,8 +687,6 @@ private:
   Value *getVectorValue(ScopStmt &Stmt, Value *Old, ValueMapT &VectorMap,
                         VectorValueMapT &ScalarMaps, Loop *L);
 
-  Type *getVectorPtrTy(const Value *V, int Width);
-
   /// Load a vector from a set of adjacent scalars
   ///
   /// In case a set of scalars is known to be next to each other in memory,
