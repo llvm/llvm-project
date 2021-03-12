@@ -18,7 +18,7 @@
                         ARM_DOWNWARD | ARM_TOWARDZERO)
 #define ARM_RMODE_SHIFT 22
 
-#define ARM_INEXACT     0x1000
+#define ARM_INEXACT     0x10
 
 #ifndef __ARM_FP
 // For soft float targets, allow changing rounding mode by overriding the weak
