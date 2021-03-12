@@ -57,12 +57,6 @@ EXTERN uint32_t __kmpc_impl_smid();
 
 EXTERN __kmpc_impl_lanemask_t __kmpc_impl_activemask();
 
-EXTERN int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t Mask, int32_t Var,
-                                     int32_t SrcLane);
-EXTERN int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t Mask,
-                                          int32_t Var, uint32_t Delta,
-                                          int32_t Width);
-
 EXTERN void __kmpc_impl_syncthreads();
 EXTERN void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t Mask);
 

@@ -239,8 +239,8 @@ entry:
 ; CHECK-NEXT:  L..debug_line_0:
 ; CHECK-NEXT:  .set L..line_table_start0, L..debug_line_0-4
 ; CHECK-NEXT:          .vbyte  2, 3
-; CHECK-NEXT:          .vbyte  4, L..tmp7-L..tmp6
-; CHECK-NEXT:  L..tmp6:
+; CHECK-NEXT:          .vbyte  4, L..prologue_end0-L..prologue_start0
+; CHECK-NEXT:  L..prologue_start0:
 ; CHECK-NEXT:          .byte   4
 ; CHECK-NEXT:          .byte   1
 ; CHECK-NEXT:          .byte   -5
@@ -267,7 +267,7 @@ entry:
 ; CHECK-NEXT:          .byte   0
 ; CHECK-NEXT:          .byte   0
 ; CHECK-NEXT:          .byte   0
-; CHECK-NEXT:  L..tmp7:
+; CHECK-NEXT:  L..prologue_end0:
 ; CHECK-NEXT:          .byte   0                               # Set address to L..tmp0
 ; CHECK-NEXT:          .byte   5
 ; CHECK-NEXT:          .byte   2

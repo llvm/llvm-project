@@ -180,8 +180,8 @@ entry:
 ; ASM32-NEXT:  L..debug_line_0:
 ; ASM32-NEXT:  .set L..line_table_start0, L..debug_line_0-4
 ; ASM32-NEXT:          .vbyte  2, 4
-; ASM32-NEXT:          .vbyte  4, L..tmp5-L..tmp4
-; ASM32-NEXT:  L..tmp4:
+; ASM32-NEXT:          .vbyte	4, L..prologue_end0-L..prologue_start0
+; ASM32-NEXT:  L..prologue_start0:
 ; ASM32-NEXT:          .byte   4
 ; ASM32-NEXT:          .byte   1
 ; ASM32-NEXT:          .byte   1
@@ -209,7 +209,7 @@ entry:
 ; ASM32-NEXT:          .byte   0
 ; ASM32-NEXT:          .byte   0
 ; ASM32-NEXT:          .byte   0
-; ASM32-NEXT:  L..tmp5:
+; ASM32-NEXT:  L..prologue_end0:
 ; ASM32-NEXT:          .byte   0                               # Set address to L..tmp0
 ; ASM32-NEXT:          .byte   5
 ; ASM32-NEXT:          .byte   2
@@ -381,8 +381,8 @@ entry:
 ; ASM64-NEXT:  L..debug_line_0:
 ; ASM64-NEXT:  .set L..line_table_start0, L..debug_line_0-12
 ; ASM64-NEXT:          .vbyte  2, 4
-; ASM64-NEXT:          .vbyte  8, L..tmp5-L..tmp4
-; ASM64-NEXT:  L..tmp4:
+; ASM64-NEXT:          .vbyte  8, L..prologue_end0-L..prologue_start0
+; ASM64-NEXT:  L..prologue_start0:
 ; ASM64-NEXT:          .byte   4
 ; ASM64-NEXT:          .byte   1
 ; ASM64-NEXT:          .byte   1
@@ -410,7 +410,7 @@ entry:
 ; ASM64-NEXT:          .byte   0
 ; ASM64-NEXT:          .byte   0
 ; ASM64-NEXT:          .byte   0
-; ASM64-NEXT:  L..tmp5:
+; ASM64-NEXT:  L..prologue_end0:
 ; ASM64-NEXT:          .byte   0                               # Set address to L..tmp0
 ; ASM64-NEXT:          .byte   9
 ; ASM64-NEXT:          .byte   2

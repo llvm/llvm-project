@@ -250,6 +250,10 @@ public:
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
 
+  /// Return true if the given shuffle mask can be codegen'd directly, or if it
+  /// should be stack expanded.
+  bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
+
   bool hasBitPreservingFPLogic(EVT VT) const override;
   bool
   shouldExpandBuildVectorWithShuffles(EVT VT,

@@ -26,8 +26,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "moveconstructible.h"
-#include "swappable.h"
+#include "type_classification/moveconstructible.h"
+#include "type_classification/swappable.h"
 
 template <class T, class U>
 constexpr bool check_swappable_with_impl() {
