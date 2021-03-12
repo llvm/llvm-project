@@ -19,7 +19,7 @@ using namespace llvm;
 void VPlanTransforms::VPInstructionsToVPRecipes(
     Loop *OrigLoop, VPlanPtr &Plan,
     LoopVectorizationLegality::InductionList &Inductions,
-    SmallPtrSetImpl<Instruction *> &DeadInstructions) {
+    SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE) {
 
   auto *TopRegion = cast<VPRegionBlock>(Plan->getEntry());
   ReversePostOrderTraversal<VPBlockBase *> RPOT(TopRegion->getEntry());
@@ -74,6 +74,11 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           NewRecipe = new VPWidenCallRecipe(
               *CI, Plan->mapToVPValues(CI->arg_operands()));
+        } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
+          bool InvariantCond =
+              SE.isLoopInvariant(SE.getSCEV(SI->getOperand(0)), OrigLoop);
+          NewRecipe = new VPWidenSelectRecipe(
+              *SI, Plan->mapToVPValues(SI->operands()), InvariantCond);
         } else {
           NewRecipe =
               new VPWidenRecipe(*Inst, Plan->mapToVPValues(Inst->operands()));
