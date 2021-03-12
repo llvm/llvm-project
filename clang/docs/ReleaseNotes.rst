@@ -141,6 +141,7 @@ Modified Compiler Flags
   (`D92054 <https://reviews.llvm.org/D92054>`_)
 - Support has been added for the following processors (command-line identifiers
   in parentheses):
+
   - Arm Cortex-A78C (cortex-a78c).
   - Arm Cortex-R82 (cortex-r82).
   - Arm Neoverse V1 (neoverse-v1).
