@@ -23,6 +23,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,16 +37,6 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
-#endif
-
-#if !defined(_MSC_VER)
-#include <stdint.h>
-#endif
-
-#if defined(_MSC_VER)
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
 #endif
 
 #include "InstrProfiling.h"
