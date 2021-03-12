@@ -85,12 +85,12 @@ def test3(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N)) {
 // Test attribute definitions
 // ODS-LABEL: def Test4Op
 // ODS: F32ArrayAttr:$array_attr,
-// ODS: F32:$f32_attr,
+// ODS: F32Attr:$f32_attr,
 // ODS: RankedF32ElementsAttr<[4]>:$fvec_attr,
-// ODS: I32:$i32_attr,
-// ODS: I64:$i64_attr,
+// ODS: I32Attr:$i32_attr,
+// ODS: I64Attr:$i64_attr,
 // ODS: RankedI32ElementsAttr<[5, 6]>:$ivec_attr,
-// ODS: OptionalAttr<F32>:$optional_attr
+// ODS: OptionalAttr<F32Attr>:$optional_attr
 //
 // ODS: bool hasDynamicIndexingMaps();
 // ODS: LogicalResult verifyIndexingMapRequiredAttributes();
