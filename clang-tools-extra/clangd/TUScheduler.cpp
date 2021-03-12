@@ -1519,13 +1519,6 @@ void TUScheduler::remove(PathRef File) {
   // preamble of several open headers.
 }
 
-llvm::StringMap<std::string> TUScheduler::getAllFileContents() const {
-  llvm::StringMap<std::string> Results;
-  for (auto &It : Files)
-    Results.try_emplace(It.getKey(), It.getValue()->Contents);
-  return Results;
-}
-
 void TUScheduler::run(llvm::StringRef Name, llvm::StringRef Path,
                       llvm::unique_function<void()> Action) {
   runWithSemaphore(Name, Path, std::move(Action), Barrier);

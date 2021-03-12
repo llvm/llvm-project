@@ -586,10 +586,10 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
 // index (background index) is relatively stale. We choose the dirty buffers
 // as the file content we rename on, and fallback to file content on disk if
 // there is no dirty buffer.
-llvm::Expected<FileEdits> renameOutsideFile(
-    const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
-    llvm::StringRef NewName, const SymbolIndex &Index, size_t MaxLimitFiles,
-    llvm::function_ref<llvm::Expected<std::string>(PathRef)> GetFileContent) {
+llvm::Expected<FileEdits>
+renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
+                  llvm::StringRef NewName, const SymbolIndex &Index,
+                  size_t MaxLimitFiles, llvm::vfs::FileSystem &FS) {
   trace::Span Tracer("RenameOutsideFile");
   auto AffectedFiles = findOccurrencesOutsideFile(RenameDecl, MainFilePath,
                                                   Index, MaxLimitFiles);
@@ -599,13 +599,16 @@ llvm::Expected<FileEdits> renameOutsideFile(
   for (auto &FileAndOccurrences : *AffectedFiles) {
     llvm::StringRef FilePath = FileAndOccurrences.first();
 
-    auto AffectedFileCode = GetFileContent(FilePath);
-    if (!AffectedFileCode) {
-      elog("Fail to read file content: {0}", AffectedFileCode.takeError());
+    auto ExpBuffer = FS.getBufferForFile(FilePath);
+    if (!ExpBuffer) {
+      elog("Fail to read file content: Fail to open file {0}: {1}", FilePath,
+           ExpBuffer.getError().message());
       continue;
     }
+
+    auto AffectedFileCode = (*ExpBuffer)->getBuffer();
     auto RenameRanges =
-        adjustRenameRanges(*AffectedFileCode, RenameDecl.getNameAsString(),
+        adjustRenameRanges(AffectedFileCode, RenameDecl.getNameAsString(),
                            std::move(FileAndOccurrences.second),
                            RenameDecl.getASTContext().getLangOpts());
     if (!RenameRanges) {
@@ -617,7 +620,7 @@ llvm::Expected<FileEdits> renameOutsideFile(
                    FilePath);
     }
     auto RenameEdit =
-        buildRenameEdit(FilePath, *AffectedFileCode, *RenameRanges, NewName);
+        buildRenameEdit(FilePath, AffectedFileCode, *RenameRanges, NewName);
     if (!RenameEdit)
       return error("failed to rename in file {0}: {1}", FilePath,
                    RenameEdit.takeError());
@@ -668,28 +671,13 @@ void findNearMiss(
 } // namespace
 
 llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
+  assert(!RInputs.Index == !RInputs.FS &&
+         "Index and FS must either both be specified or both null.");
   trace::Span Tracer("Rename flow");
   const auto &Opts = RInputs.Opts;
   ParsedAST &AST = RInputs.AST;
   const SourceManager &SM = AST.getSourceManager();
   llvm::StringRef MainFileCode = SM.getBufferData(SM.getMainFileID());
-  auto GetFileContent = [&RInputs,
-                         &SM](PathRef AbsPath) -> llvm::Expected<std::string> {
-    llvm::Optional<std::string> DirtyBuffer;
-    if (RInputs.GetDirtyBuffer &&
-        (DirtyBuffer = RInputs.GetDirtyBuffer(AbsPath)))
-      return std::move(*DirtyBuffer);
-
-    auto Content =
-        SM.getFileManager().getVirtualFileSystem().getBufferForFile(AbsPath);
-    if (!Content)
-      return error("Fail to open file {0}: {1}", AbsPath,
-                   Content.getError().message());
-    if (!*Content)
-      return error("Got no buffer for file {0}", AbsPath);
-
-    return (*Content)->getBuffer().str();
-  };
   // Try to find the tokens adjacent to the cursor position.
   auto Loc = sourceLocationInMainFile(SM, RInputs.Pos);
   if (!Loc)
@@ -765,7 +753,7 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
       RenameDecl, RInputs.MainFilePath, RInputs.NewName, *RInputs.Index,
       Opts.LimitFiles == 0 ? std::numeric_limits<size_t>::max()
                            : Opts.LimitFiles,
-      GetFileContent);
+      *RInputs.FS);
   if (!OtherFilesEdits)
     return OtherFilesEdits.takeError();
   Result.GlobalChanges = *OtherFilesEdits;
