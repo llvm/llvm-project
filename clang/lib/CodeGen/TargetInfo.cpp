@@ -5946,7 +5946,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
   Address reg_top_p =
       CGF.Builder.CreateStructGEP(VAListAddr, reg_top_index, "reg_top_p");
   reg_top = CGF.Builder.CreateLoad(reg_top_p, "reg_top");
-  Address BaseAddr(CGF.Builder.CreateInBoundsGEP(reg_top, reg_offs),
+  Address BaseAddr(CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, reg_top, reg_offs),
                    CharUnits::fromQuantity(IsFPR ? 16 : 8));
   Address RegAddr = Address::invalid();
   llvm::Type *MemTy = CGF.ConvertTypeForMem(Ty);
@@ -6044,8 +6044,8 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
     StackSize = TySize.alignTo(StackSlotSize);
 
   llvm::Value *StackSizeC = CGF.Builder.getSize(StackSize);
-  llvm::Value *NewStack =
-      CGF.Builder.CreateInBoundsGEP(OnStackPtr, StackSizeC, "new_stack");
+  llvm::Value *NewStack = CGF.Builder.CreateInBoundsGEP(
+      CGF.Int8Ty, OnStackPtr, StackSizeC, "new_stack");
 
   // Write the new value of __stack for the next call to va_arg
   CGF.Builder.CreateStore(NewStack, stack_p);
