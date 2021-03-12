@@ -164,8 +164,8 @@ getSearchPaths(unsigned optionCode, opt::InputArgList &args,
   if (args.hasArg(OPT_Z))
     return paths;
 
-  for (auto const &path : systemPaths) {
-    for (auto root : roots) {
+  for (const StringRef &path : systemPaths) {
+    for (const StringRef &root : roots) {
       SmallString<261> buffer(root);
       path::append(buffer, path);
       if (fs::is_directory(buffer))
@@ -252,7 +252,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
   MemoryBufferRef mbref = *buffer;
   InputFile *newFile = nullptr;
 
-  auto magic = identify_magic(mbref.getBuffer());
+  file_magic magic = identify_magic(mbref.getBuffer());
   switch (magic) {
   case file_magic::archive: {
     std::unique_ptr<object::Archive> file = CHECK(
@@ -368,10 +368,10 @@ void macho::parseLCLinkerOption(InputFile* f, unsigned argc, StringRef data) {
   opt::InputArgList args = table.ParseArgs(argv, missingIndex, missingCount);
   if (missingCount)
     fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
-  for (auto *arg : args.filtered(OPT_UNKNOWN))
+  for (const Arg *arg : args.filtered(OPT_UNKNOWN))
     error("unknown argument: " + arg->getAsString(args));
 
-  for (auto *arg : args) {
+  for (const Arg *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_l:
       addLibrary(arg->getValue(), false);
@@ -493,7 +493,7 @@ static void initLLVM() {
 }
 
 static void compileBitcodeFiles() {
-  auto lto = make<BitcodeCompiler>();
+  auto *lto = make<BitcodeCompiler>();
   for (InputFile *file : inputFiles)
     if (auto *bitcodeFile = dyn_cast<BitcodeFile>(file))
       lto->add(*bitcodeFile);
@@ -663,7 +663,7 @@ static void warnIfUnimplementedOption(const opt::Option &opt) {
 }
 
 static const char *getReproduceOption(opt::InputArgList &args) {
-  if (auto *arg = args.getLastArg(OPT_reproduce))
+  if (const Arg *arg = args.getLastArg(OPT_reproduce))
     return arg->getValue();
   return getenv("LLD_REPRODUCE");
 }
@@ -752,9 +752,9 @@ static void handleSymbolPatterns(opt::InputArgList &args,
                                  SymbolPatterns &symbolPatterns,
                                  unsigned singleOptionCode,
                                  unsigned listFileOptionCode) {
-  for (opt::Arg *arg : args.filtered(singleOptionCode))
+  for (const Arg *arg : args.filtered(singleOptionCode))
     symbolPatterns.insert(arg->getValue());
-  for (opt::Arg *arg : args.filtered(listFileOptionCode)) {
+  for (const Arg *arg : args.filtered(listFileOptionCode)) {
     StringRef path = arg->getValue();
     Optional<MemoryBufferRef> buffer = readFile(path);
     if (!buffer) {
@@ -819,12 +819,12 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
                                        /*file=*/nullptr,
                                        /*isWeakRef=*/false);
-  for (auto *arg : args.filtered(OPT_u)) {
+  for (const Arg *arg : args.filtered(OPT_u)) {
     config->explicitUndefineds.push_back(symtab->addUndefined(
         arg->getValue(), /*file=*/nullptr, /*isWeakRef=*/false));
   }
 
-  for (auto *arg : args.filtered(OPT_U))
+  for (const Arg *arg : args.filtered(OPT_U))
     symtab->addDynamicLookup(arg->getValue());
 
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
@@ -884,12 +884,12 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       error("invalid name for segment or section: " + s);
     return s;
   };
-  for (opt::Arg *arg : args.filtered(OPT_rename_section)) {
+  for (const Arg *arg : args.filtered(OPT_rename_section)) {
     config->sectionRenameMap[{validName(arg->getValue(0)),
                               validName(arg->getValue(1))}] = {
         validName(arg->getValue(2)), validName(arg->getValue(3))};
   }
-  for (opt::Arg *arg : args.filtered(OPT_rename_segment)) {
+  for (const Arg *arg : args.filtered(OPT_rename_segment)) {
     config->segmentRenameMap[validName(arg->getValue(0))] =
         validName(arg->getValue(1));
   }
@@ -926,8 +926,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
-  for (const auto &arg : args) {
-    const auto &opt = arg->getOption();
+  for (const Arg *arg : args) {
+    const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
     warnIfUnimplementedOption(opt);
 
@@ -964,7 +964,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   // Now that all dylibs have been loaded, search for those that should be
   // re-exported.
-  for (opt::Arg *arg : args.filtered(OPT_sub_library, OPT_sub_umbrella)) {
+  for (const Arg *arg : args.filtered(OPT_sub_library, OPT_sub_umbrella)) {
     config->hasReexports = true;
     StringRef searchName = arg->getValue();
     std::vector<StringRef> extensions;
@@ -978,11 +978,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   // Parse LTO options.
-  if (auto *arg = args.getLastArg(OPT_mcpu))
+  if (const Arg *arg = args.getLastArg(OPT_mcpu))
     parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
                      arg->getSpelling());
 
-  for (auto *arg : args.filtered(OPT_mllvm))
+  for (const Arg *arg : args.filtered(OPT_mllvm))
     parseClangOption(arg->getValue(), arg->getSpelling());
 
   compileBitcodeFiles();
@@ -998,7 +998,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   }
   // FIXME: This prints symbols that are undefined both in input files and
   // via -u flag twice.
-  for (const auto *undefined : config->explicitUndefineds) {
+  for (const Symbol *undefined : config->explicitUndefineds) {
     if (isa<Undefined>(undefined)) {
       error("undefined symbol: " + toString(*undefined) +
             "\n>>> referenced by flag -u " + toString(*undefined));
@@ -1009,7 +1009,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   createSyntheticSections();
   symtab->addDSOHandle(in.header);
 
-  for (opt::Arg *arg : args.filtered(OPT_sectcreate)) {
+  for (const Arg *arg : args.filtered(OPT_sectcreate)) {
     StringRef segName = arg->getValue(0);
     StringRef sectName = arg->getValue(1);
     StringRef fileName = arg->getValue(2);
@@ -1021,7 +1021,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   // Initialize InputSections.
   for (InputFile *file : inputFiles) {
     for (SubsectionMap &map : file->subsections) {
-      for (auto &p : map) {
+      for (const auto &p : map) {
         InputSection *isec = p.second;
         inputSections.push_back(isec);
       }
