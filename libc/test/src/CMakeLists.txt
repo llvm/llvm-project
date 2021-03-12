@@ -1,8 +1,13 @@
-add_subdirectory(assert)
 add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)
 add_subdirectory(math)
+
+if(NOT LLVM_LIBC_FULL_BUILD)
+  return()
+endif()
+
+add_subdirectory(assert)
 add_subdirectory(signal)
 add_subdirectory(stdio)
 add_subdirectory(stdlib)
