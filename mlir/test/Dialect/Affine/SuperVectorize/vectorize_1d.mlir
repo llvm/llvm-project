@@ -500,11 +500,11 @@ func @vec_rejected_unsupported_block_arg(%A : memref<512xi32>) {
 
 // -----
 
-// '%i' loop is vectorized, including the inner reduction over '%j'.
-
-func @vec_non_vecdim_reduction(%in: memref<128x256xf32>, %out: memref<256xf32>) {
+// CHECK-LABEL: @vec_rejected_unsupported_reduction
+func @vec_rejected_unsupported_reduction(%in: memref<128x256xf32>, %out: memref<256xf32>) {
  %cst = constant 0.000000e+00 : f32
  affine.for %i = 0 to 256 {
+   // CHECK-NOT: vector
    %final_red = affine.for %j = 0 to 128 iter_args(%red_iter = %cst) -> (f32) {
      %ld = affine.load %in[%j, %i] : memref<128x256xf32>
      %add = addf %red_iter, %ld : f32
@@ -515,63 +515,13 @@ func @vec_non_vecdim_reduction(%in: memref<128x256xf32>, %out: memref<256xf32>) 
  return
 }
 
-// CHECK-LABEL: @vec_non_vecdim_reduction
-// CHECK:       affine.for %{{.*}} = 0 to 256 step 128 {
-// CHECK:         %[[vzero:.*]] = constant dense<0.000000e+00> : vector<128xf32>
-// CHECK:         %[[final_red:.*]] = affine.for %{{.*}} = 0 to 128 iter_args(%[[red_iter:.*]] = %[[vzero]]) -> (vector<128xf32>) {
-// CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<128x256xf32>, vector<128xf32>
-// CHECK:           %[[add:.*]] = addf %[[red_iter]], %[[ld]] : vector<128xf32>
-// CHECK:           affine.yield %[[add]] : vector<128xf32>
-// CHECK:         }
-// CHECK:         vector.transfer_write %[[final_red]], %{{.*}} : vector<128xf32>, memref<256xf32>
-// CHECK:       }
-
 // -----
 
-// '%i' loop is vectorized, including the inner reductions over '%j'.
-
-func @vec_non_vecdim_reductions(%in0: memref<128x256xf32>, %in1: memref<128x256xi32>,
-                                %out0: memref<256xf32>, %out1: memref<256xi32>) {
- %zero = constant 0.000000e+00 : f32
- %one = constant 1 : i32
- affine.for %i = 0 to 256 {
-   %red0, %red1 = affine.for %j = 0 to 128
-     iter_args(%red_iter0 = %zero, %red_iter1 = %one) -> (f32, i32) {
-     %ld0 = affine.load %in0[%j, %i] : memref<128x256xf32>
-     %add = addf %red_iter0, %ld0 : f32
-     %ld1 = affine.load %in1[%j, %i] : memref<128x256xi32>
-     %mul = muli %red_iter1, %ld1 : i32
-     affine.yield %add, %mul : f32, i32
-   }
-   affine.store %red0, %out0[%i] : memref<256xf32>
-   affine.store %red1, %out1[%i] : memref<256xi32>
- }
- return
-}
-
-// CHECK-LABEL: @vec_non_vecdim_reductions
-// CHECK:       affine.for %{{.*}} = 0 to 256 step 128 {
-// CHECK:         %[[vzero:.*]] = constant dense<0.000000e+00> : vector<128xf32>
-// CHECK:         %[[vone:.*]] = constant dense<1> : vector<128xi32>
-// CHECK:         %[[reds:.*]]:2 = affine.for %{{.*}} = 0 to 128
-// CHECK-SAME:      iter_args(%[[red_iter0:.*]] = %[[vzero]], %[[red_iter1:.*]] = %[[vone]]) -> (vector<128xf32>, vector<128xi32>) {
-// CHECK:           %[[ld0:.*]] = vector.transfer_read %{{.*}} : memref<128x256xf32>, vector<128xf32>
-// CHECK:           %[[add:.*]] = addf %[[red_iter0]], %[[ld0]] : vector<128xf32>
-// CHECK:           %[[ld1:.*]] = vector.transfer_read %{{.*}} : memref<128x256xi32>, vector<128xi32>
-// CHECK:           %[[mul:.*]] = muli %[[red_iter1]], %[[ld1]] : vector<128xi32>
-// CHECK:           affine.yield %[[add]], %[[mul]] : vector<128xf32>, vector<128xi32>
-// CHECK:         }
-// CHECK:         vector.transfer_write %[[reds]]#0, %{{.*}} : vector<128xf32>, memref<256xf32>
-// CHECK:         vector.transfer_write %[[reds]]#1, %{{.*}} : vector<128xi32>, memref<256xi32>
-// CHECK:       }
-
-// -----
-
-// '%i' loop is vectorized, including the inner last value computation over '%j'.
-
-func @vec_no_vecdim_last_value(%in: memref<128x256xf32>, %out: memref<256xf32>) {
+// CHECK-LABEL: @vec_rejected_unsupported_last_value
+func @vec_rejected_unsupported_last_value(%in: memref<128x256xf32>, %out: memref<256xf32>) {
  %cst = constant 0.000000e+00 : f32
  affine.for %i = 0 to 256 {
+   // CHECK-NOT: vector
    %last_val = affine.for %j = 0 to 128 iter_args(%last_iter = %cst) -> (f32) {
      %ld = affine.load %in[%j, %i] : memref<128x256xf32>
      affine.yield %ld : f32
@@ -580,13 +530,3 @@ func @vec_no_vecdim_last_value(%in: memref<128x256xf32>, %out: memref<256xf32>) 
  }
  return
 }
-
-// CHECK-LABEL: @vec_no_vecdim_last_value
-// CHECK:       affine.for %{{.*}} = 0 to 256 step 128 {
-// CHECK:         %[[vzero:.*]] = constant dense<0.000000e+00> : vector<128xf32>
-// CHECK:         %[[last_val:.*]] = affine.for %{{.*}} = 0 to 128 iter_args(%[[last_iter:.*]] = %[[vzero]]) -> (vector<128xf32>) {
-// CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<128x256xf32>, vector<128xf32>
-// CHECK:           affine.yield %[[ld]] : vector<128xf32>
-// CHECK:         }
-// CHECK:         vector.transfer_write %[[last_val]], %{{.*}} : vector<128xf32>, memref<256xf32>
-// CHECK:       }
