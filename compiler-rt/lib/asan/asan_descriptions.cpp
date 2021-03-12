@@ -77,6 +77,7 @@ static bool GetShadowKind(uptr addr, ShadowKind *shadow_kind) {
   } else if (AddrIsInLowShadow(addr)) {
     *shadow_kind = kShadowKindLow;
   } else {
+    CHECK(0 && "Address is not in memory and not in shadow?");
     return false;
   }
   return true;
@@ -463,13 +464,7 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
     return;
   }
   data.kind = kAddressKindWild;
-  data.wild.addr = addr;
-  data.wild.access_size = access_size;
-}
-
-void WildAddressDescription::Print() const {
-  Printf("Address %p is a wild pointer inside of access range of size %p.\n",
-         addr, access_size);
+  addr = 0;
 }
 
 void PrintAddressDescription(uptr addr, uptr access_size,
