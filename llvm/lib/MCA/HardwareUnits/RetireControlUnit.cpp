@@ -21,8 +21,8 @@ namespace mca {
 
 RetireControlUnit::RetireControlUnit(const MCSchedModel &SM)
     : NextAvailableSlotIdx(0), CurrentInstructionSlotIdx(0),
-      NumROBEntries(SM.MicroOpBufferSize),
-      AvailableEntries(SM.MicroOpBufferSize), MaxRetirePerCycle(0) {
+      AvailableEntries(SM.isOutOfOrder() ? SM.MicroOpBufferSize : 0),
+      MaxRetirePerCycle(0) {
   // Check if the scheduling model provides extra information about the machine
   // processor. If so, then use that information to set the reorder buffer size
   // and the maximum number of instructions retired per cycle.
@@ -33,8 +33,7 @@ RetireControlUnit::RetireControlUnit(const MCSchedModel &SM)
     MaxRetirePerCycle = EPI.MaxRetirePerCycle;
   }
   NumROBEntries = AvailableEntries;
-  bool IsOutOfOrder = SM.MicroOpBufferSize;
-  if (!IsOutOfOrder && !NumROBEntries)
+  if (!SM.isOutOfOrder() && !NumROBEntries)
     return;
   assert(NumROBEntries && "Invalid reorder buffer size!");
   Queue.resize(2 * NumROBEntries);
