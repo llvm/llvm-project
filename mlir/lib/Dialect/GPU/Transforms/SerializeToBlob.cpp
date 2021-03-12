@@ -27,13 +27,7 @@ gpu::SerializeToBlobPass::SerializeToBlobPass(TypeID passID)
     : OperationPass<gpu::GPUModuleOp>(passID) {}
 
 gpu::SerializeToBlobPass::SerializeToBlobPass(const SerializeToBlobPass &other)
-    : OperationPass<gpu::GPUModuleOp>(other) {
-  // Pass::Option has no copy constructor, copy them manually.
-  triple = other.triple;
-  chip = other.chip;
-  features = other.features;
-  gpuBinaryAnnotation = other.gpuBinaryAnnotation;
-}
+    : OperationPass<gpu::GPUModuleOp>(other) {}
 
 static std::string translateToISA(llvm::Module &llvmModule,
                                   llvm::TargetMachine &targetMachine) {
