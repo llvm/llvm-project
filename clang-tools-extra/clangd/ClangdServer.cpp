@@ -573,8 +573,9 @@ void ClangdServer::enumerateTweaks(
   static constexpr trace::Metric TweakAvailable(
       "tweak_available", trace::Metric::Counter, "tweak_id");
   auto Action = [File = File.str(), Sel, CB = std::move(CB),
-                 Filter =
-                     std::move(Filter)](Expected<InputsAndAST> InpAST) mutable {
+                 Filter = std::move(Filter),
+                 FeatureModules(this->FeatureModules)](
+                    Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
     auto Selections = tweakSelection(Sel, *InpAST);
@@ -587,7 +588,7 @@ void ClangdServer::enumerateTweaks(
       return Filter(T) && !PreparedTweaks.count(T.id());
     };
     for (const auto &Sel : *Selections) {
-      for (auto &T : prepareTweaks(*Sel, DeduplicatingFilter)) {
+      for (auto &T : prepareTweaks(*Sel, DeduplicatingFilter, FeatureModules)) {
         Res.push_back({T->id(), T->title(), T->kind()});
         PreparedTweaks.insert(T->id());
         TweakAvailable.record(1, T->id());
@@ -622,7 +623,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
     // Try each selection, take the first one that prepare()s.
     // If they all fail, Effect will hold get the last error.
     for (const auto &Selection : *Selections) {
-      auto T = prepareTweak(TweakID, *Selection);
+      auto T = prepareTweak(TweakID, *Selection, FeatureModules);
       if (T) {
         Effect = (*T)->apply(*Selection);
         break;

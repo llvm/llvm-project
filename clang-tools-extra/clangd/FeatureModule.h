@@ -25,6 +25,7 @@ class LSPBinder;
 class SymbolIndex;
 class ThreadsafeFS;
 class TUScheduler;
+class Tweak;
 
 /// A FeatureModule contributes a vertical feature to clangd.
 ///
@@ -90,6 +91,10 @@ public:
   /// FeatureModules should go idle quickly if stop() has been called.
   /// Called by the server when shutting down, and also by tests.
   virtual bool blockUntilIdle(Deadline) { return true; }
+
+  /// Tweaks implemented by this module. Can be called asynchronously when
+  /// enumerating or applying code actions.
+  virtual void contributeTweaks(std::vector<std::unique_ptr<Tweak>> &Out) {}
 
 protected:
   /// Accessors for modules to access shared server facilities they depend on.
