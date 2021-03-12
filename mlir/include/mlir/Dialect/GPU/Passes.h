@@ -13,7 +13,14 @@
 #ifndef MLIR_DIALECT_GPU_PASSES_H_
 #define MLIR_DIALECT_GPU_PASSES_H_
 
+#include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Pass/Pass.h"
+
+namespace llvm {
+class TargetMachine;
+class LLVMContext;
+class Module;
+} // namespace llvm
 
 namespace mlir {
 /// Replaces `gpu.launch` with `gpu.launch_func` by moving the region into
@@ -32,6 +39,45 @@ inline void populateGpuRewritePatterns(MLIRContext *context,
                                        OwningRewritePatternList &patterns) {
   populateGpuAllReducePatterns(context, patterns);
 }
+
+namespace gpu {
+/// Returns the default annotation name for GPU binary blobs.
+std::string getDefaultGpuBinaryAnnotation();
+
+/// Base pass class to serialize kernel functions through LLVM into
+/// user-specified IR and add the resulting blob as module attribute.
+class SerializeToBlobPass : public OperationPass<gpu::GPUModuleOp> {
+public:
+  SerializeToBlobPass(TypeID passID);
+  SerializeToBlobPass(const SerializeToBlobPass &other);
+
+  void runOnOperation() final;
+
+private:
+  // Creates the LLVM target machine to generate the ISA.
+  std::unique_ptr<llvm::TargetMachine> createTargetMachine();
+
+  // Translates the 'getOperation()' result to an LLVM module.
+  virtual std::unique_ptr<llvm::Module>
+  translateToLLVMIR(llvm::LLVMContext &llvmContext) = 0;
+
+  // Serializes the target ISA to binary form.
+  virtual std::unique_ptr<std::vector<char>>
+  serializeISA(const std::string &isa) = 0;
+
+protected:
+  Option<std::string> triple{*this, "triple",
+                             ::llvm::cl::desc("Target triple")};
+  Option<std::string> chip{*this, "chip",
+                           ::llvm::cl::desc("Target architecture")};
+  Option<std::string> features{*this, "features",
+                               ::llvm::cl::desc("Target features")};
+  Option<std::string> gpuBinaryAnnotation{
+      *this, "gpu-binary-annotation",
+      llvm::cl::desc("Annotation attribute string for GPU binary"),
+      llvm::cl::init(getDefaultGpuBinaryAnnotation())};
+};
+} // namespace gpu
 
 //===----------------------------------------------------------------------===//
 // Registration
