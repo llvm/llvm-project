@@ -827,8 +827,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     symtab->addDynamicLookup(arg->getValue());
 
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
-  config->installName =
-      args.getLastArgValue(OPT_install_name, config->outputFile);
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
       args.hasArg(OPT_headerpad_max_install_names);
@@ -849,6 +847,15 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->forceLoadObjC = args.hasArg(OPT_ObjC);
   config->demangle = args.hasArg(OPT_demangle);
   config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
+
+  if (const Arg *arg = args.getLastArg(OPT_install_name)) {
+    if (config->outputType != MH_DYLIB)
+      warn(arg->getAsString(args) + ": ignored, only has effect with -dylib");
+    else
+      config->installName = arg->getValue();
+  } else if (config->outputType == MH_DYLIB) {
+    config->installName = config->outputFile;
+  }
 
   if (args.hasArg(OPT_mark_dead_strippable_dylib)) {
     if (config->outputType != MH_DYLIB)
