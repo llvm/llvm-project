@@ -199,6 +199,8 @@ SampleContextTracker::getCalleeContextSamplesFor(const CallBase &Inst,
   if (!DIL)
     return nullptr;
 
+  CalleeName = FunctionSamples::getCanonicalFnName(CalleeName);
+
   // For indirect call, CalleeName will be empty, in which case the context
   // profile for callee with largest total samples will be returned.
   ContextTrieNode *CalleeContext = getCalleeContextFor(DIL, CalleeName);

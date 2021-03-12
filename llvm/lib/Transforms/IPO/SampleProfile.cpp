@@ -608,7 +608,7 @@ SampleProfileLoader::findCalleeFunctionSamples(const CallBase &Inst) const {
 
   StringRef CalleeName;
   if (Function *Callee = Inst.getCalledFunction())
-    CalleeName = FunctionSamples::getCanonicalFnName(*Callee);
+    CalleeName = Callee->getName();
 
   if (ProfileIsCS)
     return ContextTracker->getCalleeContextSamplesFor(Inst, CalleeName);
@@ -994,7 +994,7 @@ bool SampleProfileLoader::inlineHotFunctions(
         for (const auto *FS : findIndirectCallFunctionSamples(*I, Sum)) {
           uint64_t SumOrigin = Sum;
           if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
-            FS->findInlinedFunctions(InlinedGUIDs, F.getParent(),
+            FS->findInlinedFunctions(InlinedGUIDs, F.getParent(), SymbolMap,
                                      PSI->getOrCompHotCountThreshold());
             continue;
           }
@@ -1015,7 +1015,8 @@ bool SampleProfileLoader::inlineHotFunctions(
         }
       } else if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
         findCalleeFunctionSamples(*I)->findInlinedFunctions(
-            InlinedGUIDs, F.getParent(), PSI->getOrCompHotCountThreshold());
+            InlinedGUIDs, F.getParent(), SymbolMap,
+            PSI->getOrCompHotCountThreshold());
       }
     }
     Changed |= LocalChanged;
@@ -1266,7 +1267,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
       for (const auto *FS : CalleeSamples) {
         // TODO: Consider disable pre-lTO ICP for MonoLTO as well
         if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
-          FS->findInlinedFunctions(InlinedGUIDs, F.getParent(),
+          FS->findInlinedFunctions(InlinedGUIDs, F.getParent(), SymbolMap,
                                    PSI->getOrCompHotCountThreshold());
           continue;
         }
@@ -1313,7 +1314,8 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
       }
     } else if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
       findCalleeFunctionSamples(*I)->findInlinedFunctions(
-          InlinedGUIDs, F.getParent(), PSI->getOrCompHotCountThreshold());
+          InlinedGUIDs, F.getParent(), SymbolMap,
+          PSI->getOrCompHotCountThreshold());
     }
   }
 
@@ -1679,7 +1681,9 @@ bool SampleProfileLoader::doInitialization(Module &M,
   }
   Reader = std::move(ReaderOrErr.get());
   Reader->setSkipFlatProf(LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink);
-  Reader->collectFuncsFrom(M);
+  // set module before reading the profile so reader may be able to only
+  // read the function profiles which are used by the current module.
+  Reader->setModule(&M);
   if (std::error_code EC = Reader->read()) {
     std::string Msg = "profile reading failed: " + EC.message();
     Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));
@@ -1763,12 +1767,11 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   for (const auto &N_F : M.getValueSymbolTable()) {
     StringRef OrigName = N_F.getKey();
     Function *F = dyn_cast<Function>(N_F.getValue());
-    if (F == nullptr)
+    if (F == nullptr || OrigName.empty())
       continue;
     SymbolMap[OrigName] = F;
-    auto pos = OrigName.find('.');
-    if (pos != StringRef::npos) {
-      StringRef NewName = OrigName.substr(0, pos);
+    StringRef NewName = FunctionSamples::getCanonicalFnName(*F);
+    if (OrigName != NewName && !NewName.empty()) {
       auto r = SymbolMap.insert(std::make_pair(NewName, F));
       // Failiing to insert means there is already an entry in SymbolMap,
       // thus there are multiple functions that are mapped to the same
@@ -1781,12 +1784,13 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
     // Insert the remapped names into SymbolMap.
     if (Remapper) {
       if (auto MapName = Remapper->lookUpNameInProfile(OrigName)) {
-        if (*MapName == OrigName)
-          continue;
-        SymbolMap.insert(std::make_pair(*MapName, F));
+        if (*MapName != OrigName && !MapName->empty())
+          SymbolMap.insert(std::make_pair(*MapName, F));
       }
     }
   }
+  assert(SymbolMap.count(StringRef()) == 0 &&
+         "No empty StringRef should be added in SymbolMap");
 
   bool retval = false;
   for (auto F : buildFunctionOrder(M, CG)) {
