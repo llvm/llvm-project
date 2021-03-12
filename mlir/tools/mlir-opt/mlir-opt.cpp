@@ -66,6 +66,7 @@ void registerTestConstantFold();
 void registerTestConvVectorization();
 void registerTestGpuSerializeToCubinPass();
 void registerTestConvertGPUKernelToHsacoPass();
+void registerTestDataLayoutQuery();
 void registerTestDecomposeCallGraphTypes();
 void registerTestDialect(DialectRegistry &);
 void registerTestDominancePass();
@@ -143,6 +144,7 @@ void registerTestPasses() {
 #endif
   test::registerTestConvVectorization();
   test::registerTestDecomposeCallGraphTypes();
+  test::registerTestDataLayoutQuery();
   test::registerTestDominancePass();
   test::registerTestDynamicPipelinePass();
   test::registerTestExpandTanhPass();
