@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/MyCFG/MyCFG.h"
-#include "TopoSorter.cpp"
+#include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/Pass.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/CFGPrinter.h"
+#include "llvm/Analysis/HeatUtils.h"
 
 using namespace llvm;
-
-TopoSorter topo;
-
 PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
   outs() << "===============================================\n";
   outs() << "Function: " << F.getName() << "\n";
@@ -32,8 +34,13 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
     }
   }
 
-  outs() << "+++++++++++++++++++++++++++++++++++++++\n";
-  topo.runToposort(F);
+  outs() << "Trying GrapTraits #######################\n";
+  auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+  auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
+
+  DOTFuncInfo CFGInfo(&F, BFI, BPI, getMaxFreq(F, BFI));
+  GraphHelper<DOTFuncInfo*>::wg(outs(), &CFGInfo);
 
   return PreservedAnalyses::all();
 }
+
