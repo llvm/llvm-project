@@ -1765,8 +1765,7 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
 
   if (AttrOnCallSite) {
     // Attributes that should go on the call site only.
-    if (!CodeGenOpts.SimplifyLibCalls ||
-        CodeGenOpts.isNoBuiltinFunc(Name.data()))
+    if (!CodeGenOpts.SimplifyLibCalls || LangOpts.isNoBuiltinFunc(Name))
       FuncAttrs.addAttribute(llvm::Attribute::NoBuiltin);
     if (!CodeGenOpts.TrapFuncName.empty())
       FuncAttrs.addAttribute("trap-func-name", CodeGenOpts.TrapFuncName);
