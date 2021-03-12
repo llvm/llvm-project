@@ -30,6 +30,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 
 #include <chrono>
+#include <grpc++/ext/proto_server_reflection_plugin.h>
 #include <grpc++/grpc++.h>
 #include <grpc++/health_check_service_interface.h>
 #include <memory>
@@ -313,6 +314,7 @@ void runServerAndWait(clangd::SymbolIndex &Index, llvm::StringRef ServerAddress,
   RemoteIndexServer Service(Index, IndexRoot);
 
   grpc::EnableDefaultHealthCheckService(true);
+  grpc::reflection::InitProtoReflectionServerBuilderPlugin();
   grpc::ServerBuilder Builder;
   Builder.AddListeningPort(ServerAddress.str(),
                            grpc::InsecureServerCredentials());
