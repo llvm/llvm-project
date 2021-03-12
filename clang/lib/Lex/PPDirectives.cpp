@@ -441,9 +441,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
     CurLexer->Lex(Tok);
 
     if (Tok.is(tok::code_completion)) {
+      setCodeCompletionReached();
       if (CodeComplete)
         CodeComplete->CodeCompleteInConditionalExclusion();
-      setCodeCompletionReached();
       continue;
     }
 
@@ -966,10 +966,10 @@ void Preprocessor::HandleDirective(Token &Result) {
   case tok::eod:
     return;   // null directive.
   case tok::code_completion:
+    setCodeCompletionReached();
     if (CodeComplete)
       CodeComplete->CodeCompleteDirective(
                                     CurPPLexer->getConditionalStackDepth() > 0);
-    setCodeCompletionReached();
     return;
   case tok::numeric_constant:  // # 7  GNU line marker directive.
     if (getLangOpts().AsmPreprocessor)
