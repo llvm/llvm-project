@@ -374,6 +374,14 @@ concept movable =
   assignable_from<_Tp&, _Tp> &&
   swappable<_Tp>;
 
+template<class _Tp>
+concept copyable =
+  copy_constructible<_Tp> &&
+  movable<_Tp> &&
+  assignable_from<_Tp&, _Tp&> &&
+  assignable_from<_Tp&, const _Tp&> &&
+  assignable_from<_Tp&, const _Tp>;
+
 // [concept.invocable]
 template<class _Fn, class... _Args>
 concept invocable = requires(_Fn&& __fn, _Args&&... __args) {
