@@ -18,6 +18,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
@@ -463,26 +464,38 @@ Error DebugObjectManagerPlugin::notifyEmitted(
   DebugObject *UnownedDebugObj = It->second.release();
   PendingObjs.erase(It);
 
+  // During finalization the debug object is registered with the target.
+  // Materialization must wait for this process to finish. Otherwise we might
+  // start running code before the debugger processed the corresponding debug
+  // info.
+  std::promise<MSVCPError> FinalizePromise;
+  std::future<MSVCPError> FinalizeErr = FinalizePromise.get_future();
+
   // FIXME: We released ownership of the DebugObject, so we can easily capture
   // the raw pointer in the continuation function, which re-owns it immediately.
   if (UnownedDebugObj)
     UnownedDebugObj->finalizeAsync(
-        [this, Key, UnownedDebugObj](Expected<sys::MemoryBlock> TargetMem) {
+        [this, Key, UnownedDebugObj,
+         &FinalizePromise](Expected<sys::MemoryBlock> TargetMem) {
           std::unique_ptr<DebugObject> ReownedDebugObj(UnownedDebugObj);
           if (!TargetMem) {
-            ES.reportError(TargetMem.takeError());
+            FinalizePromise.set_value(TargetMem.takeError());
             return;
           }
           if (Error Err = Target->registerDebugObject(*TargetMem)) {
-            ES.reportError(std::move(Err));
+            FinalizePromise.set_value(std::move(Err));
             return;
           }
+
+          // Registration successful, notifyEmitted() can return now and
+          // materialization can finish.
+          FinalizePromise.set_value(Error::success());
 
           std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
           RegisteredObjs[Key].push_back(std::move(ReownedDebugObj));
         });
 
-  return Error::success();
+  return FinalizeErr.get();
 }
 
 Error DebugObjectManagerPlugin::notifyFailed(
