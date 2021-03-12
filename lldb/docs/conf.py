@@ -15,16 +15,21 @@ from __future__ import print_function
 import sys, os, re
 from datetime import date
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
+building_man_page = tags.has('builder-man')
 
-# Add the current directory that contains the mock _lldb native module which
-# is imported by the `lldb` module.
-sys.path.insert(0, os.path.abspath("."))
-# Add the build directory that contains the `lldb` module. LLDB_SWIG_MODULE is
-# set by CMake.
-sys.path.insert(0, os.getenv("LLDB_SWIG_MODULE"))
+# For the website we need to setup the path to the generated LLDB module that
+# we can generate documentation for its API.
+if not building_man_page:
+    # If extensions (or modules to document with autodoc) are in another directory,
+    # add these directories to sys.path here. If the directory is relative to the
+    # documentation root, use os.path.abspath to make it absolute, like shown here.
+
+    # Add the current directory that contains the mock _lldb native module which
+    # is imported by the `lldb` module.
+    sys.path.insert(0, os.path.abspath("."))
+    # Add the build directory that contains the `lldb` module. LLDB_SWIG_MODULE is
+    # set by CMake.
+    sys.path.insert(0, os.getenv("LLDB_SWIG_MODULE"))
 
 # Put the generated Python API documentation in the 'python_api' folder. This
 # also defines the URL these files will have in the generated website.
@@ -37,8 +42,12 @@ automodapi_toctreedirnm = 'python_api'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.todo', 'sphinx.ext.mathjax', 'sphinx.ext.intersphinx',
-              'sphinx_automodapi.automodapi']
+extensions = ['sphinx.ext.todo', 'sphinx.ext.mathjax', 'sphinx.ext.intersphinx']
+
+# Unless we only generate the basic manpage we need the plugin for generating
+# the Python API documentation.
+if not building_man_page:
+    extensions.append('sphinx_automodapi.automodapi')
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -52,7 +61,7 @@ try:
   import recommonmark
 except ImportError:
   # manpages do not use any .md sources
-  if not tags.has('builder-man'):
+  if not building_man_page:
     raise
 else:
   import sphinx
@@ -97,7 +106,12 @@ copyright = u'2007-%d, The LLDB Team' % date.today().year
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = ['_build', 'analyzer']
-
+# Ignore the generated Python documentation that is only used on the website.
+# Without this we will get a lot of warnings about doc pages that aren't
+# included by any doctree (as the manpage ignores those pages but they are
+# potentially still around from a previous website generation).
+if building_man_page:
+    exclude_patterns.append(automodapi_toctreedirnm)
 # Use the recommended 'any' rule so that referencing SB API classes is possible
 # by just writing `SBData`.
 default_role = 'any'
