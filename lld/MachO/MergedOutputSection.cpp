@@ -54,19 +54,18 @@ void MergedOutputSection::writeTo(uint8_t *buf) const {
 // are actually merged. The logic presented here was written without
 // any form of informed research.
 void MergedOutputSection::mergeFlags(uint32_t inputFlags) {
-  uint8_t sectionFlag = MachO::SECTION_TYPE & inputFlags;
-  if (sectionFlag != (MachO::SECTION_TYPE & flags))
+  uint8_t sectionFlag = SECTION_TYPE & inputFlags;
+  if (sectionFlag != (SECTION_TYPE & flags))
     error("Cannot add merge section; inconsistent type flags " +
           Twine(sectionFlag));
 
-  uint32_t inconsistentFlags =
-      MachO::S_ATTR_DEBUG | MachO::S_ATTR_STRIP_STATIC_SYMS |
-      MachO::S_ATTR_NO_DEAD_STRIP | MachO::S_ATTR_LIVE_SUPPORT;
+  uint32_t inconsistentFlags = S_ATTR_DEBUG | S_ATTR_STRIP_STATIC_SYMS |
+                               S_ATTR_NO_DEAD_STRIP | S_ATTR_LIVE_SUPPORT;
   if ((inputFlags ^ flags) & inconsistentFlags)
     error("Cannot add merge section; cannot merge inconsistent flags");
 
   // Negate pure instruction presence if any section isn't pure.
-  uint32_t pureMask = ~MachO::S_ATTR_PURE_INSTRUCTIONS | (inputFlags & flags);
+  uint32_t pureMask = ~S_ATTR_PURE_INSTRUCTIONS | (inputFlags & flags);
 
   // Merge the rest
   flags |= inputFlags;

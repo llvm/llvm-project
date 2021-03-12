@@ -67,6 +67,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/TextAPI/MachO/Architecture.h"
+#include "llvm/TextAPI/MachO/InterfaceFile.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -111,9 +112,9 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
 
   // If this is a regular non-fat file, return it.
   const char *buf = mbref.getBufferStart();
-  auto *hdr = reinterpret_cast<const MachO::fat_header *>(buf);
+  const auto *hdr = reinterpret_cast<const fat_header *>(buf);
   if (mbref.getBufferSize() < sizeof(uint32_t) ||
-      read32be(&hdr->magic) != MachO::FAT_MAGIC) {
+      read32be(&hdr->magic) != FAT_MAGIC) {
     if (tar)
       tar->append(relativeToRoot(path), mbref.getBuffer());
     return mbref;
@@ -123,7 +124,7 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   // multiple real files for different CPU ISAs. Here, we search for a
   // file that matches with the current link target and returns it as
   // a MemoryBufferRef.
-  auto *arch = reinterpret_cast<const MachO::fat_arch *>(buf + sizeof(*hdr));
+  const auto *arch = reinterpret_cast<const fat_arch *>(buf + sizeof(*hdr));
 
   for (uint32_t i = 0, n = read32be(&hdr->nfat_arch); i < n; ++i) {
     if (reinterpret_cast<const char *>(arch + i + 1) >
@@ -148,6 +149,9 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   error("unable to find matching architecture in " + path);
   return None;
 }
+
+InputFile::InputFile(Kind kind, const InterfaceFile &interface)
+    : id(idCount++), fileKind(kind), name(saver.save(interface.getPath())) {}
 
 void ObjFile::parseSections(ArrayRef<section_64> sections) {
   subsections.reserve(sections.size());
@@ -500,8 +504,7 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const mach_header_64 *>(mb.getBufferStart());
 
-  MachO::Architecture arch =
-      MachO::getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
+  Architecture arch = getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
   if (arch != config->target.Arch) {
     error(toString(this) + " has architecture " + getArchitectureName(arch) +
           " which is incompatible with target architecture " +

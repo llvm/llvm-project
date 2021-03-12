@@ -552,7 +552,7 @@ void Writer::createLoadCommands() {
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
       if (dylibFile->isBundleLoader) {
-        dylibFile->ordinal = MachO::BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE;
+        dylibFile->ordinal = BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE;
         // Shortcut since bundle-loader does not re-export the symbols.
 
         dylibFile->reexport = false;
