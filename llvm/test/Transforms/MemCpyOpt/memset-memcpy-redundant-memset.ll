@@ -261,7 +261,6 @@ define void @test_same_dynamic_size(i8* noalias %src, i8* noalias %dst, i64 %siz
 define void @test_must_alias_same_size(i8* noalias %src, i8* noalias %dst, i8 %c) {
 ; CHECK-LABEL: @test_must_alias_same_size(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, i8* [[DST:%.*]], i64 16
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[GEP1]], i8 [[C:%.*]], i64 16, i1 false)
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, i8* [[DST]], i64 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[GEP2]], i8* [[SRC:%.*]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
@@ -276,9 +275,13 @@ define void @test_must_alias_same_size(i8* noalias %src, i8* noalias %dst, i8 %c
 define void @test_must_alias_different_size(i8* noalias %src, i64 %src_size, i8* noalias %dst, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test_must_alias_different_size(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, i8* [[DST:%.*]], i64 16
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[GEP1]], i8 [[C:%.*]], i64 [[DST_SIZE:%.*]], i1 false)
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, i8* [[DST]], i64 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[GEP2]], i8* [[SRC:%.*]], i64 [[SRC_SIZE:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, i8* [[GEP2]], i64 [[SRC_SIZE]]
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP4]], i8 [[C:%.*]], i64 [[TMP3]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[GEP2]], i8* [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %gep1 = getelementptr i8, i8* %dst, i64 16
