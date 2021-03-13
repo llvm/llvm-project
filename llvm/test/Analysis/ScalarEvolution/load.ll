@@ -82,7 +82,7 @@ define i32 @test2() nounwind uwtable readonly {
 ; CHECK-NEXT:    %next = getelementptr inbounds %struct.ListNode, %struct.ListNode* %n.01, i64 0, i32 0
 ; CHECK-NEXT:    --> %n.01 U: full-set S: full-set Exits: @node1 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %1 = load %struct.ListNode*, %struct.ListNode** %next, align 8
-; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: null LoopDispositions: { %for.body: Variant }
+; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: 0 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test2
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 4

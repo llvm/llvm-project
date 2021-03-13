@@ -1065,23 +1065,15 @@ const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty,
     return getTruncateOrZeroExtend(S, Ty);
 
   // If not, is this expression something we can't reduce any further?
-  if (auto *U = dyn_cast<SCEVUnknown>(Op)) {
+  if (isa<SCEVUnknown>(Op)) {
+    // Create an explicit cast node.
+    // We can reuse the existing insert position since if we get here,
+    // we won't have made any changes which would invalidate it.
     Type *IntPtrTy = getDataLayout().getIntPtrType(Op->getType());
     assert(getDataLayout().getTypeSizeInBits(getEffectiveSCEVType(
                Op->getType())) == getDataLayout().getTypeSizeInBits(IntPtrTy) &&
            "We can only model ptrtoint if SCEV's effective (integer) type is "
            "sufficiently wide to represent all possible pointer values.");
-
-    // Perform some basic constant folding. If the operand of the ptr2int cast
-    // is a null pointer, don't create a ptr2int SCEV expression (that will be
-    // left as-is), but produce a zero constant.
-    // NOTE: We could handle a more general case, but lack motivational cases.
-    if (isa<ConstantPointerNull>(U->getValue()))
-      return getZero(Ty);
-
-    // Create an explicit cast node.
-    // We can reuse the existing insert position since if we get here,
-    // we won't have made any changes which would invalidate it.
     SCEV *S = new (SCEVAllocator)
         SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), Op, IntPtrTy);
     UniqueSCEVs.InsertNode(S, IP);
@@ -6374,6 +6366,9 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       return getUnknown(UndefValue::get(V->getType()));
   } else if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
     return getConstant(CI);
+  else if (isa<ConstantPointerNull>(V))
+    // FIXME: we shouldn't special-case null pointer constant.
+    return getZero(V->getType());
   else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V))
     return GA->isInterposable() ? getUnknown(V) : getSCEV(GA->getAliasee());
   else if (!isa<ConstantExpr>(V))
@@ -6713,6 +6708,11 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     Value *Ptr = U->getOperand(0);
     const SCEV *Op = getSCEV(Ptr);
     Type *DstIntTy = U->getType();
+    // SCEV doesn't have constant pointer expression type, but it supports
+    // nullptr constant (and only that one), which is modelled in SCEV as a
+    // zero integer constant. So just skip the ptrtoint cast for constants.
+    if (isa<SCEVConstant>(Op))
+      return getTruncateOrZeroExtend(Op, DstIntTy);
     Type *PtrTy = Ptr->getType();
     Type *IntPtrTy = getDataLayout().getIntPtrType(PtrTy);
     // But only if effective SCEV (integer) type is wide enough to represent

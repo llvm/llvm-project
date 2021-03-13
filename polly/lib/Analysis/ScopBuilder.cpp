@@ -1761,11 +1761,6 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, ScopStmt *Stmt) {
   if (DestAccFunc->isZero())
     return true;
 
-  if (auto *U = dyn_cast<SCEVUnknown>(DestAccFunc)) {
-    if (isa<ConstantPointerNull>(U->getValue()))
-      return true;
-  }
-
   auto *DestPtrSCEV = dyn_cast<SCEVUnknown>(SE.getPointerBase(DestAccFunc));
   assert(DestPtrSCEV);
   DestAccFunc = SE.getMinusSCEV(DestAccFunc, DestPtrSCEV);
@@ -1841,11 +1836,6 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
       auto *ArgSCEV = SE.getSCEVAtScope(Arg, L);
       if (ArgSCEV->isZero())
         continue;
-
-      if (auto *U = dyn_cast<SCEVUnknown>(ArgSCEV)) {
-        if (isa<ConstantPointerNull>(U->getValue()))
-          return true;
-      }
 
       auto *ArgBasePtr = cast<SCEVUnknown>(SE.getPointerBase(ArgSCEV));
       addArrayAccess(Stmt, Inst, AccType, ArgBasePtr->getValue(),

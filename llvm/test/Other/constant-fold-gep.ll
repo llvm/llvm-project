@@ -192,9 +192,9 @@
 ; SCEV:   %t = bitcast i1* getelementptr (i1, i1* inttoptr (i32 1 to i1*), i32 -2) to i1*
 ; SCEV:   -->  (-2 + inttoptr (i32 1 to i1*))
 ; SCEV: Classifying expressions for: @hoo8
-; SCEV:   -->  (-1 + null)<nuw><nsw> U: [-1,0) S: [-1,0)
+; SCEV:   -->  -1
 ; SCEV: Classifying expressions for: @hoo1
-; SCEV:   -->  (-1 + null)<nuw><nsw> U: [-1,0) S: [-1,0)
+; SCEV:   -->  -1
 
 define i8* @goo8() nounwind {
   %t = bitcast i8* getelementptr (i8, i8* inttoptr (i32 1 to i8*), i32 -1) to i8*
@@ -408,13 +408,13 @@ define i64 @fi() nounwind {
 ; TO: }
 ; SCEV: Classifying expressions for: @fM
 ; SCEV:   %t = bitcast i64* getelementptr (i64, i64* null, i32 1) to i64*
-; SCEV:    --> (8 + null)<nuw><nsw> U: [8,9) S: [8,9)
+; SCEV:    --> 8
 ; SCEV: Classifying expressions for: @fN
 ; SCEV:   %t = bitcast i64* getelementptr ({ i64, i64 }, { i64, i64 }* null, i32 0, i32 1) to i64*
-; SCEV:   --> (8 + null)<nuw><nsw> U: [8,9) S: [8,9)
+; SCEV:   --> 8
 ; SCEV: Classifying expressions for: @fO
 ; SCEV:   %t = bitcast i64* getelementptr ([2 x i64], [2 x i64]* null, i32 0, i32 1) to i64*
-; SCEV:   --> (8 + null)<nuw><nsw> U: [8,9) S: [8,9)
+; SCEV:   --> 8
 
 define i64* @fM() nounwind {
   %t = bitcast i64* getelementptr (i64, i64* null, i32 1) to i64*

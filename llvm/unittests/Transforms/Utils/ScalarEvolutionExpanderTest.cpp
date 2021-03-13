@@ -947,31 +947,24 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandNonIntegralPtrWithNullBase) {
     Value *V = Exp.expandCodeFor(PtrPlus1, I.getType(), &I);
     I.replaceAllUsesWith(V);
 
-    // Check that the expander created:
-    // define float addrspace(1)* @test(i64 %off) {
-    //   %scevgep = getelementptr float, float addrspace(1)* null, i64 %off
-    //   %scevgep1 = bitcast float addrspace(1)* %scevgep to i8 addrspace(1)*
-    //   %uglygep = getelementptr i8, i8 addrspace(1)* %scevgep1, i64 1
-    //   %uglygep2 = bitcast i8 addrspace(1)* %uglygep to float addrspace(1)*
-    //   %ptr = getelementptr inbounds float, float addrspace(1)* null, i64 %off
-    //   ret float addrspace(1)* %uglygep2
-    // }
-
+    // Check the expander created bitcast (gep i8* null, %offset).
     auto *Cast = dyn_cast<BitCastInst>(V);
     EXPECT_TRUE(Cast);
     EXPECT_EQ(Cast->getType(), I.getType());
     auto *GEP = dyn_cast<GetElementPtrInst>(Cast->getOperand(0));
     EXPECT_TRUE(GEP);
-    EXPECT_TRUE(match(GEP->getOperand(1), m_SpecificInt(1)));
-    auto *Cast1 = dyn_cast<BitCastInst>(GEP->getPointerOperand());
-    EXPECT_TRUE(Cast1);
-    auto *GEP1 = dyn_cast<GetElementPtrInst>(Cast1->getOperand(0));
-    EXPECT_TRUE(GEP1);
-    EXPECT_TRUE(cast<Constant>(GEP1->getPointerOperand())->isNullValue());
-    EXPECT_EQ(GEP1->getOperand(1), &*F.arg_begin());
-    EXPECT_EQ(cast<PointerType>(GEP1->getPointerOperand()->getType())
+    EXPECT_TRUE(cast<Constant>(GEP->getPointerOperand())->isNullValue());
+    EXPECT_EQ(cast<PointerType>(GEP->getPointerOperand()->getType())
                   ->getAddressSpace(),
               cast<PointerType>(I.getType())->getAddressSpace());
+
+    // Check the expander created the expected index computation: add (shl
+    // %offset, 2), 1.
+    Value *Arg;
+    EXPECT_TRUE(
+        match(GEP->getOperand(1),
+              m_Add(m_Shl(m_Value(Arg), m_SpecificInt(2)), m_SpecificInt(1))));
+    EXPECT_EQ(Arg, &*F.arg_begin());
     EXPECT_FALSE(verifyFunction(F, &errs()));
   });
 }
