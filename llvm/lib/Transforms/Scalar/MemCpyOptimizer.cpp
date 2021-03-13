@@ -1253,6 +1253,18 @@ static bool hasUndefContentsMSSA(MemorySSA *MSSA, AliasAnalysis *AA, Value *V,
       if (AA->isMustAlias(V, II->getArgOperand(1)) &&
           LTSize->getZExtValue() >= Size->getZExtValue())
         return true;
+
+      // If the lifetime.start covers a whole alloca (as it almost always does)
+      // and we're querying a pointer based on that alloca, then we know the
+      // memory is definitely undef, regardless of how exactly we alias. The
+      // size also doesn't matter, as an out-of-bounds access would be UB.
+      AllocaInst *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V));
+      if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
+        DataLayout DL = Alloca->getModule()->getDataLayout();
+        if (Optional<TypeSize> AllocaSize = Alloca->getAllocationSizeInBits(DL))
+          if (*AllocaSize == LTSize->getValue() * 8)
+            return true;
+      }
     }
   }
 
