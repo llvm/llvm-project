@@ -14,6 +14,7 @@ target_link_libraries(bbc PRIVATE
   ${dialect_libs}
   MLIRLLVMIR
   MLIRAffineToStandard
+  MLIRSCFToStandard
   FortranCommon
   FortranParser
   FortranEvaluate
