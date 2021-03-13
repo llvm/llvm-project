@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/Support/InitLLVM.h"
@@ -51,24 +52,35 @@ public:
   // defined as lambdas that call the printLinkerGraph method on our
   // plugin: One to run before the linker applies fixups and another to
   // run afterwards.
-  void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
+  void modifyPassConfig(MaterializationResponsibility &MR,
+                        jitlink::LinkGraph &LG,
                         jitlink::PassConfiguration &Config) override {
-    Config.PostPrunePasses.push_back([this](jitlink::LinkGraph &G) -> Error {
-      printLinkGraph(G, "Before fixup:");
-      return Error::success();
-    });
-    Config.PostFixupPasses.push_back([this](jitlink::LinkGraph &G) -> Error {
-      printLinkGraph(G, "After fixup:");
-      return Error::success();
-    });
+
+    outs() << "MyPlugin -- Modifying pass config for " << LG.getName() << " ("
+           << LG.getTargetTriple().str() << "):\n";
+
+    // Print sections, symbol names and addresses, and any edges for the
+    // associated blocks.
+    Config.PostPrunePasses.push_back(printGraph);
+
+    // Print graph contents before and after fixups:
+    //
+    // Config.PostPrunePasses.push_back([this](jitlink::LinkGraph &G) -> Error {
+    //   printLinkGraphContent(G, "Before fixup:");
+    //   return Error::success();
+    // });
+    // Config.PostFixupPasses.push_back([this](jitlink::LinkGraph &G) -> Error {
+    //   printLinkGraphContent(G, "After fixup:");
+    //   return Error::success();
+    // });
   }
 
   void notifyLoaded(MaterializationResponsibility &MR) override {
-    dbgs() << "Loading object defining " << MR.getSymbols() << "\n";
+    outs() << "Loading object defining " << MR.getSymbols() << "\n";
   }
 
   Error notifyEmitted(MaterializationResponsibility &MR) override {
-    dbgs() << "Emitted object defining " << MR.getSymbols() << "\n";
+    outs() << "Emitted object defining " << MR.getSymbols() << "\n";
     return Error::success();
   }
 
@@ -84,41 +96,99 @@ public:
                                    ResourceKey SrcKey) override {}
 
 private:
-  void printLinkGraph(jitlink::LinkGraph &G, StringRef Title) {
+  static void printBlockContent(jitlink::Block &B) {
     constexpr JITTargetAddress LineWidth = 16;
 
-    dbgs() << "--- " << Title << "---\n";
+    if (B.isZeroFill()) {
+      outs() << "    " << formatv("{0:x16}", B.getAddress()) << ": "
+             << B.getSize() << " bytes of zero-fill.\n";
+      return;
+    }
+
+    JITTargetAddress InitAddr = B.getAddress() & ~(LineWidth - 1);
+    JITTargetAddress StartAddr = B.getAddress();
+    JITTargetAddress EndAddr = B.getAddress() + B.getSize();
+    auto *Data = reinterpret_cast<const uint8_t *>(B.getContent().data());
+
+    for (JITTargetAddress CurAddr = InitAddr; CurAddr != EndAddr; ++CurAddr) {
+      if (CurAddr % LineWidth == 0)
+        outs() << "          " << formatv("{0:x16}", CurAddr) << ": ";
+      if (CurAddr < StartAddr)
+        outs() << "   ";
+      else
+        outs() << formatv("{0:x-2}", Data[CurAddr - StartAddr]) << " ";
+      if (CurAddr % LineWidth == LineWidth - 1)
+        outs() << "\n";
+    }
+    if (EndAddr % LineWidth != 0)
+      outs() << "\n";
+  }
+
+  static Error printGraph(jitlink::LinkGraph &G) {
+
+    DenseSet<jitlink::Block *> BlocksAlreadyVisited;
+
+    outs() << "Graph \"" << G.getName() << "\"\n";
+    // Loop over all sections...
     for (auto &S : G.sections()) {
-      dbgs() << "  section: " << S.getName() << "\n";
-      for (auto *B : S.blocks()) {
-        dbgs() << "    block@" << formatv("{0:x16}", B->getAddress()) << ":\n";
+      outs() << "  Section " << S.getName() << ":\n";
 
-        if (B->isZeroFill())
+      // Loop over all symbols in the current section...
+      for (auto *Sym : S.symbols()) {
+
+        // Print the symbol's address.
+        outs() << "    " << formatv("{0:x16}", Sym->getAddress()) << ": ";
+
+        // Print the symbol's name, or "<anonymous symbol>" if it doesn't have
+        // one.
+        if (Sym->hasName())
+          outs() << Sym->getName() << "\n";
+        else
+          outs() << "<anonymous symbol>\n";
+
+        // Get the content block for this symbol.
+        auto &B = Sym->getBlock();
+
+        if (BlocksAlreadyVisited.count(&B)) {
+          outs() << "      Block " << formatv("{0:x16}", B.getAddress())
+                 << " already printed.\n";
           continue;
+        } else
+          outs() << "      Block " << formatv("{0:x16}", B.getAddress())
+                 << ":\n";
 
-        JITTargetAddress InitAddr = B->getAddress() & ~(LineWidth - 1);
-        JITTargetAddress StartAddr = B->getAddress();
-        JITTargetAddress EndAddr = B->getAddress() + B->getSize();
-        auto *Data = reinterpret_cast<const uint8_t *>(B->getContent().data());
+        outs() << "        Content:\n";
+        printBlockContent(B);
+        BlocksAlreadyVisited.insert(&B);
 
-        for (JITTargetAddress CurAddr = InitAddr; CurAddr != EndAddr;
-             ++CurAddr) {
-          if (CurAddr % LineWidth == 0)
-            dbgs() << "    " << formatv("{0:x16}", CurAddr) << ": ";
-          if (CurAddr < StartAddr)
-            dbgs() << "   ";
-          else
-            dbgs() << formatv("{0:x-2}", Data[CurAddr - StartAddr]) << " ";
-          if (CurAddr % LineWidth == LineWidth - 1)
-            dbgs() << "\n";
+        if (!llvm::empty(B.edges())) {
+          outs() << "        Edges:\n";
+          for (auto &E : B.edges()) {
+            outs() << "          "
+                   << formatv("{0:x16}", B.getAddress() + E.getOffset())
+                   << ": kind = " << formatv("{0:d}", E.getKind())
+                   << ", addend = " << formatv("{0:x}", E.getAddend())
+                   << ", target = ";
+            jitlink::Symbol &TargetSym = E.getTarget();
+            if (TargetSym.hasName())
+              outs() << TargetSym.getName() << "\n";
+            else
+              outs() << "<anonymous target>\n";
+          }
         }
-        if (EndAddr % LineWidth != 0)
-          dbgs() << "\n";
-        dbgs() << "\n";
+        outs() << "\n";
       }
     }
+    return Error::success();
   }
 };
+
+static cl::opt<std::string>
+    EntryPointName("entry", cl::desc("Symbol to call as main entry point"),
+                   cl::init("entry"));
+
+static cl::list<std::string> InputObjects(cl::Positional, cl::ZeroOrMore,
+                                          cl::desc("input objects"));
 
 int main(int argc, char *argv[]) {
   // Initialize LLVM.
@@ -151,17 +221,36 @@ int main(int argc, char *argv[]) {
               })
           .create());
 
-  auto M = ExitOnErr(parseExampleModule(TestMod, "test-module"));
+  if (!InputObjects.empty()) {
 
-  ExitOnErr(J->addIRModule(std::move(M)));
+    // If we have input objects then reflect process symbols so the input
+    // objects can do interesting things, like call printf.
+    J->getMainJITDylib().addGenerator(
+        ExitOnErr(DynamicLibrarySearchGenerator::GetForCurrentProcess(
+            J->getDataLayout().getGlobalPrefix())));
+
+    // Load the input objects.
+    for (auto InputObject : InputObjects) {
+      auto ObjBuffer =
+          ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputObject)));
+      ExitOnErr(J->addObjectFile(std::move(ObjBuffer)));
+    }
+  } else {
+    auto M = ExitOnErr(parseExampleModule(TestMod, "test-module"));
+    M.withModuleDo([](Module &MP) {
+      outs() << "No input objects specified. Using demo module:\n"
+             << MP << "\n";
+    });
+    ExitOnErr(J->addIRModule(std::move(M)));
+  }
 
   // Look up the JIT'd function, cast it to a function pointer, then call it.
-  auto EntrySym = ExitOnErr(J->lookup("entry"));
+  auto EntrySym = ExitOnErr(J->lookup(EntryPointName));
   auto *Entry = (int (*)())EntrySym.getAddress();
 
   int Result = Entry();
   outs() << "---Result---\n"
-         << "entry() = " << Result << "\n";
+         << EntryPointName << "() = " << Result << "\n";
 
   return 0;
 }

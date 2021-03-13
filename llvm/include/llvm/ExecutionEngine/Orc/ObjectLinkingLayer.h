@@ -69,7 +69,7 @@ public:
 
     virtual ~Plugin();
     virtual void modifyPassConfig(MaterializationResponsibility &MR,
-                                  const Triple &TT,
+                                  jitlink::LinkGraph &G,
                                   jitlink::PassConfiguration &Config) {}
 
     // Deprecated. Don't use this in new code. There will be a proper mechanism
@@ -171,7 +171,8 @@ public:
 private:
   using AllocPtr = std::unique_ptr<jitlink::JITLinkMemoryManager::Allocation>;
 
-  void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
+  void modifyPassConfig(MaterializationResponsibility &MR,
+                        jitlink::LinkGraph &G,
                         jitlink::PassConfiguration &PassConfig);
   void notifyLoaded(MaterializationResponsibility &MR);
   Error notifyEmitted(MaterializationResponsibility &MR, AllocPtr Alloc);
@@ -194,7 +195,8 @@ public:
   EHFrameRegistrationPlugin(
       ExecutionSession &ES,
       std::unique_ptr<jitlink::EHFrameRegistrar> Registrar);
-  void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
+  void modifyPassConfig(MaterializationResponsibility &MR,
+                        jitlink::LinkGraph &G,
                         jitlink::PassConfiguration &PassConfig) override;
   Error notifyEmitted(MaterializationResponsibility &MR) override;
   Error notifyFailed(MaterializationResponsibility &MR) override;

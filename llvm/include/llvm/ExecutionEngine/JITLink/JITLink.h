@@ -1377,7 +1377,7 @@ public:
 
   /// Called by JITLink to modify the pass pipeline prior to linking.
   /// The default version performs no modification.
-  virtual Error modifyPassConfig(const Triple &TT, PassConfiguration &Config);
+  virtual Error modifyPassConfig(LinkGraph &G, PassConfiguration &Config);
 
 private:
   const JITLinkDylib *JD = nullptr;
