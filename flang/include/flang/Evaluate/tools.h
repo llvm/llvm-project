@@ -806,7 +806,7 @@ template <typename A> bool IsAllocatableOrPointer(const A &x) {
 // Procedure and pointer detection predicates
 bool IsProcedure(const Expr<SomeType> &);
 bool IsFunction(const Expr<SomeType> &);
-bool IsProcedurePointer(const Expr<SomeType> &);
+bool IsProcedurePointerTarget(const Expr<SomeType> &);
 bool IsNullPointer(const Expr<SomeType> &);
 bool IsObjectPointer(const Expr<SomeType> &, FoldingContext &);
 
@@ -963,6 +963,7 @@ const Symbol *FindCommonBlockContaining(const Symbol &);
 int CountLenParameters(const DerivedTypeSpec &);
 int CountNonConstantLenParameters(const DerivedTypeSpec &);
 const Symbol &GetUsedModule(const UseDetails &);
+const Symbol *FindFunctionResult(const Symbol &);
 
 } // namespace Fortran::semantics
 
