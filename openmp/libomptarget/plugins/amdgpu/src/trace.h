@@ -173,10 +173,10 @@ log_t<R, Ts...> log(const char *func, Ts &&... ts) {
 extern "C" {
 #endif
 
-static void *__tgt_rtl_data_alloc_impl(int device_id, int64_t size, void *ptr);
-void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *ptr) {
+static void *__tgt_rtl_data_alloc_impl(int device_id, int64_t size, void *ptr, int32_t kind);
+void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *ptr, int32_t Kind) {
   auto t = detail::log<void *>(__func__, device_id, size, ptr);
-  void *r = __tgt_rtl_data_alloc_impl(device_id, size, ptr);
+  void *r = __tgt_rtl_data_alloc_impl(device_id, size, ptr, Kind);
   t.res(r);
   return r;
 }

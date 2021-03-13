@@ -11,13 +11,12 @@ define dso_local void @Widen_i32_i8ptr() local_unnamed_addr {
 ; CHECK-NEXT:    store i8** [[ARRAYDECAY2032]], i8*** inttoptr (i64 8 to i8***), align 8
 ; CHECK-NEXT:    br label [[FOR_COND2106:%.*]]
 ; CHECK:       for.cond2106:
-; CHECK-NEXT:    [[GID_0:%.*]] = phi i8* [ null, [[ENTRY:%.*]] ], [ [[INCDEC_PTR:%.*]], [[FOR_COND2106]] ]
-; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC2117:%.*]], [[FOR_COND2106]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_COND2106]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[GID_0:%.*]] = phi i8* [ null, [[ENTRY]] ], [ [[INCDEC_PTR:%.*]], [[FOR_COND2106]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, i8* [[GID_0]], i64 1
-; CHECK-NEXT:    [[IDXPROM2114:%.*]] = zext i32 [[I_0]] to i64
-; CHECK-NEXT:    [[ARRAYIDX2115:%.*]] = getelementptr inbounds [15 x i8*], [15 x i8*]* [[PTRIDS]], i64 0, i64 [[IDXPROM2114]]
+; CHECK-NEXT:    [[ARRAYIDX2115:%.*]] = getelementptr inbounds [15 x i8*], [15 x i8*]* [[PTRIDS]], i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8* [[GID_0]], i8** [[ARRAYIDX2115]], align 8
-; CHECK-NEXT:    [[INC2117]] = add nuw nsw i32 [[I_0]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br label [[FOR_COND2106]]
 ;
 entry:

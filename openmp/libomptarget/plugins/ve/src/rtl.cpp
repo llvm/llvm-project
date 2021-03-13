@@ -330,9 +330,16 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t ID,
 // used to generate a table of target variables to pass to
 // __tgt_rtl_run_region(). The __tgt_rtl_data_alloc() returns NULL in
 // case an error occurred on the target device.
-void *__tgt_rtl_data_alloc(int32_t ID, int64_t Size, void *HostPtr) {
+void *__tgt_rtl_data_alloc(int32_t ID, int64_t Size, void *HostPtr,
+                           int32_t kind) {
   int ret;
   uint64_t addr;
+
+  if (kind != TARGET_ALLOC_DEFAULT) {
+    REPORT("Invalid target data allocation kind or requested allocator not "
+           "implemented yet\n");
+    return NULL;
+  }
 
   if (DeviceInfo.ProcHandles[ID] == NULL) {
     struct veo_proc_handle *proc_handle;

@@ -1270,6 +1270,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &CI) {
     ICmpInst *LHS = dyn_cast<ICmpInst>(SrcI->getOperand(0));
     ICmpInst *RHS = dyn_cast<ICmpInst>(SrcI->getOperand(1));
     if (LHS && RHS && LHS->hasOneUse() && RHS->hasOneUse() &&
+        LHS->getOperand(0)->getType() == RHS->getOperand(0)->getType() &&
         (transformZExtICmp(LHS, CI, false) ||
          transformZExtICmp(RHS, CI, false))) {
       // zext (or icmp, icmp) -> or (zext icmp), (zext icmp)

@@ -4661,6 +4661,14 @@ SDValue DAGCombiner::visitMULO(SDNode *N) {
                        N->getVTList(), N0, N0);
 
   if (IsSigned) {
+    // A 1 bit SMULO overflows if both inputs are 1.
+    if (VT.getScalarSizeInBits() == 1) {
+      SDValue And = DAG.getNode(ISD::AND, DL, VT, N0, N1);
+      return CombineTo(N, And,
+                       DAG.getSetCC(DL, CarryVT, And,
+                                    DAG.getConstant(0, DL, VT), ISD::SETNE));
+    }
+
     // Multiplying n * m significant bits yields a result of n + m significant
     // bits. If the total number of significant bits does not exceed the
     // result bit width (minus 1), there is no overflow.

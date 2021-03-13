@@ -54,6 +54,9 @@ VERS1.0 {
     hostrpc_varfn_uint64_execute;
     hostrpc_varfn_uint64;
     hostrpc_invoke;
+    llvm_omp_target_alloc_host;
+    llvm_omp_target_alloc_shared;
+    llvm_omp_target_alloc_device;
   local:
     *;
 };
