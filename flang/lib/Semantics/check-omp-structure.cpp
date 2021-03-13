@@ -131,7 +131,7 @@ bool OmpStructureChecker::HasInvalidWorksharingNesting(
     const parser::CharBlock &source, const OmpDirectiveSet &set) {
   // set contains all the invalid closely nested directives
   // for the given directive (`source` here)
-  if (CurrentDirectiveIsNested() && set.test(GetContext().directive)) {
+  if (CurrentDirectiveIsNested() && set.test(GetContextParent().directive)) {
     context_.Say(source,
         "A worksharing region may not be closely nested inside a "
         "worksharing, explicit task, taskloop, critical, ordered, atomic, or "
@@ -158,9 +158,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
     CheckMatching<parser::OmpLoopDirective>(beginDir, endDir);
   }
 
-  if (beginDir.v != llvm::omp::Directive::OMPD_do) {
-    PushContextAndClauseSets(beginDir.source, beginDir.v);
-  } else {
+  PushContextAndClauseSets(beginDir.source, beginDir.v);
+
+  if (beginDir.v == llvm::omp::Directive::OMPD_do) {
     // 2.7.1 do-clause -> private-clause |
     //                    firstprivate-clause |
     //                    lastprivate-clause |
@@ -181,7 +181,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
             llvm::omp::Directive::OMPD_ordered,
             llvm::omp::Directive::OMPD_atomic,
             llvm::omp::Directive::OMPD_master});
-    PushContextAndClauseSets(beginDir.source, llvm::omp::Directive::OMPD_do);
   }
   SetLoopInfo(x);
 
@@ -318,15 +317,17 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
 
   CheckMatching<parser::OmpBlockDirective>(beginDir, endDir);
 
+  PushContextAndClauseSets(beginDir.source, beginDir.v);
+
   // TODO: This check needs to be extended while implementing nesting of regions
   // checks.
   if (beginDir.v == llvm::omp::Directive::OMPD_single) {
     HasInvalidWorksharingNesting(
         beginDir.source, {llvm::omp::Directive::OMPD_do});
   }
-  CheckIfDoOrderedClause(beginDir);
+  if (CurrentDirectiveIsNested())
+    CheckIfDoOrderedClause(beginDir);
 
-  PushContextAndClauseSets(beginDir.source, beginDir.v);
   CheckNoBranching(block, beginDir.v, beginDir.source);
 
   switch (beginDir.v) {
@@ -342,7 +343,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
 void OmpStructureChecker::CheckIfDoOrderedClause(
     const parser::OmpBlockDirective &blkDirective) {
   if (blkDirective.v == llvm::omp::OMPD_ordered) {
-    if (!FindClause(llvm::omp::Clause::OMPC_ordered)) {
+    if (!FindClauseParent(llvm::omp::Clause::OMPC_ordered)) {
       context_.Say(blkDirective.source,
           "The ORDERED clause must be present on the loop"
           " construct if any ORDERED region ever binds"
