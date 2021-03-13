@@ -62,7 +62,8 @@ public:
   void notifyTransferringResources(ResourceKey DstKey,
                                    ResourceKey SrcKey) override;
 
-  void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
+  void modifyPassConfig(MaterializationResponsibility &MR,
+                        jitlink::LinkGraph &LG,
                         jitlink::PassConfiguration &PassConfig) override;
 
 private:
