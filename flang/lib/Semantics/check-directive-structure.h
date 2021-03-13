@@ -150,6 +150,11 @@ protected:
     return dirContext_.back();
   }
 
+  DirectiveContext &GetContextParent() {
+    CHECK(dirContext_.size() >= 2);
+    return dirContext_[dirContext_.size() - 2];
+  }
+
   void SetContextClause(const PC &clause) {
     GetContext().clauseSource = clause.source;
     GetContext().clause = &clause;
@@ -198,9 +203,19 @@ protected:
     GetContext().actualClauses.push_back(type);
   }
 
+  // Check if the given clause is present in the current context
   const PC *FindClause(C type) {
     auto it{GetContext().clauseInfo.find(type)};
     if (it != GetContext().clauseInfo.end()) {
+      return it->second;
+    }
+    return nullptr;
+  }
+
+  // Check if the given clause is present in the parent context
+  const PC *FindClauseParent(C type) {
+    auto it{GetContextParent().clauseInfo.find(type)};
+    if (it != GetContextParent().clauseInfo.end()) {
       return it->second;
     }
     return nullptr;
