@@ -791,21 +791,6 @@ Status PlatformDarwinKernel::GetSharedModuleKext(
     return error;
   }
 
-  // Lastly, look through the kext binarys without dSYMs
-  if (m_name_to_kext_path_map_without_dsyms.count(kext_bundle) > 0) {
-    for (BundleIDToKextIterator it =
-             m_name_to_kext_path_map_without_dsyms.begin();
-         it != m_name_to_kext_path_map_without_dsyms.end(); ++it) {
-      if (it->first == kext_bundle) {
-        error = ExamineKextForMatchingUUID(it->second, module_spec.GetUUID(),
-                                           module_spec.GetArchitecture(),
-                                           module_sp);
-        if (module_sp.get()) {
-          return error;
-        }
-      }
-    }
-  }
   return error;
 }
 
@@ -882,33 +867,6 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
                                           did_create_ptr);
   if (error.Success() && module_sp.get()) {
     return error;
-  }
-
-  // Lastly, try all kernel binaries that don't have a dSYM
-  for (auto possible_kernel : m_kernel_binaries_without_dsyms) {
-    if (FileSystem::Instance().Exists(possible_kernel)) {
-      ModuleSpec kern_spec(possible_kernel);
-      kern_spec.GetUUID() = module_spec.GetUUID();
-      module_sp.reset(new Module(kern_spec));
-      if (module_sp && module_sp->GetObjectFile() &&
-          module_sp->MatchesModuleSpec(kern_spec)) {
-        // module_sp is an actual kernel binary we want to add.
-        if (process) {
-          process->GetTarget().GetImages().AppendIfNeeded(module_sp);
-          error.Clear();
-          return error;
-        } else {
-          error = ModuleList::GetSharedModule(kern_spec, module_sp, nullptr,
-                                              nullptr, nullptr);
-          if (module_sp && module_sp->GetObjectFile() &&
-              module_sp->GetObjectFile()->GetType() !=
-                  ObjectFile::Type::eTypeCoreFile) {
-            return error;
-          }
-          module_sp.reset();
-        }
-      }
-    }
   }
 
   return error;
