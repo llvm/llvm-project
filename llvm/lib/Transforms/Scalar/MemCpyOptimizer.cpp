@@ -1134,7 +1134,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
 bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
                                                   MemSetInst *MemSet) {
   // We can only transform memset/memcpy with the same destination.
-  if (MemSet->getDest() != MemCpy->getDest())
+  if (!AA->isMustAlias(MemSet->getDest(), MemCpy->getDest()))
     return false;
 
   // Check that src and dst of the memcpy aren't the same. While memcpy
