@@ -67,20 +67,12 @@ define void @test_lifetime_may_alias(i8* %lifetime, i8* %src, i8* %dst) {
 
 ; lifetime.start on full alloca size, copy in range.
 define void @test_lifetime_partial_alias_1(i8* noalias %dst) {
-; NO-MSSA-LABEL: @test_lifetime_partial_alias_1(
-; NO-MSSA-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
-; NO-MSSA-NEXT:    [[A_I8:%.*]] = bitcast [16 x i8]* [[A]] to i8*
-; NO-MSSA-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[A_I8]])
-; NO-MSSA-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[A_I8]], i64 8
-; NO-MSSA-NEXT:    ret void
-;
-; MSSA-LABEL: @test_lifetime_partial_alias_1(
-; MSSA-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
-; MSSA-NEXT:    [[A_I8:%.*]] = bitcast [16 x i8]* [[A]] to i8*
-; MSSA-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[A_I8]])
-; MSSA-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[A_I8]], i64 8
-; MSSA-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[GEP]], i64 8, i1 false)
-; MSSA-NEXT:    ret void
+; CHECK-LABEL: @test_lifetime_partial_alias_1(
+; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[A_I8:%.*]] = bitcast [16 x i8]* [[A]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[A_I8]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[A_I8]], i64 8
+; CHECK-NEXT:    ret void
 ;
   %a = alloca [16 x i8]
   %a.i8 = bitcast [16 x i8]* %a to i8*
@@ -92,20 +84,12 @@ define void @test_lifetime_partial_alias_1(i8* noalias %dst) {
 
 ; lifetime.start on full alloca size, copy out of range.
 define void @test_lifetime_partial_alias_2(i8* noalias %dst) {
-; NO-MSSA-LABEL: @test_lifetime_partial_alias_2(
-; NO-MSSA-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
-; NO-MSSA-NEXT:    [[A_I8:%.*]] = bitcast [16 x i8]* [[A]] to i8*
-; NO-MSSA-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[A_I8]])
-; NO-MSSA-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[A_I8]], i64 8
-; NO-MSSA-NEXT:    ret void
-;
-; MSSA-LABEL: @test_lifetime_partial_alias_2(
-; MSSA-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
-; MSSA-NEXT:    [[A_I8:%.*]] = bitcast [16 x i8]* [[A]] to i8*
-; MSSA-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[A_I8]])
-; MSSA-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[A_I8]], i64 8
-; MSSA-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[GEP]], i64 16, i1 false)
-; MSSA-NEXT:    ret void
+; CHECK-LABEL: @test_lifetime_partial_alias_2(
+; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[A_I8:%.*]] = bitcast [16 x i8]* [[A]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[A_I8]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[A_I8]], i64 8
+; CHECK-NEXT:    ret void
 ;
   %a = alloca [16 x i8]
   %a.i8 = bitcast [16 x i8]* %a to i8*
