@@ -198,6 +198,33 @@ CSProfileGenerator::getFunctionProfileForContext(StringRef ContextStr) {
   return Ret.first->second;
 }
 
+void CSProfileGenerator::generateProfile() {
+  FunctionSamples::ProfileIsCS = true;
+  for (const auto &BI : BinarySampleCounters) {
+    ProfiledBinary *Binary = BI.first;
+    for (const auto &CI : BI.second) {
+      const StringBasedCtxKey *CtxKey =
+          dyn_cast<StringBasedCtxKey>(CI.first.getPtr());
+      StringRef ContextId(CtxKey->Context);
+      // Get or create function profile for the range
+      FunctionSamples &FunctionProfile =
+          getFunctionProfileForContext(ContextId);
+
+      // Fill in function body samples
+      populateFunctionBodySamples(FunctionProfile, CI.second.RangeCounter,
+                                  Binary);
+      // Fill in boundary sample counts as well as call site samples for calls
+      populateFunctionBoundarySamples(ContextId, FunctionProfile,
+                                      CI.second.BranchCounter, Binary);
+    }
+  }
+  // Fill in call site value sample for inlined calls and also use context to
+  // infer missing samples. Since we don't have call count for inlined
+  // functions, we estimate it from inlinee's profile using the entry of the
+  // body sample.
+  populateInferredFunctionSamples();
+}
+
 void CSProfileGenerator::updateBodySamplesforFunctionProfile(
     FunctionSamples &FunctionProfile, const FrameLocation &LeafLoc,
     uint64_t Count) {
@@ -422,6 +449,7 @@ extractPrefixContextStack(SmallVectorImpl<std::string> &ContextStrStack,
 void PseudoProbeCSProfileGenerator::generateProfile() {
   // Enable pseudo probe functionalities in SampleProf
   FunctionSamples::ProfileIsProbeBased = true;
+  FunctionSamples::ProfileIsCS = true;
   for (const auto &BI : BinarySampleCounters) {
     ProfiledBinary *Binary = BI.first;
     for (const auto &CI : BI.second) {
