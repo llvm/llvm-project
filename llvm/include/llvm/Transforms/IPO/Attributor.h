@@ -1125,17 +1125,6 @@ struct Attributor {
   const AAType &
   getOrCreateAAFor(IRPosition IRP, const AbstractAttribute *QueryingAA,
                    DepClassTy DepClass, bool ForceUpdate = false) {
-#ifdef EXPENSIVE_CHECKS
-    // Don't allow callbase information to leak.
-    if (auto *CBContext = IRP.getCallBaseContext()) {
-      assert(
-          ((CBContext->getCalledFunction() == IRP.getAnchorScope() ||
-            !QueryingAA ||
-            !QueryingAA->getIRPosition().isAnyCallSitePosition())) &&
-          "non callsite positions are not allowed to propagate CallBaseContext "
-          "across functions");
-    }
-#endif
     if (!shouldPropagateCallBaseContext(IRP))
       IRP = IRP.stripCallBaseContext();
 
