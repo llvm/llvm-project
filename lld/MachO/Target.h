@@ -39,7 +39,7 @@ public:
   virtual ~TargetInfo() = default;
 
   // Validate the relocation structure and get its addend.
-  virtual uint64_t
+  virtual int64_t
   getEmbeddedAddend(llvm::MemoryBufferRef, const llvm::MachO::section_64 &,
                     const llvm::MachO::relocation_info) const = 0;
   virtual void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,

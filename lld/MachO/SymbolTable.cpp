@@ -37,9 +37,9 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
   return {sym, true};
 }
 
-Symbol *SymbolTable::addDefined(StringRef name, InputFile *file,
-                                InputSection *isec, uint32_t value,
-                                bool isWeakDef, bool isPrivateExtern) {
+Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
+                                 InputSection *isec, uint32_t value,
+                                 bool isWeakDef, bool isPrivateExtern) {
   Symbol *s;
   bool wasInserted;
   bool overridesWeakDef = false;
@@ -52,7 +52,7 @@ Symbol *SymbolTable::addDefined(StringRef name, InputFile *file,
         // If one of them isn't private extern, the merged symbol isn't.
         if (defined->isWeakDef())
           defined->privateExtern &= isPrivateExtern;
-        return s;
+        return defined;
       }
       if (!defined->isWeakDef()) {
         error("duplicate symbol: " + name + "\n>>> defined in " +
@@ -70,7 +70,7 @@ Symbol *SymbolTable::addDefined(StringRef name, InputFile *file,
       replaceSymbol<Defined>(s, name, file, isec, value, isWeakDef,
                              /*isExternal=*/true, isPrivateExtern);
   defined->overridesWeakDef = overridesWeakDef;
-  return s;
+  return defined;
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
@@ -158,18 +158,12 @@ Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
   return s;
 }
 
-Symbol *SymbolTable::addDSOHandle(const MachHeaderSection *header) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(DSOHandle::name);
-  if (!wasInserted) {
-    // FIXME: Make every symbol (including absolute symbols) contain a
-    // reference to their originating file, then add that file name to this
-    // error message. dynamic_lookup symbols don't have an originating file.
-    if (isa<Defined>(s))
-      error("found defined symbol with illegal name " + DSOHandle::name);
-  }
-  replaceSymbol<DSOHandle>(s, header);
+Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
+                                   uint32_t value, bool isPrivateExtern,
+                                   bool isLinkerInternal) {
+  Defined *s = addDefined(name, nullptr, isec, value, /*isWeakDef=*/false,
+                          isPrivateExtern);
+  s->linkerInternal = isLinkerInternal;
   return s;
 }
 

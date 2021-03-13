@@ -52,7 +52,7 @@ namespace DeducedVsSynthesized {
     bool operator<(const A&) const;
   };
   struct B {
-    A a; // expected-note {{no viable comparison function for member 'a'}}
+    A a; // expected-note {{no viable three-way comparison function for member 'a'}}
     auto operator<=>(const B&) const = default; // expected-warning {{implicitly deleted}}
   };
 }
@@ -159,16 +159,16 @@ namespace BadDeducedType {
 namespace PR48856 {
   struct A {
     auto operator<=>(const A &) const = default; // expected-warning {{implicitly deleted}}
-    void (*x)();                                 // expected-note {{because there is no viable comparison function for member 'x'}}
+    void (*x)();                                 // expected-note {{because there is no viable three-way comparison function for member 'x'}}
   };
 
   struct B {
     auto operator<=>(const B &) const = default; // expected-warning {{implicitly deleted}}
-    void (B::*x)();                              // expected-note {{because there is no viable comparison function for member 'x'}}
+    void (B::*x)();                              // expected-note {{because there is no viable three-way comparison function for member 'x'}}
   };
 
   struct C {
     auto operator<=>(const C &) const = default; // expected-warning {{implicitly deleted}}
-    int C::*x;                                   // expected-note {{because there is no viable comparison function for member 'x'}}
+    int C::*x;                                   // expected-note {{because there is no viable three-way comparison function for member 'x'}}
   };
 }

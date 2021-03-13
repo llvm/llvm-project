@@ -434,17 +434,6 @@ const Symbol *FindSubprogram(const Symbol &symbol) {
       symbol.details());
 }
 
-const Symbol *FindFunctionResult(const Symbol &symbol) {
-  if (const Symbol * subp{FindSubprogram(symbol)}) {
-    if (const auto &subpDetails{subp->detailsIf<SubprogramDetails>()}) {
-      if (subpDetails->isFunction()) {
-        return &subpDetails->result();
-      }
-    }
-  }
-  return nullptr;
-}
-
 const Symbol *FindOverriddenBinding(const Symbol &symbol) {
   if (symbol.has<ProcBindingDetails>()) {
     if (const DeclTypeSpec * parentType{FindParentTypeSpec(symbol.owner())}) {
@@ -841,9 +830,7 @@ std::optional<parser::MessageFixedText> WhyNotModifiable(
 // Modifiability checks for a data-ref
 std::optional<parser::Message> WhyNotModifiable(parser::CharBlock at,
     const SomeExpr &expr, const Scope &scope, bool vectorSubscriptIsOk) {
-  if (!evaluate::IsVariable(expr)) {
-    return parser::Message{at, "Expression is not a variable"_en_US};
-  } else if (auto dataRef{evaluate::ExtractDataRef(expr, true)}) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true)}) {
     if (!vectorSubscriptIsOk && evaluate::HasVectorSubscript(expr)) {
       return parser::Message{at, "Variable has a vector subscript"_en_US};
     }
@@ -865,6 +852,9 @@ std::optional<parser::Message> WhyNotModifiable(parser::CharBlock at,
                 std::move(*maybeWhyFirst), first.name()}};
       }
     }
+  } else if (!evaluate::IsVariable(expr)) {
+    return parser::Message{
+        at, "'%s' is not a variable"_en_US, expr.AsFortran()};
   } else {
     // reference to function returning POINTER
   }

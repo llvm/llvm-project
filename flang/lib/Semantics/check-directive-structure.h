@@ -212,6 +212,15 @@ protected:
     return it;
   }
 
+  DirectiveContext *GetEnclosingDirContext() {
+    CHECK(!dirContext_.empty());
+    auto it{dirContext_.rbegin()};
+    if (++it != dirContext_.rend()) {
+      return &(*it);
+    }
+    return nullptr;
+  }
+
   void PushContext(const parser::CharBlock &source, D dir) {
     dirContext_.emplace_back(source, dir);
   }
@@ -227,7 +236,7 @@ protected:
     return nullptr;
   }
 
-  bool CurrentDirectiveIsNested() { return dirContext_.size() > 0; };
+  bool CurrentDirectiveIsNested() { return dirContext_.size() > 1; };
 
   void SetClauseSets(D dir) {
     dirContext_.back().allowedClauses = directiveClausesMap_[dir].allowed;

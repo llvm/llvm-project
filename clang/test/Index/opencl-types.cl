@@ -1,4 +1,4 @@
-// RUN: c-index-test -test-print-type %s -cl-std=CL2.0 | FileCheck %s
+// RUN: c-index-test -test-print-type %s -cl-std=CL2.0 -target spir | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable

@@ -820,9 +820,25 @@ bool RISCVTargetLowering::hasBitPreservingFPLogic(EVT VT) const {
 }
 
 // Changes the condition code and swaps operands if necessary, so the SetCC
-// operation matches one of the comparisons supported directly in the RISC-V
-// ISA.
-static void normaliseSetCC(SDValue &LHS, SDValue &RHS, ISD::CondCode &CC) {
+// operation matches one of the comparisons supported directly by branches
+// in the RISC-V ISA. May adjust compares to favor compare with 0 over compare
+// with 1/-1.
+static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
+                                    ISD::CondCode &CC, SelectionDAG &DAG) {
+  // Convert X > -1 to X >= 0.
+  if (CC == ISD::SETGT && isAllOnesConstant(RHS)) {
+    RHS = DAG.getConstant(0, DL, RHS.getValueType());
+    CC = ISD::SETGE;
+    return;
+  }
+  // Convert X < 1 to 0 >= X.
+  if (CC == ISD::SETLT && isOneConstant(RHS)) {
+    RHS = LHS;
+    LHS = DAG.getConstant(0, DL, RHS.getValueType());
+    CC = ISD::SETGE;
+    return;
+  }
+
   switch (CC) {
   default:
     break;
@@ -838,7 +854,7 @@ static void normaliseSetCC(SDValue &LHS, SDValue &RHS, ISD::CondCode &CC) {
 
 // Return the RISC-V branch opcode that matches the given DAG integer
 // condition code. The CondCode must be one of those supported by the RISC-V
-// ISA (see normaliseSetCC).
+// ISA (see translateSetCCForBranch).
 static unsigned getBranchOpcodeForIntCondCode(ISD::CondCode CC) {
   switch (CC) {
   default:
@@ -1869,7 +1885,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     auto CC = cast<CondCodeSDNode>(CondV.getOperand(2));
     ISD::CondCode CCVal = CC->get();
 
-    normaliseSetCC(LHS, RHS, CCVal);
+    translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
 
     SDValue TargetCC = DAG.getConstant(CCVal, DL, XLenVT);
     SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
@@ -4156,11 +4172,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       if (Invert)
         CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
 
+      SDLoc DL(N);
       RHS = LHS.getOperand(1);
       LHS = LHS.getOperand(0);
-      normaliseSetCC(LHS, RHS, CCVal);
+      translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
 
-      SDLoc DL(N);
       SDValue TargetCC = DAG.getConstant(CCVal, DL, Subtarget.getXLenVT());
       return DAG.getNode(
           RISCVISD::SELECT_CC, DL, N->getValueType(0),

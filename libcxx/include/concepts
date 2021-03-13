@@ -385,6 +385,9 @@ concept copyable =
 template<class _Tp>
 concept semiregular = copyable<_Tp> && default_initializable<_Tp>;
 
+template<class _Tp>
+concept regular = semiregular<_Tp> && equality_comparable<_Tp>;
+
 // [concept.invocable]
 template<class _Fn, class... _Args>
 concept invocable = requires(_Fn&& __fn, _Args&&... __args) {

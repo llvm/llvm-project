@@ -143,7 +143,7 @@ subroutine dotprod (b, c, n, block_size, num_teams, block_threads)
   !REF: /dotprod/block_size
   !REF: /dotprod/n
   do i=i0,min(i0+block_size, n)
-   !REF: /dotprod/sum
+   !DEF: /dotprod/Block1/Block1/Block1/Block1/sum (OmpReduction) HostAssoc REAL(4)
    !REF: /dotprod/b
    !REF: /dotprod/Block1/Block1/Block1/Block1/i
    !REF: /dotprod/c

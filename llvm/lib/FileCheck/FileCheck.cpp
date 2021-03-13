@@ -45,8 +45,12 @@ StringRef ExpressionFormat::toString() const {
 }
 
 Expected<std::string> ExpressionFormat::getWildcardRegex() const {
-  auto CreatePrecisionRegex = [this](StringRef S) {
-    return (S + Twine('{') + Twine(Precision) + "}").str();
+  StringRef AlternateFormPrefix = AlternateForm ? StringRef("0x") : StringRef();
+
+  auto CreatePrecisionRegex = [&](StringRef S) {
+    return (Twine(AlternateFormPrefix) + S + Twine('{') + Twine(Precision) +
+            "}")
+        .str();
   };
 
   switch (Value) {
@@ -61,11 +65,11 @@ Expected<std::string> ExpressionFormat::getWildcardRegex() const {
   case Kind::HexUpper:
     if (Precision)
       return CreatePrecisionRegex("([1-9A-F][0-9A-F]*)?[0-9A-F]");
-    return std::string("[0-9A-F]+");
+    return (Twine(AlternateFormPrefix) + Twine("[0-9A-F]+")).str();
   case Kind::HexLower:
     if (Precision)
       return CreatePrecisionRegex("([1-9a-f][0-9a-f]*)?[0-9a-f]");
-    return std::string("[0-9a-f]+");
+    return (Twine(AlternateFormPrefix) + Twine("[0-9a-f]+")).str();
   default:
     return createStringError(std::errc::invalid_argument,
                              "trying to match value with invalid format");
@@ -107,14 +111,17 @@ ExpressionFormat::getMatchingString(ExpressionValue IntegerValue) const {
                              "trying to match value with invalid format");
   }
 
+  StringRef AlternateFormPrefix = AlternateForm ? StringRef("0x") : StringRef();
+
   if (Precision > AbsoluteValueStr.size()) {
     unsigned LeadingZeros = Precision - AbsoluteValueStr.size();
-    return (Twine(SignPrefix) + std::string(LeadingZeros, '0') +
-            AbsoluteValueStr)
+    return (Twine(SignPrefix) + Twine(AlternateFormPrefix) +
+            std::string(LeadingZeros, '0') + AbsoluteValueStr)
         .str();
   }
 
-  return (Twine(SignPrefix) + AbsoluteValueStr).str();
+  return (Twine(SignPrefix) + Twine(AlternateFormPrefix) + AbsoluteValueStr)
+      .str();
 }
 
 Expected<ExpressionValue>
@@ -138,8 +145,14 @@ ExpressionFormat::valueFromStringRepr(StringRef StrVal,
 
   bool Hex = Value == Kind::HexUpper || Value == Kind::HexLower;
   uint64_t UnsignedValue;
+  bool MissingFormPrefix = AlternateForm && !StrVal.consume_front("0x");
   if (StrVal.getAsInteger(Hex ? 16 : 10, UnsignedValue))
     return ErrorDiagnostic::get(SM, StrVal, IntegerParseErrorStr);
+
+  // Error out for a missing prefix only now that we know we have an otherwise
+  // valid integer.  For example, "-0x18" is reported above instead.
+  if (MissingFormPrefix)
+    return ErrorDiagnostic::get(SM, StrVal, "missing alternate form prefix");
 
   return ExpressionValue(UnsignedValue);
 }
@@ -772,6 +785,10 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
           SM, FormatExpr,
           "invalid matching format specification in expression");
 
+    // Parse alternate form flag.
+    SMLoc AlternateFormFlagLoc = SMLoc::getFromPointer(FormatExpr.data());
+    bool AlternateForm = FormatExpr.consume_front("#");
+
     // Parse precision.
     if (FormatExpr.consume_front(".")) {
       if (FormatExpr.consumeInteger(10, Precision))
@@ -793,18 +810,24 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
             ExpressionFormat(ExpressionFormat::Kind::Signed, Precision);
         break;
       case 'x':
-        ExplicitFormat =
-            ExpressionFormat(ExpressionFormat::Kind::HexLower, Precision);
+        ExplicitFormat = ExpressionFormat(ExpressionFormat::Kind::HexLower,
+                                          Precision, AlternateForm);
         break;
       case 'X':
-        ExplicitFormat =
-            ExpressionFormat(ExpressionFormat::Kind::HexUpper, Precision);
+        ExplicitFormat = ExpressionFormat(ExpressionFormat::Kind::HexUpper,
+                                          Precision, AlternateForm);
         break;
       default:
         return ErrorDiagnostic::get(SM, FmtLoc,
                                     "invalid format specifier in expression");
       }
     }
+
+    if (AlternateForm && ExplicitFormat != ExpressionFormat::Kind::HexLower &&
+        ExplicitFormat != ExpressionFormat::Kind::HexUpper)
+      return ErrorDiagnostic::get(
+          SM, AlternateFormFlagLoc,
+          "alternate form only supported for hex values");
 
     FormatExpr = FormatExpr.ltrim(SpaceChars);
     if (!FormatExpr.empty())

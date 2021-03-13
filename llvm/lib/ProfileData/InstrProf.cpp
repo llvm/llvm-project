@@ -353,16 +353,29 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
       return E;
     MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
     // In ThinLTO, local function may have been promoted to global and have
-    // suffix added to the function name. We need to add the stripped function
-    // name to the symbol table so that we can find a match from profile.
-    if (InLTO) {
-      auto pos = PGOFuncName.find('.');
-      if (pos != std::string::npos) {
-        const std::string &OtherFuncName = PGOFuncName.substr(0, pos);
-        if (Error E = addFuncName(OtherFuncName))
-          return E;
-        MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
-      }
+    // suffix ".llvm." added to the function name. We need to add the
+    // stripped function name to the symbol table so that we can find a match
+    // from profile.
+    //
+    // We may have other suffixes similar as ".llvm." which are needed to
+    // be stripped before the matching, but ".__uniq." suffix which is used
+    // to differentiate internal linkage functions in different modules
+    // should be kept. Now this is the only suffix with the pattern ".xxx"
+    // which is kept before matching.
+    const std::string UniqSuffix = ".__uniq.";
+    auto pos = PGOFuncName.find(UniqSuffix);
+    // Search '.' after ".__uniq." if ".__uniq." exists, otherwise
+    // search '.' from the beginning.
+    if (pos != std::string::npos)
+      pos += UniqSuffix.length();
+    else
+      pos = 0;
+    pos = PGOFuncName.find('.', pos);
+    if (pos != std::string::npos && pos != 0) {
+      const std::string &OtherFuncName = PGOFuncName.substr(0, pos);
+      if (Error E = addFuncName(OtherFuncName))
+        return E;
+      MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
     }
   }
   Sorted = false;

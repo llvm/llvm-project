@@ -1859,7 +1859,7 @@ static bool CheckCompatibleArgument(bool isElemental,
           },
           [&](const characteristics::DummyProcedure &) {
             const auto *expr{actual.UnwrapExpr()};
-            return expr && IsProcedurePointer(*expr);
+            return expr && IsProcedurePointerTarget(*expr);
           },
           [&](const characteristics::AlternateReturn &) {
             return actual.isAlternateReturn();
