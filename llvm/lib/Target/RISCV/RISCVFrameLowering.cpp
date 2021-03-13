@@ -480,6 +480,9 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
+  if (RVVStackSize)
+    adjustStackForRVV(MF, MBB, MBBI, DL, -RVVStackSize);
+
   if (hasFP(MF)) {
     // Realign Stack
     const RISCVRegisterInfo *RI = STI.getRegisterInfo();
@@ -511,9 +514,6 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
       }
     }
   }
-
-  if (RVVStackSize)
-    adjustStackForRVV(MF, MBB, MBBI, DL, -RVVStackSize);
 }
 
 void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
@@ -645,35 +645,40 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     if (hasBP(MF)) {
       FrameReg = RISCVABI::getBPReg();
       // |--------------------------| -- <-- FP
-      // | callee-saved registers   | |
-      // |--------------------------| | MFI.getStackSize()
-      // | scalar local variables   | |
-      // |--------------------------| --
-      // | Realignment              | |
+      // | callee-saved registers   | | <---------.
+      // |--------------------------| --          |
+      // | realignment (the size of | |           |
+      // | this area is not counted | |           |
+      // | in MFI.getStackSize())   | |           |
+      // |--------------------------| --          |-- MFI.getStackSize()
+      // | RVV objects              | |           |
+      // |--------------------------| --          |
+      // | scalar local variables   | | <---------'
       // |--------------------------| -- <-- BP
-      // | RVV objects              | | RVFI->getRVVStackSize()
-      // |--------------------------| --
       // | VarSize objects          | |
       // |--------------------------| -- <-- SP
     } else {
       FrameReg = RISCV::X2;
-      // When using SP to access frame objects, we need to add RVV stack size.
-      //
       // |--------------------------| -- <-- FP
-      // | callee-saved registers   | |
-      // |--------------------------| | MFI.getStackSize()
-      // | scalar local variables   | |
-      // |--------------------------| --
-      // | Realignment              | |
-      // |--------------------------| --
-      // | RVV objects              | | RVFI->getRVVStackSize()
+      // | callee-saved registers   | | <---------.
+      // |--------------------------| --          |
+      // | realignment (the size of | |           |
+      // | this area is not counted | |           |
+      // | in MFI.getStackSize())   | |           |
+      // |--------------------------| --          |-- MFI.getStackSize()
+      // | RVV objects              | |           |
+      // |--------------------------| --          |
+      // | scalar local variables   | | <---------'
       // |--------------------------| -- <-- SP
-      Offset += StackOffset::getScalable(RVFI->getRVVStackSize());
     }
     if (MFI.getStackID(FI) == TargetStackID::Default) {
       Offset += StackOffset::getFixed(MFI.getStackSize());
       if (FI < 0)
         Offset += StackOffset::getFixed(RVFI->getLibCallStackSize());
+    } else if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+      Offset +=
+          StackOffset::get(MFI.getStackSize() - RVFI->getCalleeSavedStackSize(),
+                           RVFI->getRVVStackSize());
     }
   } else {
     FrameReg = RI->getFrameRegister(MF);
@@ -699,17 +704,20 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
       // When using SP to access frame objects, we need to add RVV stack size.
       //
       // |--------------------------| -- <-- FP
-      // | callee-saved registers   | |
-      // |--------------------------| | MFI.getStackSize()
-      // | scalar local variables   | |
-      // |--------------------------| --
-      // | RVV objects              | | RVFI->getRVVStackSize()
+      // | callee-saved registers   | |<--------.
+      // |--------------------------| --        |
+      // | RVV objects              | |         |-- MFI.getStackSize()
+      // |--------------------------| --        |
+      // | scalar local variables   | |<--------'
       // |--------------------------| -- <-- SP
-      Offset += StackOffset::getScalable(RVFI->getRVVStackSize());
       if (MFI.getStackID(FI) == TargetStackID::Default) {
         Offset += StackOffset::getFixed(MFI.getStackSize());
         if (FI < 0)
           Offset += StackOffset::getFixed(RVFI->getLibCallStackSize());
+      } else if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+        Offset += StackOffset::get(MFI.getStackSize() -
+                                       RVFI->getCalleeSavedStackSize(),
+                                   RVFI->getRVVStackSize());
       }
     }
   }
@@ -798,21 +806,48 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterClass *RC = &RISCV::GPRRegClass;
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+
+  int64_t RVVStackSize = assignRVVStackObjectOffsets(MFI);
+  RVFI->setRVVStackSize(RVVStackSize);
+
   // estimateStackSize has been observed to under-estimate the final stack
   // size, so give ourselves wiggle-room by checking for stack size
   // representable an 11-bit signed field rather than 12-bits.
   // FIXME: It may be possible to craft a function with a small stack that
   // still needs an emergency spill slot for branch relaxation. This case
   // would currently be missed.
-  if (!isInt<11>(MFI.estimateStackSize(MF))) {
+  if (!isInt<11>(MFI.estimateStackSize(MF)) || RVVStackSize != 0) {
     int RegScavFI = MFI.CreateStackObject(RegInfo->getSpillSize(*RC),
                                           RegInfo->getSpillAlign(*RC), false);
     RS->addScavengingFrameIndex(RegScavFI);
   }
+}
 
+void RISCVFrameLowering::processFunctionBeforeFrameIndicesReplaced(
+    MachineFunction &MF, RegScavenger *RS) const {
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-  int64_t RVVStackSize = assignRVVStackObjectOffsets(MFI);
-  RVFI->setRVVStackSize(RVVStackSize);
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (MFI.getCalleeSavedInfo().empty() || RVFI->useSaveRestoreLibCalls(MF)) {
+    RVFI->setCalleeSavedStackSize(0);
+    return;
+  }
+
+  int64_t MinOffset = std::numeric_limits<int64_t>::max();
+  int64_t MaxOffset = std::numeric_limits<int64_t>::min();
+  for (const auto &Info : MFI.getCalleeSavedInfo()) {
+    int FrameIdx = Info.getFrameIdx();
+    if (MFI.getStackID(FrameIdx) != TargetStackID::Default)
+      continue;
+
+    int64_t Offset = MFI.getObjectOffset(FrameIdx);
+    int64_t ObjSize = MFI.getObjectSize(FrameIdx);
+    MinOffset = std::min<int64_t>(Offset, MinOffset);
+    MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
+  }
+
+  unsigned Size = alignTo(MaxOffset - MinOffset, 16);
+  RVFI->setCalleeSavedStackSize(Size);
 }
 
 // Not preserve stack space within prologue for outgoing variables when the

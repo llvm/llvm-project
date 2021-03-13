@@ -1979,9 +1979,11 @@ declare <vscale x 8 x i64> @llvm.riscv.vasub.mask.nxv8i64.i64(
 define <vscale x 8 x i64> @intrinsic_vasub_mask_vx_nxv8i64_nxv8i64_i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, i64 %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vasub_mask_vx_nxv8i64_nxv8i64_i64:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    csrrs a3, vlenb, zero
 ; CHECK-NEXT:    sub sp, sp, a3
-; CHECK-NEXT:    vs1r.v v0, (sp) # Unknown-size Folded Spill
+; CHECK-NEXT:    addi a3, sp, 16
+; CHECK-NEXT:    vs1r.v v0, (a3) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vsetvli a3, a2, e64,m8,ta,mu
 ; CHECK-NEXT:    vmv.v.x v24, a1
 ; CHECK-NEXT:    addi a1, zero, 32
@@ -1991,10 +1993,12 @@ define <vscale x 8 x i64> @intrinsic_vasub_mask_vx_nxv8i64_nxv8i64_i64(<vscale x
 ; CHECK-NEXT:    vsrl.vx v24, v24, a1
 ; CHECK-NEXT:    vor.vv v24, v24, v0
 ; CHECK-NEXT:    vsetvli a0, a2, e64,m8,tu,mu
-; CHECK-NEXT:    vl1re8.v v0, (sp) # Unknown-size Folded Reload
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl1re8.v v0, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vasub.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    csrrs a0, vlenb, zero
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vasub.mask.nxv8i64.i64(
