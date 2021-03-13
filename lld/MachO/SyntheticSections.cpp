@@ -597,8 +597,7 @@ void ExportSection::finalizeContents() {
 void ExportSection::writeTo(uint8_t *buf) const { trieBuilder.writeTo(buf); }
 
 FunctionStartsSection::FunctionStartsSection()
-    : LinkEditSection(segment_names::linkEdit, section_names::functionStarts_) {
-}
+    : LinkEditSection(segment_names::linkEdit, section_names::functionStarts) {}
 
 void FunctionStartsSection::finalizeContents() {
   raw_svector_ostream os{contents};
