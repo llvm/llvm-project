@@ -1304,6 +1304,24 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   return SinkCast(CI);
 }
 
+// Match a simple increment by constant operation.  Note that if a sub is
+// matched, the step is negated (as if the step had been canonicalized to
+// an add, even though we leave the instruction alone.)
+bool matchIncrement(const Instruction* IVInc, Instruction *&LHS,
+                    Constant *&Step) {
+  if (match(IVInc, m_Add(m_Instruction(LHS), m_Constant(Step))) ||
+      match(IVInc, m_ExtractValue<0>(m_Intrinsic<Intrinsic::uadd_with_overflow>(
+                       m_Instruction(LHS), m_Constant(Step)))))
+    return true;
+  if (match(IVInc, m_Sub(m_Instruction(LHS), m_Constant(Step))) ||
+      match(IVInc, m_ExtractValue<0>(m_Intrinsic<Intrinsic::usub_with_overflow>(
+                       m_Instruction(LHS), m_Constant(Step))))) {
+    Step = ConstantExpr::getNeg(Step);
+    return true;
+  }
+  return false;
+}
+
 /// If given \p PN is an inductive variable with value IVInc coming from the
 /// backedge, and on each iteration it gets increased by Step, return pair
 /// <IVInc, Step>. Otherwise, return None.
@@ -1316,26 +1334,24 @@ getIVIncrement(const PHINode *PN, const LoopInfo *LI) {
       dyn_cast<Instruction>(PN->getIncomingValueForBlock(L->getLoopLatch()));
   if (!IVInc)
     return None;
+  Instruction *LHS = nullptr;
   Constant *Step = nullptr;
-  if (match(IVInc, m_Sub(m_Specific(PN), m_Constant(Step))))
-    return std::make_pair(IVInc, ConstantExpr::getNeg(Step));
-  if (match(IVInc, m_Add(m_Specific(PN), m_Constant(Step))))
-    return std::make_pair(IVInc, Step);
-  if (match(IVInc, m_ExtractValue<0>(m_Intrinsic<Intrinsic::usub_with_overflow>(
-                       m_Specific(PN), m_Constant(Step)))))
-    return std::make_pair(IVInc, ConstantExpr::getNeg(Step));
-  if (match(IVInc, m_ExtractValue<0>(m_Intrinsic<Intrinsic::uadd_with_overflow>(
-                       m_Specific(PN), m_Constant(Step)))))
+  if (matchIncrement(IVInc, LHS, Step) && LHS == PN)
     return std::make_pair(IVInc, Step);
   return None;
 }
 
-static bool isIVIncrement(const BinaryOperator *BO, const LoopInfo *LI) {
-  auto *PN = dyn_cast<PHINode>(BO->getOperand(0));
-  if (!PN)
+static bool isIVIncrement(const Value *V, const LoopInfo *LI) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
     return false;
-  if (auto IVInc = getIVIncrement(PN, LI))
-    return IVInc->first == BO;
+  Instruction *LHS = nullptr;
+  Constant *Step = nullptr;
+  if (!matchIncrement(I, LHS, Step))
+    return false;
+  if (auto *PN = dyn_cast<PHINode>(LHS))
+    if (auto IVInc = getIVIncrement(PN, LI))
+      return IVInc->first == I;
   return false;
 }
 
@@ -3861,8 +3877,7 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
   ConstantInt *CI = nullptr; Value *AddLHS = nullptr;
   if (isa<Instruction>(ScaleReg) && // not a constant expr.
       match(ScaleReg, m_Add(m_Value(AddLHS), m_ConstantInt(CI))) &&
-      !isIVIncrement(cast<BinaryOperator>(ScaleReg), &LI) &&
-      CI->getValue().isSignedIntN(64)) {
+      !isIVIncrement(ScaleReg, &LI) && CI->getValue().isSignedIntN(64)) {
     TestAddrMode.InBounds = false;
     TestAddrMode.ScaledReg = AddLHS;
     TestAddrMode.BaseOffs += CI->getSExtValue() * TestAddrMode.Scale;
@@ -3878,6 +3893,8 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
     TestAddrMode = AddrMode;
   }
 
+  // If this is an add recurrence with a constant step, return the increment
+  // instruction and the canonicalized step.
   auto GetConstantStep = [this](const Value * V)
       ->Optional<std::pair<Instruction *, APInt> > {
     auto *PN = dyn_cast<PHINode>(V);
@@ -3914,6 +3931,11 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
   if (AddrMode.BaseOffs) {
     if (auto IVStep = GetConstantStep(ScaleReg)) {
       Instruction *IVInc = IVStep->first;
+      // The following assert is important to ensure a lack of infinite loops.
+      // This transforms is (intentionally) the inverse of the one just above.
+      // If they don't agree on the definition of an increment, we'd alternate
+      // back and forth indefinitely.
+      assert(isIVIncrement(IVInc, &LI) && "implied by GetConstantStep");
       APInt Step = IVStep->second;
       APInt Offset = Step * AddrMode.Scale;
       if (Offset.isSignedIntN(64)) {
