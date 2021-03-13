@@ -34,6 +34,8 @@ private:
   unsigned LibCallStackSize = 0;
   /// Size of RVV stack.
   uint64_t RVVStackSize = 0;
+  /// Size of stack frame to save callee saved registers
+  unsigned CalleeSavedStackSize = 0;
 
 public:
   RISCVMachineFunctionInfo(const MachineFunction &MF) {}
@@ -63,6 +65,9 @@ public:
 
   uint64_t getRVVStackSize() const { return RVVStackSize; }
   void setRVVStackSize(uint64_t Size) { RVVStackSize = Size; }
+
+  unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
+  void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 };
 
 } // end namespace llvm
