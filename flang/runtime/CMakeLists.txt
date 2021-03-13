@@ -24,8 +24,7 @@ configure_file(config.h.cmake config.h)
 # with different names
 include_directories(AFTER ${CMAKE_CURRENT_BINARY_DIR})
 
-add_flang_library(FortranRuntime
-  Fortran_main.c
+add_flang_library(FortranRuntime PARTIAL_SOURCES_INTENDED
   ISO_Fortran_binding.cpp
   allocatable.cpp
   buffer.cpp
@@ -57,4 +56,8 @@ add_flang_library(FortranRuntime
 
   LINK_LIBS
   FortranDecimal
+)
+
+add_flang_library(Fortran_main STATIC PARTIAL_SOURCES_INTENDED 
+  Fortran_main.c
 )

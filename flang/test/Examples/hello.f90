@@ -7,7 +7,7 @@
 ! default when they are available.
 
 ! RUN: bbc %s -o - | tco | llc --relocation-model=pic --filetype=obj -o %t.o
-! RUN: %CC %t.o -L%L -lFortranRuntime -lFortranDecimal -lstdc++ -lm -o hello
+! RUN: %CC %t.o -L%L -lFortranRuntime -lFortranDecimal -lFortran_main -lstdc++ -lm -o hello
 ! RUN: ./hello | FileCheck %s
 
 ! CHECK: Hello, World!
