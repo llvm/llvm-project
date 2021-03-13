@@ -531,17 +531,17 @@ define void @crash(i8* %ptr) {
 ; CHECK-LABEL: 'crash'
 ; CHECK-NEXT:  Classifying expressions for: @crash
 ; CHECK-NEXT:    %text.addr.5 = phi i8* [ %incdec.ptr112, %while.cond111 ], [ null, %while.body ]
-; CHECK-NEXT:    --> {null,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Variant }
+; CHECK-NEXT:    --> {0,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Variant }
 ; CHECK-NEXT:    %incdec.ptr112 = getelementptr inbounds i8, i8* %text.addr.5, i64 -1
-; CHECK-NEXT:    --> {(-1 + null)<nuw><nsw>,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Variant }
+; CHECK-NEXT:    --> {-1,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Variant }
 ; CHECK-NEXT:    %lastout.2271 = phi i8* [ %incdec.ptr126, %while.body125 ], [ %ptr, %while.end117 ]
-; CHECK-NEXT:    --> {%ptr,+,1}<nuw><%while.body125> U: full-set S: full-set Exits: {(-2 + null)<nuw><nsw>,+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
+; CHECK-NEXT:    --> {%ptr,+,1}<nuw><%while.body125> U: full-set S: full-set Exits: {-2,+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
 ; CHECK-NEXT:    %incdec.ptr126 = getelementptr inbounds i8, i8* %lastout.2271, i64 1
-; CHECK-NEXT:    --> {(1 + %ptr)<nuw>,+,1}<nuw><%while.body125> U: [1,0) S: [1,0) Exits: {(-1 + null)<nuw><nsw>,+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
+; CHECK-NEXT:    --> {(1 + %ptr)<nuw>,+,1}<nuw><%while.body125> U: [1,0) S: [1,0) Exits: {-1,+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @crash
-; CHECK-NEXT:  Loop %while.body125: backedge-taken count is {(-2 + (-1 * %ptr) + null),+,-1}<nw><%while.cond111>
+; CHECK-NEXT:  Loop %while.body125: backedge-taken count is {(-2 + (-1 * %ptr)),+,-1}<nw><%while.cond111>
 ; CHECK-NEXT:  Loop %while.body125: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %while.body125: Predicated backedge-taken count is {(-2 + (-1 * %ptr) + null),+,-1}<nw><%while.cond111>
+; CHECK-NEXT:  Loop %while.body125: Predicated backedge-taken count is {(-2 + (-1 * %ptr)),+,-1}<nw><%while.cond111>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %while.body125: Trip multiple is 1
 ; CHECK-NEXT:  Loop %while.cond111: Unpredictable backedge-taken count.

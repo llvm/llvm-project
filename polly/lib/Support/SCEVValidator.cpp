@@ -461,11 +461,6 @@ public:
       }
     }
 
-    if (Expr->getType()->isPointerTy()) {
-      if (isa<ConstantPointerNull>(V))
-        return ValidatorResult(SCEVType::INT); // "int"
-    }
-
     return ValidatorResult(SCEVType::PARAM, Expr);
   }
 };
