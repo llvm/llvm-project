@@ -432,7 +432,7 @@ void DebugObjectManagerPlugin::notifyMaterializing(
 }
 
 void DebugObjectManagerPlugin::modifyPassConfig(
-    MaterializationResponsibility &MR, const Triple &TT,
+    MaterializationResponsibility &MR, LinkGraph &G,
     PassConfiguration &PassConfig) {
   // Not all link artifacts have associated debug objects.
   std::lock_guard<std::mutex> Lock(PendingObjsLock);

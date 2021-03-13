@@ -218,14 +218,14 @@ public:
     return [this](LinkGraph &G) { return markResponsibilitySymbolsLive(G); };
   }
 
-  Error modifyPassConfig(const Triple &TT, PassConfiguration &Config) override {
+  Error modifyPassConfig(LinkGraph &LG, PassConfiguration &Config) override {
     // Add passes to mark duplicate defs as should-discard, and to walk the
     // link graph to build the symbol dependence graph.
     Config.PrePrunePasses.push_back([this](LinkGraph &G) {
       return claimOrExternalizeWeakAndCommonSymbols(G);
     });
 
-    Layer.modifyPassConfig(*MR, TT, Config);
+    Layer.modifyPassConfig(*MR, LG, Config);
 
     Config.PostPrunePasses.push_back(
         [this](LinkGraph &G) { return computeNamedSymbolDependencies(G); });
@@ -511,10 +511,10 @@ void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
 }
 
 void ObjectLinkingLayer::modifyPassConfig(MaterializationResponsibility &MR,
-                                          const Triple &TT,
+                                          LinkGraph &G,
                                           PassConfiguration &PassConfig) {
   for (auto &P : Plugins)
-    P->modifyPassConfig(MR, TT, PassConfig);
+    P->modifyPassConfig(MR, G, PassConfig);
 }
 
 void ObjectLinkingLayer::notifyLoaded(MaterializationResponsibility &MR) {
@@ -583,11 +583,11 @@ EHFrameRegistrationPlugin::EHFrameRegistrationPlugin(
     : ES(ES), Registrar(std::move(Registrar)) {}
 
 void EHFrameRegistrationPlugin::modifyPassConfig(
-    MaterializationResponsibility &MR, const Triple &TT,
+    MaterializationResponsibility &MR, LinkGraph &G,
     PassConfiguration &PassConfig) {
 
   PassConfig.PostFixupPasses.push_back(createEHFrameRecorderPass(
-      TT, [this, &MR](JITTargetAddress Addr, size_t Size) {
+      G.getTargetTriple(), [this, &MR](JITTargetAddress Addr, size_t Size) {
         if (Addr) {
           std::lock_guard<std::mutex> Lock(EHFramePluginMutex);
           assert(!InProcessLinks.count(&MR) &&

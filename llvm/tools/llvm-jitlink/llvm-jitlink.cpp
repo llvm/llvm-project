@@ -821,9 +821,9 @@ Session::Session(std::unique_ptr<TargetProcessControl> TPC, Error &Err)
   class JITLinkSessionPlugin : public ObjectLinkingLayer::Plugin {
   public:
     JITLinkSessionPlugin(Session &S) : S(S) {}
-    void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
+    void modifyPassConfig(MaterializationResponsibility &MR, LinkGraph &G,
                           PassConfiguration &PassConfig) override {
-      S.modifyPassConfig(TT, PassConfig);
+      S.modifyPassConfig(G.getTargetTriple(), PassConfig);
     }
 
     Error notifyFailed(MaterializationResponsibility &MR) override {

@@ -311,7 +311,7 @@ LinkGraphPassFunction JITLinkContext::getMarkLivePass(const Triple &TT) const {
   return LinkGraphPassFunction();
 }
 
-Error JITLinkContext::modifyPassConfig(const Triple &TT,
+Error JITLinkContext::modifyPassConfig(LinkGraph &G,
                                        PassConfiguration &Config) {
   return Error::success();
 }
