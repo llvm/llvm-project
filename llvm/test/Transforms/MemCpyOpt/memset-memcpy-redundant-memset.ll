@@ -239,9 +239,7 @@ define void @test_missing_noalias(i8* %src, i64 %src_size, i8* %dst, i64 %dst_si
 
 define void @test_same_const_size(i8* noalias %src, i8* noalias %dst, i8 %c) {
 ; CHECK-LABEL: @test_same_const_size(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[DST:%.*]], i64 16
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP1]], i8 [[C:%.*]], i64 0, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST]], i8* [[SRC:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[SRC:%.*]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0i8.i64(i8* %dst, i8 %c, i64 16, i1 false)
@@ -251,12 +249,7 @@ define void @test_same_const_size(i8* noalias %src, i8* noalias %dst, i8 %c) {
 
 define void @test_same_dynamic_size(i8* noalias %src, i8* noalias %dst, i64 %size, i8 %c) {
 ; CHECK-LABEL: @test_same_dynamic_size(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[SIZE:%.*]], [[SIZE]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[SIZE]], [[SIZE]]
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, i8* [[DST:%.*]], i64 [[SIZE]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP4]], i8 [[C:%.*]], i64 [[TMP3]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST]], i8* [[SRC:%.*]], i64 [[SIZE]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[SRC:%.*]], i64 [[SIZE:%.*]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0i8.i64(i8* %dst, i8 %c, i64 %size, i1 false)
