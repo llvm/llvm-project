@@ -1172,6 +1172,13 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   if (mayBeVisibleThroughUnwinding(Dest, MemSet, MemCpy))
     return false;
 
+  // If the sizes are the same, simply drop the memset instead of generating
+  // a replacement with zero size.
+  if (DestSize == SrcSize) {
+    eraseInstruction(MemSet);
+    return true;
+  }
+
   // By default, create an unaligned memset.
   unsigned Align = 1;
   // If Dest is aligned, and SrcSize is constant, use the minimum alignment
