@@ -434,17 +434,6 @@ const Symbol *FindSubprogram(const Symbol &symbol) {
       symbol.details());
 }
 
-const Symbol *FindFunctionResult(const Symbol &symbol) {
-  if (const Symbol * subp{FindSubprogram(symbol)}) {
-    if (const auto &subpDetails{subp->detailsIf<SubprogramDetails>()}) {
-      if (subpDetails->isFunction()) {
-        return &subpDetails->result();
-      }
-    }
-  }
-  return nullptr;
-}
-
 const Symbol *FindOverriddenBinding(const Symbol &symbol) {
   if (symbol.has<ProcBindingDetails>()) {
     if (const DeclTypeSpec * parentType{FindParentTypeSpec(symbol.owner())}) {
