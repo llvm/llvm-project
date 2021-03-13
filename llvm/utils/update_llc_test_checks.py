@@ -109,8 +109,7 @@ def main():
         flags=type('', (object,), {
             'verbose': ti.args.verbose,
             'function_signature': False,
-            'check_attributes': False,
-            'replace_function_regex': []}),
+            'check_attributes': False}),
         scrubber_args=[ti.args])
 
     for prefixes, llc_args, triple_in_cmd, march_in_cmd in run_list:
