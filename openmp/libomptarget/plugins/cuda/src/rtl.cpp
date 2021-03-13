@@ -1095,8 +1095,15 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   return DeviceRTL.loadBinary(device_id, image);
 }
 
-void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *) {
+void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *,
+                           int32_t kind) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+
+  if (kind != TARGET_ALLOC_DEFAULT) {
+    REPORT("Invalid target data allocation kind or requested allocator not "
+           "implemented yet\n");
+    return NULL;
+  }
 
   return DeviceRTL.dataAlloc(device_id, size);
 }

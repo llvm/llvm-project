@@ -46,6 +46,8 @@ extern int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
 extern int checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc);
+extern void *targetAllocExplicit(size_t size, int device_num, int kind,
+                                 const char *name);
 
 // This structure stores information of a mapped memory region.
 struct MapComponentInfoTy {
