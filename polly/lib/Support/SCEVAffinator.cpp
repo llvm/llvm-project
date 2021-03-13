@@ -551,15 +551,8 @@ PWACtx SCEVAffinator::visitUnknown(const SCEVUnknown *Expr) {
     }
   }
 
-  if (isa<ConstantPointerNull>(Expr->getValue())) {
-    isl::val v{Ctx, 0};
-    isl::space Space{Ctx, 0, NumIterators};
-    isl::local_space ls{Space};
-    return getPWACtxFromPWA(isl::aff(ls, v));
-  }
-
-  llvm_unreachable("Unknowns SCEV was neither a parameter, a constant nor a "
-                   "valid instruction.");
+  llvm_unreachable(
+      "Unknowns SCEV was neither parameter nor a valid instruction.");
 }
 
 PWACtx SCEVAffinator::complexityBailout() {

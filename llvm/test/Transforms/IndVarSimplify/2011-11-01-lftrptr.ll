@@ -150,13 +150,13 @@ define i8 @testnullptrint(i8* %buf, i8* %end) nounwind {
 ; PTR64-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[BI]]
 ; PTR64-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
 ; PTR64-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
-; PTR64-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* null, i64 [[TMP4]]
+; PTR64-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to i8*
 ; PTR64-NEXT:    br label [[LOOP:%.*]]
 ; PTR64:       loop:
 ; PTR64-NEXT:    [[P_01_US_US:%.*]] = phi i8* [ null, [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; PTR64-NEXT:    [[GEP]] = getelementptr inbounds i8, i8* [[P_01_US_US]], i64 1
 ; PTR64-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]], align 1
-; PTR64-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[GEP]], [[SCEVGEP]]
+; PTR64-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[GEP]], [[TMP5]]
 ; PTR64-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR64:       exit.loopexit:
 ; PTR64-NEXT:    [[SNEXT_LCSSA:%.*]] = phi i8 [ [[SNEXT]], [[LOOP]] ]
@@ -171,16 +171,16 @@ define i8 @testnullptrint(i8* %buf, i8* %end) nounwind {
 ; PTR32-NEXT:    [[BI:%.*]] = ptrtoint i8* [[BUF:%.*]] to i32
 ; PTR32-NEXT:    [[EI:%.*]] = ptrtoint i8* [[END:%.*]] to i32
 ; PTR32-NEXT:    [[CNT:%.*]] = sub i32 [[EI]], [[BI]]
+; PTR32-NEXT:    [[CNT1:%.*]] = inttoptr i32 [[CNT]] to i8*
 ; PTR32-NEXT:    [[GUARD:%.*]] = icmp ult i32 0, [[CNT]]
 ; PTR32-NEXT:    br i1 [[GUARD]], label [[PREHEADER:%.*]], label [[EXIT:%.*]]
 ; PTR32:       preheader:
-; PTR32-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* null, i32 [[CNT]]
 ; PTR32-NEXT:    br label [[LOOP:%.*]]
 ; PTR32:       loop:
 ; PTR32-NEXT:    [[P_01_US_US:%.*]] = phi i8* [ null, [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; PTR32-NEXT:    [[GEP]] = getelementptr inbounds i8, i8* [[P_01_US_US]], i64 1
 ; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]], align 1
-; PTR32-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[GEP]], [[SCEVGEP]]
+; PTR32-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[GEP]], [[CNT1]]
 ; PTR32-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR32:       exit.loopexit:
 ; PTR32-NEXT:    [[SNEXT_LCSSA:%.*]] = phi i8 [ [[SNEXT]], [[LOOP]] ]
