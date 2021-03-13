@@ -6,11 +6,11 @@
 # RUN: %lld -dylib %t/bar.o -o %t/libbar.dylib
 # RUN: not %lld -lSystem -o /dev/null %t/libbar.dylib %t/test.o 2>&1 | FileCheck %s
 
-# CHECK: error: relocation UNSIGNED is out of range: 8589942792 is not in [0, 4294967295]; references _foo
-# CHECK: error: relocation GOT_LOAD is out of range: 4294974033 is not in [-2147483648, 2147483647]; references _foo
-# CHECK: error: stub is out of range: 4294974006 is not in [-2147483648, 2147483647]; references _bar
-# CHECK: error: stub helper header is out of range: 4294974005 is not in [-2147483648, 2147483647]
-# CHECK: error: stub helper header is out of range: 4294969893 is not in [-2147483648, 2147483647]
+# CHECK: error: relocation UNSIGNED is out of range: [[#]] is not in [0, 4294967295]; references _foo
+# CHECK: error: relocation GOT_LOAD is out of range: [[#]] is not in [-2147483648, 2147483647]; references _foo
+# CHECK: error: stub is out of range: [[#]] is not in [-2147483648, 2147483647]; references _bar
+# CHECK: error: stub helper header is out of range: [[#]] is not in [-2147483648, 2147483647]
+# CHECK: error: stub helper header is out of range: [[#]] is not in [-2147483648, 2147483647]
 
 #--- bar.s
 .globl _bar
