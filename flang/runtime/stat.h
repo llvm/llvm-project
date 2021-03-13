@@ -47,8 +47,8 @@ enum Stat {
 };
 
 const char *StatErrorString(int);
-int ToErrmsg(Descriptor *errmsg, int stat); // returns stat
-int ReturnError(
-    Terminator &, int stat, Descriptor *errmsg = nullptr, bool hasStat = false);
+int ToErrmsg(const Descriptor *errmsg, int stat); // returns stat
+int ReturnError(Terminator &, int stat, const Descriptor *errmsg = nullptr,
+    bool hasStat = false);
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_STAT_H
