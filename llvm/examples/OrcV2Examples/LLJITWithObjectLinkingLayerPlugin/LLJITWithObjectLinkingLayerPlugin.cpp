@@ -60,19 +60,14 @@ public:
            << LG.getTargetTriple().str() << "):\n";
 
     // Print sections, symbol names and addresses, and any edges for the
-    // associated blocks.
-    Config.PostPrunePasses.push_back(printGraph);
-
-    // Print graph contents before and after fixups:
+    // associated blocks at the 'PostPrune' phase of JITLink (after
+    // dead-stripping, but before addresses are allocated in the target
+    // address space. See llvm/docs/JITLink.rst).
     //
-    // Config.PostPrunePasses.push_back([this](jitlink::LinkGraph &G) -> Error {
-    //   printLinkGraphContent(G, "Before fixup:");
-    //   return Error::success();
-    // });
-    // Config.PostFixupPasses.push_back([this](jitlink::LinkGraph &G) -> Error {
-    //   printLinkGraphContent(G, "After fixup:");
-    //   return Error::success();
-    // });
+    // Experiment with adding the 'printGraph' pass at other points in the
+    // pipeline. E.g. PrePrunePasses, PostAllocationPasses, and
+    // PostFixupPasses.
+    Config.PostPrunePasses.push_back(printGraph);
   }
 
   void notifyLoaded(MaterializationResponsibility &MR) override {
