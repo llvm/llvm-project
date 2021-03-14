@@ -2173,14 +2173,15 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           Matched = true;
       }
 
-      if (Matched) {
-        // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X))
-        // to (bitcast Y)
-        Value *Y;
-        if (match(V, m_Sub(m_PtrToInt(m_Value(Y)),
-                           m_PtrToInt(m_Specific(GEP.getOperand(0))))))
-          return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
-      }
+      // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X)) to (bitcast Y), but
+      // only if both point to the same underlying object (otherwise provenance
+      // is not necessarily retained).
+      Value *Y;
+      Value *X = GEP.getOperand(0);
+      if (Matched &&
+          match(V, m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
+          getUnderlyingObject(X) == getUnderlyingObject(Y))
+        return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
     }
   }
 
