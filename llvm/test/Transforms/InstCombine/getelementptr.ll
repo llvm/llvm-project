@@ -1087,7 +1087,11 @@ define %struct.C* @test44i(%struct.C* %c1, %struct.C* %c2) {
 
 define %struct.C* @test45(%struct.C* %c1, %struct.C** %c2) {
 ; CHECK-LABEL: @test45(
-; CHECK-NEXT:    [[GEP:%.*]] = bitcast %struct.C** [[C2:%.*]] to %struct.C*
+; CHECK-NEXT:    [[PTRTOINT1:%.*]] = ptrtoint %struct.C* [[C1:%.*]] to i64
+; CHECK-NEXT:    [[PTRTOINT2:%.*]] = ptrtoint %struct.C** [[C2:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PTRTOINT2]], [[PTRTOINT1]]
+; CHECK-NEXT:    [[SHR:%.*]] = sdiv i64 [[SUB]], 7
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_C:%.*]], %struct.C* [[C1]], i64 [[SHR]]
 ; CHECK-NEXT:    ret %struct.C* [[GEP]]
 ;
   %ptrtoint1 = ptrtoint %struct.C* %c1 to i64
