@@ -5,40 +5,7 @@ import os
 import sys
 import json
 
-from optparse import OptionParser
-
-parser = OptionParser()
-parser.add_option('--json-input-path',
-                  help='Read API description from FILE', metavar='FILE')
-parser.add_option('--output-file', help='Generate output in FILEPATH',
-                  metavar='FILEPATH')
-parser.add_option('--empty-implementation', help='Generate empty implementation',
-                  action="store", type="int", metavar='FILEPATH')
-
-(options, args) = parser.parse_args()
-
-if options.empty_implementation:
-    with open(os.path.join(os.getcwd(),
-              options.output_file), 'w') as f:
-        f.write("""
-namespace clang {
-namespace tooling {
-
-NodeLocationAccessors NodeIntrospection::GetLocations(clang::Stmt const *) {
-  return {};
-}
-NodeLocationAccessors
-NodeIntrospection::GetLocations(clang::DynTypedNode const &) {
-  return {};
-}
-} // namespace tooling
-} // namespace clang
-""")
-    sys.exit(0)
-
-with open(options.json_input_path) as f:
-    jsonData = json.load(f)
-
+import argparse
 
 class Generator(object):
 
@@ -66,7 +33,8 @@ using RangeAndString = SourceRangeMap::value_type;
     def GenerateBaseGetLocationsDeclaration(self, CladeName):
         self.implementationContent += \
             """
-void GetLocationsImpl(std::shared_ptr<LocationCall> const& Prefix, clang::{0} const *Object, SourceLocationMap &Locs,
+void GetLocationsImpl(std::shared_ptr<LocationCall> const& Prefix,
+    clang::{0} const *Object, SourceLocationMap &Locs,
     SourceRangeMap &Rngs);
 """.format(CladeName)
 
@@ -84,7 +52,8 @@ static void GetLocations{0}(std::shared_ptr<LocationCall> const& Prefix,
             for locName in ClassData['sourceLocations']:
                 self.implementationContent += \
                     """
-  Locs.insert(LocationAndString(Object.{0}(), std::make_shared<LocationCall>(Prefix, "{0}")));
+  Locs.insert(LocationAndString(Object.{0}(),
+    std::make_shared<LocationCall>(Prefix, "{0}")));
 """.format(locName)
 
             self.implementationContent += '\n'
@@ -93,7 +62,8 @@ static void GetLocations{0}(std::shared_ptr<LocationCall> const& Prefix,
             for rngName in ClassData['sourceRanges']:
                 self.implementationContent += \
                     """
-  Rngs.insert(RangeAndString(Object.{0}(), std::make_shared<LocationCall>(Prefix, "{0}")));
+  Rngs.insert(RangeAndString(Object.{0}(),
+    std::make_shared<LocationCall>(Prefix, "{0}")));
 """.format(rngName)
 
             self.implementationContent += '\n'
@@ -104,16 +74,6 @@ static void GetLocations{0}(std::shared_ptr<LocationCall> const& Prefix,
         with open(os.path.join(os.getcwd(),
                   OutputFile), 'w') as f:
             f.write(self.implementationContent)
-
-    def GenerateTrivialBaseGetLocationsFunction(self, CladeName):
-        MethodReturnType = 'NodeLocationAccessors'
-
-        Signature = \
-            'GetLocations(clang::{0} const *Object)'.format(CladeName)
-
-        self.implementationContent += \
-            '{0} NodeIntrospection::{1} {{ return {{}}; }}'.format(MethodReturnType,
-                Signature)
 
     def GenerateBaseGetLocationsFunction(self, ASTClassNames, CladeName):
 
@@ -129,7 +89,8 @@ GetLocationsImpl(std::shared_ptr<LocationCall> const& Prefix,
 """.format(CladeName)
 
         self.implementationContent += \
-            'void {0} {{ GetLocations{1}(Prefix, *Object, Locs, Rngs);'.format(ImplSignature,
+            'void {0} {{ GetLocations{1}(Prefix, *Object, Locs, Rngs);'.format(
+                ImplSignature,
                 CladeName)
 
         for ASTClassName in ASTClassNames:
@@ -180,29 +141,61 @@ if (auto Derived = llvm::dyn_cast<clang::{0}>(Object)) {{
 }
 '''
 
+def main():
 
-g = Generator()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--json-input-path',
+                      help='Read API description from FILE', metavar='FILE')
+    parser.add_argument('--output-file', help='Generate output in FILEPATH',
+                      metavar='FILEPATH')
+    parser.add_argument('--empty-implementation',
+                      help='Generate empty implementation',
+                      action="store", type=int)
 
-g.GeneratePrologue()
+    options = parser.parse_args()
 
-if 'classesInClade' in jsonData:
-    for (CladeName, ClassNameData) in jsonData['classesInClade'].items():
-        g.GenerateBaseGetLocationsDeclaration(CladeName)
+    if options.empty_implementation:
+        with open(os.path.join(os.getcwd(),
+                  options.output_file), 'w') as f:
+            f.write("""
+namespace clang {
+namespace tooling {
 
-    for (ClassName, ClassAccessors) in jsonData['classEntries'].items():
-        if ClassAccessors:
-            g.GenerateSrcLocMethod(ClassName, ClassAccessors)
+NodeLocationAccessors NodeIntrospection::GetLocations(clang::Stmt const *) {
+  return {};
+}
+NodeLocationAccessors
+NodeIntrospection::GetLocations(clang::DynTypedNode const &) {
+  return {};
+}
+} // namespace tooling
+} // namespace clang
+    """)
+        sys.exit(0)
 
-    for (CladeName, ClassNameData) in jsonData['classesInClade'].items():
-        g.GenerateBaseGetLocationsFunction(ClassNameData, CladeName)
+    with open(options.json_input_path) as f:
+        jsonData = json.load(f)
 
-    g.GenerateDynNodeVisitor(jsonData['classesInClade'].keys())
-else:
-    for CladeName in ['Stmt']:
-        g.GenerateTrivialBaseGetLocationsFunction(CladeName)
+    g = Generator()
 
-    g.GenerateDynNodeVisitor([])
+    g.GeneratePrologue()
 
-g.GenerateEpilogue()
+    if 'classesInClade' in jsonData:
+        for (CladeName, ClassNameData) in jsonData['classesInClade'].items():
+            g.GenerateBaseGetLocationsDeclaration(CladeName)
 
-g.GenerateFiles(options.output_file)
+        for (ClassName, ClassAccessors) in jsonData['classEntries'].items():
+            if ClassAccessors:
+                g.GenerateSrcLocMethod(ClassName, ClassAccessors)
+
+        for (CladeName, ClassNameData) in jsonData['classesInClade'].items():
+            g.GenerateBaseGetLocationsFunction(ClassNameData, CladeName)
+
+        g.GenerateDynNodeVisitor(jsonData['classesInClade'].keys())
+
+    g.GenerateEpilogue()
+
+    g.GenerateFiles(options.output_file)
+
+if __name__ == '__main__':
+    main()
