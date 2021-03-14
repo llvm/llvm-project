@@ -12,7 +12,6 @@ group("unittests") {
     "Format:FormatTests",
     "Frontend:FrontendTests",
     "Index:IndexTests",
-    "Introspection:IntrospectionTests",
     "Lex:LexTests",
     "Rename:ClangRenameTests",
     "Rewrite:RewriteTests",
