@@ -28,36 +28,6 @@ class DWARFUnit;
 namespace lld {
 namespace macho {
 
-namespace section_names {
-
-constexpr const char pageZero[] = "__pagezero";
-constexpr const char common[] = "__common";
-constexpr const char header[] = "__mach_header";
-constexpr const char rebase[] = "__rebase";
-constexpr const char binding[] = "__binding";
-constexpr const char weakBinding[] = "__weak_binding";
-constexpr const char lazyBinding[] = "__lazy_binding";
-constexpr const char export_[] = "__export";
-constexpr const char functionStarts_[] = "__functionStarts";
-constexpr const char symbolTable[] = "__symbol_table";
-constexpr const char indirectSymbolTable[] = "__ind_sym_tab";
-constexpr const char stringTable[] = "__string_table";
-constexpr const char codeSignature[] = "__code_signature";
-constexpr const char got[] = "__got";
-constexpr const char threadPtrs[] = "__thread_ptrs";
-constexpr const char unwindInfo[] = "__unwind_info";
-// these are not synthetic, but in service of synthetic __unwind_info
-constexpr const char compactUnwind[] = "__compact_unwind";
-constexpr const char ehFrame[] = "__eh_frame";
-// these are not synthetic, but need to be sorted
-constexpr const char text[] = "__text";
-constexpr const char stubs[] = "__stubs";
-constexpr const char stubHelper[] = "__stub_helper";
-constexpr const char laSymbolPtr[] = "__la_symbol_ptr";
-constexpr const char data[] = "__data";
-
-} // namespace section_names
-
 class Defined;
 class DylibSymbol;
 class LoadCommand;

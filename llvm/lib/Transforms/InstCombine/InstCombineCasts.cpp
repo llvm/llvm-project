@@ -2403,6 +2403,11 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
         Value *Addr = LI->getOperand(0);
         if (Addr == &CI || isa<LoadInst>(Addr))
           return nullptr;
+        // If there is any loss for the pointer bitcast, abandon.
+        auto *DestPtrTy = DestTy->getPointerTo(LI->getPointerAddressSpace());
+        auto *SrcPtrTy = Addr->getType();
+        if (!SrcPtrTy->canLosslesslyBitCastTo(DestPtrTy))
+          return nullptr;
         if (LI->hasOneUse() && LI->isSimple())
           continue;
         // If a LoadInst has more than one use, changing the type of loaded

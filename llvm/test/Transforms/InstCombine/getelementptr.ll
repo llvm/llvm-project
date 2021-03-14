@@ -92,7 +92,7 @@ define void @test5_as1(i8 %B) {
 ; This should be turned into a constexpr instead of being an instruction
 define void @test_evaluate_gep_nested_as_ptrs(i32 addrspace(2)* %B) {
 ; CHECK-LABEL: @test_evaluate_gep_nested_as_ptrs(
-; CHECK-NEXT:    store i32 addrspace(2)* [[B:%.*]], i32 addrspace(2)* addrspace(1)* getelementptr inbounds (%as2_ptr_struct, [[AS2_PTR_STRUCT:%.*]] addrspace(1)* @global_as1_as2_ptr, i16 0, i32 0), align 8
+; CHECK-NEXT:    store i32 addrspace(2)* [[B:%.*]], i32 addrspace(2)* addrspace(1)* getelementptr inbounds ([[AS2_PTR_STRUCT:%.*]], [[AS2_PTR_STRUCT]] addrspace(1)* @global_as1_as2_ptr, i16 0, i32 0), align 8
 ; CHECK-NEXT:    ret void
 ;
   %A = getelementptr %as2_ptr_struct, %as2_ptr_struct addrspace(1)* @global_as1_as2_ptr, i16 0, i32 0
@@ -525,10 +525,10 @@ define i1 @test26(i8* %arr) {
   ret i1 %test
 }
 
-	%struct.__large_struct = type { [100 x i64] }
-	%struct.compat_siginfo = type { i32, i32, i32, { [29 x i32] } }
-	%struct.siginfo_t = type { i32, i32, i32, { { i32, i32, [0 x i8], %struct.sigval_t, i32 }, [88 x i8] } }
-	%struct.sigval_t = type { i8* }
+  %struct.__large_struct = type { [100 x i64] }
+  %struct.compat_siginfo = type { i32, i32, i32, { [29 x i32] } }
+  %struct.siginfo_t = type { i32, i32, i32, { { i32, i32, [0 x i8], %struct.sigval_t, i32 }, [88 x i8] } }
+  %struct.sigval_t = type { i8* }
 
 define i32 @test27(%struct.compat_siginfo* %to, %struct.siginfo_t* %from) {
 ; CHECK-LABEL: @test27(
@@ -538,7 +538,7 @@ define i32 @test27(%struct.compat_siginfo* %to, %struct.siginfo_t* %from) {
 ; CHECK-NEXT:    [[TMP349:%.*]] = getelementptr [[STRUCT_SIGINFO_T:%.*]], %struct.siginfo_t* [[TMP344]], i64 0, i32 3, i32 0, i32 3, i32 0
 ; CHECK-NEXT:    [[TMP349350:%.*]] = bitcast i8** [[TMP349]] to i32*
 ; CHECK-NEXT:    [[TMP351:%.*]] = load i32, i32* [[TMP349350]], align 8
-; CHECK-NEXT:    [[TMP360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[TMP351]], %struct.__large_struct* null, i32 -14, i32 0) [[ATTR0:#.*]]
+; CHECK-NEXT:    [[TMP360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[TMP351]], %struct.__large_struct* null, i32 -14, i32 0) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -558,7 +558,7 @@ entry:
 }
 
 ; PR1978
-	%struct.x = type <{ i8 }>
+  %struct.x = type <{ i8 }>
 @.str = internal constant [6 x i8] c"Main!\00"
 @.str1 = internal constant [12 x i8] c"destroy %p\0A\00"
 
@@ -566,14 +566,14 @@ define i32 @test28() nounwind  {
 ; CHECK-LABEL: @test28(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ORIENTATIONS:%.*]] = alloca [1 x [1 x %struct.x]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @puts(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0)) [[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @puts(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0)) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[BB10]] ]
 ; CHECK-NEXT:    [[TMP12_REC:%.*]] = xor i32 [[INDVAR]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[TMP12_REC]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1 x [1 x %struct.x]], [1 x [1 x %struct.x]]* [[ORIENTATIONS]], i64 1, i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP16:%.*]] = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @.str1, i64 0, i64 0), %struct.x* nonnull [[TMP12]]) [[ATTR0]]
+; CHECK-NEXT:    [[TMP16:%.*]] = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @.str1, i64 0, i64 0), %struct.x* nonnull [[TMP12]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP84:%.*]] = icmp eq i32 [[INDVAR]], 0
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
 ; CHECK-NEXT:    br i1 [[TMP84]], label [[BB17:%.*]], label [[BB10]]
@@ -609,7 +609,7 @@ declare i32 @printf(i8*, ...)
 
 
 ; rdar://6762290
-	%T = type <{ i64, i64, i64 }>
+  %T = type <{ i64, i64, i64 }>
 define i32 @test29(i8* %start, i32 %X) nounwind {
 ; CHECK-LABEL: @test29(
 ; CHECK-NEXT:  entry:
@@ -648,7 +648,7 @@ define i32 @test30(i32 %m, i32 %n) nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, i64 [[TMP0]], align 4
-; CHECK-NEXT:    call void @test30f(i32* nonnull [[TMP1]]) [[ATTR0]]
+; CHECK-NEXT:    call void @test30f(i32* nonnull [[TMP1]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[M:%.*]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, i32* [[TMP1]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP3]], align 4
@@ -758,7 +758,7 @@ define i32 addrspace(1)* @test33_addrspacecast(%struct.Key* %A) {
   ret i32 addrspace(1)* %C
 }
 
-	%T2 = type { i8*, i8 }
+  %T2 = type { i8*, i8 }
 define i8* @test34(i8* %Val, i64 %V) nounwind {
 ; CHECK-LABEL: @test34(
 ; CHECK-NEXT:  entry:
@@ -787,7 +787,7 @@ entry:
 
 define i32 @test35() nounwind {
 ; CHECK-LABEL: @test35(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([17 x i8], [17 x i8]* @"\01LC8", i64 0, i64 0), i8* getelementptr inbounds (%t0, %t0* @s, i64 0, i32 1, i64 0)) [[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([17 x i8], [17 x i8]* @"\01LC8", i64 0, i64 0), i8* getelementptr inbounds ([[T0:%.*]], %t0* @s, i64 0, i32 1, i64 0)) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 0
 ;
   call i32 (i8*, ...) @printf(i8* getelementptr ([17 x i8], [17 x i8]* @"\01LC8", i32 0, i32 0),
@@ -833,9 +833,9 @@ define void @pr10322_f1(%pr10322_t* %foo) {
 ; CHECK-LABEL: @pr10322_f1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [[PR10322_T:%.*]], %pr10322_t* [[FOO:%.*]], i64 2
-; CHECK-NEXT:    call void @pr10322_f2(%pr10322_t* nonnull [[ARRAYIDX8]]) [[ATTR0]]
+; CHECK-NEXT:    call void @pr10322_f2(%pr10322_t* nonnull [[ARRAYIDX8]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PR10322_T]], %pr10322_t* [[ARRAYIDX8]], i64 0, i32 0
-; CHECK-NEXT:    call void @pr10322_f3(i8** nonnull [[TMP2]]) [[ATTR0]]
+; CHECK-NEXT:    call void @pr10322_f3(i8** nonnull [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1096,7 +1096,6 @@ define %struct.C* @test45(%struct.C* %c1, %struct.C** %c2) {
   %shr = sdiv i64 %sub, 7
   %gep = getelementptr inbounds %struct.C, %struct.C* %c1, i64 %shr ; C1 + (C2 - C1)
   ret %struct.C* %gep
-
 }
 
 define %struct.C* @test46(%struct.C* %c1, %struct.C* %c2, i64 %N) {
@@ -1229,7 +1228,7 @@ define i32* @test_gep_inbounds_of_gep(i32* %base) {
 
 define i32* @PR45084(i1 %cond) {
 ; CHECK-LABEL: @PR45084(
-; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[COND:%.*]], i32* getelementptr inbounds (%struct.f, %struct.f* @g0, i64 0, i32 0), i32* getelementptr inbounds (%struct.f, %struct.f* @g1, i64 0, i32 0), !prof !0
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[COND:%.*]], i32* getelementptr inbounds ([[STRUCT_F:%.*]], %struct.f* @g0, i64 0, i32 0), i32* getelementptr inbounds ([[STRUCT_F]], %struct.f* @g1, i64 0, i32 0), !prof !0
 ; CHECK-NEXT:    ret i32* [[GEP]]
 ;
   %sel = select i1 %cond, %struct.f* @g0, %struct.f* @g1, !prof !0
@@ -1241,7 +1240,7 @@ define i32* @PR45084_extra_use(i1 %cond, %struct.f** %p) {
 ; CHECK-LABEL: @PR45084_extra_use(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], %struct.f* @g0, %struct.f* @g1
 ; CHECK-NEXT:    store %struct.f* [[SEL]], %struct.f** [[P:%.*]], align 8
-; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[COND]], i32* getelementptr inbounds (%struct.f, %struct.f* @g0, i64 0, i32 0), i32* getelementptr inbounds (%struct.f, %struct.f* @g1, i64 0, i32 0)
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[COND]], i32* getelementptr inbounds ([[STRUCT_F:%.*]], %struct.f* @g0, i64 0, i32 0), i32* getelementptr inbounds ([[STRUCT_F]], %struct.f* @g1, i64 0, i32 0)
 ; CHECK-NEXT:    ret i32* [[GEP]]
 ;
   %sel = select i1 %cond, %struct.f* @g0, %struct.f* @g1
@@ -1283,6 +1282,22 @@ define i8* @gep_null_inbounds_different_type(i64 %idx1, i64 %idx2) {
 ; CHECK-NEXT:    ret i8* [[GEP]]
 ;
   %gep = getelementptr inbounds [0 x i8], [0 x i8]* null, i64 %idx1, i64 %idx2
+  ret i8* %gep
+}
+
+define i8* @D98588(i8* %c1, i64 %offset) {
+; CHECK-LABEL: @D98588(
+; CHECK-NEXT:    [[C2:%.*]] = bitcast i8* [[C1:%.*]] to i64*
+; CHECK-NEXT:    [[C2_NEXT:%.*]] = getelementptr inbounds i64, i64* [[C2]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = bitcast i64* [[C2_NEXT]] to i8*
+; CHECK-NEXT:    ret i8* [[GEP]]
+;
+  %c2 = bitcast i8* %c1 to i64*
+  %c2_next = getelementptr inbounds i64, i64* %c2, i64 %offset
+  %ptrtoint1 = ptrtoint i8* %c1 to i64
+  %ptrtoint2 = ptrtoint i64* %c2_next to i64
+  %sub = sub i64 %ptrtoint2, %ptrtoint1 ; C2 - C1
+  %gep = getelementptr inbounds i8, i8* %c1, i64 %sub ; C1 + (C2 - C1)
   ret i8* %gep
 }
 

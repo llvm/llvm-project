@@ -20,7 +20,7 @@ LLVM_LIBC_FUNCTION(int, fesetexceptflag,
   // can fit in int type.
   static_assert(sizeof(int) >= sizeof(fexcept_t),
                 "fexcept_t value cannot fit in an int value.");
-  int excepts_to_set = *reinterpret_cast<const int *>(flagp) & excepts;
+  int excepts_to_set = static_cast<const int>(*flagp) & excepts;
   return fputil::setExcept(excepts_to_set);
 }
 

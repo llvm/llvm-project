@@ -9,22 +9,22 @@ define linkonce_odr dso_local void @foo(<256 x i32>* %arrayidx16, <256 x i32>* %
 ; CHECK:       for.cond9:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_BODY14:%.*]], label [[EXIT:%.*]]
 ; CHECK:       for.body14:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <256 x i32>* [[ARRAYIDX16:%.*]] to x86_amx*
-; CHECK-NEXT:    [[T51:%.*]] = load x86_amx, x86_amx* [[TMP0]], align 64
+; CHECK-NEXT:    [[T5:%.*]] = load <256 x i32>, <256 x i32>* [[ARRAYIDX16:%.*]], align 64
 ; CHECK-NEXT:    br label [[FOR_COND18:%.*]]
 ; CHECK:       for.cond18:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi x86_amx [ [[T51]], [[FOR_BODY14]] ], [ [[T11:%.*]], [[FOR_BODY24:%.*]] ]
+; CHECK-NEXT:    [[SUB_C_SROA_0_0:%.*]] = phi <256 x i32> [ [[T5]], [[FOR_BODY14]] ], [ [[T12:%.*]], [[FOR_BODY24:%.*]] ]
 ; CHECK-NEXT:    br i1 undef, label [[FOR_BODY24]], label [[FOR_COND_CLEANUP23:%.*]]
 ; CHECK:       for.cond.cleanup23:
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_amx [[TMP1]] to <256 x i32>
-; CHECK-NEXT:    store <256 x i32> [[TMP2]], <256 x i32>* [[ARRAYIDX16]], align 64
+; CHECK-NEXT:    store <256 x i32> [[SUB_C_SROA_0_0]], <256 x i32>* [[ARRAYIDX16]], align 64
 ; CHECK-NEXT:    br label [[FOR_COND9]]
 ; CHECK:       for.body24:
 ; CHECK-NEXT:    [[T6:%.*]] = load <256 x i32>, <256 x i32>* [[ARRAYIDX29:%.*]], align 64
 ; CHECK-NEXT:    [[T7:%.*]] = load <256 x i32>, <256 x i32>* [[ARRAYIDX35:%.*]], align 64
+; CHECK-NEXT:    [[T8:%.*]] = bitcast <256 x i32> [[SUB_C_SROA_0_0]] to x86_amx
 ; CHECK-NEXT:    [[T9:%.*]] = bitcast <256 x i32> [[T6]] to x86_amx
 ; CHECK-NEXT:    [[T10:%.*]] = bitcast <256 x i32> [[T7]] to x86_amx
-; CHECK-NEXT:    [[T11]] = call x86_amx @llvm.x86.tdpbssd.internal(i16 1, i16 4, i16 4, x86_amx [[TMP1]], x86_amx [[T9]], x86_amx [[T10]])
+; CHECK-NEXT:    [[T11:%.*]] = call x86_amx @llvm.x86.tdpbssd.internal(i16 1, i16 4, i16 4, x86_amx [[T8]], x86_amx [[T9]], x86_amx [[T10]])
+; CHECK-NEXT:    [[T12]] = bitcast x86_amx [[T11]] to <256 x i32>
 ; CHECK-NEXT:    br label [[FOR_COND18]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
