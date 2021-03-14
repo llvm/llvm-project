@@ -47,6 +47,7 @@ NodeIntrospection::GetLocations(clang::DynTypedNode const &) {
 } // namespace clang
 "
     )
+    set(CLANG_TOOLING_BUILD_AST_INTROSPECTION "OFF" CACHE BOOL "")
 else()
   # The generation of ASTNodeAPI.json takes a long time in a
   # Debug build due to parsing AST.h. Disable the processing
