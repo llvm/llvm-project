@@ -10,12 +10,12 @@ add	w7, w9, w0
 
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      12
-# CHECK-NEXT: Total Cycles:      25
+# CHECK-NEXT: Total Cycles:      24
 # CHECK-NEXT: Total uOps:        12
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.48
-# CHECK-NEXT: IPC:               0.48
+# CHECK-NEXT: uOps Per Cycle:    0.50
+# CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 10.0
 
 # CHECK:      Instruction Info:
@@ -40,30 +40,20 @@ add	w7, w9, w0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
 # CHECK-NEXT: LQ      - Load queue full:                           0
 # CHECK-NEXT: SQ      - Store queue full:                          0
-# CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 7  (28.0%)
+# CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 7  (29.2%)
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
-# CHECK-NEXT:  0,              19  (76.0%)
-# CHECK-NEXT:  2,              6  (24.0%)
+# CHECK-NEXT:  0,              18  (75.0%)
+# CHECK-NEXT:  2,              6  (25.0%)
 
 # CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
-# CHECK-NEXT:  0,          19  (76.0%)
-# CHECK-NEXT:  2,          6  (24.0%)
+# CHECK-NEXT:  0,          18  (75.0%)
+# CHECK-NEXT:  2,          6  (25.0%)
 
 # CHECK:      Scheduler's queue usage:
 # CHECK-NEXT: No scheduler resources used.
-
-# CHECK:      Retire Control Unit - number of cycles where we saw N instructions retired:
-# CHECK-NEXT: [# retired], [# cycles]
-# CHECK-NEXT:  0,           18  (72.0%)
-# CHECK-NEXT:  1,           2  (8.0%)
-# CHECK-NEXT:  2,           5  (20.0%)
-
-# CHECK:      Total ROB Entries:                64
-# CHECK-NEXT: Max Used ROB Entries:             7  ( 10.9% )
-# CHECK-NEXT: Average Used ROB Entries per cy:  2  ( 3.1% )
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    12
@@ -98,20 +88,20 @@ add	w7, w9, w0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234
+# CHECK-NEXT: Index     0123456789          0123
 
-# CHECK:      [0,0]     DeeeeeeeeeeeeER.    .   .   fdiv	s1, s2, s3
-# CHECK-NEXT: [0,1]     DeeER.    .    .    .   .   add	w8, w8, #1
-# CHECK-NEXT: [0,2]     .DeeER    .    .    .   .   add	w1, w2, w0
-# CHECK-NEXT: [0,3]     .DeeER    .    .    .   .   add	w3, w4, #1
-# CHECK-NEXT: [0,4]     . DeeER   .    .    .   .   add	w5, w6, w0
-# CHECK-NEXT: [0,5]     . DeeER   .    .    .   .   add	w7, w9, w0
-# CHECK-NEXT: [1,0]     .    .    DeeeeeeeeeeeeER   fdiv	s1, s2, s3
-# CHECK-NEXT: [1,1]     .    .    DeeER.    .   .   add	w8, w8, #1
-# CHECK-NEXT: [1,2]     .    .    .DeeER    .   .   add	w1, w2, w0
-# CHECK-NEXT: [1,3]     .    .    .DeeER    .   .   add	w3, w4, #1
-# CHECK-NEXT: [1,4]     .    .    . DeeER   .   .   add	w5, w6, w0
-# CHECK-NEXT: [1,5]     .    .    . DeeER   .   .   add	w7, w9, w0
+# CHECK:      [0,0]     DeeeeeeeeeeeeE .    .  .   fdiv	s1, s2, s3
+# CHECK-NEXT: [0,1]     DeeE .    .    .    .  .   add	w8, w8, #1
+# CHECK-NEXT: [0,2]     .DeeE.    .    .    .  .   add	w1, w2, w0
+# CHECK-NEXT: [0,3]     .DeeE.    .    .    .  .   add	w3, w4, #1
+# CHECK-NEXT: [0,4]     . DeeE    .    .    .  .   add	w5, w6, w0
+# CHECK-NEXT: [0,5]     . DeeE    .    .    .  .   add	w7, w9, w0
+# CHECK-NEXT: [1,0]     .    .    DeeeeeeeeeeeeE   fdiv	s1, s2, s3
+# CHECK-NEXT: [1,1]     .    .    DeeE .    .  .   add	w8, w8, #1
+# CHECK-NEXT: [1,2]     .    .    .DeeE.    .  .   add	w1, w2, w0
+# CHECK-NEXT: [1,3]     .    .    .DeeE.    .  .   add	w3, w4, #1
+# CHECK-NEXT: [1,4]     .    .    . DeeE    .  .   add	w5, w6, w0
+# CHECK-NEXT: [1,5]     .    .    . DeeE    .  .   add	w7, w9, w0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
