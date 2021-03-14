@@ -97,6 +97,9 @@ public:
 
   Status KillProcess(const lldb::pid_t pid) override;
 
+  size_t ConnectToWaitingProcesses(Debugger &debugger,
+                                   Status &error) override;
+
 protected:
   lldb::PlatformSP m_remote_platform_sp;
 };
