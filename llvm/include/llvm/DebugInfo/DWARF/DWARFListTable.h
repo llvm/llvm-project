@@ -113,7 +113,7 @@ public:
   void dump(DataExtractor Data, raw_ostream &OS,
             DIDumpOptions DumpOpts = {}) const;
   Optional<uint64_t> getOffsetEntry(DataExtractor Data, uint32_t Index) const {
-    if (Index > HeaderData.OffsetEntryCount)
+    if (Index >= HeaderData.OffsetEntryCount)
       return None;
 
     return getOffsetEntry(Data, getHeaderOffset() + getHeaderSize(Format), Format, Index);
