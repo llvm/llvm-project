@@ -23,6 +23,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
 #include <cstdint>
@@ -38,7 +39,6 @@ class MachineIRBuilder;
 struct MachinePointerInfo;
 class MachineRegisterInfo;
 class TargetLowering;
-class Value;
 
 class CallLowering {
   const TargetLowering *TLI;
@@ -65,10 +65,17 @@ public:
     // if the argument was an incoming arg.
     SmallVector<Register, 2> OrigRegs;
 
+    /// Optionally track the original IR value for the argument. This may not be
+    /// meaningful in all contexts. This should only be used on for forwarding
+    /// through to use for aliasing information in MachinePointerInfo for memory
+    /// arguments.
+    const Value *OrigValue = nullptr;
+
     ArgInfo(ArrayRef<Register> Regs, Type *Ty,
             ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
-            bool IsFixed = true)
-        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs.begin(), Regs.end()) {
+            bool IsFixed = true, const Value *OrigValue = nullptr)
+        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs.begin(), Regs.end()),
+          OrigValue(OrigValue) {
       if (!Regs.empty() && Flags.empty())
         this->Flags.push_back(ISD::ArgFlagsTy());
       // FIXME: We should have just one way of saying "no register".
@@ -76,6 +83,11 @@ public:
               (Regs.empty() || Regs[0] == 0)) &&
              "only void types should have no register");
     }
+
+    ArgInfo(ArrayRef<Register> Regs, const Value &OrigValue,
+            ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
+            bool IsFixed = true)
+        : ArgInfo(Regs, OrigValue.getType(), Flags, IsFixed, &OrigValue) {}
 
     ArgInfo() : BaseArgInfo() {}
   };

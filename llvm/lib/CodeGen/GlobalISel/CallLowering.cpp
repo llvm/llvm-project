@@ -112,7 +112,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   unsigned i = 0;
   unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
   for (auto &Arg : CB.args()) {
-    ArgInfo OrigArg{ArgRegs[i], Arg->getType(), getAttributesForArgIdx(CB, i),
+    ArgInfo OrigArg{ArgRegs[i], *Arg.get(), getAttributesForArgIdx(CB, i),
                     i < NumFixedArgs};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
 
@@ -204,7 +204,8 @@ void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
     // No splitting to do, but we want to replace the original type (e.g. [1 x
     // double] -> double).
     SplitArgs.emplace_back(OrigArg.Regs[0], SplitVTs[0].getTypeForEVT(Ctx),
-                           OrigArg.Flags[0], OrigArg.IsFixed);
+                           OrigArg.Flags[0], OrigArg.IsFixed,
+                           OrigArg.OrigValue);
     return;
   }
 
@@ -667,18 +668,19 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
           Register StackAddr =
               Handler.getStackAddress(MemSize, Offset, DstMPO, Flags);
 
-          const LLT PtrTy = MRI.getType(StackAddr);
-
-          // FIXME: We do not have access to the original IR value here to
-          // preserve the aliasing information.
-          MachinePointerInfo SrcMPO(PtrTy.getAddressSpace());
+          MachinePointerInfo SrcMPO(Args[i].OrigValue);
+          if (!Args[i].OrigValue) {
+            // We still need to accurately track the stack address space if we
+            // don't know the underlying value.
+            const LLT PtrTy = MRI.getType(StackAddr);
+            SrcMPO = MachinePointerInfo(PtrTy.getAddressSpace());
+          }
 
           Align DstAlign = std::max(Flags.getNonZeroByValAlign(),
                                     inferAlignFromPtrInfo(MF, DstMPO));
 
-          // TODO: Theoretically the source value could have a higher alignment,
-          // but we don't have that here
-          Align SrcAlign = Flags.getNonZeroByValAlign();
+          Align SrcAlign = std::max(Flags.getNonZeroByValAlign(),
+                                    inferAlignFromPtrInfo(MF, SrcMPO));
 
           Handler.copyArgumentMemory(Args[i], StackAddr, Args[i].Regs[0],
                                      DstMPO, DstAlign, SrcMPO, SrcAlign,
