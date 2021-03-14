@@ -234,10 +234,10 @@ func @transpose_3D_sequence(%arg : vector<4x3x2xf32>) -> vector<4x3x2xf32> {
   // CHECK: [[T0:%.*]] = vector.transpose [[ARG]], [2, 1, 0]
   %0 = vector.transpose %arg, [1, 2, 0] : vector<4x3x2xf32> to vector<3x2x4xf32>
   %1 = vector.transpose %0, [1, 0, 2] : vector<3x2x4xf32> to vector<2x3x4xf32>
-  // CHECK-NOT: transpose
+  // CHECK: [[T1:%.*]] = vector.transpose [[ARG]], [2, 1, 0]
   %2 = vector.transpose %1, [2, 1, 0] : vector<2x3x4xf32> to vector<4x3x2xf32>
   %3 = vector.transpose %2, [2, 1, 0] : vector<4x3x2xf32> to vector<2x3x4xf32>
-  // CHECK: [[MUL:%.*]] = mulf [[T0]], [[T0]]
+  // CHECK: [[MUL:%.*]] = mulf [[T0]], [[T1]]
   %4 = mulf %1, %3 : vector<2x3x4xf32>
   // CHECK: [[T5:%.*]] = vector.transpose [[MUL]], [2, 1, 0]
   %5 = vector.transpose %4, [2, 1, 0] : vector<2x3x4xf32> to vector<4x3x2xf32>
@@ -571,10 +571,10 @@ func @bitcast_folding(%I1: vector<4x8xf32>, %I2: vector<2xi32>) -> (vector<4x8xf
 }
 
 // CHECK-LABEL: func @bitcast_f16_to_f32
-//              bit pattern: 0x00000000
-//       CHECK: %[[CST0:.+]] = constant dense<0.000000e+00> : vector<4xf32>
 //              bit pattern: 0x40004000
 //       CHECK: %[[CST1:.+]] = constant dense<2.00390625> : vector<4xf32>
+//              bit pattern: 0x00000000
+//       CHECK: %[[CST0:.+]] = constant dense<0.000000e+00> : vector<4xf32>
 //       CHECK: return %[[CST0]], %[[CST1]]
 func @bitcast_f16_to_f32() -> (vector<4xf32>, vector<4xf32>) {
   %cst0 = constant dense<0.0> : vector<8xf16> // bit pattern: 0x0000
@@ -612,8 +612,8 @@ func @broadcast_folding2() -> vector<4x16xi32> {
 // -----
 
 // CHECK-LABEL: shape_cast_constant
-//       CHECK: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<20x2xf32>
 //       CHECK: %[[CST1:.*]] = constant dense<1> : vector<3x4x2xi32>
+//       CHECK: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<20x2xf32>
 //       CHECK: return %[[CST0]], %[[CST1]] : vector<20x2xf32>, vector<3x4x2xi32>
 func @shape_cast_constant() -> (vector<20x2xf32>, vector<3x4x2xi32>) {
   %cst = constant dense<2.000000e+00> : vector<5x4x2xf32>
@@ -626,8 +626,8 @@ func @shape_cast_constant() -> (vector<20x2xf32>, vector<3x4x2xi32>) {
 // -----
 
 // CHECK-LABEL: extract_strided_constant
-//       CHECK: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<12x2xf32>
 //       CHECK: %[[CST1:.*]] = constant dense<1> : vector<2x13x3xi32>
+//       CHECK: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<12x2xf32>
 //       CHECK: return %[[CST0]], %[[CST1]] : vector<12x2xf32>, vector<2x13x3xi32>
 func @extract_strided_constant() -> (vector<12x2xf32>, vector<2x13x3xi32>) {
   %cst = constant dense<2.000000e+00> : vector<29x7xf32>

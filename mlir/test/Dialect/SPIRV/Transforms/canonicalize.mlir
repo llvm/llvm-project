@@ -92,9 +92,9 @@ func @convert_bitcast_multi_use(%arg0 : vector<2xf32>, %arg1 : !spv.ptr<i64, Uni
 
 // CHECK-LABEL: extract_vector
 func @extract_vector() -> (i32, i32, i32) {
-  // CHECK: spv.Constant 42 : i32
-  // CHECK: spv.Constant -33 : i32
   // CHECK: spv.Constant 6 : i32
+  // CHECK: spv.Constant -33 : i32
+  // CHECK: spv.Constant 42 : i32
   %0 = spv.Constant dense<[42, -33, 6]> : vector<3xi32>
   %1 = spv.CompositeExtract %0[0 : i32] : vector<3xi32>
   %2 = spv.CompositeExtract %0[1 : i32] : vector<3xi32>
@@ -106,8 +106,8 @@ func @extract_vector() -> (i32, i32, i32) {
 
 // CHECK-LABEL: extract_array_final
 func @extract_array_final() -> (i32, i32) {
-  // CHECK: spv.Constant 4 : i32
   // CHECK: spv.Constant -5 : i32
+  // CHECK: spv.Constant 4 : i32
   %0 = spv.Constant [dense<[4, -5]> : vector<2xi32>] : !spv.array<1 x vector<2xi32>>
   %1 = spv.CompositeExtract %0[0 : i32, 0 : i32] : !spv.array<1 x vector<2 x i32>>
   %2 = spv.CompositeExtract %0[0 : i32, 1 : i32] : !spv.array<1 x vector<2 x i32>>
@@ -192,9 +192,9 @@ func @const_fold_scalar_iadd_normal() -> (i32, i32, i32) {
   %c5 = spv.Constant 5 : i32
   %cn8 = spv.Constant -8 : i32
 
-  // CHECK: spv.Constant 10
-  // CHECK: spv.Constant -16
   // CHECK: spv.Constant -3
+  // CHECK: spv.Constant -16
+  // CHECK: spv.Constant 10
   %0 = spv.IAdd %c5, %c5 : i32
   %1 = spv.IAdd %cn8, %cn8 : i32
   %2 = spv.IAdd %c5, %cn8 : i32
@@ -210,17 +210,17 @@ func @const_fold_scalar_iadd_flow() -> (i32, i32, i32, i32) {
   %c5 = spv.Constant -1 : i32          //         : 0xffff ffff
   %c6 = spv.Constant -2 : i32          //         : 0xffff fffe
 
+  // 0x8000 0000 + 0xffff fffe = 0x1 7fff fffe -> 0x7fff fffe
+  // CHECK: spv.Constant 2147483646
+  // 0x8000 0000 + 0xffff ffff = 0x1 7fff ffff -> 0x7fff ffff
+  // CHECK: spv.Constant 2147483647
+  // 0x0000 0002 + 0xffff ffff = 0x1 0000 0001 -> 0x0000 0001
+  // CHECK: spv.Constant 1
   // 0x0000 0001 + 0xffff ffff = 0x1 0000 0000 -> 0x0000 0000
   // CHECK: spv.Constant 0
   %0 = spv.IAdd %c1, %c3 : i32
-  // 0x0000 0002 + 0xffff ffff = 0x1 0000 0001 -> 0x0000 0001
-  // CHECK: spv.Constant 1
-  %1 = spv.IAdd %c2, %c3 : i32
-  // 0x8000 0000 + 0xffff ffff = 0x1 7fff ffff -> 0x7fff ffff
-  // CHECK: spv.Constant 2147483647
+   %1 = spv.IAdd %c2, %c3 : i32
   %2 = spv.IAdd %c4, %c5 : i32
-  // 0x8000 0000 + 0xffff fffe = 0x1 7fff fffe -> 0x7fff fffe
-  // CHECK: spv.Constant 2147483646
   %3 = spv.IAdd %c4, %c6 : i32
   return %0, %1, %2, %3: i32, i32, i32, i32
 }
@@ -259,9 +259,9 @@ func @const_fold_scalar_imul_normal() -> (i32, i32, i32) {
   %cn8 = spv.Constant -8 : i32
   %c7 = spv.Constant 7 : i32
 
-  // CHECK: spv.Constant 35
-  // CHECK: spv.Constant -40
   // CHECK: spv.Constant -56
+  // CHECK: spv.Constant -40
+  // CHECK: spv.Constant 35
   %0 = spv.IMul %c7, %c5 : i32
   %1 = spv.IMul %c5, %cn8 : i32
   %2 = spv.IMul %cn8, %c7 : i32
@@ -275,13 +275,14 @@ func @const_fold_scalar_imul_flow() -> (i32, i32, i32) {
   %c3 = spv.Constant 4294967295 : i32  // 2^32 - 1 : 0xffff ffff
   %c4 = spv.Constant 2147483647 : i32  // 2^31 - 1 : 0x7fff ffff
 
+  // (0x7fff ffff << 2) = 0x1 ffff fffc -> 0xffff fffc
+  // CHECK: %[[CST4:.*]] = spv.Constant -4
+
   // (0xffff ffff << 1) = 0x1 ffff fffe -> 0xffff fffe
   // CHECK: %[[CST2:.*]] = spv.Constant -2
   %0 = spv.IMul %c1, %c3 : i32
   // (0x7fff ffff << 1) = 0x0 ffff fffe -> 0xffff fffe
   %1 = spv.IMul %c1, %c4 : i32
-  // (0x7fff ffff << 2) = 0x1 ffff fffc -> 0xffff fffc
-  // CHECK: %[[CST4:.*]] = spv.Constant -4
   %2 = spv.IMul %c4, %c2 : i32
   // CHECK: return %[[CST2]], %[[CST2]], %[[CST4]]
   return %0, %1, %2: i32, i32, i32
@@ -317,9 +318,9 @@ func @const_fold_scalar_isub_normal() -> (i32, i32, i32) {
   %cn8 = spv.Constant -8 : i32
   %c7 = spv.Constant 7 : i32
 
-  // CHECK: spv.Constant 2
-  // CHECK: spv.Constant 13
   // CHECK: spv.Constant -15
+  // CHECK: spv.Constant 13
+  // CHECK: spv.Constant 2
   %0 = spv.ISub %c7, %c5 : i32
   %1 = spv.ISub %c5, %cn8 : i32
   %2 = spv.ISub %cn8, %c7 : i32
@@ -335,17 +336,17 @@ func @const_fold_scalar_isub_flow() -> (i32, i32, i32, i32) {
   %c5 = spv.Constant -1 : i32          //          : 0xffff ffff
   %c6 = spv.Constant -2 : i32          //          : 0xffff fffe
 
-  // 0x0000 0000 - 0xffff ffff -> 0x0000 0000 + 0x0000 0001 = 0x0000 0001
-  // CHECK: spv.Constant 1
-  %0 = spv.ISub %c1, %c3 : i32
-  // 0x0000 0001 - 0xffff ffff -> 0x0000 0001 + 0x0000 0001 = 0x0000 0002
-  // CHECK: spv.Constant 2
-  %1 = spv.ISub %c2, %c3 : i32
   // 0xffff ffff - 0x7fff ffff -> 0xffff ffff + 0x8000 0001 = 0x1 8000 0000
   // CHECK: spv.Constant -2147483648
-  %2 = spv.ISub %c5, %c4 : i32
+  // 0x0000 0001 - 0xffff ffff -> 0x0000 0001 + 0x0000 0001 = 0x0000 0002
+  // CHECK: spv.Constant 2
+  // 0x0000 0000 - 0xffff ffff -> 0x0000 0000 + 0x0000 0001 = 0x0000 0001
+  // CHECK: spv.Constant 1
   // 0xffff fffe - 0x7fff ffff -> 0xffff fffe + 0x8000 0001 = 0x1 7fff ffff
   // CHECK: spv.Constant 2147483647
+  %0 = spv.ISub %c1, %c3 : i32
+  %1 = spv.ISub %c2, %c3 : i32
+  %2 = spv.ISub %c5, %c4 : i32
   %3 = spv.ISub %c6, %c4 : i32
   return %0, %1, %2, %3: i32, i32, i32, i32
 }
@@ -545,12 +546,14 @@ func @canonicalize_selection_op_vector_type(%cond: i1) -> () {
 
 // -----
 
+// CHECK-LABEL: cannot_canonicalize_selection_op_0
+
 // Store to a different variables.
 func @cannot_canonicalize_selection_op_0(%cond: i1) -> () {
   %0 = spv.Constant dense<[0, 1, 2]> : vector<3xi32>
+  // CHECK: %[[SRC_VALUE_1:.*]] = spv.Constant dense<[2, 3, 4]> : vector<3xi32>
   // CHECK: %[[SRC_VALUE_0:.*]] = spv.Constant dense<[1, 2, 3]> : vector<3xi32>
   %1 = spv.Constant dense<[1, 2, 3]> : vector<3xi32>
-  // CHECK: %[[SRC_VALUE_1:.*]] = spv.Constant dense<[2, 3, 4]> : vector<3xi32>
   %2 = spv.Constant dense<[2, 3, 4]> : vector<3xi32>
   // CHECK: %[[DST_VAR_0:.*]] = spv.Variable init({{%.*}}) : !spv.ptr<vector<3xi32>, Function>
   %3 = spv.Variable init(%0) : !spv.ptr<vector<3xi32>, Function>
@@ -581,6 +584,8 @@ func @cannot_canonicalize_selection_op_0(%cond: i1) -> () {
 }
 
 // -----
+
+// CHECK-LABEL: cannot_canonicalize_selection_op_1
 
 // A conditional block consists of more than 2 operations.
 func @cannot_canonicalize_selection_op_1(%cond: i1) -> () {
@@ -618,6 +623,8 @@ func @cannot_canonicalize_selection_op_1(%cond: i1) -> () {
 
 // -----
 
+// CHECK-LABEL: cannot_canonicalize_selection_op_2
+
 // A control-flow goes into `^then` block from `^else` block.
 func @cannot_canonicalize_selection_op_2(%cond: i1) -> () {
   %0 = spv.Constant dense<[0, 1, 2]> : vector<3xi32>
@@ -650,11 +657,13 @@ func @cannot_canonicalize_selection_op_2(%cond: i1) -> () {
 
 // -----
 
+// CHECK-LABEL: cannot_canonicalize_selection_op_3
+
 // `spv.Return` as a block terminator.
 func @cannot_canonicalize_selection_op_3(%cond: i1) -> () {
   %0 = spv.Constant dense<[0, 1, 2]> : vector<3xi32>
-  // CHECK: %[[SRC_VALUE_0:.*]] = spv.Constant dense<[1, 2, 3]> : vector<3xi32>
   %1 = spv.Constant dense<[1, 2, 3]> : vector<3xi32>
+  // CHECK: %[[SRC_VALUE_0:.*]] = spv.Constant dense<[1, 2, 3]> : vector<3xi32>
   // CHECK: %[[SRC_VALUE_1:.*]] = spv.Constant dense<[2, 3, 4]> : vector<3xi32>
   %2 = spv.Constant dense<[2, 3, 4]> : vector<3xi32>
   // CHECK: %[[DST_VAR:.*]] = spv.Variable init({{%.*}}) : !spv.ptr<vector<3xi32>, Function>
@@ -681,6 +690,8 @@ func @cannot_canonicalize_selection_op_3(%cond: i1) -> () {
 }
 
 // -----
+
+// CHECK-LABEL: cannot_canonicalize_selection_op_4
 
 // Different memory access attributes.
 func @cannot_canonicalize_selection_op_4(%cond: i1) -> () {

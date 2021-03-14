@@ -23,7 +23,6 @@ namespace mlir {
 class Operation;
 class Value;
 
-
 //===--------------------------------------------------------------------===//
 // OperationFolder
 //===--------------------------------------------------------------------===//
@@ -33,6 +32,11 @@ class Value;
 class OperationFolder {
 public:
   OperationFolder(MLIRContext *ctx) : interfaces(ctx) {}
+
+  /// Scan the specified region for constants that can be used in folding,
+  /// moving them to the entry block and adding them to our known-constants
+  /// table.
+  void processExistingConstants(Region &region);
 
   /// Tries to perform folding on the given `op`, including unifying
   /// deduplicated constants. If successful, replaces `op`'s uses with
