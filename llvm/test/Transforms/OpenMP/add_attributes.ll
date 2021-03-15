@@ -2,9 +2,6 @@
 ; RUN: opt < %s -S -passes=openmpopt | FileCheck %s
 ; RUN: opt < %s -S -openmpopt        -openmp-ir-builder-optimistic-attributes | FileCheck %s --check-prefix=OPTIMISTIC
 ; RUN: opt < %s -S -passes=openmpopt -openmp-ir-builder-optimistic-attributes | FileCheck %s --check-prefix=OPTIMISTIC
-;
-; TODO: Not all omp_XXXX methods are known to the OpenMPIRBuilder/OpenMPOpt.
-;
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 %struct.omp_lock_t = type { i8* }
@@ -669,6 +666,11 @@ declare i8* @__kmpc_task_reduction_modifier_init(i8*, i32, i32, i32, i8*)
 
 declare void @__kmpc_proxy_task_completed_ooo(i8*)
 
+; Function Attrs: noinline
+declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture nofree readonly, i32) #0
+
+attributes #0 = { noinline }
+
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare dso_local void @omp_set_num_threads(i32)
 
@@ -685,52 +687,52 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; CHECK-NEXT: declare dso_local void @omp_set_schedule(i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_num_threads() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_num_threads()
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare dso_local void @use_int(i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_dynamic() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_dynamic()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_nested() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_nested()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_max_threads() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_max_threads()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_thread_num() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_thread_num()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_num_procs() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_num_procs()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_in_parallel() #0
+; CHECK-NEXT: declare dso_local i32 @omp_in_parallel()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_in_final() #0
+; CHECK-NEXT: declare dso_local i32 @omp_in_final()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_active_level() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_active_level()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_level() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_level()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_ancestor_thread_num(i32) #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_ancestor_thread_num(i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_team_size(i32) #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_team_size(i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_thread_limit() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_thread_limit()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_max_active_levels() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_max_active_levels()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local void @omp_get_schedule(i32* nocapture writeonly, i32* nocapture writeonly) #0
+; CHECK-NEXT: declare dso_local void @omp_get_schedule(i32* nocapture writeonly, i32* nocapture writeonly)
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare dso_local i32 @omp_get_max_task_priority()
@@ -799,7 +801,7 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; CHECK: declare dso_local i32 @omp_get_team_num()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_cancellation() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_cancellation()
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare dso_local i32 @omp_get_initial_device()
@@ -829,25 +831,25 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; CHECK: declare dso_local i32 @omp_get_device_num()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_proc_bind() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_proc_bind()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_num_places() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_num_places()
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare dso_local i32 @omp_get_place_num_procs(i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local void @omp_get_place_proc_ids(i32, i32* nocapture writeonly) #0
+; CHECK-NEXT: declare dso_local void @omp_get_place_proc_ids(i32, i32* nocapture writeonly)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_place_num() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_place_num()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_partition_num_places() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_partition_num_places()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local void @omp_get_partition_place_nums(i32*) #0
+; CHECK-NEXT: declare dso_local void @omp_get_partition_place_nums(i32*)
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare dso_local i32 @omp_control_tool(i32, i32, i8*)
@@ -1205,6 +1207,9 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare void @__kmpc_proxy_task_completed_ooo(i8*)
+
+; CHECK: ; Function Attrs: convergent noinline nounwind
+; CHECK-NEXT: declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture nofree readonly, i32)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn writeonly
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_num_threads(i32)
@@ -1730,3 +1735,7 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare void @__kmpc_proxy_task_completed_ooo(i8*)
+
+; OPTIMISTIC: ; Function Attrs: convergent noinline nounwind 
+; OPTIMISTIC-NEXT: declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture nofree readonly, i32)
+
