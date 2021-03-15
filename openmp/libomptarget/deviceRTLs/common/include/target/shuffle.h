@@ -16,7 +16,7 @@
 #define LIBOMPTARGET_DEVICERTL_SHUFFLE_H
 
 #include <assert.h>
-#include <inttypes.h>
+#include <stdint.h>
 
 #pragma omp declare target
 
