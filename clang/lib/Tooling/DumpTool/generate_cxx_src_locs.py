@@ -156,14 +156,16 @@ def main():
 
     use_empty_implementation = options.empty_implementation
 
-    if not os.path.exists(options.json_input_path):
-      use_empty_implementation = True
+    if (not use_empty_implementation
+            and not os.path.exists(options.json_input_path)):
+        use_empty_implementation = True
 
-    with open(options.json_input_path) as f:
-        jsonData = json.load(f)
+    if not use_empty_implementation:
+        with open(options.json_input_path) as f:
+            jsonData = json.load(f)
 
-    if not 'classesInClade' in jsonData or not jsonData["classesInClade"]:
-      use_empty_implementation = True
+        if not 'classesInClade' in jsonData or not jsonData["classesInClade"]:
+            use_empty_implementation = True
 
     if use_empty_implementation:
         with open(os.path.join(os.getcwd(),
