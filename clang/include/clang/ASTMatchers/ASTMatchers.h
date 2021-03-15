@@ -5217,7 +5217,7 @@ AST_POLYMORPHIC_MATCHER_P(hasBody,
 ///   void f() {}
 ///   void g();
 /// \endcode
-/// hasAnyBody(functionDecl())
+/// functionDecl(hasAnyBody(compoundStmt()))
 ///   matches both 'void f();'
 ///   and 'void f() {}'
 /// with compoundStmt()

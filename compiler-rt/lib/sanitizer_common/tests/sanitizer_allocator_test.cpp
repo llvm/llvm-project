@@ -36,17 +36,6 @@ using namespace __sanitizer;
 #define SKIP_ON_SOLARIS_SPARCV9(x) x
 #endif
 
-// On 64-bit systems with small virtual address spaces (e.g. 39-bit) we can't
-// use size class maps with a large number of classes, as that will make the
-// SizeClassAllocator64 region size too small (< 2^32).
-#if SANITIZER_ANDROID && defined(__aarch64__)
-#define ALLOCATOR64_SMALL_SIZE 1
-#elif SANITIZER_RISCV64
-#define ALLOCATOR64_SMALL_SIZE 1
-#else
-#define ALLOCATOR64_SMALL_SIZE 0
-#endif
-
 // Too slow for debug build
 #if !SANITIZER_DEBUG
 
@@ -64,11 +53,6 @@ static const uptr kAllocatorSpace = 0x3000000000ULL;
 static const uptr kAllocatorSize  = 0x2000000000ULL;
 static const u64 kAddressSpaceSize = 1ULL << 39;
 typedef VeryCompactSizeClassMap SizeClassMap;
-#elif SANITIZER_RISCV64
-const uptr kAllocatorSpace = ~(uptr)0;
-const uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
-static const u64 kAddressSpaceSize = 1ULL << 38;
-typedef VeryDenseSizeClassMap SizeClassMap;
 #else
 static const uptr kAllocatorSpace = 0x700000000000ULL;
 static const uptr kAllocatorSize  = 0x010000000000ULL;  // 1T.
@@ -292,7 +276,8 @@ TEST(SanitizerCommon, SizeClassAllocator64Dynamic) {
   TestSizeClassAllocator<Allocator64Dynamic>();
 }
 
-#if !ALLOCATOR64_SMALL_SIZE
+#if !SANITIZER_ANDROID
+//FIXME(kostyak): find values so that those work on Android as well.
 TEST(SanitizerCommon, SizeClassAllocator64Compact) {
   TestSizeClassAllocator<Allocator64Compact>();
 }
@@ -376,7 +361,7 @@ TEST(SanitizerCommon, SizeClassAllocator64DynamicMetadataStress) {
   SizeClassAllocatorMetadataStress<Allocator64Dynamic>();
 }
 
-#if !ALLOCATOR64_SMALL_SIZE
+#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64CompactMetadataStress) {
   SizeClassAllocatorMetadataStress<Allocator64Compact>();
 }
@@ -423,7 +408,7 @@ TEST(SanitizerCommon, SizeClassAllocator64DynamicGetBlockBegin) {
   SizeClassAllocatorGetBlockBeginStress<Allocator64Dynamic>(
       1ULL << (SANITIZER_ANDROID ? 31 : 33));
 }
-#if !ALLOCATOR64_SMALL_SIZE
+#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64CompactGetBlockBegin) {
   SizeClassAllocatorGetBlockBeginStress<Allocator64Compact>(1ULL << 33);
 }
@@ -535,7 +520,7 @@ TEST(SanitizerCommon, LargeMmapAllocatorMapUnmapCallback) {
 
 // Don't test OOM conditions on Win64 because it causes other tests on the same
 // machine to OOM.
-#if SANITIZER_CAN_USE_ALLOCATOR64 && !SANITIZER_WINDOWS64
+#if SANITIZER_CAN_USE_ALLOCATOR64 && !SANITIZER_WINDOWS64 && !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64Overflow) {
   Allocator64 a;
   a.Init(kReleaseToOSIntervalNever);
@@ -549,8 +534,7 @@ TEST(SanitizerCommon, SizeClassAllocator64Overflow) {
   uint32_t chunks[kNumChunks];
   bool allocation_failed = false;
   for (int i = 0; i < 1000000; i++) {
-    uptr class_id = a.kNumClasses - 1;
-    if (!a.GetFromAllocator(&stats, class_id, chunks, kNumChunks)) {
+    if (!a.GetFromAllocator(&stats, 52, chunks, kNumChunks)) {
       allocation_failed = true;
       break;
     }
@@ -714,7 +698,7 @@ TEST(SanitizerCommon, CombinedAllocator64Dynamic) {
   TestCombinedAllocator<Allocator64Dynamic>();
 }
 
-#if !ALLOCATOR64_SMALL_SIZE
+#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, CombinedAllocator64Compact) {
   TestCombinedAllocator<Allocator64Compact>();
 }
@@ -775,7 +759,7 @@ TEST(SanitizerCommon, SizeClassAllocator64DynamicLocalCache) {
   TestSizeClassAllocatorLocalCache<Allocator64Dynamic>();
 }
 
-#if !ALLOCATOR64_SMALL_SIZE
+#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64CompactLocalCache) {
   TestSizeClassAllocatorLocalCache<Allocator64Compact>();
 }
@@ -1032,8 +1016,8 @@ TEST(SanitizerCommon, LargeMmapAllocatorBlockBegin) {
 
 // Don't test OOM conditions on Win64 because it causes other tests on the same
 // machine to OOM.
-#if SANITIZER_CAN_USE_ALLOCATOR64 && !SANITIZER_WINDOWS64
-typedef __sanitizer::SizeClassMap<2, 22, 22, 34, 128, 16> SpecialSizeClassMap;
+#if SANITIZER_CAN_USE_ALLOCATOR64 && !SANITIZER_WINDOWS64 && !SANITIZER_ANDROID
+typedef __sanitizer::SizeClassMap<3, 4, 8, 38, 128, 16> SpecialSizeClassMap;
 template <typename AddressSpaceViewTy = LocalAddressSpaceView>
 struct AP64_SpecialSizeClassMap {
   static const uptr kSpaceBeg = kAllocatorSpace;
@@ -1060,7 +1044,7 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
   // ...one man is on a mission to overflow a region with a series of
   // successive allocations.
 
-  const uptr kClassID = kAllocatorSize == ALLOCATOR64_SMALL_SIZE ? 18 : 24;
+  const uptr kClassID = 107;
   const uptr kAllocationSize = SpecialSizeClassMap::Size(kClassID);
   ASSERT_LT(2 * kAllocationSize, kRegionSize);
   ASSERT_GT(3 * kAllocationSize, kRegionSize);
@@ -1068,7 +1052,7 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
   EXPECT_NE(cache.Allocate(a, kClassID), nullptr);
   EXPECT_EQ(cache.Allocate(a, kClassID), nullptr);
 
-  const uptr Class2 = kAllocatorSize == ALLOCATOR64_SMALL_SIZE ? 15 : 21;
+  const uptr Class2 = 100;
   const uptr Size2 = SpecialSizeClassMap::Size(Class2);
   ASSERT_EQ(Size2 * 8, kRegionSize);
   char *p[7];
@@ -1354,7 +1338,7 @@ TEST(SanitizerCommon, SizeClassAllocator64ReleaseFreeMemoryToOS) {
   TestReleaseFreeMemoryToOS<Allocator64>();
 }
 
-#if !ALLOCATOR64_SMALL_SIZE
+#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64CompactReleaseFreeMemoryToOS) {
   TestReleaseFreeMemoryToOS<Allocator64Compact>();
 }
@@ -1362,7 +1346,7 @@ TEST(SanitizerCommon, SizeClassAllocator64CompactReleaseFreeMemoryToOS) {
 TEST(SanitizerCommon, SizeClassAllocator64VeryCompactReleaseFreeMemoryToOS) {
   TestReleaseFreeMemoryToOS<Allocator64VeryCompact>();
 }
-#endif  // !ALLOCATOR64_SMALL_SIZE
+#endif  // !SANITIZER_ANDROID
 
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 

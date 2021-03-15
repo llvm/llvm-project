@@ -10,12 +10,12 @@
 
 // CHECK: [4, 5, 6, 7, 0, 1, 2, 3, 12, -1, -1, -1, 8]
 func @main() {
-  %arg = alloc() : memref<13xf32>
-  %dst = memref_cast %arg : memref<13xf32> to memref<?xf32>
+  %arg = memref.alloc() : memref<13xf32>
+  %dst = memref.cast %arg : memref<13xf32> to memref<?xf32>
   %one = constant 1 : index
   %c0 = constant 0 : index
-  %sx = dim %dst, %c0 : memref<?xf32>
-  %cast_dst = memref_cast %dst : memref<?xf32> to memref<*xf32>
+  %sx = memref.dim %dst, %c0 : memref<?xf32>
+  %cast_dst = memref.cast %dst : memref<?xf32> to memref<*xf32>
   gpu.host_register %cast_dst : memref<*xf32>
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %one, %grid_y = %one, %grid_z = %one)
              threads(%tx, %ty, %tz) in (%block_x = %sx, %block_y = %one, %block_z = %one) {
@@ -29,7 +29,7 @@ func @main() {
     %m1 = constant -1.0 : f32
     br ^bb1(%m1 : f32)
   ^bb1(%value : f32):
-    store %value, %dst[%tx] : memref<?xf32>
+    memref.store %value, %dst[%tx] : memref<?xf32>
     gpu.terminator
   }
   call @print_memref_f32(%cast_dst) : (memref<*xf32>) -> ()
