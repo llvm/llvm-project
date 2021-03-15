@@ -2968,6 +2968,9 @@ DEF_TRAVERSE_STMT(OMPTargetTeamsDistributeParallelForSimdDirective,
 DEF_TRAVERSE_STMT(OMPTargetTeamsDistributeSimdDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPInteropDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 // OpenMP clauses.
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseOMPClause(OMPClause *C) {
@@ -3191,6 +3194,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPSIMDClause(OMPSIMDClause *) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPNogroupClause(OMPNogroupClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPInitClause(OMPInitClause *C) {
+  TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 

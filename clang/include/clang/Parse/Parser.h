@@ -3292,6 +3292,14 @@ private:
   /// '(' { <allocator> [ '(' <allocator_traits> ')' ] }+ ')'
   OMPClause *ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind);
 
+  /// Parses clause with an interop variable of kind \a Kind.
+  ///
+  /// \param Kind Kind of current clause.
+  /// \param ParseOnly true to skip the clause's semantic actions and return
+  /// nullptr.
+  //
+  OMPClause *ParseOpenMPInteropClause(OpenMPClauseKind Kind, bool ParseOnly);
+
 public:
   /// Parses simple expression in parens for single-expression clauses of OpenMP
   /// constructs.

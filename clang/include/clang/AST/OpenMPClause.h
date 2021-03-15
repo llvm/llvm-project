@@ -7366,6 +7366,129 @@ public:
   }
 };
 
+/// This represents the 'init' clause in '#pragma omp ...' directives.
+///
+/// \code
+/// #pragma omp interop init(target:obj)
+/// \endcode
+class OMPInitClause final
+    : public OMPVarListClause<OMPInitClause>,
+      private llvm::TrailingObjects<OMPInitClause, Expr *> {
+  friend class OMPClauseReader;
+  friend OMPVarListClause;
+  friend TrailingObjects;
+
+  /// Location of interop variable.
+  SourceLocation VarLoc;
+
+  bool IsTarget = false;
+  bool IsTargetSync = false;
+
+  void setInteropVar(Expr *E) { varlist_begin()[0] = E; }
+
+  void setIsTarget(bool V) { IsTarget = V; }
+
+  void setIsTargetSync(bool V) { IsTargetSync = V; }
+
+  /// Sets the location of the interop variable.
+  void setVarLoc(SourceLocation Loc) { VarLoc = Loc; }
+
+  /// Build 'init' clause.
+  ///
+  /// \param IsTarget Uses the 'target' interop-type.
+  /// \param IsTargetSync Uses the 'targetsync' interop-type.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param VarLoc Location of the interop variable.
+  /// \param EndLoc Ending location of the clause.
+  /// \param N Number of expressions.
+  OMPInitClause(bool IsTarget, bool IsTargetSync, SourceLocation StartLoc,
+                SourceLocation LParenLoc, SourceLocation VarLoc,
+                SourceLocation EndLoc, unsigned N)
+      : OMPVarListClause<OMPInitClause>(llvm::omp::OMPC_init, StartLoc,
+                                        LParenLoc, EndLoc, N),
+        VarLoc(VarLoc), IsTarget(IsTarget), IsTargetSync(IsTargetSync) {}
+
+  /// Build an empty clause.
+  OMPInitClause(unsigned N)
+      : OMPVarListClause<OMPInitClause>(llvm::omp::OMPC_init, SourceLocation(),
+                                        SourceLocation(), SourceLocation(), N) {
+  }
+
+public:
+  /// Creates a fully specified clause.
+  ///
+  /// \param C AST context.
+  /// \param InteropVar The interop variable.
+  /// \param PrefExprs The list of preference expressions.
+  /// \param IsTarget Uses the 'target' interop-type.
+  /// \param IsTargetSync Uses the 'targetsync' interop-type.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param VarLoc Location of the interop variable.
+  /// \param EndLoc Ending location of the clause.
+  static OMPInitClause *Create(const ASTContext &C, Expr *InteropVar,
+                               ArrayRef<Expr *> PrefExprs, bool IsTarget,
+                               bool IsTargetSync, SourceLocation StartLoc,
+                               SourceLocation LParenLoc, SourceLocation VarLoc,
+                               SourceLocation EndLoc);
+
+  /// Creates an empty clause with \a N expressions.
+  ///
+  /// \param C AST context.
+  /// \param N Number of expression items.
+  static OMPInitClause *CreateEmpty(const ASTContext &C, unsigned N);
+
+  /// Returns the location of the interop variable.
+  SourceLocation getVarLoc() const { return VarLoc; }
+
+  /// Returns the interop variable.
+  Expr *getInteropVar() { return varlist_begin()[0]; }
+  const Expr *getInteropVar() const { return varlist_begin()[0]; }
+
+  /// Returns true is interop-type 'target' is used.
+  bool getIsTarget() const { return IsTarget; }
+
+  /// Returns true is interop-type 'targetsync' is used.
+  bool getIsTargetSync() const { return IsTargetSync; }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPInitClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  using prefs_iterator = MutableArrayRef<Expr *>::iterator;
+  using const_prefs_iterator = ArrayRef<const Expr *>::iterator;
+  using prefs_range = llvm::iterator_range<prefs_iterator>;
+  using const_prefs_range = llvm::iterator_range<const_prefs_iterator>;
+
+  prefs_range prefs() {
+    return prefs_range(reinterpret_cast<Expr **>(std::next(varlist_begin())),
+                       reinterpret_cast<Expr **>(varlist_end()));
+  }
+
+  const_prefs_range prefs() const {
+    auto Prefs = const_cast<OMPInitClause *>(this)->prefs();
+    return const_prefs_range(Prefs.begin(), Prefs.end());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_init;
+  }
+};
+
 /// This represents 'destroy' clause in the '#pragma omp depobj'
 /// directive.
 ///

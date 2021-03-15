@@ -11968,6 +11968,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_order:
     C = new (Context) OMPOrderClause();
     break;
+  case llvm::omp::OMPC_init:
+    C = OMPInitClause::CreateEmpty(Context, Record.readInt());
+    break;
   case llvm::omp::OMPC_destroy:
     C = new (Context) OMPDestroyClause();
     break;
@@ -12130,6 +12133,19 @@ void OMPClauseReader::VisitOMPThreadsClause(OMPThreadsClause *) {}
 void OMPClauseReader::VisitOMPSIMDClause(OMPSIMDClause *) {}
 
 void OMPClauseReader::VisitOMPNogroupClause(OMPNogroupClause *) {}
+
+void OMPClauseReader::VisitOMPInitClause(OMPInitClause *C) {
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
+  C->setIsTarget(Record.readBool());
+  C->setIsTargetSync(Record.readBool());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setVarLoc(Record.readSourceLocation());
+}
 
 void OMPClauseReader::VisitOMPDestroyClause(OMPDestroyClause *) {}
 

@@ -1513,6 +1513,27 @@ OMPAffinityClause *OMPAffinityClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPAffinityClause(N);
 }
 
+OMPInitClause *OMPInitClause::Create(const ASTContext &C, Expr *InteropVar,
+                                     ArrayRef<Expr *> PrefExprs, bool IsTarget,
+                                     bool IsTargetSync, SourceLocation StartLoc,
+                                     SourceLocation LParenLoc,
+                                     SourceLocation VarLoc,
+                                     SourceLocation EndLoc) {
+
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(PrefExprs.size() + 1));
+  auto *Clause =
+      new (Mem) OMPInitClause(IsTarget, IsTargetSync, StartLoc, LParenLoc,
+                              VarLoc, EndLoc, PrefExprs.size() + 1);
+  Clause->setInteropVar(InteropVar);
+  llvm::copy(PrefExprs, Clause->getTrailingObjects<Expr *>() + 1);
+  return Clause;
+}
+
+OMPInitClause *OMPInitClause::CreateEmpty(const ASTContext &C, unsigned N) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  return new (Mem) OMPInitClause(N);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -1752,6 +1773,31 @@ void OMPClausePrinter::VisitOMPNumTasksClause(OMPNumTasksClause *Node) {
 void OMPClausePrinter::VisitOMPHintClause(OMPHintClause *Node) {
   OS << "hint(";
   Node->getHint()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPInitClause(OMPInitClause *Node) {
+  OS << "init(";
+  bool First = true;
+  for (const Expr *E : Node->prefs()) {
+    if (First)
+      OS << "prefer_type(";
+    else
+      OS << ",";
+    E->printPretty(OS, nullptr, Policy);
+    First = false;
+  }
+  if (!First)
+    OS << "), ";
+  if (Node->getIsTarget())
+    OS << "target";
+  if (Node->getIsTargetSync()) {
+    if (Node->getIsTarget())
+      OS << ", ";
+    OS << "targetsync";
+  }
+  OS << " : ";
+  Node->getInteropVar()->printPretty(OS, nullptr, Policy);
   OS << ")";
 }
 

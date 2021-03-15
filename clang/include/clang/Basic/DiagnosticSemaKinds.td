@@ -10587,6 +10587,17 @@ def note_omp_protected_structured_block
     : Note<"jump bypasses OpenMP structured block">;
 def note_omp_exits_structured_block
     : Note<"jump exits scope of OpenMP structured block">;
+def err_omp_interop_variable_expected : Error<
+  "expected%select{| non-const}0 variable of type 'omp_interop_t'">;
+def err_omp_interop_variable_wrong_type : Error<
+  "interop variable must be of type 'omp_interop_t'">;
+def err_omp_interop_prefer_type : Error<
+  "prefer_list item must be a string literal or constant integral "
+  "expression">;
+def err_omp_interop_bad_depend_clause : Error<
+  "'depend' clause requires the 'targetsync' interop type">;
+def err_omp_interop_var_multiple_actions : Error<
+  "interop variable %0 used in multiple action clauses">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
