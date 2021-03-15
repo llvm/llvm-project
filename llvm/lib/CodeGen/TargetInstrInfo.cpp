@@ -472,9 +472,7 @@ static const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
   return nullptr;
 }
 
-void TargetInstrInfo::getNoop(MCInst &NopInst) const {
-  llvm_unreachable("Not implemented");
-}
+MCInst TargetInstrInfo::getNop() const { llvm_unreachable("Not implemented"); }
 
 static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
                                     ArrayRef<unsigned> Ops, int FrameIndex,

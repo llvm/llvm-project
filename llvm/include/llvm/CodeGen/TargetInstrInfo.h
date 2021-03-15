@@ -1395,7 +1395,7 @@ public:
                            unsigned Quantity) const;
 
   /// Return the noop instruction to use for a noop.
-  virtual void getNoop(MCInst &NopInst) const;
+  virtual MCInst getNop() const;
 
   /// Return true for post-incremented instructions.
   virtual bool isPostIncrement(const MachineInstr &MI) const { return false; }
