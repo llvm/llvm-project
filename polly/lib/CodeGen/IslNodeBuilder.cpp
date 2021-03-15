@@ -426,7 +426,22 @@ void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
     auto *BasePtr = static_cast<Value *>(isl_id_get_user(Id));
     Annotator.addInterIterationAliasFreeBasePtr(BasePtr);
   }
+
+  BandAttr *ChildLoopAttr = getLoopAttr(isl::manage_copy(Id));
+  if (ChildLoopAttr) {
+    assert(!Annotator.getStagingAttrEnv() &&
+           "conflicting loop attr environments");
+    Annotator.getStagingAttrEnv() = ChildLoopAttr;
+  }
+
   create(Child);
+
+  if (ChildLoopAttr) {
+    assert(Annotator.getStagingAttrEnv() == ChildLoopAttr &&
+           "Nest  must not overwrite loop attr environment");
+    Annotator.getStagingAttrEnv() = nullptr;
+  }
+
   isl_id_free(Id);
 }
 
