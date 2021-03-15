@@ -442,44 +442,44 @@ fir.dispatch_table @dispatch_tbl {
 }
 
 // CHECK-LABEL: func @compare_real(
-// CHECK-SAME: [[VAL_133:%.*]]: !fir.real<16>, [[VAL_134:%.*]]: !fir.real<16>) {
-func @compare_real(%a : !fir.real<16>, %b : !fir.real<16>) {
+// CHECK-SAME: [[VAL_133:%.*]]: f128, [[VAL_134:%.*]]: f128) {
+func @compare_real(%a : f128, %b : f128) {
 
-// CHECK: [[VAL_135:%.*]] = fir.cmpf "false", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_136:%.*]] = fir.cmpf "oeq", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_137:%.*]] = fir.cmpf "ogt", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_138:%.*]] = fir.cmpf "oge", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-  %d0 = fir.cmpf "false", %a, %b : !fir.real<16>
-  %d1 = fir.cmpf "oeq", %a, %b : !fir.real<16>
-  %d2 = fir.cmpf "ogt", %a, %b : !fir.real<16>
-  %d3 = fir.cmpf "oge", %a, %b : !fir.real<16>
+// CHECK: [[VAL_135:%.*]] = fir.cmpf "false", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_136:%.*]] = fir.cmpf "oeq", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_137:%.*]] = fir.cmpf "ogt", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_138:%.*]] = fir.cmpf "oge", [[VAL_133]], [[VAL_134]] : f128
+  %d0 = fir.cmpf "false", %a, %b : f128
+  %d1 = fir.cmpf "oeq", %a, %b : f128
+  %d2 = fir.cmpf "ogt", %a, %b : f128
+  %d3 = fir.cmpf "oge", %a, %b : f128
 
-// CHECK: [[VAL_139:%.*]] = fir.cmpf "olt", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_140:%.*]] = fir.cmpf "ole", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_141:%.*]] = fir.cmpf "one", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_142:%.*]] = fir.cmpf "ord", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-  %a0 = fir.cmpf "olt", %a, %b : !fir.real<16>
-  %a1 = fir.cmpf "ole", %a, %b : !fir.real<16>
-  %a2 = fir.cmpf "one", %a, %b : !fir.real<16>
-  %a3 = fir.cmpf "ord", %a, %b : !fir.real<16>
+// CHECK: [[VAL_139:%.*]] = fir.cmpf "olt", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_140:%.*]] = fir.cmpf "ole", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_141:%.*]] = fir.cmpf "one", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_142:%.*]] = fir.cmpf "ord", [[VAL_133]], [[VAL_134]] : f128
+  %a0 = fir.cmpf "olt", %a, %b : f128
+  %a1 = fir.cmpf "ole", %a, %b : f128
+  %a2 = fir.cmpf "one", %a, %b : f128
+  %a3 = fir.cmpf "ord", %a, %b : f128
 
-// CHECK: [[VAL_143:%.*]] = fir.cmpf "ueq", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_144:%.*]] = fir.cmpf "ugt", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_145:%.*]] = fir.cmpf "uge", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_146:%.*]] = fir.cmpf "ult", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-  %b0 = fir.cmpf "ueq", %a, %b : !fir.real<16>
-  %b1 = fir.cmpf "ugt", %a, %b : !fir.real<16>
-  %b2 = fir.cmpf "uge", %a, %b : !fir.real<16>
-  %b3 = fir.cmpf "ult", %a, %b : !fir.real<16>
+// CHECK: [[VAL_143:%.*]] = fir.cmpf "ueq", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_144:%.*]] = fir.cmpf "ugt", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_145:%.*]] = fir.cmpf "uge", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_146:%.*]] = fir.cmpf "ult", [[VAL_133]], [[VAL_134]] : f128
+  %b0 = fir.cmpf "ueq", %a, %b : f128
+  %b1 = fir.cmpf "ugt", %a, %b : f128
+  %b2 = fir.cmpf "uge", %a, %b : f128
+  %b3 = fir.cmpf "ult", %a, %b : f128
 
-// CHECK: [[VAL_147:%.*]] = fir.cmpf "ule", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_148:%.*]] = fir.cmpf "une", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_149:%.*]] = fir.cmpf "uno", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_150:%.*]] = fir.cmpf "true", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-  %c0 = fir.cmpf "ule", %a, %b : !fir.real<16>
-  %c1 = fir.cmpf "une", %a, %b : !fir.real<16>
-  %c2 = fir.cmpf "uno", %a, %b : !fir.real<16>
-  %c3 = fir.cmpf "true", %a, %b : !fir.real<16>
+// CHECK: [[VAL_147:%.*]] = fir.cmpf "ule", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_148:%.*]] = fir.cmpf "une", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_149:%.*]] = fir.cmpf "uno", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_150:%.*]] = fir.cmpf "true", [[VAL_133]], [[VAL_134]] : f128
+  %c0 = fir.cmpf "ule", %a, %b : f128
+  %c1 = fir.cmpf "une", %a, %b : f128
+  %c2 = fir.cmpf "uno", %a, %b : f128
+  %c3 = fir.cmpf "true", %a, %b : f128
 
 // CHECK: return
 // CHECK: }
@@ -531,28 +531,28 @@ func @compare_complex(%a : !fir.complex<16>, %b : !fir.complex<16>) {
 }
 
 // CHECK-LABEL: func @arith_real(
-// CHECK-SAME: [[VAL_169:%.*]]: !fir.real<16>, [[VAL_170:%.*]]: !fir.real<16>) -> !fir.real<16> {
-func @arith_real(%a : !fir.real<16>, %b : !fir.real<16>) -> !fir.real<16> {
+// CHECK-SAME: [[VAL_169:%.*]]: f128, [[VAL_170:%.*]]: f128) -> f128 {
+func @arith_real(%a : f128, %b : f128) -> f128 {
 
 // CHECK: [[VAL_171:%.*]] = constant 1.0
-// CHECK: [[VAL_172:%.*]] = fir.convert [[VAL_171]] : (f32) -> !fir.real<16>
-// CHECK: [[VAL_173:%.*]] = fir.negf [[VAL_169]] : !fir.real<16>
-// CHECK: [[VAL_174:%.*]] = fir.addf [[VAL_172]], [[VAL_173]] : !fir.real<16>
-// CHECK: [[VAL_175:%.*]] = fir.subf [[VAL_174]], [[VAL_170]] : !fir.real<16>
-// CHECK: [[VAL_176:%.*]] = fir.mulf [[VAL_173]], [[VAL_175]] : !fir.real<16>
-// CHECK: [[VAL_177:%.*]] = fir.divf [[VAL_176]], [[VAL_169]] : !fir.real<16>
-// CHECK: [[VAL_178:%.*]] = fir.modf [[VAL_177]], [[VAL_170]] : !fir.real<16>
+// CHECK: [[VAL_172:%.*]] = fir.convert [[VAL_171]] : (f32) -> f128
+// CHECK: [[VAL_173:%.*]] = fir.negf [[VAL_169]] : f128
+// CHECK: [[VAL_174:%.*]] = addf [[VAL_172]], [[VAL_173]] : f128
+// CHECK: [[VAL_175:%.*]] = subf [[VAL_174]], [[VAL_170]] : f128
+// CHECK: [[VAL_176:%.*]] = mulf [[VAL_173]], [[VAL_175]] : f128
+// CHECK: [[VAL_177:%.*]] = divf [[VAL_176]], [[VAL_169]] : f128
+// CHECK: [[VAL_178:%.*]] = fir.modf [[VAL_177]], [[VAL_170]] : f128
   %c1 = constant 1.0 : f32
-  %0 = fir.convert %c1 : (f32) -> !fir.real<16>
-  %1 = fir.negf %a : !fir.real<16>
-  %2 = fir.addf %0, %1 : !fir.real<16>
-  %3 = fir.subf %2, %b : !fir.real<16>
-  %4 = fir.mulf %1, %3 : !fir.real<16>
-  %5 = fir.divf %4, %a : !fir.real<16>
-  %6 = fir.modf %5, %b : !fir.real<16>
-// CHECK: return [[VAL_178]] : !fir.real<16>
+  %0 = fir.convert %c1 : (f32) -> f128
+  %1 = fir.negf %a : f128
+  %2 = addf %0, %1 : f128
+  %3 = subf %2, %b : f128
+  %4 = mulf %1, %3 : f128
+  %5 = divf %4, %a : f128
+  %6 = fir.modf %5, %b : f128
+// CHECK: return [[VAL_178]] : f128
 // CHECK: }
-  return %6 : !fir.real<16>
+  return %6 : f128
 }
 
 // CHECK-LABEL: func @arith_complex(
