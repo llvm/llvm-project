@@ -406,6 +406,17 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *Fast = nullptr) const override;
 
+  bool splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL,
+                                   SDValue Val, SDValue *Parts,
+                                   unsigned NumParts, MVT PartVT,
+                                   Optional<CallingConv::ID> CC) const override;
+
+  SDValue
+  joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
+                             const SDValue *Parts, unsigned NumParts,
+                             MVT PartVT, EVT ValueVT,
+                             Optional<CallingConv::ID> CC) const override;
+
   static RISCVVLMUL getLMUL(MVT VT);
   static unsigned getRegClassIDForLMUL(RISCVVLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
