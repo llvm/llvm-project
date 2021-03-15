@@ -106,7 +106,8 @@ set(MLIR_PYTHON_BINDINGS_VERSION_LOCKED 1 CACHE BOOL
 
 if(MLIR_BINDINGS_PYTHON_ENABLED)
   include(MLIRDetectPythonEnv)
-  find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
+  find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
+    COMPONENTS Interpreter Development NumPy REQUIRED)
   message(STATUS "Found python include dirs: ${Python3_INCLUDE_DIRS}")
   message(STATUS "Found python libraries: ${Python3_LIBRARIES}")
   message(STATUS "Found numpy v${Python3_NumPy_VERSION}: ${Python3_NumPy_INCLUDE_DIRS}")
