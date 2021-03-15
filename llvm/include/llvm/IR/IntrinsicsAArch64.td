@@ -696,11 +696,17 @@ let TargetPrefix = "aarch64" in {
     : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrHasSideEffects]>;
   class FPCR_Set_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrNoMem, IntrHasSideEffects]>;
+  class RNDR_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_i64_ty, llvm_i1_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 }
 
 // FPCR
 def int_aarch64_get_fpcr : FPCR_Get_Intrinsic;
 def int_aarch64_set_fpcr : FPCR_Set_Intrinsic;
+
+// Armv8.5-A Random number generation intrinsics
+def int_aarch64_rndr : RNDR_Intrinsic;
+def int_aarch64_rndrrs : RNDR_Intrinsic;
 
 let TargetPrefix = "aarch64" in {
   class Crypto_AES_DataKey_Intrinsic

@@ -203,6 +203,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SHL, MVT::i32, Custom);
     setOperationAction(ISD::SRA, MVT::i32, Custom);
     setOperationAction(ISD::SRL, MVT::i32, Custom);
+
+    setOperationAction(ISD::UADDO, MVT::i32, Custom);
+    setOperationAction(ISD::USUBO, MVT::i32, Custom);
   }
 
   if (!Subtarget.hasStdExtM()) {
@@ -3467,6 +3470,31 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
     Results.push_back(customLegalizeToWOp(N, DAG, ExtOpc));
     break;
+  }
+  case ISD::UADDO:
+  case ISD::USUBO: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    bool IsAdd = N->getOpcode() == ISD::UADDO;
+    SDLoc DL(N);
+    // Create an ADDW or SUBW.
+    SDValue LHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+    SDValue RHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+    SDValue Res =
+        DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, DL, MVT::i64, LHS, RHS);
+    Res = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Res,
+                      DAG.getValueType(MVT::i32));
+
+    // Sign extend the LHS and perform an unsigned compare with the ADDW result.
+    // Since the inputs are sign extended from i32, this is equivalent to
+    // comparing the lower 32 bits.
+    LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(0));
+    SDValue Overflow = DAG.getSetCC(DL, N->getValueType(1), Res, LHS,
+                                    IsAdd ? ISD::SETULT : ISD::SETUGT);
+
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+    Results.push_back(Overflow);
+    return;
   }
   case ISD::BITCAST: {
     assert(((N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&

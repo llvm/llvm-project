@@ -36814,7 +36814,7 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
   return SDValue();
 }
 
-// Canonicalize SHUFFLE(BINOP(X,C)) -> BINOP(SHUFFLE(X),SHUFFLE(C)).
+// Canonicalize SHUFFLE(BINOP(X,Y)) -> BINOP(SHUFFLE(X),SHUFFLE(Y)).
 static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
                                              const SDLoc &DL) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -36822,11 +36822,14 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
 
   auto IsMergeableWithShuffle = [](SDValue Op) {
     // AllZeros/AllOnes constants are freely shuffled and will peek through
-    // bitcasts. Other constant build vectors do not peek through bitcasts.
+    // bitcasts. Other constant build vectors do not peek through bitcasts. Only
+    // merge with target shuffles if it has one use so shuffle combining is
+    // likely to kick in.
     return ISD::isBuildVectorAllOnes(Op.getNode()) ||
            ISD::isBuildVectorAllZeros(Op.getNode()) ||
            ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
-           ISD::isBuildVectorOfConstantFPSDNodes(Op.getNode());
+           ISD::isBuildVectorOfConstantFPSDNodes(Op.getNode()) ||
+           (isTargetShuffle(Op.getOpcode()) && Op->hasOneUse());
   };
   auto IsSafeToMoveShuffle = [ShuffleVT](SDValue Op, unsigned BinOp) {
     // Ensure we only shuffle whole vector src elements, unless its a logical
@@ -45829,6 +45832,17 @@ static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
     for (unsigned i = 0; i != NumElts; ++i)
       RMask.push_back(i);
   }
+
+  // If we have an unary mask, ensure the other op is set to null.
+  if (isUndefOrInRange(LMask, 0, NumElts))
+    B = SDValue();
+  else if (isUndefOrInRange(LMask, NumElts, NumElts * 2))
+    A = SDValue();
+
+  if (isUndefOrInRange(RMask, 0, NumElts))
+    D = SDValue();
+  else if (isUndefOrInRange(RMask, NumElts, NumElts * 2))
+    C = SDValue();
 
   // If A and B occur in reverse order in RHS, then canonicalize by commuting
   // RHS operands and shuffle mask.

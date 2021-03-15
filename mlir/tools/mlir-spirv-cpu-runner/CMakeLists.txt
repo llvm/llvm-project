@@ -23,6 +23,7 @@ if (MLIR_SPIRV_CPU_RUNNER_ENABLED)
     MLIRJitRunner
     MLIRLLVMIR
     MLIRLLVMToLLVMIRTranslation
+    MLIRMemRef
     MLIRParser
     MLIRSPIRV
     MLIRStandard

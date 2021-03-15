@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -ffreestanding -triple armv8a-none-eabi -target-feature +crc -target-feature +dsp -O0 -disable-O0-optnone -fexperimental-new-pass-manager -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s -check-prefixes=ARM,AArch32
 // RUN: %clang_cc1 -ffreestanding -triple aarch64-none-eabi -target-feature +neon -target-feature +crc -target-feature +crypto -O0 -disable-O0-optnone -fexperimental-new-pass-manager -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s -check-prefixes=ARM,AArch64
 // RUN: %clang_cc1 -ffreestanding -triple aarch64-none-eabi -target-feature +v8.3a -O0 -disable-O0-optnone -fexperimental-new-pass-manager -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s -check-prefixes=ARM,AArch64,AArch6483
-// RUN: %clang_cc1 -ffreestanding -triple aarch64-none-eabi -target-feature +v8.5a -O0 -disable-O0-optnone -fexperimental-new-pass-manager -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s -check-prefixes=ARM,AArch64,AArch6483
+// RUN: %clang_cc1 -ffreestanding -triple aarch64-none-eabi -target-feature +v8.5a -target-feature +rand -O0 -disable-O0-optnone -fexperimental-new-pass-manager -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s -check-prefixes=ARM,AArch64,AArch6483,AArch6485
 
 #include <arm_acle.h>
 
@@ -1753,6 +1753,36 @@ void test_wsrf64(double v) {
 //
 int32_t test_jcvt(double v) {
   return __jcvt(v);
+}
+#endif
+
+
+#if __ARM_64BIT_STATE && defined(__ARM_FEATURE_RNG)
+
+// AArch6485-LABEL: @test_rndr(
+// AArch6485-NEXT:  entry:
+// AArch6485-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.aarch64.rndr() [[ATTR3:#.*]]
+// AArch6485-NEXT:    [[TMP1:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
+// AArch6485-NEXT:    [[TMP2:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
+// AArch6485-NEXT:    store i64 [[TMP1]], i64* [[__ADDR:%.*]], align 8
+// AArch6485-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+// AArch6485-NEXT:    ret i32 [[TMP3]]
+//
+int test_rndr(uint64_t *__addr) {
+  return __rndr(__addr);
+}
+
+// AArch6485-LABEL: @test_rndrrs(
+// AArch6485-NEXT:  entry:
+// AArch6485-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.aarch64.rndrrs() [[ATTR3:#.*]]
+// AArch6485-NEXT:    [[TMP1:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
+// AArch6485-NEXT:    [[TMP2:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
+// AArch6485-NEXT:    store i64 [[TMP1]], i64* [[__ADDR:%.*]], align 8
+// AArch6485-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+// AArch6485-NEXT:    ret i32 [[TMP3]]
+//
+int test_rndrrs(uint64_t *__addr) {
+  return __rndrrs(__addr);
 }
 #endif
 

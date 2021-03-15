@@ -15,33 +15,33 @@ module attributes {
       %i1 = constant 1 : index
       %i2 = constant 2 : index
 
-      %x = load %arg0[%i0] : memref<3xf32>
-      %y = load %arg1[%i0, %i0] : memref<3x3xf32>
+      %x = memref.load %arg0[%i0] : memref<3xf32>
+      %y = memref.load %arg1[%i0, %i0] : memref<3x3xf32>
       %sum = addf %x, %y : f32
 
-      store %sum, %arg2[%i0, %i0, %i0] : memref<3x3x3xf32>
-      store %sum, %arg2[%i0, %i1, %i0] : memref<3x3x3xf32>
-      store %sum, %arg2[%i0, %i2, %i0] : memref<3x3x3xf32>
-      store %sum, %arg2[%i1, %i0, %i1] : memref<3x3x3xf32>
-      store %sum, %arg2[%i1, %i1, %i1] : memref<3x3x3xf32>
-      store %sum, %arg2[%i1, %i2, %i1] : memref<3x3x3xf32>
-      store %sum, %arg2[%i2, %i0, %i2] : memref<3x3x3xf32>
-      store %sum, %arg2[%i2, %i1, %i2] : memref<3x3x3xf32>
-      store %sum, %arg2[%i2, %i2, %i2] : memref<3x3x3xf32>
+      memref.store %sum, %arg2[%i0, %i0, %i0] : memref<3x3x3xf32>
+      memref.store %sum, %arg2[%i0, %i1, %i0] : memref<3x3x3xf32>
+      memref.store %sum, %arg2[%i0, %i2, %i0] : memref<3x3x3xf32>
+      memref.store %sum, %arg2[%i1, %i0, %i1] : memref<3x3x3xf32>
+      memref.store %sum, %arg2[%i1, %i1, %i1] : memref<3x3x3xf32>
+      memref.store %sum, %arg2[%i1, %i2, %i1] : memref<3x3x3xf32>
+      memref.store %sum, %arg2[%i2, %i0, %i2] : memref<3x3x3xf32>
+      memref.store %sum, %arg2[%i2, %i1, %i2] : memref<3x3x3xf32>
+      memref.store %sum, %arg2[%i2, %i2, %i2] : memref<3x3x3xf32>
       gpu.return
     }
   }
 
   func @main() {
-    %input1 = alloc() : memref<3xf32>
-    %input2 = alloc() : memref<3x3xf32>
-    %output = alloc() : memref<3x3x3xf32>
+    %input1 = memref.alloc() : memref<3xf32>
+    %input2 = memref.alloc() : memref<3x3xf32>
+    %output = memref.alloc() : memref<3x3x3xf32>
     %0 = constant 0.0 : f32
     %3 = constant 3.4 : f32
     %4 = constant 4.3 : f32
-    %input1_casted = memref_cast %input1 : memref<3xf32> to memref<?xf32>
-    %input2_casted = memref_cast %input2 : memref<3x3xf32> to memref<?x?xf32>
-    %output_casted = memref_cast %output : memref<3x3x3xf32> to memref<?x?x?xf32>
+    %input1_casted = memref.cast %input1 : memref<3xf32> to memref<?xf32>
+    %input2_casted = memref.cast %input2 : memref<3x3xf32> to memref<?x?xf32>
+    %output_casted = memref.cast %output : memref<3x3x3xf32> to memref<?x?x?xf32>
     call @fillF32Buffer1D(%input1_casted, %3) : (memref<?xf32>, f32) -> ()
     call @fillF32Buffer2D(%input2_casted, %4) : (memref<?x?xf32>, f32) -> ()
     call @fillF32Buffer3D(%output_casted, %0) : (memref<?x?x?xf32>, f32) -> ()
@@ -50,7 +50,7 @@ module attributes {
     gpu.launch_func @kernels::@sum
         blocks in (%one, %one, %one) threads in (%one, %one, %one)
         args(%input1 : memref<3xf32>, %input2 : memref<3x3xf32>, %output : memref<3x3x3xf32>)
-    %result = memref_cast %output : memref<3x3x3xf32> to memref<*xf32>
+    %result = memref.cast %output : memref<3x3x3xf32> to memref<*xf32>
     call @print_memref_f32(%result) : (memref<*xf32>) -> ()
     return
   }

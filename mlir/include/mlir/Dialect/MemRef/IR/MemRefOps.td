@@ -254,7 +254,8 @@ def MemRef_BufferCastOp : MemRef_Op<"buffer_cast",
 
 def MemRef_CastOp : MemRef_Op<"cast", [
       NoSideEffect, SameOperandsAndResultShape,
-      DeclareOpInterfaceMethods<CastOpInterface>
+      DeclareOpInterfaceMethods<CastOpInterface>,
+      ViewLikeOpInterface
     ]> {
   let summary = "memref cast operation";
   let description = [{
@@ -325,6 +326,8 @@ def MemRef_CastOp : MemRef_Op<"cast", [
   let extraClassDeclaration = [{
     /// Fold the given CastOp into consumer op.
     static bool canFoldIntoConsumerOp(CastOp castOp);
+
+    Value getViewSource() { return source(); }
   }];
 
   let hasFolder = 1;

@@ -441,6 +441,12 @@
 // CHECK-BTI-OFF-NOT: __ARM_FEATURE_BTI_DEFAULT
 // CHECK-BTI:         #define __ARM_FEATURE_BTI_DEFAULT 1
 
+// ================== Check Armv8.5-A random number generation extension.
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.5-a+rng -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-RNG %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.5-a -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-RNG %s
+// CHECK-RNG: __ARM_FEATURE_RNG 1
+// CHECK-NO-RNG-NOT: __ARM_FEATURE_RNG 1
+
 // ================== Check BFloat16 Extensions.
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv8.6-a+bf16 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-BFLOAT %s
 // CHECK-BFLOAT: __ARM_BF16_FORMAT_ALTERNATIVE 1
