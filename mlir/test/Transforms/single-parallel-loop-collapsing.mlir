@@ -14,13 +14,13 @@ func @collapse_to_single() {
 }
 
 // CHECK-LABEL: func @collapse_to_single() {
-// CHECK:         [[C7:%.*]] = constant 7 : index
-// CHECK:         [[C3:%.*]] = constant 3 : index
-// CHECK:         [[C4:%.*]] = constant 4 : index
-// CHECK:         [[C18:%.*]] = constant 18 : index
-// CHECK:         [[C6:%.*]] = constant 6 : index
-// CHECK:         [[C0:%.*]] = constant 0 : index
-// CHECK:         [[C1:%.*]] = constant 1 : index
+// CHECK-DAG:         [[C18:%.*]] = constant 18 : index
+// CHECK-DAG:         [[C6:%.*]] = constant 6 : index
+// CHECK-DAG:         [[C3:%.*]] = constant 3 : index
+// CHECK-DAG:         [[C7:%.*]] = constant 7 : index
+// CHECK-DAG:         [[C4:%.*]] = constant 4 : index
+// CHECK-DAG:         [[C1:%.*]] = constant 1 : index
+// CHECK-DAG:         [[C0:%.*]] = constant 0 : index
 // CHECK:         scf.parallel ([[NEW_I:%.*]]) = ([[C0]]) to ([[C18]]) step ([[C1]]) {
 // CHECK:           [[I0_COUNT:%.*]] = remi_signed [[NEW_I]], [[C6]] : index
 // CHECK:           [[I1_COUNT:%.*]] = divi_signed [[NEW_I]], [[C6]] : index

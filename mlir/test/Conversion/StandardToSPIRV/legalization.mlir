@@ -67,9 +67,9 @@ func @fold_dynamic_stride_subview_with_store(%arg0 : memref<12x32xf32>, %arg1 : 
 // CHECK-SAME: [[ARG0:%.*]]: memref<12x32xf32>, [[ARG1:%.*]]: index, [[ARG2:%.*]]: index, [[ARG3:%.*]]: index, [[ARG4:%.*]]: index
 func @fold_static_stride_subview_with_transfer_read(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> vector<4xf32> {
   // CHECK-NOT: subview
-  // CHECK: [[F1:%.*]] = constant 1.000000e+00 : f32
   // CHECK: [[C2:%.*]] = constant 2 : index
   // CHECK: [[C3:%.*]] = constant 3 : index
+  // CHECK: [[F1:%.*]] = constant 1.000000e+00 : f32
   // CHECK: [[STRIDE1:%.*]] = muli [[ARG3]], [[C2]] : index
   // CHECK: [[INDEX1:%.*]] = addi [[ARG1]], [[STRIDE1]] : index
   // CHECK: [[STRIDE2:%.*]] = muli [[ARG4]], [[C3]] : index
