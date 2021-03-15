@@ -1,4 +1,5 @@
 ; RUN: opt -S -strip-nonlinetable-debuginfo %s -o - |  FileCheck %s
+; RUN: opt -S -strip-debug %s -o - |  FileCheck %s
 ; int *get() { return new int[256]; }
 ; ModuleID = '/tmp/heapallocsite.cpp'
 source_filename = "/tmp/heapallocsite.cpp"
@@ -26,7 +27,7 @@ attributes #2 = { builtin allocsize(0) }
 !llvm.module.flags = !{!3, !4, !5, !6}
 !llvm.ident = !{!7}
 
-; CHECK-LABEL: !0 =
+; CHECK-LABEL: !llvm.ident
 ; CHECK-NOT: !DIBasicType(name: "int"
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 13.0.0 (git@github.com:llvm/llvm-project 6d4ce49dae17715de502acbd50ab4c9b3c18215b)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None, sysroot: "/")
 !1 = !DIFile(filename: "/tmp/heapallocsite.cpp", directory: "/Volumes/Data/llvm-project")
