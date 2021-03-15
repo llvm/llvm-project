@@ -3380,6 +3380,52 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Builder.CreateMemSet(Dest, ByteVal, SizeVal, false);
     return RValue::get(Dest.getPointer());
   }
+  case Builtin::BI__builtin_wmemchr: {
+    // The MSVC runtime library does not provide a definition of wmemchr, so we
+    // need an inline implementation.
+    if (!getTarget().getTriple().isOSMSVCRT())
+      break;
+
+    llvm::Type *WCharTy = ConvertType(getContext().WCharTy);
+    Value *Str = EmitScalarExpr(E->getArg(0));
+    Value *Chr = EmitScalarExpr(E->getArg(1));
+    Value *Size = EmitScalarExpr(E->getArg(2));
+
+    BasicBlock *Entry = Builder.GetInsertBlock();
+    BasicBlock *CmpEq = createBasicBlock("wmemchr.eq");
+    BasicBlock *Next = createBasicBlock("wmemchr.next");
+    BasicBlock *Exit = createBasicBlock("wmemchr.exit");
+    Value *SizeEq0 = Builder.CreateICmpEQ(Size, ConstantInt::get(SizeTy, 0));
+    Builder.CreateCondBr(SizeEq0, Exit, CmpEq);
+
+    EmitBlock(CmpEq);
+    PHINode *StrPhi = Builder.CreatePHI(Str->getType(), 2);
+    StrPhi->addIncoming(Str, Entry);
+    PHINode *SizePhi = Builder.CreatePHI(SizeTy, 2);
+    SizePhi->addIncoming(Size, Entry);
+    CharUnits WCharAlign =
+        getContext().getTypeAlignInChars(getContext().WCharTy);
+    Value *StrCh = Builder.CreateAlignedLoad(WCharTy, StrPhi, WCharAlign);
+    Value *FoundChr = Builder.CreateConstInBoundsGEP1_32(WCharTy, StrPhi, 0);
+    Value *StrEqChr = Builder.CreateICmpEQ(StrCh, Chr);
+    Builder.CreateCondBr(StrEqChr, Exit, Next);
+
+    EmitBlock(Next);
+    Value *NextStr = Builder.CreateConstInBoundsGEP1_32(WCharTy, StrPhi, 1);
+    Value *NextSize = Builder.CreateSub(SizePhi, ConstantInt::get(SizeTy, 1));
+    Value *NextSizeEq0 =
+        Builder.CreateICmpEQ(NextSize, ConstantInt::get(SizeTy, 0));
+    Builder.CreateCondBr(NextSizeEq0, Exit, CmpEq);
+    StrPhi->addIncoming(NextStr, Next);
+    SizePhi->addIncoming(NextSize, Next);
+
+    EmitBlock(Exit);
+    PHINode *Ret = Builder.CreatePHI(Str->getType(), 3);
+    Ret->addIncoming(llvm::Constant::getNullValue(Str->getType()), Entry);
+    Ret->addIncoming(llvm::Constant::getNullValue(Str->getType()), Next);
+    Ret->addIncoming(FoundChr, CmpEq);
+    return RValue::get(Ret);
+  }
   case Builtin::BI__builtin_wmemcmp: {
     // The MSVC runtime library does not provide a definition of wmemcmp, so we
     // need an inline implementation.
