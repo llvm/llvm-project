@@ -37,10 +37,12 @@
 #include <unistd.h>
 
 #include "dfsan/dfsan.h"
+#include "dfsan/dfsan_chained_origin_depot.h"
 #include "dfsan/dfsan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_linux.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 
 using namespace __dfsan;
 
@@ -310,6 +312,17 @@ __dfsw_strlen(const char *s, dfsan_label s_label, dfsan_label *ret_label) {
   return ret;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE size_t __dfso_strlen(const char *s,
+                                                   dfsan_label s_label,
+                                                   dfsan_label *ret_label,
+                                                   dfsan_origin s_origin,
+                                                   dfsan_origin *ret_origin) {
+  size_t ret = __dfsw_strlen(s, s_label, ret_label);
+  if (!flags().strict_data_dependencies)
+    *ret_origin = dfsan_read_origin_of_first_taint(s, ret + 1);
+  return ret;
+}
+
 static void *dfsan_memmove(void *dest, const void *src, size_t n) {
   dfsan_label *sdest = shadow_for(dest);
   const dfsan_label *ssrc = shadow_for(src);
@@ -456,7 +469,8 @@ static void *DFsanThreadStartFunc(void *arg) {
 static int dfsan_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                                 void *start_routine_trampoline,
                                 void *start_routine, void *arg,
-                                dfsan_label *ret_label) {
+                                dfsan_label *ret_label,
+                                bool track_origins = false) {
   pthread_attr_t myattr;
   if (!attr) {
     pthread_attr_init(&myattr);
@@ -466,8 +480,9 @@ static int dfsan_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   // Ensure that the thread stack is large enough to hold all TLS data.
   AdjustStackSize((void *)(const_cast<pthread_attr_t *>(attr)));
 
-  DFsanThread *t = DFsanThread::Create(start_routine_trampoline,
-                                       (thread_callback_t)start_routine, arg);
+  DFsanThread *t =
+      DFsanThread::Create(start_routine_trampoline,
+                          (thread_callback_t)start_routine, arg, track_origins);
   int res = pthread_create(thread, attr, DFsanThreadStartFunc, t);
 
   if (attr == &myattr)
@@ -487,6 +502,20 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_pthread_create(
                               start_routine, arg, ret_label);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE int __dfso_pthread_create(
+    pthread_t *thread, const pthread_attr_t *attr,
+    void *(*start_routine_trampoline)(void *, void *, dfsan_label,
+                                      dfsan_label *, dfsan_origin,
+                                      dfsan_origin *),
+    void *start_routine, void *arg, dfsan_label thread_label,
+    dfsan_label attr_label, dfsan_label start_routine_label,
+    dfsan_label arg_label, dfsan_label *ret_label, dfsan_origin thread_origin,
+    dfsan_origin attr_origin, dfsan_origin start_routine_origin,
+    dfsan_origin arg_origin, dfsan_origin *ret_origin) {
+  return dfsan_pthread_create(thread, attr, (void *)start_routine_trampoline,
+                              start_routine, arg, ret_label, true);
+}
+
 SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_pthread_join(pthread_t thread,
                                                       void **retval,
                                                       dfsan_label thread_label,
@@ -497,6 +526,15 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_pthread_join(pthread_t thread,
     dfsan_set_label(0, retval, sizeof(*retval));
   *ret_label = 0;
   return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE int __dfso_pthread_join(
+    pthread_t thread, void **retval, dfsan_label thread_label,
+    dfsan_label retval_label, dfsan_label *ret_label,
+    dfsan_origin thread_origin, dfsan_origin retval_origin,
+    dfsan_origin *ret_origin) {
+  return __dfsw_pthread_join(thread, retval, thread_label, retval_label,
+                             ret_label);
 }
 
 struct dl_iterate_phdr_info {
@@ -872,6 +910,13 @@ int __dfsw_sigemptyset(sigset_t *set, dfsan_label set_label,
   return ret;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_sigemptyset(sigset_t *set, dfsan_label set_label,
+                       dfsan_label *ret_label, dfsan_origin set_origin,
+                       dfsan_origin *ret_origin) {
+  return __dfsw_sigemptyset(set, set_label, ret_label);
+}
+
 class SignalHandlerScope {
  public:
   SignalHandlerScope() {
@@ -988,11 +1033,18 @@ int __dfsw_sigaction(int signum, const struct sigaction *act,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-sighandler_t __dfsw_signal(int signum,
-                           void *(*handler_trampoline)(void *, int, dfsan_label,
-                                                       dfsan_label *),
-                           sighandler_t handler, dfsan_label signum_label,
-                           dfsan_label handler_label, dfsan_label *ret_label) {
+int __dfso_sigaction(int signum, const struct sigaction *act,
+                     struct sigaction *oldact, dfsan_label signum_label,
+                     dfsan_label act_label, dfsan_label oldact_label,
+                     dfsan_label *ret_label, dfsan_origin signum_origin,
+                     dfsan_origin act_origin, dfsan_origin oldact_origin,
+                     dfsan_origin *ret_origin) {
+  return __dfsw_sigaction(signum, act, oldact, signum_label, act_label,
+                          oldact_label, ret_label);
+}
+
+static sighandler_t dfsan_signal(int signum, sighandler_t handler,
+                                 dfsan_label *ret_label) {
   CHECK_LT(signum, kMaxSignals);
   SignalSpinLocker lock;
   uptr old_cb = atomic_load(&sigactions[signum], memory_order_relaxed);
@@ -1011,6 +1063,26 @@ sighandler_t __dfsw_signal(int signum,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+sighandler_t __dfsw_signal(int signum,
+                           void *(*handler_trampoline)(void *, int, dfsan_label,
+                                                       dfsan_label *),
+                           sighandler_t handler, dfsan_label signum_label,
+                           dfsan_label handler_label, dfsan_label *ret_label) {
+  return dfsan_signal(signum, handler, ret_label);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+sighandler_t __dfso_signal(
+    int signum,
+    void *(*handler_trampoline)(void *, int, dfsan_label, dfsan_label *,
+                                dfsan_origin, dfsan_origin *),
+    sighandler_t handler, dfsan_label signum_label, dfsan_label handler_label,
+    dfsan_label *ret_label, dfsan_origin signum_origin,
+    dfsan_origin handler_origin, dfsan_origin *ret_origin) {
+  return dfsan_signal(signum, handler, ret_label);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsw_sigaltstack(const stack_t *ss, stack_t *old_ss, dfsan_label ss_label,
                        dfsan_label old_ss_label, dfsan_label *ret_label) {
   int ret = sigaltstack(ss, old_ss);
@@ -1018,6 +1090,14 @@ int __dfsw_sigaltstack(const stack_t *ss, stack_t *old_ss, dfsan_label ss_label,
     dfsan_set_label(0, old_ss, sizeof(*old_ss));
   *ret_label = 0;
   return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_sigaltstack(const stack_t *ss, stack_t *old_ss, dfsan_label ss_label,
+                       dfsan_label old_ss_label, dfsan_label *ret_label,
+                       dfsan_origin ss_origin, dfsan_origin old_ss_origin,
+                       dfsan_origin *ret_origin) {
+  return __dfsw_sigaltstack(ss, old_ss, ss_label, old_ss_label, ret_label);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -1203,12 +1283,22 @@ typedef void (*write_trampoline_t)(
     int fd, const void *buf, ssize_t count,
     dfsan_label fd_label, dfsan_label buf_label, dfsan_label count_label);
 
+typedef void (*write_origin_trampoline_t)(
+    void *callback, int fd, const void *buf, ssize_t count,
+    dfsan_label fd_label, dfsan_label buf_label, dfsan_label count_label,
+    dfsan_origin fd_origin, dfsan_origin buf_origin, dfsan_origin count_origin);
+
 // Calls to dfsan_set_write_callback() set the values in this struct.
 // Calls to the custom version of write() read (and invoke) them.
 static struct {
   write_trampoline_t write_callback_trampoline = nullptr;
   void *write_callback = nullptr;
 } write_callback_info;
+
+static struct {
+  write_origin_trampoline_t write_callback_trampoline = nullptr;
+  void *write_callback = nullptr;
+} write_origin_callback_info;
 
 SANITIZER_INTERFACE_ATTRIBUTE void
 __dfsw_dfsan_set_write_callback(
@@ -1220,6 +1310,15 @@ __dfsw_dfsan_set_write_callback(
   write_callback_info.write_callback = write_callback;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE void __dfso_dfsan_set_write_callback(
+    write_origin_trampoline_t write_callback_trampoline, void *write_callback,
+    dfsan_label write_callback_label, dfsan_label *ret_label,
+    dfsan_origin write_callback_origin, dfsan_origin *ret_origin) {
+  write_origin_callback_info.write_callback_trampoline =
+      write_callback_trampoline;
+  write_origin_callback_info.write_callback = write_callback;
+}
+
 SANITIZER_INTERFACE_ATTRIBUTE int
 __dfsw_write(int fd, const void *buf, size_t count,
              dfsan_label fd_label, dfsan_label buf_label,
@@ -1229,6 +1328,21 @@ __dfsw_write(int fd, const void *buf, size_t count,
         write_callback_info.write_callback,
         fd, buf, count,
         fd_label, buf_label, count_label);
+  }
+
+  *ret_label = 0;
+  return write(fd, buf, count);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE int __dfso_write(
+    int fd, const void *buf, size_t count, dfsan_label fd_label,
+    dfsan_label buf_label, dfsan_label count_label, dfsan_label *ret_label,
+    dfsan_origin fd_origin, dfsan_origin buf_origin, dfsan_origin count_origin,
+    dfsan_origin *ret_origin) {
+  if (write_origin_callback_info.write_callback) {
+    write_origin_callback_info.write_callback_trampoline(
+        write_origin_callback_info.write_callback, fd, buf, count, fd_label,
+        buf_label, count_label, fd_origin, buf_origin, count_origin);
   }
 
   *ret_label = 0;
@@ -1489,6 +1603,31 @@ int __dfsw_snprintf(char *str, size_t size, const char *format,
   int ret = format_buffer(str, size, format, va_labels, ret_label, ap);
   va_end(ap);
   return ret;
+}
+
+static void BeforeFork() {
+  StackDepotLockAll();
+  GetChainedOriginDepot()->LockAll();
+}
+
+static void AfterFork() {
+  GetChainedOriginDepot()->UnlockAll();
+  StackDepotUnlockAll();
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+pid_t __dfsw_fork(dfsan_label *ret_label) {
+  pid_t pid = fork();
+  *ret_label = 0;
+  return pid;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+pid_t __dfso_fork(dfsan_label *ret_label, dfsan_origin *ret_origin) {
+  BeforeFork();
+  pid_t pid = __dfsw_fork(ret_label);
+  AfterFork();
+  return pid;
 }
 
 // Default empty implementations (weak). Users should redefine them.

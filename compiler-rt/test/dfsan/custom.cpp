@@ -3,8 +3,12 @@
 // RUN: %clang_dfsan -DFAST_16_LABELS -mllvm -dfsan-fast-16-labels %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES -mllvm -dfsan-args-abi %s -o %t && %run %t
-
+// RUN: %clang_dfsan -DFAST_16_LABELS -DORIGIN_TRACKING -mllvm -dfsan-fast-16-labels -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
+// RUN: %clang_dfsan -DFAST_16_LABELS -DORIGIN_TRACKING -mllvm -dfsan-fast-16-labels -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
+//
 // Tests custom implementations of various glibc functions.
+//
+// REQUIRES: x86_64-target-arch
 
 #include <sanitizer/dfsan_interface.h>
 
@@ -35,6 +39,8 @@
 dfsan_label i_label = 0;
 dfsan_label j_label = 0;
 dfsan_label k_label = 0;
+dfsan_label m_label = 0;
+dfsan_label n_label = 0;
 dfsan_label i_j_label = 0;
 
 #define ASSERT_ZERO_LABEL(data) \
@@ -49,6 +55,102 @@ dfsan_label i_j_label = 0;
 #define ASSERT_READ_LABEL(ptr, size, label) \
   assert(label == dfsan_read_label(ptr, size))
 
+#ifdef ORIGIN_TRACKING
+#define ASSERT_ZERO_ORIGIN(data) \
+  assert(0 == dfsan_get_origin((long)(data)))
+#else
+#define ASSERT_ZERO_ORIGIN(data)
+#endif
+
+#ifdef ORIGIN_TRACKING
+#define ASSERT_ZERO_ORIGINS(ptr, size)                       \
+  for (int i = 0; i < size; ++i) {                           \
+    assert(0 == dfsan_get_origin((long)(((char *)ptr)[i]))); \
+  }
+#else
+#define ASSERT_ZERO_ORIGINS(ptr, size)
+#endif
+
+#ifdef ORIGIN_TRACKING
+#define ASSERT_ORIGIN(data, origin) \
+  assert(origin == dfsan_get_origin((long)(data)))
+#else
+#define ASSERT_ORIGIN(data, origin)
+#endif
+
+#ifdef ORIGIN_TRACKING
+#define ASSERT_ORIGINS(ptr, size, origin)                         \
+  for (int i = 0; i < size; ++i) {                                \
+    assert(origin == dfsan_get_origin((long)(((char *)ptr)[i]))); \
+  }
+#define ASSERT_ORIGINS(ptr, size, origin)
+#else
+#endif
+
+#ifdef ORIGIN_TRACKING
+#define ASSERT_INIT_ORIGIN(ptr, origin) \
+  assert(origin == dfsan_get_init_origin(ptr))
+#else
+#define ASSERT_INIT_ORIGIN(ptr, origin)
+#endif
+
+#ifdef ORIGIN_TRACKING
+#define ASSERT_INIT_ORIGIN_EQ_ORIGIN(ptr, data) \
+  assert(dfsan_get_origin((long)(data)) == dfsan_get_init_origin(ptr))
+#else
+#define ASSERT_INIT_ORIGIN_EQ_ORIGIN(ptr, data)
+#endif
+
+#ifdef ORIGIN_TRACKING
+#define ASSERT_INIT_ORIGINS(ptr, size, origin)                  \
+  for (int i = 0; i < size; ++i) {                              \
+    assert(origin == dfsan_get_init_origin(&((char *)ptr)[i])); \
+  }
+#else
+#define ASSERT_INIT_ORIGINS(ptr, size, origin)
+#endif
+
+#ifdef ORIGIN_TRACKING
+#define ASSERT_EQ_ORIGIN(data1, data2) \
+  assert(dfsan_get_origin((long)(data1)) == dfsan_get_origin((long)(data2)))
+#else
+#define ASSERT_EQ_ORIGIN(data1, data2)
+#endif
+
+#ifdef ORIGIN_TRACKING
+#define DEFINE_AND_SAVE_ORIGINS(val)    \
+  dfsan_origin val##_o[sizeof(val)];    \
+  for (int i = 0; i < sizeof(val); ++i) \
+    val##_o[i] = dfsan_get_origin((long)(((char *)(&val))[i]));
+#else
+#define DEFINE_AND_SAVE_ORIGINS(val)
+#endif
+
+#ifdef ORIGIN_TRACKING
+#define SAVE_ORIGINS(val)               \
+  for (int i = 0; i < sizeof(val); ++i) \
+    val##_o[i] = dfsan_get_origin((long)(((char *)(&val))[i]));
+#else
+#define SAVE_ORIGINS(val)
+#endif
+
+#ifdef ORIGIN_TRACKING
+#define ASSERT_SAVED_ORIGINS(val)       \
+  for (int i = 0; i < sizeof(val); ++i) \
+    ASSERT_ORIGIN(((char *)(&val))[i], val##_o[i]);
+#else
+#define ASSERT_SAVED_ORIGINS(val)
+#endif
+
+#ifdef ORIGIN_TRACKING
+#define ASSERT_SAVED_N_ORIGINS(val, n) \
+  for (int i = 0; i < n; ++i)          \
+    ASSERT_ORIGIN(val[i], val##_o[i]);
+#else
+#define ASSERT_SAVED_N_ORIGINS(val, n)
+#endif
+
+#if !defined(ORIGIN_TRACKING)
 void test_stat() {
   int i = 1;
   dfsan_set_label(i_label, &i, sizeof(i));
@@ -175,6 +277,7 @@ void test_strcat() {
   }
   ASSERT_LABEL(dst[11], j_label);
 }
+#endif // !defined(ORIGIN_TRACKING)
 
 void test_strlen() {
   char str1[] = "str1";
@@ -186,9 +289,11 @@ void test_strlen() {
   ASSERT_ZERO_LABEL(rv);
 #else
   ASSERT_LABEL(rv, i_label);
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
 #endif
 }
 
+#if !defined(ORIGIN_TRACKING)
 void test_strdup() {
   char str1[] = "str1";
   dfsan_set_label(i_label, &str1[3], 1);
@@ -835,13 +940,17 @@ void test_sched_getaffinity() {
   assert(ret == 0);
   ASSERT_READ_ZERO_LABEL(&mask, sizeof(mask));
 }
+#endif // !defined(ORIGIN_TRACKING)
 
 void test_sigemptyset() {
   sigset_t set;
   dfsan_set_label(j_label, &set, 1);
+  DEFINE_AND_SAVE_ORIGINS(set)
   int ret = sigemptyset(&set);
   assert(ret == 0);
+  ASSERT_ZERO_LABEL(ret);
   ASSERT_READ_ZERO_LABEL(&set, sizeof(set));
+  ASSERT_SAVED_ORIGINS(set)
 }
 
 static void SignalHandler(int signo) {}
@@ -856,10 +965,12 @@ void test_sigaction() {
   // Set sigaction to be SignalAction, save the last one into origin_act
   struct sigaction origin_act;
   dfsan_set_label(j_label, &origin_act, 1);
+  DEFINE_AND_SAVE_ORIGINS(origin_act)
   int ret = sigaction(SIGUSR1, &newact_with_sigaction, &origin_act);
   assert(ret == 0);
   ASSERT_ZERO_LABEL(ret);
   ASSERT_READ_ZERO_LABEL(&origin_act, sizeof(origin_act));
+  ASSERT_SAVED_ORIGINS(origin_act)
 
   struct sigaction newact_with_sighandler = {};
   newact_with_sighandler.sa_handler = SignalHandler;
@@ -904,12 +1015,15 @@ void test_signal() {
 void test_sigaltstack() {
   stack_t old_altstack = {};
   dfsan_set_label(j_label, &old_altstack, sizeof(old_altstack));
+  DEFINE_AND_SAVE_ORIGINS(old_altstack)
   int ret = sigaltstack(NULL, &old_altstack);
   assert(ret == 0);
   ASSERT_ZERO_LABEL(ret);
   ASSERT_READ_ZERO_LABEL(&old_altstack, sizeof(old_altstack));
+  ASSERT_SAVED_ORIGINS(old_altstack)
 }
 
+#if !defined(ORIGIN_TRACKING)
 void test_gettimeofday() {
   struct timeval tv;
   struct timezone tz;
@@ -920,6 +1034,7 @@ void test_gettimeofday() {
   ASSERT_READ_ZERO_LABEL(&tv, sizeof(tv));
   ASSERT_READ_ZERO_LABEL(&tz, sizeof(tz));
 }
+#endif // !defined(ORIGIN_TRACKING)
 
 void *pthread_create_test_cb(void *p) {
   assert(p == (void *)1);
@@ -929,20 +1044,25 @@ void *pthread_create_test_cb(void *p) {
 
 void test_pthread_create() {
   pthread_t pt;
-  pthread_create(&pt, 0, pthread_create_test_cb, (void *)1);
+  int create_ret = pthread_create(&pt, 0, pthread_create_test_cb, (void *)1);
+  assert(create_ret == 0);
+  ASSERT_ZERO_LABEL(create_ret);
   void *cbrv;
   dfsan_set_label(i_label, &cbrv, sizeof(cbrv));
-  int ret = pthread_join(pt, &cbrv);
-  assert(ret == 0);
+  DEFINE_AND_SAVE_ORIGINS(cbrv)
+  int joint_ret = pthread_join(pt, &cbrv);
+  assert(joint_ret == 0);
   assert(cbrv == (void *)2);
-  ASSERT_ZERO_LABEL(ret);
+  ASSERT_ZERO_LABEL(joint_ret);
   ASSERT_ZERO_LABEL(cbrv);
+  ASSERT_SAVED_ORIGINS(cbrv);
 }
 
 // Tested by test_pthread_create().  This empty function is here to appease the
 // check-wrappers script.
 void test_pthread_join() {}
 
+#if !defined(ORIGIN_TRACKING)
 int dl_iterate_phdr_test_cb(struct dl_phdr_info *info, size_t size,
                             void *data) {
   assert(data == (void *)3);
@@ -1165,6 +1285,7 @@ void test_getsockopt() {
 
   close(sockfd);
 }
+#endif // !defined(ORIGIN_TRACKING)
 
 void test_write() {
   int fd = open("/dev/null", O_WRONLY);
@@ -1189,6 +1310,7 @@ void test_write() {
   close(fd);
 }
 
+#if !defined(ORIGIN_TRACKING)
 template <class T>
 void test_sprintf_chunk(const char* expected, const char* format, T arg) {
   char buf[512];
@@ -1316,22 +1438,32 @@ void test_snprintf() {
   ASSERT_READ_LABEL(buf + 17, 2, 0);
   ASSERT_LABEL(r, 0);
 }
+#endif // !defined(ORIGIN_TRACKING)
+
+// Tested by a seperate source file.  This empty function is here to appease the
+// check-wrappers script.
+void test_fork() {}
 
 int main(void) {
 #ifdef FAST_16_LABELS
   i_label = 1;
   j_label = 2;
   k_label = 4;
+  m_label = 8;
+  n_label = 16;
 #else
   i_label = dfsan_create_label("i", 0);
   j_label = dfsan_create_label("j", 0);
   k_label = dfsan_create_label("k", 0);
+  m_label = dfsan_create_label("m", 0);
+  n_label = dfsan_create_label("n", 0);
 #endif
   i_j_label = dfsan_union(i_label, j_label);
   assert(i_j_label != i_label);
   assert(i_j_label != j_label);
   assert(i_j_label != k_label);
 
+#if !defined(ORIGIN_TRACKING)
   test__dl_get_tls_static_info();
   test_bcmp();
   test_calloc();
@@ -1363,17 +1495,21 @@ int main(void) {
   test_nanosleep();
   test_poll();
   test_pread();
+#endif // !defined(ORIGIN_TRACKING)
   test_pthread_create();
   test_pthread_join();
+#if !defined(ORIGIN_TRACKING)
   test_read();
   test_recvmmsg();
   test_recvmsg();
   test_sched_getaffinity();
   test_select();
+#endif // !defined(ORIGIN_TRACKING)
   test_sigaction();
   test_signal();
   test_sigaltstack();
   test_sigemptyset();
+#if !defined(ORIGIN_TRACKING)
   test_snprintf();
   test_socketpair();
   test_sprintf();
@@ -1384,7 +1520,9 @@ int main(void) {
   test_strcat();
   test_strcpy();
   test_strdup();
+#endif // !defined(ORIGIN_TRACKING)
   test_strlen();
+#if !defined(ORIGIN_TRACKING)
   test_strncasecmp();
   test_strncmp();
   test_strncpy();
@@ -1397,5 +1535,7 @@ int main(void) {
   test_strtoul();
   test_strtoull();
   test_time();
+#endif // !defined(ORIGIN_TRACKING)
   test_write();
+  test_fork();
 }
