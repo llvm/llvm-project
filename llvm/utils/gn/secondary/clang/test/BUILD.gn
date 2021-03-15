@@ -59,7 +59,6 @@ write_lit_config("lit_site_cfg") {
     "ENABLE_BACKTRACES=1",
     "LLVM_ENABLE_NEW_PASS_MANAGER=1",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
-    "LLVM_LIT_ERRC_MESSAGES=",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_USE_SANITIZER=",
     "Python3_EXECUTABLE=$python_path",
@@ -103,10 +102,16 @@ write_lit_config("lit_site_cfg") {
   }
 
   if (host_os == "win") {
-    extra_values += [ "LLVM_ENABLE_PLUGINS=0" ]
+    extra_values += [
+      "LLVM_ENABLE_PLUGINS=0",
+      "LLVM_LIT_ERRC_MESSAGES=no such file or directory;is a directory;" +
+          "invalid argument;permission denied",
+    ]
   } else {
-    # FIXME: Analysis/plugins need global -fPIC
-    extra_values += [ "LLVM_ENABLE_PLUGINS=0" ]
+    extra_values += [
+      "LLVM_ENABLE_PLUGINS=0",  # FIXME: Analysis/plugins need global -fPIC
+      "LLVM_LIT_ERRC_MESSAGES=",
+    ]
   }
 
   if (llvm_enable_threads) {

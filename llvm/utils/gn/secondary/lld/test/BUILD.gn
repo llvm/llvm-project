@@ -35,10 +35,15 @@ write_lit_cfg("lit_site_cfg") {
   input = "//lld/test/lit.site.cfg.py.in"
   output = lld_lit_site_cfg_file
 
-  extra_values = [
-    "LLD_DEFAULT_LD_LLD_IS_MINGW=0", # Must be 0.
-    "LLVM_LIT_ERRC_MESSAGES=",
-  ]
+  extra_values = [ "LLD_DEFAULT_LD_LLD_IS_MINGW=0" ]  # Must be 0.
+
+  if (host_os == "win") {
+    extra_values +=
+        [ "LLVM_LIT_ERRC_MESSAGES=no such file or directory;is a directory;" +
+          "invalid argument;permission denied" ]
+  } else {
+    extra_values += [ "LLVM_LIT_ERRC_MESSAGES=" ]
+  }
 
   if (llvm_enable_dia_sdk) {
     extra_values += [ "LLVM_ENABLE_DIA_SDK=1" ]

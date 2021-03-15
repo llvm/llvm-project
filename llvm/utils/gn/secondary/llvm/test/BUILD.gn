@@ -61,7 +61,6 @@ write_lit_config("lit_site_cfg") {
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_LIBS_DIR=" + rebase_path("$root_out_dir/lib", dir),
     "LLVM_LINK_LLVM_DYLIB=0",
-    "LLVM_LIT_ERRC_MESSAGES=",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_NATIVE_ARCH=$native_target",
     "LLVM_USE_INTEL_JITEVENTS=0",
@@ -99,15 +98,18 @@ write_lit_config("lit_site_cfg") {
   }
 
   if (host_os == "win") {
-    extra_values += [ "EXEEXT=.exe" ]
+    extra_values += [
+      "EXEEXT=.exe",
+      "LLVM_ENABLE_PLUGINS=0",
+      "LLVM_LIT_ERRC_MESSAGES=no such file or directory;is a directory;" +
+          "invalid argument;permission denied",
+    ]
   } else {
-    extra_values += [ "EXEEXT=" ]
-  }
-
-  if (host_os == "win") {
-    extra_values += [ "LLVM_ENABLE_PLUGINS=0" ]
-  } else {
-    extra_values += [ "LLVM_ENABLE_PLUGINS=1" ]
+    extra_values += [
+      "EXEEXT=",
+      "LLVM_ENABLE_PLUGINS=1",
+      "LLVM_LIT_ERRC_MESSAGES=",
+    ]
   }
 
   if (host_os == "mac") {
