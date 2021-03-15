@@ -11,7 +11,6 @@ from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
 lit_path_displayed = False
-python_errc_displayed = False
 
 class LLVMConfig(object):
 
