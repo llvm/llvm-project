@@ -101,6 +101,7 @@ macro(add_cuda_bc_library)
     -xc++
     -c
     -std=c++14
+    -ffreestanding
     -target amdgcn
     -emit-llvm
     -Xclang -aux-triple -Xclang x86_64-unknown-linux-gnu # see nvptx
