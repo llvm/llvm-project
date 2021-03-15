@@ -5588,21 +5588,10 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
                 .add(*SOffset)
                 .add(*Offset);
 
-        // Atomics do not have this operand.
-        if (const MachineOperand *GLC =
-                getNamedOperand(MI, AMDGPU::OpName::glc)) {
-          MIB.addImm(GLC->getImm());
+        if (const MachineOperand *CPol =
+                getNamedOperand(MI, AMDGPU::OpName::cpol)) {
+          MIB.addImm(CPol->getImm());
         }
-        if (const MachineOperand *DLC =
-                getNamedOperand(MI, AMDGPU::OpName::dlc)) {
-          MIB.addImm(DLC->getImm());
-        }
-        if (const MachineOperand *SCCB =
-                getNamedOperand(MI, AMDGPU::OpName::sccb)) {
-          MIB.addImm(SCCB->getImm());
-        }
-
-        MIB.addImm(getNamedImmOperand(MI, AMDGPU::OpName::slc));
 
         if (const MachineOperand *TFE =
                 getNamedOperand(MI, AMDGPU::OpName::tfe)) {
@@ -5622,7 +5611,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
                      .addReg(NewSRsrc)
                      .add(*SOffset)
                      .add(*Offset)
-                     .addImm(getNamedImmOperand(MI, AMDGPU::OpName::slc))
+                     .addImm(getNamedImmOperand(MI, AMDGPU::OpName::cpol))
                      .cloneMemRefs(MI);
       }
 

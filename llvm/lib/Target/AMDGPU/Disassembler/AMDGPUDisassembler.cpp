@@ -541,9 +541,20 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   }
 
   if (Res && (MCII->get(MI.getOpcode()).TSFlags &
-                        (SIInstrFlags::MUBUF | SIInstrFlags::FLAT)) &&
-      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::glc1) != -1) {
-    insertNamedMCOperand(MI, MCOperand::createImm(1), AMDGPU::OpName::glc1);
+          (SIInstrFlags::MUBUF | SIInstrFlags::FLAT | SIInstrFlags::SMRD))) {
+    int CPolPos = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                             AMDGPU::OpName::cpol);
+    if (CPolPos != -1) {
+      unsigned CPol =
+          (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::IsAtomicRet) ?
+              AMDGPU::CPol::GLC : 0;
+      if (MI.getNumOperands() <= (unsigned)CPolPos) {
+        insertNamedMCOperand(MI, MCOperand::createImm(CPol),
+                             AMDGPU::OpName::cpol);
+      } else if (CPol) {
+        MI.getOperand(CPolPos).setImm(MI.getOperand(CPolPos).getImm() | CPol);
+      }
+    }
   }
 
   if (Res && (MCII->get(MI.getOpcode()).TSFlags &
@@ -556,20 +567,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       auto TFEIter = MI.begin();
       std::advance(TFEIter, TFEOpIdx);
       MI.insert(TFEIter, MCOperand::createImm(0));
-    }
-  }
-
-  if (Res && (MCII->get(MI.getOpcode()).TSFlags &
-              (SIInstrFlags::FLAT |
-               SIInstrFlags::MTBUF | SIInstrFlags::MUBUF))) {
-    if (!isGFX10()) {
-      int DLCOpIdx =
-          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dlc);
-      if (DLCOpIdx != -1) {
-        auto DLCIter = MI.begin();
-        std::advance(DLCIter, DLCOpIdx);
-        MI.insert(DLCIter, MCOperand::createImm(0));
-      }
     }
   }
 

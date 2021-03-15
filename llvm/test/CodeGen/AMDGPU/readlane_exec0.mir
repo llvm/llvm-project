@@ -22,7 +22,7 @@ body:       |
 
    $sgpr10 = V_READFIRSTLANE_B32 $vgpr2, implicit $exec
    $sgpr11 = V_READFIRSTLANE_B32 $vgpr3, implicit $exec
-   $sgpr10 = S_LOAD_DWORD_IMM killed $sgpr10_sgpr11, 0, 0, 0
+   $sgpr10 = S_LOAD_DWORD_IMM killed $sgpr10_sgpr11, 0, 0
    S_WAITCNT 127
    $vgpr0 = V_XOR_B32_e32 killed $sgpr10, killed $vgpr0, implicit $exec
 

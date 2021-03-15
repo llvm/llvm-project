@@ -12,7 +12,7 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK:   FLAT_STORE_DWORD undef $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+  ; CHECK:   FLAT_STORE_DWORD undef $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
   ; CHECK: bb.2:
   ; CHECK:   S_ENDPGM 0
   bb.0:
@@ -22,7 +22,7 @@ body: |
   bb.1:
     successors: %bb.2
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    FLAT_STORE_DWORD undef $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD undef $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
 
   bb.2:
     S_ENDPGM 0
@@ -39,7 +39,7 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK:   BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+  ; CHECK:   BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
   ; CHECK: bb.2:
   ; CHECK:   S_ENDPGM 0
   bb.0:
@@ -49,7 +49,7 @@ body: |
   bb.1:
     successors: %bb.2
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
 
   bb.2:
     S_ENDPGM 0

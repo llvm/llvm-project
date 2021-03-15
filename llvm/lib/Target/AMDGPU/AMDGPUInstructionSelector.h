@@ -286,16 +286,12 @@ private:
 
   void renderPopcntImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
-  void renderExtractGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
-  void renderExtractSLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
-  void renderExtractDLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
+  void renderExtractCPol(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
   void renderExtractSWZ(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;
-  void renderExtractSCCB(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                         int OpIdx) const;
+  void renderSetGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                    int OpIdx) const;
 
   void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;

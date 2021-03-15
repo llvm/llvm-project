@@ -20,7 +20,7 @@ body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0
 
-    renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX8_IMM renamable $sgpr0_sgpr1, 480, 0, 0
+    renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX8_IMM renamable $sgpr0_sgpr1, 480, 0
     renamable $vgpr13 = V_LSHLREV_B32_e32 2, killed $vgpr0, implicit $exec
     S_WAITCNT -16257
     renamable $vgpr0_vgpr1 = DS_READ2_B32 renamable $vgpr13, 0, 1, 0, implicit $m0, implicit $exec
@@ -32,6 +32,6 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $exec
     $vgpr2 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $exec
     $vgpr3 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $exec
-    IMAGE_STORE_V4_V2 killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, -1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 16)
+    IMAGE_STORE_V4_V2 killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store 16)
     S_ENDPGM 0
 ...

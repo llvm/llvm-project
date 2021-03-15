@@ -324,19 +324,19 @@ v_pk_mov_b32 v[0:1], v[2:3], v[4:5] op_sel:[1,1]
 
 // GFX90A: tbuffer_load_format_xyzw v[4:7], off, s[0:3], 0 scc ; encoding: [0x00,0x80,0x09,0xe8,0x00,0x04,0x20,0x80]
 // GFX1010: error: not a valid operand.
-// GFX908: error: failed parsing operand.
+// GFX908: error: scc modifier is not supported on this GPU
 tbuffer_load_format_xyzw v[4:7], off, s[0:3], dfmt:1, nfmt:0, 0 scc
 
 // GFX90A: tbuffer_load_format_xyzw v[4:7], off, s[0:3], 0 glc scc ; encoding: [0x00,0xc0,0x09,0xe8,0x00,0x04,0x20,0x80]
 // GFX1010: error: not a valid operand.
-// GFX908: error: failed parsing operand.
+// GFX908: error: scc modifier is not supported on this GPU
 tbuffer_load_format_xyzw v[4:7], off, s[0:3], dfmt:1, nfmt:0, 0 glc scc
 
-// NOT-GFX90A: error: failed parsing operand
+// NOT-GFX90A: error: scc modifier is not supported on this GPU
 // GFX90A: buffer_load_dword v5, off, s[8:11], s3 offset:4095 scc ; encoding: [0xff,0x8f,0x50,0xe0,0x00,0x05,0x02,0x03]
 buffer_load_dword v5, off, s[8:11], s3 offset:4095 scc
 
-// NOT-GFX90A: error: failed parsing operand
+// NOT-GFX90A: error: scc modifier is not supported on this GPU
 // GFX90A: buffer_load_dword v5, off, s[8:11], s3 offset:4095 glc scc ; encoding: [0xff,0xcf,0x50,0xe0,0x00,0x05,0x02,0x03]
 buffer_load_dword v5, off, s[8:11], s3 offset:4095 glc scc
 
@@ -564,11 +564,11 @@ ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:4
 // GFX90A: ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:65535 gds ; encoding: [0xff,0xff,0xf9,0xd8,0x01,0x02,0x00,0x04]
 ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:65535 gds
 
-// NOT-GFX90A: error: failed parsing operand
+// NOT-GFX90A: error: scc modifier is not supported on this GPU
 // GFX90A: flat_load_dword v0, v[0:1] scc ; encoding: [0x00,0x00,0x50,0xde,0x00,0x00,0x00,0x00]
 flat_load_dword v0, v[0:1] scc
 
-// NOT-GFX90A: error: failed parsing operand
+// NOT-GFX90A: error: scc modifier is not supported on this GPU
 // GFX90A: flat_load_dword v0, v[0:1] glc scc ; encoding: [0x00,0x00,0x51,0xde,0x00,0x00,0x00,0x00]
 flat_load_dword v0, v[0:1] glc scc
 
@@ -680,7 +680,7 @@ global_atomic_min_f64 v[0:1], v[2:3], off
 // GFX90A: global_atomic_max_f64 v[0:1], v[2:3], off ; encoding: [0x00,0x80,0x44,0xdd,0x00,0x02,0x7f,0x00]
 global_atomic_max_f64 v[0:1], v[2:3], off
 
-// NOT-GFX90A: error: failed parsing operand
+// NOT-GFX90A: error: scc modifier is not supported on this GPU
 // GFX90A: image_load v[0:4], v2, s[0:7] dmask:0xf unorm scc ; encoding: [0x80,0x1f,0x00,0xf0,0x02,0x00,0x00,0x00]
 image_load v[0:4], v2, s[0:7] dmask:0xf unorm scc
 
@@ -973,17 +973,17 @@ v_xor_b32 v6, v29, v27 row_newbcast:15
 
 // GFX90A: buffer_atomic_add_f32 v0, v2, s[4:7], 0 idxen glc ; encoding: [0x00,0x60,0x34,0xe1,0x02,0x00,0x01,0x80]
 // GFX1010: error: instruction not supported on this GPU
-// GFX908: error: operands are not valid for this GPU or mode
+// GFX908: error: instruction must not use glc
 buffer_atomic_add_f32 v0, v2, s[4:7], 0 idxen glc
 
 // GFX90A: buffer_atomic_add_f32 v0, v2, s[4:7], 0 idxen glc ; encoding: [0x00,0x60,0x34,0xe1,0x02,0x00,0x01,0x80]
 // GFX1010: error: instruction not supported on this GPU
-// GFX908: error: operands are not valid for this GPU or mode
+// GFX908: error: instruction must not use glc
 buffer_atomic_add_f32 v0, v2, s[4:7], 0 idxen glc
 
 // GFX90A: buffer_atomic_pk_add_f16 v0, v2, s[4:7], 0 idxen glc ; encoding: [0x00,0x60,0x38,0xe1,0x02,0x00,0x01,0x80]
 // GFX1010: error: instruction not supported on this GPU
-// GFX908: error: operands are not valid for this GPU or mode
+// GFX908: error: instruction must not use glc
 buffer_atomic_pk_add_f16 v0, v2, s[4:7], 0 idxen glc
 
 // GFX90A: global_atomic_add_f32 v0, v[0:1], v2, off glc ; encoding: [0x00,0x80,0x35,0xdd,0x00,0x02,0x7f,0x00]
@@ -1021,7 +1021,7 @@ flat_atomic_max_f64 v[0:1], v[0:1], v[2:3] glc
 flat_atomic_min_f64 v[0:1], v[0:1], v[2:3] glc
 
 // GFX90A: global_atomic_add  v[2:3], v5, off scc  ; encoding: [0x00,0x80,0x08,0xdf,0x02,0x05,0x7f,0x00]
-// NOT-GFX90A: error: failed parsing operand.
+// NOT-GFX90A: error: scc modifier is not supported on this GPU
 global_atomic_add v[2:3], v5, off scc
 
 // GFX90A: global_atomic_add_f32  v0, v[0:1], v2, off glc ; encoding: [0x00,0x80,0x35,0xdd,0x00,0x02,0x7f,0x00]
