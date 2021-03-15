@@ -20,6 +20,10 @@ namespace linalg {
 class LinalgDialect;
 } // end namespace linalg
 
+namespace memref {
+class MemRefDialect;
+} // end namespace memref
+
 #define GEN_PASS_CLASSES
 #include "mlir/Transforms/Passes.h.inc"
 

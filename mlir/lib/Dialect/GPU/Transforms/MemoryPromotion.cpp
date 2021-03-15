@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/GPU/MemoryPromotion.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/MemRef/EDSC/Intrinsics.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Pass/Pass.h"
@@ -82,7 +83,7 @@ static void insertCopyLoops(OpBuilder &builder, Location loc,
   loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
     ivs.assign(loopIvs.begin(), loopIvs.end());
     auto activeIvs = llvm::makeArrayRef(ivs).take_back(rank);
-    StdIndexedValue fromHandle(from), toHandle(to);
+    MemRefIndexedValue fromHandle(from), toHandle(to);
     toHandle(activeIvs) = fromHandle(activeIvs);
   });
 

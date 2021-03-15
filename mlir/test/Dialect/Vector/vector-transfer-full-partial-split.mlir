@@ -29,10 +29,10 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   //  CHECK-DAG: %[[c8:.*]] = constant 8 : index
   //  CHECK-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // alloca for boundary full tile
-  //      CHECK: %[[alloc:.*]] = alloca() {alignment = 32 : i64} : memref<4x8xf32>
+  //      CHECK: %[[alloc:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
   //      CHECK: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
-  //      CHECK: %[[d0:.*]] = dim %[[A]], %[[c0]] : memref<?x8xf32>
+  //      CHECK: %[[d0:.*]] = memref.dim %[[A]], %[[c0]] : memref<?x8xf32>
   //      CHECK: %[[cmp0:.*]] = cmpi sle, %[[idx0]], %[[d0]] : index
   // %j + 8 <= dim(%A, 1)
   //      CHECK: %[[idx1:.*]] = affine.apply #[[$map_p8]]()[%[[j]]]
@@ -49,7 +49,7 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   //      CHECK:   %[[cast_alloc:.*]] = vector.type_cast %[[alloc]] :
   // CHECK-SAME:     memref<4x8xf32> to memref<vector<4x8xf32>>
   //      CHECK:   store %[[slow]], %[[cast_alloc]][] : memref<vector<4x8xf32>>
-  //      CHECK:   %[[yielded:.*]] = memref_cast %[[alloc]] :
+  //      CHECK:   %[[yielded:.*]] = memref.cast %[[alloc]] :
   // CHECK-SAME:     memref<4x8xf32> to memref<?x8xf32>
   //      CHECK:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :
   // CHECK-SAME:     memref<?x8xf32>, index, index
@@ -62,10 +62,10 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   //  LINALG-DAG: %[[c8:.*]] = constant 8 : index
   //  LINALG-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // alloca for boundary full tile
-  //      LINALG: %[[alloc:.*]] = alloca() {alignment = 32 : i64} : memref<4x8xf32>
+  //      LINALG: %[[alloc:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
   //      LINALG: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
-  //      LINALG: %[[d0:.*]] = dim %[[A]], %[[c0]] : memref<?x8xf32>
+  //      LINALG: %[[d0:.*]] = memref.dim %[[A]], %[[c0]] : memref<?x8xf32>
   //      LINALG: %[[cmp0:.*]] = cmpi sle, %[[idx0]], %[[d0]] : index
   // %j + 8 <= dim(%A, 1)
   //      LINALG: %[[idx1:.*]] = affine.apply #[[$map_p8]]()[%[[j]]]
@@ -78,13 +78,13 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   //      LINALG: } else {
   //               slow path, fill tmp alloc and yield a memref_casted version of it
   //      LINALG:   linalg.fill(%[[alloc]], %[[cst]]) : memref<4x8xf32>, f32
-  //      LINALG:   %[[d0:.*]] = dim %[[A]], %[[c0]] : memref<?x8xf32>
+  //      LINALG:   %[[d0:.*]] = memref.dim %[[A]], %[[c0]] : memref<?x8xf32>
   //      LINALG:   %[[sv0:.*]] = affine.min #[[$bounds_map_4]](%[[d0]], %[[i]], %[[c4]])
   //      LINALG:   %[[sv1:.*]] = affine.min #[[$bounds_map_8]](%[[c8]], %[[j]], %[[c8]])
-  //      LINALG:   %[[sv:.*]] = subview %[[A]][%[[i]], %[[j]]] [%[[sv0]], %[[sv1]]] [1, 1]
+  //      LINALG:   %[[sv:.*]] = memref.subview %[[A]][%[[i]], %[[j]]] [%[[sv0]], %[[sv1]]] [1, 1]
   // LINALG-SAME:     memref<?x8xf32> to memref<?x?xf32, #[[$map_2d_stride_8x1]]>
   //      LINALG:   linalg.copy(%[[sv]], %[[alloc]]) : memref<?x?xf32, #[[$map_2d_stride_8x1]]>, memref<4x8xf32>
-  //      LINALG:   %[[yielded:.*]] = memref_cast %[[alloc]] :
+  //      LINALG:   %[[yielded:.*]] = memref.cast %[[alloc]] :
   // LINALG-SAME:     memref<4x8xf32> to memref<?x8xf32>
   //      LINALG:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :
   // LINALG-SAME:     memref<?x8xf32>, index, index
@@ -117,7 +117,7 @@ func @split_vector_transfer_read_strided_2d(
   //  CHECK-DAG: %[[c8:.*]] = constant 8 : index
   //  CHECK-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // alloca for boundary full tile
-  //      CHECK: %[[alloc:.*]] = alloca() {alignment = 32 : i64} : memref<4x8xf32>
+  //      CHECK: %[[alloc:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
   //      CHECK: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
   //      CHECK: %[[cmp0:.*]] = cmpi sle, %[[idx0]], %[[c7]] : index
@@ -128,7 +128,7 @@ func @split_vector_transfer_read_strided_2d(
   //      CHECK: %[[cond:.*]] = and %[[cmp0]], %[[cmp1]] : i1
   //      CHECK: %[[ifres:.*]]:3 = scf.if %[[cond]] -> (memref<?x8xf32, #[[$map_2d_stride_1]]>, index, index) {
   //               inBounds but not cast-compatible: yield a memref_casted form of %A
-  //      CHECK:   %[[casted:.*]] = memref_cast %arg0 :
+  //      CHECK:   %[[casted:.*]] = memref.cast %arg0 :
   // CHECK-SAME:     memref<7x8xf32, #[[$map_2d_stride_1]]> to memref<?x8xf32, #[[$map_2d_stride_1]]>
   //      CHECK:   scf.yield %[[casted]], %[[i]], %[[j]] :
   // CHECK-SAME:     memref<?x8xf32, #[[$map_2d_stride_1]]>, index, index
@@ -140,7 +140,7 @@ func @split_vector_transfer_read_strided_2d(
   // CHECK-SAME:     memref<4x8xf32> to memref<vector<4x8xf32>>
   //      CHECK:   store %[[slow]], %[[cast_alloc]][] :
   // CHECK-SAME:     memref<vector<4x8xf32>>
-  //      CHECK:   %[[yielded:.*]] = memref_cast %[[alloc]] :
+  //      CHECK:   %[[yielded:.*]] = memref.cast %[[alloc]] :
   // CHECK-SAME:     memref<4x8xf32> to memref<?x8xf32, #[[$map_2d_stride_1]]>
   //      CHECK:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :
   // CHECK-SAME:     memref<?x8xf32, #[[$map_2d_stride_1]]>, index, index
@@ -154,7 +154,7 @@ func @split_vector_transfer_read_strided_2d(
   //  LINALG-DAG: %[[c8:.*]] = constant 8 : index
   //  LINALG-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // alloca for boundary full tile
-  //      LINALG: %[[alloc:.*]] = alloca() {alignment = 32 : i64} : memref<4x8xf32>
+  //      LINALG: %[[alloc:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
   //      LINALG: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
   //      LINALG: %[[cmp0:.*]] = cmpi sle, %[[idx0]], %[[c7]] : index
@@ -165,7 +165,7 @@ func @split_vector_transfer_read_strided_2d(
   //      LINALG: %[[cond:.*]] = and %[[cmp0]], %[[cmp1]] : i1
   //      LINALG: %[[ifres:.*]]:3 = scf.if %[[cond]] -> (memref<?x8xf32, #[[$map_2d_stride_1]]>, index, index) {
   //               inBounds but not cast-compatible: yield a memref_casted form of %A
-  //      LINALG:   %[[casted:.*]] = memref_cast %arg0 :
+  //      LINALG:   %[[casted:.*]] = memref.cast %arg0 :
   // LINALG-SAME:     memref<7x8xf32, #[[$map_2d_stride_1]]> to memref<?x8xf32, #[[$map_2d_stride_1]]>
   //      LINALG:   scf.yield %[[casted]], %[[i]], %[[j]] :
   // LINALG-SAME:     memref<?x8xf32, #[[$map_2d_stride_1]]>, index, index
@@ -174,10 +174,10 @@ func @split_vector_transfer_read_strided_2d(
   //      LINALG:   linalg.fill(%[[alloc]], %[[cst]]) : memref<4x8xf32>, f32
   //      LINALG:   %[[sv0:.*]] = affine.min #[[$bounds_map_4]](%[[c7]], %[[i]], %[[c4]])
   //      LINALG:   %[[sv1:.*]] = affine.min #[[$bounds_map_8]](%[[c8]], %[[j]], %[[c8]])
-  //      LINALG:   %[[sv:.*]] = subview %[[A]][%[[i]], %[[j]]] [%[[sv0]], %[[sv1]]] [1, 1]
+  //      LINALG:   %[[sv:.*]] = memref.subview %[[A]][%[[i]], %[[j]]] [%[[sv0]], %[[sv1]]] [1, 1]
   // LINALG-SAME:     memref<7x8xf32, #[[$map_2d_stride_1]]> to memref<?x?xf32, #[[$map_2d_stride_1]]>
   //      LINALG:   linalg.copy(%[[sv]], %[[alloc]]) : memref<?x?xf32, #[[$map_2d_stride_1]]>, memref<4x8xf32>
-  //      LINALG:   %[[yielded:.*]] = memref_cast %[[alloc]] :
+  //      LINALG:   %[[yielded:.*]] = memref.cast %[[alloc]] :
   // LINALG-SAME:     memref<4x8xf32> to memref<?x8xf32, #[[$map_2d_stride_1]]>
   //      LINALG:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :
   // LINALG-SAME:     memref<?x8xf32, #[[$map_2d_stride_1]]>, index, index

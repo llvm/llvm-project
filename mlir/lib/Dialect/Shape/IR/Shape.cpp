@@ -407,7 +407,7 @@ struct RemoveDuplicateOperandsPattern : public OpRewritePattern<OpTy> {
     // Reduce op to equivalent with unique operands.
     if (unique.size() < op.getNumOperands()) {
       rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(), unique,
-                                        op.getAttrs());
+                                        op->getAttrs());
       return success();
     }
 

@@ -44,13 +44,13 @@ func @main() {
   // Memref allocated inside async.execute region.
   // ------------------------------------------------------------------------ //
   %token2, %result2 = async.execute[%token0] -> !async.value<memref<f32>> {
-    %5 = alloc() : memref<f32>
+    %5 = memref.alloc() : memref<f32>
     %c0 = constant 0.25 : f32
-    store %c0, %5[]: memref<f32>
+    memref.store %c0, %5[]: memref<f32>
     async.yield %5 : memref<f32>
   }
   %6 = async.await %result2 : !async.value<memref<f32>>
-  %7 = memref_cast %6 :  memref<f32> to memref<*xf32>
+  %7 = memref.cast %6 :  memref<f32> to memref<*xf32>
 
   // CHECK: Unranked Memref
   // CHECK-SAME: rank = 0 offset = 0 sizes = [] strides = []
@@ -61,9 +61,9 @@ func @main() {
   // Memref passed as async.execute operand.
   // ------------------------------------------------------------------------ //
   %token3 = async.execute(%result2 as %unwrapped : !async.value<memref<f32>>) {
-    %8 = load %unwrapped[]: memref<f32>
+    %8 = memref.load %unwrapped[]: memref<f32>
     %9 = addf %8, %8 : f32
-    store %9, %unwrapped[]: memref<f32>
+    memref.store %9, %unwrapped[]: memref<f32>
     async.yield
   }
   async.await %token3 : !async.token
@@ -73,7 +73,7 @@ func @main() {
   // CHECK-NEXT: [0.5]
   call @print_memref_f32(%7): (memref<*xf32>) -> ()
 
-  dealloc %6 : memref<f32>
+  memref.dealloc %6 : memref<f32>
 
   return
 }

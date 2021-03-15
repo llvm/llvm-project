@@ -54,7 +54,7 @@ void populateBufferizeMaterializationLegality(ConversionTarget &target);
 
 /// Populate patterns to eliminate bufferize materializations.
 ///
-/// In particular, these are the tensor_load/tensor_to_memref ops.
+/// In particular, these are the tensor_load/buffer_cast ops.
 void populateEliminateBufferizeMaterializationsPatterns(
     MLIRContext *context, BufferizeTypeConverter &typeConverter,
     OwningRewritePatternList &patterns);

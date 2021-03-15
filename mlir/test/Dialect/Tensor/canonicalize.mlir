@@ -171,10 +171,10 @@ func @extract_oob_from_tensor.from_elements(%element : index) -> index {
 // CHECK-SAME: %[[IDX:.*]]: index, %[[TENSOR:.*]]: tensor<*xf32>
 func @extract_from_tensor.generate(%idx: index, %tensor: tensor<*xf32>) -> index {
   %size = rank %tensor : tensor<*xf32>
-  // CHECK-NEXT: %[[RES:.*]] = dim %[[TENSOR]], %[[IDX]]
+  // CHECK-NEXT: %[[RES:.*]] = memref.dim %[[TENSOR]], %[[IDX]]
   %0 = tensor.generate %size {
     ^bb0(%arg0: index):
-    %1 = dim %tensor, %arg0 : tensor<*xf32>
+    %1 = memref.dim %tensor, %arg0 : tensor<*xf32>
     tensor.yield %1 : index
   } : tensor<?xindex>
   %1 = tensor.extract %0[%idx] : tensor<?xindex>
@@ -188,13 +188,13 @@ func @extract_from_tensor.generate(%idx: index, %tensor: tensor<*xf32>) -> index
 // CHECK-SAME: %[[IDX0:.*]]: index, %[[IDX1:.*]]: index, %[[TENSOR:.*]]: tensor<*xf32>
 func @extract_from_tensor.generate_2d(%idx0: index, %idx1: index, %tensor: tensor<*xf32>) -> index {
   %size = rank %tensor : tensor<*xf32>
-  // CHECK-NEXT: %[[DIM0:.*]] = dim %[[TENSOR]], %[[IDX0]]
-  // CHECK-NEXT: %[[DIM1:.*]] = dim %[[TENSOR]], %[[IDX1]]
+  // CHECK-NEXT: %[[DIM0:.*]] = memref.dim %[[TENSOR]], %[[IDX0]]
+  // CHECK-NEXT: %[[DIM1:.*]] = memref.dim %[[TENSOR]], %[[IDX1]]
   // CHECK-NEXT: %[[RES:.*]] = addi %[[DIM0]], %[[DIM1]]
   %0 = tensor.generate %size, %size {
     ^bb0(%arg0: index, %arg1: index):
-    %1 = dim %tensor, %arg0 : tensor<*xf32>
-    %2 = dim %tensor, %arg1 : tensor<*xf32>
+    %1 = memref.dim %tensor, %arg0 : tensor<*xf32>
+    %2 = memref.dim %tensor, %arg1 : tensor<*xf32>
     %3 = addi %1, %2 : index
     tensor.yield %3 : index
   } : tensor<?x?xindex>
@@ -209,12 +209,12 @@ func @extract_from_tensor.generate_2d(%idx0: index, %idx1: index, %tensor: tenso
 // CHECK-SAME: %[[IDX:.*]]: index
 func @extract_from_tensor.generate_sideeffects(%idx: index, %tensor: tensor<*xf32>) -> index {
   %size = rank %tensor : tensor<*xf32>
-  %mem = alloc(%size) : memref<?xindex>
+  %mem = memref.alloc(%size) : memref<?xindex>
   // CHECK: %[[DTENSOR:.*]] = tensor.generate
   %0 = tensor.generate %size {
     ^bb0(%arg0: index):
-    %1 = dim %tensor, %arg0 : tensor<*xf32>
-    store %1, %mem[%arg0] : memref<?xindex>
+    %1 = memref.dim %tensor, %arg0 : tensor<*xf32>
+    memref.store %1, %mem[%arg0] : memref<?xindex>
     tensor.yield %1 : index
   } : tensor<?xindex>
   // CHECK: %[[RES:.*]] = tensor.extract %[[DTENSOR]][%[[IDX]]]

@@ -24,7 +24,7 @@ func private @print_memref_f32(memref<*xf32>)
 
 // Creates and returns 4-D buffer of size (%s1, %s2, %s3, %s4) filled with the value %f
 func @alloc_4d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %f : f32) -> memref<?x?x?x?xf32> {
-  %buf = alloc(%s1, %s2, %s3, %s4) : memref<?x?x?x?xf32>
+  %buf = memref.alloc(%s1, %s2, %s3, %s4) : memref<?x?x?x?xf32>
   linalg.fill(%buf, %f) : memref<?x?x?x?xf32>, f32
   return %buf : memref<?x?x?x?xf32>
 }
@@ -51,14 +51,14 @@ func @main() {
   %in2D_nchw = call @alloc_4d_filled_f32(%c3, %c1, %c8, %c8, %val) : (index, index, index, index, f32) -> (memref<?x?x?x?xf32>)
   %out2D_nchw = call @alloc_4d_filled_f32(%c3, %c1, %c6, %c6, %zero) : (index, index, index, index, f32) -> (memref<?x?x?x?xf32>)
 
-  store %f10, %in2D_nchw[%c0, %c0, %c0, %c3] : memref<?x?x?x?xf32>
+  memref.store %f10, %in2D_nchw[%c0, %c0, %c0, %c3] : memref<?x?x?x?xf32>
   call @conv_2d_input_nchw_filter_hwcf(%in2D_nchw, %filter2D_nchw, %out2D_nchw) : (memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>) -> ()
-  %out2D_nchw_ = memref_cast %out2D_nchw : memref<?x?x?x?xf32> to memref<*xf32>
+  %out2D_nchw_ = memref.cast %out2D_nchw : memref<?x?x?x?xf32> to memref<*xf32>
   call @print_memref_f32(%out2D_nchw_): (memref<*xf32>) -> ()
 
-  dealloc %filter2D_nchw : memref<?x?x?x?xf32>
-  dealloc %in2D_nchw : memref<?x?x?x?xf32>
-  dealloc %out2D_nchw : memref<?x?x?x?xf32>
+  memref.dealloc %filter2D_nchw : memref<?x?x?x?xf32>
+  memref.dealloc %in2D_nchw : memref<?x?x?x?xf32>
+  memref.dealloc %out2D_nchw : memref<?x?x?x?xf32>
   return
 }
 

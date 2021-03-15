@@ -37,7 +37,7 @@ std::unique_ptr<Pass> createTensorConstantBufferizePass();
 /// Creates an instance of the StdExpand pass that legalizes Std
 /// dialect ops to be convertible to LLVM. For example,
 /// `std.ceildivi_signed` gets transformed to a number of std operations,
-/// which can be lowered to LLVM; `memref_reshape` gets converted to
+/// which can be lowered to LLVM; `memref.reshape` gets converted to
 /// `memref_reinterpret_cast`.
 std::unique_ptr<Pass> createStdExpandOpsPass();
 

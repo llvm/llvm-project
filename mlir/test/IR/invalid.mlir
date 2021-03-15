@@ -821,7 +821,7 @@ func @f(f32) {
 func @f(%m : memref<?x?xf32>) {
   affine.for %i0 = 0 to 42 {
     // expected-note@+1 {{previously referenced here}}
-    %x = load %m[%i0, %i1] : memref<?x?xf32>
+    %x = memref.load %m[%i0, %i1] : memref<?x?xf32>
   }
   // expected-error@+1 {{region entry argument '%i1' is already in use}}
   affine.for %i1 = 0 to 42 {

@@ -121,7 +121,7 @@ def LowerHostCodeToLLVM : Pass<"lower-host-to-llvm", "ModuleOp"> {
 def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
   let summary = "Generate NVVM operations for gpu operations";
   let constructor = "mlir::createLowerGpuOpsToNVVMOpsPass()";
-  let dependentDialects = ["NVVM::NVVMDialect"];
+  let dependentDialects = ["NVVM::NVVMDialect", "memref::MemRefDialect"];
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
@@ -210,7 +210,7 @@ def ConvertLinalgToStandard : Pass<"convert-linalg-to-std", "ModuleOp"> {
   let summary = "Convert the operations from the linalg dialect into the "
                 "Standard dialect";
   let constructor = "mlir::createConvertLinalgToStandardPass()";
-  let dependentDialects = ["StandardOpsDialect"];
+  let dependentDialects = ["memref::MemRefDialect", "StandardOpsDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -316,7 +316,11 @@ def ConvertShapeToStandard : Pass<"convert-shape-to-std", "ModuleOp"> {
   let summary = "Convert operations from the shape dialect into the standard "
                 "dialect";
   let constructor = "mlir::createConvertShapeToStandardPass()";
-  let dependentDialects = ["StandardOpsDialect", "scf::SCFDialect"];
+  let dependentDialects = [
+    "memref::MemRefDialect",
+    "StandardOpsDialect",
+    "scf::SCFDialect"
+  ];
 }
 
 def ConvertShapeConstraints: Pass<"convert-shape-constraints", "FuncOp"> {
@@ -474,7 +478,11 @@ def ConvertVectorToSCF : FunctionPass<"convert-vector-to-scf"> {
   let summary = "Lower the operations from the vector dialect into the SCF "
                 "dialect";
   let constructor = "mlir::createConvertVectorToSCFPass()";
-  let dependentDialects = ["AffineDialect", "scf::SCFDialect"];
+  let dependentDialects = [
+    "AffineDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect"
+  ];
   let options = [
     Option<"fullUnroll", "full-unroll", "bool", /*default=*/"false",
            "Perform full unrolling when converting vector transfers to SCF">,

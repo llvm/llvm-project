@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a partial lowering of Toy operations to a combination of
-// affine loops and standard operations. This lowering expects that all calls
-// have been inlined, and all shapes have been resolved.
+// affine loops, memref operations and standard operations. This lowering
+// expects that all calls have been inlined, and all shapes have been resolved.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,6 +16,7 @@
 #include "toy/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -36,7 +37,7 @@ static MemRefType convertTensorToMemRef(TensorType type) {
 /// Insert an allocation and deallocation for the given MemRefType.
 static Value insertAllocAndDealloc(MemRefType type, Location loc,
                                    PatternRewriter &rewriter) {
-  auto alloc = rewriter.create<AllocOp>(loc, type);
+  auto alloc = rewriter.create<memref::AllocOp>(loc, type);
 
   // Make sure to allocate at the beginning of the block.
   auto *parentBlock = alloc->getBlock();
@@ -44,7 +45,7 @@ static Value insertAllocAndDealloc(MemRefType type, Location loc,
 
   // Make sure to deallocate this alloc at the end of the block. This is fine
   // as toy functions have no control flow.
-  auto dealloc = rewriter.create<DeallocOp>(loc, alloc);
+  auto dealloc = rewriter.create<memref::DeallocOp>(loc, alloc);
   dealloc->moveBefore(&parentBlock->back());
   return alloc;
 }
@@ -152,8 +153,8 @@ struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
 
     if (!valueShape.empty()) {
       for (auto i : llvm::seq<int64_t>(
-              0, *std::max_element(valueShape.begin(), valueShape.end())))
-       constantIndices.push_back(rewriter.create<ConstantIndexOp>(loc, i));
+               0, *std::max_element(valueShape.begin(), valueShape.end())))
+        constantIndices.push_back(rewriter.create<ConstantIndexOp>(loc, i));
     } else {
       // This is the case of a tensor of rank 0.
       constantIndices.push_back(rewriter.create<ConstantIndexOp>(loc, 0));
@@ -256,7 +257,7 @@ namespace {
 struct ToyToAffineLoweringPass
     : public PassWrapper<ToyToAffineLoweringPass, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, StandardOpsDialect>();
+    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect>();
   }
   void runOnFunction() final;
 };
@@ -282,8 +283,9 @@ void ToyToAffineLoweringPass::runOnFunction() {
 
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering. In our case, we are lowering to a combination of the
-  // `Affine` and `Standard` dialects.
-  target.addLegalDialect<AffineDialect, StandardOpsDialect>();
+  // `Affine`, `MemRef` and `Standard` dialects.
+  target.addLegalDialect<AffineDialect, memref::MemRefDialect,
+                         StandardOpsDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want

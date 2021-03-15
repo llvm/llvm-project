@@ -111,7 +111,7 @@ gpu.module @kernels {
     // CHECK:   cond_br [[VAL_74]], ^bb22, ^bb41
     // CHECK: ^bb22:
     // CHECK:   [[VAL_75:%.*]] = index_cast [[VAL_27]] : i32 to index
-    // CHECK:   [[VAL_76:%.*]] = load [[VAL_1]]{{\[}}[[VAL_75]]] : memref<32xf32, 3>
+    // CHECK:   [[VAL_76:%.*]] = memref.load [[VAL_1]]{{\[}}[[VAL_75]]] : memref<32xf32, 3>
     // CHECK:   [[VAL_77:%.*]] = cmpi slt, [[VAL_73]], [[VAL_5]] : i32
     // CHECK:   cond_br [[VAL_77]], ^bb23, ^bb39
     // CHECK: ^bb23:

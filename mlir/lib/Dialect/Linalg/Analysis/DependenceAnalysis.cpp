@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinOps.h"
 
@@ -48,7 +49,7 @@ Value Aliases::find(Value v) {
     // the aliasing further.
     if (isa<RegionBranchOpInterface>(defOp))
       return v;
-    if (isa<TensorToMemrefOp>(defOp))
+    if (isa<memref::BufferCastOp>(defOp))
       return v;
 
     if (auto memEffect = dyn_cast<MemoryEffectOpInterface>(defOp)) {

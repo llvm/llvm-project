@@ -406,9 +406,9 @@ into a form that will resemble:
 #map0 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 
 func @example(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
-  %0 = memref_cast %arg0 : memref<?x?xf32> to memref<?x?xf32, #map0>
-  %1 = memref_cast %arg1 : memref<?x?xf32> to memref<?x?xf32, #map0>
-  %2 = memref_cast %arg2 : memref<?x?xf32> to memref<?x?xf32, #map0>
+  %0 = memref.cast %arg0 : memref<?x?xf32> to memref<?x?xf32, #map0>
+  %1 = memref.cast %arg1 : memref<?x?xf32> to memref<?x?xf32, #map0>
+  %2 = memref.cast %arg2 : memref<?x?xf32> to memref<?x?xf32, #map0>
   call @pointwise_add(%0, %1, %2) : (memref<?x?xf32, #map0>, memref<?x?xf32, #map0>, memref<?x?xf32, #map0>) -> ()
   return
 }
@@ -518,9 +518,9 @@ A set of ops that manipulate metadata but do not move memory. These ops take
 generally alias the operand `view`. At the moment the existing ops are:
 
 ```
-* `std.view`,
+* `memref.view`,
 * `std.subview`,
-* `std.transpose`.
+* `memref.transpose`.
 * `linalg.range`,
 * `linalg.slice`,
 * `linalg.reshape`,

@@ -352,7 +352,7 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
     works for static shaped memrefs.
   }];
   let constructor = "mlir::createBufferResultsToOutParamsPass()";
-  let dependentDialects = ["linalg::LinalgDialect"];
+  let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect"];
 }
 
 def Canonicalizer : Pass<"canonicalize"> {
@@ -363,6 +363,7 @@ def Canonicalizer : Pass<"canonicalize"> {
     details.
   }];
   let constructor = "mlir::createCanonicalizerPass()";
+  let dependentDialects = ["memref::MemRefDialect"];
 }
 
 def CopyRemoval : FunctionPass<"copy-removal"> {
@@ -406,11 +407,11 @@ def FinalizingBufferize : FunctionPass<"finalizing-bufferize"> {
   let summary = "Finalize a partial bufferization";
   let description = [{
     A bufferize pass that finalizes a partial bufferization by removing
-    remaining `tensor_load` and `tensor_to_memref` operations.
+    remaining `memref.tensor_load` and `memref.buffer_cast` operations.
 
     The removal of those operations is only possible if the operations only
-    exist in pairs, i.e., all uses of `tensor_load` operations are
-    `tensor_to_memref` operations.
+    exist in pairs, i.e., all uses of `memref.tensor_load` operations are
+    `memref.buffer_cast` operations.
 
     This pass will fail if not all operations can be removed or if any operation
     with tensor typed operands remains.
@@ -535,7 +536,7 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
     contained in the op. Operations marked with the [MemRefsNormalizable]
     (https://mlir.llvm.org/docs/Traits/#memrefsnormalizable) trait are
     expected to be normalizable. Supported operations include affine
-    operations, std.alloc, std.dealloc, and std.return.
+    operations, memref.alloc, memref.dealloc, and std.return.
 
     Given an appropriate layout map specified in the code, this transformation
     can express tiled or linearized access to multi-dimensional data

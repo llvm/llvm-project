@@ -43,10 +43,10 @@ func @entry() {
   %c0 = constant 0: index
   %c1 = constant 1: index
   %c32 = constant 32: index
-  %A = alloc(%c32) {alignment=64} : memref<?xf32>
+  %A = memref.alloc(%c32) {alignment=64} : memref<?xf32>
   scf.for %i = %c0 to %c32 step %c1 {
     %f = constant 0.0: f32
-    store %f, %A[%i] : memref<?xf32>
+    memref.store %f, %A[%i] : memref<?xf32>
   }
 
   // On input, memory contains all zeros.

@@ -180,11 +180,11 @@ private:
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
 ///      // fastpath, direct cast
-///      memref_cast %A: memref<A...> to compatibleMemRefType
+///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view : compatibleMemRefType, index, index
 ///    } else {
 ///      // slowpath, masked vector.transfer or linalg.copy.
-///      memref_cast %alloc: memref<B...> to compatibleMemRefType
+///      memref.cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4 : compatibleMemRefType, index, index
 //     }
 ///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {masked = [false ... false]}

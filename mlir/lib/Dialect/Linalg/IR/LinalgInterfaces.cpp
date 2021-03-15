@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "llvm/ADT/SmallSet.h"
@@ -187,7 +188,7 @@ SmallVector<Value, 4> LinalgOp::createFlatListOfOperandDims(OpBuilder &b,
   for (Value v : getShapedOperands()) {
     ShapedType t = v.getType().template cast<ShapedType>();
     for (unsigned i = 0, e = t.getRank(); i < e; ++i)
-      res.push_back(b.create<DimOp>(loc, v, i));
+      res.push_back(b.create<memref::DimOp>(loc, v, i));
   }
   return res;
 }

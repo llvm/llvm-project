@@ -13,6 +13,7 @@ add_mlir_conversion_library(MLIRStandardToSPIRV
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRMath
+  MLIRMemRef
   MLIRPass
   MLIRSPIRV
   MLIRSPIRVConversion

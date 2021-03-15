@@ -28,18 +28,18 @@ module {
 //  CHECK-DAG:   %[[C32:.+]] = constant 32 : index
 //  CHECK-DAG:   %[[C64:.+]] = constant 64 : index
 //  CHECK-DAG:   %[[C16:.+]] = constant 16 : index
-//  CHECK-DAG:   %[[M:.+]] = dim %[[ARG0]], %[[C0]]
+//  CHECK-DAG:   %[[M:.+]] = memref.dim %[[ARG0]], %[[C0]]
 //      CHECK:   %[[RESULT:.+]] = scf.for %[[IV0:[a-zA-Z0-9]+]] =
 // CHECK-SAME:     %[[C0]] to %[[M]] step %[[C32]]
 // CHECK-SAME:     iter_args(%[[ARG6:.+]] = %[[ARG4]]) -> (tensor<?x?xf32>) {
 //      CHECK:     %[[TILE_M:.+]] = affine.min #[[MAP0]](%[[IV0]])[%[[M]]]
-//      CHECK:     %[[M_2:.+]] = dim %[[ARG6]], %[[C0]]
+//      CHECK:     %[[M_2:.+]] = memref.dim %[[ARG6]], %[[C0]]
 //      CHECK:     %[[TILE_M_2:.+]] = affine.min #[[MAP1]](%[[M_2]], %[[IV0]])
-//      CHECK:     %[[N3:.+]] = dim %[[ARG6]], %[[C1]]
+//      CHECK:     %[[N3:.+]] = memref.dim %[[ARG6]], %[[C1]]
 //      CHECK:     %[[ST_ARG6:.+]] = subtensor %[[ARG6]][%[[IV0]], 0]
 // CHECK-SAME:       [%[[TILE_M_2]], %[[N3]]]
-//      CHECK:     %[[N2:.+]] = dim %[[ARG1]], %[[C1]]
-//      CHECK:     %[[N1:.+]] = dim %[[ARG0]], %[[C1]]
+//      CHECK:     %[[N2:.+]] = memref.dim %[[ARG1]], %[[C1]]
+//      CHECK:     %[[N1:.+]] = memref.dim %[[ARG0]], %[[C1]]
 //      CHECK:     %[[ST_ARG0:.+]] = subtensor %[[ARG0]][%[[IV0]], 0]
 // CHECK-SAME:       [%[[TILE_M]], %[[N1]]]
 //      CHECK:     %[[ST_ARG1:.+]] = subtensor %[[ARG1]][0, 0]
@@ -50,7 +50,7 @@ module {
 // CHECK-SAME:       __internal_linalg_transform__ = "after_lhs_fusion_producer"
 // CHECK-SAME:       ins(%[[ST_ARG0]], %[[ST_ARG1]] : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME:       outs(%[[ST_ARG2]] : tensor<?x?xf32>)
-//      CHECK:     %[[N3_2:.+]] = dim %[[ARG3]], %[[C1]]
+//      CHECK:     %[[N3_2:.+]] = memref.dim %[[ARG3]], %[[C1]]
 //      CHECK:     %[[YIELD0:.+]] = scf.for %[[IV1:[a-zA-Z0-9]+]] =
 // CHECK-SAME:       %[[C0]] to %[[N3_2]] step %[[C64]]
 // CHECK-SAME:       iter_args(%[[ARG8:.+]] = %[[ST_ARG6]]) -> (tensor<?x?xf32>) {
@@ -60,13 +60,13 @@ module {
 //      CHECK:         %[[TILE_N2:.+]] = affine.min #[[MAP2]](%[[IV2]])[%[[N2]]]
 //      CHECK:         %[[ST_LHS:.+]] = subtensor %[[LHS]][0, %[[IV2]]]
 // CHECK-SAME:           [%[[TILE_M]], %[[TILE_N2]]]
-//      CHECK:         %[[N2_3:.+]] = dim %[[ARG3]], %[[C0]]
+//      CHECK:         %[[N2_3:.+]] = memref.dim %[[ARG3]], %[[C0]]
 //      CHECK:         %[[TILE_N2_2:.+]] = affine.min #[[MAP2]](%[[IV2]])[%[[N2_3]]]
 //      CHECK:         %[[TILE_N3:.+]] = affine.min #[[MAP3]](%[[IV1]])[%[[N3_2]]]
 //      CHECK:         %[[ST_ARG3:.+]] = subtensor %[[ARG3]][%[[IV2]], %[[IV1]]]
 // CHECK-SAME:           [%[[TILE_N2_2]], %[[TILE_N3]]]
-//      CHECK:         %[[M_4:.+]] = dim %[[ARG10]], %[[C0]]
-//      CHECK:         %[[N3_3:.+]] = dim %[[ARG10]], %[[C1]]
+//      CHECK:         %[[M_4:.+]] = memref.dim %[[ARG10]], %[[C0]]
+//      CHECK:         %[[N3_3:.+]] = memref.dim %[[ARG10]], %[[C1]]
 //      CHECK:         %[[TILE_N3_2:.+]] = affine.min #[[MAP4]](%[[N3_3]], %[[IV1]])
 //      CHECK:         %[[ST_ARG4:.+]] = subtensor %[[ARG10]][0, %[[IV1]]]
 // CHECK-SAME:           [%[[M_4]], %[[TILE_N3_2]]]
@@ -94,12 +94,12 @@ module {
                            %arg2: tensor<?x?xf32>) -> tensor<?x?xf32>{
     %c0 = constant 0 : index
     %c1 = constant 1 : index
-    %0 = dim %arg2, %c0 : tensor<?x?xf32>
-    %1 = dim %arg2, %c1 : tensor<?x?xf32>
+    %0 = memref.dim %arg2, %c0 : tensor<?x?xf32>
+    %1 = memref.dim %arg2, %c1 : tensor<?x?xf32>
     %2 = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
-    %3 = dim %2, %c0 : tensor<?x?xf32>
-    %4 = dim %2, %c1 : tensor<?x?xf32>
+    %3 = memref.dim %2, %c0 : tensor<?x?xf32>
+    %4 = memref.dim %2, %c1 : tensor<?x?xf32>
     %5 = linalg.init_tensor [%3, %4] : tensor<?x?xf32>
     %6 = linalg.generic
       {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
