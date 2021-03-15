@@ -500,8 +500,9 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
-
   const DataLayout &DL = F.getParent()->getDataLayout();
+
+  Info->allocateModuleLDSGlobal(F.getParent());
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
@@ -591,6 +592,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   const SIRegisterInfo *TRI = Subtarget.getRegisterInfo();
   const DataLayout &DL = F.getParent()->getDataLayout();
 
+  Info->allocateModuleLDSGlobal(F.getParent());
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CC, F.isVarArg(), MF, ArgLocs, F.getContext());
