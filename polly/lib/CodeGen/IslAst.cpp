@@ -203,50 +203,43 @@ static isl_printer *cbPrintFor(__isl_take isl_printer *Printer,
 /// dependences connect all iterations with each other (thus they are cyclic)
 /// we can perform the parallelism check as we are only interested in a zero
 /// (or non-zero) dependence distance on the dimension in question.
-static bool astScheduleDimIsParallel(__isl_keep isl_ast_build *Build,
+static bool astScheduleDimIsParallel(const isl::ast_build &Build,
                                      const Dependences *D,
                                      IslAstUserPayload *NodeInfo) {
   if (!D->hasValidDependences())
     return false;
 
-  isl_union_map *Schedule = isl_ast_build_get_schedule(Build);
-  isl_union_map *Deps =
-      D->getDependences(Dependences::TYPE_RAW | Dependences::TYPE_WAW |
-                        Dependences::TYPE_WAR)
-          .release();
+  isl::union_map Schedule = Build.get_schedule();
+  isl::union_map Dep = D->getDependences(
+      Dependences::TYPE_RAW | Dependences::TYPE_WAW | Dependences::TYPE_WAR);
 
-  if (!D->isParallel(Schedule, Deps)) {
-    isl_union_map *DepsAll =
+  if (!D->isParallel(Schedule.get(), Dep.release())) {
+    isl::union_map DepsAll =
         D->getDependences(Dependences::TYPE_RAW | Dependences::TYPE_WAW |
-                          Dependences::TYPE_WAR | Dependences::TYPE_TC_RED)
-            .release();
-    isl_pw_aff *MinimalDependenceDistance = nullptr;
-    D->isParallel(Schedule, DepsAll, &MinimalDependenceDistance);
+                          Dependences::TYPE_WAR | Dependences::TYPE_TC_RED);
+    // TODO: We will need to change isParallel to stop the unwrapping
+    isl_pw_aff *MinimalDependenceDistanceIsl = nullptr;
+    D->isParallel(Schedule.get(), DepsAll.release(),
+                  &MinimalDependenceDistanceIsl);
     NodeInfo->MinimalDependenceDistance =
-        isl::manage(MinimalDependenceDistance);
-    isl_union_map_free(Schedule);
+        isl::manage(MinimalDependenceDistanceIsl);
     return false;
   }
 
-  isl_union_map *RedDeps =
-      D->getDependences(Dependences::TYPE_TC_RED).release();
-  if (!D->isParallel(Schedule, RedDeps))
+  isl::union_map RedDeps = D->getDependences(Dependences::TYPE_TC_RED);
+  if (!D->isParallel(Schedule.get(), RedDeps.release()))
     NodeInfo->IsReductionParallel = true;
 
-  if (!NodeInfo->IsReductionParallel && !isl_union_map_free(Schedule))
+  if (!NodeInfo->IsReductionParallel)
     return true;
 
-  // Annotate reduction parallel nodes with the memory accesses which caused the
-  // reduction dependences parallel execution of the node conflicts with.
   for (const auto &MaRedPair : D->getReductionDependences()) {
     if (!MaRedPair.second)
       continue;
-    RedDeps = isl_union_map_from_map(isl_map_copy(MaRedPair.second));
-    if (!D->isParallel(Schedule, RedDeps))
+    isl::union_map MaRedDeps = isl::manage_copy(MaRedPair.second);
+    if (!D->isParallel(Schedule.get(), MaRedDeps.release()))
       NodeInfo->BrokenReductions.insert(MaRedPair.first);
   }
-
-  isl_union_map_free(Schedule);
   return true;
 }
 
@@ -265,8 +258,8 @@ static __isl_give isl_id *astBuildBeforeFor(__isl_keep isl_ast_build *Build,
   Id = isl_id_set_free_user(Id, freeIslAstUserPayload);
   BuildInfo->LastForNodeId = Id;
 
-  Payload->IsParallel =
-      astScheduleDimIsParallel(Build, BuildInfo->Deps, Payload);
+  Payload->IsParallel = astScheduleDimIsParallel(isl::manage_copy(Build),
+                                                 BuildInfo->Deps, Payload);
 
   // Test for parallelism only if we are not already inside a parallel loop
   if (!BuildInfo->InParallelFor && !BuildInfo->InSIMD)
