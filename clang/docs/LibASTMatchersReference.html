@@ -7509,7 +7509,7 @@ Given
   void f();
   void f() {}
   void g();
-hasAnyBody(functionDecl())
+functionDecl(hasAnyBody(compoundStmt()))
   matches both 'void f();'
   and 'void f() {}'
 with compoundStmt()
