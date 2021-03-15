@@ -1,5 +1,5 @@
 ! RUN: bbc --always-execute-loop-body %s -o - | tco | llc --relocation-model=pic --filetype=obj -o %temp.o
-! RUN: %CC %temp.o -L%L -lFortranRuntime -lFortranDecimal -lFortran_main -lstdc++ -lm -o %temp.loop
+! RUN: %CC %temp.o -L%L -Wl,-rpath=%L -lFortran_main -lFortranRuntime -lFortranDecimal -lm -o %temp.loop
 ! RUN: %temp.loop | FileCheck %s
 
 program alwaysexecuteloopbody
