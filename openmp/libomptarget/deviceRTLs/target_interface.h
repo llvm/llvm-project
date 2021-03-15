@@ -21,19 +21,20 @@ EXTERN int GetBlockIdInKernel();
 EXTERN int GetNumberOfBlocksInKernel();
 EXTERN int GetNumberOfThreadsInBlock();
 EXTERN unsigned GetWarpId();
+EXTERN unsigned GetWarpSize();
 EXTERN unsigned GetLaneId();
 
 // Atomics
-extern DEVICE uint32_t __kmpc_atomic_add(uint32_t *, uint32_t);
-extern DEVICE uint32_t __kmpc_atomic_inc(uint32_t *, uint32_t);
-extern DEVICE uint32_t __kmpc_atomic_max(uint32_t *, uint32_t);
-extern DEVICE uint32_t __kmpc_atomic_exchange(uint32_t *, uint32_t);
-extern DEVICE uint32_t __kmpc_atomic_cas(uint32_t *, uint32_t, uint32_t);
+DEVICE uint32_t __kmpc_atomic_add(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_inc(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_max(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_exchange(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_cas(uint32_t *, uint32_t, uint32_t);
 static_assert(sizeof(unsigned long long) == sizeof(uint64_t), "");
-extern DEVICE unsigned long long __kmpc_atomic_exchange(unsigned long long *,
-                                                        unsigned long long);
-extern DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *,
-                                                   unsigned long long);
+DEVICE unsigned long long __kmpc_atomic_exchange(unsigned long long *,
+                                                 unsigned long long);
+DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *,
+                                            unsigned long long);
 
 // Locks
 EXTERN void __kmpc_impl_init_lock(omp_lock_t *lock);

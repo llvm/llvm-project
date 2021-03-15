@@ -130,6 +130,7 @@ EXTERN int GetNumberOfThreadsInBlock() {
 }
 
 EXTERN unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
+EXTERN unsigned GetWarpSize() { return WARPSIZE; }
 EXTERN unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }
