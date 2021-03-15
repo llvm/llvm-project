@@ -28,15 +28,15 @@ func @parallel_many_dims() {
   return
 }
 
-// CHECK: [[C12:%.*]] = constant 12 : index
-// CHECK: [[C10:%.*]] = constant 10 : index
-// CHECK: [[C9:%.*]] = constant 9 : index
-// CHECK: [[C6:%.*]] = constant 6 : index
-// CHECK: [[C4:%.*]] = constant 4 : index
 // CHECK: [[C3:%.*]] = constant 3 : index
-// CHECK: [[C2:%.*]] = constant 2 : index
-// CHECK: [[C1:%.*]] = constant 1 : index
+// CHECK: [[C6:%.*]] = constant 6 : index
+// CHECK: [[C9:%.*]] = constant 9 : index
+// CHECK: [[C10:%.*]] = constant 10 : index
+// CHECK: [[C4:%.*]] = constant 4 : index
+// CHECK: [[C12:%.*]] = constant 12 : index
 // CHECK: [[C0:%.*]] = constant 0 : index
+// CHECK: [[C1:%.*]] = constant 1 : index
+// CHECK: [[C2:%.*]] = constant 2 : index
 // CHECK: scf.parallel ([[NEW_I0:%.*]]) = ([[C0]]) to ([[C4]]) step ([[C1]]) {
 // CHECK:   [[V0:%.*]] = remi_signed [[NEW_I0]], [[C2]] : index
 // CHECK:   [[I0:%.*]] = divi_signed [[NEW_I0]], [[C2]] : index
