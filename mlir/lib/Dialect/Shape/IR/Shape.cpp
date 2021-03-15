@@ -354,11 +354,14 @@ static LogicalResult verify(AssumingAllOp op) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
-  if (!operands[1])
-    return nullptr;
+  if (operands.size() == 1)
+    return shapes().front();
 
   // TODO: Support folding with more than 2 input shapes
   if (shapes().size() > 2)
+    return nullptr;
+
+  if (!operands[1])
     return nullptr;
 
   auto rhsShape = llvm::to_vector<6>(
@@ -384,11 +387,38 @@ OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
 }
 
 static LogicalResult verify(BroadcastOp op) {
-  // Ensure that AssumingAllOp contains at least one operand
-  if (op.getNumOperands() < 2)
-    return op.emitOpError("required at least 2 input shapes");
-
   return verifyShapeOrExtentTensorOp(op);
+}
+
+namespace {
+template <typename OpTy>
+struct RemoveDuplicateOperandsPattern : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    // Find unique operands.
+    SmallVector<Value, 2> unique;
+    for (Value v : op.getOperands()) {
+      if (!llvm::is_contained(unique, v))
+        unique.push_back(v);
+    }
+
+    // Reduce op to equivalent with unique operands.
+    if (unique.size() < op.getNumOperands()) {
+      rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(), unique,
+                                        op.getAttrs());
+      return success();
+    }
+
+    return failure();
+  }
+};
+} // namespace
+
+void BroadcastOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<RemoveDuplicateOperandsPattern<BroadcastOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -772,49 +802,18 @@ void GetExtentOp::build(OpBuilder &builder, OperationState &result, Value shape,
 // IsBroadcastableOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(IsBroadcastableOp op) {
-  // Ensure that AssumingAllOp contains at least one operand
-  if (op.getNumOperands() < 2)
-    return op.emitOpError("required at least 2 input shapes");
-  return success();
-}
-
-namespace {
-struct IsBroadcastableCanonicalizationPattern
-    : public OpRewritePattern<IsBroadcastableOp> {
-  using OpRewritePattern<IsBroadcastableOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(IsBroadcastableOp op,
-                                PatternRewriter &rewriter) const override {
-    // Find unique operands.
-    SmallVector<Value, 2> unique;
-    for (Value v : op.getOperands()) {
-      if (!llvm::is_contained(unique, v))
-        unique.push_back(v);
-    }
-
-    // Can always broadcast fewer than two shapes.
-    if (unique.size() < 2) {
-      rewriter.replaceOpWithNewOp<mlir::ConstantOp>(op,
-                                                    rewriter.getBoolAttr(true));
-      return success();
-    }
-
-    // Reduce op to equivalent with unique operands.
-    if (unique.size() < op.getNumOperands()) {
-      rewriter.replaceOpWithNewOp<IsBroadcastableOp>(op, rewriter.getI1Type(),
-                                                     unique);
-      return success();
-    }
-
-    return failure();
-  }
-};
-} // namespace
-
 void IsBroadcastableOp::getCanonicalizationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<IsBroadcastableCanonicalizationPattern>(context);
+  patterns.insert<RemoveDuplicateOperandsPattern<IsBroadcastableOp>>(context);
+}
+
+OpFoldResult IsBroadcastableOp::fold(ArrayRef<Attribute> operands) {
+  // Can always broadcast fewer than two shapes.
+  if (operands.size() < 2) {
+    return BoolAttr::get(getContext(), true);
+  }
+
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
