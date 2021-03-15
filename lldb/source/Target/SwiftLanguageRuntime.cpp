@@ -43,6 +43,7 @@
 #include "clang/AST/DeclCXX.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Memory.h"
 
@@ -2304,14 +2305,18 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   uint32_t async_context_regnum;
   uint32_t fp_regnum;
   uint32_t pc_regnum;
+  uint32_t dummy_regnum;
+
   if (arch.GetMachine() == llvm::Triple::x86_64) {
     async_context_regnum = dwarf_r14_x86_64;
     fp_regnum = dwarf_rbp_x86_64;
     pc_regnum = dwarf_rip_x86_64;
+    dummy_regnum = dwarf_r15_x86_64;
   } else if (arch.GetMachine() == llvm::Triple::aarch64) {
     async_context_regnum = arm64_dwarf::x22;
     fp_regnum = arm64_dwarf::fp;
     pc_regnum = arm64_dwarf::pc;
+    dummy_regnum = arm64_dwarf::x23;
   } else {
     return UnwindPlanSP();
   }
@@ -2383,29 +2388,72 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   //      pushes the frame pointer register - 8
   //      dereference
 
-  // Row::RegisterLocation::RestoreType doesn't have a
+  // FIXME: Row::RegisterLocation::RestoreType doesn't have a
   // deref(reg-value + offset) yet, shortcut around it with
   // a dwarf expression for now.
+  // The CFA of an async frame is the address of it's associated AsyncContext.
+  // In an async frame currently on the stack, this address is stored right
+  // before the saved frame pointer on the stack.
   static const uint8_t g_cfa_dwarf_expression_x86_64[] = {
-      0x76,      // DW_OP_breg6, register 6 == rbp
-      0x78,      //    sleb128 -8 (ptrsize)
-      0x94, 0x8, // DW_OP_deref_size(8)
+      llvm::dwarf::DW_OP_breg6, // DW_OP_breg6, register 6 == rbp
+      0x78,                     //    sleb128 -8 (ptrsize)
+      llvm::dwarf::DW_OP_deref,
   };
   static const uint8_t g_cfa_dwarf_expression_arm64[] = {
-      0x8d,      // DW_OP_breg29, register 29 == fp
-      0x78,      //    sleb128 -8 (ptrsize)
-      0x94, 0x8, // DW_OP_deref_size(8)
+      llvm::dwarf::DW_OP_breg29, // DW_OP_breg29, register 29 == fp
+      0x78,                      //    sleb128 -8 (ptrsize)
+      llvm::dwarf::DW_OP_deref,
   };
 
-  if (arch.GetMachine() == llvm::Triple::x86_64) {
-    row->GetCFAValue().SetIsDWARFExpression(
-        g_cfa_dwarf_expression_x86_64, sizeof(g_cfa_dwarf_expression_x86_64));
-  } else if (arch.GetMachine() == llvm::Triple::aarch64) {
-    row->GetCFAValue().SetIsDWARFExpression(
-        g_cfa_dwarf_expression_arm64, sizeof(g_cfa_dwarf_expression_arm64));
-  }
+  constexpr unsigned expr_size = sizeof(g_cfa_dwarf_expression_arm64);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(async_context_regnum, 0, false);
+  static_assert(sizeof(g_cfa_dwarf_expression_x86_64) ==
+                    sizeof(g_cfa_dwarf_expression_arm64),
+                "Code relies on DWARF  expressions being the same size");
+
+  const uint8_t *expr = nullptr;
+  if (arch.GetMachine() == llvm::Triple::x86_64)
+    expr = g_cfa_dwarf_expression_x86_64;
+  else if (arch.GetMachine() == llvm::Triple::aarch64)
+    expr = g_cfa_dwarf_expression_arm64;
+  else
+    llvm_unreachable("Unsupported architexture");
+
+  row->GetCFAValue().SetIsDWARFExpression(expr, expr_size);
+  // The first "shard" of an async fucntion split into coroutines will take its
+  // context directly in r14 when called. The other "shards", which have
+  // .resume. in their names take the parent pointer in the ABI context register
+  // and thus it needs to be dereferenced to get to the context for the
+  // function. The debug info for locals reflects this difference, so our
+  // unwinding of the context reister needs to reflect it too.
+  bool in_resume_function =
+      sc.symbol->GetName().GetStringRef().contains(".resume.");
+  if (in_resume_function) {
+    // In a "resume" coroutine, the passed context argument needs to be
+    // dereferenced once to get the context. This is reflected in the debug
+    // info so we need to account for it and report am async register value
+    // that needs to be dereferenced to get to the context.
+    // Note that the size passed for the DWARF expression is the size of the
+    // array minus one. This skips the last deref for this use.
+    assert(expr[expr_size - 1] == llvm::dwarf::DW_OP_deref &&
+           "Should skip a deref");
+    row->SetRegisterLocationToIsDWARFExpression(async_context_regnum, expr,
+                                                expr_size - 1, false);
+  } else {
+    // In the first part of a split async function, the context is passed
+    // directly, so we can use the CFA value directly.
+    row->SetRegisterLocationToIsCFAPlusOffset(async_context_regnum, 0, false);
+    // The fact that we are in this case needs to be communicated to the frames
+    // below us as they need to react differently. There is no good way to
+    // expose this, so we set another dummy register to communicate this state.
+    static const uint8_t g_dummy_dwarf_expression[] = {
+        llvm::dwarf::DW_OP_const1u, 0
+    };
+    row->SetRegisterLocationToIsDWARFExpression(dummy_regnum,
+                                                g_dummy_dwarf_expression,
+                                                sizeof(g_dummy_dwarf_expression),
+                                                false);
+  }
   row->SetRegisterLocationToAtCFAPlusOffset(pc_regnum, ptr_size, false);
 
   row->SetUnspecifiedRegistersAreUndefined(true);
@@ -2433,20 +2481,65 @@ GetFollowAsyncContextUnwindPlan(RegisterContext *regctx, ArchSpec &arch,
   uint32_t async_context_regnum;
   uint32_t fp_regnum;
   uint32_t pc_regnum;
+  uint32_t dummy_regnum;
+
   if (arch.GetMachine() == llvm::Triple::x86_64) {
     async_context_regnum = dwarf_r14_x86_64;
     fp_regnum = dwarf_rbp_x86_64;
     pc_regnum = dwarf_rip_x86_64;
+    dummy_regnum = dwarf_r15_x86_64;
   } else if (arch.GetMachine() == llvm::Triple::aarch64) {
     async_context_regnum = arm64_dwarf::x22;
     fp_regnum = arm64_dwarf::fp;
     pc_regnum = arm64_dwarf::pc;
+    dummy_regnum = arm64_dwarf::x23;
   } else {
     return UnwindPlanSP();
   }
 
-  row->GetCFAValue().SetIsRegisterPlusOffset(async_context_regnum, 0);
-  row->SetRegisterLocationToAtCFAPlusOffset(async_context_regnum, 0, false);
+  // In the general case, the async register setup by the frame above us
+  // should be dereferenced twice to get our context, except when the frame
+  // above us is an async frame on the OS stack that takes its context directly
+  // (see discussion in GetRuntimeUnwindPlan()). The availability of
+  // dummy_regnum is used as a marked for this situation.
+  if (regctx->ReadRegisterAsUnsigned(dummy_regnum, (uint64_t)-1ll) !=
+      (uint64_t)-1ll) {
+    row->GetCFAValue().SetIsRegisterDereferenced(async_context_regnum);
+    row->SetRegisterLocationToSame(async_context_regnum, false);
+  } else {
+    static const uint8_t async_dwarf_expression_x86_64[] = {
+        llvm::dwarf::DW_OP_regx, dwarf_r14_x86_64, // DW_OP_regx, reg
+        llvm::dwarf::DW_OP_deref,                  // DW_OP_deref
+        llvm::dwarf::DW_OP_deref,                  // DW_OP_deref
+    };
+    static const uint8_t async_dwarf_expression_arm64[] = {
+        llvm::dwarf::DW_OP_regx, arm64_dwarf::x22, // DW_OP_regx, reg
+        llvm::dwarf::DW_OP_deref,                  // DW_OP_deref
+        llvm::dwarf::DW_OP_deref,                  // DW_OP_deref
+    };
+
+    const unsigned expr_size = sizeof(async_dwarf_expression_x86_64);
+    static_assert(sizeof(async_dwarf_expression_x86_64) ==
+                      sizeof(async_dwarf_expression_arm64),
+                  "Expressions of different sizes");
+
+    const uint8_t *expression = nullptr;
+    if (arch.GetMachine() == llvm::Triple::x86_64)
+      expression = async_dwarf_expression_x86_64;
+    else if (arch.GetMachine() == llvm::Triple::aarch64)
+      expression = async_dwarf_expression_arm64;
+    else
+      llvm_unreachable("Unsupported architecture");
+
+    // Note how the register location gets the same expression pointer with a
+    // different size. We just skip the trailing deref for it.
+    assert(expression[expr_size - 1] == llvm::dwarf::DW_OP_deref &&
+           "Should skip a deref");
+    row->GetCFAValue().SetIsDWARFExpression(expression, expr_size);
+    row->SetRegisterLocationToIsDWARFExpression(
+        async_context_regnum, expression, expr_size - 1, false);
+  }
+
   row->SetRegisterLocationToAtCFAPlusOffset(pc_regnum, ptr_size, false);
 
   row->SetUnspecifiedRegistersAreUndefined(true);
