@@ -24,7 +24,7 @@ grep -E "^fun:.*=custom" ${DFSAN_ABI_LIST} \
   | sed "s/^fun:\(.*\)=custom.*/\1/" | sort > $DIFF_A
 grep -E "__dfsw.*\(" ${DFSAN_CUSTOM_WRAPPERS} \
   | grep -v "__sanitizer_cov_trace" \
-  | sed "s/.*__dfsw_\(.*\)(.*/\1/" | sort > $DIFF_B
+  | sed "s/.*__dfsw_\(.*\)(.*/\1/" | sort | uniq > $DIFF_B
 diff -u $DIFF_A $DIFF_B > ${DIFFOUT}
 if [ $? -ne 0 ]
 then
@@ -35,7 +35,7 @@ fi
 
 grep -E __dfsw_ ${DFSAN_CUSTOM_WRAPPERS} \
   | grep -v "__sanitizer_cov_trace" \
-  | sed "s/.*__dfsw_\([^(]*\).*/\1/" | sort > $DIFF_A
+  | sed "s/.*__dfsw_\([^(]*\).*/\1/" | sort | uniq > $DIFF_A
 grep -E "^[[:space:]]*test_.*\(\);" ${DFSAN_CUSTOM_TESTS} \
   | sed "s/.*test_\(.*\)();/\1/" | sort > $DIFF_B
 diff -u $DIFF_A $DIFF_B > ${DIFFOUT}
