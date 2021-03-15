@@ -59,12 +59,40 @@ struct Reloc {
   uint32_t offset = 0;
   // Adding this offset to the address of the referent symbol or subsection
   // gives the destination that this relocation refers to.
-  uint64_t addend = 0;
+  int64_t addend = 0;
   llvm::PointerUnion<Symbol *, InputSection *> referent = nullptr;
 };
 
 bool validateSymbolRelocation(const Symbol *, const InputSection *,
                               const Reloc &);
+
+/*
+ * v: The value the relocation is attempting to encode
+ * bits: The number of bits actually available to encode this relocation
+ */
+void reportRangeError(const Reloc &, const llvm::Twine &v, uint8_t bits,
+                      int64_t min, uint64_t max);
+
+struct SymbolDiagnostic {
+  const Symbol *symbol;
+  llvm::StringRef reason;
+};
+
+void reportRangeError(SymbolDiagnostic, const llvm::Twine &v, uint8_t bits,
+                      int64_t min, uint64_t max);
+
+template <typename Diagnostic>
+inline void checkInt(Diagnostic d, int64_t v, int bits) {
+  if (v != llvm::SignExtend64(v, bits))
+    reportRangeError(d, llvm::Twine(v), bits, llvm::minIntN(bits),
+                     llvm::maxIntN(bits));
+}
+
+template <typename Diagnostic>
+inline void checkUInt(Diagnostic d, uint64_t v, int bits) {
+  if ((v >> bits) != 0)
+    reportRangeError(d, llvm::Twine(v), bits, 0, llvm::maxUIntN(bits));
+}
 
 extern const RelocAttrs invalidRelocAttrs;
 

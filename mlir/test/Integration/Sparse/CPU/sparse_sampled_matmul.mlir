@@ -82,32 +82,32 @@ module {
     // Mark both dimensions of the matrix as sparse and encode the
     // storage scheme types (this must match the metadata in the
     // trait and compiler switches).
-    %annotations = alloc(%c2) : memref<?xi1>
+    %annotations = memref.alloc(%c2) : memref<?xi1>
     %sparse = constant true
-    store %sparse, %annotations[%c0] : memref<?xi1>
-    store %sparse, %annotations[%c1] : memref<?xi1>
+    memref.store %sparse, %annotations[%c0] : memref<?xi1>
+    memref.store %sparse, %annotations[%c1] : memref<?xi1>
     %i32 = constant 3 : index
     %f32 = constant 1 : index
 
     // Setup memory for the dense matrices and initialize.
-    %adata = alloc(%c5, %c10) : memref<?x?xf32>
-    %bdata = alloc(%c10, %c5) : memref<?x?xf32>
-    %xdata = alloc(%c5,  %c5) : memref<?x?xf32>
+    %adata = memref.alloc(%c5, %c10) : memref<?x?xf32>
+    %bdata = memref.alloc(%c10, %c5) : memref<?x?xf32>
+    %xdata = memref.alloc(%c5,  %c5) : memref<?x?xf32>
     scf.for %i = %c0 to %c5 step %c1 {
       scf.for %j = %c0 to %c5 step %c1 {
-        store %d0, %xdata[%i, %j] : memref<?x?xf32>
+        memref.store %d0, %xdata[%i, %j] : memref<?x?xf32>
       }
       %p = addi %i, %c1 : index
       %q = index_cast %p : index to i32
       %d = sitofp %q : i32 to f32
       scf.for %j = %c0 to %c10 step %c1 {
-        store %d, %adata[%i, %j] : memref<?x?xf32>
-        store %d, %bdata[%j, %i] : memref<?x?xf32>
+        memref.store %d, %adata[%i, %j] : memref<?x?xf32>
+        memref.store %d, %bdata[%j, %i] : memref<?x?xf32>
       }
     }
-    %a = tensor_load %adata : memref<?x?xf32>
-    %b = tensor_load %bdata : memref<?x?xf32>
-    %x = tensor_load %xdata : memref<?x?xf32>
+    %a = memref.tensor_load %adata : memref<?x?xf32>
+    %b = memref.tensor_load %bdata : memref<?x?xf32>
+    %x = memref.tensor_load %xdata : memref<?x?xf32>
 
     // Read the sparse matrix from file, construct sparse storage
     // according to <sparse,sparse> in memory, and call the kernel.
@@ -125,7 +125,7 @@ module {
     // CHECK: ( 164, 0, 0, 640, 0 )
     // CHECK: ( 0, 520, 0, 0, 1250 )
     //
-    %r = tensor_to_memref %0 : memref<?x?xf32>
+    %r = memref.buffer_cast %0 : memref<?x?xf32>
     scf.for %i = %c0 to %c5 step %c1 {
       %v = vector.transfer_read %r[%i, %c0], %d0: memref<?x?xf32>, vector<5xf32>
       vector.print %v : vector<5xf32>
@@ -133,9 +133,9 @@ module {
 
     // Release the resources.
     call @delSparseTensor(%s) : (!SparseTensor) -> ()
-    dealloc %adata : memref<?x?xf32>
-    dealloc %bdata : memref<?x?xf32>
-    dealloc %xdata : memref<?x?xf32>
+    memref.dealloc %adata : memref<?x?xf32>
+    memref.dealloc %bdata : memref<?x?xf32>
+    memref.dealloc %xdata : memref<?x?xf32>
 
     return
   }

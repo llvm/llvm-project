@@ -1,7 +1,4 @@
 set(TARGET_LIBC_ENTRYPOINTS
-    # assert.h entrypoints
-    libc.src.assert.__assert_fail
-    
     # ctype.h entrypoints
     libc.src.ctype.isalnum
     libc.src.ctype.isalpha
@@ -22,23 +19,6 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # errno.h entrypoints
     libc.src.errno.__errno_location
-
-    # signal.h entrypoints
-    libc.src.signal.raise
-    libc.src.signal.sigaction
-    libc.src.signal.sigdelset
-    libc.src.signal.sigaddset
-    libc.src.signal.sigemptyset
-    libc.src.signal.sigprocmask
-    libc.src.signal.sigfillset
-    libc.src.signal.signal
-
-    # stdlib.h entrypoints
-    libc.src.stdlib._Exit
-    libc.src.stdlib.abort
-    libc.src.stdlib.abs
-    libc.src.stdlib.labs
-    libc.src.stdlib.llabs
 
     # string.h entrypoints
     libc.src.string.bzero
@@ -62,24 +42,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strstr
     libc.src.string.strtok
     libc.src.string.strtok_r
-
-    # sys/mman.h entrypoints
-    libc.src.sys.mman.mmap
-    libc.src.sys.mman.munmap
-
-    # threads.h entrypoints
-    libc.src.threads.call_once
-    libc.src.threads.mtx_init
-    libc.src.threads.mtx_lock
-    libc.src.threads.mtx_unlock
-    libc.src.threads.thrd_create
-    libc.src.threads.thrd_join
-
-    # time.h entrypoints
-    libc.src.time.mktime
-
-    # unistd.h entrypoints
-    libc.src.unistd.write
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -178,6 +140,48 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncf
     libc.src.math.truncl
 )
+
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # assert.h entrypoints
+    libc.src.assert.__assert_fail
+
+    # stdlib.h entrypoints
+    libc.src.stdlib._Exit
+    libc.src.stdlib.abort
+    libc.src.stdlib.abs
+    libc.src.stdlib.labs
+    libc.src.stdlib.llabs
+
+    # signal.h entrypoints
+    libc.src.signal.raise
+    libc.src.signal.sigaction
+    libc.src.signal.sigdelset
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigprocmask
+    libc.src.signal.sigfillset
+    libc.src.signal.signal
+
+    # sys/mman.h entrypoints
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+
+    # threads.h entrypoints
+    libc.src.threads.call_once
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+
+    # time.h entrypoints
+    libc.src.time.mktime
+
+    # unistd.h entrypoints
+    libc.src.unistd.write
+  )
+endif()
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}

@@ -16,6 +16,7 @@ add_mlir_dialect_library(MLIRStandard
   MLIRControlFlowInterfaces
   MLIREDSC
   MLIRIR
+  MLIRMemRef
   MLIRSideEffectInterfaces
   MLIRTensor
   MLIRVectorInterfaces

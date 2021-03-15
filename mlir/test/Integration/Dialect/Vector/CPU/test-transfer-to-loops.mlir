@@ -13,14 +13,14 @@ func @alloc_2d_filled_f32(%arg0: index, %arg1: index) -> memref<?x?xf32> {
   %c1 = constant 1 : index
   %c10 = constant 10 : index
   %c100 = constant 100 : index
-  %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
+  %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
   scf.for %arg5 = %c0 to %arg0 step %c1 {
     scf.for %arg6 = %c0 to %arg1 step %c1 {
       %arg66 = muli %arg6, %c100 : index
       %tmp1 = addi %arg5, %arg66 : index
       %tmp2 = index_cast %tmp1 : index to i32
       %tmp3 = sitofp %tmp2 : i32 to f32
-      store %tmp3, %0[%arg5, %arg6] : memref<?x?xf32>
+      memref.store %tmp3, %0[%arg5, %arg6] : memref<?x?xf32>
     }
   }
   return %0 : memref<?x?xf32>
@@ -34,7 +34,7 @@ func @main() {
   %c6 = constant 6 : index
   %cst = constant -4.2e+01 : f32
   %0 = call @alloc_2d_filled_f32(%c6, %c6) : (index, index) -> memref<?x?xf32>
-  %converted = memref_cast %0 : memref<?x?xf32> to memref<*xf32>
+  %converted = memref.cast %0 : memref<?x?xf32> to memref<*xf32>
   call @print_memref_f32(%converted): (memref<*xf32>) -> ()
   // CHECK:      Unranked{{.*}}data =
   // CHECK:      [
@@ -100,6 +100,6 @@ func @main() {
   vector.print %5 : vector<5xf32>
   // CHECK-NEXT: ( 403, 503, 502, -42, -42 )
 
-  dealloc %0 : memref<?x?xf32>
+  memref.dealloc %0 : memref<?x?xf32>
   return
 }

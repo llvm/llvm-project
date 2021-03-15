@@ -272,7 +272,7 @@ ApplyNonVirtualAndVirtualOffset(CodeGenFunction &CGF, Address addr,
   llvm::Value *ptr = addr.getPointer();
   unsigned AddrSpace = ptr->getType()->getPointerAddressSpace();
   ptr = CGF.Builder.CreateBitCast(ptr, CGF.Int8Ty->getPointerTo(AddrSpace));
-  ptr = CGF.Builder.CreateInBoundsGEP(ptr, baseOffset, "add.ptr");
+  ptr = CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, ptr, baseOffset, "add.ptr");
 
   // If we have a virtual component, the alignment of the result will
   // be relative only to the known alignment of that vbase.
@@ -434,8 +434,8 @@ CodeGenFunction::GetAddressOfDerivedClass(Address BaseAddr,
 
   // Apply the offset.
   llvm::Value *Value = Builder.CreateBitCast(BaseAddr.getPointer(), Int8PtrTy);
-  Value = Builder.CreateInBoundsGEP(Value, Builder.CreateNeg(NonVirtualOffset),
-                                    "sub.ptr");
+  Value = Builder.CreateInBoundsGEP(
+      Int8Ty, Value, Builder.CreateNeg(NonVirtualOffset), "sub.ptr");
 
   // Just cast.
   Value = Builder.CreateBitCast(Value, DerivedPtrTy);
@@ -1963,9 +1963,10 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
   }
 
   // Find the end of the array.
+  llvm::Type *elementType = arrayBase.getElementType();
   llvm::Value *arrayBegin = arrayBase.getPointer();
-  llvm::Value *arrayEnd = Builder.CreateInBoundsGEP(arrayBegin, numElements,
-                                                    "arrayctor.end");
+  llvm::Value *arrayEnd = Builder.CreateInBoundsGEP(
+      elementType, arrayBegin, numElements, "arrayctor.end");
 
   // Enter the loop, setting up a phi for the current location to initialize.
   llvm::BasicBlock *entryBB = Builder.GetInsertBlock();
@@ -2023,9 +2024,8 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
   }
 
   // Go to the next element.
-  llvm::Value *next =
-    Builder.CreateInBoundsGEP(cur, llvm::ConstantInt::get(SizeTy, 1),
-                              "arrayctor.next");
+  llvm::Value *next = Builder.CreateInBoundsGEP(
+      elementType, cur, llvm::ConstantInt::get(SizeTy, 1), "arrayctor.next");
   cur->addIncoming(next, Builder.GetInsertBlock());
 
   // Check whether that's the end of the loop.

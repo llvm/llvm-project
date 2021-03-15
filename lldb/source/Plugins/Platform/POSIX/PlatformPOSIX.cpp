@@ -994,13 +994,6 @@ PlatformPOSIX::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
              )";
 }
 
-size_t PlatformPOSIX::ConnectToWaitingProcesses(Debugger &debugger,
-                                                Status &error) {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->ConnectToWaitingProcesses(debugger, error);
-  return Platform::ConnectToWaitingProcesses(debugger, error);
-}
-
 ConstString PlatformPOSIX::GetFullNameForDylib(ConstString basename) {
   if (basename.IsEmpty())
     return basename;

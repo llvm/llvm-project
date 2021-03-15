@@ -489,7 +489,7 @@ if(MINGW)
     arm/aeabi_uldivmod.S
     arm/chkstk.S
     mingw_fixfloat.c
-    ${GENERIC_SOURCES}
+    ${arm_SOURCES}
   )
 elseif(NOT WIN32)
   # TODO the EABI sources should only be added to EABI targets

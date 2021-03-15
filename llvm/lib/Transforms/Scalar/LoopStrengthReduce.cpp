@@ -3430,6 +3430,9 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
         // Ignore non-instructions.
         if (!UserInst)
           continue;
+        // Don't bother if the instruction is an EHPad.
+        if (UserInst->isEHPad())
+          continue;
         // Ignore instructions in other functions (as can happen with
         // Constants).
         if (UserInst->getParent()->getParent() != L->getHeader()->getParent())

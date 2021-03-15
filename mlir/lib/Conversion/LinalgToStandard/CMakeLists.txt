@@ -14,6 +14,7 @@ add_mlir_conversion_library(MLIRLinalgToStandard
   MLIREDSC
   MLIRIR
   MLIRLinalg
+  MLIRMemRef
   MLIRPass
   MLIRSCF
   MLIRTransforms

@@ -4,9 +4,9 @@
 
 // CHECK-LABEL: func @cannot_fuse_would_create_cycle() {
 func @cannot_fuse_would_create_cycle() {
-  %a = alloc() : memref<10xf32>
-  %b = alloc() : memref<10xf32>
-  %c = alloc() : memref<10xf32>
+  %a = memref.alloc() : memref<10xf32>
+  %b = memref.alloc() : memref<10xf32>
+  %c = memref.alloc() : memref<10xf32>
 
   %cf7 = constant 7.0 : f32
 
@@ -37,9 +37,9 @@ func @cannot_fuse_would_create_cycle() {
 
 // CHECK-LABEL: func @can_fuse_rar_dependence() {
 func @can_fuse_rar_dependence() {
-  %a = alloc() : memref<10xf32>
-  %b = alloc() : memref<10xf32>
-  %c = alloc() : memref<10xf32>
+  %a = memref.alloc() : memref<10xf32>
+  %b = memref.alloc() : memref<10xf32>
+  %c = memref.alloc() : memref<10xf32>
 
   %cf7 = constant 7.0 : f32
 
@@ -69,10 +69,10 @@ func @can_fuse_rar_dependence() {
 
 // CHECK-LABEL: func @can_fuse_different_memrefs() {
 func @can_fuse_different_memrefs() {
-  %a = alloc() : memref<10xf32>
-  %b = alloc() : memref<10xf32>
-  %c = alloc() : memref<10xf32>
-  %d = alloc() : memref<10xf32>
+  %a = memref.alloc() : memref<10xf32>
+  %b = memref.alloc() : memref<10xf32>
+  %c = memref.alloc() : memref<10xf32>
+  %d = memref.alloc() : memref<10xf32>
 
   %cf7 = constant 7.0 : f32
 
@@ -102,7 +102,7 @@ func @can_fuse_different_memrefs() {
 
 // CHECK-LABEL: func @should_not_fuse_across_intermediate_store() {
 func @should_not_fuse_across_intermediate_store() {
-  %0 = alloc() : memref<10xf32>
+  %0 = memref.alloc() : memref<10xf32>
   %c0 = constant 0 : index
   %cf7 = constant 7.0 : f32
 
@@ -127,7 +127,7 @@ func @should_not_fuse_across_intermediate_store() {
 
 // CHECK-LABEL: func @should_not_fuse_across_intermediate_load() {
 func @should_not_fuse_across_intermediate_load() {
-  %0 = alloc() : memref<10xf32>
+  %0 = memref.alloc() : memref<10xf32>
   %c0 = constant 0 : index
   %cf7 = constant 7.0 : f32
 
@@ -152,8 +152,8 @@ func @should_not_fuse_across_intermediate_load() {
 
 // CHECK-LABEL: func @should_not_fuse_across_ssa_value_def() {
 func @should_not_fuse_across_ssa_value_def() {
-  %0 = alloc() : memref<10xf32>
-  %1 = alloc() : memref<10xf32>
+  %0 = memref.alloc() : memref<10xf32>
+  %1 = memref.alloc() : memref<10xf32>
   %c0 = constant 0 : index
   %cf7 = constant 7.0 : f32
 
@@ -182,7 +182,7 @@ func @should_not_fuse_across_ssa_value_def() {
 
 // CHECK-LABEL: func @should_not_fuse_store_before_load() {
 func @should_not_fuse_store_before_load() {
-  %0 = alloc() : memref<10xf32>
+  %0 = memref.alloc() : memref<10xf32>
   %c0 = constant 0 : index
   %cf7 = constant 7.0 : f32
 
@@ -208,7 +208,7 @@ func @should_not_fuse_store_before_load() {
 
 // CHECK-LABEL: func @should_not_fuse_across_load_at_depth1() {
 func @should_not_fuse_across_load_at_depth1() {
-  %0 = alloc() : memref<10x10xf32>
+  %0 = memref.alloc() : memref<10x10xf32>
   %c0 = constant 0 : index
   %cf7 = constant 7.0 : f32
 
@@ -232,7 +232,7 @@ func @should_not_fuse_across_load_at_depth1() {
 
 // CHECK-LABEL: func @should_not_fuse_across_load_in_loop_at_depth1() {
 func @should_not_fuse_across_load_in_loop_at_depth1() {
-  %0 = alloc() : memref<10x10xf32>
+  %0 = memref.alloc() : memref<10x10xf32>
   %c0 = constant 0 : index
   %cf7 = constant 7.0 : f32
 
@@ -258,7 +258,7 @@ func @should_not_fuse_across_load_in_loop_at_depth1() {
 
 // CHECK-LABEL: func @should_not_fuse_across_store_at_depth1() {
 func @should_not_fuse_across_store_at_depth1() {
-  %0 = alloc() : memref<10x10xf32>
+  %0 = memref.alloc() : memref<10x10xf32>
   %c0 = constant 0 : index
   %cf7 = constant 7.0 : f32
 
@@ -282,7 +282,7 @@ func @should_not_fuse_across_store_at_depth1() {
 
 // CHECK-LABEL: func @should_not_fuse_across_store_in_loop_at_depth1() {
 func @should_not_fuse_across_store_in_loop_at_depth1() {
-  %0 = alloc() : memref<10x10xf32>
+  %0 = memref.alloc() : memref<10x10xf32>
   %c0 = constant 0 : index
   %cf7 = constant 7.0 : f32
 
@@ -308,8 +308,8 @@ func @should_not_fuse_across_store_in_loop_at_depth1() {
 
 // CHECK-LABEL: func @should_not_fuse_across_ssa_value_def_at_depth1() {
 func @should_not_fuse_across_ssa_value_def_at_depth1() {
-  %0 = alloc() : memref<10x10xf32>
-  %1 = alloc() : memref<10x10xf32>
+  %0 = memref.alloc() : memref<10x10xf32>
+  %1 = memref.alloc() : memref<10x10xf32>
   %c0 = constant 0 : index
   %cf7 = constant 7.0 : f32
 

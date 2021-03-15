@@ -1912,8 +1912,9 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
       if (Rec.second.IsOnePerTeam) {
         VarTy = Rec.second.FD->getType();
       } else {
+        Address Addr = VarAddr.getAddress(CGF);
         llvm::Value *Ptr = CGF.Builder.CreateInBoundsGEP(
-            VarAddr.getAddress(CGF).getPointer(),
+            Addr.getElementType(), Addr.getPointer(),
             {Bld.getInt32(0), getNVPTXLaneID(CGF)});
         VarTy =
             Rec.second.FD->getType()->castAsArrayTypeUnsafe()->getElementType();
@@ -2943,7 +2944,8 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
       // Get pointer to location in transfer medium.
       // MediumPtr = &medium[warp_id]
       llvm::Value *MediumPtrVal = Bld.CreateInBoundsGEP(
-          TransferMedium, {llvm::Constant::getNullValue(CGM.Int64Ty), WarpID});
+          TransferMedium->getValueType(), TransferMedium,
+          {llvm::Constant::getNullValue(CGM.Int64Ty), WarpID});
       Address MediumPtr(MediumPtrVal, Align);
       // Casting to actual data type.
       // MediumPtr = (CopyType*)MediumPtrAddr;
@@ -2991,7 +2993,7 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
 
       // SrcMediumPtr = &medium[tid]
       llvm::Value *SrcMediumPtrVal = Bld.CreateInBoundsGEP(
-          TransferMedium,
+          TransferMedium->getValueType(), TransferMedium,
           {llvm::Constant::getNullValue(CGM.Int64Ty), ThreadID});
       Address SrcMediumPtr(SrcMediumPtrVal, Align);
       // SrcMediumVal = *SrcMediumPtr;
@@ -3327,9 +3329,10 @@ static llvm::Value *emitListToGlobalCopyFunction(
     const FieldDecl *FD = VarFieldMap.lookup(VD);
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignAddrLValue(BufferArrPtr, StaticTy), FD);
-    llvm::Value *BufferPtr =
-        Bld.CreateInBoundsGEP(GlobLVal.getPointer(CGF), Idxs);
-    GlobLVal.setAddress(Address(BufferPtr, GlobLVal.getAlignment()));
+    Address GlobAddr = GlobLVal.getAddress(CGF);
+    llvm::Value *BufferPtr = Bld.CreateInBoundsGEP(
+        GlobAddr.getElementType(), GlobAddr.getPointer(), Idxs);
+    GlobLVal.setAddress(Address(BufferPtr, GlobAddr.getAlignment()));
     switch (CGF.getEvaluationKind(Private->getType())) {
     case TEK_Scalar: {
       llvm::Value *V = CGF.EmitLoadOfScalar(
@@ -3426,8 +3429,9 @@ static llvm::Value *emitListToGlobalReduceFunction(
     const FieldDecl *FD = VarFieldMap.lookup(VD);
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignAddrLValue(BufferArrPtr, StaticTy), FD);
-    llvm::Value *BufferPtr =
-        Bld.CreateInBoundsGEP(GlobLVal.getPointer(CGF), Idxs);
+    Address GlobAddr = GlobLVal.getAddress(CGF);
+    llvm::Value *BufferPtr = Bld.CreateInBoundsGEP(
+        GlobAddr.getElementType(), GlobAddr.getPointer(), Idxs);
     llvm::Value *Ptr = CGF.EmitCastToVoidPtr(BufferPtr);
     CGF.EmitStoreOfScalar(Ptr, Elem, /*Volatile=*/false, C.VoidPtrTy);
     if ((*IPriv)->getType()->isVariablyModifiedType()) {
@@ -3531,9 +3535,10 @@ static llvm::Value *emitGlobalToListCopyFunction(
     const FieldDecl *FD = VarFieldMap.lookup(VD);
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignAddrLValue(BufferArrPtr, StaticTy), FD);
-    llvm::Value *BufferPtr =
-        Bld.CreateInBoundsGEP(GlobLVal.getPointer(CGF), Idxs);
-    GlobLVal.setAddress(Address(BufferPtr, GlobLVal.getAlignment()));
+    Address GlobAddr = GlobLVal.getAddress(CGF);
+    llvm::Value *BufferPtr = Bld.CreateInBoundsGEP(
+        GlobAddr.getElementType(), GlobAddr.getPointer(), Idxs);
+    GlobLVal.setAddress(Address(BufferPtr, GlobAddr.getAlignment()));
     switch (CGF.getEvaluationKind(Private->getType())) {
     case TEK_Scalar: {
       llvm::Value *V = CGF.EmitLoadOfScalar(GlobLVal, Loc);
@@ -3630,8 +3635,9 @@ static llvm::Value *emitGlobalToListReduceFunction(
     const FieldDecl *FD = VarFieldMap.lookup(VD);
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignAddrLValue(BufferArrPtr, StaticTy), FD);
-    llvm::Value *BufferPtr =
-        Bld.CreateInBoundsGEP(GlobLVal.getPointer(CGF), Idxs);
+    Address GlobAddr = GlobLVal.getAddress(CGF);
+    llvm::Value *BufferPtr = Bld.CreateInBoundsGEP(
+        GlobAddr.getElementType(), GlobAddr.getPointer(), Idxs);
     llvm::Value *Ptr = CGF.EmitCastToVoidPtr(BufferPtr);
     CGF.EmitStoreOfScalar(Ptr, Elem, /*Volatile=*/false, C.VoidPtrTy);
     if ((*IPriv)->getType()->isVariablyModifiedType()) {

@@ -116,15 +116,16 @@ endif()
 
 set(CLANG_BOOTSTRAP_TARGETS
   check-all
-  check-llvm
   check-clang
   check-lld
+  check-llvm
+  check-polly
   llvm-config
-  test-suite
-  test-depends
-  llvm-test-depends
   clang-test-depends
   lld-test-depends
+  llvm-test-depends
+  test-suite
+  test-depends
   distribution
   install-distribution
   install-distribution-stripped

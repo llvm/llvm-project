@@ -212,7 +212,7 @@ static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
     SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
     auto sizes = llvm::to_vector<4>(llvm::map_range(
         llvm::seq<unsigned>(0, rank), [&](unsigned d) -> OpFoldResult {
-          auto dimOp = rewriter.create<DimOp>(loc, std::get<0>(it), d);
+          auto dimOp = rewriter.create<memref::DimOp>(loc, std::get<0>(it), d);
           newUsersOfOpToPad.insert(dimOp);
           return dimOp.getResult();
         }));

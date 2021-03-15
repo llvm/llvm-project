@@ -72,18 +72,18 @@ module {
     // Mark both dimensions of the matrix as sparse and encode the
     // storage scheme types (this must match the metadata in the
     // trait and compiler switches).
-    %annotations = alloc(%c2) : memref<?xi1>
+    %annotations = memref.alloc(%c2) : memref<?xi1>
     %sparse = constant true
-    store %sparse, %annotations[%c0] : memref<?xi1>
-    store %sparse, %annotations[%c1] : memref<?xi1>
+    memref.store %sparse, %annotations[%c0] : memref<?xi1>
+    memref.store %sparse, %annotations[%c1] : memref<?xi1>
     %i64 = constant 2 : index
     %f64 = constant 0 : index
 
     // Setup memory for a single reduction scalar,
     // initialized to zero.
-    %xdata = alloc() : memref<f64>
-    store %d0, %xdata[] : memref<f64>
-    %x = tensor_load %xdata : memref<f64>
+    %xdata = memref.alloc() : memref<f64>
+    memref.store %d0, %xdata[] : memref<f64>
+    %x = memref.tensor_load %xdata : memref<f64>
 
     // Read the sparse matrix from file, construct sparse storage
     // according to <sparse,sparse> in memory, and call the kernel.
@@ -97,13 +97,13 @@ module {
     //
     // CHECK: 28.2
     //
-    %m = tensor_to_memref %0 : memref<f64>
-    %v = load %m[] : memref<f64>
+    %m = memref.buffer_cast %0 : memref<f64>
+    %v = memref.load %m[] : memref<f64>
     vector.print %v : f64
 
     // Release the resources.
     call @delSparseTensor(%a) : (!SparseTensor) -> ()
-    dealloc %xdata : memref<f64>
+    memref.dealloc %xdata : memref<f64>
 
     return
   }

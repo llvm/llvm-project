@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/MemRef/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -23,7 +24,7 @@ static SmallVector<Value, 8> getMemRefSizes(Value memRef) {
   const auto &shape = memRefType.getShape();
   for (unsigned idx = 0, n = shape.size(); idx < n; ++idx) {
     if (shape[idx] == -1)
-      res.push_back(std_dim(memRef, idx));
+      res.push_back(memref_dim(memRef, idx));
     else
       res.push_back(std_constant_index(shape[idx]));
   }

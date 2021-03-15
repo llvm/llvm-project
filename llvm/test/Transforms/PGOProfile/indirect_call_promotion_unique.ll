@@ -83,6 +83,12 @@ entry:
   ret i32 %call
 }
 
+; Check symbol with '.' in the front is handled properly.
+define i32 @..func6() {
+entry:
+  ret i32 3
+}
+
 ; GUID of "func1" is -2545542355363006406.
 ; GUID of "func2" is -4377547752858689819.
 ; GUID of "func3.__uniq.258901567653530696343884446915951489119" is 8271224222042874235.

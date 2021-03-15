@@ -34,25 +34,29 @@ define <vscale x 64 x i8> @caller() {
 ; RV64IV-NEXT:    .cfi_offset s0, -16
 ; RV64IV-NEXT:    addi s0, sp, 64
 ; RV64IV-NEXT:    .cfi_def_cfa s0, 0
-; RV64IV-NEXT:    andi sp, sp, -64
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 5
 ; RV64IV-NEXT:    sub sp, sp, a0
+; RV64IV-NEXT:    andi sp, sp, -64
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    addi a1, zero, 24
 ; RV64IV-NEXT:    mul a0, a0, a1
 ; RV64IV-NEXT:    add a0, sp, a0
+; RV64IV-NEXT:    addi a0, a0, 48
 ; RV64IV-NEXT:    vl8r.v v8, (a0)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 4
 ; RV64IV-NEXT:    add a0, sp, a0
+; RV64IV-NEXT:    addi a0, a0, 48
 ; RV64IV-NEXT:    vl8r.v v16, (a0)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 3
 ; RV64IV-NEXT:    add a0, sp, a0
+; RV64IV-NEXT:    addi a0, a0, 48
 ; RV64IV-NEXT:    vl8r.v v24, (a0)
-; RV64IV-NEXT:    mv a0, sp
-; RV64IV-NEXT:    vs8r.v v24, (sp)
+; RV64IV-NEXT:    addi a0, sp, 48
+; RV64IV-NEXT:    addi a1, sp, 48
+; RV64IV-NEXT:    vs8r.v v24, (a1)
 ; RV64IV-NEXT:    call callee@plt
 ; RV64IV-NEXT:    addi sp, s0, -64
 ; RV64IV-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload

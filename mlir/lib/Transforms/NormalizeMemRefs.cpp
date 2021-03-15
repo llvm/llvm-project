@@ -13,6 +13,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/SmallSet.h"
@@ -152,7 +153,7 @@ bool NormalizeMemRefs::areMemRefsNormalizable(FuncOp funcOp) {
     return true;
 
   if (funcOp
-          .walk([&](AllocOp allocOp) -> WalkResult {
+          .walk([&](memref::AllocOp allocOp) -> WalkResult {
             Value oldMemRef = allocOp.getResult();
             if (!isMemRefNormalizable(oldMemRef.getUsers()))
               return WalkResult::interrupt();
@@ -326,10 +327,10 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
   // Turn memrefs' non-identity layouts maps into ones with identity. Collect
   // alloc ops first and then process since normalizeMemRef replaces/erases ops
   // during memref rewriting.
-  SmallVector<AllocOp, 4> allocOps;
-  funcOp.walk([&](AllocOp op) { allocOps.push_back(op); });
-  for (AllocOp allocOp : allocOps)
-    (void)normalizeMemRef(allocOp);
+  SmallVector<memref::AllocOp, 4> allocOps;
+  funcOp.walk([&](memref::AllocOp op) { allocOps.push_back(op); });
+  for (memref::AllocOp allocOp : allocOps)
+    (void)normalizeMemRef(&allocOp);
 
   // We use this OpBuilder to create new memref layout later.
   OpBuilder b(funcOp);

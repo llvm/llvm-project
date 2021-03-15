@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
@@ -70,13 +71,13 @@ public:
   }
 };
 
-/// Converts `memref_reshape` that has a target shape of a statically-known
-/// size to `memref_reinterpret_cast`.
-struct MemRefReshapeOpConverter : public OpRewritePattern<MemRefReshapeOp> {
+/// Converts `memref.reshape` that has a target shape of a statically-known
+/// size to `memref.reinterpret_cast`.
+struct MemRefReshapeOpConverter : public OpRewritePattern<memref::ReshapeOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(MemRefReshapeOp op,
+  LogicalResult matchAndRewrite(memref::ReshapeOp op,
                                 PatternRewriter &rewriter) const final {
     auto shapeType = op.shape().getType().cast<MemRefType>();
     if (!shapeType.hasStaticShape())
@@ -91,7 +92,7 @@ public:
     Value stride = rewriter.create<ConstantIndexOp>(loc, 1);
     for (int i = rank - 1; i >= 0; --i) {
       Value index = rewriter.create<ConstantIndexOp>(loc, i);
-      Value size = rewriter.create<LoadOp>(loc, op.shape(), index);
+      Value size = rewriter.create<memref::LoadOp>(loc, op.shape(), index);
       if (!size.getType().isa<IndexType>())
         size = rewriter.create<IndexCastOp>(loc, size, rewriter.getIndexType());
       sizes[i] = size;
@@ -99,7 +100,7 @@ public:
       if (i > 0)
         stride = rewriter.create<MulIOp>(loc, stride, size);
     }
-    rewriter.replaceOpWithNewOp<MemRefReinterpretCastOp>(
+    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
         op, op.getType(), op.source(), /*offset=*/rewriter.getIndexAttr(0),
         sizes, strides);
     return success();
@@ -215,12 +216,12 @@ struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
 
     ConversionTarget target(getContext());
 
-    target.addLegalDialect<StandardOpsDialect>();
+    target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect>();
     target.addDynamicallyLegalOp<AtomicRMWOp>([](AtomicRMWOp op) {
       return op.kind() != AtomicRMWKind::maxf &&
              op.kind() != AtomicRMWKind::minf;
     });
-    target.addDynamicallyLegalOp<MemRefReshapeOp>([](MemRefReshapeOp op) {
+    target.addDynamicallyLegalOp<memref::ReshapeOp>([](memref::ReshapeOp op) {
       return !op.shape().getType().cast<MemRefType>().hasStaticShape();
     });
     target.addIllegalOp<SignedCeilDivIOp>();

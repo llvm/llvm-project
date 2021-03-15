@@ -33,7 +33,7 @@ func @entry() {
   // work with dims of 4, not of 3
   %first = constant 3: index
   %second = constant 4: index
-  %A = alloc(%first, %second) : memref<?x?xf32>
+  %A = memref.alloc(%first, %second) : memref<?x?xf32>
   scf.for %i = %c0 to %first step %c1 {
     %i32 = index_cast %i : index to i32
     %fi = sitofp %i32 : i32 to f32
@@ -42,7 +42,7 @@ func @entry() {
         %j32 = index_cast %j : index to i32
         %fj = sitofp %j32 : i32 to f32
         %fres = addf %fi10, %fj : f32
-        store %fres, %A[%i, %j] : memref<?x?xf32>
+        memref.store %fres, %A[%i, %j] : memref<?x?xf32>
     }
   }
   // On input, memory contains [[ 0, 1, 2, ...], [10, 11, 12, ...], ...]

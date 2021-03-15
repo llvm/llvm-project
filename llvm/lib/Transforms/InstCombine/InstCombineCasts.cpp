@@ -1270,6 +1270,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &CI) {
     ICmpInst *LHS = dyn_cast<ICmpInst>(SrcI->getOperand(0));
     ICmpInst *RHS = dyn_cast<ICmpInst>(SrcI->getOperand(1));
     if (LHS && RHS && LHS->hasOneUse() && RHS->hasOneUse() &&
+        LHS->getOperand(0)->getType() == RHS->getOperand(0)->getType() &&
         (transformZExtICmp(LHS, CI, false) ||
          transformZExtICmp(RHS, CI, false))) {
       // zext (or icmp, icmp) -> or (zext icmp), (zext icmp)
@@ -2401,6 +2402,11 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
         // simplicity we give up if the load address comes from another load.
         Value *Addr = LI->getOperand(0);
         if (Addr == &CI || isa<LoadInst>(Addr))
+          return nullptr;
+        // If there is any loss for the pointer bitcast, abandon.
+        auto *DestPtrTy = DestTy->getPointerTo(LI->getPointerAddressSpace());
+        auto *SrcPtrTy = Addr->getType();
+        if (!SrcPtrTy->canLosslesslyBitCastTo(DestPtrTy))
           return nullptr;
         if (LI->hasOneUse() && LI->isSimple())
           continue;

@@ -26,7 +26,7 @@ gpu.module @foo {
     // CHECK:     scf.for %[[i2:.*]] =
 
     // Verify that the copy is emitted and uses only the last two loops.
-    // CHECK:       %[[v:.*]] = load %[[arg]][%[[i1]], %[[i2]]]
+    // CHECK:       %[[v:.*]] = memref.load %[[arg]][%[[i1]], %[[i2]]]
     // CHECK:       store %[[v]], %[[promoted]][%[[i1]], %[[i2]]]
 
     // Verify that the use has been rewritten.
@@ -42,7 +42,7 @@ gpu.module @foo {
     // CHECK:     scf.for %[[i2:.*]] =
 
     // Verify that the copy is emitted and uses only the last two loops.
-    // CHECK:       %[[v:.*]] = load %[[promoted]][%[[i1]], %[[i2]]]
+    // CHECK:       %[[v:.*]] = memref.load %[[promoted]][%[[i1]], %[[i2]]]
     // CHECK:       store %[[v]], %[[arg]][%[[i1]], %[[i2]]]
     gpu.return
   }
@@ -80,7 +80,7 @@ gpu.module @foo {
     // CHECK:         scf.for %[[i4:.*]] =
 
     // Verify that the copy is emitted.
-    // CHECK:           %[[v:.*]] = load %[[arg]][%[[i0]], %[[i1]], %[[i2]], %[[i3]], %[[i4]]]
+    // CHECK:           %[[v:.*]] = memref.load %[[arg]][%[[i0]], %[[i1]], %[[i2]], %[[i3]], %[[i4]]]
     // CHECK:           store %[[v]], %[[promoted]][%[[i0]], %[[i1]], %[[i2]], %[[i3]], %[[i4]]]
 
     // Verify that the use has been rewritten.
@@ -95,7 +95,7 @@ gpu.module @foo {
     // CHECK:         scf.for %[[i4:.*]] =
 
     // Verify that the copy is emitted.
-    // CHECK:           %[[v:.*]] = load %[[promoted]][%[[i0]], %[[i1]], %[[i2]], %[[i3]], %[[i4]]]
+    // CHECK:           %[[v:.*]] = memref.load %[[promoted]][%[[i0]], %[[i1]], %[[i2]], %[[i3]], %[[i4]]]
     // CHECK:           store %[[v]], %[[arg]][%[[i0]], %[[i1]], %[[i2]], %[[i3]], %[[i4]]]
     gpu.return
   }

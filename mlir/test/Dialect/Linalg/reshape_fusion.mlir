@@ -512,7 +512,7 @@ func @unit_dim_reshape_expansion_full
      affine_map<(d0, d1, d2, d3, d4, d5) -> (d3, d4)>,
      affine_map<(d0, d1, d2, d3, d4, d5) -> (d5)>]
     : tensor<1x?x1x2x1x4xf32> into tensor<?x2x4xf32>
-  %1 = dim %arg0, %c1 : tensor<1x?x1x2x1x4xf32>
+  %1 = memref.dim %arg0, %c1 : tensor<1x?x1x2x1x4xf32>
   %2 = linalg.init_tensor [%1, 2, 4] : tensor<?x2x4xf32>
   %3 = linalg.generic
     {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,

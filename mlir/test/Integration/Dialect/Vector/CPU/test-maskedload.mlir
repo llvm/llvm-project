@@ -24,11 +24,11 @@ func @entry() {
   %c0 = constant 0: index
   %c1 = constant 1: index
   %c16 = constant 16: index
-  %A = alloc(%c16) : memref<?xf32>
+  %A = memref.alloc(%c16) : memref<?xf32>
   scf.for %i = %c0 to %c16 step %c1 {
     %i32 = index_cast %i : index to i32
     %fi = sitofp %i32 : i32 to f32
-    store %fi, %A[%i] : memref<?xf32>
+    memref.store %fi, %A[%i] : memref<?xf32>
   }
 
   // Set up pass thru vector.

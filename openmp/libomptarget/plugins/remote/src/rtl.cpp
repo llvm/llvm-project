@@ -84,7 +84,14 @@ int32_t __tgt_rtl_is_data_exchangable(int32_t SrcDevId, int32_t DstDevId) {
   return Manager->isDataExchangeable(SrcDevId, DstDevId);
 }
 
-void *__tgt_rtl_data_alloc(int32_t DeviceId, int64_t Size, void *HstPtr) {
+void *__tgt_rtl_data_alloc(int32_t DeviceId, int64_t Size, void *HstPtr,
+                           int32_t kind) {
+  if (kind != TARGET_ALLOC_DEFAULT) {
+    REPORT("Invalid target data allocation kind or requested allocator not "
+           "implemented yet\n");
+    return NULL;
+  }
+
   return Manager->dataAlloc(DeviceId, Size, HstPtr);
 }
 

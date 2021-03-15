@@ -33,8 +33,6 @@ class StringRef;
 class raw_ostream;
 class raw_pwrite_stream;
 
-extern Target TheM68kTarget;
-
 MCAsmBackend *createM68kAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                    const MCRegisterInfo &MRI,
                                    const MCTargetOptions &Options);

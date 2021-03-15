@@ -33,8 +33,7 @@ def get_raw_section_dump(readobj_path, section_name, input_file):
     import subprocess
     cmd = [readobj_path, '-elf-output-style=GNU', '--hex-dump={}'.format(section_name),
             input_file]
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            universal_newlines=True)
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
     if input_file == '-':
         # From stdin

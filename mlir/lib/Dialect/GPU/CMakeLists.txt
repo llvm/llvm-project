@@ -35,6 +35,7 @@ add_mlir_dialect_library(MLIRGPU
   MLIRAsync
   MLIREDSC
   MLIRIR
+  MLIRMemRef
   MLIRLLVMIR
   MLIRLLVMToLLVMIRTranslation
   MLIRSCF

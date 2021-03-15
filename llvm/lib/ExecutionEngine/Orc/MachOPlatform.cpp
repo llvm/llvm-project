@@ -298,7 +298,7 @@ getSectionExtent(jitlink::LinkGraph &G, StringRef SectionName) {
 }
 
 void MachOPlatform::InitScraperPlugin::modifyPassConfig(
-    MaterializationResponsibility &MR, const Triple &TT,
+    MaterializationResponsibility &MR, jitlink::LinkGraph &LG,
     jitlink::PassConfiguration &Config) {
 
   if (!MR.getInitializerSymbol())

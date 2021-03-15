@@ -16,11 +16,11 @@ func @entry() {
   %c0 = constant 0: index
   %c1 = constant 1: index
   %c10 = constant 10: index
-  %A = alloc(%c10) : memref<?xf32>
+  %A = memref.alloc(%c10) : memref<?xf32>
   scf.for %i = %c0 to %c10 step %c1 {
     %i32 = index_cast %i : index to i32
     %fi = sitofp %i32 : i32 to f32
-    store %fi, %A[%i] : memref<?xf32>
+    memref.store %fi, %A[%i] : memref<?xf32>
   }
 
   // Set up idx vector.

@@ -2385,7 +2385,8 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
   if (DebugKind == codegenoptions::DebugLineTablesOnly)
     return true;
 
-  if (DebugKind > codegenoptions::LimitedDebugInfo)
+  if (DebugKind > codegenoptions::LimitedDebugInfo ||
+      RD->hasAttr<StandaloneDebugAttr>())
     return false;
 
   if (!LangOpts.CPlusPlus)

@@ -53,16 +53,16 @@ func @spmv8x8(%AVAL: memref<4xvector<8xf32>>,
   %f0 = constant 0.0 : f32
   %mask = vector.constant_mask [8] : vector<8xi1>
   %pass = vector.broadcast %f0 : f32 to vector<8xf32>
-  %b = load %B[%c0] : memref<1xvector<8xf32>>
+  %b = memref.load %B[%c0] : memref<1xvector<8xf32>>
   %b_out = scf.for %k = %c0 to %cn step %c1 iter_args(%b_iter = %b) -> (vector<8xf32>) {
-    %aval = load %AVAL[%k] : memref<4xvector<8xf32>>
-    %aidx = load %AIDX[%k] : memref<4xvector<8xi32>>
+    %aval = memref.load %AVAL[%k] : memref<4xvector<8xf32>>
+    %aidx = memref.load %AIDX[%k] : memref<4xvector<8xi32>>
     %0 = vector.gather %X[%c0][%aidx], %mask, %pass
        : memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
     %b_new = vector.fma %aval, %0, %b_iter : vector<8xf32>
     scf.yield %b_new : vector<8xf32>
   }
-  store %b_out, %B[%c0] : memref<1xvector<8xf32>>
+  memref.store %b_out, %B[%c0] : memref<1xvector<8xf32>>
   return
 }
 
@@ -100,10 +100,10 @@ func @entry() {
   // Allocate.
   //
 
-  %AVAL = alloc()    {alignment = 64} : memref<4xvector<8xf32>>
-  %AIDX = alloc()    {alignment = 64} : memref<4xvector<8xi32>>
-  %X    = alloc(%c8) {alignment = 64} : memref<?xf32>
-  %B    = alloc()    {alignment = 64} : memref<1xvector<8xf32>>
+  %AVAL = memref.alloc()    {alignment = 64} : memref<4xvector<8xf32>>
+  %AIDX = memref.alloc()    {alignment = 64} : memref<4xvector<8xi32>>
+  %X    = memref.alloc(%c8) {alignment = 64} : memref<?xf32>
+  %B    = memref.alloc()    {alignment = 64} : memref<1xvector<8xf32>>
 
   //
   // Initialize.
@@ -116,7 +116,7 @@ func @entry() {
   %2 = vector.insert %f3, %1[5] : f32 into vector<8xf32>
   %3 = vector.insert %f4, %2[6] : f32 into vector<8xf32>
   %4 = vector.insert %f3, %3[7] : f32 into vector<8xf32>
-  store %4, %AVAL[%c0] : memref<4xvector<8xf32>>
+  memref.store %4, %AVAL[%c0] : memref<4xvector<8xf32>>
 
   %5 = vector.insert %f2, %vf1[0] : f32 into vector<8xf32>
   %6 = vector.insert %f8, %5[1] : f32 into vector<8xf32>
@@ -124,15 +124,15 @@ func @entry() {
   %8 = vector.insert %f2, %7[5] : f32 into vector<8xf32>
   %9 = vector.insert %f7, %8[6] : f32 into vector<8xf32>
   %10 = vector.insert %f2, %9[7] : f32 into vector<8xf32>
-  store %10, %AVAL[%c1] : memref<4xvector<8xf32>>
+  memref.store %10, %AVAL[%c1] : memref<4xvector<8xf32>>
 
   %11 = vector.insert %f3, %vf1[1] : f32 into vector<8xf32>
   %12 = vector.insert %f6, %11[2] : f32 into vector<8xf32>
-  store %12, %AVAL[%c2] : memref<4xvector<8xf32>>
+  memref.store %12, %AVAL[%c2] : memref<4xvector<8xf32>>
 
   %13 = vector.insert %f2, %vf1[2] : f32 into vector<8xf32>
   %14 = vector.insert %f2, %13[5] : f32 into vector<8xf32>
-  store %14, %AVAL[%c3] : memref<4xvector<8xf32>>
+  memref.store %14, %AVAL[%c3] : memref<4xvector<8xf32>>
 
   %vi0 = vector.broadcast %i0 : i32 to vector<8xi32>
 
@@ -140,7 +140,7 @@ func @entry() {
   %21 = vector.insert %i1, %20[3] : i32 into vector<8xi32>
   %22 = vector.insert %i1, %21[5] : i32 into vector<8xi32>
   %23 = vector.insert %i1, %22[7] : i32 into vector<8xi32>
-  store %23, %AIDX[%c0] : memref<4xvector<8xi32>>
+  memref.store %23, %AIDX[%c0] : memref<4xvector<8xi32>>
 
   %24 = vector.insert %i2, %vi0[0] : i32 into vector<8xi32>
   %25 = vector.insert %i1, %24[1] : i32 into vector<8xi32>
@@ -150,7 +150,7 @@ func @entry() {
   %29 = vector.insert %i4, %28[5] : i32 into vector<8xi32>
   %30 = vector.insert %i2, %29[6] : i32 into vector<8xi32>
   %31 = vector.insert %i3, %30[7] : i32 into vector<8xi32>
-  store %31, %AIDX[%c1] : memref<4xvector<8xi32>>
+  memref.store %31, %AIDX[%c1] : memref<4xvector<8xi32>>
 
   %32 = vector.insert %i5, %vi0[0] : i32 into vector<8xi32>
   %33 = vector.insert %i4, %32[1] : i32 into vector<8xi32>
@@ -160,7 +160,7 @@ func @entry() {
   %37 = vector.insert %i5, %36[5] : i32 into vector<8xi32>
   %38 = vector.insert %i4, %37[6] : i32 into vector<8xi32>
   %39 = vector.insert %i6, %38[7] : i32 into vector<8xi32>
-  store %39, %AIDX[%c2] : memref<4xvector<8xi32>>
+  memref.store %39, %AIDX[%c2] : memref<4xvector<8xi32>>
 
   %40 = vector.insert %i7, %vi0[0] : i32 into vector<8xi32>
   %41 = vector.insert %i6, %40[1] : i32 into vector<8xi32>
@@ -170,16 +170,16 @@ func @entry() {
   %45 = vector.insert %i6, %44[5] : i32 into vector<8xi32>
   %46 = vector.insert %i6, %45[6] : i32 into vector<8xi32>
   %47 = vector.insert %i7, %46[7] : i32 into vector<8xi32>
-  store %47, %AIDX[%c3] : memref<4xvector<8xi32>>
+  memref.store %47, %AIDX[%c3] : memref<4xvector<8xi32>>
 
   %vf0 = vector.broadcast %f0 : f32 to vector<8xf32>
-  store %vf0, %B[%c0] : memref<1xvector<8xf32>>
+  memref.store %vf0, %B[%c0] : memref<1xvector<8xf32>>
 
   scf.for %i = %c0 to %c8 step %c1 {
     %ix = addi %i, %c1 : index
     %kx = index_cast %ix : index to i32
     %fx = sitofp %kx : i32 to f32
-    store %fx, %X[%i] : memref<?xf32>
+    memref.store %fx, %X[%i] : memref<?xf32>
   }
 
   //
@@ -196,16 +196,16 @@ func @entry() {
   //
 
   scf.for %i = %c0 to %c4 step %c1 {
-    %aval = load %AVAL[%i] : memref<4xvector<8xf32>>
+    %aval = memref.load %AVAL[%i] : memref<4xvector<8xf32>>
     vector.print %aval : vector<8xf32>
   }
 
   scf.for %i = %c0 to %c4 step %c1 {
-    %aidx = load %AIDX[%i] : memref<4xvector<8xi32>>
+    %aidx = memref.load %AIDX[%i] : memref<4xvector<8xi32>>
     vector.print %aidx : vector<8xi32>
   }
 
-  %ldb = load %B[%c0] : memref<1xvector<8xf32>>
+  %ldb = memref.load %B[%c0] : memref<1xvector<8xf32>>
   vector.print %ldb : vector<8xf32>
 
   //
@@ -226,10 +226,10 @@ func @entry() {
   // Free.
   //
 
-  dealloc %AVAL : memref<4xvector<8xf32>>
-  dealloc %AIDX : memref<4xvector<8xi32>>
-  dealloc %X    : memref<?xf32>
-  dealloc %B    : memref<1xvector<8xf32>>
+  memref.dealloc %AVAL : memref<4xvector<8xf32>>
+  memref.dealloc %AIDX : memref<4xvector<8xi32>>
+  memref.dealloc %X    : memref<?xf32>
+  memref.dealloc %B    : memref<1xvector<8xf32>>
 
   return
 }

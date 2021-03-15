@@ -25,8 +25,8 @@ namespace {
 struct X86_64 : TargetInfo {
   X86_64();
 
-  uint64_t getEmbeddedAddend(MemoryBufferRef, const section_64 &,
-                             const relocation_info) const override;
+  int64_t getEmbeddedAddend(MemoryBufferRef, const section_64 &,
+                            const relocation_info) const override;
   void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
                    uint64_t relocVA) const override;
 
@@ -77,14 +77,14 @@ static int pcrelOffset(uint8_t type) {
   }
 }
 
-uint64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, const section_64 &sec,
-                                   relocation_info rel) const {
+int64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, const section_64 &sec,
+                                  relocation_info rel) const {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   const uint8_t *loc = buf + sec.offset + rel.r_address;
 
   switch (rel.r_length) {
   case 2:
-    return read32le(loc) + pcrelOffset(rel.r_type);
+    return static_cast<int32_t>(read32le(loc)) + pcrelOffset(rel.r_type);
   case 3:
     return read64le(loc) + pcrelOffset(rel.r_type);
   default:
@@ -102,6 +102,10 @@ void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
 
   switch (r.length) {
   case 2:
+    if (r.type == X86_64_RELOC_UNSIGNED)
+      checkUInt(r, value, 32);
+    else
+      checkInt(r, value, 32);
     write32le(loc, value);
     break;
   case 3:
@@ -121,9 +125,10 @@ void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
 // bufAddr:  The virtual address corresponding to buf[0].
 // bufOff:   The offset within buf of the next instruction.
 // destAddr: The destination address that the current instruction references.
-static void writeRipRelative(uint8_t *buf, uint64_t bufAddr, uint64_t bufOff,
-                             uint64_t destAddr) {
+static void writeRipRelative(SymbolDiagnostic d, uint8_t *buf, uint64_t bufAddr,
+                             uint64_t bufOff, uint64_t destAddr) {
   uint64_t rip = bufAddr + bufOff;
+  checkInt(d, destAddr - rip, 32);
   // For the instructions we care about, the RIP-relative address is always
   // stored in the last 4 bytes of the instruction.
   write32le(buf + bufOff - 4, destAddr - rip);
@@ -136,7 +141,7 @@ static constexpr uint8_t stub[] = {
 void X86_64::writeStub(uint8_t *buf, const macho::Symbol &sym) const {
   memcpy(buf, stub, 2); // just copy the two nonzero bytes
   uint64_t stubAddr = in.stubs->addr + sym.stubsIndex * sizeof(stub);
-  writeRipRelative(buf, stubAddr, sizeof(stub),
+  writeRipRelative({&sym, "stub"}, buf, stubAddr, sizeof(stub),
                    in.lazyPointers->addr + sym.stubsIndex * WordSize);
 }
 
@@ -149,8 +154,10 @@ static constexpr uint8_t stubHelperHeader[] = {
 
 void X86_64::writeStubHelperHeader(uint8_t *buf) const {
   memcpy(buf, stubHelperHeader, sizeof(stubHelperHeader));
-  writeRipRelative(buf, in.stubHelper->addr, 7, in.imageLoaderCache->getVA());
-  writeRipRelative(buf, in.stubHelper->addr, 0xf,
+  SymbolDiagnostic d = {nullptr, "stub helper header"};
+  writeRipRelative(d, buf, in.stubHelper->addr, 7,
+                   in.imageLoaderCache->getVA());
+  writeRipRelative(d, buf, in.stubHelper->addr, 0xf,
                    in.got->addr +
                        in.stubHelper->stubBinder->gotIndex * WordSize);
 }
@@ -164,8 +171,8 @@ void X86_64::writeStubHelperEntry(uint8_t *buf, const DylibSymbol &sym,
                                   uint64_t entryAddr) const {
   memcpy(buf, stubHelperEntry, sizeof(stubHelperEntry));
   write32le(buf + 1, sym.lazyBindOffset);
-  writeRipRelative(buf, entryAddr, sizeof(stubHelperEntry),
-                   in.stubHelper->addr);
+  writeRipRelative({&sym, "stub helper"}, buf, entryAddr,
+                   sizeof(stubHelperEntry), in.stubHelper->addr);
 }
 
 void X86_64::relaxGotLoad(uint8_t *loc, uint8_t type) const {

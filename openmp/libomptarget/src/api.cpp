@@ -38,31 +38,19 @@ EXTERN int omp_get_initial_device(void) {
 }
 
 EXTERN void *omp_target_alloc(size_t size, int device_num) {
-  TIMESCOPE();
-  DP("Call to omp_target_alloc for device %d requesting %zu bytes\n",
-     device_num, size);
+  return targetAllocExplicit(size, device_num, TARGET_ALLOC_DEFAULT, __func__);
+}
 
-  if (size <= 0) {
-    DP("Call to omp_target_alloc with non-positive length\n");
-    return NULL;
-  }
+EXTERN void *llvm_omp_target_alloc_device(size_t size, int device_num) {
+  return targetAllocExplicit(size, device_num, TARGET_ALLOC_DEVICE, __func__);
+}
 
-  void *rc = NULL;
+EXTERN void *llvm_omp_target_alloc_host(size_t size, int device_num) {
+  return targetAllocExplicit(size, device_num, TARGET_ALLOC_HOST, __func__);
+}
 
-  if (device_num == omp_get_initial_device()) {
-    rc = malloc(size);
-    DP("omp_target_alloc returns host ptr " DPxMOD "\n", DPxPTR(rc));
-    return rc;
-  }
-
-  if (!device_is_ready(device_num)) {
-    DP("omp_target_alloc returns NULL ptr\n");
-    return NULL;
-  }
-
-  rc = PM->Devices[device_num].allocData(size);
-  DP("omp_target_alloc returns device ptr " DPxMOD "\n", DPxPTR(rc));
-  return rc;
+EXTERN void *llvm_omp_target_alloc_shared(size_t size, int device_num) {
+  return targetAllocExplicit(size, device_num, TARGET_ALLOC_SHARED, __func__);
 }
 
 EXTERN void omp_target_free(void *device_ptr, int device_num) {

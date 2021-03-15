@@ -26,10 +26,6 @@ using namespace mlir::vector;
 
 using TypePredicate = llvm::function_ref<bool(Type)>;
 
-static bool isF32(Type type) { return type.isF32(); }
-
-static bool isI32(Type type) { return type.isInteger(32); }
-
 // Returns vector width if the element type is matching the predicate (scalars
 // that do match the predicate have width equal to `1`).
 static Optional<int> vectorWidth(Type type, TypePredicate pred) {
@@ -54,9 +50,15 @@ static int vectorWidth(Type type) {
 }
 
 // Returns vector element type. If the type is a scalar returns the argument.
-static Type elementType(Type type) {
+LLVM_ATTRIBUTE_UNUSED static Type elementType(Type type) {
   auto vectorType = type.dyn_cast<VectorType>();
   return vectorType ? vectorType.getElementType() : type;
+}
+
+LLVM_ATTRIBUTE_UNUSED static bool isF32(Type type) { return type.isF32(); }
+
+LLVM_ATTRIBUTE_UNUSED static bool isI32(Type type) {
+  return type.isInteger(32);
 }
 
 //----------------------------------------------------------------------------//
