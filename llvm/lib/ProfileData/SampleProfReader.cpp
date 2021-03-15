@@ -38,6 +38,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <set>
 #include <system_error>
 #include <vector>
 
@@ -577,6 +578,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       return EC;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagPartial))
       Summary->setPartialProfile(true);
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFullContext))
+      FunctionSamples::ProfileIsCS = ProfileIsCS = true;
     break;
   case SecNameTable: {
     FixedLengthMD5 =
@@ -687,6 +690,46 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
         if (std::error_code EC = readFuncProfile(FuncProfileAddr))
           return EC;
       }
+    } else if (FunctionSamples::ProfileIsCS) {
+      // Compute the ordered set of names, so we can
+      // get all context profiles under a subtree by
+      // iterating through the ordered names.
+      struct Comparer {
+        // Ignore the closing ']' when ordering context
+        bool operator()(const StringRef &L, const StringRef &R) const {
+          return L.substr(0, L.size() - 1) < R.substr(0, R.size() - 1);
+        }
+      };
+      std::set<StringRef, Comparer> OrderedNames;
+      for (auto Name : FuncOffsetTable) {
+        OrderedNames.insert(Name.first);
+      }
+
+      // For each function in current module, load all
+      // context profiles for the function.
+      for (auto NameOffset : FuncOffsetTable) {
+        StringRef ContextName = NameOffset.first;
+        SampleContext FContext(ContextName);
+        auto FuncName = FContext.getNameWithoutContext();
+        if (!FuncsToUse.count(FuncName) &&
+            (!Remapper || !Remapper->exist(FuncName)))
+          continue;
+
+        // For each context profile we need, try to load
+        // all context profile in the subtree. This can
+        // help profile guided importing for ThinLTO.
+        auto It = OrderedNames.find(ContextName);
+        while (It != OrderedNames.end() &&
+               It->startswith(ContextName.substr(0, ContextName.size() - 1))) {
+          const uint8_t *FuncProfileAddr = Start + FuncOffsetTable[*It];
+          assert(FuncProfileAddr < End && "out of LBRProfile section");
+          if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+            return EC;
+          // Remove loaded context profile so we won't
+          // load it repeatedly.
+          It = OrderedNames.erase(It);
+        }
+      }
     } else {
       for (auto NameOffset : FuncOffsetTable) {
         SampleContext FContext(NameOffset.first);
@@ -704,8 +747,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   }
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
-  ProfileIsCS = (CSProfileCount > 0);
-  FunctionSamples::ProfileIsCS = ProfileIsCS;
+  assert(ProfileIsCS == (CSProfileCount > 0) &&
+         "Section flag should be consistent with actual profile");
   return sampleprof_error::success;
 }
 
@@ -1034,6 +1077,8 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
   case SecProfSummary:
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagPartial))
       Flags.append("partial,");
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFullContext))
+      Flags.append("context,");
     break;
   default:
     break;
