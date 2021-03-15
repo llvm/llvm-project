@@ -229,6 +229,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(expr);
   REGISTER_MATCHER(exprWithCleanups);
   REGISTER_MATCHER(fieldDecl);
+  REGISTER_MATCHER(fixedPointLiteral);
   REGISTER_MATCHER(floatLiteral);
   REGISTER_MATCHER(forDecomposition);
   REGISTER_MATCHER(forEach);
@@ -254,6 +255,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasAnyArgument);
   REGISTER_MATCHER(hasAnyBase);
   REGISTER_MATCHER(hasAnyBinding);
+  REGISTER_MATCHER(hasAnyBody);
   REGISTER_MATCHER(hasAnyClause);
   REGISTER_MATCHER(hasAnyConstructorInitializer);
   REGISTER_MATCHER(hasAnyDeclaration);
@@ -526,6 +528,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(tagType);
   REGISTER_MATCHER(templateArgument);
   REGISTER_MATCHER(templateArgumentCountIs);
+  REGISTER_MATCHER(templateArgumentLoc);
   REGISTER_MATCHER(templateName);
   REGISTER_MATCHER(templateSpecializationType);
   REGISTER_MATCHER(templateTemplateParmDecl);
