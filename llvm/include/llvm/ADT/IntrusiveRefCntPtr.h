@@ -255,7 +255,7 @@ inline bool operator!=(T *A, const IntrusiveRefCntPtr<U> &B) {
 }
 
 template <class T>
-bool operator==(std::nullptr_t A, const IntrusiveRefCntPtr<T> &B) {
+bool operator==(std::nullptr_t, const IntrusiveRefCntPtr<T> &B) {
   return !B;
 }
 
