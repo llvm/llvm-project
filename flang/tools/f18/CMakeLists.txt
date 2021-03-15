@@ -30,7 +30,6 @@ set(MODULES
   "__fortran_type_info"
 )
 
-set(include ${FLANG_BINARY_DIR}/include/flang)
 target_include_directories(f18
   PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}
@@ -38,27 +37,24 @@ target_include_directories(f18
 
 # Create module files directly from the top-level module source directory
 foreach(filename ${MODULES})
+  set(base ${FLANG_INTRINSIC_MODULES_DIR}/${filename})
   if(${filename} MATCHES "__fortran_type_info")
     set(depends "")
   elseif(${filename} MATCHES "__fortran_builtins")
-    set(depends ${include}/__fortran_type_info.mod)
+    set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_type_info.mod)
   else()
-    set(depends ${include}/__fortran_builtins.mod)
+    set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
   endif()
-  add_custom_command(OUTPUT ${include}/${filename}.mod
-    COMMAND f18 -fsyntax-only -I${include}
-      ${FLANG_SOURCE_DIR}/module/${filename}.f90
-    WORKING_DIRECTORY ${include}
+  add_custom_command(OUTPUT ${base}.mod
+    COMMAND f18 -fsyntax-only ${FLANG_SOURCE_DIR}/module/${filename}.f90
+    WORKING_DIRECTORY ${FLANG_INTRINSIC_MODULES_DIR}
     DEPENDS f18 ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
   )
-  add_custom_command(OUTPUT ${include}/${filename}.f18.mod
-    DEPENDS ${include}/${filename}.mod
-    COMMAND ${CMAKE_COMMAND} -E
-      copy ${include}/${filename}.mod ${include}/${filename}.f18.mod)
-  list(APPEND MODULE_FILES ${include}/${filename}.mod)
-  list(APPEND MODULE_FILES ${include}/${filename}.f18.mod)
-  install(FILES ${include}/${filename}.mod DESTINATION include/flang)
-  install(FILES ${include}/${filename}.f18.mod DESTINATION include/flang)
+  add_custom_command(OUTPUT ${base}.f18.mod
+    DEPENDS ${base}.mod
+    COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
+  list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod)
+  install(FILES ${base}.mod ${base}.f18.mod DESTINATION include/flang)
 endforeach()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
