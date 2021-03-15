@@ -2,7 +2,8 @@
 # REQUIRES: rdar75336700
 #
 # The test has regressed, tracked by: rdar://73760364
-# XFAIL: *
+# The regression only appears when compiling with -disable-copy-propagation.
+# REQUIRES: rdar73760364
 #
 # - Don't capture a reproducer (it can easily exceed 1GB).
 # - Skip `po` testing for now (until we can un-XFAIL `frame var` testing).
