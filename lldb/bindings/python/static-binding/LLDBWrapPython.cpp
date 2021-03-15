@@ -14726,6 +14726,66 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBCommandInterpreterRunOptions_GetPrintErrors(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBCommandInterpreterRunOptions *arg1 = (lldb::SBCommandInterpreterRunOptions *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  bool result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBCommandInterpreterRunOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBCommandInterpreterRunOptions_GetPrintErrors" "', argument " "1"" of type '" "lldb::SBCommandInterpreterRunOptions const *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBCommandInterpreterRunOptions * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)((lldb::SBCommandInterpreterRunOptions const *)arg1)->GetPrintErrors();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBCommandInterpreterRunOptions_SetPrintErrors(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBCommandInterpreterRunOptions *arg1 = (lldb::SBCommandInterpreterRunOptions *) 0 ;
+  bool arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  PyObject *swig_obj[2] ;
+  
+  if (!SWIG_Python_UnpackTuple(args, "SBCommandInterpreterRunOptions_SetPrintErrors", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBCommandInterpreterRunOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBCommandInterpreterRunOptions_SetPrintErrors" "', argument " "1"" of type '" "lldb::SBCommandInterpreterRunOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBCommandInterpreterRunOptions * >(argp1);
+  ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBCommandInterpreterRunOptions_SetPrintErrors" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->SetPrintErrors(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBCommandInterpreterRunOptions_GetAddToHistory(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBCommandInterpreterRunOptions *arg1 = (lldb::SBCommandInterpreterRunOptions *) 0 ;
@@ -80124,6 +80184,17 @@ SWIGINTERN PyObject *SBWatchpoint_swiginit(PyObject *SWIGUNUSEDPARM(self), PyObj
 // This function is called by lldb_private::ScriptInterpreterPython::BreakpointCallbackFunction(...)
 // and is used when a script command is attached to a breakpoint for execution.
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
+
+// Disable warning C4190: 'LLDBSwigPythonBreakpointCallbackFunction' has
+// C-linkage specified, but returns UDT 'llvm::Expected<bool>' which is
+// incompatible with C
+#if _MSC_VER
+#pragma warning (push)
+#pragma warning (disable : 4190)
+#endif
+
 SWIGEXPORT llvm::Expected<bool>
 LLDBSwigPythonBreakpointCallbackFunction
 (
@@ -80169,6 +80240,12 @@ LLDBSwigPythonBreakpointCallbackFunction
     // Only False counts as false!
     return result.get().get() != Py_False;
 }
+
+#if _MSC_VER
+#pragma warning (pop)
+#endif
+
+#pragma clang diagnostic pop
 
 // This function is called by lldb_private::ScriptInterpreterPython::WatchpointCallbackFunction(...)
 // and is used when a script command is attached to a watchpoint for execution.
@@ -81675,6 +81752,8 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBCommandInterpreterRunOptions_SetEchoCommands", _wrap_SBCommandInterpreterRunOptions_SetEchoCommands, METH_VARARGS, "SBCommandInterpreterRunOptions_SetEchoCommands(SBCommandInterpreterRunOptions self, bool arg2)"},
 	 { "SBCommandInterpreterRunOptions_GetPrintResults", _wrap_SBCommandInterpreterRunOptions_GetPrintResults, METH_O, "SBCommandInterpreterRunOptions_GetPrintResults(SBCommandInterpreterRunOptions self) -> bool"},
 	 { "SBCommandInterpreterRunOptions_SetPrintResults", _wrap_SBCommandInterpreterRunOptions_SetPrintResults, METH_VARARGS, "SBCommandInterpreterRunOptions_SetPrintResults(SBCommandInterpreterRunOptions self, bool arg2)"},
+	 { "SBCommandInterpreterRunOptions_GetPrintErrors", _wrap_SBCommandInterpreterRunOptions_GetPrintErrors, METH_O, "SBCommandInterpreterRunOptions_GetPrintErrors(SBCommandInterpreterRunOptions self) -> bool"},
+	 { "SBCommandInterpreterRunOptions_SetPrintErrors", _wrap_SBCommandInterpreterRunOptions_SetPrintErrors, METH_VARARGS, "SBCommandInterpreterRunOptions_SetPrintErrors(SBCommandInterpreterRunOptions self, bool arg2)"},
 	 { "SBCommandInterpreterRunOptions_GetAddToHistory", _wrap_SBCommandInterpreterRunOptions_GetAddToHistory, METH_O, "SBCommandInterpreterRunOptions_GetAddToHistory(SBCommandInterpreterRunOptions self) -> bool"},
 	 { "SBCommandInterpreterRunOptions_SetAddToHistory", _wrap_SBCommandInterpreterRunOptions_SetAddToHistory, METH_VARARGS, "SBCommandInterpreterRunOptions_SetAddToHistory(SBCommandInterpreterRunOptions self, bool arg2)"},
 	 { "SBCommandInterpreterRunOptions_swigregister", SBCommandInterpreterRunOptions_swigregister, METH_O, NULL},
