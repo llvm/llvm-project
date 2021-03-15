@@ -1701,7 +1701,7 @@ public:
     auto tempRes = temp.getResult();
     builder.create<fir::ArrayMergeStoreOp>(loc, arrLd, fir::getBase(loopRes),
                                            tempRes);
-    return tempRes;
+    return fir::ArrayBoxValue(tempRes, exprShape);
   }
 
   /// Lower an array value as an argument. This argument can be passed as a box
