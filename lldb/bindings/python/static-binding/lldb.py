@@ -9,23 +9,27 @@ The lldb module contains the public APIs for Python binding.
 
 Some of the important classes are described here:
 
-o SBTarget: Represents the target program running under the debugger.
-o SBProcess: Represents the process associated with the target program.
-o SBThread: Represents a thread of execution. SBProcess contains SBThread(s).
-o SBFrame: Represents one of the stack frames associated with a thread. SBThread
-      contains SBFrame(s).
-o SBSymbolContext: A container that stores various debugger related info.
-o SBValue: Represents the value of a variable, a register, or an expression.
-o SBModule: Represents an executable image and its associated object and symbol
-      files.  SBTarget contains SBModule(s).
-o SBBreakpoint: Represents a logical breakpoint and its associated settings.
-      SBTarget contains SBBreakpoint(s).
-o SBSymbol: Represents the symbol possibly associated with a stack frame.
-o SBCompileUnit: Represents a compilation unit, or compiled source file.
-o SBFunction: Represents a generic function, which can be inlined or not.
-o SBBlock: Represents a lexical block. SBFunction contains SBBlock(s).
-o SBLineEntry: Specifies an association with a contiguous range of instructions
-      and a source file location. SBCompileUnit contains SBLineEntry(s).
+* :py:class:`SBTarget`: Represents the target program running under the debugger.
+* :py:class:`SBProcess`: Represents the process associated with the target program.
+* :py:class:`SBThread`: Represents a thread of execution. :py:class:`SBProcess` contains SBThreads.
+* :py:class:`SBFrame`: Represents one of the stack frames associated with a thread. :py:class:`SBThread`
+  contains SBFrame(s).
+* :py:class:`SBSymbolContext`: A container that stores various debugger related info.
+* :py:class:`SBValue`: Represents the value of a variable, a register, or an expression.
+* :py:class:`SBModule`: Represents an executable image and its associated object and symbol
+  files.  :py:class:`SBTarget` contains SBModule.
+* :py:class:`SBBreakpoint`: Represents a logical breakpoint and its associated settings.
+  :py:class:`SBTarget` contains SBBreakpoints.
+* :py:class:`SBSymbol`: Represents the symbol possibly associated with a stack frame.
+* :py:class:`SBCompileUnit`: Represents a compilation unit, or compiled source file.
+* :py:class:`SBFunction`: Represents a generic function, which can be inlined or not.
+* :py:class:`SBBlock`: Represents a lexical block. :py:class:`SBFunction` contains SBBlocks.
+* :py:class:`SBLineEntry`: Specifies an association with a contiguous range of instructions
+  and a source file location. :py:class:`SBCompileUnit` contains SBLineEntry.
+
+The different enums in the `lldb` module are described in :doc:`python_api_enums`.
+
+
 """
 
 from sys import version_info as _swig_python_version_info
@@ -1518,6 +1522,8 @@ eCommandProcessMustBeLaunched = _lldb.eCommandProcessMustBeLaunched
 
 eCommandProcessMustBePaused = _lldb.eCommandProcessMustBePaused
 
+eCommandProcessMustBeTraced = _lldb.eCommandProcessMustBeTraced
+
 eTypeSummaryCapped = _lldb.eTypeSummaryCapped
 
 eTypeSummaryUncapped = _lldb.eTypeSummaryUncapped
@@ -1540,8 +1546,9 @@ class SBAddress(object):
     addresses than the addresses found in the object file that
     represents them on disk. There are currently two types of addresses
     for a section:
-        o file addresses
-        o load addresses
+
+    * file addresses
+    * load addresses
 
     File addresses represents the virtual addresses that are in the 'on
     disk' object files. These virtual addresses are converted to be
@@ -1642,8 +1649,8 @@ class SBAddress(object):
             An address might refer to code or data from an existing module, or it
             might refer to something on the stack or heap. The following functions
             will only return valid values if the address has been resolved to a code
-            or data address using 'void SBAddress::SetLoadAddress(...)' or
-            'lldb::SBAddress SBTarget::ResolveLoadAddress (...)'.
+            or data address using :py:class:`SBAddress.SetLoadAddress' or
+            :py:class:`SBTarget.ResolveLoadAddress`.
         """
         return _lldb.SBAddress_GetSymbolContext(self, resolve_scope)
 
@@ -1653,10 +1660,9 @@ class SBAddress(object):
 
             GetModule() and the following grab individual objects for a given address and
             are less efficient if you want more than one symbol related objects.
-            Use one of the following when you want multiple debug symbol related
-            objects for an address:
-               lldb::SBSymbolContext SBAddress::GetSymbolContext (uint32_t resolve_scope);
-               lldb::SBSymbolContext SBTarget::ResolveSymbolContextForAddress (const SBAddress &addr, uint32_t resolve_scope);
+            Use :py:class:`SBAddress.GetSymbolContext` or
+            :py:class:`SBTarget.ResolveSymbolContextForAddress` when you want multiple
+            debug symbol related objects for an address.
             One or more bits from the SymbolContextItem enumerations can be logically
             OR'ed together to more efficiently retrieve multiple symbol objects.
         """
@@ -1732,7 +1738,7 @@ class SBAddress(object):
 _lldb.SBAddress_swigregister(SBAddress)
 
 class SBAttachInfo(object):
-    r"""Proxy of C++ lldb::SBAttachInfo class."""
+    r"""Describes how to attach when calling :py:class:`SBTarget.Attach`."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -2056,7 +2062,7 @@ class SBBreakpoint(object):
     Represents a logical breakpoint and its associated settings.
 
     For example (from test/functionalities/breakpoint/breakpoint_ignore_count/
-    TestBreakpointIgnoreCount.py),
+    TestBreakpointIgnoreCount.py),::
 
         def breakpoint_ignore_count_python(self):
             '''Use Python APIs to set breakpoint ignore count.'''
@@ -2107,13 +2113,13 @@ class SBBreakpoint(object):
 
             process.Continue()
 
-    SBBreakpoint supports breakpoint location iteration, for example,
+    SBBreakpoint supports breakpoint location iteration, for example,::
 
         for bl in breakpoint:
             print('breakpoint location load addr: %s' % hex(bl.GetLoadAddress()))
             print('breakpoint location condition: %s' % hex(bl.GetCondition()))
 
-    and rich comparison methods which allow the API program to use,
+    and rich comparison methods which allow the API program to use,::
 
         if aBreakpoint == bBreakpoint:
             ...
@@ -2272,7 +2278,7 @@ class SBBreakpoint(object):
         SetScriptCallbackFunction(SBBreakpoint self, char const * callback_function_name, SBStructuredData extra_args) -> SBError
 
             Set the name of the script function to be called when the breakpoint is hit.
-            To use this variant, the function should take (frame, bp_loc, extra_args, dict) and
+            To use this variant, the function should take (frame, bp_loc, extra_args, internal_dict) and
             when the breakpoint is hit the extra_args will be passed to the callback function.
         """
         return _lldb.SBBreakpoint_SetScriptCallbackFunction(self, *args)
@@ -2459,7 +2465,7 @@ def SBBreakpoint_GetNumBreakpointLocationsFromEvent(event_sp):
     return _lldb.SBBreakpoint_GetNumBreakpointLocationsFromEvent(event_sp)
 
 class SBBreakpointList(object):
-    r"""Proxy of C++ lldb::SBBreakpointList class."""
+    r"""Represents a list of :py:class:`SBBreakpoint`."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -2508,7 +2514,7 @@ class SBBreakpointLocation(object):
     and the address that resulted in this particular instantiation.
     Each breakpoint location has its settable options.
 
-    SBBreakpoint contains SBBreakpointLocation(s). See docstring of SBBreakpoint
+    :py:class:`SBBreakpoint` contains SBBreakpointLocation(s). See docstring of SBBreakpoint
     for retrieval of an SBBreakpointLocation from an SBBreakpoint.
     """
 
@@ -2596,7 +2602,7 @@ class SBBreakpointLocation(object):
         SetScriptCallbackFunction(SBBreakpointLocation self, char const * callback_function_name, SBStructuredData extra_args) -> SBError
 
             Set the name of the script function to be called when the breakpoint is hit.
-            To use this variant, the function should take (frame, bp_loc, extra_args, dict) and
+            To use this variant, the function should take (frame, bp_loc, extra_args, internal_dict) and
             when the breakpoint is hit the extra_args will be passed to the callback function.
         """
         return _lldb.SBBreakpointLocation_SetScriptCallbackFunction(self, *args)
@@ -2677,12 +2683,12 @@ _lldb.SBBreakpointLocation_swigregister(SBBreakpointLocation)
 
 class SBBreakpointName(object):
     r"""
-    Represents a breakpoint name registered in a given SBTarget.
+    Represents a breakpoint name registered in a given :py:class:`SBTarget`.
 
     Breakpoint names provide a way to act on groups of breakpoints.  When you add a
     name to a group of breakpoints, you can then use the name in all the command
     line lldb commands for that name.  You can also configure the SBBreakpointName
-    options and those options will be propagated to any SBBreakpoints currently
+    options and those options will be propagated to any :py:class:`SBBreakpoint` s currently
     using that name.  Adding a name to a breakpoint will also apply any of the
     set options to that breakpoint.
 
@@ -2863,9 +2869,11 @@ _lldb.SBBreakpointName_swigregister(SBBreakpointName)
 
 class SBBroadcaster(object):
     r"""
-    Represents an entity which can broadcast events. A default broadcaster is
+    Represents an entity which can broadcast events.
+
+    A default broadcaster is
     associated with an SBCommandInterpreter, SBProcess, and SBTarget.  For
-    example, use
+    example, use ::
 
         broadcaster = process.GetBroadcaster()
 
@@ -2954,9 +2962,11 @@ _lldb.SBBroadcaster_swigregister(SBBroadcaster)
 
 class SBCommandInterpreter(object):
     r"""
-    SBCommandInterpreter handles/interprets commands for lldb.  You get the
-    command interpreter from the SBDebugger instance. For example (from test/
-    python_api/interpreter/TestCommandInterpreterAPI.py),
+    SBCommandInterpreter handles/interprets commands for lldb.
+
+    You get the command interpreter from the :py:class:`SBDebugger` instance.
+
+    For example (from test/ python_api/interpreter/TestCommandInterpreterAPI.py),::
 
         def command_interpreter_api(self):
             '''Test the SBCommandInterpreter APIs.'''
@@ -3163,13 +3173,16 @@ def SBCommandInterpreter_GetBroadcasterClass():
 class SBCommandInterpreterRunOptions(object):
     r"""
     SBCommandInterpreterRunOptions controls how the RunCommandInterpreter runs the code it is fed.
+
     A default SBCommandInterpreterRunOptions object has:
-        StopOnContinue: false
-        StopOnError:    false
-        StopOnCrash:    false
-        EchoCommands:   true
-        PrintResults:   true
-        AddToHistory:   true
+
+    * StopOnContinue: false
+    * StopOnError:    false
+    * StopOnCrash:    false
+    * EchoCommands:   true
+    * PrintResults:   true
+    * PrintErrors:    true
+    * AddToHistory:   true
 
 
     """
@@ -3222,6 +3235,14 @@ class SBCommandInterpreterRunOptions(object):
         r"""SetPrintResults(SBCommandInterpreterRunOptions self, bool arg2)"""
         return _lldb.SBCommandInterpreterRunOptions_SetPrintResults(self, arg2)
 
+    def GetPrintErrors(self):
+        r"""GetPrintErrors(SBCommandInterpreterRunOptions self) -> bool"""
+        return _lldb.SBCommandInterpreterRunOptions_GetPrintErrors(self)
+
+    def SetPrintErrors(self, arg2):
+        r"""SetPrintErrors(SBCommandInterpreterRunOptions self, bool arg2)"""
+        return _lldb.SBCommandInterpreterRunOptions_SetPrintErrors(self, arg2)
+
     def GetAddToHistory(self):
         r"""GetAddToHistory(SBCommandInterpreterRunOptions self) -> bool"""
         return _lldb.SBCommandInterpreterRunOptions_GetAddToHistory(self)
@@ -3236,10 +3257,10 @@ _lldb.SBCommandInterpreterRunOptions_swigregister(SBCommandInterpreterRunOptions
 class SBCommandReturnObject(object):
     r"""
     Represents a container which holds the result from command execution.
-    It works with SBCommandInterpreter.HandleCommand() to encapsulate the result
+    It works with :py:class:`SBCommandInterpreter.HandleCommand()` to encapsulate the result
     of command execution.
 
-    See SBCommandInterpreter for example usage of SBCommandReturnObject.
+    See :py:class:`SBCommandInterpreter` for example usage of SBCommandReturnObject.
     """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -3378,7 +3399,7 @@ class SBCommandReturnObject(object):
 _lldb.SBCommandReturnObject_swigregister(SBCommandReturnObject)
 
 class SBCommunication(object):
-    r"""Proxy of C++ lldb::SBCommunication class."""
+    r"""Allows sending/receiving data."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -3481,7 +3502,7 @@ class SBCompileUnit(object):
     r"""
     Represents a compilation unit, or compiled source file.
 
-    SBCompileUnit supports line entry iteration. For example,
+    SBCompileUnit supports line entry iteration. For example,::
 
         # Now get the SBSymbolContext from this frame.  We want everything. :-)
         context = frame0.GetSymbolContext(lldb.eSymbolContextEverything)
@@ -3495,23 +3516,23 @@ class SBCompileUnit(object):
             print('start addr: %s' % str(lineEntry.GetStartAddress()))
             print('end   addr: %s' % str(lineEntry.GetEndAddress()))
 
-    produces:
+    produces: ::
 
-    line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:20
-    start addr: a.out[0x100000d98]
-    end   addr: a.out[0x100000da3]
-    line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:21
-    start addr: a.out[0x100000da3]
-    end   addr: a.out[0x100000da9]
-    line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:22
-    start addr: a.out[0x100000da9]
-    end   addr: a.out[0x100000db6]
-    line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:23
-    start addr: a.out[0x100000db6]
-    end   addr: a.out[0x100000dbc]
-    ...
+      line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:20
+      start addr: a.out[0x100000d98]
+      end   addr: a.out[0x100000da3]
+      line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:21
+      start addr: a.out[0x100000da3]
+      end   addr: a.out[0x100000da9]
+      line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:22
+      start addr: a.out[0x100000da9]
+      end   addr: a.out[0x100000db6]
+      line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:23
+      start addr: a.out[0x100000db6]
+      end   addr: a.out[0x100000dbc]
+      ...
 
-    See also SBSymbolContext and SBLineEntry
+    See also :py:class:`SBSymbolContext` and :py:class:`SBLineEntry`
     """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -3636,7 +3657,7 @@ class SBCompileUnit(object):
 _lldb.SBCompileUnit_swigregister(SBCompileUnit)
 
 class SBData(object):
-    r"""Proxy of C++ lldb::SBData class."""
+    r"""Represents a data buffer."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -3994,109 +4015,108 @@ class SBDebugger(object):
     SBDebugger is the primordial object that creates SBTargets and provides
     access to them.  It also manages the overall debugging experiences.
 
-    For example (from example/disasm.py),
+    For example (from example/disasm.py),::
 
-    import lldb
-    import os
-    import sys
+        import lldb
+        import os
+        import sys
 
-    def disassemble_instructions (insts):
-        for i in insts:
-            print i
+        def disassemble_instructions (insts):
+            for i in insts:
+                print i
 
-    ...
+        ...
 
-    # Create a new debugger instance
-    debugger = lldb.SBDebugger.Create()
+        # Create a new debugger instance
+        debugger = lldb.SBDebugger.Create()
 
-    # When we step or continue, don't return from the function until the process
-    # stops. We do this by setting the async mode to false.
-    debugger.SetAsync (False)
+        # When we step or continue, don't return from the function until the process
+        # stops. We do this by setting the async mode to false.
+        debugger.SetAsync (False)
 
-    # Create a target from a file and arch
-    print('Creating a target for '%s'' % exe)
+        # Create a target from a file and arch
+        print('Creating a target for '%s'' % exe)
 
-    target = debugger.CreateTargetWithFileAndArch (exe, lldb.LLDB_ARCH_DEFAULT)
+        target = debugger.CreateTargetWithFileAndArch (exe, lldb.LLDB_ARCH_DEFAULT)
 
-    if target:
-        # If the target is valid set a breakpoint at main
-        main_bp = target.BreakpointCreateByName (fname, target.GetExecutable().GetFilename());
+        if target:
+            # If the target is valid set a breakpoint at main
+            main_bp = target.BreakpointCreateByName (fname, target.GetExecutable().GetFilename());
 
-        print main_bp
+            print main_bp
 
-        # Launch the process. Since we specified synchronous mode, we won't return
-        # from this function until we hit the breakpoint at main
-        process = target.LaunchSimple (None, None, os.getcwd())
+            # Launch the process. Since we specified synchronous mode, we won't return
+            # from this function until we hit the breakpoint at main
+            process = target.LaunchSimple (None, None, os.getcwd())
 
-        # Make sure the launch went ok
-        if process:
-            # Print some simple process info
-            state = process.GetState ()
-            print process
-            if state == lldb.eStateStopped:
-                # Get the first thread
-                thread = process.GetThreadAtIndex (0)
-                if thread:
-                    # Print some simple thread info
-                    print thread
-                    # Get the first frame
-                    frame = thread.GetFrameAtIndex (0)
-                    if frame:
-                        # Print some simple frame info
-                        print frame
-                        function = frame.GetFunction()
-                        # See if we have debug info (a function)
-                        if function:
-                            # We do have a function, print some info for the function
-                            print function
-                            # Now get all instructions for this function and print them
-                            insts = function.GetInstructions(target)
-                            disassemble_instructions (insts)
-                        else:
-                            # See if we have a symbol in the symbol table for where we stopped
-                            symbol = frame.GetSymbol();
-                            if symbol:
-                                # We do have a symbol, print some info for the symbol
-                                print symbol
-                                # Now get all instructions for this symbol and print them
-                                insts = symbol.GetInstructions(target)
+            # Make sure the launch went ok
+            if process:
+                # Print some simple process info
+                state = process.GetState ()
+                print process
+                if state == lldb.eStateStopped:
+                    # Get the first thread
+                    thread = process.GetThreadAtIndex (0)
+                    if thread:
+                        # Print some simple thread info
+                        print thread
+                        # Get the first frame
+                        frame = thread.GetFrameAtIndex (0)
+                        if frame:
+                            # Print some simple frame info
+                            print frame
+                            function = frame.GetFunction()
+                            # See if we have debug info (a function)
+                            if function:
+                                # We do have a function, print some info for the function
+                                print function
+                                # Now get all instructions for this function and print them
+                                insts = function.GetInstructions(target)
                                 disassemble_instructions (insts)
+                            else:
+                                # See if we have a symbol in the symbol table for where we stopped
+                                symbol = frame.GetSymbol();
+                                if symbol:
+                                    # We do have a symbol, print some info for the symbol
+                                    print symbol
+                                    # Now get all instructions for this symbol and print them
+                                    insts = symbol.GetInstructions(target)
+                                    disassemble_instructions (insts)
 
-                        registerList = frame.GetRegisters()
-                        print('Frame registers (size of register set = %d):' % registerList.GetSize())
-                        for value in registerList:
-                            #print value
-                            print('%s (number of children = %d):' % (value.GetName(), value.GetNumChildren()))
-                            for child in value:
-                                print('Name: ', child.GetName(), ' Value: ', child.GetValue())
+                            registerList = frame.GetRegisters()
+                            print('Frame registers (size of register set = %d):' % registerList.GetSize())
+                            for value in registerList:
+                                #print value
+                                print('%s (number of children = %d):' % (value.GetName(), value.GetNumChildren()))
+                                for child in value:
+                                    print('Name: ', child.GetName(), ' Value: ', child.GetValue())
 
-                print('Hit the breakpoint at main, enter to continue and wait for program to exit or 'Ctrl-D'/'quit' to terminate the program')
-                next = sys.stdin.readline()
-                if not next or next.rstrip('
-    ') == 'quit':
-                    print('Terminating the inferior process...')
-                    process.Kill()
+                    print('Hit the breakpoint at main, enter to continue and wait for program to exit or 'Ctrl-D'/'quit' to terminate the program')
+                    next = sys.stdin.readline()
+                    if not next or next.rstrip('\n') == 'quit':
+                        print('Terminating the inferior process...')
+                        process.Kill()
+                    else:
+                        # Now continue to the program exit
+                        process.Continue()
+                        # When we return from the above function we will hopefully be at the
+                        # program exit. Print out some process info
+                        print process
+                elif state == lldb.eStateExited:
+                    print('Didn't hit the breakpoint at main, program has exited...')
                 else:
-                    # Now continue to the program exit
-                    process.Continue()
-                    # When we return from the above function we will hopefully be at the
-                    # program exit. Print out some process info
-                    print process
-            elif state == lldb.eStateExited:
-                print('Didn't hit the breakpoint at main, program has exited...')
-            else:
-                print('Unexpected process state: %s, killing process...' % debugger.StateAsCString (state))
-                process.Kill()
+                    print('Unexpected process state: %s, killing process...' % debugger.StateAsCString (state))
+                    process.Kill()
 
     Sometimes you need to create an empty target that will get filled in later.  The most common use for this
     is to attach to a process by name or pid where you don't know the executable up front.  The most convenient way
-    to do this is:
+    to do this is: ::
 
-    target = debugger.CreateTarget('')
-    error = lldb.SBError()
-    process = target.AttachToProcessWithName(debugger.GetListener(), 'PROCESS_NAME', False, error)
+        target = debugger.CreateTarget('')
+        error = lldb.SBError()
+        process = target.AttachToProcessWithName(debugger.GetListener(), 'PROCESS_NAME', False, error)
 
-    or the equivalent arguments for AttachToProcessWithID.
+    or the equivalent arguments for :py:class:`SBTarget.AttachToProcessWithID` .
     """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -4570,12 +4590,12 @@ class SBDebugger(object):
         indicating whether quitting the interpreter was requested and another boolean
         set to True in case of a crash.
 
-        Example:
+        Example: ::
 
-        # Start an interactive lldb session from a script (with a valid debugger object
-        # created beforehand):
-        n_errors, quit_requested, has_crashed = debugger.RunCommandInterpreter(True,
-            False, lldb.SBCommandInterpreterRunOptions(), 0, False, False)
+            # Start an interactive lldb session from a script (with a valid debugger object
+            # created beforehand):
+            n_errors, quit_requested, has_crashed = debugger.RunCommandInterpreter(True,
+                False, lldb.SBCommandInterpreterRunOptions(), 0, False, False)
         """
         return _lldb.SBDebugger_RunCommandInterpreter(self, auto_handle_events, spawn_thread, options, num_errors, quit_requested, stopped_for_crash)
 
@@ -4752,7 +4772,7 @@ class SBError(object):
     r"""
     Represents a container for holding any error code.
 
-    For example (from test/python_api/hello_world/TestHelloWorld.py),
+    For example (from test/python_api/hello_world/TestHelloWorld.py), ::
 
         def hello_world_attach_with_id_api(self):
             '''Create target, spawn a process, and attach to it by id.'''
@@ -4786,7 +4806,7 @@ class SBError(object):
     checks that after the attach, there is no error condition by asserting
     that error.Success() is True and we get back a valid process object.
 
-    And (from test/python_api/event/TestEvent.py),
+    And (from test/python_api/event/TestEvent.py), ::
 
             # Now launch the process, and do not stop at entry point.
             error = lldb.SBError()
@@ -4884,7 +4904,8 @@ class SBEnvironment(object):
     r"""
     Represents the environment of a certain process.
 
-    Example:
+    Example: ::
+
       for entry in lldb.debugger.GetSelectedTarget().GetEnvironment().GetEntries():
         print(entry)
 
@@ -4949,27 +4970,27 @@ class SBEvent(object):
     r"""
     API clients can register to receive events.
 
-    For example, check out the following output:
+    For example, check out the following output: ::
 
-    Try wait for event...
-    Event description: 0x103d0bb70 Event: broadcaster = 0x1009c8410, type = 0x00000001, data = { process = 0x1009c8400 (pid = 21528), state = running}
-    Event data flavor: Process::ProcessEventData
-    Process state: running
+        Try wait for event...
+        Event description: 0x103d0bb70 Event: broadcaster = 0x1009c8410, type = 0x00000001, data = { process = 0x1009c8400 (pid = 21528), state = running}
+        Event data flavor: Process::ProcessEventData
+        Process state: running
 
-    Try wait for event...
-    Event description: 0x103a700a0 Event: broadcaster = 0x1009c8410, type = 0x00000001, data = { process = 0x1009c8400 (pid = 21528), state = stopped}
-    Event data flavor: Process::ProcessEventData
-    Process state: stopped
+        Try wait for event...
+        Event description: 0x103a700a0 Event: broadcaster = 0x1009c8410, type = 0x00000001, data = { process = 0x1009c8400 (pid = 21528), state = stopped}
+        Event data flavor: Process::ProcessEventData
+        Process state: stopped
 
-    Try wait for event...
-    Event description: 0x103d0d4a0 Event: broadcaster = 0x1009c8410, type = 0x00000001, data = { process = 0x1009c8400 (pid = 21528), state = exited}
-    Event data flavor: Process::ProcessEventData
-    Process state: exited
+        Try wait for event...
+        Event description: 0x103d0d4a0 Event: broadcaster = 0x1009c8410, type = 0x00000001, data = { process = 0x1009c8400 (pid = 21528), state = exited}
+        Event data flavor: Process::ProcessEventData
+        Process state: exited
 
-    Try wait for event...
-    timeout occurred waiting for event...
+        Try wait for event...
+        timeout occurred waiting for event...
 
-    from test/python_api/event/TestEventspy:
+    from test/python_api/event/TestEventspy: ::
 
         def do_listen_for_and_print_event(self):
             '''Create a listener and use SBEvent API to print the events received.'''
@@ -5106,7 +5127,7 @@ def SBEvent_GetCStringFromEvent(event):
     return _lldb.SBEvent_GetCStringFromEvent(event)
 
 class SBExecutionContext(object):
-    r"""Proxy of C++ lldb::SBExecutionContext class."""
+    r"""Describes the program context in which a command should be executed."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -5481,7 +5502,7 @@ class SBFile(object):
 
             If there is no underlying python file to unwrap, GetFile will
             use the file descriptor, if available to create a new python
-            file object using `open(fd, mode=..., closefd=False)`
+            file object using ``open(fd, mode=..., closefd=False)``
 
         """
         return _lldb.SBFile_GetFile(self)
@@ -5516,7 +5537,7 @@ class SBFileSpec(object):
     basename.  The string values of the paths are put into uniqued string pools
     for fast comparisons and efficient memory usage.
 
-    For example, the following code
+    For example, the following code ::
 
             lineEntry = context.GetLineEntry()
             self.expect(lineEntry.GetFileSpec().GetDirectory(), 'The line entry should have the correct directory',
@@ -5634,7 +5655,7 @@ def SBFileSpec_ResolvePath(src_path, dst_path, dst_len):
     return _lldb.SBFileSpec_ResolvePath(src_path, dst_path, dst_len)
 
 class SBFileSpecList(object):
-    r"""Proxy of C++ lldb::SBFileSpecList class."""
+    r"""Represents a list of :py:class:`SBFileSpec`."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -5681,34 +5702,35 @@ _lldb.SBFileSpecList_swigregister(SBFileSpecList)
 class SBFrame(object):
     r"""
     Represents one of the stack frames associated with a thread.
-    SBThread contains SBFrame(s). For example (from test/lldbutil.py),
 
-    def print_stacktrace(thread, string_buffer = False):
-        '''Prints a simple stack trace of this thread.'''
+    SBThread contains SBFrame(s). For example (from test/lldbutil.py), ::
 
-        ...
+        def print_stacktrace(thread, string_buffer = False):
+            '''Prints a simple stack trace of this thread.'''
 
-        for i in range(depth):
-            frame = thread.GetFrameAtIndex(i)
-            function = frame.GetFunction()
+            ...
 
-            load_addr = addrs[i].GetLoadAddress(target)
-            if not function:
-                file_addr = addrs[i].GetFileAddress()
-                start_addr = frame.GetSymbol().GetStartAddress().GetFileAddress()
-                symbol_offset = file_addr - start_addr
-                print >> output, '  frame #{num}: {addr:#016x} {mod}`{symbol} + {offset}'.format(
-                    num=i, addr=load_addr, mod=mods[i], symbol=symbols[i], offset=symbol_offset)
-            else:
-                print >> output, '  frame #{num}: {addr:#016x} {mod}`{func} at {file}:{line} {args}'.format(
-                    num=i, addr=load_addr, mod=mods[i],
-                    func='%s [inlined]' % funcs[i] if frame.IsInlined() else funcs[i],
-                    file=files[i], line=lines[i],
-                    args=get_args_as_string(frame, showFuncName=False) if not frame.IsInlined() else '()')
+            for i in range(depth):
+                frame = thread.GetFrameAtIndex(i)
+                function = frame.GetFunction()
 
-        ...
+                load_addr = addrs[i].GetLoadAddress(target)
+                if not function:
+                    file_addr = addrs[i].GetFileAddress()
+                    start_addr = frame.GetSymbol().GetStartAddress().GetFileAddress()
+                    symbol_offset = file_addr - start_addr
+                    print >> output, '  frame #{num}: {addr:#016x} {mod}`{symbol} + {offset}'.format(
+                        num=i, addr=load_addr, mod=mods[i], symbol=symbols[i], offset=symbol_offset)
+                else:
+                    print >> output, '  frame #{num}: {addr:#016x} {mod}`{func} at {file}:{line} {args}'.format(
+                        num=i, addr=load_addr, mod=mods[i],
+                        func='%s [inlined]' % funcs[i] if frame.IsInlined() else funcs[i],
+                        file=files[i], line=lines[i],
+                        args=get_args_as_string(frame, showFuncName=False) if not frame.IsInlined() else '()')
 
-    And,
+            ...
+
+    And, ::
 
         for frame in thread:
             print frame
@@ -5955,20 +5977,27 @@ class SBFrame(object):
 
             Get a lldb.SBValue for a variable path.
 
-            Variable paths can include access to pointer or instance members:
+            Variable paths can include access to pointer or instance members: ::
+
                 rect_ptr->origin.y
                 pt.x
-            Pointer dereferences:
+
+            Pointer dereferences: ::
+
                 *this->foo_ptr
                 **argv
-            Address of:
+
+            Address of: ::
+
                 &pt
                 &my_array[3].x
-            Array accesses and treating pointers as arrays:
+
+            Array accesses and treating pointers as arrays: ::
+
                 int_array[1]
                 pt_ptr[22].x
 
-            Unlike EvaluateExpression() which returns lldb.SBValue objects
+            Unlike `EvaluateExpression()` which returns :py:class:`SBValue` objects
             with constant copies of the values at the time of evaluation,
             the result of this function is a value that will continue to
             track the current value of the value as execution progresses
@@ -5984,7 +6013,7 @@ class SBFrame(object):
             Find variables, register sets, registers, or persistent variables using
             the frame as the scope.
 
-            The version that doesn't supply a 'use_dynamic' value will use the
+            The version that doesn't supply a ``use_dynamic`` value will use the
             target's default.
         """
         return _lldb.SBFrame_FindValue(self, *args)
@@ -6074,7 +6103,7 @@ class SBFunction(object):
     r"""
     Represents a generic function, which can be inlined or not.
 
-    For example (from test/lldbutil.py, but slightly modified for doc purpose),
+    For example (from test/lldbutil.py, but slightly modified for doc purpose),::
 
             ...
 
@@ -6237,7 +6266,7 @@ class SBFunction(object):
 _lldb.SBFunction_swigregister(SBFunction)
 
 class SBHostOS(object):
-    r"""Proxy of C++ lldb::SBHostOS class."""
+    r"""Provides information about the host system."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -6332,7 +6361,7 @@ def SBHostOS_ThreadJoin(thread, result, err):
     return _lldb.SBHostOS_ThreadJoin(thread, result, err)
 
 class SBInstruction(object):
-    r"""Proxy of C++ lldb::SBInstruction class."""
+    r"""Represents a (machine language) instruction."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -6445,12 +6474,12 @@ class SBInstructionList(object):
     Represents a list of machine instructions.  SBFunction and SBSymbol have
     GetInstructions() methods which return SBInstructionList instances.
 
-    SBInstructionList supports instruction (SBInstruction instance) iteration.
-    For example (see also SBDebugger for a more complete example),
+    SBInstructionList supports instruction (:py:class:`SBInstruction` instance) iteration.
+    For example (see also :py:class:`SBDebugger` for a more complete example), ::
 
-    def disassemble_instructions (insts):
-        for i in insts:
-            print i
+        def disassemble_instructions (insts):
+            for i in insts:
+                print i
 
     defines a function which takes an SBInstructionList instance and prints out
     the machine instructions in assembly format.
@@ -6551,7 +6580,7 @@ class SBInstructionList(object):
 _lldb.SBInstructionList_swigregister(SBInstructionList)
 
 class SBLanguageRuntime(object):
-    r"""Proxy of C++ lldb::SBLanguageRuntime class."""
+    r"""Utility functions for :ref:`LanguageType`"""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -6583,7 +6612,7 @@ def SBLanguageRuntime_GetNameForLanguageType(language):
     return _lldb.SBLanguageRuntime_GetNameForLanguageType(language)
 
 class SBLaunchInfo(object):
-    r"""Proxy of C++ lldb::SBLaunchInfo class."""
+    r"""Describes how a target or program should be launched."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -6759,7 +6788,9 @@ _lldb.SBLaunchInfo_swigregister(SBLaunchInfo)
 class SBLineEntry(object):
     r"""
     Specifies an association with a contiguous range of instructions and
-    a source file location. SBCompileUnit contains SBLineEntry(s). For example,
+    a source file location.
+
+    :py:class:`SBCompileUnit` contains SBLineEntry(s). For example, ::
 
         for lineEntry in compileUnit:
             print('line entry: %s:%d' % (str(lineEntry.GetFileSpec()),
@@ -6767,23 +6798,23 @@ class SBLineEntry(object):
             print('start addr: %s' % str(lineEntry.GetStartAddress()))
             print('end   addr: %s' % str(lineEntry.GetEndAddress()))
 
-    produces:
+    produces: ::
 
-    line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:20
-    start addr: a.out[0x100000d98]
-    end   addr: a.out[0x100000da3]
-    line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:21
-    start addr: a.out[0x100000da3]
-    end   addr: a.out[0x100000da9]
-    line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:22
-    start addr: a.out[0x100000da9]
-    end   addr: a.out[0x100000db6]
-    line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:23
-    start addr: a.out[0x100000db6]
-    end   addr: a.out[0x100000dbc]
-    ...
+        line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:20
+        start addr: a.out[0x100000d98]
+        end   addr: a.out[0x100000da3]
+        line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:21
+        start addr: a.out[0x100000da3]
+        end   addr: a.out[0x100000da9]
+        line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:22
+        start addr: a.out[0x100000da9]
+        end   addr: a.out[0x100000db6]
+        line entry: /Volumes/data/lldb/svn/trunk/test/python_api/symbol-context/main.c:23
+        start addr: a.out[0x100000db6]
+        end   addr: a.out[0x100000dbc]
+        ...
 
-    See also SBCompileUnit.
+    See also :py:class:`SBCompileUnit` .
     """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -6882,7 +6913,7 @@ class SBListener(object):
     r"""
     API clients can register its own listener to debugger events.
 
-    See aslo SBEvent for example usage of creating and adding a listener.
+    See also :py:class:`SBEvent` for example usage of creating and adding a listener.
     """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -7040,7 +7071,7 @@ class SBMemoryRegionInfo(object):
 _lldb.SBMemoryRegionInfo_swigregister(SBMemoryRegionInfo)
 
 class SBMemoryRegionInfoList(object):
-    r"""Proxy of C++ lldb::SBMemoryRegionInfoList class."""
+    r"""Represents a list of :py:class:`SBMemoryRegionInfo`."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -7105,30 +7136,30 @@ class SBModule(object):
     executable image as it would appear on disk and during program
     execution.
 
-    You can retrieve SBModule from SBSymbolContext, which in turn is available
+    You can retrieve SBModule from :py:class:`SBSymbolContext` , which in turn is available
     from SBFrame.
 
-    SBModule supports symbol iteration, for example,
+    SBModule supports symbol iteration, for example, ::
 
         for symbol in module:
             name = symbol.GetName()
             saddr = symbol.GetStartAddress()
             eaddr = symbol.GetEndAddress()
 
-    and rich comparison methods which allow the API program to use,
+    and rich comparison methods which allow the API program to use, ::
 
         if thisModule == thatModule:
             print('This module is the same as that module')
 
     to test module equality.  A module also contains object file sections, namely
-    SBSection.  SBModule supports section iteration through section_iter(), for
-    example,
+    :py:class:`SBSection` .  SBModule supports section iteration through section_iter(), for
+    example, ::
 
         print('Number of sections: %d' % module.GetNumSections())
         for sec in module.section_iter():
             print(sec)
 
-    And to iterate the symbols within a SBSection, use symbol_in_section_iter(),
+    And to iterate the symbols within a SBSection, use symbol_in_section_iter(), ::
 
         # Iterates the text section and prints each symbols within each sub-section.
         for subsec in text_sec:
@@ -7137,7 +7168,7 @@ class SBModule(object):
                 print(INDENT2 + repr(sym))
                 print(INDENT2 + 'symbol type: %s' % symbol_type_to_str(sym.GetType()))
 
-    produces this following output:
+    produces this following output: ::
 
         [0x0000000100001780-0x0000000100001d5c) a.out.__TEXT.__text
             id = {0x00000004}, name = 'mask_access(MaskAction, unsigned int)', range = [0x00000001000017c0-0x0000000100001870)
@@ -7297,15 +7328,15 @@ class SBModule(object):
         r"""
         FindCompileUnits(SBModule self, SBFileSpec sb_file_spec) -> SBSymbolContextList
 
-            Find compile units related to *this module and passed source
+            Find compile units related to this module and passed source
             file.
 
             @param[in] sb_file_spec
-                A lldb::SBFileSpec object that contains source file
+                A :py:class:`SBFileSpec` object that contains source file
                 specification.
 
             @return
-                A lldb::SBSymbolContextList that gets filled in with all of
+                A :py:class:`SBSymbolContextList` that gets filled in with all of
                 the symbol contexts for all the matches.
         """
         return _lldb.SBModule_FindCompileUnits(self, sb_file_spec)
@@ -7855,7 +7886,7 @@ class SBModuleSpec(object):
 _lldb.SBModuleSpec_swigregister(SBModuleSpec)
 
 class SBModuleSpecList(object):
-    r"""Proxy of C++ lldb::SBModuleSpecList class."""
+    r"""Represents a list of :py:class:`SBModuleSpec`."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -7912,7 +7943,7 @@ def SBModuleSpecList_GetModuleSpecifications(path):
     return _lldb.SBModuleSpecList_GetModuleSpecifications(path)
 
 class SBPlatformConnectOptions(object):
-    r"""Proxy of C++ lldb::SBPlatformConnectOptions class."""
+    r"""Describes how :py:class:`SBPlatform.ConnectRemote` connects to a remote platform."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -7957,7 +7988,7 @@ class SBPlatformConnectOptions(object):
 _lldb.SBPlatformConnectOptions_swigregister(SBPlatformConnectOptions)
 
 class SBPlatformShellCommand(object):
-    r"""Proxy of C++ lldb::SBPlatformShellCommand class."""
+    r"""Represents a shell command that can be run by :py:class:`SBPlatform.Run`."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -8038,7 +8069,7 @@ class SBPlatform(object):
     install programs on the remote system, attach and launch processes,
     and much more.
 
-    Every SBTarget has a corresponding SBPlatform. The platform can be
+    Every :py:class:`SBTarget` has a corresponding SBPlatform. The platform can be
     specified upon target creation, or the currently selected platform
     will attempt to be used when creating the target automatically as long
     as the currently selected platform matches the target architecture
@@ -8183,24 +8214,22 @@ class SBProcess(object):
     r"""
     Represents the process associated with the target program.
 
-    SBProcess supports thread iteration. For example (from test/lldbutil.py),
+    SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
 
-    # ==================================================
-    # Utility functions related to Threads and Processes
-    # ==================================================
+        # ==================================================
+        # Utility functions related to Threads and Processes
+        # ==================================================
 
-    def get_stopped_threads(process, reason):
-        '''Returns the thread(s) with the specified stop reason in a list.
+        def get_stopped_threads(process, reason):
+            '''Returns the thread(s) with the specified stop reason in a list.
 
-        The list can be empty if no such thread exists.
-        '''
-        threads = []
-        for t in process:
-            if t.GetStopReason() == reason:
-                threads.append(t)
-        return threads
-
-    ...
+            The list can be empty if no such thread exists.
+            '''
+            threads = []
+            for t in process:
+                if t.GetStopReason() == reason:
+                    threads.append(t)
+            return threads
 
     """
 
@@ -8469,11 +8498,11 @@ class SBProcess(object):
 
         Reads memory from the current process's address space and removes any
         traps that may have been inserted into the memory. It returns the byte
-        buffer in a Python string. Example:
+        buffer in a Python string. Example: ::
 
-        # Read 4 bytes from address 'addr' and assume error.Success() is True.
-        content = process.ReadMemory(addr, 4, error)
-        new_bytes = bytearray(content)
+            # Read 4 bytes from address 'addr' and assume error.Success() is True.
+            content = process.ReadMemory(addr, 4, error)
+            new_bytes = bytearray(content)
         """
         return _lldb.SBProcess_ReadMemory(self, addr, buf, error)
 
@@ -8481,13 +8510,13 @@ class SBProcess(object):
         r"""
 
         Writes memory to the current process's address space and maintains any
-        traps that might be present due to software breakpoints. Example:
+        traps that might be present due to software breakpoints. Example: ::
 
-        # Create a Python string from the byte array.
-        new_value = str(bytes)
-        result = process.WriteMemory(addr, new_value, error)
-        if not error.Success() or result != len(bytes):
-            print('SBProcess.WriteMemory() failed!')
+            # Create a Python string from the byte array.
+            new_value = str(bytes)
+            result = process.WriteMemory(addr, new_value, error)
+            if not error.Success() or result != len(bytes):
+                print('SBProcess.WriteMemory() failed!')
         """
         return _lldb.SBProcess_WriteMemory(self, addr, buf, error)
 
@@ -8496,15 +8525,15 @@ class SBProcess(object):
 
         Reads a NULL terminated C string from the current process's address space.
         It returns a python string of the exact length, or truncates the string if
-        the maximum character limit is reached. Example:
+        the maximum character limit is reached. Example: ::
 
-        # Read a C string of at most 256 bytes from address '0x1000'
-        error = lldb.SBError()
-        cstring = process.ReadCStringFromMemory(0x1000, 256, error)
-        if error.Success():
-            print('cstring: ', cstring)
-        else
-            print('error: ', error)
+            # Read a C string of at most 256 bytes from address '0x1000'
+            error = lldb.SBError()
+            cstring = process.ReadCStringFromMemory(0x1000, 256, error)
+            if error.Success():
+                print('cstring: ', cstring)
+            else
+                print('error: ', error)
         """
         return _lldb.SBProcess_ReadCStringFromMemory(self, addr, char_buf, error)
 
@@ -8512,30 +8541,30 @@ class SBProcess(object):
         r"""
 
         Reads an unsigned integer from memory given a byte size and an address.
-        Returns the unsigned integer that was read. Example:
+        Returns the unsigned integer that was read. Example: ::
 
-        # Read a 4 byte unsigned integer from address 0x1000
-        error = lldb.SBError()
-        uint = ReadUnsignedFromMemory(0x1000, 4, error)
-        if error.Success():
-            print('integer: %u' % uint)
-        else
-            print('error: ', error)
+            # Read a 4 byte unsigned integer from address 0x1000
+            error = lldb.SBError()
+            uint = ReadUnsignedFromMemory(0x1000, 4, error)
+            if error.Success():
+                print('integer: %u' % uint)
+            else
+                print('error: ', error)
         """
         return _lldb.SBProcess_ReadUnsignedFromMemory(self, addr, byte_size, error)
 
     def ReadPointerFromMemory(self, addr, error):
         r"""
 
-        Reads a pointer from memory from an address and returns the value. Example:
+        Reads a pointer from memory from an address and returns the value. Example: ::
 
-        # Read a pointer from address 0x1000
-        error = lldb.SBError()
-        ptr = ReadPointerFromMemory(0x1000, error)
-        if error.Success():
-            print('pointer: 0x%x' % ptr)
-        else
-            print('error: ', error)
+            # Read a pointer from address 0x1000
+            error = lldb.SBError()
+            ptr = ReadPointerFromMemory(0x1000, error)
+            if error.Success():
+                print('pointer: 0x%x' % ptr)
+            else
+                print('error: ', error)
         """
         return _lldb.SBProcess_ReadPointerFromMemory(self, addr, error)
 
@@ -8675,11 +8704,11 @@ class SBProcess(object):
 
         Get information about the process.
         Valid process info will only be returned when the process is alive,
-        use IsValid() to check if the info returned is valid.
+        use IsValid() to check if the info returned is valid. ::
 
-        process_info = process.GetProcessInfo()
-        if process_info.IsValid():
-            process_info.GetProcessID()
+            process_info = process.GetProcessInfo()
+            if process_info.IsValid():
+                process_info.GetProcessID()
         """
         return _lldb.SBProcess_GetProcessInfo(self)
 
@@ -8887,7 +8916,7 @@ class SBProcessInfo(object):
 _lldb.SBProcessInfo_swigregister(SBProcessInfo)
 
 class SBQueue(object):
-    r"""Proxy of C++ lldb::SBQueue class."""
+    r"""Represents a libdispatch queue in the process."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -8969,7 +8998,7 @@ class SBQueue(object):
 _lldb.SBQueue_swigregister(SBQueue)
 
 class SBQueueItem(object):
-    r"""Proxy of C++ lldb::SBQueueItem class."""
+    r"""This class represents an item in an :py:class:`SBQueue`."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -9024,7 +9053,7 @@ class SBQueueItem(object):
 _lldb.SBQueueItem_swigregister(SBQueueItem)
 
 class SBReproducer(object):
-    r"""Proxy of C++ lldb::SBReproducer class."""
+    r"""Controls LLDB's reproducer functionality."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -9078,7 +9107,7 @@ class SBSection(object):
     Represents an executable image section.
 
     SBSection supports iteration through its subsection, represented as SBSection
-    as well.  For example,
+    as well.  For example, ::
 
         for sec in exe_module:
             if sec.GetName() == '__TEXT':
@@ -9088,18 +9117,18 @@ class SBSection(object):
         for subsec in sec:
             print INDENT + repr(subsec)
 
-    produces:
+    produces: ::
 
-    [0x0000000100000000-0x0000000100002000) a.out.__TEXT
-        Number of subsections: 6
-        [0x0000000100001780-0x0000000100001d5c) a.out.__TEXT.__text
-        [0x0000000100001d5c-0x0000000100001da4) a.out.__TEXT.__stubs
-        [0x0000000100001da4-0x0000000100001e2c) a.out.__TEXT.__stub_helper
-        [0x0000000100001e2c-0x0000000100001f10) a.out.__TEXT.__cstring
-        [0x0000000100001f10-0x0000000100001f68) a.out.__TEXT.__unwind_info
-        [0x0000000100001f68-0x0000000100001ff8) a.out.__TEXT.__eh_frame
+      [0x0000000100000000-0x0000000100002000) a.out.__TEXT
+          Number of subsections: 6
+          [0x0000000100001780-0x0000000100001d5c) a.out.__TEXT.__text
+          [0x0000000100001d5c-0x0000000100001da4) a.out.__TEXT.__stubs
+          [0x0000000100001da4-0x0000000100001e2c) a.out.__TEXT.__stub_helper
+          [0x0000000100001e2c-0x0000000100001f10) a.out.__TEXT.__cstring
+          [0x0000000100001f10-0x0000000100001f68) a.out.__TEXT.__unwind_info
+          [0x0000000100001f68-0x0000000100001ff8) a.out.__TEXT.__eh_frame
 
-    See also SBModule.
+    See also :py:class:`SBModule` .
     """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -9250,7 +9279,7 @@ class SBSourceManager(object):
     r"""
     Represents a central authority for displaying source code.
 
-    For example (from test/source-manager/TestSourceManager.py),
+    For example (from test/source-manager/TestSourceManager.py), ::
 
             # Create the filespec for 'main.c'.
             filespec = lldb.SBFileSpec('main.c', False)
@@ -9298,7 +9327,7 @@ class SBStream(object):
     Represents a destination for streaming data output to. By default, a string
     stream is created.
 
-    For example (from test/source-manager/TestSourceManager.py),
+    For example (from test/source-manager/TestSourceManager.py), ::
 
             # Create the filespec for 'main.c'.
             filespec = lldb.SBFileSpec('main.c', False)
@@ -9401,7 +9430,7 @@ class SBStream(object):
 _lldb.SBStream_swigregister(SBStream)
 
 class SBStringList(object):
-    r"""Proxy of C++ lldb::SBStringList class."""
+    r"""Represents a list of strings."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -9463,8 +9492,7 @@ class SBStructuredData(object):
     r"""
     A class representing a StructuredData event.
 
-                  This class wraps the event type generated by StructuredData
-                  features.
+    This class wraps the event type generated by StructuredData features.
     """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -9547,9 +9575,7 @@ _lldb.SBStructuredData_swigregister(SBStructuredData)
 class SBSymbol(object):
     r"""
     Represents the symbol possibly associated with a stack frame.
-    SBModule contains SBSymbol(s). SBSymbol can also be retrieved from SBFrame.
-
-    See also SBModule and SBFrame.
+    :py:class:`SBModule` contains SBSymbol(s). SBSymbol can also be retrieved from :py:class:`SBFrame` .
     """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -9670,7 +9696,7 @@ class SBSymbolContext(object):
     provides a common structure that can be used as the result of a query that
     can contain a single result.
 
-    For example,
+    For example, ::
 
             exe = os.path.join(os.getcwd(), 'a.out')
 
@@ -9797,7 +9823,7 @@ class SBSymbolContextList(object):
     r"""
     Represents a list of symbol context object. See also SBSymbolContext.
 
-    For example (from test/python_api/target/TestTargetAPI.py),
+    For example (from test/python_api/target/TestTargetAPI.py), ::
 
         def find_functions(self, exe_name):
             '''Exercise SBTaget.FindFunctions() API.'''
@@ -9940,40 +9966,40 @@ class SBTarget(object):
     r"""
     Represents the target program running under the debugger.
 
-    SBTarget supports module, breakpoint, and watchpoint iterations. For example,
+    SBTarget supports module, breakpoint, and watchpoint iterations. For example, ::
 
         for m in target.module_iter():
             print m
 
-    produces:
+    produces: ::
 
-    (x86_64) /Volumes/data/lldb/svn/trunk/test/python_api/lldbutil/iter/a.out
-    (x86_64) /usr/lib/dyld
-    (x86_64) /usr/lib/libstdc++.6.dylib
-    (x86_64) /usr/lib/libSystem.B.dylib
-    (x86_64) /usr/lib/system/libmathCommon.A.dylib
-    (x86_64) /usr/lib/libSystem.B.dylib(__commpage)
+        (x86_64) /Volumes/data/lldb/svn/trunk/test/python_api/lldbutil/iter/a.out
+        (x86_64) /usr/lib/dyld
+        (x86_64) /usr/lib/libstdc++.6.dylib
+        (x86_64) /usr/lib/libSystem.B.dylib
+        (x86_64) /usr/lib/system/libmathCommon.A.dylib
+        (x86_64) /usr/lib/libSystem.B.dylib(__commpage)
 
-    and,
+    and, ::
 
         for b in target.breakpoint_iter():
             print b
 
-    produces:
+    produces: ::
 
-    SBBreakpoint: id = 1, file ='main.cpp', line = 66, locations = 1
-    SBBreakpoint: id = 2, file ='main.cpp', line = 85, locations = 1
+        SBBreakpoint: id = 1, file ='main.cpp', line = 66, locations = 1
+        SBBreakpoint: id = 2, file ='main.cpp', line = 85, locations = 1
 
-    and,
+    and, ::
 
         for wp_loc in target.watchpoint_iter():
             print wp_loc
 
-    produces:
+    produces: ::
 
-    Watchpoint 1: addr = 0x1034ca048 size = 4 state = enabled type = rw
-        declare @ '/Volumes/data/lldb/svn/trunk/test/python_api/watchpoint/main.c:12'
-        hw_index = 0  hit_count = 2     ignore_count = 0
+        Watchpoint 1: addr = 0x1034ca048 size = 4 state = enabled type = rw
+            declare @ '/Volumes/data/lldb/svn/trunk/test/python_api/watchpoint/main.c:12'
+            hw_index = 0  hit_count = 2     ignore_count = 0
     """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -10075,30 +10101,16 @@ class SBTarget(object):
 
             Launch a new process with sensible defaults.
 
-            @param[in] argv
-                The argument array.
+            :param argv: The argument array.
+            :param envp: The environment array.
+            :param working_directory: The working directory to have the child process run in
+            :return: The newly created process.
+            :rtype: SBProcess
 
-            @param[in] envp
-                The environment array.
+            A pseudo terminal will be used as stdin/stdout/stderr.
+            No launch flags are passed and the target's debuger is used as a listener.
 
-            @param[in] working_directory
-                The working directory to have the child process run in
-
-            Default: listener
-                Set to the target's debugger (SBTarget::GetDebugger())
-
-            Default: launch_flags
-                Empty launch flags
-
-            Default: stdin_path
-            Default: stdout_path
-            Default: stderr_path
-                A pseudo terminal will be used.
-
-            @return
-                 A process object for the newly created process.
-
-            For example,
+            For example, ::
 
                 process = target.LaunchSimple(['X', 'Y', 'Z'], None, os.getcwd())
 
@@ -10332,16 +10344,13 @@ class SBTarget(object):
         r"""
         FindCompileUnits(SBTarget self, SBFileSpec sb_file_spec) -> SBSymbolContextList
 
-            Find compile units related to *this target and passed source
+            Find compile units related to this target and passed source
             file.
 
-            @param[in] sb_file_spec
-                A lldb::SBFileSpec object that contains source file
+            :param sb_file_spec: A :py:class:`lldb::SBFileSpec` object that contains source file
                 specification.
-
-            @return
-                A lldb::SBSymbolContextList that gets filled in with all of
-                the symbol contexts for all the matches.
+            :return: The symbol contexts for all the matches.
+            :rtype: SBSymbolContextList
         """
         return _lldb.SBTarget_FindCompileUnits(self, sb_file_spec)
 
@@ -10363,9 +10372,9 @@ class SBTarget(object):
 
             Architecture data byte width accessor
 
-            @return
-            The size in 8-bit (host) bytes of a minimum addressable
-            unit from the Architecture's data bus
+            :return: The size in 8-bit (host) bytes of a minimum addressable unit from the Architecture's data bus.
+
+
         """
         return _lldb.SBTarget_GetDataByteSize(self)
 
@@ -10373,11 +10382,11 @@ class SBTarget(object):
         r"""
         GetCodeByteSize(SBTarget self) -> uint32_t
 
-            Architecture code byte width accessor
+            Architecture code byte width accessor.
 
-            @return
-            The size in 8-bit (host) bytes of a minimum addressable
-            unit from the Architecture's code bus
+            :return: The size in 8-bit (host) bytes of a minimum addressable unit from the Architecture's code bus.
+
+
         """
         return _lldb.SBTarget_GetCodeByteSize(self)
 
@@ -10403,17 +10412,16 @@ class SBTarget(object):
 
             Find functions by name.
 
-            @param[in] name
-                The name of the function we are looking for.
+            :param name: The name of the function we are looking for.
 
-            @param[in] name_type_mask
+            :param name_type_mask:
                 A logical OR of one or more FunctionNameType enum bits that
                 indicate what kind of names should be used when doing the
                 lookup. Bits include fully qualified names, base names,
                 C++ methods, or ObjC selectors.
                 See FunctionNameType for more details.
 
-            @return
+            :return:
                 A lldb::SBSymbolContextList that gets filled in with all of
                 the symbol contexts for all the matches.
         """
@@ -10536,6 +10544,7 @@ class SBTarget(object):
         BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, lldb::addr_t offset) -> SBBreakpoint
         BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, lldb::addr_t offset, SBFileSpecList module_list) -> SBBreakpoint
         BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, uint32_t column, lldb::addr_t offset, SBFileSpecList module_list) -> SBBreakpoint
+        BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, uint32_t column, lldb::addr_t offset, SBFileSpecList module_list, bool move_to_nearest_code) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateByLocation(self, *args)
 
@@ -10597,41 +10606,42 @@ class SBTarget(object):
 
             @param[in] class_name
                This is the name of the class that implements a scripted resolver.
-               The class should have the following signature:
-               class Resolver:
-                   def __init__(self, bkpt, extra_args):
-                       # bkpt - the breakpoint for which this is the resolver.  When
-                       # the resolver finds an interesting address, call AddLocation
-                       # on this breakpoint to add it.
-                       #
-                       # extra_args - an SBStructuredData that can be used to
-                       # parametrize this instance.  Same as the extra_args passed
-                       # to BreakpointCreateFromScript.
+               The class should have the following signature: ::
 
-                   def __get_depth__ (self):
-                       # This is optional, but if defined, you should return the
-                       # depth at which you want the callback to be called.  The
-                       # available options are:
-                       #    lldb.eSearchDepthModule
-                       #    lldb.eSearchDepthCompUnit
-                       # The default if you don't implement this method is
-                       # eSearchDepthModule.
+                   class Resolver:
+                       def __init__(self, bkpt, extra_args):
+                           # bkpt - the breakpoint for which this is the resolver.  When
+                           # the resolver finds an interesting address, call AddLocation
+                           # on this breakpoint to add it.
+                           #
+                           # extra_args - an SBStructuredData that can be used to
+                           # parametrize this instance.  Same as the extra_args passed
+                           # to BreakpointCreateFromScript.
 
-                   def __callback__(self, sym_ctx):
-                       # sym_ctx - an SBSymbolContext that is the cursor in the
-                       # search through the program to resolve breakpoints.
-                       # The sym_ctx will be filled out to the depth requested in
-                       # __get_depth__.
-                       # Look in this sym_ctx for new breakpoint locations,
-                       # and if found use bkpt.AddLocation to add them.
-                       # Note, you will only get called for modules/compile_units that
-                       # pass the SearchFilter provided by the module_list & file_list
-                       # passed into BreakpointCreateFromScript.
+                       def __get_depth__ (self):
+                           # This is optional, but if defined, you should return the
+                           # depth at which you want the callback to be called.  The
+                           # available options are:
+                           #    lldb.eSearchDepthModule
+                           #    lldb.eSearchDepthCompUnit
+                           # The default if you don't implement this method is
+                           # eSearchDepthModule.
 
-                   def get_short_help(self):
-                       # Optional, but if implemented return a short string that will
-                       # be printed at the beginning of the break list output for the
-                       # breakpoint.
+                       def __callback__(self, sym_ctx):
+                           # sym_ctx - an SBSymbolContext that is the cursor in the
+                           # search through the program to resolve breakpoints.
+                           # The sym_ctx will be filled out to the depth requested in
+                           # __get_depth__.
+                           # Look in this sym_ctx for new breakpoint locations,
+                           # and if found use bkpt.AddLocation to add them.
+                           # Note, you will only get called for modules/compile_units that
+                           # pass the SearchFilter provided by the module_list & file_list
+                           # passed into BreakpointCreateFromScript.
+
+                       def get_short_help(self):
+                           # Optional, but if implemented return a short string that will
+                           # be printed at the beginning of the break list output for the
+                           # breakpoint.
 
             @param[in] extra_args
                This is an SBStructuredData object that will get passed to the
@@ -10794,11 +10804,12 @@ class SBTarget(object):
         ReadInstructions(SBTarget self, SBAddress base_addr, uint32_t count, char const * flavor_string) -> SBInstructionList
 
             Disassemble a specified number of instructions starting at an address.
-            Parameters:
-               base_addr       -- the address to start disassembly from
-               count           -- the number of instructions to disassemble
-               flavor_string   -- may be 'intel' or 'att' on x86 targets to specify that style of disassembly
-            Returns an SBInstructionList.
+
+            :param base_addr: the address to start disassembly from.
+            :param count: the number of instructions to disassemble.
+            :param flavor_string: may be 'intel' or 'att' on x86 targets to specify that style of disassembly.
+            :rtype: SBInstructionList
+
         """
         return _lldb.SBTarget_ReadInstructions(self, *args)
 
@@ -10807,11 +10818,12 @@ class SBTarget(object):
         GetInstructions(SBTarget self, SBAddress base_addr, void const * buf) -> SBInstructionList
 
             Disassemble the bytes in a buffer and return them in an SBInstructionList.
-            Parameters:
-               base_addr -- used for symbolicating the offsets in the byte stream when disassembling
-               buf       -- bytes to be disassembled
-               size      -- (C++) size of the buffer
-            Returns an SBInstructionList.
+
+            :param base_addr: used for symbolicating the offsets in the byte stream when disassembling.
+            :param buf: bytes to be disassembled.
+            :param size: (C++) size of the buffer.
+            :rtype: SBInstructionList
+
         """
         return _lldb.SBTarget_GetInstructions(self, base_addr, buf)
 
@@ -10820,12 +10832,13 @@ class SBTarget(object):
         GetInstructionsWithFlavor(SBTarget self, SBAddress base_addr, char const * flavor_string, void const * buf) -> SBInstructionList
 
             Disassemble the bytes in a buffer and return them in an SBInstructionList, with a supplied flavor.
-            Parameters:
-               base_addr -- used for symbolicating the offsets in the byte stream when disassembling
-               flavor    -- may be 'intel' or 'att' on x86 targets to specify that style of disassembly
-               buf       -- bytes to be disassembled
-               size      -- (C++) size of the buffer
-            Returns an SBInstructionList.
+
+            :param base_addr: used for symbolicating the offsets in the byte stream when disassembling.
+            :param flavor:  may be 'intel' or 'att' on x86 targets to specify that style of disassembly.
+            :param buf: bytes to be disassembled.
+            :param size: (C++) size of the buffer.
+            :rtype: SBInstructionList
+
         """
         return _lldb.SBTarget_GetInstructionsWithFlavor(self, base_addr, flavor_string, buf)
 
@@ -10840,6 +10853,19 @@ class SBTarget(object):
     def GetStackRedZoneSize(self):
         r"""GetStackRedZoneSize(SBTarget self) -> lldb::addr_t"""
         return _lldb.SBTarget_GetStackRedZoneSize(self)
+
+    def IsLoaded(self, module):
+        r"""
+        IsLoaded(SBTarget self, SBModule module) -> bool
+
+            Returns true if the module has been loaded in this `SBTarget`.
+            A module can be loaded either by the dynamic loader or by being manually
+            added to the target (see `SBTarget.AddModule` and the `target module add` command).
+
+            :rtype: bool
+
+        """
+        return _lldb.SBTarget_IsLoaded(self, module)
 
     def GetLaunchInfo(self):
         r"""GetLaunchInfo(SBTarget self) -> SBLaunchInfo"""
@@ -11013,7 +11039,7 @@ def SBTarget_GetModuleAtIndexFromEvent(idx, event):
 
 class SBThread(object):
     r"""
-    Represents a thread of execution. SBProcess contains SBThread(s).
+    Represents a thread of execution. :py:class:`SBProcess` contains SBThread(s).
 
     SBThreads can be referred to by their ID, which maps to the system specific thread
     identifier, or by IndexID.  The ID may or may not be unique depending on whether the
@@ -11022,7 +11048,7 @@ class SBThread(object):
     away it will not be reused.
 
     SBThread supports frame iteration. For example (from test/python_api/
-    lldbutil/iter/TestLLDBIterator.py),
+    lldbutil/iter/TestLLDBIterator.py), ::
 
             from lldbutil import print_stacktrace
             stopped_due_to_breakpoint = False
@@ -11039,7 +11065,7 @@ class SBThread(object):
 
             self.assertTrue(stopped_due_to_breakpoint)
 
-    See also SBProcess and SBFrame.
+    See also :py:class:`SBFrame` .
     """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -11583,7 +11609,11 @@ class SBThreadCollection(object):
 _lldb.SBThreadCollection_swigregister(SBThreadCollection)
 
 class SBThreadPlan(object):
-    r"""Proxy of C++ lldb::SBThreadPlan class."""
+    r"""
+    Represents a plan for the execution control of a given thread.
+
+    See also :py:class:`SBThread` and :py:class:`SBFrame`.
+    """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -11710,7 +11740,7 @@ class SBThreadPlan(object):
 _lldb.SBThreadPlan_swigregister(SBThreadPlan)
 
 class SBTrace(object):
-    r"""Proxy of C++ lldb::SBTrace class."""
+    r"""Represents a processor trace."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -11754,7 +11784,11 @@ class SBTrace(object):
 _lldb.SBTrace_swigregister(SBTrace)
 
 class SBTraceOptions(object):
-    r"""Proxy of C++ lldb::SBTraceOptions class."""
+    r"""
+    Represents the possible options when doing processor tracing.
+
+    See :py:class:`SBProcess.StartTrace`.
+    """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -11818,7 +11852,7 @@ class SBTraceOptions(object):
 _lldb.SBTraceOptions_swigregister(SBTraceOptions)
 
 class SBTypeMember(object):
-    r"""Represents a member of a type in lldb."""
+    r"""Represents a member of a type."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -11881,7 +11915,7 @@ class SBTypeMember(object):
 _lldb.SBTypeMember_swigregister(SBTypeMember)
 
 class SBTypeMemberFunction(object):
-    r"""Proxy of C++ lldb::SBTypeMemberFunction class."""
+    r"""Represents a member function of a type."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -11952,72 +11986,72 @@ class SBType(object):
     Represents a data type in lldb.  The FindFirstType() method of SBTarget/SBModule
     returns a SBType.
 
-    SBType supports the eq/ne operator. For example,
+    SBType supports the eq/ne operator. For example,::
 
-    main.cpp:
+        //main.cpp:
 
-    class Task {
-    public:
-        int id;
-        Task *next;
-        Task(int i, Task *n):
-            id(i),
-            next(n)
-        {}
-    };
+        class Task {
+        public:
+            int id;
+            Task *next;
+            Task(int i, Task *n):
+                id(i),
+                next(n)
+            {}
+        };
 
-    int main (int argc, char const *argv[])
-    {
-        Task *task_head = new Task(-1, NULL);
-        Task *task1 = new Task(1, NULL);
-        Task *task2 = new Task(2, NULL);
-        Task *task3 = new Task(3, NULL); // Orphaned.
-        Task *task4 = new Task(4, NULL);
-        Task *task5 = new Task(5, NULL);
+        int main (int argc, char const *argv[])
+        {
+            Task *task_head = new Task(-1, NULL);
+            Task *task1 = new Task(1, NULL);
+            Task *task2 = new Task(2, NULL);
+            Task *task3 = new Task(3, NULL); // Orphaned.
+            Task *task4 = new Task(4, NULL);
+            Task *task5 = new Task(5, NULL);
 
-        task_head->next = task1;
-        task1->next = task2;
-        task2->next = task4;
-        task4->next = task5;
+            task_head->next = task1;
+            task1->next = task2;
+            task2->next = task4;
+            task4->next = task5;
 
-        int total = 0;
-        Task *t = task_head;
-        while (t != NULL) {
-            if (t->id >= 0)
-                ++total;
-            t = t->next;
+            int total = 0;
+            Task *t = task_head;
+            while (t != NULL) {
+                if (t->id >= 0)
+                    ++total;
+                t = t->next;
+            }
+            printf('We have a total number of %d tasks\n', total);
+
+            // This corresponds to an empty task list.
+            Task *empty_task_head = new Task(-1, NULL);
+
+            return 0; // Break at this line
         }
-        printf('We have a total number of %d tasks\n', total);
 
-        // This corresponds to an empty task list.
-        Task *empty_task_head = new Task(-1, NULL);
+        # find_type.py:
 
-        return 0; // Break at this line
-    }
+                # Get the type 'Task'.
+                task_type = target.FindFirstType('Task')
+                self.assertTrue(task_type)
 
-    find_type.py:
+                # Get the variable 'task_head'.
+                frame0.FindVariable('task_head')
+                task_head_type = task_head.GetType()
+                self.assertTrue(task_head_type.IsPointerType())
 
-            # Get the type 'Task'.
-            task_type = target.FindFirstType('Task')
-            self.assertTrue(task_type)
+                # task_head_type is 'Task *'.
+                task_pointer_type = task_type.GetPointerType()
+                self.assertTrue(task_head_type == task_pointer_type)
 
-            # Get the variable 'task_head'.
-            frame0.FindVariable('task_head')
-            task_head_type = task_head.GetType()
-            self.assertTrue(task_head_type.IsPointerType())
+                # Get the child mmember 'id' from 'task_head'.
+                id = task_head.GetChildMemberWithName('id')
+                id_type = id.GetType()
 
-            # task_head_type is 'Task *'.
-            task_pointer_type = task_type.GetPointerType()
-            self.assertTrue(task_head_type == task_pointer_type)
-
-            # Get the child mmember 'id' from 'task_head'.
-            id = task_head.GetChildMemberWithName('id')
-            id_type = id.GetType()
-
-            # SBType.GetBasicType() takes an enum 'BasicType' (lldb-enumerations.h).
-            int_type = id_type.GetBasicType(lldb.eBasicTypeInt)
-            # id_type and int_type should be the same type!
-            self.assertTrue(id_type == int_type)
+                # SBType.GetBasicType() takes an enum 'BasicType' (lldb-enumerations.h).
+                int_type = id_type.GetBasicType(lldb.eBasicTypeInt)
+                # id_type and int_type should be the same type!
+                self.assertTrue(id_type == int_type)
 
     ...
     """
@@ -12079,6 +12113,10 @@ class SBType(object):
         r"""IsAnonymousType(SBType self) -> bool"""
         return _lldb.SBType_IsAnonymousType(self)
 
+    def IsScopedEnumerationType(self):
+        r"""IsScopedEnumerationType(SBType self) -> bool"""
+        return _lldb.SBType_IsScopedEnumerationType(self)
+
     def GetPointerType(self):
         r"""GetPointerType(SBType self) -> SBType"""
         return _lldb.SBType_GetPointerType(self)
@@ -12106,6 +12144,10 @@ class SBType(object):
     def GetCanonicalType(self):
         r"""GetCanonicalType(SBType self) -> SBType"""
         return _lldb.SBType_GetCanonicalType(self)
+
+    def GetEnumerationIntegerType(self):
+        r"""GetEnumerationIntegerType(SBType self) -> SBType"""
+        return _lldb.SBType_GetEnumerationIntegerType(self)
 
     def GetArrayElementType(self):
         r"""GetArrayElementType(SBType self) -> SBType"""
@@ -12153,6 +12195,10 @@ class SBType(object):
     def GetEnumMembers(self):
         r"""GetEnumMembers(SBType self) -> SBTypeEnumMemberList"""
         return _lldb.SBType_GetEnumMembers(self)
+
+    def GetModule(self):
+        r"""GetModule(SBType self) -> SBModule"""
+        return _lldb.SBType_GetModule(self)
 
     def GetName(self):
         r"""GetName(SBType self) -> char const *"""
@@ -12223,6 +12269,7 @@ class SBType(object):
             return template_args
         return None
 
+    module = property(GetModule, None, doc='''A read only property that returns the module in which type is defined.''')
     name = property(GetName, None, doc='''A read only property that returns the name for this type as a string.''')
     size = property(GetByteSize, None, doc='''A read only property that returns size in bytes for this type as an integer.''')
     is_pointer = property(IsPointerType, None, doc='''A read only property that returns a boolean value that indicates if this type is a pointer type.''')
@@ -12315,35 +12362,38 @@ _lldb.SBType_swigregister(SBType)
 
 class SBTypeList(object):
     r"""
-    Represents a list of SBTypes.  The FindTypes() method of SBTarget/SBModule
-    returns a SBTypeList.
+    Represents a list of :py:class:`SBType` s.
 
-    SBTypeList supports SBType iteration. For example,
+    The FindTypes() method of :py:class:`SBTarget`/:py:class:`SBModule` returns a SBTypeList.
 
-    main.cpp:
+    SBTypeList supports :py:class:`SBType` iteration. For example,
 
-    class Task {
-    public:
-        int id;
-        Task *next;
-        Task(int i, Task *n):
-            id(i),
-            next(n)
-        {}
-    };
+    .. code-block:: cpp
 
-    ...
+        // main.cpp:
 
-    find_type.py:
+        class Task {
+        public:
+            int id;
+            Task *next;
+            Task(int i, Task *n):
+                id(i),
+                next(n)
+            {}
+        };
 
-            # Get the type 'Task'.
-            type_list = target.FindTypes('Task')
-            self.assertTrue(len(type_list) == 1)
-            # To illustrate the SBType iteration.
-            for type in type_list:
-                # do something with type
+    .. code-block:: python
 
-    ...
+        # find_type.py:
+
+        # Get the type 'Task'.
+        type_list = target.FindTypes('Task')
+        self.assertTrue(len(type_list) == 1)
+        # To illustrate the SBType iteration.
+        for type in type_list:
+            # do something with type
+
+
     """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -12692,9 +12742,10 @@ _lldb.SBTypeEnumMember_swigregister(SBTypeEnumMember)
 class SBTypeEnumMemberList(object):
     r"""
     Represents a list of SBTypeEnumMembers.
+
     SBTypeEnumMemberList supports SBTypeEnumMember iteration.
     It also supports [] access either by index, or by enum
-    element name by doing:
+    element name by doing: ::
 
       myType = target.FindFirstType('MyEnumWithElementA')
       members = myType.GetEnumMembers()
@@ -13375,7 +13426,7 @@ class SBValue(object):
 
     SBValue supports iteration through its child, which in turn is represented
     as an SBValue.  For example, we can get the general purpose registers of a
-    frame as an SBValue, and iterate through all the registers,
+    frame as an SBValue, and iterate through all the registers,::
 
         registerSet = frame.registers # Returns an SBValueList.
         for regs in registerSet:
@@ -13387,30 +13438,30 @@ class SBValue(object):
         for reg in GPRs:
             print('Name: ', reg.name, ' Value: ', reg.value)
 
-    produces the output:
+    produces the output: ::
 
-    General Purpose Registers (number of children = 21):
-    Name:  rax  Value:  0x0000000100000c5c
-    Name:  rbx  Value:  0x0000000000000000
-    Name:  rcx  Value:  0x00007fff5fbffec0
-    Name:  rdx  Value:  0x00007fff5fbffeb8
-    Name:  rdi  Value:  0x0000000000000001
-    Name:  rsi  Value:  0x00007fff5fbffea8
-    Name:  rbp  Value:  0x00007fff5fbffe80
-    Name:  rsp  Value:  0x00007fff5fbffe60
-    Name:  r8  Value:  0x0000000008668682
-    Name:  r9  Value:  0x0000000000000000
-    Name:  r10  Value:  0x0000000000001200
-    Name:  r11  Value:  0x0000000000000206
-    Name:  r12  Value:  0x0000000000000000
-    Name:  r13  Value:  0x0000000000000000
-    Name:  r14  Value:  0x0000000000000000
-    Name:  r15  Value:  0x0000000000000000
-    Name:  rip  Value:  0x0000000100000dae
-    Name:  rflags  Value:  0x0000000000000206
-    Name:  cs  Value:  0x0000000000000027
-    Name:  fs  Value:  0x0000000000000010
-    Name:  gs  Value:  0x0000000000000048
+        General Purpose Registers (number of children = 21):
+        Name:  rax  Value:  0x0000000100000c5c
+        Name:  rbx  Value:  0x0000000000000000
+        Name:  rcx  Value:  0x00007fff5fbffec0
+        Name:  rdx  Value:  0x00007fff5fbffeb8
+        Name:  rdi  Value:  0x0000000000000001
+        Name:  rsi  Value:  0x00007fff5fbffea8
+        Name:  rbp  Value:  0x00007fff5fbffe80
+        Name:  rsp  Value:  0x00007fff5fbffe60
+        Name:  r8  Value:  0x0000000008668682
+        Name:  r9  Value:  0x0000000000000000
+        Name:  r10  Value:  0x0000000000001200
+        Name:  r11  Value:  0x0000000000000206
+        Name:  r12  Value:  0x0000000000000000
+        Name:  r13  Value:  0x0000000000000000
+        Name:  r14  Value:  0x0000000000000000
+        Name:  r15  Value:  0x0000000000000000
+        Name:  rip  Value:  0x0000000100000dae
+        Name:  rflags  Value:  0x0000000000000206
+        Name:  cs  Value:  0x0000000000000027
+        Name:  fs  Value:  0x0000000000000010
+        Name:  gs  Value:  0x0000000000000048
 
     See also linked_list_iter() for another perspective on how to iterate through an
     SBValue instance which interprets the value object as representing the head of a
@@ -13801,22 +13852,18 @@ class SBValue(object):
             Get an SBData wrapping what this SBValue points to.
 
             This method will dereference the current SBValue, if its
-            data type is a T* or T[], and extract item_count elements
-            of type T from it, copying their contents in an SBData.
+            data type is a ``T\*`` or ``T[]``, and extract ``item_count`` elements
+            of type ``T`` from it, copying their contents in an :py:class:`SBData`.
 
-            @param[in] item_idx
-                The index of the first item to retrieve. For an array
+            :param item_idx: The index of the first item to retrieve. For an array
                 this is equivalent to array[item_idx], for a pointer
-                to *(pointer + item_idx). In either case, the measurement
-                unit for item_idx is the sizeof(T) rather than the byte
-
-            @param[in] item_count
-                How many items should be copied into the output. By default
+                to ``\*(pointer + item_idx)``. In either case, the measurement
+                unit for item_idx is the ``sizeof(T)`` rather than the byte
+            :param item_count: How many items should be copied into the output. By default
                 only one item is copied, but more can be asked for.
+            :return: The contents of the copied items on success. An empty :py:class:`SBData` otherwise.
+            :rtype: SBData
 
-            @return
-                An SBData with the contents of the copied items, on success.
-                An empty SBData otherwise.
         """
         return _lldb.SBValue_GetPointeeData(self, item_idx, item_count)
 
@@ -14024,61 +14071,62 @@ _lldb.SBValue_swigregister(SBValue)
 
 class SBValueList(object):
     r"""
-    Represents a collection of SBValues.  Both SBFrame's GetVariables() and
-    GetRegisters() return a SBValueList.
+    Represents a collection of SBValues.  Both :py:class:`SBFrame.GetVariables()` and
+    :py:class:`SBFrame.GetRegisters()` return a SBValueList.
 
-    SBValueList supports SBValue iteration. For example (from test/lldbutil.py),
+    SBValueList supports :py:class:`SBValue` iteration. For example (from test/lldbutil.py),::
 
-    def get_registers(frame, kind):
-        '''Returns the registers given the frame and the kind of registers desired.
+        def get_registers(frame, kind):
+            '''Returns the registers given the frame and the kind of registers desired.
 
-        Returns None if there's no such kind.
-        '''
-        registerSet = frame.GetRegisters() # Return type of SBValueList.
-        for value in registerSet:
-            if kind.lower() in value.GetName().lower():
-                return value
+            Returns None if there's no such kind.
+            '''
+            registerSet = frame.GetRegisters() # Return type of SBValueList.
+            for value in registerSet:
+                if kind.lower() in value.GetName().lower():
+                    return value
 
-        return None
+            return None
 
-    def get_GPRs(frame):
-        '''Returns the general purpose registers of the frame as an SBValue.
+        def get_GPRs(frame):
+            '''Returns the general purpose registers of the frame as an SBValue.
 
-        The returned SBValue object is iterable.  An example:
-            ...
-            from lldbutil import get_GPRs
-            regs = get_GPRs(frame)
-            for reg in regs:
-                print('%s => %s' % (reg.GetName(), reg.GetValue()))
-            ...
-        '''
-        return get_registers(frame, 'general purpose')
+            The returned SBValue object is iterable.  An example:
+                ...
+                from lldbutil import get_GPRs
+                regs = get_GPRs(frame)
+                for reg in regs:
+                    print('%s => %s' % (reg.GetName(), reg.GetValue()))
+                ...
+            '''
+            return get_registers(frame, 'general purpose')
 
-    def get_FPRs(frame):
-        '''Returns the floating point registers of the frame as an SBValue.
+        def get_FPRs(frame):
+            '''Returns the floating point registers of the frame as an SBValue.
 
-        The returned SBValue object is iterable.  An example:
-            ...
-            from lldbutil import get_FPRs
-            regs = get_FPRs(frame)
-            for reg in regs:
-                print('%s => %s' % (reg.GetName(), reg.GetValue()))
-            ...
-        '''
-        return get_registers(frame, 'floating point')
+            The returned SBValue object is iterable.  An example:
+                ...
+                from lldbutil import get_FPRs
+                regs = get_FPRs(frame)
+                for reg in regs:
+                    print('%s => %s' % (reg.GetName(), reg.GetValue()))
+                ...
+            '''
+            return get_registers(frame, 'floating point')
 
-    def get_ESRs(frame):
-        '''Returns the exception state registers of the frame as an SBValue.
+        def get_ESRs(frame):
+            '''Returns the exception state registers of the frame as an SBValue.
 
-        The returned SBValue object is iterable.  An example:
-            ...
-            from lldbutil import get_ESRs
-            regs = get_ESRs(frame)
-            for reg in regs:
-                print('%s => %s' % (reg.GetName(), reg.GetValue()))
-            ...
-        '''
-        return get_registers(frame, 'exception state')
+            The returned SBValue object is iterable.  An example:
+                ...
+                from lldbutil import get_ESRs
+                regs = get_ESRs(frame)
+                for reg in regs:
+                    print('%s => %s' % (reg.GetName(), reg.GetValue()))
+                ...
+            '''
+            return get_registers(frame, 'exception state')
+
     """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -14176,7 +14224,7 @@ class SBValueList(object):
 _lldb.SBValueList_swigregister(SBValueList)
 
 class SBVariablesOptions(object):
-    r"""Proxy of C++ lldb::SBVariablesOptions class."""
+    r"""Describes which variables should be returned from :py:class:`SBFrame.GetVariables`."""
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -14265,7 +14313,7 @@ class SBWatchpoint(object):
     A watchpoint is determined by the address and the byte size that resulted in
     this particular instantiation.  Each watchpoint has its settable options.
 
-    See also SBTarget.watchpoint_iter() for example usage of iterating through the
+    See also :py:class:`SBTarget.watchpoint_iter()` for example usage of iterating through the
     watchpoints of the target.
     """
 
@@ -14420,6 +14468,7 @@ class declaration(object):
         self.col = col
 
 class value_iter(object):
+    '''Allows iterating over the children of an :py:class:`SBValue`.'''
     def __iter__(self):
         return self
 
@@ -14441,19 +14490,19 @@ class value_iter(object):
         self.length = self.sbvalue.GetNumChildren()
 
 class value(object):
-    '''A class designed to wrap lldb.SBValue() objects so the resulting object
-    can be used as a variable would be in code. So if you have a Point structure
-    variable in your code in the current frame named "pt", you can initialize an instance
-    of this class with it:
+    '''Wraps :py:class:`SBValue` objects so the resulting object can be used as a variable would be in code.
 
-    pt = lldb.value(lldb.frame.FindVariable("pt"))
-    print pt
-    print pt.x
-    print pt.y
+    So if you have a Point structure variable in your code in the current frame named "pt",
+    you can initialize an instance of this class with it: ::
 
-    pt = lldb.value(lldb.frame.FindVariable("rectangle_array"))
-    print rectangle_array[12]
-    print rectangle_array[5].origin.x'''
+        pt = lldb.value(lldb.frame.FindVariable("pt"))
+        print pt
+        print pt.x
+        print pt.y
+
+        pt = lldb.value(lldb.frame.FindVariable("rectangle_array"))
+        print rectangle_array[12]
+        print rectangle_array[5].origin.x'''
     def __init__(self, sbvalue):
         self.sbvalue = sbvalue
 
