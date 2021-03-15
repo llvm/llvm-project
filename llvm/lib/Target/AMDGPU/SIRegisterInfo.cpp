@@ -2338,6 +2338,18 @@ MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
   return AMDGPU::NoRegister;
 }
 
+bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
+  if (!ST.needsAlignedVGPRs())
+    return true;
+
+  if (hasVGPRs(&RC))
+    return RC.hasSuperClassEq(getVGPRClassForBitWidth(getRegSizeInBits(RC)));
+  if (hasAGPRs(&RC))
+    return RC.hasSuperClassEq(getAGPRClassForBitWidth(getRegSizeInBits(RC)));
+
+  return true;
+}
+
 bool SIRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
   switch (PhysReg) {
   case AMDGPU::SGPR_NULL:
