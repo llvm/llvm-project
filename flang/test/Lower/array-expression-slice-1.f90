@@ -66,9 +66,12 @@ subroutine sub(a)
   ! CHECK-DAG: %[[one:.*]] = constant 1 : i64
   ! CHECK-DAG: %[[five:.*]] = constant 5 : i64
   ! CHECK-DAG: %[[two:.*]] = constant 2 : i64
+  ! CHECK-DAG: %[[three:.*]] = constant 3 : index
+  ! CHECK: %[[allocmem:.*]] = fir.allocmem !fir.array<3x!fir.char<1>>
+  ! CHECK: %[[shape3:.*]] = fir.shape %[[three]] :
   ! CHECK: %[[shape:.*]] = fir.shape %[[ten]] :
   ! CHECK: %[[slice:.*]] = fir.slice %[[one]], %[[five]], %[[two]] :
   ! CHECK: fir.array_coor %{{.*}}(%[[shape]]) [%[[slice]]] %
-  ! CHECK: fir.embox %{{.*}} : (!fir.heap<!fir.array<3x!fir.char<1>>>) -> !fir.box<!fir.array<3x!fir.char<1>>>
+  ! CHECK: fir.embox %[[allocmem]](%[[shape3]]) : (!fir.heap<!fir.array<3x!fir.char<1>>>, !fir.shape<1>) -> !fir.box<!fir.array<3x!fir.char<1>>>
   print *, "a = ", a(1:5:2)
 end subroutine sub
