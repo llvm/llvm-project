@@ -9,9 +9,9 @@
 // RUN: | FileCheck %s
 
 func @main() {
-  %data = alloc() : memref<2x6xf32>
-  %sum = alloc() : memref<2xf32>
-  %mul = alloc() : memref<2xf32>
+  %data = memref.alloc() : memref<2x6xf32>
+  %sum = memref.alloc() : memref<2xf32>
+  %mul = memref.alloc() : memref<2xf32>
   %cst0 = constant 0.0 : f32
   %cst1 = constant 1.0 : f32
   %cst2 = constant 2.0 : f32
@@ -33,35 +33,35 @@ func @main() {
   %c5 = constant 5 : index
   %c6 = constant 6 : index
 
-  %cast_data = memref_cast %data : memref<2x6xf32> to memref<*xf32>
+  %cast_data = memref.cast %data : memref<2x6xf32> to memref<*xf32>
   gpu.host_register %cast_data : memref<*xf32>
-  %cast_sum = memref_cast %sum : memref<2xf32> to memref<*xf32>
+  %cast_sum = memref.cast %sum : memref<2xf32> to memref<*xf32>
   gpu.host_register %cast_sum : memref<*xf32>
-  %cast_mul = memref_cast %mul : memref<2xf32> to memref<*xf32>
+  %cast_mul = memref.cast %mul : memref<2xf32> to memref<*xf32>
   gpu.host_register %cast_mul : memref<*xf32>
 
-  store %cst0, %data[%c0, %c0] : memref<2x6xf32>
-  store %cst1, %data[%c0, %c1] : memref<2x6xf32>
-  store %cst2, %data[%c0, %c2] : memref<2x6xf32>
-  store %cst4, %data[%c0, %c3] : memref<2x6xf32>
-  store %cst8, %data[%c0, %c4] : memref<2x6xf32>
-  store %cst16, %data[%c0, %c5] : memref<2x6xf32>
+  memref.store %cst0, %data[%c0, %c0] : memref<2x6xf32>
+  memref.store %cst1, %data[%c0, %c1] : memref<2x6xf32>
+  memref.store %cst2, %data[%c0, %c2] : memref<2x6xf32>
+  memref.store %cst4, %data[%c0, %c3] : memref<2x6xf32>
+  memref.store %cst8, %data[%c0, %c4] : memref<2x6xf32>
+  memref.store %cst16, %data[%c0, %c5] : memref<2x6xf32>
 
-  store %cst2, %data[%c1, %c0] : memref<2x6xf32>
-  store %cst3, %data[%c1, %c1] : memref<2x6xf32>
-  store %cst6, %data[%c1, %c2] : memref<2x6xf32>
-  store %cst7, %data[%c1, %c3] : memref<2x6xf32>
-  store %cst10, %data[%c1, %c4] : memref<2x6xf32>
-  store %cst11, %data[%c1, %c5] : memref<2x6xf32>
+  memref.store %cst2, %data[%c1, %c0] : memref<2x6xf32>
+  memref.store %cst3, %data[%c1, %c1] : memref<2x6xf32>
+  memref.store %cst6, %data[%c1, %c2] : memref<2x6xf32>
+  memref.store %cst7, %data[%c1, %c3] : memref<2x6xf32>
+  memref.store %cst10, %data[%c1, %c4] : memref<2x6xf32>
+  memref.store %cst11, %data[%c1, %c5] : memref<2x6xf32>
 
   // ADD + MUL
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c2, %grid_y = %c1, %grid_z = %c1)
              threads(%tx, %ty, %tz) in (%block_x = %c6, %block_y = %c1, %block_z = %c1) {
-    %val = load %data[%bx, %tx] : memref<2x6xf32>
+    %val = memref.load %data[%bx, %tx] : memref<2x6xf32>
     %reduced0 = "gpu.all_reduce"(%val) ({}) { op = "add" } : (f32) -> (f32)
-    store %reduced0, %sum[%bx] : memref<2xf32>
+    memref.store %reduced0, %sum[%bx] : memref<2xf32>
     %reduced1 = "gpu.all_reduce"(%val) ({}) { op = "mul" } : (f32) -> (f32)
-    store %reduced1, %mul[%bx] : memref<2xf32>
+    memref.store %reduced1, %mul[%bx] : memref<2xf32>
     gpu.terminator
   }
 
