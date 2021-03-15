@@ -6215,6 +6215,7 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
     default:
       break;
     case 'f':
+    case 'v':
       return C_RegisterClass;
     case 'I':
     case 'J':
@@ -6244,6 +6245,14 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &RISCV::FPR32RegClass);
       if (Subtarget.hasStdExtD() && VT == MVT::f64)
         return std::make_pair(0U, &RISCV::FPR64RegClass);
+      break;
+    case 'v':
+      for (const auto *RC :
+           {&RISCV::VMRegClass, &RISCV::VRRegClass, &RISCV::VRM2RegClass,
+            &RISCV::VRM4RegClass, &RISCV::VRM8RegClass}) {
+        if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
+          return std::make_pair(0U, RC);
+      }
       break;
     default:
       break;
@@ -6341,6 +6350,56 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(DReg, &RISCV::FPR64RegClass);
       }
       return std::make_pair(FReg, &RISCV::FPR32RegClass);
+    }
+  }
+
+  if (Subtarget.hasStdExtV()) {
+    Register VReg = StringSwitch<Register>(Constraint.lower())
+                        .Case("{v0}", RISCV::V0)
+                        .Case("{v1}", RISCV::V1)
+                        .Case("{v2}", RISCV::V2)
+                        .Case("{v3}", RISCV::V3)
+                        .Case("{v4}", RISCV::V4)
+                        .Case("{v5}", RISCV::V5)
+                        .Case("{v6}", RISCV::V6)
+                        .Case("{v7}", RISCV::V7)
+                        .Case("{v8}", RISCV::V8)
+                        .Case("{v9}", RISCV::V9)
+                        .Case("{v10}", RISCV::V10)
+                        .Case("{v11}", RISCV::V11)
+                        .Case("{v12}", RISCV::V12)
+                        .Case("{v13}", RISCV::V13)
+                        .Case("{v14}", RISCV::V14)
+                        .Case("{v15}", RISCV::V15)
+                        .Case("{v16}", RISCV::V16)
+                        .Case("{v17}", RISCV::V17)
+                        .Case("{v18}", RISCV::V18)
+                        .Case("{v19}", RISCV::V19)
+                        .Case("{v20}", RISCV::V20)
+                        .Case("{v21}", RISCV::V21)
+                        .Case("{v22}", RISCV::V22)
+                        .Case("{v23}", RISCV::V23)
+                        .Case("{v24}", RISCV::V24)
+                        .Case("{v25}", RISCV::V25)
+                        .Case("{v26}", RISCV::V26)
+                        .Case("{v27}", RISCV::V27)
+                        .Case("{v28}", RISCV::V28)
+                        .Case("{v29}", RISCV::V29)
+                        .Case("{v30}", RISCV::V30)
+                        .Case("{v31}", RISCV::V31)
+                        .Default(RISCV::NoRegister);
+    if (VReg != RISCV::NoRegister) {
+      if (TRI->isTypeLegalForClass(RISCV::VMRegClass, VT.SimpleTy))
+        return std::make_pair(VReg, &RISCV::VMRegClass);
+      if (TRI->isTypeLegalForClass(RISCV::VRRegClass, VT.SimpleTy))
+        return std::make_pair(VReg, &RISCV::VRRegClass);
+      for (const auto *RC :
+           {&RISCV::VRM2RegClass, &RISCV::VRM4RegClass, &RISCV::VRM8RegClass}) {
+        if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy)) {
+          VReg = TRI->getMatchingSuperReg(VReg, RISCV::sub_vrm1_0, RC);
+          return std::make_pair(VReg, RC);
+        }
+      }
     }
   }
 
@@ -6700,6 +6759,65 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
   }
 
   return false;
+}
+
+bool RISCVTargetLowering::splitValueIntoRegisterParts(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
+    unsigned NumParts, MVT PartVT, Optional<CallingConv::ID> CC) const {
+  EVT ValueVT = Val.getValueType();
+  if (ValueVT.isScalableVector() && PartVT.isScalableVector()) {
+    LLVMContext &Context = *DAG.getContext();
+    EVT ValueEltVT = ValueVT.getVectorElementType();
+    EVT PartEltVT = PartVT.getVectorElementType();
+    unsigned ValueVTBitSize = ValueVT.getSizeInBits().getKnownMinSize();
+    unsigned PartVTBitSize = PartVT.getSizeInBits().getKnownMinSize();
+    if (PartVTBitSize % ValueVTBitSize == 0) {
+      // If the element types are different, bitcast to the same element type of
+      // PartVT first.
+      if (ValueEltVT != PartEltVT) {
+        unsigned Count = ValueVTBitSize / PartEltVT.getSizeInBits();
+        assert(Count != 0 && "The number of element should not be zero.");
+        EVT SameEltTypeVT =
+            EVT::getVectorVT(Context, PartEltVT, Count, /*IsScalable=*/true);
+        Val = DAG.getNode(ISD::BITCAST, DL, SameEltTypeVT, Val);
+      }
+      Val = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, PartVT, DAG.getUNDEF(PartVT),
+                        Val, DAG.getConstant(0, DL, Subtarget.getXLenVT()));
+      Parts[0] = Val;
+      return true;
+    }
+  }
+  return false;
+}
+
+SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
+    SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
+    MVT PartVT, EVT ValueVT, Optional<CallingConv::ID> CC) const {
+  if (ValueVT.isScalableVector() && PartVT.isScalableVector()) {
+    LLVMContext &Context = *DAG.getContext();
+    SDValue Val = Parts[0];
+    EVT ValueEltVT = ValueVT.getVectorElementType();
+    EVT PartEltVT = PartVT.getVectorElementType();
+    unsigned ValueVTBitSize = ValueVT.getSizeInBits().getKnownMinSize();
+    unsigned PartVTBitSize = PartVT.getSizeInBits().getKnownMinSize();
+    if (PartVTBitSize % ValueVTBitSize == 0) {
+      EVT SameEltTypeVT = ValueVT;
+      // If the element types are different, convert it to the same element type
+      // of PartVT.
+      if (ValueEltVT != PartEltVT) {
+        unsigned Count = ValueVTBitSize / PartEltVT.getSizeInBits();
+        assert(Count != 0 && "The number of element should not be zero.");
+        SameEltTypeVT =
+            EVT::getVectorVT(Context, PartEltVT, Count, /*IsScalable=*/true);
+      }
+      Val = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SameEltTypeVT, Val,
+                        DAG.getConstant(0, DL, Subtarget.getXLenVT()));
+      if (ValueEltVT != PartEltVT)
+        Val = DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
+      return Val;
+    }
+  }
+  return SDValue();
 }
 
 #define GET_REGISTER_MATCHER
