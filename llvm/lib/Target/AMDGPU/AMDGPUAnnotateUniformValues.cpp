@@ -14,6 +14,7 @@
 
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -75,12 +76,6 @@ static void setNoClobberMetadata(Instruction *I) {
   I->setMetadata("amdgpu.noclobber", MDNode::get(I->getContext(), {}));
 }
 
-static void DFS(BasicBlock *Root, SetVector<BasicBlock*> & Set) {
-  for (auto I : predecessors(Root))
-    if (Set.insert(I))
-      DFS(I, Set);
-}
-
 bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst * Load) {
   // 1. get Loop for the Load->getparent();
   // 2. if it exists, collect all the BBs from the most outer
@@ -101,7 +96,7 @@ bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst * Load) {
     Start = L->getHeader();
   }
 
-  DFS(Start, Checklist);
+  Checklist.insert(idf_begin(Start), idf_end(Start));
   for (auto &BB : Checklist) {
     BasicBlock::iterator StartIt = (!L && (BB == Load->getParent())) ?
       BasicBlock::iterator(Load) : BB->end();
