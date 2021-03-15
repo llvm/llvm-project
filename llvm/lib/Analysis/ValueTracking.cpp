@@ -4165,7 +4165,11 @@ static bool isSameUnderlyingObjectInLoop(const PHINode *PN,
 const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
   if (!V->getType()->isPointerTy())
     return V;
+#ifndef NDEBUG
+  SmallPtrSet<const Value *, 8> Visited;
+#endif
   for (unsigned Count = 0; MaxLookup == 0 || Count < MaxLookup; ++Count) {
+    assert(Visited.insert(V).second && "Cycle detected. Unreachable code?");
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       V = GEP->getPointerOperand();
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
