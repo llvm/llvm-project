@@ -3417,15 +3417,6 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
     // declarations and the lexed inline method definitions, along with any
     // delayed attributes.
 
-    // Save the state of Sema.FPFeatures, and change the setting
-    // to the levels specified on the command line.  Previous level
-    // will be restored when the RAII object is destroyed.
-    Sema::FPFeaturesStateRAII SaveFPFeaturesState(Actions);
-    FPOptionsOverride NewOverrides;
-    Actions.CurFPFeatures = NewOverrides.applyOverrides(getLangOpts());
-    Actions.FpPragmaStack.Act(Tok.getLocation(), Sema::PSK_Reset, StringRef(),
-                              {} /*unused*/);
-
     SourceLocation SavedPrevTokLocation = PrevTokLocation;
     ParseLexedPragmas(getCurrentClass());
     ParseLexedAttributes(getCurrentClass());
