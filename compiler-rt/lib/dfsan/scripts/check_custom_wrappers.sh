@@ -20,7 +20,7 @@ on_exit() {
 # Ignore __sanitizer_cov_trace* because they are implemented elsewhere.
 trap on_exit EXIT
 grep -E "^fun:.*=custom" ${DFSAN_ABI_LIST} \
-  | grep -v "dfsan_get_label\|__sanitizer_cov_trace" \
+  | grep -v "dfsan_get_label\|dfsan_get_origin\|__sanitizer_cov_trace" \
   | sed "s/^fun:\(.*\)=custom.*/\1/" | sort > $DIFF_A
 grep -E "__dfsw.*\(" ${DFSAN_CUSTOM_WRAPPERS} \
   | grep -v "__sanitizer_cov_trace" \
