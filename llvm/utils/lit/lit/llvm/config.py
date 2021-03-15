@@ -11,6 +11,7 @@ from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
 lit_path_displayed = False
+python_errc_displayed = False
 
 class LLVMConfig(object):
 
@@ -356,19 +357,24 @@ class LLVMConfig(object):
         return True
 
     def add_err_msg_substitutions(self):
-        host_cxx = getattr(self.config, 'host_cxx', '')
-        # On Windows, python's os.strerror() does not emit the same spelling as
-        # the C++ std::error_code.  As a workaround, hardcode the Windows error
-        # message.
-        if (sys.platform == 'win32' and 'MSYS' not in host_cxx):
+        # Python's strerror may not supply the same message
+        # as C++ std::error_code. One example of such a platform is
+        # Visual Studio. errc_messages may be supplied which contains the error
+        # messages for ENOENT, EISDIR, EINVAL and EACCES as a semi colon
+        # separated string. LLVM testsuites can use get_errc_messages in cmake
+        # to automatically get the messages and pass them into lit.
+        errc_messages = getattr(self.config, 'errc_messages', '')
+        if len(errc_messages) != 0:
+            (errc_enoent, errc_eisdir,
+             errc_einval, errc_eacces) = errc_messages.split(';')
             self.config.substitutions.append(
-                ('%errc_ENOENT', '\'no such file or directory\''))
+                ('%errc_ENOENT', '\'' + errc_enoent + '\''))
             self.config.substitutions.append(
-                ('%errc_EISDIR', '\'is a directory\''))
+                ('%errc_EISDIR', '\'' + errc_eisdir + '\''))
             self.config.substitutions.append(
-                ('%errc_EINVAL', '\'invalid argument\''))
+                ('%errc_EINVAL', '\'' + errc_einval + '\''))
             self.config.substitutions.append(
-                ('%errc_EACCES', '\'permission denied\''))
+                ('%errc_EACCES', '\'' + errc_eacces + '\''))
         else:
             self.config.substitutions.append(
                 ('%errc_ENOENT', '\'' + os.strerror(errno.ENOENT) + '\''))
