@@ -272,7 +272,7 @@ struct _LIBCPP_HIDDEN __begin_node_of
 };
 
 template <class _Tp, class _VoidPtr>
-struct __forward_list_node
+struct _LIBCPP_STANDALONE_DEBUG __forward_list_node
     : public __begin_node_of<_Tp, _VoidPtr>::type
 {
     typedef _Tp value_type;
