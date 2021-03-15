@@ -236,7 +236,7 @@ func @func_with_ops(i32, i32) {
 func @func_with_ops() {
 ^bb0:
   %c = constant dense<0> : vector<42 x i32>
-  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type: found 'vector<41xi1>' and 'vector<42xi32>'}}
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
   %r = "std.cmpi"(%c, %c) {predicate = 0} : (vector<42 x i32>, vector<42 x i32>) -> vector<41 x i1>
 }
 
@@ -269,7 +269,7 @@ func @func_with_ops(i1, i32, i64) {
 
 func @func_with_ops(vector<12xi1>, vector<42xi32>, vector<42xi32>) {
 ^bb0(%cond : vector<12xi1>, %t : vector<42xi32>, %f : vector<42xi32>):
-  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type: found 'vector<42xi32>' and 'vector<12xi1>'}}
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
   %r = "std.select"(%cond, %t, %f) : (vector<12xi1>, vector<42xi32>, vector<42xi32>) -> vector<42xi32>
 }
 
@@ -277,7 +277,7 @@ func @func_with_ops(vector<12xi1>, vector<42xi32>, vector<42xi32>) {
 
 func @func_with_ops(tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) {
 ^bb0(%cond : tensor<12xi1>, %t : tensor<42xi32>, %f : tensor<42xi32>):
-  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type: found 'tensor<42xi32>' and 'tensor<12xi1>'}}
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
   %r = "std.select"(%cond, %t, %f) : (tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) -> tensor<42xi32>
 }
 
@@ -514,7 +514,7 @@ func @cmpf_canonical_wrong_result_type(%a : f32, %b : f32) -> f32 {
 // -----
 
 func @cmpf_result_shape_mismatch(%a : vector<42xf32>) {
-  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type: found 'vector<41xi1>' and 'vector<42xf32>'}}
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
   %r = "std.cmpf"(%a, %a) {predicate = 0} : (vector<42 x f32>, vector<42 x f32>) -> vector<41 x i1>
 }
 
@@ -614,7 +614,7 @@ func @fpext_f32_to_i32(%arg0 : f32) {
 // -----
 
 func @fpext_vec(%arg0 : vector<2xf16>) {
-  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type: found 'vector<3xf32>' and 'vector<2xf16>'}}
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
   %0 = fpext %arg0 : vector<2xf16> to vector<3xf32>
   return
 }
@@ -686,7 +686,7 @@ func @fptrunc_f32_to_i32(%arg0 : f32) {
 // -----
 
 func @fptrunc_vec(%arg0 : vector<2xf16>) {
-  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type: found 'vector<3xf32>' and 'vector<2xf16>'}}
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
   %0 = fptrunc %arg0 : vector<2xf16> to vector<3xf32>
   return
 }
