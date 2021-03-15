@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -107,7 +108,7 @@ struct GpuAllReduceRewriter {
     createPredicatedBlock(isFirstLane, [&] {
       Value subgroupId = getDivideBySubgroupSize(invocationIdx);
       Value index = create<IndexCastOp>(indexType, subgroupId);
-      create<StoreOp>(subgroupReduce, buffer, index);
+      create<memref::StoreOp>(subgroupReduce, buffer, index);
     });
     create<gpu::BarrierOp>();
 
@@ -124,27 +125,29 @@ struct GpuAllReduceRewriter {
     Value zero = create<ConstantIndexOp>(0);
     createPredicatedBlock(isValidSubgroup, [&] {
       Value index = create<IndexCastOp>(indexType, invocationIdx);
-      Value value = create<LoadOp>(valueType, buffer, index);
+      Value value = create<memref::LoadOp>(valueType, buffer, index);
       Value result =
           createSubgroupReduce(numSubgroups, laneId, value, accumFactory);
-      create<StoreOp>(result, buffer, zero);
+      create<memref::StoreOp>(result, buffer, zero);
     });
 
     // Synchronize workgroup and load result from workgroup memory.
     create<gpu::BarrierOp>();
-    Value result = create<LoadOp>(valueType, buffer, zero);
+    Value result = create<memref::LoadOp>(valueType, buffer, zero);
 
     rewriter.replaceOp(reduceOp, result);
   }
 
 private:
   // Shortcut to create an op from rewriter using loc as the first argument.
-  template <typename T, typename... Args> T create(Args... args) {
+  template <typename T, typename... Args>
+  T create(Args... args) {
     return rewriter.create<T>(loc, std::forward<Args>(args)...);
   }
 
   // Creates dimension op of type T, with the result casted to int32.
-  template <typename T> Value getDimOp(StringRef dimension) {
+  template <typename T>
+  Value getDimOp(StringRef dimension) {
     Value dim = create<T>(indexType, rewriter.getStringAttr(dimension));
     return create<IndexCastOp>(int32Type, dim);
   }
@@ -236,7 +239,8 @@ private:
   }
 
   /// Returns an accumulator factory that creates an op of type T.
-  template <typename T> AccumulatorFactory getFactory() {
+  template <typename T>
+  AccumulatorFactory getFactory() {
     return [&](Value lhs, Value rhs) {
       return create<T>(lhs.getType(), lhs, rhs);
     };

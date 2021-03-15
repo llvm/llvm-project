@@ -16,9 +16,9 @@ func @matmul_tensors(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tens
   %c0 = constant 0 : index
   %c3 = constant 3 : index
   %c1 = constant 1 : index
-  %0 = dim %t0, %c0 : tensor<?x?xf32>
-  %1 = dim %t0, %c1 : tensor<?x?xf32>
-  %2 = dim %arg1, %c1 : tensor<?x?xf32>
+  %0 = memref.dim %t0, %c0 : tensor<?x?xf32>
+  %1 = memref.dim %t0, %c1 : tensor<?x?xf32>
+  %2 = memref.dim %arg1, %c1 : tensor<?x?xf32>
   %3 = scf.for %arg3 = %c0 to %0 step %c2 iter_args(%arg4 = %arg2) -> (tensor<?x?xf32>) {
     %4 = scf.for %arg5 = %c0 to %2 step %c3 iter_args(%arg6 = %arg4) -> (tensor<?x?xf32>) {
       %5 = scf.for %arg7 = %c0 to %1 step %c4 iter_args(%arg8 = %arg6) -> (tensor<?x?xf32>) {
@@ -42,7 +42,7 @@ func @matmul_tensors(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tens
 //  CHECK-SAME: %[[C:[0-9a-z]*]]: tensor<?x?xf32>
 //   CHECK-DAG: %[[C0:.*]] = constant 0 : index
 //   CHECK-DAG: %[[C1:.*]] = constant 1 : index
-//   CHECK-DAG: %[[dA1:.*]] = dim %[[A]], %[[C1]] : tensor<?x?xf32>
+//   CHECK-DAG: %[[dA1:.*]] = memref.dim %[[A]], %[[C1]] : tensor<?x?xf32>
 //       CHECK: scf.for %[[I:[0-9a-z]*]]
 //       CHECK:     %[[stA:.*]] = subtensor %[[A]][%[[I]], 0] [2, %[[dA1]]] [1, 1]  : tensor<?x?xf32> to tensor<2x?xf32>
 //  CHECK-NEXT:   scf.for %[[J:[0-9a-z]*]]

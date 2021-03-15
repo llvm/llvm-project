@@ -44,11 +44,11 @@ class TensorFromPointerConverter
 };
 
 /// Sparse conversion rule for dimension accesses.
-class TensorToDimSizeConverter : public OpConversionPattern<DimOp> {
+class TensorToDimSizeConverter : public OpConversionPattern<memref::DimOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(DimOp op, ArrayRef<Value> operands,
+  matchAndRewrite(memref::DimOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     if (!operands[0].getType().isa<LLVM::LLVMPointerType>())
       return failure();

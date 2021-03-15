@@ -85,7 +85,7 @@ static VectorType extractVectorTypeFromShapedValue(Value v) {
 }
 
 /// Build a vector.transfer_read from `source` at indices set to all `0`.
-/// If source has rank zero, build an std.load.
+/// If source has rank zero, build an memref.load.
 /// Return the produced value.
 static Value buildVectorRead(OpBuilder &builder, Value source) {
   edsc::ScopedContext scope(builder);
@@ -94,11 +94,11 @@ static Value buildVectorRead(OpBuilder &builder, Value source) {
     SmallVector<Value> indices(shapedType.getRank(), std_constant_index(0));
     return vector_transfer_read(vectorType, source, indices);
   }
-  return std_load(source);
+  return memref_load(source);
 }
 
 /// Build a vector.transfer_write of `value` into `dest` at indices set to all
-/// `0`. If `dest` has null rank, build an std.store.
+/// `0`. If `dest` has null rank, build an memref.store.
 /// Return the produced value or null if no value is produced.
 static Value buildVectorWrite(OpBuilder &builder, Value value, Value dest) {
   edsc::ScopedContext scope(builder);
@@ -110,7 +110,7 @@ static Value buildVectorWrite(OpBuilder &builder, Value value, Value dest) {
       value = vector_broadcast(vectorType, value);
     write = vector_transfer_write(value, dest, indices);
   } else {
-    write = std_store(value, dest);
+    write = memref_store(value, dest);
   }
   LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: vectorized op: " << *write);
   if (!write->getResults().empty())
@@ -544,7 +544,7 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
       rewriter.getAffineMapArrayAttr(indexingMaps),
       rewriter.getStrArrayAttr(iteratorTypes));
 
-  rewriter.create<StoreOp>(loc, result, output, ValueRange(zeros));
+  rewriter.create<memref::StoreOp>(loc, result, output, ValueRange(zeros));
   rewriter.eraseOp(op);
   return success();
 }
@@ -667,12 +667,12 @@ static bool mayExistInterleavedUses(Operation *firstOp, Operation *secondOp,
 }
 
 /// Return the unique subview use of `v` if it is indeed unique, null otherwise.
-static SubViewOp getSubViewUseIfUnique(Value v) {
-  SubViewOp subViewOp;
+static memref::SubViewOp getSubViewUseIfUnique(Value v) {
+  memref::SubViewOp subViewOp;
   for (auto &u : v.getUses()) {
-    if (auto newSubViewOp = dyn_cast<SubViewOp>(u.getOwner())) {
+    if (auto newSubViewOp = dyn_cast<memref::SubViewOp>(u.getOwner())) {
       if (subViewOp)
-        return SubViewOp();
+        return memref::SubViewOp();
       subViewOp = newSubViewOp;
     }
   }
@@ -686,14 +686,14 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
 
   // Transfer into `view`.
   Value viewOrAlloc = xferOp.source();
-  if (!viewOrAlloc.getDefiningOp<ViewOp>() &&
-      !viewOrAlloc.getDefiningOp<AllocOp>())
+  if (!viewOrAlloc.getDefiningOp<memref::ViewOp>() &&
+      !viewOrAlloc.getDefiningOp<memref::AllocOp>())
     return failure();
 
   LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: " << viewOrAlloc);
 
   // Ensure there is exactly one subview of `viewOrAlloc` defining `subView`.
-  SubViewOp subViewOp = getSubViewUseIfUnique(viewOrAlloc);
+  memref::SubViewOp subViewOp = getSubViewUseIfUnique(viewOrAlloc);
   if (!subViewOp)
     return failure();
   Value subView = subViewOp.getResult();
@@ -765,12 +765,12 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
     vector::TransferWriteOp xferOp, PatternRewriter &rewriter) const {
   // Transfer into `viewOrAlloc`.
   Value viewOrAlloc = xferOp.source();
-  if (!viewOrAlloc.getDefiningOp<ViewOp>() &&
-      !viewOrAlloc.getDefiningOp<AllocOp>())
+  if (!viewOrAlloc.getDefiningOp<memref::ViewOp>() &&
+      !viewOrAlloc.getDefiningOp<memref::AllocOp>())
     return failure();
 
   // Ensure there is exactly one subview of `viewOrAlloc` defining `subView`.
-  SubViewOp subViewOp = getSubViewUseIfUnique(viewOrAlloc);
+  memref::SubViewOp subViewOp = getSubViewUseIfUnique(viewOrAlloc);
   if (!subViewOp)
     return failure();
   Value subView = subViewOp.getResult();

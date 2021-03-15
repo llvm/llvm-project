@@ -5,10 +5,10 @@ func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 		    %A: memref<?x?xf32>, %B: memref<?x?xf32>,
                     %C: memref<?x?xf32>, %result: memref<?x?xf32>) {
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3) step (%arg4, %arg5) {
-    %B_elem = load %B[%i0, %i1] : memref<?x?xf32>
-    %C_elem = load %C[%i0, %i1] : memref<?x?xf32>
+    %B_elem = memref.load %B[%i0, %i1] : memref<?x?xf32>
+    %C_elem = memref.load %C[%i0, %i1] : memref<?x?xf32>
     %sum_elem = addf %B_elem, %C_elem : f32
-    store %sum_elem, %result[%i0, %i1] : memref<?x?xf32>
+    memref.store %sum_elem, %result[%i0, %i1] : memref<?x?xf32>
   }
   return
 }
@@ -27,10 +27,10 @@ func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:             scf.parallel ([[V7:%.*]], [[V8:%.*]]) = ([[C0]], [[C0]]) to ([[V5]], [[V6]]) step ([[ARG5]], [[ARG6]]) {
 // CHECK:               [[V9:%.*]] = addi [[V7]], [[V3]] : index
 // CHECK:               [[V10:%.*]] = addi [[V8]], [[V4]] : index
-// CHECK:               [[V11:%.*]] = load [[ARG8]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
-// CHECK:               [[V12:%.*]] = load [[ARG9]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
+// CHECK:               [[V11:%.*]] = memref.load [[ARG8]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
+// CHECK:               [[V12:%.*]] = memref.load [[ARG9]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
 // CHECK:               [[V13:%.*]] = addf [[V11]], [[V12]] : f32
-// CHECK:               store [[V13]], [[ARG10]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
+// CHECK:               memref.store [[V13]], [[ARG10]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
 // CHECK:             }
 // CHECK:           }
 // CHECK:           return

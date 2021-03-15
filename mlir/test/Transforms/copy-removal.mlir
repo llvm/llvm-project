@@ -6,65 +6,65 @@
 // CHECK-LABEL: func @nested_region_control_flow_div_nested
 func @nested_region_control_flow_div_nested(%arg0: index, %arg1: index) -> memref<?x?xf32> {
   %0 = cmpi eq, %arg0, %arg1 : index
-  %1 = alloc(%arg0, %arg0) : memref<?x?xf32>
+  %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   // CHECK: %{{.*}} = scf.if
   %2 = scf.if %0 -> (memref<?x?xf32>) {
     // CHECK: %[[PERCENT3:.*]] = scf.if
     %3 = scf.if %0 -> (memref<?x?xf32>) {
       %c0_0 = constant 0 : index
-      %7 = dim %1, %c0_0 : memref<?x?xf32>
+      %7 = memref.dim %1, %c0_0 : memref<?x?xf32>
       %c1_1 = constant 1 : index
-      %8 = dim %1, %c1_1 : memref<?x?xf32>
-      %9 = alloc(%7, %8) : memref<?x?xf32>
+      %8 = memref.dim %1, %c1_1 : memref<?x?xf32>
+      %9 = memref.alloc(%7, %8) : memref<?x?xf32>
       // CHECK: linalg.copy({{.*}}, %[[PERCENT9:.*]])
       linalg.copy(%1, %9) : memref<?x?xf32>, memref<?x?xf32>
       // CHECK: scf.yield %[[PERCENT9]]
       scf.yield %9 : memref<?x?xf32>
     } else {
-      // CHECK: %[[PERCENT7:.*]] = alloc
-      %7 = alloc(%arg0, %arg1) : memref<?x?xf32>
+      // CHECK: %[[PERCENT7:.*]] = memref.alloc
+      %7 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
       %c0_0 = constant 0 : index
-      %8 = dim %7, %c0_0 : memref<?x?xf32>
+      %8 = memref.dim %7, %c0_0 : memref<?x?xf32>
       %c1_1 = constant 1 : index
-      %9 = dim %7, %c1_1 : memref<?x?xf32>
-      // CHECK-NOT: %{{.*}} = alloc
+      %9 = memref.dim %7, %c1_1 : memref<?x?xf32>
+      // CHECK-NOT: %{{.*}} = memref.alloc
       // CHECK-NOT: linalg.copy(%[[PERCENT7]], %{{.*}})
-      // CHECK-NOT: dealloc %[[PERCENT7]]
-      %10 = alloc(%8, %9) : memref<?x?xf32>
+      // CHECK-NOT: memref.dealloc %[[PERCENT7]]
+      %10 = memref.alloc(%8, %9) : memref<?x?xf32>
       linalg.copy(%7, %10) : memref<?x?xf32>, memref<?x?xf32>
-      dealloc %7 : memref<?x?xf32>
+      memref.dealloc %7 : memref<?x?xf32>
       // CHECK: scf.yield %[[PERCENT7]]
       scf.yield %10 : memref<?x?xf32>
     }
     %c0 = constant 0 : index
-    %4 = dim %3, %c0 : memref<?x?xf32>
+    %4 = memref.dim %3, %c0 : memref<?x?xf32>
     %c1 = constant 1 : index
-    %5 = dim %3, %c1 : memref<?x?xf32>
-    // CHECK-NOT: %{{.*}} = alloc
+    %5 = memref.dim %3, %c1 : memref<?x?xf32>
+    // CHECK-NOT: %{{.*}} = memref.alloc
     // CHECK-NOT: linalg.copy(%[[PERCENT3]], %{{.*}})
-    // CHECK-NOT: dealloc %[[PERCENT3]]
-    %6 = alloc(%4, %5) : memref<?x?xf32>
+    // CHECK-NOT: memref.dealloc %[[PERCENT3]]
+    %6 = memref.alloc(%4, %5) : memref<?x?xf32>
     linalg.copy(%3, %6) : memref<?x?xf32>, memref<?x?xf32>
-    dealloc %3 : memref<?x?xf32>
+    memref.dealloc %3 : memref<?x?xf32>
     // CHECK: scf.yield %[[PERCENT3]]
     scf.yield %6 : memref<?x?xf32>
   } else {
-    // CHECK: %[[PERCENT3:.*]] = alloc
-    %3 = alloc(%arg1, %arg1) : memref<?x?xf32>
+    // CHECK: %[[PERCENT3:.*]] = memref.alloc
+    %3 = memref.alloc(%arg1, %arg1) : memref<?x?xf32>
     %c0 = constant 0 : index
-    %4 = dim %3, %c0 : memref<?x?xf32>
+    %4 = memref.dim %3, %c0 : memref<?x?xf32>
     %c1 = constant 1 : index
-    %5 = dim %3, %c1 : memref<?x?xf32>
-    // CHECK-NOT: %{{.*}} = alloc
+    %5 = memref.dim %3, %c1 : memref<?x?xf32>
+    // CHECK-NOT: %{{.*}} = memref.alloc
     // CHECK-NOT: linalg.copy(%[[PERCENT3]], %{{.*}})
-    // CHECK-NOT: dealloc %[[PERCENT3]]
-    %6 = alloc(%4, %5) : memref<?x?xf32>
+    // CHECK-NOT: memref.dealloc %[[PERCENT3]]
+    %6 = memref.alloc(%4, %5) : memref<?x?xf32>
     linalg.copy(%3, %6) : memref<?x?xf32>, memref<?x?xf32>
-    dealloc %3 : memref<?x?xf32>
+    memref.dealloc %3 : memref<?x?xf32>
     // CHECK: scf.yield %[[PERCENT3]]
     scf.yield %6 : memref<?x?xf32>
   }
-  dealloc %1 : memref<?x?xf32>
+  memref.dealloc %1 : memref<?x?xf32>
   return %2 : memref<?x?xf32>
 }
 
@@ -72,16 +72,16 @@ func @nested_region_control_flow_div_nested(%arg0: index, %arg1: index) -> memre
 
 // CHECK-LABEL: func @simple_test
 func @simple_test() -> memref<5xf32> {
-  %temp = alloc() : memref<5xf32>
-  %ret = alloc() : memref<5xf32>
+  %temp = memref.alloc() : memref<5xf32>
+  %ret = memref.alloc() : memref<5xf32>
   linalg.copy(%ret, %temp) : memref<5xf32>, memref<5xf32>
-  dealloc %ret : memref<5xf32>
+  memref.dealloc %ret : memref<5xf32>
   return %temp : memref<5xf32>
 }
 // CHECK-SAME: () -> memref<5xf32>
-// CHECK-NEXT: %[[ret:.*]] = alloc()
+// CHECK-NEXT: %[[ret:.*]] = memref.alloc()
 // CHECK-NOT: linalg.copy(%[[ret]], %{{.*}})
-// CHECK-NOT: dealloc %[[ret]]
+// CHECK-NOT: memref.dealloc %[[ret]]
 // CHECK: return %[[ret]]
 
 // -----
@@ -92,20 +92,20 @@ func @simple_test() -> memref<5xf32> {
 
 // CHECK-LABEL: func @test_with_ret_usage_before_copy
 func @test_with_ret_usage_before_copy() -> memref<5xf32> {
-  %ret = alloc() : memref<5xf32>
-  %temp = alloc() : memref<5xf32>
+  %ret = memref.alloc() : memref<5xf32>
+  %temp = memref.alloc() : memref<5xf32>
   %c0 = constant 0 : index
-  %dimension = dim %ret, %c0 : memref<5xf32>
+  %dimension = memref.dim %ret, %c0 : memref<5xf32>
   linalg.copy(%ret, %temp) : memref<5xf32>, memref<5xf32>
-  dealloc %ret : memref<5xf32>
+  memref.dealloc %ret : memref<5xf32>
   return %temp : memref<5xf32>
 }
-// CHECK-NEXT: %[[ret:.*]] = alloc()
-// CHECK-NOT: %{{.*}} = alloc
+// CHECK-NEXT: %[[ret:.*]] = memref.alloc()
+// CHECK-NOT: %{{.*}} = memref.alloc
 // CHECK-NEXT: %{{.*}} = constant
-// CHECK-NEXT: %[[DIM:.*]] = dim %[[ret]]
+// CHECK-NEXT: %[[DIM:.*]] = memref.dim %[[ret]]
 // CHECK-NOT: linalg.copy(%[[ret]], %{{.*}})
-// CHECK-NOT: dealloc %[[ret]]
+// CHECK-NOT: memref.dealloc %[[ret]]
 // CHECK: return %[[ret]]
 
 // -----
@@ -115,13 +115,13 @@ func @test_with_ret_usage_before_copy() -> memref<5xf32> {
 
 // CHECK-LABEL: func @test_with_ret_usage_after_copy
 func @test_with_ret_usage_after_copy() -> memref<5xf32> {
-  %ret = alloc() : memref<5xf32>
-  %temp = alloc() : memref<5xf32>
+  %ret = memref.alloc() : memref<5xf32>
+  %temp = memref.alloc() : memref<5xf32>
   // CHECK: linalg.copy
   linalg.copy(%ret, %temp) : memref<5xf32>, memref<5xf32>
   %c0 = constant 0 : index
-  %dimension = dim %ret, %c0 : memref<5xf32>
-  dealloc %ret : memref<5xf32>
+  %dimension = memref.dim %ret, %c0 : memref<5xf32>
+  memref.dealloc %ret : memref<5xf32>
   return %temp : memref<5xf32>
 }
 
@@ -132,13 +132,13 @@ func @test_with_ret_usage_after_copy() -> memref<5xf32> {
 
 // CHECK-LABEL: func @test_with_temp_usage_before_copy
 func @test_with_temp_usage_before_copy() -> memref<5xf32> {
-  %ret = alloc() : memref<5xf32>
-  %temp = alloc() : memref<5xf32>
+  %ret = memref.alloc() : memref<5xf32>
+  %temp = memref.alloc() : memref<5xf32>
   %c0 = constant 0 : index
-  %dimension = dim %temp, %c0 : memref<5xf32>
+  %dimension = memref.dim %temp, %c0 : memref<5xf32>
   // CHECK: linalg.copy
   linalg.copy(%ret, %temp) : memref<5xf32>, memref<5xf32>
-  dealloc %ret : memref<5xf32>
+  memref.dealloc %ret : memref<5xf32>
   return %temp : memref<5xf32>
 }
 
@@ -149,11 +149,11 @@ func @test_with_temp_usage_before_copy() -> memref<5xf32> {
 // removed.
 
 // However the following pattern is not handled by copy removal.
-//   %from = alloc()
-//   %to = alloc()
+//   %from = memref.alloc()
+//   %to = memref.alloc()
 //   copy(%from, %to)
 //   read_from(%from) + write_to(%something_else)
-//   dealloc(%from)
+//   memref.dealloc(%from)
 //   return %to
 // In particular, linalg.generic is a memoryEffectOp between copy and dealloc.
 // Since no alias analysis is performed and no distinction is made between reads
@@ -163,9 +163,9 @@ func @test_with_temp_usage_before_copy() -> memref<5xf32> {
 
 // CHECK-LABEL: func @test_with_temp_usage_after_copy
 func @test_with_temp_usage_after_copy() -> memref<5xf32> {
-  %ret = alloc() : memref<5xf32>
-  %res = alloc() : memref<5xf32>
-  %temp = alloc() : memref<5xf32>
+  %ret = memref.alloc() : memref<5xf32>
+  %res = memref.alloc() : memref<5xf32>
+  %temp = memref.alloc() : memref<5xf32>
   linalg.copy(%ret, %temp) : memref<5xf32>, memref<5xf32>
   linalg.generic {
     indexing_maps = [#map0, #map0],
@@ -176,22 +176,22 @@ func @test_with_temp_usage_after_copy() -> memref<5xf32> {
     %tmp1 = math.exp %gen1_arg0 : f32
     linalg.yield %tmp1 : f32
   }
-  dealloc %ret : memref<5xf32>
+  memref.dealloc %ret : memref<5xf32>
   return %temp : memref<5xf32>
 }
-// CHECK-NEXT: %[[ret:.*]] = alloc()
-// CHECK-NEXT: %[[res:.*]] = alloc()
-// CHECK-NEXT: %[[temp:.*]] = alloc()
+// CHECK-NEXT: %[[ret:.*]] = memref.alloc()
+// CHECK-NEXT: %[[res:.*]] = memref.alloc()
+// CHECK-NEXT: %[[temp:.*]] = memref.alloc()
 // CHECK-NEXT: linalg.copy(%[[ret]], %[[temp]])
 // CHECK-NEXT: linalg.generic
-//      CHECK: dealloc %[[ret]]
+//      CHECK: memref.dealloc %[[ret]]
 //      CHECK: return %[[temp]]
 
 // -----
 
 // CHECK-LABEL: func @make_allocation
 func @make_allocation() -> memref<5xf32> {
-  %mem = alloc() : memref<5xf32>
+  %mem = memref.alloc() : memref<5xf32>
   return %mem : memref<5xf32>
 }
 
@@ -199,12 +199,12 @@ func @make_allocation() -> memref<5xf32> {
 func @test_with_function_call() -> memref<5xf32> {
   // CHECK-NEXT: %[[ret:.*]] = call @make_allocation() : () -> memref<5xf32>
   %ret = call @make_allocation() : () -> (memref<5xf32>)
-  // CHECK-NOT: %{{.*}} = alloc
+  // CHECK-NOT: %{{.*}} = memref.alloc
   // CHECK-NOT: linalg.copy(%[[ret]], %{{.*}})
-  // CHECK-NOT: dealloc %[[ret]]
-  %temp = alloc() : memref<5xf32>
+  // CHECK-NOT: memref.dealloc %[[ret]]
+  %temp = memref.alloc() : memref<5xf32>
   linalg.copy(%ret, %temp) : memref<5xf32>, memref<5xf32>
-  dealloc %ret : memref<5xf32>
+  memref.dealloc %ret : memref<5xf32>
   // CHECK: return %[[ret]]
   return %temp : memref<5xf32>
 }
@@ -213,20 +213,20 @@ func @test_with_function_call() -> memref<5xf32> {
 
 // CHECK-LABEL: func @multiple_deallocs_in_different_blocks
 func @multiple_deallocs_in_different_blocks(%cond : i1) -> memref<5xf32> {
-  // CHECK-NEXT: %[[PERCENT0:.*]] = alloc()
-  %0 = alloc() : memref<5xf32>
+  // CHECK-NEXT: %[[PERCENT0:.*]] = memref.alloc()
+  %0 = memref.alloc() : memref<5xf32>
   cond_br %cond, ^bb1, ^bb2
 ^bb1:
-  dealloc %0 : memref<5xf32>
+  memref.dealloc %0 : memref<5xf32>
   // CHECK: br ^[[BB3:.*]](%[[PERCENT0]]
   br ^bb3(%0 : memref<5xf32>)
 ^bb2:
-  // CHECK-NOT: %{{.*}} = alloc
+  // CHECK-NOT: %{{.*}} = memref.alloc
   // CHECK-NOT: linalg.copy(%[[PERCENT0]], %{{.*}})
-  // CHECK-NOT: dealloc %[[PERCENT0]]
-  %temp = alloc() : memref<5xf32>
+  // CHECK-NOT: memref.dealloc %[[PERCENT0]]
+  %temp = memref.alloc() : memref<5xf32>
   linalg.copy(%0, %temp) : memref<5xf32>, memref<5xf32>
-  dealloc %0 : memref<5xf32>
+  memref.dealloc %0 : memref<5xf32>
   // CHECK: br ^[[BB3]](%[[PERCENT0]]
   br ^bb3(%temp : memref<5xf32>)
 ^bb3(%res : memref<5xf32>):
@@ -240,12 +240,12 @@ func @multiple_deallocs_in_different_blocks(%cond : i1) -> memref<5xf32> {
 // CHECK-LABEL: func @test_ReuseCopyTargetAsSource
 func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>, %result: memref<2xf32>){
   // CHECK-SAME: (%[[ARG0:.*]]: memref<2xf32>, %[[RES:.*]]: memref<2xf32>)
-  // CHECK-NOT: %{{.*}} = alloc
-  %temp = alloc() : memref<2xf32>
+  // CHECK-NOT: %{{.*}} = memref.alloc
+  %temp = memref.alloc() : memref<2xf32>
   // CHECK-NEXT: linalg.generic
   // CHECK-SAME: ins(%[[ARG0]]{{.*}}outs(%[[RES]]
   // CHECK-NOT: linalg.copy(%{{.*}}, %[[RES]])
-  // CHECK-NOT: dealloc %{{.*}}
+  // CHECK-NOT: memref.dealloc %{{.*}}
   linalg.generic {
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel"]}
@@ -256,7 +256,7 @@ func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>, %result: memref<2xf32>)
     linalg.yield %tmp2 : f32
   }
   linalg.copy(%temp, %result) : memref<2xf32>, memref<2xf32>
-  dealloc %temp : memref<2xf32>
+  memref.dealloc %temp : memref<2xf32>
   // CHECK: return
   return
 }
@@ -270,8 +270,8 @@ func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>, %result: memref<2xf32>)
 
 // CHECK-LABEL: func @test_ReuseCopyTargetAsSource
 func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>){
-  %to = alloc() : memref<2xf32>
-  %temp = alloc() : memref<2xf32>
+  %to = memref.alloc() : memref<2xf32>
+  %temp = memref.alloc() : memref<2xf32>
   linalg.generic {
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel"]}
@@ -292,7 +292,7 @@ func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>){
   }
   // CHECK: linalg.copy
   linalg.copy(%temp, %to) : memref<2xf32>, memref<2xf32>
-  dealloc %temp : memref<2xf32>
+  memref.dealloc %temp : memref<2xf32>
   return
 }
 
@@ -302,34 +302,34 @@ func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>){
 
 // CHECK-LABEL: func @loop_alloc
 func @loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2xf32>, %arg4: memref<2xf32>) {
-  // CHECK: %{{.*}} = alloc()
-  %0 = alloc() : memref<2xf32>
-  dealloc %0 : memref<2xf32>
-  // CHECK: %{{.*}} = alloc()
-  %1 = alloc() : memref<2xf32>
+  // CHECK: %{{.*}} = memref.alloc()
+  %0 = memref.alloc() : memref<2xf32>
+  memref.dealloc %0 : memref<2xf32>
+  // CHECK: %{{.*}} = memref.alloc()
+  %1 = memref.alloc() : memref<2xf32>
   // CHECK: linalg.copy
   linalg.copy(%arg3, %1) : memref<2xf32>, memref<2xf32>
   %2 = scf.for %arg5 = %arg0 to %arg1 step %arg2 iter_args(%arg6 = %1) -> (memref<2xf32>) {
     %3 = cmpi eq, %arg5, %arg1 : index
-    // CHECK: dealloc
-    dealloc %arg6 : memref<2xf32>
-    // CHECK: %[[PERCENT4:.*]] = alloc()
-    %4 = alloc() : memref<2xf32>
-    // CHECK-NOT: alloc
+    // CHECK: memref.dealloc
+    memref.dealloc %arg6 : memref<2xf32>
+    // CHECK: %[[PERCENT4:.*]] = memref.alloc()
+    %4 = memref.alloc() : memref<2xf32>
+    // CHECK-NOT: memref.alloc
     // CHECK-NOT: linalg.copy
-    // CHECK-NOT: dealloc
-    %5 = alloc() : memref<2xf32>
+    // CHECK-NOT: memref.dealloc
+    %5 = memref.alloc() : memref<2xf32>
     linalg.copy(%4, %5) : memref<2xf32>, memref<2xf32>
-    dealloc %4 : memref<2xf32>
-    // CHECK: %[[PERCENT6:.*]] = alloc()
-    %6 = alloc() : memref<2xf32>
+    memref.dealloc %4 : memref<2xf32>
+    // CHECK: %[[PERCENT6:.*]] = memref.alloc()
+    %6 = memref.alloc() : memref<2xf32>
     // CHECK: linalg.copy(%[[PERCENT4]], %[[PERCENT6]])
     linalg.copy(%5, %6) : memref<2xf32>, memref<2xf32>
     scf.yield %6 : memref<2xf32>
   }
   // CHECK: linalg.copy
   linalg.copy(%2, %arg4) : memref<2xf32>, memref<2xf32>
-  dealloc %2 : memref<2xf32>
+  memref.dealloc %2 : memref<2xf32>
   return
 }
 
@@ -341,8 +341,8 @@ func @loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2xf32>,
 // CHECK-LABEL: func @check_with_affine_dialect
 func @check_with_affine_dialect(%arg0: memref<4xf32>, %arg1: memref<4xf32>, %arg2: memref<4xf32>) {
   // CHECK-SAME: (%[[ARG0:.*]]: memref<4xf32>, %[[ARG1:.*]]: memref<4xf32>, %[[RES:.*]]: memref<4xf32>)
-  // CHECK-NOT: alloc
-  %0 = alloc() : memref<4xf32>
+  // CHECK-NOT: memref.alloc
+  %0 = memref.alloc() : memref<4xf32>
   affine.for %arg3 = 0 to 4 {
     %5 = affine.load %arg0[%arg3] : memref<4xf32>
     %6 = affine.load %arg1[%arg3] : memref<4xf32>
@@ -355,7 +355,7 @@ func @check_with_affine_dialect(%arg0: memref<4xf32>, %arg1: memref<4xf32>, %arg
   // CHECK-NOT: linalg.copy
   // CHECK-NOT: dealloc
   linalg.copy(%0, %arg2) : memref<4xf32>, memref<4xf32>
-  dealloc %0 : memref<4xf32>
+  memref.dealloc %0 : memref<4xf32>
   //CHECK: return
   return
 }

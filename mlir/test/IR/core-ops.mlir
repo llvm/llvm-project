@@ -35,9 +35,9 @@ func @func_with_ops(f32) {
   %t = "getTensor"() : () -> tensor<4x4x?xf32>
 
   // CHECK: %[[C2:.*]] = constant 2 : index
-  // CHECK-NEXT: %{{.*}} = dim %[[T]], %[[C2]] : tensor<4x4x?xf32>
+  // CHECK-NEXT: %{{.*}} = memref.dim %[[T]], %[[C2]] : tensor<4x4x?xf32>
   %c2 = constant 2 : index
-  %t2 = "std.dim"(%t, %c2) : (tensor<4x4x?xf32>, index) -> index
+  %t2 = "memref.dim"(%t, %c2) : (tensor<4x4x?xf32>, index) -> index
 
   // CHECK: %{{.*}} = addf %[[ARG]], %[[ARG]] : f32
   %x = "std.addf"(%a, %a) : (f32,f32) -> (f32)
@@ -50,9 +50,9 @@ func @func_with_ops(f32) {
 func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
 ^bb42(%t: tensor<4x4x?xf32>, %f: f32, %i: i32, %idx : index, %j: i64, %half: f16):
   // CHECK: %[[C2:.*]] = constant 2 : index
-  // CHECK: %[[A2:.*]] = dim %arg0, %[[C2]] : tensor<4x4x?xf32>
+  // CHECK: %[[A2:.*]] = memref.dim %arg0, %[[C2]] : tensor<4x4x?xf32>
   %c2 = constant 2 : index
-  %a2 = dim %t, %c2 : tensor<4x4x?xf32>
+  %a2 = memref.dim %t, %c2 : tensor<4x4x?xf32>
 
   // CHECK: %[[F2:.*]] = addf %arg1, %arg1 : f32
   %f2 = "std.addf"(%f, %f) : (f32,f32) -> f32
@@ -540,17 +540,17 @@ func @affine_apply() {
 // CHECK-LABEL: func @load_store_prefetch
 func @load_store_prefetch(memref<4x4xi32>, index) {
 ^bb0(%0: memref<4x4xi32>, %1: index):
-  // CHECK: %0 = load %arg0[%arg1, %arg1] : memref<4x4xi32>
-  %2 = "std.load"(%0, %1, %1) : (memref<4x4xi32>, index, index)->i32
+  // CHECK: %0 = memref.load %arg0[%arg1, %arg1] : memref<4x4xi32>
+  %2 = "memref.load"(%0, %1, %1) : (memref<4x4xi32>, index, index)->i32
 
-  // CHECK: %{{.*}} = load %arg0[%arg1, %arg1] : memref<4x4xi32>
-  %3 = load %0[%1, %1] : memref<4x4xi32>
+  // CHECK: %{{.*}} = memref.load %arg0[%arg1, %arg1] : memref<4x4xi32>
+  %3 = memref.load %0[%1, %1] : memref<4x4xi32>
 
-  // CHECK: prefetch %arg0[%arg1, %arg1], write, locality<1>, data : memref<4x4xi32>
-  prefetch %0[%1, %1], write, locality<1>, data : memref<4x4xi32>
+  // CHECK: memref.prefetch %arg0[%arg1, %arg1], write, locality<1>, data : memref<4x4xi32>
+  memref.prefetch %0[%1, %1], write, locality<1>, data : memref<4x4xi32>
 
-  // CHECK: prefetch %arg0[%arg1, %arg1], read, locality<3>, instr : memref<4x4xi32>
-  prefetch %0[%1, %1], read, locality<3>, instr : memref<4x4xi32>
+  // CHECK: memref.prefetch %arg0[%arg1, %arg1], read, locality<3>, instr : memref<4x4xi32>
+  memref.prefetch %0[%1, %1], read, locality<3>, instr : memref<4x4xi32>
 
   return
 }
@@ -558,11 +558,11 @@ func @load_store_prefetch(memref<4x4xi32>, index) {
 // Test with zero-dimensional operands using no index in load/store.
 // CHECK-LABEL: func @zero_dim_no_idx
 func @zero_dim_no_idx(%arg0 : memref<i32>, %arg1 : memref<i32>, %arg2 : memref<i32>) {
-  %0 = std.load %arg0[] : memref<i32>
-  std.store %0, %arg1[] : memref<i32>
+  %0 = memref.load %arg0[] : memref<i32>
+  memref.store %0, %arg1[] : memref<i32>
   return
-  // CHECK: %0 = load %{{.*}}[] : memref<i32>
-  // CHECK: store %{{.*}}, %{{.*}}[] : memref<i32>
+  // CHECK: %0 = memref.load %{{.*}}[] : memref<i32>
+  // CHECK: memref.store %{{.*}}, %{{.*}}[] : memref<i32>
 }
 
 // CHECK-LABEL: func @return_op(%arg0: i32) -> i32 {
@@ -600,23 +600,23 @@ func @calls(%arg0: i32) {
 
 // CHECK-LABEL: func @memref_cast(%arg0
 func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64x16x4xf32, offset: 0, strides: [64, 4, 1]>) {
-  // CHECK: %0 = memref_cast %arg0 : memref<4xf32> to memref<?xf32>
-  %0 = memref_cast %arg0 : memref<4xf32> to memref<?xf32>
+  // CHECK: %0 = memref.cast %arg0 : memref<4xf32> to memref<?xf32>
+  %0 = memref.cast %arg0 : memref<4xf32> to memref<?xf32>
 
-  // CHECK: %1 = memref_cast %arg1 : memref<?xf32> to memref<4xf32>
-  %1 = memref_cast %arg1 : memref<?xf32> to memref<4xf32>
+  // CHECK: %1 = memref.cast %arg1 : memref<?xf32> to memref<4xf32>
+  %1 = memref.cast %arg1 : memref<?xf32> to memref<4xf32>
 
-  // CHECK: {{%.*}} = memref_cast %arg2 : memref<64x16x4xf32, #[[$BASE_MAP0]]> to memref<64x16x4xf32, #[[$BASE_MAP3]]>
-  %2 = memref_cast %arg2 : memref<64x16x4xf32, offset: 0, strides: [64, 4, 1]> to memref<64x16x4xf32, offset: ?, strides: [?, ?, ?]>
+  // CHECK: {{%.*}} = memref.cast %arg2 : memref<64x16x4xf32, #[[$BASE_MAP0]]> to memref<64x16x4xf32, #[[$BASE_MAP3]]>
+  %2 = memref.cast %arg2 : memref<64x16x4xf32, offset: 0, strides: [64, 4, 1]> to memref<64x16x4xf32, offset: ?, strides: [?, ?, ?]>
 
-  // CHECK: {{%.*}} = memref_cast {{%.*}} : memref<64x16x4xf32, #[[$BASE_MAP3]]> to memref<64x16x4xf32, #[[$BASE_MAP0]]>
-  %3 = memref_cast %2 : memref<64x16x4xf32, offset: ?, strides: [?, ?, ?]> to memref<64x16x4xf32, offset: 0, strides: [64, 4, 1]>
+  // CHECK: {{%.*}} = memref.cast {{%.*}} : memref<64x16x4xf32, #[[$BASE_MAP3]]> to memref<64x16x4xf32, #[[$BASE_MAP0]]>
+  %3 = memref.cast %2 : memref<64x16x4xf32, offset: ?, strides: [?, ?, ?]> to memref<64x16x4xf32, offset: 0, strides: [64, 4, 1]>
 
-  // CHECK: memref_cast %{{.*}} : memref<4xf32> to memref<*xf32>
-  %4 = memref_cast %1 : memref<4xf32> to memref<*xf32>
+  // CHECK: memref.cast %{{.*}} : memref<4xf32> to memref<*xf32>
+  %4 = memref.cast %1 : memref<4xf32> to memref<*xf32>
 
-  // CHECK: memref_cast %{{.*}} : memref<*xf32> to memref<4xf32>
-  %5 = memref_cast %4 : memref<*xf32> to memref<4xf32>
+  // CHECK: memref.cast %{{.*}} : memref<*xf32> to memref<4xf32>
+  %5 = memref.cast %4 : memref<*xf32> to memref<4xf32>
   return
 }
 
@@ -627,19 +627,19 @@ func private @unranked_memref_roundtrip(memref<*xf32, 4>)
 
 // CHECK-LABEL: func @memref_view(%arg0
 func @memref_view(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<2048xi8>
+  %0 = memref.alloc() : memref<2048xi8>
   // Test two dynamic sizes and dynamic offset.
-  // CHECK: %{{.*}} = std.view %0[%arg2][%arg0, %arg1] : memref<2048xi8> to memref<?x?xf32>
-  %1 = view %0[%arg2][%arg0, %arg1] : memref<2048xi8> to memref<?x?xf32>
+  // CHECK: %{{.*}} = memref.view %0[%arg2][%arg0, %arg1] : memref<2048xi8> to memref<?x?xf32>
+  %1 = memref.view %0[%arg2][%arg0, %arg1] : memref<2048xi8> to memref<?x?xf32>
 
   // Test one dynamic size and dynamic offset.
-  // CHECK: %{{.*}} = std.view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32>
-  %3 = view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32>
+  // CHECK: %{{.*}} = memref.view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32>
+  %3 = memref.view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32>
 
   // Test static sizes and static offset.
-  // CHECK: %{{.*}} = std.view %0[{{.*}}][] : memref<2048xi8> to memref<64x4xf32>
+  // CHECK: %{{.*}} = memref.view %0[{{.*}}][] : memref<2048xi8> to memref<64x4xf32>
   %c0 = constant 0: index
-  %5 = view %0[%c0][] : memref<2048xi8> to memref<64x4xf32>
+  %5 = memref.view %0[%c0][] : memref<2048xi8> to memref<64x4xf32>
   return
 }
 
@@ -648,107 +648,107 @@ func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
 
-  %0 = alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>
+  %0 = memref.alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>
   // CHECK: subview %0[%c0, %c0, %c0] [%arg0, %arg1, %arg2] [%c1, %c1, %c1] :
   // CHECK-SAME: memref<8x16x4xf32, #[[$BASE_MAP0]]>
   // CHECK-SAME: to memref<?x?x?xf32, #[[$BASE_MAP3]]>
-  %1 = subview %0[%c0, %c0, %c0][%arg0, %arg1, %arg2][%c1, %c1, %c1]
+  %1 = memref.subview %0[%c0, %c0, %c0][%arg0, %arg1, %arg2][%c1, %c1, %c1]
     : memref<8x16x4xf32, offset:0, strides: [64, 4, 1]> to
       memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
 
-  %2 = alloc()[%arg2] : memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-  // CHECK: subview %2[%c1] [%arg0] [%c1] :
+  %2 = memref.alloc()[%arg2] : memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
+  // CHECK: memref.subview %2[%c1] [%arg0] [%c1] :
   // CHECK-SAME: memref<64xf32, #[[$BASE_MAP1]]>
   // CHECK-SAME: to memref<?xf32, #[[$SUBVIEW_MAP1]]>
-  %3 = subview %2[%c1][%arg0][%c1]
+  %3 = memref.subview %2[%c1][%arg0][%c1]
     : memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to
       memref<?xf32, affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>>
 
-  %4 = alloc() : memref<64x22xf32, affine_map<(d0, d1) -> (d0 * 22 + d1)>>
-  // CHECK: subview %4[%c0, %c1] [%arg0, %arg1] [%c1, %c0] :
+  %4 = memref.alloc() : memref<64x22xf32, affine_map<(d0, d1) -> (d0 * 22 + d1)>>
+  // CHECK: memref.subview %4[%c0, %c1] [%arg0, %arg1] [%c1, %c0] :
   // CHECK-SAME: memref<64x22xf32, #[[$BASE_MAP2]]>
   // CHECK-SAME: to memref<?x?xf32, #[[$SUBVIEW_MAP2]]>
-  %5 = subview %4[%c0, %c1][%arg0, %arg1][%c1, %c0]
+  %5 = memref.subview %4[%c0, %c1][%arg0, %arg1][%c1, %c0]
     : memref<64x22xf32, offset:0, strides: [22, 1]> to
       memref<?x?xf32, offset:?, strides: [?, ?]>
 
-  // CHECK: subview %0[0, 2, 0] [4, 4, 4] [1, 1, 1] :
+  // CHECK: memref.subview %0[0, 2, 0] [4, 4, 4] [1, 1, 1] :
   // CHECK-SAME: memref<8x16x4xf32, #[[$BASE_MAP0]]>
   // CHECK-SAME: to memref<4x4x4xf32, #[[$SUBVIEW_MAP3]]>
-  %6 = subview %0[0, 2, 0][4, 4, 4][1, 1, 1]
+  %6 = memref.subview %0[0, 2, 0][4, 4, 4][1, 1, 1]
     : memref<8x16x4xf32, offset:0, strides: [64, 4, 1]> to
       memref<4x4x4xf32, offset:8, strides: [64, 4, 1]>
 
-  %7 = alloc(%arg1, %arg2) : memref<?x?xf32>
-  // CHECK: subview {{%.*}}[0, 0] [4, 4] [1, 1] :
+  %7 = memref.alloc(%arg1, %arg2) : memref<?x?xf32>
+  // CHECK: memref.subview {{%.*}}[0, 0] [4, 4] [1, 1] :
   // CHECK-SAME: memref<?x?xf32>
   // CHECK-SAME: to memref<4x4xf32, #[[$SUBVIEW_MAP4]]>
-  %8 = subview %7[0, 0][4, 4][1, 1]
+  %8 = memref.subview %7[0, 0][4, 4][1, 1]
     : memref<?x?xf32> to memref<4x4xf32, offset: ?, strides:[?, 1]>
 
-  %9 = alloc() : memref<16x4xf32>
-  // CHECK: subview {{%.*}}[{{%.*}}, {{%.*}}] [4, 4] [{{%.*}}, {{%.*}}] :
+  %9 = memref.alloc() : memref<16x4xf32>
+  // CHECK: memref.subview {{%.*}}[{{%.*}}, {{%.*}}] [4, 4] [{{%.*}}, {{%.*}}] :
   // CHECK-SAME: memref<16x4xf32>
   // CHECK-SAME: to memref<4x4xf32, #[[$SUBVIEW_MAP2]]
-  %10 = subview %9[%arg1, %arg1][4, 4][%arg2, %arg2]
+  %10 = memref.subview %9[%arg1, %arg1][4, 4][%arg2, %arg2]
     : memref<16x4xf32> to memref<4x4xf32, offset: ?, strides:[?, ?]>
 
-  // CHECK: subview {{%.*}}[{{%.*}}, {{%.*}}] [4, 4] [2, 2] :
+  // CHECK: memref.subview {{%.*}}[{{%.*}}, {{%.*}}] [4, 4] [2, 2] :
   // CHECK-SAME: memref<16x4xf32>
   // CHECK-SAME: to memref<4x4xf32, #[[$SUBVIEW_MAP5]]
-  %11 = subview %9[%arg1, %arg2][4, 4][2, 2]
+  %11 = memref.subview %9[%arg1, %arg2][4, 4][2, 2]
     : memref<16x4xf32> to memref<4x4xf32, offset: ?, strides:[8, 2]>
 
-  %12 = alloc() : memref<1x9x1x4x1xf32, affine_map<(d0, d1, d2, d3, d4) -> (36 * d0 + 36 * d1 + 4 * d2 + 4 * d3 + d4)>>
-  // CHECK: subview %12[%arg1, %arg1, %arg1, %arg1, %arg1]
+  %12 = memref.alloc() : memref<1x9x1x4x1xf32, affine_map<(d0, d1, d2, d3, d4) -> (36 * d0 + 36 * d1 + 4 * d2 + 4 * d3 + d4)>>
+  // CHECK: memref.subview %12[%arg1, %arg1, %arg1, %arg1, %arg1]
   // CHECK-SAME: [1, 9, 1, 4, 1] [%arg2, %arg2, %arg2, %arg2, %arg2] :
   // CHECK-SAME: memref<1x9x1x4x1xf32, #[[$SUBVIEW_MAP6]]> to memref<9x4xf32, #[[$SUBVIEW_MAP2]]>
-  %13 = subview %12[%arg1, %arg1, %arg1, %arg1, %arg1][1, 9, 1, 4, 1][%arg2, %arg2, %arg2, %arg2, %arg2] : memref<1x9x1x4x1xf32, offset: 0, strides: [36, 36, 4, 4, 1]> to memref<9x4xf32, offset: ?, strides: [?, ?]>
-  // CHECK: subview %12[%arg1, %arg1, %arg1, %arg1, %arg1]
+  %13 = memref.subview %12[%arg1, %arg1, %arg1, %arg1, %arg1][1, 9, 1, 4, 1][%arg2, %arg2, %arg2, %arg2, %arg2] : memref<1x9x1x4x1xf32, offset: 0, strides: [36, 36, 4, 4, 1]> to memref<9x4xf32, offset: ?, strides: [?, ?]>
+  // CHECK: memref.subview %12[%arg1, %arg1, %arg1, %arg1, %arg1]
   // CHECK-SAME: [1, 9, 1, 4, 1] [%arg2, %arg2, %arg2, %arg2, %arg2] :
   // CHECK-SAME: memref<1x9x1x4x1xf32, #[[$SUBVIEW_MAP6]]> to memref<1x9x4xf32, #[[$BASE_MAP3]]>
-  %14 = subview %12[%arg1, %arg1, %arg1, %arg1, %arg1][1, 9, 1, 4, 1][%arg2, %arg2, %arg2, %arg2, %arg2] : memref<1x9x1x4x1xf32, offset: 0, strides: [36, 36, 4, 4, 1]> to memref<1x9x4xf32, offset: ?, strides: [?, ?, ?]>
+  %14 = memref.subview %12[%arg1, %arg1, %arg1, %arg1, %arg1][1, 9, 1, 4, 1][%arg2, %arg2, %arg2, %arg2, %arg2] : memref<1x9x1x4x1xf32, offset: 0, strides: [36, 36, 4, 4, 1]> to memref<1x9x4xf32, offset: ?, strides: [?, ?, ?]>
 
-  %15 = alloc(%arg1, %arg2)[%c0, %c1, %arg1, %arg0, %arg0, %arg2, %arg2] : memref<1x?x5x1x?x1xf32, affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6] -> (s0 + s1 * d0 + s2 * d1 + s3 * d2 + s4 * d3 + s5 * d4 + s6 * d5)>>
-  // CHECK: subview %15[0, 0, 0, 0, 0, 0] [1, %arg1, 5, 1, %arg2, 1] [1, 1, 1, 1, 1, 1]  :
+  %15 = memref.alloc(%arg1, %arg2)[%c0, %c1, %arg1, %arg0, %arg0, %arg2, %arg2] : memref<1x?x5x1x?x1xf32, affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6] -> (s0 + s1 * d0 + s2 * d1 + s3 * d2 + s4 * d3 + s5 * d4 + s6 * d5)>>
+  // CHECK: memref.subview %15[0, 0, 0, 0, 0, 0] [1, %arg1, 5, 1, %arg2, 1] [1, 1, 1, 1, 1, 1]  :
   // CHECK-SAME: memref<1x?x5x1x?x1xf32,  #[[$SUBVIEW_MAP7]]> to memref<?x5x?xf32, #[[$BASE_MAP3]]>
-  %16 = subview %15[0, 0, 0, 0, 0, 0][1, %arg1, 5, 1, %arg2, 1][1, 1, 1, 1, 1, 1] : memref<1x?x5x1x?x1xf32, offset: ?, strides: [?, ?, ?, ?, ?, ?]> to memref<?x5x?xf32, offset: ?, strides: [?, ?, ?]>
-  // CHECK: subview %15[%arg1, %arg1, %arg1, %arg1, %arg1, %arg1] [1, %arg1, 5, 1, %arg2, 1] [1, 1, 1, 1, 1, 1]  :
+  %16 = memref.subview %15[0, 0, 0, 0, 0, 0][1, %arg1, 5, 1, %arg2, 1][1, 1, 1, 1, 1, 1] : memref<1x?x5x1x?x1xf32, offset: ?, strides: [?, ?, ?, ?, ?, ?]> to memref<?x5x?xf32, offset: ?, strides: [?, ?, ?]>
+  // CHECK: memref.subview %15[%arg1, %arg1, %arg1, %arg1, %arg1, %arg1] [1, %arg1, 5, 1, %arg2, 1] [1, 1, 1, 1, 1, 1]  :
   // CHECK-SAME: memref<1x?x5x1x?x1xf32, #[[$SUBVIEW_MAP7]]> to memref<?x5x?x1xf32, #[[$SUBVIEW_MAP8]]>
-  %17 = subview %15[%arg1, %arg1, %arg1, %arg1, %arg1, %arg1][1, %arg1, 5, 1, %arg2, 1][1, 1, 1, 1, 1, 1] :  memref<1x?x5x1x?x1xf32, offset: ?, strides: [?, ?, ?, ?, ?, ?]> to memref<?x5x?x1xf32, offset: ?, strides: [?, ?, ?, ?]>
+  %17 = memref.subview %15[%arg1, %arg1, %arg1, %arg1, %arg1, %arg1][1, %arg1, 5, 1, %arg2, 1][1, 1, 1, 1, 1, 1] :  memref<1x?x5x1x?x1xf32, offset: ?, strides: [?, ?, ?, ?, ?, ?]> to memref<?x5x?x1xf32, offset: ?, strides: [?, ?, ?, ?]>
 
-  %18 = alloc() : memref<1x8xf32>
-  // CHECK: subview %18[0, 0] [1, 8] [1, 1]  : memref<1x8xf32> to memref<8xf32>
-  %19 = subview %18[0, 0][1, 8][1, 1] : memref<1x8xf32> to memref<8xf32>
+  %18 = memref.alloc() : memref<1x8xf32>
+  // CHECK: memref.subview %18[0, 0] [1, 8] [1, 1]  : memref<1x8xf32> to memref<8xf32>
+  %19 = memref.subview %18[0, 0][1, 8][1, 1] : memref<1x8xf32> to memref<8xf32>
 
-  %20 = alloc() : memref<8x16x4xf32>
-  // CHECK: subview %20[0, 0, 0] [1, 16, 4] [1, 1, 1]  : memref<8x16x4xf32> to memref<16x4xf32>
-  %21 = subview %20[0, 0, 0][1, 16, 4][1, 1, 1] : memref<8x16x4xf32> to memref<16x4xf32>
+  %20 = memref.alloc() : memref<8x16x4xf32>
+  // CHECK: memref.subview %20[0, 0, 0] [1, 16, 4] [1, 1, 1]  : memref<8x16x4xf32> to memref<16x4xf32>
+  %21 = memref.subview %20[0, 0, 0][1, 16, 4][1, 1, 1] : memref<8x16x4xf32> to memref<16x4xf32>
 
-  %22 = subview %20[3, 4, 2][1, 6, 3][1, 1, 1] : memref<8x16x4xf32> to memref<6x3xf32, offset: 210, strides: [4, 1]>
+  %22 = memref.subview %20[3, 4, 2][1, 6, 3][1, 1, 1] : memref<8x16x4xf32> to memref<6x3xf32, offset: 210, strides: [4, 1]>
 
-  %23 = alloc() : memref<f32>
-  %78 = subview %23[] [] []  : memref<f32> to memref<f32>
+  %23 = memref.alloc() : memref<f32>
+  %78 = memref.subview %23[] [] []  : memref<f32> to memref<f32>
 
   /// Subview with only leading operands.
-  %24 = alloc() : memref<5x3xf32>
-  // CHECK: subview %{{.*}}[2] [3] [1] : memref<5x3xf32> to memref<3x3xf32, #[[$SUBVIEW_MAP9]]>
-  %25 = subview %24[2][3][1]: memref<5x3xf32> to memref<3x3xf32, offset: 6, strides: [3, 1]>
+  %24 = memref.alloc() : memref<5x3xf32>
+  // CHECK: memref.subview %{{.*}}[2] [3] [1] : memref<5x3xf32> to memref<3x3xf32, #[[$SUBVIEW_MAP9]]>
+  %25 = memref.subview %24[2][3][1]: memref<5x3xf32> to memref<3x3xf32, offset: 6, strides: [3, 1]>
 
   /// Rank-reducing subview with only leading operands.
-  // CHECK: subview %{{.*}}[1] [1] [1] : memref<5x3xf32> to memref<3xf32, #[[$SUBVIEW_MAP10]]>
-  %26 = subview %24[1][1][1]: memref<5x3xf32> to memref<3xf32, offset: 3, strides: [1]>
+  // CHECK: memref.subview %{{.*}}[1] [1] [1] : memref<5x3xf32> to memref<3xf32, #[[$SUBVIEW_MAP10]]>
+  %26 = memref.subview %24[1][1][1]: memref<5x3xf32> to memref<3xf32, offset: 3, strides: [1]>
 
   // Corner-case of 0-D rank-reducing subview with an offset.
-  // CHECK: subview %{{.*}}[1, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, #[[$SUBVIEW_MAP11]]>
-  %27 = subview %24[1, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, affine_map<() -> (4)>>
+  // CHECK: memref.subview %{{.*}}[1, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, #[[$SUBVIEW_MAP11]]>
+  %27 = memref.subview %24[1, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, affine_map<() -> (4)>>
 
-  // CHECK: subview %{{.*}}[%{{.*}}, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, #[[$SUBVIEW_MAP12]]>
-  %28 = subview %24[%arg0, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, affine_map<()[s0] -> (s0)>>
+  // CHECK: memref.subview %{{.*}}[%{{.*}}, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, #[[$SUBVIEW_MAP12]]>
+  %28 = memref.subview %24[%arg0, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, affine_map<()[s0] -> (s0)>>
 
-  // CHECK: subview %{{.*}}[0, %{{.*}}] [%{{.*}}, 1] [1, 1] : memref<?x?xf32> to memref<?xf32, #[[$SUBVIEW_MAP1]]>
-  %a30 = alloc(%arg0, %arg0) : memref<?x?xf32>
-  %30 = subview %a30[0, %arg1][%arg2, 1][1, 1] : memref<?x?xf32> to memref<?xf32, affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>>
+  // CHECK: memref.subview %{{.*}}[0, %{{.*}}] [%{{.*}}, 1] [1, 1] : memref<?x?xf32> to memref<?xf32, #[[$SUBVIEW_MAP1]]>
+  %a30 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
+  %30 = memref.subview %a30[0, %arg1][%arg2, 1][1, 1] : memref<?x?xf32> to memref<?xf32, affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>>
 
   return
 }
@@ -757,9 +757,9 @@ func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK-SAME: %[[ARG:.*]]: tensor<4x4x?xf32>
 func @test_dimop(%arg0: tensor<4x4x?xf32>) {
   // CHECK: %[[C2:.*]] = constant 2 : index
-  // CHECK: %{{.*}} = dim %[[ARG]], %[[C2]] : tensor<4x4x?xf32>
+  // CHECK: %{{.*}} = memref.dim %[[ARG]], %[[C2]] : tensor<4x4x?xf32>
   %c2 = constant 2 : index
-  %0 = dim %arg0, %c2 : tensor<4x4x?xf32>
+  %0 = memref.dim %arg0, %c2 : tensor<4x4x?xf32>
   // use dim as an index to ensure type correctness
   %1 = affine.apply affine_map<(d0) -> (d0)>(%0)
   return
@@ -779,19 +779,19 @@ func @test_splat_op(%s : f32) {
 
 // CHECK-LABEL: func @tensor_load_store
 func @tensor_load_store(%0 : memref<4x4xi32>) {
-  // CHECK: %[[TENSOR:.*]] = tensor_load %[[MEMREF:.*]] : memref<4x4xi32>
-  %1 = tensor_load %0 : memref<4x4xi32>
-  // CHECK: tensor_store %[[TENSOR]], %[[MEMREF]] : memref<4x4xi32>
-  tensor_store %1, %0 : memref<4x4xi32>
+  // CHECK: %[[TENSOR:.*]] = memref.tensor_load %[[MEMREF:.*]] : memref<4x4xi32>
+  %1 = memref.tensor_load %0 : memref<4x4xi32>
+  // CHECK: memref.tensor_store %[[TENSOR]], %[[MEMREF]] : memref<4x4xi32>
+  memref.tensor_store %1, %0 : memref<4x4xi32>
   return
 }
 
 // CHECK-LABEL: func @unranked_tensor_load_store
 func @unranked_tensor_load_store(%0 : memref<*xi32>) {
-  // CHECK: %[[TENSOR:.*]] = tensor_load %[[MEMREF:.*]] : memref<*xi32>
-  %1 = tensor_load %0 : memref<*xi32>
-  // CHECK: tensor_store %[[TENSOR]], %[[MEMREF]] : memref<*xi32>
-  tensor_store %1, %0 : memref<*xi32>
+  // CHECK: %[[TENSOR:.*]] = memref.tensor_load %[[MEMREF:.*]] : memref<*xi32>
+  %1 = memref.tensor_load %0 : memref<*xi32>
+  // CHECK: memref.tensor_store %[[TENSOR]], %[[MEMREF]] : memref<*xi32>
+  memref.tensor_store %1, %0 : memref<*xi32>
   return
 }
 
@@ -820,8 +820,8 @@ func @generic_atomic_rmw(%I: memref<1x2xf32>, %i : index, %j : index) {
 // CHECK-LABEL: func @assume_alignment
 // CHECK-SAME: %[[MEMREF:.*]]: memref<4x4xf16>
 func @assume_alignment(%0: memref<4x4xf16>) {
-  // CHECK: assume_alignment %[[MEMREF]], 16 : memref<4x4xf16>
-  assume_alignment %0, 16 : memref<4x4xf16>
+  // CHECK: memref.assume_alignment %[[MEMREF]], 16 : memref<4x4xf16>
+  memref.assume_alignment %0, 16 : memref<4x4xf16>
   return
 }
 

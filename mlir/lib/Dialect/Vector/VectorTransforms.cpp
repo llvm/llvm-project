@@ -16,6 +16,8 @@
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
+#include "mlir/Dialect/MemRef/EDSC/Intrinsics.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -2282,7 +2284,7 @@ static Value createScopedInBoundsCond(VectorTransferOpInterface xferOp) {
     // Fold or create the check that `index + vector_size` <= `memref_size`.
     Value sum = xferOp.indices()[indicesIdx] + std_constant_index(vectorSize);
     Value cond =
-        createScopedFoldedSLE(sum, std_dim(xferOp.source(), indicesIdx));
+        createScopedFoldedSLE(sum, memref_dim(xferOp.source(), indicesIdx));
     if (!cond)
       return;
     // Conjunction over all dims for which we are in-bounds.
@@ -2317,7 +2319,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
 ///     b. using a dynamic shape and/or stride for the dimensions that don't
 ///        agree.
 static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
-  if (MemRefCastOp::areCastCompatible(aT, bT))
+  if (memref::CastOp::areCastCompatible(aT, bT))
     return aT;
   if (aT.getRank() != bT.getRank())
     return MemRefType();
@@ -2362,8 +2364,8 @@ static Value createScopedSubViewIntersection(VectorTransferOpInterface xferOp,
   sizes.append(leadingIndices.begin(), leadingIndices.end());
   xferOp.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-    Value dimMemRef = std_dim(xferOp.source(), indicesIdx);
-    Value dimAlloc = std_dim(alloc, resultIdx);
+    Value dimMemRef = memref_dim(xferOp.source(), indicesIdx);
+    Value dimAlloc = memref_dim(alloc, resultIdx);
     Value index = xferOp.indices()[indicesIdx];
     AffineExpr i, j, k;
     bindDims(xferOp.getContext(), i, j, k);
@@ -2377,7 +2379,7 @@ static Value createScopedSubViewIntersection(VectorTransferOpInterface xferOp,
 
   SmallVector<OpFoldResult, 4> indices = llvm::to_vector<4>(llvm::map_range(
       xferOp.indices(), [](Value idx) -> OpFoldResult { return idx; }));
-  return std_sub_view(
+  return memref_sub_view(
       xferOp.source(), indices, sizes,
       SmallVector<OpFoldResult>(memrefRank, OpBuilder(xferOp).getIndexAttr(1)));
 }
@@ -2388,13 +2390,13 @@ static Value createScopedSubViewIntersection(VectorTransferOpInterface xferOp,
 /// Produce IR resembling:
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
-///      memref_cast %A: memref<A...> to compatibleMemRefType
+///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view, ... : compatibleMemRefType, index, index
 ///    } else {
 ///      %2 = linalg.fill(%alloc, %pad)
 ///      %3 = subview %view [...][...][...]
 ///      linalg.copy(%3, %alloc)
-///      memref_cast %alloc: memref<B...> to compatibleMemRefType
+///      memref.cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4, ... : compatibleMemRefType, index, index
 ///   }
 /// ```
@@ -2412,7 +2414,7 @@ static scf::IfOp createScopedFullPartialLinalgCopy(
       [&]() -> scf::ValueVector {
         Value res = memref;
         if (compatibleMemRefType != xferOp.getShapedType())
-          res = std_memref_cast(memref, compatibleMemRefType);
+          res = memref_cast(memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.indices().begin(),
                               xferOp.indices().end());
@@ -2425,7 +2427,7 @@ static scf::IfOp createScopedFullPartialLinalgCopy(
         Value memRefSubView = createScopedSubViewIntersection(
             cast<VectorTransferOpInterface>(xferOp.getOperation()), alloc);
         linalg_copy(memRefSubView, alloc);
-        Value casted = std_memref_cast(alloc, compatibleMemRefType);
+        Value casted = memref_cast(alloc, compatibleMemRefType);
         scf::ValueVector viewAndIndices{casted};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getTransferRank(),
                               zero);
@@ -2441,14 +2443,14 @@ static scf::IfOp createScopedFullPartialLinalgCopy(
 /// Produce IR resembling:
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
-///      memref_cast %A: memref<A...> to compatibleMemRefType
+///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view, ... : compatibleMemRefType, index, index
 ///    } else {
 ///      %2 = vector.transfer_read %view[...], %pad : memref<A...>, vector<...>
 ///      %3 = vector.type_cast %extra_alloc :
 ///        memref<...> to memref<vector<...>>
 ///      store %2, %3[] : memref<vector<...>>
-///      %4 = memref_cast %alloc: memref<B...> to compatibleMemRefType
+///      %4 = memref.cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4, ... : compatibleMemRefType, index, index
 ///   }
 /// ```
@@ -2466,7 +2468,7 @@ static scf::IfOp createScopedFullPartialVectorTransferRead(
       [&]() -> scf::ValueVector {
         Value res = memref;
         if (compatibleMemRefType != xferOp.getShapedType())
-          res = std_memref_cast(memref, compatibleMemRefType);
+          res = memref_cast(memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.indices().begin(),
                               xferOp.indices().end());
@@ -2476,10 +2478,10 @@ static scf::IfOp createScopedFullPartialVectorTransferRead(
         Operation *newXfer =
             ScopedContext::getBuilderRef().clone(*xferOp.getOperation());
         Value vector = cast<VectorTransferOpInterface>(newXfer).vector();
-        std_store(vector, vector_type_cast(
-                              MemRefType::get({}, vector.getType()), alloc));
+        memref_store(vector, vector_type_cast(
+                                 MemRefType::get({}, vector.getType()), alloc));
 
-        Value casted = std_memref_cast(alloc, compatibleMemRefType);
+        Value casted = memref_cast(alloc, compatibleMemRefType);
         scf::ValueVector viewAndIndices{casted};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getTransferRank(),
                               zero);
@@ -2506,11 +2508,11 @@ static scf::IfOp createScopedFullPartialVectorTransferRead(
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
 ///      // fastpath, direct cast
-///      memref_cast %A: memref<A...> to compatibleMemRefType
+///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view : compatibleMemRefType, index, index
 ///    } else {
 ///      // slowpath, masked vector.transfer or linalg.copy.
-///      memref_cast %alloc: memref<B...> to compatibleMemRefType
+///      memref.cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4 : compatibleMemRefType, index, index
 //     }
 ///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {masked = [false ... false]}
@@ -2565,8 +2567,8 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
     b.setInsertionPointToStart(&funcOp.getRegion().front());
     auto shape = xferOp.getVectorType().getShape();
     Type elementType = xferOp.getVectorType().getElementType();
-    alloc = std_alloca(MemRefType::get(shape, elementType), ValueRange{},
-                       b.getI64IntegerAttr(32));
+    alloc = memref_alloca(MemRefType::get(shape, elementType), ValueRange{},
+                          b.getI64IntegerAttr(32));
   }
 
   MemRefType compatibleMemRefType =
@@ -2780,8 +2782,8 @@ struct TransferReadToVectorLoadLowering
     if (!broadcastedDims.empty() &&
         unbroadcastedVectorType.getNumElements() == 1) {
       // If broadcasting is required and the number of loaded elements is 1 then
-      // we can create `std.load` instead of `vector.load`.
-      loadOp = rewriter.create<mlir::LoadOp>(read.getLoc(), read.source(),
+      // we can create `memref.load` instead of `vector.load`.
+      loadOp = rewriter.create<memref::LoadOp>(read.getLoc(), read.source(),
                                              read.indices());
     } else {
       // Otherwise create `vector.load`.

@@ -7,7 +7,7 @@
 
 // CHECK-LABEL: func @compose_affine_maps_1dto2d_no_symbols() {
 func @compose_affine_maps_1dto2d_no_symbols() {
-  %0 = alloc() : memref<4x4xf32>
+  %0 = memref.alloc() : memref<4x4xf32>
 
   affine.for %i0 = 0 to 15 {
     // Test load[%x, %x]
@@ -17,8 +17,8 @@ func @compose_affine_maps_1dto2d_no_symbols() {
     %x1_1 = affine.apply affine_map<(d0, d1) -> (d1)> (%x0, %x0)
 
     // CHECK: %[[I0A:.*]] = affine.apply #[[$MAP0]](%{{.*}})
-    // CHECK-NEXT: %[[V0:.*]] = load %0[%[[I0A]], %[[I0A]]]
-    %v0 = load %0[%x1_0, %x1_1] : memref<4x4xf32>
+    // CHECK-NEXT: %[[V0:.*]] = memref.load %0[%[[I0A]], %[[I0A]]]
+    %v0 = memref.load %0[%x1_0, %x1_1] : memref<4x4xf32>
 
     // Test store[%y, %y]
     %y0 = affine.apply affine_map<(d0) -> (d0 + 1)> (%i0)
@@ -26,21 +26,21 @@ func @compose_affine_maps_1dto2d_no_symbols() {
     %y1_1 = affine.apply affine_map<(d0, d1) -> (d1)> (%y0, %y0)
 
     // CHECK-NEXT: %[[I1A:.*]] = affine.apply #[[$MAP1]](%{{.*}})
-    // CHECK-NEXT: store %[[V0]], %0[%[[I1A]], %[[I1A]]]
-    store %v0, %0[%y1_0, %y1_1] : memref<4x4xf32>
+    // CHECK-NEXT: memref.store %[[V0]], %0[%[[I1A]], %[[I1A]]]
+    memref.store %v0, %0[%y1_0, %y1_1] : memref<4x4xf32>
 
     // Test store[%x, %y]
     %xy_0 = affine.apply affine_map<(d0, d1) -> (d0)> (%x0, %y0)
     %xy_1 = affine.apply affine_map<(d0, d1) -> (d1)> (%x0, %y0)
 
-    // CHECK-NEXT: store %[[V0]], %0[%[[I0A]], %[[I1A]]]
-    store %v0, %0[%xy_0, %xy_1] : memref<4x4xf32>
+    // CHECK-NEXT: memref.store %[[V0]], %0[%[[I0A]], %[[I1A]]]
+    memref.store %v0, %0[%xy_0, %xy_1] : memref<4x4xf32>
 
     // Test store[%y, %x]
     %yx_0 = affine.apply affine_map<(d0, d1) -> (d0)> (%y0, %x0)
     %yx_1 = affine.apply affine_map<(d0, d1) -> (d1)> (%y0, %x0)
-    // CHECK-NEXT: store %[[V0]], %0[%[[I1A]], %[[I0A]]]
-    store %v0, %0[%yx_0, %yx_1] : memref<4x4xf32>
+    // CHECK-NEXT: memref.store %[[V0]], %0[%[[I1A]], %[[I0A]]]
+    memref.store %v0, %0[%yx_0, %yx_1] : memref<4x4xf32>
   }
   return
 }
@@ -53,7 +53,7 @@ func @compose_affine_maps_1dto2d_no_symbols() {
 
 // CHECK-LABEL: func @compose_affine_maps_1dto2d_with_symbols() {
 func @compose_affine_maps_1dto2d_with_symbols() {
-  %0 = alloc() : memref<4x4xf32>
+  %0 = memref.alloc() : memref<4x4xf32>
 
   affine.for %i0 = 0 to 15 {
     // Test load[%x0, %x0] with symbol %c4
@@ -61,29 +61,29 @@ func @compose_affine_maps_1dto2d_with_symbols() {
     %x0 = affine.apply affine_map<(d0)[s0] -> (d0 - s0)> (%i0)[%c4]
 
     // CHECK: %[[I0:.*]] = affine.apply #[[$MAP4]](%{{.*}})
-    // CHECK-NEXT: %[[V0:.*]] = load %{{.*}}[%[[I0]], %[[I0]]]
-    %v0 = load %0[%x0, %x0] : memref<4x4xf32>
+    // CHECK-NEXT: %[[V0:.*]] = memref.load %{{.*}}[%[[I0]], %[[I0]]]
+    %v0 = memref.load %0[%x0, %x0] : memref<4x4xf32>
 
     // Test load[%x0, %x1] with symbol %c4 captured by '%x0' map.
     %x1 = affine.apply affine_map<(d0) -> (d0 + 1)> (%i0)
     %y1 = affine.apply affine_map<(d0, d1) -> (d0+d1)> (%x0, %x1)
     // CHECK-NEXT: %[[I1:.*]] = affine.apply #[[$MAP7]](%{{.*}})
-    // CHECK-NEXT: store %[[V0]], %{{.*}}[%[[I1]], %[[I1]]]
-    store %v0, %0[%y1, %y1] : memref<4x4xf32>
+    // CHECK-NEXT: memref.store %[[V0]], %{{.*}}[%[[I1]], %[[I1]]]
+    memref.store %v0, %0[%y1, %y1] : memref<4x4xf32>
 
     // Test store[%x1, %x0] with symbol %c4 captured by '%x0' map.
     %y2 = affine.apply affine_map<(d0, d1) -> (d0 + d1)> (%x1, %x0)
     // CHECK-NEXT: %[[I2:.*]] = affine.apply #[[$MAP7]](%{{.*}})
-    // CHECK-NEXT: store %[[V0]], %{{.*}}[%[[I2]], %[[I2]]]
-    store %v0, %0[%y2, %y2] : memref<4x4xf32>
+    // CHECK-NEXT: memref.store %[[V0]], %{{.*}}[%[[I2]], %[[I2]]]
+    memref.store %v0, %0[%y2, %y2] : memref<4x4xf32>
 
     // Test store[%x2, %x0] with symbol %c4 from '%x0' and %c5 from '%x2'
     %c5 = constant 5 : index
     %x2 = affine.apply affine_map<(d0)[s0] -> (d0 + s0)> (%i0)[%c5]
     %y3 = affine.apply affine_map<(d0, d1) -> (d0 + d1)> (%x2, %x0)
     // CHECK: %[[I3:.*]] = affine.apply #[[$MAP7a]](%{{.*}})
-    // CHECK-NEXT: store %[[V0]], %{{.*}}[%[[I3]], %[[I3]]]
-    store %v0, %0[%y3, %y3] : memref<4x4xf32>
+    // CHECK-NEXT: memref.store %[[V0]], %{{.*}}[%[[I3]], %[[I3]]]
+    memref.store %v0, %0[%y3, %y3] : memref<4x4xf32>
   }
   return
 }
@@ -95,8 +95,8 @@ func @compose_affine_maps_1dto2d_with_symbols() {
 
 // CHECK-LABEL: func @compose_affine_maps_2d_tile() {
 func @compose_affine_maps_2d_tile() {
-  %0 = alloc() : memref<16x32xf32>
-  %1 = alloc() : memref<16x32xf32>
+  %0 = memref.alloc() : memref<16x32xf32>
+  %1 = memref.alloc() : memref<16x32xf32>
 
   %c4 = constant 4 : index
   %c8 = constant 8 : index
@@ -116,11 +116,11 @@ func @compose_affine_maps_2d_tile() {
             ((d1 * s1) + d3)> (%x0, %x1, %x2, %x3)[%c4, %c8]
           // CHECK: %[[I0:.*]] = affine.apply #[[$MAP8]](%{{.*}}, %{{.*}})
           // CHECK: %[[I1:.*]] = affine.apply #[[$MAP8a]](%{{.*}}, %{{.*}})
-          // CHECK-NEXT: %[[L0:.*]] = load %{{.*}}[%[[I0]], %[[I1]]]
-          %v0 = load %0[%x40, %x41] : memref<16x32xf32>
+          // CHECK-NEXT: %[[L0:.*]] = memref.load %{{.*}}[%[[I0]], %[[I1]]]
+          %v0 = memref.load %0[%x40, %x41] : memref<16x32xf32>
 
-          // CHECK-NEXT: store %[[L0]], %{{.*}}[%[[I0]], %[[I1]]]
-          store %v0, %1[%x40, %x41] : memref<16x32xf32>
+          // CHECK-NEXT: memref.store %[[L0]], %{{.*}}[%[[I0]], %[[I1]]]
+          memref.store %v0, %1[%x40, %x41] : memref<16x32xf32>
         }
       }
     }
@@ -138,8 +138,8 @@ func @compose_affine_maps_2d_tile() {
 
 // CHECK-LABEL: func @compose_affine_maps_dependent_loads() {
 func @compose_affine_maps_dependent_loads() {
-  %0 = alloc() : memref<16x32xf32>
-  %1 = alloc() : memref<16x32xf32>
+  %0 = memref.alloc() : memref<16x32xf32>
+  %1 = memref.alloc() : memref<16x32xf32>
 
   affine.for %i0 = 0 to 3 {
     affine.for %i1 = 0 to 3 {
@@ -157,15 +157,15 @@ func @compose_affine_maps_dependent_loads() {
         // CHECK: %[[I0:.*]] = affine.apply #[[$MAP9]](%{{.*}})
         // CHECK: %[[I1:.*]] = affine.apply #[[$MAP4b]](%{{.*}})
         // CHECK: %[[I2:.*]] = affine.apply #[[$MAP10]](%{{.*}})
-        // CHECK-NEXT: %[[V0:.*]] = load %{{.*}}[%[[I0]], %[[I1]]]
-        %v0 = load %0[%x00, %x01] : memref<16x32xf32>
+        // CHECK-NEXT: %[[V0:.*]] = memref.load %{{.*}}[%[[I0]], %[[I1]]]
+        %v0 = memref.load %0[%x00, %x01] : memref<16x32xf32>
 
-        // CHECK-NEXT: store %[[V0]], %{{.*}}[%[[I0]], %[[I2]]]
-        store %v0, %0[%x00, %x02] : memref<16x32xf32>
+        // CHECK-NEXT: memref.store %[[V0]], %{{.*}}[%[[I0]], %[[I2]]]
+        memref.store %v0, %0[%x00, %x02] : memref<16x32xf32>
 
         // Swizzle %i0, %i1
-        // CHECK-NEXT: store %[[V0]], %{{.*}}[%[[I1]], %[[I0]]]
-        store %v0, %0[%x01, %x00] : memref<16x32xf32>
+        // CHECK-NEXT: memref.store %[[V0]], %{{.*}}[%[[I1]], %[[I0]]]
+        memref.store %v0, %0[%x01, %x00] : memref<16x32xf32>
 
         // Swizzle %x00, %x01 and %c3, %c7
         %x10 = affine.apply affine_map<(d0, d1)[s0, s1] -> (d0 * s1)>
@@ -175,8 +175,8 @@ func @compose_affine_maps_dependent_loads() {
 
         // CHECK-NEXT: %[[I2A:.*]] = affine.apply #[[$MAP12]](%{{.*}})
         // CHECK-NEXT: %[[I2B:.*]] = affine.apply #[[$MAP11]](%{{.*}})
-        // CHECK-NEXT: store %[[V0]], %{{.*}}[%[[I2A]], %[[I2B]]]
-        store %v0, %0[%x10, %x11] : memref<16x32xf32>
+        // CHECK-NEXT: memref.store %[[V0]], %{{.*}}[%[[I2A]], %[[I2B]]]
+        memref.store %v0, %0[%x10, %x11] : memref<16x32xf32>
       }
     }
   }
@@ -198,8 +198,8 @@ func @compose_affine_maps_diamond_dependency(%arg0: f32, %arg1: memref<4x4xf32>)
     %d1 = affine.apply affine_map<(d0, d1) -> (d1 floordiv 3)> (%b, %c)
     // CHECK: %[[I0:.*]] = affine.apply #[[$MAP13A]](%{{.*}})
     // CHECK: %[[I1:.*]] = affine.apply #[[$MAP13B]](%{{.*}})
-    // CHECK-NEXT: store %arg0, %arg1[%[[I0]], %[[I1]]]
-    store %arg0, %arg1[%d0, %d1] : memref<4x4xf32>
+    // CHECK-NEXT: memref.store %arg0, %arg1[%[[I0]], %[[I1]]]
+    memref.store %arg0, %arg1[%d0, %d1] : memref<4x4xf32>
   }
 
   return
@@ -223,16 +223,16 @@ func @compose_affine_maps_multiple_symbols(%arg0: index, %arg1: index) -> index 
 // CHECK-LABEL: func @arg_used_as_dim_and_symbol
 func @arg_used_as_dim_and_symbol(%arg0: memref<100x100xf32>, %arg1: index, %arg2: f32) {
   %c9 = constant 9 : index
-  %1 = alloc() : memref<100x100xf32, 1>
-  %2 = alloc() : memref<1xi32>
+  %1 = memref.alloc() : memref<100x100xf32, 1>
+  %2 = memref.alloc() : memref<1xi32>
   affine.for %i0 = 0 to 100 {
     affine.for %i1 = 0 to 100 {
       %3 = affine.apply affine_map<(d0, d1)[s0, s1] -> (d1 + s0 + s1)>
         (%i0, %i1)[%arg1, %c9]
       %4 = affine.apply affine_map<(d0, d1, d3) -> (d3 - (d0 + d1))>
         (%arg1, %c9, %3)
-      // CHECK: store %arg2, %{{.*}}[%{{.*}}, %{{.*}}]
-      store %arg2, %1[%4, %arg1] : memref<100x100xf32, 1>
+      // CHECK: memref.store %arg2, %{{.*}}[%{{.*}}, %{{.*}}]
+      memref.store %arg2, %1[%4, %arg1] : memref<100x100xf32, 1>
     }
   }
   return
@@ -244,17 +244,17 @@ func @arg_used_as_dim_and_symbol(%arg0: memref<100x100xf32>, %arg1: index, %arg2
 func @trivial_maps() {
   // CHECK-NOT: affine.apply
 
-  %0 = alloc() : memref<10xf32>
+  %0 = memref.alloc() : memref<10xf32>
   %c0 = constant 0 : index
   %cst = constant 0.000000e+00 : f32
   affine.for %i1 = 0 to 10 {
     %1 = affine.apply affine_map<()[s0] -> (s0)>()[%c0]
-    store %cst, %0[%1] : memref<10xf32>
-    %2 = load %0[%c0] : memref<10xf32>
+    memref.store %cst, %0[%1] : memref<10xf32>
+    %2 = memref.load %0[%c0] : memref<10xf32>
 
     %3 = affine.apply affine_map<()[] -> (0)>()[]
-    store %cst, %0[%3] : memref<10xf32>
-    store %2, %0[%c0] : memref<10xf32>
+    memref.store %cst, %0[%3] : memref<10xf32>
+    memref.store %2, %0[%c0] : memref<10xf32>
   }
   return
 }
@@ -422,7 +422,7 @@ func @symbolic_semi_affine(%M: index, %N: index, %A: memref<?xf32>) {
     %1 = affine.apply affine_map<()[s0] -> (s0 + 1)> ()[%M]
     %2 = affine.apply affine_map<(d0)[s0] -> (d0 floordiv s0)> (%i0)[%1]
     // CHECK-DAG: {{.*}} = affine.apply #[[$symbolic_semi_affine]](%{{.*}})[%{{.*}}]
-    store %f1, %A[%2] : memref<?xf32>
+    memref.store %f1, %A[%2] : memref<?xf32>
   }
   return
 }
@@ -667,7 +667,7 @@ func @affine_parallel_const_bounds() {
   %cst = constant 1.0 : f32
   %c0 = constant 0 : index
   %c4 = constant 4 : index
-  %0 = alloc() : memref<4xf32>
+  %0 = memref.alloc() : memref<4xf32>
   // CHECK: affine.parallel (%{{.*}}) = (0) to (4)
   affine.parallel (%i) = (%c0) to (%c0 + %c4) {
     %1 = affine.apply #map3(%i)
@@ -686,11 +686,11 @@ func @compose_affine_maps_div_symbol(%A : memref<i64>, %i0 : index, %i1 : index)
   %1 = affine.apply affine_map<()[s0] -> (3 * s0)> ()[%i0]
   %2 = affine.apply affine_map<(d0)[s0, s1] -> (d0 mod s1 + s0 * s1 + s0 * 4)> (%i1)[%0, %1]
   %3 = index_cast %2: index to i64
-  store %3, %A[]: memref<i64>
+  memref.store %3, %A[]: memref<i64>
   affine.for %i2 = 0 to 3 {
     %4 = affine.apply affine_map<(d0)[s0, s1] -> (d0 ceildiv s1 + s0 + s0 * 3)> (%i2)[%0, %1]
     %5 = index_cast %4: index to i64
-    store %5, %A[]: memref<i64>
+    memref.store %5, %A[]: memref<i64>
   }
   return
 }

@@ -42,7 +42,7 @@ func @for_with_yield(%buffer: memref<1024xf32>) -> (f32) {
 // CHECK-NEXT:    %[[UPPER:.*]] = constant 10 : index
 // CHECK-NEXT:    %[[STEP:.*]] = constant 2 : index
 // CHECK-NEXT:    %[[SUM:.*]] = scf.for %[[IV:.*]] = %[[LOWER]] to %[[UPPER]] step %[[STEP]] iter_args(%[[SUM_ITER:.*]] = %[[INIT_SUM]]) -> (f32) {
-// CHECK-NEXT:      load
+// CHECK-NEXT:      memref.load
 // CHECK-NEXT:      %[[SUM_NEXT:.*]] = addf
 // CHECK-NEXT:      scf.yield %[[SUM_NEXT]] : f32
 // CHECK-NEXT:    }
@@ -533,20 +533,20 @@ func @affine_apply_ceildiv(%arg0 : index) -> (index) {
 
 // CHECK-LABEL: func @affine_load
 func @affine_load(%arg0 : index) {
-  %0 = alloc() : memref<10xf32>
+  %0 = memref.alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     %1 = affine.load %0[%i0 + symbol(%arg0) + 7] : memref<10xf32>
   }
 // CHECK:       %[[a:.*]] = addi %{{.*}}, %{{.*}} : index
 // CHECK-NEXT:  %[[c7:.*]] = constant 7 : index
 // CHECK-NEXT:  %[[b:.*]] = addi %[[a]], %[[c7]] : index
-// CHECK-NEXT:  %{{.*}} = load %[[v0:.*]][%[[b]]] : memref<10xf32>
+// CHECK-NEXT:  %{{.*}} = memref.load %[[v0:.*]][%[[b]]] : memref<10xf32>
   return
 }
 
 // CHECK-LABEL: func @affine_store
 func @affine_store(%arg0 : index) {
-  %0 = alloc() : memref<10xf32>
+  %0 = memref.alloc() : memref<10xf32>
   %1 = constant 11.0 : f32
   affine.for %i0 = 0 to 10 {
     affine.store %1, %0[%i0 - symbol(%arg0) + 7] : memref<10xf32>
@@ -564,29 +564,29 @@ func @affine_store(%arg0 : index) {
 func @affine_load_store_zero_dim(%arg0 : memref<i32>, %arg1 : memref<i32>) {
   %0 = affine.load %arg0[] : memref<i32>
   affine.store %0, %arg1[] : memref<i32>
-// CHECK: %[[x:.*]] = load %arg0[] : memref<i32>
+// CHECK: %[[x:.*]] = memref.load %arg0[] : memref<i32>
 // CHECK: store %[[x]], %arg1[] : memref<i32>
   return
 }
 
 // CHECK-LABEL: func @affine_prefetch
 func @affine_prefetch(%arg0 : index) {
-  %0 = alloc() : memref<10xf32>
+  %0 = memref.alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.prefetch %0[%i0 + symbol(%arg0) + 7], read, locality<3>, data : memref<10xf32>
   }
 // CHECK:       %[[a:.*]] = addi %{{.*}}, %{{.*}} : index
 // CHECK-NEXT:  %[[c7:.*]] = constant 7 : index
 // CHECK-NEXT:  %[[b:.*]] = addi %[[a]], %[[c7]] : index
-// CHECK-NEXT:  prefetch %[[v0:.*]][%[[b]]], read, locality<3>, data : memref<10xf32>
+// CHECK-NEXT:  memref.prefetch %[[v0:.*]][%[[b]]], read, locality<3>, data : memref<10xf32>
   return
 }
 
 // CHECK-LABEL: func @affine_dma_start
 func @affine_dma_start(%arg0 : index) {
-  %0 = alloc() : memref<100xf32>
-  %1 = alloc() : memref<100xf32, 2>
-  %2 = alloc() : memref<1xi32>
+  %0 = memref.alloc() : memref<100xf32>
+  %1 = memref.alloc() : memref<100xf32, 2>
+  %2 = memref.alloc() : memref<1xi32>
   %c0 = constant 0 : index
   %c64 = constant 64 : index
   affine.for %i0 = 0 to 10 {
@@ -603,7 +603,7 @@ func @affine_dma_start(%arg0 : index) {
 
 // CHECK-LABEL: func @affine_dma_wait
 func @affine_dma_wait(%arg0 : index) {
-  %2 = alloc() : memref<1xi32>
+  %2 = memref.alloc() : memref<1xi32>
   %c64 = constant 64 : index
   affine.for %i0 = 0 to 10 {
     affine.dma_wait %2[%i0 + %arg0 + 17], %c64 : memref<1xi32>
@@ -694,15 +694,15 @@ func @affine_parallel_tiled(%o: memref<100x100xf32>, %a: memref<100x100xf32>, %b
 // CHECK-DAG:       %[[C1_9:.*]] = constant 1
 // CHECK-DAG:       %[[C1_10:.*]] = constant 1
 // CHECK:           scf.parallel (%[[arg6:.*]], %[[arg7:.*]], %[[arg8:.*]]) = (%[[arg3]], %[[arg4]], %[[arg5]]) to (%[[A0]], %[[A1]], %[[A2]]) step (%[[C1]], %[[C1_9]], %[[C1_10]]) {
-// CHECK:             %[[A3:.*]] = load %[[ARG1]][%[[arg6]], %[[arg8]]] : memref<100x100xf32>
-// CHECK:             %[[A4:.*]] = load %[[ARG2]][%[[arg8]], %[[arg7]]] : memref<100x100xf32>
+// CHECK:             %[[A3:.*]] = memref.load %[[ARG1]][%[[arg6]], %[[arg8]]] : memref<100x100xf32>
+// CHECK:             %[[A4:.*]] = memref.load %[[ARG2]][%[[arg8]], %[[arg7]]] : memref<100x100xf32>
 // CHECK:             mulf %[[A3]], %[[A4]] : f32
 // CHECK:             scf.yield
 
 /////////////////////////////////////////////////////////////////////
 
 func @affine_parallel_simple(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> (memref<3x3xf32>) {
-  %O = alloc() : memref<3x3xf32>
+  %O = memref.alloc() : memref<3x3xf32>
   affine.parallel (%kx, %ky) = (0, 0) to (2, 2) {
       %1 = affine.load %arg0[%kx, %ky] : memref<3x3xf32>
       %2 = affine.load %arg1[%kx, %ky] : memref<3x3xf32>
@@ -719,8 +719,8 @@ func @affine_parallel_simple(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> 
 // CHECK-NEXT:    %[[STEP_1:.*]] = constant 1 : index
 // CHECK-NEXT:    %[[STEP_2:.*]] = constant 1 : index
 // CHECK-NEXT:    scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[LOWER_1]], %[[LOWER_2]]) to (%[[UPPER_1]], %[[UPPER_2]]) step (%[[STEP_1]], %[[STEP_2]]) {
-// CHECK-NEXT:      %[[VAL_1:.*]] = load
-// CHECK-NEXT:      %[[VAL_2:.*]] = load
+// CHECK-NEXT:      %[[VAL_1:.*]] = memref.load
+// CHECK-NEXT:      %[[VAL_2:.*]] = memref.load
 // CHECK-NEXT:      %[[PRODUCT:.*]] = mulf
 // CHECK-NEXT:      store
 // CHECK-NEXT:      scf.yield
@@ -732,7 +732,7 @@ func @affine_parallel_simple(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> 
 
 func @affine_parallel_simple_dynamic_bounds(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
   %c_0 = constant 0 : index
-  %output_dim = dim %arg0, %c_0 : memref<?x?xf32>
+  %output_dim = memref.dim %arg0, %c_0 : memref<?x?xf32>
   affine.parallel (%kx, %ky) = (%c_0, %c_0) to (%output_dim, %output_dim) {
       %1 = affine.load %arg0[%kx, %ky] : memref<?x?xf32>
       %2 = affine.load %arg1[%kx, %ky] : memref<?x?xf32>
@@ -744,14 +744,14 @@ func @affine_parallel_simple_dynamic_bounds(%arg0: memref<?x?xf32>, %arg1: memre
 // CHECK-LABEL: func @affine_parallel_simple_dynamic_bounds
 // CHECK-SAME:  %[[ARG_0:.*]]: memref<?x?xf32>, %[[ARG_1:.*]]: memref<?x?xf32>, %[[ARG_2:.*]]: memref<?x?xf32>
 // CHECK:         %[[DIM_INDEX:.*]] = constant 0 : index
-// CHECK-NEXT:    %[[UPPER:.*]] = dim %[[ARG_0]], %[[DIM_INDEX]] : memref<?x?xf32>
+// CHECK-NEXT:    %[[UPPER:.*]] = memref.dim %[[ARG_0]], %[[DIM_INDEX]] : memref<?x?xf32>
 // CHECK-NEXT:    %[[LOWER_1:.*]] = constant 0 : index
 // CHECK-NEXT:    %[[LOWER_2:.*]] = constant 0 : index
 // CHECK-NEXT:    %[[STEP_1:.*]] = constant 1 : index
 // CHECK-NEXT:    %[[STEP_2:.*]] = constant 1 : index
 // CHECK-NEXT:    scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[LOWER_1]], %[[LOWER_2]]) to (%[[UPPER]], %[[UPPER]]) step (%[[STEP_1]], %[[STEP_2]]) {
-// CHECK-NEXT:      %[[VAL_1:.*]] = load
-// CHECK-NEXT:      %[[VAL_2:.*]] = load
+// CHECK-NEXT:      %[[VAL_1:.*]] = memref.load
+// CHECK-NEXT:      %[[VAL_2:.*]] = memref.load
 // CHECK-NEXT:      %[[PRODUCT:.*]] = mulf
 // CHECK-NEXT:      store
 // CHECK-NEXT:      scf.yield
@@ -781,8 +781,8 @@ func @affine_parallel_with_reductions(%arg0: memref<3x3xf32>, %arg1: memref<3x3x
 // CHECK-NEXT:    %[[INIT_1:.*]] = constant 0.000000e+00 : f32
 // CHECK-NEXT:    %[[INIT_2:.*]] = constant 1.000000e+00 : f32
 // CHECK-NEXT:    %[[RES:.*]] = scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[LOWER_1]], %[[LOWER_2]]) to (%[[UPPER_1]], %[[UPPER_2]]) step (%[[STEP_1]], %[[STEP_2]]) init (%[[INIT_1]], %[[INIT_2]]) -> (f32, f32) {
-// CHECK-NEXT:      %[[VAL_1:.*]] = load
-// CHECK-NEXT:      %[[VAL_2:.*]] = load
+// CHECK-NEXT:      %[[VAL_1:.*]] = memref.load
+// CHECK-NEXT:      %[[VAL_2:.*]] = memref.load
 // CHECK-NEXT:      %[[PRODUCT:.*]] = mulf
 // CHECK-NEXT:      %[[SUM:.*]] = addf
 // CHECK-NEXT:      scf.reduce(%[[PRODUCT]]) : f32 {

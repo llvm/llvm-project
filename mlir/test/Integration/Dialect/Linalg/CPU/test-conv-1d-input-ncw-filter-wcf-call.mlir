@@ -24,7 +24,7 @@ func private @print_memref_f32(memref<*xf32>)
 
 // Creates and returns 3-D buffer of size (%s1, %s2, %s3) filled with the value %f
 func @alloc_3d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %f : f32) -> memref<?x?x?xf32> {
-  %buf = alloc(%s1, %s2, %s3) : memref<?x?x?xf32>
+  %buf = memref.alloc(%s1, %s2, %s3) : memref<?x?x?xf32>
   linalg.fill(%buf, %f) : memref<?x?x?xf32>, f32
   return %buf : memref<?x?x?xf32>
 }
@@ -51,14 +51,14 @@ func @main() {
   %in1D_ncw = call @alloc_3d_filled_f32(%c1, %c1, %c8, %val) : (index, index, index, f32) -> (memref<?x?x?xf32>)
   %out1D_ncw = call @alloc_3d_filled_f32(%c1, %c1, %c6, %zero) : (index, index, index, f32) -> (memref<?x?x?xf32>)
 
-  store %f10, %in1D_ncw[%c0, %c0, %c3] : memref<?x?x?xf32>
+  memref.store %f10, %in1D_ncw[%c0, %c0, %c3] : memref<?x?x?xf32>
   call @conv_1d_input_ncw_filter_wcf(%in1D_ncw, %filter1D_ncw, %out1D_ncw) : (memref<?x?x?xf32>, memref<?x?x?xf32>, memref<?x?x?xf32>) -> ()
-  %out1D_ncw_ = memref_cast %out1D_ncw : memref<?x?x?xf32> to memref<*xf32>
+  %out1D_ncw_ = memref.cast %out1D_ncw : memref<?x?x?xf32> to memref<*xf32>
   call @print_memref_f32(%out1D_ncw_): (memref<*xf32>) -> ()
 
-  dealloc %filter1D_ncw : memref<?x?x?xf32>
-  dealloc %in1D_ncw : memref<?x?x?xf32>
-  dealloc %out1D_ncw : memref<?x?x?xf32>
+  memref.dealloc %filter1D_ncw : memref<?x?x?xf32>
+  memref.dealloc %in1D_ncw : memref<?x?x?xf32>
+  memref.dealloc %out1D_ncw : memref<?x?x?xf32>
   return
 }
 

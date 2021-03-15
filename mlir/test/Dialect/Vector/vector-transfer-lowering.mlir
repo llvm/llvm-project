@@ -159,7 +159,7 @@ func @transfer_perm_map(%mem : memref<8x8xf32>, %i : index) -> vector<4xf32> {
 // CHECK-LABEL:   func @transfer_broadcasting(
 // CHECK-SAME:                                %[[MEM:.*]]: memref<8x8xf32>,
 // CHECK-SAME:                                %[[IDX:.*]]: index) -> vector<4xf32> {
-// CHECK-NEXT:      %[[LOAD:.*]] = load %[[MEM]][%[[IDX]], %[[IDX]]] : memref<8x8xf32>
+// CHECK-NEXT:      %[[LOAD:.*]] = memref.load %[[MEM]][%[[IDX]], %[[IDX]]] : memref<8x8xf32>
 // CHECK-NEXT:      %[[RES:.*]] = vector.broadcast %[[LOAD]] : f32 to vector<4xf32>
 // CHECK-NEXT:      return %[[RES]] : vector<4xf32>
 // CHECK-NEXT:    }
@@ -177,7 +177,7 @@ func @transfer_broadcasting(%mem : memref<8x8xf32>, %i : index) -> vector<4xf32>
 // CHECK-LABEL:   func @transfer_broadcasting_2D(
 // CHECK-SAME:                                %[[MEM:.*]]: memref<8x8xf32>,
 // CHECK-SAME:                                %[[IDX:.*]]: index) -> vector<4x4xf32> {
-// CHECK-NEXT:      %[[LOAD:.*]] = load %[[MEM]][%[[IDX]], %[[IDX]]] : memref<8x8xf32>
+// CHECK-NEXT:      %[[LOAD:.*]] = memref.load %[[MEM]][%[[IDX]], %[[IDX]]] : memref<8x8xf32>
 // CHECK-NEXT:      %[[RES:.*]] = vector.broadcast %[[LOAD]] : f32 to vector<4x4xf32>
 // CHECK-NEXT:      return %[[RES]] : vector<4x4xf32>
 // CHECK-NEXT:    }

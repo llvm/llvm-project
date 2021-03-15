@@ -34,9 +34,9 @@ func @generic_op_tensors(
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %c2 = constant 2 : index
-  %0 = dim %arg0, %c0 : tensor<?x?x?xf32>
-  %1 = dim %arg0, %c1 : tensor<?x?x?xf32>
-  %2 = dim %arg0, %c2 : tensor<?x?x?xf32>
+  %0 = memref.dim %arg0, %c0 : tensor<?x?x?xf32>
+  %1 = memref.dim %arg0, %c1 : tensor<?x?x?xf32>
+  %2 = memref.dim %arg0, %c2 : tensor<?x?x?xf32>
   %3 = linalg.init_tensor [%0, %1, %2] : tensor<?x?x?xf32>
   %4 = linalg.generic
     {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
@@ -81,9 +81,9 @@ func @indexed_generic_op_tensors(
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %c2 = constant 2 : index
-  %0 = dim %arg0, %c0 : tensor<?x?x?xf32>
-  %1 = dim %arg0, %c1 : tensor<?x?x?xf32>
-  %2 = dim %arg0, %c2 : tensor<?x?x?xf32>
+  %0 = memref.dim %arg0, %c0 : tensor<?x?x?xf32>
+  %1 = memref.dim %arg0, %c1 : tensor<?x?x?xf32>
+  %2 = memref.dim %arg0, %c2 : tensor<?x?x?xf32>
   %3 = linalg.init_tensor [%0, %1, %2] : tensor<?x?x?xf32>
   %4 = linalg.indexed_generic
     {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,

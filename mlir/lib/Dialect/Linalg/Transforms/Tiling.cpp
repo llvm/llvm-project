@@ -17,6 +17,8 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/MemRef/EDSC/Intrinsics.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -33,7 +35,6 @@ using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 using namespace mlir::scf;
-
 
 #define DEBUG_TYPE "linalg-tiling"
 
@@ -144,9 +145,9 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
 // operand_dim_1 = dim %operand, 1 : memref<50x100xf32>
 // scf.for %k = %c0 to operand_dim_0 step %c10 {
 //   scf.for %l = %c0 to operand_dim_1 step %c25 {
-//     %4 = std.subview %operand[%k, %l][%c10, %c25][%c1, %c1]
+//     %4 = memref.subview %operand[%k, %l][%c10, %c25][%c1, %c1]
 //       : memref<50x100xf32> to memref<?x?xf32, #strided>
-//     %5 = std.subview %result[%k, %l][%c10, %c25][%c1, %c1]
+//     %5 = memref.subview %result[%k, %l][%c10, %c25][%c1, %c1]
 //       : memref<50x100xf32> to memref<?x?xf32, #strided>
 //     linalg.indexed_generic pointwise_2d_trait %4, %5 {
 //     ^bb0(%i: index, %j: index, %operand_in: f32, %result_in: f32):
@@ -262,7 +263,7 @@ makeTiledShapes(OpBuilder &b, Location loc, LinalgOp linalgOp,
     for (unsigned r = 0; r < rank; ++r) {
       if (!isTiled(map.getSubMap({r}), tileSizes)) {
         offsets.push_back(b.getIndexAttr(0));
-        sizes.push_back(std_dim(shapedOp, r).value);
+        sizes.push_back(memref_dim(shapedOp, r).value);
         strides.push_back(b.getIndexAttr(1));
         continue;
       }
@@ -290,7 +291,7 @@ makeTiledShapes(OpBuilder &b, Location loc, LinalgOp linalgOp,
              getAffineDimExpr(/*position=*/1, b.getContext()) -
                  getAffineDimExpr(/*position=*/2, b.getContext())},
             b.getContext());
-        auto d = std_dim(shapedOp, r);
+        Value d = memref_dim(shapedOp, r);
         SmallVector<Value, 4> operands{size, d, offset};
         fullyComposeAffineMapAndOperands(&minMap, &operands);
         size = affine_min(b.getIndexType(), minMap, operands);
@@ -302,7 +303,7 @@ makeTiledShapes(OpBuilder &b, Location loc, LinalgOp linalgOp,
 
     if (shapedType.isa<MemRefType>())
       res.push_back(
-          b.create<SubViewOp>(loc, shapedOp, offsets, sizes, strides));
+          b.create<memref::SubViewOp>(loc, shapedOp, offsets, sizes, strides));
     else
       res.push_back(
           b.create<SubTensorOp>(loc, shapedOp, offsets, sizes, strides));
@@ -474,7 +475,7 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
 
   if (!options.tileSizeComputationFunction)
     return llvm::None;
-  
+
   // Enforce the convention that "tiling by zero" skips tiling a particular
   // dimension. This convention is significantly simpler to handle instead of
   // adjusting affine maps to account for missing dimensions.
@@ -564,9 +565,9 @@ void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
   scf::ParallelOp::getCanonicalizationPatterns(patterns, ctx);
   ConstantIndexOp::getCanonicalizationPatterns(patterns, ctx);
   SubTensorOp::getCanonicalizationPatterns(patterns, ctx);
-  SubViewOp::getCanonicalizationPatterns(patterns, ctx);
+  memref::SubViewOp::getCanonicalizationPatterns(patterns, ctx);
   tensor::CastOp::getCanonicalizationPatterns(patterns, ctx);
-  ViewOp::getCanonicalizationPatterns(patterns, ctx);
+  memref::ViewOp::getCanonicalizationPatterns(patterns, ctx);
   CanonicalizationPatternList<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
