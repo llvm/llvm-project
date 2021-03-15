@@ -19,6 +19,7 @@ option(CLANGD_MALLOC_TRIM "Call malloc_trim(3) periodically in Clangd. (only tak
 llvm_canonicalize_cmake_booleans(
   CLANGD_BUILD_XPC
   CLANGD_ENABLE_REMOTE
+  ENABLE_GRPC_REFLECTION
   CLANGD_MALLOC_TRIM
   LLVM_ENABLE_ZLIB
 )

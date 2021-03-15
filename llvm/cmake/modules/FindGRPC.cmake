@@ -1,3 +1,5 @@
+option(ENABLE_GRPC_REFLECTION "Link clangd-index-server to gRPC Reflection library" OFF)
+
 # FIXME(kirillbobyrev): Check if gRPC and Protobuf headers can be included at
 # configure time.
 find_package(Threads REQUIRED)
@@ -22,6 +24,10 @@ if (GRPC_INSTALL_PATH)
   add_library(protobuf ALIAS protobuf::libprotobuf)
   set_target_properties(gRPC::grpc++ PROPERTIES IMPORTED_GLOBAL TRUE)
   add_library(grpc++ ALIAS gRPC::grpc++)
+  if (ENABLE_GRPC_REFLECTION)
+    set_target_properties(gRPC::grpc++_reflection PROPERTIES IMPORTED_GLOBAL TRUE)
+    add_library(grpc++_reflection ALIAS gRPC::grpc++_reflection)
+  endif()
 
   set(GRPC_CPP_PLUGIN $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
   set(PROTOC ${Protobuf_PROTOC_EXECUTABLE})
@@ -71,10 +77,19 @@ else()
   add_library(grpc++ UNKNOWN IMPORTED GLOBAL)
   message(STATUS "Using grpc++: " ${GRPC_LIBRARY})
   set_target_properties(grpc++ PROPERTIES IMPORTED_LOCATION ${GRPC_LIBRARY})
+  if (ENABLE_GRPC_REFLECTION)
+    find_library(GRPC_REFLECTION_LIBRARY grpc++_reflection $GRPC_OPTS REQUIRED)
+    add_library(grpc++_reflection UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(grpc++_reflection PROPERTIES IMPORTED_LOCATION ${GRPC_REFLECTION_LIBRARY})
+  endif()
   find_library(PROTOBUF_LIBRARY protobuf $PROTOBUF_OPTS REQUIRED)
   message(STATUS "Using protobuf: " ${PROTOBUF_LIBRARY})
   add_library(protobuf UNKNOWN IMPORTED GLOBAL)
   set_target_properties(protobuf PROPERTIES IMPORTED_LOCATION ${PROTOBUF_LIBRARY})
+endif()
+
+if (ENABLE_GRPC_REFLECTION)
+  set(REFLECTION_LIBRARY grpc++_reflection)
 endif()
 
 # Proto headers are generated in ${CMAKE_CURRENT_BINARY_DIR}.
