@@ -45,9 +45,6 @@ class LDSDIR_Common<string opName, string asm = "", bit direct> : InstSI<
   let LDSDIR = 1;
   let EXP_CNT = 1;
 
-  // GFX11-TODO: this is a hack for now, because this instruction always executes in WQM
-  let WQM = 1;
-
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;

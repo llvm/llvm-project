@@ -314,6 +314,18 @@ def V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot8, 1>;
 
 } // End SubtargetPredicate = HasDot1Insts
+
+let SubtargetPredicate = isGFX11Plus  in {
+
+// TODO-GFX11 considers inputs as signed if imod neg bits are set
+// needs implementation for codegen
+def V_DOT4_I32_IU8  : VOP3PInst<"v_dot4_i32_iu8",
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, null_frag, 1>;
+def V_DOT8_I32_IU4  : VOP3PInst<"v_dot8_i32_iu4",
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, null_frag, 1>;
+
+} // End SubtargetPredicate = isGFX11Plus
+
 } // End let IsDOT = 1
 
 def : UDot2Pat<V_DOT2_U32_U16>;
@@ -503,8 +515,13 @@ let AssemblerPredicate = isGFX11Plus, DecoderNamespace = "GFX11" in {
     /*VOP3_Real_dpp8_with_name_gfx11<{0, 0, 0, op{0-6}}, backing_ps_name , asm_name >;*/
 } // End AssemblerPredicate = isGFX11Plus, DecoderNamespace = "GFX11"
 
-defm V_DOT4_I32_IU8              : VOP3P_Real_gfx11 <0x16, "V_DOT4_I32_I8", "v_dot4_i32_iu8">;
-defm V_DOT8_I32_IU4              : VOP3P_Real_gfx11 <0x18, "V_DOT8_I32_I4", "v_dot8_i32_iu8">;
+// The name for the old signed only version of these instructions is accepted
+// but will function differently on GFX11+.
+defm V_DOT4_I32_IU8              : VOP3P_Real_gfx11 <0x16>;
+def : MnemonicAlias<"v_dot4_i32_i8", "v_dot4_i32_iu8">, Requires<[isGFX11Plus]>;
+defm V_DOT8_I32_IU4              : VOP3P_Real_gfx11 <0x18>;
+def : MnemonicAlias<"v_dot8_i32_i4", "v_dot8_i32_iu4">, Requires<[isGFX11Plus]>;
+
 // TODO-GFX11 new instructions
 /*defm V_DOT2_F32_BF16           : VOP3P_Real_gfx11 <0x1a>;*/
 /*defm V_WMMA_F32_16X16X16_F16   : VOP3P_Real_gfx11 <0x040>;*/
