@@ -439,7 +439,7 @@ public:
                                int64_t Offset2,
                                unsigned NumLoads) const override;
 
-  void getNoop(MCInst &NopInst) const override;
+  MCInst getNop() const override;
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
