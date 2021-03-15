@@ -27,7 +27,8 @@ def update_step_watches(step_info, watches, commands):
         # Iterate over all watches of the types named in watch_cmds
         for watch in towatch:
             loc = step_info.current_location
-            if (os.path.exists(loc.path)
+            if (loc.path != None
+                    and os.path.exists(loc.path)
                     and os.path.samefile(watch.path, loc.path)
                     and watch.lineno == loc.lineno):
                 result = watch.eval(step_info)
