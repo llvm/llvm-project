@@ -23,13 +23,6 @@
 
 namespace mlir {
 
-class Location;
-class OpBuilder;
-
-/// Given an operation, retrieves the value of each dynamic dimension through
-/// constructing the necessary DimOp operators.
-SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b);
-
 /// Matches a ConstantIndexOp.
 detail::op_matcher<ConstantIndexOp> matchConstantIndex();
 
