@@ -14,6 +14,7 @@
 #define FORTRAN_LOWER_SUPPORT_BOXVALUE_H
 
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/Matcher.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Value.h"
@@ -75,7 +76,8 @@ public:
   CharBoxValue(mlir::Value addr, mlir::Value len)
       : AbstractBox{addr}, len{len} {
     if (addr && addr.getType().template isa<fir::BoxCharType>())
-      llvm::report_fatal_error("BoxChar should not be in CharBoxValue");
+      fir::emitFatalError(addr.getLoc(),
+                          "BoxChar should not be in CharBoxValue");
   }
 
   CharBoxValue clone(mlir::Value newBase) const { return {newBase, len}; }
@@ -430,15 +432,16 @@ public:
     if (auto b = getUnboxed()) {
       if (*b) {
         auto type = b->getType();
+        auto loc = b->getLoc();
         if (type.template isa<fir::BoxCharType>())
-          llvm::report_fatal_error("BoxChar should be unboxed");
+          fir::emitFatalError(loc, "BoxChar should be unboxed");
         if (auto refType = type.template dyn_cast<fir::ReferenceType>())
           type = refType.getEleTy();
         if (auto seqType = type.template dyn_cast<fir::SequenceType>())
           type = seqType.getEleTy();
         if (type.template isa<fir::CharacterType>())
-          llvm::report_fatal_error(
-              "character buffer should be in CharBoxValue");
+          fir::emitFatalError(loc,
+                              "character buffer should be in CharBoxValue");
       }
     }
   }
