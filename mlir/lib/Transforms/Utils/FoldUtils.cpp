@@ -84,6 +84,82 @@ static Operation *materializeConstant(Dialect *dialect, OpBuilder &builder,
 // OperationFolder
 //===----------------------------------------------------------------------===//
 
+/// Scan the specified region for constants that can be used in folding,
+/// moving them to the entry block and adding them to our known-constants
+/// table.
+void OperationFolder::processExistingConstants(Region &region) {
+  if (region.empty())
+    return;
+
+  // March the constant insertion point forward, moving all constants to the
+  // top of the block, but keeping them in their order of discovery.
+  Region *insertRegion = getInsertionRegion(interfaces, &region.front());
+  auto &uniquedConstants = foldScopes[insertRegion];
+
+  Block &insertBlock = insertRegion->front();
+  Block::iterator constantIterator = insertBlock.begin();
+
+  // Process each constant that we discover in this region.
+  auto processConstant = [&](Operation *op, Attribute value) {
+    // Check to see if we already have an instance of this constant.
+    Operation *&constOp = uniquedConstants[std::make_tuple(
+        op->getDialect(), value, op->getResult(0).getType())];
+
+    // If we already have an instance of this constant, CSE/delete this one as
+    // we go.
+    if (constOp) {
+      if (constantIterator == Block::iterator(op))
+        ++constantIterator; // Don't invalidate our iterator when scanning.
+      op->getResult(0).replaceAllUsesWith(constOp->getResult(0));
+      op->erase();
+      return;
+    }
+
+    // Otherwise, remember that we have this constant.
+    constOp = op;
+    referencedDialects[op].push_back(op->getDialect());
+
+    // If the constant isn't already at the insertion point then move it up.
+    if (constantIterator == insertBlock.end() || &*constantIterator != op)
+      op->moveBefore(&insertBlock, constantIterator);
+    else
+      ++constantIterator; // It was pointing at the constant.
+  };
+
+  SmallVector<Operation *> isolatedOps;
+  region.walk<WalkOrder::PreOrder>([&](Operation *op) {
+    // If this is a constant, process it.
+    Attribute value;
+    if (op->getNumOperands() == 0 && op->getNumResults() == 1 &&
+        matchPattern(op, m_Constant(&value))) {
+      processConstant(op, value);
+      // We may have deleted the operation, don't check it for regions.
+      return WalkResult::advance();
+    }
+
+    // If the operation has regions and is isolated, don't recurse into it.
+    if (op->getNumRegions() != 0) {
+      auto hasDifferentInsertRegion = [&](Region &region) {
+        return !region.empty() &&
+               getInsertionRegion(interfaces, &region.front()) != insertRegion;
+      };
+      if (llvm::any_of(op->getRegions(), hasDifferentInsertRegion)) {
+        isolatedOps.push_back(op);
+        return WalkResult::skip();
+      }
+    }
+
+    // Otherwise keep going.
+    return WalkResult::advance();
+  });
+
+  // Process regions in any isolated ops separately.
+  for (Operation *isolated : isolatedOps) {
+    for (Region &region : isolated->getRegions())
+      processExistingConstants(region);
+  }
+}
+
 LogicalResult OperationFolder::tryToFold(
     Operation *op, function_ref<void(Operation *)> processGeneratedConstants,
     function_ref<void(Operation *)> preReplaceAction, bool *inPlaceUpdate) {
@@ -262,19 +338,19 @@ Operation *OperationFolder::tryGetOrCreateConstant(
     Attribute value, Type type, Location loc) {
   // Check if an existing mapping already exists.
   auto constKey = std::make_tuple(dialect, value, type);
-  auto *&constInst = uniquedConstants[constKey];
-  if (constInst)
-    return constInst;
+  auto *&constOp = uniquedConstants[constKey];
+  if (constOp)
+    return constOp;
 
   // If one doesn't exist, try to materialize one.
-  if (!(constInst = materializeConstant(dialect, builder, value, type, loc)))
+  if (!(constOp = materializeConstant(dialect, builder, value, type, loc)))
     return nullptr;
 
   // Check to see if the generated constant is in the expected dialect.
-  auto *newDialect = constInst->getDialect();
+  auto *newDialect = constOp->getDialect();
   if (newDialect == dialect) {
-    referencedDialects[constInst].push_back(dialect);
-    return constInst;
+    referencedDialects[constOp].push_back(dialect);
+    return constOp;
   }
 
   // If it isn't, then we also need to make sure that the mapping for the new
@@ -284,13 +360,13 @@ Operation *OperationFolder::tryGetOrCreateConstant(
   // If an existing operation in the new dialect already exists, delete the
   // materialized operation in favor of the existing one.
   if (auto *existingOp = uniquedConstants.lookup(newKey)) {
-    constInst->erase();
+    constOp->erase();
     referencedDialects[existingOp].push_back(dialect);
-    return constInst = existingOp;
+    return constOp = existingOp;
   }
 
   // Otherwise, update the new dialect to the materialized operation.
-  referencedDialects[constInst].assign({dialect, newDialect});
-  auto newIt = uniquedConstants.insert({newKey, constInst});
+  referencedDialects[constOp].assign({dialect, newDialect});
+  auto newIt = uniquedConstants.insert({newKey, constOp});
   return newIt.first->second;
 }
