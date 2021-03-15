@@ -97,39 +97,38 @@ EXTERN unsigned GetWarpSize() { return WARPSIZE; }
 EXTERN unsigned GetLaneId() { return GetThreadIdInBlock() & (WARPSIZE - 1); }
 
 // Atomics
-DEVICE uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {
+uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {
   return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
 }
-DEVICE uint32_t __kmpc_atomic_inc(uint32_t *Address, uint32_t Val) {
+uint32_t __kmpc_atomic_inc(uint32_t *Address, uint32_t Val) {
   return __nvvm_atom_inc_gen_ui(Address, Val);
 }
 
-DEVICE uint32_t __kmpc_atomic_max(uint32_t *Address, uint32_t Val) {
+uint32_t __kmpc_atomic_max(uint32_t *Address, uint32_t Val) {
   return __atomic_fetch_max(Address, Val, __ATOMIC_SEQ_CST);
 }
 
-DEVICE uint32_t __kmpc_atomic_exchange(uint32_t *Address, uint32_t Val) {
+uint32_t __kmpc_atomic_exchange(uint32_t *Address, uint32_t Val) {
   uint32_t R;
   __atomic_exchange(Address, &Val, &R, __ATOMIC_SEQ_CST);
   return R;
 }
 
-DEVICE uint32_t __kmpc_atomic_cas(uint32_t *Address, uint32_t Compare,
-                                  uint32_t Val) {
+uint32_t __kmpc_atomic_cas(uint32_t *Address, uint32_t Compare, uint32_t Val) {
   (void)__atomic_compare_exchange(Address, &Compare, &Val, false,
                                   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
   return Compare;
 }
 
-DEVICE unsigned long long __kmpc_atomic_exchange(unsigned long long *Address,
-                                                 unsigned long long Val) {
+unsigned long long __kmpc_atomic_exchange(unsigned long long *Address,
+                                          unsigned long long Val) {
   unsigned long long R;
   __atomic_exchange(Address, &Val, &R, __ATOMIC_SEQ_CST);
   return R;
 }
 
-DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *Address,
-                                            unsigned long long Val) {
+unsigned long long __kmpc_atomic_add(unsigned long long *Address,
+                                     unsigned long long Val) {
   return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
 }
 
