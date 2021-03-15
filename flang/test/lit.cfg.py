@@ -73,7 +73,7 @@ if config.flang_standalone_build:
             llvm_config.with_environment('PATH', config.flang_llvm_tools_dir, append_path=True)
 
 config.substitutions.append(('%B', config.flang_obj_root))
-config.substitutions.append(("%L", config.flang_lib_dir))
+config.substitutions.append(("%L", config.flang_libs_dir))
 config.substitutions.append(("%moddir", config.flang_intrinsic_modules_dir)) 
 if len(config.macos_sysroot) > 0:
   config.substitutions.append(("%CXX", config.cplusplus_executable + " -isysroot " + config.macos_sysroot))
