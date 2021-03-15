@@ -185,7 +185,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE2-NEXT:    addq %rdx, %rax
 ; SSE2-NEXT:    leaq (%rax,%rax,8), %rax
 ; SSE2-NEXT:    subq %rax, %rsi
-; SSE2-NEXT:    movq %rsi, %xmm1
+; SSE2-NEXT:    movq %rsi, %xmm0
 ; SSE2-NEXT:    movq %rdi, %rax
 ; SSE2-NEXT:    imulq %r8
 ; SSE2-NEXT:    movq %rdx, %rax
@@ -193,10 +193,10 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE2-NEXT:    addq %rdx, %rax
 ; SSE2-NEXT:    leaq (%rax,%rax,8), %rax
 ; SSE2-NEXT:    subq %rax, %rdi
-; SSE2-NEXT:    movq %rdi, %xmm0
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [8589934591,8589934591]
-; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    movq %rdi, %xmm1
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [8589934591,8589934591]
+; SSE2-NEXT:    pand %xmm0, %xmm1
 ; SSE2-NEXT:    movabsq $2049638230412172401, %rdx # imm = 0x1C71C71C71C71C71
 ; SSE2-NEXT:    movq %rcx, %rax
 ; SSE2-NEXT:    imulq %rdx
@@ -208,13 +208,14 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE2-NEXT:    leaq (%rdx,%rdx,8), %rax
 ; SSE2-NEXT:    addq %rcx, %rax
 ; SSE2-NEXT:    movq %rax, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    pcmpeqd {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand %xmm0, %xmm2
+; SSE2-NEXT:    pcmpeqd {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,0,3,2]
+; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    pcmpeqd {{.*}}(%rip), %xmm2
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm2[1,2]
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,3]
-; SSE2-NEXT:    andps %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,0,3,2]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,3]
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
