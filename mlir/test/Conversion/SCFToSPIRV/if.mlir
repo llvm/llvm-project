@@ -20,7 +20,7 @@ func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1) {
   // CHECK-NEXT:  spv.Return
 
   scf.if %arg3 {
-    store %value, %arg2[%i] : memref<10xf32>
+    memref.store %value, %arg2[%i] : memref<10xf32>
   }
   return
 }
@@ -61,19 +61,19 @@ func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %a
 
   scf.if %arg5 {
     scf.if %arg6 {
-      %value = load %arg3[%i] : memref<10xf32>
-      store %value, %arg4[%i] : memref<10xf32>
+      %value = memref.load %arg3[%i] : memref<10xf32>
+      memref.store %value, %arg4[%i] : memref<10xf32>
     } else {
-      %value = load %arg4[%i] : memref<10xf32>
-      store %value, %arg3[%i] : memref<10xf32>
+      %value = memref.load %arg4[%i] : memref<10xf32>
+      memref.store %value, %arg3[%i] : memref<10xf32>
     }
   } else {
     scf.if %arg6 {
-      %value = load %arg3[%j] : memref<10xf32>
-      store %value, %arg4[%j] : memref<10xf32>
+      %value = memref.load %arg3[%j] : memref<10xf32>
+      memref.store %value, %arg4[%j] : memref<10xf32>
     } else {
-      %value = load %arg4[%j] : memref<10xf32>
-      store %value, %arg3[%j] : memref<10xf32>
+      %value = memref.load %arg4[%j] : memref<10xf32>
+      memref.store %value, %arg3[%j] : memref<10xf32>
     }
   }
   return
@@ -116,8 +116,8 @@ func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
   }
   %i = constant 0 : index
   %j = constant 1 : index
-  store %0#0, %arg2[%i] : memref<10xf32>
-  store %0#1, %arg2[%j] : memref<10xf32>
+  memref.store %0#0, %arg2[%i] : memref<10xf32>
+  memref.store %0#1, %arg2[%j] : memref<10xf32>
   return
 }
 
@@ -149,7 +149,7 @@ func @simple_if_yield_type_change(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>
   } else {
     scf.yield %arg3 : memref<10xf32>
   }
-  store %value, %0[%i] : memref<10xf32>
+  memref.store %value, %0[%i] : memref<10xf32>
   return
 }
 

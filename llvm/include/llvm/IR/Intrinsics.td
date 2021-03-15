@@ -1182,11 +1182,11 @@ def int_experimental_gc_statepoint : Intrinsic<[llvm_token_ty],
                                 ImmArg<ArgIndex<4>>]>;
 
 def int_experimental_gc_result   : Intrinsic<[llvm_any_ty], [llvm_token_ty],
-                                             [IntrNoMem]>;
+                                             [IntrReadMem]>;
 def int_experimental_gc_relocate : Intrinsic<[llvm_any_ty],
                                              [llvm_token_ty, llvm_i32_ty,
                                               llvm_i32_ty],
-                                             [IntrNoMem, ImmArg<ArgIndex<1>>,
+                                             [IntrReadMem, ImmArg<ArgIndex<1>>,
                                               ImmArg<ArgIndex<2>>]>;
 
 //===------------------------ Coroutine Intrinsics ---------------===//
@@ -1600,6 +1600,12 @@ def int_start_loop_iterations :
 // control entry to a 'while' loop.
 def int_test_set_loop_iterations :
   DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_anyint_ty], [IntrNoDuplicate]>;
+
+// Same as the above, but produces an extra value (the same as the input
+// operand) to be fed into the loop.
+def int_test_start_loop_iterations :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty, llvm_i1_ty], [LLVMMatchType<0>],
+                        [IntrNoDuplicate]>;
 
 // Decrement loop counter by the given argument. Return false if the loop
 // should exit.

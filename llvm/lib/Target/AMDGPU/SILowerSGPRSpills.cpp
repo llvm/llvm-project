@@ -304,14 +304,20 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
   bool HasCSRs = spillCalleeSavedRegs(MF);
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+
   if (!MFI.hasStackObjects() && !HasCSRs) {
     SaveBlocks.clear();
     RestoreBlocks.clear();
+    if (FuncInfo->VGPRReservedForSGPRSpill) {
+      // Free the reserved VGPR for later possible use by frame lowering.
+      FuncInfo->removeVGPRForSGPRSpill(FuncInfo->VGPRReservedForSGPRSpill, MF);
+      MRI.freezeReservedRegs(MF);
+    }
     return false;
   }
 
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   const bool SpillVGPRToAGPR = ST.hasMAIInsts() && FuncInfo->hasSpilledVGPRs()
     && EnableSpillVGPRToAGPR;
 

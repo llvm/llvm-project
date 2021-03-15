@@ -57,9 +57,9 @@ func @rectangular(%arg0: memref<?x?xf32>) {
     // TILE_74:scf.for %[[jj:.*]] = %[[j]] to %[[ub2]] step %c2
    scf.for %j = %c1 to %c44 step %c2 {
       // The right iterator are used.
-      // TILE_7:  load %arg0[%[[ii]], %[[j]]]
-      // TILE_74: load %arg0[%[[ii]], %[[jj]]]
-      load %arg0[%i, %j]: memref<?x?xf32>
+      // TILE_7:  memref.load %arg0[%[[ii]], %[[j]]]
+      // TILE_74: memref.load %arg0[%[[ii]], %[[jj]]]
+      memref.load %arg0[%i, %j]: memref<?x?xf32>
     }
   }
   return
@@ -124,9 +124,9 @@ func @triangular(%arg0: memref<?x?xf32>) {
     // TILE_74:scf.for %[[jj:.*]] = %[[j]] to %[[ub2]] step %c2
    scf.for %j = %c1 to %i step %c2 {
       // The right iterator are used.
-      // TILE_7:  load %arg0[%[[ii]], %[[j]]]
-      // TILE_74: load %arg0[%[[ii]], %[[jj]]]
-      load %arg0[%i, %j]: memref<?x?xf32>
+      // TILE_7:  memref.load %arg0[%[[ii]], %[[j]]]
+      // TILE_74: memref.load %arg0[%[[ii]], %[[jj]]]
+      memref.load %arg0[%i, %j]: memref<?x?xf32>
     }
   }
   return

@@ -2402,22 +2402,23 @@ MemoryAccess *
 MemorySSA::ClobberWalkerBase<AliasAnalysisType>::getClobberingMemoryAccessBase(
     MemoryAccess *StartingAccess, const MemoryLocation &Loc,
     unsigned &UpwardWalkLimit) {
-  if (isa<MemoryPhi>(StartingAccess))
-    return StartingAccess;
+  assert(!isa<MemoryUse>(StartingAccess) && "Use cannot be defining access");
 
-  auto *StartingUseOrDef = cast<MemoryUseOrDef>(StartingAccess);
-  if (MSSA->isLiveOnEntryDef(StartingUseOrDef))
-    return StartingUseOrDef;
+  Instruction *I = nullptr;
+  if (auto *StartingUseOrDef = dyn_cast<MemoryUseOrDef>(StartingAccess)) {
+    if (MSSA->isLiveOnEntryDef(StartingUseOrDef))
+      return StartingUseOrDef;
 
-  Instruction *I = StartingUseOrDef->getMemoryInst();
+    I = StartingUseOrDef->getMemoryInst();
 
-  // Conservatively, fences are always clobbers, so don't perform the walk if we
-  // hit a fence.
-  if (!isa<CallBase>(I) && I->isFenceLike())
-    return StartingUseOrDef;
+    // Conservatively, fences are always clobbers, so don't perform the walk if
+    // we hit a fence.
+    if (!isa<CallBase>(I) && I->isFenceLike())
+      return StartingUseOrDef;
+  }
 
   UpwardsMemoryQuery Q;
-  Q.OriginalAccess = StartingUseOrDef;
+  Q.OriginalAccess = StartingAccess;
   Q.StartingLoc = Loc;
   Q.Inst = nullptr;
   Q.IsCall = false;
@@ -2425,16 +2426,14 @@ MemorySSA::ClobberWalkerBase<AliasAnalysisType>::getClobberingMemoryAccessBase(
   // Unlike the other function, do not walk to the def of a def, because we are
   // handed something we already believe is the clobbering access.
   // We never set SkipSelf to true in Q in this method.
-  MemoryAccess *DefiningAccess = isa<MemoryUse>(StartingUseOrDef)
-                                     ? StartingUseOrDef->getDefiningAccess()
-                                     : StartingUseOrDef;
-
   MemoryAccess *Clobber =
-      Walker.findClobber(DefiningAccess, Q, UpwardWalkLimit);
-  LLVM_DEBUG(dbgs() << "Starting Memory SSA clobber for " << *I << " is ");
-  LLVM_DEBUG(dbgs() << *StartingUseOrDef << "\n");
-  LLVM_DEBUG(dbgs() << "Final Memory SSA clobber for " << *I << " is ");
-  LLVM_DEBUG(dbgs() << *Clobber << "\n");
+      Walker.findClobber(StartingAccess, Q, UpwardWalkLimit);
+  LLVM_DEBUG({
+    dbgs() << "Clobber starting at access " << *StartingAccess << "\n";
+    if (I)
+      dbgs() << "  for instruction " << *I << "\n";
+    dbgs() << "  is " << *Clobber << "\n";
+  });
   return Clobber;
 }
 

@@ -688,7 +688,7 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
     Config.PreFixupPasses.push_back(optimizeMachO_x86_64_GOTAndStubs);
   }
 
-  if (auto Err = Ctx->modifyPassConfig(G->getTargetTriple(), Config))
+  if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));
 
   // Construct a JITLinker and run the link function.

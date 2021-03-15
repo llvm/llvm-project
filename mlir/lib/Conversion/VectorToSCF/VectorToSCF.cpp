@@ -16,6 +16,7 @@
 
 #include "../PassDetail.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
+#include "mlir/Dialect/MemRef/EDSC/Intrinsics.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
@@ -252,7 +253,7 @@ static Value setAllocAtFunctionEntry(MemRefType memRefMinorVectorType,
       op->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
   assert(scope && "Expected op to be inside automatic allocation scope");
   b.setInsertionPointToStart(&scope->getRegion(0).front());
-  Value res = std_alloca(memRefMinorVectorType);
+  Value res = memref_alloca(memRefMinorVectorType);
   return res;
 }
 
@@ -314,7 +315,7 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
               return {vector};
             }
             // 3.b. Otherwise, just go through the temporary `alloc`.
-            std_store(vector, alloc, majorIvs);
+            memref_store(vector, alloc, majorIvs);
             return {};
           },
           [&]() -> scf::ValueVector {
@@ -326,7 +327,7 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
               return {vector};
             }
             // 3.d. Otherwise, just go through the temporary `alloc`.
-            std_store(vector, alloc, majorIvs);
+            memref_store(vector, alloc, majorIvs);
             return {};
           });
 
@@ -341,14 +342,15 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
         result = vector_insert(loaded1D, result, majorIvs);
       // 5.b. Otherwise, just go through the temporary `alloc`.
       else
-        std_store(loaded1D, alloc, majorIvs);
+        memref_store(loaded1D, alloc, majorIvs);
     }
   });
 
   assert((!options.unroll ^ (bool)result) &&
          "Expected resulting Value iff unroll");
   if (!result)
-    result = std_load(vector_type_cast(MemRefType::get({}, vectorType), alloc));
+    result =
+        memref_load(vector_type_cast(MemRefType::get({}, vectorType), alloc));
   rewriter.replaceOp(op, result);
 
   return success();
@@ -359,8 +361,8 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
   Value alloc;
   if (!options.unroll) {
     alloc = setAllocAtFunctionEntry(memRefMinorVectorType, op);
-    std_store(xferOp.vector(),
-              vector_type_cast(MemRefType::get({}, vectorType), alloc));
+    memref_store(xferOp.vector(),
+                 vector_type_cast(MemRefType::get({}, vectorType), alloc));
   }
 
   emitLoops([&](ValueRange majorIvs, ValueRange leadingOffsets,
@@ -379,7 +381,7 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
       if (options.unroll)
         result = vector_extract(xferOp.vector(), majorIvs);
       else
-        result = std_load(alloc, majorIvs);
+        result = memref_load(alloc, majorIvs);
       auto map =
           getTransferMinorIdentityMap(xferOp.getShapedType(), minorVectorType);
       ArrayAttr masked;
@@ -560,7 +562,7 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
   // Conservative lowering to scalar load / stores.
   // 1. Setup all the captures.
   ScopedContext scope(rewriter, transfer.getLoc());
-  StdIndexedValue remote(transfer.source());
+  MemRefIndexedValue remote(transfer.source());
   MemRefBoundsCapture memRefBoundsCapture(transfer.source());
   VectorBoundsCapture vectorBoundsCapture(transfer.vector());
   int coalescedIdx = computeCoalescedIndex(transfer);
@@ -579,7 +581,7 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
   // 2. Emit alloc-copy-load-dealloc.
   MLIRContext *ctx = op->getContext();
   Value tmp = setAllocAtFunctionEntry(tmpMemRefType(transfer), transfer);
-  StdIndexedValue local(tmp);
+  MemRefIndexedValue local(tmp);
   loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
     auto ivsStorage = llvm::to_vector<8>(loopIvs);
     // Swap the ivs which will reorder memory accesses.
@@ -601,7 +603,7 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
         rewriter, cast<VectorTransferOpInterface>(transfer.getOperation()), ivs,
         memRefBoundsCapture, loadValue, loadPadding);
   });
-  Value vectorValue = std_load(vector_type_cast(tmp));
+  Value vectorValue = memref_load(vector_type_cast(tmp));
 
   // 3. Propagate.
   rewriter.replaceOp(op, vectorValue);
@@ -646,7 +648,7 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
 
   // 1. Setup all the captures.
   ScopedContext scope(rewriter, transfer.getLoc());
-  StdIndexedValue remote(transfer.source());
+  MemRefIndexedValue remote(transfer.source());
   MemRefBoundsCapture memRefBoundsCapture(transfer.source());
   Value vectorValue(transfer.vector());
   VectorBoundsCapture vectorBoundsCapture(transfer.vector());
@@ -665,9 +667,9 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
 
   // 2. Emit alloc-store-copy-dealloc.
   Value tmp = setAllocAtFunctionEntry(tmpMemRefType(transfer), transfer);
-  StdIndexedValue local(tmp);
+  MemRefIndexedValue local(tmp);
   Value vec = vector_type_cast(tmp);
-  std_store(vectorValue, vec);
+  memref_store(vectorValue, vec);
   loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
     auto ivsStorage = llvm::to_vector<8>(loopIvs);
     // Swap the ivsStorage which will reorder memory accesses.

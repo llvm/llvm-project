@@ -3,7 +3,7 @@
 func @load_number_of_indices(%v : memref<f32>) {
   // expected-error @+2 {{incorrect number of indices for load}}
   %c0 = constant 0 : index
-  load %v[%c0] : memref<f32>
+  memref.load %v[%c0] : memref<f32>
 }
 
 // -----
@@ -12,7 +12,7 @@ func @store_number_of_indices(%v : memref<f32>) {
   // expected-error @+3 {{store index operand count not equal to memref rank}}
   %c0 = constant 0 : index
   %f0 = constant 0.0 : f32
-  store %f0, %v[%c0] : memref<f32>
+  memref.store %f0, %v[%c0] : memref<f32>
 }
 
 // -----

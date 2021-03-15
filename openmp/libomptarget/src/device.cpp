@@ -405,8 +405,8 @@ __tgt_target_table *DeviceTy::load_binary(void *Img) {
   return rc;
 }
 
-void *DeviceTy::allocData(int64_t Size, void *HstPtr) {
-  return RTL->data_alloc(RTLDeviceID, Size, HstPtr);
+void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
+  return RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
 }
 
 int32_t DeviceTy::deleteData(void *TgtPtrBegin) {

@@ -123,6 +123,7 @@ protected:
       : context_{context}, directiveClausesMap_(directiveClausesMap) {}
   virtual ~DirectiveStructureChecker() {}
 
+  using ClauseMapTy = std::multimap<C, const PC *>;
   struct DirectiveContext {
     DirectiveContext(parser::CharBlock source, D d)
         : directiveSource{source}, directive{d} {}
@@ -136,7 +137,7 @@ protected:
     common::EnumSet<C, ClauseEnumSize> requiredClauses{};
 
     const PC *clause{nullptr};
-    std::multimap<C, const PC *> clauseInfo;
+    ClauseMapTy clauseInfo;
     std::list<C> actualClauses;
     Symbol *loopIV{nullptr};
   };
@@ -147,6 +148,11 @@ protected:
   DirectiveContext &GetContext() {
     CHECK(!dirContext_.empty());
     return dirContext_.back();
+  }
+
+  DirectiveContext &GetContextParent() {
+    CHECK(dirContext_.size() >= 2);
+    return dirContext_[dirContext_.size() - 2];
   }
 
   void SetContextClause(const PC &clause) {
@@ -197,10 +203,35 @@ protected:
     GetContext().actualClauses.push_back(type);
   }
 
+  // Check if the given clause is present in the current context
   const PC *FindClause(C type) {
     auto it{GetContext().clauseInfo.find(type)};
     if (it != GetContext().clauseInfo.end()) {
       return it->second;
+    }
+    return nullptr;
+  }
+
+  // Check if the given clause is present in the parent context
+  const PC *FindClauseParent(C type) {
+    auto it{GetContextParent().clauseInfo.find(type)};
+    if (it != GetContextParent().clauseInfo.end()) {
+      return it->second;
+    }
+    return nullptr;
+  }
+
+  std::pair<typename ClauseMapTy::iterator, typename ClauseMapTy::iterator>
+  FindClauses(C type) {
+    auto it{GetContext().clauseInfo.equal_range(type)};
+    return it;
+  }
+
+  DirectiveContext *GetEnclosingDirContext() {
+    CHECK(!dirContext_.empty());
+    auto it{dirContext_.rbegin()};
+    if (++it != dirContext_.rend()) {
+      return &(*it);
     }
     return nullptr;
   }
@@ -220,7 +251,7 @@ protected:
     return nullptr;
   }
 
-  bool CurrentDirectiveIsNested() { return dirContext_.size() > 0; };
+  bool CurrentDirectiveIsNested() { return dirContext_.size() > 1; };
 
   void SetClauseSets(D dir) {
     dirContext_.back().allowedClauses = directiveClausesMap_[dir].allowed;

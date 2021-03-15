@@ -12,6 +12,7 @@
 // convert heap-based allocations to stack-based allocations, if possible.
 
 #include "PassDetail.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
@@ -33,7 +34,7 @@ static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
                                 unsigned bitwidthOfIndexType,
                                 unsigned maxRankOfAllocatedMemRef) {
   auto type = alloc.getType().dyn_cast<ShapedType>();
-  if (!type || !alloc.getDefiningOp<AllocOp>())
+  if (!type || !alloc.getDefiningOp<memref::AllocOp>())
     return false;
   if (!type.hasStaticShape()) {
     // Check if the dynamic shape dimension of the alloc is produced by RankOp.
@@ -142,13 +143,13 @@ public:
       // Check for additional allocation dependencies to compute an upper bound
       // for hoisting.
       Block *dependencyBlock = nullptr;
-      if (!operands.empty()) {
-        // If this node has dependencies, check all dependent nodes with respect
-        // to a common post dominator. This ensures that all dependency values
-        // have been computed before allocating the buffer.
-        ValueSetT dependencies(std::next(operands.begin()), operands.end());
-        dependencyBlock = findCommonDominator(*operands.begin(), dependencies,
-                                              postDominators);
+      // If this node has dependencies, check all dependent nodes. This ensures
+      // that all dependency values have been computed before allocating the
+      // buffer.
+      for (Value depValue : operands) {
+        Block *depBlock = depValue.getParentBlock();
+        if (!dependencyBlock || dominators.dominates(dependencyBlock, depBlock))
+          dependencyBlock = depBlock;
       }
 
       // Find the actual placement block and determine the start operation using
@@ -317,7 +318,7 @@ public:
       // `AutomaticAllocationScope` determined during the initialization phase.
       OpBuilder builder(startOperation);
       Operation *allocOp = alloc.getDefiningOp();
-      Operation *alloca = builder.create<AllocaOp>(
+      Operation *alloca = builder.create<memref::AllocaOp>(
           alloc.getLoc(), alloc.getType().cast<MemRefType>(),
           allocOp->getOperands());
 
@@ -371,7 +372,7 @@ public:
   explicit PromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc)
       : isSmallAlloc(std::move(isSmallAlloc)) {}
 
-  LogicalResult initialize(MLIRContext* context) override {
+  LogicalResult initialize(MLIRContext *context) override {
     if (isSmallAlloc == nullptr) {
       isSmallAlloc = [=](Value alloc) {
         return defaultIsSmallAlloc(alloc, maxAllocSizeInBytes,

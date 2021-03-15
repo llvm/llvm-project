@@ -1842,10 +1842,11 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   // Note: using IRBuilder to create the constants for efficiency.
   SmallVector<Value *, 4> IndexC(GEP.indices());
   bool IsInBounds = GEP.isInBounds();
-  Value *NewTrueC = IsInBounds ? Builder.CreateInBoundsGEP(TrueC, IndexC)
-                               : Builder.CreateGEP(TrueC, IndexC);
-  Value *NewFalseC = IsInBounds ? Builder.CreateInBoundsGEP(FalseC, IndexC)
-                                : Builder.CreateGEP(FalseC, IndexC);
+  Type *Ty = GEP.getSourceElementType();
+  Value *NewTrueC = IsInBounds ? Builder.CreateInBoundsGEP(Ty, TrueC, IndexC)
+                               : Builder.CreateGEP(Ty, TrueC, IndexC);
+  Value *NewFalseC = IsInBounds ? Builder.CreateInBoundsGEP(Ty, FalseC, IndexC)
+                                : Builder.CreateGEP(Ty, FalseC, IndexC);
   return SelectInst::Create(Cond, NewTrueC, NewFalseC, "", nullptr, Sel);
 }
 
@@ -2172,14 +2173,15 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           Matched = true;
       }
 
-      if (Matched) {
-        // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X))
-        // to (bitcast Y)
-        Value *Y;
-        if (match(V, m_Sub(m_PtrToInt(m_Value(Y)),
-                           m_PtrToInt(m_Specific(GEP.getOperand(0))))))
-          return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
-      }
+      // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X)) to (bitcast Y), but
+      // only if both point to the same underlying object (otherwise provenance
+      // is not necessarily retained).
+      Value *Y;
+      Value *X = GEP.getOperand(0);
+      if (Matched &&
+          match(V, m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
+          getUnderlyingObject(X) == getUnderlyingObject(Y))
+        return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
     }
   }
 

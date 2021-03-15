@@ -14,6 +14,7 @@
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/GPU/Utils.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -58,7 +59,7 @@ static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
 /// operations may not have side-effects, as otherwise sinking (and hence
 /// duplicating them) is not legal.
 static bool isSinkingBeneficiary(Operation *op) {
-  return isa<ConstantOp, DimOp, SelectOp, CmpIOp>(op);
+  return isa<ConstantOp, memref::DimOp, SelectOp, CmpIOp>(op);
 }
 
 /// For a given operation `op`, computes whether it is beneficial to sink the
@@ -283,10 +284,8 @@ private:
     // and then this needs to use the OpBuilder.
     auto context = getOperation().getContext();
     OpBuilder builder(context);
-    OperationState state(kernelFunc.getLoc(),
-                         gpu::GPUModuleOp::getOperationName());
-    gpu::GPUModuleOp::build(builder, state, kernelFunc.getName());
-    auto kernelModule = cast<gpu::GPUModuleOp>(Operation::create(state));
+    auto kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
+                                                         kernelFunc.getName());
     SymbolTable symbolTable(kernelModule);
     symbolTable.insert(kernelFunc);
 

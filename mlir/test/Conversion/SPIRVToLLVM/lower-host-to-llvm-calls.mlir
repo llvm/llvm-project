@@ -1,5 +1,5 @@
 // RUN: mlir-opt --lower-host-to-llvm %s | FileCheck %s
-  
+
 module attributes {gpu.container_module, spv.target_env = #spv.target_env<#spv.vce<v1.0, [Shader], [SPV_KHR_variable_pointers]>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>} {
 
   //       CHECK: llvm.mlir.global linkonce @__spv__foo_bar_arg_0_descriptor_set0_binding0() : !llvm.struct<(array<6 x i32>)>
@@ -8,7 +8,7 @@ module attributes {gpu.container_module, spv.target_env = #spv.target_env<#spv.v
   //       CHECK: spv.module @__spv__foo
   //       CHECK:   spv.GlobalVariable @bar_arg_0 bind(0, 0) : !spv.ptr<!spv.struct<(!spv.array<6 x i32, stride=4> [0])>, StorageBuffer>
   //       CHECK:   spv.func @__spv__foo_bar
-  
+
   //       CHECK:   spv.EntryPoint "GLCompute" @__spv__foo_bar
   //       CHECK:   spv.ExecutionMode @__spv__foo_bar "LocalSize", 1, 1, 1
 
@@ -38,7 +38,7 @@ module attributes {gpu.container_module, spv.target_env = #spv.target_env<#spv.v
   }
 
   func @main() {
-    %buffer = alloc() : memref<6xi32>
+    %buffer = memref.alloc() : memref<6xi32>
     %one = constant 1 : index
     gpu.launch_func @foo::@bar blocks in (%one, %one, %one)
         threads in (%one, %one, %one) args(%buffer : memref<6xi32>)

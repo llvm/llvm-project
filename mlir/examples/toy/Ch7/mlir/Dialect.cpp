@@ -77,33 +77,6 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
 };
 
 //===----------------------------------------------------------------------===//
-// ToyDialect
-//===----------------------------------------------------------------------===//
-
-/// Dialect creation, the instance will be owned by the context. This is the
-/// point of registration of custom types and operations for the dialect.
-ToyDialect::ToyDialect(mlir::MLIRContext *ctx)
-    : mlir::Dialect(getDialectNamespace(), ctx, TypeID::get<ToyDialect>()) {
-  addOperations<
-#define GET_OP_LIST
-#include "toy/Ops.cpp.inc"
-      >();
-  addInterfaces<ToyInlinerInterface>();
-  addTypes<StructType>();
-}
-
-mlir::Operation *ToyDialect::materializeConstant(mlir::OpBuilder &builder,
-                                                 mlir::Attribute value,
-                                                 mlir::Type type,
-                                                 mlir::Location loc) {
-  if (type.isa<StructType>())
-    return builder.create<StructConstantOp>(loc, type,
-                                            value.cast<mlir::ArrayAttr>());
-  return builder.create<ConstantOp>(loc, type,
-                                    value.cast<mlir::DenseElementsAttr>());
-}
-
-//===----------------------------------------------------------------------===//
 // Toy Operations
 //===----------------------------------------------------------------------===//
 
@@ -566,3 +539,30 @@ void ToyDialect::printType(mlir::Type type,
 
 #define GET_OP_CLASSES
 #include "toy/Ops.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// ToyDialect
+//===----------------------------------------------------------------------===//
+
+/// Dialect creation, the instance will be owned by the context. This is the
+/// point of registration of custom types and operations for the dialect.
+ToyDialect::ToyDialect(mlir::MLIRContext *ctx)
+    : mlir::Dialect(getDialectNamespace(), ctx, TypeID::get<ToyDialect>()) {
+  addOperations<
+#define GET_OP_LIST
+#include "toy/Ops.cpp.inc"
+      >();
+  addInterfaces<ToyInlinerInterface>();
+  addTypes<StructType>();
+}
+
+mlir::Operation *ToyDialect::materializeConstant(mlir::OpBuilder &builder,
+                                                 mlir::Attribute value,
+                                                 mlir::Type type,
+                                                 mlir::Location loc) {
+  if (type.isa<StructType>())
+    return builder.create<StructConstantOp>(loc, type,
+                                            value.cast<mlir::ArrayAttr>());
+  return builder.create<ConstantOp>(loc, type,
+                                    value.cast<mlir::DenseElementsAttr>());
+}

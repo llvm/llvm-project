@@ -143,3 +143,9 @@ buffer_atomic_csub v5, off, s[8:11], s3 offset:4095
 
 global_atomic_csub v2, v[0:1], v2, off offset:100 slc
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use glc
+
+image_msaa_load v[1:4], v5, s[8:15] dmask:0xf dim:SQ_RSRC_IMG_1D
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dim; must be MSAA type
+
+image_msaa_load v5, v[1:2], s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_2D d16
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dim; must be MSAA type

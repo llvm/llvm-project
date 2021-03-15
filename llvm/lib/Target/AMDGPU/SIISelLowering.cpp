@@ -11623,16 +11623,26 @@ static int getAlignedAGPRClassID(unsigned UnalignedClassID) {
     return AMDGPU::VReg_96_Align2RegClassID;
   case AMDGPU::VReg_128RegClassID:
     return AMDGPU::VReg_128_Align2RegClassID;
+  case AMDGPU::VReg_160RegClassID:
+    return AMDGPU::VReg_160_Align2RegClassID;
+  case AMDGPU::VReg_192RegClassID:
+    return AMDGPU::VReg_192_Align2RegClassID;
   case AMDGPU::VReg_256RegClassID:
     return AMDGPU::VReg_256_Align2RegClassID;
   case AMDGPU::VReg_512RegClassID:
     return AMDGPU::VReg_512_Align2RegClassID;
+  case AMDGPU::VReg_1024RegClassID:
+    return AMDGPU::VReg_1024_Align2RegClassID;
   case AMDGPU::AReg_64RegClassID:
     return AMDGPU::AReg_64_Align2RegClassID;
   case AMDGPU::AReg_96RegClassID:
     return AMDGPU::AReg_96_Align2RegClassID;
   case AMDGPU::AReg_128RegClassID:
     return AMDGPU::AReg_128_Align2RegClassID;
+  case AMDGPU::AReg_160RegClassID:
+    return AMDGPU::AReg_160_Align2RegClassID;
+  case AMDGPU::AReg_192RegClassID:
+    return AMDGPU::AReg_192_Align2RegClassID;
   case AMDGPU::AReg_256RegClassID:
     return AMDGPU::AReg_256_Align2RegClassID;
   case AMDGPU::AReg_512RegClassID:
@@ -11705,8 +11715,7 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   // "amdgpu-reserve-vgpr-for-sgpr-spill" option is used
   // FIXME: We won't need this hack if we split SGPR allocation from VGPR
   if (VGPRReserveforSGPRSpill && TRI->spillSGPRToVGPR() &&
-      !Info->VGPRReservedForSGPRSpill && !Info->isEntryFunction() &&
-      MF.getFrameInfo().hasStackObjects())
+      !Info->VGPRReservedForSGPRSpill && !Info->isEntryFunction())
     Info->reserveVGPRforSGPRSpills(MF);
 }
 

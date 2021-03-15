@@ -89,6 +89,7 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative, NoSideEffect]> {
   ];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
   let verifier = [{ return ::verify(*this); }];
 }
 
@@ -277,9 +278,10 @@ def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable",
     };
   }];
 
-  let assemblyFormat = "$shapes attr-dict `:` type($shapes)";
-  let verifier = [{ return ::verify(*this); }];
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 
+  let assemblyFormat = "$shapes attr-dict `:` type($shapes)";
 }
 
 def Shape_RankOp : Shape_Op<"rank", [NoSideEffect]> {

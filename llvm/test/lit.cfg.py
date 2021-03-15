@@ -124,6 +124,12 @@ if config.have_ocamlopt:
 
 opt_viewer_cmd = '%s %s/tools/opt-viewer/opt-viewer.py' % (sys.executable, config.llvm_src_root)
 
+llvm_original_di_preservation_cmd = os.path.join(
+    config.llvm_src_root,'utils', 'llvm-original-di-preservation.py')
+config.substitutions.append(
+    ('%llvm-original-di-preservation', "'%s' %s" % (
+        config.python_executable, llvm_original_di_preservation_cmd)))
+
 llvm_locstats_tool = os.path.join(config.llvm_tools_dir, 'llvm-locstats')
 config.substitutions.append(
     ('%llvm-locstats', "'%s' %s" % (config.python_executable, llvm_locstats_tool)))

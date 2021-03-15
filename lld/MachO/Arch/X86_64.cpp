@@ -25,10 +25,10 @@ namespace {
 struct X86_64 : TargetInfo {
   X86_64();
 
-  uint64_t getEmbeddedAddend(MemoryBufferRef, const section_64 &,
-                             const relocation_info) const override;
+  int64_t getEmbeddedAddend(MemoryBufferRef, const section_64 &,
+                            const relocation_info) const override;
   void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
-                   uint64_t pc) const override;
+                   uint64_t relocVA) const override;
 
   void writeStub(uint8_t *buf, const macho::Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
@@ -36,14 +36,14 @@ struct X86_64 : TargetInfo {
                             uint64_t entryAddr) const override;
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
-  const TargetInfo::RelocAttrs &getRelocAttrs(uint8_t type) const override;
+  const RelocAttrs &getRelocAttrs(uint8_t type) const override;
   uint64_t getPageSize() const override { return 4 * 1024; }
 };
 
 } // namespace
 
-const TargetInfo::RelocAttrs &X86_64::getRelocAttrs(uint8_t type) const {
-  static const std::array<TargetInfo::RelocAttrs, 10> relocAttrsArray{{
+const RelocAttrs &X86_64::getRelocAttrs(uint8_t type) const {
+  static const std::array<RelocAttrs, 10> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
       {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) |
                        B(DYSYM8) | B(BYTE4) | B(BYTE8)},
@@ -60,32 +60,52 @@ const TargetInfo::RelocAttrs &X86_64::getRelocAttrs(uint8_t type) const {
   }};
   assert(type < relocAttrsArray.size() && "invalid relocation type");
   if (type >= relocAttrsArray.size())
-    return TargetInfo::invalidRelocAttrs;
+    return invalidRelocAttrs;
   return relocAttrsArray[type];
 }
 
-uint64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, const section_64 &sec,
-                                   relocation_info rel) const {
+static int pcrelOffset(uint8_t type) {
+  switch (type) {
+  case X86_64_RELOC_SIGNED_1:
+    return 1;
+  case X86_64_RELOC_SIGNED_2:
+    return 2;
+  case X86_64_RELOC_SIGNED_4:
+    return 4;
+  default:
+    return 0;
+  }
+}
+
+int64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, const section_64 &sec,
+                                  relocation_info rel) const {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   const uint8_t *loc = buf + sec.offset + rel.r_address;
 
   switch (rel.r_length) {
   case 2:
-    return read32le(loc);
+    return static_cast<int32_t>(read32le(loc)) + pcrelOffset(rel.r_type);
   case 3:
-    return read64le(loc);
+    return read64le(loc) + pcrelOffset(rel.r_type);
   default:
     llvm_unreachable("invalid r_length");
   }
 }
 
 void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
-                         uint64_t pc) const {
+                         uint64_t relocVA) const {
   value += r.addend;
-  if (r.pcrel)
-    value -= (pc + 4);
+  if (r.pcrel) {
+    uint64_t pc = relocVA + 4 + pcrelOffset(r.type);
+    value -= pc;
+  }
+
   switch (r.length) {
   case 2:
+    if (r.type == X86_64_RELOC_UNSIGNED)
+      checkUInt(r, value, 32);
+    else
+      checkInt(r, value, 32);
     write32le(loc, value);
     break;
   case 3:
@@ -105,9 +125,10 @@ void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
 // bufAddr:  The virtual address corresponding to buf[0].
 // bufOff:   The offset within buf of the next instruction.
 // destAddr: The destination address that the current instruction references.
-static void writeRipRelative(uint8_t *buf, uint64_t bufAddr, uint64_t bufOff,
-                             uint64_t destAddr) {
+static void writeRipRelative(SymbolDiagnostic d, uint8_t *buf, uint64_t bufAddr,
+                             uint64_t bufOff, uint64_t destAddr) {
   uint64_t rip = bufAddr + bufOff;
+  checkInt(d, destAddr - rip, 32);
   // For the instructions we care about, the RIP-relative address is always
   // stored in the last 4 bytes of the instruction.
   write32le(buf + bufOff - 4, destAddr - rip);
@@ -120,7 +141,7 @@ static constexpr uint8_t stub[] = {
 void X86_64::writeStub(uint8_t *buf, const macho::Symbol &sym) const {
   memcpy(buf, stub, 2); // just copy the two nonzero bytes
   uint64_t stubAddr = in.stubs->addr + sym.stubsIndex * sizeof(stub);
-  writeRipRelative(buf, stubAddr, sizeof(stub),
+  writeRipRelative({&sym, "stub"}, buf, stubAddr, sizeof(stub),
                    in.lazyPointers->addr + sym.stubsIndex * WordSize);
 }
 
@@ -133,8 +154,10 @@ static constexpr uint8_t stubHelperHeader[] = {
 
 void X86_64::writeStubHelperHeader(uint8_t *buf) const {
   memcpy(buf, stubHelperHeader, sizeof(stubHelperHeader));
-  writeRipRelative(buf, in.stubHelper->addr, 7, in.imageLoaderCache->getVA());
-  writeRipRelative(buf, in.stubHelper->addr, 0xf,
+  SymbolDiagnostic d = {nullptr, "stub helper header"};
+  writeRipRelative(d, buf, in.stubHelper->addr, 7,
+                   in.imageLoaderCache->getVA());
+  writeRipRelative(d, buf, in.stubHelper->addr, 0xf,
                    in.got->addr +
                        in.stubHelper->stubBinder->gotIndex * WordSize);
 }
@@ -148,8 +171,8 @@ void X86_64::writeStubHelperEntry(uint8_t *buf, const DylibSymbol &sym,
                                   uint64_t entryAddr) const {
   memcpy(buf, stubHelperEntry, sizeof(stubHelperEntry));
   write32le(buf + 1, sym.lazyBindOffset);
-  writeRipRelative(buf, entryAddr, sizeof(stubHelperEntry),
-                   in.stubHelper->addr);
+  writeRipRelative({&sym, "stub helper"}, buf, entryAddr,
+                   sizeof(stubHelperEntry), in.stubHelper->addr);
 }
 
 void X86_64::relaxGotLoad(uint8_t *loc, uint8_t type) const {

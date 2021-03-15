@@ -41,11 +41,11 @@ void test_f1(void) {
 
 #pragma OPENCL EXTENSION my_ext : disable 
 void test_f2(void) {
-  struct A test_A2; // expected-error {{use of type 'struct A' requires my_ext extension to be enabled}}
-  const struct A test_A_local; // expected-error {{use of type 'struct A' requires my_ext extension to be enabled}}
-  TypedefOfA test_typedef_A; // expected-error {{use of type 'TypedefOfA' (aka 'struct A') requires my_ext extension to be enabled}}
-  PointerOfA test_A_pointer; // expected-error {{use of type 'PointerOfA' (aka 'const __private struct A *') requires my_ext extension to be enabled}}
-  f(); // expected-error {{use of declaration 'f' requires my_ext extension to be enabled}}
+  struct A test_A2; // expected-error {{use of type 'struct A' requires my_ext support}}
+  const struct A test_A_local; // expected-error {{use of type 'struct A' requires my_ext support}}
+  TypedefOfA test_typedef_A; // expected-error {{use of type 'TypedefOfA' (aka 'struct A') requires my_ext support}}
+  PointerOfA test_A_pointer; // expected-error {{use of type 'PointerOfA' (aka 'const __private struct A *') requires my_ext support}}
+  f(); // expected-error {{use of declaration 'f' requires my_ext support}}
   g(0); // expected-error {{no matching function for call to 'g'}}
         // expected-note@extension-begin.h:18 {{candidate unavailable as it requires OpenCL extension 'my_ext' to be enabled}}
         // expected-note@extension-begin.h:23 {{candidate function not viable: requires 0 arguments, but 1 was provided}}

@@ -729,6 +729,102 @@ void multiply_compound_int_matrix_constant(ix9x3_t a) {
   a *= 5;
 }
 
+// CHECK-LABEL: @divide_double_matrix_scalar_float(
+// CHECK:         [[A:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
+// CHECK-NEXT:    [[S:%.*]] = load float, float* %s.addr, align 4
+// CHECK-NEXT:    [[S_EXT:%.*]] = fpext float [[S]] to double
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S_EXT]], i32 0
+// CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <25 x double> [[VECINSERT]], <25 x double> poison, <25 x i32> zeroinitializer
+// CHECK-NEXT:    [[RES:%.*]] = fdiv <25 x double> [[A]], [[VECSPLAT]]
+// CHECK-NEXT:    store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
+// CHECK-NEXT:    ret void
+//
+void divide_double_matrix_scalar_float(dx5x5_t a, float s) {
+  a = a / s;
+}
+
+// CHECK-LABEL: @divide_double_matrix_scalar_double(
+// CHECK:         [[A:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
+// CHECK-NEXT:    [[S:%.*]] = load double, double* %s.addr, align 8
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S]], i32 0
+// CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <25 x double> [[VECINSERT]], <25 x double> poison, <25 x i32> zeroinitializer
+// CHECK-NEXT:    [[RES:%.*]] = fdiv <25 x double> [[A]], [[VECSPLAT]]
+// CHECK-NEXT:    store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
+// CHECK-NEXT:    ret void
+//
+void divide_double_matrix_scalar_double(dx5x5_t a, double s) {
+  a = a / s;
+}
+
+// CHECK-LABEL: @divide_float_matrix_scalar_double(
+// CHECK:         [[MAT:%.*]] = load <6 x float>, <6 x float>* [[MAT_ADDR:%.*]], align 4
+// CHECK-NEXT:    [[S:%.*]] = load double, double* %s.addr, align 8
+// CHECK-NEXT:    [[S_TRUNC:%.*]] = fptrunc double [[S]] to float
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <6 x float> poison, float [[S_TRUNC]], i32 0
+// CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <6 x float> [[VECINSERT]], <6 x float> poison, <6 x i32> zeroinitializer
+// CHECK-NEXT:    [[RES:%.*]] = fdiv <6 x float> [[MAT]], [[VECSPLAT]]
+// CHECK-NEXT:    store <6 x float> [[RES]], <6 x float>* [[MAT_ADDR]], align 4
+// CHECK-NEXT:    ret void
+//
+void divide_float_matrix_scalar_double(fx2x3_t b, double s) {
+  b = b / s;
+}
+
+// CHECK-LABEL: @divide_int_matrix_scalar_short(
+// CHECK:         [[MAT:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4
+// CHECK-NEXT:    [[S:%.*]] = load i16, i16* %s.addr, align 2
+// CHECK-NEXT:    [[S_EXT:%.*]] = sext i16 [[S]] to i32
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_EXT]], i32 0
+// CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <27 x i32> [[VECINSERT]], <27 x i32> poison, <27 x i32> zeroinitializer
+// CHECK-NEXT:    [[RES:%.*]] = sdiv <27 x i32> [[MAT]], [[VECSPLAT]]
+// CHECK-NEXT:    store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
+// CHECK-NEXT:    ret void
+//
+void divide_int_matrix_scalar_short(ix9x3_t b, short s) {
+  b = b / s;
+}
+
+// CHECK-LABEL: @divide_int_matrix_scalar_ull(
+// CHECK:         [[MAT:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4
+// CHECK-NEXT:    [[S:%.*]] = load i64, i64* %s.addr, align 8
+// CHECK-NEXT:    [[S_TRUNC:%.*]] = trunc i64 [[S]] to i32
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_TRUNC]], i32 0
+// CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <27 x i32> [[VECINSERT]], <27 x i32> poison, <27 x i32> zeroinitializer
+// CHECK-NEXT:    [[RES:%.*]] = sdiv <27 x i32> [[MAT]], [[VECSPLAT]]
+// CHECK-NEXT:    store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
+// CHECK-NEXT:    ret void
+//
+void divide_int_matrix_scalar_ull(ix9x3_t b, unsigned long long s) {
+  b = b / s;
+}
+
+// CHECK-LABEL: @divide_ull_matrix_scalar_ull(
+// CHECK:         [[MAT:%.*]] = load <8 x i64>, <8 x i64>* [[MAT_ADDR:%.*]], align 8
+// CHECK-NEXT:    [[S:%.*]] = load i64, i64* %s.addr, align 8
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[S]], i32 0
+// CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <8 x i64> [[VECINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
+// CHECK-NEXT:    [[RES:%.*]] = udiv <8 x i64> [[MAT]], [[VECSPLAT]]
+// CHECK-NEXT:    store <8 x i64> [[RES]], <8 x i64>* [[MAT_ADDR]], align 8
+// CHECK-NEXT:    ret void
+//
+void divide_ull_matrix_scalar_ull(ullx4x2_t b, unsigned long long s) {
+  b = b / s;
+}
+
+// CHECK-LABEL: @divide_float_matrix_constant(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [6 x float], align 4
+// CHECK-NEXT:    [[MAT_ADDR:%.*]] = bitcast [6 x float]* [[A_ADDR]] to <6 x float>*
+// CHECK-NEXT:    store <6 x float> [[A:%.*]], <6 x float>* [[MAT_ADDR]], align 4
+// CHECK-NEXT:    [[MAT:%.*]] = load <6 x float>, <6 x float>* [[MAT_ADDR]], align 4
+// CHECK-NEXT:    [[RES:%.*]] = fdiv <6 x float> [[MAT]], <float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00>
+// CHECK-NEXT:    store <6 x float> [[RES]], <6 x float>* [[MAT_ADDR]], align 4
+// CHECK-NEXT:    ret void
+//
+void divide_float_matrix_constant(fx2x3_t a) {
+  a = a / 2.5;
+}
+
 // Tests for the matrix type operators.
 
 typedef double dx5x5_t __attribute__((matrix_type(5, 5)));

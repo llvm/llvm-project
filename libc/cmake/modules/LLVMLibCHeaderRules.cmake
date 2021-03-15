@@ -58,6 +58,12 @@ function(add_gen_header target_name)
     "PARAMS;DATA_FILES;DEPENDS"     # Multi value arguments
     ${ARGN}
   )
+  get_fq_target_name(${target_name} fq_target_name)
+  if(NOT LLVM_LIBC_FULL_BUILD)
+    # We don't want to use generated headers if we are doing a non-full-build.
+    add_custom_target(${fq_target_name})
+    return()
+  endif()
   if(NOT ADD_GEN_HDR_DEF_FILE)
     message(FATAL_ERROR "`add_gen_hdr` rule requires DEF_FILE to be specified.")
   endif()
@@ -100,7 +106,6 @@ function(add_gen_header target_name)
             ${LIBC_TABLEGEN_EXE} ${LIBC_TABLEGEN_TARGET}
   )
 
-  get_fq_target_name(${target_name} fq_target_name)
   if(ADD_GEN_HDR_DEPENDS)
     get_fq_deps_list(fq_deps_list ${ADD_GEN_HDR_DEPENDS})
   endif()

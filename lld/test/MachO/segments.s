@@ -1,7 +1,10 @@
-# REQUIRES: x86, shell
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
 # RUN: %lld -o %t %t.o
-# RUN: (llvm-readobj --macho-segment %t; echo "Total file size"; wc -c %t) | FileCheck %s
+# RUN: llvm-readobj --macho-segment %t > %t.out
+# RUN: echo "Total file size" >> %t.out
+# RUN: wc -c %t >> %t.out
+# RUN: FileCheck %s < %t.out
 
 ## These two segments must always be present at the start of an executable.
 # CHECK-NOT:  Segment {

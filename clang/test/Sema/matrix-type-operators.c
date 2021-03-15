@@ -94,6 +94,40 @@ void mat_scalar_multiply(sx10x10_t a, sx5x10_t b, float sf, char *p) {
   // expected-error@-1 {{assigning to 'float' from incompatible type 'sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))')}}
 }
 
+void mat_scalar_divide(sx10x10_t a, sx5x10_t b, float sf, char *p) {
+  // Shape of multiplication result does not match the type of b.
+  b = a / sf;
+  // expected-error@-1 {{assigning to 'sx5x10_t' (aka 'float __attribute__((matrix_type(5, 10)))') from incompatible type 'sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))')}}
+  b = sf / a;
+  // expected-error@-1 {{invalid operands to binary expression ('float' and 'sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))'))}}
+
+  a = a / p;
+  // expected-error@-1 {{invalid operands to binary expression ('sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))') and 'char *')}}
+  a = p / a;
+  // expected-error@-1 {{invalid operands to binary expression ('char *' and 'sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))'))}}
+
+  sf = a / sf;
+  // expected-error@-1 {{assigning to 'float' from incompatible type 'sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))')}}
+}
+
+void matrix_matrix_divide(sx10x10_t a, sx5x10_t b, ix10x5_t c, ix10x10_t d, float sf, char *p) {
+  // Matrix by matrix division is not supported.
+  a = a / a;
+  // expected-error@-1 {{invalid operands to binary expression ('sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))') and 'sx10x10_t')}}
+
+  b = a / a;
+  // expected-error@-1 {{invalid operands to binary expression ('sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))') and 'sx10x10_t')}}
+
+  // Check element type mismatches.
+  a = b / c;
+  // expected-error@-1 {{invalid operands to binary expression ('sx5x10_t' (aka 'float __attribute__((matrix_type(5, 10)))') and 'ix10x5_t' (aka 'int __attribute__((matrix_type(10, 5)))'))}}
+  d = a / a;
+  // expected-error@-1 {{invalid operands to binary expression ('sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))') and 'sx10x10_t')}}
+
+  p = a / a;
+  // expected-error@-1 {{invalid operands to binary expression ('sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))') and 'sx10x10_t')}}
+}
+
 sx5x10_t get_matrix();
 
 void insert(sx5x10_t a, float f) {

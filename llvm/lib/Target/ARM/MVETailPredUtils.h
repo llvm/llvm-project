@@ -71,26 +71,31 @@ static inline bool isVCTP(const MachineInstr *MI) {
 static inline bool isLoopStart(MachineInstr &MI) {
   return MI.getOpcode() == ARM::t2DoLoopStart ||
          MI.getOpcode() == ARM::t2DoLoopStartTP ||
-         MI.getOpcode() == ARM::t2WhileLoopStart;
+         MI.getOpcode() == ARM::t2WhileLoopStart ||
+         MI.getOpcode() == ARM::t2WhileLoopStartLR;
 }
 
-// WhileLoopStart holds the exit block, so produce a cmp lr, 0 and then a
+// WhileLoopStart holds the exit block, so produce a subs Op0, Op1, 0 and then a
 // beq that branches to the exit branch.
-inline void RevertWhileLoopStart(MachineInstr *MI, const TargetInstrInfo *TII,
-                        unsigned BrOpc = ARM::t2Bcc) {
+inline void RevertWhileLoopStartLR(MachineInstr *MI, const TargetInstrInfo *TII,
+                                   unsigned BrOpc = ARM::t2Bcc) {
   MachineBasicBlock *MBB = MI->getParent();
+  assert(MI->getOpcode() == ARM::t2WhileLoopStartLR &&
+         "Only expected a t2WhileLoopStartLR in RevertWhileLoopStartLR!");
 
-  // Cmp
+  // Subs
   MachineInstrBuilder MIB =
-      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::t2CMPri));
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::t2SUBri));
   MIB.add(MI->getOperand(0));
+  MIB.add(MI->getOperand(1));
   MIB.addImm(0);
   MIB.addImm(ARMCC::AL);
   MIB.addReg(ARM::NoRegister);
+  MIB.addReg(ARM::CPSR, RegState::Define);
 
   // Branch
   MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(BrOpc));
-  MIB.add(MI->getOperand(1)); // branch target
+  MIB.add(MI->getOperand(2)); // branch target
   MIB.addImm(ARMCC::EQ);      // condition code
   MIB.addReg(ARM::CPSR);
 

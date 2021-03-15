@@ -134,11 +134,8 @@ static unsigned getRelaxedOpcodeBranch(const MCInst &Inst) {
 
 static unsigned getRelaxedOpcodeArith(const MCInst &Inst) {
   unsigned Op = Inst.getOpcode();
-  switch (Op) {
-  default:
-    return Op;
-    // NOTE there will be some relaxations for PCD and ARD mem for x20
-  }
+  // NOTE there will be some relaxations for PCD and ARD mem for x20
+  return Op;
 }
 
 static unsigned getRelaxedOpcode(const MCInst &Inst) {

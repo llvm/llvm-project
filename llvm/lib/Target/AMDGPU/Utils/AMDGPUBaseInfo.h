@@ -284,6 +284,7 @@ struct MIMGBaseOpcodeInfo {
   bool Coordinates;
   bool LodOrClampOrMip;
   bool HasD16;
+  bool MSAA;
 };
 
 LLVM_READONLY
@@ -293,6 +294,7 @@ struct MIMGDimInfo {
   MIMGDim Dim;
   uint8_t NumCoords;
   uint8_t NumGradients;
+  bool MSAA;
   bool DA;
   uint8_t Encoding;
   const char *AsmSuffix;

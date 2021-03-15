@@ -37,6 +37,7 @@ public:
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<VectorDialect>();
     registry.insert<linalg::LinalgDialect>();
+    registry.insert<memref::MemRefDialect>();
     registry.insert<scf::SCFDialect>();
     registry.insert<AffineDialect>();
     registry.insert<StandardOpsDialect>();

@@ -36,7 +36,7 @@ uint64_t InputSection::getVA() const { return parent->addr + outSecOff; }
 
 static uint64_t resolveSymbolVA(uint8_t *loc, const lld::macho::Symbol &sym,
                                 uint8_t type) {
-  const TargetInfo::RelocAttrs &relocAttrs = target->getRelocAttrs(type);
+  const RelocAttrs &relocAttrs = target->getRelocAttrs(type);
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
     if (sym.isInStubs())
       return in.stubs->addr + sym.stubsIndex * target->stubSize;
@@ -58,15 +58,12 @@ void InputSection::writeTo(uint8_t *buf) {
   memcpy(buf, data.data(), data.size());
 
   for (size_t i = 0; i < relocs.size(); i++) {
-    const Symbol *fromSym =
-        target->hasAttr(relocs[i].type, RelocAttrBits::SUBTRAHEND)
-            ? relocs[i++].referent.get<Symbol *>()
-            : nullptr;
     const Reloc &r = relocs[i];
     uint8_t *loc = buf + r.offset;
     uint64_t referentVA = 0;
-    if (fromSym) {
-      const Symbol *toSym = r.referent.get<Symbol *>();
+    if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
+      const Symbol *fromSym = r.referent.get<Symbol *>();
+      const Symbol *toSym = relocs[++i].referent.get<Symbol *>();
       referentVA = toSym->getVA() - fromSym->getVA();
     } else if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
       if (target->hasAttr(r.type, RelocAttrBits::LOAD) &&
@@ -90,11 +87,11 @@ void InputSection::writeTo(uint8_t *buf) {
 }
 
 bool macho::isCodeSection(InputSection *isec) {
-  uint32_t type = isec->flags & MachO::SECTION_TYPE;
+  uint32_t type = isec->flags & SECTION_TYPE;
   if (type != S_REGULAR && type != S_COALESCED)
     return false;
 
-  uint32_t attr = isec->flags & MachO::SECTION_ATTRIBUTES_USR;
+  uint32_t attr = isec->flags & SECTION_ATTRIBUTES_USR;
   if (attr == S_ATTR_PURE_INSTRUCTIONS)
     return true;
 

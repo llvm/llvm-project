@@ -43,9 +43,9 @@ struct MachinePointerInfo {
   /// Offset - This is an offset from the base Value*.
   int64_t Offset;
 
-  uint8_t StackID;
-
   unsigned AddrSpace = 0;
+
+  uint8_t StackID;
 
   explicit MachinePointerInfo(const Value *v, int64_t offset = 0,
                               uint8_t ID = 0)
@@ -60,8 +60,8 @@ struct MachinePointerInfo {
   }
 
   explicit MachinePointerInfo(unsigned AddressSpace = 0, int64_t offset = 0)
-      : V((const Value *)nullptr), Offset(offset), StackID(0),
-        AddrSpace(AddressSpace) {}
+      : V((const Value *)nullptr), Offset(offset), AddrSpace(AddressSpace),
+        StackID(0) {}
 
   explicit MachinePointerInfo(
     PointerUnion<const Value *, const PseudoSourceValue *> v,

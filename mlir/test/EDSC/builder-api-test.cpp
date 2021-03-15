@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Linalg/EDSC/Builders.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/MemRef/EDSC/Intrinsics.h"
 #include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Vector/EDSC/Intrinsics.h"
@@ -44,6 +45,7 @@ static MLIRContext &globalContext() {
                         scf::SCFDialect,
                         linalg::LinalgDialect,
                         math::MathDialect,
+                        memref::MemRefDialect,
                         StandardOpsDialect,
                         vector::VectorDialect>();
     // clang-format on
@@ -762,9 +764,9 @@ TEST_FUNC(tile_2d) {
   // clang-format off
   // CHECK-LABEL: func @tile_2d
   //       CHECK: %[[ZERO:.*]] = constant 0 : index
-  //       CHECK: %[[M:[0-9]+]] = dim %arg2, %c0{{[_0-9]*}} : memref<?x?x?xf32>
-  //       CHECK: %[[N:[0-9]+]] = dim %arg2, %c1{{[_0-9]*}} : memref<?x?x?xf32>
-  //       CHECK: %[[P:[0-9]+]] = dim %arg2, %c2{{[_0-9]*}} : memref<?x?x?xf32>
+  //       CHECK: %[[M:[0-9]+]] = memref.dim %arg2, %c0{{[_0-9]*}} : memref<?x?x?xf32>
+  //       CHECK: %[[N:[0-9]+]] = memref.dim %arg2, %c1{{[_0-9]*}} : memref<?x?x?xf32>
+  //       CHECK: %[[P:[0-9]+]] = memref.dim %arg2, %c2{{[_0-9]*}} : memref<?x?x?xf32>
   //       CHECK:   affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%[[ZERO]]) to affine_map<(d0) -> (d0)>(%[[M]]) step 512 {
   //  CHECK-NEXT:     affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%[[ZERO]]) to affine_map<(d0) -> (d0)>(%[[N]]) step 1024 {
   //  CHECK-NEXT:       affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%[[ZERO]]) to affine_map<(d0) -> (d0)>(%[[P]]) {
@@ -806,7 +808,7 @@ TEST_FUNC(indirect_access) {
   Value zero = std_constant_index(0);
   MemRefBoundsCapture vC(f.getArgument(2));
   AffineIndexedValue B(f.getArgument(1)), D(f.getArgument(3));
-  StdIndexedValue A(f.getArgument(0)), C(f.getArgument(2));
+  MemRefIndexedValue A(f.getArgument(0)), C(f.getArgument(2));
   Value N(vC.ub(0));
 
   // clang-format off

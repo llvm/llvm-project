@@ -7,7 +7,9 @@ declare half @llvm.vector.reduce.fadd.v1f16(half, <1 x half>)
 define half @vreduce_fadd_v1f16(<1 x half>* %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    flh ft0, 0(a0)
+; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vfmv.f.s ft0, v25
 ; CHECK-NEXT:    fadd.h fa0, fa0, ft0
 ; CHECK-NEXT:    ret
   %v = load <1 x half>, <1 x half>* %x
@@ -18,8 +20,13 @@ define half @vreduce_fadd_v1f16(<1 x half>* %x, half %s) {
 define half @vreduce_ord_fadd_v1f16(<1 x half>* %x, half %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    flh ft0, 0(a0)
-; CHECK-NEXT:    fadd.h fa0, fa0, ft0
+; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
+; CHECK-NEXT:    vfmv.v.f v26, fa0
+; CHECK-NEXT:    vsetivli a0, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vfredosum.vs v25, v25, v26
+; CHECK-NEXT:    vfmv.f.s fa0, v25
 ; CHECK-NEXT:    ret
   %v = load <1 x half>, <1 x half>* %x
   %red = call half @llvm.vector.reduce.fadd.v1f16(half %s, <1 x half> %v)

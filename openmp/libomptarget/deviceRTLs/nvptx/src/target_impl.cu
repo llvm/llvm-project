@@ -59,18 +59,6 @@ DEVICE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
   return Mask;
 }
 
-DEVICE int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t Mask, int32_t Var,
-                                     int32_t SrcLane) {
-  return __nvvm_shfl_sync_idx_i32(Mask, Var, SrcLane, 0x1f);
-}
-
-DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t Mask,
-                                          int32_t Var, uint32_t Delta,
-                                          int32_t Width) {
-  int32_t T = ((WARPSIZE - Width) << 8) | 0x1f;
-  return __nvvm_shfl_sync_down_i32(Mask, Var, Delta, T);
-}
-
 DEVICE void __kmpc_impl_syncthreads() { __syncthreads(); }
 
 DEVICE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t Mask) {

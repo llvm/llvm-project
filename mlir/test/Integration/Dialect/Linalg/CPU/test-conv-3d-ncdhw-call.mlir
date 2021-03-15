@@ -24,7 +24,7 @@ func private @print_memref_f32(memref<*xf32>)
 
 // Creates and returns 5-D buffer of size (%s1, %s2, %s3, %s4, %s5) filled with the value %f
 func @alloc_5d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %s5 : index, %f : f32) -> memref<?x?x?x?x?xf32> {
-  %buf = alloc(%s1, %s2, %s3, %s4, %s5) : memref<?x?x?x?x?xf32>
+  %buf = memref.alloc(%s1, %s2, %s3, %s4, %s5) : memref<?x?x?x?x?xf32>
   linalg.fill(%buf, %f) : memref<?x?x?x?x?xf32>, f32
   return %buf : memref<?x?x?x?x?xf32>
 }
@@ -49,14 +49,14 @@ func @main() {
   %in3D_ncdhw = call @alloc_5d_filled_f32(%c1, %c1, %c8, %c8, %c8, %val) : (index, index, index, index, index, f32) -> (memref<?x?x?x?x?xf32>)
   %out3D_ncdhw = call @alloc_5d_filled_f32(%c1, %c1, %c6, %c6, %c6, %zero) : (index, index, index, index, index, f32) -> (memref<?x?x?x?x?xf32>)
 
-  store %f10, %in3D_ncdhw[%c0, %c0, %c0, %c0, %c3] : memref<?x?x?x?x?xf32>
+  memref.store %f10, %in3D_ncdhw[%c0, %c0, %c0, %c0, %c3] : memref<?x?x?x?x?xf32>
   call @conv_3d_ncdhw(%in3D_ncdhw, %filter3D_ncdhw, %out3D_ncdhw) : (memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>) -> ()
-  %out3D_ncdhw_ = memref_cast %out3D_ncdhw : memref<?x?x?x?x?xf32> to memref<*xf32>
+  %out3D_ncdhw_ = memref.cast %out3D_ncdhw : memref<?x?x?x?x?xf32> to memref<*xf32>
   call @print_memref_f32(%out3D_ncdhw_): (memref<*xf32>) -> ()
 
-  dealloc %filter3D_ncdhw : memref<?x?x?x?x?xf32>
-  dealloc %in3D_ncdhw : memref<?x?x?x?x?xf32>
-  dealloc %out3D_ncdhw : memref<?x?x?x?x?xf32>
+  memref.dealloc %filter3D_ncdhw : memref<?x?x?x?x?xf32>
+  memref.dealloc %in3D_ncdhw : memref<?x?x?x?x?xf32>
+  memref.dealloc %out3D_ncdhw : memref<?x?x?x?x?xf32>
   return
 }
 

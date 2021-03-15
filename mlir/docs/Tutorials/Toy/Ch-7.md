@@ -187,6 +187,9 @@ ToyDialect::ToyDialect(mlir::MLIRContext *ctx)
 }
 ```
 
+(An important note here is that when registering a type, the definition of the
+storage class must be visible.)
+
 With this we can now use our `StructType` when generating MLIR from Toy. See
 examples/toy/Ch7/mlir/MLIRGen.cpp for more details.
 

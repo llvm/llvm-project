@@ -1026,12 +1026,12 @@ public:
     if (__p.has_root_directory()) {
       path __root_name_str = root_name();
       __pn_ = __root_name_str.native();
-      __pn_ += __p.__pn_.substr(__p_root_name_size);
+      __pn_ += __string_view(__p.__pn_).substr(__p_root_name_size);
       return *this;
     }
     if (has_filename() || (!has_root_directory() && is_absolute()))
       __pn_ += preferred_separator;
-    __pn_ += __p.__pn_.substr(__p_root_name_size);
+    __pn_ += __string_view(__p.__pn_).substr(__p_root_name_size);
     return *this;
   }
   template <class _Source>

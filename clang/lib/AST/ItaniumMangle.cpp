@@ -628,21 +628,24 @@ static bool isInternalLinkageDecl(const NamedDecl *ND) {
   return false;
 }
 
-// Check if this Decl needs a unique internal linkage name.
+// Check if this Function Decl needs a unique internal linkage name.
 bool ItaniumMangleContextImpl::isUniqueInternalLinkageDecl(
     const NamedDecl *ND) {
   if (!NeedsUniqueInternalLinkageNames || !ND)
     return false;
 
+  const auto *FD = dyn_cast<FunctionDecl>(ND);
+  if (!FD)
+    return false;
+
   // For C functions without prototypes, return false as their
   // names should not be mangled.
-  if (auto *FD = dyn_cast<FunctionDecl>(ND)) {
-    if (!FD->getType()->getAs<FunctionProtoType>())
-      return false;
-  }
+  if (!FD->getType()->getAs<FunctionProtoType>())
+    return false;
 
   if (isInternalLinkageDecl(ND))
     return true;
+
   return false;
 }
 

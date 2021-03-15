@@ -1934,13 +1934,10 @@ void Generic_GCC::GCCInstallationDetector::init(
       // Typically /usr.
       AddDefaultGCCPrefixes(TargetTriple, Prefixes, D.SysRoot);
     }
-  }
 
-  // Try to respect gcc-config on Gentoo. However, do that only
-  // if --gcc-toolchain is not provided or equal to the Gentoo install
-  // in /usr. This avoids accidentally enforcing the system GCC version
-  // when using a custom toolchain.
-  if (GCCToolchainDir == "" || GCCToolchainDir == D.SysRoot + "/usr") {
+    // Try to respect gcc-config on Gentoo if --gcc-toolchain is not provided.
+    // This avoids accidentally enforcing the system GCC version when using a
+    // custom toolchain.
     SmallVector<StringRef, 16> GentooTestTriples;
     // Try to match an exact triple as target triple first.
     // e.g. crossdev -S x86_64-gentoo-linux-gnu will install gcc libs for

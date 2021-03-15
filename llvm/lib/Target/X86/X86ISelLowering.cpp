@@ -7216,6 +7216,14 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
   return true;
 }
 
+// Wrapper for getTargetShuffleMask with InUnary;
+static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
+                                 SmallVectorImpl<SDValue> &Ops,
+                                 SmallVectorImpl<int> &Mask) {
+  bool IsUnary;
+  return getTargetShuffleMask(N, VT, AllowSentinelZero, Ops, Mask, IsUnary);
+}
+
 /// Compute whether each element of a shuffle is zeroable.
 ///
 /// A "zeroable" vector shuffle element is one which can be lowered to zero.
@@ -7956,10 +7964,8 @@ static SDValue getShuffleScalarElt(SDValue Op, unsigned Index,
     int NumElems = (int)ShufVT.getVectorNumElements();
     SmallVector<int, 16> ShuffleMask;
     SmallVector<SDValue, 16> ShuffleOps;
-    bool IsUnary;
-
     if (!getTargetShuffleMask(Op.getNode(), ShufVT, true, ShuffleOps,
-                              ShuffleMask, IsUnary))
+                              ShuffleMask))
       return SDValue();
 
     int Elt = ShuffleMask[Index];
@@ -18848,7 +18854,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   // a blend shuffle with a rematerializable vector than a costly integer
   // insertion.
   if ((IsZeroElt || IsAllOnesElt) && Subtarget.hasSSE41() &&
-      16 <= EltSizeInBits) {
+      (16 <= EltSizeInBits || (IsZeroElt && !VT.is128BitVector()))) {
     SmallVector<int, 8> BlendMask;
     for (unsigned i = 0; i != NumElts; ++i)
       BlendMask.push_back(i == IdxVal ? i + NumElts : i);
@@ -34433,11 +34439,9 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   // Handle target shuffles.
   // TODO - use resolveTargetShuffleInputs once we can limit recursive depth.
   if (isTargetShuffle(Opc)) {
-    bool IsUnary;
     SmallVector<int, 64> Mask;
     SmallVector<SDValue, 2> Ops;
-    if (getTargetShuffleMask(Op.getNode(), VT.getSimpleVT(), true, Ops, Mask,
-                             IsUnary)) {
+    if (getTargetShuffleMask(Op.getNode(), VT.getSimpleVT(), true, Ops, Mask)) {
       unsigned NumOps = Ops.size();
       unsigned NumElts = VT.getVectorNumElements();
       if (Mask.size() == NumElts) {
@@ -34572,11 +34576,9 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
   // Handle target shuffles.
   // TODO - use resolveTargetShuffleInputs once we can limit recursive depth.
   if (isTargetShuffle(Opcode)) {
-    bool IsUnary;
     SmallVector<int, 64> Mask;
     SmallVector<SDValue, 2> Ops;
-    if (getTargetShuffleMask(Op.getNode(), VT.getSimpleVT(), true, Ops, Mask,
-                             IsUnary)) {
+    if (getTargetShuffleMask(Op.getNode(), VT.getSimpleVT(), true, Ops, Mask)) {
       unsigned NumOps = Ops.size();
       unsigned NumElts = VT.getVectorNumElements();
       if (Mask.size() == NumElts) {
@@ -36592,9 +36594,8 @@ static SmallVector<int, 4> getPSHUFShuffleMask(SDValue N) {
   MVT VT = N.getSimpleValueType();
   SmallVector<int, 4> Mask;
   SmallVector<SDValue, 2> Ops;
-  bool IsUnary;
   bool HaveMask =
-      getTargetShuffleMask(N.getNode(), VT, false, Ops, Mask, IsUnary);
+      getTargetShuffleMask(N.getNode(), VT, false, Ops, Mask);
   (void)HaveMask;
   assert(HaveMask);
 
@@ -36837,9 +36838,17 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
   unsigned Opc = N.getOpcode();
   switch (Opc) {
   // Unary and Unary+Permute Shuffles.
+  case X86ISD::PSHUFB: {
+    // Don't merge PSHUFB if it contains zero'd elements.
+    SmallVector<int> Mask;
+    SmallVector<SDValue> Ops;
+    if (!getTargetShuffleMask(N.getNode(), ShuffleVT.getSimpleVT(), false, Ops,
+                              Mask))
+      break;
+    LLVM_FALLTHROUGH;
+  }
   case X86ISD::VBROADCAST:
   case X86ISD::MOVDDUP:
-  case X86ISD::PSHUFB:
   case X86ISD::PSHUFD: {
     if (N.getOperand(0).getValueType() == ShuffleVT &&
         N->isOnlyUserOf(N.getOperand(0).getNode())) {
@@ -41191,14 +41200,11 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       LHS.getOpcode() == X86ISD::PSHUFB && RHS.getOpcode() == X86ISD::PSHUFB &&
       LHS.hasOneUse() && RHS.hasOneUse()) {
     MVT SimpleVT = VT.getSimpleVT();
-    bool LHSUnary, RHSUnary;
     SmallVector<SDValue, 1> LHSOps, RHSOps;
     SmallVector<int, 64> LHSMask, RHSMask, CondMask;
     if (createShuffleMaskFromVSELECT(CondMask, Cond) &&
-        getTargetShuffleMask(LHS.getNode(), SimpleVT, true, LHSOps, LHSMask,
-                             LHSUnary) &&
-        getTargetShuffleMask(RHS.getNode(), SimpleVT, true, RHSOps, RHSMask,
-                             RHSUnary)) {
+        getTargetShuffleMask(LHS.getNode(), SimpleVT, true, LHSOps, LHSMask) &&
+        getTargetShuffleMask(RHS.getNode(), SimpleVT, true, RHSOps, RHSMask)) {
       int NumElts = VT.getVectorNumElements();
       for (int i = 0; i != NumElts; ++i) {
         if (CondMask[i] < NumElts)
@@ -43381,6 +43387,35 @@ static SDValue combineVectorHADDSUB(SDNode *N, SelectionDAG &DAG,
   assert((X86ISD::HADD == N->getOpcode() || X86ISD::FHADD == N->getOpcode() ||
           X86ISD::HSUB == N->getOpcode() || X86ISD::FHSUB == N->getOpcode()) &&
          "Unexpected horizontal add/sub opcode");
+
+  // For slow-hop targets, if we have a hop with a single op, see if we already
+  // have another user that we can reuse and shuffle the result.
+  if (!shouldUseHorizontalOp(true, DAG, Subtarget)) {
+    MVT VT = N->getSimpleValueType(0);
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    if (VT.is128BitVector() && LHS == RHS) {
+      for (SDNode *User : LHS->uses()) {
+        if (User != N && User->getOpcode() == N->getOpcode()) {
+          MVT ShufVT = VT.isFloatingPoint() ? MVT::v4f32 : MVT::v4i32;
+          if (User->getOperand(0) == LHS && !User->getOperand(1).isUndef()) {
+            return DAG.getBitcast(
+                VT,
+                DAG.getVectorShuffle(ShufVT, SDLoc(N),
+                                     DAG.getBitcast(ShufVT, SDValue(User, 0)),
+                                     DAG.getUNDEF(ShufVT), {0, 1, 0, 1}));
+          }
+          if (User->getOperand(1) == LHS && !User->getOperand(0).isUndef()) {
+            return DAG.getBitcast(
+                VT,
+                DAG.getVectorShuffle(ShufVT, SDLoc(N),
+                                     DAG.getBitcast(ShufVT, SDValue(User, 0)),
+                                     DAG.getUNDEF(ShufVT), {2, 3, 2, 3}));
+          }
+        }
+      }
+    }
+  }
 
   // Try to fold HOP(SHUFFLE(),SHUFFLE()) -> SHUFFLE(HOP()).
   if (SDValue V = combineHorizOpWithShuffle(N, DAG, Subtarget))
@@ -45741,13 +45776,12 @@ static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
       Op = Op.getOperand(0);
       UseSubVector = true;
     }
-    bool IsUnary;
     SmallVector<SDValue, 2> SrcOps;
     SmallVector<int, 16> SrcShuffleMask;
     SDValue BC = peekThroughBitcasts(Op);
     if (isTargetShuffle(BC.getOpcode()) &&
         getTargetShuffleMask(BC.getNode(), BC.getSimpleValueType(), false,
-                             SrcOps, SrcShuffleMask, IsUnary)) {
+                             SrcOps, SrcShuffleMask)) {
       if (!UseSubVector && SrcShuffleMask.size() == NumElts &&
           SrcOps.size() <= 2) {
         N0 = SrcOps.size() > 0 ? SrcOps[0] : SDValue();
@@ -49097,14 +49131,22 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
 
+  // TODO: Add NoOpaque handling to isConstantIntBuildVectorOrConstantInt.
+  auto IsNonOpaqueConstant = [&](SDValue Op) {
+    if (SDNode *C = DAG.isConstantIntBuildVectorOrConstantInt(Op)) {
+      if (auto *Cst = dyn_cast<ConstantSDNode>(C))
+        return !Cst->isOpaque();
+      return true;
+    }
+    return false;
+  };
+
   // X86 can't encode an immediate LHS of a sub. See if we can push the
   // negation into a preceding instruction. If the RHS of the sub is a XOR with
   // one use and a constant, invert the immediate, saving one register.
   // sub(C1, xor(X, C2)) -> add(xor(X, ~C2), C1+1)
-  if (Op1.getOpcode() == ISD::XOR &&
-      DAG.isConstantIntBuildVectorOrConstantInt(Op0) &&
-      DAG.isConstantIntBuildVectorOrConstantInt(Op1.getOperand(1)) &&
-      Op1->hasOneUse()) {
+  if (Op1.getOpcode() == ISD::XOR && IsNonOpaqueConstant(Op0) &&
+      IsNonOpaqueConstant(Op1.getOperand(1)) && Op1->hasOneUse()) {
     SDLoc DL(N);
     EVT VT = Op0.getValueType();
     SDValue NewXor = DAG.getNode(ISD::XOR, SDLoc(Op1), VT, Op1.getOperand(0),
@@ -49304,11 +49346,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         int NumSrcElts = OpVT.getVectorNumElements();
         SmallVector<int, 64> ConcatMask;
         for (unsigned i = 0; i != NumOps; ++i) {
-          bool IsUnary;
           SmallVector<int, 64> SubMask;
           SmallVector<SDValue, 2> SubOps;
           if (!getTargetShuffleMask(Ops[i].getNode(), OpVT, false, SubOps,
-                                    SubMask, IsUnary))
+                                    SubMask))
             break;
           for (int M : SubMask) {
             if (0 <= M) {

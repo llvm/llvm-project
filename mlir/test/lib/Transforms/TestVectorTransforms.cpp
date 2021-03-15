@@ -11,6 +11,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
@@ -268,7 +269,7 @@ struct TestVectorToLoopPatterns
           type.getNumElements() % multiplicity != 0)
         return mlir::WalkResult::advance();
       auto filterAlloc = [](Operation *op) {
-        if (isa<ConstantOp, AllocOp, CallOp>(op))
+        if (isa<ConstantOp, memref::AllocOp, CallOp>(op))
           return false;
         return true;
       };
@@ -335,7 +336,8 @@ struct TestVectorTransferFullPartialSplitPatterns
       const TestVectorTransferFullPartialSplitPatterns &pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, linalg::LinalgDialect, scf::SCFDialect>();
+    registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
+                    scf::SCFDialect>();
   }
 
   Option<bool> useLinalgOps{
@@ -359,6 +361,18 @@ struct TestVectorTransferFullPartialSplitPatterns
 struct TestVectorTransferOpt
     : public PassWrapper<TestVectorTransferOpt, FunctionPass> {
   void runOnFunction() override { transferOpflowOpt(getFunction()); }
+};
+
+struct TestVectorTransferLoweringPatterns
+    : public PassWrapper<TestVectorTransferLoweringPatterns, FunctionPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<memref::MemRefDialect>();
+  }
+  void runOnFunction() override {
+    OwningRewritePatternList patterns;
+    populateVectorTransferLoweringPatterns(patterns, &getContext());
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
 };
 
 } // end anonymous namespace
@@ -390,16 +404,23 @@ void registerTestVectorConversions() {
       vectorTransformFullPartialPass("test-vector-transfer-full-partial-split",
                                      "Test conversion patterns to split "
                                      "transfer ops via scf.if + linalg ops");
+
   PassRegistration<TestVectorDistributePatterns> distributePass(
       "test-vector-distribute-patterns",
       "Test conversion patterns to distribute vector ops in the vector "
       "dialect");
+
   PassRegistration<TestVectorToLoopPatterns> vectorToForLoop(
       "test-vector-to-forloop",
       "Test conversion patterns to break up a vector op into a for loop");
+
   PassRegistration<TestVectorTransferOpt> transferOpOpt(
       "test-vector-transferop-opt",
       "Test optimization transformations for transfer ops");
+
+  PassRegistration<TestVectorTransferLoweringPatterns> transferOpLoweringPass(
+      "test-vector-transfer-lowering-patterns",
+      "Test conversion patterns to lower transfer ops to other vector ops");
 }
 } // namespace test
 } // namespace mlir

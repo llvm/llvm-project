@@ -132,7 +132,7 @@ contains
   end subroutine
 end module m1
 
-module t2
+module m2
   type parent
     real realField
   contains
@@ -147,7 +147,71 @@ module t2
 contains
   subroutine proc 
   end subroutine
-end module t2
+end module m2
+
+module m3
+  type t
+  contains
+    procedure b
+  end type
+contains
+  !ERROR: Cannot use an alternate return as the passed-object dummy argument
+  subroutine b(*)
+    return 1
+  end subroutine
+end module m3
+
+module m4
+  type t
+  contains
+    procedure b
+  end type
+contains
+  ! Check to see that alternate returns work with default PASS arguments
+  subroutine b(this, *)
+    class(t) :: this
+    return 1
+  end subroutine
+end module m4
+
+module m5
+  type t
+  contains
+    !ERROR: Passed-object dummy argument 'passarg' of procedure 'b' must be of type 't' but is 'INTEGER(4)'
+    procedure, pass(passArg) ::  b
+  end type
+contains
+  subroutine b(*, passArg)
+    integer :: passArg
+    return 1
+  end subroutine
+end module m5
+
+module m6
+  type t
+  contains
+    !ERROR: Passed-object dummy argument 'passarg' of procedure 'b' must be polymorphic because 't' is extensible
+    procedure, pass(passArg) ::  b
+  end type
+contains
+  subroutine b(*, passArg)
+    type(t) :: passArg
+    return 1
+  end subroutine
+end module m6
+
+module m7
+  type t
+  contains
+  ! Check to see that alternate returns work with PASS arguments
+    procedure, pass(passArg) ::  b
+  end type
+contains
+  subroutine b(*, passArg)
+    class(t) :: passArg
+    return 1
+  end subroutine
+end module m7
 
 program test
   use m1

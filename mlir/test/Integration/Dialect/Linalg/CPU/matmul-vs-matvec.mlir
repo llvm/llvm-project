@@ -9,9 +9,9 @@ func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %f0 = constant 0.0 : f32
-  %x = dim %A, %c0 : memref<?x?xf32>
-  %y = dim %B, %c1 : memref<?x?xf32>
-  %C = alloc(%x, %y) : memref<?x?xf32>
+  %x = memref.dim %A, %c0 : memref<?x?xf32>
+  %y = memref.dim %B, %c1 : memref<?x?xf32>
+  %C = memref.alloc(%x, %y) : memref<?x?xf32>
   linalg.fill(%C, %f0) : memref<?x?xf32>, f32
   linalg.matmul ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
                 outs(%C: memref<?x?xf32>)
@@ -22,14 +22,14 @@ func @matvec(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %f0 = constant 0.0 : f32
-  %m = dim %A, %c0 : memref<?x?xf32>
-  %x = dim %A, %c1 : memref<?x?xf32>
-  %n = dim %B, %c1 : memref<?x?xf32>
-  %C = alloc(%m, %n) : memref<?x?xf32>
+  %m = memref.dim %A, %c0 : memref<?x?xf32>
+  %x = memref.dim %A, %c1 : memref<?x?xf32>
+  %n = memref.dim %B, %c1 : memref<?x?xf32>
+  %C = memref.alloc(%m, %n) : memref<?x?xf32>
   linalg.fill(%C, %f0) : memref<?x?xf32>, f32
   scf.for %i = %c0 to %n step %c1 {
-    %b = subview %B[0, %i][%x, 1][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [?]>
-    %c = subview %C[0, %i][%m, 1][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [?]>
+    %b = memref.subview %B[0, %i][%x, 1][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [?]>
+    %c = memref.subview %C[0, %i][%m, 1][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [?]>
     linalg.matvec ins(%A, %b: memref<?x?xf32>, memref<?xf32, offset: ?, strides: [?]>)
                   outs(%c: memref<?xf32, offset: ?, strides: [?]>)
   }
@@ -44,22 +44,22 @@ func @main() {
   %n = constant 2 : index
   %val1 = constant 13.0 : f32
   %val2 = constant 17.0 : f32
-  %A = alloc(%m, %x) : memref<?x?xf32>
-  %B = alloc(%x, %n) : memref<?x?xf32>
+  %A = memref.alloc(%m, %x) : memref<?x?xf32>
+  %B = memref.alloc(%x, %n) : memref<?x?xf32>
   linalg.fill(%A, %val1) : memref<?x?xf32>, f32
   linalg.fill(%B, %val2) : memref<?x?xf32>, f32
-  store %val1, %B[%c0, %c0] : memref<?x?xf32>
+  memref.store %val1, %B[%c0, %c0] : memref<?x?xf32>
   %C1 = call @matmul(%A, %B) : (memref<?x?xf32>, memref<?x?xf32>) -> memref<?x?xf32>
   %C2 = call @matvec(%A, %B) : (memref<?x?xf32>, memref<?x?xf32>) -> memref<?x?xf32>
   scf.for %i = %c0 to %m step %c1 {
     scf.for %j = %c0 to %n step %c1 {
-      %e1 = load %C1[%i, %j] : memref<?x?xf32>
-      %e2 = load %C2[%i, %j] : memref<?x?xf32>
+      %e1 = memref.load %C1[%i, %j] : memref<?x?xf32>
+      %e2 = memref.load %C2[%i, %j] : memref<?x?xf32>
       %c = cmpf oeq, %e1, %e2 : f32
       assert %c, "Matmul does not produce same output as matvec"
     }
   }
-  %C2_ = memref_cast %C2 : memref<?x?xf32> to memref<*xf32>
+  %C2_ = memref.cast %C2 : memref<?x?xf32> to memref<*xf32>
   call @print_memref_f32(%C2_) : (memref<*xf32>) -> ()
   return
 }

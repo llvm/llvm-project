@@ -52,22 +52,6 @@ EXTERN __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
   return __builtin_amdgcn_read_exec();
 }
 
-EXTERN int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t, int32_t var,
-                                     int32_t srcLane) {
-  int width = WARPSIZE;
-  int self = GetLaneId();
-  int index = srcLane + (self & ~(width - 1));
-  return __builtin_amdgcn_ds_bpermute(index << 2, var);
-}
-
-EXTERN int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
-                                          uint32_t laneDelta, int32_t width) {
-  int self = GetLaneId();
-  int index = self + laneDelta;
-  index = (int)(laneDelta + (self & (width - 1))) >= width ? self : index;
-  return __builtin_amdgcn_ds_bpermute(index << 2, var);
-}
-
 uint32_t __kmpc_L1_Barrier [[clang::loader_uninitialized]];
 #pragma allocate(__kmpc_L1_Barrier) allocator(omp_pteam_mem_alloc)
 

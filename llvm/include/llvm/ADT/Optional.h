@@ -381,7 +381,7 @@ constexpr bool operator!=(NoneType, const Optional<T> &X) {
   return X != None;
 }
 
-template <typename T> constexpr bool operator<(const Optional<T> &X, NoneType) {
+template <typename T> constexpr bool operator<(const Optional<T> &, NoneType) {
   return false;
 }
 

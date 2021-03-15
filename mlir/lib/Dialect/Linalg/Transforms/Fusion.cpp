@@ -18,6 +18,8 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/MemRef/EDSC/Intrinsics.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExpr.h"
@@ -104,11 +106,12 @@ static LinalgOp cloneWithLoopRanges(OpBuilder &b, Location loc, LinalgOp op,
     SmallVector<OpFoldResult, 4> offsets, sizes, strides;
     inferShapeComponents(map, loopRanges, offsets, sizes, strides);
     Value shape = en.value();
-    Value sub = shape.getType().isa<MemRefType>()
-                    ? b.create<SubViewOp>(loc, shape, offsets, sizes, strides)
-                          .getResult()
-                    : b.create<SubTensorOp>(loc, shape, offsets, sizes, strides)
-                          .getResult();
+    Value sub =
+        shape.getType().isa<MemRefType>()
+            ? b.create<memref::SubViewOp>(loc, shape, offsets, sizes, strides)
+                  .getResult()
+            : b.create<SubTensorOp>(loc, shape, offsets, sizes, strides)
+                  .getResult();
     clonedShapes.push_back(sub);
   }
   // Append the other operands.
@@ -177,8 +180,8 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
     // `ViewInterface`. The interface needs a `getOrCreateRanges` method which
     // currently returns a `linalg.range`. The fix here is to move this op to
     // `std` dialect and add the method to `ViewInterface`.
-    if (fromSubViewOpOnly &&
-        !isa_and_nonnull<SubViewOp, SubTensorOp>(en.value().getDefiningOp()))
+    if (fromSubViewOpOnly && !isa_and_nonnull<memref::SubViewOp, SubTensorOp>(
+                                 en.value().getDefiningOp()))
       continue;
 
     unsigned idx = en.index();
@@ -227,9 +230,8 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
                  << "existing LoopRange: " << loopRanges[i] << "\n");
     else {
       auto shapeDim = getShapeDefiningLoopRange(producer, i);
-      loopRanges[i] = Range{std_constant_index(0),
-                            std_dim(shapeDim.shape, shapeDim.dimension),
-                            std_constant_index(1)};
+      Value dim = memref_dim(shapeDim.shape, shapeDim.dimension);
+      loopRanges[i] = Range{std_constant_index(0), dim, std_constant_index(1)};
       LLVM_DEBUG(llvm::dbgs() << "new LoopRange: " << loopRanges[i] << "\n");
     }
   }
@@ -242,7 +244,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
 static Range getRangeFromOperandShape(OpBuilder &b, Location loc,
                                       Value shapedOperand, unsigned dim) {
   Operation *shapeProducingOp = shapedOperand.getDefiningOp();
-  if (auto subViewOp = dyn_cast<SubViewOp>(shapeProducingOp))
+  if (auto subViewOp = dyn_cast<memref::SubViewOp>(shapeProducingOp))
     return subViewOp.getOrCreateRanges(b, loc)[dim];
   if (auto subTensorOp = dyn_cast<SubTensorOp>(shapeProducingOp))
     return subTensorOp.getOrCreateRanges(b, loc)[dim];
@@ -425,7 +427,7 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
 
   // Must be a subview or a slice to guarantee there are loops we can fuse
   // into.
-  auto subView = consumerOpOperand.get().getDefiningOp<SubViewOp>();
+  auto subView = consumerOpOperand.get().getDefiningOp<memref::SubViewOp>();
   if (!subView) {
     LLVM_DEBUG(llvm::dbgs() << "\nNot fusable (not a subview)");
     return llvm::None;

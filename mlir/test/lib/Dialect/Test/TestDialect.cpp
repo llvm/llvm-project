@@ -9,6 +9,8 @@
 #include "TestDialect.h"
 #include "TestAttributes.h"
 #include "TestTypes.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -165,20 +167,14 @@ struct TestInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void TestDialect::initialize() {
+  registerAttributes();
+  registerTypes();
   addOperations<
 #define GET_OP_LIST
 #include "TestOps.cpp.inc"
       >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "TestAttrDefs.cpp.inc"
-      >();
   addInterfaces<TestOpAsmInterface, TestDialectFoldInterface,
                 TestInlinerInterface>();
-  addTypes<TestType, TestRecursiveType,
-#define GET_TYPEDEF_LIST
-#include "TestTypeDefs.cpp.inc"
-           >();
   allowUnknownOperations();
 }
 
@@ -685,7 +681,7 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::reifyReturnTypeShapes(
     OpBuilder &builder, llvm::SmallVectorImpl<Value> &shapes) {
   shapes = SmallVector<Value, 1>{
-      builder.createOrFold<DimOp>(getLoc(), getOperand(0), 0)};
+      builder.createOrFold<memref::DimOp>(getLoc(), getOperand(0), 0)};
   return success();
 }
 

@@ -14,6 +14,8 @@
 
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
@@ -68,6 +70,12 @@ void gpu::SerializeToBlobPass::runOnOperation() {
   getOperation()->setAttr(gpuBinaryAnnotation, attr);
 }
 
+void gpu::SerializeToBlobPass::getDependentDialects(
+    DialectRegistry &registry) const {
+  registerLLVMDialectTranslation(registry);
+  OperationPass<gpu::GPUModuleOp>::getDependentDialects(registry);
+}
+
 std::unique_ptr<llvm::TargetMachine>
 gpu::SerializeToBlobPass::createTargetMachine() {
   Location loc = getOperation().getLoc();
@@ -86,4 +94,10 @@ gpu::SerializeToBlobPass::createTargetMachine() {
   }
 
   return std::unique_ptr<llvm::TargetMachine>{machine};
+}
+
+std::unique_ptr<llvm::Module>
+gpu::SerializeToBlobPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
+  return translateModuleToLLVMIR(getOperation(), llvmContext,
+                                 "LLVMDialectModule");
 }

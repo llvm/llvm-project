@@ -3125,7 +3125,7 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
 
     llvm::Value *IntMin =
       Builder.getInt(llvm::APInt::getSignedMinValue(Ty->getBitWidth()));
-    llvm::Value *NegOne = llvm::ConstantInt::get(Ty, -1ULL);
+    llvm::Value *NegOne = llvm::Constant::getAllOnesValue(Ty);
 
     llvm::Value *LHSCmp = Builder.CreateICmpNE(Ops.LHS, IntMin);
     llvm::Value *RHSCmp = Builder.CreateICmpNE(Ops.RHS, NegOne);
@@ -3155,6 +3155,21 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
       EmitBinOpCheck(std::make_pair(NonZero, SanitizerKind::FloatDivideByZero),
                      Ops);
     }
+  }
+
+  if (Ops.Ty->isConstantMatrixType()) {
+    llvm::MatrixBuilder<CGBuilderTy> MB(Builder);
+    // We need to check the types of the operands of the operator to get the
+    // correct matrix dimensions.
+    auto *BO = cast<BinaryOperator>(Ops.E);
+    (void)BO;
+    assert(
+        isa<ConstantMatrixType>(BO->getLHS()->getType().getCanonicalType()) &&
+        "first operand must be a matrix");
+    assert(BO->getRHS()->getType().getCanonicalType()->isArithmeticType() &&
+           "second operand must be an arithmetic type");
+    return MB.CreateScalarDiv(Ops.LHS, Ops.RHS,
+                              Ops.Ty->hasUnsignedIntegerRepresentation());
   }
 
   if (Ops.LHS->getType()->isFPOrFPVectorTy()) {

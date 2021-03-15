@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRStandardOpsTransforms
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRMemRef
   MLIRPass
   MLIRSCF
   MLIRStandard

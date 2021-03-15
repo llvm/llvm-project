@@ -3912,12 +3912,8 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C5]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; CHECK:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
-  ; CHECK:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C6]](s32)
-  ; CHECK:   G_STORE [[FRAME_INDEX]](p5), [[PTR_ADD2]](p5) :: (store 4 into stack, align 16, addrspace 5)
-  ; CHECK:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
+  ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
   ; CHECK:   $sgpr6_sgpr7 = COPY [[COPY11]](p4)
   ; CHECK:   $sgpr8_sgpr9 = COPY [[PTR_ADD1]](p4)

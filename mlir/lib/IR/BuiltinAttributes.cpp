@@ -9,6 +9,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "AttributeDetail.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IntegerSet.h"
@@ -27,6 +28,18 @@ using namespace mlir::detail;
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/IR/BuiltinAttributes.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// BuiltinDialect
+//===----------------------------------------------------------------------===//
+
+void BuiltinDialect::registerAttributes() {
+  addAttributes<AffineMapAttr, ArrayAttr, DenseIntOrFPElementsAttr,
+                DenseStringElementsAttr, DictionaryAttr, FloatAttr,
+                SymbolRefAttr, IntegerAttr, IntegerSetAttr, OpaqueAttr,
+                OpaqueElementsAttr, SparseElementsAttr, StringAttr, TypeAttr,
+                UnitAttr>();
+}
 
 //===----------------------------------------------------------------------===//
 // DictionaryAttr

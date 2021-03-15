@@ -25,10 +25,7 @@ void PDLDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/PDL/IR/PDLOps.cpp.inc"
       >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/PDL/IR/PDLOpsTypes.cpp.inc"
-      >();
+  registerTypes();
 }
 
 /// Returns true if the given operation is used by a "binding" pdl operation

@@ -1062,8 +1062,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     llvm::Function::arg_iterator EI = CurFn->arg_end();
     --EI;
     llvm::Value *Addr = Builder.CreateStructGEP(nullptr, &*EI, Idx);
+    llvm::Type *Ty =
+        cast<llvm::GetElementPtrInst>(Addr)->getResultElementType();
     ReturnValuePointer = Address(Addr, getPointerAlign());
-    Addr = Builder.CreateAlignedLoad(Addr, getPointerAlign(), "agg.result");
+    Addr = Builder.CreateAlignedLoad(Ty, Addr, getPointerAlign(), "agg.result");
     ReturnValue = Address(Addr, CGM.getNaturalTypeAlignment(RetTy));
   } else {
     ReturnValue = CreateIRTemp(RetTy, "retval");
@@ -1814,8 +1816,8 @@ static void emitNonZeroVLAInit(CodeGenFunction &CGF, QualType baseType,
 
   Address begin =
     Builder.CreateElementBitCast(dest, CGF.Int8Ty, "vla.begin");
-  llvm::Value *end =
-    Builder.CreateInBoundsGEP(begin.getPointer(), sizeInChars, "vla.end");
+  llvm::Value *end = Builder.CreateInBoundsGEP(
+      begin.getElementType(), begin.getPointer(), sizeInChars, "vla.end");
 
   llvm::BasicBlock *originBB = CGF.Builder.GetInsertBlock();
   llvm::BasicBlock *loopBB = CGF.createBasicBlock("vla-init.loop");
@@ -2022,9 +2024,9 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
     addr = Builder.CreateElementBitCast(addr, baseType, "array.begin");
   } else {
     // Create the actual GEP.
-    addr = Address(Builder.CreateInBoundsGEP(addr.getPointer(),
-                                             gepIndices, "array.begin"),
-                   addr.getAlignment());
+    addr = Address(Builder.CreateInBoundsGEP(
+        addr.getElementType(), addr.getPointer(), gepIndices, "array.begin"),
+        addr.getAlignment());
   }
 
   baseType = eltType;

@@ -163,7 +163,7 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
     // For ByVal, alignment should be passed from FE.  BE will guess if
     // this info is not there but there are cases it cannot get right.
     Align FrameAlign;
-    if (auto ParamAlign = FuncInfo.getParamAlign(OpIdx - 2))
+    if (auto ParamAlign = FuncInfo.getParamAlign(OpIdx - 1))
       FrameAlign = *ParamAlign;
     else
       FrameAlign = Align(getTLI()->getByValTypeAlignment(ElementTy, DL));
@@ -627,7 +627,9 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       Register ArgReg = Args[i].Regs[Part];
       // There should be Regs.size() ArgLocs per argument.
       VA = ArgLocs[j + Part];
-      if (VA.isMemLoc()) {
+      const ISD::ArgFlagsTy Flags = Args[i].Flags[Part];
+
+      if (VA.isMemLoc() && !Flags.isByVal()) {
         // Individual pieces may have been spilled to the stack and others
         // passed in registers.
 
@@ -637,13 +639,29 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
                                               : LocVT.getStoreSize();
         unsigned Offset = VA.getLocMemOffset();
         MachinePointerInfo MPO;
-        Register StackAddr = Handler.getStackAddress(MemSize, Offset, MPO);
+        Register StackAddr =
+            Handler.getStackAddress(MemSize, Offset, MPO, Flags);
         Handler.assignValueToAddress(Args[i], Part, StackAddr, MemSize, MPO,
                                      VA);
         continue;
       }
 
-      assert(VA.isRegLoc() && "custom loc should have been handled already");
+      if (VA.isMemLoc() && Flags.isByVal()) {
+        // FIXME: We should be inserting a memcpy from the source pointer to the
+        // result for outgoing byval parameters.
+        if (!Handler.isIncomingArgumentHandler())
+          continue;
+
+        MachinePointerInfo MPO;
+        Register StackAddr = Handler.getStackAddress(
+            Flags.getByValSize(), VA.getLocMemOffset(), MPO, Flags);
+        assert(Args[i].Regs.size() == 1 &&
+               "didn't expect split byval pointer");
+        MIRBuilder.buildCopy(Args[i].Regs[0], StackAddr);
+        continue;
+      }
+
+      assert(!VA.needsCustom() && "custom loc should have been handled already");
 
       if (i == 0 && ThisReturnReg.isValid() &&
           Handler.isIncomingArgumentHandler() &&

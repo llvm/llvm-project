@@ -61,6 +61,8 @@ public:
 
 private:
   // Translates the 'getOperation()' result to an LLVM module.
+  // Note: when this class is removed, this function no longer needs to be
+  // virtual.
   std::unique_ptr<llvm::Module>
   translateToLLVMIR(llvm::LLVMContext &llvmContext) override {
     return loweringCallback(getOperation(), llvmContext, "LLVMDialectModule");

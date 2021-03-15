@@ -44,7 +44,7 @@ struct A3 {
 
   bool operator==(const A3 &) const = default; // expected-warning {{implicitly deleted}}
   bool operator<(const A3 &) const = default;  // expected-warning {{implicitly deleted}}
-  // expected-note@-1 {{because there is no viable comparison function}}
+  // expected-note@-1 {{because there is no viable three-way comparison function for 'A3'}}
 };
 
 struct B1 {

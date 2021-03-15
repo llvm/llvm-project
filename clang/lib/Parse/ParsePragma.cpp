@@ -14,11 +14,13 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Token.h"
 #include "clang/Parse/LoopHint.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/Scope.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
 using namespace clang;
 
@@ -292,6 +294,10 @@ struct PragmaMaxTokensTotalHandler : public PragmaHandler {
                     Token &FirstToken) override;
 };
 
+void markAsReinjectedForRelexing(llvm::MutableArrayRef<clang::Token> Toks) {
+  for (auto &T : Toks)
+    T.setFlag(clang::Token::IsReinjected);
+}
 }  // end namespace
 
 void Parser::initializePragmaHandlers() {
@@ -771,12 +777,10 @@ void Parser::HandlePragmaOpenCLExtension() {
   // overriding all previously issued extension directives, but only if the
   // behavior is set to disable."
   if (Name == "all") {
-    if (State == Disable) {
+    if (State == Disable)
       Opt.disableAll();
-      Opt.enableSupportedCore(getLangOpts());
-    } else {
+    else
       PP.Diag(NameLoc, diag::warn_pragma_expected_predicate) << 1;
-    }
   } else if (State == Begin) {
     if (!Opt.isKnown(Name) || !Opt.isSupported(Name, getLangOpts())) {
       Opt.support(Name);
@@ -2621,6 +2625,7 @@ void PragmaMSPragma::HandlePragma(Preprocessor &PP,
   TokenVector.push_back(EoF);
   // We must allocate this array with new because EnterTokenStream is going to
   // delete it later.
+  markAsReinjectedForRelexing(TokenVector);
   auto TokenArray = std::make_unique<Token[]>(TokenVector.size());
   std::copy(TokenVector.begin(), TokenVector.end(), TokenArray.get());
   auto Value = new (PP.getPreprocessorAllocator())
@@ -3178,6 +3183,7 @@ static bool ParseLoopHintValue(Preprocessor &PP, Token &Tok, Token PragmaName,
   EOFTok.setLocation(Tok.getLocation());
   ValueList.push_back(EOFTok); // Terminates expression for parsing.
 
+  markAsReinjectedForRelexing(ValueList);
   Info.Toks = llvm::makeArrayRef(ValueList).copy(PP.getPreprocessorAllocator());
 
   Info.PragmaName = PragmaName;
@@ -3634,6 +3640,7 @@ void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
     EOFTok.setLocation(EndLoc);
     AttributeTokens.push_back(EOFTok);
 
+    markAsReinjectedForRelexing(AttributeTokens);
     Info->Tokens =
         llvm::makeArrayRef(AttributeTokens).copy(PP.getPreprocessorAllocator());
   }

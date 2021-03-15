@@ -5,32 +5,32 @@
 
 // CHECK-LABEL: func @permute()
 func @permute() {
-  %A = alloc() : memref<64x256xf32, affine_map<(d0, d1) -> (d1, d0)>>
+  %A = memref.alloc() : memref<64x256xf32, affine_map<(d0, d1) -> (d1, d0)>>
   affine.for %i = 0 to 64 {
     affine.for %j = 0 to 256 {
       %1 = affine.load %A[%i, %j] : memref<64x256xf32, affine_map<(d0, d1) -> (d1, d0)>>
       "prevent.dce"(%1) : (f32) -> ()
     }
   }
-  dealloc %A : memref<64x256xf32, affine_map<(d0, d1) -> (d1, d0)>>
+  memref.dealloc %A : memref<64x256xf32, affine_map<(d0, d1) -> (d1, d0)>>
   return
 }
 // The old memref alloc should disappear.
 // CHECK-NOT:  memref<64x256xf32>
-// CHECK:      [[MEM:%[0-9]+]] = alloc() : memref<256x64xf32>
+// CHECK:      [[MEM:%[0-9]+]] = memref.alloc() : memref<256x64xf32>
 // CHECK-NEXT: affine.for %[[I:arg[0-9]+]] = 0 to 64 {
 // CHECK-NEXT:   affine.for %[[J:arg[0-9]+]] = 0 to 256 {
 // CHECK-NEXT:     affine.load [[MEM]][%[[J]], %[[I]]] : memref<256x64xf32>
 // CHECK-NEXT:     "prevent.dce"
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
-// CHECK-NEXT: dealloc [[MEM]]
+// CHECK-NEXT: memref.dealloc [[MEM]]
 // CHECK-NEXT: return
 
 // CHECK-LABEL: func @shift
 func @shift(%idx : index) {
-  // CHECK-NEXT: alloc() : memref<65xf32>
-  %A = alloc() : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
+  // CHECK-NEXT: memref.alloc() : memref<65xf32>
+  %A = memref.alloc() : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
   // CHECK-NEXT: affine.load %{{.*}}[symbol(%arg0) + 1] : memref<65xf32>
   affine.load %A[%idx] : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
   affine.for %i = 0 to 64 {
@@ -44,7 +44,7 @@ func @shift(%idx : index) {
 // CHECK-LABEL: func @high_dim_permute()
 func @high_dim_permute() {
   // CHECK-NOT: memref<64x128x256xf32,
-  %A = alloc() : memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
+  %A = memref.alloc() : memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
   // CHECK: %[[I:arg[0-9]+]]
   affine.for %i = 0 to 64 {
     // CHECK: %[[J:arg[0-9]+]]
@@ -62,16 +62,16 @@ func @high_dim_permute() {
 
 // CHECK-LABEL: func @invalid_map
 func @invalid_map() {
-  %A = alloc() : memref<64x128xf32, affine_map<(d0, d1) -> (d0, -d1 - 10)>>
-  // CHECK: %{{.*}} = alloc() : memref<64x128xf32,
+  %A = memref.alloc() : memref<64x128xf32, affine_map<(d0, d1) -> (d0, -d1 - 10)>>
+  // CHECK: %{{.*}} = memref.alloc() : memref<64x128xf32,
   return
 }
 
 // A tiled layout.
 // CHECK-LABEL: func @data_tiling
 func @data_tiling(%idx : index) {
-  // CHECK: alloc() : memref<8x32x8x16xf32>
-  %A = alloc() : memref<64x512xf32, affine_map<(d0, d1) -> (d0 floordiv 8, d1 floordiv 16, d0 mod 8, d1 mod 16)>>
+  // CHECK: memref.alloc() : memref<8x32x8x16xf32>
+  %A = memref.alloc() : memref<64x512xf32, affine_map<(d0, d1) -> (d0 floordiv 8, d1 floordiv 16, d0 mod 8, d1 mod 16)>>
   // CHECK: affine.load %{{.*}}[symbol(%arg0) floordiv 8, symbol(%arg0) floordiv 16, symbol(%arg0) mod 8, symbol(%arg0) mod 16]
   %1 = affine.load %A[%idx, %idx] : memref<64x512xf32, affine_map<(d0, d1) -> (d0 floordiv 8, d1 floordiv 16, d0 mod 8, d1 mod 16)>>
   "prevent.dce"(%1) : (f32) -> ()
@@ -81,7 +81,7 @@ func @data_tiling(%idx : index) {
 // Strides 2 and 4 along respective dimensions.
 // CHECK-LABEL: func @strided
 func @strided() {
-  %A = alloc() : memref<64x128xf32, affine_map<(d0, d1) -> (2*d0, 4*d1)>>
+  %A = memref.alloc() : memref<64x128xf32, affine_map<(d0, d1) -> (2*d0, 4*d1)>>
   // CHECK: affine.for %[[IV0:.*]] =
   affine.for %i = 0 to 64 {
     // CHECK: affine.for %[[IV1:.*]] =
@@ -97,7 +97,7 @@ func @strided() {
 // Strided, but the strides are in the linearized space.
 // CHECK-LABEL: func @strided_cumulative
 func @strided_cumulative() {
-  %A = alloc() : memref<2x5xf32, affine_map<(d0, d1) -> (3*d0 + 17*d1)>>
+  %A = memref.alloc() : memref<2x5xf32, affine_map<(d0, d1) -> (3*d0 + 17*d1)>>
   // CHECK: affine.for %[[IV0:.*]] =
   affine.for %i = 0 to 2 {
     // CHECK: affine.for %[[IV1:.*]] =
@@ -114,8 +114,8 @@ func @strided_cumulative() {
 // when the index remap has symbols.
 // CHECK-LABEL: func @symbolic_operands
 func @symbolic_operands(%s : index) {
-  // CHECK: alloc() : memref<100xf32>
-  %A = alloc()[%s] : memref<10x10xf32, affine_map<(d0,d1)[s0] -> (10*d0 + d1)>>
+  // CHECK: memref.alloc() : memref<100xf32>
+  %A = memref.alloc()[%s] : memref<10x10xf32, affine_map<(d0,d1)[s0] -> (10*d0 + d1)>>
   affine.for %i = 0 to 10 {
     affine.for %j = 0 to 10 {
       // CHECK: affine.load %{{.*}}[%{{.*}} * 10 + %{{.*}}] : memref<100xf32>
@@ -129,7 +129,7 @@ func @symbolic_operands(%s : index) {
 // Semi-affine maps, normalization not implemented yet.
 // CHECK-LABEL: func @semi_affine_layout_map
 func @semi_affine_layout_map(%s0: index, %s1: index) {
-  %A = alloc()[%s0, %s1] : memref<256x1024xf32, affine_map<(d0, d1)[s0, s1] -> (d0*s0 + d1*s1)>>
+  %A = memref.alloc()[%s0, %s1] : memref<256x1024xf32, affine_map<(d0, d1)[s0, s1] -> (d0*s0 + d1*s1)>>
   affine.for %i = 0 to 256 {
     affine.for %j = 0 to 1024 {
       // CHECK: memref<256x1024xf32, #map{{[0-9]+}}>
@@ -141,8 +141,8 @@ func @semi_affine_layout_map(%s0: index, %s1: index) {
 
 // CHECK-LABEL: func @alignment
 func @alignment() {
-  %A = alloc() {alignment = 32 : i64}: memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
-  // CHECK-NEXT: alloc() {alignment = 32 : i64} : memref<256x64x128xf32>
+  %A = memref.alloc() {alignment = 32 : i64}: memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
+  // CHECK-NEXT: memref.alloc() {alignment = 32 : i64} : memref<256x64x128xf32>
   return
 }
 
@@ -171,20 +171,20 @@ func @multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref<8xf6
 // CHECK-LABEL: func @single_argument_type
 // CHECK-SAME: (%[[C:arg[0-9]+]]: memref<2x4xf64>)
 func @single_argument_type(%C : memref<8xf64, #tile>) {
-  %a = alloc(): memref<8xf64, #tile>
-  %b = alloc(): memref<16xf64, #tile>
+  %a = memref.alloc(): memref<8xf64, #tile>
+  %b = memref.alloc(): memref<16xf64, #tile>
   %d = constant 23.0 : f64
-  %e = alloc(): memref<24xf64>
+  %e = memref.alloc(): memref<24xf64>
   call @single_argument_type(%a): (memref<8xf64, #tile>) -> ()
   call @single_argument_type(%C): (memref<8xf64, #tile>) -> ()
   call @multiple_argument_type(%b, %d, %a, %e): (memref<16xf64, #tile>, f64, memref<8xf64, #tile>, memref<24xf64>) -> f64
   return
 }
 
-// CHECK: %[[a:[0-9]+]] = alloc() : memref<2x4xf64>
-// CHECK: %[[b:[0-9]+]] = alloc() : memref<4x4xf64>
+// CHECK: %[[a:[0-9]+]] = memref.alloc() : memref<2x4xf64>
+// CHECK: %[[b:[0-9]+]] = memref.alloc() : memref<4x4xf64>
 // CHECK: %cst = constant 2.300000e+01 : f64
-// CHECK: %[[e:[0-9]+]] = alloc() : memref<24xf64>
+// CHECK: %[[e:[0-9]+]] = memref.alloc() : memref<24xf64>
 // CHECK: call @single_argument_type(%[[a]]) : (memref<2x4xf64>) -> ()
 // CHECK: call @single_argument_type(%[[C]]) : (memref<2x4xf64>) -> ()
 // CHECK: call @multiple_argument_type(%[[b]], %cst, %[[a]], %[[e]]) : (memref<4x4xf64>, f64, memref<2x4xf64>, memref<24xf64>) -> f64
@@ -227,8 +227,8 @@ func @ret_multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref<
 // CHECK-LABEL: func @ret_single_argument_type
 // CHECK-SAME: (%[[C:arg[0-9]+]]: memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
 func @ret_single_argument_type(%C: memref<8xf64, #tile>) -> (memref<16xf64, #tile>, memref<8xf64, #tile>){
-  %a = alloc() : memref<8xf64, #tile>
-  %b = alloc() : memref<16xf64, #tile>
+  %a = memref.alloc() : memref<8xf64, #tile>
+  %b = memref.alloc() : memref<16xf64, #tile>
   %d = constant 23.0 : f64
   call @ret_single_argument_type(%a) : (memref<8xf64, #tile>) -> (memref<16xf64, #tile>, memref<8xf64, #tile>)
   call @ret_single_argument_type(%C) : (memref<8xf64, #tile>) -> (memref<16xf64, #tile>, memref<8xf64, #tile>)
@@ -237,8 +237,8 @@ func @ret_single_argument_type(%C: memref<8xf64, #tile>) -> (memref<16xf64, #til
   return %b, %a: memref<16xf64, #tile>, memref<8xf64, #tile>
 }
 
-// CHECK: %[[a:[0-9]+]] = alloc() : memref<2x4xf64>
-// CHECK: %[[b:[0-9]+]] = alloc() : memref<4x4xf64>
+// CHECK: %[[a:[0-9]+]] = memref.alloc() : memref<2x4xf64>
+// CHECK: %[[b:[0-9]+]] = memref.alloc() : memref<4x4xf64>
 // CHECK: %cst = constant 2.300000e+01 : f64
 // CHECK: %[[resA:[0-9]+]]:2 = call @ret_single_argument_type(%[[a]]) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
 // CHECK: %[[resB:[0-9]+]]:2 = call @ret_single_argument_type(%[[C]]) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
@@ -304,11 +304,11 @@ func private @external_func_B(memref<16xf64, #tile>, f64) -> (memref<8xf64, #til
 
 // CHECK-LABEL: func @simply_call_external()
 func @simply_call_external() {
-  %a = alloc() : memref<16xf64, #tile>
+  %a = memref.alloc() : memref<16xf64, #tile>
   call @external_func_A(%a) : (memref<16xf64, #tile>) -> ()
   return
 }
-// CHECK: %[[a:[0-9]+]] = alloc() : memref<4x4xf64>
+// CHECK: %[[a:[0-9]+]] = memref.alloc() : memref<4x4xf64>
 // CHECK: call @external_func_A(%[[a]]) : (memref<4x4xf64>) -> ()
 
 // CHECK-LABEL: func @use_value_of_external
@@ -323,7 +323,7 @@ func @use_value_of_external(%A: memref<16xf64, #tile>, %B: f64) -> (memref<8xf64
 // CHECK-LABEL: func @affine_parallel_norm
 func @affine_parallel_norm() ->  memref<8xf32, #tile> {
   %c = constant 23.0 : f32
-  %a = alloc() : memref<8xf32, #tile>
+  %a = memref.alloc() : memref<8xf32, #tile>
   // CHECK: affine.parallel (%{{.*}}) = (0) to (8) reduce ("assign") -> (memref<2x4xf32>)
   %1 = affine.parallel (%i) = (0) to (8) reduce ("assign") ->  memref<8xf32, #tile> {
     affine.store %c, %a[%i] : memref<8xf32, #tile>

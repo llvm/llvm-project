@@ -1463,9 +1463,6 @@ TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
       }
       )cpp",
       /*Main=*/"");
-  for (const auto &S : Symbols)
-    llvm::errs() << S.Scope << S.Name << " in " << S.IncludeHeaders.size()
-                 << "\n";
   EXPECT_THAT(
       Symbols,
       UnorderedElementsAre(

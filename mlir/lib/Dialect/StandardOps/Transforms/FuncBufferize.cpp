@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Transforms/FuncConversions.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
@@ -22,7 +23,6 @@ using namespace mlir;
 namespace {
 struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
   using FuncBufferizeBase<FuncBufferizePass>::FuncBufferizeBase;
-
   void runOnOperation() override {
     auto module = getOperation();
     auto *context = &getContext();
@@ -43,8 +43,8 @@ struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
     populateBranchOpInterfaceTypeConversionPattern(patterns, context,
                                                    typeConverter);
     populateReturnOpTypeConversionPattern(patterns, context, typeConverter);
-    target.addLegalOp<ModuleOp, ModuleTerminatorOp, TensorLoadOp,
-                      TensorToMemrefOp>();
+    target.addLegalOp<ModuleOp, ModuleTerminatorOp, memref::TensorLoadOp,
+                      memref::BufferCastOp>();
 
     target.markUnknownOpDynamicallyLegal([&](Operation *op) {
       return isNotBranchOpInterfaceOrReturnLikeOp(op) ||

@@ -414,7 +414,7 @@ static Value *EmitISOVolatileLoad(CodeGenFunction &CGF, const CallExpr *E) {
   llvm::Type *ITy =
       llvm::IntegerType::get(CGF.getLLVMContext(), LoadSize.getQuantity() * 8);
   Ptr = CGF.Builder.CreateBitCast(Ptr, ITy->getPointerTo());
-  llvm::LoadInst *Load = CGF.Builder.CreateAlignedLoad(Ptr, LoadSize);
+  llvm::LoadInst *Load = CGF.Builder.CreateAlignedLoad(ITy, Ptr, LoadSize);
   Load->setVolatile(true);
   return Load;
 }
@@ -3251,7 +3251,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Builder.CreateMemCpy(Dest, Src, SizeVal, false);
     if (BuiltinID == Builtin::BImempcpy ||
         BuiltinID == Builtin::BI__builtin_mempcpy)
-      return RValue::get(Builder.CreateInBoundsGEP(Dest.getPointer(), SizeVal));
+      return RValue::get(Builder.CreateInBoundsGEP(Dest.getElementType(),
+                                                   Dest.getPointer(), SizeVal));
     else
       return RValue::get(Dest.getPointer());
   }
@@ -4682,7 +4683,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       auto *Zero = llvm::ConstantInt::get(IntTy, 0);
       for (unsigned I = First; I < NumArgs; ++I) {
         auto *Index = llvm::ConstantInt::get(IntTy, I - First);
-        auto *GEP = Builder.CreateGEP(TmpPtr, {Zero, Index});
+        auto *GEP = Builder.CreateGEP(Tmp.getElementType(), TmpPtr,
+                                      {Zero, Index});
         if (I == First)
           ElemPtr = GEP;
         auto *V =
@@ -8984,7 +8986,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     for (unsigned I = 0; I < NumOpnds; ++I)
       Builder.CreateDefaultAlignedStore(
           IsBoolTy ? Builder.CreateZExt(Ops[I], EltTy) : Ops[I],
-          Builder.CreateGEP(Alloca.getPointer(),
+          Builder.CreateGEP(Alloca.getElementType(), Alloca.getPointer(),
                             {Builder.getInt64(0), Builder.getInt64(I)}));
 
     SVETypeFlags TypeFlags(Builtin->TypeModifier);
@@ -8993,7 +8995,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     llvm::Type *OverloadedTy = getSVEVectorForElementType(EltTy);
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_ld1rq, OverloadedTy);
     Value *Alloca0 = Builder.CreateGEP(
-        Alloca.getPointer(), {Builder.getInt64(0), Builder.getInt64(0)});
+        Alloca.getElementType(), Alloca.getPointer(),
+        {Builder.getInt64(0), Builder.getInt64(0)});
     Value *LD1RQ = Builder.CreateCall(F, {Pred, Alloca0});
 
     if (!IsBoolTy)
@@ -12160,7 +12163,8 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
   llvm::Value *Idxs[] = {ConstantInt::get(Int32Ty, 0),
                          ConstantInt::get(Int32Ty, Index)};
   llvm::Value *CpuValue = Builder.CreateGEP(STy, CpuModel, Idxs);
-  CpuValue = Builder.CreateAlignedLoad(CpuValue, CharUnits::fromQuantity(4));
+  CpuValue = Builder.CreateAlignedLoad(Int32Ty, CpuValue,
+                                       CharUnits::fromQuantity(4));
 
   // Check the value of the field against the requested value.
   return Builder.CreateICmpEQ(CpuValue,
@@ -12217,8 +12221,8 @@ llvm::Value *CodeGenFunction::EmitX86CpuSupports(uint64_t FeaturesMask) {
     Value *Idxs[] = {Builder.getInt32(0), Builder.getInt32(3),
                      Builder.getInt32(0)};
     Value *CpuFeatures = Builder.CreateGEP(STy, CpuModel, Idxs);
-    Value *Features =
-        Builder.CreateAlignedLoad(CpuFeatures, CharUnits::fromQuantity(4));
+    Value *Features = Builder.CreateAlignedLoad(Int32Ty, CpuFeatures,
+                                                CharUnits::fromQuantity(4));
 
     // Check the value of the bit corresponding to the feature requested.
     Value *Mask = Builder.getInt32(Features1);
@@ -12232,8 +12236,8 @@ llvm::Value *CodeGenFunction::EmitX86CpuSupports(uint64_t FeaturesMask) {
                                                              "__cpu_features2");
     cast<llvm::GlobalValue>(CpuFeatures2)->setDSOLocal(true);
 
-    Value *Features =
-        Builder.CreateAlignedLoad(CpuFeatures2, CharUnits::fromQuantity(4));
+    Value *Features = Builder.CreateAlignedLoad(Int32Ty, CpuFeatures2,
+                                                CharUnits::fromQuantity(4));
 
     // Check the value of the bit corresponding to the feature requested.
     Value *Mask = Builder.getInt32(Features2);
@@ -14662,11 +14666,12 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       break;
     }
 
+    llvm::Type *Ty = FixedVectorType::get(Builder.getInt64Ty(), 2);
     Value *InOps[9];
     InOps[0] = Ops[2];
     for (int i = 0; i != 8; ++i) {
       Value *Ptr = Builder.CreateConstGEP1_32(Ops[1], i);
-      InOps[i + 1] = Builder.CreateAlignedLoad(Ptr, Align(16));
+      InOps[i + 1] = Builder.CreateAlignedLoad(Ty, Ptr, Align(16));
     }
 
     Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), InOps);
@@ -15235,7 +15240,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       for (unsigned i=0; i<NumVecs; i++) {
         Value *Vec = Builder.CreateExtractValue(Call, i);
         llvm::ConstantInt* Index = llvm::ConstantInt::get(IntTy, i);
-        Value *GEP = Builder.CreateInBoundsGEP(Ptr, Index);
+        Value *GEP = Builder.CreateInBoundsGEP(VTy, Ptr, Index);
         Builder.CreateAlignedStore(Vec, GEP, MaybeAlign(16));
       }
       return Call;
@@ -16665,7 +16670,9 @@ CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
     SmallVector<Value *, 10> Values = {Dst};
     for (unsigned i = 0; i < II.NumResults; ++i) {
       Value *V = Builder.CreateAlignedLoad(
-          Builder.CreateGEP(Src.getPointer(), llvm::ConstantInt::get(IntTy, i)),
+          Src.getElementType(),
+          Builder.CreateGEP(Src.getElementType(), Src.getPointer(),
+                            llvm::ConstantInt::get(IntTy, i)),
           CharUnits::fromQuantity(4));
       Values.push_back(Builder.CreateBitCast(V, ParamType));
     }
@@ -16728,7 +16735,8 @@ CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
     // Load A
     for (unsigned i = 0; i < MI.NumEltsA; ++i) {
       Value *V = Builder.CreateAlignedLoad(
-          Builder.CreateGEP(SrcA.getPointer(),
+          SrcA.getElementType(),
+          Builder.CreateGEP(SrcA.getElementType(), SrcA.getPointer(),
                             llvm::ConstantInt::get(IntTy, i)),
           CharUnits::fromQuantity(4));
       Values.push_back(Builder.CreateBitCast(V, AType));
@@ -16737,7 +16745,8 @@ CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
     llvm::Type *BType = Intrinsic->getFunctionType()->getParamType(MI.NumEltsA);
     for (unsigned i = 0; i < MI.NumEltsB; ++i) {
       Value *V = Builder.CreateAlignedLoad(
-          Builder.CreateGEP(SrcB.getPointer(),
+          SrcB.getElementType(),
+          Builder.CreateGEP(SrcB.getElementType(), SrcB.getPointer(),
                             llvm::ConstantInt::get(IntTy, i)),
           CharUnits::fromQuantity(4));
       Values.push_back(Builder.CreateBitCast(V, BType));
@@ -16747,7 +16756,8 @@ CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
         Intrinsic->getFunctionType()->getParamType(MI.NumEltsA + MI.NumEltsB);
     for (unsigned i = 0; i < MI.NumEltsC; ++i) {
       Value *V = Builder.CreateAlignedLoad(
-          Builder.CreateGEP(SrcC.getPointer(),
+          SrcC.getElementType(),
+          Builder.CreateGEP(SrcC.getElementType(), SrcC.getPointer(),
                             llvm::ConstantInt::get(IntTy, i)),
           CharUnits::fromQuantity(4));
       Values.push_back(Builder.CreateBitCast(V, CType));

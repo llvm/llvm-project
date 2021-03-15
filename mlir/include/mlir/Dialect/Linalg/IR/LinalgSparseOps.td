@@ -18,7 +18,7 @@
 //
 // The other operations form the bridge between the opaque pointer and
 // the actual storage of pointers, indices, and values. These operations
-// resemble 'tensor_to_memref' in the sense that they map tensors to
+// resemble 'buffer_cast' in the sense that they map tensors to
 // their bufferized memrefs, but they lower into actual calls since
 // sparse storage does not bufferize into a single memrefs, as dense
 // tensors do, but into a hierarchical storage scheme where pointers
@@ -74,9 +74,9 @@ def Linalg_SparseTensorToPointersMemRefOp :
   let description = [{
      Returns the pointers array of the sparse storage scheme at the
      given dimension for the given tensor. This is similar to the
-     `tensor_to_memref` operation in the sense that it provides a bridge
+     `buffer_cast` operation in the sense that it provides a bridge
      between a tensor world view and a bufferized world view. Unlike the
-     `tensor_to_memref` operation, however, this sparse operation actually
+     `buffer_cast` operation, however, this sparse operation actually
      lowers into a call into a support library to obtain access to the
      pointers array.
 
@@ -98,9 +98,9 @@ def Linalg_SparseTensorToIndicesMemRefOp :
   let description = [{
      Returns the indices array of the sparse storage scheme at the
      given dimension for the given tensor. This is similar to the
-     `tensor_to_memref` operation in the sense that it provides a bridge
+     `buffer_cast` operation in the sense that it provides a bridge
      between a tensor world view and a bufferized world view. Unlike the
-     `tensor_to_memref` operation, however, this sparse operation actually
+     `buffer_cast` operation, however, this sparse operation actually
      lowers into a call into a support library to obtain access to the
      indices array.
 
@@ -122,9 +122,9 @@ def Linalg_SparseTensorToValuesMemRefOp :
   let description = [{
      Returns the values array of the sparse storage scheme for the given
      tensor, independent of the actual dimension. This is similar to the
-     `tensor_to_memref` operation in the sense that it provides a bridge
+     `buffer_cast` operation in the sense that it provides a bridge
      between a tensor world view and a bufferized world view. Unlike the
-     `tensor_to_memref` operation, however, this sparse operation actually
+     `buffer_cast` operation, however, this sparse operation actually
      lowers into a call into a support library to obtain access to the
      values array.
 

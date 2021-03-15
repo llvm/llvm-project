@@ -19,6 +19,7 @@
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMArmSVEDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -39,6 +40,7 @@ struct LowerVectorToLLVMPass
   // Override explicitly to allow conditional dialect dependence.
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect>();
+    registry.insert<memref::MemRefDialect>();
     if (enableArmNeon)
       registry.insert<arm_neon::ArmNeonDialect>();
     if (enableArmSVE)
@@ -72,6 +74,7 @@ void LowerVectorToLLVMPass::runOnOperation() {
   // Architecture specific augmentations.
   LLVMConversionTarget target(getContext());
   target.addLegalOp<LLVM::DialectCastOp>();
+  target.addLegalDialect<memref::MemRefDialect>();
   target.addLegalDialect<StandardOpsDialect>();
   target.addLegalOp<UnrealizedConversionCastOp>();
   if (enableArmNeon) {
