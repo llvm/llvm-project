@@ -12,6 +12,7 @@ config.llvm_shlib_dir = path(r"@SHLIBDIR@")
 config.llvm_shlib_ext = "@SHLIBEXT@"
 config.llvm_exe_ext = "@EXEEXT@"
 config.lit_tools_dir = path(r"@LLVM_LIT_TOOLS_DIR@")
+config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.gold_executable = "@GOLD_EXECUTABLE@"
 config.ld64_executable = "@LD64_EXECUTABLE@"
