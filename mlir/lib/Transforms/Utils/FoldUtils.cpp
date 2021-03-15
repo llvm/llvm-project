@@ -130,8 +130,7 @@ void OperationFolder::processExistingConstants(Region &region) {
   region.walk<WalkOrder::PreOrder>([&](Operation *op) {
     // If this is a constant, process it.
     Attribute value;
-    if (op->getNumOperands() == 0 && op->getNumResults() == 1 &&
-        matchPattern(op, m_Constant(&value))) {
+    if (matchPattern(op, m_Constant(&value))) {
       processConstant(op, value);
       // We may have deleted the operation, don't check it for regions.
       return WalkResult::advance();
