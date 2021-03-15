@@ -2263,6 +2263,8 @@ SDValue SITargetLowering::LowerFormalArguments(
     return DAG.getEntryNode();
   }
 
+  Info->allocateModuleLDSGlobal(Fn.getParent());
+
   SmallVector<ISD::InputArg, 16> Splits;
   SmallVector<CCValAssign, 16> ArgLocs;
   BitVector Skipped(Ins.size());

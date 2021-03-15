@@ -64,6 +64,18 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   return Offset;
 }
 
+void AMDGPUMachineFunction::allocateModuleLDSGlobal(const Module *M) {
+  if (isModuleEntryFunction()) {
+    GlobalVariable *GV = M->getGlobalVariable("llvm.amdgcn.module.lds");
+    if (GV) {
+      unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *GV);
+      (void)Offset;
+      assert(Offset == 0 &&
+             "Module LDS expected to be allocated before other LDS");
+    }
+  }
+}
+
 void AMDGPUMachineFunction::setDynLDSAlign(const DataLayout &DL,
                                            const GlobalVariable &GV) {
   assert(DL.getTypeAllocSize(GV.getValueType()).isZero());
