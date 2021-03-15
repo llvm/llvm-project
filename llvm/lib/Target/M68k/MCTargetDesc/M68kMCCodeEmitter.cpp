@@ -162,13 +162,13 @@ unsigned M68kMCCodeEmitter::encodeReg(unsigned ThisByte, uint8_t Bead,
   unsigned Written = 0;
   if (Reg) {
     uint32_t Val = RI->getEncodingValue(RegNum);
-    Buffer |= Val << Offset;
+    Buffer |= (Val & 7) << Offset;
     Offset += 3;
     Written += 3;
   }
 
   if (DA) {
-    Buffer |= (char)M68kII::isAddressRegister(RegNum) << Offset;
+    Buffer |= (uint64_t)M68kII::isAddressRegister(RegNum) << Offset;
     Written++;
   }
 
@@ -179,13 +179,9 @@ static unsigned EmitConstant(uint64_t Val, unsigned Size, unsigned Pad,
                              uint64_t &Buffer, unsigned Offset) {
   assert(Size + Offset <= 64 && isUIntN(Size, Val) && "Value does not fit");
 
-  // Pad the instruction with zeros if any
-  // FIXME Emit zeros in the padding, since there might be trash in the buffer.
-  Size += Pad;
-
   // Writing Value in host's endianness
-  Buffer |= Val << Offset;
-  return Size;
+  Buffer |= (Val & ((1ULL << Size) - 1)) << Offset;
+  return Size + Pad;
 }
 
 unsigned M68kMCCodeEmitter::encodeImm(unsigned ThisByte, uint8_t Bead,
@@ -316,8 +312,7 @@ unsigned M68kMCCodeEmitter::encodeImm(unsigned ThisByte, uint8_t Bead,
     return Size;
   }
 
-  return EmitConstant(Imm & (UINT64_MAX >> (64 - Size)), Size, Pad, Buffer,
-                      Offset);
+  return EmitConstant(Imm & ((1ULL << Size) - 1), Size, Pad, Buffer, Offset);
 }
 
 #include "M68kGenMCCodeBeads.inc"

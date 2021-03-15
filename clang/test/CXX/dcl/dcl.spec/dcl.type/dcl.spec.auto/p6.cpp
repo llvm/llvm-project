@@ -68,3 +68,11 @@ namespace PR48384 {
   True decltype(auto) h = (b);
   static_assert(is_same_v<decltype(h), int&>);
 }
+
+namespace PR48593 {
+  template <class T, class U> concept a = true;
+  a<B> auto c = 0; // expected-error{{use of undeclared identifier 'B'}}
+
+  template<class> concept d = true;
+  d<,> auto e = 0; // expected-error{{expected expression}}
+}

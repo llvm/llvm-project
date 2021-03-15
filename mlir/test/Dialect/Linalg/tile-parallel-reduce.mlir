@@ -18,18 +18,18 @@ func @gemm(%arg0 : memref<?x?xf32>,
 //  CHECK-SAME:     step (%[[C2]], %[[C4]])
 //       CHECK:     scf.for %[[ARG5:.*]] =
 //  CHECK-SAME:       step %[[C8]]
-//       CHECK:       %[[SV1:.*]] = subview %{{.*}}[%[[ARG3]], %[[ARG5]]]
-//       CHECK:       %[[SV2:.*]] = subview %{{.*}}[%[[ARG5]], %[[ARG4]]]
-//       CHECK:       %[[SV3:.*]] = subview %{{.*}}[%[[ARG3]], %[[ARG4]]]
+//       CHECK:       %[[SV1:.*]] = memref.subview %{{.*}}[%[[ARG3]], %[[ARG5]]]
+//       CHECK:       %[[SV2:.*]] = memref.subview %{{.*}}[%[[ARG5]], %[[ARG4]]]
+//       CHECK:       %[[SV3:.*]] = memref.subview %{{.*}}[%[[ARG3]], %[[ARG4]]]
 //       CHECK:       linalg.matmul ins(%[[SV1]], %[[SV2]]{{.*}} outs(%[[SV3]]
 
 // TILE1-LABEL: func @gemm
 //   TILE1-DAG:   %[[C2:.*]] = constant 2 : index
 //       TILE1:   scf.parallel (%[[ARG3:.*]]) =
 //  TILE1-SAME:     step (%[[C2]])
-//       TILE1:     %[[SV1:.*]] = subview %{{.*}}[%[[ARG3]], 0]
-//       TILE1:     %[[SV3:.*]] = subview %{{.*}}[%[[ARG3]], 0]
-//   TILE1-NOT:     subview
+//       TILE1:     %[[SV1:.*]] = memref.subview %{{.*}}[%[[ARG3]], 0]
+//       TILE1:     %[[SV3:.*]] = memref.subview %{{.*}}[%[[ARG3]], 0]
+//   TILE1-NOT:     memref.subview
 //       TILE1:     linalg.matmul ins(%[[SV1]], %{{.*}} outs(%[[SV3]]
 
 // TILE2-LABEL: func @gemm
@@ -37,9 +37,9 @@ func @gemm(%arg0 : memref<?x?xf32>,
 //   TILE2-DAG:   %[[C4:.*]] = constant 4 : index
 //       TILE2:   scf.parallel (%[[ARG3:.*]], %[[ARG4:.*]]) =
 //  TILE2-SAME:     step (%[[C2]], %[[C4]])
-//       TILE2:       %[[SV1:.*]] = subview %{{.*}}[%[[ARG3]], 0]
-//       TILE2:       %[[SV2:.*]] = subview %{{.*}}[0, %[[ARG4]]]
-//       TILE2:       %[[SV3:.*]] = subview %{{.*}}[%[[ARG3]], %[[ARG4]]]
+//       TILE2:       %[[SV1:.*]] = memref.subview %{{.*}}[%[[ARG3]], 0]
+//       TILE2:       %[[SV2:.*]] = memref.subview %{{.*}}[0, %[[ARG4]]]
+//       TILE2:       %[[SV3:.*]] = memref.subview %{{.*}}[%[[ARG3]], %[[ARG4]]]
 //       TILE2:       linalg.matmul ins(%[[SV1]], %[[SV2]]{{.*}} outs(%[[SV3]]
 
 // -----
@@ -80,9 +80,9 @@ func @reduction(%arg0 : memref<?x?x?xf32>,
 //  CHECK-SAME:       step (%[[C4]])
 //       CHECK:       scf.for %[[ARG5:.*]] =
 //  CHECK-SAME:         step %[[C8]]
-//       CHECK:         %[[SV1:.*]] = subview %{{.*}}[%[[ARG3]], %[[ARG4]], %[[ARG5]]]
-//       CHECK:         %[[SV2:.*]] = subview %{{.*}}[%[[ARG3]], %[[ARG5]]]
-//       CHECK:         %[[SV3:.*]] = subview %{{.*}}[%[[ARG4]]]
+//       CHECK:         %[[SV1:.*]] = memref.subview %{{.*}}[%[[ARG3]], %[[ARG4]], %[[ARG5]]]
+//       CHECK:         %[[SV2:.*]] = memref.subview %{{.*}}[%[[ARG3]], %[[ARG5]]]
+//       CHECK:         %[[SV3:.*]] = memref.subview %{{.*}}[%[[ARG4]]]
 //       CHECK:         linalg.generic
 //  CHECK-SAME:           ins(%[[SV1]], %[[SV2]]
 //  CHECK-SAME:          outs(%[[SV3]]
@@ -91,9 +91,9 @@ func @reduction(%arg0 : memref<?x?x?xf32>,
 //   TILE1-DAG:   %[[C2:.*]] = constant 2 : index
 //       TILE1:   scf.for %[[ARG3:.*]] =
 //  TILE1-SAME:     step %[[C2]]
-//       TILE1:         %[[SV1:.*]] = subview %{{.*}}[%[[ARG3]], 0, 0]
-//       TILE1:         %[[SV2:.*]] = subview %{{.*}}[%[[ARG3]], 0]
-//   TILE1-NOT:         subview
+//       TILE1:         %[[SV1:.*]] = memref.subview %{{.*}}[%[[ARG3]], 0, 0]
+//       TILE1:         %[[SV2:.*]] = memref.subview %{{.*}}[%[[ARG3]], 0]
+//   TILE1-NOT:         memref.subview
 //       TILE1:         linalg.generic
 //  TILE1-SAME:           ins(%[[SV1]], %[[SV2]]
 //  TILE1-SAME:          outs(%{{.*}}
@@ -105,9 +105,9 @@ func @reduction(%arg0 : memref<?x?x?xf32>,
 //  TILE2-SAME:     step %[[C2]]
 //       TILE2:     scf.parallel (%[[ARG4:.*]]) =
 //  TILE2-SAME:       step (%[[C4]])
-//       TILE2:         %[[SV1:.*]] = subview %{{.*}}[%[[ARG3]], %[[ARG4]], 0]
-//       TILE2:         %[[SV2:.*]] = subview %{{.*}}[%[[ARG3]], 0]
-//       TILE2:         %[[SV3:.*]] = subview %{{.*}}[%[[ARG4]]]
+//       TILE2:         %[[SV1:.*]] = memref.subview %{{.*}}[%[[ARG3]], %[[ARG4]], 0]
+//       TILE2:         %[[SV2:.*]] = memref.subview %{{.*}}[%[[ARG3]], 0]
+//       TILE2:         %[[SV3:.*]] = memref.subview %{{.*}}[%[[ARG4]]]
 //       TILE2:         linalg.generic
 //  TILE2-SAME:           ins(%[[SV1]], %[[SV2]]
 //  TILE2-SAME:          outs(%[[SV3]]

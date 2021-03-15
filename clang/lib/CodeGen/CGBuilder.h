@@ -213,7 +213,7 @@ public:
         CharUnits::fromQuantity(DL.getTypeAllocSize(ElTy->getElementType()));
 
     return Address(
-        CreateInBoundsGEP(Addr.getPointer(),
+        CreateInBoundsGEP(Addr.getElementType(), Addr.getPointer(),
                           {getSize(CharUnits::Zero()), getSize(Index)}, Name),
         Addr.getAlignment().alignmentAtOffset(Index * EltSize));
   }
@@ -254,7 +254,8 @@ public:
   Address CreateConstInBoundsByteGEP(Address Addr, CharUnits Offset,
                                      const llvm::Twine &Name = "") {
     assert(Addr.getElementType() == TypeCache.Int8Ty);
-    return Address(CreateInBoundsGEP(Addr.getPointer(), getSize(Offset), Name),
+    return Address(CreateInBoundsGEP(Addr.getElementType(), Addr.getPointer(),
+                                     getSize(Offset), Name),
                    Addr.getAlignment().alignmentAtOffset(Offset));
   }
   Address CreateConstByteGEP(Address Addr, CharUnits Offset,

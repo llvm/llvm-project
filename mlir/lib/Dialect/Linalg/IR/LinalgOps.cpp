@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/Matchers.h"
@@ -109,12 +110,12 @@ static void dispatchIndexOpFoldResult(OpFoldResult ofr,
 /// ```
 ///    someop(memrefcast) -> someop
 /// ```
-/// It folds the source of the memref_cast into the root operation directly.
+/// It folds the source of the memref.cast into the root operation directly.
 static LogicalResult foldMemRefCast(Operation *op) {
   bool folded = false;
   for (OpOperand &operand : op->getOpOperands()) {
-    auto castOp = operand.get().getDefiningOp<MemRefCastOp>();
-    if (castOp && canFoldIntoConsumerOp(castOp)) {
+    auto castOp = operand.get().getDefiningOp<memref::CastOp>();
+    if (castOp && memref::CastOp::canFoldIntoConsumerOp(castOp)) {
       operand.set(castOp.getOperand());
       folded = true;
     }
@@ -776,10 +777,10 @@ struct ReplaceStaticShapeDims : OpRewritePattern<InitTensorOp> {
 /// - A constant value if the size is static along the dimension.
 /// - The dynamic value that defines the size of the result of
 ///   `linalg.init_tensor` op.
-struct ReplaceDimOfInitTensorOp : public OpRewritePattern<DimOp> {
-  using OpRewritePattern<DimOp>::OpRewritePattern;
+struct ReplaceDimOfInitTensorOp : public OpRewritePattern<memref::DimOp> {
+  using OpRewritePattern<memref::DimOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(DimOp dimOp,
+  LogicalResult matchAndRewrite(memref::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
     auto initTensorOp = dimOp.memrefOrTensor().getDefiningOp<InitTensorOp>();
     if (!initTensorOp)
@@ -986,7 +987,7 @@ PadTensorOp PadTensorOp::createPadHighOp(Type type, Value source, Value pad,
   assert(rankedTensorType.hasStaticShape());
   int rank = rankedTensorType.getRank();
   for (int i = 0; i < rank; ++i) {
-    auto dimOp = builder.createOrFold<DimOp>(loc, source, i);
+    auto dimOp = builder.createOrFold<memref::DimOp>(loc, source, i);
     auto resultDimSize = builder.createOrFold<ConstantIndexOp>(
         loc, rankedTensorType.getDimSize(i));
     auto highValue = builder.createOrFold<SubIOp>(loc, resultDimSize, dimOp);
@@ -1292,7 +1293,7 @@ getCollapsedOutputDimFromInputShape(OpBuilder &builder, Location loc,
   AffineExpr expr;
   SmallVector<Value, 2> dynamicDims;
   for (auto dim : llvm::seq(startPos, endPos + 1)) {
-    dynamicDims.push_back(builder.create<DimOp>(loc, src, dim));
+    dynamicDims.push_back(builder.create<memref::DimOp>(loc, src, dim));
     AffineExpr currExpr = builder.getAffineSymbolExpr(dim - startPos);
     expr = (expr ? expr * currExpr : currExpr);
   }
@@ -1361,7 +1362,7 @@ static Value getExpandedOutputDimFromInputShape(
            "dimensions");
     linearizedStaticDim *= d.value();
   }
-  Value sourceDim = builder.create<DimOp>(loc, src, sourceDimPos);
+  Value sourceDim = builder.create<memref::DimOp>(loc, src, sourceDimPos);
   return applyMapToValues(
       builder, loc,
       AffineMap::get(
@@ -1637,9 +1638,9 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
 };
 
 /// Canonicalize dim ops that use the output shape with dim of the input.
-struct ReplaceDimOfReshapeOpResult : OpRewritePattern<DimOp> {
-  using OpRewritePattern<DimOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(DimOp dimOp,
+struct ReplaceDimOfReshapeOpResult : OpRewritePattern<memref::DimOp> {
+  using OpRewritePattern<memref::DimOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(memref::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
     Value dimValue = dimOp.memrefOrTensor();
     Optional<int64_t> dimIndex = dimOp.getConstantIndex();
@@ -2445,24 +2446,25 @@ struct FoldTensorCastOp : public RewritePattern {
   }
 };
 
-/// Replaces std.dim operations that use the result of a LinalgOp (on tensors)
-/// with std.dim operations that use one of the arguments. For example,
+/// Replaces memref.dim operations that use the result of a LinalgOp (on
+/// tensors) with memref.dim operations that use one of the arguments. For
+/// example,
 ///
 /// %0 = linalg.matmul ins(%arg0, %arg1, ...)
-/// %1 = dim %0, %c0
+/// %1 = memref.dim %0, %c0
 ///
 /// with
 ///
-/// %1 = dim %arg0, %c0
+/// %1 = memref.dim %arg0, %c0
 ///
 /// where possible. With this the result of the `linalg.matmul` is not used in
 /// dim operations. If the value produced is replaced with another value (say by
 /// tiling `linalg.matmul`) will make the `linalg.matmul` truly dead instead of
 /// used in a dim op that would prevent the DCE of this op.
-struct ReplaceDimOfLinalgOpResult : public OpRewritePattern<DimOp> {
-  using OpRewritePattern<DimOp>::OpRewritePattern;
+struct ReplaceDimOfLinalgOpResult : public OpRewritePattern<memref::DimOp> {
+  using OpRewritePattern<memref::DimOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(DimOp dimOp,
+  LogicalResult matchAndRewrite(memref::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
     Value dimValue = dimOp.memrefOrTensor();
     Optional<int64_t> dimIndex = dimOp.getConstantIndex();
@@ -2479,7 +2481,7 @@ struct ReplaceDimOfLinalgOpResult : public OpRewritePattern<DimOp> {
     if (!operandDimValue) {
       // Its always possible to replace using the corresponding `outs`
       // parameter.
-      operandDimValue = rewriter.create<DimOp>(
+      operandDimValue = rewriter.create<memref::DimOp>(
           dimOp.getLoc(), linalgOp.getOutput(resultIndex), *dimIndex);
     }
     rewriter.replaceOp(dimOp, *operandDimValue);

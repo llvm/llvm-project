@@ -787,7 +787,7 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
     Config.PreFixupPasses.push_back(optimizeELF_x86_64_GOTAndStubs);
   }
 
-  if (auto Err = Ctx->modifyPassConfig(G->getTargetTriple(), Config))
+  if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));
 
   ELFJITLinker_x86_64::link(std::move(Ctx), std::move(G), std::move(Config));

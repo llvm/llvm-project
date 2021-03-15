@@ -39,7 +39,6 @@ public:
     CommonKind,
     DylibKind,
     LazyKind,
-    DSOHandleKind,
   };
 
   virtual ~Symbol() {}
@@ -100,7 +99,7 @@ public:
           bool isWeakDef, bool isExternal, bool isPrivateExtern)
       : Symbol(DefinedKind, name, file), isec(isec), value(value),
         overridesWeakDef(false), privateExtern(isPrivateExtern),
-        weakDef(isWeakDef), external(isExternal) {}
+        linkerInternal(false), weakDef(isWeakDef), external(isExternal) {}
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {
@@ -123,7 +122,10 @@ public:
   uint32_t value;
 
   bool overridesWeakDef : 1;
+  // Whether this symbol should appear in the output binary's export trie.
   bool privateExtern : 1;
+  // Whether this symbol should appear in the output binary's symbol table.
+  bool linkerInternal : 1;
 
 private:
   const bool weakDef : 1;
@@ -228,44 +230,12 @@ private:
   const llvm::object::Archive::Symbol sym;
 };
 
-// The Itanium C++ ABI requires dylibs to pass a pointer to __cxa_atexit which
-// does e.g. cleanup of static global variables. The ABI document says that the
-// pointer can point to any address in one of the dylib's segments, but in
-// practice ld64 seems to set it to point to the header, so that's what's
-// implemented here.
-//
-// The ARM C++ ABI uses __dso_handle similarly, but I (int3) have not yet
-// tested this on an ARM platform.
-//
-// DSOHandle effectively functions like a Defined symbol, but it doesn't belong
-// to an InputSection.
-class DSOHandle : public Symbol {
-public:
-  DSOHandle(const MachHeaderSection *header)
-      : Symbol(DSOHandleKind, name, nullptr), header(header) {}
-
-  const MachHeaderSection *header;
-
-  uint64_t getVA() const override;
-
-  uint64_t getFileOffset() const override;
-
-  bool isWeakDef() const override { return false; }
-
-  bool isTlv() const override { return false; }
-
-  static constexpr StringRef name = "___dso_handle";
-
-  static bool classof(const Symbol *s) { return s->kind() == DSOHandleKind; }
-};
-
 union SymbolUnion {
   alignas(Defined) char a[sizeof(Defined)];
   alignas(Undefined) char b[sizeof(Undefined)];
   alignas(CommonSymbol) char c[sizeof(CommonSymbol)];
   alignas(DylibSymbol) char d[sizeof(DylibSymbol)];
   alignas(LazySymbol) char e[sizeof(LazySymbol)];
-  alignas(DSOHandle) char f[sizeof(DSOHandle)];
 };
 
 template <typename T, typename... ArgT>

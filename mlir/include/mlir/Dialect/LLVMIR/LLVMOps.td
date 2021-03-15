@@ -320,8 +320,11 @@ def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
   let printer = [{ printAllocaOp(p, *this); }];
 }
 
-def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]>,
-                 LLVM_Builder<"$res = builder.CreateGEP($base, $indices);"> {
+def LLVM_GEPOp
+    : LLVM_Op<"getelementptr", [NoSideEffect]>,
+      LLVM_Builder<
+          "$res = builder.CreateGEP("
+          " $base->getType()->getPointerElementType(), $base, $indices);"> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$base,
                    Variadic<LLVM_ScalarOrVectorOf<LLVM_AnyInteger>>:$indices);
   let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);

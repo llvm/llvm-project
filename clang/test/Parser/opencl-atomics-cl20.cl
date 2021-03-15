@@ -42,21 +42,21 @@ void atomic_types_test() {
 // expected-error@-16 {{use of undeclared identifier 'atomic_size_t'}}
 // expected-error@-16 {{use of undeclared identifier 'atomic_ptrdiff_t'}}
 #elif !EXT
-// expected-error@-26 {{use of type 'atomic_long' (aka '_Atomic(long)') requires cl_khr_int64_base_atomics extension to be enabled}}
-// expected-error@-27 {{use of type 'atomic_long' (aka '_Atomic(long)') requires cl_khr_int64_extended_atomics extension to be enabled}}
-// expected-error@-27 {{use of type 'atomic_ulong' (aka '_Atomic(unsigned long)') requires cl_khr_int64_base_atomics extension to be enabled}}
-// expected-error@-28 {{use of type 'atomic_ulong' (aka '_Atomic(unsigned long)') requires cl_khr_int64_extended_atomics extension to be enabled}}
-// expected-error@-27 {{use of type 'atomic_double' (aka '_Atomic(double)') requires cl_khr_int64_base_atomics extension to be enabled}}
-// expected-error@-28 {{use of type 'atomic_double' (aka '_Atomic(double)') requires cl_khr_int64_extended_atomics extension to be enabled}}
+// expected-error@-26 {{use of type 'atomic_long' (aka '_Atomic(long)') requires cl_khr_int64_base_atomics support}}
+// expected-error@-27 {{use of type 'atomic_long' (aka '_Atomic(long)') requires cl_khr_int64_extended_atomics support}}
+// expected-error@-27 {{use of type 'atomic_ulong' (aka '_Atomic(unsigned long)') requires cl_khr_int64_base_atomics support}}
+// expected-error@-28 {{use of type 'atomic_ulong' (aka '_Atomic(unsigned long)') requires cl_khr_int64_extended_atomics support}}
+// expected-error@-27 {{use of type 'atomic_double' (aka '_Atomic(double)') requires cl_khr_int64_base_atomics support}}
+// expected-error@-28 {{use of type 'atomic_double' (aka '_Atomic(double)') requires cl_khr_int64_extended_atomics support}}
 #if __LP64__
-// expected-error-re@-28 {{use of type 'atomic_intptr_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_base_atomics extension to be enabled}}
-// expected-error-re@-29 {{use of type 'atomic_intptr_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_extended_atomics extension to be enabled}}
-// expected-error-re@-29 {{use of type 'atomic_uintptr_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_base_atomics extension to be enabled}}
-// expected-error-re@-30 {{use of type 'atomic_uintptr_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_extended_atomics extension to be enabled}}
-// expected-error-re@-30 {{use of type 'atomic_size_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_base_atomics extension to be enabled}}
-// expected-error-re@-31 {{use of type 'atomic_size_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_extended_atomics extension to be enabled}}
-// expected-error-re@-31 {{use of type 'atomic_ptrdiff_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_base_atomics extension to be enabled}}
-// expected-error-re@-32 {{use of type 'atomic_ptrdiff_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_extended_atomics extension to be enabled}}
+// expected-error-re@-28 {{use of type 'atomic_intptr_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_base_atomics support}}
+// expected-error-re@-29 {{use of type 'atomic_intptr_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_extended_atomics support}}
+// expected-error-re@-29 {{use of type 'atomic_uintptr_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_base_atomics support}}
+// expected-error-re@-30 {{use of type 'atomic_uintptr_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_extended_atomics support}}
+// expected-error-re@-30 {{use of type 'atomic_size_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_base_atomics support}}
+// expected-error-re@-31 {{use of type 'atomic_size_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_extended_atomics support}}
+// expected-error-re@-31 {{use of type 'atomic_ptrdiff_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_base_atomics support}}
+// expected-error-re@-32 {{use of type 'atomic_ptrdiff_t' (aka '_Atomic({{.+}})') requires cl_khr_int64_extended_atomics support}}
 #endif
 #endif
 

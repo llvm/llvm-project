@@ -1134,7 +1134,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
 bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
                                                   MemSetInst *MemSet) {
   // We can only transform memset/memcpy with the same destination.
-  if (MemSet->getDest() != MemCpy->getDest())
+  if (!AA->isMustAlias(MemSet->getDest(), MemCpy->getDest()))
     return false;
 
   // Check that src and dst of the memcpy aren't the same. While memcpy
@@ -1171,6 +1171,13 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
 
   if (mayBeVisibleThroughUnwinding(Dest, MemSet, MemCpy))
     return false;
+
+  // If the sizes are the same, simply drop the memset instead of generating
+  // a replacement with zero size.
+  if (DestSize == SrcSize) {
+    eraseInstruction(MemSet);
+    return true;
+  }
 
   // By default, create an unaligned memset.
   unsigned Align = 1;
@@ -1246,6 +1253,18 @@ static bool hasUndefContentsMSSA(MemorySSA *MSSA, AliasAnalysis *AA, Value *V,
       if (AA->isMustAlias(V, II->getArgOperand(1)) &&
           LTSize->getZExtValue() >= Size->getZExtValue())
         return true;
+
+      // If the lifetime.start covers a whole alloca (as it almost always does)
+      // and we're querying a pointer based on that alloca, then we know the
+      // memory is definitely undef, regardless of how exactly we alias. The
+      // size also doesn't matter, as an out-of-bounds access would be UB.
+      AllocaInst *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V));
+      if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
+        DataLayout DL = Alloca->getModule()->getDataLayout();
+        if (Optional<TypeSize> AllocaSize = Alloca->getAllocationSizeInBits(DL))
+          if (*AllocaSize == LTSize->getValue() * 8)
+            return true;
+      }
     }
   }
 

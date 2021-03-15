@@ -12,7 +12,9 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LINUX-I386 %s
 //
+// CHECK-LINUX-I386-NOT: "-u__llvm_profile_runtime"
 // CHECK-LINUX-I386: /Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.profile-i386.a"
+// CHECK-LINUX-I386-NOT: "-u__llvm_profile_runtime"
 // CHECK-LINUX-I386: "-lc"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \

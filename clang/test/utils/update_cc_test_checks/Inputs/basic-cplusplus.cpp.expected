@@ -44,7 +44,7 @@ Foo::Foo(int x) : x(x) {}
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %class.Foo*, align 8
 // CHECK-NEXT:    store %class.Foo* [[THIS:%.*]], %class.Foo** [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load %class.Foo*, %class.Foo** [[THIS_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN3FooD2Ev(%class.Foo* nonnull dereferenceable(4) [[THIS1]]) [[ATTR3:#.*]]
+// CHECK-NEXT:    call void @_ZN3FooD2Ev(%class.Foo* nonnull dereferenceable(4) [[THIS1]]) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 Foo::~Foo() {}
@@ -70,7 +70,7 @@ int Foo::function_defined_out_of_line(int arg) const { return x - arg; }
 // CHECK-NEXT:    call void @_ZN3FooC1Ei(%class.Foo* nonnull dereferenceable(4) [[F]], i32 1)
 // CHECK-NEXT:    [[CALL:%.*]] = call i32 @_ZNK3Foo23function_defined_inlineEi(%class.Foo* nonnull dereferenceable(4) [[F]], i32 2)
 // CHECK-NEXT:    [[CALL1:%.*]] = call i32 @_ZNK3Foo28function_defined_out_of_lineEi(%class.Foo* nonnull dereferenceable(4) [[F]], i32 3)
-// CHECK-NEXT:    call void @_ZN3FooD1Ev(%class.Foo* nonnull dereferenceable(4) [[F]]) [[ATTR3]]
+// CHECK-NEXT:    call void @_ZN3FooD1Ev(%class.Foo* nonnull dereferenceable(4) [[F]]) #[[ATTR3]]
 // CHECK-NEXT:    ret i32 0
 //
 int main() {

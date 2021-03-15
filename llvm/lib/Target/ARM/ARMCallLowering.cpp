@@ -92,7 +92,8 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
       : OutgoingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
-                           MachinePointerInfo &MPO) override {
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
     assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
            "Unsupported size");
 
@@ -244,13 +245,18 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
       : IncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
-                           MachinePointerInfo &MPO) override {
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
     assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
            "Unsupported size");
 
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
 
-    int FI = MFI.CreateFixedObject(Size, Offset, true);
+    // Byval is assumed to be writable memory, but other stack passed arguments
+    // are not.
+    const bool IsImmutable = !Flags.isByVal();
+
+    int FI = MFI.CreateFixedObject(Size, Offset, IsImmutable);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
 
     return MIRBuilder.buildFrameIndex(LLT::pointer(MPO.getAddrSpace(), 32), FI)

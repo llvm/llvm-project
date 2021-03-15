@@ -16,6 +16,10 @@ namespace mlir {
 
 class AtomicRMWOp;
 
+namespace memref {
+class MemRefDialect;
+} // end namespace memref
+
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h.inc"
 

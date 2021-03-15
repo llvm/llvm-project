@@ -12,6 +12,7 @@
 
 #include "mlir/Transforms/Bufferize.h"
 #include "PassDetail.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -28,7 +29,7 @@ public:
   matchAndRewrite(tensor::CastOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto resultType = getTypeConverter()->convertType(op.getType());
-    rewriter.replaceOpWithNewOp<MemRefCastOp>(op, resultType, operands[0]);
+    rewriter.replaceOpWithNewOp<memref::CastOp>(op, resultType, operands[0]);
     return success();
   }
 };
@@ -42,8 +43,8 @@ public:
   matchAndRewrite(tensor::ExtractOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     tensor::ExtractOp::Adaptor adaptor(operands);
-    rewriter.replaceOpWithNewOp<LoadOp>(op, adaptor.tensor(),
-                                        adaptor.indices());
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, adaptor.tensor(),
+                                                adaptor.indices());
     return success();
   }
 };
@@ -60,11 +61,12 @@ public:
     int numberOfElements = op.elements().size();
     auto resultType = MemRefType::get(
         {numberOfElements}, op.getType().cast<TensorType>().getElementType());
-    Value result = rewriter.create<AllocOp>(op.getLoc(), resultType);
+    Value result = rewriter.create<memref::AllocOp>(op.getLoc(), resultType);
     for (auto element : llvm::enumerate(op.elements())) {
       Value index =
           rewriter.create<ConstantIndexOp>(op.getLoc(), element.index());
-      rewriter.create<StoreOp>(op.getLoc(), element.value(), result, index);
+      rewriter.create<memref::StoreOp>(op.getLoc(), element.value(), result,
+                                       index);
     }
     rewriter.replaceOp(op, {result});
     return success();
@@ -86,8 +88,8 @@ public:
     RankedTensorType tensorType = op.getType().cast<RankedTensorType>();
     MemRefType memrefType =
         MemRefType::get(tensorType.getShape(), tensorType.getElementType());
-    Value result =
-        rewriter.create<AllocOp>(loc, memrefType, transformed.dynamicExtents());
+    Value result = rewriter.create<memref::AllocOp>(
+        loc, memrefType, transformed.dynamicExtents());
 
     // Collect loop bounds.
     int64_t rank = tensorType.getRank();
@@ -125,9 +127,9 @@ public:
     // about creating that.
     Operation *elementYield = parallelBody->getTerminator()->getPrevNode();
     rewriter.setInsertionPointAfter(elementYield);
-    rewriter.replaceOpWithNewOp<StoreOp>(elementYield,
-                                         elementYield->getOperands()[0], result,
-                                         parallelBody->getArguments());
+    rewriter.replaceOpWithNewOp<memref::StoreOp>(
+        elementYield, elementYield->getOperands()[0], result,
+        parallelBody->getArguments());
 
     rewriter.replaceOp(op, {result});
     return success();
@@ -155,6 +157,7 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
     populateTensorBufferizePatterns(context, typeConverter, patterns);
     target.addIllegalOp<tensor::CastOp, tensor::ExtractOp,
                         tensor::FromElementsOp, tensor::GenerateOp>();
+    target.addLegalDialect<memref::MemRefDialect>();
     target.addLegalDialect<StandardOpsDialect>();
     target.addLegalDialect<scf::SCFDialect>();
 

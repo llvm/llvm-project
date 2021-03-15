@@ -86,6 +86,13 @@ enum OpenMPOffloadingRequiresDirFlags {
   OMP_REQ_DYNAMIC_ALLOCATORS      = 0x010
 };
 
+enum TargetAllocTy : int32_t {
+  TARGET_ALLOC_DEVICE = 0,
+  TARGET_ALLOC_HOST,
+  TARGET_ALLOC_SHARED,
+  TARGET_ALLOC_DEFAULT
+};
+
 /// This struct is a record of an entry point or global. For a function
 /// entry point the size is expected to be zero
 struct __tgt_offload_entry {
@@ -189,6 +196,12 @@ int omp_target_memcpy_rect(void *dst, void *src, size_t element_size,
 int omp_target_associate_ptr(void *host_ptr, void *device_ptr, size_t size,
                              size_t device_offset, int device_num);
 int omp_target_disassociate_ptr(void *host_ptr, int device_num);
+
+/// Explicit target memory allocators
+/// Using the llvm_ prefix until they become part of the OpenMP standard.
+void *llvm_omp_target_alloc_device(size_t size, int device_num);
+void *llvm_omp_target_alloc_host(size_t size, int device_num);
+void *llvm_omp_target_alloc_shared(size_t size, int device_num);
 
 /// add the clauses of the requires directives in a given file
 void __tgt_register_requires(int64_t flags);

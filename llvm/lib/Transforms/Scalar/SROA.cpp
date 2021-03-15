@@ -3488,20 +3488,22 @@ private:
     SmallVector<Value *, 4> Index(GEPI.indices());
     bool IsInBounds = GEPI.isInBounds();
 
+    Type *Ty = GEPI.getSourceElementType();
     Value *True = Sel->getTrueValue();
     Value *NTrue =
         IsInBounds
-            ? Builder.CreateInBoundsGEP(True, Index,
+            ? Builder.CreateInBoundsGEP(Ty, True, Index,
                                         True->getName() + ".sroa.gep")
-            : Builder.CreateGEP(True, Index, True->getName() + ".sroa.gep");
+            : Builder.CreateGEP(Ty, True, Index, True->getName() + ".sroa.gep");
 
     Value *False = Sel->getFalseValue();
 
     Value *NFalse =
         IsInBounds
-            ? Builder.CreateInBoundsGEP(False, Index,
+            ? Builder.CreateInBoundsGEP(Ty, False, Index,
                                         False->getName() + ".sroa.gep")
-            : Builder.CreateGEP(False, Index, False->getName() + ".sroa.gep");
+            : Builder.CreateGEP(Ty, False, Index,
+                                False->getName() + ".sroa.gep");
 
     Value *NSel = Builder.CreateSelect(Sel->getCondition(), NTrue, NFalse,
                                        Sel->getName() + ".sroa.sel");
@@ -3555,9 +3557,10 @@ private:
         Instruction *In = cast<Instruction>(PHI->getIncomingValue(I));
 
         IRBuilderTy B(In->getParent(), std::next(In->getIterator()));
+        Type *Ty = GEPI.getSourceElementType();
         NewVal = IsInBounds
-            ? B.CreateInBoundsGEP(In, Index, In->getName() + ".sroa.gep")
-            : B.CreateGEP(In, Index, In->getName() + ".sroa.gep");
+            ? B.CreateInBoundsGEP(Ty, In, Index, In->getName() + ".sroa.gep")
+            : B.CreateGEP(Ty, In, Index, In->getName() + ".sroa.gep");
       }
       NewPN->addIncoming(NewVal, B);
     }

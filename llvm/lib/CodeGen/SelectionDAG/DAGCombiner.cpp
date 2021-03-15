@@ -4661,6 +4661,14 @@ SDValue DAGCombiner::visitMULO(SDNode *N) {
                        N->getVTList(), N0, N0);
 
   if (IsSigned) {
+    // A 1 bit SMULO overflows if both inputs are 1.
+    if (VT.getScalarSizeInBits() == 1) {
+      SDValue And = DAG.getNode(ISD::AND, DL, VT, N0, N1);
+      return CombineTo(N, And,
+                       DAG.getSetCC(DL, CarryVT, And,
+                                    DAG.getConstant(0, DL, VT), ISD::SETNE));
+    }
+
     // Multiplying n * m significant bits yields a result of n + m significant
     // bits. If the total number of significant bits does not exceed the
     // result bit width (minus 1), there is no overflow.
@@ -9637,12 +9645,12 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   SDLoc DL(N);
 
   // Zap masked stores with a zero mask.
-  if (ISD::isBuildVectorAllZeros(Mask.getNode()))
+  if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
     return Chain;
 
   // If this is a masked load with an all ones mask, we can use a unmasked load.
   // FIXME: Can we do this for indexed, compressing, or truncating stores?
-  if (ISD::isBuildVectorAllOnes(Mask.getNode()) &&
+  if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) &&
       MST->isUnindexed() && !MST->isCompressingStore() &&
       !MST->isTruncatingStore())
     return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
@@ -9694,12 +9702,12 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
   SDLoc DL(N);
 
   // Zap masked loads with a zero mask.
-  if (ISD::isBuildVectorAllZeros(Mask.getNode()))
+  if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
     return CombineTo(N, MLD->getPassThru(), MLD->getChain());
 
   // If this is a masked load with an all ones mask, we can use a unmasked load.
   // FIXME: Can we do this for indexed, expanding, or extending loads?
-  if (ISD::isBuildVectorAllOnes(Mask.getNode()) &&
+  if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) &&
       MLD->isUnindexed() && !MLD->isExpandingLoad() &&
       MLD->getExtensionType() == ISD::NON_EXTLOAD) {
     SDValue NewLd = DAG.getLoad(N->getValueType(0), SDLoc(N), MLD->getChain(),

@@ -543,10 +543,8 @@ bool InstrProfiling::run(
   UsedVars.clear();
   TT = Triple(M.getTargetTriple());
 
-  bool MadeChange = false;
-  // Emit the runtime hook even if no counters are present in Mach-O.
-  if (TT.isOSBinFormatMachO())
-    MadeChange = emitRuntimeHook();
+  // Emit the runtime hook even if no counters are present.
+  bool MadeChange = emitRuntimeHook();
 
   // Improve compile time by avoiding linear scans when there is no work.
   GlobalVariable *CoverageNamesVar =
@@ -586,8 +584,6 @@ bool InstrProfiling::run(
   emitVNodes();
   emitNameData();
   emitRegistration();
-  if (!TT.isOSBinFormatMachO())
-    emitRuntimeHook();
   emitUses();
   emitInitialization();
   return true;
@@ -1062,6 +1058,11 @@ void InstrProfiling::emitRegistration() {
 }
 
 bool InstrProfiling::emitRuntimeHook() {
+  // We expect the linker to be invoked with -u<hook_var> flag for Linux or
+  // Fuchsia, in which case there is no need to emit the user function.
+  if (TT.isOSLinux() || TT.isOSFuchsia())
+    return false;
+
   // If the module's provided its own runtime, we don't need to do anything.
   if (M->getGlobalVariable(getInstrProfRuntimeHookVarName()))
     return false;
@@ -1072,8 +1073,23 @@ bool InstrProfiling::emitRuntimeHook() {
       new GlobalVariable(*M, Int32Ty, false, GlobalValue::ExternalLinkage,
                          nullptr, getInstrProfRuntimeHookVarName());
 
+  // Make a function that uses it.
+  auto *User = Function::Create(FunctionType::get(Int32Ty, false),
+                                GlobalValue::LinkOnceODRLinkage,
+                                getInstrProfRuntimeHookVarUseFuncName(), M);
+  User->addFnAttr(Attribute::NoInline);
+  if (Options.NoRedZone)
+    User->addFnAttr(Attribute::NoRedZone);
+  User->setVisibility(GlobalValue::HiddenVisibility);
+  if (TT.supportsCOMDAT())
+    User->setComdat(M->getOrInsertComdat(User->getName()));
+
+  IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", User));
+  auto *Load = IRB.CreateLoad(Int32Ty, Var);
+  IRB.CreateRet(Load);
+
   // Mark the user variable as used so that it isn't stripped out.
-  CompilerUsedVars.push_back(Var);
+  CompilerUsedVars.push_back(User);
   return true;
 }
 

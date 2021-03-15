@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/EDSC/Builders.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/MemRef/EDSC/Intrinsics.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -21,7 +22,7 @@
 #include "llvm/ADT/SetVector.h"
 
 using mlir::edsc::intrinsics::AffineIndexedValue;
-using mlir::edsc::intrinsics::StdIndexedValue;
+using mlir::edsc::intrinsics::MemRefIndexedValue;
 
 namespace mlir {
 class AffineExpr;
@@ -213,7 +214,7 @@ template <typename LoopTy>
 struct GenerateLoopNest {
   using IndexedValueTy =
       typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
-                                AffineIndexedValue, StdIndexedValue>::type;
+                                AffineIndexedValue, MemRefIndexedValue>::type;
 
   static void
   doit(ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,

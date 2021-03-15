@@ -701,7 +701,7 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
     });
   }
 
-  if (auto Err = Ctx->modifyPassConfig(G->getTargetTriple(), Config))
+  if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));
 
   // Construct a JITLinker and run the link function.

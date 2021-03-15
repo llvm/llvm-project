@@ -35,8 +35,8 @@ module {
     // Setup memrefs to get meta data, indices and values.
     // The index array should provide sufficient space.
     //
-    %idata = alloc(%c10) : memref<?xindex>
-    %ddata = alloc(%c1)  : memref<?xf64>
+    %idata = memref.alloc(%c10) : memref<?xindex>
+    %ddata = memref.alloc(%c1)  : memref<?xf64>
 
     //
     // Obtain the sparse tensor filename through this test helper.
@@ -55,12 +55,12 @@ module {
     //
     // Print some meta data.
     //
-    %rank = load %idata[%c0] : memref<?xindex>
-    %nnz  = load %idata[%c1] : memref<?xindex>
+    %rank = memref.load %idata[%c0] : memref<?xindex>
+    %nnz  = memref.load %idata[%c1] : memref<?xindex>
     vector.print %rank : index
     vector.print %nnz  : index
     scf.for %r = %c2 to %c10 step %c1 {
-      %d = load %idata[%r] : memref<?xindex>
+      %d = memref.load %idata[%r] : memref<?xindex>
       vector.print %d : index
     }
 
@@ -77,13 +77,13 @@ module {
       //
       %0 = vector.broadcast %i0 : i64 to vector<8xi64>
       %1 = scf.for %r = %c0 to %rank step %c1 iter_args(%in = %0) -> vector<8xi64> {
-        %i  = load %idata[%r] : memref<?xindex>
+        %i  = memref.load %idata[%r] : memref<?xindex>
         %ii = index_cast %i : index to i64
         %ri = index_cast %r : index to i32
         %out = vector.insertelement %ii, %in[%ri : i32] : vector<8xi64>
         scf.yield %out : vector<8xi64>
       }
-      %2 = load %ddata[%c0] : memref<?xf64>
+      %2 = memref.load %ddata[%c0] : memref<?xf64>
       vector.print %1 : vector<8xi64>
       vector.print %2 : f64
     }
@@ -145,8 +145,8 @@ module {
     //
     // Free.
     //
-    dealloc %idata : memref<?xindex>
-    dealloc %ddata : memref<?xf64>
+    memref.dealloc %idata : memref<?xindex>
+    memref.dealloc %ddata : memref<?xf64>
 
     return
   }

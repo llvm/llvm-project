@@ -533,13 +533,13 @@ static Value genOutputBuffer(CodeGen &codegen, PatternRewriter &rewriter,
   // positions for the output tensor. Currently this results in functional,
   // but slightly imprecise IR, so it is put under an experimental option.
   if (codegen.options.fastOutput)
-    return rewriter.create<TensorToMemrefOp>(loc, denseTp, tensor);
+    return rewriter.create<memref::BufferCastOp>(loc, denseTp, tensor);
   // By default, a new buffer is allocated which is initialized to the
   // tensor defined in the outs() clause. This is always correct but
   // introduces a dense initialization component that may negatively
   // impact the running complexity of the sparse kernel.
-  Value init = rewriter.create<TensorToMemrefOp>(loc, denseTp, tensor);
-  Value alloc = rewriter.create<AllocOp>(loc, denseTp, args);
+  Value init = rewriter.create<memref::BufferCastOp>(loc, denseTp, tensor);
+  Value alloc = rewriter.create<memref::AllocOp>(loc, denseTp, args);
   rewriter.create<linalg::CopyOp>(loc, init, alloc);
   return alloc;
 }
@@ -585,8 +585,8 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
       }
       // Find lower and upper bound in current dimension.
       Value up;
-      if (shape[d] == TensorType::kDynamicSize) {
-        up = rewriter.create<DimOp>(loc, tensor, d);
+      if (shape[d] == MemRefType::kDynamicSize) {
+        up = rewriter.create<memref::DimOp>(loc, tensor, d);
         args.push_back(up);
       } else {
         up = rewriter.create<ConstantIndexOp>(loc, shape[d]);
@@ -600,7 +600,7 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
       auto denseTp = MemRefType::get(shape, tensorType.getElementType());
       if (t < numInputs)
         codegen.buffers[t] =
-            rewriter.create<TensorToMemrefOp>(loc, denseTp, tensor);
+            rewriter.create<memref::BufferCastOp>(loc, denseTp, tensor);
       else
         codegen.buffers[t] =
             genOutputBuffer(codegen, rewriter, op, denseTp, args);
@@ -716,7 +716,7 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen,
   Value ptr = codegen.buffers[tensor];
   if (codegen.curVecLength > 1)
     return genVectorLoad(codegen, rewriter, ptr, args);
-  return rewriter.create<LoadOp>(loc, ptr, args);
+  return rewriter.create<memref::LoadOp>(loc, ptr, args);
 }
 
 /// Generates a store on a dense tensor.
@@ -744,7 +744,7 @@ static void genTensorStore(Merger &merger, CodeGen &codegen,
   if (codegen.curVecLength > 1)
     genVectorStore(codegen, rewriter, rhs, ptr, args);
   else
-    rewriter.create<StoreOp>(loc, rhs, ptr, args);
+    rewriter.create<memref::StoreOp>(loc, rhs, ptr, args);
 }
 
 /// Generates a pointer/index load from the sparse storage scheme.
@@ -752,7 +752,7 @@ static Value genLoad(CodeGen &codegen, PatternRewriter &rewriter, Location loc,
                      Value ptr, Value s) {
   if (codegen.curVecLength > 1)
     return genVectorLoad(codegen, rewriter, ptr, {s});
-  Value load = rewriter.create<LoadOp>(loc, ptr, s);
+  Value load = rewriter.create<memref::LoadOp>(loc, ptr, s);
   return load.getType().isa<IndexType>()
              ? load
              : rewriter.create<IndexCastOp>(loc, load, rewriter.getIndexType());
@@ -799,11 +799,11 @@ static void genReductionEnd(Merger &merger, CodeGen &codegen,
   Value red = codegen.redVal;
   if (!red)
     return;
+  assert(codegen.curVecLength == 1);
   codegen.redVal = merger.exp(codegen.redExp).val = Value(); // end chain
   unsigned lhs = op.getNumShapedOperands() - 1;
   if (red.getType().isa<VectorType>()) {
     // TODO: assumes + reductions for now
-    codegen.curVecLength = 1;
     Value ld = genTensorLoad(merger, codegen, rewriter, op, codegen.redExp);
     red = rewriter.create<vector::ReductionOp>(
         op.getLoc(), ld.getType(), rewriter.getStringAttr("add"), red, ld);
@@ -947,6 +947,25 @@ static bool isParallelFor(CodeGen &codegen, bool isOuter, bool isReduction,
   llvm_unreachable("unexpected parallelization strategy");
 }
 
+/// Checks unit strides for dense tensors. The iteration graph may have ignored
+/// dense access patterns in order to avoid cycles (sparse access patterns are
+/// always placed innermost), but that means dense access has become strided.
+/// For now, we reject vectorization of such cases.
+/// TODO: implement strided load/stores on dense arrays
+static bool denseUnitStrides(Merger &merger, linalg::GenericOp op,
+                             unsigned idx) {
+  unsigned numTensors = op.getNumShapedOperands();
+  for (unsigned t = 0; t < numTensors; t++) {
+    if (!merger.isSparseTensor(t) && !linkedSparse(op, t)) {
+      auto map = op.getIndexingMap(t);
+      unsigned r = map.getNumResults();
+      if (r && map.getDimPosition(r - 1) != idx)
+        return false;
+    }
+  }
+  return true;
+}
+
 /// Generates a for-loop on a single index.
 static Operation *genFor(Merger &merger, CodeGen &codegen,
                          PatternRewriter &rewriter, linalg::GenericOp op,
@@ -958,7 +977,8 @@ static Operation *genFor(Merger &merger, CodeGen &codegen,
   auto iteratorTypes = op.iterator_types().getValue();
   bool isReduction = linalg::isReductionIteratorType(iteratorTypes[idx]);
   bool isSparse = merger.isDim(fb, Dim::kSparse);
-  bool isVector = isVectorFor(codegen, isInner, isSparse);
+  bool isVector = isVectorFor(codegen, isInner, isSparse) &&
+                  denseUnitStrides(merger, op, idx);
   bool isParallel =
       isParallelFor(codegen, isOuter, isReduction, isSparse, isVector);
 
@@ -1279,10 +1299,10 @@ static void genStmt(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   }
 
   // Wrap-up loop sequence.
+  codegen.curVecLength = 1;
   genReductionEnd(merger, codegen, rewriter, op);
   genInvariants(merger, codegen, rewriter, op, exp, ldx, /*hoist=*/false);
   codegen.loops[idx] = Value();
-  codegen.curVecLength = 1;
 }
 
 namespace {
@@ -1325,8 +1345,8 @@ public:
     CodeGen codegen(options, numTensors, numLoops);
     genBuffers(merger, codegen, rewriter, op);
     genStmt(merger, codegen, rewriter, op, topSort, exp.getValue(), 0);
-    Value result =
-        rewriter.create<TensorLoadOp>(op.getLoc(), codegen.buffers.back());
+    Value result = rewriter.create<memref::TensorLoadOp>(
+        op.getLoc(), codegen.buffers.back());
     rewriter.replaceOp(op, result);
     return success();
   }

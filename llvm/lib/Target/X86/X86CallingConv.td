@@ -617,6 +617,9 @@ def CC_X86_Win64_C : CallingConv<[
   // A SwiftError is passed in R12.
   CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R12]>>>,
 
+  // Pass SwiftSelf in a callee saved register.
+  CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[R13]>>>,
+
   // The 'CFGuardTarget' parameter, if any, is passed in RAX.
   CCIfCFGuardTarget<CCAssignToReg<[RAX]>>,
 

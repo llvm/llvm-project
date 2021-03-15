@@ -371,7 +371,7 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
     else
       pos = 0;
     pos = PGOFuncName.find('.', pos);
-    if (pos != std::string::npos) {
+    if (pos != std::string::npos && pos != 0) {
       const std::string &OtherFuncName = PGOFuncName.substr(0, pos);
       if (Error E = addFuncName(OtherFuncName))
         return E;

@@ -112,7 +112,10 @@ public:
 
   bool isKnown(llvm::StringRef Ext) const;
 
-  bool isEnabled(llvm::StringRef Ext) const;
+  // For core or optional core feature check that it is supported
+  // by a target, for any other option (extension) check that it is
+  // enabled via pragma
+  bool isAvailableOption(llvm::StringRef Ext, const LangOptions &LO) const;
 
   bool isWithPragma(llvm::StringRef Ext) const;
 
@@ -160,15 +163,15 @@ public:
   // Disable all extensions
   void disableAll();
 
-  // Enable supported core and optional core features
-  void enableSupportedCore(const LangOptions &LO);
-
   friend class ASTWriter;
   friend class ASTReader;
 
   using OpenCLOptionInfoMap = llvm::StringMap<OpenCLOptionInfo>;
 
 private:
+  // Option is enabled via pragma
+  bool isEnabled(llvm::StringRef Ext) const;
+
   OpenCLOptionInfoMap OptMap;
 };
 

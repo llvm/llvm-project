@@ -578,27 +578,27 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
               "Actual argument associated with procedure %s is not a procedure"_err_en_US,
               dummyName);
         }
-      } else if (!(dummyIsPointer && IsNullPointer(*expr))) {
+      } else if (IsNullPointer(*expr)) {
+        if (!dummyIsPointer) {
+          messages.Say(
+              "Actual argument associated with procedure %s is a null pointer"_err_en_US,
+              dummyName);
+        }
+      } else {
         messages.Say(
-            "Actual argument associated with procedure %s is not a procedure"_err_en_US,
+            "Actual argument associated with procedure %s is typeless"_err_en_US,
             dummyName);
       }
     }
-    if (interface.HasExplicitInterface()) {
-      if (dummyIsPointer) {
+    if (interface.HasExplicitInterface() && dummyIsPointer &&
+        proc.intent != common::Intent::In) {
+      const Symbol *last{GetLastSymbol(*expr)};
+      if (!(last && IsProcedurePointer(*last))) {
         // 15.5.2.9(5) -- dummy procedure POINTER
         // Interface compatibility has already been checked above by comparison.
-        if (proc.intent != common::Intent::In && !IsVariable(*expr)) {
-          messages.Say(
-              "Actual argument associated with procedure pointer %s must be a POINTER unless INTENT(IN)"_err_en_US,
-              dummyName);
-        }
-      } else { // 15.5.2.9(4) -- dummy procedure is not POINTER
-        if (!argProcDesignator) {
-          messages.Say(
-              "Actual argument associated with non-POINTER procedure %s must be a procedure (and not a procedure pointer)"_err_en_US,
-              dummyName);
-        }
+        messages.Say(
+            "Actual argument associated with procedure pointer %s must be a POINTER unless INTENT(IN)"_err_en_US,
+            dummyName);
       }
     }
   } else {

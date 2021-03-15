@@ -17,13 +17,13 @@ func @entry() {
   %c20 = constant 20: i32
   %c10 = constant 10: i32
   %cmin10 = constant -10: i32
-  %A = alloc() : memref<40xi32>
+  %A = memref.alloc() : memref<40xi32>
 
   // print numerator
   affine.for %i = 0 to 40  {
     %ii = index_cast %i: index to i32
     %ii30 = subi %ii, %c20 : i32
-    store %ii30, %A[%i] : memref<40xi32>
+    memref.store %ii30, %A[%i] : memref<40xi32>
   }
   call @transfer_read_2d(%A, %c0) : (memref<40xi32>, index) -> ()
 
@@ -32,7 +32,7 @@ func @entry() {
     %ii = index_cast %i: index to i32
     %ii30 = subi %ii, %c20 : i32
     %val = ceildivi_signed %ii30, %c10 : i32
-    store %val, %A[%i] : memref<40xi32>
+    memref.store %val, %A[%i] : memref<40xi32>
   }
   call @transfer_read_2d(%A, %c0) : (memref<40xi32>, index) -> ()
 
@@ -41,7 +41,7 @@ func @entry() {
     %ii = index_cast %i: index to i32
     %ii30 = subi %ii, %c20 : i32
     %val = floordivi_signed %ii30, %c10 : i32
-    store %val, %A[%i] : memref<40xi32>
+    memref.store %val, %A[%i] : memref<40xi32>
   }
   call @transfer_read_2d(%A, %c0) : (memref<40xi32>, index) -> ()
 
@@ -51,7 +51,7 @@ func @entry() {
     %ii = index_cast %i: index to i32
     %ii30 = subi %ii, %c20 : i32
     %val = ceildivi_signed %ii30, %cmin10 : i32
-    store %val, %A[%i] : memref<40xi32>
+    memref.store %val, %A[%i] : memref<40xi32>
   }
   call @transfer_read_2d(%A, %c0) : (memref<40xi32>, index) -> ()
 
@@ -60,7 +60,7 @@ func @entry() {
     %ii = index_cast %i: index to i32
     %ii30 = subi %ii, %c20 : i32
     %val = floordivi_signed %ii30, %cmin10 : i32
-    store %val, %A[%i] : memref<40xi32>
+    memref.store %val, %A[%i] : memref<40xi32>
   }
   call @transfer_read_2d(%A, %c0) : (memref<40xi32>, index) -> ()
 

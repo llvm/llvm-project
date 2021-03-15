@@ -38,6 +38,7 @@ add_mlir_library(MLIRTransforms
   MLIRCopyOpInterface
   MLIRLinalg
   MLIRLoopLikeInterface
+  MLIRMemRef
   MLIRSCF
   MLIRPass
   MLIRTransformUtils

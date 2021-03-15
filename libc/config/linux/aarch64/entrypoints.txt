@@ -20,11 +20,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.__errno_location
 
-    # stdlib.h entrypoints
-    libc.src.stdlib.abs
-    libc.src.stdlib.labs
-    libc.src.stdlib.llabs
-
     # string.h entrypoints
     libc.src.string.bzero
     libc.src.string.memchr
@@ -36,6 +31,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcat
     libc.src.string.strchr
     libc.src.string.strcpy
+    libc.src.string.strcmp
     libc.src.string.strcspn
     libc.src.string.strlen
     libc.src.string.strncpy
@@ -144,6 +140,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncf
     libc.src.math.truncl
 )
+
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # stdlib.h entrypoints
+    libc.src.stdlib.abs
+    libc.src.stdlib.labs
+    libc.src.stdlib.llabs
+  )
+endif()
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}
