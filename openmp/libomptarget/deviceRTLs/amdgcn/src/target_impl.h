@@ -25,9 +25,8 @@
 #define PRId64 "ld"
 #define PRIu64 "lu"
 
-#define DEVICE
-#define INLINE inline DEVICE
-#define NOINLINE __attribute__((noinline)) DEVICE
+#define INLINE inline
+#define NOINLINE __attribute__((noinline))
 #define ALIGN(N) __attribute__((aligned(N)))
 
 ////////////////////////////////////////////////////////////////////////////////

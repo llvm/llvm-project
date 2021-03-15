@@ -107,12 +107,12 @@ EXTERN void __kmpc_impl_named_sync(uint32_t num_threads) {
 }
 
 namespace {
-DEVICE uint32_t get_grid_dim(uint32_t n, uint16_t d) {
+uint32_t get_grid_dim(uint32_t n, uint16_t d) {
   uint32_t q = n / d;
   return q + (n > q * d);
 }
-DEVICE uint32_t get_workgroup_dim(uint32_t group_id, uint32_t grid_size,
-                                  uint16_t group_size) {
+uint32_t get_workgroup_dim(uint32_t group_id, uint32_t grid_size,
+                           uint16_t group_size) {
   uint32_t r = grid_size - group_id * group_size;
   return (r < group_size) ? r : group_size;
 }
@@ -140,36 +140,35 @@ EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads() {
 }
 
 // Atomics
-DEVICE uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {
+uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {
   return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
 }
-DEVICE uint32_t __kmpc_atomic_inc(uint32_t *Address, uint32_t Val) {
+uint32_t __kmpc_atomic_inc(uint32_t *Address, uint32_t Val) {
   return __builtin_amdgcn_atomic_inc32(Address, Val, __ATOMIC_SEQ_CST, "");
 }
-DEVICE uint32_t __kmpc_atomic_max(uint32_t *Address, uint32_t Val) {
+uint32_t __kmpc_atomic_max(uint32_t *Address, uint32_t Val) {
   return __atomic_fetch_max(Address, Val, __ATOMIC_SEQ_CST);
 }
 
-DEVICE uint32_t __kmpc_atomic_exchange(uint32_t *Address, uint32_t Val) {
+uint32_t __kmpc_atomic_exchange(uint32_t *Address, uint32_t Val) {
   uint32_t R;
   __atomic_exchange(Address, &Val, &R, __ATOMIC_SEQ_CST);
   return R;
 }
-DEVICE uint32_t __kmpc_atomic_cas(uint32_t *Address, uint32_t Compare,
-                                  uint32_t Val) {
+uint32_t __kmpc_atomic_cas(uint32_t *Address, uint32_t Compare, uint32_t Val) {
   (void)__atomic_compare_exchange(Address, &Compare, &Val, false,
                                   __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
   return Compare;
 }
 
-DEVICE unsigned long long __kmpc_atomic_exchange(unsigned long long *Address,
-                                                 unsigned long long Val) {
+unsigned long long __kmpc_atomic_exchange(unsigned long long *Address,
+                                          unsigned long long Val) {
   unsigned long long R;
   __atomic_exchange(Address, &Val, &R, __ATOMIC_SEQ_CST);
   return R;
 }
-DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *Address,
-                                            unsigned long long Val) {
+unsigned long long __kmpc_atomic_add(unsigned long long *Address,
+                                     unsigned long long Val) {
   return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
 }
 
