@@ -259,3 +259,42 @@ body:             |
     $vgpr1 = STRICT_WWM %3.sub1:vreg_64, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
 ...
+
+---
+# Check that WQM marking occurs correctly through phi nodes in live range graph.
+# If not then initial V_MOV will not be in WQM.
+#
+#CHECK-LABEL: name: test_wqm_lr_phi
+#CHECK: COPY $exec
+#CHECK-NEXT: S_WQM
+#CHECK-NEXT: V_MOV_B32_e32 -10
+#CHECK-NEXT: V_MOV_B32_e32 0
+name:            test_wqm_lr_phi
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    undef %0.sub0:vreg_64 = V_MOV_B32_e32 -10, implicit $exec
+    %0.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
+    %1:sreg_64 = S_GETPC_B64
+    %2:sgpr_256 = S_LOAD_DWORDX8_IMM %1:sreg_64, 32, 0, 0
+
+   bb.1:
+    $vcc = V_CMP_LT_U32_e64 4, 4, implicit $exec
+    S_CBRANCH_VCCNZ %bb.3, implicit $vcc
+    S_BRANCH %bb.2
+
+   bb.2:
+    %0.sub0:vreg_64 = V_ADD_U32_e32 1, %0.sub1, implicit $exec
+    S_BRANCH %bb.3
+
+   bb.3:
+    %0.sub1:vreg_64 = V_ADD_U32_e32 1, %0.sub1, implicit $exec
+    S_BRANCH %bb.4
+
+   bb.4:
+    %3:sgpr_128 = IMPLICIT_DEF
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %2:sgpr_256, %3:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom "ImageResource")
+    $vgpr0 = COPY %4.sub0:vreg_128
+    $vgpr1 = COPY %4.sub1:vreg_128
+    SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
+...
