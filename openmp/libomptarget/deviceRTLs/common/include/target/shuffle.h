@@ -33,10 +33,12 @@ int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size);
 /// Forward declarations
 ///
 ///{
+extern "C" {
 unsigned GetLaneId();
 unsigned GetWarpSize();
 void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi);
 uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi);
+}
 ///}
 
 /// Fallback implementations of the shuffle sync idiom.
