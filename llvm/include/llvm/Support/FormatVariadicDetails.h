@@ -48,7 +48,7 @@ public:
   explicit stream_operator_format_adapter(T &&Item)
       : Item(std::forward<T>(Item)) {}
 
-  void format(llvm::raw_ostream &S, StringRef Options) override { S << Item; }
+  void format(llvm::raw_ostream &S, StringRef) override { S << Item; }
 };
 
 template <typename T> class missing_format_adapter;
@@ -153,7 +153,7 @@ build_format_adapter(T &&Item) {
 
 template <typename T>
 std::enable_if_t<uses_missing_provider<T>::value, missing_format_adapter<T>>
-build_format_adapter(T &&Item) {
+build_format_adapter(T &&) {
   return missing_format_adapter<T>();
 }
 }
