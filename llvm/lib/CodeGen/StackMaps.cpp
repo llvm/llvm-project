@@ -511,7 +511,7 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
   const MachineFrameInfo &MFI = AP.MF->getFrameInfo();
   const TargetRegisterInfo *RegInfo = AP.MF->getSubtarget().getRegisterInfo();
   bool HasDynamicFrameSize =
-      MFI.hasVarSizedObjects() || RegInfo->needsStackRealignment(*(AP.MF));
+      MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(*(AP.MF));
   uint64_t FrameSize = HasDynamicFrameSize ? UINT64_MAX : MFI.getStackSize();
 
   auto CurrentIt = FnInfos.find(AP.CurrentFnSym);

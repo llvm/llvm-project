@@ -79,7 +79,7 @@ public:
   bool hasBasePointer(const MachineFunction &MF) const;
   Register getBaseRegister() const;
 
-  bool canRealignStack(const MachineFunction &MF) const override;
+  bool shouldRealignStack(const MachineFunction &MF) const override;
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;
 
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;
