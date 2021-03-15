@@ -1403,8 +1403,8 @@ define <16 x i8> @splatvar_funnnel_v16i8(<16 x i8> %x, <16 x i8> %amt) nounwind 
 ; XOPAVX1-LABEL: splatvar_funnnel_v16i8:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOPAVX1-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
 ; XOPAVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
 ; XOPAVX1-NEXT:    vprotb %xmm1, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    retq
 ;

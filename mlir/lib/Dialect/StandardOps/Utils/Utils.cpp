@@ -12,21 +12,9 @@
 
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 using namespace mlir;
-
-SmallVector<Value, 4> mlir::getDynOperands(Location loc, Value val,
-                                           OpBuilder &b) {
-  SmallVector<Value, 4> dynOperands;
-  auto shapedType = val.getType().cast<ShapedType>();
-  for (auto dim : llvm::enumerate(shapedType.getShape())) {
-    if (dim.value() == MemRefType::kDynamicSize)
-      dynOperands.push_back(b.create<memref::DimOp>(loc, val, dim.index()));
-  }
-  return dynOperands;
-}
 
 /// Matches a ConstantIndexOp.
 /// TODO: This should probably just be a general matcher that uses matchConstant

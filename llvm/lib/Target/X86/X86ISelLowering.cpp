@@ -36838,6 +36838,15 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
   unsigned Opc = N.getOpcode();
   switch (Opc) {
   // Unary and Unary+Permute Shuffles.
+  case X86ISD::PSHUFB: {
+    // Don't merge PSHUFB if it contains zero'd elements.
+    SmallVector<int> Mask;
+    SmallVector<SDValue> Ops;
+    if (!getTargetShuffleMask(N.getNode(), ShuffleVT.getSimpleVT(), false, Ops,
+                              Mask))
+      break;
+    LLVM_FALLTHROUGH;
+  }
   case X86ISD::VBROADCAST:
   case X86ISD::MOVDDUP:
   case X86ISD::PSHUFD: {
