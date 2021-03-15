@@ -12,10 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "M68kMCTargetDesc.h"
-
-#include "M68kMCAsmInfo.h"
-
 #include "M68kInstPrinter.h"
+#include "M68kMCAsmInfo.h"
+#include "TargetInfo/M68kTargetInfo.h"
 
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstPrinter.h"
@@ -108,7 +107,7 @@ static MCInstPrinter *createM68kMCInstPrinter(const Triple &T,
 }
 
 extern "C" void LLVMInitializeM68kTargetMC() {
-  Target &T = TheM68kTarget;
+  Target &T = getTheM68kTarget();
 
   // Register the MC asm info.
   RegisterMCAsmInfoFn X(T, createM68kMCAsmInfo);

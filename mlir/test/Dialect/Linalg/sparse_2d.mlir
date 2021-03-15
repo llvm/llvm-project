@@ -1163,9 +1163,9 @@ func @sum_reduction(%arga: tensor<10x20xf32>, %argx: tensor<f32>) -> tensor<f32>
 // CHECK-LABEL:   func @scale(
 // CHECK-SAME:                %[[VAL_0:.*]]: tensor<?x?xf64>,
 // CHECK-SAME:                %[[VAL_1:.*]]: tensor<?x?xf64>) -> tensor<?x?xf64> {
-// CHECK:           %[[VAL_2:.*]] = constant 2.000000e+00 : f64
 // CHECK:           %[[VAL_3:.*]] = constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = constant 2.000000e+00 : f64
 // CHECK:           %[[VAL_5:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_4]] : tensor<?x?xf64> to memref<?xindex>
 // CHECK:           %[[VAL_6:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_4]] : tensor<?x?xf64> to memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<?x?xf64> to memref<?xf64>

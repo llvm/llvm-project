@@ -47,17 +47,22 @@ static cl::opt<unsigned> RVVVectorLMULMax(
 
 void RISCVSubtarget::anchor() {}
 
-RISCVSubtarget &RISCVSubtarget::initializeSubtargetDependencies(
-    const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS, StringRef ABIName) {
+RISCVSubtarget &
+RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
+                                                StringRef TuneCPU, StringRef FS,
+                                                StringRef ABIName) {
   // Determine default and user-specified characteristics
   bool Is64Bit = TT.isArch64Bit();
-  std::string CPUName = std::string(CPU);
-  std::string TuneCPUName = std::string(TuneCPU);
-  if (CPUName.empty())
-    CPUName = Is64Bit ? "generic-rv64" : "generic-rv32";
-  if (TuneCPUName.empty())
-    TuneCPUName = CPUName;
-  ParseSubtargetFeatures(CPUName, TuneCPUName, FS);
+  if (CPU.empty())
+    CPU = Is64Bit ? "generic-rv64" : "generic-rv32";
+  if (CPU == "generic")
+    report_fatal_error(Twine("CPU 'generic' is not supported. Use ") +
+                       (Is64Bit ? "generic-rv64" : "generic-rv32"));
+
+  if (TuneCPU.empty())
+    TuneCPU = CPU;
+
+  ParseSubtargetFeatures(CPU, TuneCPU, FS);
   if (Is64Bit) {
     XLenVT = MVT::i64;
     XLen = 64;

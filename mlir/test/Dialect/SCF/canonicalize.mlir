@@ -21,12 +21,12 @@ func @single_iteration(%A: memref<?x?x?xi32>) {
 
 // CHECK-LABEL:   func @single_iteration(
 // CHECK-SAME:                        [[ARG0:%.*]]: memref<?x?x?xi32>) {
-// CHECK:           [[C0:%.*]] = constant 0 : index
-// CHECK:           [[C2:%.*]] = constant 2 : index
-// CHECK:           [[C3:%.*]] = constant 3 : index
-// CHECK:           [[C6:%.*]] = constant 6 : index
-// CHECK:           [[C7:%.*]] = constant 7 : index
 // CHECK:           [[C42:%.*]] = constant 42 : i32
+// CHECK:           [[C7:%.*]] = constant 7 : index
+// CHECK:           [[C6:%.*]] = constant 6 : index
+// CHECK:           [[C3:%.*]] = constant 3 : index
+// CHECK:           [[C2:%.*]] = constant 2 : index
+// CHECK:           [[C0:%.*]] = constant 0 : index
 // CHECK:           scf.parallel ([[V0:%.*]]) = ([[C3]]) to ([[C6]]) step ([[C2]]) {
 // CHECK:             store [[C42]], [[ARG0]]{{\[}}[[C0]], [[V0]], [[C7]]] : memref<?x?x?xi32>
 // CHECK:             scf.yield
