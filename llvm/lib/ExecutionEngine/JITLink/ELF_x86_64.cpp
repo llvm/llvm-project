@@ -36,7 +36,7 @@ public:
   ELF_x86_64_GOTAndStubsBuilder(LinkGraph &G)
       : BasicGOTAndStubsBuilder<ELF_x86_64_GOTAndStubsBuilder>(G) {}
 
-  bool isGOTEdge(Edge &E) const {
+  bool isGOTEdgeToFix(Edge &E) const {
     return E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad;
   }
 
@@ -652,9 +652,9 @@ private:
 public:
   ELFLinkGraphBuilder_x86_64(StringRef FileName,
                              const object::ELFFile<object::ELF64LE> &Obj)
-      : G(std::make_unique<LinkGraph>(FileName.str(),
-                                      Triple("x86_64-unknown-linux"),
-                                      getPointerSize(Obj), getEndianness(Obj))),
+      : G(std::make_unique<LinkGraph>(
+            FileName.str(), Triple("x86_64-unknown-linux"), getPointerSize(Obj),
+            getEndianness(Obj), getELFX86RelocationKindName)),
         Obj(Obj) {}
 
   Expected<std::unique_ptr<LinkGraph>> buildGraph() {
@@ -695,9 +695,6 @@ public:
       : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
 
 private:
-  StringRef getEdgeKindName(Edge::Kind R) const override {
-    return getELFX86RelocationKindName(R);
-  }
 
   static Error targetOutOfRangeError(const Block &B, const Edge &E) {
     std::string ErrMsg;
@@ -792,7 +789,7 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
 
   ELFJITLinker_x86_64::link(std::move(Ctx), std::move(G), std::move(Config));
 }
-StringRef getELFX86RelocationKindName(Edge::Kind R) {
+const char *getELFX86RelocationKindName(Edge::Kind R) {
   switch (R) {
   case PCRel32:
     return "PCRel32";

@@ -25,7 +25,8 @@ static StringRef BlockContent(BlockContentBytes);
 
 TEST(LinkGraphTest, Construction) {
   // Check that LinkGraph construction works as expected.
-  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little);
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
   EXPECT_EQ(G.getName(), "foo");
   EXPECT_EQ(G.getTargetTriple().str(), "x86_64-apple-darwin");
   EXPECT_EQ(G.getPointerSize(), 8U);
@@ -38,7 +39,8 @@ TEST(LinkGraphTest, Construction) {
 
 TEST(LinkGraphTest, AddressAccess) {
   // Check that we can get addresses for blocks, symbols, and edges.
-  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little);
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
 
   auto Sec1 = G.createSection("__data.1", RWFlags);
   auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
@@ -54,7 +56,8 @@ TEST(LinkGraphTest, AddressAccess) {
 
 TEST(LinkGraphTest, BlockAndSymbolIteration) {
   // Check that we can iterate over blocks within Sections and across sections.
-  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little);
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
   auto &Sec1 = G.createSection("__data.1", RWFlags);
   auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
   auto &B2 = G.createContentBlock(Sec1, BlockContent, 0x2000, 8, 0);
@@ -106,7 +109,8 @@ TEST(LinkGraphTest, SplitBlock) {
                                     0x1C, 0x1D, 0x1E, 0x1F, 0x00};
   StringRef BlockContent(BlockContentBytes);
 
-  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little);
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
   auto &Sec = G.createSection("__data", RWFlags);
 
   // Create the block to split.
