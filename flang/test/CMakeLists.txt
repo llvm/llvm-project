@@ -5,8 +5,6 @@ llvm_canonicalize_cmake_booleans(
   FLANG_STANDALONE_BUILD
 )
 
-set(FLANG_INTRINSIC_MODULES_DIR ${FLANG_BINARY_DIR}/include/flang)
-
 set(FLANG_TOOLS_DIR ${FLANG_BINARY_DIR}/bin)
 
 configure_lit_site_cfg(
