@@ -22,7 +22,7 @@ int a[-1];
 // ''ff'''
 // CHECK-YAML-NEXT:       FilePath:        '{{.*}}-input.cpp'
 // CHECK-YAML-NEXT:       FileOffset:      30
-// CHECK-YAML-NEXT:       Replacements:      []
+// CHECK-YAML-NEXT:       Replacements:    []
 // CHECK-YAML-NEXT:     Notes:
 // CHECK-YAML-NEXT:       - Message:         'expanded from macro ''X'''
 // CHECK-YAML-NEXT:         FilePath:        '{{.*}}-input.cpp'
@@ -52,10 +52,10 @@ int a[-1];
 // CHECK-YAML-NEXT:       FilePath:        '{{.*}}-input.cpp'
 // CHECK-YAML-NEXT:       FileOffset:      41
 // CHECK-YAML-NEXT:       Replacements:    []
+// CHECK-YAML-NEXT:       Ranges:
+// CHECK-YAML-NEXT:        - FilePath:        '{{.*}}-input.cpp'
+// CHECK-YAML-NEXT:          FileOffset:      41
+// CHECK-YAML-NEXT:          Length:          1
 // CHECK-YAML-NEXT:     Level:           Error
 // CHECK-YAML-NEXT:     BuildDirectory:  '{{.*}}'
-// CHECK-YAML-NEXT:     Ranges:
-// CHECK-YAML-NEXT:      - FilePath:        '{{.*}}-input.cpp'
-// CHECK-YAML-NEXT:         FileOffset:      41
-// CHECK-YAML-NEXT:         Length:          1
 // CHECK-YAML-NEXT: ...
