@@ -467,17 +467,10 @@ define <2 x double> @add_pd_003_2(<2 x double> %x) {
 }
 
 define <2 x double> @add_pd_010(<2 x double> %x) {
-; SSE-SLOW-LABEL: add_pd_010:
-; SSE-SLOW:       # %bb.0:
-; SSE-SLOW-NEXT:    movddup {{.*#+}} xmm1 = xmm0[0,0]
-; SSE-SLOW-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; SSE-SLOW-NEXT:    addpd %xmm1, %xmm0
-; SSE-SLOW-NEXT:    retq
-;
-; SSE-FAST-LABEL: add_pd_010:
-; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    haddpd %xmm0, %xmm0
-; SSE-FAST-NEXT:    retq
+; SSE-LABEL: add_pd_010:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddpd %xmm0, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX-SLOW-LABEL: add_pd_010:
 ; AVX-SLOW:       # %bb.0:
