@@ -381,7 +381,8 @@ static void emitInterfaceDoc(const llvm::Record &interfaceDef,
   Interface interface(&interfaceDef);
 
   // Emit the interface name followed by the description.
-  os << "## " << interface.getName() << " (" << interfaceDef.getName() << ")";
+  os << "## " << interface.getName() << " (`" << interfaceDef.getName()
+     << "`)\n\n";
   if (auto description = interface.getDescription())
     mlir::tblgen::emitDescription(*description, os);
 
