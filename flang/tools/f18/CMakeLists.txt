@@ -46,6 +46,7 @@ foreach(filename ${MODULES})
     set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
   endif()
   add_custom_command(OUTPUT ${base}.mod
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
     COMMAND f18 -fsyntax-only ${FLANG_SOURCE_DIR}/module/${filename}.f90
     WORKING_DIRECTORY ${FLANG_INTRINSIC_MODULES_DIR}
     DEPENDS f18 ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
