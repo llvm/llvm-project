@@ -363,8 +363,8 @@ define <16 x i8> @shuffle_8_18_uuuuuuuuuuuuuu(<16 x i8> %a, <16 x i8> %b) {
 ; AMD10H-LABEL: shuffle_8_18_uuuuuuuuuuuuuu:
 ; AMD10H:       # %bb.0:
 ; AMD10H-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AMD10H-NEXT:    andpd {{.*}}(%rip), %xmm0
-; AMD10H-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AMD10H-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AMD10H-NEXT:    andps {{.*}}(%rip), %xmm0
 ; AMD10H-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,2,3,4,5,6,7]
 ; AMD10H-NEXT:    packuswb %xmm0, %xmm0
 ; AMD10H-NEXT:    retq
