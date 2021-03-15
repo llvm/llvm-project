@@ -12,7 +12,7 @@ define swifttailcc void @swifttail() {
 
 define void @has_swiftasync(i8* swiftasync %in) {
 ; CHECK-LABEL: has_swiftasync:
-; CHECK-NOT: popq %r14
+; CHECK: popq %r14
   call void asm "","~{r14}"()
   ret void
 }
