@@ -6079,10 +6079,10 @@ AMDGPUAsmParser::parseSDelayAluOps(OperandVector &Operands) {
   SMLoc S = getLoc();
 
   if (isToken(AsmToken::Identifier) && peekToken().is(AsmToken::LParen)) {
-    while (!isToken(AsmToken::EndOfStatement)) {
+    do {
       if (!parseDelay(Delay))
         return MatchOperand_ParseFail;
-    }
+    } while (trySkipToken(AsmToken::Pipe));
   } else {
     if (!parseExpr(Delay))
       return MatchOperand_ParseFail;

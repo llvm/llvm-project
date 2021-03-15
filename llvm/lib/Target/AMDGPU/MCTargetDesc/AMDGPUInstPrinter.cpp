@@ -1484,7 +1484,7 @@ void AMDGPUInstPrinter::printDelayFlag(const MCInst *MI, unsigned OpNo,
   if (Value) {
     const char *Name = Value < InstIds.size() ? InstIds[Value] : BadInstId;
     O << Prefix << "instid0(" << Name << ')';
-    Prefix = " ";
+    Prefix = " | ";
   }
 
   Value = (SImm16 >> 4) & 7;
@@ -1492,14 +1492,14 @@ void AMDGPUInstPrinter::printDelayFlag(const MCInst *MI, unsigned OpNo,
     const char *Name =
         Value < InstSkips.size() ? InstSkips[Value] : BadInstSkip;
     O << Prefix << "instskip(" << Name << ')';
-    Prefix = " ";
+    Prefix = " | ";
   }
 
   Value = (SImm16 >> 7) & 0xF;
   if (Value) {
     const char *Name = Value < InstIds.size() ? InstIds[Value] : BadInstId;
     O << Prefix << "instid1(" << Name << ')';
-    Prefix = " ";
+    Prefix = " | ";
   }
 
   if (!*Prefix)
