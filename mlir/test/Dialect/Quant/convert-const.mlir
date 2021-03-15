@@ -144,9 +144,9 @@ func @const_custom_storage_range_i8_fixedpoint() -> tensor<7xf32> {
 // CHECK-LABEL: zero_tensors_to_zero_points
 func @zero_tensors_to_zero_points() -> (tensor<7xf32>, tensor<7xf32>, tensor<7xf32>, tensor<7xf32>) {
 
-// CHECK: %[[cst1:.*]] = constant dense<1> : tensor<7xi8>
 // CHECK: %[[cst:.*]] = constant dense<-127> : tensor<7xi8>
 // CHECK: %[[cst0:.*]] = constant dense<0> : tensor<7xi8>
+// CHECK: %[[cst1:.*]] = constant dense<1> : tensor<7xi8>
 // CHECK: "quant.scast"(%[[cst0]]) : (tensor<7xi8>) -> tensor<7x!quant.uniform<i8:f32, 1.000000e+00>>
 // CHECK: "quant.scast"(%[[cst]]) : (tensor<7xi8>) -> tensor<7x!quant.uniform<i8<-127:127>:f32, 1.000000e+00:-127>>
 // CHECK: "quant.scast"(%[[cst0]]) : (tensor<7xi8>) -> tensor<7x!quant.uniform<u8:f32, 1.000000e+00>>
@@ -176,10 +176,10 @@ func @zero_tensors_to_zero_points() -> (tensor<7xf32>, tensor<7xf32>, tensor<7xf
 // CHECK-LABEL: per_axis_dense_quantization
 func @per_axis_dense_quantization() -> (tensor<2x3xf32>, tensor<2x3xf32>) {
 
-// CHECK-NEXT: %[[cst0:.*]] = constant dense<{{\[}}[-128, -1, 1], [127, 1, 3]]> : tensor<2x3xi8>
 // CHECK-NEXT: %[[cst:.*]] = constant dense<{{\[}}[-128, 64, 127], [0, 1, 2]]> : tensor<2x3xi8>
+// CHECK-NEXT: %[[cst0:.*]] = constant dense<{{\[}}[-128, -1, 1], [127, 1, 3]]> : tensor<2x3xi8>
 // CHECK: "quant.scast"(%[[cst]]) : (tensor<2x3xi8>) -> tensor<2x3x!quant.uniform<i8:f32:0, {7.812500e-03:128,1.000000e+00}>>
-// CHECK: "quant.scast"(%[[cst0]]) : (tensor<2x3xi8>) -> tensor<2x3x!quant.uniform<i8:f32:1, {7.812500e-03:128,1.000000e+00,1.000000e+00:1}>>
+// CHECK: "quant.scast"(%cst_0) : (tensor<2x3xi8>) -> tensor<2x3x!quant.uniform<i8:f32:1, {7.812500e-03:128,1.000000e+00,1.000000e+00:1}>>
 
   %cst = constant dense<[[-2.0, -0.5, 0.0], [0.0, 1.0, 2.0]]> : tensor<2x3xf32>
   %1 = "quant.qcast"(%cst) : (tensor<2x3xf32>) -> tensor<2x3x!quant.uniform<i8:f32:0, {7.812500e-03:128, 1.0}>>

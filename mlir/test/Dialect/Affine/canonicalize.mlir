@@ -207,7 +207,7 @@ func @compose_affine_maps_diamond_dependency(%arg0: f32, %arg1: memref<4x4xf32>)
 
 // -----
 
-// CHECK-DAG: #[[$MAP14:.*]] = affine_map<()[s0, s1] -> ((s0 * 4 + s1 * 4) floordiv s0)>
+// CHECK-DAG: #[[$MAP14:.*]] = affine_map<()[s0, s1] -> (((s1 + s0) * 4) floordiv s0)>
 
 // CHECK-LABEL: func @compose_affine_maps_multiple_symbols
 func @compose_affine_maps_multiple_symbols(%arg0: index, %arg1: index) -> index {
@@ -312,7 +312,7 @@ func @symbolic_composition_c(%arg0: index, %arg1: index, %arg2: index, %arg3: in
 
 // -----
 
-// CHECK-DAG: #[[$MAP_symbolic_composition_d:.*]] = affine_map<()[s0, s1] -> (s0 * 3 + s1)>
+// CHECK-DAG: #[[$MAP_symbolic_composition_d:.*]] = affine_map<()[s0, s1] -> (s0 + s1 * 3)>
 
 // CHECK-LABEL: func @symbolic_composition_d(
 //  CHECK-SAME:   %[[ARG0:[0-9a-zA-Z]+]]: index
@@ -321,7 +321,7 @@ func @symbolic_composition_d(%arg0: index, %arg1: index, %arg2: index, %arg3: in
   %0 = affine.apply affine_map<(d0) -> (d0)>(%arg0)
   %1 = affine.apply affine_map<()[s0] -> (s0)>()[%arg1]
   %2 = affine.apply affine_map<()[s0, s1, s2, s3] -> (s0 + s1 + s2 + s3)>()[%0, %0, %0, %1]
-  // CHECK: %{{.*}} = affine.apply #[[$MAP_symbolic_composition_d]]()[%[[ARG0]], %[[ARG1]]]
+  // CHECK: %{{.*}} = affine.apply #[[$MAP_symbolic_composition_d]]()[%[[ARG1]], %[[ARG0]]]
   return %2 : index
 }
 

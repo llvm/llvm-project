@@ -25,11 +25,11 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   %c0 = constant 0 : index
   %f0 = constant 0.0 : f32
 
-  //  CHECK-DAG: %[[c8:.*]] = constant 8 : index
   //  CHECK-DAG: %[[c0:.*]] = constant 0 : index
+  //  CHECK-DAG: %[[c8:.*]] = constant 8 : index
+  //  CHECK-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // alloca for boundary full tile
   //      CHECK: %[[alloc:.*]] = alloca() {alignment = 32 : i64} : memref<4x8xf32>
-  //  CHECK-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // %i + 4 <= dim(%A, 0)
   //      CHECK: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
   //      CHECK: %[[d0:.*]] = dim %[[A]], %[[c0]] : memref<?x8xf32>
@@ -60,9 +60,9 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   //  LINALG-DAG: %[[c0:.*]] = constant 0 : index
   //  LINALG-DAG: %[[c4:.*]] = constant 4 : index
   //  LINALG-DAG: %[[c8:.*]] = constant 8 : index
+  //  LINALG-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // alloca for boundary full tile
   //      LINALG: %[[alloc:.*]] = alloca() {alignment = 32 : i64} : memref<4x8xf32>
-  //  LINALG-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // %i + 4 <= dim(%A, 0)
   //      LINALG: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
   //      LINALG: %[[d0:.*]] = dim %[[A]], %[[c0]] : memref<?x8xf32>
@@ -112,12 +112,12 @@ func @split_vector_transfer_read_strided_2d(
   %c0 = constant 0 : index
   %f0 = constant 0.0 : f32
 
+  //  CHECK-DAG: %[[c0:.*]] = constant 0 : index
   //  CHECK-DAG: %[[c7:.*]] = constant 7 : index
   //  CHECK-DAG: %[[c8:.*]] = constant 8 : index
-  //  CHECK-DAG: %[[c0:.*]] = constant 0 : index
+  //  CHECK-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // alloca for boundary full tile
   //      CHECK: %[[alloc:.*]] = alloca() {alignment = 32 : i64} : memref<4x8xf32>
-  //  CHECK-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // %i + 4 <= dim(%A, 0)
   //      CHECK: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
   //      CHECK: %[[cmp0:.*]] = cmpi sle, %[[idx0]], %[[c7]] : index
@@ -152,9 +152,9 @@ func @split_vector_transfer_read_strided_2d(
   //  LINALG-DAG: %[[c4:.*]] = constant 4 : index
   //  LINALG-DAG: %[[c7:.*]] = constant 7 : index
   //  LINALG-DAG: %[[c8:.*]] = constant 8 : index
+  //  LINALG-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // alloca for boundary full tile
   //      LINALG: %[[alloc:.*]] = alloca() {alignment = 32 : i64} : memref<4x8xf32>
-  //  LINALG-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // %i + 4 <= dim(%A, 0)
   //      LINALG: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
   //      LINALG: %[[cmp0:.*]] = cmpi sle, %[[idx0]], %[[c7]] : index
