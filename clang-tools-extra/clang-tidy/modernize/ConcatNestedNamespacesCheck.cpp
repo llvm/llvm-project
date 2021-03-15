@@ -82,9 +82,6 @@ void ConcatNestedNamespacesCheck::check(
   if (!locationsInSameFile(Sources, ND.getBeginLoc(), ND.getRBraceLoc()))
     return;
 
-  if (!Sources.isInMainFile(ND.getBeginLoc()))
-    return;
-
   if (anonymousOrInlineNamespace(ND))
     return;
 
