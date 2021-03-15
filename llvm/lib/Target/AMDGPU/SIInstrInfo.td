@@ -818,24 +818,16 @@ def NegSubInlineConstV216 : PatLeaf<(build_vector), [{
 // MUBUF/SMEM Patterns
 //===----------------------------------------------------------------------===//
 
-def extract_glc : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() & 1, SDLoc(N), MVT::i8);
-}]>;
-
-def extract_slc : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant((N->getZExtValue() >> 1) & 1, SDLoc(N), MVT::i8);
-}]>;
-
-def extract_dlc : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant((N->getZExtValue() >> 2) & 1, SDLoc(N), MVT::i8);
+def extract_cpol : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() & AMDGPU::CPol::ALL, SDLoc(N), MVT::i8);
 }]>;
 
 def extract_swz : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant((N->getZExtValue() >> 3) & 1, SDLoc(N), MVT::i8);
 }]>;
 
-def extract_sccb : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant((N->getZExtValue() >> 4) & 1, SDLoc(N), MVT::i8);
+def set_glc : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() | AMDGPU::CPol::GLC, SDLoc(N), MVT::i8);
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -1090,6 +1082,12 @@ class NamedOperandU32Default0<string Name, AsmOperandClass MatchClass> :
   let ParserMatchClass = MatchClass;
 }
 
+class NamedOperandU32Default1<string Name, AsmOperandClass MatchClass> :
+  OperandWithDefaultOps<i32, (ops (i32 1))> {
+  let PrintMethod = "print"#Name;
+  let ParserMatchClass = MatchClass;
+}
+
 let OperandType = "OPERAND_IMMEDIATE" in {
 
 def offen : NamedOperandBit<"Offen", NamedMatchClass<"Offen">>;
@@ -1113,18 +1111,9 @@ def clampmod : NamedOperandBit<"ClampSI", NamedMatchClass<"ClampSI">>;
 def clampmod0 : NamedOperandBit_0<"ClampSI", NamedMatchClass<"ClampSI">>;
 def highmod : NamedOperandBit<"High", NamedMatchClass<"High">>;
 
-def SCCB : NamedOperandBit<"SCCB", NamedMatchClass<"SCCB">>;
-def SCCB_0 : NamedOperandBit_0<"SCCB", NamedMatchClass<"SCCB">>;
-
-def DLC : NamedOperandBit<"DLC", NamedMatchClass<"DLC">>;
-def DLC_0 : NamedOperandBit_0<"DLC", NamedMatchClass<"DLC">>;
-
-def GLC : NamedOperandBit<"GLC", NamedMatchClass<"GLC">>;
-def GLC_0 : NamedOperandBit_0<"GLC", NamedMatchClass<"GLC">>;
-def GLC_1 : NamedOperandBit_1<"GLC", NamedMatchClass<"GLC_1">>;
-
-def SLC : NamedOperandBit<"SLC", NamedMatchClass<"SLC">>;
-def SLC_0 : NamedOperandBit_0<"SLC", NamedMatchClass<"SLC">>;
+def CPol : NamedOperandU32<"CPol", NamedMatchClass<"CPol">>;
+def CPol_0 : NamedOperandU32Default0<"CPol", NamedMatchClass<"CPol">>;
+def CPol_GLC1 : NamedOperandU32Default1<"CPol", NamedMatchClass<"CPol">>;
 
 def TFE : NamedOperandBit<"TFE", NamedMatchClass<"TFE">>;
 def SWZ : NamedOperandBit<"SWZ", NamedMatchClass<"SWZ">>;

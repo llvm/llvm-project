@@ -276,6 +276,18 @@ enum : unsigned {
 } // namespace AMDGPU
 
 namespace AMDGPU {
+namespace CPol {
+
+enum CPol {
+  GLC = 1,
+  SLC = 2,
+  DLC = 4,
+  SCC = 16,
+  ALL = GLC | SLC | DLC | SCC
+};
+
+} // namespace CPol
+
 namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.
 
 enum Id { // Message ID, width(4) [3:0].
