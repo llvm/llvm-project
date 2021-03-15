@@ -2,12 +2,13 @@
 
 from mlir.ir import *
 import mlir.dialects.std as std
+import mlir.dialects.memref as memref
 
 def run(f):
   print("\nTEST:", f.__name__)
   f()
 
-# _HECK-LABEL: TEST: testSubViewAccessors
+# CHECK-LABEL: TEST: testSubViewAccessors
 def testSubViewAccessors():
   ctx = Context()
   module = Module.parse(r"""
@@ -31,28 +32,22 @@ def testSubViewAccessors():
   assert len(subview.strides) == 2
   assert subview.result == subview.results[0]
 
-  # _HECK: SubViewOp
+  # CHECK: SubViewOp
   print(type(subview).__name__)
 
-  # _HECK: constant 0
+  # CHECK: constant 0
   print(subview.offsets[0])
-  # _HECK: constant 1
+  # CHECK: constant 1
   print(subview.offsets[1])
-  # _HECK: constant 2
+  # CHECK: constant 2
   print(subview.sizes[0])
-  # _HECK: constant 3
+  # CHECK: constant 3
   print(subview.sizes[1])
-  # _HECK: constant 4
+  # CHECK: constant 4
   print(subview.strides[0])
-  # _HECK: constant 5
+  # CHECK: constant 5
   print(subview.strides[1])
 
 
-# TODO: re-enable after moving the bindings from std to memref dialects
-# run(testSubViewAccessors)
+run(testSubViewAccessors)
 
-def forcePass():
-  # CHECK: okay
-  print("okay")
-
-run(forcePass)
