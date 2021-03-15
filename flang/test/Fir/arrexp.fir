@@ -124,7 +124,7 @@ func @f5(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>,
     // CHECK: %[[B_VAL:.*]] = load float, float* %[[B_ADDR]]
     // CHECK: fadd float %[[B_VAL]], %[[F]]
     %5 = fir.array_fetch %3, %arg3 : (!fir.array<?xf32>, index) -> f32
-    %6 = fir.addf %5, %arg2 : f32
+    %6 = addf %5, %arg2 : f32
     %7 = fir.array_update %arg4, %6, %arg3 : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
     fir.result %7 : !fir.array<?xf32>
   }
@@ -158,7 +158,7 @@ func @f6(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: f32) {
   %4 = fir.array_load %arg0 [%3] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.array<?xf32>
   %5 = fir.do_loop %arg2 = %c0 to %c9 step %c1 iter_args(%arg3 = %2) -> (!fir.array<?xf32>) {
     %6 = fir.array_fetch %4, %arg2 : (!fir.array<?xf32>, index) -> f32
-    %7 = fir.addf %6, %arg1 : f32
+    %7 = addf %6, %arg1 : f32
     %8 = fir.array_update %arg3, %7, %arg2 : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
     fir.result %8 : !fir.array<?xf32>
   }

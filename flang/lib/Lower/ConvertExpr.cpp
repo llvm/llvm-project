@@ -513,16 +513,16 @@ public:
   }
 
   GENBIN(Add, Integer, mlir::AddIOp)
-  GENBIN(Add, Real, fir::AddfOp)
+  GENBIN(Add, Real, mlir::AddFOp)
   GENBIN(Add, Complex, fir::AddcOp)
   GENBIN(Subtract, Integer, mlir::SubIOp)
-  GENBIN(Subtract, Real, fir::SubfOp)
+  GENBIN(Subtract, Real, mlir::SubFOp)
   GENBIN(Subtract, Complex, fir::SubcOp)
   GENBIN(Multiply, Integer, mlir::MulIOp)
-  GENBIN(Multiply, Real, fir::MulfOp)
+  GENBIN(Multiply, Real, mlir::MulFOp)
   GENBIN(Multiply, Complex, fir::MulcOp)
   GENBIN(Divide, Integer, mlir::SignedDivIOp)
-  GENBIN(Divide, Real, fir::DivfOp)
+  GENBIN(Divide, Real, mlir::DivFOp)
   GENBIN(Divide, Complex, fir::DivcOp)
 
   template <Fortran::common::TypeCategory TC, int KIND>
@@ -2143,16 +2143,16 @@ public:
   }
 
   GENBIN(Add, Integer, mlir::AddIOp)
-  GENBIN(Add, Real, fir::AddfOp)
+  GENBIN(Add, Real, mlir::AddFOp)
   GENBIN(Add, Complex, fir::AddcOp)
   GENBIN(Subtract, Integer, mlir::SubIOp)
-  GENBIN(Subtract, Real, fir::SubfOp)
+  GENBIN(Subtract, Real, mlir::SubFOp)
   GENBIN(Subtract, Complex, fir::SubcOp)
   GENBIN(Multiply, Integer, mlir::MulIOp)
-  GENBIN(Multiply, Real, fir::MulfOp)
+  GENBIN(Multiply, Real, mlir::MulFOp)
   GENBIN(Multiply, Complex, fir::MulcOp)
   GENBIN(Divide, Integer, mlir::SignedDivIOp)
-  GENBIN(Divide, Real, fir::DivfOp)
+  GENBIN(Divide, Real, mlir::DivFOp)
   GENBIN(Divide, Complex, fir::DivcOp)
 
   template <Fortran::common::TypeCategory TC, int KIND>

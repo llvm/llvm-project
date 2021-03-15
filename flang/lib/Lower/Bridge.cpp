@@ -673,7 +673,7 @@ private:
     // Arithmetic expression has Real type.  Generate
     //   sum = expr + expr  [ raise an exception if expr is a NaN ]
     //   if (sum < 0.0) goto L1 else if (sum > 0.0) goto L3 else goto L2
-    auto sum = builder->create<fir::AddfOp>(loc, expr, expr);
+    auto sum = builder->create<mlir::AddFOp>(loc, expr, expr);
     auto zero = builder->create<mlir::ConstantOp>(
         loc, exprType, builder->getFloatAttr(exprType, 0.0));
     auto cond1 =

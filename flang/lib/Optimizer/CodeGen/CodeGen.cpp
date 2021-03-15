@@ -2674,46 +2674,6 @@ void lowerRealBinaryOp(BINOP binop, OperandTy operands,
   rewriter.replaceOpWithNewOp<LLVMOP>(binop, ty, operands);
 }
 
-struct AddfOpConversion : public FIROpConversion<fir::AddfOp> {
-  using FIROpConversion::FIROpConversion;
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::AddfOp op, OperandTy operands,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    lowerRealBinaryOp<mlir::LLVM::FAddOp>(op, operands, rewriter, lowerTy());
-    return success();
-  }
-};
-struct SubfOpConversion : public FIROpConversion<fir::SubfOp> {
-  using FIROpConversion::FIROpConversion;
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::SubfOp op, OperandTy operands,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    lowerRealBinaryOp<mlir::LLVM::FSubOp>(op, operands, rewriter, lowerTy());
-    return success();
-  }
-};
-struct MulfOpConversion : public FIROpConversion<fir::MulfOp> {
-  using FIROpConversion::FIROpConversion;
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::MulfOp op, OperandTy operands,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    lowerRealBinaryOp<mlir::LLVM::FMulOp>(op, operands, rewriter, lowerTy());
-    return success();
-  }
-};
-struct DivfOpConversion : public FIROpConversion<fir::DivfOp> {
-  using FIROpConversion::FIROpConversion;
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::DivfOp op, OperandTy operands,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    lowerRealBinaryOp<mlir::LLVM::FDivOp>(op, operands, rewriter, lowerTy());
-    return success();
-  }
-};
 struct ModfOpConversion : public FIROpConversion<fir::ModfOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -2916,29 +2876,27 @@ public:
     auto loc = mlir::UnknownLoc::get(context);
     mlir::OwningRewritePatternList pattern;
     pattern.insert<
-        AbsentOpConversion, AddcOpConversion, AddfOpConversion,
-        AddrOfOpConversion, AllocaOpConversion, AllocMemOpConversion,
-        BoxAddrOpConversion, BoxCharLenOpConversion, BoxDimsOpConversion,
-        BoxEleSizeOpConversion, BoxIsAllocOpConversion, BoxIsArrayOpConversion,
-        BoxIsPtrOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
-        BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
-        CmpfOpConversion, ConstcOpConversion, ConvertOpConversion,
-        CoordinateOpConversion, DispatchOpConversion, DispatchTableOpConversion,
-        DivcOpConversion, DivfOpConversion, DTEntryOpConversion,
-        EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
-        FieldIndexOpConversion, FirEndOpConversion, ExtractValueOpConversion,
-        IsPresentOpConversion, FreeMemOpConversion, GenTypeDescOpConversion,
-        GlobalLenOpConversion, GlobalOpConversion, HasValueOpConversion,
-        InsertOnRangeOpConversion, InsertValueOpConversion,
-        LenParamIndexOpConversion, LoadOpConversion, ModfOpConversion,
-        MulcOpConversion, MulfOpConversion, NegcOpConversion, NegfOpConversion,
+        AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
+        AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,
+        BoxCharLenOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
+        BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
+        BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeDescOpConversion,
+        CallOpConversion, CmpcOpConversion, CmpfOpConversion,
+        ConstcOpConversion, ConvertOpConversion, CoordinateOpConversion,
+        DispatchOpConversion, DispatchTableOpConversion, DivcOpConversion,
+        DTEntryOpConversion, EmboxOpConversion, EmboxCharOpConversion,
+        EmboxProcOpConversion, FieldIndexOpConversion, FirEndOpConversion,
+        ExtractValueOpConversion, IsPresentOpConversion, FreeMemOpConversion,
+        GenTypeDescOpConversion, GlobalLenOpConversion, GlobalOpConversion,
+        HasValueOpConversion, InsertOnRangeOpConversion,
+        InsertValueOpConversion, ModfOpConversion, LenParamIndexOpConversion,
+        LoadOpConversion, MulcOpConversion, NegcOpConversion, NegfOpConversion,
         NoReassocOpConversion, SelectCaseOpConversion, SelectOpConversion,
         SelectRankOpConversion, SelectTypeOpConversion, StoreOpConversion,
-        StringLitOpConversion, SubcOpConversion, SubfOpConversion,
-        UnboxCharOpConversion, UnboxOpConversion, UnboxProcOpConversion,
-        UndefOpConversion, UnreachableOpConversion, XArrayCoorOpConversion,
-        XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(
-        context, typeConverter);
+        StringLitOpConversion, SubcOpConversion, UnboxCharOpConversion,
+        UnboxOpConversion, UnboxProcOpConversion, UndefOpConversion,
+        UnreachableOpConversion, XArrayCoorOpConversion, XEmboxOpConversion,
+        XReboxOpConversion, ZeroOpConversion>(context, typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ConversionTarget target{*context};

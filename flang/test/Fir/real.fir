@@ -3,49 +3,49 @@
 // RUN: tco %s | FileCheck %s
 
 // CHECK-LABEL: @bar
-func @bar(%a : !fir.real<2>, %b : !fir.real<4>, %c : !fir.real<8>, %d : !fir.real<10>, %e : !fir.real<16>) -> !fir.real<10> {
+func @bar(%a : f16, %b : f32, %c : f64, %d : f80, %e : f128) -> f80 {
   // CHECK: fpext half %{{.*}} to x86_fp80
-  %1 = fir.convert %a : (!fir.real<2>) -> !fir.real<10>
+  %1 = fir.convert %a : (f16) -> f80
   // CHECK: fpext float %{{.*}} to x86_fp80
-  %2 = fir.convert %b : (!fir.real<4>) -> !fir.real<10>
+  %2 = fir.convert %b : (f32) -> f80
   // CHECK: fpext double %{{.*}} to x86_fp80
-  %3 = fir.convert %c : (!fir.real<8>) -> !fir.real<10>
+  %3 = fir.convert %c : (f64) -> f80
   // CHECK-NOT: fpext
   // CHECK-NOT: fptrunc
-  %4 = fir.convert %d : (!fir.real<10>) -> !fir.real<10>
+  %4 = fir.convert %d : (f80) -> f80
   // CHECK: fptrunc fp128 %{{.*}} to x86_fp80
-  %5 = fir.convert %e : (!fir.real<16>) -> !fir.real<10>
+  %5 = fir.convert %e : (f128) -> f80
   // CHECK-NEXT: call x86_fp80
-  %6 = call @foop(%1, %2, %3, %4, %5) : (!fir.real<10>, !fir.real<10>, !fir.real<10>, !fir.real<10>, !fir.real<10>) -> !fir.real<10>
-  return %6 : !fir.real<10>
+  %6 = call @foop(%1, %2, %3, %4, %5) : (f80, f80, f80, f80, f80) -> f80
+  return %6 : f80
 }
 
 // CHECK-LABEL: @foo
-func @foo(%a : !fir.real<16>, %b : !fir.real<16>, %c : !fir.real<16>, %d : !fir.real<16>, %e : !fir.real<16>) -> !fir.real<16> {
+func @foo(%a : f128, %b : f128, %c : f128, %d : f128, %e : f128) -> f128 {
   // CHECK: fadd fp128
-  %1 = fir.addf %a, %b : !fir.real<16>
+  %1 = addf %a, %b : f128
   // CHECK: fmul fp128
-  %2 = fir.mulf %1, %c : !fir.real<16>
+  %2 = mulf %1, %c : f128
   // CHECK: fsub fp128
-  %3 = fir.subf %2, %d : !fir.real<16>
+  %3 = subf %2, %d : f128
   // CHECK: fdiv fp128
-  %4 = fir.divf %3, %e : !fir.real<16>
+  %4 = divf %3, %e : f128
   // CHECK: frem fp128
-  %5 = fir.modf %4, %a : !fir.real<16>
-  return %5 : !fir.real<16>
+  %5 = fir.modf %4, %a : f128
+  return %5 : f128
 }
 
 // CHECK-LABEL: @foop
-func @foop(%a : !fir.real<10>, %b : !fir.real<10>, %c : !fir.real<10>, %d : !fir.real<10>, %e : !fir.real<10>) -> !fir.real<10> {
+func @foop(%a : f80, %b : f80, %c : f80, %d : f80, %e : f80) -> f80 {
   // CHECK: fadd x86_fp80
-  %1 = fir.addf %a, %b : !fir.real<10>
+  %1 = addf %a, %b : f80
   // CHECK: fmul x86_fp80
-  %2 = fir.mulf %1, %c : !fir.real<10>
+  %2 = mulf %1, %c : f80
   // CHECK: fsub x86_fp80
-  %3 = fir.subf %2, %d : !fir.real<10>
+  %3 = subf %2, %d : f80
   // CHECK: fdiv x86_fp80
-  %4 = fir.divf %3, %e : !fir.real<10>
+  %4 = divf %3, %e : f80
   // CHECK: frem x86_fp80
-  %5 = fir.modf %4, %a : !fir.real<10>
-  return %5 : !fir.real<10>
+  %5 = fir.modf %4, %a : f80
+  return %5 : f80
 }
