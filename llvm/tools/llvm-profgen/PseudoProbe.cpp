@@ -162,7 +162,7 @@ void PseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
     uint64_t GUID = readUnencodedNumber<uint64_t>();
     uint64_t Hash = readUnencodedNumber<uint64_t>();
     uint32_t NameSize = readUnsignedNumber<uint32_t>();
-    StringRef Name = readString(NameSize);
+    StringRef Name = FunctionSamples::getCanonicalFnName(readString(NameSize));
 
     // Initialize PseudoProbeFuncDesc and populate it into GUID2FuncDescMap
     GUID2FuncDescMap.emplace(GUID, PseudoProbeFuncDesc(GUID, Hash, Name));
