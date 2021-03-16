@@ -235,6 +235,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
   while (true) {
     if (HasScopeSpecifier) {
       if (Tok.is(tok::code_completion)) {
+        cutOffParsing();
         // Code completion for a nested-name-specifier, where the code
         // completion token follows the '::'.
         Actions.CodeCompleteQualifiedId(getCurScope(), SS, EnteringContext,
@@ -245,7 +246,6 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         // token will cause assertion in
         // Preprocessor::AnnotatePreviousCachedTokens.
         SS.setEndLoc(Tok.getLocation());
-        cutOffParsing();
         return true;
       }
 
@@ -877,9 +877,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         // expression parser perform the completion.
         if (Tok.is(tok::code_completion) &&
             !(getLangOpts().ObjC && Tentative)) {
+          cutOffParsing();
           Actions.CodeCompleteLambdaIntroducer(getCurScope(), Intro,
                                                /*AfterAmpersand=*/false);
-          cutOffParsing();
           break;
         }
 
@@ -891,6 +891,7 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     }
 
     if (Tok.is(tok::code_completion)) {
+      cutOffParsing();
       // If we're in Objective-C++ and we have a bare '[', then this is more
       // likely to be a message receiver.
       if (getLangOpts().ObjC && Tentative && First)
@@ -898,7 +899,6 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       else
         Actions.CodeCompleteLambdaIntroducer(getCurScope(), Intro,
                                              /*AfterAmpersand=*/false);
-      cutOffParsing();
       break;
     }
 
@@ -943,9 +943,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         ConsumeToken();
 
         if (Tok.is(tok::code_completion)) {
+          cutOffParsing();
           Actions.CodeCompleteLambdaIntroducer(getCurScope(), Intro,
                                                /*AfterAmpersand=*/true);
-          cutOffParsing();
           break;
         }
       }
@@ -1996,8 +1996,8 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
   PreferredType.enterCondition(Actions, Tok.getLocation());
 
   if (Tok.is(tok::code_completion)) {
-    Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Condition);
     cutOffParsing();
+    Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Condition);
     return Sema::ConditionError();
   }
 
@@ -2608,10 +2608,10 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
     }
 
     case tok::code_completion: {
+      // Don't try to parse any further.
+      cutOffParsing();
       // Code completion for the operator name.
       Actions.CodeCompleteOperatorName(getCurScope());
-      cutOffParsing();
-      // Don't try to parse any further.
       return true;
     }
 

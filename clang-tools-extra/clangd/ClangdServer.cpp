@@ -9,6 +9,7 @@
 #include "ClangdServer.h"
 #include "CodeComplete.h"
 #include "Config.h"
+#include "Diagnostics.h"
 #include "DumpAST.h"
 #include "FindSymbols.h"
 #include "Format.h"
@@ -81,7 +82,9 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     if (FIndex)
       FIndex->updateMain(Path, AST);
 
-    std::vector<Diag> Diagnostics = AST.getDiagnostics();
+    assert(AST.getDiagnostics().hasValue() &&
+           "We issue callback only with fresh preambles");
+    std::vector<Diag> Diagnostics = *AST.getDiagnostics();
     if (ServerCallbacks)
       Publish([&]() {
         ServerCallbacks->onDiagnosticsReady(Path, AST.version(),
@@ -150,6 +153,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
       WorkspaceRoot(Opts.WorkspaceRoot),
+      Transient(Opts.ImplicitCancellation ? TUScheduler::InvalidateOnUpdate
+                                          : TUScheduler::NoInvalidation),
       DirtyFS(std::make_unique<DraftStoreFS>(TFS, DraftMgr)) {
   // Pass a callback into `WorkScheduler` to extract symbols from a newly
   // parsed file and rebuild the file index synchronously each time an AST
@@ -593,7 +598,7 @@ void ClangdServer::enumerateTweaks(
   };
 
   WorkScheduler->runWithAST("EnumerateTweaks", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+                            Transient);
 }
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
@@ -683,8 +688,7 @@ void ClangdServer::findDocumentHighlights(
         CB(clangd::findDocumentHighlights(InpAST->AST, Pos));
       };
 
-  WorkScheduler->runWithAST("Highlights", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+  WorkScheduler->runWithAST("Highlights", File, std::move(Action), Transient);
 }
 
 void ClangdServer::findHover(PathRef File, Position Pos,
@@ -698,8 +702,7 @@ void ClangdServer::findHover(PathRef File, Position Pos,
     CB(clangd::getHover(InpAST->AST, Pos, std::move(Style), Index));
   };
 
-  WorkScheduler->runWithAST("Hover", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+  WorkScheduler->runWithAST("Hover", File, std::move(Action), Transient);
 }
 
 void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
@@ -771,7 +774,7 @@ void ClangdServer::documentSymbols(llvm::StringRef File,
         CB(clangd::getDocumentSymbols(InpAST->AST));
       };
   WorkScheduler->runWithAST("DocumentSymbols", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+                            Transient);
 }
 
 void ClangdServer::foldingRanges(llvm::StringRef File,
@@ -783,7 +786,7 @@ void ClangdServer::foldingRanges(llvm::StringRef File,
         CB(clangd::getFoldingRanges(InpAST->AST));
       };
   WorkScheduler->runWithAST("FoldingRanges", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+                            Transient);
 }
 
 void ClangdServer::findImplementations(
@@ -850,7 +853,7 @@ void ClangdServer::documentLinks(PathRef File,
         CB(clangd::getDocumentLinks(InpAST->AST));
       };
   WorkScheduler->runWithAST("DocumentLinks", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+                            Transient);
 }
 
 void ClangdServer::semanticHighlights(
@@ -862,7 +865,7 @@ void ClangdServer::semanticHighlights(
         CB(clangd::getSemanticHighlightings(InpAST->AST));
       };
   WorkScheduler->runWithAST("SemanticHighlights", File, std::move(Action),
-                            TUScheduler::InvalidateOnUpdate);
+                            Transient);
 }
 
 void ClangdServer::getAST(PathRef File, Range R,
@@ -900,6 +903,21 @@ void ClangdServer::getAST(PathRef File, Range R,
 void ClangdServer::customAction(PathRef File, llvm::StringRef Name,
                                 Callback<InputsAndAST> Action) {
   WorkScheduler->runWithAST(Name, File, std::move(Action));
+}
+
+void ClangdServer::diagnostics(PathRef File, Callback<std::vector<Diag>> CB) {
+  auto Action =
+      [CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
+        if (!InpAST)
+          return CB(InpAST.takeError());
+        if (auto Diags = InpAST->AST.getDiagnostics())
+          return CB(*Diags);
+        // FIXME: Use ServerCancelled error once it is settled in LSP-3.17.
+        return CB(llvm::make_error<LSPError>("server is busy parsing includes",
+                                             ErrorCode::InternalError));
+      };
+
+  WorkScheduler->runWithAST("Diagnostics", File, std::move(Action));
 }
 
 llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {

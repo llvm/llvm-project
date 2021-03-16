@@ -1,5 +1,8 @@
 # RUN: llvm-exegesis -mode=latency -opcode-name=IN16rr -repetition-mode=duplicate | FileCheck %s
 
+# FIXME: Sometimes fails with: 'unimplemented operand type'
+# ALLOW_RETRIES: 2
+
 CHECK:      ---
 CHECK-NEXT: mode: latency
 CHECK-NEXT: key:

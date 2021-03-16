@@ -8,7 +8,10 @@
 
 #include "Features.inc"
 #include "Index.pb.h"
+#include "MonitoringService.grpc.pb.h"
+#include "MonitoringService.pb.h"
 #include "Service.grpc.pb.h"
+#include "Service.pb.h"
 #include "index/Index.h"
 #include "index/Serialization.h"
 #include "index/Symbol.h"
@@ -288,11 +291,46 @@ private:
   clangd::SymbolIndex &Index;
 };
 
+class Monitor final : public v1::Monitor::Service {
+public:
+  Monitor(llvm::sys::TimePoint<> IndexAge)
+      : StartTime(std::chrono::system_clock::now()), IndexBuildTime(IndexAge) {}
+
+  void updateIndex(llvm::sys::TimePoint<> UpdateTime) {
+    IndexBuildTime.exchange(UpdateTime);
+  }
+
+private:
+  // FIXME(kirillbobyrev): Most fields should be populated when the index
+  // reloads (probably in adjacent metadata.txt file next to loaded .idx) but
+  // they aren't right now.
+  grpc::Status MonitoringInfo(grpc::ServerContext *Context,
+                              const v1::MonitoringInfoRequest *Request,
+                              v1::MonitoringInfoReply *Reply) override {
+    Reply->set_uptime_seconds(std::chrono::duration_cast<std::chrono::seconds>(
+                                  std::chrono::system_clock::now() - StartTime)
+                                  .count());
+    // FIXME(kirillbobyrev): We are currently making use of the last
+    // modification time of the index artifact to deduce its age. This is wrong
+    // as it doesn't account for the indexing delay. Propagate some metadata
+    // with the index artifacts to indicate time of the commit we indexed.
+    Reply->set_index_age_seconds(
+        std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now() - IndexBuildTime.load())
+            .count());
+    return grpc::Status::OK;
+  }
+
+  const llvm::sys::TimePoint<> StartTime;
+  std::atomic<llvm::sys::TimePoint<>> IndexBuildTime;
+};
+
 // Detect changes in \p IndexPath file and load new versions of the index
 // whenever they become available.
 void hotReload(clangd::SwapIndex &Index, llvm::StringRef IndexPath,
                llvm::vfs::Status &LastStatus,
-               llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> &FS) {
+               llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> &FS,
+               Monitor &Monitor) {
   auto Status = FS->status(IndexPath);
   // Requested file is same as loaded index: no reload is needed.
   if (!Status || (Status->getLastModificationTime() ==
@@ -309,12 +347,13 @@ void hotReload(clangd::SwapIndex &Index, llvm::StringRef IndexPath,
     return;
   }
   Index.reset(std::move(NewIndex));
+  Monitor.updateIndex(Status->getLastModificationTime());
   log("New index version loaded. Last modification time: {0}, size: {1} bytes.",
       Status->getLastModificationTime(), Status->getSize());
 }
 
 void runServerAndWait(clangd::SymbolIndex &Index, llvm::StringRef ServerAddress,
-                      llvm::StringRef IndexPath) {
+                      llvm::StringRef IndexPath, Monitor &Monitor) {
   RemoteIndexServer Service(Index, IndexRoot);
 
   grpc::EnableDefaultHealthCheckService(true);
@@ -327,6 +366,7 @@ void runServerAndWait(clangd::SymbolIndex &Index, llvm::StringRef ServerAddress,
   Builder.AddChannelArgument(GRPC_ARG_MAX_CONNECTION_IDLE_MS,
                              IdleTimeoutSeconds * 1000);
   Builder.RegisterService(&Service);
+  Builder.RegisterService(&Monitor);
   std::unique_ptr<grpc::Server> Server(Builder.BuildAndStart());
   log("Server listening on {0}", ServerAddress);
 
@@ -425,16 +465,18 @@ int main(int argc, char *argv[]) {
   }
   clang::clangd::SwapIndex Index(std::move(SymIndex));
 
-  std::thread HotReloadThread([&Index, &Status, &FS]() {
+  Monitor Monitor(Status->getLastModificationTime());
+
+  std::thread HotReloadThread([&Index, &Status, &FS, &Monitor]() {
     llvm::vfs::Status LastStatus = *Status;
     static constexpr auto RefreshFrequency = std::chrono::seconds(30);
     while (!clang::clangd::shutdownRequested()) {
-      hotReload(Index, llvm::StringRef(IndexPath), LastStatus, FS);
+      hotReload(Index, llvm::StringRef(IndexPath), LastStatus, FS, Monitor);
       std::this_thread::sleep_for(RefreshFrequency);
     }
   });
 
-  runServerAndWait(Index, ServerAddress, IndexPath);
+  runServerAndWait(Index, ServerAddress, IndexPath, Monitor);
 
   HotReloadThread.join();
 }
