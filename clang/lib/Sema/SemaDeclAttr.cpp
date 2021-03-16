@@ -390,10 +390,10 @@ appendDiagnostics(const Sema::SemaDiagnosticBuilder &Bldr, T &&ExtraArg,
                            std::forward<DiagnosticArgs>(ExtraArgs)...);
 }
 
-/// Add an attribute {@code AttrType} to declaration {@code D}, provided that
-/// {@code PassesCheck} is true.
-/// Otherwise, emit diagnostic {@code DiagID}, passing in all parameters
-/// specified in {@code ExtraArgs}.
+/// Add an attribute @c AttrType to declaration @c D, provided that
+/// @c PassesCheck is true.
+/// Otherwise, emit diagnostic @c DiagID, passing in all parameters
+/// specified in @c ExtraArgs.
 template <typename AttrType, typename... DiagnosticArgs>
 static void handleSimpleAttributeOrDiagnose(Sema &S, Decl *D,
                                             const AttributeCommonInfo &CI,
