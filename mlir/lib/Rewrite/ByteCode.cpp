@@ -80,8 +80,6 @@ enum OpCode : ByteCodeField {
   CheckOperationName,
   /// Compare the result count of an operation with a constant.
   CheckResultCount,
-  /// Invoke a native creation method.
-  CreateNative,
   /// Create an operation.
   CreateOperation,
   /// Erase an operation.
@@ -148,15 +146,12 @@ public:
             SmallVectorImpl<PDLByteCodePattern> &patterns,
             ByteCodeField &maxValueMemoryIndex,
             llvm::StringMap<PDLConstraintFunction> &constraintFns,
-            llvm::StringMap<PDLCreateFunction> &createFns,
             llvm::StringMap<PDLRewriteFunction> &rewriteFns)
       : ctx(ctx), uniquedData(uniquedData), matcherByteCode(matcherByteCode),
         rewriterByteCode(rewriterByteCode), patterns(patterns),
         maxValueMemoryIndex(maxValueMemoryIndex) {
     for (auto it : llvm::enumerate(constraintFns))
       constraintToMemIndex.try_emplace(it.value().first(), it.index());
-    for (auto it : llvm::enumerate(createFns))
-      nativeCreateToMemIndex.try_emplace(it.value().first(), it.index());
     for (auto it : llvm::enumerate(rewriteFns))
       externalRewriterToMemIndex.try_emplace(it.value().first(), it.index());
   }
@@ -203,7 +198,6 @@ private:
   void generate(pdl_interp::CheckResultCountOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::CheckTypeOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::CreateAttributeOp op, ByteCodeWriter &writer);
-  void generate(pdl_interp::CreateNativeOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::CreateOperationOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::CreateTypeOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::EraseOp op, ByteCodeWriter &writer);
@@ -234,10 +228,6 @@ private:
   /// Mapping from the name of an externally registered constraint to its index
   /// in the bytecode registry.
   llvm::StringMap<ByteCodeField> constraintToMemIndex;
-
-  /// Mapping from the name of an externally registered creation method to its
-  /// index in the bytecode registry.
-  llvm::StringMap<ByteCodeField> nativeCreateToMemIndex;
 
   /// Mapping from rewriter function name to the bytecode address of the
   /// rewriter function in byte.
@@ -492,16 +482,16 @@ void Generator::generate(Operation *op, ByteCodeWriter &writer) {
             pdl_interp::CheckAttributeOp, pdl_interp::CheckOperandCountOp,
             pdl_interp::CheckOperationNameOp, pdl_interp::CheckResultCountOp,
             pdl_interp::CheckTypeOp, pdl_interp::CreateAttributeOp,
-            pdl_interp::CreateNativeOp, pdl_interp::CreateOperationOp,
-            pdl_interp::CreateTypeOp, pdl_interp::EraseOp,
-            pdl_interp::FinalizeOp, pdl_interp::GetAttributeOp,
-            pdl_interp::GetAttributeTypeOp, pdl_interp::GetDefiningOpOp,
-            pdl_interp::GetOperandOp, pdl_interp::GetResultOp,
-            pdl_interp::GetValueTypeOp, pdl_interp::InferredTypeOp,
-            pdl_interp::IsNotNullOp, pdl_interp::RecordMatchOp,
-            pdl_interp::ReplaceOp, pdl_interp::SwitchAttributeOp,
-            pdl_interp::SwitchTypeOp, pdl_interp::SwitchOperandCountOp,
-            pdl_interp::SwitchOperationNameOp, pdl_interp::SwitchResultCountOp>(
+            pdl_interp::CreateOperationOp, pdl_interp::CreateTypeOp,
+            pdl_interp::EraseOp, pdl_interp::FinalizeOp,
+            pdl_interp::GetAttributeOp, pdl_interp::GetAttributeTypeOp,
+            pdl_interp::GetDefiningOpOp, pdl_interp::GetOperandOp,
+            pdl_interp::GetResultOp, pdl_interp::GetValueTypeOp,
+            pdl_interp::InferredTypeOp, pdl_interp::IsNotNullOp,
+            pdl_interp::RecordMatchOp, pdl_interp::ReplaceOp,
+            pdl_interp::SwitchAttributeOp, pdl_interp::SwitchTypeOp,
+            pdl_interp::SwitchOperandCountOp, pdl_interp::SwitchOperationNameOp,
+            pdl_interp::SwitchResultCountOp>(
           [&](auto interpOp) { this->generate(interpOp, writer); })
       .Default([](Operation *) {
         llvm_unreachable("unknown `pdl_interp` operation");
@@ -522,8 +512,16 @@ void Generator::generate(pdl_interp::ApplyRewriteOp op,
   assert(externalRewriterToMemIndex.count(op.name()) &&
          "expected index for rewrite function");
   writer.append(OpCode::ApplyRewrite, externalRewriterToMemIndex[op.name()],
-                op.constParamsAttr(), op.root());
+                op.constParamsAttr());
   writer.appendPDLValueList(op.args());
+
+#ifndef NDEBUG
+  // In debug mode we also append the number of results so that we can assert
+  // that the native creation function gave us the correct number of results.
+  writer.append(ByteCodeField(op.results().size()));
+#endif
+  for (Value result : op.results())
+    writer.append(result);
 }
 void Generator::generate(pdl_interp::AreEqualOp op, ByteCodeWriter &writer) {
   writer.append(OpCode::AreEqual, op.lhs(), op.rhs(), op.getSuccessors());
@@ -558,14 +556,6 @@ void Generator::generate(pdl_interp::CreateAttributeOp op,
                          ByteCodeWriter &writer) {
   // Simply repoint the memory index of the result to the constant.
   getMemIndex(op.attribute()) = getMemIndex(op.value());
-}
-void Generator::generate(pdl_interp::CreateNativeOp op,
-                         ByteCodeWriter &writer) {
-  assert(nativeCreateToMemIndex.count(op.name()) &&
-         "expected index for creation function");
-  writer.append(OpCode::CreateNative, nativeCreateToMemIndex[op.name()],
-                op.result(), op.constParamsAttr());
-  writer.appendPDLValueList(op.args());
 }
 void Generator::generate(pdl_interp::CreateOperationOp op,
                          ByteCodeWriter &writer) {
@@ -678,18 +668,15 @@ void Generator::generate(pdl_interp::SwitchTypeOp op, ByteCodeWriter &writer) {
 
 PDLByteCode::PDLByteCode(ModuleOp module,
                          llvm::StringMap<PDLConstraintFunction> constraintFns,
-                         llvm::StringMap<PDLCreateFunction> createFns,
                          llvm::StringMap<PDLRewriteFunction> rewriteFns) {
   Generator generator(module.getContext(), uniquedData, matcherByteCode,
                       rewriterByteCode, patterns, maxValueMemoryIndex,
-                      constraintFns, createFns, rewriteFns);
+                      constraintFns, rewriteFns);
   generator.generate(module);
 
   // Initialize the external functions.
   for (auto &it : constraintFns)
     constraintFunctions.push_back(std::move(it.second));
-  for (auto &it : createFns)
-    createFunctions.push_back(std::move(it.second));
   for (auto &it : rewriteFns)
     rewriteFunctions.push_back(std::move(it.second));
 }
@@ -717,12 +704,11 @@ public:
                    ArrayRef<PatternBenefit> currentPatternBenefits,
                    ArrayRef<PDLByteCodePattern> patterns,
                    ArrayRef<PDLConstraintFunction> constraintFunctions,
-                   ArrayRef<PDLCreateFunction> createFunctions,
                    ArrayRef<PDLRewriteFunction> rewriteFunctions)
       : curCodeIt(curCodeIt), memory(memory), uniquedMemory(uniquedMemory),
         code(code), currentPatternBenefits(currentPatternBenefits),
         patterns(patterns), constraintFunctions(constraintFunctions),
-        createFunctions(createFunctions), rewriteFunctions(rewriteFunctions) {}
+        rewriteFunctions(rewriteFunctions) {}
 
   /// Start executing the code at the current bytecode index. `matches` is an
   /// optional field provided when this function is executed in a matching
@@ -740,7 +726,6 @@ private:
   void executeCheckOperandCount();
   void executeCheckOperationName();
   void executeCheckResultCount();
-  void executeCreateNative(PatternRewriter &rewriter);
   void executeCreateOperation(PatternRewriter &rewriter,
                               Location mainRewriteLoc);
   void executeEraseOp(PatternRewriter &rewriter);
@@ -866,8 +851,16 @@ private:
   ArrayRef<PatternBenefit> currentPatternBenefits;
   ArrayRef<PDLByteCodePattern> patterns;
   ArrayRef<PDLConstraintFunction> constraintFunctions;
-  ArrayRef<PDLCreateFunction> createFunctions;
   ArrayRef<PDLRewriteFunction> rewriteFunctions;
+};
+
+/// This class is an instantiation of the PDLResultList that provides access to
+/// the returned results. This API is not on `PDLResultList` to avoid
+/// overexposing access to information specific solely to the ByteCode.
+class ByteCodeRewriteResultList : public PDLResultList {
+public:
+  /// Return the list of PDL results.
+  MutableArrayRef<PDLValue> getResults() { return results; }
 };
 } // end anonymous namespace
 
@@ -892,18 +885,29 @@ void ByteCodeExecutor::executeApplyRewrite(PatternRewriter &rewriter) {
   LLVM_DEBUG(llvm::dbgs() << "Executing ApplyRewrite:\n");
   const PDLRewriteFunction &rewriteFn = rewriteFunctions[read()];
   ArrayAttr constParams = read<ArrayAttr>();
-  Operation *root = read<Operation *>();
   SmallVector<PDLValue, 16> args;
   readList<PDLValue>(args);
 
   LLVM_DEBUG({
-    llvm::dbgs() << "  * Root: " << *root << "\n  * Arguments: ";
+    llvm::dbgs() << "  * Arguments: ";
     llvm::interleaveComma(args, llvm::dbgs());
     llvm::dbgs() << "\n  * Parameters: " << constParams << "\n";
   });
+  ByteCodeRewriteResultList results;
+  rewriteFn(args, constParams, rewriter, results);
 
-  // Invoke the native rewrite function.
-  rewriteFn(root, args, constParams, rewriter);
+  // Store the results in the bytecode memory.
+#ifndef NDEBUG
+  ByteCodeField expectedNumberOfResults = read();
+  assert(results.getResults().size() == expectedNumberOfResults &&
+         "native PDL rewrite function returned unexpected number of results");
+#endif
+
+  // Store the results in the bytecode memory.
+  for (PDLValue &result : results.getResults()) {
+    LLVM_DEBUG(llvm::dbgs() << "  * Result: " << result << "\n");
+    memory[read()] = result.getAsOpaquePointer();
+  }
 }
 
 void ByteCodeExecutor::executeAreEqual() {
@@ -948,26 +952,6 @@ void ByteCodeExecutor::executeCheckResultCount() {
   LLVM_DEBUG(llvm::dbgs() << "  * Found: " << op->getNumResults() << "\n"
                           << "  * Expected: " << expectedCount << "\n");
   selectJump(op->getNumResults() == expectedCount);
-}
-
-void ByteCodeExecutor::executeCreateNative(PatternRewriter &rewriter) {
-  LLVM_DEBUG(llvm::dbgs() << "Executing CreateNative:\n");
-  const PDLCreateFunction &createFn = createFunctions[read()];
-  ByteCodeField resultIndex = read();
-  ArrayAttr constParams = read<ArrayAttr>();
-  SmallVector<PDLValue, 16> args;
-  readList<PDLValue>(args);
-
-  LLVM_DEBUG({
-    llvm::dbgs() << "  * Arguments: ";
-    llvm::interleaveComma(args, llvm::dbgs());
-    llvm::dbgs() << "\n  * Parameters: " << constParams << "\n";
-  });
-
-  PDLValue result = createFn(args, constParams, rewriter);
-  memory[resultIndex] = result.getAsOpaquePointer();
-
-  LLVM_DEBUG(llvm::dbgs() << "  * Result: " << result << "\n");
 }
 
 void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
@@ -1246,9 +1230,6 @@ void ByteCodeExecutor::execute(
     case CheckResultCount:
       executeCheckResultCount();
       break;
-    case CreateNative:
-      executeCreateNative(rewriter);
-      break;
     case CreateOperation:
       executeCreateOperation(rewriter, *mainRewriteLoc);
       break;
@@ -1338,8 +1319,7 @@ void PDLByteCode::match(Operation *op, PatternRewriter &rewriter,
   // The matcher function always starts at code address 0.
   ByteCodeExecutor executor(matcherByteCode.data(), state.memory, uniquedData,
                             matcherByteCode, state.currentPatternBenefits,
-                            patterns, constraintFunctions, createFunctions,
-                            rewriteFunctions);
+                            patterns, constraintFunctions, rewriteFunctions);
   executor.execute(rewriter, &matches);
 
   // Order the found matches by benefit.
@@ -1356,9 +1336,9 @@ void PDLByteCode::rewrite(PatternRewriter &rewriter, const MatchResult &match,
   // memory buffer.
   llvm::copy(match.values, state.memory.begin());
 
-  ByteCodeExecutor executor(
-      &rewriterByteCode[match.pattern->getRewriterAddr()], state.memory,
-      uniquedData, rewriterByteCode, state.currentPatternBenefits, patterns,
-      constraintFunctions, createFunctions, rewriteFunctions);
+  ByteCodeExecutor executor(&rewriterByteCode[match.pattern->getRewriterAddr()],
+                            state.memory, uniquedData, rewriterByteCode,
+                            state.currentPatternBenefits, patterns,
+                            constraintFunctions, rewriteFunctions);
   executor.execute(rewriter, /*matches=*/nullptr, match.location);
 }

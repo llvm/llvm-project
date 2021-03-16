@@ -102,7 +102,6 @@ void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
   // Steal the other state if we have no patterns.
   if (!pdlModule) {
     constraintFunctions = std::move(other.constraintFunctions);
-    createFunctions = std::move(other.createFunctions);
     rewriteFunctions = std::move(other.rewriteFunctions);
     pdlModule = std::move(other.pdlModule);
     return;
@@ -110,8 +109,6 @@ void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
   // Steal the functions of the other module.
   for (auto &it : constraintFunctions)
     registerConstraintFunction(it.first(), std::move(it.second));
-  for (auto &it : createFunctions)
-    registerCreateFunction(it.first(), std::move(it.second));
   for (auto &it : rewriteFunctions)
     registerRewriteFunction(it.first(), std::move(it.second));
 
@@ -132,13 +129,7 @@ void PDLPatternModule::registerConstraintFunction(
   assert(it.second &&
          "constraint with the given name has already been registered");
 }
-void PDLPatternModule::registerCreateFunction(StringRef name,
-                                              PDLCreateFunction createFn) {
-  auto it = createFunctions.try_emplace(name, std::move(createFn));
-  (void)it;
-  assert(it.second && "native create function with the given name has "
-                      "already been registered");
-}
+
 void PDLPatternModule::registerRewriteFunction(StringRef name,
                                                PDLRewriteFunction rewriteFn) {
   auto it = rewriteFunctions.try_emplace(name, std::move(rewriteFn));

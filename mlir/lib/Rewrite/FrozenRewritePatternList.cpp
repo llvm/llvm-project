@@ -70,7 +70,7 @@ FrozenRewritePatternList::FrozenRewritePatternList(
   // Generate the pdl bytecode.
   impl->pdlByteCode = std::make_unique<detail::PDLByteCode>(
       pdlModule, pdlPatterns.takeConstraintFunctions(),
-      pdlPatterns.takeCreateFunctions(), pdlPatterns.takeRewriteFunctions());
+      pdlPatterns.takeRewriteFunctions());
 }
 
 FrozenRewritePatternList::~FrozenRewritePatternList() {}

@@ -303,6 +303,33 @@ inline raw_ostream &operator<<(raw_ostream &os, PDLValue value) {
 }
 
 //===----------------------------------------------------------------------===//
+// PDLResultList
+
+/// The class represents a list of PDL results, returned by a native rewrite
+/// method. It provides the mechanism with which to pass PDLValues back to the
+/// PDL bytecode.
+class PDLResultList {
+public:
+  /// Push a new Attribute value onto the result list.
+  void push_back(Attribute value) { results.push_back(value); }
+
+  /// Push a new Operation onto the result list.
+  void push_back(Operation *value) { results.push_back(value); }
+
+  /// Push a new Type onto the result list.
+  void push_back(Type value) { results.push_back(value); }
+
+  /// Push a new Value onto the result list.
+  void push_back(Value value) { results.push_back(value); }
+
+protected:
+  PDLResultList() = default;
+
+  /// The PDL results held by this list.
+  SmallVector<PDLValue> results;
+};
+
+//===----------------------------------------------------------------------===//
 // PDLPatternModule
 
 /// A generic PDL pattern constraint function. This function applies a
@@ -311,16 +338,13 @@ inline raw_ostream &operator<<(raw_ostream &os, PDLValue value) {
 /// success if the constraint successfully held, failure otherwise.
 using PDLConstraintFunction = std::function<LogicalResult(
     ArrayRef<PDLValue>, ArrayAttr, PatternRewriter &)>;
-/// A native PDL creation function. This function creates a new PDLValue given
-/// a set of existing PDL values, a set of constant parameters specified in
-/// Attribute form, and a PatternRewriter. Returns the newly created PDLValue.
-using PDLCreateFunction =
-    std::function<PDLValue(ArrayRef<PDLValue>, ArrayAttr, PatternRewriter &)>;
-/// A native PDL rewrite function. This function rewrites the given root
-/// operation using the provided PatternRewriter. This method is only invoked
-/// when the corresponding match was successful.
-using PDLRewriteFunction = std::function<void(Operation *, ArrayRef<PDLValue>,
-                                              ArrayAttr, PatternRewriter &)>;
+/// A native PDL rewrite function. This function performs a rewrite on the
+/// given set of values and constant parameters. Any results from this rewrite
+/// that should be passed back to PDL should be added to the provided result
+/// list. This method is only invoked when the corresponding match was
+/// successful.
+using PDLRewriteFunction = std::function<void(
+    ArrayRef<PDLValue>, ArrayAttr, PatternRewriter &, PDLResultList &)>;
 /// A generic PDL pattern constraint function. This function applies a
 /// constraint to a given opaque PDLValue entity. The second parameter is a set
 /// of constant value parameters specified in Attribute form. Returns success if
@@ -367,9 +391,6 @@ public:
         });
   }
 
-  /// Register a creation function.
-  void registerCreateFunction(StringRef name, PDLCreateFunction createFn);
-
   /// Register a rewrite function.
   void registerRewriteFunction(StringRef name, PDLRewriteFunction rewriteFn);
 
@@ -379,13 +400,6 @@ public:
   }
   llvm::StringMap<PDLConstraintFunction> takeConstraintFunctions() {
     return constraintFunctions;
-  }
-  /// Return the set of the registered create functions.
-  const llvm::StringMap<PDLCreateFunction> &getCreateFunctions() const {
-    return createFunctions;
-  }
-  llvm::StringMap<PDLCreateFunction> takeCreateFunctions() {
-    return createFunctions;
   }
   /// Return the set of the registered rewrite functions.
   const llvm::StringMap<PDLRewriteFunction> &getRewriteFunctions() const {
@@ -399,7 +413,6 @@ public:
   void clear() {
     pdlModule = nullptr;
     constraintFunctions.clear();
-    createFunctions.clear();
     rewriteFunctions.clear();
   }
 
@@ -409,7 +422,6 @@ private:
 
   /// The external functions referenced from within the PDL module.
   llvm::StringMap<PDLConstraintFunction> constraintFunctions;
-  llvm::StringMap<PDLCreateFunction> createFunctions;
   llvm::StringMap<PDLRewriteFunction> rewriteFunctions;
 };
 

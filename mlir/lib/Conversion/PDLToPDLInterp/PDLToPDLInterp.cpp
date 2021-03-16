@@ -70,6 +70,9 @@ private:
                                  SmallVectorImpl<Position *> &usedMatchValues);
 
   /// Generate the rewriter code for the given operation.
+  void generateRewriter(pdl::ApplyNativeRewriteOp rewriteOp,
+                        DenseMap<Value, Value> &rewriteValues,
+                        function_ref<Value(Value)> mapRewriteValue);
   void generateRewriter(pdl::AttributeOp attrOp,
                         DenseMap<Value, Value> &rewriteValues,
                         function_ref<Value(Value)> mapRewriteValue);
@@ -77,9 +80,6 @@ private:
                         DenseMap<Value, Value> &rewriteValues,
                         function_ref<Value(Value)> mapRewriteValue);
   void generateRewriter(pdl::OperationOp operationOp,
-                        DenseMap<Value, Value> &rewriteValues,
-                        function_ref<Value(Value)> mapRewriteValue);
-  void generateRewriter(pdl::CreateNativeOp createNativeOp,
                         DenseMap<Value, Value> &rewriteValues,
                         function_ref<Value(Value)> mapRewriteValue);
   void generateRewriter(pdl::ReplaceOp replaceOp,
@@ -449,17 +449,17 @@ SymbolRefAttr PatternLowering::generateRewriter(
   // method.
   pdl::RewriteOp rewriter = pattern.getRewriter();
   if (StringAttr rewriteName = rewriter.nameAttr()) {
-    Value root = mapRewriteValue(rewriter.root());
-    SmallVector<Value, 4> args = llvm::to_vector<4>(
-        llvm::map_range(rewriter.externalArgs(), mapRewriteValue));
+    auto mappedArgs = llvm::map_range(rewriter.externalArgs(), mapRewriteValue);
+    SmallVector<Value, 4> args(1, mapRewriteValue(rewriter.root()));
+    args.append(mappedArgs.begin(), mappedArgs.end());
     builder.create<pdl_interp::ApplyRewriteOp>(
-        rewriter.getLoc(), rewriteName, root, args,
+        rewriter.getLoc(), /*resultTypes=*/TypeRange(), rewriteName, args,
         rewriter.externalConstParamsAttr());
   } else {
     // Otherwise this is a dag rewriter defined using PDL operations.
     for (Operation &rewriteOp : *rewriter.getBody()) {
       llvm::TypeSwitch<Operation *>(&rewriteOp)
-          .Case<pdl::AttributeOp, pdl::CreateNativeOp, pdl::EraseOp,
+          .Case<pdl::ApplyNativeRewriteOp, pdl::AttributeOp, pdl::EraseOp,
                 pdl::OperationOp, pdl::ReplaceOp, pdl::ResultOp, pdl::TypeOp>(
               [&](auto op) {
                 this->generateRewriter(op, rewriteValues, mapRewriteValue);
@@ -476,6 +476,19 @@ SymbolRefAttr PatternLowering::generateRewriter(
   return builder.getSymbolRefAttr(
       pdl_interp::PDLInterpDialect::getRewriterModuleName(),
       builder.getSymbolRefAttr(rewriterFunc));
+}
+
+void PatternLowering::generateRewriter(
+    pdl::ApplyNativeRewriteOp rewriteOp, DenseMap<Value, Value> &rewriteValues,
+    function_ref<Value(Value)> mapRewriteValue) {
+  SmallVector<Value, 2> arguments;
+  for (Value argument : rewriteOp.args())
+    arguments.push_back(mapRewriteValue(argument));
+  auto interpOp = builder.create<pdl_interp::ApplyRewriteOp>(
+      rewriteOp.getLoc(), rewriteOp.getResultTypes(), rewriteOp.nameAttr(),
+      arguments, rewriteOp.constParamsAttr());
+  for (auto it : llvm::zip(rewriteOp.results(), interpOp.results()))
+    rewriteValues[std::get<0>(it)] = std::get<1>(it);
 }
 
 void PatternLowering::generateRewriter(
@@ -525,18 +538,6 @@ void PatternLowering::generateRewriter(
         loc, builder.getType<pdl::ValueType>(), createdOp, it.index());
     type = builder.create<pdl_interp::GetValueTypeOp>(loc, getResultVal);
   }
-}
-
-void PatternLowering::generateRewriter(
-    pdl::CreateNativeOp createNativeOp, DenseMap<Value, Value> &rewriteValues,
-    function_ref<Value(Value)> mapRewriteValue) {
-  SmallVector<Value, 2> arguments;
-  for (Value argument : createNativeOp.args())
-    arguments.push_back(mapRewriteValue(argument));
-  Value result = builder.create<pdl_interp::CreateNativeOp>(
-      createNativeOp.getLoc(), createNativeOp.result().getType(),
-      createNativeOp.nameAttr(), arguments, createNativeOp.constParamsAttr());
-  rewriteValues[createNativeOp] = result;
 }
 
 void PatternLowering::generateRewriter(

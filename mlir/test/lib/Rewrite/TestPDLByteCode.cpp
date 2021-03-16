@@ -26,18 +26,18 @@ static LogicalResult customMultiEntityConstraint(ArrayRef<PDLValue> values,
 }
 
 // Custom creator invoked from PDL.
-static PDLValue customCreate(ArrayRef<PDLValue> args, ArrayAttr constantParams,
-                             PatternRewriter &rewriter) {
-  return rewriter.createOperation(
-      OperationState(args[0].cast<Operation *>()->getLoc(), "test.success"));
+static void customCreate(ArrayRef<PDLValue> args, ArrayAttr constantParams,
+                         PatternRewriter &rewriter, PDLResultList &results) {
+  results.push_back(rewriter.createOperation(
+      OperationState(args[0].cast<Operation *>()->getLoc(), "test.success")));
 }
 
 /// Custom rewriter invoked from PDL.
-static void customRewriter(Operation *root, ArrayRef<PDLValue> args,
-                           ArrayAttr constantParams,
-                           PatternRewriter &rewriter) {
+static void customRewriter(ArrayRef<PDLValue> args, ArrayAttr constantParams,
+                           PatternRewriter &rewriter, PDLResultList &results) {
+  Operation *root = args[0].cast<Operation *>();
   OperationState successOpState(root->getLoc(), "test.success");
-  successOpState.addOperands(args[0].cast<Value>());
+  successOpState.addOperands(args[1].cast<Value>());
   successOpState.addAttribute("constantParams", constantParams);
   rewriter.createOperation(successOpState);
   rewriter.eraseOp(root);
@@ -63,7 +63,7 @@ struct TestPDLByteCodePass
                                           customMultiEntityConstraint);
     pdlPattern.registerConstraintFunction("single_entity_constraint",
                                           customSingleEntityConstraint);
-    pdlPattern.registerCreateFunction("creator", customCreate);
+    pdlPattern.registerRewriteFunction("creator", customCreate);
     pdlPattern.registerRewriteFunction("rewriter", customRewriter);
 
     OwningRewritePatternList patternList(std::move(pdlPattern));

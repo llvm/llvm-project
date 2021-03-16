@@ -58,7 +58,7 @@ module @patterns {
   module @rewriters {
     func @success(%root : !pdl.operation) {
       %operand = pdl_interp.get_operand 0 of %root
-      pdl_interp.apply_rewrite "rewriter"[42](%operand : !pdl.value) on %root
+      pdl_interp.apply_rewrite "rewriter"[42](%root, %operand : !pdl.operation, !pdl.value)
       pdl_interp.finalize
     }
   }
@@ -72,6 +72,35 @@ module @ir attributes { test.apply_rewrite_1 } {
   %input = "test.op_input"() : () -> i32
   "test.op"(%input) : (i32) -> ()
 }
+
+// -----
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.op" -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%root : !pdl.operation) {
+      %op = pdl_interp.apply_rewrite "creator"(%root : !pdl.operation) : !pdl.operation
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.apply_rewrite_2
+// CHECK: "test.success"
+module @ir attributes { test.apply_rewrite_2 } {
+  "test.op"() : () -> ()
+}
+
 // -----
 
 //===----------------------------------------------------------------------===//
@@ -316,38 +345,6 @@ module @ir attributes { test.check_type_1 } {
 //===----------------------------------------------------------------------===//
 
 // Fully tested within the tests for other operations.
-
-//===----------------------------------------------------------------------===//
-// pdl_interp::CreateNativeOp
-//===----------------------------------------------------------------------===//
-
-// -----
-
-module @patterns {
-  func @matcher(%root : !pdl.operation) {
-    pdl_interp.check_operation_name of %root is "test.op" -> ^pat, ^end
-
-  ^pat:
-    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
-
-  ^end:
-    pdl_interp.finalize
-  }
-
-  module @rewriters {
-    func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_native "creator"(%root : !pdl.operation) : !pdl.operation
-      pdl_interp.erase %root
-      pdl_interp.finalize
-    }
-  }
-}
-
-// CHECK-LABEL: test.create_native_1
-// CHECK: "test.success"
-module @ir attributes { test.create_native_1 } {
-  "test.op"() : () -> ()
-}
 
 //===----------------------------------------------------------------------===//
 // pdl_interp::CreateOperationOp
