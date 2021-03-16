@@ -568,7 +568,7 @@ void Abort() {
 // load the image at this address. Therefore, we call it the preferred base. Any
 // addresses in the DWARF typically assume that the object has been loaded at
 // this address.
-static uptr GetPreferredBase(const char *modname) {
+static uptr GetPreferredBase(const char *modname, char *buf, size_t buf_size) {
   fd_t fd = OpenFile(modname, RdOnly, nullptr);
   if (fd == kInvalidFd)
     return 0;
@@ -590,12 +590,10 @@ static uptr GetPreferredBase(const char *modname) {
   // IMAGE_FILE_HEADER
   // IMAGE_OPTIONAL_HEADER
   // Seek to e_lfanew and read all that data.
-  char buf[4 + sizeof(IMAGE_FILE_HEADER) + sizeof(IMAGE_OPTIONAL_HEADER)];
   if (::SetFilePointer(fd, dos_header.e_lfanew, nullptr, FILE_BEGIN) ==
       INVALID_SET_FILE_POINTER)
     return 0;
-  if (!ReadFromFile(fd, &buf[0], sizeof(buf), &bytes_read) ||
-      bytes_read != sizeof(buf))
+  if (!ReadFromFile(fd, buf, buf_size, &bytes_read) || bytes_read != buf_size)
     return 0;
 
   // Check for "PE\0\0" before the PE header.
@@ -615,10 +613,6 @@ static uptr GetPreferredBase(const char *modname) {
   return (uptr)pe_header->ImageBase;
 }
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wframe-larger-than="
-#endif
 void ListOfModules::init() {
   clearOrInit();
   HANDLE cur_process = GetCurrentProcess();
@@ -641,6 +635,10 @@ void ListOfModules::init() {
     }
   }
 
+  InternalMmapVector<char> buf(4 + sizeof(IMAGE_FILE_HEADER) +
+                               sizeof(IMAGE_OPTIONAL_HEADER));
+  InternalMmapVector<wchar_t> modname_utf16(kMaxPathLength);
+  InternalMmapVector<char> module_name(kMaxPathLength);
   // |num_modules| is the number of modules actually present,
   size_t num_modules = bytes_required / sizeof(HMODULE);
   for (size_t i = 0; i < num_modules; ++i) {
@@ -650,15 +648,13 @@ void ListOfModules::init() {
       continue;
 
     // Get the UTF-16 path and convert to UTF-8.
-    wchar_t modname_utf16[kMaxPathLength];
     int modname_utf16_len =
-        GetModuleFileNameW(handle, modname_utf16, kMaxPathLength);
+        GetModuleFileNameW(handle, &modname_utf16[0], kMaxPathLength);
     if (modname_utf16_len == 0)
       modname_utf16[0] = '\0';
-    char module_name[kMaxPathLength];
-    int module_name_len =
-        ::WideCharToMultiByte(CP_UTF8, 0, modname_utf16, modname_utf16_len + 1,
-                              &module_name[0], kMaxPathLength, NULL, NULL);
+    int module_name_len = ::WideCharToMultiByte(
+        CP_UTF8, 0, &modname_utf16[0], modname_utf16_len + 1, &module_name[0],
+        kMaxPathLength, NULL, NULL);
     module_name[module_name_len] = '\0';
 
     uptr base_address = (uptr)mi.lpBaseOfDll;
@@ -668,21 +664,19 @@ void ListOfModules::init() {
     // RVA when computing the module offset. This helps llvm-symbolizer find the
     // right DWARF CU. In the common case that the image is loaded at it's
     // preferred address, we will now print normal virtual addresses.
-    uptr preferred_base = GetPreferredBase(&module_name[0]);
+    uptr preferred_base =
+        GetPreferredBase(&module_name[0], &buf[0], buf.size());
     uptr adjusted_base = base_address - preferred_base;
 
-    LoadedModule cur_module;
-    cur_module.set(module_name, adjusted_base);
+    modules_.push_back(LoadedModule());
+    LoadedModule &cur_module = modules_.back();
+    cur_module.set(&module_name[0], adjusted_base);
     // We add the whole module as one single address range.
     cur_module.addAddressRange(base_address, end_address, /*executable*/ true,
                                /*writable*/ true);
-    modules_.push_back(cur_module);
   }
   UnmapOrDie(hmodules, modules_buffer_size);
 }
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 void ListOfModules::fallbackInit() { clear(); }
 
@@ -1057,15 +1051,16 @@ uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
     return 0;
 
   // Get the UTF-16 path and convert to UTF-8.
-  wchar_t binname_utf16[kMaxPathLength];
+  InternalMmapVector<wchar_t> binname_utf16(kMaxPathLength);
   int binname_utf16_len =
-      GetModuleFileNameW(NULL, binname_utf16, ARRAY_SIZE(binname_utf16));
+      GetModuleFileNameW(NULL, &binname_utf16[0], kMaxPathLength);
   if (binname_utf16_len == 0) {
     buf[0] = '\0';
     return 0;
   }
-  int binary_name_len = ::WideCharToMultiByte(
-      CP_UTF8, 0, binname_utf16, binname_utf16_len, buf, buf_len, NULL, NULL);
+  int binary_name_len =
+      ::WideCharToMultiByte(CP_UTF8, 0, &binname_utf16[0], binname_utf16_len,
+                            buf, buf_len, NULL, NULL);
   if ((unsigned)binary_name_len == buf_len)
     --binary_name_len;
   buf[binary_name_len] = '\0';
