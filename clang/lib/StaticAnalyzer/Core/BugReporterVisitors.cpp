@@ -1846,7 +1846,7 @@ static const MemRegion *getLocationRegionIfReference(const Expr *E,
   return nullptr;
 }
 
-/// \return A subexpression of {@code Ex} which represents the
+/// \return A subexpression of @c Ex which represents the
 /// expression-of-interest.
 static const Expr *peelOffOuterExpr(const Expr *Ex,
                                     const ExplodedNode *N) {

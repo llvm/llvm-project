@@ -101,7 +101,8 @@ macro(add_cuda_bc_library)
     -xc++
     -c
     -std=c++14
-    -target amdgcn
+    -ffreestanding
+    -target amdgcn-amd-amdhsa
     -emit-llvm
     -Xclang -aux-triple -Xclang x86_64-unknown-linux-gnu # see nvptx
     -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
@@ -153,6 +154,6 @@ foreach(mcpu ${mcpus})
   add_custom_target(lib${libname}-${mcpu} ALL DEPENDS ${bc_libname})
 
   install(FILES ${OUTPUTDIR}/${bc_libname}
-     DESTINATION "${OPENMP_INSTALL_LIBDIR}/libdevice"
+     DESTINATION "${OPENMP_INSTALL_LIBDIR}"
   )
 endforeach()

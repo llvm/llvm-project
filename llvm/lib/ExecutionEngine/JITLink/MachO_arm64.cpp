@@ -26,7 +26,8 @@ namespace {
 class MachOLinkGraphBuilder_arm64 : public MachOLinkGraphBuilder {
 public:
   MachOLinkGraphBuilder_arm64(const object::MachOObjectFile &Obj)
-      : MachOLinkGraphBuilder(Obj, Triple("arm64-apple-darwin")),
+      : MachOLinkGraphBuilder(Obj, Triple("arm64-apple-darwin"),
+                              getMachOARM64RelocationKindName),
         NumSymbols(Obj.getSymtabLoadCommand().nsyms) {}
 
 private:
@@ -271,7 +272,7 @@ private:
           if (*Kind != Branch26 && *Kind != Page21 && *Kind != PageOffset12)
             return make_error<JITLinkError>(
                 "Invalid relocation pair: Addend + " +
-                getMachOARM64RelocationKindName(*Kind));
+                StringRef(getMachOARM64RelocationKindName(*Kind)));
 
           LLVM_DEBUG({
             dbgs() << "    Addend: value = " << formatv("{0:x6}", Addend)
@@ -410,9 +411,10 @@ public:
   MachO_arm64_GOTAndStubsBuilder(LinkGraph &G)
       : BasicGOTAndStubsBuilder<MachO_arm64_GOTAndStubsBuilder>(G) {}
 
-  bool isGOTEdge(Edge &E) const {
-    return E.getKind() == GOTPage21 || E.getKind() == GOTPageOffset12 ||
-           E.getKind() == PointerToGOT;
+  bool isGOTEdgeToFix(Edge &E) const {
+    return (E.getKind() == GOTPage21 || E.getKind() == GOTPageOffset12 ||
+            E.getKind() == PointerToGOT) &&
+           E.getTarget().isExternal();
   }
 
   Symbol &createGOTEntry(Symbol &Target) {
@@ -506,9 +508,6 @@ public:
       : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
 
 private:
-  StringRef getEdgeKindName(Edge::Kind R) const override {
-    return getMachOARM64RelocationKindName(R);
-  }
 
   static Error targetOutOfRangeError(const Block &B, const Edge &E) {
     std::string ErrMsg;
@@ -708,7 +707,7 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
   MachOJITLinker_arm64::link(std::move(Ctx), std::move(G), std::move(Config));
 }
 
-StringRef getMachOARM64RelocationKindName(Edge::Kind R) {
+const char *getMachOARM64RelocationKindName(Edge::Kind R) {
   switch (R) {
   case Branch26:
     return "Branch26";

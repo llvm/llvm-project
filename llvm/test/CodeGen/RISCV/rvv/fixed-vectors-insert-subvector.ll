@@ -553,6 +553,99 @@ define <vscale x 8 x i1> @insert_nxv8i1_v8i1_16(<vscale x 8 x i1> %v, <8 x i1>* 
   ret <vscale x 8 x i1> %c
 }
 
+declare <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64>, <2 x i64>, i64)
+
+define void @insert_v2i64_nxv16i64(<2 x i64>* %psv0, <2 x i64>* %psv1, <vscale x 16 x i64>* %out) {
+; CHECK-LABEL: insert_v2i64_nxv16i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a3, 2, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vle64.v v16, (a1)
+; CHECK-NEXT:    vsetivli a0, 6, e64,m8,tu,mu
+; CHECK-NEXT:    vslideup.vi v8, v16, 4
+; CHECK-NEXT:    vs8r.v v8, (a2)
+; CHECK-NEXT:    ret
+  %sv0 = load <2 x i64>, <2 x i64>* %psv0
+  %sv1 = load <2 x i64>, <2 x i64>* %psv1
+  %v0 = call <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv0, i64 0)
+  %v = call <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> %v0, <2 x i64> %sv1, i64 4)
+  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  ret void
+}
+
+define void @insert_v2i64_nxv16i64_lo0(<2 x i64>* %psv, <vscale x 16 x i64>* %out) {
+; CHECK-LABEL: insert_v2i64_nxv16i64_lo0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vs8r.v v8, (a1)
+; CHECK-NEXT:    ret
+  %sv = load <2 x i64>, <2 x i64>* %psv
+  %v = call <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 0)
+  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  ret void
+}
+
+define void @insert_v2i64_nxv16i64_lo2(<2 x i64>* %psv, <vscale x 16 x i64>* %out) {
+; CHECK-LABEL: insert_v2i64_nxv16i64_lo2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vsetivli a0, 4, e64,m8,ta,mu
+; CHECK-NEXT:    vslideup.vi v16, v8, 2
+; CHECK-NEXT:    vs8r.v v16, (a1)
+; CHECK-NEXT:    ret
+  %sv = load <2 x i64>, <2 x i64>* %psv
+  %v = call <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 2)
+  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  ret void
+}
+
+; Check we don't mistakenly optimize this: we don't know whether this is
+; inserted into the low or high split vector.
+define void @insert_v2i64_nxv16i64_hi(<2 x i64>* %psv, <vscale x 16 x i64>* %out) {
+; CHECK-LABEL: insert_v2i64_nxv16i64_hi:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    sub sp, sp, a2
+; CHECK-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v25, (a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    slli a2, a0, 4
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    addi a3, zero, 8
+; CHECK-NEXT:    bltu a2, a3, .LBB29_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    addi a2, zero, 8
+; CHECK-NEXT:  .LBB29_2:
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    addi a3, sp, 16
+; CHECK-NEXT:    add a2, a3, a2
+; CHECK-NEXT:    vsetivli a4, 2, e64,m1,ta,mu
+; CHECK-NEXT:    vse64.v v25, (a2)
+; CHECK-NEXT:    slli a0, a0, 6
+; CHECK-NEXT:    add a2, a3, a0
+; CHECK-NEXT:    vl8re64.v v8, (a2)
+; CHECK-NEXT:    addi a2, sp, 16
+; CHECK-NEXT:    vl8re64.v v16, (a2)
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    vs8r.v v16, (a1)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 4
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %sv = load <2 x i64>, <2 x i64>* %psv
+  %v = call <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 8)
+  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  ret void
+}
+
 declare <8 x i1> @llvm.experimental.vector.insert.v4i1.v8i1(<8 x i1>, <4 x i1>, i64)
 declare <32 x i1> @llvm.experimental.vector.insert.v8i1.v32i1(<32 x i1>, <8 x i1>, i64)
 

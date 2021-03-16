@@ -7,13 +7,15 @@
 namespace __dfsan {
 
 DFsanThread *DFsanThread::Create(void *start_routine_trampoline,
-                                 thread_callback_t start_routine, void *arg) {
+                                 thread_callback_t start_routine, void *arg,
+                                 bool track_origins) {
   uptr PageSize = GetPageSizeCached();
   uptr size = RoundUpTo(sizeof(DFsanThread), PageSize);
   DFsanThread *thread = (DFsanThread *)MmapOrDie(size, __func__);
   thread->start_routine_trampoline_ = start_routine_trampoline;
   thread->start_routine_ = start_routine;
   thread->arg_ = arg;
+  thread->track_origins_ = track_origins;
   thread->destructor_iterations_ = GetPthreadDestructorIterations();
 
   return thread;
@@ -57,11 +59,19 @@ thread_return_t DFsanThread::ThreadStart() {
 
   typedef void *(*thread_callback_trampoline_t)(void *, void *, dfsan_label,
                                                 dfsan_label *);
+  typedef void *(*thread_callback_origin_trampoline_t)(
+      void *, void *, dfsan_label, dfsan_label *, dfsan_origin, dfsan_origin *);
 
   dfsan_label ret_label;
-  return ((thread_callback_trampoline_t)
+  if (!track_origins_)
+    return ((thread_callback_trampoline_t)
+                start_routine_trampoline_)((void *)start_routine_, arg_, 0,
+                                           &ret_label);
+
+  dfsan_origin ret_origin;
+  return ((thread_callback_origin_trampoline_t)
               start_routine_trampoline_)((void *)start_routine_, arg_, 0,
-                                         &ret_label);
+                                         &ret_label, 0, &ret_origin);
 }
 
 DFsanThread::StackBounds DFsanThread::GetStackBounds() const {

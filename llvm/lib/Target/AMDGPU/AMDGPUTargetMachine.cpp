@@ -200,6 +200,11 @@ static cl::opt<bool> EnableStructurizerWorkarounds(
     cl::desc("Enable workarounds for the StructurizeCFG pass"), cl::init(true),
     cl::Hidden);
 
+static cl::opt<bool>
+    DisableLowerModuleLDS("amdgpu-disable-lower-module-lds", cl::Hidden,
+                          cl::desc("Disable lower module lds pass"),
+                          cl::init(false));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -242,6 +247,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULateCodeGenPreparePass(*PR);
   initializeAMDGPUPropagateAttributesEarlyPass(*PR);
   initializeAMDGPUPropagateAttributesLatePass(*PR);
+  initializeAMDGPULowerModuleLDSPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowPass(*PR);
@@ -514,6 +520,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
           PM.addPass(AMDGPUAlwaysInlinePass());
           return true;
         }
+        if (PassName == "amdgpu-lower-module-lds") {
+          PM.addPass(AMDGPULowerModuleLDSPass());
+          return true;
+        }
         return false;
       });
   PB.registerPipelineParsingCallback(
@@ -543,7 +553,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
           PM.addPass(AMDGPUPropagateAttributesEarlyPass(*this));
           return true;
         }
-
         return false;
       });
 
@@ -891,6 +900,10 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // Replace OpenCL enqueued block function pointers with global variables.
   addPass(createAMDGPUOpenCLEnqueuedBlockLoweringPass());
+
+  // Can increase LDS used by kernel so runs before PromoteAlloca
+  if (!DisableLowerModuleLDS)
+    addPass(createAMDGPULowerModuleLDSPass());
 
   if (TM.getOptLevel() > CodeGenOpt::None) {
     addPass(createInferAddressSpacesPass());

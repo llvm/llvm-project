@@ -41,7 +41,7 @@ buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:7
 // GFX908: encoding: [0x07,0x00,0x34,0xe1,0x00,0x05,0x02,0x03]
 
 buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:4095 glc
-// GFX908-ERR: error: operands are not valid for this GPU or mode
+// GFX908-ERR: error: instruction must not use glc
 
 buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:4095 slc
 // GFX908: encoding: [0xff,0x0f,0x36,0xe1,0x00,0x05,0x02,0x03]
@@ -86,7 +86,7 @@ buffer_atomic_pk_add_f16 v5, off, s[8:11], s3 offset:7
 // GFX908: encoding: [0x07,0x00,0x38,0xe1,0x00,0x05,0x02,0x03]
 
 buffer_atomic_pk_add_f16 v5, off, s[8:11], s3 offset:4095 glc
-// GFX908-ERR: error: operands are not valid for this GPU or mode
+// GFX908-ERR: error: instruction must not use glc
 
 buffer_atomic_pk_add_f16 v5, off, s[8:11], s3 offset:4095 slc
 // GFX908: encoding: [0xff,0x0f,0x3a,0xe1,0x00,0x05,0x02,0x03]

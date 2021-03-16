@@ -158,3 +158,193 @@ body: |
     ; GFX90A: $vgpr2_vgpr3 = V_PK_MOV_B32 8, $sgpr6_sgpr7, 12, $sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec, implicit killed $sgpr4_sgpr5_sgpr6_sgpr7
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY killed $sgpr4_sgpr5_sgpr6_sgpr7
 ...
+
+---
+name: copy_v64_to_v64_unaligned
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr2_vgpr3
+    ; GFX908-LABEL: name: copy_v64_to_v64_unaligned
+    ; GFX908: liveins: $vgpr2_vgpr3
+    ; GFX908: $vgpr1 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $vgpr2_vgpr3
+    ; GFX908: $vgpr2 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit $vgpr2_vgpr3, implicit $exec
+    ; GFX90A-LABEL: name: copy_v64_to_v64_unaligned
+    ; GFX90A: liveins: $vgpr2_vgpr3
+    ; GFX90A: $vgpr1 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $vgpr2_vgpr3
+    ; GFX90A: $vgpr2 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit $vgpr2_vgpr3, implicit $exec
+    $vgpr1_vgpr2 = COPY killed $vgpr2_vgpr3, implicit $exec
+...
+
+---
+name: copy_v64_unaligned_to_v64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr3_vgpr4
+    ; GFX908-LABEL: name: copy_v64_unaligned_to_v64
+    ; GFX908: liveins: $vgpr3_vgpr4
+    ; GFX908: $vgpr0 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr3_vgpr4
+    ; GFX908: $vgpr1 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit killed $vgpr3_vgpr4, implicit $exec
+    ; GFX90A-LABEL: name: copy_v64_unaligned_to_v64
+    ; GFX90A: liveins: $vgpr3_vgpr4
+    ; GFX90A: $vgpr0 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr3_vgpr4
+    ; GFX90A: $vgpr1 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit killed $vgpr3_vgpr4, implicit $exec
+    $vgpr0_vgpr1 = COPY killed $vgpr3_vgpr4, implicit $exec
+...
+
+---
+name: copy_v128_to_v128_unaligned
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX908-LABEL: name: copy_v128_to_v128_unaligned
+    ; GFX908: liveins: $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX908: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX908: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX908: $vgpr3 = V_MOV_B32_e32 $vgpr10, implicit $exec, implicit $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX908: $vgpr4 = V_MOV_B32_e32 $vgpr11, implicit $exec, implicit killed $vgpr8_vgpr9_vgpr10_vgpr11, implicit $exec
+    ; GFX90A-LABEL: name: copy_v128_to_v128_unaligned
+    ; GFX90A: liveins: $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX90A: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX90A: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX90A: $vgpr3 = V_MOV_B32_e32 $vgpr10, implicit $exec, implicit $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX90A: $vgpr4 = V_MOV_B32_e32 $vgpr11, implicit $exec, implicit killed $vgpr8_vgpr9_vgpr10_vgpr11, implicit $exec
+    $vgpr1_vgpr2_vgpr3_vgpr4 = COPY killed $vgpr8_vgpr9_vgpr10_vgpr11, implicit $exec
+...
+
+---
+name: copy_v128_unaligned_to_v128
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX908-LABEL: name: copy_v128_unaligned_to_v128
+    ; GFX908: liveins: $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX908: $vgpr0 = V_MOV_B32_e32 $vgpr7, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX908: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX908: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX908: $vgpr3 = V_MOV_B32_e32 $vgpr10, implicit $exec, implicit killed $vgpr7_vgpr8_vgpr9_vgpr10, implicit $exec
+    ; GFX90A-LABEL: name: copy_v128_unaligned_to_v128
+    ; GFX90A: liveins: $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX90A: $vgpr0 = V_MOV_B32_e32 $vgpr7, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX90A: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX90A: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX90A: $vgpr3 = V_MOV_B32_e32 $vgpr10, implicit $exec, implicit killed $vgpr7_vgpr8_vgpr9_vgpr10, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY killed $vgpr7_vgpr8_vgpr9_vgpr10, implicit $exec
+...
+
+---
+name: copy_s64_to_v64_unaligned
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr8_sgpr9
+    ; GFX908-LABEL: name: copy_s64_to_v64_unaligned
+    ; GFX908: liveins: $sgpr8_sgpr9
+    ; GFX908: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $sgpr8_sgpr9
+    ; GFX908: $vgpr2 = V_MOV_B32_e32 $sgpr9, implicit $exec, implicit killed $sgpr8_sgpr9, implicit $exec
+    ; GFX90A-LABEL: name: copy_s64_to_v64_unaligned
+    ; GFX90A: liveins: $sgpr8_sgpr9
+    ; GFX90A: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $sgpr8_sgpr9
+    ; GFX90A: $vgpr2 = V_MOV_B32_e32 $sgpr9, implicit $exec, implicit killed $sgpr8_sgpr9, implicit $exec
+    $vgpr1_vgpr2 = COPY killed $sgpr8_sgpr9, implicit $exec
+...
+
+---
+name: copy_s128_to_v128_unaligned
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX908-LABEL: name: copy_s128_to_v128_unaligned
+    ; GFX908: liveins: $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX908: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX908: $vgpr2 = V_MOV_B32_e32 $sgpr9, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX908: $vgpr3 = V_MOV_B32_e32 $sgpr10, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX908: $vgpr4 = V_MOV_B32_e32 $sgpr11, implicit $exec, implicit killed $sgpr8_sgpr9_sgpr10_sgpr11, implicit $exec
+    ; GFX90A-LABEL: name: copy_s128_to_v128_unaligned
+    ; GFX90A: liveins: $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX90A: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX90A: $vgpr2 = V_MOV_B32_e32 $sgpr9, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX90A: $vgpr3 = V_MOV_B32_e32 $sgpr10, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX90A: $vgpr4 = V_MOV_B32_e32 $sgpr11, implicit $exec, implicit killed $sgpr8_sgpr9_sgpr10_sgpr11, implicit $exec
+    $vgpr1_vgpr2_vgpr3_vgpr4 = COPY killed $sgpr8_sgpr9_sgpr10_sgpr11, implicit $exec
+...
+
+---
+name: copy_v96_to_v96_unaligned
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr8_vgpr9_vgpr10
+    ; GFX908-LABEL: name: copy_v96_to_v96_unaligned
+    ; GFX908: liveins: $vgpr8_vgpr9_vgpr10
+    ; GFX908: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3, implicit $vgpr8_vgpr9_vgpr10
+    ; GFX908: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit $vgpr8_vgpr9_vgpr10
+    ; GFX908: $vgpr3 = V_MOV_B32_e32 $vgpr10, implicit $exec, implicit killed $vgpr8_vgpr9_vgpr10, implicit $exec
+    ; GFX90A-LABEL: name: copy_v96_to_v96_unaligned
+    ; GFX90A: liveins: $vgpr8_vgpr9_vgpr10
+    ; GFX90A: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3, implicit $vgpr8_vgpr9_vgpr10
+    ; GFX90A: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit $vgpr8_vgpr9_vgpr10
+    ; GFX90A: $vgpr3 = V_MOV_B32_e32 $vgpr10, implicit $exec, implicit killed $vgpr8_vgpr9_vgpr10, implicit $exec
+    $vgpr1_vgpr2_vgpr3 = COPY killed $vgpr8_vgpr9_vgpr10, implicit $exec
+...
+
+---
+name: copy_v96_unaligned_to_v96
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr7_vgpr8_vgpr9
+    ; GFX908-LABEL: name: copy_v96_unaligned_to_v96
+    ; GFX908: liveins: $vgpr7_vgpr8_vgpr9
+    ; GFX908: $vgpr0 = V_MOV_B32_e32 $vgpr7, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2, implicit $vgpr7_vgpr8_vgpr9
+    ; GFX908: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit $vgpr7_vgpr8_vgpr9
+    ; GFX908: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit killed $vgpr7_vgpr8_vgpr9, implicit $exec
+    ; GFX90A-LABEL: name: copy_v96_unaligned_to_v96
+    ; GFX90A: liveins: $vgpr7_vgpr8_vgpr9
+    ; GFX90A: $vgpr0 = V_MOV_B32_e32 $vgpr7, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2, implicit $vgpr7_vgpr8_vgpr9
+    ; GFX90A: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit $vgpr7_vgpr8_vgpr9
+    ; GFX90A: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit killed $vgpr7_vgpr8_vgpr9, implicit $exec
+    $vgpr0_vgpr1_vgpr2 = COPY killed $vgpr7_vgpr8_vgpr9, implicit $exec
+...
+
+---
+name: copy_s96_to_v96
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2
+    ; GFX908-LABEL: name: copy_s96_to_v96
+    ; GFX908: liveins: $sgpr0_sgpr1_sgpr2
+    ; GFX908: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2, implicit $sgpr0_sgpr1_sgpr2
+    ; GFX908: $vgpr1 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2
+    ; GFX908: $vgpr2 = V_MOV_B32_e32 $sgpr2, implicit $exec, implicit killed $sgpr0_sgpr1_sgpr2, implicit $exec
+    ; GFX90A-LABEL: name: copy_s96_to_v96
+    ; GFX90A: liveins: $sgpr0_sgpr1_sgpr2
+    ; GFX90A: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2, implicit $sgpr0_sgpr1_sgpr2
+    ; GFX90A: $vgpr1 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2
+    ; GFX90A: $vgpr2 = V_MOV_B32_e32 $sgpr2, implicit $exec, implicit killed $sgpr0_sgpr1_sgpr2, implicit $exec
+    $vgpr0_vgpr1_vgpr2 = COPY killed $sgpr0_sgpr1_sgpr2, implicit $exec
+...
+
+---
+name: copy_s96_to_v96_unaligned
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2
+    ; GFX908-LABEL: name: copy_s96_to_v96_unaligned
+    ; GFX908: liveins: $sgpr0_sgpr1_sgpr2
+    ; GFX908: $vgpr3 = V_MOV_B32_e32 $sgpr2, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3, implicit $sgpr0_sgpr1_sgpr2
+    ; GFX908: $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2
+    ; GFX908: $vgpr1 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit killed $sgpr0_sgpr1_sgpr2, implicit $exec
+    ; GFX90A-LABEL: name: copy_s96_to_v96_unaligned
+    ; GFX90A: liveins: $sgpr0_sgpr1_sgpr2
+    ; GFX90A: $vgpr3 = V_MOV_B32_e32 $sgpr2, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3, implicit $sgpr0_sgpr1_sgpr2
+    ; GFX90A: $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2
+    ; GFX90A: $vgpr1 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit killed $sgpr0_sgpr1_sgpr2, implicit $exec
+    $vgpr1_vgpr2_vgpr3 = COPY killed $sgpr0_sgpr1_sgpr2, implicit $exec
+...

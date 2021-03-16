@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Basic sanity tests of CHARACTER API; exhaustive testing will be done
+// in Fortran.
+
 #include "../../runtime/character.h"
 #include "gtest/gtest.h"
 #include <cstring>
@@ -136,147 +139,86 @@ TYPED_TEST(CharacterComparisonTests, CompareCharacters) {
   }
 }
 
-//------------------------------------------------------------------------------
-/// Tests and infrastructure for Scan functions
-//------------------------------------------------------------------------------
+// Test search functions INDEX(), SCAN(), and VERIFY()
 
 template <typename CHAR>
-using ScanFuncTy = std::function<int(
+using SearchFunction = std::function<std::size_t(
     const CHAR *, std::size_t, const CHAR *, std::size_t, bool)>;
-
-using ScanFuncsTy =
-    std::tuple<ScanFuncTy<char>, ScanFuncTy<char16_t>, ScanFuncTy<char32_t>>;
-
-// These functions are the systems under test in CharacterScanTests test cases.
-static ScanFuncsTy scanFuncs{
-    RTNAME(Scan1),
-    RTNAME(Scan2),
-    RTNAME(Scan4),
+template <template <typename> class FUNC>
+using CharTypedFunctions =
+    std::tuple<FUNC<char>, FUNC<char16_t>, FUNC<char32_t>>;
+using SearchFunctions = CharTypedFunctions<SearchFunction>;
+struct SearchTestCase {
+  const char *x, *y;
+  bool back;
+  std::size_t expect;
 };
 
-// Types of _values_ over which tests are parameterized
 template <typename CHAR>
-using ScanParametersTy =
-    std::vector<std::tuple<const CHAR *, const CHAR *, bool, int>>;
-
-using ScanTestCasesTy = std::tuple<ScanParametersTy<char>,
-    ScanParametersTy<char16_t>, ScanParametersTy<char32_t>>;
-
-static ScanTestCasesTy scanTestCases{
-    {
-        std::make_tuple("abc", "abc", false, 1),
-        std::make_tuple("abc", "abc", true, 3),
-        std::make_tuple("abc", "cde", false, 3),
-        std::make_tuple("abc", "cde", true, 3),
-        std::make_tuple("abc", "x", false, 0),
-        std::make_tuple("", "x", false, 0),
-    },
-    {
-        std::make_tuple(u"abc", u"abc", false, 1),
-        std::make_tuple(u"abc", u"abc", true, 3),
-        std::make_tuple(u"abc", u"cde", false, 3),
-        std::make_tuple(u"abc", u"cde", true, 3),
-        std::make_tuple(u"abc", u"x", false, 0),
-        std::make_tuple(u"", u"x", false, 0),
-    },
-    {
-        std::make_tuple(U"abc", U"abc", false, 1),
-        std::make_tuple(U"abc", U"abc", true, 3),
-        std::make_tuple(U"abc", U"cde", false, 3),
-        std::make_tuple(U"abc", U"cde", true, 3),
-        std::make_tuple(U"abc", U"x", false, 0),
-        std::make_tuple(U"", U"x", false, 0),
-    }};
-
-template <typename CHAR> struct CharacterScanTests : public ::testing::Test {
-  CharacterScanTests()
-      : parameters{std::get<ScanParametersTy<CHAR>>(scanTestCases)},
-        characterScanFunc{std::get<ScanFuncTy<CHAR>>(scanFuncs)} {}
-  ScanParametersTy<CHAR> parameters;
-  ScanFuncTy<CHAR> characterScanFunc;
-};
-
-// Type-parameterized over the same character types as CharacterComparisonTests
-TYPED_TEST_CASE(CharacterScanTests, CharacterTypes);
-
-TYPED_TEST(CharacterScanTests, ScanCharacters) {
-  for (auto const &[str, set, back, expect] : this->parameters) {
-    auto res{
-        this->characterScanFunc(str, std::char_traits<TypeParam>::length(str),
-            set, std::char_traits<TypeParam>::length(set), back)};
-    ASSERT_EQ(res, expect) << "Scan(" << str << ',' << set << ",back=" << back
-                           << "): got " << res << ", should be " << expect;
+void RunSearchTests(const char *which,
+    const std::vector<SearchTestCase> &testCases,
+    const SearchFunction<CHAR> &function) {
+  for (const auto &t : testCases) {
+    // Convert default character to desired kind
+    std::size_t xLen{std::strlen(t.x)}, yLen{std::strlen(t.y)};
+    std::basic_string<CHAR> x{t.x, t.x + xLen};
+    std::basic_string<CHAR> y{t.y, t.y + yLen};
+    auto got{function(x.data(), xLen, y.data(), yLen, t.back)};
+    ASSERT_EQ(got, t.expect)
+        << which << "('" << t.x << "','" << t.y << "',back=" << t.back
+        << ") for CHARACTER(kind=" << sizeof(CHAR) << "): got " << got
+        << ", expected " << t.expect;
   }
 }
 
-//------------------------------------------------------------------------------
-/// Tests and infrastructure for Verify functions
-//------------------------------------------------------------------------------
-template <typename CHAR>
-using VerifyFuncTy = std::function<int(
-    const CHAR *, std::size_t, const CHAR *, std::size_t, bool)>;
+template <typename CHAR> struct SearchTests : public ::testing::Test {};
+TYPED_TEST_CASE(SearchTests, CharacterTypes);
 
-using VerifyFuncsTy = std::tuple<VerifyFuncTy<char>, VerifyFuncTy<char16_t>,
-    VerifyFuncTy<char32_t>>;
+TYPED_TEST(SearchTests, IndexTests) {
+  static SearchFunctions functions{
+      RTNAME(Index1), RTNAME(Index2), RTNAME(Index4)};
+  static std::vector<SearchTestCase> tests{
+      {"", "", false, 1},
+      {"", "", true, 1},
+      {"a", "", false, 1},
+      {"a", "", true, 2},
+      {"", "a", false, 0},
+      {"", "a", true, 0},
+      {"aa", "a", false, 1},
+      {"aa", "a", true, 2},
+      {"Fortran that I ran", "that I ran", false, 9},
+      {"Fortran that I ran", "that I ran", true, 9},
+      {"Fortran that you ran", "that I ran", false, 0},
+      {"Fortran that you ran", "that I ran", true, 0},
+  };
+  RunSearchTests(
+      "INDEX", tests, std::get<SearchFunction<TypeParam>>(functions));
+}
 
-// These functions are the systems under test in CharacterVerifyTests test cases
-static VerifyFuncsTy verifyFuncs{
-    RTNAME(Verify1),
-    RTNAME(Verify2),
-    RTNAME(Verify4),
-};
+TYPED_TEST(SearchTests, ScanTests) {
+  static SearchFunctions functions{RTNAME(Scan1), RTNAME(Scan2), RTNAME(Scan4)};
+  static std::vector<SearchTestCase> tests{
+      {"abc", "abc", false, 1},
+      {"abc", "abc", true, 3},
+      {"abc", "cde", false, 3},
+      {"abc", "cde", true, 3},
+      {"abc", "x", false, 0},
+      {"", "x", false, 0},
+  };
+  RunSearchTests("SCAN", tests, std::get<SearchFunction<TypeParam>>(functions));
+}
 
-// Types of _values_ over which tests are parameterized
-template <typename CHAR>
-using VerifyParametersTy =
-    std::vector<std::tuple<const CHAR *, const CHAR *, bool, int>>;
-
-using VerifyTestCasesTy = std::tuple<VerifyParametersTy<char>,
-    VerifyParametersTy<char16_t>, VerifyParametersTy<char32_t>>;
-
-static VerifyTestCasesTy verifyTestCases{
-    {
-        std::make_tuple("abc", "abc", false, 0),
-        std::make_tuple("abc", "abc", true, 0),
-        std::make_tuple("abc", "cde", false, 1),
-        std::make_tuple("abc", "cde", true, 2),
-        std::make_tuple("abc", "x", false, 1),
-        std::make_tuple("", "x", false, 0),
-    },
-    {
-        std::make_tuple(u"abc", u"abc", false, 0),
-        std::make_tuple(u"abc", u"abc", true, 0),
-        std::make_tuple(u"abc", u"cde", false, 1),
-        std::make_tuple(u"abc", u"cde", true, 2),
-        std::make_tuple(u"abc", u"x", false, 1),
-        std::make_tuple(u"", u"x", false, 0),
-    },
-    {
-        std::make_tuple(U"abc", U"abc", false, 0),
-        std::make_tuple(U"abc", U"abc", true, 0),
-        std::make_tuple(U"abc", U"cde", false, 1),
-        std::make_tuple(U"abc", U"cde", true, 2),
-        std::make_tuple(U"abc", U"x", false, 1),
-        std::make_tuple(U"", U"x", false, 0),
-    }};
-
-template <typename CHAR> struct CharacterVerifyTests : public ::testing::Test {
-  CharacterVerifyTests()
-      : parameters{std::get<VerifyParametersTy<CHAR>>(verifyTestCases)},
-        characterVerifyFunc{std::get<VerifyFuncTy<CHAR>>(verifyFuncs)} {}
-  VerifyParametersTy<CHAR> parameters;
-  VerifyFuncTy<CHAR> characterVerifyFunc;
-};
-
-// Type-parameterized over the same character types as CharacterComparisonTests
-TYPED_TEST_CASE(CharacterVerifyTests, CharacterTypes);
-
-TYPED_TEST(CharacterVerifyTests, VerifyCharacters) {
-  for (auto const &[str, set, back, expect] : this->parameters) {
-    auto res{
-        this->characterVerifyFunc(str, std::char_traits<TypeParam>::length(str),
-            set, std::char_traits<TypeParam>::length(set), back)};
-    ASSERT_EQ(res, expect) << "Verify(" << str << ',' << set << ",back=" << back
-                           << "): got " << res << ", should be " << expect;
-  }
+TYPED_TEST(SearchTests, VerifyTests) {
+  static SearchFunctions functions{
+      RTNAME(Verify1), RTNAME(Verify2), RTNAME(Verify4)};
+  static std::vector<SearchTestCase> tests{
+      {"abc", "abc", false, 0},
+      {"abc", "abc", true, 0},
+      {"abc", "cde", false, 1},
+      {"abc", "cde", true, 2},
+      {"abc", "x", false, 1},
+      {"", "x", false, 0},
+  };
+  RunSearchTests(
+      "VERIFY", tests, std::get<SearchFunction<TypeParam>>(functions));
 }

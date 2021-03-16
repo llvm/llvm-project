@@ -230,16 +230,6 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
       log_per_phy = data[2];
       p->apic_id = data[3]; /* Bits 31-24: Processor Initial APIC ID (X) */
       KA_TRACE(trace_level, (" HT(%d TPUs)", log_per_phy));
-
-      if (log_per_phy > 1) {
-/* default to 1k FOR JT-enabled processors (4k on OS X*) */
-#if KMP_OS_DARWIN
-        p->cpu_stackoffset = 4 * 1024;
-#else
-        p->cpu_stackoffset = 1 * 1024;
-#endif
-      }
-
       p->physical_id = __kmp_get_physical_id(log_per_phy, p->apic_id);
       p->logical_id = __kmp_get_logical_id(log_per_phy, p->apic_id);
     }

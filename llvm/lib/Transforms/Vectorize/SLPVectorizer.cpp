@@ -6692,6 +6692,7 @@ class HorizontalReduction {
   /// Expected number of uses for reduction operations/reduced values.
   static bool hasRequiredNumberOfUses(RecurKind Kind, Instruction *I,
                                       bool IsReductionOp) {
+    assert(Kind != RecurKind::None && "Reduction type not set");
     // SelectInst must be used twice while the condition op must have single
     // use only.
     if (isCmpSel(Kind))
@@ -6795,8 +6796,8 @@ public:
         if (IsReducedValue)
           ReducedVals.push_back(TreeN);
         else {
-          auto I = ExtraArgs.find(TreeN);
-          if (I != ExtraArgs.end() && !I->second) {
+          auto ExtraArgsIter = ExtraArgs.find(TreeN);
+          if (ExtraArgsIter != ExtraArgs.end() && !ExtraArgsIter->second) {
             // Check if TreeN is an extra argument of its parent operation.
             if (Stack.size() <= 1) {
               // TreeN can't be an extra argument as it is a root reduction
@@ -6818,14 +6819,14 @@ public:
 
       // Visit left or right.
       Value *EdgeVal = TreeN->getOperand(EdgeToVisit);
-      auto *I = dyn_cast<Instruction>(EdgeVal);
-      if (!I) {
+      auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
+      if (!EdgeInst) {
         // Edge value is not a reduction instruction or a leaf instruction.
         // (It may be a constant, function argument, or something else.)
         markExtraArg(Stack.back(), EdgeVal);
         continue;
       }
-      RecurKind EdgeRdxKind = getRdxKind(I);
+      RecurKind EdgeRdxKind = getRdxKind(EdgeInst);
       // Continue analysis if the next operand is a reduction operation or
       // (possibly) a leaf value. If the leaf value opcode is not set,
       // the first met operation != reduction operation is considered as the
@@ -6834,25 +6835,26 @@ public:
       // Each tree node needs to have minimal number of users except for the
       // ultimate reduction.
       const bool IsRdxInst = EdgeRdxKind == RdxKind;
-      if (I != Phi && I != B &&
-          hasSameParent(RdxKind, I, B->getParent(), IsRdxInst) &&
-          hasRequiredNumberOfUses(RdxKind, I, IsRdxInst) &&
-          (!LeafOpcode || LeafOpcode == I->getOpcode() || IsRdxInst)) {
+      if (EdgeInst != Phi && EdgeInst != B &&
+          hasSameParent(RdxKind, EdgeInst, B->getParent(), IsRdxInst) &&
+          hasRequiredNumberOfUses(RdxKind, EdgeInst, IsRdxInst) &&
+          (!LeafOpcode || LeafOpcode == EdgeInst->getOpcode() || IsRdxInst)) {
         if (IsRdxInst) {
           // We need to be able to reassociate the reduction operations.
-          if (!isVectorizable(EdgeRdxKind, I)) {
+          if (!isVectorizable(EdgeRdxKind, EdgeInst)) {
             // I is an extra argument for TreeN (its parent operation).
-            markExtraArg(Stack.back(), I);
+            markExtraArg(Stack.back(), EdgeInst);
             continue;
           }
         } else if (!LeafOpcode) {
-          LeafOpcode = I->getOpcode();
+          LeafOpcode = EdgeInst->getOpcode();
         }
-        Stack.push_back(std::make_pair(I, getFirstOperandIndex(EdgeRdxKind)));
+        Stack.push_back(
+            std::make_pair(EdgeInst, getFirstOperandIndex(EdgeRdxKind)));
         continue;
       }
       // I is an extra argument for TreeN (its parent operation).
-      markExtraArg(Stack.back(), I);
+      markExtraArg(Stack.back(), EdgeInst);
     }
     return true;
   }

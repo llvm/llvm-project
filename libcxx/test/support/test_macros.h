@@ -371,6 +371,12 @@ inline void DoNotOptimize(Tp const& value) {
 #define TEST_NOINLINE
 #endif
 
+#ifdef _WIN32
+#define TEST_NOT_WIN32(...) ((void)0)
+#else
+#define TEST_NOT_WIN32(...) __VA_ARGS__
+#endif
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif

@@ -147,6 +147,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPULowerIntrinsics.cpp",
     "AMDGPULowerKernelArguments.cpp",
     "AMDGPULowerKernelAttributes.cpp",
+    "AMDGPULowerModuleLDSPass.cpp",
     "AMDGPUMCInstLower.cpp",
     "AMDGPUMIRFormatter.cpp",
     "AMDGPUMachineCFGStructurizer.cpp",

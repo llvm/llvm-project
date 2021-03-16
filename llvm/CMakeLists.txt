@@ -507,6 +507,9 @@ if (MSVC_IDE OR XCODE)
 endif()
 set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
+include(GetErrcMessages)
+get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
+
 # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
 if( WIN32 AND NOT CYGWIN )
   set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
@@ -693,7 +696,8 @@ set(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER TRUE CACHE BOOL
 
 include(HandleLLVMOptions)
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
+find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION} REQUIRED
+    COMPONENTS Interpreter)
 
 ######
 

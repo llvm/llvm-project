@@ -1386,8 +1386,7 @@ struct MapAnyOfMatcherImpl {
             internal::DynTypedMatcher::VO_AnyOf},
         applyMatcher(
             [&](auto... Matcher) {
-              return std::make_tuple(Matcher(
-                  std::forward<decltype(InnerMatcher)>(InnerMatcher)...)...);
+              return std::make_tuple(Matcher(InnerMatcher...)...);
             },
             std::tuple<
                 VariadicDynCastAllOfMatcher<CladeType, MatcherTypes>...>())));

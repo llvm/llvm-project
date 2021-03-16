@@ -196,37 +196,49 @@ image_sample_b v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
 // GFX90A: error: instruction not supported on this GPU
 
 global_atomic_add_f32 v0, v[0:1], v2, off glc scc
-// GFX90A: error: operands are not valid for this GPU or mode
+// GFX90A: error: instruction must not use scc
 
 global_atomic_add_f32 v[0:1], v2, off scc
-// GFX90A: error: operands are not valid for this GPU or mode
+// GFX90A: error: instruction must not use scc
 
 global_atomic_add_f32 v0, v2, s[0:1] scc
-// GFX90A: error: operands are not valid for this GPU or mode
+// GFX90A: error: instruction must not use scc
 
 global_atomic_add_f32 v1, v0, v2, s[0:1] glc scc
-// GFX90A: error: operands are not valid for this GPU or mode
+// GFX90A: error: instruction must not use scc
 
 global_atomic_pk_add_f16 v0, v[0:1], v2, off glc scc
-// GFX90A: error: invalid operand for instruction
+// GFX90A: error: instruction must not use scc
 
 flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] glc scc
-// GFX90A: error: invalid operand for instruction
+// GFX90A: error: instruction must not use scc
 
 flat_atomic_add_f64 v[0:1], v[2:3] scc
-// GFX90A: error: invalid operand for instruction
+// GFX90A: error: instruction must not use scc
 
 flat_atomic_min_f64 v[0:1], v[2:3] scc
-// GFX90A: error: invalid operand for instruction
+// GFX90A: error: instruction must not use scc
 
 flat_atomic_max_f64 v[0:1], v[2:3] scc
-// GFX90A: error: invalid operand for instruction
+// GFX90A: error: instruction must not use scc
 
 global_atomic_add_f64 v[0:1], v[2:3], off scc
-// GFX90A: error: invalid operand for instruction
+// GFX90A: error: instruction must not use scc
 
 global_atomic_min_f64 v[0:1], v[2:3], off scc
-// GFX90A: error: invalid operand for instruction
+// GFX90A: error: instruction must not use scc
 
 global_atomic_max_f64 v[0:1], v[2:3], off scc
-// GFX90A: error: invalid operand for instruction
+// GFX90A: error: instruction must not use scc
+
+v_mov_b32_sdwa v1, src_lds_direct dst_sel:DWORD
+// GFX90A: error: lds_direct is not supported on this GPU
+
+v_add_f32_sdwa v5, v1, lds_direct dst_sel:DWORD
+// GFX90A: error: lds_direct is not supported on this GPU
+
+v_ashrrev_i16 v0, lds_direct, v0
+// GFX90A: error: lds_direct is not supported on this GPU
+
+v_add_f32 v5, v1, lds_direct
+// GFX90A: error: lds_direct is not supported on this GPU

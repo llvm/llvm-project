@@ -374,17 +374,24 @@ static void CheckMissingAnalysis(bool absent, const T &x) {
   }
 }
 
-const SomeExpr *GetExprHelper::Get(const parser::Expr &x) {
+template <typename T> static const SomeExpr *GetTypedExpr(const T &x) {
   CheckMissingAnalysis(!x.typedExpr, x);
   return common::GetPtrFromOptional(x.typedExpr->v);
+}
+const SomeExpr *GetExprHelper::Get(const parser::Expr &x) {
+  return GetTypedExpr(x);
 }
 const SomeExpr *GetExprHelper::Get(const parser::Variable &x) {
-  CheckMissingAnalysis(!x.typedExpr, x);
-  return common::GetPtrFromOptional(x.typedExpr->v);
+  return GetTypedExpr(x);
 }
 const SomeExpr *GetExprHelper::Get(const parser::DataStmtConstant &x) {
-  CheckMissingAnalysis(!x.typedExpr, x);
-  return common::GetPtrFromOptional(x.typedExpr->v);
+  return GetTypedExpr(x);
+}
+const SomeExpr *GetExprHelper::Get(const parser::AllocateObject &x) {
+  return GetTypedExpr(x);
+}
+const SomeExpr *GetExprHelper::Get(const parser::PointerObject &x) {
+  return GetTypedExpr(x);
 }
 
 const evaluate::Assignment *GetAssignment(const parser::AssignmentStmt &x) {

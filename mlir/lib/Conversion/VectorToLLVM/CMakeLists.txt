@@ -14,6 +14,8 @@ add_mlir_conversion_library(MLIRVectorToLLVM
 
   LINK_LIBS PUBLIC
   MLIRArmNeon
+  MLIRAMX
+  MLIRAMXTransforms
   MLIRAVX512
   MLIRAVX512Transforms
   MLIRArmSVE

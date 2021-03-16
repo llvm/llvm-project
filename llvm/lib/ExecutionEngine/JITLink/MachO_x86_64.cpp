@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
+#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 
 #include "BasicGOTAndStubsBuilder.h"
 #include "MachOLinkGraphBuilder.h"
@@ -19,69 +20,86 @@
 
 using namespace llvm;
 using namespace llvm::jitlink;
-using namespace llvm::jitlink::MachO_x86_64_Edges;
 
 namespace {
 
 class MachOLinkGraphBuilder_x86_64 : public MachOLinkGraphBuilder {
 public:
   MachOLinkGraphBuilder_x86_64(const object::MachOObjectFile &Obj)
-      : MachOLinkGraphBuilder(Obj, Triple("x86_64-apple-darwin")) {}
+      : MachOLinkGraphBuilder(Obj, Triple("x86_64-apple-darwin"),
+                              x86_64::getEdgeKindName) {}
 
 private:
-  static Expected<MachOX86RelocationKind>
-  getRelocationKind(const MachO::relocation_info &RI) {
+  enum MachONormalizedRelocationType : unsigned {
+    MachOBranch32,
+    MachOPointer32,
+    MachOPointer64,
+    MachOPointer64Anon,
+    MachOPCRel32,
+    MachOPCRel32Minus1,
+    MachOPCRel32Minus2,
+    MachOPCRel32Minus4,
+    MachOPCRel32Anon,
+    MachOPCRel32Minus1Anon,
+    MachOPCRel32Minus2Anon,
+    MachOPCRel32Minus4Anon,
+    MachOPCRel32GOTLoad,
+    MachOPCRel32GOT,
+    MachOPCRel32TLV,
+    MachOSubtractor32,
+    MachOSubtractor64,
+  };
+
+  static Expected<MachONormalizedRelocationType>
+  getRelocKind(const MachO::relocation_info &RI) {
     switch (RI.r_type) {
     case MachO::X86_64_RELOC_UNSIGNED:
       if (!RI.r_pcrel) {
         if (RI.r_length == 3)
-          return RI.r_extern ? Pointer64 : Pointer64Anon;
+          return RI.r_extern ? MachOPointer64 : MachOPointer64Anon;
         else if (RI.r_extern && RI.r_length == 2)
-          return Pointer32;
+          return MachOPointer32;
       }
       break;
     case MachO::X86_64_RELOC_SIGNED:
       if (RI.r_pcrel && RI.r_length == 2)
-        return RI.r_extern ? PCRel32 : PCRel32Anon;
+        return RI.r_extern ? MachOPCRel32 : MachOPCRel32Anon;
       break;
     case MachO::X86_64_RELOC_BRANCH:
       if (RI.r_pcrel && RI.r_extern && RI.r_length == 2)
-        return Branch32;
+        return MachOBranch32;
       break;
     case MachO::X86_64_RELOC_GOT_LOAD:
       if (RI.r_pcrel && RI.r_extern && RI.r_length == 2)
-        return PCRel32GOTLoad;
+        return MachOPCRel32GOTLoad;
       break;
     case MachO::X86_64_RELOC_GOT:
       if (RI.r_pcrel && RI.r_extern && RI.r_length == 2)
-        return PCRel32GOT;
+        return MachOPCRel32GOT;
       break;
     case MachO::X86_64_RELOC_SUBTRACTOR:
-      // SUBTRACTOR must be non-pc-rel, extern, with length 2 or 3.
-      // Initially represent SUBTRACTOR relocations with 'Delta<W>'. They may
-      // be turned into NegDelta<W> by parsePairRelocation.
       if (!RI.r_pcrel && RI.r_extern) {
         if (RI.r_length == 2)
-          return Delta32;
+          return MachOSubtractor32;
         else if (RI.r_length == 3)
-          return Delta64;
+          return MachOSubtractor64;
       }
       break;
     case MachO::X86_64_RELOC_SIGNED_1:
       if (RI.r_pcrel && RI.r_length == 2)
-        return RI.r_extern ? PCRel32Minus1 : PCRel32Minus1Anon;
+        return RI.r_extern ? MachOPCRel32Minus1 : MachOPCRel32Minus1Anon;
       break;
     case MachO::X86_64_RELOC_SIGNED_2:
       if (RI.r_pcrel && RI.r_length == 2)
-        return RI.r_extern ? PCRel32Minus2 : PCRel32Minus2Anon;
+        return RI.r_extern ? MachOPCRel32Minus2 : MachOPCRel32Minus2Anon;
       break;
     case MachO::X86_64_RELOC_SIGNED_4:
       if (RI.r_pcrel && RI.r_length == 2)
-        return RI.r_extern ? PCRel32Minus4 : PCRel32Minus4Anon;
+        return RI.r_extern ? MachOPCRel32Minus4 : MachOPCRel32Minus4Anon;
       break;
     case MachO::X86_64_RELOC_TLV:
       if (RI.r_pcrel && RI.r_extern && RI.r_length == 2)
-        return PCRel32TLV;
+        return MachOPCRel32TLV;
       break;
     }
 
@@ -95,20 +113,19 @@ private:
         ", length=" + formatv("{0:d}", RI.r_length));
   }
 
-  using PairRelocInfo = std::tuple<MachOX86RelocationKind, Symbol *, uint64_t>;
+  using PairRelocInfo = std::tuple<Edge::Kind, Symbol *, uint64_t>;
 
   // Parses paired SUBTRACTOR/UNSIGNED relocations and, on success,
   // returns the edge kind and addend to be used.
-  Expected<PairRelocInfo>
-  parsePairRelocation(Block &BlockToFix, Edge::Kind SubtractorKind,
-                      const MachO::relocation_info &SubRI,
-                      JITTargetAddress FixupAddress, const char *FixupContent,
-                      object::relocation_iterator &UnsignedRelItr,
-                      object::relocation_iterator &RelEnd) {
+  Expected<PairRelocInfo> parsePairRelocation(
+      Block &BlockToFix, MachONormalizedRelocationType SubtractorKind,
+      const MachO::relocation_info &SubRI, JITTargetAddress FixupAddress,
+      const char *FixupContent, object::relocation_iterator &UnsignedRelItr,
+      object::relocation_iterator &RelEnd) {
     using namespace support;
 
-    assert(((SubtractorKind == Delta32 && SubRI.r_length == 2) ||
-            (SubtractorKind == Delta64 && SubRI.r_length == 3)) &&
+    assert(((SubtractorKind == MachOSubtractor32 && SubRI.r_length == 2) ||
+            (SubtractorKind == MachOSubtractor64 && SubRI.r_length == 3)) &&
            "Subtractor kind should match length");
     assert(SubRI.r_extern && "SUBTRACTOR reloc symbol should be extern");
     assert(!SubRI.r_pcrel && "SUBTRACTOR reloc should not be PCRel");
@@ -158,17 +175,18 @@ private:
       FixupValue -= ToSymbol->getAddress();
     }
 
-    MachOX86RelocationKind DeltaKind;
+    Edge::Kind DeltaKind;
     Symbol *TargetSymbol;
     uint64_t Addend;
     if (&BlockToFix == &FromSymbol->getAddressable()) {
       TargetSymbol = ToSymbol;
-      DeltaKind = (SubRI.r_length == 3) ? Delta64 : Delta32;
+      DeltaKind = (SubRI.r_length == 3) ? x86_64::Delta64 : x86_64::Delta32;
       Addend = FixupValue + (FixupAddress - FromSymbol->getAddress());
       // FIXME: handle extern 'from'.
     } else if (&BlockToFix == &ToSymbol->getAddressable()) {
       TargetSymbol = FromSymbol;
-      DeltaKind = (SubRI.r_length == 3) ? NegDelta64 : NegDelta32;
+      DeltaKind =
+          (SubRI.r_length == 3) ? x86_64::NegDelta64 : x86_64::NegDelta32;
       Addend = FixupValue - (FixupAddress - ToSymbol->getAddress());
     } else {
       // BlockToFix was neither FromSymbol nor ToSymbol.
@@ -218,11 +236,6 @@ private:
 
         MachO::relocation_info RI = getRelocationInfo(RelItr);
 
-        // Sanity check the relocation kind.
-        auto Kind = getRelocationKind(RI);
-        if (!Kind)
-          return Kind.takeError();
-
         // Find the address of the value to fix up.
         JITTargetAddress FixupAddress = SectionAddress + (uint32_t)RI.r_address;
 
@@ -251,111 +264,149 @@ private:
         const char *FixupContent = BlockToFix->getContent().data() +
                                    (FixupAddress - BlockToFix->getAddress());
 
+        size_t FixupOffset = FixupAddress - BlockToFix->getAddress();
+
         // The target symbol and addend will be populated by the switch below.
         Symbol *TargetSymbol = nullptr;
         uint64_t Addend = 0;
 
-        switch (*Kind) {
-        case Branch32:
-        case PCRel32:
-        case PCRel32GOTLoad:
-        case PCRel32GOT:
+        // Sanity check the relocation kind.
+        auto MachORelocKind = getRelocKind(RI);
+        if (!MachORelocKind)
+          return MachORelocKind.takeError();
+
+        Edge::Kind Kind = Edge::Invalid;
+
+        switch (*MachORelocKind) {
+        case MachOBranch32:
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
             return TargetSymbolOrErr.takeError();
           Addend = *(const little32_t *)FixupContent;
+          Kind = x86_64::BranchPCRel32;
           break;
-        case Pointer32:
+        case MachOPCRel32:
+          if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
+            TargetSymbol = TargetSymbolOrErr->GraphSymbol;
+          else
+            return TargetSymbolOrErr.takeError();
+          Addend = *(const little32_t *)FixupContent - 4;
+          Kind = x86_64::Delta32;
+          break;
+        case MachOPCRel32GOTLoad:
+          if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
+            TargetSymbol = TargetSymbolOrErr->GraphSymbol;
+          else
+            return TargetSymbolOrErr.takeError();
+          Addend = *(const little32_t *)FixupContent;
+          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
+          if (FixupOffset < 3)
+            return make_error<JITLinkError>("GOTLD at invalid offset " +
+                                            formatv("{0}", FixupOffset));
+          break;
+        case MachOPCRel32GOT:
+          if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
+            TargetSymbol = TargetSymbolOrErr->GraphSymbol;
+          else
+            return TargetSymbolOrErr.takeError();
+          Addend = *(const little32_t *)FixupContent - 4;
+          Kind = x86_64::RequestGOTAndTransformToDelta32;
+          break;
+        case MachOPointer32:
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
             return TargetSymbolOrErr.takeError();
           Addend = *(const ulittle32_t *)FixupContent;
+          Kind = x86_64::Pointer32;
           break;
-        case Pointer64:
+        case MachOPointer64:
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
             return TargetSymbolOrErr.takeError();
           Addend = *(const ulittle64_t *)FixupContent;
+          Kind = x86_64::Pointer64;
           break;
-        case Pointer64Anon: {
+        case MachOPointer64Anon: {
           JITTargetAddress TargetAddress = *(const ulittle64_t *)FixupContent;
           if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
             TargetSymbol = &*TargetSymbolOrErr;
           else
             return TargetSymbolOrErr.takeError();
           Addend = TargetAddress - TargetSymbol->getAddress();
+          Kind = x86_64::Pointer64;
           break;
         }
-        case PCRel32Minus1:
-        case PCRel32Minus2:
-        case PCRel32Minus4:
+        case MachOPCRel32Minus1:
+        case MachOPCRel32Minus2:
+        case MachOPCRel32Minus4:
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
             return TargetSymbolOrErr.takeError();
-          Addend = *(const little32_t *)FixupContent +
-                   (1 << (*Kind - PCRel32Minus1));
+          Addend = *(const little32_t *)FixupContent - 4;
+          // -
+          //   (1 << (*MachORelocKind - MachOPCRel32Minus1));
+          Kind = x86_64::Delta32;
           break;
-        case PCRel32Anon: {
+        case MachOPCRel32Anon: {
           JITTargetAddress TargetAddress =
               FixupAddress + 4 + *(const little32_t *)FixupContent;
           if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
             TargetSymbol = &*TargetSymbolOrErr;
           else
             return TargetSymbolOrErr.takeError();
-          Addend = TargetAddress - TargetSymbol->getAddress();
+          Addend = TargetAddress - TargetSymbol->getAddress() - 4;
+          Kind = x86_64::Delta32;
           break;
         }
-        case PCRel32Minus1Anon:
-        case PCRel32Minus2Anon:
-        case PCRel32Minus4Anon: {
+        case MachOPCRel32Minus1Anon:
+        case MachOPCRel32Minus2Anon:
+        case MachOPCRel32Minus4Anon: {
           JITTargetAddress Delta =
-              static_cast<JITTargetAddress>(1ULL << (*Kind - PCRel32Minus1Anon));
+              4 + static_cast<JITTargetAddress>(
+                      1ULL << (*MachORelocKind - MachOPCRel32Minus1Anon));
           JITTargetAddress TargetAddress =
-              FixupAddress + 4 + Delta + *(const little32_t *)FixupContent;
+              FixupAddress + Delta + *(const little32_t *)FixupContent;
           if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
             TargetSymbol = &*TargetSymbolOrErr;
           else
             return TargetSymbolOrErr.takeError();
-          Addend = TargetAddress - TargetSymbol->getAddress();
+          Addend = TargetAddress - TargetSymbol->getAddress() - Delta;
+          Kind = x86_64::Delta32;
           break;
         }
-        case Delta32:
-        case Delta64: {
+        case MachOSubtractor32:
+        case MachOSubtractor64: {
           // We use Delta32/Delta64 to represent SUBTRACTOR relocations.
           // parsePairRelocation handles the paired reloc, and returns the
           // edge kind to be used (either Delta32/Delta64, or
           // NegDelta32/NegDelta64, depending on the direction of the
           // subtraction) along with the addend.
           auto PairInfo =
-              parsePairRelocation(*BlockToFix, *Kind, RI, FixupAddress,
-                                  FixupContent, ++RelItr, RelEnd);
+              parsePairRelocation(*BlockToFix, *MachORelocKind, RI,
+                                  FixupAddress, FixupContent, ++RelItr, RelEnd);
           if (!PairInfo)
             return PairInfo.takeError();
-          std::tie(*Kind, TargetSymbol, Addend) = *PairInfo;
+          std::tie(Kind, TargetSymbol, Addend) = *PairInfo;
           assert(TargetSymbol && "No target symbol from parsePairRelocation?");
           break;
         }
-        case PCRel32TLV:
+        case MachOPCRel32TLV:
           return make_error<JITLinkError>(
               "MachO TLV relocations not yet supported");
-        default:
-          llvm_unreachable("Special relocation kind should not appear in "
-                           "mach-o file");
         }
 
         LLVM_DEBUG({
           dbgs() << "    ";
-          Edge GE(*Kind, FixupAddress - BlockToFix->getAddress(), *TargetSymbol,
+          Edge GE(Kind, FixupAddress - BlockToFix->getAddress(), *TargetSymbol,
                   Addend);
-          printEdge(dbgs(), *BlockToFix, GE,
-                    getMachOX86RelocationKindName(*Kind));
+          printEdge(dbgs(), *BlockToFix, GE, x86_64::getEdgeKindName(Kind));
           dbgs() << "\n";
         });
-        BlockToFix->addEdge(*Kind, FixupAddress - BlockToFix->getAddress(),
+        BlockToFix->addEdge(Kind, FixupAddress - BlockToFix->getAddress(),
                             *TargetSymbol, Addend);
       }
     }
@@ -372,33 +423,37 @@ public:
   MachO_x86_64_GOTAndStubsBuilder(LinkGraph &G)
       : BasicGOTAndStubsBuilder<MachO_x86_64_GOTAndStubsBuilder>(G) {}
 
-  bool isGOTEdge(Edge &E) const {
-    return E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad;
+  bool isGOTEdgeToFix(Edge &E) const {
+    return E.getKind() == x86_64::RequestGOTAndTransformToDelta32 ||
+           E.getKind() ==
+               x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
   }
 
   Symbol &createGOTEntry(Symbol &Target) {
     auto &GOTEntryBlock = G.createContentBlock(
         getGOTSection(), getGOTEntryBlockContent(), 0, 8, 0);
-    GOTEntryBlock.addEdge(Pointer64, 0, Target, 0);
+    GOTEntryBlock.addEdge(x86_64::Pointer64, 0, Target, 0);
     return G.addAnonymousSymbol(GOTEntryBlock, 0, 8, false, false);
   }
 
   void fixGOTEdge(Edge &E, Symbol &GOTEntry) {
-    assert((E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad) &&
-           "Not a GOT edge?");
-    // If this is a PCRel32GOT then change it to an ordinary PCRel32. If it is
-    // a PCRel32GOTLoad then leave it as-is for now. We will use the kind to
-    // check for GOT optimization opportunities in the
-    // optimizeMachO_x86_64_GOTAndStubs pass below.
-    if (E.getKind() == PCRel32GOT)
-      E.setKind(PCRel32);
-
+    // Fix the edge kind.
+    switch (E.getKind()) {
+    case x86_64::RequestGOTAndTransformToDelta32:
+      E.setKind(x86_64::Delta32);
+      break;
+    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable:
+      E.setKind(x86_64::PCRel32GOTLoadRelaxable);
+      break;
+    default:
+      llvm_unreachable("Not a GOT transform edge");
+    }
+    // Fix the target, leave the addend as-is.
     E.setTarget(GOTEntry);
-    // Leave the edge addend as-is.
   }
 
   bool isExternalBranchEdge(Edge &E) {
-    return E.getKind() == Branch32 && !E.getTarget().isDefined();
+    return E.getKind() == x86_64::BranchPCRel32 && E.getTarget().isExternal();
   }
 
   Symbol &createStub(Symbol &Target) {
@@ -406,18 +461,19 @@ public:
         G.createContentBlock(getStubsSection(), getStubBlockContent(), 0, 1, 0);
     // Re-use GOT entries for stub targets.
     auto &GOTEntrySymbol = getGOTEntrySymbol(Target);
-    StubContentBlock.addEdge(PCRel32, 2, GOTEntrySymbol, 0);
+    StubContentBlock.addEdge(x86_64::Delta32, 2, GOTEntrySymbol, -4);
     return G.addAnonymousSymbol(StubContentBlock, 0, 6, true, false);
   }
 
   void fixExternalBranchEdge(Edge &E, Symbol &Stub) {
-    assert(E.getKind() == Branch32 && "Not a Branch32 edge?");
-    assert(E.getAddend() == 0 && "Branch32 edge has non-zero addend?");
+    assert(E.getKind() == x86_64::BranchPCRel32 && "Not a Branch32 edge?");
+    assert(E.getAddend() == 0 &&
+           "BranchPCRel32 edge has unexpected addend value");
 
-    // Set the edge kind to Branch32ToStub. We will use this to check for stub
-    // optimization opportunities in the optimizeMachO_x86_64_GOTAndStubs pass
-    // below.
-    E.setKind(Branch32ToStub);
+    // Set the edge kind to BranchPCRel32ToPtrJumpStubRelaxable. We will use
+    // this to check for stub optimization opportunities in the
+    // optimizeMachO_x86_64_GOTAndStubs pass below.
+    E.setKind(x86_64::BranchPCRel32ToPtrJumpStubRelaxable);
     E.setTarget(Stub);
   }
 
@@ -462,12 +518,8 @@ static Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
 
   for (auto *B : G.blocks())
     for (auto &E : B->edges())
-      if (E.getKind() == PCRel32GOTLoad) {
+      if (E.getKind() == x86_64::PCRel32GOTLoadRelaxable) {
         assert(E.getOffset() >= 3 && "GOT edge occurs too early in block");
-
-        // Switch the edge kind to PCRel32: Whether we change the edge target
-        // or not this will be the desired kind.
-        E.setKind(PCRel32);
 
         // Optimize GOT references.
         auto &GOTBlock = E.getTarget().getBlock();
@@ -491,22 +543,18 @@ static Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
         if (Displacement >= std::numeric_limits<int32_t>::min() &&
             Displacement <= std::numeric_limits<int32_t>::max()) {
           E.setTarget(GOTTarget);
+          E.setKind(x86_64::Delta32);
+          E.setAddend(E.getAddend() - 4);
           auto *BlockData = reinterpret_cast<uint8_t *>(
               const_cast<char *>(B->getContent().data()));
           BlockData[E.getOffset() - 2] = 0x8d;
           LLVM_DEBUG({
             dbgs() << "  Replaced GOT load wih LEA:\n    ";
-            printEdge(dbgs(), *B, E,
-                      getMachOX86RelocationKindName(E.getKind()));
+            printEdge(dbgs(), *B, E, x86_64::getEdgeKindName(E.getKind()));
             dbgs() << "\n";
           });
         }
-      } else if (E.getKind() == Branch32ToStub) {
-
-        // Switch the edge kind to PCRel32: Whether we change the edge target
-        // or not this will be the desired kind.
-        E.setKind(Branch32);
-
+      } else if (E.getKind() == x86_64::BranchPCRel32ToPtrJumpStubRelaxable) {
         auto &StubBlock = E.getTarget().getBlock();
         assert(StubBlock.getSize() ==
                    sizeof(MachO_x86_64_GOTAndStubsBuilder::StubContent) &&
@@ -527,11 +575,11 @@ static Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
         int64_t Displacement = TargetAddr - EdgeAddr + 4;
         if (Displacement >= std::numeric_limits<int32_t>::min() &&
             Displacement <= std::numeric_limits<int32_t>::max()) {
+          E.setKind(x86_64::BranchPCRel32);
           E.setTarget(GOTTarget);
           LLVM_DEBUG({
             dbgs() << "  Replaced stub branch with direct branch:\n    ";
-            printEdge(dbgs(), *B, E,
-                      getMachOX86RelocationKindName(E.getKind()));
+            printEdge(dbgs(), *B, E, x86_64::getEdgeKindName(E.getKind()));
             dbgs() << "\n";
           });
         }
@@ -553,104 +601,10 @@ public:
       : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
 
 private:
-  StringRef getEdgeKindName(Edge::Kind R) const override {
-    return getMachOX86RelocationKindName(R);
-  }
-
-  static Error targetOutOfRangeError(const Block &B, const Edge &E) {
-    std::string ErrMsg;
-    {
-      raw_string_ostream ErrStream(ErrMsg);
-      ErrStream << "Relocation target out of range: ";
-      printEdge(ErrStream, B, E, getMachOX86RelocationKindName(E.getKind()));
-      ErrStream << "\n";
-    }
-    return make_error<JITLinkError>(std::move(ErrMsg));
-  }
 
   Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) const {
-
-    using namespace support;
-
-    char *FixupPtr = BlockWorkingMem + E.getOffset();
-    JITTargetAddress FixupAddress = B.getAddress() + E.getOffset();
-
-    switch (E.getKind()) {
-    case Branch32:
-    case PCRel32:
-    case PCRel32Anon: {
-      int64_t Value =
-          E.getTarget().getAddress() - (FixupAddress + 4) + E.getAddend();
-      if (Value < std::numeric_limits<int32_t>::min() ||
-          Value > std::numeric_limits<int32_t>::max())
-        return targetOutOfRangeError(B, E);
-      *(little32_t *)FixupPtr = Value;
-      break;
-    }
-    case Pointer64:
-    case Pointer64Anon: {
-      uint64_t Value = E.getTarget().getAddress() + E.getAddend();
-      *(ulittle64_t *)FixupPtr = Value;
-      break;
-    }
-    case PCRel32Minus1:
-    case PCRel32Minus2:
-    case PCRel32Minus4: {
-      int Delta = 4 + (1 << (E.getKind() - PCRel32Minus1));
-      int64_t Value =
-          E.getTarget().getAddress() - (FixupAddress + Delta) + E.getAddend();
-      if (Value < std::numeric_limits<int32_t>::min() ||
-          Value > std::numeric_limits<int32_t>::max())
-        return targetOutOfRangeError(B, E);
-      *(little32_t *)FixupPtr = Value;
-      break;
-    }
-    case PCRel32Minus1Anon:
-    case PCRel32Minus2Anon:
-    case PCRel32Minus4Anon: {
-      int Delta = 4 + (1 << (E.getKind() - PCRel32Minus1Anon));
-      int64_t Value =
-          E.getTarget().getAddress() - (FixupAddress + Delta) + E.getAddend();
-      if (Value < std::numeric_limits<int32_t>::min() ||
-          Value > std::numeric_limits<int32_t>::max())
-        return targetOutOfRangeError(B, E);
-      *(little32_t *)FixupPtr = Value;
-      break;
-    }
-    case Delta32:
-    case Delta64:
-    case NegDelta32:
-    case NegDelta64: {
-      int64_t Value;
-      if (E.getKind() == Delta32 || E.getKind() == Delta64)
-        Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
-      else
-        Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
-
-      if (E.getKind() == Delta32 || E.getKind() == NegDelta32) {
-        if (Value < std::numeric_limits<int32_t>::min() ||
-            Value > std::numeric_limits<int32_t>::max())
-          return targetOutOfRangeError(B, E);
-        *(little32_t *)FixupPtr = Value;
-      } else
-        *(little64_t *)FixupPtr = Value;
-      break;
-    }
-    case Pointer32: {
-      uint64_t Value = E.getTarget().getAddress() + E.getAddend();
-      if (Value > std::numeric_limits<uint32_t>::max())
-        return targetOutOfRangeError(B, E);
-      *(ulittle32_t *)FixupPtr = Value;
-      break;
-    }
-    default:
-      llvm_unreachable("Unrecognized edge kind");
-    }
-
-    return Error::success();
+    return x86_64::applyFixup(B, E, BlockWorkingMem);
   }
-
-  uint64_t NullValue = 0;
 };
 
 Expected<std::unique_ptr<LinkGraph>>
@@ -669,8 +623,9 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
   if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
     // Add eh-frame passses.
     Config.PrePrunePasses.push_back(EHFrameSplitter("__eh_frame"));
-    Config.PrePrunePasses.push_back(EHFrameEdgeFixer(
-        "__eh_frame", G->getPointerSize(), Delta64, Delta32, NegDelta32));
+    Config.PrePrunePasses.push_back(
+        EHFrameEdgeFixer("__eh_frame", G->getPointerSize(), x86_64::Delta64,
+                         x86_64::Delta32, x86_64::NegDelta32));
 
     // Add a mark-live pass.
     if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))
@@ -693,53 +648,6 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
 
   // Construct a JITLinker and run the link function.
   MachOJITLinker_x86_64::link(std::move(Ctx), std::move(G), std::move(Config));
-}
-
-StringRef getMachOX86RelocationKindName(Edge::Kind R) {
-  switch (R) {
-  case Branch32:
-    return "Branch32";
-  case Branch32ToStub:
-    return "Branch32ToStub";
-  case Pointer32:
-    return "Pointer32";
-  case Pointer64:
-    return "Pointer64";
-  case Pointer64Anon:
-    return "Pointer64Anon";
-  case PCRel32:
-    return "PCRel32";
-  case PCRel32Minus1:
-    return "PCRel32Minus1";
-  case PCRel32Minus2:
-    return "PCRel32Minus2";
-  case PCRel32Minus4:
-    return "PCRel32Minus4";
-  case PCRel32Anon:
-    return "PCRel32Anon";
-  case PCRel32Minus1Anon:
-    return "PCRel32Minus1Anon";
-  case PCRel32Minus2Anon:
-    return "PCRel32Minus2Anon";
-  case PCRel32Minus4Anon:
-    return "PCRel32Minus4Anon";
-  case PCRel32GOTLoad:
-    return "PCRel32GOTLoad";
-  case PCRel32GOT:
-    return "PCRel32GOT";
-  case PCRel32TLV:
-    return "PCRel32TLV";
-  case Delta32:
-    return "Delta32";
-  case Delta64:
-    return "Delta64";
-  case NegDelta32:
-    return "NegDelta32";
-  case NegDelta64:
-    return "NegDelta64";
-  default:
-    return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
-  }
 }
 
 } // end namespace jitlink

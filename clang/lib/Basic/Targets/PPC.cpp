@@ -199,6 +199,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ROP_PROTECTION__");
   if (HasP10Vector)
     Builder.defineMacro("__POWER10_VECTOR__");
+  if (HasPCRelativeMemops)
+    Builder.defineMacro("__PCREL__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -566,6 +568,7 @@ void PPCTargetInfo::adjust(LangOptions &Opts) {
     LongDoubleFormat = Opts.PPCIEEELongDouble
                            ? &llvm::APFloat::IEEEquad()
                            : &llvm::APFloat::PPCDoubleDouble();
+  Opts.IEEE128 = 1;
 }
 
 ArrayRef<Builtin::Info> PPCTargetInfo::getTargetBuiltins() const {

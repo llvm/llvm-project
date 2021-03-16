@@ -455,6 +455,8 @@ AffHWSubsetManyDies          "KMP_HW_SUBSET ignored: too many Dies requested."
 AffUseGlobCpuidL             "%1$s: Affinity capable, using global cpuid leaf %2$d info"
 AffNotCapableUseLocCpuidL    "%1$s: Affinity not capable, using local cpuid leaf %2$d info"
 AffNotUsingHwloc             "%1$s: Affinity not capable, using hwloc."
+UserDirectedError            "%1$s: Encountered user-directed error: %2$s."
+UserDirectedWarning          "%1$s: Encountered user-directed warning: %2$s."
 FailedToCreateTeam           "Failed to create teams between lower bound (%1$d) and upper bound (%2$d)."
 
 # --------------------------------------------------------------------------------------------------

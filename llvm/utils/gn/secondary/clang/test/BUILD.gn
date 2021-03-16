@@ -102,10 +102,16 @@ write_lit_config("lit_site_cfg") {
   }
 
   if (host_os == "win") {
-    extra_values += [ "LLVM_ENABLE_PLUGINS=0" ]
+    extra_values += [
+      "LLVM_ENABLE_PLUGINS=0",
+      "LLVM_LIT_ERRC_MESSAGES=no such file or directory;is a directory;" +
+          "invalid argument;permission denied",
+    ]
   } else {
-    # FIXME: Analysis/plugins need global -fPIC
-    extra_values += [ "LLVM_ENABLE_PLUGINS=0" ]
+    extra_values += [
+      "LLVM_ENABLE_PLUGINS=0",  # FIXME: Analysis/plugins need global -fPIC
+      "LLVM_LIT_ERRC_MESSAGES=",
+    ]
   }
 
   if (llvm_enable_threads) {

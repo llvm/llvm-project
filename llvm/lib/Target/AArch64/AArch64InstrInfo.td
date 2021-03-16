@@ -607,7 +607,9 @@ def AArch64stp : SDNode<"AArch64ISD::STP", SDT_AArch64stp, [SDNPHasChain, SDNPMa
 def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
-
+def AArch64mrs : SDNode<"AArch64ISD::MRS",
+                        SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, i32>]>,
+                        [SDNPHasChain, SDNPOutGlue]>;
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -1265,6 +1267,9 @@ def MRS    : MRSI;
 def MSR    : MSRI;
 def MSRpstateImm1 : MSRpstateImm0_1;
 def MSRpstateImm4 : MSRpstateImm0_15;
+
+def : Pat<(AArch64mrs imm:$id),
+          (MRS imm:$id)>;
 
 // The thread pointer (on Linux, at least, where this has been implemented) is
 // TPIDR_EL0.
@@ -5328,6 +5333,13 @@ def : Pat<(and (vector_extract (v16i8 V128:$Rn), VectorIndexB:$idx),
 def : Pat<(and (vector_extract (v8i16 V128:$Rn), VectorIndexH:$idx),
                (i32 0xffff)),
           (i32 (UMOVvi16 V128:$Rn, VectorIndexH:$idx))>;
+
+def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract (v16i8 V128:$Rn),
+            VectorIndexB:$idx)))), (i64 0xff))),
+          (SUBREG_TO_REG (i64 0), (i32 (UMOVvi8 V128:$Rn, VectorIndexB:$idx)), sub_32)>;
+def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract (v8i16 V128:$Rn),
+            VectorIndexH:$idx)))), (i64 0xffff))),
+          (SUBREG_TO_REG (i64 0), (i32 (UMOVvi16 V128:$Rn, VectorIndexH:$idx)), sub_32)>;
 
 defm INS : SIMDIns;
 

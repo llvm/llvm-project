@@ -12,27 +12,27 @@ module attributes {
       %x = "gpu.block_id"() {dimension = "x"} : () -> index
       %y = "gpu.block_id"() {dimension = "y"} : () -> index
       %z = "gpu.block_id"() {dimension = "z"} : () -> index
-      %1 = load %arg0[%x, %y, %z] : memref<8x4x4xf32>
-      %2 = load %arg1[%y, %z] : memref<4x4xf32>
+      %1 = memref.load %arg0[%x, %y, %z] : memref<8x4x4xf32>
+      %2 = memref.load %arg1[%y, %z] : memref<4x4xf32>
       %3 = subf %1, %2 : f32
-      store %3, %arg2[%x, %y, %z] : memref<8x4x4xf32>
+      memref.store %3, %arg2[%x, %y, %z] : memref<8x4x4xf32>
       gpu.return
     }
   }
 
   func @main() {
-    %arg0 = alloc() : memref<8x4x4xf32>
-    %arg1 = alloc() : memref<4x4xf32>
-    %arg2 = alloc() : memref<8x4x4xf32>
+    %arg0 = memref.alloc() : memref<8x4x4xf32>
+    %arg1 = memref.alloc() : memref<4x4xf32>
+    %arg2 = memref.alloc() : memref<8x4x4xf32>
     %0 = constant 0 : i32
     %1 = constant 1 : i32
     %2 = constant 2 : i32
     %value0 = constant 0.0 : f32
     %value1 = constant 3.3 : f32
     %value2 = constant 1.1 : f32
-    %arg3 = memref_cast %arg0 : memref<8x4x4xf32> to memref<?x?x?xf32>
-    %arg4 = memref_cast %arg1 : memref<4x4xf32> to memref<?x?xf32>
-    %arg5 = memref_cast %arg2 : memref<8x4x4xf32> to memref<?x?x?xf32>
+    %arg3 = memref.cast %arg0 : memref<8x4x4xf32> to memref<?x?x?xf32>
+    %arg4 = memref.cast %arg1 : memref<4x4xf32> to memref<?x?xf32>
+    %arg5 = memref.cast %arg2 : memref<8x4x4xf32> to memref<?x?x?xf32>
     call @fillResource3DFloat(%arg3, %value1) : (memref<?x?x?xf32>, f32) -> ()
     call @fillResource2DFloat(%arg4, %value2) : (memref<?x?xf32>, f32) -> ()
     call @fillResource3DFloat(%arg5, %value0) : (memref<?x?x?xf32>, f32) -> ()
@@ -43,7 +43,7 @@ module attributes {
     gpu.launch_func @kernels::@kernel_sub
         blocks in (%cst8, %cst4, %cst4) threads in (%cst1, %cst1, %cst1)
         args(%arg0 : memref<8x4x4xf32>, %arg1 : memref<4x4xf32>, %arg2 : memref<8x4x4xf32>)
-    %arg6 = memref_cast %arg5 : memref<?x?x?xf32> to memref<*xf32>
+    %arg6 = memref.cast %arg5 : memref<?x?x?xf32> to memref<*xf32>
     call @print_memref_f32(%arg6) : (memref<*xf32>) -> ()
     return
   }

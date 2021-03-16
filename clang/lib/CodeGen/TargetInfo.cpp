@@ -7218,6 +7218,18 @@ public:
       case Builtin::BI__builtin_isnan:
         TDCBits = 0xf;
         break;
+      case Builtin::BIfinite:
+      case Builtin::BI__finite:
+      case Builtin::BIfinitef:
+      case Builtin::BI__finitef:
+      case Builtin::BIfinitel:
+      case Builtin::BI__finitel:
+      case Builtin::BI__builtin_isfinite:
+        TDCBits = 0xfc0;
+        break;
+      case Builtin::BI__builtin_isinf:
+        TDCBits = 0x30;
+        break;
       default:
         break;
       }

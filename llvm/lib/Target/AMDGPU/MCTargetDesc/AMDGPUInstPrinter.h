@@ -68,14 +68,8 @@ private:
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printGDS(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
-  void printDLC(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
-  void printSCCB(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                 raw_ostream &O);
-  void printGLC(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
-  void printSLC(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
+  void printCPol(const MCInst *MI, unsigned OpNo,
+                 const MCSubtargetInfo &STI, raw_ostream &O);
   void printSWZ(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
   void printTFE(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

@@ -275,6 +275,13 @@ class Enc96 {
   int Size = 12;
 }
 
+def CPolBit {
+  int GLC = 0;
+  int SLC = 1;
+  int DLC = 2;
+  int SCC = 4;
+}
+
 class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
 
 class VINTRPe <bits<2> op> : Enc32 {
@@ -295,21 +302,20 @@ class MIMGe_gfxpre11 : Enc64 {
   bits<10> vdata;
   bits<4> dmask;
   bits<1> unorm;
-  bits<1> glc;
+  bits<5> cpol;
   bits<1> r128;
   bits<1> tfe;
   bits<1> lwe;
-  bits<1> slc;
   bit d16;
   bits<7> srsrc;
   bits<7> ssamp;
 
   let Inst{11-8} = dmask;
   let Inst{12} = unorm;
-  let Inst{13} = glc;
+  let Inst{13} = cpol{CPolBit.GLC};
   let Inst{15} = r128;
   let Inst{17} = lwe;
-  let Inst{25} = slc;
+  let Inst{25} = cpol{CPolBit.SLC};
   let Inst{31-26} = 0x3c;
   let Inst{47-40} = vdata{7-0};
   let Inst{52-48} = srsrc{6-2};
@@ -320,10 +326,9 @@ class MIMGe_gfxpre11 : Enc64 {
 class MIMGe_gfx6789 <bits<8> op> : MIMGe_gfxpre11 {
   bits<8> vaddr;
   bits<1> da;
-  bits<1> sccb;
 
   let Inst{0} = op{7};
-  let Inst{7} = sccb;
+  let Inst{7} = cpol{CPolBit.SCC};
   let Inst{14} = da;
   let Inst{16} = tfe;
   let Inst{24-18} = op{6-0};
@@ -333,10 +338,9 @@ class MIMGe_gfx6789 <bits<8> op> : MIMGe_gfxpre11 {
 class MIMGe_gfx90a <bits<8> op> : MIMGe_gfxpre11 {
   bits<8> vaddr;
   bits<1> da;
-  bits<1> sccb;
 
   let Inst{0} = op{7};
-  let Inst{7} = sccb;
+  let Inst{7} = cpol{CPolBit.SCC};
   let Inst{14} = da;
   let Inst{16} = vdata{9}; // ACC bit
   let Inst{24-18} = op{6-0};
@@ -347,13 +351,12 @@ class MIMGe_gfx10 <bits<8> op> : MIMGe_gfxpre11 {
   bits<8> vaddr0;
   bits<3> dim;
   bits<2> nsa;
-  bits<1> dlc;
   bits<1> a16;
 
   let Inst{0} = op{7};
   let Inst{2-1} = nsa;
   let Inst{5-3} = dim;
-  let Inst{7} = dlc;
+  let Inst{7} = cpol{CPolBit.DLC};
   let Inst{16} = tfe;
   let Inst{24-18} = op{6-0};
   let Inst{39-32} = vaddr0;
@@ -364,11 +367,10 @@ class MIMGe_gfx11 <bits<8> op> : Enc64 {
   bits<8> vdata;
   bits<4> dmask;
   bits<1> unorm;
-  bits<1> glc;
+  bits<5> cpol;
   bits<1> r128;
   bits<1> tfe;
   bits<1> lwe;
-  bits<1> slc;
   bits<7> srsrc;
   bits<7> ssamp;
   bit d16;
@@ -376,15 +378,14 @@ class MIMGe_gfx11 <bits<8> op> : Enc64 {
   bits<8> vaddr0;
   bits<3> dim;
   bits<1> nsa;
-  bits<1> dlc;
 
   let Inst{0} = nsa;
   let Inst{4-2} = dim;
   let Inst{7} = unorm;
   let Inst{11-8} = dmask;
-  let Inst{12} = slc;
-  let Inst{13} = dlc;
-  let Inst{14} = glc;
+  let Inst{12} = cpol{CPolBit.SLC};
+  let Inst{13} = cpol{CPolBit.DLC};
+  let Inst{14} = cpol{CPolBit.GLC};
   let Inst{15} = r128;
   let Inst{16} = a16;
   let Inst{17} = d16;

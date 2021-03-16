@@ -8,6 +8,8 @@
 #
 # Test again in non-UTF shell to catch potential errors with python 2 seen
 # on stdout-encoding.txt
+# FIXME: lit's testing sets source_root == exec_root which complicates running lit more than once per test.
+# RUN: rm -f %{inputs}/shtest-shell/.lit_test_times.txt
 # RUN: env PYTHONIOENCODING=ascii not %{lit} -j 1 -a %{inputs}/shtest-shell > %t.ascii.out
 # FIXME: Temporarily dump test output so we can debug failing tests on
 # buildbots.

@@ -1273,20 +1273,24 @@ void DAGTypeLegalizer::SplitVecRes_INSERT_SUBVECTOR(SDNode *N, SDValue &Lo,
 
   EVT VecVT = Vec.getValueType();
   EVT LoVT = Lo.getValueType();
-  unsigned VecElems = VecVT.getVectorNumElements();
-  unsigned SubElems = SubVec.getValueType().getVectorNumElements();
-  unsigned LoElems = LoVT.getVectorNumElements();
+  EVT SubVecVT = SubVec.getValueType();
+  unsigned VecElems = VecVT.getVectorMinNumElements();
+  unsigned SubElems = SubVecVT.getVectorMinNumElements();
+  unsigned LoElems = LoVT.getVectorMinNumElements();
 
   // If we know the index is in the first half, and we know the subvector
   // doesn't cross the boundary between the halves, we can avoid spilling the
   // vector, and insert into the lower half of the split vector directly.
-  // Similarly if the subvector is fully in the high half.
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
   if (IdxVal + SubElems <= LoElems) {
     Lo = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, LoVT, Lo, SubVec, Idx);
     return;
   }
-  if (IdxVal >= LoElems && IdxVal + SubElems <= VecElems) {
+  // Similarly if the subvector is fully in the high half, but mind that we
+  // can't tell whether a fixed-length subvector is fully within the high half
+  // of a scalable vector.
+  if (VecVT.isScalableVector() == SubVecVT.isScalableVector() &&
+      IdxVal >= LoElems && IdxVal + SubElems <= VecElems) {
     Hi = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, Hi.getValueType(), Hi, SubVec,
                      DAG.getVectorIdxConstant(IdxVal - LoElems, dl));
     return;
@@ -1315,13 +1319,12 @@ void DAGTypeLegalizer::SplitVecRes_INSERT_SUBVECTOR(SDNode *N, SDValue &Lo,
                    SmallestAlign);
 
   // Increment the pointer to the other part.
-  unsigned IncrementSize = Lo.getValueSizeInBits() / 8;
-  StackPtr =
-      DAG.getMemBasePlusOffset(StackPtr, TypeSize::Fixed(IncrementSize), dl);
+  auto *Load = cast<LoadSDNode>(Lo);
+  MachinePointerInfo MPI = Load->getPointerInfo();
+  IncrementPointer(Load, LoVT, MPI, StackPtr);
 
   // Load the Hi part from the stack slot.
-  Hi = DAG.getLoad(Hi.getValueType(), dl, Store, StackPtr,
-                   PtrInfo.getWithOffset(IncrementSize), SmallestAlign);
+  Hi = DAG.getLoad(Hi.getValueType(), dl, Store, StackPtr, MPI, SmallestAlign);
 }
 
 void DAGTypeLegalizer::SplitVecRes_FPOWI(SDNode *N, SDValue &Lo,
