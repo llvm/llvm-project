@@ -291,6 +291,9 @@ Below are some guidelines about the format of the message itself:
   related commit. This could be as simple as "Revert commit NNNN because it
   caused PR#".
 
+* If the patch has been reviewed, add a link to its review page, as shown
+  `here <https://www.llvm.org/docs/Phabricator.html#committing-a-change>`_.
+
 For minor violations of these recommendations, the community normally favors
 reminding the contributor of this policy over reverting. Minor corrections and
 omissions can be handled by sending a reply to the commits mailing list.
