@@ -12,6 +12,7 @@
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::pdl_to_pdl_interp;
@@ -20,9 +21,106 @@ using namespace mlir::pdl_to_pdl_interp;
 // Predicate List Building
 //===----------------------------------------------------------------------===//
 
+static void getTreePredicates(std::vector<PositionalPredicate> &predList,
+                              Value val, PredicateBuilder &builder,
+                              DenseMap<Value, Position *> &inputs,
+                              Position *pos);
+
 /// Compares the depths of two positions.
 static bool comparePosDepth(Position *lhs, Position *rhs) {
   return lhs->getIndex().size() < rhs->getIndex().size();
+}
+
+static void getTreePredicates(std::vector<PositionalPredicate> &predList,
+                              Value val, PredicateBuilder &builder,
+                              DenseMap<Value, Position *> &inputs,
+                              AttributePosition *pos) {
+  assert(val.getType().isa<pdl::AttributeType>() && "expected attribute type");
+  pdl::AttributeOp attr = cast<pdl::AttributeOp>(val.getDefiningOp());
+  predList.emplace_back(pos, builder.getIsNotNull());
+
+  // If the attribute has a type or value, add a constraint.
+  if (Value type = attr.type())
+    getTreePredicates(predList, type, builder, inputs, builder.getType(pos));
+  else if (Attribute value = attr.valueAttr())
+    predList.emplace_back(pos, builder.getAttributeConstraint(value));
+}
+
+static void getTreePredicates(std::vector<PositionalPredicate> &predList,
+                              Value val, PredicateBuilder &builder,
+                              DenseMap<Value, Position *> &inputs,
+                              OperandPosition *pos) {
+  assert(val.getType().isa<pdl::ValueType>() && "expected value type");
+
+  // Prevent traversal into a null value.
+  predList.emplace_back(pos, builder.getIsNotNull());
+
+  // If this is a typed operand, add a type constraint.
+  if (auto in = val.getDefiningOp<pdl::OperandOp>()) {
+    if (Value type = in.type())
+      getTreePredicates(predList, type, builder, inputs, builder.getType(pos));
+
+    // Otherwise, recurse into a result node.
+  } else if (auto resultOp = val.getDefiningOp<pdl::ResultOp>()) {
+    OperationPosition *parentPos = builder.getParent(pos);
+    Position *resultPos = builder.getResult(parentPos, resultOp.index());
+    predList.emplace_back(parentPos, builder.getIsNotNull());
+    predList.emplace_back(resultPos, builder.getEqualTo(pos));
+    getTreePredicates(predList, resultOp.parent(), builder, inputs, parentPos);
+  }
+}
+
+static void getTreePredicates(std::vector<PositionalPredicate> &predList,
+                              Value val, PredicateBuilder &builder,
+                              DenseMap<Value, Position *> &inputs,
+                              OperationPosition *pos) {
+  assert(val.getType().isa<pdl::OperationType>() && "expected operation");
+  pdl::OperationOp op = cast<pdl::OperationOp>(val.getDefiningOp());
+  OperationPosition *opPos = cast<OperationPosition>(pos);
+
+  // Ensure getDefiningOp returns a non-null operation.
+  if (!opPos->isRoot())
+    predList.emplace_back(pos, builder.getIsNotNull());
+
+  // Check that this is the correct root operation.
+  if (Optional<StringRef> opName = op.name())
+    predList.emplace_back(pos, builder.getOperationName(*opName));
+
+  // Check that the operation has the proper number of operands and results.
+  OperandRange operands = op.operands();
+  OperandRange types = op.types();
+  predList.emplace_back(pos, builder.getOperandCount(operands.size()));
+  predList.emplace_back(pos, builder.getResultCount(types.size()));
+
+  // Recurse into any attributes, operands, or results.
+  for (auto it : llvm::zip(op.attributeNames(), op.attributes())) {
+    getTreePredicates(
+        predList, std::get<1>(it), builder, inputs,
+        builder.getAttribute(opPos,
+                             std::get<0>(it).cast<StringAttr>().getValue()));
+  }
+  for (auto operandIt : llvm::enumerate(operands)) {
+    getTreePredicates(predList, operandIt.value(), builder, inputs,
+                      builder.getOperand(opPos, operandIt.index()));
+  }
+  for (auto &resultIt : llvm::enumerate(types)) {
+    auto *resultPos = builder.getResult(pos, resultIt.index());
+    predList.emplace_back(resultPos, builder.getIsNotNull());
+    getTreePredicates(predList, resultIt.value(), builder, inputs,
+                      builder.getType(resultPos));
+  }
+}
+
+static void getTreePredicates(std::vector<PositionalPredicate> &predList,
+                              Value val, PredicateBuilder &builder,
+                              DenseMap<Value, Position *> &inputs,
+                              TypePosition *pos) {
+  assert(val.getType().isa<pdl::TypeType>() && "expected value type");
+  pdl::TypeOp typeOp = cast<pdl::TypeOp>(val.getDefiningOp());
+
+  // Check for a constraint on a constant type.
+  if (Optional<Type> type = typeOp.type())
+    predList.emplace_back(pos, builder.getTypeConstraint(*type));
 }
 
 /// Collect the tree predicates anchored at the given value.
@@ -32,139 +130,72 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
                               Position *pos) {
   // Make sure this input value is accessible to the rewrite.
   auto it = inputs.try_emplace(val, pos);
-
-  // If this is an input value that has been visited in the tree, add a
-  // constraint to ensure that both instances refer to the same value.
-  if (!it.second &&
-      isa<pdl::AttributeOp, pdl::OperandOp, pdl::TypeOp>(val.getDefiningOp())) {
-    auto minMaxPositions = std::minmax(pos, it.first->second, comparePosDepth);
-    predList.emplace_back(minMaxPositions.second,
-                          builder.getEqualTo(minMaxPositions.first));
+  if (!it.second) {
+    // If this is an input value that has been visited in the tree, add a
+    // constraint to ensure that both instances refer to the same value.
+    if (isa<pdl::AttributeOp, pdl::OperandOp, pdl::OperationOp, pdl::TypeOp>(
+            val.getDefiningOp())) {
+      auto minMaxPositions =
+          std::minmax(pos, it.first->second, comparePosDepth);
+      predList.emplace_back(minMaxPositions.second,
+                            builder.getEqualTo(minMaxPositions.first));
+    }
     return;
   }
 
-  // Check for a per-position predicate to apply.
-  switch (pos->getKind()) {
-  case Predicates::AttributePos: {
-    assert(val.getType().isa<pdl::AttributeType>() &&
-           "expected attribute type");
-    pdl::AttributeOp attr = cast<pdl::AttributeOp>(val.getDefiningOp());
-    predList.emplace_back(pos, builder.getIsNotNull());
-
-    // If the attribute has a type, add a type constraint.
-    if (Value type = attr.type()) {
-      getTreePredicates(predList, type, builder, inputs, builder.getType(pos));
-
-      // Check for a constant value of the attribute.
-    } else if (Optional<Attribute> value = attr.value()) {
-      predList.emplace_back(pos, builder.getAttributeConstraint(*value));
-    }
-    break;
-  }
-  case Predicates::OperandPos: {
-    assert(val.getType().isa<pdl::ValueType>() && "expected value type");
-
-    // Prevent traversal into a null value.
-    predList.emplace_back(pos, builder.getIsNotNull());
-
-    // If this is a typed operand, add a type constraint.
-    if (auto in = val.getDefiningOp<pdl::OperandOp>()) {
-      if (Value type = in.type()) {
-        getTreePredicates(predList, type, builder, inputs,
-                          builder.getType(pos));
-      }
-
-      // Otherwise, recurse into the parent node.
-    } else if (auto parentOp = val.getDefiningOp<pdl::OperationOp>()) {
-      getTreePredicates(predList, parentOp.op(), builder, inputs,
-                        builder.getParent(cast<OperandPosition>(pos)));
-    }
-    break;
-  }
-  case Predicates::OperationPos: {
-    assert(val.getType().isa<pdl::OperationType>() && "expected operation");
-    pdl::OperationOp op = cast<pdl::OperationOp>(val.getDefiningOp());
-    OperationPosition *opPos = cast<OperationPosition>(pos);
-
-    // Ensure getDefiningOp returns a non-null operation.
-    if (!opPos->isRoot())
-      predList.emplace_back(pos, builder.getIsNotNull());
-
-    // Check that this is the correct root operation.
-    if (Optional<StringRef> opName = op.name())
-      predList.emplace_back(pos, builder.getOperationName(*opName));
-
-    // Check that the operation has the proper number of operands and results.
-    OperandRange operands = op.operands();
-    ResultRange results = op.results();
-    predList.emplace_back(pos, builder.getOperandCount(operands.size()));
-    predList.emplace_back(pos, builder.getResultCount(results.size()));
-
-    // Recurse into any attributes, operands, or results.
-    for (auto it : llvm::zip(op.attributeNames(), op.attributes())) {
-      getTreePredicates(
-          predList, std::get<1>(it), builder, inputs,
-          builder.getAttribute(opPos,
-                               std::get<0>(it).cast<StringAttr>().getValue()));
-    }
-    for (auto operandIt : llvm::enumerate(operands))
-      getTreePredicates(predList, operandIt.value(), builder, inputs,
-                        builder.getOperand(opPos, operandIt.index()));
-
-    // Only recurse into results that are not referenced in the source tree.
-    for (auto resultIt : llvm::enumerate(results)) {
-      getTreePredicates(predList, resultIt.value(), builder, inputs,
-                        builder.getResult(opPos, resultIt.index()));
-    }
-    break;
-  }
-  case Predicates::ResultPos: {
-    assert(val.getType().isa<pdl::ValueType>() && "expected value type");
-    pdl::OperationOp parentOp = cast<pdl::OperationOp>(val.getDefiningOp());
-
-    // Prevent traversing a null value.
-    predList.emplace_back(pos, builder.getIsNotNull());
-
-    // Traverse the type constraint.
-    unsigned resultNo = cast<ResultPosition>(pos)->getResultNumber();
-    getTreePredicates(predList, parentOp.types()[resultNo], builder, inputs,
-                      builder.getType(pos));
-    break;
-  }
-  case Predicates::TypePos: {
-    assert(val.getType().isa<pdl::TypeType>() && "expected value type");
-    pdl::TypeOp typeOp = cast<pdl::TypeOp>(val.getDefiningOp());
-
-    // Check for a constraint on a constant type.
-    if (Optional<Type> type = typeOp.type())
-      predList.emplace_back(pos, builder.getTypeConstraint(*type));
-    break;
-  }
-  default:
-    llvm_unreachable("unknown position kind");
-  }
+  TypeSwitch<Position *>(pos)
+      .Case<AttributePosition, OperandPosition, OperationPosition,
+            TypePosition>([&](auto *derivedPos) {
+        getTreePredicates(predList, val, builder, inputs, derivedPos);
+      })
+      .Default([](auto *) { llvm_unreachable("unexpected position kind"); });
 }
 
 /// Collect all of the predicates related to constraints within the given
 /// pattern operation.
-static void collectConstraintPredicates(
-    pdl::PatternOp pattern, std::vector<PositionalPredicate> &predList,
-    PredicateBuilder &builder, DenseMap<Value, Position *> &inputs) {
-  for (auto op : pattern.body().getOps<pdl::ApplyConstraintOp>()) {
-    OperandRange arguments = op.args();
-    ArrayAttr parameters = op.constParamsAttr();
+static void getConstraintPredicates(pdl::ApplyConstraintOp op,
+                                    std::vector<PositionalPredicate> &predList,
+                                    PredicateBuilder &builder,
+                                    DenseMap<Value, Position *> &inputs) {
+  OperandRange arguments = op.args();
+  ArrayAttr parameters = op.constParamsAttr();
 
-    std::vector<Position *> allPositions;
-    allPositions.reserve(arguments.size());
-    for (Value arg : arguments)
-      allPositions.push_back(inputs.lookup(arg));
+  std::vector<Position *> allPositions;
+  allPositions.reserve(arguments.size());
+  for (Value arg : arguments)
+    allPositions.push_back(inputs.lookup(arg));
 
-    // Push the constraint to the furthest position.
-    Position *pos = *std::max_element(allPositions.begin(), allPositions.end(),
-                                      comparePosDepth);
-    PredicateBuilder::Predicate pred =
-        builder.getConstraint(op.name(), std::move(allPositions), parameters);
-    predList.emplace_back(pos, pred);
+  // Push the constraint to the furthest position.
+  Position *pos = *std::max_element(allPositions.begin(), allPositions.end(),
+                                    comparePosDepth);
+  PredicateBuilder::Predicate pred =
+      builder.getConstraint(op.name(), std::move(allPositions), parameters);
+  predList.emplace_back(pos, pred);
+}
+
+static void getResultPredicates(pdl::ResultOp op,
+                                std::vector<PositionalPredicate> &predList,
+                                PredicateBuilder &builder,
+                                DenseMap<Value, Position *> &inputs) {
+  Position *&resultPos = inputs[op];
+  if (resultPos)
+    return;
+  auto *parentPos = cast<OperationPosition>(inputs.lookup(op.parent()));
+  resultPos = builder.getResult(parentPos, op.index());
+  predList.emplace_back(resultPos, builder.getIsNotNull());
+}
+
+/// Collect all of the predicates that cannot be determined via walking the
+/// tree.
+static void getNonTreePredicates(pdl::PatternOp pattern,
+                                 std::vector<PositionalPredicate> &predList,
+                                 PredicateBuilder &builder,
+                                 DenseMap<Value, Position *> &inputs) {
+  for (Operation &op : pattern.body().getOps()) {
+    if (auto constraintOp = dyn_cast<pdl::ApplyConstraintOp>(&op))
+      getConstraintPredicates(constraintOp, predList, builder, inputs);
+    else if (auto resultOp = dyn_cast<pdl::ResultOp>(&op))
+      getResultPredicates(resultOp, predList, builder, inputs);
   }
 }
 
@@ -176,7 +207,7 @@ static void buildPredicateList(pdl::PatternOp pattern,
                                DenseMap<Value, Position *> &valueToPosition) {
   getTreePredicates(predList, pattern.getRewriter().root(), builder,
                     valueToPosition, builder.getRoot());
-  collectConstraintPredicates(pattern, predList, builder, valueToPosition);
+  getNonTreePredicates(pattern, predList, builder, valueToPosition);
 }
 
 //===----------------------------------------------------------------------===//

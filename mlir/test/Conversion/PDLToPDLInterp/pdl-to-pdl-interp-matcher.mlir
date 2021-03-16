@@ -63,15 +63,16 @@ module @constraints {
   // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
   // CHECK-DAG:   %[[INPUT:.*]] = pdl_interp.get_operand 0 of %[[ROOT]]
   // CHECK-DAG:   %[[INPUT1:.*]] = pdl_interp.get_operand 1 of %[[ROOT]]
-  // CHECK:       pdl_interp.apply_constraint "multi_constraint" [true](%[[INPUT]], %[[INPUT1]] : !pdl.value, !pdl.value)
+  // CHECK-DAG:   %[[RESULT:.*]] = pdl_interp.get_result 0 of %[[ROOT]]
+  // CHECK:       pdl_interp.apply_constraint "multi_constraint" [true](%[[INPUT]], %[[INPUT1]], %[[RESULT]]
 
   pdl.pattern : benefit(1) {
     %input0 = pdl.operand
     %input1 = pdl.operand
-
-    pdl.apply_constraint "multi_constraint"[true](%input0, %input1 : !pdl.value, !pdl.value)
-
     %root = pdl.operation(%input0, %input1)
+    %result0 = pdl.result 0 of %root
+
+    pdl.apply_constraint "multi_constraint"[true](%input0, %input1, %result0 : !pdl.value, !pdl.value, !pdl.value)
     pdl.rewrite %root with "rewriter"
   }
 }
@@ -107,19 +108,52 @@ module @results {
   // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
   // CHECK:   pdl_interp.check_result_count of %[[ROOT]] is 2
 
-  // Get the input and check the type.
+  // Get the result and check the type.
   // CHECK-DAG:   %[[RESULT:.*]] = pdl_interp.get_result 0 of %[[ROOT]]
   // CHECK-DAG:   pdl_interp.is_not_null %[[RESULT]] : !pdl.value
   // CHECK-DAG:   %[[RESULT_TYPE:.*]] = pdl_interp.get_value_type of %[[RESULT]]
   // CHECK-DAG:   pdl_interp.check_type %[[RESULT_TYPE]] is i32
 
-  // Get the second operand and check that it is equal to the first.
-  // CHECK-DAG:  %[[RESULT1:.*]] = pdl_interp.get_result 1 of %[[ROOT]]
-  // CHECK-NOT: pdl_interp.get_value_type of %[[RESULT1]]
+  // The second result doesn't have any constraints, so we don't generate an
+  // access for it.
+  // CHECK-NOT:   pdl_interp.get_result 1 of %[[ROOT]]
   pdl.pattern : benefit(1) {
     %type1 = pdl.type : i32
     %type2 = pdl.type
-    %root, %results:2 = pdl.operation -> %type1, %type2
+    %root = pdl.operation -> %type1, %type2
+    pdl.rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @results_as_operands
+module @results_as_operands {
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+
+  // Get the first result and check it matches the first operand.
+  // CHECK-DAG:   %[[OPERAND_0:.*]] = pdl_interp.get_operand 0 of %[[ROOT]]
+  // CHECK-DAG:   %[[DEF_OP_0:.*]] = pdl_interp.get_defining_op of %[[OPERAND_0]]
+  // CHECK-DAG:   %[[RESULT_0:.*]] = pdl_interp.get_result 0 of %[[DEF_OP_0]]
+  // CHECK-DAG:   pdl_interp.are_equal %[[RESULT_0]], %[[OPERAND_0]]
+
+  // Get the second result and check it matches the second operand.
+  // CHECK-DAG:   %[[OPERAND_1:.*]] = pdl_interp.get_operand 1 of %[[ROOT]]
+  // CHECK-DAG:   %[[DEF_OP_1:.*]] = pdl_interp.get_defining_op of %[[OPERAND_1]]
+  // CHECK-DAG:   %[[RESULT_1:.*]] = pdl_interp.get_result 1 of %[[DEF_OP_1]]
+  // CHECK-DAG:   pdl_interp.are_equal %[[RESULT_1]], %[[OPERAND_1]]
+
+  // Check that the parent operation of both results is the same.
+  // CHECK-DAG:   pdl_interp.are_equal %[[DEF_OP_0]], %[[DEF_OP_1]]
+
+  pdl.pattern : benefit(1) {
+    %type1 = pdl.type : i32
+    %type2 = pdl.type
+    %inputOp = pdl.operation -> %type1, %type2
+    %result1 = pdl.result 0 of %inputOp
+    %result2 = pdl.result 1 of %inputOp
+
+    %root = pdl.operation(%result1, %result2)
     pdl.rewrite %root with "rewriter"
   }
 }
@@ -134,12 +168,12 @@ module @switch_result_types {
   // CHECK:   pdl_interp.switch_type %[[RESULT_TYPE]] to [i32, i64]
   pdl.pattern : benefit(1) {
     %type = pdl.type : i32
-    %root, %result = pdl.operation -> %type
+    %root = pdl.operation -> %type
     pdl.rewrite %root with "rewriter"
   }
   pdl.pattern : benefit(1) {
     %type = pdl.type : i64
-    %root, %result = pdl.operation -> %type
+    %root = pdl.operation -> %type
     pdl.rewrite %root with "rewriter"
   }
 }
@@ -161,13 +195,13 @@ module @predicate_ordering  {
   pdl.pattern : benefit(1) {
     %resultType = pdl.type
     pdl.apply_constraint "typeConstraint"[](%resultType : !pdl.type)
-    %root, %result = pdl.operation -> %resultType
+    %root = pdl.operation -> %resultType
     pdl.rewrite %root with "rewriter"
   }
 
   pdl.pattern : benefit(1) {
     %resultType = pdl.type
-    %apply, %applyRes = pdl.operation -> %resultType
+    %apply = pdl.operation -> %resultType
     pdl.rewrite %apply with "rewriter"
   }
 }

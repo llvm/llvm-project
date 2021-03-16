@@ -24,7 +24,7 @@ pdl.pattern : benefit(1) {
   // expected-error@below {{expected only one of [`type`, `value`] to be set}}
   %attr = pdl.attribute : %type 10
 
-  %op, %result = pdl.operation "foo.op" {"attr" = %attr} -> %type
+  %op = pdl.operation "foo.op" {"attr" = %attr} -> %type
   pdl.rewrite %op with "rewriter"
 }
 
@@ -108,7 +108,7 @@ pdl.pattern : benefit(1) {
 
     // expected-error@below {{op must have inferable or constrained result types when nested within `pdl.rewrite`}}
     // expected-note@below {{result type #0 was not constrained}}
-    %newOp, %result = pdl.operation "foo.op" -> %type
+    %newOp = pdl.operation "foo.op" -> %type
   }
 }
 
@@ -147,46 +147,17 @@ pdl.pattern : benefit(1) {
 
 // -----
 
-//===----------------------------------------------------------------------===//
-// pdl::ReplaceOp
-//===----------------------------------------------------------------------===//
-
-pdl.pattern : benefit(1) {
-  %root = pdl.operation "foo.op"
-  pdl.rewrite %root {
-    %type = pdl.type : i32
-    %newOp, %newResult = pdl.operation "foo.op" -> %type
-
-    // expected-error@below {{to have the same number of results as the replacement operation}}
-    pdl.replace %root with %newOp
-  }
-}
-
-// -----
-
 pdl.pattern : benefit(1) {
   %type = pdl.type : i32
-  %root, %oldResult = pdl.operation "foo.op" -> %type
+  %root = pdl.operation "foo.op" -> %type
   pdl.rewrite %root {
-    %newOp, %newResult = pdl.operation "foo.op" -> %type
+    %newOp = pdl.operation "foo.op" -> %type
+    %newResult = pdl.result 0 of %newOp
 
     // expected-error@below {{expected no replacement values to be provided when the replacement operation is present}}
     "pdl.replace"(%root, %newOp, %newResult) {
       operand_segment_sizes = dense<1> : vector<3xi32>
     } : (!pdl.operation, !pdl.operation, !pdl.value) -> ()
-  }
-}
-
-// -----
-
-pdl.pattern : benefit(1) {
-  %root = pdl.operation "foo.op"
-  pdl.rewrite %root {
-    %type = pdl.type : i32
-    %newOp, %newResult = pdl.operation "foo.op" -> %type
-
-    // expected-error@below {{to have the same number of results as the provided replacement values}}
-    pdl.replace %root with (%newResult)
   }
 }
 
