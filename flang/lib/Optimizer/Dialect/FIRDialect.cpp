@@ -49,10 +49,10 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
       valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }
 
-  mlir::Operation *materializeCallConversion(mlir::OpBuilder &builder,
-                                             mlir::Value input,
-                                             mlir::Type resultType,
-                                             mlir::Location loc) const {
+  mlir::Operation *
+  materializeCallConversion(mlir::OpBuilder &builder, mlir::Value input,
+                            mlir::Type resultType,
+                            mlir::Location loc) const override {
     return builder.create<fir::ConvertOp>(loc, resultType, input);
   }
 };
