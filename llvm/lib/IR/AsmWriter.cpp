@@ -1696,6 +1696,7 @@ struct MDFieldPrinter {
   void printEmissionKind(StringRef Name, DICompileUnit::DebugEmissionKind EK);
   void printNameTableKind(StringRef Name,
                           DICompileUnit::DebugNameTableKind NTK);
+  template <class RangeT> void printMetadataList(StringRef Name, RangeT Range);
 };
 
 } // end anonymous namespace
@@ -1833,6 +1834,19 @@ void MDFieldPrinter::printNameTableKind(StringRef Name,
   Out << FS << Name << ": " << DICompileUnit::nameTableKindString(NTK);
 }
 
+template <class RangeT>
+void MDFieldPrinter::printMetadataList(StringRef Name, RangeT Range) {
+  if (Range.begin() == Range.end())
+    return;
+  Out << FS << Name << ": {";
+  FieldSeparator IFS;
+  for (const auto &I : Range) {
+    Out << IFS;
+    writeMetadataAsOperand(Out, I, TypePrinter, Machine, Context);
+  }
+  Out << "}";
+}
+
 template <class IntTy, class Stringifier>
 void MDFieldPrinter::printDwarfEnum(StringRef Name, IntTy Value,
                                     Stringifier toString, bool ShouldSkipZero) {
@@ -1854,15 +1868,7 @@ static void writeGenericDINode(raw_ostream &Out, const GenericDINode *N,
   MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
   Printer.printTag(N);
   Printer.printString("header", N->getHeader());
-  if (N->getNumDwarfOperands()) {
-    Out << Printer.FS << "operands: {";
-    FieldSeparator IFS;
-    for (auto &I : N->dwarf_operands()) {
-      Out << IFS;
-      writeMetadataAsOperand(Out, I, TypePrinter, Machine, Context);
-    }
-    Out << "}";
-  }
+  Printer.printMetadataList("operands", N->dwarf_operands());
   Out << ")";
 }
 
