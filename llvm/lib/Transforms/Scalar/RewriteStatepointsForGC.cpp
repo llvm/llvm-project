@@ -900,14 +900,51 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
   }
 #endif
 
+  // Iterate forward through the value graph pruning any node from the state
+  // list where all of the inputs are base pointers.  The purpose of this is to
+  // reuse existing values when the derived pointer we were asked to materialize
+  // a base pointer for happens to be a base pointer itself.  (Or a sub-graph
+  // feeding it does.)
+  SmallVector<Value *> ToRemove;
+  do {
+    ToRemove.clear();
+    for (auto Pair : States) {
+      Value *BDV = Pair.first;
+      auto canPruneInput = [&](Value *V) {
+        Value *BDV = findBaseOrBDV(V, Cache);
+        if (V->stripPointerCasts() != BDV)
+          return false;
+        // The assumption is that anything not in the state list is
+        // propagates a base pointer.
+        return States.count(BDV) == 0;
+      };
+
+      bool CanPrune = true;
+      visitBDVOperands(BDV, [&](Value *Op) {
+        CanPrune = CanPrune && canPruneInput(Op);
+      });
+      if (CanPrune)
+        ToRemove.push_back(BDV);
+    }
+    for (Value *V : ToRemove) {
+      States.erase(V);
+      // Cache the fact V is it's own base for later usage.
+      Cache[V] = V;
+    }
+  } while (!ToRemove.empty());
+
+  // Did we manage to prove that Def itself must be a base pointer?
+  if (!States.count(Def))
+    return Def;
+
   // Return a phi state for a base defining value.  We'll generate a new
   // base state for known bases and expect to find a cached state otherwise.
   auto GetStateForBDV = [&](Value *BaseValue, Value *Input) {
-    if (isKnownBaseResult(BaseValue) && areBothVectorOrScalar(BaseValue, Input))
-      return BDVState(BaseValue, BDVState::Base, BaseValue);
     auto I = States.find(BaseValue);
-    assert(I != States.end() && "lookup failed!");
-    return I->second;
+    if (I != States.end())
+      return I->second;
+    assert(areBothVectorOrScalar(BaseValue, Input));
+    return BDVState(BaseValue, BDVState::Base, BaseValue);
   };
 
   bool Progress = true;
@@ -1071,7 +1108,8 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
   auto getBaseForInput = [&](Value *Input, Instruction *InsertPt) {
     Value *BDV = findBaseOrBDV(Input, Cache);
     Value *Base = nullptr;
-    if (isKnownBaseResult(BDV) && areBothVectorOrScalar(BDV, Input)) {
+    if (!States.count(BDV)) {
+      assert(areBothVectorOrScalar(BDV, Input));
       Base = BDV;
     } else {
       // Either conflict or base.
@@ -1203,14 +1241,6 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
                << (Cache.count(BDV) ? Cache[BDV]->getName().str() : "none")
                << " to: " << Base->getName() << "\n");
 
-    if (Cache.count(BDV)) {
-      assert(isKnownBaseResult(Base) &&
-             "must be something we 'know' is a base pointer");
-      // Once we transition from the BDV relation being store in the Cache to
-      // the base relation being stored, it must be stable
-      assert((!isKnownBaseResult(Cache[BDV]) || Cache[BDV] == Base) &&
-             "base relation should be stable");
-    }
     Cache[BDV] = Base;
   }
   assert(Cache.count(Def));
@@ -3016,11 +3046,7 @@ static void recomputeLiveInValues(GCPtrLivenessData &RevisedLivenessData,
   // We may have base pointers which are now live that weren't before.  We need
   // to update the PointerToBase structure to reflect this.
   for (auto V : Updated)
-    if (Info.PointerToBase.insert({V, V}).second) {
-      assert(isKnownBaseResult(V) &&
-             "Can't find base for unexpected live value!");
-      continue;
-    }
+    Info.PointerToBase.insert({V, V});
 
 #ifndef NDEBUG
   for (auto V : Updated)
