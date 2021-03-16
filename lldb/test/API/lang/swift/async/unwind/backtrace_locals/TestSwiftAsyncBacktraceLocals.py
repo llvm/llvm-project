@@ -10,7 +10,7 @@ class TestSwiftAsyncBacktraceLocals(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @skipIf(oslist=['windows', 'linux'])
+    @skipIf(oslist=['windows', 'linux', 'macosx'])
     @skipIf(archs=no_match(["arm64", "arm64e", "arm64_32", "x86_64"]))
     def test(self):
         """Test async unwind"""
