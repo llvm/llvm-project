@@ -95,7 +95,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // DEF: return new (allocator.allocate<CompoundAAttrStorage>())
 // DEF-NEXT: CompoundAAttrStorage(widthOfSomething, exampleTdType, apFloat, dims, inner);
 
-// DEF: ::mlir::Type CompoundAAttr::getInner() const { return getImpl()->getType(); }
+// DEF: ::mlir::Type CompoundAAttr::getInner() const { return getImpl()->getType().cast<::mlir::Type>(); }
 }
 
 def C_IndexAttr : TestAttr<"Index"> {

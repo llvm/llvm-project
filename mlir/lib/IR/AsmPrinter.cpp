@@ -1515,7 +1515,7 @@ static void printSymbolReference(StringRef symbolRef, raw_ostream &os) {
 // accept the string "elided". The first string must be a registered dialect
 // name and the latter must be a hex constant.
 static void printElidedElementsAttr(raw_ostream &os) {
-  os << R"(opaque<"", "0xDEADBEEF">)";
+  os << R"(opaque<"_", "0xDEADBEEF">)";
 }
 
 void ModulePrinter::printAttribute(Attribute attr,
@@ -1610,8 +1610,8 @@ void ModulePrinter::printAttribute(Attribute attr,
     if (printerFlags.shouldElideElementsAttr(opaqueAttr)) {
       printElidedElementsAttr(os);
     } else {
-      os << "opaque<\"" << opaqueAttr.getDialect()->getNamespace() << "\", ";
-      os << '"' << "0x" << llvm::toHex(opaqueAttr.getValue()) << "\">";
+      os << "opaque<\"" << opaqueAttr.getDialect() << "\", \"0x"
+         << llvm::toHex(opaqueAttr.getValue()) << "\">";
     }
 
   } else if (auto intOrFpEltAttr = attr.dyn_cast<DenseIntOrFPElementsAttr>()) {
