@@ -855,8 +855,11 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
       F(IE->getOperand(0));
       F(IE->getOperand(1));
     } else if (auto *SV = dyn_cast<ShuffleVectorInst>(BDV)) {
+      // For a canonical broadcast, ignore the undef argument
+      // (without this, we insert a parallel base shuffle for every broadcast)
       F(SV->getOperand(0));
-      F(SV->getOperand(1));
+      if (!SV->isZeroEltSplat())
+        F(SV->getOperand(1));
     } else {
       llvm_unreachable("unexpected BDV type");
     }
@@ -1214,7 +1217,8 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
         BaseSV->setOperand(OperandIdx, Base);
       };
       UpdateOperand(0); // vector operand
-      UpdateOperand(1); // vector operand
+      if (!BdvSV->isZeroEltSplat())
+        UpdateOperand(1); // vector operand
     }
   }
 
