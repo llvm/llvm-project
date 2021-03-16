@@ -654,7 +654,7 @@ public:
 
   SemanticsContext &GetSemanticsContext() const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
+  LLVM_DUMP_METHOD void dump() const;
 #endif
 
 private:
