@@ -4087,6 +4087,13 @@ extern void __kmp_hidden_helper_main_thread_release();
 #define KMP_GTID_TO_SHADOW_GTID(gtid)                                          \
   ((gtid) % (__kmp_hidden_helper_threads_num - 1) + 2)
 
+// Support for error directive
+typedef enum kmp_severity_t {
+  severity_warning = 1,
+  severity_fatal = 2
+} kmp_severity_t;
+extern void __kmpc_error(ident_t *loc, int severity, const char *message);
+
 #ifdef __cplusplus
 }
 #endif
