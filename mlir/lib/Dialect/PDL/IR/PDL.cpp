@@ -28,21 +28,36 @@ void PDLDialect::initialize() {
   registerTypes();
 }
 
+//===----------------------------------------------------------------------===//
+// PDL Operations
+//===----------------------------------------------------------------------===//
+
 /// Returns true if the given operation is used by a "binding" pdl operation
 /// within the main matcher body of a `pdl.pattern`.
+static bool hasBindingUseInMatcher(Operation *op, Block *matcherBlock) {
+  for (Operation *user : op->getUsers()) {
+    if (user->getBlock() != matcherBlock)
+      continue;
+    if (isa<AttributeOp, OperandOp, OperationOp, RewriteOp>(user))
+      return true;
+    // A result by itself is not binding, it must also be bound.
+    if (isa<ResultOp>(user) && hasBindingUseInMatcher(user, matcherBlock))
+      return true;
+  }
+  return false;
+}
+
+/// Returns success if the given operation is used by a "binding" pdl operation
+/// within the main matcher body of a `pdl.pattern`. On failure, emits an error
+/// with the given context message.
 static LogicalResult
 verifyHasBindingUseInMatcher(Operation *op,
                              StringRef bindableContextStr = "`pdl.operation`") {
   // If the pattern is not a pattern, there is nothing to do.
   if (!isa<PatternOp>(op->getParentOp()))
     return success();
-  Block *matcherBlock = op->getBlock();
-  for (Operation *user : op->getUsers()) {
-    if (user->getBlock() != matcherBlock)
-      continue;
-    if (isa<AttributeOp, OperandOp, OperationOp, RewriteOp>(user))
-      return success();
-  }
+  if (hasBindingUseInMatcher(op, op->getBlock()))
+    return success();
   return op->emitOpError()
          << "expected a bindable (i.e. " << bindableContextStr
          << ") user when defined in the matcher body of a `pdl.pattern`";
@@ -86,37 +101,12 @@ static LogicalResult verify(OperandOp op) {
 // pdl::OperationOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseOperationOp(OpAsmParser &p, OperationState &state) {
+static ParseResult parseOperationOpAttributes(
+    OpAsmParser &p, SmallVectorImpl<OpAsmParser::OperandType> &attrOperands,
+    ArrayAttr &attrNamesAttr) {
   Builder &builder = p.getBuilder();
-
-  // Parse the optional operation name.
-  bool startsWithOperands = succeeded(p.parseOptionalLParen());
-  bool startsWithAttributes =
-      !startsWithOperands && succeeded(p.parseOptionalLBrace());
-  bool startsWithOpName = false;
-  if (!startsWithAttributes && !startsWithOperands) {
-    StringAttr opName;
-    OptionalParseResult opNameResult =
-        p.parseOptionalAttribute(opName, "name", state.attributes);
-    startsWithOpName = opNameResult.hasValue();
-    if (startsWithOpName && failed(*opNameResult))
-      return failure();
-  }
-
-  // Parse the operands.
-  SmallVector<OpAsmParser::OperandType, 4> operands;
-  if (startsWithOperands ||
-      (!startsWithAttributes && succeeded(p.parseOptionalLParen()))) {
-    if (p.parseOperandList(operands) || p.parseRParen() ||
-        p.resolveOperands(operands, builder.getType<ValueType>(),
-                          state.operands))
-      return failure();
-  }
-
-  // Parse the attributes.
   SmallVector<Attribute, 4> attrNames;
-  if (startsWithAttributes || succeeded(p.parseOptionalLBrace())) {
-    SmallVector<OpAsmParser::OperandType, 4> attrOps;
+  if (succeeded(p.parseOptionalLBrace())) {
     do {
       StringAttr nameAttr;
       OpAsmParser::OperandType operand;
@@ -124,68 +114,29 @@ static ParseResult parseOperationOp(OpAsmParser &p, OperationState &state) {
           p.parseOperand(operand))
         return failure();
       attrNames.push_back(nameAttr);
-      attrOps.push_back(operand);
+      attrOperands.push_back(operand);
     } while (succeeded(p.parseOptionalComma()));
-
-    if (p.parseRBrace() ||
-        p.resolveOperands(attrOps, builder.getType<AttributeType>(),
-                          state.operands))
+    if (p.parseRBrace())
       return failure();
   }
-  state.addAttribute("attributeNames", builder.getArrayAttr(attrNames));
-  state.addTypes(builder.getType<OperationType>());
-
-  // Parse the result types.
-  SmallVector<OpAsmParser::OperandType, 4> opResultTypes;
-  if (succeeded(p.parseOptionalArrow())) {
-    if (p.parseOperandList(opResultTypes) ||
-        p.resolveOperands(opResultTypes, builder.getType<TypeType>(),
-                          state.operands))
-      return failure();
-    state.types.append(opResultTypes.size(), builder.getType<ValueType>());
-  }
-
-  if (p.parseOptionalAttrDict(state.attributes))
-    return failure();
-
-  int32_t operandSegmentSizes[] = {static_cast<int32_t>(operands.size()),
-                                   static_cast<int32_t>(attrNames.size()),
-                                   static_cast<int32_t>(opResultTypes.size())};
-  state.addAttribute("operand_segment_sizes",
-                     builder.getI32VectorAttr(operandSegmentSizes));
+  attrNamesAttr = builder.getArrayAttr(attrNames);
   return success();
 }
 
-static void print(OpAsmPrinter &p, OperationOp op) {
-  p << "pdl.operation ";
-  if (Optional<StringRef> name = op.name())
-    p << '"' << *name << '"';
-
-  auto operandValues = op.operands();
-  if (!operandValues.empty())
-    p << '(' << operandValues << ')';
-
-  // Emit the optional attributes.
-  ArrayAttr attrNames = op.attributeNames();
-  if (!attrNames.empty()) {
-    Operation::operand_range attrArgs = op.attributes();
-    p << " {";
-    interleaveComma(llvm::seq<int>(0, attrNames.size()), p,
-                    [&](int i) { p << attrNames[i] << " = " << attrArgs[i]; });
-    p << '}';
-  }
-
-  // Print the result type constraints of the operation.
-  if (!op.results().empty())
-    p << " -> " << op.types();
-  p.printOptionalAttrDict(op->getAttrs(),
-                          {"attributeNames", "name", "operand_segment_sizes"});
+static void printOperationOpAttributes(OpAsmPrinter &p, OperationOp op,
+                                       OperandRange attrArgs,
+                                       ArrayAttr attrNames) {
+  if (attrNames.empty())
+    return;
+  p << " {";
+  interleaveComma(llvm::seq<int>(0, attrNames.size()), p,
+                  [&](int i) { p << attrNames[i] << " = " << attrArgs[i]; });
+  p << '}';
 }
 
 /// Verifies that the result types of this operation, defined within a
 /// `pdl.rewrite`, can be inferred.
 static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
-                                                    ResultRange opResults,
                                                     OperandRange resultTypes) {
   // Functor that returns if the given use can be used to infer a type.
   Block *rewriterBlock = op->getBlock();
@@ -207,8 +158,8 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
     return success();
 
   // Otherwise, make sure each of the types can be inferred.
-  for (int i : llvm::seq<int>(0, opResults.size())) {
-    Operation *resultTypeOp = resultTypes[i].getDefiningOp();
+  for (auto it : llvm::enumerate(resultTypes)) {
+    Operation *resultTypeOp = it.value().getDefiningOp();
     assert(resultTypeOp && "expected valid result type operation");
 
     // If the op was defined by a `create_native`, it is guaranteed to be
@@ -229,14 +180,11 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
     if (llvm::any_of(typeOp.getResult().getUsers(), constrainsInputOp))
       continue;
 
-    // Otherwise, check to see if any uses of the result can infer the type.
-    if (llvm::any_of(opResults[i].getUses(), canInferTypeFromUse))
-      continue;
     return op
         .emitOpError("must have inferable or constrained result types when "
                      "nested within `pdl.rewrite`")
         .attachNote()
-        .append("result type #", i, " was not constrained");
+        .append("result type #", it.index(), " was not constrained");
   }
   return success();
 }
@@ -256,19 +204,10 @@ static LogicalResult verify(OperationOp op) {
            << " values";
   }
 
-  OperandRange resultTypes = op.types();
-  auto opResults = op.results();
-  if (resultTypes.size() != opResults.size()) {
-    return op.emitOpError() << "expected the same number of result values and "
-                               "result type constraints, got "
-                            << opResults.size() << " results and "
-                            << resultTypes.size() << " constraints";
-  }
-
   // If the operation is within a rewrite body and doesn't have type inference,
   // ensure that the result types can be resolved.
   if (isWithinRewrite && !op.hasTypeInference()) {
-    if (failed(verifyResultTypesAreInferrable(op, opResults, resultTypes)))
+    if (failed(verifyResultTypesAreInferrable(op, op.types())))
       return failure();
   }
 
@@ -341,37 +280,9 @@ Optional<StringRef> PatternOp::getRootKind() {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(ReplaceOp op) {
-  auto sourceOp = cast<OperationOp>(op.operation().getDefiningOp());
-  auto sourceOpResults = sourceOp.results();
-  auto replValues = op.replValues();
-
-  if (Value replOpVal = op.replOperation()) {
-    auto replOp = cast<OperationOp>(replOpVal.getDefiningOp());
-    auto replOpResults = replOp.results();
-    if (sourceOpResults.size() != replOpResults.size()) {
-      return op.emitOpError()
-             << "expected source operation to have the same number of results "
-                "as the replacement operation, replacement operation provided "
-             << replOpResults.size() << " but expected "
-             << sourceOpResults.size();
-    }
-
-    if (!replValues.empty()) {
-      return op.emitOpError() << "expected no replacement values to be provided"
-                                 " when the replacement operation is present";
-    }
-
-    return success();
-  }
-
-  if (sourceOpResults.size() != replValues.size()) {
-    return op.emitOpError()
-           << "expected source operation to have the same number of results "
-              "as the provided replacement values, found "
-           << replValues.size() << " replacement values but expected "
-           << sourceOpResults.size();
-  }
-
+  if (op.replOperation() && !op.replValues().empty())
+    return op.emitOpError() << "expected no replacement values to be provided"
+                               " when the replacement operation is present";
   return success();
 }
 

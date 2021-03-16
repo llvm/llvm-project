@@ -48,7 +48,7 @@ def PDL_Dialect : Dialect {
 
       %resultType = pdl.type
       %inputOperand = pdl.operand
-      %root, %results = pdl.operation "foo.op"(%inputOperand) -> %resultType
+      %root = pdl.operation "foo.op"(%inputOperand) -> %resultType
       pdl.rewrite %root {
         pdl.replace %root with (%inputOperand)
       }

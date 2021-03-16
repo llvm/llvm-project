@@ -85,6 +85,9 @@ private:
   void generateRewriter(pdl::ReplaceOp replaceOp,
                         DenseMap<Value, Value> &rewriteValues,
                         function_ref<Value(Value)> mapRewriteValue);
+  void generateRewriter(pdl::ResultOp resultOp,
+                        DenseMap<Value, Value> &rewriteValues,
+                        function_ref<Value(Value)> mapRewriteValue);
   void generateRewriter(pdl::TypeOp typeOp,
                         DenseMap<Value, Value> &rewriteValues,
                         function_ref<Value(Value)> mapRewriteValue);
@@ -457,9 +460,10 @@ SymbolRefAttr PatternLowering::generateRewriter(
     for (Operation &rewriteOp : *rewriter.getBody()) {
       llvm::TypeSwitch<Operation *>(&rewriteOp)
           .Case<pdl::AttributeOp, pdl::CreateNativeOp, pdl::EraseOp,
-                pdl::OperationOp, pdl::ReplaceOp, pdl::TypeOp>([&](auto op) {
-            this->generateRewriter(op, rewriteValues, mapRewriteValue);
-          });
+                pdl::OperationOp, pdl::ReplaceOp, pdl::ResultOp, pdl::TypeOp>(
+              [&](auto op) {
+                this->generateRewriter(op, rewriteValues, mapRewriteValue);
+              });
     }
   }
 
@@ -511,17 +515,15 @@ void PatternLowering::generateRewriter(
       operationOp.attributeNames());
   rewriteValues[operationOp.op()] = createdOp;
 
-  // Make all of the new operation results available.
-  OperandRange resultTypes = operationOp.types();
-  for (auto it : llvm::enumerate(operationOp.results())) {
+  // Generate accesses for any results that have their types constrained.
+  for (auto it : llvm::enumerate(operationOp.types())) {
+    Value &type = rewriteValues[it.value()];
+    if (type)
+      continue;
+
     Value getResultVal = builder.create<pdl_interp::GetResultOp>(
         loc, builder.getType<pdl::ValueType>(), createdOp, it.index());
-    rewriteValues[it.value()] = getResultVal;
-
-    // If any of the types have not been resolved, make those available as well.
-    Value &type = rewriteValues[resultTypes[it.index()]];
-    if (!type)
-      type = builder.create<pdl_interp::GetValueTypeOp>(loc, getResultVal);
+    type = builder.create<pdl_interp::GetValueTypeOp>(loc, getResultVal);
   }
 }
 
@@ -540,27 +542,39 @@ void PatternLowering::generateRewriter(
 void PatternLowering::generateRewriter(
     pdl::ReplaceOp replaceOp, DenseMap<Value, Value> &rewriteValues,
     function_ref<Value(Value)> mapRewriteValue) {
+  SmallVector<Value, 4> replOperands;
+
   // If the replacement was another operation, get its results. `pdl` allows
   // for using an operation for simplicitly, but the interpreter isn't as
   // user facing.
-  ValueRange origOperands;
-  if (Value replOp = replaceOp.replOperation())
-    origOperands = cast<pdl::OperationOp>(replOp.getDefiningOp()).results();
-  else
-    origOperands = replaceOp.replValues();
+  if (Value replOp = replaceOp.replOperation()) {
+    pdl::OperationOp op = cast<pdl::OperationOp>(replOp.getDefiningOp());
+    for (unsigned i = 0, e = op.types().size(); i < e; ++i)
+      replOperands.push_back(builder.create<pdl_interp::GetResultOp>(
+          replOp.getLoc(), builder.getType<pdl::ValueType>(),
+          mapRewriteValue(replOp), i));
+  } else {
+    for (Value operand : replaceOp.replValues())
+      replOperands.push_back(mapRewriteValue(operand));
+  }
 
   // If there are no replacement values, just create an erase instead.
-  if (origOperands.empty()) {
+  if (replOperands.empty()) {
     builder.create<pdl_interp::EraseOp>(replaceOp.getLoc(),
                                         mapRewriteValue(replaceOp.operation()));
     return;
   }
 
-  SmallVector<Value, 4> replOperands;
-  for (Value operand : origOperands)
-    replOperands.push_back(mapRewriteValue(operand));
   builder.create<pdl_interp::ReplaceOp>(
       replaceOp.getLoc(), mapRewriteValue(replaceOp.operation()), replOperands);
+}
+
+void PatternLowering::generateRewriter(
+    pdl::ResultOp resultOp, DenseMap<Value, Value> &rewriteValues,
+    function_ref<Value(Value)> mapRewriteValue) {
+  rewriteValues[resultOp] = builder.create<pdl_interp::GetResultOp>(
+      resultOp.getLoc(), builder.getType<pdl::ValueType>(),
+      mapRewriteValue(resultOp.parent()), resultOp.index());
 }
 
 void PatternLowering::generateRewriter(
@@ -602,8 +616,8 @@ void PatternLowering::generateOperationResultTypeRewriter(
   bool hasTypeInference = op.hasTypeInference();
   auto resultTypeValues = op.types();
   types.reserve(resultTypeValues.size());
-  for (auto it : llvm::enumerate(op.results())) {
-    Value result = it.value(), resultType = resultTypeValues[it.index()];
+  for (auto it : llvm::enumerate(resultTypeValues)) {
+    Value resultType = it.value();
 
     // Check for an already translated value.
     if (Value existingRewriteValue = rewriteValues.lookup(resultType)) {
@@ -633,15 +647,10 @@ void PatternLowering::generateOperationResultTypeRewriter(
         if ((replacedOp = getReplacedOperationFrom(use)))
           break;
       fullReplacedOperation = replacedOp;
+      assert(fullReplacedOperation &&
+             "expected replaced op to infer a result type from");
     } else {
       replacedOp = fullReplacedOperation.getValue();
-    }
-    // Infer from the result, as there was no fully replaced op.
-    if (!replacedOp) {
-      for (OpOperand &use : result.getUses())
-        if ((replacedOp = getReplacedOperationFrom(use)))
-          break;
-      assert(replacedOp && "expected replaced op to infer a result type from");
     }
 
     auto replOpOp = cast<pdl::OperationOp>(replacedOp);

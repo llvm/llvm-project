@@ -433,7 +433,7 @@ public:
   Position *getRoot() { return OperationPosition::getRoot(uniquer); }
 
   /// Returns the parent position defining the value held by the given operand.
-  Position *getParent(OperandPosition *p) {
+  OperationPosition *getParent(OperandPosition *p) {
     std::vector<unsigned> index = p->getIndex();
     index.push_back(p->getOperandNumber());
     return OperationPosition::get(uniquer, index);

@@ -177,7 +177,7 @@ def PDL_OperandOp : PDL_Op<"operand", [HasParent<"pdl::PatternOp">]> {
   let description = [{
     `pdl.operand` operations capture external operand edges into an operation
     node that originate from operations or block arguments not otherwise
-    specified within the pattern (e.g. via `pdl.operation`). These operations
+    specified within the pattern (e.g. via `pdl.result`). These operations
     define individual operands of a given operation. A `pdl.operand` may
     partially constrain an operand by specifying an expected value type
     (via a `pdl.type` operation).
@@ -223,8 +223,8 @@ def PDL_OperationOp
     `pdl.operation`s are composed of a name, and a set of attribute, operand,
     and result type values, that map to what those that would be on a
     constructed instance of that operation. The results of a `pdl.operation` are
-    a handle to the operation itself, and a handle to each of the operation
-    result values.
+    a handle to the operation itself. Handles to the results of the operation
+    can be extracted via `pdl.result`.
 
     When used within a matching context, the name of the operation may be
     omitted.
@@ -241,7 +241,7 @@ def PDL_OperationOp
 
     ```mlir
     // Define an instance of a `foo.op` operation.
-    %op, %results:4 = pdl.operation "foo.op"(%arg0, %arg1) {"attrA" = %attr0} -> %type, %type, %type, %type
+    %op = pdl.operation "foo.op"(%arg0, %arg1) {"attrA" = %attr0} -> %type, %type, %type, %type
     ```
   }];
 
@@ -250,8 +250,13 @@ def PDL_OperationOp
                        Variadic<PDL_Attribute>:$attributes,
                        StrArrayAttr:$attributeNames,
                        Variadic<PDL_Type>:$types);
-  let results = (outs PDL_Operation:$op,
-                      Variadic<PDL_Value>:$results);
+  let results = (outs PDL_Operation:$op);
+  let assemblyFormat = [{
+    ($name^)? (`(` $operands^ `)`)?
+    custom<OperationOpAttributes>($attributes, $attributeNames)
+    (`->` $types^)? attr-dict
+  }];
+
   let builders = [
     OpBuilder<(ins CArg<"Optional<StringRef>", "llvm::None">:$name,
       CArg<"ValueRange", "llvm::None">:$operandValues,
@@ -259,10 +264,9 @@ def PDL_OperationOp
       CArg<"ValueRange", "llvm::None">:$attrValues,
       CArg<"ValueRange", "llvm::None">:$resultTypes), [{
       auto nameAttr = name ? StringAttr() : $_builder.getStringAttr(*name);
-      build($_builder, $_state, $_builder.getType<OperationType>(), {}, nameAttr,
+      build($_builder, $_state, $_builder.getType<OperationType>(), nameAttr,
             operandValues, attrValues, $_builder.getStrArrayAttr(attrNames),
             resultTypes);
-      $_state.types.append(resultTypes.size(), $_builder.getType<ValueType>());
     }]>,
   ];
   let extraClassDeclaration = [{
@@ -293,7 +297,7 @@ def PDL_PatternOp : PDL_Op<"pattern", [IsolatedFromAbove, Symbol]> {
     pdl.pattern : benefit(1) {
       %resultType = pdl.type
       %inputOperand = pdl.operand
-      %root, %results = pdl.operation "foo.op"(%inputOperand) -> (%resultType)
+      %root = pdl.operation "foo.op"(%inputOperand) -> (%resultType)
       pdl.rewrite %root {
         pdl.replace %root with (%inputOperand)
       }
@@ -366,6 +370,39 @@ def PDL_ReplaceOp : PDL_Op<"replace", [
   let assemblyFormat = [{
     $operation `with` (`(` $replValues^ `)`)? ($replOperation^)? attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::ResultOp
+//===----------------------------------------------------------------------===//
+
+def PDL_ResultOp : PDL_Op<"result"> {
+  let summary = "Extract a result from an operation";
+  let description = [{
+    `pdl.result` operations extract result edges from an operation node within
+    a pattern or rewrite region. The provided index is zero-based, and
+    represents the concrete result to extract, i.e. this is not the result index
+    as defined by the ODS definition of the operation.
+
+    Example:
+
+    ```mlir
+    // Extract a result:
+    %operation = pdl.operation ...
+    %result = pdl.result 1 of %operation
+
+    // Imagine the following IR being matched:
+    %result_0, %result_1 = foo.op ...
+
+    // If the example pattern snippet above were matching against `foo.op` in
+    // the IR snippted, `%result` would correspond to `%result_1`.
+    ```
+  }];
+
+  let arguments = (ins PDL_Operation:$parent, I32Attr:$index);
+  let results = (outs PDL_Value:$val);
+  let assemblyFormat = "$index `of` $parent attr-dict";
+  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//
