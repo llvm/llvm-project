@@ -1099,6 +1099,13 @@ typedef void (*ompt_callback_error_t) (
   const void *codeptr_ra
 );
 
+typedef struct ompt_record_error_t {
+  ompt_severity_t severity;
+  const char *message;
+  size_t length;
+  const void *codeptr_ra;
+} ompt_record_error_t;
+
 typedef struct ompd_address_t {
   ompd_seg_t segment;
   ompd_addr_t address;

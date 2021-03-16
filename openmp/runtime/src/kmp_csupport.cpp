@@ -4357,3 +4357,35 @@ int __kmpc_pause_resource(kmp_pause_status_t level) {
   }
   return __kmp_pause_resource(level);
 }
+
+void __kmpc_error(ident_t *loc, int severity, const char *message) {
+  if (!__kmp_init_serial)
+    __kmp_serial_initialize();
+
+  KMP_ASSERT(severity == severity_warning || severity == severity_fatal);
+
+#if OMPT_SUPPORT
+  if (ompt_enabled.enabled && ompt_enabled.ompt_callback_error) {
+    ompt_callbacks.ompt_callback(ompt_callback_error)(
+        (ompt_severity_t)severity, message, KMP_STRLEN(message),
+        OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif // OMPT_SUPPORT
+
+  char *src_loc;
+  if (loc && loc->psource) {
+    kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, false);
+    src_loc =
+        __kmp_str_format("%s:%s:%s", str_loc.file, str_loc.line, str_loc.col);
+    __kmp_str_loc_free(&str_loc);
+  } else {
+    src_loc = __kmp_str_format("unknown");
+  }
+
+  if (severity == severity_warning)
+    KMP_WARNING(UserDirectedWarning, src_loc, message);
+  else
+    KMP_FATAL(UserDirectedError, src_loc, message);
+
+  __kmp_str_free(&src_loc);
+}
