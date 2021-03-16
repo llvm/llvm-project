@@ -82,6 +82,12 @@ inline ::llvm::hash_code hash_value(TypeRange arg) {
   return ::llvm::hash_combine_range(arg.begin(), arg.end());
 }
 
+/// Emit a type range to the given output stream.
+inline raw_ostream &operator<<(raw_ostream &os, const TypeRange &types) {
+  llvm::interleaveComma(types, os);
+  return os;
+}
+
 //===----------------------------------------------------------------------===//
 // ValueTypeRange
 

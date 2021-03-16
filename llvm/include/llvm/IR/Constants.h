@@ -558,10 +558,10 @@ public:
 
 //===----------------------------------------------------------------------===//
 /// ConstantDataSequential - A vector or array constant whose element type is a
-/// simple 1/2/4/8-byte integer or float/double, and whose elements are just
-/// simple data values (i.e. ConstantInt/ConstantFP).  This Constant node has no
-/// operands because it stores all of the elements of the constant as densely
-/// packed data, instead of as Value*'s.
+/// simple 1/2/4/8-byte integer or half/bfloat/float/double, and whose elements
+/// are just simple data values (i.e. ConstantInt/ConstantFP).  This Constant
+/// node has no operands because it stores all of the elements of the constant
+/// as densely packed data, instead of as Value*'s.
 ///
 /// This is the common base class of ConstantDataArray and ConstantDataVector.
 ///
@@ -700,11 +700,11 @@ public:
     return ConstantDataArray::get(Context, makeArrayRef(Elts));
   }
 
-  /// get() constructor - Return a constant with array type with an element
+  /// getRaw() constructor - Return a constant with array type with an element
   /// count and element type matching the NumElements and ElementTy parameters
   /// passed in. Note that this can return a ConstantAggregateZero object.
-  /// ElementTy needs to be one of i8/i16/i32/i64/float/double. Data is the
-  /// buffer containing the elements. Be careful to make sure Data uses the
+  /// ElementTy must be one of i8/i16/i32/i64/half/bfloat/float/double. Data is
+  /// the buffer containing the elements. Be careful to make sure Data uses the
   /// right endianness, the buffer will be used as-is.
   static Constant *getRaw(StringRef Data, uint64_t NumElements,
                           Type *ElementTy) {
@@ -772,6 +772,18 @@ public:
   static Constant *get(LLVMContext &Context, ArrayRef<float> Elts);
   static Constant *get(LLVMContext &Context, ArrayRef<double> Elts);
 
+  /// getRaw() constructor - Return a constant with vector type with an element
+  /// count and element type matching the NumElements and ElementTy parameters
+  /// passed in. Note that this can return a ConstantAggregateZero object.
+  /// ElementTy must be one of i8/i16/i32/i64/half/bfloat/float/double. Data is
+  /// the buffer containing the elements. Be careful to make sure Data uses the
+  /// right endianness, the buffer will be used as-is.
+  static Constant *getRaw(StringRef Data, uint64_t NumElements,
+                          Type *ElementTy) {
+    Type *Ty = VectorType::get(ElementTy, ElementCount::getFixed(NumElements));
+    return getImpl(Data, Ty);
+  }
+
   /// getFP() constructors - Return a constant of vector type with a float
   /// element type taken from argument `ElementType', and count taken from
   /// argument `Elts'.  The amount of bits of the contained type must match the
@@ -784,7 +796,7 @@ public:
 
   /// Return a ConstantVector with the specified constant in each element.
   /// The specified constant has to be a of a compatible type (i8/i16/
-  /// i32/i64/float/double) and must be a ConstantFP or ConstantInt.
+  /// i32/i64/half/bfloat/float/double) and must be a ConstantFP or ConstantInt.
   static Constant *getSplat(unsigned NumElts, Constant *Elt);
 
   /// Returns true if this is a splat constant, meaning that all elements have
