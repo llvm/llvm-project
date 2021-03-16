@@ -1203,4 +1203,16 @@ const Symbol *FindFunctionResult(const Symbol &symbol) {
   return FindFunctionResult(symbol, seen);
 }
 
+// These are here in Evaluate/tools.cpp so that Evaluate can use
+// them; they cannot be defined in symbol.h due to the dependence
+// on Scope.
+
+bool Symbol::operator<(const Symbol &that) const {
+  return GetSemanticsContext().allCookedSources().Precedes(name_, that.name_);
+}
+
+SemanticsContext &Symbol::GetSemanticsContext() const {
+  return DEREF(owner_).context();
+}
+
 } // namespace Fortran::semantics
