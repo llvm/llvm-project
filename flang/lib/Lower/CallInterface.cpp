@@ -28,10 +28,34 @@ bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
   return procRef.hasAlternateReturns();
 }
 
+static std::string getBindCName(const Fortran::semantics::Symbol &symbol) {
+  // bind(C) name expression, if any, must be a scalar constant of default
+  // character type as per R808.
+  using T =
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, 1>;
+  const auto &ultimateSymbol = symbol.GetUltimate();
+  if (const auto *procDetails{
+          ultimateSymbol.detailsIf<Fortran::semantics::ProcEntityDetails>()}) {
+    if (auto bindName = procDetails->bindName())
+      return Fortran::evaluate::GetScalarConstantValue<T>(bindName).value();
+    return procDetails->interface().symbol()->name().ToString();
+  }
+  if (auto bindName =
+          ultimateSymbol.get<Fortran::semantics::SubprogramDetails>()
+              .bindName())
+    return Fortran::evaluate::GetScalarConstantValue<T>(bindName).value();
+  return ultimateSymbol.name().ToString();
+}
+
 std::string Fortran::lower::CallerInterface::getMangledName() const {
   const auto &proc = procRef.proc();
   if (const auto *symbol = proc.GetSymbol())
-    return converter.mangleName(*symbol);
+    // Do NOT mangle names for functions/subroutines with BIND(C) attribute.
+    // These could be potential calls to external RTL (i.e OpenMP), that may not
+    // follow the same mangling semantics. Return the `bindName` instead.
+    return Fortran::semantics::IsBindCProcedure(*symbol)
+               ? getBindCName(*symbol)
+               : converter.mangleName(*symbol);
   assert(proc.GetSpecificIntrinsic() &&
          "expected intrinsic procedure in designator");
   return proc.GetName();
@@ -166,9 +190,15 @@ bool Fortran::lower::CalleeInterface::hasAlternateReturns() const {
 }
 
 std::string Fortran::lower::CalleeInterface::getMangledName() const {
-  return funit.isMainProgram()
-             ? fir::NameUniquer::doProgramEntry().str()
-             : converter.mangleName(funit.getSubprogramSymbol());
+
+  if (funit.isMainProgram())
+    return fir::NameUniquer::doProgramEntry().str();
+  // Do NOT mangle names for functions/subroutines with BIND(C) attribute.
+  // These could be potential calls to external RTL (i.e OpenMP), that may not
+  // follow the same mangling semantics. Return the `bindName` instead.
+  if (Fortran::semantics::IsBindCProcedure(funit.getSubprogramSymbol()))
+    return getBindCName(funit.getSubprogramSymbol());
+  return converter.mangleName(funit.getSubprogramSymbol());
 }
 
 mlir::Location Fortran::lower::CalleeInterface::getCalleeLocation() const {
