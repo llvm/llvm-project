@@ -1253,6 +1253,19 @@ TEST(SignatureHelpTest, Overloads) {
   EXPECT_EQ(0, Results.activeParameter);
 }
 
+TEST(SignatureHelpTest, OverloadInitListRegression) {
+  auto Results = signatures(R"cpp(
+    struct A {int x;};
+    struct B {B(A);};
+    void f();
+    int main() {
+      B b({1});
+      f(^);
+    }
+  )cpp");
+  EXPECT_THAT(Results.signatures, UnorderedElementsAre(Sig("f() -> void")));
+}
+
 TEST(SignatureHelpTest, DefaultArgs) {
   auto Results = signatures(R"cpp(
     void bar(int x, int y = 0);

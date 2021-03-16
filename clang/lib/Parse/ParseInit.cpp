@@ -200,9 +200,9 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
       SourceLocation DotLoc = ConsumeToken();
 
       if (Tok.is(tok::code_completion)) {
+        cutOffParsing();
         Actions.CodeCompleteDesignator(DesignatorCompletion.PreferredBaseType,
                                        DesignatorCompletion.InitExprs, Desig);
-        cutOffParsing();
         return ExprError();
       }
       if (Tok.isNot(tok::identifier)) {
