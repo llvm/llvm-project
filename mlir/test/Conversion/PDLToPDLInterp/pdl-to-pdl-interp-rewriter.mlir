@@ -9,7 +9,7 @@ module @external {
   // CHECK:     pdl_interp.apply_rewrite "rewriter" [true](%[[ROOT]], %[[INPUT]] : !pdl.operation, !pdl.value)
   pdl.pattern : benefit(1) {
     %input = pdl.operand
-    %root = pdl.operation "foo.op"(%input)
+    %root = pdl.operation "foo.op"(%input : !pdl.value)
     pdl.rewrite %root with "rewriter"[true](%input : !pdl.value)
   }
 }
@@ -60,12 +60,12 @@ module @operation_operands {
   // CHECK:     pdl_interp.create_operation "foo.op2"(%[[OPERAND1]])
   pdl.pattern : benefit(1) {
     %operand = pdl.operand
-    %root = pdl.operation "foo.op"(%operand)
+    %root = pdl.operation "foo.op"(%operand : !pdl.value)
     pdl.rewrite %root {
       %type = pdl.type : i32
-      %newOp = pdl.operation "foo.op"(%operand) -> %type
+      %newOp = pdl.operation "foo.op"(%operand : !pdl.value) -> (%type : !pdl.type)
       %result = pdl.result 0 of %newOp
-      %newOp1 = pdl.operation "foo.op2"(%result)
+      %newOp1 = pdl.operation "foo.op2"(%result : !pdl.value)
       pdl.erase %root
     }
   }
@@ -82,12 +82,12 @@ module @operation_operands {
   // CHECK:     pdl_interp.create_operation "foo.op2"(%[[OPERAND1]])
   pdl.pattern : benefit(1) {
     %operand = pdl.operand
-    %root = pdl.operation "foo.op"(%operand)
+    %root = pdl.operation "foo.op"(%operand : !pdl.value)
     pdl.rewrite %root {
       %type = pdl.type : i32
-      %newOp = pdl.operation "foo.op"(%operand) -> %type
+      %newOp = pdl.operation "foo.op"(%operand : !pdl.value) -> (%type : !pdl.type)
       %result = pdl.result 0 of %newOp
-      %newOp1 = pdl.operation "foo.op2"(%result)
+      %newOp1 = pdl.operation "foo.op2"(%result : !pdl.value)
       pdl.erase %root
     }
   }
@@ -103,10 +103,10 @@ module @operation_result_types {
   pdl.pattern : benefit(1) {
     %rootType = pdl.type
     %rootType1 = pdl.type
-    %root = pdl.operation "foo.op" -> %rootType, %rootType1
+    %root = pdl.operation "foo.op" -> (%rootType, %rootType1 : !pdl.type, !pdl.type)
     pdl.rewrite %root {
       %newType1 = pdl.type
-      %newOp = pdl.operation "foo.op" -> %rootType, %newType1
+      %newOp = pdl.operation "foo.op" -> (%rootType, %newType1 : !pdl.type, !pdl.type)
       pdl.replace %root with %newOp
     }
   }
@@ -123,9 +123,9 @@ module @replace_with_op {
   // CHECK:     pdl_interp.replace %[[ROOT]] with(%[[OP_RESULT]])
   pdl.pattern : benefit(1) {
     %type = pdl.type : i32
-    %root = pdl.operation "foo.op" -> %type
+    %root = pdl.operation "foo.op" -> (%type : !pdl.type)
     pdl.rewrite %root {
-      %newOp = pdl.operation "foo.op" -> %type
+      %newOp = pdl.operation "foo.op" -> (%type : !pdl.type)
       pdl.replace %root with %newOp
     }
   }
@@ -142,11 +142,11 @@ module @replace_with_values {
   // CHECK:     pdl_interp.replace %[[ROOT]] with(%[[OP_RESULT]])
   pdl.pattern : benefit(1) {
     %type = pdl.type : i32
-    %root = pdl.operation "foo.op" -> %type
+    %root = pdl.operation "foo.op" -> (%type : !pdl.type)
     pdl.rewrite %root {
-      %newOp = pdl.operation "foo.op" -> %type
+      %newOp = pdl.operation "foo.op" -> (%type : !pdl.type)
       %newResult = pdl.result 0 of %newOp
-      pdl.replace %root with (%newResult)
+      pdl.replace %root with (%newResult : !pdl.value)
     }
   }
 }
@@ -178,10 +178,10 @@ module @apply_native_rewrite {
   // CHECK:     pdl_interp.create_operation "foo.op"() -> %[[TYPE]]
   pdl.pattern : benefit(1) {
     %type = pdl.type
-    %root = pdl.operation "foo.op" -> %type
+    %root = pdl.operation "foo.op" -> (%type : !pdl.type)
     pdl.rewrite %root {
       %newType = pdl.apply_native_rewrite "functor"[true](%root : !pdl.operation) : !pdl.type
-      %newOp = pdl.operation "foo.op" -> %newType
+      %newOp = pdl.operation "foo.op" -> (%newType : !pdl.type)
       pdl.replace %root with %newOp
     }
   }

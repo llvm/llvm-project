@@ -27,7 +27,7 @@ module @simple {
   // CHECK:     pdl_interp.apply_rewrite "rewriter"(%[[REWRITE_ROOT]]
   // CHECK:     pdl_interp.finalize
   pdl.pattern : benefit(1) {
-    %root = pdl.operation "foo.op"()
+    %root = pdl.operation "foo.op"
     pdl.rewrite %root with "rewriter"
   }
 }
@@ -69,7 +69,7 @@ module @constraints {
   pdl.pattern : benefit(1) {
     %input0 = pdl.operand
     %input1 = pdl.operand
-    %root = pdl.operation(%input0, %input1)
+    %root = pdl.operation(%input0, %input1 : !pdl.value, !pdl.value)
     %result0 = pdl.result 0 of %root
 
     pdl.apply_native_constraint "multi_constraint"[true](%input0, %input1, %result0 : !pdl.value, !pdl.value, !pdl.value)
@@ -96,7 +96,7 @@ module @inputs {
   pdl.pattern : benefit(1) {
     %type = pdl.type : i64
     %input = pdl.operand : %type
-    %root = pdl.operation(%input, %input)
+    %root = pdl.operation(%input, %input : !pdl.value, !pdl.value)
     pdl.rewrite %root with "rewriter"
   }
 }
@@ -120,7 +120,7 @@ module @results {
   pdl.pattern : benefit(1) {
     %type1 = pdl.type : i32
     %type2 = pdl.type
-    %root = pdl.operation -> %type1, %type2
+    %root = pdl.operation -> (%type1, %type2 : !pdl.type, !pdl.type)
     pdl.rewrite %root with "rewriter"
   }
 }
@@ -149,11 +149,11 @@ module @results_as_operands {
   pdl.pattern : benefit(1) {
     %type1 = pdl.type : i32
     %type2 = pdl.type
-    %inputOp = pdl.operation -> %type1, %type2
+    %inputOp = pdl.operation -> (%type1, %type2 : !pdl.type, !pdl.type)
     %result1 = pdl.result 0 of %inputOp
     %result2 = pdl.result 1 of %inputOp
 
-    %root = pdl.operation(%result1, %result2)
+    %root = pdl.operation(%result1, %result2 : !pdl.value, !pdl.value)
     pdl.rewrite %root with "rewriter"
   }
 }
@@ -168,12 +168,12 @@ module @switch_result_types {
   // CHECK:   pdl_interp.switch_type %[[RESULT_TYPE]] to [i32, i64]
   pdl.pattern : benefit(1) {
     %type = pdl.type : i32
-    %root = pdl.operation -> %type
+    %root = pdl.operation -> (%type : !pdl.type)
     pdl.rewrite %root with "rewriter"
   }
   pdl.pattern : benefit(1) {
     %type = pdl.type : i64
-    %root = pdl.operation -> %type
+    %root = pdl.operation -> (%type : !pdl.type)
     pdl.rewrite %root with "rewriter"
   }
 }
@@ -195,13 +195,13 @@ module @predicate_ordering  {
   pdl.pattern : benefit(1) {
     %resultType = pdl.type
     pdl.apply_native_constraint "typeConstraint"[](%resultType : !pdl.type)
-    %root = pdl.operation -> %resultType
+    %root = pdl.operation -> (%resultType : !pdl.type)
     pdl.rewrite %root with "rewriter"
   }
 
   pdl.pattern : benefit(1) {
     %resultType = pdl.type
-    %apply = pdl.operation -> %resultType
+    %apply = pdl.operation -> (%resultType : !pdl.type)
     pdl.rewrite %apply with "rewriter"
   }
 }
