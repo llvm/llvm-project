@@ -1221,6 +1221,8 @@ public:
   bool isUniform() const { return IsUniform; }
 
   bool isPacked() const { return AlsoPack; }
+
+  bool isPredicated() const { return IsPredicated; }
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.
