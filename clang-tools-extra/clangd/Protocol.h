@@ -475,6 +475,10 @@ struct ClientCapabilities {
   /// window.implicitWorkDoneProgressCreate
   bool ImplicitProgressCreation = false;
 
+  /// Whether the client claims to cancel stale requests.
+  /// general.staleRequestSupport.cancel
+  bool CancelsStaleRequests = false;
+
   /// Whether the client implementation supports a refresh request sent from the
   /// server to the client.
   bool SemanticTokenRefreshSupport = false;

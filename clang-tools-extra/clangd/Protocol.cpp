@@ -414,6 +414,12 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
     if (auto Implicit = Window->getBoolean("implicitWorkDoneProgressCreate"))
       R.ImplicitProgressCreation = *Implicit;
   }
+  if (auto *General = O->getObject("general")) {
+    if (auto *StaleRequestSupport = General->getObject("staleRequestSupport")) {
+      if (auto Cancel = StaleRequestSupport->getBoolean("cancel"))
+        R.CancelsStaleRequests = *Cancel;
+    }
+  }
   if (auto *OffsetEncoding = O->get("offsetEncoding")) {
     R.offsetEncoding.emplace();
     if (!fromJSON(*OffsetEncoding, *R.offsetEncoding,

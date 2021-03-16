@@ -518,6 +518,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (Params.capabilities.WorkDoneProgress)
     BackgroundIndexProgressState = BackgroundIndexProgress::Empty;
   BackgroundIndexSkipCreate = Params.capabilities.ImplicitProgressCreation;
+  Opts.ImplicitCancellation = !Params.capabilities.CancelsStaleRequests;
 
   llvm::json::Object ServerCaps{
       {"textDocumentSync",

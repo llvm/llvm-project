@@ -146,6 +146,12 @@ public:
         /*RebuildRatio=*/1,
     };
 
+    /// Cancel certain requests if the file changes before they begin running.
+    /// This is useful for "transient" actions like enumerateTweaks that were
+    /// likely implicitly generated, and avoids redundant work if clients forget
+    /// to cancel. Clients that always cancel stale requests should clear this.
+    bool ImplicitCancellation = true;
+
     /// Clangd will execute compiler drivers matching one of these globs to
     /// fetch system include path.
     std::vector<std::string> QueryDriverGlobs;
@@ -391,6 +397,8 @@ private:
 
   llvm::Optional<std::string> WorkspaceRoot;
   llvm::Optional<TUScheduler> WorkScheduler;
+  // Invalidation policy used for actions that we assume are "transient".
+  TUScheduler::ASTActionInvalidation Transient;
 
   // Store of the current versions of the open documents.
   // Only written from the main thread (despite being threadsafe).
