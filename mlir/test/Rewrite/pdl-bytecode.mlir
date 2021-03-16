@@ -25,7 +25,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.replaced_by_pattern"() -> ()
+      %op = pdl_interp.create_operation "test.replaced_by_pattern"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -122,7 +122,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -157,7 +157,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -190,7 +190,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -222,7 +222,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -256,7 +256,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -288,7 +288,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -325,7 +325,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -375,7 +375,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -425,8 +425,8 @@ module @patterns {
   ^pat1:
     %operand0 = pdl_interp.get_operand 0 of %root
     %operand4 = pdl_interp.get_operand 4 of %root
-    %defOp0 = pdl_interp.get_defining_op of %operand0
-    %defOp4 = pdl_interp.get_defining_op of %operand4
+    %defOp0 = pdl_interp.get_defining_op of %operand0 : !pdl.value
+    %defOp4 = pdl_interp.get_defining_op of %operand4 : !pdl.value
     pdl_interp.are_equal %defOp0, %defOp4 : !pdl.operation -> ^pat2, ^end
 
   ^pat2:
@@ -438,7 +438,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -476,8 +476,8 @@ module @patterns {
   ^pat1:
     %result0 = pdl_interp.get_result 0 of %root
     %result4 = pdl_interp.get_result 4 of %root
-    %result0_type = pdl_interp.get_value_type of %result0
-    %result4_type = pdl_interp.get_value_type of %result4
+    %result0_type = pdl_interp.get_value_type of %result0 : !pdl.type
+    %result4_type = pdl_interp.get_value_type of %result4 : !pdl.type
     pdl_interp.are_equal %result0_type, %result4_type : !pdl.type -> ^pat2, ^end
 
   ^pat2:
@@ -489,7 +489,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -513,7 +513,7 @@ module @ir attributes { test.get_result_1 } {
 // Fully tested within the tests for other operations.
 
 //===----------------------------------------------------------------------===//
-// pdl_interp::InferredTypeOp
+// pdl_interp::InferredTypesOp
 //===----------------------------------------------------------------------===//
 
 // Fully tested within the tests for other operations.
@@ -549,7 +549,7 @@ module @patterns {
       pdl_interp.finalize
     }
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -582,7 +582,7 @@ module @patterns {
   module @rewriters {
     func @success(%root : !pdl.operation) {
       %operand = pdl_interp.get_operand 0 of %root
-      pdl_interp.replace %root with (%operand)
+      pdl_interp.replace %root with (%operand : !pdl.value)
       pdl_interp.finalize
     }
   }
@@ -622,7 +622,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -657,7 +657,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -693,7 +693,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -728,7 +728,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -768,7 +768,7 @@ module @patterns {
 
   module @rewriters {
     func @success(%root : !pdl.operation) {
-      %op = pdl_interp.create_operation "test.success"() -> ()
+      %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
     }

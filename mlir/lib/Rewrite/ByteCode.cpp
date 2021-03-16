@@ -208,7 +208,7 @@ private:
   void generate(pdl_interp::GetOperandOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::GetResultOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::GetValueTypeOp op, ByteCodeWriter &writer);
-  void generate(pdl_interp::InferredTypeOp op, ByteCodeWriter &writer);
+  void generate(pdl_interp::InferredTypesOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::IsNotNullOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::RecordMatchOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::ReplaceOp op, ByteCodeWriter &writer);
@@ -487,7 +487,7 @@ void Generator::generate(Operation *op, ByteCodeWriter &writer) {
             pdl_interp::GetAttributeOp, pdl_interp::GetAttributeTypeOp,
             pdl_interp::GetDefiningOpOp, pdl_interp::GetOperandOp,
             pdl_interp::GetResultOp, pdl_interp::GetValueTypeOp,
-            pdl_interp::InferredTypeOp, pdl_interp::IsNotNullOp,
+            pdl_interp::InferredTypesOp, pdl_interp::IsNotNullOp,
             pdl_interp::RecordMatchOp, pdl_interp::ReplaceOp,
             pdl_interp::SwitchAttributeOp, pdl_interp::SwitchTypeOp,
             pdl_interp::SwitchOperandCountOp, pdl_interp::SwitchOperationNameOp,
@@ -615,9 +615,9 @@ void Generator::generate(pdl_interp::GetValueTypeOp op,
                          ByteCodeWriter &writer) {
   writer.append(OpCode::GetValueType, op.result(), op.value());
 }
-void Generator::generate(pdl_interp::InferredTypeOp op,
+void Generator::generate(pdl_interp::InferredTypesOp op,
                          ByteCodeWriter &writer) {
-  // InferType maps to a null type as a marker for inferring a result type.
+  // InferType maps to a null type as a marker for inferring result types.
   getMemIndex(op.type()) = getMemIndex(Type());
 }
 void Generator::generate(pdl_interp::IsNotNullOp op, ByteCodeWriter &writer) {
@@ -980,16 +980,12 @@ void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
         state.name.getAbstractOperation()->getInterface<InferTypeOpInterface>();
 
     // TODO: Handle failure.
-    SmallVector<Type, 2> inferredTypes;
+    state.types.clear();
     if (failed(concept->inferReturnTypes(
             state.getContext(), state.location, state.operands,
             state.attributes.getDictionary(state.getContext()), state.regions,
-            inferredTypes)))
+            state.types)))
       return;
-
-    for (unsigned i = 0, e = state.types.size(); i != e; ++i)
-      if (!state.types[i])
-        state.types[i] = inferredTypes[i];
   }
   Operation *resultOp = rewriter.createOperation(state);
   memory[memIndex] = resultOp;
