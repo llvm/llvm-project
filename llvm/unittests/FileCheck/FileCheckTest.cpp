@@ -1343,6 +1343,9 @@ TEST_F(FileCheckTest, ParsePattern) {
   // Collision with numeric variable.
   EXPECT_TRUE(Tester.parsePattern("[[FOO:]]"));
 
+  // Invalid use of string variable.
+  EXPECT_TRUE(Tester.parsePattern("[[FOO-BAR]]"));
+
   // Valid use of string variable.
   EXPECT_FALSE(Tester.parsePattern("[[BAR]]"));
 
