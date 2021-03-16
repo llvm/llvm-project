@@ -210,10 +210,38 @@ C++1z Feature Support
 Objective-C Language Changes in Clang
 -------------------------------------
 
-OpenCL C Language Changes in Clang
-----------------------------------
+OpenCL Kernel Language Changes in Clang
+---------------------------------------
 
-...
+- Improved online documentation: :doc:`UsersManual` and :doc:`OpenCLSupport`
+  pages.
+- Added ``-cl-std=CL3.0`` and predefined version macro for OpenCL 3.0.
+- Added ``-cl-std=CL1.0`` and mapped to the existing OpenCL 1.0 functionality.
+- Improved OpenCL extension handling per target.
+- Added clang extension for function pointers ``__cl_clang_function_pointers``
+  and variadic functions ``__cl_clang_variadic_functions``, more details can be
+  found in :doc:`LanguageExtensions`.
+- Removed extensions without kernel language changes:
+  ``cl_khr_select_fprounding_mode``, ``cl_khr_gl_sharing``, ``cl_khr_icd``,
+  ``cl_khr_gl_event``, ``cl_khr_d3d10_sharing``, ``cl_khr_context_abort``,
+  ``cl_khr_d3d11_sharing``, ``cl_khr_dx9_media_sharing``,
+  ``cl_khr_image2d_from_buffer``, ``cl_khr_initialize_memory``,
+  ``cl_khr_gl_depth_images``, ``cl_khr_spir``, ``cl_khr_egl_event``,
+  ``cl_khr_egl_image``, ``cl_khr_terminate_context``.
+- Improved diagnostics for  unevaluated ``vec_step`` expression.
+- Allow nested pointers (e.g. pointer-to-pointer) kernel arguments beyond OpenCL
+  1.2.
+- Added ``global_device`` and ``global_host`` address spaces for USM
+  allocations.
+
+Miscellaneous improvements in C++ for OpenCL support:
+
+- Added diagnostics for pointers to member functions and references to
+  functions.
+- Added support of ``vec_step`` builtin.
+- Fixed ICE on address spaces with forwarding references and templated copy
+  constructors.
+- Removed warning for variadic macro use.
 
 ABI Changes in Clang
 --------------------
