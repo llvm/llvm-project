@@ -878,6 +878,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     SingleDecl = ParseObjCMethodDefinition();
     break;
   case tok::code_completion:
+    cutOffParsing();
     if (CurParsedObjCImpl) {
       // Code-complete Objective-C methods even without leading '-'/'+' prefix.
       Actions.CodeCompleteObjCMethodDecl(getCurScope(),
@@ -887,7 +888,6 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     Actions.CodeCompleteOrdinaryName(
         getCurScope(),
         CurParsedObjCImpl ? Sema::PCC_ObjCImplementation : Sema::PCC_Namespace);
-    cutOffParsing();
     return nullptr;
   case tok::kw_import:
     SingleDecl = ParseModuleImport(SourceLocation());
@@ -2122,21 +2122,21 @@ SourceLocation Parser::handleUnexpectedCodeCompletionToken() {
 
   for (Scope *S = getCurScope(); S; S = S->getParent()) {
     if (S->getFlags() & Scope::FnScope) {
+      cutOffParsing();
       Actions.CodeCompleteOrdinaryName(getCurScope(),
                                        Sema::PCC_RecoveryInFunction);
-      cutOffParsing();
       return PrevTokLocation;
     }
 
     if (S->getFlags() & Scope::ClassScope) {
-      Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Class);
       cutOffParsing();
+      Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Class);
       return PrevTokLocation;
     }
   }
 
-  Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Namespace);
   cutOffParsing();
+  Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Namespace);
   return PrevTokLocation;
 }
 
@@ -2460,8 +2460,8 @@ bool Parser::ParseModuleName(
   while (true) {
     if (!Tok.is(tok::identifier)) {
       if (Tok.is(tok::code_completion)) {
-        Actions.CodeCompleteModuleImport(UseLoc, Path);
         cutOffParsing();
+        Actions.CodeCompleteModuleImport(UseLoc, Path);
         return true;
       }
 
