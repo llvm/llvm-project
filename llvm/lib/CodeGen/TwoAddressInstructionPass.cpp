@@ -1357,11 +1357,9 @@ void
 TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
                                             TiedPairList &TiedPairs,
                                             unsigned &Dist) {
-  bool IsEarlyClobber = false;
-  for (unsigned tpi = 0, tpe = TiedPairs.size(); tpi != tpe; ++tpi) {
-    const MachineOperand &DstMO = MI->getOperand(TiedPairs[tpi].second);
-    IsEarlyClobber |= DstMO.isEarlyClobber();
-  }
+  bool IsEarlyClobber = llvm::find_if(TiedPairs, [MI](auto const &TP) {
+                          return MI->getOperand(TP.second).isEarlyClobber();
+                        }) != TiedPairs.end();
 
   bool RemovedKillFlag = false;
   bool AllUsesCopied = true;
@@ -1369,9 +1367,9 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
   SlotIndex LastCopyIdx;
   Register RegB = 0;
   unsigned SubRegB = 0;
-  for (unsigned tpi = 0, tpe = TiedPairs.size(); tpi != tpe; ++tpi) {
-    unsigned SrcIdx = TiedPairs[tpi].first;
-    unsigned DstIdx = TiedPairs[tpi].second;
+  for (auto &TP : TiedPairs) {
+    unsigned SrcIdx = TP.first;
+    unsigned DstIdx = TP.second;
 
     const MachineOperand &DstMO = MI->getOperand(DstIdx);
     Register RegA = DstMO.getReg();
