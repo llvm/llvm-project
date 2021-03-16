@@ -1057,40 +1057,23 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
     if (!State.isConflict())
       continue;
 
-    /// Create and insert a new instruction which will represent the base of
-    /// the given instruction 'I'.
-    auto MakeBaseInstPlaceholder = [](Instruction *I) -> Instruction* {
+    auto getMangledName = [](Instruction *I) -> std::string {
       if (isa<PHINode>(I)) {
-        BasicBlock *BB = I->getParent();
-        int NumPreds = pred_size(BB);
-        assert(NumPreds > 0 && "how did we reach here");
-        std::string Name = suffixed_name_or(I, ".base", "base_phi");
-        return PHINode::Create(I->getType(), NumPreds, Name, I);
-      } else if (SelectInst *SI = dyn_cast<SelectInst>(I)) {
-        // The undef will be replaced later
-        UndefValue *Undef = UndefValue::get(SI->getType());
-        std::string Name = suffixed_name_or(I, ".base", "base_select");
-        return SelectInst::Create(SI->getCondition(), Undef, Undef, Name, SI);
-      } else if (auto *EE = dyn_cast<ExtractElementInst>(I)) {
-        UndefValue *Undef = UndefValue::get(EE->getVectorOperand()->getType());
-        std::string Name = suffixed_name_or(I, ".base", "base_ee");
-        return ExtractElementInst::Create(Undef, EE->getIndexOperand(), Name,
-                                          EE);
-      } else if (auto *IE = dyn_cast<InsertElementInst>(I)) {
-        UndefValue *VecUndef = UndefValue::get(IE->getOperand(0)->getType());
-        UndefValue *ScalarUndef = UndefValue::get(IE->getOperand(1)->getType());
-        std::string Name = suffixed_name_or(I, ".base", "base_ie");
-        return InsertElementInst::Create(VecUndef, ScalarUndef,
-                                         IE->getOperand(2), Name, IE);
+        return suffixed_name_or(I, ".base", "base_phi");
+      } else if (isa<SelectInst>(I)) {
+        return suffixed_name_or(I, ".base", "base_select");
+      } else if (isa<ExtractElementInst>(I)) {
+        return suffixed_name_or(I, ".base", "base_ee");
+      } else if (isa<InsertElementInst>(I)) {
+        return suffixed_name_or(I, ".base", "base_ie");
       } else {
-        auto *SV = cast<ShuffleVectorInst>(I);
-        UndefValue *VecUndef = UndefValue::get(SV->getOperand(0)->getType());
-        std::string Name = suffixed_name_or(I, ".base", "base_sv");
-        return new ShuffleVectorInst(VecUndef, VecUndef, SV->getShuffleMask(),
-                                     Name, SV);
+        return suffixed_name_or(I, ".base", "base_sv");
       }
     };
-    Instruction *BaseInst = MakeBaseInstPlaceholder(I);
+
+    Instruction *BaseInst = I->clone();
+    BaseInst->insertBefore(I);
+    BaseInst->setName(getMangledName(I));
     // Add metadata marking this as a base value
     BaseInst->setMetadata("is_base_value", MDNode::get(I->getContext(), {}));
     States[I] = BDVState(I, BDVState::Conflict, BaseInst);
@@ -1145,26 +1128,21 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
 
     if (PHINode *BasePHI = dyn_cast<PHINode>(State.getBaseValue())) {
       PHINode *PN = cast<PHINode>(BDV);
-      unsigned NumPHIValues = PN->getNumIncomingValues();
+      const unsigned NumPHIValues = PN->getNumIncomingValues();
+
+      // The IR verifier requires phi nodes with multiple entries from the
+      // same basic block to have the same incoming value for each of those
+      // entries.  Since we're inserting bitcasts in the loop, make sure we
+      // do so at least once per incoming block.
+      DenseMap<BasicBlock *, Value*> BlockToValue;
       for (unsigned i = 0; i < NumPHIValues; i++) {
         Value *InVal = PN->getIncomingValue(i);
         BasicBlock *InBB = PN->getIncomingBlock(i);
-
-        // If we've already seen InBB, add the same incoming value
-        // we added for it earlier.  The IR verifier requires phi
-        // nodes with multiple entries from the same basic block
-        // to have the same incoming value for each of those
-        // entries.  If we don't do this check here and basephi
-        // has a different type than base, we'll end up adding two
-        // bitcasts (and hence two distinct values) as incoming
-        // values for the same basic block.
-
-        int BlockIndex = BasePHI->getBasicBlockIndex(InBB);
-        if (BlockIndex != -1) {
-          Value *OldBase = BasePHI->getIncomingValue(BlockIndex);
-          BasePHI->addIncoming(OldBase, InBB);
-
+        if (!BlockToValue.count(InBB))
+          BlockToValue[InBB] = getBaseForInput(InVal, InBB->getTerminator());
+        else {
 #ifndef NDEBUG
+          Value *OldBase = BlockToValue[InBB];
           Value *Base = getBaseForInput(InVal, nullptr);
           // In essence this assert states: the only way two values
           // incoming from the same basic block may be different is by
@@ -1175,16 +1153,10 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
           assert(Base->stripPointerCasts() == OldBase->stripPointerCasts() &&
                  "Sanity -- findBaseOrBDV should be pure!");
 #endif
-          continue;
         }
-
-        // Find the instruction which produces the base for each input.  We may
-        // need to insert a bitcast in the incoming block.
-        // TODO: Need to split critical edges if insertion is needed
-        Value *Base = getBaseForInput(InVal, InBB->getTerminator());
-        BasePHI->addIncoming(Base, InBB);
+        Value *Base = BlockToValue[InBB];
+        BasePHI->setIncomingValue(i, Base);
       }
-      assert(BasePHI->getNumIncomingValues() == NumPHIValues);
     } else if (SelectInst *BaseSI =
                    dyn_cast<SelectInst>(State.getBaseValue())) {
       SelectInst *SI = cast<SelectInst>(BDV);
@@ -1219,6 +1191,11 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
       UpdateOperand(0); // vector operand
       if (!BdvSV->isZeroEltSplat())
         UpdateOperand(1); // vector operand
+      else {
+        // Never read, so just use undef
+        Value *InVal = BdvSV->getOperand(1);
+        BaseSV->setOperand(1, UndefValue::get(InVal->getType()));
+      }
     }
   }
 
