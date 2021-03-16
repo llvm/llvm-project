@@ -19,7 +19,7 @@ define i32 addrspace(1)* @test1(i8 addrspace(1)* %base1, <2 x i64> %offsets) gc 
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast i8 addrspace(1)* [[PHI]] to i32 addrspace(1)*
 ; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x i32 addrspace(1)*> zeroinitializer, i32 addrspace(1)* [[CAST]], i32 0, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32 addrspace(1)*> poison, i32 addrspace(1)* [[BASE_I32]], i32 0
-; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x i32 addrspace(1)*> [[DOTSPLATINSERT_BASE]], <2 x i32 addrspace(1)*> zeroinitializer, <2 x i32> zeroinitializer, !is_base_value !0
+; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x i32 addrspace(1)*> [[DOTSPLATINSERT_BASE]], <2 x i32 addrspace(1)*> undef, <2 x i32> zeroinitializer, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32 addrspace(1)*> [[DOTSPLATINSERT]], <2 x i32 addrspace(1)*> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC:%.*]] = getelementptr i32, <2 x i32 addrspace(1)*> [[DOTSPLAT]], <2 x i64> [[OFFSETS:%.*]]
 ; CHECK-NEXT:    [[PTR_BASE:%.*]] = extractelement <2 x i32 addrspace(1)*> [[DOTSPLAT_BASE]], i32 1, !is_base_value !0
@@ -54,7 +54,7 @@ define i32 addrspace(1)* @test2(i8 addrspace(1)* %base, <2 x i64> %offsets) gc "
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast i8 addrspace(1)* [[BASE]] to i32 addrspace(1)*
 ; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x i32 addrspace(1)*> zeroinitializer, i32 addrspace(1)* [[CAST]], i32 0, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32 addrspace(1)*> poison, i32 addrspace(1)* [[BASE_I32]], i32 0
-; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x i32 addrspace(1)*> [[DOTSPLATINSERT_BASE]], <2 x i32 addrspace(1)*> zeroinitializer, <2 x i32> zeroinitializer, !is_base_value !0
+; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x i32 addrspace(1)*> [[DOTSPLATINSERT_BASE]], <2 x i32 addrspace(1)*> undef, <2 x i32> zeroinitializer, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32 addrspace(1)*> [[DOTSPLATINSERT]], <2 x i32 addrspace(1)*> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC:%.*]] = getelementptr i32, <2 x i32 addrspace(1)*> [[DOTSPLAT]], <2 x i64> [[OFFSETS:%.*]]
 ; CHECK-NEXT:    [[PTR_BASE:%.*]] = extractelement <2 x i32 addrspace(1)*> [[DOTSPLAT_BASE]], i32 1, !is_base_value !0
@@ -102,7 +102,7 @@ define i32 addrspace(1)* @test4(i8 addrspace(1)* %base, <2 x i64> %offsets) gc "
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast i8 addrspace(1)* [[BASE]] to i32 addrspace(1)*
 ; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x i32 addrspace(1)*> zeroinitializer, i32 addrspace(1)* [[CAST]], i32 0, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32 addrspace(1)*> poison, i32 addrspace(1)* [[BASE_I32]], i32 0
-; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x i32 addrspace(1)*> [[DOTSPLATINSERT_BASE]], <2 x i32 addrspace(1)*> zeroinitializer, <2 x i32> zeroinitializer, !is_base_value !0
+; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x i32 addrspace(1)*> [[DOTSPLATINSERT_BASE]], <2 x i32 addrspace(1)*> undef, <2 x i32> zeroinitializer, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32 addrspace(1)*> [[DOTSPLATINSERT]], <2 x i32 addrspace(1)*> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC:%.*]] = getelementptr i32, <2 x i32 addrspace(1)*> [[DOTSPLAT]], <2 x i64> [[OFFSETS:%.*]]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(<2 x i32 addrspace(1)*> [[VEC]], <2 x i32 addrspace(1)*> [[DOTSPLAT_BASE]]) ]

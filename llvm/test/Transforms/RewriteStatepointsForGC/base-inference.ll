@@ -227,11 +227,9 @@ define <2 x i8 addrspace(1)*> @test_shuffle_broadcast(i8 addrspace(1)* %a) gc "s
 ; CHECK-LABEL: @test_shuffle_broadcast(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IE:%.*]] = insertelement <2 x i8 addrspace(1)*> zeroinitializer, i8 addrspace(1)* [[A:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_BASE:%.*]] = shufflevector <2 x i8 addrspace(1)*> [[IE]], <2 x i8 addrspace(1)*> zeroinitializer, <2 x i32> zeroinitializer, !is_base_value !0
 ; CHECK-NEXT:    [[BROADCAST:%.*]] = shufflevector <2 x i8 addrspace(1)*> [[IE]], <2 x i8 addrspace(1)*> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(<2 x i8 addrspace(1)*> [[BROADCAST]], <2 x i8 addrspace(1)*> [[BROADCAST_BASE]]) ]
-; CHECK-NEXT:    [[BROADCAST_RELOCATED:%.*]] = call coldcc <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
-; CHECK-NEXT:    [[BROADCAST_BASE_RELOCATED:%.*]] = call coldcc <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(<2 x i8 addrspace(1)*> [[BROADCAST]]) ]
+; CHECK-NEXT:    [[BROADCAST_RELOCATED:%.*]] = call coldcc <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    ret <2 x i8 addrspace(1)*> [[BROADCAST_RELOCATED]]
 ;
 entry:
