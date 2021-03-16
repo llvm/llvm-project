@@ -1046,3 +1046,7 @@ global_atomic_add_f32 v1, v0, v2, s[0:1] glc ; encoding: [0x00,0x80,0x35,0xdd,0x
 // GFX1010: error: instruction not supported on this GPU
 // GFX90A: global_atomic_pk_add_f16  v0, v[0:1], v2, off glc ; encoding: [0x00,0x80,0x39,0xdd,0x00,0x02,0x7f,0x00]
 global_atomic_pk_add_f16 v0, v[0:1], v2, off glc
+
+// NOT-GFX90A: error: scc modifier is not supported on this GPU
+// GFX90A: buffer_atomic_add v4, off, s[8:11], s3 scc ; encoding: [0x00,0x80,0x08,0xe1,0x00,0x04,0x02,0x03]
+buffer_atomic_add v4, off, s[8:11], s3 scc

@@ -679,7 +679,7 @@ class MUBUF_Atomic_Pseudo<string opName,
   let has_glc = 0;
   let has_dlc = 0;
   let has_tfe = 0;
-  let has_sccb = 0;
+  let has_sccb = 1;
   let maybeAtomic = 1;
   let AsmMatchConverter = "cvtMubufAtomic";
 }
@@ -2259,7 +2259,8 @@ defm TBUFFER_STORE_FORMAT_XYZW : MTBUF_Real_AllAddr_gfx6_gfx7_gfx10<0x007>;
 // GFX8, GFX9 (VI).
 //===----------------------------------------------------------------------===//
 
-class MUBUF_Real_Base_vi <bits<7> op, MUBUF_Pseudo ps, int Enc> :
+class MUBUF_Real_Base_vi <bits<7> op, MUBUF_Pseudo ps, int Enc,
+                          bit has_sccb = ps.has_sccb> :
   MUBUF_Real<ps>,
   Enc64,
   SIMCInstr<ps.PseudoInstr, Enc>,
@@ -2270,7 +2271,7 @@ class MUBUF_Real_Base_vi <bits<7> op, MUBUF_Pseudo ps, int Enc> :
   let Inst{12}    = ps.offen;
   let Inst{13}    = ps.idxen;
   let Inst{14}    = !if(ps.has_glc, cpol{CPolBit.GLC}, ps.glc_value);
-  let Inst{15}    = !if(ps.has_sccb, cpol{CPolBit.SCC}, ps.sccb_value);
+  let Inst{15}    = !if(has_sccb, cpol{CPolBit.SCC}, ps.sccb_value);
   let Inst{16}    = ps.lds;
   let Inst{17}    = !if(ps.has_slc, cpol{CPolBit.SLC}, ?);
   let Inst{24-18} = op;
@@ -2281,26 +2282,28 @@ class MUBUF_Real_Base_vi <bits<7> op, MUBUF_Pseudo ps, int Enc> :
   let Inst{63-56} = !if(ps.has_soffset, soffset, ?);
 }
 
-class MUBUF_Real_vi <bits<7> op, MUBUF_Pseudo ps> :
-  MUBUF_Real_Base_vi<op, ps, SIEncodingFamily.VI> {
+class MUBUF_Real_vi <bits<7> op, MUBUF_Pseudo ps, bit has_sccb = ps.has_sccb> :
+  MUBUF_Real_Base_vi<op, ps, SIEncodingFamily.VI, has_sccb> {
   let AssemblerPredicate = isGFX8GFX9NotGFX90A;
   let DecoderNamespace = "GFX8";
 
   let Inst{55}    = !if(ps.has_tfe, tfe, ?);
 }
 
-class MUBUF_Real_gfx90a <bits<7> op, MUBUF_Pseudo ps> :
-  MUBUF_Real_Base_vi<op, ps, SIEncodingFamily.GFX90A> {
+class MUBUF_Real_gfx90a <bits<7> op, MUBUF_Pseudo ps,
+                         bit has_sccb = ps.has_sccb> :
+  MUBUF_Real_Base_vi<op, ps, SIEncodingFamily.GFX90A, has_sccb> {
   let AssemblerPredicate = isGFX90APlus;
   let DecoderNamespace = "GFX90A";
-  let AsmString = ps.Mnemonic # !subst("$tfe", "", ps.AsmOperands);
+  let AsmString = ps.Mnemonic # !subst("$sccb", !if(has_sccb, "$sccb",""),
+                                !subst("$tfe", "", ps.AsmOperands));
 
   let Inst{55}    = acc;
 }
 
 multiclass MUBUF_Real_vi_gfx90a<bits<7> op, MUBUF_Pseudo ps> {
   def _vi :     MUBUF_Real_vi<op, ps>;
-  def _gfx90a : MUBUF_Real_gfx90a<op, ps>;
+  def _gfx90a : MUBUF_Real_gfx90a<op, ps, !and(ps.has_sccb,!not(ps.FPAtomic))>;
 }
 
 multiclass MUBUF_Real_AllAddr_vi<bits<7> op> {
@@ -2483,7 +2486,7 @@ defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Real_Atomic_vi <0x4e>;
 
 } // End SubtargetPredicate = HasAtomicFaddInsts
 
-let SubtargetPredicate = isGFX90APlus, AssemblerPredicate = isGFX90APlus in {
+let SubtargetPredicate = isGFX90APlus in {
   defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Real_Atomic_vi<0x4f>;
   defm BUFFER_ATOMIC_MIN_F64 : MUBUF_Real_Atomic_vi<0x50>;
   defm BUFFER_ATOMIC_MAX_F64 : MUBUF_Real_Atomic_vi<0x51>;
