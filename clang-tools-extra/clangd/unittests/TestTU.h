@@ -78,6 +78,7 @@ struct TestTU {
 
   // By default, build() will report Error diagnostics as GTest errors.
   // Suppress this behavior by adding an 'error-ok' comment to the code.
+  // The result will always have getDiagnostics() populated.
   ParsedAST build() const;
   std::shared_ptr<const PreambleData>
   preamble(PreambleParsedCallback PreambleCallback = nullptr) const;

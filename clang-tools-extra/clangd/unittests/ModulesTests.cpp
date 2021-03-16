@@ -61,7 +61,7 @@ TEST(Modules, PreambleBuildVisibility) {
       header "module.h"
     }
 )modulemap";
-  EXPECT_TRUE(TU.build().getDiagnostics().empty());
+  EXPECT_TRUE(TU.build().getDiagnostics()->empty());
 }
 
 TEST(Modules, Diagnostic) {
