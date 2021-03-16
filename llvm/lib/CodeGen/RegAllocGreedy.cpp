@@ -471,13 +471,12 @@ private:
   bool shouldEvict(LiveInterval &A, bool, LiveInterval &B, bool) const;
   bool canEvictInterference(LiveInterval &, MCRegister, bool, EvictionCost &,
                             const SmallVirtRegSet &) const;
-  bool canEvictInterferenceInRange(const LiveInterval &VirtReg,
-                                   MCRegister PhysReg, SlotIndex Start,
-                                   SlotIndex End, EvictionCost &MaxCost) const;
+  bool canEvictInterferenceInRange(LiveInterval &VirtReg, MCRegister PhysReg,
+                                   SlotIndex Start, SlotIndex End,
+                                   EvictionCost &MaxCost) const;
   MCRegister getCheapestEvicteeWeight(const AllocationOrder &Order,
-                                      const LiveInterval &VirtReg,
-                                      SlotIndex Start, SlotIndex End,
-                                      float *BestEvictWeight) const;
+                                      LiveInterval &VirtReg, SlotIndex Start,
+                                      SlotIndex End, float *BestEvictWeight);
   void evictInterference(LiveInterval &, MCRegister,
                          SmallVectorImpl<Register> &);
   bool mayRecolorAllInterferences(MCRegister PhysReg, LiveInterval &VirtReg,
@@ -980,7 +979,7 @@ bool RAGreedy::canEvictInterference(
 /// \param MaxCost Only look for cheaper candidates and update with new cost
 ///                when returning true.
 /// \return True when interference can be evicted cheaper than MaxCost.
-bool RAGreedy::canEvictInterferenceInRange(const LiveInterval &VirtReg,
+bool RAGreedy::canEvictInterferenceInRange(LiveInterval &VirtReg,
                                            MCRegister PhysReg, SlotIndex Start,
                                            SlotIndex End,
                                            EvictionCost &MaxCost) const {
@@ -988,7 +987,6 @@ bool RAGreedy::canEvictInterferenceInRange(const LiveInterval &VirtReg,
 
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
-    Q.collectInterferingVRegs();
 
     // Check if any interfering live range is heavier than MaxWeight.
     for (const LiveInterval *Intf : reverse(Q.interferingVRegs())) {
@@ -1033,9 +1031,9 @@ bool RAGreedy::canEvictInterferenceInRange(const LiveInterval &VirtReg,
 /// \return The PhysReg which is the best candidate for eviction and the
 /// eviction cost in BestEvictweight
 MCRegister RAGreedy::getCheapestEvicteeWeight(const AllocationOrder &Order,
-                                              const LiveInterval &VirtReg,
+                                              LiveInterval &VirtReg,
                                               SlotIndex Start, SlotIndex End,
-                                              float *BestEvictweight) const {
+                                              float *BestEvictweight) {
   EvictionCost BestEvictCost;
   BestEvictCost.setMax();
   BestEvictCost.MaxWeight = VirtReg.weight();
@@ -1060,7 +1058,7 @@ MCRegister RAGreedy::getCheapestEvicteeWeight(const AllocationOrder &Order,
 /// returned true.
 void RAGreedy::evictInterference(LiveInterval &VirtReg, MCRegister PhysReg,
                                  SmallVectorImpl<Register> &NewVRegs) {
-  // Make sure th5at VirtReg has a cascade number, and assign that cascade
+  // Make sure that VirtReg has a cascade number, and assign that cascade
   // number to every evicted register. These live ranges than then only be
   // evicted by a newer cascade, preventing infinite loops.
   unsigned Cascade = ExtraRegInfo[VirtReg.reg()].Cascade;
@@ -1558,9 +1556,25 @@ bool RAGreedy::splitCanCauseLocalSpill(unsigned VirtRegToSplit,
       return false;
   }
 
-  // The local interval is not able to find non interferencing assignment
-  // and not able to evict a less worthy interval, therfore, it can cause a
-  // spill.
+  // Check if the local interval will evict a cheaper interval.
+  float CheapestEvictWeight = 0;
+  MCRegister FutureEvictedPhysReg = getCheapestEvicteeWeight(
+      Order, LIS->getInterval(VirtRegToSplit), Cand.Intf.first(),
+      Cand.Intf.last(), &CheapestEvictWeight);
+
+  // Have we found an interval that can be evicted?
+  if (FutureEvictedPhysReg) {
+    float splitArtifactWeight =
+        VRAI->futureWeight(LIS->getInterval(VirtRegToSplit),
+                           Cand.Intf.first().getPrevIndex(), Cand.Intf.last());
+    // Will the weight of the local interval be higher than the cheapest evictee
+    // weight? If so it will evict it and will not cause a spill.
+    if (splitArtifactWeight >= 0 && splitArtifactWeight > CheapestEvictWeight)
+      return false;
+  }
+
+  // The local interval is not able to find non interferencing assignment and
+  // not able to evict a less worthy interval, therfore, it can cause a spill.
   return true;
 }
 
