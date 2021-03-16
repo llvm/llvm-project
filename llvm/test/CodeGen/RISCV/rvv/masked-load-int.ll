@@ -170,7 +170,7 @@ declare <vscale x 8 x i32> @llvm.masked.load.nxv8i32(<vscale x 8 x i32>*, i32, <
 define <vscale x 8 x i64> @masked_load_nxv8i64(<vscale x 8 x i64>* %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv8i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e64,m8,tu,mu
+; CHECK-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <vscale x 8 x i64> @llvm.masked.load.nxv8i64(<vscale x 8 x i64>* %a, i32 8, <vscale x 8 x i1> %mask, <vscale x 8 x i64> undef)
@@ -203,7 +203,7 @@ declare <vscale x 16 x i16> @llvm.masked.load.nxv16i16(<vscale x 16 x i16>*, i32
 define <vscale x 16 x i32> @masked_load_nxv16i32(<vscale x 16 x i32>* %a, <vscale x 16 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32,m8,tu,mu
+; CHECK-NEXT:    vsetvli a1, zero, e32,m8,ta,mu
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <vscale x 16 x i32> @llvm.masked.load.nxv16i32(<vscale x 16 x i32>* %a, i32 4, <vscale x 16 x i1> %mask, <vscale x 16 x i32> undef)
@@ -225,7 +225,7 @@ declare <vscale x 32 x i8> @llvm.masked.load.nxv32i8(<vscale x 32 x i8>*, i32, <
 define <vscale x 32 x i16> @masked_load_nxv32i16(<vscale x 32 x i16>* %a, <vscale x 32 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv32i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16,m8,tu,mu
+; CHECK-NEXT:    vsetvli a1, zero, e16,m8,ta,mu
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <vscale x 32 x i16> @llvm.masked.load.nxv32i16(<vscale x 32 x i16>* %a, i32 2, <vscale x 32 x i1> %mask, <vscale x 32 x i16> undef)
@@ -236,7 +236,7 @@ declare <vscale x 32 x i16> @llvm.masked.load.nxv32i16(<vscale x 32 x i16>*, i32
 define <vscale x 64 x i8> @masked_load_nxv64i8(<vscale x 64 x i8>* %a, <vscale x 64 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8,m8,tu,mu
+; CHECK-NEXT:    vsetvli a1, zero, e8,m8,ta,mu
 ; CHECK-NEXT:    vle8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8(<vscale x 64 x i8>* %a, i32 1, <vscale x 64 x i1> %mask, <vscale x 64 x i8> undef)
