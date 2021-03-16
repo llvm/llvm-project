@@ -963,7 +963,7 @@ def PDLInterp_SwitchOperandCountOp
 
   let builders = [
     OpBuilder<(ins "Value":$operation, "ArrayRef<int32_t>":$counts,
-      "Block *":$defaultDest, "BlockRange":$dests), [{
+                   "Block *":$defaultDest, "BlockRange":$dests), [{
     build($_builder, $_state, operation, $_builder.getI32VectorAttr(counts),
           defaultDest, dests);
   }]>];
@@ -1033,7 +1033,7 @@ def PDLInterp_SwitchResultCountOp
 
   let builders = [
     OpBuilder<(ins "Value":$operation, "ArrayRef<int32_t>":$counts,
-      "Block *":$defaultDest, "BlockRange":$dests), [{
+                   "Block *":$defaultDest, "BlockRange":$dests), [{
     build($_builder, $_state, operation, $_builder.getI32VectorAttr(counts),
           defaultDest, dests);
   }]>];

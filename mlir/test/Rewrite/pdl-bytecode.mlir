@@ -40,6 +40,38 @@ module @ir attributes { test.apply_constraint_1 } {
 
 // -----
 
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    %results = pdl_interp.get_results of %root : !pdl.range<value>
+    %types = pdl_interp.get_value_type of %results : !pdl.range<type>
+    pdl_interp.apply_constraint "multi_entity_var_constraint"(%results, %types : !pdl.range<value>, !pdl.range<type>) -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%root : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.replaced_by_pattern"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.apply_constraint_2
+// CHECK-NOT: "test.replaced_by_pattern"
+// CHECK: "test.replaced_by_pattern"
+module @ir attributes { test.apply_constraint_2 } {
+  "test.failure_op"() { test_attr } : () -> ()
+  "test.success_op"() : () -> (i32, i64)
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // pdl_interp::ApplyRewriteOp
 //===----------------------------------------------------------------------===//
@@ -103,6 +135,68 @@ module @ir attributes { test.apply_rewrite_2 } {
 
 // -----
 
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.op" -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%root : !pdl.operation) {
+      %operands, %types = pdl_interp.apply_rewrite "var_creator"(%root : !pdl.operation) : !pdl.range<value>, !pdl.range<type>
+      %op = pdl_interp.create_operation "test.success"(%operands : !pdl.range<value>) -> (%types : !pdl.range<type>)
+      pdl_interp.replace %root with (%operands : !pdl.range<value>)
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.apply_rewrite_3
+// CHECK: %[[OPERAND:.*]] = "test.producer"
+// CHECK: "test.success"(%[[OPERAND]]) : (i32) -> i32
+// CHECK: "test.consumer"(%[[OPERAND]])
+module @ir attributes { test.apply_rewrite_3 } {
+  %first_operand = "test.producer"() : () -> (i32)
+  %operand = "test.op"(%first_operand) : (i32) -> (i32)
+  "test.consumer"(%operand) : (i32) -> ()
+}
+
+// -----
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.op" -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%root : !pdl.operation) {
+      %type = pdl_interp.apply_rewrite "type_creator" : !pdl.type
+      %newOp = pdl_interp.create_operation "test.success" -> (%type : !pdl.type)
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.apply_rewrite_4
+// CHECK: "test.success"() : () -> f32
+module @ir attributes { test.apply_rewrite_4 } {
+  "test.op"() : () -> ()
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // pdl_interp::AreEqualOp
 //===----------------------------------------------------------------------===//
@@ -133,6 +227,40 @@ module @patterns {
 // CHECK: "test.success"
 module @ir attributes { test.are_equal_1 } {
   "test.op"() { test_attr } : () -> ()
+}
+
+// -----
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    %const_types = pdl_interp.create_types [i32, i64]
+    %results = pdl_interp.get_results of %root : !pdl.range<value>
+    %result_types = pdl_interp.get_value_type of %results : !pdl.range<type>
+    pdl_interp.are_equal %result_types, %const_types : !pdl.range<type> -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%root : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.are_equal_2
+// CHECK: "test.not_equal"
+// CHECK: "test.success"
+// CHECK-NOT: "test.op"
+module @ir attributes { test.are_equal_2 } {
+  "test.not_equal"() : () -> (i32)
+  "test.op"() : () -> (i32, i64)
 }
 
 // -----
@@ -211,7 +339,10 @@ module @ir attributes { test.check_attribute_1 } {
 
 module @patterns {
   func @matcher(%root : !pdl.operation) {
-    pdl_interp.check_operand_count of %root is 1 -> ^pat, ^end
+    pdl_interp.check_operand_count of %root is at_least 1 -> ^exact_check, ^end
+
+  ^exact_check:
+    pdl_interp.check_operand_count of %root is 2 -> ^pat, ^end
 
   ^pat:
     pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
@@ -234,7 +365,7 @@ module @patterns {
 // CHECK: "test.success"
 module @ir attributes { test.check_operand_count_1 } {
   %operand = "test.op"() : () -> i32
-  "test.op"(%operand) : (i32) -> ()
+  "test.op"(%operand, %operand) : (i32, i32) -> ()
 }
 
 // -----
@@ -277,7 +408,10 @@ module @ir attributes { test.check_operation_name_1 } {
 
 module @patterns {
   func @matcher(%root : !pdl.operation) {
-    pdl_interp.check_result_count of %root is 1 -> ^pat, ^end
+    pdl_interp.check_result_count of %root is at_least 1 -> ^exact_check, ^end
+
+  ^exact_check:
+    pdl_interp.check_result_count of %root is 2 -> ^pat, ^end
 
   ^pat:
     pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
@@ -296,9 +430,12 @@ module @patterns {
 }
 
 // CHECK-LABEL: test.check_result_count_1
+// CHECK: "test.op"() : () -> i32
 // CHECK: "test.success"() : () -> ()
+// CHECK-NOT: "test.op"() : () -> (i32, i32)
 module @ir attributes { test.check_result_count_1 } {
   "test.op"() : () -> i32
+  "test.op"() : () -> (i32, i32)
 }
 
 // -----
@@ -336,6 +473,43 @@ module @patterns {
 // CHECK: "test.success"
 module @ir attributes { test.check_type_1 } {
   "test.op"() { test_attr = 10 : i32 } : () -> ()
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CheckTypesOp
+//===----------------------------------------------------------------------===//
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    %results = pdl_interp.get_results of %root : !pdl.range<value>
+    %result_types = pdl_interp.get_value_type of %results : !pdl.range<type>
+    pdl_interp.check_types %result_types are [i32] -> ^pat2, ^end
+
+  ^pat2:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%root : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.check_types_1
+// CHECK: "test.op"() : () -> (i32, i64)
+// CHECK: "test.success"
+// CHECK-NOT: "test.op"() : () -> i32
+module @ir attributes { test.check_types_1 } {
+  "test.op"() : () -> (i32, i64)
+  "test.op"() : () -> i32
 }
 
 // -----
@@ -389,6 +563,12 @@ module @ir attributes { test.create_type_1 } {
 }
 
 // -----
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CreateTypesOp
+//===----------------------------------------------------------------------===//
+
+// Fully tested within the tests for other operations.
 
 //===----------------------------------------------------------------------===//
 // pdl_interp::EraseOp
@@ -466,6 +646,110 @@ module @ir attributes { test.get_defining_op_1 } {
 // Fully tested within the tests for other operations.
 
 //===----------------------------------------------------------------------===//
+// pdl_interp::GetOperandsOp
+//===----------------------------------------------------------------------===//
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operand_count of %root is 2 -> ^pat1, ^end
+
+  ^pat1:
+    %operands = pdl_interp.get_operands 0 of %root : !pdl.range<value>
+    %full_operands = pdl_interp.get_operands of %root : !pdl.range<value>
+    pdl_interp.are_equal %operands, %full_operands : !pdl.range<value> -> ^pat2, ^end
+
+  ^pat2:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%root : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.get_operands_1
+// CHECK: "test.success"
+module @ir attributes { test.get_operands_1 } {
+  %inputs:2 = "test.producer"() : () -> (i32, i32)
+  "test.op"(%inputs#0, %inputs#1) : (i32, i32) -> ()
+}
+
+// -----
+
+// Test all of the various combinations related to `AttrSizedOperandSegments`.
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.attr_sized_operands" -> ^pat1, ^end
+
+  ^pat1:
+    %operands_0 = pdl_interp.get_operands 0 of %root : !pdl.range<value>
+    pdl_interp.is_not_null %operands_0 : !pdl.range<value> -> ^pat2, ^end
+
+  ^pat2:
+    %operands_0_single = pdl_interp.get_operands 0 of %root : !pdl.value
+    pdl_interp.is_not_null %operands_0_single : !pdl.value -> ^end, ^pat3
+
+  ^pat3:
+    %operands_1 = pdl_interp.get_operands 1 of %root : !pdl.range<value>
+    pdl_interp.is_not_null %operands_1 : !pdl.range<value> -> ^pat4, ^end
+
+  ^pat4:
+    %operands_1_single = pdl_interp.get_operands 1 of %root : !pdl.value
+    pdl_interp.is_not_null %operands_1_single : !pdl.value -> ^end, ^pat5
+
+  ^pat5:
+    %operands_2 = pdl_interp.get_operands 2 of %root : !pdl.range<value>
+    pdl_interp.is_not_null %operands_2 : !pdl.range<value> -> ^pat6, ^end
+
+  ^pat6:
+    %operands_2_single = pdl_interp.get_operands 2 of %root : !pdl.value
+    pdl_interp.is_not_null %operands_2_single : !pdl.value -> ^pat7, ^end
+
+  ^pat7:
+    %invalid_operands = pdl_interp.get_operands 50 of %root : !pdl.value
+    pdl_interp.is_not_null %invalid_operands : !pdl.value -> ^end, ^pat8
+
+  ^pat8:
+    pdl_interp.record_match @rewriters::@success(%root, %operands_0, %operands_1, %operands_2, %operands_2_single : !pdl.operation, !pdl.range<value>, !pdl.range<value>, !pdl.range<value>, !pdl.value) : benefit(1), loc([%root]) -> ^end
+
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%root: !pdl.operation, %operands_0: !pdl.range<value>, %operands_1: !pdl.range<value>, %operands_2: !pdl.range<value>, %operands_2_single: !pdl.value) {
+      %op0 = pdl_interp.create_operation "test.success"(%operands_0 : !pdl.range<value>)
+      %op1 = pdl_interp.create_operation "test.success"(%operands_1 : !pdl.range<value>)
+      %op2 = pdl_interp.create_operation "test.success"(%operands_2 : !pdl.range<value>)
+      %op3 = pdl_interp.create_operation "test.success"(%operands_2_single : !pdl.value)
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.get_operands_2
+// CHECK-NEXT:  %[[INPUTS:.*]]:5 = "test.producer"() : () -> (i32, i32, i32, i32, i32)
+// CHECK-NEXT:  "test.success"() : () -> ()
+// CHECK-NEXT:  "test.success"(%[[INPUTS]]#0, %[[INPUTS]]#1, %[[INPUTS]]#2, %[[INPUTS]]#3) : (i32, i32, i32, i32) -> ()
+// CHECK-NEXT:  "test.success"(%[[INPUTS]]#4) : (i32) -> ()
+// CHECK-NEXT:  "test.success"(%[[INPUTS]]#4) : (i32) -> ()
+module @ir attributes { test.get_operands_2 } {
+  %inputs:5 = "test.producer"() : () -> (i32, i32, i32, i32, i32)
+  "test.attr_sized_operands"(%inputs#0, %inputs#1, %inputs#2, %inputs#3, %inputs#4) {operand_segment_sizes = dense<[0, 4, 1, 0]> : vector<4xi32>} : (i32, i32, i32, i32, i32) -> ()
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // pdl_interp::GetResultOp
 //===----------------------------------------------------------------------===//
 
@@ -502,6 +786,119 @@ module @patterns {
 module @ir attributes { test.get_result_1 } {
   %a:5 = "test.op"() : () -> (i32, i32, i32, i32, i32)
   %b:5 = "test.op"() : () -> (i32, i32, i32, i32, i64)
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::GetResultsOp
+//===----------------------------------------------------------------------===//
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_result_count of %root is 5 -> ^pat1, ^end
+
+  ^pat1:
+    %results = pdl_interp.get_results 0 of %root : !pdl.range<value>
+    %full_results = pdl_interp.get_results of %root : !pdl.range<value>
+    pdl_interp.are_equal %results, %full_results : !pdl.range<value> -> ^pat2, ^end
+
+  ^pat2:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%root : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.get_results_1
+// CHECK: "test.success"
+module @ir attributes { test.get_results_1 } {
+  %a:5 = "test.producer"() : () -> (i32, i32, i32, i32, i32)
+}
+
+// -----
+
+// Test all of the various combinations related to `AttrSizedResultSegments`.
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.attr_sized_results" -> ^pat1, ^end
+
+  ^pat1:
+    %results_0 = pdl_interp.get_results 0 of %root : !pdl.range<value>
+    pdl_interp.is_not_null %results_0 : !pdl.range<value> -> ^pat2, ^end
+
+  ^pat2:
+    %results_0_single = pdl_interp.get_results 0 of %root : !pdl.value
+    pdl_interp.is_not_null %results_0_single : !pdl.value -> ^end, ^pat3
+
+  ^pat3:
+    %results_1 = pdl_interp.get_results 1 of %root : !pdl.range<value>
+    pdl_interp.is_not_null %results_1 : !pdl.range<value> -> ^pat4, ^end
+
+  ^pat4:
+    %results_1_single = pdl_interp.get_results 1 of %root : !pdl.value
+    pdl_interp.is_not_null %results_1_single : !pdl.value -> ^end, ^pat5
+
+  ^pat5:
+    %results_2 = pdl_interp.get_results 2 of %root : !pdl.range<value>
+    pdl_interp.is_not_null %results_2 : !pdl.range<value> -> ^pat6, ^end
+
+  ^pat6:
+    %results_2_single = pdl_interp.get_results 2 of %root : !pdl.value
+    pdl_interp.is_not_null %results_2_single : !pdl.value -> ^pat7, ^end
+
+  ^pat7:
+    %invalid_results = pdl_interp.get_results 50 of %root : !pdl.value
+    pdl_interp.is_not_null %invalid_results : !pdl.value -> ^end, ^pat8
+
+  ^pat8:
+    pdl_interp.record_match @rewriters::@success(%root, %results_0, %results_1, %results_2, %results_2_single : !pdl.operation, !pdl.range<value>, !pdl.range<value>, !pdl.range<value>, !pdl.value) : benefit(1), loc([%root]) -> ^end
+
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%root: !pdl.operation, %results_0: !pdl.range<value>, %results_1: !pdl.range<value>, %results_2: !pdl.range<value>, %results_2_single: !pdl.value) {
+      %results_0_types = pdl_interp.get_value_type of %results_0 : !pdl.range<type>
+      %results_1_types = pdl_interp.get_value_type of %results_1 : !pdl.range<type>
+      %results_2_types = pdl_interp.get_value_type of %results_2 : !pdl.range<type>
+      %results_2_single_types = pdl_interp.get_value_type of %results_2_single : !pdl.type
+
+      %op0 = pdl_interp.create_operation "test.success" -> (%results_0_types : !pdl.range<type>)
+      %op1 = pdl_interp.create_operation "test.success" -> (%results_1_types : !pdl.range<type>)
+      %op2 = pdl_interp.create_operation "test.success" -> (%results_2_types : !pdl.range<type>)
+      %op3 = pdl_interp.create_operation "test.success" -> (%results_2_single_types : !pdl.type)
+
+      %new_results_0 = pdl_interp.get_results of %op0 : !pdl.range<value>
+      %new_results_1 = pdl_interp.get_results of %op1 : !pdl.range<value>
+      %new_results_2 = pdl_interp.get_results of %op2 : !pdl.range<value>
+
+      pdl_interp.replace %root with (%new_results_0, %new_results_1, %new_results_2 : !pdl.range<value>, !pdl.range<value>, !pdl.range<value>)
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.get_results_2
+// CHECK: "test.success"() : () -> ()
+// CHECK: %[[RESULTS_1:.*]]:4 = "test.success"() : () -> (i32, i32, i32, i32)
+// CHECK: %[[RESULTS_2:.*]] = "test.success"() : () -> i32
+// CHECK: %[[RESULTS_2_SINGLE:.*]] = "test.success"() : () -> i32
+// CHECK: "test.consumer"(%[[RESULTS_1]]#0, %[[RESULTS_1]]#1, %[[RESULTS_1]]#2, %[[RESULTS_1]]#3, %[[RESULTS_2]]) : (i32, i32, i32, i32, i32) -> ()
+module @ir attributes { test.get_results_2 } {
+  %results:5 = "test.attr_sized_results"() {result_segment_sizes = dense<[0, 4, 1, 0]> : vector<4xi32>} : () -> (i32, i32, i32, i32, i32)
+  "test.consumer"(%results#0, %results#1, %results#2, %results#3, %results#4) : (i32, i32, i32, i32, i32) -> ()
 }
 
 // -----
@@ -560,6 +957,43 @@ module @patterns {
 // CHECK: "test.success"
 module @ir attributes { test.record_match_1 } {
   "test.op"() : () -> ()
+}
+
+// -----
+
+// Check that ranges are properly forwarded to the result.
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.op" -> ^pat1, ^end
+
+  ^pat1:
+    %operands = pdl_interp.get_operands of %root : !pdl.range<value>
+    %results = pdl_interp.get_results of %root : !pdl.range<value>
+    %types = pdl_interp.get_value_type of %results : !pdl.range<type>
+    pdl_interp.record_match @rewriters::@success(%operands, %types, %root : !pdl.range<value>, !pdl.range<type>, !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%operands: !pdl.range<value>, %types: !pdl.range<type>, %root: !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"(%operands : !pdl.range<value>) -> (%types : !pdl.range<type>)
+      %results = pdl_interp.get_results of %op : !pdl.range<value>
+      pdl_interp.replace %root with (%results : !pdl.range<value>)
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.record_match_2
+// CHECK: %[[OPERAND:.*]] = "test.producer"() : () -> i32
+// CHECK: %[[RESULTS:.*]]:2 = "test.success"(%[[OPERAND]]) : (i32) -> (i64, i32)
+// CHECK: "test.consumer"(%[[RESULTS]]#0, %[[RESULTS]]#1) : (i64, i32) -> ()
+module @ir attributes { test.record_match_2 } {
+  %input = "test.producer"() : () -> i32
+  %results:2 = "test.op"(%input) : (i32) -> (i64, i32)
+  "test.consumer"(%results#0, %results#1) : (i64, i32) -> ()
 }
 
 // -----
@@ -779,4 +1213,41 @@ module @patterns {
 // CHECK: "test.success"
 module @ir attributes { test.switch_type_1 } {
   "test.op"() { test_attr = 10 : i32 } : () -> ()
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::SwitchTypesOp
+//===----------------------------------------------------------------------===//
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    %results = pdl_interp.get_results of %root : !pdl.range<value>
+    %types = pdl_interp.get_value_type of %results : !pdl.range<type>
+    pdl_interp.switch_types %types to [[i64, i64], [i32]](^pat2, ^end) -> ^end
+
+  ^pat2:
+    pdl_interp.switch_types %types to [[i32], [i64, i32]](^end, ^end) -> ^pat3
+
+  ^pat3:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%root : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.switch_types_1
+// CHECK: "test.success"
+module @ir attributes { test.switch_types_1 } {
+  %results:2 = "test.op"() : () -> (i64, i64)
 }

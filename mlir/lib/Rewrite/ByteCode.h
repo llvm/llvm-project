@@ -25,8 +25,7 @@ namespace detail {
 class PDLByteCode;
 
 /// Use generic bytecode types. ByteCodeField refers to the actual bytecode
-/// entries (set to uint8_t for "byte" bytecode). ByteCodeAddr refers to size of
-/// indices into the bytecode. Correctness is checked with static asserts.
+/// entries. ByteCodeAddr refers to size of indices into the bytecode.
 using ByteCodeField = uint16_t;
 using ByteCodeAddr = uint32_t;
 
@@ -62,13 +61,15 @@ private:
 /// threads/drivers.
 class PDLByteCodeMutableState {
 public:
-  /// Initialize the state from a bytecode instance.
-  void initialize(PDLByteCode &bytecode);
-
   /// Set the new benefit for a bytecode pattern. The `patternIndex` corresponds
   /// to the position of the pattern within the range returned by
   /// `PDLByteCode::getPatterns`.
   void updatePatternBenefit(unsigned patternIndex, PatternBenefit benefit);
+
+  /// Cleanup any allocated state after a match/rewrite has been completed. This
+  /// method should be called irregardless of whether the match+rewrite was a
+  /// success or not.
+  void cleanupAfterMatchAndRewrite();
 
 private:
   /// Allow access to data fields.
@@ -77,6 +78,20 @@ private:
   /// The mutable block of memory used during the matching and rewriting phases
   /// of the bytecode.
   std::vector<const void *> memory;
+
+  /// A mutable block of memory used during the matching and rewriting phase of
+  /// the bytecode to store ranges of types.
+  std::vector<TypeRange> typeRangeMemory;
+  /// A set of type ranges that have been allocated by the byte code interpreter
+  /// to provide a guaranteed lifetime.
+  std::vector<llvm::OwningArrayRef<Type>> allocatedTypeRangeMemory;
+
+  /// A mutable block of memory used during the matching and rewriting phase of
+  /// the bytecode to store ranges of values.
+  std::vector<ValueRange> valueRangeMemory;
+  /// A set of value ranges that have been allocated by the byte code
+  /// interpreter to provide a guaranteed lifetime.
+  std::vector<llvm::OwningArrayRef<Value>> allocatedValueRangeMemory;
 
   /// The up-to-date benefits of the patterns held by the bytecode. The order
   /// of this array corresponds 1-1 with the array of patterns in `PDLByteCode`.
@@ -98,11 +113,19 @@ public:
     MatchResult(Location loc, const PDLByteCodePattern &pattern,
                 PatternBenefit benefit)
         : location(loc), pattern(&pattern), benefit(benefit) {}
+    MatchResult(const MatchResult &) = delete;
+    MatchResult &operator=(const MatchResult &) = delete;
+    MatchResult(MatchResult &&other) = default;
+    MatchResult &operator=(MatchResult &&) = default;
 
     /// The location of operations to be replaced.
     Location location;
     /// Memory values defined in the matcher that are passed to the rewriter.
-    SmallVector<const void *, 4> values;
+    SmallVector<const void *> values;
+    /// Memory used for the range input values.
+    SmallVector<TypeRange, 0> typeRangeValues;
+    SmallVector<ValueRange, 0> valueRangeValues;
+
     /// The originating pattern that was matched. This is always non-null, but
     /// represented with a pointer to allow for assignment.
     const PDLByteCodePattern *pattern;
@@ -163,6 +186,10 @@ private:
 
   /// The maximum memory index used by a value.
   ByteCodeField maxValueMemoryIndex = 0;
+
+  /// The maximum number of different types of ranges.
+  ByteCodeField maxTypeRangeCount = 0;
+  ByteCodeField maxValueRangeCount = 0;
 };
 
 } // end namespace detail

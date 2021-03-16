@@ -73,22 +73,31 @@ void RewritePattern::anchor() {}
 // PDLValue
 //===----------------------------------------------------------------------===//
 
-void PDLValue::print(raw_ostream &os) {
-  if (!impl) {
-    os << "<Null-PDLValue>";
+void PDLValue::print(raw_ostream &os) const {
+  if (!value) {
+    os << "<NULL-PDLValue>";
     return;
   }
-  if (Value val = impl.dyn_cast<Value>()) {
-    os << val;
-    return;
+  switch (kind) {
+  case Kind::Attribute:
+    os << cast<Attribute>();
+    break;
+  case Kind::Operation:
+    os << *cast<Operation *>();
+    break;
+  case Kind::Type:
+    os << cast<Type>();
+    break;
+  case Kind::TypeRange:
+    llvm::interleaveComma(cast<TypeRange>(), os);
+    break;
+  case Kind::Value:
+    os << cast<Value>();
+    break;
+  case Kind::ValueRange:
+    llvm::interleaveComma(cast<ValueRange>(), os);
+    break;
   }
-  AttrOpTypeImplT aotImpl = impl.get<AttrOpTypeImplT>();
-  if (Attribute attr = aotImpl.dyn_cast<Attribute>())
-    os << attr;
-  else if (Operation *op = aotImpl.dyn_cast<Operation *>())
-    os << *op;
-  else
-    os << aotImpl.get<Type>();
 }
 
 //===----------------------------------------------------------------------===//

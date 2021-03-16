@@ -238,63 +238,92 @@ struct OpRewritePattern : public RewritePattern {
 /// Storage type of byte-code interpreter values. These are passed to constraint
 /// functions as arguments.
 class PDLValue {
-  /// The internal implementation type when the value is an Attribute,
-  /// Operation*, or Type. See `impl` below for more details.
-  using AttrOpTypeImplT = llvm::PointerUnion<Attribute, Operation *, Type>;
-
 public:
-  PDLValue(const PDLValue &other) : impl(other.impl) {}
-  PDLValue(std::nullptr_t = nullptr) : impl() {}
-  PDLValue(Attribute value) : impl(value) {}
-  PDLValue(Operation *value) : impl(value) {}
-  PDLValue(Type value) : impl(value) {}
-  PDLValue(Value value) : impl(value) {}
+  /// The underlying kind of a PDL value.
+  enum class Kind { Attribute, Operation, Type, TypeRange, Value, ValueRange };
+
+  /// Construct a new PDL value.
+  PDLValue(const PDLValue &other) = default;
+  PDLValue(std::nullptr_t = nullptr) : value(nullptr), kind(Kind::Attribute) {}
+  PDLValue(Attribute value)
+      : value(value.getAsOpaquePointer()), kind(Kind::Attribute) {}
+  PDLValue(Operation *value) : value(value), kind(Kind::Operation) {}
+  PDLValue(Type value) : value(value.getAsOpaquePointer()), kind(Kind::Type) {}
+  PDLValue(TypeRange *value) : value(value), kind(Kind::TypeRange) {}
+  PDLValue(Value value)
+      : value(value.getAsOpaquePointer()), kind(Kind::Value) {}
+  PDLValue(ValueRange *value) : value(value), kind(Kind::ValueRange) {}
 
   /// Returns true if the type of the held value is `T`.
-  template <typename T>
-  std::enable_if_t<std::is_same<T, Value>::value, bool> isa() const {
-    return impl.is<Value>();
-  }
-  template <typename T>
-  std::enable_if_t<!std::is_same<T, Value>::value, bool> isa() const {
-    auto attrOpTypeImpl = impl.dyn_cast<AttrOpTypeImplT>();
-    return attrOpTypeImpl && attrOpTypeImpl.is<T>();
+  template <typename T> bool isa() const {
+    assert(value && "isa<> used on a null value");
+    return kind == getKindOf<T>();
   }
 
   /// Attempt to dynamically cast this value to type `T`, returns null if this
   /// value is not an instance of `T`.
-  template <typename T>
-  std::enable_if_t<std::is_same<T, Value>::value, T> dyn_cast() const {
-    return impl.dyn_cast<T>();
-  }
-  template <typename T>
-  std::enable_if_t<!std::is_same<T, Value>::value, T> dyn_cast() const {
-    auto attrOpTypeImpl = impl.dyn_cast<AttrOpTypeImplT>();
-    return attrOpTypeImpl && attrOpTypeImpl.dyn_cast<T>();
+  template <typename T,
+            typename ResultT = std::conditional_t<
+                std::is_convertible<T, bool>::value, T, Optional<T>>>
+  ResultT dyn_cast() const {
+    return isa<T>() ? castImpl<T>() : ResultT();
   }
 
   /// Cast this value to type `T`, asserts if this value is not an instance of
   /// `T`.
-  template <typename T>
-  std::enable_if_t<std::is_same<T, Value>::value, T> cast() const {
-    return impl.get<T>();
-  }
-  template <typename T>
-  std::enable_if_t<!std::is_same<T, Value>::value, T> cast() const {
-    return impl.get<AttrOpTypeImplT>().get<T>();
+  template <typename T> T cast() const {
+    assert(isa<T>() && "expected value to be of type `T`");
+    return castImpl<T>();
   }
 
   /// Get an opaque pointer to the value.
-  void *getAsOpaquePointer() { return impl.getOpaqueValue(); }
+  const void *getAsOpaquePointer() const { return value; }
+
+  /// Return if this value is null or not.
+  explicit operator bool() const { return value; }
+
+  /// Return the kind of this value.
+  Kind getKind() const { return kind; }
 
   /// Print this value to the provided output stream.
-  void print(raw_ostream &os);
+  void print(raw_ostream &os) const;
 
 private:
-  /// The internal opaque representation of a PDLValue. We use a nested
-  /// PointerUnion structure here because `Value` only has 1 low bit
-  /// available, where as the remaining types all have 3.
-  llvm::PointerUnion<AttrOpTypeImplT, Value> impl;
+  /// Find the index of a given type in a range of other types.
+  template <typename...> struct index_of_t;
+  template <typename T, typename... R>
+  struct index_of_t<T, T, R...> : std::integral_constant<size_t, 0> {};
+  template <typename T, typename F, typename... R>
+  struct index_of_t<T, F, R...>
+      : std::integral_constant<size_t, 1 + index_of_t<T, R...>::value> {};
+
+  /// Return the kind used for the given T.
+  template <typename T> static Kind getKindOf() {
+    return static_cast<Kind>(index_of_t<T, Attribute, Operation *, Type,
+                                        TypeRange, Value, ValueRange>::value);
+  }
+
+  /// The internal implementation of `cast`, that returns the underlying value
+  /// as the given type `T`.
+  template <typename T>
+  std::enable_if_t<llvm::is_one_of<T, Attribute, Type, Value>::value, T>
+  castImpl() const {
+    return T::getFromOpaquePointer(value);
+  }
+  template <typename T>
+  std::enable_if_t<llvm::is_one_of<T, TypeRange, ValueRange>::value, T>
+  castImpl() const {
+    return *reinterpret_cast<T *>(const_cast<void *>(value));
+  }
+  template <typename T>
+  std::enable_if_t<std::is_pointer<T>::value, T> castImpl() const {
+    return reinterpret_cast<T>(const_cast<void *>(value));
+  }
+
+  /// The internal opaque representation of a PDLValue.
+  const void *value;
+  /// The kind of the opaque value.
+  Kind kind;
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, PDLValue value) {
@@ -319,14 +348,66 @@ public:
   /// Push a new Type onto the result list.
   void push_back(Type value) { results.push_back(value); }
 
+  /// Push a new TypeRange onto the result list.
+  void push_back(TypeRange value) {
+    // The lifetime of a TypeRange can't be guaranteed, so we'll need to
+    // allocate a storage for it.
+    llvm::OwningArrayRef<Type> storage(value.size());
+    llvm::copy(value, storage.begin());
+    allocatedTypeRanges.emplace_back(std::move(storage));
+    typeRanges.push_back(allocatedTypeRanges.back());
+    results.push_back(&typeRanges.back());
+  }
+  void push_back(ValueTypeRange<OperandRange> value) {
+    typeRanges.push_back(value);
+    results.push_back(&typeRanges.back());
+  }
+  void push_back(ValueTypeRange<ResultRange> value) {
+    typeRanges.push_back(value);
+    results.push_back(&typeRanges.back());
+  }
+
   /// Push a new Value onto the result list.
   void push_back(Value value) { results.push_back(value); }
 
+  /// Push a new ValueRange onto the result list.
+  void push_back(ValueRange value) {
+    // The lifetime of a ValueRange can't be guaranteed, so we'll need to
+    // allocate a storage for it.
+    llvm::OwningArrayRef<Value> storage(value.size());
+    llvm::copy(value, storage.begin());
+    allocatedValueRanges.emplace_back(std::move(storage));
+    valueRanges.push_back(allocatedValueRanges.back());
+    results.push_back(&valueRanges.back());
+  }
+  void push_back(OperandRange value) {
+    valueRanges.push_back(value);
+    results.push_back(&valueRanges.back());
+  }
+  void push_back(ResultRange value) {
+    valueRanges.push_back(value);
+    results.push_back(&valueRanges.back());
+  }
+
 protected:
-  PDLResultList() = default;
+  /// Create a new result list with the expected number of results.
+  PDLResultList(unsigned maxNumResults) {
+    // For now just reserve enough space for all of the results. We could do
+    // separate counts per range type, but it isn't really worth it unless there
+    // are a "large" number of results.
+    typeRanges.reserve(maxNumResults);
+    valueRanges.reserve(maxNumResults);
+  }
 
   /// The PDL results held by this list.
   SmallVector<PDLValue> results;
+  /// Memory used to store ranges held by the list.
+  SmallVector<TypeRange> typeRanges;
+  SmallVector<ValueRange> valueRanges;
+  /// Memory allocated to store ranges in the result list whose lifetime was
+  /// generated in the native function.
+  SmallVector<llvm::OwningArrayRef<Type>> allocatedTypeRanges;
+  SmallVector<llvm::OwningArrayRef<Value>> allocatedValueRanges;
 };
 
 //===----------------------------------------------------------------------===//
