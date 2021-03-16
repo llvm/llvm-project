@@ -77,6 +77,7 @@ private:
 
   static bool optimizeConvertFromSVBool(IntrinsicInst *I);
   static bool optimizePTest(IntrinsicInst *I);
+  static bool optimizeVectorMul(IntrinsicInst *I);
 
   static bool processPhiNode(IntrinsicInst *I);
 };
@@ -366,6 +367,76 @@ bool SVEIntrinsicOpts::optimizePTest(IntrinsicInst *I) {
   return false;
 }
 
+bool SVEIntrinsicOpts::optimizeVectorMul(IntrinsicInst *I) {
+  assert((I->getIntrinsicID() == Intrinsic::aarch64_sve_mul ||
+          I->getIntrinsicID() == Intrinsic::aarch64_sve_fmul) &&
+         "Unexpected opcode");
+
+  auto *OpPredicate = I->getOperand(0);
+  auto *OpMultiplicand = I->getOperand(1);
+  auto *OpMultiplier = I->getOperand(2);
+
+  // Return true if a given instruction is an aarch64_sve_dup_x intrinsic call
+  // with a unit splat value, false otherwise.
+  auto IsUnitDupX = [](auto *I) {
+    auto *IntrI = dyn_cast<IntrinsicInst>(I);
+    if (!IntrI || IntrI->getIntrinsicID() != Intrinsic::aarch64_sve_dup_x)
+      return false;
+
+    auto *SplatValue = IntrI->getOperand(0);
+    return match(SplatValue, m_FPOne()) || match(SplatValue, m_One());
+  };
+
+  // Return true if a given instruction is an aarch64_sve_dup intrinsic call
+  // with a unit splat value, false otherwise.
+  auto IsUnitDup = [](auto *I) {
+    auto *IntrI = dyn_cast<IntrinsicInst>(I);
+    if (!IntrI || IntrI->getIntrinsicID() != Intrinsic::aarch64_sve_dup)
+      return false;
+
+    auto *SplatValue = IntrI->getOperand(2);
+    return match(SplatValue, m_FPOne()) || match(SplatValue, m_One());
+  };
+
+  bool Changed = true;
+
+  // The OpMultiplier variable should always point to the dup (if any), so
+  // swap if necessary.
+  if (IsUnitDup(OpMultiplicand) || IsUnitDupX(OpMultiplicand))
+    std::swap(OpMultiplier, OpMultiplicand);
+
+  if (IsUnitDupX(OpMultiplier)) {
+    // [f]mul pg (dupx 1) %n => %n
+    I->replaceAllUsesWith(OpMultiplicand);
+    I->eraseFromParent();
+    Changed = true;
+  } else if (IsUnitDup(OpMultiplier)) {
+    // [f]mul pg (dup pg 1) %n => %n
+    auto *DupInst = cast<IntrinsicInst>(OpMultiplier);
+    auto *DupPg = DupInst->getOperand(1);
+    // TODO: this is naive. The optimization is still valid if DupPg
+    // 'encompasses' OpPredicate, not only if they're the same predicate.
+    if (OpPredicate == DupPg) {
+      I->replaceAllUsesWith(OpMultiplicand);
+      I->eraseFromParent();
+      Changed = true;
+    }
+  }
+
+  // If an instruction was optimized out then it is possible that some dangling
+  // instructions are left.
+  if (Changed) {
+    auto *OpPredicateInst = dyn_cast<Instruction>(OpPredicate);
+    auto *OpMultiplierInst = dyn_cast<Instruction>(OpMultiplier);
+    if (OpMultiplierInst && OpMultiplierInst->use_empty())
+      OpMultiplierInst->eraseFromParent();
+    if (OpPredicateInst && OpPredicateInst->use_empty())
+      OpPredicateInst->eraseFromParent();
+  }
+
+  return Changed;
+}
+
 bool SVEIntrinsicOpts::optimizeConvertFromSVBool(IntrinsicInst *I) {
   assert(I->getIntrinsicID() == Intrinsic::aarch64_sve_convert_from_svbool &&
          "Unexpected opcode");
@@ -429,6 +500,9 @@ bool SVEIntrinsicOpts::optimizeIntrinsic(Instruction *I) {
   switch (IntrI->getIntrinsicID()) {
   case Intrinsic::aarch64_sve_convert_from_svbool:
     return optimizeConvertFromSVBool(IntrI);
+  case Intrinsic::aarch64_sve_fmul:
+  case Intrinsic::aarch64_sve_mul:
+    return optimizeVectorMul(IntrI);
   case Intrinsic::aarch64_sve_ptest_any:
   case Intrinsic::aarch64_sve_ptest_first:
   case Intrinsic::aarch64_sve_ptest_last:
@@ -484,6 +558,8 @@ bool SVEIntrinsicOpts::runOnModule(Module &M) {
     case Intrinsic::aarch64_sve_ptest_first:
     case Intrinsic::aarch64_sve_ptest_last:
     case Intrinsic::aarch64_sve_ptrue:
+    case Intrinsic::aarch64_sve_mul:
+    case Intrinsic::aarch64_sve_fmul:
       for (User *U : F.users())
         Functions.insert(cast<Instruction>(U)->getFunction());
       break;
