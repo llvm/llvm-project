@@ -19,7 +19,7 @@ entry:
 ; Function Attrs: nobuiltin allocsize(0)
 declare nonnull i8* @_Znam(i64) #1
 
-attributes #0 = { noinline optnone ssp uwtable mustprogress }
+attributes #0 = { noinline optnone ssp uwtable }
 attributes #1 = { nobuiltin allocsize(0) "frame-pointer"="all" }
 attributes #2 = { builtin allocsize(0) }
 
