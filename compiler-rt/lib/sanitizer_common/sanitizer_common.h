@@ -605,6 +605,7 @@ class InternalScopedString {
   }
   void append(const char *format, ...);
   const char *data() const { return buffer_.data(); }
+  char *data() { return buffer_.data(); }
 
  private:
   InternalMmapVector<char> buffer_;
