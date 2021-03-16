@@ -35,13 +35,19 @@ void PDLDialect::initialize() {
 /// Returns true if the given operation is used by a "binding" pdl operation
 /// within the main matcher body of a `pdl.pattern`.
 static bool hasBindingUseInMatcher(Operation *op, Block *matcherBlock) {
-  for (Operation *user : op->getUsers()) {
+  for (OpOperand &use : op->getUses()) {
+    Operation *user = use.getOwner();
     if (user->getBlock() != matcherBlock)
       continue;
-    if (isa<AttributeOp, OperandOp, OperationOp, RewriteOp>(user))
+    if (isa<AttributeOp, OperandOp, OperandsOp, OperationOp>(user))
+      return true;
+    // Only the first operand of RewriteOp may be bound to, i.e. the root
+    // operation of the pattern.
+    if (isa<RewriteOp>(user) && use.getOperandNumber() == 0)
       return true;
     // A result by itself is not binding, it must also be bound.
-    if (isa<ResultOp>(user) && hasBindingUseInMatcher(user, matcherBlock))
+    if (isa<ResultOp, ResultsOp>(user) &&
+        hasBindingUseInMatcher(user, matcherBlock))
       return true;
   }
   return false;
@@ -104,6 +110,14 @@ static LogicalResult verify(AttributeOp op) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(OperandOp op) {
+  return verifyHasBindingUseInMatcher(op);
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::OperandsOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(OperandsOp op) {
   return verifyHasBindingUseInMatcher(op);
 }
 
@@ -177,18 +191,18 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
     if (isa<ApplyNativeRewriteOp>(resultTypeOp))
       continue;
 
-    // If the type is already constrained, there is nothing to do.
-    TypeOp typeOp = cast<TypeOp>(resultTypeOp);
-    if (typeOp.type())
-      continue;
-
     // If the type operation was defined in the matcher and constrains the
     // result of an input operation, it can be used.
     auto constrainsInputOp = [rewriterBlock](Operation *user) {
       return user->getBlock() != rewriterBlock && isa<OperationOp>(user);
     };
-    if (llvm::any_of(typeOp.getResult().getUsers(), constrainsInputOp))
-      continue;
+    if (TypeOp typeOp = dyn_cast<TypeOp>(resultTypeOp)) {
+      if (typeOp.type() || llvm::any_of(typeOp->getUsers(), constrainsInputOp))
+        continue;
+    } else if (TypesOp typeOp = dyn_cast<TypesOp>(resultTypeOp)) {
+      if (typeOp.types() || llvm::any_of(typeOp->getUsers(), constrainsInputOp))
+        continue;
+    }
 
     return op
         .emitOpError("must have inferable or constrained result types when "
@@ -297,6 +311,36 @@ static LogicalResult verify(ReplaceOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// pdl::ResultsOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseResultsValueType(OpAsmParser &p, IntegerAttr index,
+                                         Type &resultType) {
+  if (!index) {
+    resultType = RangeType::get(p.getBuilder().getType<ValueType>());
+    return success();
+  }
+  if (p.parseArrow() || p.parseType(resultType))
+    return failure();
+  return success();
+}
+
+static void printResultsValueType(OpAsmPrinter &p, ResultsOp op,
+                                  IntegerAttr index, Type resultType) {
+  if (index)
+    p << " -> " << resultType;
+}
+
+static LogicalResult verify(ResultsOp op) {
+  if (!op.index() && op.getType().isa<pdl::ValueType>()) {
+    return op.emitOpError() << "expected `pdl.range<value>` result type when "
+                               "no index is specified, but got: "
+                            << op.getType();
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // pdl::RewriteOp
 //===----------------------------------------------------------------------===//
 
@@ -338,6 +382,14 @@ static LogicalResult verify(RewriteOp op) {
 static LogicalResult verify(TypeOp op) {
   return verifyHasBindingUseInMatcher(
       op, "`pdl.attribute`, `pdl.operand`, or `pdl.operation`");
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::TypesOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(TypesOp op) {
+  return verifyHasBindingUseInMatcher(op, "`pdl.operands`, or `pdl.operation`");
 }
 
 //===----------------------------------------------------------------------===//

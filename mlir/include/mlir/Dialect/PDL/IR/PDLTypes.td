@@ -101,4 +101,18 @@ def PDL_AnyType : Type<
   CPred<"$_self.isa<::mlir::pdl::PDLType>()">, "pdl type",
         "::mlir::pdl::PDLType">;
 
+// A range of positional values of one of the provided types.
+class PDL_RangeOf<Type positionalType> :
+  ContainerType<AnyTypeOf<[positionalType]>, PDL_Range.predicate,
+                "$_self.cast<::mlir::pdl::RangeType>().getElementType()",
+                "range", "::mlir::pdl::RangeType">,
+    BuildableType<"::mlir::pdl::RangeType::get(" # positionalType.builderCall #
+                  ")">;
+
+// Either a positional value or a range of positional values for a given type.
+class PDL_InstOrRangeOf<Type positionalType> :
+    AnyTypeOf<[positionalType, PDL_RangeOf<positionalType>],
+              "single element or range of " # positionalType.summary,
+              "::mlir::pdl::PDLType">;
+
 #endif // MLIR_DIALECT_PDL_IR_PDLTYPES
