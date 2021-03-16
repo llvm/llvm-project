@@ -1,6 +1,7 @@
 ; Test that -dfsan-fast-16-labels mode uses inline ORs rather than calling
 ; __dfsan_union or __dfsan_union_load.
 ; RUN: opt < %s -dfsan -dfsan-fast-16-labels -S | FileCheck %s --implicit-check-not="call{{.*}}__dfsan_union" --check-prefixes=CHECK,CHECK16
+; RUN: opt < %s -dfsan -dfsan-fast-8-labels -S | FileCheck %s --implicit-check-not="call{{.*}}__dfsan_union" --check-prefixes=CHECK,CHECK8
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -13,7 +14,7 @@ define i8 @add(i8 %a, i8 %b) {
   ; CHECK-LABEL: define i8 @"dfs$add"
   ; CHECK-DAG: %[[ALABEL:.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
   ; CHECK-DAG: %[[BLABEL:.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN]]
-  ; CHECK: %[[ADDLABEL:.*]] = or i16 %[[ALABEL]], %[[BLABEL]]
+  ; CHECK: %[[ADDLABEL:.*]] = or i[[#SBITS]] %[[ALABEL]], %[[BLABEL]]
   ; CHECK: %c = add i8 %a, %b
   ; CHECK: store i[[#SBITS]] %[[ADDLABEL]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK: ret i8 %c
@@ -24,7 +25,7 @@ define i8 @add(i8 %a, i8 %b) {
 define i8 @load8(i8* %p) {
   ; CHECK-LABEL:  define i8 @"dfs$load8"
   ; CHECK-SAME:   (i8* %[[PADDR:.*]])
-  ; CHECK-NEXT:   %[[#ARG:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i16*), align [[ALIGN]]
+  ; CHECK-NEXT:   %[[#ARG:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:   %[[#R:]] = ptrtoint i8* %[[PADDR]] to i64
   ; CHECK-NEXT:   %[[#PS:R+1]] = and i64 %[[#R]], [[#%.10d,MASK:]]
   ; CHECK16-NEXT: %[[#PS:R+2]] = mul i64 %[[#R+1]], 2
@@ -106,6 +107,16 @@ define i64 @load64(i64* %p) {
   ; CHECK16-NEXT: %[[#WS+5]]        = trunc i64 %[[#WS+4]] to i[[#SBITS]]
   ; CHECK16-NEXT: %[[#S_OUT:]]      = or i[[#SBITS]] %[[#WS+5]], %[[#ARG]]
 
+  ; COMM: On fast8, no need to OR the wide shadow but one more shift is needed.
+  ; CHECK8-NEXT: %[[#WS+1]]         = lshr i64 %[[#WS]], 32
+  ; CHECK8-NEXT: %[[#WS+2]]         = or i64 %[[#WS]], %[[#WS+1]]
+  ; CHECK8-NEXT: %[[#WS+3]]         = lshr i64 %[[#WS+2]], 16
+  ; CHECK8-NEXT: %[[#WS+4]]         = or i64 %[[#WS+2]], %[[#WS+3]]
+  ; CHECK8-NEXT: %[[#WS+5]]         = lshr i64 %[[#WS+4]], 8
+  ; CHECK8-NEXT: %[[#WS+6]]         = or i64 %[[#WS+4]], %[[#WS+5]]
+  ; CHECK8-NEXT: %[[#WS+7]]         = trunc i64 %[[#WS+6]] to i[[#SBITS]]
+  ; CHECK8-NEXT: %[[#S_OUT:]]       = or i[[#SBITS]] %[[#WS+7]], %[[#ARG]]
+
   ; CHECK-NEXT:   %a = load i64, i64* %p
   ; CHECK-NEXT:   store i[[#SBITS]] %[[#S_OUT]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:   ret i64 %a
@@ -141,6 +152,16 @@ define i128 @load128(i128* %p) {
   ; CHECK16-NEXT: %[[#WS+4]]    = or i64 %[[#WS+2]], %[[#WS+3]]
   ; CHECK16-NEXT: %[[#WS+5]]    = trunc i64 %[[#WS+4]] to i[[#SBITS]]
   ; CHECK16-NEXT: %[[#S_OUT:]]  = or i[[#SBITS]] %[[#WS+5]], %[[#ARG]]
+
+  ; COMM: On fast8, we need to OR 2x64bits for the wide shadow, before ORing its bytes (one more shift).
+  ; CHECK8-NEXT: %[[#WS+1]]     = lshr i64 %[[#WS]], 32
+  ; CHECK8-NEXT: %[[#WS+2]]     = or i64 %[[#WS]], %[[#WS+1]]
+  ; CHECK8-NEXT: %[[#WS+3]]     = lshr i64 %[[#WS+2]], 16
+  ; CHECK8-NEXT: %[[#WS+4]]     = or i64 %[[#WS+2]], %[[#WS+3]]
+  ; CHECK8-NEXT: %[[#WS+5]]     = lshr i64 %[[#WS+4]], 8
+  ; CHECK8-NEXT: %[[#WS+6]]     = or i64 %[[#WS+4]], %[[#WS+5]]
+  ; CHECK8-NEXT: %[[#WS+7]]     = trunc i64 %[[#WS+6]] to i[[#SBITS]]
+  ; CHECK8-NEXT: %[[#S_OUT:]]   = or i[[#SBITS]] %[[#WS+7]], %[[#ARG]]
 
   ; CHECK-NEXT: %a = load i128, i128* %p
   ; CHECK-NEXT: store i[[#SBITS]] %[[#S_OUT]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
