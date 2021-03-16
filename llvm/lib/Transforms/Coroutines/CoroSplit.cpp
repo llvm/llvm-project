@@ -761,8 +761,8 @@ Value *CoroCloner::deriveNewFramePointer() {
   // context header.
   case coro::ABI::Async: {
     auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
-    auto *CalleeContext =
-        NewF->getArg(ActiveAsyncSuspend->getStorageArgumentIndex());
+    auto ContextIdx = ActiveAsyncSuspend->getStorageArgumentIndex() & 0xff;
+    auto *CalleeContext = NewF->getArg(ContextIdx);
     auto *FramePtrTy = Shape.FrameTy->getPointerTo();
     auto *ProjectionFunc =
         ActiveAsyncSuspend->getAsyncContextProjectionFunction();
@@ -820,6 +820,13 @@ static void addAsyncContextAttrs(AttributeList &Attrs, LLVMContext &Context,
                                  unsigned ParamIndex) {
   AttrBuilder ParamAttrs;
   ParamAttrs.addAttribute(Attribute::SwiftAsync);
+  Attrs = Attrs.addParamAttributes(Context, ParamIndex, ParamAttrs);
+}
+
+static void addSwiftSelfAttrs(AttributeList &Attrs, LLVMContext &Context,
+                                 unsigned ParamIndex) {
+  AttrBuilder ParamAttrs;
+  ParamAttrs.addAttribute(Attribute::SwiftSelf);
   Attrs = Attrs.addParamAttributes(Context, ParamIndex, ParamAttrs);
 }
 
@@ -886,8 +893,16 @@ void CoroCloner::create() {
     auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
     if (OrigF.hasParamAttribute(Shape.AsyncLowering.ContextArgNo,
                                 Attribute::SwiftAsync)) {
-      auto ContextArgIndex = ActiveAsyncSuspend->getStorageArgumentIndex();
+      uint32_t ArgAttributeIndices =
+          ActiveAsyncSuspend->getStorageArgumentIndex();
+      auto ContextArgIndex = ArgAttributeIndices & 0xff;
       addAsyncContextAttrs(NewAttrs, Context, ContextArgIndex);
+
+      // `swiftasync` must preceed `swiftself` so 0 is not a valid index for
+      // `swiftself`.
+      auto SwiftSelfIndex = ArgAttributeIndices >> 8;
+      if (SwiftSelfIndex)
+        addSwiftSelfAttrs(NewAttrs, Context, SwiftSelfIndex);
     }
 
     // Transfer the original function's attributes.
