@@ -6393,7 +6393,7 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       CheckPossibleBadForwardRef(symbol);
     }
   }
-  currScope().InstantiateDerivedTypes(context());
+  currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {
     if (const auto *statement{std::get_if<
             parser::Statement<common::Indirection<parser::StmtFunctionStmt>>>(

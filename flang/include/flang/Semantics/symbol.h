@@ -18,7 +18,7 @@
 #include <functional>
 #include <list>
 #include <optional>
-#include <unordered_set>
+#include <set>
 #include <vector>
 
 namespace llvm {
@@ -595,10 +595,13 @@ public:
 
   bool operator==(const Symbol &that) const { return this == &that; }
   bool operator!=(const Symbol &that) const { return !(*this == that); }
-  bool operator<(const Symbol &that) const {
-    // Used to collate symbols by creation order
-    return sortIndex_ < that.sortIndex_;
-  }
+
+  // Symbol comparison is based on the order of cooked source
+  // stream creation and, when both are from the same cooked source,
+  // their positions in that cooked source stream.
+  // (This function is implemented in Evaluate/tools.cpp to
+  // satisfy complicated shared library interdependency.)
+  bool operator<(const Symbol &) const;
 
   int Rank() const {
     return std::visit(
@@ -651,10 +654,11 @@ public:
   // for a parameterized derived type instantiation with the instance's scope.
   const DerivedTypeSpec *GetParentTypeSpec(const Scope * = nullptr) const;
 
+  SemanticsContext &GetSemanticsContext() const;
+
 private:
   const Scope *owner_;
   SourceName name_;
-  std::size_t sortIndex_; // to implement "operator<" platform independently
   Attrs attrs_;
   Flags flags_;
   Scope *scope_{nullptr};
@@ -689,7 +693,6 @@ public:
     Symbol &symbol = Get();
     symbol.owner_ = &owner;
     symbol.name_ = name;
-    symbol.sortIndex_ = ++symbolCount_;
     symbol.attrs_ = attrs;
     symbol.details_ = std::move(details);
     return symbol;
@@ -700,7 +703,6 @@ private:
   std::list<blockType *> blocks_;
   std::size_t nextIndex_{0};
   blockType *currBlock_{nullptr};
-  static inline std::size_t symbolCount_ = 0;
 
   Symbol &Get() {
     if (nextIndex_ == 0) {
@@ -765,17 +767,13 @@ inline const DeclTypeSpec *Symbol::GetType() const {
       details_);
 }
 
-inline bool operator<(SymbolRef x, SymbolRef y) { return *x < *y; }
-inline bool operator<(MutableSymbolRef x, MutableSymbolRef y) {
-  return *x < *y;
+inline bool operator<(SymbolRef x, SymbolRef y) {
+  return *x < *y; // name source position ordering
 }
-struct SymbolHash {
-  std::size_t operator()(SymbolRef symRef) const {
-    std::hash<std::string> hasher;
-    return hasher(symRef->name().ToString());
-  }
-};
-using SymbolSet = std::unordered_set<SymbolRef, SymbolHash>;
+inline bool operator<(MutableSymbolRef x, MutableSymbolRef y) {
+  return *x < *y; // name source position ordering
+}
+using SymbolSet = std::set<SymbolRef>;
 
 } // namespace Fortran::semantics
 

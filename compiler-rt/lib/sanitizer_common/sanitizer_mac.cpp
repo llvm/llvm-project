@@ -453,7 +453,7 @@ uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
   // On OS X the executable path is saved to the stack by dyld. Reading it
   // from there is much faster than calling dladdr, especially for large
   // binaries with symbols.
-  InternalScopedString exe_path(kMaxPathLength);
+  InternalMmapVector<char> exe_path(kMaxPathLength);
   uint32_t size = exe_path.size();
   if (_NSGetExecutablePath(exe_path.data(), &size) == 0 &&
       realpath(exe_path.data(), buf) != 0) {
@@ -1019,7 +1019,7 @@ void MaybeReexec() {
   if (DyldNeedsEnvVariable() && !lib_is_in_env) {
     // DYLD_INSERT_LIBRARIES is not set or does not contain the runtime
     // library.
-    InternalScopedString program_name(1024);
+    InternalMmapVector<char> program_name(1024);
     uint32_t buf_size = program_name.size();
     _NSGetExecutablePath(program_name.data(), &buf_size);
     char *new_env = const_cast<char*>(info.dli_fname);

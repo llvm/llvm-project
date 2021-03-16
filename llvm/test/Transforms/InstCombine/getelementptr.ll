@@ -1305,4 +1305,23 @@ define i8* @D98588(i8* %c1, i64 %offset) {
   ret i8* %gep
 }
 
+declare noalias i8* @malloc(i64) nounwind
+
+define i32 @test_gep_bitcast_malloc(%struct.A* %a) {
+; CHECK-LABEL: @test_gep_bitcast_malloc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(16) i8* @malloc(i64 16)
+; CHECK-NEXT:    [[B:%.*]] = bitcast i8* [[CALL]] to %struct.A*
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr [[STRUCT_A:%.*]], %struct.A* [[B]], i64 0, i32 2
+; CHECK-NEXT:    [[A_C:%.*]] = load i32, i32* [[G3]], align 4
+; CHECK-NEXT:    ret i32 [[A_C]]
+;
+entry:
+  %call = call noalias i8* @malloc(i64 16) #2
+  %B = bitcast i8* %call to %struct.A*
+  %g3 = getelementptr %struct.A, %struct.A* %B, i32 0, i32 2
+  %a_c = load i32, i32* %g3, align 4
+  ret i32 %a_c
+}
+
 !0 = !{!"branch_weights", i32 2, i32 10}

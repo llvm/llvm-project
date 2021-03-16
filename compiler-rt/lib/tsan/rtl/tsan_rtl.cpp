@@ -172,7 +172,7 @@ static void *BackgroundThread(void *arg) {
       fd_t fd = OpenFile(filename.data(), WrOnly);
       if (fd == kInvalidFd) {
         Printf("ThreadSanitizer: failed to open memory profile file '%s'\n",
-            &filename[0]);
+               filename.data());
       } else {
         mprof_fd = fd;
       }
