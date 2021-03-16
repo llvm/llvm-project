@@ -94,12 +94,11 @@ void *BackgroundThread(void *arg) {
 void WriteToSyslog(const char *msg) {
   InternalScopedString msg_copy(kErrorMessageBufferSize);
   msg_copy.append("%s", msg);
-  char *p = msg_copy.data();
-  char *q;
+  const char *p = msg_copy.data();
 
   // Print one line at a time.
   // syslog, at least on Android, has an implicit message length limit.
-  while ((q = internal_strchr(p, '\n'))) {
+  while (char* q = internal_strchr(p, '\n')) {
     *q = '\0';
     WriteOneLineToSyslog(p);
     p = q + 1;
