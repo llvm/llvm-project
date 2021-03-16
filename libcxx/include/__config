@@ -1458,6 +1458,13 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 # define _LIBCPP_INIT_PRIORITY_MAX
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
+#define _LIBCPP_FORMAT_PRINTF(a, b)                                            \
+  __attribute__((__format__(__printf__, a, b)))
+#else
+#define _LIBCPP_FORMAT_PRINTF(a, b)
+#endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP_CONFIG
