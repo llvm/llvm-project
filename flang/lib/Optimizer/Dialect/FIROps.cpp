@@ -72,15 +72,6 @@ static bool verifyRecordLenParams(mlir::Type inType, unsigned numLenParams) {
 }
 
 //===----------------------------------------------------------------------===//
-// AddfOp
-//===----------------------------------------------------------------------===//
-
-mlir::OpFoldResult fir::AddfOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
-  return mlir::constFoldBinaryOp<FloatAttr>(
-      opnds, [](APFloat a, APFloat b) { return a + b; });
-}
-
-//===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
@@ -752,8 +743,8 @@ struct UndoComplexPattern : public mlir::RewritePattern {
 
 void fir::InsertValueOp::getCanonicalizationPatterns(
     mlir::OwningRewritePatternList &results, mlir::MLIRContext *context) {
-  results.insert<UndoComplexPattern<fir::AddfOp, fir::AddcOp>,
-                 UndoComplexPattern<fir::SubfOp, fir::SubcOp>>(context);
+  results.insert<UndoComplexPattern<mlir::AddFOp, fir::AddcOp>,
+                 UndoComplexPattern<mlir::SubFOp, fir::SubcOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1230,15 +1221,6 @@ mlir::Value fir::DoLoopOp::blockArgToSourceOp(unsigned blockArgNum) {
   if (blockArgNum > 0 && blockArgNum <= initArgs().size())
     return initArgs()[blockArgNum - 1];
   return {};
-}
-
-//===----------------------------------------------------------------------===//
-// MulfOp
-//===----------------------------------------------------------------------===//
-
-mlir::OpFoldResult fir::MulfOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
-  return mlir::constFoldBinaryOp<FloatAttr>(
-      opnds, [](APFloat a, APFloat b) { return a * b; });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1764,15 +1746,6 @@ mlir::Type fir::StoreOp::elementType(mlir::Type refType) {
 bool fir::StringLitOp::isWideValue() {
   auto eleTy = getType().cast<fir::SequenceType>().getEleTy();
   return eleTy.cast<fir::CharacterType>().getFKind() != 1;
-}
-
-//===----------------------------------------------------------------------===//
-// SubfOp
-//===----------------------------------------------------------------------===//
-
-mlir::OpFoldResult fir::SubfOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
-  return mlir::constFoldBinaryOp<FloatAttr>(
-      opnds, [](APFloat a, APFloat b) { return a - b; });
 }
 
 //===----------------------------------------------------------------------===//

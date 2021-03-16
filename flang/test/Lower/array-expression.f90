@@ -11,7 +11,7 @@ subroutine test1(a,b,c,n)
   ! CHECK: %[[T:.*]] = fir.do_loop
   ! CHECK-DAG: %[[Bi:.*]] = fir.array_fetch %[[B]]
   ! CHECK-DAG: %[[Ci:.*]] = fir.array_fetch %[[C]]
-  ! CHECK: %[[rv:.*]] = fir.addf %[[Bi]], %[[Ci]]
+  ! CHECK: %[[rv:.*]] = addf %[[Bi]], %[[Ci]]
   ! CHECK: fir.array_update %{{.*}}, %[[rv]], %
   a = b + c
   ! CHECK: fir.array_merge_store %[[A]], %[[T]] to %arg0
@@ -29,9 +29,9 @@ subroutine test1b(a,b,c,d,n)
   ! CHECK: %[[T:.*]] = fir.do_loop
   ! CHECK-DAG: %[[Bi:.*]] = fir.array_fetch %[[B]]
   ! CHECK-DAG: %[[Ci:.*]] = fir.array_fetch %[[C]]
-  ! CHECK: %[[rv1:.*]] = fir.addf %[[Bi]], %[[Ci]]
+  ! CHECK: %[[rv1:.*]] = addf %[[Bi]], %[[Ci]]
   ! CHECK: %[[Di:.*]] = fir.array_fetch %[[D]]
-  ! CHECK: %[[rv:.*]] = fir.addf %[[rv1]], %[[Di]]
+  ! CHECK: %[[rv:.*]] = addf %[[rv1]], %[[Di]]
   ! CHECK: fir.array_update %{{.*}}, %[[rv]], %
   a = b + c + d
   ! CHECK: fir.array_merge_store %[[A]], %[[T]] to %arg0
@@ -54,7 +54,7 @@ subroutine test3(a,b,c,n)
   ! CHECK-DAG: %[[C:.*]] = fir.load %arg2
   ! CHECK: %[[T:.*]] = fir.do_loop
   ! CHECK: %[[Bi:.*]] = fir.array_fetch %[[B]]
-  ! CHECK: %[[rv:.*]] = fir.addf %[[Bi]], %[[C]]
+  ! CHECK: %[[rv:.*]] = addf %[[Bi]], %[[C]]
   ! CHECK: %[[Ti:.*]] = fir.array_update %{{.*}}, %[[rv]], %
   ! CHECK: fir.result %[[Ti]]
   a = b + c
@@ -113,7 +113,7 @@ subroutine test7(a,b,n)
   ! CHECK: %[[T:.*]] = fir.do_loop
   ! CHECK-DAG: %[[Bi:.*]] = fir.array_fetch %[[Ain]]
   ! CHECK-DAG: %[[Ci:.*]] = fir.array_fetch %[[B]]
-  ! CHECK: %[[rv:.*]] = fir.addf %[[Bi]], %[[Ci]]
+  ! CHECK: %[[rv:.*]] = addf %[[Bi]], %[[Ci]]
   ! CHECK: fir.array_update %{{.*}}, %[[rv]], %
   a = a + b
   ! CHECK: fir.array_merge_store %[[Aout]], %[[T]] to %arg0
@@ -178,7 +178,7 @@ subroutine test11(a,b,c,d)
   ! CHECK: %[[bar_in:.*]] = fir.do_loop
   !  CHECK-DAG: %[[c_i:.*]] = fir.array_fetch %[[C]]
   !  CHECK-DAG: %[[d_i:.*]] = fir.array_fetch %[[D]]
-  !  CHECK: %[[sum:.*]] = fir.addf %[[c_i]], %[[d_i]]
+  !  CHECK: %[[sum:.*]] = addf %[[c_i]], %[[d_i]]
   !  CHECK: fir.array_update %{{.*}}, %[[sum]], %
   ! CHECK: fir.array_merge_store %[[T]], %[[bar_in]] to %[[tmp]]
   ! CHECK: %[[cast:.*]] = fir.convert %[[tmp]]
@@ -187,7 +187,7 @@ subroutine test11(a,b,c,d)
   !    a <- b + bar(?)
   ! CHECK: %[[S:.*]] = fir.do_loop
   !  CHECK: %[[b_i:.*]] = fir.array_fetch %[[B]], %
-  !  CHECK: %[[sum2:.*]] = fir.addf %[[b_i]], %[[bar_out]]
+  !  CHECK: %[[sum2:.*]] = addf %[[b_i]], %[[bar_out]]
   !  CHECK: fir.array_update %{{.*}}, %[[sum2]], %
   ! CHECK: fir.array_merge_store %[[A]], %[[S]] to %arg0
   a = b + bar(c + d)
