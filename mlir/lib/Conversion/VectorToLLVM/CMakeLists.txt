@@ -20,6 +20,7 @@ add_mlir_conversion_library(MLIRVectorToLLVM
   MLIRArmSVEToLLVM
   MLIRLLVMArmSVE
   MLIRLLVMIR
+  MLIRMemRef
   MLIRStandardToLLVM
   MLIRTargetLLVMIRExport
   MLIRTransforms

@@ -859,6 +859,10 @@ main_body:
 ; CHECK-NEXT: ; %entry
 ; CHECK-NEXT: s_mov_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], exec
 ; CHECK: s_wqm_b64 exec, exec
+; CHECK: v_mov
+; CHECK: v_mov
+; CHECK: v_mov
+; CHECK: v_mov
 ; CHECK: s_and_b64 exec, exec, [[LIVE]]
 ; CHECK: image_store
 ; CHECK: s_wqm_b64 exec, exec

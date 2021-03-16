@@ -18,12 +18,12 @@ func private @print_memref_f32(memref<*xf32>)
 func @alloc_1d_filled_inc_f32(%arg0: index, %arg1: f32) -> memref<?xf32> {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %0 = alloc(%arg0) : memref<?xf32>
+  %0 = memref.alloc(%arg0) : memref<?xf32>
   scf.for %arg2 = %c0 to %arg0 step %c1 {
     %tmp = index_cast %arg2 : index to i32
     %tmp1 = sitofp %tmp : i32 to f32
     %tmp2 = addf %tmp1, %arg1 : f32
-    store %tmp2, %0[%arg2] : memref<?xf32>
+    memref.store %tmp2, %0[%arg2] : memref<?xf32>
   }
   return %0 : memref<?xf32>
 }
@@ -37,7 +37,7 @@ func @main() {
   %c1 = constant 1 : index
   %c32 = constant 32 : index
   %c64 = constant 64 : index
-  %out = alloc(%c64) : memref<?xf32>
+  %out = memref.alloc(%c64) : memref<?xf32>
   %in1 = call @alloc_1d_filled_inc_f32(%c64, %cf1) : (index, f32) -> memref<?xf32>
   %in2 = call @alloc_1d_filled_inc_f32(%c64, %cf2) : (index, f32) -> memref<?xf32>
   // Check that the tansformatio correctly happened.
@@ -51,7 +51,7 @@ func @main() {
   %b = vector.transfer_read %in2[%c0], %cf0: memref<?xf32>, vector<64xf32>
   %acc = addf %a, %b: vector<64xf32>
   vector.transfer_write %acc, %out[%c0]: vector<64xf32>, memref<?xf32>
-  %converted = memref_cast %out : memref<?xf32> to memref<*xf32>
+  %converted = memref.cast %out : memref<?xf32> to memref<*xf32>
   call @print_memref_f32(%converted): (memref<*xf32>) -> ()
   // CHECK:      Unranked{{.*}}data =
   // CHECK:      [
@@ -61,8 +61,8 @@ func @main() {
   // CHECK-SAME:  77,  79,  81,  83,  85,  87,  89,  91,  93,  95,  97,  99,
   // CHECK-SAME:  101,  103,  105,  107,  109,  111,  113,  115,  117,  119,
   // CHECK-SAME:  121,  123,  125,  127,  129]
-  dealloc %out : memref<?xf32>
-  dealloc %in1 : memref<?xf32>
-  dealloc %in2 : memref<?xf32>
+  memref.dealloc %out : memref<?xf32>
+  memref.dealloc %in1 : memref<?xf32>
+  memref.dealloc %in2 : memref<?xf32>
   return
 }

@@ -52,25 +52,6 @@ func @test_commutative_multi(%arg0: i32, %arg1: i32) -> (i32, i32) {
   return %y, %z: i32, i32
 }
 
-
-// CHECK-LABEL: func @test_commutative_multi_cst
-func @test_commutative_multi_cst(%arg0: i32, %arg1: i32) -> (i32, i32) {
-  // CHECK-NEXT: %c42_i32 = constant 42 : i32
-  %c42_i32 = constant 42 : i32
-  %c42_i32_2 = constant 42 : i32
-  // CHECK-NEXT: %[[O0:.*]] = "test.op_commutative"(%arg0, %arg1, %c42_i32, %c42_i32) : (i32, i32, i32, i32) -> i32
-  %y = "test.op_commutative"(%c42_i32, %arg0, %arg1, %c42_i32_2) : (i32, i32, i32, i32) -> i32
-
-  %c42_i32_3 = constant 42 : i32
-
-  // CHECK-NEXT: %[[O1:.*]] = "test.op_commutative"(%arg0, %arg1, %c42_i32, %c42_i32) : (i32, i32, i32, i32) -> i32
-  %z = "test.op_commutative"(%arg0, %c42_i32_3, %c42_i32_2, %arg1): (i32, i32, i32, i32) -> i32
-  // CHECK-NEXT: return %[[O0]], %[[O1]]
-  return %y, %z: i32, i32
-}
-
-// CHECK-LABEL: func @typemismatch
-
 func @typemismatch() -> i32 {
   %c42 = constant 42.0 : f32
 

@@ -17,7 +17,7 @@ module attributes {
     %c1_2 = constant 1 : index
     gpu.launch_func @kernels::@load_store_kernel
         blocks in (%0, %c1_2, %c1_2) threads in (%1, %c1_2, %c1_2)
-        args(%arg0 : memref<12x4xf32>, %arg1 : memref<12x4xf32>, %arg2 : memref<12x4xf32>, 
+        args(%arg0 : memref<12x4xf32>, %arg1 : memref<12x4xf32>, %arg2 : memref<12x4xf32>,
              %c0 : index, %c0_0 : index, %c1 : index, %c1_1 : index)
     return
   }
@@ -69,15 +69,15 @@ module attributes {
       // CHECK: %[[OFFSET1_2:.*]] = spv.IAdd %[[OFFSET1_1]], %[[UPDATE1_2]] : i32
       // CHECK: %[[PTR1:.*]] = spv.AccessChain %[[ARG0]]{{\[}}%[[ZERO]], %[[OFFSET1_2]]{{\]}}
       // CHECK-NEXT: %[[VAL1:.*]] = spv.Load "StorageBuffer" %[[PTR1]]
-      %14 = load %arg0[%12, %13] : memref<12x4xf32>
+      %14 = memref.load %arg0[%12, %13] : memref<12x4xf32>
       // CHECK: %[[PTR2:.*]] = spv.AccessChain %[[ARG1]]{{\[}}{{%.*}}, {{%.*}}{{\]}}
       // CHECK-NEXT: %[[VAL2:.*]] = spv.Load "StorageBuffer" %[[PTR2]]
-      %15 = load %arg1[%12, %13] : memref<12x4xf32>
+      %15 = memref.load %arg1[%12, %13] : memref<12x4xf32>
       // CHECK: %[[VAL3:.*]] = spv.FAdd %[[VAL1]], %[[VAL2]]
       %16 = addf %14, %15 : f32
       // CHECK: %[[PTR3:.*]] = spv.AccessChain %[[ARG2]]{{\[}}{{%.*}}, {{%.*}}{{\]}}
       // CHECK-NEXT: spv.Store "StorageBuffer" %[[PTR3]], %[[VAL3]]
-      store %16, %arg2[%12, %13] : memref<12x4xf32>
+      memref.store %16, %arg2[%12, %13] : memref<12x4xf32>
       gpu.return
     }
   }

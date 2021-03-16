@@ -30,7 +30,11 @@
 # CHECK-NEXT: lazy_bind_off [[#LAZY_OFF: BIND_OFF + BIND_SIZE]]
 # CHECK-NEXT: lazy_bind_size [[#LAZY_SIZE:]]
 # CHECK-NEXT: export_off [[#EXPORT_OFF: LAZY_OFF + LAZY_SIZE]]
-# CHECK-NEXT: export_size [[#]]
+# CHECK-NEXT: export_size [[#EXPORT_SIZE:]]
+
+# CHECK:      cmd LC_FUNCTION_STARTS
+# CHECK-NEXT: cmdsize
+# CHECK-NEXT: dataoff [[#FUNCSTARTS_OFF: EXPORT_OFF + EXPORT_SIZE]]
 
 .text
 .globl _main

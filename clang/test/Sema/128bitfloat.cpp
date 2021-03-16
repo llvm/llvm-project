@@ -6,6 +6,13 @@
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -verify -std=c++11 %s
 
 #if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
+
+#if defined(__ppc__)
+template <typename> struct __is_float128 { static constexpr bool value = false; };
+template <> struct __is_float128<__float128> { static constexpr bool value = true; };
+static_assert(__is_float128<__ieee128>::value, "__ieee128 aliases to __float128");
+#endif
+
 __float128 f;
 template<typename> struct __is_floating_point_helper {};
 template<> struct __is_floating_point_helper<__float128> {};

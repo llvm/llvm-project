@@ -708,6 +708,14 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label __dfso_dfsan_get_label(
   return data_label;
 }
 
+// This function is used if dfsan_get_origin is called when origin tracking is
+// off.
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin __dfsw_dfsan_get_origin(
+    long data, dfsan_label data_label, dfsan_label *ret_label) {
+  *ret_label = 0;
+  return 0;
+}
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin __dfso_dfsan_get_origin(
     long data, dfsan_label data_label, dfsan_label *ret_label,
     dfsan_origin data_origin, dfsan_origin *ret_origin) {
@@ -847,6 +855,7 @@ dfsan_get_init_origin(const void *addr) {
   dfsan_origin origin_id = o.raw_id();
   while (o.isChainedOrigin()) {
     StackTrace stack;
+    origin_id = o.raw_id();
     o = o.getNextChainedOrigin(&stack);
   }
   return origin_id;

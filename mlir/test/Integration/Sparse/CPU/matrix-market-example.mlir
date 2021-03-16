@@ -35,8 +35,8 @@ module {
     //
     // Setup memrefs to get meta data, indices, and values.
     //
-    %idata = alloc(%c4) : memref<?xindex>
-    %ddata = alloc(%c1) : memref<?xf64>
+    %idata = memref.alloc(%c4) : memref<?xindex>
+    %ddata = memref.alloc(%c1) : memref<?xf64>
 
     //
     // Obtain the sparse matrix filename through this test helper.
@@ -51,20 +51,20 @@ module {
     // nonzero elements (nnz), and the size (m x n) through a memref array.
     //
     %tensor = call @openTensor(%fileName, %idata) : (!Filename, memref<?xindex>) -> (!Tensor)
-    %rank = load %idata[%c0] : memref<?xindex>
-    %nnz  = load %idata[%c1] : memref<?xindex>
-    %m    = load %idata[%c2] : memref<?xindex>
-    %n    = load %idata[%c3] : memref<?xindex>
+    %rank = memref.load %idata[%c0] : memref<?xindex>
+    %nnz  = memref.load %idata[%c1] : memref<?xindex>
+    %m    = memref.load %idata[%c2] : memref<?xindex>
+    %n    = memref.load %idata[%c3] : memref<?xindex>
 
     //
     // At this point, code should prepare a proper sparse storage scheme for
     // an m x n matrix with nnz nonzero elements. For simplicity, here we
     // simply intialize a dense m x n matrix to all zeroes.
     //
-    %a = alloc(%m, %n) : memref<?x?xf64>
+    %a = memref.alloc(%m, %n) : memref<?x?xf64>
     scf.for %ii = %c0 to %m step %c1 {
       scf.for %jj = %c0 to %n step %c1 {
-        store %d0, %a[%ii, %jj] : memref<?x?xf64>
+        memref.store %d0, %a[%ii, %jj] : memref<?x?xf64>
       }
     }
 
@@ -75,10 +75,10 @@ module {
     //
     scf.for %k = %c0 to %nnz step %c1 {
       call @readTensorItem(%tensor, %idata, %ddata) : (!Tensor, memref<?xindex>, memref<?xf64>) -> ()
-      %i = load %idata[%c0] : memref<?xindex>
-      %j = load %idata[%c1] : memref<?xindex>
-      %d = load %ddata[%c0] : memref<?xf64>
-      store %d, %a[%i, %j] : memref<?x?xf64>
+      %i = memref.load %idata[%c0] : memref<?xindex>
+      %j = memref.load %idata[%c1] : memref<?xindex>
+      %d = memref.load %ddata[%c0] : memref<?xf64>
+      memref.store %d, %a[%i, %j] : memref<?x?xf64>
     }
 
     //
@@ -112,9 +112,9 @@ module {
     //
     // Free.
     //
-    dealloc %idata : memref<?xindex>
-    dealloc %ddata : memref<?xf64>
-    dealloc %a     : memref<?x?xf64>
+    memref.dealloc %idata : memref<?xindex>
+    memref.dealloc %ddata : memref<?xf64>
+    memref.dealloc %a     : memref<?x?xf64>
 
     return
   }

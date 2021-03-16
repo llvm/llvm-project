@@ -102,8 +102,8 @@ struct TestLinalgFusionTransforms
   TestLinalgFusionTransforms(const TestLinalgFusionTransforms &pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, linalg::LinalgDialect, scf::SCFDialect,
-                    StandardOpsDialect>();
+    registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
+                    scf::SCFDialect, StandardOpsDialect>();
   }
 
   void runOnFunction() override {
@@ -211,7 +211,8 @@ struct TestLinalgTileAndFuseSequencePass
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, linalg::LinalgDialect, scf::SCFDialect>();
+    registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
+                    scf::SCFDialect>();
   }
 
   void runOnFunction() override {

@@ -24,6 +24,6 @@ struct omptarget_device_environmentTy {
 };
 #endif
 
-extern DEVICE omptarget_device_environmentTy omptarget_device_environment;
+extern omptarget_device_environmentTy omptarget_device_environment;
 
 #endif

@@ -24,7 +24,7 @@ func private @print_memref_f32(memref<*xf32>)
 
 // Creates and returns 5-D buffer of size (%s1, %s2, %s3, %s4, %s5) filled with the value %f
 func @alloc_5d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %s5 : index, %f : f32) -> memref<?x?x?x?x?xf32> {
-  %buf = alloc(%s1, %s2, %s3, %s4, %s5) : memref<?x?x?x?x?xf32>
+  %buf = memref.alloc(%s1, %s2, %s3, %s4, %s5) : memref<?x?x?x?x?xf32>
   linalg.fill(%buf, %f) : memref<?x?x?x?x?xf32>, f32
   return %buf : memref<?x?x?x?x?xf32>
 }
@@ -52,14 +52,14 @@ func @main() {
   %in3D_ndhwc = call @alloc_5d_filled_f32(%c1, %c8, %c8, %c8, %c1, %val) : (index, index, index, index, index, f32) -> (memref<?x?x?x?x?xf32>)
   %out3D_ndhwc = call @alloc_5d_filled_f32(%c1, %c6, %c6, %c6, %c1, %zero) : (index, index, index, index, index, f32) -> (memref<?x?x?x?x?xf32>)
 
-  store %f10, %in3D_ndhwc[%c0, %c0, %c0, %c3, %c0] : memref<?x?x?x?x?xf32>
+  memref.store %f10, %in3D_ndhwc[%c0, %c0, %c0, %c3, %c0] : memref<?x?x?x?x?xf32>
   call @conv_3d_input_ndhwc_filter_dhwcf(%in3D_ndhwc, %filter3D_ndhwc, %out3D_ndhwc) : (memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>) -> ()
-  %out3D_ndhwc_ = memref_cast %out3D_ndhwc : memref<?x?x?x?x?xf32> to memref<*xf32>
+  %out3D_ndhwc_ = memref.cast %out3D_ndhwc : memref<?x?x?x?x?xf32> to memref<*xf32>
   call @print_memref_f32(%out3D_ndhwc_): (memref<*xf32>) -> ()
 
-  dealloc %filter3D_ndhwc : memref<?x?x?x?x?xf32>
-  dealloc %in3D_ndhwc : memref<?x?x?x?x?xf32>
-  dealloc %out3D_ndhwc : memref<?x?x?x?x?xf32>
+  memref.dealloc %filter3D_ndhwc : memref<?x?x?x?x?xf32>
+  memref.dealloc %in3D_ndhwc : memref<?x?x?x?x?xf32>
+  memref.dealloc %out3D_ndhwc : memref<?x?x?x?x?xf32>
   return
 }
 

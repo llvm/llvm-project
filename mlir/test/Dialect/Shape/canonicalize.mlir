@@ -1088,9 +1088,34 @@ func @is_broadcastable_on_same_shape(%shape : !shape.shape) -> i1 {
 // CHECK-SAME: (%[[A:.*]]: !shape.shape, %[[B:.*]]: !shape.shape)
 func @is_broadcastable_on_duplicate_shapes(%a : !shape.shape, %b : !shape.shape)
     -> i1 {
-  // CHECK: %[[RES:.*]] = shape.is_broadcastable %[[A]], %[[B]]
+  // CHECK: %[[RES:.*]] = shape.is_broadcastable %[[A]], %[[B]] :
   // CHECK: return %[[RES]]
   %0 = shape.is_broadcastable %a, %b, %a, %a, %a, %b : !shape.shape,
       !shape.shape, !shape.shape, !shape.shape, !shape.shape, !shape.shape
   return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @broadcast_on_same_shape
+// CHECK-SAME: (%[[SHAPE:.*]]: !shape.shape)
+func @broadcast_on_same_shape(%shape : !shape.shape) -> !shape.shape {
+  // CHECK-NOT: broadcast
+  // CHECK: return %[[SHAPE]]
+  %0 = shape.broadcast %shape, %shape, %shape : !shape.shape, !shape.shape,
+      !shape.shape -> !shape.shape
+  return %0 : !shape.shape
+}
+
+// -----
+
+// CHECK-LABEL: @broadcast_on_duplicate_shapes
+// CHECK-SAME: (%[[A:.*]]: !shape.shape, %[[B:.*]]: !shape.shape)
+func @broadcast_on_duplicate_shapes(%a : !shape.shape, %b : !shape.shape)
+    -> !shape.shape {
+  // CHECK: %[[RES:.*]] = shape.broadcast %[[A]], %[[B]] :
+  // CHECK: return %[[RES]]
+  %0 = shape.broadcast %a, %b, %a, %a, %a, %b : !shape.shape, !shape.shape,
+      !shape.shape, !shape.shape, !shape.shape, !shape.shape -> !shape.shape
+  return %0 : !shape.shape
 }

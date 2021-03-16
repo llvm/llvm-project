@@ -29,6 +29,10 @@
 #include <string_view>
 #include <cassert>
 
+// On Windows, the append function converts all inputs (pointers, iterators)
+// to an intermediate path object, causing allocations in cases where no
+// allocations are done on other platforms.
+
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "count_new.h"
@@ -141,7 +145,7 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
     path LHS(L); PathReserve(LHS, ReserveSize);
     Str  RHS(R);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       LHS /= RHS;
     }
     assert(PathEq(LHS, E));
@@ -151,7 +155,7 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
     path LHS(L); PathReserve(LHS, ReserveSize);
     StrView  RHS(R);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       LHS /= RHS;
     }
     assert(PathEq(LHS, E));
@@ -161,7 +165,7 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
     path LHS(L); PathReserve(LHS, ReserveSize);
     Ptr RHS(R);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       LHS /= RHS;
     }
     assert(PathEq(LHS, E));
@@ -170,7 +174,7 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
     path LHS(L); PathReserve(LHS, ReserveSize);
     Ptr RHS(R);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       LHS.append(RHS, StrEnd(RHS));
     }
     assert(PathEq(LHS, E));
@@ -189,7 +193,13 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
   // code_cvt conversions.
   // For "char" no allocations will be performed because no conversion is
   // required.
+  // On Windows, the append method is more complex and uses intermediate
+  // path objects, which causes extra allocations.
+#ifdef _WIN32
+  bool DisableAllocations = false;
+#else
   bool DisableAllocations = std::is_same<CharT, char>::value;
+#endif
   {
     path LHS(L); PathReserve(LHS, ReserveSize);
     InputIter RHS(R);

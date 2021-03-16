@@ -1,5 +1,5 @@
 ; RUN: opt -S -disable-promote-alloca-to-vector -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-promote-alloca < %s | FileCheck -check-prefix=IR %s
-; RUN: llc -disable-promote-alloca-to-vector -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=ASM %s
+; RUN: llc -disable-promote-alloca-to-vector -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-disable-lower-module-lds=true < %s | FileCheck -check-prefix=ASM %s
 
 target datalayout = "A5"
 

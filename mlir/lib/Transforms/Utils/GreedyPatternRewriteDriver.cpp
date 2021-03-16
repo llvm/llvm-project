@@ -107,8 +107,7 @@ private:
   // be re-added to the worklist. This function should be called when an
   // operation is modified or removed, as it may trigger further
   // simplifications.
-  template <typename Operands>
-  void addToWorklist(Operands &&operands) {
+  template <typename Operands> void addToWorklist(Operands &&operands) {
     for (Value operand : operands) {
       // If the use count of this operand is now < 2, we re-add the defining
       // operation to the worklist.
@@ -141,26 +140,15 @@ private:
 /// if the rewrite converges in `maxIterations`.
 bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
                                           int maxIterations) {
-  // Perform a prepass over the IR to discover constants.
-  for (auto &region : regions)
-    folder.processExistingConstants(region);
+  // Add the given operation to the worklist.
+  auto collectOps = [this](Operation *op) { addToWorklist(op); };
 
   bool changed = false;
-  int iteration = 0;
+  int i = 0;
   do {
-    assert(worklist.empty() &&
-           "Each iteration should start with empty worklist");
-
-    // Add all nested operations to the worklist in preorder.
+    // Add all nested operations to the worklist.
     for (auto &region : regions)
-      region.walk<WalkOrder::PreOrder>(
-          [this](Operation *op) { worklist.push_back(op); });
-
-    // Reverse the list so our pop-back loop processes them in-order.
-    std::reverse(worklist.begin(), worklist.end());
-    // Remember the reverse index.
-    for (unsigned i = 0, e = worklist.size(); i != e; ++i)
-      worklistMap[worklist[i]] = i;
+      region.walk(collectOps);
 
     // These are scratch vectors used in the folding loop below.
     SmallVector<Value, 8> originalOperands, resultValues;
@@ -198,9 +186,6 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
         notifyOperationRemoved(op);
       };
 
-      // Add the given operation to the worklist.
-      auto collectOps = [this](Operation *op) { addToWorklist(op); };
-
       // Try to fold this op.
       bool inPlaceUpdate;
       if ((succeeded(folder.tryToFold(op, collectOps, preReplaceAction,
@@ -221,7 +206,7 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
       folder.clear();
       changed = true;
     }
-  } while (changed && ++iteration < maxIterations);
+  } while (changed && ++i < maxIterations);
   // Whether the rewrite converges, i.e. wasn't changed in the last iteration.
   return !changed;
 }

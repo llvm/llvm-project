@@ -9,8 +9,8 @@ func @parallel_loop_bidy_bidx(%arg0 : index, %arg1 : index, %arg2 : index,
   %step = constant 2 : index
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                                           step (%arg4, %step)  {
-    %val = load %buf[%i0, %i1] : memref<?x?xf32>
-    store %val, %res[%i1, %i0] : memref<?x?xf32>
+    %val = memref.load %buf[%i0, %i1] : memref<?x?xf32>
+    memref.store %val, %res[%i1, %i0] : memref<?x?xf32>
   } { mapping = [{processor = 1, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}, {processor = 0, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}] }
   return
 }
@@ -28,8 +28,8 @@ func @parallel_loop_bidy_bidx(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:           gpu.launch blocks([[VAL_11:%.*]], [[VAL_12:%.*]], [[VAL_13:%.*]]) in ([[VAL_14:%.*]] = [[VAL_10]], [[VAL_15:%.*]] = [[VAL_9]], [[VAL_16:%.*]] = [[VAL_8]]) threads([[VAL_17:%.*]], [[VAL_18:%.*]], [[VAL_19:%.*]]) in ([[VAL_20:%.*]] = [[VAL_8]], [[VAL_21:%.*]] = [[VAL_8]], [[VAL_22:%.*]] = [[VAL_8]]) {
 // CHECK:             [[VAL_23:%.*]] = affine.apply #[[$MAP1]]([[VAL_12]]){{\[}}[[VAL_4]], [[VAL_0]]]
 // CHECK:             [[VAL_24:%.*]] = affine.apply #[[$MAP1]]([[VAL_11]]){{\[}}[[VAL_7]], [[VAL_1]]]
-// CHECK:             [[VAL_25:%.*]] = load [[VAL_5]]{{\[}}[[VAL_23]], [[VAL_24]]] : memref<?x?xf32>
-// CHECK:             store [[VAL_25]], [[VAL_6]]{{\[}}[[VAL_24]], [[VAL_23]]] : memref<?x?xf32>
+// CHECK:             [[VAL_25:%.*]] = memref.load [[VAL_5]]{{\[}}[[VAL_23]], [[VAL_24]]] : memref<?x?xf32>
+// CHECK:             memref.store [[VAL_25]], [[VAL_6]]{{\[}}[[VAL_24]], [[VAL_23]]] : memref<?x?xf32>
 // CHECK:             gpu.terminator
 // CHECK:           }
 // CHECK:           return
@@ -53,8 +53,8 @@ func @parallel_loop_tiled(%arg0 : index, %arg1 : index, %arg2 : index,
                                             step (%one, %one)  {
       %idx0 = addi %i0, %si0 : index
       %idx1 = addi %i1, %si1 : index
-      %val = load %buf[%idx0, %idx1] : memref<?x?xf32>
-      store %val, %res[%idx1, %idx0] : memref<?x?xf32>
+      %val = memref.load %buf[%idx0, %idx1] : memref<?x?xf32>
+      memref.store %val, %res[%idx1, %idx0] : memref<?x?xf32>
     } { mapping = [
         {processor = 4, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>},
         {processor = 3, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}
@@ -87,8 +87,8 @@ func @parallel_loop_tiled(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:             [[VAL_55:%.*]] = affine.apply #[[$MAP1]]([[VAL_46]]){{\[}}[[VAL_33]], [[VAL_32]]]
 // CHECK:             [[VAL_56:%.*]] = addi [[VAL_52]], [[VAL_54]] : index
 // CHECK:             [[VAL_57:%.*]] = addi [[VAL_53]], [[VAL_55]] : index
-// CHECK:             [[VAL_58:%.*]] = load [[VAL_30]]{{\[}}[[VAL_56]], [[VAL_57]]] : memref<?x?xf32>
-// CHECK:             store [[VAL_58]], [[VAL_31]]{{\[}}[[VAL_57]], [[VAL_56]]] : memref<?x?xf32>
+// CHECK:             [[VAL_58:%.*]] = memref.load [[VAL_30]]{{\[}}[[VAL_56]], [[VAL_57]]] : memref<?x?xf32>
+// CHECK:             memref.store [[VAL_58]], [[VAL_31]]{{\[}}[[VAL_57]], [[VAL_56]]] : memref<?x?xf32>
 // CHECK:             gpu.terminator
 // CHECK:           }
 // CHECK:           return
@@ -106,8 +106,8 @@ func @parallel_loop_bidy_seq(%arg0 : index, %arg1 : index, %arg2 : index,
   %step = constant 2 : index
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                                           step (%arg4, %step)  {
-    %val = load %buf[%i0, %i1] : memref<?x?xf32>
-    store %val, %res[%i1, %i0] : memref<?x?xf32>
+    %val = memref.load %buf[%i0, %i1] : memref<?x?xf32>
+    memref.store %val, %res[%i1, %i0] : memref<?x?xf32>
   } { mapping = [
       {processor = 1, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>},
       {processor = 6, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}
@@ -127,8 +127,8 @@ func @parallel_loop_bidy_seq(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:           gpu.launch blocks([[VAL_69:%.*]], [[VAL_70:%.*]], [[VAL_71:%.*]]) in ([[VAL_72:%.*]] = [[VAL_67]], [[VAL_73:%.*]] = [[VAL_68]], [[VAL_74:%.*]] = [[VAL_67]]) threads([[VAL_75:%.*]], [[VAL_76:%.*]], [[VAL_77:%.*]]) in ([[VAL_78:%.*]] = [[VAL_67]], [[VAL_79:%.*]] = [[VAL_67]], [[VAL_80:%.*]] = [[VAL_67]]) {
 // CHECK:             [[VAL_81:%.*]] = affine.apply #[[$MAP1]]([[VAL_70]]){{\[}}[[VAL_63]], [[VAL_59]]]
 // CHECK:             scf.for [[VAL_82:%.*]] = [[VAL_60]] to [[VAL_62]] step [[VAL_66]] {
-// CHECK:               [[VAL_83:%.*]] = load [[VAL_64]]{{\[}}[[VAL_81]], [[VAL_82]]] : memref<?x?xf32>
-// CHECK:               store [[VAL_83]], [[VAL_65]]{{\[}}[[VAL_82]], [[VAL_81]]] : memref<?x?xf32>
+// CHECK:               [[VAL_83:%.*]] = memref.load [[VAL_64]]{{\[}}[[VAL_81]], [[VAL_82]]] : memref<?x?xf32>
+// CHECK:               memref.store [[VAL_83]], [[VAL_65]]{{\[}}[[VAL_82]], [[VAL_81]]] : memref<?x?xf32>
 // CHECK:             }
 // CHECK:             gpu.terminator
 // CHECK:           }
@@ -153,8 +153,8 @@ func @parallel_loop_tiled_seq(%arg0 : index, %arg1 : index, %arg2 : index,
                                             step (%one, %one)  {
       %idx0 = addi %i0, %si0 : index
       %idx1 = addi %i1, %si1 : index
-      %val = load %buf[%idx0, %idx1] : memref<?x?xf32>
-      store %val, %res[%idx1, %idx0] : memref<?x?xf32>
+      %val = memref.load %buf[%idx0, %idx1] : memref<?x?xf32>
+      memref.store %val, %res[%idx1, %idx0] : memref<?x?xf32>
     } { mapping = [
         {processor = 4, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>},
         {processor = 6, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}
@@ -185,8 +185,8 @@ func @parallel_loop_tiled_seq(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:               scf.for [[VAL_111:%.*]] = [[VAL_90]] to [[VAL_92]] step [[VAL_91]] {
 // CHECK:                 [[VAL_112:%.*]] = addi [[VAL_108]], [[VAL_110]] : index
 // CHECK:                 [[VAL_113:%.*]] = addi [[VAL_109]], [[VAL_111]] : index
-// CHECK:                 [[VAL_114:%.*]] = load [[VAL_88]]{{\[}}[[VAL_112]], [[VAL_113]]] : memref<?x?xf32>
-// CHECK:                 store [[VAL_114]], [[VAL_89]]{{\[}}[[VAL_113]], [[VAL_112]]] : memref<?x?xf32>
+// CHECK:                 [[VAL_114:%.*]] = memref.load [[VAL_88]]{{\[}}[[VAL_112]], [[VAL_113]]] : memref<?x?xf32>
+// CHECK:                 memref.store [[VAL_114]], [[VAL_89]]{{\[}}[[VAL_113]], [[VAL_112]]] : memref<?x?xf32>
 // CHECK:               }
 // CHECK:             }
 // CHECK:             gpu.terminator
@@ -208,31 +208,31 @@ module {
     %c0 = constant 0 : index
     %c3 = constant 3 : index
     %c2 = constant 2 : index
-    %0 = dim %arg0, %c0 : memref<?x?xf32, #map0>
-    %1 = dim %arg0, %c1 : memref<?x?xf32, #map0>
+    %0 = memref.dim %arg0, %c0 : memref<?x?xf32, #map0>
+    %1 = memref.dim %arg0, %c1 : memref<?x?xf32, #map0>
     scf.parallel (%arg3, %arg4) = (%c0, %c0) to (%0, %1) step (%c2, %c3) {
-      %2 = dim %arg0, %c0 : memref<?x?xf32, #map0>
+      %2 = memref.dim %arg0, %c0 : memref<?x?xf32, #map0>
       %3 = affine.min #map1(%arg3)[%2]
       %squared_min = muli %3, %3 : index
-      %4 = dim %arg0, %c1 : memref<?x?xf32, #map0>
+      %4 = memref.dim %arg0, %c1 : memref<?x?xf32, #map0>
       %5 = affine.min #map2(%arg4)[%4]
-      %6 = std.subview %arg0[%arg3, %arg4][%squared_min, %5][%c1, %c1] : memref<?x?xf32, #map0> to memref<?x?xf32, #map3>
-      %7 = dim %arg1, %c0 : memref<?x?xf32, #map0>
+      %6 = memref.subview %arg0[%arg3, %arg4][%squared_min, %5][%c1, %c1] : memref<?x?xf32, #map0> to memref<?x?xf32, #map3>
+      %7 = memref.dim %arg1, %c0 : memref<?x?xf32, #map0>
       %8 = affine.min #map1(%arg3)[%7]
-      %9 = dim %arg1, %c1 : memref<?x?xf32, #map0>
+      %9 = memref.dim %arg1, %c1 : memref<?x?xf32, #map0>
       %10 = affine.min #map2(%arg4)[%9]
-      %11 = std.subview %arg1[%arg3, %arg4][%8, %10][%c1, %c1] : memref<?x?xf32, #map0> to memref<?x?xf32, #map3>
-      %12 = dim %arg2, %c0 : memref<?x?xf32, #map0>
+      %11 = memref.subview %arg1[%arg3, %arg4][%8, %10][%c1, %c1] : memref<?x?xf32, #map0> to memref<?x?xf32, #map3>
+      %12 = memref.dim %arg2, %c0 : memref<?x?xf32, #map0>
       %13 = affine.min #map1(%arg3)[%12]
-      %14 = dim %arg2, %c1 : memref<?x?xf32, #map0>
+      %14 = memref.dim %arg2, %c1 : memref<?x?xf32, #map0>
       %15 = affine.min #map2(%arg4)[%14]
-      %16 = std.subview %arg2[%arg3, %arg4][%13, %15][%c1, %c1] : memref<?x?xf32, #map0> to memref<?x?xf32, #map3>
+      %16 = memref.subview %arg2[%arg3, %arg4][%13, %15][%c1, %c1] : memref<?x?xf32, #map0> to memref<?x?xf32, #map3>
       scf.parallel (%arg5, %arg6) = (%c0, %c0) to (%squared_min, %5) step (%c1, %c1) {
-        %17 = load %6[%arg5, %arg6] : memref<?x?xf32, #map3>
-        %18 = load %11[%arg5, %arg6] : memref<?x?xf32, #map3>
-        %19 = load %16[%arg5, %arg6] : memref<?x?xf32, #map3>
+        %17 = memref.load %6[%arg5, %arg6] : memref<?x?xf32, #map3>
+        %18 = memref.load %11[%arg5, %arg6] : memref<?x?xf32, #map3>
+        %19 = memref.load %16[%arg5, %arg6] : memref<?x?xf32, #map3>
         %20 = addf %17, %18 : f32
-        store %20, %16[%arg5, %arg6] : memref<?x?xf32, #map3>
+        memref.store %20, %16[%arg5, %arg6] : memref<?x?xf32, #map3>
         scf.yield
       } {mapping = [{bound = affine_map<(d0) -> (d0)>, map = affine_map<(d0) -> (d0)>, processor = 3 : i64}, {bound = affine_map<(d0) -> (d0)>, map = affine_map<(d0) -> (d0)>, processor = 4 : i64}]}
       scf.yield
@@ -255,8 +255,8 @@ module {
 // CHECK:           %[[C0:.*]] = constant 0 : index
 // CHECK:           %[[C3:.*]] = constant 3 : index
 // CHECK:           %[[C2:.*]] = constant 2 : index
-// CHECK:           [[VAL_7:%.*]] = dim [[VAL_0]], %[[C0]] : memref<?x?xf32, #[[$MAP0]]>
-// CHECK:           [[VAL_8:%.*]] = dim [[VAL_0]], %[[C1]] : memref<?x?xf32, #[[$MAP0]]>
+// CHECK:           [[VAL_7:%.*]] = memref.dim [[VAL_0]], %[[C0]] : memref<?x?xf32, #[[$MAP0]]>
+// CHECK:           [[VAL_8:%.*]] = memref.dim [[VAL_0]], %[[C1]] : memref<?x?xf32, #[[$MAP0]]>
 // CHECK:           [[VAL_9:%.*]] = constant 1 : index
 // CHECK:           [[VAL_10:%.*]] = affine.apply #[[$MAP1]]([[VAL_7]]){{\[}}%[[C0]], %[[C2]]]
 // CHECK:           [[VAL_11:%.*]] = affine.apply #[[$MAP1]]([[VAL_8]]){{\[}}%[[C0]], %[[C3]]]
@@ -267,33 +267,33 @@ module {
 // CHECK:           gpu.launch blocks([[VAL_16:%.*]], [[VAL_17:%.*]], [[VAL_18:%.*]]) in ([[VAL_19:%.*]] = [[VAL_10]], [[VAL_20:%.*]] = [[VAL_11]], [[VAL_21:%.*]] = [[VAL_9]]) threads([[VAL_22:%.*]], [[VAL_23:%.*]], [[VAL_24:%.*]]) in ([[VAL_25:%.*]] = [[VAL_13]], [[VAL_26:%.*]] = [[VAL_15]], [[VAL_27:%.*]] = [[VAL_9]]) {
 // CHECK:             [[VAL_28:%.*]] = affine.apply #[[$MAP2]]([[VAL_16]]){{\[}}%[[C2]], %[[C0]]]
 // CHECK:             [[VAL_29:%.*]] = affine.apply #[[$MAP2]]([[VAL_17]]){{\[}}%[[C3]], %[[C0]]]
-// CHECK:             [[VAL_30:%.*]] = dim [[VAL_0]], %[[C0]] : memref<?x?xf32, #[[$MAP0]]>
+// CHECK:             [[VAL_30:%.*]] = memref.dim [[VAL_0]], %[[C0]] : memref<?x?xf32, #[[$MAP0]]>
 // CHECK:             [[VAL_31:%.*]] = affine.min #[[$MAP3]]([[VAL_28]]){{\[}}[[VAL_30]]]
 // CHECK:             [[VAL_31_SQUARED:%.*]] = muli [[VAL_31]], [[VAL_31]] : index
-// CHECK:             [[VAL_32:%.*]] = dim [[VAL_0]], %[[C1]] : memref<?x?xf32, #[[$MAP0]]>
+// CHECK:             [[VAL_32:%.*]] = memref.dim [[VAL_0]], %[[C1]] : memref<?x?xf32, #[[$MAP0]]>
 // CHECK:             [[VAL_33:%.*]] = affine.min #[[$MAP4]]([[VAL_29]]){{\[}}[[VAL_32]]]
-// CHECK:             [[VAL_34:%.*]] = subview [[VAL_0]]{{\[}}[[VAL_28]], [[VAL_29]]] {{\[}}[[VAL_31_SQUARED]], [[VAL_33]]] {{\[}}%[[C1]], %[[C1]]] : memref<?x?xf32, #[[$MAP0]]> to memref<?x?xf32, #[[$MAP5]]>
-// CHECK:             [[VAL_35:%.*]] = dim [[VAL_1]], %[[C0]] : memref<?x?xf32, #[[$MAP0]]>
+// CHECK:             [[VAL_34:%.*]] = memref.subview [[VAL_0]]{{\[}}[[VAL_28]], [[VAL_29]]] {{\[}}[[VAL_31_SQUARED]], [[VAL_33]]] {{\[}}%[[C1]], %[[C1]]] : memref<?x?xf32, #[[$MAP0]]> to memref<?x?xf32, #[[$MAP5]]>
+// CHECK:             [[VAL_35:%.*]] = memref.dim [[VAL_1]], %[[C0]] : memref<?x?xf32, #[[$MAP0]]>
 // CHECK:             [[VAL_36:%.*]] = affine.min #[[$MAP3]]([[VAL_28]]){{\[}}[[VAL_35]]]
-// CHECK:             [[VAL_37:%.*]] = dim [[VAL_1]], %[[C1]] : memref<?x?xf32, #[[$MAP0]]>
+// CHECK:             [[VAL_37:%.*]] = memref.dim [[VAL_1]], %[[C1]] : memref<?x?xf32, #[[$MAP0]]>
 // CHECK:             [[VAL_38:%.*]] = affine.min #[[$MAP4]]([[VAL_29]]){{\[}}[[VAL_37]]]
-// CHECK:             [[VAL_39:%.*]] = subview [[VAL_1]]{{\[}}[[VAL_28]], [[VAL_29]]] {{\[}}[[VAL_36]], [[VAL_38]]] {{\[}}%[[C1]], %[[C1]]] : memref<?x?xf32, #[[$MAP0]]> to memref<?x?xf32, #[[$MAP5]]>
-// CHECK:             [[VAL_40:%.*]] = dim [[VAL_2]], %[[C0]] : memref<?x?xf32, #[[$MAP0]]>
+// CHECK:             [[VAL_39:%.*]] = memref.subview [[VAL_1]]{{\[}}[[VAL_28]], [[VAL_29]]] {{\[}}[[VAL_36]], [[VAL_38]]] {{\[}}%[[C1]], %[[C1]]] : memref<?x?xf32, #[[$MAP0]]> to memref<?x?xf32, #[[$MAP5]]>
+// CHECK:             [[VAL_40:%.*]] = memref.dim [[VAL_2]], %[[C0]] : memref<?x?xf32, #[[$MAP0]]>
 // CHECK:             [[VAL_41:%.*]] = affine.min #[[$MAP3]]([[VAL_28]]){{\[}}[[VAL_40]]]
-// CHECK:             [[VAL_42:%.*]] = dim [[VAL_2]], %[[C1]] : memref<?x?xf32, #[[$MAP0]]>
+// CHECK:             [[VAL_42:%.*]] = memref.dim [[VAL_2]], %[[C1]] : memref<?x?xf32, #[[$MAP0]]>
 // CHECK:             [[VAL_43:%.*]] = affine.min #[[$MAP4]]([[VAL_29]]){{\[}}[[VAL_42]]]
-// CHECK:             [[VAL_44:%.*]] = subview [[VAL_2]]{{\[}}[[VAL_28]], [[VAL_29]]] {{\[}}[[VAL_41]], [[VAL_43]]] {{\[}}%[[C1]], %[[C1]]] : memref<?x?xf32, #[[$MAP0]]> to memref<?x?xf32, #[[$MAP5]]>
+// CHECK:             [[VAL_44:%.*]] = memref.subview [[VAL_2]]{{\[}}[[VAL_28]], [[VAL_29]]] {{\[}}[[VAL_41]], [[VAL_43]]] {{\[}}%[[C1]], %[[C1]]] : memref<?x?xf32, #[[$MAP0]]> to memref<?x?xf32, #[[$MAP5]]>
 // CHECK:             [[VAL_45:%.*]] = affine.apply #[[$MAP2]]([[VAL_22]]){{\[}}%[[C1]], %[[C0]]]
 // CHECK:             [[VAL_46:%.*]] = cmpi slt, [[VAL_45]], [[VAL_31_SQUARED]] : index
 // CHECK:             scf.if [[VAL_46]] {
 // CHECK:               [[VAL_47:%.*]] = affine.apply #[[$MAP2]]([[VAL_23]]){{\[}}%[[C1]], %[[C0]]]
 // CHECK:               [[VAL_48:%.*]] = cmpi slt, [[VAL_47]], [[VAL_33]] : index
 // CHECK:               scf.if [[VAL_48]] {
-// CHECK:                 [[VAL_49:%.*]] = load [[VAL_34]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
-// CHECK:                 [[VAL_50:%.*]] = load [[VAL_39]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
-// CHECK:                 [[VAL_51:%.*]] = load [[VAL_44]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
+// CHECK:                 [[VAL_49:%.*]] = memref.load [[VAL_34]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
+// CHECK:                 [[VAL_50:%.*]] = memref.load [[VAL_39]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
+// CHECK:                 [[VAL_51:%.*]] = memref.load [[VAL_44]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
 // CHECK:                 [[VAL_52:%.*]] = addf [[VAL_49]], [[VAL_50]] : f32
-// CHECK:                 store [[VAL_52]], [[VAL_44]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
+// CHECK:                 memref.store [[VAL_52]], [[VAL_44]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
 // CHECK:               }
 // CHECK:             }
 // CHECK:             gpu.terminator
@@ -353,8 +353,8 @@ func @parallel_loop_loop_variant_bound(%arg0 : index, %arg1 : index, %arg2 : ind
                                             step (%one, %one)  {
       %idx0 = addi %i0, %si0 : index
       %idx1 = addi %i1, %si1 : index
-      %val = load %buf[%idx0, %idx1] : memref<?x?xf32>
-      store %val, %res[%idx1, %idx0] : memref<?x?xf32>
+      %val = memref.load %buf[%idx0, %idx1] : memref<?x?xf32>
+      memref.store %val, %res[%idx1, %idx0] : memref<?x?xf32>
     } { mapping = [
         {processor = 4, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>},
         {processor = 6, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}

@@ -1051,15 +1051,6 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
   return success();
 }
 
-/// Checks if two ShapedTypes are the same, ignoring the element type.
-static bool areSameShapedTypeIgnoringElementType(ShapedType a, ShapedType b) {
-  if (a.getTypeID() != b.getTypeID())
-    return false;
-  if (!a.hasRank())
-    return !b.hasRank();
-  return a.getShape() == b.getShape();
-}
-
 LogicalResult OpTrait::impl::verifyElementwise(Operation *op) {
   auto isMappableType = [](Type type) {
     return type.isa<VectorType, TensorType>();
@@ -1088,15 +1079,14 @@ LogicalResult OpTrait::impl::verifyElementwise(Operation *op) {
     return op->emitOpError(
         "if an operand is non-scalar, then all results must be non-scalar");
 
-  auto mustMatchType = operandMappableTypes[0].cast<ShapedType>();
-  for (auto type :
-       llvm::concat<Type>(resultMappableTypes, operandMappableTypes)) {
-    if (!areSameShapedTypeIgnoringElementType(type.cast<ShapedType>(),
-                                              mustMatchType)) {
-      return op->emitOpError() << "all non-scalar operands/results must have "
-                                  "the same shape and base type: found "
-                               << type << " and " << mustMatchType;
-    }
+  SmallVector<Type, 4> types = llvm::to_vector<2>(
+      llvm::concat<Type>(operandMappableTypes, resultMappableTypes));
+  TypeID expectedBaseTy = types.front().getTypeID();
+  if (!llvm::all_of(types,
+                    [&](Type t) { return t.getTypeID() == expectedBaseTy; }) ||
+      failed(verifyCompatibleShapes(types))) {
+    return op->emitOpError() << "all non-scalar operands/results must have the "
+                                "same shape and base type";
   }
 
   return success();

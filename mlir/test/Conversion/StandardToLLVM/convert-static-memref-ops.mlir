@@ -93,7 +93,7 @@ func @zero_d_alloc() -> memref<f32> {
 // BAREPTR-NEXT:  llvm.insertvalue %[[ptr]], %{{.*}}[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64)>
 // BAREPTR-NEXT:  %[[c0:.*]] = llvm.mlir.constant(0 : index) : i64
 // BAREPTR-NEXT:  llvm.insertvalue %[[c0]], %{{.*}}[2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64)>
-  %0 = alloc() : memref<f32>
+  %0 = memref.alloc() : memref<f32>
   return %0 : memref<f32>
 }
 
@@ -109,7 +109,7 @@ func @zero_d_dealloc(%arg0: memref<f32>) {
 // BAREPTR: %[[ptr:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64)>
 // BAREPTR-NEXT: %[[bc:.*]] = llvm.bitcast %[[ptr]] : !llvm.ptr<f32> to !llvm.ptr<i8>
 // BAREPTR-NEXT: llvm.call @free(%[[bc]]) : (!llvm.ptr<i8>) -> ()
-  dealloc %arg0 : memref<f32>
+  memref.dealloc %arg0 : memref<f32>
   return
 }
 
@@ -161,7 +161,7 @@ func @aligned_1d_alloc() -> memref<42xf32> {
 // BAREPTR-NEXT:  llvm.insertvalue %[[alignedBitCast]], %{{.*}}[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
 // BAREPTR-NEXT:  %[[c0:.*]] = llvm.mlir.constant(0 : index) : i64
 // BAREPTR-NEXT:  llvm.insertvalue %[[c0]], %{{.*}}[2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
-  %0 = alloc() {alignment = 8} : memref<42xf32>
+  %0 = memref.alloc() {alignment = 8} : memref<42xf32>
   return %0 : memref<42xf32>
 }
 
@@ -183,7 +183,7 @@ func @static_alloc() -> memref<32x18xf32> {
 // BAREPTR-NEXT: %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<f32> to i64
 // BAREPTR-NEXT: %[[allocated:.*]] = llvm.call @malloc(%[[size_bytes]]) : (i64) -> !llvm.ptr<i8>
 // BAREPTR-NEXT: llvm.bitcast %[[allocated]] : !llvm.ptr<i8> to !llvm.ptr<f32>
- %0 = alloc() : memref<32x18xf32>
+ %0 = memref.alloc() : memref<32x18xf32>
  return %0 : memref<32x18xf32>
 }
 
@@ -199,7 +199,7 @@ func @static_alloca() -> memref<32x18xf32> {
 // CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[num_elems]]] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
 // CHECK-NEXT:  %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<f32> to i64
 // CHECK-NEXT:  %[[allocated:.*]] = llvm.alloca %[[size_bytes]] x f32 : (i64) -> !llvm.ptr<f32>
- %0 = alloca() : memref<32x18xf32>
+ %0 = memref.alloca() : memref<32x18xf32>
 
  // Test with explicitly specified alignment. llvm.alloca takes care of the
  // alignment. The same pointer is thus used for allocation and aligned
@@ -208,7 +208,7 @@ func @static_alloca() -> memref<32x18xf32> {
  // CHECK: %[[desc:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
  // CHECK: %[[desc1:.*]] = llvm.insertvalue %[[alloca_aligned]], %[[desc]][0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
  // CHECK: llvm.insertvalue %[[alloca_aligned]], %[[desc1]][1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
- alloca() {alignment = 32} : memref<32x18xf32>
+ memref.alloca() {alignment = 32} : memref<32x18xf32>
  return %0 : memref<32x18xf32>
 }
 
@@ -224,7 +224,7 @@ func @static_dealloc(%static: memref<10x8xf32>) {
 // BAREPTR:      %[[ptr:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-NEXT: %[[bc:.*]] = llvm.bitcast %[[ptr]] : !llvm.ptr<f32> to !llvm.ptr<i8>
 // BAREPTR-NEXT: llvm.call @free(%[[bc]]) : (!llvm.ptr<i8>) -> ()
-  dealloc %static : memref<10x8xf32>
+  memref.dealloc %static : memref<10x8xf32>
   return
 }
 
@@ -238,7 +238,7 @@ func @zero_d_load(%arg0: memref<f32>) -> f32 {
 
 // BAREPTR:      %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64)>
 // BAREPTR-NEXT: llvm.load %[[ptr:.*]] : !llvm.ptr<f32>
-  %0 = load %arg0[] : memref<f32>
+  %0 = memref.load %arg0[] : memref<f32>
   return %0 : f32
 }
 
@@ -265,7 +265,7 @@ func @static_load(%static : memref<10x42xf32>, %i : index, %j : index) {
 // BAREPTR-NEXT: %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : i64
 // BAREPTR-NEXT: %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
 // BAREPTR-NEXT: llvm.load %[[addr]] : !llvm.ptr<f32>
-  %0 = load %static[%i, %j] : memref<10x42xf32>
+  %0 = memref.load %static[%i, %j] : memref<10x42xf32>
   return
 }
 
@@ -280,7 +280,7 @@ func @zero_d_store(%arg0: memref<f32>, %arg1: f32) {
 
 // BAREPTR:      %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64)>
 // BAREPTR-NEXT: llvm.store %[[val]], %[[ptr]] : !llvm.ptr<f32>
-  store %arg1, %arg0[] : memref<f32>
+  memref.store %arg1, %arg0[] : memref<f32>
   return
 }
 
@@ -314,7 +314,7 @@ func @static_store(%static : memref<10x42xf32>, %i : index, %j : index, %val : f
 // BAREPTR-NEXT: %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : i64
 // BAREPTR-NEXT: %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
 // BAREPTR-NEXT: llvm.store %{{.*}}, %[[addr]] : !llvm.ptr<f32>
-  store %val, %static[%i, %j] : memref<10x42xf32>
+  memref.store %val, %static[%i, %j] : memref<10x42xf32>
   return
 }
 
@@ -327,23 +327,23 @@ func @static_memref_dim(%static : memref<42x32x15x13x27xf32>) {
 // BAREPTR:      llvm.insertvalue %{{.*}}, %{{.*}}[4, 4] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<5 x i64>, array<5 x i64>)>
 // BAREPTR: llvm.mlir.constant(42 : index) : i64
   %c0 = constant 0 : index
-  %0 = dim %static, %c0 : memref<42x32x15x13x27xf32>
+  %0 = memref.dim %static, %c0 : memref<42x32x15x13x27xf32>
 // CHECK:  llvm.mlir.constant(32 : index) : i64
 // BAREPTR:  llvm.mlir.constant(32 : index) : i64
   %c1 = constant 1 : index
-  %1 = dim %static, %c1 : memref<42x32x15x13x27xf32>
+  %1 = memref.dim %static, %c1 : memref<42x32x15x13x27xf32>
 // CHECK:  llvm.mlir.constant(15 : index) : i64
 // BAREPTR:  llvm.mlir.constant(15 : index) : i64
   %c2 = constant 2 : index
-  %2 = dim %static, %c2 : memref<42x32x15x13x27xf32>
+  %2 = memref.dim %static, %c2 : memref<42x32x15x13x27xf32>
 // CHECK:  llvm.mlir.constant(13 : index) : i64
 // BAREPTR:  llvm.mlir.constant(13 : index) : i64
   %c3 = constant 3 : index
-  %3 = dim %static, %c3 : memref<42x32x15x13x27xf32>
+  %3 = memref.dim %static, %c3 : memref<42x32x15x13x27xf32>
 // CHECK:  llvm.mlir.constant(27 : index) : i64
 // BAREPTR:  llvm.mlir.constant(27 : index) : i64
   %c4 = constant 4 : index
-  %4 = dim %static, %c4 : memref<42x32x15x13x27xf32>
+  %4 = memref.dim %static, %c4 : memref<42x32x15x13x27xf32>
   return
 }
 

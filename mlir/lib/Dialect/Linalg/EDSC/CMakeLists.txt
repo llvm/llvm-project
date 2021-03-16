@@ -11,6 +11,7 @@ add_mlir_dialect_library(MLIRLinalgEDSC
   MLIRAffineEDSC
   MLIRLinalg
   MLIRMath
+  MLIRMemRef
   MLIRSCF
   MLIRStandard
   )

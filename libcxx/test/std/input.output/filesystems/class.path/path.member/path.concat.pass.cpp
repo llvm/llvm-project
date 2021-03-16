@@ -36,6 +36,9 @@
 #include <string_view>
 #include <cassert>
 
+// On Windows, charset conversions cause allocations in the path class in
+// cases where no allocations are done on other platforms.
+
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "count_new.h"
@@ -98,7 +101,7 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
     path LHS(L); PathReserve(LHS, ReserveSize);
     Str  RHS(R);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       LHS += RHS;
     }
     assert(LHS == E);
@@ -108,7 +111,7 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
     path LHS(L); PathReserve(LHS, ReserveSize);
     StrView  RHS(R);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       LHS += RHS;
     }
     assert(LHS == E);
@@ -118,7 +121,7 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
     path LHS(L); PathReserve(LHS, ReserveSize);
     Ptr RHS(R);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       LHS += RHS;
     }
     assert(LHS == E);
@@ -127,7 +130,7 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
     path LHS(L); PathReserve(LHS, ReserveSize);
     Ptr RHS(R);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       LHS.concat(RHS, StrEnd(RHS));
     }
     assert(LHS == E);
@@ -135,9 +138,9 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
   // input iterator - For non-native char types, appends needs to copy the
   // iterator range into a contiguous block of memory before it can perform the
   // code_cvt conversions.
-  // For "char" no allocations will be performed because no conversion is
-  // required.
-  bool DisableAllocations = std::is_same<CharT, char>::value;
+  // For the path native type, no allocations will be performed because no
+  // conversion is required.
+  bool DisableAllocations = std::is_same<CharT, path::value_type>::value;
   {
     path LHS(L); PathReserve(LHS, ReserveSize);
     InputIter RHS(R);

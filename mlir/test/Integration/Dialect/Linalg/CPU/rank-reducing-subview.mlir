@@ -13,18 +13,18 @@ func @main() {
   %f1 = constant 1.0 : f32
   %f2 = constant 2.0 : f32
   %f3 = constant 3.0 : f32
-  %A = alloc(%c2, %c2) : memref<?x?xf32>
-  store %f0, %A[%c0, %c0] : memref<?x?xf32>
-  store %f1, %A[%c0, %c1] : memref<?x?xf32>
-  store %f2, %A[%c1, %c0] : memref<?x?xf32>
-  store %f3, %A[%c1, %c1] : memref<?x?xf32>
-  %B = subview %A[%c1, 0][1, %c2][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [1]>
-  %C = subview %A[0, %c1][%c2, 1][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [?]>
-  %A_ = memref_cast %A : memref<?x?xf32> to memref<*xf32>
+  %A = memref.alloc(%c2, %c2) : memref<?x?xf32>
+  memref.store %f0, %A[%c0, %c0] : memref<?x?xf32>
+  memref.store %f1, %A[%c0, %c1] : memref<?x?xf32>
+  memref.store %f2, %A[%c1, %c0] : memref<?x?xf32>
+  memref.store %f3, %A[%c1, %c1] : memref<?x?xf32>
+  %B = memref.subview %A[%c1, 0][1, %c2][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [1]>
+  %C = memref.subview %A[0, %c1][%c2, 1][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [?]>
+  %A_ = memref.cast %A : memref<?x?xf32> to memref<*xf32>
   call @print_memref_f32(%A_) : (memref<*xf32>) -> ()
-  %B_ = memref_cast %B : memref<?xf32, offset: ?, strides: [1]> to memref<*xf32>
+  %B_ = memref.cast %B : memref<?xf32, offset: ?, strides: [1]> to memref<*xf32>
   call @print_memref_f32(%B_) : (memref<*xf32>) -> ()
-  %C_ = memref_cast %C : memref<?xf32, offset: ?, strides: [?]> to memref<*xf32>
+  %C_ = memref.cast %C : memref<?xf32, offset: ?, strides: [?]> to memref<*xf32>
   call @print_memref_f32(%C_) : (memref<*xf32>) -> ()
   return
 }

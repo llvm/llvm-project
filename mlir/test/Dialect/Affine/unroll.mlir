@@ -265,9 +265,9 @@ func @loop_nest_outer_unroll() {
 // count threshold set to 2.
 // SHORT-LABEL: func @loop_nest_seq_long() -> i32 {
 func @loop_nest_seq_long() -> i32 {
-  %A = alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
-  %B = alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
-  %C = alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+  %A = memref.alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+  %B = memref.alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+  %C = memref.alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
 
   %zero = constant 0 : i32
   %one = constant 1 : i32
@@ -279,9 +279,9 @@ func @loop_nest_seq_long() -> i32 {
   affine.for %n0 = 0 to 512 {
     // CHECK: affine.for %arg1 = 0 to 8
     affine.for %n1 = 0 to 8 {
-      store %one,  %A[%n0, %n1] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
-      store %two,  %B[%n0, %n1] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
-      store %zero, %C[%n0, %n1] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+      memref.store %one,  %A[%n0, %n1] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+      memref.store %two,  %B[%n0, %n1] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+      memref.store %zero, %C[%n0, %n1] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
     }
   }
 
@@ -292,27 +292,27 @@ func @loop_nest_seq_long() -> i32 {
         // CHECK-NOT: affine.for
         // CHECK: %{{[0-9]+}} = affine.apply
         %b2 = "affine.apply" (%y, %arg2) {map = affine_map<(d0, d1) -> (16*d0 + d1)>} : (index, index) -> index
-        %z = load %B[%x, %b2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+        %z = memref.load %B[%x, %b2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
         "op1"(%z) : (i32) -> ()
       }
       affine.for %j1 = 0 to 8 {
         affine.for %j2 = 0 to 8 {
           %a2 = "affine.apply" (%y, %j2) {map = affine_map<(d0, d1) -> (16*d0 + d1)>} : (index, index) -> index
-          %v203 = load %A[%j1, %a2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+          %v203 = memref.load %A[%j1, %a2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
           "op2"(%v203) : (i32) -> ()
         }
         affine.for %k2 = 0 to 8 {
           %s0 = "op3"() : () -> i32
           %c2 = "affine.apply" (%x, %k2) {map = affine_map<(d0, d1) -> (16*d0 + d1)>} : (index, index) -> index
-          %s1 =  load %C[%j1, %c2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+          %s1 =  memref.load %C[%j1, %c2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
           %s2 = "addi32"(%s0, %s1) : (i32, i32) -> i32
-          store %s2, %C[%j1, %c2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+          memref.store %s2, %C[%j1, %c2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
         }
       }
       "op4"() : () -> ()
     }
   }
-  %ret = load %C[%zero_idx, %zero_idx] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+  %ret = memref.load %C[%zero_idx, %zero_idx] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
   return %ret : i32
 }
 

@@ -2,6 +2,7 @@
 
 from mlir.ir import *
 import mlir.dialects.std as std
+import mlir.dialects.memref as memref
 
 def run(f):
   print("\nTEST:", f.__name__)
@@ -18,7 +19,7 @@ def testSubViewAccessors():
       %3 = constant 3 : index
       %4 = constant 4 : index
       %5 = constant 5 : index
-      subview %arg0[%0, %1][%2, %3][%4, %5] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
+      memref.subview %arg0[%0, %1][%2, %3][%4, %5] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
       return
     }
   """, ctx)
@@ -49,3 +50,4 @@ def testSubViewAccessors():
 
 
 run(testSubViewAccessors)
+

@@ -16,6 +16,7 @@ target_link_libraries(mlir-edsc-builder-api-test
   MLIRIR
   MLIRLinalg
   MLIRLinalgEDSC
+  MLIRMemRef
   MLIRSCF
   MLIRStandard
   MLIRTransforms

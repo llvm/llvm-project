@@ -633,6 +633,7 @@
 // PPCPOWER10:#define _ARCH_PWR8 1
 // PPCPOWER10:#define _ARCH_PWR9 1
 // PPCPOWER10:#define __MMA__ 1
+// PPCPOWER10:#define __PCREL__ 1
 // PPCPOWER10-NOT:#define __ROP_PROTECTION__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu future -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCFUTURE %s
@@ -652,6 +653,7 @@
 // PPCFUTURE:#define _ARCH_PWR9 1
 // PPCFUTURE:#define _ARCH_PWR_FUTURE 1
 // PPCFUTURE:#define __MMA__ 1
+// PPCFUTURE:#define __PCREL__ 1
 // PPCFUTURE-NOT:#define __ROP_PROTECTION__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +mma -target-cpu power10 -fno-signed-char < /dev/null | FileCheck -check-prefix PPC-MMA %s

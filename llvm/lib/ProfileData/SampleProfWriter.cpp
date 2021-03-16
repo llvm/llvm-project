@@ -237,6 +237,8 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     setToCompressSection(SecProfileSymbolList);
   if (Type == SecFuncMetadata && FunctionSamples::ProfileIsProbeBased)
     addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagIsProbeBased);
+  if (Type == SecProfSummary && FunctionSamples::ProfileIsCS)
+    addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagFullContext);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);
   switch (Type) {

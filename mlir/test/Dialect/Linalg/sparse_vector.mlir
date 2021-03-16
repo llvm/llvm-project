@@ -24,7 +24,7 @@
 // CHECK-VEC0-DAG:   %[[c1:.*]] = constant 1 : index
 // CHECK-VEC0-DAG:   %[[c1024:.*]] = constant 1024 : index
 // CHECK-VEC0:       scf.for %[[i:.*]] = %[[c0]] to %[[c1024]] step %[[c1]] {
-// CHECK-VEC0:         %[[l:.*]] = load %{{.*}}[%[[i]]] : memref<1024xf32>
+// CHECK-VEC0:         %[[l:.*]] = memref.load %{{.*}}[%[[i]]] : memref<1024xf32>
 // CHECK-VEC0:         %[[m:.*]] = mulf %[[l]], %{{.*}} : f32
 // CHECK-VEC0:         store %[[m]], %{{.*}}[%[[i]]] : memref<1024xf32>
 // CHECK-VEC0:       }
@@ -84,15 +84,15 @@ func @scale_d(%arga: tensor<1024xf32>, %scale: f32, %argx: tensor<1024xf32>) -> 
 // CHECK-VEC0-LABEL: func @mul_s
 // CHECK-VEC0-DAG:   %[[c0:.*]] = constant 0 : index
 // CHECK-VEC0-DAG:   %[[c1:.*]] = constant 1 : index
-// CHECK-VEC0:       %[[p:.*]] = load %{{.*}}[%[[c0]]] : memref<?xi32>
+// CHECK-VEC0:       %[[p:.*]] = memref.load %{{.*}}[%[[c0]]] : memref<?xi32>
 // CHECK-VEC0:       %[[q:.*]] = index_cast %[[p]] : i32 to index
-// CHECK-VEC0:       %[[r:.*]] = load %{{.*}}[%[[c1]]] : memref<?xi32>
+// CHECK-VEC0:       %[[r:.*]] = memref.load %{{.*}}[%[[c1]]] : memref<?xi32>
 // CHECK-VEC0:       %[[s:.*]] = index_cast %[[r]] : i32 to index
 // CHECK-VEC0:       scf.for %[[i:.*]] = %[[q]] to %[[s]] step %[[c1]] {
-// CHECK-VEC0:         %[[li:.*]] = load %{{.*}}[%[[i]]] : memref<?xi32>
+// CHECK-VEC0:         %[[li:.*]] = memref.load %{{.*}}[%[[i]]] : memref<?xi32>
 // CHECK-VEC0:         %[[ci:.*]] = index_cast %[[li]] : i32 to index
-// CHECK-VEC0:         %[[la:.*]] = load %{{.*}}[%[[i]]] : memref<?xf32>
-// CHECK-VEC0:         %[[lb:.*]] = load %{{.*}}[%[[ci]]] : memref<1024xf32>
+// CHECK-VEC0:         %[[la:.*]] = memref.load %{{.*}}[%[[i]]] : memref<?xf32>
+// CHECK-VEC0:         %[[lb:.*]] = memref.load %{{.*}}[%[[ci]]] : memref<1024xf32>
 // CHECK-VEC0:         %[[m:.*]] = mulf %[[la]], %[[lb]] : f32
 // CHECK-VEC0:         store %[[m]], %{{.*}}[%[[ci]]] : memref<1024xf32>
 // CHECK-VEC0:       }
@@ -101,15 +101,15 @@ func @scale_d(%arga: tensor<1024xf32>, %scale: f32, %argx: tensor<1024xf32>) -> 
 // CHECK-VEC1-LABEL: func @mul_s
 // CHECK-VEC1-DAG:   %[[c0:.*]] = constant 0 : index
 // CHECK-VEC1-DAG:   %[[c1:.*]] = constant 1 : index
-// CHECK-VEC1:       %[[p:.*]] = load %{{.*}}[%[[c0]]] : memref<?xi32>
+// CHECK-VEC1:       %[[p:.*]] = memref.load %{{.*}}[%[[c0]]] : memref<?xi32>
 // CHECK-VEC1:       %[[q:.*]] = index_cast %[[p]] : i32 to index
-// CHECK-VEC1:       %[[r:.*]] = load %{{.*}}[%[[c1]]] : memref<?xi32>
+// CHECK-VEC1:       %[[r:.*]] = memref.load %{{.*}}[%[[c1]]] : memref<?xi32>
 // CHECK-VEC1:       %[[s:.*]] = index_cast %[[r]] : i32 to index
 // CHECK-VEC1:       scf.for %[[i:.*]] = %[[q]] to %[[s]] step %[[c1]] {
-// CHECK-VEC1:         %[[li:.*]] = load %{{.*}}[%[[i]]] : memref<?xi32>
+// CHECK-VEC1:         %[[li:.*]] = memref.load %{{.*}}[%[[i]]] : memref<?xi32>
 // CHECK-VEC1:         %[[ci:.*]] = index_cast %[[li]] : i32 to index
-// CHECK-VEC1:         %[[la:.*]] = load %{{.*}}[%[[i]]] : memref<?xf32>
-// CHECK-VEC1:         %[[lb:.*]] = load %{{.*}}[%[[ci]]] : memref<1024xf32>
+// CHECK-VEC1:         %[[la:.*]] = memref.load %{{.*}}[%[[i]]] : memref<?xf32>
+// CHECK-VEC1:         %[[lb:.*]] = memref.load %{{.*}}[%[[ci]]] : memref<1024xf32>
 // CHECK-VEC1:         %[[m:.*]] = mulf %[[la]], %[[lb]] : f32
 // CHECK-VEC1:         store %[[m]], %{{.*}}[%[[ci]]] : memref<1024xf32>
 // CHECK-VEC1:       }
@@ -119,9 +119,9 @@ func @scale_d(%arga: tensor<1024xf32>, %scale: f32, %argx: tensor<1024xf32>) -> 
 // CHECK-VEC2-DAG:   %[[c0:.*]] = constant 0 : index
 // CHECK-VEC2-DAG:   %[[c1:.*]] = constant 1 : index
 // CHECK-VEC2-DAG:   %[[c16:.*]] = constant 16 : index
-// CHECK-VEC2:       %[[p:.*]] = load %{{.*}}[%[[c0]]] : memref<?xi32>
+// CHECK-VEC2:       %[[p:.*]] = memref.load %{{.*}}[%[[c0]]] : memref<?xi32>
 // CHECK-VEC2:       %[[q:.*]] = index_cast %[[p]] : i32 to index
-// CHECK-VEC2:       %[[r:.*]] = load %{{.*}}[%[[c1]]] : memref<?xi32>
+// CHECK-VEC2:       %[[r:.*]] = memref.load %{{.*}}[%[[c1]]] : memref<?xi32>
 // CHECK-VEC2:       %[[s:.*]] = index_cast %[[r]] : i32 to index
 // CHECK-VEC2:       scf.for %[[i:.*]] = %[[q]] to %[[s]] step %[[c16]] {
 // CHECK-VEC2:         %[[sub:.*]] = subi %[[s]], %[[i]] : index
@@ -150,9 +150,9 @@ func @mul_s(%arga: tensor<1024xf32>, %argb: tensor<1024xf32>, %argx: tensor<1024
 // CHECK-VEC2-DAG:   %[[c0:.*]] = constant 0 : index
 // CHECK-VEC2-DAG:   %[[c1:.*]] = constant 1 : index
 // CHECK-VEC2-DAG:   %[[c16:.*]] = constant 16 : index
-// CHECK-VEC2:       %[[p:.*]] = load %{{.*}}[%[[c0]]] : memref<?xi32>
+// CHECK-VEC2:       %[[p:.*]] = memref.load %{{.*}}[%[[c0]]] : memref<?xi32>
 // CHECK-VEC2:       %[[q:.*]] = index_cast %[[p]] : i32 to index
-// CHECK-VEC2:       %[[r:.*]] = load %{{.*}}[%[[c1]]] : memref<?xi32>
+// CHECK-VEC2:       %[[r:.*]] = memref.load %{{.*}}[%[[c1]]] : memref<?xi32>
 // CHECK-VEC2:       %[[s:.*]] = index_cast %[[r]] : i32 to index
 // CHECK-VEC2:       scf.for %[[i:.*]] = %[[q]] to %[[s]] step %[[c16]] {
 // CHECK-VEC2:         %[[sub:.*]] = subi %[[s]], %[[i]] : index
@@ -200,8 +200,8 @@ func @mul_s_alt(%argA: !SparseTensor, %argB: !SparseTensor, %argx: tensor<1024xf
 // CHECK-VEC0-DAG:   %[[c1:.*]] = constant 1 : index
 // CHECK-VEC0-DAG:   %[[c1024:.*]] = constant 1024 : index
 // CHECK-VEC0:       %[[red:.*]] = scf.for %[[i:.*]] = %[[c0]] to %[[c1024]] step %[[c1]] iter_args(%[[red_in:.*]] = %{{.*}}) -> (f32) {
-// CHECK-VEC0:         %[[la:.*]] = load %{{.*}}[%[[i]]] : memref<1024xf32>
-// CHECK-VEC0:         %[[lb:.*]] = load %{{.*}}[%[[i]]] : memref<1024xf32>
+// CHECK-VEC0:         %[[la:.*]] = memref.load %{{.*}}[%[[i]]] : memref<1024xf32>
+// CHECK-VEC0:         %[[lb:.*]] = memref.load %{{.*}}[%[[i]]] : memref<1024xf32>
 // CHECK-VEC0:         %[[m:.*]] = mulf %[[la]], %[[lb]] : f32
 // CHECK-VEC0:         %[[a:.*]] = addf %[[red_in]], %[[m]] : f32
 // CHECK-VEC0:         scf.yield %[[a]] : f32
@@ -302,16 +302,16 @@ func @reduction_17(%arga: tensor<17xf32>, %argb: tensor<17xf32>, %argx: tensor<f
 // CHECK-VEC0-DAG:   %[[c1:.*]] = constant 1 : index
 // CHECK-VEC0-DAG:   %[[c512:.*]] = constant 512 : index
 // CHECK-VEC0:       scf.for %[[i:.*]] = %[[c0]] to %[[c512]] step %[[c1]] {
-// CHECK-VEC0:         %[[p:.*]] = load %{{.*}}[%[[i]]] : memref<?xi32>
+// CHECK-VEC0:         %[[p:.*]] = memref.load %{{.*}}[%[[i]]] : memref<?xi32>
 // CHECK-VEC0:         %[[q:.*]] = index_cast %[[p]] : i32 to index
 // CHECK-VEC0:         %[[a:.*]] = addi %[[i]], %[[c1]] : index
-// CHECK-VEC0:         %[[r:.*]] = load %{{.*}}[%[[a]]] : memref<?xi32>
+// CHECK-VEC0:         %[[r:.*]] = memref.load %{{.*}}[%[[a]]] : memref<?xi32>
 // CHECK-VEC0:         %[[s:.*]] = index_cast %[[r]] : i32 to index
 // CHECK-VEC0:         scf.for %[[j:.*]] = %[[q]] to %[[s]] step %[[c1]] {
-// CHECK-VEC0:           %[[lj:.*]] = load %{{.*}}[%[[j]]] : memref<?xi32>
+// CHECK-VEC0:           %[[lj:.*]] = memref.load %{{.*}}[%[[j]]] : memref<?xi32>
 // CHECK-VEC0:           %[[cj:.*]] = index_cast %[[lj]] : i32 to index
-// CHECK-VEC0:           %[[la:.*]] = load %{{.*}}[%[[j]]] : memref<?xf32>
-// CHECK-VEC0:           %[[lb:.*]] = load %{{.*}}[%[[i]], %[[cj]]] : memref<512x1024xf32>
+// CHECK-VEC0:           %[[la:.*]] = memref.load %{{.*}}[%[[j]]] : memref<?xf32>
+// CHECK-VEC0:           %[[lb:.*]] = memref.load %{{.*}}[%[[i]], %[[cj]]] : memref<512x1024xf32>
 // CHECK-VEC0:           %[[m:.*]] = mulf %[[la]], %[[lb]] : f32
 // CHECK-VEC0:           store %[[m]], %{{.*}}[%[[i]], %[[cj]]] : memref<512x1024xf32>
 // CHECK-VEC0:         }
@@ -323,16 +323,16 @@ func @reduction_17(%arga: tensor<17xf32>, %argb: tensor<17xf32>, %argx: tensor<f
 // CHECK-VEC1-DAG:   %[[c1:.*]] = constant 1 : index
 // CHECK-VEC1-DAG:   %[[c512:.*]] = constant 512 : index
 // CHECK-VEC1:       scf.for %[[i:.*]] = %[[c0]] to %[[c512]] step %[[c1]] {
-// CHECK-VEC1:         %[[p:.*]] = load %{{.*}}[%[[i]]] : memref<?xi32>
+// CHECK-VEC1:         %[[p:.*]] = memref.load %{{.*}}[%[[i]]] : memref<?xi32>
 // CHECK-VEC1:         %[[q:.*]] = index_cast %[[p]] : i32 to index
 // CHECK-VEC1:         %[[a:.*]] = addi %[[i]], %[[c1]] : index
-// CHECK-VEC1:         %[[r:.*]] = load %{{.*}}[%[[a]]] : memref<?xi32>
+// CHECK-VEC1:         %[[r:.*]] = memref.load %{{.*}}[%[[a]]] : memref<?xi32>
 // CHECK-VEC1:         %[[s:.*]] = index_cast %[[r]] : i32 to index
 // CHECK-VEC1:         scf.for %[[j:.*]] = %[[q]] to %[[s]] step %[[c1]] {
-// CHECK-VEC1:           %[[lj:.*]] = load %{{.*}}[%[[j]]] : memref<?xi32>
+// CHECK-VEC1:           %[[lj:.*]] = memref.load %{{.*}}[%[[j]]] : memref<?xi32>
 // CHECK-VEC1:           %[[cj:.*]] = index_cast %[[lj]] : i32 to index
-// CHECK-VEC1:           %[[la:.*]] = load %{{.*}}[%[[j]]] : memref<?xf32>
-// CHECK-VEC1:           %[[lb:.*]] = load %{{.*}}[%[[i]], %[[cj]]] : memref<512x1024xf32>
+// CHECK-VEC1:           %[[la:.*]] = memref.load %{{.*}}[%[[j]]] : memref<?xf32>
+// CHECK-VEC1:           %[[lb:.*]] = memref.load %{{.*}}[%[[i]], %[[cj]]] : memref<512x1024xf32>
 // CHECK-VEC1:           %[[m:.*]] = mulf %[[la]], %[[lb]] : f32
 // CHECK-VEC1:           store %[[m]], %{{.*}}[%[[i]], %[[cj]]] : memref<512x1024xf32>
 // CHECK-VEC1:         }
@@ -345,10 +345,10 @@ func @reduction_17(%arga: tensor<17xf32>, %argb: tensor<17xf32>, %argx: tensor<f
 // CHECK-VEC2-DAG:   %[[c16:.*]] = constant 16 : index
 // CHECK-VEC2-DAG:   %[[c512:.*]] = constant 512 : index
 // CHECK-VEC2:       scf.for %[[i:.*]] = %[[c0]] to %[[c512]] step %[[c1]] {
-// CHECK-VEC2:         %[[p:.*]] = load %{{.*}}[%[[i]]] : memref<?xi32>
+// CHECK-VEC2:         %[[p:.*]] = memref.load %{{.*}}[%[[i]]] : memref<?xi32>
 // CHECK-VEC2:         %[[q:.*]] = index_cast %[[p]] : i32 to index
 // CHECK-VEC2:         %[[a:.*]] = addi %[[i]], %[[c1]] : index
-// CHECK-VEC2:         %[[r:.*]] = load %{{.*}}[%[[a]]] : memref<?xi32>
+// CHECK-VEC2:         %[[r:.*]] = memref.load %{{.*}}[%[[a]]] : memref<?xi32>
 // CHECK-VEC2:         %[[s:.*]] = index_cast %[[r]] : i32 to index
 // CHECK-VEC2:         scf.for %[[j:.*]] = %[[q]] to %[[s]] step %[[c16]] {
 // CHECK-VEC2:           %[[sub:.*]] = subi %[[s]], %[[j]] : index

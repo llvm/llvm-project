@@ -31,7 +31,6 @@ body:             |
     ; GCN: frame-setup CFI_INSTRUCTION undefined $sgpr8_lo16
     ; GCN: $sgpr8_sgpr9 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def $scc, implicit $exec
     ; GCN: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 0, 0, 0, 0, implicit $exec :: (store 4 into %stack.1, addrspace 5)
-    ; GCN: frame-setup CFI_INSTRUCTION offset $vgpr0_lo16, 0
     ; GCN: $exec = S_MOV_B64 killed $sgpr8_sgpr9
     ; GCN: renamable $sgpr1 = COPY $sgpr2
     ; GCN: $vgpr0 = V_WRITELANE_B32 $sgpr0, 0, $vgpr0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr0_sgpr1_sgpr2_sgpr3
@@ -75,7 +74,6 @@ body:             |
     ; GCN: frame-setup CFI_INSTRUCTION undefined $sgpr3_lo16
     ; GCN: $sgpr8_sgpr9 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def $scc, implicit $exec
     ; GCN: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 0, 0, 0, 0, implicit $exec :: (store 4 into %stack.1, addrspace 5)
-    ; GCN: frame-setup CFI_INSTRUCTION offset $vgpr0_lo16, 0
     ; GCN: $exec = S_MOV_B64 killed $sgpr8_sgpr9
     ; GCN: renamable $sgpr1 = COPY $sgpr2
     ; GCN: $vgpr0 = V_WRITELANE_B32 $sgpr0, 0, $vgpr0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr0_sgpr1_sgpr2_sgpr3
