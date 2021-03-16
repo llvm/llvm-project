@@ -60,7 +60,7 @@ def PDL_ApplyNativeConstraintOp
 
   let builders = [
     OpBuilder<(ins "StringRef":$name, CArg<"ValueRange", "{}">:$args,
-      CArg<"ArrayRef<Attribute>", "{}">:$params), [{
+                   CArg<"ArrayRef<Attribute>", "{}">:$params), [{
       build($_builder, $_state, $_builder.getStringAttr(name), args,
             params.empty() ? ArrayAttr() : $_builder.getArrayAttr(params));
     }]>,
@@ -196,9 +196,9 @@ def PDL_OperandOp : PDL_Op<"operand", [HasParent<"pdl::PatternOp">]> {
   let description = [{
     `pdl.operand` operations capture external operand edges into an operation
     node that originate from operations or block arguments not otherwise
-    specified within the pattern (e.g. via `pdl.result`). These operations
-    define individual operands of a given operation. A `pdl.operand` may
-    partially constrain an operand by specifying an expected value type
+    specified within the pattern (i.e. via `pdl.result` or `pdl.results`). These
+    operations define individual operands of a given operation. A `pdl.operand`
+    may partially constrain an operand by specifying an expected value type
     (via a `pdl.type` operation).
 
     Example:
@@ -225,6 +225,44 @@ def PDL_OperandOp : PDL_Op<"operand", [HasParent<"pdl::PatternOp">]> {
 }
 
 //===----------------------------------------------------------------------===//
+// pdl::OperandsOp
+//===----------------------------------------------------------------------===//
+
+def PDL_OperandsOp : PDL_Op<"operands", [HasParent<"pdl::PatternOp">]> {
+  let summary = "Define a range of input operands in a pattern";
+  let description = [{
+    `pdl.operands` operations capture external operand range edges into an
+    operation node that originate from operations or block arguments not
+    otherwise specified within the pattern (i.e. via `pdl.result` or
+    `pdl.results`). These operations define groups of input operands into a
+    given operation. A `pdl.operands` may partially constrain a set of input
+    operands by specifying expected value types (via `pdl.types` operations).
+
+    Example:
+
+    ```mlir
+    // Define a range of input operands:
+    %operands = pdl.operands
+
+    // Define a range of input operands with expected types:
+    %types = pdl.types : [i32, i64, i32]
+    %typed_operands = pdl.operands : %types
+    ```
+  }];
+
+  let arguments = (ins Optional<PDL_RangeOf<PDL_Type>>:$type);
+  let results = (outs PDL_RangeOf<PDL_Value>:$val);
+  let assemblyFormat = "(`:` $type^)? attr-dict";
+
+  let builders = [
+    OpBuilder<(ins), [{
+      build($_builder, $_state, RangeType::get($_builder.getType<ValueType>()),
+            Value());
+    }]>,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // pdl::OperationOp
 //===----------------------------------------------------------------------===//
 
@@ -245,6 +283,14 @@ def PDL_OperationOp
     a handle to the operation itself. Handles to the results of the operation
     can be extracted via `pdl.result`.
 
+    Example:
+
+    ```mlir
+    // Define an instance of a `foo.op` operation.
+    %op = pdl.operation "foo.op"(%arg0, %arg1 : !pdl.value, !pdl.value)
+      {"attrA" = %attr0} -> (%type, %type : !pdl.type, !pdl.type)
+    ```
+
     When used within a matching context, the name of the operation may be
     omitted.
 
@@ -257,24 +303,78 @@ def PDL_OperationOp
     override the `InferTypeOpInterface` to ensure that the result types can be
     inferred.
 
-    Example:
+    The operands of the operation are interpreted in the following ways:
+
+    1) A single !pdl.range<value>:
+
+    In this case, the single range is treated as all of the operands of the
+    operation.
 
     ```mlir
-    // Define an instance of a `foo.op` operation.
-    %op = pdl.operation "foo.op"(%arg0, %arg1) {"attrA" = %attr0} -> %type, %type, %type, %type
+    // Define an instance with single range of operands.
+    %op = pdl.operation "std.return"(%allArgs : !pdl.range<value>)
+    ```
+
+    2) A variadic number of either !pdl.value or !pdl.range<value>:
+
+    In this case, the inputs are expected to correspond with the operand groups
+    defined on the operation in ODS.
+
+    ```tablgen
+    // Given the following operation definition in ODS:
+    def MyIndirectCallOp {
+      let results = (outs FunctionType:$call, Variadic<AnyType>:$args);
+    }
+    ```
+
+    ```mlir
+    // We can match the operands as so:
+    %op = pdl.operation "my.indirect_call"(%call, %args : !pdl.value, !pdl.range<value>)
+    ```
+
+    The results of the operation are interpreted in the following ways:
+
+    1) A single !pdl.range<type>:
+
+    In this case, the single range is treated as all of the result types of the
+    operation.
+
+    ```mlir
+    // Define an instance with single range of types.
+    %allResultTypes = pdl.types
+    %op = pdl.operation "unrealized_conversion_cast" -> (%allResultTypes : !pdl.types)
+    ```
+
+    2) A variadic number of either !pdl.type or !pdl.range<type>:
+
+    In this case, the inputs are expected to correspond with the result groups
+    defined on the operation in ODS.
+
+    ```tablgen
+    // Given the following operation definition in ODS:
+    def MyOp {
+      let results = (outs SomeType:$result, Variadic<SomeType>:$otherResults);
+    }
+    ```
+
+    ```mlir
+    // We can match the results as so:
+    %result = pdl.type
+    %otherResults = pdl.types
+    %op = pdl.operation "foo.op" -> (%result, %otherResults : !pdl.type, !pdl.range<type>)
     ```
   }];
 
   let arguments = (ins OptionalAttr<StrAttr>:$name,
-                       Variadic<PDL_Value>:$operands,
+                       Variadic<PDL_InstOrRangeOf<PDL_Value>>:$operands,
                        Variadic<PDL_Attribute>:$attributes,
                        StrArrayAttr:$attributeNames,
-                       Variadic<PDL_Type>:$types);
+                       Variadic<PDL_InstOrRangeOf<PDL_Type>>:$types);
   let results = (outs PDL_Operation:$op);
   let assemblyFormat = [{
-    ($name^)? (`(` $operands^ `)`)?
+    ($name^)? (`(` $operands^ `:` type($operands) `)`)?
     custom<OperationOpAttributes>($attributes, $attributeNames)
-    (`->` $types^)? attr-dict
+    (`->` `(` $types^ `:` type($types) `)`)? attr-dict
   }];
 
   let builders = [
@@ -378,7 +478,10 @@ def PDL_ReplaceOp : PDL_Op<"replace", [
 
     ```mlir
     // Replace root node with 2 values:
-    pdl.replace %root with (%val0, %val1)
+    pdl.replace %root with (%val0, %val1 : !pdl.value, !pdl.value)
+
+    // Replace root node with a range of values:
+    pdl.replace %root with (%vals : !pdl.range<value>)
 
     // Replace root with another operation:
     pdl.replace %root with %otherOp
@@ -386,9 +489,10 @@ def PDL_ReplaceOp : PDL_Op<"replace", [
   }];
   let arguments = (ins PDL_Operation:$operation,
                        Optional<PDL_Operation>:$replOperation,
-                       Variadic<PDL_Value>:$replValues);
+                       Variadic<PDL_InstOrRangeOf<PDL_Value>>:$replValues);
   let assemblyFormat = [{
-    $operation `with` (`(` $replValues^ `)`)? ($replOperation^)? attr-dict
+    $operation `with` (`(` $replValues^ `:` type($replValues) `)`)?
+    ($replOperation^)? attr-dict
   }];
 }
 
@@ -409,13 +513,13 @@ def PDL_ResultOp : PDL_Op<"result"> {
     ```mlir
     // Extract a result:
     %operation = pdl.operation ...
-    %result = pdl.result 1 of %operation
+    %pdl_result = pdl.result 1 of %operation
 
     // Imagine the following IR being matched:
     %result_0, %result_1 = foo.op ...
 
     // If the example pattern snippet above were matching against `foo.op` in
-    // the IR snippted, `%result` would correspond to `%result_1`.
+    // the IR snippet, `%pdl_result` would correspond to `%result_1`.
     ```
   }];
 
@@ -423,6 +527,48 @@ def PDL_ResultOp : PDL_Op<"result"> {
   let results = (outs PDL_Value:$val);
   let assemblyFormat = "$index `of` $parent attr-dict";
   let verifier = ?;
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::ResultsOp
+//===----------------------------------------------------------------------===//
+
+def PDL_ResultsOp : PDL_Op<"results"> {
+  let summary = "Extract a result group from an operation";
+  let description = [{
+    `pdl.results` operations extract a result group from an operation within a
+    pattern or rewrite region. If an index is provided, this operation extracts
+    a result group as defined by the ODS definition of the operation. In this
+    case the result of this operation may be either a single `pdl.value` or
+    a `pdl.range<value>`, depending on the constraint of the result in ODS. If
+    no index is provided, this operation extracts the full result range of the
+    operation.
+
+    Example:
+
+    ```mlir
+    // Extract all of the results of an operation:
+    %operation = pdl.operation ...
+    %results = pdl.results of %operation
+
+    // Extract the results in the first result group of an operation, which is
+    // variadic:
+    %operation = pdl.operation ...
+    %results = pdl.results 0 of %operation -> !pdl.range<value>
+
+    // Extract the results in the second result group of an operation, which is
+    // not variadic:
+    %operation = pdl.operation ...
+    %results = pdl.results 1 of %operation -> !pdl.value
+    ```
+  }];
+
+  let arguments = (ins PDL_Operation:$parent, OptionalAttr<I32Attr>:$index);
+  let results = (outs PDL_InstOrRangeOf<PDL_Value>:$val);
+  let assemblyFormat = [{
+    ($index^)? `of` $parent custom<ResultsValueType>(ref($index), type($val))
+    attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -489,7 +635,7 @@ def PDL_RewriteEndOp : PDL_Op<"rewrite_end", [Terminator,
 def PDL_TypeOp : PDL_Op<"type"> {
   let summary = "Define a type handle within a pattern";
   let description = [{
-    `pdl.type` operations capture result type constraints of an `Attributes`,
+    `pdl.type` operations capture result type constraints of `Attributes`,
     `Values`, and `Operations`. Instances of this operation define, and
     partially constrain, results types of a given entity. A `pdl.type` may
     partially constrain the result by specifying a constant `Type`.
@@ -498,23 +644,44 @@ def PDL_TypeOp : PDL_Op<"type"> {
 
     ```mlir
     // Define a type:
-    %attr = pdl.type
+    %type = pdl.type
 
     // Define a type with a constant value:
-    %attr = pdl.type : i32
+    %type = pdl.type : i32
     ```
   }];
 
   let arguments = (ins OptionalAttr<TypeAttr>:$type);
   let results = (outs PDL_Type:$result);
   let assemblyFormat = "attr-dict (`:` $type^)?";
+}
 
-  let builders = [
-    OpBuilder<(ins CArg<"Type", "Type()">:$ty), [{
-      build($_builder, $_state, $_builder.getType<AttributeType>(),
-            ty ? TypeAttr::get(ty) : TypeAttr());
-    }]>,
-  ];
+//===----------------------------------------------------------------------===//
+// pdl::TypesOp
+//===----------------------------------------------------------------------===//
+
+def PDL_TypesOp : PDL_Op<"types"> {
+  let summary = "Define a range of type handles within a pattern";
+  let description = [{
+    `pdl.types` operations capture result type constraints of `Value`s, and
+    `Operation`s. Instances of this operation define results types of a given
+    entity. A `pdl.types` may partially constrain the results by specifying
+    an array of `Type`s.
+
+    Example:
+
+    ```mlir
+    // Define a range of types:
+    %types = pdl.types
+
+    // Define a range of types with a range of constant values:
+    %types = pdl.types : [i32, i64, i32]
+    ```
+  }];
+
+  let arguments = (ins OptionalAttr<TypeArrayAttr>:$types);
+  let results = (outs PDL_RangeOf<PDL_Type>:$result);
+  let assemblyFormat = "attr-dict (`:` $types^)?";
 }
 
 #endif // MLIR_DIALECT_PDL_IR_PDLOPS
