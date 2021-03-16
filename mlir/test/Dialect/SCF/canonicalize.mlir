@@ -335,6 +335,7 @@ func @remove_empty_parallel_loop(%lb: index, %ub: index, %s: index) {
 }
 
 // -----
+
 func private @process(%0 : memref<128x128xf32>)
 func private @process_tensor(%0 : tensor<128x128xf32>) -> memref<128x128xf32>
 
@@ -381,4 +382,23 @@ func @last_value(%t0: tensor<128x128xf32>, %t1: tensor<128x128xf32>,
   // CHECK-NEXT: %[[R1:.*]] = memref.tensor_load %[[M1]] : memref<128x128xf32>
   // CHECK-NEXT: return %[[R0]], %[[R1]], %[[FOR_RES]] : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
   return %0#0, %0#1, %0#2 : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
+}
+
+// -----
+
+// CHECK-LABEL: fold_away_iter_with_no_use_and_yielded_input
+//  CHECK-SAME:   %[[A0:[0-9a-z]*]]: i32
+func @fold_away_iter_with_no_use_and_yielded_input(%arg0 : i32,
+                    %ub : index, %lb : index, %step : index) -> (i32, i32) {
+  // CHECK-NEXT: %[[C32:.*]] = constant 32 : i32
+  %cst = constant 32 : i32
+  // CHECK-NEXT: %[[FOR_RES:.*]] = scf.for {{.*}} iter_args({{.*}} = %[[A0]]) -> (i32) { 
+  %0:2 = scf.for %arg1 = %lb to %ub step %step iter_args(%arg2 = %arg0, %arg3 = %cst)
+    -> (i32, i32) {
+    %1 = addi %arg2, %cst : i32
+    scf.yield %1, %cst : i32, i32
+  }
+
+  // CHECK: return %[[FOR_RES]], %[[C32]] : i32, i32
+  return %0#0, %0#1 : i32, i32
 }
