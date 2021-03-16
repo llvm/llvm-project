@@ -61,12 +61,12 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         if self.isExpressionParsedExpected():
             self.assertEvaluate(
                 "a_function",
-                "0x.* \(a.out`a_function\(int\) at main.cpp:7\)")
+                "0x.*a.out`a_function.*")
             self.assertEvaluate("a_function(1)", "1")
             self.assertEvaluate("var2 + struct1.foo", "36")
             self.assertEvaluate(
                 "foo_func",
-                "0x.* \(a.out`foo_func\(\) at foo.cpp:3\)")
+                "0x.*a.out`foo_func.*")
             self.assertEvaluate("foo_var", "44")
         else:
             self.assertEvaluateFailure("a_function")
@@ -88,12 +88,12 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         if self.isExpressionParsedExpected():
             self.assertEvaluate(
                 "a_function",
-                "0x.* \(a.out`a_function\(int\) at main.cpp:7\)")
+                "0x.*a.out`a_function.*")
             self.assertEvaluate("a_function(1)", "1")
             self.assertEvaluate("var2 + struct1.foo", "17")
             self.assertEvaluate(
                 "foo_func",
-                "0x.* \(a.out`foo_func\(\) at foo.cpp:3\)")
+                "0x.*a.out`foo_func.*")
             self.assertEvaluate("foo_var", "44")
         else:
             self.assertEvaluateFailure("a_function")
@@ -118,12 +118,12 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         if self.isExpressionParsedExpected():
             self.assertEvaluate(
                 "a_function",
-                "0x.* \(a.out`a_function\(int\) at main.cpp:7\)")
+                "0x.*a.out`a_function.*")
             self.assertEvaluate("a_function(1)", "1")
             self.assertEvaluate("var + 1", "43")
             self.assertEvaluate(
                 "foo_func",
-                "0x.* \(a.out`foo_func\(\) at foo.cpp:3\)")
+                "0x.*a.out`foo_func.*")
             self.assertEvaluate("foo_var", "44")
         else:
             self.assertEvaluateFailure("a_function")
